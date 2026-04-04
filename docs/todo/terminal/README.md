@@ -23,6 +23,8 @@ Current high-signal entrypoints:
 
 - `vt_core_rearchitecture.md` — active VT maturity purity queue and checkpoint
   record
+- `widget_scrutiny.md` — active native terminal widget scrutiny queue for the
+  host-side part of VT maturity
 - `wayland_present.md` — present-path execution queue and validation lane
 - `ffi_bridge.md` — embeddable terminal bridge plan
 - `ffi_host_migration.md` — host migration follow-up
@@ -33,7 +35,9 @@ Maintenance or supporting queues:
 - `protocol.md` — protocol parity follow-up after the main backlog closure
 - `damage_tracking.md` — narrower redraw/publication cleanup after the main rewrite/hardening work
 - `modularization.md` — mostly historical extraction record; active structural work now lives in `vt_core_rearchitecture.md`
-- `widget.md` — mostly historical terminal-widget backlog; active UI rendering follow-up now lives under `docs/todo/ui/`
+- `widget.md` — mostly historical terminal-widget backlog
+- `widget_boundary_split.md` — earlier boundary-split record; use the new audit
+  and `widget_scrutiny.md` before treating it as a stop-marker
 
 Do not treat this folder as architecture authority. Durable design ownership
 lives under `app_architecture/terminal/`.

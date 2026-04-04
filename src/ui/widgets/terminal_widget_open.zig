@@ -2,12 +2,10 @@ const std = @import("std");
 const builtin = @import("builtin");
 const app_logger = @import("../../app_logger.zig");
 
-const host_queries = @import("../../terminal/core/session/host_queries.zig");
-const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
+const input_adapter_mod = @import("terminal_widget_input_adapter.zig");
 const hover_mod = @import("terminal_widget_hover.zig");
 
-const TerminalRuntimeShell = terminal_runtime.TerminalRuntimeShell;
 const Cell = terminal_publication.Cell;
 const TerminalViewGeometry = @import("../../types/mod.zig").layout.TerminalViewGeometry;
 
@@ -18,8 +16,7 @@ pub const PendingOpen = struct {
 };
 
 pub fn ctrlClickOpenVisibleMaybe(
-    allocator: std.mem.Allocator,
-    session: *TerminalRuntimeShell,
+    input_adapter: *const input_adapter_mod.TerminalInputAdapter,
     pending_open: *?PendingOpen,
     view_cells: []const Cell,
     view: TerminalViewGeometry,
@@ -27,6 +24,7 @@ pub fn ctrlClickOpenVisibleMaybe(
     mouse_y: f32,
 ) bool {
     const log = app_logger.logger("terminal.open");
+    const allocator = input_adapter.allocator();
     if (view.rows == 0 or view.cols == 0) return false;
     if (view.cell_width <= 0 or view.cell_height <= 0) return false;
     if (view_cells.len < view.rows * view.cols) return false;
@@ -40,12 +38,12 @@ pub fn ctrlClickOpenVisibleMaybe(
         var link_buf = std.ArrayList(u8).empty;
         defer link_buf.deinit(allocator);
         link_buf.clearRetainingCapacity();
-        if ((host_queries.copyHyperlinkUri(session, allocator, &link_buf, link_id) catch |err| {
+        if ((input_adapter.copyHyperlinkUri(allocator, &link_buf, link_id) catch |err| {
             log.logf(.warning, "ctrl-open hyperlink copy failed link_id={d} err={s}", .{ link_id, @errorName(err) });
             return false;
         })) |uri| {
             const link = uri;
-            if (resolveLinkPath(allocator, session, link)) |path| {
+            if (resolveLinkPath(input_adapter, link)) |path| {
                 setPendingOpen(allocator, pending_open, .{ .path = path });
                 return true;
             }
@@ -66,11 +64,11 @@ pub fn ctrlClickOpenVisibleMaybe(
                         return false;
                     };
                 } else if (std.mem.startsWith(u8, parsed.path, "file://") or (parsed.path.len > 0 and parsed.path[0] == '/')) {
-                    resolved = resolveLinkPath(allocator, session, parsed.path);
+                    resolved = resolveLinkPath(input_adapter, parsed.path);
                 } else {
                     var cwd_buf = std.ArrayList(u8).empty;
                     defer cwd_buf.deinit(allocator);
-                    _ = host_queries.copyCwdText(session, allocator, &cwd_buf) catch |err| {
+                    _ = input_adapter.copyCwdText(allocator, &cwd_buf) catch |err| {
                         log.logf(.warning, "ctrl-open failed copying cwd err={s}", .{@errorName(err)});
                         return false;
                     };
@@ -147,8 +145,9 @@ fn decodePercent(allocator: std.mem.Allocator, text: []const u8) ?[]u8 {
     };
 }
 
-fn resolveLinkPath(allocator: std.mem.Allocator, session: *TerminalRuntimeShell, uri: []const u8) ?[]u8 {
+fn resolveLinkPath(input_adapter: *const input_adapter_mod.TerminalInputAdapter, uri: []const u8) ?[]u8 {
     const log = app_logger.logger("terminal.open");
+    const allocator = input_adapter.allocator();
     if (uri.len == 0) return null;
     if (builtin.os.tag == .windows) {
         if (isWindowsAbsPath(uri)) {
@@ -186,7 +185,7 @@ fn resolveLinkPath(allocator: std.mem.Allocator, session: *TerminalRuntimeShell,
     }
     var cwd_buf = std.ArrayList(u8).empty;
     defer cwd_buf.deinit(allocator);
-    _ = host_queries.copyCwdText(session, allocator, &cwd_buf) catch |err| {
+    _ = input_adapter.copyCwdText(allocator, &cwd_buf) catch |err| {
         log.logf(.warning, "resolveLinkPath failed copying cwd err={s}", .{@errorName(err)});
         return null;
     };

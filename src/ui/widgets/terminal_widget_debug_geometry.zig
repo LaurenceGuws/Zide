@@ -81,3 +81,10 @@ pub const TextPaintSample = struct {
     glyph: terminal_font_mod.Rect = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
     source: TextPaintSource = .direct,
 };
+
+pub const DebugCaptureState = struct {
+    last_view_geometry: ViewGeometrySample = .{},
+    last_cursor_overlay: CursorOverlaySample = .{},
+    last_surface_present: RetainedSurfacePresentSample = .{},
+    last_text_paint: TextPaintSample = .{},
+};

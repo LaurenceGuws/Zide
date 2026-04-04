@@ -41,6 +41,8 @@ Quick reading guide:
   - `docs/todo/file_layout.md` — file/folder layout cleanup queue (split large folders/files, collapse low-value micro-files).
   - `docs/todo/terminal/vt_core_rearchitecture.md` — active VT maturity purity
     queue; only continue when one named maturity contradiction is explicit.
+  - `docs/todo/terminal/widget_scrutiny.md` — active native terminal widget
+    scrutiny queue for the host-side part of VT maturity.
   - `docs/todo/terminal/ffi_bridge.md` — terminal FFI/embedding contract maturation.
   - `docs/todo/terminal/ffi_host_migration.md` — mixed terminal/editor host migration follow-up.
   - `docs/todo/terminal/tabs.md` — terminal-only tab/workspace lifecycle follow-up.
@@ -81,6 +83,9 @@ Quick reading guide:
   terminal architecture priority and maturity campaign authority.
 - `app_architecture/terminal/VT_CORE_DESIGN.md` — exact target split for terminal core, transport, host session, snapshot, and FFI.
 - `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md` — finer subsystem-layer ownership map for host, transport, engine, publication, and presentation.
+- `app_architecture/terminal/TERMINAL_WIDGET_HOSTING_DESIGN.md` — target
+  ownership zones and migration rules for the native terminal widget under the
+  VT maturity standard.
 - `app_architecture/terminal/TERMINAL_BETA_CHECKPOINT.md` — high-level terminal checkpoint orientation for the current beta.
 - `app_architecture/terminal/present/WAYLAND_DESIGN_BRIEF.md` — high-level present-path design target.
 - `app_architecture/terminal/present/WAYLAND_TECHNICAL_WRITEUP.md` — present-path ownership and architecture authority.
@@ -135,6 +140,12 @@ Quick reading guide:
 - `docs/review/` — past review notes (scope + date in file).
   - `docs/review/SDL_GL_RENDERER_AUDIT_2026-04-02.md` — ranked SDL3/OpenGL renderer findings on ownership shape, host seam maturity, scene/present drift, and backend honesty.
   - `docs/review/TERMINAL_DOGFOOD_REVIEW_2026-03-17.md` — structured record of the first major native terminal dogfood pass, issue ids, and final dispositions.
+  - `docs/review/TERMINAL_WIDGET_HOSTILE_AUDIT_2026-04-04.md` — hostile audit
+    of the native terminal widget stack and the current evidence baseline for
+    widget-side VT maturity pressure.
+  - `docs/review/TERMINAL_WIDGET_POST_FRONT_RERANK_2026-04-04.md` — rerank
+    after the first widget-hosting fronts, naming retained-surface update
+    planning as the next strongest contradiction.
   - `docs/review/TERMINAL_CORE_ARCHITECTURE_REVIEW_2026-03-10.md` — Ghostty-informed review of remaining terminal-core architectural blockers.
   - `docs/review/PERFORMANCE_REVIEW_1.md` — historical UI/terminal performance audit that still contains useful ownership notes.
   - `docs/review/TERMINAL_PROTOCOL_ACCURACY_REVIEW_2026-02-23.md` — detailed protocol source-review evidence and implementation history behind the active parity tracker.

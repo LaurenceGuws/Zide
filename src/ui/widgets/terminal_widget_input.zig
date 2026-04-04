@@ -1,13 +1,10 @@
 const std = @import("std");
 
 const app_shell = @import("../../app_shell.zig");
-const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
-const session_interaction = @import("../../terminal/core/session/interaction.zig");
-const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
 const terminal_types = @import("../../terminal/model/types.zig");
-const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
 
+const input_adapter_mod = @import("terminal_widget_input_adapter.zig");
 const open_mod = @import("terminal_widget_open.zig");
 const hover_mod = @import("terminal_widget_hover.zig");
 const keyboard_mod = @import("terminal_widget_keyboard.zig");
@@ -33,17 +30,19 @@ pub fn handleInput(
     const mouse = input_batch.mouse_pos;
     const in_terminal = common.pointInRect(mouse.x, mouse.y, x, y, width, height);
     var handled = false;
-    const cache = &self.draw_cache;
-    const view_cells = cache.cells.items;
-    const rows = cache.rows;
-    const cols = cache.cols;
+    const cache = self.publication.cacheConst();
+    const terminal_view = self.publication.model();
+    const input_adapter = input_adapter_mod.TerminalInputAdapter.init(self.session);
+    const view_cells = terminal_view.cells;
+    const rows = terminal_view.rows;
+    const cols = terminal_view.cols;
     const view_geometry = shell.terminalViewGeometry(.{
         .x = x,
         .y = y,
         .width = width,
         .height = height,
     }, rows, cols);
-    const viewport = view_state.viewportInfo(cache);
+    const viewport = terminal_view.viewport;
     const history_len = viewport.history_len;
     const total_lines = viewport.total_lines;
     const scroll_offset = viewport.scroll_offset;
@@ -51,7 +50,7 @@ pub fn handleInput(
     const has_visible_grid = rows > 0 and cols > 0 and view_cells.len >= rows * cols;
     const r = shell.rendererPtr();
     hover_mod.updateHoverStateVisible(
-        &self.hover,
+        &self.controller.hover,
         view_geometry,
         shell.uiGeometryContext().ui_scale,
         view_cells,
@@ -75,14 +74,13 @@ pub fn handleInput(
         wheel_steps = if (rounded > 0) rounded else 1;
         if (wheel_delta < 0) wheel_steps = -wheel_steps;
     }
-    const mouse_reporting = allow_input and in_terminal and session_interaction.mouseReportingEnabled(self.session);
+    const mouse_reporting = allow_input and in_terminal and input_adapter.mouseReportingEnabled();
     var skip_mouse_click = false;
     if (allow_input and in_terminal and ctrl and input_batch.mousePressed(.left)) {
         if (has_visible_grid) {
             const did_open = open_mod.ctrlClickOpenVisibleMaybe(
-                self.session.allocator,
-                self.session,
-                &self.pending_open,
+                &input_adapter,
+                self.controller.pending.pendingOpenPtr(),
                 view_cells,
                 view_geometry,
                 mouse.x,
@@ -98,19 +96,17 @@ pub fn handleInput(
     var osc_clipboard = std.ArrayList(u8).empty;
     defer osc_clipboard.deinit(self.session.allocator);
     osc_clipboard.clearRetainingCapacity();
-    if (self.session.tryLock()) {
-        defer self.session.unlock();
-        if ((self.session.core.takeOscClipboardCopy(self.session.allocator, &osc_clipboard) catch false)) {
-            const cstr: [*:0]const u8 = @ptrCast(osc_clipboard.items.ptr);
-            shell.setClipboardText(cstr);
-            handled = true;
-        }
+    if ((input_adapter.takeOscClipboardCopy(self.session.allocator, &osc_clipboard) catch false)) {
+        const cstr: [*:0]const u8 = @ptrCast(osc_clipboard.items.ptr);
+        shell.setClipboardText(cstr);
+        handled = true;
     }
 
     if (allow_input) {
         var skip_chars = false;
         const keyboard_result = try keyboard_mod.handleKeyboardInput(
             self,
+            &input_adapter,
             shell,
             r,
             scroll_offset,
@@ -141,6 +137,7 @@ pub fn handleInput(
         if (!mouse_reporting) {
             const pointer_result = try pointer_mod.handlePointerInput(
                 self,
+                &input_adapter,
                 .{
                     .in_terminal = in_terminal,
                     .mouse = mouse,
@@ -168,6 +165,7 @@ pub fn handleInput(
         if (mouse_reporting and rows > 0 and cols > 0) {
             handled = handled or try mouse_reporting_mod.handleMouseReporting(
                 self,
+                &input_adapter,
                 .{
                     .mouse = mouse,
                     .view = view_geometry,

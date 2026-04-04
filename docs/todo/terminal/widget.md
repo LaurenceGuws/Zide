@@ -19,6 +19,16 @@ Status note, 2026-03-15:
   - `docs/todo/ui/terminal_special_glyphs.md`
   - `docs/todo/ui/renderer.md`
 
+Status note, 2026-04-04:
+
+- A new full-stack widget audit now exists:
+  - `docs/review/TERMINAL_WIDGET_HOSTILE_AUDIT_2026-04-04.md`
+- Use that audit if the question is whether the current terminal widget still
+  weakens VT maturity by mixing hosting, rendering, and session-facing
+  responsibilities.
+- The active execution queue for that front now lives in:
+  - `docs/todo/terminal/widget_scrutiny.md`
+
 ## Constraints
 
 - Keep the fast path strong for ASCII monospace workloads.

@@ -1,11 +1,9 @@
 const std = @import("std");
 
-const session_input = @import("../../terminal/core/session/input.zig");
-const scrollback_view = @import("../../terminal/core/scrollback_view.zig");
-const terminal_selection = @import("../../terminal/core/selection.zig");
 const terminal_types = @import("../../terminal/model/types.zig");
 const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
+const input_adapter_mod = @import("terminal_widget_input_adapter.zig");
 const paste_mod = @import("terminal_widget_paste.zig");
 
 pub const PointerParams = struct {
@@ -27,6 +25,7 @@ pub const PointerResult = struct {
 
 pub fn handlePointerInput(
     self: anytype,
+    input_adapter: *const input_adapter_mod.TerminalInputAdapter,
     params: PointerParams,
     view_cells: anytype,
     input_batch: *shared_types.input.InputBatch,
@@ -47,12 +46,12 @@ pub fn handlePointerInput(
     var live_scroll_offset = params.scroll_offset;
     var selection_active = params.cache_selection_active;
 
-    if (live_scroll_offset > 0 and scrollback_view.resetToLiveBottomForInput(self.session, saw_non_modifier_key_press, saw_text_input)) {
+    if (live_scroll_offset > 0 and input_adapter.resetToLiveBottomForInput(saw_non_modifier_key_press, saw_text_input)) {
         live_scroll_offset = 0;
     }
 
     if (params.in_terminal and input_batch.mousePressed(.left) and selection_active) {
-        if (terminal_selection.clearSelectionIfActive(self.session)) {
+        if (input_adapter.clearSelectionIfActive()) {
             selection_active = false;
             result.handled = true;
         }
@@ -67,36 +66,29 @@ pub fn handlePointerInput(
             const clamped_row = @min(row, params.view.rows - 1);
             const global_row = params.start_line + clamped_row;
             if (global_row < params.history_len + params.view.rows) {
-                self.selection_press_origin = press_mouse;
-                self.selection_drag_active = false;
+                self.controller.selection.beginPress(press_mouse);
                 if (input_batch.mouseClicks(.left) >= 2) {
                     const row_cells = view_cells[clamped_row * params.view.cols .. (clamped_row + 1) * params.view.cols];
-                    const click_result = terminal_selection.beginClickSelection(
-                        self.session,
-                        row_cells,
-                        global_row,
-                        clamped_col,
-                        input_batch.mouseClicks(.left),
-                    );
-                    self.selection_gesture = click_result.gesture;
+                    const click_result = input_adapter.beginClickSelection(row_cells, global_row, clamped_col, input_batch.mouseClicks(.left));
+                    self.controller.selection.setGesture(click_result.gesture);
                     if (click_result.started) {
                         selection_active = true;
                         result.handled = true;
                     }
                 } else {
-                    self.selection_gesture = .{
+                    self.controller.selection.setGesture(.{
                         .mode = .none,
                         .row = global_row,
                         .col_start = clamped_col,
                         .col_end = clamped_col,
-                    };
+                    });
                 }
             }
         }
 
         const drag_select_active = selectionDragIsActive(self, input_batch, params.mouse, params.view.cell_width);
-        const drag_select_multi = drag_select_active and self.selection_gesture.mode != .none;
-        const drag_select_normal = drag_select_active and self.selection_gesture.mode == .none;
+        const drag_select_multi = drag_select_active and self.controller.selection.gesture.mode != .none;
+        const drag_select_normal = drag_select_active and self.controller.selection.gesture.mode == .none;
         if (drag_select_multi) {
             const col = @as(usize, @intFromFloat((params.mouse.x - params.view.origin_x) / params.view.cell_width));
             const row = @as(usize, @intFromFloat((params.mouse.y - params.view.origin_y) / params.view.cell_height));
@@ -105,7 +97,7 @@ pub fn handlePointerInput(
             const global_row = params.start_line + clamped_row;
             if (global_row < params.history_len + params.view.rows) {
                 const row_cells = view_cells[clamped_row * params.view.cols .. (clamped_row + 1) * params.view.cols];
-                if (terminal_selection.extendGestureSelection(self.session, self.selection_gesture, row_cells, global_row, clamped_col)) {
+                if (input_adapter.extendGestureSelection(self.controller.selection.gesture, row_cells, global_row, clamped_col)) {
                     selection_active = true;
                     result.handled = true;
                 }
@@ -113,10 +105,10 @@ pub fn handlePointerInput(
 
             if (selection_active) {
                 if (params.mouse.y < params.view.viewport.y) {
-                    _ = scrollback_view.scrollSelectionDrag(self.session, true);
+                    _ = input_adapter.scrollSelectionDrag(true);
                     result.handled = true;
                 } else if (params.mouse.y > params.view.viewport.y + params.view.viewport.height) {
-                    _ = scrollback_view.scrollSelectionDrag(self.session, false);
+                    _ = input_adapter.scrollSelectionDrag(false);
                     result.handled = true;
                 }
             }
@@ -130,21 +122,21 @@ pub fn handlePointerInput(
             if (global_row < params.history_len + params.view.rows) {
                 if (!selection_active) {
                     const anchor = terminal_types.SelectionPos{
-                        .row = self.selection_gesture.row,
-                        .col = self.selection_gesture.col_start,
+                        .row = self.controller.selection.gesture.row,
+                        .col = self.controller.selection.gesture.col_start,
                     };
                     const target = terminal_types.SelectionPos{
                         .row = global_row,
                         .col = clamped_col,
                     };
                     if (anchor.row != target.row or anchor.col != target.col) {
-                        terminal_selection.selectRange(self.session, anchor, target, false);
+                        input_adapter.selectRange(anchor, target, false);
                         selection_active = true;
                         result.handled = true;
                     }
                 } else {
                     const row_cells = view_cells[clamped_row * params.view.cols .. (clamped_row + 1) * params.view.cols];
-                    if (terminal_selection.selectOrUpdateCellInRow(self.session, row_cells, global_row, clamped_col)) {
+                    if (input_adapter.selectOrUpdateCellInRow(row_cells, global_row, clamped_col)) {
                         selection_active = true;
                         result.handled = true;
                     }
@@ -153,17 +145,17 @@ pub fn handlePointerInput(
 
             if (selection_active) {
                 if (params.mouse.y < params.view.viewport.y) {
-                    _ = scrollback_view.scrollSelectionDrag(self.session, true);
+                    _ = input_adapter.scrollSelectionDrag(true);
                     result.handled = true;
                 } else if (params.mouse.y > params.view.viewport.y + params.view.viewport.height) {
-                    _ = scrollback_view.scrollSelectionDrag(self.session, false);
+                    _ = input_adapter.scrollSelectionDrag(false);
                     result.handled = true;
                 }
             }
         }
 
         if (input_batch.mouseReleased(.left)) {
-            if (selection_active and terminal_selection.finishSelectionIfActive(self.session)) {
+            if (selection_active and input_adapter.finishSelectionIfActive()) {
                 selection_active = true;
                 result.handled = true;
             }
@@ -171,19 +163,19 @@ pub fn handlePointerInput(
     }
 
     if (params.in_terminal and input_batch.mousePressed(.middle)) {
-        if (paste_mod.pasteSelectionClipboard(self, clip_opt, html, uri_list, png)) {
+        if (paste_mod.pasteSelectionClipboard(input_adapter, clip_opt, html, uri_list, png)) {
             result.handled = true;
         }
     }
     if (params.in_terminal and wheel_steps.* != 0) {
-        if (try session_input.reportAlternateScrollWheel(self.session, wheel_steps.*, params.mod)) {
+        if (try input_adapter.reportAlternateScrollWheel(wheel_steps.*, params.mod)) {
             scroll_log.logf(.info, "alt-scroll wheel steps={d}", .{wheel_steps.*});
             result.handled = true;
             wheel_steps.* = 0;
         }
     }
     if (params.in_terminal and wheel_steps.* != 0) {
-        if (scrollback_view.scrollWheel(self.session, wheel_steps.*)) {
+        if (input_adapter.scrollWheel(wheel_steps.*)) {
             scroll_log.logf(.info, "scroll wheel steps={d}", .{wheel_steps.*});
             result.handled = true;
         }
@@ -193,9 +185,7 @@ pub fn handlePointerInput(
 }
 
 pub fn resetLeftDragState(self: anytype) void {
-    self.selection_gesture = .{};
-    self.selection_press_origin = null;
-    self.selection_drag_active = false;
+    self.controller.selection.reset();
 }
 
 fn selectionDragIsActive(
@@ -206,13 +196,13 @@ fn selectionDragIsActive(
 ) bool {
     const drag_select_active = input_batch.mouseDown(.left) and !input_batch.mousePressed(.left);
     if (!drag_select_active) return false;
-    if (self.selection_drag_active) return true;
-    const origin = self.selection_press_origin orelse return false;
+    if (self.controller.selection.dragIsActive()) return true;
+    const origin = self.controller.selection.pressOrigin() orelse return false;
     const dx = mouse.x - origin.x;
     const dy = mouse.y - origin.y;
     const dist2 = dx * dx + dy * dy;
     const threshold2 = hit_cell_w * hit_cell_w;
     if (dist2 < threshold2) return false;
-    self.selection_drag_active = true;
+    self.controller.selection.activateDrag();
     return true;
 }

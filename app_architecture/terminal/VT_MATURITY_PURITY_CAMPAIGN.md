@@ -153,6 +153,11 @@ Current comprehensive scope authority:
   mixed protocol interaction state
 - [VT_PROTOCOL_INTERACTION_CONTRACT_WAR_2026-04-03.md](/home/home/personal/zide/docs/review/VT_PROTOCOL_INTERACTION_CONTRACT_WAR_2026-04-03.md)
   is historical evidence from one front inside the same VT scrutiny war
+- host-side native widget pressure is also valid VT work when it directly
+  weakens the library-hosting story:
+  - [TERMINAL_WIDGET_HOSTING_DESIGN.md](/home/home/personal/zide/app_architecture/terminal/TERMINAL_WIDGET_HOSTING_DESIGN.md)
+  - [widget_scrutiny.md](/home/home/personal/zide/docs/todo/terminal/widget_scrutiny.md)
+  - [TERMINAL_WIDGET_HOSTILE_AUDIT_2026-04-04.md](/home/home/personal/zide/docs/review/TERMINAL_WIDGET_HOSTILE_AUDIT_2026-04-04.md)
 
 ## What No Longer Counts As Progress
 

@@ -1,12 +1,11 @@
 const std = @import("std");
 
 const app_logger = @import("../../app_logger.zig");
-const scrollback_view = @import("../../terminal/core/scrollback_view.zig");
-const session_input = @import("../../terminal/core/session/input.zig");
-const session_interaction = @import("../../terminal/core/session/interaction.zig");
+const input_adapter_mod = @import("terminal_widget_input_adapter.zig");
 
 pub fn pasteSystemClipboard(
     widget: anytype,
+    input_adapter: *const input_adapter_mod.TerminalInputAdapter,
     clip_opt: ?[]const u8,
     html: ?[]const u8,
     uri_list: ?[]const u8,
@@ -15,21 +14,21 @@ pub fn pasteSystemClipboard(
     const has_supported_clipboard_data = clip_opt != null or html != null or uri_list != null or png != null;
     if (!has_supported_clipboard_data) return false;
 
-    if (widget.draw_cache.scroll_offset > 0) {
-        scrollback_view.setScrollOffset(widget.session, 0);
+    if (widget.publication.model().viewport.scroll_offset > 0) {
+        input_adapter.setScrollOffset(0);
     }
 
-    return pasteClipboardWithPolicy(widget, clip_opt, html, uri_list, png, .system) catch false;
+    return pasteClipboardWithPolicy(input_adapter, clip_opt, html, uri_list, png, .system) catch false;
 }
 
 pub fn pasteSelectionClipboard(
-    widget: anytype,
+    input_adapter: *const input_adapter_mod.TerminalInputAdapter,
     clip_opt: ?[]const u8,
     html: ?[]const u8,
     uri_list: ?[]const u8,
     png: ?[]const u8,
 ) bool {
-    return pasteClipboardWithPolicy(widget, clip_opt, html, uri_list, png, .selection) catch false;
+    return pasteClipboardWithPolicy(input_adapter, clip_opt, html, uri_list, png, .selection) catch false;
 }
 
 const PasteSource = enum {
@@ -38,7 +37,7 @@ const PasteSource = enum {
 };
 
 fn pasteClipboardWithPolicy(
-    widget: anytype,
+    input_adapter: *const input_adapter_mod.TerminalInputAdapter,
     clip_opt: ?[]const u8,
     html: ?[]const u8,
     uri_list: ?[]const u8,
@@ -50,39 +49,39 @@ fn pasteClipboardWithPolicy(
     const has_supported_clipboard_data = clip_opt != null or html != null or uri_list != null or png != null;
     if (!has_supported_clipboard_data) return false;
 
-    if (try session_interaction.sendKittyPasteEvent5522WithMimeRich(widget.session, clip, html, uri_list, png)) {
+    if (try input_adapter.sendKittyPasteEvent5522WithMimeRich(clip, html, uri_list, png)) {
         return true;
     }
 
     const clip_text = clip_opt orelse return false;
-    if (session_interaction.bracketedPasteEnabled(widget.session)) {
+    if (input_adapter.bracketedPasteEnabled()) {
         const payload = switch (source) {
-            .system => filterBracketedPaste(widget.session.allocator, clip_text) catch |err| {
+            .system => filterBracketedPaste(input_adapter.allocator(), clip_text) catch |err| {
                 log.logf(.warning, "paste filter failed source={s} err={s}", .{ @tagName(source), @errorName(err) });
                 return false;
             },
             .selection => clip_text,
         };
-        defer if (source == .system and payload.ptr != clip_text.ptr) widget.session.allocator.free(payload);
+        defer if (source == .system and payload.ptr != clip_text.ptr) input_adapter.allocator().free(payload);
 
-        session_input.sendText(widget.session, "\x1b[200~") catch |err| {
+        input_adapter.sendText("\x1b[200~") catch |err| {
             log.logf(.warning, "paste failed sending bracketed prefix source={s} err={s}", .{ @tagName(source), @errorName(err) });
             return false;
         };
         if (payload.len > 0) {
-            session_input.sendText(widget.session, payload) catch |err| {
+            input_adapter.sendText(payload) catch |err| {
                 log.logf(.warning, "paste failed sending payload source={s} err={s}", .{ @tagName(source), @errorName(err) });
                 return false;
             };
         }
-        session_input.sendText(widget.session, "\x1b[201~") catch |err| {
+        input_adapter.sendText("\x1b[201~") catch |err| {
             log.logf(.warning, "paste failed sending bracketed suffix source={s} err={s}", .{ @tagName(source), @errorName(err) });
             return false;
         };
         return true;
     }
 
-    session_input.sendText(widget.session, clip_text) catch |err| {
+    input_adapter.sendText(clip_text) catch |err| {
         log.logf(.warning, "paste failed sending clipboard source={s} err={s}", .{ @tagName(source), @errorName(err) });
         return false;
     };

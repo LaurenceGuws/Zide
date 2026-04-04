@@ -218,7 +218,7 @@ pub fn drawOverlays(
             var sample_cursor_y = cell_y;
             var sample_cursor_w = cursor_w;
             var sample_cursor_h = cursor_h;
-            if (!self.ui_focused) {
+            if (!self.controller.focus.isUiFocused()) {
                 const border_w = pixel_step;
                 const box_x = cell_x + cursor_edge_inset_f;
                 const box_y = cell_y + cursor_edge_inset_f;
@@ -263,7 +263,7 @@ pub fn drawOverlays(
 
             const composing_cells: usize = composing_len;
             const cursor_rect_w_f = if (composing_cells > 0) @as(f32, @floatFromInt(@as(i32, @intCast(@max(@as(usize, 1), composing_cells))))) * view.cell_width else view.cell_width;
-            self.last_cursor_overlay = CursorOverlaySample{
+            self.debug.last_cursor_overlay = CursorOverlaySample{
                 .valid = true,
                 .generation = cache.generation,
                 .row = cursor.row,

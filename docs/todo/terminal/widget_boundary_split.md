@@ -15,6 +15,24 @@ Review aid:
 
 - `app_architecture/terminal/BOUNDARY_SMELL_CHECKLIST.md`
 
+Status note, 2026-04-04:
+
+- The older "good stopping point" read in this file is now too permissive for
+  the current VT maturity standard.
+- Use
+  `docs/review/TERMINAL_WIDGET_HOSTILE_AUDIT_2026-04-04.md`
+  as the current evidence baseline before deciding whether terminal widget work
+  is really paused.
+- Active follow-up now lives in:
+  - `docs/todo/terminal/widget_scrutiny.md`
+- The active question is no longer only "did native-only host policy leave the
+  backend?"
+- It is also:
+  - does the widget still read like a mixed owner of VT/session/render/present
+    behavior?
+  - does the widget still weaken the story that a mature VT object is being
+    hosted through a boring contract?
+
 ## Why Now
 
 Recent terminal dogfooding closed a cluster of scrollbar/focus/hover bugs by
@@ -87,6 +105,15 @@ Status, 2026-03-17:
 - The original high-value cuts are done.
 - Further work here should be driven by a fresh concrete smell, not by
   checklist completion pressure.
+
+Status correction, 2026-04-04:
+
+- A fresh concrete smell did appear.
+- The recent fractional-scale retained-surface drift and alt-screen block
+  cursor bug both traced back to deeper terminal widget ownership sprawl.
+- The lane is therefore reopened at the audit level, with the hostile audit as
+  the new baseline:
+  - `docs/review/TERMINAL_WIDGET_HOSTILE_AUDIT_2026-04-04.md`
 
 ## Audit Notes
 

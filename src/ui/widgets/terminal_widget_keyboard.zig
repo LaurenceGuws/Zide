@@ -2,16 +2,13 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 const app_shell = @import("../../app_shell.zig");
-const scrollback_view = @import("../../terminal/core/scrollback_view.zig");
-const session_interaction = @import("../../terminal/core/session/interaction.zig");
-const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
-const session_input = @import("../../terminal/core/session/input.zig");
 const terminal_types = @import("../../terminal/model/types.zig");
 const input_mod = @import("../../terminal/input/input.zig");
 const key_encoder = @import("../../terminal/input/key_encoder.zig");
 const alt_probe = @import("../../terminal/input/alternate_probe.zig");
 const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
+const input_adapter_mod = @import("terminal_widget_input_adapter.zig");
 const Shell = app_shell.Shell;
 
 pub const InputResult = struct {
@@ -23,6 +20,7 @@ pub const InputResult = struct {
 
 pub fn handleKeyboardInput(
     self: anytype,
+    input_adapter: *const input_adapter_mod.TerminalInputAdapter,
     shell: *Shell,
     renderer: anytype,
     scroll_offset: usize,
@@ -38,7 +36,7 @@ pub fn handleKeyboardInput(
     const key_log = app_logger.logger("terminal.input.keys");
     const dump_log = app_logger.logger("terminal.ui.dump");
 
-    const key_mode_flags = session_interaction.keyModeFlagsValue(self.session);
+    const key_mode_flags = input_adapter.keyModeFlags();
     const report_text_enabled = key_encoder.reportTextEnabled(key_mode_flags);
     const allow_terminal_key = !(builtin.target.os.tag == .macos and input_batch.mods.super);
 
@@ -71,7 +69,7 @@ pub fn handleKeyboardInput(
                 .{
                     key_mode_flags,
                     @intFromBool(report_text_enabled),
-                    @intFromBool(session_interaction.autoRepeatEnabled(self.session)),
+                    @intFromBool(input_adapter.autoRepeatEnabled()),
                     input_batch.events.items.len,
                 },
             );
@@ -88,43 +86,9 @@ pub fn handleKeyboardInput(
             const key = event.key.key;
             const event_mod = keyModFromEvent(event.key);
             if (event.key.pressed and !event.key.repeated and event.key.mods.ctrl and event.key.mods.shift and !event.key.mods.alt and !event.key.mods.altgr and !event.key.mods.super and key == .f12) {
-                self.dumpVisibleAsciiView(shell) catch |err| {
+                self.dumpVisibleAsciiView(shell, dump_log) catch |err| {
                     dump_log.logf(.warning, "visible_ascii_dump failed err={s}", .{@errorName(err)});
-                    result.handled = true;
-                    result.skip_chars = true;
-                    continue;
                 };
-                dump_log.logf(.info, "visible_ascii_dump path={s} rows={d} cols={d} alt_active={d} generation={d} cursor_overlay={d} text_paint={d}", .{
-                    "zide_terminal_view_dump.txt",
-                    self.draw_cache.rows,
-                    self.draw_cache.cols,
-                    @intFromBool(self.draw_cache.alt_active),
-                    self.draw_cache.generation,
-                    @intFromBool(self.last_cursor_overlay.valid),
-                    @intFromBool(self.last_text_paint.valid),
-                });
-                dump_log.logf(
-                    .info,
-                    "visible_ascii_dump geometry ui_scale={d:.3} render_scale={d:.3} cursor=({d:.3},{d:.3},{d:.3},{d:.3}) text=({d:.3},{d:.3},{d:.3},{d:.3}) surface=({d:.3}->{d:.3} scale={d:.6}) source={s} covers_cursor={d} cursor_distance_cols={d}",
-                    .{
-                        shell.uiScaleFactor(),
-                        1.0 / shell.rendererPtr().devicePixelStep(),
-                        self.last_cursor_overlay.cursor_x,
-                        self.last_cursor_overlay.cursor_y,
-                        self.last_cursor_overlay.cursor_w,
-                        self.last_cursor_overlay.cursor_h,
-                        self.last_text_paint.glyph.x,
-                        self.last_text_paint.glyph.y,
-                        self.last_text_paint.glyph.width,
-                        self.last_text_paint.glyph.height,
-                        self.last_surface_present.target_logical_w,
-                        self.last_surface_present.dest_w,
-                        self.last_surface_present.scale_x,
-                        @tagName(self.last_text_paint.source),
-                        @intFromBool(self.last_text_paint.covers_cursor),
-                        self.last_text_paint.cursor_distance_cols,
-                    },
-                );
                 result.handled = true;
                 result.skip_chars = true;
                 continue;
@@ -154,25 +118,25 @@ pub fn handleKeyboardInput(
                 }
                 if (report_text_enabled) {
                     if (key_encoder.baseCharForKey(key)) |base_char| {
-                        clearLiveState(self);
-                        try session_input.sendCharActionWithMetadata(self.session, base_char, event_mod, .release, keyAltMeta(renderer, altmeta_log, event.key, base_char));
+                        clearLiveState(input_adapter);
+                        try input_adapter.sendCharActionWithMetadata(base_char, event_mod, .release, keyAltMeta(renderer, altmeta_log, event.key, base_char));
                         key_log.logf(.info, "send char key={d} action=release base_char={d}", .{ @intFromEnum(key), base_char });
                         result.handled = true;
                         result.skip_chars = true;
                         continue;
                     }
                 }
-                const handled_release = try key_encoder.sendKeyAction(self.session, key, event_mod, .release);
+                const handled_release = try input_adapter.sendKeyAction(key, event_mod, .release);
                 key_log.logf(.info, "send key={d} action=release handled={d}", .{ @intFromEnum(key), @intFromBool(handled_release) });
                 if (handled_release) {
-                    clearLiveState(self);
+                    clearLiveState(input_adapter);
                     result.handled = true;
                     result.skip_chars = true;
                 }
                 continue;
             }
             const action: input_mod.KeyAction = if (event.key.repeated) .repeat else .press;
-            if (action == .repeat and !session_interaction.autoRepeatEnabled(self.session)) {
+            if (action == .repeat and !input_adapter.autoRepeatEnabled()) {
                 key_log.logf(.info, "skip key={d} action=repeat reason=auto_repeat_disabled", .{@intFromEnum(key)});
                 continue;
             }
@@ -182,8 +146,8 @@ pub fn handleKeyboardInput(
             }
             if (report_text_enabled) {
                 if (key_encoder.baseCharForKey(key)) |base_char| {
-                    clearLiveState(self);
-                    try session_input.sendCharActionWithMetadata(self.session, base_char, event_mod, action, keyAltMeta(renderer, altmeta_log, event.key, base_char));
+                    clearLiveState(input_adapter);
+                    try input_adapter.sendCharActionWithMetadata(base_char, event_mod, action, keyAltMeta(renderer, altmeta_log, event.key, base_char));
                     key_log.logf(.info, "send char key={d} action={s} base_char={d}", .{ @intFromEnum(key), @tagName(action), base_char });
                     result.handled = true;
                     result.skip_chars = true;
@@ -191,20 +155,20 @@ pub fn handleKeyboardInput(
                 }
             }
 
-            const handled_key = try key_encoder.sendKeyAction(self.session, key, event_mod, action);
+            const handled_key = try input_adapter.sendKeyAction(key, event_mod, action);
             key_log.logf(.info, "send key={d} action={s} handled={d}", .{ @intFromEnum(key), @tagName(action), @intFromBool(handled_key) });
 
             if (handled_key) {
-                clearLiveState(self);
+                clearLiveState(input_adapter);
                 result.handled = true;
                 result.skip_chars = true;
                 continue;
             }
 
             if (!report_text_enabled and (event.key.mods.ctrl or event.key.mods.alt)) {
-                if (try key_encoder.sendCharForKey(self.session, key, event_mod, action, event.key.mods.ctrl, event.key.mods.alt)) {
+                if (try input_adapter.sendCharForKey(key, event_mod, action, event.key.mods.ctrl, event.key.mods.alt)) {
                     key_log.logf(.info, "send ctrl_alt_char key={d} action={s}", .{ @intFromEnum(key), @tagName(action) });
-                    clearLiveState(self);
+                    clearLiveState(input_adapter);
                     result.handled = true;
                     result.skip_chars = true;
                 }
@@ -223,8 +187,8 @@ pub fn handleKeyboardInput(
                     const char = text_event.codepoint;
                     if (char < 32) continue;
                     const alt_meta = textAltMeta(renderer, altmeta_log, text_event, pending_text_key, char);
-                    clearLiveState(self);
-                    try session_input.sendCharActionWithMetadata(self.session, char, mod, .press, alt_meta);
+                    clearLiveState(input_adapter);
+                    try input_adapter.sendCharActionWithMetadata(char, mod, .press, alt_meta);
                     result.handled = true;
                     pending_text_key = null;
                 },
@@ -260,10 +224,8 @@ fn isSuppressedTerminalShortcut(
     return key_event.key == .c or key_event.key == .v;
 }
 
-fn clearLiveState(widget: anytype) void {
-    widget.session.lock();
-    defer widget.session.unlock();
-    _ = scrollback_view.resetToLiveBottomLocked(widget.session);
+fn clearLiveState(input_adapter: *const input_adapter_mod.TerminalInputAdapter) void {
+    _ = input_adapter.resetToLiveBottom();
 }
 
 test "suppressed terminal clipboard shortcuts do not count as live-reset input" {

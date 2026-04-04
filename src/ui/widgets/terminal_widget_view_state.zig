@@ -103,7 +103,98 @@ pub const VisibleViewDumpInfo = struct {
     screen_reverse: bool,
 };
 
+pub const TerminalViewModel = struct {
+    generation: u64,
+    clear_generation: u64,
+    rows: usize,
+    cols: usize,
+    alt_active: bool,
+    sync_updates_active: bool,
+    kitty_generation: u64,
+    cursor: CursorPos,
+    viewport: ViewportInfo,
+    render: RenderStateInfo,
+    partial_capture: PartialCaptureInfo,
+    dirty_summary: DirtySummary,
+    base_colors: BaseColorInfo,
+    cells: []const Cell,
+    kitty_images: []const KittyImage,
+    kitty_placements: []const KittyPlacement,
+
+    pub fn scrollbarAllowed(self: TerminalViewModel, mouse_reporting_enabled: bool) bool {
+        return !self.alt_active and !mouse_reporting_enabled and self.rows > 0 and self.viewport.total_lines > self.rows;
+    }
+
+    pub fn scrollbarInfo(self: TerminalViewModel, mouse_reporting_enabled: bool) ScrollbarInfo {
+        return .{
+            .allowed = self.scrollbarAllowed(mouse_reporting_enabled),
+            .rows = self.rows,
+            .total_lines = self.viewport.total_lines,
+            .scroll_offset = self.viewport.scroll_offset,
+        };
+    }
+
+    pub fn lifecycleTransition(self: TerminalViewModel, previous_alt_active: bool) LifecycleTransitionInfo {
+        const changed = previous_alt_active != self.alt_active;
+        return .{
+            .changed = changed,
+            .exited = previous_alt_active and !self.alt_active,
+            .current_alt_active = self.alt_active,
+        };
+    }
+
+    pub fn backgroundRunInfo(self: TerminalViewModel, row: usize) BackgroundRunInfo {
+        const cursor_here = self.render.draw_cursor_visible and self.cursor.row == row and self.cursor.col < self.cols;
+        return .{
+            .cursor_here = cursor_here,
+            .cursor_col = if (cursor_here) self.cursor.col else null,
+            .screen_reverse = self.render.screen_reverse,
+        };
+    }
+
+    pub fn visibleViewDumpInfo(self: TerminalViewModel) VisibleViewDumpInfo {
+        return .{
+            .rows = self.rows,
+            .cols = self.cols,
+            .generation = self.generation,
+            .scroll_offset = self.viewport.scroll_offset,
+            .alt_active = self.alt_active,
+            .cursor = self.cursor,
+            .draw_cursor_visible = self.render.draw_cursor_visible,
+            .screen_reverse = self.render.screen_reverse,
+        };
+    }
+};
+
+pub fn model(cache: *const RenderCache) TerminalViewModel {
+    const viewport = computeViewportInfo(cache);
+    const render = computeRenderStateInfo(cache);
+    const partial_capture = computePartialCaptureInfo(cache);
+    return .{
+        .generation = cache.generation,
+        .clear_generation = cache.clear_generation,
+        .rows = cache.rows,
+        .cols = cache.cols,
+        .alt_active = cache.alt_active,
+        .sync_updates_active = cache.sync_updates_active,
+        .kitty_generation = cache.kitty_generation,
+        .cursor = cache.cursor,
+        .viewport = viewport,
+        .render = render,
+        .partial_capture = partial_capture,
+        .dirty_summary = computeDirtySummary(cache, partial_capture),
+        .base_colors = computeBaseColorInfo(cache, render),
+        .cells = cache.cells.items,
+        .kitty_images = cache.kitty_images.items,
+        .kitty_placements = cache.kitty_placements.items,
+    };
+}
+
 pub fn viewportInfo(cache: *const RenderCache) ViewportInfo {
+    return model(cache).viewport;
+}
+
+fn computeViewportInfo(cache: *const RenderCache) ViewportInfo {
     const total_lines = cache.totalLines();
     const end_line = total_lines - cache.scroll_offset;
     return .{
@@ -115,17 +206,11 @@ pub fn viewportInfo(cache: *const RenderCache) ViewportInfo {
 }
 
 pub fn scrollbarAllowed(cache: *const RenderCache, mouse_reporting_enabled: bool) bool {
-    return !cache.alt_active and !mouse_reporting_enabled and cache.rows > 0 and cache.totalLines() > cache.rows;
+    return model(cache).scrollbarAllowed(mouse_reporting_enabled);
 }
 
 pub fn scrollbarInfo(cache: *const RenderCache, mouse_reporting_enabled: bool) ScrollbarInfo {
-    const viewport = viewportInfo(cache);
-    return .{
-        .allowed = scrollbarAllowed(cache, mouse_reporting_enabled),
-        .rows = cache.rows,
-        .total_lines = viewport.total_lines,
-        .scroll_offset = viewport.scroll_offset,
-    };
+    return model(cache).scrollbarInfo(mouse_reporting_enabled);
 }
 
 pub fn drawCursorVisible(cache: *const RenderCache) bool {
@@ -140,15 +225,14 @@ pub fn altTransition(previous_alt_active: bool, cache: *const RenderCache) AltTr
 }
 
 pub fn lifecycleTransitionInfo(previous_alt_active: bool, cache: *const RenderCache) LifecycleTransitionInfo {
-    const transition = altTransition(previous_alt_active, cache);
-    return .{
-        .changed = transition.changed,
-        .exited = transition.exited,
-        .current_alt_active = cache.alt_active,
-    };
+    return model(cache).lifecycleTransition(previous_alt_active);
 }
 
 pub fn partialCaptureInfo(cache: *const RenderCache) PartialCaptureInfo {
+    return model(cache).partial_capture;
+}
+
+fn computePartialCaptureInfo(cache: *const RenderCache) PartialCaptureInfo {
     const use_viewport_shift = cache.dirty == .partial and cache.viewport_shift_rows != 0;
     const active_viewport_shift_rows = if (use_viewport_shift) cache.viewport_shift_rows else 0;
     const shift_exposed_only = use_viewport_shift and cache.viewport_shift_exposed_only;
@@ -168,6 +252,10 @@ pub fn partialCaptureInfo(cache: *const RenderCache) PartialCaptureInfo {
 }
 
 pub fn renderStateInfo(cache: *const RenderCache) RenderStateInfo {
+    return model(cache).render;
+}
+
+fn computeRenderStateInfo(cache: *const RenderCache) RenderStateInfo {
     return .{
         .screen_reverse = cache.screen_reverse,
         .draw_cursor_visible = drawCursorVisible(cache),
@@ -177,30 +265,18 @@ pub fn renderStateInfo(cache: *const RenderCache) RenderStateInfo {
 }
 
 pub fn backgroundRunInfo(cache: *const RenderCache, row: usize) BackgroundRunInfo {
-    const cursor_here = cache.cursor_visible and cache.cursor.row == row and cache.cursor.col < cache.cols;
-    return .{
-        .cursor_here = cursor_here,
-        .cursor_col = if (cursor_here) cache.cursor.col else null,
-        .screen_reverse = cache.screen_reverse,
-    };
+    return model(cache).backgroundRunInfo(row);
 }
 
 pub fn visibleViewDumpInfo(cache: *const RenderCache) VisibleViewDumpInfo {
-    const viewport = viewportInfo(cache);
-    const render_state = renderStateInfo(cache);
-    return .{
-        .rows = cache.rows,
-        .cols = cache.cols,
-        .generation = cache.generation,
-        .scroll_offset = viewport.scroll_offset,
-        .alt_active = cache.alt_active,
-        .cursor = cache.cursor,
-        .draw_cursor_visible = render_state.draw_cursor_visible,
-        .screen_reverse = render_state.screen_reverse,
-    };
+    return model(cache).visibleViewDumpInfo();
 }
 
 pub fn dirtySummary(cache: *const RenderCache) DirtySummary {
+    return model(cache).dirty_summary;
+}
+
+fn computeDirtySummary(cache: *const RenderCache, partial_capture: PartialCaptureInfo) DirtySummary {
     var dirty_rows_count: usize = 0;
     var damage_row_span: usize = 0;
     var damage_col_span: usize = 0;
@@ -220,7 +296,7 @@ pub fn dirtySummary(cache: *const RenderCache) DirtySummary {
     return .{
         .is_clean = cache.dirty == .none,
         .dirty_tag = @tagName(cache.dirty),
-        .current_reason = partialCaptureInfo(cache).reason,
+        .current_reason = partial_capture.reason,
         .dirty_rows_count = dirty_rows_count,
         .damage_row_span = damage_row_span,
         .damage_col_span = damage_col_span,
@@ -232,24 +308,28 @@ pub fn dirtySummary(cache: *const RenderCache) DirtySummary {
 }
 
 pub fn drawStateInfo(cache: *const RenderCache) DrawStateInfo {
+    const terminal_view = model(cache);
     return .{
-        .generation = cache.generation,
-        .clear_generation = cache.clear_generation,
-        .rows = cache.rows,
-        .cols = cache.cols,
-        .viewport = viewportInfo(cache),
-        .render = renderStateInfo(cache),
-        .sync_updates_active = cache.sync_updates_active,
-        .kitty_generation = cache.kitty_generation,
-        .cursor = cache.cursor,
-        .cells = cache.cells.items,
-        .kitty_images = cache.kitty_images.items,
-        .kitty_placements = cache.kitty_placements.items,
+        .generation = terminal_view.generation,
+        .clear_generation = terminal_view.clear_generation,
+        .rows = terminal_view.rows,
+        .cols = terminal_view.cols,
+        .viewport = terminal_view.viewport,
+        .render = terminal_view.render,
+        .sync_updates_active = terminal_view.sync_updates_active,
+        .kitty_generation = terminal_view.kitty_generation,
+        .cursor = terminal_view.cursor,
+        .cells = terminal_view.cells,
+        .kitty_images = terminal_view.kitty_images,
+        .kitty_placements = terminal_view.kitty_placements,
     };
 }
 
 pub fn baseColorInfo(cache: *const RenderCache) BaseColorInfo {
-    const render_state = renderStateInfo(cache);
+    return model(cache).base_colors;
+}
+
+fn computeBaseColorInfo(cache: *const RenderCache, render_state: RenderStateInfo) BaseColorInfo {
     if (cache.cells.items.len == 0) {
         return .{
             .background = .{ .r = 0, .g = 0, .b = 0, .a = 255 },
