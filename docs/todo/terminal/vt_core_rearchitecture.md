@@ -600,6 +600,20 @@ Current full-scope read:
     same raw interaction bag
   - the active feed path no longer depends on a monolithic interaction bag;
     the remaining contradiction is narrower than raw interaction reach
+  Progress:
+  - the surviving host-contract dependency is now split too
+  - `protocol_execution.zig` no longer carries one mixed `host_contract` face
+  - the active feed receiver now carries two explicit faces instead:
+    - reporting contract
+    - host metrics
+  - `host_reporting.zig` now consumes those two faces explicitly instead of
+    treating flags, color state, and cell metrics as one bag
+  - `protocol_runtime.zig` now reads CSI reply geometry/color from host
+    metrics and resets reporting flags through the reporting-contract face
+  - kitty placement now reads only host metrics, not a broader host-contract
+    shape
+  - the next honest move is a rerank between reporting-contract dependence and
+    host-metric dependence, not another generic “host contract” cut
 
 Current named category-1 contradiction:
 

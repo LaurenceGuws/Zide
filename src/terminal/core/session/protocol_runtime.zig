@@ -12,11 +12,11 @@ pub fn emitReplyBytes(self: anytype, log_scope: []const u8, bytes: []const u8) b
 }
 
 pub fn csiReplyRuntimeSnapshot(self: anytype) CsiReplyRuntimeSnapshot {
-    const host_contract = host_reporting.hostContract(self);
+    const host_metrics = host_reporting.hostMetrics(self);
     return .{
-        .cell_height = host_contract.cell_height,
-        .cell_width = host_contract.cell_width,
-        .color_scheme_dark = host_contract.color_scheme_dark,
+        .cell_height = host_metrics.cell_height.*,
+        .cell_width = host_metrics.cell_width.*,
+        .color_scheme_dark = host_metrics.color_scheme_dark.*,
     };
 }
 
@@ -29,8 +29,8 @@ pub fn applyCsiReportingMode(self: anytype, mode: i32, enabled: bool) bool {
 }
 
 pub fn resetCsiReportingModes(self: anytype) void {
-    const host_contract = host_reporting.hostContract(self);
-    host_contract.report_color_scheme_2031 = false;
-    host_contract.inband_resize_notifications_2048 = false;
-    host_contract.kitty_paste_events_5522 = false;
+    const reporting_contract = host_reporting.reportingContract(self);
+    reporting_contract.report_color_scheme_2031.* = false;
+    reporting_contract.inband_resize_notifications_2048.* = false;
+    reporting_contract.kitty_paste_events_5522.* = false;
 }

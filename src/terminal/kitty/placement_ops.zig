@@ -2,21 +2,7 @@ const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const common = @import("common.zig");
 const terminal_core_protocol = @import("../core/protocol/terminal_core_protocol.zig");
-const interaction_fields = @import("../core/session/interaction_fields.zig");
-
-fn hostContract(self: anytype) *interaction_fields.HostContractState {
-    const receiver = switch (@typeInfo(@TypeOf(self))) {
-        .pointer => |ptr| switch (@typeInfo(ptr.child)) {
-            .pointer => self.*,
-            else => self,
-        },
-        else => @compileError("placement_ops expects a pointer receiver"),
-    };
-    if (@hasField(@TypeOf(receiver.session), "host_contract")) {
-        return receiver.session.host_contract;
-    }
-    return &receiver.session.interaction.host_contract;
-}
+const host_reporting = @import("../core/session/host_reporting.zig");
 
 pub const KittyPlacementOps = struct {
     pub fn dropForImage(self: anytype, image_id: u32, include_children: bool) void {
@@ -37,14 +23,14 @@ pub const KittyPlacementOps = struct {
         const screen = self.core.activeScreen();
         const kitty = common.kittyStateConst(self);
         const image = common.findKittyImageById(kitty.images.items, placement.image_id);
-        const host_contract = hostContract(self);
+        const host_metrics = host_reporting.hostMetrics(self);
         switch (common.kittyPlacementDirtyRegion(
             image,
             placement,
             screen.grid.rows,
             screen.grid.cols,
-            host_contract.cell_width,
-            host_contract.cell_height,
+            host_metrics.cell_width.*,
+            host_metrics.cell_height.*,
         )) {
             .none => {},
             .partial => |region| screen.grid.markDirtyRange(region.start_row, region.end_row, region.start_col, region.end_col),
@@ -79,7 +65,7 @@ pub const KittyPlacementOps = struct {
 
     pub fn effectiveColumns(self: anytype, control: common.KittyControl, image_id: u32) u32 {
         if (control.cols > 0) return control.cols;
-        const cell_w = @as(u32, hostContract(self).cell_width);
+        const cell_w = @as(u32, host_reporting.hostMetrics(self).cell_width.*);
         const width_px = if (control.width > 0) control.width else blk: {
             const kitty = common.kittyStateConst(self);
             const image = common.findKittyImageById(kitty.images.items, image_id) orelse break :blk 0;
@@ -91,7 +77,7 @@ pub const KittyPlacementOps = struct {
 
     pub fn effectiveRows(self: anytype, control: common.KittyControl, image_id: u32) u32 {
         if (control.rows > 0) return control.rows;
-        const cell_h = @as(u32, hostContract(self).cell_height);
+        const cell_h = @as(u32, host_reporting.hostMetrics(self).cell_height.*);
         const height_px = if (control.height > 0) control.height else blk: {
             const kitty = common.kittyStateConst(self);
             const image = common.findKittyImageById(kitty.images.items, image_id) orelse break :blk 0;

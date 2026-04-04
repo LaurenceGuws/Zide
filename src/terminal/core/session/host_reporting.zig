@@ -3,7 +3,6 @@ const app_logger = @import("../../../app_logger.zig");
 const osc_kitty_clipboard = @import("../../protocol/osc_kitty_clipboard.zig");
 const terminal_transport = @import("../runtime/terminal_transport.zig");
 const csi_mod = @import("../../protocol/csi.zig");
-const interaction_fields = @import("interaction_fields.zig");
 
 pub const ReportingSnapshot = struct {
     report_color_scheme_2031: bool,
@@ -11,35 +10,85 @@ pub const ReportingSnapshot = struct {
     kitty_paste_events_5522: bool,
 };
 
-pub fn hostContract(self: anytype) *interaction_fields.HostContractState {
-    const receiver = switch (@typeInfo(@TypeOf(self))) {
-        .pointer => |ptr| switch (@typeInfo(ptr.child)) {
-            .pointer => self.*,
-            else => self,
-        },
+pub const ReportingContractAccess = struct {
+    report_color_scheme_2031: *bool,
+    inband_resize_notifications_2048: *bool,
+    kitty_paste_events_5522: *bool,
+};
+
+pub const HostMetricsAccess = struct {
+    color_scheme_dark: *bool,
+    cell_width: *u16,
+    cell_height: *u16,
+};
+
+pub fn reportingContract(self: anytype) ReportingContractAccess {
+    switch (@typeInfo(@TypeOf(self))) {
+        .pointer => {},
         else => @compileError("host_reporting expects a pointer receiver"),
-    };
-    if (@hasField(@TypeOf(receiver.session), "host_contract")) {
-        return receiver.session.host_contract;
     }
-    return &receiver.session.interaction.host_contract;
+    if (@hasField(@TypeOf(self.*), "reporting_contract")) {
+        return .{
+            .report_color_scheme_2031 = self.reporting_contract.report_color_scheme_2031,
+            .inband_resize_notifications_2048 = self.reporting_contract.inband_resize_notifications_2048,
+            .kitty_paste_events_5522 = self.reporting_contract.kitty_paste_events_5522,
+        };
+    }
+    if (@hasField(@TypeOf(self.session), "reporting_contract")) {
+        return .{
+            .report_color_scheme_2031 = self.session.reporting_contract.report_color_scheme_2031,
+            .inband_resize_notifications_2048 = self.session.reporting_contract.inband_resize_notifications_2048,
+            .kitty_paste_events_5522 = self.session.reporting_contract.kitty_paste_events_5522,
+        };
+    }
+    return .{
+        .report_color_scheme_2031 = &self.session.interaction.host_contract.report_color_scheme_2031,
+        .inband_resize_notifications_2048 = &self.session.interaction.host_contract.inband_resize_notifications_2048,
+        .kitty_paste_events_5522 = &self.session.interaction.host_contract.kitty_paste_events_5522,
+    };
+}
+
+pub fn hostMetrics(self: anytype) HostMetricsAccess {
+    switch (@typeInfo(@TypeOf(self))) {
+        .pointer => {},
+        else => @compileError("host_reporting expects a pointer receiver"),
+    }
+    if (@hasField(@TypeOf(self.*), "host_metrics")) {
+        return .{
+            .color_scheme_dark = self.host_metrics.color_scheme_dark,
+            .cell_width = self.host_metrics.cell_width,
+            .cell_height = self.host_metrics.cell_height,
+        };
+    }
+    if (@hasField(@TypeOf(self.session), "host_metrics")) {
+        return .{
+            .color_scheme_dark = self.session.host_metrics.color_scheme_dark,
+            .cell_width = self.session.host_metrics.cell_width,
+            .cell_height = self.session.host_metrics.cell_height,
+        };
+    }
+    return .{
+        .color_scheme_dark = &self.session.interaction.host_contract.color_scheme_dark,
+        .cell_width = &self.session.interaction.host_contract.cell_width,
+        .cell_height = &self.session.interaction.host_contract.cell_height,
+    };
 }
 
 pub fn reportingSnapshot(self: anytype) ReportingSnapshot {
-    const host_contract = hostContract(self);
+    const reporting_contract = reportingContract(self);
     return .{
-        .report_color_scheme_2031 = host_contract.report_color_scheme_2031,
-        .inband_resize_notifications_2048 = host_contract.inband_resize_notifications_2048,
-        .kitty_paste_events_5522 = host_contract.kitty_paste_events_5522,
+        .report_color_scheme_2031 = reporting_contract.report_color_scheme_2031.*,
+        .inband_resize_notifications_2048 = reporting_contract.inband_resize_notifications_2048.*,
+        .kitty_paste_events_5522 = reporting_contract.kitty_paste_events_5522.*,
     };
 }
 
 pub fn applyCsiReportingMode(self: anytype, mode: i32, enabled: bool) bool {
-    const host_contract = hostContract(self);
+    const reporting_contract = reportingContract(self);
     switch (mode) {
-        2031 => host_contract.report_color_scheme_2031 = enabled,
-        2048 => host_contract.inband_resize_notifications_2048 = enabled,
-        5522 => host_contract.kitty_paste_events_5522 = enabled,
+        2031 => reporting_contract.report_color_scheme_2031.* = enabled,
+        2048 => reporting_contract.inband_resize_notifications_2048.* = enabled,
+        5522 => reporting_contract.kitty_paste_events_5522.* = enabled,
         else => return false,
     }
     return true;
@@ -55,12 +104,13 @@ pub fn decrqmReportingModeState(snapshot: ReportingSnapshot, mode: i32) ?csi_mod
 }
 
 pub fn reportInBandResize2048(self: anytype, rows: u16, cols: u16) !void {
-    const host_contract = hostContract(self);
-    if (!host_contract.inband_resize_notifications_2048) return;
+    const reporting_contract = reportingContract(self);
+    const host_metrics = hostMetrics(self);
+    if (!reporting_contract.inband_resize_notifications_2048.*) return;
     if (self.lockPtyWriter()) |writer_guard| {
         var writer = writer_guard;
-        const rows_px: u32 = @as(u32, rows) * @as(u32, host_contract.cell_height);
-        const cols_px: u32 = @as(u32, cols) * @as(u32, host_contract.cell_width);
+        const rows_px: u32 = @as(u32, rows) * @as(u32, host_metrics.cell_height.*);
+        const cols_px: u32 = @as(u32, cols) * @as(u32, host_metrics.cell_width.*);
         var buf: [64]u8 = undefined;
         const seq = try std.fmt.bufPrint(
             &buf,
@@ -73,9 +123,10 @@ pub fn reportInBandResize2048(self: anytype, rows: u16, cols: u16) !void {
 }
 
 pub fn reportColorSchemeChanged(self: anytype, dark: bool) !bool {
-    const host_contract = hostContract(self);
-    host_contract.color_scheme_dark = dark;
-    if (!host_contract.report_color_scheme_2031) {
+    const reporting_contract = reportingContract(self);
+    const host_metrics = hostMetrics(self);
+    host_metrics.color_scheme_dark.* = dark;
+    if (!reporting_contract.report_color_scheme_2031.*) {
         return false;
     }
     if (self.lockPtyWriter()) |writer_guard| {
@@ -91,7 +142,7 @@ pub fn reportColorSchemeChanged(self: anytype, dark: bool) !bool {
 }
 
 pub fn kittyPasteEvents5522Enabled(self: anytype) bool {
-    return hostContract(self).kitty_paste_events_5522;
+    return reportingContract(self).kitty_paste_events_5522.*;
 }
 
 pub fn sendKittyPasteEvent5522(self: anytype, clip: []const u8) !bool {
@@ -113,7 +164,7 @@ pub fn sendKittyPasteEvent5522WithMimeRich(
     uri_list: ?[]const u8,
     png: ?[]const u8,
 ) !bool {
-    if (!hostContract(self).kitty_paste_events_5522) {
+    if (!reportingContract(self).kitty_paste_events_5522.*) {
         return false;
     }
     if (!terminal_transport.Writer.exists(self)) {

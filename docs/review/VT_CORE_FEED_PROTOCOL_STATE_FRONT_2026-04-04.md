@@ -95,3 +95,32 @@ Current judgment after the split:
 - host-contract state still survives, but it survives as a separate explicit
   dependency rather than being smuggled through protocol state
 - the next contradiction is therefore narrower than “raw interaction reach”
+
+## Further Progress
+
+The surviving host-contract dependency is now split too.
+
+What changed:
+
+- [protocol_execution.zig](/home/home/personal/zide/src/terminal/core/session/protocol_execution.zig)
+  no longer carries one mixed `host_contract` face
+- the active feed receiver now carries two explicit faces instead:
+  - reporting contract
+  - host metrics
+- [host_reporting.zig](/home/home/personal/zide/src/terminal/core/session/host_reporting.zig)
+  now consumes those two faces explicitly instead of treating flags, color
+  state, and cell metrics as one bag
+- [protocol_runtime.zig](/home/home/personal/zide/src/terminal/core/session/protocol_runtime.zig)
+  now reads CSI reply geometry/color from host metrics and resets reporting
+  flags through the reporting-contract face
+- [placement_ops.zig](/home/home/personal/zide/src/terminal/kitty/placement_ops.zig)
+  now reads only host metrics, not a broader host-contract shape
+
+Current judgment after the host split:
+
+- the feed receiver no longer carries one mixed host-contract bag
+- the remaining contradiction is narrower again:
+  - reporting contract flags
+  - or host metrics/color state
+- the next move should rerank those two explicitly instead of treating them as
+  one surviving face

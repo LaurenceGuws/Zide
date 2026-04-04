@@ -17,8 +17,19 @@ const FeedResult = terminal_core_feed.FeedResult;
 pub const SessionFaces = struct {
     protocol_modes: *interaction_fields.ProtocolModeState,
     derived_snapshot: *interaction_fields.DerivedSnapshotState,
-    host_contract: *interaction_fields.HostContractState,
     publication: *publication_fields.Fields,
+};
+
+pub const ReportingContractFace = struct {
+    report_color_scheme_2031: *bool,
+    inband_resize_notifications_2048: *bool,
+    kitty_paste_events_5522: *bool,
+};
+
+pub const HostMetricsFace = struct {
+    color_scheme_dark: *bool,
+    cell_width: *u16,
+    cell_height: *u16,
 };
 
 pub const RuntimeWriteFace = struct {
@@ -42,6 +53,8 @@ pub const ProtocolExecution = struct {
     allocator: std.mem.Allocator,
     core: *TerminalCore,
     session: SessionFaces,
+    reporting_contract: ReportingContractFace,
+    host_metrics: HostMetricsFace,
     runtime: RuntimeWriteFace,
     state_mutex: *std.Thread.Mutex,
 
@@ -52,8 +65,17 @@ pub const ProtocolExecution = struct {
             .session = .{
                 .protocol_modes = &owner.session.interaction.protocol_modes,
                 .derived_snapshot = &owner.session.interaction.derived_snapshot,
-                .host_contract = &owner.session.interaction.host_contract,
                 .publication = &owner.session.publication,
+            },
+            .reporting_contract = .{
+                .report_color_scheme_2031 = &owner.session.interaction.host_contract.report_color_scheme_2031,
+                .inband_resize_notifications_2048 = &owner.session.interaction.host_contract.inband_resize_notifications_2048,
+                .kitty_paste_events_5522 = &owner.session.interaction.host_contract.kitty_paste_events_5522,
+            },
+            .host_metrics = .{
+                .color_scheme_dark = &owner.session.interaction.host_contract.color_scheme_dark,
+                .cell_width = &owner.session.interaction.host_contract.cell_width,
+                .cell_height = &owner.session.interaction.host_contract.cell_height,
             },
             .runtime = .{
                 .pty = &owner.session.runtime.pty,
