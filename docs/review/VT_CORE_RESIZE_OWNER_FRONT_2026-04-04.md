@@ -97,3 +97,25 @@ What remains:
 - host cell-metric staging
 - transport resize reporting
 - any deeper resize-side owner dependence still mixed into the reflow path
+
+## Post-First-Slice Rerank
+
+From this baseline, the remaining resize consequences now read mostly honest.
+
+Why:
+
+- host cell metrics live in
+  [host_contract](/home/home/personal/zide/src/terminal/core/session/interaction_fields.zig)
+  state and are consumed by
+  [host_reporting.zig](/home/home/personal/zide/src/terminal/core/session/host_reporting.zig)
+  for in-band resize reporting
+- PTY/external transport resize still belongs at the runtime edge through
+  [transport_runtime.zig](/home/home/personal/zide/src/terminal/core/session/transport_runtime.zig)
+
+Current judgment:
+
+- resize owner dependency is materially flatter now
+- do not keep stretching this front by trying to drag host metrics or transport
+  reporting into core
+- the next default pressure returns to broader `TerminalCore` sufficiency
+  unless one deeper resize-side owner dependency appears

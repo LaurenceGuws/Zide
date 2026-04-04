@@ -517,6 +517,10 @@ Current full-scope read:
     refresh inside the core resize/reflow path
   - outer resize orchestration now consumes that refresh deliberately after
     core resize returns
+  - post-first-slice rerank: host cell metrics and transport resize reporting
+    now read mostly honest as host-contract/runtime concerns
+  - the next default pressure returns to broader `TerminalCore` sufficiency
+    unless one deeper resize-side owner dependency appears
 
 Current named category-1 contradiction:
 
