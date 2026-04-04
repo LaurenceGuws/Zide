@@ -72,3 +72,28 @@ The next move must:
 
 The next default VT front is resize owner dependency unless a stronger named
 `TerminalCore` contradiction overtakes it immediately.
+
+## Progress
+
+The first resize slice is now landed:
+
+- [TerminalCore.resizeLocked(...)](/home/home/personal/zide/src/terminal/core/terminal_core.zig)
+  now returns explicit `ResizeEffect`
+- [resize_reflow.zig](/home/home/personal/zide/src/terminal/core/resize_reflow.zig)
+  no longer performs hidden scroll-view publication refresh inside the core
+  resize/reflow path
+- outer resize orchestration now consumes that refresh deliberately after the
+  core resize effect returns
+
+Why this counts:
+
+- terminal resize/reflow truth is more clearly separated from publication
+  consequences
+- the core-side resize path no longer finishes itself through hidden
+  publication choreography
+
+What remains:
+
+- host cell-metric staging
+- transport resize reporting
+- any deeper resize-side owner dependence still mixed into the reflow path

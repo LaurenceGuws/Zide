@@ -511,6 +511,12 @@ Current full-scope read:
     - transport resize reporting
   - the next move must separate terminal resize/reflow truth from those outer
     consequences instead of just renaming `owner`
+  - the first resize slice is now landed:
+    `TerminalCore.resizeLocked(...)` returns explicit `ResizeEffect`
+  - `resize_reflow.zig` no longer performs hidden scroll-view publication
+    refresh inside the core resize/reflow path
+  - outer resize orchestration now consumes that refresh deliberately after
+    core resize returns
 
 Current named category-1 contradiction:
 

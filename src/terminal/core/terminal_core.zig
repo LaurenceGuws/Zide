@@ -61,6 +61,11 @@ pub const TerminalCore = struct {
         scroll_offset: usize,
     };
 
+    pub const ResizeEffect = struct {
+        refresh_scroll_view: bool,
+        scroll_offset: usize,
+    };
+
     pub const ScrollAction = union(enum) {
         none,
         scroll_region_up: struct {
@@ -241,7 +246,7 @@ pub const TerminalCore = struct {
         };
     }
 
-    pub fn resizeLocked(_: *TerminalCore, owner: anytype, rows: u16, cols: u16) !void {
+    pub fn resizeLocked(_: *TerminalCore, owner: anytype, rows: u16, cols: u16) !ResizeEffect {
         return try @import("resize_reflow.zig").resizeCoreLocked(owner, rows, cols);
     }
 

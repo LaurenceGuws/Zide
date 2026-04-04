@@ -3,7 +3,6 @@ const terminal_transport = @import("runtime/terminal_transport.zig");
 const scrollback_buffer = @import("../model/scrollback_buffer.zig");
 const types = @import("../model/types.zig");
 const publication_flow = @import("publication/publication_flow.zig");
-const scrollback_view = @import("scrollback_view.zig");
 
 const PtySize = terminal_transport.PtySize;
 const Cell = types.Cell;
@@ -35,7 +34,10 @@ fn resizeInternal(
         self.session.interaction.host_contract.cell_width = size.cell_width;
         self.session.interaction.host_contract.cell_height = size.cell_height;
     }
-    try self.core.resizeLocked(self, rows, cols);
+    const effect = try self.core.resizeLocked(self, rows, cols);
+    if (effect.refresh_scroll_view) {
+        publication_flow.refreshScrollViewLocked(self, effect.scroll_offset);
+    }
     const cell_width = self.session.interaction.host_contract.cell_width;
     const cell_height = self.session.interaction.host_contract.cell_height;
     self.session.control.state_mutex.unlock();
@@ -50,7 +52,7 @@ fn resizeInternal(
     }
 }
 
-pub fn resizeCoreLocked(self: anytype, rows: u16, cols: u16) !void {
+pub fn resizeCoreLocked(self: anytype, rows: u16, cols: u16) !@import("terminal_core.zig").TerminalCore.ResizeEffect {
     const old_cols: u16 = self.core.primary.grid.cols;
     const old_rows: u16 = self.core.primary.grid.rows;
     self.core.history.ensureViewCache(old_cols, self.core.primary.defaultCell());
@@ -61,7 +63,7 @@ pub fn resizeCoreLocked(self: anytype, rows: u16, cols: u16) !void {
     const old_selection = self.core.selectionState();
 
     if (cols != old_cols and cols > 0 and old_cols > 0) {
-        try reflowResizePrimary(self, rows, cols, old_rows, old_cols, old_total_lines, old_scroll_offset, old_cursor, old_selection);
+        return try reflowResizePrimary(self, rows, cols, old_rows, old_cols, old_total_lines, old_scroll_offset, old_cursor, old_selection);
     } else {
         try self.core.primary.resize(rows, cols);
         try self.core.alt.resize(rows, cols);
@@ -74,8 +76,16 @@ pub fn resizeCoreLocked(self: anytype, rows: u16, cols: u16) !void {
                 self.core.history.saved_scrollback_offset = max_offset;
             }
             self.core.history.scrollback_offset = 0;
+            return .{
+                .refresh_scroll_view = false,
+                .scroll_offset = 0,
+            };
         } else {
-            scrollback_view.setScrollOffsetLocked(self, self.core.history.scrollback_offset);
+            const scroll_offset = self.core.setHostScrollbackOffset(self.core.history.scrollback_offset);
+            return .{
+                .refresh_scroll_view = true,
+                .scroll_offset = scroll_offset,
+            };
         }
     }
 }
@@ -101,7 +111,7 @@ fn reflowResizePrimary(
     old_scroll_offset: usize,
     old_cursor: types.CursorPos,
     old_selection: ?types.TerminalSelection,
-) !void {
+) !@import("terminal_core.zig").TerminalCore.ResizeEffect {
     const allocator = self.allocator;
     const default_cell = self.core.primary.defaultCell();
     const old_cols_usize = @as(usize, old_cols);
@@ -382,7 +392,6 @@ fn reflowResizePrimary(
         self.core.history.scrollback_offset = 0;
     } else {
         self.core.history.scrollback_offset = new_scroll_offset;
-        publication_flow.refreshScrollViewLocked(self, self.core.history.scrollback_offset);
     }
     const max_offset = self.core.history.maxScrollOffset(rows);
     if (self.core.history.saved_scrollback_offset > max_offset) {
@@ -462,4 +471,9 @@ fn reflowResizePrimary(
     }
 
     self.core.primary.wrap_next = false;
+
+    return .{
+        .refresh_scroll_view = self.core.active != .alt,
+        .scroll_offset = self.core.history.scrollback_offset,
+    };
 }
