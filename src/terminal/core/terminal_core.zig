@@ -56,6 +56,11 @@ pub const TerminalCore = struct {
         scroll_offset: usize,
     };
 
+    pub const EraseDisplayEffect = struct {
+        clear_selection: bool,
+        scroll_offset: usize,
+    };
+
     pub const ScrollAction = union(enum) {
         none,
         scroll_region_up: struct {
@@ -367,16 +372,21 @@ pub const TerminalCore = struct {
         };
     }
 
-    pub fn eraseDisplayLocked(self: *TerminalCore, owner: anytype, mode: i32) void {
+    pub fn eraseDisplayLocked(self: *TerminalCore, mode: i32) EraseDisplayEffect {
         const screen = self.activeScreen();
         const blank_cell = screen.blankCell();
         screen.eraseDisplay(mode, blank_cell);
+        var effect = EraseDisplayEffect{
+            .clear_selection = false,
+            .scroll_offset = self.scrollbackOffset(),
+        };
         if (mode == 0 or mode == 2 or mode == 3) {
             if (mode == 2 or mode == 3) {
-                @import("selection.zig").clearSelectionLocked(owner);
+                effect.clear_selection = true;
             }
             _ = self.clear_generation.fetchAdd(1, .acq_rel);
         }
+        return effect;
     }
 
     pub fn eraseLineLocked(self: *TerminalCore, mode: i32) void {

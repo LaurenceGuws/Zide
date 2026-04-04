@@ -19,7 +19,10 @@ pub fn clearAllKittyImages(self: anytype) void {
 }
 
 pub fn eraseDisplay(self: anytype, mode: i32) void {
-    self.core.eraseDisplayLocked(self, mode);
+    const effect = self.core.eraseDisplayLocked(mode);
+    if (effect.clear_selection) {
+        @import("../selection.zig").clearSelectionLocked(self);
+    }
 }
 
 pub fn eraseLine(self: anytype, mode: i32) void {

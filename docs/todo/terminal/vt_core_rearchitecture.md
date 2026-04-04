@@ -470,6 +470,20 @@ Current full-scope read:
     obvious enough to keep execution-face cleanup as the default front
   - the next default pressure returns to broader `TerminalCore` sufficiency
     unless one new explicit publication contradiction is named first
+  - the next exact broader contradiction is now named:
+    mode/reset effect ownership
+  - live pressure is concentrated in:
+    - `TerminalCore.resetState(...)`
+    - `TerminalCore.eraseDisplayLocked(...)`
+    - `terminal_core_modes.zig`
+    - `mode_effects.zig`
+  - the next move should define explicit terminal-mode/reset effects instead
+    of leaving outer mode helpers to complete the story by habit
+  - the first opening slice is now landed:
+    `TerminalCore.eraseDisplayLocked(...)` returns explicit
+    `EraseDisplayEffect` instead of taking outer owner shape just to clear
+    selection
+  - `terminal_core_protocol.zig` now consumes that consequence explicitly
 
 Current named category-1 contradiction:
 
