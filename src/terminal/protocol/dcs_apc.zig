@@ -2,7 +2,6 @@ const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const sync_updates = @import("../core/protocol/sync_updates.zig");
 const kitty_mod = @import("../kitty/graphics.zig");
-const terminal_core_protocol = @import("../core/protocol/terminal_core_protocol.zig");
 const protocol_runtime = @import("../core/session/protocol_runtime.zig");
 
 pub fn parseDcs(self: anytype, payload: []const u8) void {
@@ -42,7 +41,7 @@ fn handleXtgettcap(self: anytype, text: []const u8) void {
 
 fn handleDecrqss(self: anytype, text: []const u8) void {
     var buf: [128]u8 = undefined;
-    const ok_reply = terminal_core_protocol.decrqssReplyInto(self, text, &buf);
+    const ok_reply = self.core.decrqssReplyInto(text, &buf);
     writeDecrqssReply(self, ok_reply != null, ok_reply);
 }
 

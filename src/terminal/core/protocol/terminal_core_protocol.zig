@@ -3,7 +3,6 @@ const terminal_core_mod = @import("../terminal_core.zig");
 const types = @import("../../model/types.zig");
 const hyperlink_table = @import("../hyperlink_table.zig");
 const scrolling_mod = @import("../scrolling.zig");
-const terminal_core_decrqss = @import("terminal_core_decrqss.zig");
 
 pub fn appendHyperlink(self: anytype, uri: []const u8, max_hyperlinks: usize) ?u32 {
     return hyperlink_table.appendHyperlink(self, uri, max_hyperlinks);
@@ -79,8 +78,4 @@ pub fn getCell(self: anytype, row: usize, col: usize) types.Cell {
 
 pub fn getCursorPos(self: anytype) types.CursorPos {
     return self.core.activeScreenConst().cursorPos();
-}
-
-pub fn decrqssReplyInto(self: anytype, text: []const u8, buf: []u8) ?[]const u8 {
-    return terminal_core_decrqss.replyInto(self, text, buf);
 }

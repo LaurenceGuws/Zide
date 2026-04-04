@@ -16,6 +16,7 @@ const protocol_execution = @import("session/protocol_execution.zig");
 const terminal_core_kitty_storage = @import("terminal_core_kitty_storage.zig");
 const terminal_core_style = @import("protocol/terminal_core_style.zig");
 const scrolling = @import("scrolling.zig");
+const app_logger = @import("../../app_logger.zig");
 
 const Screen = screen_mod.Screen;
 const Charset = parser_mod.Charset;
@@ -511,6 +512,37 @@ pub const TerminalCore = struct {
 
     pub fn sgrReplyInto(self: *const TerminalCore, buf: []u8) ?[]const u8 {
         return terminal_core_style.sgrReplyInto(self, buf);
+    }
+
+    pub fn decrqssReplyInto(self: *const TerminalCore, text: []const u8, buf: []u8) ?[]const u8 {
+        const log = app_logger.logger("terminal.apc");
+        if (std.mem.eql(u8, text, " q")) {
+            return self.decrqssCursorStyleReplyText();
+        }
+        if (std.mem.eql(u8, text, "m")) {
+            return self.sgrReplyInto(buf);
+        }
+        if (std.mem.eql(u8, text, "r")) {
+            const screen = self.activeScreenConst();
+            return std.fmt.bufPrint(buf, "{d};{d}r", .{
+                screen.scroll_top + 1,
+                screen.scroll_bottom + 1,
+            }) catch |err| {
+                log.logf(.warning, "decrqss r reply format failed err={s}", .{@errorName(err)});
+                return null;
+            };
+        }
+        if (std.mem.eql(u8, text, "s")) {
+            const screen = self.activeScreenConst();
+            return std.fmt.bufPrint(buf, "{d};{d}s", .{
+                screen.left_margin + 1,
+                screen.right_margin + 1,
+            }) catch |err| {
+                log.logf(.warning, "decrqss s reply format failed err={s}", .{@errorName(err)});
+                return null;
+            };
+        }
+        return null;
     }
 
     pub fn newlineLocked(self: *TerminalCore) ScrollAction {

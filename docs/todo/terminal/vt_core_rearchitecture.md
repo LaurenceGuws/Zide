@@ -87,6 +87,15 @@ Current full-scope read:
   - reply assembly is flatter and more obviously composed from core truth plus
     honest runtime state
 
+- `docs/review/VT_CORE_DECRQSS_OWNER_FRONT_2026-04-04.md`
+  Why: after the CSI reply snapshot slice, DECRQSS remained one small but real
+  helper-owned terminal query slab beside `TerminalCore`.
+  Current read:
+  - full DECRQSS terminal query truth now lives directly on `TerminalCore`
+  - DCS/APC handling now reads more cleanly as framing and reply emission
+    around a core-owned capability
+  - the dead helper/query wrapper layer is gone
+
 - `docs/review/VT_SHELL_HOSTILE_AUDIT_2026-04-03.md`
   Why: with the wartime shell bar now explicit, the shell needs a hostile
   responsibility audit instead of vague legitimacy language.
