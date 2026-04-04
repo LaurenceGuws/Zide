@@ -499,6 +499,18 @@ Current full-scope read:
     near a stop-marker
   - the next default pressure returns to broader `TerminalCore` sufficiency
     unless one new exact mode/reset contradiction appears
+  - the next exact broader contradiction is now named:
+    resize owner dependency
+  - live pressure is concentrated in:
+    - `TerminalCore.resizeLocked(...)`
+    - `resize_reflow.zig`
+  - the active mixed story is:
+    - terminal reflow and selection remap
+    - host cell-metric staging
+    - scroll-view publication refresh
+    - transport resize reporting
+  - the next move must separate terminal resize/reflow truth from those outer
+    consequences instead of just renaming `owner`
 
 Current named category-1 contradiction:
 
