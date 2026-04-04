@@ -747,8 +747,32 @@ pub const TerminalCore = struct {
         self.activeScreen().setScrollRegion(top, bot);
     }
 
+    pub fn setScrollRegionFromParamsLocked(self: *TerminalCore, top_1: i32, bot_1: i32) void {
+        const screen = self.activeScreen();
+        const rows = @as(usize, screen.grid.rows);
+        if (rows == 0) return;
+        const top = @min(rows - 1, @as(usize, @intCast(@max(1, top_1) - 1)));
+        const bot = @min(rows - 1, @as(usize, @intCast(@max(1, bot_1) - 1)));
+        if (top < bot) {
+            screen.setScrollRegion(top, bot);
+        }
+    }
+
     pub fn setLeftRightMarginsLocked(self: *TerminalCore, left: usize, right: usize) void {
         self.activeScreen().setLeftRightMargins(left, right);
+    }
+
+    pub fn setLeftRightMarginsFromParamsLocked(self: *TerminalCore, left_1: i32, right_1: i32) bool {
+        const screen = self.activeScreen();
+        if (!screen.left_right_margin_mode_69) return false;
+        const cols = @as(usize, screen.grid.cols);
+        if (cols == 0) return true;
+        const left = @min(cols - 1, @as(usize, @intCast(@max(1, left_1) - 1)));
+        const right = @min(cols - 1, @as(usize, @intCast(@max(1, right_1) - 1)));
+        if (left < right) {
+            screen.setLeftRightMargins(left, right);
+        }
+        return true;
     }
 
     pub fn setCursorStyleLocked(self: *TerminalCore, mode: i32) void {

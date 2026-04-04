@@ -49,14 +49,9 @@ pub fn handleSimpleCsi(
             while (i < n) : (i += 1) self.core.backTabLocked();
         },
         'r' => {
-            const screen = self.core.activeScreen();
             const top_1 = if (param_len > 0 and params[0] > 0) params[0] else 1;
-            const bot_1 = if (param_len > 1 and params[1] > 0) params[1] else @as(i32, @intCast(screen.grid.rows));
-            const top = @min(@as(usize, screen.grid.rows - 1), @as(usize, @intCast(@max(1, top_1) - 1)));
-            const bot = @min(@as(usize, screen.grid.rows - 1), @as(usize, @intCast(@max(1, bot_1) - 1)));
-            if (top < bot) {
-                self.core.setScrollRegionLocked(top, bot);
-            }
+            const bot_1 = if (param_len > 1 and params[1] > 0) params[1] else std.math.maxInt(i32);
+            self.core.setScrollRegionFromParamsLocked(top_1, bot_1);
         },
         else => {},
     }
@@ -71,17 +66,9 @@ pub fn handleSpecialCsi(
     switch (action.final) {
         's' => {
             if (!action.private) {
-                const screen = self.core.activeScreen();
-                if (screen.left_right_margin_mode_69) {
-                    const cols = @as(usize, screen.grid.cols);
-                    if (cols == 0) return;
-                    const left_1 = if (param_len > 0 and params[0] > 0) params[0] else 1;
-                    const right_1 = if (param_len > 1 and params[1] > 0) params[1] else @as(i32, @intCast(cols));
-                    const left = @min(cols - 1, @as(usize, @intCast(@max(1, left_1) - 1)));
-                    const right = @min(cols - 1, @as(usize, @intCast(@max(1, right_1) - 1)));
-                    if (left < right) {
-                        self.core.setLeftRightMarginsLocked(left, right);
-                    }
+                const left_1 = if (param_len > 0 and params[0] > 0) params[0] else 1;
+                const right_1 = if (param_len > 1 and params[1] > 0) params[1] else std.math.maxInt(i32);
+                if (self.core.setLeftRightMarginsFromParamsLocked(left_1, right_1)) {
                     return;
                 }
                 terminal_core_modes.saveCursor(self);

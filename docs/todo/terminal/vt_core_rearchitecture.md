@@ -96,6 +96,15 @@ Current full-scope read:
     around a core-owned capability
   - the dead helper/query wrapper layer is gone
 
+- `docs/review/VT_CORE_GEOMETRY_MARGIN_OWNER_FRONT_2026-04-04.md`
+  Why: after DECRQSS moved inward, CSI still owned one small geometry/margin
+  normalization slab from raw screen state.
+  Current read:
+  - scroll-region and left-right-margin parameter normalization now live on
+    `TerminalCore`
+  - CSI execution is flatter and more clearly framed around core-owned
+    terminal geometry truth
+
 - `docs/review/VT_SHELL_HOSTILE_AUDIT_2026-04-03.md`
   Why: with the wartime shell bar now explicit, the shell needs a hostile
   responsibility audit instead of vague legitimacy language.
