@@ -521,6 +521,17 @@ Current full-scope read:
     now read mostly honest as host-contract/runtime concerns
   - the next default pressure returns to broader `TerminalCore` sufficiency
     unless one deeper resize-side owner dependency appears
+  - the next exact broader contradiction is now named:
+    feed execution dependency
+  - live pressure is concentrated in:
+    - `TerminalCore.feedOutputBytesLocked(...)`
+    - `protocol_execution.zig`
+  - the surviving issue is no longer shell-shaped ownership
+  - it is that core feed still needs a composite execution receiver bundling:
+    protocol state, publication/update reach, runtime write/wake reach, and
+    lock access
+  - the next move must isolate one narrower surviving feed execution
+    dependency instead of renaming that receiver again
 
 Current named category-1 contradiction:
 
