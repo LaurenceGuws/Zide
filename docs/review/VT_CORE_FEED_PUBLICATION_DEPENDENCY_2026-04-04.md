@@ -54,3 +54,27 @@ The bar stays the same:
 - do not just rename the execution surface
 - do not reopen broad publication cleanup
 - name one coherent publication/update contract inside feed execution first
+
+## Post-Cadence Rerank
+
+Publication/update reach still wins, but it is materially narrower now.
+
+Why:
+
+- parsed-output publication is now grouped as one explicit contract
+- pending-refresh request handling is now grouped as one explicit cadence
+  contract
+- runtime, locking, and protocol state still do not overtake publication in
+  active feed pressure
+
+Current strongest remainder:
+
+- poll-time publish-or-refresh behavior in:
+  - [protocol_execution.zig](/home/home/personal/zide/src/terminal/core/session/protocol_execution.zig)
+  - [pty_poll_publication.zig](/home/home/personal/zide/src/terminal/core/runtime/pty_poll_publication.zig)
+
+Current judgment:
+
+- publication still narrowly beats the other feed faces
+- the next slice, if this front continues, is poll-time publish-or-refresh
+  behavior

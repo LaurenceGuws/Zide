@@ -556,6 +556,11 @@ Current full-scope read:
     `PendingRefreshDecision` handling
   - `io_threads.zig` no longer spells out request-take vs request-publish
     handling as separate parse-thread steps
+  - post-cadence rerank:
+    publication/update reach still wins, but much more narrowly now
+  - the strongest remaining publication piece is poll-time
+    publish-or-refresh behavior through `protocol_execution.zig` and
+    `pty_poll_publication.zig`
 
 Current named category-1 contradiction:
 
