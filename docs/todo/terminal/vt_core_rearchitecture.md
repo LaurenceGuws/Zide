@@ -542,6 +542,11 @@ Current full-scope read:
   - that split is now explicit:
     parsed-output publication is the first coherent feed-publication contract
   - pending-refresh / poll cadence is the second cluster, not the first slice
+  - the first parsed-output publication slice is now landed:
+    active feed callers no longer spell out generation bump, cache update, and
+    output-pending marking separately
+  - `protocol_execution.zig` now owns that as one explicit parsed-output
+    publication contract
 
 Current named category-1 contradiction:
 

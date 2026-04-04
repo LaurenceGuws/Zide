@@ -112,17 +112,19 @@ pub const ProtocolExecution = struct {
         self.updateViewCacheForProtocol(self.pendingPublicationGeneration(), scroll_offset, "set_sync_updates");
     }
 
-    pub fn noteParsedOutput(self: *ProtocolExecution) u64 {
-        return self.bumpPublicationGeneration();
+    pub fn noteParsedOutputPending(self: *ProtocolExecution) void {
+        _ = self.bumpPublicationGeneration();
+        self.markOutputPending();
     }
 
-    pub fn consumeFeedResult(self: *ProtocolExecution, result: FeedResult, source: []const u8) void {
+    pub fn publishParsedOutput(self: *ProtocolExecution, result: FeedResult, source: []const u8) void {
         if (!result.parsed) return;
-        _ = self.noteParsedOutput();
+        _ = self.bumpPublicationGeneration();
         self.updateViewCacheForProtocol(self.pendingPublicationGeneration(), result.scroll_offset, source);
+        self.markOutputPending();
     }
 
-    pub fn publishPendingOutput(self: *ProtocolExecution, scroll_offset: usize, source: []const u8) void {
+    pub fn publishBufferedParsedOutput(self: *ProtocolExecution, scroll_offset: usize, source: []const u8) void {
         self.updateViewCacheForProtocol(self.pendingPublicationGeneration(), scroll_offset, source);
         self.markOutputPending();
     }

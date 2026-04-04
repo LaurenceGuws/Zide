@@ -41,3 +41,31 @@ The bar:
 - keep pending-refresh / poll cadence out of the first slice
 - make parsed-output publication read more like one explicit contract
 - do not widen this into generic publication cleanup
+
+## Progress
+
+The first parsed-output publication slice is now landed.
+
+What changed:
+
+- [protocol_execution.zig](/home/home/personal/zide/src/terminal/core/session/protocol_execution.zig)
+  now owns one explicit parsed-output publication contract through:
+  - `publishParsedOutput(...)`
+  - `publishBufferedParsedOutput(...)`
+  - `noteParsedOutputPending(...)`
+- active feed callers no longer spell out generation bump, cache update, and
+  output-pending marking as separate publication steps across:
+  - [terminal_core_feed.zig](/home/home/personal/zide/src/terminal/core/protocol/terminal_core_feed.zig)
+  - [pty_poll_processing.zig](/home/home/personal/zide/src/terminal/core/runtime/pty_poll_processing.zig)
+  - [io_threads.zig](/home/home/personal/zide/src/terminal/core/runtime/io_threads.zig)
+
+Why this counts:
+
+- parsed-output publication now reads more like one coherent feed-local
+  contract
+- the active feed callers no longer assemble that publication choreography
+  themselves
+
+What remains:
+
+- pending-refresh / poll cadence is still the second publication cluster

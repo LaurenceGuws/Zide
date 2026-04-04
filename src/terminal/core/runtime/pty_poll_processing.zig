@@ -75,7 +75,7 @@ pub fn processBufferedPtyOutput(self: anytype, input_pressure: bool) PtyPollResu
         self.session.control.state_mutex.lock();
         const result = self.core.feedOutputBytesLocked(self, temp[0..chunk_len]);
         var exec = protocol_execution.ProtocolExecution.init(self, &self.core);
-        exec.consumeFeedResult(result, "pty_poll_buffered_output");
+        exec.publishParsedOutput(result, "pty_poll_buffered_output");
         self.session.control.state_mutex.unlock();
         parse_lock_hold_ns += std.time.nanoTimestamp() - parse_lock_start_ns;
         processed += chunk_len;
@@ -107,7 +107,7 @@ pub fn processExternalTransportOutput(self: anytype, transport: anytype, input_p
         const parse_lock_start_ns = std.time.nanoTimestamp();
         const result = self.core.feedOutputBytesLocked(self, buf[0..n.?]);
         var exec = protocol_execution.ProtocolExecution.init(self, &self.core);
-        exec.consumeFeedResult(result, "pty_poll_external_output");
+        exec.publishParsedOutput(result, "pty_poll_external_output");
         parse_lock_hold_ns += std.time.nanoTimestamp() - parse_lock_start_ns;
         if (processed >= max_bytes_per_poll) break;
     }
