@@ -15,7 +15,9 @@ const Pty = pty_mod.Pty;
 const FeedResult = terminal_core_feed.FeedResult;
 
 pub const SessionFaces = struct {
-    interaction: *interaction_fields.Fields,
+    protocol_modes: *interaction_fields.ProtocolModeState,
+    derived_snapshot: *interaction_fields.DerivedSnapshotState,
+    host_contract: *interaction_fields.HostContractState,
     publication: *publication_fields.Fields,
 };
 
@@ -48,7 +50,9 @@ pub const ProtocolExecution = struct {
             .allocator = owner.allocator,
             .core = core,
             .session = .{
-                .interaction = &owner.session.interaction,
+                .protocol_modes = &owner.session.interaction.protocol_modes,
+                .derived_snapshot = &owner.session.interaction.derived_snapshot,
+                .host_contract = &owner.session.interaction.host_contract,
                 .publication = &owner.session.publication,
             },
             .runtime = .{

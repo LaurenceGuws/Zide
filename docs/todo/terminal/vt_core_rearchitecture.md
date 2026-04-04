@@ -584,6 +584,22 @@ Current full-scope read:
   - the next move must split one narrower feed-facing protocol-state contract
     that survives those dependencies instead of pretending `interaction` can
     already disappear
+  Progress:
+  - the first survivable feed-state split is now landed
+  - `protocol_execution.zig` no longer carries one raw `interaction` face
+  - the active feed receiver now carries explicit state faces instead:
+    - `protocol_modes`
+    - `derived_snapshot`
+    - `host_contract`
+  - `protocol_state.zig` now resolves protocol-mode and derived-snapshot
+    access through those explicit faces
+  - `input_modes.zig` now mutates and republishes input protocol state through
+    that narrower protocol-state contract
+  - `host_reporting.zig`, `protocol_runtime.zig`, and kitty placement metrics
+    now consume an explicit host-contract face instead of depending on the
+    same raw interaction bag
+  - the active feed path no longer depends on a monolithic interaction bag;
+    the remaining contradiction is narrower than raw interaction reach
 
 Current named category-1 contradiction:
 
