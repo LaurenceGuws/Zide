@@ -85,3 +85,41 @@ Current judgment after the cut:
   - color-scheme state
 - the next rerank should decide whether either of those still beats broader
   `TerminalCore` sufficiency
+
+## Final Rerank
+
+Neither remaining host-side face now beats broader `TerminalCore`
+sufficiency.
+
+### Reporting Contract Flags
+
+These now read mostly honest as explicit host opt-in contract.
+
+They control:
+
+- color-scheme reporting enablement
+- in-band resize reporting enablement
+- kitty paste event enablement
+
+That is runtime-facing host contract, not disguised terminal semantics.
+
+### Color-Scheme State
+
+This is now too narrow to justify staying the active front.
+
+It influences:
+
+- CSI color-scheme preference reply
+- host-triggered color-scheme change reporting
+
+That is a real dependency, but not a stronger contradiction than the broader
+terminal-object maturity questions now back on the board.
+
+## Decision
+
+This feed host-face lane is at a stop-marker.
+
+Do not keep shaving reporting or color-state faces by momentum.
+
+The next default VT pressure returns to broader `TerminalCore` sufficiency
+from this cleaner baseline.

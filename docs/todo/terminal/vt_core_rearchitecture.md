@@ -652,6 +652,15 @@ Current full-scope read:
     - color-scheme state
   - the next rerank should decide whether either of those still beats broader
     `TerminalCore` sufficiency
+  Final rerank:
+  - neither remaining host-side face now beats broader `TerminalCore`
+    sufficiency
+  - reporting contract flags now read mostly honest as explicit host opt-in
+    runtime contract
+  - color-scheme state is too narrow to justify staying the active front
+  - this feed host-face lane is now at a stop-marker
+  - the next default VT pressure returns to broader `TerminalCore`
+    sufficiency from this cleaner baseline
 
 Current named category-1 contradiction:
 
