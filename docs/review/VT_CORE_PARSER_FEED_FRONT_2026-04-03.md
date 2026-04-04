@@ -270,3 +270,11 @@ The runtime side then lost its dead compatibility residue too:
 See:
 
 - [VT_POST_POLL_PUBLICATION_RERANK_2026-04-04.md](/home/home/personal/zide/docs/review/VT_POST_POLL_PUBLICATION_RERANK_2026-04-04.md)
+
+The post-execution-face rerank is now explicit too:
+
+- [VT_POST_EXECUTION_FACE_RERANK_2026-04-04.md](/home/home/personal/zide/docs/review/VT_POST_EXECUTION_FACE_RERANK_2026-04-04.md)
+- execution-face cleanup no longer wins by default
+- publication does not get to stay active by inertia alone
+- the next default pressure returns to broader `TerminalCore` sufficiency
+  unless one new exact publication contradiction is named first

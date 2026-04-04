@@ -321,3 +321,15 @@ That means:
 See:
 
 - [VT_POST_POLL_PUBLICATION_RERANK_2026-04-04.md](/home/home/personal/zide/docs/review/VT_POST_POLL_PUBLICATION_RERANK_2026-04-04.md)
+
+That means the next rerank is no longer "publication vs runtime" by momentum.
+
+It is now:
+
+- can we name one new coherent publication contract from this baseline?
+- if not, execution-face cleanup stops and broader `TerminalCore` sufficiency
+  becomes the default front again
+
+See:
+
+- [VT_POST_EXECUTION_FACE_RERANK_2026-04-04.md](/home/home/personal/zide/docs/review/VT_POST_EXECUTION_FACE_RERANK_2026-04-04.md)

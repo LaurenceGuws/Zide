@@ -466,6 +466,10 @@ Current full-scope read:
   - post-poll rerank: runtime compatibility is no longer a broad surviving
     execution face; the next move must freshly prove whether publication still
     wins or whether execution-face cleanup is no longer the default front
+  - post-execution-face rerank: no new coherent publication contract is
+    obvious enough to keep execution-face cleanup as the default front
+  - the next default pressure returns to broader `TerminalCore` sufficiency
+    unless one new explicit publication contradiction is named first
 
 Current named category-1 contradiction:
 
