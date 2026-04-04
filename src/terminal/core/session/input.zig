@@ -1,6 +1,5 @@
 const std = @import("std");
 const input_modes = @import("../input_modes.zig");
-const terminal_core_text = @import("../protocol/terminal_core_text.zig");
 const terminal_transport = @import("../runtime/terminal_transport.zig");
 const host_reporting = @import("host_reporting.zig");
 const session_interaction = @import("interaction.zig");
@@ -35,7 +34,7 @@ const CharActionContext = struct {
 
 fn echoCharLocallyIfEligible(self: anytype, char: u32, eligible: bool) void {
     if (!eligible) return;
-    terminal_core_text.handleCodepoint(self, char);
+    self.core.writeCodepointLocked(char);
 }
 
 pub fn sendKey(self: anytype, key: Key, mod: Modifier) !void {
@@ -334,7 +333,7 @@ test "alternate scroll mapping comes from core dispatch" {
 
     session_runtime.attachExternalTransport(session);
     @import("../input_modes.zig").setAppCursorKeys(session, true);
-    terminal_core_text.handleCodepoint(session, 'x');
+    session.core.writeCodepointLocked('x');
     session.core.active = .alt;
     @import("../input_modes.zig").publishSnapshot(session);
 

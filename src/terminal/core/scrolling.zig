@@ -18,7 +18,11 @@ pub fn consumeScrollAction(self: anytype, action: ScrollAction) void {
 }
 
 pub fn scrollRegionUpWithOrigin(self: anytype, count: usize, origin: ?[]const u8) void {
-    const screen = self.core.activeScreen();
+    const core = if (@hasField(@TypeOf(self.*), "active") and @hasField(@TypeOf(self.*), "history"))
+        self
+    else
+        self.core;
+    const screen = core.activeScreen();
     const cols = @as(usize, screen.grid.cols);
     if (cols == 0 or screen.grid.rows == 0) return;
     const n = @min(count, screen.scroll_bottom - screen.scroll_top + 1);
@@ -42,7 +46,11 @@ pub fn scrollRegionUp(self: anytype, count: usize) void {
 }
 
 pub fn scrollRegionDown(self: anytype, count: usize) void {
-    const screen = self.core.activeScreen();
+    const core = if (@hasField(@TypeOf(self.*), "active") and @hasField(@TypeOf(self.*), "history"))
+        self
+    else
+        self.core;
+    const screen = core.activeScreen();
     const cols = @as(usize, screen.grid.cols);
     if (cols == 0 or screen.grid.rows == 0) return;
     const n = @min(count, screen.scroll_bottom - screen.scroll_top + 1);
@@ -53,7 +61,11 @@ pub fn scrollRegionDown(self: anytype, count: usize) void {
 }
 
 pub fn scrollUp(self: anytype) void {
-    const screen = self.core.activeScreen();
+    const core = if (@hasField(@TypeOf(self.*), "active") and @hasField(@TypeOf(self.*), "history"))
+        self
+    else
+        self.core;
+    const screen = core.activeScreen();
     const cols = @as(usize, screen.grid.cols);
     const rows = @as(usize, screen.grid.rows);
     if (rows == 0 or cols == 0) return;
@@ -70,12 +82,20 @@ pub fn scrollUp(self: anytype) void {
 }
 
 fn isFullScrollRegion(self: anytype) bool {
-    return self.core.activeScreenConst().isFullScrollRegion();
+    const core = if (@hasField(@TypeOf(self.*), "active") and @hasField(@TypeOf(self.*), "history"))
+        self
+    else
+        self.core;
+    return core.activeScreenConst().isFullScrollRegion();
 }
 
 fn isTopAnchoredFullWidthRegion(self: anytype) bool {
-    const screen = self.core.activeScreenConst();
-    if (self.core.active == .alt) return false;
+    const core = if (@hasField(@TypeOf(self.*), "active") and @hasField(@TypeOf(self.*), "history"))
+        self
+    else
+        self.core;
+    const screen = core.activeScreenConst();
+    if (core.active == .alt) return false;
     if (screen.scroll_top != 0) return false;
     if (screen.left_right_margin_mode_69) return false;
     const cols = @as(usize, screen.grid.cols);
@@ -86,20 +106,28 @@ fn isTopAnchoredFullWidthRegion(self: anytype) bool {
 fn regionFeedsScrollback(self: anytype) bool {
     const full_region = isFullScrollRegion(self);
     const top_anchored = isTopAnchoredFullWidthRegion(self);
-    if (self.core.sync_updates_active) {
+    const core = if (@hasField(@TypeOf(self.*), "active") and @hasField(@TypeOf(self.*), "history"))
+        self
+    else
+        self.core;
+    if (core.sync_updates_active) {
         return top_anchored and !full_region;
     }
     return full_region or top_anchored;
 }
 
 fn pushScrollbackRow(self: anytype, row: usize) void {
-    if (self.core.active == .alt) return;
-    const screen = &self.core.primary;
+    const core = if (@hasField(@TypeOf(self.*), "active") and @hasField(@TypeOf(self.*), "history"))
+        self
+    else
+        self.core;
+    if (core.active == .alt) return;
+    const screen = &core.primary;
     const cols = @as(usize, screen.grid.cols);
     if (cols == 0 or screen.grid.rows == 0) return;
     if (row >= @as(usize, screen.grid.rows)) return;
     const row_start = row * cols;
     const wrapped = screen.grid.rowWrapped(row);
-    self.core.history.pushRow(screen.grid.cells.items[row_start .. row_start + cols], wrapped, screen.defaultCell());
-    self.core.kitty_primary.scrollback_total += 1;
+    core.history.pushRow(screen.grid.cells.items[row_start .. row_start + cols], wrapped, screen.defaultCell());
+    core.kitty_primary.scrollback_total += 1;
 }

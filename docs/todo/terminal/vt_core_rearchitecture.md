@@ -67,6 +67,16 @@ Current full-scope read:
   - the next pressure returns to broader `TerminalCore` sufficiency from this
     cleaner baseline
 
+- `docs/review/VT_CORE_TEXT_OWNER_FRONT_2026-04-04.md`
+  Why: after style/color ownership flattened, printable text was the next
+  coherent terminal-semantic slab still completing beside `TerminalCore`.
+  Current read:
+  - printable codepoint and ASCII-run writes now terminate directly on
+    `TerminalCore`
+  - parser dispatch and local echo now use the same core-owned text path
+  - scrollback and kitty follow-through remain explicit lower-level consumers,
+    but they no longer keep text protocol-owned
+
 - `docs/review/VT_SHELL_HOSTILE_AUDIT_2026-04-03.md`
   Why: with the wartime shell bar now explicit, the shell needs a hostile
   responsibility audit instead of vague legitimacy language.

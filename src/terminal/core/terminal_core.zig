@@ -15,6 +15,7 @@ const session_host_types = @import("session/host_types.zig");
 const protocol_execution = @import("session/protocol_execution.zig");
 const terminal_core_kitty_storage = @import("terminal_core_kitty_storage.zig");
 const terminal_core_style = @import("protocol/terminal_core_style.zig");
+const scrolling = @import("scrolling.zig");
 
 const Screen = screen_mod.Screen;
 const Charset = parser_mod.Charset;
@@ -517,6 +518,110 @@ pub const TerminalCore = struct {
             return .{ .scroll_region_down = 1 };
         }
         return .none;
+    }
+
+    pub fn writeCodepointLocked(self: *TerminalCore, codepoint: u32) void {
+        if (codepoint == 0) return;
+        if (codepoint > 0x10FFFF or (codepoint >= 0xD800 and codepoint <= 0xDFFF)) return;
+
+        var cp = codepoint;
+        if (self.glCharset() == .dec_special) {
+            cp = screen_mod.mapDecSpecial(codepoint);
+        }
+
+        const screen = self.activeScreen();
+        const rows = @as(usize, screen.grid.rows);
+        const cols = @as(usize, screen.grid.cols);
+        if (rows == 0 or cols == 0) return;
+        if (screen.cursor.row >= rows) return;
+        while (true) {
+            switch (screen.prepareWrite()) {
+                .done => return,
+                .need_wrap => {
+                    scrolling.consumeScrollAction(self, self.wrapNewlineLocked());
+                    continue;
+                },
+                .proceed => break,
+            }
+        }
+
+        if (screen.auto_wrap and cols > 1) {
+            const cp_width = screen_mod.Screen.codepointCellWidth(cp);
+            const right = screen.writeRightBoundary();
+            const cpw: usize = cp_width;
+            if (cp_width > 1 and screen.cursor.col + cpw > right + 1) {
+                scrolling.consumeScrollAction(self, self.wrapNewlineLocked());
+                while (true) {
+                    switch (screen.prepareWrite()) {
+                        .done => return,
+                        .need_wrap => {
+                            scrolling.consumeScrollAction(self, self.wrapNewlineLocked());
+                            continue;
+                        },
+                        .proceed => break,
+                    }
+                }
+            }
+        }
+
+        var attrs = screen.current_attrs;
+        self.applyHyperlinkAttrs(&attrs);
+        const cp_width = screen_mod.Screen.codepointCellWidth(cp);
+        if (screen.insert_mode and cp_width > 0) {
+            self.insertCharsLocked(@intCast(cp_width));
+        }
+        screen.writeCodepoint(cp, attrs);
+    }
+
+    pub fn writeAsciiSliceLocked(self: *TerminalCore, bytes: []const u8) void {
+        if (bytes.len == 0) return;
+        const screen = self.activeScreen();
+        const rows = @as(usize, screen.grid.rows);
+        const cols = @as(usize, screen.grid.cols);
+        if (rows == 0 or cols == 0) return;
+        if (screen.cursor.row >= rows) return;
+
+        var attrs = screen.current_attrs;
+        self.applyHyperlinkAttrs(&attrs);
+        const use_dec_special = self.glCharset() == .dec_special;
+
+        if (screen.insert_mode) {
+            for (bytes) |b| {
+                while (true) {
+                    switch (screen.prepareWrite()) {
+                        .done => return,
+                        .need_wrap => {
+                            scrolling.consumeScrollAction(self, self.wrapNewlineLocked());
+                            continue;
+                        },
+                        .proceed => break,
+                    }
+                }
+                self.insertCharsLocked(1);
+                screen.writeCodepoint(@intCast(b), attrs);
+            }
+            return;
+        }
+
+        var i: usize = 0;
+        while (i < bytes.len) {
+            switch (screen.prepareWrite()) {
+                .done => break,
+                .need_wrap => {
+                    scrolling.consumeScrollAction(self, self.wrapNewlineLocked());
+                    continue;
+                },
+                .proceed => {},
+            }
+
+            const ascii_origin = if (use_dec_special)
+                "core.ascii_run.dec_special"
+            else
+                "core.ascii_run";
+            const run_len = screen.writeAsciiRun(bytes[i..], attrs, use_dec_special, ascii_origin);
+            if (run_len == 0) break;
+            i += run_len;
+        }
     }
 
     pub fn backspaceLocked(self: *TerminalCore) void {
