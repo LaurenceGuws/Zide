@@ -54,6 +54,19 @@ Current full-scope read:
 - interaction ownership and mutation/publication maturity are now lower-pressure
   guardrails unless a fresh named contradiction appears
 
+- `docs/review/VT_CORE_STYLE_COLOR_OWNER_FRONT_2026-04-04.md`
+  Why: after the recent mode, keymode, and kitty-storage cuts, the next
+  terminal-semantic owner contradiction was style/color state still living in
+  protocol files.
+  Current read:
+  - SGR mutation, style-side DECRQSS truth, and OSC dynamic color query truth
+    now terminate on a core-side style owner instead of protocol-local screen
+    state
+  - this materially flattens one more coherent terminal-semantic slab beside
+    `TerminalCore`
+  - the next pressure returns to broader `TerminalCore` sufficiency from this
+    cleaner baseline
+
 - `docs/review/VT_SHELL_HOSTILE_AUDIT_2026-04-03.md`
   Why: with the wartime shell bar now explicit, the shell needs a hostile
   responsibility audit instead of vague legitimacy language.

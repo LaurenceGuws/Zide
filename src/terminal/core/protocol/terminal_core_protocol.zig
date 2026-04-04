@@ -72,10 +72,6 @@ pub fn scrollRegionDown(self: anytype, count: usize) void {
     scrolling_mod.scrollRegionDown(self, count);
 }
 
-pub fn paletteColor(self: anytype, idx: u8) types.Color {
-    return self.core.palette_current[idx];
-}
-
 pub fn getCell(self: anytype, row: usize, col: usize) types.Cell {
     const screen = self.core.activeScreenConst();
     return screen.cellAtOr(row, col, self.core.primary.defaultCell());

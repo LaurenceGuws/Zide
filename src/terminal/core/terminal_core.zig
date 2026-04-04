@@ -14,6 +14,7 @@ const hyperlink_table = @import("hyperlink_table.zig");
 const session_host_types = @import("session/host_types.zig");
 const protocol_execution = @import("session/protocol_execution.zig");
 const terminal_core_kitty_storage = @import("terminal_core_kitty_storage.zig");
+const terminal_core_style = @import("protocol/terminal_core_style.zig");
 
 const Screen = screen_mod.Screen;
 const Charset = parser_mod.Charset;
@@ -474,6 +475,18 @@ pub const TerminalCore = struct {
         const screen = self.activeScreen();
         const blank_cell = screen.blankCell();
         screen.deleteLines(count, blank_cell);
+    }
+
+    pub fn applySgrLocked(self: *TerminalCore, params: []const i32) void {
+        terminal_core_style.applySgrLocked(self, params);
+    }
+
+    pub fn decrqssCursorStyleReplyText(self: *const TerminalCore) []const u8 {
+        return terminal_core_style.decrqssCursorStyleReplyText(self);
+    }
+
+    pub fn sgrReplyInto(self: *const TerminalCore, buf: []u8) ?[]const u8 {
+        return terminal_core_style.sgrReplyInto(self, buf);
     }
 
     pub fn newlineLocked(self: *TerminalCore) ScrollAction {
@@ -1126,6 +1139,10 @@ pub const TerminalCore = struct {
                 }
             },
         }
+    }
+
+    pub fn dynamicColorValue(self: *const TerminalCore, code: u8) types.Color {
+        return terminal_core_style.dynamicColorValue(self, code);
     }
 
     pub fn takeOscClipboardCopy(

@@ -6,8 +6,6 @@ const app_logger = @import("../../app_logger.zig");
 const protocol_runtime = @import("../core/session/protocol_runtime.zig");
 const OscTerminator = parser_mod.OscTerminator;
 
-const dynamic_color_base: u8 = 10;
-
 pub fn buildDefaultPalette() [256]types.Color {
     var palette: [256]types.Color = undefined;
     var idx: usize = 0;
@@ -49,7 +47,7 @@ pub fn handleOscPaletteReset(self: anytype, text: []const u8) void {
 
 pub fn handleOscDynamicColor(self: anytype, code: u8, text: []const u8, terminator: OscTerminator) void {
     if (text.len == 1 and text[0] == '?') {
-        const color = dynamicColorValue(self, code);
+        const color = self.core.dynamicColorValue(code);
         writeOscColorReply(self, code, color, terminator);
         return;
     }
@@ -60,20 +58,6 @@ pub fn handleOscDynamicColor(self: anytype, code: u8, text: []const u8, terminat
 
 pub fn handleOscDynamicReset(self: anytype, code: u8) void {
     config.setDynamicColorCodeLocked(self, code - 100, null);
-}
-
-pub fn dynamicColorValue(self: anytype, code: u8) types.Color {
-    if (code == 10) return self.core.primary.default_attrs.fg;
-    if (code == 11) return self.core.primary.default_attrs.bg;
-    const idx = @as(usize, code - dynamic_color_base);
-    if (idx < self.core.dynamic_colors.len) {
-        if (self.core.dynamic_colors[idx]) |color| return color;
-    }
-    return switch (code) {
-        12 => self.core.primary.default_attrs.fg,
-        17, 19 => self.core.primary.default_attrs.bg,
-        else => self.core.primary.default_attrs.fg,
-    };
 }
 
 fn parseOscColor(text: []const u8) ?types.Color {

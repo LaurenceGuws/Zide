@@ -195,5 +195,5 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
 }
 
 pub fn applySgr(self: anytype, action: parser_csi.CsiAction) void {
-    csi_style_reset.applySgr(self, action, effectiveSgrParamCount);
+    self.core.applySgrLocked(action.params[0..effectiveSgrParamCount(action)]);
 }
