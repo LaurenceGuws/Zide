@@ -2656,6 +2656,16 @@ Validation note, 2026-03-31:
 
 ## Current Review Scope
 
+- `docs/review/VT_CORE_CURSOR_TAB_OWNER_FRONT_2026-04-04.md`
+  Why: after the kitty-storage owner cut, the next honest `TerminalCore`
+  sufficiency contradiction was that basic cursor/tab/margin semantics still
+  terminated on raw screen calls in protocol handlers.
+  Current read:
+  - cursor, tab, carriage-return, margin, and cursor-style semantics now live
+    on direct core-owned verbs
+  - control/CSI/ESC handlers now route that slab through `TerminalCore`
+  - lower-level `Screen` navigation remains mechanism, not the semantic center
+
 - `docs/review/VT_CORE_KITTY_STORAGE_OWNER_FRONT_2026-04-04.md`
   Why: after the feed host-face stop-marker, the next honest owner-shaped
   contradiction was kitty storage cleanup still depending on outer-shaped

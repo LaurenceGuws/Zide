@@ -484,6 +484,82 @@ pub const TerminalCore = struct {
         return .none;
     }
 
+    pub fn backspaceLocked(self: *TerminalCore) void {
+        self.activeScreen().backspace();
+    }
+
+    pub fn tabLocked(self: *TerminalCore) void {
+        self.activeScreen().tab();
+    }
+
+    pub fn backTabLocked(self: *TerminalCore) void {
+        self.activeScreen().backTab();
+    }
+
+    pub fn clearTabAtCursorLocked(self: *TerminalCore) void {
+        self.activeScreen().clearTabAtCursor();
+    }
+
+    pub fn setTabAtCursorLocked(self: *TerminalCore) void {
+        self.activeScreen().setTabAtCursor();
+    }
+
+    pub fn clearAllTabsLocked(self: *TerminalCore) void {
+        self.activeScreen().clearAllTabs();
+    }
+
+    pub fn carriageReturnLocked(self: *TerminalCore) void {
+        self.activeScreen().carriageReturn();
+    }
+
+    pub fn cursorUpLocked(self: *TerminalCore, delta: usize) void {
+        self.activeScreen().cursorUp(delta);
+    }
+
+    pub fn cursorDownLocked(self: *TerminalCore, delta: usize) void {
+        self.activeScreen().cursorDown(delta);
+    }
+
+    pub fn cursorForwardLocked(self: *TerminalCore, delta: usize) void {
+        self.activeScreen().cursorForward(delta);
+    }
+
+    pub fn cursorBackLocked(self: *TerminalCore, delta: usize) void {
+        self.activeScreen().cursorBack(delta);
+    }
+
+    pub fn cursorNextLineLocked(self: *TerminalCore, delta: usize) void {
+        self.activeScreen().cursorNextLine(delta);
+    }
+
+    pub fn cursorPrevLineLocked(self: *TerminalCore, delta: usize) void {
+        self.activeScreen().cursorPrevLine(delta);
+    }
+
+    pub fn cursorColAbsoluteLocked(self: *TerminalCore, col_1: i32) void {
+        self.activeScreen().cursorColAbsolute(col_1);
+    }
+
+    pub fn cursorPosAbsoluteLocked(self: *TerminalCore, row_1: i32, col_1: i32) void {
+        self.activeScreen().cursorPosAbsolute(row_1, col_1);
+    }
+
+    pub fn cursorRowAbsoluteLocked(self: *TerminalCore, row_1: i32) void {
+        self.activeScreen().cursorRowAbsolute(row_1);
+    }
+
+    pub fn setScrollRegionLocked(self: *TerminalCore, top: usize, bot: usize) void {
+        self.activeScreen().setScrollRegion(top, bot);
+    }
+
+    pub fn setLeftRightMarginsLocked(self: *TerminalCore, left: usize, right: usize) void {
+        self.activeScreen().setLeftRightMargins(left, right);
+    }
+
+    pub fn setCursorStyleLocked(self: *TerminalCore, mode: i32) void {
+        self.activeScreen().setCursorStyle(mode);
+    }
+
     pub fn scrollbackOffset(self: *const TerminalCore) usize {
         return if (self.active == .alt) 0 else self.history.scrollOffset();
     }

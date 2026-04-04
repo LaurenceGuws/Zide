@@ -85,14 +85,6 @@ pub fn getCursorPos(self: anytype) types.CursorPos {
     return self.core.activeScreenConst().cursorPos();
 }
 
-pub fn setCursorStyle(self: anytype, mode: i32) void {
-    self.core.activeScreen().setCursorStyle(mode);
-}
-
-pub fn setTabAtCursor(self: anytype) void {
-    self.core.activeScreen().setTabAtCursor();
-}
-
 pub fn decrqssReplyInto(self: anytype, text: []const u8, buf: []u8) ?[]const u8 {
     return terminal_core_decrqss.replyInto(self, text, buf);
 }

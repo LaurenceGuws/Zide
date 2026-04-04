@@ -1,17 +1,16 @@
 pub fn handleControl(self: anytype, byte: u8) void {
-    const screen = self.core.activeScreen();
     switch (byte) {
         0x08 => { // BS
-            screen.backspace();
+            self.core.backspaceLocked();
         },
         0x09 => { // TAB (every 8 columns)
-            screen.tab();
+            self.core.tabLocked();
         },
         0x0A => { // LF
             @import("terminal_core_protocol.zig").newline(self);
         },
         0x0D => { // CR
-            screen.carriageReturn();
+            self.core.carriageReturnLocked();
         },
         0x0E => { // SO (Shift Out) -> G1
             self.core.shiftOutCharset();

@@ -18,7 +18,7 @@ pub fn handleEscSemanticEffect(self: anytype, byte: u8) bool {
             return true;
         },
         'H' => {
-            terminal_core_protocol.setTabAtCursor(self);
+            self.core.setTabAtCursorLocked();
             return true;
         },
         'M' => { // RI

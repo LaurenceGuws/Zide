@@ -15,23 +15,22 @@ pub fn handleSimpleCsi(
             return if (idx < parser_csi.max_params) local_params[idx] else default;
         }
     }.at;
-    const screen = self.core.activeScreen();
 
     switch (action.final) {
-        'A' => screen.cursorUp(@intCast(@max(1, get(params, 0, 1)))),
-        'B' => screen.cursorDown(@intCast(@max(1, get(params, 0, 1)))),
-        'C' => screen.cursorForward(@intCast(@max(1, get(params, 0, 1)))),
-        'D' => screen.cursorBack(@intCast(@max(1, get(params, 0, 1)))),
-        'E' => screen.cursorNextLine(@intCast(@max(1, get(params, 0, 1)))),
-        'F' => screen.cursorPrevLine(@intCast(@max(1, get(params, 0, 1)))),
-        'G' => screen.cursorColAbsolute(@max(1, get(params, 0, 1))),
+        'A' => self.core.cursorUpLocked(@intCast(@max(1, get(params, 0, 1)))),
+        'B' => self.core.cursorDownLocked(@intCast(@max(1, get(params, 0, 1)))),
+        'C' => self.core.cursorForwardLocked(@intCast(@max(1, get(params, 0, 1)))),
+        'D' => self.core.cursorBackLocked(@intCast(@max(1, get(params, 0, 1)))),
+        'E' => self.core.cursorNextLineLocked(@intCast(@max(1, get(params, 0, 1)))),
+        'F' => self.core.cursorPrevLineLocked(@intCast(@max(1, get(params, 0, 1)))),
+        'G' => self.core.cursorColAbsoluteLocked(@max(1, get(params, 0, 1))),
         'I' => {
             var i: i32 = 0;
             const n = @max(1, get(params, 0, 1));
-            while (i < n) : (i += 1) screen.tab();
+            while (i < n) : (i += 1) self.core.tabLocked();
         },
-        'H', 'f' => screen.cursorPosAbsolute(@max(1, get(params, 0, 1)), @max(1, get(params, 1, 1))),
-        'd' => screen.cursorRowAbsolute(@max(1, get(params, 0, 1))),
+        'H', 'f' => self.core.cursorPosAbsoluteLocked(@max(1, get(params, 0, 1)), @max(1, get(params, 1, 1))),
+        'd' => self.core.cursorRowAbsoluteLocked(@max(1, get(params, 0, 1))),
         'J' => terminal_core_protocol.eraseDisplay(self, if (param_len > 0) params[0] else 0),
         'K' => terminal_core_protocol.eraseLine(self, if (param_len > 0) params[0] else 0),
         '@' => terminal_core_protocol.insertChars(self, @intCast(@max(1, get(params, 0, 1)))),
@@ -47,15 +46,16 @@ pub fn handleSimpleCsi(
         'Z' => {
             var i: i32 = 0;
             const n = @max(1, get(params, 0, 1));
-            while (i < n) : (i += 1) screen.backTab();
+            while (i < n) : (i += 1) self.core.backTabLocked();
         },
         'r' => {
+            const screen = self.core.activeScreen();
             const top_1 = if (param_len > 0 and params[0] > 0) params[0] else 1;
             const bot_1 = if (param_len > 1 and params[1] > 0) params[1] else @as(i32, @intCast(screen.grid.rows));
             const top = @min(@as(usize, screen.grid.rows - 1), @as(usize, @intCast(@max(1, top_1) - 1)));
             const bot = @min(@as(usize, screen.grid.rows - 1), @as(usize, @intCast(@max(1, bot_1) - 1)));
             if (top < bot) {
-                screen.setScrollRegion(top, bot);
+                self.core.setScrollRegionLocked(top, bot);
             }
         },
         else => {},
@@ -68,10 +68,10 @@ pub fn handleSpecialCsi(
     param_len: usize,
     params: [parser_csi.max_params]i32,
 ) void {
-    const screen = self.core.activeScreen();
     switch (action.final) {
         's' => {
             if (!action.private) {
+                const screen = self.core.activeScreen();
                 if (screen.left_right_margin_mode_69) {
                     const cols = @as(usize, screen.grid.cols);
                     if (cols == 0) return;
@@ -80,7 +80,7 @@ pub fn handleSpecialCsi(
                     const left = @min(cols - 1, @as(usize, @intCast(@max(1, left_1) - 1)));
                     const right = @min(cols - 1, @as(usize, @intCast(@max(1, right_1) - 1)));
                     if (left < right) {
-                        screen.setLeftRightMargins(left, right);
+                        self.core.setLeftRightMarginsLocked(left, right);
                     }
                     return;
                 }
@@ -104,13 +104,13 @@ pub fn handleSpecialCsi(
         },
         'q' => {
             if (action.leader == 0 and !action.private) {
-                terminal_core_protocol.setCursorStyle(self, if (param_len > 0) params[0] else 0);
+                self.core.setCursorStyleLocked(if (param_len > 0) params[0] else 0);
             }
         },
         'g' => {
             switch (if (param_len > 0) params[0] else 0) {
-                0 => screen.clearTabAtCursor(),
-                3 => screen.clearAllTabs(),
+                0 => self.core.clearTabAtCursorLocked(),
+                3 => self.core.clearAllTabsLocked(),
                 else => {},
             }
         },
