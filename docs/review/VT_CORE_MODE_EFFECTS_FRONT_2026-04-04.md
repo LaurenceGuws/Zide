@@ -110,3 +110,25 @@ What remains now:
 
 - alt-screen enter/exit transitions
 - presentation/snapshot effects around those transitions
+
+The third opening slice is now landed:
+
+- [terminal_core_modes.zig](/home/home/personal/zide/src/terminal/core/terminal_core_modes.zig)
+  now returns explicit `AltScreenEffect` values for enter/exit transitions
+- alt-screen core transitions no longer depend on outer owner shape just to
+  clear kitty image state
+- [mode_effects.zig](/home/home/personal/zide/src/terminal/core/session/mode_effects.zig)
+  now consumes explicit outer consequences instead of hard-coding the full
+  post-transition choreography inline
+
+Why this counts:
+
+- alt-screen mode transitions now read more like terminal truth plus explicit
+  outer consequences
+- the shell no longer acts as the hidden completion path for that whole mode
+  transition story
+
+What remains now:
+
+- whether snapshot/publication consequences around mode transitions should stay
+  as outer effects or want one narrower explicit contract

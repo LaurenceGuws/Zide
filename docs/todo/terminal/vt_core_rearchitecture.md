@@ -489,6 +489,11 @@ Current full-scope read:
     reset kitty image state
   - `mode_effects.zig` now keeps input-mode reset as the explicit outer
     consequence instead of passing the whole shell into core reset
+  - the third opening slice is now landed:
+    `terminal_core_modes.zig` now returns explicit `AltScreenEffect` values
+    for alt-screen enter/exit transitions
+  - `mode_effects.zig` now consumes explicit post-transition consequences
+    instead of hard-coding the whole outer completion sequence inline
 
 Current named category-1 contradiction:
 

@@ -16,14 +16,24 @@ pub fn resetState(self: anytype) void {
 }
 
 pub fn enterAltScreen(self: anytype, clear: bool, save_cursor: bool) void {
-    if (!core_modes.enterAltScreenCore(self, clear, save_cursor)) return;
-    host_selection.clearSelectionLocked(self);
-    input_modes.publishSnapshot(self);
+    const effect = core_modes.enterAltScreenCore(self, clear, save_cursor) orelse return;
+    if (effect.clear_selection) {
+        host_selection.clearSelectionLocked(self);
+    }
+    if (effect.publish_snapshot) {
+        input_modes.publishSnapshot(self);
+    }
 }
 
 pub fn exitAltScreen(self: anytype, restore_cursor: bool) void {
-    if (!core_modes.exitAltScreenCore(self, restore_cursor)) return;
-    input_modes.publishSnapshot(self);
-    terminal_publication.noteAltExitPending(self);
-    host_selection.clearSelectionLocked(self);
+    const effect = core_modes.exitAltScreenCore(self, restore_cursor) orelse return;
+    if (effect.publish_snapshot) {
+        input_modes.publishSnapshot(self);
+    }
+    if (effect.note_alt_exit_pending) {
+        terminal_publication.noteAltExitPending(self);
+    }
+    if (effect.clear_selection) {
+        host_selection.clearSelectionLocked(self);
+    }
 }
