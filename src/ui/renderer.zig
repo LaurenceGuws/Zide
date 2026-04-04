@@ -866,6 +866,14 @@ pub const Renderer = struct {
         return 1.0 / scale;
     }
 
+    pub fn logicalLengthToRaster(self: *const Renderer, value: f32) f32 {
+        return value / self.devicePixelStep();
+    }
+
+    pub fn rasterLengthToLogical(self: *const Renderer, value: f32) f32 {
+        return value * self.devicePixelStep();
+    }
+
     pub fn snapLogicalToDevicePixel(self: *const Renderer, value: f32) f32 {
         return snapToDevicePixel(value, self.scale.render_scale);
     }

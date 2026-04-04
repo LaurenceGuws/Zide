@@ -15,59 +15,71 @@ const Color = app_shell.Color;
 const Renderer = renderer_mod.Renderer;
 const TerminalFont = terminal_font_mod.TerminalFont;
 
+const SampleFontFace = struct {
+    font: TerminalFont,
+    metrics: Renderer.ScaledFontMetrics,
+
+    fn init(allocator: std.mem.Allocator, renderer: *Renderer, path: [*:0]const u8, layout_size: f32) !SampleFontFace {
+        const raster_scale = renderer.logicalLengthToRaster(1.0);
+        const raster_size = renderer.logicalLengthToRaster(layout_size);
+        var font = try TerminalFont.init(
+            allocator,
+            path,
+            raster_size,
+            iface.SYMBOLS_FALLBACK_PATH,
+            iface.UNICODE_SYMBOLS2_PATH,
+            iface.UNICODE_SYMBOLS_PATH,
+            iface.UNICODE_MONO_PATH,
+            iface.UNICODE_SANS_PATH,
+            iface.EMOJI_COLOR_FALLBACK_PATH,
+            iface.EMOJI_TEXT_FALLBACK_PATH,
+            renderer.font_config.font_rendering,
+        );
+        errdefer font.deinit();
+        font.render_scale = raster_scale;
+        font.setAtlasFilterPoint();
+        return .{
+            .font = font,
+            .metrics = .{
+                .ascent = renderer.rasterLengthToLogical(font.ascent),
+                .descent = renderer.rasterLengthToLogical(font.descent),
+                .line_height = renderer.rasterLengthToLogical(font.line_height),
+                .cell_width = renderer.rasterLengthToLogical(font.cell_width),
+                .cell_height = renderer.rasterLengthToLogical(font.line_height),
+                .baseline_from_top = renderer.rasterLengthToLogical(font.baseline_from_top),
+            },
+        };
+    }
+
+    fn deinit(self: *SampleFontFace) void {
+        self.font.deinit();
+    }
+};
+
 pub const FontSampleView = struct {
     allocator: std.mem.Allocator,
     size: f32,
-    left: TerminalFont,
-    right: TerminalFont,
+    raster_scale: f32,
+    left: SampleFontFace,
+    right: SampleFontFace,
     left_name: []const u8,
     right_name: []const u8,
 
     pub fn init(allocator: std.mem.Allocator, renderer: *Renderer) !FontSampleView {
-        const render_scale = if (renderer.scale.render_scale > 0.0) renderer.scale.render_scale else 1.0;
         const size = parseEnvF32("ZIDE_FONT_SAMPLE_SIZE", renderer.base_font_size);
-        const raster_size = size * render_scale;
-
         const left_path: [*:0]const u8 = "assets/fonts/JetBrainsMonoNerdFont-Regular.ttf";
         const right_path: [*:0]const u8 = "assets/fonts/IosevkaTermNerdFont-Regular.ttf";
 
-        var left = try TerminalFont.init(
-            allocator,
-            left_path,
-            raster_size,
-            iface.SYMBOLS_FALLBACK_PATH,
-            iface.UNICODE_SYMBOLS2_PATH,
-            iface.UNICODE_SYMBOLS_PATH,
-            iface.UNICODE_MONO_PATH,
-            iface.UNICODE_SANS_PATH,
-            iface.EMOJI_COLOR_FALLBACK_PATH,
-            iface.EMOJI_TEXT_FALLBACK_PATH,
-            renderer.font_config.font_rendering,
-        );
+        var left = try SampleFontFace.init(allocator, renderer, left_path, size);
         errdefer left.deinit();
-        left.render_scale = render_scale;
-        left.setAtlasFilterPoint();
 
-        var right = try TerminalFont.init(
-            allocator,
-            right_path,
-            raster_size,
-            iface.SYMBOLS_FALLBACK_PATH,
-            iface.UNICODE_SYMBOLS2_PATH,
-            iface.UNICODE_SYMBOLS_PATH,
-            iface.UNICODE_MONO_PATH,
-            iface.UNICODE_SANS_PATH,
-            iface.EMOJI_COLOR_FALLBACK_PATH,
-            iface.EMOJI_TEXT_FALLBACK_PATH,
-            renderer.font_config.font_rendering,
-        );
+        var right = try SampleFontFace.init(allocator, renderer, right_path, size);
         errdefer right.deinit();
-        right.render_scale = render_scale;
-        right.setAtlasFilterPoint();
 
         return .{
             .allocator = allocator,
             .size = size,
+            .raster_scale = renderer.logicalLengthToRaster(1.0),
             .left = left,
             .right = right,
             .left_name = "JetBrainsMono",
@@ -87,57 +99,27 @@ pub const FontSampleView = struct {
         const mods = input.mods;
         const increase = (input.keyPressed(.equal) and mods.shift) or input.keyPressed(.kp_add);
         const decrease = input.keyPressed(.minus) or input.keyPressed(.kp_subtract);
-        if (!increase and !decrease) return false;
-
-        const next = if (increase) self.size + 1.0 else self.size - 1.0;
+        const next = if (increase) self.size + 1.0 else if (decrease) self.size - 1.0 else self.size;
         const clamped = @max(6.0, @min(64.0, next));
-        if (std.math.approxEqAbs(f32, clamped, self.size, 0.001)) return false;
-
-        const render_scale = if (renderer.scale.render_scale > 0.0) renderer.scale.render_scale else 1.0;
-        const raster_size = clamped * render_scale;
+        const next_raster_scale = renderer.logicalLengthToRaster(1.0);
+        const size_changed = !std.math.approxEqAbs(f32, clamped, self.size, 0.001);
+        const scale_changed = !std.math.approxEqAbs(f32, next_raster_scale, self.raster_scale, 0.0001);
+        if (!size_changed and !scale_changed) return false;
 
         const left_path: [*:0]const u8 = "assets/fonts/JetBrainsMonoNerdFont-Regular.ttf";
         const right_path: [*:0]const u8 = "assets/fonts/IosevkaTermNerdFont-Regular.ttf";
 
-        var new_left = TerminalFont.init(
-            self.allocator,
-            left_path,
-            raster_size,
-            iface.SYMBOLS_FALLBACK_PATH,
-            iface.UNICODE_SYMBOLS2_PATH,
-            iface.UNICODE_SYMBOLS_PATH,
-            iface.UNICODE_MONO_PATH,
-            iface.UNICODE_SANS_PATH,
-            iface.EMOJI_COLOR_FALLBACK_PATH,
-            iface.EMOJI_TEXT_FALLBACK_PATH,
-            renderer.font_config.font_rendering,
-        ) catch |err| {
+        var new_left = SampleFontFace.init(self.allocator, renderer, left_path, clamped) catch |err| {
             log.logf(.warning, "font sample left font rebuild failed err={s}", .{@errorName(err)});
             return false;
         };
         errdefer new_left.deinit();
-        new_left.render_scale = render_scale;
-        new_left.setAtlasFilterPoint();
 
-        var new_right = TerminalFont.init(
-            self.allocator,
-            right_path,
-            raster_size,
-            iface.SYMBOLS_FALLBACK_PATH,
-            iface.UNICODE_SYMBOLS2_PATH,
-            iface.UNICODE_SYMBOLS_PATH,
-            iface.UNICODE_MONO_PATH,
-            iface.UNICODE_SANS_PATH,
-            iface.EMOJI_COLOR_FALLBACK_PATH,
-            iface.EMOJI_TEXT_FALLBACK_PATH,
-            renderer.font_config.font_rendering,
-        ) catch |err| {
+        const new_right = SampleFontFace.init(self.allocator, renderer, right_path, clamped) catch |err| {
             log.logf(.warning, "font sample right font rebuild failed err={s}", .{@errorName(err)});
             new_left.deinit();
             return false;
         };
-        new_right.render_scale = render_scale;
-        new_right.setAtlasFilterPoint();
 
         // Swap in new fonts.
         self.left.deinit();
@@ -145,14 +127,16 @@ pub const FontSampleView = struct {
         self.left = new_left;
         self.right = new_right;
         self.size = clamped;
+        self.raster_scale = next_raster_scale;
         return true;
     }
 
     pub fn draw(self: *FontSampleView, shell: *Shell) void {
         const r = shell.rendererPtr();
         const theme = shell.theme();
-        const w = @as(f32, @floatFromInt(shell.width()));
-        const h = @as(f32, @floatFromInt(shell.height()));
+        const geometry = shell.uiGeometryContext();
+        const w = geometry.window.width;
+        const h = geometry.window.height;
         if (w <= 0 or h <= 0) return;
 
         // Render into the offscreen target so we can do linear blending in a
@@ -214,7 +198,7 @@ pub const FontSampleView = struct {
         fg: Color,
     ) f32 {
         const section_pad_y: f32 = 8;
-        const line_h = self.left.line_height / (if (r.scale.render_scale > 0.0) r.scale.render_scale else 1.0);
+        const line_h = self.left.metrics.line_height;
         const lines = sampleLines();
         const content_h: f32 = @as(f32, @floatFromInt(lines.len)) * line_h + baselineStressHeight(line_h);
         const section_h: f32 = r.char_height + section_pad_y + content_h + section_pad_y;
@@ -233,25 +217,24 @@ pub const FontSampleView = struct {
         return y + section_h;
     }
 
-    fn drawColumn(self: *FontSampleView, r: *Renderer, x: f32, y: f32, w: f32, name: []const u8, font: *TerminalFont) void {
+    fn drawColumn(self: *FontSampleView, r: *Renderer, x: f32, y: f32, w: f32, name: []const u8, font: *SampleFontFace) void {
         drawColumnWithColor(self, r, x, y, w, name, font, Color.white);
     }
 
-    fn drawColumnWithColor(self: *FontSampleView, r: *Renderer, x: f32, y: f32, w: f32, name: []const u8, font: *TerminalFont, fg: Color) void {
+    fn drawColumnWithColor(self: *FontSampleView, r: *Renderer, x: f32, y: f32, w: f32, name: []const u8, font: *SampleFontFace, fg: Color) void {
         _ = w;
         const theme = r.theme;
-        const scale = if (r.scale.render_scale > 0.0) r.scale.render_scale else 1.0;
 
         var header_buf: [192]u8 = undefined;
         const header = std.fmt.bufPrint(
             &header_buf,
             "{s}  line_h={d:.1} cell_w={d:.1}",
-            .{ name, font.line_height / scale, font.cell_width / scale },
+            .{ name, font.metrics.line_height, font.metrics.cell_width },
         ) catch name;
         r.drawText(header, x, y, theme.foreground);
 
         const start_y = y + r.char_height * 1.6;
-        const line_h = font.line_height / scale;
+        const line_h = font.metrics.line_height;
 
         const lines = sampleLines();
         var row: usize = 0;
@@ -277,21 +260,33 @@ pub const FontSampleView = struct {
     fn drawTextWithFont(
         r: *Renderer,
         allocator: std.mem.Allocator,
-        font: *TerminalFont,
+        face: *SampleFontFace,
         text: []const u8,
         x: f32,
         y: f32,
         color: Color,
     ) void {
         const draw_ctx = terminal_font_mod.DrawContext{ .ctx = r, .drawTexture = drawTextureThunk };
-        const scale = if (r.scale.render_scale > 0.0) r.scale.render_scale else 1.0;
-        text_draw.drawText(allocator, font, draw_ctx.ctx, draw_ctx.drawTexture, text, x, y, font.cell_width / scale, font.line_height / scale, color.toRgba(), true, false);
+        text_draw.drawText(
+            allocator,
+            &face.font,
+            draw_ctx.ctx,
+            draw_ctx.drawTexture,
+            text,
+            x,
+            y,
+            face.metrics.cell_width,
+            face.metrics.line_height,
+            color.toRgba(),
+            true,
+            false,
+        );
     }
 
     fn drawTextWithFontZoom(
         r: *Renderer,
         allocator: std.mem.Allocator,
-        font: *TerminalFont,
+        face: *SampleFontFace,
         text: []const u8,
         x: f32,
         y: f32,
@@ -299,10 +294,9 @@ pub const FontSampleView = struct {
         zoom: f32,
     ) void {
         const draw_ctx = terminal_font_mod.DrawContext{ .ctx = r, .drawTexture = drawTextureThunk };
-        const scale = if (r.scale.render_scale > 0.0) r.scale.render_scale else 1.0;
-        const cell_w = (font.cell_width / scale) * zoom;
-        const cell_h = (font.line_height / scale) * zoom;
-        text_draw.drawText(allocator, font, draw_ctx.ctx, draw_ctx.drawTexture, text, x, y, cell_w, cell_h, color.toRgba(), true, false);
+        const cell_w = face.metrics.cell_width * zoom;
+        const cell_h = face.metrics.line_height * zoom;
+        text_draw.drawText(allocator, &face.font, draw_ctx.ctx, draw_ctx.drawTexture, text, x, y, cell_w, cell_h, color.toRgba(), true, false);
     }
 
     fn baselineStressHeight(line_h: f32) f32 {

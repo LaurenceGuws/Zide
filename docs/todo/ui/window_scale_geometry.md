@@ -278,7 +278,7 @@ Manual:
     - underline/cursor stroke thickness
     - retained-texture / device-pixel rendering policy
   - Those survivors belong to `WSG-3-*`, not terminal geometry ownership.
-- [ ] `WSG-3-01` Delete widget-side snap helpers and raw render-scale reads
+- [x] `WSG-3-01` Delete widget-side snap helpers and raw render-scale reads
   - Remove `common.snapToDevicePixel(...)` and any equivalent widget-level
     public surface.
   - First deletion landed:
@@ -294,11 +294,18 @@ Manual:
     - [terminal_widget_draw.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget_draw.zig)
     - [terminal_widget.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget.zig)
     - [terminal_widget_keyboard.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget_keyboard.zig)
-  - Current honest remainder:
+  - Final non-terminal escape hatch also landed:
+    - [font_sample_view.zig](/home/home/personal/zide/src/ui/font_sample_view.zig)
+      now uses renderer-owned logical/raster conversion helpers plus
+      [UiGeometryContext](/home/home/personal/zide/src/types/layout.zig)
+      instead of raw `renderer.scale.render_scale` and raw window dimensions
+    - the font sample view now rebuilds its sample fonts when raster scale
+      changes, so it no longer drifts stale across display-scale or zoom
+      changes
+  - Completion result:
     - widget-local snap helper is deleted
-    - terminal widget code no longer reads raw `render_scale`
-    - the next pressure is public `Shell` scale/metric API survival, tracked under
-      `WSG-3-02`
+    - widget/view code no longer reads raw `renderer.scale.render_scale`
+    - the next pressure is no longer widget raw scale access
 - [ ] `WSG-3-02` Delete raw scale/metric access from `Shell` where widgets currently rely on it
   - Narrow diagnostics separately if needed.
   - Landed diagnostic replacement:
@@ -408,6 +415,13 @@ Manual:
   - dead Wayland-scale state
   - fake mouse-scale seam
   - any remaining widget-visible SDL geometry vocabulary
+  - Current strongest residue after the terminal drift fix and font-sample cut:
+    - [mouse_state.zig](/home/home/personal/zide/src/platform/mouse_state.zig)
+      still has the fake mouse-scale seam
+    - [shaping.zig](/home/home/personal/zide/src/ui/font/shaping.zig) and
+      [text_runtime.zig](/home/home/personal/zide/src/ui/renderer/text_runtime.zig)
+      still carry duplicated snap/quantize policy outside one renderer-owned
+      contract
 
 ## Exit Criteria
 
