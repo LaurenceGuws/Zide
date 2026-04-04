@@ -250,7 +250,12 @@ fn initWithMode(
     if (config.app_theme != null or config.editor_theme != null or config.terminal_theme != null or config.theme != null) {
         // Wait, we need to defer theme initialization to AppState so let's do it right before AppState init
     }
-    _ = try shell.refreshUiScale();
+    _ = try shell.refreshWindowState("init", .{
+        .resized = true,
+        .pixel_size_changed = true,
+        .display_changed = true,
+        .display_scale_changed = true,
+    });
     const app_log = app_logger.logger("app.core");
     app_log.logStdout(.info, "logger initialized", .{});
     app_log.logStdout(.info, "config lua backend: impl={s}", .{"ziglua"});

@@ -2,10 +2,12 @@ const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
 const app_logger = @import("../../app_logger.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
+const shared_types = @import("../../types/mod.zig");
 const renderer_mod = @import("../renderer.zig");
 const terminal_font_mod = @import("../terminal_font.zig");
 const terminal_glyphs = @import("../renderer/terminal_glyphs.zig");
 const terminal_underline = @import("../renderer/terminal_underline.zig");
+const debug_geometry_mod = @import("terminal_widget_debug_geometry.zig");
 
 const Shell = app_shell.Shell;
 const Color = app_shell.Color;
@@ -17,6 +19,8 @@ const DrawContext = terminal_font_mod.DrawContext;
 const Renderer = renderer_mod.Renderer;
 const TerminalDisableLigaturesStrategy = renderer_mod.TerminalDisableLigaturesStrategy;
 const Rgba = terminal_font_mod.Rgba;
+const TextPaintSample = debug_geometry_mod.TextPaintSample;
+const TextPaintSource = debug_geometry_mod.TextPaintSource;
 
 const kitty_unicode_placeholder: u32 = 0x10EEEE;
 
@@ -77,32 +81,67 @@ const RowSpecialSpriteCache = struct {
     sprite: ?terminal_font_mod.SpecialGlyphSprite = null,
 };
 
-pub fn snapToDevicePixel(value: f32, render_scale: f32) f32 {
-    const scale = if (render_scale > 0.0) render_scale else 1.0;
-    return @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(value * scale))))) / scale;
+fn shouldCaptureTextPaint(sample: ?*TextPaintSample, row_idx: usize, cursor_pos: CursorPos, abs_col: usize, width_units: usize) bool {
+    return bestTextPaintCapture(sample, row_idx, cursor_pos, abs_col, width_units);
 }
 
-const QuantizedAxis = struct {
-    origin: f32,
-    size: f32,
-};
-
-fn quantizeHorizontalAxis(origin: f32, size: f32, render_scale: f32) QuantizedAxis {
-    const scale = if (render_scale > 0.0) render_scale else 1.0;
-    const snapped_origin = snapToDevicePixel(origin, render_scale);
-    const snapped_end = snapToDevicePixel(origin + size, render_scale);
-    return .{
-        .origin = snapped_origin,
-        .size = @max(1.0 / scale, snapped_end - snapped_origin),
-    };
+fn bestTextPaintCapture(sample: ?*TextPaintSample, row_idx: usize, cursor_pos: CursorPos, abs_col: usize, width_units: usize) bool {
+    const s = sample orelse return false;
+    if (row_idx != cursor_pos.row) return false;
+    const covers_cursor = abs_col <= cursor_pos.col and cursor_pos.col < abs_col + width_units;
+    const candidate_distance = if (covers_cursor)
+        @as(usize, 0)
+    else if (abs_col + width_units <= cursor_pos.col)
+        cursor_pos.col - (abs_col + width_units)
+    else
+        abs_col - cursor_pos.col;
+    if (!s.valid) return true;
+    if (covers_cursor and !s.covers_cursor) return true;
+    if (!covers_cursor and s.covers_cursor) return false;
+    return candidate_distance < s.cursor_distance_cols;
 }
 
-fn quantizeVerticalAxis(origin: f32, size: f32, render_scale: f32) QuantizedAxis {
-    const scale = if (render_scale > 0.0) render_scale else 1.0;
-    const snapped_origin = snapToDevicePixel(origin, render_scale);
-    return .{
-        .origin = snapped_origin,
-        .size = @max(1.0 / scale, size),
+fn captureTextPaintSample(
+    sample: *TextPaintSample,
+    generation: u64,
+    row_idx: usize,
+    cursor_col: usize,
+    abs_col: usize,
+    cell: Cell,
+    width_units: usize,
+    cell_x: f32,
+    cell_y: f32,
+    cell_w: f32,
+    cell_h: f32,
+    baseline: f32,
+    render_scale: f32,
+    glyph: terminal_font_mod.Rect,
+    source: TextPaintSource,
+) void {
+    const covers_cursor = abs_col <= cursor_col and cursor_col < abs_col + width_units;
+    const cursor_distance_cols = if (covers_cursor)
+        @as(usize, 0)
+    else if (abs_col + width_units <= cursor_col)
+        cursor_col - (abs_col + width_units)
+    else
+        abs_col - cursor_col;
+    sample.* = .{
+        .valid = true,
+        .generation = generation,
+        .row = row_idx,
+        .col = abs_col,
+        .covers_cursor = covers_cursor,
+        .cursor_distance_cols = cursor_distance_cols,
+        .codepoint = cell.codepoint,
+        .width_units = width_units,
+        .cell_x = cell_x,
+        .cell_y = cell_y,
+        .cell_w = cell_w,
+        .cell_h = cell_h,
+        .baseline = baseline,
+        .render_scale = render_scale,
+        .glyph = glyph,
+        .source = source,
     };
 }
 
@@ -159,6 +198,7 @@ fn backgroundRunEnd(
 
 pub fn drawRowBackgrounds(
     renderer: *Shell,
+    view: shared_types.layout.TerminalViewGeometry,
     snapshot_cells: []const Cell,
     cols_count: usize,
     row_idx: usize,
@@ -174,11 +214,9 @@ pub fn drawRowBackgrounds(
     cursor_style: anytype,
 ) void {
     const rr = renderer.rendererPtr();
-    const geom = rr.terminalCellGeometry();
-    const cell_w = geom.cell_width_logical_exact;
-    const cell_h = geom.cell_height_logical_exact;
-    const scale = if (rr.scale.render_scale > 0.0) rr.scale.render_scale else 1.0;
-    const padding_x = @as(f32, @floatFromInt(padding_x_i)) / scale;
+    const cell_w = view.cell_width;
+    const cell_h = view.cell_height;
+    const padding_x = @as(f32, @floatFromInt(padding_x_i)) * rr.devicePixelStep();
 
     const row_cells = rowSlice(snapshot_cells, cols_count, row_idx);
     if (row_cells.len != cols_count) return;
@@ -393,6 +431,7 @@ fn cellCanDirectSpecial(cell: Cell) bool {
 }
 
 fn drawShapedGlyph(
+    rr: *Renderer,
     font: *TerminalFont,
     ctx_draw: DrawContext,
     face: hb.FT_Face,
@@ -408,14 +447,23 @@ fn drawShapedGlyph(
     cell_height: f32,
     followed_by_space: bool,
     color: Rgba,
+    capture_sample: ?*TextPaintSample,
+    capture_generation: u64,
+    capture_row: usize,
+    capture_cursor_col: usize,
+    capture_col: usize,
+    capture_cell: Cell,
+    capture_width_units: usize,
+    capture_cell_x: f32,
+    capture_cell_y: f32,
 ) void {
     const glyph = font.getGlyphById(face, glyph_id, want_color, false, hb_pos.x_advance) catch |err| {
         const log = app_logger.logger("terminal.draw");
         log.logf(.warning, "shaped glyph lookup failed cp=U+{X} glyph_id={d} err={s}", .{ base_codepoint, glyph_id, @errorName(err) });
         return;
     };
-    const render_scale = if (font.render_scale > 0.0) font.render_scale else 1.0;
-    const inv_scale = 1.0 / render_scale;
+    const render_scale = 1.0 / rr.devicePixelStep();
+    const inv_scale = rr.devicePixelStep();
     const baseline = y + baseline_from_top;
     const gx_off = (@as(f32, @floatFromInt(hb_pos.x_offset)) / 64.0) * inv_scale;
     const gy_off = (@as(f32, @floatFromInt(hb_pos.y_offset)) / 64.0) * inv_scale;
@@ -431,7 +479,6 @@ fn drawShapedGlyph(
         (base_codepoint >= 0x2700 and base_codepoint <= 0x27BF) or
         (base_codepoint >= 0x2600 and base_codepoint <= 0x26FF);
     const is_powerline_thin = base_codepoint == 0xE0B1 or base_codepoint == 0xE0B3;
-    _ = cell_height;
     _ = followed_by_space;
     const allow_width_overflow = is_symbol_glyph;
     const overflow_scale_x: f32 = 1.0;
@@ -439,14 +486,14 @@ fn drawShapedGlyph(
     const scaled_h = glyph_h;
     const draw_x = if (allow_width_overflow) origin_x + bearing_x * overflow_scale_x else @max(x, origin_x + bearing_x * overflow_scale_x);
     const draw_y = (baseline - bearing_y) - gy_off;
-    const axis_x = quantizeHorizontalAxis(draw_x, scaled_w, render_scale);
-    const axis_y = quantizeVerticalAxis(draw_y, scaled_h, render_scale);
+    const axis_x = rr.quantizeLogicalHorizontalAxis(draw_x, scaled_w);
+    const axis_y = rr.quantizeLogicalVerticalAxis(draw_y, scaled_h);
     const snapped_x = axis_x.origin;
     const snapped_y = axis_y.origin;
 
     const dest = if (is_powerline_thin) blk: {
-        const cell_left = snapToDevicePixel(x, render_scale);
-        const cell_right = snapToDevicePixel(x + cell_width, render_scale);
+        const cell_left = rr.snapLogicalToDevicePixel(x);
+        const cell_right = rr.snapLogicalToDevicePixel(x + cell_width);
         break :blk terminal_font_mod.Rect{ .x = cell_left, .y = snapped_y, .width = @max(inv_scale, cell_right - cell_left), .height = axis_y.size };
     } else terminal_font_mod.Rect{ .x = snapped_x, .y = snapped_y, .width = axis_x.size, .height = axis_y.size };
 
@@ -456,9 +503,29 @@ fn drawShapedGlyph(
     } else {
         ctx_draw.drawTexture(ctx_draw.ctx, font.coverage_texture, glyph.rect, dest, draw_color, .font_coverage);
     }
+    if (capture_sample) |sample| {
+        captureTextPaintSample(
+            sample,
+            capture_generation,
+            capture_row,
+            capture_cursor_col,
+            capture_col,
+            capture_cell,
+            capture_width_units,
+            capture_cell_x,
+            capture_cell_y,
+            cell_width,
+            cell_height,
+            baseline,
+            render_scale,
+            dest,
+            .shaped,
+        );
+    }
 }
 
 fn drawDirectGlyphById(
+    rr: *Renderer,
     font: *TerminalFont,
     ctx_draw: DrawContext,
     face: hb.FT_Face,
@@ -466,8 +533,6 @@ fn drawDirectGlyphById(
     base_codepoint: u32,
     glyph_id: u32,
     simple_ascii: bool,
-    render_scale: f32,
-    inv_scale: f32,
     baseline: f32,
     x: f32,
     cell_width: f32,
@@ -475,6 +540,15 @@ fn drawDirectGlyphById(
     followed_by_space: bool,
     color: Rgba,
     stats: ?*GlyphDrawStats,
+    capture_sample: ?*TextPaintSample,
+    capture_generation: u64,
+    capture_row: usize,
+    capture_cursor_col: usize,
+    capture_col: usize,
+    capture_cell: Cell,
+    capture_width_units: usize,
+    capture_cell_x: f32,
+    capture_cell_y: f32,
 ) void {
     const glyph_lookup_start = app_shell.getTime();
     const glyph = font.getGlyphById(face, glyph_id, want_color, false, 0) catch |err| {
@@ -485,6 +559,8 @@ fn drawDirectGlyphById(
     if (stats) |s| s.direct_lookup_ms += (app_shell.getTime() - glyph_lookup_start) * 1000.0;
 
     const draw_submit_start = app_shell.getTime();
+    const render_scale = 1.0 / rr.devicePixelStep();
+    const inv_scale = rr.devicePixelStep();
     const glyph_w = @as(f32, @floatFromInt(glyph.width)) * inv_scale;
     const glyph_h = @as(f32, @floatFromInt(glyph.height)) * inv_scale;
     const bearing_x = @as(f32, @floatFromInt(glyph.bearing_x)) * inv_scale;
@@ -492,8 +568,8 @@ fn drawDirectGlyphById(
     const dest = if (simple_ascii) blk: {
         const draw_x = @max(x, x + bearing_x);
         const draw_y = baseline - bearing_y;
-        const axis_x = quantizeHorizontalAxis(draw_x, glyph_w, render_scale);
-        const axis_y = quantizeVerticalAxis(draw_y, glyph_h, render_scale);
+        const axis_x = rr.quantizeLogicalHorizontalAxis(draw_x, glyph_w);
+        const axis_y = rr.quantizeLogicalVerticalAxis(draw_y, glyph_h);
         break :blk terminal_font_mod.Rect{
             .x = axis_x.origin,
             .y = axis_y.origin,
@@ -506,7 +582,6 @@ fn drawDirectGlyphById(
             (base_codepoint >= 0x100000 and base_codepoint <= 0x10FFFD) or
             (base_codepoint >= 0x2700 and base_codepoint <= 0x27BF) or
             (base_codepoint >= 0x2600 and base_codepoint <= 0x26FF);
-        _ = cell_height;
         _ = followed_by_space;
         const allow_width_overflow = is_symbol_glyph;
         const overflow_scale_x: f32 = 1.0;
@@ -514,11 +589,11 @@ fn drawDirectGlyphById(
         const scaled_h = glyph_h;
         const draw_x = if (allow_width_overflow) x + bearing_x * overflow_scale_x else @max(x, x + bearing_x * overflow_scale_x);
         const draw_y = baseline - bearing_y;
-        const axis_x = quantizeHorizontalAxis(draw_x, scaled_w, render_scale);
-        const axis_y = quantizeVerticalAxis(draw_y, scaled_h, render_scale);
+        const axis_x = rr.quantizeLogicalHorizontalAxis(draw_x, scaled_w);
+        const axis_y = rr.quantizeLogicalVerticalAxis(draw_y, scaled_h);
         break :blk if (base_codepoint == 0xE0B1 or base_codepoint == 0xE0B3) blk2: {
-            const cell_left = snapToDevicePixel(x, render_scale);
-            const cell_right = snapToDevicePixel(x + cell_width, render_scale);
+            const cell_left = rr.snapLogicalToDevicePixel(x);
+            const cell_right = rr.snapLogicalToDevicePixel(x + cell_width);
             break :blk2 terminal_font_mod.Rect{
                 .x = cell_left,
                 .y = axis_y.origin,
@@ -538,6 +613,25 @@ fn drawDirectGlyphById(
     } else {
         ctx_draw.drawTexture(ctx_draw.ctx, font.coverage_texture, glyph.rect, dest, draw_color, .font_coverage);
     }
+    if (capture_sample) |sample| {
+        captureTextPaintSample(
+            sample,
+            capture_generation,
+            capture_row,
+            capture_cursor_col,
+            capture_col,
+            capture_cell,
+            capture_width_units,
+            capture_cell_x,
+            capture_cell_y,
+            cell_width,
+            cell_height,
+            baseline,
+            render_scale,
+            dest,
+            .direct,
+        );
+    }
     if (stats) |s| s.direct_draw_ms += (app_shell.getTime() - draw_submit_start) * 1000.0;
 }
 
@@ -554,19 +648,28 @@ fn drawAlignedSpecialGlyphSprite(
     box_w_i: i32,
     box_h_i: i32,
     fg_draw: Color,
-    render_scale: f32,
     row_sprite_cache: ?*RowSpecialSpriteCache,
     stats: ?*GlyphDrawStats,
+    capture_sample: ?*TextPaintSample,
+    capture_generation: u64,
+    capture_row: usize,
+    capture_cursor_col: usize,
+    capture_col: usize,
+    capture_cell: Cell,
+    capture_width_units: usize,
+    capture_cell_x: f32,
+    capture_cell_y: f32,
 ) bool {
-    const x0 = snapToDevicePixel(@as(f32, @floatFromInt(box_x_i)), render_scale);
-    const x1 = snapToDevicePixel(@as(f32, @floatFromInt(box_x_i + box_w_i)), render_scale);
+    const render_scale = 1.0 / rr.devicePixelStep();
+    const x0 = rr.snapLogicalToDevicePixel(@as(f32, @floatFromInt(box_x_i)));
+    const x1 = rr.snapLogicalToDevicePixel(@as(f32, @floatFromInt(box_x_i + box_w_i)));
     const y0_unsnapped = @as(f32, @floatFromInt(box_y_i));
     const y1_unsnapped = @as(f32, @floatFromInt(box_y_i + box_h_i));
     const use_y_snap = variant == .box or variant == .braille;
-    const y0 = if (use_y_snap) snapToDevicePixel(y0_unsnapped, render_scale) else y0_unsnapped;
-    const y1 = if (use_y_snap) snapToDevicePixel(y1_unsnapped, render_scale) else y1_unsnapped;
-    const snapped_w = @max(1.0 / render_scale, x1 - x0);
-    const snapped_h = @max(1.0 / render_scale, y1 - y0);
+    const y0 = if (use_y_snap) rr.snapLogicalToDevicePixel(y0_unsnapped) else y0_unsnapped;
+    const y1 = if (use_y_snap) rr.snapLogicalToDevicePixel(y1_unsnapped) else y1_unsnapped;
+    const snapped_w = @max(rr.devicePixelStep(), x1 - x0);
+    const snapped_h = @max(rr.devicePixelStep(), y1 - y0);
     const raster_w_i: i32 = @max(1, @as(i32, @intFromFloat(std.math.round(snapped_w * render_scale))));
     const raster_h_i: i32 = @max(1, @as(i32, @intFromFloat(std.math.round(snapped_h * render_scale))));
     const lookup_start = app_shell.getTime();
@@ -602,7 +705,7 @@ fn drawAlignedSpecialGlyphSprite(
         var dest_x = x0;
         var dest_w = snapped_w;
         if (variant == .powerline) {
-            const seam_overdraw = 1.0 / render_scale;
+            const seam_overdraw = rr.devicePixelStep();
             if (codepoint == 0xE0B2 or codepoint == 0xE0B6) {
                 const next_col = abs_col + width_units;
                 if (next_col < row_cells.len) {
@@ -630,6 +733,25 @@ fn drawAlignedSpecialGlyphSprite(
             fg_draw.toRgba(),
             .font_coverage,
         );
+        if (capture_sample) |sample| {
+            captureTextPaintSample(
+                sample,
+                capture_generation,
+                capture_row,
+                capture_cursor_col,
+                capture_col,
+                capture_cell,
+                capture_width_units,
+                capture_cell_x,
+                capture_cell_y,
+                @as(f32, @floatFromInt(box_w_i)),
+                @as(f32, @floatFromInt(box_h_i)),
+                capture_cell_y,
+                render_scale,
+                .{ .x = dest_x, .y = y0, .width = dest_w, .height = snapped_h },
+                .special,
+            );
+        }
         if (stats) |s| {
             s.shaped_special_glyphs += 1;
             const submit_ms = (app_shell.getTime() - submit_start) * 1000.0;
@@ -650,6 +772,7 @@ fn drawAlignedSpecialGlyphSprite(
 
 pub fn drawRowGlyphs(
     renderer: *Shell,
+    view: shared_types.layout.TerminalViewGeometry,
     snapshot_cells: []const Cell,
     cols_count: usize,
     row_idx: usize,
@@ -665,15 +788,16 @@ pub fn drawRowGlyphs(
     draw_cursor_mode: bool,
     cursor_pos: CursorPos,
     ligature_strategy: TerminalDisableLigaturesStrategy,
+    generation: u64,
     stats: ?*GlyphDrawStats,
+    text_paint_sample: ?*TextPaintSample,
 ) void {
     const row_fixed_start = app_shell.getTime();
     _ = padding_x_i;
     const BlinkStyleT = @TypeOf(blink_style_mode);
     const rr = renderer.rendererPtr();
-    const geom = rr.terminalCellGeometry();
-    const cell_w = geom.cell_width_logical_exact;
-    const cell_h = geom.cell_height_logical_exact;
+    const cell_w = view.cell_width;
+    const cell_h = view.cell_height;
     const row_cells = rowSlice(snapshot_cells, cols_count, row_idx);
     if (row_cells.len != cols_count) return;
     const col_start = @min(col_start_in, cols_count - 1);
@@ -775,9 +899,7 @@ pub fn drawRowGlyphs(
         const shape_features_len = rr.collectShapeFeatures(.terminal, disable_programming_ligatures, shape_features_buf[0..]);
         if (shape_features_len == 0 and span_can_bypass and spanCanBypassShaping(row_cells, span_start_col, span_end_excl)) {
             _ = span_scan_start;
-            const direct_render_scale = if (rr.terminal_font.render_scale > 0.0) rr.terminal_font.render_scale else 1.0;
-            const direct_inv_scale = 1.0 / direct_render_scale;
-            const row_baseline = base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h + geom.baseline_logical_exact;
+            const row_baseline = base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h + view.baseline_from_top;
             var direct_col = span_start_col;
             while (direct_col < span_end_excl and direct_col < row_cells.len) : (direct_col += 1) {
                 const cell = row_cells[direct_col];
@@ -821,7 +943,12 @@ pub fn drawRowGlyphs(
                     }
                     break :blk true;
                 };
+                const capture_direct = if (shouldCaptureTextPaint(text_paint_sample, row_idx, cursor_pos, direct_col, @as(usize, @max(@as(u8, 1), cell.width))))
+                    text_paint_sample
+                else
+                    null;
                 drawDirectGlyphById(
+                    rr,
                     &rr.terminal_font,
                     draw_ctx,
                     choice.face,
@@ -829,8 +956,6 @@ pub fn drawRowGlyphs(
                     cell.codepoint,
                     choice.glyph_id,
                     choice.simple_ascii,
-                    direct_render_scale,
-                    direct_inv_scale,
                     row_baseline,
                     cell_x,
                     cell_w,
@@ -838,6 +963,15 @@ pub fn drawRowGlyphs(
                     followed_by_space,
                     fg_draw.toRgba(),
                     stats,
+                    capture_direct,
+                    generation,
+                    row_idx,
+                    cursor_pos.col,
+                    direct_col,
+                    cell,
+                    @as(usize, @max(@as(u8, 1), cell.width)),
+                    cell_x,
+                    base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h,
                 );
                 if (stats) |s| {
                     s.shaped_glyphs += 1;
@@ -870,10 +1004,33 @@ pub fn drawRowGlyphs(
                 const box_y = base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h;
                 const box_w = cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(width_units))));
                 const box_h = cell_h;
+                const capture_special = if (shouldCaptureTextPaint(text_paint_sample, row_idx, cursor_pos, special_col, width_units))
+                    text_paint_sample
+                else
+                    null;
                 if (terminal_glyphs.specialVariantForCodepoint(cell.codepoint)) |variant| {
                     if (variant == .shade) {
                         const special_submit_start = app_shell.getTime();
                         _ = terminal_glyphs.drawBoxGlyphBatched(addTerminalGlyphRect, rr, cell.codepoint, box_x, box_y, box_w, box_h, fg_draw);
+                        if (capture_special) |sample| {
+                            captureTextPaintSample(
+                                sample,
+                                generation,
+                                row_idx,
+                                cursor_pos.col,
+                                special_col,
+                                cell,
+                                width_units,
+                                box_x,
+                                box_y,
+                                box_w,
+                                box_h,
+                                box_y,
+                                1.0 / rr.devicePixelStep(),
+                                .{ .x = box_x, .y = box_y, .width = box_w, .height = box_h },
+                                .special,
+                            );
+                        }
                         if (stats) |s| {
                             const submit_ms = (app_shell.getTime() - special_submit_start) * 1000.0;
                             s.shaped_special_glyphs += 1;
@@ -883,10 +1040,29 @@ pub fn drawRowGlyphs(
                         }
                         continue;
                     }
-                    _ = drawAlignedSpecialGlyphSprite(rr, row_cells, special_col, width_units, screen_reverse_mode, cell.codepoint, variant, @as(i32, @intFromFloat(std.math.round(box_x))), @as(i32, @intFromFloat(std.math.round(box_y))), @as(i32, @intFromFloat(std.math.round(box_w))), @as(i32, @intFromFloat(std.math.round(box_h))), fg_draw, if (rr.terminal_font.render_scale > 0.0) rr.terminal_font.render_scale else 1.0, &row_sprite_cache, stats);
+                    _ = drawAlignedSpecialGlyphSprite(rr, row_cells, special_col, width_units, screen_reverse_mode, cell.codepoint, variant, @as(i32, @intFromFloat(std.math.round(box_x))), @as(i32, @intFromFloat(std.math.round(box_y))), @as(i32, @intFromFloat(std.math.round(box_w))), @as(i32, @intFromFloat(std.math.round(box_h))), fg_draw, &row_sprite_cache, stats, capture_special, generation, row_idx, cursor_pos.col, special_col, cell, width_units, box_x, box_y);
                 } else if (isTerminalBoxGlyph(cell.codepoint)) {
                     const special_submit_start = app_shell.getTime();
                     _ = terminal_glyphs.drawBoxGlyphBatched(addTerminalGlyphRect, rr, cell.codepoint, box_x, box_y, box_w, box_h, fg_draw);
+                    if (capture_special) |sample| {
+                        captureTextPaintSample(
+                            sample,
+                            generation,
+                            row_idx,
+                            cursor_pos.col,
+                            special_col,
+                            cell,
+                            width_units,
+                            box_x,
+                            box_y,
+                            box_w,
+                            box_h,
+                            box_y,
+                            1.0 / rr.devicePixelStep(),
+                            .{ .x = box_x, .y = box_y, .width = box_w, .height = box_h },
+                            .special,
+                        );
+                    }
                     if (stats) |s| {
                         const submit_ms = (app_shell.getTime() - special_submit_start) * 1000.0;
                         s.shaped_special_glyphs += 1;
@@ -1007,6 +1183,30 @@ pub fn drawRowGlyphs(
                 } else {
                     rr.drawTerminalCellBatched(cell.codepoint, cell_x, cell_y, cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(cell_width_units)))), cell_h, if (cell_reverse) bg else fg, if (cell_reverse) fg else bg, underline_color, cell.attrs.bold, false, false, followed_by_space, false);
                 }
+                if (shouldCaptureTextPaint(text_paint_sample, row_idx, cursor_pos, fb_col, cell_width_units)) {
+                    captureTextPaintSample(
+                        text_paint_sample.?,
+                        generation,
+                        row_idx,
+                        cursor_pos.col,
+                        fb_col,
+                        cell,
+                        cell_width_units,
+                        cell_x,
+                        cell_y,
+                        cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(cell_width_units)))),
+                        cell_h,
+                        cell_y,
+                        if (rr.terminal_font.render_scale > 0.0) rr.terminal_font.render_scale else 1.0,
+                        .{
+                            .x = cell_x,
+                            .y = cell_y,
+                            .width = cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(cell_width_units)))),
+                            .height = cell_h,
+                        },
+                        .fallback,
+                    );
+                }
                 if (stats) |s| s.fallback_cells += 1;
                 fb_col += cell_width_units;
             }
@@ -1015,8 +1215,8 @@ pub fn drawRowGlyphs(
         }
 
         const glyph_len: usize = @intCast(length);
-        const render_scale = if (rr.terminal_font.render_scale > 0.0) rr.terminal_font.render_scale else 1.0;
-        const inv_scale = 1.0 / render_scale;
+        const render_scale = 1.0 / rr.devicePixelStep();
+        const inv_scale = rr.devicePixelStep();
         const submit_phase_start = app_shell.getTime();
         var pen_x: f32 = 0;
         var i: usize = 0;
@@ -1073,10 +1273,33 @@ pub fn drawRowGlyphs(
                 const box_y = cell_y;
                 const box_w = cell_w_span;
                 const box_h = cell_h_span;
+                const capture_shaped_special = if (shouldCaptureTextPaint(text_paint_sample, row_idx, cursor_pos, abs_col, width_units))
+                    text_paint_sample
+                else
+                    null;
                 if (terminal_glyphs.specialVariantForCodepoint(cell.codepoint)) |variant| {
                     if (variant == .shade) {
                         const special_submit_start = app_shell.getTime();
                         _ = terminal_glyphs.drawBoxGlyphBatched(addTerminalGlyphRect, rr, cell.codepoint, box_x, box_y, box_w, box_h, fg_draw);
+                        if (capture_shaped_special) |sample| {
+                            captureTextPaintSample(
+                                sample,
+                                generation,
+                                row_idx,
+                                cursor_pos.col,
+                                abs_col,
+                                cell,
+                                width_units,
+                                box_x,
+                                box_y,
+                                box_w,
+                                box_h,
+                                box_y,
+                                render_scale,
+                                .{ .x = box_x, .y = box_y, .width = box_w, .height = box_h },
+                                .special,
+                            );
+                        }
                         if (stats) |s| {
                             const submit_ms = (app_shell.getTime() - special_submit_start) * 1000.0;
                             s.shaped_special_glyphs += 1;
@@ -1086,7 +1309,7 @@ pub fn drawRowGlyphs(
                         }
                         continue;
                     }
-                    if (drawAlignedSpecialGlyphSprite(rr, row_cells, abs_col, width_units, screen_reverse_mode, cell.codepoint, variant, @as(i32, @intFromFloat(std.math.round(box_x))), @as(i32, @intFromFloat(std.math.round(box_y))), @as(i32, @intFromFloat(std.math.round(box_w))), @as(i32, @intFromFloat(std.math.round(box_h))), fg_draw, render_scale, &row_sprite_cache, stats)) {
+                    if (drawAlignedSpecialGlyphSprite(rr, row_cells, abs_col, width_units, screen_reverse_mode, cell.codepoint, variant, @as(i32, @intFromFloat(std.math.round(box_x))), @as(i32, @intFromFloat(std.math.round(box_y))), @as(i32, @intFromFloat(std.math.round(box_w))), @as(i32, @intFromFloat(std.math.round(box_h))), fg_draw, &row_sprite_cache, stats, capture_shaped_special, generation, row_idx, cursor_pos.col, abs_col, cell, width_units, box_x, box_y)) {
                         continue;
                     }
                 }
@@ -1094,6 +1317,25 @@ pub fn drawRowGlyphs(
             if (cell.combining_len == 0 and isTerminalBoxGlyph(cell.codepoint)) {
                 const special_submit_start = app_shell.getTime();
                 _ = terminal_glyphs.drawBoxGlyphBatched(addTerminalGlyphRect, rr, cell.codepoint, cell_x, cell_y, cell_w_span, cell_h_span, fg_draw);
+                if (shouldCaptureTextPaint(text_paint_sample, row_idx, cursor_pos, abs_col, width_units)) {
+                    captureTextPaintSample(
+                        text_paint_sample.?,
+                        generation,
+                        row_idx,
+                        cursor_pos.col,
+                        abs_col,
+                        cell,
+                        width_units,
+                        cell_x,
+                        cell_y,
+                        cell_w_span,
+                        cell_h_span,
+                        cell_y,
+                        render_scale,
+                        .{ .x = cell_x, .y = cell_y, .width = cell_w_span, .height = cell_h_span },
+                        .special,
+                    );
+                }
                 if (stats) |s| {
                     const submit_ms = (app_shell.getTime() - special_submit_start) * 1000.0;
                     s.shaped_special_glyphs += 1;
@@ -1106,7 +1348,12 @@ pub fn drawRowGlyphs(
             }
 
             const text_submit_start = app_shell.getTime();
+            const capture_shaped = if (shouldCaptureTextPaint(text_paint_sample, row_idx, cursor_pos, abs_col, width_units))
+                text_paint_sample
+            else
+                null;
             drawShapedGlyph(
+                rr,
                 &rr.terminal_font,
                 draw_ctx,
                 span_choice.face,
@@ -1117,11 +1364,20 @@ pub fn drawRowGlyphs(
                 pen_rel,
                 cell_x,
                 cell_y,
-                geom.baseline_logical_exact,
+                view.baseline_from_top,
                 cell_w_span,
                 cell_h_span,
                 followed_by_space,
                 fg_draw.toRgba(),
+                capture_shaped,
+                generation,
+                row_idx,
+                cursor_pos.col,
+                abs_col,
+                cell,
+                width_units,
+                cell_x,
+                cell_y,
             );
             if (stats) |s| {
                 s.shaped_glyphs += 1;

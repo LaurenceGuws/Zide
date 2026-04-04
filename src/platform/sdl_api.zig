@@ -26,6 +26,42 @@ pub const EVENT_MOUSE_BUTTON_DOWN: c_uint = c.SDL_EVENT_MOUSE_BUTTON_DOWN;
 pub const EVENT_MOUSE_BUTTON_UP: c_uint = c.SDL_EVENT_MOUSE_BUTTON_UP;
 pub const EVENT_MOUSE_WHEEL: c_uint = c.SDL_EVENT_MOUSE_WHEEL;
 
+pub const WindowChangeMask = packed struct(u8) {
+    moved: bool = false,
+    resized: bool = false,
+    pixel_size_changed: bool = false,
+    display_changed: bool = false,
+    display_scale_changed: bool = false,
+    _padding: u3 = 0,
+
+    pub fn any(self: WindowChangeMask) bool {
+        return self.moved or
+            self.resized or
+            self.pixel_size_changed or
+            self.display_changed or
+            self.display_scale_changed;
+    }
+
+    pub fn affectsWindowRefresh(self: WindowChangeMask) bool {
+        return self.resized or
+            self.pixel_size_changed or
+            self.display_changed or
+            self.display_scale_changed;
+    }
+
+    pub fn affectsUiScale(self: WindowChangeMask) bool {
+        return self.display_changed or self.display_scale_changed;
+    }
+
+    pub fn merge(self: *WindowChangeMask, other: WindowChangeMask) void {
+        self.moved = self.moved or other.moved;
+        self.resized = self.resized or other.resized;
+        self.pixel_size_changed = self.pixel_size_changed or other.pixel_size_changed;
+        self.display_changed = self.display_changed or other.display_changed;
+        self.display_scale_changed = self.display_scale_changed or other.display_scale_changed;
+    }
+};
+
 pub fn isWindowEventType(event_type: c_uint) bool {
     if (event_type == c.SDL_EVENT_WINDOW_SHOWN) return true;
     if (event_type == c.SDL_EVENT_WINDOW_HIDDEN) return true;
@@ -69,12 +105,17 @@ pub fn windowEventName(event_type: c_uint) []const u8 {
 }
 
 pub fn isResizeEvent(event_type: c_uint) bool {
-    if (event_type == c.SDL_EVENT_WINDOW_RESIZED) return true;
-    if (event_type == c.SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) return true;
-    if (event_type == c.SDL_EVENT_WINDOW_MOVED) return true;
-    if (event_type == c.SDL_EVENT_WINDOW_DISPLAY_CHANGED) return true;
-    if (event_type == c.SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED) return true;
-    return false;
+    return classifyWindowChange(event_type).affectsWindowRefresh();
+}
+
+pub fn classifyWindowChange(event_type: c_uint) WindowChangeMask {
+    var changes: WindowChangeMask = .{};
+    if (event_type == c.SDL_EVENT_WINDOW_MOVED) changes.moved = true;
+    if (event_type == c.SDL_EVENT_WINDOW_RESIZED) changes.resized = true;
+    if (event_type == c.SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) changes.pixel_size_changed = true;
+    if (event_type == c.SDL_EVENT_WINDOW_DISPLAY_CHANGED) changes.display_changed = true;
+    if (event_type == c.SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED) changes.display_scale_changed = true;
+    return changes;
 }
 
 pub fn isCloseEvent(event_type: c_uint) bool {

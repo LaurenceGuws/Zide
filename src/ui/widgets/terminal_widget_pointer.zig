@@ -11,16 +11,7 @@ const paste_mod = @import("terminal_widget_paste.zig");
 pub const PointerParams = struct {
     in_terminal: bool,
     mouse: shared_types.input.MousePos,
-    x: f32,
-    y: f32,
-    width: f32,
-    height: f32,
-    hit_base_x: f32,
-    hit_base_y: f32,
-    hit_cell_w: f32,
-    hit_cell_h: f32,
-    rows: usize,
-    cols: usize,
+    view: shared_types.layout.TerminalViewGeometry,
     total_lines: usize,
     history_len: usize,
     start_line: usize,
@@ -70,16 +61,16 @@ pub fn handlePointerInput(
     if (params.has_visible_grid and params.in_terminal) {
         if (input_batch.mousePressed(.left)) {
             const press_mouse = input_batch.mousePressPos(.left) orelse params.mouse;
-            const col = @as(usize, @intFromFloat((press_mouse.x - params.hit_base_x) / params.hit_cell_w));
-            const row = @as(usize, @intFromFloat((press_mouse.y - params.hit_base_y) / params.hit_cell_h));
-            const clamped_col = @min(col, params.cols - 1);
-            const clamped_row = @min(row, params.rows - 1);
+            const col = @as(usize, @intFromFloat((press_mouse.x - params.view.origin_x) / params.view.cell_width));
+            const row = @as(usize, @intFromFloat((press_mouse.y - params.view.origin_y) / params.view.cell_height));
+            const clamped_col = @min(col, params.view.cols - 1);
+            const clamped_row = @min(row, params.view.rows - 1);
             const global_row = params.start_line + clamped_row;
-            if (global_row < params.history_len + params.rows) {
+            if (global_row < params.history_len + params.view.rows) {
                 self.selection_press_origin = press_mouse;
                 self.selection_drag_active = false;
                 if (input_batch.mouseClicks(.left) >= 2) {
-                    const row_cells = view_cells[clamped_row * params.cols .. (clamped_row + 1) * params.cols];
+                    const row_cells = view_cells[clamped_row * params.view.cols .. (clamped_row + 1) * params.view.cols];
                     const click_result = terminal_selection.beginClickSelection(
                         self.session,
                         row_cells,
@@ -103,17 +94,17 @@ pub fn handlePointerInput(
             }
         }
 
-        const drag_select_active = selectionDragIsActive(self, input_batch, params.mouse, params.hit_cell_w);
+        const drag_select_active = selectionDragIsActive(self, input_batch, params.mouse, params.view.cell_width);
         const drag_select_multi = drag_select_active and self.selection_gesture.mode != .none;
         const drag_select_normal = drag_select_active and self.selection_gesture.mode == .none;
         if (drag_select_multi) {
-            const col = @as(usize, @intFromFloat((params.mouse.x - params.hit_base_x) / params.hit_cell_w));
-            const row = @as(usize, @intFromFloat((params.mouse.y - params.hit_base_y) / params.hit_cell_h));
-            const clamped_col = @min(col, params.cols - 1);
-            const clamped_row = @min(row, params.rows - 1);
+            const col = @as(usize, @intFromFloat((params.mouse.x - params.view.origin_x) / params.view.cell_width));
+            const row = @as(usize, @intFromFloat((params.mouse.y - params.view.origin_y) / params.view.cell_height));
+            const clamped_col = @min(col, params.view.cols - 1);
+            const clamped_row = @min(row, params.view.rows - 1);
             const global_row = params.start_line + clamped_row;
-            if (global_row < params.history_len + params.rows) {
-                const row_cells = view_cells[clamped_row * params.cols .. (clamped_row + 1) * params.cols];
+            if (global_row < params.history_len + params.view.rows) {
+                const row_cells = view_cells[clamped_row * params.view.cols .. (clamped_row + 1) * params.view.cols];
                 if (terminal_selection.extendGestureSelection(self.session, self.selection_gesture, row_cells, global_row, clamped_col)) {
                     selection_active = true;
                     result.handled = true;
@@ -121,22 +112,22 @@ pub fn handlePointerInput(
             }
 
             if (selection_active) {
-                if (params.mouse.y < params.y) {
+                if (params.mouse.y < params.view.viewport.y) {
                     _ = scrollback_view.scrollSelectionDrag(self.session, true);
                     result.handled = true;
-                } else if (params.mouse.y > params.y + params.height) {
+                } else if (params.mouse.y > params.view.viewport.y + params.view.viewport.height) {
                     _ = scrollback_view.scrollSelectionDrag(self.session, false);
                     result.handled = true;
                 }
             }
         }
         if (drag_select_normal) {
-            const col = @as(usize, @intFromFloat((params.mouse.x - params.hit_base_x) / params.hit_cell_w));
-            const row = @as(usize, @intFromFloat((params.mouse.y - params.hit_base_y) / params.hit_cell_h));
-            const clamped_col = @min(col, params.cols - 1);
-            const clamped_row = @min(row, params.rows - 1);
+            const col = @as(usize, @intFromFloat((params.mouse.x - params.view.origin_x) / params.view.cell_width));
+            const row = @as(usize, @intFromFloat((params.mouse.y - params.view.origin_y) / params.view.cell_height));
+            const clamped_col = @min(col, params.view.cols - 1);
+            const clamped_row = @min(row, params.view.rows - 1);
             const global_row = params.start_line + clamped_row;
-            if (global_row < params.history_len + params.rows) {
+            if (global_row < params.history_len + params.view.rows) {
                 if (!selection_active) {
                     const anchor = terminal_types.SelectionPos{
                         .row = self.selection_gesture.row,
@@ -152,7 +143,7 @@ pub fn handlePointerInput(
                         result.handled = true;
                     }
                 } else {
-                    const row_cells = view_cells[clamped_row * params.cols .. (clamped_row + 1) * params.cols];
+                    const row_cells = view_cells[clamped_row * params.view.cols .. (clamped_row + 1) * params.view.cols];
                     if (terminal_selection.selectOrUpdateCellInRow(self.session, row_cells, global_row, clamped_col)) {
                         selection_active = true;
                         result.handled = true;
@@ -161,10 +152,10 @@ pub fn handlePointerInput(
             }
 
             if (selection_active) {
-                if (params.mouse.y < params.y) {
+                if (params.mouse.y < params.view.viewport.y) {
                     _ = scrollback_view.scrollSelectionDrag(self.session, true);
                     result.handled = true;
-                } else if (params.mouse.y > params.y + params.height) {
+                } else if (params.mouse.y > params.view.viewport.y + params.view.viewport.height) {
                     _ = scrollback_view.scrollSelectionDrag(self.session, false);
                     result.handled = true;
                 }

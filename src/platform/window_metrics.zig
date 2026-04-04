@@ -8,6 +8,7 @@ const sdl = gl.c;
 pub const DisplayMetrics = display_metrics.DisplayMetrics;
 pub const WindowSize = display_metrics.WindowSize;
 pub const DrawableSize = display_metrics.DrawableSize;
+pub const WindowGeometryMetrics = display_metrics.WindowGeometryMetrics;
 
 pub const WindowMetrics = struct {
     window_w: i32,
@@ -41,6 +42,14 @@ pub fn getRenderScale(window: *sdl.SDL_Window) f32 {
 
 pub fn collectDisplayMetrics(window: *sdl.SDL_Window) DisplayMetrics {
     return display_metrics.collectDisplayMetrics(window);
+}
+
+pub fn collectWindowGeometryMetrics(window: *sdl.SDL_Window) WindowGeometryMetrics {
+    return display_metrics.collectWindowGeometryMetrics(window);
+}
+
+pub fn mergeWindowGeometryMetrics(base: DisplayMetrics, geometry: WindowGeometryMetrics) DisplayMetrics {
+    return display_metrics.mergeWindowGeometryMetrics(base, geometry);
 }
 
 pub fn getScreenSize(window: *sdl.SDL_Window) iface.MousePos {

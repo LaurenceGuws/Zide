@@ -172,8 +172,7 @@ pub fn resetUserZoomTarget(self: anytype, now: f64) bool {
     return result.changed;
 }
 
-pub fn refreshUiScale(self: anytype) !bool {
-    const metrics = platform_window.collectDisplayMetrics(self.window);
+pub fn refreshUiScaleFromDisplayMetrics(self: anytype, metrics: platform_window.DisplayMetrics) !bool {
     var wayland = scale_utils.WaylandScaleState{
         .cache = self.scale.wayland_scale_cache,
         .last_update = self.scale.wayland_scale_last_update,

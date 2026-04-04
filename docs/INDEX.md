@@ -48,11 +48,16 @@ Quick reading guide:
   - `docs/todo/editor/treesitter_dynamic_roadmap.md` — dynamic grammar-pack rollout queue and execution order.
   - `docs/todo/ui/terminal_special_glyphs.md` — active terminal UI quality lane for special glyphs.
   - `docs/todo/ui/font_rendering.md` — remaining text-rendering quality work.
+  - `docs/todo/ui/window_scale_geometry.md` — active app-wide scale and
+    geometry ownership queue for one resolved widget/terminal contract.
   - `docs/todo/dependencies.md` — Zig-managed dependency migration plan (SDL3/FreeType/HarfBuzz/Lua/tree-sitter).
   - `docs/todo/app_hygiene_cleanup.md` — app/build/platform hygiene cleanup queue for dependency boundaries, SDL3 residue, and repo-contract hardening.
 
 ## Architecture + design
 - `app_architecture/ui/DEVELOPMENT_JOURNEY.md` — renderer plan and per-OS journey.
+- `app_architecture/ui/WINDOW_SCALE_GEOMETRY_DESIGN.md` — exact public widget
+  and terminal geometry contract plus first API deletion list for the scale
+  ownership lane.
 - `app_architecture/linux/INSTALLATION.md` — Linux local install and staged-release authority.
 - `app_architecture/TOOLING_INSTALL_SURFACES.md` — cross-OS tooling intent model for smoke, local install, and staged release.
 - `app_architecture/APP_LAYERING.md` — module boundaries and import rules.

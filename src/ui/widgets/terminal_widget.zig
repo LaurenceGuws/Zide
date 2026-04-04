@@ -18,6 +18,7 @@ const paste_mod = @import("terminal_widget_paste.zig");
 const draw_mod = @import("terminal_widget_draw.zig");
 const input_mod = @import("terminal_widget_input.zig");
 const retained_state_mod = @import("terminal_widget_retained_state.zig");
+const debug_geometry_mod = @import("terminal_widget_debug_geometry.zig");
 const view_state = @import("terminal_widget_view_state.zig");
 const render_cache_mod = @import("../../terminal/core/publication/render_cache.zig");
 
@@ -31,6 +32,10 @@ const RetainedState = retained_state_mod.RetainedState;
 const DrawOutcome = draw_mod.DrawOutcome;
 const DrawPreparation = draw_mod.DrawPreparation;
 const Cell = terminal_publication.Cell;
+const ViewGeometrySample = debug_geometry_mod.ViewGeometrySample;
+const CursorOverlaySample = debug_geometry_mod.CursorOverlaySample;
+const RetainedSurfacePresentSample = debug_geometry_mod.RetainedSurfacePresentSample;
+const TextPaintSample = debug_geometry_mod.TextPaintSample;
 
 const visible_ascii_dump_path = "zide_terminal_view_dump.txt";
 
@@ -54,6 +59,10 @@ pub const TerminalWidget = struct {
     pending_presentation_feedback: ?DrawOutcome = null,
     draw_cache: RenderCache,
     retained: RetainedState,
+    last_view_geometry: ViewGeometrySample = .{},
+    last_cursor_overlay: CursorOverlaySample = .{},
+    last_surface_present: RetainedSurfacePresentSample = .{},
+    last_text_paint: TextPaintSample = .{},
     blink_last_slow_on: bool = true,
     blink_last_fast_on: bool = true,
     blink_last_active: bool = false,
@@ -87,6 +96,10 @@ pub const TerminalWidget = struct {
             .pending_presentation_feedback = null,
             .draw_cache = RenderCache.init(),
             .retained = RetainedState.init(),
+            .last_view_geometry = .{},
+            .last_cursor_overlay = .{},
+            .last_surface_present = .{},
+            .last_text_paint = .{},
             .blink_last_slow_on = true,
             .blink_last_fast_on = true,
             .blink_last_active = false,
@@ -219,10 +232,11 @@ pub const TerminalWidget = struct {
         self.retained.invalidateTextureCache();
     }
 
-    pub fn dumpVisibleAsciiView(self: *TerminalWidget) !void {
+    pub fn dumpVisibleAsciiView(self: *TerminalWidget, shell: *Shell) !void {
         var out = std.ArrayList(u8).empty;
         defer out.deinit(self.session.allocator);
         const dump_info = view_state.visibleViewDumpInfo(&self.draw_cache);
+        const metrics = shell.refreshWindowGeometryDiagnostics("terminal_visible_ascii_dump");
 
         try out.writer(self.session.allocator).print(
             "# Zide terminal visible-view dump\npath={s}\nrows={d} cols={d} generation={d} scroll_offset={d} alt_active={d} cursor={d}:{d} cursor_visible={d} screen_reverse={d}\n",
@@ -239,6 +253,135 @@ pub const TerminalWidget = struct {
                 @intFromBool(dump_info.screen_reverse),
             },
         );
+        try out.writer(self.session.allocator).print(
+            "window={d}x{d} drawable={d}x{d} display={d}x{d} display_index={d} dpi_scale={d:.3},{d:.3} display_scale={d:.3} pixel_density={d:.3} ui_scale={d:.3} render_scale={d:.3}\n",
+            .{
+                metrics.window_w,
+                metrics.window_h,
+                metrics.drawable_w,
+                metrics.drawable_h,
+                metrics.display_w,
+                metrics.display_h,
+                metrics.display_index,
+                metrics.dpi.x,
+                metrics.dpi.y,
+                metrics.display_scale,
+                metrics.pixel_density,
+                shell.uiScaleFactor(),
+                1.0 / shell.rendererPtr().devicePixelStep(),
+            },
+        );
+
+        try out.writer(self.session.allocator).print(
+            "view_geometry valid={d} generation={d} base=({d:.3},{d:.3}) viewport=({d:.3}x{d:.3}) rows={d} cols={d} cell_logical=({d:.3}x{d:.3}) cell_device=({d}x{d}) baseline={d:.3} ui_scale={d:.3} render_scale={d:.3}\n",
+            .{
+                @intFromBool(self.last_view_geometry.valid),
+                self.last_view_geometry.generation,
+                self.last_view_geometry.base_x,
+                self.last_view_geometry.base_y,
+                self.last_view_geometry.viewport_w,
+                self.last_view_geometry.viewport_h,
+                self.last_view_geometry.rows,
+                self.last_view_geometry.cols,
+                self.last_view_geometry.cell_width_logical,
+                self.last_view_geometry.cell_height_logical,
+                self.last_view_geometry.cell_width_device,
+                self.last_view_geometry.cell_height_device,
+                self.last_view_geometry.baseline_logical,
+                self.last_view_geometry.ui_scale,
+                self.last_view_geometry.render_scale,
+            },
+        );
+        try out.writer(self.session.allocator).print(
+            "cursor_overlay valid={d} generation={d} row={d} col={d} cp={d} width_units={d} cell=({d:.3},{d:.3},{d:.3},{d:.3}) cursor=({d:.3},{d:.3},{d:.3},{d:.3}) text_input_w={d:.3} edge_inset={d:.3} stroke={d:.3} render_scale={d:.3}\n",
+            .{
+                @intFromBool(self.last_cursor_overlay.valid),
+                self.last_cursor_overlay.generation,
+                self.last_cursor_overlay.row,
+                self.last_cursor_overlay.col,
+                self.last_cursor_overlay.codepoint,
+                self.last_cursor_overlay.width_units,
+                self.last_cursor_overlay.cell_x,
+                self.last_cursor_overlay.cell_y,
+                self.last_cursor_overlay.cell_w,
+                self.last_cursor_overlay.cell_h,
+                self.last_cursor_overlay.cursor_x,
+                self.last_cursor_overlay.cursor_y,
+                self.last_cursor_overlay.cursor_w,
+                self.last_cursor_overlay.cursor_h,
+                self.last_cursor_overlay.text_input_w,
+                self.last_cursor_overlay.edge_inset,
+                self.last_cursor_overlay.stroke,
+                self.last_cursor_overlay.render_scale,
+            },
+        );
+        try out.writer(self.session.allocator).print(
+            "retained_surface valid={d} generation={d} texture_px=({d}x{d}) target_logical=({d:.3}x{d:.3}) source_logical=({d:.3}x{d:.3}) dest=({d:.3},{d:.3},{d:.3},{d:.3}) scale=({d:.6},{d:.6})\n",
+            .{
+                @intFromBool(self.last_surface_present.valid),
+                self.last_surface_present.generation,
+                self.last_surface_present.texture_w_px,
+                self.last_surface_present.texture_h_px,
+                self.last_surface_present.target_logical_w,
+                self.last_surface_present.target_logical_h,
+                self.last_surface_present.source_logical_w,
+                self.last_surface_present.source_logical_h,
+                self.last_surface_present.dest_x,
+                self.last_surface_present.dest_y,
+                self.last_surface_present.dest_w,
+                self.last_surface_present.dest_h,
+                self.last_surface_present.scale_x,
+                self.last_surface_present.scale_y,
+            },
+        );
+        try out.writer(self.session.allocator).print(
+            "text_paint valid={d} generation={d} row={d} col={d} covers_cursor={d} cursor_distance_cols={d} cp={d} width_units={d} source={s} cell=({d:.3},{d:.3},{d:.3},{d:.3}) glyph=({d:.3},{d:.3},{d:.3},{d:.3}) baseline={d:.3} render_scale={d:.3}\n",
+            .{
+                @intFromBool(self.last_text_paint.valid),
+                self.last_text_paint.generation,
+                self.last_text_paint.row,
+                self.last_text_paint.col,
+                @intFromBool(self.last_text_paint.covers_cursor),
+                self.last_text_paint.cursor_distance_cols,
+                self.last_text_paint.codepoint,
+                self.last_text_paint.width_units,
+                @tagName(self.last_text_paint.source),
+                self.last_text_paint.cell_x,
+                self.last_text_paint.cell_y,
+                self.last_text_paint.cell_w,
+                self.last_text_paint.cell_h,
+                self.last_text_paint.glyph.x,
+                self.last_text_paint.glyph.y,
+                self.last_text_paint.glyph.width,
+                self.last_text_paint.glyph.height,
+                self.last_text_paint.baseline,
+                self.last_text_paint.render_scale,
+            },
+        );
+        if (self.last_cursor_overlay.valid and self.last_text_paint.valid) {
+            try out.writer(self.session.allocator).print(
+                "cursor_vs_text delta_cell_origin=({d:.3},{d:.3}) delta_overlay_to_glyph=({d:.3},{d:.3},{d:.3},{d:.3})\n",
+                .{
+                    self.last_cursor_overlay.cell_x - self.last_text_paint.cell_x,
+                    self.last_cursor_overlay.cell_y - self.last_text_paint.cell_y,
+                    self.last_cursor_overlay.cursor_x - self.last_text_paint.glyph.x,
+                    self.last_cursor_overlay.cursor_y - self.last_text_paint.glyph.y,
+                    self.last_cursor_overlay.cursor_w - self.last_text_paint.glyph.width,
+                    self.last_cursor_overlay.cursor_h - self.last_text_paint.glyph.height,
+                },
+            );
+        }
+        if (self.last_surface_present.valid and self.last_view_geometry.valid) {
+            try out.writer(self.session.allocator).print(
+                "surface_vs_view delta_target_minus_view=({d:.3},{d:.3}) delta_source_minus_view=({d:.3},{d:.3})\n",
+                .{
+                    self.last_surface_present.target_logical_w - self.last_view_geometry.viewport_w,
+                    self.last_surface_present.target_logical_h - self.last_view_geometry.viewport_h,
+                    self.last_surface_present.source_logical_w - self.last_view_geometry.viewport_w,
+                    self.last_surface_present.source_logical_h - self.last_view_geometry.viewport_h,
+                },
+            );
+        }
 
         try appendViewportColumnRuler(&out, self.session.allocator, dump_info.cols);
         try out.append(self.session.allocator, '\n');

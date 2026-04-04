@@ -31,6 +31,9 @@ Status note, 2026-03-30:
   - canonical per-frame terminal cell geometry is now the authority for terminal-space consumers under fractional scale
   - duplicate focused block-cursor glyph drawing is removed
   - focused `.bar` cursor height now uses logical cell geometry and visually matches row text at both `render_scale=1.00` and `render_scale=1.65`
+  - unfocused terminal cursor overlay now reuses logical cell geometry instead of device-pixel width/height, which keeps the box sane at fractional UI scale
+  - terminal-space origin is now device-pixel snapped once at the widget boundary, and draw/hover/input consumers share that same origin instead of rounding independently
+  - terminal cursor overlay now keeps exact logical cell edges from that snapped origin instead of rounding each cell position back to integer logical pixels
 - Current open bug in this queue:
   - some idle frames clear and submit the authoritative scene target without blitting the retained terminal texture (`terminal_texture_draws=0`)
   - input restores the foreground because a real redraw reintroduces the terminal blit

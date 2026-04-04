@@ -1,6 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
+const app_shell = @import("../../app_shell.zig");
 const scrollback_view = @import("../../terminal/core/scrollback_view.zig");
 const session_interaction = @import("../../terminal/core/session/interaction.zig");
 const terminal_runtime = @import("../../terminal/core/terminal_runtime.zig");
@@ -11,6 +12,7 @@ const key_encoder = @import("../../terminal/input/key_encoder.zig");
 const alt_probe = @import("../../terminal/input/alternate_probe.zig");
 const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
+const Shell = app_shell.Shell;
 
 pub const InputResult = struct {
     handled: bool = false,
@@ -21,6 +23,7 @@ pub const InputResult = struct {
 
 pub fn handleKeyboardInput(
     self: anytype,
+    shell: *Shell,
     renderer: anytype,
     scroll_offset: usize,
     allow_input: bool,
@@ -85,19 +88,43 @@ pub fn handleKeyboardInput(
             const key = event.key.key;
             const event_mod = keyModFromEvent(event.key);
             if (event.key.pressed and !event.key.repeated and event.key.mods.ctrl and event.key.mods.shift and !event.key.mods.alt and !event.key.mods.altgr and !event.key.mods.super and key == .f12) {
-                self.dumpVisibleAsciiView() catch |err| {
+                self.dumpVisibleAsciiView(shell) catch |err| {
                     dump_log.logf(.warning, "visible_ascii_dump failed err={s}", .{@errorName(err)});
                     result.handled = true;
                     result.skip_chars = true;
                     continue;
                 };
-                dump_log.logf(.info, "visible_ascii_dump path={s} rows={d} cols={d} alt_active={d} generation={d}", .{
+                dump_log.logf(.info, "visible_ascii_dump path={s} rows={d} cols={d} alt_active={d} generation={d} cursor_overlay={d} text_paint={d}", .{
                     "zide_terminal_view_dump.txt",
                     self.draw_cache.rows,
                     self.draw_cache.cols,
                     @intFromBool(self.draw_cache.alt_active),
                     self.draw_cache.generation,
+                    @intFromBool(self.last_cursor_overlay.valid),
+                    @intFromBool(self.last_text_paint.valid),
                 });
+                dump_log.logf(
+                    .info,
+                    "visible_ascii_dump geometry ui_scale={d:.3} render_scale={d:.3} cursor=({d:.3},{d:.3},{d:.3},{d:.3}) text=({d:.3},{d:.3},{d:.3},{d:.3}) surface=({d:.3}->{d:.3} scale={d:.6}) source={s} covers_cursor={d} cursor_distance_cols={d}",
+                    .{
+                        shell.uiScaleFactor(),
+                        1.0 / shell.rendererPtr().devicePixelStep(),
+                        self.last_cursor_overlay.cursor_x,
+                        self.last_cursor_overlay.cursor_y,
+                        self.last_cursor_overlay.cursor_w,
+                        self.last_cursor_overlay.cursor_h,
+                        self.last_text_paint.glyph.x,
+                        self.last_text_paint.glyph.y,
+                        self.last_text_paint.glyph.width,
+                        self.last_text_paint.glyph.height,
+                        self.last_surface_present.target_logical_w,
+                        self.last_surface_present.dest_w,
+                        self.last_surface_present.scale_x,
+                        @tagName(self.last_text_paint.source),
+                        @intFromBool(self.last_text_paint.covers_cursor),
+                        self.last_text_paint.cursor_distance_cols,
+                    },
+                );
                 result.handled = true;
                 result.skip_chars = true;
                 continue;

@@ -5,12 +5,7 @@ const shared_types = @import("../../types/mod.zig");
 
 pub const MouseReportingParams = struct {
     mouse: shared_types.input.MousePos,
-    hit_base_x: f32,
-    hit_base_y: f32,
-    hit_cell_w: f32,
-    hit_cell_h: f32,
-    rows: usize,
-    cols: usize,
+    view: shared_types.layout.TerminalViewGeometry,
     mod: terminal_types.Modifier,
 };
 
@@ -22,7 +17,7 @@ pub fn handleMouseReporting(
     wheel_steps: i32,
 ) !bool {
     var handled = false;
-    if (params.rows == 0 or params.cols == 0) return false;
+    if (params.view.rows == 0 or params.view.cols == 0) return false;
 
     self.session.lock();
     defer self.session.unlock();
@@ -33,15 +28,15 @@ pub fn handleMouseReporting(
     if (input_batch.mouseDown(.right)) buttons_down |= 4;
 
     var col: usize = 0;
-    if (params.mouse.x > params.hit_base_x) col = @as(usize, @intFromFloat((params.mouse.x - params.hit_base_x) / params.hit_cell_w));
+    if (params.mouse.x > params.view.origin_x) col = @as(usize, @intFromFloat((params.mouse.x - params.view.origin_x) / params.view.cell_width));
     var row: usize = 0;
-    if (params.mouse.y > params.hit_base_y) row = @as(usize, @intFromFloat((params.mouse.y - params.hit_base_y) / params.hit_cell_h));
-    row = @min(row, params.rows - 1);
-    col = @min(col, params.cols - 1);
-    const grid_px_w = @as(u32, @intCast(params.cols)) * @as(u32, @intFromFloat(params.hit_cell_w));
-    const grid_px_h = @as(u32, @intCast(params.rows)) * @as(u32, @intFromFloat(params.hit_cell_h));
-    const raw_px_x_f = @max(0.0, params.mouse.x - params.hit_base_x);
-    const raw_px_y_f = @max(0.0, params.mouse.y - params.hit_base_y);
+    if (params.mouse.y > params.view.origin_y) row = @as(usize, @intFromFloat((params.mouse.y - params.view.origin_y) / params.view.cell_height));
+    row = @min(row, params.view.rows - 1);
+    col = @min(col, params.view.cols - 1);
+    const grid_px_w = @as(u32, @intCast(params.view.cols)) * @as(u32, @intFromFloat(params.view.cell_width));
+    const grid_px_h = @as(u32, @intCast(params.view.rows)) * @as(u32, @intFromFloat(params.view.cell_height));
+    const raw_px_x_f = @max(0.0, params.mouse.x - params.view.origin_x);
+    const raw_px_y_f = @max(0.0, params.mouse.y - params.view.origin_y);
     var pixel_x: u32 = @intFromFloat(raw_px_x_f);
     var pixel_y: u32 = @intFromFloat(raw_px_y_f);
     if (grid_px_w > 0) pixel_x = @min(pixel_x, grid_px_w - 1);

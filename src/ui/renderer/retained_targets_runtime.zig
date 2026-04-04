@@ -27,6 +27,8 @@ pub const SurfaceDraw = struct {
     y: f32,
     width: ?f32 = null,
     height: ?f32 = null,
+    source_width: ?f32 = null,
+    source_height: ?f32 = null,
     generation: ?u64 = null,
 };
 
@@ -85,9 +87,17 @@ pub fn drawSurface(self: anytype, surface: RetainedSurface, draw: SurfaceDraw) v
             scene_frame_runtime.noteRetainedSurfaceBlit(self, .terminal, draw.generation);
             const width = draw.width orelse return;
             const height = draw.height orelse return;
+            const source_width = draw.source_width orelse width;
+            const source_height = draw.source_height orelse height;
             const snapped_x = snapToDevicePixel(draw.x, self.scale.render_scale);
             const snapped_y = snapToDevicePixel(draw.y, self.scale.render_scale);
-            const src = texture_draw.fullTextureSrcRect(target.texture);
+            const src = texture_draw.logicalTextureSrcRect(
+                target.texture,
+                @floatFromInt(target.logical_width),
+                @floatFromInt(target.logical_height),
+                source_width,
+                source_height,
+            );
             const dest = types.Rect{
                 .x = snapped_x,
                 .y = snapped_y,
@@ -129,12 +139,22 @@ pub fn drawSurface(self: anytype, surface: RetainedSurface, draw: SurfaceDraw) v
             scene_frame_runtime.noteRetainedSurfaceBlit(self, .editor, null);
             const snapped_x = snapToDevicePixel(draw.x, self.scale.render_scale);
             const snapped_y = snapToDevicePixel(draw.y, self.scale.render_scale);
-            const src = texture_draw.fullTextureSrcRect(target.texture);
+            const width = draw.width orelse @as(f32, @floatFromInt(target.logical_width));
+            const height = draw.height orelse @as(f32, @floatFromInt(target.logical_height));
+            const source_width = draw.source_width orelse width;
+            const source_height = draw.source_height orelse height;
+            const src = texture_draw.logicalTextureSrcRect(
+                target.texture,
+                @floatFromInt(target.logical_width),
+                @floatFromInt(target.logical_height),
+                source_width,
+                source_height,
+            );
             const dest = types.Rect{
                 .x = snapped_x,
                 .y = snapped_y,
-                .width = draw.width orelse @floatFromInt(target.logical_width),
-                .height = draw.height orelse @floatFromInt(target.logical_height),
+                .width = width,
+                .height = height,
             };
             draw_ops.drawTextureRect(self, target.texture, src, dest, Color.white.toRgba(), types.Rgba{ .r = 0, .g = 0, .b = 0, .a = 0 }, .linear_premul);
         },

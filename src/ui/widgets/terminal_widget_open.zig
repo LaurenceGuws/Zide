@@ -9,6 +9,7 @@ const hover_mod = @import("terminal_widget_hover.zig");
 
 const TerminalRuntimeShell = terminal_runtime.TerminalRuntimeShell;
 const Cell = terminal_publication.Cell;
+const TerminalViewGeometry = @import("../../types/mod.zig").layout.TerminalViewGeometry;
 
 pub const PendingOpen = struct {
     path: []u8,
@@ -21,25 +22,20 @@ pub fn ctrlClickOpenVisibleMaybe(
     session: *TerminalRuntimeShell,
     pending_open: *?PendingOpen,
     view_cells: []const Cell,
-    rows: usize,
-    cols: usize,
-    x: f32,
-    y: f32,
+    view: TerminalViewGeometry,
     mouse_x: f32,
     mouse_y: f32,
-    cell_width: f32,
-    cell_height: f32,
 ) bool {
     const log = app_logger.logger("terminal.open");
-    if (rows == 0 or cols == 0) return false;
-    if (cell_width <= 0 or cell_height <= 0) return false;
-    if (view_cells.len < rows * cols) return false;
+    if (view.rows == 0 or view.cols == 0) return false;
+    if (view.cell_width <= 0 or view.cell_height <= 0) return false;
+    if (view_cells.len < view.rows * view.cols) return false;
 
-    const col = @as(usize, @intFromFloat((mouse_x - x) / cell_width));
-    const row = @as(usize, @intFromFloat((mouse_y - y) / cell_height));
-    if (row >= rows or col >= cols) return false;
+    const col = @as(usize, @intFromFloat((mouse_x - view.origin_x) / view.cell_width));
+    const row = @as(usize, @intFromFloat((mouse_y - view.origin_y) / view.cell_height));
+    if (row >= view.rows or col >= view.cols) return false;
 
-    const link_id = hover_mod.visibleLinkIdAtCell(view_cells, rows, cols, row, col);
+    const link_id = hover_mod.visibleLinkIdAtCell(view_cells, view.rows, view.cols, row, col);
     if (link_id != 0) {
         var link_buf = std.ArrayList(u8).empty;
         defer link_buf.deinit(allocator);
@@ -59,7 +55,7 @@ pub fn ctrlClickOpenVisibleMaybe(
         }
     }
 
-    if (visibleRowCells(view_cells, cols, row)) |row_cells| {
+    if (visibleRowCells(view_cells, view.cols, row)) |row_cells| {
         if (extractTokenAtCol(allocator, row_cells, col)) |token| {
             defer allocator.free(token);
             if (parsePathAndLocation(token)) |parsed| {

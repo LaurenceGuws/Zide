@@ -40,7 +40,7 @@ pub const InputRuntimeState = struct {
     composing_cursor: i32 = 0,
     composing_selection_len: i32 = 0,
     composing_active: bool = false,
-    window_resized_flag: bool = false,
+    window_changes: sdl_api.WindowChangeMask = .{},
     text_input_state: text_input.TextInputState = text_input.initState(),
     pending_wait_event: sdl_api.c.SDL_Event = undefined,
     pending_wait_event_valid: bool = false,
@@ -72,7 +72,7 @@ pub const InputDomain = struct {
     composing_cursor: *i32,
     composing_selection_len: *i32,
     composing_active: *bool,
-    window_resized_flag: *bool,
+    window_changes: *sdl_api.WindowChangeMask,
     text_input_state: *text_input.TextInputState,
     pending_wait_event: *sdl_api.c.SDL_Event,
     pending_wait_event_valid: *bool,
@@ -94,7 +94,7 @@ pub const InputState = struct {
     composing_selection_len: *i32,
     composing_active: *bool,
     mouse_wheel_delta: *f32,
-    window_resized_flag: *bool,
+    window_changes: *sdl_api.WindowChangeMask,
 };
 
 pub fn resetForFrame(state: InputState) void {
@@ -104,7 +104,7 @@ pub fn resetForFrame(state: InputState) void {
     @memset(state.mouse_pressed, false);
     @memset(state.mouse_released, false);
     @memset(state.mouse_clicks, 0);
-    state.window_resized_flag.* = false;
+    state.window_changes.* = .{};
     state.mouse_wheel_delta.* = 0.0;
 }
 
@@ -240,8 +240,8 @@ pub fn windowFocused(domain: InputDomain) bool {
     return domain.window_focused.*;
 }
 
-pub fn windowResized(domain: InputDomain) bool {
-    return domain.window_resized_flag.*;
+pub fn windowChanges(domain: InputDomain) sdl_api.WindowChangeMask {
+    return domain.window_changes.*;
 }
 
 pub fn hasPendingWaitEvent(domain: InputDomain) bool {

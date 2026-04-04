@@ -30,7 +30,7 @@ pub fn pollInputEvents(
         .composing_selection_len = domain.composing_selection_len,
         .composing_active = domain.composing_active,
         .mouse_wheel_delta = mouse_wheel_delta,
-        .window_resized_flag = domain.window_resized_flag,
+        .window_changes = domain.window_changes,
     };
     input_state.resetForFrame(state);
     @memset(domain.mouse_press_pos_valid, false);
@@ -60,7 +60,7 @@ fn handleEvent(
         },
         sdl_api.EVENT_WINDOW => {
             if (sdl_api.windowEventId(event) != main_window_id) return;
-            handleWindowEvent(event.type, domain.should_close_flag, domain.window_resized_flag);
+            handleWindowEvent(event.type, domain.should_close_flag, domain.window_changes);
             if (sdl_api.isFocusGainedEvent(event.type)) {
                 sdl_api.startTextInput(domain.window);
                 text_input.reapplyRect(domain.text_input_state, domain.window);
@@ -118,7 +118,7 @@ fn handleEvent(
             if (sdl_api.isRuntimeWakeEvent(event.type)) return;
             if (sdl_api.isWindowEventType(event.type)) {
                 if (sdl_api.windowEventId(event) != main_window_id) return;
-                handleWindowEvent(event.type, domain.should_close_flag, domain.window_resized_flag);
+                handleWindowEvent(event.type, domain.should_close_flag, domain.window_changes);
                 if (sdl_api.isFocusGainedEvent(event.type)) {
                     sdl_api.startTextInput(domain.window);
                     text_input.reapplyRect(domain.text_input_state, domain.window);
@@ -138,10 +138,10 @@ fn handleEvent(
     }
 }
 
-fn handleWindowEvent(event_type: c_uint, should_close: *bool, window_resized: *bool) void {
-    if (sdl_api.isResizeEvent(event_type)) {
-        window_resized.* = true;
-        return;
+fn handleWindowEvent(event_type: c_uint, should_close: *bool, window_changes: *sdl_api.WindowChangeMask) void {
+    const change = sdl_api.classifyWindowChange(event_type);
+    if (change.any()) {
+        window_changes.merge(change);
     }
     if (sdl_api.isCloseEvent(event_type)) {
         should_close.* = true;

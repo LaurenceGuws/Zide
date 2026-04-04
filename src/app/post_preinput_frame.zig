@@ -49,10 +49,11 @@ pub fn handle(
     var out_needs_redraw = false;
     var out_note_input = false;
 
-    if (try shell.applyPendingZoom(now)) {
+    const zoom_refresh = try shell.applyPendingZoom(now);
+    if (zoom_refresh.needsUiLayoutRefresh()) {
         hooks.apply_ui_scale(ctx);
         try hooks.refresh_terminal_sizing(ctx);
-        out_needs_redraw = true;
+        out_needs_redraw = zoom_refresh.needsRedraw();
         out_note_input = true;
     }
     try hooks.handle_window_resize_event(ctx, shell, now);

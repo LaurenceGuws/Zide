@@ -42,6 +42,7 @@ const sdl_api = @import("../platform/sdl_api.zig");
 const types = @import("renderer/types.zig");
 const app_logger = @import("../app_logger.zig");
 const builtin = @import("builtin");
+const shared_types = @import("../types/mod.zig");
 
 const sdl = gl.c;
 const TextPress = platform_input_events.TextPress;
@@ -69,6 +70,50 @@ pub const EMOJI_TEXT_FALLBACK_PATH = iface.EMOJI_TEXT_FALLBACK_PATH;
 pub const Color = iface.Color;
 pub const MousePos = iface.MousePos;
 pub const Theme = iface.Theme;
+pub const UiGeometryContext = shared_types.layout.UiGeometryContext;
+pub const TerminalViewGeometry = shared_types.layout.TerminalViewGeometry;
+pub const WindowChangeMask = sdl_api.WindowChangeMask;
+pub const QuantizedAxis = struct {
+    origin: f32,
+    size: f32,
+};
+pub const WindowGeometryDiagnostics = struct {
+    window_w: i32,
+    window_h: i32,
+    drawable_w: i32,
+    drawable_h: i32,
+    display_w: i32,
+    display_h: i32,
+    display_index: i32,
+    dpi: MousePos,
+    display_scale: f32,
+    pixel_density: f32,
+    ui_scale: f32,
+    render_scale: f32,
+    screen: MousePos,
+    render: MousePos,
+    monitor: MousePos,
+};
+pub const WindowRefreshResult = struct {
+    changes: WindowChangeMask = .{},
+    geometry: WindowGeometryDiagnostics,
+    ui_scale_changed: bool = false,
+    scene_target_invalidation: SceneTargetInvalidation = .{},
+
+    pub fn needsRedraw(self: WindowRefreshResult) bool {
+        return self.ui_scale_changed or self.scene_target_invalidation.any();
+    }
+
+    pub fn needsUiLayoutRefresh(self: WindowRefreshResult) bool {
+        return self.ui_scale_changed;
+    }
+
+    pub fn needsDeferredTerminalResize(self: WindowRefreshResult) bool {
+        return self.scene_target_invalidation.drawable_resize or
+            self.scene_target_invalidation.display_change or
+            self.scene_target_invalidation.render_scale_change;
+    }
+};
 pub const EditorTextStyleFlags = iface.EditorTextStyleFlags;
 pub const editor_syntax_style_slots = iface.editor_syntax_style_slots;
 
@@ -218,6 +263,14 @@ pub const SceneTargetInvalidation = packed struct(u8) {
             self.render_scale_change or
             self.target_recreate_failure;
     }
+
+    pub fn merge(self: *SceneTargetInvalidation, other: SceneTargetInvalidation) void {
+        self.uninitialized = self.uninitialized or other.uninitialized;
+        self.drawable_resize = self.drawable_resize or other.drawable_resize;
+        self.display_change = self.display_change or other.display_change;
+        self.render_scale_change = self.render_scale_change or other.render_scale_change;
+        self.target_recreate_failure = self.target_recreate_failure or other.target_recreate_failure;
+    }
 };
 
 pub const SceneTargetContract = struct {
@@ -228,6 +281,36 @@ pub const SceneTargetContract = struct {
     display_index: i32 = -1,
     render_scale: f32 = 1.0,
 };
+
+fn sceneTargetInvalidationForRefresh(
+    scene_target: SceneTargetState,
+    changes: WindowChangeMask,
+    metrics: platform_window.DisplayMetrics,
+) SceneTargetInvalidation {
+    const next = sceneTargetContractFromDisplayMetrics(metrics);
+    const previous = scene_target.contract;
+    var reasons: SceneTargetInvalidation = .{};
+
+    if (!scene_target.ready and scene_target.target == null) {
+        reasons.uninitialized = true;
+    }
+    if (changes.resized or changes.pixel_size_changed or
+        previous.drawable_width != next.drawable_width or
+        previous.drawable_height != next.drawable_height or
+        previous.logical_width != next.logical_width or
+        previous.logical_height != next.logical_height)
+    {
+        reasons.drawable_resize = true;
+    }
+    if (changes.display_changed or previous.display_index != next.display_index) {
+        reasons.display_change = true;
+    }
+    if (changes.display_scale_changed or !std.math.approxEqAbs(f32, previous.render_scale, next.render_scale, 0.0001)) {
+        reasons.render_scale_change = true;
+    }
+
+    return reasons;
+}
 
 pub fn sceneTargetContractFromDisplayMetrics(metrics: platform_window.DisplayMetrics) SceneTargetContract {
     return .{
@@ -244,6 +327,7 @@ const SceneTargetState = struct {
     target: ?RenderTarget = null,
     contract: SceneTargetContract = .{},
     invalidation: SceneTargetInvalidation = .{ .uninitialized = true },
+    pending_invalidation: SceneTargetInvalidation = .{},
     ready: bool = false,
 };
 
@@ -347,6 +431,7 @@ pub const Renderer = struct {
     height: i32,
     render_width: i32,
     render_height: i32,
+    display_metrics: platform_window.DisplayMetrics,
     target_width: i32,
     target_height: i32,
     target_pixel_width: i32,
@@ -476,6 +561,7 @@ pub const Renderer = struct {
             .height = display_metrics.window_h,
             .render_width = display_metrics.drawable_w,
             .render_height = display_metrics.drawable_h,
+            .display_metrics = display_metrics,
             .target_width = display_metrics.drawable_w,
             .target_height = display_metrics.drawable_h,
             .target_pixel_width = display_metrics.drawable_w,
@@ -739,12 +825,16 @@ pub const Renderer = struct {
         return font_runtime.resetUserZoomTarget(self, now);
     }
 
-    pub fn refreshUiScale(self: *Renderer) !bool {
-        return font_runtime.refreshUiScale(self);
-    }
-
-    pub fn applyPendingZoom(self: *Renderer, now: f64) !bool {
-        return font_runtime.applyPendingZoom(self, now);
+    pub fn applyPendingZoom(self: *Renderer, now: f64) !WindowRefreshResult {
+        const changed = try font_runtime.applyPendingZoom(self, now);
+        const scene_target_invalidation: SceneTargetInvalidation = if (changed) .{ .render_scale_change = true } else .{};
+        self.scene_target.pending_invalidation.merge(scene_target_invalidation);
+        return .{
+            .changes = .{},
+            .geometry = self.windowGeometryDiagnostics(),
+            .ui_scale_changed = changed,
+            .scene_target_invalidation = scene_target_invalidation,
+        };
     }
 
     pub fn uiScaleFactor(self: *const Renderer) f32 {
@@ -771,8 +861,115 @@ pub const Renderer = struct {
         return self.terminal_base_font_size;
     }
 
-    pub fn renderScaleFactor(self: *const Renderer) f32 {
-        return self.scale.render_scale;
+    pub fn devicePixelStep(self: *const Renderer) f32 {
+        const scale = if (self.scale.render_scale > 0.0) self.scale.render_scale else 1.0;
+        return 1.0 / scale;
+    }
+
+    pub fn snapLogicalToDevicePixel(self: *const Renderer, value: f32) f32 {
+        return snapToDevicePixel(value, self.scale.render_scale);
+    }
+
+    pub fn quantizeLogicalHorizontalAxis(self: *const Renderer, origin: f32, size: f32) QuantizedAxis {
+        const snapped_origin = self.snapLogicalToDevicePixel(origin);
+        const snapped_end = self.snapLogicalToDevicePixel(origin + size);
+        return .{
+            .origin = snapped_origin,
+            .size = @max(self.devicePixelStep(), snapped_end - snapped_origin),
+        };
+    }
+
+    pub fn quantizeLogicalVerticalAxis(self: *const Renderer, origin: f32, size: f32) QuantizedAxis {
+        return .{
+            .origin = self.snapLogicalToDevicePixel(origin),
+            .size = @max(self.devicePixelStep(), size),
+        };
+    }
+
+    fn windowGeometryDiagnosticsFromDisplayMetrics(self: *const Renderer, metrics: platform_window.DisplayMetrics) WindowGeometryDiagnostics {
+        const monitor = platform_window.getMonitorSize(self.window);
+        return .{
+            .window_w = metrics.window_w,
+            .window_h = metrics.window_h,
+            .drawable_w = metrics.drawable_w,
+            .drawable_h = metrics.drawable_h,
+            .display_w = @intFromFloat(monitor.x),
+            .display_h = @intFromFloat(monitor.y),
+            .display_index = metrics.display_index,
+            .dpi = metrics.dpi,
+            .display_scale = metrics.display_scale,
+            .pixel_density = metrics.pixel_density,
+            .ui_scale = self.uiScaleFactor(),
+            .render_scale = metrics.render_scale,
+            .screen = platform_window.getScreenSize(self.window),
+            .render = .{ .x = @floatFromInt(metrics.drawable_w), .y = @floatFromInt(metrics.drawable_h) },
+            .monitor = monitor,
+        };
+    }
+
+    fn applyDisplayMetricsSnapshot(self: *Renderer, metrics: platform_window.DisplayMetrics) void {
+        self.width = metrics.window_w;
+        self.height = metrics.window_h;
+        self.render_width = metrics.drawable_w;
+        self.render_height = metrics.drawable_h;
+        self.display_metrics = metrics;
+        self.updateMouseScale();
+    }
+
+    fn logWindowMetricsSnapshot(self: *Renderer, metrics: platform_window.DisplayMetrics, reason: []const u8) void {
+        _ = self;
+        _ = platform_window.collectWindowMetricsFromDisplayMetrics(metrics, reason);
+    }
+
+    fn refreshUiScaleForWindowChanges(self: *Renderer, changes: WindowChangeMask, metrics: platform_window.DisplayMetrics) !bool {
+        if (!changes.affectsUiScale()) return false;
+        return font_runtime.refreshUiScaleFromDisplayMetrics(self, metrics);
+    }
+
+    fn collectDisplayMetricsForWindowChanges(self: *Renderer, changes: WindowChangeMask) platform_window.DisplayMetrics {
+        if (changes.affectsUiScale()) {
+            return platform_window.collectDisplayMetrics(self.window);
+        }
+        const geometry = platform_window.collectWindowGeometryMetrics(self.window);
+        return platform_window.mergeWindowGeometryMetrics(self.display_metrics, geometry);
+    }
+
+    pub fn windowGeometryDiagnostics(self: *const Renderer) WindowGeometryDiagnostics {
+        return self.windowGeometryDiagnosticsFromDisplayMetrics(self.display_metrics);
+    }
+
+    pub fn refreshWindowGeometryDiagnostics(self: *Renderer, reason: []const u8) WindowGeometryDiagnostics {
+        const metrics = platform_window.collectDisplayMetrics(self.window);
+        self.applyDisplayMetricsSnapshot(metrics);
+        self.logWindowMetricsSnapshot(metrics, reason);
+        return self.windowGeometryDiagnosticsFromDisplayMetrics(metrics);
+    }
+
+    pub fn refreshWindowState(self: *Renderer, reason: []const u8, changes: WindowChangeMask) !WindowRefreshResult {
+        const metrics = self.collectDisplayMetricsForWindowChanges(changes);
+        const scene_target_invalidation = sceneTargetInvalidationForRefresh(self.scene_target, changes, metrics);
+        self.applyDisplayMetricsSnapshot(metrics);
+        self.scene_target.pending_invalidation.merge(scene_target_invalidation);
+        self.logWindowMetricsSnapshot(metrics, reason);
+        const ui_scale_changed = try self.refreshUiScaleForWindowChanges(changes, metrics);
+        return .{
+            .changes = changes,
+            .geometry = self.windowGeometryDiagnosticsFromDisplayMetrics(metrics),
+            .ui_scale_changed = ui_scale_changed,
+            .scene_target_invalidation = scene_target_invalidation,
+        };
+    }
+
+    pub fn uiGeometryContext(self: *const Renderer) UiGeometryContext {
+        return .{
+            .window = .{
+                .x = 0,
+                .y = 0,
+                .width = @floatFromInt(self.width),
+                .height = @floatFromInt(self.height),
+            },
+            .ui_scale = self.uiScaleFactor(),
+        };
     }
 
     pub fn shouldClose(self: *Renderer) bool {
@@ -1072,22 +1269,6 @@ pub const Renderer = struct {
         return .{ .x = pos.x, .y = pos.y };
     }
 
-    pub fn getDpiScale(self: *Renderer) MousePos {
-        return platform_window.getDpiScale(self.window);
-    }
-
-    pub fn getDisplayMetrics(self: *Renderer) platform_window.DisplayMetrics {
-        return platform_window.collectDisplayMetrics(self.window);
-    }
-
-    pub fn getScreenSize(self: *Renderer) MousePos {
-        return platform_window.getScreenSize(self.window);
-    }
-
-    pub fn getMonitorSize(self: *Renderer) MousePos {
-        return platform_window.getMonitorSize(self.window);
-    }
-
     fn windowChromeDomain(self: *Renderer) window_chrome_runtime.WindowChromeDomain {
         return .{
             .window = self.window,
@@ -1177,27 +1358,11 @@ pub const Renderer = struct {
         );
     }
 
-    pub const WindowMetrics = platform_window.WindowMetrics;
     pub const DisplayMetrics = platform_window.DisplayMetrics;
-
-    pub fn refreshWindowMetrics(self: *Renderer, reason: []const u8) WindowMetrics {
-        const display_metrics = platform_window.collectDisplayMetrics(self.window);
-        self.width = display_metrics.window_w;
-        self.height = display_metrics.window_h;
-        self.render_width = display_metrics.drawable_w;
-        self.render_height = display_metrics.drawable_h;
-        self.updateMouseScale();
-        return platform_window.collectWindowMetricsFromDisplayMetrics(display_metrics, reason);
-    }
 
     pub fn updateMouseScale(self: *Renderer) void {
         const scale = platform_mouse.computeMouseScale(self.window);
         self.input.mouse_scale = .{ .x = scale.x, .y = scale.y };
-    }
-
-    pub fn getRenderSize(self: *Renderer) MousePos {
-        const drawable = platform_window.getDrawableSize(self.window);
-        return .{ .x = @floatFromInt(drawable.w), .y = @floatFromInt(drawable.h) };
     }
 
     pub fn isMouseButtonPressed(self: *Renderer, button: i32) bool {
@@ -1328,6 +1493,39 @@ pub const Renderer = struct {
         };
     }
 
+    pub fn terminalViewGeometry(self: *Renderer, viewport: shared_types.layout.Rect, rows: usize, cols: usize) TerminalViewGeometry {
+        const geom = self.terminalCellGeometry();
+        const scale = if (self.scale.render_scale > 0.0) self.scale.render_scale else 1.0;
+        const origin_x = snapToDevicePixel(viewport.x, self.scale.render_scale);
+        const origin_y = snapToDevicePixel(viewport.y, self.scale.render_scale);
+        const max_grid_w = geom.cell_width_logical_exact * @as(f32, @floatFromInt(@as(i32, @intCast(cols))));
+        const max_grid_h = geom.cell_height_logical_exact * @as(f32, @floatFromInt(@as(i32, @intCast(rows))));
+        const clip_w = @min(viewport.width, max_grid_w);
+        const clip_h = @min(viewport.height, max_grid_h);
+        const visible_cols: i32 = if (geom.cell_width_logical_exact > 0)
+            @intFromFloat(std.math.floor(clip_w / geom.cell_width_logical_exact))
+        else
+            0;
+        const visible_rows: i32 = if (geom.cell_height_logical_exact > 0)
+            @intFromFloat(std.math.floor(clip_h / geom.cell_height_logical_exact))
+        else
+            0;
+        const viewport_width = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(visible_cols * geom.cell_width_device_px)) / scale)))));
+        const viewport_height = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(visible_rows * geom.cell_height_device_px)) / scale)))));
+        return .{
+            .viewport = viewport,
+            .origin_x = origin_x,
+            .origin_y = origin_y,
+            .viewport_width = viewport_width,
+            .viewport_height = viewport_height,
+            .rows = rows,
+            .cols = cols,
+            .cell_width = geom.cell_width_logical_exact,
+            .cell_height = geom.cell_height_logical_exact,
+            .baseline_from_top = geom.baseline_logical_exact,
+        };
+    }
+
     pub fn addTerminalGlyphRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
         self.terminal_text.glyph_cache.addRect(self.white_texture, x, y, w, h, color.toRgba());
     }
@@ -1403,7 +1601,7 @@ pub const Renderer = struct {
             .composing_cursor = &self.input.composing_cursor,
             .composing_selection_len = &self.input.composing_selection_len,
             .composing_active = &self.input.composing_active,
-            .window_resized_flag = &self.input.window_resized_flag,
+            .window_changes = &self.input.window_changes,
             .text_input_state = &self.input.text_input_state,
             .pending_wait_event = &self.input.pending_wait_event,
             .pending_wait_event_valid = &self.input.pending_wait_event_valid,
@@ -1469,11 +1667,11 @@ pub fn setSdlLogLevel(level: c_int) void {
     sdl_api.logSetAllPriority(@intCast(level));
 }
 
-pub fn isWindowResized() bool {
+pub fn windowChanges() WindowChangeMask {
     if (active_renderer) |renderer| {
-        return input_state.windowResized(renderer.inputDomain());
+        return input_state.windowChanges(renderer.inputDomain());
     }
-    return false;
+    return .{};
 }
 
 pub fn getScreenWidth() i32 {

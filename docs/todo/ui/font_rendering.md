@@ -59,6 +59,19 @@ Status note, 2026-03-30:
 - This does not by itself close sequence-level emoji shaping parity; it is a
   fallback-stack correctness baseline.
 
+Status note, 2026-04-04:
+
+- The renderer/font-side fractional-DPI contract is no longer the whole scale
+  problem.
+- A broader app-wide geometry ownership contradiction is now explicit:
+  - widgets still see raw scale surfaces
+  - widgets still do their own snap math
+  - terminal draw/overlay/input/hover still own too much last-mile geometry
+- That broader lane now has its own queue:
+  - [window_scale_geometry.md](/home/home/personal/zide/docs/todo/ui/window_scale_geometry.md)
+- Read `FR-4-03` as a renderer/font contract checkpoint, not as closure of the
+  app-wide geometry ownership problem.
+
 ## Constraints
 
 - Introduce repeatable visual or metric harnesses before large rendering changes.
@@ -171,6 +184,14 @@ Status note, 2026-03-30:
     - vertical quantization now snaps glyph origin only and preserves raster
       height, instead of snapping both top and bottom edges and flattening the
       lower parts of letters
+  - Terminal overlay/input correction, 2026-04-04:
+    - the terminal widget now snaps its viewport origin to device pixels once
+      from `render_scale`, then reuses that same origin for draw, hover, open,
+      pointer, and mouse-reporting paths
+    - the terminal cursor overlay no longer rounds per-cell logical positions
+      to integer logical pixels; it derives cursor rects from the snapped
+      origin plus exact logical cell metrics so fractional-scale drift cannot
+      accumulate down rows/columns
   - Reverted rasterization experiment, 2026-03-19:
     - switching Windows defaults to `"normal"` hinting with `autohint = false`
       did not materially improve the remaining uneven stroke weight

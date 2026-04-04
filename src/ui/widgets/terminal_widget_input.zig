@@ -33,11 +33,16 @@ pub fn handleInput(
     const mouse = input_batch.mouse_pos;
     const in_terminal = common.pointInRect(mouse.x, mouse.y, x, y, width, height);
     var handled = false;
-    const scale = shell.uiScaleFactor();
     const cache = &self.draw_cache;
     const view_cells = cache.cells.items;
     const rows = cache.rows;
     const cols = cache.cols;
+    const view_geometry = shell.terminalViewGeometry(.{
+        .x = x,
+        .y = y,
+        .width = width,
+        .height = height,
+    }, rows, cols);
     const viewport = view_state.viewportInfo(cache);
     const history_len = viewport.history_len;
     const total_lines = viewport.total_lines;
@@ -45,22 +50,10 @@ pub fn handleInput(
     const start_line = viewport.start_line;
     const has_visible_grid = rows > 0 and cols > 0 and view_cells.len >= rows * cols;
     const r = shell.rendererPtr();
-    const geom = r.terminalCellGeometry();
-    const hit_cell_w = geom.cell_width_logical_exact;
-    const hit_cell_h = geom.cell_height_logical_exact;
-    const hit_base_x = x;
-    const hit_base_y = y;
     hover_mod.updateHoverStateVisible(
         &self.hover,
-        x,
-        y,
-        width,
-        height,
-        scale,
-        hit_cell_w,
-        hit_cell_h,
-        rows,
-        cols,
+        view_geometry,
+        shell.uiGeometryContext().ui_scale,
         view_cells,
         input_batch,
         shell.windowFocused(),
@@ -91,14 +84,9 @@ pub fn handleInput(
                 self.session,
                 &self.pending_open,
                 view_cells,
-                rows,
-                cols,
-                hit_base_x,
-                hit_base_y,
+                view_geometry,
                 mouse.x,
                 mouse.y,
-                hit_cell_w,
-                hit_cell_h,
             );
             if (did_open) {
                 handled = true;
@@ -123,6 +111,7 @@ pub fn handleInput(
         var skip_chars = false;
         const keyboard_result = try keyboard_mod.handleKeyboardInput(
             self,
+            shell,
             r,
             scroll_offset,
             allow_input,
@@ -155,16 +144,7 @@ pub fn handleInput(
                 .{
                     .in_terminal = in_terminal,
                     .mouse = mouse,
-                    .x = x,
-                    .y = y,
-                    .width = width,
-                    .height = height,
-                    .hit_base_x = hit_base_x,
-                    .hit_base_y = hit_base_y,
-                    .hit_cell_w = hit_cell_w,
-                    .hit_cell_h = hit_cell_h,
-                    .rows = rows,
-                    .cols = cols,
+                    .view = view_geometry,
                     .total_lines = total_lines,
                     .history_len = history_len,
                     .start_line = start_line,
@@ -190,12 +170,7 @@ pub fn handleInput(
                 self,
                 .{
                     .mouse = mouse,
-                    .hit_base_x = hit_base_x,
-                    .hit_base_y = hit_base_y,
-                    .hit_cell_w = hit_cell_w,
-                    .hit_cell_h = hit_cell_h,
-                    .rows = rows,
-                    .cols = cols,
+                    .view = view_geometry,
                     .mod = mod,
                 },
                 input_batch,

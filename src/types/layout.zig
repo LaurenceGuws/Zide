@@ -5,6 +5,24 @@ pub const Rect = struct {
     height: f32,
 };
 
+pub const UiGeometryContext = struct {
+    window: Rect,
+    ui_scale: f32,
+};
+
+pub const TerminalViewGeometry = struct {
+    viewport: Rect,
+    origin_x: f32,
+    origin_y: f32,
+    viewport_width: f32,
+    viewport_height: f32,
+    rows: usize,
+    cols: usize,
+    cell_width: f32,
+    cell_height: f32,
+    baseline_from_top: f32,
+};
+
 pub const WidgetLayout = struct {
     window: Rect,
     top_bar: Rect,

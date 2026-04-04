@@ -56,12 +56,13 @@ pub fn beginFrame(self: anytype) void {
     self.present.frame_seq +%= 1;
     self.present.trace_current = .{ .frame_seq = self.present.frame_seq };
     self.present.drawing_editor_surface = false;
-    const sizes = refreshWindowSizes(self.window);
+    const display_metrics = self.display_metrics;
+    const sizes = windowSizesFromDisplayMetrics(display_metrics);
     self.width = sizes.width;
     self.height = sizes.height;
     self.render_width = sizes.render_width;
     self.render_height = sizes.render_height;
-    refreshSceneTargetContract(self);
+    refreshSceneTargetContract(self, display_metrics);
     prepareSceneTarget(self, gl.c.GL_NEAREST);
 
     self.text_render.bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
@@ -206,29 +207,11 @@ pub fn noteEditorSurfaceFullPaneClear(self: anytype, x: i32, y: i32, w: i32, h: 
     noteCompositionFullPaneClear(self);
 }
 
-pub fn refreshSceneTargetContract(self: anytype) void {
+pub fn refreshSceneTargetContract(self: anytype, display_metrics: platform_window.DisplayMetrics) void {
     const log = app_logger.logger("renderer.scene_target");
-    const next = sceneTargetContractSnapshot(self);
-    var reasons: SceneTargetInvalidation = .{};
-    const previous = self.scene_target.contract;
-
-    if (!self.scene_target.ready and self.scene_target.target == null) {
-        reasons.uninitialized = true;
-    }
-    if (previous.drawable_width != next.drawable_width or
-        previous.drawable_height != next.drawable_height or
-        previous.logical_width != next.logical_width or
-        previous.logical_height != next.logical_height)
-    {
-        reasons.drawable_resize = true;
-    }
-    if (previous.display_index != next.display_index) {
-        reasons.display_change = true;
-    }
-    if (!std.math.approxEqAbs(f32, previous.render_scale, next.render_scale, 0.0001)) {
-        reasons.render_scale_change = true;
-    }
-
+    const next = renderer_root.sceneTargetContractFromDisplayMetrics(display_metrics);
+    const reasons = self.scene_target.pending_invalidation;
+    self.scene_target.pending_invalidation = .{};
     self.scene_target.contract = next;
     if (!reasons.any()) return;
 
@@ -286,18 +269,13 @@ fn performanceDeltaMs(start: u64, end: u64, freq: f64) f64 {
     return (@as(f64, @floatFromInt(end - start)) * 1000.0) / freq;
 }
 
-fn refreshWindowSizes(window: *gl.c.SDL_Window) WindowSizes {
-    const display_metrics = platform_window.collectDisplayMetrics(window);
+fn windowSizesFromDisplayMetrics(display_metrics: platform_window.DisplayMetrics) WindowSizes {
     return .{
         .width = display_metrics.window_w,
         .height = display_metrics.window_h,
         .render_width = display_metrics.drawable_w,
         .render_height = display_metrics.drawable_h,
     };
-}
-
-fn sceneTargetContractSnapshot(self: anytype) SceneTargetContract {
-    return renderer_root.sceneTargetContractFromDisplayMetrics(platform_window.collectDisplayMetrics(self.window));
 }
 
 fn noteSceneTargetRecreateFailure(self: anytype) void {

@@ -27,15 +27,8 @@ pub fn visibleLinkIdAtCell(view_cells: []const Cell, rows: usize, cols: usize, r
 
 pub fn updateHoverStateVisible(
     state: *HoverState,
-    x: f32,
-    y: f32,
-    width: f32,
-    height: f32,
+    view: shared_types.layout.TerminalViewGeometry,
     ui_scale: f32,
-    cell_width: f32,
-    cell_height: f32,
-    rows: usize,
-    cols: usize,
     view_cells: []const Cell,
     input_batch: *shared_types.input.InputBatch,
     window_focused: bool,
@@ -43,23 +36,28 @@ pub fn updateHoverStateVisible(
     const mouse = input_batch.mouse_pos;
     const ctrl = window_focused and input_batch.mods.ctrl;
     const scrollbar_w: f32 = common.scrollbarWidth(ui_scale);
-    const scrollbar_x = x + width - scrollbar_w;
+    const scrollbar_x = view.viewport.x + view.viewport.width - scrollbar_w;
     var hover_row: isize = -1;
     var hover_col: isize = -1;
     var hover_link_id: u32 = 0;
-    if (rows > 0 and cols > 0) {
-        const in_terminal = window_focused and common.pointInRect(mouse.x, mouse.y, x, y, width, height);
+    if (view.rows > 0 and view.cols > 0) {
+        const in_terminal = window_focused and common.pointInRect(
+            mouse.x,
+            mouse.y,
+            view.viewport.x,
+            view.viewport.y,
+            view.viewport.width,
+            view.viewport.height,
+        );
         const in_cells = in_terminal and mouse.x < scrollbar_x;
-        if (in_cells and cell_width > 0 and cell_height > 0) {
-            const base_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(x)))));
-            const base_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(y)))));
-            const col = @as(usize, @intFromFloat((mouse.x - base_x) / cell_width));
-            const row = @as(usize, @intFromFloat((mouse.y - base_y) / cell_height));
-            if (row < rows and col < cols) {
+        if (in_cells and view.cell_width > 0 and view.cell_height > 0) {
+            const col = @as(usize, @intFromFloat((mouse.x - view.origin_x) / view.cell_width));
+            const row = @as(usize, @intFromFloat((mouse.y - view.origin_y) / view.cell_height));
+            if (row < view.rows and col < view.cols) {
                 hover_row = @intCast(row);
                 hover_col = @intCast(col);
                 if (ctrl) {
-                    hover_link_id = visibleLinkIdAtCell(view_cells, rows, cols, row, col);
+                    hover_link_id = visibleLinkIdAtCell(view_cells, view.rows, view.cols, row, col);
                 }
             }
         }
@@ -81,40 +79,37 @@ pub fn updateHoverStateVisible(
 
 pub fn drawHoverUnderlineOverlay(
     r: anytype,
-    base_x: f32,
-    base_y: f32,
-    rows: usize,
-    cols: usize,
+    view: shared_types.layout.TerminalViewGeometry,
     hover_link_id: u32,
     view_cells: []const Cell,
 ) void {
-    if (rows == 0 or cols == 0) return;
+    if (view.rows == 0 or view.cols == 0) return;
     if (hover_link_id == 0) return;
-    if (view_cells.len < rows * cols) return;
+    if (view_cells.len < view.rows * view.cols) return;
 
-    const geom = r.terminalCellGeometry();
-    const cell_w = geom.cell_width_logical_exact;
-    const cell_h = geom.cell_height_logical_exact;
+    const cell_w = view.cell_width;
+    const cell_h = view.cell_height;
     const underline_color = r.theme.link;
+    const pixel_step = r.devicePixelStep();
 
     var row_idx: usize = 0;
-    while (row_idx < rows) : (row_idx += 1) {
+    while (row_idx < view.rows) : (row_idx += 1) {
         var col_idx: usize = 0;
-        while (col_idx < cols) {
-            const cell = view_cells[row_idx * cols + col_idx];
+        while (col_idx < view.cols) {
+            const cell = view_cells[row_idx * view.cols + col_idx];
             if (cell.attrs.link_id != hover_link_id) {
                 col_idx += 1;
                 continue;
             }
             const start_col = col_idx;
             col_idx += 1;
-            while (col_idx < cols and view_cells[row_idx * cols + col_idx].attrs.link_id == hover_link_id) {
+            while (col_idx < view.cols and view_cells[row_idx * view.cols + col_idx].attrs.link_id == hover_link_id) {
                 col_idx += 1;
             }
-            const rect_x = base_x + @as(f32, @floatFromInt(@as(i32, @intCast(start_col)))) * cell_w;
-            const rect_y = base_y + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h + (cell_h - (2.0 / (if (r.scale.render_scale > 0.0) r.scale.render_scale else 1.0)));
+            const rect_x = view.origin_x + @as(f32, @floatFromInt(@as(i32, @intCast(start_col)))) * cell_w;
+            const rect_y = view.origin_y + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h + (cell_h - (2.0 * pixel_step));
             const rect_w = cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(col_idx - start_col))));
-            r.drawRectF(rect_x, rect_y, rect_w, 2.0 / (if (r.scale.render_scale > 0.0) r.scale.render_scale else 1.0), underline_color);
+            r.drawRectF(rect_x, rect_y, rect_w, 2.0 * pixel_step, underline_color);
         }
     }
 }

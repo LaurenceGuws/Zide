@@ -4,14 +4,11 @@ const app_shell = @import("../app_shell.zig");
 pub fn log(shell: *app_shell.Shell, enabled: bool) void {
     if (!enabled) return;
     const r = shell.rendererPtr();
-    const display = shell.getDisplayMetrics();
+    const diagnostics = shell.windowGeometryDiagnostics();
     const raw = r.getMousePosRaw();
     const scaled = r.getMousePos();
-    const screen = r.getScreenSize();
-    const render = r.getRenderSize();
-    const monitor = r.getMonitorSize();
-    const scale_screen = if (render.x > 0) screen.x / render.x else 1.0;
-    const scale_render = if (screen.x > 0) render.x / screen.x else 1.0;
+    const scale_screen = if (diagnostics.render.x > 0) diagnostics.screen.x / diagnostics.render.x else 1.0;
+    const scale_render = if (diagnostics.screen.x > 0) diagnostics.render.x / diagnostics.screen.x else 1.0;
     const via_screen: app_shell.MousePos = .{ .x = raw.x * scale_screen, .y = raw.y * scale_screen };
     const via_render: app_shell.MousePos = .{ .x = raw.x * scale_render, .y = raw.y * scale_render };
 
@@ -22,17 +19,17 @@ pub fn log(shell: *app_shell.Shell, enabled: bool) void {
             raw.y,
             scaled.x,
             scaled.y,
-            display.dpi.x,
-            display.dpi.y,
-            display.display_scale,
-            display.pixel_density,
-            display.render_scale,
-            screen.x,
-            screen.y,
-            render.x,
-            render.y,
-            monitor.x,
-            monitor.y,
+            diagnostics.dpi.x,
+            diagnostics.dpi.y,
+            diagnostics.display_scale,
+            diagnostics.pixel_density,
+            diagnostics.render_scale,
+            diagnostics.screen.x,
+            diagnostics.screen.y,
+            diagnostics.render.x,
+            diagnostics.render.y,
+            diagnostics.monitor.x,
+            diagnostics.monitor.y,
             via_screen.x,
             via_screen.y,
             via_render.x,

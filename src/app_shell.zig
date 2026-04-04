@@ -8,7 +8,10 @@ const platform_input_events = @import("platform/input_events.zig");
 pub const MousePos = iface.MousePos;
 pub const Color = iface.Color;
 pub const Theme = iface.Theme;
+pub const WindowChangeMask = r.WindowChangeMask;
 pub const FrameSubmission = r.FrameSubmission;
+pub const WindowGeometryDiagnostics = r.WindowGeometryDiagnostics;
+pub const WindowRefreshResult = r.WindowRefreshResult;
 
 pub const MOUSE_LEFT = r.MOUSE_LEFT;
 pub const MOUSE_RIGHT = r.MOUSE_RIGHT;
@@ -120,10 +123,12 @@ pub const getTime = r.getTime;
 pub const waitTime = r.waitTime;
 pub const waitForWakeOrTimeout = r.waitForWakeOrTimeout;
 pub const requestWake = r.requestWake;
-pub const isWindowResized = r.isWindowResized;
+pub const windowChanges = r.windowChanges;
 pub const getScreenWidth = r.getScreenWidth;
 pub const getScreenHeight = r.getScreenHeight;
 pub const WindowMetrics = window.WindowMetrics;
+pub const UiGeometryContext = r.UiGeometryContext;
+pub const TerminalViewGeometry = r.TerminalViewGeometry;
 pub const RendererInitOptions = r.Renderer.InitOptions;
 pub const TextComposition = r.Renderer.TextComposition;
 pub const WindowChromeMode = r.Renderer.WindowChromeMode;
@@ -145,11 +150,7 @@ pub const Shell = struct {
         allocator.destroy(self);
     }
 
-    pub fn refreshUiScale(self: *Shell) !bool {
-        return self.renderer.refreshUiScale();
-    }
-
-    pub fn applyPendingZoom(self: *Shell, now: f64) !bool {
+    pub fn applyPendingZoom(self: *Shell, now: f64) !WindowRefreshResult {
         return self.renderer.applyPendingZoom(now);
     }
 
@@ -194,8 +195,8 @@ pub const Shell = struct {
         self.renderer.height = new_height;
     }
 
-    pub fn refreshWindowMetrics(self: *Shell, reason: []const u8) WindowMetrics {
-        return self.renderer.refreshWindowMetrics(reason);
+    pub fn refreshWindowState(self: *Shell, reason: []const u8, changes: WindowChangeMask) !WindowRefreshResult {
+        return self.renderer.refreshWindowState(reason, changes);
     }
 
     pub fn setWindowChrome(self: *Shell, contract: WindowChromeContract) void {
@@ -290,8 +291,20 @@ pub const Shell = struct {
         return self.renderer.userZoomTargetFactor();
     }
 
-    pub fn renderScaleFactor(self: *Shell) f32 {
-        return self.renderer.renderScaleFactor();
+    pub fn uiGeometryContext(self: *Shell) UiGeometryContext {
+        return self.renderer.uiGeometryContext();
+    }
+
+    pub fn windowGeometryDiagnostics(self: *Shell) WindowGeometryDiagnostics {
+        return self.renderer.windowGeometryDiagnostics();
+    }
+
+    pub fn refreshWindowGeometryDiagnostics(self: *Shell, reason: []const u8) WindowGeometryDiagnostics {
+        return self.renderer.refreshWindowGeometryDiagnostics(reason);
+    }
+
+    pub fn terminalViewGeometry(self: *Shell, viewport: @import("types/mod.zig").layout.Rect, rows: usize, cols: usize) TerminalViewGeometry {
+        return self.renderer.terminalViewGeometry(viewport, rows, cols);
     }
 
     pub fn terminalCellWidth(self: *Shell) f32 {
@@ -456,25 +469,5 @@ pub const Shell = struct {
 
     pub fn getClipboardMimeData(self: *Shell, allocator: std.mem.Allocator, mime_type: [*:0]const u8) ?[]u8 {
         return self.renderer.getClipboardMimeData(allocator, mime_type);
-    }
-
-    pub fn getDpiScale(self: *Shell) MousePos {
-        return self.renderer.getDpiScale();
-    }
-
-    pub fn getDisplayMetrics(self: *Shell) window.DisplayMetrics {
-        return self.renderer.getDisplayMetrics();
-    }
-
-    pub fn getScreenSize(self: *Shell) MousePos {
-        return self.renderer.getScreenSize();
-    }
-
-    pub fn getRenderSize(self: *Shell) MousePos {
-        return self.renderer.getRenderSize();
-    }
-
-    pub fn getMonitorSize(self: *Shell) MousePos {
-        return self.renderer.getMonitorSize();
     }
 };

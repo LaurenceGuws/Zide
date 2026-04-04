@@ -56,6 +56,39 @@ pub const DrawPreparation = struct {
     }
 };
 
+fn noteRetainedSurfacePresent(
+    self: anytype,
+    renderer: anytype,
+    generation: u64,
+    dest_x: f32,
+    dest_y: f32,
+    dest_w: f32,
+    dest_h: f32,
+    source_w: f32,
+    source_h: f32,
+) void {
+    if (renderer.retained_targets.terminal) |target| {
+        self.last_surface_present = .{
+            .valid = true,
+            .generation = generation,
+            .texture_w_px = target.texture.width,
+            .texture_h_px = target.texture.height,
+            .target_logical_w = @floatFromInt(target.logical_width),
+            .target_logical_h = @floatFromInt(target.logical_height),
+            .source_logical_w = source_w,
+            .source_logical_h = source_h,
+            .dest_x = dest_x,
+            .dest_y = dest_y,
+            .dest_w = dest_w,
+            .dest_h = dest_h,
+            .scale_x = if (source_w > 0.0) dest_w / source_w else 1.0,
+            .scale_y = if (source_h > 0.0) dest_h / source_h else 1.0,
+        };
+    } else {
+        self.last_surface_present.valid = false;
+    }
+}
+
 const ViewportTextureShiftPlan = draw_texture.ViewportTextureShiftPlan;
 const TextureUpdatePlan = draw_texture.TextureUpdatePlan;
 const FullFrameFastPathDecision = draw_texture.FullFrameFastPathDecision;
@@ -67,11 +100,6 @@ const ViewportShiftState = struct {
 
 pub fn latestFrameLatencyMetrics() FrameLatencyMetrics {
     return draw_metrics.latestFrameLatencyMetrics();
-}
-
-fn snapToDevicePixel(value: f32, render_scale: f32) f32 {
-    const scale = if (render_scale > 0.0) render_scale else 1.0;
-    return @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(value * scale))))) / scale;
 }
 
 fn toShellColor(color: terminal_publication.Color) Color {
@@ -128,6 +156,7 @@ pub fn drawPrepared(
     }
 
     const r = shell.rendererPtr();
+    const render_scale = 1.0 / r.devicePixelStep();
     const cache = &self.draw_cache;
     const lifecycle_transition = view_state.lifecycleTransitionInfo(self.retained.last_alt_active, cache);
     const alt_exit = lifecycle_transition.exited;
@@ -145,8 +174,15 @@ pub fn drawPrepared(
     const blink_time = app_shell.getTime();
     const rows = draw_state.rows;
     const cols = draw_state.cols;
+    const view_geometry = shell.terminalViewGeometry(.{
+        .x = x,
+        .y = y,
+        .width = width,
+        .height = height,
+    }, rows, cols);
     const view_cells = draw_state.cells;
     const base_colors = view_state.baseColorInfo(cache);
+    self.last_surface_present.valid = false;
     if (sync_updates and view_cells.len > 0 and retained_surface_ready) {
         const bg_color = if (view_cells.len > 0) toShellColor(base_colors.resolved_background) else r.theme.background;
         r.drawRect(
@@ -156,11 +192,24 @@ pub fn drawPrepared(
             @intFromFloat(height),
             bg_color,
         );
+        noteRetainedSurfacePresent(
+            self,
+            r,
+            draw_state.generation,
+            view_geometry.origin_x,
+            view_geometry.origin_y,
+            view_geometry.viewport_width,
+            view_geometry.viewport_height,
+            view_geometry.viewport_width,
+            view_geometry.viewport_height,
+        );
         retained_targets_runtime.drawSurface(r, .terminal, .{
-            .x = x,
-            .y = y,
-            .width = width,
-            .height = height,
+            .x = view_geometry.origin_x,
+            .y = view_geometry.origin_y,
+            .width = view_geometry.viewport_width,
+            .height = view_geometry.viewport_height,
+            .source_width = view_geometry.viewport_width,
+            .source_height = view_geometry.viewport_height,
             .generation = self.retained.last_render_generation,
         });
         return outcome;
@@ -206,8 +255,10 @@ pub fn drawPrepared(
     // No clipping - let icons overflow freely
     // (sidebar draws last to cover any left overflow, right overflow goes into empty space)
 
-    const base_x = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(x)))));
-    const base_y = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(y)))));
+    const base_x = view_geometry.origin_x;
+    const base_y = view_geometry.origin_y;
+    self.last_cursor_overlay.valid = false;
+    self.last_text_paint.valid = false;
 
     self.hover.dirty = false;
     const hover_link_id = hover_mod.hoverLinkId(&self.hover);
@@ -226,9 +277,9 @@ pub fn drawPrepared(
         cell_w_i = geom.cell_width_device_px;
         cell_h_i = geom.cell_height_device_px;
         const cell_metrics_changed = cell_w_i != self.retained.last_cell_w_i or cell_h_i != self.retained.last_cell_h_i;
-        const render_scale_changed = r.scale.render_scale != self.retained.last_render_scale;
+        const render_scale_changed = render_scale != self.retained.last_render_scale;
         const padding_x_i: i32 = @max(2, @divTrunc(cell_w_i, 2));
-        const scale = if (r.scale.render_scale > 0.0) r.scale.render_scale else 1.0;
+        const scale = render_scale;
         const texture_w = @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(cell_w_i * @as(i32, @intCast(cols)) + padding_x_i)) / scale)));
         const texture_h = @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(cell_h_i * @as(i32, @intCast(rows)))) / scale)));
         const clip_w = @min(width, geom.cell_width_logical_exact * @as(f32, @floatFromInt(cols)));
@@ -373,7 +424,7 @@ pub fn drawPrepared(
                 r.addTerminalRect(0, 0, texture_w, texture_h, bg);
                 var row: usize = 0;
                 while (row < rows) : (row += 1) {
-                    drawRowBackgrounds(shell, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i, true, screen_reverse, draw_cursor, cursor, cursor_style);
+                    drawRowBackgrounds(shell, view_geometry, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i, true, screen_reverse, draw_cursor, cursor, cursor_style);
                 }
                 r.flushTerminalBatch();
                 texture_bg_ms += time_utils.secondsToMs(app_shell.getTime() - bg_phase_start);
@@ -388,7 +439,7 @@ pub fn drawPrepared(
                 r.beginTerminalGlyphBatch();
                 row = 0;
                 while (row < rows) : (row += 1) {
-                    drawRowGlyphs(shell, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.font_config.terminal_disable_ligatures, &glyph_draw_stats);
+                    drawRowGlyphs(shell, view_geometry, view_cells, cols, row, 0, cols - 1, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.font_config.terminal_disable_ligatures, draw_state.generation, &glyph_draw_stats, &self.last_text_paint);
                 }
                 r.flushTerminalGlyphBatch();
                 texture_glyph_ms += time_utils.secondsToMs(app_shell.getTime() - glyph_phase_start);
@@ -450,14 +501,14 @@ pub fn drawPrepared(
                             const col_start = @min(@as(usize, span.start), cols - 1);
                             const col_end = @min(@as(usize, span.end), cols - 1);
                             const draw_padding = col_end >= cols - 1;
-                            drawRowBackgrounds(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, draw_padding, screen_reverse, draw_cursor, cursor, cursor_style);
+                            drawRowBackgrounds(shell, view_geometry, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, draw_padding, screen_reverse, draw_cursor, cursor, cursor_style);
                         }
                         continue;
                     }
                     const col_start = @min(@as(usize, self.retained.partial_draw_cols_start.items[row]), cols - 1);
                     const col_end = @min(@as(usize, self.retained.partial_draw_cols_end.items[row]), cols - 1);
                     const draw_padding = col_end >= cols - 1;
-                    drawRowBackgrounds(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, draw_padding, screen_reverse, draw_cursor, cursor, cursor_style);
+                    drawRowBackgrounds(shell, view_geometry, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, draw_padding, screen_reverse, draw_cursor, cursor, cursor_style);
                 }
                 r.flushTerminalBatch();
                 texture_bg_ms += time_utils.secondsToMs(app_shell.getTime() - bg_phase_start);
@@ -478,12 +529,12 @@ pub fn drawPrepared(
                             const span = self.retained.partial_draw_spans.items[row][span_idx];
                             const col_start = @min(@as(usize, span.start), cols - 1);
                             const col_end = @min(@as(usize, span.end), cols - 1);
-                            drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.font_config.terminal_disable_ligatures, &glyph_draw_stats);
+                            drawRowGlyphs(shell, view_geometry, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.font_config.terminal_disable_ligatures, draw_state.generation, &glyph_draw_stats, &self.last_text_paint);
                         }
                     } else {
                         const col_start = @min(@as(usize, self.retained.partial_draw_cols_start.items[row]), cols - 1);
                         const col_end = @min(@as(usize, self.retained.partial_draw_cols_end.items[row]), cols - 1);
-                        drawRowGlyphs(shell, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.font_config.terminal_disable_ligatures, &glyph_draw_stats);
+                        drawRowGlyphs(shell, view_geometry, view_cells, cols, row, col_start, col_end, base_x_local, base_y_local, padding_x_i, hover_link_id, screen_reverse, blink_style, blink_time, draw_cursor, cursor, r.font_config.terminal_disable_ligatures, draw_state.generation, &glyph_draw_stats, &self.last_text_paint);
                     }
                 }
                 r.flushTerminalGlyphBatch();
@@ -502,7 +553,7 @@ pub fn drawPrepared(
                 self.retained.last_render_clear_generation = draw_state.clear_generation;
                 self.retained.last_cell_w_i = cell_w_i;
                 self.retained.last_cell_h_i = cell_h_i;
-                self.retained.last_render_scale = r.scale.render_scale;
+                self.retained.last_render_scale = render_scale;
                 if (visible_w > 0 and visible_h > 0) {
                     r.beginClip(
                         @intFromFloat(std.math.round(base_x)),
@@ -543,30 +594,55 @@ pub fn drawPrepared(
             });
         }
         if (retained_surface_ready_after_update and visible_w > 0 and visible_h > 0) {
+            noteRetainedSurfacePresent(
+                self,
+                r,
+                self.retained.last_render_generation,
+                base_x,
+                base_y,
+                viewport_w,
+                viewport_h,
+                viewport_w,
+                viewport_h,
+            );
             retained_targets_runtime.drawSurface(r, .terminal, .{
                 .x = base_x,
                 .y = base_y,
                 .width = viewport_w,
                 .height = viewport_h,
+                .source_width = viewport_w,
+                .source_height = viewport_h,
                 .generation = self.retained.last_render_generation,
             });
         }
     }
+    self.last_view_geometry = .{
+        .valid = rows > 0 and cols > 0,
+        .generation = draw_state.generation,
+        .base_x = view_geometry.origin_x,
+        .base_y = view_geometry.origin_y,
+        .viewport_w = view_geometry.viewport_width,
+        .viewport_h = view_geometry.viewport_height,
+        .rows = view_geometry.rows,
+        .cols = view_geometry.cols,
+        .ui_scale = shell.uiGeometryContext().ui_scale,
+        .render_scale = render_scale,
+        .cell_width_logical = view_geometry.cell_width,
+        .cell_height_logical = view_geometry.cell_height,
+        .cell_width_device = r.terminalCellGeometry().cell_width_device_px,
+        .cell_height_device = r.terminalCellGeometry().cell_height_device_px,
+        .baseline_logical = view_geometry.baseline_from_top,
+    };
     texture_update_ms = time_utils.secondsToMs(app_shell.getTime() - texture_phase_start);
     const overlay_phase_start = app_shell.getTime();
     self.kitty.finishDraw(self.session.allocator, kitty_generation, has_kitty);
     drawOverlays(
         self,
         shell,
-        base_x,
-        base_y,
-        viewport_w,
-        viewport_h,
+        view_geometry,
         input,
         cache,
         view_cells,
-        rows,
-        cols,
         screen_reverse,
         hover_link_id,
         draw_cursor,
