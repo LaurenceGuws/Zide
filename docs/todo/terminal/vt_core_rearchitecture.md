@@ -532,6 +532,13 @@ Current full-scope read:
     lock access
   - the next move must isolate one narrower surviving feed execution
     dependency instead of renaming that receiver again
+  - hostile audit result: publication/update reach is still the strongest
+    surviving feed dependency inside `protocol_execution.zig`
+  - runtime is already narrowed to write/wake mechanics
+  - locking is already narrowed to the mutex
+  - protocol state is named and narrower than before
+  - the next move should therefore name one coherent publication/update
+    contract inside feed execution before more code
 
 Current named category-1 contradiction:
 
