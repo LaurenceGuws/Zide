@@ -547,6 +547,10 @@ Current full-scope read:
     output-pending marking separately
   - `protocol_execution.zig` now owns that as one explicit parsed-output
     publication contract
+  - rerank after that slice:
+    pending-refresh / poll cadence is now the strongest remaining
+    feed-publication cluster
+  - the next move should target that cadence contract directly
 
 Current named category-1 contradiction:
 
