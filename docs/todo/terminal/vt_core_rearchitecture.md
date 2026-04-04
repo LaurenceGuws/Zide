@@ -561,6 +561,10 @@ Current full-scope read:
   - the strongest remaining publication piece is poll-time
     publish-or-refresh behavior through `protocol_execution.zig` and
     `pty_poll_publication.zig`
+  - that second cadence slice is now landed too:
+    `protocol_execution.zig` now owns the poll-time
+    `shouldPublishPollUpdate(...)` decision
+  - `pty_poll_publication.zig` no longer re-derives that branch itself
 
 Current named category-1 contradiction:
 

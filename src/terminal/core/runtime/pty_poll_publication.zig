@@ -4,7 +4,7 @@ const protocol_execution = @import("../session/protocol_execution.zig");
 
 pub fn publishPtyPollResult(self: anytype, had_data: bool, processed: usize, input_pressure: bool, queued_bytes: usize, parse_lock_hold_ns: i128, publish_lock_hold_ns: *i128, start_ms: i64) void {
     var exec = protocol_execution.ProtocolExecution.init(self, &self.core);
-    if (had_data or exec.viewRefreshPending()) {
+    if (exec.shouldPublishPollUpdate(had_data)) {
         const publish_lock_start_ns = std.time.nanoTimestamp();
         self.session.control.state_mutex.lock();
         _ = exec.publishPollUpdate(had_data, "pty_poll_publish", "pty_pending_offset");
@@ -32,7 +32,7 @@ pub fn publishPtyPollResult(self: anytype, had_data: bool, processed: usize, inp
 pub fn publishTransportPollResult(self: anytype, had_data: bool, processed: usize, input_pressure: bool, parse_lock_hold_ns: i128, publish_lock_hold_ns: *i128, start_ms: i64) void {
     _ = start_ms;
     var exec = protocol_execution.ProtocolExecution.init(self, &self.core);
-    if (had_data or exec.viewRefreshPending()) {
+    if (exec.shouldPublishPollUpdate(had_data)) {
         const publish_lock_start_ns = std.time.nanoTimestamp();
         _ = exec.publishPollUpdate(had_data, "transport_poll_publish", "transport_pending_offset");
         publish_lock_hold_ns.* += std.time.nanoTimestamp() - publish_lock_start_ns;

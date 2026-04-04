@@ -73,3 +73,20 @@ What remains:
 
 - poll-time publish-or-refresh behavior still survives as the next narrower
   cadence slice
+
+The second cadence slice is now landed too.
+
+What changed:
+
+- [protocol_execution.zig](/home/home/personal/zide/src/terminal/core/session/protocol_execution.zig)
+  now owns the poll-time publish-or-refresh decision through:
+  - `shouldPublishPollUpdate(...)`
+- [pty_poll_publication.zig](/home/home/personal/zide/src/terminal/core/runtime/pty_poll_publication.zig)
+  no longer re-derives that branch from `had_data` plus `viewRefreshPending()`
+
+Why this counts:
+
+- the poll publish-or-refresh decision now lives inside the same cadence
+  contract as the publish operation itself
+- runtime poll publication now reads more like a consumer of the cadence
+  contract, not the place where that decision is reassembled

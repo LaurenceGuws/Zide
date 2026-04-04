@@ -169,6 +169,10 @@ pub const ProtocolExecution = struct {
         self.updateViewCacheForProtocol(request.generation, request.scroll_offset, source);
     }
 
+    pub fn shouldPublishPollUpdate(self: *ProtocolExecution, had_data: bool) bool {
+        return had_data or self.viewRefreshPending();
+    }
+
     pub fn publishPollUpdate(self: *ProtocolExecution, had_data: bool, publish_source: []const u8, refresh_source: []const u8) bool {
         if (had_data) {
             self.updateViewCacheForProtocol(self.pendingPublicationGeneration(), self.core.scrollbackOffset(), publish_source);
