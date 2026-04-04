@@ -80,14 +80,14 @@ pub fn parseThreadMain(session: anytype) void {
         var max_bytes: usize = if (input_pressure) 64 * 1024 else 512 * 1024;
         var max_ms: i64 = if (input_pressure) 2 else 8;
         var pending_exec = protocol_execution.ProtocolExecution.init(session, &session.core);
-        const pending_refresh = pending_exec.takePendingViewRefreshRequest();
+        const pending_refresh = pending_exec.takePendingRefreshDecision();
 
         var queued_bytes: usize = 0;
         session.session.runtime.io_mutex.lock();
         if (session.session.runtime.io_buffer.items.len > session.session.runtime.io_read_offset) {
             queued_bytes = session.session.runtime.io_buffer.items.len - session.session.runtime.io_read_offset;
         } else {
-            if (pending_refresh == null) {
+            if (pending_refresh == .none) {
                 session.session.runtime.io_wait_cond.timedWait(&session.session.runtime.io_mutex, 10 * std.time.ns_per_ms) catch |err| {
                     if (err != error.Timeout) {
                         app_logger.logger("terminal.parse").logf(.warning, "parse wait timedWait failed err={s}", .{@errorName(err)});
@@ -105,7 +105,7 @@ pub fn parseThreadMain(session: anytype) void {
         session.session.runtime.io_mutex.unlock();
 
         if (queued_bytes == 0) {
-            if (session.session.control.parse_bytes_since_publish > 0 and pending_refresh == null and !session.core.sync_updates_active) {
+            if (session.session.control.parse_bytes_since_publish > 0 and pending_refresh == .none and !session.core.sync_updates_active) {
                 const publish_lock_start_ns = std.time.nanoTimestamp();
                 session.session.control.state_mutex.lock();
                 var publish_exec = protocol_execution.ProtocolExecution.init(session, &session.core);
@@ -117,10 +117,10 @@ pub fn parseThreadMain(session: anytype) void {
                 session.session.control.parse_bytes_since_publish = 0;
                 session.session.control.last_parse_publish_ms = std.time.milliTimestamp();
             }
-            if (pending_refresh) |request| {
+            if (pending_refresh != .none) {
                 session.session.control.state_mutex.lock();
                 if (!session.core.sync_updates_active) {
-                    pending_exec.publishViewRefreshRequest(request, "parse_thread_pending_offset");
+                    _ = pending_exec.publishPendingRefreshDecision(pending_refresh, "parse_thread_pending_offset");
                 }
                 session.session.control.state_mutex.unlock();
             }
@@ -202,7 +202,7 @@ pub fn parseThreadMain(session: anytype) void {
         if (processed > 0) {
             const end_ms = std.time.milliTimestamp();
             session.session.control.parse_bytes_since_publish += processed;
-            if (had_data or pending_refresh != null) {
+            if (had_data or pending_refresh != .none) {
                 var backlog_publish_max_ms: i64 = if (input_pressure) 2 else 8;
                 var backlog_publish_min_bytes: usize = if (input_pressure) 32 * 1024 else 128 * 1024;
                 if (presentation_backlog and publishedVisibleCellCount(session) >= 16_000) {
@@ -216,7 +216,10 @@ pub fn parseThreadMain(session: anytype) void {
                 const drained_available = queued_bytes > 0 and processed >= queued_bytes;
                 const should_publish = shouldPublishParseBatch(
                     session.core.sync_updates_active,
-                    if (pending_refresh) |request| request.scroll_offset else null,
+                    switch (pending_refresh) {
+                        .none => null,
+                        .request => |request| request.scroll_offset,
+                    },
                     presentation_backlog,
                     drained_available,
                     session.session.control.parse_bytes_since_publish,
@@ -225,10 +228,10 @@ pub fn parseThreadMain(session: anytype) void {
                     backlog_publish_max_ms,
                 );
                 if (should_publish) {
-                    const target_offset = if (pending_refresh) |request|
-                        request.scroll_offset
-                    else
-                        session.core.history.scrollOffset();
+                    const target_offset = switch (pending_refresh) {
+                        .none => session.core.history.scrollOffset(),
+                        .request => |request| request.scroll_offset,
+                    };
                     const publish_lock_start_ns = std.time.nanoTimestamp();
                     session.session.control.state_mutex.lock();
                     var exec = protocol_execution.ProtocolExecution.init(session, &session.core);

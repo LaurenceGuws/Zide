@@ -46,3 +46,30 @@ The bar:
 - keep it coherent as one cadence contract
 - do not widen it into generic runtime-thread cleanup
 - rerank immediately after, because publication may stop winning after this
+
+## Progress
+
+The first pending-refresh / poll cadence slice is now landed.
+
+What changed:
+
+- [protocol_execution.zig](/home/home/personal/zide/src/terminal/core/session/protocol_execution.zig)
+  now owns one explicit pending-refresh cadence shape through:
+  - `PendingRefreshDecision`
+  - `takePendingRefreshDecision(...)`
+  - `publishPendingRefreshDecision(...)`
+- [io_threads.zig](/home/home/personal/zide/src/terminal/core/runtime/io_threads.zig)
+  no longer spells out request-take vs request-publish handling as separate
+  steps in the parse-thread path
+
+Why this counts:
+
+- pending-refresh cadence now reads more like one coherent feed-publication
+  contract
+- the parse-thread caller no longer assembles that refresh choreography
+  itself
+
+What remains:
+
+- poll-time publish-or-refresh behavior still survives as the next narrower
+  cadence slice

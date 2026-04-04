@@ -551,6 +551,11 @@ Current full-scope read:
     pending-refresh / poll cadence is now the strongest remaining
     feed-publication cluster
   - the next move should target that cadence contract directly
+  - the first pending-refresh cadence slice is now landed:
+    `protocol_execution.zig` now owns explicit
+    `PendingRefreshDecision` handling
+  - `io_threads.zig` no longer spells out request-take vs request-publish
+    handling as separate parse-thread steps
 
 Current named category-1 contradiction:
 

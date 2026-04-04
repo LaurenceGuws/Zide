@@ -32,6 +32,11 @@ pub const ProtocolExecution = struct {
         scroll_offset: usize,
     };
 
+    pub const PendingRefreshDecision = union(enum) {
+        none,
+        request: ViewRefreshRequest,
+    };
+
     allocator: std.mem.Allocator,
     core: *TerminalCore,
     session: SessionFaces,
@@ -137,6 +142,21 @@ pub const ProtocolExecution = struct {
         return self.session.publication.view_cache_pending.load(.acquire);
     }
 
+    pub fn takePendingRefreshDecision(self: *ProtocolExecution) PendingRefreshDecision {
+        const request = self.takePendingViewRefreshRequest() orelse return .none;
+        return .{ .request = request };
+    }
+
+    pub fn publishPendingRefreshDecision(self: *ProtocolExecution, decision: PendingRefreshDecision, source: []const u8) bool {
+        switch (decision) {
+            .none => return false,
+            .request => |request| {
+                self.publishViewRefreshRequest(request, source);
+                return true;
+            },
+        }
+    }
+
     pub fn takePendingViewRefreshRequest(self: *ProtocolExecution) ?ViewRefreshRequest {
         if (!self.session.publication.view_cache_pending.swap(false, .acq_rel)) return null;
         return .{
@@ -153,8 +173,7 @@ pub const ProtocolExecution = struct {
         if (had_data) {
             self.updateViewCacheForProtocol(self.pendingPublicationGeneration(), self.core.scrollbackOffset(), publish_source);
         }
-        const request = self.takePendingViewRefreshRequest() orelse return false;
-        self.publishViewRefreshRequest(request, refresh_source);
-        return true;
+        const decision = self.takePendingRefreshDecision();
+        return self.publishPendingRefreshDecision(decision, refresh_source);
     }
 };
