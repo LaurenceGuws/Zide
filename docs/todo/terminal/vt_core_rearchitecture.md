@@ -570,6 +570,12 @@ Current full-scope read:
     feed contradiction by inertia
   - the next default pressure returns to the broader feed-execution front from
     this cleaner baseline unless one new exact publication contract is named
+  - the next surviving feed face is now named:
+    protocol-state reach
+  - runtime is still narrowed to write/wake mechanics
+  - lock access is still narrowed to the mutex
+  - the remaining broad named state face on `protocol_execution.zig` is
+    `interaction`, still reached indirectly through `protocol_state.zig`
 
 Current named category-1 contradiction:
 
