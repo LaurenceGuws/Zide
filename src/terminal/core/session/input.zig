@@ -152,7 +152,7 @@ fn charActionContext(self: anytype, char: u32, mod: Modifier, action: input_mod.
             mod,
             action,
             input_snapshot.auto_repeat.load(.acquire),
-            self.core.activeScreen().local_echo_mode_12,
+            self.core.localEchoMode12(),
         ),
     };
 }

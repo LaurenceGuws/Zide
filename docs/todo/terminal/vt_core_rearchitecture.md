@@ -105,6 +105,13 @@ Current full-scope read:
   - CSI execution is flatter and more clearly framed around core-owned
     terminal geometry truth
 
+- `docs/review/VT_CORE_CURSOR_ECHO_OWNER_FRONT_2026-04-04.md`
+  Why: after the geometry cut, config and input still had two small direct
+  screen-state teaching paths that did not deserve to survive the rerank.
+  Current read:
+  - configured cursor-style application now lives on `TerminalCore`
+  - local-echo mode 12 read access now lives on `TerminalCore`
+
 - `docs/review/VT_SHELL_HOSTILE_AUDIT_2026-04-03.md`
   Why: with the wartime shell bar now explicit, the shell needs a hostile
   responsibility audit instead of vague legitimacy language.

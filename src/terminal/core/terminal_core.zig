@@ -779,6 +779,15 @@ pub const TerminalCore = struct {
         self.activeScreen().setCursorStyle(mode);
     }
 
+    pub fn setConfiguredCursorStyle(self: *TerminalCore, cursor_style: types.CursorStyle) void {
+        self.primary.cursor_style = cursor_style;
+        self.alt.cursor_style = cursor_style;
+    }
+
+    pub fn localEchoMode12(self: *const TerminalCore) bool {
+        return self.activeScreenConst().local_echo_mode_12;
+    }
+
     pub fn applyAnsiTerminalModeLocked(self: *TerminalCore, mode: i32, enabled: bool) bool {
         switch (mode) {
             4 => self.activeScreen().setInsertMode(enabled),

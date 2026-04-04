@@ -87,8 +87,7 @@ pub fn applyThemePalette(self: anytype, fg: types.Color, bg: types.Color, ansi: 
 pub fn setConfiguredCursorStyle(self: anytype, cursor_style: types.CursorStyle) void {
     self.lock();
     defer self.unlock();
-    self.core.primary.cursor_style = cursor_style;
-    self.core.alt.cursor_style = cursor_style;
+    self.core.setConfiguredCursorStyle(cursor_style);
     publishConfigViewLocked(self, "session_config_cursor_style");
 }
 
