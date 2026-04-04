@@ -2656,6 +2656,16 @@ Validation note, 2026-03-31:
 
 ## Current Review Scope
 
+- `docs/review/VT_CORE_KEYMODE_OWNER_FRONT_2026-04-04.md`
+  Why: after the mode-state owner cut, the next honest `TerminalCore`
+  sufficiency contradiction was that key-mode and grapheme-shaping terminal
+  state still mutated raw screen state from helpers outside core.
+  Current read:
+  - key-mode mutation and grapheme-shaping screen mutation now live on
+    `TerminalCore`
+  - input/protocol helpers keep only the honest snapshot/reply behavior around
+    that slab
+
 - `docs/review/VT_CORE_MODE_STATE_OWNER_FRONT_2026-04-04.md`
   Why: after the cursor/tab owner cut, the next honest `TerminalCore`
   sufficiency contradiction was that terminal mode mutation/query truth still

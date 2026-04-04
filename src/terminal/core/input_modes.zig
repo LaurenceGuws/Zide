@@ -2,20 +2,14 @@ const std = @import("std");
 const key_encoding = @import("../input/key_encoding.zig");
 const protocol_state = @import("session/protocol_state.zig");
 const app_logger = @import("../../app_logger.zig");
-
-const supported_key_mode_flags: u32 =
-    key_encoding.key_mode_disambiguate |
-    key_encoding.key_mode_report_all_event_types |
-    key_encoding.key_mode_report_alternate_key |
-    key_encoding.key_mode_report_text |
-    key_encoding.key_mode_embed_text;
+const terminal_core_mod = @import("terminal_core.zig");
 
 pub fn sanitizeKeyModeFlags(flags: u32) u32 {
-    return flags & supported_key_mode_flags;
+    return terminal_core_mod.TerminalCore.sanitizeKeyModeFlags(flags);
 }
 
 pub fn keyModeFlags(self: anytype) u32 {
-    return sanitizeKeyModeFlags(self.core.activeScreen().keyModeFlags());
+    return self.core.keyModeFlags();
 }
 
 pub fn publishSnapshot(self: anytype) void {
@@ -53,7 +47,7 @@ pub fn keyModePush(self: anytype, flags: u32) void {
 }
 
 pub fn keyModePushLocked(self: anytype, flags: u32) void {
-    self.core.activeScreen().keyModePush(sanitizeKeyModeFlags(flags));
+    self.core.keyModePushLocked(flags);
     publishSnapshot(self);
 }
 
@@ -64,7 +58,7 @@ pub fn keyModePop(self: anytype, count: usize) void {
 }
 
 pub fn keyModePopLocked(self: anytype, count: usize) void {
-    self.core.activeScreen().keyModePop(count);
+    self.core.keyModePopLocked(count);
     publishSnapshot(self);
 }
 
@@ -75,7 +69,7 @@ pub fn keyModeModify(self: anytype, flags: u32, mode: u32) void {
 }
 
 pub fn keyModeModifyLocked(self: anytype, flags: u32, mode: u32) void {
-    self.core.activeScreen().keyModeModify(sanitizeKeyModeFlags(flags), mode);
+    self.core.keyModeModifyLocked(flags, mode);
     publishSnapshot(self);
 }
 

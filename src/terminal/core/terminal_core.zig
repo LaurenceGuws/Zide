@@ -25,6 +25,12 @@ const Cell = types.Cell;
 const ProgressMetadata = session_host_types.ProgressMetadata;
 
 const dynamic_color_count: usize = 10;
+const supported_key_mode_flags: u32 =
+    @import("../input/key_encoding.zig").key_mode_disambiguate |
+    @import("../input/key_encoding.zig").key_mode_report_all_event_types |
+    @import("../input/key_encoding.zig").key_mode_report_alternate_key |
+    @import("../input/key_encoding.zig").key_mode_report_text |
+    @import("../input/key_encoding.zig").key_mode_embed_text;
 
 pub const ActiveScreen = enum {
     primary,
@@ -625,6 +631,31 @@ pub const TerminalCore = struct {
             .local_echo_mode_12 = screen.local_echo_mode_12,
             .newline_mode = screen.newline_mode,
         };
+    }
+
+    pub fn sanitizeKeyModeFlags(flags: u32) u32 {
+        return flags & supported_key_mode_flags;
+    }
+
+    pub fn keyModeFlags(self: *const TerminalCore) u32 {
+        return sanitizeKeyModeFlags(self.activeScreenConst().keyModeFlags());
+    }
+
+    pub fn keyModePushLocked(self: *TerminalCore, flags: u32) void {
+        self.activeScreen().keyModePush(sanitizeKeyModeFlags(flags));
+    }
+
+    pub fn keyModePopLocked(self: *TerminalCore, count: usize) void {
+        self.activeScreen().keyModePop(count);
+    }
+
+    pub fn keyModeModifyLocked(self: *TerminalCore, flags: u32, mode: u32) void {
+        self.activeScreen().keyModeModify(sanitizeKeyModeFlags(flags), mode);
+    }
+
+    pub fn setGraphemeClusterShaping2027(self: *TerminalCore, enabled: bool) void {
+        self.primary.setGraphemeClusterShaping2027(enabled);
+        self.alt.setGraphemeClusterShaping2027(enabled);
     }
 
     pub fn scrollbackOffset(self: *const TerminalCore) usize {

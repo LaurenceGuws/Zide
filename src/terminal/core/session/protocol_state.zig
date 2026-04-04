@@ -31,8 +31,7 @@ pub fn derivedSnapshot(self: anytype) *interaction_fields.DerivedSnapshotState {
 
 pub fn setGraphemeClusterShaping2027(self: anytype, enabled: bool) void {
     protocolModes(self).grapheme_cluster_shaping_2027 = enabled;
-    self.core.primary.setGraphemeClusterShaping2027(enabled);
-    self.core.alt.setGraphemeClusterShaping2027(enabled);
+    self.core.setGraphemeClusterShaping2027(enabled);
 }
 
 pub fn inputModeSnapshot(self: anytype) terminal_core_csi_input_modes.InputModeSnapshot {
