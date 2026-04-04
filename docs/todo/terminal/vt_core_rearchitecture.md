@@ -539,6 +539,9 @@ Current full-scope read:
   - protocol state is named and narrower than before
   - the next move should therefore name one coherent publication/update
     contract inside feed execution before more code
+  - that split is now explicit:
+    parsed-output publication is the first coherent feed-publication contract
+  - pending-refresh / poll cadence is the second cluster, not the first slice
 
 Current named category-1 contradiction:
 
