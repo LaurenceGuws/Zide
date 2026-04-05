@@ -73,6 +73,13 @@ pub const DirectPresentResult = struct {
     kitty_ms: f64 = 0.0,
 };
 
+pub const DirectSnapshotUpdateResult = struct {
+    completed: bool = false,
+    bg_ms: f64 = 0.0,
+    glyph_ms: f64 = 0.0,
+    kitty_ms: f64 = 0.0,
+};
+
 pub const PresentationExecutionResult = struct {
     completed: bool = false,
     bg_ms: f64 = 0.0,
@@ -398,6 +405,83 @@ fn drawPresentationGlyphPass(
     return time_utils.secondsToMs(app_shell.getTime() - glyph_phase_start);
 }
 
+fn executeDirectSnapshotUpdate(
+    self: anytype,
+    shell: *app_shell.Shell,
+    renderer: anytype,
+    terminal_view: view_state.TerminalViewModel,
+    view_geometry: TerminalViewGeometry,
+    hover_link_id: u32,
+    draw_cursor: bool,
+    cursor: CursorPos,
+    cursor_style: terminal_types.CursorStyle,
+    blink_style: anytype,
+    blink_time: f64,
+    surface_update_plan: PresentationUpdatePlan,
+) DirectSnapshotUpdateResult {
+    var result = DirectSnapshotUpdateResult{};
+    if (surface_update_plan.mode != .partial or surface_update_plan.partial_plan == null) return result;
+
+    const rows = terminal_view.rows;
+    const cols = terminal_view.cols;
+    const view_cells = terminal_view.cells;
+    const base_colors = terminal_view.base_colors;
+    const screen_reverse = terminal_view.render.screen_reverse;
+    var glyph_draw_stats = GlyphDrawStats{};
+    const bg_color = if (view_cells.len > 0)
+        Color{
+            .r = base_colors.resolved_background.r,
+            .g = base_colors.resolved_background.g,
+            .b = base_colors.resolved_background.b,
+            .a = base_colors.resolved_background.a,
+        }
+    else
+        renderer.theme.background;
+
+    result.bg_ms += drawPresentationBackgroundPass(
+        shell,
+        renderer,
+        view_geometry,
+        view_cells,
+        rows,
+        cols,
+        view_geometry.origin_x,
+        view_geometry.origin_y,
+        0,
+        screen_reverse,
+        draw_cursor,
+        cursor,
+        cursor_style,
+        surface_update_plan,
+        bg_color,
+        false,
+    );
+    result.glyph_ms += drawPresentationGlyphPass(
+        self,
+        shell,
+        renderer,
+        view_geometry,
+        view_cells,
+        rows,
+        cols,
+        view_geometry.origin_x,
+        view_geometry.origin_y,
+        0,
+        hover_link_id,
+        screen_reverse,
+        blink_style,
+        blink_time,
+        draw_cursor,
+        cursor,
+        cursor_style,
+        terminal_view.generation,
+        surface_update_plan,
+        &glyph_draw_stats,
+    );
+    result.completed = true;
+    return result;
+}
+
 pub fn notePresentSample(
     self: anytype,
     renderer: anytype,
@@ -694,6 +778,33 @@ pub fn runPresentation(
             note_present,
         )) {
             result.early_return = true;
+            return result;
+        }
+        const partial = tryDirectSnapshotUpdate(
+            self,
+            shell,
+            renderer,
+            terminal_view,
+            view_geometry,
+            hover_link_id,
+            scroll_offset,
+            draw_cursor,
+            cursor,
+            cursor_style,
+            blink_style,
+            blink_time,
+            blink_requires_partial,
+            has_kitty,
+            width,
+            height,
+            recent_input_window_active,
+            note_present_ctx,
+            note_present,
+        );
+        if (partial.completed) {
+            result.bg_ms = partial.bg_ms;
+            result.glyph_ms = partial.glyph_ms;
+            result.kitty_ms = partial.kitty_ms;
             return result;
         }
         const direct = directPresent(
@@ -1084,6 +1195,100 @@ pub fn directPresent(
         result.kitty_ms += time_utils.secondsToMs(app_shell.getTime() - kitty_phase_start);
     }
 
+    return result;
+}
+
+pub fn tryDirectSnapshotUpdate(
+    self: anytype,
+    shell: *app_shell.Shell,
+    renderer: anytype,
+    terminal_view: view_state.TerminalViewModel,
+    view_geometry: TerminalViewGeometry,
+    hover_link_id: u32,
+    scroll_offset: usize,
+    draw_cursor: bool,
+    cursor: CursorPos,
+    cursor_style: terminal_types.CursorStyle,
+    blink_style: anytype,
+    blink_time: f64,
+    blink_requires_partial: bool,
+    has_kitty: bool,
+    width: f32,
+    height: f32,
+    recent_input_window_active: bool,
+    note_present_ctx: anytype,
+    note_present: anytype,
+) DirectSnapshotUpdateResult {
+    var result = DirectSnapshotUpdateResult{};
+    if (!renderer.usesDirectTerminalPresentation()) return result;
+    if (has_kitty) return result;
+    if (!presentation_target_runtime.presentableAvailable(renderer)) return result;
+    if (terminal_view.rows == 0 or terminal_view.cols == 0 or terminal_view.cells.len == 0) return result;
+
+    const surface_update_plan = planUpdate(
+        &self.surface,
+        self.session.allocator,
+        renderer,
+        self.publication.cacheConst(),
+        terminal_view,
+        width,
+        height,
+        blink_requires_partial,
+        scroll_offset,
+        recent_input_window_active,
+    );
+    if (surface_update_plan.mode != .partial) return result;
+
+    const viewport_w = @min(width, view_geometry.viewport_width);
+    const viewport_h = @min(height, view_geometry.viewport_height);
+    if (viewport_w <= 0 or viewport_h <= 0) return result;
+
+    note_present(
+        note_present_ctx,
+        renderer,
+        .direct_snapshot_update,
+        terminal_view.generation,
+        view_geometry.origin_x,
+        view_geometry.origin_y,
+        viewport_w,
+        viewport_h,
+        view_geometry.viewport_width,
+        view_geometry.viewport_height,
+    );
+    presentation_target_runtime.drawPresentable(renderer, .{
+        .x = view_geometry.origin_x,
+        .y = view_geometry.origin_y,
+        .width = viewport_w,
+        .height = viewport_h,
+        .source_width = view_geometry.viewport_width,
+        .source_height = view_geometry.viewport_height,
+        .generation = self.surface.lastRenderGeneration(),
+    });
+    beginViewportClip(
+        renderer,
+        view_geometry,
+        surface_update_plan.geometry.visible_w,
+        surface_update_plan.geometry.visible_h,
+    );
+    defer renderer.endClip();
+
+    result = executeDirectSnapshotUpdate(
+        self,
+        shell,
+        renderer,
+        terminal_view,
+        view_geometry,
+        hover_link_id,
+        draw_cursor,
+        cursor,
+        cursor_style,
+        blink_style,
+        blink_time,
+        surface_update_plan,
+    );
+    if (!result.completed) return result;
+    scene_frame_runtime.noteTerminalPresentation(renderer, terminal_view.generation);
+    self.surface.noteDirectPresentationReady(terminal_view);
     return result;
 }
 

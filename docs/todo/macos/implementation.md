@@ -740,6 +740,19 @@ lane.
       `metric_present_sample=direct_snapshot_presentable`, non-zero frame-0
       `kitty_ms`, and `presented=2` in handoff logs after the first submitted
       frame
+    - the direct Metal terminal lane now also has a real partial-update seam
+      for no-Kitty frames: it can seed the current frame from the cached
+      snapshot and redraw only dirty terminal rows on top when the runtime
+      yields an honest partial plan
+    - this new direct partial lane is still intentionally honest about scope:
+      Kitty-bearing frames remain on the full direct redraw path for now, and
+      the current deterministic terminal diagnostic fixtures still resolve to
+      either full redraw or steady-state snapshot fast-present, so this new
+      `direct_snapshot_update` sample mode is implemented and compile-validated
+      without being claimed as runtime-proven yet
+    - the Metal terminal diagnostic runtime now has explicit no-Kitty,
+      mutation-frame, and scroll-frame env hooks for pushing that lane under
+      future targeted proof runs without having to hand-edit the runtime again
     - this reduces one more retained-first contradiction before a second
       Metal terminal presentation shape is introduced
 

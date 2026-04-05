@@ -749,6 +749,21 @@ What this does and does not mean:
   snapshot presents use explicit raster-space source and destination regions
   instead of implicitly sampling the whole drawable texture, which is required
   for terminals that do not fill the entire window
+- the direct Metal terminal lane now has a partial-update seam too, not only
+  full direct redraw and steady-state snapshot fast-present: when the runtime
+  can produce an honest partial plan without Kitty image participation, the
+  renderer can seed the current frame from the cached snapshot and redraw only
+  the dirty terminal rows on top
+- that new direct partial path is intentionally scoped honestly: Kitty-bearing
+  frames still stay on the full direct redraw path for now, because the Metal
+  lane does not yet have a separate image-delta update contract that would let
+  partially redrawn frames reuse cached Kitty content without ambiguity
+- current validation truth is still compile-first for this new seam: the
+  dedicated Metal terminal diagnostic now has deterministic no-Kitty mutation
+  and scroll knobs for exercising the lane, but the current fixtures still
+  resolve either to full redraw or to steady-state snapshot fast-present, so
+  `direct_snapshot_update` is implemented and wired without being claimed as
+  runtime-proven yet
 - that preparation contract is now aligned with capture truth as well:
   the target runtime prepares drawable-sized Metal snapshot presentables
   instead of using terminal-surface geometry while submit-time capture

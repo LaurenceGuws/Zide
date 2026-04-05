@@ -6,6 +6,7 @@ const terminal_runtime = @import("../terminal/core/terminal_runtime.zig");
 const session_runtime = @import("../terminal/core/session/runtime.zig");
 const terminal_session_bootstrap = @import("terminal/terminal_session_bootstrap.zig");
 const terminal_widget_draw = @import("../ui/widgets/terminal_widget_draw.zig");
+const input_adapter_mod = @import("../ui/widgets/terminal_widget_input_adapter.zig");
 const shared_types = @import("../types/mod.zig");
 
 pub fn run(allocator: std.mem.Allocator) !void {
@@ -14,6 +15,10 @@ pub fn run(allocator: std.mem.Allocator) !void {
     const rows: u16 = @intCast(@max(@as(i32, 4), app_bootstrap.parseEnvI32("ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_ROWS", 8)));
     const cols: u16 = @intCast(@max(@as(i32, 8), app_bootstrap.parseEnvI32("ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_COLS", 28)));
     const frame_budget = app_bootstrap.parseEnvU64("ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_FRAMES", 90);
+    const mutate_frame = app_bootstrap.parseEnvU64("ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_MUTATE_FRAME", std.math.maxInt(u64));
+    const scroll_frame = app_bootstrap.parseEnvU64("ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_SCROLL_FRAME", std.math.maxInt(u64));
+    const scroll_offset = @as(usize, @intCast(@max(@as(i32, 0), app_bootstrap.parseEnvI32("ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_SCROLL_OFFSET", 0))));
+    const disable_kitty = app_bootstrap.parseEnvBool("ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_DISABLE_KITTY") orelse false;
     const screenshot_path = app_bootstrap.envSlice("ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_SCREENSHOT");
     const title: [*:0]const u8 = "Zide macOS Metal Terminal Diagnostic";
 
@@ -50,14 +55,15 @@ pub fn run(allocator: std.mem.Allocator) !void {
 
     if (!(try session_runtime.enqueueExternalBytes(
         session,
-        "\x1b[H1| build one\x1b[2;1H2| item two\x1b[3;1H3| plain ascii\x1b[4;1H4| fallback row\x1b[5;1H5| metal lane\x1b[6;1H6| terminal ok",
+        "\x1b[H1| build one\x1b[2;1H2| item two\x1b[3;1H3| plain ascii\x1b[4;1H4| fallback row\x1b[5;1H5| metal lane\x1b[6;1H6| terminal ok\x1b[7;1H7| history one\x1b[8;1H8| history two\x1b[9;1H9| history three\x1b[10;1H10| history four",
     ))) return error.MetalTerminalDiagnosticSeedRejected;
     try session_runtime.poll(session);
-    try seedDiagnosticKittyImages(session);
+    if (!disable_kitty) try seedDiagnosticKittyImages(session);
 
     var widget = terminal_session_bootstrap.initWidget(session, .kitty, false, false);
     defer widget.deinit();
     widget.setUiFocused(true);
+    const input_adapter = input_adapter_mod.TerminalInputAdapter.init(session);
 
     var input = shared_types.input.InputSnapshot.init(.{ .x = 0, .y = 0 }, .{});
     input.composing_active = true;
@@ -88,6 +94,17 @@ pub fn run(allocator: std.mem.Allocator) !void {
     var frame_index: u64 = 0;
     while (frame_index < frame_budget and !shell.shouldClose()) : (frame_index += 1) {
         app_shell.pollInputEvents();
+        if (frame_index == mutate_frame) {
+            if (!(try session_runtime.enqueueExternalBytes(
+                session,
+                "\x1b[2;1H2| row changed\x1b[3;1H3| partial draw",
+            ))) return error.MetalTerminalDiagnosticMutationRejected;
+            try session_runtime.poll(session);
+            input_adapter.setScrollOffset(0);
+        }
+        if (frame_index == scroll_frame) {
+            input_adapter.setScrollOffset(scroll_offset);
+        }
         const changes = app_shell.windowChanges();
         if (changes.affectsWindowRefresh()) {
             _ = try shell.refreshWindowState("macos-metal-terminal-diagnostic-frame", changes);
