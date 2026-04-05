@@ -5,7 +5,7 @@ const render_cache_mod = @import("../../terminal/core/publication/render_cache.z
 const RowDirtySpan = render_cache_mod.RowDirtySpan;
 const max_row_dirty_spans = render_cache_mod.max_row_dirty_spans;
 
-pub const RetainedState = struct {
+pub const PresentationState = struct {
     partial_draw_rows: std.ArrayList(bool),
     partial_draw_span_counts: std.ArrayList(u8),
     partial_draw_spans: std.ArrayList([render_cache_mod.max_row_dirty_spans]render_cache_mod.RowDirtySpan),
@@ -19,7 +19,7 @@ pub const RetainedState = struct {
     last_cell_h_i: i32 = 0,
     last_render_scale: f32 = 0,
 
-    pub const PartialDrawPlan = struct {
+    pub const PresentationPartialDrawPlan = struct {
         rows: []bool,
         span_counts: []u8,
         spans: [][max_row_dirty_spans]RowDirtySpan,
@@ -27,7 +27,7 @@ pub const RetainedState = struct {
         cols_end: []u16,
     };
 
-    pub fn init() RetainedState {
+    pub fn init() PresentationState {
         return .{
             .partial_draw_rows = std.ArrayList(bool).empty,
             .partial_draw_span_counts = std.ArrayList(u8).empty,
@@ -37,7 +37,7 @@ pub const RetainedState = struct {
         };
     }
 
-    pub fn deinit(self: *RetainedState, allocator: std.mem.Allocator) void {
+    pub fn deinit(self: *PresentationState, allocator: std.mem.Allocator) void {
         self.partial_draw_rows.deinit(allocator);
         self.partial_draw_span_counts.deinit(allocator);
         self.partial_draw_spans.deinit(allocator);
@@ -45,11 +45,11 @@ pub const RetainedState = struct {
         self.partial_draw_cols_end.deinit(allocator);
     }
 
-    pub fn invalidateTextureCache(self: *RetainedState) void {
+    pub fn invalidateTextureCache(self: *PresentationState) void {
         self.terminal_presentable_ready = false;
     }
 
-    pub fn ensurePartialDrawPlan(self: *RetainedState, allocator: std.mem.Allocator, rows: usize) ?PartialDrawPlan {
+    pub fn ensurePartialDrawPlan(self: *PresentationState, allocator: std.mem.Allocator, rows: usize) ?PresentationPartialDrawPlan {
         self.partial_draw_rows.resize(allocator, rows) catch |err| {
             const log = app_logger.logger("terminal.ui.redraw");
             log.logf(.warning, "partial row plan resize failed field=rows rows={d} err={s}", .{ rows, @errorName(err) });

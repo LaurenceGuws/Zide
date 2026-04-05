@@ -3,7 +3,7 @@ const retained_state_mod = @import("terminal_widget_retained_state.zig");
 const view_state = @import("terminal_widget_view_state.zig");
 
 const KittyState = kitty_mod.KittyState;
-const RetainedState = retained_state_mod.RetainedState;
+const PresentationState = retained_state_mod.PresentationState;
 
 pub const TerminalWidgetSurfaceState = struct {
     pub const PresentationUpdateDelta = struct {
@@ -15,30 +15,30 @@ pub const TerminalWidgetSurfaceState = struct {
     };
 
     kitty: KittyState,
-    retained: RetainedState,
+    presentation: PresentationState,
 
     pub fn init(allocator: anytype) TerminalWidgetSurfaceState {
         return .{
             .kitty = KittyState.init(allocator),
-            .retained = RetainedState.init(),
+            .presentation = PresentationState.init(),
         };
     }
 
     pub fn deinit(self: *TerminalWidgetSurfaceState, allocator: anytype) void {
-        self.retained.deinit(allocator);
+        self.presentation.deinit(allocator);
         self.kitty.deinit(allocator);
     }
 
     pub fn invalidateTextureCache(self: *TerminalWidgetSurfaceState) void {
-        self.retained.invalidateTextureCache();
+        self.presentation.invalidateTextureCache();
     }
 
     pub fn lifecycleTransition(
         self: *TerminalWidgetSurfaceState,
         terminal_view: view_state.TerminalViewModel,
     ) view_state.LifecycleTransitionInfo {
-        const transition = terminal_view.lifecycleTransition(self.retained.last_alt_active);
-        self.retained.last_alt_active = transition.current_alt_active;
+        const transition = terminal_view.lifecycleTransition(self.presentation.last_alt_active);
+        self.presentation.last_alt_active = transition.current_alt_active;
         return transition;
     }
 
@@ -68,11 +68,11 @@ pub const TerminalWidgetSurfaceState = struct {
     }
 
     pub fn lastRenderGeneration(self: *const TerminalWidgetSurfaceState) u64 {
-        return self.retained.last_render_generation;
+        return self.presentation.last_render_generation;
     }
 
     pub fn presentableReady(self: *const TerminalWidgetSurfaceState) bool {
-        return self.retained.terminal_presentable_ready;
+        return self.presentation.terminal_presentable_ready;
     }
 
     pub fn presentationUpdateDelta(
@@ -81,12 +81,12 @@ pub const TerminalWidgetSurfaceState = struct {
         surface_geometry: anytype,
     ) PresentationUpdateDelta {
         return .{
-            .cell_metrics_changed = surface_geometry.cell_w_i != self.retained.last_cell_w_i or
-                surface_geometry.cell_h_i != self.retained.last_cell_h_i,
-            .render_scale_changed = surface_geometry.render_scale != self.retained.last_render_scale,
-            .generation_changed = terminal_view.generation != self.retained.last_render_generation,
-            .clear_generation_changed = terminal_view.clear_generation != self.retained.last_render_clear_generation,
-            .presentable_ready = self.retained.terminal_presentable_ready,
+            .cell_metrics_changed = surface_geometry.cell_w_i != self.presentation.last_cell_w_i or
+                surface_geometry.cell_h_i != self.presentation.last_cell_h_i,
+            .render_scale_changed = surface_geometry.render_scale != self.presentation.last_render_scale,
+            .generation_changed = terminal_view.generation != self.presentation.last_render_generation,
+            .clear_generation_changed = terminal_view.clear_generation != self.presentation.last_render_clear_generation,
+            .presentable_ready = self.presentation.terminal_presentable_ready,
         };
     }
 
@@ -95,33 +95,33 @@ pub const TerminalWidgetSurfaceState = struct {
         terminal_view: view_state.TerminalViewModel,
         surface_geometry: anytype,
     ) void {
-        self.retained.terminal_presentable_ready = true;
-        self.retained.last_render_generation = terminal_view.generation;
-        self.retained.last_render_clear_generation = terminal_view.clear_generation;
-        self.retained.last_cell_w_i = surface_geometry.cell_w_i;
-        self.retained.last_cell_h_i = surface_geometry.cell_h_i;
-        self.retained.last_render_scale = surface_geometry.render_scale;
+        self.presentation.terminal_presentable_ready = true;
+        self.presentation.last_render_generation = terminal_view.generation;
+        self.presentation.last_render_clear_generation = terminal_view.clear_generation;
+        self.presentation.last_cell_w_i = surface_geometry.cell_w_i;
+        self.presentation.last_cell_h_i = surface_geometry.cell_h_i;
+        self.presentation.last_render_scale = surface_geometry.render_scale;
     }
 
     pub fn noteDirectPresentationReady(
         self: *TerminalWidgetSurfaceState,
         terminal_view: view_state.TerminalViewModel,
     ) void {
-        self.retained.terminal_presentable_ready = true;
-        self.retained.last_render_generation = terminal_view.generation;
-        self.retained.last_render_clear_generation = terminal_view.clear_generation;
+        self.presentation.terminal_presentable_ready = true;
+        self.presentation.last_render_generation = terminal_view.generation;
+        self.presentation.last_render_clear_generation = terminal_view.clear_generation;
     }
 
     pub fn notePresentableAvailability(self: *TerminalWidgetSurfaceState, available: bool) bool {
-        if (!available) self.retained.terminal_presentable_ready = false;
-        return self.retained.terminal_presentable_ready and available;
+        if (!available) self.presentation.terminal_presentable_ready = false;
+        return self.presentation.terminal_presentable_ready and available;
     }
 
     pub fn ensurePartialDrawPlan(
         self: *TerminalWidgetSurfaceState,
         allocator: anytype,
         rows: usize,
-    ) ?RetainedState.PartialDrawPlan {
-        return self.retained.ensurePartialDrawPlan(allocator, rows);
+    ) ?PresentationState.PresentationPartialDrawPlan {
+        return self.presentation.ensurePartialDrawPlan(allocator, rows);
     }
 };

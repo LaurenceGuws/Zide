@@ -15,7 +15,7 @@ const view_state = @import("terminal_widget_view_state.zig");
 const Shell = app_shell.Shell;
 const Color = app_shell.Color;
 const CursorPos = terminal_publication.CursorPos;
-const PartialDrawPlan = retained_state_mod.RetainedState.PartialDrawPlan;
+const PresentationPartialDrawPlan = retained_state_mod.PresentationState.PresentationPartialDrawPlan;
 
 const FullFrameFastPathDecision = draw_texture.FullFrameFastPathDecision;
 const TerminalPresentationSampleMode = @import("terminal_widget_debug_geometry.zig").TerminalPresentationSampleMode;
@@ -59,7 +59,7 @@ const SurfaceUpdateMode = enum {
 const PresentationUpdatePlan = struct {
     geometry: PresentationGeometry = .{},
     mode: SurfaceUpdateMode = .none,
-    partial_plan: ?PartialDrawPlan = null,
+    partial_plan: ?PresentationPartialDrawPlan = null,
 };
 
 const PresentationPresentState = struct {

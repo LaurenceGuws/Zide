@@ -427,6 +427,10 @@ lane.
       after the first successful direct-main-target Metal frame, widget
       handoff logs report `presentable_ready=1` instead of staying stuck at a
       retained-only readiness value
+    - the underlying terminal widget storage contract is less retained-first
+      now too: the state container and partial-plan type are named around
+      presentation instead of retained state, which reduces another place
+      where the direct Metal lane had to live inside retained terminology
     - the terminal Metal diagnostic now reports `raw_image_textures=1`, keeps
       non-zero `kitty_ms`, and no longer relies on the previous unsupported
       backend gate for RGB/RGBA Kitty images
