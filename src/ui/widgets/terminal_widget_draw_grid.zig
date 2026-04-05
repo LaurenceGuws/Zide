@@ -1627,6 +1627,38 @@ pub fn drawRowGlyphs(
             continue;
         }
 
+        if (rr.textRenderingMode() == .unavailable and rr.plannedTextRenderingMode() == .metal_texture_atlas) {
+            var metal_col: usize = span_start_col;
+            while (metal_col < span_end_excl and metal_col < cols_count and metal_col < row_cells.len) {
+                const cell = row_cells[metal_col];
+                const style = resolveTerminalCellStyle(cell, screen_reverse_mode, hover_link, blink_style_mode, blink_time_s, draw_cursor_mode, cursor_pos, cursor_style, row_idx, metal_col);
+                if (cell.x != 0 or cell.y != 0) {
+                    metal_col += 1;
+                    continue;
+                }
+                if (!style.glyph_visible) {
+                    metal_col += style.width_units;
+                    continue;
+                }
+
+                const cell_x = base_x_local + @as(f32, @floatFromInt(@as(i32, @intCast(metal_col)))) * cell_w;
+                const cell_y = base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h;
+                const cell_w_span = cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(style.width_units))));
+                const followed_by_space = terminalCellFollowedBySpace(row_cells, row_cells.len, metal_col, style.width_units);
+                if (cell.codepoint != 0 and cell.codepoint != kitty_unicode_placeholder) {
+                    if (cell.combining_len > 0) {
+                        rr.drawTerminalCellGraphemeBatched(cell.codepoint, cell.combining[0..@intCast(cell.combining_len)], cell_x, cell_y, cell_w_span, cell_h, style.fg, style.bg, style.underline_color, style.bold, style.underline, false, followed_by_space, false);
+                    } else {
+                        rr.drawTerminalCellBatched(cell.codepoint, cell_x, cell_y, cell_w_span, cell_h, style.fg, style.bg, style.underline_color, style.bold, style.underline, false, followed_by_space, false);
+                    }
+                }
+                if (stats) |s| s.fallback_cells += style.width_units;
+                metal_col += style.width_units;
+            }
+            col = span_end_excl;
+            continue;
+        }
+
         const buffer = rr.terminalShapeBuffer();
         const shape_phase_start = app_shell.getTime();
         hb.hb_buffer_reset(buffer);

@@ -895,6 +895,14 @@ What this does and does not mean:
   `nvim`-style icons disappear” contradiction: the sampled row path can now
   pick and upload non-primary symbol glyphs instead of silently returning no
   draw for those cells
+- the unavailable-text Metal terminal lane is wider now too: shaped spans
+  that fall out of the narrow single-cell fast paths can route through
+  per-cell Metal atlas fallback instead of relying on ASCII-only fallback
+  helpers or the GL text path
+- on the live Metal terminal path that moves emoji/emote rendering forward
+  materially: wide emoji cells and simple grapheme cases now render on the
+  fallback lane instead of vanishing whenever they miss the single-cell row
+  fast path
 - that same dashboard lane is now runtime-proven under churn too instead of
   only on the first full frame: a dashboard mutation frame now stays on
   `metric_present_sample=direct_snapshot_update` with

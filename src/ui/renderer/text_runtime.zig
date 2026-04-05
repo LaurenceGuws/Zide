@@ -251,7 +251,7 @@ pub fn drawChar(self: *Renderer, char: u8, x: f32, y: f32, color: Color) void {
     drawText(self, buf[0..], x, y, color);
 }
 
-fn drawMetalTerminalAsciiCellFallback(
+fn drawMetalTerminalCodepointCellFallback(
     self: *Renderer,
     codepoint: u32,
     x: f32,
@@ -261,11 +261,48 @@ fn drawMetalTerminalAsciiCellFallback(
     color: Color,
 ) bool {
     if (self.plannedTextRenderingMode() != .metal_texture_atlas) return false;
-    if (codepoint < 0x20 or codepoint > 0x7E) return false;
-    const ascii: u8 = @intCast(codepoint);
-    var buf = [1]u8{ascii};
+    if (codepoint == 0) return false;
+    const scalar = std.math.cast(u21, codepoint) orelse return false;
+    const encoded_len = std.unicode.utf8CodepointSequenceLength(scalar) catch return false;
+    var buf: [4]u8 = undefined;
+    _ = std.unicode.utf8Encode(scalar, buf[0..encoded_len]) catch return false;
     return self.drawMetalTerminalCellRun(&self.terminal_font, .{
-        .text = buf[0..],
+        .text = buf[0..encoded_len],
+        .x = x,
+        .y = y,
+        .cell_width = cell_width,
+        .cell_height = cell_height,
+        .tint = color.toRgba(),
+    });
+}
+
+fn drawMetalTerminalGraphemeCellFallback(
+    self: *Renderer,
+    base: u32,
+    combining: []const u32,
+    x: f32,
+    y: f32,
+    cell_width: f32,
+    cell_height: f32,
+    color: Color,
+) bool {
+    if (self.plannedTextRenderingMode() != .metal_texture_atlas) return false;
+    if (base == 0) return false;
+    var buf: [32]u8 = undefined;
+    var len: usize = 0;
+
+    const cps = [_][]const u32{ &[_]u32{base}, combining };
+    for (cps) |slice| {
+        for (slice) |codepoint| {
+            const scalar = std.math.cast(u21, codepoint) orelse return false;
+            const encoded_len = std.unicode.utf8CodepointSequenceLength(scalar) catch return false;
+            if (len + encoded_len > buf.len) return false;
+            _ = std.unicode.utf8Encode(scalar, buf[len .. len + encoded_len]) catch return false;
+            len += encoded_len;
+        }
+    }
+    return self.drawMetalTerminalCellRun(&self.terminal_font, .{
+        .text = buf[0..len],
         .x = x,
         .y = y,
         .cell_width = cell_width,
@@ -302,7 +339,7 @@ pub fn drawTerminalCell(self: *Renderer, codepoint: u32, x: f32, y: f32, cell_wi
         }
     } else if (codepoint != 0) {
         const text_color = if (is_cursor) bg else fg;
-        _ = drawMetalTerminalAsciiCellFallback(self, codepoint, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, text_color);
+        _ = drawMetalTerminalCodepointCellFallback(self, codepoint, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, text_color);
         if (underline) {
             terminal_underline.drawUnderline(drawRectThunk, self, snapInt(snapped_x), snapInt(snapped_y), snapped_cell_w_i, snapped_cell_h_i, underline_color);
         }
@@ -331,7 +368,7 @@ pub fn drawTerminalCellGrapheme(self: *Renderer, base: u32, combining: []const u
         if (underline) terminal_underline.drawUnderline(drawRectThunk, self, snapInt(snapped_x), snapInt(snapped_y), snapped_cell_w_i, snapped_cell_h_i, underline_color);
     } else if (base != 0) {
         const text_color = if (is_cursor) bg else fg;
-        _ = drawMetalTerminalAsciiCellFallback(self, base, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, text_color);
+        _ = drawMetalTerminalGraphemeCellFallback(self, base, combining, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, text_color);
         if (underline) terminal_underline.drawUnderline(drawRectThunk, self, snapInt(snapped_x), snapInt(snapped_y), snapped_cell_w_i, snapped_cell_h_i, underline_color);
     }
 }
@@ -358,7 +395,7 @@ pub fn drawTerminalCellGraphemeBatched(self: *Renderer, base: u32, combining: []
         if (underline) terminal_underline.drawUnderline(addTerminalGlyphRectThunk, self, snapInt(snapped_x), snapInt(snapped_y), snapped_cell_w_i, snapped_cell_h_i, underline_color);
     } else if (base != 0) {
         const text_color = if (is_cursor) bg else fg;
-        _ = drawMetalTerminalAsciiCellFallback(self, base, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, text_color);
+        _ = drawMetalTerminalGraphemeCellFallback(self, base, combining, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, text_color);
         if (underline) terminal_underline.drawUnderline(addTerminalGlyphRectThunk, self, snapInt(snapped_x), snapInt(snapped_y), snapped_cell_w_i, snapped_cell_h_i, underline_color);
     }
 }
@@ -385,7 +422,7 @@ pub fn drawTerminalCellBatched(self: *Renderer, codepoint: u32, x: f32, y: f32, 
         if (underline) terminal_underline.drawUnderline(addTerminalGlyphRectThunk, self, snapInt(snapped_x), snapInt(snapped_y), snapped_cell_w_i, snapped_cell_h_i, underline_color);
     } else if (codepoint != 0) {
         const text_color = if (is_cursor) bg else fg;
-        _ = drawMetalTerminalAsciiCellFallback(self, codepoint, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, text_color);
+        _ = drawMetalTerminalCodepointCellFallback(self, codepoint, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, text_color);
         if (underline) terminal_underline.drawUnderline(addTerminalGlyphRectThunk, self, snapInt(snapped_x), snapInt(snapped_y), snapped_cell_w_i, snapped_cell_h_i, underline_color);
     }
 }

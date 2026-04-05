@@ -2448,9 +2448,14 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
                 metal_text_sample_runtime.pixelClipRect(self, clip)
             else
                 null;
-            if (kind == .font_coverage) {
+            const atlas_kind: ?metal_backend.AtlasTextureSource = switch (kind) {
+                .font_coverage => .coverage,
+                .rgba => .color,
+                else => null,
+            };
+            if (atlas_kind) |atlas| {
                 _ = self.appendMetalAtlasSampleDraw(.{
-                    .atlas = .coverage,
+                    .atlas = atlas,
                     .source_rect = src,
                     .dest_x = @intFromFloat(std.math.round(self.logicalLengthToRaster(dest.x))),
                     .dest_y = @intFromFloat(std.math.round(self.logicalLengthToRaster(dest.y))),

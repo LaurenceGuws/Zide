@@ -900,6 +900,14 @@ lane.
       Metal while `nvim`-style icons still vanished: sampled fallback rows can
       now pick and upload non-primary symbol glyphs instead of returning no
       draw for those cells
+    - the unavailable-text Metal terminal lane is wider now too: spans that
+      fall out of the narrow single-cell fast paths can route through per-cell
+      Metal atlas fallback instead of relying on ASCII-only fallback helpers
+      or the GL text path
+    - that moves simple emoji/emote rendering forward on the live Metal
+      terminal path: wide emoji cells and simple grapheme cases now render on
+      the fallback lane instead of vanishing whenever they miss the single-cell
+      row fast path
     - the dashboard fixture is now proven under churn too:
       `DASHBOARD=1` plus `MUTATE_FRAME=1` yields
       `metric_present_sample=direct_snapshot_update`,
