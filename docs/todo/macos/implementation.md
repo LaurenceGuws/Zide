@@ -682,6 +682,9 @@ lane.
       routes through one runtime entrypoint too, leaving the presenter mostly
       with timing and recent-input policy input instead of backend-shaped
       presentation control flow
+    - the recent-input force-full presentation policy check now routes through
+      the terminal runtime too, so the presenter no longer computes that
+      policy branch itself
     - the direct Metal terminal lane still validates on the same runtime truth:
       `terminal_present=direct_main_target`, `presentable_ready=1` after the
       first successful frame, `grid_runs=10/224`, `overlay_runs=1/5`, and

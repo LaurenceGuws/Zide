@@ -22,6 +22,7 @@ const CursorPos = terminal_publication.CursorPos;
 const GlyphDrawStats = draw_grid.GlyphDrawStats;
 const TerminalPresentationSampleMode = terminal_debug_geometry.TerminalPresentationSampleMode;
 const TerminalPresentationSample = terminal_debug_geometry.TerminalPresentationSample;
+const InputSnapshot = shared_types.input.InputSnapshot;
 
 const drawRowBackgrounds = draw_grid.drawRowBackgrounds;
 const drawRowGlyphs = draw_grid.drawRowGlyphs;
@@ -97,6 +98,20 @@ pub const PresentationRunResult = struct {
     glyph_ms: f64 = 0.0,
     kitty_ms: f64 = 0.0,
 };
+
+pub fn recentInputWindowActive(
+    self: anytype,
+    renderer: anytype,
+    input: InputSnapshot,
+    at: f64,
+) bool {
+    return renderer.forceFullTerminalPresentationRecentInputWindow() and
+        ((input.mods.ctrl or input.mods.shift or input.mods.alt or input.mods.super) or
+            self.controller.blink.recentInputWindowActive(
+                at,
+                renderer.fullTerminalPresentationRecentInputWindowSeconds(),
+            ));
+}
 
 pub fn clearPresentationSample(self: anytype) void {
     self.debug.last_terminal_presentation.valid = false;

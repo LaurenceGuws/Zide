@@ -804,6 +804,9 @@ What this does and does not mean:
   and retained present submission are all selected and executed through one
   runtime entrypoint, leaving the presenter mostly with timing and policy
   input instead of backend-shaped control flow
+- even the recent-input presentation policy check now lives there:
+  the presenter no longer computes the force-full recent-input window logic
+  itself and instead passes through a terminal-owned runtime policy call
 - that contract is intentionally backend-native rather than fake portability:
   the old cached GL `Texture` path is still OpenGL-only, while Metal Kitty
   images are created as frame-scoped native Metal textures and released after

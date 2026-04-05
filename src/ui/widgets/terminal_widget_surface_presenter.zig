@@ -41,12 +41,12 @@ pub fn updateAndPresent(
     var result = SurfacePresentResult{};
     const r = shell.rendererPtr();
     const plan_time = app_shell.getTime();
-    const recent_input_window_active = r.forceFullTerminalPresentationRecentInputWindow() and
-        ((input.mods.ctrl or input.mods.shift or input.mods.alt or input.mods.super) or
-            self.controller.blink.recentInputWindowActive(
-                plan_time,
-                r.fullTerminalPresentationRecentInputWindowSeconds(),
-            ));
+    const recent_input_window_active = presentation_runtime.recentInputWindowActive(
+        self,
+        r,
+        input,
+        plan_time,
+    );
     const presentation = presentation_runtime.runPresentation(
         self,
         shell,
