@@ -5,11 +5,11 @@ const terminal_types = @import("../../terminal/model/types.zig");
 const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
 const time_utils = @import("../renderer/time_utils.zig");
-const retained_targets_runtime = @import("../renderer/retained_targets_runtime.zig");
 const scene_frame_runtime = @import("../renderer/scene_frame_runtime.zig");
 const draw_grid = @import("terminal_widget_draw_grid.zig");
 const draw_presentation = @import("terminal_widget_draw_presentation.zig");
 const presentation_state_mod = @import("terminal_widget_presentation_state.zig");
+const presentation_target_runtime = @import("terminal_widget_presentation_target_runtime.zig");
 const view_state = @import("terminal_widget_view_state.zig");
 
 const Shell = app_shell.Shell;
@@ -573,7 +573,7 @@ fn refreshPresentationPresentState(
         self.surface.notePresentationUpdated(terminal_view, surface_geometry);
     }
 
-    state.target_available = retained_targets_runtime.surfaceAvailable(renderer, .terminal);
+    state.target_available = presentation_target_runtime.presentableAvailable(renderer);
     state.ready = self.surface.notePresentableAvailability(state.target_available);
     state.present = state.ready and state.visible;
     state.log_unavailable = !state.ready and terminal_view.rows > 0 and terminal_view.cols > 0 and view_cells_len > 0 and state.visible;
@@ -625,7 +625,7 @@ fn presentPresentationSurface(
         viewport_w,
         viewport_h,
     );
-    retained_targets_runtime.drawSurface(renderer, .terminal, .{
+    presentation_target_runtime.drawPresentable(renderer, .{
         .x = view_geometry.origin_x,
         .y = view_geometry.origin_y,
         .width = viewport_w,
@@ -670,7 +670,7 @@ fn planPresentationUpdate(
     plan.geometry.viewport_w = @as(f32, @floatFromInt(plan.geometry.visible_w));
     plan.geometry.viewport_h = @as(f32, @floatFromInt(plan.geometry.visible_h));
 
-    const recreated = retained_targets_runtime.ensureSurface(renderer, .terminal, plan.geometry.surface_w, plan.geometry.surface_h);
+    const recreated = presentation_target_runtime.ensurePresentable(renderer, plan.geometry.surface_w, plan.geometry.surface_h);
     const presentation_delta = self.surface.presentationUpdateDelta(terminal_view, plan.geometry);
 
     var update_plan = draw_presentation.choosePresentationUpdatePlan(
@@ -704,7 +704,7 @@ fn planPresentationUpdate(
     )) {
         .attempt => |shift_rows| {
             const dy_pixels: i32 = -viewport_shift.rows * plan.geometry.cell_h_i;
-            if (retained_targets_runtime.scrollSurface(renderer, .terminal, 0, dy_pixels)) {
+            if (presentation_target_runtime.scrollPresentable(renderer, 0, dy_pixels)) {
                 needs_partial = true;
                 shifted_rows = shift_rows;
             } else {
@@ -827,7 +827,7 @@ pub fn updateAndPresent(
         );
     }
 
-    const presentation_target_available = retained_targets_runtime.surfaceAvailable(r, .terminal);
+    const presentation_target_available = presentation_target_runtime.presentableAvailable(r);
     const presentation_ready = self.surface.notePresentableAvailability(presentation_target_available);
 
     if (terminal_view.sync_updates_active and view_cells.len > 0 and presentation_ready) {
@@ -851,7 +851,7 @@ pub fn updateAndPresent(
             view_geometry.viewport_width,
             view_geometry.viewport_height,
         );
-        retained_targets_runtime.drawSurface(r, .terminal, .{
+        presentation_target_runtime.drawPresentable(r, .{
             .x = view_geometry.origin_x,
             .y = view_geometry.origin_y,
             .width = view_geometry.viewport_width,
@@ -895,7 +895,7 @@ pub fn updateAndPresent(
         padding_x_i = surface_update_plan.geometry.padding_x_i;
         var presentation_update_completed = false;
 
-        if (surface_update_plan.mode != .none and retained_targets_runtime.beginSurface(r, .terminal)) {
+        if (surface_update_plan.mode != .none and presentation_target_runtime.beginPresentable(r)) {
             r.endClip();
             const execution = executePresentationUpdate(
                 self,

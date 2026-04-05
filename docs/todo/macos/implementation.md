@@ -461,6 +461,9 @@ lane.
       `terminal_widget_draw_presentation.zig` replaces the old texture-named
       helper module because it now primarily owns presentation update/shift
       policy
+    - terminal presentation now goes through a terminal-owned
+      presentation-target wrapper instead of importing the generic
+      retained-target runtime directly from the presenter
     - the terminal Metal diagnostic now reports `raw_image_textures=1`, keeps
       non-zero `kitty_ms`, and no longer relies on the previous unsupported
       backend gate for RGB/RGBA Kitty images

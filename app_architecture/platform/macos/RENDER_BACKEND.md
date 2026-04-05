@@ -741,6 +741,10 @@ What this does and does not mean:
   `terminal_widget_draw_presentation.zig` replaces the old texture-named
   helper module, which is more honest because the file mostly owns
   presentation update/shift policy rather than texture-specific behavior
+- the terminal presenter also depends on a terminal-owned presentation-target
+  wrapper now instead of importing the generic retained-target runtime
+  directly, which reduces one more place where the live Metal terminal lane
+  had to sit inside retained-target module ownership
 - that contract is intentionally backend-native rather than fake portability:
   the old cached GL `Texture` path is still OpenGL-only, while Metal Kitty
   images are created as frame-scoped native Metal textures and released after
