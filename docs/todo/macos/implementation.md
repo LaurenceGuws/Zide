@@ -318,6 +318,9 @@ lane.
       diagnostic seam when live text is unavailable and the planned text mode
       is `metal_texture_atlas`, so this narrow text-diagnostic route no longer
       remains structurally GL-only
+    - a dedicated `--macos-metal-text-diagnostic` startup/runtime lane now
+      exists for this sampled-glyph path, so the Metal text diagnostic seam is
+      validated independently of the broader live-smoke runtime
     - the live macOS Metal smoke frame path still blits a tiny region from the
       Metal atlas color texture into the drawable before present, and the
       submit-time screenshot path captured a real `1280x720` PPM artifact for

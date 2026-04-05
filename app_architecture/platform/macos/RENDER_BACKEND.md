@@ -568,6 +568,11 @@ What this does and does not mean:
   text diagnostic view when live text is unavailable and the planned text mode
   is `metal_texture_atlas`, which keeps the path honest without pretending the
   generic text renderer has already migrated
+- there is now a dedicated startup/runtime lane for the Metal text diagnostic
+  seam itself: `--macos-metal-text-diagnostic` brings up the backend-smoke
+  renderer, activates the Metal text diagnostic view, and validates present
+  sequencing plus optional present-capture screenshots without depending on the
+  broader live-smoke runtime
 - the visible atlas-backed preview path itself is still real: the live smoke
   frame path blits a tiny region from the Metal atlas color texture into the
   drawable before present, and the submit-time screenshot path captured a real
