@@ -17,8 +17,6 @@ const CursorPos = @import("../../terminal/core/publication/terminal_publication.
 const terminal_types = @import("../../terminal/model/types.zig");
 const PresentationPartialDrawPlan = presentation_state_mod.PresentationState.PresentationPartialDrawPlan;
 
-const TerminalPresentationSampleMode = @import("terminal_widget_debug_geometry.zig").TerminalPresentationSampleMode;
-
 const drawRowBackgrounds = draw_grid.drawRowBackgrounds;
 const drawRowGlyphs = draw_grid.drawRowGlyphs;
 const GlyphDrawStats = draw_grid.GlyphDrawStats;
@@ -341,48 +339,6 @@ fn toShellColor(color: terminal_publication.Color) Color {
     return .{ .r = color.r, .g = color.g, .b = color.b, .a = color.a };
 }
 
-fn noteTerminalPresent(
-    self: anytype,
-    renderer: anytype,
-    mode: TerminalPresentationSampleMode,
-    generation: u64,
-    dest_x: f32,
-    dest_y: f32,
-    dest_w: f32,
-    dest_h: f32,
-    source_w: f32,
-    source_h: f32,
-) void {
-    var sample = @TypeOf(self.debug.last_terminal_presentation){
-        .valid = true,
-        .mode = mode,
-        .generation = generation,
-        .presentable_w_px = 0,
-        .presentable_h_px = 0,
-        .target_logical_w = source_w,
-        .target_logical_h = source_h,
-        .source_logical_w = source_w,
-        .source_logical_h = source_h,
-        .dest_x = dest_x,
-        .dest_y = dest_y,
-        .dest_w = dest_w,
-        .dest_h = dest_h,
-        .scale_x = if (source_w > 0.0) dest_w / source_w else 1.0,
-        .scale_y = if (source_h > 0.0) dest_h / source_h else 1.0,
-    };
-    if (mode == .retained_surface) {
-        if (renderer.retained_targets.terminal) |target| {
-            sample.presentable_w_px = target.texture.width;
-            sample.presentable_h_px = target.texture.height;
-            sample.target_logical_w = @floatFromInt(target.logical_width);
-            sample.target_logical_h = @floatFromInt(target.logical_height);
-        } else {
-            sample.valid = false;
-        }
-    }
-    self.debug.last_terminal_presentation = sample;
-}
-
 fn refreshPresentationPresentState(
     self: anytype,
     renderer: anytype,
@@ -434,7 +390,7 @@ fn presentPresentationSurface(
         viewport_w,
         viewport_h,
         self,
-        noteTerminalPresent,
+        presentation_runtime.notePresentSample,
     );
 }
 
@@ -490,7 +446,7 @@ pub fn updateAndPresent(
     const cols = terminal_view.cols;
     const view_cells = terminal_view.cells;
     const base_colors = terminal_view.base_colors;
-    self.debug.last_terminal_presentation.valid = false;
+    presentation_runtime.clearPresentationSample(self);
 
     if (r.terminalPresentationMode() == .direct_main_target) {
         const direct = presentation_runtime.directPresent(
@@ -510,7 +466,7 @@ pub fn updateAndPresent(
             width,
             height,
             self,
-            noteTerminalPresent,
+            presentation_runtime.notePresentSample,
         );
         result.presentation_bg_ms = direct.bg_ms;
         result.presentation_glyph_ms = direct.glyph_ms;
@@ -531,7 +487,7 @@ pub fn updateAndPresent(
         height,
         view_geometry,
         self,
-        noteTerminalPresent,
+        presentation_runtime.notePresentSample,
     )) {
         result.early_return = true;
         return result;

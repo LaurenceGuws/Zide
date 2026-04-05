@@ -659,6 +659,9 @@ lane.
     - `terminal_widget_presentation_runtime.zig` owns retained fast-present,
       presentable draw, presentable planning, present-state refresh, and now
       the direct-main-target terminal present path too
+    - terminal presentation sample/debug bookkeeping moved into that same
+      runtime seam, so the presenter no longer owns direct-versus-retained
+      presentation sample emission
     - the direct Metal terminal lane still validates on the same runtime truth:
       `terminal_present=direct_main_target`, `presentable_ready=1` after the
       first successful frame, `grid_runs=10/224`, `overlay_runs=1/5`, and

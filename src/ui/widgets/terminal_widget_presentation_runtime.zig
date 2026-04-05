@@ -21,6 +21,7 @@ const PresentationPartialDrawPlan = presentation_state_mod.PresentationState.Pre
 const CursorPos = terminal_publication.CursorPos;
 const GlyphDrawStats = draw_grid.GlyphDrawStats;
 const TerminalPresentationSampleMode = terminal_debug_geometry.TerminalPresentationSampleMode;
+const TerminalPresentationSample = terminal_debug_geometry.TerminalPresentationSample;
 
 const drawRowBackgrounds = draw_grid.drawRowBackgrounds;
 const drawRowGlyphs = draw_grid.drawRowGlyphs;
@@ -69,6 +70,52 @@ pub const DirectPresentResult = struct {
     glyph_ms: f64 = 0.0,
     kitty_ms: f64 = 0.0,
 };
+
+pub fn clearPresentationSample(self: anytype) void {
+    self.debug.last_terminal_presentation.valid = false;
+}
+
+pub fn notePresentSample(
+    self: anytype,
+    renderer: anytype,
+    mode: TerminalPresentationSampleMode,
+    generation: u64,
+    dest_x: f32,
+    dest_y: f32,
+    dest_w: f32,
+    dest_h: f32,
+    source_w: f32,
+    source_h: f32,
+) void {
+    var sample = TerminalPresentationSample{
+        .valid = true,
+        .mode = mode,
+        .generation = generation,
+        .presentable_w_px = 0,
+        .presentable_h_px = 0,
+        .target_logical_w = source_w,
+        .target_logical_h = source_h,
+        .source_logical_w = source_w,
+        .source_logical_h = source_h,
+        .dest_x = dest_x,
+        .dest_y = dest_y,
+        .dest_w = dest_w,
+        .dest_h = dest_h,
+        .scale_x = if (source_w > 0.0) dest_w / source_w else 1.0,
+        .scale_y = if (source_h > 0.0) dest_h / source_h else 1.0,
+    };
+    if (mode == .retained_surface) {
+        if (renderer.retained_targets.terminal) |target| {
+            sample.presentable_w_px = target.texture.width;
+            sample.presentable_h_px = target.texture.height;
+            sample.target_logical_w = @floatFromInt(target.logical_width);
+            sample.target_logical_h = @floatFromInt(target.logical_height);
+        } else {
+            sample.valid = false;
+        }
+    }
+    self.debug.last_terminal_presentation = sample;
+}
 
 pub fn beginViewportClip(
     renderer: anytype,

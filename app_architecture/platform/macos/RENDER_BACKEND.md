@@ -776,6 +776,9 @@ What this does and does not mean:
   intended role as orchestration over terminal-owned presentation/runtime
   contracts instead of being the real owner of one presentation mode and a
   helper caller for the other
+- terminal presentation debug sampling moved behind that same seam too:
+  sample clearing and retained-versus-direct presentation sample emission now
+  live in `terminal_widget_presentation_runtime.zig` instead of the presenter
 - that contract is intentionally backend-native rather than fake portability:
   the old cached GL `Texture` path is still OpenGL-only, while Metal Kitty
   images are created as frame-scoped native Metal textures and released after
