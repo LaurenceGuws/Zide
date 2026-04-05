@@ -154,6 +154,7 @@ pub const RendererCapabilities = struct {
     planned_text_rendering_mode: TextRenderingMode,
     atlas_storage_mode: AtlasStorageMode,
     planned_atlas_storage_mode: AtlasStorageMode,
+    raw_image_textures: bool,
 };
 pub const EditorTextStyleFlags = iface.EditorTextStyleFlags;
 pub const editor_syntax_style_slots = iface.editor_syntax_style_slots;
@@ -1347,6 +1348,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
                 .opengl => .opengl_textures,
                 .metal => .metal_textures,
             },
+            .raw_image_textures = self.supportsRawImageTextures(),
         };
     }
 

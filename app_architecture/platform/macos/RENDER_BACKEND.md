@@ -671,6 +671,10 @@ What this does and does not mean:
   rather than noisy repeated failure: the Kitty lane checks raw image-texture
   support up front, logs one `kitty upload unsupported backend=metal`
   diagnostic, and stops retrying impossible GL uploads every frame on Metal
+- the terminal Metal diagnostic now reports that capability directly too:
+  `raw_image_textures=0` is part of the runtime surface on the current host,
+  so the next missing path is visible as contract truth instead of only being
+  inferred from secondary failure logs
 - this is still intentionally narrow and honest: it is now a tiny sampled
   multiline ASCII run with an explicit monospace-cell option rather than a
   claim that the generic string/text renderer has already migrated

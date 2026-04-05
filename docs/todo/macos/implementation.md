@@ -403,6 +403,9 @@ lane.
       noisy retry behavior: the Metal path logs one explicit unsupported
       backend message and stops retrying impossible raw texture uploads every
       frame
+    - the terminal Metal diagnostic now reports that capability directly as
+      `raw_image_textures=0`, so the missing native Metal image path is
+      visible in first-class runtime truth rather than only in secondary logs
     - this is still a proof/runtime checkpoint, not a claim that retained
       terminal surfaces or full terminal-on-Metal presentation are finished
     - the narrow Metal text lane now covers a tiny multiline ASCII run, not

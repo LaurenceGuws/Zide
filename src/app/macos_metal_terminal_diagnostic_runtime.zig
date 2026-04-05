@@ -69,7 +69,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
     log.logf(.info, "start width={d} height={d} rows={d} cols={d} frame_budget={d}", .{ width, height, rows, cols, frame_budget });
     log.logf(
         .info,
-        "capabilities composition={s} retained_targets={d} screenshot={s} text={s} planned_text={s} atlas={s} planned_atlas={s}",
+        "capabilities composition={s} retained_targets={d} screenshot={s} text={s} planned_text={s} atlas={s} planned_atlas={s} raw_image_textures={d}",
         .{
             @tagName(capabilities.scene_composition_mode),
             @intFromBool(capabilities.retained_targets),
@@ -78,6 +78,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
             @tagName(capabilities.planned_text_rendering_mode),
             @tagName(capabilities.atlas_storage_mode),
             @tagName(capabilities.planned_atlas_storage_mode),
+            @intFromBool(capabilities.raw_image_textures),
         },
     );
 
