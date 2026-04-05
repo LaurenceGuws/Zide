@@ -667,6 +667,10 @@ What this does and does not mean:
   widget/frame pipeline, `texture_kitty_ms` is reported in the terminal
   diagnostic, and Kitty texture upload still fails cleanly because raw texture
   creation is currently OpenGL-only on this path
+- that interim boundary is now enforced as an explicit renderer capability
+  rather than noisy repeated failure: the Kitty lane checks raw image-texture
+  support up front, logs one `kitty upload unsupported backend=metal`
+  diagnostic, and stops retrying impossible GL uploads every frame on Metal
 - this is still intentionally narrow and honest: it is now a tiny sampled
   multiline ASCII run with an explicit monospace-cell option rather than a
   claim that the generic string/text renderer has already migrated

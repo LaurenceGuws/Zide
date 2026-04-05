@@ -1300,6 +1300,10 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         return self.capabilities().retained_targets;
     }
 
+    pub fn supportsRawImageTextures(self: *const Renderer) bool {
+        return self.backend == .opengl;
+    }
+
     pub fn sceneCompositionMode(self: *const Renderer) SceneCompositionMode {
         return self.capabilities().scene_composition_mode;
     }

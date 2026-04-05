@@ -399,6 +399,10 @@ lane.
       diagnostic reports non-zero `kitty_ms`, while Kitty texture upload still
       fails cleanly because raw texture creation is still OpenGL-only on the
       backend-smoke Metal lane
+    - that unsupported Kitty image boundary is now capability-owned instead of
+      noisy retry behavior: the Metal path logs one explicit unsupported
+      backend message and stops retrying impossible raw texture uploads every
+      frame
     - this is still a proof/runtime checkpoint, not a claim that retained
       terminal surfaces or full terminal-on-Metal presentation are finished
     - the narrow Metal text lane now covers a tiny multiline ASCII run, not

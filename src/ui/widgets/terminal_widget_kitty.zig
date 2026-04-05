@@ -25,6 +25,7 @@ pub const KittyState = struct {
     pending_uploads: std.ArrayList(u32),
     pending_uploads_set: std.AutoHashMap(u32, void),
     last_generation: u64 = 0,
+    raw_texture_upload_unsupported_logged: bool = false,
 
     pub const UploadStats = struct {
         images: usize = 0,
@@ -39,6 +40,7 @@ pub const KittyState = struct {
             .pending_uploads = .empty,
             .pending_uploads_set = std.AutoHashMap(u32, void).init(allocator),
             .last_generation = 0,
+            .raw_texture_upload_unsupported_logged = false,
         };
     }
 
@@ -210,6 +212,15 @@ pub const KittyState = struct {
     pub fn processPendingUploads(self: *KittyState, shell: *Shell) UploadStats {
         if (self.pending_uploads.items.len == 0) return .{};
         const renderer = shell.rendererPtr();
+        if (!renderer.supportsRawImageTextures()) {
+            if (!self.raw_texture_upload_unsupported_logged) {
+                app_logger.logger("terminal.kitty").logf(.info, "kitty upload unsupported backend={s}", .{@tagName(renderer.backend)});
+                self.raw_texture_upload_unsupported_logged = true;
+            }
+            self.pending_uploads.clearRetainingCapacity();
+            self.pending_uploads_set.clearRetainingCapacity();
+            return .{};
+        }
         const max_bytes: usize = 2 * 1024 * 1024;
         var used_bytes: usize = 0;
         var uploaded_images: usize = 0;
