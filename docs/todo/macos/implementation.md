@@ -685,6 +685,9 @@ lane.
     - the recent-input force-full presentation policy check now routes through
       the terminal runtime too, so the presenter no longer computes that
       policy branch itself
+    - the dedicated terminal presentation wrapper file is now deleted;
+      `terminal_widget_draw.zig` calls the terminal presentation runtime
+      directly as the public entrypoint for terminal presentation
     - the direct Metal terminal lane still validates on the same runtime truth:
       `terminal_present=direct_main_target`, `presentable_ready=1` after the
       first successful frame, `grid_runs=10/224`, `overlay_runs=1/5`, and

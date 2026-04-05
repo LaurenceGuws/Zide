@@ -99,6 +99,14 @@ pub const PresentationRunResult = struct {
     kitty_ms: f64 = 0.0,
 };
 
+pub const SurfacePresentResult = struct {
+    early_return: bool = false,
+    presentation_update_ms: f64 = 0.0,
+    presentation_bg_ms: f64 = 0.0,
+    presentation_glyph_ms: f64 = 0.0,
+    presentation_kitty_ms: f64 = 0.0,
+};
+
 pub fn recentInputWindowActive(
     self: anytype,
     renderer: anytype,
@@ -111,6 +119,70 @@ pub fn recentInputWindowActive(
                 at,
                 renderer.fullTerminalPresentationRecentInputWindowSeconds(),
             ));
+}
+
+pub fn updateAndPresent(
+    self: anytype,
+    shell: *app_shell.Shell,
+    x: f32,
+    y: f32,
+    width: f32,
+    height: f32,
+    input: InputSnapshot,
+    terminal_view: view_state.TerminalViewModel,
+    view_geometry: TerminalViewGeometry,
+    hover_link_id: u32,
+    start_line: usize,
+    scroll_offset: usize,
+    draw_cursor: bool,
+    cursor: CursorPos,
+    cursor_style: terminal_types.CursorStyle,
+    blink_style: anytype,
+    blink_time: f64,
+    blink_requires_partial: bool,
+    has_kitty: bool,
+) SurfacePresentResult {
+    const presentation_phase_start = app_shell.getTime();
+    var result = SurfacePresentResult{};
+    const renderer = shell.rendererPtr();
+    const recent_input_window_active = recentInputWindowActive(
+        self,
+        renderer,
+        input,
+        app_shell.getTime(),
+    );
+    const presentation = runPresentation(
+        self,
+        shell,
+        renderer,
+        terminal_view,
+        view_geometry,
+        hover_link_id,
+        start_line,
+        scroll_offset,
+        draw_cursor,
+        cursor,
+        cursor_style,
+        blink_style,
+        blink_time,
+        blink_requires_partial,
+        has_kitty,
+        width,
+        height,
+        x,
+        y,
+        recent_input_window_active,
+        self,
+        notePresentSample,
+    );
+    result.early_return = presentation.early_return;
+    result.presentation_bg_ms = presentation.bg_ms;
+    result.presentation_glyph_ms = presentation.glyph_ms;
+    result.presentation_kitty_ms = presentation.kitty_ms;
+    if (result.early_return) return result;
+
+    result.presentation_update_ms = time_utils.secondsToMs(app_shell.getTime() - presentation_phase_start);
+    return result;
 }
 
 pub fn clearPresentationSample(self: anytype) void {

@@ -11,7 +11,7 @@ const draw_grid = @import("terminal_widget_draw_grid.zig");
 const draw_overlay = @import("terminal_widget_draw_overlay.zig");
 const draw_presentation = @import("terminal_widget_draw_presentation.zig");
 const draw_metrics = @import("terminal_widget_draw_metrics.zig");
-const surface_presenter = @import("terminal_widget_surface_presenter.zig");
+const presentation_runtime = @import("terminal_widget_presentation_runtime.zig");
 const view_state = @import("terminal_widget_view_state.zig");
 
 const hover_mod = @import("terminal_widget_hover.zig");
@@ -162,7 +162,7 @@ pub fn drawPrepared(
 
     self.controller.hover.dirty = false;
     const hover_link_id = hover_mod.hoverLinkId(&self.controller.hover);
-    const surface_result = surface_presenter.updateAndPresent(
+    const surface_result = presentation_runtime.updateAndPresent(
         self,
         shell,
         x,

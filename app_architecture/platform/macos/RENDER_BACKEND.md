@@ -807,6 +807,10 @@ What this does and does not mean:
 - even the recent-input presentation policy check now lives there:
   the presenter no longer computes the force-full recent-input window logic
   itself and instead passes through a terminal-owned runtime policy call
+- the dedicated terminal presenter file is gone now:
+  `terminal_widget_presentation_runtime.zig` is the public entrypoint for
+  terminal presentation, while `terminal_widget_draw.zig` calls it directly
+  instead of routing through a thin presenter wrapper
 - that contract is intentionally backend-native rather than fake portability:
   the old cached GL `Texture` path is still OpenGL-only, while Metal Kitty
   images are created as frame-scoped native Metal textures and released after
