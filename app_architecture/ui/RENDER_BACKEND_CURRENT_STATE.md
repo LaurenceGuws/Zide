@@ -146,6 +146,12 @@ That has improved slightly again inside the Metal state bundle too: atlas
 preview/debug state now lives under `metal_runtime.preview_source` instead of
 as a separate backend-specific field on the renderer root.
 
+That has improved slightly again on the presentable-storage side too: the
+OpenGL retained-presentable cache is no longer stored as a direct renderer-root
+field. It now lives under `opengl_runtime.presentable_targets`, which is a
+better fit for the truth that the richer retained-presentable lifecycle is
+currently an OpenGL-owned implementation shape.
+
 ### 2. Shared frame lifecycle still branches backend-by-backend
 
 The renderer root no longer spells out backend frame begin/submit bodies, but

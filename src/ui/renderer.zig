@@ -542,7 +542,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     terminal_font: TerminalFont,
     font_config: FontConfigState,
 
-    presentable_targets: PresentableTargetState,
     scene_target: SceneTargetState,
     window_chrome: WindowChromeState,
 
@@ -819,7 +818,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             },
             .terminal_font = undefined,
             .font_config = font_config,
-            .presentable_targets = .{},
             .scene_target = .{},
             .window_chrome = .{},
             .theme = .{},

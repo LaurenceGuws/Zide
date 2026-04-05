@@ -3,12 +3,7 @@ const metal_backend = @import("metal_backend.zig");
 const presentable_contract = @import("presentable_contract.zig");
 const presentable_target = @import("presentable_target.zig");
 const PresentableTarget = presentable_target.PresentableTarget;
-
-pub const PresentableTargetState = struct {
-    terminal: ?PresentableTarget = null,
-    terminal_scroll: ?PresentableTarget = null,
-    editor: ?PresentableTarget = null,
-};
+pub const PresentableTargetState = presentable_target.PresentableTargetState;
 
 pub const PresentableSurface = presentable_contract.PresentableSurface;
 pub const PresentableDraw = presentable_contract.PresentableDraw;

@@ -167,6 +167,10 @@ Progress note, 2026-04-05:
   `src/ui/renderer/metal_runtime_state.zig` as part of the bundled Metal
   runtime state instead of as a separate backend-specific field on
   `Renderer`.
+- The OpenGL retained-presentable cache now also lives under
+  `src/ui/renderer/opengl_runtime_state.zig` instead of as a direct
+  `Renderer` field, which makes the GL-owned retained-presentable model less
+  obviously rooted in shared renderer storage.
 - The next lifecycle step is to reduce shared-runtime ownership of dispatch and
   backend-native frame state, not just move code blocks around.
 

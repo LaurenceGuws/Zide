@@ -1,6 +1,9 @@
 const gl = @import("gl.zig");
+const presentable_target = @import("presentable_target.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
 const types = @import("types.zig");
+
+const PresentableTargetState = presentable_target.PresentableTargetState;
 
 pub const State = struct {
     context: ?sdl_api.c.SDL_GLContext = null,
@@ -17,4 +20,5 @@ pub const State = struct {
     uniform_dst_linear: gl.GLint = -1,
     uniform_linear_correction: gl.GLint = -1,
     white_texture: types.Texture = .{ .id = 0, .width = 0, .height = 0 },
+    presentable_targets: PresentableTargetState = .{},
 };
