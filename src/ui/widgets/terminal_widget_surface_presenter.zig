@@ -466,6 +466,8 @@ fn directPresentMainTarget(
     cursor_style: terminal_types.CursorStyle,
     blink_style: anytype,
     blink_time: f64,
+    start_line: usize,
+    has_kitty: bool,
     width: f32,
     height: f32,
 ) SurfacePresentResult {
@@ -509,6 +511,13 @@ fn directPresentMainTarget(
     renderer.flushTerminalBatch();
     result.texture_bg_ms = time_utils.secondsToMs(app_shell.getTime() - bg_phase_start);
 
+    if (has_kitty) {
+        const kitty_phase_start = app_shell.getTime();
+        self.surface.kitty.cleanupTextures(self.session.allocator, self.surface.kitty.images_view.items);
+        self.surface.kitty.drawImages(self.session.allocator, shell, view_geometry.origin_x, view_geometry.origin_y, false, start_line, rows, cols);
+        result.texture_kitty_ms += time_utils.secondsToMs(app_shell.getTime() - kitty_phase_start);
+    }
+
     const glyph_phase_start = app_shell.getTime();
     renderer.terminal_font.beginFrameAtlasStats();
     renderer.beginTerminalGlyphBatch();
@@ -542,6 +551,13 @@ fn directPresentMainTarget(
     }
     renderer.flushTerminalGlyphBatch();
     result.texture_glyph_ms = time_utils.secondsToMs(app_shell.getTime() - glyph_phase_start);
+
+    if (has_kitty) {
+        const kitty_phase_start = app_shell.getTime();
+        self.surface.kitty.drawImages(self.session.allocator, shell, view_geometry.origin_x, view_geometry.origin_y, true, start_line, rows, cols);
+        result.texture_kitty_ms += time_utils.secondsToMs(app_shell.getTime() - kitty_phase_start);
+    }
+
     return result;
 }
 
@@ -826,6 +842,8 @@ pub fn updateAndPresent(
             cursor_style,
             blink_style,
             blink_time,
+            start_line,
+            has_kitty,
             width,
             height,
         );

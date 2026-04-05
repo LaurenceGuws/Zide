@@ -389,6 +389,9 @@ lane.
       terminal font instead of rebuilding a fresh font stack on every sampled
       draw call, which removes misleading per-frame font churn from the
       terminal Metal proof runtime
+    - the direct main-target terminal fallback now preserves Kitty image
+      composition ordering too: below-text and above-text Kitty passes run on
+      the non-retained Metal path instead of that path behaving as text-only
     - this is still a proof/runtime checkpoint, not a claim that retained
       terminal surfaces or full terminal-on-Metal presentation are finished
     - the narrow Metal text lane now covers a tiny multiline ASCII run, not

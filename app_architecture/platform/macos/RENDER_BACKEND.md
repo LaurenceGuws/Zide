@@ -653,6 +653,11 @@ What this does and does not mean:
   instead of reinitializing a fresh font stack on every sampled draw call,
   which keeps runtime proof honest enough to profile backend behavior rather
   than repeated font bootstrap work
+- direct main-target terminal presentation is also less feature-incomplete
+  now: the same Kitty image below-text and above-text ordering used by the
+  retained path is applied on the non-retained Metal terminal path too, so the
+  presentation contract is less "text-only" even though a dedicated Kitty
+  proof runtime still has not been added yet
 - this is still intentionally narrow and honest: it is now a tiny sampled
   multiline ASCII run with an explicit monospace-cell option rather than a
   claim that the generic string/text renderer has already migrated
