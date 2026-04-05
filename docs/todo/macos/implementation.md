@@ -411,6 +411,10 @@ lane.
     - terminal widget surface readiness is now named `presentable_ready`
       instead of `texture_ready`, which better matches the current contract
       where Metal can present directly without a retained texture surface
+    - the terminal planning helper surface is now presentation-shaped too:
+      viewport shift and update-plan helpers are named around presentation
+      instead of texture ownership, which better matches both retained and
+      direct terminal modes
     - the terminal Metal diagnostic now reports `raw_image_textures=1`, keeps
       non-zero `kitty_ms`, and no longer relies on the previous unsupported
       backend gate for RGB/RGBA Kitty images

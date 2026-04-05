@@ -237,42 +237,42 @@ pub fn drawPrepared(
     return outcome;
 }
 
-test "viewport texture shift attempts only when fast path is eligible" {
-    switch (planViewportTextureShift(true, true, 2, false, 0, false, true, 24)) {
+test "viewport present shift attempts only when fast path is eligible" {
+    switch (planViewportPresentShift(true, true, 2, false, 0, false, true, 24)) {
         .attempt => |rows| try std.testing.expectEqual(@as(usize, 2), rows),
         else => return error.ExpectedShiftAttempt,
     }
 }
 
-test "viewport texture shift disable falls back to standard damage path" {
-    const plan = planViewportTextureShift(false, true, 2, false, 0, false, true, 24);
-    try std.testing.expectEqual(ViewportTextureShiftPlan.none, plan);
+test "viewport present shift disable falls back to standard damage path" {
+    const plan = planViewportPresentShift(false, true, 2, false, 0, false, true, 24);
+    try std.testing.expectEqual(ViewportPresentShiftPlan.none, plan);
 }
 
-test "viewport texture shift oversize scroll falls back to standard damage path" {
-    const plan = planViewportTextureShift(true, true, 24, false, 0, false, true, 24);
-    try std.testing.expectEqual(ViewportTextureShiftPlan.none, plan);
+test "viewport present shift oversize scroll falls back to standard damage path" {
+    const plan = planViewportPresentShift(true, true, 24, false, 0, false, true, 24);
+    try std.testing.expectEqual(ViewportPresentShiftPlan.none, plan);
 }
 
-test "viewport texture shift does not attempt while already forced full" {
-    const plan = planViewportTextureShift(true, true, 2, false, 0, true, true, 24);
-    try std.testing.expectEqual(ViewportTextureShiftPlan.none, plan);
+test "viewport present shift does not attempt while already forced full" {
+    const plan = planViewportPresentShift(true, true, 2, false, 0, true, true, 24);
+    try std.testing.expectEqual(ViewportPresentShiftPlan.none, plan);
 }
 
-test "viewport texture shift ignores scrollback view movement" {
-    const plan = planViewportTextureShift(true, true, 2, false, 3, false, true, 24);
-    try std.testing.expectEqual(ViewportTextureShiftPlan.none, plan);
+test "viewport present shift ignores scrollback view movement" {
+    const plan = planViewportPresentShift(true, true, 2, false, 3, false, true, 24);
+    try std.testing.expectEqual(ViewportPresentShiftPlan.none, plan);
 }
 
-test "viewport texture shift allows explicit scrollback remap path" {
-    switch (planViewportTextureShift(true, true, 2, true, 3, false, true, 24)) {
+test "viewport present shift allows explicit scrollback remap path" {
+    switch (planViewportPresentShift(true, true, 2, true, 3, false, true, 24)) {
         .attempt => |rows| try std.testing.expectEqual(@as(usize, 2), rows),
         else => return error.ExpectedShiftAttempt,
     }
 }
 
-test "texture update plan keeps partial redraws eligible while scrolled" {
-    const plan = chooseTextureUpdatePlan(
+test "presentation update plan keeps partial redraws eligible while scrolled" {
+    const plan = choosePresentationUpdatePlan(
         .partial,
         false,
         false,
@@ -287,8 +287,8 @@ test "texture update plan keeps partial redraws eligible while scrolled" {
     try std.testing.expect(plan.needs_partial);
 }
 
-test "texture update plan forces full redraw when texture is not ready" {
-    const plan = chooseTextureUpdatePlan(
+test "presentation update plan forces full redraw when presentable is not ready" {
+    const plan = choosePresentationUpdatePlan(
         .partial,
         false,
         false,
@@ -300,8 +300,8 @@ test "texture update plan forces full redraw when texture is not ready" {
     try std.testing.expect(!plan.needs_partial);
 }
 
-test "texture update plan stays idle when dirty state is clean" {
-    const plan = chooseTextureUpdatePlan(
+test "presentation update plan stays idle when dirty state is clean" {
+    const plan = choosePresentationUpdatePlan(
         .none,
         false,
         false,
@@ -312,8 +312,8 @@ test "texture update plan stays idle when dirty state is clean" {
     try std.testing.expect(!plan.needs_partial);
 }
 
-test "texture update plan keeps partial redraw for normal partial damage" {
-    const plan = chooseTextureUpdatePlan(
+test "presentation update plan keeps partial redraw for normal partial damage" {
+    const plan = choosePresentationUpdatePlan(
         .partial,
         false,
         false,
@@ -324,8 +324,8 @@ test "texture update plan keeps partial redraw for normal partial damage" {
     try std.testing.expect(plan.needs_partial);
 }
 
-test "texture update plan uses partial redraw for blink-only changes" {
-    const plan = chooseTextureUpdatePlan(
+test "presentation update plan uses partial redraw for blink-only changes" {
+    const plan = choosePresentationUpdatePlan(
         .none,
         false,
         false,
@@ -354,11 +354,12 @@ test "full-width partial plan marks every row" {
         try std.testing.expectEqual(@as(u16, 4), end);
     }
 }
-const planViewportTextureShift = draw_texture.planViewportTextureShift;
+const planViewportPresentShift = draw_texture.planViewportPresentShift;
+const ViewportPresentShiftPlan = draw_texture.ViewportPresentShiftPlan;
 const useViewportShiftForPartialPlan = draw_texture.useViewportShiftForPartialPlan;
-const chooseTextureUpdatePlan = draw_texture.chooseTextureUpdatePlan;
-const forceFullTextureUpdatePlan = draw_texture.forceFullTextureUpdatePlan;
-const forceFullTextureUpdatePlanEveryFrame = draw_texture.forceFullTextureUpdatePlanEveryFrame;
+const choosePresentationUpdatePlan = draw_texture.choosePresentationUpdatePlan;
+const forceFullPresentationUpdatePlan = draw_texture.forceFullPresentationUpdatePlan;
+const forceFullPresentationUpdatePlanEveryFrame = draw_texture.forceFullPresentationUpdatePlanEveryFrame;
 const buildPartialPlan = draw_texture.buildPartialPlan;
 const markAllRowsFullWidthPartialPlan = draw_texture.markAllRowsFullWidthPartialPlan;
 

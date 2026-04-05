@@ -4,12 +4,12 @@ const screen_mod = @import("../../terminal/model/screen.zig");
 
 const RenderCache = render_cache_mod.RenderCache;
 
-pub const ViewportTextureShiftPlan = union(enum) {
+pub const ViewportPresentShiftPlan = union(enum) {
     none,
     attempt: usize,
 };
 
-pub const TextureUpdatePlan = struct {
+pub const PresentationUpdatePlan = struct {
     needs_full: bool,
     needs_partial: bool,
 };
@@ -221,7 +221,7 @@ pub fn buildBasePartialPlan(
     }
 }
 
-pub fn planViewportTextureShift(
+pub fn planViewportPresentShift(
     texture_shift_enabled: bool,
     gen_changed: bool,
     viewport_shift_rows: i32,
@@ -230,7 +230,7 @@ pub fn planViewportTextureShift(
     needs_full: bool,
     terminal_presentable_ready: bool,
     rows: usize,
-) ViewportTextureShiftPlan {
+) ViewportPresentShiftPlan {
     const shift_abs_i: i32 = if (viewport_shift_rows < 0) -viewport_shift_rows else viewport_shift_rows;
     if (texture_shift_enabled and
         gen_changed and
@@ -253,7 +253,7 @@ pub fn useViewportShiftForPartialPlan(
     return cache_dirty == .partial and viewport_shift_rows != 0;
 }
 
-pub fn chooseTextureUpdatePlan(
+pub fn choosePresentationUpdatePlan(
     cache_dirty: @TypeOf(RenderCache.init().dirty),
     recreated: bool,
     clear_generation_changed: bool,
@@ -261,7 +261,7 @@ pub fn chooseTextureUpdatePlan(
     render_scale_changed: bool,
     blink_requires_partial: bool,
     terminal_presentable_ready: bool,
-) TextureUpdatePlan {
+) PresentationUpdatePlan {
     var needs_full = recreated or
         clear_generation_changed or
         cell_metrics_changed or
@@ -360,7 +360,7 @@ pub fn decideFullFrameFastPath(
     };
 }
 
-pub fn forceFullTextureUpdatePlan(plan: TextureUpdatePlan, enabled: bool) TextureUpdatePlan {
+pub fn forceFullPresentationUpdatePlan(plan: PresentationUpdatePlan, enabled: bool) PresentationUpdatePlan {
     if (!enabled or plan.needs_full or !plan.needs_partial) return plan;
     return .{
         .needs_full = true,
@@ -368,7 +368,7 @@ pub fn forceFullTextureUpdatePlan(plan: TextureUpdatePlan, enabled: bool) Textur
     };
 }
 
-pub fn forceFullTextureUpdatePlanEveryFrame(plan: TextureUpdatePlan, enabled: bool) TextureUpdatePlan {
+pub fn forceFullPresentationUpdatePlanEveryFrame(plan: PresentationUpdatePlan, enabled: bool) PresentationUpdatePlan {
     if (!enabled or plan.needs_full) return plan;
     return .{
         .needs_full = true,

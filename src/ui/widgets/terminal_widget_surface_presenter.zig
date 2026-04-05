@@ -718,7 +718,7 @@ fn planRetainedSurfaceUpdate(
     const recreated = retained_targets_runtime.ensureSurface(renderer, .terminal, plan.geometry.texture_w, plan.geometry.texture_h);
     const retained_delta = self.surface.retainedUpdateDelta(terminal_view, plan.geometry);
 
-    var update_plan = draw_texture.chooseTextureUpdatePlan(
+    var update_plan = draw_texture.choosePresentationUpdatePlan(
         self.publication.cacheConst().dirty,
         recreated,
         retained_delta.clear_generation_changed,
@@ -727,7 +727,7 @@ fn planRetainedSurfaceUpdate(
         blink_requires_partial,
         retained_delta.presentable_ready,
     );
-    update_plan = draw_texture.forceFullTextureUpdatePlanEveryFrame(update_plan, recent_input_window_active);
+    update_plan = draw_texture.forceFullPresentationUpdatePlanEveryFrame(update_plan, recent_input_window_active);
 
     var needs_full = update_plan.needs_full;
     var needs_partial = update_plan.needs_partial;
@@ -737,7 +737,7 @@ fn planRetainedSurfaceUpdate(
     };
     var shifted_rows: usize = 0;
     var shift_requires_fullwidth_partial = false;
-    switch (draw_texture.planViewportTextureShift(
+    switch (draw_texture.planViewportPresentShift(
         renderer.terminalTextureShiftEnabled(),
         retained_delta.generation_changed,
         viewport_shift.rows,

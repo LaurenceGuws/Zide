@@ -682,6 +682,10 @@ What this does and does not mean:
   as `presentable_ready` instead of `texture_ready`, which matches the current
   contract where Metal can present directly without a retained texture-backed
   surface
+- the terminal planning helper surface is less GL-shaped too: viewport-shift
+  and update-plan decisions are now named in terms of presentation rather than
+  texture ownership, which better matches both retained and direct-main-target
+  terminal modes
 - that contract is intentionally backend-native rather than fake portability:
   the old cached GL `Texture` path is still OpenGL-only, while Metal Kitty
   images are created as frame-scoped native Metal textures and released after
