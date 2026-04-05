@@ -38,6 +38,17 @@ pub fn deinit(state: *BatchState, allocator: std.mem.Allocator) void {
     state.draws.deinit(allocator);
 }
 
+/// OpenGL-only: shared batch pipeline binding for vertex-stream glyph uploads
+/// (terminal batch flush and `glyph_cache` flush).
+pub fn bindBatchPipelineForVertexStream(renderer: anytype) void {
+    gl_backend.bindBatchPipeline(renderer);
+}
+
+/// OpenGL-only: texture-kind uniform for vertex-stream glyph draws.
+pub fn setTextureKindForVertexStream(renderer: anytype, kind: types.TextureKind) void {
+    gl_backend.setTextureKind(renderer, kind);
+}
+
 pub fn beginTerminalBatch(renderer: anytype) void {
     renderer.batch.vertices.clearRetainingCapacity();
     renderer.batch.draws.clearRetainingCapacity();
@@ -47,7 +58,7 @@ pub fn flushTerminalBatch(renderer: anytype) void {
     const vertex_count = renderer.batch.vertices.items.len;
     if (vertex_count == 0) return;
     ensureVboCapacity(renderer, vertex_count);
-    gl_backend.bindBatchPipeline(renderer);
+    bindBatchPipelineForVertexStream(renderer);
     gl.BufferSubData(
         gl.c.GL_ARRAY_BUFFER,
         0,
@@ -58,7 +69,7 @@ pub fn flushTerminalBatch(renderer: anytype) void {
         if (draw.texture_id == 0) continue;
         gl.ActiveTexture(gl.c.GL_TEXTURE0);
         gl.BindTexture(gl.c.GL_TEXTURE_2D, draw.texture_id);
-        gl_backend.setTextureKind(renderer, draw.kind);
+        setTextureKindForVertexStream(renderer, draw.kind);
         applyBlendForKind(draw.kind);
         gl.DrawArrays(gl.c.GL_TRIANGLES, @intCast(draw.start), @intCast(draw.count));
     }
@@ -66,10 +77,10 @@ pub fn flushTerminalBatch(renderer: anytype) void {
 
 pub fn drawTextureRect(renderer: anytype, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, bg_color: types.Rgba, kind: types.TextureKind) void {
     if (texture.id == 0 or texture.width <= 0 or texture.height <= 0) return;
-    gl_backend.bindBatchPipeline(renderer);
+    bindBatchPipelineForVertexStream(renderer);
     gl.ActiveTexture(gl.c.GL_TEXTURE0);
     gl.BindTexture(gl.c.GL_TEXTURE_2D, texture.id);
-    gl_backend.setTextureKind(renderer, kind);
+    setTextureKindForVertexStream(renderer, kind);
     applyBlendForKind(kind);
 
     const tex_w = @as(f32, @floatFromInt(texture.width));

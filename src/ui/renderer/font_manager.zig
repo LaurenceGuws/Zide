@@ -3,7 +3,6 @@ const app_logger = @import("../../app_logger.zig");
 const renderer_root = @import("../renderer.zig");
 const terminal_font_mod = @import("../terminal_font.zig");
 const TerminalFont = terminal_font_mod.TerminalFont;
-const metal_backend = @import("metal_backend.zig");
 const iface = @import("interface.zig");
 
 const Renderer = renderer_root.Renderer;
@@ -134,7 +133,7 @@ pub fn deinitFontConfigState(renderer: anytype) void {
 }
 
 fn metalAtlasHooks(renderer: anytype) ?terminal_font_mod.AtlasUploadHooks {
-    return metal_backend.terminalFontAtlasUploadHooksForRenderer(renderer);
+    return renderer.terminalFontAtlasUploadHooksForRenderer();
 }
 
 fn initFont(renderer: anytype, path: [*:0]const u8, layout_size: f32) !FontInitResult {
