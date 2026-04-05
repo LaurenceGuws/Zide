@@ -30,6 +30,7 @@ const font_runtime = @import("renderer/font_runtime.zig");
 const retained_targets_runtime = @import("renderer/retained_targets_runtime.zig");
 const scene_frame_runtime = @import("renderer/scene_frame_runtime.zig");
 const metal_text_diagnostic_runtime = @import("renderer/metal_text_diagnostic_runtime.zig");
+const metal_text_sample_runtime = @import("renderer/metal_text_sample_runtime.zig");
 const text_runtime = @import("renderer/text_runtime.zig");
 const window_chrome_runtime = @import("renderer/window_chrome_runtime.zig");
 const app_lifecycle_runtime = @import("../app/lifecycle_runtime.zig");
@@ -1856,37 +1857,17 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         if (self.backend != .metal) return false;
         if (self.plannedTextRenderingMode() != .metal_texture_atlas) return false;
         if (self.metal_backend_context == null) return false;
-        if (text.len == 0) return false;
 
         var font = self.initMetalDiagnosticFont() catch return false;
         defer font.deinit();
 
-        const render_scale = if (self.scale.render_scale > 0.0) self.scale.render_scale else 1.0;
-        var pen_x = x;
-        var drew_any = false;
-
-        for (text) |char| {
-            if (char == ' ') {
-                pen_x += font.cell_width / render_scale;
-                continue;
-            }
-            const codepoint: u32 = char;
-            const direct = font.directFastGlyphForCodepoint(codepoint) orelse return drew_any;
-            const glyph = font.getGlyphById(direct.face, direct.glyph_id, direct.want_color, false, 0) catch return drew_any;
-            if (glyph.rect.width <= 0 or glyph.rect.height <= 0) continue;
-
-            const appended = self.appendMetalAtlasSampleDraw(.{
-                .atlas = .color,
-                .source_rect = glyph.rect,
-                .dest_x = @max(0, @as(i32, @intFromFloat(std.math.round(self.logicalLengthToRaster(pen_x))))),
-                .dest_y = @max(0, @as(i32, @intFromFloat(std.math.round(self.logicalLengthToRaster(y))))),
-            });
-            if (!appended) return drew_any;
-            drew_any = true;
-            pen_x += glyph.advance / render_scale;
-        }
-
-        return drew_any;
+        return metal_text_sample_runtime.appendAsciiRun(
+            self,
+            &font,
+            .{ .text = text, .x = x, .y = y },
+            self.metal_atlas_sample_draws[0..],
+            &self.metal_atlas_sample_draw_count,
+        );
     }
 
     pub fn runMacosMetalAtlasUploadDiagnostic(self: *Renderer) bool {

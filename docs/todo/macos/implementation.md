@@ -325,6 +325,9 @@ lane.
       can upload and place a tiny sampled ASCII text run through the Metal
       atlas contract, and the dedicated text-diagnostic runtime now reports
       `sample_text_draw=1` on the current macOS host
+    - that tiny sampled-text run now has a dedicated runtime builder in
+      `renderer/metal_text_sample_runtime.zig`, so it is no longer entirely
+      ad hoc renderer-local logic
     - the existing `font_sample` fallback now consumes that same narrow path as
       a real UI caller: when live text is unavailable but the planned mode is
       `metal_texture_atlas`, it frames and requests a tiny sampled `"METAL"`

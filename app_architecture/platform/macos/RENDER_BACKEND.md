@@ -577,6 +577,10 @@ What this does and does not mean:
   renderer can upload and place a tiny ASCII sampled-text run through the
   Metal atlas contract, and the dedicated text-diagnostic lane now reports
   `sample_text_draw=1` on the current macOS host
+- the tiny sampled-text run is no longer just renderer-local logic: it now has
+  a dedicated runtime builder in `renderer/metal_text_sample_runtime.zig`,
+  which is the right contract direction for growing from ad hoc sampled draws
+  toward a real Metal text lane
 - this is still intentionally narrow and honest: it is a tiny sampled-text run
   rather than a claim that the generic string/text renderer has already
   migrated or that per-glyph tinting semantics are complete on Metal
