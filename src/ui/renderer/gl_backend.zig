@@ -3,6 +3,9 @@ const gl = @import("gl.zig");
 const gl_resources = @import("gl_resources.zig");
 const opengl_frame_runtime = @import("opengl_frame_runtime.zig");
 const opengl_presentable_runtime = @import("opengl_presentable_runtime.zig");
+const draw_ops = @import("draw_ops.zig");
+const shape_utils = @import("shape_utils.zig");
+const texture_draw = @import("texture_draw.zig");
 const capability_contract = @import("capability_contract.zig");
 const presentable_contract = @import("presentable_contract.zig");
 const presentable_target = @import("presentable_target.zig");
@@ -142,6 +145,91 @@ pub fn whiteTexture(renderer: anytype) types.Texture {
     return renderer.opengl_runtime.white_texture;
 }
 
+pub fn drawSolidRect(renderer: anytype, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) bool {
+    if (w <= 0 or h <= 0) return false;
+    const dest = types.Rect{ .x = x, .y = y, .width = w, .height = h };
+    const src = texture_draw.unitSrcRect();
+    draw_ops.drawTextureRect(renderer, whiteTexture(renderer), src, dest, color, .{ .r = 0, .g = 0, .b = 0, .a = 0 }, .rgba);
+    return true;
+}
+
+pub fn addTerminalRect(renderer: anytype, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void {
+    draw_ops.addTerminalRect(renderer, x, y, w, h, color);
+}
+
+pub fn addTerminalGlyphRect(renderer: anytype, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void {
+    renderer.terminal_text.glyph_cache.addRect(whiteTexture(renderer), x, y, w, h, color);
+}
+
+pub fn addTerminalGlyphQuad(
+    renderer: anytype,
+    texture: types.Texture,
+    src: types.Rect,
+    dest: types.Rect,
+    color: types.Rgba,
+    kind: types.TextureKind,
+) void {
+    renderer.terminal_text.glyph_cache.addQuad(texture, src, dest, color, renderer.text_render.bg_rgba, kind);
+}
+
+pub fn applyClipRect(renderer: anytype, clip: ?types.Rect) void {
+    const active_clip = clip orelse {
+        gl.Disable(gl.c.GL_SCISSOR_TEST);
+        return;
+    };
+    if (active_clip.width <= 0 or active_clip.height <= 0) {
+        gl.Enable(gl.c.GL_SCISSOR_TEST);
+        gl.Scissor(0, 0, 0, 0);
+        return;
+    }
+    gl.Enable(gl.c.GL_SCISSOR_TEST);
+    const scale_x = @as(f32, @floatFromInt(renderer.target_pixel_width)) / @as(f32, @floatFromInt(renderer.target_width));
+    const scale_y = @as(f32, @floatFromInt(renderer.target_pixel_height)) / @as(f32, @floatFromInt(renderer.target_height));
+    const sx: i32 = @intFromFloat(active_clip.x * scale_x);
+    const sy: i32 = @intFromFloat((@as(f32, @floatFromInt(renderer.target_height)) - (active_clip.y + active_clip.height)) * scale_y);
+    const sw: i32 = @intFromFloat(active_clip.width * scale_x);
+    const sh: i32 = @intFromFloat(active_clip.height * scale_y);
+    const log = app_logger.logger("renderer.terminal_present");
+    if (log.enabled_file or log.enabled_console) {
+        log.logf(
+            .info,
+            "clip logical={d},{d} {d}x{d} scissor={d},{d} {d}x{d} target_logical={d}x{d} target_px={d}x{d} scale={d:.3},{d:.3}",
+            .{
+                @as(i32, @intFromFloat(active_clip.x)),
+                @as(i32, @intFromFloat(active_clip.y)),
+                @as(i32, @intFromFloat(active_clip.width)),
+                @as(i32, @intFromFloat(active_clip.height)),
+                sx,
+                sy,
+                sw,
+                sh,
+                renderer.target_width,
+                renderer.target_height,
+                renderer.target_pixel_width,
+                renderer.target_pixel_height,
+                scale_x,
+                scale_y,
+            },
+        );
+    }
+    gl.Scissor(sx, sy, sw, sh);
+}
+
+pub fn clearThemeBackground(renderer: anytype) void {
+    const bg = renderer.theme.background.toRgba();
+    var rr = @as(f32, @floatFromInt(bg.r)) / 255.0;
+    var gg = @as(f32, @floatFromInt(bg.g)) / 255.0;
+    var bb = @as(f32, @floatFromInt(bg.b)) / 255.0;
+    const aa = @as(f32, @floatFromInt(bg.a)) / 255.0;
+    if (renderer.text_render.dst_linear_active) {
+        rr = srgbToLinear(rr);
+        gg = srgbToLinear(gg);
+        bb = srgbToLinear(bb);
+    }
+    gl.ClearColor(rr, gg, bb, aa);
+    gl.Clear(gl.c.GL_COLOR_BUFFER_BIT);
+}
+
 pub fn bindBatchPipeline(renderer: anytype) void {
     gl.UseProgram(renderer.opengl_runtime.shader_program);
     gl.BindVertexArray(renderer.opengl_runtime.vao);
@@ -215,6 +303,11 @@ pub fn drawPresentable(renderer: anytype, surface: PresentableSurface, draw: Pre
 pub fn scrollPresentable(renderer: anytype, surface: PresentableSurface, dx: i32, dy: i32) bool {
     if (!renderer.capabilities().retained_targets) return false;
     return opengl_presentable_runtime.scrollPresentable(renderer, surface, dx, dy);
+}
+
+fn srgbToLinear(c: f32) f32 {
+    if (c <= 0.04045) return c / 12.92;
+    return std.math.pow(f32, (c + 0.055) / 1.055, 2.4);
 }
 
 pub fn initGlResources(renderer: anytype) !void {

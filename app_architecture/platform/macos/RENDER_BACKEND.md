@@ -1051,9 +1051,8 @@ What this does and does not mean:
   `updateAndPresent` now talks to the terminal presentation runtime directly
   for those operations instead of bouncing through local wrappers
 - the terminal-owned target seam is slightly more complete now too:
-  retained-presentable end/restore is routed through
-  `terminal_widget_presentation_target_runtime.zig` instead of leaving target
-  shutdown as presenter-local knowledge
+  retained-presentable end/restore is routed through the renderer presentable
+  contract instead of leaving target shutdown as presenter-local knowledge
 - the retained-presentable update execution moved behind the same terminal
   runtime seam too: the background pass, glyph pass, Kitty below/above-text
   ordering, and partial/full row-span iteration for the retained terminal

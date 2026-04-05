@@ -1354,6 +1354,65 @@ pub fn appendRawImage(renderer: anytype, draw: RawImageDraw) bool {
     return appendSurfaceDraw(renderer, .{ .raw_image = draw });
 }
 
+pub fn drawSolidRect(
+    renderer: anytype,
+    x: f32,
+    y: f32,
+    w: f32,
+    h: f32,
+    color: types.Rgba,
+) bool {
+    if (renderer.backend != .metal) return false;
+    return appendSolidRect(renderer, x, y, w, h, color);
+}
+
+pub fn addTerminalRect(renderer: anytype, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void {
+    _ = drawSolidRect(
+        renderer,
+        @floatFromInt(x),
+        @floatFromInt(y),
+        @floatFromInt(w),
+        @floatFromInt(h),
+        color,
+    );
+}
+
+pub fn addTerminalGlyphRect(renderer: anytype, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void {
+    addTerminalRect(renderer, x, y, w, h, color);
+}
+
+pub fn addTerminalGlyphQuad(
+    renderer: anytype,
+    texture: types.Texture,
+    src: types.Rect,
+    dest: types.Rect,
+    color: types.Rgba,
+    kind: types.TextureKind,
+) void {
+    _ = texture;
+    const clip_rect = if (renderer.currentClipRect()) |clip|
+        metal_text_sample_runtime.pixelClipRect(renderer, clip)
+    else
+        null;
+    const atlas_kind: ?surface_draw.AtlasTextureSource = switch (kind) {
+        .font_coverage => .coverage,
+        .rgba => .color,
+        else => null,
+    };
+    if (atlas_kind) |atlas| {
+        _ = appendAtlasSample(renderer, .{
+            .atlas = atlas,
+            .source_rect = src,
+            .dest_x = @intFromFloat(std.math.round(renderer.logicalLengthToRaster(dest.x))),
+            .dest_y = @intFromFloat(std.math.round(renderer.logicalLengthToRaster(dest.y))),
+            .tint = color,
+            .clip_rect = clip_rect,
+        });
+    }
+}
+
+pub fn applyClipRect(_: anytype, _: ?types.Rect) void {}
+
 pub fn drawAtlasSampleChar(renderer: anytype, char: u8, x: f32, y: f32, color: iface.Color) bool {
     if (renderer.backend != .metal) return false;
     if (renderer.plannedTextRenderingMode() != .metal_texture_atlas) return false;

@@ -6,7 +6,6 @@ const shared_types = @import("../../types/mod.zig");
 const draw_presentation = @import("terminal_widget_draw_presentation.zig");
 const presentation_state_mod = @import("terminal_widget_presentation_state.zig");
 const view_state = @import("terminal_widget_view_state.zig");
-const presentation_target_runtime = @import("terminal_widget_presentation_target_runtime.zig");
 const present_trace_runtime = @import("../renderer/present_trace_runtime.zig");
 const draw_grid = @import("terminal_widget_draw_grid.zig");
 const publication_capture = @import("../../terminal/core/publication/render_cache.zig");
@@ -685,8 +684,8 @@ pub fn runRetainedPresentCycle(
 ) RetainedPresentCycleResult {
     var result = RetainedPresentCycleResult{};
     if (surface_update_plan.mode == .none) return result;
-    if (!presentation_target_runtime.beginPresentable(renderer)) return result;
-    defer presentation_target_runtime.endPresentable(renderer);
+    if (!renderer.beginPresentable(.terminal)) return result;
+    defer renderer.endPresentable(.terminal);
 
     renderer.endClip();
     const execution = executePresentableUpdate(
@@ -982,7 +981,7 @@ pub fn refreshPresentState(
         surface_state.notePresentationUpdated(terminal_view, surface_geometry);
     }
 
-    state.target_available = presentation_target_runtime.presentableAvailable(renderer);
+    state.target_available = renderer.presentableAvailable(.terminal);
     state.ready = surface_state.notePresentableAvailability(state.target_available);
     state.present = state.ready and state.visible;
     state.log_unavailable = !state.ready and terminal_view.rows > 0 and terminal_view.cols > 0 and view_cells_len > 0 and state.visible;
@@ -1035,7 +1034,7 @@ pub fn presentDraw(
         viewport_w,
         viewport_h,
     );
-    presentation_target_runtime.drawPresentable(renderer, .{
+    renderer.drawPresentable(.terminal, .{
         .x = view_geometry.origin_x,
         .y = view_geometry.origin_y,
         .width = viewport_w,
@@ -1062,7 +1061,7 @@ pub fn tryFastPresentExisting(
     note_present: anytype,
 ) bool {
     const presentable_ready = surface_state.notePresentableAvailability(
-        presentation_target_runtime.presentableAvailable(renderer),
+        renderer.presentableAvailable(.terminal),
     );
     const direct_snapshot_reusable = renderer.usesDirectTerminalPresentation() and
         !terminal_view.sync_updates_active and
@@ -1092,7 +1091,7 @@ pub fn tryFastPresentExisting(
             view_geometry.viewport_width,
             view_geometry.viewport_height,
         );
-        presentation_target_runtime.drawPresentable(renderer, .{
+        renderer.drawPresentable(.terminal, .{
             .x = view_geometry.origin_x,
             .y = view_geometry.origin_y,
             .width = view_geometry.viewport_width,
@@ -1280,7 +1279,7 @@ pub fn tryDirectSnapshotUpdate(
     var result = DirectSnapshotUpdateResult{};
     if (!renderer.usesDirectTerminalPresentation()) return result;
     if (has_kitty) return result;
-    if (!presentation_target_runtime.presentableAvailable(renderer)) return result;
+    if (!renderer.presentableAvailable(.terminal)) return result;
     if (terminal_view.rows == 0 or terminal_view.cols == 0 or terminal_view.cells.len == 0) return result;
 
     const surface_update_plan = planUpdate(
@@ -1316,7 +1315,7 @@ pub fn tryDirectSnapshotUpdate(
         view_geometry.viewport_width,
         view_geometry.viewport_height,
     );
-    presentation_target_runtime.drawPresentable(renderer, .{
+    renderer.drawPresentable(.terminal, .{
         .x = view_geometry.origin_x,
         .y = view_geometry.origin_y,
         .width = viewport_w,
@@ -1376,7 +1375,7 @@ pub fn planUpdate(
 
     plan.geometry = computePresentationSurfaceGeometry(renderer, terminal_view, width, height);
 
-    const recreated = presentation_target_runtime.ensurePresentable(renderer, plan.geometry.surface_w, plan.geometry.surface_h);
+    const recreated = renderer.ensurePresentable(.terminal, plan.geometry.surface_w, plan.geometry.surface_h);
     const presentation_delta = surface_state.presentationUpdateDelta(terminal_view, plan.geometry);
 
     var update_plan = draw_presentation.choosePresentationUpdatePlan(
@@ -1410,7 +1409,7 @@ pub fn planUpdate(
     )) {
         .attempt => |shift_rows| {
             const dy_pixels: i32 = -viewport_shift.rows * plan.geometry.cell_h_i;
-            if (presentation_target_runtime.scrollPresentable(renderer, 0, dy_pixels)) {
+            if (renderer.scrollPresentable(.terminal, 0, dy_pixels)) {
                 needs_partial = true;
                 shifted_rows = shift_rows;
             } else {

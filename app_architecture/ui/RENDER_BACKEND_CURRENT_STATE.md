@@ -139,8 +139,14 @@ backend-specific assembly details itself.
 The presentable contract has improved slightly again too: the Metal terminal
 snapshot-presentable path now participates in the shared presentable contract
 through `metal_backend` entrypoints, instead of
-`terminal_widget_presentation_target_runtime.zig` carrying a separate
-Metal-only bypass branch for availability, ensure, draw, and scroll.
+the terminal presentation runtime carrying a separate Metal-only bypass branch
+for availability, ensure, draw, and scroll.
+
+That has improved slightly again on the widget-side contract too: the tiny
+terminal-specific presentable wrapper is gone, and
+`terminal_widget_presentation_runtime.zig` now talks to the renderer
+presentable contract directly instead of bouncing through one more forwarding
+module.
 
 That has improved slightly again at the renderer boundary too: the remaining
 macOS Metal host-prep, smoke, glyph-atlas readiness, and atlas-upload
@@ -175,6 +181,14 @@ remaining terminal-snapshot availability and macOS Metal attachment/atlas
 preview conveniences no longer live on `Renderer`; those callers now go
 through `metal_backend` and `macos_host` directly instead of keeping more
 Metal-only shims on the renderer root.
+
+That has improved slightly again on the primitive draw/clip boundary too: the
+renderer root no longer owns private Metal queue-assembly helpers for solid
+rects or atlas samples, and it no longer owns the OpenGL scissor
+implementation directly either. Primitive solid-rect submission, terminal
+glyph/rect submission, and backend clip application now route through
+`gl_backend.zig` / `metal_backend.zig` instead of `renderer.zig` acting as the
+implementation center for those backend-specific mechanics.
 
 ### 2. Shared frame lifecycle still branches backend-by-backend
 

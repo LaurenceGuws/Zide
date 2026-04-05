@@ -162,9 +162,13 @@ Progress note, 2026-04-05:
   packaging now also route through `metal_backend.zig` helpers instead of
   `Renderer` spelling out those backend-specific assembly details itself.
 - The Metal terminal snapshot-presentable path now participates in the shared
-  presentable contract through `metal_backend.zig` entrypoints instead of
-  `terminal_widget_presentation_target_runtime.zig` carrying a separate
-  Metal-only bypass branch for availability, ensure, draw, and scroll.
+  presentable contract through `metal_backend.zig` entrypoints instead of the
+  terminal presentation runtime carrying a separate Metal-only bypass branch
+  for availability, ensure, draw, and scroll.
+- The tiny terminal-specific presentable wrapper module is gone too:
+  `terminal_widget_presentation_runtime.zig` now talks to the renderer
+  presentable contract directly instead of bouncing through one more
+  forwarding layer.
 - The remaining macOS Metal host-prep, smoke, glyph-atlas readiness, and
   atlas-upload diagnostic helpers now also route through `metal_backend.zig`,
   and shell-side Metal diagnostics no longer rely on `Renderer` owning that
@@ -194,6 +198,12 @@ Progress note, 2026-04-05:
   attachment/atlas-preview convenience paths now also bypass `Renderer` and go
   through `metal_backend.zig` / `macos_host.zig` directly instead of leaving
   more backend-only shims on the renderer root.
+- The renderer root no longer owns private Metal queue-assembly helpers for
+  solid rects / atlas samples or the OpenGL scissor implementation directly.
+  Primitive solid-rect submission, terminal glyph/rect submission, theme
+  background clear, and clip application now route through `gl_backend.zig` /
+  `metal_backend.zig` instead of `renderer.zig` acting as the implementation
+  center for those backend-specific mechanics.
 - Direct OpenGL frame submit and direct window screenshot-readback now also
   live under `src/ui/renderer/opengl_frame_runtime.zig` /
   `src/ui/renderer/gl_backend.zig` instead of

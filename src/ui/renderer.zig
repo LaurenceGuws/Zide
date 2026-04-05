@@ -467,40 +467,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         };
     }
 
-    fn applyGlScissorForClip(self: *Renderer, clip: types.Rect) void {
-        gl.Enable(gl.c.GL_SCISSOR_TEST);
-        const scale_x = @as(f32, @floatFromInt(self.target_pixel_width)) / @as(f32, @floatFromInt(self.target_width));
-        const scale_y = @as(f32, @floatFromInt(self.target_pixel_height)) / @as(f32, @floatFromInt(self.target_height));
-        const sx: i32 = @intFromFloat(clip.x * scale_x);
-        const sy: i32 = @intFromFloat((@as(f32, @floatFromInt(self.target_height)) - (clip.y + clip.height)) * scale_y);
-        const sw: i32 = @intFromFloat(clip.width * scale_x);
-        const sh: i32 = @intFromFloat(clip.height * scale_y);
-        const log = app_logger.logger("renderer.terminal_present");
-        if (log.enabled_file or log.enabled_console) {
-            log.logf(
-                .info,
-                "clip logical={d},{d} {d}x{d} scissor={d},{d} {d}x{d} target_logical={d}x{d} target_px={d}x{d} scale={d:.3},{d:.3}",
-                .{
-                    @as(i32, @intFromFloat(clip.x)),
-                    @as(i32, @intFromFloat(clip.y)),
-                    @as(i32, @intFromFloat(clip.width)),
-                    @as(i32, @intFromFloat(clip.height)),
-                    sx,
-                    sy,
-                    sw,
-                    sh,
-                    self.target_width,
-                    self.target_height,
-                    self.target_pixel_width,
-                    self.target_pixel_height,
-                    scale_x,
-                    scale_y,
-                },
-            );
-        }
-        gl.Scissor(sx, sy, sw, sh);
-    }
-
     pub fn currentClipRect(self: *const Renderer) ?types.Rect {
         if (self.clip_depth == 0) return null;
         return self.clip_stack[self.clip_depth - 1];
@@ -1159,19 +1125,10 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     }
 
     pub fn clearToThemeBackground(self: *Renderer) void {
-        if (self.backend != .opengl) return;
-        const bg = self.theme.background.toRgba();
-        var rr = @as(f32, @floatFromInt(bg.r)) / 255.0;
-        var gg = @as(f32, @floatFromInt(bg.g)) / 255.0;
-        var bb = @as(f32, @floatFromInt(bg.b)) / 255.0;
-        const aa = @as(f32, @floatFromInt(bg.a)) / 255.0;
-        if (self.text_render.dst_linear_active) {
-            rr = srgbToLinear(rr);
-            gg = srgbToLinear(gg);
-            bb = srgbToLinear(bb);
+        switch (self.backend) {
+            .opengl => gl_backend.clearThemeBackground(self),
+            .metal => {},
         }
-        gl.ClearColor(rr, gg, bb, aa);
-        gl.Clear(gl.c.GL_COLOR_BUFFER_BIT);
     }
 
     pub fn supportsSceneTargets(self: *const Renderer) bool {
@@ -1220,11 +1177,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         };
     }
 
-    fn srgbToLinear(c: f32) f32 {
-        if (c <= 0.04045) return c / 12.92;
-        return std.math.pow(f32, (c + 0.055) / 1.055, 2.4);
-    }
-
     pub fn setTextInputRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32) void {
         text_input.setRect(&self.input.text_input_state, self.window, x, y, w, h);
     }
@@ -1232,30 +1184,32 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     pub fn drawRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
         if (w <= 0 or h <= 0) return;
         present_trace_runtime.noteEditorSurfaceFullPaneClear(self, x, y, w, h);
-        if (self.backend == .metal) {
-            _ = self.appendMetalSolidRect(
+        switch (self.backend) {
+            .opengl => _ = gl_backend.drawSolidRect(
+                self,
                 @floatFromInt(x),
                 @floatFromInt(y),
                 @floatFromInt(w),
                 @floatFromInt(h),
                 color.toRgba(),
-            );
-            return;
+            ),
+            .metal => _ = metal_backend.drawSolidRect(
+                self,
+                @floatFromInt(x),
+                @floatFromInt(y),
+                @floatFromInt(w),
+                @floatFromInt(h),
+                color.toRgba(),
+            ),
         }
-        const dest = shape_utils.rectFromInts(x, y, w, h);
-        const src = texture_draw.unitSrcRect();
-        self.drawTextureRect(gl_backend.whiteTexture(self), src, dest, color.toRgba());
     }
 
     pub fn drawRectF(self: *Renderer, x: f32, y: f32, w: f32, h: f32, color: Color) void {
         if (w <= 0 or h <= 0) return;
-        if (self.backend == .metal) {
-            _ = self.appendMetalSolidRect(x, y, w, h, color.toRgba());
-            return;
+        switch (self.backend) {
+            .opengl => _ = gl_backend.drawSolidRect(self, x, y, w, h, color.toRgba()),
+            .metal => _ = metal_backend.drawSolidRect(self, x, y, w, h, color.toRgba()),
         }
-        const dest = types.Rect{ .x = x, .y = y, .width = w, .height = h };
-        const src = texture_draw.unitSrcRect();
-        self.drawTextureRect(gl_backend.whiteTexture(self), src, dest, color.toRgba());
     }
 
     pub fn drawRectOutline(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
@@ -1327,7 +1281,10 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         present_trace_runtime.noteCompositionClip(self);
         const requested = logicalClipFromInts(x, y, w, h) orelse {
             self.clip_depth = 0;
-            if (self.backend == .opengl) gl.Disable(gl.c.GL_SCISSOR_TEST);
+            switch (self.backend) {
+                .opengl => gl_backend.applyClipRect(self, null),
+                .metal => metal_backend.applyClipRect(self, null),
+            }
             return;
         };
         const next = if (self.currentClipRect()) |current|
@@ -1345,28 +1302,17 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         } else {
             self.clip_stack[self.clip_stack.len - 1] = next;
         }
-        if (self.backend == .opengl) {
-            if (next.width <= 0 or next.height <= 0) {
-                gl.Enable(gl.c.GL_SCISSOR_TEST);
-                gl.Scissor(0, 0, 0, 0);
-            } else {
-                self.applyGlScissorForClip(next);
-            }
+        switch (self.backend) {
+            .opengl => gl_backend.applyClipRect(self, next),
+            .metal => metal_backend.applyClipRect(self, next),
         }
     }
 
     pub fn endClip(self: *Renderer) void {
         if (self.clip_depth > 0) self.clip_depth -= 1;
-        if (self.backend != .opengl) return;
-        if (self.currentClipRect()) |clip| {
-            if (clip.width <= 0 or clip.height <= 0) {
-                gl.Enable(gl.c.GL_SCISSOR_TEST);
-                gl.Scissor(0, 0, 0, 0);
-            } else {
-                self.applyGlScissorForClip(clip);
-            }
-        } else {
-            gl.Disable(gl.c.GL_SCISSOR_TEST);
+        switch (self.backend) {
+            .opengl => gl_backend.applyClipRect(self, self.currentClipRect()),
+            .metal => metal_backend.applyClipRect(self, self.currentClipRect()),
         }
     }
 
@@ -1600,19 +1546,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         return macos_host.requestOpenFile(&self.app_host, path);
     }
 
-    fn appendMetalSolidRect(self: *Renderer, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) bool {
-        if (self.backend != .metal) return false;
-        return metal_backend.appendSolidRect(self, x, y, w, h, color);
-    }
-
-    fn appendMetalAtlasSampleDraw(self: *Renderer, sample: surface_draw.AtlasSampleDraw) bool {
-        return metal_backend.appendAtlasSample(self, sample);
-    }
-
-    fn appendMetalRawImageDraw(self: *Renderer, draw: surface_draw.RawImageDraw) bool {
-        return metal_backend.appendRawImage(self, draw);
-    }
-
     fn windowHitTestCallback(_: ?*sdl.SDL_Window, area: [*c]const sdl.SDL_Point, data: ?*anyopaque) callconv(.c) sdl_api.HitTestResult {
         const raw = data orelse return sdl.SDL_HITTEST_NORMAL;
         const self: *Renderer = @ptrCast(@alignCast(raw));
@@ -1731,28 +1664,18 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     }
 
     pub fn addTerminalRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
-        if (self.backend == .metal) {
-            _ = self.appendMetalSolidRect(
-                @floatFromInt(x),
-                @floatFromInt(y),
-                @floatFromInt(w),
-                @floatFromInt(h),
-                color.toRgba(),
-            );
-            return;
+        switch (self.backend) {
+            .opengl => gl_backend.addTerminalRect(self, x, y, w, h, color.toRgba()),
+            .metal => metal_backend.addTerminalRect(self, x, y, w, h, color.toRgba()),
         }
-        draw_ops.addTerminalRect(self, x, y, w, h, color.toRgba());
     }
 
     pub fn addTerminalRectF(self: *Renderer, x: f32, y: f32, w: f32, h: f32, color: Color) void {
         if (w <= 0 or h <= 0) return;
-        if (self.backend == .metal) {
-            _ = self.appendMetalSolidRect(x, y, w, h, color.toRgba());
-            return;
+        switch (self.backend) {
+            .opengl => _ = gl_backend.drawSolidRect(self, x, y, w, h, color.toRgba()),
+            .metal => _ = metal_backend.drawSolidRect(self, x, y, w, h, color.toRgba()),
         }
-        const src = texture_draw.unitSrcRect();
-        const dest = types.Rect{ .x = x, .y = y, .width = w, .height = h };
-        draw_ops.addBatchQuad(self, gl_backend.whiteTexture(self), src, dest, color.toRgba(), types.Rgba{ .r = 0, .g = 0, .b = 0, .a = 0 }, .rgba);
     }
 
     pub fn terminalCellGeometry(self: *Renderer) TerminalCellGeometry {
@@ -1804,43 +1727,17 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     }
 
     pub fn addTerminalGlyphRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
-        if (self.backend == .metal) {
-            _ = self.appendMetalSolidRect(
-                @floatFromInt(x),
-                @floatFromInt(y),
-                @floatFromInt(w),
-                @floatFromInt(h),
-                color.toRgba(),
-            );
-            return;
+        switch (self.backend) {
+            .opengl => gl_backend.addTerminalGlyphRect(self, x, y, w, h, color.toRgba()),
+            .metal => metal_backend.addTerminalGlyphRect(self, x, y, w, h, color.toRgba()),
         }
-        self.terminal_text.glyph_cache.addRect(gl_backend.whiteTexture(self), x, y, w, h, color.toRgba());
     }
 
     pub fn addTerminalGlyphQuad(self: *Renderer, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
-        if (self.backend == .metal) {
-            const clip_rect = if (self.currentClipRect()) |clip|
-                metal_text_sample_runtime.pixelClipRect(self, clip)
-            else
-                null;
-            const atlas_kind: ?surface_draw.AtlasTextureSource = switch (kind) {
-                .font_coverage => .coverage,
-                .rgba => .color,
-                else => null,
-            };
-            if (atlas_kind) |atlas| {
-                _ = self.appendMetalAtlasSampleDraw(.{
-                    .atlas = atlas,
-                    .source_rect = src,
-                    .dest_x = @intFromFloat(std.math.round(self.logicalLengthToRaster(dest.x))),
-                    .dest_y = @intFromFloat(std.math.round(self.logicalLengthToRaster(dest.y))),
-                    .tint = color,
-                    .clip_rect = clip_rect,
-                });
-            }
-            return;
+        switch (self.backend) {
+            .opengl => gl_backend.addTerminalGlyphQuad(self, texture, src, dest, color, kind),
+            .metal => metal_backend.addTerminalGlyphQuad(self, texture, src, dest, color, kind),
         }
-        self.terminal_text.glyph_cache.addQuad(texture, src, dest, color, self.text_render.bg_rgba, kind);
     }
 
     pub fn terminalShapeBuffer(self: *Renderer) *hb.hb_buffer_t {
