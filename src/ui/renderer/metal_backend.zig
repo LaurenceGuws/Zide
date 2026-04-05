@@ -44,6 +44,7 @@ pub const PixelClipRect = surface_draw.PixelClipRect;
 pub const AtlasPreviewSource = metal_runtime_state.AtlasPreviewSource;
 const PresentableSurface = presentable_contract.PresentableSurface;
 const PresentableDraw = presentable_contract.PresentableDraw;
+const PresentableInfo = presentable_contract.PresentableInfo;
 const RendererCapabilities = capability_contract.RendererCapabilities;
 
 pub fn capabilities(renderer: anytype) RendererCapabilities {
@@ -1178,6 +1179,19 @@ pub fn presentableAvailable(renderer: anytype, surface: PresentableSurface) bool
 }
 
 pub fn endPresentable(_: anytype, _: PresentableSurface) void {}
+
+pub fn presentableInfo(renderer: anytype, surface: PresentableSurface) ?PresentableInfo {
+    if (surface != .terminal) return null;
+    if (!terminalSnapshotAvailableForRenderer(renderer)) return null;
+    const context = backendContextConst(renderer) orelse return null;
+    const snapshot = context.terminal_snapshot orelse return null;
+    return .{
+        .width_px = snapshot.width,
+        .height_px = snapshot.height,
+        .logical_width = renderer.width,
+        .logical_height = renderer.height,
+    };
+}
 
 pub fn drawPresentable(renderer: anytype, surface: PresentableSurface, draw: PresentableDraw) void {
     switch (surface) {

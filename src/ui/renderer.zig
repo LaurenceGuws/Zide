@@ -148,6 +148,7 @@ pub const TerminalTextState = text_runtime.TerminalTextState;
 pub const PresentableTargetState = presentable_target.PresentableTargetState;
 pub const PresentableSurface = presentable_contract.PresentableSurface;
 pub const PresentableDraw = presentable_contract.PresentableDraw;
+pub const PresentableInfo = presentable_contract.PresentableInfo;
 pub const SceneTargetInvalidation = scene_target_state.SceneTargetInvalidation;
 pub const SceneTargetContract = scene_target_state.SceneTargetContract;
 const MainCompositionTarget = present_trace_runtime.MainCompositionTarget;
@@ -1119,6 +1120,13 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         return switch (self.backend) {
             .opengl => gl_backend.scrollPresentable(self, surface, dx, dy),
             .metal => metal_backend.scrollPresentable(self, surface, dx, dy),
+        };
+    }
+
+    pub fn presentableInfo(self: *Renderer, surface: PresentableSurface) ?PresentableInfo {
+        return switch (self.backend) {
+            .opengl => gl_backend.presentableInfo(self, surface),
+            .metal => metal_backend.presentableInfo(self, surface),
         };
     }
 

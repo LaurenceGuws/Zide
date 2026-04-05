@@ -19,6 +19,7 @@ const sdl = gl.c;
 pub const RenderTarget = presentable_target.PresentableTarget;
 const PresentableSurface = presentable_contract.PresentableSurface;
 const PresentableDraw = presentable_contract.PresentableDraw;
+const PresentableInfo = presentable_contract.PresentableInfo;
 const SceneTargetInvalidation = scene_target_state.SceneTargetInvalidation;
 const RendererCapabilities = capability_contract.RendererCapabilities;
 
@@ -303,6 +304,19 @@ pub fn drawPresentable(renderer: anytype, surface: PresentableSurface, draw: Pre
 pub fn scrollPresentable(renderer: anytype, surface: PresentableSurface, dx: i32, dy: i32) bool {
     if (!renderer.capabilities().retained_targets) return false;
     return opengl_presentable_runtime.scrollPresentable(renderer, surface, dx, dy);
+}
+
+pub fn presentableInfo(renderer: anytype, surface: PresentableSurface) ?PresentableInfo {
+    const target = switch (surface) {
+        .terminal => renderer.opengl_runtime.presentable_targets.terminal,
+        .editor => renderer.opengl_runtime.presentable_targets.editor,
+    } orelse return null;
+    return .{
+        .width_px = target.texture.width,
+        .height_px = target.texture.height,
+        .logical_width = target.logical_width,
+        .logical_height = target.logical_height,
+    };
 }
 
 fn srgbToLinear(c: f32) f32 {

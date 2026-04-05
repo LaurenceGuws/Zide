@@ -201,6 +201,12 @@ OpenGL frame, scene-target, and presentable runtimes now bind the default
 target through `gl_backend` directly instead of going through one more
 OpenGL-only helper on `Renderer`.
 
+That has improved slightly again on the shared/widget side too: terminal
+presentation debug sampling no longer reaches into
+`renderer.opengl_runtime.presentable_targets.terminal` directly. It now asks
+the renderer presentable contract for backend-neutral presentable info instead
+of peeking into OpenGL-owned storage from shared terminal code.
+
 That has improved slightly again on the Metal frame side too: the shared
 frame prelude no longer clears the Metal queued draw list before backend
 dispatch. That queue reset now lives under `metal_frame_runtime.zig`, which is

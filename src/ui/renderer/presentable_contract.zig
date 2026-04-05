@@ -12,3 +12,10 @@ pub const PresentableDraw = struct {
     source_height: ?f32 = null,
     generation: ?u64 = null,
 };
+
+pub const PresentableInfo = struct {
+    width_px: i32,
+    height_px: i32,
+    logical_width: i32,
+    logical_height: i32,
+};

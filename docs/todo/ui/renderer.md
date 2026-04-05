@@ -215,6 +215,10 @@ Progress note, 2026-04-05:
 - The OpenGL frame, scene-target, and presentable runtimes now also bind the
   default target through `gl_backend.zig` directly instead of bouncing through
   another OpenGL-only helper on `Renderer`.
+- Terminal presentation debug sampling now also uses renderer presentable
+  contract info instead of reaching into
+  `renderer.opengl_runtime.presentable_targets.terminal` from shared terminal
+  code.
 - Direct OpenGL frame submit and direct window screenshot-readback now also
   live under `src/ui/renderer/opengl_frame_runtime.zig` /
   `src/ui/renderer/gl_backend.zig` instead of

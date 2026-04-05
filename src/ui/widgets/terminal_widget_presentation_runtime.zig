@@ -554,11 +554,11 @@ pub fn notePresentSample(
         .scale_y = if (source_h > 0.0) dest_h / source_h else 1.0,
     };
     if (mode == .retained_surface) {
-        if (renderer.opengl_runtime.presentable_targets.terminal) |target| {
-            sample.presentable_w_px = target.texture.width;
-            sample.presentable_h_px = target.texture.height;
-            sample.target_logical_w = @floatFromInt(target.logical_width);
-            sample.target_logical_h = @floatFromInt(target.logical_height);
+        if (renderer.presentableInfo(.terminal)) |info| {
+            sample.presentable_w_px = info.width_px;
+            sample.presentable_h_px = info.height_px;
+            sample.target_logical_w = @floatFromInt(info.logical_width);
+            sample.target_logical_h = @floatFromInt(info.logical_height);
         } else {
             sample.valid = false;
         }
