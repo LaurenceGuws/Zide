@@ -662,6 +662,9 @@ lane.
     - terminal presentation sample/debug bookkeeping moved into that same
       runtime seam, so the presenter no longer owns direct-versus-retained
       presentation sample emission
+    - `updateAndPresent` now calls the terminal presentation runtime directly
+      for plan selection, present-state refresh, unavailable logging, and
+      present draw instead of bouncing through presenter-local wrapper helpers
     - the direct Metal terminal lane still validates on the same runtime truth:
       `terminal_present=direct_main_target`, `presentable_ready=1` after the
       first successful frame, `grid_runs=10/224`, `overlay_runs=1/5`, and

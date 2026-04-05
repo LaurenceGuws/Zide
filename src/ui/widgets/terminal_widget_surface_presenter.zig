@@ -29,10 +29,7 @@ pub const SurfacePresentResult = struct {
     presentation_kitty_ms: f64 = 0.0,
 };
 
-const PresentationGeometry = presentation_runtime.PresentationGeometry;
 const PresentationUpdatePlan = presentation_runtime.PresentationUpdatePlan;
-
-const PresentationPresentState = presentation_runtime.PresentationPresentState;
 
 const PresentationExecutionResult = struct {
     completed: bool = false,
@@ -339,85 +336,6 @@ fn toShellColor(color: terminal_publication.Color) Color {
     return .{ .r = color.r, .g = color.g, .b = color.b, .a = color.a };
 }
 
-fn refreshPresentationPresentState(
-    self: anytype,
-    renderer: anytype,
-    terminal_view: view_state.TerminalViewModel,
-    surface_geometry: PresentationGeometry,
-    view_geometry: shared_types.layout.TerminalViewGeometry,
-    presentation_update_completed: bool,
-    visible_w: i32,
-    visible_h: i32,
-    view_cells_len: usize,
-) PresentationPresentState {
-    return presentation_runtime.refreshPresentState(
-        &self.surface,
-        renderer,
-        terminal_view,
-        surface_geometry,
-        view_geometry,
-        presentation_update_completed,
-        visible_w,
-        visible_h,
-        view_cells_len,
-    );
-}
-
-fn logPresentationUnavailable(
-    self: anytype,
-    terminal_view: view_state.TerminalViewModel,
-    present_state: PresentationPresentState,
-    visible_w: i32,
-    visible_h: i32,
-) void {
-    presentation_runtime.logUnavailable(&self.surface, terminal_view, present_state, visible_w, visible_h);
-}
-
-fn presentPresentationSurface(
-    self: anytype,
-    renderer: anytype,
-    sample_generation: u64,
-    surface_generation: u64,
-    view_geometry: shared_types.layout.TerminalViewGeometry,
-    viewport_w: f32,
-    viewport_h: f32,
-) void {
-    presentation_runtime.presentDraw(
-        renderer,
-        sample_generation,
-        surface_generation,
-        view_geometry,
-        viewport_w,
-        viewport_h,
-        self,
-        presentation_runtime.notePresentSample,
-    );
-}
-
-fn planPresentationUpdate(
-    self: anytype,
-    renderer: anytype,
-    terminal_view: view_state.TerminalViewModel,
-    width: f32,
-    height: f32,
-    blink_requires_partial: bool,
-    scroll_offset: usize,
-    recent_input_window_active: bool,
-) PresentationUpdatePlan {
-    return presentation_runtime.planUpdate(
-        &self.surface,
-        self.session.allocator,
-        renderer,
-        self.publication.cacheConst(),
-        terminal_view,
-        width,
-        height,
-        blink_requires_partial,
-        scroll_offset,
-        recent_input_window_active,
-    );
-}
-
 pub fn updateAndPresent(
     self: anytype,
     shell: *Shell,
@@ -507,9 +425,11 @@ pub fn updateAndPresent(
                     plan_time,
                     r.fullTerminalPresentationRecentInputWindowSeconds(),
                 ));
-        const surface_update_plan = planPresentationUpdate(
-            self,
+        const surface_update_plan = presentation_runtime.planUpdate(
+            &self.surface,
+            self.session.allocator,
             r,
+            self.publication.cacheConst(),
             terminal_view,
             width,
             height,
@@ -548,8 +468,8 @@ pub fn updateAndPresent(
             presentation_update_completed = execution.completed;
             scene_frame_runtime.restoreMainCompositionTarget(r);
         }
-        const present_state = refreshPresentationPresentState(
-            self,
+        const present_state = presentation_runtime.refreshPresentState(
+            &self.surface,
             r,
             terminal_view,
             surface_update_plan.geometry,
@@ -565,16 +485,17 @@ pub fn updateAndPresent(
                 r.drawRectF(view_geometry.origin_x, view_geometry.origin_y, viewport_w, viewport_h, bg);
             }
         }
-        logPresentationUnavailable(self, terminal_view, present_state, visible_w, visible_h);
+        presentation_runtime.logUnavailable(&self.surface, terminal_view, present_state, visible_w, visible_h);
         if (present_state.present) {
-            presentPresentationSurface(
-                self,
+            presentation_runtime.presentDraw(
                 r,
                 self.surface.lastRenderGeneration(),
                 self.surface.lastRenderGeneration(),
                 view_geometry,
                 viewport_w,
                 viewport_h,
+                self,
+                presentation_runtime.notePresentSample,
             );
         }
     }
