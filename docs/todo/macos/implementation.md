@@ -370,6 +370,13 @@ lane.
     - those same grid/overlay Metal row-run counts now flow into the live
       terminal frame-metrics surface, so fallback activity is queryable
       without relying only on the visible-view debug dump path
+    - a dedicated `--macos-metal-terminal-diagnostic` runtime now exists: it
+      seeds a deterministic external-transport terminal session, draws a real
+      terminal widget through the Metal backend-smoke path, and logs fallback
+      counts from both widget debug state and live frame metrics
+    - current truth from that runtime is intentionally strict: the ASCII
+      composing-text overlay row path is observed on the current host, while
+      the grid row fallback still reports `0`
     - the narrow Metal text lane now covers a tiny multiline ASCII run, not
       just a single flat row
     - the diagnostic/runtime callers now use the explicit monospace-cell

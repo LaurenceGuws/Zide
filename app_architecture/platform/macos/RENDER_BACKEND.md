@@ -630,6 +630,15 @@ What this does and does not mean:
 - those same counts now flow into the live terminal frame-metrics surface, so
   Metal row-run fallback activity is queryable without relying only on the
   visible-view debug dump path
+- there is now a dedicated `--macos-metal-terminal-diagnostic` runtime as
+  well: it seeds a deterministic external-transport terminal session, draws a
+  real `TerminalWidget` through the Metal backend-smoke path, and logs the
+  row-run fallback counts from both widget debug state and live frame metrics
+- current truth from that runtime is useful and intentionally strict: the
+  ASCII composing-text overlay row path is observed on the current macOS host,
+  while the terminal-grid row fallback still reports `0`, which means the
+  dedicated terminal-facing proof exists before the broader terminal Metal lane
+  is being overstated
 - this is still intentionally narrow and honest: it is now a tiny sampled
   multiline ASCII run with an explicit monospace-cell option rather than a
   claim that the generic string/text renderer has already migrated

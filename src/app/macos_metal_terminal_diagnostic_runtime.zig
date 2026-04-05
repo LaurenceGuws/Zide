@@ -1,0 +1,155 @@
+const std = @import("std");
+const app_bootstrap = @import("bootstrap.zig");
+const app_logger = @import("../app_logger.zig");
+const app_shell = @import("../app_shell.zig");
+const terminal_runtime = @import("../terminal/core/terminal_runtime.zig");
+const session_runtime = @import("../terminal/core/session/runtime.zig");
+const terminal_session_bootstrap = @import("terminal/terminal_session_bootstrap.zig");
+const terminal_widget_draw = @import("../ui/widgets/terminal_widget_draw.zig");
+const shared_types = @import("../types/mod.zig");
+
+pub fn run(allocator: std.mem.Allocator) !void {
+    const width = app_bootstrap.parseEnvI32("ZIDE_WINDOW_WIDTH", 1280);
+    const height = app_bootstrap.parseEnvI32("ZIDE_WINDOW_HEIGHT", 720);
+    const rows: u16 = @intCast(@max(@as(i32, 4), app_bootstrap.parseEnvI32("ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_ROWS", 8)));
+    const cols: u16 = @intCast(@max(@as(i32, 8), app_bootstrap.parseEnvI32("ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_COLS", 28)));
+    const frame_budget = app_bootstrap.parseEnvU64("ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_FRAMES", 90);
+    const screenshot_path = app_bootstrap.envSlice("ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_SCREENSHOT");
+    const title: [*:0]const u8 = "Zide macOS Metal Terminal Diagnostic";
+
+    try app_logger.init();
+    defer app_logger.deinit();
+
+    const init_options: app_shell.RendererInitOptions = .{
+        .renderer_backend = .metal,
+        .runtime_profile = .backend_smoke,
+    };
+
+    const shell = try app_shell.Shell.init(allocator, width, height, title, init_options);
+    defer shell.deinit(allocator);
+
+    _ = try shell.refreshWindowState("macos-metal-terminal-diagnostic-init", .{
+        .resized = true,
+        .pixel_size_changed = true,
+        .display_changed = true,
+        .display_scale_changed = true,
+    });
+
+    var session = try terminal_runtime.init(allocator, rows, cols);
+    defer session.deinit();
+    session_runtime.attachExternalTransport(session);
+
+    const cell_geometry = shell.terminalCellGeometry();
+    try session_runtime.resizeWithCellSize(
+        session,
+        rows,
+        cols,
+        @intCast(@max(1, cell_geometry.cell_width_device_px)),
+        @intCast(@max(1, cell_geometry.cell_height_device_px)),
+    );
+
+    if (!(try session_runtime.enqueueExternalBytes(
+        session,
+        "\x1b[H1| build one\x1b[2;1H2| item two\x1b[3;1H3| plain ascii\x1b[4;1H4| fallback row\x1b[5;1H5| metal lane\x1b[6;1H6| terminal ok",
+    ))) return error.MetalTerminalDiagnosticSeedRejected;
+    try session_runtime.poll(session);
+
+    var widget = terminal_session_bootstrap.initWidget(session, .kitty, false, false);
+    defer widget.deinit();
+    widget.setUiFocused(true);
+
+    var input = shared_types.input.InputSnapshot.init(.{ .x = 0, .y = 0 }, .{});
+    input.composing_active = true;
+    input.composing_text = "ASCII";
+    input.composing_cursor = 5;
+
+    const log = app_logger.logger("macos.metal.terminal_diagnostic");
+    const capabilities = shell.rendererCapabilities();
+    log.logf(.info, "start width={d} height={d} rows={d} cols={d} frame_budget={d}", .{ width, height, rows, cols, frame_budget });
+    log.logf(
+        .info,
+        "capabilities composition={s} retained_targets={d} screenshot={s} text={s} planned_text={s} atlas={s} planned_atlas={s}",
+        .{
+            @tagName(capabilities.scene_composition_mode),
+            @intFromBool(capabilities.retained_targets),
+            @tagName(capabilities.screenshot_mode),
+            @tagName(capabilities.text_rendering_mode),
+            @tagName(capabilities.planned_text_rendering_mode),
+            @tagName(capabilities.atlas_storage_mode),
+            @tagName(capabilities.planned_atlas_storage_mode),
+        },
+    );
+
+    var last_metrics_seq: u64 = 0;
+    var frame_index: u64 = 0;
+    while (frame_index < frame_budget and !shell.shouldClose()) : (frame_index += 1) {
+        app_shell.pollInputEvents();
+        const changes = app_shell.windowChanges();
+        if (changes.affectsWindowRefresh()) {
+            _ = try shell.refreshWindowState("macos-metal-terminal-diagnostic-frame", changes);
+        }
+
+        shell.beginFrame();
+        if (screenshot_path) |path| {
+            if (frame_index + 1 == frame_budget) {
+                shell.armPresentCapture(path);
+            }
+        }
+
+        const draw_outcome = widget.draw(shell, 0.0, 0.0, @floatFromInt(width), @floatFromInt(height), input);
+        widget.stagePresentationFeedback(draw_outcome);
+
+        const submission = shell.endFrame();
+        widget.completePendingPresentationFeedback(submission);
+        if (!submission.succeeded) return error.MetalTerminalDiagnosticPresentFailed;
+
+        const debug_sample = widget.debug.last_metal_terminal_fallback;
+        const metrics = terminal_widget_draw.latestFrameLatencyMetrics();
+        if (metrics.seq != 0 and metrics.seq != last_metrics_seq) {
+            last_metrics_seq = metrics.seq;
+            log.logf(
+                .info,
+                "frame={d} submitted={d} sequence={d} grid_runs={d}/{d} overlay_runs={d}/{d} metric_grid_runs={d}/{d} metric_overlay_runs={d}/{d}",
+                .{
+                    frame_index,
+                    @intFromBool(submission.succeeded),
+                    submission.sequence,
+                    debug_sample.grid_row_runs,
+                    debug_sample.grid_row_cells,
+                    debug_sample.overlay_row_runs,
+                    debug_sample.overlay_row_cells,
+                    metrics.metal_grid_row_runs,
+                    metrics.metal_grid_row_cells,
+                    metrics.metal_overlay_row_runs,
+                    metrics.metal_overlay_row_cells,
+                },
+            );
+        } else {
+            log.logf(.info, "frame={d} submitted={d} sequence={d}", .{
+                frame_index,
+                @intFromBool(submission.succeeded),
+                submission.sequence,
+            });
+        }
+
+        app_shell.waitTime(0.016);
+    }
+
+    const final_debug = widget.debug.last_metal_terminal_fallback;
+    const final_metrics = terminal_widget_draw.latestFrameLatencyMetrics();
+    log.logf(
+        .info,
+        "complete frames={d} final_grid_runs={d}/{d} final_overlay_runs={d}/{d} metric_grid_runs={d}/{d} metric_overlay_runs={d}/{d}",
+        .{
+            frame_index,
+            final_debug.grid_row_runs,
+            final_debug.grid_row_cells,
+            final_debug.overlay_row_runs,
+            final_debug.overlay_row_cells,
+            final_metrics.metal_grid_row_runs,
+            final_metrics.metal_grid_row_cells,
+            final_metrics.metal_overlay_row_runs,
+            final_metrics.metal_overlay_row_cells,
+        },
+    );
+}
