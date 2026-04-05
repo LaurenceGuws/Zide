@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const gl = @import("gl.zig");
 const gl_resources = @import("gl_resources.zig");
 const opengl_frame_runtime = @import("opengl_frame_runtime.zig");
@@ -26,24 +27,26 @@ const SceneTargetInvalidation = scene_target_state.SceneTargetInvalidation;
 const RendererCapabilities = capability_contract.RendererCapabilities;
 
 pub fn capabilities(renderer: anytype) RendererCapabilities {
+    const full_ui = renderer.runtime_profile == .full_ui;
     return .{
-        .scene_composition_mode = if (renderer.runtime_profile == .full_ui)
+        .scene_composition_mode = if (full_ui)
             .offscreen_scene_target
         else
             .direct_main_target,
-        .retained_targets = renderer.runtime_profile == .full_ui,
-        .terminal_presentation_mode = if (renderer.runtime_profile == .full_ui)
+        .retained_targets = full_ui,
+        .editor_presentable_cache_compatible = full_ui and builtin.target.os.tag != .macos,
+        .terminal_presentation_mode = if (full_ui)
             .retained_surface
         else
             .direct_main_target,
         .screenshot_mode = .direct_window_readback,
-        .text_rendering_mode = if (renderer.runtime_profile == .full_ui)
+        .text_rendering_mode = if (full_ui)
             .gl_texture_atlas
         else
             .unavailable,
         .planned_text_rendering_mode = .gl_texture_atlas,
         .kitty_image_mode = .persistent_textures,
-        .atlas_storage_mode = if (renderer.runtime_profile == .full_ui)
+        .atlas_storage_mode = if (full_ui)
             .opengl_textures
         else
             .metal_textures,

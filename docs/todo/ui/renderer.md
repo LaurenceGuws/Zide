@@ -255,6 +255,11 @@ Progress note, 2026-04-05:
   orchestrating that cleanup first.
 - The next lifecycle step is to reduce shared-runtime ownership of dispatch and
   backend-native frame state, not just move code blocks around.
+- The macOS OpenGL editor retained-presentable bypass in
+  `editor_widget_draw.zig` no longer keys off `renderer.backend` + OS tags;
+  `capability_contract.RendererCapabilities` now exposes
+  `editor_presentable_cache_compatible`, and OpenGL reports false on macOS
+  full UI while Metal leaves it enabled so widget code stays capability-shaped.
 
 ## Live Contradiction Centers
 

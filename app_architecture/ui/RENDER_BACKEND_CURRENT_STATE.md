@@ -33,6 +33,8 @@ such as:
 - text rendering mode
 - atlas storage mode
 - raw image texture support
+- editor presentable cache compatibility (macOS OpenGL retains a deliberate
+  false here; widgets query capability instead of `renderer.backend`)
 
 That is a meaningful improvement over backend-label theater.
 

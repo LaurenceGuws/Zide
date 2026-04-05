@@ -52,6 +52,7 @@ pub fn capabilities(renderer: anytype) RendererCapabilities {
     return .{
         .scene_composition_mode = .direct_main_target,
         .retained_targets = false,
+        .editor_presentable_cache_compatible = true,
         .terminal_presentation_mode = .direct_snapshot_cache,
         .screenshot_mode = .present_capture,
         .text_rendering_mode = .unavailable,
