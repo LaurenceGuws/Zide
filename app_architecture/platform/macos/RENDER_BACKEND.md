@@ -615,6 +615,10 @@ What this does and does not mean:
   too: when live text is unavailable, base-codepoint grapheme cells degrade to
   the narrow ASCII/base-cell Metal lane instead of dropping straight to empty
   text whenever the base codepoint is representable by the current fallback
+- the terminal-row contract now has a real terminal-grid foothold too: when a
+  shaped span collapses to fallback under the Metal-planned/unavailable-text
+  path, contiguous ASCII single-cell runs are emitted through the row-shaped
+  Metal lane instead of only degrading one cell at a time
 - this is still intentionally narrow and honest: it is now a tiny sampled
   multiline ASCII run with an explicit monospace-cell option rather than a
   claim that the generic string/text renderer has already migrated

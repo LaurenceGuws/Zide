@@ -224,6 +224,10 @@ fn terminalCellUnderlineEnabled(cell: Cell, hover_link: u32) bool {
     return underline;
 }
 
+fn colorEql(lhs: Color, rhs: Color) bool {
+    return lhs.r == rhs.r and lhs.g == rhs.g and lhs.b == rhs.b and lhs.a == rhs.a;
+}
+
 fn terminalCellGlyphVisible(cell: Cell, blink_style_mode: anytype, blink_time_s: f64) bool {
     const BlinkStyleT = @TypeOf(blink_style_mode);
     if (!cell.attrs.blink or blink_style_mode == BlinkStyleT.off) return true;
@@ -257,6 +261,143 @@ fn resolveTerminalCellStyle(
         .block_cursor_here = block_cursor_here,
         .glyph_visible = terminalCellGlyphVisible(cell, blink_style_mode, blink_time_s),
     };
+}
+
+fn cellSupportsMetalTerminalRowFallback(cell: Cell, style: ResolvedTerminalCellStyle) bool {
+    if (!style.glyph_visible) return false;
+    if (cell.x != 0 or cell.y != 0) return false;
+    if (style.width_units != 1) return false;
+    if (cell.combining_len != 0) return false;
+    if (cell.codepoint == 0 or cell.codepoint == ' ') return true;
+    return cell.codepoint >= 0x20 and cell.codepoint <= 0x7E;
+}
+
+fn captureMetalFallbackRunSample(
+    sample: ?*TextPaintSample,
+    generation: u64,
+    row_idx: usize,
+    cursor_pos: CursorPos,
+    row_cells: []const Cell,
+    start_col: usize,
+    run_len: usize,
+    cell_x: f32,
+    cell_y: f32,
+    cell_w: f32,
+    cell_h: f32,
+    render_scale: f32,
+) void {
+    const out = sample orelse return;
+    var col = start_col;
+    while (col < start_col + run_len and col < row_cells.len) : (col += 1) {
+        const cell = row_cells[col];
+        if (!shouldCaptureTextPaint(out, row_idx, cursor_pos, col, 1)) continue;
+        captureTextPaintSample(
+            out,
+            generation,
+            row_idx,
+            cursor_pos.col,
+            col,
+            cell,
+            1,
+            cell_x + @as(f32, @floatFromInt(@as(i32, @intCast(col - start_col)))) * cell_w,
+            cell_y,
+            cell_w,
+            cell_h,
+            cell_y,
+            render_scale,
+            .{
+                .x = cell_x + @as(f32, @floatFromInt(@as(i32, @intCast(col - start_col)))) * cell_w,
+                .y = cell_y,
+                .width = cell_w,
+                .height = cell_h,
+            },
+            .fallback,
+        );
+        return;
+    }
+}
+
+fn drawMetalTerminalFallbackRun(
+    rr: *Renderer,
+    row_cells: []const Cell,
+    cols_count: usize,
+    row_idx: usize,
+    start_col: usize,
+    span_end_excl: usize,
+    base_x_local: f32,
+    base_y_local: f32,
+    cell_w: f32,
+    cell_h: f32,
+    screen_reverse_mode: bool,
+    hover_link: u32,
+    blink_style_mode: anytype,
+    blink_time_s: f64,
+    draw_cursor_mode: bool,
+    cursor_pos: CursorPos,
+    cursor_style: anytype,
+    text_paint_sample: ?*TextPaintSample,
+    generation: u64,
+    stats: ?*GlyphDrawStats,
+) usize {
+    if (rr.textRenderingMode() != .unavailable) return 0;
+    if (rr.plannedTextRenderingMode() != .metal_texture_atlas) return 0;
+    if (start_col >= span_end_excl or start_col >= cols_count or start_col >= row_cells.len) return 0;
+
+    const first_cell = row_cells[start_col];
+    const first_style = resolveTerminalCellStyle(first_cell, screen_reverse_mode, hover_link, blink_style_mode, blink_time_s, draw_cursor_mode, cursor_pos, cursor_style, row_idx, start_col);
+    if (!cellSupportsMetalTerminalRowFallback(first_cell, first_style)) return 0;
+
+    var run_buf: [256]u8 = undefined;
+    var run_len: usize = 0;
+    var col = start_col;
+    while (col < span_end_excl and col < cols_count and col < row_cells.len and run_len < run_buf.len) : (col += 1) {
+        const cell = row_cells[col];
+        const style = resolveTerminalCellStyle(cell, screen_reverse_mode, hover_link, blink_style_mode, blink_time_s, draw_cursor_mode, cursor_pos, cursor_style, row_idx, col);
+        if (!cellSupportsMetalTerminalRowFallback(cell, style)) break;
+        if (!colorEql(style.fg, first_style.fg)) break;
+        if (style.underline != first_style.underline) break;
+        if (style.block_cursor_here != first_style.block_cursor_here) break;
+        run_buf[run_len] = if (cell.codepoint == 0) ' ' else @as(u8, @intCast(cell.codepoint));
+        run_len += 1;
+    }
+    if (run_len == 0) return 0;
+
+    var has_visible = false;
+    for (run_buf[0..run_len]) |char| {
+        if (char != ' ') {
+            has_visible = true;
+            break;
+        }
+    }
+
+    const cell_x = base_x_local + @as(f32, @floatFromInt(@as(i32, @intCast(start_col)))) * cell_w;
+    const cell_y = base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h;
+    if (has_visible) {
+        _ = rr.drawMetalTerminalCellRun(.{
+            .text = run_buf[0..run_len],
+            .x = cell_x,
+            .y = cell_y,
+            .cell_width = cell_w,
+            .cell_height = cell_h,
+            .tint = first_style.fg.toRgba(),
+        });
+        captureMetalFallbackRunSample(
+            text_paint_sample,
+            generation,
+            row_idx,
+            cursor_pos,
+            row_cells,
+            start_col,
+            run_len,
+            cell_x,
+            cell_y,
+            cell_w,
+            cell_h,
+            if (rr.terminal_font.render_scale > 0.0) rr.terminal_font.render_scale else 1.0,
+        );
+    }
+    if (stats) |s| s.fallback_cells += run_len;
+    return run_len;
 }
 
 fn resolvedDrawBackgroundColor(
@@ -1345,6 +1486,32 @@ pub fn drawRowGlyphs(
         if (length == 0) {
             var fb_col: usize = span_start_col;
             while (fb_col < span_end_excl and fb_col < cols_count) {
+                const row_consumed = drawMetalTerminalFallbackRun(
+                    rr,
+                    row_cells,
+                    cols_count,
+                    row_idx,
+                    fb_col,
+                    span_end_excl,
+                    base_x_local,
+                    base_y_local,
+                    cell_w,
+                    cell_h,
+                    screen_reverse_mode,
+                    hover_link,
+                    blink_style_mode,
+                    blink_time_s,
+                    draw_cursor_mode,
+                    cursor_pos,
+                    cursor_style,
+                    text_paint_sample,
+                    generation,
+                    stats,
+                );
+                if (row_consumed > 0) {
+                    fb_col += row_consumed;
+                    continue;
+                }
                 const cell = row_cells[fb_col];
                 if (cell.x != 0 or cell.y != 0) {
                     fb_col += 1;

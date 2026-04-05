@@ -358,6 +358,9 @@ lane.
       ASCII/base-cell Metal lane when live text is unavailable, instead of
       falling straight through to empty text whenever the grapheme base can be
       represented by the current fallback
+    - the terminal grid now has its first row-level Metal integration too:
+      contiguous ASCII single-cell fallback spans can route through the
+      terminal-row Metal contract instead of only degrading one cell at a time
     - the narrow Metal text lane now covers a tiny multiline ASCII run, not
       just a single flat row
     - the diagnostic/runtime callers now use the explicit monospace-cell
