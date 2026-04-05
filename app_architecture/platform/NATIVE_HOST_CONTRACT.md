@@ -226,6 +226,21 @@ That means:
 - SDL may not justify pretending `SDL_WINDOW_OPENGL` defines the durable host
   shape for macOS or Android
 
+## macOS implementation pointers (current tree)
+
+These modules are the live macOS-side expression of the shared contract today.
+SDL still bridges window creation and event transport; native handles and
+AppKit delegate behavior are explicit rather than implied:
+
+- `src/platform/native_host.zig` — `PlatformAppHost`, `PlatformRenderHost`
+- `src/platform/sdl_api.zig` — Cocoa window/view pointers via SDL window properties
+- `src/platform/macos_host.zig` — macOS-owned helpers on top of `PlatformAppHost`
+- `src/platform/macos_metal_host.zig` — Metal view/layer preparation from the render host
+- `src/platform/macos_app_delegate.zig` — `NSApplicationDelegate` proxy feeding lifecycle into `PlatformAppHost`
+
+macOS rendering authority and migration narrative:
+`app_architecture/platform/macos/RENDER_BACKEND.md`.
+
 ## What This Contract Intentionally Does Not Standardize
 
 The contract does not require:

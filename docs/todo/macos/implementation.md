@@ -139,7 +139,11 @@ lane.
     - `app_architecture/platform/macos/RENDER_BACKEND.md`
       - `Ranked Contradiction Audit Versus The Live SDL/OpenGL Lane`
 
-- [ ] `MAC-04` Define the native window/app lifecycle seam
+- [x] `MAC-04` Define the native window/app lifecycle seam
+  - Authority: shared contract in `app_architecture/platform/NATIVE_HOST_CONTRACT.md`
+    (including **macOS implementation pointers**) plus macOS groundwork described
+    in the checkpoint below; product gap is still “SDL-bridged host” rather than
+    a fully AppKit-owned bootstrap—tracked as execution under later milestones.
   - Focus:
     - `NSApplication`/delegate ownership
     - menu/file-open/app-activation lifecycle
@@ -163,7 +167,11 @@ lane.
     - the next cut can define the AppKit boundary against explicit native
       handles instead of extending GL-only helpers
 
-- [ ] `MAC-05` Define the Metal renderer migration plan
+- [x] `MAC-05` Define the Metal renderer migration plan
+  - Authority: `app_architecture/platform/macos/RENDER_BACKEND.md` (host seam,
+    drawable ownership, present contract, reviewable migration cuts); remaining
+    work is **execution** (`MAC-07` normal Metal frame loop, terminal-on-Metal
+    breadth) not more paper plan.
   - Focus:
     - render-host seam shape
     - drawable/layer ownership
@@ -627,6 +635,15 @@ lane.
 
 ## Progress Ledger
 
+- 2026-04-05 (macOS queue reconciliation):
+  - marked `MAC-04` and `MAC-05` complete: definition and migration authority
+    already live in `NATIVE_HOST_CONTRACT.md` and `macos/RENDER_BACKEND.md` with
+    matching code scaffolding; remaining scope is product execution (`MAC-07+`),
+    not additional unsigned architecture drafts
+  - added **macOS implementation pointers** to `NATIVE_HOST_CONTRACT.md` so the
+    contract doc names the concrete modules that implement the shared host seam
+    on macOS today
+
 - 2026-04-05:
   - created `macos-implementation` from current `main`
   - confirmed there was no pre-existing dedicated macOS queue
@@ -768,9 +785,9 @@ lane.
 
 ## Immediate Next Pass
 
-1. Close the documentation gap for `MAC-04` / `MAC-05` against what is already
-   landed (lifecycle + Metal migration narrative), without re-auditing from zero.
-2. Push the normal app frame loop toward honest `.metal` submission (`MAC-07`)
-   once partial terminal presentation is stable on diagnostics.
+1. Drive `MAC-07`: normal app frame loop on `.metal` (not only diagnostics /
+   backend-smoke), with honest capability reporting and resize/present truth.
+2. Revisit `MAC-06` / `MAC-08` checklists against the live tree—much of the
+   listed groundwork may already match reality; avoid duplicate milestone claims.
 3. Keep `docs/AGENT_HANDOFF.md` in mind: macOS work stays deferrable unless it
    unblocks the default VT maturity lane.
