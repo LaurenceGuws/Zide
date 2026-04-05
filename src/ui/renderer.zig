@@ -10,6 +10,7 @@ const font_manager = @import("renderer/font_manager.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
 const gl_backend = @import("renderer/gl_backend.zig");
 const metal_backend = @import("renderer/metal_backend.zig");
+const metal_text_diagnostic_runtime = @import("renderer/metal_text_diagnostic_runtime.zig");
 const opengl_runtime_state = @import("renderer/opengl_runtime_state.zig");
 const metal_runtime_state = @import("renderer/metal_runtime_state.zig");
 const scene_target_state = @import("renderer/scene_target_state.zig");
@@ -39,7 +40,6 @@ const window_chrome_runtime = @import("renderer/window_chrome_runtime.zig");
 const app_lifecycle_runtime = @import("../app/lifecycle_runtime.zig");
 const macos_host = @import("../platform/macos_host.zig");
 const macos_app_delegate = @import("../platform/macos_app_delegate.zig");
-const macos_metal_host = @import("../platform/macos_metal_host.zig");
 const windows_snap_layout_sink = @import("../platform/windows_snap_layout_sink.zig");
 const windows_frame_material = @import("../platform/windows_frame_material.zig");
 const windows_integrated_frame = @import("../platform/windows_integrated_frame.zig");
@@ -396,9 +396,6 @@ pub const Renderer = struct {
 pub const WindowChromeMode = window_chrome_runtime.WindowChromeMode;
 pub const WindowChromeContract = window_chrome_runtime.WindowChromeContract;
 pub const ExternalIntent = native_host.ExternalIntent;
-pub const MacOsMetalAttachmentTarget = macos_host.MetalAttachmentTarget;
-pub const MacOsMetalHost = macos_metal_host.Host;
-pub const MacOsMetalBackendContext = metal_backend.BackendContext;
 pub const RendererBackend = enum {
     opengl,
     metal,
@@ -1192,6 +1189,23 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             },
             .ui_scale = self.uiScaleFactor(),
         };
+    }
+
+    pub fn metalGlyphAtlasReady(self: *const Renderer) bool {
+        return metal_backend.glyphAtlasReadyForRenderer(self);
+    }
+
+    pub fn runMetalAtlasUploadDiagnosticAt(self: *Renderer, dest_x: i32, dest_y: i32) bool {
+        return metal_backend.runAtlasUploadDiagnosticAt(self, dest_x, dest_y);
+    }
+
+    pub fn metalAtlasPreviewSource(self: *const Renderer) AtlasPreviewSource {
+        return metal_backend.atlasPreviewSourceForRenderer(self);
+    }
+
+    pub fn runMetalAtlasUploadDiagnostic(self: *Renderer, margin_logical: f32) bool {
+        const placement = metal_text_diagnostic_runtime.previewPlacement(self.uiGeometryContext(), margin_logical);
+        return metal_backend.runAtlasUploadDiagnosticAt(self, placement.dest_x, placement.dest_y);
     }
 
     pub fn shouldClose(self: *Renderer) bool {

@@ -1,9 +1,6 @@
 const std = @import("std");
 const r = @import("ui/renderer.zig");
 const iface = @import("ui/renderer/interface.zig");
-const metal_backend = @import("ui/renderer/metal_backend.zig");
-const metal_text_diagnostic_runtime = @import("ui/renderer/metal_text_diagnostic_runtime.zig");
-const macos_host = @import("platform/macos_host.zig");
 const window = @import("platform/window_metrics.zig");
 const platform_input_events = @import("platform/input_events.zig");
 
@@ -148,9 +145,6 @@ pub const WindowChromeContract = r.Renderer.WindowChromeContract;
 pub const RendererBackend = r.RendererBackend;
 pub const RendererRuntimeProfile = r.RendererRuntimeProfile;
 pub const ExternalIntent = r.ExternalIntent;
-pub const MacOsMetalAttachmentTarget = r.MacOsMetalAttachmentTarget;
-pub const MacOsMetalHost = r.MacOsMetalHost;
-pub const MacOsMetalBackendContext = r.MacOsMetalBackendContext;
 
 pub const Shell = struct {
     renderer: *r.Renderer,
@@ -289,22 +283,6 @@ pub const Shell = struct {
         return self.renderer.macosRequestOpenFile(path);
     }
 
-    pub fn macosMetalAttachmentTarget(self: *const Shell) ?MacOsMetalAttachmentTarget {
-        return macos_host.metalAttachmentTarget(self.renderer.render_host);
-    }
-
-    pub fn prepareMacosMetalHost(self: *const Shell) ?MacOsMetalHost {
-        return metal_backend.prepareHost(self.renderer);
-    }
-
-    pub fn prepareMacosMetalBackendContext(self: *const Shell) ?MacOsMetalBackendContext {
-        return metal_backend.createBackendContextForRenderer(self.renderer);
-    }
-
-    pub fn runMacosMetalSmokeFrame(self: *const Shell) bool {
-        return metal_backend.runSmokeFrame(self.renderer);
-    }
-
     pub fn setTextInputRect(self: *Shell, x: i32, y: i32, w: i32, h: i32) void {
         self.renderer.setTextInputRect(x, y, w, h);
     }
@@ -403,23 +381,6 @@ pub const Shell = struct {
 
     pub fn rendererCapabilities(self: *const Shell) RendererCapabilities {
         return self.renderer.capabilities();
-    }
-
-    pub fn macosMetalGlyphAtlasReady(self: *const Shell) bool {
-        return metal_backend.glyphAtlasReadyForRenderer(self.renderer);
-    }
-
-    pub fn runMacosMetalAtlasUploadDiagnostic(self: *Shell) bool {
-        const placement = metal_text_diagnostic_runtime.previewPlacement(self.renderer, 24.0);
-        return metal_backend.runAtlasUploadDiagnosticAt(self.renderer, placement.dest_x, placement.dest_y);
-    }
-
-    pub fn runMacosMetalAtlasUploadDiagnosticAt(self: *Shell, dest_x: i32, dest_y: i32) bool {
-        return metal_backend.runAtlasUploadDiagnosticAt(self.renderer, dest_x, dest_y);
-    }
-
-    pub fn macosMetalAtlasPreviewSource(self: *const Shell) AtlasPreviewSource {
-        return metal_backend.atlasPreviewSourceForRenderer(self.renderer);
     }
 
     pub fn lastPresentTrace(self: *const Shell) r.PresentTrace {
