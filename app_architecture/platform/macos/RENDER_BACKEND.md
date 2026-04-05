@@ -671,6 +671,9 @@ What this does and does not mean:
   surface too: the current macOS Metal terminal lane reports
   `terminal_present=direct_main_target`, which is a better contract than
   inferring terminal behavior indirectly from `retained_targets=0`
+- that presentation mode is now also published through terminal frame metrics
+  and the terminal diagnostic lane, so the live contract is visible both at
+  startup capability time and per-frame widget evidence time
 - that contract is intentionally backend-native rather than fake portability:
   the old cached GL `Texture` path is still OpenGL-only, while Metal Kitty
   images are created as frame-scoped native Metal textures and released after

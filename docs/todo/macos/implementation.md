@@ -402,6 +402,9 @@ lane.
       the current Metal terminal lane reports
       `terminal_present=direct_main_target` instead of making callers infer
       terminal behavior from retained-target absence
+    - terminal frame metrics now publish that same presentation mode too, so
+      the terminal diagnostic can confirm `metric_terminal_present=direct_main_target`
+      per frame instead of only in startup capability logs
     - the terminal Metal diagnostic now reports `raw_image_textures=1`, keeps
       non-zero `kitty_ms`, and no longer relies on the previous unsupported
       backend gate for RGB/RGBA Kitty images

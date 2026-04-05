@@ -128,6 +128,10 @@ pub fn run(allocator: std.mem.Allocator) !void {
                     metrics.texture_kitty_ms,
                 },
             );
+            log.logf(.info, "frame={d} metric_terminal_present={s}", .{
+                frame_index,
+                @tagName(metrics.terminal_presentation_mode),
+            });
         } else {
             log.logf(.info, "frame={d} submitted={d} sequence={d}", .{
                 frame_index,
@@ -143,7 +147,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
     const final_metrics = terminal_widget_draw.latestFrameLatencyMetrics();
     log.logf(
         .info,
-        "complete frames={d} final_grid_runs={d}/{d} final_overlay_runs={d}/{d} metric_grid_runs={d}/{d} metric_overlay_runs={d}/{d} kitty_ms={d:.3}",
+        "complete frames={d} final_grid_runs={d}/{d} final_overlay_runs={d}/{d} metric_grid_runs={d}/{d} metric_overlay_runs={d}/{d} metric_terminal_present={s} kitty_ms={d:.3}",
         .{
             frame_index,
             final_debug.grid_row_runs,
@@ -154,6 +158,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
             final_metrics.metal_grid_row_cells,
             final_metrics.metal_overlay_row_runs,
             final_metrics.metal_overlay_row_cells,
+            @tagName(final_metrics.terminal_presentation_mode),
             final_metrics.texture_kitty_ms,
         },
     );

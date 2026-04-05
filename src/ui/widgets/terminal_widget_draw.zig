@@ -84,11 +84,13 @@ pub fn drawPrepared(
     var overlay_ms: f64 = 0.0;
     var render_phase_start = draw_start;
     var outcome = DrawOutcome{ .presented = preparation.presented };
+    const r = shell.rendererPtr();
     defer {
         const draw_end = app_shell.getTime();
         const draw_ms_total = time_utils.secondsToMs(draw_end - draw_start);
         const render_ms = time_utils.secondsToMs(draw_end - render_phase_start);
         draw_metrics.publishFrameLatencyMetrics(
+            r.terminalPresentationMode(),
             terminal_view.generation,
             lock_ms,
             lock_wait_ms,
@@ -109,7 +111,6 @@ pub fn drawPrepared(
         );
     }
 
-    const r = shell.rendererPtr();
     const render_scale = 1.0 / r.devicePixelStep();
     const lifecycle_transition = self.surface.lifecycleTransition(terminal_view);
     const alt_exit = lifecycle_transition.exited;
