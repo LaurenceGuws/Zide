@@ -2,6 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const macos_metal_host = @import("../../platform/macos_metal_host.zig");
 const metal_frame_runtime = @import("metal_frame_runtime.zig");
+const presentable_contract = @import("presentable_contract.zig");
 const surface_draw = @import("surface_draw.zig");
 const terminal_font = @import("../terminal_font.zig");
 const types = @import("types.zig");
@@ -35,6 +36,8 @@ const AtlasFragmentUniforms = extern struct {
 };
 
 pub const PixelClipRect = surface_draw.PixelClipRect;
+const PresentableSurface = presentable_contract.PresentableSurface;
+const PresentableDraw = presentable_contract.PresentableDraw;
 
 const MTLRegion = extern struct {
     origin: MTLOrigin,
@@ -1112,6 +1115,28 @@ pub fn beginFrame(renderer: anytype) void {
 
 pub fn submitFrame(renderer: anytype) @import("scene_frame_runtime.zig").FrameSubmission {
     return metal_frame_runtime.submitFrame(renderer);
+}
+
+pub fn deinitPresentables(_: anytype) void {}
+
+pub fn ensurePresentable(_: anytype, _: PresentableSurface, _: i32, _: i32) bool {
+    return false;
+}
+
+pub fn beginPresentable(_: anytype, _: PresentableSurface) bool {
+    return false;
+}
+
+pub fn presentableAvailable(_: anytype, _: PresentableSurface) bool {
+    return false;
+}
+
+pub fn endPresentable(_: anytype, _: PresentableSurface) void {}
+
+pub fn drawPresentable(_: anytype, _: PresentableSurface, _: PresentableDraw) void {}
+
+pub fn scrollPresentable(_: anytype, _: PresentableSurface, _: i32, _: i32) bool {
+    return false;
 }
 
 pub fn resizeBackendContext(

@@ -89,11 +89,16 @@ Progress note, 2026-04-05:
 - `src/ui/renderer/presentable_target.zig` now owns the presentable target
   type, so shared runtime code no longer imports a GL-owned target type
   directly.
+- `src/ui/renderer/presentable_contract.zig` now owns the shared presentable
+  contract types instead of leaving them inside the shared runtime wrapper.
 - the shared runtime API now uses presentable-oriented names instead of the old
   retained-surface verbs.
 - the actual GL presentable mechanics now live in
   `src/ui/renderer/opengl_presentable_runtime.zig` instead of inside the
   shared presentable contract module.
+- the shared presentable runtime now routes through backend-owned presentable
+  entrypoints on the OpenGL and Metal modules instead of importing the OpenGL
+  implementation directly.
 - The next presentable step is lifecycle/behavior ownership, not just storage
   relocation.
 - backend-specific frame begin/submit bodies now live in dedicated frame

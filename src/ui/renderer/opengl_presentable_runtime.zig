@@ -2,16 +2,16 @@ const std = @import("std");
 const draw_ops = @import("draw_ops.zig");
 const gl = @import("gl.zig");
 const gl_backend = @import("gl_backend.zig");
+const presentable_contract = @import("presentable_contract.zig");
 const scene_frame_runtime = @import("scene_frame_runtime.zig");
 const texture_draw = @import("texture_draw.zig");
 const types = @import("types.zig");
 const app_logger = @import("../../app_logger.zig");
 const renderer_root = @import("../renderer.zig");
-const presentable_targets_runtime = @import("presentable_targets_runtime.zig");
 
 const Color = renderer_root.Color;
-const PresentableSurface = presentable_targets_runtime.PresentableSurface;
-const PresentableDraw = presentable_targets_runtime.PresentableDraw;
+const PresentableSurface = presentable_contract.PresentableSurface;
+const PresentableDraw = presentable_contract.PresentableDraw;
 
 pub fn deinit(self: anytype) void {
     self.destroyRenderTarget(&self.presentable_targets.terminal);

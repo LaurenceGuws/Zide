@@ -2,6 +2,8 @@ const std = @import("std");
 const gl = @import("gl.zig");
 const gl_resources = @import("gl_resources.zig");
 const opengl_frame_runtime = @import("opengl_frame_runtime.zig");
+const opengl_presentable_runtime = @import("opengl_presentable_runtime.zig");
+const presentable_contract = @import("presentable_contract.zig");
 const presentable_target = @import("presentable_target.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
 const app_logger = @import("../../app_logger.zig");
@@ -10,6 +12,8 @@ const types = @import("types.zig");
 const sdl = gl.c;
 
 pub const RenderTarget = presentable_target.PresentableTarget;
+const PresentableSurface = presentable_contract.PresentableSurface;
+const PresentableDraw = presentable_contract.PresentableDraw;
 
 fn glAttrName(attr: sdl_api.GlAttr) []const u8 {
     return switch (attr) {
@@ -77,6 +81,40 @@ pub fn beginFrame(renderer: anytype) void {
 
 pub fn submitFrame(renderer: anytype) @import("scene_frame_runtime.zig").FrameSubmission {
     return opengl_frame_runtime.submitFrame(renderer);
+}
+
+pub fn deinitPresentables(renderer: anytype) void {
+    opengl_presentable_runtime.deinit(renderer);
+}
+
+pub fn ensurePresentable(renderer: anytype, surface: PresentableSurface, width: i32, height: i32) bool {
+    if (!renderer.capabilities().retained_targets) return false;
+    return opengl_presentable_runtime.ensurePresentable(renderer, surface, width, height);
+}
+
+pub fn beginPresentable(renderer: anytype, surface: PresentableSurface) bool {
+    if (!renderer.capabilities().retained_targets) return false;
+    return opengl_presentable_runtime.beginPresentable(renderer, surface);
+}
+
+pub fn presentableAvailable(renderer: anytype, surface: PresentableSurface) bool {
+    if (!renderer.capabilities().retained_targets) return false;
+    return opengl_presentable_runtime.presentableAvailable(renderer, surface);
+}
+
+pub fn endPresentable(renderer: anytype, surface: PresentableSurface) void {
+    if (!renderer.capabilities().retained_targets) return;
+    opengl_presentable_runtime.endPresentable(renderer, surface);
+}
+
+pub fn drawPresentable(renderer: anytype, surface: PresentableSurface, draw: PresentableDraw) void {
+    if (!renderer.capabilities().retained_targets) return;
+    opengl_presentable_runtime.drawPresentable(renderer, surface, draw);
+}
+
+pub fn scrollPresentable(renderer: anytype, surface: PresentableSurface, dx: i32, dy: i32) bool {
+    if (!renderer.capabilities().retained_targets) return false;
+    return opengl_presentable_runtime.scrollPresentable(renderer, surface, dx, dy);
 }
 
 pub fn initGlResources(renderer: anytype) !void {

@@ -164,9 +164,14 @@ The shared runtime surface has improved too:
 - the main shared retained-target API now uses presentable-oriented names
 - callers no longer have to speak in GL-era `ensureSurface` /
   `beginSurface` / `drawSurface` vocabulary
+- the shared presentable contract types now live in
+  `src/ui/renderer/presentable_contract.zig`
 - the OpenGL presentable mechanics now live in
   `src/ui/renderer/opengl_presentable_runtime.zig` instead of inside the
   shared presentable contract module
+- the shared presentable runtime now routes through backend-owned presentable
+  entrypoints on the OpenGL and Metal modules instead of importing the OpenGL
+  implementation directly
 
 But the presentable surface story is still not backend-neutral at the shared
 runtime layer:
