@@ -713,8 +713,8 @@ What this does and does not mean:
 - the Metal terminal diagnostic now proves that snapshot-backed presentable
   reuse explicitly too: it starts with `snapshot_available=0` at capability
   time and reports `snapshot_available=1` from frame 0 onward, which confirms
-  the live direct-main-target lane now has a reusable presentable cache even
-  though the active presentation mode remains `direct_main_target`
+  the live Metal terminal lane now has a reusable presentable cache under the
+  `direct_snapshot_cache` contract
 - the reuse path is now actually exercised on the current host instead of only
   existing as latent cache state: frame 0 still reports
   `metric_present_sample=direct_main_target`, while later steady-state frames
@@ -809,7 +809,7 @@ What this does and does not mean:
 - that matters because the terminal lane now has one owning runtime seam for
   both active presentation shapes on macOS:
   - `retained_surface` on the mature OpenGL/full-ui lane
-  - `direct_main_target` on the live Metal terminal lane
+  - `direct_snapshot_cache` on the live Metal terminal lane
 - with this move, `terminal_widget_surface_presenter.zig` is closer to its
   intended role as orchestration over terminal-owned presentation/runtime
   contracts instead of being the real owner of one presentation mode and a

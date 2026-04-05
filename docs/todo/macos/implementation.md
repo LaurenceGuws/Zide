@@ -441,8 +441,8 @@ lane.
     - the terminal Metal diagnostic now proves that snapshot-backed reuse
       explicitly too: capability logs start at `snapshot_available=0`, then
       frame logs report `snapshot_available=1` from the first submitted frame
-      onward while the active presentation mode remains
-      `terminal_present=direct_main_target`
+      onward while the active presentation mode is reported as
+      `terminal_present=direct_snapshot_cache`
     - that reuse path is now exercised on the current host too: frame 0 still
       reports `metric_present_sample=direct_main_target`, while later
       steady-state frames report
