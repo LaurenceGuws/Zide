@@ -691,6 +691,10 @@ What this does and does not mean:
   helpers are named around presentation instead of retained surfaces, which
   makes the current direct-main-target Metal lane less architecturally
   second-class inside the widget implementation
+- terminal debug geometry now matches that same contract too: the debug sample
+  type/field are named around terminal presentation rather than retained
+  surfaces, so the debug model no longer treats direct-main-target Metal as a
+  special case wearing retained terminology
 - that contract is intentionally backend-native rather than fake portability:
   the old cached GL `Texture` path is still OpenGL-only, while Metal Kitty
   images are created as frame-scoped native Metal textures and released after

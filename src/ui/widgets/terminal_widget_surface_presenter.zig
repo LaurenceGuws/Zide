@@ -392,7 +392,7 @@ fn noteTerminalPresent(
     source_w: f32,
     source_h: f32,
 ) void {
-    var sample = @TypeOf(self.debug.last_surface_present){
+    var sample = @TypeOf(self.debug.last_terminal_presentation){
         .valid = true,
         .mode = mode,
         .generation = generation,
@@ -419,7 +419,7 @@ fn noteTerminalPresent(
             sample.valid = false;
         }
     }
-    self.debug.last_surface_present = sample;
+    self.debug.last_terminal_presentation = sample;
 }
 
 fn decideSyncUpdateFastPresent(
@@ -850,7 +850,7 @@ pub fn updateAndPresent(
     const cols = terminal_view.cols;
     const view_cells = terminal_view.cells;
     const base_colors = terminal_view.base_colors;
-    self.debug.last_surface_present.valid = false;
+    self.debug.last_terminal_presentation.valid = false;
 
     if (r.terminalPresentationMode() == .direct_main_target) {
         return directPresentMainTarget(

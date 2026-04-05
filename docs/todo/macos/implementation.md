@@ -419,6 +419,10 @@ lane.
       update deltas, geometry, plan, and present-state helpers are named
       around presentation instead of retained surfaces, which makes the live
       direct Metal lane less architecturally second-class inside the widget
+    - terminal debug geometry is now presentation-shaped too: the debug sample
+      type/field are named around terminal presentation instead of retained
+      surfaces, so the direct Metal lane no longer sits inside a retained-only
+      debug model
     - the terminal Metal diagnostic now reports `raw_image_textures=1`, keeps
       non-zero `kitty_ms`, and no longer relies on the previous unsupported
       backend gate for RGB/RGBA Kitty images

@@ -98,21 +98,21 @@ pub fn dumpVisibleAsciiView(widget: anytype, shell: *Shell, log: anytype) !void 
     try out.writer(widget.session.allocator).print(
         "terminal_present valid={d} mode={s} generation={d} texture_px=({d}x{d}) target_logical=({d:.3}x{d:.3}) source_logical=({d:.3}x{d:.3}) dest=({d:.3},{d:.3},{d:.3},{d:.3}) scale=({d:.6},{d:.6})\n",
         .{
-            @intFromBool(debug.last_surface_present.valid),
-            @tagName(debug.last_surface_present.mode),
-            debug.last_surface_present.generation,
-            debug.last_surface_present.texture_w_px,
-            debug.last_surface_present.texture_h_px,
-            debug.last_surface_present.target_logical_w,
-            debug.last_surface_present.target_logical_h,
-            debug.last_surface_present.source_logical_w,
-            debug.last_surface_present.source_logical_h,
-            debug.last_surface_present.dest_x,
-            debug.last_surface_present.dest_y,
-            debug.last_surface_present.dest_w,
-            debug.last_surface_present.dest_h,
-            debug.last_surface_present.scale_x,
-            debug.last_surface_present.scale_y,
+            @intFromBool(debug.last_terminal_presentation.valid),
+            @tagName(debug.last_terminal_presentation.mode),
+            debug.last_terminal_presentation.generation,
+            debug.last_terminal_presentation.texture_w_px,
+            debug.last_terminal_presentation.texture_h_px,
+            debug.last_terminal_presentation.target_logical_w,
+            debug.last_terminal_presentation.target_logical_h,
+            debug.last_terminal_presentation.source_logical_w,
+            debug.last_terminal_presentation.source_logical_h,
+            debug.last_terminal_presentation.dest_x,
+            debug.last_terminal_presentation.dest_y,
+            debug.last_terminal_presentation.dest_w,
+            debug.last_terminal_presentation.dest_h,
+            debug.last_terminal_presentation.scale_x,
+            debug.last_terminal_presentation.scale_y,
         },
     );
     try out.writer(widget.session.allocator).print(
@@ -163,14 +163,14 @@ pub fn dumpVisibleAsciiView(widget: anytype, shell: *Shell, log: anytype) !void 
             },
         );
     }
-    if (debug.last_surface_present.valid and debug.last_view_geometry.valid) {
+    if (debug.last_terminal_presentation.valid and debug.last_view_geometry.valid) {
         try out.writer(widget.session.allocator).print(
             "surface_vs_view delta_target_minus_view=({d:.3},{d:.3}) delta_source_minus_view=({d:.3},{d:.3})\n",
             .{
-                debug.last_surface_present.target_logical_w - debug.last_view_geometry.viewport_w,
-                debug.last_surface_present.target_logical_h - debug.last_view_geometry.viewport_h,
-                debug.last_surface_present.source_logical_w - debug.last_view_geometry.viewport_w,
-                debug.last_surface_present.source_logical_h - debug.last_view_geometry.viewport_h,
+                debug.last_terminal_presentation.target_logical_w - debug.last_view_geometry.viewport_w,
+                debug.last_terminal_presentation.target_logical_h - debug.last_view_geometry.viewport_h,
+                debug.last_terminal_presentation.source_logical_w - debug.last_view_geometry.viewport_w,
+                debug.last_terminal_presentation.source_logical_h - debug.last_view_geometry.viewport_h,
             },
         );
     }
@@ -252,9 +252,9 @@ pub fn dumpVisibleAsciiView(widget: anytype, shell: *Shell, log: anytype) !void 
             debug.last_text_paint.glyph.y,
             debug.last_text_paint.glyph.width,
             debug.last_text_paint.glyph.height,
-            debug.last_surface_present.target_logical_w,
-            debug.last_surface_present.dest_w,
-            debug.last_surface_present.scale_x,
+            debug.last_terminal_presentation.target_logical_w,
+            debug.last_terminal_presentation.dest_w,
+            debug.last_terminal_presentation.scale_x,
             @tagName(debug.last_text_paint.source),
             @intFromBool(debug.last_text_paint.covers_cursor),
             debug.last_text_paint.cursor_distance_cols,

@@ -51,7 +51,7 @@ pub const TerminalPresentationSampleMode = enum {
     retained_surface,
 };
 
-pub const RetainedSurfacePresentSample = struct {
+pub const TerminalPresentationSample = struct {
     valid: bool = false,
     mode: TerminalPresentationSampleMode = .retained_surface,
     generation: u64 = 0,
@@ -100,7 +100,7 @@ pub const MetalTerminalFallbackSample = struct {
 pub const DebugCaptureState = struct {
     last_view_geometry: ViewGeometrySample = .{},
     last_cursor_overlay: CursorOverlaySample = .{},
-    last_surface_present: RetainedSurfacePresentSample = .{},
+    last_terminal_presentation: TerminalPresentationSample = .{},
     last_text_paint: TextPaintSample = .{},
     last_metal_terminal_fallback: MetalTerminalFallbackSample = .{},
 };
