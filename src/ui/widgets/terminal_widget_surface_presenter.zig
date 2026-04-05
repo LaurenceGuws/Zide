@@ -9,13 +9,13 @@ const retained_targets_runtime = @import("../renderer/retained_targets_runtime.z
 const scene_frame_runtime = @import("../renderer/scene_frame_runtime.zig");
 const draw_grid = @import("terminal_widget_draw_grid.zig");
 const draw_texture = @import("terminal_widget_draw_texture.zig");
-const retained_state_mod = @import("terminal_widget_retained_state.zig");
+const presentation_state_mod = @import("terminal_widget_retained_state.zig");
 const view_state = @import("terminal_widget_view_state.zig");
 
 const Shell = app_shell.Shell;
 const Color = app_shell.Color;
 const CursorPos = terminal_publication.CursorPos;
-const PresentationPartialDrawPlan = retained_state_mod.PresentationState.PresentationPartialDrawPlan;
+const PresentationPartialDrawPlan = presentation_state_mod.PresentationState.PresentationPartialDrawPlan;
 
 const FullFrameFastPathDecision = draw_texture.FullFrameFastPathDecision;
 const TerminalPresentationSampleMode = @import("terminal_widget_debug_geometry.zig").TerminalPresentationSampleMode;
@@ -42,8 +42,8 @@ const PresentationGeometry = struct {
     cell_w_i: i32 = 0,
     cell_h_i: i32 = 0,
     padding_x_i: i32 = 0,
-    texture_w: i32 = 0,
-    texture_h: i32 = 0,
+    surface_w: i32 = 0,
+    surface_h: i32 = 0,
     visible_w: i32 = 0,
     visible_h: i32 = 0,
     viewport_w: f32 = 0.0,
@@ -78,7 +78,7 @@ const PresentationExecutionResult = struct {
     kitty_ms: f64 = 0.0,
 };
 
-fn forEachRetainedDrawSpan(
+fn forEachPresentationDrawSpan(
     rows: usize,
     cols: usize,
     surface_update_plan: PresentationUpdatePlan,
@@ -115,7 +115,7 @@ fn forEachRetainedDrawSpan(
     }
 }
 
-fn drawRetainedBackgroundPass(
+fn drawPresentationBackgroundPass(
     shell: *Shell,
     renderer: anytype,
     view_geometry: shared_types.layout.TerminalViewGeometry,
@@ -136,7 +136,7 @@ fn drawRetainedBackgroundPass(
     const bg_phase_start = app_shell.getTime();
     renderer.beginTerminalBatch();
     if (clear_full_surface) {
-        renderer.addTerminalRect(0, 0, surface_update_plan.geometry.texture_w, surface_update_plan.geometry.texture_h, bg_color);
+        renderer.addTerminalRect(0, 0, surface_update_plan.geometry.surface_w, surface_update_plan.geometry.surface_h, bg_color);
     }
     var visitor = struct {
         shell: *Shell,
@@ -183,12 +183,12 @@ fn drawRetainedBackgroundPass(
         .cursor = cursor,
         .cursor_style = cursor_style,
     };
-    forEachRetainedDrawSpan(rows, cols, surface_update_plan, &visitor);
+    forEachPresentationDrawSpan(rows, cols, surface_update_plan, &visitor);
     renderer.flushTerminalBatch();
     return time_utils.secondsToMs(app_shell.getTime() - bg_phase_start);
 }
 
-fn drawRetainedGlyphPass(
+fn drawPresentationGlyphPass(
     self: anytype,
     shell: *Shell,
     renderer: anytype,
@@ -281,7 +281,7 @@ fn drawRetainedGlyphPass(
         .glyph_draw_stats = glyph_draw_stats,
         .metal_fallback_sample = &self.debug.last_metal_terminal_fallback,
     };
-    forEachRetainedDrawSpan(rows, cols, surface_update_plan, &visitor);
+    forEachPresentationDrawSpan(rows, cols, surface_update_plan, &visitor);
     renderer.flushTerminalGlyphBatch();
     return time_utils.secondsToMs(app_shell.getTime() - glyph_phase_start);
 }
@@ -317,7 +317,7 @@ fn executePresentationUpdate(
     const bg_color = if (view_cells.len > 0) toShellColor(base_colors.resolved_background) else renderer.theme.background;
     const clear_full_surface = surface_update_plan.mode == .full;
 
-    result.bg_ms += drawRetainedBackgroundPass(
+    result.bg_ms += drawPresentationBackgroundPass(
         shell,
         renderer,
         view_geometry,
@@ -341,7 +341,7 @@ fn executePresentationUpdate(
         self.surface.kitty.drawImages(self.session.allocator, shell, base_x_local, base_y_local, false, start_line, rows, cols);
         result.kitty_ms += time_utils.secondsToMs(app_shell.getTime() - kitty_phase_start);
     }
-    result.glyph_ms += drawRetainedGlyphPass(
+    result.glyph_ms += drawPresentationGlyphPass(
         self,
         shell,
         renderer,
@@ -538,7 +538,7 @@ fn directPresentMainTarget(
     return result;
 }
 
-fn beginRetainedViewportClip(
+fn beginPresentationViewportClip(
     renderer: anytype,
     view_geometry: shared_types.layout.TerminalViewGeometry,
     visible_w: i32,
@@ -559,17 +559,17 @@ fn refreshPresentationPresentState(
     terminal_view: view_state.TerminalViewModel,
     surface_geometry: PresentationGeometry,
     view_geometry: shared_types.layout.TerminalViewGeometry,
-    texture_update_completed: bool,
+    presentation_update_completed: bool,
     visible_w: i32,
     visible_h: i32,
     view_cells_len: usize,
 ) PresentationPresentState {
     var state = PresentationPresentState{
-        .updated = texture_update_completed,
+        .updated = presentation_update_completed,
         .visible = visible_w > 0 and visible_h > 0,
     };
 
-    if (texture_update_completed) {
+    if (presentation_update_completed) {
         self.surface.notePresentationUpdated(terminal_view, surface_geometry);
     }
 
@@ -579,7 +579,7 @@ fn refreshPresentationPresentState(
     state.log_unavailable = !state.ready and terminal_view.rows > 0 and terminal_view.cols > 0 and view_cells_len > 0 and state.visible;
 
     if (state.present) {
-        beginRetainedViewportClip(renderer, view_geometry, visible_w, visible_h);
+        beginPresentationViewportClip(renderer, view_geometry, visible_w, visible_h);
     }
 
     return state;
@@ -604,7 +604,7 @@ fn logPresentationUnavailable(
     });
 }
 
-fn presentRetainedSurface(
+fn presentPresentationSurface(
     self: anytype,
     renderer: anytype,
     sample_generation: u64,
@@ -658,8 +658,8 @@ fn planPresentationUpdate(
     plan.geometry.render_scale = 1.0 / renderer.devicePixelStep();
 
     const scale = plan.geometry.render_scale;
-    plan.geometry.texture_w = @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(plan.geometry.cell_w_i * @as(i32, @intCast(cols)) + plan.geometry.padding_x_i)) / scale)));
-    plan.geometry.texture_h = @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(plan.geometry.cell_h_i * @as(i32, @intCast(rows)))) / scale)));
+    plan.geometry.surface_w = @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(plan.geometry.cell_w_i * @as(i32, @intCast(cols)) + plan.geometry.padding_x_i)) / scale)));
+    plan.geometry.surface_h = @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(plan.geometry.cell_h_i * @as(i32, @intCast(rows)))) / scale)));
 
     const clip_w = @min(width, geom.cell_width_logical_exact * @as(f32, @floatFromInt(cols)));
     const clip_h = @min(height, geom.cell_height_logical_exact * @as(f32, @floatFromInt(rows)));
@@ -670,17 +670,17 @@ fn planPresentationUpdate(
     plan.geometry.viewport_w = @as(f32, @floatFromInt(plan.geometry.visible_w));
     plan.geometry.viewport_h = @as(f32, @floatFromInt(plan.geometry.visible_h));
 
-    const recreated = retained_targets_runtime.ensureSurface(renderer, .terminal, plan.geometry.texture_w, plan.geometry.texture_h);
-    const retained_delta = self.surface.presentationUpdateDelta(terminal_view, plan.geometry);
+    const recreated = retained_targets_runtime.ensureSurface(renderer, .terminal, plan.geometry.surface_w, plan.geometry.surface_h);
+    const presentation_delta = self.surface.presentationUpdateDelta(terminal_view, plan.geometry);
 
     var update_plan = draw_texture.choosePresentationUpdatePlan(
         self.publication.cacheConst().dirty,
         recreated,
-        retained_delta.clear_generation_changed,
-        retained_delta.cell_metrics_changed,
-        retained_delta.render_scale_changed,
+        presentation_delta.clear_generation_changed,
+        presentation_delta.cell_metrics_changed,
+        presentation_delta.render_scale_changed,
         blink_requires_partial,
-        retained_delta.presentable_ready,
+        presentation_delta.presentable_ready,
     );
     update_plan = draw_texture.forceFullPresentationUpdatePlanEveryFrame(update_plan, recent_input_window_active);
 
@@ -694,12 +694,12 @@ fn planPresentationUpdate(
     var shift_requires_fullwidth_partial = false;
     switch (draw_texture.planViewportPresentShift(
         renderer.terminalTextureShiftEnabled(),
-        retained_delta.generation_changed,
+        presentation_delta.generation_changed,
         viewport_shift.rows,
         viewport_shift.exposed_only,
         scroll_offset,
         needs_full,
-        retained_delta.presentable_ready,
+        presentation_delta.presentable_ready,
         rows,
     )) {
         .attempt => |shift_rows| {
@@ -827,10 +827,10 @@ pub fn updateAndPresent(
         );
     }
 
-    const retained_surface_target_available = retained_targets_runtime.surfaceAvailable(r, .terminal);
-    const retained_surface_ready = self.surface.notePresentableAvailability(retained_surface_target_available);
+    const presentation_target_available = retained_targets_runtime.surfaceAvailable(r, .terminal);
+    const presentation_ready = self.surface.notePresentableAvailability(presentation_target_available);
 
-    if (terminal_view.sync_updates_active and view_cells.len > 0 and retained_surface_ready) {
+    if (terminal_view.sync_updates_active and view_cells.len > 0 and presentation_ready) {
         const bg_color = if (view_cells.len > 0) toShellColor(base_colors.resolved_background) else r.theme.background;
         r.drawRect(
             @intFromFloat(x),
@@ -938,7 +938,7 @@ pub fn updateAndPresent(
         }
         logPresentationUnavailable(self, terminal_view, present_state, visible_w, visible_h);
         if (present_state.present) {
-            presentRetainedSurface(
+            presentPresentationSurface(
                 self,
                 r,
                 self.surface.lastRenderGeneration(),

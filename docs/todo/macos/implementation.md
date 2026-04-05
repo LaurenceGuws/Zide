@@ -441,6 +441,11 @@ lane.
       `invalidatePresentationCache()` seam instead of a retained-era texture
       cache name, which better matches the current direct-main-target Metal
       lane
+    - terminal presenter internals are less retained-first now too: helper
+      names and temporary state use presentation language (`surface_w`,
+      `presentation_delta`, `presentation_ready`, presentation draw-pass
+      helpers) instead of describing the live direct/retained split as a
+      retained lane plus exceptions
     - the terminal Metal diagnostic now reports `raw_image_textures=1`, keeps
       non-zero `kitty_ms`, and no longer relies on the previous unsupported
       backend gate for RGB/RGBA Kitty images

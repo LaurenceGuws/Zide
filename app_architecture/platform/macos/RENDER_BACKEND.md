@@ -716,6 +716,11 @@ What this does and does not mean:
   tab-navigation callers invalidate presentation cache readiness through the
   widget/state seam instead of referring to a texture cache even though the
   active Metal terminal lane presents directly
+- the terminal presenter internals are less retained-first now too: helper
+  names and temporary state use presentation-language (`surface_w`,
+  `presentation_delta`, `presentation_ready`, presentation draw-pass helpers)
+  instead of describing the live direct/retained split as a retained lane plus
+  exceptions
 - that contract is intentionally backend-native rather than fake portability:
   the old cached GL `Texture` path is still OpenGL-only, while Metal Kitty
   images are created as frame-scoped native Metal textures and released after
