@@ -88,6 +88,12 @@ This has improved slightly again: Metal-only maintenance helpers such as
 queued-surface cleanup and diagnostic-font cleanup now live on the Metal
 backend instead of `Renderer` carrying those backend-specific chores itself.
 
+This has improved slightly again on the OpenGL side too: shared draw/text code
+now goes through `gl_backend` helpers for white-brush access, batch pipeline
+binding, VBO growth, texture-kind uniform updates, and text-render uniform
+sync instead of reaching directly into `renderer.opengl_runtime` for each of
+those actions.
+
 ### 2. Shared frame lifecycle still branches backend-by-backend
 
 The renderer root no longer spells out backend frame begin/submit bodies, but

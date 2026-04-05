@@ -125,6 +125,10 @@ Progress note, 2026-04-05:
 - Metal-only queued-surface cleanup and diagnostic-font cleanup now route
   through `metal_backend.zig` instead of living as renderer-root helper
   methods.
+- Shared draw/text code now routes several OpenGL-specific operations through
+  `gl_backend.zig` helpers instead of directly reaching into
+  `renderer.opengl_runtime` for white-brush access, batch binding, VBO growth,
+  texture-kind uniform updates, and text-render uniform sync.
 - The next lifecycle step is to reduce shared-runtime ownership of dispatch and
   backend-native frame state, not just move code blocks around.
 

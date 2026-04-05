@@ -1,6 +1,7 @@
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const gl = @import("gl.zig");
+const gl_backend = @import("gl_backend.zig");
 const shape_utils = @import("shape_utils.zig");
 const texture_draw = @import("texture_draw.zig");
 const types = @import("types.zig");
@@ -46,9 +47,7 @@ pub fn flushTerminalBatch(renderer: anytype) void {
     const vertex_count = renderer.batch.vertices.items.len;
     if (vertex_count == 0) return;
     ensureVboCapacity(renderer, vertex_count);
-    gl.UseProgram(renderer.opengl_runtime.shader_program);
-    gl.BindVertexArray(renderer.opengl_runtime.vao);
-    gl.BindBuffer(gl.c.GL_ARRAY_BUFFER, renderer.opengl_runtime.vbo);
+    gl_backend.bindBatchPipeline(renderer);
     gl.BufferSubData(
         gl.c.GL_ARRAY_BUFFER,
         0,
@@ -59,7 +58,7 @@ pub fn flushTerminalBatch(renderer: anytype) void {
         if (draw.texture_id == 0) continue;
         gl.ActiveTexture(gl.c.GL_TEXTURE0);
         gl.BindTexture(gl.c.GL_TEXTURE_2D, draw.texture_id);
-        if (renderer.opengl_runtime.uniform_kind >= 0) gl.Uniform1i(renderer.opengl_runtime.uniform_kind, @intFromEnum(draw.kind));
+        gl_backend.setTextureKind(renderer, draw.kind);
         applyBlendForKind(draw.kind);
         gl.DrawArrays(gl.c.GL_TRIANGLES, @intCast(draw.start), @intCast(draw.count));
     }
@@ -67,11 +66,10 @@ pub fn flushTerminalBatch(renderer: anytype) void {
 
 pub fn drawTextureRect(renderer: anytype, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, bg_color: types.Rgba, kind: types.TextureKind) void {
     if (texture.id == 0 or texture.width <= 0 or texture.height <= 0) return;
-    gl.UseProgram(renderer.opengl_runtime.shader_program);
-    gl.BindVertexArray(renderer.opengl_runtime.vao);
+    gl_backend.bindBatchPipeline(renderer);
     gl.ActiveTexture(gl.c.GL_TEXTURE0);
     gl.BindTexture(gl.c.GL_TEXTURE_2D, texture.id);
-    if (renderer.opengl_runtime.uniform_kind >= 0) gl.Uniform1i(renderer.opengl_runtime.uniform_kind, @intFromEnum(kind));
+    gl_backend.setTextureKind(renderer, kind);
     applyBlendForKind(kind);
 
     const tex_w = @as(f32, @floatFromInt(texture.width));
@@ -105,7 +103,6 @@ pub fn drawTextureRect(renderer: anytype, texture: types.Texture, src: types.Rec
         .{ .x = x0, .y = y1, .u = u_min, .v = v_max, .r = r, .g = g, .b = b, .a = a, .br = br, .bg = bg, .bb = bb, .ba = ba },
     };
 
-    gl.BindBuffer(gl.c.GL_ARRAY_BUFFER, renderer.opengl_runtime.vbo);
     gl.BufferSubData(
         gl.c.GL_ARRAY_BUFFER,
         0,
@@ -182,20 +179,9 @@ pub fn addTerminalRect(renderer: anytype, x: i32, y: i32, w: i32, h: i32, color:
     if (w <= 0 or h <= 0) return;
     const dest = shape_utils.rectFromInts(x, y, w, h);
     const src = texture_draw.unitSrcRect();
-    addBatchQuad(renderer, renderer.opengl_runtime.white_texture, src, dest, color, types.Rgba{ .r = 0, .g = 0, .b = 0, .a = 0 }, .rgba);
+    addBatchQuad(renderer, gl_backend.whiteTexture(renderer), src, dest, color, types.Rgba{ .r = 0, .g = 0, .b = 0, .a = 0 }, .rgba);
 }
 
 pub fn ensureVboCapacity(renderer: anytype, vertex_count: usize) void {
-    if (vertex_count <= renderer.opengl_runtime.vbo_capacity_vertices) return;
-    var next_cap = renderer.opengl_runtime.vbo_capacity_vertices * 2;
-    if (next_cap < 6) next_cap = 6;
-    if (next_cap < vertex_count) next_cap = vertex_count;
-    gl.BindBuffer(gl.c.GL_ARRAY_BUFFER, renderer.opengl_runtime.vbo);
-    gl.BufferData(
-        gl.c.GL_ARRAY_BUFFER,
-        @as(gl.GLsizeiptr, @intCast(@sizeOf(Vertex) * next_cap)),
-        null,
-        gl.c.GL_DYNAMIC_DRAW,
-    );
-    renderer.opengl_runtime.vbo_capacity_vertices = next_cap;
+    gl_backend.ensureVboCapacity(renderer, vertex_count, @sizeOf(Vertex));
 }

@@ -83,6 +83,51 @@ pub fn submitFrame(renderer: anytype) @import("scene_frame_runtime.zig").FrameSu
     return opengl_frame_runtime.submitFrame(renderer);
 }
 
+pub fn whiteTexture(renderer: anytype) types.Texture {
+    return renderer.opengl_runtime.white_texture;
+}
+
+pub fn bindBatchPipeline(renderer: anytype) void {
+    gl.UseProgram(renderer.opengl_runtime.shader_program);
+    gl.BindVertexArray(renderer.opengl_runtime.vao);
+    gl.BindBuffer(gl.c.GL_ARRAY_BUFFER, renderer.opengl_runtime.vbo);
+}
+
+pub fn setTextureKind(renderer: anytype, kind: types.TextureKind) void {
+    if (renderer.opengl_runtime.uniform_kind >= 0) {
+        gl.Uniform1i(renderer.opengl_runtime.uniform_kind, @intFromEnum(kind));
+    }
+}
+
+pub fn ensureVboCapacity(renderer: anytype, vertex_count: usize, vertex_size: usize) void {
+    if (vertex_count <= renderer.opengl_runtime.vbo_capacity_vertices) return;
+    var next_cap = renderer.opengl_runtime.vbo_capacity_vertices * 2;
+    if (next_cap < 6) next_cap = 6;
+    if (next_cap < vertex_count) next_cap = vertex_count;
+    gl.BindBuffer(gl.c.GL_ARRAY_BUFFER, renderer.opengl_runtime.vbo);
+    gl.BufferData(
+        gl.c.GL_ARRAY_BUFFER,
+        @as(gl.GLsizeiptr, @intCast(vertex_size * next_cap)),
+        null,
+        gl.c.GL_DYNAMIC_DRAW,
+    );
+    renderer.opengl_runtime.vbo_capacity_vertices = next_cap;
+}
+
+pub fn syncTextRenderConfig(renderer: anytype) void {
+    if (renderer.opengl_runtime.shader_program == 0) return;
+    gl.UseProgram(renderer.opengl_runtime.shader_program);
+    if (renderer.opengl_runtime.uniform_text_gamma >= 0) {
+        gl.Uniform1f(renderer.opengl_runtime.uniform_text_gamma, renderer.text_render.gamma);
+    }
+    if (renderer.opengl_runtime.uniform_text_contrast >= 0) {
+        gl.Uniform1f(renderer.opengl_runtime.uniform_text_contrast, renderer.text_render.contrast);
+    }
+    if (renderer.opengl_runtime.uniform_linear_correction >= 0) {
+        gl.Uniform1i(renderer.opengl_runtime.uniform_linear_correction, if (renderer.text_render.linear_correction) 1 else 0);
+    }
+}
+
 pub fn deinitPresentables(renderer: anytype) void {
     opengl_presentable_runtime.deinit(renderer);
 }

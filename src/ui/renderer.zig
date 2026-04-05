@@ -1360,7 +1360,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         }
         const dest = shape_utils.rectFromInts(x, y, w, h);
         const src = texture_draw.unitSrcRect();
-        self.drawTextureRect(self.opengl_runtime.white_texture, src, dest, color.toRgba());
+        self.drawTextureRect(gl_backend.whiteTexture(self), src, dest, color.toRgba());
     }
 
     pub fn drawRectF(self: *Renderer, x: f32, y: f32, w: f32, h: f32, color: Color) void {
@@ -1371,7 +1371,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         }
         const dest = types.Rect{ .x = x, .y = y, .width = w, .height = h };
         const src = texture_draw.unitSrcRect();
-        self.drawTextureRect(self.opengl_runtime.white_texture, src, dest, color.toRgba());
+        self.drawTextureRect(gl_backend.whiteTexture(self), src, dest, color.toRgba());
     }
 
     pub fn drawRectOutline(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
@@ -2131,7 +2131,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         }
         const src = texture_draw.unitSrcRect();
         const dest = types.Rect{ .x = x, .y = y, .width = w, .height = h };
-        draw_ops.addBatchQuad(self, self.opengl_runtime.white_texture, src, dest, color.toRgba(), types.Rgba{ .r = 0, .g = 0, .b = 0, .a = 0 }, .rgba);
+        draw_ops.addBatchQuad(self, gl_backend.whiteTexture(self), src, dest, color.toRgba(), types.Rgba{ .r = 0, .g = 0, .b = 0, .a = 0 }, .rgba);
     }
 
     pub fn terminalCellGeometry(self: *Renderer) TerminalCellGeometry {
@@ -2193,7 +2193,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             );
             return;
         }
-        self.terminal_text.glyph_cache.addRect(self.opengl_runtime.white_texture, x, y, w, h, color.toRgba());
+        self.terminal_text.glyph_cache.addRect(gl_backend.whiteTexture(self), x, y, w, h, color.toRgba());
     }
 
     pub fn addTerminalGlyphQuad(self: *Renderer, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {

@@ -4,8 +4,8 @@ const hb = terminal_font_mod.c;
 const RenderingOptions = terminal_font_mod.RenderingOptions;
 const scale_utils = @import("scale_utils.zig");
 const font_manager = @import("font_manager.zig");
+const gl_backend = @import("gl_backend.zig");
 const text_input = @import("text_input.zig");
-const gl = @import("gl.zig");
 const app_logger = @import("../../app_logger.zig");
 const platform_window = @import("../../platform/window_metrics.zig");
 const renderer_root = @import("../renderer.zig");
@@ -58,12 +58,7 @@ pub fn setTextRenderingConfig(self: anytype, gamma: ?f32, contrast: ?f32, linear
         self.text_render.linear_correction = v;
     }
 
-    if (self.opengl_runtime.shader_program != 0) {
-        gl.UseProgram(self.opengl_runtime.shader_program);
-        if (self.opengl_runtime.uniform_text_gamma >= 0) gl.Uniform1f(self.opengl_runtime.uniform_text_gamma, self.text_render.gamma);
-        if (self.opengl_runtime.uniform_text_contrast >= 0) gl.Uniform1f(self.opengl_runtime.uniform_text_contrast, self.text_render.contrast);
-        if (self.opengl_runtime.uniform_linear_correction >= 0) gl.Uniform1i(self.opengl_runtime.uniform_linear_correction, if (self.text_render.linear_correction) 1 else 0);
-    }
+    gl_backend.syncTextRenderConfig(self);
 }
 
 pub fn setTerminalLigatureConfig(self: anytype, strategy: ?TerminalDisableLigaturesStrategy, features_raw: ?[]const u8) void {
