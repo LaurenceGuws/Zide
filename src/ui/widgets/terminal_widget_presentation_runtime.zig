@@ -677,7 +677,7 @@ pub fn runPresentation(
     else
         renderer.theme.background;
 
-    if (renderer.terminalPresentationMode() == .direct_main_target) {
+    if (renderer.usesDirectTerminalPresentation()) {
         if (tryFastPresentExisting(
             &self.surface,
             renderer,
@@ -904,7 +904,7 @@ pub fn tryFastPresentExisting(
     const presentable_ready = surface_state.notePresentableAvailability(
         presentation_target_runtime.presentableAvailable(renderer),
     );
-    const direct_snapshot_reusable = renderer.terminalPresentationMode() == .direct_main_target and
+    const direct_snapshot_reusable = renderer.usesDirectTerminalPresentation() and
         !terminal_view.sync_updates_active and
         !blink_requires_partial and
         terminal_view.generation == surface_state.lastRenderGeneration() and
@@ -919,7 +919,7 @@ pub fn tryFastPresentExisting(
         @intFromFloat(height),
         bg_color,
     );
-    if (renderer.terminalPresentationMode() == .direct_main_target) {
+    if (renderer.usesDirectTerminalPresentation()) {
         note_present(
             note_present_ctx,
             renderer,

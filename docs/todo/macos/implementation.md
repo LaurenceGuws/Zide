@@ -399,12 +399,14 @@ lane.
       terminal diagnostic lane, using frame-scoped Metal textures instead of
       forcing the GL `Texture` abstraction across backends
     - terminal presentation truth is now explicit in renderer capabilities:
-      the current Metal terminal lane reports
-      `terminal_present=direct_main_target` instead of making callers infer
-      terminal behavior from retained-target absence
+      the current Metal terminal lane now reports
+      `terminal_present=direct_snapshot_cache` instead of making callers infer
+      terminal behavior from retained-target absence or forcing the lane under
+      the older `direct_main_target` label
     - terminal frame metrics now publish that same presentation mode too, so
-      the terminal diagnostic can confirm `metric_terminal_present=direct_main_target`
-      per frame instead of only in startup capability logs
+      the terminal diagnostic can confirm
+      `metric_terminal_present=direct_snapshot_cache` per frame instead of
+      only in startup capability logs
     - terminal widget debug capture is now mode-aware too, so the live direct
       Metal path records a real terminal presentation sample instead of
       leaving debug state shaped around retained surfaces only
@@ -416,6 +418,10 @@ lane.
       captures a persistent snapshot texture and the terminal presentable seam
       can reuse that snapshot on later fast-present frames without pretending
       the lane has already become a retained-surface path
+    - capability truth now matches that contract directly: the live Metal
+      lane is reported as `direct_snapshot_cache`, while the sample path still
+      distinguishes frame-0 `direct_main_target` from steady-state
+      `direct_snapshot_presentable`
     - the terminal planning helper surface is now presentation-shaped too:
       viewport shift and update-plan helpers are named around presentation
       instead of texture ownership, which better matches both retained and
@@ -716,7 +722,7 @@ lane.
       `terminal_widget_draw.zig` calls the terminal presentation runtime
       directly as the public entrypoint for terminal presentation
     - the direct Metal terminal lane still validates on the same runtime truth:
-      `terminal_present=direct_main_target`, `presentable_ready=1` after the
+      `terminal_present=direct_snapshot_cache`, `presentable_ready=1` after the
       first successful frame, `snapshot_available=1` after frame 0,
       frame-0 `metric_present_sample=direct_main_target`, steady-state
       `metric_present_sample=direct_snapshot_presentable`, non-zero frame-0

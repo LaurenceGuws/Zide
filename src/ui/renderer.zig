@@ -135,6 +135,7 @@ pub const SceneCompositionMode = enum {
 
 pub const TerminalPresentationMode = enum {
     direct_main_target,
+    direct_snapshot_cache,
     retained_surface,
 };
 
@@ -1311,6 +1312,13 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         return self.capabilities().terminal_presentation_mode;
     }
 
+    pub fn usesDirectTerminalPresentation(self: *const Renderer) bool {
+        return switch (self.terminalPresentationMode()) {
+            .direct_main_target, .direct_snapshot_cache => true,
+            .retained_surface => false,
+        };
+    }
+
     pub fn supportsRawImageTextures(self: *const Renderer) bool {
         return self.backend == .opengl or (self.backend == .metal and self.metal_backend_context != null);
     }
@@ -1348,6 +1356,8 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             .retained_targets = self.backend == .opengl and self.runtime_profile == .full_ui,
             .terminal_presentation_mode = if (self.backend == .opengl and self.runtime_profile == .full_ui)
                 .retained_surface
+            else if (self.backend == .metal)
+                .direct_snapshot_cache
             else
                 .direct_main_target,
             .screenshot_mode = switch (self.backend) {

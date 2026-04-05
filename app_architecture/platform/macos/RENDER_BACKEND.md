@@ -669,14 +669,19 @@ What this does and does not mean:
   above-text Kitty can share the same live Metal present order
 - the terminal presentation shape is now explicit in the shared capability
   surface too: the current macOS Metal terminal lane reports
-  `terminal_present=direct_main_target`, which is a better contract than
-  inferring terminal behavior indirectly from `retained_targets=0`
+  `terminal_present=direct_snapshot_cache`, which is better than inferring
+  terminal behavior indirectly from `retained_targets=0` and better matches
+  the real lane contract than the older `direct_main_target` label
 - that direct-main-target lane now also owns a backend-native presentable
   reuse story instead of behaving like a permanently one-shot path:
   after the first successful Metal terminal frame, the backend captures a
   persistent drawable-sized snapshot texture and the terminal presentable seam
   can reuse that snapshot on later fast-present frames without pretending the
   lane has already become a retained-surface path
+- capability truth now names that lane honestly as a direct present path with
+  snapshot cache support, while per-frame presentation samples continue to
+  distinguish the initial full draw (`direct_main_target`) from steady-state
+  snapshot reuse (`direct_snapshot_presentable`)
 - that presentation mode is now also published through terminal frame metrics
   and the terminal diagnostic lane, so the live contract is visible both at
   startup capability time and per-frame widget evidence time
