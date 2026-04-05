@@ -2,6 +2,7 @@ const std = @import("std");
 const draw_ops = @import("draw_ops.zig");
 const gl = @import("gl.zig");
 const gl_backend = @import("gl_backend.zig");
+const opengl_scene_target_runtime = @import("opengl_scene_target_runtime.zig");
 const presentable_contract = @import("presentable_contract.zig");
 const scene_frame_runtime = @import("scene_frame_runtime.zig");
 const texture_draw = @import("texture_draw.zig");
@@ -160,7 +161,7 @@ fn snapToDevicePixel(value: f32, render_scale: f32) f32 {
 
 fn restoreCompositionTarget(self: anytype) void {
     if (self.present.main_composition_target == .offscreen_scene_target) {
-        if (!scene_frame_runtime.beginSceneFrame(self)) {
+        if (!opengl_scene_target_runtime.beginSceneFrame(self)) {
             self.present.main_composition_target = .default_target;
             self.bindDefaultTarget();
         }

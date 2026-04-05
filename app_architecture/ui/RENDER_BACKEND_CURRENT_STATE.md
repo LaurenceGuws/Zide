@@ -190,6 +190,12 @@ This has improved slightly again: OpenGL-only scene target refresh/prep no
 longer happens in a shared frame wrapper; that branch now lives under
 `opengl_frame_runtime.zig`, which is closer to the contract we actually want.
 
+That has improved slightly again: the remaining OpenGL scene-target mechanics
+no longer live in `scene_frame_runtime.zig` either. Scene-target contract
+refresh, offscreen begin/draw, and recreate handling now live under
+`opengl_scene_target_runtime.zig`, leaving the shared scene runtime closer to
+shared present-trace semantics instead of mixed shared/GL ownership.
+
 This has improved slightly once more: the extra shared backend-frame dispatch
 wrapper is gone. `Renderer.beginFrame()` / `Renderer.submitFrame()` now do the
 small shared per-frame bookkeeping directly and route to backend-owned
@@ -311,8 +317,12 @@ The main contradiction centers today are:
   - now owns the small shared frame facade directly, but still exposes
     renderer-wide per-frame bookkeeping and backend dispatch from one root
 - `src/ui/renderer/scene_frame_runtime.zig`
-  - now mostly scene target / trace support, but is still part of the shared
+  - now mostly trace/present bookkeeping, but is still part of the shared
     frame lifecycle surface
+- `src/ui/renderer/opengl_scene_target_runtime.zig`
+  - now owns the OpenGL scene-target mechanics that used to sit in the shared
+    scene runtime, but still exposes that GL model through shared renderer
+    state
 
 ## First Required Cut Order
 
