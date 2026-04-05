@@ -761,6 +761,9 @@ What this does and does not mean:
 - with that move, the terminal presenter is now mostly a coordinator over a
   terminal-owned presentation seam rather than a parallel owner of setup,
   lifecycle, and presentable draw mechanics
+- the retained-presentable sync/fast path is behind that same runtime now too:
+  the presenter no longer owns the ready-presentable short-circuit branch
+  directly, which tightens the terminal-owned presentation contract further
 - that contract is intentionally backend-native rather than fake portability:
   the old cached GL `Texture` path is still OpenGL-only, while Metal Kitty
   images are created as frame-scoped native Metal textures and released after

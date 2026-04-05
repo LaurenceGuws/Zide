@@ -632,39 +632,21 @@ pub fn updateAndPresent(
         );
     }
 
-    const presentation_target_available = presentation_target_runtime.presentableAvailable(r);
-    const presentation_ready = self.surface.notePresentableAvailability(presentation_target_available);
-
-    if (terminal_view.sync_updates_active and view_cells.len > 0 and presentation_ready) {
-        const bg_color = if (view_cells.len > 0) toShellColor(base_colors.resolved_background) else r.theme.background;
-        r.drawRect(
-            @intFromFloat(x),
-            @intFromFloat(y),
-            @intFromFloat(width),
-            @intFromFloat(height),
-            bg_color,
-        );
-        noteTerminalPresent(
-            self,
-            r,
-            .retained_surface,
-            terminal_view.generation,
-            view_geometry.origin_x,
-            view_geometry.origin_y,
-            view_geometry.viewport_width,
-            view_geometry.viewport_height,
-            view_geometry.viewport_width,
-            view_geometry.viewport_height,
-        );
-        presentation_target_runtime.drawPresentable(r, .{
-            .x = view_geometry.origin_x,
-            .y = view_geometry.origin_y,
-            .width = view_geometry.viewport_width,
-            .height = view_geometry.viewport_height,
-            .source_width = view_geometry.viewport_width,
-            .source_height = view_geometry.viewport_height,
-            .generation = self.surface.lastRenderGeneration(),
-        });
+    const bg_color = if (view_cells.len > 0) toShellColor(base_colors.resolved_background) else r.theme.background;
+    if (presentation_runtime.tryFastPresentExisting(
+        &self.surface,
+        r,
+        terminal_view,
+        view_cells.len,
+        bg_color,
+        x,
+        y,
+        width,
+        height,
+        view_geometry,
+        self,
+        noteTerminalPresent,
+    )) {
         result.early_return = true;
         return result;
     }

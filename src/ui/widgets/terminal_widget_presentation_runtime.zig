@@ -6,8 +6,10 @@ const presentation_state_mod = @import("terminal_widget_presentation_state.zig")
 const view_state = @import("terminal_widget_view_state.zig");
 const presentation_target_runtime = @import("terminal_widget_presentation_target_runtime.zig");
 const publication_capture = @import("../../terminal/core/publication/render_cache.zig");
+const app_shell = @import("../../app_shell.zig");
 
 const TerminalViewGeometry = shared_types.layout.TerminalViewGeometry;
+const Color = app_shell.Color;
 const RenderCache = publication_capture.RenderCache;
 const FullFrameFastPathDecision = draw_presentation.FullFrameFastPathDecision;
 const PresentationPartialDrawPlan = presentation_state_mod.PresentationState.PresentationPartialDrawPlan;
@@ -148,6 +150,45 @@ pub fn presentDraw(
         .source_height = viewport_h,
         .generation = surface_generation,
     });
+}
+
+pub fn tryFastPresentExisting(
+    surface_state: anytype,
+    renderer: anytype,
+    terminal_view: view_state.TerminalViewModel,
+    view_cells_len: usize,
+    bg_color: Color,
+    x: f32,
+    y: f32,
+    width: f32,
+    height: f32,
+    view_geometry: TerminalViewGeometry,
+    note_present_ctx: anytype,
+    note_present: anytype,
+) bool {
+    const presentable_ready = surface_state.notePresentableAvailability(
+        presentation_target_runtime.presentableAvailable(renderer),
+    );
+    if (!(terminal_view.sync_updates_active and view_cells_len > 0 and presentable_ready)) return false;
+
+    renderer.drawRect(
+        @intFromFloat(x),
+        @intFromFloat(y),
+        @intFromFloat(width),
+        @intFromFloat(height),
+        bg_color,
+    );
+    presentDraw(
+        renderer,
+        terminal_view.generation,
+        surface_state.lastRenderGeneration(),
+        view_geometry,
+        view_geometry.viewport_width,
+        view_geometry.viewport_height,
+        note_present_ctx,
+        note_present,
+    );
+    return true;
 }
 
 pub fn planUpdate(

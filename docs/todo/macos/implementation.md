@@ -475,6 +475,9 @@ lane.
     - that leaves the terminal presenter much closer to a coordinator over a
       terminal-owned presentation seam instead of a parallel owner of setup,
       lifecycle, and draw mechanics
+    - the retained-presentable sync/fast path is behind that same runtime now
+      too, so the presenter no longer owns the ready-presentable short-circuit
+      branch directly
     - the terminal Metal diagnostic now reports `raw_image_textures=1`, keeps
       non-zero `kitty_ms`, and no longer relies on the previous unsupported
       backend gate for RGB/RGBA Kitty images
