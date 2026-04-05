@@ -1,6 +1,5 @@
 const std = @import("std");
 const r = @import("ui/renderer.zig");
-const frame_runtime = @import("ui/renderer/frame_runtime.zig");
 const iface = @import("ui/renderer/interface.zig");
 const metal_backend = @import("ui/renderer/metal_backend.zig");
 const metal_text_diagnostic_runtime = @import("ui/renderer/metal_text_diagnostic_runtime.zig");
@@ -394,7 +393,7 @@ pub const Shell = struct {
     }
 
     pub fn armPresentCapture(self: *Shell, path: []const u8) void {
-        frame_runtime.armPresentCapture(self.renderer, path);
+        self.renderer.armPresentCapture(path);
     }
 
     pub fn screenshotMode(self: *const Shell) ScreenshotMode {
@@ -423,15 +422,15 @@ pub const Shell = struct {
     }
 
     pub fn lastPresentTrace(self: *const Shell) r.PresentTrace {
-        return frame_runtime.lastPresentTrace(self.renderer);
+        return self.renderer.lastPresentTrace();
     }
 
     pub fn dumpWindowScreenshotPpm(self: *Shell, path: []const u8) !void {
-        try frame_runtime.dumpWindowScreenshotPpm(self.renderer, path);
+        try self.renderer.dumpWindowScreenshotPpm(path);
     }
 
     pub fn dumpWindowScreenshotPpmSized(self: *Shell, path: []const u8, out_width: i32, out_height: i32) !void {
-        try frame_runtime.dumpWindowScreenshotPpmSized(self.renderer, path, out_width, out_height);
+        try self.renderer.dumpWindowScreenshotPpmSized(path, out_width, out_height);
     }
 
     pub fn requestWindowScreenshotPpm(self: *Shell, path: []const u8) !ScreenshotRequestResult {

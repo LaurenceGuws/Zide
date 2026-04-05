@@ -22,7 +22,6 @@ active execution lane for backend contract quality.
 - `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md`
 - `docs/research/RENDER_BACKEND_REFERENCE_SCAN_2026-04-05.md`
 - `src/ui/renderer.zig`
-- `src/ui/renderer/frame_runtime.zig`
 - `src/ui/renderer/gl_backend.zig`
 - `src/ui/renderer/metal_backend.zig`
 - `src/ui/renderer/scene_frame_runtime.zig`
@@ -103,11 +102,11 @@ Progress note, 2026-04-05:
   relocation.
 - backend-specific frame begin/submit bodies now live in dedicated frame
   runtime modules instead of staying inline in `src/ui/renderer.zig`.
-- the renderer-root wrapper methods are gone too; `frame_runtime.zig`
-  now owns the top-level shared frame lifecycle entrypoint above backend frame
-  runtime modules.
-- OpenGL-only scene target refresh/prep has moved out of `frame_runtime.zig`
-  and into `opengl_frame_runtime.zig`.
+- the renderer-root wrapper methods are gone too; `Renderer.beginFrame()` /
+  `Renderer.submitFrame()` now form the small top-level frame facade above the
+  backend frame runtime modules.
+- OpenGL-only scene target refresh/prep has moved out of the old shared frame
+  wrapper shape and into `opengl_frame_runtime.zig`.
 - Metal runtime storage on `Renderer` is now bundled under one
   `metal_runtime` state object instead of being scattered across separate peer
   fields.
@@ -119,9 +118,10 @@ Progress note, 2026-04-05:
 - backend startup/init and startup-smoke probing now also route through
   `gl_backend.zig` and `metal_backend.zig` instead of `Renderer.init()` and
   `runStartupBackendSmoke()` spelling out both boot paths inline.
-- the extra shared backend-frame dispatch wrapper is gone; `frame_runtime.zig`
-  now does shared bookkeeping and routes directly to backend-owned
-  `beginFrame` / `submitFrame` entrypoints on the OpenGL and Metal modules.
+- the extra shared backend-frame dispatch wrapper is gone; the renderer facade
+  now does the small shared bookkeeping directly and routes straight to
+  backend-owned `beginFrame` / `submitFrame` entrypoints on the OpenGL and
+  Metal modules.
 - Metal-only queued-surface cleanup and diagnostic-font cleanup now route
   through `metal_backend.zig` instead of living as renderer-root helper
   methods.
@@ -197,8 +197,6 @@ Progress note, 2026-04-05:
   - still owns backend-native state
 - `src/ui/renderer/metal_backend.zig`
   - still owns the only live consumer of the shared surface-draw queue
-- `src/ui/renderer/frame_runtime.zig`
-  - still acts as the shared frame lifecycle entrypoint above backend dispatch
 - `src/ui/renderer/scene_frame_runtime.zig`
   - still participates in the shared frame lifecycle surface
 - `src/ui/renderer/presentable_targets_runtime.zig`

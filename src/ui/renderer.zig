@@ -29,11 +29,9 @@ const shape_draw = @import("renderer/shape_draw.zig");
 const terminal_glyphs = @import("renderer/terminal_glyphs.zig");
 const terminal_underline = @import("renderer/terminal_underline.zig");
 const texture_draw = @import("renderer/texture_draw.zig");
-const screenshot = @import("renderer/screenshot.zig");
 const input_runtime = @import("renderer/input_runtime.zig");
 const font_runtime = @import("renderer/font_runtime.zig");
 const presentable_targets_runtime = @import("renderer/presentable_targets_runtime.zig");
-const frame_runtime = @import("renderer/frame_runtime.zig");
 const scene_frame_runtime = @import("renderer/scene_frame_runtime.zig");
 const metal_text_sample_runtime = @import("renderer/metal_text_sample_runtime.zig");
 const text_runtime = @import("renderer/text_runtime.zig");
@@ -166,8 +164,8 @@ pub const RendererCapabilities = struct {
 pub const EditorTextStyleFlags = iface.EditorTextStyleFlags;
 pub const editor_syntax_style_slots = iface.editor_syntax_style_slots;
 
-pub const FrameSubmission = frame_runtime.FrameSubmission;
-pub const PresentTrace = frame_runtime.PresentTrace;
+pub const FrameSubmission = scene_frame_runtime.FrameSubmission;
+pub const PresentTrace = scene_frame_runtime.PresentTrace;
 pub const InputRuntimeState = input_state.InputRuntimeState;
 pub const WindowChromeState = window_chrome_runtime.WindowChromeState;
 pub const ScaleState = font_runtime.ScaleState;
@@ -1102,11 +1100,52 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     }
 
     pub fn beginFrame(self: *Renderer) void {
-        frame_runtime.beginFrame(self);
+        self.present.frame_seq +%= 1;
+        self.present.trace_current = .{ .frame_seq = self.present.frame_seq };
+        self.present.drawing_editor_surface = false;
+        const display_metrics = self.display_metrics;
+        self.width = display_metrics.window_w;
+        self.height = display_metrics.window_h;
+        self.render_width = display_metrics.drawable_w;
+        self.render_height = display_metrics.drawable_h;
+
+        self.text_render.bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
+        metal_backend.clearQueuedSurfaceDraws(self);
+        switch (self.backend) {
+            .opengl => gl_backend.beginFrame(self),
+            .metal => metal_backend.beginFrame(self),
+        }
     }
 
     pub fn submitFrame(self: *Renderer) FrameSubmission {
-        return frame_runtime.submitFrame(self);
+        return switch (self.backend) {
+            .opengl => gl_backend.submitFrame(self),
+            .metal => metal_backend.submitFrame(self),
+        };
+    }
+
+    pub fn armPresentCapture(self: *Renderer, path: []const u8) void {
+        self.present.capture_path = path;
+        self.present.capture_armed = true;
+        self.present.capture_frame_seq = self.present.frame_seq;
+    }
+
+    pub fn lastPresentTrace(self: *const Renderer) PresentTrace {
+        return self.present.trace_last;
+    }
+
+    pub fn dumpWindowScreenshotPpm(self: *Renderer, path: []const u8) !void {
+        return switch (self.backend) {
+            .opengl => gl_backend.dumpWindowScreenshotPpm(self, path),
+            .metal => error.RendererScreenshotUnavailable,
+        };
+    }
+
+    pub fn dumpWindowScreenshotPpmSized(self: *Renderer, path: []const u8, out_width: i32, out_height: i32) !void {
+        return switch (self.backend) {
+            .opengl => gl_backend.dumpWindowScreenshotPpmSized(self, path, out_width, out_height),
+            .metal => error.RendererScreenshotUnavailable,
+        };
     }
 
     pub fn clearToThemeBackground(self: *Renderer) void {

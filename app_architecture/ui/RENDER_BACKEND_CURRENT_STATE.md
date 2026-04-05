@@ -168,8 +168,7 @@ third backend feel routine.
 
 This has improved slightly: the top-level frame seam is now split across:
 
-- `src/ui/renderer/frame_runtime.zig`
-- `src/ui/renderer/backend_frame_runtime.zig`
+- `src/ui/renderer.zig`
 - `src/ui/renderer/opengl_frame_runtime.zig`
 - `src/ui/renderer/metal_frame_runtime.zig`
 
@@ -188,13 +187,13 @@ But there is still not a final backend lifecycle seam yet:
   runtime state behind a narrower lifecycle seam
 
 This has improved slightly again: OpenGL-only scene target refresh/prep no
-longer happens in `frame_runtime.zig`; that branch now lives under
+longer happens in a shared frame wrapper; that branch now lives under
 `opengl_frame_runtime.zig`, which is closer to the contract we actually want.
 
 This has improved slightly once more: the extra shared backend-frame dispatch
-wrapper is gone. `frame_runtime.zig` now does shared per-frame bookkeeping and
-routes directly to backend-owned `beginFrame` / `submitFrame` entrypoints on
-the OpenGL and Metal modules.
+wrapper is gone. `Renderer.beginFrame()` / `Renderer.submitFrame()` now do the
+small shared per-frame bookkeeping directly and route to backend-owned
+`beginFrame` / `submitFrame` entrypoints on the OpenGL and Metal modules.
 
 That has improved slightly again on the OpenGL submission path too: direct GL
 submit and direct window screenshot-readback logic now live under the OpenGL
@@ -308,9 +307,9 @@ The main contradiction centers today are:
 - `src/ui/renderer/opengl_presentable_runtime.zig`
   - now owns the actual GL presentable mechanics that used to live in the
     shared presentable contract module
-- `src/ui/renderer/frame_runtime.zig`
-  - shared frame lifecycle still acts as the entrypoint above backend dispatch
-    and renderer-wide per-frame bookkeeping
+- `src/ui/renderer.zig`
+  - now owns the small shared frame facade directly, but still exposes
+    renderer-wide per-frame bookkeeping and backend dispatch from one root
 - `src/ui/renderer/scene_frame_runtime.zig`
   - now mostly scene target / trace support, but is still part of the shared
     frame lifecycle surface
