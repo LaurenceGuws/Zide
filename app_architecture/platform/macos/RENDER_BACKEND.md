@@ -787,6 +787,13 @@ What this does and does not mean:
   single-cell mutation frame, the diagnostic reports
   `metric_present_sample=direct_snapshot_update` and tight grid fallback counts
   (for example `grid_runs=1/1` for one ASCII cell) on the partial frame
+- that same recent-input policy can no longer force real interactive Metal
+  terminal sessions back onto the expensive full direct-present path: on a
+  live `nvim -u NONE -N` cursor-move probe, the direct Metal lane now stays on
+  `direct_snapshot_update` for Up-arrow frames instead of regressing to
+  `direct_main_target`; the measured active move frame on the current host
+  dropped from the earlier ~15-28 ms full-redraw range to about `draw_ms=2.196`
+  with `term_draw_present_ms=1.809`
 - Metal snapshot scrolling now exists under the presentable target seam too:
   the terminal target runtime can shift the drawable-sized Metal snapshot cache
   through a backend-owned scratch texture instead of hard-failing every

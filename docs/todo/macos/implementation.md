@@ -800,6 +800,13 @@ lane.
       thresholding when row marks are conservative, and recording presentation
       geometry on the direct path via `notePresentationUpdated` so `planUpdate`
       does not spuriously force full redraws)
+    - the same recent-input force-full policy is now narrowed on the live
+      direct Metal lane: real interactive `nvim` cursor-move frames no longer
+      get promoted back to `direct_main_target` during the recent-input window,
+      and a live `nvim -u NONE -N` Up-arrow probe on the current host now
+      lands on `metric_present_sample=direct_snapshot_update` with
+      `draw_ms=2.196` / `term_draw_present_ms=1.809` instead of the earlier
+      ~15-28 ms full-redraw range
     - the Metal terminal diagnostic runtime disables default recent-input
       force-full policy, removes the fake composing input stub, and disables
       texture-shift planning when `PARTIAL_UPDATE_FRAME` is set; the scroll

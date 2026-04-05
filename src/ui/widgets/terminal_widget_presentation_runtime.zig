@@ -155,6 +155,7 @@ pub fn recentInputWindowActive(
     input: InputSnapshot,
     at: f64,
 ) bool {
+    if (renderer.usesDirectTerminalPresentation()) return false;
     return renderer.forceFullTerminalPresentationRecentInputWindow() and
         ((input.mods.ctrl or input.mods.shift or input.mods.alt or input.mods.super) or
             self.controller.blink.recentInputWindowActive(
