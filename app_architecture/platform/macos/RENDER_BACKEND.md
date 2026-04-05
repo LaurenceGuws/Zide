@@ -667,6 +667,10 @@ What this does and does not mean:
   the renderer owns ordered `SurfaceDraw` submission for both atlas text and
   frame-scoped raw image textures, so below-text Kitty, sampled text, and
   above-text Kitty can share the same live Metal present order
+- the terminal presentation shape is now explicit in the shared capability
+  surface too: the current macOS Metal terminal lane reports
+  `terminal_present=direct_main_target`, which is a better contract than
+  inferring terminal behavior indirectly from `retained_targets=0`
 - that contract is intentionally backend-native rather than fake portability:
   the old cached GL `Texture` path is still OpenGL-only, while Metal Kitty
   images are created as frame-scoped native Metal textures and released after

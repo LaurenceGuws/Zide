@@ -133,6 +133,11 @@ pub const SceneCompositionMode = enum {
     offscreen_scene_target,
 };
 
+pub const TerminalPresentationMode = enum {
+    direct_main_target,
+    retained_surface,
+};
+
 pub const TextRenderingMode = enum {
     unavailable,
     gl_texture_atlas,
@@ -149,6 +154,7 @@ pub const AtlasPreviewSource = enum {
 pub const RendererCapabilities = struct {
     scene_composition_mode: SceneCompositionMode,
     retained_targets: bool,
+    terminal_presentation_mode: TerminalPresentationMode,
     screenshot_mode: ScreenshotMode,
     text_rendering_mode: TextRenderingMode,
     planned_text_rendering_mode: TextRenderingMode,
@@ -1301,6 +1307,10 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         return self.capabilities().retained_targets;
     }
 
+    pub fn terminalPresentationMode(self: *const Renderer) TerminalPresentationMode {
+        return self.capabilities().terminal_presentation_mode;
+    }
+
     pub fn supportsRawImageTextures(self: *const Renderer) bool {
         return self.backend == .opengl or (self.backend == .metal and self.metal_backend_context != null);
     }
@@ -1328,6 +1338,10 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             else
                 .direct_main_target,
             .retained_targets = self.backend == .opengl and self.runtime_profile == .full_ui,
+            .terminal_presentation_mode = if (self.backend == .opengl and self.runtime_profile == .full_ui)
+                .retained_surface
+            else
+                .direct_main_target,
             .screenshot_mode = switch (self.backend) {
                 .opengl => .direct_window_readback,
                 .metal => .present_capture,

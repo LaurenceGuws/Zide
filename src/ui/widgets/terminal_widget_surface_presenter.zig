@@ -829,7 +829,7 @@ pub fn updateAndPresent(
     const base_colors = terminal_view.base_colors;
     self.debug.last_surface_present.valid = false;
 
-    if (!r.capabilities().retained_targets) {
+    if (r.terminalPresentationMode() == .direct_main_target) {
         return directPresentMainTarget(
             self,
             shell,

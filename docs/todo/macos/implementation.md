@@ -398,6 +398,10 @@ lane.
     - Kitty images now have a live Metal-native raw-image path on the direct
       terminal diagnostic lane, using frame-scoped Metal textures instead of
       forcing the GL `Texture` abstraction across backends
+    - terminal presentation truth is now explicit in renderer capabilities:
+      the current Metal terminal lane reports
+      `terminal_present=direct_main_target` instead of making callers infer
+      terminal behavior from retained-target absence
     - the terminal Metal diagnostic now reports `raw_image_textures=1`, keeps
       non-zero `kitty_ms`, and no longer relies on the previous unsupported
       backend gate for RGB/RGBA Kitty images

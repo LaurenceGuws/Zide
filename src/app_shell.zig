@@ -13,6 +13,7 @@ pub const FrameSubmission = r.FrameSubmission;
 pub const WindowGeometryDiagnostics = r.WindowGeometryDiagnostics;
 pub const WindowRefreshResult = r.WindowRefreshResult;
 pub const ScreenshotMode = r.ScreenshotMode;
+pub const TerminalPresentationMode = r.TerminalPresentationMode;
 pub const TextRenderingMode = r.TextRenderingMode;
 pub const RendererCapabilities = r.RendererCapabilities;
 pub const AtlasPreviewSource = r.AtlasPreviewSource;

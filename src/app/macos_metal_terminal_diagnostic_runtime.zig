@@ -69,10 +69,11 @@ pub fn run(allocator: std.mem.Allocator) !void {
     log.logf(.info, "start width={d} height={d} rows={d} cols={d} frame_budget={d}", .{ width, height, rows, cols, frame_budget });
     log.logf(
         .info,
-        "capabilities composition={s} retained_targets={d} screenshot={s} text={s} planned_text={s} atlas={s} planned_atlas={s} raw_image_textures={d}",
+        "capabilities composition={s} retained_targets={d} terminal_present={s} screenshot={s} text={s} planned_text={s} atlas={s} planned_atlas={s} raw_image_textures={d}",
         .{
             @tagName(capabilities.scene_composition_mode),
             @intFromBool(capabilities.retained_targets),
+            @tagName(capabilities.terminal_presentation_mode),
             @tagName(capabilities.screenshot_mode),
             @tagName(capabilities.text_rendering_mode),
             @tagName(capabilities.planned_text_rendering_mode),
