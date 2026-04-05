@@ -887,6 +887,10 @@ lane.
       surface draws too, so live `btop` now has broad normal text plus a
       visibly participating box/block lane instead of missing almost the whole
       frame
+    - the next small live indicator slice is analytic too now: `■`, `▲`, and
+      `▼` are handled by the Metal special-glyph lane instead of relying on
+      generic font fallback, which makes queue/status markers cleaner on the
+      live `btop` workload
     - the dashboard fixture is now proven under churn too:
       `DASHBOARD=1` plus `MUTATE_FRAME=1` yields
       `metric_present_sample=direct_snapshot_update`,

@@ -94,6 +94,9 @@ pub fn hasAnalyticBoxGlyphCoverage(codepoint: u32) bool {
         0x258F,
         0x2594,
         0x2595,
+        0x25A0,
+        0x25B2,
+        0x25BC,
         0xE0B0,
         0xE0B1,
         0xE0B2,
@@ -1030,6 +1033,43 @@ pub fn drawBoxGlyph(
         },
         0x2595 => { // ▕
             drawRightBlockGlyph(drawRect, ctx, 1, ix, iy, iw, ih, color);
+            return true;
+        },
+        0x25A0 => { // ■
+            const inset_x = if (iw >= 6) @max(1, @divTrunc(iw, 6)) else 0;
+            const inset_y = if (ih >= 6) @max(1, @divTrunc(ih, 6)) else 0;
+            drawRect(
+                ctx,
+                ix + inset_x,
+                iy + inset_y,
+                @max(1, iw - inset_x * 2),
+                @max(1, ih - inset_y * 2),
+                color,
+            );
+            return true;
+        },
+        0x25B2 => { // ▲
+            var row_y: i32 = 0;
+            while (row_y < ih) : (row_y += 1) {
+                const center = ix + @divTrunc(iw, 2);
+                const progress = @as(f32, @floatFromInt(row_y + 1)) / @as(f32, @floatFromInt(ih));
+                const half_w = @max(0, @as(i32, @intFromFloat(std.math.floor(progress * @as(f32, @floatFromInt(iw)) * 0.5))));
+                const start_x = center - half_w;
+                const end_x = center + half_w + 1;
+                drawRect(ctx, start_x, iy + (ih - row_y - 1), @max(1, end_x - start_x), 1, color);
+            }
+            return true;
+        },
+        0x25BC => { // ▼
+            var row_y: i32 = 0;
+            while (row_y < ih) : (row_y += 1) {
+                const center = ix + @divTrunc(iw, 2);
+                const progress = @as(f32, @floatFromInt(row_y + 1)) / @as(f32, @floatFromInt(ih));
+                const half_w = @max(0, @as(i32, @intFromFloat(std.math.floor(progress * @as(f32, @floatFromInt(iw)) * 0.5))));
+                const start_x = center - half_w;
+                const end_x = center + half_w + 1;
+                drawRect(ctx, start_x, iy + row_y, @max(1, end_x - start_x), 1, color);
+            }
             return true;
         },
         0xE0B0 => { // 

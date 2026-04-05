@@ -882,6 +882,10 @@ What this does and does not mean:
   materially: normal terminal text is broadly present again and the box/block
   lane is visibly participating, so the remaining gap is now continuity and
   fidelity quality rather than “most of the frame never rendered”
+- a small live `btop` indicator slice is covered analytically now too:
+  `■`, `▲`, and `▼` are on the Metal special-glyph lane instead of relying on
+  font fallback, which makes queue/status markers materially cleaner on the
+  live dashboard workload
 - that same dashboard lane is now runtime-proven under churn too instead of
   only on the first full frame: a dashboard mutation frame now stays on
   `metric_present_sample=direct_snapshot_update` with
