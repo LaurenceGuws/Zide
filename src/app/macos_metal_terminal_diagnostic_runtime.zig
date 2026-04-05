@@ -320,7 +320,7 @@ fn seedDiagnosticKittyImages(session: *terminal_runtime.TerminalRuntimeShell) !v
 }
 
 fn dashboardSeedBytes() []const u8 {
-    return "\x1b[H╭─ btop-ish metal lane ─────────────────────────────╮" ++
+    return "\x1b[H╭─ btop-ish metal lane ¹²³⁴° ─────────────────────╮" ++
         "\x1b[2;1H│ CPU  ███████░░░ 72%   NET  ▂▃▄▅▆▇█        │" ++
         "\x1b[3;1H│ MEM  ▏▎▍▌▋▊▉█ 61%   DISK ▔▕░▒▓█▇▆▅▄      │" ++
         "\x1b[4;1H╔══ dbl ══╦══ load ══╦══ nets ══╦══ bars ════╗" ++

@@ -44,6 +44,11 @@ fn powerlineModeForCodepoint(codepoint: u32) ?PowerlineMode {
 
 pub fn hasAnalyticBoxGlyphCoverage(codepoint: u32) bool {
     return switch (codepoint) {
+        0x00B0,
+        0x00B2,
+        0x00B3,
+        0x00B9,
+        0x2074,
         0x2500,
         0x2501,
         0x2502,
@@ -878,6 +883,69 @@ fn drawCircleGlyph(
     }
 }
 
+fn drawSmallCircleGlyph(
+    drawRect: *const fn (ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void,
+    ctx: *anyopaque,
+    ix: i32,
+    iy: i32,
+    iw: i32,
+    ih: i32,
+    color: Color,
+) void {
+    const w = @max(2, @divTrunc(iw, 3));
+    const h = @max(2, @divTrunc(ih, 3));
+    const x = ix + @divTrunc(iw - w, 2);
+    const y = iy + @max(0, @divTrunc(ih, 8));
+    drawCircleGlyph(drawRect, ctx, x, y, w, h, color, false);
+}
+
+fn drawSuperscriptDigitGlyph(
+    drawRect: *const fn (ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void,
+    ctx: *anyopaque,
+    codepoint: u32,
+    ix: i32,
+    iy: i32,
+    iw: i32,
+    ih: i32,
+    color: Color,
+) bool {
+    const box_w = @max(3, @divTrunc(iw, 2));
+    const box_h = @max(4, @divTrunc(ih, 2));
+    const x = ix + @divTrunc(iw - box_w, 2);
+    const y = iy + @max(0, @divTrunc(ih, 10));
+    const mid_y = y + @divTrunc(box_h, 2);
+    const right_x = x + box_w - 1;
+    switch (codepoint) {
+        0x00B9 => { // ¹
+            drawRect(ctx, x + @divTrunc(box_w, 2), y, 1, box_h, color);
+            drawRect(ctx, x, y + 1, @max(1, @divTrunc(box_w, 2)), 1, color);
+            return true;
+        },
+        0x00B2 => { // ²
+            drawRect(ctx, x, y, box_w, 1, color);
+            drawRect(ctx, right_x, y, 1, mid_y - y + 1, color);
+            drawRect(ctx, x, mid_y, box_w, 1, color);
+            drawRect(ctx, x, mid_y, 1, box_h - (mid_y - y), color);
+            drawRect(ctx, x, y + box_h - 1, box_w, 1, color);
+            return true;
+        },
+        0x00B3 => { // ³
+            drawRect(ctx, x, y, box_w, 1, color);
+            drawRect(ctx, x, mid_y, box_w, 1, color);
+            drawRect(ctx, x, y + box_h - 1, box_w, 1, color);
+            drawRect(ctx, right_x, y, 1, box_h, color);
+            return true;
+        },
+        0x2074 => { // ⁴
+            drawRect(ctx, x, y, 1, mid_y - y + 1, color);
+            drawRect(ctx, right_x, y, 1, box_h, color);
+            drawRect(ctx, x, mid_y, box_w, 1, color);
+            return true;
+        },
+        else => return false,
+    }
+}
+
 fn drawCheckGlyph(
     drawRect: *const fn (ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void,
     ctx: *anyopaque,
@@ -998,6 +1066,13 @@ pub fn drawBoxGlyph(
         return true;
     }
     if (drawShadeGlyph(drawRect, ctx, codepoint, ix, iy, iw, ih, color)) {
+        return true;
+    }
+    if (codepoint == 0x00B0) {
+        drawSmallCircleGlyph(drawRect, ctx, ix, iy, iw, ih, color);
+        return true;
+    }
+    if (drawSuperscriptDigitGlyph(drawRect, ctx, codepoint, ix, iy, iw, ih, color)) {
         return true;
     }
     if (drawArrowGlyph(drawRect, ctx, codepoint, ix, iy, iw, ih, color)) {
@@ -1557,6 +1632,9 @@ test "shade glyph coverage exists and increases by density" {
 
 test "special variant routing only claims implemented box coverage" {
     try std.testing.expectEqual(types.SpecialGlyphVariant.box, specialVariantForCodepoint(0x2500).?);
+    try std.testing.expectEqual(types.SpecialGlyphVariant.box, specialVariantForCodepoint(0x00B0).?);
+    try std.testing.expectEqual(types.SpecialGlyphVariant.box, specialVariantForCodepoint(0x00B2).?);
+    try std.testing.expectEqual(types.SpecialGlyphVariant.box, specialVariantForCodepoint(0x2074).?);
     try std.testing.expectEqual(types.SpecialGlyphVariant.box, specialVariantForCodepoint(0x250F).?);
     try std.testing.expectEqual(types.SpecialGlyphVariant.box, specialVariantForCodepoint(0x254B).?);
     try std.testing.expectEqual(types.SpecialGlyphVariant.box, specialVariantForCodepoint(0x2191).?);

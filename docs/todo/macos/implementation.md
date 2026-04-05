@@ -896,6 +896,13 @@ lane.
       left/right triangles and arrowheads now use directional analytic shapes
       instead of the earlier diamond/rect approximations, so the Metal symbol
       lane is closer to the GL read without changing the class counts
+    - the live `btop` capture exposed one more small but real symbol class:
+      superscript counters (`¹²³⁴`) and the degree sign (`°`) now use the
+      analytic Metal lane instead of relying on font fallback
+    - the dashboard proof now seeds that exact status-marker set in the title
+      row; on the current host the first-frame split is
+      `powerline=6 shade=6 braille=3 box=186 other_special=0`, with
+      `shaped_special_glyphs=201`
     - a real live Metal contradiction is fixed too: the narrow terminal row
       fallback was still truncating fallback cells to `u8`, and the Metal
       sample helper only iterated raw bytes, so non-ASCII fallback cells could

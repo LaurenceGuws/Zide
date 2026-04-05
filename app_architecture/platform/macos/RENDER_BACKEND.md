@@ -887,6 +887,14 @@ What this does and does not mean:
   and arrowheads now use directional analytic shapes instead of the earlier
   “diamond/rect stub” approximations, so the symbol lane is closer to the GL
   read even though the runtime class counts stay the same
+- the live `btop` capture also exposed one last tiny status-marker class that
+  matters in practice: superscript counters (`¹²³⁴`) and the degree sign (`°`)
+  are now on the analytic Metal path instead of relying on font fallback
+- the dashboard proof now seeds that exact status-marker set in the title row;
+  on the current host the first-frame split is
+  `powerline=6 shade=6 braille=3 box=186 other_special=0`, which is slightly
+  lower than the prior indicator-heavy proof because the row content changed,
+  not because the lane regressed
   dashboard row set
 - a real live-lane contradiction is fixed now too: the Metal terminal row
   fallback had still been truncating fallback cells to `u8` and the backend
