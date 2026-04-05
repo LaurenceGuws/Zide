@@ -48,6 +48,20 @@ pub fn hasAnalyticBoxGlyphCoverage(codepoint: u32) bool {
         0x2501,
         0x2502,
         0x2503,
+        0x250F,
+        0x2513,
+        0x2517,
+        0x251B,
+        0x2520,
+        0x2523,
+        0x2528,
+        0x252B,
+        0x2530,
+        0x2533,
+        0x2538,
+        0x253B,
+        0x2542,
+        0x254B,
         0x2550,
         0x2551,
         0x2552,
@@ -811,6 +825,76 @@ pub fn drawBoxGlyph(
             drawRect(ctx, mid_x - @divTrunc(thick, 2), iy - extend, thick, ih + extend * 2, color);
             return true;
         },
+        0x250F => { // ┏
+            drawRect(ctx, mid_x - @divTrunc(thick, 2), mid_y, thick, ih - (mid_y - iy) + extend, color);
+            drawRect(ctx, mid_x, mid_y - @divTrunc(thick, 2), iw - (mid_x - ix), thick, color);
+            return true;
+        },
+        0x2513 => { // ┓
+            drawRect(ctx, mid_x - @divTrunc(thick, 2), mid_y, thick, ih - (mid_y - iy) + extend, color);
+            drawRect(ctx, ix, mid_y - @divTrunc(thick, 2), mid_x - ix + thick, thick, color);
+            return true;
+        },
+        0x2517 => { // ┗
+            drawRect(ctx, mid_x - @divTrunc(thick, 2), iy - extend, thick, mid_y - iy + thick + extend, color);
+            drawRect(ctx, mid_x, mid_y - @divTrunc(thick, 2), iw - (mid_x - ix), thick, color);
+            return true;
+        },
+        0x251B => { // ┛
+            drawRect(ctx, mid_x - @divTrunc(thick, 2), iy - extend, thick, mid_y - iy + thick + extend, color);
+            drawRect(ctx, ix, mid_y - @divTrunc(thick, 2), mid_x - ix + thick, thick, color);
+            return true;
+        },
+        0x2520 => { // ┠
+            drawRect(ctx, mid_x - @divTrunc(thick, 2), iy - extend, thick, ih + extend * 2, color);
+            drawRect(ctx, mid_x, mid_y, iw - (mid_x - ix), thin, color);
+            return true;
+        },
+        0x2523 => { // ┣
+            drawRect(ctx, mid_x - @divTrunc(thick, 2), iy - extend, thick, ih + extend * 2, color);
+            drawRect(ctx, mid_x, mid_y - @divTrunc(thick, 2), iw - (mid_x - ix), thick, color);
+            return true;
+        },
+        0x2528 => { // ┨
+            drawRect(ctx, mid_x - @divTrunc(thick, 2), iy - extend, thick, ih + extend * 2, color);
+            drawRect(ctx, ix, mid_y, mid_x - ix + thin, thin, color);
+            return true;
+        },
+        0x252B => { // ┫
+            drawRect(ctx, mid_x - @divTrunc(thick, 2), iy - extend, thick, ih + extend * 2, color);
+            drawRect(ctx, ix, mid_y - @divTrunc(thick, 2), mid_x - ix + thick, thick, color);
+            return true;
+        },
+        0x2530 => { // ┰
+            drawRect(ctx, ix, mid_y, iw, thin, color);
+            drawRect(ctx, mid_x - @divTrunc(thick, 2), mid_y, thick, ih - (mid_y - iy) + extend, color);
+            return true;
+        },
+        0x2533 => { // ┳
+            drawRect(ctx, ix, mid_y - @divTrunc(thick, 2), iw, thick, color);
+            drawRect(ctx, mid_x - @divTrunc(thick, 2), mid_y, thick, ih - (mid_y - iy) + extend, color);
+            return true;
+        },
+        0x2538 => { // ┸
+            drawRect(ctx, ix, mid_y, iw, thin, color);
+            drawRect(ctx, mid_x - @divTrunc(thick, 2), iy - extend, thick, mid_y - iy + thick + extend, color);
+            return true;
+        },
+        0x253B => { // ┻
+            drawRect(ctx, ix, mid_y - @divTrunc(thick, 2), iw, thick, color);
+            drawRect(ctx, mid_x - @divTrunc(thick, 2), iy - extend, thick, mid_y - iy + thick + extend, color);
+            return true;
+        },
+        0x2542 => { // ╂
+            drawRect(ctx, ix, mid_y, iw, thin, color);
+            drawRect(ctx, mid_x - @divTrunc(thick, 2), iy - extend, thick, ih + extend * 2, color);
+            return true;
+        },
+        0x254B => { // ╋
+            drawRect(ctx, ix, mid_y - @divTrunc(thick, 2), iw, thick, color);
+            drawRect(ctx, mid_x - @divTrunc(thick, 2), iy - extend, thick, ih + extend * 2, color);
+            return true;
+        },
         0x2550 => { // ═
             drawDoubleHorizontal(drawRect, ctx, ix, iw, mid_y, thin, double_separation, color);
             return true;
@@ -1242,6 +1326,8 @@ test "shade glyph coverage exists and increases by density" {
 
 test "special variant routing only claims implemented box coverage" {
     try std.testing.expectEqual(types.SpecialGlyphVariant.box, specialVariantForCodepoint(0x2500).?);
+    try std.testing.expectEqual(types.SpecialGlyphVariant.box, specialVariantForCodepoint(0x250F).?);
+    try std.testing.expectEqual(types.SpecialGlyphVariant.box, specialVariantForCodepoint(0x254B).?);
     try std.testing.expectEqual(types.SpecialGlyphVariant.box, specialVariantForCodepoint(0x2550).?);
     try std.testing.expectEqual(types.SpecialGlyphVariant.box, specialVariantForCodepoint(0x2552).?);
     try std.testing.expectEqual(types.SpecialGlyphVariant.box, specialVariantForCodepoint(0x256B).?);

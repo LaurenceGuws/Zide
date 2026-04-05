@@ -876,6 +876,14 @@ lane.
     - on the current host that richer mixed-box dashboard frame reports
       `powerline=10 shade=6 braille=3 box=174 other_special=0`, with
       `shaped_special_glyphs=193`
+    - the heavy and mixed heavy/light junction family is now analytic too:
+      `U+250F`, `U+2513`, `U+2517`, `U+251B`, `U+2520`, `U+2523`, `U+2528`,
+      `U+252B`, `U+2530`, `U+2533`, `U+2538`, `U+253B`, `U+2542`, and
+      `U+254B` no longer fall back to normal font rendering
+    - the dashboard proof now seeds those heavy joins directly, and on the
+      current host that first-frame split is
+      `powerline=6 shade=6 braille=3 box=181 other_special=0`, with
+      `shaped_special_glyphs=196`
     - a real live Metal contradiction is fixed too: the narrow terminal row
       fallback was still truncating fallback cells to `u8`, and the Metal
       sample helper only iterated raw bytes, so non-ASCII fallback cells could

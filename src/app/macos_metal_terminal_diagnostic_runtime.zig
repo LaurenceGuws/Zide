@@ -325,7 +325,7 @@ fn dashboardSeedBytes() []const u8 {
         "\x1b[3;1H│ MEM  ▏▎▍▌▋▊▉█ 61%   DISK ▔▕░▒▓█▇▆▅▄      │" ++
         "\x1b[4;1H╔══ dbl ══╦══ load ══╦══ nets ══╦══ bars ════╗" ++
         "\x1b[5;1H│ mixed    │╒╓╕╖╘╙╛╜╞╟╡╢╤╥╧╨╪╫│ box  │┌┬┐├┼┤││" ++
-        "\x1b[6;1H│ temp 42C │███████     │ pwr  ││" ++
+        "\x1b[6;1H│ heavy    │┏┳┓┣╋┫┗┻┛┠┨┰┸╂   │ pwr  ││" ++
         "\x1b[7;1H╠══ box ══╬══ mem  ══╬══ brai ═╬══ ring ════╣" ++
         "\x1b[8;1H╰─ bars ▁▂▃▄▅▆▇█ braille ⣀⣤⣶  ╭╮╯╰ ───────╯";
 }

@@ -865,6 +865,15 @@ What this does and does not mean:
   `powerline=10 shade=6 braille=3 box=174 other_special=0`, which confirms
   the live Metal lane is carrying more of the mixed border language that
   `btop`-class dashboards rely on
+- the heavy/mixed light-heavy junction family is on that path now too:
+  `U+250F`, `U+2513`, `U+2517`, `U+251B`, `U+2520`, `U+2523`, `U+2528`,
+  `U+252B`, `U+2530`, `U+2533`, `U+2538`, `U+253B`, `U+2542`, and `U+254B`
+  now render analytically instead of falling back to normal font output
+- the dashboard proof now seeds those heavy joins directly, and on the current
+  host the first-frame split moves again to
+  `powerline=6 shade=6 braille=3 box=181 other_special=0`, which is a better
+  statement of the remaining gap: less missing box language, more continuity
+  and stroke-quality cleanup
   dashboard row set
 - a real live-lane contradiction is fixed now too: the Metal terminal row
   fallback had still been truncating fallback cells to `u8` and the backend
