@@ -395,17 +395,15 @@ lane.
     - the macOS Metal terminal diagnostic now seeds deterministic below-text
       and above-text Kitty placements too, so the next Kitty boundary is
       proven by runtime instead of only by code shape
-    - current Kitty truth is now explicit and non-crashing: the Metal terminal
-      diagnostic reports non-zero `kitty_ms`, while Kitty texture upload still
-      fails cleanly because raw texture creation is still OpenGL-only on the
-      backend-smoke Metal lane
-    - that unsupported Kitty image boundary is now capability-owned instead of
-      noisy retry behavior: the Metal path logs one explicit unsupported
-      backend message and stops retrying impossible raw texture uploads every
-      frame
-    - the terminal Metal diagnostic now reports that capability directly as
-      `raw_image_textures=0`, so the missing native Metal image path is
-      visible in first-class runtime truth rather than only in secondary logs
+    - Kitty images now have a live Metal-native raw-image path on the direct
+      terminal diagnostic lane, using frame-scoped Metal textures instead of
+      forcing the GL `Texture` abstraction across backends
+    - the terminal Metal diagnostic now reports `raw_image_textures=1`, keeps
+      non-zero `kitty_ms`, and no longer relies on the previous unsupported
+      backend gate for RGB/RGBA Kitty images
+    - the Kitty-seeded Metal terminal diagnostic also produced a real
+      `1280x720` PPM present-capture artifact on the current host, so this is
+      runtime-validated image presentation rather than only timing/log truth
     - this is still a proof/runtime checkpoint, not a claim that retained
       terminal surfaces or full terminal-on-Metal presentation are finished
     - the narrow Metal text lane now covers a tiny multiline ASCII run, not

@@ -143,6 +143,24 @@ pub const AtlasSampleDraw = struct {
     clip_rect: ?PixelClipRect = null,
 };
 
+pub const RawImageTexture = struct {
+    texture: *anyopaque,
+    width: i32,
+    height: i32,
+};
+
+pub const RawImageDraw = struct {
+    texture: RawImageTexture,
+    dest_rect: types.Rect,
+    tint: types.Rgba = .{ .r = 255, .g = 255, .b = 255, .a = 255 },
+    clip_rect: ?PixelClipRect = null,
+};
+
+pub const SurfaceDraw = union(enum) {
+    atlas: AtlasSampleDraw,
+    raw_image: RawImageDraw,
+};
+
 pub const BackendContext = struct {
     host: macos_metal_host.Host,
     metal_layer: *anyopaque,
@@ -745,6 +763,111 @@ fn encodeAtlasTextureRegion(
     return true;
 }
 
+fn encodeExternalTextureRegion(
+    context: *BackendContext,
+    frame: *Frame,
+    texture: *anyopaque,
+    texture_width: i32,
+    texture_height: i32,
+    source_rect: types.Rect,
+    dest_rect: types.Rect,
+    tint: types.Rgba,
+    clip_rect: ?PixelClipRect,
+) bool {
+    if (builtin.target.os.tag != .macos) return false;
+    const drawable_texture = msgSendPointer(frame.drawable, "texture") orelse return false;
+    const width: i32 = @intFromFloat(source_rect.width);
+    const height: i32 = @intFromFloat(source_rect.height);
+    if (width <= 0 or height <= 0) return false;
+    if (context.drawable_width <= 0 or context.drawable_height <= 0) return false;
+
+    const render_pass_descriptor_class = classPointer("MTLRenderPassDescriptor") orelse return false;
+    const render_pass_descriptor = msgSendClassPointer(render_pass_descriptor_class, "renderPassDescriptor") orelse return false;
+    const color_attachments = msgSendPointer(render_pass_descriptor, "colorAttachments") orelse return false;
+    const color_attachment = msgSendU64ArgPointer(color_attachments, "objectAtIndexedSubscript:", 0) orelse return false;
+    msgSendSetPointer(color_attachment, "setTexture:", drawable_texture);
+    msgSendSetU64(color_attachment, "setLoadAction:", load_action_load);
+    msgSendSetU64(color_attachment, "setStoreAction:", store_action_store);
+
+    const encoder = msgSendPointerArgPointer(frame.command_buffer, "renderCommandEncoderWithDescriptor:", render_pass_descriptor) orelse return false;
+    defer msgSendVoid(encoder, "endEncoding");
+
+    msgSendSetPointer(encoder, "setRenderPipelineState:", context.atlas_pipeline);
+    msgSendPointerArgU64Void(encoder, "setFragmentSamplerState:atIndex:", context.atlas_sampler, 0);
+    msgSendSetPointerU64(encoder, "setFragmentTexture:atIndex:", texture, 0);
+
+    if (clip_rect) |rect| {
+        const clip_x0 = @max(0, @min(rect.x, context.drawable_width));
+        const clip_y0 = @max(0, @min(rect.y, context.drawable_height));
+        const clip_x1 = @max(clip_x0, @min(rect.x + rect.width, context.drawable_width));
+        const clip_y1 = @max(clip_y0, @min(rect.y + rect.height, context.drawable_height));
+        const clip_w = clip_x1 - clip_x0;
+        const clip_h = clip_y1 - clip_y0;
+        if (clip_w <= 0 or clip_h <= 0) return false;
+        msgSendSetScissorRect(encoder, "setScissorRect:", .{
+            .x = @intCast(clip_x0),
+            .y = @intCast(clip_y0),
+            .width = @intCast(clip_w),
+            .height = @intCast(clip_h),
+        });
+    }
+
+    const dest_x0 = dest_rect.x;
+    const dest_y0 = dest_rect.y;
+    const dest_x1 = dest_rect.x + dest_rect.width;
+    const dest_y1 = dest_rect.y + dest_rect.height;
+    const drawable_w = @as(f32, @floatFromInt(context.drawable_width));
+    const drawable_h = @as(f32, @floatFromInt(context.drawable_height));
+    const src_x0 = source_rect.x / @as(f32, @floatFromInt(texture_width));
+    const src_y0 = source_rect.y / @as(f32, @floatFromInt(texture_height));
+    const src_x1 = (source_rect.x + source_rect.width) / @as(f32, @floatFromInt(texture_width));
+    const src_y1 = (source_rect.y + source_rect.height) / @as(f32, @floatFromInt(texture_height));
+
+    const vertices = [_]AtlasVertex{
+        .{
+            .position = .{ (dest_x0 / drawable_w) * 2.0 - 1.0, 1.0 - (dest_y0 / drawable_h) * 2.0 },
+            .uv = .{ src_x0, src_y0 },
+        },
+        .{
+            .position = .{ (dest_x1 / drawable_w) * 2.0 - 1.0, 1.0 - (dest_y0 / drawable_h) * 2.0 },
+            .uv = .{ src_x1, src_y0 },
+        },
+        .{
+            .position = .{ (dest_x0 / drawable_w) * 2.0 - 1.0, 1.0 - (dest_y1 / drawable_h) * 2.0 },
+            .uv = .{ src_x0, src_y1 },
+        },
+        .{
+            .position = .{ (dest_x1 / drawable_w) * 2.0 - 1.0, 1.0 - (dest_y1 / drawable_h) * 2.0 },
+            .uv = .{ src_x1, src_y1 },
+        },
+    };
+    const fragment_uniforms = AtlasFragmentUniforms{
+        .tint = .{
+            @as(f32, @floatFromInt(tint.r)) / 255.0,
+            @as(f32, @floatFromInt(tint.g)) / 255.0,
+            @as(f32, @floatFromInt(tint.b)) / 255.0,
+            @as(f32, @floatFromInt(tint.a)) / 255.0,
+        },
+        .alpha_only = 0,
+    };
+    msgSendBytesU64U64Void(
+        encoder,
+        "setVertexBytes:length:atIndex:",
+        @ptrCast(&vertices),
+        @sizeOf(@TypeOf(vertices)),
+        0,
+    );
+    msgSendBytesU64U64Void(
+        encoder,
+        "setFragmentBytes:length:atIndex:",
+        @ptrCast(&fragment_uniforms),
+        @sizeOf(AtlasFragmentUniforms),
+        0,
+    );
+    msgSendSetU64U64U64Void(encoder, "drawPrimitives:vertexStart:vertexCount:", primitive_type_triangle_strip, 0, 4);
+    return true;
+}
+
 pub fn drawAtlasSample(
     context: *BackendContext,
     frame: *Frame,
@@ -760,6 +883,34 @@ pub fn drawAtlasSample(
         sample.tint,
         sample.clip_rect,
     );
+}
+
+pub fn drawRawImage(
+    context: *BackendContext,
+    frame: *Frame,
+    draw: RawImageDraw,
+) bool {
+    return encodeExternalTextureRegion(
+        context,
+        frame,
+        draw.texture.texture,
+        draw.texture.width,
+        draw.texture.height,
+        .{
+            .x = 0,
+            .y = 0,
+            .width = @floatFromInt(draw.texture.width),
+            .height = @floatFromInt(draw.texture.height),
+        },
+        draw.dest_rect,
+        draw.tint,
+        draw.clip_rect,
+    );
+}
+
+pub fn deinitRawImageTexture(texture: *RawImageTexture) void {
+    if (builtin.target.os.tag != .macos) return;
+    releaseObject(texture.texture);
 }
 
 fn seedGlyphAtlasDiagnostics(atlas: *GlyphAtlas) bool {
@@ -783,6 +934,75 @@ fn seedGlyphAtlasDiagnostics(atlas: *GlyphAtlas) bool {
     };
     return uploadGlyphCoverage(atlas, rect, coverage[0..]) and
         uploadGlyphColor(atlas, rect, color[0..]);
+}
+
+pub fn createRawImageTextureRgba(
+    device: *anyopaque,
+    width: i32,
+    height: i32,
+    data: []const u8,
+) ?RawImageTexture {
+    if (builtin.target.os.tag != .macos) return null;
+    const atlas_texture = createAtlasTexture(device, width, height, pixel_format_bgra8_unorm) orelse return null;
+    errdefer releaseObject(atlas_texture.texture);
+    const converted = std.heap.page_allocator.alloc(u8, data.len) catch return null;
+    defer std.heap.page_allocator.free(converted);
+    var idx: usize = 0;
+    while (idx + 3 < data.len) : (idx += 4) {
+        converted[idx + 0] = data[idx + 2];
+        converted[idx + 1] = data[idx + 1];
+        converted[idx + 2] = data[idx + 0];
+        converted[idx + 3] = data[idx + 3];
+    }
+    const uploaded = uploadAtlasTexture(
+        &atlas_texture,
+        .{ .x = 0, .y = 0, .width = @floatFromInt(width), .height = @floatFromInt(height) },
+        4,
+        converted,
+    );
+    if (!uploaded) return null;
+    return .{
+        .texture = atlas_texture.texture,
+        .width = width,
+        .height = height,
+    };
+}
+
+pub fn createRawImageTextureRgb(
+    device: *anyopaque,
+    width: i32,
+    height: i32,
+    data: []const u8,
+) ?RawImageTexture {
+    if (builtin.target.os.tag != .macos) return null;
+    const atlas_texture = createAtlasTexture(device, width, height, pixel_format_bgra8_unorm) orelse return null;
+    errdefer releaseObject(atlas_texture.texture);
+    const converted_len: usize = @intCast(width * height * 4);
+    const converted = std.heap.page_allocator.alloc(u8, converted_len) catch return null;
+    defer std.heap.page_allocator.free(converted);
+    var src_idx: usize = 0;
+    var dst_idx: usize = 0;
+    while (src_idx + 2 < data.len and dst_idx + 3 < converted.len) : ({
+        src_idx += 3;
+        dst_idx += 4;
+    }) {
+        converted[dst_idx + 0] = data[src_idx + 2];
+        converted[dst_idx + 1] = data[src_idx + 1];
+        converted[dst_idx + 2] = data[src_idx + 0];
+        converted[dst_idx + 3] = 0xFF;
+    }
+    const uploaded = uploadAtlasTexture(
+        &atlas_texture,
+        .{ .x = 0, .y = 0, .width = @floatFromInt(width), .height = @floatFromInt(height) },
+        4,
+        converted,
+    );
+    if (!uploaded) return null;
+    return .{
+        .texture = atlas_texture.texture,
+        .width = width,
+        .height = height,
+    };
 }
 
 pub fn createBackendContext(

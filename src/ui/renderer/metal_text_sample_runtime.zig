@@ -31,7 +31,7 @@ pub const TerminalCellRunRequest = struct {
     clip_rect: ?types.Rect = null,
 };
 
-fn pixelClipRect(renderer: *const Renderer, clip_rect: types.Rect) ?metal_backend.PixelClipRect {
+pub fn pixelClipRect(renderer: *const Renderer, clip_rect: types.Rect) ?metal_backend.PixelClipRect {
     const x0 = @as(i32, @intFromFloat(std.math.round(renderer.logicalLengthToRaster(clip_rect.x))));
     const y0 = @as(i32, @intFromFloat(std.math.round(renderer.logicalLengthToRaster(clip_rect.y))));
     const x1 = @as(i32, @intFromFloat(std.math.round(renderer.logicalLengthToRaster(clip_rect.x + clip_rect.width))));
@@ -77,7 +77,7 @@ pub fn appendAsciiRun(
     renderer: *const Renderer,
     font: *TerminalFont,
     request: SampleTextRequest,
-    draws: []metal_backend.AtlasSampleDraw,
+    draws: []metal_backend.SurfaceDraw,
     draw_count: *usize,
 ) bool {
     if (request.text.len == 0) return false;
@@ -107,14 +107,14 @@ pub fn appendAsciiRun(
         if (glyph.rect.width <= 0 or glyph.rect.height <= 0) continue;
         if (draw_count.* >= draws.len) return drew_any;
 
-        draws[draw_count.*] = .{
+        draws[draw_count.*] = .{ .atlas = .{
             .atlas = .color,
             .source_rect = glyph.rect,
             .dest_x = @max(0, @as(i32, @intFromFloat(std.math.round(renderer.logicalLengthToRaster(pen_x))))),
             .dest_y = @max(0, @as(i32, @intFromFloat(std.math.round(renderer.logicalLengthToRaster(pen_y))))),
             .tint = request.tint,
             .clip_rect = clip,
-        };
+        } };
         draw_count.* += 1;
         drew_any = true;
         pen_x += switch (request.layout) {
@@ -130,7 +130,7 @@ pub fn appendTerminalAsciiCells(
     renderer: *const Renderer,
     font: *TerminalFont,
     request: TerminalCellRunRequest,
-    draws: []metal_backend.AtlasSampleDraw,
+    draws: []metal_backend.SurfaceDraw,
     draw_count: *usize,
 ) bool {
     if (request.text.len == 0) return false;
@@ -160,14 +160,14 @@ pub fn appendTerminalAsciiCells(
         }
         if (draw_count.* >= draws.len) return drew_any;
 
-        draws[draw_count.*] = .{
+        draws[draw_count.*] = .{ .atlas = .{
             .atlas = .color,
             .source_rect = glyph.rect,
             .dest_x = @max(0, @as(i32, @intFromFloat(std.math.round(renderer.logicalLengthToRaster(pen_x))))),
             .dest_y = @max(0, @as(i32, @intFromFloat(std.math.round(renderer.logicalLengthToRaster(pen_y))))),
             .tint = request.tint,
             .clip_rect = clip,
-        };
+        } };
         draw_count.* += 1;
         drew_any = true;
         pen_x += request.cell_width;

@@ -72,7 +72,7 @@ pub const KittyState = struct {
         session_placements: []const KittyPlacement,
     ) bool {
         self.updateViews(allocator, rows, cols, session_images, session_placements);
-        if (self.images_view.items.len > 0) {
+        if (self.images_view.items.len > 0 and shell.rendererPtr().backend == .opengl) {
             self.primeUploads(allocator);
             _ = self.processPendingUploads(shell);
         }
@@ -162,14 +162,13 @@ pub const KittyState = struct {
         for (self.placements_view.items) |placement| {
             if (!shouldDrawPlacement(placement, above_text)) continue;
             const image = findKittyImage(self.images_view.items, placement.image_id) orelse continue;
-            const tex = self.ensureTexture(allocator, image) orelse continue;
-
             const col_i: i32 = @as(i32, @intCast(placement.col));
             if (col_i < 0 or col_i >= cols_i) continue;
             const row_i: i32 = @as(i32, @intCast(placement.row)) - start_line_i;
-
-            const draw_w = if (placement.cols > 0) cell_w * @as(f32, @floatFromInt(placement.cols)) else @as(f32, @floatFromInt(tex.width));
-            const draw_h = if (placement.rows > 0) cell_h * @as(f32, @floatFromInt(placement.rows)) else @as(f32, @floatFromInt(tex.height));
+            const image_w = @as(f32, @floatFromInt(image.width));
+            const image_h = @as(f32, @floatFromInt(image.height));
+            const draw_w = if (placement.cols > 0) cell_w * @as(f32, @floatFromInt(placement.cols)) else image_w;
+            const draw_h = if (placement.rows > 0) cell_h * @as(f32, @floatFromInt(placement.rows)) else image_h;
 
             const row_span: i32 = if (placement.rows > 0)
                 @as(i32, @intCast(placement.rows))
@@ -181,6 +180,16 @@ pub const KittyState = struct {
             const y = base_y + @as(f32, @floatFromInt(row_i)) * cell_h;
 
             const dest = types.Rect{ .x = x, .y = y, .width = draw_w, .height = draw_h };
+            if (r.backend == .metal) {
+                switch (image.format) {
+                    .rgb => _ = r.drawMetalRawImageRgb(@intCast(image.width), @intCast(image.height), image.data, dest, Color.white.toRgba()),
+                    .rgba => _ = r.drawMetalRawImageRgba(@intCast(image.width), @intCast(image.height), image.data, dest, Color.white.toRgba()),
+                    .png => {},
+                }
+                continue;
+            }
+
+            const tex = self.ensureTexture(allocator, image) orelse continue;
             const src = types.Rect{
                 .x = 0,
                 .y = 0,

@@ -662,19 +662,23 @@ What this does and does not mean:
   diagnostic runtime itself: it seeds deterministic below-text and above-text
   Kitty placements on the current host and proves the next real boundary
   honestly
-- current Kitty truth on the Metal backend-smoke terminal lane is now explicit
-  instead of crashing through a GL path: seeded Kitty placements reach the
-  widget/frame pipeline, `texture_kitty_ms` is reported in the terminal
-  diagnostic, and Kitty texture upload still fails cleanly because raw texture
-  creation is currently OpenGL-only on this path
-- that interim boundary is now enforced as an explicit renderer capability
-  rather than noisy repeated failure: the Kitty lane checks raw image-texture
-  support up front, logs one `kitty upload unsupported backend=metal`
-  diagnostic, and stops retrying impossible GL uploads every frame on Metal
-- the terminal Metal diagnostic now reports that capability directly too:
-  `raw_image_textures=0` is part of the runtime surface on the current host,
-  so the next missing path is visible as contract truth instead of only being
-  inferred from secondary failure logs
+- Kitty images now have a real Metal-native raw-image lane on the terminal
+  backend-smoke path instead of only a cleanly-gated unsupported boundary:
+  the renderer owns ordered `SurfaceDraw` submission for both atlas text and
+  frame-scoped raw image textures, so below-text Kitty, sampled text, and
+  above-text Kitty can share the same live Metal present order
+- that contract is intentionally backend-native rather than fake portability:
+  the old cached GL `Texture` path is still OpenGL-only, while Metal Kitty
+  images are created as frame-scoped native Metal textures and released after
+  submission
+- the terminal Metal diagnostic now reports `raw_image_textures=1` on the
+  current host, seeded Kitty placements still drive non-zero `kitty_ms`, and
+  the previous `kitty upload unsupported backend=metal` boundary is gone for
+  RGB/RGBA images on this lane
+- screenshot truth exists too: the Kitty-seeded Metal terminal diagnostic has
+  produced a real `1280x720` PPM capture on the current host through the
+  present-capture path, which means the raw-image lane is now runtime-proven
+  instead of only inferred from timing metrics
 - this is still intentionally narrow and honest: it is now a tiny sampled
   multiline ASCII run with an explicit monospace-cell option rather than a
   claim that the generic string/text renderer has already migrated
