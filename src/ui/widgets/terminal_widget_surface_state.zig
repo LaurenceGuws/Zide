@@ -11,7 +11,7 @@ pub const TerminalWidgetSurfaceState = struct {
         render_scale_changed: bool,
         generation_changed: bool,
         clear_generation_changed: bool,
-        texture_ready: bool,
+        presentable_ready: bool,
     };
 
     kitty: KittyState,
@@ -71,8 +71,8 @@ pub const TerminalWidgetSurfaceState = struct {
         return self.retained.last_render_generation;
     }
 
-    pub fn textureReady(self: *const TerminalWidgetSurfaceState) bool {
-        return self.retained.terminal_texture_ready;
+    pub fn presentableReady(self: *const TerminalWidgetSurfaceState) bool {
+        return self.retained.terminal_presentable_ready;
     }
 
     pub fn retainedUpdateDelta(
@@ -86,16 +86,16 @@ pub const TerminalWidgetSurfaceState = struct {
             .render_scale_changed = surface_geometry.render_scale != self.retained.last_render_scale,
             .generation_changed = terminal_view.generation != self.retained.last_render_generation,
             .clear_generation_changed = terminal_view.clear_generation != self.retained.last_render_clear_generation,
-            .texture_ready = self.retained.terminal_texture_ready,
+            .presentable_ready = self.retained.terminal_presentable_ready,
         };
     }
 
-    pub fn noteRetainedSurfaceUpdated(
+    pub fn noteRetainedPresentationUpdated(
         self: *TerminalWidgetSurfaceState,
         terminal_view: view_state.TerminalViewModel,
         surface_geometry: anytype,
     ) void {
-        self.retained.terminal_texture_ready = true;
+        self.retained.terminal_presentable_ready = true;
         self.retained.last_render_generation = terminal_view.generation;
         self.retained.last_render_clear_generation = terminal_view.clear_generation;
         self.retained.last_cell_w_i = surface_geometry.cell_w_i;
@@ -103,9 +103,9 @@ pub const TerminalWidgetSurfaceState = struct {
         self.retained.last_render_scale = surface_geometry.render_scale;
     }
 
-    pub fn noteRetainedTargetAvailability(self: *TerminalWidgetSurfaceState, available: bool) bool {
-        if (!available) self.retained.terminal_texture_ready = false;
-        return self.retained.terminal_texture_ready and available;
+    pub fn notePresentableAvailability(self: *TerminalWidgetSurfaceState, available: bool) bool {
+        if (!available) self.retained.terminal_presentable_ready = false;
+        return self.retained.terminal_presentable_ready and available;
     }
 
     pub fn ensurePartialDrawPlan(

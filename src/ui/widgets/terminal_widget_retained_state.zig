@@ -11,7 +11,7 @@ pub const RetainedState = struct {
     partial_draw_spans: std.ArrayList([render_cache_mod.max_row_dirty_spans]render_cache_mod.RowDirtySpan),
     partial_draw_cols_start: std.ArrayList(u16),
     partial_draw_cols_end: std.ArrayList(u16),
-    terminal_texture_ready: bool = false,
+    terminal_presentable_ready: bool = false,
     last_render_generation: u64 = 0,
     last_render_clear_generation: u64 = 0,
     last_alt_active: bool = false,
@@ -46,7 +46,7 @@ pub const RetainedState = struct {
     }
 
     pub fn invalidateTextureCache(self: *RetainedState) void {
-        self.terminal_texture_ready = false;
+        self.terminal_presentable_ready = false;
     }
 
     pub fn ensurePartialDrawPlan(self: *RetainedState, allocator: std.mem.Allocator, rows: usize) ?PartialDrawPlan {

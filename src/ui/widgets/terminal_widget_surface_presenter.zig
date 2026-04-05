@@ -615,11 +615,11 @@ fn refreshRetainedSurfacePresentState(
     };
 
     if (texture_update_completed) {
-        self.surface.noteRetainedSurfaceUpdated(terminal_view, surface_geometry);
+        self.surface.noteRetainedPresentationUpdated(terminal_view, surface_geometry);
     }
 
     state.target_available = retained_targets_runtime.surfaceAvailable(renderer, .terminal);
-    state.ready = self.surface.noteRetainedTargetAvailability(state.target_available);
+    state.ready = self.surface.notePresentableAvailability(state.target_available);
     state.present = state.ready and state.visible;
     state.log_unavailable = !state.ready and terminal_view.rows > 0 and terminal_view.cols > 0 and view_cells_len > 0 and state.visible;
 
@@ -642,7 +642,7 @@ fn logRetainedSurfaceUnavailable(
         .{ .key = "generation", .value = .{ .unsigned = terminal_view.generation } },
         .{ .key = "sync_updates", .value = .{ .boolean = terminal_view.sync_updates_active } },
         .{ .key = "updated", .value = .{ .boolean = present_state.updated } },
-        .{ .key = "texture_ready", .value = .{ .boolean = self.surface.textureReady() } },
+        .{ .key = "presentable_ready", .value = .{ .boolean = self.surface.presentableReady() } },
         .{ .key = "target_available", .value = .{ .boolean = present_state.target_available } },
         .{ .key = "visible_w", .value = .{ .integer = visible_w } },
         .{ .key = "visible_h", .value = .{ .integer = visible_h } },
@@ -725,7 +725,7 @@ fn planRetainedSurfaceUpdate(
         retained_delta.cell_metrics_changed,
         retained_delta.render_scale_changed,
         blink_requires_partial,
-        retained_delta.texture_ready,
+        retained_delta.presentable_ready,
     );
     update_plan = draw_texture.forceFullTextureUpdatePlanEveryFrame(update_plan, recent_input_window_active);
 
@@ -744,7 +744,7 @@ fn planRetainedSurfaceUpdate(
         viewport_shift.exposed_only,
         scroll_offset,
         needs_full,
-        retained_delta.texture_ready,
+        retained_delta.presentable_ready,
         rows,
     )) {
         .attempt => |shift_rows| {
@@ -873,7 +873,7 @@ pub fn updateAndPresent(
     }
 
     const retained_surface_target_available = retained_targets_runtime.surfaceAvailable(r, .terminal);
-    const retained_surface_ready = self.surface.noteRetainedTargetAvailability(retained_surface_target_available);
+    const retained_surface_ready = self.surface.notePresentableAvailability(retained_surface_target_available);
 
     if (terminal_view.sync_updates_active and view_cells.len > 0 and retained_surface_ready) {
         const bg_color = if (view_cells.len > 0) toShellColor(base_colors.resolved_background) else r.theme.background;

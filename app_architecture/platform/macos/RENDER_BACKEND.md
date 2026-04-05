@@ -678,6 +678,10 @@ What this does and does not mean:
   presentation samples are mode-aware instead of being implicitly
   "retained-surface or invalid", so the live direct-main-target Metal lane can
   leave first-class presentation evidence in widget debug state
+- terminal widget surface state is less GL-shaped now too: readiness is tracked
+  as `presentable_ready` instead of `texture_ready`, which matches the current
+  contract where Metal can present directly without a retained texture-backed
+  surface
 - that contract is intentionally backend-native rather than fake portability:
   the old cached GL `Texture` path is still OpenGL-only, while Metal Kitty
   images are created as frame-scoped native Metal textures and released after
