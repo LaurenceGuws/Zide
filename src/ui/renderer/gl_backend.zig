@@ -3,6 +3,7 @@ const gl = @import("gl.zig");
 const gl_resources = @import("gl_resources.zig");
 const opengl_frame_runtime = @import("opengl_frame_runtime.zig");
 const opengl_presentable_runtime = @import("opengl_presentable_runtime.zig");
+const capability_contract = @import("capability_contract.zig");
 const presentable_contract = @import("presentable_contract.zig");
 const presentable_target = @import("presentable_target.zig");
 const scene_target_state = @import("scene_target_state.zig");
@@ -16,6 +17,33 @@ pub const RenderTarget = presentable_target.PresentableTarget;
 const PresentableSurface = presentable_contract.PresentableSurface;
 const PresentableDraw = presentable_contract.PresentableDraw;
 const SceneTargetInvalidation = scene_target_state.SceneTargetInvalidation;
+const RendererCapabilities = capability_contract.RendererCapabilities;
+
+pub fn capabilities(renderer: anytype) RendererCapabilities {
+    return .{
+        .scene_composition_mode = if (renderer.runtime_profile == .full_ui)
+            .offscreen_scene_target
+        else
+            .direct_main_target,
+        .retained_targets = renderer.runtime_profile == .full_ui,
+        .terminal_presentation_mode = if (renderer.runtime_profile == .full_ui)
+            .retained_surface
+        else
+            .direct_main_target,
+        .screenshot_mode = .direct_window_readback,
+        .text_rendering_mode = if (renderer.runtime_profile == .full_ui)
+            .gl_texture_atlas
+        else
+            .unavailable,
+        .planned_text_rendering_mode = .gl_texture_atlas,
+        .atlas_storage_mode = if (renderer.runtime_profile == .full_ui)
+            .opengl_textures
+        else
+            .metal_textures,
+        .planned_atlas_storage_mode = .opengl_textures,
+        .raw_image_textures = true,
+    };
+}
 
 fn glAttrName(attr: sdl_api.GlAttr) []const u8 {
     return switch (attr) {

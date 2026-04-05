@@ -5,6 +5,7 @@ const TerminalFont = terminal_font_mod.TerminalFont;
 const AtlasStorageMode = terminal_font_mod.AtlasStorageMode;
 const FontRenderingOptions = terminal_font_mod.RenderingOptions;
 const hb = terminal_font_mod.c;
+const capability_contract = @import("renderer/capability_contract.zig");
 const font_manager = @import("renderer/font_manager.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
 const gl_backend = @import("renderer/gl_backend.zig");
@@ -125,42 +126,14 @@ pub const WindowRefreshResult = struct {
     }
 };
 
-pub const ScreenshotMode = enum {
-    unavailable,
-    direct_window_readback,
-    present_capture,
-};
-
-pub const SceneCompositionMode = enum {
-    direct_main_target,
-    offscreen_scene_target,
-};
-
-pub const TerminalPresentationMode = enum {
-    direct_main_target,
-    direct_snapshot_cache,
-    retained_surface,
-};
-
-pub const TextRenderingMode = enum {
-    unavailable,
-    gl_texture_atlas,
-    metal_texture_atlas,
-};
+pub const ScreenshotMode = capability_contract.ScreenshotMode;
+pub const SceneCompositionMode = capability_contract.SceneCompositionMode;
+pub const TerminalPresentationMode = capability_contract.TerminalPresentationMode;
+pub const TextRenderingMode = capability_contract.TextRenderingMode;
 
 pub const AtlasPreviewSource = metal_runtime_state.AtlasPreviewSource;
 
-pub const RendererCapabilities = struct {
-    scene_composition_mode: SceneCompositionMode,
-    retained_targets: bool,
-    terminal_presentation_mode: TerminalPresentationMode,
-    screenshot_mode: ScreenshotMode,
-    text_rendering_mode: TextRenderingMode,
-    planned_text_rendering_mode: TextRenderingMode,
-    atlas_storage_mode: AtlasStorageMode,
-    planned_atlas_storage_mode: AtlasStorageMode,
-    raw_image_textures: bool,
-};
+pub const RendererCapabilities = capability_contract.RendererCapabilities;
 pub const EditorTextStyleFlags = iface.EditorTextStyleFlags;
 pub const editor_syntax_style_slots = iface.editor_syntax_style_slots;
 
@@ -1221,7 +1194,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     }
 
     pub fn supportsRawImageTextures(self: *const Renderer) bool {
-        return self.backend == .opengl or (self.backend == .metal and metal_backend.hasBackendContext(self));
+        return self.capabilities().raw_image_textures;
     }
 
     pub fn metalTerminalSnapshotAvailable(self: *const Renderer) bool {
@@ -1264,39 +1237,9 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     }
 
     pub fn capabilities(self: *const Renderer) RendererCapabilities {
-        return .{
-            .scene_composition_mode = if (self.backend == .opengl and self.runtime_profile == .full_ui)
-                .offscreen_scene_target
-            else
-                .direct_main_target,
-            .retained_targets = self.backend == .opengl and self.runtime_profile == .full_ui,
-            .terminal_presentation_mode = if (self.backend == .opengl and self.runtime_profile == .full_ui)
-                .retained_surface
-            else if (self.backend == .metal)
-                .direct_snapshot_cache
-            else
-                .direct_main_target,
-            .screenshot_mode = switch (self.backend) {
-                .opengl => .direct_window_readback,
-                .metal => .present_capture,
-            },
-            .text_rendering_mode = if (self.backend == .opengl and self.runtime_profile == .full_ui)
-                .gl_texture_atlas
-            else
-                .unavailable,
-            .planned_text_rendering_mode = switch (self.backend) {
-                .opengl => .gl_texture_atlas,
-                .metal => .metal_texture_atlas,
-            },
-            .atlas_storage_mode = if (self.backend == .opengl and self.runtime_profile == .full_ui)
-                .opengl_textures
-            else
-                .metal_textures,
-            .planned_atlas_storage_mode = switch (self.backend) {
-                .opengl => .opengl_textures,
-                .metal => .metal_textures,
-            },
-            .raw_image_textures = self.supportsRawImageTextures(),
+        return switch (self.backend) {
+            .opengl => gl_backend.capabilities(self),
+            .metal => metal_backend.capabilities(self),
         };
     }
 

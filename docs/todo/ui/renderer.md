@@ -22,6 +22,7 @@ active execution lane for backend contract quality.
 - `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md`
 - `docs/research/RENDER_BACKEND_REFERENCE_SCAN_2026-04-05.md`
 - `src/ui/renderer.zig`
+- `src/ui/renderer/capability_contract.zig`
 - `src/ui/renderer/gl_backend.zig`
 - `src/ui/renderer/metal_backend.zig`
 - `src/ui/renderer/opengl_scene_target_runtime.zig`
@@ -82,6 +83,10 @@ Progress note, 2026-04-05:
 
 - `src/ui/renderer/surface_draw.zig` now owns the shared draw payload types.
 - Metal no longer owns the `SurfaceDraw` union definition.
+- `src/ui/renderer/capability_contract.zig` now owns the capability enums and
+  struct, and `gl_backend.zig` / `metal_backend.zig` now report backend
+  capability truth through that shared contract instead of `Renderer`
+  hardcoding every backend capability shape itself.
 - The next step is to push real submission and caller flow through that shared
   contract instead of leaving Metal-specific renderer verbs as the practical
   API.

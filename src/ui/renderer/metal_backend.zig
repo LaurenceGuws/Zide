@@ -2,6 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const iface = @import("interface.zig");
 const macos_metal_host = @import("../../platform/macos_metal_host.zig");
+const capability_contract = @import("capability_contract.zig");
 const metal_frame_runtime = @import("metal_frame_runtime.zig");
 const metal_runtime_state = @import("metal_runtime_state.zig");
 const metal_text_sample_runtime = @import("metal_text_sample_runtime.zig");
@@ -43,6 +44,21 @@ pub const PixelClipRect = surface_draw.PixelClipRect;
 pub const AtlasPreviewSource = metal_runtime_state.AtlasPreviewSource;
 const PresentableSurface = presentable_contract.PresentableSurface;
 const PresentableDraw = presentable_contract.PresentableDraw;
+const RendererCapabilities = capability_contract.RendererCapabilities;
+
+pub fn capabilities(renderer: anytype) RendererCapabilities {
+    return .{
+        .scene_composition_mode = .direct_main_target,
+        .retained_targets = false,
+        .terminal_presentation_mode = .direct_snapshot_cache,
+        .screenshot_mode = .present_capture,
+        .text_rendering_mode = .unavailable,
+        .planned_text_rendering_mode = .metal_texture_atlas,
+        .atlas_storage_mode = .metal_textures,
+        .planned_atlas_storage_mode = .metal_textures,
+        .raw_image_textures = hasBackendContext(renderer),
+    };
+}
 
 const MTLRegion = extern struct {
     origin: MTLOrigin,

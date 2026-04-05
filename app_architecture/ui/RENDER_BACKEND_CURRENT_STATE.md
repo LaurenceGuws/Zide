@@ -23,7 +23,8 @@ So the honest answer to "would Vulkan be easy to add?" is:
 
 ### Capability naming is better
 
-`RendererCapabilities` in `src/ui/renderer.zig` describes real runtime behavior
+`RendererCapabilities` now lives in
+`src/ui/renderer/capability_contract.zig` and describes real runtime behavior
 such as:
 
 - scene composition mode
@@ -34,6 +35,11 @@ such as:
 - raw image texture support
 
 That is a meaningful improvement over backend-label theater.
+
+That has improved slightly again: the capability enums/struct are no longer
+owned by `renderer.zig`, and backend modules now report capability truth
+through that shared contract instead of the renderer root hardcoding every
+OpenGL/Metal capability combination itself.
 
 ### Metal is no longer hypothetical
 
