@@ -145,6 +145,9 @@ Progress note, 2026-04-05:
   mutating and iterating `renderer.metal_runtime` storage fields.
 - The Metal diagnostic-font cache/ensure path now also routes through
   `metal_backend.zig` instead of living as renderer-root-owned backend logic.
+- Metal snapshot-presentable draw and raw-image enqueue paths now also route
+  through `metal_backend.zig` helpers instead of the renderer root assembling
+  those backend draw requests inline.
 - The next lifecycle step is to reduce shared-runtime ownership of dispatch and
   backend-native frame state, not just move code blocks around.
 

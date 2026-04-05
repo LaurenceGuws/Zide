@@ -119,6 +119,11 @@ font cache/ensure path now lives behind `metal_backend` instead of the
 renderer root carrying its own backend-specific diagnostic-font initializer and
 cache management logic.
 
+That has improved slightly again at the renderer root: Metal snapshot
+presentable draw and raw-image enqueue paths now also route through
+`metal_backend` helpers instead of the renderer root assembling those backend
+draw requests inline.
+
 ### 2. Shared frame lifecycle still branches backend-by-backend
 
 The renderer root no longer spells out backend frame begin/submit bodies, but

@@ -1223,6 +1223,76 @@ pub fn appendTerminalCellRun(
     );
 }
 
+pub fn appendTerminalSnapshotDraw(renderer: anytype, draw: RawImageDraw) bool {
+    const context = backendContext(renderer) orelse return false;
+    const snapshot = context.terminal_snapshot orelse return false;
+    return appendSurfaceDraw(renderer, .{ .raw_image = .{
+        .texture = cloneRawImageTexture(snapshot),
+        .source_rect = draw.source_rect,
+        .dest_rect = draw.dest_rect,
+        .tint = draw.tint,
+        .clip_rect = draw.clip_rect,
+    } });
+}
+
+pub fn appendRawImageRgba(
+    renderer: anytype,
+    width: i32,
+    height: i32,
+    data: []const u8,
+    dest: types.Rect,
+    tint: types.Rgba,
+) bool {
+    const context = backendContext(renderer) orelse return false;
+    if (width <= 0 or height <= 0) return false;
+    const texture = createRawImageTextureRgba(context.device, width, height, data) orelse return false;
+    const clip_rect = if (renderer.currentClipRect()) |clip|
+        metal_text_sample_runtime.pixelClipRect(renderer, clip)
+    else
+        null;
+    return appendSurfaceDraw(renderer, .{ .raw_image = .{
+        .texture = texture,
+        .source_rect = null,
+        .dest_rect = .{
+            .x = renderer.logicalLengthToRaster(dest.x),
+            .y = renderer.logicalLengthToRaster(dest.y),
+            .width = renderer.logicalLengthToRaster(dest.width),
+            .height = renderer.logicalLengthToRaster(dest.height),
+        },
+        .tint = tint,
+        .clip_rect = clip_rect,
+    } });
+}
+
+pub fn appendRawImageRgb(
+    renderer: anytype,
+    width: i32,
+    height: i32,
+    data: []const u8,
+    dest: types.Rect,
+    tint: types.Rgba,
+) bool {
+    const context = backendContext(renderer) orelse return false;
+    if (width <= 0 or height <= 0) return false;
+    const texture = createRawImageTextureRgb(context.device, width, height, data) orelse return false;
+    const clip_rect = if (renderer.currentClipRect()) |clip|
+        metal_text_sample_runtime.pixelClipRect(renderer, clip)
+    else
+        null;
+    return appendSurfaceDraw(renderer, .{ .raw_image = .{
+        .texture = texture,
+        .source_rect = null,
+        .dest_rect = .{
+            .x = renderer.logicalLengthToRaster(dest.x),
+            .y = renderer.logicalLengthToRaster(dest.y),
+            .width = renderer.logicalLengthToRaster(dest.width),
+            .height = renderer.logicalLengthToRaster(dest.height),
+        },
+        .tint = tint,
+        .clip_rect = clip_rect,
+    } });
+}
+
 pub fn terminalSnapshotAvailableForRenderer(renderer: anytype) bool {
     const context = backendContextConst(renderer) orelse return false;
     return terminalSnapshotMatchesDrawable(context);

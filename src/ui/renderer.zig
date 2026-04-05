@@ -1759,15 +1759,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         draw: surface_draw.RawImageDraw,
     ) bool {
         if (self.backend != .metal) return false;
-        const context = metal_backend.backendContext(self) orelse return false;
-        const snapshot = context.terminal_snapshot orelse return false;
-        return self.appendMetalRawImageDraw(.{
-            .texture = metal_backend.cloneRawImageTexture(snapshot),
-            .source_rect = draw.source_rect,
-            .dest_rect = draw.dest_rect,
-            .tint = draw.tint,
-            .clip_rect = draw.clip_rect,
-        });
+        return metal_backend.appendTerminalSnapshotDraw(self, draw);
     }
 
     pub fn drawMetalAtlasSampleChar(self: *Renderer, char: u8, x: f32, y: f32, color: Color) bool {
@@ -1801,48 +1793,12 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
 
     pub fn drawBackendRawImageRgba(self: *Renderer, width: i32, height: i32, data: []const u8, dest: types.Rect, tint: types.Rgba) bool {
         if (self.backend != .metal) return false;
-        const context = metal_backend.backendContext(self) orelse return false;
-        if (width <= 0 or height <= 0) return false;
-        const texture = metal_backend.createRawImageTextureRgba(context.device, width, height, data) orelse return false;
-        const clip_rect = if (self.currentClipRect()) |clip|
-            metal_text_sample_runtime.pixelClipRect(self, clip)
-        else
-            null;
-        return self.appendMetalRawImageDraw(.{
-            .texture = texture,
-            .source_rect = null,
-            .dest_rect = .{
-                .x = self.logicalLengthToRaster(dest.x),
-                .y = self.logicalLengthToRaster(dest.y),
-                .width = self.logicalLengthToRaster(dest.width),
-                .height = self.logicalLengthToRaster(dest.height),
-            },
-            .tint = tint,
-            .clip_rect = clip_rect,
-        });
+        return metal_backend.appendRawImageRgba(self, width, height, data, dest, tint);
     }
 
     pub fn drawBackendRawImageRgb(self: *Renderer, width: i32, height: i32, data: []const u8, dest: types.Rect, tint: types.Rgba) bool {
         if (self.backend != .metal) return false;
-        const context = metal_backend.backendContext(self) orelse return false;
-        if (width <= 0 or height <= 0) return false;
-        const texture = metal_backend.createRawImageTextureRgb(context.device, width, height, data) orelse return false;
-        const clip_rect = if (self.currentClipRect()) |clip|
-            metal_text_sample_runtime.pixelClipRect(self, clip)
-        else
-            null;
-        return self.appendMetalRawImageDraw(.{
-            .texture = texture,
-            .source_rect = null,
-            .dest_rect = .{
-                .x = self.logicalLengthToRaster(dest.x),
-                .y = self.logicalLengthToRaster(dest.y),
-                .width = self.logicalLengthToRaster(dest.width),
-                .height = self.logicalLengthToRaster(dest.height),
-            },
-            .tint = tint,
-            .clip_rect = clip_rect,
-        });
+        return metal_backend.appendRawImageRgb(self, width, height, data, dest, tint);
     }
 
     pub fn drawMetalAtlasSampleText(self: *Renderer, text: []const u8, x: f32, y: f32) bool {
