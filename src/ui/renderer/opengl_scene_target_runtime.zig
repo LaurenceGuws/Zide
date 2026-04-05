@@ -46,7 +46,7 @@ pub fn beginSceneFrame(self: anytype) bool {
 
 pub fn drawSceneTargetToDefault(self: anytype) void {
     const target = self.opengl_runtime.scene_target.target orelse return;
-    self.bindDefaultTarget();
+    gl_backend.bindDefaultTarget(self);
     gl.Disable(gl.c.GL_SCISSOR_TEST);
     const bg = self.theme.background.toRgba();
     gl.ClearColor(
@@ -93,7 +93,7 @@ pub fn prepareSceneTarget(self: anytype, filter: i32) void {
         @as(f32, @floatFromInt(bg.a)) / 255.0,
     );
     gl.Clear(gl.c.GL_COLOR_BUFFER_BIT);
-    self.bindDefaultTarget();
+    gl_backend.bindDefaultTarget(self);
 }
 
 fn noteSceneTargetRecreateFailure(self: anytype) void {

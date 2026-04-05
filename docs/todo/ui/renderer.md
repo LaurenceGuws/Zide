@@ -212,6 +212,9 @@ Progress note, 2026-04-05:
   backend dispatch; that queue reset now lives in
   `src/ui/renderer/metal_frame_runtime.zig` instead of shared renderer
   lifecycle code mutating Metal runtime state directly.
+- The OpenGL frame, scene-target, and presentable runtimes now also bind the
+  default target through `gl_backend.zig` directly instead of bouncing through
+  another OpenGL-only helper on `Renderer`.
 - Direct OpenGL frame submit and direct window screenshot-readback now also
   live under `src/ui/renderer/opengl_frame_runtime.zig` /
   `src/ui/renderer/gl_backend.zig` instead of

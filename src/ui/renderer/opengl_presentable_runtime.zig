@@ -163,9 +163,9 @@ fn restoreCompositionTarget(self: anytype) void {
     if (self.present.main_composition_target == .offscreen_scene_target) {
         if (!opengl_scene_target_runtime.beginSceneFrame(self)) {
             self.present.main_composition_target = .default_target;
-            self.bindDefaultTarget();
+            gl_backend.bindDefaultTarget(self);
         }
         return;
     }
-    self.bindDefaultTarget();
+    gl_backend.bindDefaultTarget(self);
 }

@@ -196,6 +196,11 @@ render-target helpers through `Renderer`. They now talk to `gl_backend`
 directly for render-target begin/ensure/destroy, which removes another
 pure-OpenGL helper surface from the renderer root.
 
+That has improved slightly again on the OpenGL target-binding side too: the
+OpenGL frame, scene-target, and presentable runtimes now bind the default
+target through `gl_backend` directly instead of going through one more
+OpenGL-only helper on `Renderer`.
+
 That has improved slightly again on the Metal frame side too: the shared
 frame prelude no longer clears the Metal queued draw list before backend
 dispatch. That queue reset now lives under `metal_frame_runtime.zig`, which is

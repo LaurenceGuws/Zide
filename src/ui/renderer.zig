@@ -1592,11 +1592,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         return font_runtime.fontForSize(self, size);
     }
 
-    pub fn bindDefaultTarget(self: *Renderer) void {
-        self.text_render.dst_linear_active = false;
-        gl_backend.bindDefaultTarget(self);
-    }
-
     pub fn beginTerminalBatch(self: *Renderer) void {
         draw_ops.beginTerminalBatch(self);
     }

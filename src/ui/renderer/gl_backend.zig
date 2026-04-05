@@ -496,6 +496,7 @@ fn clampPositive(v: f32, fallback: f32) f32 {
 
 pub fn bindDefaultTarget(renderer: anytype) void {
     gl.BindFramebuffer(gl.c.GL_FRAMEBUFFER, 0);
+    renderer.text_render.dst_linear_active = false;
     renderer.target_pixel_width = renderer.render_width;
     renderer.target_pixel_height = renderer.render_height;
     updateProjection(renderer, renderer.width, renderer.height);

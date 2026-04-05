@@ -1,4 +1,5 @@
 const gl = @import("gl.zig");
+const gl_backend = @import("gl_backend.zig");
 const screenshot = @import("screenshot.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
 const app_logger = @import("../../app_logger.zig");
@@ -17,7 +18,7 @@ pub fn beginFrame(renderer: anytype) void {
             .default_target,
         .direct_main_target => .default_target,
     };
-    if (renderer.present.main_composition_target == .default_target) renderer.bindDefaultTarget();
+    if (renderer.present.main_composition_target == .default_target) gl_backend.bindDefaultTarget(renderer);
     gl.Disable(gl.c.GL_SCISSOR_TEST);
 
     const bg = renderer.theme.background.toRgba();
@@ -66,7 +67,7 @@ pub fn submitFrame(renderer: anytype) present_trace_runtime.FrameSubmission {
 }
 
 pub fn dumpWindowScreenshotPpm(renderer: anytype, path: []const u8) !void {
-    renderer.bindDefaultTarget();
+    gl_backend.bindDefaultTarget(renderer);
     try screenshot.dumpFramebufferPpmScaled(
         renderer.allocator,
         renderer.render_width,
@@ -82,7 +83,7 @@ pub fn dumpWindowScreenshotPpmSized(renderer: anytype, path: []const u8, out_wid
         try dumpWindowScreenshotPpm(renderer, path);
         return;
     }
-    renderer.bindDefaultTarget();
+    gl_backend.bindDefaultTarget(renderer);
     try screenshot.dumpFramebufferPpmScaled(
         renderer.allocator,
         renderer.render_width,
