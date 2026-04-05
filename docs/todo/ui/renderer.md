@@ -109,6 +109,8 @@ Progress note, 2026-04-05:
 - OpenGL runtime storage on `Renderer` is now bundled under one
   `opengl_runtime` state object instead of being scattered across separate peer
   fields.
+- backend teardown now routes through `gl_backend.zig` and `metal_backend.zig`
+  instead of `Renderer.deinit()` spelling out both cleanup paths inline.
 - The next lifecycle step is to reduce shared-runtime ownership of dispatch and
   backend-native frame state, not just move code blocks around.
 

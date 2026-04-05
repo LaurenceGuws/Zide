@@ -75,6 +75,10 @@ backend instead of being scattered as unrelated renderer peers.
 But it is still not the end-state. Shared renderer lifecycle, teardown, and
 submission logic still depend on backend-native state shape directly.
 
+This has improved slightly again: backend teardown now runs through backend
+modules instead of `Renderer.deinit()` spelling out both OpenGL and Metal
+cleanup inline.
+
 ### 2. Shared frame lifecycle still branches backend-by-backend
 
 The renderer root no longer spells out backend frame begin/submit bodies, but
@@ -185,6 +189,9 @@ The main contradiction centers today are:
 - `src/ui/renderer/metal_backend.zig`
   - owns a useful implementation surface, but is still the only backend
     consuming the shared surface-draw queue directly
+- `src/ui/renderer/gl_backend.zig`
+  - now owns more of the OpenGL runtime lifecycle, but shared renderer code
+    still carries the OpenGL runtime state directly
 - `src/ui/renderer/presentable_targets_runtime.zig`
   - shared contract surface still routes only to the OpenGL presentable model
 - `src/ui/renderer/opengl_presentable_runtime.zig`

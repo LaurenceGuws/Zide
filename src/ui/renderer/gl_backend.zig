@@ -368,6 +368,22 @@ pub fn destroyRenderTarget(target: *?RenderTarget) void {
     }
 }
 
+pub fn deinitRuntime(renderer: anytype) void {
+    if (renderer.opengl_runtime.resources_ready and renderer.opengl_runtime.white_texture.id != 0) {
+        gl.DeleteTextures(1, &renderer.opengl_runtime.white_texture.id);
+    }
+    if (renderer.opengl_runtime.resources_ready) {
+        gl_resources.destroy(.{
+            .shader_program = renderer.opengl_runtime.shader_program,
+            .vao = renderer.opengl_runtime.vao,
+            .vbo = renderer.opengl_runtime.vbo,
+            .uniform_proj = renderer.opengl_runtime.uniform_proj,
+            .uniform_tex = renderer.opengl_runtime.uniform_tex,
+        });
+    }
+    if (renderer.opengl_runtime.context) |context| sdl_api.glDeleteContext(context);
+}
+
 pub fn updateProjection(renderer: anytype, width: i32, height: i32) void {
     renderer.target_width = width;
     renderer.target_height = height;

@@ -919,9 +919,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     pub fn deinit(self: *Renderer) void {
         presentable_targets_runtime.deinit(self);
         self.destroyRenderTarget(&self.scene_target.target);
-        self.clearMetalDiagnosticFont();
-        self.clearQueuedSurfaceDraws();
-        self.metal_runtime.queued_surface_draws.deinit(self.allocator);
 
         if (self.fonts_ready) {
             self.app_font.deinit();
@@ -936,27 +933,13 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         draw_ops.deinit(&self.batch, self.allocator);
         text_runtime.deinitTerminalTextState(self);
 
-        if (self.opengl_runtime.resources_ready and self.opengl_runtime.white_texture.id != 0) {
-            gl.DeleteTextures(1, &self.opengl_runtime.white_texture.id);
-        }
-        if (self.opengl_runtime.resources_ready) {
-            gl_resources.destroy(.{
-                .shader_program = self.opengl_runtime.shader_program,
-                .vao = self.opengl_runtime.vao,
-                .vbo = self.opengl_runtime.vbo,
-                .uniform_proj = self.opengl_runtime.uniform_proj,
-                .uniform_tex = self.opengl_runtime.uniform_tex,
-            });
-        }
-
         input_state.stopTextInput(self.inputDomain());
         window_chrome_runtime.deinit(self.windowChromeDomain());
-        if (self.metal_runtime.frame) |*frame| metal_backend.abandonFrame(frame);
-        if (self.metal_runtime.backend_context) |*context| metal_backend.deinitBackendContext(context);
+        metal_backend.deinitRuntime(self);
+        gl_backend.deinitRuntime(self);
         if (self.appkit_delegate_installation) |*installation| macos_app_delegate.uninstall(installation);
         if (self.app_event_watch_installed) removeAppEventWatch(&self.app_host);
         window_init.deinitRenderSurfaceAttachment(&self.render_surface_attachment);
-        if (self.opengl_runtime.context) |context| sdl_api.glDeleteContext(context);
         sdl.SDL_DestroyWindow(self.window);
         sdl.SDL_Quit();
 
@@ -1819,7 +1802,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         return font;
     }
 
-    fn clearMetalDiagnosticFont(self: *Renderer) void {
+    pub fn clearMetalDiagnosticFont(self: *Renderer) void {
         if (self.metal_runtime.diagnostic_font) |*font| {
             font.deinit();
             self.metal_runtime.diagnostic_font = null;

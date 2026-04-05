@@ -1106,6 +1106,14 @@ pub fn deinitBackendContext(context: *BackendContext) void {
     msgSendVoid(context.device, "release");
 }
 
+pub fn deinitRuntime(renderer: anytype) void {
+    renderer.clearMetalDiagnosticFont();
+    renderer.clearQueuedSurfaceDraws();
+    renderer.metal_runtime.queued_surface_draws.deinit(renderer.allocator);
+    if (renderer.metal_runtime.frame) |*frame| abandonFrame(frame);
+    if (renderer.metal_runtime.backend_context) |*context| deinitBackendContext(context);
+}
+
 pub fn acquireFrame(context: *BackendContext) ?Frame {
     if (builtin.target.os.tag != .macos) return null;
     const drawable_unretained = msgSendPointer(context.metal_layer, "nextDrawable") orelse return null;
