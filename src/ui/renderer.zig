@@ -149,6 +149,7 @@ pub const PresentableTargetState = presentable_target.PresentableTargetState;
 pub const PresentableSurface = presentable_contract.PresentableSurface;
 pub const PresentableDraw = presentable_contract.PresentableDraw;
 pub const PresentableInfo = presentable_contract.PresentableInfo;
+pub const SurfaceDraw = surface_draw.SurfaceDraw;
 pub const MetalSampleTextRequest = metal_text_sample_runtime.SampleTextRequest;
 pub const MetalTerminalCellRunRequest = metal_text_sample_runtime.TerminalCellRunRequest;
 pub const SceneTargetInvalidation = scene_target_state.SceneTargetInvalidation;
@@ -385,6 +386,7 @@ pub const Renderer = struct {
         drawSampleTextRequest: *const fn (*Self, metal_text_sample_runtime.SampleTextRequest) bool,
         drawTerminalCellRun: *const fn (*Self, *TerminalFont, metal_text_sample_runtime.TerminalCellRunRequest) bool,
         drawAtlasSampleChar: *const fn (*Self, u8, f32, f32, Color) bool,
+        enqueueSurfaceDraw: *const fn (*Self, surface_draw.SurfaceDraw) bool,
     };
 
     const BackendBootstrapOps = struct {
@@ -552,6 +554,9 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         fn drawSampleTextRequest(renderer: *Self, request: metal_text_sample_runtime.SampleTextRequest) bool { return gl_backend.drawSampleTextRequest(renderer, request); }
         fn drawTerminalCellRun(renderer: *Self, font: *TerminalFont, request: metal_text_sample_runtime.TerminalCellRunRequest) bool { return gl_backend.drawTerminalCellRun(renderer, font, request); }
         fn drawAtlasSampleChar(renderer: *Self, char: u8, x: f32, y: f32, color: Color) bool { return gl_backend.drawAtlasSampleChar(renderer, char, x, y, color); }
+        fn enqueueSurfaceDraw(renderer: *Self, draw: surface_draw.SurfaceDraw) bool {
+            return gl_backend.submitSurfaceDrawImmediate(renderer, draw);
+        }
     };
 
     const MetalDispatch = struct {
@@ -584,6 +589,9 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         fn drawSampleTextRequest(renderer: *Self, request: metal_text_sample_runtime.SampleTextRequest) bool { return metal_backend.drawSampleTextRequest(renderer, request); }
         fn drawTerminalCellRun(renderer: *Self, font: *TerminalFont, request: metal_text_sample_runtime.TerminalCellRunRequest) bool { return metal_backend.drawTerminalCellRun(renderer, font, request); }
         fn drawAtlasSampleChar(renderer: *Self, char: u8, x: f32, y: f32, color: Color) bool { return metal_backend.drawAtlasSampleChar(renderer, char, x, y, color); }
+        fn enqueueSurfaceDraw(renderer: *Self, draw: surface_draw.SurfaceDraw) bool {
+            return metal_backend.appendSurfaceDrawToMetalQueue(renderer, draw);
+        }
     };
 
     fn backendOps(backend: RendererBackend) BackendOps {
@@ -618,6 +626,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
                 .drawSampleTextRequest = OpenGlDispatch.drawSampleTextRequest,
                 .drawTerminalCellRun = OpenGlDispatch.drawTerminalCellRun,
                 .drawAtlasSampleChar = OpenGlDispatch.drawAtlasSampleChar,
+                .enqueueSurfaceDraw = OpenGlDispatch.enqueueSurfaceDraw,
             },
             .metal => .{
                 .initRuntime = MetalDispatch.initRuntime,
@@ -649,6 +658,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
                 .drawSampleTextRequest = MetalDispatch.drawSampleTextRequest,
                 .drawTerminalCellRun = MetalDispatch.drawTerminalCellRun,
                 .drawAtlasSampleChar = MetalDispatch.drawAtlasSampleChar,
+                .enqueueSurfaceDraw = MetalDispatch.enqueueSurfaceDraw,
             },
         };
     }
@@ -1210,6 +1220,10 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
 
     pub fn terminalFontAtlasUploadHooksForRenderer(self: *Renderer) ?terminal_font_mod.AtlasUploadHooks {
         return metal_backend.terminalFontAtlasUploadHooksForRenderer(self);
+    }
+
+    pub fn enqueueSurfaceDraw(self: *Renderer, draw: surface_draw.SurfaceDraw) bool {
+        return self.backend_ops.enqueueSurfaceDraw(self, draw);
     }
 
     pub fn shouldClose(self: *Renderer) bool {

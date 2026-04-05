@@ -18,6 +18,7 @@ const sdl_api = @import("../../platform/sdl_api.zig");
 const platform_window = @import("../../platform/window_metrics.zig");
 const app_logger = @import("../../app_logger.zig");
 const types = @import("types.zig");
+const surface_draw = @import("surface_draw.zig");
 
 const sdl = gl.c;
 
@@ -261,6 +262,35 @@ pub fn drawSolidRect(renderer: anytype, x: f32, y: f32, w: f32, h: f32, color: t
     const src = texture_draw.unitSrcRect();
     draw_ops.drawTextureRect(renderer, whiteTexture(renderer), src, dest, color, .{ .r = 0, .g = 0, .b = 0, .a = 0 }, .rgba);
     return true;
+}
+
+/// Interprets one shared `SurfaceDraw` on the OpenGL path immediately (Metal
+/// queues the same union for end-of-frame replay). Only `.solid` is supported
+/// today; `.atlas` / `.raw_image` return false and do not take ownership.
+pub fn submitSurfaceDrawImmediate(renderer: anytype, draw: surface_draw.SurfaceDraw) bool {
+    switch (draw) {
+        .solid => |s| {
+            const x = renderer.rasterLengthToLogical(s.dest_rect.x);
+            const y = renderer.rasterLengthToLogical(s.dest_rect.y);
+            const w = renderer.rasterLengthToLogical(s.dest_rect.width);
+            const h = renderer.rasterLengthToLogical(s.dest_rect.height);
+            if (w <= 0 or h <= 0) return false;
+            if (s.clip_rect) |pc| {
+                if (pc.width <= 0 or pc.height <= 0) return false;
+                renderer.beginClip(
+                    @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.x)))),
+                    @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.y)))),
+                    @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.width)))),
+                    @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.height)))),
+                );
+                defer renderer.endClip();
+                return drawSolidRect(renderer, x, y, w, h, s.color);
+            }
+            return drawSolidRect(renderer, x, y, w, h, s.color);
+        },
+        .atlas => return false,
+        .raw_image => return false,
+    }
 }
 
 pub fn addTerminalRect(renderer: anytype, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void {

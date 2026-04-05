@@ -1336,7 +1336,7 @@ pub fn storeCurrentFrame(renderer: anytype, frame: Frame) void {
     renderer.metal_runtime.frame = frame;
 }
 
-pub fn appendSurfaceDraw(renderer: anytype, draw: SurfaceDraw) bool {
+pub fn appendSurfaceDrawToMetalQueue(renderer: anytype, draw: SurfaceDraw) bool {
     renderer.metal_runtime.queued_surface_draws.append(renderer.allocator, draw) catch {
         var queued_draw = draw;
         switch (queued_draw) {
@@ -1347,6 +1347,11 @@ pub fn appendSurfaceDraw(renderer: anytype, draw: SurfaceDraw) bool {
         return false;
     };
     return true;
+}
+
+pub fn appendSurfaceDraw(renderer: anytype, draw: SurfaceDraw) bool {
+    if (renderer.backend != .metal) return false;
+    return appendSurfaceDrawToMetalQueue(renderer, draw);
 }
 
 pub fn appendSolidRect(
@@ -1361,7 +1366,7 @@ pub fn appendSolidRect(
         metal_text_sample_runtime.pixelClipRect(renderer, c)
     else
         null;
-    return appendSurfaceDraw(renderer, .{ .solid = .{
+    return appendSurfaceDrawToMetalQueue(renderer, .{ .solid = .{
         .dest_rect = .{
             .x = renderer.logicalLengthToRaster(x),
             .y = renderer.logicalLengthToRaster(y),
@@ -1374,11 +1379,11 @@ pub fn appendSolidRect(
 }
 
 pub fn appendAtlasSample(renderer: anytype, sample: AtlasSampleDraw) bool {
-    return appendSurfaceDraw(renderer, .{ .atlas = sample });
+    return appendSurfaceDrawToMetalQueue(renderer, .{ .atlas = sample });
 }
 
 pub fn appendRawImage(renderer: anytype, draw: RawImageDraw) bool {
-    return appendSurfaceDraw(renderer, .{ .raw_image = draw });
+    return appendSurfaceDrawToMetalQueue(renderer, .{ .raw_image = draw });
 }
 
 pub fn drawSolidRect(
