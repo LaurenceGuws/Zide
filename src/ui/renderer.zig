@@ -130,6 +130,7 @@ pub const ScreenshotMode = capability_contract.ScreenshotMode;
 pub const SceneCompositionMode = capability_contract.SceneCompositionMode;
 pub const TerminalPresentationMode = capability_contract.TerminalPresentationMode;
 pub const TextRenderingMode = capability_contract.TextRenderingMode;
+pub const KittyImageMode = capability_contract.KittyImageMode;
 
 pub const AtlasPreviewSource = metal_runtime_state.AtlasPreviewSource;
 
@@ -1249,6 +1250,10 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
 
     pub fn supportsRawImageTextures(self: *const Renderer) bool {
         return self.capabilities().raw_image_textures;
+    }
+
+    pub fn kittyImageMode(self: *const Renderer) KittyImageMode {
+        return self.capabilities().kitty_image_mode;
     }
 
     pub fn sceneCompositionMode(self: *const Renderer) SceneCompositionMode {

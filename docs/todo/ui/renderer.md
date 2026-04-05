@@ -229,6 +229,9 @@ Progress note, 2026-04-05:
 - The unused renderer-root `deinitPresentables()` seam and its backend ops
   entry are gone too; presentable teardown now only exists in backend-owned
   runtime cleanup where it is actually used.
+- Kitty image handling now uses an explicit renderer capability mode instead of
+  branching on `renderer.backend` in the widget layer to decide between
+  persistent textures and direct raw-image draws.
 - Direct OpenGL frame submit and direct window screenshot-readback now also
   live under `src/ui/renderer/opengl_frame_runtime.zig` /
   `src/ui/renderer/gl_backend.zig` instead of

@@ -73,7 +73,7 @@ pub const KittyState = struct {
         session_placements: []const KittyPlacement,
     ) bool {
         self.updateViews(allocator, rows, cols, session_images, session_placements);
-        if (self.images_view.items.len > 0 and shell.rendererPtr().backend == .opengl) {
+        if (self.images_view.items.len > 0 and shell.rendererPtr().kittyImageMode() == .persistent_textures) {
             self.primeUploads(allocator);
             _ = self.processPendingUploads(shell);
         }
@@ -181,7 +181,7 @@ pub const KittyState = struct {
             const y = base_y + @as(f32, @floatFromInt(row_i)) * cell_h;
 
             const dest = types.Rect{ .x = x, .y = y, .width = draw_w, .height = draw_h };
-            if (r.backend == .metal) {
+            if (r.kittyImageMode() == .direct_raw_images) {
                 switch (image.format) {
                     .rgb => _ = metal_backend.drawRawImageRgb(r, @intCast(image.width), @intCast(image.height), image.data, dest, Color.white.toRgba()),
                     .rgba => _ = metal_backend.drawRawImageRgba(r, @intCast(image.width), @intCast(image.height), image.data, dest, Color.white.toRgba()),
@@ -222,9 +222,9 @@ pub const KittyState = struct {
     pub fn processPendingUploads(self: *KittyState, shell: *Shell) UploadStats {
         if (self.pending_uploads.items.len == 0) return .{};
         const renderer = shell.rendererPtr();
-        if (!renderer.supportsRawImageTextures()) {
+        if (renderer.kittyImageMode() != .persistent_textures) {
             if (!self.raw_texture_upload_unsupported_logged) {
-                app_logger.logger("terminal.kitty").logf(.info, "kitty upload unsupported backend={s}", .{@tagName(renderer.backend)});
+                app_logger.logger("terminal.kitty").logf(.info, "kitty upload unsupported mode={s}", .{@tagName(renderer.kittyImageMode())});
                 self.raw_texture_upload_unsupported_logged = true;
             }
             self.pending_uploads.clearRetainingCapacity();

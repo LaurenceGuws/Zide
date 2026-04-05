@@ -40,6 +40,7 @@ pub fn capabilities(renderer: anytype) RendererCapabilities {
         else
             .unavailable,
         .planned_text_rendering_mode = .gl_texture_atlas,
+        .kitty_image_mode = .persistent_textures,
         .atlas_storage_mode = if (renderer.runtime_profile == .full_ui)
             .opengl_textures
         else

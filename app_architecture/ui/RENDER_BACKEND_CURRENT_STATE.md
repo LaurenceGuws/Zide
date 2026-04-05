@@ -223,6 +223,12 @@ renderer-root `deinitPresentables()` seam and its matching backend ops entry
 are gone. Presentable teardown now only exists where it is actually needed, in
 backend-owned runtime cleanup.
 
+That has improved slightly again on the widget-side contract too: Kitty image
+handling no longer decides between persistent GL textures and direct Metal raw
+image draws by branching on `renderer.backend`. The renderer capability model
+now publishes an explicit Kitty image mode, and the terminal Kitty widget
+follows that contract instead of backend labels.
+
 That has improved slightly again on the Metal frame side too: the shared
 frame prelude no longer clears the Metal queued draw list before backend
 dispatch. That queue reset now lives under `metal_frame_runtime.zig`, which is

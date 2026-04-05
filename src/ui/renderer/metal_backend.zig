@@ -48,6 +48,7 @@ const PresentableInfo = presentable_contract.PresentableInfo;
 const RendererCapabilities = capability_contract.RendererCapabilities;
 
 pub fn capabilities(renderer: anytype) RendererCapabilities {
+    const raw_image_textures = hasBackendContext(renderer);
     return .{
         .scene_composition_mode = .direct_main_target,
         .retained_targets = false,
@@ -55,9 +56,10 @@ pub fn capabilities(renderer: anytype) RendererCapabilities {
         .screenshot_mode = .present_capture,
         .text_rendering_mode = .unavailable,
         .planned_text_rendering_mode = .metal_texture_atlas,
+        .kitty_image_mode = if (raw_image_textures) .direct_raw_images else .unsupported,
         .atlas_storage_mode = .metal_textures,
         .planned_atlas_storage_mode = .metal_textures,
-        .raw_image_textures = hasBackendContext(renderer),
+        .raw_image_textures = raw_image_textures,
     };
 }
 
