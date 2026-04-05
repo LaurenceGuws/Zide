@@ -7,6 +7,7 @@ const FontRenderingOptions = terminal_font_mod.RenderingOptions;
 const hb = terminal_font_mod.c;
 const font_manager = @import("renderer/font_manager.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
+const backend_frame_runtime = @import("renderer/backend_frame_runtime.zig");
 const gl_backend = @import("renderer/gl_backend.zig");
 const metal_backend = @import("renderer/metal_backend.zig");
 const presentable_target = @import("renderer/presentable_target.zig");
@@ -1421,149 +1422,11 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     }
 
     pub fn beginBackendFrame(self: *Renderer) void {
-        self.clearQueuedMetalSurfaceDraws();
-        switch (self.backend) {
-            .opengl => {
-                self.present.main_composition_target = switch (self.sceneCompositionMode()) {
-                    .offscreen_scene_target => if (scene_frame_runtime.beginSceneFrame(self))
-                        .offscreen_scene_target
-                    else
-                        .default_target,
-                    .direct_main_target => .default_target,
-                };
-                if (self.present.main_composition_target == .default_target) self.bindDefaultTarget();
-                gl.Disable(gl.c.GL_SCISSOR_TEST);
-
-                const bg = self.theme.background.toRgba();
-                gl.ClearColor(
-                    @as(f32, @floatFromInt(bg.r)) / 255.0,
-                    @as(f32, @floatFromInt(bg.g)) / 255.0,
-                    @as(f32, @floatFromInt(bg.b)) / 255.0,
-                    @as(f32, @floatFromInt(bg.a)) / 255.0,
-                );
-                gl.Clear(gl.c.GL_COLOR_BUFFER_BIT);
-            },
-            .metal => {
-                if (self.metal_backend_context) |*context| {
-                    metal_backend.resizeBackendContext(context, self.render_width, self.render_height);
-                    var frame = metal_backend.acquireFrame(context) orelse {
-                        self.present.main_composition_target = .default_target;
-                        self.metal_frame = null;
-                        return;
-                    };
-                    const bg = self.theme.background.toRgba();
-                    const cleared = metal_backend.clearFrame(&frame, .{
-                        @as(f32, @floatFromInt(bg.r)) / 255.0,
-                        @as(f32, @floatFromInt(bg.g)) / 255.0,
-                        @as(f32, @floatFromInt(bg.b)) / 255.0,
-                        @as(f32, @floatFromInt(bg.a)) / 255.0,
-                    });
-                    if (!cleared) {
-                        metal_backend.abandonFrame(&frame);
-                        self.present.main_composition_target = .default_target;
-                        self.metal_frame = null;
-                        return;
-                    }
-                    self.present.main_composition_target = .backend_surface;
-                    self.metal_frame = frame;
-                } else {
-                    self.present.main_composition_target = .default_target;
-                    self.metal_frame = null;
-                }
-            },
-        }
+        backend_frame_runtime.beginFrame(self);
     }
 
     pub fn submitBackendFrame(self: *Renderer) FrameSubmission {
-        return switch (self.backend) {
-            .opengl => scene_frame_runtime.submitOpenGlFrame(self),
-            .metal => blk: {
-                defer self.clearQueuedMetalSurfaceDraws();
-                const present_start = sdl_api.getPerformanceCounter();
-                const succeeded = if (self.metal_backend_context) |*context|
-                    if (self.metal_frame) |*frame| inner: {
-                        var capture_readback: ?metal_backend.Readback = null;
-                        defer if (capture_readback) |*readback| metal_backend.deinitReadback(readback);
-
-                        if (self.present.capture_armed) {
-                            capture_readback = metal_backend.prepareFrameReadback(context, frame);
-                        }
-
-                        for (self.metal_surface_draws.items) |queued_draw| {
-                            switch (queued_draw) {
-                                .atlas => |sample| _ = metal_backend.drawAtlasSample(context, frame, sample),
-                                .solid => |solid| _ = metal_backend.drawSolidColor(context, frame, solid),
-                                .raw_image => |draw| _ = metal_backend.drawRawImage(context, frame, draw),
-                            }
-                        }
-
-                        _ = metal_backend.captureTerminalSnapshot(context, frame);
-
-                        metal_backend.encodePresent(frame);
-                        metal_backend.commitFrame(frame);
-
-                        if (capture_readback) |*readback| {
-                            metal_backend.waitForFrame(frame);
-                            if (self.present.capture_path) |path| {
-                                const rgba = metal_backend.copyReadbackRgba(self.allocator, readback) catch |err| rgba_capture: {
-                                    app_logger.logger("renderer.present").logf(.warning, "capture failed frame_seq={d} path={s} err={s}", .{
-                                        self.present.frame_seq,
-                                        path,
-                                        @errorName(err),
-                                    });
-                                    break :rgba_capture null;
-                                };
-                                if (rgba) |pixels| {
-                                    defer self.allocator.free(pixels);
-                                    screenshot.dumpRgbaPixelsPpmScaled(
-                                        self.allocator,
-                                        pixels,
-                                        readback.width,
-                                        readback.height,
-                                        self.width,
-                                        self.height,
-                                        path,
-                                        .top_left,
-                                    ) catch |err| {
-                                        app_logger.logger("renderer.present").logf(.warning, "capture failed frame_seq={d} path={s} err={s}", .{
-                                            self.present.frame_seq,
-                                            path,
-                                            @errorName(err),
-                                        });
-                                    };
-                                    self.present.trace_current.captured_path = path;
-                                }
-                            }
-                        } else if (self.present.capture_armed) {
-                            if (self.present.capture_path) |path| {
-                                app_logger.logger("renderer.present").logf(.warning, "capture failed frame_seq={d} path={s} err=MetalReadbackUnavailable", .{
-                                    self.present.frame_seq,
-                                    path,
-                                });
-                            }
-                        }
-
-                        metal_backend.releaseFrame(frame);
-                        self.metal_frame = null;
-                        break :inner true;
-                    } else false
-                else false;
-                const present_end = sdl_api.getPerformanceCounter();
-                self.present.last_swap_ms = scene_frame_runtime.performanceDeltaMs(present_start, present_end, self.perf_freq);
-                self.present.main_composition_target = .default_target;
-                self.present.trace_last = self.present.trace_current;
-                self.present.capture_path = null;
-                self.present.capture_armed = false;
-                self.present.capture_frame_seq = 0;
-                if (succeeded) self.present.submission_sequence += 1;
-                break :blk .{
-                    .succeeded = succeeded,
-                    .sequence = self.present.submission_sequence,
-                    .terminal_presented = self.present.trace_current.terminal_presentation_count > 0,
-                    .terminal_presented_generation = self.present.trace_current.terminal_presented_generation,
-                };
-            },
-        };
+        return backend_frame_runtime.submitFrame(self);
     }
 
     fn srgbToLinear(c: f32) f32 {
@@ -2008,7 +1871,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         return &self.metal_diagnostic_font.?;
     }
 
-    fn clearQueuedMetalSurfaceDraws(self: *Renderer) void {
+    pub fn clearQueuedMetalSurfaceDraws(self: *Renderer) void {
         for (self.metal_surface_draws.items) |*queued_draw| {
             switch (queued_draw.*) {
                 .atlas => {},

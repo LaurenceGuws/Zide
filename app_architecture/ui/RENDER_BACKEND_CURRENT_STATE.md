@@ -71,15 +71,21 @@ directly on `.opengl` and `.metal`.
 That is survivable for two backends, but it is not the shape that makes a
 third backend feel routine.
 
-The problem is not only the `switch`.
+This has improved slightly: the backend-native begin/submit bodies now live in:
 
-The problem is that the `switch` body still contains backend-native work:
+- `src/ui/renderer/opengl_frame_runtime.zig`
+- `src/ui/renderer/metal_frame_runtime.zig`
+- dispatched via `src/ui/renderer/backend_frame_runtime.zig`
 
-- GL scene target bring-up and clear semantics
-- Metal frame acquire/clear/present/readback submission
-- Metal queued surface-draw iteration
+So the renderer root no longer spells out the whole OpenGL and Metal frame
+loops inline.
 
-So there is not yet a real backend lifecycle seam under the renderer root.
+But there is still not a final backend lifecycle seam yet:
+
+- the renderer root still owns the dispatch point
+- shared lifecycle helpers still expose backend-specific state on `Renderer`
+- the backend frame runtimes still operate on a renderer object that carries
+  concrete backend state directly
 
 ### 3. The shared draw queue is still Metal-native
 
@@ -207,6 +213,13 @@ Status, 2026-04-05:
 Move inline frame begin/submit logic out of `src/ui/renderer.zig` and behind a
 backend-owned lifecycle surface so the renderer root stops being the place that
 knows how each backend actually submits work.
+
+Status, 2026-04-05:
+
+- the inline begin/submit bodies now live in dedicated backend frame runtime
+  modules
+- the next required step is to reduce shared renderer ownership of the dispatch
+  point and backend-native frame state itself
 
 ### Cut 4. Delete backend-specific public draw helpers from `Renderer`
 
