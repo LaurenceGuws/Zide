@@ -181,6 +181,10 @@ Progress note, 2026-04-05:
   `src/ui/renderer/gl_backend.zig` instead of
   `src/ui/renderer/scene_frame_runtime.zig` carrying that OpenGL-specific
   behavior inside a shared runtime file.
+- The terminal presentable end path now goes back through the shared
+  presentable contract instead of bypassing it to call a scene-runtime restore
+  helper directly, and the OpenGL composition-target restore logic now lives
+  with the OpenGL presentable implementation instead of shared scene runtime.
 - The next lifecycle step is to reduce shared-runtime ownership of dispatch and
   backend-native frame state, not just move code blocks around.
 

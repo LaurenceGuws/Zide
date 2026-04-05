@@ -1,5 +1,4 @@
 const presentable_targets_runtime = @import("../renderer/presentable_targets_runtime.zig");
-const scene_frame_runtime = @import("../renderer/scene_frame_runtime.zig");
 
 pub const PresentableDraw = presentable_targets_runtime.PresentableDraw;
 
@@ -16,7 +15,7 @@ pub fn beginPresentable(renderer: anytype) bool {
 }
 
 pub fn endPresentable(renderer: anytype) void {
-    scene_frame_runtime.restoreMainCompositionTarget(renderer);
+    presentable_targets_runtime.endPresentable(renderer, .terminal);
 }
 
 pub fn drawPresentable(renderer: anytype, draw: PresentableDraw) void {

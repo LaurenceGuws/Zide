@@ -54,7 +54,7 @@ pub fn endPresentable(self: anytype, surface: PresentableSurface) void {
         .terminal => {},
         .editor => scene_frame_runtime.notePresentableEnded(self, .editor),
     }
-    scene_frame_runtime.restoreMainCompositionTarget(self);
+    restoreCompositionTarget(self);
 }
 
 pub fn drawPresentable(self: anytype, surface: PresentableSurface, draw: PresentableDraw) void {
@@ -156,4 +156,15 @@ pub fn scrollPresentable(self: anytype, surface: PresentableSurface, dx: i32, dy
 fn snapToDevicePixel(value: f32, render_scale: f32) f32 {
     const scale = if (render_scale > 0.0) render_scale else 1.0;
     return @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(value * scale))))) / scale;
+}
+
+fn restoreCompositionTarget(self: anytype) void {
+    if (self.present.main_composition_target == .offscreen_scene_target) {
+        if (!scene_frame_runtime.beginSceneFrame(self)) {
+            self.present.main_composition_target = .default_target;
+            self.bindDefaultTarget();
+        }
+        return;
+    }
+    self.bindDefaultTarget();
 }

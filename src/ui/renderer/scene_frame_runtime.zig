@@ -53,17 +53,6 @@ pub const PresentState = struct {
     capture_frame_seq: u64 = 0,
 };
 
-pub fn restoreMainCompositionTarget(self: anytype) void {
-    if (self.present.main_composition_target == .offscreen_scene_target) {
-        if (!beginSceneFrame(self)) {
-            self.present.main_composition_target = .default_target;
-            self.bindDefaultTarget();
-        }
-        return;
-    }
-    self.bindDefaultTarget();
-}
-
 pub fn noteCompositionFullPaneClear(self: anytype) void {
     self.present.trace_current.composition_full_pane_clear = true;
 }

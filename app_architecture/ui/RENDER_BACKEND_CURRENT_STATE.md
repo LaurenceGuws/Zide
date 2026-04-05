@@ -201,6 +201,12 @@ submit and direct window screenshot-readback logic now live under the OpenGL
 frame/backend modules instead of `scene_frame_runtime.zig` carrying that
 OpenGL-specific behavior inside a shared runtime file.
 
+That has improved slightly again on the presentable lifecycle side too: the
+terminal presentable end path no longer bypasses the shared presentable
+contract just to call a shared scene-runtime restore helper. The restore logic
+now lives under the OpenGL presentable implementation, and the widget-facing
+terminal presenter ends presentables through the contract again.
+
 ### 3. The shared draw queue is still Metal-native
 
 The shared renderer currently stores and submits
