@@ -71,8 +71,223 @@ pub const DirectPresentResult = struct {
     kitty_ms: f64 = 0.0,
 };
 
+pub const PresentationExecutionResult = struct {
+    completed: bool = false,
+    bg_ms: f64 = 0.0,
+    glyph_ms: f64 = 0.0,
+    kitty_ms: f64 = 0.0,
+};
+
 pub fn clearPresentationSample(self: anytype) void {
     self.debug.last_terminal_presentation.valid = false;
+}
+
+fn forEachPresentationDrawSpan(
+    rows: usize,
+    cols: usize,
+    surface_update_plan: PresentationUpdatePlan,
+    visitor: anytype,
+) void {
+    if (rows == 0 or cols == 0) return;
+
+    switch (surface_update_plan.mode) {
+        .none => {},
+        .full => {
+            for (0..rows) |row| {
+                visitor.visit(row, 0, cols - 1, true);
+            }
+        },
+        .partial => {
+            const partial_plan = surface_update_plan.partial_plan orelse return;
+            for (0..rows) |row| {
+                if (!partial_plan.rows[row]) continue;
+                if (row < partial_plan.span_counts.len and row < partial_plan.spans.len and partial_plan.span_counts[row] > 0) {
+                    var span_idx: usize = 0;
+                    while (span_idx < partial_plan.span_counts[row]) : (span_idx += 1) {
+                        const span = partial_plan.spans[row][span_idx];
+                        const col_start = @min(@as(usize, span.start), cols - 1);
+                        const col_end = @min(@as(usize, span.end), cols - 1);
+                        visitor.visit(row, col_start, col_end, col_end >= cols - 1);
+                    }
+                    continue;
+                }
+                const col_start = @min(@as(usize, partial_plan.cols_start[row]), cols - 1);
+                const col_end = @min(@as(usize, partial_plan.cols_end[row]), cols - 1);
+                visitor.visit(row, col_start, col_end, col_end >= cols - 1);
+            }
+        },
+    }
+}
+
+fn drawPresentationBackgroundPass(
+    shell: *app_shell.Shell,
+    renderer: anytype,
+    view_geometry: TerminalViewGeometry,
+    view_cells: anytype,
+    rows: usize,
+    cols: usize,
+    base_x_local: f32,
+    base_y_local: f32,
+    padding_x_i: i32,
+    screen_reverse: bool,
+    draw_cursor: bool,
+    cursor: CursorPos,
+    cursor_style: terminal_types.CursorStyle,
+    surface_update_plan: PresentationUpdatePlan,
+    bg_color: Color,
+    clear_full_surface: bool,
+) f64 {
+    const bg_phase_start = app_shell.getTime();
+    renderer.beginTerminalBatch();
+    if (clear_full_surface) {
+        renderer.addTerminalRect(0, 0, surface_update_plan.geometry.surface_w, surface_update_plan.geometry.surface_h, bg_color);
+    }
+    var visitor = struct {
+        shell: *app_shell.Shell,
+        view_geometry: TerminalViewGeometry,
+        view_cells: @TypeOf(view_cells),
+        cols: usize,
+        base_x_local: f32,
+        base_y_local: f32,
+        padding_x_i: i32,
+        screen_reverse: bool,
+        draw_cursor: bool,
+        cursor: CursorPos,
+        cursor_style: terminal_types.CursorStyle,
+
+        fn visit(ctx: *@This(), row: usize, col_start: usize, col_end: usize, draw_padding: bool) void {
+            drawRowBackgrounds(
+                ctx.shell,
+                ctx.view_geometry,
+                ctx.view_cells,
+                ctx.cols,
+                row,
+                col_start,
+                col_end,
+                ctx.base_x_local,
+                ctx.base_y_local,
+                ctx.padding_x_i,
+                draw_padding,
+                ctx.screen_reverse,
+                ctx.draw_cursor,
+                ctx.cursor,
+                ctx.cursor_style,
+            );
+        }
+    }{
+        .shell = shell,
+        .view_geometry = view_geometry,
+        .view_cells = view_cells,
+        .cols = cols,
+        .base_x_local = base_x_local,
+        .base_y_local = base_y_local,
+        .padding_x_i = padding_x_i,
+        .screen_reverse = screen_reverse,
+        .draw_cursor = draw_cursor,
+        .cursor = cursor,
+        .cursor_style = cursor_style,
+    };
+    forEachPresentationDrawSpan(rows, cols, surface_update_plan, &visitor);
+    renderer.flushTerminalBatch();
+    return time_utils.secondsToMs(app_shell.getTime() - bg_phase_start);
+}
+
+fn drawPresentationGlyphPass(
+    self: anytype,
+    shell: *app_shell.Shell,
+    renderer: anytype,
+    view_geometry: TerminalViewGeometry,
+    view_cells: anytype,
+    rows: usize,
+    cols: usize,
+    base_x_local: f32,
+    base_y_local: f32,
+    padding_x_i: i32,
+    hover_link_id: u32,
+    screen_reverse: bool,
+    blink_style: anytype,
+    blink_time: f64,
+    draw_cursor: bool,
+    cursor: CursorPos,
+    cursor_style: terminal_types.CursorStyle,
+    terminal_generation: u64,
+    surface_update_plan: PresentationUpdatePlan,
+    glyph_draw_stats: *GlyphDrawStats,
+) f64 {
+    const glyph_phase_start = app_shell.getTime();
+    renderer.terminal_font.beginFrameAtlasStats();
+    renderer.beginTerminalGlyphBatch();
+    var visitor = struct {
+        self_widget: @TypeOf(self),
+        shell: *app_shell.Shell,
+        view_geometry: TerminalViewGeometry,
+        view_cells: @TypeOf(view_cells),
+        cols: usize,
+        base_x_local: f32,
+        base_y_local: f32,
+        padding_x_i: i32,
+        hover_link_id: u32,
+        screen_reverse: bool,
+        blink_style: @TypeOf(blink_style),
+        blink_time: f64,
+        draw_cursor: bool,
+        cursor: CursorPos,
+        cursor_style: terminal_types.CursorStyle,
+        disable_ligatures: @TypeOf(renderer.font_config.terminal_disable_ligatures),
+        terminal_generation: u64,
+        glyph_draw_stats: *GlyphDrawStats,
+        metal_fallback_sample: *@import("terminal_widget_debug_geometry.zig").MetalTerminalFallbackSample,
+
+        fn visit(ctx: *@This(), row: usize, col_start: usize, col_end: usize, _: bool) void {
+            drawRowGlyphs(
+                ctx.shell,
+                ctx.view_geometry,
+                ctx.view_cells,
+                ctx.cols,
+                row,
+                col_start,
+                col_end,
+                ctx.base_x_local,
+                ctx.base_y_local,
+                ctx.padding_x_i,
+                ctx.hover_link_id,
+                ctx.screen_reverse,
+                ctx.blink_style,
+                ctx.blink_time,
+                ctx.draw_cursor,
+                ctx.cursor,
+                ctx.cursor_style,
+                ctx.disable_ligatures,
+                ctx.terminal_generation,
+                ctx.glyph_draw_stats,
+                &ctx.self_widget.debug.last_text_paint,
+                ctx.metal_fallback_sample,
+            );
+        }
+    }{
+        .self_widget = self,
+        .shell = shell,
+        .view_geometry = view_geometry,
+        .view_cells = view_cells,
+        .cols = cols,
+        .base_x_local = base_x_local,
+        .base_y_local = base_y_local,
+        .padding_x_i = padding_x_i,
+        .hover_link_id = hover_link_id,
+        .screen_reverse = screen_reverse,
+        .blink_style = blink_style,
+        .blink_time = blink_time,
+        .draw_cursor = draw_cursor,
+        .cursor = cursor,
+        .cursor_style = cursor_style,
+        .disable_ligatures = renderer.font_config.terminal_disable_ligatures,
+        .terminal_generation = terminal_generation,
+        .glyph_draw_stats = glyph_draw_stats,
+        .metal_fallback_sample = &self.debug.last_metal_terminal_fallback,
+    };
+    forEachPresentationDrawSpan(rows, cols, surface_update_plan, &visitor);
+    renderer.flushTerminalGlyphBatch();
+    return time_utils.secondsToMs(app_shell.getTime() - glyph_phase_start);
 }
 
 pub fn notePresentSample(
@@ -115,6 +330,100 @@ pub fn notePresentSample(
         }
     }
     self.debug.last_terminal_presentation = sample;
+}
+
+pub fn executePresentableUpdate(
+    self: anytype,
+    shell: *app_shell.Shell,
+    renderer: anytype,
+    terminal_view: view_state.TerminalViewModel,
+    view_geometry: TerminalViewGeometry,
+    hover_link_id: u32,
+    start_line: usize,
+    draw_cursor: bool,
+    cursor: CursorPos,
+    cursor_style: terminal_types.CursorStyle,
+    blink_style: anytype,
+    blink_time: f64,
+    has_kitty: bool,
+    surface_update_plan: PresentationUpdatePlan,
+) PresentationExecutionResult {
+    var result = PresentationExecutionResult{};
+    if (surface_update_plan.mode == .none) return result;
+    if (surface_update_plan.mode == .partial and surface_update_plan.partial_plan == null) return result;
+
+    const rows = terminal_view.rows;
+    const cols = terminal_view.cols;
+    const view_cells = terminal_view.cells;
+    const base_colors = terminal_view.base_colors;
+    const screen_reverse = terminal_view.render.screen_reverse;
+    const base_x_local: f32 = 0;
+    const base_y_local: f32 = 0;
+    var glyph_draw_stats = GlyphDrawStats{};
+    const bg_color = if (view_cells.len > 0)
+        Color{
+            .r = base_colors.resolved_background.r,
+            .g = base_colors.resolved_background.g,
+            .b = base_colors.resolved_background.b,
+            .a = base_colors.resolved_background.a,
+        }
+    else
+        renderer.theme.background;
+    const clear_full_surface = surface_update_plan.mode == .full;
+
+    result.bg_ms += drawPresentationBackgroundPass(
+        shell,
+        renderer,
+        view_geometry,
+        view_cells,
+        rows,
+        cols,
+        base_x_local,
+        base_y_local,
+        surface_update_plan.geometry.padding_x_i,
+        screen_reverse,
+        draw_cursor,
+        cursor,
+        cursor_style,
+        surface_update_plan,
+        bg_color,
+        clear_full_surface,
+    );
+    if (has_kitty) {
+        const kitty_phase_start = app_shell.getTime();
+        self.surface.kitty.cleanupTextures(self.session.allocator, self.surface.kitty.images_view.items);
+        self.surface.kitty.drawImages(self.session.allocator, shell, base_x_local, base_y_local, false, start_line, rows, cols);
+        result.kitty_ms += time_utils.secondsToMs(app_shell.getTime() - kitty_phase_start);
+    }
+    result.glyph_ms += drawPresentationGlyphPass(
+        self,
+        shell,
+        renderer,
+        view_geometry,
+        view_cells,
+        rows,
+        cols,
+        base_x_local,
+        base_y_local,
+        surface_update_plan.geometry.padding_x_i,
+        hover_link_id,
+        screen_reverse,
+        blink_style,
+        blink_time,
+        draw_cursor,
+        cursor,
+        cursor_style,
+        terminal_view.generation,
+        surface_update_plan,
+        &glyph_draw_stats,
+    );
+    if (has_kitty) {
+        const kitty_phase_start = app_shell.getTime();
+        self.surface.kitty.drawImages(self.session.allocator, shell, base_x_local, base_y_local, true, start_line, rows, cols);
+        result.kitty_ms += time_utils.secondsToMs(app_shell.getTime() - kitty_phase_start);
+    }
+    result.completed = true;
+    return result;
 }
 
 pub fn beginViewportClip(

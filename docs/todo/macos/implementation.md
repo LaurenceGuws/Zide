@@ -668,6 +668,9 @@ lane.
     - retained-presentable end/restore now routes through the terminal-owned
       presentation target runtime instead of remaining presenter-local target
       shutdown logic
+    - retained terminal update execution now lives in the terminal
+      presentation runtime too, including row-span iteration, background pass,
+      glyph pass, and Kitty below/above-text ordering for the retained path
     - the direct Metal terminal lane still validates on the same runtime truth:
       `terminal_present=direct_main_target`, `presentable_ready=1` after the
       first successful frame, `grid_runs=10/224`, `overlay_runs=1/5`, and
