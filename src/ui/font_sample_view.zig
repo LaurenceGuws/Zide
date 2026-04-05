@@ -6,6 +6,7 @@ const metal_text_diagnostic_view = @import("metal_text_diagnostic_view.zig");
 const terminal_font_mod = @import("terminal_font.zig");
 const renderer_mod = @import("renderer.zig");
 const retained_targets_runtime = @import("renderer/retained_targets_runtime.zig");
+const metal_backend = @import("renderer/metal_backend.zig");
 const metal_text_sample_runtime = @import("renderer/metal_text_sample_runtime.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
 const iface = @import("renderer/interface.zig");
@@ -25,7 +26,11 @@ const SampleFontFace = struct {
     fn init(allocator: std.mem.Allocator, renderer: *Renderer, path: [*:0]const u8, layout_size: f32) !SampleFontFace {
         const raster_scale = renderer.logicalLengthToRaster(1.0);
         const raster_size = renderer.logicalLengthToRaster(layout_size);
-        var font = try TerminalFont.init(
+        const atlas_upload_hooks = if (renderer.backend == .metal)
+            metal_backend.terminalFontAtlasUploadHooks(&(renderer.metal_backend_context orelse return error.MetalBackendContextUnavailable))
+        else
+            null;
+        var font = try TerminalFont.initWithAtlasUploadHooks(
             allocator,
             path,
             raster_size,
@@ -37,6 +42,7 @@ const SampleFontFace = struct {
             iface.EMOJI_COLOR_FALLBACK_PATH,
             iface.EMOJI_TEXT_FALLBACK_PATH,
             renderer.font_config.font_rendering,
+            atlas_upload_hooks,
         );
         errdefer font.deinit();
         font.render_scale = raster_scale;
@@ -177,7 +183,7 @@ pub const FontSampleView = struct {
             "Font Sample (size={d:.1})  keys: +/-",
             .{self.size},
         ) catch "Font Sample";
-        r.drawText(title, padding, header_y, theme.foreground);
+        drawStatusText(r, title, padding, header_y, theme.foreground);
 
         if (r.textRenderingMode() != .gl_texture_atlas) {
             drawTextModeStatus(r, theme, padding, header_y + r.char_height * 1.8);
@@ -223,15 +229,23 @@ pub const FontSampleView = struct {
                 },
             });
         }
-        r.drawText("Text sample unavailable on this runtime path.", x, y, theme.foreground);
+        drawStatusText(r, "Text sample unavailable on this runtime path.", x, y, theme.foreground);
 
         var live_buf: [96]u8 = undefined;
         const live = std.fmt.bufPrint(&live_buf, "live text mode: {s}", .{@tagName(r.textRenderingMode())}) catch "live text mode: <error>";
-        r.drawText(live, x, y + r.char_height * 1.4, theme.ui_text_inactive);
+        drawStatusText(r, live, x, y + r.char_height * 1.4, theme.ui_text_inactive);
 
         var planned_buf: [96]u8 = undefined;
         const planned = std.fmt.bufPrint(&planned_buf, "planned text mode: {s}", .{@tagName(r.plannedTextRenderingMode())}) catch "planned text mode: <error>";
-        r.drawText(planned, x, y + r.char_height * 2.8, theme.ui_modified);
+        drawStatusText(r, planned, x, y + r.char_height * 2.8, theme.ui_modified);
+    }
+
+    fn drawStatusText(r: *Renderer, text: []const u8, x: f32, y: f32, color: Color) void {
+        if (r.textRenderingMode() == .unavailable and r.plannedTextRenderingMode() == .metal_texture_atlas) {
+            r.drawTextMonospace(text, x, y, color);
+            return;
+        }
+        r.drawText(text, x, y, color);
     }
 
     fn drawSection(

@@ -963,6 +963,11 @@ explicitly. Invalid values are ignored (default OpenGL).
 When Metal is active, font atlases use the Metal atlas upload hooks
 (`terminalFontAtlasUploadHooks`) so glyph caches are not GL-backed.
 
+The `font-sample` mode is now also honest on this path: standalone sample fonts
+use the same Metal atlas upload hooks instead of crashing through GL-only font
+atlas allocation, and the diagnostic/status copy uses the Metal monospace
+fallback path when live text mode is still reported as unavailable.
+
 This is an execution checkpoint toward `MAC-07`, not a claim that every
 full-ui draw path is Metal-complete; capability and editor/terminal breadth still
 follow `capabilities()` and ongoing milestone work.

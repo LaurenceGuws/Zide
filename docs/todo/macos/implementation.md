@@ -597,6 +597,10 @@ lane.
       `runtime_profile == .full_ui` on macOS only; Metal branch runs
       `initFonts()` with Metal atlas hooks (`font_manager` →
       `initWithAtlasUploadHooks`)
+    - `font-sample` on the Metal full-ui lane now uses Metal atlas upload hooks
+      for its standalone sample fonts and routes diagnostic/status copy through
+      the Metal monospace fallback path; this fixed a real crash and a silent
+      blank-text diagnostic failure on the reviewed branch-only implementation
 
 - [ ] `MAC-08` Re-establish normal macOS validation truth
   - Required checks:
