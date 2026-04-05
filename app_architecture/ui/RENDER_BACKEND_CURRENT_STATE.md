@@ -124,6 +124,11 @@ presentable draw and raw-image enqueue paths now also route through
 `metal_backend` helpers instead of the renderer root assembling those backend
 draw requests inline.
 
+That has improved slightly again at the renderer root: even the one-off Metal
+smoke frame and the basic Metal `SurfaceDraw` variant packaging now route
+through `metal_backend` helpers instead of `Renderer` spelling out those
+backend-specific assembly details itself.
+
 ### 2. Shared frame lifecycle still branches backend-by-backend
 
 The renderer root no longer spells out backend frame begin/submit bodies, but

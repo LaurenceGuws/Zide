@@ -1195,6 +1195,38 @@ pub fn appendSurfaceDraw(renderer: anytype, draw: SurfaceDraw) bool {
     return true;
 }
 
+pub fn appendSolidRect(
+    renderer: anytype,
+    x: f32,
+    y: f32,
+    w: f32,
+    h: f32,
+    color: types.Rgba,
+) bool {
+    const clip = if (renderer.currentClipRect()) |c|
+        metal_text_sample_runtime.pixelClipRect(renderer, c)
+    else
+        null;
+    return appendSurfaceDraw(renderer, .{ .solid = .{
+        .dest_rect = .{
+            .x = renderer.logicalLengthToRaster(x),
+            .y = renderer.logicalLengthToRaster(y),
+            .width = renderer.logicalLengthToRaster(w),
+            .height = renderer.logicalLengthToRaster(h),
+        },
+        .color = color,
+        .clip_rect = clip,
+    } });
+}
+
+pub fn appendAtlasSample(renderer: anytype, sample: AtlasSampleDraw) bool {
+    return appendSurfaceDraw(renderer, .{ .atlas = sample });
+}
+
+pub fn appendRawImage(renderer: anytype, draw: RawImageDraw) bool {
+    return appendSurfaceDraw(renderer, .{ .raw_image = draw });
+}
+
 pub fn appendSampleTextRequest(
     renderer: anytype,
     font: *terminal_font.TerminalFont,
@@ -1226,13 +1258,13 @@ pub fn appendTerminalCellRun(
 pub fn appendTerminalSnapshotDraw(renderer: anytype, draw: RawImageDraw) bool {
     const context = backendContext(renderer) orelse return false;
     const snapshot = context.terminal_snapshot orelse return false;
-    return appendSurfaceDraw(renderer, .{ .raw_image = .{
+    return appendRawImage(renderer, .{
         .texture = cloneRawImageTexture(snapshot),
         .source_rect = draw.source_rect,
         .dest_rect = draw.dest_rect,
         .tint = draw.tint,
         .clip_rect = draw.clip_rect,
-    } });
+    });
 }
 
 pub fn appendRawImageRgba(
@@ -1250,7 +1282,7 @@ pub fn appendRawImageRgba(
         metal_text_sample_runtime.pixelClipRect(renderer, clip)
     else
         null;
-    return appendSurfaceDraw(renderer, .{ .raw_image = .{
+    return appendRawImage(renderer, .{
         .texture = texture,
         .source_rect = null,
         .dest_rect = .{
@@ -1261,7 +1293,7 @@ pub fn appendRawImageRgba(
         },
         .tint = tint,
         .clip_rect = clip_rect,
-    } });
+    });
 }
 
 pub fn appendRawImageRgb(
@@ -1279,7 +1311,7 @@ pub fn appendRawImageRgb(
         metal_text_sample_runtime.pixelClipRect(renderer, clip)
     else
         null;
-    return appendSurfaceDraw(renderer, .{ .raw_image = .{
+    return appendRawImage(renderer, .{
         .texture = texture,
         .source_rect = null,
         .dest_rect = .{
@@ -1290,7 +1322,7 @@ pub fn appendRawImageRgb(
         },
         .tint = tint,
         .clip_rect = clip_rect,
-    } });
+    });
 }
 
 pub fn terminalSnapshotAvailableForRenderer(renderer: anytype) bool {
@@ -1306,6 +1338,27 @@ pub fn ensureTerminalSnapshotPresentableForRenderer(renderer: anytype, width: i3
 pub fn scrollTerminalSnapshotPresentableForRenderer(renderer: anytype, dx: i32, dy: i32) bool {
     const context = backendContext(renderer) orelse return false;
     return scrollTerminalSnapshotPresentable(context, dx, dy);
+}
+
+pub fn runSmokeFrame(renderer: anytype) bool {
+    const host = renderer.prepareMacosMetalHost() orelse return false;
+    var context = createBackendContext(host, renderer.render_width, renderer.render_height) orelse return false;
+    defer deinitBackendContext(&context);
+
+    var frame = acquireFrame(&context) orelse return false;
+    const bg = renderer.theme.background.toRgba();
+    const cleared = clearFrame(&frame, .{
+        @as(f32, @floatFromInt(bg.r)) / 255.0,
+        @as(f32, @floatFromInt(bg.g)) / 255.0,
+        @as(f32, @floatFromInt(bg.b)) / 255.0,
+        @as(f32, @floatFromInt(bg.a)) / 255.0,
+    });
+    if (!cleared) {
+        abandonFrame(&frame);
+        return false;
+    }
+    presentFrame(&context, &frame);
+    return true;
 }
 
 pub fn replayQueuedSurfaceDraws(renderer: anytype, context: *BackendContext, frame: *Frame) void {

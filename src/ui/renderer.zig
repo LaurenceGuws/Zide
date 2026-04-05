@@ -1733,25 +1733,15 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
 
     fn appendMetalSolidRect(self: *Renderer, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) bool {
         if (self.backend != .metal) return false;
-        const clip = if (self.currentClipRect()) |c| metal_text_sample_runtime.pixelClipRect(self, c) else null;
-        return metal_backend.appendSurfaceDraw(self, .{ .solid = .{
-            .dest_rect = .{
-                .x = self.logicalLengthToRaster(x),
-                .y = self.logicalLengthToRaster(y),
-                .width = self.logicalLengthToRaster(w),
-                .height = self.logicalLengthToRaster(h),
-            },
-            .color = color,
-            .clip_rect = clip,
-        } });
+        return metal_backend.appendSolidRect(self, x, y, w, h, color);
     }
 
     fn appendMetalAtlasSampleDraw(self: *Renderer, sample: surface_draw.AtlasSampleDraw) bool {
-        return metal_backend.appendSurfaceDraw(self, .{ .atlas = sample });
+        return metal_backend.appendAtlasSample(self, sample);
     }
 
     fn appendMetalRawImageDraw(self: *Renderer, draw: surface_draw.RawImageDraw) bool {
-        return metal_backend.appendSurfaceDraw(self, .{ .raw_image = draw });
+        return metal_backend.appendRawImage(self, draw);
     }
 
     pub fn drawBackendTerminalSnapshotPresentable(
@@ -1868,23 +1858,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     }
 
     pub fn runMacosMetalSmokeFrame(self: *const Renderer) bool {
-        var context = self.prepareMacosMetalBackendContext() orelse return false;
-        defer metal_backend.deinitBackendContext(&context);
-
-        var frame = metal_backend.acquireFrame(&context) orelse return false;
-        const bg = self.theme.background.toRgba();
-        const cleared = metal_backend.clearFrame(&frame, .{
-            @as(f32, @floatFromInt(bg.r)) / 255.0,
-            @as(f32, @floatFromInt(bg.g)) / 255.0,
-            @as(f32, @floatFromInt(bg.b)) / 255.0,
-            @as(f32, @floatFromInt(bg.a)) / 255.0,
-        });
-        if (!cleared) {
-            metal_backend.abandonFrame(&frame);
-            return false;
-        }
-        metal_backend.presentFrame(&context, &frame);
-        return true;
+        return metal_backend.runSmokeFrame(self);
     }
 
     fn windowHitTestCallback(_: ?*sdl.SDL_Window, area: [*c]const sdl.SDL_Point, data: ?*anyopaque) callconv(.c) sdl_api.HitTestResult {

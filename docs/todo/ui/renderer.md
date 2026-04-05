@@ -148,6 +148,9 @@ Progress note, 2026-04-05:
 - Metal snapshot-presentable draw and raw-image enqueue paths now also route
   through `metal_backend.zig` helpers instead of the renderer root assembling
   those backend draw requests inline.
+- The one-off Metal smoke frame and basic Metal `SurfaceDraw` variant
+  packaging now also route through `metal_backend.zig` helpers instead of
+  `Renderer` spelling out those backend-specific assembly details itself.
 - The next lifecycle step is to reduce shared-runtime ownership of dispatch and
   backend-native frame state, not just move code blocks around.
 
