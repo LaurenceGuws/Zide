@@ -140,6 +140,9 @@ Progress note, 2026-04-05:
 - Sampled-text and terminal-cell-run queue handoffs now also route through
   `metal_backend.zig` helpers instead of the renderer root passing the Metal
   queued-surface list directly into those builders.
+- The Metal frame runtime now routes current-frame slot access and queued
+  surface replay through `metal_backend.zig` helpers instead of directly
+  mutating and iterating `renderer.metal_runtime` storage fields.
 - The next lifecycle step is to reduce shared-runtime ownership of dispatch and
   backend-native frame state, not just move code blocks around.
 

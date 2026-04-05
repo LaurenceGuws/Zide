@@ -5,11 +5,11 @@ const sdl_api = @import("../../platform/sdl_api.zig");
 const metal_backend = @import("metal_backend.zig");
 
 pub fn beginFrame(renderer: anytype) void {
-    if (renderer.metal_runtime.backend_context) |*context| {
+    if (metal_backend.backendContext(renderer)) |context| {
         metal_backend.resizeBackendContext(context, renderer.render_width, renderer.render_height);
         var frame = metal_backend.acquireFrame(context) orelse {
             renderer.present.main_composition_target = .default_target;
-            renderer.metal_runtime.frame = null;
+            metal_backend.clearCurrentFrame(renderer);
             return;
         };
         const bg = renderer.theme.background.toRgba();
@@ -22,22 +22,22 @@ pub fn beginFrame(renderer: anytype) void {
         if (!cleared) {
             metal_backend.abandonFrame(&frame);
             renderer.present.main_composition_target = .default_target;
-            renderer.metal_runtime.frame = null;
+            metal_backend.clearCurrentFrame(renderer);
             return;
         }
         renderer.present.main_composition_target = .backend_surface;
-        renderer.metal_runtime.frame = frame;
+        metal_backend.storeCurrentFrame(renderer, frame);
     } else {
         renderer.present.main_composition_target = .default_target;
-        renderer.metal_runtime.frame = null;
+        metal_backend.clearCurrentFrame(renderer);
     }
 }
 
 pub fn submitFrame(renderer: anytype) scene_frame_runtime.FrameSubmission {
     defer metal_backend.clearQueuedSurfaceDraws(renderer);
     const present_start = sdl_api.getPerformanceCounter();
-    const succeeded = if (renderer.metal_runtime.backend_context) |*context|
-        if (renderer.metal_runtime.frame) |*frame| inner: {
+    const succeeded = if (metal_backend.backendContext(renderer)) |context|
+        if (metal_backend.currentFrame(renderer)) |frame| inner: {
             var capture_readback: ?metal_backend.Readback = null;
             defer if (capture_readback) |*readback| metal_backend.deinitReadback(readback);
 
@@ -45,13 +45,7 @@ pub fn submitFrame(renderer: anytype) scene_frame_runtime.FrameSubmission {
                 capture_readback = metal_backend.prepareFrameReadback(context, frame);
             }
 
-            for (renderer.metal_runtime.queued_surface_draws.items) |queued_draw| {
-                switch (queued_draw) {
-                    .atlas => |sample| _ = metal_backend.drawAtlasSample(context, frame, sample),
-                    .solid => |solid| _ = metal_backend.drawSolidColor(context, frame, solid),
-                    .raw_image => |draw| _ = metal_backend.drawRawImage(context, frame, draw),
-                }
-            }
+            metal_backend.replayQueuedSurfaceDraws(renderer, context, frame);
 
             _ = metal_backend.captureTerminalSnapshot(context, frame);
 
@@ -100,7 +94,7 @@ pub fn submitFrame(renderer: anytype) scene_frame_runtime.FrameSubmission {
             }
 
             metal_backend.releaseFrame(frame);
-            renderer.metal_runtime.frame = null;
+            metal_backend.clearCurrentFrame(renderer);
             break :inner true;
         } else false
     else false;

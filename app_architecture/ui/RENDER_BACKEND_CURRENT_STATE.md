@@ -109,6 +109,11 @@ Metal queued-surface list directly into the sampled-text builders for sampled
 text runs and terminal cell runs. Those queue handoffs now route through
 `metal_backend` helpers too.
 
+That has improved slightly again in the Metal frame path: frame-slot access and
+queued-surface replay now route through `metal_backend` helpers instead of
+`metal_frame_runtime.zig` directly mutating and iterating the
+`renderer.metal_runtime` storage fields itself.
+
 ### 2. Shared frame lifecycle still branches backend-by-backend
 
 The renderer root no longer spells out backend frame begin/submit bodies, but

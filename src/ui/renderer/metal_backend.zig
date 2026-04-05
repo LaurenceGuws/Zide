@@ -1168,6 +1168,19 @@ pub fn queuedSurfaceDrawCount(renderer: anytype) usize {
     return renderer.metal_runtime.queued_surface_draws.items.len;
 }
 
+pub fn currentFrame(renderer: anytype) ?*Frame {
+    if (renderer.metal_runtime.frame) |*frame| return frame;
+    return null;
+}
+
+pub fn clearCurrentFrame(renderer: anytype) void {
+    renderer.metal_runtime.frame = null;
+}
+
+pub fn storeCurrentFrame(renderer: anytype, frame: Frame) void {
+    renderer.metal_runtime.frame = frame;
+}
+
 pub fn appendSurfaceDraw(renderer: anytype, draw: SurfaceDraw) bool {
     renderer.metal_runtime.queued_surface_draws.append(renderer.allocator, draw) catch {
         var queued_draw = draw;
@@ -1222,6 +1235,16 @@ pub fn ensureTerminalSnapshotPresentableForRenderer(renderer: anytype, width: i3
 pub fn scrollTerminalSnapshotPresentableForRenderer(renderer: anytype, dx: i32, dy: i32) bool {
     const context = backendContext(renderer) orelse return false;
     return scrollTerminalSnapshotPresentable(context, dx, dy);
+}
+
+pub fn replayQueuedSurfaceDraws(renderer: anytype, context: *BackendContext, frame: *Frame) void {
+    for (renderer.metal_runtime.queued_surface_draws.items) |queued_draw| {
+        switch (queued_draw) {
+            .atlas => |sample| _ = drawAtlasSample(context, frame, sample),
+            .solid => |solid| _ = drawSolidColor(context, frame, solid),
+            .raw_image => |draw| _ = drawRawImage(context, frame, draw),
+        }
+    }
 }
 
 pub fn resizeBackendContext(
