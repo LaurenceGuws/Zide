@@ -126,8 +126,8 @@ supposed to prevent.
 
 ### 4. Retained/presentable surfaces are still GL-shaped in shared runtime code
 
-`src/ui/renderer/presentable_targets_runtime.zig` still imports
-`gl_backend.RenderTarget` as the retained surface type.
+`src/ui/renderer/presentable_targets_runtime.zig` still routes only to the
+OpenGL presentable implementation today.
 
 This has improved slightly: the presentable target type now lives in
 `src/ui/renderer/presentable_target.zig` instead of being owned directly by the
@@ -138,12 +138,15 @@ The shared runtime surface has improved too:
 - the main shared retained-target API now uses presentable-oriented names
 - callers no longer have to speak in GL-era `ensureSurface` /
   `beginSurface` / `drawSurface` vocabulary
+- the OpenGL presentable mechanics now live in
+  `src/ui/renderer/opengl_presentable_runtime.zig` instead of inside the
+  shared presentable contract module
 
 But the presentable surface story is still not backend-neutral at the shared
 runtime layer:
 
 - the moved type is still FBO/texture-shaped
-- shared runtime behavior is still effectively the GL retained-surface model
+- shared presentable routing still only reaches the OpenGL presentable model
 - Metal still reaches presentable behavior through a separate direct/snapshot
   lane instead of the same contract
 
@@ -175,7 +178,10 @@ The main contradiction centers today are:
   - owns a useful implementation surface, but is still the only backend
     consuming the shared surface-draw queue directly
 - `src/ui/renderer/presentable_targets_runtime.zig`
-  - shared runtime logic is still effectively the GL presentable model
+  - shared contract surface still routes only to the OpenGL presentable model
+- `src/ui/renderer/opengl_presentable_runtime.zig`
+  - now owns the actual GL presentable mechanics that used to live in the
+    shared presentable contract module
 - `src/ui/renderer/frame_runtime.zig`
   - shared frame lifecycle still acts as the entrypoint above backend dispatch
     and renderer-wide per-frame bookkeeping
