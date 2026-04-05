@@ -1208,6 +1208,10 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         return metal_backend.runAtlasUploadDiagnosticAt(self, placement.dest_x, placement.dest_y);
     }
 
+    pub fn terminalFontAtlasUploadHooksForRenderer(self: *Renderer) ?terminal_font_mod.AtlasUploadHooks {
+        return metal_backend.terminalFontAtlasUploadHooksForRenderer(self);
+    }
+
     pub fn shouldClose(self: *Renderer) bool {
         return self.input.should_close_flag;
     }
