@@ -437,6 +437,12 @@ lane.
       frame logs report `snapshot_available=1` from the first submitted frame
       onward while the active presentation mode remains
       `terminal_present=direct_main_target`
+    - that reuse path is now exercised on the current host too: frame 0 still
+      reports `metric_present_sample=direct_main_target`, while later
+      steady-state frames report
+      `metric_present_sample=direct_snapshot_presentable`, with grid/overlay
+      row fallback counts and Kitty presentation work collapsing to zero on
+      those reused frames
     - the underlying terminal widget storage contract is less retained-first
       now too: the state container and partial-plan type are named around
       presentation instead of retained state, which reduces another place
@@ -701,7 +707,9 @@ lane.
     - the direct Metal terminal lane still validates on the same runtime truth:
       `terminal_present=direct_main_target`, `presentable_ready=1` after the
       first successful frame, `snapshot_available=1` after frame 0,
-      `grid_runs=10/224`, `overlay_runs=1/5`, and non-zero `kitty_ms`
+      frame-0 `metric_present_sample=direct_main_target`, steady-state
+      `metric_present_sample=direct_snapshot_presentable`, and non-zero
+      frame-0 `kitty_ms`
     - this reduces one more retained-first contradiction before a second
       Metal terminal presentation shape is introduced
 

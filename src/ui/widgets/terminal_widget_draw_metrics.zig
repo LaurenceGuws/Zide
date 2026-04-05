@@ -1,7 +1,9 @@
 const app_shell = @import("../../app_shell.zig");
+const terminal_debug_geometry = @import("terminal_widget_debug_geometry.zig");
 
 pub const FrameLatencyMetrics = struct {
     terminal_presentation_mode: app_shell.TerminalPresentationMode = .retained_surface,
+    terminal_presentation_sample_mode: terminal_debug_geometry.TerminalPresentationSampleMode = .retained_surface,
     seq: u64 = 0,
     generation: u64 = 0,
     lock_ms: f64 = 0.0,
@@ -31,6 +33,7 @@ pub fn latestFrameLatencyMetrics() FrameLatencyMetrics {
 
 pub fn publishFrameLatencyMetrics(
     terminal_presentation_mode: app_shell.TerminalPresentationMode,
+    terminal_presentation_sample_mode: terminal_debug_geometry.TerminalPresentationSampleMode,
     generation: u64,
     lock_ms: f64,
     lock_wait_ms: f64,
@@ -52,6 +55,7 @@ pub fn publishFrameLatencyMetrics(
     frame_latency_seq +%= 1;
     frame_latency_metrics = .{
         .terminal_presentation_mode = terminal_presentation_mode,
+        .terminal_presentation_sample_mode = terminal_presentation_sample_mode,
         .seq = frame_latency_seq,
         .generation = generation,
         .lock_ms = lock_ms,

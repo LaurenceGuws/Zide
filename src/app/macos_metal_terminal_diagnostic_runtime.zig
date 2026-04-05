@@ -113,7 +113,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
             last_metrics_seq = metrics.seq;
             log.logf(
                 .info,
-                "frame={d} submitted={d} sequence={d} grid_runs={d}/{d} overlay_runs={d}/{d} metric_grid_runs={d}/{d} metric_overlay_runs={d}/{d} kitty_ms={d:.3} snapshot_available={d}",
+                "frame={d} submitted={d} sequence={d} grid_runs={d}/{d} overlay_runs={d}/{d} metric_grid_runs={d}/{d} metric_overlay_runs={d}/{d} kitty_ms={d:.3} snapshot_available={d} metric_present_sample={s}",
                 .{
                     frame_index,
                     @intFromBool(submission.succeeded),
@@ -128,6 +128,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
                     metrics.metal_overlay_row_cells,
                     metrics.presentation_kitty_ms,
                     @intFromBool(shell.renderer.metalTerminalSnapshotAvailable()),
+                    @tagName(metrics.terminal_presentation_sample_mode),
                 },
             );
             log.logf(.info, "frame={d} metric_terminal_present={s}", .{
@@ -149,7 +150,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
     const final_metrics = terminal_widget_draw.latestFrameLatencyMetrics();
     log.logf(
         .info,
-        "complete frames={d} final_grid_runs={d}/{d} final_overlay_runs={d}/{d} metric_grid_runs={d}/{d} metric_overlay_runs={d}/{d} metric_terminal_present={s} kitty_ms={d:.3} snapshot_available={d}",
+        "complete frames={d} final_grid_runs={d}/{d} final_overlay_runs={d}/{d} metric_grid_runs={d}/{d} metric_overlay_runs={d}/{d} metric_terminal_present={s} metric_present_sample={s} kitty_ms={d:.3} snapshot_available={d}",
         .{
             frame_index,
             final_debug.grid_row_runs,
@@ -161,6 +162,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
             final_metrics.metal_overlay_row_runs,
             final_metrics.metal_overlay_row_cells,
             @tagName(final_metrics.terminal_presentation_mode),
+            @tagName(final_metrics.terminal_presentation_sample_mode),
             final_metrics.presentation_kitty_ms,
             @intFromBool(shell.renderer.metalTerminalSnapshotAvailable()),
         },

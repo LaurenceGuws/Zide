@@ -71,6 +71,10 @@ pub const TerminalWidgetSurfaceState = struct {
         return self.presentation.last_render_generation;
     }
 
+    pub fn lastRenderClearGeneration(self: *const TerminalWidgetSurfaceState) u64 {
+        return self.presentation.last_render_clear_generation;
+    }
+
     pub fn presentableReady(self: *const TerminalWidgetSurfaceState) bool {
         return self.presentation.terminal_presentable_ready;
     }

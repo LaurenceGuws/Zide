@@ -682,6 +682,7 @@ pub fn runPresentation(
             renderer,
             terminal_view,
             view_cells_len,
+            blink_requires_partial,
             bg_color,
             x,
             y,
@@ -724,6 +725,7 @@ pub fn runPresentation(
         renderer,
         terminal_view,
         view_cells_len,
+        blink_requires_partial,
         bg_color,
         x,
         y,
@@ -888,6 +890,7 @@ pub fn tryFastPresentExisting(
     renderer: anytype,
     terminal_view: view_state.TerminalViewModel,
     view_cells_len: usize,
+    blink_requires_partial: bool,
     bg_color: Color,
     x: f32,
     y: f32,
@@ -900,7 +903,13 @@ pub fn tryFastPresentExisting(
     const presentable_ready = surface_state.notePresentableAvailability(
         presentation_target_runtime.presentableAvailable(renderer),
     );
-    if (!(terminal_view.sync_updates_active and view_cells_len > 0 and presentable_ready)) return false;
+    const direct_snapshot_reusable = renderer.terminalPresentationMode() == .direct_main_target and
+        !terminal_view.sync_updates_active and
+        !blink_requires_partial and
+        terminal_view.generation == surface_state.lastRenderGeneration() and
+        terminal_view.clear_generation == surface_state.lastRenderClearGeneration();
+    if (!(view_cells_len > 0 and presentable_ready and
+        (terminal_view.sync_updates_active or direct_snapshot_reusable))) return false;
 
     renderer.drawRect(
         @intFromFloat(x),
@@ -913,7 +922,7 @@ pub fn tryFastPresentExisting(
         note_present(
             note_present_ctx,
             renderer,
-            .direct_main_target,
+            .direct_snapshot_presentable,
             terminal_view.generation,
             view_geometry.origin_x,
             view_geometry.origin_y,

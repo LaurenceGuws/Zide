@@ -48,6 +48,7 @@ pub const CursorOverlaySample = struct {
 
 pub const TerminalPresentationSampleMode = enum {
     direct_main_target,
+    direct_snapshot_presentable,
     retained_surface,
 };
 

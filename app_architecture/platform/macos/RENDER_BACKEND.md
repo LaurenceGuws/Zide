@@ -710,6 +710,13 @@ What this does and does not mean:
   time and reports `snapshot_available=1` from frame 0 onward, which confirms
   the live direct-main-target lane now has a reusable presentable cache even
   though the active presentation mode remains `direct_main_target`
+- the reuse path is now actually exercised on the current host instead of only
+  existing as latent cache state: frame 0 still reports
+  `metric_present_sample=direct_main_target`, while later steady-state frames
+  report `metric_present_sample=direct_snapshot_presentable` with zero
+  grid/overlay/Kitty presentation work, which proves the direct Metal lane can
+  fast-present the cached snapshot when generation and clear-generation remain
+  unchanged
 - the underlying storage contract is less retained-first now too: the terminal
   widget state container and partial-plan type are named around presentation
   rather than retained state, which reduces one more place where the direct
