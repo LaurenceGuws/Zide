@@ -32,7 +32,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
     const log = app_logger.logger("macos.metal.text_diagnostic");
     const capabilities = shell.rendererCapabilities();
     const atlas_upload_probe = (metal_text_diagnostic_view.View{}).activate(shell);
-    const sample_text_draw = shell.rendererPtr().drawMetalAtlasSampleText("METAL", 24.0, 96.0);
+    const sample_text_draw = shell.rendererPtr().drawMetalAtlasSampleText("METAL\nTEXT", 24.0, 96.0);
     const atlas_preview_source = shell.macosMetalAtlasPreviewSource();
     log.logf(.info, "start width={d} height={d} frame_budget={d}", .{ width, height, frame_budget });
     log.logf(

@@ -208,7 +208,7 @@ pub const FontSampleView = struct {
                 @intFromFloat(std.math.round(swatch_size + 12.0)),
                 theme.ui_panel_overlay,
             );
-            _ = r.drawMetalAtlasSampleText("METAL", swatch_x, swatch_y);
+            _ = r.drawMetalAtlasSampleText("METAL\nTEXT", swatch_x, swatch_y);
         }
         r.drawText("Text sample unavailable on this runtime path.", x, y, theme.foreground);
 

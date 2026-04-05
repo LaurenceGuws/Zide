@@ -22,10 +22,17 @@ pub fn appendAsciiRun(
     if (request.text.len == 0) return false;
 
     const render_scale = if (renderer.scale.render_scale > 0.0) renderer.scale.render_scale else 1.0;
+    const line_height = font.line_height / render_scale;
     var pen_x = request.x;
+    var pen_y = request.y;
     var drew_any = false;
 
     for (request.text) |char| {
+        if (char == '\n') {
+            pen_x = request.x;
+            pen_y += line_height;
+            continue;
+        }
         if (char == ' ') {
             pen_x += font.cell_width / render_scale;
             continue;
@@ -41,7 +48,7 @@ pub fn appendAsciiRun(
             .atlas = .color,
             .source_rect = glyph.rect,
             .dest_x = @max(0, @as(i32, @intFromFloat(std.math.round(renderer.logicalLengthToRaster(pen_x))))),
-            .dest_y = @max(0, @as(i32, @intFromFloat(std.math.round(renderer.logicalLengthToRaster(request.y))))),
+            .dest_y = @max(0, @as(i32, @intFromFloat(std.math.round(renderer.logicalLengthToRaster(pen_y))))),
         };
         draw_count.* += 1;
         drew_any = true;

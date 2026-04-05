@@ -581,9 +581,10 @@ What this does and does not mean:
   a dedicated runtime builder in `renderer/metal_text_sample_runtime.zig`,
   which is the right contract direction for growing from ad hoc sampled draws
   toward a real Metal text lane
-- this is still intentionally narrow and honest: it is a tiny sampled-text run
-  rather than a claim that the generic string/text renderer has already
-  migrated or that per-glyph tinting semantics are complete on Metal
+- this is still intentionally narrow and honest: it is now a tiny sampled
+  multiline ASCII run rather than a claim that the generic string/text
+  renderer has already migrated or that per-glyph tinting semantics are
+  complete on Metal
 - the existing font-sample fallback now consumes that same narrow path as an
   actual UI caller: when live text is unavailable but the planned mode is
   `metal_texture_atlas`, it frames and requests a tiny sampled `"METAL"` run
