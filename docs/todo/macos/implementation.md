@@ -466,6 +466,9 @@ lane.
     - the terminal presentation-target seam now owns Metal snapshot
       preparation too, so the live Metal terminal presentable is no longer
       allocated only as an implicit submit-time side effect
+    - the Metal snapshot-presentable draw now uses explicit raster-space
+      source and destination regions, so non-full-window terminals do not
+      rely on an accidental full-texture blit assumption
     - the underlying terminal widget storage contract is less retained-first
       now too: the state container and partial-plan type are named around
       presentation instead of retained state, which reduces another place

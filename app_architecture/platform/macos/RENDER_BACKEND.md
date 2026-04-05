@@ -745,6 +745,10 @@ What this does and does not mean:
   preparation as well as availability/draw: presentable allocation for the
   live Metal lane no longer exists only as an implicit side effect of submit-
   time capture
+- the Metal snapshot-presentable draw contract is more correct now too:
+  snapshot presents use explicit raster-space source and destination regions
+  instead of implicitly sampling the whole drawable texture, which is required
+  for terminals that do not fill the entire window
 - the underlying storage contract is less retained-first now too: the terminal
   widget state container and partial-plan type are named around presentation
   rather than retained state, which reduces one more place where the direct

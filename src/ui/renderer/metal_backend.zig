@@ -151,6 +151,7 @@ pub const RawImageTexture = struct {
 
 pub const RawImageDraw = struct {
     texture: RawImageTexture,
+    source_rect: ?types.Rect = null,
     dest_rect: types.Rect,
     tint: types.Rgba = .{ .r = 255, .g = 255, .b = 255, .a = 255 },
     clip_rect: ?PixelClipRect = null,
@@ -891,18 +892,19 @@ pub fn drawRawImage(
     frame: *Frame,
     draw: RawImageDraw,
 ) bool {
+    const source_rect = draw.source_rect orelse types.Rect{
+        .x = 0,
+        .y = 0,
+        .width = @floatFromInt(draw.texture.width),
+        .height = @floatFromInt(draw.texture.height),
+    };
     return encodeExternalTextureRegion(
         context,
         frame,
         draw.texture.texture,
         draw.texture.width,
         draw.texture.height,
-        .{
-            .x = 0,
-            .y = 0,
-            .width = @floatFromInt(draw.texture.width),
-            .height = @floatFromInt(draw.texture.height),
-        },
+        source_rect,
         draw.dest_rect,
         draw.tint,
         draw.clip_rect,

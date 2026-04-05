@@ -2006,6 +2006,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         const snapshot = context.terminal_snapshot orelse return false;
         return self.appendMetalRawImageDraw(.{
             .texture = metal_backend.cloneRawImageTexture(snapshot),
+            .source_rect = draw.source_rect,
             .dest_rect = draw.dest_rect,
             .tint = draw.tint,
             .clip_rect = draw.clip_rect,
@@ -2076,6 +2077,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             null;
         return self.appendMetalRawImageDraw(.{
             .texture = texture,
+            .source_rect = null,
             .dest_rect = .{
                 .x = self.logicalLengthToRaster(dest.x),
                 .y = self.logicalLengthToRaster(dest.y),
@@ -2098,6 +2100,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             null;
         return self.appendMetalRawImageDraw(.{
             .texture = texture,
+            .source_rect = null,
             .dest_rect = .{
                 .x = self.logicalLengthToRaster(dest.x),
                 .y = self.logicalLengthToRaster(dest.y),

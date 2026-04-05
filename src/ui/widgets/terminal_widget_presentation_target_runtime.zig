@@ -24,14 +24,24 @@ pub fn endPresentable(renderer: anytype) void {
 
 pub fn drawPresentable(renderer: anytype, draw: PresentableDraw) void {
     if (renderer.backend == .metal) {
+        const dest_width = draw.width orelse return;
+        const dest_height = draw.height orelse return;
+        const source_width = draw.source_width orelse dest_width;
+        const source_height = draw.source_height orelse dest_height;
         scene_frame_runtime.noteTerminalPresentation(renderer, draw.generation);
         _ = renderer.drawMetalTerminalSnapshotPresentable(.{
             .texture = undefined,
+            .source_rect = .{
+                .x = renderer.logicalLengthToRaster(draw.x),
+                .y = renderer.logicalLengthToRaster(draw.y),
+                .width = renderer.logicalLengthToRaster(source_width),
+                .height = renderer.logicalLengthToRaster(source_height),
+            },
             .dest_rect = .{
-                .x = draw.x,
-                .y = draw.y,
-                .width = draw.width orelse return,
-                .height = draw.height orelse return,
+                .x = renderer.logicalLengthToRaster(draw.x),
+                .y = renderer.logicalLengthToRaster(draw.y),
+                .width = renderer.logicalLengthToRaster(dest_width),
+                .height = renderer.logicalLengthToRaster(dest_height),
             },
         });
         return;
