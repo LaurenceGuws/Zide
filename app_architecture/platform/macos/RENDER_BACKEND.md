@@ -843,6 +843,15 @@ What this does and does not mean:
   lane on the same dashboard proof: the current first frame now reports
   `shaped_special_glyphs=179`, split as
   `powerline=12 shade=18 braille=10 box=139 other_special=0`
+- the dashboard fixture itself now pressures that new block ladder too rather
+  than leaving it as compile-only coverage: it seeds side-fill glyphs
+  (`▏▎▍▌▋▊▉█`), top/right-edge blocks (`▔▕`), and the lower block ladder
+  (`▁▂▃▄▅▆▇█`) on the live Metal terminal lane
+- with that richer mixed dashboard content, the current first-frame proof is
+  now `shaped_special_glyphs=185`, split as
+  `powerline=10 shade=6 braille=10 box=159 other_special=0`, which is a
+  more representative `btop`-style bar/box pressure mix than the earlier
+  dashboard row set
 - that same dashboard lane is now runtime-proven under churn too instead of
   only on the first full frame: a dashboard mutation frame now stays on
   `metric_present_sample=direct_snapshot_update` with

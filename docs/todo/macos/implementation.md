@@ -856,6 +856,13 @@ lane.
       onto the live Metal special-glyph lane: the current first-frame split is
       now `powerline=12 shade=18 braille=10 box=139 other_special=0`, with
       `shaped_special_glyphs=179`
+    - the dashboard fixture now exercises that new block ladder directly too:
+      side fills (`▏▎▍▌▋▊▉█`), top/right-edge blocks (`▔▕`), and the lower
+      block ladder (`▁▂▃▄▅▆▇█`) are now part of the live Metal proof instead
+      of only the implementation surface
+    - with that richer mixed dashboard content, the first-frame proof is now
+      `powerline=10 shade=6 braille=10 box=159 other_special=0`, with
+      `shaped_special_glyphs=185`
     - the dashboard fixture is now proven under churn too:
       `DASHBOARD=1` plus `MUTATE_FRAME=1` yields
       `metric_present_sample=direct_snapshot_update`,
