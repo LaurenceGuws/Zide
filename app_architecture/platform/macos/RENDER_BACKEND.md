@@ -813,9 +813,13 @@ What this does and does not mean:
   powerline separator set (`U+E0B0..U+E0B7`) on the current host
 - that runtime proof is also now classed enough to guide the next execution
   slice instead of only proving “some special glyphs happened”: the current
-  fixture reports `powerline=6 shade=3 braille=7 other_special=21`, which is
-  strong evidence that the next `btop`-class pressure is the broader
-  box/block continuity lane rather than the already-active powerline lane
+  fixture originally exposed a classification bug where filled powerline
+  separators were still riding the `.box` lane; that is now fixed, so the same
+  proof reports `powerline=10 shade=3 braille=7 box=17 other_special=0`
+- that tighter split is the current best runtime statement of where the next
+  `btop`-class pressure lives: powerline is now materially more honest, and
+  the remaining gap is the broader box/block continuity quality itself rather
+  than hidden ownership ambiguity inside the special-glyph router
 - that preparation contract is now aligned with capture truth as well:
   the target runtime prepares drawable-sized Metal snapshot presentables
   instead of using terminal-surface geometry while submit-time capture

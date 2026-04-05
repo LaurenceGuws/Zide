@@ -78,7 +78,8 @@ pub fn hasAnalyticBoxGlyphCoverage(codepoint: u32) bool {
 }
 
 pub fn specialVariantForCodepoint(codepoint: u32) ?types.SpecialGlyphVariant {
-    if (codepoint == 0xE0B1 or codepoint == 0xE0B3 or
+    if (codepoint == 0xE0B0 or codepoint == 0xE0B1 or
+        codepoint == 0xE0B2 or codepoint == 0xE0B3 or
         codepoint == 0xE0B4 or codepoint == 0xE0B5 or
         codepoint == 0xE0B6 or codepoint == 0xE0B7)
     {
@@ -866,6 +867,8 @@ test "shade glyph coverage exists and increases by density" {
 
 test "special variant routing only claims implemented box coverage" {
     try std.testing.expectEqual(types.SpecialGlyphVariant.box, specialVariantForCodepoint(0x2500).?);
+    try std.testing.expectEqual(types.SpecialGlyphVariant.powerline, specialVariantForCodepoint(0xE0B0).?);
+    try std.testing.expectEqual(types.SpecialGlyphVariant.powerline, specialVariantForCodepoint(0xE0B2).?);
     try std.testing.expectEqual(@as(?types.SpecialGlyphVariant, null), specialVariantForCodepoint(0x2550));
     try std.testing.expectEqual(@as(?types.SpecialGlyphVariant, null), specialVariantForCodepoint(0xF5D0));
     try std.testing.expectEqual(@as(?types.SpecialGlyphVariant, null), specialVariantForCodepoint(0x1FB00));

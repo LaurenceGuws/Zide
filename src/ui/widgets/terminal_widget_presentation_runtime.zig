@@ -1235,6 +1235,12 @@ pub fn directPresent(
             &self.debug.last_metal_terminal_fallback,
         );
     }
+    self.debug.last_metal_terminal_fallback.special_sprite_glyphs = glyph_stats.special_sprite_glyphs;
+    self.debug.last_metal_terminal_fallback.shaped_special_glyphs = glyph_stats.shaped_special_glyphs;
+    self.debug.last_metal_terminal_fallback.powerline_special_glyphs = glyph_stats.powerline_special_glyphs;
+    self.debug.last_metal_terminal_fallback.shade_special_glyphs = glyph_stats.shade_special_glyphs;
+    self.debug.last_metal_terminal_fallback.braille_special_glyphs = glyph_stats.braille_special_glyphs;
+    self.debug.last_metal_terminal_fallback.box_glyphs = glyph_stats.box_glyphs;
     renderer.flushTerminalGlyphBatch();
     result.glyph_ms = time_utils.secondsToMs(app_shell.getTime() - glyph_phase_start);
 

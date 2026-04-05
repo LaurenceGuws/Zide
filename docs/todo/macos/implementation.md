@@ -827,10 +827,12 @@ lane.
       `shaped_special_glyphs=37`, with real sprite creation for
       `U+E0B0..U+E0B7`
     - the same fixture now reports a useful class breakdown too:
-      `powerline=6 shade=3 braille=7 other_special=21`, which means the Metal
-      lane is no longer blocked on “special glyphs not running at all”; the
-      next real pressure is box/block continuity and the remaining uncategorized
-      special coverage that still separates the lane from a `btop`-quality bar
+      after fixing filled powerline separators to use the real powerline path,
+      the current runtime split is
+      `powerline=10 shade=3 braille=7 box=17 other_special=0`
+    - that means the Metal lane is no longer blocked on “special glyphs not
+      running at all” or on a hidden powerline ownership bug; the next real
+      pressure is box/block continuity quality against the `btop` bar
     - this reduces one more retained-first contradiction before a second
       Metal terminal presentation shape is introduced
 
