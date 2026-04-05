@@ -508,6 +508,7 @@ pub fn bindDefaultTarget(renderer: anytype) void {
 pub fn beginRenderTarget(renderer: anytype, target: ?RenderTarget) bool {
     if (target) |t| {
         gl.BindFramebuffer(gl.c.GL_FRAMEBUFFER, t.fbo);
+        renderer.text_render.dst_linear_active = true;
         renderer.target_pixel_width = t.texture.width;
         renderer.target_pixel_height = t.texture.height;
         updateProjection(renderer, t.logical_width, t.logical_height);
@@ -518,6 +519,19 @@ pub fn beginRenderTarget(renderer: anytype, target: ?RenderTarget) bool {
         return true;
     }
     return false;
+}
+
+pub fn ensureRenderTargetScaledForRenderer(
+    renderer: anytype,
+    target: *?RenderTarget,
+    logical_width: i32,
+    logical_height: i32,
+    filter: i32,
+) bool {
+    const scale = if (renderer.scale.render_scale > 0.0) renderer.scale.render_scale else 1.0;
+    const width = @max(1, @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(logical_width)) * scale))));
+    const height = @max(1, @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(logical_height)) * scale))));
+    return ensureRenderTarget(target, width, height, logical_width, logical_height, filter);
 }
 
 pub fn scrollRenderTarget(

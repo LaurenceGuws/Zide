@@ -5,6 +5,7 @@ const sdl_api = @import("../../platform/sdl_api.zig");
 const metal_backend = @import("metal_backend.zig");
 
 pub fn beginFrame(renderer: anytype) void {
+    metal_backend.clearQueuedSurfaceDraws(renderer);
     if (metal_backend.backendContext(renderer)) |context| {
         metal_backend.resizeBackendContext(context, renderer.render_width, renderer.render_height);
         var frame = metal_backend.acquireFrame(context) orelse {

@@ -15,30 +15,30 @@ const PresentableSurface = presentable_contract.PresentableSurface;
 const PresentableDraw = presentable_contract.PresentableDraw;
 
 pub fn deinit(self: anytype) void {
-    self.destroyRenderTarget(&self.opengl_runtime.presentable_targets.terminal);
-    self.destroyRenderTarget(&self.opengl_runtime.presentable_targets.terminal_scroll);
-    self.destroyRenderTarget(&self.opengl_runtime.presentable_targets.editor);
+    gl_backend.destroyRenderTarget(&self.opengl_runtime.presentable_targets.terminal);
+    gl_backend.destroyRenderTarget(&self.opengl_runtime.presentable_targets.terminal_scroll);
+    gl_backend.destroyRenderTarget(&self.opengl_runtime.presentable_targets.editor);
 }
 
 pub fn ensurePresentable(self: anytype, surface: PresentableSurface, width: i32, height: i32) bool {
     switch (surface) {
         .terminal => {
-            const recreated = self.ensureRenderTargetScaled(&self.opengl_runtime.presentable_targets.terminal, width, height, gl.c.GL_NEAREST);
-            _ = self.ensureRenderTargetScaled(&self.opengl_runtime.presentable_targets.terminal_scroll, width, height, gl.c.GL_NEAREST);
+            const recreated = gl_backend.ensureRenderTargetScaledForRenderer(self, &self.opengl_runtime.presentable_targets.terminal, width, height, gl.c.GL_NEAREST);
+            _ = gl_backend.ensureRenderTargetScaledForRenderer(self, &self.opengl_runtime.presentable_targets.terminal_scroll, width, height, gl.c.GL_NEAREST);
             return recreated;
         },
         .editor => {
-            return self.ensureRenderTargetScaled(&self.opengl_runtime.presentable_targets.editor, width, height, gl.c.GL_NEAREST);
+            return gl_backend.ensureRenderTargetScaledForRenderer(self, &self.opengl_runtime.presentable_targets.editor, width, height, gl.c.GL_NEAREST);
         },
     }
 }
 
 pub fn beginPresentable(self: anytype, surface: PresentableSurface) bool {
     switch (surface) {
-        .terminal => return self.beginRenderTarget(self.opengl_runtime.presentable_targets.terminal),
+        .terminal => return gl_backend.beginRenderTarget(self, self.opengl_runtime.presentable_targets.terminal),
         .editor => {
             present_trace_runtime.notePresentableUpdate(self, .editor);
-            return self.beginRenderTarget(self.opengl_runtime.presentable_targets.editor);
+            return gl_backend.beginRenderTarget(self, self.opengl_runtime.presentable_targets.editor);
         },
     }
 }

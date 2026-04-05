@@ -12,7 +12,6 @@ const gl_backend = @import("renderer/gl_backend.zig");
 const metal_backend = @import("renderer/metal_backend.zig");
 const opengl_runtime_state = @import("renderer/opengl_runtime_state.zig");
 const metal_runtime_state = @import("renderer/metal_runtime_state.zig");
-const presentable_target = @import("renderer/presentable_target.zig");
 const scene_target_state = @import("renderer/scene_target_state.zig");
 const surface_draw = @import("renderer/surface_draw.zig");
 const input_constants = @import("renderer/input_constants.zig");
@@ -33,6 +32,7 @@ const texture_draw = @import("renderer/texture_draw.zig");
 const input_runtime = @import("renderer/input_runtime.zig");
 const font_runtime = @import("renderer/font_runtime.zig");
 const presentable_contract = @import("renderer/presentable_contract.zig");
+const presentable_target = @import("renderer/presentable_target.zig");
 const present_trace_runtime = @import("renderer/present_trace_runtime.zig");
 const metal_text_sample_runtime = @import("renderer/metal_text_sample_runtime.zig");
 const text_runtime = @import("renderer/text_runtime.zig");
@@ -270,7 +270,6 @@ const input_queue_capacity: usize = 8192;
 const clip_stack_capacity: usize = 8;
 const KeyPress = input_state.KeyPress;
 
-const RenderTarget = presentable_target.PresentableTarget;
 
 const BatchState = draw_ops.BatchState;
 
@@ -1037,7 +1036,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         self.render_height = display_metrics.drawable_h;
 
         self.text_render.bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
-        metal_backend.clearQueuedSurfaceDraws(self);
         switch (self.backend) {
             .opengl => gl_backend.beginFrame(self),
             .metal => metal_backend.beginFrame(self),
@@ -1597,27 +1595,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     pub fn bindDefaultTarget(self: *Renderer) void {
         self.text_render.dst_linear_active = false;
         gl_backend.bindDefaultTarget(self);
-    }
-
-    pub fn beginRenderTarget(self: *Renderer, target: ?RenderTarget) bool {
-        const ok = gl_backend.beginRenderTarget(self, target);
-        if (ok) self.text_render.dst_linear_active = true;
-        return ok;
-    }
-
-    pub fn ensureRenderTargetScaled(self: *Renderer, target: *?RenderTarget, logical_width: i32, logical_height: i32, filter: i32) bool {
-        const scale = if (self.scale.render_scale > 0.0) self.scale.render_scale else 1.0;
-        const width = @max(1, @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(logical_width)) * scale))));
-        const height = @max(1, @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(logical_height)) * scale))));
-        return gl_backend.ensureRenderTarget(target, width, height, logical_width, logical_height, filter);
-    }
-
-    pub fn destroyRenderTarget(_: *Renderer, target: *?RenderTarget) void {
-        gl_backend.destroyRenderTarget(target);
-    }
-
-    fn updateProjection(self: *Renderer, width: i32, height: i32) void {
-        gl_backend.updateProjection(self, width, height);
     }
 
     pub fn beginTerminalBatch(self: *Renderer) void {

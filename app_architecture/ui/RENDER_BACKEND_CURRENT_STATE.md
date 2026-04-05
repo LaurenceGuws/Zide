@@ -190,6 +190,18 @@ glyph/rect submission, and backend clip application now route through
 `gl_backend.zig` / `metal_backend.zig` instead of `renderer.zig` acting as the
 implementation center for those backend-specific mechanics.
 
+That has improved slightly again on the OpenGL lifecycle side too: the
+OpenGL scene-target and presentable runtimes no longer call GL-only
+render-target helpers through `Renderer`. They now talk to `gl_backend`
+directly for render-target begin/ensure/destroy, which removes another
+pure-OpenGL helper surface from the renderer root.
+
+That has improved slightly again on the Metal frame side too: the shared
+frame prelude no longer clears the Metal queued draw list before backend
+dispatch. That queue reset now lives under `metal_frame_runtime.zig`, which is
+closer to the rule that shared frame entry should not directly mutate
+backend-native runtime state.
+
 ### 2. Shared frame lifecycle still branches backend-by-backend
 
 The renderer root no longer spells out backend frame begin/submit bodies, but

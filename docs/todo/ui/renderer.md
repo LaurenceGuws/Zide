@@ -204,6 +204,14 @@ Progress note, 2026-04-05:
   background clear, and clip application now route through `gl_backend.zig` /
   `metal_backend.zig` instead of `renderer.zig` acting as the implementation
   center for those backend-specific mechanics.
+- The OpenGL scene-target and presentable runtimes now also call
+  `gl_backend.zig` directly for render-target begin/ensure/destroy instead of
+  bouncing through GL-only helper methods on `Renderer`, which removes another
+  pure-OpenGL helper surface from the renderer root.
+- The shared frame prelude no longer clears the Metal queued draw list before
+  backend dispatch; that queue reset now lives in
+  `src/ui/renderer/metal_frame_runtime.zig` instead of shared renderer
+  lifecycle code mutating Metal runtime state directly.
 - Direct OpenGL frame submit and direct window screenshot-readback now also
   live under `src/ui/renderer/opengl_frame_runtime.zig` /
   `src/ui/renderer/gl_backend.zig` instead of

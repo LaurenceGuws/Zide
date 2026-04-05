@@ -1,4 +1,5 @@
 const gl = @import("gl.zig");
+const gl_backend = @import("gl_backend.zig");
 const platform_window = @import("../../platform/window_metrics.zig");
 const texture_draw = @import("texture_draw.zig");
 const draw_ops = @import("draw_ops.zig");
@@ -17,7 +18,7 @@ pub fn refreshSceneTargetContract(self: anytype, display_metrics: platform_windo
         self.opengl_runtime.scene_target.invalidation = .{};
         self.opengl_runtime.scene_target.ready = false;
         if (self.opengl_runtime.scene_target.target != null) {
-            self.destroyRenderTarget(&self.opengl_runtime.scene_target.target);
+            gl_backend.destroyRenderTarget(&self.opengl_runtime.scene_target.target);
         }
         return;
     }
@@ -29,14 +30,14 @@ pub fn refreshSceneTargetContract(self: anytype, display_metrics: platform_windo
     self.opengl_runtime.scene_target.invalidation = reasons;
     self.opengl_runtime.scene_target.ready = false;
     if (self.opengl_runtime.scene_target.target != null) {
-        self.destroyRenderTarget(&self.opengl_runtime.scene_target.target);
+        gl_backend.destroyRenderTarget(&self.opengl_runtime.scene_target.target);
     }
     renderer_root.logSceneTargetState(log, "invalidate", self.opengl_runtime.scene_target.contract, self.opengl_runtime.scene_target.invalidation, self.opengl_runtime.scene_target.ready);
 }
 
 pub fn beginSceneFrame(self: anytype) bool {
     if (self.opengl_runtime.scene_target.target == null) return false;
-    if (!self.beginRenderTarget(self.opengl_runtime.scene_target.target)) {
+    if (!gl_backend.beginRenderTarget(self, self.opengl_runtime.scene_target.target)) {
         noteSceneTargetRecreateFailure(self);
         return false;
     }
@@ -79,7 +80,7 @@ pub fn prepareSceneTarget(self: anytype, filter: i32) void {
     const recreated = ensureSceneTarget(self, filter);
     if (self.opengl_runtime.scene_target.target == null or !recreated) return;
 
-    if (!self.beginRenderTarget(self.opengl_runtime.scene_target.target)) {
+    if (!gl_backend.beginRenderTarget(self, self.opengl_runtime.scene_target.target)) {
         noteSceneTargetRecreateFailure(self);
         return;
     }
@@ -128,7 +129,8 @@ fn ensureSceneTarget(self: anytype, filter: i32) bool {
         return false;
     }
 
-    const recreated = self.ensureRenderTargetScaled(
+    const recreated = gl_backend.ensureRenderTargetScaledForRenderer(
+        self,
         &self.opengl_runtime.scene_target.target,
         contract.logical_width,
         contract.logical_height,
