@@ -1512,8 +1512,8 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
                 break :blk .{
                     .succeeded = succeeded,
                     .sequence = self.present.submission_sequence,
-                    .terminal_surface_blitted = self.present.trace_current.terminal_surface_blit_count > 0,
-                    .terminal_surface_generation = self.present.trace_current.terminal_surface_generation,
+                    .terminal_presented = self.present.trace_current.terminal_presentation_count > 0,
+                    .terminal_presented_generation = self.present.trace_current.terminal_presented_generation,
                 };
             },
         };

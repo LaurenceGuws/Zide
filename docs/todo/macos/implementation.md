@@ -451,6 +451,9 @@ lane.
       submitted terminal generation in the frame trace, so terminal
       publication retirement no longer depends on retained-surface-only
       evidence on this lane
+    - the submission/trace contract is now named around terminal presentation
+      instead of `terminal_surface_*`, which better matches the live Metal
+      lane where direct draw and snapshot fast-present are both valid shapes
     - the underlying terminal widget storage contract is less retained-first
       now too: the state container and partial-plan type are named around
       presentation instead of retained state, which reduces another place

@@ -727,6 +727,11 @@ What this does and does not mean:
   depends on retained-surface-only evidence and the handoff logs now advance
   from `presented=0` to the live generation after the first successful Metal
   terminal frame
+- that contract is now named honestly too: the frame-submission and present
+  trace surfaces use terminal-presentation terminology instead of
+  `terminal_surface_*`, which matters because the active Metal lane is no
+  longer "a surface blit when retained, otherwise an exception" but one
+  terminal presentation contract with multiple concrete shapes
 - the underlying storage contract is less retained-first now too: the terminal
   widget state container and partial-plan type are named around presentation
   rather than retained state, which reduces one more place where the direct

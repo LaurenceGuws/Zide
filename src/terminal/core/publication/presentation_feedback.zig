@@ -41,8 +41,8 @@ pub fn completeSubmittedPresentationFeedback(self: anytype, feedback: anytype, s
 
 fn submittedPresentationMatchesFeedback(feedback: anytype, submission: anytype) bool {
     const presented = feedback.presented orelse return false;
-    if (!submission.terminal_surface_blitted) return false;
-    const submitted_generation = submission.terminal_surface_generation orelse return false;
+    if (!submission.terminal_presented) return false;
+    const submitted_generation = submission.terminal_presented_generation orelse return false;
     return submitted_generation == presented.generation;
 }
 
