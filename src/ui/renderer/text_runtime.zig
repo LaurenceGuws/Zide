@@ -117,8 +117,33 @@ pub fn drawTextMonospace(self: *Renderer, text: []const u8, x: f32, y: f32, colo
     drawTextMonospacePolicy(self, text, x, y, color, false);
 }
 
+fn drawMetalMonospaceTextFallback(
+    self: *Renderer,
+    text: []const u8,
+    x: f32,
+    y: f32,
+    metrics: Renderer.ScaledFontMetrics,
+    color: Color,
+) bool {
+    if (self.plannedTextRenderingMode() != .metal_texture_atlas) return false;
+    if (text.len == 0) return false;
+    return self.drawMetalTerminalCellRun(.{
+        .text = text,
+        .x = x,
+        .y = y,
+        .cell_width = metrics.cell_width,
+        .cell_height = metrics.cell_height,
+        .tint = color.toRgba(),
+    });
+}
+
 pub fn drawTextMonospacePolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, disable_programming_ligatures: bool) void {
-    if (!textRenderingAvailable(self)) return;
+    if (!textRenderingAvailable(self)) {
+        if (self.plannedTextRenderingMode() == .metal_texture_atlas) {
+            _ = drawMetalMonospaceTextFallback(self, text, x, y, self.editor_metrics, color);
+        }
+        return;
+    }
     const prev = self.text_render.bg_rgba;
     defer self.text_render.bg_rgba = prev;
     self.text_render.bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
@@ -130,7 +155,12 @@ pub fn drawTextMonospaceOnBg(self: *Renderer, text: []const u8, x: f32, y: f32, 
 }
 
 pub fn drawTextMonospaceOnBgPolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color, disable_programming_ligatures: bool) void {
-    if (!textRenderingAvailable(self)) return;
+    if (!textRenderingAvailable(self)) {
+        if (self.plannedTextRenderingMode() == .metal_texture_atlas) {
+            _ = drawMetalMonospaceTextFallback(self, text, x, y, self.editor_metrics, color);
+        }
+        return;
+    }
     const prev = self.text_render.bg_rgba;
     defer self.text_render.bg_rgba = prev;
     var bg_rgba = bg.toRgba();
@@ -140,7 +170,12 @@ pub fn drawTextMonospaceOnBgPolicy(self: *Renderer, text: []const u8, x: f32, y:
 }
 
 pub fn drawTextMonospaceStyledPolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, disable_programming_ligatures: bool, italic: bool) void {
-    if (!textRenderingAvailable(self)) return;
+    if (!textRenderingAvailable(self)) {
+        if (self.plannedTextRenderingMode() == .metal_texture_atlas and !italic) {
+            _ = drawMetalMonospaceTextFallback(self, text, x, y, self.editor_metrics, color);
+        }
+        return;
+    }
     const prev = self.text_render.bg_rgba;
     defer self.text_render.bg_rgba = prev;
     self.text_render.bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
@@ -148,7 +183,12 @@ pub fn drawTextMonospaceStyledPolicy(self: *Renderer, text: []const u8, x: f32, 
 }
 
 pub fn drawTextMonospaceOnBgStyledPolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color, disable_programming_ligatures: bool, italic: bool) void {
-    if (!textRenderingAvailable(self)) return;
+    if (!textRenderingAvailable(self)) {
+        if (self.plannedTextRenderingMode() == .metal_texture_atlas and !italic) {
+            _ = drawMetalMonospaceTextFallback(self, text, x, y, self.editor_metrics, color);
+        }
+        return;
+    }
     const prev = self.text_render.bg_rgba;
     defer self.text_render.bg_rgba = prev;
     var bg_rgba = bg.toRgba();

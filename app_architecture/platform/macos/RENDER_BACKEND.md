@@ -607,6 +607,10 @@ What this does and does not mean:
   diagnostic enters a renderer clip and draws the terminal row without an
   explicit row clip rectangle, which is the right direction for real widget
   flows
+- more real renderer flows can now hit the terminal-shaped Metal lane instead
+  of only bespoke diagnostics: monospace text fallback paths route through the
+  narrow terminal-cell-run contract when live text is unavailable and planned
+  text is `metal_texture_atlas`
 - this is still intentionally narrow and honest: it is now a tiny sampled
   multiline ASCII run with an explicit monospace-cell option rather than a
   claim that the generic string/text renderer has already migrated

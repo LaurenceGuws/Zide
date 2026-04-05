@@ -350,6 +350,10 @@ lane.
     - that inherited clip state is now exercised by the live terminal-row
       proof itself: the macOS Metal text diagnostic enters a renderer clip and
       draws the terminal row without an explicit row clip rectangle
+    - more real renderer flows can now hit the terminal-shaped Metal lane
+      instead of only bespoke diagnostics: monospace text fallback paths now
+      route through the narrow terminal-cell-run contract when live text is
+      unavailable and planned text is `metal_texture_atlas`
     - the narrow Metal text lane now covers a tiny multiline ASCII run, not
       just a single flat row
     - the diagnostic/runtime callers now use the explicit monospace-cell
