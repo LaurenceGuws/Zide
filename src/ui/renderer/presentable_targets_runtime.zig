@@ -34,9 +34,9 @@ pub const PresentableDraw = struct {
 };
 
 pub fn deinit(self: anytype) void {
-    self.destroyRenderTarget(&self.retained_targets.terminal);
-    self.destroyRenderTarget(&self.retained_targets.terminal_scroll);
-    self.destroyRenderTarget(&self.retained_targets.editor);
+    self.destroyRenderTarget(&self.presentable_targets.terminal);
+    self.destroyRenderTarget(&self.presentable_targets.terminal_scroll);
+    self.destroyRenderTarget(&self.presentable_targets.editor);
 }
 
 fn snapToDevicePixel(value: f32, render_scale: f32) f32 {
@@ -48,12 +48,12 @@ pub fn ensurePresentable(self: anytype, surface: PresentableSurface, width: i32,
     if (!self.capabilities().retained_targets) return false;
     switch (surface) {
         .terminal => {
-            const recreated = self.ensureRenderTargetScaled(&self.retained_targets.terminal, width, height, gl.c.GL_NEAREST);
-            _ = self.ensureRenderTargetScaled(&self.retained_targets.terminal_scroll, width, height, gl.c.GL_NEAREST);
+            const recreated = self.ensureRenderTargetScaled(&self.presentable_targets.terminal, width, height, gl.c.GL_NEAREST);
+            _ = self.ensureRenderTargetScaled(&self.presentable_targets.terminal_scroll, width, height, gl.c.GL_NEAREST);
             return recreated;
         },
         .editor => {
-            return self.ensureRenderTargetScaled(&self.retained_targets.editor, width, height, gl.c.GL_NEAREST);
+            return self.ensureRenderTargetScaled(&self.presentable_targets.editor, width, height, gl.c.GL_NEAREST);
         },
     }
 }
@@ -61,10 +61,10 @@ pub fn ensurePresentable(self: anytype, surface: PresentableSurface, width: i32,
 pub fn beginPresentable(self: anytype, surface: PresentableSurface) bool {
     if (!self.capabilities().retained_targets) return false;
     switch (surface) {
-        .terminal => return self.beginRenderTarget(self.retained_targets.terminal),
+        .terminal => return self.beginRenderTarget(self.presentable_targets.terminal),
         .editor => {
             scene_frame_runtime.notePresentableUpdate(self, .editor);
-            return self.beginRenderTarget(self.retained_targets.editor);
+            return self.beginRenderTarget(self.presentable_targets.editor);
         },
     }
 }
@@ -72,8 +72,8 @@ pub fn beginPresentable(self: anytype, surface: PresentableSurface) bool {
 pub fn presentableAvailable(self: anytype, surface: PresentableSurface) bool {
     if (!self.capabilities().retained_targets) return false;
     return switch (surface) {
-        .terminal => self.retained_targets.terminal != null,
-        .editor => self.retained_targets.editor != null,
+        .terminal => self.presentable_targets.terminal != null,
+        .editor => self.presentable_targets.editor != null,
     };
 }
 
@@ -89,7 +89,7 @@ pub fn endPresentable(self: anytype, surface: PresentableSurface) void {
 pub fn drawPresentable(self: anytype, surface: PresentableSurface, draw: PresentableDraw) void {
     if (!self.capabilities().retained_targets) return;
     switch (surface) {
-        .terminal => if (self.retained_targets.terminal) |target| {
+        .terminal => if (self.presentable_targets.terminal) |target| {
             scene_frame_runtime.notePresentableDraw(self, .terminal, draw.generation);
             const width = draw.width orelse return;
             const height = draw.height orelse return;
@@ -141,7 +141,7 @@ pub fn drawPresentable(self: anytype, surface: PresentableSurface, draw: Present
             }
             draw_ops.drawTextureRect(self, target.texture, src, dest, Color.white.toRgba(), types.Rgba{ .r = 0, .g = 0, .b = 0, .a = 0 }, .linear_premul);
         },
-        .editor => if (self.retained_targets.editor) |target| {
+        .editor => if (self.presentable_targets.editor) |target| {
             scene_frame_runtime.notePresentableDraw(self, .editor, null);
             const snapped_x = snapToDevicePixel(draw.x, self.scale.render_scale);
             const snapped_y = snapToDevicePixel(draw.y, self.scale.render_scale);
@@ -170,11 +170,11 @@ pub fn drawPresentable(self: anytype, surface: PresentableSurface, draw: Present
 pub fn scrollPresentable(self: anytype, surface: PresentableSurface, dx: i32, dy: i32) bool {
     if (!self.capabilities().retained_targets) return false;
     if (surface != .terminal) return false;
-    if (self.retained_targets.terminal) |target| {
+    if (self.presentable_targets.terminal) |target| {
         return gl_backend.scrollRenderTarget(
             self,
-            self.retained_targets.terminal,
-            &self.retained_targets.terminal_scroll,
+            self.presentable_targets.terminal,
+            &self.presentable_targets.terminal_scroll,
             dx,
             dy,
             target.logical_width,

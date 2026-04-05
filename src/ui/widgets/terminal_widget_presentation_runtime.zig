@@ -555,7 +555,7 @@ pub fn notePresentSample(
         .scale_y = if (source_h > 0.0) dest_h / source_h else 1.0,
     };
     if (mode == .retained_surface) {
-        if (renderer.retained_targets.terminal) |target| {
+        if (renderer.presentable_targets.terminal) |target| {
             sample.presentable_w_px = target.texture.width;
             sample.presentable_h_px = target.texture.height;
             sample.target_logical_w = @floatFromInt(target.logical_width);

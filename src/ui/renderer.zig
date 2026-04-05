@@ -565,7 +565,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     metal_diagnostic_font: ?TerminalFont,
     font_config: FontConfigState,
 
-    retained_targets: PresentableTargetState,
+    presentable_targets: PresentableTargetState,
     scene_target: SceneTargetState,
     window_chrome: WindowChromeState,
 
@@ -859,7 +859,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             .terminal_font = undefined,
             .metal_diagnostic_font = null,
             .font_config = font_config,
-            .retained_targets = .{},
+            .presentable_targets = .{},
             .scene_target = .{},
             .window_chrome = .{},
             .theme = .{},
