@@ -3,6 +3,7 @@ const builtin = @import("builtin");
 const iface = @import("interface.zig");
 const macos_metal_host = @import("../../platform/macos_metal_host.zig");
 const metal_frame_runtime = @import("metal_frame_runtime.zig");
+const metal_runtime_state = @import("metal_runtime_state.zig");
 const metal_text_sample_runtime = @import("metal_text_sample_runtime.zig");
 const presentable_contract = @import("presentable_contract.zig");
 const scene_frame_runtime = @import("scene_frame_runtime.zig");
@@ -39,6 +40,7 @@ const AtlasFragmentUniforms = extern struct {
 };
 
 pub const PixelClipRect = surface_draw.PixelClipRect;
+pub const AtlasPreviewSource = metal_runtime_state.AtlasPreviewSource;
 const PresentableSurface = presentable_contract.PresentableSurface;
 const PresentableDraw = presentable_contract.PresentableDraw;
 
@@ -1213,6 +1215,10 @@ pub fn hasBackendContext(renderer: anytype) bool {
 pub fn glyphAtlasReadyForRenderer(renderer: anytype) bool {
     const context = backendContextConst(renderer) orelse return false;
     return glyphAtlasReady(context);
+}
+
+pub fn atlasPreviewSourceForRenderer(renderer: anytype) AtlasPreviewSource {
+    return renderer.metal_runtime.preview_source;
 }
 
 pub fn runAtlasUploadDiagnosticAt(renderer: anytype, dest_x: i32, dest_y: i32) bool {

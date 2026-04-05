@@ -5,6 +5,7 @@ const opengl_frame_runtime = @import("opengl_frame_runtime.zig");
 const opengl_presentable_runtime = @import("opengl_presentable_runtime.zig");
 const presentable_contract = @import("presentable_contract.zig");
 const presentable_target = @import("presentable_target.zig");
+const scene_target_state = @import("scene_target_state.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
 const app_logger = @import("../../app_logger.zig");
 const types = @import("types.zig");
@@ -14,6 +15,7 @@ const sdl = gl.c;
 pub const RenderTarget = presentable_target.PresentableTarget;
 const PresentableSurface = presentable_contract.PresentableSurface;
 const PresentableDraw = presentable_contract.PresentableDraw;
+const SceneTargetInvalidation = scene_target_state.SceneTargetInvalidation;
 
 fn glAttrName(attr: sdl_api.GlAttr) []const u8 {
     return switch (attr) {
@@ -89,6 +91,23 @@ pub fn dumpWindowScreenshotPpm(renderer: anytype, path: []const u8) !void {
 
 pub fn dumpWindowScreenshotPpmSized(renderer: anytype, path: []const u8, out_width: i32, out_height: i32) !void {
     return opengl_frame_runtime.dumpWindowScreenshotPpmSized(renderer, path, out_width, out_height);
+}
+
+pub fn sceneTargetInvalidationForRefresh(
+    renderer: anytype,
+    changes: anytype,
+    metrics: anytype,
+) SceneTargetInvalidation {
+    return scene_target_state.invalidationForRefresh(
+        renderer.opengl_runtime.scene_target,
+        changes,
+        metrics,
+        renderer.supportsSceneTargets(),
+    );
+}
+
+pub fn mergePendingSceneTargetInvalidation(renderer: anytype, invalidation: SceneTargetInvalidation) void {
+    renderer.opengl_runtime.scene_target.pending_invalidation.merge(invalidation);
 }
 
 pub fn whiteTexture(renderer: anytype) types.Texture {

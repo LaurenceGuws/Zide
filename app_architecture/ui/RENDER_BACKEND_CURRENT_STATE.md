@@ -158,6 +158,12 @@ offscreen scene-target contract/state now lives in a dedicated
 instead of as a direct renderer-root field. That makes the current OpenGL-owned
 offscreen scene-target model less obviously shared-state-by-default.
 
+That has improved slightly again at the renderer root too: the remaining
+window-refresh / zoom invalidation merges for the OpenGL scene target now
+route through `gl_backend`, and Metal atlas-preview lookup now routes through
+`metal_backend`, so `Renderer` no longer directly reaches into those backend
+runtime storage slots for those paths.
+
 ### 2. Shared frame lifecycle still branches backend-by-backend
 
 The renderer root no longer spells out backend frame begin/submit bodies, but

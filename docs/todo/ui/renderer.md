@@ -181,6 +181,10 @@ Progress note, 2026-04-05:
   `opengl_runtime.scene_target` instead of as a direct `Renderer` field,
   which makes the current OpenGL-owned scene-target model less obviously
   shared-state-by-default.
+- The remaining renderer-root scene-target invalidation merges and Metal atlas
+  preview lookup now also route through `gl_backend.zig` / `metal_backend.zig`
+  instead of `Renderer` directly reaching into those backend runtime storage
+  slots.
 - Direct OpenGL frame submit and direct window screenshot-readback now also
   live under `src/ui/renderer/opengl_frame_runtime.zig` /
   `src/ui/renderer/gl_backend.zig` instead of

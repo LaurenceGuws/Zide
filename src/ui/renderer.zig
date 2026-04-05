@@ -299,15 +299,6 @@ const RenderTarget = presentable_target.PresentableTarget;
 
 const BatchState = draw_ops.BatchState;
 
-fn sceneTargetInvalidationForRefresh(
-    scene_target: scene_target_state.SceneTargetState,
-    changes: WindowChangeMask,
-    metrics: platform_window.DisplayMetrics,
-    scene_targets_supported: bool,
-) SceneTargetInvalidation {
-    return scene_target_state.invalidationForRefresh(scene_target, changes, metrics, scene_targets_supported);
-}
-
 pub fn sceneTargetContractFromDisplayMetrics(metrics: platform_window.DisplayMetrics) SceneTargetContract {
     return scene_target_state.contractFromDisplayMetrics(metrics);
 }
@@ -935,7 +926,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             .{ .render_scale_change = true }
         else
             .{};
-        self.opengl_runtime.scene_target.pending_invalidation.merge(scene_target_invalidation);
+        gl_backend.mergePendingSceneTargetInvalidation(self, scene_target_invalidation);
         return .{
             .changes = .{},
             .geometry = self.windowGeometryDiagnostics(),
@@ -1061,14 +1052,9 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
 
     pub fn refreshWindowState(self: *Renderer, reason: []const u8, changes: WindowChangeMask) !WindowRefreshResult {
         const metrics = self.collectDisplayMetricsForWindowChanges(changes);
-        const scene_target_invalidation = sceneTargetInvalidationForRefresh(
-            self.opengl_runtime.scene_target,
-            changes,
-            metrics,
-            self.supportsSceneTargets(),
-        );
+        const scene_target_invalidation = gl_backend.sceneTargetInvalidationForRefresh(self, changes, metrics);
         self.applyDisplayMetricsSnapshot(metrics);
-        self.opengl_runtime.scene_target.pending_invalidation.merge(scene_target_invalidation);
+        gl_backend.mergePendingSceneTargetInvalidation(self, scene_target_invalidation);
         self.logWindowMetricsSnapshot(metrics, reason);
         const ui_scale_changed = try self.refreshUiScaleForWindowChanges(changes, metrics);
         return .{
@@ -1648,7 +1634,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     }
 
     pub fn macosMetalAtlasPreviewSource(self: *const Renderer) AtlasPreviewSource {
-        return self.metal_runtime.preview_source;
+        return metal_backend.atlasPreviewSourceForRenderer(self);
     }
 
     fn appendMetalSolidRect(self: *Renderer, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) bool {
