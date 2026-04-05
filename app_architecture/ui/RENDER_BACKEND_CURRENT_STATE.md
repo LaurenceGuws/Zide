@@ -218,6 +218,11 @@ binding, startup backend configuration, and startup smoke execution now route
 through a small backend bootstrap ops table instead of `renderer.zig`
 carrying a separate cluster of ad hoc backend startup switches.
 
+That has improved slightly again on dead contract cleanup too: the unused
+renderer-root `deinitPresentables()` seam and its matching backend ops entry
+are gone. Presentable teardown now only exists where it is actually needed, in
+backend-owned runtime cleanup.
+
 That has improved slightly again on the Metal frame side too: the shared
 frame prelude no longer clears the Metal queued draw list before backend
 dispatch. That queue reset now lives under `metal_frame_runtime.zig`, which is

@@ -1159,8 +1159,6 @@ pub fn dumpWindowScreenshotPpmSized(_: anytype, _: []const u8, _: i32, _: i32) !
     return error.RendererScreenshotUnavailable;
 }
 
-pub fn deinitPresentables(_: anytype) void {}
-
 pub fn ensurePresentable(renderer: anytype, surface: PresentableSurface, width: i32, height: i32) bool {
     return switch (surface) {
         .terminal => blk: {

@@ -272,7 +272,7 @@ pub fn syncTextRenderConfig(renderer: anytype) void {
     }
 }
 
-pub fn deinitPresentables(renderer: anytype) void {
+fn deinitPresentables(renderer: anytype) void {
     opengl_presentable_runtime.deinit(renderer);
 }
 

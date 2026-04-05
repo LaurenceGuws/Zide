@@ -361,7 +361,6 @@ pub const Renderer = struct {
         capabilities: *const fn (*const Self) RendererCapabilities,
         dumpWindowScreenshotPpm: *const fn (*Self, []const u8) anyerror!void,
         dumpWindowScreenshotPpmSized: *const fn (*Self, []const u8, i32, i32) anyerror!void,
-        deinitPresentables: *const fn (*Self) void,
         ensurePresentable: *const fn (*Self, PresentableSurface, i32, i32) bool,
         beginPresentable: *const fn (*Self, PresentableSurface) bool,
         presentableAvailable: *const fn (*Self, PresentableSurface) bool,
@@ -523,7 +522,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         fn capabilities(renderer: *const Self) RendererCapabilities { return gl_backend.capabilities(renderer); }
         fn dumpWindowScreenshotPpm(renderer: *Self, path: []const u8) !void { return gl_backend.dumpWindowScreenshotPpm(renderer, path); }
         fn dumpWindowScreenshotPpmSized(renderer: *Self, path: []const u8, out_width: i32, out_height: i32) !void { return gl_backend.dumpWindowScreenshotPpmSized(renderer, path, out_width, out_height); }
-        fn deinitPresentables(renderer: *Self) void { gl_backend.deinitPresentables(renderer); }
         fn ensurePresentable(renderer: *Self, surface: PresentableSurface, width: i32, height: i32) bool { return gl_backend.ensurePresentable(renderer, surface, width, height); }
         fn beginPresentable(renderer: *Self, surface: PresentableSurface) bool { return gl_backend.beginPresentable(renderer, surface); }
         fn presentableAvailable(renderer: *Self, surface: PresentableSurface) bool { return gl_backend.presentableAvailable(renderer, surface); }
@@ -547,7 +545,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         fn capabilities(renderer: *const Self) RendererCapabilities { return metal_backend.capabilities(renderer); }
         fn dumpWindowScreenshotPpm(renderer: *Self, path: []const u8) !void { return metal_backend.dumpWindowScreenshotPpm(renderer, path); }
         fn dumpWindowScreenshotPpmSized(renderer: *Self, path: []const u8, out_width: i32, out_height: i32) !void { return metal_backend.dumpWindowScreenshotPpmSized(renderer, path, out_width, out_height); }
-        fn deinitPresentables(renderer: *Self) void { metal_backend.deinitPresentables(renderer); }
         fn ensurePresentable(renderer: *Self, surface: PresentableSurface, width: i32, height: i32) bool { return metal_backend.ensurePresentable(renderer, surface, width, height); }
         fn beginPresentable(renderer: *Self, surface: PresentableSurface) bool { return metal_backend.beginPresentable(renderer, surface); }
         fn presentableAvailable(renderer: *Self, surface: PresentableSurface) bool { return metal_backend.presentableAvailable(renderer, surface); }
@@ -573,7 +570,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
                 .capabilities = OpenGlDispatch.capabilities,
                 .dumpWindowScreenshotPpm = OpenGlDispatch.dumpWindowScreenshotPpm,
                 .dumpWindowScreenshotPpmSized = OpenGlDispatch.dumpWindowScreenshotPpmSized,
-                .deinitPresentables = OpenGlDispatch.deinitPresentables,
                 .ensurePresentable = OpenGlDispatch.ensurePresentable,
                 .beginPresentable = OpenGlDispatch.beginPresentable,
                 .presentableAvailable = OpenGlDispatch.presentableAvailable,
@@ -596,7 +592,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
                 .capabilities = MetalDispatch.capabilities,
                 .dumpWindowScreenshotPpm = MetalDispatch.dumpWindowScreenshotPpm,
                 .dumpWindowScreenshotPpmSized = MetalDispatch.dumpWindowScreenshotPpmSized,
-                .deinitPresentables = MetalDispatch.deinitPresentables,
                 .ensurePresentable = MetalDispatch.ensurePresentable,
                 .beginPresentable = MetalDispatch.beginPresentable,
                 .presentableAvailable = MetalDispatch.presentableAvailable,
@@ -1199,10 +1194,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
 
     pub fn dumpWindowScreenshotPpmSized(self: *Renderer, path: []const u8, out_width: i32, out_height: i32) !void {
         return self.backend_ops.dumpWindowScreenshotPpmSized(self, path, out_width, out_height);
-    }
-
-    pub fn deinitPresentables(self: *Renderer) void {
-        self.backend_ops.deinitPresentables(self);
     }
 
     pub fn ensurePresentable(self: *Renderer, surface: PresentableSurface, width: i32, height: i32) bool {
