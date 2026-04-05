@@ -385,6 +385,10 @@ lane.
     - the direct main-target terminal fallback now preserves the normal
       overlay phase, so IME/composition drawing still runs on the non-retained
       Metal terminal path instead of being dropped by the fallback itself
+    - the Metal diagnostic/sample lane now reuses a renderer-owned diagnostic
+      terminal font instead of rebuilding a fresh font stack on every sampled
+      draw call, which removes misleading per-frame font churn from the
+      terminal Metal proof runtime
     - this is still a proof/runtime checkpoint, not a claim that retained
       terminal surfaces or full terminal-on-Metal presentation are finished
     - the narrow Metal text lane now covers a tiny multiline ASCII run, not

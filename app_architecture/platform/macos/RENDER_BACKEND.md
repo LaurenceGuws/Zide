@@ -648,6 +648,11 @@ What this does and does not mean:
   now preserves the normal overlay phase instead of short-circuiting before
   IME/composition drawing, which is the correct layering for a non-retained
   Metal terminal path
+- the Metal terminal/text diagnostic lane is now less structurally noisy too:
+  sampled Metal text requests reuse a renderer-owned diagnostic `TerminalFont`
+  instead of reinitializing a fresh font stack on every sampled draw call,
+  which keeps runtime proof honest enough to profile backend behavior rather
+  than repeated font bootstrap work
 - this is still intentionally narrow and honest: it is now a tiny sampled
   multiline ASCII run with an explicit monospace-cell option rather than a
   claim that the generic string/text renderer has already migrated

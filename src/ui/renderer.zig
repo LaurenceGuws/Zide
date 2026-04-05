@@ -551,6 +551,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     terminal_base_font_size: f32,
     terminal_metrics: ScaledFontMetrics,
     terminal_font: TerminalFont,
+    metal_diagnostic_font: ?TerminalFont,
     font_config: FontConfigState,
 
     retained_targets: RetainedTargetState,
@@ -840,6 +841,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
                 .baseline_from_top = terminal_font_size,
             },
             .terminal_font = undefined,
+            .metal_diagnostic_font = null,
             .font_config = font_config,
             .retained_targets = .{},
             .scene_target = .{},
@@ -928,6 +930,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     pub fn deinit(self: *Renderer) void {
         retained_targets_runtime.deinit(self);
         self.destroyRenderTarget(&self.scene_target.target);
+        self.clearMetalDiagnosticFont();
 
         if (self.fonts_ready) {
             self.app_font.deinit();
@@ -1083,6 +1086,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     }
 
     fn applyFontScale(self: *Renderer) !void {
+        self.clearMetalDiagnosticFont();
         try font_runtime.applyFontScale(self);
     }
 
@@ -1894,6 +1898,20 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         return font;
     }
 
+    fn clearMetalDiagnosticFont(self: *Renderer) void {
+        if (self.metal_diagnostic_font) |*font| {
+            font.deinit();
+            self.metal_diagnostic_font = null;
+        }
+    }
+
+    fn ensureMetalDiagnosticFont(self: *Renderer) !*terminal_font_mod.TerminalFont {
+        if (self.metal_backend_context == null) return error.MetalBackendContextUnavailable;
+        if (self.metal_diagnostic_font) |*font| return font;
+        self.metal_diagnostic_font = try self.initMetalDiagnosticFont();
+        return &self.metal_diagnostic_font.?;
+    }
+
     fn resetMetalAtlasSampleDraws(self: *Renderer) void {
         self.metal_atlas_sample_draw_count = 0;
     }
@@ -1910,8 +1928,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         if (self.plannedTextRenderingMode() != .metal_texture_atlas) return false;
         if (self.metal_backend_context == null) return false;
 
-        var font = self.initMetalDiagnosticFont() catch return false;
-        defer font.deinit();
+        const font = self.ensureMetalDiagnosticFont() catch return false;
 
         const codepoint: u32 = char;
         const direct = font.directFastGlyphForCodepoint(codepoint) orelse return false;
@@ -1932,12 +1949,11 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         if (self.plannedTextRenderingMode() != .metal_texture_atlas) return false;
         if (self.metal_backend_context == null) return false;
 
-        var font = self.initMetalDiagnosticFont() catch return false;
-        defer font.deinit();
+        const font = self.ensureMetalDiagnosticFont() catch return false;
 
         return metal_text_sample_runtime.appendAsciiRun(
             self,
-            &font,
+            font,
             request,
             self.metal_atlas_sample_draws[0..],
             &self.metal_atlas_sample_draw_count,
@@ -1949,12 +1965,11 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         if (self.plannedTextRenderingMode() != .metal_texture_atlas) return false;
         if (self.metal_backend_context == null) return false;
 
-        var font = self.initMetalDiagnosticFont() catch return false;
-        defer font.deinit();
+        const font = self.ensureMetalDiagnosticFont() catch return false;
 
         return metal_text_sample_runtime.appendTerminalAsciiCells(
             self,
-            &font,
+            font,
             request,
             self.metal_atlas_sample_draws[0..],
             &self.metal_atlas_sample_draw_count,
@@ -1981,8 +1996,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         self.resetMetalAtlasSampleDraws();
         self.metal_debug_preview_source = .unavailable;
 
-        var font = self.initMetalDiagnosticFont() catch return false;
-        defer font.deinit();
+        const font = self.ensureMetalDiagnosticFont() catch return false;
         const color_preview_rect = font.uploadDiagnosticColorGlyphPreview();
         const codepoint: u32 = 'A';
         const direct = font.directFastGlyphForCodepoint(codepoint) orelse return false;
