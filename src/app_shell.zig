@@ -1,6 +1,5 @@
 const std = @import("std");
 const r = @import("ui/renderer.zig");
-const scene_frame_runtime = @import("ui/renderer/scene_frame_runtime.zig");
 const frame_runtime = @import("ui/renderer/frame_runtime.zig");
 const iface = @import("ui/renderer/interface.zig");
 const window = @import("platform/window_metrics.zig");
@@ -425,11 +424,11 @@ pub const Shell = struct {
     }
 
     pub fn dumpWindowScreenshotPpm(self: *Shell, path: []const u8) !void {
-        try scene_frame_runtime.dumpWindowScreenshotPpm(self.renderer, path);
+        try frame_runtime.dumpWindowScreenshotPpm(self.renderer, path);
     }
 
     pub fn dumpWindowScreenshotPpmSized(self: *Shell, path: []const u8, out_width: i32, out_height: i32) !void {
-        try scene_frame_runtime.dumpWindowScreenshotPpmSized(self.renderer, path, out_width, out_height);
+        try frame_runtime.dumpWindowScreenshotPpmSized(self.renderer, path, out_width, out_height);
     }
 
     pub fn requestWindowScreenshotPpm(self: *Shell, path: []const u8) !ScreenshotRequestResult {
