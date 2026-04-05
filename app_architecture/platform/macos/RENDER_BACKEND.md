@@ -703,6 +703,10 @@ What this does and does not mean:
   widget state container and partial-plan type are named around presentation
   rather than retained state, which reduces one more place where the direct
   Metal lane had to live inside retained terminology
+- dead retained-era sync fast-present helper layers are gone too: the terminal
+  presenter no longer preserves an unused parallel helper path around the live
+  presentation flow, which keeps the contract centered on the actual
+  `updateAndPresent` logic instead of stale helper duplicates
 - that contract is intentionally backend-native rather than fake portability:
   the old cached GL `Texture` path is still OpenGL-only, while Metal Kitty
   images are created as frame-scoped native Metal textures and released after

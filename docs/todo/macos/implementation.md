@@ -431,6 +431,9 @@ lane.
       now too: the state container and partial-plan type are named around
       presentation instead of retained state, which reduces another place
       where the direct Metal lane had to live inside retained terminology
+    - dead retained-era sync fast-present helpers are gone too, so the
+      terminal presenter no longer preserves an unused parallel helper layer
+      around the live `updateAndPresent` flow
     - the terminal Metal diagnostic now reports `raw_image_textures=1`, keeps
       non-zero `kitty_ms`, and no longer relies on the previous unsupported
       backend gate for RGB/RGBA Kitty images

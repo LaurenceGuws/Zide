@@ -78,10 +78,6 @@ const PresentationExecutionResult = struct {
     kitty_ms: f64 = 0.0,
 };
 
-const SyncUpdateFastPresentDecision = struct {
-    consume: bool = false,
-};
-
 fn forEachRetainedDrawSpan(
     rows: usize,
     cols: usize,
@@ -420,48 +416,6 @@ fn noteTerminalPresent(
         }
     }
     self.debug.last_terminal_presentation = sample;
-}
-
-fn decideSyncUpdateFastPresent(
-    terminal_view: view_state.TerminalViewModel,
-    view_cells_len: usize,
-    retained_surface_ready: bool,
-) SyncUpdateFastPresentDecision {
-    return .{
-        .consume = terminal_view.sync_updates_active and view_cells_len > 0 and retained_surface_ready,
-    };
-}
-
-fn executeSyncUpdateFastPresent(
-    self: anytype,
-    renderer: anytype,
-    terminal_view: view_state.TerminalViewModel,
-    view_geometry: shared_types.layout.TerminalViewGeometry,
-    x: f32,
-    y: f32,
-    width: f32,
-    height: f32,
-    bg_color: Color,
-) SurfacePresentResult {
-    var result = SurfacePresentResult{};
-    renderer.drawRect(
-        @intFromFloat(x),
-        @intFromFloat(y),
-        @intFromFloat(width),
-        @intFromFloat(height),
-        bg_color,
-    );
-    presentRetainedSurface(
-        self,
-        renderer,
-        terminal_view.generation,
-        self.surface.lastRenderGeneration(),
-        view_geometry,
-        view_geometry.viewport_width,
-        view_geometry.viewport_height,
-    );
-    result.early_return = true;
-    return result;
 }
 
 fn directPresentMainTarget(
