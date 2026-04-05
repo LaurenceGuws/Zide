@@ -551,14 +551,18 @@ What this does and does not mean:
   reports `atlas_upload_probe=1 atlas_preview_source=uploaded_coverage_glyph`,
   which means the visible preview is sourced from a real uploaded glyph rect
   rather than seeded atlas content
-- the atlas-backed preview path is now backend-owned rather than embedded in
-  smoke-only renderer glue: the renderer stores a `metal_backend.AtlasPreview`
-  description, and the Metal backend owns the actual sampling/blit helper used
-  during submit before present
+- the atlas-backed sample path is now backend-owned rather than embedded in
+  smoke-only renderer glue: the renderer stores a
+  `metal_backend.AtlasSampleDraw` description, and the Metal backend owns the
+  actual sampled-atlas blit helper used during submit before present
 - the first dedicated Metal text diagnostic view now exists as its own UI seam
   rather than being embedded directly in the smoke runtime: placement and
   activation flow through `ui/metal_text_diagnostic_view.zig`, while backend
   sampling/blit ownership remains in `metal_backend`
+- the diagnostic view no longer chooses placement by itself: preview placement
+  is now produced by a renderer-owned helper in
+  `renderer/metal_text_diagnostic_runtime.zig`, which is the right direction
+  for reusing the same sampled-glyph diagnostic contract across more callers
 - one real diagnostic caller now reuses that seam instead of remaining
   structurally GL-only: the existing `font_sample` view activates the Metal
   text diagnostic view when live text is unavailable and the planned text mode

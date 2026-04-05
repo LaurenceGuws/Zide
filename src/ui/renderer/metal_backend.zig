@@ -59,7 +59,13 @@ pub const GlyphAtlas = struct {
     diagnostic_seeded: bool,
 };
 
-pub const AtlasPreview = struct {
+pub const AtlasTextureSource = enum {
+    coverage,
+    color,
+};
+
+pub const AtlasSampleDraw = struct {
+    atlas: AtlasTextureSource = .color,
     source_rect: types.Rect,
     dest_x: i32,
     dest_y: i32,
@@ -420,9 +426,17 @@ pub fn terminalFontAtlasUploadHooks(context: *BackendContext) terminal_font.Atla
     };
 }
 
-pub fn blitAtlasColorPreview(
+fn atlasTexture(atlas: *const GlyphAtlas, source: AtlasTextureSource) *const AtlasTexture {
+    return switch (source) {
+        .coverage => &atlas.coverage,
+        .color => &atlas.color,
+    };
+}
+
+fn blitAtlasTextureRegion(
     context: *BackendContext,
     frame: *Frame,
+    source: AtlasTextureSource,
     source_rect: types.Rect,
     dest_x: i32,
     dest_y: i32,
@@ -439,7 +453,7 @@ pub fn blitAtlasColorPreview(
     msgSendCopyTextureToTexture(
         blit_encoder,
         "copyFromTexture:sourceSlice:sourceLevel:sourceOrigin:sourceSize:toTexture:destinationSlice:destinationLevel:destinationOrigin:",
-        context.glyph_atlas.color.texture,
+        atlasTexture(&context.glyph_atlas, source).texture,
         0,
         0,
         .{
@@ -465,17 +479,18 @@ pub fn blitAtlasColorPreview(
     return true;
 }
 
-pub fn drawAtlasPreview(
+pub fn drawAtlasSample(
     context: *BackendContext,
     frame: *Frame,
-    preview: AtlasPreview,
+    sample: AtlasSampleDraw,
 ) bool {
-    return blitAtlasColorPreview(
+    return blitAtlasTextureRegion(
         context,
         frame,
-        preview.source_rect,
-        preview.dest_x,
-        preview.dest_y,
+        sample.atlas,
+        sample.source_rect,
+        sample.dest_x,
+        sample.dest_y,
     );
 }
 

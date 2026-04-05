@@ -27,6 +27,24 @@ Follow this workflow for every feature/task:
 17. Once approved (or explicitly instructed to commit), commit each step labeled as the step header.
 18. Return to the todo and suggest 3 next changes.
 
+## Continuous unattended workflow
+
+- If the user explicitly requests unattended or overnight continuation, treat
+  that as approval to keep executing sequential validated steps without
+  waiting for another reply.
+- In that mode, do not stop at the first clean checkpoint if there is still
+  clear, locally-executable work in the active lane.
+- Keep the branch reviewable by making small coherent commits at validated
+  checkpoints rather than letting the branch sit as one huge uncommitted diff.
+- Stop only when:
+  - the current lane is honestly blocked by an external dependency or a risky
+    product decision that cannot be inferred safely from repo authority
+  - local validation fails and the failure cannot be resolved within the lane
+  - the requested lane reaches a real validated endpoint rather than an
+    artificial pause point
+- When operating unattended, keep docs and architecture authority current at
+  each meaningful checkpoint so the next session can resume without archaeology.
+
 Current default priority rule:
 
 - if `docs/AGENT_HANDOFF.md` names one indefinite architecture focus, that

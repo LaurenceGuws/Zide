@@ -304,13 +304,16 @@ lane.
       `atlas_upload_probe=1 atlas_preview_source=uploaded_coverage_glyph`, so
       the visible preview is sourced from a real uploaded glyph rect rather
       than seeded atlas content
-    - the visible atlas preview is no longer wired as ad hoc smoke-only
+    - the visible atlas sample path is no longer wired as ad hoc smoke-only
       renderer glue; the renderer now carries a backend-owned
-      `metal_backend.AtlasPreview` description and the Metal backend owns the
-      actual preview sampling/blit helper used during submit
+      `metal_backend.AtlasSampleDraw` description and the Metal backend owns
+      the actual sampled-atlas blit helper used during submit
     - the first dedicated Metal text diagnostic view now exists as a separate
       UI seam in `ui/metal_text_diagnostic_view.zig`, so preview placement and
       activation are no longer embedded directly in the live smoke runtime
+    - that diagnostic view no longer chooses placement by itself; placement is
+      now produced by a renderer-owned helper in
+      `renderer/metal_text_diagnostic_runtime.zig`
     - the existing `font_sample` diagnostic surface now reuses that Metal text
       diagnostic seam when live text is unavailable and the planned text mode
       is `metal_texture_atlas`, so this narrow text-diagnostic route no longer
