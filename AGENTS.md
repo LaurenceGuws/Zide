@@ -25,7 +25,8 @@ Follow this workflow for every feature/task:
 15. Extraction-only constraint: no renaming of public symbols, no logic changes, no behavior-motivated simplifications, no "while we're here" cleanups.
 16. Before any refactor, implement the replay harness, capture baseline goldens, and lock the fixture list as regression authority.
 17. Once approved (or explicitly instructed to commit), commit each step labeled as the step header.
-18. Return to the todo and suggest 3 next changes.
+18. Prefer **small, scoped commits**: one logical change per commit when practical, each leaving the tree **buildable** (`zig build` at minimum; run `zig build test` when the lane touches test-covered code). Split doc-only updates from code. When a change cannot be split without a broken intermediate tree or a compatibility shim you are explicitly avoiding, use **one atomic commit** for that refactor rather than landing partial steps.
+19. Return to the todo and suggest 3 next changes.
 
 ## Continuous unattended workflow
 
