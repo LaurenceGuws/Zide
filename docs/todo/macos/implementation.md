@@ -322,9 +322,9 @@ lane.
       exists for this sampled-glyph path, so the Metal text diagnostic seam is
       validated independently of the broader live-smoke runtime
     - the first actual narrow Metal text draw path now exists: the renderer
-      can upload and place a single sampled ASCII glyph through the Metal atlas
-      contract, and the dedicated text-diagnostic runtime now reports
-      `sample_char_draw=1` on the current macOS host
+      can upload and place a tiny sampled ASCII text run through the Metal
+      atlas contract, and the dedicated text-diagnostic runtime now reports
+      `sample_text_draw=1` on the current macOS host
     - the existing `font_sample` fallback now consumes that same narrow path as
       a real UI caller: when live text is unavailable but the planned mode is
       `metal_texture_atlas`, it frames and requests a sampled `'A'` through

@@ -32,12 +32,12 @@ pub fn run(allocator: std.mem.Allocator) !void {
     const log = app_logger.logger("macos.metal.text_diagnostic");
     const capabilities = shell.rendererCapabilities();
     const atlas_upload_probe = (metal_text_diagnostic_view.View{}).activate(shell);
-    const sample_char_draw = shell.rendererPtr().drawMetalAtlasSampleChar('A', 24.0, 96.0);
+    const sample_text_draw = shell.rendererPtr().drawMetalAtlasSampleText("METAL", 24.0, 96.0);
     const atlas_preview_source = shell.macosMetalAtlasPreviewSource();
     log.logf(.info, "start width={d} height={d} frame_budget={d}", .{ width, height, frame_budget });
     log.logf(
         .info,
-        "capabilities composition={s} retained_targets={d} screenshot={s} text={s} planned_text={s} atlas={s} planned_atlas={s} atlas_ready={d} atlas_upload_probe={d} atlas_preview_source={s} sample_char_draw={d}",
+        "capabilities composition={s} retained_targets={d} screenshot={s} text={s} planned_text={s} atlas={s} planned_atlas={s} atlas_ready={d} atlas_upload_probe={d} atlas_preview_source={s} sample_text_draw={d}",
         .{
             @tagName(capabilities.scene_composition_mode),
             @intFromBool(capabilities.retained_targets),
@@ -49,7 +49,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
             @intFromBool(shell.macosMetalGlyphAtlasReady()),
             @intFromBool(atlas_upload_probe),
             @tagName(atlas_preview_source),
-            @intFromBool(sample_char_draw),
+            @intFromBool(sample_text_draw),
         },
     );
 

@@ -494,7 +494,8 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     gl_context: ?sdl.SDL_GLContext,
     metal_backend_context: ?metal_backend.BackendContext,
     metal_frame: ?metal_backend.Frame,
-    metal_atlas_sample_draw: ?metal_backend.AtlasSampleDraw,
+    metal_atlas_sample_draws: [32]metal_backend.AtlasSampleDraw,
+    metal_atlas_sample_draw_count: usize,
     metal_debug_preview_source: AtlasPreviewSource,
     gl_resources_ready: bool,
     fonts_ready: bool,
@@ -691,7 +692,8 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             .gl_context = gl_context,
             .metal_backend_context = null,
             .metal_frame = null,
-            .metal_atlas_sample_draw = null,
+            .metal_atlas_sample_draws = undefined,
+            .metal_atlas_sample_draw_count = 0,
             .metal_debug_preview_source = .unavailable,
             .gl_resources_ready = false,
             .fonts_ready = false,
@@ -1341,7 +1343,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
                             capture_readback = metal_backend.prepareFrameReadback(context, frame);
                         }
 
-                        if (self.metal_atlas_sample_draw) |sample| {
+                        for (self.metal_atlas_sample_draws[0..self.metal_atlas_sample_draw_count]) |sample| {
                             _ = metal_backend.drawAtlasSample(context, frame, sample);
                         }
 
@@ -1818,6 +1820,17 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         return font;
     }
 
+    fn resetMetalAtlasSampleDraws(self: *Renderer) void {
+        self.metal_atlas_sample_draw_count = 0;
+    }
+
+    fn appendMetalAtlasSampleDraw(self: *Renderer, sample: metal_backend.AtlasSampleDraw) bool {
+        if (self.metal_atlas_sample_draw_count >= self.metal_atlas_sample_draws.len) return false;
+        self.metal_atlas_sample_draws[self.metal_atlas_sample_draw_count] = sample;
+        self.metal_atlas_sample_draw_count += 1;
+        return true;
+    }
+
     pub fn drawMetalAtlasSampleChar(self: *Renderer, char: u8, x: f32, y: f32) bool {
         if (self.backend != .metal) return false;
         if (self.plannedTextRenderingMode() != .metal_texture_atlas) return false;
@@ -1831,13 +1844,49 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         const glyph = font.getGlyphById(direct.face, direct.glyph_id, direct.want_color, false, 0) catch return false;
         if (glyph.rect.width <= 0 or glyph.rect.height <= 0) return false;
 
-        self.metal_atlas_sample_draw = .{
+        return self.appendMetalAtlasSampleDraw(.{
             .atlas = .color,
             .source_rect = glyph.rect,
             .dest_x = @max(0, @as(i32, @intFromFloat(std.math.round(self.logicalLengthToRaster(x))))),
             .dest_y = @max(0, @as(i32, @intFromFloat(std.math.round(self.logicalLengthToRaster(y))))),
-        };
-        return true;
+        });
+    }
+
+    pub fn drawMetalAtlasSampleText(self: *Renderer, text: []const u8, x: f32, y: f32) bool {
+        if (self.backend != .metal) return false;
+        if (self.plannedTextRenderingMode() != .metal_texture_atlas) return false;
+        if (self.metal_backend_context == null) return false;
+        if (text.len == 0) return false;
+
+        var font = self.initMetalDiagnosticFont() catch return false;
+        defer font.deinit();
+
+        const render_scale = if (self.scale.render_scale > 0.0) self.scale.render_scale else 1.0;
+        var pen_x = x;
+        var drew_any = false;
+
+        for (text) |char| {
+            if (char == ' ') {
+                pen_x += font.cell_width / render_scale;
+                continue;
+            }
+            const codepoint: u32 = char;
+            const direct = font.directFastGlyphForCodepoint(codepoint) orelse return drew_any;
+            const glyph = font.getGlyphById(direct.face, direct.glyph_id, direct.want_color, false, 0) catch return drew_any;
+            if (glyph.rect.width <= 0 or glyph.rect.height <= 0) continue;
+
+            const appended = self.appendMetalAtlasSampleDraw(.{
+                .atlas = .color,
+                .source_rect = glyph.rect,
+                .dest_x = @max(0, @as(i32, @intFromFloat(std.math.round(self.logicalLengthToRaster(pen_x))))),
+                .dest_y = @max(0, @as(i32, @intFromFloat(std.math.round(self.logicalLengthToRaster(y))))),
+            });
+            if (!appended) return drew_any;
+            drew_any = true;
+            pen_x += glyph.advance / render_scale;
+        }
+
+        return drew_any;
     }
 
     pub fn runMacosMetalAtlasUploadDiagnostic(self: *Renderer) bool {
@@ -1848,7 +1897,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     pub fn runMacosMetalAtlasUploadDiagnosticAt(self: *Renderer, dest_x: i32, dest_y: i32) bool {
         if (self.backend != .metal) return false;
         if (self.metal_backend_context == null) return false;
-        self.metal_atlas_sample_draw = null;
+        self.resetMetalAtlasSampleDraws();
         self.metal_debug_preview_source = .unavailable;
 
         var font = self.initMetalDiagnosticFont() catch return false;
@@ -1858,25 +1907,26 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         const direct = font.directFastGlyphForCodepoint(codepoint) orelse return false;
         const coverage_glyph = font.getGlyphById(direct.face, direct.glyph_id, direct.want_color, false, 0) catch return false;
         if (coverage_glyph.rect.width > 0 and coverage_glyph.rect.height > 0) {
-            self.metal_atlas_sample_draw = .{
+            _ = self.appendMetalAtlasSampleDraw(.{
                 .atlas = .color,
                 .source_rect = coverage_glyph.rect,
                 .dest_x = dest_x,
                 .dest_y = dest_y,
-            };
+            });
             self.metal_debug_preview_source = .uploaded_coverage_glyph;
         }
         if (color_preview_rect) |rect| {
-            self.metal_atlas_sample_draw = .{
+            self.resetMetalAtlasSampleDraws();
+            _ = self.appendMetalAtlasSampleDraw(.{
                 .atlas = .color,
                 .source_rect = rect,
                 .dest_x = dest_x,
                 .dest_y = dest_y,
-            };
+            });
             self.metal_debug_preview_source = .uploaded_color_glyph;
         } else {
-            if (self.metal_atlas_sample_draw == null) {
-                self.metal_atlas_sample_draw = .{
+            if (self.metal_atlas_sample_draw_count == 0) {
+                _ = self.appendMetalAtlasSampleDraw(.{
                     .atlas = .color,
                     .source_rect = .{
                         .x = 0,
@@ -1886,7 +1936,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
                     },
                     .dest_x = dest_x,
                     .dest_y = dest_y,
-                };
+                });
                 self.metal_debug_preview_source = .seeded_color_block;
             }
         }

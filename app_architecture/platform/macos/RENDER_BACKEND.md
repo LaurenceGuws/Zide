@@ -574,11 +574,11 @@ What this does and does not mean:
   sequencing plus optional present-capture screenshots without depending on the
   broader live-smoke runtime
 - the first actual narrow text draw path now exists on the Metal side: the
-  renderer can upload and place a single sampled ASCII glyph through the Metal
-  atlas contract, and the dedicated text-diagnostic lane now reports
-  `sample_char_draw=1` on the current macOS host
-- this is still intentionally narrow and honest: it is a single-glyph sampled
-  draw path, not a claim that the generic string/text renderer has already
+  renderer can upload and place a tiny ASCII sampled-text run through the
+  Metal atlas contract, and the dedicated text-diagnostic lane now reports
+  `sample_text_draw=1` on the current macOS host
+- this is still intentionally narrow and honest: it is a tiny sampled-text run
+  rather than a claim that the generic string/text renderer has already
   migrated or that per-glyph tinting semantics are complete on Metal
 - the existing font-sample fallback now consumes that same narrow path as an
   actual UI caller: when live text is unavailable but the planned mode is
