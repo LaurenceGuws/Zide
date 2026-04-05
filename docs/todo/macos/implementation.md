@@ -337,6 +337,9 @@ lane.
     - that same sampled-text contract now also carries explicit clip
       ownership, so the narrow Metal text lane can obey widget/view bounds
       instead of only drawing unconstrained diagnostics
+    - the first terminal-facing fallback now exists on top of that contract:
+      narrow ASCII terminal cells can route through the sampled Metal lane
+      with per-cell bounds and tint when live text is unavailable
     - the narrow Metal text lane now covers a tiny multiline ASCII run, not
       just a single flat row
     - the diagnostic/runtime callers now use the explicit monospace-cell

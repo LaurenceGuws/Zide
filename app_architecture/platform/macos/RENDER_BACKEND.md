@@ -590,6 +590,10 @@ What this does and does not mean:
 - that same sampled-text contract now carries explicit clip ownership, so the
   narrow Metal text lane can obey widget/view bounds instead of only drawing
   unconstrained diagnostics
+- the first terminal-facing fallback now exists on top of that contract: when
+  live text is unavailable but the planned mode is `metal_texture_atlas`, the
+  terminal cell path can route narrow ASCII cells through the sampled Metal
+  lane with per-cell bounds and tint instead of dropping straight to empty text
 - this is still intentionally narrow and honest: it is now a tiny sampled
   multiline ASCII run with an explicit monospace-cell option rather than a
   claim that the generic string/text renderer has already migrated

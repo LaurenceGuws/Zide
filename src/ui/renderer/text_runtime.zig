@@ -11,6 +11,7 @@ const glyph_cache = @import("../glyph_cache.zig");
 const app_logger = @import("../../app_logger.zig");
 const types = @import("types.zig");
 const renderer_root = @import("../renderer.zig");
+const metal_text_sample_runtime = @import("metal_text_sample_runtime.zig");
 
 const Color = renderer_root.Color;
 const Renderer = renderer_root.Renderer;
@@ -210,6 +211,34 @@ pub fn drawChar(self: *Renderer, char: u8, x: f32, y: f32, color: Color) void {
     drawText(self, buf[0..], x, y, color);
 }
 
+fn drawMetalTerminalAsciiCellFallback(
+    self: *Renderer,
+    codepoint: u32,
+    x: f32,
+    y: f32,
+    cell_width: f32,
+    cell_height: f32,
+    color: Color,
+) bool {
+    if (self.plannedTextRenderingMode() != .metal_texture_atlas) return false;
+    if (codepoint < 0x20 or codepoint > 0x7E) return false;
+    const ascii: u8 = @intCast(codepoint);
+    var buf = [1]u8{ascii};
+    return self.drawMetalAtlasSampleRequest(.{
+        .text = buf[0..],
+        .x = x,
+        .y = y,
+        .tint = color.toRgba(),
+        .layout = .monospace_cell,
+        .clip_rect = .{
+            .x = x,
+            .y = y,
+            .width = cell_width,
+            .height = cell_height,
+        },
+    });
+}
+
 pub fn drawTerminalCell(self: *Renderer, codepoint: u32, x: f32, y: f32, cell_width: f32, cell_height: f32, fg: Color, bg: Color, underline_color: Color, bold: bool, underline: bool, is_cursor: bool, followed_by_space: bool, draw_bg: bool) void {
     const snapped_x = snapToDevicePixel(x, self.scale.render_scale);
     const snapped_y = snapToDevicePixel(y, self.scale.render_scale);
@@ -233,6 +262,12 @@ pub fn drawTerminalCell(self: *Renderer, codepoint: u32, x: f32, y: f32, cell_wi
         if (!drawTerminalBoxGlyph(self, codepoint, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, text_color)) {
             self.terminal_font.drawGlyph(draw, codepoint, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, followed_by_space, text_color.toRgba(), false);
         }
+        if (underline) {
+            terminal_underline.drawUnderline(drawRectThunk, self, snapInt(snapped_x), snapInt(snapped_y), snapped_cell_w_i, snapped_cell_h_i, underline_color);
+        }
+    } else if (codepoint != 0) {
+        const text_color = if (is_cursor) bg else fg;
+        _ = drawMetalTerminalAsciiCellFallback(self, codepoint, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, text_color);
         if (underline) {
             terminal_underline.drawUnderline(drawRectThunk, self, snapInt(snapped_x), snapInt(snapped_y), snapped_cell_w_i, snapped_cell_h_i, underline_color);
         }
@@ -304,6 +339,10 @@ pub fn drawTerminalCellBatched(self: *Renderer, codepoint: u32, x: f32, y: f32, 
             self.text_render.bg_rgba = behind_rgba;
             self.terminal_font.drawGlyph(draw, codepoint, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, followed_by_space, text_color.toRgba(), false);
         }
+        if (underline) terminal_underline.drawUnderline(addTerminalGlyphRectThunk, self, snapInt(snapped_x), snapInt(snapped_y), snapped_cell_w_i, snapped_cell_h_i, underline_color);
+    } else if (codepoint != 0) {
+        const text_color = if (is_cursor) bg else fg;
+        _ = drawMetalTerminalAsciiCellFallback(self, codepoint, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, text_color);
         if (underline) terminal_underline.drawUnderline(addTerminalGlyphRectThunk, self, snapInt(snapped_x), snapInt(snapped_y), snapped_cell_w_i, snapped_cell_h_i, underline_color);
     }
 }
