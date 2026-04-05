@@ -260,6 +260,11 @@ Progress note, 2026-04-05:
   `capability_contract.RendererCapabilities` now exposes
   `editor_presentable_cache_compatible`, and OpenGL reports false on macOS
   full UI while Metal leaves it enabled so widget code stays capability-shaped.
+- Metal-only immediate draw helpers (raw RGB/RGBA image enqueue, sampled text,
+  terminal cell runs, atlas sample char) now live on the shared `BackendOps`
+  table with OpenGL no-op stubs; `text_runtime`, Kitty placement, terminal
+  metal fallbacks, font sample view, and macOS text diagnostic call
+  `Renderer` methods instead of importing `metal_backend.zig` for those paths.
 
 ## Live Contradiction Centers
 

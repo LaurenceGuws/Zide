@@ -4,7 +4,6 @@ const app_logger = @import("../../app_logger.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
 
 const gl = @import("../renderer/gl.zig");
-const metal_backend = @import("../renderer/metal_backend.zig");
 const types = @import("../renderer/types.zig");
 
 const Shell = app_shell.Shell;
@@ -183,8 +182,8 @@ pub const KittyState = struct {
             const dest = types.Rect{ .x = x, .y = y, .width = draw_w, .height = draw_h };
             if (r.kittyImageMode() == .direct_raw_images) {
                 switch (image.format) {
-                    .rgb => _ = metal_backend.drawRawImageRgb(r, @intCast(image.width), @intCast(image.height), image.data, dest, Color.white.toRgba()),
-                    .rgba => _ = metal_backend.drawRawImageRgba(r, @intCast(image.width), @intCast(image.height), image.data, dest, Color.white.toRgba()),
+                    .rgb => _ = r.drawRawImageRgb(@intCast(image.width), @intCast(image.height), image.data, dest, Color.white.toRgba()),
+                    .rgba => _ = r.drawRawImageRgba(@intCast(image.width), @intCast(image.height), image.data, dest, Color.white.toRgba()),
                     .png => {},
                 }
                 continue;

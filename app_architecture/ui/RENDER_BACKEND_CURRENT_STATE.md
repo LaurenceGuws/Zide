@@ -231,6 +231,13 @@ image draws by branching on `renderer.backend`. The renderer capability model
 now publishes an explicit Kitty image mode, and the terminal Kitty widget
 follows that contract instead of backend labels.
 
+That has improved slightly again on the immediate-draw boundary too: Kitty
+direct raw-image placement, terminal Metal text fallbacks, `text_runtime`
+Metal fallbacks, font-sample Metal preview, and the macOS Metal text diagnostic
+no longer import `metal_backend.zig` just to enqueue those draws. They call
+`Renderer` methods wired through `BackendOps` instead, and OpenGL implements
+those ops as honest no-ops.
+
 That has improved slightly again on the persistent image-texture side too: the
 renderer root no longer exposes `createTextureFromRgb` /
 `createTextureFromRgba` as GL-only helper surfaces. Persistent texture

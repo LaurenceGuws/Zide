@@ -4,7 +4,6 @@ const app_logger = @import("../../app_logger.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
 const render_cache_mod = @import("../../terminal/core/publication/render_cache.zig");
 const shared_types = @import("../../types/mod.zig");
-const metal_backend = @import("../renderer/metal_backend.zig");
 const common = @import("common.zig");
 const hover_mod = @import("terminal_widget_hover.zig");
 const debug_geometry_mod = @import("terminal_widget_debug_geometry.zig");
@@ -306,7 +305,7 @@ pub fn drawOverlays(
 
                 var comp_col: usize = 0;
                 if (use_metal_row_fallback) {
-                    _ = metal_backend.drawTerminalCellRun(r, &r.terminal_font, .{
+                    _ = r.drawTerminalCellRun(&r.terminal_font, .{
                         .text = input.composing_text,
                         .x = cell_x,
                         .y = cell_y,
