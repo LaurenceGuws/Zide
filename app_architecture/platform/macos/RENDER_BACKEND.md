@@ -737,6 +737,10 @@ What this does and does not mean:
   `forceFullTerminalPresentationRecentInputWindow`) instead of naming the live
   contract around texture publication even though the active Metal lane
   presents directly
+- the terminal planning helper file center matches that contract now too:
+  `terminal_widget_draw_presentation.zig` replaces the old texture-named
+  helper module, which is more honest because the file mostly owns
+  presentation update/shift policy rather than texture-specific behavior
 - that contract is intentionally backend-native rather than fake portability:
   the old cached GL `Texture` path is still OpenGL-only, while Metal Kitty
   images are created as frame-scoped native Metal textures and released after

@@ -8,7 +8,7 @@ const time_utils = @import("../renderer/time_utils.zig");
 const retained_targets_runtime = @import("../renderer/retained_targets_runtime.zig");
 const scene_frame_runtime = @import("../renderer/scene_frame_runtime.zig");
 const draw_grid = @import("terminal_widget_draw_grid.zig");
-const draw_texture = @import("terminal_widget_draw_texture.zig");
+const draw_presentation = @import("terminal_widget_draw_presentation.zig");
 const presentation_state_mod = @import("terminal_widget_presentation_state.zig");
 const view_state = @import("terminal_widget_view_state.zig");
 
@@ -17,7 +17,7 @@ const Color = app_shell.Color;
 const CursorPos = terminal_publication.CursorPos;
 const PresentationPartialDrawPlan = presentation_state_mod.PresentationState.PresentationPartialDrawPlan;
 
-const FullFrameFastPathDecision = draw_texture.FullFrameFastPathDecision;
+const FullFrameFastPathDecision = draw_presentation.FullFrameFastPathDecision;
 const TerminalPresentationSampleMode = @import("terminal_widget_debug_geometry.zig").TerminalPresentationSampleMode;
 
 const drawRowBackgrounds = draw_grid.drawRowBackgrounds;
@@ -673,7 +673,7 @@ fn planPresentationUpdate(
     const recreated = retained_targets_runtime.ensureSurface(renderer, .terminal, plan.geometry.surface_w, plan.geometry.surface_h);
     const presentation_delta = self.surface.presentationUpdateDelta(terminal_view, plan.geometry);
 
-    var update_plan = draw_texture.choosePresentationUpdatePlan(
+    var update_plan = draw_presentation.choosePresentationUpdatePlan(
         self.publication.cacheConst().dirty,
         recreated,
         presentation_delta.clear_generation_changed,
@@ -682,7 +682,7 @@ fn planPresentationUpdate(
         blink_requires_partial,
         presentation_delta.presentable_ready,
     );
-    update_plan = draw_texture.forceFullPresentationUpdatePlanEveryFrame(update_plan, recent_input_window_active);
+    update_plan = draw_presentation.forceFullPresentationUpdatePlanEveryFrame(update_plan, recent_input_window_active);
 
     var needs_full = update_plan.needs_full;
     var needs_partial = update_plan.needs_partial;
@@ -692,7 +692,7 @@ fn planPresentationUpdate(
     };
     var shifted_rows: usize = 0;
     var shift_requires_fullwidth_partial = false;
-    switch (draw_texture.planViewportPresentShift(
+    switch (draw_presentation.planViewportPresentShift(
         renderer.terminalPresentationShiftEnabled(),
         presentation_delta.generation_changed,
         viewport_shift.rows,
@@ -724,7 +724,7 @@ fn planPresentationUpdate(
     }
 
     if (!needs_full and needs_partial) {
-        const fullframe_fastpath_decision: FullFrameFastPathDecision = draw_texture.decideFullFrameFastPath(
+        const fullframe_fastpath_decision: FullFrameFastPathDecision = draw_presentation.decideFullFrameFastPath(
             self.publication.cacheConst(),
             shifted_rows,
             viewport_shift.rows,
@@ -747,7 +747,7 @@ fn planPresentationUpdate(
                 .mode = .full,
             };
         };
-        _ = draw_texture.buildPartialPlan(
+        _ = draw_presentation.buildPartialPlan(
             self.publication.cacheConst(),
             partial_plan.rows,
             partial_plan.span_counts,

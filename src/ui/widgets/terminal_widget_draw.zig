@@ -9,7 +9,7 @@ const time_utils = @import("../renderer/time_utils.zig");
 const terminal_font_mod = @import("../terminal_font.zig");
 const draw_grid = @import("terminal_widget_draw_grid.zig");
 const draw_overlay = @import("terminal_widget_draw_overlay.zig");
-const draw_texture = @import("terminal_widget_draw_texture.zig");
+const draw_presentation = @import("terminal_widget_draw_presentation.zig");
 const draw_metrics = @import("terminal_widget_draw_metrics.zig");
 const surface_presenter = @import("terminal_widget_surface_presenter.zig");
 const view_state = @import("terminal_widget_view_state.zig");
@@ -49,7 +49,7 @@ pub const DrawPreparation = struct {
     }
 };
 
-const ViewportTextureShiftPlan = draw_texture.ViewportTextureShiftPlan;
+const ViewportPresentationShiftPlan = draw_presentation.ViewportPresentShiftPlan;
 
 pub fn latestFrameLatencyMetrics() FrameLatencyMetrics {
     return draw_metrics.latestFrameLatencyMetrics();
@@ -354,14 +354,14 @@ test "full-width partial plan marks every row" {
         try std.testing.expectEqual(@as(u16, 4), end);
     }
 }
-const planViewportPresentShift = draw_texture.planViewportPresentShift;
-const ViewportPresentShiftPlan = draw_texture.ViewportPresentShiftPlan;
-const useViewportShiftForPartialPlan = draw_texture.useViewportShiftForPartialPlan;
-const choosePresentationUpdatePlan = draw_texture.choosePresentationUpdatePlan;
-const forceFullPresentationUpdatePlan = draw_texture.forceFullPresentationUpdatePlan;
-const forceFullPresentationUpdatePlanEveryFrame = draw_texture.forceFullPresentationUpdatePlanEveryFrame;
-const buildPartialPlan = draw_texture.buildPartialPlan;
-const markAllRowsFullWidthPartialPlan = draw_texture.markAllRowsFullWidthPartialPlan;
+const planViewportPresentShift = draw_presentation.planViewportPresentShift;
+const ViewportPresentShiftPlan = draw_presentation.ViewportPresentShiftPlan;
+const useViewportShiftForPartialPlan = draw_presentation.useViewportShiftForPartialPlan;
+const choosePresentationUpdatePlan = draw_presentation.choosePresentationUpdatePlan;
+const forceFullPresentationUpdatePlan = draw_presentation.forceFullPresentationUpdatePlan;
+const forceFullPresentationUpdatePlanEveryFrame = draw_presentation.forceFullPresentationUpdatePlanEveryFrame;
+const buildPartialPlan = draw_presentation.buildPartialPlan;
+const markAllRowsFullWidthPartialPlan = draw_presentation.markAllRowsFullWidthPartialPlan;
 
 test "useViewportShiftForPartialPlan ignores stale shift metadata on clean frames" {
     try std.testing.expect(!useViewportShiftForPartialPlan(.none, 1));

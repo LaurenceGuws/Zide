@@ -457,6 +457,10 @@ lane.
       config/presenter callers use presentation-language for terminal shift
       and recent-input full-present policy instead of texture-publication
       names
+    - the terminal planning helper file center matches that contract now too:
+      `terminal_widget_draw_presentation.zig` replaces the old texture-named
+      helper module because it now primarily owns presentation update/shift
+      policy
     - the terminal Metal diagnostic now reports `raw_image_textures=1`, keeps
       non-zero `kitty_ms`, and no longer relies on the previous unsupported
       backend gate for RGB/RGBA Kitty images
