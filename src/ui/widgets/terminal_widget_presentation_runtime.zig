@@ -85,6 +85,12 @@ pub const RetainedPresentCycleResult = struct {
     kitty_ms: f64 = 0.0,
 };
 
+pub const RetainedPresentationResult = struct {
+    bg_ms: f64 = 0.0,
+    glyph_ms: f64 = 0.0,
+    kitty_ms: f64 = 0.0,
+};
+
 pub fn clearPresentationSample(self: anytype) void {
     self.debug.last_terminal_presentation.valid = false;
 }
@@ -475,6 +481,67 @@ pub fn runRetainedPresentCycle(
     result.bg_ms = execution.bg_ms;
     result.glyph_ms = execution.glyph_ms;
     result.kitty_ms = execution.kitty_ms;
+    return result;
+}
+
+pub fn runRetainedPresentation(
+    self: anytype,
+    renderer: anytype,
+    terminal_view: view_state.TerminalViewModel,
+    view_geometry: TerminalViewGeometry,
+    view_cells_len: usize,
+    surface_update_plan: PresentationUpdatePlan,
+    cycle_result: RetainedPresentCycleResult,
+    note_present_ctx: anytype,
+    note_present: anytype,
+) RetainedPresentationResult {
+    const result = RetainedPresentationResult{
+        .bg_ms = cycle_result.bg_ms,
+        .glyph_ms = cycle_result.glyph_ms,
+        .kitty_ms = cycle_result.kitty_ms,
+    };
+
+    const visible_w = surface_update_plan.geometry.visible_w;
+    const visible_h = surface_update_plan.geometry.visible_h;
+    const viewport_w = surface_update_plan.geometry.viewport_w;
+    const viewport_h = surface_update_plan.geometry.viewport_h;
+
+    const present_state = refreshPresentState(
+        &self.surface,
+        renderer,
+        terminal_view,
+        surface_update_plan.geometry,
+        view_geometry,
+        cycle_result.completed,
+        visible_w,
+        visible_h,
+        view_cells_len,
+    );
+    const bg = if (view_cells_len > 0)
+        Color{
+            .r = terminal_view.base_colors.resolved_background.r,
+            .g = terminal_view.base_colors.resolved_background.g,
+            .b = terminal_view.base_colors.resolved_background.b,
+            .a = terminal_view.base_colors.resolved_background.a,
+        }
+    else
+        renderer.theme.background;
+    if (visible_w > 0 and visible_h > 0) {
+        renderer.drawRectF(view_geometry.origin_x, view_geometry.origin_y, viewport_w, viewport_h, bg);
+    }
+    logUnavailable(&self.surface, terminal_view, present_state, visible_w, visible_h);
+    if (present_state.present) {
+        presentDraw(
+            renderer,
+            self.surface.lastRenderGeneration(),
+            self.surface.lastRenderGeneration(),
+            view_geometry,
+            viewport_w,
+            viewport_h,
+            note_present_ctx,
+            note_present,
+        );
+    }
     return result;
 }
 

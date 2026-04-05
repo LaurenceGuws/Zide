@@ -795,6 +795,10 @@ What this does and does not mean:
   end-clip, retained update execution, and end-target restore now run through
   one terminal runtime entrypoint instead of being split between presenter
   orchestration and runtime helpers
+- the remaining retained-path post-update orchestration moved there too:
+  refresh-present-state, fallback background fill, unavailable logging, and
+  retained present submission now run through one terminal runtime operation
+  instead of being assembled inline in the presenter
 - that contract is intentionally backend-native rather than fake portability:
   the old cached GL `Texture` path is still OpenGL-only, while Metal Kitty
   images are created as frame-scoped native Metal textures and released after

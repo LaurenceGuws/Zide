@@ -102,12 +102,6 @@ pub fn updateAndPresent(
         return result;
     }
 
-    var visible_w: i32 = 0;
-    var visible_h: i32 = 0;
-    var viewport_w: f32 = 0;
-    var viewport_h: f32 = 0;
-    var padding_x_i: i32 = 0;
-
     if (rows > 0 and cols > 0) {
         const plan_time = app_shell.getTime();
         const recent_input_window_active = r.forceFullTerminalPresentationRecentInputWindow() and
@@ -128,65 +122,36 @@ pub fn updateAndPresent(
             scroll_offset,
             recent_input_window_active,
         );
-        visible_w = surface_update_plan.geometry.visible_w;
-        visible_h = surface_update_plan.geometry.visible_h;
-        viewport_w = surface_update_plan.geometry.viewport_w;
-        viewport_h = surface_update_plan.geometry.viewport_h;
-        padding_x_i = surface_update_plan.geometry.padding_x_i;
-        var presentation_update_completed = false;
-
-        if (surface_update_plan.mode != .none) {
-            const execution = presentation_runtime.runRetainedPresentCycle(
-                self,
-                shell,
-                r,
-                terminal_view,
-                view_geometry,
-                hover_link_id,
-                start_line,
-                draw_cursor,
-                cursor,
-                cursor_style,
-                blink_style,
-                blink_time,
-                has_kitty,
-                surface_update_plan,
-            );
-            result.presentation_bg_ms += execution.bg_ms;
-            result.presentation_glyph_ms += execution.glyph_ms;
-            result.presentation_kitty_ms += execution.kitty_ms;
-            presentation_update_completed = execution.completed;
-        }
-        const present_state = presentation_runtime.refreshPresentState(
-            &self.surface,
+        const cycle = presentation_runtime.runRetainedPresentCycle(
+            self,
+            shell,
             r,
             terminal_view,
-            surface_update_plan.geometry,
             view_geometry,
-            presentation_update_completed,
-            visible_w,
-            visible_h,
-            view_cells.len,
+            hover_link_id,
+            start_line,
+            draw_cursor,
+            cursor,
+            cursor_style,
+            blink_style,
+            blink_time,
+            has_kitty,
+            surface_update_plan,
         );
-        if (rows > 0 and cols > 0) {
-            const bg = if (view_cells.len > 0) toShellColor(base_colors.resolved_background) else r.theme.background;
-            if (visible_w > 0 and visible_h > 0) {
-                r.drawRectF(view_geometry.origin_x, view_geometry.origin_y, viewport_w, viewport_h, bg);
-            }
-        }
-        presentation_runtime.logUnavailable(&self.surface, terminal_view, present_state, visible_w, visible_h);
-        if (present_state.present) {
-            presentation_runtime.presentDraw(
-                r,
-                self.surface.lastRenderGeneration(),
-                self.surface.lastRenderGeneration(),
-                view_geometry,
-                viewport_w,
-                viewport_h,
-                self,
-                presentation_runtime.notePresentSample,
-            );
-        }
+        const retained = presentation_runtime.runRetainedPresentation(
+            self,
+            r,
+            terminal_view,
+            view_geometry,
+            view_cells.len,
+            surface_update_plan,
+            cycle,
+            self,
+            presentation_runtime.notePresentSample,
+        );
+        result.presentation_bg_ms += retained.bg_ms;
+        result.presentation_glyph_ms += retained.glyph_ms;
+        result.presentation_kitty_ms += retained.kitty_ms;
     }
 
     result.presentation_update_ms = time_utils.secondsToMs(app_shell.getTime() - presentation_phase_start);
