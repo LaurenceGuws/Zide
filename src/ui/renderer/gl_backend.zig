@@ -265,8 +265,10 @@ pub fn drawSolidRect(renderer: anytype, x: f32, y: f32, w: f32, h: f32, color: t
 }
 
 /// Interprets one shared `SurfaceDraw` on the OpenGL path immediately (Metal
-/// queues the same union for end-of-frame replay). Only `.solid` is supported
-/// today; `.atlas` / `.raw_image` return false and do not take ownership.
+/// queues the same union for end-of-frame replay). `.solid` and `.atlas` are
+/// supported when the renderer is in a compatible text mode (atlas uses
+/// `terminal_font` coverage/color textures). `.raw_image` returns false and does
+/// not take ownership.
 pub fn submitSurfaceDrawImmediate(renderer: anytype, draw: surface_draw.SurfaceDraw) bool {
     switch (draw) {
         .solid => |s| {
@@ -288,7 +290,42 @@ pub fn submitSurfaceDrawImmediate(renderer: anytype, draw: surface_draw.SurfaceD
             }
             return drawSolidRect(renderer, x, y, w, h, s.color);
         },
-        .atlas => return false,
+        .atlas => |sample| {
+            if (renderer.textRenderingMode() != .gl_texture_atlas) return false;
+            const w_px = @as(i32, @intFromFloat(sample.source_rect.width));
+            const h_px = @as(i32, @intFromFloat(sample.source_rect.height));
+            if (w_px <= 0 or h_px <= 0) return false;
+            const tex = switch (sample.atlas) {
+                .coverage => renderer.terminal_font.coverageTexture(),
+                .color => renderer.terminal_font.colorTexture(),
+            };
+            if (tex.id == 0 or tex.width <= 0 or tex.height <= 0) return false;
+            const dest = types.Rect{
+                .x = renderer.rasterLengthToLogical(@floatFromInt(sample.dest_x)),
+                .y = renderer.rasterLengthToLogical(@floatFromInt(sample.dest_y)),
+                .width = renderer.rasterLengthToLogical(@floatFromInt(w_px)),
+                .height = renderer.rasterLengthToLogical(@floatFromInt(h_px)),
+            };
+            const kind: types.TextureKind = switch (sample.atlas) {
+                .coverage => .font_coverage,
+                .color => .rgba,
+            };
+            const bg = renderer.text_render.bg_rgba;
+            if (sample.clip_rect) |pc| {
+                if (pc.width <= 0 or pc.height <= 0) return false;
+                renderer.beginClip(
+                    @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.x)))),
+                    @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.y)))),
+                    @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.width)))),
+                    @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.height)))),
+                );
+                defer renderer.endClip();
+                draw_ops.drawTextureRect(renderer, tex, sample.source_rect, dest, sample.tint, bg, kind);
+                return true;
+            }
+            draw_ops.drawTextureRect(renderer, tex, sample.source_rect, dest, sample.tint, bg, kind);
+            return true;
+        },
         .raw_image => return false,
     }
 }

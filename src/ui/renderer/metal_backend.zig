@@ -1366,7 +1366,7 @@ pub fn appendSolidRect(
         metal_text_sample_runtime.pixelClipRect(renderer, c)
     else
         null;
-    return appendSurfaceDrawToMetalQueue(renderer, .{ .solid = .{
+    return renderer.backend_ops.enqueueSurfaceDraw(renderer, .{ .solid = .{
         .dest_rect = .{
             .x = renderer.logicalLengthToRaster(x),
             .y = renderer.logicalLengthToRaster(y),
@@ -1379,7 +1379,7 @@ pub fn appendSolidRect(
 }
 
 pub fn appendAtlasSample(renderer: anytype, sample: AtlasSampleDraw) bool {
-    return appendSurfaceDrawToMetalQueue(renderer, .{ .atlas = sample });
+    return renderer.backend_ops.enqueueSurfaceDraw(renderer, .{ .atlas = sample });
 }
 
 pub fn appendRawImage(renderer: anytype, draw: RawImageDraw) bool {
