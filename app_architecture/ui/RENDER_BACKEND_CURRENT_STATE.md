@@ -129,6 +129,12 @@ smoke frame and the basic Metal `SurfaceDraw` variant packaging now route
 through `metal_backend` helpers instead of `Renderer` spelling out those
 backend-specific assembly details itself.
 
+The presentable contract has improved slightly again too: the Metal terminal
+snapshot-presentable path now participates in the shared presentable contract
+through `metal_backend` entrypoints, instead of
+`terminal_widget_presentation_target_runtime.zig` carrying a separate
+Metal-only bypass branch for availability, ensure, draw, and scroll.
+
 ### 2. Shared frame lifecycle still branches backend-by-backend
 
 The renderer root no longer spells out backend frame begin/submit bodies, but

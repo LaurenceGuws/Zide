@@ -5,6 +5,7 @@ const macos_metal_host = @import("../../platform/macos_metal_host.zig");
 const metal_frame_runtime = @import("metal_frame_runtime.zig");
 const metal_text_sample_runtime = @import("metal_text_sample_runtime.zig");
 const presentable_contract = @import("presentable_contract.zig");
+const scene_frame_runtime = @import("scene_frame_runtime.zig");
 const surface_draw = @import("surface_draw.zig");
 const terminal_font = @import("../terminal_font.zig");
 const types = @import("types.zig");
@@ -1121,24 +1122,66 @@ pub fn submitFrame(renderer: anytype) @import("scene_frame_runtime.zig").FrameSu
 
 pub fn deinitPresentables(_: anytype) void {}
 
-pub fn ensurePresentable(_: anytype, _: PresentableSurface, _: i32, _: i32) bool {
-    return false;
+pub fn ensurePresentable(renderer: anytype, surface: PresentableSurface, width: i32, height: i32) bool {
+    return switch (surface) {
+        .terminal => blk: {
+            _ = width;
+            _ = height;
+            const drawable_width = renderer.render_width;
+            const drawable_height = renderer.render_height;
+            if (drawable_width <= 0 or drawable_height <= 0) break :blk false;
+            break :blk ensureTerminalSnapshotPresentableForRenderer(renderer, drawable_width, drawable_height);
+        },
+        .editor => false,
+    };
 }
 
 pub fn beginPresentable(_: anytype, _: PresentableSurface) bool {
     return false;
 }
 
-pub fn presentableAvailable(_: anytype, _: PresentableSurface) bool {
-    return false;
+pub fn presentableAvailable(renderer: anytype, surface: PresentableSurface) bool {
+    return switch (surface) {
+        .terminal => terminalSnapshotAvailableForRenderer(renderer),
+        .editor => false,
+    };
 }
 
 pub fn endPresentable(_: anytype, _: PresentableSurface) void {}
 
-pub fn drawPresentable(_: anytype, _: PresentableSurface, _: PresentableDraw) void {}
+pub fn drawPresentable(renderer: anytype, surface: PresentableSurface, draw: PresentableDraw) void {
+    switch (surface) {
+        .terminal => {
+            const dest_width = draw.width orelse return;
+            const dest_height = draw.height orelse return;
+            const source_width = draw.source_width orelse dest_width;
+            const source_height = draw.source_height orelse dest_height;
+            scene_frame_runtime.notePresentableDraw(renderer, .terminal, draw.generation);
+            _ = appendTerminalSnapshotDraw(renderer, .{
+                .texture = undefined,
+                .source_rect = .{
+                    .x = renderer.logicalLengthToRaster(draw.x),
+                    .y = renderer.logicalLengthToRaster(draw.y),
+                    .width = renderer.logicalLengthToRaster(source_width),
+                    .height = renderer.logicalLengthToRaster(source_height),
+                },
+                .dest_rect = .{
+                    .x = renderer.logicalLengthToRaster(draw.x),
+                    .y = renderer.logicalLengthToRaster(draw.y),
+                    .width = renderer.logicalLengthToRaster(dest_width),
+                    .height = renderer.logicalLengthToRaster(dest_height),
+                },
+            });
+        },
+        .editor => {},
+    }
+}
 
-pub fn scrollPresentable(_: anytype, _: PresentableSurface, _: i32, _: i32) bool {
-    return false;
+pub fn scrollPresentable(renderer: anytype, surface: PresentableSurface, dx: i32, dy: i32) bool {
+    return switch (surface) {
+        .terminal => scrollTerminalSnapshotPresentableForRenderer(renderer, dx, dy),
+        .editor => false,
+    };
 }
 
 pub fn backendContext(renderer: anytype) ?*BackendContext {

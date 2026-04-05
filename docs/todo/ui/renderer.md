@@ -151,6 +151,10 @@ Progress note, 2026-04-05:
 - The one-off Metal smoke frame and basic Metal `SurfaceDraw` variant
   packaging now also route through `metal_backend.zig` helpers instead of
   `Renderer` spelling out those backend-specific assembly details itself.
+- The Metal terminal snapshot-presentable path now participates in the shared
+  presentable contract through `metal_backend.zig` entrypoints instead of
+  `terminal_widget_presentation_target_runtime.zig` carrying a separate
+  Metal-only bypass branch for availability, ensure, draw, and scroll.
 - The next lifecycle step is to reduce shared-runtime ownership of dispatch and
   backend-native frame state, not just move code blocks around.
 
