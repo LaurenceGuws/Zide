@@ -1,7 +1,6 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
-const terminal_types = @import("../../terminal/model/types.zig");
 const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
 const time_utils = @import("../renderer/time_utils.zig");
@@ -14,7 +13,8 @@ const view_state = @import("terminal_widget_view_state.zig");
 
 const Shell = app_shell.Shell;
 const Color = app_shell.Color;
-const CursorPos = terminal_publication.CursorPos;
+const CursorPos = @import("../../terminal/core/publication/terminal_publication.zig").CursorPos;
+const terminal_types = @import("../../terminal/model/types.zig");
 const PresentationPartialDrawPlan = presentation_state_mod.PresentationState.PresentationPartialDrawPlan;
 
 const TerminalPresentationSampleMode = @import("terminal_widget_debug_geometry.zig").TerminalPresentationSampleMode;
@@ -383,126 +383,6 @@ fn noteTerminalPresent(
     self.debug.last_terminal_presentation = sample;
 }
 
-fn directPresentMainTarget(
-    self: anytype,
-    shell: *Shell,
-    renderer: anytype,
-    terminal_view: view_state.TerminalViewModel,
-    view_geometry: shared_types.layout.TerminalViewGeometry,
-    hover_link_id: u32,
-    draw_cursor: bool,
-    cursor: CursorPos,
-    cursor_style: terminal_types.CursorStyle,
-    blink_style: anytype,
-    blink_time: f64,
-    start_line: usize,
-    has_kitty: bool,
-    width: f32,
-    height: f32,
-) SurfacePresentResult {
-    var result = SurfacePresentResult{};
-    const rows = terminal_view.rows;
-    const cols = terminal_view.cols;
-    const view_cells = terminal_view.cells;
-    if (rows == 0 or cols == 0 or view_cells.len == 0) return result;
-
-    const bg_color = toShellColor(terminal_view.base_colors.resolved_background);
-    renderer.drawRect(
-        @intFromFloat(std.math.round(view_geometry.origin_x)),
-        @intFromFloat(std.math.round(view_geometry.origin_y)),
-        @intFromFloat(std.math.round(@min(width, view_geometry.viewport_width))),
-        @intFromFloat(std.math.round(@min(height, view_geometry.viewport_height))),
-        bg_color,
-    );
-    noteTerminalPresent(
-        self,
-        renderer,
-        .direct_main_target,
-        terminal_view.generation,
-        view_geometry.origin_x,
-        view_geometry.origin_y,
-        @min(width, view_geometry.viewport_width),
-        @min(height, view_geometry.viewport_height),
-        view_geometry.viewport_width,
-        view_geometry.viewport_height,
-    );
-    self.surface.noteDirectPresentationReady(terminal_view);
-
-    const bg_phase_start = app_shell.getTime();
-    renderer.beginTerminalBatch();
-    var row: usize = 0;
-    while (row < rows) : (row += 1) {
-        drawRowBackgrounds(
-            shell,
-            view_geometry,
-            view_cells,
-            cols,
-            row,
-            0,
-            cols - 1,
-            view_geometry.origin_x,
-            view_geometry.origin_y,
-            0,
-            false,
-            terminal_view.render.screen_reverse,
-            draw_cursor,
-            cursor,
-            cursor_style,
-        );
-    }
-    renderer.flushTerminalBatch();
-    result.presentation_bg_ms = time_utils.secondsToMs(app_shell.getTime() - bg_phase_start);
-
-    if (has_kitty) {
-        const kitty_phase_start = app_shell.getTime();
-        self.surface.kitty.cleanupTextures(self.session.allocator, self.surface.kitty.images_view.items);
-        self.surface.kitty.drawImages(self.session.allocator, shell, view_geometry.origin_x, view_geometry.origin_y, false, start_line, rows, cols);
-        result.presentation_kitty_ms += time_utils.secondsToMs(app_shell.getTime() - kitty_phase_start);
-    }
-
-    const glyph_phase_start = app_shell.getTime();
-    renderer.terminal_font.beginFrameAtlasStats();
-    renderer.beginTerminalGlyphBatch();
-    var glyph_stats = GlyphDrawStats{};
-    row = 0;
-    while (row < rows) : (row += 1) {
-        drawRowGlyphs(
-            shell,
-            view_geometry,
-            view_cells,
-            cols,
-            row,
-            0,
-            cols - 1,
-            view_geometry.origin_x,
-            view_geometry.origin_y,
-            0,
-            hover_link_id,
-            terminal_view.render.screen_reverse,
-            blink_style,
-            blink_time,
-            draw_cursor,
-            cursor,
-            cursor_style,
-            renderer.font_config.terminal_disable_ligatures,
-            terminal_view.generation,
-            &glyph_stats,
-            &self.debug.last_text_paint,
-            &self.debug.last_metal_terminal_fallback,
-        );
-    }
-    renderer.flushTerminalGlyphBatch();
-    result.presentation_glyph_ms = time_utils.secondsToMs(app_shell.getTime() - glyph_phase_start);
-
-    if (has_kitty) {
-        const kitty_phase_start = app_shell.getTime();
-        self.surface.kitty.drawImages(self.session.allocator, shell, view_geometry.origin_x, view_geometry.origin_y, true, start_line, rows, cols);
-        result.presentation_kitty_ms += time_utils.secondsToMs(app_shell.getTime() - kitty_phase_start);
-    }
-
-    return result;
-}
-
 fn refreshPresentationPresentState(
     self: anytype,
     renderer: anytype,
@@ -613,7 +493,7 @@ pub fn updateAndPresent(
     self.debug.last_terminal_presentation.valid = false;
 
     if (r.terminalPresentationMode() == .direct_main_target) {
-        return directPresentMainTarget(
+        const direct = presentation_runtime.directPresent(
             self,
             shell,
             r,
@@ -629,7 +509,13 @@ pub fn updateAndPresent(
             has_kitty,
             width,
             height,
+            self,
+            noteTerminalPresent,
         );
+        result.presentation_bg_ms = direct.bg_ms;
+        result.presentation_glyph_ms = direct.glyph_ms;
+        result.presentation_kitty_ms = direct.kitty_ms;
+        return result;
     }
 
     const bg_color = if (view_cells.len > 0) toShellColor(base_colors.resolved_background) else r.theme.background;

@@ -1,18 +1,29 @@
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
+const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
+const terminal_types = @import("../../terminal/model/types.zig");
 const shared_types = @import("../../types/mod.zig");
 const draw_presentation = @import("terminal_widget_draw_presentation.zig");
 const presentation_state_mod = @import("terminal_widget_presentation_state.zig");
 const view_state = @import("terminal_widget_view_state.zig");
 const presentation_target_runtime = @import("terminal_widget_presentation_target_runtime.zig");
+const draw_grid = @import("terminal_widget_draw_grid.zig");
 const publication_capture = @import("../../terminal/core/publication/render_cache.zig");
 const app_shell = @import("../../app_shell.zig");
+const time_utils = @import("../renderer/time_utils.zig");
+const terminal_debug_geometry = @import("terminal_widget_debug_geometry.zig");
 
 const TerminalViewGeometry = shared_types.layout.TerminalViewGeometry;
 const Color = app_shell.Color;
 const RenderCache = publication_capture.RenderCache;
 const FullFrameFastPathDecision = draw_presentation.FullFrameFastPathDecision;
 const PresentationPartialDrawPlan = presentation_state_mod.PresentationState.PresentationPartialDrawPlan;
+const CursorPos = terminal_publication.CursorPos;
+const GlyphDrawStats = draw_grid.GlyphDrawStats;
+const TerminalPresentationSampleMode = terminal_debug_geometry.TerminalPresentationSampleMode;
+
+const drawRowBackgrounds = draw_grid.drawRowBackgrounds;
+const drawRowGlyphs = draw_grid.drawRowGlyphs;
 
 pub const PresentationGeometry = struct {
     render_scale: f32 = 1.0,
@@ -51,6 +62,12 @@ pub const PresentationUpdatePlan = struct {
 pub const ViewportShiftState = struct {
     rows: i32 = 0,
     exposed_only: bool = false,
+};
+
+pub const DirectPresentResult = struct {
+    bg_ms: f64 = 0.0,
+    glyph_ms: f64 = 0.0,
+    kitty_ms: f64 = 0.0,
 };
 
 pub fn beginViewportClip(
@@ -189,6 +206,136 @@ pub fn tryFastPresentExisting(
         note_present,
     );
     return true;
+}
+
+pub fn directPresent(
+    self: anytype,
+    shell: *app_shell.Shell,
+    renderer: anytype,
+    terminal_view: view_state.TerminalViewModel,
+    view_geometry: TerminalViewGeometry,
+    hover_link_id: u32,
+    draw_cursor: bool,
+    cursor: CursorPos,
+    cursor_style: terminal_types.CursorStyle,
+    blink_style: anytype,
+    blink_time: f64,
+    start_line: usize,
+    has_kitty: bool,
+    width: f32,
+    height: f32,
+    note_present_ctx: anytype,
+    note_present: anytype,
+) DirectPresentResult {
+    var result = DirectPresentResult{};
+    const rows = terminal_view.rows;
+    const cols = terminal_view.cols;
+    const view_cells = terminal_view.cells;
+    if (rows == 0 or cols == 0 or view_cells.len == 0) return result;
+
+    const bg_color: Color = .{
+        .r = terminal_view.base_colors.resolved_background.r,
+        .g = terminal_view.base_colors.resolved_background.g,
+        .b = terminal_view.base_colors.resolved_background.b,
+        .a = terminal_view.base_colors.resolved_background.a,
+    };
+    const viewport_w = @min(width, view_geometry.viewport_width);
+    const viewport_h = @min(height, view_geometry.viewport_height);
+
+    renderer.drawRect(
+        @intFromFloat(std.math.round(view_geometry.origin_x)),
+        @intFromFloat(std.math.round(view_geometry.origin_y)),
+        @intFromFloat(std.math.round(viewport_w)),
+        @intFromFloat(std.math.round(viewport_h)),
+        bg_color,
+    );
+    note_present(
+        note_present_ctx,
+        renderer,
+        .direct_main_target,
+        terminal_view.generation,
+        view_geometry.origin_x,
+        view_geometry.origin_y,
+        viewport_w,
+        viewport_h,
+        view_geometry.viewport_width,
+        view_geometry.viewport_height,
+    );
+    self.surface.noteDirectPresentationReady(terminal_view);
+
+    const bg_phase_start = app_shell.getTime();
+    renderer.beginTerminalBatch();
+    var row: usize = 0;
+    while (row < rows) : (row += 1) {
+        drawRowBackgrounds(
+            shell,
+            view_geometry,
+            view_cells,
+            cols,
+            row,
+            0,
+            cols - 1,
+            view_geometry.origin_x,
+            view_geometry.origin_y,
+            0,
+            false,
+            terminal_view.render.screen_reverse,
+            draw_cursor,
+            cursor,
+            cursor_style,
+        );
+    }
+    renderer.flushTerminalBatch();
+    result.bg_ms = time_utils.secondsToMs(app_shell.getTime() - bg_phase_start);
+
+    if (has_kitty) {
+        const kitty_phase_start = app_shell.getTime();
+        self.surface.kitty.cleanupTextures(self.session.allocator, self.surface.kitty.images_view.items);
+        self.surface.kitty.drawImages(self.session.allocator, shell, view_geometry.origin_x, view_geometry.origin_y, false, start_line, rows, cols);
+        result.kitty_ms += time_utils.secondsToMs(app_shell.getTime() - kitty_phase_start);
+    }
+
+    const glyph_phase_start = app_shell.getTime();
+    renderer.terminal_font.beginFrameAtlasStats();
+    renderer.beginTerminalGlyphBatch();
+    var glyph_stats = GlyphDrawStats{};
+    row = 0;
+    while (row < rows) : (row += 1) {
+        drawRowGlyphs(
+            shell,
+            view_geometry,
+            view_cells,
+            cols,
+            row,
+            0,
+            cols - 1,
+            view_geometry.origin_x,
+            view_geometry.origin_y,
+            0,
+            hover_link_id,
+            terminal_view.render.screen_reverse,
+            blink_style,
+            blink_time,
+            draw_cursor,
+            cursor,
+            cursor_style,
+            renderer.font_config.terminal_disable_ligatures,
+            terminal_view.generation,
+            &glyph_stats,
+            &self.debug.last_text_paint,
+            &self.debug.last_metal_terminal_fallback,
+        );
+    }
+    renderer.flushTerminalGlyphBatch();
+    result.glyph_ms = time_utils.secondsToMs(app_shell.getTime() - glyph_phase_start);
+
+    if (has_kitty) {
+        const kitty_phase_start = app_shell.getTime();
+        self.surface.kitty.drawImages(self.session.allocator, shell, view_geometry.origin_x, view_geometry.origin_y, true, start_line, rows, cols);
+        result.kitty_ms += time_utils.secondsToMs(app_shell.getTime() - kitty_phase_start);
+    }
+
+    return result;
 }
 
 pub fn planUpdate(

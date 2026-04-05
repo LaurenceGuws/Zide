@@ -764,6 +764,18 @@ What this does and does not mean:
 - the retained-presentable sync/fast path is behind that same runtime now too:
   the presenter no longer owns the ready-presentable short-circuit branch
   directly, which tightens the terminal-owned presentation contract further
+- the same terminal-owned runtime now owns the direct-main-target terminal
+  present path too: background clear, grid background pass, glyph pass, Kitty
+  below-text pass, Kitty above-text pass, and direct-present debug sampling
+  are no longer presenter-local logic
+- that matters because the terminal lane now has one owning runtime seam for
+  both active presentation shapes on macOS:
+  - `retained_surface` on the mature OpenGL/full-ui lane
+  - `direct_main_target` on the live Metal terminal lane
+- with this move, `terminal_widget_surface_presenter.zig` is closer to its
+  intended role as orchestration over terminal-owned presentation/runtime
+  contracts instead of being the real owner of one presentation mode and a
+  helper caller for the other
 - that contract is intentionally backend-native rather than fake portability:
   the old cached GL `Texture` path is still OpenGL-only, while Metal Kitty
   images are created as frame-scoped native Metal textures and released after

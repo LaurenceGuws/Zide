@@ -655,6 +655,16 @@ lane.
   - package validation is also green for:
     - `zig build test` in `../zlua-portable`
   - manual GUI/runtime validation is still open
+  - the terminal presentation seam is now more honestly terminal-owned:
+    - `terminal_widget_presentation_runtime.zig` owns retained fast-present,
+      presentable draw, presentable planning, present-state refresh, and now
+      the direct-main-target terminal present path too
+    - the direct Metal terminal lane still validates on the same runtime truth:
+      `terminal_present=direct_main_target`, `presentable_ready=1` after the
+      first successful frame, `grid_runs=10/224`, `overlay_runs=1/5`, and
+      non-zero `kitty_ms`
+    - this reduces one more retained-first contradiction before a second
+      Metal terminal presentation shape is introduced
 
 ## Immediate Next Pass
 
