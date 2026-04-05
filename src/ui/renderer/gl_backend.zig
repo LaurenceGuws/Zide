@@ -1,6 +1,7 @@
 const std = @import("std");
 const gl = @import("gl.zig");
 const gl_resources = @import("gl_resources.zig");
+const opengl_frame_runtime = @import("opengl_frame_runtime.zig");
 const presentable_target = @import("presentable_target.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
 const app_logger = @import("../../app_logger.zig");
@@ -68,6 +69,14 @@ pub fn runStartupSmoke(window: *sdl.SDL_Window) !bool {
     defer sdl_api.glDeleteContext(gl_context);
     try gl.load();
     return true;
+}
+
+pub fn beginFrame(renderer: anytype) void {
+    opengl_frame_runtime.beginFrame(renderer);
+}
+
+pub fn submitFrame(renderer: anytype) @import("scene_frame_runtime.zig").FrameSubmission {
+    return opengl_frame_runtime.submitFrame(renderer);
 }
 
 pub fn initGlResources(renderer: anytype) !void {

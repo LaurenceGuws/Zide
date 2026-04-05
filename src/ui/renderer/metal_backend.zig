@@ -1,6 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const macos_metal_host = @import("../../platform/macos_metal_host.zig");
+const metal_frame_runtime = @import("metal_frame_runtime.zig");
 const surface_draw = @import("surface_draw.zig");
 const terminal_font = @import("../terminal_font.zig");
 const types = @import("types.zig");
@@ -1103,6 +1104,14 @@ pub fn runStartupSmoke(render_surface_attachment: anytype, width: i32, height: i
     }
     presentFrame(&context, &frame);
     return true;
+}
+
+pub fn beginFrame(renderer: anytype) void {
+    metal_frame_runtime.beginFrame(renderer);
+}
+
+pub fn submitFrame(renderer: anytype) @import("scene_frame_runtime.zig").FrameSubmission {
+    return metal_frame_runtime.submitFrame(renderer);
 }
 
 pub fn resizeBackendContext(

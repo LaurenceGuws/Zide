@@ -117,6 +117,11 @@ This has improved slightly again: OpenGL-only scene target refresh/prep no
 longer happens in `frame_runtime.zig`; that branch now lives under
 `opengl_frame_runtime.zig`, which is closer to the contract we actually want.
 
+This has improved slightly once more: the extra shared backend-frame dispatch
+wrapper is gone. `frame_runtime.zig` now does shared per-frame bookkeeping and
+routes directly to backend-owned `beginFrame` / `submitFrame` entrypoints on
+the OpenGL and Metal modules.
+
 ### 3. The shared draw queue is still Metal-native
 
 The shared renderer currently stores and submits

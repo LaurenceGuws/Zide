@@ -114,6 +114,9 @@ Progress note, 2026-04-05:
 - backend startup/init and startup-smoke probing now also route through
   `gl_backend.zig` and `metal_backend.zig` instead of `Renderer.init()` and
   `runStartupBackendSmoke()` spelling out both boot paths inline.
+- the extra shared backend-frame dispatch wrapper is gone; `frame_runtime.zig`
+  now does shared bookkeeping and routes directly to backend-owned
+  `beginFrame` / `submitFrame` entrypoints on the OpenGL and Metal modules.
 - The next lifecycle step is to reduce shared-runtime ownership of dispatch and
   backend-native frame state, not just move code blocks around.
 

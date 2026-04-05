@@ -1,7 +1,8 @@
-const backend_frame_runtime = @import("backend_frame_runtime.zig");
 const platform_window = @import("../../platform/window_metrics.zig");
 const renderer_root = @import("../renderer.zig");
 const scene_frame_runtime = @import("scene_frame_runtime.zig");
+const gl_backend = @import("gl_backend.zig");
+const metal_backend = @import("metal_backend.zig");
 
 pub const FrameSubmission = scene_frame_runtime.FrameSubmission;
 pub const PresentTrace = scene_frame_runtime.PresentTrace;
@@ -19,11 +20,18 @@ pub fn beginFrame(self: anytype) void {
     self.render_height = sizes.render_height;
 
     self.text_render.bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
-    backend_frame_runtime.beginFrame(self);
+    self.clearQueuedSurfaceDraws();
+    switch (self.backend) {
+        .opengl => gl_backend.beginFrame(self),
+        .metal => metal_backend.beginFrame(self),
+    }
 }
 
 pub fn submitFrame(self: anytype) FrameSubmission {
-    return backend_frame_runtime.submitFrame(self);
+    return switch (self.backend) {
+        .opengl => gl_backend.submitFrame(self),
+        .metal => metal_backend.submitFrame(self),
+    };
 }
 
 pub fn armPresentCapture(self: anytype, path: []const u8) void {

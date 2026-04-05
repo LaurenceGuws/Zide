@@ -7,7 +7,6 @@ const FontRenderingOptions = terminal_font_mod.RenderingOptions;
 const hb = terminal_font_mod.c;
 const font_manager = @import("renderer/font_manager.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
-const backend_frame_runtime = @import("renderer/backend_frame_runtime.zig");
 const gl_backend = @import("renderer/gl_backend.zig");
 const metal_backend = @import("renderer/metal_backend.zig");
 const opengl_runtime_state = @import("renderer/opengl_runtime_state.zig");
