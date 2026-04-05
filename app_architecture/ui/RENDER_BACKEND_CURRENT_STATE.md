@@ -150,11 +150,14 @@ terminal-specific presentable wrapper is gone, and
 presentable contract directly instead of bouncing through one more forwarding
 module.
 
-That has improved slightly again at the renderer boundary too: the remaining
-macOS Metal host-prep, smoke, glyph-atlas readiness, and atlas-upload
-diagnostic helpers now live under `metal_backend` and the shell routes those
-diagnostics through the backend module instead of `Renderer` owning that
-backend-specific helper surface directly.
+That has improved slightly again at the app boundary too: **Metal glyph-atlas
+readiness, atlas preview source, atlas-upload diagnostics, and terminal font
+Metal atlas hooks** are **`Renderer` methods** that delegate into
+`metal_backend`, and **`app_shell` does not re-export or forward** those
+concerns. macOS diagnostic/smoke runtimes and the Metal text diagnostic view
+call `shell.rendererPtr()` (and `ui/font_sample_view.zig` asks the renderer for
+hooks) instead of growing another Shell seam or importing `metal_backend` from
+UI modules.
 
 That has improved slightly again inside the Metal state bundle too: atlas
 preview/debug state now lives under `metal_runtime.preview_source` instead of
@@ -178,11 +181,12 @@ route through `gl_backend`, and Metal atlas-preview lookup now routes through
 `metal_backend`, so `Renderer` no longer directly reaches into those backend
 runtime storage slots for those paths.
 
-That has improved slightly again on the Metal-only helper surface too: the
-remaining terminal-snapshot availability and macOS Metal attachment/atlas
-preview conveniences no longer live on `Renderer`; those callers now go
-through `metal_backend` and `macos_host` directly instead of keeping more
-Metal-only shims on the renderer root.
+That has improved slightly again on the Metal-only helper surface too: unused
+`app_shell` forwards for macOS Metal host prep, smoke frames, and atlas
+diagnostics were **removed**, and atlas preview/upload probe entrypoints live on
+`Renderer` rather than as Shell methods. Remaining Metal-only mechanics still
+live under `metal_backend` / `macos_host` where appropriate, without duplicating
+that surface on `app_shell`.
 
 That has improved slightly again on the primitive draw/clip boundary too: the
 renderer root no longer owns private Metal queue-assembly helpers for solid

@@ -243,6 +243,13 @@ Progress note, 2026-04-05:
   `TerminalFont` atlas hooks; it uses
   `Renderer.terminalFontAtlasUploadHooksForRenderer()` like other UI callers
   that must stay backend-shaped without reaching into `metal_backend.zig`.
+- `renderer/font_manager.zig` also uses that renderer facade for cached font
+  init instead of importing `metal_backend` for the same hook query.
+- `ui/glyph_cache.zig` no longer imports `gl_backend`; OpenGL batch bind and
+  texture-kind uniform for the vertex-stream flush go through
+  `draw_ops.bindBatchPipelineForVertexStream` /
+  `draw_ops.setTextureKindForVertexStream` (shared with the terminal batch
+  flush path in `draw_ops.zig`).
 - The old OpenGL-only init-time swap-interval policy tweak now also routes
   through backend ops instead of living as one more raw backend branch in
   `renderer.zig`.
