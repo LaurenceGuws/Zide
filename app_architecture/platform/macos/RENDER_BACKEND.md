@@ -594,6 +594,10 @@ What this does and does not mean:
   live text is unavailable but the planned mode is `metal_texture_atlas`, the
   terminal cell path can route narrow ASCII cells through the sampled Metal
   lane with per-cell bounds and tint instead of dropping straight to empty text
+- that terminal-facing fallback is no longer forced through the generic
+  sampled-text request shape: there is now a dedicated terminal-cell-run
+  request and builder for tiny terminal-style rows, and the live macOS Metal
+  text diagnostic reports `terminal_cell_run_draw=1` on the current host
 - this is still intentionally narrow and honest: it is now a tiny sampled
   multiline ASCII run with an explicit monospace-cell option rather than a
   claim that the generic string/text renderer has already migrated

@@ -46,11 +46,25 @@ pub fn run(allocator: std.mem.Allocator) !void {
             .height = 96.0,
         },
     });
+    const terminal_cell_run_draw = shell.rendererPtr().drawMetalTerminalCellRun(metal_text_sample_runtime.TerminalCellRunRequest{
+        .text = "$ ls",
+        .x = 24.0,
+        .y = 220.0,
+        .cell_width = shell.terminalCellWidth(),
+        .cell_height = shell.terminalCellHeight(),
+        .tint = shell.theme().foreground.toRgba(),
+        .clip_rect = .{
+            .x = 24.0,
+            .y = 220.0,
+            .width = shell.terminalCellWidth() * 8.0,
+            .height = shell.terminalCellHeight(),
+        },
+    });
     const atlas_preview_source = shell.macosMetalAtlasPreviewSource();
     log.logf(.info, "start width={d} height={d} frame_budget={d}", .{ width, height, frame_budget });
     log.logf(
         .info,
-        "capabilities composition={s} retained_targets={d} screenshot={s} text={s} planned_text={s} atlas={s} planned_atlas={s} atlas_ready={d} atlas_upload_probe={d} atlas_preview_source={s} sample_text_draw={d}",
+        "capabilities composition={s} retained_targets={d} screenshot={s} text={s} planned_text={s} atlas={s} planned_atlas={s} atlas_ready={d} atlas_upload_probe={d} atlas_preview_source={s} sample_text_draw={d} terminal_cell_run_draw={d}",
         .{
             @tagName(capabilities.scene_composition_mode),
             @intFromBool(capabilities.retained_targets),
@@ -63,6 +77,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
             @intFromBool(atlas_upload_probe),
             @tagName(atlas_preview_source),
             @intFromBool(sample_text_draw),
+            @intFromBool(terminal_cell_run_draw),
         },
     );
 

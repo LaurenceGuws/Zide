@@ -340,6 +340,9 @@ lane.
     - the first terminal-facing fallback now exists on top of that contract:
       narrow ASCII terminal cells can route through the sampled Metal lane
       with per-cell bounds and tint when live text is unavailable
+    - that terminal-facing fallback now has its own request/builder seam for
+      tiny terminal-style rows, and the live macOS Metal text diagnostic now
+      reports `terminal_cell_run_draw=1` on the current host
     - the narrow Metal text lane now covers a tiny multiline ASCII run, not
       just a single flat row
     - the diagnostic/runtime callers now use the explicit monospace-cell

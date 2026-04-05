@@ -224,12 +224,13 @@ fn drawMetalTerminalAsciiCellFallback(
     if (codepoint < 0x20 or codepoint > 0x7E) return false;
     const ascii: u8 = @intCast(codepoint);
     var buf = [1]u8{ascii};
-    return self.drawMetalAtlasSampleRequest(.{
+    return self.drawMetalTerminalCellRun(.{
         .text = buf[0..],
         .x = x,
         .y = y,
+        .cell_width = cell_width,
+        .cell_height = cell_height,
         .tint = color.toRgba(),
-        .layout = .monospace_cell,
         .clip_rect = .{
             .x = x,
             .y = y,
