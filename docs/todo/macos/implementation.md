@@ -354,6 +354,10 @@ lane.
       instead of only bespoke diagnostics: monospace text fallback paths now
       route through the narrow terminal-cell-run contract when live text is
       unavailable and planned text is `metal_texture_atlas`
+    - terminal grapheme entry points now degrade to the same narrow
+      ASCII/base-cell Metal lane when live text is unavailable, instead of
+      falling straight through to empty text whenever the grapheme base can be
+      represented by the current fallback
     - the narrow Metal text lane now covers a tiny multiline ASCII run, not
       just a single flat row
     - the diagnostic/runtime callers now use the explicit monospace-cell

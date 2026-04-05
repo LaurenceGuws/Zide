@@ -329,6 +329,10 @@ pub fn drawTerminalCellGrapheme(self: *Renderer, base: u32, combining: []const u
             self.terminal_font.drawGrapheme(draw, base, combining, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, followed_by_space, text_color.toRgba(), false);
         }
         if (underline) terminal_underline.drawUnderline(drawRectThunk, self, snapInt(snapped_x), snapInt(snapped_y), snapped_cell_w_i, snapped_cell_h_i, underline_color);
+    } else if (base != 0) {
+        const text_color = if (is_cursor) bg else fg;
+        _ = drawMetalTerminalAsciiCellFallback(self, base, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, text_color);
+        if (underline) terminal_underline.drawUnderline(drawRectThunk, self, snapInt(snapped_x), snapInt(snapped_y), snapped_cell_w_i, snapped_cell_h_i, underline_color);
     }
 }
 
@@ -351,6 +355,10 @@ pub fn drawTerminalCellGraphemeBatched(self: *Renderer, base: u32, combining: []
         if (!drawTerminalBoxGlyphBatched(self, base, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, text_color)) {
             self.terminal_font.drawGrapheme(draw, base, combining, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, followed_by_space, text_color.toRgba(), false);
         }
+        if (underline) terminal_underline.drawUnderline(addTerminalGlyphRectThunk, self, snapInt(snapped_x), snapInt(snapped_y), snapped_cell_w_i, snapped_cell_h_i, underline_color);
+    } else if (base != 0) {
+        const text_color = if (is_cursor) bg else fg;
+        _ = drawMetalTerminalAsciiCellFallback(self, base, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, text_color);
         if (underline) terminal_underline.drawUnderline(addTerminalGlyphRectThunk, self, snapInt(snapped_x), snapInt(snapped_y), snapped_cell_w_i, snapped_cell_h_i, underline_color);
     }
 }

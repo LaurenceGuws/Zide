@@ -611,6 +611,10 @@ What this does and does not mean:
   of only bespoke diagnostics: monospace text fallback paths route through the
   narrow terminal-cell-run contract when live text is unavailable and planned
   text is `metal_texture_atlas`
+- that same fallback coverage now reaches the terminal grapheme entry points
+  too: when live text is unavailable, base-codepoint grapheme cells degrade to
+  the narrow ASCII/base-cell Metal lane instead of dropping straight to empty
+  text whenever the base codepoint is representable by the current fallback
 - this is still intentionally narrow and honest: it is now a tiny sampled
   multiline ASCII run with an explicit monospace-cell option rather than a
   claim that the generic string/text renderer has already migrated
