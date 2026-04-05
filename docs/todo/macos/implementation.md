@@ -469,6 +469,9 @@ lane.
       live in `terminal_widget_presentation_runtime.zig`
     - that runtime now owns the retained-presentable draw step too, so the
       presenter no longer inlines the "note sample + draw presentable" helper
+    - that same runtime now owns presentable setup/planning too: geometry
+      calculation, ensure/shift/update-plan selection, and partial-plan
+      assembly moved out of the presenter
     - the terminal Metal diagnostic now reports `raw_image_textures=1`, keeps
       non-zero `kitty_ms`, and no longer relies on the previous unsupported
       backend gate for RGB/RGBA Kitty images

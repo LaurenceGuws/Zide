@@ -753,6 +753,11 @@ What this does and does not mean:
   presenter no longer inlines the "note sample + draw presentable" helper for
   the terminal lane, which tightens the terminal-owned presentation seam one
   step further
+- the runtime now owns presentable setup/planning too: geometry calculation,
+  ensure/shift/update-plan selection, and partial-plan assembly moved out of
+  the presenter into `terminal_widget_presentation_runtime.zig`, so the
+  terminal lane no longer splits setup ownership between presenter-local logic
+  and runtime helpers
 - that contract is intentionally backend-native rather than fake portability:
   the old cached GL `Texture` path is still OpenGL-only, while Metal Kitty
   images are created as frame-scoped native Metal textures and released after
