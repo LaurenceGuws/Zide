@@ -6,7 +6,7 @@ const metal_frame_runtime = @import("metal_frame_runtime.zig");
 const metal_runtime_state = @import("metal_runtime_state.zig");
 const metal_text_sample_runtime = @import("metal_text_sample_runtime.zig");
 const presentable_contract = @import("presentable_contract.zig");
-const scene_frame_runtime = @import("scene_frame_runtime.zig");
+const present_trace_runtime = @import("present_trace_runtime.zig");
 const surface_draw = @import("surface_draw.zig");
 const terminal_font = @import("../terminal_font.zig");
 const types = @import("types.zig");
@@ -1130,7 +1130,7 @@ pub fn beginFrame(renderer: anytype) void {
     metal_frame_runtime.beginFrame(renderer);
 }
 
-pub fn submitFrame(renderer: anytype) @import("scene_frame_runtime.zig").FrameSubmission {
+pub fn submitFrame(renderer: anytype) @import("present_trace_runtime.zig").FrameSubmission {
     return metal_frame_runtime.submitFrame(renderer);
 }
 
@@ -1170,7 +1170,7 @@ pub fn drawPresentable(renderer: anytype, surface: PresentableSurface, draw: Pre
             const dest_height = draw.height orelse return;
             const source_width = draw.source_width orelse dest_width;
             const source_height = draw.source_height orelse dest_height;
-            scene_frame_runtime.notePresentableDraw(renderer, .terminal, draw.generation);
+            present_trace_runtime.notePresentableDraw(renderer, .terminal, draw.generation);
             _ = appendTerminalSnapshotDraw(renderer, .{
                 .texture = undefined,
                 .source_rect = .{

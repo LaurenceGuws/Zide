@@ -4,7 +4,7 @@ const gl = @import("gl.zig");
 const gl_backend = @import("gl_backend.zig");
 const opengl_scene_target_runtime = @import("opengl_scene_target_runtime.zig");
 const presentable_contract = @import("presentable_contract.zig");
-const scene_frame_runtime = @import("scene_frame_runtime.zig");
+const present_trace_runtime = @import("present_trace_runtime.zig");
 const texture_draw = @import("texture_draw.zig");
 const types = @import("types.zig");
 const app_logger = @import("../../app_logger.zig");
@@ -37,7 +37,7 @@ pub fn beginPresentable(self: anytype, surface: PresentableSurface) bool {
     switch (surface) {
         .terminal => return self.beginRenderTarget(self.opengl_runtime.presentable_targets.terminal),
         .editor => {
-            scene_frame_runtime.notePresentableUpdate(self, .editor);
+            present_trace_runtime.notePresentableUpdate(self, .editor);
             return self.beginRenderTarget(self.opengl_runtime.presentable_targets.editor);
         },
     }
@@ -53,7 +53,7 @@ pub fn presentableAvailable(self: anytype, surface: PresentableSurface) bool {
 pub fn endPresentable(self: anytype, surface: PresentableSurface) void {
     switch (surface) {
         .terminal => {},
-        .editor => scene_frame_runtime.notePresentableEnded(self, .editor),
+        .editor => present_trace_runtime.notePresentableEnded(self, .editor),
     }
     restoreCompositionTarget(self);
 }
@@ -61,7 +61,7 @@ pub fn endPresentable(self: anytype, surface: PresentableSurface) void {
 pub fn drawPresentable(self: anytype, surface: PresentableSurface, draw: PresentableDraw) void {
     switch (surface) {
         .terminal => if (self.opengl_runtime.presentable_targets.terminal) |target| {
-            scene_frame_runtime.notePresentableDraw(self, .terminal, draw.generation);
+            present_trace_runtime.notePresentableDraw(self, .terminal, draw.generation);
             const width = draw.width orelse return;
             const height = draw.height orelse return;
             const source_width = draw.source_width orelse width;
@@ -113,7 +113,7 @@ pub fn drawPresentable(self: anytype, surface: PresentableSurface, draw: Present
             draw_ops.drawTextureRect(self, target.texture, src, dest, Color.white.toRgba(), types.Rgba{ .r = 0, .g = 0, .b = 0, .a = 0 }, .linear_premul);
         },
         .editor => if (self.opengl_runtime.presentable_targets.editor) |target| {
-            scene_frame_runtime.notePresentableDraw(self, .editor, null);
+            present_trace_runtime.notePresentableDraw(self, .editor, null);
             const snapped_x = snapToDevicePixel(draw.x, self.scale.render_scale);
             const snapped_y = snapToDevicePixel(draw.y, self.scale.render_scale);
             const width = draw.width orelse @as(f32, @floatFromInt(target.logical_width));

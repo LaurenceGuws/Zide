@@ -81,7 +81,7 @@ pub fn beginFrame(renderer: anytype) void {
     opengl_frame_runtime.beginFrame(renderer);
 }
 
-pub fn submitFrame(renderer: anytype) @import("scene_frame_runtime.zig").FrameSubmission {
+pub fn submitFrame(renderer: anytype) @import("present_trace_runtime.zig").FrameSubmission {
     return opengl_frame_runtime.submitFrame(renderer);
 }
 

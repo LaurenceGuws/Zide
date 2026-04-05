@@ -126,11 +126,12 @@ where backend-specific presentation and lifecycle choices still happen.
 
 That is directly relevant to Zide's current state:
 
-- `src/ui/renderer/scene_frame_runtime.zig` is slimmer than before, but still
-  acts as a shared backend dispatch center
-- `src/ui/renderer/presentable_targets_runtime.zig` uses better contract
-  language now, but still mostly encodes the GL presentable model in shared
-  behavior
+- `src/ui/renderer/present_trace_runtime.zig` is slimmer than before, but
+  still acts as a shared present/trace center that needs a tighter long-term
+  role
+- the neutral presentable facade is cleaner now that it lives on
+  `src/ui/renderer.zig`, but the richer presentable lifecycle is still mostly
+  defined by the OpenGL implementation
 
 ## Consequence For Zide
 

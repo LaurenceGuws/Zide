@@ -197,7 +197,7 @@ longer happens in a shared frame wrapper; that branch now lives under
 `opengl_frame_runtime.zig`, which is closer to the contract we actually want.
 
 That has improved slightly again: the remaining OpenGL scene-target mechanics
-no longer live in `scene_frame_runtime.zig` either. Scene-target contract
+no longer live in `present_trace_runtime.zig`'s predecessor either. Scene-target contract
 refresh, offscreen begin/draw, and recreate handling now live under
 `opengl_scene_target_runtime.zig`, leaving the shared scene runtime closer to
 shared present-trace semantics instead of mixed shared/GL ownership.
@@ -209,7 +209,7 @@ small shared per-frame bookkeeping directly and route to backend-owned
 
 That has improved slightly again on the OpenGL submission path too: direct GL
 submit and direct window screenshot-readback logic now live under the OpenGL
-frame/backend modules instead of `scene_frame_runtime.zig` carrying that
+frame/backend modules instead of `present_trace_runtime.zig` carrying that
 OpenGL-specific behavior inside a shared runtime file.
 
 That has improved slightly again on the presentable lifecycle side too: the
@@ -323,7 +323,7 @@ The main contradiction centers today are:
 - `src/ui/renderer.zig`
   - now owns the small shared frame facade directly, but still exposes
     renderer-wide per-frame bookkeeping and backend dispatch from one root
-- `src/ui/renderer/scene_frame_runtime.zig`
+- `src/ui/renderer/present_trace_runtime.zig`
   - now mostly trace/present bookkeeping, but is still part of the shared
     frame lifecycle surface
 - `src/ui/renderer/opengl_scene_target_runtime.zig`

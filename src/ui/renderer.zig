@@ -32,7 +32,7 @@ const texture_draw = @import("renderer/texture_draw.zig");
 const input_runtime = @import("renderer/input_runtime.zig");
 const font_runtime = @import("renderer/font_runtime.zig");
 const presentable_contract = @import("renderer/presentable_contract.zig");
-const scene_frame_runtime = @import("renderer/scene_frame_runtime.zig");
+const present_trace_runtime = @import("renderer/present_trace_runtime.zig");
 const metal_text_sample_runtime = @import("renderer/metal_text_sample_runtime.zig");
 const text_runtime = @import("renderer/text_runtime.zig");
 const window_chrome_runtime = @import("renderer/window_chrome_runtime.zig");
@@ -164,8 +164,8 @@ pub const RendererCapabilities = struct {
 pub const EditorTextStyleFlags = iface.EditorTextStyleFlags;
 pub const editor_syntax_style_slots = iface.editor_syntax_style_slots;
 
-pub const FrameSubmission = scene_frame_runtime.FrameSubmission;
-pub const PresentTrace = scene_frame_runtime.PresentTrace;
+pub const FrameSubmission = present_trace_runtime.FrameSubmission;
+pub const PresentTrace = present_trace_runtime.PresentTrace;
 pub const InputRuntimeState = input_state.InputRuntimeState;
 pub const WindowChromeState = window_chrome_runtime.WindowChromeState;
 pub const ScaleState = font_runtime.ScaleState;
@@ -177,7 +177,7 @@ pub const PresentableSurface = presentable_contract.PresentableSurface;
 pub const PresentableDraw = presentable_contract.PresentableDraw;
 pub const SceneTargetInvalidation = scene_target_state.SceneTargetInvalidation;
 pub const SceneTargetContract = scene_target_state.SceneTargetContract;
-const MainCompositionTarget = scene_frame_runtime.MainCompositionTarget;
+const MainCompositionTarget = present_trace_runtime.MainCompositionTarget;
 pub const TerminalDisableLigaturesStrategy = enum {
     never,
     cursor,
@@ -456,7 +456,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
 
     start_counter: u64,
     perf_freq: f64,
-    present: scene_frame_runtime.PresentState,
+    present: present_trace_runtime.PresentState,
     clip_stack: [clip_stack_capacity]types.Rect,
     clip_depth: usize,
 
@@ -1311,7 +1311,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
 
     pub fn drawRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
         if (w <= 0 or h <= 0) return;
-        scene_frame_runtime.noteEditorSurfaceFullPaneClear(self, x, y, w, h);
+        present_trace_runtime.noteEditorSurfaceFullPaneClear(self, x, y, w, h);
         if (self.backend == .metal) {
             _ = self.appendMetalSolidRect(
                 @floatFromInt(x),
@@ -1404,7 +1404,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     }
 
     pub fn beginClip(self: *Renderer, x: i32, y: i32, w: i32, h: i32) void {
-        scene_frame_runtime.noteCompositionClip(self);
+        present_trace_runtime.noteCompositionClip(self);
         const requested = logicalClipFromInts(x, y, w, h) orelse {
             self.clip_depth = 0;
             if (self.backend == .opengl) gl.Disable(gl.c.GL_SCISSOR_TEST);

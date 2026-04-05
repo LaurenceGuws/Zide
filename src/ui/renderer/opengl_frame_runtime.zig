@@ -3,7 +3,7 @@ const screenshot = @import("screenshot.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
 const app_logger = @import("../../app_logger.zig");
 const opengl_scene_target_runtime = @import("opengl_scene_target_runtime.zig");
-const scene_frame_runtime = @import("scene_frame_runtime.zig");
+const present_trace_runtime = @import("present_trace_runtime.zig");
 
 pub fn beginFrame(renderer: anytype) void {
     opengl_scene_target_runtime.refreshSceneTargetContract(renderer, renderer.display_metrics);
@@ -30,7 +30,7 @@ pub fn beginFrame(renderer: anytype) void {
     gl.Clear(gl.c.GL_COLOR_BUFFER_BIT);
 }
 
-pub fn submitFrame(renderer: anytype) scene_frame_runtime.FrameSubmission {
+pub fn submitFrame(renderer: anytype) present_trace_runtime.FrameSubmission {
     if (renderer.present.main_composition_target == .offscreen_scene_target) opengl_scene_target_runtime.drawSceneTargetToDefault(renderer);
     if (renderer.present.capture_armed) {
         if (renderer.present.capture_path) |path| {
@@ -50,7 +50,7 @@ pub fn submitFrame(renderer: anytype) scene_frame_runtime.FrameSubmission {
         app_logger.logger("sdl.gl").logStdout(.warning, "SDL_GL_SwapWindow failed err={s}", .{sdl_api.getError()});
     }
     const swap_end = sdl_api.getPerformanceCounter();
-    renderer.present.last_swap_ms = scene_frame_runtime.performanceDeltaMs(swap_start, swap_end, renderer.perf_freq);
+    renderer.present.last_swap_ms = present_trace_runtime.performanceDeltaMs(swap_start, swap_end, renderer.perf_freq);
     renderer.present.main_composition_target = .default_target;
     renderer.present.trace_last = renderer.present.trace_current;
     renderer.present.capture_path = null;
