@@ -110,9 +110,9 @@ pub const GlyphCache = struct {
         self.frame_metrics.flush_count += 1;
         self.frame_metrics.vertex_count += vertex_count;
         draw_ops.ensureVboCapacity(renderer, vertex_count);
-        gl.UseProgram(renderer.shader_program);
-        gl.BindVertexArray(renderer.vao);
-        gl.BindBuffer(gl.c.GL_ARRAY_BUFFER, renderer.vbo);
+        gl.UseProgram(renderer.opengl_runtime.shader_program);
+        gl.BindVertexArray(renderer.opengl_runtime.vao);
+        gl.BindBuffer(gl.c.GL_ARRAY_BUFFER, renderer.opengl_runtime.vbo);
         gl.BufferSubData(
             gl.c.GL_ARRAY_BUFFER,
             0,
@@ -124,7 +124,7 @@ pub const GlyphCache = struct {
             self.frame_metrics.draw_call_count += 1;
             gl.ActiveTexture(gl.c.GL_TEXTURE0);
             gl.BindTexture(gl.c.GL_TEXTURE_2D, draw.texture_id);
-            if (renderer.uniform_kind >= 0) gl.Uniform1i(renderer.uniform_kind, @intFromEnum(draw.kind));
+            if (renderer.opengl_runtime.uniform_kind >= 0) gl.Uniform1i(renderer.opengl_runtime.uniform_kind, @intFromEnum(draw.kind));
             applyBlendForKind(draw.kind);
             gl.DrawArrays(gl.c.GL_TRIANGLES, @intCast(draw.start), @intCast(draw.count));
         }

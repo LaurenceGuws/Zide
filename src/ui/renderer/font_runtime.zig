@@ -58,11 +58,11 @@ pub fn setTextRenderingConfig(self: anytype, gamma: ?f32, contrast: ?f32, linear
         self.text_render.linear_correction = v;
     }
 
-    if (self.shader_program != 0) {
-        gl.UseProgram(self.shader_program);
-        if (self.uniform_text_gamma >= 0) gl.Uniform1f(self.uniform_text_gamma, self.text_render.gamma);
-        if (self.uniform_text_contrast >= 0) gl.Uniform1f(self.uniform_text_contrast, self.text_render.contrast);
-        if (self.uniform_linear_correction >= 0) gl.Uniform1i(self.uniform_linear_correction, if (self.text_render.linear_correction) 1 else 0);
+    if (self.opengl_runtime.shader_program != 0) {
+        gl.UseProgram(self.opengl_runtime.shader_program);
+        if (self.opengl_runtime.uniform_text_gamma >= 0) gl.Uniform1f(self.opengl_runtime.uniform_text_gamma, self.text_render.gamma);
+        if (self.opengl_runtime.uniform_text_contrast >= 0) gl.Uniform1f(self.opengl_runtime.uniform_text_contrast, self.text_render.contrast);
+        if (self.opengl_runtime.uniform_linear_correction >= 0) gl.Uniform1i(self.opengl_runtime.uniform_linear_correction, if (self.text_render.linear_correction) 1 else 0);
     }
 }
 

@@ -49,7 +49,7 @@ That makes OpenGL and Metal useful comparison pressure instead of paper plans.
 
 ## Where The Contract Still Fails
 
-### 1. `Renderer` still stores concrete Metal runtime state
+### 1. `Renderer` still stores concrete backend runtime state
 
 In `src/ui/renderer.zig`, the shared renderer still owns one bundled Metal
 runtime state:
@@ -58,14 +58,22 @@ runtime state:
 - `metal_runtime.frame`
 - `metal_runtime.queued_surface_draws`
 
-That means the renderer root is still partly the Metal implementation center,
+It now also owns one bundled OpenGL runtime state:
+
+- `opengl_runtime.context`
+- `opengl_runtime.shader_program`
+- `opengl_runtime.vao`
+- `opengl_runtime.vbo`
+- `opengl_runtime.white_texture`
+
+That means the renderer root is still partly the backend implementation center,
 not just the backend-neutral host/facade.
 
-This has improved slightly because the Metal state is now bundled under one
-field instead of being scattered as unrelated renderer peers.
+This has improved slightly because backend-native state is now bundled per
+backend instead of being scattered as unrelated renderer peers.
 
 But it is still not the end-state. Shared renderer lifecycle, teardown, and
-submission logic still depend on Metal-native state shape directly.
+submission logic still depend on backend-native state shape directly.
 
 ### 2. Shared frame lifecycle still branches backend-by-backend
 

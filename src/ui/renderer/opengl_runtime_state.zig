@@ -1,0 +1,20 @@
+const gl = @import("gl.zig");
+const sdl_api = @import("../../platform/sdl_api.zig");
+const types = @import("types.zig");
+
+pub const State = struct {
+    context: ?sdl_api.c.SDL_GLContext = null,
+    resources_ready: bool = false,
+    shader_program: gl.GLuint = 0,
+    vao: gl.GLuint = 0,
+    vbo: gl.GLuint = 0,
+    vbo_capacity_vertices: usize = 0,
+    uniform_proj: gl.GLint = -1,
+    uniform_tex: gl.GLint = -1,
+    uniform_kind: gl.GLint = -1,
+    uniform_text_gamma: gl.GLint = -1,
+    uniform_text_contrast: gl.GLint = -1,
+    uniform_dst_linear: gl.GLint = -1,
+    uniform_linear_correction: gl.GLint = -1,
+    white_texture: types.Texture = .{ .id = 0, .width = 0, .height = 0 },
+};

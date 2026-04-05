@@ -164,36 +164,36 @@ pub fn initGlResources(renderer: anytype) !void {
     const frag = try compileShader(gl.c.GL_FRAGMENT_SHADER, fragment_src);
     defer gl.DeleteShader(frag);
     const program = try linkProgram(vert, frag);
-    renderer.shader_program = program;
+    renderer.opengl_runtime.shader_program = program;
     gl.UseProgram(program);
 
-    renderer.uniform_proj = gl.GetUniformLocation(program, "u_proj");
-    renderer.uniform_tex = gl.GetUniformLocation(program, "u_tex");
-    renderer.uniform_kind = gl.GetUniformLocation(program, "u_kind");
-    renderer.uniform_dst_linear = gl.GetUniformLocation(program, "u_dst_linear");
-    renderer.uniform_linear_correction = gl.GetUniformLocation(program, "u_linear_correction");
-    renderer.uniform_text_gamma = gl.GetUniformLocation(program, "u_text_gamma");
-    renderer.uniform_text_contrast = gl.GetUniformLocation(program, "u_text_contrast");
-    if (renderer.uniform_tex >= 0) gl.Uniform1i(renderer.uniform_tex, 0);
-    if (renderer.uniform_kind >= 0) gl.Uniform1i(renderer.uniform_kind, 0);
-    if (renderer.uniform_dst_linear >= 0) gl.Uniform1i(renderer.uniform_dst_linear, 0);
-    if (renderer.uniform_linear_correction >= 0) gl.Uniform1i(renderer.uniform_linear_correction, if (renderer.text_render.linear_correction) 1 else 0);
+    renderer.opengl_runtime.uniform_proj = gl.GetUniformLocation(program, "u_proj");
+    renderer.opengl_runtime.uniform_tex = gl.GetUniformLocation(program, "u_tex");
+    renderer.opengl_runtime.uniform_kind = gl.GetUniformLocation(program, "u_kind");
+    renderer.opengl_runtime.uniform_dst_linear = gl.GetUniformLocation(program, "u_dst_linear");
+    renderer.opengl_runtime.uniform_linear_correction = gl.GetUniformLocation(program, "u_linear_correction");
+    renderer.opengl_runtime.uniform_text_gamma = gl.GetUniformLocation(program, "u_text_gamma");
+    renderer.opengl_runtime.uniform_text_contrast = gl.GetUniformLocation(program, "u_text_contrast");
+    if (renderer.opengl_runtime.uniform_tex >= 0) gl.Uniform1i(renderer.opengl_runtime.uniform_tex, 0);
+    if (renderer.opengl_runtime.uniform_kind >= 0) gl.Uniform1i(renderer.opengl_runtime.uniform_kind, 0);
+    if (renderer.opengl_runtime.uniform_dst_linear >= 0) gl.Uniform1i(renderer.opengl_runtime.uniform_dst_linear, 0);
+    if (renderer.opengl_runtime.uniform_linear_correction >= 0) gl.Uniform1i(renderer.opengl_runtime.uniform_linear_correction, if (renderer.text_render.linear_correction) 1 else 0);
 
     // Coverage tuning (applies only to font coverage atlas).
-    if (renderer.uniform_text_gamma >= 0) gl.Uniform1f(renderer.uniform_text_gamma, clampPositive(renderer.text_render.gamma, 1.0));
-    if (renderer.uniform_text_contrast >= 0) gl.Uniform1f(renderer.uniform_text_contrast, clampPositive(renderer.text_render.contrast, 1.0));
+    if (renderer.opengl_runtime.uniform_text_gamma >= 0) gl.Uniform1f(renderer.opengl_runtime.uniform_text_gamma, clampPositive(renderer.text_render.gamma, 1.0));
+    if (renderer.opengl_runtime.uniform_text_contrast >= 0) gl.Uniform1f(renderer.opengl_runtime.uniform_text_contrast, clampPositive(renderer.text_render.contrast, 1.0));
 
-    gl.GenVertexArrays(1, &renderer.vao);
-    gl.GenBuffers(1, &renderer.vbo);
-    gl.BindVertexArray(renderer.vao);
-    gl.BindBuffer(gl.c.GL_ARRAY_BUFFER, renderer.vbo);
+    gl.GenVertexArrays(1, &renderer.opengl_runtime.vao);
+    gl.GenBuffers(1, &renderer.opengl_runtime.vbo);
+    gl.BindVertexArray(renderer.opengl_runtime.vao);
+    gl.BindBuffer(gl.c.GL_ARRAY_BUFFER, renderer.opengl_runtime.vbo);
     gl.BufferData(
         gl.c.GL_ARRAY_BUFFER,
         gl_resources.computeBufferBytes(@sizeOf(@TypeOf(renderer.batch.vertices.items[0])), 6),
         null,
         gl.c.GL_DYNAMIC_DRAW,
     );
-    renderer.vbo_capacity_vertices = 6;
+    renderer.opengl_runtime.vbo_capacity_vertices = 6;
 
     gl.EnableVertexAttribArray(0);
     gl.VertexAttribPointer(0, 2, gl.c.GL_FLOAT, gl.c.GL_FALSE, @sizeOf(@TypeOf(renderer.batch.vertices.items[0])), @ptrFromInt(0));
@@ -231,7 +231,7 @@ pub fn initGlResources(renderer: anytype) !void {
     gl.Disable(gl.c.GL_DEPTH_TEST);
     gl.Disable(gl.c.GL_CULL_FACE);
 
-    renderer.white_texture = createSolidTexture(1, 1, .{ 255, 255, 255, 255 });
+    renderer.opengl_runtime.white_texture = createSolidTexture(1, 1, .{ 255, 255, 255, 255 });
     updateProjection(renderer, renderer.render_width, renderer.render_height);
 }
 
@@ -245,9 +245,9 @@ pub fn bindDefaultTarget(renderer: anytype) void {
     renderer.target_pixel_width = renderer.render_width;
     renderer.target_pixel_height = renderer.render_height;
     updateProjection(renderer, renderer.width, renderer.height);
-    if (renderer.uniform_dst_linear >= 0) {
-        gl.UseProgram(renderer.shader_program);
-        gl.Uniform1i(renderer.uniform_dst_linear, 0);
+    if (renderer.opengl_runtime.uniform_dst_linear >= 0) {
+        gl.UseProgram(renderer.opengl_runtime.shader_program);
+        gl.Uniform1i(renderer.opengl_runtime.uniform_dst_linear, 0);
     }
 }
 
@@ -257,9 +257,9 @@ pub fn beginRenderTarget(renderer: anytype, target: ?RenderTarget) bool {
         renderer.target_pixel_width = t.texture.width;
         renderer.target_pixel_height = t.texture.height;
         updateProjection(renderer, t.logical_width, t.logical_height);
-        if (renderer.uniform_dst_linear >= 0) {
-            gl.UseProgram(renderer.shader_program);
-            gl.Uniform1i(renderer.uniform_dst_linear, 1);
+        if (renderer.opengl_runtime.uniform_dst_linear >= 0) {
+            gl.UseProgram(renderer.opengl_runtime.shader_program);
+            gl.Uniform1i(renderer.opengl_runtime.uniform_dst_linear, 1);
         }
         return true;
     }
@@ -374,7 +374,7 @@ pub fn updateProjection(renderer: anytype, width: i32, height: i32) void {
     const viewport_w = if (renderer.target_pixel_width > 0) renderer.target_pixel_width else width;
     const viewport_h = if (renderer.target_pixel_height > 0) renderer.target_pixel_height else height;
     gl.Viewport(0, 0, viewport_w, viewport_h);
-    if (renderer.uniform_proj >= 0) {
+    if (renderer.opengl_runtime.uniform_proj >= 0) {
         const w = @as(f32, @floatFromInt(width));
         const h = @as(f32, @floatFromInt(height));
         const proj = [_]f32{
@@ -383,8 +383,8 @@ pub fn updateProjection(renderer: anytype, width: i32, height: i32) void {
             0,       0,        1, 0,
             -1,      1,        0, 1,
         };
-        gl.UseProgram(renderer.shader_program);
-        gl.UniformMatrix4fv(renderer.uniform_proj, 1, gl.c.GL_FALSE, &proj);
+        gl.UseProgram(renderer.opengl_runtime.shader_program);
+        gl.UniformMatrix4fv(renderer.opengl_runtime.uniform_proj, 1, gl.c.GL_FALSE, &proj);
     }
 }
 

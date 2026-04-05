@@ -10,6 +10,7 @@ const draw_ops = @import("renderer/draw_ops.zig");
 const backend_frame_runtime = @import("renderer/backend_frame_runtime.zig");
 const gl_backend = @import("renderer/gl_backend.zig");
 const metal_backend = @import("renderer/metal_backend.zig");
+const opengl_runtime_state = @import("renderer/opengl_runtime_state.zig");
 const metal_runtime_state = @import("renderer/metal_runtime_state.zig");
 const presentable_target = @import("renderer/presentable_target.zig");
 const surface_draw = @import("renderer/surface_draw.zig");
@@ -506,10 +507,9 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     render_host: native_host.PlatformRenderHost,
     render_surface_attachment: RenderSurfaceAttachment,
     window: *sdl.SDL_Window,
-    gl_context: ?sdl.SDL_GLContext,
+    opengl_runtime: opengl_runtime_state.State,
     metal_runtime: metal_runtime_state.State,
     metal_debug_preview_source: AtlasPreviewSource,
-    gl_resources_ready: bool,
     fonts_ready: bool,
     width: i32,
     height: i32,
@@ -520,19 +520,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     target_height: i32,
     target_pixel_width: i32,
     target_pixel_height: i32,
-
-    shader_program: gl.GLuint,
-    vao: gl.GLuint,
-    vbo: gl.GLuint,
-    vbo_capacity_vertices: usize,
-    uniform_proj: gl.GLint,
-    uniform_tex: gl.GLint,
-    uniform_kind: gl.GLint,
-    uniform_text_gamma: gl.GLint,
-    uniform_text_contrast: gl.GLint,
-    uniform_dst_linear: gl.GLint,
-    uniform_linear_correction: gl.GLint,
-    white_texture: types.Texture,
 
     text_render: TextRenderState,
     selection_overlay: SelectionOverlayState,
@@ -769,10 +756,9 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             .render_host = render_host,
             .render_surface_attachment = render_surface_attachment,
             .window = window,
-            .gl_context = gl_context,
+            .opengl_runtime = .{ .context = gl_context },
             .metal_runtime = .{},
             .metal_debug_preview_source = .unavailable,
-            .gl_resources_ready = false,
             .fonts_ready = false,
             .width = display_metrics.window_w,
             .height = display_metrics.window_h,
@@ -783,18 +769,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             .target_height = display_metrics.drawable_h,
             .target_pixel_width = display_metrics.drawable_w,
             .target_pixel_height = display_metrics.drawable_h,
-            .shader_program = 0,
-            .vao = 0,
-            .vbo = 0,
-            .vbo_capacity_vertices = 0,
-            .uniform_proj = -1,
-            .uniform_tex = -1,
-            .uniform_kind = -1,
-            .uniform_text_gamma = -1,
-            .uniform_text_contrast = -1,
-            .uniform_dst_linear = -1,
-            .uniform_linear_correction = -1,
-            .white_texture = .{ .id = 0, .width = 0, .height = 0 },
             .text_render = .{
                 .gamma = init_options.text_gamma,
                 .contrast = init_options.text_contrast,
@@ -882,7 +856,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         switch (renderer.backend) {
             .opengl => {
                 try renderer.initGlResources();
-                renderer.gl_resources_ready = true;
+                renderer.opengl_runtime.resources_ready = true;
                 try renderer.initFonts();
                 renderer.fonts_ready = true;
             },
@@ -962,16 +936,16 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         draw_ops.deinit(&self.batch, self.allocator);
         text_runtime.deinitTerminalTextState(self);
 
-        if (self.gl_resources_ready and self.white_texture.id != 0) {
-            gl.DeleteTextures(1, &self.white_texture.id);
+        if (self.opengl_runtime.resources_ready and self.opengl_runtime.white_texture.id != 0) {
+            gl.DeleteTextures(1, &self.opengl_runtime.white_texture.id);
         }
-        if (self.gl_resources_ready) {
+        if (self.opengl_runtime.resources_ready) {
             gl_resources.destroy(.{
-                .shader_program = self.shader_program,
-                .vao = self.vao,
-                .vbo = self.vbo,
-                .uniform_proj = self.uniform_proj,
-                .uniform_tex = self.uniform_tex,
+                .shader_program = self.opengl_runtime.shader_program,
+                .vao = self.opengl_runtime.vao,
+                .vbo = self.opengl_runtime.vbo,
+                .uniform_proj = self.opengl_runtime.uniform_proj,
+                .uniform_tex = self.opengl_runtime.uniform_tex,
             });
         }
 
@@ -982,7 +956,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         if (self.appkit_delegate_installation) |*installation| macos_app_delegate.uninstall(installation);
         if (self.app_event_watch_installed) removeAppEventWatch(&self.app_host);
         window_init.deinitRenderSurfaceAttachment(&self.render_surface_attachment);
-        if (self.gl_context) |context| sdl_api.glDeleteContext(context);
+        if (self.opengl_runtime.context) |context| sdl_api.glDeleteContext(context);
         sdl.SDL_DestroyWindow(self.window);
         sdl.SDL_Quit();
 
@@ -1441,7 +1415,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         }
         const dest = shape_utils.rectFromInts(x, y, w, h);
         const src = texture_draw.unitSrcRect();
-        self.drawTextureRect(self.white_texture, src, dest, color.toRgba());
+        self.drawTextureRect(self.opengl_runtime.white_texture, src, dest, color.toRgba());
     }
 
     pub fn drawRectF(self: *Renderer, x: f32, y: f32, w: f32, h: f32, color: Color) void {
@@ -1452,7 +1426,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         }
         const dest = types.Rect{ .x = x, .y = y, .width = w, .height = h };
         const src = texture_draw.unitSrcRect();
-        self.drawTextureRect(self.white_texture, src, dest, color.toRgba());
+        self.drawTextureRect(self.opengl_runtime.white_texture, src, dest, color.toRgba());
     }
 
     pub fn drawRectOutline(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
@@ -2230,7 +2204,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         }
         const src = texture_draw.unitSrcRect();
         const dest = types.Rect{ .x = x, .y = y, .width = w, .height = h };
-        draw_ops.addBatchQuad(self, self.white_texture, src, dest, color.toRgba(), types.Rgba{ .r = 0, .g = 0, .b = 0, .a = 0 }, .rgba);
+        draw_ops.addBatchQuad(self, self.opengl_runtime.white_texture, src, dest, color.toRgba(), types.Rgba{ .r = 0, .g = 0, .b = 0, .a = 0 }, .rgba);
     }
 
     pub fn terminalCellGeometry(self: *Renderer) TerminalCellGeometry {
@@ -2292,7 +2266,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             );
             return;
         }
-        self.terminal_text.glyph_cache.addRect(self.white_texture, x, y, w, h, color.toRgba());
+        self.terminal_text.glyph_cache.addRect(self.opengl_runtime.white_texture, x, y, w, h, color.toRgba());
     }
 
     pub fn addTerminalGlyphQuad(self: *Renderer, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
