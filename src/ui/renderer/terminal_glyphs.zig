@@ -50,14 +50,32 @@ pub fn hasAnalyticBoxGlyphCoverage(codepoint: u32) bool {
         0x2503,
         0x2550,
         0x2551,
+        0x2552,
+        0x2553,
         0x2554,
+        0x2555,
+        0x2556,
         0x2557,
+        0x2558,
+        0x2559,
         0x255A,
+        0x255B,
+        0x255C,
         0x255D,
+        0x255E,
+        0x255F,
         0x2560,
+        0x2561,
+        0x2562,
         0x2563,
+        0x2564,
+        0x2565,
         0x2566,
+        0x2567,
+        0x2568,
         0x2569,
+        0x256A,
+        0x256B,
         0x256C,
         0x256d,
         0x256e,
@@ -801,8 +819,28 @@ pub fn drawBoxGlyph(
             drawDoubleVertical(drawRect, ctx, iy - extend, ih + extend * 2, mid_x, thin, double_separation, color);
             return true;
         },
+        0x2552 => { // ╒
+            drawDoubleHorizontal(drawRect, ctx, mid_x, iw - (mid_x - ix), mid_y, thin, double_separation, color);
+            drawRect(ctx, mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color);
+            return true;
+        },
+        0x2553 => { // ╓
+            drawRect(ctx, mid_x, mid_y - @divTrunc(thick, 2), iw - (mid_x - ix), thick, color);
+            drawDoubleVertical(drawRect, ctx, mid_y, ih - (mid_y - iy) + extend, mid_x, thin, double_separation, color);
+            return true;
+        },
         0x2554 => { // ╔
             drawDoubleHorizontal(drawRect, ctx, mid_x, iw - (mid_x - ix), mid_y, thin, double_separation, color);
+            drawDoubleVertical(drawRect, ctx, mid_y, ih - (mid_y - iy) + extend, mid_x, thin, double_separation, color);
+            return true;
+        },
+        0x2555 => { // ╕
+            drawDoubleHorizontal(drawRect, ctx, ix, mid_x - ix + thin, mid_y, thin, double_separation, color);
+            drawRect(ctx, mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color);
+            return true;
+        },
+        0x2556 => { // ╖
+            drawRect(ctx, ix, mid_y - @divTrunc(thick, 2), mid_x - ix + thick, thick, color);
             drawDoubleVertical(drawRect, ctx, mid_y, ih - (mid_y - iy) + extend, mid_x, thin, double_separation, color);
             return true;
         },
@@ -811,8 +849,28 @@ pub fn drawBoxGlyph(
             drawDoubleVertical(drawRect, ctx, mid_y, ih - (mid_y - iy) + extend, mid_x, thin, double_separation, color);
             return true;
         },
+        0x2558 => { // ╘
+            drawDoubleHorizontal(drawRect, ctx, mid_x, iw - (mid_x - ix), mid_y, thin, double_separation, color);
+            drawRect(ctx, mid_x, iy - extend, thin, mid_y - iy + thin + extend, color);
+            return true;
+        },
+        0x2559 => { // ╙
+            drawRect(ctx, mid_x, mid_y - @divTrunc(thick, 2), iw - (mid_x - ix), thick, color);
+            drawDoubleVertical(drawRect, ctx, iy - extend, mid_y - iy + thin + extend, mid_x, thin, double_separation, color);
+            return true;
+        },
         0x255A => { // ╚
             drawDoubleHorizontal(drawRect, ctx, mid_x, iw - (mid_x - ix), mid_y, thin, double_separation, color);
+            drawDoubleVertical(drawRect, ctx, iy - extend, mid_y - iy + thin + extend, mid_x, thin, double_separation, color);
+            return true;
+        },
+        0x255B => { // ╛
+            drawDoubleHorizontal(drawRect, ctx, ix, mid_x - ix + thin, mid_y, thin, double_separation, color);
+            drawRect(ctx, mid_x, iy - extend, thin, mid_y - iy + thin + extend, color);
+            return true;
+        },
+        0x255C => { // ╜
+            drawRect(ctx, ix, mid_y - @divTrunc(thick, 2), mid_x - ix + thick, thick, color);
             drawDoubleVertical(drawRect, ctx, iy - extend, mid_y - iy + thin + extend, mid_x, thin, double_separation, color);
             return true;
         },
@@ -821,9 +879,29 @@ pub fn drawBoxGlyph(
             drawDoubleVertical(drawRect, ctx, iy - extend, mid_y - iy + thin + extend, mid_x, thin, double_separation, color);
             return true;
         },
+        0x255E => { // ╞
+            drawRect(ctx, mid_x, iy - extend, thin, ih + extend * 2, color);
+            drawDoubleHorizontal(drawRect, ctx, mid_x, iw - (mid_x - ix), mid_y, thin, double_separation, color);
+            return true;
+        },
+        0x255F => { // ╟
+            drawDoubleVertical(drawRect, ctx, iy - extend, ih + extend * 2, mid_x, thin, double_separation, color);
+            drawRect(ctx, mid_x, mid_y - @divTrunc(thick, 2), iw - (mid_x - ix), thick, color);
+            return true;
+        },
         0x2560 => { // ╠
             drawDoubleVertical(drawRect, ctx, iy - extend, ih + extend * 2, mid_x, thin, double_separation, color);
             drawDoubleHorizontal(drawRect, ctx, mid_x, iw - (mid_x - ix), mid_y, thin, double_separation, color);
+            return true;
+        },
+        0x2561 => { // ╡
+            drawRect(ctx, mid_x, iy - extend, thin, ih + extend * 2, color);
+            drawDoubleHorizontal(drawRect, ctx, ix, mid_x - ix + thin, mid_y, thin, double_separation, color);
+            return true;
+        },
+        0x2562 => { // ╢
+            drawDoubleVertical(drawRect, ctx, iy - extend, ih + extend * 2, mid_x, thin, double_separation, color);
+            drawRect(ctx, ix, mid_y - @divTrunc(thick, 2), mid_x - ix + thick, thick, color);
             return true;
         },
         0x2563 => { // ╣
@@ -831,14 +909,44 @@ pub fn drawBoxGlyph(
             drawDoubleHorizontal(drawRect, ctx, ix, mid_x - ix + thin, mid_y, thin, double_separation, color);
             return true;
         },
+        0x2564 => { // ╤
+            drawDoubleHorizontal(drawRect, ctx, ix, iw, mid_y, thin, double_separation, color);
+            drawRect(ctx, mid_x, mid_y, thin, ih - (mid_y - iy) + extend, color);
+            return true;
+        },
+        0x2565 => { // ╥
+            drawRect(ctx, ix, mid_y - @divTrunc(thick, 2), iw, thick, color);
+            drawDoubleVertical(drawRect, ctx, mid_y, ih - (mid_y - iy) + extend, mid_x, thin, double_separation, color);
+            return true;
+        },
         0x2566 => { // ╦
             drawDoubleHorizontal(drawRect, ctx, ix, iw, mid_y, thin, double_separation, color);
             drawDoubleVertical(drawRect, ctx, mid_y, ih - (mid_y - iy) + extend, mid_x, thin, double_separation, color);
             return true;
         },
+        0x2567 => { // ╧
+            drawDoubleHorizontal(drawRect, ctx, ix, iw, mid_y, thin, double_separation, color);
+            drawRect(ctx, mid_x, iy - extend, thin, mid_y - iy + thin + extend, color);
+            return true;
+        },
+        0x2568 => { // ╨
+            drawRect(ctx, ix, mid_y - @divTrunc(thick, 2), iw, thick, color);
+            drawDoubleVertical(drawRect, ctx, iy - extend, mid_y - iy + thin + extend, mid_x, thin, double_separation, color);
+            return true;
+        },
         0x2569 => { // ╩
             drawDoubleHorizontal(drawRect, ctx, ix, iw, mid_y, thin, double_separation, color);
             drawDoubleVertical(drawRect, ctx, iy - extend, mid_y - iy + thin + extend, mid_x, thin, double_separation, color);
+            return true;
+        },
+        0x256A => { // ╪
+            drawRect(ctx, mid_x, iy - extend, thin, ih + extend * 2, color);
+            drawDoubleHorizontal(drawRect, ctx, ix, iw, mid_y, thin, double_separation, color);
+            return true;
+        },
+        0x256B => { // ╫
+            drawDoubleVertical(drawRect, ctx, iy - extend, ih + extend * 2, mid_x, thin, double_separation, color);
+            drawRect(ctx, ix, mid_y - @divTrunc(thick, 2), iw, thick, color);
             return true;
         },
         0x256C => { // ╬
@@ -1135,6 +1243,8 @@ test "shade glyph coverage exists and increases by density" {
 test "special variant routing only claims implemented box coverage" {
     try std.testing.expectEqual(types.SpecialGlyphVariant.box, specialVariantForCodepoint(0x2500).?);
     try std.testing.expectEqual(types.SpecialGlyphVariant.box, specialVariantForCodepoint(0x2550).?);
+    try std.testing.expectEqual(types.SpecialGlyphVariant.box, specialVariantForCodepoint(0x2552).?);
+    try std.testing.expectEqual(types.SpecialGlyphVariant.box, specialVariantForCodepoint(0x256B).?);
     try std.testing.expectEqual(types.SpecialGlyphVariant.box, specialVariantForCodepoint(0x2581).?);
     try std.testing.expectEqual(types.SpecialGlyphVariant.box, specialVariantForCodepoint(0x258C).?);
     try std.testing.expectEqual(types.SpecialGlyphVariant.powerline, specialVariantForCodepoint(0xE0B0).?);

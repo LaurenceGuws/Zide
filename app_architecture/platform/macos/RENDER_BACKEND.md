@@ -858,6 +858,13 @@ What this does and does not mean:
   now `shaped_special_glyphs=185`, split as
   `powerline=10 shade=6 braille=10 box=159 other_special=0`, which is a
   more representative `btop`-style bar/box pressure mix than the earlier
+- the mixed double/single box family is now on the same analytic path too:
+  `U+2552..U+256B` no longer fall back to normal font rendering, and the
+  dashboard proof now seeds those joins directly; on the current host that
+  pushes the first-frame dashboard split to
+  `powerline=10 shade=6 braille=3 box=174 other_special=0`, which confirms
+  the live Metal lane is carrying more of the mixed border language that
+  `btop`-class dashboards rely on
   dashboard row set
 - a real live-lane contradiction is fixed now too: the Metal terminal row
   fallback had still been truncating fallback cells to `u8` and the backend

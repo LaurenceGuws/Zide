@@ -870,6 +870,12 @@ lane.
     - with that richer mixed dashboard content, the first-frame proof is now
       `powerline=10 shade=6 braille=10 box=159 other_special=0`, with
       `shaped_special_glyphs=185`
+    - the mixed double/single box family is now analytic too:
+      `U+2552..U+256B` no longer fall back to normal font rendering, and the
+      dashboard proof now seeds those joins directly
+    - on the current host that richer mixed-box dashboard frame reports
+      `powerline=10 shade=6 braille=3 box=174 other_special=0`, with
+      `shaped_special_glyphs=193`
     - a real live Metal contradiction is fixed too: the narrow terminal row
       fallback was still truncating fallback cells to `u8`, and the Metal
       sample helper only iterated raw bytes, so non-ASCII fallback cells could
@@ -934,9 +940,20 @@ lane.
 
 ## Immediate Next Pass
 
-1. Drive `MAC-07`: normal app frame loop on `.metal` (not only diagnostics /
+1. Keep closing the Metal-vs-GL terminal fidelity gap on live `btop`/`nvim`
+   workloads, with box/block continuity and graph quality as the primary
+   product gap.
+2. Keep shrinking the remaining interactive Metal terminal latency gap on real
+   editor workloads, especially cursor motion, small scrolls, and other frames
+   that should stay on `direct_snapshot_update` instead of falling back to full
+   direct redraw.
+3. Continue widening the live Metal terminal non-ASCII lane from “usable” to
+   “credible first-class terminal,” especially richer emoji/grapheme fidelity
+   and the remaining dashboard-style symbol classes.
+4. Drive `MAC-07`: normal app frame loop on `.metal` (not only diagnostics /
    backend-smoke), with honest capability reporting and resize/present truth.
-2. Revisit `MAC-06` / `MAC-08` checklists against the live tree—much of the
-   listed groundwork may already match reality; avoid duplicate milestone claims.
-3. Keep `docs/AGENT_HANDOFF.md` in mind: macOS work stays deferrable unless it
+5. Revisit `MAC-06` / `MAC-08` checklists against the live tree—much of the
+   listed groundwork may already match reality; avoid duplicate milestone
+   claims.
+6. Keep `docs/AGENT_HANDOFF.md` in mind: macOS work stays deferrable unless it
    unblocks the default VT maturity lane.
