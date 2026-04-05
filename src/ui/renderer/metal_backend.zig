@@ -1139,6 +1139,32 @@ pub fn scrollPresentable(_: anytype, _: PresentableSurface, _: i32, _: i32) bool
     return false;
 }
 
+pub fn backendContext(renderer: anytype) ?*BackendContext {
+    if (renderer.metal_runtime.backend_context) |*context| return context;
+    return null;
+}
+
+pub fn hasBackendContext(renderer: anytype) bool {
+    return backendContext(renderer) != null;
+}
+
+pub fn queuedSurfaceDrawCount(renderer: anytype) usize {
+    return renderer.metal_runtime.queued_surface_draws.items.len;
+}
+
+pub fn appendSurfaceDraw(renderer: anytype, draw: SurfaceDraw) bool {
+    renderer.metal_runtime.queued_surface_draws.append(renderer.allocator, draw) catch {
+        var queued_draw = draw;
+        switch (queued_draw) {
+            .atlas => {},
+            .solid => {},
+            .raw_image => |*raw| deinitRawImageTexture(&raw.texture),
+        }
+        return false;
+    };
+    return true;
+}
+
 pub fn resizeBackendContext(
     context: *BackendContext,
     drawable_width: i32,

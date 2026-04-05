@@ -1765,7 +1765,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     }
 
     fn ensureMetalDiagnosticFont(self: *Renderer) !*terminal_font_mod.TerminalFont {
-        if (self.metal_runtime.backend_context == null) return error.MetalBackendContextUnavailable;
+        if (!metal_backend.hasBackendContext(self)) return error.MetalBackendContextUnavailable;
         if (self.metal_runtime.diagnostic_font) |*font| return font;
         self.metal_runtime.diagnostic_font = try self.initMetalDiagnosticFont();
         return &self.metal_runtime.diagnostic_font.?;
@@ -1774,7 +1774,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     fn appendMetalSolidRect(self: *Renderer, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) bool {
         if (self.backend != .metal) return false;
         const clip = if (self.currentClipRect()) |c| metal_text_sample_runtime.pixelClipRect(self, c) else null;
-        self.metal_runtime.queued_surface_draws.append(self.allocator, .{ .solid = .{
+        return metal_backend.appendSurfaceDraw(self, .{ .solid = .{
             .dest_rect = .{
                 .x = self.logicalLengthToRaster(x),
                 .y = self.logicalLengthToRaster(y),
@@ -1783,22 +1783,15 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             },
             .color = color,
             .clip_rect = clip,
-        } }) catch return false;
-        return true;
+        } });
     }
 
     fn appendMetalAtlasSampleDraw(self: *Renderer, sample: surface_draw.AtlasSampleDraw) bool {
-        self.metal_runtime.queued_surface_draws.append(self.allocator, .{ .atlas = sample }) catch return false;
-        return true;
+        return metal_backend.appendSurfaceDraw(self, .{ .atlas = sample });
     }
 
     fn appendMetalRawImageDraw(self: *Renderer, draw: surface_draw.RawImageDraw) bool {
-        self.metal_runtime.queued_surface_draws.append(self.allocator, .{ .raw_image = draw }) catch {
-            var texture = draw.texture;
-            metal_backend.deinitRawImageTexture(&texture);
-            return false;
-        };
-        return true;
+        return metal_backend.appendSurfaceDraw(self, .{ .raw_image = draw });
     }
 
     pub fn drawBackendTerminalSnapshotPresentable(
@@ -1806,7 +1799,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         draw: surface_draw.RawImageDraw,
     ) bool {
         if (self.backend != .metal) return false;
-        const context = self.metal_runtime.backend_context orelse return false;
+        const context = metal_backend.backendContext(self) orelse return false;
         const snapshot = context.terminal_snapshot orelse return false;
         return self.appendMetalRawImageDraw(.{
             .texture = metal_backend.cloneRawImageTexture(snapshot),
@@ -1820,7 +1813,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     pub fn drawMetalAtlasSampleChar(self: *Renderer, char: u8, x: f32, y: f32, color: Color) bool {
         if (self.backend != .metal) return false;
         if (self.plannedTextRenderingMode() != .metal_texture_atlas) return false;
-        if (self.metal_runtime.backend_context == null) return false;
+        if (!metal_backend.hasBackendContext(self)) return false;
 
         const font = self.ensureMetalDiagnosticFont() catch return false;
 
@@ -1833,7 +1826,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     pub fn drawBackendSampleTextRequest(self: *Renderer, request: metal_text_sample_runtime.SampleTextRequest) bool {
         if (self.backend != .metal) return false;
         if (self.plannedTextRenderingMode() != .metal_texture_atlas) return false;
-        if (self.metal_runtime.backend_context == null) return false;
+        if (!metal_backend.hasBackendContext(self)) return false;
 
         const font = self.ensureMetalDiagnosticFont() catch return false;
 
@@ -1849,7 +1842,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     pub fn drawBackendTerminalCellRun(self: *Renderer, font: *terminal_font_mod.TerminalFont, request: metal_text_sample_runtime.TerminalCellRunRequest) bool {
         if (self.backend != .metal) return false;
         if (self.plannedTextRenderingMode() != .metal_texture_atlas) return false;
-        if (self.metal_runtime.backend_context == null) return false;
+        if (!metal_backend.hasBackendContext(self)) return false;
 
         return metal_text_sample_runtime.appendTerminalUtf8Cells(
             self,
@@ -1862,7 +1855,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
 
     pub fn drawBackendRawImageRgba(self: *Renderer, width: i32, height: i32, data: []const u8, dest: types.Rect, tint: types.Rgba) bool {
         if (self.backend != .metal) return false;
-        const context = self.metal_runtime.backend_context orelse return false;
+        const context = metal_backend.backendContext(self) orelse return false;
         if (width <= 0 or height <= 0) return false;
         const texture = metal_backend.createRawImageTextureRgba(context.device, width, height, data) orelse return false;
         const clip_rect = if (self.currentClipRect()) |clip|
@@ -1885,7 +1878,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
 
     pub fn drawBackendRawImageRgb(self: *Renderer, width: i32, height: i32, data: []const u8, dest: types.Rect, tint: types.Rgba) bool {
         if (self.backend != .metal) return false;
-        const context = self.metal_runtime.backend_context orelse return false;
+        const context = metal_backend.backendContext(self) orelse return false;
         if (width <= 0 or height <= 0) return false;
         const texture = metal_backend.createRawImageTextureRgb(context.device, width, height, data) orelse return false;
         const clip_rect = if (self.currentClipRect()) |clip|
@@ -1922,7 +1915,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
 
     pub fn runMacosMetalAtlasUploadDiagnosticAt(self: *Renderer, dest_x: i32, dest_y: i32) bool {
         if (self.backend != .metal) return false;
-        if (self.metal_runtime.backend_context == null) return false;
+        if (!metal_backend.hasBackendContext(self)) return false;
         metal_backend.clearQueuedSurfaceDraws(self);
         self.metal_debug_preview_source = .unavailable;
 
@@ -1952,7 +1945,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             });
             self.metal_debug_preview_source = .uploaded_color_glyph;
         } else {
-            if (self.metal_runtime.queued_surface_draws.items.len == 0) {
+            if (metal_backend.queuedSurfaceDrawCount(self) == 0) {
                 _ = self.appendMetalAtlasSampleDraw(.{
                     .atlas = .color,
                     .source_rect = .{

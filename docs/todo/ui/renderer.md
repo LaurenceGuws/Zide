@@ -129,6 +129,10 @@ Progress note, 2026-04-05:
   `gl_backend.zig` helpers instead of directly reaching into
   `renderer.opengl_runtime` for white-brush access, batch binding, VBO growth,
   texture-kind uniform updates, and text-render uniform sync.
+- Shared Metal-facing renderer code now routes runtime-context lookup,
+  queued-surface append, and queued-surface count through `metal_backend.zig`
+  helpers instead of open-coding those `renderer.metal_runtime` storage
+  details.
 - The next lifecycle step is to reduce shared-runtime ownership of dispatch and
   backend-native frame state, not just move code blocks around.
 

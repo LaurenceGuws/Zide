@@ -94,6 +94,11 @@ binding, VBO growth, texture-kind uniform updates, and text-render uniform
 sync instead of reaching directly into `renderer.opengl_runtime` for each of
 those actions.
 
+This has improved slightly again on the Metal side too: shared Metal-facing
+renderer code now goes through `metal_backend` helpers for runtime-context
+lookup, queued-surface append, and queued-surface count instead of open-coding
+those `renderer.metal_runtime` storage details at each call site.
+
 ### 2. Shared frame lifecycle still branches backend-by-backend
 
 The renderer root no longer spells out backend frame begin/submit bodies, but
