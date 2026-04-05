@@ -449,6 +449,10 @@ lane.
     - terminal debug capture is less retained-texture-biased now too:
       presentation samples report `presentable_px` instead of `texture_px`,
       which better matches the active direct-main-target Metal lane
+    - the storage module/file center matches that contract now too:
+      terminal presentation state lives in
+      `terminal_widget_presentation_state.zig` instead of a retained-state
+      file name
     - the terminal Metal diagnostic now reports `raw_image_textures=1`, keeps
       non-zero `kitty_ms`, and no longer relies on the previous unsupported
       backend gate for RGB/RGBA Kitty images

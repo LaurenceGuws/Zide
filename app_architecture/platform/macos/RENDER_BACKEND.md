@@ -725,6 +725,11 @@ What this does and does not mean:
   samples and debug capture report `presentable_px` instead of `texture_px`,
   which matches the fact that the active Metal terminal lane is a direct
   presentable path rather than a retained texture-backed present path
+- the same correction now reaches the storage module/file center too: terminal
+  presentation state now lives in
+  `terminal_widget_presentation_state.zig` instead of a retained-state file,
+  so the direct Metal lane no longer depends on a retained-era module name for
+  its primary widget presentation cache
 - that contract is intentionally backend-native rather than fake portability:
   the old cached GL `Texture` path is still OpenGL-only, while Metal Kitty
   images are created as frame-scoped native Metal textures and released after

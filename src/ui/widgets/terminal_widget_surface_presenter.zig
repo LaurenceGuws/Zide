@@ -9,7 +9,7 @@ const retained_targets_runtime = @import("../renderer/retained_targets_runtime.z
 const scene_frame_runtime = @import("../renderer/scene_frame_runtime.zig");
 const draw_grid = @import("terminal_widget_draw_grid.zig");
 const draw_texture = @import("terminal_widget_draw_texture.zig");
-const presentation_state_mod = @import("terminal_widget_retained_state.zig");
+const presentation_state_mod = @import("terminal_widget_presentation_state.zig");
 const view_state = @import("terminal_widget_view_state.zig");
 
 const Shell = app_shell.Shell;

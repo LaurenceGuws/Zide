@@ -1,5 +1,5 @@
 const kitty_mod = @import("terminal_widget_kitty.zig");
-const presentation_state_mod = @import("terminal_widget_retained_state.zig");
+const presentation_state_mod = @import("terminal_widget_presentation_state.zig");
 const view_state = @import("terminal_widget_view_state.zig");
 
 const KittyState = kitty_mod.KittyState;
