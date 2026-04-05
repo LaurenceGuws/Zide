@@ -215,6 +215,12 @@ pub const FontSampleView = struct {
                 .y = swatch_y,
                 .tint = theme.foreground.toRgba(),
                 .layout = .monospace_cell,
+                .clip_rect = .{
+                    .x = swatch_x,
+                    .y = swatch_y,
+                    .width = swatch_width,
+                    .height = swatch_size + r.char_height * 1.4,
+                },
             });
         }
         r.drawText("Text sample unavailable on this runtime path.", x, y, theme.foreground);

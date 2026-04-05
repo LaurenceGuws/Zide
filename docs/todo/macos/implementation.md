@@ -334,6 +334,9 @@ lane.
     - that sampled-text contract now carries explicit tint and layout policy,
       so the Metal diagnostic lane no longer depends on white-only copied
       atlas pixels or on implicit glyph-advance stepping
+    - that same sampled-text contract now also carries explicit clip
+      ownership, so the narrow Metal text lane can obey widget/view bounds
+      instead of only drawing unconstrained diagnostics
     - the narrow Metal text lane now covers a tiny multiline ASCII run, not
       just a single flat row
     - the diagnostic/runtime callers now use the explicit monospace-cell

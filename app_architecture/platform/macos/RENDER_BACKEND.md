@@ -587,6 +587,9 @@ What this does and does not mean:
 - that sampled-text contract now carries explicit tint and layout policy, so
   the Metal diagnostic lane is no longer limited to white-only copied atlas
   pixels or to implicit glyph-advance stepping
+- that same sampled-text contract now carries explicit clip ownership, so the
+  narrow Metal text lane can obey widget/view bounds instead of only drawing
+  unconstrained diagnostics
 - this is still intentionally narrow and honest: it is now a tiny sampled
   multiline ASCII run with an explicit monospace-cell option rather than a
   claim that the generic string/text renderer has already migrated

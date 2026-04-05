@@ -32,6 +32,13 @@ const AtlasFragmentUniforms = extern struct {
     _padding: [3]u32 = .{ 0, 0, 0 },
 };
 
+pub const PixelClipRect = struct {
+    x: i32,
+    y: i32,
+    width: i32,
+    height: i32,
+};
+
 const MTLRegion = extern struct {
     origin: MTLOrigin,
     size: MTLSize,
@@ -47,6 +54,13 @@ const MTLSize = extern struct {
     width: usize,
     height: usize,
     depth: usize,
+};
+
+const MTLScissorRect = extern struct {
+    x: usize,
+    y: usize,
+    width: usize,
+    height: usize,
 };
 
 const pixel_format_bgra8_unorm: usize = 80;
@@ -126,6 +140,7 @@ pub const AtlasSampleDraw = struct {
     dest_x: i32,
     dest_y: i32,
     tint: types.Rgba = .{ .r = 255, .g = 255, .b = 255, .a = 255 },
+    clip_rect: ?PixelClipRect = null,
 };
 
 pub const BackendContext = struct {
@@ -204,6 +219,12 @@ fn msgSendSetBool(target: *anyopaque, selector_name: [*:0]const u8, value: bool)
 fn msgSendSetSize(target: *anyopaque, selector_name: [*:0]const u8, value: CGSize) void {
     const sel = objc.sel_registerName(selector_name);
     const fn_ptr: *const fn (*anyopaque, objc.SEL, CGSize) callconv(.c) void = @ptrCast(&objc.objc_msgSend);
+    fn_ptr(target, sel, value);
+}
+
+fn msgSendSetScissorRect(target: *anyopaque, selector_name: [*:0]const u8, value: MTLScissorRect) void {
+    const sel = objc.sel_registerName(selector_name);
+    const fn_ptr: *const fn (*anyopaque, objc.SEL, MTLScissorRect) callconv(.c) void = @ptrCast(&objc.objc_msgSend);
     fn_ptr(target, sel, value);
 }
 
@@ -627,6 +648,7 @@ fn encodeAtlasTextureRegion(
     dest_x: i32,
     dest_y: i32,
     tint: types.Rgba,
+    clip_rect: ?PixelClipRect,
 ) bool {
     if (builtin.target.os.tag != .macos) return false;
     const drawable_texture = msgSendPointer(frame.drawable, "texture") orelse return false;
@@ -649,6 +671,22 @@ fn encodeAtlasTextureRegion(
     msgSendSetPointer(encoder, "setRenderPipelineState:", context.atlas_pipeline);
     msgSendPointerArgU64Void(encoder, "setFragmentSamplerState:atIndex:", context.atlas_sampler, 0);
     msgSendSetPointerU64(encoder, "setFragmentTexture:atIndex:", atlasTexture(&context.glyph_atlas, source).texture, 0);
+
+    if (clip_rect) |rect| {
+        const clip_x0 = @max(0, @min(rect.x, context.drawable_width));
+        const clip_y0 = @max(0, @min(rect.y, context.drawable_height));
+        const clip_x1 = @max(clip_x0, @min(rect.x + rect.width, context.drawable_width));
+        const clip_y1 = @max(clip_y0, @min(rect.y + rect.height, context.drawable_height));
+        const clip_w = clip_x1 - clip_x0;
+        const clip_h = clip_y1 - clip_y0;
+        if (clip_w <= 0 or clip_h <= 0) return false;
+        msgSendSetScissorRect(encoder, "setScissorRect:", .{
+            .x = @intCast(clip_x0),
+            .y = @intCast(clip_y0),
+            .width = @intCast(clip_w),
+            .height = @intCast(clip_h),
+        });
+    }
 
     const atlas = atlasTexture(&context.glyph_atlas, source);
     const dest_x0 = @as(f32, @floatFromInt(dest_x));
@@ -720,6 +758,7 @@ pub fn drawAtlasSample(
         sample.dest_x,
         sample.dest_y,
         sample.tint,
+        sample.clip_rect,
     );
 }
 
