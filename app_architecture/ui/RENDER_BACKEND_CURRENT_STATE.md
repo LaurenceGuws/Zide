@@ -82,7 +82,7 @@ loops inline.
 
 But there is still not a final backend lifecycle seam yet:
 
-- the renderer root still owns the dispatch point
+- the dispatch point still lives in shared frame runtime code
 - shared lifecycle helpers still expose backend-specific state on `Renderer`
 - the backend frame runtimes still operate on a renderer object that carries
   concrete backend state directly

@@ -92,7 +92,7 @@ Progress note, 2026-04-05:
   relocation.
 - backend-specific frame begin/submit bodies now live in dedicated frame
   runtime modules instead of staying inline in `src/ui/renderer.zig`.
-- The next lifecycle step is to reduce renderer-root ownership of dispatch and
+- The next lifecycle step is to reduce shared-runtime ownership of dispatch and
   backend-native frame state, not just move code blocks around.
 
 ## Live Contradiction Centers

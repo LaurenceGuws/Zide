@@ -1421,14 +1421,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         };
     }
 
-    pub fn beginBackendFrame(self: *Renderer) void {
-        backend_frame_runtime.beginFrame(self);
-    }
-
-    pub fn submitBackendFrame(self: *Renderer) FrameSubmission {
-        return backend_frame_runtime.submitFrame(self);
-    }
-
     fn srgbToLinear(c: f32) f32 {
         if (c <= 0.04045) return c / 12.92;
         return std.math.pow(f32, (c + 0.055) / 1.055, 2.4);

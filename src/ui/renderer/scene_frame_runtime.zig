@@ -1,4 +1,5 @@
 const std = @import("std");
+const backend_frame_runtime = @import("backend_frame_runtime.zig");
 const gl = @import("gl.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
 const platform_window = @import("../../platform/window_metrics.zig");
@@ -74,11 +75,11 @@ pub fn beginFrame(self: anytype) void {
     }
 
     self.text_render.bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
-    self.beginBackendFrame();
+    backend_frame_runtime.beginFrame(self);
 }
 
 pub fn submitFrame(self: anytype) FrameSubmission {
-    return self.submitBackendFrame();
+    return backend_frame_runtime.submitFrame(self);
 }
 
 pub fn submitOpenGlFrame(self: anytype) FrameSubmission {
