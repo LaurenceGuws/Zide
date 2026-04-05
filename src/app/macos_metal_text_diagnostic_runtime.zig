@@ -3,6 +3,7 @@ const app_bootstrap = @import("bootstrap.zig");
 const app_logger = @import("../app_logger.zig");
 const app_shell = @import("../app_shell.zig");
 const metal_text_diagnostic_view = @import("../ui/metal_text_diagnostic_view.zig");
+const metal_text_sample_runtime = @import("../ui/renderer/metal_text_sample_runtime.zig");
 
 pub fn run(allocator: std.mem.Allocator) !void {
     const width = app_bootstrap.parseEnvI32("ZIDE_WINDOW_WIDTH", 1280);
@@ -32,7 +33,11 @@ pub fn run(allocator: std.mem.Allocator) !void {
     const log = app_logger.logger("macos.metal.text_diagnostic");
     const capabilities = shell.rendererCapabilities();
     const atlas_upload_probe = (metal_text_diagnostic_view.View{}).activate(shell);
-    const sample_text_draw = shell.rendererPtr().drawMetalAtlasSampleText("METAL\nTEXT", 24.0, 96.0);
+    const sample_text_draw = shell.rendererPtr().drawMetalAtlasSampleRequest(metal_text_sample_runtime.SampleTextRequest{
+        .text = "METAL\nTEXT",
+        .x = 24.0,
+        .y = 96.0,
+    });
     const atlas_preview_source = shell.macosMetalAtlasPreviewSource();
     log.logf(.info, "start width={d} height={d} frame_budget={d}", .{ width, height, frame_budget });
     log.logf(

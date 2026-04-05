@@ -1853,7 +1853,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         });
     }
 
-    pub fn drawMetalAtlasSampleText(self: *Renderer, text: []const u8, x: f32, y: f32) bool {
+    pub fn drawMetalAtlasSampleRequest(self: *Renderer, request: metal_text_sample_runtime.SampleTextRequest) bool {
         if (self.backend != .metal) return false;
         if (self.plannedTextRenderingMode() != .metal_texture_atlas) return false;
         if (self.metal_backend_context == null) return false;
@@ -1864,10 +1864,18 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         return metal_text_sample_runtime.appendAsciiRun(
             self,
             &font,
-            .{ .text = text, .x = x, .y = y },
+            request,
             self.metal_atlas_sample_draws[0..],
             &self.metal_atlas_sample_draw_count,
         );
+    }
+
+    pub fn drawMetalAtlasSampleText(self: *Renderer, text: []const u8, x: f32, y: f32) bool {
+        return self.drawMetalAtlasSampleRequest(.{
+            .text = text,
+            .x = x,
+            .y = y,
+        });
     }
 
     pub fn runMacosMetalAtlasUploadDiagnostic(self: *Renderer) bool {

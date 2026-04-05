@@ -328,6 +328,9 @@ lane.
     - that tiny sampled-text run now has a dedicated runtime builder in
       `renderer/metal_text_sample_runtime.zig`, so it is no longer entirely
       ad hoc renderer-local logic
+    - the sampled Metal text lane now also has an explicit
+      `SampleTextRequest` contract for callers instead of only raw convenience
+      parameters
     - the narrow Metal text lane now covers a tiny multiline ASCII run, not
       just a single flat row
     - the existing `font_sample` fallback now consumes that same narrow path as

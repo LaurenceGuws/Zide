@@ -581,6 +581,9 @@ What this does and does not mean:
   a dedicated runtime builder in `renderer/metal_text_sample_runtime.zig`,
   which is the right contract direction for growing from ad hoc sampled draws
   toward a real Metal text lane
+- that builder now has an explicit `SampleTextRequest` contract, so callers can
+  describe sampled-text placement without staying coupled to the renderer’s
+  convenience overloads
 - this is still intentionally narrow and honest: it is now a tiny sampled
   multiline ASCII run rather than a claim that the generic string/text
   renderer has already migrated or that per-glyph tinting semantics are
