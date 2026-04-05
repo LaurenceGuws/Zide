@@ -564,27 +564,16 @@ fn presentPresentationSurface(
     viewport_w: f32,
     viewport_h: f32,
 ) void {
-    noteTerminalPresent(
-        self,
+    presentation_runtime.presentDraw(
         renderer,
-        .retained_surface,
         sample_generation,
-        view_geometry.origin_x,
-        view_geometry.origin_y,
+        surface_generation,
+        view_geometry,
         viewport_w,
         viewport_h,
-        viewport_w,
-        viewport_h,
+        self,
+        noteTerminalPresent,
     );
-    presentation_target_runtime.drawPresentable(renderer, .{
-        .x = view_geometry.origin_x,
-        .y = view_geometry.origin_y,
-        .width = viewport_w,
-        .height = viewport_h,
-        .source_width = viewport_w,
-        .source_height = viewport_h,
-        .generation = surface_generation,
-    });
 }
 
 fn planPresentationUpdate(

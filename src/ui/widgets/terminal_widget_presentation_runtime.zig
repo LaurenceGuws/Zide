@@ -93,3 +93,36 @@ pub fn logUnavailable(
         .{ .key = "visible_h", .value = .{ .integer = visible_h } },
     });
 }
+
+pub fn presentDraw(
+    renderer: anytype,
+    sample_generation: u64,
+    surface_generation: u64,
+    view_geometry: TerminalViewGeometry,
+    viewport_w: f32,
+    viewport_h: f32,
+    note_present_ctx: anytype,
+    note_present: anytype,
+) void {
+    note_present(
+        note_present_ctx,
+        renderer,
+        .retained_surface,
+        sample_generation,
+        view_geometry.origin_x,
+        view_geometry.origin_y,
+        viewport_w,
+        viewport_h,
+        viewport_w,
+        viewport_h,
+    );
+    presentation_target_runtime.drawPresentable(renderer, .{
+        .x = view_geometry.origin_x,
+        .y = view_geometry.origin_y,
+        .width = viewport_w,
+        .height = viewport_h,
+        .source_width = viewport_w,
+        .source_height = viewport_h,
+        .generation = surface_generation,
+    });
+}

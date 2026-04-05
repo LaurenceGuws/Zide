@@ -749,6 +749,10 @@ What this does and does not mean:
   present-state refresh, viewport clip entry, and unavailable logging now live
   in `terminal_widget_presentation_runtime.zig` instead of being carried as
   ad hoc presenter-local lifecycle logic
+- the same runtime now owns the retained-presentable draw step too: the
+  presenter no longer inlines the "note sample + draw presentable" helper for
+  the terminal lane, which tightens the terminal-owned presentation seam one
+  step further
 - that contract is intentionally backend-native rather than fake portability:
   the old cached GL `Texture` path is still OpenGL-only, while Metal Kitty
   images are created as frame-scoped native Metal textures and released after
