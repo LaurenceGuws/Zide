@@ -200,14 +200,15 @@ pub const FontSampleView = struct {
             const swatch_x = x;
             const swatch_y = y;
             const swatch_size = @max(r.char_height * 1.25, 18.0);
+            const swatch_width = @max(r.char_width * 6.0, swatch_size * 3.4);
             r.drawRect(
                 @intFromFloat(std.math.round(swatch_x - 6.0)),
                 @intFromFloat(std.math.round(swatch_y - 6.0)),
-                @intFromFloat(std.math.round(swatch_size + 12.0)),
+                @intFromFloat(std.math.round(swatch_width + 12.0)),
                 @intFromFloat(std.math.round(swatch_size + 12.0)),
                 theme.ui_panel_overlay,
             );
-            r.drawChar('A', swatch_x, swatch_y, theme.foreground);
+            _ = r.drawMetalAtlasSampleText("METAL", swatch_x, swatch_y);
         }
         r.drawText("Text sample unavailable on this runtime path.", x, y, theme.foreground);
 

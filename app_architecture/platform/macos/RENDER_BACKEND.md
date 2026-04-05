@@ -582,8 +582,8 @@ What this does and does not mean:
   migrated or that per-glyph tinting semantics are complete on Metal
 - the existing font-sample fallback now consumes that same narrow path as an
   actual UI caller: when live text is unavailable but the planned mode is
-  `metal_texture_atlas`, it frames and requests a sampled `'A'` through
-  `drawChar` rather than remaining purely a passive status surface
+  `metal_texture_atlas`, it frames and requests a tiny sampled `"METAL"` run
+  rather than remaining purely a passive status surface
 - the visible atlas-backed preview path itself is still real: the live smoke
   frame path blits a tiny region from the Metal atlas color texture into the
   drawable before present, and the submit-time screenshot path captured a real

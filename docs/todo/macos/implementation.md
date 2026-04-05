@@ -327,8 +327,8 @@ lane.
       `sample_text_draw=1` on the current macOS host
     - the existing `font_sample` fallback now consumes that same narrow path as
       a real UI caller: when live text is unavailable but the planned mode is
-      `metal_texture_atlas`, it frames and requests a sampled `'A'` through
-      `drawChar`
+      `metal_texture_atlas`, it frames and requests a tiny sampled `"METAL"`
+      run
     - the live macOS Metal smoke frame path still blits a tiny region from the
       Metal atlas color texture into the drawable before present, and the
       submit-time screenshot path captured a real `1280x720` PPM artifact for
