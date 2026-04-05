@@ -2,6 +2,7 @@ const std = @import("std");
 const draw_ops = @import("draw_ops.zig");
 const gl = @import("gl.zig");
 const gl_backend = @import("gl_backend.zig");
+const presentable_target = @import("presentable_target.zig");
 const scene_frame_runtime = @import("scene_frame_runtime.zig");
 const texture_draw = @import("texture_draw.zig");
 const types = @import("types.zig");
@@ -9,12 +10,12 @@ const app_logger = @import("../../app_logger.zig");
 const renderer_root = @import("../renderer.zig");
 
 const Color = renderer_root.Color;
-const RenderTarget = gl_backend.RenderTarget;
+const PresentableTarget = presentable_target.PresentableTarget;
 
 pub const RetainedTargetState = struct {
-    terminal: ?RenderTarget = null,
-    terminal_scroll: ?RenderTarget = null,
-    editor: ?RenderTarget = null,
+    terminal: ?PresentableTarget = null,
+    terminal_scroll: ?PresentableTarget = null,
+    editor: ?PresentableTarget = null,
 };
 
 pub const RetainedSurface = enum {

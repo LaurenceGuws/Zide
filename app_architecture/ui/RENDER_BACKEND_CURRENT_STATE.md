@@ -112,10 +112,19 @@ mode this campaign is supposed to prevent.
 `src/ui/renderer/retained_targets_runtime.zig` still imports
 `gl_backend.RenderTarget` as the retained surface type.
 
-That means the presentable surface story is still not backend-neutral at the
-shared runtime layer.
+This has improved slightly: the presentable target type now lives in
+`src/ui/renderer/presentable_target.zig` instead of being owned directly by the
+GL backend.
 
-This is why OpenGL still reads like "the real retained implementation" while
+But the presentable surface story is still not backend-neutral at the shared
+runtime layer:
+
+- the moved type is still FBO/texture-shaped
+- shared runtime behavior is still effectively the GL retained-surface model
+- Metal still reaches presentable behavior through a separate direct/snapshot
+  lane instead of the same contract
+
+That is why OpenGL still reads like "the real retained implementation" while
 Metal reads like "the special direct/snapshot implementation" instead of both
 being implementations of one presentable contract.
 
@@ -179,6 +188,12 @@ with one backend-neutral presentable target surface:
 - draw presentable
 - scroll/shift
 - availability/reuse truth
+
+Status, 2026-04-05:
+
+- the presentable target type now lives in `src/ui/renderer/presentable_target.zig`
+- the next required step is to move lifecycle behavior behind that ownership,
+  not just the storage type
 
 ### Cut 3. Backend lifecycle dispatch seam
 

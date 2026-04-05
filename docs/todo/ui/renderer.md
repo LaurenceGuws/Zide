@@ -32,6 +32,7 @@ active execution lane for backend contract quality.
 - [x] Capability truth is materially better than backend-label theater
 - [~] Shared draw contract has started moving out of Metal ownership
 - [ ] Shared draw/present contracts are still not backend-neutral end-to-end
+- [~] Shared presentable target type has started moving out of GL ownership
 - [ ] Shared retained/presentable ownership is still not backend-neutral
 - [ ] `Renderer` still carries backend-native implementation state
 
@@ -82,6 +83,11 @@ Progress note, 2026-04-05:
 - The next step is to push real submission and caller flow through that shared
   contract instead of leaving Metal-specific renderer verbs as the practical
   API.
+- `src/ui/renderer/presentable_target.zig` now owns the presentable target
+  type, so shared runtime code no longer imports a GL-owned target type
+  directly.
+- The next presentable step is lifecycle/behavior ownership, not just storage
+  relocation.
 
 ## Live Contradiction Centers
 

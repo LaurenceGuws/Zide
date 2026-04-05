@@ -1,18 +1,14 @@
 const std = @import("std");
 const gl = @import("gl.zig");
 const gl_resources = @import("gl_resources.zig");
+const presentable_target = @import("presentable_target.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
 const app_logger = @import("../../app_logger.zig");
 const types = @import("types.zig");
 
 const sdl = gl.c;
 
-pub const RenderTarget = struct {
-    texture: types.Texture,
-    fbo: gl.GLuint,
-    logical_width: i32,
-    logical_height: i32,
-};
+pub const RenderTarget = presentable_target.PresentableTarget;
 
 fn glAttrName(attr: sdl_api.GlAttr) []const u8 {
     return switch (attr) {

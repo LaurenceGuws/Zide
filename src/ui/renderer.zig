@@ -9,6 +9,7 @@ const font_manager = @import("renderer/font_manager.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
 const gl_backend = @import("renderer/gl_backend.zig");
 const metal_backend = @import("renderer/metal_backend.zig");
+const presentable_target = @import("renderer/presentable_target.zig");
 const surface_draw = @import("renderer/surface_draw.zig");
 const input_constants = @import("renderer/input_constants.zig");
 const clipboard = @import("renderer/clipboard.zig");
@@ -296,7 +297,7 @@ const input_queue_capacity: usize = 8192;
 const clip_stack_capacity: usize = 8;
 const KeyPress = input_state.KeyPress;
 
-const RenderTarget = gl_backend.RenderTarget;
+const RenderTarget = presentable_target.PresentableTarget;
 
 const BatchState = draw_ops.BatchState;
 
