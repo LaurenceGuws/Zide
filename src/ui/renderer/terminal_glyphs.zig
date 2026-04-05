@@ -76,9 +76,24 @@ pub fn hasAnalyticBoxGlyphCoverage(codepoint: u32) bool {
         0x252c,
         0x2534,
         0x253c,
+        0x2581,
+        0x2582,
+        0x2583,
         0x2580,
         0x2584,
+        0x2585,
+        0x2586,
+        0x2587,
         0x2588,
+        0x2589,
+        0x258A,
+        0x258B,
+        0x258C,
+        0x258D,
+        0x258E,
+        0x258F,
+        0x2594,
+        0x2595,
         0xE0B0,
         0xE0B1,
         0xE0B2,
@@ -667,6 +682,62 @@ fn drawDoubleVertical(
     drawRect(ctx, right_x, iy, thin, ih, color);
 }
 
+fn drawLowerBlockGlyph(
+    drawRect: *const fn (ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void,
+    ctx: *anyopaque,
+    eighths: i32,
+    ix: i32,
+    iy: i32,
+    iw: i32,
+    ih: i32,
+    color: Color,
+) void {
+    const fill_h = std.math.clamp(@divTrunc(ih * eighths + 7, 8), 1, ih);
+    drawRect(ctx, ix, iy + (ih - fill_h), iw, fill_h, color);
+}
+
+fn drawUpperBlockGlyph(
+    drawRect: *const fn (ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void,
+    ctx: *anyopaque,
+    eighths: i32,
+    ix: i32,
+    iy: i32,
+    iw: i32,
+    ih: i32,
+    color: Color,
+) void {
+    const fill_h = std.math.clamp(@divTrunc(ih * eighths + 7, 8), 1, ih);
+    drawRect(ctx, ix, iy, iw, fill_h, color);
+}
+
+fn drawLeftBlockGlyph(
+    drawRect: *const fn (ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void,
+    ctx: *anyopaque,
+    eighths: i32,
+    ix: i32,
+    iy: i32,
+    iw: i32,
+    ih: i32,
+    color: Color,
+) void {
+    const fill_w = std.math.clamp(@divTrunc(iw * eighths + 7, 8), 1, iw);
+    drawRect(ctx, ix, iy, fill_w, ih, color);
+}
+
+fn drawRightBlockGlyph(
+    drawRect: *const fn (ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void,
+    ctx: *anyopaque,
+    eighths: i32,
+    ix: i32,
+    iy: i32,
+    iw: i32,
+    ih: i32,
+    color: Color,
+) void {
+    const fill_w = std.math.clamp(@divTrunc(iw * eighths + 7, 8), 1, iw);
+    drawRect(ctx, ix + (iw - fill_w), iy, fill_w, ih, color);
+}
+
 pub fn drawBoxGlyph(
     drawRect: *const fn (ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void,
     ctx: *anyopaque,
@@ -889,17 +960,76 @@ pub fn drawBoxGlyph(
             drawRect(ctx, mid_x, iy - extend, thin, ih + extend * 2, color);
             return true;
         },
+        0x2581 => { // ▁
+            drawLowerBlockGlyph(drawRect, ctx, 1, ix, iy, iw, ih, color);
+            return true;
+        },
+        0x2582 => { // ▂
+            drawLowerBlockGlyph(drawRect, ctx, 2, ix, iy, iw, ih, color);
+            return true;
+        },
+        0x2583 => { // ▃
+            drawLowerBlockGlyph(drawRect, ctx, 3, ix, iy, iw, ih, color);
+            return true;
+        },
         0x2580 => { // ▀
-            drawRect(ctx, ix, iy, iw, @divTrunc(ih, 2), color);
+            drawUpperBlockGlyph(drawRect, ctx, 4, ix, iy, iw, ih, color);
             return true;
         },
         0x2584 => { // ▄
-            const half = @divTrunc(ih, 2);
-            drawRect(ctx, ix, iy + half, iw, ih - half, color);
+            drawLowerBlockGlyph(drawRect, ctx, 4, ix, iy, iw, ih, color);
+            return true;
+        },
+        0x2585 => { // ▅
+            drawLowerBlockGlyph(drawRect, ctx, 5, ix, iy, iw, ih, color);
+            return true;
+        },
+        0x2586 => { // ▆
+            drawLowerBlockGlyph(drawRect, ctx, 6, ix, iy, iw, ih, color);
+            return true;
+        },
+        0x2587 => { // ▇
+            drawLowerBlockGlyph(drawRect, ctx, 7, ix, iy, iw, ih, color);
             return true;
         },
         0x2588 => { // █
             drawRect(ctx, ix, iy, iw, ih, color);
+            return true;
+        },
+        0x2589 => { // ▉
+            drawLeftBlockGlyph(drawRect, ctx, 7, ix, iy, iw, ih, color);
+            return true;
+        },
+        0x258A => { // ▊
+            drawLeftBlockGlyph(drawRect, ctx, 6, ix, iy, iw, ih, color);
+            return true;
+        },
+        0x258B => { // ▋
+            drawLeftBlockGlyph(drawRect, ctx, 5, ix, iy, iw, ih, color);
+            return true;
+        },
+        0x258C => { // ▌
+            drawLeftBlockGlyph(drawRect, ctx, 4, ix, iy, iw, ih, color);
+            return true;
+        },
+        0x258D => { // ▍
+            drawLeftBlockGlyph(drawRect, ctx, 3, ix, iy, iw, ih, color);
+            return true;
+        },
+        0x258E => { // ▎
+            drawLeftBlockGlyph(drawRect, ctx, 2, ix, iy, iw, ih, color);
+            return true;
+        },
+        0x258F => { // ▏
+            drawLeftBlockGlyph(drawRect, ctx, 1, ix, iy, iw, ih, color);
+            return true;
+        },
+        0x2594 => { // ▔
+            drawUpperBlockGlyph(drawRect, ctx, 1, ix, iy, iw, ih, color);
+            return true;
+        },
+        0x2595 => { // ▕
+            drawRightBlockGlyph(drawRect, ctx, 1, ix, iy, iw, ih, color);
             return true;
         },
         0xE0B0 => { // 
@@ -965,8 +1095,31 @@ test "shade glyph coverage exists and increases by density" {
 test "special variant routing only claims implemented box coverage" {
     try std.testing.expectEqual(types.SpecialGlyphVariant.box, specialVariantForCodepoint(0x2500).?);
     try std.testing.expectEqual(types.SpecialGlyphVariant.box, specialVariantForCodepoint(0x2550).?);
+    try std.testing.expectEqual(types.SpecialGlyphVariant.box, specialVariantForCodepoint(0x2581).?);
+    try std.testing.expectEqual(types.SpecialGlyphVariant.box, specialVariantForCodepoint(0x258C).?);
     try std.testing.expectEqual(types.SpecialGlyphVariant.powerline, specialVariantForCodepoint(0xE0B0).?);
     try std.testing.expectEqual(types.SpecialGlyphVariant.powerline, specialVariantForCodepoint(0xE0B2).?);
     try std.testing.expectEqual(@as(?types.SpecialGlyphVariant, null), specialVariantForCodepoint(0xF5D0));
     try std.testing.expectEqual(@as(?types.SpecialGlyphVariant, null), specialVariantForCodepoint(0x1FB00));
+}
+
+test "block glyph coverage increases with fill amount" {
+    var low: [16 * 16]u8 = undefined;
+    var mid: [16 * 16]u8 = undefined;
+    var high: [16 * 16]u8 = undefined;
+
+    try std.testing.expect(rasterizeSpecialGlyphCoverage(0x2581, 16, 16, low[0..]));
+    try std.testing.expect(rasterizeSpecialGlyphCoverage(0x2584, 16, 16, mid[0..]));
+    try std.testing.expect(rasterizeSpecialGlyphCoverage(0x2588, 16, 16, high[0..]));
+
+    var low_sum: usize = 0;
+    var mid_sum: usize = 0;
+    var high_sum: usize = 0;
+    for (low) |a| low_sum += a;
+    for (mid) |a| mid_sum += a;
+    for (high) |a| high_sum += a;
+
+    try std.testing.expect(low_sum > 0);
+    try std.testing.expect(low_sum < mid_sum);
+    try std.testing.expect(mid_sum < high_sum);
 }

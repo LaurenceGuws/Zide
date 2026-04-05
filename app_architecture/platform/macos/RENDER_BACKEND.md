@@ -836,6 +836,13 @@ What this does and does not mean:
 - the dashboard fixture was updated to exercise that double-line set directly,
   so the Metal terminal lane now has a live runtime probe for those shapes
   instead of only a code claim
+- the next box/block slice is in as well: the common lower, upper, and
+  left/right block elements (`U+2581..U+258F`, plus `U+2594` and `U+2595`)
+  now ride the analytic/special path instead of normal font fallback
+- that moves more `btop`-style bar content onto the live Metal special-glyph
+  lane on the same dashboard proof: the current first frame now reports
+  `shaped_special_glyphs=179`, split as
+  `powerline=12 shade=18 braille=10 box=139 other_special=0`
 - that same dashboard lane is now runtime-proven under churn too instead of
   only on the first full frame: a dashboard mutation frame now stays on
   `metric_present_sample=direct_snapshot_update` with

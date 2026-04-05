@@ -849,6 +849,13 @@ lane.
     - the dashboard diagnostic fixture was updated to include that double-line
       set directly, so the Metal lane has a live runtime probe for the new
       coverage instead of only a static implementation claim
+    - the next box/block slice is in too: common lower, upper, and left/right
+      block elements (`U+2581..U+258F`, plus `U+2594` and `U+2595`) now ride
+      the analytic/special path instead of normal font fallback
+    - on the same dashboard fixture, that moves more `btop`-style bar content
+      onto the live Metal special-glyph lane: the current first-frame split is
+      now `powerline=12 shade=18 braille=10 box=139 other_special=0`, with
+      `shaped_special_glyphs=179`
     - the dashboard fixture is now proven under churn too:
       `DASHBOARD=1` plus `MUTATE_FRAME=1` yields
       `metric_present_sample=direct_snapshot_update`,
