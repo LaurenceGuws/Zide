@@ -34,7 +34,7 @@ pub fn drawPresentable(renderer: anytype, draw: PresentableDraw) void {
         const source_width = draw.source_width orelse dest_width;
         const source_height = draw.source_height orelse dest_height;
         scene_frame_runtime.noteTerminalPresentation(renderer, draw.generation);
-        _ = renderer.drawMetalTerminalSnapshotPresentable(.{
+        _ = renderer.drawBackendTerminalSnapshotPresentable(.{
             .texture = undefined,
             .source_rect = .{
                 .x = renderer.logicalLengthToRaster(draw.x),

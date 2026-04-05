@@ -5,10 +5,10 @@ Goal
 - Treat reference repos as canonical. We only diverge when required by Zide's code or to exceed the reference quality.
 
 Status (2026-01-29)
-- Current emphasis (2026-03-07): UI-thread/backend decoupling and compute
-  offload.
-  - performance review context: `docs/review/PERFORMANCE_REVIEW_1.md`
-  - active execution queue: `docs/todo/ui/widget_modularization.md` (Phase 5)
+- Current emphasis (2026-04-05): renderer backend contract quality.
+  - target contract authority: `app_architecture/ui/RENDER_BACKEND_CONTRACT.md`
+  - current-state authority: `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md`
+  - active execution queue: `docs/todo/ui/renderer.md`
 - SDL3 window/input + OpenGL 3.3 renderer is now the active stack on Linux.
 - Raylib has been removed from the build path; PNG decoding is handled via stb_image.
 - Fixed texture UV orientation: CPU textures use top-left UVs; FBO blits flip Y at draw time.
@@ -26,8 +26,7 @@ Status (2026-01-29)
 - Kitty image/placement view lists are built and sorted on the parse thread; renderer reuses the cached lists per frame.
 - Selection highlight spans are cached alongside the view snapshot to avoid per-frame selection range scans.
 - Kitty image uploads are now queued and uploaded in a per-frame budget to avoid large render-thread spikes.
-- Renderer modularization + OS abstraction execution lives in
-  `docs/todo/ui/renderer.md` (now boundary-focused, extraction complete).
+- Renderer backend abstraction execution lives in `docs/todo/ui/renderer.md`.
 - UI widget modularization (splitting large widgets like TerminalWidget
   UI-side) lives in `docs/todo/ui/widget_modularization.md`.
 - SDL3 migration: SDL3-only build path; SDL2 fallback removed.
@@ -64,10 +63,10 @@ Canonical references (do not diverge without a documented reason)
 Non-negotiable rules
 - We do not invent new rendering paradigms. We follow the reference repos unless forced by Zide's architecture.
 - Any deviation must be recorded in app_architecture/DECISIONS.md with a concrete reason.
-- Renderer backend expansion is not active work. Current live runtime truth is
-  SDL3 + OpenGL, but backend work is now downstream of the native-host
-  contract pressure in
-  `app_architecture/platform/NATIVE_HOST_REFERENCE_CROSSCHECK.md`.
+- Backend expansion is active work only insofar as it strengthens the shared
+  backend contract. OpenGL and Metal are the two reference implementations for
+  that campaign. A future Vulkan backend should satisfy the same contract, not
+  become a separate architecture story.
 - Platform wording must distinguish host truth from current graphics truth; use
   `app_architecture/platform/PLATFORM_CAPABILITY_MODEL.md`.
 - macOS-first-class reopening is now tracked explicitly in

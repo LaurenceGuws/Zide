@@ -33,7 +33,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
     const log = app_logger.logger("macos.metal.text_diagnostic");
     const capabilities = shell.rendererCapabilities();
     const atlas_upload_probe = (metal_text_diagnostic_view.View{}).activate(shell);
-    const sample_text_draw = shell.rendererPtr().drawMetalAtlasSampleRequest(metal_text_sample_runtime.SampleTextRequest{
+    const sample_text_draw = shell.rendererPtr().drawBackendSampleTextRequest(metal_text_sample_runtime.SampleTextRequest{
         .text = "METAL\nTEXT",
         .x = 24.0,
         .y = 96.0,
@@ -54,7 +54,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
     );
     defer shell.endClip();
     const renderer = shell.rendererPtr();
-    const terminal_cell_run_draw = renderer.drawMetalTerminalCellRun(&renderer.terminal_font, metal_text_sample_runtime.TerminalCellRunRequest{
+    const terminal_cell_run_draw = renderer.drawBackendTerminalCellRun(&renderer.terminal_font, metal_text_sample_runtime.TerminalCellRunRequest{
         .text = "$ ls",
         .x = 24.0,
         .y = 220.0,

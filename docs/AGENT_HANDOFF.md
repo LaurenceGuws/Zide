@@ -5,89 +5,76 @@ not a progress log and should stay brief.
 
 ### Current Focus
 
-- The only default architecture focus is now VT maturity purity.
-- Treat
-  [VT_MATURITY_PURITY_CAMPAIGN.md](/home/home/personal/zide/app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md)
-  as the primary authority for what work counts.
-- Treat
-  [VT_MATURITY_COMPLETION_LIST.md](/home/home/personal/zide/app_architecture/terminal/VT_MATURITY_COMPLETION_LIST.md)
-  as the numbered exit criteria for the same scrutiny war.
-- Treat VT maturity purity as one continuous scrutiny war, not a chain of
-  small wars with new names every few commits.
-- The standard is no longer "find another cleanup seam."
+- The only default architecture focus is now renderer backend contract quality.
+- Treat OpenGL and Metal as the two reference implementations for the shared
+  backend abstraction.
+- The standard is no longer "make Metal work for one more terminal case."
 - The standard is:
-  - make `TerminalCore` feel unquestionably sufficient and mature as the VT
-    library center
-  - treat `TerminalRuntimeShell` as guilty until every surviving
-    responsibility proves it is irreducible runtime boundary
-  - normalize the host-facing VT contract until the remaining gap versus
-    Ghostty/WezTerm is maturity/taste, not ownership ambiguity
-- Work outside this lane is deferred by default unless it directly unblocks VT
-  maturity purity.
+  - define the renderer/backend contract we actually want
+  - audit the renderer/backend contract we actually have
+  - use OpenGL and Metal to prove the contract is backend-neutral instead of
+    backend theater
+  - make a future Vulkan backend feel like straightforward backend work, not
+    renderer surgery
 
 ### Current Direction
 
-- The active terminal baseline is much stronger now:
-  - `TerminalSession` is gone
-  - `PtyTerminalRuntime` is gone
-  - key input semantics, resize semantics, and mutation ownership are cleaner
-- The remaining VT work is now deeper and stricter:
-  - no seam-hopping
-  - no shell-thinning theater
-  - no shell-preservation theater
-  - no renaming every front as its own war
-  - no reopening solved local lanes by momentum
-  - no code unless one named maturity contradiction is explicit first
+- Capability naming is better than it used to be, but the renderer root still
+  owns too much concrete GL and Metal machinery.
+- The active campaign is to make OpenGL and Metal read like two
+  implementations of one rendering system instead of one renderer carrying both
+  implementations inside itself.
 - Preferred execution style:
-  - no compatibility theater
-  - no fallback path without a deletion story
-  - no broad helper extraction that leaves the same library story intact
-  - no sentimental attachment to existing file centers
+  - no new backend-specific leakage in shared renderer state without an
+    explicit deletion story
+  - no "easy later" Vulkan claims while GL and Metal still need different
+    structural treatment today
+  - no polishing-first drift when the shared backend contract is still weak
+  - no fake neutrality through enums/capabilities when control flow still
+    depends on backend-native types
 
 ### Current State
 
-- `zide-vt` is now credibly extractable, but still not near plug-and-play
-  parity with `libghostty-vt`.
-- The remaining gap is no longer obvious architecture sludge.
-- The remaining gap is now:
-  - `TerminalCore` sufficiency
-  - public contract normalization
-  - overall library-object maturity
-- Recent VT lanes that should stay paused unless a fresh named contradiction
-  appears:
-  - input semantics
-  - public resize
-  - viewport/selection mutation
-  - `host_queries`
-- Current implementation authority lives in the VT maturity docs, not in older
-  war framing or repo-wide reranks.
-- We stay on this one war until we can honestly claim our VT contract quality
-  is no longer clearly behind the peer references that matter.
+- OpenGL is still the most complete renderer implementation.
+- Metal is now a real live implementation, especially on the terminal lane, but
+  it still depends on backend-specific state and draw descriptions carried by
+  the shared renderer.
+- The current repo question is no longer "can Metal present frames?"
+- The current repo question is:
+  - do OpenGL and Metal prove a solid backend abstraction
+  - or do they prove that `src/ui/renderer.zig` still knows too much about both
+    backends
+- The honest answer today is still "not yet."
 
 ### Where To Look
 
-- VT maturity campaign authority:
+- Target backend contract authority:
+  - `app_architecture/ui/RENDER_BACKEND_CONTRACT.md`
+- Current-state backend contract authority:
+  - `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md`
+- Active execution queue:
+  - `docs/todo/ui/renderer.md`
+- Reference-pressure scan:
+  - `docs/research/RENDER_BACKEND_REFERENCE_SCAN_2026-04-05.md`
+- Supporting platform/renderer authority:
+  - `app_architecture/platform/PLATFORM_CAPABILITY_MODEL.md`
+  - `app_architecture/platform/macos/RENDER_BACKEND.md`
+  - `app_architecture/RENDERER_SCENE_PUBLICATION_CONTRACT.md`
+
+### Deferred Focuses
+
+- VT maturity purity is deferred as the repo-wide default focus.
+- When that lane is resumed, start from:
+  - `docs/deferred/VT_MATURITY_FOCUS.md`
   - `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md`
   - `app_architecture/terminal/VT_MATURITY_COMPLETION_LIST.md`
-  - `app_architecture/terminal/VT_CORE_DESIGN.md`
-  - `app_architecture/terminal/TERMINAL_ARCHITECTURE_COMPARISON.md`
-  - `docs/todo/terminal/vt_core_rearchitecture.md`
-  - `docs/review/VT_MATURITY_FULL_SCOPE_2026-04-03.md`
-  - `docs/review/VT_PLUGANDPLAY_GAP_MATRIX_2026-04-03.md`
-  - `docs/review/VT_SPRINT_STOP_MARKER_2026-04-03.md`
-- Strongest current comparison pressure:
-  - `dev_references/terminals/ghostty/src/terminal/Terminal.zig`
-  - `dev_references/terminals/ghostty/include/ghostty/vt.h`
-  - `dev_references/terminals/wezterm/term/src/terminal.rs`
-- Repo workflow and doc ownership:
-  - `AGENTS.md`
-  - `docs/WORKFLOW.md`
-  - `docs/INDEX.md`
 
 ### Constraints
 
 - Keep this file high-level only.
-- Detailed progress belongs in the owning files under `docs/todo/` and the relevant `app_architecture/` authority docs.
-- Do not work directly on `main`; treat it as merge-only and start active work on a branch from current `main`.
+- Detailed progress belongs in the owning files under `docs/todo/` and the
+  relevant `app_architecture/` authority docs.
+- Do not work directly on `main`; treat it as merge-only and start active work
+  on a branch from current `main`.
 - `.zide.lua` logging is agent-owned and should stay minimal and bug-scoped.
 - No CI; validation is local build/test plus manual verification.

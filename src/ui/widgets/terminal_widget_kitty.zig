@@ -182,8 +182,8 @@ pub const KittyState = struct {
             const dest = types.Rect{ .x = x, .y = y, .width = draw_w, .height = draw_h };
             if (r.backend == .metal) {
                 switch (image.format) {
-                    .rgb => _ = r.drawMetalRawImageRgb(@intCast(image.width), @intCast(image.height), image.data, dest, Color.white.toRgba()),
-                    .rgba => _ = r.drawMetalRawImageRgba(@intCast(image.width), @intCast(image.height), image.data, dest, Color.white.toRgba()),
+                    .rgb => _ = r.drawBackendRawImageRgb(@intCast(image.width), @intCast(image.height), image.data, dest, Color.white.toRgba()),
+                    .rgba => _ = r.drawBackendRawImageRgba(@intCast(image.width), @intCast(image.height), image.data, dest, Color.white.toRgba()),
                     .png => {},
                 }
                 continue;

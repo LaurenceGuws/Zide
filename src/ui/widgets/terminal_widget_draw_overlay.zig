@@ -305,7 +305,7 @@ pub fn drawOverlays(
 
                 var comp_col: usize = 0;
                 if (use_metal_row_fallback) {
-                    _ = r.drawMetalTerminalCellRun(&r.terminal_font, .{
+                    _ = r.drawBackendTerminalCellRun(&r.terminal_font, .{
                         .text = input.composing_text,
                         .x = cell_x,
                         .y = cell_y,

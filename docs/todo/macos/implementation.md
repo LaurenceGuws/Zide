@@ -1,7 +1,9 @@
 # macOS First-Class Implementation Journey
 
-This queue is now a derived execution lane under the broader native-host
-architecture direction in
+This queue is now a derived execution lane under the broader renderer backend
+contract campaign and the native-host architecture direction in
+`app_architecture/ui/RENDER_BACKEND_CONTRACT.md`,
+`app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md`,
 `app_architecture/platform/NATIVE_HOST_CONTRACT.md`,
 `app_architecture/platform/NATIVE_HOST_REFERENCE_CROSSCHECK.md`, and
 `app_architecture/platform/PLATFORM_CAPABILITY_MODEL.md`, and
@@ -23,7 +25,7 @@ This queue owns:
 
 This queue does not own:
 
-- the default repo-wide VT priority lane in `docs/AGENT_HANDOFF.md`
+- the default repo-wide backend-contract priority lane in `docs/AGENT_HANDOFF.md`
 - the shared native-host contract itself
 - general UI modularization that is not macOS-specific
 - speculative backend work that bypasses the shared native-host carve

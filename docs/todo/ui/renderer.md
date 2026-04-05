@@ -1,63 +1,103 @@
-# Renderer TODO
+# Renderer Backend Abstraction Queue
 
 ## Scope
 
-Renderer modularization and OS abstraction boundaries, with Linux SDL3 plus OpenGL as the stable baseline and Windows prep kept behind clear seams.
+Turn OpenGL and Metal into the two reference implementations for a
+best-in-class renderer backend abstraction.
+
+This queue is no longer just renderer modularization maintenance. It is the
+active execution lane for backend contract quality.
 
 ## Constraints
 
-- Extraction-only refactors unless explicitly re-scoped.
-- Keep OS window and input boundaries clear from renderer backend code.
-- Preserve widget behavior and keep diffs reviewable.
-- Run manual smoke checks after extraction steps.
+- OpenGL and Metal must converge toward one backend-neutral contract.
+- Do not add a Vulkan story until the shared contract is strong enough that the
+  implementation work is obvious.
+- Keep OS/native-host concerns separate from pure backend contract work.
+- Prefer reviewable backend-contract cuts over broad cleanup passes.
 
 ## Entry Points
 
+- `app_architecture/ui/RENDER_BACKEND_CONTRACT.md`
+- `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md`
+- `docs/research/RENDER_BACKEND_REFERENCE_SCAN_2026-04-05.md`
 - `src/ui/renderer.zig`
-- `src/app_shell.zig`
-- `src/main.zig`
+- `src/ui/renderer/gl_backend.zig`
+- `src/ui/renderer/metal_backend.zig`
+- `src/ui/renderer/retained_targets_runtime.zig`
 
 ## Status
 
-- [x] Extraction phase complete
-- [x] `zig build` check passed on 2026-01-31
+- [x] OpenGL and Metal both exist as real renderer lanes
+- [x] Capability truth is materially better than backend-label theater
+- [~] Shared draw contract has started moving out of Metal ownership
+- [ ] Shared draw/present contracts are still not backend-neutral end-to-end
+- [ ] Shared retained/presentable ownership is still not backend-neutral
+- [ ] `Renderer` still carries backend-native implementation state
 
-Status note, 2026-03-15:
+Status note, 2026-04-05:
 
-- This is no longer a high-churn execution queue.
-- The major renderer-path architectural work has already moved into the
-  terminal present and post-rewrite bug-hunting lanes.
-- Treat this file as a narrow maintenance queue for renderer modularization,
-  not as the main renderer roadmap.
+- This is now the main renderer roadmap.
+- The active standard is no longer "Metal works well enough."
+- The active standard is "OpenGL and Metal prove one strong backend contract."
 
-## Boundary Map
+## Campaign Goal
 
 ```mermaid
 flowchart LR
-    App["App shell / window host"] --> Renderer["Renderer facade"]
-    Renderer --> GL["OpenGL submission + scene/state"]
-    Renderer --> Widgets["Widget draw surfaces"]
-    Renderer --> Text["Font/text helpers"]
+    Contract["Shared Backend Contract"] --> GL["OpenGL Reference Impl"]
+    Contract --> Metal["Metal Reference Impl"]
+    Contract --> Vulkan["Future Vulkan Impl"]
 
-    App -. window/input lifecycle .-> Renderer
-    Renderer -. must not own app/terminal policy .-> App
+    Renderer["Renderer Host / Product Semantics"] --> Contract
+    Widgets["Widgets / Scene Publishers"] --> Renderer
+    Host["Native Host / Windowing"] --> Renderer
 ```
 
-## Extraction Trigger
+## Immediate Contradictions
 
-```mermaid
-flowchart TD
-    Block["renderer block under review"] --> Q1{"one responsibility?"}
-    Q1 -- yes --> Keep["keep in current owner"]
-    Q1 -- no --> Q2{"crosses platform vs renderer boundary?"}
-    Q2 -- yes --> Extract["extract to focused sub-owner"]
-    Q2 -- no --> Q3{"just residue micro-file churn?"}
-    Q3 -- yes --> Collapse["collapse back into stronger owner"]
-    Q3 -- no --> Keep
-```
+- [ ] Remove backend-native draw payloads from shared renderer state.
+- [ ] Replace GL-native retained target types in shared runtime code with a
+  backend-neutral presentable contract.
+- [ ] Move backend frame lifecycle dispatch behind a backend-owned seam instead
+  of branching inline in `Renderer`.
+- [ ] Shrink backend-specific convenience APIs on `Renderer` once stronger
+  neutral contracts exist.
+
+## Execution Order
+
+1. Define a shared surface draw contract outside `metal_backend.zig`, then make
+   both GL and Metal consume it.
+2. Define a shared presentable contract outside `gl_backend.zig`, then move
+   retained/direct/snapshot behavior behind it.
+3. Move backend frame begin/submit lifecycle into backend-owned dispatch
+   surfaces instead of keeping those code paths inline in `Renderer`.
+4. Delete backend-specific public renderer verbs after the neutral seams are
+   real and callers no longer need backend-shaped requests.
+
+Progress note, 2026-04-05:
+
+- `src/ui/renderer/surface_draw.zig` now owns the shared draw payload types.
+- Metal no longer owns the `SurfaceDraw` union definition.
+- The next step is to push real submission and caller flow through that shared
+  contract instead of leaving Metal-specific renderer verbs as the practical
+  API.
+
+## Live Contradiction Centers
+
+- `src/ui/renderer.zig`
+  - still owns backend-native state and inline backend dispatch
+- `src/ui/renderer/metal_backend.zig`
+  - still defines draw payloads carried by shared renderer state
+- `src/ui/renderer/gl_backend.zig`
+  - still defines the retained target type used by shared runtime code
+- `src/ui/renderer/retained_targets_runtime.zig`
+  - still depends on GL-native presentable storage
 
 ## Remaining Work
 
-- [ ] Only extract when a renderer block exceeds one responsibility or crosses platform and renderer boundaries.
-- [ ] Add focused tests once replay harness authority exists.
-- [ ] Revisit Windows smoke-build dependencies now that the native Zig-managed Windows path is the default.
+- [ ] Write and maintain the target contract and current-state contract as the
+  two active backend architecture references.
+- [ ] Use OpenGL and Metal as the proof pair for every structural backend cut.
+- [ ] Keep terminal/text execution work subordinate to the shared contract
+  instead of letting it redefine the backend architecture by momentum.

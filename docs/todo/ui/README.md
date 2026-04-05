@@ -4,7 +4,7 @@ This folder holds active UI and renderer implementation queues.
 
 Use it for:
 
-- renderer modularization and OS abstraction execution
+- renderer backend abstraction execution
 - widget modularization
 - font-rendering execution work
 - SDL3 migration cleanup
@@ -12,14 +12,14 @@ Use it for:
 
 Current high-signal entrypoints:
 
-- `rendering_scrutiny.md` — active SDL3/OpenGL renderer-center scrutiny queue
+- `renderer.md` — active OpenGL/Metal backend abstraction campaign
+- `rendering_scrutiny.md` — supporting SDL3/OpenGL renderer-center scrutiny queue
 - `window_scale_geometry.md` — active app-wide scale/geometry ownership lane
 - `terminal_special_glyphs.md` — sprite/special-glyph quality lane
 - `font_rendering.md` — remaining text-rendering quality work
 
 Maintenance or supporting queues:
 
-- `renderer.md` — mostly-complete renderer modularization with a small remaining maintenance tail
 - `widget_modularization.md` — mostly-complete extraction queue with a few remaining boundary/verification items
 - `sdl3_migration.md` — effectively closed except for small cleanup residue
 - `terminal_ligatures.md` — focused future quality lane, not active baseline hardening

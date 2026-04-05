@@ -393,7 +393,7 @@ fn drawMetalTerminalFallbackRun(
     const cell_x = base_x_local + @as(f32, @floatFromInt(@as(i32, @intCast(start_col)))) * cell_w;
     const cell_y = base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h;
     if (has_visible) {
-        _ = rr.drawMetalTerminalCellRun(&rr.terminal_font, .{
+        _ = rr.drawBackendTerminalCellRun(&rr.terminal_font, .{
             .text = run_buf[0..run_len_bytes],
             .x = cell_x,
             .y = cell_y,

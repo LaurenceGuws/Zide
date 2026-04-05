@@ -2,9 +2,16 @@
 
 Date: 2026-04-03
 
+Status note, 2026-04-05:
+
+- This lane is deferred as the repo-wide default focus.
+- Use `docs/deferred/VT_MATURITY_FOCUS.md` for the pause-state summary.
+- This file remains the owning authority for VT maturity when that lane is
+  resumed.
+
 ## Purpose
 
-This is the current terminal architecture authority for agents and
+This is the terminal architecture authority for agents and
 contributors.
 
 It replaces seam-hopping and local cleanup momentum with one explicit
@@ -15,9 +22,9 @@ indefinite priority:
 
 This is not a sequence of little wars.
 It is one continuous VT scrutiny war.
-It remains the default architecture focus until we can honestly say the live
-VT contract is at least as strong as our peer references in the dimensions
-that matter for a serious standalone library center.
+When this lane is active again, it remains the authority until we can honestly
+say the live VT contract is at least as strong as our peer references in the
+dimensions that matter for a serious standalone library center.
 
 Campaign exit criteria now live in:
 

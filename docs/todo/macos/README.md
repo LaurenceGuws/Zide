@@ -7,6 +7,7 @@ Use it for:
 - macOS-first-class product sequencing
 - native renderer/window/app-lifecycle bring-up tracking
 - macOS-specific validation and parity checkpoints
+- derived execution work under the shared renderer backend contract campaign
 
 Current high-signal entrypoint:
 

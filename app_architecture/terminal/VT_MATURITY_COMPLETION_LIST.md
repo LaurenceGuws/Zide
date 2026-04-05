@@ -2,6 +2,12 @@
 
 Date: 2026-04-03
 
+Status note, 2026-04-05:
+
+- This list remains the VT maturity exit-criteria authority, but the VT lane is
+  currently deferred as the repo-wide default focus.
+- Use `docs/deferred/VT_MATURITY_FOCUS.md` for the pause-state summary.
+
 ## Purpose
 
 Turn VT maturity purity into one explicit numbered completion list.

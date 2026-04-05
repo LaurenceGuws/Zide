@@ -1,6 +1,6 @@
 const std = @import("std");
+const surface_draw = @import("surface_draw.zig");
 const terminal_font_mod = @import("../terminal_font.zig");
-const metal_backend = @import("metal_backend.zig");
 const renderer_root = @import("../renderer.zig");
 const types = @import("types.zig");
 
@@ -85,8 +85,8 @@ pub fn atlasSampleForGlyph(
     pen_x: f32,
     pen_y: f32,
     tint: types.Rgba,
-    clip_rect: ?metal_backend.PixelClipRect,
-) ?metal_backend.AtlasSampleDraw {
+    clip_rect: ?surface_draw.PixelClipRect,
+) ?surface_draw.AtlasSampleDraw {
     const render_scale = if (renderer.scale.render_scale > 0.0) renderer.scale.render_scale else 1.0;
     const inv_scale = 1.0 / render_scale;
     const baseline = pen_y + font.baseline_from_top * inv_scale;
@@ -145,7 +145,7 @@ pub const TerminalCellRunRequest = struct {
     clip_rect: ?types.Rect = null,
 };
 
-pub fn pixelClipRect(renderer: *const Renderer, clip_rect: types.Rect) ?metal_backend.PixelClipRect {
+pub fn pixelClipRect(renderer: *const Renderer, clip_rect: types.Rect) ?surface_draw.PixelClipRect {
     const x0 = @as(i32, @intFromFloat(std.math.round(renderer.logicalLengthToRaster(clip_rect.x))));
     const y0 = @as(i32, @intFromFloat(std.math.round(renderer.logicalLengthToRaster(clip_rect.y))));
     const x1 = @as(i32, @intFromFloat(std.math.round(renderer.logicalLengthToRaster(clip_rect.x + clip_rect.width))));
@@ -191,7 +191,7 @@ pub fn appendUtf8Run(
     renderer: *const Renderer,
     font: *TerminalFont,
     request: SampleTextRequest,
-    draws: *std.ArrayListUnmanaged(metal_backend.SurfaceDraw),
+    draws: *std.ArrayListUnmanaged(surface_draw.SurfaceDraw),
     allocator: std.mem.Allocator,
 ) bool {
     if (request.text.len == 0) return false;
@@ -235,7 +235,7 @@ pub fn appendTerminalUtf8Cells(
     renderer: *const Renderer,
     font: *TerminalFont,
     request: TerminalCellRunRequest,
-    draws: *std.ArrayListUnmanaged(metal_backend.SurfaceDraw),
+    draws: *std.ArrayListUnmanaged(surface_draw.SurfaceDraw),
     allocator: std.mem.Allocator,
 ) bool {
     if (request.text.len == 0) return false;

@@ -1,6 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const macos_metal_host = @import("../../platform/macos_metal_host.zig");
+const surface_draw = @import("surface_draw.zig");
 const terminal_font = @import("../terminal_font.zig");
 const types = @import("types.zig");
 
@@ -32,12 +33,7 @@ const AtlasFragmentUniforms = extern struct {
     _padding: [3]u32 = .{ 0, 0, 0 },
 };
 
-pub const PixelClipRect = struct {
-    x: i32,
-    y: i32,
-    width: i32,
-    height: i32,
-};
+pub const PixelClipRect = surface_draw.PixelClipRect;
 
 const MTLRegion = extern struct {
     origin: MTLOrigin,
@@ -129,45 +125,12 @@ pub const GlyphAtlas = struct {
     diagnostic_seeded: bool,
 };
 
-pub const AtlasTextureSource = enum {
-    coverage,
-    color,
-};
-
-pub const AtlasSampleDraw = struct {
-    atlas: AtlasTextureSource = .color,
-    source_rect: types.Rect,
-    dest_x: i32,
-    dest_y: i32,
-    tint: types.Rgba = .{ .r = 255, .g = 255, .b = 255, .a = 255 },
-    clip_rect: ?PixelClipRect = null,
-};
-
-pub const RawImageTexture = struct {
-    texture: *anyopaque,
-    width: i32,
-    height: i32,
-};
-
-pub const RawImageDraw = struct {
-    texture: RawImageTexture,
-    source_rect: ?types.Rect = null,
-    dest_rect: types.Rect,
-    tint: types.Rgba = .{ .r = 255, .g = 255, .b = 255, .a = 255 },
-    clip_rect: ?PixelClipRect = null,
-};
-
-pub const SolidColorDraw = struct {
-    dest_rect: types.Rect,
-    color: types.Rgba,
-    clip_rect: ?PixelClipRect = null,
-};
-
-pub const SurfaceDraw = union(enum) {
-    atlas: AtlasSampleDraw,
-    raw_image: RawImageDraw,
-    solid: SolidColorDraw,
-};
+pub const AtlasTextureSource = surface_draw.AtlasTextureSource;
+pub const AtlasSampleDraw = surface_draw.AtlasSampleDraw;
+pub const RawImageTexture = surface_draw.RawImageTexture;
+pub const RawImageDraw = surface_draw.RawImageDraw;
+pub const SolidColorDraw = surface_draw.SolidColorDraw;
+pub const SurfaceDraw = surface_draw.SurfaceDraw;
 
 pub const BackendContext = struct {
     host: macos_metal_host.Host,

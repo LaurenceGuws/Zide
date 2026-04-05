@@ -51,10 +51,13 @@ Current default priority rule:
   focus outranks opportunistic repo reranks and side-war momentum
 - do not drift to another architecture lane unless the user explicitly directs
   it or the current focus is proven blocked by a stronger direct prerequisite
-- current repo focus is VT maturity purity until replaced by new authority
+- current repo focus is renderer backend contract quality until replaced by new
+  authority
 - treat that focus as one continuous scrutiny campaign; do not relabel each
   ranked front as a separate "war" unless the repo authority explicitly says
   the overall campaign itself has changed
+- when an older long-running focus is paused, move the focus summary into
+  `docs/deferred/` and remove it from session-default guidance
 
 ## Doc scope policy
 

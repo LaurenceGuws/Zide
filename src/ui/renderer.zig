@@ -9,6 +9,7 @@ const font_manager = @import("renderer/font_manager.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
 const gl_backend = @import("renderer/gl_backend.zig");
 const metal_backend = @import("renderer/metal_backend.zig");
+const surface_draw = @import("renderer/surface_draw.zig");
 const input_constants = @import("renderer/input_constants.zig");
 const clipboard = @import("renderer/clipboard.zig");
 const texture_utils = @import("renderer/texture_utils.zig");
@@ -504,7 +505,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     gl_context: ?sdl.SDL_GLContext,
     metal_backend_context: ?metal_backend.BackendContext,
     metal_frame: ?metal_backend.Frame,
-    metal_surface_draws: std.ArrayListUnmanaged(metal_backend.SurfaceDraw),
+    metal_surface_draws: std.ArrayListUnmanaged(surface_draw.SurfaceDraw),
     metal_debug_preview_source: AtlasPreviewSource,
     gl_resources_ready: bool,
     fonts_ready: bool,
@@ -1487,8 +1488,8 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
                             capture_readback = metal_backend.prepareFrameReadback(context, frame);
                         }
 
-                        for (self.metal_surface_draws.items) |surface_draw| {
-                            switch (surface_draw) {
+                        for (self.metal_surface_draws.items) |queued_draw| {
+                            switch (queued_draw) {
                                 .atlas => |sample| _ = metal_backend.drawAtlasSample(context, frame, sample),
                                 .solid => |solid| _ = metal_backend.drawSolidColor(context, frame, solid),
                                 .raw_image => |draw| _ = metal_backend.drawRawImage(context, frame, draw),
@@ -2007,8 +2008,8 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     }
 
     fn clearQueuedMetalSurfaceDraws(self: *Renderer) void {
-        for (self.metal_surface_draws.items) |*surface_draw| {
-            switch (surface_draw.*) {
+        for (self.metal_surface_draws.items) |*queued_draw| {
+            switch (queued_draw.*) {
                 .atlas => {},
                 .solid => {},
                 .raw_image => |*draw| metal_backend.deinitRawImageTexture(&draw.texture),
@@ -2033,12 +2034,12 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         return true;
     }
 
-    fn appendMetalAtlasSampleDraw(self: *Renderer, sample: metal_backend.AtlasSampleDraw) bool {
+    fn appendMetalAtlasSampleDraw(self: *Renderer, sample: surface_draw.AtlasSampleDraw) bool {
         self.metal_surface_draws.append(self.allocator, .{ .atlas = sample }) catch return false;
         return true;
     }
 
-    fn appendMetalRawImageDraw(self: *Renderer, draw: metal_backend.RawImageDraw) bool {
+    fn appendMetalRawImageDraw(self: *Renderer, draw: surface_draw.RawImageDraw) bool {
         self.metal_surface_draws.append(self.allocator, .{ .raw_image = draw }) catch {
             var texture = draw.texture;
             metal_backend.deinitRawImageTexture(&texture);
@@ -2047,9 +2048,9 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         return true;
     }
 
-    pub fn drawMetalTerminalSnapshotPresentable(
+    pub fn drawBackendTerminalSnapshotPresentable(
         self: *Renderer,
-        draw: metal_backend.RawImageDraw,
+        draw: surface_draw.RawImageDraw,
     ) bool {
         if (self.backend != .metal) return false;
         const context = self.metal_backend_context orelse return false;
@@ -2076,7 +2077,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         return self.appendMetalAtlasSampleDraw(sample);
     }
 
-    pub fn drawMetalAtlasSampleRequest(self: *Renderer, request: metal_text_sample_runtime.SampleTextRequest) bool {
+    pub fn drawBackendSampleTextRequest(self: *Renderer, request: metal_text_sample_runtime.SampleTextRequest) bool {
         if (self.backend != .metal) return false;
         if (self.plannedTextRenderingMode() != .metal_texture_atlas) return false;
         if (self.metal_backend_context == null) return false;
@@ -2092,7 +2093,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         );
     }
 
-    pub fn drawMetalTerminalCellRun(self: *Renderer, font: *terminal_font_mod.TerminalFont, request: metal_text_sample_runtime.TerminalCellRunRequest) bool {
+    pub fn drawBackendTerminalCellRun(self: *Renderer, font: *terminal_font_mod.TerminalFont, request: metal_text_sample_runtime.TerminalCellRunRequest) bool {
         if (self.backend != .metal) return false;
         if (self.plannedTextRenderingMode() != .metal_texture_atlas) return false;
         if (self.metal_backend_context == null) return false;
@@ -2106,7 +2107,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         );
     }
 
-    pub fn drawMetalRawImageRgba(self: *Renderer, width: i32, height: i32, data: []const u8, dest: types.Rect, tint: types.Rgba) bool {
+    pub fn drawBackendRawImageRgba(self: *Renderer, width: i32, height: i32, data: []const u8, dest: types.Rect, tint: types.Rgba) bool {
         if (self.backend != .metal) return false;
         const context = self.metal_backend_context orelse return false;
         if (width <= 0 or height <= 0) return false;
@@ -2129,7 +2130,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         });
     }
 
-    pub fn drawMetalRawImageRgb(self: *Renderer, width: i32, height: i32, data: []const u8, dest: types.Rect, tint: types.Rgba) bool {
+    pub fn drawBackendRawImageRgb(self: *Renderer, width: i32, height: i32, data: []const u8, dest: types.Rect, tint: types.Rgba) bool {
         if (self.backend != .metal) return false;
         const context = self.metal_backend_context orelse return false;
         if (width <= 0 or height <= 0) return false;
@@ -2153,7 +2154,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     }
 
     pub fn drawMetalAtlasSampleText(self: *Renderer, text: []const u8, x: f32, y: f32) bool {
-        return self.drawMetalAtlasSampleRequest(.{
+        return self.drawBackendSampleTextRequest(.{
             .text = text,
             .x = x,
             .y = y,
@@ -2448,7 +2449,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
                 metal_text_sample_runtime.pixelClipRect(self, clip)
             else
                 null;
-            const atlas_kind: ?metal_backend.AtlasTextureSource = switch (kind) {
+            const atlas_kind: ?surface_draw.AtlasTextureSource = switch (kind) {
                 .font_coverage => .coverage,
                 .rgba => .color,
                 else => null,

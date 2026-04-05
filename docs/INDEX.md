@@ -13,9 +13,8 @@ project landing page.
 Quick reading guide:
 
 - start with `docs/AGENT_HANDOFF.md` if you are joining an active work session
-- if you are doing architecture work, treat
-  `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md` as the current
-  default priority and bar for what counts
+- if you are doing architecture work, treat the renderer backend contract docs
+  as the current default priority and bar for what counts
 - use `docs/todo/` for current execution queues
 - use `app_architecture/` for current technical authority
 - use `docs/reference/`, `docs/research/`, and `docs/review/` for supporting material
@@ -24,9 +23,10 @@ Quick reading guide:
 - `docs/AGENT_HANDOFF.md` — current focus, constraints, and entrypoints.
 - `AGENTS.md` — workflow rules and constraints.
 - `docs/WORKFLOW.md` — doc roles and update rules.
-- `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md` — current
-  indefinite default architecture focus and the authority for what VT work
-  counts.
+- `app_architecture/ui/RENDER_BACKEND_CONTRACT.md` — current indefinite
+  default architecture focus and the target backend contract.
+- `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md` — current-state audit
+  for the same backend contract.
 
 ## Task tracking (source of truth)
 - `docs/todo/README.md` — active work-queue policy and ownership split.
@@ -40,10 +40,12 @@ Quick reading guide:
   - `docs/todo/editor/stress_and_reference.md` — editor stress-testing and cross-reference comparison queue.
   - `docs/todo/repo_structure.md` — non-product repo structure cleanup (tests, tools, stale docs/tests).
   - `docs/todo/file_layout.md` — file/folder layout cleanup queue (split large folders/files, collapse low-value micro-files).
+  - `docs/todo/ui/renderer.md` — active renderer backend abstraction campaign.
   - `docs/todo/terminal/vt_core_rearchitecture.md` — active VT maturity purity
-    queue; only continue when one named maturity contradiction is explicit.
+    queue; currently deferred as the repo-wide default focus.
   - `docs/todo/terminal/widget_scrutiny.md` — active native terminal widget
-    scrutiny queue for the host-side part of VT maturity.
+    scrutiny queue for the host-side part of VT maturity; currently deferred as
+    the repo-wide default focus.
   - `docs/todo/terminal/ffi_bridge.md` — terminal FFI/embedding contract maturation.
   - `docs/todo/terminal/ffi_host_migration.md` — mixed terminal/editor host migration follow-up.
   - `docs/todo/terminal/tabs.md` — terminal-only tab/workspace lifecycle follow-up.
@@ -60,6 +62,10 @@ Quick reading guide:
 - `app_architecture/platform/NATIVE_HOST_CONTRACT.md` — strict shared native
   host contract for lifecycle, surface, focus, IME, and present semantics.
 - `app_architecture/ui/DEVELOPMENT_JOURNEY.md` — renderer plan and per-OS journey.
+- `app_architecture/ui/RENDER_BACKEND_CONTRACT.md` — target backend
+  abstraction contract, with OpenGL and Metal as the reference implementations.
+- `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md` — current renderer
+  contract audit and ranked contradictions.
 - `app_architecture/platform/NATIVE_HOST_REFERENCE_CROSSCHECK.md` — current
   native-host architecture pressure: live SDL/GL truth versus macOS/Android
   native lifecycle and surface rules.
@@ -92,8 +98,8 @@ Quick reading guide:
 - `app_architecture/editor/LSP_THEME_OVERLAY_BOUNDARY.md` — deferred LSP/semantic-token overlay boundary for editor theming.
 - `app_architecture/terminal/DESIGN.md` — terminal architecture + decisions.
 - `app_architecture/terminal/TERMINAL_WORKSPACE.md` — backend tab/workspace ownership contract for terminal mode.
-- `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md` — current
-  terminal architecture priority and maturity campaign authority.
+- `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md` — deferred VT
+  maturity campaign authority; resume through `docs/deferred/VT_MATURITY_FOCUS.md`.
 - `app_architecture/terminal/VT_CORE_DESIGN.md` — exact target split for terminal core, transport, host session, snapshot, and FFI.
 - `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md` — finer subsystem-layer ownership map for host, transport, engine, publication, and presentation.
 - `app_architecture/terminal/TERMINAL_WIDGET_HOSTING_DESIGN.md` — target
@@ -130,6 +136,8 @@ Quick reading guide:
 - `docs/research/README.md` — research-doc placement and role.
 - `docs/research/APP_HYGIENE_REFERENCE_SCRUTINY_2026-04-01.md` — official-doc and reference-repo scrutiny for the app hygiene cleanup lane.
 - `docs/research/SDL_GL_RENDERER_SCRUTINY_2026-04-02.md` — SDL3/OpenGL renderer scrutiny brief for renderer ownership, host seam, scene/present drift, and backend maturity.
+- `docs/research/RENDER_BACKEND_REFERENCE_SCAN_2026-04-05.md` — initial
+  Ghostty/Zed pressure scan for the backend abstraction campaign.
 - `docs/research/editor/README.md` — editor research subtree entrypoint.
 - `docs/research/windows/README.md` — Windows shell/context-menu research subtree entrypoint.
 - `docs/research/editor/EDITOR_REFERENCE_COMPARISON_2026-03-18.md` — first focused editor reference comparison by concern.
@@ -167,6 +175,12 @@ Quick reading guide:
 Historical evidence remains under `docs/review/`, but most files there are no
 longer first-class navigation docs. Older completed rollout records are grouped
 under `docs/review/archive/`.
+
+## Deferred Focuses
+
+- `docs/deferred/README.md` — deferred focus index.
+- `docs/deferred/VT_MATURITY_FOCUS.md` — former repo-wide VT default focus,
+  now paused while backend abstraction quality takes priority.
 
 ## Quick Ownership Rules
 

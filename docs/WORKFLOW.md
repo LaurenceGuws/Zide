@@ -60,6 +60,8 @@ Current focus rule:
 - when that focus is a long-running architecture campaign, keep one stable
   campaign identity and treat named subtopics as fronts within it, not as a
   string of new wars
+- deferred older focus lanes should be recorded under `docs/deferred/` instead
+  of remaining ambiguous "current" priorities
 
 Doc-placement authority:
 

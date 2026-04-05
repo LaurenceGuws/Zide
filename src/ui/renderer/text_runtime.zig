@@ -127,7 +127,7 @@ fn drawMetalMonospaceTextFallback(
 ) bool {
     if (self.plannedTextRenderingMode() != .metal_texture_atlas) return false;
     if (text.len == 0) return false;
-    return self.drawMetalTerminalCellRun(&self.editor_font, .{
+    return self.drawBackendTerminalCellRun(&self.editor_font, .{
         .text = text,
         .x = x,
         .y = y,
@@ -266,7 +266,7 @@ fn drawMetalTerminalCodepointCellFallback(
     const encoded_len = std.unicode.utf8CodepointSequenceLength(scalar) catch return false;
     var buf: [4]u8 = undefined;
     _ = std.unicode.utf8Encode(scalar, buf[0..encoded_len]) catch return false;
-    return self.drawMetalTerminalCellRun(&self.terminal_font, .{
+    return self.drawBackendTerminalCellRun(&self.terminal_font, .{
         .text = buf[0..encoded_len],
         .x = x,
         .y = y,
@@ -301,7 +301,7 @@ fn drawMetalTerminalGraphemeCellFallback(
             len += encoded_len;
         }
     }
-    return self.drawMetalTerminalCellRun(&self.terminal_font, .{
+    return self.drawBackendTerminalCellRun(&self.terminal_font, .{
         .text = buf[0..len],
         .x = x,
         .y = y,
