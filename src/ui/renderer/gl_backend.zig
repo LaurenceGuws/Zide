@@ -483,6 +483,8 @@ pub fn destroyRenderTarget(target: *?RenderTarget) void {
 }
 
 pub fn deinitRuntime(renderer: anytype) void {
+    deinitPresentables(renderer);
+    destroyRenderTarget(&renderer.opengl_runtime.scene_target.target);
     if (renderer.opengl_runtime.resources_ready and renderer.opengl_runtime.white_texture.id != 0) {
         gl.DeleteTextures(1, &renderer.opengl_runtime.white_texture.id);
     }

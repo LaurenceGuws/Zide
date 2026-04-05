@@ -185,6 +185,9 @@ Progress note, 2026-04-05:
   presentable contract instead of bypassing it to call a scene-runtime restore
   helper directly, and the OpenGL composition-target restore logic now lives
   with the OpenGL presentable implementation instead of shared scene runtime.
+- OpenGL presentable and scene-target teardown now also lives under
+  `gl_backend.deinitRuntime()` instead of `Renderer.deinit()` explicitly
+  orchestrating that cleanup first.
 - The next lifecycle step is to reduce shared-runtime ownership of dispatch and
   backend-native frame state, not just move code blocks around.
 

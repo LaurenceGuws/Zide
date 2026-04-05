@@ -783,9 +783,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     }
 
     pub fn deinit(self: *Renderer) void {
-        presentable_targets_runtime.deinit(self);
-        self.destroyRenderTarget(&self.opengl_runtime.scene_target.target);
-
         if (self.fonts_ready) {
             self.app_font.deinit();
             self.editor_font.deinit();

@@ -207,6 +207,11 @@ contract just to call a shared scene-runtime restore helper. The restore logic
 now lives under the OpenGL presentable implementation, and the widget-facing
 terminal presenter ends presentables through the contract again.
 
+That has improved slightly again on teardown ownership too: OpenGL presentable
+and scene-target cleanup no longer runs from `Renderer.deinit()` before backend
+shutdown. That teardown now lives under `gl_backend.deinitRuntime()`, which is
+closer to the contract we want.
+
 ### 3. The shared draw queue is still Metal-native
 
 The shared renderer currently stores and submits
