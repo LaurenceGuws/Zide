@@ -752,7 +752,9 @@ lane.
       without being claimed as runtime-proven yet
     - the Metal terminal diagnostic runtime now has explicit no-Kitty,
       mutation-frame, and scroll-frame env hooks for pushing that lane under
-      future targeted proof runs without having to hand-edit the runtime again
+      future targeted proof runs without having to hand-edit the runtime
+      again; the scroll fixture now seeds real overflow history rather than
+      fake cursor-positioned rows
     - this reduces one more retained-first contradiction before a second
       Metal terminal presentation shape is introduced
 

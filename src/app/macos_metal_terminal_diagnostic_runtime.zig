@@ -55,9 +55,16 @@ pub fn run(allocator: std.mem.Allocator) !void {
 
     if (!(try session_runtime.enqueueExternalBytes(
         session,
-        "\x1b[H1| build one\x1b[2;1H2| item two\x1b[3;1H3| plain ascii\x1b[4;1H4| fallback row\x1b[5;1H5| metal lane\x1b[6;1H6| terminal ok\x1b[7;1H7| history one\x1b[8;1H8| history two\x1b[9;1H9| history three\x1b[10;1H10| history four",
+        "\x1b[H1| build one\x1b[2;1H2| item two\x1b[3;1H3| plain ascii\x1b[4;1H4| fallback row\x1b[5;1H5| metal lane\x1b[6;1H6| terminal ok",
     ))) return error.MetalTerminalDiagnosticSeedRejected;
     try session_runtime.poll(session);
+    if (scroll_frame != std.math.maxInt(u64)) {
+        if (!(try session_runtime.enqueueExternalBytes(
+            session,
+            "\n7| history one\n8| history two\n9| history three\n10| history four",
+        ))) return error.MetalTerminalDiagnosticScrollSeedRejected;
+        try session_runtime.poll(session);
+    }
     if (!disable_kitty) try seedDiagnosticKittyImages(session);
 
     var widget = terminal_session_bootstrap.initWidget(session, .kitty, false, false);

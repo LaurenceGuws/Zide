@@ -760,10 +760,11 @@ What this does and does not mean:
   partially redrawn frames reuse cached Kitty content without ambiguity
 - current validation truth is still compile-first for this new seam: the
   dedicated Metal terminal diagnostic now has deterministic no-Kitty mutation
-  and scroll knobs for exercising the lane, but the current fixtures still
-  resolve either to full redraw or to steady-state snapshot fast-present, so
-  `direct_snapshot_update` is implemented and wired without being claimed as
-  runtime-proven yet
+  and scroll knobs for exercising the lane, and the scroll fixture now seeds
+  real overflow history instead of fake cursor-positioned rows, but the
+  current fixtures still resolve either to full redraw or to steady-state
+  snapshot fast-present, so `direct_snapshot_update` is implemented and wired
+  without being claimed as runtime-proven yet
 - that preparation contract is now aligned with capture truth as well:
   the target runtime prepares drawable-sized Metal snapshot presentables
   instead of using terminal-surface geometry while submit-time capture
