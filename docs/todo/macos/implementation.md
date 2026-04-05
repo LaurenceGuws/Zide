@@ -750,10 +750,14 @@ lane.
       `assignDirtyRows` / `assignDirtySpans` copy partial row/span damage when
       `view.dirty == partial` even if `visible_history_changed` is true, instead
       of widening to all rows at full width from that flag alone
-    - `direct_snapshot_update` is still wired; use the Metal terminal
-      diagnostic env hooks (`DISABLE_KITTY`, `PARTIAL_UPDATE_FRAME`, plus
-      mutation/scroll knobs) to chase `metric_present_sample=direct_snapshot_update`
-      now that the redundant publish path is fixed
+    - `direct_snapshot_update` is now runtime-proven on the Metal terminal
+      diagnostic: `DISABLE_KITTY` plus `PARTIAL_UPDATE_FRAME` on a
+      single-cell mutation frame yields `metric_present_sample=direct_snapshot_update`
+      and minimal grid fallback work on that frame; publication fixes above are
+      paired with presentation-plan fixes (`decideFullFrameFastPath` damage-bbox
+      thresholding when row marks are conservative, and recording presentation
+      geometry on the direct path via `notePresentationUpdated` so `planUpdate`
+      does not spuriously force full redraws)
     - the Metal terminal diagnostic runtime disables default recent-input
       force-full policy, removes the fake composing input stub, and disables
       texture-shift planning when `PARTIAL_UPDATE_FRAME` is set; the scroll
@@ -764,9 +768,9 @@ lane.
 
 ## Immediate Next Pass
 
-1. Replace backend-first platform wording in the architecture docs with shared
-   native-host wording and an explicit capability model.
-2. Keep build/report vocabulary honest about the difference between host truth
-   and the current runtime graphics path.
-3. Then return to `MAC-02` / `MAC-03` with the new shared contract as the
-   pressure source.
+1. Close the documentation gap for `MAC-04` / `MAC-05` against what is already
+   landed (lifecycle + Metal migration narrative), without re-auditing from zero.
+2. Push the normal app frame loop toward honest `.metal` submission (`MAC-07`)
+   once partial terminal presentation is stable on diagnostics.
+3. Keep `docs/AGENT_HANDOFF.md` in mind: macOS work stays deferrable unless it
+   unblocks the default VT maturity lane.

@@ -41,6 +41,38 @@ pub const PresentationGeometry = struct {
     viewport_h: f32 = 0.0,
 };
 
+pub fn computePresentationSurfaceGeometry(
+    renderer: anytype,
+    terminal_view: view_state.TerminalViewModel,
+    width: f32,
+    height: f32,
+) PresentationGeometry {
+    var geometry: PresentationGeometry = .{};
+    const rows = terminal_view.rows;
+    const cols = terminal_view.cols;
+    if (rows == 0 or cols == 0) return geometry;
+
+    const geom = renderer.terminalCellGeometry();
+    geometry.cell_w_i = geom.cell_width_device_px;
+    geometry.cell_h_i = geom.cell_height_device_px;
+    geometry.padding_x_i = @max(2, @divTrunc(geometry.cell_w_i, 2));
+    geometry.render_scale = 1.0 / renderer.devicePixelStep();
+
+    const scale = geometry.render_scale;
+    geometry.surface_w = @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(geometry.cell_w_i * @as(i32, @intCast(cols)) + geometry.padding_x_i)) / scale)));
+    geometry.surface_h = @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(geometry.cell_h_i * @as(i32, @intCast(rows)))) / scale)));
+
+    const clip_w = @min(width, geom.cell_width_logical_exact * @as(f32, @floatFromInt(cols)));
+    const clip_h = @min(height, geom.cell_height_logical_exact * @as(f32, @floatFromInt(rows)));
+    const visible_cols: i32 = if (geom.cell_width_logical_exact > 0) @intFromFloat(std.math.floor(clip_w / geom.cell_width_logical_exact)) else 0;
+    const visible_rows: i32 = if (geom.cell_height_logical_exact > 0) @intFromFloat(std.math.floor(clip_h / geom.cell_height_logical_exact)) else 0;
+    geometry.visible_w = @intFromFloat(std.math.round(@as(f32, @floatFromInt(visible_cols * geom.cell_width_device_px)) / scale));
+    geometry.visible_h = @intFromFloat(std.math.round(@as(f32, @floatFromInt(visible_rows * geom.cell_height_device_px)) / scale));
+    geometry.viewport_w = @as(f32, @floatFromInt(geometry.visible_w));
+    geometry.viewport_h = @as(f32, @floatFromInt(geometry.visible_h));
+    return geometry;
+}
+
 pub const PresentationPresentState = struct {
     updated: bool = false,
     target_available: bool = false,
@@ -1064,6 +1096,8 @@ pub fn tryFastPresentExisting(
             note_present,
         );
     }
+    const pres_geom = computePresentationSurfaceGeometry(renderer, terminal_view, width, height);
+    surface_state.notePresentationUpdated(terminal_view, pres_geom);
     return true;
 }
 
@@ -1121,7 +1155,6 @@ pub fn directPresent(
         view_geometry.viewport_height,
     );
     scene_frame_runtime.noteTerminalPresentation(renderer, terminal_view.generation);
-    self.surface.noteDirectPresentationReady(terminal_view);
 
     const bg_phase_start = app_shell.getTime();
     renderer.beginTerminalBatch();
@@ -1195,6 +1228,8 @@ pub fn directPresent(
         result.kitty_ms += time_utils.secondsToMs(app_shell.getTime() - kitty_phase_start);
     }
 
+    const pres_geom = computePresentationSurfaceGeometry(renderer, terminal_view, width, height);
+    self.surface.notePresentationUpdated(terminal_view, pres_geom);
     return result;
 }
 
@@ -1288,7 +1323,7 @@ pub fn tryDirectSnapshotUpdate(
     );
     if (!result.completed) return result;
     scene_frame_runtime.noteTerminalPresentation(renderer, terminal_view.generation);
-    self.surface.noteDirectPresentationReady(terminal_view);
+    self.surface.notePresentationUpdated(terminal_view, surface_update_plan.geometry);
     return result;
 }
 
@@ -1313,24 +1348,7 @@ pub fn planUpdate(
     const cols = terminal_view.cols;
     if (rows == 0 or cols == 0) return plan;
 
-    const geom = renderer.terminalCellGeometry();
-    plan.geometry.cell_w_i = geom.cell_width_device_px;
-    plan.geometry.cell_h_i = geom.cell_height_device_px;
-    plan.geometry.padding_x_i = @max(2, @divTrunc(plan.geometry.cell_w_i, 2));
-    plan.geometry.render_scale = 1.0 / renderer.devicePixelStep();
-
-    const scale = plan.geometry.render_scale;
-    plan.geometry.surface_w = @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(plan.geometry.cell_w_i * @as(i32, @intCast(cols)) + plan.geometry.padding_x_i)) / scale)));
-    plan.geometry.surface_h = @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(plan.geometry.cell_h_i * @as(i32, @intCast(rows)))) / scale)));
-
-    const clip_w = @min(width, geom.cell_width_logical_exact * @as(f32, @floatFromInt(cols)));
-    const clip_h = @min(height, geom.cell_height_logical_exact * @as(f32, @floatFromInt(rows)));
-    const visible_cols: i32 = if (geom.cell_width_logical_exact > 0) @intFromFloat(std.math.floor(clip_w / geom.cell_width_logical_exact)) else 0;
-    const visible_rows: i32 = if (geom.cell_height_logical_exact > 0) @intFromFloat(std.math.floor(clip_h / geom.cell_height_logical_exact)) else 0;
-    plan.geometry.visible_w = @intFromFloat(std.math.round(@as(f32, @floatFromInt(visible_cols * geom.cell_width_device_px)) / scale));
-    plan.geometry.visible_h = @intFromFloat(std.math.round(@as(f32, @floatFromInt(visible_rows * geom.cell_height_device_px)) / scale));
-    plan.geometry.viewport_w = @as(f32, @floatFromInt(plan.geometry.visible_w));
-    plan.geometry.viewport_h = @as(f32, @floatFromInt(plan.geometry.visible_h));
+    plan.geometry = computePresentationSurfaceGeometry(renderer, terminal_view, width, height);
 
     const recreated = presentation_target_runtime.ensurePresentable(renderer, plan.geometry.surface_w, plan.geometry.surface_h);
     const presentation_delta = surface_state.presentationUpdateDelta(terminal_view, plan.geometry);

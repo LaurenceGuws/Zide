@@ -300,6 +300,33 @@ pub fn decideFullFrameFastPath(
         };
     }
 
+    // Row marks can be conservatively dense (for example visible-history republish paths)
+    // while `cache.damage` stays tight. Using only the dirty-row union for the fast-path
+    // threshold would promote almost every frame to a full redraw and defeat direct
+    // snapshot partial updates on the Metal terminal lane.
+    // Do not require `viewport_shift_rows == 0`: the cache can still carry a non-zero
+    // line delta from the publication plan when texture scroll is disabled or failed,
+    // while `shifted_rows` (actual shifted presentable rows) stays zero.
+    if (shifted_rows == 0 and
+        !shift_requires_fullwidth_partial and
+        !blink_requires_partial and
+        cache.damage.end_row >= cache.damage.start_row and
+        cache.damage.end_col >= cache.damage.start_col)
+    {
+        const dr = cache.damage.end_row - cache.damage.start_row + 1;
+        const dc = cache.damage.end_col - cache.damage.start_col + 1;
+        const bbox_cells = dr * dc;
+        const threshold_hit = if (total_cells > 0)
+            @as(f64, @floatFromInt(bbox_cells)) / @as(f64, @floatFromInt(total_cells)) >= threshold
+        else
+            false;
+        return .{
+            .union_cells = bbox_cells,
+            .total_cells = total_cells,
+            .threshold_hit = threshold_hit,
+        };
+    }
+
     const shift_up = viewport_shift_rows > 0;
     var min_row: usize = rows;
     var max_row: usize = 0;
@@ -574,4 +601,78 @@ fn addBlinkRowsToPartialPlan(
             );
         }
     }
+}
+
+test "decideFullFrameFastPath uses damage bbox when dirty rows are conservative" {
+    const allocator = std.testing.allocator;
+    var cache = RenderCache.init();
+    defer cache.deinit(allocator);
+
+    const rows: usize = 8;
+    const cols: usize = 28;
+    try cache.cells.resize(allocator, rows * cols);
+    try cache.dirty_rows.resize(allocator, rows);
+    @memset(cache.dirty_rows.items, true);
+    try cache.row_dirty_span_counts.resize(allocator, rows);
+    @memset(cache.row_dirty_span_counts.items, 0);
+    try cache.row_dirty_span_overflow.resize(allocator, rows);
+    @memset(cache.row_dirty_span_overflow.items, false);
+    try cache.row_dirty_spans.resize(allocator, rows);
+    for (cache.row_dirty_spans.items) |*row_spans| {
+        for (row_spans) |*span| {
+            span.* = .{ .start = @intCast(cols), .end = 0 };
+        }
+    }
+    try cache.dirty_cols_start.resize(allocator, rows);
+    @memset(cache.dirty_cols_start.items, 0);
+    try cache.dirty_cols_end.resize(allocator, rows);
+    for (cache.dirty_cols_end.items) |*end| {
+        end.* = if (cols > 0) @intCast(cols - 1) else 0;
+    }
+
+    cache.rows = rows;
+    cache.cols = cols;
+    cache.dirty = .partial;
+    cache.damage = .{ .start_row = 7, .end_row = 7, .start_col = 27, .end_col = 27 };
+
+    const d = decideFullFrameFastPath(&cache, 0, 0, false, false, 0.85);
+    try std.testing.expect(!d.threshold_hit);
+    try std.testing.expectEqual(@as(usize, 1), d.union_cells);
+}
+
+test "decideFullFrameFastPath uses row union when blink forces row-wide partial work" {
+    const allocator = std.testing.allocator;
+    var cache = RenderCache.init();
+    defer cache.deinit(allocator);
+
+    const rows: usize = 8;
+    const cols: usize = 28;
+    try cache.cells.resize(allocator, rows * cols);
+    try cache.dirty_rows.resize(allocator, rows);
+    @memset(cache.dirty_rows.items, true);
+    try cache.row_dirty_span_counts.resize(allocator, rows);
+    @memset(cache.row_dirty_span_counts.items, 0);
+    try cache.row_dirty_span_overflow.resize(allocator, rows);
+    @memset(cache.row_dirty_span_overflow.items, false);
+    try cache.row_dirty_spans.resize(allocator, rows);
+    for (cache.row_dirty_spans.items) |*row_spans| {
+        for (row_spans) |*span| {
+            span.* = .{ .start = @intCast(cols), .end = 0 };
+        }
+    }
+    try cache.dirty_cols_start.resize(allocator, rows);
+    @memset(cache.dirty_cols_start.items, 0);
+    try cache.dirty_cols_end.resize(allocator, rows);
+    for (cache.dirty_cols_end.items) |*end| {
+        end.* = if (cols > 0) @intCast(cols - 1) else 0;
+    }
+
+    cache.rows = rows;
+    cache.cols = cols;
+    cache.dirty = .partial;
+    cache.damage = .{ .start_row = 7, .end_row = 7, .start_col = 27, .end_col = 27 };
+
+    const d = decideFullFrameFastPath(&cache, 0, 0, false, true, 0.85);
+    try std.testing.expect(d.threshold_hit);
+    try std.testing.expectEqual(@as(usize, rows * cols), d.union_cells);
 }

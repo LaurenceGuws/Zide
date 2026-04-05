@@ -767,6 +767,15 @@ What this does and does not mean:
   `view.dirty == partial` even when `visible_history_changed` is true, instead
   of expanding to every row at full width from that flag alone (which pushed
   `decideFullFrameFastPath` over the full-frame threshold)
+- two more presentation-plan bugs blocked `direct_snapshot_update` even when
+  the published cache was honestly `partial` with tight `damage`: the
+  full-frame fast-path heuristic now prefers the published damage bounding box
+  when texture scroll rows are not actually applied and blink is not forcing
+  row-wide partial work, instead of treating conservatively dense `dirty_rows`
+  as proof the union covers ~85% of the grid; the direct Metal path now calls
+  `notePresentationUpdated` (including after snapshot fast-present) so
+  `presentationUpdateDelta` no longer reports perpetual `cell_metrics_changed`
+  from stale zeroed cell-metric baselines the first time `planUpdate` runs
 - the Metal terminal diagnostic runtime disables the default recent-input
   force-full publication policy, drops the old fake IME/composing input stub,
   and when `ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_PARTIAL_UPDATE_FRAME` is set
@@ -774,10 +783,11 @@ What this does and does not mean:
   lacks `scrollPresentable`) and can enqueue a single-cell mutation on the
   chosen frame; pair with `ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_DISABLE_KITTY`
   for a no-Kitty partial attempt
-- `direct_snapshot_update` remains implemented end-to-end; confirming
-  `metric_present_sample=direct_snapshot_update` on the dedicated diagnostic
-  under those hooks is the next runtime proof step now that publication is less
-  self-defeating
+- runtime proof: with `ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_DISABLE_KITTY=1` and
+  `ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_PARTIAL_UPDATE_FRAME` pointing at a
+  single-cell mutation frame, the diagnostic reports
+  `metric_present_sample=direct_snapshot_update` and tight grid fallback counts
+  (for example `grid_runs=1/1` for one ASCII cell) on the partial frame
 - that preparation contract is now aligned with capture truth as well:
   the target runtime prepares drawable-sized Metal snapshot presentables
   instead of using terminal-surface geometry while submit-time capture
