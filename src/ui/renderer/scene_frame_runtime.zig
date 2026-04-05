@@ -186,11 +186,13 @@ pub fn noteRetainedSurfaceUpdate(self: anytype, surface: RetainedSurfaceKind) vo
 pub fn noteRetainedSurfaceBlit(self: anytype, surface: RetainedSurfaceKind, generation: ?u64) void {
     switch (surface) {
         .editor => self.present.trace_current.editor_surface_blit_count += 1,
-        .terminal => {
-            self.present.trace_current.terminal_surface_blit_count += 1;
-            if (generation) |value| self.present.trace_current.terminal_surface_generation = value;
-        },
+        .terminal => noteTerminalPresentation(self, generation),
     }
+}
+
+pub fn noteTerminalPresentation(self: anytype, generation: ?u64) void {
+    self.present.trace_current.terminal_surface_blit_count += 1;
+    if (generation) |value| self.present.trace_current.terminal_surface_generation = value;
 }
 
 pub fn noteRetainedSurfaceEnded(self: anytype, surface: RetainedSurfaceKind) void {

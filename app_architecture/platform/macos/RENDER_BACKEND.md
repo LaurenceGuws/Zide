@@ -721,6 +721,12 @@ What this does and does not mean:
   terminal draw-latency surface as well, so non-diagnostic terminal runs can
   distinguish a full direct draw from snapshot fast-present reuse without
   depending on the dedicated Metal terminal diagnostic runtime
+- the submission/retirement contract is now honest for this lane too:
+  direct full draws and direct snapshot fast-presents both mark the submitted
+  terminal generation in the frame trace, so publication retirement no longer
+  depends on retained-surface-only evidence and the handoff logs now advance
+  from `presented=0` to the live generation after the first successful Metal
+  terminal frame
 - the underlying storage contract is less retained-first now too: the terminal
   widget state container and partial-plan type are named around presentation
   rather than retained state, which reduces one more place where the direct

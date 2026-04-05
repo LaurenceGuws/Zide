@@ -7,6 +7,7 @@ const draw_presentation = @import("terminal_widget_draw_presentation.zig");
 const presentation_state_mod = @import("terminal_widget_presentation_state.zig");
 const view_state = @import("terminal_widget_view_state.zig");
 const presentation_target_runtime = @import("terminal_widget_presentation_target_runtime.zig");
+const scene_frame_runtime = @import("../renderer/scene_frame_runtime.zig");
 const draw_grid = @import("terminal_widget_draw_grid.zig");
 const publication_capture = @import("../../terminal/core/publication/render_cache.zig");
 const app_shell = @import("../../app_shell.zig");
@@ -1008,6 +1009,7 @@ pub fn directPresent(
         view_geometry.viewport_width,
         view_geometry.viewport_height,
     );
+    scene_frame_runtime.noteTerminalPresentation(renderer, terminal_view.generation);
     self.surface.noteDirectPresentationReady(terminal_view);
 
     const bg_phase_start = app_shell.getTime();

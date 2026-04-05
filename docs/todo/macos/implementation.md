@@ -447,6 +447,10 @@ lane.
       draw-latency surface, so non-diagnostic terminal runs can distinguish a
       full direct draw from snapshot fast-present reuse without relying only
       on the dedicated Metal terminal diagnostic runtime
+    - direct full draws and direct snapshot fast-presents now both mark the
+      submitted terminal generation in the frame trace, so terminal
+      publication retirement no longer depends on retained-surface-only
+      evidence on this lane
     - the underlying terminal widget storage contract is less retained-first
       now too: the state container and partial-plan type are named around
       presentation instead of retained state, which reduces another place
@@ -712,8 +716,9 @@ lane.
       `terminal_present=direct_main_target`, `presentable_ready=1` after the
       first successful frame, `snapshot_available=1` after frame 0,
       frame-0 `metric_present_sample=direct_main_target`, steady-state
-      `metric_present_sample=direct_snapshot_presentable`, and non-zero
-      frame-0 `kitty_ms`
+      `metric_present_sample=direct_snapshot_presentable`, non-zero frame-0
+      `kitty_ms`, and `presented=2` in handoff logs after the first submitted
+      frame
     - this reduces one more retained-first contradiction before a second
       Metal terminal presentation shape is introduced
 

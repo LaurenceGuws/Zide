@@ -22,6 +22,7 @@ pub fn endPresentable(renderer: anytype) void {
 
 pub fn drawPresentable(renderer: anytype, draw: PresentableDraw) void {
     if (renderer.backend == .metal) {
+        scene_frame_runtime.noteTerminalPresentation(renderer, draw.generation);
         _ = renderer.drawMetalTerminalSnapshotPresentable(.{
             .texture = undefined,
             .dest_rect = .{
