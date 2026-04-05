@@ -627,6 +627,9 @@ What this does and does not mean:
   too, split between grid-driven row runs and overlay-driven row runs, so this
   lane has direct terminal-widget proof instead of only indirect architecture
   claims
+- those same counts now flow into the live terminal frame-metrics surface, so
+  Metal row-run fallback activity is queryable without relying only on the
+  visible-view debug dump path
 - this is still intentionally narrow and honest: it is now a tiny sampled
   multiline ASCII run with an explicit monospace-cell option rather than a
   claim that the generic string/text renderer has already migrated

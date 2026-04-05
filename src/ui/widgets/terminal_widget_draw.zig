@@ -102,6 +102,10 @@ pub fn drawPrepared(
             overlay_ms,
             render_ms,
             draw_ms_total,
+            self.debug.last_metal_terminal_fallback.grid_row_runs,
+            self.debug.last_metal_terminal_fallback.grid_row_cells,
+            self.debug.last_metal_terminal_fallback.overlay_row_runs,
+            self.debug.last_metal_terminal_fallback.overlay_row_cells,
         );
     }
 

@@ -13,6 +13,10 @@ pub const FrameLatencyMetrics = struct {
     overlay_ms: f64 = 0.0,
     render_ms: f64 = 0.0,
     draw_ms: f64 = 0.0,
+    metal_grid_row_runs: usize = 0,
+    metal_grid_row_cells: usize = 0,
+    metal_overlay_row_runs: usize = 0,
+    metal_overlay_row_cells: usize = 0,
 };
 
 var frame_latency_seq: u64 = 0;
@@ -36,6 +40,10 @@ pub fn publishFrameLatencyMetrics(
     overlay_ms: f64,
     render_ms: f64,
     draw_ms: f64,
+    metal_grid_row_runs: usize,
+    metal_grid_row_cells: usize,
+    metal_overlay_row_runs: usize,
+    metal_overlay_row_cells: usize,
 ) void {
     frame_latency_seq +%= 1;
     frame_latency_metrics = .{
@@ -53,5 +61,9 @@ pub fn publishFrameLatencyMetrics(
         .overlay_ms = overlay_ms,
         .render_ms = render_ms,
         .draw_ms = draw_ms,
+        .metal_grid_row_runs = metal_grid_row_runs,
+        .metal_grid_row_cells = metal_grid_row_cells,
+        .metal_overlay_row_runs = metal_overlay_row_runs,
+        .metal_overlay_row_cells = metal_overlay_row_cells,
     };
 }

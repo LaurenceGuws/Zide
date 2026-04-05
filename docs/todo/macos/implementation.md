@@ -367,6 +367,9 @@ lane.
     - the terminal debug capture surface now records Metal row-run fallback
       usage separately for grid and overlay callers, so these terminal-facing
       integrations have direct debug proof instead of only architecture notes
+    - those same grid/overlay Metal row-run counts now flow into the live
+      terminal frame-metrics surface, so fallback activity is queryable
+      without relying only on the visible-view debug dump path
     - the narrow Metal text lane now covers a tiny multiline ASCII run, not
       just a single flat row
     - the diagnostic/runtime callers now use the explicit monospace-cell
