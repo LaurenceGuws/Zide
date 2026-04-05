@@ -34,7 +34,7 @@ pub fn beginFrame(renderer: anytype) void {
 }
 
 pub fn submitFrame(renderer: anytype) scene_frame_runtime.FrameSubmission {
-    defer renderer.clearQueuedSurfaceDraws();
+    defer metal_backend.clearQueuedSurfaceDraws(renderer);
     const present_start = sdl_api.getPerformanceCounter();
     const succeeded = if (renderer.metal_runtime.backend_context) |*context|
         if (renderer.metal_runtime.frame) |*frame| inner: {

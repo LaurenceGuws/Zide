@@ -1022,7 +1022,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     }
 
     fn applyFontScale(self: *Renderer) !void {
-        self.clearMetalDiagnosticFont();
+        metal_backend.clearDiagnosticFont(self);
         try font_runtime.applyFontScale(self);
     }
 
@@ -1764,29 +1764,11 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         return font;
     }
 
-    pub fn clearMetalDiagnosticFont(self: *Renderer) void {
-        if (self.metal_runtime.diagnostic_font) |*font| {
-            font.deinit();
-            self.metal_runtime.diagnostic_font = null;
-        }
-    }
-
     fn ensureMetalDiagnosticFont(self: *Renderer) !*terminal_font_mod.TerminalFont {
         if (self.metal_runtime.backend_context == null) return error.MetalBackendContextUnavailable;
         if (self.metal_runtime.diagnostic_font) |*font| return font;
         self.metal_runtime.diagnostic_font = try self.initMetalDiagnosticFont();
         return &self.metal_runtime.diagnostic_font.?;
-    }
-
-    pub fn clearQueuedSurfaceDraws(self: *Renderer) void {
-        for (self.metal_runtime.queued_surface_draws.items) |*queued_draw| {
-            switch (queued_draw.*) {
-                .atlas => {},
-                .solid => {},
-                .raw_image => |*draw| metal_backend.deinitRawImageTexture(&draw.texture),
-            }
-        }
-        self.metal_runtime.queued_surface_draws.clearRetainingCapacity();
     }
 
     fn appendMetalSolidRect(self: *Renderer, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) bool {
@@ -1941,7 +1923,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     pub fn runMacosMetalAtlasUploadDiagnosticAt(self: *Renderer, dest_x: i32, dest_y: i32) bool {
         if (self.backend != .metal) return false;
         if (self.metal_runtime.backend_context == null) return false;
-        self.clearQueuedSurfaceDraws();
+        metal_backend.clearQueuedSurfaceDraws(self);
         self.metal_debug_preview_source = .unavailable;
 
         const font = self.ensureMetalDiagnosticFont() catch return false;
@@ -1960,7 +1942,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             self.metal_debug_preview_source = .uploaded_coverage_glyph;
         }
         if (color_preview_rect) |rect| {
-            self.clearQueuedSurfaceDraws();
+            metal_backend.clearQueuedSurfaceDraws(self);
             _ = self.appendMetalAtlasSampleDraw(.{
                 .atlas = .color,
                 .source_rect = rect,

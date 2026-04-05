@@ -84,6 +84,10 @@ through backend modules instead of `Renderer.init()` and
 `runStartupBackendSmoke()` spelling out both OpenGL and Metal boot logic
 inline.
 
+This has improved slightly again: Metal-only maintenance helpers such as
+queued-surface cleanup and diagnostic-font cleanup now live on the Metal
+backend instead of `Renderer` carrying those backend-specific chores itself.
+
 ### 2. Shared frame lifecycle still branches backend-by-backend
 
 The renderer root no longer spells out backend frame begin/submit bodies, but

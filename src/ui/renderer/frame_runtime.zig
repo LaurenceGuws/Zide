@@ -20,7 +20,7 @@ pub fn beginFrame(self: anytype) void {
     self.render_height = sizes.render_height;
 
     self.text_render.bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
-    self.clearQueuedSurfaceDraws();
+    metal_backend.clearQueuedSurfaceDraws(self);
     switch (self.backend) {
         .opengl => gl_backend.beginFrame(self),
         .metal => metal_backend.beginFrame(self),

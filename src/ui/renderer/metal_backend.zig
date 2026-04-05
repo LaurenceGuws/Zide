@@ -1168,11 +1168,29 @@ pub fn deinitBackendContext(context: *BackendContext) void {
 }
 
 pub fn deinitRuntime(renderer: anytype) void {
-    renderer.clearMetalDiagnosticFont();
-    renderer.clearQueuedSurfaceDraws();
+    clearDiagnosticFont(renderer);
+    clearQueuedSurfaceDraws(renderer);
     renderer.metal_runtime.queued_surface_draws.deinit(renderer.allocator);
     if (renderer.metal_runtime.frame) |*frame| abandonFrame(frame);
     if (renderer.metal_runtime.backend_context) |*context| deinitBackendContext(context);
+}
+
+pub fn clearDiagnosticFont(renderer: anytype) void {
+    if (renderer.metal_runtime.diagnostic_font) |*font| {
+        font.deinit();
+        renderer.metal_runtime.diagnostic_font = null;
+    }
+}
+
+pub fn clearQueuedSurfaceDraws(renderer: anytype) void {
+    for (renderer.metal_runtime.queued_surface_draws.items) |*queued_draw| {
+        switch (queued_draw.*) {
+            .atlas => {},
+            .solid => {},
+            .raw_image => |*draw| deinitRawImageTexture(&draw.texture),
+        }
+    }
+    renderer.metal_runtime.queued_surface_draws.clearRetainingCapacity();
 }
 
 pub fn acquireFrame(context: *BackendContext) ?Frame {

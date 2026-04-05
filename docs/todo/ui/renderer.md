@@ -122,6 +122,9 @@ Progress note, 2026-04-05:
 - the extra shared backend-frame dispatch wrapper is gone; `frame_runtime.zig`
   now does shared bookkeeping and routes directly to backend-owned
   `beginFrame` / `submitFrame` entrypoints on the OpenGL and Metal modules.
+- Metal-only queued-surface cleanup and diagnostic-font cleanup now route
+  through `metal_backend.zig` instead of living as renderer-root helper
+  methods.
 - The next lifecycle step is to reduce shared-runtime ownership of dispatch and
   backend-native frame state, not just move code blocks around.
 
