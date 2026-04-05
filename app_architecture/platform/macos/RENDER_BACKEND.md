@@ -741,6 +741,10 @@ What this does and does not mean:
   `terminal_surface_*`, which matters because the active Metal lane is no
   longer "a surface blit when retained, otherwise an exception" but one
   terminal presentation contract with multiple concrete shapes
+- the terminal-owned presentation-target seam now owns Metal snapshot
+  preparation as well as availability/draw: presentable allocation for the
+  live Metal lane no longer exists only as an implicit side effect of submit-
+  time capture
 - the underlying storage contract is less retained-first now too: the terminal
   widget state container and partial-plan type are named around presentation
   rather than retained state, which reduces one more place where the direct

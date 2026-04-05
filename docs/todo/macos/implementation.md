@@ -463,6 +463,9 @@ lane.
     - the submission/trace contract is now named around terminal presentation
       instead of `terminal_surface_*`, which better matches the live Metal
       lane where direct draw and snapshot fast-present are both valid shapes
+    - the terminal presentation-target seam now owns Metal snapshot
+      preparation too, so the live Metal terminal presentable is no longer
+      allocated only as an implicit submit-time side effect
     - the underlying terminal widget storage contract is less retained-first
       now too: the state container and partial-plan type are named around
       presentation instead of retained state, which reduces another place

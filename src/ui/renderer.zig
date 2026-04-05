@@ -1331,6 +1331,18 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         return false;
     }
 
+    pub fn ensureMetalTerminalSnapshotPresentable(
+        self: *Renderer,
+        width: i32,
+        height: i32,
+    ) bool {
+        if (self.backend != .metal) return false;
+        if (self.metal_backend_context) |*context| {
+            return metal_backend.ensureTerminalSnapshotPresentable(context, width, height).recreated;
+        }
+        return false;
+    }
+
     pub fn sceneCompositionMode(self: *const Renderer) SceneCompositionMode {
         return self.capabilities().scene_composition_mode;
     }

@@ -9,10 +9,12 @@ pub fn presentableAvailable(renderer: anytype) bool {
 }
 
 pub fn ensurePresentable(renderer: anytype, width: i32, height: i32) bool {
+    if (renderer.backend == .metal) return renderer.ensureMetalTerminalSnapshotPresentable(width, height);
     return retained_targets_runtime.ensureSurface(renderer, .terminal, width, height);
 }
 
 pub fn beginPresentable(renderer: anytype) bool {
+    if (renderer.backend == .metal) return false;
     return retained_targets_runtime.beginSurface(renderer, .terminal);
 }
 
@@ -38,5 +40,6 @@ pub fn drawPresentable(renderer: anytype, draw: PresentableDraw) void {
 }
 
 pub fn scrollPresentable(renderer: anytype, dx: i32, dy: i32) bool {
+    if (renderer.backend == .metal) return false;
     return retained_targets_runtime.scrollSurface(renderer, .terminal, dx, dy);
 }

@@ -1176,6 +1176,11 @@ pub fn terminalSnapshotAvailable(context: *const BackendContext) bool {
     return context.terminal_snapshot != null;
 }
 
+pub const EnsureTerminalSnapshotResult = struct {
+    available: bool = false,
+    recreated: bool = false,
+};
+
 pub fn terminalSnapshotMatchesDrawable(context: *const BackendContext) bool {
     const snapshot = context.terminal_snapshot orelse return false;
     return context.drawable_width > 0 and
@@ -1184,22 +1189,35 @@ pub fn terminalSnapshotMatchesDrawable(context: *const BackendContext) bool {
         snapshot.height == context.drawable_height;
 }
 
-pub fn ensureTerminalSnapshot(context: *BackendContext, width: i32, height: i32) bool {
-    if (width <= 0 or height <= 0) return false;
+pub fn ensureTerminalSnapshotPresentable(
+    context: *BackendContext,
+    width: i32,
+    height: i32,
+) EnsureTerminalSnapshotResult {
+    if (width <= 0 or height <= 0) return .{};
     if (context.terminal_snapshot) |snapshot| {
-        if (snapshot.width == width and snapshot.height == height) return true;
+        if (snapshot.width == width and snapshot.height == height) {
+            return .{
+                .available = true,
+                .recreated = false,
+            };
+        }
         var existing = snapshot;
         deinitRawImageTexture(&existing);
         context.terminal_snapshot = null;
     }
     context.terminal_snapshot = createEmptyRawImageTexture(context.device, width, height);
-    return context.terminal_snapshot != null;
+    const available = context.terminal_snapshot != null;
+    return .{
+        .available = available,
+        .recreated = available,
+    };
 }
 
 pub fn captureTerminalSnapshot(context: *BackendContext, frame: *Frame) bool {
     if (builtin.target.os.tag != .macos) return false;
     if (context.drawable_width <= 0 or context.drawable_height <= 0) return false;
-    if (!ensureTerminalSnapshot(context, context.drawable_width, context.drawable_height)) return false;
+    if (!ensureTerminalSnapshotPresentable(context, context.drawable_width, context.drawable_height).available) return false;
     const snapshot = context.terminal_snapshot orelse return false;
     const source_texture = msgSendPointer(frame.drawable, "texture") orelse return false;
     const blit_encoder = msgSendPointer(frame.command_buffer, "blitCommandEncoder") orelse return false;
