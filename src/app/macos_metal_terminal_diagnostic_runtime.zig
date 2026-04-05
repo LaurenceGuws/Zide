@@ -74,10 +74,10 @@ pub fn run(allocator: std.mem.Allocator) !void {
             "\x1b[H╭─ btop-ish metal lane ─────────────────────────────╮" ++
             "\x1b[2;1H│ CPU  ███████░░░ 72%   NET  ▂▃▄▅▆▇█        │" ++
             "\x1b[3;1H│ MEM  ▓▓▓▓▓▒░░░ 61%   DISK ░▒▓█▇▆▅▄        │" ++
-            "\x1b[4;1H├────────────────────────────────────────────────┤" ++
+            "\x1b[4;1H╔══ dbl ══╦══ load ══╦══ nets ══╦══ bars ════╗" ++
             "\x1b[5;1H│ proc-box │⣀⣤⣶⣿⣷⣄⡀│ load │┌┬┐├┼┤└┴┘││" ++
             "\x1b[6;1H│ temp 42C │███████     │ pwr  ││" ++
-            "\x1b[7;1H├────────────────────────────────────────────────┤" ++
+            "\x1b[7;1H╠══ box ══╬══ mem  ══╬══ brai ═╬══ ring ════╣" ++
             "\x1b[8;1H╰─ bars ░▒▓  braille ⣀⣤⣶  corners ╭╮╯╰ ─────╯"
         else if (special_glyph_fixture)
             "\x1b[HCPU  92%  RAM\x1b[2;1HBOX ┌┬┐├┼┤└┴┘│─╭╮╯╰\x1b[3;1HSHD ░▒▓█▇▆▅▄▃▂▁\x1b[4;1HBRA ⣀⣤⣶⣿⣷⣄⡀ test\x1b[5;1HPWR \x1b[6;1HGLYPH lane stress active"

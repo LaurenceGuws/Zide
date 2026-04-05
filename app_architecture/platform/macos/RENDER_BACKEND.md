@@ -829,6 +829,13 @@ What this does and does not mean:
   `powerline=12 shade=18 braille=10 box=186 other_special=0`, which means the
   Metal terminal lane is now visibly dominated by box/block continuity work
   rather than powerline ownership bugs
+- the first box-continuity execution slice is now in too: the common
+  double-line box set (`U+2550`, `U+2551`, `U+2554`, `U+2557`, `U+255A`,
+  `U+255D`, `U+2560`, `U+2563`, `U+2566`, `U+2569`, `U+256C`) now has
+  analytic/special coverage instead of falling back to normal font rendering
+- the dashboard fixture was updated to exercise that double-line set directly,
+  so the Metal terminal lane now has a live runtime probe for those shapes
+  instead of only a code claim
 - that preparation contract is now aligned with capture truth as well:
   the target runtime prepares drawable-sized Metal snapshot presentables
   instead of using terminal-surface geometry while submit-time capture

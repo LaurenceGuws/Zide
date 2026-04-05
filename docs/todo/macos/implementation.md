@@ -842,6 +842,13 @@ lane.
       `powerline=12 shade=18 braille=10 box=186 other_special=0`
     - that confirms the next execution slice should be box/block continuity
       quality, not another ownership cleanup in the powerline lane
+    - the first concrete box-continuity slice is now in: common double-line
+      box glyphs (`U+2550`, `U+2551`, `U+2554`, `U+2557`, `U+255A`, `U+255D`,
+      `U+2560`, `U+2563`, `U+2566`, `U+2569`, `U+256C`) now ride the
+      analytic/special path instead of normal font fallback
+    - the dashboard diagnostic fixture was updated to include that double-line
+      set directly, so the Metal lane has a live runtime probe for the new
+      coverage instead of only a static implementation claim
     - this reduces one more retained-first contradiction before a second
       Metal terminal presentation shape is introduced
 
