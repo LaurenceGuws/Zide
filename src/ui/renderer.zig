@@ -1197,29 +1197,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         return self.capabilities().raw_image_textures;
     }
 
-    pub fn metalTerminalSnapshotAvailable(self: *const Renderer) bool {
-        if (self.backend != .metal) return false;
-        return metal_backend.terminalSnapshotAvailableForRenderer(self);
-    }
-
-    pub fn ensureMetalTerminalSnapshotPresentable(
-        self: *Renderer,
-        width: i32,
-        height: i32,
-    ) bool {
-        if (self.backend != .metal) return false;
-        return metal_backend.ensureTerminalSnapshotPresentableForRenderer(self, width, height);
-    }
-
-    pub fn scrollMetalTerminalSnapshotPresentable(
-        self: *Renderer,
-        dx: i32,
-        dy: i32,
-    ) bool {
-        if (self.backend != .metal) return false;
-        return metal_backend.scrollTerminalSnapshotPresentableForRenderer(self, dx, dy);
-    }
-
     pub fn sceneCompositionMode(self: *const Renderer) SceneCompositionMode {
         return self.capabilities().scene_composition_mode;
     }
@@ -1621,14 +1598,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
 
     pub fn macosRequestOpenFile(self: *Renderer, path: []const u8) bool {
         return macos_host.requestOpenFile(&self.app_host, path);
-    }
-
-    pub fn macosMetalAttachmentTarget(self: *const Renderer) ?MacOsMetalAttachmentTarget {
-        return macos_host.metalAttachmentTarget(self.render_host);
-    }
-
-    pub fn macosMetalAtlasPreviewSource(self: *const Renderer) AtlasPreviewSource {
-        return metal_backend.atlasPreviewSourceForRenderer(self);
     }
 
     fn appendMetalSolidRect(self: *Renderer, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) bool {

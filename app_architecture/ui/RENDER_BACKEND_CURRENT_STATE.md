@@ -170,6 +170,12 @@ route through `gl_backend`, and Metal atlas-preview lookup now routes through
 `metal_backend`, so `Renderer` no longer directly reaches into those backend
 runtime storage slots for those paths.
 
+That has improved slightly again on the Metal-only helper surface too: the
+remaining terminal-snapshot availability and macOS Metal attachment/atlas
+preview conveniences no longer live on `Renderer`; those callers now go
+through `metal_backend` and `macos_host` directly instead of keeping more
+Metal-only shims on the renderer root.
+
 ### 2. Shared frame lifecycle still branches backend-by-backend
 
 The renderer root no longer spells out backend frame begin/submit bodies, but

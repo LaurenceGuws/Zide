@@ -190,6 +190,10 @@ Progress note, 2026-04-05:
   preview lookup now also route through `gl_backend.zig` / `metal_backend.zig`
   instead of `Renderer` directly reaching into those backend runtime storage
   slots.
+- The remaining Metal-only terminal-snapshot availability and macOS Metal
+  attachment/atlas-preview convenience paths now also bypass `Renderer` and go
+  through `metal_backend.zig` / `macos_host.zig` directly instead of leaving
+  more backend-only shims on the renderer root.
 - Direct OpenGL frame submit and direct window screenshot-readback now also
   live under `src/ui/renderer/opengl_frame_runtime.zig` /
   `src/ui/renderer/gl_backend.zig` instead of

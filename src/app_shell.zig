@@ -3,6 +3,7 @@ const r = @import("ui/renderer.zig");
 const iface = @import("ui/renderer/interface.zig");
 const metal_backend = @import("ui/renderer/metal_backend.zig");
 const metal_text_diagnostic_runtime = @import("ui/renderer/metal_text_diagnostic_runtime.zig");
+const macos_host = @import("platform/macos_host.zig");
 const window = @import("platform/window_metrics.zig");
 const platform_input_events = @import("platform/input_events.zig");
 
@@ -289,7 +290,7 @@ pub const Shell = struct {
     }
 
     pub fn macosMetalAttachmentTarget(self: *const Shell) ?MacOsMetalAttachmentTarget {
-        return self.renderer.macosMetalAttachmentTarget();
+        return macos_host.metalAttachmentTarget(self.renderer.render_host);
     }
 
     pub fn prepareMacosMetalHost(self: *const Shell) ?MacOsMetalHost {
@@ -418,7 +419,7 @@ pub const Shell = struct {
     }
 
     pub fn macosMetalAtlasPreviewSource(self: *const Shell) AtlasPreviewSource {
-        return self.renderer.macosMetalAtlasPreviewSource();
+        return metal_backend.atlasPreviewSourceForRenderer(self.renderer);
     }
 
     pub fn lastPresentTrace(self: *const Shell) r.PresentTrace {

@@ -2,6 +2,7 @@ const std = @import("std");
 const app_bootstrap = @import("bootstrap.zig");
 const app_logger = @import("../app_logger.zig");
 const app_shell = @import("../app_shell.zig");
+const metal_backend = @import("../ui/renderer/metal_backend.zig");
 const terminal_runtime = @import("../terminal/core/terminal_runtime.zig");
 const session_runtime = @import("../terminal/core/session/runtime.zig");
 const terminal_session_bootstrap = @import("terminal/terminal_session_bootstrap.zig");
@@ -111,7 +112,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
             @tagName(capabilities.atlas_storage_mode),
             @tagName(capabilities.planned_atlas_storage_mode),
             @intFromBool(capabilities.raw_image_textures),
-            @intFromBool(shell.renderer.metalTerminalSnapshotAvailable()),
+            @intFromBool(metal_backend.terminalSnapshotAvailableForRenderer(shell.renderer)),
         },
     );
 
@@ -197,7 +198,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
                     metrics.box_glyphs,
                     uncategorized_special_glyphs,
                     metrics.presentation_kitty_ms,
-                    @intFromBool(shell.renderer.metalTerminalSnapshotAvailable()),
+                    @intFromBool(metal_backend.terminalSnapshotAvailableForRenderer(shell.renderer)),
                     @tagName(metrics.terminal_presentation_sample_mode),
                 },
             );
@@ -247,7 +248,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
             @tagName(final_metrics.terminal_presentation_mode),
             @tagName(final_metrics.terminal_presentation_sample_mode),
             final_metrics.presentation_kitty_ms,
-            @intFromBool(shell.renderer.metalTerminalSnapshotAvailable()),
+            @intFromBool(metal_backend.terminalSnapshotAvailableForRenderer(shell.renderer)),
         },
     );
 }
