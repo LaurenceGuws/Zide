@@ -745,6 +745,10 @@ What this does and does not mean:
   wrapper now instead of importing the generic retained-target runtime
   directly, which reduces one more place where the live Metal terminal lane
   had to sit inside retained-target module ownership
+- terminal presentable lifecycle bookkeeping is less inline now too:
+  present-state refresh, viewport clip entry, and unavailable logging now live
+  in `terminal_widget_presentation_runtime.zig` instead of being carried as
+  ad hoc presenter-local lifecycle logic
 - that contract is intentionally backend-native rather than fake portability:
   the old cached GL `Texture` path is still OpenGL-only, while Metal Kitty
   images are created as frame-scoped native Metal textures and released after

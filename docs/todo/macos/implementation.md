@@ -464,6 +464,9 @@ lane.
     - terminal presentation now goes through a terminal-owned
       presentation-target wrapper instead of importing the generic
       retained-target runtime directly from the presenter
+    - terminal presentable lifecycle bookkeeping is less inline now too:
+      present-state refresh, viewport clip entry, and unavailable logging now
+      live in `terminal_widget_presentation_runtime.zig`
     - the terminal Metal diagnostic now reports `raw_image_textures=1`, keeps
       non-zero `kitty_ms`, and no longer relies on the previous unsupported
       backend gate for RGB/RGBA Kitty images

@@ -8,6 +8,7 @@ const time_utils = @import("../renderer/time_utils.zig");
 const scene_frame_runtime = @import("../renderer/scene_frame_runtime.zig");
 const draw_grid = @import("terminal_widget_draw_grid.zig");
 const draw_presentation = @import("terminal_widget_draw_presentation.zig");
+const presentation_runtime = @import("terminal_widget_presentation_runtime.zig");
 const presentation_state_mod = @import("terminal_widget_presentation_state.zig");
 const presentation_target_runtime = @import("terminal_widget_presentation_target_runtime.zig");
 const view_state = @import("terminal_widget_view_state.zig");
@@ -37,18 +38,7 @@ const ViewportShiftState = struct {
     exposed_only: bool = false,
 };
 
-const PresentationGeometry = struct {
-    render_scale: f32 = 1.0,
-    cell_w_i: i32 = 0,
-    cell_h_i: i32 = 0,
-    padding_x_i: i32 = 0,
-    surface_w: i32 = 0,
-    surface_h: i32 = 0,
-    visible_w: i32 = 0,
-    visible_h: i32 = 0,
-    viewport_w: f32 = 0.0,
-    viewport_h: f32 = 0.0,
-};
+const PresentationGeometry = presentation_runtime.PresentationGeometry;
 
 const SurfaceUpdateMode = enum {
     none,
@@ -62,14 +52,7 @@ const PresentationUpdatePlan = struct {
     partial_plan: ?PresentationPartialDrawPlan = null,
 };
 
-const PresentationPresentState = struct {
-    updated: bool = false,
-    target_available: bool = false,
-    ready: bool = false,
-    visible: bool = false,
-    present: bool = false,
-    log_unavailable: bool = false,
-};
+const PresentationPresentState = presentation_runtime.PresentationPresentState;
 
 const PresentationExecutionResult = struct {
     completed: bool = false,
@@ -538,21 +521,6 @@ fn directPresentMainTarget(
     return result;
 }
 
-fn beginPresentationViewportClip(
-    renderer: anytype,
-    view_geometry: shared_types.layout.TerminalViewGeometry,
-    visible_w: i32,
-    visible_h: i32,
-) void {
-    if (visible_w <= 0 or visible_h <= 0) return;
-    renderer.beginClip(
-        @intFromFloat(std.math.round(view_geometry.origin_x)),
-        @intFromFloat(std.math.round(view_geometry.origin_y)),
-        visible_w,
-        visible_h,
-    );
-}
-
 fn refreshPresentationPresentState(
     self: anytype,
     renderer: anytype,
@@ -564,25 +532,17 @@ fn refreshPresentationPresentState(
     visible_h: i32,
     view_cells_len: usize,
 ) PresentationPresentState {
-    var state = PresentationPresentState{
-        .updated = presentation_update_completed,
-        .visible = visible_w > 0 and visible_h > 0,
-    };
-
-    if (presentation_update_completed) {
-        self.surface.notePresentationUpdated(terminal_view, surface_geometry);
-    }
-
-    state.target_available = presentation_target_runtime.presentableAvailable(renderer);
-    state.ready = self.surface.notePresentableAvailability(state.target_available);
-    state.present = state.ready and state.visible;
-    state.log_unavailable = !state.ready and terminal_view.rows > 0 and terminal_view.cols > 0 and view_cells_len > 0 and state.visible;
-
-    if (state.present) {
-        beginPresentationViewportClip(renderer, view_geometry, visible_w, visible_h);
-    }
-
-    return state;
+    return presentation_runtime.refreshPresentState(
+        &self.surface,
+        renderer,
+        terminal_view,
+        surface_geometry,
+        view_geometry,
+        presentation_update_completed,
+        visible_w,
+        visible_h,
+        view_cells_len,
+    );
 }
 
 fn logPresentationUnavailable(
@@ -592,16 +552,7 @@ fn logPresentationUnavailable(
     visible_w: i32,
     visible_h: i32,
 ) void {
-    if (!present_state.log_unavailable) return;
-    app_logger.logger("renderer.terminal_present").logFields(.warning, "terminal_surface_unavailable_for_present", &.{
-        .{ .key = "generation", .value = .{ .unsigned = terminal_view.generation } },
-        .{ .key = "sync_updates", .value = .{ .boolean = terminal_view.sync_updates_active } },
-        .{ .key = "updated", .value = .{ .boolean = present_state.updated } },
-        .{ .key = "presentable_ready", .value = .{ .boolean = self.surface.presentableReady() } },
-        .{ .key = "target_available", .value = .{ .boolean = present_state.target_available } },
-        .{ .key = "visible_w", .value = .{ .integer = visible_w } },
-        .{ .key = "visible_h", .value = .{ .integer = visible_h } },
-    });
+    presentation_runtime.logUnavailable(&self.surface, terminal_view, present_state, visible_w, visible_h);
 }
 
 fn presentPresentationSurface(
