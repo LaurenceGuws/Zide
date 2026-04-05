@@ -1151,6 +1151,14 @@ pub fn submitFrame(renderer: anytype) @import("present_trace_runtime.zig").Frame
     return metal_frame_runtime.submitFrame(renderer);
 }
 
+pub fn dumpWindowScreenshotPpm(_: anytype, _: []const u8) !void {
+    return error.RendererScreenshotUnavailable;
+}
+
+pub fn dumpWindowScreenshotPpmSized(_: anytype, _: []const u8, _: i32, _: i32) !void {
+    return error.RendererScreenshotUnavailable;
+}
+
 pub fn deinitPresentables(_: anytype) void {}
 
 pub fn ensurePresentable(renderer: anytype, surface: PresentableSurface, width: i32, height: i32) bool {
@@ -1192,6 +1200,8 @@ pub fn presentableInfo(renderer: anytype, surface: PresentableSurface) ?Presenta
         .logical_height = renderer.height,
     };
 }
+
+pub fn clearThemeBackground(_: anytype) void {}
 
 pub fn drawPresentable(renderer: anytype, surface: PresentableSurface, draw: PresentableDraw) void {
     switch (surface) {

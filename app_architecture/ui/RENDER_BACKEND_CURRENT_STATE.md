@@ -207,6 +207,17 @@ presentation debug sampling no longer reaches into
 the renderer presentable contract for backend-neutral presentable info instead
 of peeking into OpenGL-owned storage from shared terminal code.
 
+That has improved slightly again at the renderer root itself: the live
+renderer instance now selects one explicit backend ops table at init time and
+routes frame, presentable, screenshot, capability, clip, and primitive draw
+behavior through that table instead of repeating backend switches across the
+root for each of those operations.
+
+That has improved slightly again on the bootstrap side too: startup window
+binding, startup backend configuration, and startup smoke execution now route
+through a small backend bootstrap ops table instead of `renderer.zig`
+carrying a separate cluster of ad hoc backend startup switches.
+
 That has improved slightly again on the Metal frame side too: the shared
 frame prelude no longer clears the Metal queued draw list before backend
 dispatch. That queue reset now lives under `metal_frame_runtime.zig`, which is
@@ -266,6 +277,13 @@ terminal presentable end path no longer bypasses the shared presentable
 contract just to call a shared scene-runtime restore helper. The restore logic
 now lives under the OpenGL presentable implementation, and the widget-facing
 terminal presenter ends presentables through the contract again.
+
+That has improved slightly again at the renderer boundary too: the repeated
+live-instance backend dispatch switches for frame/presentable/capability and
+primitive operations are now gone from `renderer.zig`, replaced by one backend
+ops table selected at renderer init. The remaining root-level backend
+switching is now mostly ops-table selection and backend-profile gating rather
+than per-call renderer behavior.
 
 That has improved slightly again on teardown ownership too: OpenGL presentable
 and scene-target cleanup no longer runs from `Renderer.deinit()` before backend

@@ -219,6 +219,13 @@ Progress note, 2026-04-05:
   contract info instead of reaching into
   `renderer.opengl_runtime.presentable_targets.terminal` from shared terminal
   code.
+- The live renderer instance now selects one explicit backend ops table at
+  init time and routes frame, presentable, screenshot, capability, clip, and
+  primitive draw behavior through that table instead of repeating those
+  backend switches across `src/ui/renderer.zig`.
+- Startup window binding, backend configuration, and startup smoke execution
+  now also route through a small backend bootstrap ops table instead of
+  leaving one more cluster of backend startup switches in `src/ui/renderer.zig`.
 - Direct OpenGL frame submit and direct window screenshot-readback now also
   live under `src/ui/renderer/opengl_frame_runtime.zig` /
   `src/ui/renderer/gl_backend.zig` instead of
