@@ -331,16 +331,23 @@ lane.
     - the sampled Metal text lane now also has an explicit
       `SampleTextRequest` contract for callers instead of only raw convenience
       parameters
+    - that sampled-text contract now carries explicit tint and layout policy,
+      so the Metal diagnostic lane no longer depends on white-only copied
+      atlas pixels or on implicit glyph-advance stepping
     - the narrow Metal text lane now covers a tiny multiline ASCII run, not
       just a single flat row
+    - the diagnostic/runtime callers now use the explicit monospace-cell
+      layout mode, which is a better terminal-facing contract than ad hoc
+      glyph-advance stepping
     - the existing `font_sample` fallback now consumes that same narrow path as
       a real UI caller: when live text is unavailable but the planned mode is
       `metal_texture_atlas`, it frames and requests a tiny sampled `"METAL"`
       run
-    - the live macOS Metal smoke frame path still blits a tiny region from the
-      Metal atlas color texture into the drawable before present, and the
-      submit-time screenshot path captured a real `1280x720` PPM artifact for
-      that visible atlas-backed preview on the current macOS host
+    - the Metal backend now owns a real tiny textured-quad atlas sampling path
+      with sampler/tint semantics instead of only copying atlas pixels into the
+      drawable, and the submit-time screenshot path captured a real
+      `1280x720` PPM artifact for that visible Metal text lane on the current
+      macOS host
     - the AppKit delegate proxy now routes activation, quit, and open-file
       through macOS-owned host-policy helpers first, with previous-delegate
       forwarding reduced to fallback behavior instead of being the default

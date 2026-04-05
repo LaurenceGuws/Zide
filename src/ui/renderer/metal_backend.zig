@@ -21,6 +21,17 @@ const MTLClearColor = extern struct {
     alpha: f64,
 };
 
+const AtlasVertex = extern struct {
+    position: [2]f32,
+    uv: [2]f32,
+};
+
+const AtlasFragmentUniforms = extern struct {
+    tint: [4]f32,
+    alpha_only: u32,
+    _padding: [3]u32 = .{ 0, 0, 0 },
+};
+
 const MTLRegion = extern struct {
     origin: MTLOrigin,
     size: MTLSize,
@@ -40,11 +51,56 @@ const MTLSize = extern struct {
 
 const pixel_format_bgra8_unorm: usize = 80;
 const pixel_format_r8_unorm: usize = 10;
+const load_action_load: usize = 1;
 const load_action_clear: usize = 2;
 const store_action_store: usize = 1;
 const texture_usage_shader_read: usize = 1;
+const texture_usage_render_target: usize = 4;
+const primitive_type_triangle_strip: usize = 4;
+const blend_operation_add: usize = 0;
+const blend_factor_source_alpha: usize = 4;
+const blend_factor_one_minus_source_alpha: usize = 5;
+const blend_factor_one: usize = 1;
+const sampler_min_mag_filter_nearest: usize = 0;
 const default_glyph_atlas_width: i32 = 2048;
 const default_glyph_atlas_height: i32 = 2048;
+
+const atlas_shader_source =
+    "#include <metal_stdlib>\n" ++
+    "using namespace metal;\n" ++
+    "struct AtlasVertexIn {\n" ++
+    "    float2 position;\n" ++
+    "    float2 uv;\n" ++
+    "};\n" ++
+    "struct AtlasVertexOut {\n" ++
+    "    float4 position [[position]];\n" ++
+    "    float2 uv;\n" ++
+    "};\n" ++
+    "struct AtlasFragmentUniforms {\n" ++
+    "    float4 tint;\n" ++
+    "    uint alpha_only;\n" ++
+    "    uint3 _padding;\n" ++
+    "};\n" ++
+    "vertex AtlasVertexOut zideAtlasVertex(\n" ++
+    "    const device AtlasVertexIn *vertices [[buffer(0)]],\n" ++
+    "    uint vertex_id [[vertex_id]]) {\n" ++
+    "    AtlasVertexOut out;\n" ++
+    "    out.position = float4(vertices[vertex_id].position, 0.0, 1.0);\n" ++
+    "    out.uv = vertices[vertex_id].uv;\n" ++
+    "    return out;\n" ++
+    "}\n" ++
+    "fragment float4 zideAtlasFragment(\n" ++
+    "    AtlasVertexOut in [[stage_in]],\n" ++
+    "    texture2d<float> atlas [[texture(0)]],\n" ++
+    "    sampler atlas_sampler [[sampler(0)]],\n" ++
+    "    constant AtlasFragmentUniforms &uniforms [[buffer(0)]]) {\n" ++
+    "    const float4 sample = atlas.sample(atlas_sampler, in.uv);\n" ++
+    "    if (uniforms.alpha_only != 0u) {\n" ++
+    "        return float4(uniforms.tint.rgb, uniforms.tint.a * sample.r);\n" ++
+    "    }\n" ++
+    "    return sample * uniforms.tint;\n" ++
+    "}\n" ++
+    "\x00";
 
 pub const AtlasTexture = struct {
     texture: *anyopaque,
@@ -69,6 +125,7 @@ pub const AtlasSampleDraw = struct {
     source_rect: types.Rect,
     dest_x: i32,
     dest_y: i32,
+    tint: types.Rgba = .{ .r = 255, .g = 255, .b = 255, .a = 255 },
 };
 
 pub const BackendContext = struct {
@@ -76,6 +133,8 @@ pub const BackendContext = struct {
     metal_layer: *anyopaque,
     device: *anyopaque,
     command_queue: *anyopaque,
+    atlas_pipeline: *anyopaque,
+    atlas_sampler: *anyopaque,
     glyph_atlas: GlyphAtlas,
     drawable_width: i32,
     drawable_height: i32,
@@ -164,6 +223,71 @@ fn msgSendPointerArgPointer(target: *anyopaque, selector_name: [*:0]const u8, va
     const sel = objc.sel_registerName(selector_name);
     const fn_ptr: *const fn (*anyopaque, objc.SEL, *anyopaque) callconv(.c) ?*anyopaque = @ptrCast(&objc.objc_msgSend);
     return fn_ptr(target, sel, value);
+}
+
+fn msgSendStringArgPointer(target: *anyopaque, selector_name: [*:0]const u8, value: [*:0]const u8) ?*anyopaque {
+    const sel = objc.sel_registerName(selector_name);
+    const fn_ptr: *const fn (*anyopaque, objc.SEL, [*:0]const u8) callconv(.c) ?*anyopaque = @ptrCast(&objc.objc_msgSend);
+    return fn_ptr(target, sel, value);
+}
+
+fn msgSendPointerPointerPointerArgPointer(
+    target: *anyopaque,
+    selector_name: [*:0]const u8,
+    value0: *anyopaque,
+    value1: ?*anyopaque,
+    value2: *?*anyopaque,
+) ?*anyopaque {
+    const sel = objc.sel_registerName(selector_name);
+    const fn_ptr: *const fn (*anyopaque, objc.SEL, *anyopaque, ?*anyopaque, *?*anyopaque) callconv(.c) ?*anyopaque = @ptrCast(&objc.objc_msgSend);
+    return fn_ptr(target, sel, value0, value1, value2);
+}
+
+fn msgSendPointerErrorArgPointer(
+    target: *anyopaque,
+    selector_name: [*:0]const u8,
+    value0: *anyopaque,
+    value1: *?*anyopaque,
+) ?*anyopaque {
+    const sel = objc.sel_registerName(selector_name);
+    const fn_ptr: *const fn (*anyopaque, objc.SEL, *anyopaque, *?*anyopaque) callconv(.c) ?*anyopaque = @ptrCast(&objc.objc_msgSend);
+    return fn_ptr(target, sel, value0, value1);
+}
+
+fn msgSendPointerArgU64Void(target: *anyopaque, selector_name: [*:0]const u8, value0: *anyopaque, value1: usize) void {
+    const sel = objc.sel_registerName(selector_name);
+    const fn_ptr: *const fn (*anyopaque, objc.SEL, *anyopaque, usize) callconv(.c) void = @ptrCast(&objc.objc_msgSend);
+    fn_ptr(target, sel, value0, value1);
+}
+
+fn msgSendBytesU64U64Void(target: *anyopaque, selector_name: [*:0]const u8, bytes: *const anyopaque, length: usize, index: usize) void {
+    const sel = objc.sel_registerName(selector_name);
+    const fn_ptr: *const fn (*anyopaque, objc.SEL, *const anyopaque, usize, usize) callconv(.c) void = @ptrCast(&objc.objc_msgSend);
+    fn_ptr(target, sel, bytes, length, index);
+}
+
+fn msgSendSetBoolU64(target: *anyopaque, selector_name: [*:0]const u8, value0: bool, value1: usize) void {
+    const sel = objc.sel_registerName(selector_name);
+    const fn_ptr: *const fn (*anyopaque, objc.SEL, bool, usize) callconv(.c) void = @ptrCast(&objc.objc_msgSend);
+    fn_ptr(target, sel, value0, value1);
+}
+
+fn msgSendSetU64U64(target: *anyopaque, selector_name: [*:0]const u8, value0: usize, value1: usize) void {
+    const sel = objc.sel_registerName(selector_name);
+    const fn_ptr: *const fn (*anyopaque, objc.SEL, usize, usize) callconv(.c) void = @ptrCast(&objc.objc_msgSend);
+    fn_ptr(target, sel, value0, value1);
+}
+
+fn msgSendSetPointerU64(target: *anyopaque, selector_name: [*:0]const u8, value0: *anyopaque, value1: usize) void {
+    const sel = objc.sel_registerName(selector_name);
+    const fn_ptr: *const fn (*anyopaque, objc.SEL, *anyopaque, usize) callconv(.c) void = @ptrCast(&objc.objc_msgSend);
+    fn_ptr(target, sel, value0, value1);
+}
+
+fn msgSendSetU64U64U64Void(target: *anyopaque, selector_name: [*:0]const u8, value0: usize, value1: usize, value2: usize) void {
+    const sel = objc.sel_registerName(selector_name);
+    const fn_ptr: *const fn (*anyopaque, objc.SEL, usize, usize, usize) callconv(.c) void = @ptrCast(&objc.objc_msgSend);
+    fn_ptr(target, sel, value0, value1, value2);
 }
 
 fn msgSendRegionU64BytesU64Void(
@@ -312,7 +436,7 @@ fn createAtlasTexture(
         @intCast(height),
         false,
     ) orelse return null;
-    msgSendSetU64(descriptor, "setUsage:", texture_usage_shader_read);
+    msgSendSetU64(descriptor, "setUsage:", texture_usage_shader_read | texture_usage_render_target);
     const texture = msgSendPointerArgPointer(device, "newTextureWithDescriptor:", descriptor) orelse return null;
     return .{
         .texture = texture,
@@ -433,49 +557,153 @@ fn atlasTexture(atlas: *const GlyphAtlas, source: AtlasTextureSource) *const Atl
     };
 }
 
-fn blitAtlasTextureRegion(
+fn nsString(string: [*:0]const u8) ?*anyopaque {
+    const nsstring_class = classPointer("NSString") orelse return null;
+    return msgSendStringArgPointer(nsstring_class, "stringWithUTF8String:", string);
+}
+
+fn createAtlasPipeline(device: *anyopaque) ?*anyopaque {
+    if (builtin.target.os.tag != .macos) return null;
+    const source = nsString(atlas_shader_source) orelse return null;
+    var compile_error: ?*anyopaque = null;
+    const library = msgSendPointerPointerPointerArgPointer(
+        device,
+        "newLibraryWithSource:options:error:",
+        source,
+        null,
+        &compile_error,
+    ) orelse return null;
+    defer releaseObject(library);
+
+    const vertex_name = nsString("zideAtlasVertex") orelse return null;
+    const fragment_name = nsString("zideAtlasFragment") orelse return null;
+    const vertex_fn = msgSendPointerArgPointer(library, "newFunctionWithName:", vertex_name) orelse return null;
+    defer releaseObject(vertex_fn);
+    const fragment_fn = msgSendPointerArgPointer(library, "newFunctionWithName:", fragment_name) orelse return null;
+    defer releaseObject(fragment_fn);
+
+    const descriptor_class = classPointer("MTLRenderPipelineDescriptor") orelse return null;
+    const descriptor = msgSendPointer(descriptor_class, "new") orelse return null;
+    defer releaseObject(descriptor);
+
+    msgSendSetPointer(descriptor, "setVertexFunction:", vertex_fn);
+    msgSendSetPointer(descriptor, "setFragmentFunction:", fragment_fn);
+
+    const color_attachments = msgSendPointer(descriptor, "colorAttachments") orelse return null;
+    const color_attachment = msgSendU64ArgPointer(color_attachments, "objectAtIndexedSubscript:", 0) orelse return null;
+    msgSendSetU64(color_attachment, "setPixelFormat:", pixel_format_bgra8_unorm);
+    msgSendSetBool(color_attachment, "setBlendingEnabled:", true);
+    msgSendSetU64(color_attachment, "setRgbBlendOperation:", blend_operation_add);
+    msgSendSetU64(color_attachment, "setAlphaBlendOperation:", blend_operation_add);
+    msgSendSetU64(color_attachment, "setSourceRGBBlendFactor:", blend_factor_source_alpha);
+    msgSendSetU64(color_attachment, "setDestinationRGBBlendFactor:", blend_factor_one_minus_source_alpha);
+    msgSendSetU64(color_attachment, "setSourceAlphaBlendFactor:", blend_factor_one);
+    msgSendSetU64(color_attachment, "setDestinationAlphaBlendFactor:", blend_factor_one_minus_source_alpha);
+
+    var pipeline_error: ?*anyopaque = null;
+    return msgSendPointerErrorArgPointer(
+        device,
+        "newRenderPipelineStateWithDescriptor:error:",
+        descriptor,
+        &pipeline_error,
+    );
+}
+
+fn createAtlasSampler(device: *anyopaque) ?*anyopaque {
+    if (builtin.target.os.tag != .macos) return null;
+    const descriptor_class = classPointer("MTLSamplerDescriptor") orelse return null;
+    const descriptor = msgSendPointer(descriptor_class, "new") orelse return null;
+    defer releaseObject(descriptor);
+    msgSendSetU64(descriptor, "setMinFilter:", sampler_min_mag_filter_nearest);
+    msgSendSetU64(descriptor, "setMagFilter:", sampler_min_mag_filter_nearest);
+    return msgSendPointerArgPointer(device, "newSamplerStateWithDescriptor:", descriptor);
+}
+
+fn encodeAtlasTextureRegion(
     context: *BackendContext,
     frame: *Frame,
     source: AtlasTextureSource,
     source_rect: types.Rect,
     dest_x: i32,
     dest_y: i32,
+    tint: types.Rgba,
 ) bool {
     if (builtin.target.os.tag != .macos) return false;
     const drawable_texture = msgSendPointer(frame.drawable, "texture") orelse return false;
-    const blit_encoder = msgSendPointer(frame.command_buffer, "blitCommandEncoder") orelse return false;
     const width: i32 = @intFromFloat(source_rect.width);
     const height: i32 = @intFromFloat(source_rect.height);
-    if (width <= 0 or height <= 0) {
-        msgSendVoid(blit_encoder, "endEncoding");
-        return false;
-    }
-    msgSendCopyTextureToTexture(
-        blit_encoder,
-        "copyFromTexture:sourceSlice:sourceLevel:sourceOrigin:sourceSize:toTexture:destinationSlice:destinationLevel:destinationOrigin:",
-        atlasTexture(&context.glyph_atlas, source).texture,
-        0,
-        0,
+    if (width <= 0 or height <= 0) return false;
+    if (context.drawable_width <= 0 or context.drawable_height <= 0) return false;
+
+    const render_pass_descriptor_class = classPointer("MTLRenderPassDescriptor") orelse return false;
+    const render_pass_descriptor = msgSendClassPointer(render_pass_descriptor_class, "renderPassDescriptor") orelse return false;
+    const color_attachments = msgSendPointer(render_pass_descriptor, "colorAttachments") orelse return false;
+    const color_attachment = msgSendU64ArgPointer(color_attachments, "objectAtIndexedSubscript:", 0) orelse return false;
+    msgSendSetPointer(color_attachment, "setTexture:", drawable_texture);
+    msgSendSetU64(color_attachment, "setLoadAction:", load_action_load);
+    msgSendSetU64(color_attachment, "setStoreAction:", store_action_store);
+
+    const encoder = msgSendPointerArgPointer(frame.command_buffer, "renderCommandEncoderWithDescriptor:", render_pass_descriptor) orelse return false;
+    defer msgSendVoid(encoder, "endEncoding");
+
+    msgSendSetPointer(encoder, "setRenderPipelineState:", context.atlas_pipeline);
+    msgSendPointerArgU64Void(encoder, "setFragmentSamplerState:atIndex:", context.atlas_sampler, 0);
+    msgSendSetPointerU64(encoder, "setFragmentTexture:atIndex:", atlasTexture(&context.glyph_atlas, source).texture, 0);
+
+    const atlas = atlasTexture(&context.glyph_atlas, source);
+    const dest_x0 = @as(f32, @floatFromInt(dest_x));
+    const dest_y0 = @as(f32, @floatFromInt(dest_y));
+    const dest_x1 = dest_x0 + @as(f32, @floatFromInt(width));
+    const dest_y1 = dest_y0 + @as(f32, @floatFromInt(height));
+    const drawable_w = @as(f32, @floatFromInt(context.drawable_width));
+    const drawable_h = @as(f32, @floatFromInt(context.drawable_height));
+    const src_x0 = source_rect.x / @as(f32, @floatFromInt(atlas.width));
+    const src_y0 = source_rect.y / @as(f32, @floatFromInt(atlas.height));
+    const src_x1 = (source_rect.x + source_rect.width) / @as(f32, @floatFromInt(atlas.width));
+    const src_y1 = (source_rect.y + source_rect.height) / @as(f32, @floatFromInt(atlas.height));
+
+    const vertices = [_]AtlasVertex{
         .{
-            .x = @intCast(@as(i32, @intFromFloat(source_rect.x))),
-            .y = @intCast(@as(i32, @intFromFloat(source_rect.y))),
-            .z = 0,
+            .position = .{ (dest_x0 / drawable_w) * 2.0 - 1.0, 1.0 - (dest_y0 / drawable_h) * 2.0 },
+            .uv = .{ src_x0, src_y0 },
         },
         .{
-            .width = @intCast(width),
-            .height = @intCast(height),
-            .depth = 1,
+            .position = .{ (dest_x1 / drawable_w) * 2.0 - 1.0, 1.0 - (dest_y0 / drawable_h) * 2.0 },
+            .uv = .{ src_x1, src_y0 },
         },
-        drawable_texture,
-        0,
-        0,
         .{
-            .x = @intCast(@max(0, dest_x)),
-            .y = @intCast(@max(0, dest_y)),
-            .z = 0,
+            .position = .{ (dest_x0 / drawable_w) * 2.0 - 1.0, 1.0 - (dest_y1 / drawable_h) * 2.0 },
+            .uv = .{ src_x0, src_y1 },
         },
+        .{
+            .position = .{ (dest_x1 / drawable_w) * 2.0 - 1.0, 1.0 - (dest_y1 / drawable_h) * 2.0 },
+            .uv = .{ src_x1, src_y1 },
+        },
+    };
+    const fragment_uniforms = AtlasFragmentUniforms{
+        .tint = .{
+            @as(f32, @floatFromInt(tint.r)) / 255.0,
+            @as(f32, @floatFromInt(tint.g)) / 255.0,
+            @as(f32, @floatFromInt(tint.b)) / 255.0,
+            @as(f32, @floatFromInt(tint.a)) / 255.0,
+        },
+        .alpha_only = if (source == .coverage) 1 else 0,
+    };
+    msgSendBytesU64U64Void(
+        encoder,
+        "setVertexBytes:length:atIndex:",
+        @ptrCast(&vertices),
+        @sizeOf(@TypeOf(vertices)),
+        0,
     );
-    msgSendVoid(blit_encoder, "endEncoding");
+    msgSendBytesU64U64Void(
+        encoder,
+        "setFragmentBytes:length:atIndex:",
+        @ptrCast(&fragment_uniforms),
+        @sizeOf(AtlasFragmentUniforms),
+        0,
+    );
+    msgSendSetU64U64U64Void(encoder, "drawPrimitives:vertexStart:vertexCount:", primitive_type_triangle_strip, 0, 4);
     return true;
 }
 
@@ -484,13 +712,14 @@ pub fn drawAtlasSample(
     frame: *Frame,
     sample: AtlasSampleDraw,
 ) bool {
-    return blitAtlasTextureRegion(
+    return encodeAtlasTextureRegion(
         context,
         frame,
         sample.atlas,
         sample.source_rect,
         sample.dest_x,
         sample.dest_y,
+        sample.tint,
     );
 }
 
@@ -528,9 +757,19 @@ pub fn createBackendContext(
         releaseObject(device);
         return null;
     };
-    const glyph_atlas = createGlyphAtlas(device, default_glyph_atlas_width, default_glyph_atlas_height) orelse {
-        releaseObject(command_queue);
+    errdefer releaseObject(command_queue);
+    const atlas_pipeline = createAtlasPipeline(device) orelse {
         releaseObject(device);
+        return null;
+    };
+    errdefer releaseObject(atlas_pipeline);
+    const atlas_sampler = createAtlasSampler(device) orelse {
+        releaseObject(atlas_pipeline);
+        releaseObject(device);
+        return null;
+    };
+    errdefer releaseObject(atlas_sampler);
+    const glyph_atlas = createGlyphAtlas(device, default_glyph_atlas_width, default_glyph_atlas_height) orelse {
         return null;
     };
     msgSendSetPointer(host.layer(), "setDevice:", device);
@@ -545,6 +784,8 @@ pub fn createBackendContext(
         .metal_layer = host.layer(),
         .device = device,
         .command_queue = command_queue,
+        .atlas_pipeline = atlas_pipeline,
+        .atlas_sampler = atlas_sampler,
         .glyph_atlas = glyph_atlas,
         .drawable_width = drawable_width,
         .drawable_height = drawable_height,
@@ -568,6 +809,8 @@ pub fn resizeBackendContext(
 pub fn deinitBackendContext(context: *BackendContext) void {
     if (builtin.target.os.tag != .macos) return;
     deinitGlyphAtlas(&context.glyph_atlas);
+    releaseObject(context.atlas_sampler);
+    releaseObject(context.atlas_pipeline);
     releaseObject(context.command_queue);
     msgSendVoid(context.device, "release");
 }

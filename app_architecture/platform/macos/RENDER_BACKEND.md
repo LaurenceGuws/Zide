@@ -584,18 +584,21 @@ What this does and does not mean:
 - that builder now has an explicit `SampleTextRequest` contract, so callers can
   describe sampled-text placement without staying coupled to the renderer’s
   convenience overloads
+- that sampled-text contract now carries explicit tint and layout policy, so
+  the Metal diagnostic lane is no longer limited to white-only copied atlas
+  pixels or to implicit glyph-advance stepping
 - this is still intentionally narrow and honest: it is now a tiny sampled
-  multiline ASCII run rather than a claim that the generic string/text
-  renderer has already migrated or that per-glyph tinting semantics are
-  complete on Metal
+  multiline ASCII run with an explicit monospace-cell option rather than a
+  claim that the generic string/text renderer has already migrated
 - the existing font-sample fallback now consumes that same narrow path as an
   actual UI caller: when live text is unavailable but the planned mode is
   `metal_texture_atlas`, it frames and requests a tiny sampled `"METAL"` run
   rather than remaining purely a passive status surface
-- the visible atlas-backed preview path itself is still real: the live smoke
-  frame path blits a tiny region from the Metal atlas color texture into the
-  drawable before present, and the submit-time screenshot path captured a real
-  `1280x720` PPM artifact for that path on the current macOS host
+- the visible atlas-backed preview path is no longer a copy-only blit: the
+  Metal backend now owns a tiny textured-quad pipeline with sampler/tint
+  semantics for sampled atlas draws, and the submit-time screenshot path has
+  captured a real `1280x720` PPM artifact for that path on the current macOS
+  host
 - this is a real lifecycle-policy step because the AppKit delegate proxy now
   routes activation, quit, and open-file through macOS-owned host policy
   helpers first, with forwarding to the previous delegate reduced to fallback

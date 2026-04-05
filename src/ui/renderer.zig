@@ -1832,7 +1832,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         return true;
     }
 
-    pub fn drawMetalAtlasSampleChar(self: *Renderer, char: u8, x: f32, y: f32) bool {
+    pub fn drawMetalAtlasSampleChar(self: *Renderer, char: u8, x: f32, y: f32, color: Color) bool {
         if (self.backend != .metal) return false;
         if (self.plannedTextRenderingMode() != .metal_texture_atlas) return false;
         if (self.metal_backend_context == null) return false;
@@ -1850,6 +1850,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             .source_rect = glyph.rect,
             .dest_x = @max(0, @as(i32, @intFromFloat(std.math.round(self.logicalLengthToRaster(x))))),
             .dest_y = @max(0, @as(i32, @intFromFloat(std.math.round(self.logicalLengthToRaster(y))))),
+            .tint = color.toRgba(),
         });
     }
 
@@ -1875,6 +1876,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             .text = text,
             .x = x,
             .y = y,
+            .tint = Color.white.toRgba(),
         });
     }
 
@@ -1901,6 +1903,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
                 .source_rect = coverage_glyph.rect,
                 .dest_x = dest_x,
                 .dest_y = dest_y,
+                .tint = Color.white.toRgba(),
             });
             self.metal_debug_preview_source = .uploaded_coverage_glyph;
         }
@@ -1911,6 +1914,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
                 .source_rect = rect,
                 .dest_x = dest_x,
                 .dest_y = dest_y,
+                .tint = Color.white.toRgba(),
             });
             self.metal_debug_preview_source = .uploaded_color_glyph;
         } else {
@@ -1925,6 +1929,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
                     },
                     .dest_x = dest_x,
                     .dest_y = dest_y,
+                    .tint = Color.white.toRgba(),
                 });
                 self.metal_debug_preview_source = .seeded_color_block;
             }
