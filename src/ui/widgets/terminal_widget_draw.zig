@@ -77,10 +77,10 @@ pub fn drawPrepared(
     const lock_hold_ms: f64 = preparation.lock_hold_ms;
     const view_cache_ms: f64 = preparation.view_cache_ms;
     const cache_copy_ms: f64 = preparation.cache_copy_ms;
-    var texture_update_ms: f64 = 0.0;
-    var texture_bg_ms: f64 = 0.0;
-    var texture_glyph_ms: f64 = 0.0;
-    var texture_kitty_ms: f64 = 0.0;
+    var presentation_update_ms: f64 = 0.0;
+    var presentation_bg_ms: f64 = 0.0;
+    var presentation_glyph_ms: f64 = 0.0;
+    var presentation_kitty_ms: f64 = 0.0;
     var overlay_ms: f64 = 0.0;
     var render_phase_start = draw_start;
     var outcome = DrawOutcome{ .presented = preparation.presented };
@@ -97,10 +97,10 @@ pub fn drawPrepared(
             lock_hold_ms,
             view_cache_ms,
             cache_copy_ms,
-            texture_update_ms,
-            texture_bg_ms,
-            texture_glyph_ms,
-            texture_kitty_ms,
+            presentation_update_ms,
+            presentation_bg_ms,
+            presentation_glyph_ms,
+            presentation_kitty_ms,
             overlay_ms,
             render_ms,
             draw_ms_total,
@@ -183,10 +183,10 @@ pub fn drawPrepared(
         blink_requires_partial,
         has_kitty,
     );
-    texture_update_ms = surface_result.texture_update_ms;
-    texture_bg_ms = surface_result.texture_bg_ms;
-    texture_glyph_ms = surface_result.texture_glyph_ms;
-    texture_kitty_ms = surface_result.texture_kitty_ms;
+    presentation_update_ms = surface_result.presentation_update_ms;
+    presentation_bg_ms = surface_result.presentation_bg_ms;
+    presentation_glyph_ms = surface_result.presentation_glyph_ms;
+    presentation_kitty_ms = surface_result.presentation_kitty_ms;
     if (surface_result.early_return) return outcome;
 
     self.debug.last_view_geometry = .{

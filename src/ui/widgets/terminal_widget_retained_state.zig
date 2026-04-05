@@ -45,7 +45,7 @@ pub const PresentationState = struct {
         self.partial_draw_cols_end.deinit(allocator);
     }
 
-    pub fn invalidateTextureCache(self: *PresentationState) void {
+    pub fn invalidatePresentationCache(self: *PresentationState) void {
         self.terminal_presentable_ready = false;
     }
 

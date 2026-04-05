@@ -125,7 +125,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
                     metrics.metal_grid_row_cells,
                     metrics.metal_overlay_row_runs,
                     metrics.metal_overlay_row_cells,
-                    metrics.texture_kitty_ms,
+                    metrics.presentation_kitty_ms,
                 },
             );
             log.logf(.info, "frame={d} metric_terminal_present={s}", .{
@@ -159,7 +159,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
             final_metrics.metal_overlay_row_runs,
             final_metrics.metal_overlay_row_cells,
             @tagName(final_metrics.terminal_presentation_mode),
-            final_metrics.texture_kitty_ms,
+            final_metrics.presentation_kitty_ms,
         },
     );
 }

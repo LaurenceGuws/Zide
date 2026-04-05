@@ -29,8 +29,8 @@ pub const TerminalWidgetSurfaceState = struct {
         self.kitty.deinit(allocator);
     }
 
-    pub fn invalidateTextureCache(self: *TerminalWidgetSurfaceState) void {
-        self.presentation.invalidateTextureCache();
+    pub fn invalidatePresentationCache(self: *TerminalWidgetSurfaceState) void {
+        self.presentation.invalidatePresentationCache();
     }
 
     pub fn lifecycleTransition(

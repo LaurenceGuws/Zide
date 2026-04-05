@@ -434,6 +434,13 @@ lane.
     - dead retained-era sync fast-present helpers are gone too, so the
       terminal presenter no longer preserves an unused parallel helper layer
       around the live `updateAndPresent` flow
+    - terminal timing/reporting is presentation-shaped now too: presenter
+      results, frame metrics, pacing logs, and the Metal terminal diagnostic
+      use `presentation_*` timing instead of `texture_*`
+    - tab-close and tab-navigation invalidation now runs through an
+      `invalidatePresentationCache()` seam instead of a retained-era texture
+      cache name, which better matches the current direct-main-target Metal
+      lane
     - the terminal Metal diagnostic now reports `raw_image_textures=1`, keeps
       non-zero `kitty_ms`, and no longer relies on the previous unsupported
       backend gate for RGB/RGBA Kitty images

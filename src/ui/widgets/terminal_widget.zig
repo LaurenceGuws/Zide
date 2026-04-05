@@ -99,8 +99,8 @@ pub const TerminalWidget = struct {
         self.controller.pending.completePendingPresentationFeedback(self.session, submission);
     }
 
-    pub fn invalidateTextureCache(self: *TerminalWidget) void {
-        self.surface.invalidateTextureCache();
+    pub fn invalidatePresentationCache(self: *TerminalWidget) void {
+        self.surface.invalidatePresentationCache();
     }
 
     pub fn dumpVisibleAsciiView(self: *TerminalWidget, shell: *Shell, log: anytype) !void {

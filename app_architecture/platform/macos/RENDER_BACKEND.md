@@ -707,6 +707,15 @@ What this does and does not mean:
   presenter no longer preserves an unused parallel helper path around the live
   presentation flow, which keeps the contract centered on the actual
   `updateAndPresent` logic instead of stale helper duplicates
+- the frame-timing contract matches that same presentation language now too:
+  terminal presenter results, terminal draw metrics, pacing logs, and the
+  Metal terminal diagnostic report `presentation_*` timing instead of
+  `texture_*`, which keeps the current direct-main-target lane from wearing
+  retained-surface timing terminology
+- terminal invalidation is less retained-shaped now too: tab-close and
+  tab-navigation callers invalidate presentation cache readiness through the
+  widget/state seam instead of referring to a texture cache even though the
+  active Metal terminal lane presents directly
 - that contract is intentionally backend-native rather than fake portability:
   the old cached GL `Texture` path is still OpenGL-only, while Metal Kitty
   images are created as frame-scoped native Metal textures and released after

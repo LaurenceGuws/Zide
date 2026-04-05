@@ -237,7 +237,7 @@ fn appendDrawLatencyFields(fields: []LogField, next: *usize, draw_metrics: Termi
     next.* += 1;
     fields[next.*] = .{ .key = "term_draw_cache_copy_ms", .value = .{ .float = draw_metrics.cache_copy_ms } };
     next.* += 1;
-    fields[next.*] = .{ .key = "term_draw_texture_ms", .value = .{ .float = draw_metrics.texture_update_ms } };
+    fields[next.*] = .{ .key = "term_draw_present_ms", .value = .{ .float = draw_metrics.presentation_update_ms } };
     next.* += 1;
     fields[next.*] = .{ .key = "term_draw_overlay_ms", .value = .{ .float = draw_metrics.overlay_ms } };
     next.* += 1;

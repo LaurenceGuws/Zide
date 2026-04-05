@@ -26,10 +26,10 @@ const GlyphDrawStats = draw_grid.GlyphDrawStats;
 
 pub const SurfacePresentResult = struct {
     early_return: bool = false,
-    texture_update_ms: f64 = 0.0,
-    texture_bg_ms: f64 = 0.0,
-    texture_glyph_ms: f64 = 0.0,
-    texture_kitty_ms: f64 = 0.0,
+    presentation_update_ms: f64 = 0.0,
+    presentation_bg_ms: f64 = 0.0,
+    presentation_glyph_ms: f64 = 0.0,
+    presentation_kitty_ms: f64 = 0.0,
 };
 
 const ViewportShiftState = struct {
@@ -486,13 +486,13 @@ fn directPresentMainTarget(
         );
     }
     renderer.flushTerminalBatch();
-    result.texture_bg_ms = time_utils.secondsToMs(app_shell.getTime() - bg_phase_start);
+    result.presentation_bg_ms = time_utils.secondsToMs(app_shell.getTime() - bg_phase_start);
 
     if (has_kitty) {
         const kitty_phase_start = app_shell.getTime();
         self.surface.kitty.cleanupTextures(self.session.allocator, self.surface.kitty.images_view.items);
         self.surface.kitty.drawImages(self.session.allocator, shell, view_geometry.origin_x, view_geometry.origin_y, false, start_line, rows, cols);
-        result.texture_kitty_ms += time_utils.secondsToMs(app_shell.getTime() - kitty_phase_start);
+        result.presentation_kitty_ms += time_utils.secondsToMs(app_shell.getTime() - kitty_phase_start);
     }
 
     const glyph_phase_start = app_shell.getTime();
@@ -527,12 +527,12 @@ fn directPresentMainTarget(
         );
     }
     renderer.flushTerminalGlyphBatch();
-    result.texture_glyph_ms = time_utils.secondsToMs(app_shell.getTime() - glyph_phase_start);
+    result.presentation_glyph_ms = time_utils.secondsToMs(app_shell.getTime() - glyph_phase_start);
 
     if (has_kitty) {
         const kitty_phase_start = app_shell.getTime();
         self.surface.kitty.drawImages(self.session.allocator, shell, view_geometry.origin_x, view_geometry.origin_y, true, start_line, rows, cols);
-        result.texture_kitty_ms += time_utils.secondsToMs(app_shell.getTime() - kitty_phase_start);
+        result.presentation_kitty_ms += time_utils.secondsToMs(app_shell.getTime() - kitty_phase_start);
     }
 
     return result;
@@ -798,7 +798,7 @@ pub fn updateAndPresent(
     blink_requires_partial: bool,
     has_kitty: bool,
 ) SurfacePresentResult {
-    const texture_phase_start = app_shell.getTime();
+    const presentation_phase_start = app_shell.getTime();
     var result = SurfacePresentResult{};
     const r = shell.rendererPtr();
     const rows = terminal_view.rows;
@@ -893,7 +893,7 @@ pub fn updateAndPresent(
         viewport_w = surface_update_plan.geometry.viewport_w;
         viewport_h = surface_update_plan.geometry.viewport_h;
         padding_x_i = surface_update_plan.geometry.padding_x_i;
-        var texture_update_completed = false;
+        var presentation_update_completed = false;
 
         if (surface_update_plan.mode != .none and retained_targets_runtime.beginSurface(r, .terminal)) {
             r.endClip();
@@ -913,10 +913,10 @@ pub fn updateAndPresent(
                 has_kitty,
                 surface_update_plan,
             );
-            result.texture_bg_ms += execution.bg_ms;
-            result.texture_glyph_ms += execution.glyph_ms;
-            result.texture_kitty_ms += execution.kitty_ms;
-            texture_update_completed = execution.completed;
+            result.presentation_bg_ms += execution.bg_ms;
+            result.presentation_glyph_ms += execution.glyph_ms;
+            result.presentation_kitty_ms += execution.kitty_ms;
+            presentation_update_completed = execution.completed;
             scene_frame_runtime.restoreMainCompositionTarget(r);
         }
         const present_state = refreshPresentationPresentState(
@@ -925,7 +925,7 @@ pub fn updateAndPresent(
             terminal_view,
             surface_update_plan.geometry,
             view_geometry,
-            texture_update_completed,
+            presentation_update_completed,
             visible_w,
             visible_h,
             view_cells.len,
@@ -950,6 +950,6 @@ pub fn updateAndPresent(
         }
     }
 
-    result.texture_update_ms = time_utils.secondsToMs(app_shell.getTime() - texture_phase_start);
+    result.presentation_update_ms = time_utils.secondsToMs(app_shell.getTime() - presentation_phase_start);
     return result;
 }
