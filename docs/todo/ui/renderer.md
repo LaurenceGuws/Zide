@@ -88,6 +88,11 @@ Progress note, 2026-04-05:
 - The next step is to push real submission and caller flow through that shared
   contract instead of leaving Metal-specific renderer verbs as the practical
   API.
+- `BackendOps` now includes `enqueueSurfaceDraw`: Metal uses
+  `appendSurfaceDrawToMetalQueue`; OpenGL implements `.solid` immediately via
+  `gl_backend.submitSurfaceDrawImmediate`. `Renderer.enqueueSurfaceDraw` is the
+  shared entrypoint; atlas/raw-image parity on OpenGL through this op is still
+  open work.
 - `src/ui/renderer/presentable_target.zig` now owns the presentable target
   type, so shared runtime code no longer imports a GL-owned target type
   directly.

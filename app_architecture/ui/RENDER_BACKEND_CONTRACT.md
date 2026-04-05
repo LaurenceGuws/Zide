@@ -97,6 +97,15 @@ One backend-neutral draw list that can express:
 This list must not embed Metal-native or GL-native draw structs in shared
 renderer state.
 
+**Submission shape today:** the shared union lives in `surface_draw.zig`
+(`SurfaceDraw`). `Renderer.enqueueSurfaceDraw` routes through `BackendOps`:
+Metal appends to the end-of-frame replay queue; OpenGL currently interprets
+`.solid` immediately via `gl_backend.submitSurfaceDrawImmediate` (raster-space
+`dest_rect` converted back to logical coordinates to match how Metal enqueues
+those draws). `.atlas` / `.raw_image` are not yet interpreted on the OpenGL
+path through this entrypoint; growing parity there is deliberate follow-up, not
+a second hidden queue.
+
 #### Presentable contract
 
 One backend-neutral presentable surface contract that can express:
