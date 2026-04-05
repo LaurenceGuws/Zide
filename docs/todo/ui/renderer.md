@@ -137,6 +137,9 @@ Progress note, 2026-04-05:
   readiness, or snapshot-presentable status now also route through
   `metal_backend.zig` helpers instead of manually unwrapping the backend
   context.
+- Sampled-text and terminal-cell-run queue handoffs now also route through
+  `metal_backend.zig` helpers instead of the renderer root passing the Metal
+  queued-surface list directly into those builders.
 - The next lifecycle step is to reduce shared-runtime ownership of dispatch and
   backend-native frame state, not just move code blocks around.
 

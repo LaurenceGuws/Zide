@@ -2,6 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const macos_metal_host = @import("../../platform/macos_metal_host.zig");
 const metal_frame_runtime = @import("metal_frame_runtime.zig");
+const metal_text_sample_runtime = @import("metal_text_sample_runtime.zig");
 const presentable_contract = @import("presentable_contract.zig");
 const surface_draw = @import("surface_draw.zig");
 const terminal_font = @import("../terminal_font.zig");
@@ -1178,6 +1179,34 @@ pub fn appendSurfaceDraw(renderer: anytype, draw: SurfaceDraw) bool {
         return false;
     };
     return true;
+}
+
+pub fn appendSampleTextRequest(
+    renderer: anytype,
+    font: *terminal_font.TerminalFont,
+    request: metal_text_sample_runtime.SampleTextRequest,
+) bool {
+    return metal_text_sample_runtime.appendUtf8Run(
+        renderer,
+        font,
+        request,
+        &renderer.metal_runtime.queued_surface_draws,
+        renderer.allocator,
+    );
+}
+
+pub fn appendTerminalCellRun(
+    renderer: anytype,
+    font: *terminal_font.TerminalFont,
+    request: metal_text_sample_runtime.TerminalCellRunRequest,
+) bool {
+    return metal_text_sample_runtime.appendTerminalUtf8Cells(
+        renderer,
+        font,
+        request,
+        &renderer.metal_runtime.queued_surface_draws,
+        renderer.allocator,
+    );
 }
 
 pub fn terminalSnapshotAvailableForRenderer(renderer: anytype) bool {

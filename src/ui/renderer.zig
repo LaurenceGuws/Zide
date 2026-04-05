@@ -1817,28 +1817,14 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         if (!metal_backend.hasBackendContext(self)) return false;
 
         const font = self.ensureMetalDiagnosticFont() catch return false;
-
-        return metal_text_sample_runtime.appendUtf8Run(
-            self,
-            font,
-            request,
-            &self.metal_runtime.queued_surface_draws,
-            self.allocator,
-        );
+        return metal_backend.appendSampleTextRequest(self, font, request);
     }
 
     pub fn drawBackendTerminalCellRun(self: *Renderer, font: *terminal_font_mod.TerminalFont, request: metal_text_sample_runtime.TerminalCellRunRequest) bool {
         if (self.backend != .metal) return false;
         if (self.plannedTextRenderingMode() != .metal_texture_atlas) return false;
         if (!metal_backend.hasBackendContext(self)) return false;
-
-        return metal_text_sample_runtime.appendTerminalUtf8Cells(
-            self,
-            font,
-            request,
-            &self.metal_runtime.queued_surface_draws,
-            self.allocator,
-        );
+        return metal_backend.appendTerminalCellRun(self, font, request);
     }
 
     pub fn drawBackendRawImageRgba(self: *Renderer, width: i32, height: i32, data: []const u8, dest: types.Rect, tint: types.Rgba) bool {

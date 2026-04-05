@@ -104,6 +104,11 @@ Metal atlas hooks, glyph-atlas readiness, or snapshot-presentable status now
 also route through renderer-level `metal_backend` helpers instead of manually
 unwrapping the backend context at each call site.
 
+That has improved slightly again: the shared renderer root no longer passes the
+Metal queued-surface list directly into the sampled-text builders for sampled
+text runs and terminal cell runs. Those queue handoffs now route through
+`metal_backend` helpers too.
+
 ### 2. Shared frame lifecycle still branches backend-by-backend
 
 The renderer root no longer spells out backend frame begin/submit bodies, but
