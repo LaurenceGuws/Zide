@@ -99,12 +99,15 @@ renderer state.
 
 **Submission shape today:** the shared union lives in `surface_draw.zig`
 (`SurfaceDraw`). `Renderer.enqueueSurfaceDraw` routes through `BackendOps`:
-Metal appends to the end-of-frame replay queue; OpenGL currently interprets
-`.solid` immediately via `gl_backend.submitSurfaceDrawImmediate` (raster-space
-`dest_rect` converted back to logical coordinates to match how Metal enqueues
-those draws). `.atlas` / `.raw_image` are not yet interpreted on the OpenGL
-path through this entrypoint; growing parity there is deliberate follow-up, not
-a second hidden queue.
+Metal appends to the end-of-frame replay queue; OpenGL interprets `.solid` and
+`.atlas` immediately via `gl_backend.submitSurfaceDrawImmediate` (raster-space
+`dest_rect` / atlas `dest_x`/`dest_y` converted back to logical coordinates to
+match how Metal enqueues those draws). Atlas samples on OpenGL require
+`text_rendering_mode == gl_texture_atlas` and use `terminal_font` coverage/color
+textures. `.raw_image` is still not interpreted on the OpenGL path (returns
+false without taking ownership). On Metal, `appendSolidRect` / `appendAtlasSample`
+now build the same `SurfaceDraw` values and submit through `enqueueSurfaceDraw`
+so queueing shares the ops-table entry with external callers.
 
 #### Presentable contract
 
