@@ -883,6 +883,10 @@ What this does and does not mean:
   `powerline=6 shade=6 braille=3 box=189 other_special=0`, which means even
   more of the dense TUI/editor symbol language is definitely on the Metal
   special path now
+- the next indicator refinement is quality, not ownership: left/right triangles
+  and arrowheads now use directional analytic shapes instead of the earlier
+  “diamond/rect stub” approximations, so the symbol lane is closer to the GL
+  read even though the runtime class counts stay the same
   dashboard row set
 - a real live-lane contradiction is fixed now too: the Metal terminal row
   fallback had still been truncating fallback cells to `u8` and the backend

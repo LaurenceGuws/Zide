@@ -807,6 +807,44 @@ fn drawDiamondGlyph(
     }
 }
 
+fn drawRightTriangleGlyph(
+    drawRect: *const fn (ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void,
+    ctx: *anyopaque,
+    ix: i32,
+    iy: i32,
+    iw: i32,
+    ih: i32,
+    color: Color,
+) void {
+    const center_y = iy + @divTrunc(ih, 2);
+    const half_h = @max(1, @divTrunc(ih, 2));
+    var row: i32 = 0;
+    while (row < ih) : (row += 1) {
+        const dy = @abs((iy + row) - center_y);
+        const span: i32 = @max(1, @divTrunc((half_h - @as(i32, @intCast(dy))) * iw, @max(1, half_h)) + 1);
+        drawRect(ctx, ix + iw - span, iy + row, span, 1, color);
+    }
+}
+
+fn drawLeftTriangleGlyph(
+    drawRect: *const fn (ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void,
+    ctx: *anyopaque,
+    ix: i32,
+    iy: i32,
+    iw: i32,
+    ih: i32,
+    color: Color,
+) void {
+    const center_y = iy + @divTrunc(ih, 2);
+    const half_h = @max(1, @divTrunc(ih, 2));
+    var row: i32 = 0;
+    while (row < ih) : (row += 1) {
+        const dy = @abs((iy + row) - center_y);
+        const span: i32 = @max(1, @divTrunc((half_h - @as(i32, @intCast(dy))) * iw, @max(1, half_h)) + 1);
+        drawRect(ctx, ix, iy + row, span, 1, color);
+    }
+}
+
 fn drawCircleGlyph(
     drawRect: *const fn (ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void,
     ctx: *anyopaque,
@@ -883,34 +921,45 @@ fn drawArrowGlyph(
     color: Color,
 ) bool {
     const thin = 1;
-    const thick = @max(1, @divTrunc(@min(iw, ih), 6));
     const mid_x = ix + @divTrunc(iw, 2);
     const mid_y = iy + @divTrunc(ih, 2);
     switch (codepoint) {
         0x2190 => {
-            drawRect(ctx, ix + @divTrunc(iw, 4), mid_y, @max(1, @divTrunc(iw * 3, 5)), thin, color);
-            drawRect(ctx, ix + @divTrunc(iw, 5), mid_y - thick, @max(1, @divTrunc(iw, 5)), thick * 2 + 1, color);
+            const head_w = @max(2, @divTrunc(iw, 4));
+            drawRect(ctx, ix + head_w, mid_y, @max(1, iw - head_w - 1), thin, color);
+            drawLeftTriangleGlyph(drawRect, ctx, ix, iy + @divTrunc(ih, 4), head_w, @max(3, ih - @divTrunc(ih, 2)), color);
             return true;
         },
         0x2192 => {
-            drawRect(ctx, ix + @divTrunc(iw, 5), mid_y, @max(1, @divTrunc(iw * 3, 5)), thin, color);
-            drawRect(ctx, ix + @divTrunc(iw * 3, 5), mid_y - thick, @max(1, @divTrunc(iw, 5)), thick * 2 + 1, color);
+            const head_w = @max(2, @divTrunc(iw, 4));
+            drawRect(ctx, ix, mid_y, @max(1, iw - head_w - 1), thin, color);
+            drawRightTriangleGlyph(drawRect, ctx, ix + iw - head_w, iy + @divTrunc(ih, 4), head_w, @max(3, ih - @divTrunc(ih, 2)), color);
             return true;
         },
         0x2191 => {
-            drawRect(ctx, mid_x, iy + @divTrunc(ih, 4), thin, @max(1, @divTrunc(ih * 3, 5)), color);
-            drawRect(ctx, mid_x - thick, iy + @divTrunc(ih, 5), thick * 2 + 1, @max(1, @divTrunc(ih, 5)), color);
+            const head_h = @max(2, @divTrunc(ih, 4));
+            drawRect(ctx, mid_x, iy + head_h, thin, @max(1, ih - head_h - 1), color);
+            var step: i32 = 0;
+            while (step < head_h) : (step += 1) {
+                const span = @max(1, step * 2 + 1);
+                drawRect(ctx, mid_x - @divTrunc(span, 2), iy + (head_h - step - 1), span, 1, color);
+            }
             return true;
         },
         0x2193 => {
-            drawRect(ctx, mid_x, iy + @divTrunc(ih, 5), thin, @max(1, @divTrunc(ih * 3, 5)), color);
-            drawRect(ctx, mid_x - thick, iy + @divTrunc(ih * 3, 5), thick * 2 + 1, @max(1, @divTrunc(ih, 5)), color);
+            const head_h = @max(2, @divTrunc(ih, 4));
+            drawRect(ctx, mid_x, iy, thin, @max(1, ih - head_h - 1), color);
+            var step: i32 = 0;
+            while (step < head_h) : (step += 1) {
+                const span = @max(1, step * 2 + 1);
+                drawRect(ctx, mid_x - @divTrunc(span, 2), iy + ih - head_h + step, span, 1, color);
+            }
             return true;
         },
         0x21B5 => {
             drawRect(ctx, mid_x, iy + @divTrunc(ih, 5), thin, @max(1, @divTrunc(ih * 3, 5)), color);
             drawRect(ctx, ix + @divTrunc(iw, 3), iy + @divTrunc(ih * 3, 5), @max(1, @divTrunc(iw, 3)), thin, color);
-            drawRect(ctx, ix + @divTrunc(iw, 4), iy + @divTrunc(ih * 3, 5) - thick, @max(1, @divTrunc(iw, 6)), thick * 2 + 1, color);
+            drawLeftTriangleGlyph(drawRect, ctx, ix + @divTrunc(iw, 4) - @max(2, @divTrunc(iw, 6)), iy + @divTrunc(ih, 2), @max(2, @divTrunc(iw, 6)), @max(3, @divTrunc(ih, 3)), color);
             return true;
         },
         else => return false,
@@ -1407,7 +1456,7 @@ pub fn drawBoxGlyph(
             return true;
         },
         0x25B6 => { // ▶
-            drawDiamondGlyph(drawRect, ctx, ix, iy, iw, ih, color);
+            drawRightTriangleGlyph(drawRect, ctx, ix, iy, iw, ih, color);
             return true;
         },
         0x25BC => { // ▼
@@ -1423,7 +1472,7 @@ pub fn drawBoxGlyph(
             return true;
         },
         0x25C0 => { // ◀
-            drawDiamondGlyph(drawRect, ctx, ix, iy, iw, ih, color);
+            drawLeftTriangleGlyph(drawRect, ctx, ix, iy, iw, ih, color);
             return true;
         },
         0x25C6 => { // ◆

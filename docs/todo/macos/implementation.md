@@ -892,6 +892,10 @@ lane.
       current host the first-frame split is
       `powerline=6 shade=6 braille=3 box=189 other_special=0`, with
       `shaped_special_glyphs=204`
+    - the next indicator slice is quality rather than new class ownership:
+      left/right triangles and arrowheads now use directional analytic shapes
+      instead of the earlier diamond/rect approximations, so the Metal symbol
+      lane is closer to the GL read without changing the class counts
     - a real live Metal contradiction is fixed too: the narrow terminal row
       fallback was still truncating fallback cells to `u8`, and the Metal
       sample helper only iterated raw bytes, so non-ASCII fallback cells could
