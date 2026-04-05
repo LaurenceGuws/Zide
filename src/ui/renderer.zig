@@ -1326,7 +1326,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     pub fn metalTerminalSnapshotAvailable(self: *const Renderer) bool {
         if (self.backend != .metal) return false;
         if (self.metal_backend_context) |*context| {
-            return metal_backend.terminalSnapshotAvailable(context);
+            return metal_backend.terminalSnapshotMatchesDrawable(context);
         }
         return false;
     }

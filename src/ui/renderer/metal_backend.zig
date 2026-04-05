@@ -1176,6 +1176,14 @@ pub fn terminalSnapshotAvailable(context: *const BackendContext) bool {
     return context.terminal_snapshot != null;
 }
 
+pub fn terminalSnapshotMatchesDrawable(context: *const BackendContext) bool {
+    const snapshot = context.terminal_snapshot orelse return false;
+    return context.drawable_width > 0 and
+        context.drawable_height > 0 and
+        snapshot.width == context.drawable_width and
+        snapshot.height == context.drawable_height;
+}
+
 pub fn ensureTerminalSnapshot(context: *BackendContext, width: i32, height: i32) bool {
     if (width <= 0 or height <= 0) return false;
     if (context.terminal_snapshot) |snapshot| {

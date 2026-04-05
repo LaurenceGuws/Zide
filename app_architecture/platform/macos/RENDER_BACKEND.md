@@ -726,6 +726,10 @@ What this does and does not mean:
   terminal draw-latency surface as well, so non-diagnostic terminal runs can
   distinguish a full direct draw from snapshot fast-present reuse without
   depending on the dedicated Metal terminal diagnostic runtime
+- the snapshot-cache availability check is stricter now too: the Metal lane
+  only treats the cache as presentable when the cached snapshot still matches
+  the live drawable size, which prevents resize-time reuse of a stale snapshot
+  just because terminal generation state happened not to change
 - the submission/retirement contract is now honest for this lane too:
   direct full draws and direct snapshot fast-presents both mark the submitted
   terminal generation in the frame trace, so publication retirement no longer

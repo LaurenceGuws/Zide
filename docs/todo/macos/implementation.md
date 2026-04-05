@@ -453,6 +453,9 @@ lane.
       draw-latency surface, so non-diagnostic terminal runs can distinguish a
       full direct draw from snapshot fast-present reuse without relying only
       on the dedicated Metal terminal diagnostic runtime
+    - snapshot-cache availability is now drawable-size-aware too, so a window
+      resize cannot reuse a stale cached Metal snapshot just because terminal
+      generation state remained unchanged
     - direct full draws and direct snapshot fast-presents now both mark the
       submitted terminal generation in the frame trace, so terminal
       publication retirement no longer depends on retained-surface-only
