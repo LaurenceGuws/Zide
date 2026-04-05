@@ -196,6 +196,19 @@ pub const FontSampleView = struct {
     }
 
     fn drawTextModeStatus(r: *Renderer, theme: *const app_shell.Theme, x: f32, y: f32) void {
+        if (r.textRenderingMode() == .unavailable and r.plannedTextRenderingMode() == .metal_texture_atlas) {
+            const swatch_x = x;
+            const swatch_y = y;
+            const swatch_size = @max(r.char_height * 1.25, 18.0);
+            r.drawRect(
+                @intFromFloat(std.math.round(swatch_x - 6.0)),
+                @intFromFloat(std.math.round(swatch_y - 6.0)),
+                @intFromFloat(std.math.round(swatch_size + 12.0)),
+                @intFromFloat(std.math.round(swatch_size + 12.0)),
+                theme.ui_panel_overlay,
+            );
+            r.drawChar('A', swatch_x, swatch_y, theme.foreground);
+        }
         r.drawText("Text sample unavailable on this runtime path.", x, y, theme.foreground);
 
         var live_buf: [96]u8 = undefined;

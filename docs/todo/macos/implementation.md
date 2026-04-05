@@ -325,6 +325,10 @@ lane.
       can upload and place a single sampled ASCII glyph through the Metal atlas
       contract, and the dedicated text-diagnostic runtime now reports
       `sample_char_draw=1` on the current macOS host
+    - the existing `font_sample` fallback now consumes that same narrow path as
+      a real UI caller: when live text is unavailable but the planned mode is
+      `metal_texture_atlas`, it frames and requests a sampled `'A'` through
+      `drawChar`
     - the live macOS Metal smoke frame path still blits a tiny region from the
       Metal atlas color texture into the drawable before present, and the
       submit-time screenshot path captured a real `1280x720` PPM artifact for

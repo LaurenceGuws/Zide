@@ -580,6 +580,10 @@ What this does and does not mean:
 - this is still intentionally narrow and honest: it is a single-glyph sampled
   draw path, not a claim that the generic string/text renderer has already
   migrated or that per-glyph tinting semantics are complete on Metal
+- the existing font-sample fallback now consumes that same narrow path as an
+  actual UI caller: when live text is unavailable but the planned mode is
+  `metal_texture_atlas`, it frames and requests a sampled `'A'` through
+  `drawChar` rather than remaining purely a passive status surface
 - the visible atlas-backed preview path itself is still real: the live smoke
   frame path blits a tiny region from the Metal atlas color texture into the
   drawable before present, and the submit-time screenshot path captured a real
