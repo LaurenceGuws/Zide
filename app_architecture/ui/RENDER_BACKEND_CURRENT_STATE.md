@@ -364,9 +364,9 @@ The shared runtime surface has improved too:
   `beginSurface` / `drawSurface` vocabulary
 - the shared presentable contract types now live in
   `src/ui/renderer/presentable_contract.zig`
-- the OpenGL presentable mechanics now live in
-  `src/ui/renderer/opengl_presentable_runtime.zig` instead of inside the
-  shared presentable contract module
+- the OpenGL presentable mechanics now live directly in
+  `src/ui/renderer/gl_backend.zig` instead of inside the shared presentable
+  contract module or another backend-local wrapper
 - the renderer-owned presentable facade now routes through backend-owned
   presentable entrypoints on the OpenGL and Metal modules
 
@@ -410,12 +410,12 @@ The main contradiction centers today are:
 - `src/ui/renderer/gl_backend.zig`
   - now owns more of the OpenGL runtime lifecycle, but shared renderer code
     still carries the OpenGL runtime state directly
+- `src/ui/renderer/gl_backend.zig`
+  - now also owns the actual GL presentable lifecycle directly instead of
+    routing that behavior through a second backend-local wrapper module
 - `src/ui/renderer.zig`
   - now also owns the small neutral presentable facade directly, so renderer
     root dispatch still remains part of the presentable contract surface
-- `src/ui/renderer/opengl_presentable_runtime.zig`
-  - now owns the actual GL presentable mechanics that used to live in the
-    shared presentable contract module
 - `src/ui/renderer.zig`
   - now owns the small shared frame facade directly, but still exposes
     renderer-wide per-frame bookkeeping and backend dispatch from one root

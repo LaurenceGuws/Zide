@@ -27,7 +27,6 @@ active execution lane for backend contract quality.
 - `src/ui/renderer/metal_backend.zig`
 - `src/ui/renderer/opengl_scene_target_runtime.zig`
 - `src/ui/renderer/present_trace_runtime.zig`
-- `src/ui/renderer/opengl_presentable_runtime.zig`
 
 ## Status
 
@@ -97,9 +96,9 @@ Progress note, 2026-04-05:
   contract types instead of leaving them inside the shared runtime wrapper.
 - the shared runtime API now uses presentable-oriented names instead of the old
   retained-surface verbs.
-- the actual GL presentable mechanics now live in
-  `src/ui/renderer/opengl_presentable_runtime.zig` instead of inside the
-  shared presentable contract module.
+- the actual GL presentable mechanics now live directly under
+  `src/ui/renderer/gl_backend.zig` instead of inside the shared presentable
+  contract module.
 - the neutral presentable facade no longer lives in a separate shared runtime
   wrapper; `Renderer` now owns that small dispatch surface directly and routes
   through backend-owned presentable entrypoints on the OpenGL and Metal
@@ -274,9 +273,9 @@ Progress note, 2026-04-05:
 - `src/ui/renderer.zig`
   - also owns the small neutral presentable facade directly, so renderer-root
     dispatch is still part of the presentable contract surface
-- `src/ui/renderer/opengl_presentable_runtime.zig`
-  - now owns the concrete GL presentable mechanics that used to live under the
-    shared contract module
+- `src/ui/renderer/gl_backend.zig`
+  - now owns the concrete GL presentable mechanics directly instead of routing
+    through a backend-local wrapper module
 
 ## Remaining Work
 
