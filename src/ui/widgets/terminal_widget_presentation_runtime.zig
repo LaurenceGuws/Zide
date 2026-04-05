@@ -665,8 +665,35 @@ pub fn runPresentation(
 ) PresentationRunResult {
     var result = PresentationRunResult{};
     clearPresentationSample(self);
+    const view_cells_len = terminal_view.cells.len;
+    const bg_color = if (view_cells_len > 0)
+        Color{
+            .r = terminal_view.base_colors.resolved_background.r,
+            .g = terminal_view.base_colors.resolved_background.g,
+            .b = terminal_view.base_colors.resolved_background.b,
+            .a = terminal_view.base_colors.resolved_background.a,
+        }
+    else
+        renderer.theme.background;
 
     if (renderer.terminalPresentationMode() == .direct_main_target) {
+        if (tryFastPresentExisting(
+            &self.surface,
+            renderer,
+            terminal_view,
+            view_cells_len,
+            bg_color,
+            x,
+            y,
+            width,
+            height,
+            view_geometry,
+            note_present_ctx,
+            note_present,
+        )) {
+            result.early_return = true;
+            return result;
+        }
         const direct = directPresent(
             self,
             shell,
@@ -692,16 +719,6 @@ pub fn runPresentation(
         return result;
     }
 
-    const view_cells_len = terminal_view.cells.len;
-    const bg_color = if (view_cells_len > 0)
-        Color{
-            .r = terminal_view.base_colors.resolved_background.r,
-            .g = terminal_view.base_colors.resolved_background.g,
-            .b = terminal_view.base_colors.resolved_background.b,
-            .a = terminal_view.base_colors.resolved_background.a,
-        }
-    else
-        renderer.theme.background;
     if (tryFastPresentExisting(
         &self.surface,
         renderer,
@@ -892,16 +909,40 @@ pub fn tryFastPresentExisting(
         @intFromFloat(height),
         bg_color,
     );
-    presentDraw(
-        renderer,
-        terminal_view.generation,
-        surface_state.lastRenderGeneration(),
-        view_geometry,
-        view_geometry.viewport_width,
-        view_geometry.viewport_height,
-        note_present_ctx,
-        note_present,
-    );
+    if (renderer.terminalPresentationMode() == .direct_main_target) {
+        note_present(
+            note_present_ctx,
+            renderer,
+            .direct_main_target,
+            terminal_view.generation,
+            view_geometry.origin_x,
+            view_geometry.origin_y,
+            view_geometry.viewport_width,
+            view_geometry.viewport_height,
+            view_geometry.viewport_width,
+            view_geometry.viewport_height,
+        );
+        presentation_target_runtime.drawPresentable(renderer, .{
+            .x = view_geometry.origin_x,
+            .y = view_geometry.origin_y,
+            .width = view_geometry.viewport_width,
+            .height = view_geometry.viewport_height,
+            .source_width = view_geometry.viewport_width,
+            .source_height = view_geometry.viewport_height,
+            .generation = surface_state.lastRenderGeneration(),
+        });
+    } else {
+        presentDraw(
+            renderer,
+            terminal_view.generation,
+            surface_state.lastRenderGeneration(),
+            view_geometry,
+            view_geometry.viewport_width,
+            view_geometry.viewport_height,
+            note_present_ctx,
+            note_present,
+        );
+    }
     return true;
 }
 

@@ -411,6 +411,11 @@ lane.
     - terminal widget surface readiness is now named `presentable_ready`
       instead of `texture_ready`, which better matches the current contract
       where Metal can present directly without a retained texture surface
+    - the direct-main-target Metal lane now also has a reusable presentable
+      cache: after the first successful terminal frame, the Metal backend
+      captures a persistent snapshot texture and the terminal presentable seam
+      can reuse that snapshot on later fast-present frames without pretending
+      the lane has already become a retained-surface path
     - the terminal planning helper surface is now presentation-shaped too:
       viewport shift and update-plan helpers are named around presentation
       instead of texture ownership, which better matches both retained and
@@ -427,6 +432,11 @@ lane.
       after the first successful direct-main-target Metal frame, widget
       handoff logs report `presentable_ready=1` instead of staying stuck at a
       retained-only readiness value
+    - the terminal Metal diagnostic now proves that snapshot-backed reuse
+      explicitly too: capability logs start at `snapshot_available=0`, then
+      frame logs report `snapshot_available=1` from the first submitted frame
+      onward while the active presentation mode remains
+      `terminal_present=direct_main_target`
     - the underlying terminal widget storage contract is less retained-first
       now too: the state container and partial-plan type are named around
       presentation instead of retained state, which reduces another place
@@ -690,8 +700,8 @@ lane.
       directly as the public entrypoint for terminal presentation
     - the direct Metal terminal lane still validates on the same runtime truth:
       `terminal_present=direct_main_target`, `presentable_ready=1` after the
-      first successful frame, `grid_runs=10/224`, `overlay_runs=1/5`, and
-      non-zero `kitty_ms`
+      first successful frame, `snapshot_available=1` after frame 0,
+      `grid_runs=10/224`, `overlay_runs=1/5`, and non-zero `kitty_ms`
     - this reduces one more retained-first contradiction before a second
       Metal terminal presentation shape is introduced
 

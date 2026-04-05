@@ -4,6 +4,7 @@ const scene_frame_runtime = @import("../renderer/scene_frame_runtime.zig");
 pub const PresentableDraw = retained_targets_runtime.SurfaceDraw;
 
 pub fn presentableAvailable(renderer: anytype) bool {
+    if (renderer.backend == .metal) return renderer.metalTerminalSnapshotAvailable();
     return retained_targets_runtime.surfaceAvailable(renderer, .terminal);
 }
 
@@ -20,6 +21,18 @@ pub fn endPresentable(renderer: anytype) void {
 }
 
 pub fn drawPresentable(renderer: anytype, draw: PresentableDraw) void {
+    if (renderer.backend == .metal) {
+        _ = renderer.drawMetalTerminalSnapshotPresentable(.{
+            .texture = undefined,
+            .dest_rect = .{
+                .x = draw.x,
+                .y = draw.y,
+                .width = draw.width orelse return,
+                .height = draw.height orelse return,
+            },
+        });
+        return;
+    }
     retained_targets_runtime.drawSurface(renderer, .terminal, draw);
 }
 

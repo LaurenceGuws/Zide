@@ -69,7 +69,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
     log.logf(.info, "start width={d} height={d} rows={d} cols={d} frame_budget={d}", .{ width, height, rows, cols, frame_budget });
     log.logf(
         .info,
-        "capabilities composition={s} retained_targets={d} terminal_present={s} screenshot={s} text={s} planned_text={s} atlas={s} planned_atlas={s} raw_image_textures={d}",
+        "capabilities composition={s} retained_targets={d} terminal_present={s} screenshot={s} text={s} planned_text={s} atlas={s} planned_atlas={s} raw_image_textures={d} snapshot_available={d}",
         .{
             @tagName(capabilities.scene_composition_mode),
             @intFromBool(capabilities.retained_targets),
@@ -80,6 +80,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
             @tagName(capabilities.atlas_storage_mode),
             @tagName(capabilities.planned_atlas_storage_mode),
             @intFromBool(capabilities.raw_image_textures),
+            @intFromBool(shell.renderer.metalTerminalSnapshotAvailable()),
         },
     );
 
@@ -112,7 +113,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
             last_metrics_seq = metrics.seq;
             log.logf(
                 .info,
-                "frame={d} submitted={d} sequence={d} grid_runs={d}/{d} overlay_runs={d}/{d} metric_grid_runs={d}/{d} metric_overlay_runs={d}/{d} kitty_ms={d:.3}",
+                "frame={d} submitted={d} sequence={d} grid_runs={d}/{d} overlay_runs={d}/{d} metric_grid_runs={d}/{d} metric_overlay_runs={d}/{d} kitty_ms={d:.3} snapshot_available={d}",
                 .{
                     frame_index,
                     @intFromBool(submission.succeeded),
@@ -126,6 +127,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
                     metrics.metal_overlay_row_runs,
                     metrics.metal_overlay_row_cells,
                     metrics.presentation_kitty_ms,
+                    @intFromBool(shell.renderer.metalTerminalSnapshotAvailable()),
                 },
             );
             log.logf(.info, "frame={d} metric_terminal_present={s}", .{
@@ -147,7 +149,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
     const final_metrics = terminal_widget_draw.latestFrameLatencyMetrics();
     log.logf(
         .info,
-        "complete frames={d} final_grid_runs={d}/{d} final_overlay_runs={d}/{d} metric_grid_runs={d}/{d} metric_overlay_runs={d}/{d} metric_terminal_present={s} kitty_ms={d:.3}",
+        "complete frames={d} final_grid_runs={d}/{d} final_overlay_runs={d}/{d} metric_grid_runs={d}/{d} metric_overlay_runs={d}/{d} metric_terminal_present={s} kitty_ms={d:.3} snapshot_available={d}",
         .{
             frame_index,
             final_debug.grid_row_runs,
@@ -160,6 +162,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
             final_metrics.metal_overlay_row_cells,
             @tagName(final_metrics.terminal_presentation_mode),
             final_metrics.presentation_kitty_ms,
+            @intFromBool(shell.renderer.metalTerminalSnapshotAvailable()),
         },
     );
 }

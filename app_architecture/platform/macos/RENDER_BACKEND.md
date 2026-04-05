@@ -671,6 +671,12 @@ What this does and does not mean:
   surface too: the current macOS Metal terminal lane reports
   `terminal_present=direct_main_target`, which is a better contract than
   inferring terminal behavior indirectly from `retained_targets=0`
+- that direct-main-target lane now also owns a backend-native presentable
+  reuse story instead of behaving like a permanently one-shot path:
+  after the first successful Metal terminal frame, the backend captures a
+  persistent drawable-sized snapshot texture and the terminal presentable seam
+  can reuse that snapshot on later fast-present frames without pretending the
+  lane has already become a retained-surface path
 - that presentation mode is now also published through terminal frame metrics
   and the terminal diagnostic lane, so the live contract is visible both at
   startup capability time and per-frame widget evidence time
@@ -699,6 +705,11 @@ What this does and does not mean:
   the first successful direct-main-target Metal frame, widget handoff logs
   report `presentable_ready=1` instead of staying stuck at a retained-only
   readiness value
+- the Metal terminal diagnostic now proves that snapshot-backed presentable
+  reuse explicitly too: it starts with `snapshot_available=0` at capability
+  time and reports `snapshot_available=1` from frame 0 onward, which confirms
+  the live direct-main-target lane now has a reusable presentable cache even
+  though the active presentation mode remains `direct_main_target`
 - the underlying storage contract is less retained-first now too: the terminal
   widget state container and partial-plan type are named around presentation
   rather than retained state, which reduces one more place where the direct

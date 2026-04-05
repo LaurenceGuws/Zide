@@ -1315,6 +1315,14 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         return self.backend == .opengl or (self.backend == .metal and self.metal_backend_context != null);
     }
 
+    pub fn metalTerminalSnapshotAvailable(self: *const Renderer) bool {
+        if (self.backend != .metal) return false;
+        if (self.metal_backend_context) |*context| {
+            return metal_backend.terminalSnapshotAvailable(context);
+        }
+        return false;
+    }
+
     pub fn sceneCompositionMode(self: *const Renderer) SceneCompositionMode {
         return self.capabilities().scene_composition_mode;
     }
@@ -1441,6 +1449,8 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
                                 .raw_image => |draw| _ = metal_backend.drawRawImage(context, frame, draw),
                             }
                         }
+
+                        _ = metal_backend.captureTerminalSnapshot(context, frame);
 
                         metal_backend.encodePresent(frame);
                         metal_backend.commitFrame(frame);
@@ -1963,6 +1973,21 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         self.metal_surface_draws[self.metal_surface_draw_count] = .{ .raw_image = draw };
         self.metal_surface_draw_count += 1;
         return true;
+    }
+
+    pub fn drawMetalTerminalSnapshotPresentable(
+        self: *Renderer,
+        draw: metal_backend.RawImageDraw,
+    ) bool {
+        if (self.backend != .metal) return false;
+        const context = self.metal_backend_context orelse return false;
+        const snapshot = context.terminal_snapshot orelse return false;
+        return self.appendMetalRawImageDraw(.{
+            .texture = metal_backend.cloneRawImageTexture(snapshot),
+            .dest_rect = draw.dest_rect,
+            .tint = draw.tint,
+            .clip_rect = draw.clip_rect,
+        });
     }
 
     pub fn drawMetalAtlasSampleChar(self: *Renderer, char: u8, x: f32, y: f32, color: Color) bool {

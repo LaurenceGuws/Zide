@@ -169,6 +169,7 @@ pub const BackendContext = struct {
     atlas_pipeline: *anyopaque,
     atlas_sampler: *anyopaque,
     glyph_atlas: GlyphAtlas,
+    terminal_snapshot: ?RawImageTexture,
     drawable_width: i32,
     drawable_height: i32,
 };
@@ -913,6 +914,28 @@ pub fn deinitRawImageTexture(texture: *RawImageTexture) void {
     releaseObject(texture.texture);
 }
 
+pub fn cloneRawImageTexture(texture: RawImageTexture) RawImageTexture {
+    return .{
+        .texture = retainObject(texture.texture),
+        .width = texture.width,
+        .height = texture.height,
+    };
+}
+
+fn createEmptyRawImageTexture(
+    device: *anyopaque,
+    width: i32,
+    height: i32,
+) ?RawImageTexture {
+    if (builtin.target.os.tag != .macos) return null;
+    const atlas_texture = createAtlasTexture(device, width, height, pixel_format_bgra8_unorm) orelse return null;
+    return .{
+        .texture = atlas_texture.texture,
+        .width = width,
+        .height = height,
+    };
+}
+
 fn seedGlyphAtlasDiagnostics(atlas: *GlyphAtlas) bool {
     const coverage = [_]u8{
         0x00, 0x55, 0xAA, 0xFF,
@@ -1046,6 +1069,7 @@ pub fn createBackendContext(
         .atlas_pipeline = atlas_pipeline,
         .atlas_sampler = atlas_sampler,
         .glyph_atlas = glyph_atlas,
+        .terminal_snapshot = null,
         .drawable_width = drawable_width,
         .drawable_height = drawable_height,
     };
@@ -1067,6 +1091,7 @@ pub fn resizeBackendContext(
 
 pub fn deinitBackendContext(context: *BackendContext) void {
     if (builtin.target.os.tag != .macos) return;
+    if (context.terminal_snapshot) |*snapshot| deinitRawImageTexture(snapshot);
     deinitGlyphAtlas(&context.glyph_atlas);
     releaseObject(context.atlas_sampler);
     releaseObject(context.atlas_pipeline);
@@ -1145,6 +1170,50 @@ pub fn prepareFrameReadback(context: *BackendContext, frame: *Frame) ?Readback {
         .height = context.drawable_height,
         .bytes_per_row = bytes_per_row,
     };
+}
+
+pub fn terminalSnapshotAvailable(context: *const BackendContext) bool {
+    return context.terminal_snapshot != null;
+}
+
+pub fn ensureTerminalSnapshot(context: *BackendContext, width: i32, height: i32) bool {
+    if (width <= 0 or height <= 0) return false;
+    if (context.terminal_snapshot) |snapshot| {
+        if (snapshot.width == width and snapshot.height == height) return true;
+        var existing = snapshot;
+        deinitRawImageTexture(&existing);
+        context.terminal_snapshot = null;
+    }
+    context.terminal_snapshot = createEmptyRawImageTexture(context.device, width, height);
+    return context.terminal_snapshot != null;
+}
+
+pub fn captureTerminalSnapshot(context: *BackendContext, frame: *Frame) bool {
+    if (builtin.target.os.tag != .macos) return false;
+    if (context.drawable_width <= 0 or context.drawable_height <= 0) return false;
+    if (!ensureTerminalSnapshot(context, context.drawable_width, context.drawable_height)) return false;
+    const snapshot = context.terminal_snapshot orelse return false;
+    const source_texture = msgSendPointer(frame.drawable, "texture") orelse return false;
+    const blit_encoder = msgSendPointer(frame.command_buffer, "blitCommandEncoder") orelse return false;
+    msgSendCopyTextureToTexture(
+        blit_encoder,
+        "copyFromTexture:sourceSlice:sourceLevel:sourceOrigin:sourceSize:toTexture:destinationSlice:destinationLevel:destinationOrigin:",
+        source_texture,
+        0,
+        0,
+        .{ .x = 0, .y = 0, .z = 0 },
+        .{
+            .width = @intCast(context.drawable_width),
+            .height = @intCast(context.drawable_height),
+            .depth = 1,
+        },
+        snapshot.texture,
+        0,
+        0,
+        .{ .x = 0, .y = 0, .z = 0 },
+    );
+    msgSendVoid(blit_encoder, "endEncoding");
+    return true;
 }
 
 pub fn copyReadbackRgba(allocator: std.mem.Allocator, readback: *const Readback) ![]u8 {
