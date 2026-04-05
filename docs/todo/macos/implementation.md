@@ -392,6 +392,13 @@ lane.
     - the direct main-target terminal fallback now preserves Kitty image
       composition ordering too: below-text and above-text Kitty passes run on
       the non-retained Metal path instead of that path behaving as text-only
+    - the macOS Metal terminal diagnostic now seeds deterministic below-text
+      and above-text Kitty placements too, so the next Kitty boundary is
+      proven by runtime instead of only by code shape
+    - current Kitty truth is now explicit and non-crashing: the Metal terminal
+      diagnostic reports non-zero `kitty_ms`, while Kitty texture upload still
+      fails cleanly because raw texture creation is still OpenGL-only on the
+      backend-smoke Metal lane
     - this is still a proof/runtime checkpoint, not a claim that retained
       terminal surfaces or full terminal-on-Metal presentation are finished
     - the narrow Metal text lane now covers a tiny multiline ASCII run, not

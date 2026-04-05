@@ -2270,11 +2270,13 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         draw_ops.drawTextureRect(renderer, texture, src, dest, color, renderer.text_render.bg_rgba, kind);
     }
 
-    pub fn createTextureFromRgba(_: *Renderer, width: i32, height: i32, data: []const u8, filter: i32) ?types.Texture {
+    pub fn createTextureFromRgba(self: *Renderer, width: i32, height: i32, data: []const u8, filter: i32) ?types.Texture {
+        if (self.backend != .opengl) return null;
         return texture_utils.createTextureFromRgba(width, height, data, filter);
     }
 
-    pub fn createTextureFromRgb(_: *Renderer, width: i32, height: i32, data: []const u8, filter: i32) ?types.Texture {
+    pub fn createTextureFromRgb(self: *Renderer, width: i32, height: i32, data: []const u8, filter: i32) ?types.Texture {
+        if (self.backend != .opengl) return null;
         return texture_utils.createTextureFromRgb(width, height, data, filter);
     }
 

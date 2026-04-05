@@ -657,7 +657,16 @@ What this does and does not mean:
   now: the same Kitty image below-text and above-text ordering used by the
   retained path is applied on the non-retained Metal terminal path too, so the
   presentation contract is less "text-only" even though a dedicated Kitty
-  proof runtime still has not been added yet
+  proof runtime still had not been added yet
+- that dedicated Kitty-facing proof now exists inside the terminal Metal
+  diagnostic runtime itself: it seeds deterministic below-text and above-text
+  Kitty placements on the current host and proves the next real boundary
+  honestly
+- current Kitty truth on the Metal backend-smoke terminal lane is now explicit
+  instead of crashing through a GL path: seeded Kitty placements reach the
+  widget/frame pipeline, `texture_kitty_ms` is reported in the terminal
+  diagnostic, and Kitty texture upload still fails cleanly because raw texture
+  creation is currently OpenGL-only on this path
 - this is still intentionally narrow and honest: it is now a tiny sampled
   multiline ASCII run with an explicit monospace-cell option rather than a
   claim that the generic string/text renderer has already migrated

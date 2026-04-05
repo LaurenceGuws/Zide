@@ -1,5 +1,7 @@
 const std = @import("std");
 const terminal_transport = @import("../runtime/terminal_transport.zig");
+const terminal_publication = @import("../publication/terminal_publication.zig");
+const publication_flow = @import("../publication/publication_flow.zig");
 const pty_mod = @import("../../io/pty.zig");
 const runtime_init = @import("runtime_init.zig");
 const runtime_lifecycle = @import("runtime_lifecycle.zig");
@@ -7,6 +9,17 @@ const session_transport_runtime = @import("transport_runtime.zig");
 const session_thread_runtime = @import("thread_runtime.zig");
 
 const Pty = pty_mod.Pty;
+
+pub const DiagnosticKittyStateSelector = enum {
+    primary,
+    alt,
+};
+
+pub const DiagnosticKittySeed = struct {
+    which: DiagnosticKittyStateSelector = .primary,
+    image: terminal_publication.KittyImage,
+    placement: terminal_publication.KittyPlacement,
+};
 
 pub fn init(self_type: type, allocator: std.mem.Allocator, rows: u16, cols: u16, options: anytype) !*self_type {
     return try runtime_init.init(self_type, allocator, rows, cols, options);
@@ -94,4 +107,57 @@ pub fn resize(self: anytype, rows: u16, cols: u16) !void {
 
 pub fn resizeWithCellSize(self: anytype, rows: u16, cols: u16, cell_width: u16, cell_height: u16) !void {
     try session_transport_runtime.resizeWithCellSize(self, rows, cols, cell_width, cell_height);
+}
+
+pub fn replaceDiagnosticKittyState(self: anytype, seeds: []const DiagnosticKittySeed) !void {
+    self.lock();
+    defer self.unlock();
+
+    clearDiagnosticKittyState(self, .primary);
+    clearDiagnosticKittyState(self, .alt);
+
+    for (seeds) |seed| {
+        const state = switch (seed.which) {
+            .primary => &self.core.kitty_primary,
+            .alt => &self.core.kitty_alt,
+        };
+        const owned_data = try self.allocator.dupe(u8, seed.image.data);
+        errdefer self.allocator.free(owned_data);
+        try state.images.append(self.allocator, .{
+            .id = seed.image.id,
+            .width = seed.image.width,
+            .height = seed.image.height,
+            .format = seed.image.format,
+            .data = owned_data,
+            .version = seed.image.version,
+        });
+        errdefer _ = state.images.pop();
+        try state.placements.append(self.allocator, seed.placement);
+        state.total_bytes += owned_data.len;
+    }
+
+    if (seeds.len > 0) {
+        self.core.kitty_primary.generation += 1;
+        self.core.kitty_alt.generation += 1;
+    }
+    _ = publication_flow.bumpAndPublishCurrentViewLocked(self, "diagnostic_kitty_seed");
+}
+
+fn clearDiagnosticKittyState(self: anytype, which: DiagnosticKittyStateSelector) void {
+    const state = switch (which) {
+        .primary => &self.core.kitty_primary,
+        .alt => &self.core.kitty_alt,
+    };
+    for (state.images.items) |image| {
+        self.allocator.free(image.data);
+    }
+    state.images.clearRetainingCapacity();
+    state.placements.clearRetainingCapacity();
+    var partial_it = state.partials.iterator();
+    while (partial_it.next()) |entry| {
+        entry.value_ptr.data.deinit(self.allocator);
+    }
+    state.partials.clearRetainingCapacity();
+    state.total_bytes = 0;
+    state.loading_image_id = null;
 }

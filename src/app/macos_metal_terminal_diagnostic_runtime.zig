@@ -53,6 +53,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
         "\x1b[H1| build one\x1b[2;1H2| item two\x1b[3;1H3| plain ascii\x1b[4;1H4| fallback row\x1b[5;1H5| metal lane\x1b[6;1H6| terminal ok",
     ))) return error.MetalTerminalDiagnosticSeedRejected;
     try session_runtime.poll(session);
+    try seedDiagnosticKittyImages(session);
 
     var widget = terminal_session_bootstrap.initWidget(session, .kitty, false, false);
     defer widget.deinit();
@@ -109,7 +110,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
             last_metrics_seq = metrics.seq;
             log.logf(
                 .info,
-                "frame={d} submitted={d} sequence={d} grid_runs={d}/{d} overlay_runs={d}/{d} metric_grid_runs={d}/{d} metric_overlay_runs={d}/{d}",
+                "frame={d} submitted={d} sequence={d} grid_runs={d}/{d} overlay_runs={d}/{d} metric_grid_runs={d}/{d} metric_overlay_runs={d}/{d} kitty_ms={d:.3}",
                 .{
                     frame_index,
                     @intFromBool(submission.succeeded),
@@ -122,6 +123,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
                     metrics.metal_grid_row_cells,
                     metrics.metal_overlay_row_runs,
                     metrics.metal_overlay_row_cells,
+                    metrics.texture_kitty_ms,
                 },
             );
         } else {
@@ -139,7 +141,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
     const final_metrics = terminal_widget_draw.latestFrameLatencyMetrics();
     log.logf(
         .info,
-        "complete frames={d} final_grid_runs={d}/{d} final_overlay_runs={d}/{d} metric_grid_runs={d}/{d} metric_overlay_runs={d}/{d}",
+        "complete frames={d} final_grid_runs={d}/{d} final_overlay_runs={d}/{d} metric_grid_runs={d}/{d} metric_overlay_runs={d}/{d} kitty_ms={d:.3}",
         .{
             frame_index,
             final_debug.grid_row_runs,
@@ -150,6 +152,74 @@ pub fn run(allocator: std.mem.Allocator) !void {
             final_metrics.metal_grid_row_cells,
             final_metrics.metal_overlay_row_runs,
             final_metrics.metal_overlay_row_cells,
+            final_metrics.texture_kitty_ms,
         },
     );
+}
+
+fn seedDiagnosticKittyImages(session: *terminal_runtime.TerminalRuntimeShell) !void {
+    var below_rgba = [_]u8{
+        0xD0, 0x44, 0x44, 0xFF, 0xD0, 0x44, 0x44, 0xFF,
+        0xD0, 0x44, 0x44, 0xFF, 0xD0, 0x44, 0x44, 0xFF,
+    };
+    var above_rgba = [_]u8{
+        0x44, 0x98, 0xE8, 0xFF, 0x44, 0x98, 0xE8, 0xFF,
+        0x44, 0x98, 0xE8, 0xFF, 0x44, 0x98, 0xE8, 0xFF,
+    };
+
+    const seeds = [_]session_runtime.DiagnosticKittySeed{
+        .{
+            .which = .primary,
+            .image = .{
+                .id = 1,
+                .width = 2,
+                .height = 2,
+                .format = .rgba,
+                .data = below_rgba[0..],
+                .version = 1,
+            },
+            .placement = .{
+                .image_id = 1,
+                .placement_id = 1,
+                .row = 1,
+                .col = 18,
+                .cols = 2,
+                .rows = 1,
+                .z = -1,
+                .anchor_row = 0,
+                .is_virtual = false,
+                .parent_image_id = 0,
+                .parent_placement_id = 0,
+                .offset_x = 0,
+                .offset_y = 0,
+            },
+        },
+        .{
+            .which = .primary,
+            .image = .{
+                .id = 2,
+                .width = 2,
+                .height = 2,
+                .format = .rgba,
+                .data = above_rgba[0..],
+                .version = 1,
+            },
+            .placement = .{
+                .image_id = 2,
+                .placement_id = 1,
+                .row = 4,
+                .col = 20,
+                .cols = 2,
+                .rows = 1,
+                .z = 1,
+                .anchor_row = 0,
+                .is_virtual = false,
+                .parent_image_id = 0,
+                .parent_placement_id = 0,
+                .offset_x = 0,
+                .offset_y = 0,
+            },
+        },
+    };
+    try session_runtime.replaceDiagnosticKittyState(session, seeds[0..]);
 }
