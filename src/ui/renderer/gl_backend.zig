@@ -2,7 +2,6 @@ const std = @import("std");
 const gl = @import("gl.zig");
 const gl_resources = @import("gl_resources.zig");
 const opengl_frame_runtime = @import("opengl_frame_runtime.zig");
-const opengl_scene_target_runtime = @import("opengl_scene_target_runtime.zig");
 const draw_ops = @import("draw_ops.zig");
 const shape_utils = @import("shape_utils.zig");
 const texture_draw = @import("texture_draw.zig");
@@ -12,6 +11,7 @@ const presentable_contract = @import("presentable_contract.zig");
 const presentable_target = @import("presentable_target.zig");
 const scene_target_state = @import("scene_target_state.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
+const platform_window = @import("../../platform/window_metrics.zig");
 const app_logger = @import("../../app_logger.zig");
 const types = @import("types.zig");
 
@@ -21,6 +21,7 @@ pub const RenderTarget = presentable_target.PresentableTarget;
 const PresentableSurface = presentable_contract.PresentableSurface;
 const PresentableDraw = presentable_contract.PresentableDraw;
 const PresentableInfo = presentable_contract.PresentableInfo;
+const SceneTargetContract = scene_target_state.SceneTargetContract;
 const SceneTargetInvalidation = scene_target_state.SceneTargetInvalidation;
 const RendererCapabilities = capability_contract.RendererCapabilities;
 
@@ -147,8 +148,101 @@ pub fn sceneTargetInvalidationForRefresh(
     );
 }
 
+pub fn refreshSceneTargetContract(renderer: anytype, display_metrics: platform_window.DisplayMetrics) void {
+    const log = app_logger.logger("renderer.scene_target");
+    const next = scene_target_state.contractFromDisplayMetrics(display_metrics);
+    if (renderer.capabilities().scene_composition_mode != .offscreen_scene_target) {
+        renderer.opengl_runtime.scene_target.pending_invalidation = .{};
+        renderer.opengl_runtime.scene_target.contract = next;
+        renderer.opengl_runtime.scene_target.invalidation = .{};
+        renderer.opengl_runtime.scene_target.ready = false;
+        if (renderer.opengl_runtime.scene_target.target != null) {
+            destroyRenderTarget(&renderer.opengl_runtime.scene_target.target);
+        }
+        return;
+    }
+    const reasons = renderer.opengl_runtime.scene_target.pending_invalidation;
+    renderer.opengl_runtime.scene_target.pending_invalidation = .{};
+    renderer.opengl_runtime.scene_target.contract = next;
+    if (!reasons.any()) return;
+
+    renderer.opengl_runtime.scene_target.invalidation = reasons;
+    renderer.opengl_runtime.scene_target.ready = false;
+    if (renderer.opengl_runtime.scene_target.target != null) {
+        destroyRenderTarget(&renderer.opengl_runtime.scene_target.target);
+    }
+    scene_target_state.logState(
+        log,
+        "invalidate",
+        renderer.opengl_runtime.scene_target.contract,
+        renderer.opengl_runtime.scene_target.invalidation,
+        renderer.opengl_runtime.scene_target.ready,
+    );
+}
+
 pub fn mergePendingSceneTargetInvalidation(renderer: anytype, invalidation: SceneTargetInvalidation) void {
     renderer.opengl_runtime.scene_target.pending_invalidation.merge(invalidation);
+}
+
+pub fn beginSceneFrame(renderer: anytype) bool {
+    if (renderer.opengl_runtime.scene_target.target == null) return false;
+    if (!beginRenderTarget(renderer, renderer.opengl_runtime.scene_target.target)) {
+        noteSceneTargetRecreateFailure(renderer);
+        return false;
+    }
+    return true;
+}
+
+pub fn drawSceneTargetToDefault(renderer: anytype) void {
+    const target = renderer.opengl_runtime.scene_target.target orelse return;
+    bindDefaultTarget(renderer);
+    gl.Disable(gl.c.GL_SCISSOR_TEST);
+    const bg = renderer.theme.background.toRgba();
+    gl.ClearColor(
+        @as(f32, @floatFromInt(bg.r)) / 255.0,
+        @as(f32, @floatFromInt(bg.g)) / 255.0,
+        @as(f32, @floatFromInt(bg.b)) / 255.0,
+        @as(f32, @floatFromInt(bg.a)) / 255.0,
+    );
+    gl.Clear(gl.c.GL_COLOR_BUFFER_BIT);
+    const src = texture_draw.fullTextureSrcRect(target.texture);
+    const dest = types.Rect{
+        .x = 0,
+        .y = 0,
+        .width = @floatFromInt(target.logical_width),
+        .height = @floatFromInt(target.logical_height),
+    };
+    gl.Disable(gl.c.GL_BLEND);
+    draw_ops.drawTextureRect(
+        renderer,
+        target.texture,
+        src,
+        dest,
+        .{ .r = 255, .g = 255, .b = 255, .a = 255 },
+        .{ .r = 0, .g = 0, .b = 0, .a = 0 },
+        .linear_premul,
+    );
+    gl.Enable(gl.c.GL_BLEND);
+}
+
+pub fn prepareSceneTarget(renderer: anytype, filter: i32) void {
+    const recreated = ensureSceneTarget(renderer, filter);
+    if (renderer.opengl_runtime.scene_target.target == null or !recreated) return;
+
+    if (!beginRenderTarget(renderer, renderer.opengl_runtime.scene_target.target)) {
+        noteSceneTargetRecreateFailure(renderer);
+        return;
+    }
+    gl.Disable(gl.c.GL_SCISSOR_TEST);
+    const bg = renderer.theme.background.toRgba();
+    gl.ClearColor(
+        @as(f32, @floatFromInt(bg.r)) / 255.0,
+        @as(f32, @floatFromInt(bg.g)) / 255.0,
+        @as(f32, @floatFromInt(bg.b)) / 255.0,
+        @as(f32, @floatFromInt(bg.a)) / 255.0,
+    );
+    gl.Clear(gl.c.GL_COLOR_BUFFER_BIT);
+    bindDefaultTarget(renderer);
 }
 
 pub fn whiteTexture(renderer: anytype) types.Texture {
@@ -498,13 +592,63 @@ fn snapToDevicePixel(value: f32, render_scale: f32) f32 {
 
 fn restoreCompositionTarget(renderer: anytype) void {
     if (renderer.present.main_composition_target == .offscreen_scene_target) {
-        if (!opengl_scene_target_runtime.beginSceneFrame(renderer)) {
+        if (!beginSceneFrame(renderer)) {
             renderer.present.main_composition_target = .default_target;
             bindDefaultTarget(renderer);
         }
         return;
     }
     bindDefaultTarget(renderer);
+}
+
+fn noteSceneTargetRecreateFailure(renderer: anytype) void {
+    renderer.opengl_runtime.scene_target.invalidation.target_recreate_failure = true;
+    renderer.opengl_runtime.scene_target.ready = false;
+    scene_target_state.logState(
+        app_logger.logger("renderer.scene_target"),
+        "recreate_failed",
+        renderer.opengl_runtime.scene_target.contract,
+        renderer.opengl_runtime.scene_target.invalidation,
+        renderer.opengl_runtime.scene_target.ready,
+    );
+}
+
+fn clearSceneTargetInvalidation(renderer: anytype) void {
+    renderer.opengl_runtime.scene_target.invalidation = .{};
+    renderer.opengl_runtime.scene_target.ready = true;
+    scene_target_state.logState(
+        app_logger.logger("renderer.scene_target"),
+        "ready",
+        renderer.opengl_runtime.scene_target.contract,
+        renderer.opengl_runtime.scene_target.invalidation,
+        renderer.opengl_runtime.scene_target.ready,
+    );
+}
+
+fn ensureSceneTarget(renderer: anytype, filter: i32) bool {
+    const contract: SceneTargetContract = renderer.opengl_runtime.scene_target.contract;
+    if (contract.logical_width <= 0 or contract.logical_height <= 0 or
+        contract.drawable_width <= 0 or contract.drawable_height <= 0)
+    {
+        noteSceneTargetRecreateFailure(renderer);
+        return false;
+    }
+
+    const recreated = ensureRenderTargetScaledForRenderer(
+        renderer,
+        &renderer.opengl_runtime.scene_target.target,
+        contract.logical_width,
+        contract.logical_height,
+        filter,
+    );
+    if (renderer.opengl_runtime.scene_target.target == null) {
+        noteSceneTargetRecreateFailure(renderer);
+        return false;
+    }
+    if (recreated or !renderer.opengl_runtime.scene_target.ready) {
+        clearSceneTargetInvalidation(renderer);
+    }
+    return recreated;
 }
 
 pub fn initGlResources(renderer: anytype) !void {

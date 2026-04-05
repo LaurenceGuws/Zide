@@ -25,7 +25,6 @@ active execution lane for backend contract quality.
 - `src/ui/renderer/capability_contract.zig`
 - `src/ui/renderer/gl_backend.zig`
 - `src/ui/renderer/metal_backend.zig`
-- `src/ui/renderer/opengl_scene_target_runtime.zig`
 - `src/ui/renderer/present_trace_runtime.zig`
 
 ## Status
@@ -112,10 +111,10 @@ Progress note, 2026-04-05:
   backend frame runtime modules.
 - OpenGL-only scene target refresh/prep has moved out of the old shared frame
   wrapper shape and into `opengl_frame_runtime.zig`.
-- The remaining OpenGL scene-target mechanics now also live under
-  `src/ui/renderer/opengl_scene_target_runtime.zig` instead of
-  `src/ui/renderer/present_trace_runtime.zig`, which leaves the shared scene
-  runtime closer to trace/present bookkeeping than GL composition ownership.
+- The remaining OpenGL scene-target mechanics now also live directly under
+  `src/ui/renderer/gl_backend.zig` instead of `src/ui/renderer/present_trace_runtime.zig`,
+  which leaves the shared scene runtime closer to trace/present bookkeeping
+  than GL composition ownership.
 - Metal runtime storage on `Renderer` is now bundled under one
   `metal_runtime` state object instead of being scattered across separate peer
   fields.
@@ -266,10 +265,9 @@ Progress note, 2026-04-05:
 - `src/ui/renderer/present_trace_runtime.zig`
   - now mostly handles shared trace/present bookkeeping, but still
     participates in the shared frame lifecycle surface
-- `src/ui/renderer/opengl_scene_target_runtime.zig`
-  - now owns the OpenGL scene-target mechanics that used to sit in shared
-    scene runtime, but still exposes that GL model through shared renderer
-    state
+- `src/ui/renderer/gl_backend.zig`
+  - now owns the OpenGL scene-target mechanics directly instead of routing
+    them through another backend-local wrapper module
 - `src/ui/renderer.zig`
   - also owns the small neutral presentable facade directly, so renderer-root
     dispatch is still part of the presentable contract surface

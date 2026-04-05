@@ -3,16 +3,15 @@ const gl_backend = @import("gl_backend.zig");
 const screenshot = @import("screenshot.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
 const app_logger = @import("../../app_logger.zig");
-const opengl_scene_target_runtime = @import("opengl_scene_target_runtime.zig");
 const present_trace_runtime = @import("present_trace_runtime.zig");
 
 pub fn beginFrame(renderer: anytype) void {
-    opengl_scene_target_runtime.refreshSceneTargetContract(renderer, renderer.display_metrics);
+    gl_backend.refreshSceneTargetContract(renderer, renderer.display_metrics);
     if (renderer.capabilities().scene_composition_mode == .offscreen_scene_target) {
-        opengl_scene_target_runtime.prepareSceneTarget(renderer, gl.c.GL_NEAREST);
+        gl_backend.prepareSceneTarget(renderer, gl.c.GL_NEAREST);
     }
     renderer.present.main_composition_target = switch (renderer.sceneCompositionMode()) {
-        .offscreen_scene_target => if (opengl_scene_target_runtime.beginSceneFrame(renderer))
+        .offscreen_scene_target => if (gl_backend.beginSceneFrame(renderer))
             .offscreen_scene_target
         else
             .default_target,
@@ -32,7 +31,7 @@ pub fn beginFrame(renderer: anytype) void {
 }
 
 pub fn submitFrame(renderer: anytype) present_trace_runtime.FrameSubmission {
-    if (renderer.present.main_composition_target == .offscreen_scene_target) opengl_scene_target_runtime.drawSceneTargetToDefault(renderer);
+    if (renderer.present.main_composition_target == .offscreen_scene_target) gl_backend.drawSceneTargetToDefault(renderer);
     if (renderer.present.capture_armed) {
         if (renderer.present.capture_path) |path| {
             dumpWindowScreenshotPpm(renderer, path) catch |err| {
