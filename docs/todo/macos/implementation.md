@@ -891,6 +891,15 @@ lane.
       `▼` are handled by the Metal special-glyph lane instead of relying on
       generic font fallback, which makes queue/status markers cleaner on the
       live `btop` workload
+    - the narrow Metal sampled-text lane is no longer structurally
+      ASCII-primary either: glyph selection now falls through
+      `pickFontForCodepoint(...)` instead of stopping at
+      `directFastGlyphForCodepoint(...)`, so PUA / Nerd Font icon cells can
+      resolve through the existing terminal font fallback ownership
+    - that fixes the live contradiction where broad text could render on
+      Metal while `nvim`-style icons still vanished: sampled fallback rows can
+      now pick and upload non-primary symbol glyphs instead of returning no
+      draw for those cells
     - the dashboard fixture is now proven under churn too:
       `DASHBOARD=1` plus `MUTATE_FRAME=1` yields
       `metric_present_sample=direct_snapshot_update`,

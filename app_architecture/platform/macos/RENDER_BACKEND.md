@@ -886,6 +886,15 @@ What this does and does not mean:
   `■`, `▲`, and `▼` are on the Metal special-glyph lane instead of relying on
   font fallback, which makes queue/status markers materially cleaner on the
   live dashboard workload
+- the narrow Metal sampled-text lane is no longer structurally ASCII-primary
+  either: glyph selection now falls through `pickFontForCodepoint(...)`
+  instead of only using `directFastGlyphForCodepoint(...)`, so PUA / Nerd
+  Font icon cells can resolve through the same fallback font ownership that
+  the broader terminal font stack already uses
+- on the live Metal terminal path that fixes the “normal text renders but
+  `nvim`-style icons disappear” contradiction: the sampled row path can now
+  pick and upload non-primary symbol glyphs instead of silently returning no
+  draw for those cells
 - that same dashboard lane is now runtime-proven under churn too instead of
   only on the first full frame: a dashboard mutation frame now stays on
   `metric_present_sample=direct_snapshot_update` with

@@ -7,6 +7,31 @@ const types = @import("types.zig");
 const TerminalFont = terminal_font_mod.TerminalFont;
 const Renderer = renderer_root.Renderer;
 
+const GlyphSelection = struct {
+    face: terminal_font_mod.c.FT_Face,
+    glyph_id: u32,
+    want_color: bool,
+};
+
+fn selectGlyph(font: *TerminalFont, codepoint: u32) ?GlyphSelection {
+    if (font.directFastGlyphForCodepoint(codepoint)) |direct| {
+        return .{
+            .face = direct.face,
+            .glyph_id = direct.glyph_id,
+            .want_color = direct.want_color,
+        };
+    }
+
+    const choice = font.pickFontForCodepoint(codepoint);
+    const glyph_id = terminal_font_mod.c.FT_Get_Char_Index(choice.face, if (codepoint == 0) ' ' else codepoint);
+    if (glyph_id == 0) return null;
+    return .{
+        .face = choice.face,
+        .glyph_id = glyph_id,
+        .want_color = choice.want_color,
+    };
+}
+
 fn isSymbolGlyph(codepoint: u32) bool {
     return (codepoint >= 0xE000 and codepoint <= 0xF8FF) or
         (codepoint >= 0xF0000 and codepoint <= 0xFFFFD) or
@@ -65,9 +90,9 @@ pub fn atlasSampleForGlyph(
     const render_scale = if (renderer.scale.render_scale > 0.0) renderer.scale.render_scale else 1.0;
     const inv_scale = 1.0 / render_scale;
     const baseline = pen_y + font.baseline_from_top * inv_scale;
+    const selection = selectGlyph(font, codepoint) orelse return null;
     const glyph = blk: {
-        const direct = font.directFastGlyphForCodepoint(codepoint) orelse return null;
-        break :blk font.getGlyphById(direct.face, direct.glyph_id, direct.want_color, false, 0) catch return null;
+        break :blk font.getGlyphById(selection.face, selection.glyph_id, selection.want_color, false, 0) catch return null;
     };
     if (glyph.rect.width <= 0 or glyph.rect.height <= 0) return null;
 
@@ -193,10 +218,8 @@ pub fn appendUtf8Run(
         }
 
         const sample = atlasSampleForGlyph(renderer, font, codepoint, pen_x, pen_y, request.tint, clip) orelse return drew_any;
-        const advance_glyph = blk: {
-            const direct = font.directFastGlyphForCodepoint(codepoint) orelse return drew_any;
-            break :blk font.getGlyphById(direct.face, direct.glyph_id, direct.want_color, false, 0) catch return drew_any;
-        };
+        const selection = selectGlyph(font, codepoint) orelse return drew_any;
+        const advance_glyph = font.getGlyphById(selection.face, selection.glyph_id, selection.want_color, false, 0) catch return drew_any;
         draws.append(allocator, .{ .atlas = sample }) catch return drew_any;
         drew_any = true;
         pen_x += switch (request.layout) {
