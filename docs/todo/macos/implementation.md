@@ -612,6 +612,16 @@ lane.
   - 2026-04-05 build checkpoint:
     - `zig build` passed on native macOS arm64
     - `zig build -Dmode=editor` passed on native macOS arm64
+  - 2026-04-05 regression fix:
+    - the OpenGL editor/default-IDE lane on macOS was regressed by retained
+      editor-surface blit ownership: the editor surface was only blitted on
+      dirty frames even though the main composition target clears every frame
+    - fixed in `editor_widget_draw`: retained editor surfaces are still updated
+      only when dirty, but they are now drawn every frame when available
+    - native macOS smoke after the fix:
+      - `ZIDE_EDITOR_LIVE_SMOKE_SCENARIO=type ... zig build run -- --mode editor`
+      - `ZIDE_EDITOR_LIVE_SMOKE_SCENARIO=type ... zig build run`
+      - both produced valid captures instead of the prior gray/blank flicker
     - `zig build -Dmode=terminal` passed on native macOS arm64
     - this is compile/build truth only; GUI launch/manual interaction truth is
       still pending

@@ -573,7 +573,7 @@ pub fn drawCached(
         traversal_mod.walkVisibleSegments(view, prepared.line_text, prepared.cluster_slice, cols, widget.wrap_enabled, start_line, start_seg, line_idx, visible_lines, &visual_row, line_width, ctx, Local.renderSegment);
     }
 
-    if (use_retained_editor_surface and (any_dirty or force_redraw)) {
+    if (use_retained_editor_surface) {
         retained_targets_runtime.drawSurface(r, .editor, .{ .x = draw_x, .y = draw_y });
     }
 
