@@ -854,21 +854,8 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         }
 
         switch (renderer.backend) {
-            .opengl => {
-                try renderer.initGlResources();
-                renderer.opengl_runtime.resources_ready = true;
-                try renderer.initFonts();
-                renderer.fonts_ready = true;
-            },
-            .metal => {
-                const metal_runtime_ok = renderer.runtime_profile == .backend_smoke or
-                    (renderer.runtime_profile == .full_ui and builtin.target.os.tag == .macos);
-                if (!metal_runtime_ok) return error.RendererBackendRuntimeNotReady;
-                const host = renderer.prepareMacosMetalHost() orelse return error.MacosMetalAttachmentUnavailable;
-                renderer.metal_runtime.backend_context = metal_backend.createBackendContext(host, renderer.render_width, renderer.render_height) orelse return error.MetalBackendContextUnavailable;
-                try renderer.initFonts();
-                renderer.fonts_ready = true;
-            },
+            .opengl => try gl_backend.initRuntime(renderer),
+            .metal => try metal_backend.initRuntime(renderer),
         }
 
         input_state.startTextInput(renderer.inputDomain());
@@ -891,28 +878,8 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         defer window_init.deinitRenderSurfaceAttachment(&render_surface_attachment);
 
         return switch (backend) {
-            .opengl => blk: {
-                const gl_context = try gl_backend.createBackendContext(window);
-                defer sdl_api.glDeleteContext(gl_context);
-                try gl.load();
-                break :blk true;
-            },
-            .metal => blk: {
-                const host = switch (render_surface_attachment) {
-                    .macos_metal_host => |value| value,
-                    else => return false,
-                };
-                var context = metal_backend.createBackendContext(host, width, height) orelse return false;
-                defer metal_backend.deinitBackendContext(&context);
-
-                var frame = metal_backend.acquireFrame(&context) orelse return false;
-                if (!metal_backend.clearFrame(&frame, .{ 0.08, 0.09, 0.11, 1.0 })) {
-                    metal_backend.abandonFrame(&frame);
-                    return false;
-                }
-                metal_backend.presentFrame(&context, &frame);
-                break :blk true;
-            },
+            .opengl => try gl_backend.runStartupSmoke(window),
+            .metal => metal_backend.runStartupSmoke(render_surface_attachment, width, height),
         };
     }
 
@@ -947,11 +914,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         self.allocator.destroy(self);
     }
 
-    fn initGlResources(self: *Renderer) !void {
-        try gl_backend.initGlResources(self);
-    }
-
-    fn initFonts(self: *Renderer) !void {
+    pub fn initFonts(self: *Renderer) !void {
         try font_manager.initFonts(self);
     }
 

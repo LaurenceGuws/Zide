@@ -111,6 +111,9 @@ Progress note, 2026-04-05:
   fields.
 - backend teardown now routes through `gl_backend.zig` and `metal_backend.zig`
   instead of `Renderer.deinit()` spelling out both cleanup paths inline.
+- backend startup/init and startup-smoke probing now also route through
+  `gl_backend.zig` and `metal_backend.zig` instead of `Renderer.init()` and
+  `runStartupBackendSmoke()` spelling out both boot paths inline.
 - The next lifecycle step is to reduce shared-runtime ownership of dispatch and
   backend-native frame state, not just move code blocks around.
 

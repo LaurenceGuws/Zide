@@ -1078,6 +1078,33 @@ pub fn createBackendContext(
     };
 }
 
+pub fn initRuntime(renderer: anytype) !void {
+    const metal_runtime_ok = renderer.runtime_profile == .backend_smoke or
+        (renderer.runtime_profile == .full_ui and builtin.target.os.tag == .macos);
+    if (!metal_runtime_ok) return error.RendererBackendRuntimeNotReady;
+    const host = renderer.prepareMacosMetalHost() orelse return error.MacosMetalAttachmentUnavailable;
+    renderer.metal_runtime.backend_context = createBackendContext(host, renderer.render_width, renderer.render_height) orelse return error.MetalBackendContextUnavailable;
+    try renderer.initFonts();
+    renderer.fonts_ready = true;
+}
+
+pub fn runStartupSmoke(render_surface_attachment: anytype, width: i32, height: i32) bool {
+    const host = switch (render_surface_attachment) {
+        .macos_metal_host => |value| value,
+        else => return false,
+    };
+    var context = createBackendContext(host, width, height) orelse return false;
+    defer deinitBackendContext(&context);
+
+    var frame = acquireFrame(&context) orelse return false;
+    if (!clearFrame(&frame, .{ 0.08, 0.09, 0.11, 1.0 })) {
+        abandonFrame(&frame);
+        return false;
+    }
+    presentFrame(&context, &frame);
+    return true;
+}
+
 pub fn resizeBackendContext(
     context: *BackendContext,
     drawable_width: i32,

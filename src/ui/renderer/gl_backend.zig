@@ -56,6 +56,20 @@ pub fn createBackendContext(window: *sdl.SDL_Window) !sdl.SDL_GLContext {
     return gl_context;
 }
 
+pub fn initRuntime(renderer: anytype) !void {
+    try initGlResources(renderer);
+    renderer.opengl_runtime.resources_ready = true;
+    try renderer.initFonts();
+    renderer.fonts_ready = true;
+}
+
+pub fn runStartupSmoke(window: *sdl.SDL_Window) !bool {
+    const gl_context = try createBackendContext(window);
+    defer sdl_api.glDeleteContext(gl_context);
+    try gl.load();
+    return true;
+}
+
 pub fn initGlResources(renderer: anytype) !void {
     const vertex_src =
         "#version 330 core\n" ++

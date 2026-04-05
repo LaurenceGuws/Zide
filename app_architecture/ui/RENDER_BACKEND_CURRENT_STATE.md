@@ -79,6 +79,11 @@ This has improved slightly again: backend teardown now runs through backend
 modules instead of `Renderer.deinit()` spelling out both OpenGL and Metal
 cleanup inline.
 
+This has improved slightly once more: backend startup/init now also runs
+through backend modules instead of `Renderer.init()` and
+`runStartupBackendSmoke()` spelling out both OpenGL and Metal boot logic
+inline.
+
 ### 2. Shared frame lifecycle still branches backend-by-backend
 
 The renderer root no longer spells out backend frame begin/submit bodies, but
@@ -103,6 +108,10 @@ But there is still not a final backend lifecycle seam yet:
 - shared lifecycle helpers still expose backend-specific state on `Renderer`
 - the backend frame runtimes still operate on a renderer object that carries
   concrete backend state directly
+
+- backend startup ownership is better, but still depends on backend modules
+  mutating renderer-carried backend state directly rather than owning that
+  runtime state behind a narrower lifecycle seam
 
 This has improved slightly again: OpenGL-only scene target refresh/prep no
 longer happens in `frame_runtime.zig`; that branch now lives under
