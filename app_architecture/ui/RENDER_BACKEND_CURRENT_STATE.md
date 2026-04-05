@@ -253,8 +253,9 @@ supposed to prevent.
 
 ### 4. Retained/presentable surfaces are still GL-shaped in shared runtime code
 
-`src/ui/renderer/presentable_targets_runtime.zig` still routes only to the
-OpenGL presentable implementation today.
+The neutral presentable surface no longer lives in a separate shared runtime
+wrapper. That small façade now lives directly on `Renderer`, which is an
+improvement over carrying one more shared dispatch module.
 
 This has improved slightly: the presentable target type now lives in
 `src/ui/renderer/presentable_target.zig` instead of being owned directly by the
@@ -270,9 +271,8 @@ The shared runtime surface has improved too:
 - the OpenGL presentable mechanics now live in
   `src/ui/renderer/opengl_presentable_runtime.zig` instead of inside the
   shared presentable contract module
-- the shared presentable runtime now routes through backend-owned presentable
-  entrypoints on the OpenGL and Metal modules instead of importing the OpenGL
-  implementation directly
+- the renderer-owned presentable facade now routes through backend-owned
+  presentable entrypoints on the OpenGL and Metal modules
 
 But the presentable surface story is still not backend-neutral at the shared
 runtime layer:
@@ -314,8 +314,9 @@ The main contradiction centers today are:
 - `src/ui/renderer/gl_backend.zig`
   - now owns more of the OpenGL runtime lifecycle, but shared renderer code
     still carries the OpenGL runtime state directly
-- `src/ui/renderer/presentable_targets_runtime.zig`
-  - shared contract surface still routes only to the OpenGL presentable model
+- `src/ui/renderer.zig`
+  - now also owns the small neutral presentable facade directly, so renderer
+    root dispatch still remains part of the presentable contract surface
 - `src/ui/renderer/opengl_presentable_runtime.zig`
   - now owns the actual GL presentable mechanics that used to live in the
     shared presentable contract module

@@ -1,27 +1,27 @@
-const presentable_targets_runtime = @import("../renderer/presentable_targets_runtime.zig");
+const renderer_mod = @import("../renderer.zig");
 
-pub const PresentableDraw = presentable_targets_runtime.PresentableDraw;
+pub const PresentableDraw = renderer_mod.PresentableDraw;
 
 pub fn presentableAvailable(renderer: anytype) bool {
-    return presentable_targets_runtime.presentableAvailable(renderer, .terminal);
+    return renderer.presentableAvailable(.terminal);
 }
 
 pub fn ensurePresentable(renderer: anytype, width: i32, height: i32) bool {
-    return presentable_targets_runtime.ensurePresentable(renderer, .terminal, width, height);
+    return renderer.ensurePresentable(.terminal, width, height);
 }
 
 pub fn beginPresentable(renderer: anytype) bool {
-    return presentable_targets_runtime.beginPresentable(renderer, .terminal);
+    return renderer.beginPresentable(.terminal);
 }
 
 pub fn endPresentable(renderer: anytype) void {
-    presentable_targets_runtime.endPresentable(renderer, .terminal);
+    renderer.endPresentable(.terminal);
 }
 
 pub fn drawPresentable(renderer: anytype, draw: PresentableDraw) void {
-    presentable_targets_runtime.drawPresentable(renderer, .terminal, draw);
+    renderer.drawPresentable(.terminal, draw);
 }
 
 pub fn scrollPresentable(renderer: anytype, dx: i32, dy: i32) bool {
-    return presentable_targets_runtime.scrollPresentable(renderer, .terminal, dx, dy);
+    return renderer.scrollPresentable(.terminal, dx, dy);
 }

@@ -26,7 +26,6 @@ active execution lane for backend contract quality.
 - `src/ui/renderer/metal_backend.zig`
 - `src/ui/renderer/opengl_scene_target_runtime.zig`
 - `src/ui/renderer/scene_frame_runtime.zig`
-- `src/ui/renderer/presentable_targets_runtime.zig`
 - `src/ui/renderer/opengl_presentable_runtime.zig`
 
 ## Status
@@ -96,9 +95,10 @@ Progress note, 2026-04-05:
 - the actual GL presentable mechanics now live in
   `src/ui/renderer/opengl_presentable_runtime.zig` instead of inside the
   shared presentable contract module.
-- the shared presentable runtime now routes through backend-owned presentable
-  entrypoints on the OpenGL and Metal modules instead of importing the OpenGL
-  implementation directly.
+- the neutral presentable facade no longer lives in a separate shared runtime
+  wrapper; `Renderer` now owns that small dispatch surface directly and routes
+  through backend-owned presentable entrypoints on the OpenGL and Metal
+  modules.
 - The next presentable step is lifecycle/behavior ownership, not just storage
   relocation.
 - backend-specific frame begin/submit bodies now live in dedicated frame
@@ -213,9 +213,9 @@ Progress note, 2026-04-05:
   - now owns the OpenGL scene-target mechanics that used to sit in shared
     scene runtime, but still exposes that GL model through shared renderer
     state
-- `src/ui/renderer/presentable_targets_runtime.zig`
-  - still routes a shared presentable contract whose richer lifecycle is
-    effectively defined by the OpenGL implementation
+- `src/ui/renderer.zig`
+  - also owns the small neutral presentable facade directly, so renderer-root
+    dispatch is still part of the presentable contract surface
 - `src/ui/renderer/opengl_presentable_runtime.zig`
   - now owns the concrete GL presentable mechanics that used to live under the
     shared contract module

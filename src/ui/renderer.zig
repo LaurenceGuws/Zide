@@ -31,7 +31,7 @@ const terminal_underline = @import("renderer/terminal_underline.zig");
 const texture_draw = @import("renderer/texture_draw.zig");
 const input_runtime = @import("renderer/input_runtime.zig");
 const font_runtime = @import("renderer/font_runtime.zig");
-const presentable_targets_runtime = @import("renderer/presentable_targets_runtime.zig");
+const presentable_contract = @import("renderer/presentable_contract.zig");
 const scene_frame_runtime = @import("renderer/scene_frame_runtime.zig");
 const metal_text_sample_runtime = @import("renderer/metal_text_sample_runtime.zig");
 const text_runtime = @import("renderer/text_runtime.zig");
@@ -172,7 +172,9 @@ pub const ScaleState = font_runtime.ScaleState;
 pub const FontConfigState = font_manager.FontConfigState;
 pub const ClipboardState = clipboard.ClipboardState;
 pub const TerminalTextState = text_runtime.TerminalTextState;
-pub const PresentableTargetState = presentable_targets_runtime.PresentableTargetState;
+pub const PresentableTargetState = presentable_target.PresentableTargetState;
+pub const PresentableSurface = presentable_contract.PresentableSurface;
+pub const PresentableDraw = presentable_contract.PresentableDraw;
 pub const SceneTargetInvalidation = scene_target_state.SceneTargetInvalidation;
 pub const SceneTargetContract = scene_target_state.SceneTargetContract;
 const MainCompositionTarget = scene_frame_runtime.MainCompositionTarget;
@@ -1131,6 +1133,55 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         return switch (self.backend) {
             .opengl => gl_backend.dumpWindowScreenshotPpmSized(self, path, out_width, out_height),
             .metal => error.RendererScreenshotUnavailable,
+        };
+    }
+
+    pub fn deinitPresentables(self: *Renderer) void {
+        switch (self.backend) {
+            .opengl => gl_backend.deinitPresentables(self),
+            .metal => metal_backend.deinitPresentables(self),
+        }
+    }
+
+    pub fn ensurePresentable(self: *Renderer, surface: PresentableSurface, width: i32, height: i32) bool {
+        return switch (self.backend) {
+            .opengl => gl_backend.ensurePresentable(self, surface, width, height),
+            .metal => metal_backend.ensurePresentable(self, surface, width, height),
+        };
+    }
+
+    pub fn beginPresentable(self: *Renderer, surface: PresentableSurface) bool {
+        return switch (self.backend) {
+            .opengl => gl_backend.beginPresentable(self, surface),
+            .metal => metal_backend.beginPresentable(self, surface),
+        };
+    }
+
+    pub fn presentableAvailable(self: *Renderer, surface: PresentableSurface) bool {
+        return switch (self.backend) {
+            .opengl => gl_backend.presentableAvailable(self, surface),
+            .metal => metal_backend.presentableAvailable(self, surface),
+        };
+    }
+
+    pub fn endPresentable(self: *Renderer, surface: PresentableSurface) void {
+        switch (self.backend) {
+            .opengl => gl_backend.endPresentable(self, surface),
+            .metal => metal_backend.endPresentable(self, surface),
+        }
+    }
+
+    pub fn drawPresentable(self: *Renderer, surface: PresentableSurface, draw: PresentableDraw) void {
+        switch (self.backend) {
+            .opengl => gl_backend.drawPresentable(self, surface, draw),
+            .metal => metal_backend.drawPresentable(self, surface, draw),
+        }
+    }
+
+    pub fn scrollPresentable(self: *Renderer, surface: PresentableSurface, dx: i32, dy: i32) bool {
+        return switch (self.backend) {
+            .opengl => gl_backend.scrollPresentable(self, surface, dx, dy),
+            .metal => metal_backend.scrollPresentable(self, surface, dx, dy),
         };
     }
 

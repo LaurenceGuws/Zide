@@ -7,15 +7,14 @@ const frame_view_mod = @import("editor/view/frame.zig");
 const runtime_mod = @import("editor/view/runtime.zig");
 const draw_mod = @import("ui/widgets/editor_widget_draw.zig");
 const renderer_mod = @import("ui/renderer.zig");
-const presentable_targets_runtime = @import("ui/renderer/presentable_targets_runtime.zig");
 const shared_types = @import("types/mod.zig");
 
 const Editor = editor_mod.Editor;
 const EditorRenderCache = cache_mod.EditorRenderCache;
 const InputSnapshot = shared_types.input.InputSnapshot;
 const EditorTextStyleFlags = renderer_mod.EditorTextStyleFlags;
-const PresentableSurface = presentable_targets_runtime.PresentableSurface;
-const PresentableDraw = presentable_targets_runtime.PresentableDraw;
+const PresentableSurface = renderer_mod.PresentableSurface;
+const PresentableDraw = renderer_mod.PresentableDraw;
 const TokenKind = syntax_mod.TokenKind;
 
 const Scenario = enum {

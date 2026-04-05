@@ -16,7 +16,6 @@ const app_logger = @import("../../app_logger.zig");
 const overlay_mod = @import("editor_widget_draw_overlay.zig");
 const text_mod = @import("editor_widget_draw_text.zig");
 const cache_helpers = @import("editor_widget_draw_cache.zig");
-const presentable_targets_runtime = @import("../renderer/presentable_targets_runtime.zig");
 
 const HighlightToken = syntax_mod.HighlightToken;
 const SelectionRange = selection_mod.SelectionRange;
@@ -267,8 +266,8 @@ pub fn drawCached(
     const origin_y: f32 = 0;
     const draw_list = &cache.draw_list;
 
-    const texture_changed = presentable_targets_runtime.ensurePresentable(r, .editor, @intFromFloat(width), @intFromFloat(height));
-    const use_retained_editor_surface = presentable_targets_runtime.presentableAvailable(r, .editor) and
+    const texture_changed = r.ensurePresentable(.editor, @intFromFloat(width), @intFromFloat(height));
+    const use_retained_editor_surface = r.presentableAvailable(.editor) and
         !(builtin.os.tag == .macos and r.backend == .opengl);
     var force_redraw = cache.beginFrame(
         frame_id,
@@ -290,10 +289,10 @@ pub fn drawCached(
 
     if (force_redraw) {
         if (use_retained_editor_surface) {
-            if (presentable_targets_runtime.beginPresentable(r, .editor)) {
+            if (r.beginPresentable(.editor)) {
                 r.drawRect(0, 0, @intFromFloat(width), @intFromFloat(height), r.theme.background);
                 r.drawRect(0, 0, @intFromFloat(widget.gutter_width), @intFromFloat(height), r.theme.line_number_bg);
-                presentable_targets_runtime.endPresentable(r, .editor);
+                r.endPresentable(.editor);
             }
         } else {
             r.drawRect(0, 0, @intFromFloat(width), @intFromFloat(height), r.theme.background);
@@ -366,8 +365,8 @@ pub fn drawCached(
 
                 any_dirty_local.* = true;
                 if (ctx.use_retained_editor_surface) {
-                    if (!presentable_targets_runtime.beginPresentable(r_local, .editor)) return;
-                    defer presentable_targets_runtime.endPresentable(r_local, .editor);
+                    if (!r_local.beginPresentable(.editor)) return;
+                    defer r_local.endPresentable(.editor);
                 }
 
                 const clip_h = clippedEditorRowHeight(seg_band.h_i, @as(i32, @intFromFloat(height_local)) - seg_band.y_i);
@@ -576,7 +575,7 @@ pub fn drawCached(
     }
 
     if (use_retained_editor_surface) {
-        presentable_targets_runtime.drawPresentable(r, .editor, .{ .x = draw_x, .y = draw_y });
+        r.drawPresentable(.editor, .{ .x = draw_x, .y = draw_y });
     }
 
     // Draw scrollbars as final overlays (outside cached editor texture) to avoid
