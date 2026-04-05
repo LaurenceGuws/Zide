@@ -758,6 +758,9 @@ What this does and does not mean:
   the presenter into `terminal_widget_presentation_runtime.zig`, so the
   terminal lane no longer splits setup ownership between presenter-local logic
   and runtime helpers
+- with that move, the terminal presenter is now mostly a coordinator over a
+  terminal-owned presentation seam rather than a parallel owner of setup,
+  lifecycle, and presentable draw mechanics
 - that contract is intentionally backend-native rather than fake portability:
   the old cached GL `Texture` path is still OpenGL-only, while Metal Kitty
   images are created as frame-scoped native Metal textures and released after
