@@ -573,6 +573,13 @@ What this does and does not mean:
   renderer, activates the Metal text diagnostic view, and validates present
   sequencing plus optional present-capture screenshots without depending on the
   broader live-smoke runtime
+- the first actual narrow text draw path now exists on the Metal side: the
+  renderer can upload and place a single sampled ASCII glyph through the Metal
+  atlas contract, and the dedicated text-diagnostic lane now reports
+  `sample_char_draw=1` on the current macOS host
+- this is still intentionally narrow and honest: it is a single-glyph sampled
+  draw path, not a claim that the generic string/text renderer has already
+  migrated or that per-glyph tinting semantics are complete on Metal
 - the visible atlas-backed preview path itself is still real: the live smoke
   frame path blits a tiny region from the Metal atlas color texture into the
   drawable before present, and the submit-time screenshot path captured a real

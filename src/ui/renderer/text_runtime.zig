@@ -200,6 +200,12 @@ pub fn measureIconTextWidth(self: *Renderer, text: []const u8) f32 {
 }
 
 pub fn drawChar(self: *Renderer, char: u8, x: f32, y: f32, color: Color) void {
+    if (!textRenderingAvailable(self)) {
+        if (self.plannedTextRenderingMode() == .metal_texture_atlas) {
+            _ = self.drawMetalAtlasSampleChar(char, x, y);
+        }
+        return;
+    }
     var buf = [1]u8{char};
     drawText(self, buf[0..], x, y, color);
 }

@@ -1797,20 +1797,10 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         return self.metal_debug_preview_source;
     }
 
-    pub fn runMacosMetalAtlasUploadDiagnostic(self: *Renderer) bool {
-        const placement = metal_text_diagnostic_runtime.previewPlacement(self, 24.0);
-        return self.runMacosMetalAtlasUploadDiagnosticAt(placement.dest_x, placement.dest_y);
-    }
-
-    pub fn runMacosMetalAtlasUploadDiagnosticAt(self: *Renderer, dest_x: i32, dest_y: i32) bool {
-        if (self.backend != .metal) return false;
-        if (self.metal_backend_context == null) return false;
-        self.metal_atlas_sample_draw = null;
-        self.metal_debug_preview_source = .unavailable;
-
+    fn initMetalDiagnosticFont(self: *Renderer) !terminal_font_mod.TerminalFont {
         const render_scale = if (self.scale.render_scale > 0.0) self.scale.render_scale else 1.0;
         const raster_size = self.base_font_size * render_scale;
-        var font = terminal_font_mod.TerminalFont.initWithAtlasUploadHooks(
+        var font = try terminal_font_mod.TerminalFont.initWithAtlasUploadHooks(
             self.allocator,
             self.font_config.app_font_path,
             raster_size,
@@ -1823,9 +1813,46 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             iface.EMOJI_TEXT_FALLBACK_PATH,
             self.font_config.font_rendering,
             metal_backend.terminalFontAtlasUploadHooks(&self.metal_backend_context.?),
-        ) catch return false;
-        defer font.deinit();
+        );
         font.render_scale = render_scale;
+        return font;
+    }
+
+    pub fn drawMetalAtlasSampleChar(self: *Renderer, char: u8, x: f32, y: f32) bool {
+        if (self.backend != .metal) return false;
+        if (self.plannedTextRenderingMode() != .metal_texture_atlas) return false;
+        if (self.metal_backend_context == null) return false;
+
+        var font = self.initMetalDiagnosticFont() catch return false;
+        defer font.deinit();
+
+        const codepoint: u32 = char;
+        const direct = font.directFastGlyphForCodepoint(codepoint) orelse return false;
+        const glyph = font.getGlyphById(direct.face, direct.glyph_id, direct.want_color, false, 0) catch return false;
+        if (glyph.rect.width <= 0 or glyph.rect.height <= 0) return false;
+
+        self.metal_atlas_sample_draw = .{
+            .atlas = .color,
+            .source_rect = glyph.rect,
+            .dest_x = @max(0, @as(i32, @intFromFloat(std.math.round(self.logicalLengthToRaster(x))))),
+            .dest_y = @max(0, @as(i32, @intFromFloat(std.math.round(self.logicalLengthToRaster(y))))),
+        };
+        return true;
+    }
+
+    pub fn runMacosMetalAtlasUploadDiagnostic(self: *Renderer) bool {
+        const placement = metal_text_diagnostic_runtime.previewPlacement(self, 24.0);
+        return self.runMacosMetalAtlasUploadDiagnosticAt(placement.dest_x, placement.dest_y);
+    }
+
+    pub fn runMacosMetalAtlasUploadDiagnosticAt(self: *Renderer, dest_x: i32, dest_y: i32) bool {
+        if (self.backend != .metal) return false;
+        if (self.metal_backend_context == null) return false;
+        self.metal_atlas_sample_draw = null;
+        self.metal_debug_preview_source = .unavailable;
+
+        var font = self.initMetalDiagnosticFont() catch return false;
+        defer font.deinit();
         const color_preview_rect = font.uploadDiagnosticColorGlyphPreview();
         const codepoint: u32 = 'A';
         const direct = font.directFastGlyphForCodepoint(codepoint) orelse return false;

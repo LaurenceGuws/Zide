@@ -321,6 +321,10 @@ lane.
     - a dedicated `--macos-metal-text-diagnostic` startup/runtime lane now
       exists for this sampled-glyph path, so the Metal text diagnostic seam is
       validated independently of the broader live-smoke runtime
+    - the first actual narrow Metal text draw path now exists: the renderer
+      can upload and place a single sampled ASCII glyph through the Metal atlas
+      contract, and the dedicated text-diagnostic runtime now reports
+      `sample_char_draw=1` on the current macOS host
     - the live macOS Metal smoke frame path still blits a tiny region from the
       Metal atlas color texture into the drawable before present, and the
       submit-time screenshot path captured a real `1280x720` PPM artifact for
