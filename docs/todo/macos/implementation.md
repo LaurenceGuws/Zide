@@ -833,6 +833,15 @@ lane.
     - that means the Metal lane is no longer blocked on “special glyphs not
       running at all” or on a hidden powerline ownership bug; the next real
       pressure is box/block continuity quality against the `btop` bar
+    - the Metal terminal diagnostic now also has a denser dashboard-style
+      fixture (`DASHBOARD=1`) with mixed borders, bars, shades, braille, and
+      powerline rows so the lane can be stressed with something closer to a
+      real `btop` frame
+    - current runtime truth on that fixture is much sharper:
+      `shaped_special_glyphs=226`, with
+      `powerline=12 shade=18 braille=10 box=186 other_special=0`
+    - that confirms the next execution slice should be box/block continuity
+      quality, not another ownership cleanup in the powerline lane
     - this reduces one more retained-first contradiction before a second
       Metal terminal presentation shape is introduced
 

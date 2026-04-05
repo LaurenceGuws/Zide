@@ -21,6 +21,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
     const partial_update_frame = app_bootstrap.parseEnvU64("ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_PARTIAL_UPDATE_FRAME", std.math.maxInt(u64));
     const disable_kitty = app_bootstrap.parseEnvBool("ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_DISABLE_KITTY") orelse false;
     const special_glyph_fixture = app_bootstrap.parseEnvBool("ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_SPECIAL_GLYPHS") orelse false;
+    const dashboard_fixture = app_bootstrap.parseEnvBool("ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_DASHBOARD") orelse false;
     const screenshot_path = app_bootstrap.envSlice("ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_SCREENSHOT");
     const title: [*:0]const u8 = "Zide macOS Metal Terminal Diagnostic";
 
@@ -68,10 +69,20 @@ pub fn run(allocator: std.mem.Allocator) !void {
         @intCast(@max(1, cell_geometry.cell_height_device_px)),
     );
 
-    const seed_bytes = if (special_glyph_fixture)
-        "\x1b[HCPU  92%  RAM\x1b[2;1HBOX ┌┬┐├┼┤└┴┘│─╭╮╯╰\x1b[3;1HSHD ░▒▓█▇▆▅▄▃▂▁\x1b[4;1HBRA ⣀⣤⣶⣿⣷⣄⡀ test\x1b[5;1HPWR \x1b[6;1HGLYPH lane stress active"
-    else
-        "\x1b[H1| build one\x1b[2;1H2| item two\x1b[3;1H3| plain ascii\x1b[4;1H4| fallback row\x1b[5;1H5| metal lane\x1b[6;1H6| terminal ok";
+    const seed_bytes =
+        if (dashboard_fixture)
+            "\x1b[H╭─ btop-ish metal lane ─────────────────────────────╮" ++
+            "\x1b[2;1H│ CPU  ███████░░░ 72%   NET  ▂▃▄▅▆▇█        │" ++
+            "\x1b[3;1H│ MEM  ▓▓▓▓▓▒░░░ 61%   DISK ░▒▓█▇▆▅▄        │" ++
+            "\x1b[4;1H├────────────────────────────────────────────────┤" ++
+            "\x1b[5;1H│ proc-box │⣀⣤⣶⣿⣷⣄⡀│ load │┌┬┐├┼┤└┴┘││" ++
+            "\x1b[6;1H│ temp 42C │███████     │ pwr  ││" ++
+            "\x1b[7;1H├────────────────────────────────────────────────┤" ++
+            "\x1b[8;1H╰─ bars ░▒▓  braille ⣀⣤⣶  corners ╭╮╯╰ ─────╯"
+        else if (special_glyph_fixture)
+            "\x1b[HCPU  92%  RAM\x1b[2;1HBOX ┌┬┐├┼┤└┴┘│─╭╮╯╰\x1b[3;1HSHD ░▒▓█▇▆▅▄▃▂▁\x1b[4;1HBRA ⣀⣤⣶⣿⣷⣄⡀ test\x1b[5;1HPWR \x1b[6;1HGLYPH lane stress active"
+        else
+            "\x1b[H1| build one\x1b[2;1H2| item two\x1b[3;1H3| plain ascii\x1b[4;1H4| fallback row\x1b[5;1H5| metal lane\x1b[6;1H6| terminal ok";
     if (!(try session_runtime.enqueueExternalBytes(session, seed_bytes))) return error.MetalTerminalDiagnosticSeedRejected;
     try session_runtime.poll(session);
     if (scroll_frame != std.math.maxInt(u64)) {
@@ -92,7 +103,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
 
     const log = app_logger.logger("macos.metal.terminal_diagnostic");
     const capabilities = shell.rendererCapabilities();
-    log.logf(.info, "start width={d} height={d} rows={d} cols={d} frame_budget={d} special_glyph_fixture={d}", .{ width, height, rows, cols, frame_budget, @intFromBool(special_glyph_fixture) });
+    log.logf(.info, "start width={d} height={d} rows={d} cols={d} frame_budget={d} special_glyph_fixture={d} dashboard_fixture={d}", .{ width, height, rows, cols, frame_budget, @intFromBool(special_glyph_fixture), @intFromBool(dashboard_fixture) });
     log.logf(
         .info,
         "capabilities composition={s} retained_targets={d} terminal_present={s} screenshot={s} text={s} planned_text={s} atlas={s} planned_atlas={s} raw_image_textures={d} snapshot_available={d}",

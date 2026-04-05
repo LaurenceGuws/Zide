@@ -820,6 +820,15 @@ What this does and does not mean:
   `btop`-class pressure lives: powerline is now materially more honest, and
   the remaining gap is the broader box/block continuity quality itself rather
   than hidden ownership ambiguity inside the special-glyph router
+- there is now also a denser `btop`-ish Metal terminal fixture under the same
+  diagnostic runtime (`ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_DASHBOARD=1`),
+  with mixed box borders, shades, braille spark blocks, and powerline status
+  bars instead of the smaller isolated glyph rows
+- that denser proof makes the next priority explicit: on the current host the
+  first dashboard frame reports `shaped_special_glyphs=226`, split as
+  `powerline=12 shade=18 braille=10 box=186 other_special=0`, which means the
+  Metal terminal lane is now visibly dominated by box/block continuity work
+  rather than powerline ownership bugs
 - that preparation contract is now aligned with capture truth as well:
   the target runtime prepares drawable-sized Metal snapshot presentables
   instead of using terminal-surface geometry while submit-time capture
