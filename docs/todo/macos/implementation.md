@@ -380,7 +380,11 @@ lane.
       `terminal_surface_unavailable_for_present`
     - current truth from the short deterministic terminal diagnostic is now:
       grid row fallback is observed on the current host (`10/224` in the
-      4-frame run), while overlay row fallback currently reports `0/0`
+      4-frame run), and overlay row fallback is observed in that same run
+      too (`1/5`)
+    - the direct main-target terminal fallback now preserves the normal
+      overlay phase, so IME/composition drawing still runs on the non-retained
+      Metal terminal path instead of being dropped by the fallback itself
     - this is still a proof/runtime checkpoint, not a claim that retained
       terminal surfaces or full terminal-on-Metal presentation are finished
     - the narrow Metal text lane now covers a tiny multiline ASCII run, not

@@ -542,7 +542,6 @@ fn directPresentMainTarget(
     }
     renderer.flushTerminalGlyphBatch();
     result.texture_glyph_ms = time_utils.secondsToMs(app_shell.getTime() - glyph_phase_start);
-    result.early_return = true;
     return result;
 }
 

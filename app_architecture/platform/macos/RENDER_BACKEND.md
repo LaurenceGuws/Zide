@@ -639,12 +639,15 @@ What this does and does not mean:
   terminal surface presentation can fall back to direct main-target
   composition instead of dying at
   `terminal_surface_unavailable_for_present`
-- current truth from the short deterministic runtime is now useful and
-  intentionally strict in a different way: terminal-grid row fallback is
-  observed on the current macOS host (`grid_runs=10/224` in the 4-frame run),
-  while the composing-text overlay row path currently reports `0/0`, which
-  means the dedicated terminal-facing proof now reaches real grid content
-  without overstating broader retained-surface terminal support
+- current truth from the short deterministic runtime is now stronger without
+  pretending the broader terminal lane is finished: terminal-grid row fallback
+  is observed on the current macOS host (`grid_runs=10/224` in the 4-frame
+  run), and the composing-text overlay row path is observed in that same run
+  too (`overlay_runs=1/5`)
+- that overlay proof matters because the direct main-target terminal fallback
+  now preserves the normal overlay phase instead of short-circuiting before
+  IME/composition drawing, which is the correct layering for a non-retained
+  Metal terminal path
 - this is still intentionally narrow and honest: it is now a tiny sampled
   multiline ASCII run with an explicit monospace-cell option rather than a
   claim that the generic string/text renderer has already migrated
