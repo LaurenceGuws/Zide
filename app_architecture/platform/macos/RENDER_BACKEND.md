@@ -953,6 +953,20 @@ What this does and does not mean:
 - this is not yet the normal full-ui renderer frame loop on Metal
 - this is groundwork for `MAC-04` and `MAC-05`, not completion of them
 
+## Full-UI Metal opt-in (macOS, development)
+
+The default full UI still selects OpenGL at renderer init. On macOS only, set
+`ZIDE_RENDERER_BACKEND=metal` to request Metal for the normal app shell
+(`runtime_profile == .full_ui`). `ZIDE_RENDERER_BACKEND=opengl` forces OpenGL
+explicitly. Invalid values are ignored (default OpenGL).
+
+When Metal is active, font atlases use the Metal atlas upload hooks
+(`terminalFontAtlasUploadHooks`) so glyph caches are not GL-backed.
+
+This is an execution checkpoint toward `MAC-07`, not a claim that every
+full-ui draw path is Metal-complete; capability and editor/terminal breadth still
+follow `capabilities()` and ongoing milestone work.
+
 ## Explicit Anti-Goals
 
 Do not:

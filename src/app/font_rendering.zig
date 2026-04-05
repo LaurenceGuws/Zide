@@ -20,6 +20,13 @@ pub const RendererConfigApplyResult = struct {
     }
 };
 
+fn rendererBackendFromEnv() ?renderer_mod.Renderer.RendererBackend {
+    const slice = app_bootstrap.envSlice("ZIDE_RENDERER_BACKEND") orelse return null;
+    if (std.mem.eql(u8, slice, "metal")) return .metal;
+    if (std.mem.eql(u8, slice, "opengl")) return .opengl;
+    return null;
+}
+
 fn resolveAppFontPath(config: *const config_mod.Config) ?[]const u8 {
     return config.app_font_path;
 }
@@ -101,6 +108,7 @@ pub fn buildRendererInitOptions(config: *const config_mod.Config) RendererInitOp
         .text_gamma = resolveTextGamma(config),
         .text_contrast = resolveTextContrast(config),
         .text_linear_correction = config.text_linear_correction orelse true,
+        .renderer_backend = rendererBackendFromEnv() orelse .opengl,
     };
 }
 

@@ -709,7 +709,13 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             window_init.deinitRenderSurfaceAttachment(&render_surface_attachment_cleanup);
         }
 
-        if (startup_backend != .opengl and runtime_profile != .backend_smoke) {
+        const metal_full_ui_macos = startup_backend == .metal and
+            runtime_profile == .full_ui and
+            builtin.target.os.tag == .macos;
+        if (startup_backend != .opengl and
+            runtime_profile != .backend_smoke and
+            !metal_full_ui_macos)
+        {
             return error.RendererBackendRuntimeNotReady;
         }
 
@@ -884,9 +890,13 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
                 renderer.fonts_ready = true;
             },
             .metal => {
-                if (renderer.runtime_profile != .backend_smoke) return error.RendererBackendRuntimeNotReady;
+                const metal_runtime_ok = renderer.runtime_profile == .backend_smoke or
+                    (renderer.runtime_profile == .full_ui and builtin.target.os.tag == .macos);
+                if (!metal_runtime_ok) return error.RendererBackendRuntimeNotReady;
                 const host = renderer.prepareMacosMetalHost() orelse return error.MacosMetalAttachmentUnavailable;
                 renderer.metal_backend_context = metal_backend.createBackendContext(host, renderer.render_width, renderer.render_height) orelse return error.MetalBackendContextUnavailable;
+                try renderer.initFonts();
+                renderer.fonts_ready = true;
             },
         }
 

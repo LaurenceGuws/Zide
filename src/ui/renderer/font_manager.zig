@@ -3,6 +3,7 @@ const app_logger = @import("../../app_logger.zig");
 const renderer_root = @import("../renderer.zig");
 const terminal_font_mod = @import("../terminal_font.zig");
 const TerminalFont = terminal_font_mod.TerminalFont;
+const metal_backend = @import("metal_backend.zig");
 const iface = @import("interface.zig");
 
 const Renderer = renderer_root.Renderer;
@@ -132,10 +133,18 @@ pub fn deinitFontConfigState(renderer: anytype) void {
     }
 }
 
+fn metalAtlasHooks(renderer: anytype) ?terminal_font_mod.AtlasUploadHooks {
+    if (renderer.backend != .metal) return null;
+    if (renderer.metal_backend_context) |*ctx| {
+        return metal_backend.terminalFontAtlasUploadHooks(ctx);
+    }
+    return null;
+}
+
 fn initFont(renderer: anytype, path: [*:0]const u8, layout_size: f32) !FontInitResult {
     const render_scale = if (renderer.scale.render_scale > 0.0) renderer.scale.render_scale else 1.0;
     const raster_size = layout_size * render_scale;
-    var font = try TerminalFont.init(
+    var font = try TerminalFont.initWithAtlasUploadHooks(
         renderer.allocator,
         path,
         raster_size,
@@ -147,6 +156,7 @@ fn initFont(renderer: anytype, path: [*:0]const u8, layout_size: f32) !FontInitR
         iface.EMOJI_COLOR_FALLBACK_PATH,
         iface.EMOJI_TEXT_FALLBACK_PATH,
         renderer.font_config.font_rendering,
+        metalAtlasHooks(renderer),
     );
     font.render_scale = render_scale;
     font.setAtlasFilterPoint();
@@ -301,7 +311,7 @@ pub fn fontForSize(renderer: anytype, size: f32) ?*TerminalFont {
         log.logf(.warning, "font cache alloc failed size_key={d} err={s}", .{ key, @errorName(err) });
         return null;
     };
-    font_ptr.* = TerminalFont.init(
+    font_ptr.* = TerminalFont.initWithAtlasUploadHooks(
         renderer.allocator,
         renderer.font_config.app_font_path,
         @as(f32, @floatFromInt(key)) * renderer.scale.render_scale,
@@ -313,6 +323,7 @@ pub fn fontForSize(renderer: anytype, size: f32) ?*TerminalFont {
         iface.EMOJI_COLOR_FALLBACK_PATH,
         iface.EMOJI_TEXT_FALLBACK_PATH,
         renderer.font_config.font_rendering,
+        metalAtlasHooks(renderer),
     ) catch {
         renderer.allocator.destroy(font_ptr);
         return null;

@@ -590,6 +590,13 @@ lane.
     - host seam still reads as shared-contract + macOS implementation, not as a
       one-off special case
     - no fake "supported" claim before manual smoke truth exists
+  - 2026-04-05 checkpoint (in progress):
+    - `ZIDE_RENDERER_BACKEND=metal` on macOS selects Metal for full UI; default
+      remains OpenGL
+    - renderer init allows `startup_backend == .metal` with
+      `runtime_profile == .full_ui` on macOS only; Metal branch runs
+      `initFonts()` with Metal atlas hooks (`font_manager` →
+      `initWithAtlasUploadHooks`)
 
 - [ ] `MAC-08` Re-establish normal macOS validation truth
   - Required checks:
