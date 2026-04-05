@@ -799,6 +799,11 @@ What this does and does not mean:
   refresh-present-state, fallback background fill, unavailable logging, and
   retained present submission now run through one terminal runtime operation
   instead of being assembled inline in the presenter
+- the top-level terminal presentation operation is now there too:
+  direct-main-target presentation, retained fast-present, retained plan/cycle,
+  and retained present submission are all selected and executed through one
+  runtime entrypoint, leaving the presenter mostly with timing and policy
+  input instead of backend-shaped control flow
 - that contract is intentionally backend-native rather than fake portability:
   the old cached GL `Texture` path is still OpenGL-only, while Metal Kitty
   images are created as frame-scoped native Metal textures and released after

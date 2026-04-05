@@ -91,6 +91,13 @@ pub const RetainedPresentationResult = struct {
     kitty_ms: f64 = 0.0,
 };
 
+pub const PresentationRunResult = struct {
+    early_return: bool = false,
+    bg_ms: f64 = 0.0,
+    glyph_ms: f64 = 0.0,
+    kitty_ms: f64 = 0.0,
+};
+
 pub fn clearPresentationSample(self: anytype) void {
     self.debug.last_terminal_presentation.valid = false;
 }
@@ -542,6 +549,134 @@ pub fn runRetainedPresentation(
             note_present,
         );
     }
+    return result;
+}
+
+pub fn runPresentation(
+    self: anytype,
+    shell: *app_shell.Shell,
+    renderer: anytype,
+    terminal_view: view_state.TerminalViewModel,
+    view_geometry: TerminalViewGeometry,
+    hover_link_id: u32,
+    start_line: usize,
+    scroll_offset: usize,
+    draw_cursor: bool,
+    cursor: CursorPos,
+    cursor_style: terminal_types.CursorStyle,
+    blink_style: anytype,
+    blink_time: f64,
+    blink_requires_partial: bool,
+    has_kitty: bool,
+    width: f32,
+    height: f32,
+    x: f32,
+    y: f32,
+    recent_input_window_active: bool,
+    note_present_ctx: anytype,
+    note_present: anytype,
+) PresentationRunResult {
+    var result = PresentationRunResult{};
+    clearPresentationSample(self);
+
+    if (renderer.terminalPresentationMode() == .direct_main_target) {
+        const direct = directPresent(
+            self,
+            shell,
+            renderer,
+            terminal_view,
+            view_geometry,
+            hover_link_id,
+            draw_cursor,
+            cursor,
+            cursor_style,
+            blink_style,
+            blink_time,
+            start_line,
+            has_kitty,
+            width,
+            height,
+            note_present_ctx,
+            note_present,
+        );
+        result.bg_ms = direct.bg_ms;
+        result.glyph_ms = direct.glyph_ms;
+        result.kitty_ms = direct.kitty_ms;
+        return result;
+    }
+
+    const view_cells_len = terminal_view.cells.len;
+    const bg_color = if (view_cells_len > 0)
+        Color{
+            .r = terminal_view.base_colors.resolved_background.r,
+            .g = terminal_view.base_colors.resolved_background.g,
+            .b = terminal_view.base_colors.resolved_background.b,
+            .a = terminal_view.base_colors.resolved_background.a,
+        }
+    else
+        renderer.theme.background;
+    if (tryFastPresentExisting(
+        &self.surface,
+        renderer,
+        terminal_view,
+        view_cells_len,
+        bg_color,
+        x,
+        y,
+        width,
+        height,
+        view_geometry,
+        note_present_ctx,
+        note_present,
+    )) {
+        result.early_return = true;
+        return result;
+    }
+
+    if (terminal_view.rows == 0 or terminal_view.cols == 0) return result;
+
+    const surface_update_plan = planUpdate(
+        &self.surface,
+        self.session.allocator,
+        renderer,
+        self.publication.cacheConst(),
+        terminal_view,
+        width,
+        height,
+        blink_requires_partial,
+        scroll_offset,
+        recent_input_window_active,
+    );
+    const cycle = runRetainedPresentCycle(
+        self,
+        shell,
+        renderer,
+        terminal_view,
+        view_geometry,
+        hover_link_id,
+        start_line,
+        draw_cursor,
+        cursor,
+        cursor_style,
+        blink_style,
+        blink_time,
+        has_kitty,
+        surface_update_plan,
+    );
+    const retained = runRetainedPresentation(
+        self,
+        renderer,
+        terminal_view,
+        view_geometry,
+        view_cells_len,
+        surface_update_plan,
+        cycle,
+        note_present_ctx,
+        note_present,
+    );
+    result.bg_ms = retained.bg_ms;
+    result.glyph_ms = retained.glyph_ms;
+    result.kitty_ms = retained.kitty_ms;
     return result;
 }
 
