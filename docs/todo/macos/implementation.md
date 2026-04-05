@@ -453,6 +453,10 @@ lane.
       terminal presentation state lives in
       `terminal_widget_presentation_state.zig` instead of a retained-state
       file name
+    - the renderer-facing terminal policy seam is less texture-era now too:
+      config/presenter callers use presentation-language for terminal shift
+      and recent-input full-present policy instead of texture-publication
+      names
     - the terminal Metal diagnostic now reports `raw_image_textures=1`, keeps
       non-zero `kitty_ms`, and no longer relies on the previous unsupported
       backend gate for RGB/RGBA Kitty images

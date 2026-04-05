@@ -172,7 +172,7 @@ pub fn handle(state: anytype, ctx: *anyopaque, hooks: Hooks) !void {
     }
 
     if (config.terminal_texture_shift) |enabled| {
-        state.shell.rendererPtr().setTerminalTextureShiftEnabled(enabled);
+        state.shell.rendererPtr().setTerminalPresentationShiftEnabled(enabled);
         state.needs_redraw = true;
         log.logStdout(.info, "reload terminal.texture_shift={any}", .{enabled});
     }

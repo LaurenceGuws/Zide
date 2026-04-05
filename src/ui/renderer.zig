@@ -1030,11 +1030,11 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         }
     }
 
-    pub fn setTerminalTextureShiftEnabled(self: *Renderer, enabled: bool) void {
+    pub fn setTerminalPresentationShiftEnabled(self: *Renderer, enabled: bool) void {
         self.terminal_render_policy.texture_shift_enabled = enabled;
     }
 
-    pub fn terminalTextureShiftEnabled(self: *const Renderer) bool {
+    pub fn terminalPresentationShiftEnabled(self: *const Renderer) bool {
         return self.terminal_render_policy.texture_shift_enabled;
     }
 
@@ -1063,11 +1063,11 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         return @intFromFloat(std.math.round(self.terminalRecentInputFullPublicationWindowSeconds() * 1000.0));
     }
 
-    pub fn forceFullTerminalTexturePublicationRecentInputWindow(self: *const Renderer) bool {
+    pub fn forceFullTerminalPresentationRecentInputWindow(self: *const Renderer) bool {
         return self.terminalRecentInputFullPublicationEnabled();
     }
 
-    pub fn fullTerminalTexturePublicationRecentInputWindowSeconds(self: *const Renderer) f64 {
+    pub fn fullTerminalPresentationRecentInputWindowSeconds(self: *const Renderer) f64 {
         return self.terminalRecentInputFullPublicationWindowSeconds();
     }
 

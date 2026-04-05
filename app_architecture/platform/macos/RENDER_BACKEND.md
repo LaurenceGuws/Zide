@@ -730,6 +730,13 @@ What this does and does not mean:
   `terminal_widget_presentation_state.zig` instead of a retained-state file,
   so the direct Metal lane no longer depends on a retained-era module name for
   its primary widget presentation cache
+- the renderer-facing terminal policy seam is less texture-era now too:
+  terminal presenter/config callers use presentation-language
+  (`setTerminalPresentationShiftEnabled`,
+  `terminalPresentationShiftEnabled`,
+  `forceFullTerminalPresentationRecentInputWindow`) instead of naming the live
+  contract around texture publication even though the active Metal lane
+  presents directly
 - that contract is intentionally backend-native rather than fake portability:
   the old cached GL `Texture` path is still OpenGL-only, while Metal Kitty
   images are created as frame-scoped native Metal textures and released after

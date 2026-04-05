@@ -693,7 +693,7 @@ fn planPresentationUpdate(
     var shifted_rows: usize = 0;
     var shift_requires_fullwidth_partial = false;
     switch (draw_texture.planViewportPresentShift(
-        renderer.terminalTextureShiftEnabled(),
+        renderer.terminalPresentationShiftEnabled(),
         presentation_delta.generation_changed,
         viewport_shift.rows,
         viewport_shift.exposed_only,
@@ -872,11 +872,11 @@ pub fn updateAndPresent(
 
     if (rows > 0 and cols > 0) {
         const plan_time = app_shell.getTime();
-        const recent_input_window_active = r.forceFullTerminalTexturePublicationRecentInputWindow() and
+        const recent_input_window_active = r.forceFullTerminalPresentationRecentInputWindow() and
             ((input.mods.ctrl or input.mods.shift or input.mods.alt or input.mods.super) or
                 self.controller.blink.recentInputWindowActive(
                     plan_time,
-                    r.fullTerminalTexturePublicationRecentInputWindowSeconds(),
+                    r.fullTerminalPresentationRecentInputWindowSeconds(),
                 ));
         const surface_update_plan = planPresentationUpdate(
             self,

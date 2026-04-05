@@ -232,7 +232,7 @@ fn initWithMode(
         } else null,
         config.editor_font_features,
     );
-    shell.rendererPtr().setTerminalTextureShiftEnabled(config.terminal_texture_shift orelse true);
+    shell.rendererPtr().setTerminalPresentationShiftEnabled(config.terminal_texture_shift orelse true);
     shell.rendererPtr().setTerminalRecentInputFullPublicationPolicy(
         config.terminal_recent_input_force_full orelse true,
         config.terminal_recent_input_force_full_ms,
