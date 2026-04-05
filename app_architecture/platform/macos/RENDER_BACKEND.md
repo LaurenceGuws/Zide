@@ -674,6 +674,10 @@ What this does and does not mean:
 - that presentation mode is now also published through terminal frame metrics
   and the terminal diagnostic lane, so the live contract is visible both at
   startup capability time and per-frame widget evidence time
+- terminal debug capture is now aligned with that contract too: terminal
+  presentation samples are mode-aware instead of being implicitly
+  "retained-surface or invalid", so the live direct-main-target Metal lane can
+  leave first-class presentation evidence in widget debug state
 - that contract is intentionally backend-native rather than fake portability:
   the old cached GL `Texture` path is still OpenGL-only, while Metal Kitty
   images are created as frame-scoped native Metal textures and released after

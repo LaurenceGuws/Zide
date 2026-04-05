@@ -46,8 +46,14 @@ pub const CursorOverlaySample = struct {
     render_scale: f32 = 1.0,
 };
 
+pub const TerminalPresentationSampleMode = enum {
+    direct_main_target,
+    retained_surface,
+};
+
 pub const RetainedSurfacePresentSample = struct {
     valid: bool = false,
+    mode: TerminalPresentationSampleMode = .retained_surface,
     generation: u64 = 0,
     texture_w_px: i32 = 0,
     texture_h_px: i32 = 0,

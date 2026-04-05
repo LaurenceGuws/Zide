@@ -18,6 +18,7 @@ const CursorPos = terminal_publication.CursorPos;
 const PartialDrawPlan = retained_state_mod.RetainedState.PartialDrawPlan;
 
 const FullFrameFastPathDecision = draw_texture.FullFrameFastPathDecision;
+const TerminalPresentationSampleMode = @import("terminal_widget_debug_geometry.zig").TerminalPresentationSampleMode;
 
 const drawRowBackgrounds = draw_grid.drawRowBackgrounds;
 const drawRowGlyphs = draw_grid.drawRowGlyphs;
@@ -379,9 +380,10 @@ fn toShellColor(color: terminal_publication.Color) Color {
     return .{ .r = color.r, .g = color.g, .b = color.b, .a = color.a };
 }
 
-fn noteRetainedSurfacePresent(
+fn noteTerminalPresent(
     self: anytype,
     renderer: anytype,
+    mode: TerminalPresentationSampleMode,
     generation: u64,
     dest_x: f32,
     dest_y: f32,
@@ -390,26 +392,34 @@ fn noteRetainedSurfacePresent(
     source_w: f32,
     source_h: f32,
 ) void {
-    if (renderer.retained_targets.terminal) |target| {
-        self.debug.last_surface_present = .{
-            .valid = true,
-            .generation = generation,
-            .texture_w_px = target.texture.width,
-            .texture_h_px = target.texture.height,
-            .target_logical_w = @floatFromInt(target.logical_width),
-            .target_logical_h = @floatFromInt(target.logical_height),
-            .source_logical_w = source_w,
-            .source_logical_h = source_h,
-            .dest_x = dest_x,
-            .dest_y = dest_y,
-            .dest_w = dest_w,
-            .dest_h = dest_h,
-            .scale_x = if (source_w > 0.0) dest_w / source_w else 1.0,
-            .scale_y = if (source_h > 0.0) dest_h / source_h else 1.0,
-        };
-    } else {
-        self.debug.last_surface_present.valid = false;
+    var sample = @TypeOf(self.debug.last_surface_present){
+        .valid = true,
+        .mode = mode,
+        .generation = generation,
+        .texture_w_px = 0,
+        .texture_h_px = 0,
+        .target_logical_w = source_w,
+        .target_logical_h = source_h,
+        .source_logical_w = source_w,
+        .source_logical_h = source_h,
+        .dest_x = dest_x,
+        .dest_y = dest_y,
+        .dest_w = dest_w,
+        .dest_h = dest_h,
+        .scale_x = if (source_w > 0.0) dest_w / source_w else 1.0,
+        .scale_y = if (source_h > 0.0) dest_h / source_h else 1.0,
+    };
+    if (mode == .retained_surface) {
+        if (renderer.retained_targets.terminal) |target| {
+            sample.texture_w_px = target.texture.width;
+            sample.texture_h_px = target.texture.height;
+            sample.target_logical_w = @floatFromInt(target.logical_width);
+            sample.target_logical_h = @floatFromInt(target.logical_height);
+        } else {
+            sample.valid = false;
+        }
     }
+    self.debug.last_surface_present = sample;
 }
 
 fn decideSyncUpdateFastPresent(
@@ -484,6 +494,18 @@ fn directPresentMainTarget(
         @intFromFloat(std.math.round(@min(width, view_geometry.viewport_width))),
         @intFromFloat(std.math.round(@min(height, view_geometry.viewport_height))),
         bg_color,
+    );
+    noteTerminalPresent(
+        self,
+        renderer,
+        .direct_main_target,
+        terminal_view.generation,
+        view_geometry.origin_x,
+        view_geometry.origin_y,
+        @min(width, view_geometry.viewport_width),
+        @min(height, view_geometry.viewport_height),
+        view_geometry.viewport_width,
+        view_geometry.viewport_height,
     );
 
     const bg_phase_start = app_shell.getTime();
@@ -636,9 +658,10 @@ fn presentRetainedSurface(
     viewport_w: f32,
     viewport_h: f32,
 ) void {
-    noteRetainedSurfacePresent(
+    noteTerminalPresent(
         self,
         renderer,
+        .retained_surface,
         sample_generation,
         view_geometry.origin_x,
         view_geometry.origin_y,
@@ -861,9 +884,10 @@ pub fn updateAndPresent(
             @intFromFloat(height),
             bg_color,
         );
-        noteRetainedSurfacePresent(
+        noteTerminalPresent(
             self,
             r,
+            .retained_surface,
             terminal_view.generation,
             view_geometry.origin_x,
             view_geometry.origin_y,
