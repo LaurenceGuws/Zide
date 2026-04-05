@@ -1,6 +1,7 @@
 const std = @import("std");
 const r = @import("ui/renderer.zig");
 const scene_frame_runtime = @import("ui/renderer/scene_frame_runtime.zig");
+const frame_runtime = @import("ui/renderer/frame_runtime.zig");
 const iface = @import("ui/renderer/interface.zig");
 const window = @import("platform/window_metrics.zig");
 const platform_input_events = @import("platform/input_events.zig");
@@ -392,7 +393,7 @@ pub const Shell = struct {
     }
 
     pub fn armPresentCapture(self: *Shell, path: []const u8) void {
-        scene_frame_runtime.armPresentCapture(self.renderer, path);
+        frame_runtime.armPresentCapture(self.renderer, path);
     }
 
     pub fn screenshotMode(self: *const Shell) ScreenshotMode {
@@ -420,7 +421,7 @@ pub const Shell = struct {
     }
 
     pub fn lastPresentTrace(self: *const Shell) r.PresentTrace {
-        return scene_frame_runtime.lastPresentTrace(self.renderer);
+        return frame_runtime.lastPresentTrace(self.renderer);
     }
 
     pub fn dumpWindowScreenshotPpm(self: *Shell, path: []const u8) !void {

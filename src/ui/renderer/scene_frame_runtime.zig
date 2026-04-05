@@ -1,5 +1,4 @@
 const std = @import("std");
-const backend_frame_runtime = @import("backend_frame_runtime.zig");
 const gl = @import("gl.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
 const platform_window = @import("../../platform/window_metrics.zig");
@@ -13,8 +12,6 @@ const renderer_root = @import("../renderer.zig");
 const Color = renderer_root.Color;
 const SceneTargetContract = renderer_root.SceneTargetContract;
 const SceneTargetInvalidation = renderer_root.SceneTargetInvalidation;
-const WindowSizes = renderer_root.WindowSizes;
-
 pub const PresentableKind = enum {
     editor,
     terminal,
@@ -58,29 +55,6 @@ pub const PresentState = struct {
     capture_armed: bool = false,
     capture_frame_seq: u64 = 0,
 };
-
-pub fn beginFrame(self: anytype) void {
-    self.present.frame_seq +%= 1;
-    self.present.trace_current = .{ .frame_seq = self.present.frame_seq };
-    self.present.drawing_editor_surface = false;
-    const display_metrics = self.display_metrics;
-    const sizes = windowSizesFromDisplayMetrics(display_metrics);
-    self.width = sizes.width;
-    self.height = sizes.height;
-    self.render_width = sizes.render_width;
-    self.render_height = sizes.render_height;
-    refreshSceneTargetContract(self, display_metrics);
-    if (self.capabilities().scene_composition_mode == .offscreen_scene_target) {
-        prepareSceneTarget(self, gl.c.GL_NEAREST);
-    }
-
-    self.text_render.bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
-    backend_frame_runtime.beginFrame(self);
-}
-
-pub fn submitFrame(self: anytype) FrameSubmission {
-    return backend_frame_runtime.submitFrame(self);
-}
 
 pub fn submitOpenGlFrame(self: anytype) FrameSubmission {
     if (self.present.main_composition_target == .offscreen_scene_target) drawSceneTargetToDefault(self);
@@ -154,16 +128,6 @@ pub fn dumpWindowScreenshotPpmSized(self: anytype, path: []const u8, out_width: 
         out_height,
         path,
     );
-}
-
-pub fn armPresentCapture(self: anytype, path: []const u8) void {
-    self.present.capture_path = path;
-    self.present.capture_armed = true;
-    self.present.capture_frame_seq = self.present.frame_seq;
-}
-
-pub fn lastPresentTrace(self: anytype) PresentTrace {
-    return self.present.trace_last;
 }
 
 pub fn noteCompositionFullPaneClear(self: anytype) void {
@@ -281,15 +245,6 @@ pub fn performanceDeltaMs(start: u64, end: u64, freq: f64) f64 {
     return (@as(f64, @floatFromInt(end - start)) * 1000.0) / freq;
 }
 
-fn windowSizesFromDisplayMetrics(display_metrics: platform_window.DisplayMetrics) WindowSizes {
-    return .{
-        .width = display_metrics.window_w,
-        .height = display_metrics.window_h,
-        .render_width = display_metrics.drawable_w,
-        .render_height = display_metrics.drawable_h,
-    };
-}
-
 fn noteSceneTargetRecreateFailure(self: anytype) void {
     self.scene_target.invalidation.target_recreate_failure = true;
     self.scene_target.ready = false;
@@ -339,7 +294,7 @@ fn ensureSceneTarget(self: anytype, filter: i32) bool {
     return recreated;
 }
 
-fn prepareSceneTarget(self: anytype, filter: i32) void {
+pub fn prepareSceneTarget(self: anytype, filter: i32) void {
     const recreated = ensureSceneTarget(self, filter);
     if (self.scene_target.target == null or !recreated) return;
 

@@ -22,6 +22,7 @@ active execution lane for backend contract quality.
 - `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md`
 - `docs/research/RENDER_BACKEND_REFERENCE_SCAN_2026-04-05.md`
 - `src/ui/renderer.zig`
+- `src/ui/renderer/frame_runtime.zig`
 - `src/ui/renderer/gl_backend.zig`
 - `src/ui/renderer/metal_backend.zig`
 - `src/ui/renderer/scene_frame_runtime.zig`
@@ -93,8 +94,9 @@ Progress note, 2026-04-05:
   relocation.
 - backend-specific frame begin/submit bodies now live in dedicated frame
   runtime modules instead of staying inline in `src/ui/renderer.zig`.
-- the renderer-root wrapper methods are gone too; `scene_frame_runtime.zig`
-  now dispatches directly to backend frame runtime modules.
+- the renderer-root wrapper methods are gone too; `frame_runtime.zig`
+  now owns the top-level shared frame lifecycle entrypoint above backend frame
+  runtime modules.
 - The next lifecycle step is to reduce shared-runtime ownership of dispatch and
   backend-native frame state, not just move code blocks around.
 
@@ -104,8 +106,10 @@ Progress note, 2026-04-05:
   - still owns backend-native state
 - `src/ui/renderer/metal_backend.zig`
   - still owns the only live consumer of the shared surface-draw queue
+- `src/ui/renderer/frame_runtime.zig`
+  - still acts as the shared frame lifecycle entrypoint above backend dispatch
 - `src/ui/renderer/scene_frame_runtime.zig`
-  - still acts as a shared backend dispatch center
+  - still participates in the shared frame lifecycle surface
 - `src/ui/renderer/presentable_targets_runtime.zig`
   - still encodes the GL-shaped presentable model in shared runtime behavior
 

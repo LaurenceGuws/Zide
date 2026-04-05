@@ -71,14 +71,15 @@ shared frame runtime code still decides whether a frame is OpenGL or Metal.
 That is survivable for two backends, but it is not the shape that makes a
 third backend feel routine.
 
-This has improved slightly: the backend-native begin/submit bodies now live in:
+This has improved slightly: the top-level frame seam is now split across:
 
+- `src/ui/renderer/frame_runtime.zig`
+- `src/ui/renderer/backend_frame_runtime.zig`
 - `src/ui/renderer/opengl_frame_runtime.zig`
 - `src/ui/renderer/metal_frame_runtime.zig`
-- dispatched via `src/ui/renderer/backend_frame_runtime.zig`
 
 So the renderer root no longer spells out the whole OpenGL and Metal frame
-loops inline, and even the renderer-root wrapper methods are gone.
+loops inline, and even the older scene-runtime wrapper role has been split out.
 
 But there is still not a final backend lifecycle seam yet:
 
@@ -167,8 +168,11 @@ The main contradiction centers today are:
     consuming the shared surface-draw queue directly
 - `src/ui/renderer/presentable_targets_runtime.zig`
   - shared runtime logic is still effectively the GL presentable model
+- `src/ui/renderer/frame_runtime.zig`
+  - shared frame lifecycle still acts as the entrypoint above backend dispatch
 - `src/ui/renderer/scene_frame_runtime.zig`
-  - shared frame tracing and lifecycle still act as the backend dispatch center
+  - now mostly scene target / trace support, but is still part of the shared
+    frame lifecycle surface
 
 ## First Required Cut Order
 

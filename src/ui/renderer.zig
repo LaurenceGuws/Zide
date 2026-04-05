@@ -31,6 +31,7 @@ const screenshot = @import("renderer/screenshot.zig");
 const input_runtime = @import("renderer/input_runtime.zig");
 const font_runtime = @import("renderer/font_runtime.zig");
 const presentable_targets_runtime = @import("renderer/presentable_targets_runtime.zig");
+const frame_runtime = @import("renderer/frame_runtime.zig");
 const scene_frame_runtime = @import("renderer/scene_frame_runtime.zig");
 const metal_text_diagnostic_runtime = @import("renderer/metal_text_diagnostic_runtime.zig");
 const metal_text_sample_runtime = @import("renderer/metal_text_sample_runtime.zig");
@@ -169,8 +170,8 @@ pub const RendererCapabilities = struct {
 pub const EditorTextStyleFlags = iface.EditorTextStyleFlags;
 pub const editor_syntax_style_slots = iface.editor_syntax_style_slots;
 
-pub const FrameSubmission = scene_frame_runtime.FrameSubmission;
-pub const PresentTrace = scene_frame_runtime.PresentTrace;
+pub const FrameSubmission = frame_runtime.FrameSubmission;
+pub const PresentTrace = frame_runtime.PresentTrace;
 pub const InputRuntimeState = input_state.InputRuntimeState;
 pub const WindowChromeState = window_chrome_runtime.WindowChromeState;
 pub const ScaleState = font_runtime.ScaleState;
@@ -1290,11 +1291,11 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     }
 
     pub fn beginFrame(self: *Renderer) void {
-        scene_frame_runtime.beginFrame(self);
+        frame_runtime.beginFrame(self);
     }
 
     pub fn submitFrame(self: *Renderer) FrameSubmission {
-        return scene_frame_runtime.submitFrame(self);
+        return frame_runtime.submitFrame(self);
     }
 
     pub fn clearToThemeBackground(self: *Renderer) void {
