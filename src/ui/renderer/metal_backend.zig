@@ -157,9 +157,16 @@ pub const RawImageDraw = struct {
     clip_rect: ?PixelClipRect = null,
 };
 
+pub const SolidColorDraw = struct {
+    dest_rect: types.Rect,
+    color: types.Rgba,
+    clip_rect: ?PixelClipRect = null,
+};
+
 pub const SurfaceDraw = union(enum) {
     atlas: AtlasSampleDraw,
     raw_image: RawImageDraw,
+    solid: SolidColorDraw,
 };
 
 pub const BackendContext = struct {
@@ -171,6 +178,8 @@ pub const BackendContext = struct {
     atlas_sampler: *anyopaque,
     glyph_atlas: GlyphAtlas,
     terminal_snapshot: ?RawImageTexture,
+    /// 1×1 white texture for tint-only solid fills (cursor, rects).
+    solid_white_brush: ?RawImageTexture,
     drawable_width: i32,
     drawable_height: i32,
 };
@@ -911,6 +920,30 @@ pub fn drawRawImage(
     );
 }
 
+pub fn drawSolidColor(
+    context: *BackendContext,
+    frame: *Frame,
+    draw: SolidColorDraw,
+) bool {
+    const brush = context.solid_white_brush orelse return false;
+    return encodeExternalTextureRegion(
+        context,
+        frame,
+        brush.texture,
+        brush.width,
+        brush.height,
+        .{
+            .x = 0,
+            .y = 0,
+            .width = @floatFromInt(brush.width),
+            .height = @floatFromInt(brush.height),
+        },
+        draw.dest_rect,
+        draw.color,
+        draw.clip_rect,
+    );
+}
+
 pub fn deinitRawImageTexture(texture: *RawImageTexture) void {
     if (builtin.target.os.tag != .macos) return;
     releaseObject(texture.texture);
@@ -1056,6 +1089,8 @@ pub fn createBackendContext(
     const glyph_atlas = createGlyphAtlas(device, default_glyph_atlas_width, default_glyph_atlas_height) orelse {
         return null;
     };
+    const solid_white = [_]u8{ 255, 255, 255, 255 };
+    const solid_white_brush = createRawImageTextureRgba(device, 1, 1, &solid_white);
     msgSendSetPointer(host.layer(), "setDevice:", device);
     msgSendSetU64(host.layer(), "setPixelFormat:", pixel_format_bgra8_unorm);
     msgSendSetBool(host.layer(), "setFramebufferOnly:", true);
@@ -1072,6 +1107,7 @@ pub fn createBackendContext(
         .atlas_sampler = atlas_sampler,
         .glyph_atlas = glyph_atlas,
         .terminal_snapshot = null,
+        .solid_white_brush = solid_white_brush,
         .drawable_width = drawable_width,
         .drawable_height = drawable_height,
     };
@@ -1094,6 +1130,8 @@ pub fn resizeBackendContext(
 pub fn deinitBackendContext(context: *BackendContext) void {
     if (builtin.target.os.tag != .macos) return;
     if (context.terminal_snapshot) |*snapshot| deinitRawImageTexture(snapshot);
+    if (context.solid_white_brush) |*brush| deinitRawImageTexture(brush);
+    context.solid_white_brush = null;
     deinitGlyphAtlas(&context.glyph_atlas);
     releaseObject(context.atlas_sampler);
     releaseObject(context.atlas_pipeline);

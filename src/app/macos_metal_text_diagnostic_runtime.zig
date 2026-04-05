@@ -53,7 +53,8 @@ pub fn run(allocator: std.mem.Allocator) !void {
         @intFromFloat(std.math.round(shell.terminalCellHeight())),
     );
     defer shell.endClip();
-    const terminal_cell_run_draw = shell.rendererPtr().drawMetalTerminalCellRun(metal_text_sample_runtime.TerminalCellRunRequest{
+    const renderer = shell.rendererPtr();
+    const terminal_cell_run_draw = renderer.drawMetalTerminalCellRun(&renderer.terminal_font, metal_text_sample_runtime.TerminalCellRunRequest{
         .text = "$ ls",
         .x = 24.0,
         .y = 220.0,

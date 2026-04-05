@@ -1478,6 +1478,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
                         for (self.metal_surface_draws[0..self.metal_surface_draw_count]) |surface_draw| {
                             switch (surface_draw) {
                                 .atlas => |sample| _ = metal_backend.drawAtlasSample(context, frame, sample),
+                                .solid => |solid| _ = metal_backend.drawSolidColor(context, frame, solid),
                                 .raw_image => |draw| _ = metal_backend.drawRawImage(context, frame, draw),
                             }
                         }
@@ -1563,6 +1564,16 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     pub fn drawRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
         if (w <= 0 or h <= 0) return;
         scene_frame_runtime.noteEditorSurfaceFullPaneClear(self, x, y, w, h);
+        if (self.backend == .metal) {
+            _ = self.appendMetalSolidRect(
+                @floatFromInt(x),
+                @floatFromInt(y),
+                @floatFromInt(w),
+                @floatFromInt(h),
+                color.toRgba(),
+            );
+            return;
+        }
         const dest = shape_utils.rectFromInts(x, y, w, h);
         const src = texture_draw.unitSrcRect();
         self.drawTextureRect(self.white_texture, src, dest, color.toRgba());
@@ -1570,6 +1581,10 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
 
     pub fn drawRectF(self: *Renderer, x: f32, y: f32, w: f32, h: f32, color: Color) void {
         if (w <= 0 or h <= 0) return;
+        if (self.backend == .metal) {
+            _ = self.appendMetalSolidRect(x, y, w, h, color.toRgba());
+            return;
+        }
         const dest = types.Rect{ .x = x, .y = y, .width = w, .height = h };
         const src = texture_draw.unitSrcRect();
         self.drawTextureRect(self.white_texture, src, dest, color.toRgba());
@@ -1983,10 +1998,29 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         for (self.metal_surface_draws[0..self.metal_surface_draw_count]) |*surface_draw| {
             switch (surface_draw.*) {
                 .atlas => {},
+                .solid => {},
                 .raw_image => |*draw| metal_backend.deinitRawImageTexture(&draw.texture),
             }
         }
         self.metal_surface_draw_count = 0;
+    }
+
+    fn appendMetalSolidRect(self: *Renderer, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) bool {
+        if (self.backend != .metal) return false;
+        if (self.metal_surface_draw_count >= self.metal_surface_draws.len) return false;
+        const clip = if (self.currentClipRect()) |c| metal_text_sample_runtime.pixelClipRect(self, c) else null;
+        self.metal_surface_draws[self.metal_surface_draw_count] = .{ .solid = .{
+            .dest_rect = .{
+                .x = self.logicalLengthToRaster(x),
+                .y = self.logicalLengthToRaster(y),
+                .width = self.logicalLengthToRaster(w),
+                .height = self.logicalLengthToRaster(h),
+            },
+            .color = color,
+            .clip_rect = clip,
+        } };
+        self.metal_surface_draw_count += 1;
+        return true;
     }
 
     fn appendMetalAtlasSampleDraw(self: *Renderer, sample: metal_backend.AtlasSampleDraw) bool {
@@ -2031,17 +2065,9 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         const font = self.ensureMetalDiagnosticFont() catch return false;
 
         const codepoint: u32 = char;
-        const direct = font.directFastGlyphForCodepoint(codepoint) orelse return false;
-        const glyph = font.getGlyphById(direct.face, direct.glyph_id, direct.want_color, false, 0) catch return false;
-        if (glyph.rect.width <= 0 or glyph.rect.height <= 0) return false;
-
-        return self.appendMetalAtlasSampleDraw(.{
-            .atlas = .color,
-            .source_rect = glyph.rect,
-            .dest_x = @max(0, @as(i32, @intFromFloat(std.math.round(self.logicalLengthToRaster(x))))),
-            .dest_y = @max(0, @as(i32, @intFromFloat(std.math.round(self.logicalLengthToRaster(y))))),
-            .tint = color.toRgba(),
-        });
+        const clip = if (self.currentClipRect()) |c| metal_text_sample_runtime.pixelClipRect(self, c) else null;
+        const sample = metal_text_sample_runtime.atlasSampleForGlyph(self, font, codepoint, x, y, color.toRgba(), clip) orelse return false;
+        return self.appendMetalAtlasSampleDraw(sample);
     }
 
     pub fn drawMetalAtlasSampleRequest(self: *Renderer, request: metal_text_sample_runtime.SampleTextRequest) bool {
@@ -2060,12 +2086,10 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         );
     }
 
-    pub fn drawMetalTerminalCellRun(self: *Renderer, request: metal_text_sample_runtime.TerminalCellRunRequest) bool {
+    pub fn drawMetalTerminalCellRun(self: *Renderer, font: *terminal_font_mod.TerminalFont, request: metal_text_sample_runtime.TerminalCellRunRequest) bool {
         if (self.backend != .metal) return false;
         if (self.plannedTextRenderingMode() != .metal_texture_atlas) return false;
         if (self.metal_backend_context == null) return false;
-
-        const font = self.ensureMetalDiagnosticFont() catch return false;
 
         return metal_text_sample_runtime.appendTerminalAsciiCells(
             self,
@@ -2326,11 +2350,25 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     }
 
     pub fn addTerminalRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
+        if (self.backend == .metal) {
+            _ = self.appendMetalSolidRect(
+                @floatFromInt(x),
+                @floatFromInt(y),
+                @floatFromInt(w),
+                @floatFromInt(h),
+                color.toRgba(),
+            );
+            return;
+        }
         draw_ops.addTerminalRect(self, x, y, w, h, color.toRgba());
     }
 
     pub fn addTerminalRectF(self: *Renderer, x: f32, y: f32, w: f32, h: f32, color: Color) void {
         if (w <= 0 or h <= 0) return;
+        if (self.backend == .metal) {
+            _ = self.appendMetalSolidRect(x, y, w, h, color.toRgba());
+            return;
+        }
         const src = texture_draw.unitSrcRect();
         const dest = types.Rect{ .x = x, .y = y, .width = w, .height = h };
         draw_ops.addBatchQuad(self, self.white_texture, src, dest, color.toRgba(), types.Rgba{ .r = 0, .g = 0, .b = 0, .a = 0 }, .rgba);

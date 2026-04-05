@@ -127,7 +127,7 @@ fn drawMetalMonospaceTextFallback(
 ) bool {
     if (self.plannedTextRenderingMode() != .metal_texture_atlas) return false;
     if (text.len == 0) return false;
-    return self.drawMetalTerminalCellRun(.{
+    return self.drawMetalTerminalCellRun(&self.editor_font, .{
         .text = text,
         .x = x,
         .y = y,
@@ -264,7 +264,7 @@ fn drawMetalTerminalAsciiCellFallback(
     if (codepoint < 0x20 or codepoint > 0x7E) return false;
     const ascii: u8 = @intCast(codepoint);
     var buf = [1]u8{ascii};
-    return self.drawMetalTerminalCellRun(.{
+    return self.drawMetalTerminalCellRun(&self.terminal_font, .{
         .text = buf[0..],
         .x = x,
         .y = y,
