@@ -20,13 +20,25 @@ the active backend-contract docs:
 Strong pressure for:
 
 - renderer host not being the real backend center
-- backend lifecycle discipline
+- native-host UI/view ownership staying separate from backend ownership
 - backend-specific machinery terminating in backend owners
+- terminal surface composition living under a surface/view owner instead of a
+  giant shared renderer root
 
 Relevant repo path pressure:
 
-- Ghostty renderer organization under its renderer/runtime centers
-- Ghostty macOS Metal ownership as a serious native backend example
+- `dev_references/terminals/ghostty/macos/Sources/Helpers/MetalView.swift`
+- `dev_references/terminals/ghostty/macos/Sources/Ghostty/Surface View/SurfaceView.swift`
+
+Concrete takeaways from those files:
+
+- SwiftUI/AppKit view composition and focus/lifecycle concerns stay in the
+  surface/view layer.
+- The Metal view is a small host wrapper, not the place where higher-level
+  terminal composition vocabulary lives.
+- Terminal surface concerns such as overlays, focus, unhealthy-state handling,
+  and geometry ownership stay attached to the terminal surface owner instead of
+  collapsing into one renderer root.
 
 ### Zed / GPUI
 
@@ -41,6 +53,16 @@ Concrete files inspected:
 
 - `dev_references/editors/zed/crates/gpui_wgpu/src/wgpu_renderer.rs`
 - `dev_references/editors/zed/crates/gpui_macos/src/metal_renderer.rs`
+
+Concrete takeaways from those files:
+
+- GPUI keeps the higher-level scene/batch vocabulary above backend
+  implementations.
+- The wgpu and Metal renderers each terminate their own device/queue/layer/
+  pipeline/atlas state locally.
+- Backend renderers are large because GPU state really lives there, but the
+  shared model they satisfy is still clearer than Zide's current renderer-root
+  ownership.
 
 ## High-Confidence Lessons
 
@@ -71,6 +93,11 @@ local:
 Zide still leaks some of those shapes into `src/ui/renderer.zig`, especially on
 the Metal side.
 
+Ghostty adds a useful nuance here: host/view ownership does not need to become
+"generic" for the backend contract to be strong. What matters is that the
+shared renderer contract stays above backend/device state, while view/surface
+owners keep platform-specific lifecycle and presentation concerns local.
+
 ### 3. A mature backend abstraction is not just capability reporting
 
 Capability reporting is useful, but the stronger reference pattern is:
@@ -91,6 +118,20 @@ That is the right pressure for Zide:
 - native host/platform ownership where needed
 - backend-neutral renderer contract above that
 
+### 5. Shared runtime should not be the hidden backend center
+
+Zed pressures us away from a renderer root that stores backend-native state.
+Ghostty pressures us away from shared runtime code becoming the hidden place
+where backend-specific presentation and lifecycle choices still happen.
+
+That is directly relevant to Zide's current state:
+
+- `src/ui/renderer/scene_frame_runtime.zig` is slimmer than before, but still
+  acts as a shared backend dispatch center
+- `src/ui/renderer/presentable_targets_runtime.zig` uses better contract
+  language now, but still mostly encodes the GL presentable model in shared
+  behavior
+
 ## Consequence For Zide
 
 The next backend-architecture cuts should bias toward:
@@ -99,6 +140,7 @@ The next backend-architecture cuts should bias toward:
 2. backend-neutral surface draw descriptions
 3. backend-neutral presentable/retained target ownership
 4. backend-local API details
+5. shared runtime getting out of the business of being the secret backend owner
 
 Not toward:
 
