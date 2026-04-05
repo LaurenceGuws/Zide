@@ -34,7 +34,6 @@ const font_runtime = @import("renderer/font_runtime.zig");
 const presentable_targets_runtime = @import("renderer/presentable_targets_runtime.zig");
 const frame_runtime = @import("renderer/frame_runtime.zig");
 const scene_frame_runtime = @import("renderer/scene_frame_runtime.zig");
-const metal_text_diagnostic_runtime = @import("renderer/metal_text_diagnostic_runtime.zig");
 const metal_text_sample_runtime = @import("renderer/metal_text_sample_runtime.zig");
 const text_runtime = @import("renderer/text_runtime.zig");
 const window_chrome_runtime = @import("renderer/window_chrome_runtime.zig");
@@ -1711,22 +1710,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         return macos_host.metalAttachmentTarget(self.render_host);
     }
 
-    pub fn prepareMacosMetalHost(self: *const Renderer) ?MacOsMetalHost {
-        return switch (self.render_surface_attachment) {
-            .macos_metal_host => |host| host,
-            else => null,
-        };
-    }
-
-    pub fn prepareMacosMetalBackendContext(self: *const Renderer) ?MacOsMetalBackendContext {
-        const host = self.prepareMacosMetalHost() orelse return null;
-        return metal_backend.createBackendContext(host, self.render_width, self.render_height);
-    }
-
-    pub fn macosMetalGlyphAtlasReady(self: *const Renderer) bool {
-        return metal_backend.glyphAtlasReadyForRenderer(self);
-    }
-
     pub fn macosMetalAtlasPreviewSource(self: *const Renderer) AtlasPreviewSource {
         return self.metal_debug_preview_source;
     }
@@ -1798,67 +1781,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             .y = y,
             .tint = Color.white.toRgba(),
         });
-    }
-
-    pub fn runMacosMetalAtlasUploadDiagnostic(self: *Renderer) bool {
-        const placement = metal_text_diagnostic_runtime.previewPlacement(self, 24.0);
-        return self.runMacosMetalAtlasUploadDiagnosticAt(placement.dest_x, placement.dest_y);
-    }
-
-    pub fn runMacosMetalAtlasUploadDiagnosticAt(self: *Renderer, dest_x: i32, dest_y: i32) bool {
-        if (self.backend != .metal) return false;
-        if (!metal_backend.hasBackendContext(self)) return false;
-        metal_backend.clearQueuedSurfaceDraws(self);
-        self.metal_debug_preview_source = .unavailable;
-
-        const font = metal_backend.ensureDiagnosticFont(self) catch return false;
-        const color_preview_rect = font.uploadDiagnosticColorGlyphPreview();
-        const codepoint: u32 = 'A';
-        const direct = font.directFastGlyphForCodepoint(codepoint) orelse return false;
-        const coverage_glyph = font.getGlyphById(direct.face, direct.glyph_id, direct.want_color, false, 0) catch return false;
-        if (coverage_glyph.rect.width > 0 and coverage_glyph.rect.height > 0) {
-            _ = self.appendMetalAtlasSampleDraw(.{
-                .atlas = .color,
-                .source_rect = coverage_glyph.rect,
-                .dest_x = dest_x,
-                .dest_y = dest_y,
-                .tint = Color.white.toRgba(),
-            });
-            self.metal_debug_preview_source = .uploaded_coverage_glyph;
-        }
-        if (color_preview_rect) |rect| {
-            metal_backend.clearQueuedSurfaceDraws(self);
-            _ = self.appendMetalAtlasSampleDraw(.{
-                .atlas = .color,
-                .source_rect = rect,
-                .dest_x = dest_x,
-                .dest_y = dest_y,
-                .tint = Color.white.toRgba(),
-            });
-            self.metal_debug_preview_source = .uploaded_color_glyph;
-        } else {
-            if (metal_backend.queuedSurfaceDrawCount(self) == 0) {
-                _ = self.appendMetalAtlasSampleDraw(.{
-                    .atlas = .color,
-                    .source_rect = .{
-                        .x = 0,
-                        .y = 0,
-                        .width = 4,
-                        .height = 4,
-                    },
-                    .dest_x = dest_x,
-                    .dest_y = dest_y,
-                    .tint = Color.white.toRgba(),
-                });
-                self.metal_debug_preview_source = .seeded_color_block;
-            }
-        }
-        return self.metal_debug_preview_source == .uploaded_coverage_glyph or
-            self.metal_debug_preview_source == .uploaded_color_glyph;
-    }
-
-    pub fn runMacosMetalSmokeFrame(self: *const Renderer) bool {
-        return metal_backend.runSmokeFrame(self);
     }
 
     fn windowHitTestCallback(_: ?*sdl.SDL_Window, area: [*c]const sdl.SDL_Point, data: ?*anyopaque) callconv(.c) sdl_api.HitTestResult {

@@ -2,6 +2,8 @@ const std = @import("std");
 const r = @import("ui/renderer.zig");
 const frame_runtime = @import("ui/renderer/frame_runtime.zig");
 const iface = @import("ui/renderer/interface.zig");
+const metal_backend = @import("ui/renderer/metal_backend.zig");
+const metal_text_diagnostic_runtime = @import("ui/renderer/metal_text_diagnostic_runtime.zig");
 const window = @import("platform/window_metrics.zig");
 const platform_input_events = @import("platform/input_events.zig");
 
@@ -292,15 +294,15 @@ pub const Shell = struct {
     }
 
     pub fn prepareMacosMetalHost(self: *const Shell) ?MacOsMetalHost {
-        return self.renderer.prepareMacosMetalHost();
+        return metal_backend.prepareHost(self.renderer);
     }
 
     pub fn prepareMacosMetalBackendContext(self: *const Shell) ?MacOsMetalBackendContext {
-        return self.renderer.prepareMacosMetalBackendContext();
+        return metal_backend.createBackendContextForRenderer(self.renderer);
     }
 
     pub fn runMacosMetalSmokeFrame(self: *const Shell) bool {
-        return self.renderer.runMacosMetalSmokeFrame();
+        return metal_backend.runSmokeFrame(self.renderer);
     }
 
     pub fn setTextInputRect(self: *Shell, x: i32, y: i32, w: i32, h: i32) void {
@@ -404,15 +406,16 @@ pub const Shell = struct {
     }
 
     pub fn macosMetalGlyphAtlasReady(self: *const Shell) bool {
-        return self.renderer.macosMetalGlyphAtlasReady();
+        return metal_backend.glyphAtlasReadyForRenderer(self.renderer);
     }
 
     pub fn runMacosMetalAtlasUploadDiagnostic(self: *Shell) bool {
-        return self.renderer.runMacosMetalAtlasUploadDiagnostic();
+        const placement = metal_text_diagnostic_runtime.previewPlacement(self.renderer, 24.0);
+        return metal_backend.runAtlasUploadDiagnosticAt(self.renderer, placement.dest_x, placement.dest_y);
     }
 
     pub fn runMacosMetalAtlasUploadDiagnosticAt(self: *Shell, dest_x: i32, dest_y: i32) bool {
-        return self.renderer.runMacosMetalAtlasUploadDiagnosticAt(dest_x, dest_y);
+        return metal_backend.runAtlasUploadDiagnosticAt(self.renderer, dest_x, dest_y);
     }
 
     pub fn macosMetalAtlasPreviewSource(self: *const Shell) AtlasPreviewSource {

@@ -135,6 +135,12 @@ through `metal_backend` entrypoints, instead of
 `terminal_widget_presentation_target_runtime.zig` carrying a separate
 Metal-only bypass branch for availability, ensure, draw, and scroll.
 
+That has improved slightly again at the renderer boundary too: the remaining
+macOS Metal host-prep, smoke, glyph-atlas readiness, and atlas-upload
+diagnostic helpers now live under `metal_backend` and the shell routes those
+diagnostics through the backend module instead of `Renderer` owning that
+backend-specific helper surface directly.
+
 ### 2. Shared frame lifecycle still branches backend-by-backend
 
 The renderer root no longer spells out backend frame begin/submit bodies, but
@@ -228,13 +234,13 @@ But the presentable surface story is still not backend-neutral at the shared
 runtime layer:
 
 - the moved type is still FBO/texture-shaped
-- shared presentable routing still only reaches the OpenGL presentable model
-- Metal still reaches presentable behavior through a separate direct/snapshot
-  lane instead of the same contract
+- OpenGL still owns the richer retained-presentable lifecycle
+- Metal currently participates through a narrower direct/snapshot terminal
+  presentable implementation rather than a broader presentable model
 
 That is why OpenGL still reads like "the real retained implementation" while
-Metal reads like "the special direct/snapshot implementation" instead of both
-being implementations of one presentable contract.
+Metal still reads like "the narrower direct/snapshot implementation" instead
+of both being equally mature implementations of one presentable contract.
 
 ### 5. The caller-facing renderer surface is better, but still not fully neutral
 

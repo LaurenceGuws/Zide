@@ -155,6 +155,10 @@ Progress note, 2026-04-05:
   presentable contract through `metal_backend.zig` entrypoints instead of
   `terminal_widget_presentation_target_runtime.zig` carrying a separate
   Metal-only bypass branch for availability, ensure, draw, and scroll.
+- The remaining macOS Metal host-prep, smoke, glyph-atlas readiness, and
+  atlas-upload diagnostic helpers now also route through `metal_backend.zig`,
+  and shell-side Metal diagnostics no longer rely on `Renderer` owning that
+  backend-specific helper surface directly.
 - The next lifecycle step is to reduce shared-runtime ownership of dispatch and
   backend-native frame state, not just move code blocks around.
 
@@ -169,7 +173,8 @@ Progress note, 2026-04-05:
 - `src/ui/renderer/scene_frame_runtime.zig`
   - still participates in the shared frame lifecycle surface
 - `src/ui/renderer/presentable_targets_runtime.zig`
-  - still routes only to the OpenGL presentable model
+  - still routes a shared presentable contract whose richer lifecycle is
+    effectively defined by the OpenGL implementation
 - `src/ui/renderer/opengl_presentable_runtime.zig`
   - now owns the concrete GL presentable mechanics that used to live under the
     shared contract module

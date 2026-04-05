@@ -167,6 +167,18 @@ pub const Readback = struct {
     bytes_per_row: usize,
 };
 
+pub fn prepareHost(renderer: anytype) ?macos_metal_host.Host {
+    return switch (renderer.render_surface_attachment) {
+        .macos_metal_host => |host| host,
+        else => null,
+    };
+}
+
+pub fn createBackendContextForRenderer(renderer: anytype) ?BackendContext {
+    const host = prepareHost(renderer) orelse return null;
+    return createBackendContext(host, renderer.render_width, renderer.render_height);
+}
+
 extern "Metal" fn MTLCreateSystemDefaultDevice() ?*anyopaque;
 
 fn classPointer(class_name: [*:0]const u8) ?*anyopaque {
@@ -1089,7 +1101,7 @@ pub fn initRuntime(renderer: anytype) !void {
     const metal_runtime_ok = renderer.runtime_profile == .backend_smoke or
         (renderer.runtime_profile == .full_ui and builtin.target.os.tag == .macos);
     if (!metal_runtime_ok) return error.RendererBackendRuntimeNotReady;
-    const host = renderer.prepareMacosMetalHost() orelse return error.MacosMetalAttachmentUnavailable;
+    const host = prepareHost(renderer) orelse return error.MacosMetalAttachmentUnavailable;
     renderer.metal_runtime.backend_context = createBackendContext(host, renderer.render_width, renderer.render_height) orelse return error.MetalBackendContextUnavailable;
     try renderer.initFonts();
     renderer.fonts_ready = true;
@@ -1201,6 +1213,56 @@ pub fn hasBackendContext(renderer: anytype) bool {
 pub fn glyphAtlasReadyForRenderer(renderer: anytype) bool {
     const context = backendContextConst(renderer) orelse return false;
     return glyphAtlasReady(context);
+}
+
+pub fn runAtlasUploadDiagnosticAt(renderer: anytype, dest_x: i32, dest_y: i32) bool {
+    if (renderer.backend != .metal) return false;
+    if (!hasBackendContext(renderer)) return false;
+    clearQueuedSurfaceDraws(renderer);
+    renderer.metal_debug_preview_source = .unavailable;
+
+    const font = ensureDiagnosticFont(renderer) catch return false;
+    const color_preview_rect = font.uploadDiagnosticColorGlyphPreview();
+    const codepoint: u32 = 'A';
+    const direct = font.directFastGlyphForCodepoint(codepoint) orelse return false;
+    const coverage_glyph = font.getGlyphById(direct.face, direct.glyph_id, direct.want_color, false, 0) catch return false;
+    if (coverage_glyph.rect.width > 0 and coverage_glyph.rect.height > 0) {
+        _ = appendAtlasSample(renderer, .{
+            .atlas = .color,
+            .source_rect = coverage_glyph.rect,
+            .dest_x = dest_x,
+            .dest_y = dest_y,
+            .tint = iface.Color.white.toRgba(),
+        });
+        renderer.metal_debug_preview_source = .uploaded_coverage_glyph;
+    }
+    if (color_preview_rect) |rect| {
+        clearQueuedSurfaceDraws(renderer);
+        _ = appendAtlasSample(renderer, .{
+            .atlas = .color,
+            .source_rect = rect,
+            .dest_x = dest_x,
+            .dest_y = dest_y,
+            .tint = iface.Color.white.toRgba(),
+        });
+        renderer.metal_debug_preview_source = .uploaded_color_glyph;
+    } else if (queuedSurfaceDrawCount(renderer) == 0) {
+        _ = appendAtlasSample(renderer, .{
+            .atlas = .color,
+            .source_rect = .{
+                .x = 0,
+                .y = 0,
+                .width = 4,
+                .height = 4,
+            },
+            .dest_x = dest_x,
+            .dest_y = dest_y,
+            .tint = iface.Color.white.toRgba(),
+        });
+        renderer.metal_debug_preview_source = .seeded_color_block;
+    }
+    return renderer.metal_debug_preview_source == .uploaded_coverage_glyph or
+        renderer.metal_debug_preview_source == .uploaded_color_glyph;
 }
 
 pub fn terminalFontAtlasUploadHooksForRenderer(renderer: anytype) ?terminal_font.AtlasUploadHooks {
@@ -1384,7 +1446,7 @@ pub fn scrollTerminalSnapshotPresentableForRenderer(renderer: anytype, dx: i32, 
 }
 
 pub fn runSmokeFrame(renderer: anytype) bool {
-    const host = renderer.prepareMacosMetalHost() orelse return false;
+    const host = prepareHost(renderer) orelse return false;
     var context = createBackendContext(host, renderer.render_width, renderer.render_height) orelse return false;
     defer deinitBackendContext(&context);
 
