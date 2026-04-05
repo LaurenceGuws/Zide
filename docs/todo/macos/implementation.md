@@ -744,17 +744,21 @@ lane.
       for no-Kitty frames: it can seed the current frame from the cached
       snapshot and redraw only dirty terminal rows on top when the runtime
       yields an honest partial plan
-    - this new direct partial lane is still intentionally honest about scope:
-      Kitty-bearing frames remain on the full direct redraw path for now, and
-      the current deterministic terminal diagnostic fixtures still resolve to
-      either full redraw or steady-state snapshot fast-present, so this new
-      `direct_snapshot_update` sample mode is implemented and compile-validated
-      without being claimed as runtime-proven yet
-    - the Metal terminal diagnostic runtime now has explicit no-Kitty,
-      mutation-frame, and scroll-frame env hooks for pushing that lane under
-      future targeted proof runs without having to hand-edit the runtime
-      again; the scroll fixture now seeds real overflow history rather than
-      fake cursor-positioned rows
+    - view-cache publication is less hostile to that partial lane now: the poll
+      tail no longer republishes the same generation right after
+      `publishParsedOutput` when `processed > 0` (transport + PTY), and
+      `assignDirtyRows` / `assignDirtySpans` copy partial row/span damage when
+      `view.dirty == partial` even if `visible_history_changed` is true, instead
+      of widening to all rows at full width from that flag alone
+    - `direct_snapshot_update` is still wired; use the Metal terminal
+      diagnostic env hooks (`DISABLE_KITTY`, `PARTIAL_UPDATE_FRAME`, plus
+      mutation/scroll knobs) to chase `metric_present_sample=direct_snapshot_update`
+      now that the redundant publish path is fixed
+    - the Metal terminal diagnostic runtime disables default recent-input
+      force-full policy, removes the fake composing input stub, and disables
+      texture-shift planning when `PARTIAL_UPDATE_FRAME` is set; the scroll
+      fixture still seeds real overflow history when the scroll-frame hook is
+      used
     - this reduces one more retained-first contradiction before a second
       Metal terminal presentation shape is introduced
 

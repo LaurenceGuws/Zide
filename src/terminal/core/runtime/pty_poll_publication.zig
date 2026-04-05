@@ -4,7 +4,19 @@ const protocol_execution = @import("../session/protocol_execution.zig");
 
 pub fn publishPtyPollResult(self: anytype, had_data: bool, processed: usize, input_pressure: bool, queued_bytes: usize, parse_lock_hold_ns: i128, publish_lock_hold_ns: *i128, start_ms: i64) void {
     var exec = protocol_execution.ProtocolExecution.init(self, &self.core);
-    if (exec.shouldPublishPollUpdate(had_data)) {
+    // `publishParsedOutput` already refreshed the view cache per chunk; repeating the same
+    // generation would re-refine against an active cache that already matches the grid and
+    // can clear all row damage. Only run the poll publish pass for scroll/view refresh when
+    // bytes were processed, or preserve the legacy path when nothing was parsed this poll.
+    if (processed > 0) {
+        if (exec.viewRefreshPending()) {
+            const publish_lock_start_ns = std.time.nanoTimestamp();
+            self.session.control.state_mutex.lock();
+            _ = exec.publishPollUpdate(false, "pty_poll_publish", "pty_pending_offset");
+            self.session.control.state_mutex.unlock();
+            publish_lock_hold_ns.* += std.time.nanoTimestamp() - publish_lock_start_ns;
+        }
+    } else if (exec.shouldPublishPollUpdate(had_data)) {
         const publish_lock_start_ns = std.time.nanoTimestamp();
         self.session.control.state_mutex.lock();
         _ = exec.publishPollUpdate(had_data, "pty_poll_publish", "pty_pending_offset");
@@ -32,7 +44,13 @@ pub fn publishPtyPollResult(self: anytype, had_data: bool, processed: usize, inp
 pub fn publishTransportPollResult(self: anytype, had_data: bool, processed: usize, input_pressure: bool, parse_lock_hold_ns: i128, publish_lock_hold_ns: *i128, start_ms: i64) void {
     _ = start_ms;
     var exec = protocol_execution.ProtocolExecution.init(self, &self.core);
-    if (exec.shouldPublishPollUpdate(had_data)) {
+    if (processed > 0) {
+        if (exec.viewRefreshPending()) {
+            const publish_lock_start_ns = std.time.nanoTimestamp();
+            _ = exec.publishPollUpdate(false, "transport_poll_publish", "transport_pending_offset");
+            publish_lock_hold_ns.* += std.time.nanoTimestamp() - publish_lock_start_ns;
+        }
+    } else if (exec.shouldPublishPollUpdate(had_data)) {
         const publish_lock_start_ns = std.time.nanoTimestamp();
         _ = exec.publishPollUpdate(had_data, "transport_poll_publish", "transport_pending_offset");
         publish_lock_hold_ns.* += std.time.nanoTimestamp() - publish_lock_start_ns;

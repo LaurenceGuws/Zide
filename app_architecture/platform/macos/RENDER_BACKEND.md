@@ -758,13 +758,26 @@ What this does and does not mean:
   frames still stay on the full direct redraw path for now, because the Metal
   lane does not yet have a separate image-delta update contract that would let
   partially redrawn frames reuse cached Kitty content without ambiguity
-- current validation truth is still compile-first for this new seam: the
-  dedicated Metal terminal diagnostic now has deterministic no-Kitty mutation
-  and scroll knobs for exercising the lane, and the scroll fixture now seeds
-  real overflow history instead of fake cursor-positioned rows, but the
-  current fixtures still resolve either to full redraw or to steady-state
-  snapshot fast-present, so `direct_snapshot_update` is implemented and wired
-  without being claimed as runtime-proven yet
+- view-cache publication now avoids two footguns that prevented honest partial
+  planning on the live path: the poll tail no longer republishes the same
+  generation immediately after `publishParsedOutput` when bytes were processed
+  (transport + PTY), which used to run row-hash refinement twice and could
+  strip partial damage before the widget snapshot copy; `assignDirtyRows` /
+  `assignDirtySpans` now copy the grid partial row and span maps whenever
+  `view.dirty == partial` even when `visible_history_changed` is true, instead
+  of expanding to every row at full width from that flag alone (which pushed
+  `decideFullFrameFastPath` over the full-frame threshold)
+- the Metal terminal diagnostic runtime disables the default recent-input
+  force-full publication policy, drops the old fake IME/composing input stub,
+  and when `ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_PARTIAL_UPDATE_FRAME` is set
+  it also disables terminal texture-shift planning for that run (Metal still
+  lacks `scrollPresentable`) and can enqueue a single-cell mutation on the
+  chosen frame; pair with `ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_DISABLE_KITTY`
+  for a no-Kitty partial attempt
+- `direct_snapshot_update` remains implemented end-to-end; confirming
+  `metric_present_sample=direct_snapshot_update` on the dedicated diagnostic
+  under those hooks is the next runtime proof step now that publication is less
+  self-defeating
 - that preparation contract is now aligned with capture truth as well:
   the target runtime prepares drawable-sized Metal snapshot presentables
   instead of using terminal-surface geometry while submit-time capture

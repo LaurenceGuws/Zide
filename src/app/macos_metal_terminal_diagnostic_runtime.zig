@@ -18,6 +18,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
     const mutate_frame = app_bootstrap.parseEnvU64("ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_MUTATE_FRAME", std.math.maxInt(u64));
     const scroll_frame = app_bootstrap.parseEnvU64("ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_SCROLL_FRAME", std.math.maxInt(u64));
     const scroll_offset = @as(usize, @intCast(@max(@as(i32, 0), app_bootstrap.parseEnvI32("ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_SCROLL_OFFSET", 0))));
+    const partial_update_frame = app_bootstrap.parseEnvU64("ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_PARTIAL_UPDATE_FRAME", std.math.maxInt(u64));
     const disable_kitty = app_bootstrap.parseEnvBool("ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_DISABLE_KITTY") orelse false;
     const screenshot_path = app_bootstrap.envSlice("ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_SCREENSHOT");
     const title: [*:0]const u8 = "Zide macOS Metal Terminal Diagnostic";
@@ -32,6 +33,19 @@ pub fn run(allocator: std.mem.Allocator) !void {
 
     const shell = try app_shell.Shell.init(allocator, width, height, title, init_options);
     defer shell.deinit(allocator);
+
+    // Default renderer policy enables recent-input force-full publication; this diagnostic
+    // injects PTY bytes without going through widget input, but disabling the policy keeps
+    // partial-plan frames reproducible when any code path touches blink/input timing.
+    shell.renderer.setTerminalRecentInputFullPublicationPolicy(false, null);
+
+    // Metal cannot texture-scroll the snapshot presentable yet; leaving shift planning enabled
+    // can pair generation-changed viewport-shift attempts with scrollPresentable=false and
+    // force full-frame presentation. Disable shift only when exercising the partial snapshot
+    // update proof so the planner can stay on honest row-local partial damage.
+    if (partial_update_frame != std.math.maxInt(u64)) {
+        shell.renderer.setTerminalPresentationShiftEnabled(false);
+    }
 
     _ = try shell.refreshWindowState("macos-metal-terminal-diagnostic-init", .{
         .resized = true,
@@ -72,10 +86,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
     widget.setUiFocused(true);
     const input_adapter = input_adapter_mod.TerminalInputAdapter.init(session);
 
-    var input = shared_types.input.InputSnapshot.init(.{ .x = 0, .y = 0 }, .{});
-    input.composing_active = true;
-    input.composing_text = "ASCII";
-    input.composing_cursor = 5;
+    const input = shared_types.input.InputSnapshot.init(.{ .x = 0, .y = 0 }, .{});
 
     const log = app_logger.logger("macos.metal.terminal_diagnostic");
     const capabilities = shell.rendererCapabilities();
@@ -108,6 +119,16 @@ pub fn run(allocator: std.mem.Allocator) !void {
             ))) return error.MetalTerminalDiagnosticMutationRejected;
             try session_runtime.poll(session);
             input_adapter.setScrollOffset(0);
+        }
+        if (frame_index == partial_update_frame) {
+            var partial_scratch: [64]u8 = undefined;
+            const partial_bytes = std.fmt.bufPrint(
+                &partial_scratch,
+                "\x1b[{d};{d}H*",
+                .{ rows, cols },
+            ) catch unreachable;
+            if (!(try session_runtime.enqueueExternalBytes(session, partial_bytes))) return error.MetalTerminalDiagnosticPartialUpdateRejected;
+            try session_runtime.poll(session);
         }
         if (frame_index == scroll_frame) {
             input_adapter.setScrollOffset(scroll_offset);

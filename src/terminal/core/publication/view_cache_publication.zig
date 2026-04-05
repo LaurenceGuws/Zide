@@ -346,7 +346,9 @@ pub fn assignDirtyRows(
         }
         return;
     }
-    if (view.dirty_rows.len == rows and !plan.needs_full_damage and !plan.visible_history_changed) {
+    if (view.dirty_rows.len == rows and !plan.needs_full_damage and
+        (view.dirty == .partial or !plan.visible_history_changed))
+    {
         std.mem.copyForwards(bool, cache.dirty_rows.items, view.dirty_rows);
         return;
     }
@@ -366,7 +368,7 @@ pub fn assignDirtySpans(
         view.row_dirty_span_overflow.len == rows and
         view.row_dirty_spans.len == rows and
         !plan.needs_full_damage and
-        !plan.visible_history_changed)
+        (view.dirty == .partial or !plan.visible_history_changed))
     {
         std.mem.copyForwards(u8, cache.row_dirty_span_counts.items, view.row_dirty_span_counts);
         std.mem.copyForwards(bool, cache.row_dirty_span_overflow.items, view.row_dirty_span_overflow);
