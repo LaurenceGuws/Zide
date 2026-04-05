@@ -229,6 +229,24 @@ image draws by branching on `renderer.backend`. The renderer capability model
 now publishes an explicit Kitty image mode, and the terminal Kitty widget
 follows that contract instead of backend labels.
 
+That has improved slightly again on the persistent image-texture side too: the
+renderer root no longer exposes `createTextureFromRgb` /
+`createTextureFromRgba` as GL-only helper surfaces. Persistent texture
+creation and destruction now route through backend ops, so shell icons and the
+Kitty persistent-texture path ask the backend contract for a linear persistent
+image texture instead of depending on a raw OpenGL-only renderer helper.
+
+That has improved slightly again on the font-atlas hook seam too: font
+initialization no longer first checks `renderer.backend != .metal` before
+asking for Metal atlas upload hooks. The Metal backend helper now answers the
+real question directly.
+
+That has improved slightly again on shared init policy too: the old
+OpenGL-only swap-interval policy tweak no longer lives as a raw
+`renderer.backend == .opengl` branch in `renderer.zig`. That runtime policy
+now routes through backend ops as backend-owned behavior instead of leaving one
+more backend-special case in shared initialization.
+
 That has improved slightly again on the Metal frame side too: the shared
 frame prelude no longer clears the Metal queued draw list before backend
 dispatch. That queue reset now lives under `metal_frame_runtime.zig`, which is

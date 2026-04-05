@@ -323,11 +323,11 @@ pub const KittyState = struct {
             },
             .rgb => {
                 if (image.width == 0 or image.height == 0) return null;
-                return renderer.createTextureFromRgb(@intCast(image.width), @intCast(image.height), image.data, gl.c.GL_LINEAR);
+                return renderer.createPersistentTextureFromRgb(@intCast(image.width), @intCast(image.height), image.data);
             },
             .rgba => {
                 if (image.width == 0 or image.height == 0) return null;
-                return renderer.createTextureFromRgba(@intCast(image.width), @intCast(image.height), image.data, gl.c.GL_LINEAR);
+                return renderer.createPersistentTextureFromRgba(@intCast(image.width), @intCast(image.height), image.data);
             },
         }
     }

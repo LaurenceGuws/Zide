@@ -16,7 +16,6 @@ const scene_target_state = @import("renderer/scene_target_state.zig");
 const surface_draw = @import("renderer/surface_draw.zig");
 const input_constants = @import("renderer/input_constants.zig");
 const clipboard = @import("renderer/clipboard.zig");
-const texture_utils = @import("renderer/texture_utils.zig");
 const text_input = @import("renderer/text_input.zig");
 const time_utils = @import("renderer/time_utils.zig");
 const window_init = @import("renderer/window_init.zig");
@@ -357,6 +356,7 @@ pub const Renderer = struct {
     const BackendOps = struct {
         initRuntime: *const fn (*Self) anyerror!void,
         deinitRuntime: *const fn (*Self) void,
+        configureRuntimePolicy: *const fn (*Self) void,
         beginFrame: *const fn (*Self) void,
         submitFrame: *const fn (*Self) FrameSubmission,
         capabilities: *const fn (*const Self) RendererCapabilities,
@@ -375,6 +375,9 @@ pub const Renderer = struct {
         addTerminalRect: *const fn (*Self, i32, i32, i32, i32, types.Rgba) void,
         addTerminalGlyphRect: *const fn (*Self, i32, i32, i32, i32, types.Rgba) void,
         addTerminalGlyphQuad: *const fn (*Self, types.Texture, types.Rect, types.Rect, types.Rgba, types.TextureKind) void,
+        createPersistentTextureFromRgba: *const fn (*Self, i32, i32, []const u8) ?types.Texture,
+        createPersistentTextureFromRgb: *const fn (*Self, i32, i32, []const u8) ?types.Texture,
+        destroyPersistentTexture: *const fn (*Self, *types.Texture) void,
     };
 
     const BackendBootstrapOps = struct {
@@ -518,6 +521,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     const OpenGlDispatch = struct {
         fn initRuntime(renderer: *Self) !void { try gl_backend.initRuntime(renderer); }
         fn deinitRuntime(renderer: *Self) void { gl_backend.deinitRuntime(renderer); }
+        fn configureRuntimePolicy(renderer: *Self) void { gl_backend.configureRuntimePolicy(renderer); }
         fn beginFrame(renderer: *Self) void { gl_backend.beginFrame(renderer); }
         fn submitFrame(renderer: *Self) FrameSubmission { return gl_backend.submitFrame(renderer); }
         fn capabilities(renderer: *const Self) RendererCapabilities { return gl_backend.capabilities(renderer); }
@@ -536,11 +540,15 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         fn addTerminalRect(renderer: *Self, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void { gl_backend.addTerminalRect(renderer, x, y, w, h, color); }
         fn addTerminalGlyphRect(renderer: *Self, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void { gl_backend.addTerminalGlyphRect(renderer, x, y, w, h, color); }
         fn addTerminalGlyphQuad(renderer: *Self, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void { gl_backend.addTerminalGlyphQuad(renderer, texture, src, dest, color, kind); }
+        fn createPersistentTextureFromRgba(renderer: *Self, width: i32, height: i32, data: []const u8) ?types.Texture { return gl_backend.createPersistentTextureFromRgba(renderer, width, height, data); }
+        fn createPersistentTextureFromRgb(renderer: *Self, width: i32, height: i32, data: []const u8) ?types.Texture { return gl_backend.createPersistentTextureFromRgb(renderer, width, height, data); }
+        fn destroyPersistentTexture(renderer: *Self, texture: *types.Texture) void { gl_backend.destroyPersistentTexture(renderer, texture); }
     };
 
     const MetalDispatch = struct {
         fn initRuntime(renderer: *Self) !void { try metal_backend.initRuntime(renderer); }
         fn deinitRuntime(renderer: *Self) void { metal_backend.deinitRuntime(renderer); }
+        fn configureRuntimePolicy(renderer: *Self) void { metal_backend.configureRuntimePolicy(renderer); }
         fn beginFrame(renderer: *Self) void { metal_backend.beginFrame(renderer); }
         fn submitFrame(renderer: *Self) FrameSubmission { return metal_backend.submitFrame(renderer); }
         fn capabilities(renderer: *const Self) RendererCapabilities { return metal_backend.capabilities(renderer); }
@@ -559,6 +567,9 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         fn addTerminalRect(renderer: *Self, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void { metal_backend.addTerminalRect(renderer, x, y, w, h, color); }
         fn addTerminalGlyphRect(renderer: *Self, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void { metal_backend.addTerminalGlyphRect(renderer, x, y, w, h, color); }
         fn addTerminalGlyphQuad(renderer: *Self, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void { metal_backend.addTerminalGlyphQuad(renderer, texture, src, dest, color, kind); }
+        fn createPersistentTextureFromRgba(renderer: *Self, width: i32, height: i32, data: []const u8) ?types.Texture { return metal_backend.createPersistentTextureFromRgba(renderer, width, height, data); }
+        fn createPersistentTextureFromRgb(renderer: *Self, width: i32, height: i32, data: []const u8) ?types.Texture { return metal_backend.createPersistentTextureFromRgb(renderer, width, height, data); }
+        fn destroyPersistentTexture(renderer: *Self, texture: *types.Texture) void { metal_backend.destroyPersistentTexture(renderer, texture); }
     };
 
     fn backendOps(backend: RendererBackend) BackendOps {
@@ -566,6 +577,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             .opengl => .{
                 .initRuntime = OpenGlDispatch.initRuntime,
                 .deinitRuntime = OpenGlDispatch.deinitRuntime,
+                .configureRuntimePolicy = OpenGlDispatch.configureRuntimePolicy,
                 .beginFrame = OpenGlDispatch.beginFrame,
                 .submitFrame = OpenGlDispatch.submitFrame,
                 .capabilities = OpenGlDispatch.capabilities,
@@ -584,10 +596,14 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
                 .addTerminalRect = OpenGlDispatch.addTerminalRect,
                 .addTerminalGlyphRect = OpenGlDispatch.addTerminalGlyphRect,
                 .addTerminalGlyphQuad = OpenGlDispatch.addTerminalGlyphQuad,
+                .createPersistentTextureFromRgba = OpenGlDispatch.createPersistentTextureFromRgba,
+                .createPersistentTextureFromRgb = OpenGlDispatch.createPersistentTextureFromRgb,
+                .destroyPersistentTexture = OpenGlDispatch.destroyPersistentTexture,
             },
             .metal => .{
                 .initRuntime = MetalDispatch.initRuntime,
                 .deinitRuntime = MetalDispatch.deinitRuntime,
+                .configureRuntimePolicy = MetalDispatch.configureRuntimePolicy,
                 .beginFrame = MetalDispatch.beginFrame,
                 .submitFrame = MetalDispatch.submitFrame,
                 .capabilities = MetalDispatch.capabilities,
@@ -606,6 +622,9 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
                 .addTerminalRect = MetalDispatch.addTerminalRect,
                 .addTerminalGlyphRect = MetalDispatch.addTerminalGlyphRect,
                 .addTerminalGlyphQuad = MetalDispatch.addTerminalGlyphQuad,
+                .createPersistentTextureFromRgba = MetalDispatch.createPersistentTextureFromRgba,
+                .createPersistentTextureFromRgb = MetalDispatch.createPersistentTextureFromRgb,
+                .destroyPersistentTexture = MetalDispatch.destroyPersistentTexture,
             },
         };
     }
@@ -817,12 +836,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         renderer.appkit_delegate_installation = macos_app_delegate.install(&renderer.app_host);
         renderer.app_event_watch_installed = installAppEventWatch(&renderer.app_host);
 
-        if (renderer.backend == .opengl and renderer.terminal_render_policy.recent_input_full_publication.force_full_enabled) {
-            if (!sdl_api.glSetSwapInterval(0)) {
-                app_logger.logger("sdl.gl").logStdout(.warning, "SDL_GL_SetSwapInterval failed interval=0 err={s}", .{sdl_api.getError()});
-            }
-        }
-
+        renderer.backend_ops.configureRuntimePolicy(renderer);
         try renderer.backend_ops.initRuntime(renderer);
 
         input_state.startTextInput(renderer.inputDomain());
@@ -1803,18 +1817,16 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         draw_ops.drawTextureRect(renderer, texture, src, dest, color, renderer.text_render.bg_rgba, kind);
     }
 
-    pub fn createTextureFromRgba(self: *Renderer, width: i32, height: i32, data: []const u8, filter: i32) ?types.Texture {
-        if (self.backend != .opengl) return null;
-        return texture_utils.createTextureFromRgba(width, height, data, filter);
+    pub fn createPersistentTextureFromRgba(self: *Renderer, width: i32, height: i32, data: []const u8) ?types.Texture {
+        return self.backend_ops.createPersistentTextureFromRgba(self, width, height, data);
     }
 
-    pub fn createTextureFromRgb(self: *Renderer, width: i32, height: i32, data: []const u8, filter: i32) ?types.Texture {
-        if (self.backend != .opengl) return null;
-        return texture_utils.createTextureFromRgb(width, height, data, filter);
+    pub fn createPersistentTextureFromRgb(self: *Renderer, width: i32, height: i32, data: []const u8) ?types.Texture {
+        return self.backend_ops.createPersistentTextureFromRgb(self, width, height, data);
     }
 
-    pub fn destroyTexture(_: *Renderer, texture: *types.Texture) void {
-        texture_utils.destroyTexture(texture);
+    pub fn destroyPersistentTexture(self: *Renderer, texture: *types.Texture) void {
+        self.backend_ops.destroyPersistentTexture(self, texture);
     }
 
     pub fn drawTexture(self: *Renderer, texture: types.Texture, src: types.Rect, dest: types.Rect, color: Color) void {

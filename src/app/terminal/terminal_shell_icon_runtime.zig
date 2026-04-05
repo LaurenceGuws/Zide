@@ -5,7 +5,6 @@ const app_shell = @import("../../app_shell.zig");
 const config_mod = @import("../../config/lua_config.zig");
 const image_decode = @import("../../ui/image_decode.zig");
 const renderer_mod = @import("../../ui/renderer.zig");
-const gl = @import("../../ui/renderer/gl.zig");
 const renderer_types = @import("../../ui/renderer/types.zig");
 const tab_bar_mod = @import("../../ui/widgets/tab_bar.zig");
 
@@ -39,7 +38,7 @@ pub const ShellIconCache = struct {
     pub fn clear(self: *ShellIconCache, renderer: *Renderer) void {
         for (self.entries.items) |*entry| {
             if (entry.texture.id != 0) {
-                renderer.destroyTexture(&entry.texture);
+                renderer.destroyPersistentTexture(&entry.texture);
             }
             self.allocator.free(entry.path);
             entry.* = undefined;
@@ -107,7 +106,7 @@ pub const ShellIconCache = struct {
         }
 
         self.entries.append(self.allocator, new_entry) catch {
-            if (new_entry.texture.id != 0) renderer.destroyTexture(&new_entry.texture);
+            if (new_entry.texture.id != 0) renderer.destroyPersistentTexture(&new_entry.texture);
             return null;
         };
 
@@ -191,11 +190,10 @@ fn loadTexture(renderer: *Renderer, allocator: std.mem.Allocator, icon_path: []c
     };
     defer allocator.free(decoded.data);
 
-    return renderer.createTextureFromRgba(
+    return renderer.createPersistentTextureFromRgba(
         @intCast(decoded.width),
         @intCast(decoded.height),
         decoded.data,
-        @intCast(gl.c.GL_LINEAR),
     ) orelse blk: {
         log.logf(.warning, "tab shell icon upload failed path={s}", .{icon_path});
         break :blk null;

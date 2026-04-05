@@ -63,6 +63,8 @@ pub fn capabilities(renderer: anytype) RendererCapabilities {
     };
 }
 
+pub fn configureRuntimePolicy(_: anytype) void {}
+
 const MTLRegion = extern struct {
     origin: MTLOrigin,
     size: MTLSize,
@@ -1598,6 +1600,16 @@ pub fn drawRawImageRgb(
     if (renderer.backend != .metal) return false;
     return appendRawImageRgb(renderer, width, height, data, dest, tint);
 }
+
+pub fn createPersistentTextureFromRgba(_: anytype, _: i32, _: i32, _: []const u8) ?types.Texture {
+    return null;
+}
+
+pub fn createPersistentTextureFromRgb(_: anytype, _: i32, _: i32, _: []const u8) ?types.Texture {
+    return null;
+}
+
+pub fn destroyPersistentTexture(_: anytype, _: *types.Texture) void {}
 
 pub fn terminalSnapshotAvailableForRenderer(renderer: anytype) bool {
     const context = backendContextConst(renderer) orelse return false;

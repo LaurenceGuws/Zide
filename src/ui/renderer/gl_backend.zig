@@ -6,6 +6,7 @@ const opengl_presentable_runtime = @import("opengl_presentable_runtime.zig");
 const draw_ops = @import("draw_ops.zig");
 const shape_utils = @import("shape_utils.zig");
 const texture_draw = @import("texture_draw.zig");
+const texture_utils = @import("texture_utils.zig");
 const capability_contract = @import("capability_contract.zig");
 const presentable_contract = @import("presentable_contract.zig");
 const presentable_target = @import("presentable_target.zig");
@@ -103,6 +104,13 @@ pub fn initRuntime(renderer: anytype) !void {
     renderer.fonts_ready = true;
 }
 
+pub fn configureRuntimePolicy(renderer: anytype) void {
+    if (!renderer.terminal_render_policy.recent_input_full_publication.force_full_enabled) return;
+    if (!sdl_api.glSetSwapInterval(0)) {
+        app_logger.logger("sdl.gl").logStdout(.warning, "SDL_GL_SetSwapInterval failed interval=0 err={s}", .{sdl_api.getError()});
+    }
+}
+
 pub fn runStartupSmoke(window: *sdl.SDL_Window) !bool {
     const gl_context = try createBackendContext(window);
     defer sdl_api.glDeleteContext(gl_context);
@@ -172,6 +180,18 @@ pub fn addTerminalGlyphQuad(
     kind: types.TextureKind,
 ) void {
     renderer.terminal_text.glyph_cache.addQuad(texture, src, dest, color, renderer.text_render.bg_rgba, kind);
+}
+
+pub fn createPersistentTextureFromRgba(_: anytype, width: i32, height: i32, data: []const u8) ?types.Texture {
+    return texture_utils.createTextureFromRgba(width, height, data, gl.c.GL_LINEAR);
+}
+
+pub fn createPersistentTextureFromRgb(_: anytype, width: i32, height: i32, data: []const u8) ?types.Texture {
+    return texture_utils.createTextureFromRgb(width, height, data, gl.c.GL_LINEAR);
+}
+
+pub fn destroyPersistentTexture(_: anytype, texture: *types.Texture) void {
+    texture_utils.destroyTexture(texture);
 }
 
 pub fn applyClipRect(renderer: anytype, clip: ?types.Rect) void {

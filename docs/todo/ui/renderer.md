@@ -232,6 +232,17 @@ Progress note, 2026-04-05:
 - Kitty image handling now uses an explicit renderer capability mode instead of
   branching on `renderer.backend` in the widget layer to decide between
   persistent textures and direct raw-image draws.
+- Persistent image texture creation/destruction no longer exists as a GL-only
+  helper surface on `Renderer`; that lifecycle now routes through backend ops,
+  and the remaining live callers (Kitty persistent textures and terminal shell
+  icons) now ask for backend-owned persistent textures instead of OpenGL-only
+  root helpers.
+- Font atlas upload hook selection no longer does a raw `renderer.backend`
+  check before asking for Metal atlas hooks; the backend helper now answers
+  that capability question directly.
+- The old OpenGL-only init-time swap-interval policy tweak now also routes
+  through backend ops instead of living as one more raw backend branch in
+  `renderer.zig`.
 - Direct OpenGL frame submit and direct window screenshot-readback now also
   live under `src/ui/renderer/opengl_frame_runtime.zig` /
   `src/ui/renderer/gl_backend.zig` instead of
