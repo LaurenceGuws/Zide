@@ -24,6 +24,7 @@ active execution lane for backend contract quality.
 - `src/ui/renderer.zig`
 - `src/ui/renderer/gl_backend.zig`
 - `src/ui/renderer/metal_backend.zig`
+- `src/ui/renderer/scene_frame_runtime.zig`
 - `src/ui/renderer/retained_targets_runtime.zig`
 
 ## Status
@@ -61,7 +62,7 @@ flowchart LR
 - [ ] Replace GL-native retained target types in shared runtime code with a
   backend-neutral presentable contract.
 - [ ] Move backend frame lifecycle dispatch behind a backend-owned seam instead
-  of branching inline in `Renderer`.
+  of leaving dispatch in shared frame runtime code.
 - [ ] Shrink backend-specific convenience APIs on `Renderer` once stronger
   neutral contracts exist.
 
@@ -92,19 +93,21 @@ Progress note, 2026-04-05:
   relocation.
 - backend-specific frame begin/submit bodies now live in dedicated frame
   runtime modules instead of staying inline in `src/ui/renderer.zig`.
+- the renderer-root wrapper methods are gone too; `scene_frame_runtime.zig`
+  now dispatches directly to backend frame runtime modules.
 - The next lifecycle step is to reduce shared-runtime ownership of dispatch and
   backend-native frame state, not just move code blocks around.
 
 ## Live Contradiction Centers
 
 - `src/ui/renderer.zig`
-  - still owns backend-native state and inline backend dispatch
+  - still owns backend-native state
 - `src/ui/renderer/metal_backend.zig`
-  - still defines draw payloads carried by shared renderer state
-- `src/ui/renderer/gl_backend.zig`
-  - still defines the retained target type used by shared runtime code
+  - still owns the only live consumer of the shared surface-draw queue
+- `src/ui/renderer/scene_frame_runtime.zig`
+  - still acts as a shared backend dispatch center
 - `src/ui/renderer/retained_targets_runtime.zig`
-  - still depends on GL-native presentable storage
+  - still encodes the GL-shaped presentable model in shared runtime behavior
 
 ## Remaining Work
 

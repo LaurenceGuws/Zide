@@ -15,7 +15,7 @@ const SceneTargetContract = renderer_root.SceneTargetContract;
 const SceneTargetInvalidation = renderer_root.SceneTargetInvalidation;
 const WindowSizes = renderer_root.WindowSizes;
 
-pub const RetainedSurfaceKind = enum {
+pub const PresentableKind = enum {
     editor,
     terminal,
 };
@@ -29,8 +29,8 @@ pub const FrameSubmission = struct {
 
 pub const PresentTrace = struct {
     frame_seq: u64 = 0,
-    editor_surface_update_count: usize = 0,
-    editor_surface_blit_count: usize = 0,
+    editor_presentable_update_count: usize = 0,
+    editor_presentable_draw_count: usize = 0,
     terminal_presentation_count: usize = 0,
     terminal_presented_generation: ?u64 = null,
     composition_clip_count: usize = 0,
@@ -174,19 +174,19 @@ pub fn noteCompositionClip(self: anytype) void {
     self.present.trace_current.composition_clip_count += 1;
 }
 
-pub fn noteRetainedSurfaceUpdate(self: anytype, surface: RetainedSurfaceKind) void {
-    switch (surface) {
+pub fn notePresentableUpdate(self: anytype, presentable: PresentableKind) void {
+    switch (presentable) {
         .editor => {
             self.present.drawing_editor_surface = true;
-            self.present.trace_current.editor_surface_update_count += 1;
+            self.present.trace_current.editor_presentable_update_count += 1;
         },
         .terminal => {},
     }
 }
 
-pub fn noteRetainedSurfaceBlit(self: anytype, surface: RetainedSurfaceKind, generation: ?u64) void {
-    switch (surface) {
-        .editor => self.present.trace_current.editor_surface_blit_count += 1,
+pub fn notePresentableDraw(self: anytype, presentable: PresentableKind, generation: ?u64) void {
+    switch (presentable) {
+        .editor => self.present.trace_current.editor_presentable_draw_count += 1,
         .terminal => noteTerminalPresentation(self, generation),
     }
 }
@@ -196,8 +196,8 @@ pub fn noteTerminalPresentation(self: anytype, generation: ?u64) void {
     if (generation) |value| self.present.trace_current.terminal_presented_generation = value;
 }
 
-pub fn noteRetainedSurfaceEnded(self: anytype, surface: RetainedSurfaceKind) void {
-    switch (surface) {
+pub fn notePresentableEnded(self: anytype, presentable: PresentableKind) void {
+    switch (presentable) {
         .editor => self.present.drawing_editor_surface = false,
         .terminal => {},
     }

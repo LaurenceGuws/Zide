@@ -65,8 +65,8 @@ and submission logic still depend on Metal-native state shape directly.
 
 ### 2. Shared frame lifecycle still branches backend-by-backend
 
-`beginBackendFrame` and `submitBackendFrame` in `src/ui/renderer.zig` switch
-directly on `.opengl` and `.metal`.
+The renderer root no longer spells out backend frame begin/submit bodies, but
+shared frame runtime code still decides whether a frame is OpenGL or Metal.
 
 That is survivable for two backends, but it is not the shape that makes a
 third backend feel routine.
@@ -78,7 +78,7 @@ This has improved slightly: the backend-native begin/submit bodies now live in:
 - dispatched via `src/ui/renderer/backend_frame_runtime.zig`
 
 So the renderer root no longer spells out the whole OpenGL and Metal frame
-loops inline.
+loops inline, and even the renderer-root wrapper methods are gone.
 
 But there is still not a final backend lifecycle seam yet:
 
@@ -107,11 +107,13 @@ But the submission flow is still not fully shared yet:
 - shared renderer helpers still expose Metal-shaped public verbs
 - OpenGL does not yet participate in the same backend-neutral submission path
 
-This is the strongest current contradiction against a future Vulkan lane.
+This is still one of the strongest contradictions against a future Vulkan
+lane.
 
-If Vulkan were added today, the easiest local move would be to add another
-backend-native draw payload beside the Metal one. That is exactly the failure
-mode this campaign is supposed to prevent.
+If Vulkan were added today, the easiest local move would still be to bolt a
+third backend onto a shared renderer that already carries backend-native state
+and lifecycle truth directly. That is exactly the failure mode this campaign is
+supposed to prevent.
 
 ### 4. Retained/presentable surfaces are still GL-shaped in shared runtime code
 
@@ -158,16 +160,15 @@ But the contract is still not finished because:
 The main contradiction centers today are:
 
 - `src/ui/renderer.zig`
-  - backend-owned state is stored directly on `Renderer`
-  - frame begin/submit dispatch is inline
-  - Metal-specific draw helpers are public renderer methods
+  - backend-owned state is still stored directly on `Renderer`
+  - shared runtime still leans on renderer-carried backend state
 - `src/ui/renderer/metal_backend.zig`
-  - owns a useful implementation surface, but also currently owns the draw
-    payload types carried by shared renderer state
-- `src/ui/renderer/gl_backend.zig`
-  - still defines the retained target type consumed by shared runtime code
+  - owns a useful implementation surface, but is still the only backend
+    consuming the shared surface-draw queue directly
 - `src/ui/renderer/retained_targets_runtime.zig`
-  - shared runtime logic still depends on GL-native presentable storage
+  - shared runtime logic is still effectively the GL presentable model
+- `src/ui/renderer/scene_frame_runtime.zig`
+  - shared frame tracing and lifecycle still act as the backend dispatch center
 
 ## First Required Cut Order
 
@@ -230,9 +231,9 @@ verbs disappear behind neutral renderer/backend contracts.
 
 ### High
 
-1. backend-native draw/state types still live in shared renderer state
+1. backend-native state still lives in shared renderer state
 2. retained/presentable surface contract is still GL-shaped in shared code
-3. frame lifecycle dispatch still happens inline in the renderer root
+3. frame lifecycle dispatch still happens in shared runtime code
 4. caller-facing renderer verbs are now neutral in name, but not yet neutral in
    backend reach
 

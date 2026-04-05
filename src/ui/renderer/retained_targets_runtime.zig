@@ -63,7 +63,7 @@ pub fn beginPresentable(self: anytype, surface: PresentableSurface) bool {
     switch (surface) {
         .terminal => return self.beginRenderTarget(self.retained_targets.terminal),
         .editor => {
-            scene_frame_runtime.noteRetainedSurfaceUpdate(self, .editor);
+            scene_frame_runtime.notePresentableUpdate(self, .editor);
             return self.beginRenderTarget(self.retained_targets.editor);
         },
     }
@@ -81,7 +81,7 @@ pub fn endPresentable(self: anytype, surface: PresentableSurface) void {
     if (!self.capabilities().retained_targets) return;
     switch (surface) {
         .terminal => {},
-        .editor => scene_frame_runtime.noteRetainedSurfaceEnded(self, .editor),
+        .editor => scene_frame_runtime.notePresentableEnded(self, .editor),
     }
     scene_frame_runtime.restoreMainCompositionTarget(self);
 }
@@ -90,7 +90,7 @@ pub fn drawPresentable(self: anytype, surface: PresentableSurface, draw: Present
     if (!self.capabilities().retained_targets) return;
     switch (surface) {
         .terminal => if (self.retained_targets.terminal) |target| {
-            scene_frame_runtime.noteRetainedSurfaceBlit(self, .terminal, draw.generation);
+            scene_frame_runtime.notePresentableDraw(self, .terminal, draw.generation);
             const width = draw.width orelse return;
             const height = draw.height orelse return;
             const source_width = draw.source_width orelse width;
@@ -142,7 +142,7 @@ pub fn drawPresentable(self: anytype, surface: PresentableSurface, draw: Present
             draw_ops.drawTextureRect(self, target.texture, src, dest, Color.white.toRgba(), types.Rgba{ .r = 0, .g = 0, .b = 0, .a = 0 }, .linear_premul);
         },
         .editor => if (self.retained_targets.editor) |target| {
-            scene_frame_runtime.noteRetainedSurfaceBlit(self, .editor, null);
+            scene_frame_runtime.notePresentableDraw(self, .editor, null);
             const snapped_x = snapToDevicePixel(draw.x, self.scale.render_scale);
             const snapped_y = snapToDevicePixel(draw.y, self.scale.render_scale);
             const width = draw.width orelse @as(f32, @floatFromInt(target.logical_width));
