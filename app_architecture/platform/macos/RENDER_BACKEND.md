@@ -783,6 +783,10 @@ What this does and does not mean:
   unavailable logging, present draw, and plan selection are gone too:
   `updateAndPresent` now talks to the terminal presentation runtime directly
   for those operations instead of bouncing through local wrappers
+- the terminal-owned target seam is slightly more complete now too:
+  retained-presentable end/restore is routed through
+  `terminal_widget_presentation_target_runtime.zig` instead of leaving target
+  shutdown as presenter-local knowledge
 - that contract is intentionally backend-native rather than fake portability:
   the old cached GL `Texture` path is still OpenGL-only, while Metal Kitty
   images are created as frame-scoped native Metal textures and released after

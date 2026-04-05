@@ -1,4 +1,5 @@
 const retained_targets_runtime = @import("../renderer/retained_targets_runtime.zig");
+const scene_frame_runtime = @import("../renderer/scene_frame_runtime.zig");
 
 pub const PresentableDraw = retained_targets_runtime.SurfaceDraw;
 
@@ -12,6 +13,10 @@ pub fn ensurePresentable(renderer: anytype, width: i32, height: i32) bool {
 
 pub fn beginPresentable(renderer: anytype) bool {
     return retained_targets_runtime.beginSurface(renderer, .terminal);
+}
+
+pub fn endPresentable(renderer: anytype) void {
+    scene_frame_runtime.restoreMainCompositionTarget(renderer);
 }
 
 pub fn drawPresentable(renderer: anytype, draw: PresentableDraw) void {

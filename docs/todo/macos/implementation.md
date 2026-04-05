@@ -665,6 +665,9 @@ lane.
     - `updateAndPresent` now calls the terminal presentation runtime directly
       for plan selection, present-state refresh, unavailable logging, and
       present draw instead of bouncing through presenter-local wrapper helpers
+    - retained-presentable end/restore now routes through the terminal-owned
+      presentation target runtime instead of remaining presenter-local target
+      shutdown logic
     - the direct Metal terminal lane still validates on the same runtime truth:
       `terminal_present=direct_main_target`, `presentable_ready=1` after the
       first successful frame, `grid_runs=10/224`, `overlay_runs=1/5`, and

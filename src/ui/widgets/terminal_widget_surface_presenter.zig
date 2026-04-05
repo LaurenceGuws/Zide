@@ -4,7 +4,6 @@ const terminal_publication = @import("../../terminal/core/publication/terminal_p
 const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
 const time_utils = @import("../renderer/time_utils.zig");
-const scene_frame_runtime = @import("../renderer/scene_frame_runtime.zig");
 const draw_grid = @import("terminal_widget_draw_grid.zig");
 const presentation_runtime = @import("terminal_widget_presentation_runtime.zig");
 const presentation_state_mod = @import("terminal_widget_presentation_state.zig");
@@ -466,7 +465,7 @@ pub fn updateAndPresent(
             result.presentation_glyph_ms += execution.glyph_ms;
             result.presentation_kitty_ms += execution.kitty_ms;
             presentation_update_completed = execution.completed;
-            scene_frame_runtime.restoreMainCompositionTarget(r);
+            presentation_target_runtime.endPresentable(r);
         }
         const present_state = presentation_runtime.refreshPresentState(
             &self.surface,
