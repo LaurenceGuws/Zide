@@ -12,18 +12,18 @@ const renderer_root = @import("../renderer.zig");
 const Color = renderer_root.Color;
 const PresentableTarget = presentable_target.PresentableTarget;
 
-pub const RetainedTargetState = struct {
+pub const PresentableTargetState = struct {
     terminal: ?PresentableTarget = null,
     terminal_scroll: ?PresentableTarget = null,
     editor: ?PresentableTarget = null,
 };
 
-pub const RetainedSurface = enum {
+pub const PresentableSurface = enum {
     terminal,
     editor,
 };
 
-pub const SurfaceDraw = struct {
+pub const PresentableDraw = struct {
     x: f32,
     y: f32,
     width: ?f32 = null,
@@ -44,7 +44,7 @@ fn snapToDevicePixel(value: f32, render_scale: f32) f32 {
     return @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(value * scale))))) / scale;
 }
 
-pub fn ensureSurface(self: anytype, surface: RetainedSurface, width: i32, height: i32) bool {
+pub fn ensurePresentable(self: anytype, surface: PresentableSurface, width: i32, height: i32) bool {
     if (!self.capabilities().retained_targets) return false;
     switch (surface) {
         .terminal => {
@@ -58,7 +58,7 @@ pub fn ensureSurface(self: anytype, surface: RetainedSurface, width: i32, height
     }
 }
 
-pub fn beginSurface(self: anytype, surface: RetainedSurface) bool {
+pub fn beginPresentable(self: anytype, surface: PresentableSurface) bool {
     if (!self.capabilities().retained_targets) return false;
     switch (surface) {
         .terminal => return self.beginRenderTarget(self.retained_targets.terminal),
@@ -69,7 +69,7 @@ pub fn beginSurface(self: anytype, surface: RetainedSurface) bool {
     }
 }
 
-pub fn surfaceAvailable(self: anytype, surface: RetainedSurface) bool {
+pub fn presentableAvailable(self: anytype, surface: PresentableSurface) bool {
     if (!self.capabilities().retained_targets) return false;
     return switch (surface) {
         .terminal => self.retained_targets.terminal != null,
@@ -77,7 +77,7 @@ pub fn surfaceAvailable(self: anytype, surface: RetainedSurface) bool {
     };
 }
 
-pub fn endSurface(self: anytype, surface: RetainedSurface) void {
+pub fn endPresentable(self: anytype, surface: PresentableSurface) void {
     if (!self.capabilities().retained_targets) return;
     switch (surface) {
         .terminal => {},
@@ -86,7 +86,7 @@ pub fn endSurface(self: anytype, surface: RetainedSurface) void {
     scene_frame_runtime.restoreMainCompositionTarget(self);
 }
 
-pub fn drawSurface(self: anytype, surface: RetainedSurface, draw: SurfaceDraw) void {
+pub fn drawPresentable(self: anytype, surface: PresentableSurface, draw: PresentableDraw) void {
     if (!self.capabilities().retained_targets) return;
     switch (surface) {
         .terminal => if (self.retained_targets.terminal) |target| {
@@ -167,7 +167,7 @@ pub fn drawSurface(self: anytype, surface: RetainedSurface, draw: SurfaceDraw) v
     }
 }
 
-pub fn scrollSurface(self: anytype, surface: RetainedSurface, dx: i32, dy: i32) bool {
+pub fn scrollPresentable(self: anytype, surface: PresentableSurface, dx: i32, dy: i32) bool {
     if (!self.capabilities().retained_targets) return false;
     if (surface != .terminal) return false;
     if (self.retained_targets.terminal) |target| {

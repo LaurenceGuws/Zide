@@ -14,8 +14,8 @@ const Editor = editor_mod.Editor;
 const EditorRenderCache = cache_mod.EditorRenderCache;
 const InputSnapshot = shared_types.input.InputSnapshot;
 const EditorTextStyleFlags = renderer_mod.EditorTextStyleFlags;
-const RetainedSurface = retained_targets_runtime.RetainedSurface;
-const SurfaceDraw = retained_targets_runtime.SurfaceDraw;
+const PresentableSurface = retained_targets_runtime.PresentableSurface;
+const PresentableDraw = retained_targets_runtime.PresentableDraw;
 const TokenKind = syntax_mod.TokenKind;
 
 const Scenario = enum {
@@ -154,7 +154,7 @@ const FakeRenderer = struct {
         return self.terminal_selection_overlay_style;
     }
 
-    pub fn ensureSurface(self: *FakeRenderer, surface: RetainedSurface, width: i32, height: i32) bool {
+    pub fn ensurePresentable(self: *FakeRenderer, surface: PresentableSurface, width: i32, height: i32) bool {
         std.debug.assert(surface == .editor);
         _ = width;
         _ = height;
@@ -165,14 +165,14 @@ const FakeRenderer = struct {
         return false;
     }
 
-    pub fn beginSurface(self: *FakeRenderer, surface: RetainedSurface) bool {
+    pub fn beginPresentable(self: *FakeRenderer, surface: PresentableSurface) bool {
         std.debug.assert(surface == .editor);
         self.in_retained_surface = true;
         self.capture.retained_surface_update_count += 1;
         return true;
     }
 
-    pub fn endSurface(self: *FakeRenderer, surface: RetainedSurface) void {
+    pub fn endPresentable(self: *FakeRenderer, surface: PresentableSurface) void {
         std.debug.assert(surface == .editor);
         self.in_retained_surface = false;
     }
@@ -189,7 +189,7 @@ const FakeRenderer = struct {
         _ = self;
     }
 
-    pub fn drawSurface(self: *FakeRenderer, surface: RetainedSurface, draw: SurfaceDraw) void {
+    pub fn drawPresentable(self: *FakeRenderer, surface: PresentableSurface, draw: PresentableDraw) void {
         std.debug.assert(surface == .editor);
         _ = draw;
         self.capture.retained_surface_blit_count += 1;

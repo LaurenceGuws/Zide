@@ -267,8 +267,8 @@ pub fn drawCached(
     const origin_y: f32 = 0;
     const draw_list = &cache.draw_list;
 
-    const texture_changed = retained_targets_runtime.ensureSurface(r, .editor, @intFromFloat(width), @intFromFloat(height));
-    const use_retained_editor_surface = retained_targets_runtime.surfaceAvailable(r, .editor) and
+    const texture_changed = retained_targets_runtime.ensurePresentable(r, .editor, @intFromFloat(width), @intFromFloat(height));
+    const use_retained_editor_surface = retained_targets_runtime.presentableAvailable(r, .editor) and
         !(builtin.os.tag == .macos and r.backend == .opengl);
     var force_redraw = cache.beginFrame(
         frame_id,
@@ -290,10 +290,10 @@ pub fn drawCached(
 
     if (force_redraw) {
         if (use_retained_editor_surface) {
-            if (retained_targets_runtime.beginSurface(r, .editor)) {
+            if (retained_targets_runtime.beginPresentable(r, .editor)) {
                 r.drawRect(0, 0, @intFromFloat(width), @intFromFloat(height), r.theme.background);
                 r.drawRect(0, 0, @intFromFloat(widget.gutter_width), @intFromFloat(height), r.theme.line_number_bg);
-                retained_targets_runtime.endSurface(r, .editor);
+                retained_targets_runtime.endPresentable(r, .editor);
             }
         } else {
             r.drawRect(0, 0, @intFromFloat(width), @intFromFloat(height), r.theme.background);
@@ -366,8 +366,8 @@ pub fn drawCached(
 
                 any_dirty_local.* = true;
                 if (ctx.use_retained_editor_surface) {
-                    if (!retained_targets_runtime.beginSurface(r_local, .editor)) return;
-                    defer retained_targets_runtime.endSurface(r_local, .editor);
+                    if (!retained_targets_runtime.beginPresentable(r_local, .editor)) return;
+                    defer retained_targets_runtime.endPresentable(r_local, .editor);
                 }
 
                 const clip_h = clippedEditorRowHeight(seg_band.h_i, @as(i32, @intFromFloat(height_local)) - seg_band.y_i);
@@ -576,7 +576,7 @@ pub fn drawCached(
     }
 
     if (use_retained_editor_surface) {
-        retained_targets_runtime.drawSurface(r, .editor, .{ .x = draw_x, .y = draw_y });
+        retained_targets_runtime.drawPresentable(r, .editor, .{ .x = draw_x, .y = draw_y });
     }
 
     // Draw scrollbars as final overlays (outside cached editor texture) to avoid

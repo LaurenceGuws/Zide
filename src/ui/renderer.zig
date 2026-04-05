@@ -176,7 +176,7 @@ pub const ScaleState = font_runtime.ScaleState;
 pub const FontConfigState = font_manager.FontConfigState;
 pub const ClipboardState = clipboard.ClipboardState;
 pub const TerminalTextState = text_runtime.TerminalTextState;
-pub const RetainedTargetState = retained_targets_runtime.RetainedTargetState;
+pub const PresentableTargetState = retained_targets_runtime.PresentableTargetState;
 const MainCompositionTarget = scene_frame_runtime.MainCompositionTarget;
 pub const TerminalDisableLigaturesStrategy = enum {
     never,
@@ -563,7 +563,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     metal_diagnostic_font: ?TerminalFont,
     font_config: FontConfigState,
 
-    retained_targets: RetainedTargetState,
+    retained_targets: PresentableTargetState,
     scene_target: SceneTargetState,
     window_chrome: WindowChromeState,
 

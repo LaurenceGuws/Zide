@@ -116,6 +116,12 @@ This has improved slightly: the presentable target type now lives in
 `src/ui/renderer/presentable_target.zig` instead of being owned directly by the
 GL backend.
 
+The shared runtime surface has improved too:
+
+- the main shared retained-target API now uses presentable-oriented names
+- callers no longer have to speak in GL-era `ensureSurface` /
+  `beginSurface` / `drawSurface` vocabulary
+
 But the presentable surface story is still not backend-neutral at the shared
 runtime layer:
 
@@ -192,6 +198,7 @@ with one backend-neutral presentable target surface:
 Status, 2026-04-05:
 
 - the presentable target type now lives in `src/ui/renderer/presentable_target.zig`
+- the shared runtime surface now exposes presentable-oriented API names
 - the next required step is to move lifecycle behavior behind that ownership,
   not just the storage type
 

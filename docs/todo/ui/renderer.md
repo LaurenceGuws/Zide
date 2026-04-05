@@ -86,6 +86,8 @@ Progress note, 2026-04-05:
 - `src/ui/renderer/presentable_target.zig` now owns the presentable target
   type, so shared runtime code no longer imports a GL-owned target type
   directly.
+- the shared runtime API now uses presentable-oriented names instead of the old
+  retained-surface verbs.
 - The next presentable step is lifecycle/behavior ownership, not just storage
   relocation.
 
