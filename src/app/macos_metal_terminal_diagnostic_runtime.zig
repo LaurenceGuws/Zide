@@ -71,14 +71,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
 
     const seed_bytes =
         if (dashboard_fixture)
-            "\x1b[H╭─ btop-ish metal lane ─────────────────────────────╮" ++
-            "\x1b[2;1H│ CPU  ███████░░░ 72%   NET  ▂▃▄▅▆▇█        │" ++
-            "\x1b[3;1H│ MEM  ▓▓▓▓▓▒░░░ 61%   DISK ░▒▓█▇▆▅▄        │" ++
-            "\x1b[4;1H╔══ dbl ══╦══ load ══╦══ nets ══╦══ bars ════╗" ++
-            "\x1b[5;1H│ proc-box │⣀⣤⣶⣿⣷⣄⡀│ load │┌┬┐├┼┤└┴┘││" ++
-            "\x1b[6;1H│ temp 42C │███████     │ pwr  ││" ++
-            "\x1b[7;1H╠══ box ══╬══ mem  ══╬══ brai ═╬══ ring ════╣" ++
-            "\x1b[8;1H╰─ bars ░▒▓  braille ⣀⣤⣶  corners ╭╮╯╰ ─────╯"
+            dashboardSeedBytes()
         else if (special_glyph_fixture)
             "\x1b[HCPU  92%  RAM\x1b[2;1HBOX ┌┬┐├┼┤└┴┘│─╭╮╯╰\x1b[3;1HSHD ░▒▓█▇▆▅▄▃▂▁\x1b[4;1HBRA ⣀⣤⣶⣿⣷⣄⡀ test\x1b[5;1HPWR \x1b[6;1HGLYPH lane stress active"
         else
@@ -86,10 +79,11 @@ pub fn run(allocator: std.mem.Allocator) !void {
     if (!(try session_runtime.enqueueExternalBytes(session, seed_bytes))) return error.MetalTerminalDiagnosticSeedRejected;
     try session_runtime.poll(session);
     if (scroll_frame != std.math.maxInt(u64)) {
-        if (!(try session_runtime.enqueueExternalBytes(
-            session,
-            "\n7| history one\n8| history two\n9| history three\n10| history four",
-        ))) return error.MetalTerminalDiagnosticScrollSeedRejected;
+        const scroll_seed_bytes = if (dashboard_fixture)
+            dashboardScrollSeedBytes()
+        else
+            "\n7| history one\n8| history two\n9| history three\n10| history four";
+        if (!(try session_runtime.enqueueExternalBytes(session, scroll_seed_bytes))) return error.MetalTerminalDiagnosticScrollSeedRejected;
         try session_runtime.poll(session);
     }
     if (!disable_kitty) try seedDiagnosticKittyImages(session);
@@ -126,20 +120,25 @@ pub fn run(allocator: std.mem.Allocator) !void {
     while (frame_index < frame_budget and !shell.shouldClose()) : (frame_index += 1) {
         app_shell.pollInputEvents();
         if (frame_index == mutate_frame) {
-            if (!(try session_runtime.enqueueExternalBytes(
-                session,
-                "\x1b[2;1H2| row changed\x1b[3;1H3| partial draw",
-            ))) return error.MetalTerminalDiagnosticMutationRejected;
+            const mutation_bytes = if (dashboard_fixture)
+                dashboardMutationBytes()
+            else
+                "\x1b[2;1H2| row changed\x1b[3;1H3| partial draw";
+            if (!(try session_runtime.enqueueExternalBytes(session, mutation_bytes))) return error.MetalTerminalDiagnosticMutationRejected;
             try session_runtime.poll(session);
             input_adapter.setScrollOffset(0);
         }
         if (frame_index == partial_update_frame) {
-            var partial_scratch: [64]u8 = undefined;
-            const partial_bytes = std.fmt.bufPrint(
-                &partial_scratch,
-                "\x1b[{d};{d}H*",
-                .{ rows, cols },
-            ) catch unreachable;
+            const partial_bytes = if (dashboard_fixture)
+                dashboardPartialUpdateBytes()
+            else blk: {
+                var partial_scratch: [64]u8 = undefined;
+                break :blk std.fmt.bufPrint(
+                    &partial_scratch,
+                    "\x1b[{d};{d}H*",
+                    .{ rows, cols },
+                ) catch unreachable;
+            };
             if (!(try session_runtime.enqueueExternalBytes(session, partial_bytes))) return error.MetalTerminalDiagnosticPartialUpdateRejected;
             try session_runtime.poll(session);
         }
@@ -318,4 +317,32 @@ fn seedDiagnosticKittyImages(session: *terminal_runtime.TerminalRuntimeShell) !v
         },
     };
     try session_runtime.replaceDiagnosticKittyState(session, seeds[0..]);
+}
+
+fn dashboardSeedBytes() []const u8 {
+    return "\x1b[H╭─ btop-ish metal lane ─────────────────────────────╮" ++
+        "\x1b[2;1H│ CPU  ███████░░░ 72%   NET  ▂▃▄▅▆▇█        │" ++
+        "\x1b[3;1H│ MEM  ▓▓▓▓▓▒░░░ 61%   DISK ░▒▓█▇▆▅▄        │" ++
+        "\x1b[4;1H╔══ dbl ══╦══ load ══╦══ nets ══╦══ bars ════╗" ++
+        "\x1b[5;1H│ proc-box │⣀⣤⣶⣿⣷⣄⡀│ load │┌┬┐├┼┤└┴┘││" ++
+        "\x1b[6;1H│ temp 42C │███████     │ pwr  ││" ++
+        "\x1b[7;1H╠══ box ══╬══ mem  ══╬══ brai ═╬══ ring ════╣" ++
+        "\x1b[8;1H╰─ bars ░▒▓  braille ⣀⣤⣶  corners ╭╮╯╰ ─────╯";
+}
+
+fn dashboardMutationBytes() []const u8 {
+    return "\x1b[2;1H│ CPU  ████████▓░ 86%   NET  ▃▄▅▆▇██        │" ++
+        "\x1b[3;1H│ MEM  ▓▓▓▓▓▓▒░░ 68%   DISK ▒▓████▇▆        │" ++
+        "\x1b[6;1H│ temp 47C │█████████    │ pwr  ││";
+}
+
+fn dashboardPartialUpdateBytes() []const u8 {
+    return "\x1b[8;9H▒▓█\x1b[8;26H⣶⣿⣷";
+}
+
+fn dashboardScrollSeedBytes() []const u8 {
+    return "\n╔══ hist ══╦═ cpu ═╦═ mem ═╦═ net ═╗" ++
+        "\n║ row 09   ║ ████  ║ ▓▓▓▒  ║ ⣀⣤  ║" ++
+        "\n║ row 10   ║ █████ ║ ▓▓▓▓  ║ ⣤⣶  ║" ++
+        "\n╚══════════╩═══════╩═══════╩═══════╝";
 }

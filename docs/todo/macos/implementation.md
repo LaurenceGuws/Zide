@@ -849,6 +849,20 @@ lane.
     - the dashboard diagnostic fixture was updated to include that double-line
       set directly, so the Metal lane has a live runtime probe for the new
       coverage instead of only a static implementation claim
+    - the dashboard fixture is now proven under churn too:
+      `DASHBOARD=1` plus `MUTATE_FRAME=1` yields
+      `metric_present_sample=direct_snapshot_update`,
+      `cache_dirty=partial`, and tight redraw work (`grid_runs=9/72`) while
+      still carrying dense special-glyph activity
+    - a tiny dashboard-local update is runtime-proven as well:
+      `DASHBOARD=1` plus `PARTIAL_UPDATE_FRAME=1` stays on
+      `direct_snapshot_update` with `grid_runs=0/0`, redrawing only the
+      changed cells while still reporting live special-glyph activity
+      (`shaped_special_glyphs=6`, split as `shade=2 braille=3 box=1`)
+    - the dashboard scroll fixture is now proved against real dashboard
+      history content too: `DASHBOARD=1` plus `SCROLL_FRAME=1` and
+      `SCROLL_OFFSET=1` yields `metric_present_sample=direct_snapshot_shift_update`,
+      `cache_dirty=partial`, and tight redraw counts (`grid_runs=3/34`)
     - this reduces one more retained-first contradiction before a second
       Metal terminal presentation shape is introduced
 

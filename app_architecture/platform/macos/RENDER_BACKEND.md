@@ -836,6 +836,21 @@ What this does and does not mean:
 - the dashboard fixture was updated to exercise that double-line set directly,
   so the Metal terminal lane now has a live runtime probe for those shapes
   instead of only a code claim
+- that same dashboard lane is now runtime-proven under churn too instead of
+  only on the first full frame: a dashboard mutation frame now stays on
+  `metric_present_sample=direct_snapshot_update` with
+  `cache_dirty=partial` and tight redraw work (`grid_runs=9/72`) while still
+  carrying dense special-glyph traffic
+- a tiny dashboard-local update is proven as well: a partial dashboard frame
+  can stay on `direct_snapshot_update` with `grid_runs=0/0`, redrawing only
+  the changed cells while the frame still reports live special-glyph work
+  (`shaped_special_glyphs=6` split as `shade=2 braille=3 box=1`)
+- the dashboard scroll lane is now proven against real dashboard history too:
+  with a one-row scroll offset the diagnostic reports
+  `metric_present_sample=direct_snapshot_shift_update`,
+  `cache_dirty=partial`, and tight redraw counts (`grid_runs=3/34`) on the
+  dense mixed dashboard fixture instead of only on the older ASCII scroll
+  proof
 - that preparation contract is now aligned with capture truth as well:
   the target runtime prepares drawable-sized Metal snapshot presentables
   instead of using terminal-surface geometry while submit-time capture
