@@ -49,6 +49,7 @@ pub const CursorOverlaySample = struct {
 pub const TerminalPresentationSampleMode = enum {
     direct_main_target,
     direct_snapshot_update,
+    direct_snapshot_shift_update,
     direct_snapshot_presentable,
     retained_surface,
 };
@@ -97,6 +98,12 @@ pub const MetalTerminalFallbackSample = struct {
     grid_row_cells: usize = 0,
     overlay_row_runs: usize = 0,
     overlay_row_cells: usize = 0,
+    special_sprite_glyphs: usize = 0,
+    shaped_special_glyphs: usize = 0,
+    powerline_special_glyphs: usize = 0,
+    shade_special_glyphs: usize = 0,
+    braille_special_glyphs: usize = 0,
+    box_glyphs: usize = 0,
 };
 
 pub const DebugCaptureState = struct {

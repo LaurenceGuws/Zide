@@ -1353,6 +1353,18 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         return false;
     }
 
+    pub fn scrollMetalTerminalSnapshotPresentable(
+        self: *Renderer,
+        dx: i32,
+        dy: i32,
+    ) bool {
+        if (self.backend != .metal) return false;
+        if (self.metal_backend_context) |*context| {
+            return metal_backend.scrollTerminalSnapshotPresentable(context, dx, dy);
+        }
+        return false;
+    }
+
     pub fn sceneCompositionMode(self: *const Renderer) SceneCompositionMode {
         return self.capabilities().scene_composition_mode;
     }

@@ -178,6 +178,7 @@ pub const BackendContext = struct {
     atlas_sampler: *anyopaque,
     glyph_atlas: GlyphAtlas,
     terminal_snapshot: ?RawImageTexture,
+    terminal_snapshot_scratch: ?RawImageTexture,
     /// 1×1 white texture for tint-only solid fills (cursor, rects).
     solid_white_brush: ?RawImageTexture,
     drawable_width: i32,
@@ -1107,6 +1108,7 @@ pub fn createBackendContext(
         .atlas_sampler = atlas_sampler,
         .glyph_atlas = glyph_atlas,
         .terminal_snapshot = null,
+        .terminal_snapshot_scratch = null,
         .solid_white_brush = solid_white_brush,
         .drawable_width = drawable_width,
         .drawable_height = drawable_height,
@@ -1130,7 +1132,9 @@ pub fn resizeBackendContext(
 pub fn deinitBackendContext(context: *BackendContext) void {
     if (builtin.target.os.tag != .macos) return;
     if (context.terminal_snapshot) |*snapshot| deinitRawImageTexture(snapshot);
+    if (context.terminal_snapshot_scratch) |*scratch| deinitRawImageTexture(scratch);
     if (context.solid_white_brush) |*brush| deinitRawImageTexture(brush);
+    context.terminal_snapshot_scratch = null;
     context.solid_white_brush = null;
     deinitGlyphAtlas(&context.glyph_atlas);
     releaseObject(context.atlas_sampler);
@@ -1252,6 +1256,95 @@ pub fn ensureTerminalSnapshotPresentable(
         .available = available,
         .recreated = available,
     };
+}
+
+fn ensureTerminalSnapshotScratch(
+    context: *BackendContext,
+    width: i32,
+    height: i32,
+) bool {
+    if (width <= 0 or height <= 0) return false;
+    if (context.terminal_snapshot_scratch) |scratch| {
+        if (scratch.width == width and scratch.height == height) return true;
+        var existing = scratch;
+        deinitRawImageTexture(&existing);
+        context.terminal_snapshot_scratch = null;
+    }
+    context.terminal_snapshot_scratch = createEmptyRawImageTexture(context.device, width, height);
+    return context.terminal_snapshot_scratch != null;
+}
+
+pub fn scrollTerminalSnapshotPresentable(
+    context: *BackendContext,
+    dx: i32,
+    dy: i32,
+) bool {
+    if (builtin.target.os.tag != .macos) return false;
+    if (dx == 0 and dy == 0) return true;
+    if (!terminalSnapshotMatchesDrawable(context)) return false;
+
+    const width = context.drawable_width;
+    const height = context.drawable_height;
+    if (width <= 0 or height <= 0) return false;
+    if (@abs(dx) >= width or @abs(dy) >= height) return false;
+    if (!ensureTerminalSnapshotScratch(context, width, height)) return false;
+
+    const snapshot = context.terminal_snapshot orelse return false;
+    const scratch = context.terminal_snapshot_scratch orelse return false;
+
+    const src_x = @max(0, -dx);
+    const src_y = @max(0, -dy);
+    const dst_x = @max(0, dx);
+    const dst_y = @max(0, dy);
+    const abs_dx: i32 = @intCast(@abs(dx));
+    const abs_dy: i32 = @intCast(@abs(dy));
+    const copy_width = width - abs_dx;
+    const copy_height = height - abs_dy;
+    if (copy_width <= 0 or copy_height <= 0) return false;
+
+    const command_buffer_unretained = msgSendPointer(context.command_queue, "commandBuffer") orelse return false;
+    const command_buffer = retainObject(command_buffer_unretained);
+    defer releaseObject(command_buffer);
+
+    const blit_encoder = msgSendPointer(command_buffer, "blitCommandEncoder") orelse return false;
+    msgSendCopyTextureToTexture(
+        blit_encoder,
+        "copyFromTexture:sourceSlice:sourceLevel:sourceOrigin:sourceSize:toTexture:destinationSlice:destinationLevel:destinationOrigin:",
+        snapshot.texture,
+        0,
+        0,
+        .{ .x = @intCast(src_x), .y = @intCast(src_y), .z = 0 },
+        .{
+            .width = @intCast(copy_width),
+            .height = @intCast(copy_height),
+            .depth = 1,
+        },
+        scratch.texture,
+        0,
+        0,
+        .{ .x = @intCast(dst_x), .y = @intCast(dst_y), .z = 0 },
+    );
+    msgSendCopyTextureToTexture(
+        blit_encoder,
+        "copyFromTexture:sourceSlice:sourceLevel:sourceOrigin:sourceSize:toTexture:destinationSlice:destinationLevel:destinationOrigin:",
+        scratch.texture,
+        0,
+        0,
+        .{ .x = @intCast(dst_x), .y = @intCast(dst_y), .z = 0 },
+        .{
+            .width = @intCast(copy_width),
+            .height = @intCast(copy_height),
+            .depth = 1,
+        },
+        snapshot.texture,
+        0,
+        0,
+        .{ .x = @intCast(dst_x), .y = @intCast(dst_y), .z = 0 },
+    );
+    msgSendVoid(blit_encoder, "endEncoding");
+    msgSendVoid(command_buffer, "commit");
+    msgSendVoid(command_buffer, "waitUntilCompleted");
+    return true;
 }
 
 pub fn captureTerminalSnapshot(context: *BackendContext, frame: *Frame) bool {

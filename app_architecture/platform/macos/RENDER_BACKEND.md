@@ -779,8 +779,7 @@ What this does and does not mean:
 - the Metal terminal diagnostic runtime disables the default recent-input
   force-full publication policy, drops the old fake IME/composing input stub,
   and when `ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_PARTIAL_UPDATE_FRAME` is set
-  it also disables terminal texture-shift planning for that run (Metal still
-  lacks `scrollPresentable`) and can enqueue a single-cell mutation on the
+  it also disables terminal texture-shift planning for that run and can enqueue a single-cell mutation on the
   chosen frame; pair with `ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_DISABLE_KITTY`
   for a no-Kitty partial attempt
 - runtime proof: with `ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_DISABLE_KITTY=1` and
@@ -788,6 +787,35 @@ What this does and does not mean:
   single-cell mutation frame, the diagnostic reports
   `metric_present_sample=direct_snapshot_update` and tight grid fallback counts
   (for example `grid_runs=1/1` for one ASCII cell) on the partial frame
+- Metal snapshot scrolling now exists under the presentable target seam too:
+  the terminal target runtime can shift the drawable-sized Metal snapshot cache
+  through a backend-owned scratch texture instead of hard-failing every
+  `scrollPresentable` attempt
+- runtime proof for that scroll lane now exists too: with
+  `ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_DISABLE_KITTY=1`,
+  `ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_SCROLL_FRAME=1`, and
+  `ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_SCROLL_OFFSET=1`, the diagnostic now
+  reports `cache_dirty=partial` and
+  `metric_present_sample=direct_snapshot_shift_update` with tight exposed-row
+  redraw counts (currently `grid_runs=1/28`) instead of a full direct redraw
+- the Metal terminal diagnostic can now also run a special-glyph stress
+  fixture directly (`ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_SPECIAL_GLYPHS=1`),
+  which exercises powerline, shades, box-drawing, and braille rows under the
+  live Metal terminal lane instead of only ASCII dashboard rows
+- that fixture exposed and fixed a real routing contradiction on the Metal
+  lane: the `text=unavailable` terminal fallback path had been swallowing
+  special glyph cells before the normal special-glyph pipeline could run,
+  which meant `btop`-class rows were quietly bypassing the sprite/analytic
+  path even though the code already existed
+- current runtime proof on that fixture is now materially better: the first
+  Metal terminal frame reports `special_sprite_glyphs=37` and
+  `shaped_special_glyphs=37`, and the log shows real sprite creation for the
+  powerline separator set (`U+E0B0..U+E0B7`) on the current host
+- that runtime proof is also now classed enough to guide the next execution
+  slice instead of only proving “some special glyphs happened”: the current
+  fixture reports `powerline=6 shade=3 braille=7 other_special=21`, which is
+  strong evidence that the next `btop`-class pressure is the broader
+  box/block continuity lane rather than the already-active powerline lane
 - that preparation contract is now aligned with capture truth as well:
   the target runtime prepares drawable-sized Metal snapshot presentables
   instead of using terminal-surface geometry while submit-time capture

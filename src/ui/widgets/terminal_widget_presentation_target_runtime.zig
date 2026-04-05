@@ -55,6 +55,6 @@ pub fn drawPresentable(renderer: anytype, draw: PresentableDraw) void {
 }
 
 pub fn scrollPresentable(renderer: anytype, dx: i32, dy: i32) bool {
-    if (renderer.backend == .metal) return false;
+    if (renderer.backend == .metal) return renderer.scrollMetalTerminalSnapshotPresentable(dx, dy);
     return retained_targets_runtime.scrollSurface(renderer, .terminal, dx, dy);
 }

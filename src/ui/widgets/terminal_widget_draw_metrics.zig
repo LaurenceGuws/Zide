@@ -22,6 +22,12 @@ pub const FrameLatencyMetrics = struct {
     metal_grid_row_cells: usize = 0,
     metal_overlay_row_runs: usize = 0,
     metal_overlay_row_cells: usize = 0,
+    special_sprite_glyphs: usize = 0,
+    shaped_special_glyphs: usize = 0,
+    powerline_special_glyphs: usize = 0,
+    shade_special_glyphs: usize = 0,
+    braille_special_glyphs: usize = 0,
+    box_glyphs: usize = 0,
 };
 
 var frame_latency_seq: u64 = 0;
@@ -51,6 +57,12 @@ pub fn publishFrameLatencyMetrics(
     metal_grid_row_cells: usize,
     metal_overlay_row_runs: usize,
     metal_overlay_row_cells: usize,
+    special_sprite_glyphs: usize,
+    shaped_special_glyphs: usize,
+    powerline_special_glyphs: usize,
+    shade_special_glyphs: usize,
+    braille_special_glyphs: usize,
+    box_glyphs: usize,
 ) void {
     frame_latency_seq +%= 1;
     frame_latency_metrics = .{
@@ -74,5 +86,11 @@ pub fn publishFrameLatencyMetrics(
         .metal_grid_row_cells = metal_grid_row_cells,
         .metal_overlay_row_runs = metal_overlay_row_runs,
         .metal_overlay_row_cells = metal_overlay_row_cells,
+        .special_sprite_glyphs = special_sprite_glyphs,
+        .shaped_special_glyphs = shaped_special_glyphs,
+        .powerline_special_glyphs = powerline_special_glyphs,
+        .shade_special_glyphs = shade_special_glyphs,
+        .braille_special_glyphs = braille_special_glyphs,
+        .box_glyphs = box_glyphs,
     };
 }

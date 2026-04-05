@@ -145,6 +145,8 @@ pub const SurfacePresentResult = struct {
     presentation_bg_ms: f64 = 0.0,
     presentation_glyph_ms: f64 = 0.0,
     presentation_kitty_ms: f64 = 0.0,
+    special_sprite_glyphs: usize = 0,
+    shaped_special_glyphs: usize = 0,
 };
 
 pub fn recentInputWindowActive(
@@ -219,6 +221,8 @@ pub fn updateAndPresent(
     result.presentation_bg_ms = presentation.bg_ms;
     result.presentation_glyph_ms = presentation.glyph_ms;
     result.presentation_kitty_ms = presentation.kitty_ms;
+    result.special_sprite_glyphs = self.debug.last_metal_terminal_fallback.special_sprite_glyphs;
+    result.shaped_special_glyphs = self.debug.last_metal_terminal_fallback.shaped_special_glyphs;
     if (result.early_return) return result;
 
     result.presentation_update_ms = time_utils.secondsToMs(app_shell.getTime() - presentation_phase_start);
@@ -510,6 +514,12 @@ fn executeDirectSnapshotUpdate(
         surface_update_plan,
         &glyph_draw_stats,
     );
+    self.debug.last_metal_terminal_fallback.special_sprite_glyphs = glyph_draw_stats.special_sprite_glyphs;
+    self.debug.last_metal_terminal_fallback.shaped_special_glyphs = glyph_draw_stats.shaped_special_glyphs;
+    self.debug.last_metal_terminal_fallback.powerline_special_glyphs = glyph_draw_stats.powerline_special_glyphs;
+    self.debug.last_metal_terminal_fallback.shade_special_glyphs = glyph_draw_stats.shade_special_glyphs;
+    self.debug.last_metal_terminal_fallback.braille_special_glyphs = glyph_draw_stats.braille_special_glyphs;
+    self.debug.last_metal_terminal_fallback.box_glyphs = glyph_draw_stats.box_glyphs;
     result.completed = true;
     return result;
 }
@@ -641,6 +651,12 @@ pub fn executePresentableUpdate(
         surface_update_plan,
         &glyph_draw_stats,
     );
+    self.debug.last_metal_terminal_fallback.special_sprite_glyphs = glyph_draw_stats.special_sprite_glyphs;
+    self.debug.last_metal_terminal_fallback.shaped_special_glyphs = glyph_draw_stats.shaped_special_glyphs;
+    self.debug.last_metal_terminal_fallback.powerline_special_glyphs = glyph_draw_stats.powerline_special_glyphs;
+    self.debug.last_metal_terminal_fallback.shade_special_glyphs = glyph_draw_stats.shade_special_glyphs;
+    self.debug.last_metal_terminal_fallback.braille_special_glyphs = glyph_draw_stats.braille_special_glyphs;
+    self.debug.last_metal_terminal_fallback.box_glyphs = glyph_draw_stats.box_glyphs;
     if (has_kitty) {
         const kitty_phase_start = app_shell.getTime();
         self.surface.kitty.drawImages(self.session.allocator, shell, base_x_local, base_y_local, true, start_line, rows, cols);
@@ -1281,7 +1297,10 @@ pub fn tryDirectSnapshotUpdate(
     note_present(
         note_present_ctx,
         renderer,
-        .direct_snapshot_update,
+        if (terminal_view.partial_capture.active_viewport_shift_rows != 0)
+            .direct_snapshot_shift_update
+        else
+            .direct_snapshot_update,
         terminal_view.generation,
         view_geometry.origin_x,
         view_geometry.origin_y,

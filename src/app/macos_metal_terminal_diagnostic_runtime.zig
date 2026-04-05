@@ -20,6 +20,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
     const scroll_offset = @as(usize, @intCast(@max(@as(i32, 0), app_bootstrap.parseEnvI32("ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_SCROLL_OFFSET", 0))));
     const partial_update_frame = app_bootstrap.parseEnvU64("ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_PARTIAL_UPDATE_FRAME", std.math.maxInt(u64));
     const disable_kitty = app_bootstrap.parseEnvBool("ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_DISABLE_KITTY") orelse false;
+    const special_glyph_fixture = app_bootstrap.parseEnvBool("ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_SPECIAL_GLYPHS") orelse false;
     const screenshot_path = app_bootstrap.envSlice("ZIDE_MACOS_METAL_TERMINAL_DIAGNOSTIC_SCREENSHOT");
     const title: [*:0]const u8 = "Zide macOS Metal Terminal Diagnostic";
 
@@ -67,10 +68,11 @@ pub fn run(allocator: std.mem.Allocator) !void {
         @intCast(@max(1, cell_geometry.cell_height_device_px)),
     );
 
-    if (!(try session_runtime.enqueueExternalBytes(
-        session,
-        "\x1b[H1| build one\x1b[2;1H2| item two\x1b[3;1H3| plain ascii\x1b[4;1H4| fallback row\x1b[5;1H5| metal lane\x1b[6;1H6| terminal ok",
-    ))) return error.MetalTerminalDiagnosticSeedRejected;
+    const seed_bytes = if (special_glyph_fixture)
+        "\x1b[HCPU  92%  RAM\x1b[2;1HBOX ┌┬┐├┼┤└┴┘│─╭╮╯╰\x1b[3;1HSHD ░▒▓█▇▆▅▄▃▂▁\x1b[4;1HBRA ⣀⣤⣶⣿⣷⣄⡀ test\x1b[5;1HPWR \x1b[6;1HGLYPH lane stress active"
+    else
+        "\x1b[H1| build one\x1b[2;1H2| item two\x1b[3;1H3| plain ascii\x1b[4;1H4| fallback row\x1b[5;1H5| metal lane\x1b[6;1H6| terminal ok";
+    if (!(try session_runtime.enqueueExternalBytes(session, seed_bytes))) return error.MetalTerminalDiagnosticSeedRejected;
     try session_runtime.poll(session);
     if (scroll_frame != std.math.maxInt(u64)) {
         if (!(try session_runtime.enqueueExternalBytes(
@@ -90,7 +92,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
 
     const log = app_logger.logger("macos.metal.terminal_diagnostic");
     const capabilities = shell.rendererCapabilities();
-    log.logf(.info, "start width={d} height={d} rows={d} cols={d} frame_budget={d}", .{ width, height, rows, cols, frame_budget });
+    log.logf(.info, "start width={d} height={d} rows={d} cols={d} frame_budget={d} special_glyph_fixture={d}", .{ width, height, rows, cols, frame_budget, @intFromBool(special_glyph_fixture) });
     log.logf(
         .info,
         "capabilities composition={s} retained_targets={d} terminal_present={s} screenshot={s} text={s} planned_text={s} atlas={s} planned_atlas={s} raw_image_textures={d} snapshot_available={d}",
@@ -156,9 +158,15 @@ pub fn run(allocator: std.mem.Allocator) !void {
         const metrics = terminal_widget_draw.latestFrameLatencyMetrics();
         if (metrics.seq != 0 and metrics.seq != last_metrics_seq) {
             last_metrics_seq = metrics.seq;
+            const uncategorized_special_glyphs =
+                metrics.shaped_special_glyphs -
+                metrics.powerline_special_glyphs -
+                metrics.shade_special_glyphs -
+                metrics.braille_special_glyphs -
+                metrics.box_glyphs;
             log.logf(
                 .info,
-                "frame={d} submitted={d} sequence={d} grid_runs={d}/{d} overlay_runs={d}/{d} metric_grid_runs={d}/{d} metric_overlay_runs={d}/{d} kitty_ms={d:.3} snapshot_available={d} metric_present_sample={s}",
+                "frame={d} submitted={d} sequence={d} grid_runs={d}/{d} overlay_runs={d}/{d} metric_grid_runs={d}/{d} metric_overlay_runs={d}/{d} special_sprite_glyphs={d} shaped_special_glyphs={d} powerline={d} shade={d} braille={d} box={d} other_special={d} kitty_ms={d:.3} snapshot_available={d} metric_present_sample={s}",
                 .{
                     frame_index,
                     @intFromBool(submission.succeeded),
@@ -171,6 +179,13 @@ pub fn run(allocator: std.mem.Allocator) !void {
                     metrics.metal_grid_row_cells,
                     metrics.metal_overlay_row_runs,
                     metrics.metal_overlay_row_cells,
+                    metrics.special_sprite_glyphs,
+                    metrics.shaped_special_glyphs,
+                    metrics.powerline_special_glyphs,
+                    metrics.shade_special_glyphs,
+                    metrics.braille_special_glyphs,
+                    metrics.box_glyphs,
+                    uncategorized_special_glyphs,
                     metrics.presentation_kitty_ms,
                     @intFromBool(shell.renderer.metalTerminalSnapshotAvailable()),
                     @tagName(metrics.terminal_presentation_sample_mode),
@@ -193,9 +208,15 @@ pub fn run(allocator: std.mem.Allocator) !void {
 
     const final_debug = widget.debug.last_metal_terminal_fallback;
     const final_metrics = terminal_widget_draw.latestFrameLatencyMetrics();
+    const final_uncategorized_special_glyphs =
+        final_metrics.shaped_special_glyphs -
+        final_metrics.powerline_special_glyphs -
+        final_metrics.shade_special_glyphs -
+        final_metrics.braille_special_glyphs -
+        final_metrics.box_glyphs;
     log.logf(
         .info,
-        "complete frames={d} final_grid_runs={d}/{d} final_overlay_runs={d}/{d} metric_grid_runs={d}/{d} metric_overlay_runs={d}/{d} metric_terminal_present={s} metric_present_sample={s} kitty_ms={d:.3} snapshot_available={d}",
+        "complete frames={d} final_grid_runs={d}/{d} final_overlay_runs={d}/{d} metric_grid_runs={d}/{d} metric_overlay_runs={d}/{d} special_sprite_glyphs={d} shaped_special_glyphs={d} powerline={d} shade={d} braille={d} box={d} other_special={d} metric_terminal_present={s} metric_present_sample={s} kitty_ms={d:.3} snapshot_available={d}",
         .{
             frame_index,
             final_debug.grid_row_runs,
@@ -206,6 +227,13 @@ pub fn run(allocator: std.mem.Allocator) !void {
             final_metrics.metal_grid_row_cells,
             final_metrics.metal_overlay_row_runs,
             final_metrics.metal_overlay_row_cells,
+            final_metrics.special_sprite_glyphs,
+            final_metrics.shaped_special_glyphs,
+            final_metrics.powerline_special_glyphs,
+            final_metrics.shade_special_glyphs,
+            final_metrics.braille_special_glyphs,
+            final_metrics.box_glyphs,
+            final_uncategorized_special_glyphs,
             @tagName(final_metrics.terminal_presentation_mode),
             @tagName(final_metrics.terminal_presentation_sample_mode),
             final_metrics.presentation_kitty_ms,

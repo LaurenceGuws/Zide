@@ -96,6 +96,35 @@ test "buildPublicationPlan forbids live scroll shift against unpresented base" {
     try std.testing.expect(!plan.can_publish_scroll_shift);
 }
 
+test "buildPublicationPlan allows offset scroll shift when history shape is unchanged" {
+    const plan = buildPublicationPlan(
+        7,
+        0,
+        1,
+        0,
+        45,
+        45,
+        12,
+        12,
+        40,
+        40,
+        false,
+        false,
+        .none,
+        true,
+        2,
+        2,
+        false,
+        false,
+    );
+
+    try std.testing.expect(plan.visible_history_changed);
+    try std.testing.expectEqual(@as(i32, -1), plan.viewport_shift_rows);
+    try std.testing.expectEqual(@as(usize, 1), plan.shift_abs);
+    try std.testing.expect(plan.can_publish_scroll_shift);
+    try std.testing.expect(!plan.needs_full_damage);
+}
+
 pub fn buildPublicationPlan(
     visible_history_generation: u64,
     active_visible_history_generation: u64,
@@ -140,10 +169,11 @@ pub fn buildPublicationPlan(
 
     const shift_abs: usize = @intCast(if (viewport_shift_rows < 0) -viewport_shift_rows else viewport_shift_rows);
     const scroll_offset_changed = clamped_offset != active_scroll_offset;
+    const history_shape_unchanged = history_len == active_history_len and total_lines == active_total_lines;
     const can_publish_offset_scroll_shift = scroll_offset_changed and
         !selection_active and
         !active_selection_active and
-        !visible_history_changed and
+        (!visible_history_changed or history_shape_unchanged) and
         view_dirty_none and
         active_rows == rows and
         active_cols == cols and

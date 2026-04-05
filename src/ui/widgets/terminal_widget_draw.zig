@@ -109,6 +109,12 @@ pub fn drawPrepared(
             self.debug.last_metal_terminal_fallback.grid_row_cells,
             self.debug.last_metal_terminal_fallback.overlay_row_runs,
             self.debug.last_metal_terminal_fallback.overlay_row_cells,
+            self.debug.last_metal_terminal_fallback.special_sprite_glyphs,
+            self.debug.last_metal_terminal_fallback.shaped_special_glyphs,
+            self.debug.last_metal_terminal_fallback.powerline_special_glyphs,
+            self.debug.last_metal_terminal_fallback.shade_special_glyphs,
+            self.debug.last_metal_terminal_fallback.braille_special_glyphs,
+            self.debug.last_metal_terminal_fallback.box_glyphs,
         );
     }
 

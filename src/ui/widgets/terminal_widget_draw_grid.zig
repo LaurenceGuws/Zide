@@ -58,6 +58,9 @@ pub const GlyphDrawStats = struct {
     fallback_cells: usize = 0,
     special_sprite_glyphs: usize = 0,
     box_glyphs: usize = 0,
+    powerline_special_glyphs: usize = 0,
+    shade_special_glyphs: usize = 0,
+    braille_special_glyphs: usize = 0,
     shaped_text_glyphs: usize = 0,
     shaped_special_glyphs: usize = 0,
     shaped_space_skips: usize = 0,
@@ -1133,6 +1136,14 @@ fn drawAlignedSpecialGlyphSprite(
                 s.box_glyphs += 1;
                 s.box_submit_ms += submit_ms;
                 s.box_sprite_submit_ms += submit_ms;
+            } else if (variant == .powerline) {
+                s.powerline_special_glyphs += 1;
+                s.special_sprite_glyphs += 1;
+                s.special_sprite_submit_ms += submit_ms;
+            } else if (variant == .braille) {
+                s.braille_special_glyphs += 1;
+                s.special_sprite_glyphs += 1;
+                s.special_sprite_submit_ms += submit_ms;
             } else {
                 s.special_sprite_glyphs += 1;
                 s.special_sprite_submit_ms += submit_ms;
@@ -1177,6 +1188,7 @@ pub fn drawRowGlyphs(
     const col_start = @min(col_start_in, cols_count - 1);
     const col_end = @min(col_end_in, cols_count - 1);
     if (col_start > col_end) return;
+    var row_sprite_cache = RowSpecialSpriteCache{};
 
     if (rr.textRenderingMode() == .unavailable and rr.plannedTextRenderingMode() == .metal_texture_atlas) {
         var fallback_col: usize = col_start;
@@ -1221,11 +1233,105 @@ pub fn drawRowGlyphs(
             }
             const cell_x = base_x_local + @as(f32, @floatFromInt(@as(i32, @intCast(fallback_col)))) * cell_w;
             const cell_y = base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h;
+            const cell_w_span = cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(style.width_units))));
+            const capture_special = if (shouldCaptureTextPaint(text_paint_sample, row_idx, cursor_pos, fallback_col, style.width_units))
+                text_paint_sample
+            else
+                null;
+            if (cell.combining_len == 0) {
+                if (terminal_glyphs.specialVariantForCodepoint(cell.codepoint)) |variant| {
+                    if (variant == .shade) {
+                        const special_submit_start = app_shell.getTime();
+                        _ = terminal_glyphs.drawBoxGlyphBatched(addTerminalGlyphRect, rr, cell.codepoint, cell_x, cell_y, cell_w_span, cell_h, style.fg);
+                        if (capture_special) |sample| {
+                            captureTextPaintSample(
+                                sample,
+                                generation,
+                                row_idx,
+                                cursor_pos.col,
+                                fallback_col,
+                                cell,
+                                style.width_units,
+                                cell_x,
+                                cell_y,
+                                cell_w_span,
+                                cell_h,
+                                cell_y,
+                                1.0 / rr.devicePixelStep(),
+                                .{ .x = cell_x, .y = cell_y, .width = cell_w_span, .height = cell_h },
+                                .special,
+                            );
+                        }
+                        if (stats) |s| {
+                            const submit_ms = (app_shell.getTime() - special_submit_start) * 1000.0;
+                            s.shaped_special_glyphs += 1;
+                            s.shaped_special_submit_ms += submit_ms;
+                            s.special_sprite_glyphs += 1;
+                            s.shade_special_glyphs += 1;
+                            s.special_sprite_submit_ms += submit_ms;
+                        }
+                        if (metal_fallback_sample) |sample| {
+                            sample.special_sprite_glyphs += 1;
+                            sample.shaped_special_glyphs += 1;
+                            sample.shade_special_glyphs += 1;
+                        }
+                        fallback_col += style.width_units;
+                        continue;
+                    }
+                    if (drawAlignedSpecialGlyphSprite(rr, row_cells, fallback_col, style.width_units, screen_reverse_mode, draw_cursor_mode, cursor_pos, cursor_style, row_idx, cell.codepoint, variant, @as(i32, @intFromFloat(std.math.round(cell_x))), @as(i32, @intFromFloat(std.math.round(cell_y))), @as(i32, @intFromFloat(std.math.round(cell_w_span))), @as(i32, @intFromFloat(std.math.round(cell_h))), style.fg, &row_sprite_cache, stats, capture_special, generation, row_idx, cursor_pos.col, fallback_col, cell, style.width_units, cell_x, cell_y)) {
+                        if (metal_fallback_sample) |sample| {
+                            sample.special_sprite_glyphs += 1;
+                            sample.shaped_special_glyphs += 1;
+                            if (variant == .powerline) sample.powerline_special_glyphs += 1;
+                            if (variant == .braille) sample.braille_special_glyphs += 1;
+                        }
+                        fallback_col += style.width_units;
+                        continue;
+                    }
+                }
+                if (isTerminalBoxGlyph(cell.codepoint)) {
+                    const special_submit_start = app_shell.getTime();
+                    _ = terminal_glyphs.drawBoxGlyphBatched(addTerminalGlyphRect, rr, cell.codepoint, cell_x, cell_y, cell_w_span, cell_h, style.fg);
+                    if (capture_special) |sample| {
+                        captureTextPaintSample(
+                            sample,
+                            generation,
+                            row_idx,
+                            cursor_pos.col,
+                            fallback_col,
+                            cell,
+                            style.width_units,
+                            cell_x,
+                            cell_y,
+                            cell_w_span,
+                            cell_h,
+                            cell_y,
+                            1.0 / rr.devicePixelStep(),
+                            .{ .x = cell_x, .y = cell_y, .width = cell_w_span, .height = cell_h },
+                            .special,
+                        );
+                    }
+                    if (stats) |s| {
+                        const submit_ms = (app_shell.getTime() - special_submit_start) * 1000.0;
+                        s.shaped_special_glyphs += 1;
+                        s.shaped_special_submit_ms += submit_ms;
+                        s.box_glyphs += 1;
+                        s.box_submit_ms += submit_ms;
+                        s.box_rect_submit_ms += submit_ms;
+                    }
+                    if (metal_fallback_sample) |sample| {
+                        sample.shaped_special_glyphs += 1;
+                        sample.box_glyphs += 1;
+                    }
+                    fallback_col += style.width_units;
+                    continue;
+                }
+            }
             const followed_by_space = terminalCellFollowedBySpace(row_cells, cols_count, fallback_col, style.width_units);
             if (cell.combining_len > 0) {
-                rr.drawTerminalCellGraphemeBatched(cell.codepoint, cell.combining[0..@intCast(cell.combining_len)], cell_x, cell_y, cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(style.width_units)))), cell_h, style.fg, style.bg, style.underline_color, style.bold, style.underline, false, followed_by_space, false);
+                rr.drawTerminalCellGraphemeBatched(cell.codepoint, cell.combining[0..@intCast(cell.combining_len)], cell_x, cell_y, cell_w_span, cell_h, style.fg, style.bg, style.underline_color, style.bold, style.underline, false, followed_by_space, false);
             } else {
-                rr.drawTerminalCellBatched(cell.codepoint, cell_x, cell_y, cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(style.width_units)))), cell_h, style.fg, style.bg, style.underline_color, style.bold, style.underline, false, followed_by_space, false);
+                rr.drawTerminalCellBatched(cell.codepoint, cell_x, cell_y, cell_w_span, cell_h, style.fg, style.bg, style.underline_color, style.bold, style.underline, false, followed_by_space, false);
             }
             if (shouldCaptureTextPaint(text_paint_sample, row_idx, cursor_pos, fallback_col, style.width_units)) {
                 captureTextPaintSample(
@@ -1238,14 +1344,14 @@ pub fn drawRowGlyphs(
                     style.width_units,
                     cell_x,
                     cell_y,
-                    cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(style.width_units)))),
+                    cell_w_span,
                     cell_h,
                     cell_y,
                     if (rr.terminal_font.render_scale > 0.0) rr.terminal_font.render_scale else 1.0,
                     .{
                         .x = cell_x,
                         .y = cell_y,
-                        .width = cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(style.width_units)))),
+                        .width = cell_w_span,
                         .height = cell_h,
                     },
                     .fallback,
@@ -1268,7 +1374,6 @@ pub fn drawRowGlyphs(
         const span_w = @as(usize, @max(@as(u8, 1), split_cell.width));
         break :blk @min(cols_count, cursor_split_col + span_w);
     } else 0;
-    var row_sprite_cache = RowSpecialSpriteCache{};
     _ = row_fixed_start;
 
     var col: usize = col_start;
@@ -1465,6 +1570,7 @@ pub fn drawRowGlyphs(
                             s.shaped_special_glyphs += 1;
                             s.shaped_special_submit_ms += submit_ms;
                             s.special_sprite_glyphs += 1;
+                            s.shade_special_glyphs += 1;
                             s.special_sprite_submit_ms += submit_ms;
                         }
                         continue;

@@ -805,6 +805,32 @@ lane.
       texture-shift planning when `PARTIAL_UPDATE_FRAME` is set; the scroll
       fixture still seeds real overflow history when the scroll-frame hook is
       used
+    - Metal terminal snapshot scrolling now exists under the target seam:
+      `scrollPresentable` on the Metal lane shifts the drawable-sized snapshot
+      cache through a backend-owned scratch texture instead of failing
+      outright
+    - the scroll-offset Metal terminal diagnostic is now runtime-proven too:
+      with `DISABLE_KITTY=1`, `SCROLL_FRAME=1`, and `SCROLL_OFFSET=1`, the
+      fixture now drops to `cache_dirty=partial` and reports
+      `metric_present_sample=direct_snapshot_shift_update` with tight exposed-row
+      redraw counts (`grid_runs=1/28`) instead of a full direct repaint
+    - the Metal terminal diagnostic now has a special-glyph fixture as well:
+      `SPECIAL_GLYPHS=1` seeds powerline, shades, box-drawing, and braille
+      rows so the live Metal lane can be checked against `btop`-class glyph
+      pressure instead of ASCII-only rows
+    - that fixture exposed and fixed a real contradiction in the Metal
+      fallback lane: when live text was unavailable, the narrow terminal
+      fallback path was consuming special glyph cells before the normal
+      special-glyph route could run
+    - current runtime proof is now explicit: the first special-glyph Metal
+      diagnostic frame reports `special_sprite_glyphs=37` and
+      `shaped_special_glyphs=37`, with real sprite creation for
+      `U+E0B0..U+E0B7`
+    - the same fixture now reports a useful class breakdown too:
+      `powerline=6 shade=3 braille=7 other_special=21`, which means the Metal
+      lane is no longer blocked on “special glyphs not running at all”; the
+      next real pressure is box/block continuity and the remaining uncategorized
+      special coverage that still separates the lane from a `btop`-quality bar
     - this reduces one more retained-first contradiction before a second
       Metal terminal presentation shape is introduced
 
