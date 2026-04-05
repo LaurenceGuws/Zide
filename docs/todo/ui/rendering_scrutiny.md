@@ -69,7 +69,7 @@ Status note, later on 2026-04-02:
 - the first convergence cut is now landed too:
   retained-target ownership no longer speaks in product-shaped editor/terminal
   surface verbs at the main API boundary
-  - `src/ui/renderer/retained_targets_runtime.zig` now exposes one generic
+  - `src/ui/renderer/presentable_targets_runtime.zig` now exposes one generic
     retained-surface contract
   - editor, terminal, and font-sample callers now use that generic retained
     surface API directly
@@ -77,7 +77,7 @@ Status note, later on 2026-04-02:
     retained-surface vocabulary instead of preserving a second
     editor-specific fake-renderer dialect
   - retained-surface trace/update handoff between
-    `src/ui/renderer/retained_targets_runtime.zig` and
+    `src/ui/renderer/presentable_targets_runtime.zig` and
     `src/ui/renderer/scene_frame_runtime.zig` now uses generic retained-surface
     verbs instead of product-specific trace helper names
   - the next convergence target is broader again:
@@ -138,7 +138,7 @@ Progress note, 2026-04-02:
 - terminal recent-input full-publication policy now lives as one grouped state
   slab instead of two loose renderer-root fields
 - retained terminal/editor target state now lives as one grouped state slab
-  under `src/ui/renderer/retained_targets_runtime.zig` instead of four loose
+  under `src/ui/renderer/presentable_targets_runtime.zig` instead of four loose
   renderer-root fields
 - the forwarding shell `src/ui/renderer/retained_surface_api.zig` is gone; the
   retained-target owner now speaks the retained-surface vocabulary directly

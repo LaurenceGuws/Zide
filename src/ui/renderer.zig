@@ -30,7 +30,7 @@ const texture_draw = @import("renderer/texture_draw.zig");
 const screenshot = @import("renderer/screenshot.zig");
 const input_runtime = @import("renderer/input_runtime.zig");
 const font_runtime = @import("renderer/font_runtime.zig");
-const retained_targets_runtime = @import("renderer/retained_targets_runtime.zig");
+const presentable_targets_runtime = @import("renderer/presentable_targets_runtime.zig");
 const scene_frame_runtime = @import("renderer/scene_frame_runtime.zig");
 const metal_text_diagnostic_runtime = @import("renderer/metal_text_diagnostic_runtime.zig");
 const metal_text_sample_runtime = @import("renderer/metal_text_sample_runtime.zig");
@@ -177,7 +177,7 @@ pub const ScaleState = font_runtime.ScaleState;
 pub const FontConfigState = font_manager.FontConfigState;
 pub const ClipboardState = clipboard.ClipboardState;
 pub const TerminalTextState = text_runtime.TerminalTextState;
-pub const PresentableTargetState = retained_targets_runtime.PresentableTargetState;
+pub const PresentableTargetState = presentable_targets_runtime.PresentableTargetState;
 const MainCompositionTarget = scene_frame_runtime.MainCompositionTarget;
 pub const TerminalDisableLigaturesStrategy = enum {
     never,
@@ -947,7 +947,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     }
 
     pub fn deinit(self: *Renderer) void {
-        retained_targets_runtime.deinit(self);
+        presentable_targets_runtime.deinit(self);
         self.destroyRenderTarget(&self.scene_target.target);
         self.clearMetalDiagnosticFont();
         self.clearQueuedMetalSurfaceDraws();

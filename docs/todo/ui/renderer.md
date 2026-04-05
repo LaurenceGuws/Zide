@@ -25,7 +25,7 @@ active execution lane for backend contract quality.
 - `src/ui/renderer/gl_backend.zig`
 - `src/ui/renderer/metal_backend.zig`
 - `src/ui/renderer/scene_frame_runtime.zig`
-- `src/ui/renderer/retained_targets_runtime.zig`
+- `src/ui/renderer/presentable_targets_runtime.zig`
 
 ## Status
 
@@ -106,7 +106,7 @@ Progress note, 2026-04-05:
   - still owns the only live consumer of the shared surface-draw queue
 - `src/ui/renderer/scene_frame_runtime.zig`
   - still acts as a shared backend dispatch center
-- `src/ui/renderer/retained_targets_runtime.zig`
+- `src/ui/renderer/presentable_targets_runtime.zig`
   - still encodes the GL-shaped presentable model in shared runtime behavior
 
 ## Remaining Work

@@ -1,11 +1,11 @@
-const retained_targets_runtime = @import("../renderer/retained_targets_runtime.zig");
+const presentable_targets_runtime = @import("../renderer/presentable_targets_runtime.zig");
 const scene_frame_runtime = @import("../renderer/scene_frame_runtime.zig");
 
-pub const PresentableDraw = retained_targets_runtime.PresentableDraw;
+pub const PresentableDraw = presentable_targets_runtime.PresentableDraw;
 
 pub fn presentableAvailable(renderer: anytype) bool {
     if (renderer.backend == .metal) return renderer.metalTerminalSnapshotAvailable();
-    return retained_targets_runtime.presentableAvailable(renderer, .terminal);
+    return presentable_targets_runtime.presentableAvailable(renderer, .terminal);
 }
 
 pub fn ensurePresentable(renderer: anytype, width: i32, height: i32) bool {
@@ -15,12 +15,12 @@ pub fn ensurePresentable(renderer: anytype, width: i32, height: i32) bool {
         if (drawable_width <= 0 or drawable_height <= 0) return false;
         return renderer.ensureMetalTerminalSnapshotPresentable(drawable_width, drawable_height);
     }
-    return retained_targets_runtime.ensurePresentable(renderer, .terminal, width, height);
+    return presentable_targets_runtime.ensurePresentable(renderer, .terminal, width, height);
 }
 
 pub fn beginPresentable(renderer: anytype) bool {
     if (renderer.backend == .metal) return false;
-    return retained_targets_runtime.beginPresentable(renderer, .terminal);
+    return presentable_targets_runtime.beginPresentable(renderer, .terminal);
 }
 
 pub fn endPresentable(renderer: anytype) void {
@@ -51,10 +51,10 @@ pub fn drawPresentable(renderer: anytype, draw: PresentableDraw) void {
         });
         return;
     }
-    retained_targets_runtime.drawPresentable(renderer, .terminal, draw);
+    presentable_targets_runtime.drawPresentable(renderer, .terminal, draw);
 }
 
 pub fn scrollPresentable(renderer: anytype, dx: i32, dy: i32) bool {
     if (renderer.backend == .metal) return renderer.scrollMetalTerminalSnapshotPresentable(dx, dy);
-    return retained_targets_runtime.scrollPresentable(renderer, .terminal, dx, dy);
+    return presentable_targets_runtime.scrollPresentable(renderer, .terminal, dx, dy);
 }

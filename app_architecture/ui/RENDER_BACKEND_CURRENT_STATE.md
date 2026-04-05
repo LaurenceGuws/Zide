@@ -117,7 +117,7 @@ supposed to prevent.
 
 ### 4. Retained/presentable surfaces are still GL-shaped in shared runtime code
 
-`src/ui/renderer/retained_targets_runtime.zig` still imports
+`src/ui/renderer/presentable_targets_runtime.zig` still imports
 `gl_backend.RenderTarget` as the retained surface type.
 
 This has improved slightly: the presentable target type now lives in
@@ -165,7 +165,7 @@ The main contradiction centers today are:
 - `src/ui/renderer/metal_backend.zig`
   - owns a useful implementation surface, but is still the only backend
     consuming the shared surface-draw queue directly
-- `src/ui/renderer/retained_targets_runtime.zig`
+- `src/ui/renderer/presentable_targets_runtime.zig`
   - shared runtime logic is still effectively the GL presentable model
 - `src/ui/renderer/scene_frame_runtime.zig`
   - shared frame tracing and lifecycle still act as the backend dispatch center

@@ -198,7 +198,7 @@ The current high-risk files are:
 - `src/ui/renderer/font_runtime.zig`
 - `src/ui/renderer/scale_utils.zig`
 - `src/ui/renderer/text_runtime.zig`
-- `src/ui/renderer/retained_targets_runtime.zig`
+- `src/ui/renderer/presentable_targets_runtime.zig`
 - `src/ui/widgets/common.zig`
 - `src/ui/widgets/terminal_widget_draw.zig`
 - `src/ui/widgets/terminal_widget_draw_grid.zig`
@@ -398,7 +398,7 @@ Manual:
       geometry use the same snapped contract
     - terminal retained-surface presentation no longer squeezes a wider
       offscreen logical surface into a narrower on-screen viewport:
-      - [retained_targets_runtime.zig](/home/home/personal/zide/src/ui/renderer/retained_targets_runtime.zig)
+      - [presentable_targets_runtime.zig](/Users/vincent/lolly/Zide/src/ui/renderer/presentable_targets_runtime.zig)
         now supports logical source cropping for retained-surface blits
       - [texture_draw.zig](/home/home/personal/zide/src/ui/renderer/texture_draw.zig)
         now exposes proportional logical source rect calculation
