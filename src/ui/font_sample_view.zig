@@ -213,6 +213,8 @@ pub const FontSampleView = struct {
                 .text = "METAL\nTEXT",
                 .x = swatch_x,
                 .y = swatch_y,
+                .tint = theme.foreground.toRgba(),
+                .layout = .monospace_cell,
             });
         }
         r.drawText("Text sample unavailable on this runtime path.", x, y, theme.foreground);

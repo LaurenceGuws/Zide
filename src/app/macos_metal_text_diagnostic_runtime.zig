@@ -37,6 +37,8 @@ pub fn run(allocator: std.mem.Allocator) !void {
         .text = "METAL\nTEXT",
         .x = 24.0,
         .y = 96.0,
+        .tint = shell.theme().foreground.toRgba(),
+        .layout = .monospace_cell,
     });
     const atlas_preview_source = shell.macosMetalAtlasPreviewSource();
     log.logf(.info, "start width={d} height={d} frame_budget={d}", .{ width, height, frame_budget });
