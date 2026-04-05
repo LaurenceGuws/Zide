@@ -623,6 +623,10 @@ What this does and does not mean:
   lane when the runtime is in the Metal-planned/unavailable-text state and the
   active composition string is ASCII, which gives the lane another real
   terminal-facing caller outside the diagnostic runtime
+- the terminal debug capture surface now records Metal row-run fallback usage
+  too, split between grid-driven row runs and overlay-driven row runs, so this
+  lane has direct terminal-widget proof instead of only indirect architecture
+  claims
 - this is still intentionally narrow and honest: it is now a tiny sampled
   multiline ASCII run with an explicit monospace-cell option rather than a
   claim that the generic string/text renderer has already migrated

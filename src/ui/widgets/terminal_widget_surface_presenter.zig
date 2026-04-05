@@ -235,6 +235,7 @@ fn drawRetainedGlyphPass(
         disable_ligatures: @TypeOf(renderer.font_config.terminal_disable_ligatures),
         terminal_generation: u64,
         glyph_draw_stats: *GlyphDrawStats,
+        metal_fallback_sample: *@import("terminal_widget_debug_geometry.zig").MetalTerminalFallbackSample,
 
         fn visit(ctx: *@This(), row: usize, col_start: usize, col_end: usize, _: bool) void {
             drawRowGlyphs(
@@ -259,6 +260,7 @@ fn drawRetainedGlyphPass(
                 ctx.terminal_generation,
                 ctx.glyph_draw_stats,
                 &ctx.self_widget.debug.last_text_paint,
+                ctx.metal_fallback_sample,
             );
         }
     }{
@@ -280,6 +282,7 @@ fn drawRetainedGlyphPass(
         .disable_ligatures = renderer.font_config.terminal_disable_ligatures,
         .terminal_generation = terminal_generation,
         .glyph_draw_stats = glyph_draw_stats,
+        .metal_fallback_sample = &self.debug.last_metal_terminal_fallback,
     };
     forEachRetainedDrawSpan(rows, cols, surface_update_plan, &visitor);
     renderer.flushTerminalGlyphBatch();

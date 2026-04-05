@@ -364,6 +364,9 @@ lane.
     - the terminal composing-text overlay can now also route through that
       terminal-row Metal contract when the runtime is Metal-planned,
       live-text-unavailable, and the active composition string is ASCII
+    - the terminal debug capture surface now records Metal row-run fallback
+      usage separately for grid and overlay callers, so these terminal-facing
+      integrations have direct debug proof instead of only architecture notes
     - the narrow Metal text lane now covers a tiny multiline ASCII run, not
       just a single flat row
     - the diagnostic/runtime callers now use the explicit monospace-cell

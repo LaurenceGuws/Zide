@@ -21,6 +21,7 @@ const TerminalDisableLigaturesStrategy = renderer_mod.TerminalDisableLigaturesSt
 const Rgba = terminal_font_mod.Rgba;
 const TextPaintSample = debug_geometry_mod.TextPaintSample;
 const TextPaintSource = debug_geometry_mod.TextPaintSource;
+const MetalTerminalFallbackSample = debug_geometry_mod.MetalTerminalFallbackSample;
 
 const kitty_unicode_placeholder: u32 = 0x10EEEE;
 
@@ -338,6 +339,7 @@ fn drawMetalTerminalFallbackRun(
     text_paint_sample: ?*TextPaintSample,
     generation: u64,
     stats: ?*GlyphDrawStats,
+    metal_fallback_sample: ?*MetalTerminalFallbackSample,
 ) usize {
     if (rr.textRenderingMode() != .unavailable) return 0;
     if (rr.plannedTextRenderingMode() != .metal_texture_atlas) return 0;
@@ -397,6 +399,10 @@ fn drawMetalTerminalFallbackRun(
         );
     }
     if (stats) |s| s.fallback_cells += run_len;
+    if (metal_fallback_sample) |sample| {
+        sample.grid_row_runs += 1;
+        sample.grid_row_cells += run_len;
+    }
     return run_len;
 }
 
@@ -1159,6 +1165,7 @@ pub fn drawRowGlyphs(
     generation: u64,
     stats: ?*GlyphDrawStats,
     text_paint_sample: ?*TextPaintSample,
+    metal_fallback_sample: ?*MetalTerminalFallbackSample,
 ) void {
     const row_fixed_start = app_shell.getTime();
     _ = padding_x_i;
@@ -1507,6 +1514,7 @@ pub fn drawRowGlyphs(
                     text_paint_sample,
                     generation,
                     stats,
+                    metal_fallback_sample,
                 );
                 if (row_consumed > 0) {
                     fb_col += row_consumed;

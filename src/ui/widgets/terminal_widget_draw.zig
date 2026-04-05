@@ -150,6 +150,10 @@ pub fn drawPrepared(
     );
     self.debug.last_cursor_overlay.valid = false;
     self.debug.last_text_paint.valid = false;
+    self.debug.last_metal_terminal_fallback = .{
+        .valid = true,
+        .generation = terminal_view.generation,
+    };
 
     self.controller.hover.dirty = false;
     const hover_link_id = hover_mod.hoverLinkId(&self.controller.hover);
@@ -211,6 +215,7 @@ pub fn drawPrepared(
         draw_cursor,
         cursor,
         cursor_style,
+        &self.debug.last_metal_terminal_fallback,
     );
 
     overlay_ms = time_utils.secondsToMs(app_shell.getTime() - overlay_phase_start);

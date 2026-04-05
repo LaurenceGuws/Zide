@@ -14,6 +14,7 @@ const CursorPos = terminal_publication.CursorPos;
 const Cell = terminal_publication.Cell;
 const RenderCache = render_cache_mod.RenderCache;
 const CursorOverlaySample = debug_geometry_mod.CursorOverlaySample;
+const MetalTerminalFallbackSample = debug_geometry_mod.MetalTerminalFallbackSample;
 
 const SelectionCornerMask = struct {
     top_left_outward: bool = false,
@@ -133,6 +134,7 @@ pub fn drawOverlays(
     draw_cursor: bool,
     cursor: CursorPos,
     cursor_style: @TypeOf(RenderCache.init().cursor_style),
+    metal_fallback_sample: ?*MetalTerminalFallbackSample,
 ) void {
     _ = screen_reverse;
     const r = shell.rendererPtr();
@@ -312,6 +314,10 @@ pub fn drawOverlays(
                         .tint = r.theme.foreground.toRgba(),
                     });
                     comp_col = composing_cells;
+                    if (metal_fallback_sample) |sample| {
+                        sample.overlay_row_runs += 1;
+                        sample.overlay_row_cells += comp_col;
+                    }
                 } else {
                     var iter = std.unicode.Utf8Iterator{ .bytes = input.composing_text, .i = 0 };
                     while (iter.nextCodepoint()) |cp| {

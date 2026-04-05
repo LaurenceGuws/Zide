@@ -82,9 +82,19 @@ pub const TextPaintSample = struct {
     source: TextPaintSource = .direct,
 };
 
+pub const MetalTerminalFallbackSample = struct {
+    valid: bool = false,
+    generation: u64 = 0,
+    grid_row_runs: usize = 0,
+    grid_row_cells: usize = 0,
+    overlay_row_runs: usize = 0,
+    overlay_row_cells: usize = 0,
+};
+
 pub const DebugCaptureState = struct {
     last_view_geometry: ViewGeometrySample = .{},
     last_cursor_overlay: CursorOverlaySample = .{},
     last_surface_present: RetainedSurfacePresentSample = .{},
     last_text_paint: TextPaintSample = .{},
+    last_metal_terminal_fallback: MetalTerminalFallbackSample = .{},
 };

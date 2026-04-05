@@ -138,6 +138,17 @@ pub fn dumpVisibleAsciiView(widget: anytype, shell: *Shell, log: anytype) !void 
             debug.last_text_paint.render_scale,
         },
     );
+    try out.writer(widget.session.allocator).print(
+        "metal_terminal_fallback valid={d} generation={d} grid_row_runs={d} grid_row_cells={d} overlay_row_runs={d} overlay_row_cells={d}\n",
+        .{
+            @intFromBool(debug.last_metal_terminal_fallback.valid),
+            debug.last_metal_terminal_fallback.generation,
+            debug.last_metal_terminal_fallback.grid_row_runs,
+            debug.last_metal_terminal_fallback.grid_row_cells,
+            debug.last_metal_terminal_fallback.overlay_row_runs,
+            debug.last_metal_terminal_fallback.overlay_row_cells,
+        },
+    );
     if (debug.last_cursor_overlay.valid and debug.last_text_paint.valid) {
         try out.writer(widget.session.allocator).print(
             "cursor_vs_text delta_cell_origin=({d:.3},{d:.3}) delta_overlay_to_glyph=({d:.3},{d:.3},{d:.3},{d:.3})\n",
