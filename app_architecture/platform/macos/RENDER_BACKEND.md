@@ -695,6 +695,10 @@ What this does and does not mean:
   type/field are named around terminal presentation rather than retained
   surfaces, so the debug model no longer treats direct-main-target Metal as a
   special case wearing retained terminology
+- direct terminal presentation now updates readiness truth honestly too: after
+  the first successful direct-main-target Metal frame, widget handoff logs
+  report `presentable_ready=1` instead of staying stuck at a retained-only
+  readiness value
 - that contract is intentionally backend-native rather than fake portability:
   the old cached GL `Texture` path is still OpenGL-only, while Metal Kitty
   images are created as frame-scoped native Metal textures and released after

@@ -507,6 +507,7 @@ fn directPresentMainTarget(
         view_geometry.viewport_width,
         view_geometry.viewport_height,
     );
+    self.surface.noteDirectPresentationReady(terminal_view);
 
     const bg_phase_start = app_shell.getTime();
     renderer.beginTerminalBatch();

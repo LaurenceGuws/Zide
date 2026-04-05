@@ -423,6 +423,10 @@ lane.
       type/field are named around terminal presentation instead of retained
       surfaces, so the direct Metal lane no longer sits inside a retained-only
       debug model
+    - direct terminal presentation now updates readiness truth honestly too:
+      after the first successful direct-main-target Metal frame, widget
+      handoff logs report `presentable_ready=1` instead of staying stuck at a
+      retained-only readiness value
     - the terminal Metal diagnostic now reports `raw_image_textures=1`, keeps
       non-zero `kitty_ms`, and no longer relies on the previous unsupported
       backend gate for RGB/RGBA Kitty images

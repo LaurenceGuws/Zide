@@ -103,6 +103,15 @@ pub const TerminalWidgetSurfaceState = struct {
         self.retained.last_render_scale = surface_geometry.render_scale;
     }
 
+    pub fn noteDirectPresentationReady(
+        self: *TerminalWidgetSurfaceState,
+        terminal_view: view_state.TerminalViewModel,
+    ) void {
+        self.retained.terminal_presentable_ready = true;
+        self.retained.last_render_generation = terminal_view.generation;
+        self.retained.last_render_clear_generation = terminal_view.clear_generation;
+    }
+
     pub fn notePresentableAvailability(self: *TerminalWidgetSurfaceState, available: bool) bool {
         if (!available) self.retained.terminal_presentable_ready = false;
         return self.retained.terminal_presentable_ready and available;
