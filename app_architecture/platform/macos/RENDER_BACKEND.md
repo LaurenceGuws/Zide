@@ -556,13 +556,15 @@ What this does and does not mean:
   `metal_backend.AtlasSampleDraw` description, and the Metal backend owns the
   actual sampled-atlas blit helper used during submit before present
 - the first dedicated Metal text diagnostic view now exists as its own UI seam
-  rather than being embedded directly in the smoke runtime: placement and
-  activation flow through `ui/metal_text_diagnostic_view.zig`, while backend
-  sampling/blit ownership remains in `metal_backend`
-- the diagnostic view no longer chooses placement by itself: preview placement
-  is now produced by a renderer-owned helper in
-  `renderer/metal_text_diagnostic_runtime.zig`, which is the right direction
-  for reusing the same sampled-glyph diagnostic contract across more callers
+  rather than being embedded directly in the smoke runtime: activation goes
+  through `ui/metal_text_diagnostic_view.zig`, which calls
+  `Renderer.runMetalAtlasUploadDiagnostic` on `shell.rendererPtr()`; preview
+  placement is computed from `UiGeometryContext` in
+  `renderer/metal_text_diagnostic_runtime.zig` (no `renderer.zig` import there),
+  while backend sampling/blit ownership remains in `metal_backend`
+- the diagnostic view does not compute placement against a Shell API: the
+  margin-to-inset mapping is shared helper logic keyed only on geometry, and the
+  upload probe itself is a **`Renderer`** verb (not an `app_shell` forward)
 - one real diagnostic caller now reuses that seam instead of remaining
   structurally GL-only: the existing `font_sample` view activates the Metal
   text diagnostic view when live text is unavailable and the planned text mode
