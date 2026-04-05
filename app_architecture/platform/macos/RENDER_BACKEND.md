@@ -721,6 +721,10 @@ What this does and does not mean:
   `presentation_delta`, `presentation_ready`, presentation draw-pass helpers)
   instead of describing the live direct/retained split as a retained lane plus
   exceptions
+- terminal debug truth is less retained-texture-biased now too: presentation
+  samples and debug capture report `presentable_px` instead of `texture_px`,
+  which matches the fact that the active Metal terminal lane is a direct
+  presentable path rather than a retained texture-backed present path
 - that contract is intentionally backend-native rather than fake portability:
   the old cached GL `Texture` path is still OpenGL-only, while Metal Kitty
   images are created as frame-scoped native Metal textures and released after

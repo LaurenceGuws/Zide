@@ -96,13 +96,13 @@ pub fn dumpVisibleAsciiView(widget: anytype, shell: *Shell, log: anytype) !void 
         },
     );
     try out.writer(widget.session.allocator).print(
-        "terminal_present valid={d} mode={s} generation={d} texture_px=({d}x{d}) target_logical=({d:.3}x{d:.3}) source_logical=({d:.3}x{d:.3}) dest=({d:.3},{d:.3},{d:.3},{d:.3}) scale=({d:.6},{d:.6})\n",
+        "terminal_present valid={d} mode={s} generation={d} presentable_px=({d}x{d}) target_logical=({d:.3}x{d:.3}) source_logical=({d:.3}x{d:.3}) dest=({d:.3},{d:.3},{d:.3},{d:.3}) scale=({d:.6},{d:.6})\n",
         .{
             @intFromBool(debug.last_terminal_presentation.valid),
             @tagName(debug.last_terminal_presentation.mode),
             debug.last_terminal_presentation.generation,
-            debug.last_terminal_presentation.texture_w_px,
-            debug.last_terminal_presentation.texture_h_px,
+            debug.last_terminal_presentation.presentable_w_px,
+            debug.last_terminal_presentation.presentable_h_px,
             debug.last_terminal_presentation.target_logical_w,
             debug.last_terminal_presentation.target_logical_h,
             debug.last_terminal_presentation.source_logical_w,

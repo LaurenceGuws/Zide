@@ -446,6 +446,9 @@ lane.
       `presentation_delta`, `presentation_ready`, presentation draw-pass
       helpers) instead of describing the live direct/retained split as a
       retained lane plus exceptions
+    - terminal debug capture is less retained-texture-biased now too:
+      presentation samples report `presentable_px` instead of `texture_px`,
+      which better matches the active direct-main-target Metal lane
     - the terminal Metal diagnostic now reports `raw_image_textures=1`, keeps
       non-zero `kitty_ms`, and no longer relies on the previous unsupported
       backend gate for RGB/RGBA Kitty images

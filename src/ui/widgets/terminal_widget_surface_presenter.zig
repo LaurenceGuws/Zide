@@ -392,8 +392,8 @@ fn noteTerminalPresent(
         .valid = true,
         .mode = mode,
         .generation = generation,
-        .texture_w_px = 0,
-        .texture_h_px = 0,
+        .presentable_w_px = 0,
+        .presentable_h_px = 0,
         .target_logical_w = source_w,
         .target_logical_h = source_h,
         .source_logical_w = source_w,
@@ -407,8 +407,8 @@ fn noteTerminalPresent(
     };
     if (mode == .retained_surface) {
         if (renderer.retained_targets.terminal) |target| {
-            sample.texture_w_px = target.texture.width;
-            sample.texture_h_px = target.texture.height;
+            sample.presentable_w_px = target.texture.width;
+            sample.presentable_h_px = target.texture.height;
             sample.target_logical_w = @floatFromInt(target.logical_width);
             sample.target_logical_h = @floatFromInt(target.logical_height);
         } else {
