@@ -1248,15 +1248,12 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     }
 
     pub fn supportsRawImageTextures(self: *const Renderer) bool {
-        return self.backend == .opengl or (self.backend == .metal and self.metal_runtime.backend_context != null);
+        return self.backend == .opengl or (self.backend == .metal and metal_backend.hasBackendContext(self));
     }
 
     pub fn metalTerminalSnapshotAvailable(self: *const Renderer) bool {
         if (self.backend != .metal) return false;
-        if (self.metal_runtime.backend_context) |*context| {
-            return metal_backend.terminalSnapshotMatchesDrawable(context);
-        }
-        return false;
+        return metal_backend.terminalSnapshotAvailableForRenderer(self);
     }
 
     pub fn ensureMetalTerminalSnapshotPresentable(
@@ -1265,10 +1262,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         height: i32,
     ) bool {
         if (self.backend != .metal) return false;
-        if (self.metal_runtime.backend_context) |*context| {
-            return metal_backend.ensureTerminalSnapshotPresentable(context, width, height).recreated;
-        }
-        return false;
+        return metal_backend.ensureTerminalSnapshotPresentableForRenderer(self, width, height);
     }
 
     pub fn scrollMetalTerminalSnapshotPresentable(
@@ -1277,10 +1271,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         dy: i32,
     ) bool {
         if (self.backend != .metal) return false;
-        if (self.metal_runtime.backend_context) |*context| {
-            return metal_backend.scrollTerminalSnapshotPresentable(context, dx, dy);
-        }
-        return false;
+        return metal_backend.scrollTerminalSnapshotPresentableForRenderer(self, dx, dy);
     }
 
     pub fn sceneCompositionMode(self: *const Renderer) SceneCompositionMode {
@@ -1733,10 +1724,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     }
 
     pub fn macosMetalGlyphAtlasReady(self: *const Renderer) bool {
-        if (self.metal_runtime.backend_context) |*context| {
-            return metal_backend.glyphAtlasReady(context);
-        }
-        return false;
+        return metal_backend.glyphAtlasReadyForRenderer(self);
     }
 
     pub fn macosMetalAtlasPreviewSource(self: *const Renderer) AtlasPreviewSource {
@@ -1758,7 +1746,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             iface.EMOJI_COLOR_FALLBACK_PATH,
             iface.EMOJI_TEXT_FALLBACK_PATH,
             self.font_config.font_rendering,
-            metal_backend.terminalFontAtlasUploadHooks(&self.metal_runtime.backend_context.?),
+            metal_backend.terminalFontAtlasUploadHooksForRenderer(self) orelse return error.MetalBackendContextUnavailable,
         );
         font.render_scale = render_scale;
         return font;

@@ -1144,8 +1144,23 @@ pub fn backendContext(renderer: anytype) ?*BackendContext {
     return null;
 }
 
+pub fn backendContextConst(renderer: anytype) ?*const BackendContext {
+    if (renderer.metal_runtime.backend_context) |*context| return context;
+    return null;
+}
+
 pub fn hasBackendContext(renderer: anytype) bool {
-    return backendContext(renderer) != null;
+    return backendContextConst(renderer) != null;
+}
+
+pub fn glyphAtlasReadyForRenderer(renderer: anytype) bool {
+    const context = backendContextConst(renderer) orelse return false;
+    return glyphAtlasReady(context);
+}
+
+pub fn terminalFontAtlasUploadHooksForRenderer(renderer: anytype) ?terminal_font.AtlasUploadHooks {
+    const context = backendContext(renderer) orelse return null;
+    return terminalFontAtlasUploadHooks(context);
 }
 
 pub fn queuedSurfaceDrawCount(renderer: anytype) usize {
@@ -1163,6 +1178,21 @@ pub fn appendSurfaceDraw(renderer: anytype, draw: SurfaceDraw) bool {
         return false;
     };
     return true;
+}
+
+pub fn terminalSnapshotAvailableForRenderer(renderer: anytype) bool {
+    const context = backendContextConst(renderer) orelse return false;
+    return terminalSnapshotMatchesDrawable(context);
+}
+
+pub fn ensureTerminalSnapshotPresentableForRenderer(renderer: anytype, width: i32, height: i32) bool {
+    const context = backendContext(renderer) orelse return false;
+    return ensureTerminalSnapshotPresentable(context, width, height).recreated;
+}
+
+pub fn scrollTerminalSnapshotPresentableForRenderer(renderer: anytype, dx: i32, dy: i32) bool {
+    const context = backendContext(renderer) orelse return false;
+    return scrollTerminalSnapshotPresentable(context, dx, dy);
 }
 
 pub fn resizeBackendContext(

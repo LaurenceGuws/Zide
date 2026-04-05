@@ -133,6 +133,10 @@ Progress note, 2026-04-05:
   queued-surface append, and queued-surface count through `metal_backend.zig`
   helpers instead of open-coding those `renderer.metal_runtime` storage
   details.
+- Renderer/font call sites that only need Metal atlas hooks, glyph-atlas
+  readiness, or snapshot-presentable status now also route through
+  `metal_backend.zig` helpers instead of manually unwrapping the backend
+  context.
 - The next lifecycle step is to reduce shared-runtime ownership of dispatch and
   backend-native frame state, not just move code blocks around.
 

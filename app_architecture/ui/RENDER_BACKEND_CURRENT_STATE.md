@@ -99,6 +99,11 @@ renderer code now goes through `metal_backend` helpers for runtime-context
 lookup, queued-surface append, and queued-surface count instead of open-coding
 those `renderer.metal_runtime` storage details at each call site.
 
+That has improved slightly again: renderer/font call sites that only need
+Metal atlas hooks, glyph-atlas readiness, or snapshot-presentable status now
+also route through renderer-level `metal_backend` helpers instead of manually
+unwrapping the backend context at each call site.
+
 ### 2. Shared frame lifecycle still branches backend-by-backend
 
 The renderer root no longer spells out backend frame begin/submit bodies, but

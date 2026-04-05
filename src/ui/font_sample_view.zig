@@ -27,7 +27,7 @@ const SampleFontFace = struct {
         const raster_scale = renderer.logicalLengthToRaster(1.0);
         const raster_size = renderer.logicalLengthToRaster(layout_size);
         const atlas_upload_hooks = if (renderer.backend == .metal)
-            metal_backend.terminalFontAtlasUploadHooks(&(renderer.metal_runtime.backend_context orelse return error.MetalBackendContextUnavailable))
+            metal_backend.terminalFontAtlasUploadHooksForRenderer(renderer) orelse return error.MetalBackendContextUnavailable
         else
             null;
         var font = try TerminalFont.initWithAtlasUploadHooks(
