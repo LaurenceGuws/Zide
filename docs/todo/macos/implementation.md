@@ -443,6 +443,10 @@ lane.
       `metric_present_sample=direct_snapshot_presentable`, with grid/overlay
       row fallback counts and Kitty presentation work collapsing to zero on
       those reused frames
+    - that present-sample mode now also flows through the ordinary terminal
+      draw-latency surface, so non-diagnostic terminal runs can distinguish a
+      full direct draw from snapshot fast-present reuse without relying only
+      on the dedicated Metal terminal diagnostic runtime
     - the underlying terminal widget storage contract is less retained-first
       now too: the state container and partial-plan type are named around
       presentation instead of retained state, which reduces another place

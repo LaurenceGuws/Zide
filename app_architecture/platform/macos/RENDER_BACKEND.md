@@ -717,6 +717,10 @@ What this does and does not mean:
   grid/overlay/Kitty presentation work, which proves the direct Metal lane can
   fast-present the cached snapshot when generation and clear-generation remain
   unchanged
+- that steady-state present-sample mode is now published through the general
+  terminal draw-latency surface as well, so non-diagnostic terminal runs can
+  distinguish a full direct draw from snapshot fast-present reuse without
+  depending on the dedicated Metal terminal diagnostic runtime
 - the underlying storage contract is less retained-first now too: the terminal
   widget state container and partial-plan type are named around presentation
   rather than retained state, which reduces one more place where the direct
