@@ -284,6 +284,7 @@ pub const MOUSE_MIDDLE = input_constants.MOUSE_MIDDLE;
 const key_repeat_key_count: usize = sdl_api.scancode_count;
 const mouse_button_count: usize = 8;
 const input_queue_capacity: usize = 8192;
+const clip_stack_capacity: usize = 8;
 const KeyPress = input_state.KeyPress;
 
 const RenderTarget = gl_backend.RenderTarget;
@@ -566,6 +567,8 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     start_counter: u64,
     perf_freq: f64,
     present: scene_frame_runtime.PresentState,
+    clip_stack: [clip_stack_capacity]types.Rect,
+    clip_depth: usize,
 
     fn snapInt(value: f32) i32 {
         return @intFromFloat(std.math.round(value));
@@ -578,6 +581,66 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     fn snapToDevicePixel(value: f32, render_scale: f32) f32 {
         const scale = if (render_scale > 0.0) render_scale else 1.0;
         return @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(value * scale))))) / scale;
+    }
+
+    fn intersectRect(lhs: types.Rect, rhs: types.Rect) ?types.Rect {
+        const x0 = @max(lhs.x, rhs.x);
+        const y0 = @max(lhs.y, rhs.y);
+        const x1 = @min(lhs.x + lhs.width, rhs.x + rhs.width);
+        const y1 = @min(lhs.y + lhs.height, rhs.y + rhs.height);
+        const width = x1 - x0;
+        const height = y1 - y0;
+        if (width <= 0 or height <= 0) return null;
+        return .{ .x = x0, .y = y0, .width = width, .height = height };
+    }
+
+    fn logicalClipFromInts(x: i32, y: i32, w: i32, h: i32) ?types.Rect {
+        if (w <= 0 or h <= 0) return null;
+        return .{
+            .x = @floatFromInt(x),
+            .y = @floatFromInt(y),
+            .width = @floatFromInt(w),
+            .height = @floatFromInt(h),
+        };
+    }
+
+    fn applyGlScissorForClip(self: *Renderer, clip: types.Rect) void {
+        gl.Enable(gl.c.GL_SCISSOR_TEST);
+        const scale_x = @as(f32, @floatFromInt(self.target_pixel_width)) / @as(f32, @floatFromInt(self.target_width));
+        const scale_y = @as(f32, @floatFromInt(self.target_pixel_height)) / @as(f32, @floatFromInt(self.target_height));
+        const sx: i32 = @intFromFloat(clip.x * scale_x);
+        const sy: i32 = @intFromFloat((@as(f32, @floatFromInt(self.target_height)) - (clip.y + clip.height)) * scale_y);
+        const sw: i32 = @intFromFloat(clip.width * scale_x);
+        const sh: i32 = @intFromFloat(clip.height * scale_y);
+        const log = app_logger.logger("renderer.terminal_present");
+        if (log.enabled_file or log.enabled_console) {
+            log.logf(
+                .info,
+                "clip logical={d},{d} {d}x{d} scissor={d},{d} {d}x{d} target_logical={d}x{d} target_px={d}x{d} scale={d:.3},{d:.3}",
+                .{
+                    @as(i32, @intFromFloat(clip.x)),
+                    @as(i32, @intFromFloat(clip.y)),
+                    @as(i32, @intFromFloat(clip.width)),
+                    @as(i32, @intFromFloat(clip.height)),
+                    sx,
+                    sy,
+                    sw,
+                    sh,
+                    self.target_width,
+                    self.target_height,
+                    self.target_pixel_width,
+                    self.target_pixel_height,
+                    scale_x,
+                    scale_y,
+                },
+            );
+        }
+        gl.Scissor(sx, sy, sw, sh);
+    }
+
+    pub fn currentClipRect(self: *const Renderer) ?types.Rect {
+        if (self.clip_depth == 0) return null;
+        return self.clip_stack[self.clip_depth - 1];
     }
 
     fn startupGraphicsBinding(backend: RendererBackend) native_host.RenderSurfaceBinding {
@@ -790,6 +853,8 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             .start_counter = sdl_api.getPerformanceCounter(),
             .perf_freq = @as(f64, @floatFromInt(sdl_api.getPerformanceFrequency())),
             .present = .{},
+            .clip_stack = undefined,
+            .clip_depth = 0,
         };
 
         renderer.appkit_delegate_installation = macos_app_delegate.install(&renderer.app_host);
@@ -1506,41 +1571,49 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
 
     pub fn beginClip(self: *Renderer, x: i32, y: i32, w: i32, h: i32) void {
         scene_frame_runtime.noteCompositionClip(self);
-        gl.Enable(gl.c.GL_SCISSOR_TEST);
-        const scale_x = @as(f32, @floatFromInt(self.target_pixel_width)) / @as(f32, @floatFromInt(self.target_width));
-        const scale_y = @as(f32, @floatFromInt(self.target_pixel_height)) / @as(f32, @floatFromInt(self.target_height));
-        const sx: i32 = @intFromFloat(@as(f32, @floatFromInt(x)) * scale_x);
-        const sy: i32 = @intFromFloat(@as(f32, @floatFromInt(self.target_height - (y + h))) * scale_y);
-        const sw: i32 = @intFromFloat(@as(f32, @floatFromInt(w)) * scale_x);
-        const sh: i32 = @intFromFloat(@as(f32, @floatFromInt(h)) * scale_y);
-        const log = app_logger.logger("renderer.terminal_present");
-        if (log.enabled_file or log.enabled_console) {
-            log.logf(
-                .info,
-                "clip logical={d},{d} {d}x{d} scissor={d},{d} {d}x{d} target_logical={d}x{d} target_px={d}x{d} scale={d:.3},{d:.3}",
-                .{
-                    x,
-                    y,
-                    w,
-                    h,
-                    sx,
-                    sy,
-                    sw,
-                    sh,
-                    self.target_width,
-                    self.target_height,
-                    self.target_pixel_width,
-                    self.target_pixel_height,
-                    scale_x,
-                    scale_y,
-                },
-            );
+        const requested = logicalClipFromInts(x, y, w, h) orelse {
+            self.clip_depth = 0;
+            if (self.backend == .opengl) gl.Disable(gl.c.GL_SCISSOR_TEST);
+            return;
+        };
+        const next = if (self.currentClipRect()) |current|
+            intersectRect(current, requested) orelse types.Rect{
+                .x = requested.x,
+                .y = requested.y,
+                .width = 0,
+                .height = 0,
+            }
+        else
+            requested;
+        if (self.clip_depth < self.clip_stack.len) {
+            self.clip_stack[self.clip_depth] = next;
+            self.clip_depth += 1;
+        } else {
+            self.clip_stack[self.clip_stack.len - 1] = next;
         }
-        gl.Scissor(sx, sy, sw, sh);
+        if (self.backend == .opengl) {
+            if (next.width <= 0 or next.height <= 0) {
+                gl.Enable(gl.c.GL_SCISSOR_TEST);
+                gl.Scissor(0, 0, 0, 0);
+            } else {
+                self.applyGlScissorForClip(next);
+            }
+        }
     }
 
-    pub fn endClip(_: *Renderer) void {
-        gl.Disable(gl.c.GL_SCISSOR_TEST);
+    pub fn endClip(self: *Renderer) void {
+        if (self.clip_depth > 0) self.clip_depth -= 1;
+        if (self.backend != .opengl) return;
+        if (self.currentClipRect()) |clip| {
+            if (clip.width <= 0 or clip.height <= 0) {
+                gl.Enable(gl.c.GL_SCISSOR_TEST);
+                gl.Scissor(0, 0, 0, 0);
+            } else {
+                self.applyGlScissorForClip(clip);
+            }
+        } else {
+            gl.Disable(gl.c.GL_SCISSOR_TEST);
+        }
     }
 
     pub fn drawTerminalCell(

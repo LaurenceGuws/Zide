@@ -598,6 +598,10 @@ What this does and does not mean:
   sampled-text request shape: there is now a dedicated terminal-cell-run
   request and builder for tiny terminal-style rows, and the live macOS Metal
   text diagnostic reports `terminal_cell_run_draw=1` on the current host
+- clip ownership is now more renderer-native instead of purely caller-threaded:
+  the renderer keeps clip state from `beginClip`/`endClip`, and the narrow
+  Metal sampled-text and terminal-cell-run lanes inherit that active clip when
+  callers do not override it explicitly
 - this is still intentionally narrow and honest: it is now a tiny sampled
   multiline ASCII run with an explicit monospace-cell option rather than a
   claim that the generic string/text renderer has already migrated

@@ -343,6 +343,10 @@ lane.
     - that terminal-facing fallback now has its own request/builder seam for
       tiny terminal-style rows, and the live macOS Metal text diagnostic now
       reports `terminal_cell_run_draw=1` on the current host
+    - clip ownership is now more renderer-native instead of purely
+      caller-threaded: `beginClip`/`endClip` state is stored by the renderer
+      and inherited by the narrow Metal sampled-text and terminal-cell-run
+      paths when callers do not override clip explicitly
     - the narrow Metal text lane now covers a tiny multiline ASCII run, not
       just a single flat row
     - the diagnostic/runtime callers now use the explicit monospace-cell

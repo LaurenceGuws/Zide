@@ -47,6 +47,32 @@ fn pixelClipRect(renderer: *const Renderer, clip_rect: types.Rect) ?metal_backen
     };
 }
 
+fn intersectRect(lhs: types.Rect, rhs: types.Rect) ?types.Rect {
+    const x0 = @max(lhs.x, rhs.x);
+    const y0 = @max(lhs.y, rhs.y);
+    const x1 = @min(lhs.x + lhs.width, rhs.x + rhs.width);
+    const y1 = @min(lhs.y + lhs.height, rhs.y + rhs.height);
+    const width = x1 - x0;
+    const height = y1 - y0;
+    if (width <= 0 or height <= 0) return null;
+    return .{ .x = x0, .y = y0, .width = width, .height = height };
+}
+
+fn effectiveClipRect(renderer: *const Renderer, request_clip_rect: ?types.Rect) ?types.Rect {
+    return if (request_clip_rect) |requested|
+        if (renderer.currentClipRect()) |current|
+            intersectRect(current, requested) orelse types.Rect{
+                .x = requested.x,
+                .y = requested.y,
+                .width = 0,
+                .height = 0,
+            }
+        else
+            requested
+    else
+        renderer.currentClipRect();
+}
+
 pub fn appendAsciiRun(
     renderer: *const Renderer,
     font: *TerminalFont,
@@ -59,7 +85,7 @@ pub fn appendAsciiRun(
     const render_scale = if (renderer.scale.render_scale > 0.0) renderer.scale.render_scale else 1.0;
     const line_height = font.line_height / render_scale;
     const cell_width = font.cell_width / render_scale;
-    const clip = if (request.clip_rect) |clip_rect| pixelClipRect(renderer, clip_rect) else null;
+    const clip = if (effectiveClipRect(renderer, request.clip_rect)) |clip_rect| pixelClipRect(renderer, clip_rect) else null;
     var pen_x = request.x;
     var pen_y = request.y;
     var drew_any = false;
@@ -109,7 +135,7 @@ pub fn appendTerminalAsciiCells(
 ) bool {
     if (request.text.len == 0) return false;
     const render_scale = if (renderer.scale.render_scale > 0.0) renderer.scale.render_scale else 1.0;
-    const clip = if (request.clip_rect) |clip_rect| pixelClipRect(renderer, clip_rect) else null;
+    const clip = if (effectiveClipRect(renderer, request.clip_rect)) |clip_rect| pixelClipRect(renderer, clip_rect) else null;
     var pen_x = request.x;
     var pen_y = request.y;
     var drew_any = false;
