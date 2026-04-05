@@ -618,6 +618,10 @@ lane.
       dirty frames even though the main composition target clears every frame
     - fixed in `editor_widget_draw`: retained editor surfaces are still updated
       only when dirty, but they are now drawn every frame when available
+    - follow-up correction: the underlying macOS OpenGL retained editor surface
+      path is still not trustworthy after input mutation, so editor rendering on
+      macOS GL now falls back to direct redraw instead of using the broken
+      retained editor surface optimization
     - native macOS smoke after the fix:
       - `ZIDE_EDITOR_LIVE_SMOKE_SCENARIO=type ... zig build run -- --mode editor`
       - `ZIDE_EDITOR_LIVE_SMOKE_SCENARIO=type ... zig build run`

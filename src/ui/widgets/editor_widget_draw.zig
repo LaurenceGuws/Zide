@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const syntax_mod = @import("../../editor/syntax.zig");
 const selection_mod = @import("../../editor/view/selection.zig");
 const chrome_geometry_mod = @import("../../editor/view/chrome_geometry.zig");
@@ -267,7 +268,8 @@ pub fn drawCached(
     const draw_list = &cache.draw_list;
 
     const texture_changed = retained_targets_runtime.ensureSurface(r, .editor, @intFromFloat(width), @intFromFloat(height));
-    const use_retained_editor_surface = retained_targets_runtime.surfaceAvailable(r, .editor);
+    const use_retained_editor_surface = retained_targets_runtime.surfaceAvailable(r, .editor) and
+        !(builtin.os.tag == .macos and r.backend == .opengl);
     var force_redraw = cache.beginFrame(
         frame_id,
         cols,
