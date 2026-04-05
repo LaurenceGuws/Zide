@@ -852,6 +852,14 @@ What this does and does not mean:
   `powerline=10 shade=6 braille=10 box=159 other_special=0`, which is a
   more representative `btop`-style bar/box pressure mix than the earlier
   dashboard row set
+- a real live-lane contradiction is fixed now too: the Metal terminal row
+  fallback had still been truncating fallback cells to `u8` and the backend
+  helper only iterated raw bytes, which meant non-ASCII fallback cells could
+  silently disappear even though the atlas path itself could upload them
+- the current Metal fallback seam now carries UTF-8 terminal row data through
+  `metal_text_sample_runtime` and `terminal_widget_draw_grid`, so single-cell
+  non-ASCII fallback runs no longer structurally collapse to ASCII-only
+  rendering on the live Metal path
 - that same dashboard lane is now runtime-proven under churn too instead of
   only on the first full frame: a dashboard mutation frame now stays on
   `metric_present_sample=direct_snapshot_update` with

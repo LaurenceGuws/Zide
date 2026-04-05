@@ -2089,7 +2089,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
 
         const font = self.ensureMetalDiagnosticFont() catch return false;
 
-        return metal_text_sample_runtime.appendAsciiRun(
+        return metal_text_sample_runtime.appendUtf8Run(
             self,
             font,
             request,
@@ -2103,7 +2103,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         if (self.plannedTextRenderingMode() != .metal_texture_atlas) return false;
         if (self.metal_backend_context == null) return false;
 
-        return metal_text_sample_runtime.appendTerminalAsciiCells(
+        return metal_text_sample_runtime.appendTerminalUtf8Cells(
             self,
             font,
             request,

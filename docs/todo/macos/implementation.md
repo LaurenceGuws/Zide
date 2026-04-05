@@ -863,6 +863,15 @@ lane.
     - with that richer mixed dashboard content, the first-frame proof is now
       `powerline=10 shade=6 braille=10 box=159 other_special=0`, with
       `shaped_special_glyphs=185`
+    - a real live Metal contradiction is fixed too: the narrow terminal row
+      fallback was still truncating fallback cells to `u8`, and the Metal
+      sample helper only iterated raw bytes, so non-ASCII fallback cells could
+      disappear even when the atlas/upload path itself was capable of drawing
+      them
+    - the current fallback seam now carries UTF-8 terminal row data through
+      the Metal sample/runtime path instead of ASCII-only bytes, which is the
+      first honest fix for the “only some plain text renders” class of live
+      `btop` failures
     - the dashboard fixture is now proven under churn too:
       `DASHBOARD=1` plus `MUTATE_FRAME=1` yields
       `metric_present_sample=direct_snapshot_update`,

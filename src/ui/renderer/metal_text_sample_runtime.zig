@@ -162,7 +162,7 @@ fn effectiveClipRect(renderer: *const Renderer, request_clip_rect: ?types.Rect) 
         renderer.currentClipRect();
 }
 
-pub fn appendAsciiRun(
+pub fn appendUtf8Run(
     renderer: *const Renderer,
     font: *TerminalFont,
     request: SampleTextRequest,
@@ -179,18 +179,19 @@ pub fn appendAsciiRun(
     var pen_y = request.y;
     var drew_any = false;
 
-    for (request.text) |char| {
-        if (char == '\n') {
+    var it = std.unicode.Utf8View.init(request.text) catch return false;
+    var iterator = it.iterator();
+    while (iterator.nextCodepoint()) |codepoint| {
+        if (codepoint == '\n') {
             pen_x = request.x;
             pen_y += line_height;
             continue;
         }
-        if (char == ' ') {
+        if (codepoint == ' ') {
             pen_x += cell_width;
             continue;
         }
 
-        const codepoint: u32 = char;
         const sample = atlasSampleForGlyph(renderer, font, codepoint, pen_x, pen_y, request.tint, clip) orelse return drew_any;
         const advance_glyph = blk: {
             const direct = font.directFastGlyphForCodepoint(codepoint) orelse return drew_any;
@@ -210,7 +211,7 @@ pub fn appendAsciiRun(
     return drew_any;
 }
 
-pub fn appendTerminalAsciiCells(
+pub fn appendTerminalUtf8Cells(
     renderer: *const Renderer,
     font: *TerminalFont,
     request: TerminalCellRunRequest,
@@ -224,18 +225,19 @@ pub fn appendTerminalAsciiCells(
     var pen_y = request.y;
     var drew_any = false;
 
-    for (request.text) |char| {
-        if (char == '\n') {
+    var it = std.unicode.Utf8View.init(request.text) catch return false;
+    var iterator = it.iterator();
+    while (iterator.nextCodepoint()) |codepoint| {
+        if (codepoint == '\n') {
             pen_x = request.x;
             pen_y += request.cell_height;
             continue;
         }
-        if (char == ' ') {
+        if (codepoint == ' ') {
             pen_x += request.cell_width;
             continue;
         }
 
-        const codepoint: u32 = char;
         const sample = atlasSampleForGlyph(renderer, font, codepoint, pen_x, pen_y, request.tint, clip) orelse {
             pen_x += request.cell_width;
             continue;
@@ -246,8 +248,8 @@ pub fn appendTerminalAsciiCells(
         draw_count.* += 1;
         drew_any = true;
         pen_x += request.cell_width;
-        _ = render_scale;
     }
 
+    _ = render_scale;
     return drew_any;
 }

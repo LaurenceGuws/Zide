@@ -352,23 +352,35 @@ fn drawMetalTerminalFallbackRun(
     const first_style = resolveTerminalCellStyle(first_cell, screen_reverse_mode, hover_link, blink_style_mode, blink_time_s, draw_cursor_mode, cursor_pos, cursor_style, row_idx, start_col);
     if (!cellSupportsMetalTerminalRowFallback(first_cell, first_style)) return 0;
 
-    var run_buf: [256]u8 = undefined;
-    var run_len: usize = 0;
+    var run_buf: [1024]u8 = undefined;
+    var run_len_bytes: usize = 0;
+    var run_cells: usize = 0;
     var col = start_col;
-    while (col < span_end_excl and col < cols_count and col < row_cells.len and run_len < run_buf.len) : (col += 1) {
+    while (col < span_end_excl and col < cols_count and col < row_cells.len and run_len_bytes < run_buf.len) : (col += 1) {
         const cell = row_cells[col];
         const style = resolveTerminalCellStyle(cell, screen_reverse_mode, hover_link, blink_style_mode, blink_time_s, draw_cursor_mode, cursor_pos, cursor_style, row_idx, col);
         if (!cellSupportsMetalTerminalRowFallback(cell, style)) break;
         if (!colorEql(style.fg, first_style.fg)) break;
         if (style.underline != first_style.underline) break;
         if (style.block_cursor_here != first_style.block_cursor_here) break;
-        run_buf[run_len] = if (cell.codepoint == 0) ' ' else @as(u8, @intCast(cell.codepoint));
-        run_len += 1;
+        if (cell.codepoint == 0) {
+            run_buf[run_len_bytes] = ' ';
+            run_len_bytes += 1;
+            run_cells += 1;
+            continue;
+        }
+
+        const scalar = std.math.cast(u21, cell.codepoint) orelse break;
+        const encoded_len = std.unicode.utf8CodepointSequenceLength(scalar) catch break;
+        if (run_len_bytes + encoded_len > run_buf.len) break;
+        _ = std.unicode.utf8Encode(scalar, run_buf[run_len_bytes .. run_len_bytes + encoded_len]) catch break;
+        run_len_bytes += encoded_len;
+        run_cells += 1;
     }
-    if (run_len == 0) return 0;
+    if (run_cells == 0) return 0;
 
     var has_visible = false;
-    for (run_buf[0..run_len]) |char| {
+    for (run_buf[0..run_len_bytes]) |char| {
         if (char != ' ') {
             has_visible = true;
             break;
@@ -379,7 +391,7 @@ fn drawMetalTerminalFallbackRun(
     const cell_y = base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h;
     if (has_visible) {
         _ = rr.drawMetalTerminalCellRun(&rr.terminal_font, .{
-            .text = run_buf[0..run_len],
+            .text = run_buf[0..run_len_bytes],
             .x = cell_x,
             .y = cell_y,
             .cell_width = cell_w,
@@ -393,7 +405,7 @@ fn drawMetalTerminalFallbackRun(
             cursor_pos,
             row_cells,
             start_col,
-            run_len,
+            run_cells,
             cell_x,
             cell_y,
             cell_w,
@@ -401,12 +413,12 @@ fn drawMetalTerminalFallbackRun(
             if (rr.terminal_font.render_scale > 0.0) rr.terminal_font.render_scale else 1.0,
         );
     }
-    if (stats) |s| s.fallback_cells += run_len;
+    if (stats) |s| s.fallback_cells += run_cells;
     if (metal_fallback_sample) |sample| {
         sample.grid_row_runs += 1;
-        sample.grid_row_cells += run_len;
+        sample.grid_row_cells += run_cells;
     }
-    return run_len;
+    return run_cells;
 }
 
 fn resolvedDrawBackgroundColor(
