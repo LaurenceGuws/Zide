@@ -57,9 +57,9 @@ pub fn drawGlyph(
             .height = axis_y.size,
         };
         if (glyph.is_color) {
-            draw.drawTexture(draw.ctx, self.color_texture, glyph.rect, dest, draw_color, .rgba);
+            draw.drawTexture(draw.ctx, self.colorTexture(), glyph.rect, dest, draw_color, .rgba);
         } else {
-            draw.drawTexture(draw.ctx, self.coverage_texture, glyph.rect, dest, draw_color, .font_coverage);
+            draw.drawTexture(draw.ctx, self.coverageTexture(), glyph.rect, dest, draw_color, .font_coverage);
         }
         return;
     }
@@ -75,9 +75,9 @@ pub fn drawGlyph(
         .height = axis_y.size,
     };
     if (glyph.is_color) {
-        draw.drawTexture(draw.ctx, self.color_texture, glyph.rect, dest, draw_color, .rgba);
+        draw.drawTexture(draw.ctx, self.colorTexture(), glyph.rect, dest, draw_color, .rgba);
     } else {
-        draw.drawTexture(draw.ctx, self.coverage_texture, glyph.rect, dest, draw_color, .font_coverage);
+        draw.drawTexture(draw.ctx, self.coverageTexture(), glyph.rect, dest, draw_color, .font_coverage);
     }
 }
 
@@ -158,9 +158,9 @@ pub fn drawGrapheme(
 
         const draw_color = if (glyph.is_color) Rgba{ .r = 255, .g = 255, .b = 255, .a = 255 } else color;
         if (glyph.is_color) {
-            draw.drawTexture(draw.ctx, self.color_texture, glyph.rect, dest, draw_color, .rgba);
+            draw.drawTexture(draw.ctx, self.colorTexture(), glyph.rect, dest, draw_color, .rgba);
         } else {
-            draw.drawTexture(draw.ctx, self.coverage_texture, glyph.rect, dest, draw_color, .font_coverage);
+            draw.drawTexture(draw.ctx, self.coverageTexture(), glyph.rect, dest, draw_color, .font_coverage);
         }
 
         pen_x += (@as(f32, @floatFromInt(positions[i].x_advance)) / 64.0) * inv_scale;

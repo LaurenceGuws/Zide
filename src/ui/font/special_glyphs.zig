@@ -137,7 +137,12 @@ pub fn getOrCreateSpecialGlyphSpriteWithStatus(
         .width = @floatFromInt(width),
         .height = @floatFromInt(height),
     };
-    font_atlas.updateTextureRegionR8(self.coverage_texture, rec, mask);
+    if (!self.uploadCoverageAtlasRegion(rec, mask)) {
+        if (variant == .powerline or isPowerlineCodepoint(codepoint)) {
+            special_log.logf(.info, "sprite_create_fail cp=U+{X} reason=atlas_upload_failed cell={d}x{d} raster={d}x{d} rs={d:.3}", .{ codepoint, cell_w_px, cell_h_px, width, height, rs });
+        }
+        return .{ .sprite = null, .created = false };
+    }
 
     if (height > self.row_h) self.row_h = height;
     self.pen_x += width + self.padding;

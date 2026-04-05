@@ -57,7 +57,19 @@ Quick reading guide:
   - `docs/todo/app_hygiene_cleanup.md` — app/build/platform hygiene cleanup queue for dependency boundaries, SDL3 residue, and repo-contract hardening.
 
 ## Architecture + design
+- `app_architecture/platform/NATIVE_HOST_CONTRACT.md` — strict shared native
+  host contract for lifecycle, surface, focus, IME, and present semantics.
 - `app_architecture/ui/DEVELOPMENT_JOURNEY.md` — renderer plan and per-OS journey.
+- `app_architecture/platform/NATIVE_HOST_REFERENCE_CROSSCHECK.md` — current
+  native-host architecture pressure: live SDL/GL truth versus macOS/Android
+  native lifecycle and surface rules.
+- `app_architecture/platform/PLATFORM_CAPABILITY_MODEL.md` — naming authority
+  for platform host truth, optional features, and current runtime graphics
+  truth.
+- `app_architecture/platform/macos/RENDER_BACKEND.md` — macOS AppKit + Metal
+  host/backend authority.
+- `app_architecture/platform/android/RENDER_BACKEND.md` — Android Activity +
+  `ANativeWindow` host/backend authority.
 - `app_architecture/ui/WINDOW_SCALE_GEOMETRY_DESIGN.md` — exact public widget
   and terminal geometry contract plus first API deletion list for the scale
   ownership lane.

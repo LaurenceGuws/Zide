@@ -17,17 +17,29 @@ pub fn handle(state: anytype, shell: *Shell) bool {
             const screenshot_w = app_bootstrap.parseEnvI32("ZIDE_FONT_SAMPLE_SCREENSHOT_WIDTH", 0);
             const screenshot_h = app_bootstrap.parseEnvI32("ZIDE_FONT_SAMPLE_SCREENSHOT_HEIGHT", 0);
             if (screenshot_w > 0 and screenshot_h > 0) {
-                shell.dumpWindowScreenshotPpmSized(path, screenshot_w, screenshot_h) catch |err| {
+                const result = shell.requestWindowScreenshotPpmSized(path, screenshot_w, screenshot_h) catch |err| {
                     log.logf(
                         .warning,
                         "screenshot failed path={s} mode=sized size={d}x{d} err={s}",
                         .{ path, screenshot_w, screenshot_h, @errorName(err) },
                     );
+                    shell.requestClose();
+                    state.font_sample_close_pending = false;
+                    return true;
                 };
+                if (result == .armed_present_capture) {
+                    log.logf(.info, "screenshot armed path={s} mode=present_capture", .{path});
+                }
             } else {
-                shell.dumpWindowScreenshotPpm(path) catch |err| {
+                const result = shell.requestWindowScreenshotPpm(path) catch |err| {
                     log.logf(.warning, "screenshot failed path={s} mode=window err={s}", .{ path, @errorName(err) });
+                    shell.requestClose();
+                    state.font_sample_close_pending = false;
+                    return true;
                 };
+                if (result == .armed_present_capture) {
+                    log.logf(.info, "screenshot armed path={s} mode=present_capture", .{path});
+                }
             }
         }
         shell.requestClose();

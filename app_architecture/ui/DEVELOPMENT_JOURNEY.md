@@ -65,7 +65,11 @@ Non-negotiable rules
 - We do not invent new rendering paradigms. We follow the reference repos unless forced by Zide's architecture.
 - Any deviation must be recorded in app_architecture/DECISIONS.md with a concrete reason.
 - Renderer backend expansion is not active work. Current live runtime truth is
-  SDL3 + OpenGL.
+  SDL3 + OpenGL, but backend work is now downstream of the native-host
+  contract pressure in
+  `app_architecture/platform/NATIVE_HOST_REFERENCE_CROSSCHECK.md`.
+- Platform wording must distinguish host truth from current graphics truth; use
+  `app_architecture/platform/PLATFORM_CAPABILITY_MODEL.md`.
 - macOS-first-class reopening is now tracked explicitly in
   `docs/todo/macos/implementation.md`; do not treat the current macOS
   SDL/OpenGL build truth as the destination architecture.
@@ -146,6 +150,12 @@ Draw primitives (minimal, GPU-friendly)
 - macOS: Metal (matches ghostty and zed)
 - Android: OpenGL ES 3.x (native and stable)
 
+Important qualification:
+
+- these are renderer targets, not the top-level platform architecture
+- native lifecycle and surface ownership must be carved first
+- do not treat backend labels as a substitute for a shared native-host contract
+
 Rendering model (from kitty/alacritty)
 - GPU glyph atlas with cached glyph bitmaps.
 - Batch draw calls into large vertex buffers per frame.
@@ -181,6 +191,8 @@ Phase 2 - Windows 11 (SDL3 + OpenGL)
 Phase 3 - macOS
 - macOS is now an explicit tracked product lane:
   - use `docs/todo/macos/implementation.md`
+- shared native-host pressure:
+  - use `app_architecture/platform/NATIVE_HOST_REFERENCE_CROSSCHECK.md`
 - target renderer direction:
   - Metal + AppKit/Cocoa
 - strongest reference pressure:
@@ -190,8 +202,11 @@ Phase 3 - macOS
 - use CoreText only if required; otherwise keep FreeType/HarfBuzz.
 
 Phase 4 - Android
+- Android must be planned against the same native-host contract as macOS, not
+  as a later backend variant of the current SDL/GL host.
 - Re-rank GLES backend work only when Android becomes active product scope.
-- Handle activity pause/resume, surface loss, and context recreation.
+- Handle Activity lifecycle, surface loss/replacement, redraw-needed events,
+  and context recreation as host-contract concerns first.
 
 Phase 5 - Parity and quality
 - Match kitty-level glyph caching behavior and render loop stability.

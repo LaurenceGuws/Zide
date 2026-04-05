@@ -1,6 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const sdl_api = @import("sdl_api.zig");
+const native_host = @import("native_host.zig");
 const app_logger = @import("../app_logger.zig");
 const window_chrome_runtime = @import("../ui/renderer/window_chrome_runtime.zig");
 const shared_types = @import("../types/mod.zig");
@@ -11,7 +11,7 @@ pub const Sink = if (builtin.target.os.tag == .windows) WindowsSink else StubSin
 
 const StubSink = struct {
     pub fn deinit(_: *StubSink) void {}
-    pub fn sync(_: *StubSink, _: *sdl_api.c.SDL_Window, _: window_chrome_runtime.WindowChromeContract, _: bool) void {}
+    pub fn sync(_: *StubSink, _: native_host.PlatformRenderHost, _: window_chrome_runtime.WindowChromeContract, _: bool) void {}
     pub fn active(_: *const StubSink) bool {
         return false;
     }
@@ -257,7 +257,7 @@ const WindowsSink = struct {
         return self.owns_chrome and self.child_hwnd != null;
     }
 
-    pub fn sync(self: *WindowsSink, window: *sdl_api.c.SDL_Window, contract: window_chrome_runtime.WindowChromeContract, maximized: bool) void {
+    pub fn sync(self: *WindowsSink, render_host: native_host.PlatformRenderHost, contract: window_chrome_runtime.WindowChromeContract, maximized: bool) void {
         if (contract.mode == .native or contract.sink_rect.width <= 0 or contract.sink_rect.height <= 0 or contract.minimize_rect.width <= 0 or contract.maximize_rect.width <= 0 or contract.close_rect.width <= 0) {
             self.owns_chrome = false;
             self.hovered_button = .none;
@@ -267,7 +267,7 @@ const WindowsSink = struct {
             return;
         }
 
-        const parent = sdl_api.getWindowWin32Hwnd(window) orelse {
+        const parent = render_host.win32Hwnd() orelse {
             self.owns_chrome = false;
             self.hideChild();
             return;

@@ -2,11 +2,13 @@ const std = @import("std");
 const iface = @import("renderer/interface.zig");
 const terminal_font_mod = @import("terminal_font.zig");
 const TerminalFont = terminal_font_mod.TerminalFont;
+const AtlasStorageMode = terminal_font_mod.AtlasStorageMode;
 const FontRenderingOptions = terminal_font_mod.RenderingOptions;
 const hb = terminal_font_mod.c;
 const font_manager = @import("renderer/font_manager.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
 const gl_backend = @import("renderer/gl_backend.zig");
+const metal_backend = @import("renderer/metal_backend.zig");
 const input_constants = @import("renderer/input_constants.zig");
 const clipboard = @import("renderer/clipboard.zig");
 const texture_utils = @import("renderer/texture_utils.zig");
@@ -30,9 +32,13 @@ const scene_frame_runtime = @import("renderer/scene_frame_runtime.zig");
 const text_runtime = @import("renderer/text_runtime.zig");
 const window_chrome_runtime = @import("renderer/window_chrome_runtime.zig");
 const app_lifecycle_runtime = @import("../app/lifecycle_runtime.zig");
+const macos_host = @import("../platform/macos_host.zig");
+const macos_app_delegate = @import("../platform/macos_app_delegate.zig");
+const macos_metal_host = @import("../platform/macos_metal_host.zig");
 const windows_snap_layout_sink = @import("../platform/windows_snap_layout_sink.zig");
 const windows_frame_material = @import("../platform/windows_frame_material.zig");
 const windows_integrated_frame = @import("../platform/windows_integrated_frame.zig");
+const native_host = @import("../platform/native_host.zig");
 const platform_window = @import("../platform/window_metrics.zig");
 const platform_input_events = @import("../platform/input_events.zig");
 const build_options = @import("build_options");
@@ -113,6 +119,40 @@ pub const WindowRefreshResult = struct {
             self.scene_target_invalidation.render_scale_change;
     }
 };
+
+pub const ScreenshotMode = enum {
+    unavailable,
+    direct_window_readback,
+    present_capture,
+};
+
+pub const SceneCompositionMode = enum {
+    direct_main_target,
+    offscreen_scene_target,
+};
+
+pub const TextRenderingMode = enum {
+    unavailable,
+    gl_texture_atlas,
+    metal_texture_atlas,
+};
+
+pub const AtlasPreviewSource = enum {
+    unavailable,
+    seeded_color_block,
+    uploaded_coverage_glyph,
+    uploaded_color_glyph,
+};
+
+pub const RendererCapabilities = struct {
+    scene_composition_mode: SceneCompositionMode,
+    retained_targets: bool,
+    screenshot_mode: ScreenshotMode,
+    text_rendering_mode: TextRenderingMode,
+    planned_text_rendering_mode: TextRenderingMode,
+    atlas_storage_mode: AtlasStorageMode,
+    planned_atlas_storage_mode: AtlasStorageMode,
+};
 pub const EditorTextStyleFlags = iface.EditorTextStyleFlags;
 pub const editor_syntax_style_slots = iface.editor_syntax_style_slots;
 
@@ -125,6 +165,7 @@ pub const FontConfigState = font_manager.FontConfigState;
 pub const ClipboardState = clipboard.ClipboardState;
 pub const TerminalTextState = text_runtime.TerminalTextState;
 pub const RetainedTargetState = retained_targets_runtime.RetainedTargetState;
+const MainCompositionTarget = scene_frame_runtime.MainCompositionTarget;
 pub const TerminalDisableLigaturesStrategy = enum {
     never,
     cursor,
@@ -285,7 +326,9 @@ fn sceneTargetInvalidationForRefresh(
     scene_target: SceneTargetState,
     changes: WindowChangeMask,
     metrics: platform_window.DisplayMetrics,
+    scene_targets_supported: bool,
 ) SceneTargetInvalidation {
+    if (!scene_targets_supported) return .{};
     const next = sceneTargetContractFromDisplayMetrics(metrics);
     const previous = scene_target.contract;
     var reasons: SceneTargetInvalidation = .{};
@@ -371,6 +414,8 @@ pub const Renderer = struct {
         text_gamma: f32 = 1.0,
         text_contrast: f32 = 1.0,
         text_linear_correction: bool = true,
+        renderer_backend: RendererBackend = .opengl,
+        runtime_profile: RendererRuntimeProfile = .full_ui,
     };
 
     pub const ScaledFontMetrics = struct {
@@ -420,12 +465,38 @@ pub const Renderer = struct {
         bg_rgba: types.Rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 },
     };
 
-    pub const WindowChromeMode = window_chrome_runtime.WindowChromeMode;
-    pub const WindowChromeContract = window_chrome_runtime.WindowChromeContract;
+pub const WindowChromeMode = window_chrome_runtime.WindowChromeMode;
+pub const WindowChromeContract = window_chrome_runtime.WindowChromeContract;
+pub const ExternalIntent = native_host.ExternalIntent;
+pub const MacOsMetalAttachmentTarget = macos_host.MetalAttachmentTarget;
+pub const MacOsMetalHost = macos_metal_host.Host;
+pub const MacOsMetalBackendContext = metal_backend.BackendContext;
+pub const RendererBackend = enum {
+    opengl,
+    metal,
+};
+pub const RendererRuntimeProfile = enum {
+    full_ui,
+    backend_smoke,
+};
+pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
 
     allocator: std.mem.Allocator,
+    backend: RendererBackend,
+    runtime_profile: RendererRuntimeProfile,
+    app_host: native_host.PlatformAppHost,
+    app_event_watch_installed: bool,
+    appkit_delegate_installation: ?macos_app_delegate.Installation,
+    render_host: native_host.PlatformRenderHost,
+    render_surface_attachment: RenderSurfaceAttachment,
     window: *sdl.SDL_Window,
-    gl_context: sdl.SDL_GLContext,
+    gl_context: ?sdl.SDL_GLContext,
+    metal_backend_context: ?metal_backend.BackendContext,
+    metal_frame: ?metal_backend.Frame,
+    metal_atlas_preview: ?metal_backend.AtlasPreview,
+    metal_debug_preview_source: AtlasPreviewSource,
+    gl_resources_ready: bool,
+    fonts_ready: bool,
     width: i32,
     height: i32,
     render_width: i32,
@@ -506,19 +577,73 @@ pub const Renderer = struct {
         return @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(value * scale))))) / scale;
     }
 
+    fn startupGraphicsBinding(backend: RendererBackend) native_host.RenderSurfaceBinding {
+        return switch (backend) {
+            .opengl => .opengl,
+            .metal => .metal,
+        };
+    }
+
+    fn configureStartupBackend(backend: RendererBackend) !void {
+        switch (backend) {
+            .opengl => try gl_backend.configureWindowAttributes(),
+            .metal => {},
+        }
+    }
+
+    fn installAppEventWatch(app_host: *native_host.PlatformAppHost) bool {
+        if (builtin.target.os.tag != .macos) return false;
+        return sdl_api.addEventWatch(appEventWatchCallback, app_host);
+    }
+
+    fn removeAppEventWatch(app_host: *native_host.PlatformAppHost) void {
+        if (builtin.target.os.tag != .macos) return;
+        sdl_api.removeEventWatch(appEventWatchCallback, app_host);
+    }
+
+    fn appEventWatchCallback(userdata: ?*anyopaque, event: [*c]sdl_api.c.SDL_Event) callconv(.c) bool {
+        const raw = userdata orelse return true;
+        const app_host: *native_host.PlatformAppHost = @ptrCast(@alignCast(raw));
+        if (event == null) return true;
+        const evt = event[0];
+        switch (evt.type) {
+            sdl_api.EVENT_APP_TERMINATING => app_host.noteTerminationRequested(),
+            sdl_api.EVENT_APP_DID_ENTER_BACKGROUND => app_host.notePaused(),
+            sdl_api.EVENT_APP_DID_ENTER_FOREGROUND => app_host.noteResumed(),
+            else => {},
+        }
+        return true;
+    }
+
     pub fn init(allocator: std.mem.Allocator, width: i32, height: i32, title: [*:0]const u8, init_options: InitOptions) !*Renderer {
         try window_init.initSdl();
         errdefer sdl.SDL_Quit();
 
-        try window_init.configureGlAttributes();
+        const startup_backend = init_options.renderer_backend;
+        const runtime_profile = init_options.runtime_profile;
+        try configureStartupBackend(startup_backend);
 
-        const window = try window_init.createWindow(width, height, title);
+        const graphics_binding = startupGraphicsBinding(startup_backend);
+        const window = try window_init.createWindow(width, height, title, graphics_binding);
         errdefer sdl.SDL_DestroyWindow(window);
+        const app_host = native_host.currentAppHost();
+        const render_host = native_host.captureRenderHost(window, graphics_binding);
+        const render_surface_attachment = try window_init.attachRenderSurface(render_host);
+        errdefer {
+            var render_surface_attachment_cleanup = render_surface_attachment;
+            window_init.deinitRenderSurfaceAttachment(&render_surface_attachment_cleanup);
+        }
 
-        const gl_context = try window_init.createGlContext(window);
-        errdefer sdl_api.glDeleteContext(gl_context);
+        if (startup_backend != .opengl and runtime_profile != .backend_smoke) {
+            return error.RendererBackendRuntimeNotReady;
+        }
 
-        try gl.load();
+        const gl_context = if (startup_backend == .opengl) blk: {
+            const context = try gl_backend.createBackendContext(window);
+            errdefer sdl_api.glDeleteContext(context);
+            try gl.load();
+            break :blk context;
+        } else null;
 
         var renderer = try allocator.create(Renderer);
         errdefer allocator.destroy(renderer);
@@ -554,8 +679,21 @@ pub const Renderer = struct {
 
         renderer.* = .{
             .allocator = allocator,
+            .backend = startup_backend,
+            .runtime_profile = runtime_profile,
+            .app_host = app_host,
+            .app_event_watch_installed = false,
+            .appkit_delegate_installation = null,
+            .render_host = render_host,
+            .render_surface_attachment = render_surface_attachment,
             .window = window,
             .gl_context = gl_context,
+            .metal_backend_context = null,
+            .metal_frame = null,
+            .metal_atlas_preview = null,
+            .metal_debug_preview_source = .unavailable,
+            .gl_resources_ready = false,
+            .fonts_ready = false,
             .width = display_metrics.window_w,
             .height = display_metrics.window_h,
             .render_width = display_metrics.drawable_w,
@@ -650,28 +788,84 @@ pub const Renderer = struct {
             .present = .{},
         };
 
-        if (renderer.terminal_render_policy.recent_input_full_publication.force_full_enabled) {
+        renderer.appkit_delegate_installation = macos_app_delegate.install(&renderer.app_host);
+        renderer.app_event_watch_installed = installAppEventWatch(&renderer.app_host);
+
+        if (renderer.backend == .opengl and renderer.terminal_render_policy.recent_input_full_publication.force_full_enabled) {
             if (!sdl_api.glSetSwapInterval(0)) {
                 app_logger.logger("sdl.gl").logStdout(.warning, "SDL_GL_SetSwapInterval failed interval=0 err={s}", .{sdl_api.getError()});
             }
         }
 
-        try renderer.initGlResources();
-        try renderer.initFonts();
+        switch (renderer.backend) {
+            .opengl => {
+                try renderer.initGlResources();
+                renderer.gl_resources_ready = true;
+                try renderer.initFonts();
+                renderer.fonts_ready = true;
+            },
+            .metal => {
+                if (renderer.runtime_profile != .backend_smoke) return error.RendererBackendRuntimeNotReady;
+                const host = renderer.prepareMacosMetalHost() orelse return error.MacosMetalAttachmentUnavailable;
+                renderer.metal_backend_context = metal_backend.createBackendContext(host, renderer.render_width, renderer.render_height) orelse return error.MetalBackendContextUnavailable;
+            },
+        }
 
         input_state.startTextInput(renderer.inputDomain());
         active_renderer = renderer;
         return renderer;
     }
 
+    pub fn runStartupBackendSmoke(width: i32, height: i32, title: [*:0]const u8, backend: RendererBackend) !bool {
+        try window_init.initSdl();
+        errdefer sdl.SDL_Quit();
+
+        try configureStartupBackend(backend);
+
+        const graphics_binding = startupGraphicsBinding(backend);
+        const window = try window_init.createWindow(width, height, title, graphics_binding);
+        defer sdl.SDL_DestroyWindow(window);
+
+        const render_host = native_host.captureRenderHost(window, graphics_binding);
+        var render_surface_attachment = try window_init.attachRenderSurface(render_host);
+        defer window_init.deinitRenderSurfaceAttachment(&render_surface_attachment);
+
+        return switch (backend) {
+            .opengl => blk: {
+                const gl_context = try gl_backend.createBackendContext(window);
+                defer sdl_api.glDeleteContext(gl_context);
+                try gl.load();
+                break :blk true;
+            },
+            .metal => blk: {
+                const host = switch (render_surface_attachment) {
+                    .macos_metal_host => |value| value,
+                    else => return false,
+                };
+                var context = metal_backend.createBackendContext(host, width, height) orelse return false;
+                defer metal_backend.deinitBackendContext(&context);
+
+                var frame = metal_backend.acquireFrame(&context) orelse return false;
+                if (!metal_backend.clearFrame(&frame, .{ 0.08, 0.09, 0.11, 1.0 })) {
+                    metal_backend.abandonFrame(&frame);
+                    return false;
+                }
+                metal_backend.presentFrame(&context, &frame);
+                break :blk true;
+            },
+        };
+    }
+
     pub fn deinit(self: *Renderer) void {
         retained_targets_runtime.deinit(self);
         self.destroyRenderTarget(&self.scene_target.target);
 
-        self.app_font.deinit();
-        self.editor_font.deinit();
-        self.terminal_font.deinit();
-        self.icon_font.deinit();
+        if (self.fonts_ready) {
+            self.app_font.deinit();
+            self.editor_font.deinit();
+            self.terminal_font.deinit();
+            self.icon_font.deinit();
+        }
         font_manager.deinitFontConfigState(self);
 
         input_state.deinit(self.inputDomain());
@@ -679,20 +873,27 @@ pub const Renderer = struct {
         draw_ops.deinit(&self.batch, self.allocator);
         text_runtime.deinitTerminalTextState(self);
 
-        if (self.white_texture.id != 0) {
+        if (self.gl_resources_ready and self.white_texture.id != 0) {
             gl.DeleteTextures(1, &self.white_texture.id);
         }
-        gl_resources.destroy(.{
-            .shader_program = self.shader_program,
-            .vao = self.vao,
-            .vbo = self.vbo,
-            .uniform_proj = self.uniform_proj,
-            .uniform_tex = self.uniform_tex,
-        });
+        if (self.gl_resources_ready) {
+            gl_resources.destroy(.{
+                .shader_program = self.shader_program,
+                .vao = self.vao,
+                .vbo = self.vbo,
+                .uniform_proj = self.uniform_proj,
+                .uniform_tex = self.uniform_tex,
+            });
+        }
 
         input_state.stopTextInput(self.inputDomain());
         window_chrome_runtime.deinit(self.windowChromeDomain());
-        sdl_api.glDeleteContext(self.gl_context);
+        if (self.metal_frame) |*frame| metal_backend.abandonFrame(frame);
+        if (self.metal_backend_context) |*context| metal_backend.deinitBackendContext(context);
+        if (self.appkit_delegate_installation) |*installation| macos_app_delegate.uninstall(installation);
+        if (self.app_event_watch_installed) removeAppEventWatch(&self.app_host);
+        window_init.deinitRenderSurfaceAttachment(&self.render_surface_attachment);
+        if (self.gl_context) |context| sdl_api.glDeleteContext(context);
         sdl.SDL_DestroyWindow(self.window);
         sdl.SDL_Quit();
 
@@ -826,7 +1027,10 @@ pub const Renderer = struct {
 
     pub fn applyPendingZoom(self: *Renderer, now: f64) !WindowRefreshResult {
         const changed = try font_runtime.applyPendingZoom(self, now);
-        const scene_target_invalidation: SceneTargetInvalidation = if (changed) .{ .render_scale_change = true } else .{};
+        const scene_target_invalidation: SceneTargetInvalidation = if (changed and self.supportsSceneTargets())
+            .{ .render_scale_change = true }
+        else
+            .{};
         self.scene_target.pending_invalidation.merge(scene_target_invalidation);
         return .{
             .changes = .{},
@@ -953,7 +1157,12 @@ pub const Renderer = struct {
 
     pub fn refreshWindowState(self: *Renderer, reason: []const u8, changes: WindowChangeMask) !WindowRefreshResult {
         const metrics = self.collectDisplayMetricsForWindowChanges(changes);
-        const scene_target_invalidation = sceneTargetInvalidationForRefresh(self.scene_target, changes, metrics);
+        const scene_target_invalidation = sceneTargetInvalidationForRefresh(
+            self.scene_target,
+            changes,
+            metrics,
+            self.supportsSceneTargets(),
+        );
         self.applyDisplayMetricsSnapshot(metrics);
         self.scene_target.pending_invalidation.merge(scene_target_invalidation);
         self.logWindowMetricsSnapshot(metrics, reason);
@@ -995,6 +1204,7 @@ pub const Renderer = struct {
     }
 
     pub fn clearToThemeBackground(self: *Renderer) void {
+        if (self.backend != .opengl) return;
         const bg = self.theme.background.toRgba();
         var rr = @as(f32, @floatFromInt(bg.r)) / 255.0;
         var gg = @as(f32, @floatFromInt(bg.g)) / 255.0;
@@ -1007,6 +1217,198 @@ pub const Renderer = struct {
         }
         gl.ClearColor(rr, gg, bb, aa);
         gl.Clear(gl.c.GL_COLOR_BUFFER_BIT);
+    }
+
+    pub fn supportsSceneTargets(self: *const Renderer) bool {
+        return self.capabilities().scene_composition_mode == .offscreen_scene_target;
+    }
+
+    pub fn supportsRetainedTargets(self: *const Renderer) bool {
+        return self.capabilities().retained_targets;
+    }
+
+    pub fn sceneCompositionMode(self: *const Renderer) SceneCompositionMode {
+        return self.capabilities().scene_composition_mode;
+    }
+
+    pub fn screenshotMode(self: *const Renderer) ScreenshotMode {
+        return self.capabilities().screenshot_mode;
+    }
+
+    pub fn textRenderingMode(self: *const Renderer) TextRenderingMode {
+        return self.capabilities().text_rendering_mode;
+    }
+
+    pub fn plannedTextRenderingMode(self: *const Renderer) TextRenderingMode {
+        return self.capabilities().planned_text_rendering_mode;
+    }
+
+    pub fn capabilities(self: *const Renderer) RendererCapabilities {
+        return .{
+            .scene_composition_mode = if (self.backend == .opengl and self.runtime_profile == .full_ui)
+                .offscreen_scene_target
+            else
+                .direct_main_target,
+            .retained_targets = self.backend == .opengl and self.runtime_profile == .full_ui,
+            .screenshot_mode = switch (self.backend) {
+                .opengl => .direct_window_readback,
+                .metal => .present_capture,
+            },
+            .text_rendering_mode = if (self.backend == .opengl and self.runtime_profile == .full_ui)
+                .gl_texture_atlas
+            else
+                .unavailable,
+            .planned_text_rendering_mode = switch (self.backend) {
+                .opengl => .gl_texture_atlas,
+                .metal => .metal_texture_atlas,
+            },
+            .atlas_storage_mode = if (self.backend == .opengl and self.runtime_profile == .full_ui)
+                .opengl_textures
+            else
+                .metal_textures,
+            .planned_atlas_storage_mode = switch (self.backend) {
+                .opengl => .opengl_textures,
+                .metal => .metal_textures,
+            },
+        };
+    }
+
+    pub fn beginBackendFrame(self: *Renderer) void {
+        switch (self.backend) {
+            .opengl => {
+                self.present.main_composition_target = switch (self.sceneCompositionMode()) {
+                    .offscreen_scene_target => if (scene_frame_runtime.beginSceneFrame(self))
+                        .offscreen_scene_target
+                    else
+                        .default_target,
+                    .direct_main_target => .default_target,
+                };
+                if (self.present.main_composition_target == .default_target) self.bindDefaultTarget();
+                gl.Disable(gl.c.GL_SCISSOR_TEST);
+
+                const bg = self.theme.background.toRgba();
+                gl.ClearColor(
+                    @as(f32, @floatFromInt(bg.r)) / 255.0,
+                    @as(f32, @floatFromInt(bg.g)) / 255.0,
+                    @as(f32, @floatFromInt(bg.b)) / 255.0,
+                    @as(f32, @floatFromInt(bg.a)) / 255.0,
+                );
+                gl.Clear(gl.c.GL_COLOR_BUFFER_BIT);
+            },
+            .metal => {
+                if (self.metal_backend_context) |*context| {
+                    metal_backend.resizeBackendContext(context, self.render_width, self.render_height);
+                    var frame = metal_backend.acquireFrame(context) orelse {
+                        self.present.main_composition_target = .default_target;
+                        self.metal_frame = null;
+                        return;
+                    };
+                    const bg = self.theme.background.toRgba();
+                    const cleared = metal_backend.clearFrame(&frame, .{
+                        @as(f32, @floatFromInt(bg.r)) / 255.0,
+                        @as(f32, @floatFromInt(bg.g)) / 255.0,
+                        @as(f32, @floatFromInt(bg.b)) / 255.0,
+                        @as(f32, @floatFromInt(bg.a)) / 255.0,
+                    });
+                    if (!cleared) {
+                        metal_backend.abandonFrame(&frame);
+                        self.present.main_composition_target = .default_target;
+                        self.metal_frame = null;
+                        return;
+                    }
+                    self.present.main_composition_target = .backend_surface;
+                    self.metal_frame = frame;
+                } else {
+                    self.present.main_composition_target = .default_target;
+                    self.metal_frame = null;
+                }
+            },
+        }
+    }
+
+    pub fn submitBackendFrame(self: *Renderer) FrameSubmission {
+        return switch (self.backend) {
+            .opengl => scene_frame_runtime.submitOpenGlFrame(self),
+            .metal => blk: {
+                const present_start = sdl_api.getPerformanceCounter();
+                const succeeded = if (self.metal_backend_context) |*context|
+                    if (self.metal_frame) |*frame| inner: {
+                        var capture_readback: ?metal_backend.Readback = null;
+                        defer if (capture_readback) |*readback| metal_backend.deinitReadback(readback);
+
+                        if (self.present.capture_armed) {
+                            capture_readback = metal_backend.prepareFrameReadback(context, frame);
+                        }
+
+                        if (self.metal_atlas_preview) |preview| {
+                            _ = metal_backend.drawAtlasPreview(context, frame, preview);
+                        }
+
+                        metal_backend.encodePresent(frame);
+                        metal_backend.commitFrame(frame);
+
+                        if (capture_readback) |*readback| {
+                            metal_backend.waitForFrame(frame);
+                            if (self.present.capture_path) |path| {
+                                const rgba = metal_backend.copyReadbackRgba(self.allocator, readback) catch |err| rgba_capture: {
+                                    app_logger.logger("renderer.present").logf(.warning, "capture failed frame_seq={d} path={s} err={s}", .{
+                                        self.present.frame_seq,
+                                        path,
+                                        @errorName(err),
+                                    });
+                                    break :rgba_capture null;
+                                };
+                                if (rgba) |pixels| {
+                                    defer self.allocator.free(pixels);
+                                    screenshot.dumpRgbaPixelsPpmScaled(
+                                        self.allocator,
+                                        pixels,
+                                        readback.width,
+                                        readback.height,
+                                        self.width,
+                                        self.height,
+                                        path,
+                                        .top_left,
+                                    ) catch |err| {
+                                        app_logger.logger("renderer.present").logf(.warning, "capture failed frame_seq={d} path={s} err={s}", .{
+                                            self.present.frame_seq,
+                                            path,
+                                            @errorName(err),
+                                        });
+                                    };
+                                    self.present.trace_current.captured_path = path;
+                                }
+                            }
+                        } else if (self.present.capture_armed) {
+                            if (self.present.capture_path) |path| {
+                                app_logger.logger("renderer.present").logf(.warning, "capture failed frame_seq={d} path={s} err=MetalReadbackUnavailable", .{
+                                    self.present.frame_seq,
+                                    path,
+                                });
+                            }
+                        }
+
+                        metal_backend.releaseFrame(frame);
+                        self.metal_frame = null;
+                        break :inner true;
+                    } else false
+                else false;
+                const present_end = sdl_api.getPerformanceCounter();
+                self.present.last_swap_ms = scene_frame_runtime.performanceDeltaMs(present_start, present_end, self.perf_freq);
+                self.present.main_composition_target = .default_target;
+                self.present.trace_last = self.present.trace_current;
+                self.present.capture_path = null;
+                self.present.capture_armed = false;
+                self.present.capture_frame_seq = 0;
+                if (succeeded) self.present.submission_sequence += 1;
+                break :blk .{
+                    .succeeded = succeeded,
+                    .sequence = self.present.submission_sequence,
+                    .terminal_surface_blitted = self.present.trace_current.terminal_surface_blit_count > 0,
+                    .terminal_surface_generation = self.present.trace_current.terminal_surface_generation,
+                };
+            },
+        };
     }
 
     fn srgbToLinear(c: f32) f32 {
@@ -1276,6 +1678,7 @@ pub const Renderer = struct {
 
     fn windowChromeDomain(self: *Renderer) window_chrome_runtime.WindowChromeDomain {
         return .{
+            .render_host = &self.render_host,
             .window = self.window,
             .window_focused = self.input.window_focused,
             .contract = &self.window_chrome.contract,
@@ -1348,6 +1751,135 @@ pub const Renderer = struct {
 
     pub fn integratedWindowChromeSinkOwnsChrome(self: *const Renderer) bool {
         return window_chrome_runtime.sinkOwnsChrome(&self.window_chrome.snap_sink);
+    }
+
+    pub fn takePendingExternalIntent(self: *Renderer) ?ExternalIntent {
+        return self.app_host.takePendingIntent();
+    }
+
+    pub fn macosRequestActivation(self: *Renderer) void {
+        macos_host.requestActivation(&self.app_host);
+    }
+
+    pub fn macosRequestQuit(self: *Renderer) void {
+        macos_host.requestQuit(&self.app_host);
+    }
+
+    pub fn macosRequestOpenFile(self: *Renderer, path: []const u8) bool {
+        return macos_host.requestOpenFile(&self.app_host, path);
+    }
+
+    pub fn macosMetalAttachmentTarget(self: *const Renderer) ?MacOsMetalAttachmentTarget {
+        return macos_host.metalAttachmentTarget(self.render_host);
+    }
+
+    pub fn prepareMacosMetalHost(self: *const Renderer) ?MacOsMetalHost {
+        return switch (self.render_surface_attachment) {
+            .macos_metal_host => |host| host,
+            else => null,
+        };
+    }
+
+    pub fn prepareMacosMetalBackendContext(self: *const Renderer) ?MacOsMetalBackendContext {
+        const host = self.prepareMacosMetalHost() orelse return null;
+        return metal_backend.createBackendContext(host, self.render_width, self.render_height);
+    }
+
+    pub fn macosMetalGlyphAtlasReady(self: *const Renderer) bool {
+        if (self.metal_backend_context) |*context| {
+            return metal_backend.glyphAtlasReady(context);
+        }
+        return false;
+    }
+
+    pub fn macosMetalAtlasPreviewSource(self: *const Renderer) AtlasPreviewSource {
+        return self.metal_debug_preview_source;
+    }
+
+    pub fn runMacosMetalAtlasUploadDiagnostic(self: *Renderer) bool {
+        return self.runMacosMetalAtlasUploadDiagnosticAt(24, 24);
+    }
+
+    pub fn runMacosMetalAtlasUploadDiagnosticAt(self: *Renderer, dest_x: i32, dest_y: i32) bool {
+        if (self.backend != .metal) return false;
+        if (self.metal_backend_context == null) return false;
+        self.metal_atlas_preview = null;
+        self.metal_debug_preview_source = .unavailable;
+
+        const render_scale = if (self.scale.render_scale > 0.0) self.scale.render_scale else 1.0;
+        const raster_size = self.base_font_size * render_scale;
+        var font = terminal_font_mod.TerminalFont.initWithAtlasUploadHooks(
+            self.allocator,
+            self.font_config.app_font_path,
+            raster_size,
+            iface.SYMBOLS_FALLBACK_PATH,
+            iface.UNICODE_SYMBOLS2_PATH,
+            iface.UNICODE_SYMBOLS_PATH,
+            iface.UNICODE_MONO_PATH,
+            iface.UNICODE_SANS_PATH,
+            iface.EMOJI_COLOR_FALLBACK_PATH,
+            iface.EMOJI_TEXT_FALLBACK_PATH,
+            self.font_config.font_rendering,
+            metal_backend.terminalFontAtlasUploadHooks(&self.metal_backend_context.?),
+        ) catch return false;
+        defer font.deinit();
+        font.render_scale = render_scale;
+        const color_preview_rect = font.uploadDiagnosticColorGlyphPreview();
+        const codepoint: u32 = 'A';
+        const direct = font.directFastGlyphForCodepoint(codepoint) orelse return false;
+        const coverage_glyph = font.getGlyphById(direct.face, direct.glyph_id, direct.want_color, false, 0) catch return false;
+        if (coverage_glyph.rect.width > 0 and coverage_glyph.rect.height > 0) {
+            self.metal_atlas_preview = .{
+                .source_rect = coverage_glyph.rect,
+                .dest_x = dest_x,
+                .dest_y = dest_y,
+            };
+            self.metal_debug_preview_source = .uploaded_coverage_glyph;
+        }
+        if (color_preview_rect) |rect| {
+            self.metal_atlas_preview = .{
+                .source_rect = rect,
+                .dest_x = dest_x,
+                .dest_y = dest_y,
+            };
+            self.metal_debug_preview_source = .uploaded_color_glyph;
+        } else {
+            if (self.metal_atlas_preview == null) {
+                self.metal_atlas_preview = .{
+                    .source_rect = .{
+                        .x = 0,
+                        .y = 0,
+                        .width = 4,
+                        .height = 4,
+                    },
+                    .dest_x = dest_x,
+                    .dest_y = dest_y,
+                };
+                self.metal_debug_preview_source = .seeded_color_block;
+            }
+        }
+        return self.metal_debug_preview_source == .uploaded_coverage_glyph or
+            self.metal_debug_preview_source == .uploaded_color_glyph;
+    }
+
+    pub fn runMacosMetalSmokeFrame(self: *const Renderer) bool {
+        var context = self.prepareMacosMetalBackendContext() orelse return false;
+        defer metal_backend.deinitBackendContext(&context);
+
+        var frame = metal_backend.acquireFrame(&context) orelse return false;
+        const bg = self.theme.background.toRgba();
+        const cleared = metal_backend.clearFrame(&frame, .{
+            @as(f32, @floatFromInt(bg.r)) / 255.0,
+            @as(f32, @floatFromInt(bg.g)) / 255.0,
+            @as(f32, @floatFromInt(bg.b)) / 255.0,
+            @as(f32, @floatFromInt(bg.a)) / 255.0,
+        });
+        if (!cleared) {
+            metal_backend.abandonFrame(&frame);
+            return false;
+        }
+        metal_backend.presentFrame(&context, &frame);
+        return true;
     }
 
     fn windowHitTestCallback(_: ?*sdl.SDL_Window, area: [*c]const sdl.SDL_Point, data: ?*anyopaque) callconv(.c) sdl_api.HitTestResult {
@@ -1577,6 +2109,7 @@ pub const Renderer = struct {
     fn inputDomain(self: *Renderer) input_state.InputDomain {
         return .{
             .allocator = self.allocator,
+            .app_host = &self.app_host,
             .window = self.window,
             .should_close_flag = &self.input.should_close_flag,
             .key_down = self.input.key_down[0..],

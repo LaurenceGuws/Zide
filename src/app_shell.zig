@@ -12,6 +12,14 @@ pub const WindowChangeMask = r.WindowChangeMask;
 pub const FrameSubmission = r.FrameSubmission;
 pub const WindowGeometryDiagnostics = r.WindowGeometryDiagnostics;
 pub const WindowRefreshResult = r.WindowRefreshResult;
+pub const ScreenshotMode = r.ScreenshotMode;
+pub const TextRenderingMode = r.TextRenderingMode;
+pub const RendererCapabilities = r.RendererCapabilities;
+pub const AtlasPreviewSource = r.AtlasPreviewSource;
+pub const ScreenshotRequestResult = enum {
+    completed,
+    armed_present_capture,
+};
 
 pub const MOUSE_LEFT = r.MOUSE_LEFT;
 pub const MOUSE_RIGHT = r.MOUSE_RIGHT;
@@ -134,6 +142,12 @@ pub const RendererInitOptions = r.Renderer.InitOptions;
 pub const TextComposition = r.Renderer.TextComposition;
 pub const WindowChromeMode = r.Renderer.WindowChromeMode;
 pub const WindowChromeContract = r.Renderer.WindowChromeContract;
+pub const RendererBackend = r.RendererBackend;
+pub const RendererRuntimeProfile = r.RendererRuntimeProfile;
+pub const ExternalIntent = r.ExternalIntent;
+pub const MacOsMetalAttachmentTarget = r.MacOsMetalAttachmentTarget;
+pub const MacOsMetalHost = r.MacOsMetalHost;
+pub const MacOsMetalBackendContext = r.MacOsMetalBackendContext;
 
 pub const Shell = struct {
     renderer: *r.Renderer,
@@ -144,6 +158,10 @@ pub const Shell = struct {
         const shell = try allocator.create(Shell);
         shell.* = .{ .renderer = renderer };
         return shell;
+    }
+
+    pub fn runStartupBackendSmoke(initial_width: i32, initial_height: i32, title: [*:0]const u8, backend: RendererBackend) !bool {
+        return r.Renderer.runStartupBackendSmoke(initial_width, initial_height, title, backend);
     }
 
     pub fn deinit(self: *Shell, allocator: std.mem.Allocator) void {
@@ -252,6 +270,38 @@ pub const Shell = struct {
         return self.renderer.integratedWindowChromeSinkOwnsChrome();
     }
 
+    pub fn takePendingExternalIntent(self: *Shell) ?ExternalIntent {
+        return self.renderer.takePendingExternalIntent();
+    }
+
+    pub fn macosRequestActivation(self: *Shell) void {
+        self.renderer.macosRequestActivation();
+    }
+
+    pub fn macosRequestQuit(self: *Shell) void {
+        self.renderer.macosRequestQuit();
+    }
+
+    pub fn macosRequestOpenFile(self: *Shell, path: []const u8) bool {
+        return self.renderer.macosRequestOpenFile(path);
+    }
+
+    pub fn macosMetalAttachmentTarget(self: *const Shell) ?MacOsMetalAttachmentTarget {
+        return self.renderer.macosMetalAttachmentTarget();
+    }
+
+    pub fn prepareMacosMetalHost(self: *const Shell) ?MacOsMetalHost {
+        return self.renderer.prepareMacosMetalHost();
+    }
+
+    pub fn prepareMacosMetalBackendContext(self: *const Shell) ?MacOsMetalBackendContext {
+        return self.renderer.prepareMacosMetalBackendContext();
+    }
+
+    pub fn runMacosMetalSmokeFrame(self: *const Shell) bool {
+        return self.renderer.runMacosMetalSmokeFrame();
+    }
+
     pub fn setTextInputRect(self: *Shell, x: i32, y: i32, w: i32, h: i32) void {
         self.renderer.setTextInputRect(x, y, w, h);
     }
@@ -344,6 +394,30 @@ pub const Shell = struct {
         scene_frame_runtime.armPresentCapture(self.renderer, path);
     }
 
+    pub fn screenshotMode(self: *const Shell) ScreenshotMode {
+        return self.renderer.screenshotMode();
+    }
+
+    pub fn rendererCapabilities(self: *const Shell) RendererCapabilities {
+        return self.renderer.capabilities();
+    }
+
+    pub fn macosMetalGlyphAtlasReady(self: *const Shell) bool {
+        return self.renderer.macosMetalGlyphAtlasReady();
+    }
+
+    pub fn runMacosMetalAtlasUploadDiagnostic(self: *Shell) bool {
+        return self.renderer.runMacosMetalAtlasUploadDiagnostic();
+    }
+
+    pub fn runMacosMetalAtlasUploadDiagnosticAt(self: *Shell, dest_x: i32, dest_y: i32) bool {
+        return self.renderer.runMacosMetalAtlasUploadDiagnosticAt(dest_x, dest_y);
+    }
+
+    pub fn macosMetalAtlasPreviewSource(self: *const Shell) AtlasPreviewSource {
+        return self.renderer.macosMetalAtlasPreviewSource();
+    }
+
     pub fn lastPresentTrace(self: *const Shell) r.PresentTrace {
         return scene_frame_runtime.lastPresentTrace(self.renderer);
     }
@@ -354,6 +428,31 @@ pub const Shell = struct {
 
     pub fn dumpWindowScreenshotPpmSized(self: *Shell, path: []const u8, out_width: i32, out_height: i32) !void {
         try scene_frame_runtime.dumpWindowScreenshotPpmSized(self.renderer, path, out_width, out_height);
+    }
+
+    pub fn requestWindowScreenshotPpm(self: *Shell, path: []const u8) !ScreenshotRequestResult {
+        return switch (self.screenshotMode()) {
+            .direct_window_readback => blk: {
+                try self.dumpWindowScreenshotPpm(path);
+                break :blk .completed;
+            },
+            .present_capture => blk: {
+                self.armPresentCapture(path);
+                break :blk .armed_present_capture;
+            },
+            .unavailable => error.RendererScreenshotUnavailable,
+        };
+    }
+
+    pub fn requestWindowScreenshotPpmSized(self: *Shell, path: []const u8, out_width: i32, out_height: i32) !ScreenshotRequestResult {
+        return switch (self.screenshotMode()) {
+            .direct_window_readback => blk: {
+                try self.dumpWindowScreenshotPpmSized(path, out_width, out_height);
+                break :blk .completed;
+            },
+            .present_capture => error.RendererSizedScreenshotUnavailable,
+            .unavailable => error.RendererScreenshotUnavailable,
+        };
     }
 
     pub fn beginClip(self: *Shell, x: i32, y: i32, w: i32, h: i32) void {

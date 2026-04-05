@@ -1,0 +1,603 @@
+# macOS Render Backend
+
+Purpose: define how macOS satisfies Zide's native host contract with AppKit and
+Metal.
+
+This doc is architecture authority for the macOS-native render host and its
+relationship to the shared native-host contract.
+
+## Target Stack
+
+- app host: `NSApplication`
+- top-level window host: `NSWindow`
+- render host: `NSView` backed by `CAMetalLayer`, or `MTKView` where its higher
+  level behavior is useful
+- backend: Metal
+
+SDL may remain a bridge for:
+
+- window creation bootstrap
+- input/event transport
+- Cocoa handle/property access
+- optional `SDL_Metal_CreateView` glue
+
+But SDL is not the final owner of:
+
+- app delegate behavior
+- file-open / quit integration
+- Metal device assignment
+- drawable lifetime
+- present semantics
+
+## Why Metal Is Non-Negotiable
+
+Reference pressure:
+
+- Ghostty uses Metal on macOS
+- Zed uses Metal on macOS
+- Apple's current native graphics path is Metal-first
+
+Official pressure from local docs:
+
+- `MTKView` is the standard Metal-aware view and wraps `CAMetalLayer`
+- `CAMetalLayer` owns drawable pools and explicit drawable presentation
+- Metal requires explicit `MTLDevice` ownership
+
+So the destination macOS renderer is:
+
+- Metal device / queue owned by the backend
+- AppKit view/layer owned by the host seam
+- present registered per drawable
+
+## Render Host Object Model
+
+The macOS host must expose these concrete centers:
+
+- application object
+- window object
+- view object
+- layer object
+- drawable pixel size
+
+The critical rule is that the render surface is view/layer based, not window
+based. The window contains the view, but the actual render contract is with the
+layer-backed view and its drawables.
+
+## `MTKView` Versus Direct `CAMetalLayer`
+
+Both are acceptable in principle, but they imply different ownership profiles.
+
+### `MTKView`
+
+Pros:
+
+- already wraps `CAMetalLayer`
+- already provides `currentRenderPassDescriptor`
+- already provides `currentDrawable`
+- already has drawable-size and draw-timing support
+- easier first honest bring-up
+
+Cons:
+
+- higher-level behavior than Zide may eventually want
+- can hide some layer-level choices behind MetalKit defaults
+
+### Direct `CAMetalLayer`
+
+Pros:
+
+- most explicit ownership
+- no framework-level draw-loop assumptions
+- clearer long-term if Zide wants a fully explicit render host
+
+Cons:
+
+- more bring-up code immediately
+- more resize/drawable plumbing to own from the first cut
+
+## Initial Decision
+
+The first macOS-native bring-up may use `MTKView` if and only if:
+
+- the shared host contract still stays explicit
+- no important ownership is hidden
+- the render host still reads as AppKit view + drawable based
+
+The long-term authority remains:
+
+- AppKit view/layer/drawable ownership is the center
+- not "MetalKit made it easy"
+
+## First Honest Native-Host Target Note
+
+This is the concrete macOS-side target for the shared native-host contract.
+
+### Destination Statement
+
+Zide on macOS is targeting:
+
+- `PlatformAppHost`: AppKit-native application lifecycle ownership
+- `PlatformRenderHost`: Cocoa window/view render host with explicit drawable
+  pixel-size truth
+- `RendererBackend`: Metal
+
+The durable surface is:
+
+- `NSApplication`
+- `NSWindow`
+- `NSView` backed by `CAMetalLayer`, or an `MTKView` used as a thin host-owned
+  convenience wrapper
+
+The durable present contract is:
+
+- backend acquires a drawable from the current layer-backed view
+- backend encodes against that drawable's render target
+- backend registers present on the command buffer
+- host/backend discard drawable references immediately after commit
+
+### Ownership Split
+
+Shared native-host seams own:
+
+- normalized lifecycle states
+- normalized focus and text-input entry/exit
+- normalized surface created/resized/destroyed/replaced signals
+- logical size, drawable size, and scale propagation
+- normalized external intents such as quit and open-file
+
+SDL bridge seams may own:
+
+- bootstrap window creation while the host seam is still transitioning
+- event transport where it remains useful
+- Cocoa handle/property access
+- optional Metal-view helper glue
+
+macOS AppKit/Metal seams must own:
+
+- final `NSApplication`/delegate behavior when native lifecycle authority is
+  required
+- final `NSWindow` and Cocoa view truth
+- layer assignment and view-backed drawable authority
+- Metal device and command queue ownership
+- drawable acquire/present/release discipline
+
+### Anti-Fiction Rule
+
+The macOS implementation is allowed to use SDL during migration.
+
+It is not allowed to describe:
+
+- `SDL_WINDOW_OPENGL` as the durable render-host model
+- a GL context as the durable macOS presentation contract
+- SDL's delegate defaults as the durable app lifecycle story
+
+## Required macOS Host Guarantees
+
+The macOS implementation must provide:
+
+- application activation/deactivation truth
+- file-open and quit intent routing
+- window focus truth
+- text input / IME geometry updates
+- drawable pixel size truth
+- display scale / Retina change truth
+- redraw scheduling consistent with the chosen view model
+
+## Drawable Contract
+
+From the Apple docs, Zide must obey:
+
+- acquire drawables late
+- retain drawables only briefly
+- register presentation on the command buffer
+- release references promptly after commit
+
+That means the render loop must be shaped around drawable lifetime, not around
+long-lived "current frame target" assumptions.
+
+## Resize And Scale
+
+The macOS host must treat these as separate but related:
+
+- logical view size
+- drawable pixel size
+- backing scale / Retina scale
+
+The backend must render to drawable pixels. View-space layout may be logical,
+but drawable-size changes are the render truth.
+
+## App Lifecycle Boundary
+
+macOS is not just a render problem. The native host must define what happens
+when Zide owns or supplements app delegate behavior.
+
+Important SDL pressure:
+
+- if user code owns `NSApplicationDelegate`, SDL no longer owns quit/open-file
+  behavior automatically
+
+Therefore the macOS host boundary must explicitly preserve:
+
+- quit requests
+- file-open requests
+- activation behavior
+
+This is not optional polish.
+
+## SDL Role On macOS
+
+SDL is still useful for:
+
+- initial window bootstrap
+- input event transport
+- Cocoa handle/property access
+- potentially `SDL_Metal_CreateView`
+
+SDL must not define:
+
+- the final view/layer ownership model
+- the app delegate contract
+- the Metal device and drawable contract
+
+## Migration Shape
+
+The correct migration order is:
+
+1. define shared native-host contract
+2. define macOS host seam in AppKit terms
+3. expose or create the Cocoa view/window handles deliberately
+4. attach the Metal render host
+5. bring up clear/present with honest drawable ownership
+6. only then widen renderer feature work
+
+## Ranked Contradiction Audit Versus The Live SDL/OpenGL Lane
+
+This is the current ranked blocker list between Zide's live macOS build truth
+and the desired first-class macOS host shape.
+
+### 1. Window creation is still hardwired to a GL host contract
+
+Current code:
+
+- `src/platform/sdl_api.zig` creates windows with
+  `SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE`
+
+Why this is a blocker:
+
+- it defines the live window contract around GL context creation
+- it prevents the render host from being described honestly as a Cocoa
+  view/layer surface
+- it keeps the host seam backend-first instead of surface-first
+
+Classification:
+
+- shared native-host contradiction
+- not macOS-only
+
+Because:
+
+- Android will also need a surface-first host seam instead of a backend-first
+  window contract
+
+### 2. Renderer bring-up only knows GL attribute and context ownership
+
+Current code:
+
+- `src/ui/renderer/window_init.zig`
+
+Why this is a blocker:
+
+- initialization is expressed as `configureGlAttributes` plus
+  `createGlContext`
+- there is no render-host seam for native view/layer attachment
+- there is no neutral place for drawable-backed render-surface ownership
+
+Classification:
+
+- shared native-host contradiction
+- not macOS-only
+
+Because:
+
+- the same seam must later support `ANativeWindow` on Android without routing
+  through GL-centric assumptions
+
+### 3. App lifecycle ownership is still implicit in SDL bootstrap
+
+Current pressure:
+
+- `window_init.zig` handles SDL init and app naming hints
+- there is not yet an explicit `PlatformAppHost` boundary in code
+
+Why this is a blocker:
+
+- AppKit delegate ownership, activation, quit, and open-file delivery do not
+  yet have a first-class home
+- the repo can currently compile on macOS without answering who owns the real
+  native lifecycle
+
+Classification:
+
+- shared native-host contradiction with strong macOS-specific pressure
+
+Because:
+
+- macOS forces the question early through `NSApplicationDelegate`
+- Android will force the same question later through Activity lifecycle truth
+
+### 4. Build metadata still reflects implementation truth more strongly than host truth
+
+Current code:
+
+- `build_system/platform_capabilities.zig`
+
+Why this was a blocker:
+
+- platform description was previously backend-first
+- that encouraged treating the live GL lane as the platform architecture
+
+Current status:
+
+- architecture wording is now corrected to distinguish host contract from the
+  current runtime graphics path
+- implementation remains GL-first, so this contradiction is reduced but not
+  eliminated
+
+Classification:
+
+- shared architecture contradiction
+
+### 5. The current live lane has no drawable-lifetime discipline
+
+Current reality:
+
+- the GL path presents through SDL/GL swap semantics
+- the code does not yet express drawable acquisition, drawable loss, or
+  drawable release as first-class behavior
+
+Why this is a blocker:
+
+- Metal correctness on macOS depends on drawable lifetime discipline
+- surface replacement and reacquire semantics matter on Android too, even
+  though the concrete objects differ
+
+Classification:
+
+- shared native-host contradiction with different platform mechanics
+
+## Immediate Consequences
+
+The first code cuts should not be "make a Metal renderer under the existing GL
+host seam."
+
+They should be:
+
+1. define a neutral host-facing app lifecycle seam
+2. define a neutral host-facing render-surface seam
+3. let macOS satisfy those seams with AppKit/Cocoa view truth
+4. then bind Metal to that surface contract
+
+## First Code-Groundwork Checkpoint
+
+The first seam cut in code is now in place:
+
+- SDL window creation no longer hardcodes OpenGL as the only possible window
+  graphics binding
+- renderer bring-up explicitly requests `.opengl` instead of inheriting that
+  choice from a hidden SDL helper default
+- SDL wrapper accessors now expose Cocoa window and view pointers for the next
+  AppKit-boundary cut
+- shared platform-owned host structs now exist for:
+  - `PlatformAppHost`
+  - `PlatformRenderHost`
+  - `RenderSurfaceBinding`
+- `PlatformAppHost` now tracks live lifecycle state transitions on the current
+  runtime path for focus gain, focus loss, and termination requests
+- `PlatformAppHost` now carries the first explicit external-intent shape:
+  quit, activation, and open-file request payload ownership
+- existing Windows-native chrome consumers now resolve native window handles
+  through `PlatformRenderHost` instead of querying SDL properties directly
+- macOS now has a platform-owned Metal attachment target helper above the
+  shared render host contract
+- macOS now has a platform-owned Metal host preparation shim that accepts the
+  attachment target without exposing SDL details
+- renderer initialization now has an explicit render-surface attachment phase
+  before backend context creation
+- OpenGL attribute and context creation now live under the OpenGL backend
+  module, not under generic window initialization
+- macOS now performs a real Metal-backed view/layer attachment through SDL's
+  Metal bridge
+- a minimal Metal backend context module now exists beside the GL backend
+- Metal host lifetime is now owned by the stored render-surface attachment and
+  cleaned up during renderer teardown
+- Metal backend context creation now allocates a real `MTLDevice` and configures
+  the attached `CAMetalLayer`
+
+Current repo locations:
+
+- `src/platform/native_host.zig`
+- `src/platform/macos_host.zig`
+- `src/platform/macos_metal_host.zig`
+- `src/platform/sdl_api.zig`
+- `src/platform/windows_frame_material.zig`
+- `src/platform/windows_integrated_frame.zig`
+- `src/platform/windows_snap_layout_sink.zig`
+- `src/ui/renderer/window_init.zig`
+- `src/ui/renderer.zig`
+
+What this does and does not mean:
+
+- this is a real host-seam improvement because window creation is no longer
+  synonymous with GL
+- this is a real ownership improvement because renderer state now carries a
+  shared platform host snapshot instead of only raw SDL window plus GL context
+- this is a real lifecycle improvement because shared host state is now updated
+  by the live event path instead of waiting for future AppKit-only wiring
+- this is a real intent-boundary improvement because future AppKit delegate
+  work now has an owning contract for quit/open-file/activation delivery
+- this is a real cross-platform proof point because the seam is already serving
+  existing Windows-native platform code, not only future macOS work
+- this is a real macOS preparation cut because Metal attachment now has a
+  platform-owned target API based on Cocoa window/view handles
+- this is a real macOS host-preparation cut because the first Metal host object
+  can now be prepared without inventing SDL-shaped APIs
+- this is a real bring-up-order correction because surface attachment is now a
+  first-class step before backend context setup
+- this is a real ownership correction because backend-specific context creation
+  is no longer mixed into generic window/bootstrap code
+- this is a real native surface step because the macOS Metal host now owns a
+  real SDL-created Metal view and backing layer
+- this is a real backend-shape step because Metal now has an explicit backend
+  module instead of living only as future intent in docs
+- this is a real lifetime correction because the Metal host is no longer
+  recreated on each preparation call and its SDL view now has teardown
+  ownership
+- this is a real backend-configuration step because the Metal path now sets
+  layer device, pixel format, framebuffer-only mode, and drawable size
+- this is a real queue/present groundwork step because the Metal backend now
+  creates a command queue and defines an explicit drawable acquire/present
+  skeleton around `nextDrawable`, command-buffer creation, `presentDrawable:`,
+  and `commit`
+- this is a real render-pass step because the Metal backend can now encode a
+  minimal clear pass against the acquired drawable before presentation
+- this is a real smoke-path step because renderer/shell code can now drive a
+  one-frame Metal clear/present probe against the attached macOS host surface
+- this is a real startup-seam step because renderer bring-up now chooses its
+  requested backend explicitly before window creation and surface attachment,
+  instead of assuming that startup means OpenGL
+- this is a real honesty step because full `Renderer.init` now rejects the
+  Metal path with an explicit runtime-not-ready error instead of pretending the
+  GL-driven renderer core is already backend-neutral
+- this is a real startup-proof step because the dedicated Metal startup smoke
+  path uses the same window -> host capture -> surface attachment -> backend
+  context order as the future live runtime
+- this is a real frame-ownership step because `beginFrame` and `submitFrame`
+  now route through explicit renderer-backend hooks instead of making
+  `SDL_GL_SwapWindow` the structural definition of presentation
+- this is a real contract step because the GL lane remains the live
+  implementation, while non-GL runtime submission is still explicitly refused
+  instead of being half-implemented behind generic frame code
+- this is a real lifecycle-source step because `PlatformAppHost` now receives
+  open-file intents from `SDL_EVENT_DROP_FILE` and macOS app
+  foreground/background/terminate signals from a real SDL event watch instead
+  of only from helper calls and window-focus inference
+- this is a real AppKit-boundary step because macOS now installs a proxy
+  `NSApplicationDelegate` that updates `PlatformAppHost` for activation,
+  resign-active, terminate, and open-file while forwarding those selectors to
+  the previous delegate instead of blindly replacing SDL-owned behavior
+- this is a real live-Metal-runtime step because `Renderer.init` can now create
+  a live `.metal` renderer instance under a minimal backend-smoke profile,
+  owning a Metal backend context and clear/present frame submission on the real
+  window surface
+- this is now runtime-validated on the current macOS host through the
+  live smoke entry: a live `.metal` backend-smoke shell presented frames
+  successfully with sequence advancement through both the env gate and the
+  explicit `--macos-metal-live-smoke` startup switch
+- this is a real honesty step because GL scene targets, fonts, and the full UI
+  path still stay behind the OpenGL/full-ui profile instead of pretending they
+  already run on Metal
+- this is a real composition-seam step because retained targets are now an
+  explicit capability instead of a structural assumption, and the editor path
+  can fall back to direct composition when retained targets are unavailable
+- this is a real composition-ownership step because the renderer now tracks an
+  explicit main-composition target mode instead of treating "scene frame
+  active" as shorthand for offscreen GL composition; direct-to-window and
+  backend-surface composition are now first-class states
+- this is a real scene-target capability step because scene-target
+  invalidation, readiness, and teardown now respect whether scene targets are a
+  live renderer capability instead of queuing GL-shaped offscreen work on
+  unsupported paths
+- this is a real scene-composition planning step because the renderer now has
+  an explicit scene-composition mode (`direct_main_target` versus
+  `offscreen_scene_target`) and frame bring-up consults that plan instead of
+  inferring composition behavior from whether a GL scene target happens to
+  exist
+- this is a real capability-model step because scene composition, retained
+  targets, and screenshot semantics now flow through a shared renderer
+  capability surface instead of being scattered as unrelated per-feature
+  backend checks
+- this is a real text-path seam step because text rendering now has an
+  explicit capability mode; the current full-ui path declares GL texture-atlas
+  text explicitly, and unsupported paths no longer pretend that text rendering
+  is universally available
+- this is a real destination-truth step because the renderer capability
+  snapshot now carries both the live text mode and the planned destination
+  mode; the macOS Metal smoke reports that gap directly as
+  `text=unavailable planned_text=metal_texture_atlas`
+- this is a real diagnostic-text step because the existing font-sample view no
+  longer silently bypasses capability truth; on unsupported runtime paths it
+  now reports the live/planned text mode gap instead of pretending GL atlas
+  text is available everywhere
+- this is a real glyph-atlas ownership step because `TerminalFont` no longer
+  exposes raw atlas textures as if every backend owned the same storage model;
+  atlas storage is now an explicit seam with live/planned capability truth
+  (`opengl_textures` today on the GL full-ui path, `metal_textures` as the
+  Metal destination), and the macOS Metal smoke reports that gap directly as
+  `atlas=metal_textures planned_atlas=metal_textures`
+- this is a real Metal atlas-resource step because the Metal backend now owns a
+  concrete glyph-atlas object with backend-owned coverage/color textures and
+  live upload entry points; the macOS Metal smoke now reports
+  `atlas_ready=1`, which means the Metal atlas center is initialized and has
+  accepted diagnostic upload data even though the live text path is still
+  correctly reported as unavailable
+- this is a real shared atlas-upload step because font rasterization and
+  special-glyph sprite creation no longer issue direct GL atlas writes from
+  their own logic; they now write through `TerminalFont`'s atlas-upload seam,
+  which preserves current GL behavior while making atlas upload ownership an
+  explicit contract instead of a hidden OpenGL side effect
+- the current diagnostic truth is now materially stronger: the macOS Metal
+  smoke attempts a real uploaded-glyph atlas probe via a temporary
+  `TerminalFont` with Metal atlas-upload hooks, and the current host now
+  reports `atlas_upload_probe=1 atlas_preview_source=uploaded_coverage_glyph`,
+  which means the visible preview is sourced from a real uploaded glyph rect
+  rather than seeded atlas content
+- the atlas-backed preview path is now backend-owned rather than embedded in
+  smoke-only renderer glue: the renderer stores a `metal_backend.AtlasPreview`
+  description, and the Metal backend owns the actual sampling/blit helper used
+  during submit before present
+- the first dedicated Metal text diagnostic view now exists as its own UI seam
+  rather than being embedded directly in the smoke runtime: placement and
+  activation flow through `ui/metal_text_diagnostic_view.zig`, while backend
+  sampling/blit ownership remains in `metal_backend`
+- one real diagnostic caller now reuses that seam instead of remaining
+  structurally GL-only: the existing `font_sample` view activates the Metal
+  text diagnostic view when live text is unavailable and the planned text mode
+  is `metal_texture_atlas`, which keeps the path honest without pretending the
+  generic text renderer has already migrated
+- the visible atlas-backed preview path itself is still real: the live smoke
+  frame path blits a tiny region from the Metal atlas color texture into the
+  drawable before present, and the submit-time screenshot path captured a real
+  `1280x720` PPM artifact for that path on the current macOS host
+- this is a real lifecycle-policy step because the AppKit delegate proxy now
+  routes activation, quit, and open-file through macOS-owned host policy
+  helpers first, with forwarding to the previous delegate reduced to fallback
+  behavior instead of acting as the default owner
+- this is now runtime-validated on the current macOS host through a real
+  present-capture readback path: the Metal smoke can arm capture on the final
+  frame, blit the drawable texture into a Metal buffer during submit, wait for
+  completion, and write a workspace-local PPM artifact without touching GL
+- current limit: direct `dumpWindowScreenshotPpm` semantics are still
+  GL-shaped; the honest Metal path today is submit-time present capture rather
+  than fake synchronous framebuffer readback
+- this is a real screenshot-capability step because the shell/renderer surface
+  now exposes direct-readback versus present-capture semantics explicitly,
+  instead of making callers assume every backend can satisfy synchronous GL
+  screenshot requests
+- this is now reflected in caller-facing app flows as well: screenshot callers
+  outside renderer internals use the capability-aware shell surface instead of
+  reaching for direct GL-shaped screenshot helpers
+- this is a real lifetime-discipline step because drawable and command-buffer
+  references are now released explicitly after commit
+- this is not yet full native macOS lifecycle ownership
+- this is not yet a Metal render host
+- this is not yet the normal full-ui renderer frame loop on Metal
+- this is groundwork for `MAC-04` and `MAC-05`, not completion of them
+
+## Explicit Anti-Goals
+
+Do not:
+
+- keep the GL-shaped host seam and just swap APIs underneath it
+- hide app delegate ownership under "SDL handles macOS"
+- call macOS "done" because a Metal view exists
+- create a macOS-only abstraction that Android will later need to route around

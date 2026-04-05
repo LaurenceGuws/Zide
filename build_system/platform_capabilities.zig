@@ -2,7 +2,10 @@ const std = @import("std");
 
 pub const PlatformCapability = struct {
     os_tag: std.Target.Os.Tag,
-    graphics_backend: []const u8,
+    host_contract: []const u8,
+    app_host_shape: []const u8,
+    render_host_shape: []const u8,
+    current_runtime_graphics_path: []const u8,
     ffi_surface: []const u8,
     supports_fontconfig: bool,
     supports_terminal_bundle: bool,
@@ -22,7 +25,10 @@ pub const PlatformCapability = struct {
 pub const supported_platforms = [_]PlatformCapability{
     .{
         .os_tag = .linux,
-        .graphics_backend = "OpenGL via SDL3/system GL",
+        .host_contract = "SDL-managed desktop host under the shared native-host contract",
+        .app_host_shape = "SDL desktop app lifecycle",
+        .render_host_shape = "SDL window host; GL drawable path today",
+        .current_runtime_graphics_path = "OpenGL via SDL3/system GL",
         .ffi_surface = "libc + pthread/dl/rt",
         .supports_fontconfig = true,
         .supports_terminal_bundle = true,
@@ -40,7 +46,10 @@ pub const supported_platforms = [_]PlatformCapability{
     },
     .{
         .os_tag = .macos,
-        .graphics_backend = "OpenGL framework via SDL3",
+        .host_contract = "Cocoa/AppKit-native host contract via SDL bridge today",
+        .app_host_shape = "AppKit application lifecycle",
+        .render_host_shape = "Cocoa view host; Metal target, SDL/OpenGL runtime today",
+        .current_runtime_graphics_path = "OpenGL framework via SDL3",
         .ffi_surface = "Cocoa framework",
         .supports_fontconfig = false,
         .supports_terminal_bundle = false,
@@ -58,7 +67,10 @@ pub const supported_platforms = [_]PlatformCapability{
     },
     .{
         .os_tag = .windows,
-        .graphics_backend = "OpenGL32 via SDL3",
+        .host_contract = "SDL-managed desktop host with Windows-native install/shell pressure",
+        .app_host_shape = "SDL desktop app lifecycle with Windows GUI subsystem",
+        .render_host_shape = "SDL window host; OpenGL runtime today",
+        .current_runtime_graphics_path = "OpenGL32 via SDL3",
         .ffi_surface = "user32/shell32",
         .supports_fontconfig = false,
         .supports_terminal_bundle = false,

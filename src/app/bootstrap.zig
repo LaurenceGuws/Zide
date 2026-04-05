@@ -30,6 +30,7 @@ pub const DefaultConfigScope = enum {
 
 pub const StartupCommand = union(enum) {
     run,
+    macos_metal_live_smoke,
     write_default_config: struct {
         target: WriteDefaultConfigTarget,
         scope: DefaultConfigScope = .full,
@@ -51,6 +52,7 @@ pub const StartupCommand = union(enum) {
         switch (self.*) {
             .write_default_config => |*cmd| cmd.deinit(allocator),
             .install_user_lua_meta => |*cmd| cmd.force = false,
+            .macos_metal_live_smoke => {},
             .run => {},
         }
         self.* = .run;
@@ -89,6 +91,11 @@ fn parseStartupCommandArgs(allocator: std.mem.Allocator, args: []const []const u
         if (std.mem.eql(u8, arg, "--install-user-lua-meta")) {
             command.deinit(allocator);
             command = .{ .install_user_lua_meta = .{} };
+            continue;
+        }
+        if (std.mem.eql(u8, arg, "--macos-metal-live-smoke")) {
+            command.deinit(allocator);
+            command = .macos_metal_live_smoke;
             continue;
         }
         if (std.mem.eql(u8, arg, "--config-scope")) {
@@ -408,6 +415,18 @@ test "parse startup command supports user lua meta install" {
     defer command.deinit(std.testing.allocator);
     switch (command) {
         .install_user_lua_meta => |cmd| try std.testing.expect(cmd.force),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "parse startup command supports macos metal live smoke" {
+    const argv = [_][]const u8{
+        "--macos-metal-live-smoke",
+    };
+    var command = try parseStartupCommandArgs(std.testing.allocator, &argv);
+    defer command.deinit(std.testing.allocator);
+    switch (command) {
+        .macos_metal_live_smoke => {},
         else => try std.testing.expect(false),
     }
 }

@@ -13,9 +13,15 @@ pub const c = @cImport({
     }
     @cInclude("SDL3/SDL.h");
     @cInclude("SDL3/SDL_opengl.h");
+    @cInclude("SDL3/SDL_metal.h");
 });
 
 pub const EVENT_QUIT: c_uint = c.SDL_EVENT_QUIT;
+pub const EVENT_APP_TERMINATING: c_uint = c.SDL_EVENT_TERMINATING;
+pub const EVENT_APP_WILL_ENTER_BACKGROUND: c_uint = c.SDL_EVENT_WILL_ENTER_BACKGROUND;
+pub const EVENT_APP_DID_ENTER_BACKGROUND: c_uint = c.SDL_EVENT_DID_ENTER_BACKGROUND;
+pub const EVENT_APP_WILL_ENTER_FOREGROUND: c_uint = c.SDL_EVENT_WILL_ENTER_FOREGROUND;
+pub const EVENT_APP_DID_ENTER_FOREGROUND: c_uint = c.SDL_EVENT_DID_ENTER_FOREGROUND;
 pub const EVENT_WINDOW: c_uint = c.SDL_EVENT_WINDOW_SHOWN;
 pub const EVENT_KEY_DOWN: c_uint = c.SDL_EVENT_KEY_DOWN;
 pub const EVENT_KEY_UP: c_uint = c.SDL_EVENT_KEY_UP;
@@ -25,6 +31,7 @@ pub const EVENT_MOUSE_MOTION: c_uint = c.SDL_EVENT_MOUSE_MOTION;
 pub const EVENT_MOUSE_BUTTON_DOWN: c_uint = c.SDL_EVENT_MOUSE_BUTTON_DOWN;
 pub const EVENT_MOUSE_BUTTON_UP: c_uint = c.SDL_EVENT_MOUSE_BUTTON_UP;
 pub const EVENT_MOUSE_WHEEL: c_uint = c.SDL_EVENT_MOUSE_WHEEL;
+pub const EVENT_DROP_FILE: c_uint = c.SDL_EVENT_DROP_FILE;
 
 pub const WindowChangeMask = packed struct(u8) {
     moved: bool = false,
@@ -142,8 +149,25 @@ pub fn windowEventId(event: *const c.SDL_Event) u32 {
     return event.window.windowID;
 }
 
+pub fn dropEventWindowId(event: *const c.SDL_Event) u32 {
+    return event.drop.windowID;
+}
+
+pub fn dropEventData(event: *const c.SDL_Event) ?[]const u8 {
+    const raw = event.drop.data orelse return null;
+    return std.mem.sliceTo(raw, 0);
+}
+
 pub fn setHint(name: [*:0]const u8, value: [*:0]const u8) void {
     _ = c.SDL_SetHint(name, value);
+}
+
+pub fn addEventWatch(filter: c.SDL_EventFilter, userdata: ?*anyopaque) bool {
+    return c.SDL_AddEventWatch(filter, userdata);
+}
+
+pub fn removeEventWatch(filter: c.SDL_EventFilter, userdata: ?*anyopaque) void {
+    c.SDL_RemoveEventWatch(filter, userdata);
 }
 
 pub fn getError() []const u8 {
@@ -187,6 +211,7 @@ pub fn quit() void {
 
 pub const GlAttr = c.SDL_GLAttr;
 pub const PropertiesId = c.SDL_PropertiesID;
+pub const MetalView = c.SDL_MetalView;
 pub const EglDisplay = c.SDL_EGLDisplay;
 pub const EglConfig = c.SDL_EGLConfig;
 pub const EglSurface = c.SDL_EGLSurface;
@@ -194,12 +219,19 @@ pub const FunctionPointer = c.SDL_FunctionPointer;
 pub const WindowFlags = c.SDL_WindowFlags;
 pub const HitTestResult = c.SDL_HitTestResult;
 pub const HitTest = c.SDL_HitTest;
+pub const EventFilter = c.SDL_EventFilter;
 
 pub const WindowBorderSize = struct {
     top: i32,
     left: i32,
     bottom: i32,
     right: i32,
+};
+
+pub const WindowGraphicsBinding = enum {
+    none,
+    opengl,
+    metal,
 };
 
 pub fn glSetAttribute(attr: GlAttr, value: c_int) bool {
@@ -212,9 +244,22 @@ pub fn glGetAttribute(attr: GlAttr) ?c_int {
     return value;
 }
 
-pub fn createWindow(title: [*:0]const u8, width: c_int, height: c_int) ?*c.SDL_Window {
+fn graphicsBindingFlag(binding: WindowGraphicsBinding) c_uint {
+    return switch (binding) {
+        .none => 0,
+        .opengl => @intCast(c.SDL_WINDOW_OPENGL),
+        .metal => @intCast(c.SDL_WINDOW_METAL),
+    };
+}
+
+pub fn createWindow(
+    title: [*:0]const u8,
+    width: c_int,
+    height: c_int,
+    graphics_binding: WindowGraphicsBinding,
+) ?*c.SDL_Window {
     const high_dpi = @as(c_uint, @intCast(c.SDL_WINDOW_HIGH_PIXEL_DENSITY));
-    const base_flags: c_uint = @intCast(c.SDL_WINDOW_OPENGL | c.SDL_WINDOW_RESIZABLE);
+    const base_flags: c_uint = @as(c_uint, @intCast(c.SDL_WINDOW_RESIZABLE)) | graphicsBindingFlag(graphics_binding);
     const flags: c_uint = base_flags | high_dpi;
     return c.SDL_CreateWindow(title, width, height, flags);
 }
@@ -307,6 +352,33 @@ pub fn getWindowWin32Hwnd(window: *c.SDL_Window) ?*anyopaque {
     if (builtin.target.os.tag != .windows) return null;
     const props = getWindowProperties(window) orelse return null;
     return getPointerProperty(props, c.SDL_PROP_WINDOW_WIN32_HWND_POINTER);
+}
+
+pub fn getWindowCocoaWindow(window: *c.SDL_Window) ?*anyopaque {
+    if (builtin.target.os.tag != .macos) return null;
+    const props = getWindowProperties(window) orelse return null;
+    return getPointerProperty(props, c.SDL_PROP_WINDOW_COCOA_WINDOW_POINTER);
+}
+
+pub fn getWindowCocoaView(window: *c.SDL_Window) ?*anyopaque {
+    if (builtin.target.os.tag != .macos) return null;
+    const props = getWindowProperties(window) orelse return null;
+    return getPointerProperty(props, "SDL.window.cocoa.view");
+}
+
+pub fn metalCreateView(window: *c.SDL_Window) ?MetalView {
+    if (builtin.target.os.tag != .macos) return null;
+    return c.SDL_Metal_CreateView(window);
+}
+
+pub fn metalDestroyView(view: MetalView) void {
+    if (builtin.target.os.tag != .macos) return;
+    c.SDL_Metal_DestroyView(view);
+}
+
+pub fn metalGetLayer(view: MetalView) ?*anyopaque {
+    if (builtin.target.os.tag != .macos) return null;
+    return @ptrCast(c.SDL_Metal_GetLayer(view));
 }
 
 pub fn glCreateContext(window: *c.SDL_Window) ?c.SDL_GLContext {

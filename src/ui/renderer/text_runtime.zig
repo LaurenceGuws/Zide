@@ -38,11 +38,17 @@ pub fn deinitTerminalTextState(self: *Renderer) void {
 }
 
 pub fn beginTerminalGlyphBatch(self: *Renderer) void {
+    if (!textRenderingAvailable(self)) return;
     self.terminal_text.glyph_cache.begin();
 }
 
 pub fn flushTerminalGlyphBatch(self: *Renderer) void {
+    if (!textRenderingAvailable(self)) return;
     self.terminal_text.glyph_cache.flush(self);
+}
+
+fn textRenderingAvailable(self: *Renderer) bool {
+    return self.textRenderingMode() != .unavailable;
 }
 
 fn snapInt(value: f32) i32 {
@@ -99,6 +105,7 @@ fn snapTextOrigin(self: *Renderer, x: f32, y: f32) TextOrigin {
 }
 
 pub fn drawText(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color) void {
+    if (!textRenderingAvailable(self)) return;
     const prev = self.text_render.bg_rgba;
     defer self.text_render.bg_rgba = prev;
     self.text_render.bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
@@ -110,6 +117,7 @@ pub fn drawTextMonospace(self: *Renderer, text: []const u8, x: f32, y: f32, colo
 }
 
 pub fn drawTextMonospacePolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, disable_programming_ligatures: bool) void {
+    if (!textRenderingAvailable(self)) return;
     const prev = self.text_render.bg_rgba;
     defer self.text_render.bg_rgba = prev;
     self.text_render.bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
@@ -121,6 +129,7 @@ pub fn drawTextMonospaceOnBg(self: *Renderer, text: []const u8, x: f32, y: f32, 
 }
 
 pub fn drawTextMonospaceOnBgPolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color, disable_programming_ligatures: bool) void {
+    if (!textRenderingAvailable(self)) return;
     const prev = self.text_render.bg_rgba;
     defer self.text_render.bg_rgba = prev;
     var bg_rgba = bg.toRgba();
@@ -130,6 +139,7 @@ pub fn drawTextMonospaceOnBgPolicy(self: *Renderer, text: []const u8, x: f32, y:
 }
 
 pub fn drawTextMonospaceStyledPolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, disable_programming_ligatures: bool, italic: bool) void {
+    if (!textRenderingAvailable(self)) return;
     const prev = self.text_render.bg_rgba;
     defer self.text_render.bg_rgba = prev;
     self.text_render.bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
@@ -137,6 +147,7 @@ pub fn drawTextMonospaceStyledPolicy(self: *Renderer, text: []const u8, x: f32, 
 }
 
 pub fn drawTextMonospaceOnBgStyledPolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color, disable_programming_ligatures: bool, italic: bool) void {
+    if (!textRenderingAvailable(self)) return;
     const prev = self.text_render.bg_rgba;
     defer self.text_render.bg_rgba = prev;
     var bg_rgba = bg.toRgba();
@@ -146,6 +157,7 @@ pub fn drawTextMonospaceOnBgStyledPolicy(self: *Renderer, text: []const u8, x: f
 }
 
 pub fn drawTextOnBg(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color) void {
+    if (!textRenderingAvailable(self)) return;
     const prev = self.text_render.bg_rgba;
     defer self.text_render.bg_rgba = prev;
     var bg_rgba = bg.toRgba();
@@ -155,6 +167,7 @@ pub fn drawTextOnBg(self: *Renderer, text: []const u8, x: f32, y: f32, color: Co
 }
 
 pub fn drawTextSized(self: *Renderer, text: []const u8, x: f32, y: f32, size: f32, color: Color) void {
+    if (!textRenderingAvailable(self)) return;
     const prev = self.text_render.bg_rgba;
     defer self.text_render.bg_rgba = prev;
     self.text_render.bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
@@ -174,6 +187,7 @@ pub fn drawTextSized(self: *Renderer, text: []const u8, x: f32, y: f32, size: f3
 }
 
 pub fn drawIconText(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color) void {
+    if (!textRenderingAvailable(self)) return;
     const prev = self.text_render.bg_rgba;
     defer self.text_render.bg_rgba = prev;
     self.text_render.bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
@@ -181,6 +195,7 @@ pub fn drawIconText(self: *Renderer, text: []const u8, x: f32, y: f32, color: Co
 }
 
 pub fn measureIconTextWidth(self: *Renderer, text: []const u8) f32 {
+    if (!textRenderingAvailable(self)) return 0;
     return measureTextWidth(self, &self.icon_font, text);
 }
 
@@ -201,7 +216,7 @@ pub fn drawTerminalCell(self: *Renderer, codepoint: u32, x: f32, y: f32, cell_wi
         self.drawRect(snapInt(snapped_x), snapInt(snapped_y), snapped_cell_w_i, snapped_cell_h_i, if (is_cursor) fg else bg);
     }
 
-    if (codepoint != 0) {
+    if (codepoint != 0 and textRenderingAvailable(self)) {
         const text_color = if (is_cursor) bg else fg;
         _ = bold;
         const draw = terminal_font_mod.DrawContext{ .ctx = self, .drawTexture = drawTextureThunk };
@@ -227,7 +242,7 @@ pub fn drawTerminalCellGrapheme(self: *Renderer, base: u32, combining: []const u
     const snapped_cell_w_i = snapInt(snapped_cell_width);
     const snapped_cell_h_i = snapInt(snapped_cell_height);
     if (draw_bg) self.drawRect(snapInt(snapped_x), snapInt(snapped_y), snapped_cell_w_i, snapped_cell_h_i, if (is_cursor) fg else bg);
-    if (base != 0) {
+    if (base != 0 and textRenderingAvailable(self)) {
         const text_color = if (is_cursor) bg else fg;
         const draw = terminal_font_mod.DrawContext{ .ctx = self, .drawTexture = drawTextureThunk };
         const behind = if (is_cursor) fg else bg;
@@ -250,7 +265,7 @@ pub fn drawTerminalCellGraphemeBatched(self: *Renderer, base: u32, combining: []
     const snapped_cell_w_i = snapInt(snapped_cell_width);
     const snapped_cell_h_i = snapInt(snapped_cell_height);
     if (draw_bg) self.addTerminalRect(snapInt(snapped_x), snapInt(snapped_y), snapped_cell_w_i, snapped_cell_h_i, if (is_cursor) fg else bg);
-    if (base != 0) {
+    if (base != 0 and textRenderingAvailable(self)) {
         const text_color = if (is_cursor) bg else fg;
         const draw = terminal_font_mod.DrawContext{ .ctx = self, .drawTexture = drawTextureGlyphCacheThunk };
         const behind = if (is_cursor) fg else bg;
@@ -272,7 +287,7 @@ pub fn drawTerminalCellBatched(self: *Renderer, codepoint: u32, x: f32, y: f32, 
     const snapped_cell_w_i = snapInt(snapped_cell_width);
     const snapped_cell_h_i = snapInt(snapped_cell_height);
     if (draw_bg) self.addTerminalRect(snapInt(snapped_x), snapInt(snapped_y), snapped_cell_w_i, snapped_cell_h_i, if (is_cursor) fg else bg);
-    if (codepoint != 0) {
+    if (codepoint != 0 and textRenderingAvailable(self)) {
         const text_color = if (is_cursor) bg else fg;
         _ = bold;
         if (!drawTerminalBoxGlyphBatched(self, codepoint, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, text_color)) {
@@ -425,9 +440,9 @@ fn drawTextWithFontMonospaceShaped(self: *Renderer, font: *TerminalFont, metrics
             };
             const draw_color = if (glyph.is_color) types.Rgba{ .r = 255, .g = 255, .b = 255, .a = 255 } else color;
             if (glyph.is_color) {
-                drawTextureThunk(self, font.color_texture, glyph.rect, dest, draw_color, .rgba);
+                drawTextureThunk(self, font.colorTexture(), glyph.rect, dest, draw_color, .rgba);
             } else {
-                drawTextureThunk(self, font.coverage_texture, glyph.rect, dest, draw_color, .font_coverage);
+                drawTextureThunk(self, font.coverageTexture(), glyph.rect, dest, draw_color, .font_coverage);
             }
         }
         span_start = span_end;

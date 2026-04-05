@@ -267,6 +267,7 @@ pub fn drawCached(
     const draw_list = &cache.draw_list;
 
     const texture_changed = retained_targets_runtime.ensureSurface(r, .editor, @intFromFloat(width), @intFromFloat(height));
+    const use_retained_editor_surface = retained_targets_runtime.surfaceAvailable(r, .editor);
     var force_redraw = cache.beginFrame(
         frame_id,
         cols,
@@ -281,14 +282,20 @@ pub fn drawCached(
         view.selectionStateHash(),
     );
     if (texture_changed) force_redraw = true;
+    if (!use_retained_editor_surface) force_redraw = true;
 
     var any_dirty = force_redraw;
 
     if (force_redraw) {
-        if (retained_targets_runtime.beginSurface(r, .editor)) {
+        if (use_retained_editor_surface) {
+            if (retained_targets_runtime.beginSurface(r, .editor)) {
+                r.drawRect(0, 0, @intFromFloat(width), @intFromFloat(height), r.theme.background);
+                r.drawRect(0, 0, @intFromFloat(widget.gutter_width), @intFromFloat(height), r.theme.line_number_bg);
+                retained_targets_runtime.endSurface(r, .editor);
+            }
+        } else {
             r.drawRect(0, 0, @intFromFloat(width), @intFromFloat(height), r.theme.background);
             r.drawRect(0, 0, @intFromFloat(widget.gutter_width), @intFromFloat(height), r.theme.line_number_bg);
-            retained_targets_runtime.endSurface(r, .editor);
         }
     }
 
@@ -356,8 +363,10 @@ pub fn drawCached(
                 if (!(ctx.force_redraw or dirty)) return;
 
                 any_dirty_local.* = true;
-                if (!retained_targets_runtime.beginSurface(r_local, .editor)) return;
-                defer retained_targets_runtime.endSurface(r_local, .editor);
+                if (ctx.use_retained_editor_surface) {
+                    if (!retained_targets_runtime.beginSurface(r_local, .editor)) return;
+                    defer retained_targets_runtime.endSurface(r_local, .editor);
+                }
 
                 const clip_h = clippedEditorRowHeight(seg_band.h_i, @as(i32, @intFromFloat(height_local)) - seg_band.y_i);
                 r_local.beginClip(
@@ -559,13 +568,12 @@ pub fn drawCached(
             .line_width = line_width,
             .force_redraw = force_redraw,
             .any_dirty = &any_dirty,
+            .use_retained_editor_surface = use_retained_editor_surface,
         };
         traversal_mod.walkVisibleSegments(view, prepared.line_text, prepared.cluster_slice, cols, widget.wrap_enabled, start_line, start_seg, line_idx, visible_lines, &visual_row, line_width, ctx, Local.renderSegment);
     }
 
-    if (any_dirty or force_redraw) {
-        retained_targets_runtime.drawSurface(r, .editor, .{ .x = draw_x, .y = draw_y });
-    } else {
+    if (use_retained_editor_surface and (any_dirty or force_redraw)) {
         retained_targets_runtime.drawSurface(r, .editor, .{ .x = draw_x, .y = draw_y });
     }
 

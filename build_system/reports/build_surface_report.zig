@@ -13,7 +13,8 @@ pub fn main() !void {
     std.debug.print(
         \\Build policy notes
         \\- Default runtime mode is `ide`; use `-Dmode=terminal` or `-Dmode=editor` for focused builds.
-        \\- Renderer path is fixed to SDL3 + OpenGL on the current build surface.
+        \\- Current runtime graphics path is SDL3 + OpenGL on the live build surface.
+        \\- Native host architecture authority lives under `app_architecture/platform/`; do not treat the live graphics path as the durable host contract.
         \\- `main` runtime graph and extended IDE/test graph are planned separately on purpose.
         \\
     , .{});

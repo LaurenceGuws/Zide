@@ -2,6 +2,7 @@ const std = @import("std");
 const app_logger = @import("../app_logger.zig");
 
 const app_shell = @import("../app_shell.zig");
+const metal_text_diagnostic_view = @import("metal_text_diagnostic_view.zig");
 const terminal_font_mod = @import("terminal_font.zig");
 const renderer_mod = @import("renderer.zig");
 const retained_targets_runtime = @import("renderer/retained_targets_runtime.zig");
@@ -14,6 +15,7 @@ const Shell = app_shell.Shell;
 const Color = app_shell.Color;
 const Renderer = renderer_mod.Renderer;
 const TerminalFont = terminal_font_mod.TerminalFont;
+const TextRenderingMode = renderer_mod.TextRenderingMode;
 
 const SampleFontFace = struct {
     font: TerminalFont,
@@ -139,6 +141,10 @@ pub const FontSampleView = struct {
         const h = geometry.window.height;
         if (w <= 0 or h <= 0) return;
 
+        if (r.textRenderingMode() == .unavailable and r.plannedTextRenderingMode() == .metal_texture_atlas) {
+            _ = (metal_text_diagnostic_view.View{}).activate(shell);
+        }
+
         // Render into the offscreen target so we can do linear blending in a
         // controlled way (target is linear; presentation converts to sRGB).
         if (retained_targets_runtime.ensureSurface(r, .editor, @intFromFloat(w), @intFromFloat(h))) {
@@ -172,6 +178,11 @@ pub const FontSampleView = struct {
         ) catch "Font Sample";
         r.drawText(title, padding, header_y, theme.foreground);
 
+        if (r.textRenderingMode() != .gl_texture_atlas) {
+            drawTextModeStatus(r, theme, padding, header_y + r.char_height * 1.8);
+            return;
+        }
+
         const section_gap: f32 = 10;
         var y_cursor: f32 = header_y + r.char_height * 1.8;
 
@@ -182,6 +193,18 @@ pub const FontSampleView = struct {
         _ = drawSection(self, r, theme, w, left_x, right_x, y_cursor, col_w, "cursor", theme.cursor, theme.background);
 
         _ = h;
+    }
+
+    fn drawTextModeStatus(r: *Renderer, theme: *const app_shell.Theme, x: f32, y: f32) void {
+        r.drawText("Text sample unavailable on this runtime path.", x, y, theme.foreground);
+
+        var live_buf: [96]u8 = undefined;
+        const live = std.fmt.bufPrint(&live_buf, "live text mode: {s}", .{@tagName(r.textRenderingMode())}) catch "live text mode: <error>";
+        r.drawText(live, x, y + r.char_height * 1.4, theme.ui_text_inactive);
+
+        var planned_buf: [96]u8 = undefined;
+        const planned = std.fmt.bufPrint(&planned_buf, "planned text mode: {s}", .{@tagName(r.plannedTextRenderingMode())}) catch "planned text mode: <error>";
+        r.drawText(planned, x, y + r.char_height * 2.8, theme.ui_modified);
     }
 
     fn drawSection(
@@ -266,6 +289,7 @@ pub const FontSampleView = struct {
         y: f32,
         color: Color,
     ) void {
+        if (r.textRenderingMode() != .gl_texture_atlas) return;
         const draw_ctx = terminal_font_mod.DrawContext{ .ctx = r, .drawTexture = drawTextureThunk };
         text_draw.drawText(
             allocator,
@@ -293,6 +317,7 @@ pub const FontSampleView = struct {
         color: Color,
         zoom: f32,
     ) void {
+        if (r.textRenderingMode() != .gl_texture_atlas) return;
         const draw_ctx = terminal_font_mod.DrawContext{ .ctx = r, .drawTexture = drawTextureThunk };
         const cell_w = face.metrics.cell_width * zoom;
         const cell_h = face.metrics.line_height * zoom;

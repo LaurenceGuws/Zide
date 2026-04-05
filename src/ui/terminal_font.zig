@@ -355,6 +355,7 @@ pub const GlyphError = error{
     FtLoadFailed,
     FtRenderFailed,
     AtlasFull,
+    AtlasUploadFailed,
     OutOfMemory,
 };
 
@@ -363,6 +364,28 @@ const GlyphKey = struct {
     glyph_id: u32,
     want_color: bool,
     italic: bool = false,
+};
+
+pub const AtlasStorageMode = enum {
+    opengl_textures,
+    metal_textures,
+};
+
+pub const AtlasStorage = struct {
+    mode: AtlasStorageMode,
+    coverage_texture: Texture,
+    color_texture: Texture,
+};
+
+pub const AtlasUploadKind = enum {
+    coverage,
+    color,
+};
+
+pub const AtlasUploadHooks = struct {
+    ctx: ?*anyopaque,
+    upload_coverage: *const fn (ctx: ?*anyopaque, rect: Rect, data: []const u8) bool,
+    upload_color: *const fn (ctx: ?*anyopaque, rect: Rect, data: []const u8) bool,
 };
 
 pub const TerminalFont = struct {
@@ -398,8 +421,8 @@ pub const TerminalFont = struct {
     fc_config: ?FcConfigPtr,
     system_fallback_by_cp: std.AutoHashMap(u32, ?[]u8),
     system_faces: std.StringHashMapUnmanaged(FacePair),
-    coverage_texture: Texture,
-    color_texture: Texture,
+    atlas_storage: AtlasStorage,
+    atlas_upload_hooks: ?AtlasUploadHooks,
     atlas_width: i32,
     atlas_height: i32,
     pen_x: i32,
@@ -442,6 +465,36 @@ pub const TerminalFont = struct {
         emoji_color_path: ?[*:0]const u8,
         emoji_text_path: ?[*:0]const u8,
         opts: RenderingOptions,
+    ) !TerminalFont {
+        return initWithAtlasUploadHooks(
+            allocator,
+            path,
+            size,
+            symbols_path,
+            unicode_symbols2_path,
+            unicode_symbols_path,
+            unicode_mono_path,
+            unicode_sans_path,
+            emoji_color_path,
+            emoji_text_path,
+            opts,
+            null,
+        );
+    }
+
+    pub fn initWithAtlasUploadHooks(
+        allocator: std.mem.Allocator,
+        path: [*:0]const u8,
+        size: f32,
+        symbols_path: ?[*:0]const u8,
+        unicode_symbols2_path: ?[*:0]const u8,
+        unicode_symbols_path: ?[*:0]const u8,
+        unicode_mono_path: ?[*:0]const u8,
+        unicode_sans_path: ?[*:0]const u8,
+        emoji_color_path: ?[*:0]const u8,
+        emoji_text_path: ?[*:0]const u8,
+        opts: RenderingOptions,
+        atlas_upload_hooks: ?AtlasUploadHooks,
     ) !TerminalFont {
         var ft_library: c.FT_Library = null;
         if (c.FT_Init_FreeType(&ft_library) != 0) return error.FtInitFailed;
@@ -650,17 +703,31 @@ pub const TerminalFont = struct {
         const atlas_height: i32 = 2048;
         const padding: i32 = 1;
 
-        const zero_cov_len: usize = @as(usize, @intCast(atlas_width * atlas_height));
-        const zero_cov_buf = allocator.alloc(u8, zero_cov_len) catch return error.OutOfMemory;
-        defer allocator.free(zero_cov_buf);
-        @memset(zero_cov_buf, 0);
-        const coverage_texture = font_atlas.createTextureR8(atlas_width, atlas_height, zero_cov_buf);
+        const atlas_storage: AtlasStorage = atlas_init: {
+            if (atlas_upload_hooks) |_| {
+                break :atlas_init .{
+                    .mode = .metal_textures,
+                    .coverage_texture = .{ .id = 0, .width = atlas_width, .height = atlas_height },
+                    .color_texture = .{ .id = 0, .width = atlas_width, .height = atlas_height },
+                };
+            }
+            const zero_cov_len: usize = @as(usize, @intCast(atlas_width * atlas_height));
+            const zero_cov_buf = allocator.alloc(u8, zero_cov_len) catch return error.OutOfMemory;
+            defer allocator.free(zero_cov_buf);
+            @memset(zero_cov_buf, 0);
+            const coverage_texture = font_atlas.createTextureR8(atlas_width, atlas_height, zero_cov_buf);
 
-        const zero_col_len: usize = @as(usize, @intCast(atlas_width * atlas_height * 4));
-        const zero_col_buf = allocator.alloc(u8, zero_col_len) catch return error.OutOfMemory;
-        defer allocator.free(zero_col_buf);
-        @memset(zero_col_buf, 0);
-        const color_texture = font_atlas.createTexture(atlas_width, atlas_height, zero_col_buf);
+            const zero_col_len: usize = @as(usize, @intCast(atlas_width * atlas_height * 4));
+            const zero_col_buf = allocator.alloc(u8, zero_col_len) catch return error.OutOfMemory;
+            defer allocator.free(zero_col_buf);
+            @memset(zero_col_buf, 0);
+            const color_texture = font_atlas.createTexture(atlas_width, atlas_height, zero_col_buf);
+            break :atlas_init .{
+                .mode = .opengl_textures,
+                .coverage_texture = coverage_texture,
+                .color_texture = color_texture,
+            };
+        };
 
         return .{
             .allocator = allocator,
@@ -685,8 +752,8 @@ pub const TerminalFont = struct {
             .fc_config = fc_config,
             .system_fallback_by_cp = std.AutoHashMap(u32, ?[]u8).init(allocator),
             .system_faces = .{},
-            .coverage_texture = coverage_texture,
-            .color_texture = color_texture,
+            .atlas_storage = atlas_storage,
+            .atlas_upload_hooks = atlas_upload_hooks,
             .atlas_width = atlas_width,
             .atlas_height = atlas_height,
             .pen_x = padding,
@@ -740,8 +807,10 @@ pub const TerminalFont = struct {
         }
         self.system_faces.deinit(self.allocator);
 
-        if (self.coverage_texture.id != 0) gl.DeleteTextures(1, &self.coverage_texture.id);
-        if (self.color_texture.id != 0) gl.DeleteTextures(1, &self.color_texture.id);
+        if (self.atlas_storage.mode == .opengl_textures) {
+            if (self.atlas_storage.coverage_texture.id != 0) gl.DeleteTextures(1, &self.atlas_storage.coverage_texture.id);
+            if (self.atlas_storage.color_texture.id != 0) gl.DeleteTextures(1, &self.atlas_storage.color_texture.id);
+        }
         if (self.symbols_hb_font) |fb_hb| c.hb_font_destroy(fb_hb);
         if (self.symbols_ft_face) |fb_face| _ = c.FT_Done_Face(fb_face);
         if (self.unicode_symbols2_hb_font) |fb_hb| c.hb_font_destroy(fb_hb);
@@ -848,8 +917,76 @@ pub const TerminalFont = struct {
         return null;
     }
 
+    pub fn uploadDiagnosticColorGlyphPreview(self: *TerminalFont) ?Rect {
+        const candidates = [_]u32{
+            0x1F600,
+            0x1F642,
+            0x1F680,
+            0x1F525,
+        };
+        if (self.emoji_color_ft_face) |face| {
+            for (candidates) |codepoint| {
+                const glyph_id = c.FT_Get_Char_Index(face, codepoint);
+                if (glyph_id == 0) continue;
+                const glyph = self.getGlyphById(face, glyph_id, true, false, 0) catch continue;
+                if (glyph.is_color and glyph.rect.width > 0 and glyph.rect.height > 0) return glyph.rect;
+            }
+        }
+        for (candidates) |codepoint| {
+            const choice = self.pickFontForCodepoint(codepoint);
+            if (!choice.want_color) continue;
+            const glyph_id = c.FT_Get_Char_Index(choice.face, codepoint);
+            if (glyph_id == 0) continue;
+            const glyph = self.getGlyphById(choice.face, glyph_id, true, false, 0) catch continue;
+            if (glyph.is_color and glyph.rect.width > 0 and glyph.rect.height > 0) return glyph.rect;
+        }
+        return null;
+    }
+
     pub fn setAtlasFilterPoint(self: *TerminalFont) void {
         font_atlas.setAtlasFilterPoint(self);
+    }
+
+    pub fn atlasStorageMode(self: *const TerminalFont) AtlasStorageMode {
+        return self.atlas_storage.mode;
+    }
+
+    pub fn coverageTexture(self: *const TerminalFont) Texture {
+        return self.atlas_storage.coverage_texture;
+    }
+
+    pub fn colorTexture(self: *const TerminalFont) Texture {
+        return self.atlas_storage.color_texture;
+    }
+
+    pub fn uploadAtlasRegion(self: *TerminalFont, kind: AtlasUploadKind, rect: Rect, data: []const u8) bool {
+        return switch (self.atlas_storage.mode) {
+            .opengl_textures => switch (kind) {
+                .coverage => blk: {
+                    font_atlas.updateTextureRegionR8(self.atlas_storage.coverage_texture, rect, data);
+                    break :blk true;
+                },
+                .color => blk: {
+                    font_atlas.updateTextureRegion(self.atlas_storage.color_texture, rect, data);
+                    break :blk true;
+                },
+            },
+            .metal_textures => if (self.atlas_upload_hooks) |hooks|
+                switch (kind) {
+                    .coverage => hooks.upload_coverage(hooks.ctx, rect, data),
+                    .color => hooks.upload_color(hooks.ctx, rect, data),
+                }
+            else
+                false,
+        };
+    }
+
+    pub fn uploadCoverageAtlasRegion(self: *TerminalFont, rect: Rect, data: []const u8) bool {
+        return self.uploadAtlasRegion(.coverage, rect, data);
+    }
+
+    pub fn uploadColorAtlasRegion(self: *TerminalFont, rect: Rect, data: []const u8) bool {
+        return self.uploadAtlasRegion(.color, rect, data);
     }
 
     pub fn specialGlyphSpriteKey(

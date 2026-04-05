@@ -1,5 +1,5 @@
 const builtin = @import("builtin");
-const sdl_api = @import("sdl_api.zig");
+const native_host = @import("native_host.zig");
 const window_chrome_runtime = @import("../ui/renderer/window_chrome_runtime.zig");
 
 pub const Policy = struct {
@@ -67,9 +67,9 @@ pub fn policyForChromeMode(mode: window_chrome_runtime.WindowChromeMode, focused
     };
 }
 
-pub fn apply(window: *sdl_api.c.SDL_Window, policy: Policy) void {
+pub fn apply(render_host: native_host.PlatformRenderHost, policy: Policy) void {
     if (builtin.target.os.tag != .windows) return;
-    const hwnd = sdl_api.getWindowWin32Hwnd(window) orelse return;
+    const hwnd = render_host.win32Hwnd() orelse return;
     applyToHwnd(hwnd, policy);
 }
 

@@ -1,6 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const sdl_api = @import("sdl_api.zig");
+const native_host = @import("native_host.zig");
 const app_logger = @import("../app_logger.zig");
 const window_chrome_runtime = @import("../ui/renderer/window_chrome_runtime.zig");
 
@@ -8,7 +8,7 @@ pub const FrameOwner = if (builtin.target.os.tag == .windows) WindowsIntegratedF
 
 const StubFrameOwner = struct {
     pub fn deinit(_: *StubFrameOwner) void {}
-    pub fn sync(_: *StubFrameOwner, _: *sdl_api.c.SDL_Window, _: window_chrome_runtime.WindowChromeMode, _: bool) void {}
+    pub fn sync(_: *StubFrameOwner, _: native_host.PlatformRenderHost, _: window_chrome_runtime.WindowChromeMode, _: bool, _: bool) void {}
 };
 
 const WindowsIntegratedFrame = struct {
@@ -76,13 +76,13 @@ const WindowsIntegratedFrame = struct {
         self.uninstall();
     }
 
-    pub fn sync(self: *WindowsIntegratedFrame, window: *sdl_api.c.SDL_Window, mode: window_chrome_runtime.WindowChromeMode, maximized: bool, fullscreen: bool) void {
+    pub fn sync(self: *WindowsIntegratedFrame, render_host: native_host.PlatformRenderHost, mode: window_chrome_runtime.WindowChromeMode, maximized: bool, fullscreen: bool) void {
         if (mode == .native) {
             self.uninstall();
             return;
         }
 
-        const hwnd = sdl_api.getWindowWin32Hwnd(window) orelse {
+        const hwnd = render_host.win32Hwnd() orelse {
             self.uninstall();
             return;
         };

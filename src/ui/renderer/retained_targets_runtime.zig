@@ -44,6 +44,7 @@ fn snapToDevicePixel(value: f32, render_scale: f32) f32 {
 }
 
 pub fn ensureSurface(self: anytype, surface: RetainedSurface, width: i32, height: i32) bool {
+    if (!self.capabilities().retained_targets) return false;
     switch (surface) {
         .terminal => {
             const recreated = self.ensureRenderTargetScaled(&self.retained_targets.terminal, width, height, gl.c.GL_NEAREST);
@@ -57,6 +58,7 @@ pub fn ensureSurface(self: anytype, surface: RetainedSurface, width: i32, height
 }
 
 pub fn beginSurface(self: anytype, surface: RetainedSurface) bool {
+    if (!self.capabilities().retained_targets) return false;
     switch (surface) {
         .terminal => return self.beginRenderTarget(self.retained_targets.terminal),
         .editor => {
@@ -67,6 +69,7 @@ pub fn beginSurface(self: anytype, surface: RetainedSurface) bool {
 }
 
 pub fn surfaceAvailable(self: anytype, surface: RetainedSurface) bool {
+    if (!self.capabilities().retained_targets) return false;
     return switch (surface) {
         .terminal => self.retained_targets.terminal != null,
         .editor => self.retained_targets.editor != null,
@@ -74,6 +77,7 @@ pub fn surfaceAvailable(self: anytype, surface: RetainedSurface) bool {
 }
 
 pub fn endSurface(self: anytype, surface: RetainedSurface) void {
+    if (!self.capabilities().retained_targets) return;
     switch (surface) {
         .terminal => {},
         .editor => scene_frame_runtime.noteRetainedSurfaceEnded(self, .editor),
@@ -82,6 +86,7 @@ pub fn endSurface(self: anytype, surface: RetainedSurface) void {
 }
 
 pub fn drawSurface(self: anytype, surface: RetainedSurface, draw: SurfaceDraw) void {
+    if (!self.capabilities().retained_targets) return;
     switch (surface) {
         .terminal => if (self.retained_targets.terminal) |target| {
             scene_frame_runtime.noteRetainedSurfaceBlit(self, .terminal, draw.generation);
@@ -162,6 +167,7 @@ pub fn drawSurface(self: anytype, surface: RetainedSurface, draw: SurfaceDraw) v
 }
 
 pub fn scrollSurface(self: anytype, surface: RetainedSurface, dx: i32, dy: i32) bool {
+    if (!self.capabilities().retained_targets) return false;
     if (surface != .terminal) return false;
     if (self.retained_targets.terminal) |target| {
         return gl_backend.scrollRenderTarget(

@@ -4,6 +4,7 @@ const mode_build = @import("mode_build.zig");
 const app_runner = @import("runner.zig");
 const app_signals = @import("signals.zig");
 const app_state_mod = @import("app_state.zig");
+const macos_metal_live_smoke_runtime = @import("macos_metal_live_smoke_runtime.zig");
 const terminal_cli = @import("terminal_cli.zig");
 const lua_config_shared = @import("../config/lua_config_shared.zig");
 const lua_config_export = @import("../config/lua_config_export.zig");
@@ -24,9 +25,14 @@ pub fn runWithMode(allocator: std.mem.Allocator, app_mode: AppMode) !void {
 }
 
 pub fn runFromArgs(allocator: std.mem.Allocator) !void {
+    if (macos_metal_live_smoke_runtime.shouldRun()) {
+        return try macos_metal_live_smoke_runtime.run(allocator);
+    }
+
     var startup_command = try app_bootstrap.parseStartupCommand(allocator);
     defer startup_command.deinit(allocator);
     switch (startup_command) {
+        .macos_metal_live_smoke => return try macos_metal_live_smoke_runtime.run(allocator),
         .write_default_config => |cmd| return try writeDefaultConfig(allocator, cmd),
         .install_user_lua_meta => |cmd| return try installUserLuaMeta(allocator, cmd.force),
         .run => {},

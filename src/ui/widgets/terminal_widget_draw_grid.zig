@@ -723,9 +723,9 @@ fn drawShapedGlyph(
 
     const draw_color = if (glyph.is_color) Rgba{ .r = 255, .g = 255, .b = 255, .a = 255 } else color;
     if (glyph.is_color) {
-        ctx_draw.drawTexture(ctx_draw.ctx, font.color_texture, glyph.rect, dest, draw_color, .rgba);
+        ctx_draw.drawTexture(ctx_draw.ctx, font.colorTexture(), glyph.rect, dest, draw_color, .rgba);
     } else {
-        ctx_draw.drawTexture(ctx_draw.ctx, font.coverage_texture, glyph.rect, dest, draw_color, .font_coverage);
+        ctx_draw.drawTexture(ctx_draw.ctx, font.coverageTexture(), glyph.rect, dest, draw_color, .font_coverage);
     }
     if (capture_sample) |sample| {
         captureTextPaintSample(
@@ -833,9 +833,9 @@ fn drawDirectGlyphById(
     };
     const draw_color = if (glyph.is_color) Rgba{ .r = 255, .g = 255, .b = 255, .a = 255 } else color;
     if (glyph.is_color) {
-        ctx_draw.drawTexture(ctx_draw.ctx, font.color_texture, glyph.rect, dest, draw_color, .rgba);
+        ctx_draw.drawTexture(ctx_draw.ctx, font.colorTexture(), glyph.rect, dest, draw_color, .rgba);
     } else {
-        ctx_draw.drawTexture(ctx_draw.ctx, font.coverage_texture, glyph.rect, dest, draw_color, .font_coverage);
+        ctx_draw.drawTexture(ctx_draw.ctx, font.coverageTexture(), glyph.rect, dest, draw_color, .font_coverage);
     }
     if (capture_sample) |sample| {
         captureTextPaintSample(
@@ -953,7 +953,7 @@ fn drawAlignedSpecialGlyphSprite(
             }
         }
         rr.addTerminalGlyphQuad(
-            rr.terminal_font.coverage_texture,
+            rr.terminal_font.coverageTexture(),
             sp.rect,
             .{ .x = dest_x, .y = y0, .width = dest_w, .height = snapped_h },
             fg_draw.toRgba(),

@@ -10,13 +10,14 @@ const app_logger = @import("../../app_logger.zig");
 const c = @import("../terminal_font.zig").c;
 
 pub fn setAtlasFilterPoint(self: anytype) void {
-    if (self.coverage_texture.id != 0) {
-        gl.BindTexture(gl.c.GL_TEXTURE_2D, self.coverage_texture.id);
+    if (self.atlasStorageMode() != .opengl_textures) return;
+    if (self.coverageTexture().id != 0) {
+        gl.BindTexture(gl.c.GL_TEXTURE_2D, self.coverageTexture().id);
         gl.TexParameteri(gl.c.GL_TEXTURE_2D, gl.c.GL_TEXTURE_MIN_FILTER, gl.c.GL_NEAREST);
         gl.TexParameteri(gl.c.GL_TEXTURE_2D, gl.c.GL_TEXTURE_MAG_FILTER, gl.c.GL_NEAREST);
     }
-    if (self.color_texture.id != 0) {
-        gl.BindTexture(gl.c.GL_TEXTURE_2D, self.color_texture.id);
+    if (self.colorTexture().id != 0) {
+        gl.BindTexture(gl.c.GL_TEXTURE_2D, self.colorTexture().id);
         gl.TexParameteri(gl.c.GL_TEXTURE_2D, gl.c.GL_TEXTURE_MIN_FILTER, gl.c.GL_NEAREST);
         gl.TexParameteri(gl.c.GL_TEXTURE_2D, gl.c.GL_TEXTURE_MAG_FILTER, gl.c.GL_NEAREST);
     }
@@ -131,10 +132,32 @@ pub fn rasterizeGlyphKey(self: anytype, key: anytype, hb_x_advance: c_int, allow
             .height = @floatFromInt(height),
         };
         if (is_color_bitmap) {
-            updateTextureRegion(self.color_texture, rec, upload);
+            if (!self.uploadColorAtlasRegion(rec, upload)) return error.AtlasUploadFailed;
             self.frame_atlas_stats.uploaded_color_glyphs += 1;
         } else {
-            updateTextureRegionR8(self.coverage_texture, rec, upload);
+            if (!self.uploadCoverageAtlasRegion(rec, upload)) return error.AtlasUploadFailed;
+            if (self.atlasStorageMode() == .metal_textures) {
+                const rgba_needed = pixel_count * 4;
+                const rgba_upload, const owned_temp = if (rgba_needed <= self.upload_buffer_capacity)
+                    .{ self.upload_buffer[0..rgba_needed], false }
+                else blk: {
+                    const temp = try self.allocator.alloc(u8, rgba_needed);
+                    break :blk .{ temp, true };
+                };
+                defer if (owned_temp) self.allocator.free(rgba_upload);
+                var src_idx: usize = pixel_count;
+                var dst_idx: usize = rgba_needed;
+                while (src_idx > 0) {
+                    src_idx -= 1;
+                    dst_idx -= 4;
+                    const alpha = upload[src_idx];
+                    rgba_upload[dst_idx + 0] = 0xFF;
+                    rgba_upload[dst_idx + 1] = 0xFF;
+                    rgba_upload[dst_idx + 2] = 0xFF;
+                    rgba_upload[dst_idx + 3] = alpha;
+                }
+                if (!self.uploadColorAtlasRegion(rec, rgba_upload)) return error.AtlasUploadFailed;
+            }
             self.frame_atlas_stats.uploaded_coverage_glyphs += 1;
         }
         self.frame_atlas_stats.uploaded_pixels += pixel_count;
@@ -194,20 +217,21 @@ pub fn compactAtlas(self: anytype) GlyphError!void {
     self.pen_y = self.padding;
     self.row_h = 0;
 
-    if (self.coverage_texture.id != 0) gl.DeleteTextures(1, &self.coverage_texture.id);
-    if (self.color_texture.id != 0) gl.DeleteTextures(1, &self.color_texture.id);
+    if (self.atlasStorageMode() != .opengl_textures) return error.AtlasFull;
+    if (self.coverageTexture().id != 0) gl.DeleteTextures(1, &self.atlas_storage.coverage_texture.id);
+    if (self.colorTexture().id != 0) gl.DeleteTextures(1, &self.atlas_storage.color_texture.id);
 
     const zero_cov_len: usize = @as(usize, @intCast(self.atlas_width * self.atlas_height));
     const zero_cov_buf = self.allocator.alloc(u8, zero_cov_len) catch return error.OutOfMemory;
     defer self.allocator.free(zero_cov_buf);
     @memset(zero_cov_buf, 0);
-    self.coverage_texture = createTextureR8(self.atlas_width, self.atlas_height, zero_cov_buf);
+    self.atlas_storage.coverage_texture = createTextureR8(self.atlas_width, self.atlas_height, zero_cov_buf);
 
     const zero_col_len: usize = @as(usize, @intCast(self.atlas_width * self.atlas_height * 4));
     const zero_col_buf = self.allocator.alloc(u8, zero_col_len) catch return error.OutOfMemory;
     defer self.allocator.free(zero_col_buf);
     @memset(zero_col_buf, 0);
-    self.color_texture = createTexture(self.atlas_width, self.atlas_height, zero_col_buf);
+    self.atlas_storage.color_texture = createTexture(self.atlas_width, self.atlas_height, zero_col_buf);
 
     const count = old_order.items.len;
     var kept: usize = 0;

@@ -1,6 +1,11 @@
 const std = @import("std");
 const gl = @import("gl.zig");
 
+pub const PixelOrigin = enum {
+    top_left,
+    bottom_left,
+};
+
 pub fn dumpFramebufferPpm(
     allocator: std.mem.Allocator,
     width: i32,
@@ -23,15 +28,44 @@ pub fn dumpFramebufferPpmScaled(
 
     const src_w: usize = @intCast(src_width);
     const src_h: usize = @intCast(src_height);
-    const out_w: usize = @intCast(out_width);
-    const out_h: usize = @intCast(out_height);
-
     const src_byte_count = src_w * src_h * 4;
     const pixels = try allocator.alloc(u8, src_byte_count);
     defer allocator.free(pixels);
 
     // Read back RGBA8 from the currently bound framebuffer.
     gl.ReadPixels(0, 0, src_width, src_height, gl.c.GL_RGBA, gl.c.GL_UNSIGNED_BYTE, pixels.ptr);
+
+    try dumpRgbaPixelsPpmScaled(
+        allocator,
+        pixels,
+        src_width,
+        src_height,
+        out_width,
+        out_height,
+        path,
+        .bottom_left,
+    );
+}
+
+pub fn dumpRgbaPixelsPpmScaled(
+    allocator: std.mem.Allocator,
+    pixels: []const u8,
+    src_width: i32,
+    src_height: i32,
+    out_width: i32,
+    out_height: i32,
+    path: []const u8,
+    origin: PixelOrigin,
+) !void {
+    if (src_width <= 0 or src_height <= 0) return;
+    if (out_width <= 0 or out_height <= 0) return;
+
+    const src_w: usize = @intCast(src_width);
+    const src_h: usize = @intCast(src_height);
+    const out_w: usize = @intCast(out_width);
+    const out_h: usize = @intCast(out_height);
+    const src_byte_count = src_w * src_h * 4;
+    if (pixels.len < src_byte_count) return error.InvalidPixelBuffer;
 
     var file = try std.fs.cwd().createFile(path, .{ .truncate = true });
     defer file.close();
@@ -66,8 +100,10 @@ pub fn dumpFramebufferPpmScaled(
 
             var sy: usize = y0;
             while (sy < y1 and sy < src_h) : (sy += 1) {
-                // Flip Y: OpenGL is bottom-left origin.
-                const src_row = (src_h - 1 - sy);
+                const src_row = switch (origin) {
+                    .top_left => sy,
+                    .bottom_left => src_h - 1 - sy,
+                };
                 var sx: usize = x0;
                 while (sx < x1 and sx < src_w) : (sx += 1) {
                     const idx = (src_row * src_w + sx) * 4;

@@ -37,13 +37,19 @@ pub const PresentTrace = struct {
     captured_path: ?[]const u8 = null,
 };
 
+pub const MainCompositionTarget = enum {
+    default_target,
+    offscreen_scene_target,
+    backend_surface,
+};
+
 pub const PresentState = struct {
     frame_seq: u64 = 0,
     submission_sequence: u64 = 0,
     last_present_counter: u64 = 0,
     last_present_gap_ms: f64 = 0.0,
     last_swap_ms: f64 = 0.0,
-    scene_frame_active: bool = false,
+    main_composition_target: MainCompositionTarget = .default_target,
     drawing_editor_surface: bool = false,
     trace_current: PresentTrace = .{},
     trace_last: PresentTrace = .{},
@@ -63,26 +69,20 @@ pub fn beginFrame(self: anytype) void {
     self.render_width = sizes.render_width;
     self.render_height = sizes.render_height;
     refreshSceneTargetContract(self, display_metrics);
-    prepareSceneTarget(self, gl.c.GL_NEAREST);
+    if (self.capabilities().scene_composition_mode == .offscreen_scene_target) {
+        prepareSceneTarget(self, gl.c.GL_NEAREST);
+    }
 
     self.text_render.bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
-
-    self.present.scene_frame_active = beginSceneFrame(self);
-    if (!self.present.scene_frame_active) self.bindDefaultTarget();
-    gl.Disable(gl.c.GL_SCISSOR_TEST);
-
-    const bg = self.theme.background.toRgba();
-    gl.ClearColor(
-        @as(f32, @floatFromInt(bg.r)) / 255.0,
-        @as(f32, @floatFromInt(bg.g)) / 255.0,
-        @as(f32, @floatFromInt(bg.b)) / 255.0,
-        @as(f32, @floatFromInt(bg.a)) / 255.0,
-    );
-    gl.Clear(gl.c.GL_COLOR_BUFFER_BIT);
+    self.beginBackendFrame();
 }
 
 pub fn submitFrame(self: anytype) FrameSubmission {
-    if (self.present.scene_frame_active) drawSceneTargetToDefault(self);
+    return self.submitBackendFrame();
+}
+
+pub fn submitOpenGlFrame(self: anytype) FrameSubmission {
+    if (self.present.main_composition_target == .offscreen_scene_target) drawSceneTargetToDefault(self);
     if (self.present.capture_armed) {
         if (self.present.capture_path) |path| {
             dumpWindowScreenshotPpm(self, path) catch |err| {
@@ -102,7 +102,7 @@ pub fn submitFrame(self: anytype) FrameSubmission {
     }
     const swap_end = sdl_api.getPerformanceCounter();
     self.present.last_swap_ms = performanceDeltaMs(swap_start, swap_end, self.perf_freq);
-    self.present.scene_frame_active = false;
+    self.present.main_composition_target = .default_target;
     self.present.trace_last = self.present.trace_current;
     self.present.capture_path = null;
     self.present.capture_armed = false;
@@ -117,9 +117,9 @@ pub fn submitFrame(self: anytype) FrameSubmission {
 }
 
 pub fn restoreMainCompositionTarget(self: anytype) void {
-    if (self.present.scene_frame_active) {
+    if (self.present.main_composition_target == .offscreen_scene_target) {
         if (!beginSceneFrame(self)) {
-            self.present.scene_frame_active = false;
+            self.present.main_composition_target = .default_target;
             self.bindDefaultTarget();
         }
         return;
@@ -209,6 +209,16 @@ pub fn noteEditorSurfaceFullPaneClear(self: anytype, x: i32, y: i32, w: i32, h: 
 pub fn refreshSceneTargetContract(self: anytype, display_metrics: platform_window.DisplayMetrics) void {
     const log = app_logger.logger("renderer.scene_target");
     const next = renderer_root.sceneTargetContractFromDisplayMetrics(display_metrics);
+    if (self.capabilities().scene_composition_mode != .offscreen_scene_target) {
+        self.scene_target.pending_invalidation = .{};
+        self.scene_target.contract = next;
+        self.scene_target.invalidation = .{};
+        self.scene_target.ready = false;
+        if (self.scene_target.target != null) {
+            self.destroyRenderTarget(&self.scene_target.target);
+        }
+        return;
+    }
     const reasons = self.scene_target.pending_invalidation;
     self.scene_target.pending_invalidation = .{};
     self.scene_target.contract = next;
@@ -263,7 +273,7 @@ pub fn drawSceneTargetToDefault(self: anytype) void {
     gl.Enable(gl.c.GL_BLEND);
 }
 
-fn performanceDeltaMs(start: u64, end: u64, freq: f64) f64 {
+pub fn performanceDeltaMs(start: u64, end: u64, freq: f64) f64 {
     if (end <= start or freq <= 0.0) return 0.0;
     return (@as(f64, @floatFromInt(end - start)) * 1000.0) / freq;
 }

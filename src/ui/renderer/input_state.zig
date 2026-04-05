@@ -1,5 +1,6 @@
 const std = @import("std");
 const input_events = @import("../../platform/input_events.zig");
+const native_host = @import("../../platform/native_host.zig");
 const iface = @import("interface.zig");
 const text_input = @import("text_input.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
@@ -47,6 +48,7 @@ pub const InputRuntimeState = struct {
 
 pub const InputDomain = struct {
     allocator: std.mem.Allocator,
+    app_host: *native_host.PlatformAppHost,
     window: *sdl_api.c.SDL_Window,
     should_close_flag: *bool,
     key_down: []bool,

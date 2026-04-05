@@ -27,6 +27,17 @@ The practical split is now:
 - Zig package manager owns the primary third-party app/library stack
 - the OS still provides platform/runtime linkage and system facilities
 
+Important architectural note:
+
+- SDL is the current cross-platform bridge dependency for windowing, input, and
+  some platform glue
+- SDL is not, by itself, the final owner of native lifecycle and render-surface
+  semantics on platforms such as macOS and Android
+- use `app_architecture/platform/NATIVE_HOST_REFERENCE_CROSSCHECK.md` for the
+  current architecture authority on that distinction
+- use `app_architecture/platform/PLATFORM_CAPABILITY_MODEL.md` for the naming
+  distinction between host-contract truth and the current runtime graphics path
+
 So on Linux/macOS, manually sourcing SDL3, Lua, FreeType, HarfBuzz, and
 tree-sitter from the host package manager is no longer the normal path.
 
@@ -119,6 +130,7 @@ Current macOS GL bring-up note:
 - compile/build truth is now green on the active arm64 host
 - `zlua-portable` is back on a published pinned package path after the
   `v0.1.0-beta.2` package fix
+- the current GL/SDL lane remains build truth, not target host-contract truth
 
 ## Windows
 

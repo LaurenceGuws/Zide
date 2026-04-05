@@ -1,6 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const app_logger = @import("../../app_logger.zig");
+const native_host = @import("../../platform/native_host.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
 const windows_frame_material = @import("../../platform/windows_frame_material.zig");
 const windows_integrated_frame = @import("../../platform/windows_integrated_frame.zig");
@@ -34,6 +35,7 @@ pub const WindowChromeState = struct {
 };
 
 pub const WindowChromeDomain = struct {
+    render_host: *const native_host.PlatformRenderHost,
     window: *sdl_api.c.SDL_Window,
     window_focused: bool,
     contract: *WindowChromeContract,
@@ -51,7 +53,7 @@ pub fn applyContract(domain: WindowChromeDomain, contract: WindowChromeContract)
 
     const material_policy = windows_frame_material.policyForChromeMode(domain.contract.mode, domain.window_focused);
     if (!std.meta.eql(domain.applied_material.*, material_policy)) {
-        windows_frame_material.apply(domain.window, material_policy);
+        windows_frame_material.apply(domain.render_host.*, material_policy);
         domain.applied_material.* = material_policy;
     }
 
@@ -78,8 +80,8 @@ pub fn applyContract(domain: WindowChromeDomain, contract: WindowChromeContract)
         _ = sdl_api.syncWindow(domain.window);
     }
 
-    domain.integrated_frame.sync(domain.window, domain.contract.mode, windowIsMaximized(domain.window), windowIsFullscreen(domain.window));
-    domain.snap_sink.sync(domain.window, domain.contract.*, windowIsMaximized(domain.window));
+    domain.integrated_frame.sync(domain.render_host.*, domain.contract.mode, windowIsMaximized(domain.window), windowIsFullscreen(domain.window));
+    domain.snap_sink.sync(domain.render_host.*, domain.contract.*, windowIsMaximized(domain.window));
 }
 
 pub fn deinit(domain: WindowChromeDomain) void {

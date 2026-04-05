@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
+const native_host = @import("../../platform/native_host.zig");
 const platform_input_events = @import("../../platform/input_events.zig");
 const input_state = @import("input_state.zig");
 const text_input = @import("text_input.zig");
@@ -57,20 +58,28 @@ fn handleEvent(
     switch (event.type) {
         sdl_api.EVENT_QUIT => {
             domain.should_close_flag.* = true;
+            domain.app_host.noteTerminationRequested();
+        },
+        sdl_api.EVENT_DROP_FILE => {
+            if (sdl_api.dropEventWindowId(event) != main_window_id) return;
+            const path = sdl_api.dropEventData(event) orelse return;
+            _ = domain.app_host.noteOpenFileRequested(path);
         },
         sdl_api.EVENT_WINDOW => {
             if (sdl_api.windowEventId(event) != main_window_id) return;
-            handleWindowEvent(event.type, domain.should_close_flag, domain.window_changes);
+            handleWindowEvent(event.type, domain.app_host, domain.should_close_flag, domain.window_changes);
             if (sdl_api.isFocusGainedEvent(event.type)) {
                 sdl_api.startTextInput(domain.window);
                 text_input.reapplyRect(domain.text_input_state, domain.window);
                 domain.window_focused.* = true;
+                domain.app_host.noteResumed();
                 domain.focus_queue.append(domain.allocator, true) catch |err| {
                     window_log.logf(.warning, "focus queue append failed focused=1 err={s}", .{@errorName(err)});
                 };
             }
             if (sdl_api.isFocusLostEvent(event.type)) {
                 domain.window_focused.* = false;
+                domain.app_host.notePaused();
                 domain.focus_queue.append(domain.allocator, false) catch |err| {
                     window_log.logf(.warning, "focus queue append failed focused=0 err={s}", .{@errorName(err)});
                 };
@@ -118,17 +127,19 @@ fn handleEvent(
             if (sdl_api.isRuntimeWakeEvent(event.type)) return;
             if (sdl_api.isWindowEventType(event.type)) {
                 if (sdl_api.windowEventId(event) != main_window_id) return;
-                handleWindowEvent(event.type, domain.should_close_flag, domain.window_changes);
+                handleWindowEvent(event.type, domain.app_host, domain.should_close_flag, domain.window_changes);
                 if (sdl_api.isFocusGainedEvent(event.type)) {
                     sdl_api.startTextInput(domain.window);
                     text_input.reapplyRect(domain.text_input_state, domain.window);
                     domain.window_focused.* = true;
+                    domain.app_host.noteResumed();
                     domain.focus_queue.append(domain.allocator, true) catch |err| {
                         window_log.logf(.warning, "focus queue append failed focused=1 err={s}", .{@errorName(err)});
                     };
                 }
                 if (sdl_api.isFocusLostEvent(event.type)) {
                     domain.window_focused.* = false;
+                    domain.app_host.notePaused();
                     domain.focus_queue.append(domain.allocator, false) catch |err| {
                         window_log.logf(.warning, "focus queue append failed focused=0 err={s}", .{@errorName(err)});
                     };
@@ -138,13 +149,19 @@ fn handleEvent(
     }
 }
 
-fn handleWindowEvent(event_type: c_uint, should_close: *bool, window_changes: *sdl_api.WindowChangeMask) void {
+fn handleWindowEvent(
+    event_type: c_uint,
+    app_host: *native_host.PlatformAppHost,
+    should_close: *bool,
+    window_changes: *sdl_api.WindowChangeMask,
+) void {
     const change = sdl_api.classifyWindowChange(event_type);
     if (change.any()) {
         window_changes.merge(change);
     }
     if (sdl_api.isCloseEvent(event_type)) {
         should_close.* = true;
+        app_host.noteTerminationRequested();
     }
 }
 
