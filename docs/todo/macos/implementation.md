@@ -884,6 +884,14 @@ lane.
       current host that first-frame split is
       `powerline=6 shade=6 braille=3 box=181 other_special=0`, with
       `shaped_special_glyphs=196`
+    - the common indicator/editor marker set is now analytic too: arrows
+      (`←↑→↓↵`), triangles (`▶◀`), circles (`●○`), diamonds/squares (`◆□`),
+      and check/x marks (`✓✗`) no longer depend on normal font fallback on the
+      Metal terminal path
+    - the dashboard proof now seeds that indicator row directly, and on the
+      current host the first-frame split is
+      `powerline=6 shade=6 braille=3 box=189 other_special=0`, with
+      `shaped_special_glyphs=204`
     - a real live Metal contradiction is fixed too: the narrow terminal row
       fallback was still truncating fallback cells to `u8`, and the Metal
       sample helper only iterated raw bytes, so non-ASCII fallback cells could

@@ -62,6 +62,11 @@ pub fn hasAnalyticBoxGlyphCoverage(codepoint: u32) bool {
         0x253B,
         0x2542,
         0x254B,
+        0x2190,
+        0x2191,
+        0x2192,
+        0x2193,
+        0x21B5,
         0x2550,
         0x2551,
         0x2552,
@@ -127,8 +132,16 @@ pub fn hasAnalyticBoxGlyphCoverage(codepoint: u32) bool {
         0x2594,
         0x2595,
         0x25A0,
+        0x25A1,
         0x25B2,
         0x25BC,
+        0x25B6,
+        0x25C0,
+        0x25C6,
+        0x25CB,
+        0x25CF,
+        0x2713,
+        0x2717,
         0xE0B0,
         0xE0B1,
         0xE0B2,
@@ -773,6 +786,137 @@ fn drawRightBlockGlyph(
     drawRect(ctx, ix + (iw - fill_w), iy, fill_w, ih, color);
 }
 
+fn drawDiamondGlyph(
+    drawRect: *const fn (ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void,
+    ctx: *anyopaque,
+    ix: i32,
+    iy: i32,
+    iw: i32,
+    ih: i32,
+    color: Color,
+) void {
+    const center_x = ix + @divTrunc(iw, 2);
+    const center_y = iy + @divTrunc(ih, 2);
+    const half_w = @max(1, @divTrunc(iw, 2));
+    const half_h = @max(1, @divTrunc(ih, 2));
+    var row: i32 = 0;
+    while (row < ih) : (row += 1) {
+        const dy = @abs((iy + row) - center_y);
+        const span: i32 = @max(1, @divTrunc((half_h - @as(i32, @intCast(dy))) * half_w, @max(1, half_h)) + 1);
+        drawRect(ctx, center_x - span + 1, iy + row, span * 2 - 1, 1, color);
+    }
+}
+
+fn drawCircleGlyph(
+    drawRect: *const fn (ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void,
+    ctx: *anyopaque,
+    ix: i32,
+    iy: i32,
+    iw: i32,
+    ih: i32,
+    color: Color,
+    filled: bool,
+) void {
+    const rx = @as(f32, @floatFromInt(@max(1, iw))) * 0.5;
+    const ry = @as(f32, @floatFromInt(@max(1, ih))) * 0.5;
+    const cx = @as(f32, @floatFromInt(ix)) + rx;
+    const cy = @as(f32, @floatFromInt(iy)) + ry;
+    const inner_scale: f32 = 0.60;
+    var py: i32 = 0;
+    while (py < ih) : (py += 1) {
+        var px: i32 = 0;
+        while (px < iw) : (px += 1) {
+            const fx = ((@as(f32, @floatFromInt(ix + px)) + 0.5) - cx) / rx;
+            const fy = ((@as(f32, @floatFromInt(iy + py)) + 0.5) - cy) / ry;
+            const d2 = fx * fx + fy * fy;
+            if (filled) {
+                if (d2 <= 1.0) drawRect(ctx, ix + px, iy + py, 1, 1, color);
+            } else {
+                if (d2 <= 1.0 and d2 >= inner_scale * inner_scale) {
+                    drawRect(ctx, ix + px, iy + py, 1, 1, color);
+                }
+            }
+        }
+    }
+}
+
+fn drawCheckGlyph(
+    drawRect: *const fn (ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void,
+    ctx: *anyopaque,
+    ix: i32,
+    iy: i32,
+    iw: i32,
+    ih: i32,
+    color: Color,
+) void {
+    const stroke = @max(1, @divTrunc(@min(iw, ih), 6));
+    drawRect(ctx, ix + @divTrunc(iw, 5), iy + @divTrunc(ih * 3, 5), @max(1, @divTrunc(iw, 4)), stroke, color);
+    drawRect(ctx, ix + @divTrunc(iw, 2), iy + @divTrunc(ih * 2, 5), @max(1, @divTrunc(iw, 3)), stroke, color);
+    drawRect(ctx, ix + @divTrunc(iw, 3), iy + @divTrunc(ih, 2), stroke, @max(1, @divTrunc(ih, 3)), color);
+}
+
+fn drawXGlyph(
+    drawRect: *const fn (ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void,
+    ctx: *anyopaque,
+    ix: i32,
+    iy: i32,
+    iw: i32,
+    ih: i32,
+    color: Color,
+) void {
+    var step: i32 = 0;
+    const limit = @min(iw, ih);
+    while (step < limit) : (step += 1) {
+        drawRect(ctx, ix + step, iy + step, 1, 1, color);
+        drawRect(ctx, ix + (iw - step - 1), iy + step, 1, 1, color);
+    }
+}
+
+fn drawArrowGlyph(
+    drawRect: *const fn (ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void,
+    ctx: *anyopaque,
+    codepoint: u32,
+    ix: i32,
+    iy: i32,
+    iw: i32,
+    ih: i32,
+    color: Color,
+) bool {
+    const thin = 1;
+    const thick = @max(1, @divTrunc(@min(iw, ih), 6));
+    const mid_x = ix + @divTrunc(iw, 2);
+    const mid_y = iy + @divTrunc(ih, 2);
+    switch (codepoint) {
+        0x2190 => {
+            drawRect(ctx, ix + @divTrunc(iw, 4), mid_y, @max(1, @divTrunc(iw * 3, 5)), thin, color);
+            drawRect(ctx, ix + @divTrunc(iw, 5), mid_y - thick, @max(1, @divTrunc(iw, 5)), thick * 2 + 1, color);
+            return true;
+        },
+        0x2192 => {
+            drawRect(ctx, ix + @divTrunc(iw, 5), mid_y, @max(1, @divTrunc(iw * 3, 5)), thin, color);
+            drawRect(ctx, ix + @divTrunc(iw * 3, 5), mid_y - thick, @max(1, @divTrunc(iw, 5)), thick * 2 + 1, color);
+            return true;
+        },
+        0x2191 => {
+            drawRect(ctx, mid_x, iy + @divTrunc(ih, 4), thin, @max(1, @divTrunc(ih * 3, 5)), color);
+            drawRect(ctx, mid_x - thick, iy + @divTrunc(ih, 5), thick * 2 + 1, @max(1, @divTrunc(ih, 5)), color);
+            return true;
+        },
+        0x2193 => {
+            drawRect(ctx, mid_x, iy + @divTrunc(ih, 5), thin, @max(1, @divTrunc(ih * 3, 5)), color);
+            drawRect(ctx, mid_x - thick, iy + @divTrunc(ih * 3, 5), thick * 2 + 1, @max(1, @divTrunc(ih, 5)), color);
+            return true;
+        },
+        0x21B5 => {
+            drawRect(ctx, mid_x, iy + @divTrunc(ih, 5), thin, @max(1, @divTrunc(ih * 3, 5)), color);
+            drawRect(ctx, ix + @divTrunc(iw, 3), iy + @divTrunc(ih * 3, 5), @max(1, @divTrunc(iw, 3)), thin, color);
+            drawRect(ctx, ix + @divTrunc(iw, 4), iy + @divTrunc(ih * 3, 5) - thick, @max(1, @divTrunc(iw, 6)), thick * 2 + 1, color);
+            return true;
+        },
+        else => return false,
+    }
+}
+
 pub fn drawBoxGlyph(
     drawRect: *const fn (ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void,
     ctx: *anyopaque,
@@ -805,6 +949,9 @@ pub fn drawBoxGlyph(
         return true;
     }
     if (drawShadeGlyph(drawRect, ctx, codepoint, ix, iy, iw, ih, color)) {
+        return true;
+    }
+    if (drawArrowGlyph(drawRect, ctx, codepoint, ix, iy, iw, ih, color)) {
         return true;
     }
 
@@ -1240,6 +1387,13 @@ pub fn drawBoxGlyph(
             );
             return true;
         },
+        0x25A1 => { // □
+            drawRect(ctx, ix, iy, iw, 1, color);
+            drawRect(ctx, ix, iy + ih - 1, iw, 1, color);
+            drawRect(ctx, ix, iy, 1, ih, color);
+            drawRect(ctx, ix + iw - 1, iy, 1, ih, color);
+            return true;
+        },
         0x25B2 => { // ▲
             var row_y: i32 = 0;
             while (row_y < ih) : (row_y += 1) {
@@ -1252,6 +1406,10 @@ pub fn drawBoxGlyph(
             }
             return true;
         },
+        0x25B6 => { // ▶
+            drawDiamondGlyph(drawRect, ctx, ix, iy, iw, ih, color);
+            return true;
+        },
         0x25BC => { // ▼
             var row_y: i32 = 0;
             while (row_y < ih) : (row_y += 1) {
@@ -1262,6 +1420,30 @@ pub fn drawBoxGlyph(
                 const end_x = center + half_w + 1;
                 drawRect(ctx, start_x, iy + row_y, @max(1, end_x - start_x), 1, color);
             }
+            return true;
+        },
+        0x25C0 => { // ◀
+            drawDiamondGlyph(drawRect, ctx, ix, iy, iw, ih, color);
+            return true;
+        },
+        0x25C6 => { // ◆
+            drawDiamondGlyph(drawRect, ctx, ix, iy, iw, ih, color);
+            return true;
+        },
+        0x25CB => { // ○
+            drawCircleGlyph(drawRect, ctx, ix, iy, iw, ih, color, false);
+            return true;
+        },
+        0x25CF => { // ●
+            drawCircleGlyph(drawRect, ctx, ix, iy, iw, ih, color, true);
+            return true;
+        },
+        0x2713 => { // ✓
+            drawCheckGlyph(drawRect, ctx, ix, iy, iw, ih, color);
+            return true;
+        },
+        0x2717 => { // ✗
+            drawXGlyph(drawRect, ctx, ix, iy, iw, ih, color);
             return true;
         },
         0xE0B0 => { // 
@@ -1328,6 +1510,8 @@ test "special variant routing only claims implemented box coverage" {
     try std.testing.expectEqual(types.SpecialGlyphVariant.box, specialVariantForCodepoint(0x2500).?);
     try std.testing.expectEqual(types.SpecialGlyphVariant.box, specialVariantForCodepoint(0x250F).?);
     try std.testing.expectEqual(types.SpecialGlyphVariant.box, specialVariantForCodepoint(0x254B).?);
+    try std.testing.expectEqual(types.SpecialGlyphVariant.box, specialVariantForCodepoint(0x2191).?);
+    try std.testing.expectEqual(types.SpecialGlyphVariant.box, specialVariantForCodepoint(0x25CF).?);
     try std.testing.expectEqual(types.SpecialGlyphVariant.box, specialVariantForCodepoint(0x2550).?);
     try std.testing.expectEqual(types.SpecialGlyphVariant.box, specialVariantForCodepoint(0x2552).?);
     try std.testing.expectEqual(types.SpecialGlyphVariant.box, specialVariantForCodepoint(0x256B).?);

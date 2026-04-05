@@ -874,6 +874,15 @@ What this does and does not mean:
   `powerline=6 shade=6 braille=3 box=181 other_special=0`, which is a better
   statement of the remaining gap: less missing box language, more continuity
   and stroke-quality cleanup
+- the common indicator/editor marker set is now on the same analytic lane too:
+  arrows (`←↑→↓↵`), triangles (`▶◀`), circles (`●○`), diamonds/squares
+  (`◆□`), and check/x marks (`✓✗`) no longer depend on normal font fallback
+  on the Metal terminal path
+- the dashboard proof now seeds that indicator row directly, and on the
+  current host the first-frame split moves to
+  `powerline=6 shade=6 braille=3 box=189 other_special=0`, which means even
+  more of the dense TUI/editor symbol language is definitely on the Metal
+  special path now
   dashboard row set
 - a real live-lane contradiction is fixed now too: the Metal terminal row
   fallback had still been truncating fallback cells to `u8` and the backend
