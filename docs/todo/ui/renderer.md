@@ -97,6 +97,8 @@ Progress note, 2026-04-05:
 - the renderer-root wrapper methods are gone too; `frame_runtime.zig`
   now owns the top-level shared frame lifecycle entrypoint above backend frame
   runtime modules.
+- OpenGL-only scene target refresh/prep has moved out of `frame_runtime.zig`
+  and into `opengl_frame_runtime.zig`.
 - Metal runtime storage on `Renderer` is now bundled under one
   `metal_runtime` state object instead of being scattered across separate peer
   fields.

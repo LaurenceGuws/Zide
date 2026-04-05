@@ -92,6 +92,10 @@ But there is still not a final backend lifecycle seam yet:
 - the backend frame runtimes still operate on a renderer object that carries
   concrete backend state directly
 
+This has improved slightly again: OpenGL-only scene target refresh/prep no
+longer happens in `frame_runtime.zig`; that branch now lives under
+`opengl_frame_runtime.zig`, which is closer to the contract we actually want.
+
 ### 3. The shared draw queue is still Metal-native
 
 The shared renderer currently stores and submits
@@ -174,6 +178,7 @@ The main contradiction centers today are:
   - shared runtime logic is still effectively the GL presentable model
 - `src/ui/renderer/frame_runtime.zig`
   - shared frame lifecycle still acts as the entrypoint above backend dispatch
+    and renderer-wide per-frame bookkeeping
 - `src/ui/renderer/scene_frame_runtime.zig`
   - now mostly scene target / trace support, but is still part of the shared
     frame lifecycle surface

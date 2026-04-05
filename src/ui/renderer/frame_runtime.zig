@@ -1,5 +1,4 @@
 const backend_frame_runtime = @import("backend_frame_runtime.zig");
-const gl = @import("gl.zig");
 const platform_window = @import("../../platform/window_metrics.zig");
 const renderer_root = @import("../renderer.zig");
 const scene_frame_runtime = @import("scene_frame_runtime.zig");
@@ -18,10 +17,6 @@ pub fn beginFrame(self: anytype) void {
     self.height = sizes.height;
     self.render_width = sizes.render_width;
     self.render_height = sizes.render_height;
-    scene_frame_runtime.refreshSceneTargetContract(self, display_metrics);
-    if (self.capabilities().scene_composition_mode == .offscreen_scene_target) {
-        scene_frame_runtime.prepareSceneTarget(self, gl.c.GL_NEAREST);
-    }
 
     self.text_render.bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
     backend_frame_runtime.beginFrame(self);
