@@ -619,6 +619,10 @@ What this does and does not mean:
   shaped span collapses to fallback under the Metal-planned/unavailable-text
   path, contiguous ASCII single-cell runs are emitted through the row-shaped
   Metal lane instead of only degrading one cell at a time
+- the terminal composing-text overlay can now use that same row-shaped Metal
+  lane when the runtime is in the Metal-planned/unavailable-text state and the
+  active composition string is ASCII, which gives the lane another real
+  terminal-facing caller outside the diagnostic runtime
 - this is still intentionally narrow and honest: it is now a tiny sampled
   multiline ASCII run with an explicit monospace-cell option rather than a
   claim that the generic string/text renderer has already migrated

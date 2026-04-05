@@ -361,6 +361,9 @@ lane.
     - the terminal grid now has its first row-level Metal integration too:
       contiguous ASCII single-cell fallback spans can route through the
       terminal-row Metal contract instead of only degrading one cell at a time
+    - the terminal composing-text overlay can now also route through that
+      terminal-row Metal contract when the runtime is Metal-planned,
+      live-text-unavailable, and the active composition string is ASCII
     - the narrow Metal text lane now covers a tiny multiline ASCII run, not
       just a single flat row
     - the diagnostic/runtime callers now use the explicit monospace-cell

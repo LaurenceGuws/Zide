@@ -291,12 +291,34 @@ pub fn drawOverlays(
             );
 
             if (composing_cells > 0) {
-                var iter = std.unicode.Utf8Iterator{ .bytes = input.composing_text, .i = 0 };
+                var use_metal_row_fallback = r.textRenderingMode() == .unavailable and r.plannedTextRenderingMode() == .metal_texture_atlas;
+                if (use_metal_row_fallback) {
+                    for (input.composing_text) |byte| {
+                        if (byte >= 0x80) {
+                            use_metal_row_fallback = false;
+                            break;
+                        }
+                    }
+                }
+
                 var comp_col: usize = 0;
-                while (iter.nextCodepoint()) |cp| {
-                    const comp_x = cell_x + @as(f32, @floatFromInt(@as(i32, @intCast(comp_col)))) * view.cell_width;
-                    r.drawTerminalCell(cp, comp_x, cell_y, view.cell_width, view.cell_height, r.theme.foreground, bg, underline_color, false, true, false, true, false);
-                    comp_col += 1;
+                if (use_metal_row_fallback) {
+                    _ = r.drawMetalTerminalCellRun(.{
+                        .text = input.composing_text,
+                        .x = cell_x,
+                        .y = cell_y,
+                        .cell_width = view.cell_width,
+                        .cell_height = view.cell_height,
+                        .tint = r.theme.foreground.toRgba(),
+                    });
+                    comp_col = composing_cells;
+                } else {
+                    var iter = std.unicode.Utf8Iterator{ .bytes = input.composing_text, .i = 0 };
+                    while (iter.nextCodepoint()) |cp| {
+                        const comp_x = cell_x + @as(f32, @floatFromInt(@as(i32, @intCast(comp_col)))) * view.cell_width;
+                        r.drawTerminalCell(cp, comp_x, cell_y, view.cell_width, view.cell_height, r.theme.foreground, bg, underline_color, false, true, false, true, false);
+                        comp_col += 1;
+                    }
                 }
                 const underline_w = @as(f32, @floatFromInt(@as(i32, @intCast(@max(@as(usize, 1), comp_col))))) * view.cell_width;
                 const underline_h = 2.0 * pixel_step;
