@@ -1,5 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
+const iface = @import("interface.zig");
 const macos_metal_host = @import("../../platform/macos_metal_host.zig");
 const metal_frame_runtime = @import("metal_frame_runtime.zig");
 const metal_text_sample_runtime = @import("metal_text_sample_runtime.zig");
@@ -1288,6 +1289,31 @@ pub fn clearDiagnosticFont(renderer: anytype) void {
         font.deinit();
         renderer.metal_runtime.diagnostic_font = null;
     }
+}
+
+pub fn ensureDiagnosticFont(renderer: anytype) !*terminal_font.TerminalFont {
+    if (!hasBackendContext(renderer)) return error.MetalBackendContextUnavailable;
+    if (renderer.metal_runtime.diagnostic_font) |*font| return font;
+
+    const render_scale = if (renderer.scale.render_scale > 0.0) renderer.scale.render_scale else 1.0;
+    const raster_size = renderer.base_font_size * render_scale;
+    var font = try terminal_font.TerminalFont.initWithAtlasUploadHooks(
+        renderer.allocator,
+        renderer.font_config.app_font_path,
+        raster_size,
+        iface.SYMBOLS_FALLBACK_PATH,
+        iface.UNICODE_SYMBOLS2_PATH,
+        iface.UNICODE_SYMBOLS_PATH,
+        iface.UNICODE_MONO_PATH,
+        iface.UNICODE_SANS_PATH,
+        iface.EMOJI_COLOR_FALLBACK_PATH,
+        iface.EMOJI_TEXT_FALLBACK_PATH,
+        renderer.font_config.font_rendering,
+        terminalFontAtlasUploadHooksForRenderer(renderer) orelse return error.MetalBackendContextUnavailable,
+    );
+    font.render_scale = render_scale;
+    renderer.metal_runtime.diagnostic_font = font;
+    return &renderer.metal_runtime.diagnostic_font.?;
 }
 
 pub fn clearQueuedSurfaceDraws(renderer: anytype) void {

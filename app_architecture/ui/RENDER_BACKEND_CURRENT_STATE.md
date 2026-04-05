@@ -114,6 +114,11 @@ queued-surface replay now route through `metal_backend` helpers instead of
 `metal_frame_runtime.zig` directly mutating and iterating the
 `renderer.metal_runtime` storage fields itself.
 
+That has improved slightly again at the renderer root: the Metal diagnostic
+font cache/ensure path now lives behind `metal_backend` instead of the
+renderer root carrying its own backend-specific diagnostic-font initializer and
+cache management logic.
+
 ### 2. Shared frame lifecycle still branches backend-by-backend
 
 The renderer root no longer spells out backend frame begin/submit bodies, but

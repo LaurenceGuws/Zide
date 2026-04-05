@@ -143,6 +143,8 @@ Progress note, 2026-04-05:
 - The Metal frame runtime now routes current-frame slot access and queued
   surface replay through `metal_backend.zig` helpers instead of directly
   mutating and iterating `renderer.metal_runtime` storage fields.
+- The Metal diagnostic-font cache/ensure path now also routes through
+  `metal_backend.zig` instead of living as renderer-root-owned backend logic.
 - The next lifecycle step is to reduce shared-runtime ownership of dispatch and
   backend-native frame state, not just move code blocks around.
 

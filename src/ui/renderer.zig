@@ -1731,34 +1731,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         return self.metal_debug_preview_source;
     }
 
-    fn initMetalDiagnosticFont(self: *Renderer) !terminal_font_mod.TerminalFont {
-        const render_scale = if (self.scale.render_scale > 0.0) self.scale.render_scale else 1.0;
-        const raster_size = self.base_font_size * render_scale;
-        var font = try terminal_font_mod.TerminalFont.initWithAtlasUploadHooks(
-            self.allocator,
-            self.font_config.app_font_path,
-            raster_size,
-            iface.SYMBOLS_FALLBACK_PATH,
-            iface.UNICODE_SYMBOLS2_PATH,
-            iface.UNICODE_SYMBOLS_PATH,
-            iface.UNICODE_MONO_PATH,
-            iface.UNICODE_SANS_PATH,
-            iface.EMOJI_COLOR_FALLBACK_PATH,
-            iface.EMOJI_TEXT_FALLBACK_PATH,
-            self.font_config.font_rendering,
-            metal_backend.terminalFontAtlasUploadHooksForRenderer(self) orelse return error.MetalBackendContextUnavailable,
-        );
-        font.render_scale = render_scale;
-        return font;
-    }
-
-    fn ensureMetalDiagnosticFont(self: *Renderer) !*terminal_font_mod.TerminalFont {
-        if (!metal_backend.hasBackendContext(self)) return error.MetalBackendContextUnavailable;
-        if (self.metal_runtime.diagnostic_font) |*font| return font;
-        self.metal_runtime.diagnostic_font = try self.initMetalDiagnosticFont();
-        return &self.metal_runtime.diagnostic_font.?;
-    }
-
     fn appendMetalSolidRect(self: *Renderer, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) bool {
         if (self.backend != .metal) return false;
         const clip = if (self.currentClipRect()) |c| metal_text_sample_runtime.pixelClipRect(self, c) else null;
@@ -1803,7 +1775,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         if (self.plannedTextRenderingMode() != .metal_texture_atlas) return false;
         if (!metal_backend.hasBackendContext(self)) return false;
 
-        const font = self.ensureMetalDiagnosticFont() catch return false;
+        const font = metal_backend.ensureDiagnosticFont(self) catch return false;
 
         const codepoint: u32 = char;
         const clip = if (self.currentClipRect()) |c| metal_text_sample_runtime.pixelClipRect(self, c) else null;
@@ -1816,7 +1788,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         if (self.plannedTextRenderingMode() != .metal_texture_atlas) return false;
         if (!metal_backend.hasBackendContext(self)) return false;
 
-        const font = self.ensureMetalDiagnosticFont() catch return false;
+        const font = metal_backend.ensureDiagnosticFont(self) catch return false;
         return metal_backend.appendSampleTextRequest(self, font, request);
     }
 
@@ -1893,7 +1865,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         metal_backend.clearQueuedSurfaceDraws(self);
         self.metal_debug_preview_source = .unavailable;
 
-        const font = self.ensureMetalDiagnosticFont() catch return false;
+        const font = metal_backend.ensureDiagnosticFont(self) catch return false;
         const color_preview_rect = font.uploadDiagnosticColorGlyphPreview();
         const codepoint: u32 = 'A';
         const direct = font.directFastGlyphForCodepoint(codepoint) orelse return false;
