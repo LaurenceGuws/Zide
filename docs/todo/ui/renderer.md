@@ -97,6 +97,9 @@ Progress note, 2026-04-05:
 - the renderer-root wrapper methods are gone too; `frame_runtime.zig`
   now owns the top-level shared frame lifecycle entrypoint above backend frame
   runtime modules.
+- Metal runtime storage on `Renderer` is now bundled under one
+  `metal_runtime` state object instead of being scattered across separate peer
+  fields.
 - The next lifecycle step is to reduce shared-runtime ownership of dispatch and
   backend-native frame state, not just move code blocks around.
 

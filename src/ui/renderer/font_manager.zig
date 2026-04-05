@@ -135,7 +135,7 @@ pub fn deinitFontConfigState(renderer: anytype) void {
 
 fn metalAtlasHooks(renderer: anytype) ?terminal_font_mod.AtlasUploadHooks {
     if (renderer.backend != .metal) return null;
-    if (renderer.metal_backend_context) |*ctx| {
+    if (renderer.metal_runtime.backend_context) |*ctx| {
         return metal_backend.terminalFontAtlasUploadHooks(ctx);
     }
     return null;
