@@ -163,6 +163,10 @@ Progress note, 2026-04-05:
   terminal-cell runs, raw image draws, and terminal snapshot draws are now
   gone from `src/ui/renderer.zig`; live callers route those operations
   through `metal_backend.zig` directly instead.
+- Metal atlas preview/debug state now also lives inside
+  `src/ui/renderer/metal_runtime_state.zig` as part of the bundled Metal
+  runtime state instead of as a separate backend-specific field on
+  `Renderer`.
 - The next lifecycle step is to reduce shared-runtime ownership of dispatch and
   backend-native frame state, not just move code blocks around.
 

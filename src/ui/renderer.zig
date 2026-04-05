@@ -149,12 +149,7 @@ pub const TextRenderingMode = enum {
     metal_texture_atlas,
 };
 
-pub const AtlasPreviewSource = enum {
-    unavailable,
-    seeded_color_block,
-    uploaded_coverage_glyph,
-    uploaded_color_glyph,
-};
+pub const AtlasPreviewSource = metal_runtime_state.AtlasPreviewSource;
 
 pub const RendererCapabilities = struct {
     scene_composition_mode: SceneCompositionMode,
@@ -507,7 +502,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     window: *sdl.SDL_Window,
     opengl_runtime: opengl_runtime_state.State,
     metal_runtime: metal_runtime_state.State,
-    metal_debug_preview_source: AtlasPreviewSource,
     fonts_ready: bool,
     width: i32,
     height: i32,
@@ -756,7 +750,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             .window = window,
             .opengl_runtime = .{ .context = gl_context },
             .metal_runtime = .{},
-            .metal_debug_preview_source = .unavailable,
             .fonts_ready = false,
             .width = display_metrics.window_w,
             .height = display_metrics.window_h,
@@ -1711,7 +1704,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     }
 
     pub fn macosMetalAtlasPreviewSource(self: *const Renderer) AtlasPreviewSource {
-        return self.metal_debug_preview_source;
+        return self.metal_runtime.preview_source;
     }
 
     fn appendMetalSolidRect(self: *Renderer, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) bool {

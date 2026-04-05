@@ -57,6 +57,7 @@ runtime state:
 - `metal_runtime.backend_context`
 - `metal_runtime.frame`
 - `metal_runtime.queued_surface_draws`
+- `metal_runtime.preview_source`
 
 It now also owns one bundled OpenGL runtime state:
 
@@ -140,6 +141,10 @@ macOS Metal host-prep, smoke, glyph-atlas readiness, and atlas-upload
 diagnostic helpers now live under `metal_backend` and the shell routes those
 diagnostics through the backend module instead of `Renderer` owning that
 backend-specific helper surface directly.
+
+That has improved slightly again inside the Metal state bundle too: atlas
+preview/debug state now lives under `metal_runtime.preview_source` instead of
+as a separate backend-specific field on the renderer root.
 
 ### 2. Shared frame lifecycle still branches backend-by-backend
 

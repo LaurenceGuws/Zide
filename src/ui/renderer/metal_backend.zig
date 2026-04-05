@@ -1219,7 +1219,7 @@ pub fn runAtlasUploadDiagnosticAt(renderer: anytype, dest_x: i32, dest_y: i32) b
     if (renderer.backend != .metal) return false;
     if (!hasBackendContext(renderer)) return false;
     clearQueuedSurfaceDraws(renderer);
-    renderer.metal_debug_preview_source = .unavailable;
+    renderer.metal_runtime.preview_source = .unavailable;
 
     const font = ensureDiagnosticFont(renderer) catch return false;
     const color_preview_rect = font.uploadDiagnosticColorGlyphPreview();
@@ -1234,7 +1234,7 @@ pub fn runAtlasUploadDiagnosticAt(renderer: anytype, dest_x: i32, dest_y: i32) b
             .dest_y = dest_y,
             .tint = iface.Color.white.toRgba(),
         });
-        renderer.metal_debug_preview_source = .uploaded_coverage_glyph;
+        renderer.metal_runtime.preview_source = .uploaded_coverage_glyph;
     }
     if (color_preview_rect) |rect| {
         clearQueuedSurfaceDraws(renderer);
@@ -1245,7 +1245,7 @@ pub fn runAtlasUploadDiagnosticAt(renderer: anytype, dest_x: i32, dest_y: i32) b
             .dest_y = dest_y,
             .tint = iface.Color.white.toRgba(),
         });
-        renderer.metal_debug_preview_source = .uploaded_color_glyph;
+        renderer.metal_runtime.preview_source = .uploaded_color_glyph;
     } else if (queuedSurfaceDrawCount(renderer) == 0) {
         _ = appendAtlasSample(renderer, .{
             .atlas = .color,
@@ -1259,10 +1259,10 @@ pub fn runAtlasUploadDiagnosticAt(renderer: anytype, dest_x: i32, dest_y: i32) b
             .dest_y = dest_y,
             .tint = iface.Color.white.toRgba(),
         });
-        renderer.metal_debug_preview_source = .seeded_color_block;
+        renderer.metal_runtime.preview_source = .seeded_color_block;
     }
-    return renderer.metal_debug_preview_source == .uploaded_coverage_glyph or
-        renderer.metal_debug_preview_source == .uploaded_color_glyph;
+    return renderer.metal_runtime.preview_source == .uploaded_coverage_glyph or
+        renderer.metal_runtime.preview_source == .uploaded_color_glyph;
 }
 
 pub fn terminalFontAtlasUploadHooksForRenderer(renderer: anytype) ?terminal_font.AtlasUploadHooks {
