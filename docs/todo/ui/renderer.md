@@ -171,6 +171,11 @@ Progress note, 2026-04-05:
   `src/ui/renderer/opengl_runtime_state.zig` instead of as a direct
   `Renderer` field, which makes the GL-owned retained-presentable model less
   obviously rooted in shared renderer storage.
+- The offscreen scene-target contract/state now also lives in
+  `src/ui/renderer/scene_target_state.zig` and is stored under
+  `opengl_runtime.scene_target` instead of as a direct `Renderer` field,
+  which makes the current OpenGL-owned scene-target model less obviously
+  shared-state-by-default.
 - The next lifecycle step is to reduce shared-runtime ownership of dispatch and
   backend-native frame state, not just move code blocks around.
 

@@ -12,6 +12,7 @@ const metal_backend = @import("renderer/metal_backend.zig");
 const opengl_runtime_state = @import("renderer/opengl_runtime_state.zig");
 const metal_runtime_state = @import("renderer/metal_runtime_state.zig");
 const presentable_target = @import("renderer/presentable_target.zig");
+const scene_target_state = @import("renderer/scene_target_state.zig");
 const surface_draw = @import("renderer/surface_draw.zig");
 const input_constants = @import("renderer/input_constants.zig");
 const clipboard = @import("renderer/clipboard.zig");
@@ -174,6 +175,8 @@ pub const FontConfigState = font_manager.FontConfigState;
 pub const ClipboardState = clipboard.ClipboardState;
 pub const TerminalTextState = text_runtime.TerminalTextState;
 pub const PresentableTargetState = presentable_targets_runtime.PresentableTargetState;
+pub const SceneTargetInvalidation = scene_target_state.SceneTargetInvalidation;
+pub const SceneTargetContract = scene_target_state.SceneTargetContract;
 const MainCompositionTarget = scene_frame_runtime.MainCompositionTarget;
 pub const TerminalDisableLigaturesStrategy = enum {
     never,
@@ -298,90 +301,18 @@ const RenderTarget = presentable_target.PresentableTarget;
 
 const BatchState = draw_ops.BatchState;
 
-pub const SceneTargetInvalidation = packed struct(u8) {
-    uninitialized: bool = false,
-    drawable_resize: bool = false,
-    display_change: bool = false,
-    render_scale_change: bool = false,
-    target_recreate_failure: bool = false,
-    _padding: u3 = 0,
-
-    pub fn any(self: SceneTargetInvalidation) bool {
-        return self.uninitialized or
-            self.drawable_resize or
-            self.display_change or
-            self.render_scale_change or
-            self.target_recreate_failure;
-    }
-
-    pub fn merge(self: *SceneTargetInvalidation, other: SceneTargetInvalidation) void {
-        self.uninitialized = self.uninitialized or other.uninitialized;
-        self.drawable_resize = self.drawable_resize or other.drawable_resize;
-        self.display_change = self.display_change or other.display_change;
-        self.render_scale_change = self.render_scale_change or other.render_scale_change;
-        self.target_recreate_failure = self.target_recreate_failure or other.target_recreate_failure;
-    }
-};
-
-pub const SceneTargetContract = struct {
-    logical_width: i32 = 0,
-    logical_height: i32 = 0,
-    drawable_width: i32 = 0,
-    drawable_height: i32 = 0,
-    display_index: i32 = -1,
-    render_scale: f32 = 1.0,
-};
-
 fn sceneTargetInvalidationForRefresh(
-    scene_target: SceneTargetState,
+    scene_target: scene_target_state.SceneTargetState,
     changes: WindowChangeMask,
     metrics: platform_window.DisplayMetrics,
     scene_targets_supported: bool,
 ) SceneTargetInvalidation {
-    if (!scene_targets_supported) return .{};
-    const next = sceneTargetContractFromDisplayMetrics(metrics);
-    const previous = scene_target.contract;
-    var reasons: SceneTargetInvalidation = .{};
-
-    if (!scene_target.ready and scene_target.target == null) {
-        reasons.uninitialized = true;
-    }
-    if (changes.resized or changes.pixel_size_changed or
-        previous.drawable_width != next.drawable_width or
-        previous.drawable_height != next.drawable_height or
-        previous.logical_width != next.logical_width or
-        previous.logical_height != next.logical_height)
-    {
-        reasons.drawable_resize = true;
-    }
-    if (changes.display_changed or previous.display_index != next.display_index) {
-        reasons.display_change = true;
-    }
-    if (changes.display_scale_changed or !std.math.approxEqAbs(f32, previous.render_scale, next.render_scale, 0.0001)) {
-        reasons.render_scale_change = true;
-    }
-
-    return reasons;
+    return scene_target_state.invalidationForRefresh(scene_target, changes, metrics, scene_targets_supported);
 }
 
 pub fn sceneTargetContractFromDisplayMetrics(metrics: platform_window.DisplayMetrics) SceneTargetContract {
-    return .{
-        .logical_width = metrics.window_w,
-        .logical_height = metrics.window_h,
-        .drawable_width = metrics.drawable_w,
-        .drawable_height = metrics.drawable_h,
-        .display_index = metrics.display_index,
-        .render_scale = metrics.render_scale,
-    };
+    return scene_target_state.contractFromDisplayMetrics(metrics);
 }
-
-const SceneTargetState = struct {
-    target: ?RenderTarget = null,
-    contract: SceneTargetContract = .{},
-    invalidation: SceneTargetInvalidation = .{ .uninitialized = true },
-    pending_invalidation: SceneTargetInvalidation = .{},
-    ready: bool = false,
-};
 
 pub fn logSceneTargetState(
     logger: app_logger.Logger,
@@ -390,26 +321,7 @@ pub fn logSceneTargetState(
     invalidation: SceneTargetInvalidation,
     ready: bool,
 ) void {
-    if (!(logger.enabled_console or logger.enabled_file)) return;
-    logger.logf(
-        .info,
-        "event={s} ready={d} logical={d}x{d} drawable={d}x{d} display={d} render_scale={d:.3} invalidation=uninitialized:{d},drawable_resize:{d},display_change:{d},render_scale_change:{d},target_recreate_failure:{d}",
-        .{
-            event,
-            @intFromBool(ready),
-            contract.logical_width,
-            contract.logical_height,
-            contract.drawable_width,
-            contract.drawable_height,
-            contract.display_index,
-            contract.render_scale,
-            @intFromBool(invalidation.uninitialized),
-            @intFromBool(invalidation.drawable_resize),
-            @intFromBool(invalidation.display_change),
-            @intFromBool(invalidation.render_scale_change),
-            @intFromBool(invalidation.target_recreate_failure),
-        },
-    );
+    scene_target_state.logState(logger, event, contract, invalidation, ready);
 }
 
 pub const Renderer = struct {
@@ -542,7 +454,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     terminal_font: TerminalFont,
     font_config: FontConfigState,
 
-    scene_target: SceneTargetState,
     window_chrome: WindowChromeState,
 
     theme: Theme,
@@ -818,7 +729,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             },
             .terminal_font = undefined,
             .font_config = font_config,
-            .scene_target = .{},
             .window_chrome = .{},
             .theme = .{},
             .scale = scale,
@@ -874,7 +784,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
 
     pub fn deinit(self: *Renderer) void {
         presentable_targets_runtime.deinit(self);
-        self.destroyRenderTarget(&self.scene_target.target);
+        self.destroyRenderTarget(&self.opengl_runtime.scene_target.target);
 
         if (self.fonts_ready) {
             self.app_font.deinit();
@@ -1030,7 +940,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             .{ .render_scale_change = true }
         else
             .{};
-        self.scene_target.pending_invalidation.merge(scene_target_invalidation);
+        self.opengl_runtime.scene_target.pending_invalidation.merge(scene_target_invalidation);
         return .{
             .changes = .{},
             .geometry = self.windowGeometryDiagnostics(),
@@ -1157,13 +1067,13 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     pub fn refreshWindowState(self: *Renderer, reason: []const u8, changes: WindowChangeMask) !WindowRefreshResult {
         const metrics = self.collectDisplayMetricsForWindowChanges(changes);
         const scene_target_invalidation = sceneTargetInvalidationForRefresh(
-            self.scene_target,
+            self.opengl_runtime.scene_target,
             changes,
             metrics,
             self.supportsSceneTargets(),
         );
         self.applyDisplayMetricsSnapshot(metrics);
-        self.scene_target.pending_invalidation.merge(scene_target_invalidation);
+        self.opengl_runtime.scene_target.pending_invalidation.merge(scene_target_invalidation);
         self.logWindowMetricsSnapshot(metrics, reason);
         const ui_scale_changed = try self.refreshUiScaleForWindowChanges(changes, metrics);
         return .{

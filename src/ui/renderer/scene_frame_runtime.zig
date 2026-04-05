@@ -177,31 +177,31 @@ pub fn refreshSceneTargetContract(self: anytype, display_metrics: platform_windo
     const log = app_logger.logger("renderer.scene_target");
     const next = renderer_root.sceneTargetContractFromDisplayMetrics(display_metrics);
     if (self.capabilities().scene_composition_mode != .offscreen_scene_target) {
-        self.scene_target.pending_invalidation = .{};
-        self.scene_target.contract = next;
-        self.scene_target.invalidation = .{};
-        self.scene_target.ready = false;
-        if (self.scene_target.target != null) {
-            self.destroyRenderTarget(&self.scene_target.target);
+        self.opengl_runtime.scene_target.pending_invalidation = .{};
+        self.opengl_runtime.scene_target.contract = next;
+        self.opengl_runtime.scene_target.invalidation = .{};
+        self.opengl_runtime.scene_target.ready = false;
+        if (self.opengl_runtime.scene_target.target != null) {
+            self.destroyRenderTarget(&self.opengl_runtime.scene_target.target);
         }
         return;
     }
-    const reasons = self.scene_target.pending_invalidation;
-    self.scene_target.pending_invalidation = .{};
-    self.scene_target.contract = next;
+    const reasons = self.opengl_runtime.scene_target.pending_invalidation;
+    self.opengl_runtime.scene_target.pending_invalidation = .{};
+    self.opengl_runtime.scene_target.contract = next;
     if (!reasons.any()) return;
 
-    self.scene_target.invalidation = reasons;
-    self.scene_target.ready = false;
-    if (self.scene_target.target != null) {
-        self.destroyRenderTarget(&self.scene_target.target);
+    self.opengl_runtime.scene_target.invalidation = reasons;
+    self.opengl_runtime.scene_target.ready = false;
+    if (self.opengl_runtime.scene_target.target != null) {
+        self.destroyRenderTarget(&self.opengl_runtime.scene_target.target);
     }
-    renderer_root.logSceneTargetState(log, "invalidate", self.scene_target.contract, self.scene_target.invalidation, self.scene_target.ready);
+    renderer_root.logSceneTargetState(log, "invalidate", self.opengl_runtime.scene_target.contract, self.opengl_runtime.scene_target.invalidation, self.opengl_runtime.scene_target.ready);
 }
 
 pub fn beginSceneFrame(self: anytype) bool {
-    if (self.scene_target.target == null) return false;
-    if (!self.beginRenderTarget(self.scene_target.target)) {
+    if (self.opengl_runtime.scene_target.target == null) return false;
+    if (!self.beginRenderTarget(self.opengl_runtime.scene_target.target)) {
         noteSceneTargetRecreateFailure(self);
         return false;
     }
@@ -209,7 +209,7 @@ pub fn beginSceneFrame(self: anytype) bool {
 }
 
 pub fn drawSceneTargetToDefault(self: anytype) void {
-    const target = self.scene_target.target orelse return;
+    const target = self.opengl_runtime.scene_target.target orelse return;
     self.bindDefaultTarget();
     gl.Disable(gl.c.GL_SCISSOR_TEST);
     const bg = self.theme.background.toRgba();
@@ -246,31 +246,31 @@ pub fn performanceDeltaMs(start: u64, end: u64, freq: f64) f64 {
 }
 
 fn noteSceneTargetRecreateFailure(self: anytype) void {
-    self.scene_target.invalidation.target_recreate_failure = true;
-    self.scene_target.ready = false;
+    self.opengl_runtime.scene_target.invalidation.target_recreate_failure = true;
+    self.opengl_runtime.scene_target.ready = false;
     renderer_root.logSceneTargetState(
         app_logger.logger("renderer.scene_target"),
         "recreate_failed",
-        self.scene_target.contract,
-        self.scene_target.invalidation,
-        self.scene_target.ready,
+        self.opengl_runtime.scene_target.contract,
+        self.opengl_runtime.scene_target.invalidation,
+        self.opengl_runtime.scene_target.ready,
     );
 }
 
 fn clearSceneTargetInvalidation(self: anytype) void {
-    self.scene_target.invalidation = .{};
-    self.scene_target.ready = true;
+    self.opengl_runtime.scene_target.invalidation = .{};
+    self.opengl_runtime.scene_target.ready = true;
     renderer_root.logSceneTargetState(
         app_logger.logger("renderer.scene_target"),
         "ready",
-        self.scene_target.contract,
-        self.scene_target.invalidation,
-        self.scene_target.ready,
+        self.opengl_runtime.scene_target.contract,
+        self.opengl_runtime.scene_target.invalidation,
+        self.opengl_runtime.scene_target.ready,
     );
 }
 
 fn ensureSceneTarget(self: anytype, filter: i32) bool {
-    const contract = self.scene_target.contract;
+    const contract = self.opengl_runtime.scene_target.contract;
     if (contract.logical_width <= 0 or contract.logical_height <= 0 or
         contract.drawable_width <= 0 or contract.drawable_height <= 0)
     {
@@ -279,16 +279,16 @@ fn ensureSceneTarget(self: anytype, filter: i32) bool {
     }
 
     const recreated = self.ensureRenderTargetScaled(
-        &self.scene_target.target,
+        &self.opengl_runtime.scene_target.target,
         contract.logical_width,
         contract.logical_height,
         filter,
     );
-    if (self.scene_target.target == null) {
+    if (self.opengl_runtime.scene_target.target == null) {
         noteSceneTargetRecreateFailure(self);
         return false;
     }
-    if (recreated or !self.scene_target.ready) {
+    if (recreated or !self.opengl_runtime.scene_target.ready) {
         clearSceneTargetInvalidation(self);
     }
     return recreated;
@@ -296,9 +296,9 @@ fn ensureSceneTarget(self: anytype, filter: i32) bool {
 
 pub fn prepareSceneTarget(self: anytype, filter: i32) void {
     const recreated = ensureSceneTarget(self, filter);
-    if (self.scene_target.target == null or !recreated) return;
+    if (self.opengl_runtime.scene_target.target == null or !recreated) return;
 
-    if (!self.beginRenderTarget(self.scene_target.target)) {
+    if (!self.beginRenderTarget(self.opengl_runtime.scene_target.target)) {
         noteSceneTargetRecreateFailure(self);
         return;
     }

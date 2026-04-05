@@ -152,6 +152,12 @@ field. It now lives under `opengl_runtime.presentable_targets`, which is a
 better fit for the truth that the richer retained-presentable lifecycle is
 currently an OpenGL-owned implementation shape.
 
+That has improved slightly again on the scene-composition side too: the
+offscreen scene-target contract/state now lives in a dedicated
+`scene_target_state` module and is stored under `opengl_runtime.scene_target`
+instead of as a direct renderer-root field. That makes the current OpenGL-owned
+offscreen scene-target model less obviously shared-state-by-default.
+
 ### 2. Shared frame lifecycle still branches backend-by-backend
 
 The renderer root no longer spells out backend frame begin/submit bodies, but
