@@ -9,7 +9,12 @@ pub fn presentableAvailable(renderer: anytype) bool {
 }
 
 pub fn ensurePresentable(renderer: anytype, width: i32, height: i32) bool {
-    if (renderer.backend == .metal) return renderer.ensureMetalTerminalSnapshotPresentable(width, height);
+    if (renderer.backend == .metal) {
+        const drawable_width = renderer.render_width;
+        const drawable_height = renderer.render_height;
+        if (drawable_width <= 0 or drawable_height <= 0) return false;
+        return renderer.ensureMetalTerminalSnapshotPresentable(drawable_width, drawable_height);
+    }
     return retained_targets_runtime.ensureSurface(renderer, .terminal, width, height);
 }
 

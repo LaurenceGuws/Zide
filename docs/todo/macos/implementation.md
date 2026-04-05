@@ -469,6 +469,9 @@ lane.
     - the Metal snapshot-presentable draw now uses explicit raster-space
       source and destination regions, so non-full-window terminals do not
       rely on an accidental full-texture blit assumption
+    - target-runtime Metal presentable preparation now also uses drawable-size
+      truth, so snapshot allocation no longer disagrees with the submit-time
+      capture size on this lane
     - the underlying terminal widget storage contract is less retained-first
       now too: the state container and partial-plan type are named around
       presentation instead of retained state, which reduces another place

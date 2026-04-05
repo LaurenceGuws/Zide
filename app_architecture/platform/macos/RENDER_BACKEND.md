@@ -749,6 +749,10 @@ What this does and does not mean:
   snapshot presents use explicit raster-space source and destination regions
   instead of implicitly sampling the whole drawable texture, which is required
   for terminals that do not fill the entire window
+- that preparation contract is now aligned with capture truth as well:
+  the target runtime prepares drawable-sized Metal snapshot presentables
+  instead of using terminal-surface geometry while submit-time capture
+  silently reallocates something larger later
 - the underlying storage contract is less retained-first now too: the terminal
   widget state container and partial-plan type are named around presentation
   rather than retained state, which reduces one more place where the direct
