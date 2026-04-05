@@ -860,6 +860,28 @@ What this does and does not mean:
   `metal_text_sample_runtime` and `terminal_widget_draw_grid`, so single-cell
   non-ASCII fallback runs no longer structurally collapse to ASCII-only
   rendering on the live Metal path
+- a second live `btop` contradiction is fixed now too: the Metal terminal
+  present lane had still been capping queued surface draws at `128`, which
+  meant large dashboard-class frames could silently stop queuing later row
+  draws after the early text landed
+- the Metal terminal frame draw queue is now growable rather than fixed-size,
+  so `btop`-class frames no longer fail by silently truncating the back half
+  of the present list
+- a third live contradiction is fixed on top of that: once UTF-8 fallback was
+  widened, the generic Metal row fallback could consume entire rows before the
+  analytic special-glyph path ever ran, which flattened box/block/braille
+  rows back into generic text fallback
+- the live Metal row fallback now explicitly excludes analytic/special glyph
+  classes, so the real special-glyph lane regains ownership of `btop` border,
+  block, shade, braille, and powerline cells instead of losing them to the
+  generic row path
+- the GL-only terminal glyph helper seam is corrected for Metal too:
+  analytic box rects and coverage-sprite quads now enqueue real Metal surface
+  draws instead of disappearing into the OpenGL glyph cache path
+- on a real live Metal `btop` repro this moves the failure mode forward
+  materially: normal terminal text is broadly present again and the box/block
+  lane is visibly participating, so the remaining gap is now continuity and
+  fidelity quality rather than “most of the frame never rendered”
 - that same dashboard lane is now runtime-proven under churn too instead of
   only on the first full frame: a dashboard mutation frame now stays on
   `metric_present_sample=direct_snapshot_update` with

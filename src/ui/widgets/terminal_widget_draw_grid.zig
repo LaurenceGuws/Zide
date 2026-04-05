@@ -272,8 +272,11 @@ fn cellSupportsMetalTerminalRowFallback(cell: Cell, style: ResolvedTerminalCellS
     if (cell.x != 0 or cell.y != 0) return false;
     if (style.width_units != 1) return false;
     if (cell.combining_len != 0) return false;
+    if (cell.codepoint == kitty_unicode_placeholder) return false;
+    if (isTerminalBoxGlyph(cell.codepoint)) return false;
+    if (terminal_glyphs.specialVariantForCodepoint(cell.codepoint) != null) return false;
     if (cell.codepoint == 0 or cell.codepoint == ' ') return true;
-    return cell.codepoint >= 0x20 and cell.codepoint <= 0x7E;
+    return true;
 }
 
 fn captureMetalFallbackRunSample(

@@ -504,8 +504,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     gl_context: ?sdl.SDL_GLContext,
     metal_backend_context: ?metal_backend.BackendContext,
     metal_frame: ?metal_backend.Frame,
-    metal_surface_draws: [128]metal_backend.SurfaceDraw,
-    metal_surface_draw_count: usize,
+    metal_surface_draws: std.ArrayListUnmanaged(metal_backend.SurfaceDraw),
     metal_debug_preview_source: AtlasPreviewSource,
     gl_resources_ready: bool,
     fonts_ready: bool,
@@ -771,8 +770,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             .gl_context = gl_context,
             .metal_backend_context = null,
             .metal_frame = null,
-            .metal_surface_draws = undefined,
-            .metal_surface_draw_count = 0,
+            .metal_surface_draws = .{},
             .metal_debug_preview_source = .unavailable,
             .gl_resources_ready = false,
             .fonts_ready = false,
@@ -949,6 +947,8 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         retained_targets_runtime.deinit(self);
         self.destroyRenderTarget(&self.scene_target.target);
         self.clearMetalDiagnosticFont();
+        self.clearQueuedMetalSurfaceDraws();
+        self.metal_surface_draws.deinit(self.allocator);
 
         if (self.fonts_ready) {
             self.app_font.deinit();
@@ -1487,7 +1487,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
                             capture_readback = metal_backend.prepareFrameReadback(context, frame);
                         }
 
-                        for (self.metal_surface_draws[0..self.metal_surface_draw_count]) |surface_draw| {
+                        for (self.metal_surface_draws.items) |surface_draw| {
                             switch (surface_draw) {
                                 .atlas => |sample| _ = metal_backend.drawAtlasSample(context, frame, sample),
                                 .solid => |solid| _ = metal_backend.drawSolidColor(context, frame, solid),
@@ -2007,21 +2007,20 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     }
 
     fn clearQueuedMetalSurfaceDraws(self: *Renderer) void {
-        for (self.metal_surface_draws[0..self.metal_surface_draw_count]) |*surface_draw| {
+        for (self.metal_surface_draws.items) |*surface_draw| {
             switch (surface_draw.*) {
                 .atlas => {},
                 .solid => {},
                 .raw_image => |*draw| metal_backend.deinitRawImageTexture(&draw.texture),
             }
         }
-        self.metal_surface_draw_count = 0;
+        self.metal_surface_draws.clearRetainingCapacity();
     }
 
     fn appendMetalSolidRect(self: *Renderer, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) bool {
         if (self.backend != .metal) return false;
-        if (self.metal_surface_draw_count >= self.metal_surface_draws.len) return false;
         const clip = if (self.currentClipRect()) |c| metal_text_sample_runtime.pixelClipRect(self, c) else null;
-        self.metal_surface_draws[self.metal_surface_draw_count] = .{ .solid = .{
+        self.metal_surface_draws.append(self.allocator, .{ .solid = .{
             .dest_rect = .{
                 .x = self.logicalLengthToRaster(x),
                 .y = self.logicalLengthToRaster(y),
@@ -2030,26 +2029,21 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             },
             .color = color,
             .clip_rect = clip,
-        } };
-        self.metal_surface_draw_count += 1;
+        } }) catch return false;
         return true;
     }
 
     fn appendMetalAtlasSampleDraw(self: *Renderer, sample: metal_backend.AtlasSampleDraw) bool {
-        if (self.metal_surface_draw_count >= self.metal_surface_draws.len) return false;
-        self.metal_surface_draws[self.metal_surface_draw_count] = .{ .atlas = sample };
-        self.metal_surface_draw_count += 1;
+        self.metal_surface_draws.append(self.allocator, .{ .atlas = sample }) catch return false;
         return true;
     }
 
     fn appendMetalRawImageDraw(self: *Renderer, draw: metal_backend.RawImageDraw) bool {
-        if (self.metal_surface_draw_count >= self.metal_surface_draws.len) {
+        self.metal_surface_draws.append(self.allocator, .{ .raw_image = draw }) catch {
             var texture = draw.texture;
             metal_backend.deinitRawImageTexture(&texture);
             return false;
-        }
-        self.metal_surface_draws[self.metal_surface_draw_count] = .{ .raw_image = draw };
-        self.metal_surface_draw_count += 1;
+        };
         return true;
     }
 
@@ -2093,8 +2087,8 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             self,
             font,
             request,
-            self.metal_surface_draws[0..],
-            &self.metal_surface_draw_count,
+            &self.metal_surface_draws,
+            self.allocator,
         );
     }
 
@@ -2107,8 +2101,8 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             self,
             font,
             request,
-            self.metal_surface_draws[0..],
-            &self.metal_surface_draw_count,
+            &self.metal_surface_draws,
+            self.allocator,
         );
     }
 
@@ -2204,7 +2198,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             });
             self.metal_debug_preview_source = .uploaded_color_glyph;
         } else {
-            if (self.metal_surface_draw_count == 0) {
+            if (self.metal_surface_draws.items.len == 0) {
                 _ = self.appendMetalAtlasSampleDraw(.{
                     .atlas = .color,
                     .source_rect = .{
@@ -2435,10 +2429,37 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     }
 
     pub fn addTerminalGlyphRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
+        if (self.backend == .metal) {
+            _ = self.appendMetalSolidRect(
+                @floatFromInt(x),
+                @floatFromInt(y),
+                @floatFromInt(w),
+                @floatFromInt(h),
+                color.toRgba(),
+            );
+            return;
+        }
         self.terminal_text.glyph_cache.addRect(self.white_texture, x, y, w, h, color.toRgba());
     }
 
     pub fn addTerminalGlyphQuad(self: *Renderer, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
+        if (self.backend == .metal) {
+            const clip_rect = if (self.currentClipRect()) |clip|
+                metal_text_sample_runtime.pixelClipRect(self, clip)
+            else
+                null;
+            if (kind == .font_coverage) {
+                _ = self.appendMetalAtlasSampleDraw(.{
+                    .atlas = .coverage,
+                    .source_rect = src,
+                    .dest_x = @intFromFloat(std.math.round(self.logicalLengthToRaster(dest.x))),
+                    .dest_y = @intFromFloat(std.math.round(self.logicalLengthToRaster(dest.y))),
+                    .tint = color,
+                    .clip_rect = clip_rect,
+                });
+            }
+            return;
+        }
         self.terminal_text.glyph_cache.addQuad(texture, src, dest, color, self.text_render.bg_rgba, kind);
     }
 

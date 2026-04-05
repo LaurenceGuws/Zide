@@ -872,6 +872,21 @@ lane.
       the Metal sample/runtime path instead of ASCII-only bytes, which is the
       first honest fix for the “only some plain text renders” class of live
       `btop` failures
+    - a second live `btop` contradiction is fixed too: the Metal present lane
+      had still been capping queued surface draws at `128`, so large terminal
+      frames could silently stop enqueuing later row draws after the early
+      text landed
+    - that queue is now growable instead of fixed-size, which is the first
+      honest fix for the “only the top of `btop` renders” class of live
+      Metal failures
+    - once UTF-8 fallback widened, the generic Metal row fallback could still
+      consume whole rows before the analytic special-glyph path ran; that made
+      box/block/braille rows regress back into generic fallback text
+    - the row fallback now explicitly excludes special/analytic glyph classes,
+      and the GL-only terminal glyph helper seam is corrected for Metal
+      surface draws too, so live `btop` now has broad normal text plus a
+      visibly participating box/block lane instead of missing almost the whole
+      frame
     - the dashboard fixture is now proven under churn too:
       `DASHBOARD=1` plus `MUTATE_FRAME=1` yields
       `metric_present_sample=direct_snapshot_update`,

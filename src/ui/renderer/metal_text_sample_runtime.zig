@@ -166,8 +166,8 @@ pub fn appendUtf8Run(
     renderer: *const Renderer,
     font: *TerminalFont,
     request: SampleTextRequest,
-    draws: []metal_backend.SurfaceDraw,
-    draw_count: *usize,
+    draws: *std.ArrayListUnmanaged(metal_backend.SurfaceDraw),
+    allocator: std.mem.Allocator,
 ) bool {
     if (request.text.len == 0) return false;
 
@@ -197,10 +197,7 @@ pub fn appendUtf8Run(
             const direct = font.directFastGlyphForCodepoint(codepoint) orelse return drew_any;
             break :blk font.getGlyphById(direct.face, direct.glyph_id, direct.want_color, false, 0) catch return drew_any;
         };
-        if (draw_count.* >= draws.len) return drew_any;
-
-        draws[draw_count.*] = .{ .atlas = sample };
-        draw_count.* += 1;
+        draws.append(allocator, .{ .atlas = sample }) catch return drew_any;
         drew_any = true;
         pen_x += switch (request.layout) {
             .glyph_advance => advance_glyph.advance / render_scale,
@@ -215,8 +212,8 @@ pub fn appendTerminalUtf8Cells(
     renderer: *const Renderer,
     font: *TerminalFont,
     request: TerminalCellRunRequest,
-    draws: []metal_backend.SurfaceDraw,
-    draw_count: *usize,
+    draws: *std.ArrayListUnmanaged(metal_backend.SurfaceDraw),
+    allocator: std.mem.Allocator,
 ) bool {
     if (request.text.len == 0) return false;
     const render_scale = if (renderer.scale.render_scale > 0.0) renderer.scale.render_scale else 1.0;
@@ -242,10 +239,7 @@ pub fn appendTerminalUtf8Cells(
             pen_x += request.cell_width;
             continue;
         };
-        if (draw_count.* >= draws.len) return drew_any;
-
-        draws[draw_count.*] = .{ .atlas = sample };
-        draw_count.* += 1;
+        draws.append(allocator, .{ .atlas = sample }) catch return drew_any;
         drew_any = true;
         pen_x += request.cell_width;
     }
