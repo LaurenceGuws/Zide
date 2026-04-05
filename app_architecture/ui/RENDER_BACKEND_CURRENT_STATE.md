@@ -55,7 +55,7 @@ In `src/ui/renderer.zig`, the shared renderer still owns:
 
 - `metal_backend_context`
 - `metal_frame`
-- `metal_surface_draws`
+- `queued_surface_draws`
 
 That means the renderer root is still partly the Metal implementation center,
 not just the backend-neutral host/facade.

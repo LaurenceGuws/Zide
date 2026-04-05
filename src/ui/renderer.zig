@@ -507,7 +507,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     gl_context: ?sdl.SDL_GLContext,
     metal_backend_context: ?metal_backend.BackendContext,
     metal_frame: ?metal_backend.Frame,
-    metal_surface_draws: std.ArrayListUnmanaged(surface_draw.SurfaceDraw),
+    queued_surface_draws: std.ArrayListUnmanaged(surface_draw.SurfaceDraw),
     metal_debug_preview_source: AtlasPreviewSource,
     gl_resources_ready: bool,
     fonts_ready: bool,
@@ -773,7 +773,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             .gl_context = gl_context,
             .metal_backend_context = null,
             .metal_frame = null,
-            .metal_surface_draws = .{},
+            .queued_surface_draws = .{},
             .metal_debug_preview_source = .unavailable,
             .gl_resources_ready = false,
             .fonts_ready = false,
@@ -950,8 +950,8 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         presentable_targets_runtime.deinit(self);
         self.destroyRenderTarget(&self.scene_target.target);
         self.clearMetalDiagnosticFont();
-        self.clearQueuedMetalSurfaceDraws();
-        self.metal_surface_draws.deinit(self.allocator);
+        self.clearQueuedSurfaceDraws();
+        self.queued_surface_draws.deinit(self.allocator);
 
         if (self.fonts_ready) {
             self.app_font.deinit();
@@ -1863,21 +1863,21 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         return &self.metal_diagnostic_font.?;
     }
 
-    pub fn clearQueuedMetalSurfaceDraws(self: *Renderer) void {
-        for (self.metal_surface_draws.items) |*queued_draw| {
+    pub fn clearQueuedSurfaceDraws(self: *Renderer) void {
+        for (self.queued_surface_draws.items) |*queued_draw| {
             switch (queued_draw.*) {
                 .atlas => {},
                 .solid => {},
                 .raw_image => |*draw| metal_backend.deinitRawImageTexture(&draw.texture),
             }
         }
-        self.metal_surface_draws.clearRetainingCapacity();
+        self.queued_surface_draws.clearRetainingCapacity();
     }
 
     fn appendMetalSolidRect(self: *Renderer, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) bool {
         if (self.backend != .metal) return false;
         const clip = if (self.currentClipRect()) |c| metal_text_sample_runtime.pixelClipRect(self, c) else null;
-        self.metal_surface_draws.append(self.allocator, .{ .solid = .{
+        self.queued_surface_draws.append(self.allocator, .{ .solid = .{
             .dest_rect = .{
                 .x = self.logicalLengthToRaster(x),
                 .y = self.logicalLengthToRaster(y),
@@ -1891,12 +1891,12 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     }
 
     fn appendMetalAtlasSampleDraw(self: *Renderer, sample: surface_draw.AtlasSampleDraw) bool {
-        self.metal_surface_draws.append(self.allocator, .{ .atlas = sample }) catch return false;
+        self.queued_surface_draws.append(self.allocator, .{ .atlas = sample }) catch return false;
         return true;
     }
 
     fn appendMetalRawImageDraw(self: *Renderer, draw: surface_draw.RawImageDraw) bool {
-        self.metal_surface_draws.append(self.allocator, .{ .raw_image = draw }) catch {
+        self.queued_surface_draws.append(self.allocator, .{ .raw_image = draw }) catch {
             var texture = draw.texture;
             metal_backend.deinitRawImageTexture(&texture);
             return false;
@@ -1944,7 +1944,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             self,
             font,
             request,
-            &self.metal_surface_draws,
+            &self.queued_surface_draws,
             self.allocator,
         );
     }
@@ -1958,7 +1958,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             self,
             font,
             request,
-            &self.metal_surface_draws,
+            &self.queued_surface_draws,
             self.allocator,
         );
     }
@@ -2026,7 +2026,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     pub fn runMacosMetalAtlasUploadDiagnosticAt(self: *Renderer, dest_x: i32, dest_y: i32) bool {
         if (self.backend != .metal) return false;
         if (self.metal_backend_context == null) return false;
-        self.clearQueuedMetalSurfaceDraws();
+        self.clearQueuedSurfaceDraws();
         self.metal_debug_preview_source = .unavailable;
 
         const font = self.ensureMetalDiagnosticFont() catch return false;
@@ -2045,7 +2045,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             self.metal_debug_preview_source = .uploaded_coverage_glyph;
         }
         if (color_preview_rect) |rect| {
-            self.clearQueuedMetalSurfaceDraws();
+            self.clearQueuedSurfaceDraws();
             _ = self.appendMetalAtlasSampleDraw(.{
                 .atlas = .color,
                 .source_rect = rect,
@@ -2055,7 +2055,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             });
             self.metal_debug_preview_source = .uploaded_color_glyph;
         } else {
-            if (self.metal_surface_draws.items.len == 0) {
+            if (self.queued_surface_draws.items.len == 0) {
                 _ = self.appendMetalAtlasSampleDraw(.{
                     .atlas = .color,
                     .source_rect = .{

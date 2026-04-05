@@ -34,7 +34,7 @@ pub fn beginFrame(renderer: anytype) void {
 }
 
 pub fn submitFrame(renderer: anytype) scene_frame_runtime.FrameSubmission {
-    defer renderer.clearQueuedMetalSurfaceDraws();
+    defer renderer.clearQueuedSurfaceDraws();
     const present_start = sdl_api.getPerformanceCounter();
     const succeeded = if (renderer.metal_backend_context) |*context|
         if (renderer.metal_frame) |*frame| inner: {
@@ -45,7 +45,7 @@ pub fn submitFrame(renderer: anytype) scene_frame_runtime.FrameSubmission {
                 capture_readback = metal_backend.prepareFrameReadback(context, frame);
             }
 
-            for (renderer.metal_surface_draws.items) |queued_draw| {
+            for (renderer.queued_surface_draws.items) |queued_draw| {
                 switch (queued_draw) {
                     .atlas => |sample| _ = metal_backend.drawAtlasSample(context, frame, sample),
                     .solid => |solid| _ = metal_backend.drawSolidColor(context, frame, solid),
