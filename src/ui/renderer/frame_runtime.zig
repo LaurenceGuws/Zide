@@ -45,11 +45,17 @@ pub fn lastPresentTrace(self: anytype) PresentTrace {
 }
 
 pub fn dumpWindowScreenshotPpm(self: anytype, path: []const u8) !void {
-    return scene_frame_runtime.dumpWindowScreenshotPpm(self, path);
+    return switch (self.backend) {
+        .opengl => gl_backend.dumpWindowScreenshotPpm(self, path),
+        .metal => error.RendererScreenshotUnavailable,
+    };
 }
 
 pub fn dumpWindowScreenshotPpmSized(self: anytype, path: []const u8, out_width: i32, out_height: i32) !void {
-    return scene_frame_runtime.dumpWindowScreenshotPpmSized(self, path, out_width, out_height);
+    return switch (self.backend) {
+        .opengl => gl_backend.dumpWindowScreenshotPpmSized(self, path, out_width, out_height),
+        .metal => error.RendererScreenshotUnavailable,
+    };
 }
 
 fn windowSizesFromDisplayMetrics(metrics: platform_window.DisplayMetrics) WindowSizes {

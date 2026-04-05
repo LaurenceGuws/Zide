@@ -83,6 +83,14 @@ pub fn submitFrame(renderer: anytype) @import("scene_frame_runtime.zig").FrameSu
     return opengl_frame_runtime.submitFrame(renderer);
 }
 
+pub fn dumpWindowScreenshotPpm(renderer: anytype, path: []const u8) !void {
+    return opengl_frame_runtime.dumpWindowScreenshotPpm(renderer, path);
+}
+
+pub fn dumpWindowScreenshotPpmSized(renderer: anytype, path: []const u8, out_width: i32, out_height: i32) !void {
+    return opengl_frame_runtime.dumpWindowScreenshotPpmSized(renderer, path, out_width, out_height);
+}
+
 pub fn whiteTexture(renderer: anytype) types.Texture {
     return renderer.opengl_runtime.white_texture;
 }

@@ -196,6 +196,11 @@ wrapper is gone. `frame_runtime.zig` now does shared per-frame bookkeeping and
 routes directly to backend-owned `beginFrame` / `submitFrame` entrypoints on
 the OpenGL and Metal modules.
 
+That has improved slightly again on the OpenGL submission path too: direct GL
+submit and direct window screenshot-readback logic now live under the OpenGL
+frame/backend modules instead of `scene_frame_runtime.zig` carrying that
+OpenGL-specific behavior inside a shared runtime file.
+
 ### 3. The shared draw queue is still Metal-native
 
 The shared renderer currently stores and submits

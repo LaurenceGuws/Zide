@@ -176,6 +176,11 @@ Progress note, 2026-04-05:
   `opengl_runtime.scene_target` instead of as a direct `Renderer` field,
   which makes the current OpenGL-owned scene-target model less obviously
   shared-state-by-default.
+- Direct OpenGL frame submit and direct window screenshot-readback now also
+  live under `src/ui/renderer/opengl_frame_runtime.zig` /
+  `src/ui/renderer/gl_backend.zig` instead of
+  `src/ui/renderer/scene_frame_runtime.zig` carrying that OpenGL-specific
+  behavior inside a shared runtime file.
 - The next lifecycle step is to reduce shared-runtime ownership of dispatch and
   backend-native frame state, not just move code blocks around.
 
