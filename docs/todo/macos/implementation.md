@@ -415,6 +415,10 @@ lane.
       viewport shift and update-plan helpers are named around presentation
       instead of texture ownership, which better matches both retained and
       direct terminal modes
+    - terminal presenter/state internals are now presentation-shaped too:
+      update deltas, geometry, plan, and present-state helpers are named
+      around presentation instead of retained surfaces, which makes the live
+      direct Metal lane less architecturally second-class inside the widget
     - the terminal Metal diagnostic now reports `raw_image_textures=1`, keeps
       non-zero `kitty_ms`, and no longer relies on the previous unsupported
       backend gate for RGB/RGBA Kitty images

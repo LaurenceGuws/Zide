@@ -6,7 +6,7 @@ const KittyState = kitty_mod.KittyState;
 const RetainedState = retained_state_mod.RetainedState;
 
 pub const TerminalWidgetSurfaceState = struct {
-    pub const RetainedUpdateDelta = struct {
+    pub const PresentationUpdateDelta = struct {
         cell_metrics_changed: bool,
         render_scale_changed: bool,
         generation_changed: bool,
@@ -75,11 +75,11 @@ pub const TerminalWidgetSurfaceState = struct {
         return self.retained.terminal_presentable_ready;
     }
 
-    pub fn retainedUpdateDelta(
+    pub fn presentationUpdateDelta(
         self: *const TerminalWidgetSurfaceState,
         terminal_view: view_state.TerminalViewModel,
         surface_geometry: anytype,
-    ) RetainedUpdateDelta {
+    ) PresentationUpdateDelta {
         return .{
             .cell_metrics_changed = surface_geometry.cell_w_i != self.retained.last_cell_w_i or
                 surface_geometry.cell_h_i != self.retained.last_cell_h_i,
@@ -90,7 +90,7 @@ pub const TerminalWidgetSurfaceState = struct {
         };
     }
 
-    pub fn noteRetainedPresentationUpdated(
+    pub fn notePresentationUpdated(
         self: *TerminalWidgetSurfaceState,
         terminal_view: view_state.TerminalViewModel,
         surface_geometry: anytype,

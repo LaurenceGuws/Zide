@@ -686,6 +686,11 @@ What this does and does not mean:
   and update-plan decisions are now named in terms of presentation rather than
   texture ownership, which better matches both retained and direct-main-target
   terminal modes
+- the same cleanup now reaches terminal presenter/state internals too:
+  update deltas, geometry, update plans, execution results, and present-state
+  helpers are named around presentation instead of retained surfaces, which
+  makes the current direct-main-target Metal lane less architecturally
+  second-class inside the widget implementation
 - that contract is intentionally backend-native rather than fake portability:
   the old cached GL `Texture` path is still OpenGL-only, while Metal Kitty
   images are created as frame-scoped native Metal textures and released after

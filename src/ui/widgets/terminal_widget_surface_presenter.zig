@@ -37,7 +37,7 @@ const ViewportShiftState = struct {
     exposed_only: bool = false,
 };
 
-const RetainedSurfaceGeometry = struct {
+const PresentationGeometry = struct {
     render_scale: f32 = 1.0,
     cell_w_i: i32 = 0,
     cell_h_i: i32 = 0,
@@ -56,13 +56,13 @@ const SurfaceUpdateMode = enum {
     partial,
 };
 
-const RetainedSurfaceUpdatePlan = struct {
-    geometry: RetainedSurfaceGeometry = .{},
+const PresentationUpdatePlan = struct {
+    geometry: PresentationGeometry = .{},
     mode: SurfaceUpdateMode = .none,
     partial_plan: ?PartialDrawPlan = null,
 };
 
-const RetainedSurfacePresentState = struct {
+const PresentationPresentState = struct {
     updated: bool = false,
     target_available: bool = false,
     ready: bool = false,
@@ -71,7 +71,7 @@ const RetainedSurfacePresentState = struct {
     log_unavailable: bool = false,
 };
 
-const RetainedSurfaceExecutionResult = struct {
+const PresentationExecutionResult = struct {
     completed: bool = false,
     bg_ms: f64 = 0.0,
     glyph_ms: f64 = 0.0,
@@ -85,7 +85,7 @@ const SyncUpdateFastPresentDecision = struct {
 fn forEachRetainedDrawSpan(
     rows: usize,
     cols: usize,
-    surface_update_plan: RetainedSurfaceUpdatePlan,
+    surface_update_plan: PresentationUpdatePlan,
     visitor: anytype,
 ) void {
     if (rows == 0 or cols == 0) return;
@@ -133,7 +133,7 @@ fn drawRetainedBackgroundPass(
     draw_cursor: bool,
     cursor: CursorPos,
     cursor_style: terminal_types.CursorStyle,
-    surface_update_plan: RetainedSurfaceUpdatePlan,
+    surface_update_plan: PresentationUpdatePlan,
     bg_color: Color,
     clear_full_surface: bool,
 ) f64 {
@@ -211,7 +211,7 @@ fn drawRetainedGlyphPass(
     cursor: CursorPos,
     cursor_style: terminal_types.CursorStyle,
     terminal_generation: u64,
-    surface_update_plan: RetainedSurfaceUpdatePlan,
+    surface_update_plan: PresentationUpdatePlan,
     glyph_draw_stats: *GlyphDrawStats,
 ) f64 {
     const glyph_phase_start = app_shell.getTime();
@@ -290,7 +290,7 @@ fn drawRetainedGlyphPass(
     return time_utils.secondsToMs(app_shell.getTime() - glyph_phase_start);
 }
 
-fn executeRetainedSurfaceUpdate(
+fn executePresentationUpdate(
     self: anytype,
     shell: *Shell,
     renderer: anytype,
@@ -304,9 +304,9 @@ fn executeRetainedSurfaceUpdate(
     blink_style: anytype,
     blink_time: f64,
     has_kitty: bool,
-    surface_update_plan: RetainedSurfaceUpdatePlan,
-) RetainedSurfaceExecutionResult {
-    var result = RetainedSurfaceExecutionResult{};
+    surface_update_plan: PresentationUpdatePlan,
+) PresentationExecutionResult {
+    var result = PresentationExecutionResult{};
     if (surface_update_plan.mode == .none) return result;
     if (surface_update_plan.mode == .partial and surface_update_plan.partial_plan == null) return result;
 
@@ -598,24 +598,24 @@ fn beginRetainedViewportClip(
     );
 }
 
-fn refreshRetainedSurfacePresentState(
+fn refreshPresentationPresentState(
     self: anytype,
     renderer: anytype,
     terminal_view: view_state.TerminalViewModel,
-    surface_geometry: RetainedSurfaceGeometry,
+    surface_geometry: PresentationGeometry,
     view_geometry: shared_types.layout.TerminalViewGeometry,
     texture_update_completed: bool,
     visible_w: i32,
     visible_h: i32,
     view_cells_len: usize,
-) RetainedSurfacePresentState {
-    var state = RetainedSurfacePresentState{
+) PresentationPresentState {
+    var state = PresentationPresentState{
         .updated = texture_update_completed,
         .visible = visible_w > 0 and visible_h > 0,
     };
 
     if (texture_update_completed) {
-        self.surface.noteRetainedPresentationUpdated(terminal_view, surface_geometry);
+        self.surface.notePresentationUpdated(terminal_view, surface_geometry);
     }
 
     state.target_available = retained_targets_runtime.surfaceAvailable(renderer, .terminal);
@@ -630,10 +630,10 @@ fn refreshRetainedSurfacePresentState(
     return state;
 }
 
-fn logRetainedSurfaceUnavailable(
+fn logPresentationUnavailable(
     self: anytype,
     terminal_view: view_state.TerminalViewModel,
-    present_state: RetainedSurfacePresentState,
+    present_state: PresentationPresentState,
     visible_w: i32,
     visible_h: i32,
 ) void {
@@ -681,7 +681,7 @@ fn presentRetainedSurface(
     });
 }
 
-fn planRetainedSurfaceUpdate(
+fn planPresentationUpdate(
     self: anytype,
     renderer: anytype,
     terminal_view: view_state.TerminalViewModel,
@@ -690,8 +690,8 @@ fn planRetainedSurfaceUpdate(
     blink_requires_partial: bool,
     scroll_offset: usize,
     recent_input_window_active: bool,
-) RetainedSurfaceUpdatePlan {
-    var plan = RetainedSurfaceUpdatePlan{};
+) PresentationUpdatePlan {
+    var plan = PresentationUpdatePlan{};
     const rows = terminal_view.rows;
     const cols = terminal_view.cols;
     if (rows == 0 or cols == 0) return plan;
@@ -716,7 +716,7 @@ fn planRetainedSurfaceUpdate(
     plan.geometry.viewport_h = @as(f32, @floatFromInt(plan.geometry.visible_h));
 
     const recreated = retained_targets_runtime.ensureSurface(renderer, .terminal, plan.geometry.texture_w, plan.geometry.texture_h);
-    const retained_delta = self.surface.retainedUpdateDelta(terminal_view, plan.geometry);
+    const retained_delta = self.surface.presentationUpdateDelta(terminal_view, plan.geometry);
 
     var update_plan = draw_texture.choosePresentationUpdatePlan(
         self.publication.cacheConst().dirty,
@@ -923,7 +923,7 @@ pub fn updateAndPresent(
                     plan_time,
                     r.fullTerminalTexturePublicationRecentInputWindowSeconds(),
                 ));
-        const surface_update_plan = planRetainedSurfaceUpdate(
+        const surface_update_plan = planPresentationUpdate(
             self,
             r,
             terminal_view,
@@ -942,7 +942,7 @@ pub fn updateAndPresent(
 
         if (surface_update_plan.mode != .none and retained_targets_runtime.beginSurface(r, .terminal)) {
             r.endClip();
-            const execution = executeRetainedSurfaceUpdate(
+            const execution = executePresentationUpdate(
                 self,
                 shell,
                 r,
@@ -964,7 +964,7 @@ pub fn updateAndPresent(
             texture_update_completed = execution.completed;
             scene_frame_runtime.restoreMainCompositionTarget(r);
         }
-        const present_state = refreshRetainedSurfacePresentState(
+        const present_state = refreshPresentationPresentState(
             self,
             r,
             terminal_view,
@@ -981,7 +981,7 @@ pub fn updateAndPresent(
                 r.drawRectF(view_geometry.origin_x, view_geometry.origin_y, viewport_w, viewport_h, bg);
             }
         }
-        logRetainedSurfaceUnavailable(self, terminal_view, present_state, visible_w, visible_h);
+        logPresentationUnavailable(self, terminal_view, present_state, visible_w, visible_h);
         if (present_state.present) {
             presentRetainedSurface(
                 self,
