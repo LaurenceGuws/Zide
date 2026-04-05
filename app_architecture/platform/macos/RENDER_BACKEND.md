@@ -634,11 +634,17 @@ What this does and does not mean:
   well: it seeds a deterministic external-transport terminal session, draws a
   real `TerminalWidget` through the Metal backend-smoke path, and logs the
   row-run fallback counts from both widget debug state and live frame metrics
-- current truth from that runtime is useful and intentionally strict: the
-  ASCII composing-text overlay row path is observed on the current macOS host,
-  while the terminal-grid row fallback still reports `0`, which means the
-  dedicated terminal-facing proof exists before the broader terminal Metal lane
-  is being overstated
+- that terminal-facing proof is now more honest about presentation ownership
+  too: when retained targets are unavailable on the Metal backend-smoke path,
+  terminal surface presentation can fall back to direct main-target
+  composition instead of dying at
+  `terminal_surface_unavailable_for_present`
+- current truth from the short deterministic runtime is now useful and
+  intentionally strict in a different way: terminal-grid row fallback is
+  observed on the current macOS host (`grid_runs=10/224` in the 4-frame run),
+  while the composing-text overlay row path currently reports `0/0`, which
+  means the dedicated terminal-facing proof now reaches real grid content
+  without overstating broader retained-surface terminal support
 - this is still intentionally narrow and honest: it is now a tiny sampled
   multiline ASCII run with an explicit monospace-cell option rather than a
   claim that the generic string/text renderer has already migrated

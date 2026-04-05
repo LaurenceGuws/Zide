@@ -374,9 +374,15 @@ lane.
       seeds a deterministic external-transport terminal session, draws a real
       terminal widget through the Metal backend-smoke path, and logs fallback
       counts from both widget debug state and live frame metrics
-    - current truth from that runtime is intentionally strict: the ASCII
-      composing-text overlay row path is observed on the current host, while
-      the grid row fallback still reports `0`
+    - terminal presentation on the Metal backend-smoke path is now more
+      honest too: when retained targets are unavailable, the terminal widget
+      can fall back to direct main-target composition instead of failing at
+      `terminal_surface_unavailable_for_present`
+    - current truth from the short deterministic terminal diagnostic is now:
+      grid row fallback is observed on the current host (`10/224` in the
+      4-frame run), while overlay row fallback currently reports `0/0`
+    - this is still a proof/runtime checkpoint, not a claim that retained
+      terminal surfaces or full terminal-on-Metal presentation are finished
     - the narrow Metal text lane now covers a tiny multiline ASCII run, not
       just a single flat row
     - the diagnostic/runtime callers now use the explicit monospace-cell

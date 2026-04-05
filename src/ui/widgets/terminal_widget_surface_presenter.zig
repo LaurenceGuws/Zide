@@ -454,6 +454,98 @@ fn executeSyncUpdateFastPresent(
     return result;
 }
 
+fn directPresentMainTarget(
+    self: anytype,
+    shell: *Shell,
+    renderer: anytype,
+    terminal_view: view_state.TerminalViewModel,
+    view_geometry: shared_types.layout.TerminalViewGeometry,
+    hover_link_id: u32,
+    draw_cursor: bool,
+    cursor: CursorPos,
+    cursor_style: terminal_types.CursorStyle,
+    blink_style: anytype,
+    blink_time: f64,
+    width: f32,
+    height: f32,
+) SurfacePresentResult {
+    var result = SurfacePresentResult{};
+    const rows = terminal_view.rows;
+    const cols = terminal_view.cols;
+    const view_cells = terminal_view.cells;
+    if (rows == 0 or cols == 0 or view_cells.len == 0) return result;
+
+    const bg_color = toShellColor(terminal_view.base_colors.resolved_background);
+    renderer.drawRect(
+        @intFromFloat(std.math.round(view_geometry.origin_x)),
+        @intFromFloat(std.math.round(view_geometry.origin_y)),
+        @intFromFloat(std.math.round(@min(width, view_geometry.viewport_width))),
+        @intFromFloat(std.math.round(@min(height, view_geometry.viewport_height))),
+        bg_color,
+    );
+
+    const bg_phase_start = app_shell.getTime();
+    renderer.beginTerminalBatch();
+    var row: usize = 0;
+    while (row < rows) : (row += 1) {
+        drawRowBackgrounds(
+            shell,
+            view_geometry,
+            view_cells,
+            cols,
+            row,
+            0,
+            cols - 1,
+            view_geometry.origin_x,
+            view_geometry.origin_y,
+            0,
+            false,
+            terminal_view.render.screen_reverse,
+            draw_cursor,
+            cursor,
+            cursor_style,
+        );
+    }
+    renderer.flushTerminalBatch();
+    result.texture_bg_ms = time_utils.secondsToMs(app_shell.getTime() - bg_phase_start);
+
+    const glyph_phase_start = app_shell.getTime();
+    renderer.terminal_font.beginFrameAtlasStats();
+    renderer.beginTerminalGlyphBatch();
+    var glyph_stats = GlyphDrawStats{};
+    row = 0;
+    while (row < rows) : (row += 1) {
+        drawRowGlyphs(
+            shell,
+            view_geometry,
+            view_cells,
+            cols,
+            row,
+            0,
+            cols - 1,
+            view_geometry.origin_x,
+            view_geometry.origin_y,
+            0,
+            hover_link_id,
+            terminal_view.render.screen_reverse,
+            blink_style,
+            blink_time,
+            draw_cursor,
+            cursor,
+            cursor_style,
+            renderer.font_config.terminal_disable_ligatures,
+            terminal_view.generation,
+            &glyph_stats,
+            &self.debug.last_text_paint,
+            &self.debug.last_metal_terminal_fallback,
+        );
+    }
+    renderer.flushTerminalGlyphBatch();
+    result.texture_glyph_ms = time_utils.secondsToMs(app_shell.getTime() - glyph_phase_start);
+    result.early_return = true;
+    return result;
+}
+
 fn beginRetainedViewportClip(
     renderer: anytype,
     view_geometry: shared_types.layout.TerminalViewGeometry,
@@ -721,6 +813,24 @@ pub fn updateAndPresent(
     const view_cells = terminal_view.cells;
     const base_colors = terminal_view.base_colors;
     self.debug.last_surface_present.valid = false;
+
+    if (!r.capabilities().retained_targets) {
+        return directPresentMainTarget(
+            self,
+            shell,
+            r,
+            terminal_view,
+            view_geometry,
+            hover_link_id,
+            draw_cursor,
+            cursor,
+            cursor_style,
+            blink_style,
+            blink_time,
+            width,
+            height,
+        );
+    }
 
     const retained_surface_target_available = retained_targets_runtime.surfaceAvailable(r, .terminal);
     const retained_surface_ready = self.surface.noteRetainedTargetAvailability(retained_surface_target_available);

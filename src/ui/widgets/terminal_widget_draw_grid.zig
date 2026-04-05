@@ -1178,6 +1178,85 @@ pub fn drawRowGlyphs(
     const col_end = @min(col_end_in, cols_count - 1);
     if (col_start > col_end) return;
 
+    if (rr.textRenderingMode() == .unavailable and rr.plannedTextRenderingMode() == .metal_texture_atlas) {
+        var fallback_col: usize = col_start;
+        while (fallback_col <= col_end and fallback_col < cols_count) {
+            const row_consumed = drawMetalTerminalFallbackRun(
+                rr,
+                row_cells,
+                cols_count,
+                row_idx,
+                fallback_col,
+                col_end + 1,
+                base_x_local,
+                base_y_local,
+                cell_w,
+                cell_h,
+                screen_reverse_mode,
+                hover_link,
+                blink_style_mode,
+                blink_time_s,
+                draw_cursor_mode,
+                cursor_pos,
+                cursor_style,
+                text_paint_sample,
+                generation,
+                stats,
+                metal_fallback_sample,
+            );
+            if (row_consumed > 0) {
+                fallback_col += row_consumed;
+                continue;
+            }
+
+            const cell = row_cells[fallback_col];
+            if (cell.x != 0 or cell.y != 0) {
+                fallback_col += 1;
+                continue;
+            }
+            const style = resolveTerminalCellStyle(cell, screen_reverse_mode, hover_link, blink_style_mode, blink_time_s, draw_cursor_mode, cursor_pos, cursor_style, row_idx, fallback_col);
+            if (!style.glyph_visible) {
+                fallback_col += style.width_units;
+                continue;
+            }
+            const cell_x = base_x_local + @as(f32, @floatFromInt(@as(i32, @intCast(fallback_col)))) * cell_w;
+            const cell_y = base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h;
+            const followed_by_space = terminalCellFollowedBySpace(row_cells, cols_count, fallback_col, style.width_units);
+            if (cell.combining_len > 0) {
+                rr.drawTerminalCellGraphemeBatched(cell.codepoint, cell.combining[0..@intCast(cell.combining_len)], cell_x, cell_y, cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(style.width_units)))), cell_h, style.fg, style.bg, style.underline_color, style.bold, style.underline, false, followed_by_space, false);
+            } else {
+                rr.drawTerminalCellBatched(cell.codepoint, cell_x, cell_y, cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(style.width_units)))), cell_h, style.fg, style.bg, style.underline_color, style.bold, style.underline, false, followed_by_space, false);
+            }
+            if (shouldCaptureTextPaint(text_paint_sample, row_idx, cursor_pos, fallback_col, style.width_units)) {
+                captureTextPaintSample(
+                    text_paint_sample.?,
+                    generation,
+                    row_idx,
+                    cursor_pos.col,
+                    fallback_col,
+                    cell,
+                    style.width_units,
+                    cell_x,
+                    cell_y,
+                    cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(style.width_units)))),
+                    cell_h,
+                    cell_y,
+                    if (rr.terminal_font.render_scale > 0.0) rr.terminal_font.render_scale else 1.0,
+                    .{
+                        .x = cell_x,
+                        .y = cell_y,
+                        .width = cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(style.width_units)))),
+                        .height = cell_h,
+                    },
+                    .fallback,
+                );
+            }
+            if (stats) |s| s.fallback_cells += 1;
+            fallback_col += style.width_units;
+        }
+        return;
+    }
+
     const draw_ctx = DrawContext{ .ctx = rr, .drawTexture = drawTextureGlyphCache };
     const cursor_row_active = ligature_strategy == .cursor and draw_cursor_mode and row_idx == cursor_pos.row and cursor_pos.col < cols_count;
     const cursor_split_col: usize = if (cursor_row_active) blk: {
