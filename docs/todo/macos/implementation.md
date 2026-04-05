@@ -347,6 +347,9 @@ lane.
       caller-threaded: `beginClip`/`endClip` state is stored by the renderer
       and inherited by the narrow Metal sampled-text and terminal-cell-run
       paths when callers do not override clip explicitly
+    - that inherited clip state is now exercised by the live terminal-row
+      proof itself: the macOS Metal text diagnostic enters a renderer clip and
+      draws the terminal row without an explicit row clip rectangle
     - the narrow Metal text lane now covers a tiny multiline ASCII run, not
       just a single flat row
     - the diagnostic/runtime callers now use the explicit monospace-cell

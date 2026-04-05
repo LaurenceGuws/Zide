@@ -231,12 +231,6 @@ fn drawMetalTerminalAsciiCellFallback(
         .cell_width = cell_width,
         .cell_height = cell_height,
         .tint = color.toRgba(),
-        .clip_rect = .{
-            .x = x,
-            .y = y,
-            .width = cell_width,
-            .height = cell_height,
-        },
     });
 }
 

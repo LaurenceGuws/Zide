@@ -46,6 +46,13 @@ pub fn run(allocator: std.mem.Allocator) !void {
             .height = 96.0,
         },
     });
+    shell.beginClip(
+        24,
+        220,
+        @intFromFloat(std.math.round(shell.terminalCellWidth() * 8.0)),
+        @intFromFloat(std.math.round(shell.terminalCellHeight())),
+    );
+    defer shell.endClip();
     const terminal_cell_run_draw = shell.rendererPtr().drawMetalTerminalCellRun(metal_text_sample_runtime.TerminalCellRunRequest{
         .text = "$ ls",
         .x = 24.0,
@@ -53,12 +60,6 @@ pub fn run(allocator: std.mem.Allocator) !void {
         .cell_width = shell.terminalCellWidth(),
         .cell_height = shell.terminalCellHeight(),
         .tint = shell.theme().foreground.toRgba(),
-        .clip_rect = .{
-            .x = 24.0,
-            .y = 220.0,
-            .width = shell.terminalCellWidth() * 8.0,
-            .height = shell.terminalCellHeight(),
-        },
     });
     const atlas_preview_source = shell.macosMetalAtlasPreviewSource();
     log.logf(.info, "start width={d} height={d} frame_budget={d}", .{ width, height, frame_budget });

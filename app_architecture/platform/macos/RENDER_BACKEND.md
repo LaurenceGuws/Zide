@@ -602,6 +602,11 @@ What this does and does not mean:
   the renderer keeps clip state from `beginClip`/`endClip`, and the narrow
   Metal sampled-text and terminal-cell-run lanes inherit that active clip when
   callers do not override it explicitly
+- that inherited clip state is now exercised in the live terminal-row proof
+  itself rather than only existing as an optional helper: the macOS Metal text
+  diagnostic enters a renderer clip and draws the terminal row without an
+  explicit row clip rectangle, which is the right direction for real widget
+  flows
 - this is still intentionally narrow and honest: it is now a tiny sampled
   multiline ASCII run with an explicit monospace-cell option rather than a
   claim that the generic string/text renderer has already migrated
