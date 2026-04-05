@@ -215,7 +215,7 @@ pub const FontSampleView = struct {
                 @intFromFloat(std.math.round(swatch_size + 12.0)),
                 theme.ui_panel_overlay,
             );
-            _ = r.drawBackendSampleTextRequest(metal_text_sample_runtime.SampleTextRequest{
+            _ = metal_backend.drawSampleTextRequest(r, metal_text_sample_runtime.SampleTextRequest{
                 .text = "METAL\nTEXT",
                 .x = swatch_x,
                 .y = swatch_y,

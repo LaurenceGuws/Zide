@@ -1727,62 +1727,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         return metal_backend.appendRawImage(self, draw);
     }
 
-    pub fn drawBackendTerminalSnapshotPresentable(
-        self: *Renderer,
-        draw: surface_draw.RawImageDraw,
-    ) bool {
-        if (self.backend != .metal) return false;
-        return metal_backend.appendTerminalSnapshotDraw(self, draw);
-    }
-
-    pub fn drawMetalAtlasSampleChar(self: *Renderer, char: u8, x: f32, y: f32, color: Color) bool {
-        if (self.backend != .metal) return false;
-        if (self.plannedTextRenderingMode() != .metal_texture_atlas) return false;
-        if (!metal_backend.hasBackendContext(self)) return false;
-
-        const font = metal_backend.ensureDiagnosticFont(self) catch return false;
-
-        const codepoint: u32 = char;
-        const clip = if (self.currentClipRect()) |c| metal_text_sample_runtime.pixelClipRect(self, c) else null;
-        const sample = metal_text_sample_runtime.atlasSampleForGlyph(self, font, codepoint, x, y, color.toRgba(), clip) orelse return false;
-        return self.appendMetalAtlasSampleDraw(sample);
-    }
-
-    pub fn drawBackendSampleTextRequest(self: *Renderer, request: metal_text_sample_runtime.SampleTextRequest) bool {
-        if (self.backend != .metal) return false;
-        if (self.plannedTextRenderingMode() != .metal_texture_atlas) return false;
-        if (!metal_backend.hasBackendContext(self)) return false;
-
-        const font = metal_backend.ensureDiagnosticFont(self) catch return false;
-        return metal_backend.appendSampleTextRequest(self, font, request);
-    }
-
-    pub fn drawBackendTerminalCellRun(self: *Renderer, font: *terminal_font_mod.TerminalFont, request: metal_text_sample_runtime.TerminalCellRunRequest) bool {
-        if (self.backend != .metal) return false;
-        if (self.plannedTextRenderingMode() != .metal_texture_atlas) return false;
-        if (!metal_backend.hasBackendContext(self)) return false;
-        return metal_backend.appendTerminalCellRun(self, font, request);
-    }
-
-    pub fn drawBackendRawImageRgba(self: *Renderer, width: i32, height: i32, data: []const u8, dest: types.Rect, tint: types.Rgba) bool {
-        if (self.backend != .metal) return false;
-        return metal_backend.appendRawImageRgba(self, width, height, data, dest, tint);
-    }
-
-    pub fn drawBackendRawImageRgb(self: *Renderer, width: i32, height: i32, data: []const u8, dest: types.Rect, tint: types.Rgba) bool {
-        if (self.backend != .metal) return false;
-        return metal_backend.appendRawImageRgb(self, width, height, data, dest, tint);
-    }
-
-    pub fn drawMetalAtlasSampleText(self: *Renderer, text: []const u8, x: f32, y: f32) bool {
-        return self.drawBackendSampleTextRequest(.{
-            .text = text,
-            .x = x,
-            .y = y,
-            .tint = Color.white.toRgba(),
-        });
-    }
-
     fn windowHitTestCallback(_: ?*sdl.SDL_Window, area: [*c]const sdl.SDL_Point, data: ?*anyopaque) callconv(.c) sdl_api.HitTestResult {
         const raw = data orelse return sdl.SDL_HITTEST_NORMAL;
         const self: *Renderer = @ptrCast(@alignCast(raw));

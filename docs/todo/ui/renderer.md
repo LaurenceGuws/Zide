@@ -159,6 +159,10 @@ Progress note, 2026-04-05:
   atlas-upload diagnostic helpers now also route through `metal_backend.zig`,
   and shell-side Metal diagnostics no longer rely on `Renderer` owning that
   backend-specific helper surface directly.
+- The old Metal-only `Renderer` convenience verbs for sampled text,
+  terminal-cell runs, raw image draws, and terminal snapshot draws are now
+  gone from `src/ui/renderer.zig`; live callers route those operations
+  through `metal_backend.zig` directly instead.
 - The next lifecycle step is to reduce shared-runtime ownership of dispatch and
   backend-native frame state, not just move code blocks around.
 

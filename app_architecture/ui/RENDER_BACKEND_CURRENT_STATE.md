@@ -244,14 +244,16 @@ of both being equally mature implementations of one presentable contract.
 
 ### 5. The caller-facing renderer surface is better, but still not fully neutral
 
-The renderer root no longer forces main callers through Metal-shaped public
-verbs. The main submission entrypoints now use backend-neutral names.
+The renderer root no longer carries the earlier Metal-only public helper verbs
+for sampled text, terminal cell runs, raw image draws, and terminal snapshot
+draws. Live callers now route those operations through `metal_backend`
+directly instead of treating `Renderer` as the backend convenience surface.
 
 That is a real improvement.
 
 But the contract is still not finished because:
 
-- those verbs still only succeed on the Metal path today
+- those backend-owned entrypoints still only succeed on the Metal path today
 - backend submission still does not run through one neutral lifecycle surface
 - OpenGL still does not consume the same draw/present contract
 

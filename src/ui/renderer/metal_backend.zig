@@ -1332,6 +1332,30 @@ pub fn appendRawImage(renderer: anytype, draw: RawImageDraw) bool {
     return appendSurfaceDraw(renderer, .{ .raw_image = draw });
 }
 
+pub fn drawAtlasSampleChar(renderer: anytype, char: u8, x: f32, y: f32, color: iface.Color) bool {
+    if (renderer.backend != .metal) return false;
+    if (renderer.plannedTextRenderingMode() != .metal_texture_atlas) return false;
+    if (!hasBackendContext(renderer)) return false;
+
+    const font = ensureDiagnosticFont(renderer) catch return false;
+    const codepoint: u32 = char;
+    const clip = if (renderer.currentClipRect()) |c| metal_text_sample_runtime.pixelClipRect(renderer, c) else null;
+    const sample = metal_text_sample_runtime.atlasSampleForGlyph(renderer, font, codepoint, x, y, color.toRgba(), clip) orelse return false;
+    return appendAtlasSample(renderer, sample);
+}
+
+pub fn drawSampleTextRequest(
+    renderer: anytype,
+    request: metal_text_sample_runtime.SampleTextRequest,
+) bool {
+    if (renderer.backend != .metal) return false;
+    if (renderer.plannedTextRenderingMode() != .metal_texture_atlas) return false;
+    if (!hasBackendContext(renderer)) return false;
+
+    const font = ensureDiagnosticFont(renderer) catch return false;
+    return appendSampleTextRequest(renderer, font, request);
+}
+
 pub fn appendSampleTextRequest(
     renderer: anytype,
     font: *terminal_font.TerminalFont,
@@ -1344,6 +1368,17 @@ pub fn appendSampleTextRequest(
         &renderer.metal_runtime.queued_surface_draws,
         renderer.allocator,
     );
+}
+
+pub fn drawTerminalCellRun(
+    renderer: anytype,
+    font: *terminal_font.TerminalFont,
+    request: metal_text_sample_runtime.TerminalCellRunRequest,
+) bool {
+    if (renderer.backend != .metal) return false;
+    if (renderer.plannedTextRenderingMode() != .metal_texture_atlas) return false;
+    if (!hasBackendContext(renderer)) return false;
+    return appendTerminalCellRun(renderer, font, request);
 }
 
 pub fn appendTerminalCellRun(
@@ -1370,6 +1405,11 @@ pub fn appendTerminalSnapshotDraw(renderer: anytype, draw: RawImageDraw) bool {
         .tint = draw.tint,
         .clip_rect = draw.clip_rect,
     });
+}
+
+pub fn drawTerminalSnapshotPresentable(renderer: anytype, draw: RawImageDraw) bool {
+    if (renderer.backend != .metal) return false;
+    return appendTerminalSnapshotDraw(renderer, draw);
 }
 
 pub fn appendRawImageRgba(
@@ -1401,6 +1441,18 @@ pub fn appendRawImageRgba(
     });
 }
 
+pub fn drawRawImageRgba(
+    renderer: anytype,
+    width: i32,
+    height: i32,
+    data: []const u8,
+    dest: types.Rect,
+    tint: types.Rgba,
+) bool {
+    if (renderer.backend != .metal) return false;
+    return appendRawImageRgba(renderer, width, height, data, dest, tint);
+}
+
 pub fn appendRawImageRgb(
     renderer: anytype,
     width: i32,
@@ -1428,6 +1480,18 @@ pub fn appendRawImageRgb(
         .tint = tint,
         .clip_rect = clip_rect,
     });
+}
+
+pub fn drawRawImageRgb(
+    renderer: anytype,
+    width: i32,
+    height: i32,
+    data: []const u8,
+    dest: types.Rect,
+    tint: types.Rgba,
+) bool {
+    if (renderer.backend != .metal) return false;
+    return appendRawImageRgb(renderer, width, height, data, dest, tint);
 }
 
 pub fn terminalSnapshotAvailableForRenderer(renderer: anytype) bool {
