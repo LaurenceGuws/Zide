@@ -791,6 +791,10 @@ What this does and does not mean:
   runtime seam too: the background pass, glyph pass, Kitty below/above-text
   ordering, and partial/full row-span iteration for the retained terminal
   path now live in `terminal_widget_presentation_runtime.zig`
+- the retained terminal present cycle itself is there now too: begin-target,
+  end-clip, retained update execution, and end-target restore now run through
+  one terminal runtime entrypoint instead of being split between presenter
+  orchestration and runtime helpers
 - that contract is intentionally backend-native rather than fake portability:
   the old cached GL `Texture` path is still OpenGL-only, while Metal Kitty
   images are created as frame-scoped native Metal textures and released after

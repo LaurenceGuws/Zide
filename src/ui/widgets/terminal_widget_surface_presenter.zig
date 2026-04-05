@@ -135,9 +135,8 @@ pub fn updateAndPresent(
         padding_x_i = surface_update_plan.geometry.padding_x_i;
         var presentation_update_completed = false;
 
-        if (surface_update_plan.mode != .none and presentation_target_runtime.beginPresentable(r)) {
-            r.endClip();
-            const execution = presentation_runtime.executePresentableUpdate(
+        if (surface_update_plan.mode != .none) {
+            const execution = presentation_runtime.runRetainedPresentCycle(
                 self,
                 shell,
                 r,
@@ -157,7 +156,6 @@ pub fn updateAndPresent(
             result.presentation_glyph_ms += execution.glyph_ms;
             result.presentation_kitty_ms += execution.kitty_ms;
             presentation_update_completed = execution.completed;
-            presentation_target_runtime.endPresentable(r);
         }
         const present_state = presentation_runtime.refreshPresentState(
             &self.surface,

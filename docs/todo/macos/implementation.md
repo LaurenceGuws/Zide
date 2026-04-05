@@ -671,6 +671,9 @@ lane.
     - retained terminal update execution now lives in the terminal
       presentation runtime too, including row-span iteration, background pass,
       glyph pass, and Kitty below/above-text ordering for the retained path
+    - the retained terminal present cycle now routes through one terminal
+      runtime entrypoint for begin-target, end-clip, retained update
+      execution, and end-target restore
     - the direct Metal terminal lane still validates on the same runtime truth:
       `terminal_present=direct_main_target`, `presentable_ready=1` after the
       first successful frame, `grid_runs=10/224`, `overlay_runs=1/5`, and

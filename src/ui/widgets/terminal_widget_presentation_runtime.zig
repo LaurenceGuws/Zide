@@ -78,6 +78,13 @@ pub const PresentationExecutionResult = struct {
     kitty_ms: f64 = 0.0,
 };
 
+pub const RetainedPresentCycleResult = struct {
+    completed: bool = false,
+    bg_ms: f64 = 0.0,
+    glyph_ms: f64 = 0.0,
+    kitty_ms: f64 = 0.0,
+};
+
 pub fn clearPresentationSample(self: anytype) void {
     self.debug.last_terminal_presentation.valid = false;
 }
@@ -423,6 +430,51 @@ pub fn executePresentableUpdate(
         result.kitty_ms += time_utils.secondsToMs(app_shell.getTime() - kitty_phase_start);
     }
     result.completed = true;
+    return result;
+}
+
+pub fn runRetainedPresentCycle(
+    self: anytype,
+    shell: *app_shell.Shell,
+    renderer: anytype,
+    terminal_view: view_state.TerminalViewModel,
+    view_geometry: TerminalViewGeometry,
+    hover_link_id: u32,
+    start_line: usize,
+    draw_cursor: bool,
+    cursor: CursorPos,
+    cursor_style: terminal_types.CursorStyle,
+    blink_style: anytype,
+    blink_time: f64,
+    has_kitty: bool,
+    surface_update_plan: PresentationUpdatePlan,
+) RetainedPresentCycleResult {
+    var result = RetainedPresentCycleResult{};
+    if (surface_update_plan.mode == .none) return result;
+    if (!presentation_target_runtime.beginPresentable(renderer)) return result;
+    defer presentation_target_runtime.endPresentable(renderer);
+
+    renderer.endClip();
+    const execution = executePresentableUpdate(
+        self,
+        shell,
+        renderer,
+        terminal_view,
+        view_geometry,
+        hover_link_id,
+        start_line,
+        draw_cursor,
+        cursor,
+        cursor_style,
+        blink_style,
+        blink_time,
+        has_kitty,
+        surface_update_plan,
+    );
+    result.completed = execution.completed;
+    result.bg_ms = execution.bg_ms;
+    result.glyph_ms = execution.glyph_ms;
+    result.kitty_ms = execution.kitty_ms;
     return result;
 }
 
