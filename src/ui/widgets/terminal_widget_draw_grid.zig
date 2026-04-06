@@ -86,6 +86,12 @@ const RowSpecialSpriteCache = struct {
     sprite: ?terminal_font_mod.SpecialGlyphSprite = null,
 };
 
+fn shouldSnapSpecialGlyphHorizontalEdges(render_scale: f32, variant: terminal_font_mod.SpecialGlyphVariant) bool {
+    const scale = if (render_scale > 0.0) render_scale else 1.0;
+    if (variant != .shade) return true;
+    return std.math.approxEqAbs(f32, scale, std.math.round(scale), 0.0001);
+}
+
 fn shouldCaptureTextPaint(sample: ?*TextPaintSample, row_idx: usize, cursor_pos: CursorPos, abs_col: usize, width_units: usize) bool {
     return bestTextPaintCapture(sample, row_idx, cursor_pos, abs_col, width_units);
 }
@@ -1037,10 +1043,10 @@ fn drawAlignedSpecialGlyphSprite(
     row_idx: usize,
     codepoint: u32,
     variant: terminal_font_mod.SpecialGlyphVariant,
-    box_x_i: i32,
-    box_y_i: i32,
-    box_w_i: i32,
-    box_h_i: i32,
+    box_x: f32,
+    box_y: f32,
+    box_w: f32,
+    box_h: f32,
     fg_draw: Color,
     row_sprite_cache: ?*RowSpecialSpriteCache,
     stats: ?*GlyphDrawStats,
@@ -1055,11 +1061,12 @@ fn drawAlignedSpecialGlyphSprite(
     capture_cell_y: f32,
 ) bool {
     const render_scale = 1.0 / rr.devicePixelStep();
-    const x0 = rr.snapLogicalToDevicePixel(@as(f32, @floatFromInt(box_x_i)));
-    const x1 = rr.snapLogicalToDevicePixel(@as(f32, @floatFromInt(box_x_i + box_w_i)));
-    const y0_unsnapped = @as(f32, @floatFromInt(box_y_i));
-    const y1_unsnapped = @as(f32, @floatFromInt(box_y_i + box_h_i));
-    const use_y_snap = variant == .box or variant == .braille;
+    const snap_horizontal_edges = shouldSnapSpecialGlyphHorizontalEdges(render_scale, variant);
+    const x0 = if (snap_horizontal_edges) rr.snapLogicalToDevicePixel(box_x) else box_x;
+    const x1 = if (snap_horizontal_edges) rr.snapLogicalToDevicePixel(box_x + box_w) else box_x + box_w;
+    const use_y_snap = variant == .box or variant == .braille or variant == .shade;
+    const y0_unsnapped = box_y;
+    const y1_unsnapped = box_y + box_h;
     const y0 = if (use_y_snap) rr.snapLogicalToDevicePixel(y0_unsnapped) else y0_unsnapped;
     const y1 = if (use_y_snap) rr.snapLogicalToDevicePixel(y1_unsnapped) else y1_unsnapped;
     const snapped_w = @max(rr.devicePixelStep(), x1 - x0);
@@ -1069,15 +1076,15 @@ fn drawAlignedSpecialGlyphSprite(
     const lookup_start = app_shell.getTime();
     const sprite_key = rr.terminal_font.specialGlyphSpriteKey(codepoint, raster_w_i, raster_h_i, variant);
     const sprite_fetch = if (row_sprite_cache) |cache|
-        if (cache.key) |cached_key|
+            if (cache.key) |cached_key|
             if (std.meta.eql(cached_key, sprite_key) and cache.sprite != null)
                 terminal_font_mod.SpecialGlyphSpriteFetch{ .sprite = &cache.sprite.?, .created = false }
             else
-                rr.terminal_font.getOrCreateSpecialGlyphSpriteWithStatus(codepoint, box_w_i, box_h_i, raster_w_i, raster_h_i, variant)
+                rr.terminal_font.getOrCreateSpecialGlyphSpriteWithStatus(codepoint, raster_w_i, raster_h_i, raster_w_i, raster_h_i, variant)
         else
-            rr.terminal_font.getOrCreateSpecialGlyphSpriteWithStatus(codepoint, box_w_i, box_h_i, raster_w_i, raster_h_i, variant)
+            rr.terminal_font.getOrCreateSpecialGlyphSpriteWithStatus(codepoint, raster_w_i, raster_h_i, raster_w_i, raster_h_i, variant)
     else
-        rr.terminal_font.getOrCreateSpecialGlyphSpriteWithStatus(codepoint, box_w_i, box_h_i, raster_w_i, raster_h_i, variant);
+        rr.terminal_font.getOrCreateSpecialGlyphSpriteWithStatus(codepoint, raster_w_i, raster_h_i, raster_w_i, raster_h_i, variant);
     const sprite = sprite_fetch.sprite;
     if (stats) |s| {
         if (sprite_fetch.created) {
@@ -1136,8 +1143,8 @@ fn drawAlignedSpecialGlyphSprite(
                 capture_width_units,
                 capture_cell_x,
                 capture_cell_y,
-                @as(f32, @floatFromInt(box_w_i)),
-                @as(f32, @floatFromInt(box_h_i)),
+                box_w,
+                box_h,
                 capture_cell_y,
                 render_scale,
                 .{ .x = dest_x, .y = y0, .width = dest_w, .height = snapped_h },
@@ -1152,6 +1159,10 @@ fn drawAlignedSpecialGlyphSprite(
                 s.box_glyphs += 1;
                 s.box_submit_ms += submit_ms;
                 s.box_sprite_submit_ms += submit_ms;
+            } else if (variant == .shade) {
+                s.shade_special_glyphs += 1;
+                s.special_sprite_glyphs += 1;
+                s.special_sprite_submit_ms += submit_ms;
             } else if (variant == .powerline) {
                 s.powerline_special_glyphs += 1;
                 s.special_sprite_glyphs += 1;
@@ -1168,6 +1179,14 @@ fn drawAlignedSpecialGlyphSprite(
         return true;
     }
     return false;
+}
+
+test "shade special glyph horizontal snapping matches text policy at fractional scale" {
+    try std.testing.expect(shouldSnapSpecialGlyphHorizontalEdges(1.0, .shade));
+    try std.testing.expect(shouldSnapSpecialGlyphHorizontalEdges(2.0, .shade));
+    try std.testing.expect(!shouldSnapSpecialGlyphHorizontalEdges(1.6, .shade));
+    try std.testing.expect(shouldSnapSpecialGlyphHorizontalEdges(1.6, .box));
+    try std.testing.expect(shouldSnapSpecialGlyphHorizontalEdges(1.6, .powerline));
 }
 
 pub fn drawRowGlyphs(
@@ -1256,6 +1275,17 @@ pub fn drawRowGlyphs(
                 null;
             if (cell.combining_len == 0) {
                 if (terminal_glyphs.specialVariantForCodepoint(cell.codepoint)) |variant| {
+                    if (drawAlignedSpecialGlyphSprite(rr, row_cells, fallback_col, style.width_units, screen_reverse_mode, draw_cursor_mode, cursor_pos, cursor_style, row_idx, cell.codepoint, variant, cell_x, cell_y, cell_w_span, cell_h, style.fg, &row_sprite_cache, stats, capture_special, generation, row_idx, cursor_pos.col, fallback_col, cell, style.width_units, cell_x, cell_y)) {
+                        if (metal_fallback_sample) |sample| {
+                            sample.special_sprite_glyphs += 1;
+                            sample.shaped_special_glyphs += 1;
+                            if (variant == .shade) sample.shade_special_glyphs += 1;
+                            if (variant == .powerline) sample.powerline_special_glyphs += 1;
+                            if (variant == .braille) sample.braille_special_glyphs += 1;
+                        }
+                        fallback_col += style.width_units;
+                        continue;
+                    }
                     if (variant == .shade) {
                         const special_submit_start = app_shell.getTime();
                         _ = terminal_glyphs.drawBoxGlyphBatched(addTerminalGlyphRect, rr, cell.codepoint, cell_x, cell_y, cell_w_span, cell_h, style.fg);
@@ -1290,16 +1320,6 @@ pub fn drawRowGlyphs(
                             sample.special_sprite_glyphs += 1;
                             sample.shaped_special_glyphs += 1;
                             sample.shade_special_glyphs += 1;
-                        }
-                        fallback_col += style.width_units;
-                        continue;
-                    }
-                    if (drawAlignedSpecialGlyphSprite(rr, row_cells, fallback_col, style.width_units, screen_reverse_mode, draw_cursor_mode, cursor_pos, cursor_style, row_idx, cell.codepoint, variant, @as(i32, @intFromFloat(std.math.round(cell_x))), @as(i32, @intFromFloat(std.math.round(cell_y))), @as(i32, @intFromFloat(std.math.round(cell_w_span))), @as(i32, @intFromFloat(std.math.round(cell_h))), style.fg, &row_sprite_cache, stats, capture_special, generation, row_idx, cursor_pos.col, fallback_col, cell, style.width_units, cell_x, cell_y)) {
-                        if (metal_fallback_sample) |sample| {
-                            sample.special_sprite_glyphs += 1;
-                            sample.shaped_special_glyphs += 1;
-                            if (variant == .powerline) sample.powerline_special_glyphs += 1;
-                            if (variant == .braille) sample.braille_special_glyphs += 1;
                         }
                         fallback_col += style.width_units;
                         continue;
@@ -1559,6 +1579,9 @@ pub fn drawRowGlyphs(
                 else
                     null;
                 if (terminal_glyphs.specialVariantForCodepoint(cell.codepoint)) |variant| {
+                    if (drawAlignedSpecialGlyphSprite(rr, row_cells, special_col, style.width_units, screen_reverse_mode, draw_cursor_mode, cursor_pos, cursor_style, row_idx, cell.codepoint, variant, box_x, box_y, box_w, box_h, style.fg, &row_sprite_cache, stats, capture_special, generation, row_idx, cursor_pos.col, special_col, cell, style.width_units, box_x, box_y)) {
+                        continue;
+                    }
                     if (variant == .shade) {
                         const special_submit_start = app_shell.getTime();
                         _ = terminal_glyphs.drawBoxGlyphBatched(addTerminalGlyphRect, rr, cell.codepoint, box_x, box_y, box_w, box_h, style.fg);
@@ -1591,7 +1614,6 @@ pub fn drawRowGlyphs(
                         }
                         continue;
                     }
-                    _ = drawAlignedSpecialGlyphSprite(rr, row_cells, special_col, style.width_units, screen_reverse_mode, draw_cursor_mode, cursor_pos, cursor_style, row_idx, cell.codepoint, variant, @as(i32, @intFromFloat(std.math.round(box_x))), @as(i32, @intFromFloat(std.math.round(box_y))), @as(i32, @intFromFloat(std.math.round(box_w))), @as(i32, @intFromFloat(std.math.round(box_h))), style.fg, &row_sprite_cache, stats, capture_special, generation, row_idx, cursor_pos.col, special_col, cell, style.width_units, box_x, box_y);
                 } else if (isTerminalBoxGlyph(cell.codepoint)) {
                     const special_submit_start = app_shell.getTime();
                     _ = terminal_glyphs.drawBoxGlyphBatched(addTerminalGlyphRect, rr, cell.codepoint, box_x, box_y, box_w, box_h, style.fg);
@@ -1850,6 +1872,9 @@ pub fn drawRowGlyphs(
                 else
                     null;
                 if (terminal_glyphs.specialVariantForCodepoint(cell.codepoint)) |variant| {
+                    if (drawAlignedSpecialGlyphSprite(rr, row_cells, abs_col, style.width_units, screen_reverse_mode, draw_cursor_mode, cursor_pos, cursor_style, row_idx, cell.codepoint, variant, box_x, box_y, box_w, box_h, style.fg, &row_sprite_cache, stats, capture_shaped_special, generation, row_idx, cursor_pos.col, abs_col, cell, style.width_units, box_x, box_y)) {
+                        continue;
+                    }
                     if (variant == .shade) {
                         const special_submit_start = app_shell.getTime();
                         _ = terminal_glyphs.drawBoxGlyphBatched(addTerminalGlyphRect, rr, cell.codepoint, box_x, box_y, box_w, box_h, style.fg);
@@ -1877,11 +1902,9 @@ pub fn drawRowGlyphs(
                             s.shaped_special_glyphs += 1;
                             s.shaped_special_submit_ms += submit_ms;
                             s.special_sprite_glyphs += 1;
+                            s.shade_special_glyphs += 1;
                             s.special_sprite_submit_ms += submit_ms;
                         }
-                        continue;
-                    }
-                    if (drawAlignedSpecialGlyphSprite(rr, row_cells, abs_col, style.width_units, screen_reverse_mode, draw_cursor_mode, cursor_pos, cursor_style, row_idx, cell.codepoint, variant, @as(i32, @intFromFloat(std.math.round(box_x))), @as(i32, @intFromFloat(std.math.round(box_y))), @as(i32, @intFromFloat(std.math.round(box_w))), @as(i32, @intFromFloat(std.math.round(box_h))), style.fg, &row_sprite_cache, stats, capture_shaped_special, generation, row_idx, cursor_pos.col, abs_col, cell, style.width_units, box_x, box_y)) {
                         continue;
                     }
                 }

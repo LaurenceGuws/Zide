@@ -43,6 +43,53 @@ Status note, 2026-04-05:
 - The active standard is no longer "Metal works well enough."
 - The active standard is "OpenGL and Metal prove one strong backend contract."
 
+Campaign checkpoint, 2026-04-06:
+
+- Linux OpenGL is now the primary proving ground for backend-contract truth
+  until Metal validation is available again.
+- Do not start a real Vulkan implementation yet.
+- Do not pivot to Android implementation yet.
+- The next standard is not "add another backend."
+- The next standard is:
+  - close the contract gaps that Linux GL is already exposing
+  - finish the presentable/frame/runtime ownership cuts that still leave
+    `Renderer` as the hidden backend center
+  - only then run a Vulkan-fit audit against the resulting contract
+
+Current proving fronts, 2026-04-06:
+
+- `RB-01` Presentable ownership must become genuinely backend-neutral instead
+  of neutral naming over a mostly OpenGL-shaped implementation center.
+- `RB-02` Backend runtime state must stop living as renderer-carried
+  implementation bundles with shared lifecycle code mutating them directly.
+- `RB-03` Frame lifecycle ownership must terminate in backend-owned seams
+  rather than shared runtime dispatch.
+- `RB-04` Linux GL regressions that expose contract weakness must be treated as
+  proof fronts, not as unrelated polish:
+  - scale/display-hop correctness belongs with
+    `docs/todo/ui/window_scale_geometry.md`
+  - focus/activation truth belongs with `docs/todo/linux/implementation.md`
+  - terminal resize/scrollback correctness is a terminal/publication front with
+    renderer-presentable overlap
+- `RB-05` Vulkan is allowed only after `RB-01` through `RB-03` are strong
+  enough that the Vulkan shape reads like straightforward backend work instead
+  of renderer surgery.
+
+Status note, 2026-04-06:
+
+- Linux GL is now the primary proving ground for contract quality while macOS
+  Metal validation is unavailable.
+- Metal remains the second reference implementation, not the active
+  day-to-day stabilization lane.
+- Vulkan is explicitly deferred as an implementation lane until the current
+  backend, geometry, and host contracts are strong enough that a Vulkan fit
+  audit reads as routine.
+- The immediate repo milestone is:
+  - stabilize Linux focus/input truth
+  - stabilize Linux scale/display-hop truth
+  - stabilize Linux terminal resize/scrollback truth
+  - then return to backend-contract closure with cleaner evidence
+
 ## Campaign Goal
 
 ```mermaid
@@ -65,6 +112,9 @@ flowchart LR
   of leaving dispatch in shared frame runtime code.
 - [ ] Shrink backend-specific convenience APIs on `Renderer` once stronger
   neutral contracts exist.
+- [ ] Stop treating Linux-visible focus/scale/resize regressions as
+  backend-polish noise when they are really contract evidence for the renderer,
+  geometry, and host seams.
 
 ## Execution Order
 
@@ -76,6 +126,47 @@ flowchart LR
    surfaces instead of keeping those code paths inline in `Renderer`.
 4. Delete backend-specific public renderer verbs after the neutral seams are
    real and callers no longer need backend-shaped requests.
+
+## Current Milestone Order
+
+1. Linux contract stabilization
+2. Backend contract closure
+3. Vulkan fit audit
+4. First Vulkan bootstrap only if the fit audit is honestly clean
+
+### Milestone A: Linux Contract Stabilization
+
+Active fronts:
+
+- focus/input activation truth
+  - primary owner: native host + input front
+  - tracking:
+    - `docs/todo/linux/implementation.md`
+- scale/display-hop truth
+  - primary owner: window scale geometry front
+  - tracking:
+    - `docs/todo/ui/window_scale_geometry.md`
+- terminal resize/scrollback correctness
+  - primary owner: terminal resize/publication + retained-present invalidation
+  - tracking:
+    - `docs/todo/terminal/widget_scrutiny.md`
+
+Exit bar:
+
+- Linux terminal interaction no longer depends on accidental focus recovery
+- fractional-scale startup and display-hop behavior are correct without
+  monitor-drag rituals
+- terminal resize preserves sane scrollback/view truth
+
+### Milestone B: Backend Contract Closure
+
+Only after Milestone A is stable enough to provide honest pressure:
+
+- finish backend-neutral presentable ownership
+- stop `Renderer` from carrying backend implementation shape as the real
+  backend center
+- finish lifecycle ownership so shared runtime is not the hidden backend
+  dispatch center
 
 Progress note, 2026-04-05:
 

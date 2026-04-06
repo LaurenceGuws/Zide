@@ -39,21 +39,24 @@ pub const WindowChangeMask = packed struct(u8) {
     pixel_size_changed: bool = false,
     display_changed: bool = false,
     display_scale_changed: bool = false,
-    _padding: u3 = 0,
+    contents_exposed: bool = false,
+    _padding: u2 = 0,
 
     pub fn any(self: WindowChangeMask) bool {
         return self.moved or
             self.resized or
             self.pixel_size_changed or
             self.display_changed or
-            self.display_scale_changed;
+            self.display_scale_changed or
+            self.contents_exposed;
     }
 
     pub fn affectsWindowRefresh(self: WindowChangeMask) bool {
         return self.resized or
             self.pixel_size_changed or
             self.display_changed or
-            self.display_scale_changed;
+            self.display_scale_changed or
+            self.contents_exposed;
     }
 
     pub fn affectsUiScale(self: WindowChangeMask) bool {
@@ -66,6 +69,7 @@ pub const WindowChangeMask = packed struct(u8) {
         self.pixel_size_changed = self.pixel_size_changed or other.pixel_size_changed;
         self.display_changed = self.display_changed or other.display_changed;
         self.display_scale_changed = self.display_scale_changed or other.display_scale_changed;
+        self.contents_exposed = self.contents_exposed or other.contents_exposed;
     }
 };
 
@@ -122,7 +126,20 @@ pub fn classifyWindowChange(event_type: c_uint) WindowChangeMask {
     if (event_type == c.SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) changes.pixel_size_changed = true;
     if (event_type == c.SDL_EVENT_WINDOW_DISPLAY_CHANGED) changes.display_changed = true;
     if (event_type == c.SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED) changes.display_scale_changed = true;
+    if (event_type == c.SDL_EVENT_WINDOW_EXPOSED or
+        event_type == c.SDL_EVENT_WINDOW_SHOWN or
+        event_type == c.SDL_EVENT_WINDOW_RESTORED)
+    {
+        changes.contents_exposed = true;
+    }
     return changes;
+}
+
+test "classifyWindowChange marks exposed window events as refresh-worthy" {
+    try std.testing.expect(classifyWindowChange(c.SDL_EVENT_WINDOW_EXPOSED).contents_exposed);
+    try std.testing.expect(classifyWindowChange(c.SDL_EVENT_WINDOW_SHOWN).contents_exposed);
+    try std.testing.expect(classifyWindowChange(c.SDL_EVENT_WINDOW_RESTORED).contents_exposed);
+    try std.testing.expect(classifyWindowChange(c.SDL_EVENT_WINDOW_EXPOSED).affectsWindowRefresh());
 }
 
 pub fn isCloseEvent(event_type: c_uint) bool {
@@ -266,6 +283,12 @@ pub fn createWindow(
 
 pub fn getWindowFlags(window: *c.SDL_Window) WindowFlags {
     return c.SDL_GetWindowFlags(window);
+}
+
+pub fn windowHasInputFocus(window: *c.SDL_Window) bool {
+    const flags = getWindowFlags(window);
+    const focused_flag: WindowFlags = @intCast(c.SDL_WINDOW_INPUT_FOCUS);
+    return (flags & focused_flag) != 0;
 }
 
 pub fn setWindowBordered(window: *c.SDL_Window, bordered: bool) bool {

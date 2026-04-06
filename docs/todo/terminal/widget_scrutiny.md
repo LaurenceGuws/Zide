@@ -43,6 +43,35 @@ Primary completion-list pressure:
 - item 8: host edge must not undermine terminal identity
 - item 9: peer comparison must not show a clear first-glance loss
 
+Current front, 2026-04-06:
+
+- Linux resize/scrollback breakage is now explicit pressure on this lane.
+- terminal pane-fit quality is explicit pressure too:
+  the terminal should visually own the pane right up to its edges under zoomed
+  TUI layouts instead of floating inside it with dead right/bottom margins
+- The current suspicion is not "GL redraw happened to glitch."
+- The stronger current suspicion is:
+  - terminal resize reflow is not preserving viewport/scrollback truth cleanly
+    enough
+  - retained terminal presentation does not invalidate strongly enough on
+    resize-sensitive geometry changes
+- Checkpoint, 2026-04-06:
+  - terminal presentation geometry now consumes renderer-resolved
+    `TerminalViewGeometry` instead of independently recomputing visible fit
+    from raw pane size
+  - this removes one class of pane-fit drift between widget draw/input
+    geometry and retained/direct presentation geometry
+  - terminal special-glyph sprite placement now snaps from exact logical cell
+    bounds instead of rounded logical boxes, reducing one known fractional-DPI
+    source of periodic seams/overlap
+  - shade block glyphs such as `░` now route through the same special-sprite
+    coverage path as other special glyphs, with fractional-scale horizontal
+    edge policy aligned to the text path instead of always-on snapping
+- That means this lane now has one concrete product-quality bar in addition to
+  the broader widget-hosting audit:
+  - resizing the terminal after output already exists must preserve sane
+    visible history and must not reuse stale retained presentation state
+
 ## Hard Rules
 
 Do not call this lane progress if the change is only:
@@ -258,6 +287,21 @@ Completion bar:
   - What changed:
     - retained terminal surface fast-path present
     - retained texture lifecycle/use checks
+- [ ] `TWS-2-02` Lock resize-sensitive retained presentation invalidation
+  - Problem:
+    - terminal resize can leave scrollback/viewport presentation looking broken
+      after geometry changes
+  - Current likely pressure:
+    - `src/ui/widgets/terminal_widget_presentation_runtime.zig`
+    - `src/ui/widgets/terminal_widget_surface_state.zig`
+    - `src/ui/widgets/terminal_widget_presentation_state.zig`
+  - Required outcome:
+    - retained fast-present reuse tracks resize-sensitive geometry strongly
+      enough that stale presentables cannot survive terminal geometry changes
+  - Important note:
+    - this is probably a secondary front
+    - the primary front for the visible bug still looks like terminal-core
+      resize reflow / viewport preservation
     - full vs partial redraw choice
     - viewport-shift and damage-plan handling
     - partial-plan capacity/build

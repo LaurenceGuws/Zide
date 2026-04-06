@@ -43,8 +43,7 @@ pub const PresentationGeometry = struct {
 pub fn computePresentationSurfaceGeometry(
     renderer: anytype,
     terminal_view: view_state.TerminalViewModel,
-    width: f32,
-    height: f32,
+    view_geometry: TerminalViewGeometry,
 ) PresentationGeometry {
     var geometry: PresentationGeometry = .{};
     const rows = terminal_view.rows;
@@ -60,15 +59,10 @@ pub fn computePresentationSurfaceGeometry(
     const scale = geometry.render_scale;
     geometry.surface_w = @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(geometry.cell_w_i * @as(i32, @intCast(cols)) + geometry.padding_x_i)) / scale)));
     geometry.surface_h = @as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(geometry.cell_h_i * @as(i32, @intCast(rows)))) / scale)));
-
-    const clip_w = @min(width, geom.cell_width_logical_exact * @as(f32, @floatFromInt(cols)));
-    const clip_h = @min(height, geom.cell_height_logical_exact * @as(f32, @floatFromInt(rows)));
-    const visible_cols: i32 = if (geom.cell_width_logical_exact > 0) @intFromFloat(std.math.floor(clip_w / geom.cell_width_logical_exact)) else 0;
-    const visible_rows: i32 = if (geom.cell_height_logical_exact > 0) @intFromFloat(std.math.floor(clip_h / geom.cell_height_logical_exact)) else 0;
-    geometry.visible_w = @intFromFloat(std.math.round(@as(f32, @floatFromInt(visible_cols * geom.cell_width_device_px)) / scale));
-    geometry.visible_h = @intFromFloat(std.math.round(@as(f32, @floatFromInt(visible_rows * geom.cell_height_device_px)) / scale));
-    geometry.viewport_w = @as(f32, @floatFromInt(geometry.visible_w));
-    geometry.viewport_h = @as(f32, @floatFromInt(geometry.visible_h));
+    geometry.visible_w = @intFromFloat(std.math.round(view_geometry.viewport_width));
+    geometry.visible_h = @intFromFloat(std.math.round(view_geometry.viewport_height));
+    geometry.viewport_w = view_geometry.viewport_width;
+    geometry.viewport_h = view_geometry.viewport_height;
     return geometry;
 }
 
@@ -763,6 +757,7 @@ pub fn runRetainedPresentation(
         visible_h,
         view_cells_len,
     );
+    defer if (present_state.present) renderer.endClip();
     const bg = if (view_cells_len > 0)
         Color{
             .r = terminal_view.base_colors.resolved_background.r,
@@ -772,8 +767,14 @@ pub fn runRetainedPresentation(
         }
     else
         renderer.theme.background;
-    if (visible_w > 0 and visible_h > 0) {
-        renderer.drawRectF(view_geometry.origin_x, view_geometry.origin_y, viewport_w, viewport_h, bg);
+    if (view_geometry.viewport.width > 0 and view_geometry.viewport.height > 0) {
+        renderer.drawRectF(
+            view_geometry.viewport.x,
+            view_geometry.viewport.y,
+            view_geometry.viewport.width,
+            view_geometry.viewport.height,
+            bg,
+        );
     }
     logUnavailable(&self.surface, terminal_view, present_state, visible_w, visible_h);
     if (present_state.present) {
@@ -944,8 +945,7 @@ pub fn runPresentation(
         renderer,
         self.publication.cacheConst(),
         terminal_view,
-        width,
-        height,
+        view_geometry,
         blink_requires_partial,
         draw_cursor,
         cursor,
@@ -1133,13 +1133,7 @@ pub fn tryFastPresentExisting(
     if (!(view_cells_len > 0 and presentable_ready and
         (terminal_view.sync_updates_active or direct_snapshot_reusable))) return false;
 
-    renderer.drawRect(
-        @intFromFloat(x),
-        @intFromFloat(y),
-        @intFromFloat(width),
-        @intFromFloat(height),
-        bg_color,
-    );
+    renderer.drawRectF(x, y, width, height, bg_color);
     if (renderer.usesDirectTerminalPresentation()) {
         note_present(
             note_present_ctx,
@@ -1174,7 +1168,7 @@ pub fn tryFastPresentExisting(
             note_present,
         );
     }
-    const pres_geom = computePresentationSurfaceGeometry(renderer, terminal_view, width, height);
+    const pres_geom = computePresentationSurfaceGeometry(renderer, terminal_view, view_geometry);
     surface_state.notePresentationUpdated(terminal_view, pres_geom, draw_cursor, cursor, cursor_style, hover_link_id, composing_active, composing_hash);
     return true;
 }
@@ -1215,11 +1209,11 @@ pub fn directPresent(
     const viewport_w = @min(width, view_geometry.viewport_width);
     const viewport_h = @min(height, view_geometry.viewport_height);
 
-    renderer.drawRect(
-        @intFromFloat(std.math.round(view_geometry.origin_x)),
-        @intFromFloat(std.math.round(view_geometry.origin_y)),
-        @intFromFloat(std.math.round(viewport_w)),
-        @intFromFloat(std.math.round(viewport_h)),
+    renderer.drawRectF(
+        view_geometry.viewport.x,
+        view_geometry.viewport.y,
+        view_geometry.viewport.width,
+        view_geometry.viewport.height,
         bg_color,
     );
     note_present(
@@ -1314,7 +1308,7 @@ pub fn directPresent(
         result.kitty_ms += time_utils.secondsToMs(app_shell.getTime() - kitty_phase_start);
     }
 
-    const pres_geom = computePresentationSurfaceGeometry(renderer, terminal_view, width, height);
+    const pres_geom = computePresentationSurfaceGeometry(renderer, terminal_view, view_geometry);
     self.surface.notePresentationUpdated(terminal_view, pres_geom, draw_cursor, cursor, cursor_style, hover_link_id, composing_active, composing_hash);
     return result;
 }
@@ -1354,8 +1348,7 @@ pub fn tryDirectSnapshotUpdate(
         renderer,
         self.publication.cacheConst(),
         terminal_view,
-        width,
-        height,
+        view_geometry,
         blink_requires_partial,
         draw_cursor,
         cursor,
@@ -1368,6 +1361,20 @@ pub fn tryDirectSnapshotUpdate(
     const viewport_w = @min(width, view_geometry.viewport_width);
     const viewport_h = @min(height, view_geometry.viewport_height);
     if (viewport_w <= 0 or viewport_h <= 0) return result;
+
+    const bg_color: Color = .{
+        .r = terminal_view.base_colors.resolved_background.r,
+        .g = terminal_view.base_colors.resolved_background.g,
+        .b = terminal_view.base_colors.resolved_background.b,
+        .a = terminal_view.base_colors.resolved_background.a,
+    };
+    renderer.drawRectF(
+        view_geometry.viewport.x,
+        view_geometry.viewport.y,
+        view_geometry.viewport.width,
+        view_geometry.viewport.height,
+        bg_color,
+    );
 
     note_present(
         note_present_ctx,
@@ -1427,8 +1434,7 @@ pub fn planUpdate(
     renderer: anytype,
     cache: *const RenderCache,
     terminal_view: view_state.TerminalViewModel,
-    width: f32,
-    height: f32,
+    view_geometry: TerminalViewGeometry,
     blink_requires_partial: bool,
     draw_cursor: bool,
     cursor: CursorPos,
@@ -1445,7 +1451,7 @@ pub fn planUpdate(
     const cols = terminal_view.cols;
     if (rows == 0 or cols == 0) return plan;
 
-    plan.geometry = computePresentationSurfaceGeometry(renderer, terminal_view, width, height);
+    plan.geometry = computePresentationSurfaceGeometry(renderer, terminal_view, view_geometry);
 
     const recreated = renderer.ensurePresentable(.terminal, plan.geometry.surface_w, plan.geometry.surface_h);
     const presentation_delta = surface_state.presentationUpdateDelta(

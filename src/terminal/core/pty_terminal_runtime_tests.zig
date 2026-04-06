@@ -58,6 +58,15 @@ fn snapshotContainsAscii(snapshot: snapshot_mod.TerminalSnapshot, needle: []cons
     return false;
 }
 
+fn fillRowText(row: []Cell, base: Cell, text: []const u8) void {
+    for (row) |*cell| cell.* = base;
+    const limit = @min(row.len, text.len);
+    var i: usize = 0;
+    while (i < limit) : (i += 1) {
+        row[i].codepoint = text[i];
+    }
+}
+
 test "external transport poll updates screen and metadata" {
     const allocator = std.testing.allocator;
 
@@ -1191,6 +1200,106 @@ test "session snapshot reflects pinned scrollback viewport" {
     const pinned_snapshot = terminal_publication.snapshot(session);
     try expectSnapshotRow(pinned_snapshot, 0, "BBBB");
     try expectSnapshotRow(pinned_snapshot, 1, "CCCC");
+}
+
+test "resize reflow keeps live bottom anchored on width change" {
+    const allocator = std.testing.allocator;
+
+    var session = try runtime_mod.init(allocator, 2, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    var history_row = [_]Cell{ base, base, base, base };
+    fillRowText(&history_row, base, "ABCD");
+    session.history.pushRow(&history_row, true, base);
+
+    fillRowText(session.primary.grid.cells.items[0..4], base, "EFGH");
+    fillRowText(session.primary.grid.cells.items[4..8], base, "IJKL");
+    session.primary.grid.setRowWrapped(0, false);
+    session.primary.grid.setRowWrapped(1, false);
+
+    const live_snapshot = terminal_publication.snapshot(session);
+    try expectSnapshotRow(live_snapshot, 0, "EFGH");
+    try expectSnapshotRow(live_snapshot, 1, "IJKL");
+
+    try session_runtime.resize(session, 2, 2);
+
+    const resized_snapshot = terminal_publication.snapshot(session);
+    try std.testing.expectEqual(@as(usize, 0), resized_snapshot.scroll_offset);
+    try expectSnapshotRow(resized_snapshot, 0, "IJ");
+    try expectSnapshotRow(resized_snapshot, 1, "KL");
+}
+
+test "resize reflow preserves pinned top logical line on width change" {
+    const allocator = std.testing.allocator;
+
+    var session = try runtime_mod.init(allocator, 2, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    var history_row = [_]Cell{ base, base, base, base };
+    fillRowText(&history_row, base, "ABCD");
+    session.history.pushRow(&history_row, true, base);
+
+    fillRowText(session.primary.grid.cells.items[0..4], base, "EFGH");
+    fillRowText(session.primary.grid.cells.items[4..8], base, "IJKL");
+    session.primary.grid.setRowWrapped(0, false);
+    session.primary.grid.setRowWrapped(1, false);
+    session.history.ensureViewCache(session.primary.grid.cols, base);
+    session.history.setScrollOffset(session.primary.grid.rows, 1);
+    _ = publication_flow.bumpAndPublishCurrentViewLocked(session, "test_publication");
+
+    const pinned_snapshot = terminal_publication.snapshot(session);
+    try std.testing.expectEqual(@as(usize, 1), pinned_snapshot.scroll_offset);
+    try expectSnapshotRow(pinned_snapshot, 0, "ABCD");
+    try expectSnapshotRow(pinned_snapshot, 1, "EFGH");
+
+    try session_runtime.resize(session, 2, 2);
+
+    const resized_snapshot = terminal_publication.snapshot(session);
+    try std.testing.expectEqual(@as(usize, 4), resized_snapshot.scroll_offset);
+    try expectSnapshotRow(resized_snapshot, 0, "AB");
+    try expectSnapshotRow(resized_snapshot, 1, "CD");
+}
+
+test "resize reflow preserves pinned wrapped logical line anchor" {
+    const allocator = std.testing.allocator;
+
+    var session = try runtime_mod.init(allocator, 2, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    var row = [_]Cell{ base, base, base, base };
+
+    fillRowText(&row, base, "ABCD");
+    session.history.pushRow(&row, true, base);
+    fillRowText(&row, base, "EF");
+    session.history.pushRow(&row, false, base);
+    fillRowText(&row, base, "GHIJ");
+    session.history.pushRow(&row, true, base);
+    fillRowText(&row, base, "KL");
+    session.history.pushRow(&row, false, base);
+
+    fillRowText(session.primary.grid.cells.items[0..4], base, "MNOP");
+    fillRowText(session.primary.grid.cells.items[4..8], base, "QR");
+    session.primary.grid.setRowWrapped(0, true);
+    session.primary.grid.setRowWrapped(1, false);
+
+    session.history.ensureViewCache(session.primary.grid.cols, base);
+    session.history.setScrollOffset(session.primary.grid.rows, 2);
+    _ = publication_flow.bumpAndPublishCurrentViewLocked(session, "test_publication");
+
+    const pinned_snapshot = terminal_publication.snapshot(session);
+    try std.testing.expectEqual(@as(usize, 2), pinned_snapshot.scroll_offset);
+    try expectSnapshotRow(pinned_snapshot, 0, "GHIJ");
+    try expectSnapshotRow(pinned_snapshot, 1, "KL  ");
+
+    try session_runtime.resize(session, 2, 3);
+
+    const resized_snapshot = terminal_publication.snapshot(session);
+    try std.testing.expectEqual(@as(usize, 2), resized_snapshot.scroll_offset);
+    try expectSnapshotRow(resized_snapshot, 0, "GHI");
+    try expectSnapshotRow(resized_snapshot, 1, "JKL");
 }
 
 test "acknowledgePresentedGeneration does not retire newer scrollback view publication" {

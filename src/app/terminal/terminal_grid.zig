@@ -1,7 +1,9 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
+const shared_types = @import("../../types/mod.zig");
 
 const TerminalCellGeometry = app_shell.TerminalCellGeometry;
+const terminal_layout = shared_types.layout;
 
 pub const Override = struct {
     cols: u16,
@@ -22,21 +24,18 @@ pub fn compute(
     min_cols: u16,
     min_rows: u16,
 ) Grid {
-    const cell_w = if (cell_geometry.cell_width_logical_exact > 0.0)
-        cell_geometry.cell_width_logical_exact
-    else
-        1.0;
-    const cell_h = if (cell_geometry.cell_height_logical_exact > 0.0)
-        cell_geometry.cell_height_logical_exact
-    else
-        1.0;
-    const cols_f = std.math.floor(@max(0.0, terminal_width) / cell_w);
-    const rows_f = std.math.floor(@max(0.0, terminal_height) / cell_h);
-    const cols_u: u16 = @intFromFloat(@max(@as(f32, @floatFromInt(min_cols)), cols_f));
-    const rows_u: u16 = @intFromFloat(@max(@as(f32, @floatFromInt(min_rows)), rows_f));
+    const fit = terminal_layout.fitTerminalGrid(
+        terminal_width,
+        terminal_height,
+        cell_geometry,
+        min_cols,
+        min_rows,
+        null,
+        null,
+    );
     return .{
-        .cols = cols_u,
-        .rows = rows_u,
+        .cols = @intCast(@min(fit.cols, @as(usize, std.math.maxInt(u16)))),
+        .rows = @intCast(@min(fit.rows, @as(usize, std.math.maxInt(u16)))),
         .cell_width = clampDeviceCellDimension(cell_geometry.cell_width_device_px),
         .cell_height = clampDeviceCellDimension(cell_geometry.cell_height_device_px),
     };

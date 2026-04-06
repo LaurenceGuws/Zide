@@ -54,6 +54,23 @@ Current full-scope read:
 - interaction ownership and mutation/publication maturity are now lower-pressure
   guardrails unless a fresh named contradiction appears
 
+Current front, 2026-04-06:
+
+- Linux resize/scrollback breakage has reopened one concrete maturity question:
+  does resize reflow preserve viewport/scrollback truth cleanly enough when
+  the terminal is resized away from the geometry where output was produced?
+- Treat this as a real terminal-core correctness front, not as backend polish.
+- The leading code pressure is now:
+  - `src/terminal/core/resize_reflow.zig`
+  - scrollback/view anchor preservation across reflow
+  - targeted tests for resize while pinned in scrollback or away from live
+    bottom
+- Checkpoint, 2026-04-06:
+  - runtime tests now cover one more pinned-scrollback reflow case:
+    preserving a wrapped logical-line anchor across width change
+  - this does not prove the full resize lane, but it raises the floor on the
+    exact row-map/remap logic most likely to corrupt pinned history views
+
 - `docs/review/VT_CORE_STYLE_COLOR_OWNER_FRONT_2026-04-04.md`
   Why: after the recent mode, keymode, and kitty-storage cuts, the next
   terminal-semantic owner contradiction was style/color state still living in

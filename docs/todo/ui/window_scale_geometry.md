@@ -41,6 +41,24 @@ That leaves the app in a bad middle state:
 - renderer partly normalizes it
 - then widgets still reconstruct their own backend-flavored geometry
 
+Current front, 2026-04-06:
+
+- Linux startup on a fractional-scale display can still come up with the wrong
+  cursor/text scale until the window is moved to another monitor and back.
+- terminal pane fitting still leaves visible dead space at the right/bottom
+  edge under zoomed terminal layouts instead of hugging the pane like peer
+  terminals do
+- That is not a cosmetic bug. It is direct evidence that the refresh pipeline
+  still does not own initial display truth and display-hop truth cleanly
+  enough.
+- Treat both of those as contract issues, not as later polish.
+- Fractional terminal special glyphs still count as geometry-contract pressure:
+  their quad placement must follow the same scale-aware edge policy as text,
+  especially for semitransparent shade blocks such as `░`.
+- Centered terminal fit also changes input truth:
+  hover/open/selection hit testing must follow the resolved visible grid rect,
+  not the outer terminal pane viewport.
+
 ## Hard Rules
 
 These rules are the bar for this queue.
@@ -171,6 +189,9 @@ Completion bar:
 
 - widgets consume resolved geometry snapshots
 - widgets do not decide whether scale-sensitive state needs rebuild
+- initial launch on the active display and later display hops both produce the
+  same resolved scale/cursor/font truth without requiring monitor-drag
+  recovery
 
 ### Phase 5: Clean up backend/policy residue
 
@@ -224,6 +245,7 @@ Manual:
 
 - terminal at `render_scale=1.0`
 - terminal at fractional scale such as `1.25`, `1.5`, or `1.6`
+- launch directly on the fractional-scale monitor, not only after moving there
 - same terminal interactions across:
   - draw
   - cursor overlay
@@ -233,11 +255,40 @@ Manual:
   - mouse reporting
 - scale/display hop if available
 
+Current proving bug, 2026-04-06:
+
+- Startup on a fractional-scale display can leave terminal cursor/cell geometry
+  at the wrong raster scale until a later display hop forces a stronger
+  refresh.
+- Current code-path suspicion:
+  - `Renderer.refreshWindowState(...)` updates `display_metrics` for
+    pixel-size/drawable changes
+  - but `self.scale.render_scale` only updates through
+    `refreshUiScaleForWindowChanges(...)`
+  - and that path currently runs only when `WindowChangeMask.affectsUiScale()`
+    is true
+- That means pixel-size or drawable-truth changes can update one scale owner
+  (`display_metrics`) without updating the live render-scale owner actually
+  consumed by terminal geometry (`self.scale.render_scale`).
+- This is direct evidence that Phase 4 is still incomplete.
+
 ## TODO
 
 - [x] `WSG-0-01` Freeze the public geometry contract
   - Authority now lives in:
     - [WINDOW_SCALE_GEOMETRY_DESIGN.md](/home/home/personal/zide/app_architecture/ui/WINDOW_SCALE_GEOMETRY_DESIGN.md)
+- [ ] `WSG-4-01` Unify render-scale refresh ownership for pixel-size and
+  display-coupled window changes
+  - Required outcome:
+    - the live render scale used by terminal/view geometry refreshes whenever
+      drawable truth changes, not only when UI-scale events fire
+    - startup on fractional-scale displays produces correct terminal
+      cell/cursor geometry without requiring a later display hop
+  - Initial audit targets:
+    - `src/ui/renderer.zig`
+    - `src/ui/renderer/font_runtime.zig`
+    - `src/platform/display_metrics.zig`
+    - `src/platform/sdl_api.zig`
   - Frozen decisions:
     - `WidgetLayout` stays the pane-rectangle authority
     - generic widgets consume `UiGeometryContext`
@@ -258,6 +309,48 @@ Manual:
   - This was intentionally a no-behavior-change checkpoint:
     - the full terminal widget migration still belongs to `WSG-2-01`
 - [x] `WSG-2-01` Move terminal draw/overlay/hover/input/open/reporting onto one terminal geometry contract
+- [ ] `WSG-4-02` Close startup/display-hop scale truth on Linux
+  - Problem:
+    - initial launch on a fractional-scale monitor can still produce the wrong
+      cursor/text scale until the window is dragged to another display and back
+  - Current likely pressure:
+    - `src/platform/sdl_api.zig`
+    - `src/platform/display_metrics.zig`
+    - `src/platform/window_metrics.zig`
+    - `src/ui/renderer.zig`
+    - `src/ui/renderer/font_runtime.zig`
+    - `src/ui/renderer/scale_utils.zig`
+  - Required outcome:
+    - initial display truth, display change truth, and display-scale change
+      truth all route through one renderer-owned refresh path
+    - no Linux path depends on an incidental later display event to correct the
+      effective raster/UI scale
+- [ ] `WSG-2-02` Lock terminal pane-fit policy so the terminal hugs the pane
+  edge cleanly under zoom and resize
+  - Problem:
+    - terminal cell fitting can leave visible dead space at the right/bottom
+      edge even when the pane itself is larger and should still read as
+      terminal-owned space
+  - Current likely pressure:
+    - `src/app/terminal/terminal_grid.zig`
+    - `src/app/terminal/deferred_terminal_resize_frame.zig`
+    - `src/app/terminal/terminal_refresh_sizing_runtime.zig`
+    - `src/ui/renderer.zig`
+    - `src/ui/widgets/terminal_widget_presentation_runtime.zig`
+  - Required outcome:
+    - terminal sizing and draw consume one coherent fit policy
+    - unavoidable remainder is visually owned by the terminal pane, not left as
+      accidental window-background gaps
+  - Checkpoint, 2026-04-06:
+    - added shared `fitTerminalGrid(...)` authority in `src/types/layout.zig`
+    - app terminal sizing now consumes the same fit math as renderer terminal
+      view geometry
+    - terminal presentation geometry now consumes `TerminalViewGeometry`
+      instead of independently recomputing visible pane fit from raw pane size
+    - terminal view origin now centers pane remainder instead of pinning all
+      unused space to the right/bottom edge
+    - this closes one source of geometry drift, but it does not yet prove the
+      full resize/reflow path or eliminate all terminal-fit remainder
   - Landed migration fronts:
     - [terminal_widget_draw.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget_draw.zig)
     - [terminal_widget_draw_grid.zig](/home/home/personal/zide/src/ui/widgets/terminal_widget_draw_grid.zig)

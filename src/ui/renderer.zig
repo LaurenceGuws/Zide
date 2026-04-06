@@ -107,7 +107,9 @@ pub const WindowRefreshResult = struct {
     scene_target_invalidation: SceneTargetInvalidation = .{},
 
     pub fn needsRedraw(self: WindowRefreshResult) bool {
-        return self.ui_scale_changed or self.scene_target_invalidation.any();
+        return self.changes.affectsWindowRefresh() or
+            self.ui_scale_changed or
+            self.scene_target_invalidation.any();
     }
 
     pub fn needsUiLayoutRefresh(self: WindowRefreshResult) bool {
@@ -1146,8 +1148,12 @@ pub const Renderer = struct {
         _ = platform_window.collectWindowMetricsFromDisplayMetrics(metrics, reason);
     }
 
-    fn refreshUiScaleForWindowChanges(self: *Renderer, changes: WindowChangeMask, metrics: platform_window.DisplayMetrics) !bool {
-        if (!changes.affectsUiScale()) return false;
+    fn shouldRefreshScaleStateForWindowChanges(changes: WindowChangeMask) bool {
+        return changes.affectsWindowRefresh();
+    }
+
+    fn refreshScaleStateForWindowChanges(self: *Renderer, changes: WindowChangeMask, metrics: platform_window.DisplayMetrics) !bool {
+        if (!shouldRefreshScaleStateForWindowChanges(changes)) return false;
         return font_runtime.refreshUiScaleFromDisplayMetrics(self, metrics);
     }
 
@@ -1176,7 +1182,7 @@ pub const Renderer = struct {
         self.applyDisplayMetricsSnapshot(metrics);
         self.backend_ops.mergePendingSceneTargetInvalidation(self, scene_target_invalidation);
         self.logWindowMetricsSnapshot(metrics, reason);
-        const ui_scale_changed = try self.refreshUiScaleForWindowChanges(changes, metrics);
+        const ui_scale_changed = try self.refreshScaleStateForWindowChanges(changes, metrics);
         return .{
             .changes = changes,
             .geometry = self.windowGeometryDiagnosticsFromDisplayMetrics(metrics),
@@ -1230,6 +1236,7 @@ pub const Renderer = struct {
         self.present.frame_seq +%= 1;
         self.present.trace_current = .{ .frame_seq = self.present.frame_seq };
         self.present.drawing_editor_surface = false;
+        self.clip_depth = 0;
         const display_metrics = self.display_metrics;
         self.width = display_metrics.window_w;
         self.height = display_metrics.window_h;
@@ -1238,6 +1245,7 @@ pub const Renderer = struct {
 
         self.text_render.bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
         self.backend_ops.beginFrame(self);
+        self.backend_ops.applyClipRect(self, null);
     }
 
     pub fn submitFrame(self: *Renderer) FrameSubmission {
@@ -1804,31 +1812,27 @@ pub const Renderer = struct {
 
     pub fn terminalViewGeometry(self: *Renderer, viewport: shared_types.layout.Rect, rows: usize, cols: usize) TerminalViewGeometry {
         const geom = self.terminalCellGeometry();
-        const scale = if (self.scale.render_scale > 0.0) self.scale.render_scale else 1.0;
-        const origin_x = snapToDevicePixel(viewport.x, self.scale.render_scale);
-        const origin_y = snapToDevicePixel(viewport.y, self.scale.render_scale);
-        const max_grid_w = geom.cell_width_logical_exact * @as(f32, @floatFromInt(@as(i32, @intCast(cols))));
-        const max_grid_h = geom.cell_height_logical_exact * @as(f32, @floatFromInt(@as(i32, @intCast(rows))));
-        const clip_w = @min(viewport.width, max_grid_w);
-        const clip_h = @min(viewport.height, max_grid_h);
-        const visible_cols: i32 = if (geom.cell_width_logical_exact > 0)
-            @intFromFloat(std.math.floor(clip_w / geom.cell_width_logical_exact))
-        else
-            0;
-        const visible_rows: i32 = if (geom.cell_height_logical_exact > 0)
-            @intFromFloat(std.math.floor(clip_h / geom.cell_height_logical_exact))
-        else
-            0;
-        const viewport_width = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(visible_cols * geom.cell_width_device_px)) / scale)))));
-        const viewport_height = @as(f32, @floatFromInt(@as(i32, @intFromFloat(std.math.round(@as(f32, @floatFromInt(visible_rows * geom.cell_height_device_px)) / scale)))));
+        const fit = shared_types.layout.fitTerminalGrid(
+            viewport.width,
+            viewport.height,
+            geom,
+            0,
+            0,
+            cols,
+            rows,
+        );
+        const remainder_x = @max(0.0, viewport.width - fit.width);
+        const remainder_y = @max(0.0, viewport.height - fit.height);
+        const origin_x = snapToDevicePixel(viewport.x + remainder_x * 0.5, self.scale.render_scale);
+        const origin_y = snapToDevicePixel(viewport.y + remainder_y * 0.5, self.scale.render_scale);
         return .{
             .viewport = viewport,
             .origin_x = origin_x,
             .origin_y = origin_y,
-            .viewport_width = viewport_width,
-            .viewport_height = viewport_height,
-            .rows = rows,
-            .cols = cols,
+            .viewport_width = fit.width,
+            .viewport_height = fit.height,
+            .rows = fit.rows,
+            .cols = fit.cols,
             .cell_width = geom.cell_width_logical_exact,
             .cell_height = geom.cell_height_logical_exact,
             .baseline_from_top = geom.baseline_logical_exact,
@@ -1887,7 +1891,7 @@ pub const Renderer = struct {
         self.drawTextureRect(texture, src, dest, color.toRgba());
     }
 
-    fn inputDomain(self: *Renderer) input_state.InputDomain {
+    pub fn inputDomain(self: *Renderer) input_state.InputDomain {
         return .{
             .allocator = self.allocator,
             .app_host = &self.app_host,
@@ -1967,4 +1971,45 @@ pub fn getScreenWidth() i32 {
 
 pub fn getScreenHeight() i32 {
     return renderer_global_runtime.getScreenHeight(Renderer);
+}
+
+test "scale state refresh follows any real window refresh signal" {
+    try std.testing.expect(!Renderer.shouldRefreshScaleStateForWindowChanges(.{}));
+    try std.testing.expect(Renderer.shouldRefreshScaleStateForWindowChanges(.{ .resized = true }));
+    try std.testing.expect(Renderer.shouldRefreshScaleStateForWindowChanges(.{ .pixel_size_changed = true }));
+    try std.testing.expect(Renderer.shouldRefreshScaleStateForWindowChanges(.{ .display_changed = true }));
+    try std.testing.expect(Renderer.shouldRefreshScaleStateForWindowChanges(.{ .display_scale_changed = true }));
+}
+
+test "moved-only window changes do not refresh scale state" {
+    try std.testing.expect(!Renderer.shouldRefreshScaleStateForWindowChanges(.{ .moved = true }));
+}
+
+test "window refresh results redraw for exposed or resized events" {
+    const geometry: WindowGeometryDiagnostics = .{
+        .window_w = 100,
+        .window_h = 100,
+        .drawable_w = 100,
+        .drawable_h = 100,
+        .display_w = 100,
+        .display_h = 100,
+        .display_index = 0,
+        .dpi = .{ .x = 1.0, .y = 1.0 },
+        .display_scale = 1.0,
+        .pixel_density = 1.0,
+        .ui_scale = 1.0,
+        .render_scale = 1.0,
+        .screen = .{ .x = 100.0, .y = 100.0 },
+        .render = .{ .x = 100.0, .y = 100.0 },
+        .monitor = .{ .x = 100.0, .y = 100.0 },
+    };
+
+    try std.testing.expect((WindowRefreshResult{
+        .changes = .{ .contents_exposed = true },
+        .geometry = geometry,
+    }).needsRedraw());
+    try std.testing.expect((WindowRefreshResult{
+        .changes = .{ .resized = true },
+        .geometry = geometry,
+    }).needsRedraw());
 }
