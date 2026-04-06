@@ -157,7 +157,7 @@ Good starting points:
 - [Terminal beta checkpoint summary](app_architecture/terminal/TERMINAL_BETA_CHECKPOINT.md)
 - [Terminal architecture comparison](app_architecture/terminal/TERMINAL_ARCHITECTURE_COMPARISON.md)
 - [Terminal FFI bridge design](app_architecture/terminal/ffi/BRIDGE_DESIGN.md)
-- [Current beta release notes](docs/releases/v0.1.0-beta.5.md)
+- [Current beta release notes](docs/releases/v0.1.0-beta.6.md)
 
 Contributor/operator navigation lives in [docs/INDEX.md](docs/INDEX.md).
 

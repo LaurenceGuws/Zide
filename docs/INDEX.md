@@ -120,7 +120,7 @@ Quick reading guide:
 
 ## Setup + Usage
 - `README.md` — customer-facing overview, links, and quick-start pointers.
-- `docs/releases/v0.1.0-beta.5.md` — current beta checkpoint release notes.
+- `docs/releases/v0.1.0-beta.6.md` — current beta checkpoint release notes.
 - `tests/README.md` — repo-wide test layout policy.
 - `app_architecture/BOOTSTRAP.md` — dependencies, bootstrap, build, run, test.
 - `dev_references/README.md` — local development reference corpus contract and setup entrypoint.
