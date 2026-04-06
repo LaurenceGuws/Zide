@@ -6,6 +6,7 @@ const metal_text_diagnostic_view = @import("metal_text_diagnostic_view.zig");
 const terminal_font_mod = @import("terminal_font.zig");
 const renderer_mod = @import("renderer.zig");
 const metal_text_sample_runtime = @import("renderer/metal_text_sample_runtime.zig");
+const metal_backend = @import("renderer/metal_backend.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
 const iface = @import("renderer/interface.zig");
 const text_draw = @import("renderer/text_draw.zig");
@@ -213,7 +214,7 @@ pub const FontSampleView = struct {
                 @intFromFloat(std.math.round(swatch_size + 12.0)),
                 theme.ui_panel_overlay,
             );
-            _ = r.drawSampleTextRequest(metal_text_sample_runtime.SampleTextRequest{
+            _ = metal_backend.drawSampleTextRequest(r, metal_text_sample_runtime.SampleTextRequest{
                 .text = "METAL\nTEXT",
                 .x = swatch_x,
                 .y = swatch_y,

@@ -204,6 +204,10 @@ Progress note, 2026-04-05:
   terminal-cell runs, raw image draws, and terminal snapshot draws are now
   gone from `src/ui/renderer.zig`; live callers route those operations
   through `metal_backend.zig` directly instead.
+- The remaining renderer-root Metal text/atlas wrappers are gone too:
+  `drawSampleTextRequest`, `drawTerminalCellRun`, and `drawAtlasSampleChar`
+  were removed from `Renderer`/`BackendOps`, and call sites now invoke
+  `metal_backend.zig` directly.
 - Metal atlas preview/debug state now also lives inside
   `src/ui/renderer/metal_runtime_state.zig` as part of the bundled Metal
   runtime state instead of as a separate backend-specific field on

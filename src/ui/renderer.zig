@@ -384,9 +384,6 @@ pub const Renderer = struct {
         createPersistentTextureFromRgb: *const fn (*Self, i32, i32, []const u8) ?types.Texture,
         destroyPersistentTexture: *const fn (*Self, *types.Texture) void,
         drawRawImage: *const fn (*Self, RawImageFormat, i32, i32, []const u8, types.Rect, types.Rgba) bool,
-        drawSampleTextRequest: *const fn (*Self, metal_text_sample_runtime.SampleTextRequest) bool,
-        drawTerminalCellRun: *const fn (*Self, *TerminalFont, metal_text_sample_runtime.TerminalCellRunRequest) bool,
-        drawAtlasSampleChar: *const fn (*Self, u8, f32, f32, Color) bool,
         enqueueSurfaceDraw: *const fn (*Self, surface_draw.SurfaceDraw) bool,
     };
 
@@ -555,9 +552,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
                 .rgba => gl_backend.drawRawImageRgba(renderer, width, height, data, dest, tint),
             };
         }
-        fn drawSampleTextRequest(renderer: *Self, request: metal_text_sample_runtime.SampleTextRequest) bool { return gl_backend.drawSampleTextRequest(renderer, request); }
-        fn drawTerminalCellRun(renderer: *Self, font: *TerminalFont, request: metal_text_sample_runtime.TerminalCellRunRequest) bool { return gl_backend.drawTerminalCellRun(renderer, font, request); }
-        fn drawAtlasSampleChar(renderer: *Self, char: u8, x: f32, y: f32, color: Color) bool { return gl_backend.drawAtlasSampleChar(renderer, char, x, y, color); }
         fn enqueueSurfaceDraw(renderer: *Self, draw: surface_draw.SurfaceDraw) bool {
             return gl_backend.submitSurfaceDrawImmediate(renderer, draw);
         }
@@ -593,9 +587,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
                 .rgba => metal_backend.drawRawImageRgba(renderer, width, height, data, dest, tint),
             };
         }
-        fn drawSampleTextRequest(renderer: *Self, request: metal_text_sample_runtime.SampleTextRequest) bool { return metal_backend.drawSampleTextRequest(renderer, request); }
-        fn drawTerminalCellRun(renderer: *Self, font: *TerminalFont, request: metal_text_sample_runtime.TerminalCellRunRequest) bool { return metal_backend.drawTerminalCellRun(renderer, font, request); }
-        fn drawAtlasSampleChar(renderer: *Self, char: u8, x: f32, y: f32, color: Color) bool { return metal_backend.drawAtlasSampleChar(renderer, char, x, y, color); }
         fn enqueueSurfaceDraw(renderer: *Self, draw: surface_draw.SurfaceDraw) bool {
             return metal_backend.appendSurfaceDrawToMetalQueue(renderer, draw);
         }
@@ -628,9 +619,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
                 .createPersistentTextureFromRgb = OpenGlDispatch.createPersistentTextureFromRgb,
                 .destroyPersistentTexture = OpenGlDispatch.destroyPersistentTexture,
                 .drawRawImage = OpenGlDispatch.drawRawImage,
-                .drawSampleTextRequest = OpenGlDispatch.drawSampleTextRequest,
-                .drawTerminalCellRun = OpenGlDispatch.drawTerminalCellRun,
-                .drawAtlasSampleChar = OpenGlDispatch.drawAtlasSampleChar,
                 .enqueueSurfaceDraw = OpenGlDispatch.enqueueSurfaceDraw,
             },
             .metal => .{
@@ -658,9 +646,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
                 .createPersistentTextureFromRgb = MetalDispatch.createPersistentTextureFromRgb,
                 .destroyPersistentTexture = MetalDispatch.destroyPersistentTexture,
                 .drawRawImage = MetalDispatch.drawRawImage,
-                .drawSampleTextRequest = MetalDispatch.drawSampleTextRequest,
-                .drawTerminalCellRun = MetalDispatch.drawTerminalCellRun,
-                .drawAtlasSampleChar = MetalDispatch.drawAtlasSampleChar,
                 .enqueueSurfaceDraw = MetalDispatch.enqueueSurfaceDraw,
             },
         };
@@ -1909,18 +1894,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
 
     pub fn drawRawImage(self: *Renderer, format: RawImageFormat, width: i32, height: i32, data: []const u8, dest: types.Rect, tint: types.Rgba) bool {
         return self.backend_ops.drawRawImage(self, format, width, height, data, dest, tint);
-    }
-
-    pub fn drawSampleTextRequest(self: *Renderer, request: metal_text_sample_runtime.SampleTextRequest) bool {
-        return self.backend_ops.drawSampleTextRequest(self, request);
-    }
-
-    pub fn drawTerminalCellRun(self: *Renderer, font: *TerminalFont, request: metal_text_sample_runtime.TerminalCellRunRequest) bool {
-        return self.backend_ops.drawTerminalCellRun(self, font, request);
-    }
-
-    pub fn drawAtlasSampleChar(self: *Renderer, char: u8, x: f32, y: f32, color: Color) bool {
-        return self.backend_ops.drawAtlasSampleChar(self, char, x, y, color);
     }
 
     pub fn drawTexture(self: *Renderer, texture: types.Texture, src: types.Rect, dest: types.Rect, color: Color) void {
