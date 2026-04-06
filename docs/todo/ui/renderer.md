@@ -216,10 +216,9 @@ Progress note, 2026-04-05:
   presentable contract directly instead of bouncing through one more
   forwarding layer.
 - Metal glyph-atlas readiness, atlas preview source, and atlas-upload
-  diagnostics are **`Renderer` methods** that delegate to
-  `metal_backend.zig`; **`Shell` does not re-export or forward** them, so
-  diagnostics and smoke runtimes call `rendererPtr()` instead of growing
-  another app-shell seam.
+  diagnostics no longer use dedicated `Renderer` wrappers; call sites now use
+  `metal_backend.zig` helpers directly (with
+  `metal_text_diagnostic_runtime.previewPlacement` where needed).
 - The old Metal-only `Renderer` convenience verbs for sampled text,
   terminal-cell runs, raw image draws, and terminal snapshot draws are now
   gone from `src/ui/renderer.zig`; live callers route those operations
@@ -247,10 +246,9 @@ Progress note, 2026-04-05:
   preview lookup now also route through `gl_backend.zig` / `metal_backend.zig`
   instead of `Renderer` directly reaching into those backend runtime storage
   slots.
-- Unused Shell forwards for macOS Metal attachment prep, smoke frames, and
-  atlas diagnostics were removed; the live atlas-preview/upload probe surface
-  stays on **`Renderer`** with `metal_text_diagnostic_runtime.previewPlacement`
-  taking **`UiGeometryContext`** so the helper does not import `renderer.zig`.
+- Unused Shell forwards for macOS Metal attachment prep and smoke frames were
+  removed, and atlas-preview/upload probes now route through
+  `metal_backend.zig` directly instead of a renderer wrapper.
 - The renderer root no longer owns private Metal queue-assembly helpers for
   solid rects / atlas samples or the OpenGL scissor implementation directly.
   Primitive solid-rect submission, terminal glyph/rect submission, theme
@@ -293,12 +291,9 @@ Progress note, 2026-04-05:
 - Font atlas upload hook selection no longer does a raw `renderer.backend`
   check before asking for Metal atlas hooks; the backend helper now answers
   that capability question directly.
-- `ui/font_sample_view.zig` no longer imports `metal_backend` for
-  `TerminalFont` atlas hooks; it uses
-  `Renderer.terminalFontAtlasUploadHooksForRenderer()` like other UI callers
-  that must stay backend-shaped without reaching into `metal_backend.zig`.
-- `renderer/font_manager.zig` also uses that renderer facade for cached font
-  init instead of importing `metal_backend` for the same hook query.
+- `ui/font_sample_view.zig` and `renderer/font_manager.zig` now call
+  `metal_backend.terminalFontAtlasUploadHooksForRenderer` directly for Metal
+  atlas-hook capability instead of a renderer wrapper seam.
 - `ui/glyph_cache.zig` no longer imports `gl_backend`; OpenGL batch bind and
   texture-kind uniform for the vertex-stream flush go through
   `draw_ops.bindBatchPipelineForVertexStream` /
@@ -327,10 +322,9 @@ Progress note, 2026-04-05:
   `editor_presentable_cache_compatible`, and OpenGL reports false on macOS
   full UI while Metal leaves it enabled so widget code stays capability-shaped.
 - Metal-only immediate draw helpers (raw RGB/RGBA image enqueue, sampled text,
-  terminal cell runs, atlas sample char) now live on the shared `BackendOps`
-  table with OpenGL no-op stubs; `text_runtime`, Kitty placement, terminal
-  metal fallbacks, font sample view, and macOS text diagnostic call
-  `Renderer` methods instead of importing `metal_backend.zig` for those paths.
+  terminal cell runs, atlas sample char) now route through backend-owned
+  helpers (`metal_backend.zig`) from call sites that need them, while shared
+  draw submission continues converging on `enqueueSurfaceDraw`.
 
 ## Live Contradiction Centers
 

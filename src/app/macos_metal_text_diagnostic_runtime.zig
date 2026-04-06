@@ -63,7 +63,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
         .cell_height = shell.terminalCellHeight(),
         .tint = shell.theme().foreground.toRgba(),
     });
-    const atlas_preview_source = shell.rendererPtr().metalAtlasPreviewSource();
+    const atlas_preview_source = metal_backend.atlasPreviewSourceForRenderer(shell.rendererPtr());
     log.logf(.info, "start width={d} height={d} frame_budget={d}", .{ width, height, frame_budget });
     log.logf(
         .info,
@@ -76,7 +76,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
             @tagName(capabilities.planned_text_rendering_mode),
             @tagName(capabilities.atlas_storage_mode),
             @tagName(capabilities.planned_atlas_storage_mode),
-            @intFromBool(shell.rendererPtr().metalGlyphAtlasReady()),
+            @intFromBool(metal_backend.glyphAtlasReadyForRenderer(shell.rendererPtr())),
             @intFromBool(atlas_upload_probe),
             @tagName(atlas_preview_source),
             @intFromBool(sample_text_draw),

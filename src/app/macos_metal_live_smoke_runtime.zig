@@ -3,6 +3,7 @@ const app_bootstrap = @import("bootstrap.zig");
 const app_logger = @import("../app_logger.zig");
 const app_shell = @import("../app_shell.zig");
 const metal_text_diagnostic_view = @import("../ui/metal_text_diagnostic_view.zig");
+const metal_backend = @import("../ui/renderer/metal_backend.zig");
 
 pub fn shouldRun() bool {
     return app_bootstrap.parseEnvBool("ZIDE_MACOS_METAL_LIVE_SMOKE") orelse false;
@@ -36,7 +37,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
     const log = app_logger.logger("macos.metal.live_smoke");
     const capabilities = shell.rendererCapabilities();
     const atlas_upload_probe = (metal_text_diagnostic_view.View{}).activate(shell);
-    const atlas_preview_source = shell.rendererPtr().metalAtlasPreviewSource();
+    const atlas_preview_source = metal_backend.atlasPreviewSourceForRenderer(shell.rendererPtr());
     log.logf(.info, "start width={d} height={d} frame_budget={d}", .{ width, height, frame_budget });
     log.logf(
         .info,
@@ -49,7 +50,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
             @tagName(capabilities.planned_text_rendering_mode),
             @tagName(capabilities.atlas_storage_mode),
             @tagName(capabilities.planned_atlas_storage_mode),
-            @intFromBool(shell.rendererPtr().metalGlyphAtlasReady()),
+            @intFromBool(metal_backend.glyphAtlasReadyForRenderer(shell.rendererPtr())),
             @intFromBool(atlas_upload_probe),
             @tagName(atlas_preview_source),
         },

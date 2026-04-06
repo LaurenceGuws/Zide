@@ -25,7 +25,7 @@ const SampleFontFace = struct {
     fn init(allocator: std.mem.Allocator, renderer: *Renderer, path: [*:0]const u8, layout_size: f32) !SampleFontFace {
         const raster_scale = renderer.logicalLengthToRaster(1.0);
         const raster_size = renderer.logicalLengthToRaster(layout_size);
-        const atlas_upload_hooks = renderer.terminalFontAtlasUploadHooksForRenderer() orelse switch (renderer.capabilities().planned_atlas_storage_mode) {
+        const atlas_upload_hooks = metal_backend.terminalFontAtlasUploadHooksForRenderer(renderer) orelse switch (renderer.capabilities().planned_atlas_storage_mode) {
             .metal_textures => return error.MetalBackendContextUnavailable,
             else => null,
         };

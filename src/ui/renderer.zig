@@ -10,7 +10,6 @@ const font_manager = @import("renderer/font_manager.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
 const gl_backend = @import("renderer/gl_backend.zig");
 const metal_backend = @import("renderer/metal_backend.zig");
-const metal_text_diagnostic_runtime = @import("renderer/metal_text_diagnostic_runtime.zig");
 const opengl_runtime_state = @import("renderer/opengl_runtime_state.zig");
 const metal_runtime_state = @import("renderer/metal_runtime_state.zig");
 const scene_target_state = @import("renderer/scene_target_state.zig");
@@ -1187,27 +1186,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
             },
             .ui_scale = self.uiScaleFactor(),
         };
-    }
-
-    pub fn metalGlyphAtlasReady(self: *const Renderer) bool {
-        return metal_backend.glyphAtlasReadyForRenderer(self);
-    }
-
-    pub fn runMetalAtlasUploadDiagnosticAt(self: *Renderer, dest_x: i32, dest_y: i32) bool {
-        return metal_backend.runAtlasUploadDiagnosticAt(self, dest_x, dest_y);
-    }
-
-    pub fn metalAtlasPreviewSource(self: *const Renderer) AtlasPreviewSource {
-        return metal_backend.atlasPreviewSourceForRenderer(self);
-    }
-
-    pub fn runMetalAtlasUploadDiagnostic(self: *Renderer, margin_logical: f32) bool {
-        const placement = metal_text_diagnostic_runtime.previewPlacement(self.uiGeometryContext(), margin_logical);
-        return metal_backend.runAtlasUploadDiagnosticAt(self, placement.dest_x, placement.dest_y);
-    }
-
-    pub fn terminalFontAtlasUploadHooksForRenderer(self: *Renderer) ?terminal_font_mod.AtlasUploadHooks {
-        return metal_backend.terminalFontAtlasUploadHooksForRenderer(self);
     }
 
     pub fn enqueueSurfaceDraw(self: *Renderer, draw: surface_draw.SurfaceDraw) bool {
