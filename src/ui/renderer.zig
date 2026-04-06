@@ -6,7 +6,6 @@ const AtlasStorageMode = terminal_font_mod.AtlasStorageMode;
 const FontRenderingOptions = terminal_font_mod.RenderingOptions;
 const hb = terminal_font_mod.c;
 const capability_contract = @import("renderer/capability_contract.zig");
-const bootstrap_contract = @import("renderer/bootstrap_contract.zig");
 const bootstrap_runtime = @import("renderer/bootstrap_runtime.zig");
 const font_manager = @import("renderer/font_manager.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
@@ -390,8 +389,6 @@ pub const Renderer = struct {
         mergePendingSceneTargetInvalidation: *const fn (*Self, SceneTargetInvalidation) void,
     };
 
-    const BackendBootstrapOps = bootstrap_contract.BackendBootstrapOps;
-
     pub const WindowChromeMode = window_chrome_runtime.WindowChromeMode;
     pub const WindowChromeContract = window_chrome_runtime.WindowChromeContract;
     pub const ExternalIntent = native_host.ExternalIntent;
@@ -399,7 +396,7 @@ pub const Renderer = struct {
         opengl,
         metal,
     };
-    pub const RendererRuntimeProfile = bootstrap_contract.RendererRuntimeProfile;
+    pub const RendererRuntimeProfile = bootstrap_runtime.RendererRuntimeProfile;
     pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
 
     allocator: std.mem.Allocator,

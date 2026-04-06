@@ -5,6 +5,8 @@ const native_host = @import("../../platform/native_host.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
 const window_init = @import("window_init.zig");
 
+pub const RendererRuntimeProfile = bootstrap_contract.RendererRuntimeProfile;
+
 pub const InitBootstrapWindow = struct {
     window: *sdl_api.c.SDL_Window,
     render_host: native_host.PlatformRenderHost,

@@ -392,6 +392,10 @@ Progress note, 2026-04-05:
 - `renderer.zig` startup/deinit teardown paths now use `sdl_api` wrappers
   (`destroyWindow`, `quit`) instead of direct `SDL_*` calls, keeping shared
   lifecycle flow aligned to platform wrapper seams.
+- `renderer.zig` no longer imports `bootstrap_contract.zig` directly for
+  runtime-profile typing; that type now routes through
+  `bootstrap_runtime.zig`, reducing one more direct renderer-root bootstrap
+  contract coupling point.
 - The remaining renderer-root `sdl` alias is gone too; hit-test callback types
   and constants now use `sdl_api.c` directly so shared renderer code no longer
   depends on a local SDL alias surface.
