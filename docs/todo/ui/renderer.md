@@ -323,6 +323,10 @@ Progress note, 2026-04-05:
 - OpenGL screenshot dispatch now also targets `opengl_frame_runtime.zig`
   directly from backend ops, removing the last GL frame-runtime screenshot
   forwarding wrappers from `gl_backend.zig`.
+- Metal screenshot dispatch now also targets `metal_frame_runtime.zig`
+  directly from backend ops (including the current "unavailable" stub
+  behavior), removing the equivalent forwarding wrappers from
+  `metal_backend.zig`.
 - The macOS OpenGL editor retained-presentable bypass in
   `editor_widget_draw.zig` no longer keys off `renderer.backend` + OS tags;
   `capability_contract.RendererCapabilities` now exposes

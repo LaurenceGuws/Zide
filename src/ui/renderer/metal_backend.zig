@@ -3,7 +3,6 @@ const builtin = @import("builtin");
 const iface = @import("interface.zig");
 const macos_metal_host = @import("../../platform/macos_metal_host.zig");
 const capability_contract = @import("capability_contract.zig");
-const metal_frame_runtime = @import("metal_frame_runtime.zig");
 const metal_runtime_state = @import("metal_runtime_state.zig");
 const metal_text_sample_runtime = @import("metal_text_sample_runtime.zig");
 const presentable_contract = @import("presentable_contract.zig");
@@ -1161,14 +1160,6 @@ pub fn runStartupSmoke(render_surface_attachment: anytype, width: i32, height: i
     }
     presentFrame(&context, &frame);
     return true;
-}
-
-pub fn dumpWindowScreenshotPpm(_: anytype, _: []const u8) !void {
-    return error.RendererScreenshotUnavailable;
-}
-
-pub fn dumpWindowScreenshotPpmSized(_: anytype, _: []const u8, _: i32, _: i32) !void {
-    return error.RendererScreenshotUnavailable;
 }
 
 pub fn ensurePresentable(renderer: anytype, surface: PresentableSurface, width: i32, height: i32) bool {

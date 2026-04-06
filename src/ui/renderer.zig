@@ -623,10 +623,10 @@ pub const Renderer = struct {
             return metal_backend.capabilities(renderer);
         }
         fn dumpWindowScreenshotPpm(renderer: *Self, path: []const u8) !void {
-            return metal_backend.dumpWindowScreenshotPpm(renderer, path);
+            return metal_frame_runtime.dumpWindowScreenshotPpm(renderer, path);
         }
         fn dumpWindowScreenshotPpmSized(renderer: *Self, path: []const u8, out_width: i32, out_height: i32) !void {
-            return metal_backend.dumpWindowScreenshotPpmSized(renderer, path, out_width, out_height);
+            return metal_frame_runtime.dumpWindowScreenshotPpmSized(renderer, path, out_width, out_height);
         }
         fn ensurePresentable(renderer: *Self, surface: PresentableSurface, width: i32, height: i32) bool {
             return metal_backend.ensurePresentable(renderer, surface, width, height);
