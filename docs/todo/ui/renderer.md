@@ -92,7 +92,8 @@ Progress note, 2026-04-05:
   `appendSurfaceDrawToMetalQueue`; OpenGL implements `.solid` and `.atlas`
   immediately via `gl_backend.submitSurfaceDrawImmediate` when the GL text
   atlas path is active. `Renderer.enqueueSurfaceDraw` is the shared entrypoint.
-  Metal `appendSolidRect` / `appendAtlasSample` route through `enqueueSurfaceDraw`.
+  Metal `appendSolidRect` / `appendAtlasSample` / `appendRawImage` route through
+  `enqueueSurfaceDraw`.
   OpenGL `.raw_image` through `enqueueSurfaceDraw` works when `RawImageTexture`
   is the `.opengl` branch; the `.metal` branch is still Metal-queue-only.
   OpenGL `drawRawImageRgba` / `drawRawImageRgb` upload ephemeral `GL_NEAREST`

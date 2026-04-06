@@ -1370,11 +1370,6 @@ pub fn appendSurfaceDrawToMetalQueue(renderer: anytype, draw: SurfaceDraw) bool 
     return true;
 }
 
-pub fn appendSurfaceDraw(renderer: anytype, draw: SurfaceDraw) bool {
-    if (renderer.backend != .metal) return false;
-    return appendSurfaceDrawToMetalQueue(renderer, draw);
-}
-
 pub fn appendSolidRect(
     renderer: anytype,
     x: f32,
@@ -1404,7 +1399,7 @@ pub fn appendAtlasSample(renderer: anytype, sample: AtlasSampleDraw) bool {
 }
 
 pub fn appendRawImage(renderer: anytype, draw: RawImageDraw) bool {
-    return appendSurfaceDrawToMetalQueue(renderer, .{ .raw_image = draw });
+    return renderer.backend_ops.enqueueSurfaceDraw(renderer, .{ .raw_image = draw });
 }
 
 pub fn addTerminalRect(renderer: anytype, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void {
