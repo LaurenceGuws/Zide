@@ -4,6 +4,7 @@ const app_logger = @import("../app_logger.zig");
 const app_shell = @import("../app_shell.zig");
 const metal_text_diagnostic_view = @import("../ui/metal_text_diagnostic_view.zig");
 const metal_text_sample_runtime = @import("../ui/renderer/metal_text_sample_runtime.zig");
+const metal_backend = @import("../ui/renderer/metal_backend.zig");
 
 pub fn run(allocator: std.mem.Allocator) !void {
     const width = app_bootstrap.parseEnvI32("ZIDE_WINDOW_WIDTH", 1280);
@@ -33,7 +34,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
     const log = app_logger.logger("macos.metal.text_diagnostic");
     const capabilities = shell.rendererCapabilities();
     const atlas_upload_probe = (metal_text_diagnostic_view.View{}).activate(shell);
-    const sample_text_draw = shell.rendererPtr().drawSampleTextRequest(metal_text_sample_runtime.SampleTextRequest{
+    const sample_text_draw = metal_backend.drawSampleTextRequest(shell.rendererPtr(), metal_text_sample_runtime.SampleTextRequest{
         .text = "METAL\nTEXT",
         .x = 24.0,
         .y = 96.0,
@@ -54,7 +55,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
     );
     defer shell.endClip();
     const renderer = shell.rendererPtr();
-    const terminal_cell_run_draw = renderer.drawTerminalCellRun(&renderer.terminal_font, metal_text_sample_runtime.TerminalCellRunRequest{
+    const terminal_cell_run_draw = metal_backend.drawTerminalCellRun(renderer, &renderer.terminal_font, metal_text_sample_runtime.TerminalCellRunRequest{
         .text = "$ ls",
         .x = 24.0,
         .y = 220.0,
@@ -62,7 +63,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
         .cell_height = shell.terminalCellHeight(),
         .tint = shell.theme().foreground.toRgba(),
     });
-    const atlas_preview_source = shell.rendererPtr().metalAtlasPreviewSource();
+    const atlas_preview_source = metal_backend.atlasPreviewSourceForRenderer(shell.rendererPtr());
     log.logf(.info, "start width={d} height={d} frame_budget={d}", .{ width, height, frame_budget });
     log.logf(
         .info,
@@ -75,7 +76,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
             @tagName(capabilities.planned_text_rendering_mode),
             @tagName(capabilities.atlas_storage_mode),
             @tagName(capabilities.planned_atlas_storage_mode),
-            @intFromBool(shell.rendererPtr().metalGlyphAtlasReady()),
+            @intFromBool(metal_backend.glyphAtlasReadyForRenderer(shell.rendererPtr())),
             @intFromBool(atlas_upload_probe),
             @tagName(atlas_preview_source),
             @intFromBool(sample_text_draw),

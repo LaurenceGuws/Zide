@@ -1,10 +1,10 @@
 const gl = @import("gl.zig");
-const presentable_target = @import("presentable_target.zig");
+const gl_presentable_target = @import("gl_presentable_target.zig");
 const scene_target_state = @import("scene_target_state.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
 const types = @import("types.zig");
 
-const PresentableTargetState = presentable_target.PresentableTargetState;
+const PresentableTargetState = gl_presentable_target.PresentableTargetState;
 const SceneTargetState = scene_target_state.SceneTargetState;
 
 pub const State = struct {

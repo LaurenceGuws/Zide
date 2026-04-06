@@ -5,6 +5,15 @@ const platform_input_events = @import("../../platform/input_events.zig");
 const input_state = @import("input_state.zig");
 const text_input = @import("text_input.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
+const mouse_wheel_runtime = @import("mouse_wheel_runtime.zig");
+
+pub fn pollInputEventsWithRuntimeWheel(domain: input_state.InputDomain) void {
+    pollInputEvents(domain, mouse_wheel_runtime.deltaPtr());
+}
+
+pub fn mouseWheelMove() f32 {
+    return mouse_wheel_runtime.get();
+}
 
 pub fn pollInputEvents(
     domain: input_state.InputDomain,

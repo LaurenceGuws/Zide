@@ -98,7 +98,8 @@ pub fn submitFrame(renderer: anytype) present_trace_runtime.FrameSubmission {
             metal_backend.clearCurrentFrame(renderer);
             break :inner true;
         } else false
-    else false;
+    else
+        false;
     const present_end = sdl_api.getPerformanceCounter();
     renderer.present.last_swap_ms = present_trace_runtime.performanceDeltaMs(present_start, present_end, renderer.perf_freq);
     renderer.present.main_composition_target = .default_target;
@@ -113,4 +114,12 @@ pub fn submitFrame(renderer: anytype) present_trace_runtime.FrameSubmission {
         .terminal_presented = renderer.present.trace_current.terminal_presentation_count > 0,
         .terminal_presented_generation = renderer.present.trace_current.terminal_presented_generation,
     };
+}
+
+pub fn dumpWindowScreenshotPpm(_: anytype, _: []const u8) !void {
+    return error.RendererScreenshotUnavailable;
+}
+
+pub fn dumpWindowScreenshotPpmSized(_: anytype, _: []const u8, _: i32, _: i32) !void {
+    return error.RendererScreenshotUnavailable;
 }

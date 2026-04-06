@@ -8,6 +8,7 @@ const terminal_font_mod = @import("../terminal_font.zig");
 const terminal_glyphs = @import("../renderer/terminal_glyphs.zig");
 const terminal_underline = @import("../renderer/terminal_underline.zig");
 const debug_geometry_mod = @import("terminal_widget_debug_geometry.zig");
+const metal_backend = @import("../renderer/metal_backend.zig");
 
 const Shell = app_shell.Shell;
 const Color = app_shell.Color;
@@ -393,7 +394,7 @@ fn drawMetalTerminalFallbackRun(
     const cell_x = base_x_local + @as(f32, @floatFromInt(@as(i32, @intCast(start_col)))) * cell_w;
     const cell_y = base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h;
     if (has_visible) {
-        _ = rr.drawTerminalCellRun(&rr.terminal_font, .{
+        _ = metal_backend.drawTerminalCellRun(rr, &rr.terminal_font, .{
             .text = run_buf[0..run_len_bytes],
             .x = cell_x,
             .y = cell_y,

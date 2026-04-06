@@ -2,13 +2,15 @@ const std = @import("std");
 const builtin = @import("builtin");
 const iface = @import("interface.zig");
 const macos_metal_host = @import("../../platform/macos_metal_host.zig");
+const sdl_api = @import("../../platform/sdl_api.zig");
 const capability_contract = @import("capability_contract.zig");
-const metal_frame_runtime = @import("metal_frame_runtime.zig");
+const bootstrap_contract = @import("bootstrap_contract.zig");
 const metal_runtime_state = @import("metal_runtime_state.zig");
 const metal_text_sample_runtime = @import("metal_text_sample_runtime.zig");
 const presentable_contract = @import("presentable_contract.zig");
 const present_trace_runtime = @import("present_trace_runtime.zig");
 const surface_draw = @import("surface_draw.zig");
+const window_init = @import("window_init.zig");
 const terminal_font = @import("../terminal_font.zig");
 const types = @import("types.zig");
 
@@ -46,6 +48,22 @@ const PresentableSurface = presentable_contract.PresentableSurface;
 const PresentableDraw = presentable_contract.PresentableDraw;
 const PresentableInfo = presentable_contract.PresentableInfo;
 const RendererCapabilities = capability_contract.RendererCapabilities;
+
+fn supportsRuntimeProfileForBootstrap(profile: bootstrap_contract.RendererRuntimeProfile) bool {
+    return switch (profile) {
+        .backend_smoke => true,
+        .full_ui => builtin.target.os.tag == .macos,
+    };
+}
+
+pub fn bootstrapOps() bootstrap_contract.BackendBootstrapOps {
+    return .{
+        .graphics_binding = .metal,
+        .supportsRuntimeProfile = supportsRuntimeProfileForBootstrap,
+        .configureWindowAttributes = configureWindowAttributes,
+        .runStartupSmoke = runStartupSmokeForBootstrap,
+    };
+}
 
 pub fn capabilities(renderer: anytype) RendererCapabilities {
     const raw_image_textures = hasBackendContext(renderer);
@@ -158,6 +176,7 @@ pub const GlyphAtlas = struct {
 
 pub const AtlasTextureSource = surface_draw.AtlasTextureSource;
 pub const AtlasSampleDraw = surface_draw.AtlasSampleDraw;
+pub const MetalRawImageTexture = surface_draw.MetalRawImageTexture;
 pub const RawImageTexture = surface_draw.RawImageTexture;
 pub const RawImageDraw = surface_draw.RawImageDraw;
 pub const SolidColorDraw = surface_draw.SolidColorDraw;
@@ -908,18 +927,22 @@ pub fn drawRawImage(
     frame: *Frame,
     draw: RawImageDraw,
 ) bool {
+    const mt = switch (draw.texture) {
+        .metal => |m| m,
+        .opengl => return false,
+    };
     const source_rect = draw.source_rect orelse types.Rect{
         .x = 0,
         .y = 0,
-        .width = @floatFromInt(draw.texture.width),
-        .height = @floatFromInt(draw.texture.height),
+        .width = @floatFromInt(mt.width),
+        .height = @floatFromInt(mt.height),
     };
     return encodeExternalTextureRegion(
         context,
         frame,
-        draw.texture.texture,
-        draw.texture.width,
-        draw.texture.height,
+        mt.texture,
+        mt.width,
+        mt.height,
         source_rect,
         draw.dest_rect,
         draw.tint,
@@ -932,7 +955,11 @@ pub fn drawSolidColor(
     frame: *Frame,
     draw: SolidColorDraw,
 ) bool {
-    const brush = context.solid_white_brush orelse return false;
+    const brush_tex = context.solid_white_brush orelse return false;
+    const brush = switch (brush_tex) {
+        .metal => |b| b,
+        .opengl => return false,
+    };
     return encodeExternalTextureRegion(
         context,
         frame,
@@ -953,14 +980,20 @@ pub fn drawSolidColor(
 
 pub fn deinitRawImageTexture(texture: *RawImageTexture) void {
     if (builtin.target.os.tag != .macos) return;
-    releaseObject(texture.texture);
+    switch (texture.*) {
+        .metal => |*m| releaseObject(m.texture),
+        .opengl => {},
+    }
 }
 
 pub fn cloneRawImageTexture(texture: RawImageTexture) RawImageTexture {
-    return .{
-        .texture = retainObject(texture.texture),
-        .width = texture.width,
-        .height = texture.height,
+    return switch (texture) {
+        .metal => |m| .{ .metal = .{
+            .texture = retainObject(m.texture),
+            .width = m.width,
+            .height = m.height,
+        } },
+        .opengl => |t| .{ .opengl = t },
     };
 }
 
@@ -971,11 +1004,11 @@ fn createEmptyRawImageTexture(
 ) ?RawImageTexture {
     if (builtin.target.os.tag != .macos) return null;
     const atlas_texture = createAtlasTexture(device, width, height, pixel_format_bgra8_unorm) orelse return null;
-    return .{
+    return .{ .metal = .{
         .texture = atlas_texture.texture,
         .width = width,
         .height = height,
-    };
+    } };
 }
 
 fn seedGlyphAtlasDiagnostics(atlas: *GlyphAtlas) bool {
@@ -1026,11 +1059,11 @@ pub fn createRawImageTextureRgba(
         converted,
     );
     if (!uploaded) return null;
-    return .{
+    return .{ .metal = .{
         .texture = atlas_texture.texture,
         .width = width,
         .height = height,
-    };
+    } };
 }
 
 pub fn createRawImageTextureRgb(
@@ -1063,11 +1096,11 @@ pub fn createRawImageTextureRgb(
         converted,
     );
     if (!uploaded) return null;
-    return .{
+    return .{ .metal = .{
         .texture = atlas_texture.texture,
         .width = width,
         .height = height,
-    };
+    } };
 }
 
 pub fn createBackendContext(
@@ -1131,7 +1164,9 @@ pub fn initRuntime(renderer: anytype) !void {
     renderer.fonts_ready = true;
 }
 
-pub fn runStartupSmoke(render_surface_attachment: anytype, width: i32, height: i32) bool {
+pub fn configureWindowAttributes() !void {}
+
+pub fn runStartupSmokeForBootstrap(_: *sdl_api.c.SDL_Window, render_surface_attachment: window_init.RenderSurfaceAttachment, width: i32, height: i32) !bool {
     const host = switch (render_surface_attachment) {
         .macos_metal_host => |value| value,
         else => return false,
@@ -1148,22 +1183,6 @@ pub fn runStartupSmoke(render_surface_attachment: anytype, width: i32, height: i
     return true;
 }
 
-pub fn beginFrame(renderer: anytype) void {
-    metal_frame_runtime.beginFrame(renderer);
-}
-
-pub fn submitFrame(renderer: anytype) @import("present_trace_runtime.zig").FrameSubmission {
-    return metal_frame_runtime.submitFrame(renderer);
-}
-
-pub fn dumpWindowScreenshotPpm(_: anytype, _: []const u8) !void {
-    return error.RendererScreenshotUnavailable;
-}
-
-pub fn dumpWindowScreenshotPpmSized(_: anytype, _: []const u8, _: i32, _: i32) !void {
-    return error.RendererScreenshotUnavailable;
-}
-
 pub fn ensurePresentable(renderer: anytype, surface: PresentableSurface, width: i32, height: i32) bool {
     return switch (surface) {
         .terminal => blk: {
@@ -1172,7 +1191,8 @@ pub fn ensurePresentable(renderer: anytype, surface: PresentableSurface, width: 
             const drawable_width = renderer.render_width;
             const drawable_height = renderer.render_height;
             if (drawable_width <= 0 or drawable_height <= 0) break :blk false;
-            break :blk ensureTerminalSnapshotPresentableForRenderer(renderer, drawable_width, drawable_height);
+            const context = backendContext(renderer) orelse break :blk false;
+            break :blk ensureTerminalSnapshotPresentable(context, drawable_width, drawable_height).recreated;
         },
         .editor => false,
     };
@@ -1184,7 +1204,10 @@ pub fn beginPresentable(_: anytype, _: PresentableSurface) bool {
 
 pub fn presentableAvailable(renderer: anytype, surface: PresentableSurface) bool {
     return switch (surface) {
-        .terminal => terminalSnapshotAvailableForRenderer(renderer),
+        .terminal => blk: {
+            const context = backendContextConst(renderer) orelse break :blk false;
+            break :blk terminalSnapshotMatchesDrawable(context);
+        },
         .editor => false,
     };
 }
@@ -1193,12 +1216,16 @@ pub fn endPresentable(_: anytype, _: PresentableSurface) void {}
 
 pub fn presentableInfo(renderer: anytype, surface: PresentableSurface) ?PresentableInfo {
     if (surface != .terminal) return null;
-    if (!terminalSnapshotAvailableForRenderer(renderer)) return null;
+
     const context = backendContextConst(renderer) orelse return null;
     const snapshot = context.terminal_snapshot orelse return null;
+    const snap = switch (snapshot) {
+        .metal => |m| m,
+        .opengl => return null,
+    };
     return .{
-        .width_px = snapshot.width,
-        .height_px = snapshot.height,
+        .width_px = snap.width,
+        .height_px = snap.height,
         .logical_width = renderer.width,
         .logical_height = renderer.height,
     };
@@ -1214,8 +1241,10 @@ pub fn drawPresentable(renderer: anytype, surface: PresentableSurface, draw: Pre
             const source_width = draw.source_width orelse dest_width;
             const source_height = draw.source_height orelse dest_height;
             present_trace_runtime.notePresentableDraw(renderer, .terminal, draw.generation);
-            _ = appendTerminalSnapshotDraw(renderer, .{
-                .texture = undefined,
+            const context = backendContext(renderer) orelse return;
+            const snapshot = context.terminal_snapshot orelse return;
+            _ = appendRawImage(renderer, .{
+                .texture = cloneRawImageTexture(snapshot),
                 .source_rect = .{
                     .x = renderer.logicalLengthToRaster(draw.x),
                     .y = renderer.logicalLengthToRaster(draw.y),
@@ -1236,7 +1265,10 @@ pub fn drawPresentable(renderer: anytype, surface: PresentableSurface, draw: Pre
 
 pub fn scrollPresentable(renderer: anytype, surface: PresentableSurface, dx: i32, dy: i32) bool {
     return switch (surface) {
-        .terminal => scrollTerminalSnapshotPresentableForRenderer(renderer, dx, dy),
+        .terminal => blk: {
+            const context = backendContext(renderer) orelse break :blk false;
+            break :blk scrollTerminalSnapshotPresentable(context, dx, dy);
+        },
         .editor => false,
     };
 }
@@ -1265,7 +1297,6 @@ pub fn atlasPreviewSourceForRenderer(renderer: anytype) AtlasPreviewSource {
 }
 
 pub fn runAtlasUploadDiagnosticAt(renderer: anytype, dest_x: i32, dest_y: i32) bool {
-    if (renderer.backend != .metal) return false;
     if (!hasBackendContext(renderer)) return false;
     clearQueuedSurfaceDraws(renderer);
     renderer.metal_runtime.preview_source = .unavailable;
@@ -1349,11 +1380,6 @@ pub fn appendSurfaceDrawToMetalQueue(renderer: anytype, draw: SurfaceDraw) bool 
     return true;
 }
 
-pub fn appendSurfaceDraw(renderer: anytype, draw: SurfaceDraw) bool {
-    if (renderer.backend != .metal) return false;
-    return appendSurfaceDrawToMetalQueue(renderer, draw);
-}
-
 pub fn appendSolidRect(
     renderer: anytype,
     x: f32,
@@ -1383,23 +1409,11 @@ pub fn appendAtlasSample(renderer: anytype, sample: AtlasSampleDraw) bool {
 }
 
 pub fn appendRawImage(renderer: anytype, draw: RawImageDraw) bool {
-    return appendSurfaceDrawToMetalQueue(renderer, .{ .raw_image = draw });
-}
-
-pub fn drawSolidRect(
-    renderer: anytype,
-    x: f32,
-    y: f32,
-    w: f32,
-    h: f32,
-    color: types.Rgba,
-) bool {
-    if (renderer.backend != .metal) return false;
-    return appendSolidRect(renderer, x, y, w, h, color);
+    return renderer.backend_ops.enqueueSurfaceDraw(renderer, .{ .raw_image = draw });
 }
 
 pub fn addTerminalRect(renderer: anytype, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void {
-    _ = drawSolidRect(
+    _ = appendSolidRect(
         renderer,
         @floatFromInt(x),
         @floatFromInt(y),
@@ -1446,7 +1460,6 @@ pub fn addTerminalGlyphQuad(
 pub fn applyClipRect(_: anytype, _: ?types.Rect) void {}
 
 pub fn drawAtlasSampleChar(renderer: anytype, char: u8, x: f32, y: f32, color: iface.Color) bool {
-    if (renderer.backend != .metal) return false;
     if (renderer.plannedTextRenderingMode() != .metal_texture_atlas) return false;
     if (!hasBackendContext(renderer)) return false;
 
@@ -1461,7 +1474,6 @@ pub fn drawSampleTextRequest(
     renderer: anytype,
     request: metal_text_sample_runtime.SampleTextRequest,
 ) bool {
-    if (renderer.backend != .metal) return false;
     if (renderer.plannedTextRenderingMode() != .metal_texture_atlas) return false;
     if (!hasBackendContext(renderer)) return false;
 
@@ -1488,7 +1500,6 @@ pub fn drawTerminalCellRun(
     font: *terminal_font.TerminalFont,
     request: metal_text_sample_runtime.TerminalCellRunRequest,
 ) bool {
-    if (renderer.backend != .metal) return false;
     if (renderer.plannedTextRenderingMode() != .metal_texture_atlas) return false;
     if (!hasBackendContext(renderer)) return false;
     return appendTerminalCellRun(renderer, font, request);
@@ -1506,23 +1517,6 @@ pub fn appendTerminalCellRun(
         &renderer.metal_runtime.queued_surface_draws,
         renderer.allocator,
     );
-}
-
-pub fn appendTerminalSnapshotDraw(renderer: anytype, draw: RawImageDraw) bool {
-    const context = backendContext(renderer) orelse return false;
-    const snapshot = context.terminal_snapshot orelse return false;
-    return appendRawImage(renderer, .{
-        .texture = cloneRawImageTexture(snapshot),
-        .source_rect = draw.source_rect,
-        .dest_rect = draw.dest_rect,
-        .tint = draw.tint,
-        .clip_rect = draw.clip_rect,
-    });
-}
-
-pub fn drawTerminalSnapshotPresentable(renderer: anytype, draw: RawImageDraw) bool {
-    if (renderer.backend != .metal) return false;
-    return appendTerminalSnapshotDraw(renderer, draw);
 }
 
 pub fn appendRawImageRgba(
@@ -1562,7 +1556,6 @@ pub fn drawRawImageRgba(
     dest: types.Rect,
     tint: types.Rgba,
 ) bool {
-    if (renderer.backend != .metal) return false;
     return appendRawImageRgba(renderer, width, height, data, dest, tint);
 }
 
@@ -1603,7 +1596,6 @@ pub fn drawRawImageRgb(
     dest: types.Rect,
     tint: types.Rgba,
 ) bool {
-    if (renderer.backend != .metal) return false;
     return appendRawImageRgb(renderer, width, height, data, dest, tint);
 }
 
@@ -1616,21 +1608,6 @@ pub fn createPersistentTextureFromRgb(_: anytype, _: i32, _: i32, _: []const u8)
 }
 
 pub fn destroyPersistentTexture(_: anytype, _: *types.Texture) void {}
-
-pub fn terminalSnapshotAvailableForRenderer(renderer: anytype) bool {
-    const context = backendContextConst(renderer) orelse return false;
-    return terminalSnapshotMatchesDrawable(context);
-}
-
-pub fn ensureTerminalSnapshotPresentableForRenderer(renderer: anytype, width: i32, height: i32) bool {
-    const context = backendContext(renderer) orelse return false;
-    return ensureTerminalSnapshotPresentable(context, width, height).recreated;
-}
-
-pub fn scrollTerminalSnapshotPresentableForRenderer(renderer: anytype, dx: i32, dy: i32) bool {
-    const context = backendContext(renderer) orelse return false;
-    return scrollTerminalSnapshotPresentable(context, dx, dy);
-}
 
 pub fn runSmokeFrame(renderer: anytype) bool {
     const host = prepareHost(renderer) orelse return false;
@@ -1815,10 +1792,6 @@ pub fn prepareFrameReadback(context: *BackendContext, frame: *Frame) ?Readback {
     };
 }
 
-pub fn terminalSnapshotAvailable(context: *const BackendContext) bool {
-    return context.terminal_snapshot != null;
-}
-
 pub const EnsureTerminalSnapshotResult = struct {
     available: bool = false,
     recreated: bool = false,
@@ -1826,10 +1799,14 @@ pub const EnsureTerminalSnapshotResult = struct {
 
 pub fn terminalSnapshotMatchesDrawable(context: *const BackendContext) bool {
     const snapshot = context.terminal_snapshot orelse return false;
+    const snap = switch (snapshot) {
+        .metal => |m| m,
+        .opengl => return false,
+    };
     return context.drawable_width > 0 and
         context.drawable_height > 0 and
-        snapshot.width == context.drawable_width and
-        snapshot.height == context.drawable_height;
+        snap.width == context.drawable_width and
+        snap.height == context.drawable_height;
 }
 
 pub fn ensureTerminalSnapshotPresentable(
@@ -1839,7 +1816,11 @@ pub fn ensureTerminalSnapshotPresentable(
 ) EnsureTerminalSnapshotResult {
     if (width <= 0 or height <= 0) return .{};
     if (context.terminal_snapshot) |snapshot| {
-        if (snapshot.width == width and snapshot.height == height) {
+        const matches = switch (snapshot) {
+            .metal => |m| m.width == width and m.height == height,
+            .opengl => false,
+        };
+        if (matches) {
             return .{
                 .available = true,
                 .recreated = false,
@@ -1864,7 +1845,11 @@ fn ensureTerminalSnapshotScratch(
 ) bool {
     if (width <= 0 or height <= 0) return false;
     if (context.terminal_snapshot_scratch) |scratch| {
-        if (scratch.width == width and scratch.height == height) return true;
+        const matches = switch (scratch) {
+            .metal => |m| m.width == width and m.height == height,
+            .opengl => false,
+        };
+        if (matches) return true;
         var existing = scratch;
         deinitRawImageTexture(&existing);
         context.terminal_snapshot_scratch = null;
@@ -1890,6 +1875,14 @@ pub fn scrollTerminalSnapshotPresentable(
 
     const snapshot = context.terminal_snapshot orelse return false;
     const scratch = context.terminal_snapshot_scratch orelse return false;
+    const snap_m = switch (snapshot) {
+        .metal => |m| m,
+        .opengl => return false,
+    };
+    const scratch_m = switch (scratch) {
+        .metal => |m| m,
+        .opengl => return false,
+    };
 
     const src_x = @max(0, -dx);
     const src_y = @max(0, -dy);
@@ -1909,7 +1902,7 @@ pub fn scrollTerminalSnapshotPresentable(
     msgSendCopyTextureToTexture(
         blit_encoder,
         "copyFromTexture:sourceSlice:sourceLevel:sourceOrigin:sourceSize:toTexture:destinationSlice:destinationLevel:destinationOrigin:",
-        snapshot.texture,
+        snap_m.texture,
         0,
         0,
         .{ .x = @intCast(src_x), .y = @intCast(src_y), .z = 0 },
@@ -1918,7 +1911,7 @@ pub fn scrollTerminalSnapshotPresentable(
             .height = @intCast(copy_height),
             .depth = 1,
         },
-        scratch.texture,
+        scratch_m.texture,
         0,
         0,
         .{ .x = @intCast(dst_x), .y = @intCast(dst_y), .z = 0 },
@@ -1926,7 +1919,7 @@ pub fn scrollTerminalSnapshotPresentable(
     msgSendCopyTextureToTexture(
         blit_encoder,
         "copyFromTexture:sourceSlice:sourceLevel:sourceOrigin:sourceSize:toTexture:destinationSlice:destinationLevel:destinationOrigin:",
-        scratch.texture,
+        scratch_m.texture,
         0,
         0,
         .{ .x = @intCast(dst_x), .y = @intCast(dst_y), .z = 0 },
@@ -1935,7 +1928,7 @@ pub fn scrollTerminalSnapshotPresentable(
             .height = @intCast(copy_height),
             .depth = 1,
         },
-        snapshot.texture,
+        snap_m.texture,
         0,
         0,
         .{ .x = @intCast(dst_x), .y = @intCast(dst_y), .z = 0 },
@@ -1951,6 +1944,10 @@ pub fn captureTerminalSnapshot(context: *BackendContext, frame: *Frame) bool {
     if (context.drawable_width <= 0 or context.drawable_height <= 0) return false;
     if (!ensureTerminalSnapshotPresentable(context, context.drawable_width, context.drawable_height).available) return false;
     const snapshot = context.terminal_snapshot orelse return false;
+    const snap_m = switch (snapshot) {
+        .metal => |m| m,
+        .opengl => return false,
+    };
     const source_texture = msgSendPointer(frame.drawable, "texture") orelse return false;
     const blit_encoder = msgSendPointer(frame.command_buffer, "blitCommandEncoder") orelse return false;
     msgSendCopyTextureToTexture(
@@ -1965,7 +1962,7 @@ pub fn captureTerminalSnapshot(context: *BackendContext, frame: *Frame) bool {
             .height = @intCast(context.drawable_height),
             .depth = 1,
         },
-        snapshot.texture,
+        snap_m.texture,
         0,
         0,
         .{ .x = 0, .y = 0, .z = 0 },

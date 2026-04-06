@@ -92,23 +92,33 @@ Progress note, 2026-04-05:
   `appendSurfaceDrawToMetalQueue`; OpenGL implements `.solid` and `.atlas`
   immediately via `gl_backend.submitSurfaceDrawImmediate` when the GL text
   atlas path is active. `Renderer.enqueueSurfaceDraw` is the shared entrypoint.
-  Metal `appendSolidRect` / `appendAtlasSample` route through `enqueueSurfaceDraw`.
-  OpenGL `.raw_image` through `enqueueSurfaceDraw` remains unimplemented (opaque
-  Metal texture handle in the union). OpenGL   `drawRawImageRgba` /
-  `drawRawImageRgb` now upload ephemeral `GL_NEAREST` textures and draw via
-  `draw_ops.drawTextureRect` (Kitty placement path), respecting the active clip
-  stack the same way as other immediate GL draws (nested `beginClip` /
-  `endClip` from `pixelClipRect`).
+  Metal `appendSolidRect` / `appendAtlasSample` / `appendRawImage` route through
+  `enqueueSurfaceDraw`.
+  OpenGL `.raw_image` through `enqueueSurfaceDraw` works when `RawImageTexture`
+  is the `.opengl` branch; the `.metal` branch is still Metal-queue-only.
+  OpenGL `drawRawImageRgba` / `drawRawImageRgb` upload ephemeral `GL_NEAREST`
+  textures then call `submitSurfaceDrawImmediate` with `SurfaceDraw.raw_image`
+  (Kitty placement path shares the same contract as explicit `.opengl` enqueues).
 - `Renderer.drawRect` / `drawRectF` now submit through `enqueueSurfaceDraw`
   (raster `SurfaceDraw` solid + optional pixel clip), so common widget fills use
   the same contract path as Metal queue replay instead of bypassing via
   `drawSolidRect` only.
+- `BackendOps.drawSolidRect` on both backends now calls
+  `enqueueSolidSurfaceFromLogicalRect` / `enqueueSurfaceDraw` (Metal terminal
+  rects still use `appendSolidRect` from `metal_backend.addTerminalRect`).
+- The dead `BackendOps.drawSolidRect` function-pointer slot and per-backend
+  dispatch methods are now removed from `renderer.zig`; solid submission only
+  enters through `enqueueSurfaceDraw`.
+- `Renderer.drawRawImageRgba` / `drawRawImageRgb` are now one
+  `Renderer.drawRawImage(format, ...)` entrypoint (`RawImageFormat`), with one
+  backend-op dispatch slot instead of two backend-specific method names.
 - `Renderer.addTerminalRectF` uses the same `enqueueSolidSurfaceFromLogicalRect`
   helper (immediate solid); `addTerminalRect` (i32) still uses `BackendOps` so
   OpenGL keeps terminal batch quads instead of forcing an immediate path.
-- `src/ui/renderer/presentable_target.zig` now owns the presentable target
-  type, so shared runtime code no longer imports a GL-owned target type
-  directly.
+- `src/ui/renderer/gl_presentable_target.zig` owns the GL-shaped presentable
+  target type (FBO + texture), so the name matches ownership; `renderer.zig` no
+  longer re-exports `PresentableTargetState` (nothing outside the renderer
+  package referenced it).
 - `src/ui/renderer/presentable_contract.zig` now owns the shared presentable
   contract types instead of leaving them inside the shared runtime wrapper.
 - the shared runtime API now uses presentable-oriented names instead of the old
@@ -181,19 +191,44 @@ Progress note, 2026-04-05:
   presentable contract through `metal_backend.zig` entrypoints instead of the
   terminal presentation runtime carrying a separate Metal-only bypass branch
   for availability, ensure, draw, and scroll.
+- Metal-only `*ForRenderer` terminal snapshot helper exports were removed from
+  `metal_backend.zig`; diagnostics now query terminal snapshot state through
+  `renderer.presentableAvailable(.terminal)` (shared presentable contract path).
+- The remaining unused `terminalSnapshotAvailable(context)` helper was removed
+  from `metal_backend.zig` to keep snapshot-presentable lifecycle surfaces
+  contract-owned instead of helper-layered.
+- Dead terminal snapshot wrappers (`appendTerminalSnapshotDraw` and
+  `drawTerminalSnapshotPresentable`) were removed from `metal_backend.zig` once
+  `drawPresentable(.terminal, ...)` became the single snapshot-present path.
+- Metal cursor presentation now invalidates by design: fast snapshot-present
+  reuse is disabled when cursor state changes, and partial plans force redraw of
+  previous/current cursor rows when cursor visibility/row/col/shape changes.
+- Fast-present reuse now also tracks overlay state (hover link + composing
+  text signature). Reuse is blocked when those change, preventing stale overlay
+  artifacts from skipping the overlay redraw phase.
+- Removed remaining `renderer.backend == .metal` guard checks from
+  `metal_backend.zig` helper paths; capability/context checks now gate behavior
+  without backend-label branches inside backend-owned code.
+- Added regression tests for cursor/overlay invalidation gates in
+  `terminal_widget_surface_state.zig` to lock the new fast-present reuse rules.
 - The tiny terminal-specific presentable wrapper module is gone too:
   `terminal_widget_presentation_runtime.zig` now talks to the renderer
   presentable contract directly instead of bouncing through one more
   forwarding layer.
 - Metal glyph-atlas readiness, atlas preview source, and atlas-upload
-  diagnostics are **`Renderer` methods** that delegate to
-  `metal_backend.zig`; **`Shell` does not re-export or forward** them, so
-  diagnostics and smoke runtimes call `rendererPtr()` instead of growing
-  another app-shell seam.
+  diagnostics no longer use dedicated `Renderer` wrappers; call sites now use
+  `metal_backend.zig` helpers directly (with
+  `metal_text_diagnostic_runtime.previewPlacement` where needed).
 - The old Metal-only `Renderer` convenience verbs for sampled text,
   terminal-cell runs, raw image draws, and terminal snapshot draws are now
   gone from `src/ui/renderer.zig`; live callers route those operations
   through `metal_backend.zig` directly instead.
+- The remaining renderer-root Metal text/atlas wrappers are gone too:
+  `drawSampleTextRequest`, `drawTerminalCellRun`, and `drawAtlasSampleChar`
+  were removed from `Renderer`/`BackendOps`, and call sites now invoke
+  `metal_backend.zig` directly.
+- The matching no-op OpenGL stubs for those Metal-only text helpers were
+  removed from `gl_backend.zig` (plus now-unused imports).
 - Metal atlas preview/debug state now also lives inside
   `src/ui/renderer/metal_runtime_state.zig` as part of the bundled Metal
   runtime state instead of as a separate backend-specific field on
@@ -211,10 +246,9 @@ Progress note, 2026-04-05:
   preview lookup now also route through `gl_backend.zig` / `metal_backend.zig`
   instead of `Renderer` directly reaching into those backend runtime storage
   slots.
-- Unused Shell forwards for macOS Metal attachment prep, smoke frames, and
-  atlas diagnostics were removed; the live atlas-preview/upload probe surface
-  stays on **`Renderer`** with `metal_text_diagnostic_runtime.previewPlacement`
-  taking **`UiGeometryContext`** so the helper does not import `renderer.zig`.
+- Unused Shell forwards for macOS Metal attachment prep and smoke frames were
+  removed, and atlas-preview/upload probes now route through
+  `metal_backend.zig` directly instead of a renderer wrapper.
 - The renderer root no longer owns private Metal queue-assembly helpers for
   solid rects / atlas samples or the OpenGL scissor implementation directly.
   Primitive solid-rect submission, terminal glyph/rect submission, theme
@@ -257,12 +291,9 @@ Progress note, 2026-04-05:
 - Font atlas upload hook selection no longer does a raw `renderer.backend`
   check before asking for Metal atlas hooks; the backend helper now answers
   that capability question directly.
-- `ui/font_sample_view.zig` no longer imports `metal_backend` for
-  `TerminalFont` atlas hooks; it uses
-  `Renderer.terminalFontAtlasUploadHooksForRenderer()` like other UI callers
-  that must stay backend-shaped without reaching into `metal_backend.zig`.
-- `renderer/font_manager.zig` also uses that renderer facade for cached font
-  init instead of importing `metal_backend` for the same hook query.
+- `ui/font_sample_view.zig` and `renderer/font_manager.zig` now call
+  `metal_backend.terminalFontAtlasUploadHooksForRenderer` directly for Metal
+  atlas-hook capability instead of a renderer wrapper seam.
 - `ui/glyph_cache.zig` no longer imports `gl_backend`; OpenGL batch bind and
   texture-kind uniform for the vertex-stream flush go through
   `draw_ops.bindBatchPipelineForVertexStream` /
@@ -285,16 +316,161 @@ Progress note, 2026-04-05:
   orchestrating that cleanup first.
 - The next lifecycle step is to reduce shared-runtime ownership of dispatch and
   backend-native frame state, not just move code blocks around.
+- Frame lifecycle dispatch now targets `opengl_frame_runtime.zig` /
+  `metal_frame_runtime.zig` directly from the backend ops table in
+  `renderer.zig`; redundant `beginFrame` / `submitFrame` forwarding wrappers
+  were removed from `gl_backend.zig` and `metal_backend.zig`.
+- OpenGL screenshot dispatch now also targets `opengl_frame_runtime.zig`
+  directly from backend ops, removing the last GL frame-runtime screenshot
+  forwarding wrappers from `gl_backend.zig`.
+- Metal screenshot dispatch now also targets `metal_frame_runtime.zig`
+  directly from backend ops (including the current "unavailable" stub
+  behavior), removing the equivalent forwarding wrappers from
+  `metal_backend.zig`.
+- Font-scale diagnostic cache invalidation now goes through a backend-ops hook
+  (`clearDiagnosticFont`) instead of `renderer.zig` directly calling
+  `metal_backend.clearDiagnosticFont`.
+- Scene-target refresh invalidation flow now routes through backend ops
+  (`sceneTargetInvalidationForRefresh` +
+  `mergePendingSceneTargetInvalidation`) instead of shared renderer lifecycle
+  paths directly calling `gl_backend.zig`.
+- Backend bootstrap now owns context creation too: `Renderer.init()` asks
+  `BackendBootstrapOps.createBackendContext` for backend context setup instead
+  of open-coding the OpenGL context creation branch in shared init flow.
+- Backend bootstrap helper implementations were moved out of `renderer.zig`:
+  `backendBootstrapOps` now references backend-owned bootstrap entrypoints
+  directly (`gl_backend.*ForBootstrap` / `metal_backend.*ForBootstrap`,
+  plus backend-owned `configureWindowAttributes`) instead of renderer-local
+  OpenGL/Metal wrapper functions.
+- The duplicated non-bootstrap startup-smoke forwarders were removed from
+  `gl_backend.zig` and `metal_backend.zig`; each backend now exposes one
+  bootstrap startup-smoke entrypoint (`runStartupSmokeForBootstrap`) instead
+  of carrying a wrapper pair for the same behavior.
+- `renderer.zig` no longer depends on `gl.zig` just to express bootstrap SDL
+  types; bootstrap function-pointer signatures now use `sdl_api.c` SDL types
+  directly, keeping backend bootstrap typing in shared SDL/platform imports
+  instead of OpenGL module aliases.
+- Backend bootstrap startup-smoke entrypoints now take a concrete
+  `window_init.RenderSurfaceAttachment` parameter in both backends (instead of
+  `anytype`), tightening bootstrap contract typing across renderer and backend
+  modules.
+- OpenGL bootstrap context setup no longer goes through a dedicated
+  `createBackendContextForBootstrap` wrapper: `backendBootstrapOps` now points
+  directly to `gl_backend.createBackendContext`, and GL loader setup is owned
+  in that backend context-creation entrypoint.
+- Bootstrap ops contract now lives in
+  `src/ui/renderer/bootstrap_contract.zig`, and backend modules provide their
+  own bootstrap ops tables (`gl_backend.bootstrapOps()` /
+  `metal_backend.bootstrapOps()`), so `renderer.zig` no longer spells out the
+  backend bootstrap function-pointer mapping inline.
+- Bootstrap context cleanup now also routes through the shared bootstrap
+  contract (`destroyBackendContext`) instead of `renderer.zig` directly calling
+  `SDL_GL_DeleteContext` on init error paths.
+- Runtime-profile support policy now routes through backend bootstrap ops
+  (`supportsRuntimeProfile`) instead of `renderer.zig` carrying a backend-label
+  gate for Metal full-ui/macOS readiness inline.
+- `renderer.init()` no longer performs backend-context create/destroy through
+  bootstrap hooks; OpenGL context ownership moved into
+  `gl_backend.initRuntime()` and the bootstrap contract dropped the temporary
+  context lifecycle function-pointer slots.
+- Backend bootstrap-op backend selection moved out of `renderer.zig` into
+  `src/ui/renderer/bootstrap_runtime.zig`
+  (`bootstrap_runtime.opsForBackend`), removing one more backend-mapping switch
+  from renderer root startup/smoke flow.
+- Startup-smoke orchestration now also lives in
+  `src/ui/renderer/bootstrap_runtime.zig`
+  (`bootstrap_runtime.runStartupBackendSmoke`), leaving
+  `Renderer.runStartupBackendSmoke` as a thin facade instead of carrying window
+  creation/attachment/bootstrap sequencing inline.
+- Shared renderer init now also uses
+  `bootstrap_runtime.initBootstrapWindow` / `deinitBootstrapWindow` for window
+  + render-surface bootstrap sequencing and runtime-profile gating, removing
+  another startup ownership block from `renderer.zig`.
+- Renderer init now routes the full SDL + bootstrap-window bring-up through
+  `bootstrap_runtime.initRendererBootstrap` /
+  `bootstrap_runtime.deinitRendererBootstrap` instead of open-coding those
+  setup/error-cleanup steps directly in `renderer.zig`.
+- Renderer deinit window/surface teardown now routes through
+  `bootstrap_runtime.deinitRendererWindowResources(...)` instead of inlining
+  render-surface detach + window destroy sequencing inside `renderer.zig`.
+- Renderer init/deinit SDL shutdown now routes through
+  `bootstrap_runtime.deinitSdlRuntime()` instead of direct `sdl_api.quit()`
+  calls in `renderer.zig`.
+- `bootstrap_runtime.InitBootstrapWindow` was trimmed to only carry bootstrap
+  resources (`window`, `render_host`, `render_surface_attachment`); bootstrap
+  ops metadata no longer rides along in that state object.
+- `renderer.zig` startup/deinit teardown paths now use `sdl_api` wrappers
+  (`destroyWindow`, `quit`) instead of direct `SDL_*` calls, keeping shared
+  lifecycle flow aligned to platform wrapper seams.
+- `renderer.zig` no longer imports `bootstrap_contract.zig` directly for
+  runtime-profile typing; that type now routes through
+  `bootstrap_runtime.zig`, reducing one more direct renderer-root bootstrap
+  contract coupling point.
+- Global active-renderer registration moved out of `renderer.zig` into
+  `src/ui/renderer/active_renderer_runtime.zig` (`set`, `clearIf`, `get`), so
+  renderer startup/deinit and global helper lookups no longer mutate/read a
+  renderer-root global directly.
+- Mouse-wheel delta global state moved out of `renderer.zig` into
+  `src/ui/renderer/mouse_wheel_runtime.zig` (`get`, `deltaPtr`), so input poll
+  and readback paths no longer touch another renderer-root global directly.
+- Renderer mouse-wheel read/poll usage now routes through
+  `input_runtime.mouseWheelMove` /
+  `input_runtime.pollInputEventsWithRuntimeWheel`, so `renderer.zig` no longer
+  imports `mouse_wheel_runtime` directly.
+- Active-renderer global query helpers (`getTime`, `windowChanges`,
+  `getScreenWidth`, `getScreenHeight`, active-status logging probe) now route
+  through `src/ui/renderer/renderer_global_runtime.zig` instead of open-coding
+  active-renderer global reads in `renderer.zig`.
+- Renderer startup/deinit global registration side effects now route through
+  `renderer_global_runtime.registerRenderer` /
+  `renderer_global_runtime.unregisterRenderer` (text-input start/stop plus
+  active-renderer set/clear), removing those global mutations from
+  `renderer.zig` lifecycle bodies.
+- Remaining renderer-root global helper reads (`pollInputEvents` and wake/wait
+  paths) now use `renderer_global_runtime.activeRenderer(...)` instead of
+  reading `active_renderer_runtime` directly; `waitTime` now uses the shared
+  time helper path without a redundant active-renderer branch.
+- `waitForWakeOrTimeout` global orchestration now routes through
+  `renderer_global_runtime.waitForWakeOrTimeout(...)` instead of keeping the
+  SDL wait-event + pending-event staging sequence inline in `renderer.zig`.
+- `requestWake` global orchestration now routes through
+  `renderer_global_runtime.requestWake(...)`, including shutdown logging and
+  wake-event push behavior, so renderer root no longer carries that global
+  lifecycle wake path inline.
+- `setSdlLogLevel` now routes through `renderer_global_runtime` too, keeping
+  global renderer utility entrypoints consolidated under one runtime-helper
+  surface instead of leaving a one-off platform wrapper call in `renderer.zig`.
+- App lifecycle event-watch install/remove/callback orchestration moved out of
+  `renderer.zig` into `src/ui/renderer/app_event_watch_runtime.zig`, so
+  renderer init/deinit no longer carry that OS/event-hook management block.
+- App delegate install/uninstall orchestration moved out of `renderer.zig` into
+  `src/ui/renderer/app_delegate_runtime.zig`, so renderer lifecycle now treats
+  app delegate integration as a runtime-helper concern instead of platform
+  management inline.
+- App hook install/uninstall sequencing (delegate + app event watch) now routes
+  through `src/ui/renderer/lifecycle_runtime.zig`
+  (`installAppHooks` / `uninstallAppHooks`), so `renderer.zig` no longer
+  coordinates those two lifecycle hook families directly.
+- Renderer init/deinit lifecycle sequencing now also routes through
+  `lifecycle_runtime.finalizeRendererInit` /
+  `lifecycle_runtime.beginRendererShutdown`, removing inlined hook install +
+  backend init + global registration and matching shutdown sequencing from
+  `renderer.zig`.
+- The remaining global poll/time wrappers (`pollInputEvents`, `waitTime`) now
+  also route through `renderer_global_runtime.zig`, leaving renderer-root
+  global entrypoints as thin delegates for those runtime helper paths too.
+- The remaining renderer-root `sdl` alias is gone too; hit-test callback types
+  and constants now use `sdl_api.c` directly so shared renderer code no longer
+  depends on a local SDL alias surface.
 - The macOS OpenGL editor retained-presentable bypass in
   `editor_widget_draw.zig` no longer keys off `renderer.backend` + OS tags;
   `capability_contract.RendererCapabilities` now exposes
   `editor_presentable_cache_compatible`, and OpenGL reports false on macOS
   full UI while Metal leaves it enabled so widget code stays capability-shaped.
 - Metal-only immediate draw helpers (raw RGB/RGBA image enqueue, sampled text,
-  terminal cell runs, atlas sample char) now live on the shared `BackendOps`
-  table with OpenGL no-op stubs; `text_runtime`, Kitty placement, terminal
-  metal fallbacks, font sample view, and macOS text diagnostic call
-  `Renderer` methods instead of importing `metal_backend.zig` for those paths.
+  terminal cell runs, atlas sample char) now route through backend-owned
+  helpers (`metal_backend.zig`) from call sites that need them, while shared
+  draw submission continues converging on `enqueueSurfaceDraw`.
 
 ## Live Contradiction Centers
 
@@ -322,3 +498,14 @@ Progress note, 2026-04-05:
 - [ ] Use OpenGL and Metal as the proof pair for every structural backend cut.
 - [ ] Keep terminal/text execution work subordinate to the shared contract
   instead of letting it redefine the backend architecture by momentum.
+
+## Defect Class Watchlist (for later GL/Metal scrutiny pass)
+
+- stateful overlay invalidation drift: backend present/reuse fast paths that
+  skip redraw while cursor/hover/composition state changed (generation-stable
+  frames masking visual stale artifacts)
+- presentable reuse truth drift: one backend reporting `presentableAvailable`
+  true while lifecycle state (size/scroll/restore/update completion) is not
+  equivalent to the other backend
+- partial-plan vs fast-present interaction drift: damage/partial math that is
+  correct for terminal content deltas but omits overlay/trace-visible state

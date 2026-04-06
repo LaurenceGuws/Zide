@@ -6,6 +6,7 @@ const metal_text_diagnostic_view = @import("metal_text_diagnostic_view.zig");
 const terminal_font_mod = @import("terminal_font.zig");
 const renderer_mod = @import("renderer.zig");
 const metal_text_sample_runtime = @import("renderer/metal_text_sample_runtime.zig");
+const metal_backend = @import("renderer/metal_backend.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
 const iface = @import("renderer/interface.zig");
 const text_draw = @import("renderer/text_draw.zig");
@@ -24,7 +25,7 @@ const SampleFontFace = struct {
     fn init(allocator: std.mem.Allocator, renderer: *Renderer, path: [*:0]const u8, layout_size: f32) !SampleFontFace {
         const raster_scale = renderer.logicalLengthToRaster(1.0);
         const raster_size = renderer.logicalLengthToRaster(layout_size);
-        const atlas_upload_hooks = renderer.terminalFontAtlasUploadHooksForRenderer() orelse switch (renderer.capabilities().planned_atlas_storage_mode) {
+        const atlas_upload_hooks = metal_backend.terminalFontAtlasUploadHooksForRenderer(renderer) orelse switch (renderer.capabilities().planned_atlas_storage_mode) {
             .metal_textures => return error.MetalBackendContextUnavailable,
             else => null,
         };
@@ -213,7 +214,7 @@ pub const FontSampleView = struct {
                 @intFromFloat(std.math.round(swatch_size + 12.0)),
                 theme.ui_panel_overlay,
             );
-            _ = r.drawSampleTextRequest(metal_text_sample_runtime.SampleTextRequest{
+            _ = metal_backend.drawSampleTextRequest(r, metal_text_sample_runtime.SampleTextRequest{
                 .text = "METAL\nTEXT",
                 .x = swatch_x,
                 .y = swatch_y,

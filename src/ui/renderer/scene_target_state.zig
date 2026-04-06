@@ -1,9 +1,9 @@
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const platform_window = @import("../../platform/window_metrics.zig");
-const presentable_target = @import("presentable_target.zig");
+const gl_presentable_target = @import("gl_presentable_target.zig");
 
-const RenderTarget = presentable_target.PresentableTarget;
+const RenderTarget = gl_presentable_target.PresentableTarget;
 
 pub const SceneTargetInvalidation = packed struct(u8) {
     uninitialized: bool = false,

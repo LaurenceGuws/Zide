@@ -1,3 +1,7 @@
+//! OpenGL-only retained presentable targets (FBO + texture). Neutral surface
+//! identity and draw payloads live in `presentable_contract.zig`; this module
+//! is intentionally GL-shaped per execution order §2 in `docs/todo/ui/renderer.md`.
+
 const gl = @import("gl.zig");
 const types = @import("types.zig");
 

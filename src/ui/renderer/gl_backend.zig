@@ -2,33 +2,45 @@ const std = @import("std");
 const builtin = @import("builtin");
 const gl = @import("gl.zig");
 const gl_resources = @import("gl_resources.zig");
-const opengl_frame_runtime = @import("opengl_frame_runtime.zig");
 const draw_ops = @import("draw_ops.zig");
 const shape_utils = @import("shape_utils.zig");
 const texture_draw = @import("texture_draw.zig");
 const texture_utils = @import("texture_utils.zig");
 const capability_contract = @import("capability_contract.zig");
-const iface = @import("interface.zig");
+const bootstrap_contract = @import("bootstrap_contract.zig");
 const metal_text_sample_runtime = @import("metal_text_sample_runtime.zig");
-const terminal_font_mod = @import("../terminal_font.zig");
 const presentable_contract = @import("presentable_contract.zig");
-const presentable_target = @import("presentable_target.zig");
+const gl_presentable_target = @import("gl_presentable_target.zig");
 const scene_target_state = @import("scene_target_state.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
 const platform_window = @import("../../platform/window_metrics.zig");
 const app_logger = @import("../../app_logger.zig");
 const types = @import("types.zig");
 const surface_draw = @import("surface_draw.zig");
+const window_init = @import("window_init.zig");
 
 const sdl = gl.c;
 
-pub const RenderTarget = presentable_target.PresentableTarget;
+pub const RenderTarget = gl_presentable_target.PresentableTarget;
 const PresentableSurface = presentable_contract.PresentableSurface;
 const PresentableDraw = presentable_contract.PresentableDraw;
 const PresentableInfo = presentable_contract.PresentableInfo;
 const SceneTargetContract = scene_target_state.SceneTargetContract;
 const SceneTargetInvalidation = scene_target_state.SceneTargetInvalidation;
 const RendererCapabilities = capability_contract.RendererCapabilities;
+
+fn supportsRuntimeProfileForBootstrap(_: bootstrap_contract.RendererRuntimeProfile) bool {
+    return true;
+}
+
+pub fn bootstrapOps() bootstrap_contract.BackendBootstrapOps {
+    return .{
+        .graphics_binding = .opengl,
+        .supportsRuntimeProfile = supportsRuntimeProfileForBootstrap,
+        .configureWindowAttributes = configureWindowAttributes,
+        .runStartupSmoke = runStartupSmokeForBootstrap,
+    };
+}
 
 pub fn capabilities(renderer: anytype) RendererCapabilities {
     const full_ui = renderer.runtime_profile == .full_ui;
@@ -92,7 +104,7 @@ pub fn configureWindowAttributes() !void {
     try requireGlAttribute(sdl.SDL_GL_DOUBLEBUFFER, 1);
 }
 
-pub fn createBackendContext(window: *sdl.SDL_Window) !sdl.SDL_GLContext {
+pub fn createBackendContext(window: *sdl.SDL_Window) !?sdl_api.c.SDL_GLContext {
     const gl_context = sdl_api.glCreateContext(window) orelse return error.SdlGlContextFailed;
     if (!sdl_api.glMakeCurrent(window, gl_context)) {
         app_logger.logger("sdl.gl").logStdout(.@"error", "SDL_GL_MakeCurrent failed err={s}", .{sdl_api.getError()});
@@ -102,10 +114,14 @@ pub fn createBackendContext(window: *sdl.SDL_Window) !sdl.SDL_GLContext {
         app_logger.logger("sdl.gl").logStdout(.@"error", "SDL_GL_SetSwapInterval failed interval=1 err={s}", .{sdl_api.getError()});
         return error.SdlSwapIntervalFailed;
     }
+    try gl.load();
     return gl_context;
 }
 
 pub fn initRuntime(renderer: anytype) !void {
+    if (renderer.opengl_runtime.context == null) {
+        renderer.opengl_runtime.context = try createBackendContext(renderer.window);
+    }
     try initGlResources(renderer);
     renderer.opengl_runtime.resources_ready = true;
     try renderer.initFonts();
@@ -119,27 +135,10 @@ pub fn configureRuntimePolicy(renderer: anytype) void {
     }
 }
 
-pub fn runStartupSmoke(window: *sdl.SDL_Window) !bool {
-    const gl_context = try createBackendContext(window);
+pub fn runStartupSmokeForBootstrap(window: *sdl.SDL_Window, _: window_init.RenderSurfaceAttachment, _: i32, _: i32) !bool {
+    const gl_context = (try createBackendContext(window)) orelse return error.SdlGlContextFailed;
     defer sdl_api.glDeleteContext(gl_context);
-    try gl.load();
     return true;
-}
-
-pub fn beginFrame(renderer: anytype) void {
-    opengl_frame_runtime.beginFrame(renderer);
-}
-
-pub fn submitFrame(renderer: anytype) @import("present_trace_runtime.zig").FrameSubmission {
-    return opengl_frame_runtime.submitFrame(renderer);
-}
-
-pub fn dumpWindowScreenshotPpm(renderer: anytype, path: []const u8) !void {
-    return opengl_frame_runtime.dumpWindowScreenshotPpm(renderer, path);
-}
-
-pub fn dumpWindowScreenshotPpmSized(renderer: anytype, path: []const u8, out_width: i32, out_height: i32) !void {
-    return opengl_frame_runtime.dumpWindowScreenshotPpmSized(renderer, path, out_width, out_height);
 }
 
 pub fn sceneTargetInvalidationForRefresh(
@@ -267,9 +266,10 @@ pub fn drawSolidRect(renderer: anytype, x: f32, y: f32, w: f32, h: f32, color: t
 /// Interprets one shared `SurfaceDraw` on the OpenGL path immediately (Metal
 /// queues the same union for end-of-frame replay). `.solid` and `.atlas` are
 /// supported when the renderer is in a compatible text mode (atlas uses
-/// `terminal_font` coverage/color textures). `.raw_image` returns false and does
-/// not take ownership (opaque Metal texture in the union; use `drawRawImageRgba`
-/// / `drawRawImageRgb` for CPU bytes on OpenGL).
+/// `terminal_font` coverage/color textures). `.raw_image` is supported when
+/// `RawImageTexture` is the `.opengl` variant (`types.Texture`); the draw does
+/// not take ownership. The `.metal` variant returns false (use CPU uploads via
+/// `drawRawImageRgba` / `drawRawImageRgb` when you do not have a GL texture).
 pub fn submitSurfaceDrawImmediate(renderer: anytype, draw: surface_draw.SurfaceDraw) bool {
     switch (draw) {
         .solid => |s| {
@@ -327,7 +327,40 @@ pub fn submitSurfaceDrawImmediate(renderer: anytype, draw: surface_draw.SurfaceD
             draw_ops.drawTextureRect(renderer, tex, sample.source_rect, dest, sample.tint, bg, kind);
             return true;
         },
-        .raw_image => return false,
+        .raw_image => |img| {
+            const tex = switch (img.texture) {
+                .opengl => |t| t,
+                .metal => return false,
+            };
+            if (tex.id == 0 or tex.width <= 0 or tex.height <= 0) return false;
+            const source_rect = img.source_rect orelse types.Rect{
+                .x = 0,
+                .y = 0,
+                .width = @floatFromInt(tex.width),
+                .height = @floatFromInt(tex.height),
+            };
+            const x = renderer.rasterLengthToLogical(img.dest_rect.x);
+            const y = renderer.rasterLengthToLogical(img.dest_rect.y);
+            const w = renderer.rasterLengthToLogical(img.dest_rect.width);
+            const h = renderer.rasterLengthToLogical(img.dest_rect.height);
+            if (w <= 0 or h <= 0) return false;
+            const dest = types.Rect{ .x = x, .y = y, .width = w, .height = h };
+            const bg = renderer.text_render.bg_rgba;
+            if (img.clip_rect) |pc| {
+                if (pc.width <= 0 or pc.height <= 0) return false;
+                renderer.beginClip(
+                    @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.x)))),
+                    @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.y)))),
+                    @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.width)))),
+                    @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.height)))),
+                );
+                defer renderer.endClip();
+                draw_ops.drawTextureRect(renderer, tex, source_rect, dest, img.tint, bg, .rgba);
+                return true;
+            }
+            draw_ops.drawTextureRect(renderer, tex, source_rect, dest, img.tint, bg, .rgba);
+            return true;
+        },
     }
 }
 
@@ -1170,78 +1203,56 @@ fn createTextureEmpty(width: i32, height: i32, filter: i32) types.Texture {
     return .{ .id = id, .width = width, .height = height };
 }
 
-fn drawEphemeralTextureRectWithActiveClip(
-    renderer: anytype,
-    texture: types.Texture,
-    src: types.Rect,
-    dest: types.Rect,
-    tint: types.Rgba,
-    bg: types.Rgba,
-) void {
-    var clip_pushed = false;
-    if (renderer.currentClipRect()) |clip_logical| {
-        const pc = metal_text_sample_runtime.pixelClipRect(renderer, clip_logical) orelse return;
-        if (pc.width <= 0 or pc.height <= 0) return;
-        renderer.beginClip(
-            @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.x)))),
-            @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.y)))),
-            @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.width)))),
-            @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.height)))),
-        );
-        clip_pushed = true;
-    }
-    defer if (clip_pushed) renderer.endClip();
-    draw_ops.drawTextureRect(renderer, texture, src, dest, tint, bg, .rgba);
-}
-
 pub fn drawRawImageRgba(renderer: anytype, width: i32, height: i32, data: []const u8, dest: types.Rect, tint: types.Rgba) bool {
     if (width <= 0 or height <= 0) return false;
     if (@as(usize, @intCast(width * height * 4)) > data.len) return false;
     if (dest.width <= 0 or dest.height <= 0) return false;
-    if (renderer.currentClipRect()) |clip_logical| {
-        const pc = metal_text_sample_runtime.pixelClipRect(renderer, clip_logical) orelse return false;
+    const clip_rect = if (renderer.currentClipRect()) |clip_logical|
+        metal_text_sample_runtime.pixelClipRect(renderer, clip_logical)
+    else
+        null;
+    if (clip_rect) |pc| {
         if (pc.width <= 0 or pc.height <= 0) return false;
     }
     var tex = texture_utils.createTextureFromRgba(width, height, data, gl.c.GL_NEAREST) orelse return false;
     defer texture_utils.destroyTexture(&tex);
-    const src = types.Rect{
-        .x = 0,
-        .y = 0,
-        .width = @floatFromInt(width),
-        .height = @floatFromInt(height),
-    };
-    drawEphemeralTextureRectWithActiveClip(renderer, tex, src, dest, tint, renderer.text_render.bg_rgba);
-    return true;
+    return submitSurfaceDrawImmediate(renderer, .{ .raw_image = .{
+        .texture = .{ .opengl = tex },
+        .source_rect = null,
+        .dest_rect = .{
+            .x = renderer.logicalLengthToRaster(dest.x),
+            .y = renderer.logicalLengthToRaster(dest.y),
+            .width = renderer.logicalLengthToRaster(dest.width),
+            .height = renderer.logicalLengthToRaster(dest.height),
+        },
+        .tint = tint,
+        .clip_rect = clip_rect,
+    } });
 }
 
 pub fn drawRawImageRgb(renderer: anytype, width: i32, height: i32, data: []const u8, dest: types.Rect, tint: types.Rgba) bool {
     if (width <= 0 or height <= 0) return false;
     if (@as(usize, @intCast(width * height * 3)) > data.len) return false;
     if (dest.width <= 0 or dest.height <= 0) return false;
-    if (renderer.currentClipRect()) |clip_logical| {
-        const pc = metal_text_sample_runtime.pixelClipRect(renderer, clip_logical) orelse return false;
+    const clip_rect = if (renderer.currentClipRect()) |clip_logical|
+        metal_text_sample_runtime.pixelClipRect(renderer, clip_logical)
+    else
+        null;
+    if (clip_rect) |pc| {
         if (pc.width <= 0 or pc.height <= 0) return false;
     }
     var tex = texture_utils.createTextureFromRgb(width, height, data, gl.c.GL_NEAREST) orelse return false;
     defer texture_utils.destroyTexture(&tex);
-    const src = types.Rect{
-        .x = 0,
-        .y = 0,
-        .width = @floatFromInt(width),
-        .height = @floatFromInt(height),
-    };
-    drawEphemeralTextureRectWithActiveClip(renderer, tex, src, dest, tint, renderer.text_render.bg_rgba);
-    return true;
-}
-
-pub fn drawSampleTextRequest(_: anytype, _: metal_text_sample_runtime.SampleTextRequest) bool {
-    return false;
-}
-
-pub fn drawTerminalCellRun(_: anytype, _: *terminal_font_mod.TerminalFont, _: metal_text_sample_runtime.TerminalCellRunRequest) bool {
-    return false;
-}
-
-pub fn drawAtlasSampleChar(_: anytype, _: u8, _: f32, _: f32, _: iface.Color) bool {
-    return false;
+    return submitSurfaceDrawImmediate(renderer, .{ .raw_image = .{
+        .texture = .{ .opengl = tex },
+        .source_rect = null,
+        .dest_rect = .{
+            .x = renderer.logicalLengthToRaster(dest.x),
+            .y = renderer.logicalLengthToRaster(dest.y),
+            .width = renderer.logicalLengthToRaster(dest.width),
+            .height = renderer.logicalLengthToRaster(dest.height),
+        },
+        .tint = tint,
+        .clip_rect = clip_rect,
+    } });
 }

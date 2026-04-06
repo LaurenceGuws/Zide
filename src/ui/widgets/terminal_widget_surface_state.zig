@@ -1,9 +1,13 @@
 const kitty_mod = @import("terminal_widget_kitty.zig");
 const presentation_state_mod = @import("terminal_widget_presentation_state.zig");
 const view_state = @import("terminal_widget_view_state.zig");
+const terminal_types = @import("../../terminal/model/types.zig");
+const std = @import("std");
+const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
 
 const KittyState = kitty_mod.KittyState;
 const PresentationState = presentation_state_mod.PresentationState;
+const CursorPos = terminal_publication.CursorPos;
 
 pub const TerminalWidgetSurfaceState = struct {
     pub const PresentationUpdateDelta = struct {
@@ -12,6 +16,7 @@ pub const TerminalWidgetSurfaceState = struct {
         generation_changed: bool,
         clear_generation_changed: bool,
         presentable_ready: bool,
+        cursor_changed: bool,
     };
 
     kitty: KittyState,
@@ -83,6 +88,9 @@ pub const TerminalWidgetSurfaceState = struct {
         self: *const TerminalWidgetSurfaceState,
         terminal_view: view_state.TerminalViewModel,
         surface_geometry: anytype,
+        draw_cursor: bool,
+        cursor: CursorPos,
+        cursor_style: terminal_types.CursorStyle,
     ) PresentationUpdateDelta {
         return .{
             .cell_metrics_changed = surface_geometry.cell_w_i != self.presentation.last_cell_w_i or
@@ -91,13 +99,45 @@ pub const TerminalWidgetSurfaceState = struct {
             .generation_changed = terminal_view.generation != self.presentation.last_render_generation,
             .clear_generation_changed = terminal_view.clear_generation != self.presentation.last_render_clear_generation,
             .presentable_ready = self.presentation.terminal_presentable_ready,
+            .cursor_changed = self.cursorPresentationChanged(draw_cursor, cursor, cursor_style),
         };
+    }
+
+    pub fn cursorPresentationChanged(
+        self: *const TerminalWidgetSurfaceState,
+        draw_cursor: bool,
+        cursor: CursorPos,
+        cursor_style: terminal_types.CursorStyle,
+    ) bool {
+        if (self.presentation.last_cursor_visible != draw_cursor) return true;
+        if (!draw_cursor) return false;
+        return self.presentation.last_cursor_row != @as(u16, @intCast(cursor.row)) or
+            self.presentation.last_cursor_col != @as(u16, @intCast(cursor.col)) or
+            self.presentation.last_cursor_shape != @as(u8, @intFromEnum(cursor_style.shape));
+    }
+
+    pub fn overlayPresentationChanged(
+        self: *const TerminalWidgetSurfaceState,
+        hover_link_id: u32,
+        composing_active: bool,
+        composing_hash: u64,
+    ) bool {
+        if (self.presentation.last_hover_link_id != hover_link_id) return true;
+        if (self.presentation.last_composing_active != composing_active) return true;
+        if (self.presentation.last_composing_hash != composing_hash) return true;
+        return false;
     }
 
     pub fn notePresentationUpdated(
         self: *TerminalWidgetSurfaceState,
         terminal_view: view_state.TerminalViewModel,
         surface_geometry: anytype,
+        draw_cursor: bool,
+        cursor: CursorPos,
+        cursor_style: terminal_types.CursorStyle,
+        hover_link_id: u32,
+        composing_active: bool,
+        composing_hash: u64,
     ) void {
         self.presentation.terminal_presentable_ready = true;
         self.presentation.last_render_generation = terminal_view.generation;
@@ -105,6 +145,15 @@ pub const TerminalWidgetSurfaceState = struct {
         self.presentation.last_cell_w_i = surface_geometry.cell_w_i;
         self.presentation.last_cell_h_i = surface_geometry.cell_h_i;
         self.presentation.last_render_scale = surface_geometry.render_scale;
+        self.presentation.last_cursor_visible = draw_cursor;
+        if (draw_cursor) {
+            self.presentation.last_cursor_row = @intCast(cursor.row);
+            self.presentation.last_cursor_col = @intCast(cursor.col);
+            self.presentation.last_cursor_shape = @intFromEnum(cursor_style.shape);
+        }
+        self.presentation.last_hover_link_id = hover_link_id;
+        self.presentation.last_composing_active = composing_active;
+        self.presentation.last_composing_hash = composing_hash;
     }
 
     pub fn notePresentableAvailability(self: *TerminalWidgetSurfaceState, available: bool) bool {
@@ -120,3 +169,42 @@ pub const TerminalWidgetSurfaceState = struct {
         return self.presentation.ensurePartialDrawPlan(allocator, rows);
     }
 };
+
+test "cursorPresentationChanged tracks visible/position/shape transitions" {
+    var state = TerminalWidgetSurfaceState.init(std.testing.allocator);
+    defer state.deinit(std.testing.allocator);
+
+    const block_style = terminal_types.CursorStyle{ .shape = .block, .blink = true };
+    const bar_style = terminal_types.CursorStyle{ .shape = .bar, .blink = true };
+    const cursor_a = CursorPos{ .row = 2, .col = 4 };
+    const cursor_b = CursorPos{ .row = 2, .col = 5 };
+
+    // No cached cursor yet, first visible draw must invalidate.
+    try std.testing.expect(state.cursorPresentationChanged(true, cursor_a, block_style));
+
+    state.presentation.last_cursor_visible = true;
+    state.presentation.last_cursor_row = @intCast(cursor_a.row);
+    state.presentation.last_cursor_col = @intCast(cursor_a.col);
+    state.presentation.last_cursor_shape = @intFromEnum(block_style.shape);
+    try std.testing.expect(!state.cursorPresentationChanged(true, cursor_a, block_style));
+    try std.testing.expect(state.cursorPresentationChanged(true, cursor_b, block_style));
+    try std.testing.expect(state.cursorPresentationChanged(true, cursor_a, bar_style));
+
+    // Visibility transitions must invalidate too.
+    state.presentation.last_cursor_visible = false;
+    try std.testing.expect(state.cursorPresentationChanged(true, cursor_a, block_style));
+}
+
+test "overlayPresentationChanged tracks hover and composing signature" {
+    var state = TerminalWidgetSurfaceState.init(std.testing.allocator);
+    defer state.deinit(std.testing.allocator);
+
+    state.presentation.last_hover_link_id = 17;
+    state.presentation.last_composing_active = true;
+    state.presentation.last_composing_hash = 0xABCD;
+
+    try std.testing.expect(!state.overlayPresentationChanged(17, true, 0xABCD));
+    try std.testing.expect(state.overlayPresentationChanged(18, true, 0xABCD));
+    try std.testing.expect(state.overlayPresentationChanged(17, false, 0xABCD));
+    try std.testing.expect(state.overlayPresentationChanged(17, true, 0x1234));
+}

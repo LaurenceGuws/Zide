@@ -19,6 +19,15 @@ pub const PresentationState = struct {
     last_cell_h_i: i32 = 0,
     last_render_scale: f32 = 0,
 
+    last_cursor_visible: bool = false,
+    last_cursor_row: u16 = 0,
+    last_cursor_col: u16 = 0,
+    last_cursor_shape: u8 = 0,
+
+    last_hover_link_id: u32 = 0,
+    last_composing_active: bool = false,
+    last_composing_hash: u64 = 0,
+
     pub const PresentationPartialDrawPlan = struct {
         rows: []bool,
         span_counts: []u8,

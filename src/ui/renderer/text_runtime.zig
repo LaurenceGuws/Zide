@@ -12,6 +12,7 @@ const app_logger = @import("../../app_logger.zig");
 const types = @import("types.zig");
 const renderer_root = @import("../renderer.zig");
 const metal_text_sample_runtime = @import("metal_text_sample_runtime.zig");
+const metal_backend = @import("metal_backend.zig");
 
 const Color = renderer_root.Color;
 const Renderer = renderer_root.Renderer;
@@ -127,7 +128,7 @@ fn drawMetalMonospaceTextFallback(
 ) bool {
     if (self.plannedTextRenderingMode() != .metal_texture_atlas) return false;
     if (text.len == 0) return false;
-    return self.drawTerminalCellRun(&self.editor_font, .{
+    return metal_backend.drawTerminalCellRun(self, &self.editor_font, .{
         .text = text,
         .x = x,
         .y = y,
@@ -243,7 +244,7 @@ pub fn measureIconTextWidth(self: *Renderer, text: []const u8) f32 {
 pub fn drawChar(self: *Renderer, char: u8, x: f32, y: f32, color: Color) void {
     if (!textRenderingAvailable(self)) {
         if (self.plannedTextRenderingMode() == .metal_texture_atlas) {
-            _ = self.drawAtlasSampleChar(char, x, y, color);
+            _ = metal_backend.drawAtlasSampleChar(self, char, x, y, color);
         }
         return;
     }
@@ -266,7 +267,7 @@ fn drawMetalTerminalCodepointCellFallback(
     const encoded_len = std.unicode.utf8CodepointSequenceLength(scalar) catch return false;
     var buf: [4]u8 = undefined;
     _ = std.unicode.utf8Encode(scalar, buf[0..encoded_len]) catch return false;
-    return self.drawTerminalCellRun(&self.terminal_font, .{
+    return metal_backend.drawTerminalCellRun(self, &self.terminal_font, .{
         .text = buf[0..encoded_len],
         .x = x,
         .y = y,
@@ -301,7 +302,7 @@ fn drawMetalTerminalGraphemeCellFallback(
             len += encoded_len;
         }
     }
-    return self.drawTerminalCellRun(&self.terminal_font, .{
+    return metal_backend.drawTerminalCellRun(self, &self.terminal_font, .{
         .text = buf[0..len],
         .x = x,
         .y = y,
