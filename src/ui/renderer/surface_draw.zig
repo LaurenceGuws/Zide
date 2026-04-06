@@ -21,10 +21,18 @@ pub const AtlasSampleDraw = struct {
     clip_rect: ?PixelClipRect = null,
 };
 
-pub const RawImageTexture = struct {
+/// Metal path: `texture` is an `MTLTexture*`; dimensions match the texture.
+/// OpenGL path: immediate `SurfaceDraw.raw_image` uses `types.Texture` without
+/// ownership transfer (caller keeps the GL texture alive through the draw).
+pub const MetalRawImageTexture = struct {
     texture: *anyopaque,
     width: i32,
     height: i32,
+};
+
+pub const RawImageTexture = union(enum) {
+    metal: MetalRawImageTexture,
+    opengl: types.Texture,
 };
 
 pub const RawImageDraw = struct {

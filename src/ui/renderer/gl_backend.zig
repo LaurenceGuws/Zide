@@ -267,9 +267,10 @@ pub fn drawSolidRect(renderer: anytype, x: f32, y: f32, w: f32, h: f32, color: t
 /// Interprets one shared `SurfaceDraw` on the OpenGL path immediately (Metal
 /// queues the same union for end-of-frame replay). `.solid` and `.atlas` are
 /// supported when the renderer is in a compatible text mode (atlas uses
-/// `terminal_font` coverage/color textures). `.raw_image` returns false and does
-/// not take ownership (opaque Metal texture in the union; use `drawRawImageRgba`
-/// / `drawRawImageRgb` for CPU bytes on OpenGL).
+/// `terminal_font` coverage/color textures). `.raw_image` is supported when
+/// `RawImageTexture` is the `.opengl` variant (`types.Texture`); the draw does
+/// not take ownership. The `.metal` variant returns false (use CPU uploads via
+/// `drawRawImageRgba` / `drawRawImageRgb` when you do not have a GL texture).
 pub fn submitSurfaceDrawImmediate(renderer: anytype, draw: surface_draw.SurfaceDraw) bool {
     switch (draw) {
         .solid => |s| {
@@ -327,7 +328,40 @@ pub fn submitSurfaceDrawImmediate(renderer: anytype, draw: surface_draw.SurfaceD
             draw_ops.drawTextureRect(renderer, tex, sample.source_rect, dest, sample.tint, bg, kind);
             return true;
         },
-        .raw_image => return false,
+        .raw_image => |img| {
+            const tex = switch (img.texture) {
+                .opengl => |t| t,
+                .metal => return false,
+            };
+            if (tex.id == 0 or tex.width <= 0 or tex.height <= 0) return false;
+            const source_rect = img.source_rect orelse types.Rect{
+                .x = 0,
+                .y = 0,
+                .width = @floatFromInt(tex.width),
+                .height = @floatFromInt(tex.height),
+            };
+            const x = renderer.rasterLengthToLogical(img.dest_rect.x);
+            const y = renderer.rasterLengthToLogical(img.dest_rect.y);
+            const w = renderer.rasterLengthToLogical(img.dest_rect.width);
+            const h = renderer.rasterLengthToLogical(img.dest_rect.height);
+            if (w <= 0 or h <= 0) return false;
+            const dest = types.Rect{ .x = x, .y = y, .width = w, .height = h };
+            const bg = renderer.text_render.bg_rgba;
+            if (img.clip_rect) |pc| {
+                if (pc.width <= 0 or pc.height <= 0) return false;
+                renderer.beginClip(
+                    @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.x)))),
+                    @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.y)))),
+                    @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.width)))),
+                    @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.height)))),
+                );
+                defer renderer.endClip();
+                draw_ops.drawTextureRect(renderer, tex, source_rect, dest, img.tint, bg, .rgba);
+                return true;
+            }
+            draw_ops.drawTextureRect(renderer, tex, source_rect, dest, img.tint, bg, .rgba);
+            return true;
+        },
     }
 }
 

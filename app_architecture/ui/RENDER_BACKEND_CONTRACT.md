@@ -104,8 +104,9 @@ Metal appends to the end-of-frame replay queue; OpenGL interprets `.solid` and
 `dest_rect` / atlas `dest_x`/`dest_y` converted back to logical coordinates to
 match how Metal enqueues those draws). Atlas samples on OpenGL require
 `text_rendering_mode == gl_texture_atlas` and use `terminal_font` coverage/color
-textures. `.raw_image` is still not interpreted on the OpenGL `enqueueSurfaceDraw` path
-(returns false; handle is Metal-native). For CPU pixel buffers on OpenGL, the
+textures. `.raw_image` on OpenGL immediate submission interprets only the `.opengl`
+`RawImageTexture` variant (`types.Texture`); the `.metal` variant still
+returns false. For CPU pixel buffers on OpenGL, the
 `BackendOps` `drawRawImageRgba` / `drawRawImageRgb` entrypoints upload ephemeral
 textures and draw immediately, nesting clip state from the active renderer clip
 when present (same raster round-trip as other immediate GL `SurfaceDraw`

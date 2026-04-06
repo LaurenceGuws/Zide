@@ -93,8 +93,9 @@ Progress note, 2026-04-05:
   immediately via `gl_backend.submitSurfaceDrawImmediate` when the GL text
   atlas path is active. `Renderer.enqueueSurfaceDraw` is the shared entrypoint.
   Metal `appendSolidRect` / `appendAtlasSample` route through `enqueueSurfaceDraw`.
-  OpenGL `.raw_image` through `enqueueSurfaceDraw` remains unimplemented (opaque
-  Metal texture handle in the union). OpenGL   `drawRawImageRgba` /
+  OpenGL `.raw_image` through `enqueueSurfaceDraw` works when `RawImageTexture`
+  is the `.opengl` branch; the `.metal` branch is still Metal-queue-only.
+  OpenGL `drawRawImageRgba` /
   `drawRawImageRgb` now upload ephemeral `GL_NEAREST` textures and draw via
   `draw_ops.drawTextureRect` (Kitty placement path), respecting the active clip
   stack the same way as other immediate GL draws (nested `beginClip` /
