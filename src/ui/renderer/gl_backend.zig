@@ -38,8 +38,6 @@ pub fn bootstrapOps() bootstrap_contract.BackendBootstrapOps {
         .graphics_binding = .opengl,
         .supportsRuntimeProfile = supportsRuntimeProfileForBootstrap,
         .configureWindowAttributes = configureWindowAttributes,
-        .createBackendContext = createBackendContext,
-        .destroyBackendContext = destroyBackendContextForBootstrap,
         .runStartupSmoke = runStartupSmokeForBootstrap,
     };
 }
@@ -106,10 +104,6 @@ pub fn configureWindowAttributes() !void {
     try requireGlAttribute(sdl.SDL_GL_DOUBLEBUFFER, 1);
 }
 
-pub fn destroyBackendContextForBootstrap(context: ?sdl_api.c.SDL_GLContext) void {
-    if (context) |value| sdl_api.glDeleteContext(value);
-}
-
 pub fn createBackendContext(window: *sdl.SDL_Window) !?sdl_api.c.SDL_GLContext {
     const gl_context = sdl_api.glCreateContext(window) orelse return error.SdlGlContextFailed;
     if (!sdl_api.glMakeCurrent(window, gl_context)) {
@@ -125,6 +119,9 @@ pub fn createBackendContext(window: *sdl.SDL_Window) !?sdl_api.c.SDL_GLContext {
 }
 
 pub fn initRuntime(renderer: anytype) !void {
+    if (renderer.opengl_runtime.context == null) {
+        renderer.opengl_runtime.context = try createBackendContext(renderer.window);
+    }
     try initGlResources(renderer);
     renderer.opengl_runtime.resources_ready = true;
     try renderer.initFonts();

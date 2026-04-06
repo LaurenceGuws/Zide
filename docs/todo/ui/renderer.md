@@ -369,6 +369,10 @@ Progress note, 2026-04-05:
 - Runtime-profile support policy now routes through backend bootstrap ops
   (`supportsRuntimeProfile`) instead of `renderer.zig` carrying a backend-label
   gate for Metal full-ui/macOS readiness inline.
+- `renderer.init()` no longer performs backend-context create/destroy through
+  bootstrap hooks; OpenGL context ownership moved into
+  `gl_backend.initRuntime()` and the bootstrap contract dropped the temporary
+  context lifecycle function-pointer slots.
 - The macOS OpenGL editor retained-presentable bypass in
   `editor_widget_draw.zig` no longer keys off `renderer.backend` + OS tags;
   `capability_contract.RendererCapabilities` now exposes

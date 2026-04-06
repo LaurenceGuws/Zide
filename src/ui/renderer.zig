@@ -804,9 +804,6 @@ pub const Renderer = struct {
             return error.RendererBackendRuntimeNotReady;
         }
 
-        const gl_context = try bootstrap_ops.createBackendContext(window);
-        errdefer bootstrap_ops.destroyBackendContext(gl_context);
-
         var renderer = try allocator.create(Renderer);
         errdefer allocator.destroy(renderer);
 
@@ -850,7 +847,7 @@ pub const Renderer = struct {
             .render_host = render_host,
             .render_surface_attachment = render_surface_attachment,
             .window = window,
-            .opengl_runtime = .{ .context = gl_context },
+            .opengl_runtime = .{},
             .metal_runtime = .{},
             .fonts_ready = false,
             .width = display_metrics.window_w,

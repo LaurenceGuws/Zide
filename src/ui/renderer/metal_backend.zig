@@ -61,8 +61,6 @@ pub fn bootstrapOps() bootstrap_contract.BackendBootstrapOps {
         .graphics_binding = .metal,
         .supportsRuntimeProfile = supportsRuntimeProfileForBootstrap,
         .configureWindowAttributes = configureWindowAttributes,
-        .createBackendContext = createBackendContextForBootstrap,
-        .destroyBackendContext = destroyBackendContextForBootstrap,
         .runStartupSmoke = runStartupSmokeForBootstrap,
     };
 }
@@ -1167,12 +1165,6 @@ pub fn initRuntime(renderer: anytype) !void {
 }
 
 pub fn configureWindowAttributes() !void {}
-
-pub fn destroyBackendContextForBootstrap(_: ?sdl_api.c.SDL_GLContext) void {}
-
-pub fn createBackendContextForBootstrap(_: *sdl_api.c.SDL_Window) !?sdl_api.c.SDL_GLContext {
-    return null;
-}
 
 pub fn runStartupSmokeForBootstrap(_: *sdl_api.c.SDL_Window, render_surface_attachment: window_init.RenderSurfaceAttachment, width: i32, height: i32) !bool {
     const host = switch (render_surface_attachment) {
