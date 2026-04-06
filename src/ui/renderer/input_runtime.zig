@@ -3,6 +3,7 @@ const app_logger = @import("../../app_logger.zig");
 const native_host = @import("../../platform/native_host.zig");
 const platform_input_events = @import("../../platform/input_events.zig");
 const input_state = @import("input_state.zig");
+const iface = @import("interface.zig");
 const text_input = @import("text_input.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
 const mouse_wheel_runtime = @import("mouse_wheel_runtime.zig");
@@ -57,6 +58,7 @@ pub fn pollInputEvents(
     }
 
     syncWindowFocusFromFlags(domain, window_log);
+    reassertFocusedTextInputBindingIfNeeded(domain, window_log);
 }
 
 fn handleEvent(
@@ -87,6 +89,7 @@ fn handleEvent(
             }
         },
         sdl_api.EVENT_KEY_DOWN => {
+            if (consumeGhostSuperKeyEvent(domain, event, window_log)) return;
             _ = platform_input_events.handleKeyDown(
                 event,
                 domain.key_down,
@@ -97,6 +100,7 @@ fn handleEvent(
             );
         },
         sdl_api.EVENT_KEY_UP => {
+            if (consumeGhostSuperKeyEvent(domain, event, window_log)) return;
             _ = platform_input_events.handleKeyUp(event, domain.key_down, domain.key_released);
         },
         sdl_api.EVENT_TEXT_INPUT => {
@@ -149,6 +153,92 @@ fn syncWindowFocusFromFlags(
     applyWindowFocusState(domain, window_log, focused, "window_flags");
 }
 
+fn shouldReassertTextInputBindingForWindowChanges(changes: sdl_api.WindowChangeMask) bool {
+    return changes.moved or changes.affectsWindowRefresh();
+}
+
+fn shouldResetKeyboardStateForWindowChanges(changes: sdl_api.WindowChangeMask) bool {
+    return changes.moved or changes.display_changed or changes.display_scale_changed;
+}
+
+fn isSuperScancode(scancode: i32) bool {
+    return scancode == @as(i32, @intCast(sdl_api.c.SDL_SCANCODE_LGUI)) or
+        scancode == @as(i32, @intCast(sdl_api.c.SDL_SCANCODE_RGUI));
+}
+
+fn advanceGhostSuperQuarantine(
+    suppress_super_until_release: *bool,
+    event_type: c_uint,
+    scancode: i32,
+) bool {
+    if (!suppress_super_until_release.*) return false;
+    if (isSuperScancode(scancode)) {
+        if (event_type == sdl_api.EVENT_KEY_UP) {
+            suppress_super_until_release.* = false;
+        }
+        return true;
+    }
+    if (event_type == sdl_api.EVENT_KEY_DOWN) {
+        suppress_super_until_release.* = false;
+    }
+    return false;
+}
+
+fn consumeGhostSuperKeyEvent(
+    domain: input_state.InputDomain,
+    event: *const sdl_api.c.SDL_Event,
+    window_log: app_logger.Logger,
+) bool {
+    const scancode = sdl_api.keyScancode(event);
+    const was_quarantined = domain.suppress_super_until_release.*;
+    const consumed = advanceGhostSuperQuarantine(
+        domain.suppress_super_until_release,
+        event.type,
+        scancode,
+    );
+    if (consumed) {
+        window_log.logf(.info, "ghost super suppressed action={s} scancode={d}", .{
+            if (event.type == sdl_api.EVENT_KEY_DOWN) "press" else "release",
+            scancode,
+        });
+        return true;
+    }
+    if (was_quarantined and !domain.suppress_super_until_release.* and event.type == sdl_api.EVENT_KEY_DOWN) {
+        window_log.logf(.info, "ghost super quarantine cleared reason=non_super_key scancode={d}", .{
+            scancode,
+        });
+    }
+    return false;
+}
+
+fn reassertFocusedTextInputBindingIfNeeded(
+    domain: input_state.InputDomain,
+    window_log: app_logger.Logger,
+) void {
+    if (!domain.window_focused.*) return;
+    if (!shouldReassertTextInputBindingForWindowChanges(domain.window_changes.*)) return;
+
+    if (shouldResetKeyboardStateForWindowChanges(domain.window_changes.*)) {
+        resetKeyboardStateForFocusTransition(domain);
+        resetSdlKeyboardState();
+        window_log.logf(.info, "keyboard state reset reason=window_change moved={d} display={d} display_scale={d}", .{
+            @intFromBool(domain.window_changes.moved),
+            @intFromBool(domain.window_changes.display_changed),
+            @intFromBool(domain.window_changes.display_scale_changed),
+        });
+    }
+    sdl_api.startTextInput(domain.window);
+    text_input.reapplyRect(domain.text_input_state, domain.window);
+    window_log.logf(.info, "text input reasserted reason=window_change moved={d} resized={d} pixel_size={d} display={d} display_scale={d} exposed={d}", .{
+        @intFromBool(domain.window_changes.moved),
+        @intFromBool(domain.window_changes.resized),
+        @intFromBool(domain.window_changes.pixel_size_changed),
+        @intFromBool(domain.window_changes.display_changed),
+        @intFromBool(domain.window_changes.display_scale_changed),
+        @intFromBool(domain.window_changes.contents_exposed),
+    });
+}
+
 fn applyWindowFocusState(
     domain: input_state.InputDomain,
     window_log: app_logger.Logger,
@@ -157,6 +247,8 @@ fn applyWindowFocusState(
 ) void {
     if (domain.window_focused.* == focused) return;
 
+    resetKeyboardStateForFocusTransition(domain);
+    resetSdlKeyboardState();
     if (focused) {
         sdl_api.startTextInput(domain.window);
         text_input.reapplyRect(domain.text_input_state, domain.window);
@@ -175,6 +267,21 @@ fn applyWindowFocusState(
             @errorName(err),
         });
     };
+}
+
+fn resetKeyboardStateForFocusTransition(domain: input_state.InputDomain) void {
+    @memset(domain.key_down, false);
+    @memset(domain.key_pressed, false);
+    @memset(domain.key_repeated, false);
+    @memset(domain.key_released, false);
+    domain.key_queue.clearRetainingCapacity();
+    domain.key_queue_head.* = 0;
+    domain.suppress_super_until_release.* = true;
+}
+
+fn resetSdlKeyboardState() void {
+    sdl_api.resetKeyboard();
+    sdl_api.clearModState();
 }
 
 fn handleWindowEvent(
@@ -204,4 +311,131 @@ fn compactInputQueue(comptime T: type, queue: *std.ArrayList(T), head: *usize) v
     std.mem.copyForwards(T, queue.items[0..remaining], queue.items[head.*..queue.items.len]);
     queue.items.len = remaining;
     head.* = 0;
+}
+
+test "text input binding reasserts for moved or refreshed focused windows" {
+    try std.testing.expect(!shouldReassertTextInputBindingForWindowChanges(.{}));
+    try std.testing.expect(shouldReassertTextInputBindingForWindowChanges(.{ .moved = true }));
+    try std.testing.expect(shouldReassertTextInputBindingForWindowChanges(.{ .resized = true }));
+    try std.testing.expect(shouldReassertTextInputBindingForWindowChanges(.{ .display_changed = true }));
+    try std.testing.expect(shouldReassertTextInputBindingForWindowChanges(.{ .contents_exposed = true }));
+}
+
+test "keyboard state reset is limited to move and display transitions" {
+    try std.testing.expect(!shouldResetKeyboardStateForWindowChanges(.{}));
+    try std.testing.expect(shouldResetKeyboardStateForWindowChanges(.{ .moved = true }));
+    try std.testing.expect(shouldResetKeyboardStateForWindowChanges(.{ .display_changed = true }));
+    try std.testing.expect(shouldResetKeyboardStateForWindowChanges(.{ .display_scale_changed = true }));
+    try std.testing.expect(!shouldResetKeyboardStateForWindowChanges(.{ .resized = true }));
+    try std.testing.expect(!shouldResetKeyboardStateForWindowChanges(.{ .pixel_size_changed = true }));
+}
+
+test "ghost super quarantine suppresses super until release or normal keydown" {
+    var suppress_super_until_release = true;
+
+    try std.testing.expect(advanceGhostSuperQuarantine(
+        &suppress_super_until_release,
+        sdl_api.EVENT_KEY_DOWN,
+        @intCast(sdl_api.c.SDL_SCANCODE_LGUI),
+    ));
+    try std.testing.expect(suppress_super_until_release);
+
+    try std.testing.expect(!advanceGhostSuperQuarantine(
+        &suppress_super_until_release,
+        sdl_api.EVENT_KEY_DOWN,
+        @intCast(sdl_api.c.SDL_SCANCODE_A),
+    ));
+    try std.testing.expect(!suppress_super_until_release);
+
+    suppress_super_until_release = true;
+    try std.testing.expect(advanceGhostSuperQuarantine(
+        &suppress_super_until_release,
+        sdl_api.EVENT_KEY_UP,
+        @intCast(sdl_api.c.SDL_SCANCODE_RGUI),
+    ));
+    try std.testing.expect(!suppress_super_until_release);
+}
+
+test "keyboard state resets across focus transitions" {
+    var key_down = [_]bool{true, true, false};
+    var key_pressed = [_]bool{true, false, false};
+    var key_repeated = [_]bool{false, true, false};
+    var key_released = [_]bool{false, false, true};
+    var key_queue = std.ArrayList(input_state.KeyPress).empty;
+    defer key_queue.deinit(std.testing.allocator);
+    try key_queue.append(std.testing.allocator, .{
+        .scancode = 1,
+        .sym = 1,
+        .mod_bits = 0,
+        .repeated = false,
+    });
+    var key_queue_head: usize = 0;
+
+    var should_close = false;
+    var mouse_down = [_]bool{false} ** 1;
+    var mouse_pressed = [_]bool{false} ** 1;
+    var mouse_released = [_]bool{false} ** 1;
+    var mouse_clicks = [_]u8{0} ** 1;
+    var mouse_press_pos = [_]iface.MousePos{.{ .x = 0, .y = 0 }} ** 1;
+    var mouse_press_pos_valid = [_]bool{false} ** 1;
+    var char_queue = std.ArrayList(input_state.TextPress).empty;
+    defer char_queue.deinit(std.testing.allocator);
+    var char_queue_head: usize = 0;
+    var focus_queue = std.ArrayList(bool).empty;
+    defer focus_queue.deinit(std.testing.allocator);
+    var focus_queue_head: usize = 0;
+    var window_focused = true;
+    var suppress_super_until_release = false;
+    var composing_text = std.ArrayList(u8).empty;
+    defer composing_text.deinit(std.testing.allocator);
+    var composing_cursor: i32 = 0;
+    var composing_selection_len: i32 = 0;
+    var composing_active = false;
+    var window_changes: sdl_api.WindowChangeMask = .{};
+    var text_input_state = text_input.initState();
+    var pending_wait_event: sdl_api.c.SDL_Event = undefined;
+    var pending_wait_event_valid = false;
+    var app_host = native_host.currentAppHost();
+
+    const domain: input_state.InputDomain = .{
+        .allocator = std.testing.allocator,
+        .app_host = &app_host,
+        .window = undefined,
+        .should_close_flag = &should_close,
+        .key_down = key_down[0..],
+        .key_pressed = key_pressed[0..],
+        .key_repeated = key_repeated[0..],
+        .key_released = key_released[0..],
+        .mouse_down = mouse_down[0..],
+        .mouse_pressed = mouse_pressed[0..],
+        .mouse_released = mouse_released[0..],
+        .mouse_clicks = mouse_clicks[0..],
+        .mouse_press_pos = mouse_press_pos[0..],
+        .mouse_press_pos_valid = mouse_press_pos_valid[0..],
+        .key_queue = &key_queue,
+        .key_queue_head = &key_queue_head,
+        .char_queue = &char_queue,
+        .char_queue_head = &char_queue_head,
+        .focus_queue = &focus_queue,
+        .focus_queue_head = &focus_queue_head,
+        .window_focused = &window_focused,
+        .suppress_super_until_release = &suppress_super_until_release,
+        .composing_text = &composing_text,
+        .composing_cursor = &composing_cursor,
+        .composing_selection_len = &composing_selection_len,
+        .composing_active = &composing_active,
+        .window_changes = &window_changes,
+        .text_input_state = &text_input_state,
+        .pending_wait_event = &pending_wait_event,
+        .pending_wait_event_valid = &pending_wait_event_valid,
+    };
+
+    resetKeyboardStateForFocusTransition(domain);
+    try std.testing.expectEqualSlices(bool, &[_]bool{ false, false, false }, key_down[0..]);
+    try std.testing.expectEqualSlices(bool, &[_]bool{ false, false, false }, key_pressed[0..]);
+    try std.testing.expectEqualSlices(bool, &[_]bool{ false, false, false }, key_repeated[0..]);
+    try std.testing.expectEqualSlices(bool, &[_]bool{ false, false, false }, key_released[0..]);
+    try std.testing.expectEqual(@as(usize, 0), key_queue.items.len);
+    try std.testing.expectEqual(@as(usize, 0), key_queue_head);
+    try std.testing.expect(suppress_super_until_release);
 }

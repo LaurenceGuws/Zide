@@ -64,6 +64,8 @@ pub fn parseOsc(self: anytype, payload: []const u8, terminator: OscTerminator) v
         1337 => {
             osc_semantic.parseUserVar(self, text);
         },
+        30001 => palette_mod.handleColorStackPush(self),
+        30101 => palette_mod.handleColorStackPop(self),
         else => {},
     }
 }

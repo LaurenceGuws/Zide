@@ -587,6 +587,50 @@ test "osc 9;4 progress reports update structured host progress state" {
     try std.testing.expectEqual(@as(?u8, null), activity.progress.value);
 }
 
+test "osc color stack restores terminal defaults and palette" {
+    const allocator = std.testing.allocator;
+
+    var session = try runtime_mod.init(allocator, 4, 20);
+    defer session.deinit();
+
+    const original_bg = session.core.primary.default_attrs.bg;
+    const original_color_1 = session.core.palette_current[1];
+
+    terminal_core_feed.feedOutputBytes(session, "\x1b]30001\x07");
+    terminal_core_feed.feedOutputBytes(session, "\x1b]11;#112233\x07");
+    terminal_core_feed.feedOutputBytes(session, "\x1b]4;1;#445566\x07");
+
+    try std.testing.expectEqual(Color{ .r = 0x11, .g = 0x22, .b = 0x33 }, session.core.primary.default_attrs.bg);
+    try std.testing.expectEqual(Color{ .r = 0x44, .g = 0x55, .b = 0x66 }, session.core.palette_current[1]);
+
+    terminal_core_feed.feedOutputBytes(session, "\x1b]30101\x07");
+
+    try std.testing.expectEqual(original_bg, session.core.primary.default_attrs.bg);
+    try std.testing.expectEqual(original_color_1, session.core.palette_current[1]);
+}
+
+test "csi color stack restores terminal defaults and palette" {
+    const allocator = std.testing.allocator;
+
+    var session = try runtime_mod.init(allocator, 4, 20);
+    defer session.deinit();
+
+    const original_bg = session.core.primary.default_attrs.bg;
+    const original_color_2 = session.core.palette_current[2];
+
+    terminal_core_feed.feedOutputBytes(session, "\x1b[#P");
+    terminal_core_feed.feedOutputBytes(session, "\x1b]11;#223344\x07");
+    terminal_core_feed.feedOutputBytes(session, "\x1b]4;2;#778899\x07");
+
+    try std.testing.expectEqual(Color{ .r = 0x22, .g = 0x33, .b = 0x44 }, session.core.primary.default_attrs.bg);
+    try std.testing.expectEqual(Color{ .r = 0x77, .g = 0x88, .b = 0x99 }, session.core.palette_current[2]);
+
+    terminal_core_feed.feedOutputBytes(session, "\x1b[#Q");
+
+    try std.testing.expectEqual(original_bg, session.core.primary.default_attrs.bg);
+    try std.testing.expectEqual(original_color_2, session.core.palette_current[2]);
+}
+
 test "repeat guide chunks do not grow scrollback unexpectedly" {
     const allocator = std.testing.allocator;
 

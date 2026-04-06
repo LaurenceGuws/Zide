@@ -28,6 +28,12 @@ const Cell = types.Cell;
 const ProgressMetadata = session_host_types.ProgressMetadata;
 
 const dynamic_color_count: usize = 10;
+const ColorStackEntry = struct {
+    default_fg: types.Color,
+    default_bg: types.Color,
+    palette_current: [256]types.Color,
+    dynamic_colors: [dynamic_color_count]?types.Color,
+};
 const supported_key_mode_flags: u32 =
     @import("../input/key_encoding.zig").key_mode_disambiguate |
     @import("../input/key_encoding.zig").key_mode_report_all_event_types |
@@ -165,6 +171,7 @@ pub const TerminalCore = struct {
     palette_default: [256]types.Color,
     palette_current: [256]types.Color,
     dynamic_colors: [dynamic_color_count]?types.Color,
+    color_stack: std.ArrayList(ColorStackEntry),
     cell_metrics: CellMetrics,
     sync_updates_active: bool,
     column_mode_132: bool,
@@ -234,6 +241,7 @@ pub const TerminalCore = struct {
             .palette_default = palette_default,
             .palette_current = palette_default,
             .dynamic_colors = [_]?types.Color{null} ** dynamic_color_count,
+            .color_stack = .empty,
             .cell_metrics = .{ .width = 0, .height = 0 },
             .sync_updates_active = false,
             .column_mode_132 = false,
@@ -257,6 +265,7 @@ pub const TerminalCore = struct {
         self.cwd_buffer.deinit(self.allocator);
         self.semantic_prompt_aid.deinit(self.allocator);
         self.semantic_cmdline.deinit(self.allocator);
+        self.color_stack.deinit(self.allocator);
         var user_it = self.user_vars.iterator();
         while (user_it.next()) |entry| {
             self.allocator.free(entry.key_ptr.*);
@@ -1336,6 +1345,29 @@ pub const TerminalCore = struct {
 
     pub fn dynamicColorValue(self: *const TerminalCore, code: u8) types.Color {
         return terminal_core_style.dynamicColorValue(self, code);
+    }
+
+    pub fn pushColors(self: *TerminalCore) void {
+        self.color_stack.append(self.allocator, .{
+            .default_fg = self.primary.default_attrs.fg,
+            .default_bg = self.primary.default_attrs.bg,
+            .palette_current = self.palette_current,
+            .dynamic_colors = self.dynamic_colors,
+        }) catch |err| {
+            app_logger.logger("terminal.osc").logf(.warning, "color stack push failed err={s}", .{@errorName(err)});
+        };
+    }
+
+    pub fn popColors(self: *TerminalCore) bool {
+        if (self.color_stack.items.len == 0) return false;
+        const entry = self.color_stack.pop().?;
+        const old_ansi = self.snapshotAnsiColors();
+        self.setDefaultColors(entry.default_fg, entry.default_bg);
+        self.palette_current = entry.palette_current;
+        const new_ansi = self.snapshotAnsiColors();
+        self.remapAnsiColors(old_ansi, new_ansi);
+        self.dynamic_colors = entry.dynamic_colors;
+        return true;
     }
 
     pub fn takeOscClipboardCopy(

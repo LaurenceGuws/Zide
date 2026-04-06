@@ -465,6 +465,14 @@ pub fn pollEvent(event: *c.SDL_Event) bool {
     return c.SDL_PollEvent(event);
 }
 
+pub fn resetKeyboard() void {
+    c.SDL_ResetKeyboard();
+}
+
+pub fn clearModState() void {
+    c.SDL_SetModState(c.SDL_KMOD_NONE);
+}
+
 pub fn setEventEnabled(event_type: c_uint, enabled: bool) void {
     _ = c.SDL_SetEventEnabled(event_type, enabled);
 }

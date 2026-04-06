@@ -69,6 +69,9 @@ Current front, 2026-04-06:
     edge policy aligned to the text path instead of always-on snapping
   - the terminal widget special-glyph path no longer keeps analytic fallback
     rescue branches for box/shade once the sprite-owned path is chosen
+  - terminal pane background ownership now starts from the terminal's live
+    resolved background color for the whole pane, so centered-grid remainder
+    space no longer leaks shell/app chrome color around the viewport
 - That means this lane now has one concrete product-quality bar in addition to
   the broader widget-hosting audit:
   - resizing the terminal after output already exists must preserve sane

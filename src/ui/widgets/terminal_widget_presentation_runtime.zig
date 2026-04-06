@@ -831,6 +831,8 @@ pub fn runPresentation(
     else
         renderer.theme.background;
 
+    renderer.drawRectF(x, y, width, height, bg_color);
+
     if (renderer.usesDirectTerminalPresentation()) {
         if (tryFastPresentExisting(
             &self.surface,

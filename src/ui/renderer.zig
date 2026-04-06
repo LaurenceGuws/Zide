@@ -1914,6 +1914,7 @@ pub const Renderer = struct {
             .focus_queue = &self.input.focus_queue,
             .focus_queue_head = &self.input.focus_queue_head,
             .window_focused = &self.input.window_focused,
+            .suppress_super_until_release = &self.input.suppress_super_until_release,
             .composing_text = &self.input.composing_text,
             .composing_cursor = &self.input.composing_cursor,
             .composing_selection_len = &self.input.composing_selection_len,

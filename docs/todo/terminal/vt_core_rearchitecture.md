@@ -70,6 +70,11 @@ Current front, 2026-04-06:
     preserving a wrapped logical-line anchor across width change
   - this does not prove the full resize lane, but it raises the floor on the
     exact row-map/remap logic most likely to corrupt pinned history views
+  - Kitty/XTerm color-stack restore is now explicit pressure too:
+    full-screen theme preview flows such as `kitty +kitten themes` should not
+    leave the terminal's default/background/palette state mutated after exit
+  - the minimum contract here is terminal-side color-stack push/pop truth, not
+    app-layer special casing of `Escape`
 
 - `docs/review/VT_CORE_STYLE_COLOR_OWNER_FRONT_2026-04-04.md`
   Why: after the recent mode, keymode, and kitty-storage cuts, the next

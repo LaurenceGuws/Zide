@@ -60,6 +60,14 @@ pub fn handleOscDynamicReset(self: anytype, code: u8) void {
     config.setDynamicColorCodeLocked(self, code - 100, null);
 }
 
+pub fn handleColorStackPush(self: anytype) void {
+    config.pushColorsLocked(self);
+}
+
+pub fn handleColorStackPop(self: anytype) void {
+    config.popColorsLocked(self);
+}
+
 fn parseOscColor(text: []const u8) ?types.Color {
     if (text.len == 0) return null;
     if (std.mem.eql(u8, text, "?")) return null;

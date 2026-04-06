@@ -8,6 +8,7 @@ const csi_mode_query = @import("csi_mode_query.zig");
 const csi_mode_mutation = @import("csi_mode_mutation.zig");
 const csi_style_reset = @import("csi_style_reset.zig");
 const csi_exec = @import("csi_exec.zig");
+const palette_mod = @import("palette.zig");
 const protocol_runtime = @import("../core/session/protocol_runtime.zig");
 
 const Color = types.Color;
@@ -71,6 +72,19 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
     );
     const p = action.params;
     const param_len = csi_param_count;
+    if (!action.private and action.leader == 0 and csiIntermediatesEq(action, "#")) {
+        switch (action.final) {
+            'P' => {
+                palette_mod.handleColorStackPush(self);
+                return;
+            },
+            'Q' => {
+                palette_mod.handleColorStackPop(self);
+                return;
+            },
+            else => {},
+        }
+    }
     switch (action.final) {
         'A', 'B', 'C', 'D', 'E', 'F', 'G', 'I', 'H', 'f', 'd', 'J', 'K', '@', 'P', 'X', 'L', 'M', 'S', 'T', 'Z', 'r' => {
             csi_exec.handleSimpleCsi(self, action, param_len, p);

@@ -71,6 +71,15 @@ pub fn setDynamicColorCodeLocked(self: anytype, code: u8, color: ?types.Color) v
     self.core.setDynamicColorCode(code, color);
 }
 
+pub fn pushColorsLocked(self: anytype) void {
+    self.core.pushColors();
+}
+
+pub fn popColorsLocked(self: anytype) void {
+    if (!self.core.popColors()) return;
+    publishConfigViewLocked(self, "session_config_color_stack_pop");
+}
+
 pub fn applyThemePalette(self: anytype, fg: types.Color, bg: types.Color, ansi: ?[16]types.Color) void {
     self.lock();
     defer self.unlock();
