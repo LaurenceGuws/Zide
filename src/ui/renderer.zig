@@ -1161,8 +1161,15 @@ pub const Renderer = struct {
         if (changes.affectsUiScale()) {
             return platform_window.collectDisplayMetrics(self.window);
         }
+        const dm = self.display_metrics;
+        // Geometry-only merge keeps display-coupled fields from the previous snapshot. If SDL had
+        // not yet reported positive display scale / pixel density at the last full collect, stay on
+        // the full re-query path until the host snapshot is real (Linux/Wayland fractional startup).
+        if (dm.display_scale <= 0.0 and dm.pixel_density <= 0.0) {
+            return platform_window.collectDisplayMetrics(self.window);
+        }
         const geometry = platform_window.collectWindowGeometryMetrics(self.window);
-        return platform_window.mergeWindowGeometryMetrics(self.display_metrics, geometry);
+        return platform_window.mergeWindowGeometryMetrics(dm, geometry);
     }
 
     pub fn windowGeometryDiagnostics(self: *const Renderer) WindowGeometryDiagnostics {
