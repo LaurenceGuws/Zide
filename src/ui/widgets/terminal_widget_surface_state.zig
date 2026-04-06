@@ -3,10 +3,11 @@ const presentation_state_mod = @import("terminal_widget_presentation_state.zig")
 const view_state = @import("terminal_widget_view_state.zig");
 const terminal_types = @import("../../terminal/model/types.zig");
 const std = @import("std");
+const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
 
 const KittyState = kitty_mod.KittyState;
 const PresentationState = presentation_state_mod.PresentationState;
-const CursorPos = view_state.CursorPos;
+const CursorPos = terminal_publication.CursorPos;
 
 pub const TerminalWidgetSurfaceState = struct {
     pub const PresentationUpdateDelta = struct {
