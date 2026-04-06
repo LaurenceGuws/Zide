@@ -377,6 +377,11 @@ Progress note, 2026-04-05:
   `src/ui/renderer/bootstrap_runtime.zig`
   (`bootstrap_runtime.opsForBackend`), removing one more backend-mapping switch
   from renderer root startup/smoke flow.
+- Startup-smoke orchestration now also lives in
+  `src/ui/renderer/bootstrap_runtime.zig`
+  (`bootstrap_runtime.runStartupBackendSmoke`), leaving
+  `Renderer.runStartupBackendSmoke` as a thin facade instead of carrying window
+  creation/attachment/bootstrap sequencing inline.
 - The macOS OpenGL editor retained-presentable bypass in
   `editor_widget_draw.zig` no longer keys off `renderer.backend` + OS tags;
   `capability_contract.RendererCapabilities` now exposes

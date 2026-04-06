@@ -938,21 +938,7 @@ pub const Renderer = struct {
     }
 
     pub fn runStartupBackendSmoke(width: i32, height: i32, title: [*:0]const u8, backend: RendererBackend) !bool {
-        try window_init.initSdl();
-        errdefer sdl.SDL_Quit();
-
-        const bootstrap_ops = bootstrap_runtime.opsForBackend(backend);
-        try bootstrap_ops.configureWindowAttributes();
-
-        const graphics_binding = bootstrap_ops.graphics_binding;
-        const window = try window_init.createWindow(width, height, title, graphics_binding);
-        defer sdl.SDL_DestroyWindow(window);
-
-        const render_host = native_host.captureRenderHost(window, graphics_binding);
-        var render_surface_attachment = try window_init.attachRenderSurface(render_host);
-        defer window_init.deinitRenderSurfaceAttachment(&render_surface_attachment);
-
-        return try bootstrap_ops.runStartupSmoke(window, render_surface_attachment, width, height);
+        return bootstrap_runtime.runStartupBackendSmoke(width, height, title, backend);
     }
 
     pub fn deinit(self: *Renderer) void {
