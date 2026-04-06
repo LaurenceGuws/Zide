@@ -6,7 +6,6 @@ const shared_types = @import("../../types/mod.zig");
 const common = @import("common.zig");
 const hover_mod = @import("terminal_widget_hover.zig");
 const debug_geometry_mod = @import("terminal_widget_debug_geometry.zig");
-const metal_backend = @import("../renderer/metal_backend.zig");
 
 const Shell = app_shell.Shell;
 const Color = app_shell.Color;
@@ -162,6 +161,7 @@ pub fn drawOverlays(
     cursor_style: @TypeOf(RenderCache.init().cursor_style),
     metal_fallback_sample: ?*MetalTerminalFallbackSample,
 ) void {
+    _ = metal_fallback_sample;
     const r = shell.rendererPtr();
     const composing_len: usize = if (input.composing_active and input.composing_text.len > 0) blk: {
         var count: usize = 0;
@@ -355,38 +355,12 @@ pub fn drawOverlays(
             );
 
             if (composing_cells > 0) {
-                var use_metal_row_fallback = r.textRenderingMode() == .unavailable and r.plannedTextRenderingMode() == .metal_texture_atlas;
-                if (use_metal_row_fallback) {
-                    for (input.composing_text) |byte| {
-                        if (byte >= 0x80) {
-                            use_metal_row_fallback = false;
-                            break;
-                        }
-                    }
-                }
-
                 var comp_col: usize = 0;
-                if (use_metal_row_fallback) {
-                    _ = metal_backend.drawTerminalCellRun(r, &r.terminal_font, .{
-                        .text = input.composing_text,
-                        .x = cell_x,
-                        .y = cell_y,
-                        .cell_width = view.cell_width,
-                        .cell_height = view.cell_height,
-                        .tint = r.theme.foreground.toRgba(),
-                    });
-                    comp_col = composing_cells;
-                    if (metal_fallback_sample) |sample| {
-                        sample.overlay_row_runs += 1;
-                        sample.overlay_row_cells += comp_col;
-                    }
-                } else {
-                    var iter = std.unicode.Utf8Iterator{ .bytes = input.composing_text, .i = 0 };
-                    while (iter.nextCodepoint()) |cp| {
-                        const comp_x = cell_x + @as(f32, @floatFromInt(@as(i32, @intCast(comp_col)))) * view.cell_width;
-                        r.drawTerminalCellBatched(cp, comp_x, cell_y, view.cell_width, view.cell_height, r.theme.foreground, bg, underline_color, false, true, false, true, false);
-                        comp_col += 1;
-                    }
+                var iter = std.unicode.Utf8Iterator{ .bytes = input.composing_text, .i = 0 };
+                while (iter.nextCodepoint()) |cp| {
+                    const comp_x = cell_x + @as(f32, @floatFromInt(@as(i32, @intCast(comp_col)))) * view.cell_width;
+                    r.drawTerminalCellBatched(cp, comp_x, cell_y, view.cell_width, view.cell_height, r.theme.foreground, bg, underline_color, false, true, false, true, false);
+                    comp_col += 1;
                 }
                 const underline_w = @as(f32, @floatFromInt(@as(i32, @intCast(@max(@as(usize, 1), comp_col))))) * view.cell_width;
                 const underline_h = 2.0 * pixel_step;

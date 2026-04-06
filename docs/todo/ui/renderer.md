@@ -562,6 +562,10 @@ Rules:
   rendering now uses the same batched terminal cell path as the grid, and the
   old immediate terminal-cell API was removed as dead duplication rather than
   preserved as a second public route.
+- next closure after that: composition overlay no longer carries a Metal-only
+  row fallback route; it uses the same per-cell batched terminal path as the
+  rest of overlay rendering instead of advertising a second backend-specific
+  policy.
 - the next meaningful wins should reduce shared renderer ownership, not add
   another backend.
 
