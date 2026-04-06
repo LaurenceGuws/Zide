@@ -1226,6 +1226,23 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         return self.backend_ops.enqueueSurfaceDraw(self, draw);
     }
 
+    fn enqueueSolidSurfaceFromLogicalRect(self: *Renderer, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) bool {
+        const clip = if (self.currentClipRect()) |c|
+            metal_text_sample_runtime.pixelClipRect(self, c)
+        else
+            null;
+        return self.enqueueSurfaceDraw(.{ .solid = .{
+            .dest_rect = .{
+                .x = self.logicalLengthToRaster(x),
+                .y = self.logicalLengthToRaster(y),
+                .width = self.logicalLengthToRaster(w),
+                .height = self.logicalLengthToRaster(h),
+            },
+            .color = color,
+            .clip_rect = clip,
+        } });
+    }
+
     pub fn shouldClose(self: *Renderer) bool {
         return self.input.should_close_flag;
     }
@@ -1356,8 +1373,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
     pub fn drawRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
         if (w <= 0 or h <= 0) return;
         present_trace_runtime.noteEditorSurfaceFullPaneClear(self, x, y, w, h);
-        _ = self.backend_ops.drawSolidRect(
-            self,
+        _ = self.enqueueSolidSurfaceFromLogicalRect(
             @floatFromInt(x),
             @floatFromInt(y),
             @floatFromInt(w),
@@ -1368,7 +1384,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
 
     pub fn drawRectF(self: *Renderer, x: f32, y: f32, w: f32, h: f32, color: Color) void {
         if (w <= 0 or h <= 0) return;
-        _ = self.backend_ops.drawSolidRect(self, x, y, w, h, color.toRgba());
+        _ = self.enqueueSolidSurfaceFromLogicalRect(x, y, w, h, color.toRgba());
     }
 
     pub fn drawRectOutline(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {

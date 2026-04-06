@@ -107,7 +107,10 @@ match how Metal enqueues those draws). Atlas samples on OpenGL require
 textures. `.raw_image` is still not interpreted on the OpenGL path (returns
 false without taking ownership). On Metal, `appendSolidRect` / `appendAtlasSample`
 now build the same `SurfaceDraw` values and submit through `enqueueSurfaceDraw`
-so queueing shares the ops-table entry with external callers.
+so queueing shares the ops-table entry with external callers. High-level
+`Renderer.drawRect` / `drawRectF` also route solid fills through
+`enqueueSurfaceDraw` so product-level rectangles participate in the same
+submission contract.
 
 #### Presentable contract
 

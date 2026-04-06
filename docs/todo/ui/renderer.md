@@ -95,6 +95,10 @@ Progress note, 2026-04-05:
   Metal `appendSolidRect` / `appendAtlasSample` route through `enqueueSurfaceDraw`.
   OpenGL `.raw_image` through this op remains unimplemented (explicit non-goal
   until a neutral raw-texture story exists).
+- `Renderer.drawRect` / `drawRectF` now submit through `enqueueSurfaceDraw`
+  (raster `SurfaceDraw` solid + optional pixel clip), so common widget fills use
+  the same contract path as Metal queue replay instead of bypassing via
+  `drawSolidRect` only.
 - `src/ui/renderer/presentable_target.zig` now owns the presentable target
   type, so shared runtime code no longer imports a GL-owned target type
   directly.
