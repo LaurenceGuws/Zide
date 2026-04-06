@@ -41,7 +41,6 @@ const metal_text_sample_runtime = @import("renderer/metal_text_sample_runtime.zi
 const text_runtime = @import("renderer/text_runtime.zig");
 const metal_frame_runtime = @import("renderer/metal_frame_runtime.zig");
 const window_chrome_runtime = @import("renderer/window_chrome_runtime.zig");
-const app_lifecycle_runtime = @import("../app/lifecycle_runtime.zig");
 const macos_host = @import("../platform/macos_host.zig");
 const macos_app_delegate = @import("../platform/macos_app_delegate.zig");
 const windows_snap_layout_sink = @import("../platform/windows_snap_layout_sink.zig");
@@ -1992,13 +1991,7 @@ pub fn waitForWakeOrTimeout(seconds: f64) void {
 }
 
 pub fn requestWake() void {
-    if (app_lifecycle_runtime.shutdownStarted()) {
-        @import("../app_logger.zig").logger("app.lifecycle").logFields(.info, "runtime_wake_request", &.{
-            .{ .key = "renderer_active", .value = .{ .boolean = renderer_global_runtime.rendererActive(Renderer) } },
-            .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
-        });
-    }
-    _ = sdl_api.pushRuntimeWakeEvent();
+    renderer_global_runtime.requestWake(Renderer);
 }
 
 pub fn getTime() f64 {

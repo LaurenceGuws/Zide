@@ -414,6 +414,10 @@ Progress note, 2026-04-05:
 - `waitForWakeOrTimeout` global orchestration now routes through
   `renderer_global_runtime.waitForWakeOrTimeout(...)` instead of keeping the
   SDL wait-event + pending-event staging sequence inline in `renderer.zig`.
+- `requestWake` global orchestration now routes through
+  `renderer_global_runtime.requestWake(...)`, including shutdown logging and
+  wake-event push behavior, so renderer root no longer carries that global
+  lifecycle wake path inline.
 - The remaining renderer-root `sdl` alias is gone too; hit-test callback types
   and constants now use `sdl_api.c` directly so shared renderer code no longer
   depends on a local SDL alias surface.

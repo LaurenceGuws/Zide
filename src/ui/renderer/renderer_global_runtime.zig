@@ -2,6 +2,8 @@ const active_renderer_runtime = @import("active_renderer_runtime.zig");
 const input_state = @import("input_state.zig");
 const time_utils = @import("time_utils.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
+const app_lifecycle_runtime = @import("../../app/lifecycle_runtime.zig");
+const app_logger = @import("../../app_logger.zig");
 
 pub fn activeRenderer(comptime RendererType: type) ?*RendererType {
     return active_renderer_runtime.get(RendererType);
@@ -48,4 +50,14 @@ pub fn waitForWakeOrTimeout(comptime RendererType: type, seconds: f64) void {
         }
     }
     time_utils.waitTime(seconds);
+}
+
+pub fn requestWake(comptime RendererType: type) void {
+    if (app_lifecycle_runtime.shutdownStarted()) {
+        app_logger.logger("app.lifecycle").logFields(.info, "runtime_wake_request", &.{
+            .{ .key = "renderer_active", .value = .{ .boolean = rendererActive(RendererType) } },
+            .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
+        });
+    }
+    _ = sdl_api.pushRuntimeWakeEvent();
 }
