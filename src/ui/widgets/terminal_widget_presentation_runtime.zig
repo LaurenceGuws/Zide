@@ -193,6 +193,11 @@ pub fn updateAndPresent(
         input,
         app_shell.getTime(),
     );
+    const composing_active = input.composing_active and input.composing_text.len > 0;
+    const composing_hash: u64 = if (composing_active)
+        std.hash.Wyhash.hash(0, input.composing_text)
+    else
+        0;
     const presentation = runPresentation(
         self,
         shell,
@@ -200,6 +205,8 @@ pub fn updateAndPresent(
         terminal_view,
         view_geometry,
         hover_link_id,
+        composing_active,
+        composing_hash,
         start_line,
         scroll_offset,
         draw_cursor,
@@ -720,6 +727,9 @@ pub fn runRetainedPresentation(
     draw_cursor: bool,
     cursor: CursorPos,
     cursor_style: terminal_types.CursorStyle,
+    hover_link_id: u32,
+    composing_active: bool,
+    composing_hash: u64,
     surface_update_plan: PresentationUpdatePlan,
     cycle_result: RetainedPresentCycleResult,
     note_present_ctx: anytype,
@@ -746,6 +756,9 @@ pub fn runRetainedPresentation(
         draw_cursor,
         cursor,
         cursor_style,
+        hover_link_id,
+        composing_active,
+        composing_hash,
         visible_w,
         visible_h,
         view_cells_len,
@@ -785,6 +798,8 @@ pub fn runPresentation(
     terminal_view: view_state.TerminalViewModel,
     view_geometry: TerminalViewGeometry,
     hover_link_id: u32,
+    composing_active: bool,
+    composing_hash: u64,
     start_line: usize,
     scroll_offset: usize,
     draw_cursor: bool,
@@ -825,6 +840,9 @@ pub fn runPresentation(
             draw_cursor,
             cursor,
             cursor_style,
+            hover_link_id,
+            composing_active,
+            composing_hash,
             bg_color,
             x,
             y,
@@ -844,6 +862,8 @@ pub fn runPresentation(
             terminal_view,
             view_geometry,
             hover_link_id,
+            composing_active,
+            composing_hash,
             scroll_offset,
             draw_cursor,
             cursor,
@@ -874,6 +894,8 @@ pub fn runPresentation(
             draw_cursor,
             cursor,
             cursor_style,
+            composing_active,
+            composing_hash,
             blink_style,
             blink_time,
             start_line,
@@ -898,6 +920,9 @@ pub fn runPresentation(
         draw_cursor,
         cursor,
         cursor_style,
+        hover_link_id,
+        composing_active,
+        composing_hash,
         bg_color,
         x,
         y,
@@ -953,6 +978,9 @@ pub fn runPresentation(
         draw_cursor,
         cursor,
         cursor_style,
+        hover_link_id,
+        composing_active,
+        composing_hash,
         surface_update_plan,
         cycle,
         note_present_ctx,
@@ -989,6 +1017,9 @@ pub fn refreshPresentState(
     draw_cursor: bool,
     cursor: CursorPos,
     cursor_style: terminal_types.CursorStyle,
+    hover_link_id: u32,
+    composing_active: bool,
+    composing_hash: u64,
     visible_w: i32,
     visible_h: i32,
     view_cells_len: usize,
@@ -999,7 +1030,7 @@ pub fn refreshPresentState(
     };
 
     if (presentation_update_completed) {
-        surface_state.notePresentationUpdated(terminal_view, surface_geometry, draw_cursor, cursor, cursor_style);
+        surface_state.notePresentationUpdated(terminal_view, surface_geometry, draw_cursor, cursor, cursor_style, hover_link_id, composing_active, composing_hash);
     }
 
     state.target_available = renderer.presentableAvailable(.terminal);
@@ -1075,6 +1106,9 @@ pub fn tryFastPresentExisting(
     draw_cursor: bool,
     cursor: CursorPos,
     cursor_style: terminal_types.CursorStyle,
+    hover_link_id: u32,
+    composing_active: bool,
+    composing_hash: u64,
     bg_color: Color,
     x: f32,
     y: f32,
@@ -1088,10 +1122,12 @@ pub fn tryFastPresentExisting(
         renderer.presentableAvailable(.terminal),
     );
     const cursor_changed = surface_state.cursorPresentationChanged(draw_cursor, cursor, cursor_style);
+    const overlay_changed = surface_state.overlayPresentationChanged(hover_link_id, composing_active, composing_hash);
     const direct_snapshot_reusable = renderer.usesDirectTerminalPresentation() and
         !terminal_view.sync_updates_active and
         !blink_requires_partial and
         !cursor_changed and
+        !overlay_changed and
         terminal_view.generation == surface_state.lastRenderGeneration() and
         terminal_view.clear_generation == surface_state.lastRenderClearGeneration();
     if (!(view_cells_len > 0 and presentable_ready and
@@ -1139,7 +1175,7 @@ pub fn tryFastPresentExisting(
         );
     }
     const pres_geom = computePresentationSurfaceGeometry(renderer, terminal_view, width, height);
-    surface_state.notePresentationUpdated(terminal_view, pres_geom, draw_cursor, cursor, cursor_style);
+    surface_state.notePresentationUpdated(terminal_view, pres_geom, draw_cursor, cursor, cursor_style, hover_link_id, composing_active, composing_hash);
     return true;
 }
 
@@ -1153,6 +1189,8 @@ pub fn directPresent(
     draw_cursor: bool,
     cursor: CursorPos,
     cursor_style: terminal_types.CursorStyle,
+    composing_active: bool,
+    composing_hash: u64,
     blink_style: anytype,
     blink_time: f64,
     start_line: usize,
@@ -1277,7 +1315,7 @@ pub fn directPresent(
     }
 
     const pres_geom = computePresentationSurfaceGeometry(renderer, terminal_view, width, height);
-    self.surface.notePresentationUpdated(terminal_view, pres_geom, draw_cursor, cursor, cursor_style);
+    self.surface.notePresentationUpdated(terminal_view, pres_geom, draw_cursor, cursor, cursor_style, hover_link_id, composing_active, composing_hash);
     return result;
 }
 
@@ -1288,6 +1326,8 @@ pub fn tryDirectSnapshotUpdate(
     terminal_view: view_state.TerminalViewModel,
     view_geometry: TerminalViewGeometry,
     hover_link_id: u32,
+    composing_active: bool,
+    composing_hash: u64,
     scroll_offset: usize,
     draw_cursor: bool,
     cursor: CursorPos,
@@ -1377,7 +1417,7 @@ pub fn tryDirectSnapshotUpdate(
     );
     if (!result.completed) return result;
     present_trace_runtime.noteTerminalPresentation(renderer, terminal_view.generation);
-    self.surface.notePresentationUpdated(terminal_view, surface_update_plan.geometry, draw_cursor, cursor, cursor_style);
+    self.surface.notePresentationUpdated(terminal_view, surface_update_plan.geometry, draw_cursor, cursor, cursor_style, hover_link_id, composing_active, composing_hash);
     return result;
 }
 

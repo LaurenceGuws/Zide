@@ -203,6 +203,9 @@ Progress note, 2026-04-05:
 - Metal cursor presentation now invalidates by design: fast snapshot-present
   reuse is disabled when cursor state changes, and partial plans force redraw of
   previous/current cursor rows when cursor visibility/row/col/shape changes.
+- Fast-present reuse now also tracks overlay state (hover link + composing
+  text signature). Reuse is blocked when those change, preventing stale overlay
+  artifacts from skipping the overlay redraw phase.
 - The tiny terminal-specific presentable wrapper module is gone too:
   `terminal_widget_presentation_runtime.zig` now talks to the renderer
   presentable contract directly instead of bouncing through one more

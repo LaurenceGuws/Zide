@@ -114,6 +114,18 @@ pub const TerminalWidgetSurfaceState = struct {
             self.presentation.last_cursor_shape != @as(u8, @intFromEnum(cursor_style.shape));
     }
 
+    pub fn overlayPresentationChanged(
+        self: *const TerminalWidgetSurfaceState,
+        hover_link_id: u32,
+        composing_active: bool,
+        composing_hash: u64,
+    ) bool {
+        if (self.presentation.last_hover_link_id != hover_link_id) return true;
+        if (self.presentation.last_composing_active != composing_active) return true;
+        if (self.presentation.last_composing_hash != composing_hash) return true;
+        return false;
+    }
+
     pub fn notePresentationUpdated(
         self: *TerminalWidgetSurfaceState,
         terminal_view: view_state.TerminalViewModel,
@@ -121,6 +133,9 @@ pub const TerminalWidgetSurfaceState = struct {
         draw_cursor: bool,
         cursor: CursorPos,
         cursor_style: terminal_types.CursorStyle,
+        hover_link_id: u32,
+        composing_active: bool,
+        composing_hash: u64,
     ) void {
         self.presentation.terminal_presentable_ready = true;
         self.presentation.last_render_generation = terminal_view.generation;
@@ -134,6 +149,9 @@ pub const TerminalWidgetSurfaceState = struct {
             self.presentation.last_cursor_col = @intCast(cursor.col);
             self.presentation.last_cursor_shape = @intFromEnum(cursor_style.shape);
         }
+        self.presentation.last_hover_link_id = hover_link_id;
+        self.presentation.last_composing_active = composing_active;
+        self.presentation.last_composing_hash = composing_hash;
     }
 
     pub fn notePresentableAvailability(self: *TerminalWidgetSurfaceState, available: bool) bool {
