@@ -310,6 +310,9 @@ Current proving bug, 2026-04-06:
     - the full terminal widget migration still belongs to `WSG-2-01`
 - [x] `WSG-2-01` Move terminal draw/overlay/hover/input/open/reporting onto one terminal geometry contract
 - [ ] `WSG-4-02` Close startup/display-hop scale truth on Linux
+  - 2026-04-06: `Renderer.collectDisplayMetricsForWindowChanges` now re-queries full display metrics
+    when the cached snapshot still has both `display_scale` and `pixel_density` at zero, so
+    geometry-only refresh cannot preserve an uninitialized scale snapshot (see Milestone A / RB-A2).
   - Problem:
     - initial launch on a fractional-scale monitor can still produce the wrong
       cursor/text scale until the window is dragged to another display and back

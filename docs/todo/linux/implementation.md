@@ -197,6 +197,13 @@ owning subsystem queues.
       - startup/display-hop scale: window scale geometry contract
       - resize/scrollback correctness: terminal resize/publication contract,
         with retained-present invalidation scrutiny as a secondary front
+    - 2026-04-06 Renderer Contract Review 1 (code + docs checkpoint):
+      - focus/input: `InputRuntimeState.window_focused` defaults to unknown/false until SDL sync;
+        terminal widget `FocusUiState` window UI defaults aligned so the first focus transition is real
+      - fractional startup: geometry-only metrics merge forces a full `collectDisplayMetrics` while
+        both `display_scale` and `pixel_density` are still zero on the last snapshot
+      - deferred terminal resize: `invalidatePresentationCache()` on all terminal widgets after a
+        deferred grid resize completes
 
 - [ ] `LNX-02A` Lock Linux focus/input activation truth
   - Problem:

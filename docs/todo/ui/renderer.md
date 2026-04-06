@@ -248,7 +248,7 @@ Exit bar:
 
 ### `RB-A1` Focus and input truth
 
-Status: active
+Status: completed (Review Chunk 1 — pending human validation on Linux)
 
 Why this matters:
 
@@ -283,7 +283,7 @@ Do not do:
 
 ### `RB-A2` Scale and geometry truth
 
-Status: active
+Status: completed (Review Chunk 1 — pending human validation on Linux)
 
 Why this matters:
 
@@ -317,7 +317,7 @@ Do not do:
 
 ### `RB-A3` Terminal resize and scrollback truth
 
-Status: active
+Status: completed (Review Chunk 1 — pending human validation on Linux)
 
 Why this matters:
 
@@ -472,6 +472,12 @@ Rules:
 
 ## Current Evidence Snapshot
 
+- Review Chunk 1 (2026-04-06): initial window focus/text-input activation now follows SDL on the
+  first poll (`InputRuntimeState.window_focused` default false; terminal `FocusUiState` defaults
+  aligned). Geometry-only display-metrics merge no longer preserves an all-zero scale/density
+  snapshot when the host had not yet reported real display coupling (fractional/Wayland startup).
+  Deferred terminal grid resize now invalidates retained presentation caches so resize/reflow does
+  not reuse stale presenter geometry.
 - Linux GL is now the primary proving ground for contract quality.
 - Metal remains a reference implementation even though live validation is
   paused.

@@ -55,6 +55,10 @@ Current front, 2026-04-06:
     enough
   - retained terminal presentation does not invalidate strongly enough on
     resize-sensitive geometry changes
+- Checkpoint, 2026-04-06 (Renderer Contract Review 1):
+  - after deferred terminal grid resize (`post_preinput_hooks_runtime`), all terminal widgets call
+    `invalidatePresentationCache()` so retained/direct presentation does not keep geometry from
+    before the resize
 - Checkpoint, 2026-04-06:
   - terminal presentation geometry now consumes renderer-resolved
     `TerminalViewGeometry` instead of independently recomputing visible fit
