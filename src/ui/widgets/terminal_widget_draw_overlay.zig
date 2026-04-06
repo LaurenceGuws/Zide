@@ -1,6 +1,5 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
-const app_logger = @import("../../app_logger.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
 const render_cache_mod = @import("../../terminal/core/publication/render_cache.zig");
 const shared_types = @import("../../types/mod.zig");
@@ -35,6 +34,28 @@ fn softSelectionColor(base: Color) Color {
         .b = base.b,
         .a = @min(@as(u8, 156), base.a),
     };
+}
+
+fn overlayResolvedCursorColors(
+    cell: Cell,
+    screen_reverse: bool,
+) struct { fg: Color, bg: Color } {
+    const fg = Color{ .r = cell.attrs.fg.r, .g = cell.attrs.fg.g, .b = cell.attrs.fg.b, .a = cell.attrs.fg.a };
+    const bg = Color{ .r = cell.attrs.bg.r, .g = cell.attrs.bg.g, .b = cell.attrs.bg.b, .a = cell.attrs.bg.a };
+    const cell_reverse = cell.attrs.reverse != screen_reverse;
+    const normal_fg = if (cell_reverse) bg else fg;
+    const normal_bg = if (cell_reverse) fg else bg;
+    return .{
+        .fg = normal_bg,
+        .bg = normal_fg,
+    };
+}
+
+fn followedBySpace(row_cells: []const Cell, cols: usize, col: usize, width_units: usize) bool {
+    const next_col = col + width_units;
+    if (next_col >= cols or next_col >= row_cells.len) return true;
+    const next = row_cells[next_col];
+    return next.codepoint == 0 or next.codepoint == ' ';
 }
 
 fn drawSoftSelectionRect(r: anytype, x: i32, y: i32, w: i32, h: i32, color: Color, mask: SelectionCornerMask) void {
@@ -137,7 +158,6 @@ pub fn drawOverlays(
     cursor_style: @TypeOf(RenderCache.init().cursor_style),
     metal_fallback_sample: ?*MetalTerminalFallbackSample,
 ) void {
-    _ = screen_reverse;
     const r = shell.rendererPtr();
     const composing_len: usize = if (input.composing_active and input.composing_text.len > 0) blk: {
         var count: usize = 0;
@@ -221,7 +241,8 @@ pub fn drawOverlays(
             var sample_cursor_y = cell_y;
             var sample_cursor_w = cursor_w;
             var sample_cursor_h = cursor_h;
-            if (!self.controller.focus.isUiFocused()) {
+            const ui_focused = self.controller.focus.isUiFocused();
+            if (!ui_focused) {
                 const border_w = pixel_step;
                 const box_x = cell_x + cursor_edge_inset_f;
                 const box_y = cell_y + cursor_edge_inset_f;
@@ -241,6 +262,42 @@ pub fn drawOverlays(
                     sample_cursor_y = cell_y;
                     sample_cursor_w = cursor_w;
                     sample_cursor_h = cursor_h;
+                    const colors = overlayResolvedCursorColors(cell, screen_reverse);
+                    const followed_by_space = followedBySpace(row_cells, view.cols, cursor.col, cell_width_units);
+                    if (cell.combining_len > 0) {
+                        r.drawTerminalCellGrapheme(
+                            cell.codepoint,
+                            cell.combining[0..@intCast(cell.combining_len)],
+                            cell_x,
+                            cell_y,
+                            cursor_w,
+                            cursor_h,
+                            colors.fg,
+                            colors.bg,
+                            underline_color,
+                            cell.attrs.bold,
+                            underline,
+                            false,
+                            followed_by_space,
+                            true,
+                        );
+                    } else {
+                        r.drawTerminalCell(
+                            cell.codepoint,
+                            cell_x,
+                            cell_y,
+                            cursor_w,
+                            cursor_h,
+                            colors.fg,
+                            colors.bg,
+                            underline_color,
+                            cell.attrs.bold,
+                            underline,
+                            false,
+                            followed_by_space,
+                            true,
+                        );
+                    }
                 },
                 .underline => {
                     const draw_x = cell_x + cursor_edge_inset_f;
