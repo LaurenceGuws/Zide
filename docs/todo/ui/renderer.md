@@ -200,6 +200,9 @@ Progress note, 2026-04-05:
 - Dead terminal snapshot wrappers (`appendTerminalSnapshotDraw` and
   `drawTerminalSnapshotPresentable`) were removed from `metal_backend.zig` once
   `drawPresentable(.terminal, ...)` became the single snapshot-present path.
+- Metal cursor presentation now invalidates by design: fast snapshot-present
+  reuse is disabled when cursor state changes, and partial plans force redraw of
+  previous/current cursor rows when cursor visibility/row/col/shape changes.
 - The tiny terminal-specific presentable wrapper module is gone too:
   `terminal_widget_presentation_runtime.zig` now talks to the renderer
   presentable contract directly instead of bouncing through one more

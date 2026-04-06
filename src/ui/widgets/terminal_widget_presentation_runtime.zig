@@ -717,6 +717,9 @@ pub fn runRetainedPresentation(
     terminal_view: view_state.TerminalViewModel,
     view_geometry: TerminalViewGeometry,
     view_cells_len: usize,
+    draw_cursor: bool,
+    cursor: CursorPos,
+    cursor_style: terminal_types.CursorStyle,
     surface_update_plan: PresentationUpdatePlan,
     cycle_result: RetainedPresentCycleResult,
     note_present_ctx: anytype,
@@ -740,6 +743,9 @@ pub fn runRetainedPresentation(
         surface_update_plan.geometry,
         view_geometry,
         cycle_result.completed,
+        draw_cursor,
+        cursor,
+        cursor_style,
         visible_w,
         visible_h,
         view_cells_len,
@@ -816,6 +822,9 @@ pub fn runPresentation(
             terminal_view,
             view_cells_len,
             blink_requires_partial,
+            draw_cursor,
+            cursor,
+            cursor_style,
             bg_color,
             x,
             y,
@@ -886,6 +895,9 @@ pub fn runPresentation(
         terminal_view,
         view_cells_len,
         blink_requires_partial,
+        draw_cursor,
+        cursor,
+        cursor_style,
         bg_color,
         x,
         y,
@@ -910,6 +922,9 @@ pub fn runPresentation(
         width,
         height,
         blink_requires_partial,
+        draw_cursor,
+        cursor,
+        cursor_style,
         scroll_offset,
         recent_input_window_active,
     );
@@ -935,6 +950,9 @@ pub fn runPresentation(
         terminal_view,
         view_geometry,
         view_cells_len,
+        draw_cursor,
+        cursor,
+        cursor_style,
         surface_update_plan,
         cycle,
         note_present_ctx,
@@ -968,6 +986,9 @@ pub fn refreshPresentState(
     surface_geometry: PresentationGeometry,
     view_geometry: TerminalViewGeometry,
     presentation_update_completed: bool,
+    draw_cursor: bool,
+    cursor: CursorPos,
+    cursor_style: terminal_types.CursorStyle,
     visible_w: i32,
     visible_h: i32,
     view_cells_len: usize,
@@ -978,7 +999,7 @@ pub fn refreshPresentState(
     };
 
     if (presentation_update_completed) {
-        surface_state.notePresentationUpdated(terminal_view, surface_geometry);
+        surface_state.notePresentationUpdated(terminal_view, surface_geometry, draw_cursor, cursor, cursor_style);
     }
 
     state.target_available = renderer.presentableAvailable(.terminal);
@@ -1051,6 +1072,9 @@ pub fn tryFastPresentExisting(
     terminal_view: view_state.TerminalViewModel,
     view_cells_len: usize,
     blink_requires_partial: bool,
+    draw_cursor: bool,
+    cursor: CursorPos,
+    cursor_style: terminal_types.CursorStyle,
     bg_color: Color,
     x: f32,
     y: f32,
@@ -1063,9 +1087,11 @@ pub fn tryFastPresentExisting(
     const presentable_ready = surface_state.notePresentableAvailability(
         renderer.presentableAvailable(.terminal),
     );
+    const cursor_changed = surface_state.cursorPresentationChanged(draw_cursor, cursor, cursor_style);
     const direct_snapshot_reusable = renderer.usesDirectTerminalPresentation() and
         !terminal_view.sync_updates_active and
         !blink_requires_partial and
+        !cursor_changed and
         terminal_view.generation == surface_state.lastRenderGeneration() and
         terminal_view.clear_generation == surface_state.lastRenderClearGeneration();
     if (!(view_cells_len > 0 and presentable_ready and
@@ -1113,7 +1139,7 @@ pub fn tryFastPresentExisting(
         );
     }
     const pres_geom = computePresentationSurfaceGeometry(renderer, terminal_view, width, height);
-    surface_state.notePresentationUpdated(terminal_view, pres_geom);
+    surface_state.notePresentationUpdated(terminal_view, pres_geom, draw_cursor, cursor, cursor_style);
     return true;
 }
 
@@ -1251,7 +1277,7 @@ pub fn directPresent(
     }
 
     const pres_geom = computePresentationSurfaceGeometry(renderer, terminal_view, width, height);
-    self.surface.notePresentationUpdated(terminal_view, pres_geom);
+    self.surface.notePresentationUpdated(terminal_view, pres_geom, draw_cursor, cursor, cursor_style);
     return result;
 }
 
@@ -1291,6 +1317,9 @@ pub fn tryDirectSnapshotUpdate(
         width,
         height,
         blink_requires_partial,
+        draw_cursor,
+        cursor,
+        cursor_style,
         scroll_offset,
         recent_input_window_active,
     );
@@ -1348,7 +1377,7 @@ pub fn tryDirectSnapshotUpdate(
     );
     if (!result.completed) return result;
     present_trace_runtime.noteTerminalPresentation(renderer, terminal_view.generation);
-    self.surface.notePresentationUpdated(terminal_view, surface_update_plan.geometry);
+    self.surface.notePresentationUpdated(terminal_view, surface_update_plan.geometry, draw_cursor, cursor, cursor_style);
     return result;
 }
 
@@ -1361,6 +1390,9 @@ pub fn planUpdate(
     width: f32,
     height: f32,
     blink_requires_partial: bool,
+    draw_cursor: bool,
+    cursor: CursorPos,
+    cursor_style: terminal_types.CursorStyle,
     scroll_offset: usize,
     recent_input_window_active: bool,
 ) PresentationUpdatePlan {
@@ -1376,7 +1408,13 @@ pub fn planUpdate(
     plan.geometry = computePresentationSurfaceGeometry(renderer, terminal_view, width, height);
 
     const recreated = renderer.ensurePresentable(.terminal, plan.geometry.surface_w, plan.geometry.surface_h);
-    const presentation_delta = surface_state.presentationUpdateDelta(terminal_view, plan.geometry);
+    const presentation_delta = surface_state.presentationUpdateDelta(
+        terminal_view,
+        plan.geometry,
+        draw_cursor,
+        cursor,
+        cursor_style,
+    );
 
     var update_plan = draw_presentation.choosePresentationUpdatePlan(
         cache.dirty,
@@ -1391,6 +1429,9 @@ pub fn planUpdate(
 
     var needs_full = update_plan.needs_full;
     var needs_partial = update_plan.needs_partial;
+    if (!needs_full and presentation_delta.cursor_changed) {
+        needs_partial = true;
+    }
     const viewport_shift = ViewportShiftState{
         .rows = terminal_view.partial_capture.active_viewport_shift_rows,
         .exposed_only = terminal_view.partial_capture.shift_exposed_only,
@@ -1465,6 +1506,37 @@ pub fn planUpdate(
             shift_requires_fullwidth_partial,
             blink_requires_partial,
         );
+        if (presentation_delta.cursor_changed and cols > 0) {
+            const full_start: usize = 0;
+            const full_end: usize = cols - 1;
+            if (surface_state.presentation.last_cursor_visible) {
+                const prev_row = @as(usize, surface_state.presentation.last_cursor_row);
+                if (prev_row < rows) {
+                    draw_presentation.markPartialPlanRow(
+                        partial_plan.rows,
+                        partial_plan.span_counts,
+                        partial_plan.spans,
+                        partial_plan.cols_start,
+                        partial_plan.cols_end,
+                        prev_row,
+                        full_start,
+                        full_end,
+                    );
+                }
+            }
+            if (draw_cursor and cursor.row < rows) {
+                draw_presentation.markPartialPlanRow(
+                    partial_plan.rows,
+                    partial_plan.span_counts,
+                    partial_plan.spans,
+                    partial_plan.cols_start,
+                    partial_plan.cols_end,
+                    cursor.row,
+                    full_start,
+                    full_end,
+                );
+            }
+        }
         plan.partial_plan = partial_plan;
     }
 

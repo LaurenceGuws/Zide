@@ -1,9 +1,11 @@
 const kitty_mod = @import("terminal_widget_kitty.zig");
 const presentation_state_mod = @import("terminal_widget_presentation_state.zig");
 const view_state = @import("terminal_widget_view_state.zig");
+const terminal_types = @import("../../terminal/model/types.zig");
 
 const KittyState = kitty_mod.KittyState;
 const PresentationState = presentation_state_mod.PresentationState;
+const CursorPos = view_state.CursorPos;
 
 pub const TerminalWidgetSurfaceState = struct {
     pub const PresentationUpdateDelta = struct {
@@ -12,6 +14,7 @@ pub const TerminalWidgetSurfaceState = struct {
         generation_changed: bool,
         clear_generation_changed: bool,
         presentable_ready: bool,
+        cursor_changed: bool,
     };
 
     kitty: KittyState,
@@ -83,6 +86,9 @@ pub const TerminalWidgetSurfaceState = struct {
         self: *const TerminalWidgetSurfaceState,
         terminal_view: view_state.TerminalViewModel,
         surface_geometry: anytype,
+        draw_cursor: bool,
+        cursor: CursorPos,
+        cursor_style: terminal_types.CursorStyle,
     ) PresentationUpdateDelta {
         return .{
             .cell_metrics_changed = surface_geometry.cell_w_i != self.presentation.last_cell_w_i or
@@ -91,13 +97,30 @@ pub const TerminalWidgetSurfaceState = struct {
             .generation_changed = terminal_view.generation != self.presentation.last_render_generation,
             .clear_generation_changed = terminal_view.clear_generation != self.presentation.last_render_clear_generation,
             .presentable_ready = self.presentation.terminal_presentable_ready,
+            .cursor_changed = self.cursorPresentationChanged(draw_cursor, cursor, cursor_style),
         };
+    }
+
+    pub fn cursorPresentationChanged(
+        self: *const TerminalWidgetSurfaceState,
+        draw_cursor: bool,
+        cursor: CursorPos,
+        cursor_style: terminal_types.CursorStyle,
+    ) bool {
+        if (self.presentation.last_cursor_visible != draw_cursor) return true;
+        if (!draw_cursor) return false;
+        return self.presentation.last_cursor_row != @as(u16, @intCast(cursor.row)) or
+            self.presentation.last_cursor_col != @as(u16, @intCast(cursor.col)) or
+            self.presentation.last_cursor_shape != @as(u8, @intFromEnum(cursor_style.shape));
     }
 
     pub fn notePresentationUpdated(
         self: *TerminalWidgetSurfaceState,
         terminal_view: view_state.TerminalViewModel,
         surface_geometry: anytype,
+        draw_cursor: bool,
+        cursor: CursorPos,
+        cursor_style: terminal_types.CursorStyle,
     ) void {
         self.presentation.terminal_presentable_ready = true;
         self.presentation.last_render_generation = terminal_view.generation;
@@ -105,6 +128,12 @@ pub const TerminalWidgetSurfaceState = struct {
         self.presentation.last_cell_w_i = surface_geometry.cell_w_i;
         self.presentation.last_cell_h_i = surface_geometry.cell_h_i;
         self.presentation.last_render_scale = surface_geometry.render_scale;
+        self.presentation.last_cursor_visible = draw_cursor;
+        if (draw_cursor) {
+            self.presentation.last_cursor_row = @intCast(cursor.row);
+            self.presentation.last_cursor_col = @intCast(cursor.col);
+            self.presentation.last_cursor_shape = @intFromEnum(cursor_style.shape);
+        }
     }
 
     pub fn notePresentableAvailability(self: *TerminalWidgetSurfaceState, available: bool) bool {
