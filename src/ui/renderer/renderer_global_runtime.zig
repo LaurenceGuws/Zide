@@ -3,19 +3,23 @@ const input_state = @import("input_state.zig");
 const time_utils = @import("time_utils.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
 
+pub fn activeRenderer(comptime RendererType: type) ?*RendererType {
+    return active_renderer_runtime.get(RendererType);
+}
+
 pub fn rendererActive(comptime RendererType: type) bool {
-    return active_renderer_runtime.get(RendererType) != null;
+    return activeRenderer(RendererType) != null;
 }
 
 pub fn getTime(comptime RendererType: type) f64 {
-    if (active_renderer_runtime.get(RendererType)) |renderer| {
+    if (activeRenderer(RendererType)) |renderer| {
         return time_utils.getTime(renderer.start_counter, renderer.perf_freq);
     }
     return time_utils.getTime(null, null);
 }
 
 pub fn windowChanges(comptime RendererType: type) sdl_api.WindowChangeMask {
-    if (active_renderer_runtime.get(RendererType)) |renderer| {
+    if (activeRenderer(RendererType)) |renderer| {
         return input_state.windowChanges(renderer.inputDomain());
     }
     return .{};

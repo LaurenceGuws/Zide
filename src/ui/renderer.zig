@@ -1978,23 +1978,18 @@ pub const Renderer = struct {
 };
 
 pub fn pollInputEvents() void {
-    if (active_renderer_runtime.get(Renderer)) |renderer| {
+    if (renderer_global_runtime.activeRenderer(Renderer)) |renderer| {
         renderer.pollInputEvents();
     }
 }
 
 pub fn waitTime(seconds: f64) void {
-    if (active_renderer_runtime.get(Renderer)) |renderer| {
-        _ = renderer;
-        time_utils.waitTime(seconds);
-    } else {
-        time_utils.waitTime(seconds);
-    }
+    time_utils.waitTime(seconds);
 }
 
 pub fn waitForWakeOrTimeout(seconds: f64) void {
     if (seconds <= 0) return;
-    if (active_renderer_runtime.get(Renderer)) |renderer| {
+    if (renderer_global_runtime.activeRenderer(Renderer)) |renderer| {
         if (input_state.hasPendingWaitEvent(renderer.inputDomain())) return;
         const timeout_ms: c_int = @intFromFloat(@ceil(seconds * 1000.0));
         if (timeout_ms <= 0) return;

@@ -407,6 +407,10 @@ Progress note, 2026-04-05:
   `getScreenWidth`, `getScreenHeight`, active-status logging probe) now route
   through `src/ui/renderer/renderer_global_runtime.zig` instead of open-coding
   active-renderer global reads in `renderer.zig`.
+- Remaining renderer-root global helper reads (`pollInputEvents` and wake/wait
+  paths) now use `renderer_global_runtime.activeRenderer(...)` instead of
+  reading `active_renderer_runtime` directly; `waitTime` now uses the shared
+  time helper path without a redundant active-renderer branch.
 - The remaining renderer-root `sdl` alias is gone too; hit-test callback types
   and constants now use `sdl_api.c` directly so shared renderer code no longer
   depends on a local SDL alias surface.
