@@ -7,6 +7,10 @@ const window_init = @import("window_init.zig");
 
 pub const RendererRuntimeProfile = bootstrap_contract.RendererRuntimeProfile;
 
+pub const RendererBootstrap = struct {
+    window_state: InitBootstrapWindow,
+};
+
 pub const InitBootstrapWindow = struct {
     window: *sdl_api.c.SDL_Window,
     render_host: native_host.PlatformRenderHost,
@@ -54,6 +58,27 @@ pub fn initBootstrapWindow(
 pub fn deinitBootstrapWindow(window_state: *InitBootstrapWindow) void {
     window_init.deinitRenderSurfaceAttachment(&window_state.render_surface_attachment);
     sdl_api.destroyWindow(window_state.window);
+}
+
+pub fn initRendererBootstrap(
+    width: i32,
+    height: i32,
+    title: [*:0]const u8,
+    backend: anytype,
+    runtime_profile: RendererRuntimeProfile,
+) !RendererBootstrap {
+    try window_init.initSdl();
+    errdefer deinitSdlRuntime();
+
+    var window_state = try initBootstrapWindow(width, height, title, backend, runtime_profile);
+    errdefer deinitBootstrapWindow(&window_state);
+
+    return .{ .window_state = window_state };
+}
+
+pub fn deinitRendererBootstrap(bootstrap: *RendererBootstrap) void {
+    deinitBootstrapWindow(&bootstrap.window_state);
+    deinitSdlRuntime();
 }
 
 pub fn deinitRendererWindowResources(

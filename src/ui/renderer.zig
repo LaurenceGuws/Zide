@@ -744,24 +744,21 @@ pub const Renderer = struct {
     }
 
     pub fn init(allocator: std.mem.Allocator, width: i32, height: i32, title: [*:0]const u8, init_options: InitOptions) !*Renderer {
-        try window_init.initSdl();
-        errdefer bootstrap_runtime.deinitSdlRuntime();
-
         const startup_backend = init_options.renderer_backend;
         const runtime_profile = init_options.runtime_profile;
-        var bootstrap_window = try bootstrap_runtime.initBootstrapWindow(
+        var renderer_bootstrap = try bootstrap_runtime.initRendererBootstrap(
             width,
             height,
             title,
             startup_backend,
             runtime_profile,
         );
-        errdefer bootstrap_runtime.deinitBootstrapWindow(&bootstrap_window);
+        errdefer bootstrap_runtime.deinitRendererBootstrap(&renderer_bootstrap);
 
         const app_host = native_host.currentAppHost();
-        const window = bootstrap_window.window;
-        const render_host = bootstrap_window.render_host;
-        const render_surface_attachment = bootstrap_window.render_surface_attachment;
+        const window = renderer_bootstrap.window_state.window;
+        const render_host = renderer_bootstrap.window_state.render_host;
+        const render_surface_attachment = renderer_bootstrap.window_state.render_surface_attachment;
 
         var renderer = try allocator.create(Renderer);
         errdefer allocator.destroy(renderer);
