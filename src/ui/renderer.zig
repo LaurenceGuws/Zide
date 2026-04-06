@@ -1977,13 +1977,11 @@ pub const Renderer = struct {
 };
 
 pub fn pollInputEvents() void {
-    if (renderer_global_runtime.activeRenderer(Renderer)) |renderer| {
-        renderer.pollInputEvents();
-    }
+    renderer_global_runtime.pollInputEvents(Renderer, Renderer.pollInputEvents);
 }
 
 pub fn waitTime(seconds: f64) void {
-    time_utils.waitTime(seconds);
+    renderer_global_runtime.waitTime(seconds);
 }
 
 pub fn waitForWakeOrTimeout(seconds: f64) void {

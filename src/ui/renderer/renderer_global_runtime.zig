@@ -61,3 +61,11 @@ pub fn requestWake(comptime RendererType: type) void {
     }
     _ = sdl_api.pushRuntimeWakeEvent();
 }
+
+pub fn pollInputEvents(comptime RendererType: type, poll_fn: *const fn (*RendererType) void) void {
+    if (activeRenderer(RendererType)) |renderer| poll_fn(renderer);
+}
+
+pub fn waitTime(seconds: f64) void {
+    time_utils.waitTime(seconds);
+}

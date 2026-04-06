@@ -418,6 +418,9 @@ Progress note, 2026-04-05:
   `renderer_global_runtime.requestWake(...)`, including shutdown logging and
   wake-event push behavior, so renderer root no longer carries that global
   lifecycle wake path inline.
+- The remaining global poll/time wrappers (`pollInputEvents`, `waitTime`) now
+  also route through `renderer_global_runtime.zig`, leaving renderer-root
+  global entrypoints as thin delegates for those runtime helper paths too.
 - The remaining renderer-root `sdl` alias is gone too; hit-test callback types
   and constants now use `sdl_api.c` directly so shared renderer code no longer
   depends on a local SDL alias surface.
