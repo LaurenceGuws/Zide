@@ -8,9 +8,7 @@ const shape_utils = @import("shape_utils.zig");
 const texture_draw = @import("texture_draw.zig");
 const texture_utils = @import("texture_utils.zig");
 const capability_contract = @import("capability_contract.zig");
-const iface = @import("interface.zig");
 const metal_text_sample_runtime = @import("metal_text_sample_runtime.zig");
-const terminal_font_mod = @import("../terminal_font.zig");
 const presentable_contract = @import("presentable_contract.zig");
 const gl_presentable_target = @import("gl_presentable_target.zig");
 const scene_target_state = @import("scene_target_state.zig");
@@ -1258,14 +1256,3 @@ pub fn drawRawImageRgb(renderer: anytype, width: i32, height: i32, data: []const
     } });
 }
 
-pub fn drawSampleTextRequest(_: anytype, _: metal_text_sample_runtime.SampleTextRequest) bool {
-    return false;
-}
-
-pub fn drawTerminalCellRun(_: anytype, _: *terminal_font_mod.TerminalFont, _: metal_text_sample_runtime.TerminalCellRunRequest) bool {
-    return false;
-}
-
-pub fn drawAtlasSampleChar(_: anytype, _: u8, _: f32, _: f32, _: iface.Color) bool {
-    return false;
-}

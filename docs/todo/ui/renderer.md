@@ -208,6 +208,8 @@ Progress note, 2026-04-05:
   `drawSampleTextRequest`, `drawTerminalCellRun`, and `drawAtlasSampleChar`
   were removed from `Renderer`/`BackendOps`, and call sites now invoke
   `metal_backend.zig` directly.
+- The matching no-op OpenGL stubs for those Metal-only text helpers were
+  removed from `gl_backend.zig` (plus now-unused imports).
 - Metal atlas preview/debug state now also lives inside
   `src/ui/renderer/metal_runtime_state.zig` as part of the bundled Metal
   runtime state instead of as a separate backend-specific field on
