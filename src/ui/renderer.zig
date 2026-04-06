@@ -7,6 +7,7 @@ const FontRenderingOptions = terminal_font_mod.RenderingOptions;
 const hb = terminal_font_mod.c;
 const capability_contract = @import("renderer/capability_contract.zig");
 const bootstrap_runtime = @import("renderer/bootstrap_runtime.zig");
+const active_renderer_runtime = @import("renderer/active_renderer_runtime.zig");
 const font_manager = @import("renderer/font_manager.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
 const gl_backend = @import("renderer/gl_backend.zig");
@@ -62,7 +63,6 @@ pub const WindowSizes = struct {
     render_height: i32,
 };
 
-var active_renderer: ?*Renderer = null;
 var mouse_wheel_delta: f32 = 0.0;
 
 pub const FontFamily = iface.FontFamily;
@@ -925,7 +925,7 @@ pub const Renderer = struct {
         try renderer.backend_ops.initRuntime(renderer);
 
         input_state.startTextInput(renderer.inputDomain());
-        active_renderer = renderer;
+        active_renderer_runtime.set(renderer);
         return renderer;
     }
 
@@ -956,7 +956,7 @@ pub const Renderer = struct {
         sdl_api.destroyWindow(self.window);
         sdl_api.quit();
 
-        if (active_renderer == self) active_renderer = null;
+        active_renderer_runtime.clearIf(self);
         self.allocator.destroy(self);
     }
 
@@ -1978,13 +1978,13 @@ pub const Renderer = struct {
 };
 
 pub fn pollInputEvents() void {
-    if (active_renderer) |renderer| {
+    if (active_renderer_runtime.get(Renderer)) |renderer| {
         renderer.pollInputEvents();
     }
 }
 
 pub fn waitTime(seconds: f64) void {
-    if (active_renderer) |renderer| {
+    if (active_renderer_runtime.get(Renderer)) |renderer| {
         _ = renderer;
         time_utils.waitTime(seconds);
     } else {
@@ -1994,7 +1994,7 @@ pub fn waitTime(seconds: f64) void {
 
 pub fn waitForWakeOrTimeout(seconds: f64) void {
     if (seconds <= 0) return;
-    if (active_renderer) |renderer| {
+    if (active_renderer_runtime.get(Renderer)) |renderer| {
         if (input_state.hasPendingWaitEvent(renderer.inputDomain())) return;
         const timeout_ms: c_int = @intFromFloat(@ceil(seconds * 1000.0));
         if (timeout_ms <= 0) return;
@@ -2010,7 +2010,7 @@ pub fn waitForWakeOrTimeout(seconds: f64) void {
 pub fn requestWake() void {
     if (app_lifecycle_runtime.shutdownStarted()) {
         @import("../app_logger.zig").logger("app.lifecycle").logFields(.info, "runtime_wake_request", &.{
-            .{ .key = "renderer_active", .value = .{ .boolean = active_renderer != null } },
+            .{ .key = "renderer_active", .value = .{ .boolean = active_renderer_runtime.get(Renderer) != null } },
             .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
         });
     }
@@ -2018,7 +2018,7 @@ pub fn requestWake() void {
 }
 
 pub fn getTime() f64 {
-    if (active_renderer) |renderer| {
+    if (active_renderer_runtime.get(Renderer)) |renderer| {
         return time_utils.getTime(renderer.start_counter, renderer.perf_freq);
     }
     return time_utils.getTime(null, null);
@@ -2029,18 +2029,18 @@ pub fn setSdlLogLevel(level: c_int) void {
 }
 
 pub fn windowChanges() WindowChangeMask {
-    if (active_renderer) |renderer| {
+    if (active_renderer_runtime.get(Renderer)) |renderer| {
         return input_state.windowChanges(renderer.inputDomain());
     }
     return .{};
 }
 
 pub fn getScreenWidth() i32 {
-    if (active_renderer) |renderer| return renderer.width;
+    if (active_renderer_runtime.get(Renderer)) |renderer| return renderer.width;
     return 0;
 }
 
 pub fn getScreenHeight() i32 {
-    if (active_renderer) |renderer| return renderer.height;
+    if (active_renderer_runtime.get(Renderer)) |renderer| return renderer.height;
     return 0;
 }

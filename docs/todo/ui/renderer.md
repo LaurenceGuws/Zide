@@ -396,6 +396,10 @@ Progress note, 2026-04-05:
   runtime-profile typing; that type now routes through
   `bootstrap_runtime.zig`, reducing one more direct renderer-root bootstrap
   contract coupling point.
+- Global active-renderer registration moved out of `renderer.zig` into
+  `src/ui/renderer/active_renderer_runtime.zig` (`set`, `clearIf`, `get`), so
+  renderer startup/deinit and global helper lookups no longer mutate/read a
+  renderer-root global directly.
 - The remaining renderer-root `sdl` alias is gone too; hit-test callback types
   and constants now use `sdl_api.c` directly so shared renderer code no longer
   depends on a local SDL alias surface.
