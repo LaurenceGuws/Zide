@@ -54,6 +54,7 @@ pub fn bootstrapOps() bootstrap_contract.BackendBootstrapOps {
         .graphics_binding = .metal,
         .configureWindowAttributes = configureWindowAttributes,
         .createBackendContext = createBackendContextForBootstrap,
+        .destroyBackendContext = destroyBackendContextForBootstrap,
         .runStartupSmoke = runStartupSmokeForBootstrap,
     };
 }
@@ -1158,6 +1159,8 @@ pub fn initRuntime(renderer: anytype) !void {
 }
 
 pub fn configureWindowAttributes() !void {}
+
+pub fn destroyBackendContextForBootstrap(_: ?sdl_api.c.SDL_GLContext) void {}
 
 pub fn createBackendContextForBootstrap(_: *sdl_api.c.SDL_Window) !?sdl_api.c.SDL_GLContext {
     return null;

@@ -363,6 +363,9 @@ Progress note, 2026-04-05:
   own bootstrap ops tables (`gl_backend.bootstrapOps()` /
   `metal_backend.bootstrapOps()`), so `renderer.zig` no longer spells out the
   backend bootstrap function-pointer mapping inline.
+- Bootstrap context cleanup now also routes through the shared bootstrap
+  contract (`destroyBackendContext`) instead of `renderer.zig` directly calling
+  `SDL_GL_DeleteContext` on init error paths.
 - The macOS OpenGL editor retained-presentable bypass in
   `editor_widget_draw.zig` no longer keys off `renderer.backend` + OS tags;
   `capability_contract.RendererCapabilities` now exposes

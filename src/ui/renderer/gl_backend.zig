@@ -34,6 +34,7 @@ pub fn bootstrapOps() bootstrap_contract.BackendBootstrapOps {
         .graphics_binding = .opengl,
         .configureWindowAttributes = configureWindowAttributes,
         .createBackendContext = createBackendContext,
+        .destroyBackendContext = destroyBackendContextForBootstrap,
         .runStartupSmoke = runStartupSmokeForBootstrap,
     };
 }
@@ -98,6 +99,10 @@ pub fn configureWindowAttributes() !void {
     try requireGlAttribute(sdl.SDL_GL_CONTEXT_MINOR_VERSION, 3);
     try requireGlAttribute(sdl.SDL_GL_CONTEXT_PROFILE_MASK, sdl.SDL_GL_CONTEXT_PROFILE_CORE);
     try requireGlAttribute(sdl.SDL_GL_DOUBLEBUFFER, 1);
+}
+
+pub fn destroyBackendContextForBootstrap(context: ?sdl_api.c.SDL_GLContext) void {
+    if (context) |value| sdl_api.glDeleteContext(value);
 }
 
 pub fn createBackendContext(window: *sdl.SDL_Window) !?sdl_api.c.SDL_GLContext {

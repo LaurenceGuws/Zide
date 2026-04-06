@@ -814,7 +814,7 @@ pub const Renderer = struct {
         }
 
         const gl_context = try bootstrap_ops.createBackendContext(window);
-        errdefer if (gl_context) |context| sdl_api.glDeleteContext(context);
+        errdefer bootstrap_ops.destroyBackendContext(gl_context);
 
         var renderer = try allocator.create(Renderer);
         errdefer allocator.destroy(renderer);
