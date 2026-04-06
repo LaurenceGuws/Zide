@@ -182,8 +182,8 @@ pub const KittyState = struct {
             const dest = types.Rect{ .x = x, .y = y, .width = draw_w, .height = draw_h };
             if (r.kittyImageMode() == .direct_raw_images) {
                 switch (image.format) {
-                    .rgb => _ = r.drawRawImageRgb(@intCast(image.width), @intCast(image.height), image.data, dest, Color.white.toRgba()),
-                    .rgba => _ = r.drawRawImageRgba(@intCast(image.width), @intCast(image.height), image.data, dest, Color.white.toRgba()),
+                    .rgb => _ = r.drawRawImage(.rgb, @intCast(image.width), @intCast(image.height), image.data, dest, Color.white.toRgba()),
+                    .rgba => _ = r.drawRawImage(.rgba, @intCast(image.width), @intCast(image.height), image.data, dest, Color.white.toRgba()),
                     .png => {},
                 }
                 continue;

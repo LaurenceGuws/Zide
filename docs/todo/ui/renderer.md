@@ -109,6 +109,9 @@ Progress note, 2026-04-05:
 - The dead `BackendOps.drawSolidRect` function-pointer slot and per-backend
   dispatch methods are now removed from `renderer.zig`; solid submission only
   enters through `enqueueSurfaceDraw`.
+- `Renderer.drawRawImageRgba` / `drawRawImageRgb` are now one
+  `Renderer.drawRawImage(format, ...)` entrypoint (`RawImageFormat`), with one
+  backend-op dispatch slot instead of two backend-specific method names.
 - `Renderer.addTerminalRectF` uses the same `enqueueSolidSurfaceFromLogicalRect`
   helper (immediate solid); `addTerminalRect` (i32) still uses `BackendOps` so
   OpenGL keeps terminal batch quads instead of forcing an immediate path.
