@@ -312,68 +312,6 @@ fn drawMetalTerminalGraphemeCellFallback(
     });
 }
 
-pub fn drawTerminalCell(self: *Renderer, codepoint: u32, x: f32, y: f32, cell_width: f32, cell_height: f32, fg: Color, bg: Color, underline_color: Color, bold: bool, underline: bool, is_cursor: bool, followed_by_space: bool, draw_bg: bool) void {
-    const snapped_x = snapToDevicePixel(x, self.scale.render_scale);
-    const snapped_y = snapToDevicePixel(y, self.scale.render_scale);
-    const snapped_cell_width = snapToDevicePixel(cell_width, self.scale.render_scale);
-    const snapped_cell_height = snapToDevicePixel(cell_height, self.scale.render_scale);
-    const snapped_cell_w_i = snapInt(snapped_cell_width);
-    const snapped_cell_h_i = snapInt(snapped_cell_height);
-
-    if (draw_bg) {
-        self.drawRect(snapInt(snapped_x), snapInt(snapped_y), snapped_cell_w_i, snapped_cell_h_i, if (is_cursor) fg else bg);
-    }
-
-    if (codepoint != 0 and textRenderingAvailable(self)) {
-        const text_color = if (is_cursor) bg else fg;
-        _ = bold;
-        const draw = terminal_font_mod.DrawContext{ .ctx = self, .drawTexture = drawTextureThunk };
-        const behind = if (is_cursor) fg else bg;
-        var behind_rgba = behind.toRgba();
-        behind_rgba.a = 255;
-        self.text_render.bg_rgba = behind_rgba;
-        if (!drawTerminalBoxGlyph(self, codepoint, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, text_color)) {
-            self.terminal_font.drawGlyph(draw, codepoint, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, followed_by_space, text_color.toRgba(), false);
-        }
-        if (underline) {
-            terminal_underline.drawUnderline(drawRectThunk, self, snapInt(snapped_x), snapInt(snapped_y), snapped_cell_w_i, snapped_cell_h_i, underline_color);
-        }
-    } else if (codepoint != 0) {
-        const text_color = if (is_cursor) bg else fg;
-        _ = drawMetalTerminalCodepointCellFallback(self, codepoint, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, text_color);
-        if (underline) {
-            terminal_underline.drawUnderline(drawRectThunk, self, snapInt(snapped_x), snapInt(snapped_y), snapped_cell_w_i, snapped_cell_h_i, underline_color);
-        }
-    }
-}
-
-pub fn drawTerminalCellGrapheme(self: *Renderer, base: u32, combining: []const u32, x: f32, y: f32, cell_width: f32, cell_height: f32, fg: Color, bg: Color, underline_color: Color, bold: bool, underline: bool, is_cursor: bool, followed_by_space: bool, draw_bg: bool) void {
-    if (combining.len == 0) return drawTerminalCell(self, base, x, y, cell_width, cell_height, fg, bg, underline_color, bold, underline, is_cursor, followed_by_space, draw_bg);
-    const snapped_x = snapToDevicePixel(x, self.scale.render_scale);
-    const snapped_y = snapToDevicePixel(y, self.scale.render_scale);
-    const snapped_cell_width = snapToDevicePixel(cell_width, self.scale.render_scale);
-    const snapped_cell_height = snapToDevicePixel(cell_height, self.scale.render_scale);
-    const snapped_cell_w_i = snapInt(snapped_cell_width);
-    const snapped_cell_h_i = snapInt(snapped_cell_height);
-    if (draw_bg) self.drawRect(snapInt(snapped_x), snapInt(snapped_y), snapped_cell_w_i, snapped_cell_h_i, if (is_cursor) fg else bg);
-    if (base != 0 and textRenderingAvailable(self)) {
-        const text_color = if (is_cursor) bg else fg;
-        const draw = terminal_font_mod.DrawContext{ .ctx = self, .drawTexture = drawTextureThunk };
-        const behind = if (is_cursor) fg else bg;
-        var behind_rgba = behind.toRgba();
-        behind_rgba.a = 255;
-        self.text_render.bg_rgba = behind_rgba;
-        if (!drawTerminalBoxGlyph(self, base, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, text_color)) {
-            self.terminal_font.drawGrapheme(draw, base, combining, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, followed_by_space, text_color.toRgba(), false);
-        }
-        if (underline) terminal_underline.drawUnderline(drawRectThunk, self, snapInt(snapped_x), snapInt(snapped_y), snapped_cell_w_i, snapped_cell_h_i, underline_color);
-    } else if (base != 0) {
-        const text_color = if (is_cursor) bg else fg;
-        _ = drawMetalTerminalGraphemeCellFallback(self, base, combining, snapped_x, snapped_y, snapped_cell_width, snapped_cell_height, text_color);
-        if (underline) terminal_underline.drawUnderline(drawRectThunk, self, snapInt(snapped_x), snapInt(snapped_y), snapped_cell_w_i, snapped_cell_h_i, underline_color);
-    }
-}
-
 pub fn drawTerminalCellGraphemeBatched(self: *Renderer, base: u32, combining: []const u32, x: f32, y: f32, cell_width: f32, cell_height: f32, fg: Color, bg: Color, underline_color: Color, bold: bool, underline: bool, is_cursor: bool, followed_by_space: bool, draw_bg: bool) void {
     if (combining.len == 0) return drawTerminalCellBatched(self, base, x, y, cell_width, cell_height, fg, bg, underline_color, bold, underline, is_cursor, followed_by_space, draw_bg);
     const snapped_x = snapToDevicePixel(x, self.scale.render_scale);

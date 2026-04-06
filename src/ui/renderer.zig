@@ -1472,45 +1472,6 @@ pub const Renderer = struct {
         self.backend_ops.applyClipRect(self, self.currentClipRect());
     }
 
-    pub fn drawTerminalCell(
-        self: *Renderer,
-        codepoint: u32,
-        x: f32,
-        y: f32,
-        cell_width: f32,
-        cell_height: f32,
-        fg: Color,
-        bg: Color,
-        underline_color: Color,
-        bold: bool,
-        underline: bool,
-        is_cursor: bool,
-        followed_by_space: bool,
-        draw_bg: bool,
-    ) void {
-        text_runtime.drawTerminalCell(self, codepoint, x, y, cell_width, cell_height, fg, bg, underline_color, bold, underline, is_cursor, followed_by_space, draw_bg);
-    }
-
-    pub fn drawTerminalCellGrapheme(
-        self: *Renderer,
-        base: u32,
-        combining: []const u32,
-        x: f32,
-        y: f32,
-        cell_width: f32,
-        cell_height: f32,
-        fg: Color,
-        bg: Color,
-        underline_color: Color,
-        bold: bool,
-        underline: bool,
-        is_cursor: bool,
-        followed_by_space: bool,
-        draw_bg: bool,
-    ) void {
-        text_runtime.drawTerminalCellGrapheme(self, base, combining, x, y, cell_width, cell_height, fg, bg, underline_color, bold, underline, is_cursor, followed_by_space, draw_bg);
-    }
-
     pub fn drawTerminalCellGraphemeBatched(
         self: *Renderer,
         base: u32,

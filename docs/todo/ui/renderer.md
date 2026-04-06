@@ -558,9 +558,10 @@ Rules:
   rect path, not changing widget color decisions.
 - follow-up closure after that bug: the dead `addTerminalRectF(...)` API was
   removed so terminal background drawing no longer advertises two public paths.
-  Remaining explicit scrutiny point: terminal overlay/cursor rendering still
-  uses the non-batched terminal cell path and should be treated as a deliberate
-  seam until proven otherwise.
+- follow-up closure after that seam review: terminal overlay/cursor/composition
+  rendering now uses the same batched terminal cell path as the grid, and the
+  old immediate terminal-cell API was removed as dead duplication rather than
+  preserved as a second public route.
 - the next meaningful wins should reduce shared renderer ownership, not add
   another backend.
 

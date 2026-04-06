@@ -269,7 +269,7 @@ pub fn drawOverlays(
                     const colors = overlayResolvedCursorColors(cell, screen_reverse);
                     const followed_by_space = followedBySpace(row_cells, view.cols, cursor.col, cell_width_units);
                     if (cell.combining_len > 0) {
-                        r.drawTerminalCellGrapheme(
+                        r.drawTerminalCellGraphemeBatched(
                             cell.codepoint,
                             cell.combining[0..@intCast(cell.combining_len)],
                             cell_x,
@@ -286,7 +286,7 @@ pub fn drawOverlays(
                             true,
                         );
                     } else {
-                        r.drawTerminalCell(
+                        r.drawTerminalCellBatched(
                             cell.codepoint,
                             cell_x,
                             cell_y,
@@ -384,7 +384,7 @@ pub fn drawOverlays(
                     var iter = std.unicode.Utf8Iterator{ .bytes = input.composing_text, .i = 0 };
                     while (iter.nextCodepoint()) |cp| {
                         const comp_x = cell_x + @as(f32, @floatFromInt(@as(i32, @intCast(comp_col)))) * view.cell_width;
-                        r.drawTerminalCell(cp, comp_x, cell_y, view.cell_width, view.cell_height, r.theme.foreground, bg, underline_color, false, true, false, true, false);
+                        r.drawTerminalCellBatched(cp, comp_x, cell_y, view.cell_width, view.cell_height, r.theme.foreground, bg, underline_color, false, true, false, true, false);
                         comp_col += 1;
                     }
                 }
