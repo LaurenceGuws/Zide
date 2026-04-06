@@ -7,7 +7,8 @@ contract campaign and the native-host architecture direction in
 `app_architecture/platform/NATIVE_HOST_CONTRACT.md`,
 `app_architecture/platform/NATIVE_HOST_REFERENCE_CROSSCHECK.md`, and
 `app_architecture/platform/PLATFORM_CAPABILITY_MODEL.md`, and
-`app_architecture/platform/macos/RENDER_BACKEND.md`.
+`app_architecture/platform/macos/RENDER_BACKEND.md`, and
+`app_architecture/platform/macos/METAL_BACKEND_IMPLEMENTATION.md`.
 
 ## Scope
 
@@ -40,6 +41,14 @@ cross-platform native-host architecture.
 
 This file is the coordination point for reopening macOS as a deliberate product
 lane.
+
+Metal backend implementation authority also lives in:
+
+- `app_architecture/platform/macos/METAL_BACKEND_IMPLEMENTATION.md`
+
+Keep that doc current even while live macOS validation is paused. Metal still
+has to function as a first-class reference implementation for the renderer
+backend campaign.
 
 ## Product Direction
 

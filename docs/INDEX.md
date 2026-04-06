@@ -77,6 +77,8 @@ Quick reading guide:
   truth.
 - `app_architecture/platform/macos/RENDER_BACKEND.md` — macOS AppKit + Metal
   host/backend authority.
+- `app_architecture/platform/macos/METAL_BACKEND_IMPLEMENTATION.md` — live
+  Metal backend structure, ownership truth, and contributor workflow.
 - `app_architecture/platform/android/RENDER_BACKEND.md` — Android Activity +
   `ANativeWindow` host/backend authority.
 - `app_architecture/ui/WINDOW_SCALE_GEOMETRY_DESIGN.md` — exact public widget

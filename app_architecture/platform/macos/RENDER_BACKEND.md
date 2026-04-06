@@ -6,6 +6,13 @@ Metal.
 This doc is architecture authority for the macOS-native render host and its
 relationship to the shared native-host contract.
 
+Implementation companion:
+
+- `app_architecture/platform/macos/METAL_BACKEND_IMPLEMENTATION.md`
+
+Use that doc for the live Metal backend code map, current implementation truth,
+and contributor workflow.
+
 ## Target Stack
 
 - app host: `NSApplication`
@@ -249,6 +256,20 @@ The correct migration order is:
 4. attach the Metal render host
 5. bring up clear/present with honest drawable ownership
 6. only then widen renderer feature work
+
+## Authority Split
+
+Use this file for:
+
+- AppKit/window/view/layer/drawable architecture
+- native-host boundary decisions
+- destination render-host ownership
+
+Use `METAL_BACKEND_IMPLEMENTATION.md` for:
+
+- live Metal backend structure
+- frame/draw/text/present implementation truth
+- debugging and contributor guidance
 
 ## Ranked Contradiction Audit Versus The Live SDL/OpenGL Lane
 
