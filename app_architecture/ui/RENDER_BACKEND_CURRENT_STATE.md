@@ -496,6 +496,16 @@ Status, 2026-04-05:
 Only after cuts 1 through 3 are real should the Metal-specific convenience
 verbs disappear behind neutral renderer/backend contracts.
 
+## Defect Class Note (2026-04-06)
+
+One concrete class now confirmed by live behavior: stateful overlay
+invalidation drift between backend present/reuse paths. The observed symptom was
+stale terminal cursor presentation on Metal when fast snapshot-present reuse
+skipped redraw even though cursor state changed. The structural fix now tracks
+cursor/overlay state deltas in presentation cache/reuse decisions, but this
+class should be treated as an explicit scrutiny target when comparing OpenGL
+and Metal lifecycle equivalence after the current cut order is complete.
+
 ## Ranked Contradictions
 
 ### High

@@ -355,3 +355,14 @@ Progress note, 2026-04-05:
 - [ ] Use OpenGL and Metal as the proof pair for every structural backend cut.
 - [ ] Keep terminal/text execution work subordinate to the shared contract
   instead of letting it redefine the backend architecture by momentum.
+
+## Defect Class Watchlist (for later GL/Metal scrutiny pass)
+
+- stateful overlay invalidation drift: backend present/reuse fast paths that
+  skip redraw while cursor/hover/composition state changed (generation-stable
+  frames masking visual stale artifacts)
+- presentable reuse truth drift: one backend reporting `presentableAvailable`
+  true while lifecycle state (size/scroll/restore/update completion) is not
+  equivalent to the other backend
+- partial-plan vs fast-present interaction drift: damage/partial math that is
+  correct for terminal content deltas but omits overlay/trace-visible state
