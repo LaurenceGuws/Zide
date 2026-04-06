@@ -776,7 +776,7 @@ pub const Renderer = struct {
 
     pub fn init(allocator: std.mem.Allocator, width: i32, height: i32, title: [*:0]const u8, init_options: InitOptions) !*Renderer {
         try window_init.initSdl();
-        errdefer sdl.SDL_Quit();
+        errdefer sdl_api.quit();
 
         const startup_backend = init_options.renderer_backend;
         const runtime_profile = init_options.runtime_profile;
@@ -957,8 +957,8 @@ pub const Renderer = struct {
         if (self.appkit_delegate_installation) |*installation| macos_app_delegate.uninstall(installation);
         if (self.app_event_watch_installed) removeAppEventWatch(&self.app_host);
         window_init.deinitRenderSurfaceAttachment(&self.render_surface_attachment);
-        sdl.SDL_DestroyWindow(self.window);
-        sdl.SDL_Quit();
+        sdl_api.destroyWindow(self.window);
+        sdl_api.quit();
 
         if (active_renderer == self) active_renderer = null;
         self.allocator.destroy(self);

@@ -389,6 +389,9 @@ Progress note, 2026-04-05:
 - `bootstrap_runtime.InitBootstrapWindow` was trimmed to only carry bootstrap
   resources (`window`, `render_host`, `render_surface_attachment`); bootstrap
   ops metadata no longer rides along in that state object.
+- `renderer.zig` startup/deinit teardown paths now use `sdl_api` wrappers
+  (`destroyWindow`, `quit`) instead of direct `SDL_*` calls, keeping shared
+  lifecycle flow aligned to platform wrapper seams.
 - The macOS OpenGL editor retained-presentable bypass in
   `editor_widget_draw.zig` no longer keys off `renderer.backend` + OS tags;
   `capability_contract.RendererCapabilities` now exposes
