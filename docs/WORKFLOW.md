@@ -8,21 +8,85 @@ repository.
 - `README.md` and the docs explorer repo are customer-facing.
 - This file is contributor/operator/agent-facing.
 
+## Default Operating Model
+
+Treat the repo like one active campaign with ticket-style execution.
+
+That means:
+
+- `docs/AGENT_HANDOFF.md` tells you the current default campaign
+- one owning TODO queue tells you what to do next
+- architecture docs tell you what "correct" means
+- you should be able to explain your work as "I am executing ticket X"
+
+If you cannot name the active ticket, you are probably about to drift.
+
 ## Workflow
 
 1. Read `docs/AGENT_HANDOFF.md` for current focus and constraints.
 2. Read the owning TODO doc in `docs/todo/`.
-3. Read only the design docs needed for the task.
-4. Implement the change.
-5. Update the owning docs.
-6. Validate locally.
-7. Commit only after approval, unless the user explicitly asks for a commit.
+3. Read only the design docs needed for that ticket.
+4. Confirm the ticket scope, exit bar, and "do not do" rules.
+5. Implement the change.
+6. Update the owning docs.
+7. Validate locally.
+8. Commit only after approval, unless the user explicitly asks for a commit.
+
+## Ticket Execution Rules
+
+Every active task should have these five answers before code starts:
+
+- What is the active ticket ID or queue item?
+- Which doc owns the design truth?
+- Which file or subsystem is under change?
+- What is the acceptance criterion?
+- What would count as drift?
+
+Minimum ticket shape for execution:
+
+- purpose
+- owner docs
+- scope
+- acceptance criteria
+- explicit non-goals / "do not do"
+
+If the existing queue item does not provide those answers, improve the queue
+before or while doing the work.
+
+## Blocked / Done / Escalation Rules
+
+Mark work done only when:
+
+- the code change satisfies the ticket's acceptance criteria
+- the owning queue reflects the new state
+- local validation for that lane has been run
+
+Mark work blocked when:
+
+- the next step depends on a missing architecture decision
+- the active lane is actually waiting on a different ticket
+- local validation fails for reasons you cannot resolve inside the lane
+
+Escalate instead of improvising when:
+
+- two docs claim the same authority
+- a quick fix would widen the wrong seam
+- the active queue and the code reality materially disagree
+- a lower-priority backend or platform is about to reshape the active contract
+
+Weak-agent rule:
+
+- do not invent a new lane because the current ticket feels hard
+- either execute the named ticket, improve the ticket doc, or mark it blocked
 
 ## Branching
 
 - Do not implement directly on `main`.
 - `main` is merge-only and should stay clean between validated milestones.
 - Start active work on a feature branch from current `main`.
+- Weaker agents must never commit on `main`.
+- `main` should only be updated when the lead reviewer accepts a validated
+  chunk and merges or fast-forwards it intentionally.
 - If you create a branch, own it end-to-end: branch from current `main`, validate locally, merge back, and delete it after landing.
 - For large architecture campaigns, a temporary "war branch" is allowed when it
   materially improves checkpoint discipline and keeps `main` clean between
@@ -74,12 +138,76 @@ Doc-placement authority:
 - Put current task progress in the owning todo or architecture doc, not in `docs/AGENT_HANDOFF.md`.
 - If a doc contradicts code, fix the doc or remove the stale claim.
 - Prefer one clear authority per topic.
+- Prefer one clear queue per active campaign.
 - If a doc defines the intended subsystem shape, boundary, contract, or design target, it belongs in `app_architecture/`.
 - If a doc is architecture-adjacent communication such as a redesign plan, checkpoint, status note, diagram set, or release/design summary, it belongs in `app_architecture/`.
 - If a doc is workflow, operator guidance, reference, research, review, or a non-authoritative execution queue, it belongs in `docs/`.
 - If a topic is historical rather than current, move it under `docs/review/` or point to it from a current doc instead of duplicating it.
 - If a topic is exploratory or reference-heavy rather than authoritative, place it under `docs/research/` or `docs/reference/`.
 - Update the smallest doc that actually owns the information.
+
+## Queue Writing Rules
+
+Write TODO queues so a weaker agent can execute them safely.
+
+Good queue items:
+
+- name one problem clearly
+- link the owner docs directly
+- say what counts as done
+- say what not to touch
+- make rerank conditions explicit
+
+Bad queue items:
+
+- broad motivational prose with no next action
+- historical changelogs mixed with active execution instructions
+- "clean this up" items with no boundary or owner
+- backend or platform names used as a substitute for contract scope
+
+## Review Gate Rules
+
+Large architecture campaigns should define explicit review gates.
+
+Each review gate should say:
+
+- which tickets belong to the chunk
+- what validation must run
+- what the stop marker is
+- what summary the reviewer expects back
+
+Default reviewer handoff shape:
+
+1. review chunk name
+2. tickets completed
+3. files changed
+4. validation run
+5. remaining risks
+6. exact review questions
+
+If a weaker agent cannot produce that handoff, the chunk is not ready for
+review yet.
+
+## Commit Rules
+
+Default commit policy:
+
+- keep commits small and coherent
+- prefer one logical change per commit
+- each commit should leave the tree buildable for that lane
+
+For weaker agents:
+
+- do not save work for one giant end-of-chunk commit
+- make reviewable checkpoint commits on the feature branch
+- do not rewrite history unless explicitly asked
+- do not touch `main`
+
+For reviewers/leads:
+
+- accept work onto `main` only after the review gate for that chunk is met
+- if a chunk is not reviewable, send it back to the branch instead of
+  half-landing it on `main`
 
 ## Quick Placement Rules
 

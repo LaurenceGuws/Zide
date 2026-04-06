@@ -8,6 +8,8 @@ not a progress log and should stay brief.
 - The only default architecture focus is now renderer backend contract quality.
 - Treat OpenGL and Metal as the two reference implementations for the shared
   backend abstraction.
+- Linux GL is the active proving ground.
+- Metal is paused for live validation, not removed from the contract.
 - The standard is no longer "make Metal work for one more terminal case."
 - The standard is:
   - define the renderer/backend contract we actually want
@@ -16,6 +18,8 @@ not a progress log and should stay brief.
     backend theater
   - make a future Vulkan backend feel like straightforward backend work, not
     renderer surgery
+  - keep Android/mobile pressure in mind without letting mobile implementation
+    work reshape the contract too early
 
 ### Current Direction
 
@@ -33,9 +37,17 @@ not a progress log and should stay brief.
   - no fake neutrality through enums/capabilities when control flow still
     depends on backend-native types
 
+Execution discipline:
+
+- default to the renderer ticket queue:
+  - `docs/todo/ui/renderer.md`
+- treat queue items as executable tickets, not vague themes
+- if a task does not clearly map to the renderer queue, it is probably drift
+
 ### Current State
 
 - OpenGL is still the most complete renderer implementation.
+- OpenGL is the proving ground, not the design authority.
 - Metal is now a real live implementation, especially on the terminal lane, but
   it still depends on backend-specific state and draw descriptions carried by
   the shared renderer.
@@ -54,11 +66,14 @@ not a progress log and should stay brief.
   - `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md`
 - Active execution queue:
   - `docs/todo/ui/renderer.md`
+- Rendering journey orientation:
+  - `app_architecture/ui/DEVELOPMENT_JOURNEY.md`
 - Reference-pressure scan:
   - `docs/research/RENDER_BACKEND_REFERENCE_SCAN_2026-04-05.md`
 - Supporting platform/renderer authority:
   - `app_architecture/platform/PLATFORM_CAPABILITY_MODEL.md`
   - `app_architecture/platform/macos/RENDER_BACKEND.md`
+  - `app_architecture/platform/android/RENDER_BACKEND.md`
   - `app_architecture/RENDERER_SCENE_PUBLICATION_CONTRACT.md`
 
 ### Deferred Focuses
@@ -74,7 +89,12 @@ not a progress log and should stay brief.
 - Keep this file high-level only.
 - Detailed progress belongs in the owning files under `docs/todo/` and the
   relevant `app_architecture/` authority docs.
+- Do not let old "rendering roadmap" docs outrank the renderer queue and
+  contract docs.
 - Do not work directly on `main`; treat it as merge-only and start active work
   on a branch from current `main`.
+- Weaker agents must stay on feature branches and keep small reviewable
+  checkpoint commits; `main` should only move when the lead accepts a validated
+  chunk.
 - `.zide.lua` logging is agent-owned and should stay minimal and bug-scoped.
 - No CI; validation is local build/test plus manual verification.

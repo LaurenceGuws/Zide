@@ -23,6 +23,8 @@ Quick reading guide:
 - `docs/AGENT_HANDOFF.md` — current focus, constraints, and entrypoints.
 - `AGENTS.md` — workflow rules and constraints.
 - `docs/WORKFLOW.md` — doc roles and update rules.
+- `docs/todo/ui/renderer.md` — active renderer ticket queue; the main
+  execution board for the current architecture campaign.
 - `app_architecture/ui/RENDER_BACKEND_CONTRACT.md` — current indefinite
   default architecture focus and the target backend contract.
 - `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md` — current-state audit
@@ -61,7 +63,8 @@ Quick reading guide:
 ## Architecture + design
 - `app_architecture/platform/NATIVE_HOST_CONTRACT.md` — strict shared native
   host contract for lifecycle, surface, focus, IME, and present semantics.
-- `app_architecture/ui/DEVELOPMENT_JOURNEY.md` — renderer plan and per-OS journey.
+- `app_architecture/ui/DEVELOPMENT_JOURNEY.md` — high-level renderer journey
+  and priority map; orientation only, not the active queue.
 - `app_architecture/ui/RENDER_BACKEND_CONTRACT.md` — target backend
   abstraction contract, with OpenGL and Metal as the reference implementations.
 - `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md` — current renderer

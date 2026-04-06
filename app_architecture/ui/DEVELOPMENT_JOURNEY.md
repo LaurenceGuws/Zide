@@ -1,224 +1,109 @@
 # UI Development Journey (Rendering Stack)
 
-Goal
-- Build a fast, reliable GUI rendering stack for Zide across Linux, Windows 11, macOS, and Android.
-- Treat reference repos as canonical. We only diverge when required by Zide's code or to exceed the reference quality.
+Purpose: describe the current rendering journey at a high level without
+competing with the active renderer ticket queue.
 
-Status (2026-01-29)
-- Current emphasis (2026-04-05): renderer backend contract quality.
-  - target contract authority: `app_architecture/ui/RENDER_BACKEND_CONTRACT.md`
-  - current-state authority: `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md`
-  - active execution queue: `docs/todo/ui/renderer.md`
-- SDL3 window/input + OpenGL 3.3 renderer is now the active stack on Linux.
-- Raylib has been removed from the build path; PNG decoding is handled via stb_image.
-- Fixed texture UV orientation: CPU textures use top-left UVs; FBO blits flip Y at draw time.
-- Wayland mouse scale uses SDL's drawable/window ratio only; avoid double-applying compositor scale.
-- Undo repeat loop fixed by removing input-level undo grouping and ignoring text events while ctrl/alt/super are held.
-- Key repeat now uses SDL's native key repeat events (no custom repeat timers) to align with terminal/editor input behavior.
-- SDL event polling now runs on the main thread to match SDL3 thread-safety rules.
-- Idle sleep uses SDL_Delay; input polling happens each frame.
-- Added input latency logging (poll/build/update/draw timings) under `input.latency` for bottleneck tracing.
-- Added terminal perf logs: `terminal.parse` (parse_ms/bytes) and `terminal.draw` (draw_ms + grid size) to isolate input latency bottlenecks.
-- Parse loop now reduces work when input is pending, and perf logs are throttled to avoid spam.
-- Terminal PTY parsing now runs on a dedicated parse thread (decoupled from UI update) to reduce input latency under heavy output.
-- Terminal view cache is updated on the parse thread and reused by the renderer when not scrolled to avoid per-frame view rebuilds.
-- Scrollback view cache rebuilds are queued to the parse thread on scroll changes to reduce render-thread work.
-- Kitty image/placement view lists are built and sorted on the parse thread; renderer reuses the cached lists per frame.
-- Selection highlight spans are cached alongside the view snapshot to avoid per-frame selection range scans.
-- Kitty image uploads are now queued and uploaded in a per-frame budget to avoid large render-thread spikes.
-- Renderer backend abstraction execution lives in `docs/todo/ui/renderer.md`.
-- UI widget modularization (splitting large widgets like TerminalWidget
-  UI-side) lives in `docs/todo/ui/widget_modularization.md`.
-- SDL3 migration: SDL3-only build path; SDL2 fallback removed.
-- SDL3 terminal-only input now flows on Wayland when polling events on the main thread.
-- SDL3 input bring-up diagnostics and per-event SDL input noise are gone; the
-  live path keeps warning/error signal and narrower IME/window operational
-  logs.
-- Recent renderer cleanup extracted input constants, clipboard helpers, texture
-  utilities, window event helpers, text input rect handling, timing helpers,
-  input event helpers, SDL window/GL context init, input state helpers, mouse
-  state helpers, window metrics helpers, input queue helpers, UI scale
-  helpers, render target helpers, text draw helpers, GL resource helpers, draw
-  batch helpers, target draw helpers, key state helpers, shape helpers, shape
-  draw helpers, terminal glyph helpers, clipboard buffer helpers, terminal
-  underline helpers, mouse button helpers, texture draw helpers, text
-  composition helpers, window flag helpers, mouse wheel helpers, input logging
-  helpers, window metrics state, and key queue helpers into renderer/platform
-  modules. See `docs/todo/ui/renderer.md` for the remaining queue.
+Use this doc for orientation. Use `docs/todo/ui/renderer.md` for execution.
 
-Canonical references (do not diverge without a documented reason)
-- kitty: OpenGL renderer, glyph atlas, render loop discipline.
-  - dev_references/terminals/kitty/docs/overview.rst
-  - dev_references/terminals/kitty/docs/performance.rst
-- ghostty: multi-backend renderer (OpenGL on Linux, Metal on macOS).
-  - dev_references/terminals/ghostty/README.md
-- alacritty: OpenGL terminal renderer architecture.
-  - dev_references/terminals/alacritty/README.md
-- lite-xl: SDL window/input layer for a GUI editor.
-  - dev_references/editors/lite-xl/README.md
-- zed: Metal on macOS, Vulkan on Linux (GPU-first UI framework).
-  - dev_references/editors/zed/docs/src/macos.md
-  - dev_references/editors/zed/docs/src/linux.md
+## Current Journey
 
-Non-negotiable rules
-- We do not invent new rendering paradigms. We follow the reference repos unless forced by Zide's architecture.
-- Any deviation must be recorded in app_architecture/DECISIONS.md with a concrete reason.
-- Backend expansion is active work only insofar as it strengthens the shared
-  backend contract. OpenGL and Metal are the two reference implementations for
-  that campaign. A future Vulkan backend should satisfy the same contract, not
-  become a separate architecture story.
-- Platform wording must distinguish host truth from current graphics truth; use
-  `app_architecture/platform/PLATFORM_CAPABILITY_MODEL.md`.
-- macOS-first-class reopening is now tracked explicitly in
-  `docs/todo/macos/implementation.md`; do not treat the current macOS
-  SDL/OpenGL build truth as the destination architecture.
+Zide is no longer in a vague "many backends someday" phase.
 
-Architecture (modular, interface-driven)
+It is in a renderer backend contract campaign with one immediate goal:
 
-```mermaid
-flowchart LR
-    SDL[SDL3 Window + Input] --> Shell[src/app_shell.zig]
-    Shell --> App[App / frame orchestration]
-    App --> Widgets[src/ui/widgets/*]
-    Widgets --> RendererAPI[src/ui/renderer.zig]
-    RendererAPI --> Backend[Backend implementation]
-    Backend --> GPU[GL / Metal / GLES]
-    GPU --> Present[Window present]
+- architect and enforce a reference-grade backend abstraction
 
-    App --> Text[Font + text services]
-    Text --> RendererAPI
-```
+The current shape of that journey is:
 
-UI layering + import guardrails
-- Layer boundaries are enforced by import checks; keep UI modularization within the widget layer.
-- Relevant doc: `app_architecture/APP_LAYERING.md` (widget boundaries + allowed import directions).
-- Enforcement: `zig build check-app-imports` (widgets + main/renderer boundary), plus `zig build check-input-imports` / `zig build check-editor-imports`.
-- Practical rule of thumb: keep `src/ui/widgets/*_widget.zig` as an orchestrator and push draw/input details into widget-local modules; do not introduce cross-widget imports.
+1. prove the contract on Linux OpenGL
+2. keep Metal honest as the second reference implementation
+3. close the contract gaps that still leave `renderer.zig` as the hidden
+   backend center
+4. audit Vulkan fit only after the contract is strong
+5. keep Android/mobile as pressure on the contract, not as active implementation
+   drift
 
-```mermaid
-flowchart TB
-    subgraph ParseThread[Terminal Parse Thread]
-        PTY[PTY bytes]
-        Parse[Parse + model updates]
-        Cache[Build view cache]
-        Images[Build kitty image lists]
-    end
+## Current Priorities
 
-    subgraph UIThread[UI / Render Thread]
-        Poll[SDL poll events]
-        Update[Frame update]
-        Widget[Widget orchestration]
-        Draw[Draw submission]
-        Upload[Budgeted uploads]
-        Present[Present]
-    end
+### 1. Linux GL is the proving ground
 
-    PTY --> Parse --> Cache --> Widget
-    Images --> Widget
-    Poll --> Update --> Widget --> Draw --> Upload --> Present
-```
+Linux GL is currently the best available place to expose contract weakness in:
 
-1) Windowing + input (SDL3)
-- SDL3 provides window creation, input, and platform glue.
-- This is directly aligned with lite-xl.
-- Android uses SDL's Android backend (SDL handles the activity and surface lifecycle).
+- focus and input truth
+- scale and geometry truth
+- redraw and presentable ownership
+- terminal resize and scrollback correctness
 
-2) Renderer API
-- The UI code talks to a small, stable renderer interface over the live SDL3 +
-  OpenGL path.
+This does not mean OpenGL defines the contract.
 
-Renderer interface (required surface area)
-- init(renderer_config)
-- deinit()
-- create_surface(window_handle)
-- resize_surface(width_px, height_px)
-- begin_frame(frame_id)
-- submit_draw_list(draw_list)
-- end_frame()
-- present()
+It means Linux GL is the best place to test whether the contract is honest.
 
-Draw primitives (minimal, GPU-friendly)
-- rects (filled, optional rounded corners later)
-- text runs (glyph atlas + per-glyph quads)
-- images (for terminal graphics and UI icons)
-- clip rects (nested clip stack)
+### 2. Metal remains a reference implementation
 
-3) Backend direction
-- Linux: OpenGL 3.3 (via EGL for Wayland; GLX or EGL for X11)
-- Windows 11: OpenGL via WGL or EGL/ANGLE (keep the OpenGL path for parity with kitty/alacritty)
-- macOS: Metal (matches ghostty and zed)
-- Android: OpenGL ES 3.x (native and stable)
+The macOS/Metal lane started the backend-contract journey and remains a
+required reference implementation.
 
-Important qualification:
+Current live Metal validation is paused, but the architecture standard did not
+revert to "GL first, Metal later."
 
-- these are renderer targets, not the top-level platform architecture
-- native lifecycle and surface ownership must be carved first
-- do not treat backend labels as a substitute for a shared native-host contract
+The standard remains:
 
-Rendering model (from kitty/alacritty)
-- GPU glyph atlas with cached glyph bitmaps.
-- Batch draw calls into large vertex buffers per frame.
-- Damage tracking to minimize work on unchanged regions.
-- Render loop decoupled from input where possible (kitty pattern).
+- OpenGL and Metal must satisfy one shared contract
 
-Module layout (target)
-- src/app_shell.zig
-  - SDL window and input, owns renderer instance
-- src/ui/renderer/
-  - renderer.zig (SDL3/OpenGL renderer host/facade)
-  - draw_list.zig (ops + batching format)
-  - text_cache.zig (glyph atlas + font metrics)
-- src/ui/widgets/
-  - editor_widget.zig
-  - terminal_widget.zig
-  - other UI widgets
+### 3. Vulkan is a fit audit, not an active implementation lane
 
-Per-OS implementation plan (Linux first)
+Do not start real Vulkan work until the renderer contract is strong enough that
+the Vulkan shape reads like routine backend work.
 
-Phase 1 - Linux (SDL3 + OpenGL)
-- Create SDL window and OpenGL context. (done)
-- Implement the renderer interface with OpenGL 3.3. (done; immediate-mode quad pipeline)
-- Bring up text rendering with a GPU atlas (kitty/alacritty model). (done; FreeType + GL atlas)
-- Add SDL text composition (IME) handling + text input rect updates for editor/terminal. (done)
-- Draw list supports rects, text runs, and clip rects. (pending; immediate-mode for now)
-- Replace raylib usage in renderer only (no UI behavior changes). (done)
+If Vulkan still looks like it needs renderer surgery, the contract is not done.
 
-Phase 2 - Windows 11 (SDL3 + OpenGL)
-- Keep the same SDL-managed OpenGL path.
-- Validate input, DPI scaling, and swapchain behavior.
+### 4. Android/mobile is future pressure, not current implementation work
 
-Phase 3 - macOS
-- macOS is now an explicit tracked product lane:
-  - use `docs/todo/macos/implementation.md`
-- shared native-host pressure:
-  - use `app_architecture/platform/NATIVE_HOST_REFERENCE_CROSSCHECK.md`
-- target renderer direction:
-  - Metal + AppKit/Cocoa
-- strongest reference pressure:
-  - `dev_references/terminals/ghostty/macos/`
-- do not mistake the current SDL3 + OpenGL runtime truth for the intended
-  macOS product shape
-- use CoreText only if required; otherwise keep FreeType/HarfBuzz.
+Android matters because it pressures the host and renderer contracts away from
+desktop-GL assumptions.
 
-Phase 4 - Android
-- Android must be planned against the same native-host contract as macOS, not
-  as a later backend variant of the current SDL/GL host.
-- Re-rank GLES backend work only when Android becomes active product scope.
-- Handle Activity lifecycle, surface loss/replacement, redraw-needed events,
-  and context recreation as host-contract concerns first.
+That does not mean "start Android now."
 
-Phase 5 - Parity and quality
-- Match kitty-level glyph caching behavior and render loop stability.
-- Add fine-grained damage tracking for editor and terminal widgets.
+It means current contract work must avoid creating a renderer shape that a
+future Android/mobile path would have to route around.
 
-What we do not do
-- No heavy UI frameworks.
-- No new experimental render tech that is not in the reference repos.
-- No speculative backend proliferation.
+## Ownership Map
 
-Validation
-- Compare render output and perf against reference repos and previously tagged/known-good Zide commits.
-- Add per-OS smoke tests for window create, text render, and input.
+- execution queue:
+  - `docs/todo/ui/renderer.md`
+- target contract authority:
+  - `app_architecture/ui/RENDER_BACKEND_CONTRACT.md`
+- current-state contract audit:
+  - `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md`
+- native-host pressure:
+  - `app_architecture/platform/NATIVE_HOST_CONTRACT.md`
+- macOS renderer pressure:
+  - `app_architecture/platform/macos/RENDER_BACKEND.md`
+- Android/mobile pressure:
+  - `app_architecture/platform/android/RENDER_BACKEND.md`
+- scale and geometry pressure:
+  - `app_architecture/ui/WINDOW_SCALE_GEOMETRY_DESIGN.md`
 
-Open questions (to resolve later)
-- Decide if macOS requires CoreText for font discovery or if FreeType is sufficient.
+## Design Rules For The Journey
+
+- backend choice must change implementation, not architecture
+- OpenGL must not receive privileged contract shape just because it is mature
+- Metal must not be treated as a side experiment
+- Vulkan must not be used as an excuse to keep vague contracts vague
+- Android/mobile must influence contract honesty without hijacking the current
+  lane
+
+## What This Doc Should Not Become
+
+- not a changelog
+- not the active ticket queue
+- not a per-platform implementation diary
+- not a substitute for `docs/todo/ui/renderer.md`
+
+## Practical Reading Order
+
+1. `docs/AGENT_HANDOFF.md`
+2. `docs/todo/ui/renderer.md`
+3. `app_architecture/ui/RENDER_BACKEND_CONTRACT.md`
+4. `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md`
+5. platform-specific pressure docs only if the active ticket needs them

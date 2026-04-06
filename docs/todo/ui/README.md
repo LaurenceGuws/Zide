@@ -12,7 +12,8 @@ Use it for:
 
 Current high-signal entrypoints:
 
-- `renderer.md` — active OpenGL/Metal backend abstraction campaign
+- `renderer.md` — active renderer contract execution board, including review
+  chunks and stop markers
 - `rendering_scrutiny.md` — supporting SDL3/OpenGL renderer-center scrutiny queue
 - `window_scale_geometry.md` — active app-wide scale/geometry ownership lane
 - `terminal_special_glyphs.md` — sprite/special-glyph quality lane

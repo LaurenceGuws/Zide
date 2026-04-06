@@ -15,12 +15,20 @@ It needs a contract strong enough that:
 - Metal can become a first-class peer instead of a special side lane
 - Vulkan can be added later without reopening the renderer root as the real
   backend implementation center
+- Android/mobile pressure can fit later without exposing that the contract was
+  really desktop-GL-shaped all along
 
 The standard is not "can two backends coexist."
 
 The standard is:
 
 - do two backends prove one clean contract
+
+Current proving rule:
+
+- Linux GL is the active proving ground
+- Metal remains a required reference implementation
+- OpenGL convenience must not define the public contract
 
 ## Product Standard
 
@@ -183,5 +191,10 @@ The next renderer/backend work should be judged against one question:
 
 - does this change make OpenGL and Metal look more like two reference
   implementations of one contract
+
+And one guardrail:
+
+- would this still look like the right contract if Vulkan and Android/mobile
+  were added later
 
 If not, it is probably backend momentum, not backend architecture.
