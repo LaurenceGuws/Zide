@@ -1,6 +1,7 @@
 const terminal_types = @import("../../terminal/model/types.zig");
 const shared_types = @import("../../types/mod.zig");
 const input_adapter_mod = @import("terminal_widget_input_adapter.zig");
+const common = @import("common.zig");
 
 pub const MouseReportingParams = struct {
     mouse: shared_types.input.MousePos,
@@ -26,15 +27,18 @@ pub fn handleMouseReporting(
     if (input_batch.mouseDown(.right)) buttons_down |= 4;
 
     var col: usize = 0;
-    if (params.mouse.x > params.view.origin_x) col = @as(usize, @intFromFloat((params.mouse.x - params.view.origin_x) / params.view.cell_width));
     var row: usize = 0;
-    if (params.mouse.y > params.view.origin_y) row = @as(usize, @intFromFloat((params.mouse.y - params.view.origin_y) / params.view.cell_height));
-    row = @min(row, params.view.rows - 1);
-    col = @min(col, params.view.cols - 1);
-    const grid_px_w = @as(u32, @intCast(params.view.cols)) * @as(u32, @intFromFloat(params.view.cell_width));
-    const grid_px_h = @as(u32, @intCast(params.view.rows)) * @as(u32, @intFromFloat(params.view.cell_height));
     const raw_px_x_f = @max(0.0, params.mouse.x - params.view.origin_x);
     const raw_px_y_f = @max(0.0, params.mouse.y - params.view.origin_y);
+    if (common.terminalVisibleCellHit(params.view, params.mouse.x, params.mouse.y)) |hit| {
+        row = hit.row;
+        col = hit.col;
+    } else {
+        if (params.mouse.x > params.view.origin_x) col = @min(@as(usize, @intFromFloat(raw_px_x_f / params.view.cell_width)), params.view.cols - 1);
+        if (params.mouse.y > params.view.origin_y) row = @min(@as(usize, @intFromFloat(raw_px_y_f / params.view.cell_height)), params.view.rows - 1);
+    }
+    const grid_px_w = @as(u32, @intCast(params.view.cols)) * @as(u32, @intFromFloat(params.view.cell_width));
+    const grid_px_h = @as(u32, @intCast(params.view.rows)) * @as(u32, @intFromFloat(params.view.cell_height));
     var pixel_x: u32 = @intFromFloat(raw_px_x_f);
     var pixel_y: u32 = @intFromFloat(raw_px_y_f);
     if (grid_px_w > 0) pixel_x = @min(pixel_x, grid_px_w - 1);

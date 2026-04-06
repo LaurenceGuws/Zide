@@ -5,6 +5,7 @@ const app_logger = @import("../../app_logger.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
 const input_adapter_mod = @import("terminal_widget_input_adapter.zig");
 const hover_mod = @import("terminal_widget_hover.zig");
+const common = @import("common.zig");
 
 const Cell = terminal_publication.Cell;
 const TerminalViewGeometry = @import("../../types/mod.zig").layout.TerminalViewGeometry;
@@ -28,10 +29,9 @@ pub fn ctrlClickOpenVisibleMaybe(
     if (view.rows == 0 or view.cols == 0) return false;
     if (view.cell_width <= 0 or view.cell_height <= 0) return false;
     if (view_cells.len < view.rows * view.cols) return false;
-
-    const col = @as(usize, @intFromFloat((mouse_x - view.origin_x) / view.cell_width));
-    const row = @as(usize, @intFromFloat((mouse_y - view.origin_y) / view.cell_height));
-    if (row >= view.rows or col >= view.cols) return false;
+    const hit = common.terminalVisibleCellHit(view, mouse_x, mouse_y) orelse return false;
+    const col = hit.col;
+    const row = hit.row;
 
     const link_id = hover_mod.visibleLinkIdAtCell(view_cells, view.rows, view.cols, row, col);
     if (link_id != 0) {

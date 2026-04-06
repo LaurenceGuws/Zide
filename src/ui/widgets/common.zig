@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
+const shared_types = @import("../../types/mod.zig");
 
 const Shell = app_shell.Shell;
 const Color = app_shell.Color;
@@ -20,6 +21,13 @@ pub const ScrollbarThumb = struct {
     thumb_h: f32,
     available: f32,
     thumb_y: f32,
+};
+
+pub const TerminalPointerHit = struct {
+    row: usize,
+    col: usize,
+    local_x: f32,
+    local_y: f32,
 };
 
 pub fn scrollbarWidth(ui_scale: f32) f32 {
@@ -55,6 +63,31 @@ pub fn expApproach(current: f32, target: f32, dt: f32, speed: f32) f32 {
 
 pub fn pointInRect(px: f32, py: f32, x: f32, y: f32, w: f32, h: f32) bool {
     return px >= x and px <= x + w and py >= y and py <= y + h;
+}
+
+pub fn terminalVisibleCellHit(view: shared_types.layout.TerminalViewGeometry, mouse_x: f32, mouse_y: f32) ?TerminalPointerHit {
+    if (view.rows == 0 or view.cols == 0) return null;
+    if (view.cell_width <= 0 or view.cell_height <= 0) return null;
+    if (!pointInRect(mouse_x, mouse_y, view.origin_x, view.origin_y, view.viewport_width, view.viewport_height)) return null;
+
+    const local_x = mouse_x - view.origin_x;
+    const local_y = mouse_y - view.origin_y;
+    if (local_x < 0 or local_y < 0) return null;
+
+    const col = @min(
+        @as(usize, @intFromFloat(std.math.floor(local_x / view.cell_width))),
+        view.cols - 1,
+    );
+    const row = @min(
+        @as(usize, @intFromFloat(std.math.floor(local_y / view.cell_height))),
+        view.rows - 1,
+    );
+    return .{
+        .row = row,
+        .col = col,
+        .local_x = local_x,
+        .local_y = local_y,
+    };
 }
 
 pub fn computeScrollbarThumb(scrollbar_y: f32, track_h: f32, visible_lines: usize, total_lines: usize, min_thumb_h: f32, ratio: f32) ScrollbarThumb {
@@ -193,4 +226,37 @@ pub fn drawTooltip(shell: *Shell, text: []const u8, x: f32, y: f32) void {
     shell.drawRect(@intFromFloat(draw_x), @intFromFloat(draw_y), @intFromFloat(w), @intFromFloat(h), theme.ui_panel_overlay);
     shell.drawRectOutline(@intFromFloat(draw_x), @intFromFloat(draw_y), @intFromFloat(w), @intFromFloat(h), theme.ui_border);
     shell.drawText(text, draw_x + padding, draw_y + padding, theme.ui_text);
+}
+
+test "terminalVisibleCellHit ignores pane remainder outside centered grid" {
+    const hit = terminalVisibleCellHit(.{
+        .viewport = .{ .x = 0, .y = 0, .width = 100, .height = 100 },
+        .origin_x = 10,
+        .origin_y = 20,
+        .viewport_width = 80,
+        .viewport_height = 60,
+        .rows = 3,
+        .cols = 4,
+        .cell_width = 20,
+        .cell_height = 20,
+        .baseline_from_top = 15,
+    }, 5, 30);
+    try std.testing.expect(hit == null);
+}
+
+test "terminalVisibleCellHit maps mouse to visible cell coordinates" {
+    const hit = terminalVisibleCellHit(.{
+        .viewport = .{ .x = 0, .y = 0, .width = 100, .height = 100 },
+        .origin_x = 10,
+        .origin_y = 20,
+        .viewport_width = 80,
+        .viewport_height = 60,
+        .rows = 3,
+        .cols = 4,
+        .cell_width = 20,
+        .cell_height = 20,
+        .baseline_from_top = 15,
+    }, 55, 65).?;
+    try std.testing.expectEqual(@as(usize, 2), hit.col);
+    try std.testing.expectEqual(@as(usize, 2), hit.row);
 }

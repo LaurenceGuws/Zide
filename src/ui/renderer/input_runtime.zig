@@ -55,6 +55,8 @@ pub fn pollInputEvents(
     while (sdl_api.pollEvent(&event)) {
         handleEvent(domain, &event, window_log, state);
     }
+
+    syncWindowFocusFromFlags(domain, window_log);
 }
 
 fn handleEvent(
@@ -78,20 +80,10 @@ fn handleEvent(
             if (sdl_api.windowEventId(event) != main_window_id) return;
             handleWindowEvent(event.type, domain.app_host, domain.should_close_flag, domain.window_changes);
             if (sdl_api.isFocusGainedEvent(event.type)) {
-                sdl_api.startTextInput(domain.window);
-                text_input.reapplyRect(domain.text_input_state, domain.window);
-                domain.window_focused.* = true;
-                domain.app_host.noteResumed();
-                domain.focus_queue.append(domain.allocator, true) catch |err| {
-                    window_log.logf(.warning, "focus queue append failed focused=1 err={s}", .{@errorName(err)});
-                };
+                applyWindowFocusState(domain, window_log, true, sdl_api.windowEventName(event.type));
             }
             if (sdl_api.isFocusLostEvent(event.type)) {
-                domain.window_focused.* = false;
-                domain.app_host.notePaused();
-                domain.focus_queue.append(domain.allocator, false) catch |err| {
-                    window_log.logf(.warning, "focus queue append failed focused=0 err={s}", .{@errorName(err)});
-                };
+                applyWindowFocusState(domain, window_log, false, sdl_api.windowEventName(event.type));
             }
         },
         sdl_api.EVENT_KEY_DOWN => {
@@ -138,24 +130,51 @@ fn handleEvent(
                 if (sdl_api.windowEventId(event) != main_window_id) return;
                 handleWindowEvent(event.type, domain.app_host, domain.should_close_flag, domain.window_changes);
                 if (sdl_api.isFocusGainedEvent(event.type)) {
-                    sdl_api.startTextInput(domain.window);
-                    text_input.reapplyRect(domain.text_input_state, domain.window);
-                    domain.window_focused.* = true;
-                    domain.app_host.noteResumed();
-                    domain.focus_queue.append(domain.allocator, true) catch |err| {
-                        window_log.logf(.warning, "focus queue append failed focused=1 err={s}", .{@errorName(err)});
-                    };
+                    applyWindowFocusState(domain, window_log, true, sdl_api.windowEventName(event.type));
                 }
                 if (sdl_api.isFocusLostEvent(event.type)) {
-                    domain.window_focused.* = false;
-                    domain.app_host.notePaused();
-                    domain.focus_queue.append(domain.allocator, false) catch |err| {
-                        window_log.logf(.warning, "focus queue append failed focused=0 err={s}", .{@errorName(err)});
-                    };
+                    applyWindowFocusState(domain, window_log, false, sdl_api.windowEventName(event.type));
                 }
             }
         },
     }
+}
+
+fn syncWindowFocusFromFlags(
+    domain: input_state.InputDomain,
+    window_log: app_logger.Logger,
+) void {
+    const focused = sdl_api.windowHasInputFocus(domain.window);
+    if (focused == domain.window_focused.*) return;
+    applyWindowFocusState(domain, window_log, focused, "window_flags");
+}
+
+fn applyWindowFocusState(
+    domain: input_state.InputDomain,
+    window_log: app_logger.Logger,
+    focused: bool,
+    source: []const u8,
+) void {
+    if (domain.window_focused.* == focused) return;
+
+    if (focused) {
+        sdl_api.startTextInput(domain.window);
+        text_input.reapplyRect(domain.text_input_state, domain.window);
+        domain.app_host.noteResumed();
+    } else {
+        domain.app_host.notePaused();
+    }
+    domain.window_focused.* = focused;
+    window_log.logf(.info, "window focus source={s} focused={d}", .{
+        source,
+        @intFromBool(focused),
+    });
+    domain.focus_queue.append(domain.allocator, focused) catch |err| {
+        window_log.logf(.warning, "focus queue append failed focused={d} err={s}", .{
+            @intFromBool(focused),
+            @errorName(err),
+        });
+    };
 }
 
 fn handleWindowEvent(

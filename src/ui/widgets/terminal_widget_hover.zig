@@ -50,14 +50,12 @@ pub fn updateHoverStateVisible(
             view.viewport.height,
         );
         const in_cells = in_terminal and mouse.x < scrollbar_x;
-        if (in_cells and view.cell_width > 0 and view.cell_height > 0) {
-            const col = @as(usize, @intFromFloat((mouse.x - view.origin_x) / view.cell_width));
-            const row = @as(usize, @intFromFloat((mouse.y - view.origin_y) / view.cell_height));
-            if (row < view.rows and col < view.cols) {
-                hover_row = @intCast(row);
-                hover_col = @intCast(col);
+        if (in_cells) {
+            if (common.terminalVisibleCellHit(view, mouse.x, mouse.y)) |hit| {
+                hover_row = @intCast(hit.row);
+                hover_col = @intCast(hit.col);
                 if (ctrl) {
-                    hover_link_id = visibleLinkIdAtCell(view_cells, view.rows, view.cols, row, col);
+                    hover_link_id = visibleLinkIdAtCell(view_cells, view.rows, view.cols, hit.row, hit.col);
                 }
             }
         }

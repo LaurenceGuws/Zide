@@ -39,11 +39,14 @@ owning subsystem queues.
 
 1. Re-establish Linux as the primary native proving ground for shared
    editor/IDE behavior.
-2. Audit recent Windows-led and shared UI changes on Linux before starting new
+2. Use Linux-visible focus, scale, and resize defects as contract evidence for
+   the renderer/native-host campaign instead of dismissing them as backend
+   polish.
+3. Audit recent Windows-led and shared UI changes on Linux before starting new
    invention work.
-3. Close platform regressions and obvious parity gaps with small, reviewable
+4. Close platform regressions and obvious parity gaps with small, reviewable
    diffs.
-4. Move any durable subsystem-specific follow-up back to the owning editor/UI
+5. Move any durable subsystem-specific follow-up back to the owning editor/UI
    or architecture docs once the Linux gap is understood.
 
 ## Priority Order
@@ -152,6 +155,75 @@ owning subsystem queues.
     - any Linux-only visual regressions from recent shared UI changes
   - Push design-level conclusions into `app_architecture/ui/DEVELOPMENT_JOURNEY.md`
     or the owning UI queue if the issue is not Linux-specific.
+  - 2026-04-06 proving fronts:
+    - focus/input activation truth
+      - current code still splits responsibility across SDL window focus,
+        renderer text-input activation, active-surface routing, and terminal
+        session focus reporting
+      - initial audit targets:
+        - `src/ui/renderer/input_runtime.zig`
+        - `src/ui/renderer/input_state.zig`
+        - `src/input/input_builder.zig`
+        - `src/app/terminal/visible_terminal_frame_hooks_runtime.zig`
+        - `src/ui/widgets/terminal_widget_controller_state.zig`
+      - treat this as a native-host/input contract bug first, not a renderer
+        backend bug
+    - startup fractional-scale cursor/cell mismatch
+      - likely shared with the open window-scale refresh pipeline bug
+      - owning queue:
+        - `docs/todo/ui/window_scale_geometry.md`
+    - scrollback/resize correctness after window resize
+      - do not treat this as backend polish
+      - treat it as a terminal resize/publication correctness bug with
+        presentable/render-surface overlap
+      - initial audit targets:
+        - `src/app/terminal/deferred_terminal_resize_frame.zig`
+        - `src/terminal/core/resize_reflow.zig`
+        - `src/terminal/core/publication/publication_flow.zig`
+        - `src/ui/widgets/terminal_widget_draw.zig`
+        - `src/ui/widgets/terminal_widget_presentation_runtime.zig`
+  - Active front, 2026-04-06:
+    - Linux is now the primary proving ground for renderer/native-host contract
+      quality while Metal validation is paused
+    - the first three visible regressions are:
+      - focus/input activation can require repeated clicks before terminal
+        input actually works
+      - startup on a fractional-scale monitor can apply the wrong cursor/text
+        scale until a display hop occurs
+      - terminal scrollback/viewport truth can look broken after resize away
+        from the original output geometry
+    - ownership split for those fronts:
+      - focus/input activation: native-host + input contract
+      - startup/display-hop scale: window scale geometry contract
+      - resize/scrollback correctness: terminal resize/publication contract,
+        with retained-present invalidation scrutiny as a secondary front
+
+- [ ] `LNX-02A` Lock Linux focus/input activation truth
+  - Problem:
+    - terminal input can fail to activate on the first click even after the
+      window appears visually focused
+  - Likely pressure:
+    - `src/ui/renderer/input_runtime.zig`
+    - `src/ui/renderer/input_state.zig`
+    - `src/platform/native_host.zig`
+    - `src/ui/widgets/terminal_widget_input.zig`
+  - Required outcome:
+    - window focus, terminal focus, and text-input activation read like one
+      coherent contract instead of loosely related signals
+
+- [ ] `LNX-02B` Lock Linux startup/display-hop scale truth
+  - Authority:
+    - `docs/todo/ui/window_scale_geometry.md`
+  - Problem:
+    - fractional-scale startup can come up wrong until an incidental monitor
+      change forces correction
+
+- [ ] `LNX-02C` Lock Linux terminal resize/scrollback truth
+  - Authority:
+    - `docs/todo/terminal/widget_scrutiny.md`
+  - Problem:
+    - terminal resize can break the visible scrollback/viewport story after the
+      output was created at another size
 
 - [ ] `LNX-03` Recheck Linux-native platform affordances and defaults
   - Focus:
