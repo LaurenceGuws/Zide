@@ -371,7 +371,6 @@ pub const Renderer = struct {
         scrollPresentable: *const fn (*Self, PresentableSurface, i32, i32) bool,
         presentableInfo: *const fn (*Self, PresentableSurface) ?PresentableInfo,
         clearThemeBackground: *const fn (*Self) void,
-        drawSolidRect: *const fn (*Self, f32, f32, f32, f32, types.Rgba) bool,
         applyClipRect: *const fn (*Self, ?types.Rect) void,
         addTerminalRect: *const fn (*Self, i32, i32, i32, i32, types.Rgba) void,
         addTerminalGlyphRect: *const fn (*Self, i32, i32, i32, i32, types.Rgba) void,
@@ -539,9 +538,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         fn scrollPresentable(renderer: *Self, surface: PresentableSurface, dx: i32, dy: i32) bool { return gl_backend.scrollPresentable(renderer, surface, dx, dy); }
         fn presentableInfo(renderer: *Self, surface: PresentableSurface) ?PresentableInfo { return gl_backend.presentableInfo(renderer, surface); }
         fn clearThemeBackground(renderer: *Self) void { gl_backend.clearThemeBackground(renderer); }
-        fn drawSolidRect(renderer: *Self, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) bool {
-            return renderer.enqueueSolidSurfaceFromLogicalRect(x, y, w, h, color);
-        }
         fn applyClipRect(renderer: *Self, clip: ?types.Rect) void { gl_backend.applyClipRect(renderer, clip); }
         fn addTerminalRect(renderer: *Self, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void { gl_backend.addTerminalRect(renderer, x, y, w, h, color); }
         fn addTerminalGlyphRect(renderer: *Self, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void { gl_backend.addTerminalGlyphRect(renderer, x, y, w, h, color); }
@@ -576,9 +572,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         fn scrollPresentable(renderer: *Self, surface: PresentableSurface, dx: i32, dy: i32) bool { return metal_backend.scrollPresentable(renderer, surface, dx, dy); }
         fn presentableInfo(renderer: *Self, surface: PresentableSurface) ?PresentableInfo { return metal_backend.presentableInfo(renderer, surface); }
         fn clearThemeBackground(renderer: *Self) void { metal_backend.clearThemeBackground(renderer); }
-        fn drawSolidRect(renderer: *Self, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) bool {
-            return renderer.enqueueSolidSurfaceFromLogicalRect(x, y, w, h, color);
-        }
         fn applyClipRect(renderer: *Self, clip: ?types.Rect) void { metal_backend.applyClipRect(renderer, clip); }
         fn addTerminalRect(renderer: *Self, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void { metal_backend.addTerminalRect(renderer, x, y, w, h, color); }
         fn addTerminalGlyphRect(renderer: *Self, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void { metal_backend.addTerminalGlyphRect(renderer, x, y, w, h, color); }
@@ -615,7 +608,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
                 .scrollPresentable = OpenGlDispatch.scrollPresentable,
                 .presentableInfo = OpenGlDispatch.presentableInfo,
                 .clearThemeBackground = OpenGlDispatch.clearThemeBackground,
-                .drawSolidRect = OpenGlDispatch.drawSolidRect,
                 .applyClipRect = OpenGlDispatch.applyClipRect,
                 .addTerminalRect = OpenGlDispatch.addTerminalRect,
                 .addTerminalGlyphRect = OpenGlDispatch.addTerminalGlyphRect,
@@ -647,7 +639,6 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
                 .scrollPresentable = MetalDispatch.scrollPresentable,
                 .presentableInfo = MetalDispatch.presentableInfo,
                 .clearThemeBackground = MetalDispatch.clearThemeBackground,
-                .drawSolidRect = MetalDispatch.drawSolidRect,
                 .applyClipRect = MetalDispatch.applyClipRect,
                 .addTerminalRect = MetalDispatch.addTerminalRect,
                 .addTerminalGlyphRect = MetalDispatch.addTerminalGlyphRect,

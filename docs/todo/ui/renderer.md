@@ -105,6 +105,9 @@ Progress note, 2026-04-05:
 - `BackendOps.drawSolidRect` on both backends now calls
   `enqueueSolidSurfaceFromLogicalRect` / `enqueueSurfaceDraw` (Metal terminal
   rects still use `appendSolidRect` from `metal_backend.addTerminalRect`).
+- The dead `BackendOps.drawSolidRect` function-pointer slot and per-backend
+  dispatch methods are now removed from `renderer.zig`; solid submission only
+  enters through `enqueueSurfaceDraw`.
 - `Renderer.addTerminalRectF` uses the same `enqueueSolidSurfaceFromLogicalRect`
   helper (immediate solid); `addTerminalRect` (i32) still uses `BackendOps` so
   OpenGL keeps terminal batch quads instead of forcing an immediate path.
