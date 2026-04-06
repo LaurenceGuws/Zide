@@ -451,6 +451,11 @@ Progress note, 2026-04-05:
   through `src/ui/renderer/lifecycle_runtime.zig`
   (`installAppHooks` / `uninstallAppHooks`), so `renderer.zig` no longer
   coordinates those two lifecycle hook families directly.
+- Renderer init/deinit lifecycle sequencing now also routes through
+  `lifecycle_runtime.finalizeRendererInit` /
+  `lifecycle_runtime.beginRendererShutdown`, removing inlined hook install +
+  backend init + global registration and matching shutdown sequencing from
+  `renderer.zig`.
 - The remaining global poll/time wrappers (`pollInputEvents`, `waitTime`) now
   also route through `renderer_global_runtime.zig`, leaving renderer-root
   global entrypoints as thin delegates for those runtime helper paths too.

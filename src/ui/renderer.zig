@@ -760,7 +760,7 @@ pub const Renderer = struct {
         const render_host = renderer_bootstrap.window_state.render_host;
         const render_surface_attachment = renderer_bootstrap.window_state.render_surface_attachment;
 
-        var renderer = try allocator.create(Renderer);
+        const renderer = try allocator.create(Renderer);
         errdefer allocator.destroy(renderer);
 
         const display_metrics = platform_window.collectDisplayMetrics(window);
@@ -888,14 +888,7 @@ pub const Renderer = struct {
             .clip_depth = 0,
         };
 
-        const app_hooks = lifecycle_runtime.installAppHooks(&renderer.app_host);
-        renderer.appkit_delegate_installation = app_hooks.appkit_delegate_installation;
-        renderer.app_event_watch_installed = app_hooks.app_event_watch_installed;
-
-        renderer.backend_ops.configureRuntimePolicy(renderer);
-        try renderer.backend_ops.initRuntime(renderer);
-
-        renderer_global_runtime.registerRenderer(Renderer, renderer);
+        try lifecycle_runtime.finalizeRendererInit(Renderer, renderer);
         return renderer;
     }
 
@@ -917,10 +910,9 @@ pub const Renderer = struct {
         draw_ops.deinit(&self.batch, self.allocator);
         text_runtime.deinitTerminalTextState(self);
 
-        renderer_global_runtime.unregisterRenderer(Renderer, self);
+        lifecycle_runtime.beginRendererShutdown(Renderer, self);
         window_chrome_runtime.deinit(self.windowChromeDomain());
         self.backend_ops.deinitRuntime(self);
-        lifecycle_runtime.uninstallAppHooks(&self.app_host, self.appkit_delegate_installation, self.app_event_watch_installed);
         bootstrap_runtime.deinitRendererWindowResources(&self.render_surface_attachment, self.window);
         bootstrap_runtime.deinitSdlRuntime();
 
