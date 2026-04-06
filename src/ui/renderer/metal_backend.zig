@@ -4,6 +4,7 @@ const iface = @import("interface.zig");
 const macos_metal_host = @import("../../platform/macos_metal_host.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
 const capability_contract = @import("capability_contract.zig");
+const bootstrap_contract = @import("bootstrap_contract.zig");
 const metal_runtime_state = @import("metal_runtime_state.zig");
 const metal_text_sample_runtime = @import("metal_text_sample_runtime.zig");
 const presentable_contract = @import("presentable_contract.zig");
@@ -47,6 +48,15 @@ const PresentableSurface = presentable_contract.PresentableSurface;
 const PresentableDraw = presentable_contract.PresentableDraw;
 const PresentableInfo = presentable_contract.PresentableInfo;
 const RendererCapabilities = capability_contract.RendererCapabilities;
+
+pub fn bootstrapOps() bootstrap_contract.BackendBootstrapOps {
+    return .{
+        .graphics_binding = .metal,
+        .configureWindowAttributes = configureWindowAttributes,
+        .createBackendContext = createBackendContextForBootstrap,
+        .runStartupSmoke = runStartupSmokeForBootstrap,
+    };
+}
 
 pub fn capabilities(renderer: anytype) RendererCapabilities {
     const raw_image_textures = hasBackendContext(renderer);

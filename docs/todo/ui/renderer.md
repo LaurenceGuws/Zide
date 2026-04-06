@@ -358,6 +358,11 @@ Progress note, 2026-04-05:
   `createBackendContextForBootstrap` wrapper: `backendBootstrapOps` now points
   directly to `gl_backend.createBackendContext`, and GL loader setup is owned
   in that backend context-creation entrypoint.
+- Bootstrap ops contract now lives in
+  `src/ui/renderer/bootstrap_contract.zig`, and backend modules provide their
+  own bootstrap ops tables (`gl_backend.bootstrapOps()` /
+  `metal_backend.bootstrapOps()`), so `renderer.zig` no longer spells out the
+  backend bootstrap function-pointer mapping inline.
 - The macOS OpenGL editor retained-presentable bypass in
   `editor_widget_draw.zig` no longer keys off `renderer.backend` + OS tags;
   `capability_contract.RendererCapabilities` now exposes

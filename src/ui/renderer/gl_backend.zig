@@ -7,6 +7,7 @@ const shape_utils = @import("shape_utils.zig");
 const texture_draw = @import("texture_draw.zig");
 const texture_utils = @import("texture_utils.zig");
 const capability_contract = @import("capability_contract.zig");
+const bootstrap_contract = @import("bootstrap_contract.zig");
 const metal_text_sample_runtime = @import("metal_text_sample_runtime.zig");
 const presentable_contract = @import("presentable_contract.zig");
 const gl_presentable_target = @import("gl_presentable_target.zig");
@@ -27,6 +28,15 @@ const PresentableInfo = presentable_contract.PresentableInfo;
 const SceneTargetContract = scene_target_state.SceneTargetContract;
 const SceneTargetInvalidation = scene_target_state.SceneTargetInvalidation;
 const RendererCapabilities = capability_contract.RendererCapabilities;
+
+pub fn bootstrapOps() bootstrap_contract.BackendBootstrapOps {
+    return .{
+        .graphics_binding = .opengl,
+        .configureWindowAttributes = configureWindowAttributes,
+        .createBackendContext = createBackendContext,
+        .runStartupSmoke = runStartupSmokeForBootstrap,
+    };
+}
 
 pub fn capabilities(renderer: anytype) RendererCapabilities {
     const full_ui = renderer.runtime_profile == .full_ui;

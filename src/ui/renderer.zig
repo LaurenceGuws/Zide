@@ -6,6 +6,7 @@ const AtlasStorageMode = terminal_font_mod.AtlasStorageMode;
 const FontRenderingOptions = terminal_font_mod.RenderingOptions;
 const hb = terminal_font_mod.c;
 const capability_contract = @import("renderer/capability_contract.zig");
+const bootstrap_contract = @import("renderer/bootstrap_contract.zig");
 const font_manager = @import("renderer/font_manager.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
 const gl_backend = @import("renderer/gl_backend.zig");
@@ -389,12 +390,7 @@ pub const Renderer = struct {
         mergePendingSceneTargetInvalidation: *const fn (*Self, SceneTargetInvalidation) void,
     };
 
-    const BackendBootstrapOps = struct {
-        graphics_binding: native_host.RenderSurfaceBinding,
-        configureWindowAttributes: *const fn () anyerror!void,
-        createBackendContext: *const fn (*sdl_api.c.SDL_Window) anyerror!?sdl_api.c.SDL_GLContext,
-        runStartupSmoke: *const fn (*sdl_api.c.SDL_Window, RenderSurfaceAttachment, i32, i32) anyerror!bool,
-    };
+    const BackendBootstrapOps = bootstrap_contract.BackendBootstrapOps;
 
     pub const WindowChromeMode = window_chrome_runtime.WindowChromeMode;
     pub const WindowChromeContract = window_chrome_runtime.WindowChromeContract;
@@ -758,18 +754,8 @@ pub const Renderer = struct {
 
     fn backendBootstrapOps(backend: RendererBackend) BackendBootstrapOps {
         return switch (backend) {
-            .opengl => .{
-                .graphics_binding = .opengl,
-                .configureWindowAttributes = gl_backend.configureWindowAttributes,
-                .createBackendContext = gl_backend.createBackendContext,
-                .runStartupSmoke = gl_backend.runStartupSmokeForBootstrap,
-            },
-            .metal => .{
-                .graphics_binding = .metal,
-                .configureWindowAttributes = metal_backend.configureWindowAttributes,
-                .createBackendContext = metal_backend.createBackendContextForBootstrap,
-                .runStartupSmoke = metal_backend.runStartupSmokeForBootstrap,
-            },
+            .opengl => gl_backend.bootstrapOps(),
+            .metal => metal_backend.bootstrapOps(),
         };
     }
 
