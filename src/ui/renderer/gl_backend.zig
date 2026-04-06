@@ -268,7 +268,8 @@ pub fn drawSolidRect(renderer: anytype, x: f32, y: f32, w: f32, h: f32, color: t
 /// queues the same union for end-of-frame replay). `.solid` and `.atlas` are
 /// supported when the renderer is in a compatible text mode (atlas uses
 /// `terminal_font` coverage/color textures). `.raw_image` returns false and does
-/// not take ownership.
+/// not take ownership (opaque Metal texture in the union; use `drawRawImageRgba`
+/// / `drawRawImageRgb` for CPU bytes on OpenGL).
 pub fn submitSurfaceDrawImmediate(renderer: anytype, draw: surface_draw.SurfaceDraw) bool {
     switch (draw) {
         .solid => |s| {
@@ -1169,12 +1170,38 @@ fn createTextureEmpty(width: i32, height: i32, filter: i32) types.Texture {
     return .{ .id = id, .width = width, .height = height };
 }
 
-pub fn drawRawImageRgba(_: anytype, _: i32, _: i32, _: []const u8, _: types.Rect, _: types.Rgba) bool {
-    return false;
+pub fn drawRawImageRgba(renderer: anytype, width: i32, height: i32, data: []const u8, dest: types.Rect, tint: types.Rgba) bool {
+    if (width <= 0 or height <= 0) return false;
+    if (@as(usize, @intCast(width * height * 4)) > data.len) return false;
+    if (dest.width <= 0 or dest.height <= 0) return false;
+    var tex = texture_utils.createTextureFromRgba(width, height, data, gl.c.GL_NEAREST) orelse return false;
+    defer texture_utils.destroyTexture(&tex);
+    const src = types.Rect{
+        .x = 0,
+        .y = 0,
+        .width = @floatFromInt(width),
+        .height = @floatFromInt(height),
+    };
+    const bg = renderer.text_render.bg_rgba;
+    draw_ops.drawTextureRect(renderer, tex, src, dest, tint, bg, .rgba);
+    return true;
 }
 
-pub fn drawRawImageRgb(_: anytype, _: i32, _: i32, _: []const u8, _: types.Rect, _: types.Rgba) bool {
-    return false;
+pub fn drawRawImageRgb(renderer: anytype, width: i32, height: i32, data: []const u8, dest: types.Rect, tint: types.Rgba) bool {
+    if (width <= 0 or height <= 0) return false;
+    if (@as(usize, @intCast(width * height * 3)) > data.len) return false;
+    if (dest.width <= 0 or dest.height <= 0) return false;
+    var tex = texture_utils.createTextureFromRgb(width, height, data, gl.c.GL_NEAREST) orelse return false;
+    defer texture_utils.destroyTexture(&tex);
+    const src = types.Rect{
+        .x = 0,
+        .y = 0,
+        .width = @floatFromInt(width),
+        .height = @floatFromInt(height),
+    };
+    const bg = renderer.text_render.bg_rgba;
+    draw_ops.drawTextureRect(renderer, tex, src, dest, tint, bg, .rgba);
+    return true;
 }
 
 pub fn drawSampleTextRequest(_: anytype, _: metal_text_sample_runtime.SampleTextRequest) bool {
