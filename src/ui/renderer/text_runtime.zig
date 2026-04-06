@@ -118,7 +118,7 @@ pub fn drawTextMonospace(self: *Renderer, text: []const u8, x: f32, y: f32, colo
     drawTextMonospacePolicy(self, text, x, y, color, false);
 }
 
-fn drawMetalMonospaceTextFallback(
+fn drawMetalUtf8CellRunFallback(
     self: *Renderer,
     text: []const u8,
     x: f32,
@@ -141,7 +141,7 @@ fn drawMetalMonospaceTextFallback(
 pub fn drawTextMonospacePolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, disable_programming_ligatures: bool) void {
     if (!textRenderingAvailable(self)) {
         if (self.plannedTextRenderingMode() == .metal_texture_atlas) {
-            _ = drawMetalMonospaceTextFallback(self, text, x, y, self.editor_metrics, color);
+            _ = drawMetalUtf8CellRunFallback(self, text, x, y, self.editor_metrics, color);
         }
         return;
     }
@@ -158,7 +158,7 @@ pub fn drawTextMonospaceOnBg(self: *Renderer, text: []const u8, x: f32, y: f32, 
 pub fn drawTextMonospaceOnBgPolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color, disable_programming_ligatures: bool) void {
     if (!textRenderingAvailable(self)) {
         if (self.plannedTextRenderingMode() == .metal_texture_atlas) {
-            _ = drawMetalMonospaceTextFallback(self, text, x, y, self.editor_metrics, color);
+            _ = drawMetalUtf8CellRunFallback(self, text, x, y, self.editor_metrics, color);
         }
         return;
     }
@@ -173,7 +173,7 @@ pub fn drawTextMonospaceOnBgPolicy(self: *Renderer, text: []const u8, x: f32, y:
 pub fn drawTextMonospaceStyledPolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, disable_programming_ligatures: bool, italic: bool) void {
     if (!textRenderingAvailable(self)) {
         if (self.plannedTextRenderingMode() == .metal_texture_atlas and !italic) {
-            _ = drawMetalMonospaceTextFallback(self, text, x, y, self.editor_metrics, color);
+            _ = drawMetalUtf8CellRunFallback(self, text, x, y, self.editor_metrics, color);
         }
         return;
     }
@@ -186,7 +186,7 @@ pub fn drawTextMonospaceStyledPolicy(self: *Renderer, text: []const u8, x: f32, 
 pub fn drawTextMonospaceOnBgStyledPolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color, disable_programming_ligatures: bool, italic: bool) void {
     if (!textRenderingAvailable(self)) {
         if (self.plannedTextRenderingMode() == .metal_texture_atlas and !italic) {
-            _ = drawMetalMonospaceTextFallback(self, text, x, y, self.editor_metrics, color);
+            _ = drawMetalUtf8CellRunFallback(self, text, x, y, self.editor_metrics, color);
         }
         return;
     }
@@ -252,6 +252,35 @@ pub fn drawChar(self: *Renderer, char: u8, x: f32, y: f32, color: Color) void {
     drawText(self, buf[0..], x, y, color);
 }
 
+fn drawMetalTerminalScalarFallback(
+    self: *Renderer,
+    scalar_text: []const u8,
+    x: f32,
+    y: f32,
+    cell_width: f32,
+    cell_height: f32,
+    color: Color,
+) bool {
+    if (self.plannedTextRenderingMode() != .metal_texture_atlas) return false;
+    if (scalar_text.len == 0) return false;
+    return metal_backend.drawTerminalCellRun(self, &self.terminal_font, .{
+        .text = scalar_text,
+        .x = x,
+        .y = y,
+        .cell_width = cell_width,
+        .cell_height = cell_height,
+        .tint = color.toRgba(),
+    });
+}
+
+fn encodeUtf8Scalar(buf: []u8, codepoint: u32) ?[]const u8 {
+    const scalar = std.math.cast(u21, codepoint) orelse return null;
+    const encoded_len = std.unicode.utf8CodepointSequenceLength(scalar) catch return null;
+    if (encoded_len > buf.len) return null;
+    _ = std.unicode.utf8Encode(scalar, buf[0..encoded_len]) catch return null;
+    return buf[0..encoded_len];
+}
+
 fn drawMetalTerminalCodepointCellFallback(
     self: *Renderer,
     codepoint: u32,
@@ -261,20 +290,10 @@ fn drawMetalTerminalCodepointCellFallback(
     cell_height: f32,
     color: Color,
 ) bool {
-    if (self.plannedTextRenderingMode() != .metal_texture_atlas) return false;
     if (codepoint == 0) return false;
-    const scalar = std.math.cast(u21, codepoint) orelse return false;
-    const encoded_len = std.unicode.utf8CodepointSequenceLength(scalar) catch return false;
     var buf: [4]u8 = undefined;
-    _ = std.unicode.utf8Encode(scalar, buf[0..encoded_len]) catch return false;
-    return metal_backend.drawTerminalCellRun(self, &self.terminal_font, .{
-        .text = buf[0..encoded_len],
-        .x = x,
-        .y = y,
-        .cell_width = cell_width,
-        .cell_height = cell_height,
-        .tint = color.toRgba(),
-    });
+    const encoded = encodeUtf8Scalar(buf[0..], codepoint) orelse return false;
+    return drawMetalTerminalScalarFallback(self, encoded, x, y, cell_width, cell_height, color);
 }
 
 fn drawMetalTerminalGraphemeCellFallback(
@@ -295,21 +314,11 @@ fn drawMetalTerminalGraphemeCellFallback(
     const cps = [_][]const u32{ &[_]u32{base}, combining };
     for (cps) |slice| {
         for (slice) |codepoint| {
-            const scalar = std.math.cast(u21, codepoint) orelse return false;
-            const encoded_len = std.unicode.utf8CodepointSequenceLength(scalar) catch return false;
-            if (len + encoded_len > buf.len) return false;
-            _ = std.unicode.utf8Encode(scalar, buf[len .. len + encoded_len]) catch return false;
-            len += encoded_len;
+            const encoded = encodeUtf8Scalar(buf[len..], codepoint) orelse return false;
+            len += encoded.len;
         }
     }
-    return metal_backend.drawTerminalCellRun(self, &self.terminal_font, .{
-        .text = buf[0..len],
-        .x = x,
-        .y = y,
-        .cell_width = cell_width,
-        .cell_height = cell_height,
-        .tint = color.toRgba(),
-    });
+    return drawMetalTerminalScalarFallback(self, buf[0..len], x, y, cell_width, cell_height, color);
 }
 
 pub fn drawTerminalCellGraphemeBatched(self: *Renderer, base: u32, combining: []const u32, x: f32, y: f32, cell_width: f32, cell_height: f32, fg: Color, bg: Color, underline_color: Color, bold: bool, underline: bool, is_cursor: bool, followed_by_space: bool, draw_bg: bool) void {
