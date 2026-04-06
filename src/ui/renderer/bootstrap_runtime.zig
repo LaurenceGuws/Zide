@@ -6,8 +6,6 @@ const sdl_api = @import("../../platform/sdl_api.zig");
 const window_init = @import("window_init.zig");
 
 pub const InitBootstrapWindow = struct {
-    bootstrap_ops: bootstrap_contract.BackendBootstrapOps,
-    graphics_binding: native_host.RenderSurfaceBinding,
     window: *sdl_api.c.SDL_Window,
     render_host: native_host.PlatformRenderHost,
     render_surface_attachment: window_init.RenderSurfaceAttachment,
@@ -45,8 +43,6 @@ pub fn initBootstrapWindow(
     }
 
     return .{
-        .bootstrap_ops = bootstrap_ops,
-        .graphics_binding = graphics_binding,
         .window = window,
         .render_host = render_host,
         .render_surface_attachment = render_surface_attachment,
@@ -64,8 +60,9 @@ pub fn runStartupBackendSmoke(width: i32, height: i32, title: [*:0]const u8, bac
 
     var window_state = try initBootstrapWindow(width, height, title, backend, .backend_smoke);
     defer deinitBootstrapWindow(&window_state);
+    const bootstrap_ops = opsForBackend(backend);
 
-    return try window_state.bootstrap_ops.runStartupSmoke(
+    return try bootstrap_ops.runStartupSmoke(
         window_state.window,
         window_state.render_surface_attachment,
         width,
