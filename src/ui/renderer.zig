@@ -8,6 +8,7 @@ const hb = terminal_font_mod.c;
 const capability_contract = @import("renderer/capability_contract.zig");
 const bootstrap_runtime = @import("renderer/bootstrap_runtime.zig");
 const active_renderer_runtime = @import("renderer/active_renderer_runtime.zig");
+const mouse_wheel_runtime = @import("renderer/mouse_wheel_runtime.zig");
 const font_manager = @import("renderer/font_manager.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
 const gl_backend = @import("renderer/gl_backend.zig");
@@ -62,8 +63,6 @@ pub const WindowSizes = struct {
     render_width: i32,
     render_height: i32,
 };
-
-var mouse_wheel_delta: f32 = 0.0;
 
 pub const FontFamily = iface.FontFamily;
 pub const FONT_FAMILY = iface.FONT_FAMILY;
@@ -1769,7 +1768,7 @@ pub const Renderer = struct {
 
     pub fn getMouseWheelMove(self: *Renderer) f32 {
         _ = self;
-        return mouse_wheel_delta;
+        return mouse_wheel_runtime.get();
     }
 
     fn fontForSize(self: *Renderer, size: f32) ?*TerminalFont {
@@ -1972,7 +1971,7 @@ pub const Renderer = struct {
     fn pollInputEvents(self: *Renderer) void {
         input_runtime.pollInputEvents(
             self.inputDomain(),
-            &mouse_wheel_delta,
+            mouse_wheel_runtime.deltaPtr(),
         );
     }
 };
