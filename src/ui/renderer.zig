@@ -780,23 +780,19 @@ pub const Renderer = struct {
 
         const startup_backend = init_options.renderer_backend;
         const runtime_profile = init_options.runtime_profile;
-        const bootstrap_ops = bootstrap_runtime.opsForBackend(startup_backend);
-        try bootstrap_ops.configureWindowAttributes();
+        var bootstrap_window = try bootstrap_runtime.initBootstrapWindow(
+            width,
+            height,
+            title,
+            startup_backend,
+            runtime_profile,
+        );
+        errdefer bootstrap_runtime.deinitBootstrapWindow(&bootstrap_window);
 
-        const graphics_binding = bootstrap_ops.graphics_binding;
-        const window = try window_init.createWindow(width, height, title, graphics_binding);
-        errdefer sdl.SDL_DestroyWindow(window);
         const app_host = native_host.currentAppHost();
-        const render_host = native_host.captureRenderHost(window, graphics_binding);
-        const render_surface_attachment = try window_init.attachRenderSurface(render_host);
-        errdefer {
-            var render_surface_attachment_cleanup = render_surface_attachment;
-            window_init.deinitRenderSurfaceAttachment(&render_surface_attachment_cleanup);
-        }
-
-        if (!bootstrap_ops.supportsRuntimeProfile(runtime_profile)) {
-            return error.RendererBackendRuntimeNotReady;
-        }
+        const window = bootstrap_window.window;
+        const render_host = bootstrap_window.render_host;
+        const render_surface_attachment = bootstrap_window.render_surface_attachment;
 
         var renderer = try allocator.create(Renderer);
         errdefer allocator.destroy(renderer);
