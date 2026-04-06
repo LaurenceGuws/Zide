@@ -123,10 +123,6 @@ pub fn createBackendContextForBootstrap(window: *sdl.SDL_Window) !?sdl_api.c.SDL
 }
 
 pub fn runStartupSmokeForBootstrap(window: *sdl.SDL_Window, _: anytype, _: i32, _: i32) !bool {
-    return runStartupSmoke(window);
-}
-
-pub fn runStartupSmoke(window: *sdl.SDL_Window) !bool {
     const gl_context = try createBackendContext(window);
     defer sdl_api.glDeleteContext(gl_context);
     try gl.load();

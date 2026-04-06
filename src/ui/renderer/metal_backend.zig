@@ -1153,10 +1153,6 @@ pub fn createBackendContextForBootstrap(_: *sdl_api.c.SDL_Window) !?sdl_api.c.SD
 }
 
 pub fn runStartupSmokeForBootstrap(_: *sdl_api.c.SDL_Window, render_surface_attachment: anytype, width: i32, height: i32) !bool {
-    return runStartupSmoke(render_surface_attachment, width, height);
-}
-
-pub fn runStartupSmoke(render_surface_attachment: anytype, width: i32, height: i32) bool {
     const host = switch (render_surface_attachment) {
         .macos_metal_host => |value| value,
         else => return false,

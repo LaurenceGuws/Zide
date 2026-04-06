@@ -342,6 +342,10 @@ Progress note, 2026-04-05:
   directly (`gl_backend.*ForBootstrap` / `metal_backend.*ForBootstrap`,
   plus backend-owned `configureWindowAttributes`) instead of renderer-local
   OpenGL/Metal wrapper functions.
+- The duplicated non-bootstrap startup-smoke forwarders were removed from
+  `gl_backend.zig` and `metal_backend.zig`; each backend now exposes one
+  bootstrap startup-smoke entrypoint (`runStartupSmokeForBootstrap`) instead
+  of carrying a wrapper pair for the same behavior.
 - The macOS OpenGL editor retained-presentable bypass in
   `editor_widget_draw.zig` no longer keys off `renderer.backend` + OS tags;
   `capability_contract.RendererCapabilities` now exposes
