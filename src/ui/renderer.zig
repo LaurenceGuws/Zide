@@ -925,8 +925,7 @@ pub const Renderer = struct {
         self.backend_ops.deinitRuntime(self);
         if (self.appkit_delegate_installation) |*installation| app_delegate_runtime.uninstall(installation);
         if (self.app_event_watch_installed) app_event_watch_runtime.remove(&self.app_host);
-        window_init.deinitRenderSurfaceAttachment(&self.render_surface_attachment);
-        sdl_api.destroyWindow(self.window);
+        bootstrap_runtime.deinitRendererWindowResources(&self.render_surface_attachment, self.window);
         sdl_api.quit();
 
         self.allocator.destroy(self);

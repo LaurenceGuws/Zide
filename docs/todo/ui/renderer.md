@@ -386,6 +386,9 @@ Progress note, 2026-04-05:
   `bootstrap_runtime.initBootstrapWindow` / `deinitBootstrapWindow` for window
   + render-surface bootstrap sequencing and runtime-profile gating, removing
   another startup ownership block from `renderer.zig`.
+- Renderer deinit window/surface teardown now routes through
+  `bootstrap_runtime.deinitRendererWindowResources(...)` instead of inlining
+  render-surface detach + window destroy sequencing inside `renderer.zig`.
 - `bootstrap_runtime.InitBootstrapWindow` was trimmed to only carry bootstrap
   resources (`window`, `render_host`, `render_surface_attachment`); bootstrap
   ops metadata no longer rides along in that state object.

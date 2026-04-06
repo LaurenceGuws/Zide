@@ -56,6 +56,14 @@ pub fn deinitBootstrapWindow(window_state: *InitBootstrapWindow) void {
     sdl_api.destroyWindow(window_state.window);
 }
 
+pub fn deinitRendererWindowResources(
+    render_surface_attachment: *window_init.RenderSurfaceAttachment,
+    window: *sdl_api.c.SDL_Window,
+) void {
+    window_init.deinitRenderSurfaceAttachment(render_surface_attachment);
+    sdl_api.destroyWindow(window);
+}
+
 pub fn runStartupBackendSmoke(width: i32, height: i32, title: [*:0]const u8, backend: anytype) !bool {
     try window_init.initSdl();
     errdefer sdl_api.quit();
