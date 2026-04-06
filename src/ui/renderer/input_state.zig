@@ -35,7 +35,10 @@ pub const InputRuntimeState = struct {
     char_queue_head: usize = 0,
     focus_queue: std.ArrayList(bool) = std.ArrayList(bool).empty,
     focus_queue_head: usize = 0,
-    window_focused: bool = true,
+    /// Starts false so the first `syncWindowFocusFromFlags` pass can agree with SDL and run the
+    /// real focus-gained path (`startTextInput`, rect binding). Defaulting to true skipped that work
+    /// when the window was already focused and no `FOCUS_GAINED` event arrived yet.
+    window_focused: bool = false,
     suppress_super_until_release: bool = false,
     composing_text: std.ArrayList(u8) = std.ArrayList(u8).empty,
     composing_cursor: i32 = 0,

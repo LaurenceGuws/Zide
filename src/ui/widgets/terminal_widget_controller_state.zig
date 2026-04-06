@@ -124,8 +124,8 @@ pub const FocusUiState = struct {
     report_window_events: bool = true,
     report_pane_events: bool = false,
     last_reported: ?bool = null,
-    ui_focused: bool = true,
-    ui_window_focused: bool = true,
+    ui_focused: bool = false,
+    ui_window_focused: bool = false,
 
     pub fn setSources(self: *FocusUiState, window: bool, pane: bool) void {
         self.report_window_events = window;
