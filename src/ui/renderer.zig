@@ -50,7 +50,6 @@ const platform_window = @import("../platform/window_metrics.zig");
 const platform_input_events = @import("../platform/input_events.zig");
 const build_options = @import("build_options");
 const sdl_api = @import("../platform/sdl_api.zig");
-const sdl = sdl_api.c;
 const types = @import("renderer/types.zig");
 const app_logger = @import("../app_logger.zig");
 const builtin = @import("builtin");
@@ -1732,8 +1731,8 @@ pub const Renderer = struct {
         return macos_host.requestOpenFile(&self.app_host, path);
     }
 
-    fn windowHitTestCallback(_: ?*sdl_api.c.SDL_Window, area: [*c]const sdl.SDL_Point, data: ?*anyopaque) callconv(.c) sdl_api.HitTestResult {
-        const raw = data orelse return sdl.SDL_HITTEST_NORMAL;
+    fn windowHitTestCallback(_: ?*sdl_api.c.SDL_Window, area: [*c]const sdl_api.c.SDL_Point, data: ?*anyopaque) callconv(.c) sdl_api.HitTestResult {
+        const raw = data orelse return sdl_api.c.SDL_HITTEST_NORMAL;
         const self: *Renderer = @ptrCast(@alignCast(raw));
         return window_chrome_runtime.hitTest(
             self.window_chrome.contract,
