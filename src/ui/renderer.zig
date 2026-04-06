@@ -1797,11 +1797,6 @@ pub const Renderer = struct {
         self.backend_ops.addTerminalRect(self, x, y, w, h, color.toRgba());
     }
 
-    pub fn addTerminalRectF(self: *Renderer, x: f32, y: f32, w: f32, h: f32, color: Color) void {
-        if (w <= 0 or h <= 0) return;
-        _ = self.enqueueSolidSurfaceFromLogicalRect(x, y, w, h, color.toRgba());
-    }
-
     pub fn terminalCellGeometry(self: *Renderer) TerminalCellGeometry {
         const scale = if (self.scale.render_scale > 0.0) self.scale.render_scale else 1.0;
         const cell_width_device_px = @max(1, @as(i32, @intFromFloat(std.math.round(self.terminal_metrics.cell_width * scale))));

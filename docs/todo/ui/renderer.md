@@ -556,6 +556,11 @@ Rules:
   normal terminal cell backgrounds/glyphs used the dedicated terminal rect/glyph
   batch path. Fixing the bug required moving row backgrounds onto the terminal
   rect path, not changing widget color decisions.
+- follow-up closure after that bug: the dead `addTerminalRectF(...)` API was
+  removed so terminal background drawing no longer advertises two public paths.
+  Remaining explicit scrutiny point: terminal overlay/cursor rendering still
+  uses the non-batched terminal cell path and should be treated as a deliberate
+  seam until proven otherwise.
 - the next meaningful wins should reduce shared renderer ownership, not add
   another backend.
 
