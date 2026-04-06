@@ -231,6 +231,9 @@ pub fn handle(state: anytype, shell: *Shell, batch: *input_types.InputBatch, now
                                 terminal_grid.cell_height,
                             );
                         }
+                        for (inner_state.terminal_widgets.items) |*widget| {
+                            widget.invalidatePresentationCache();
+                        }
                     }
                     if (result.needs_redraw) inner_state.needs_redraw = true;
                 }
