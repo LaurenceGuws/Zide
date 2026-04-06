@@ -1811,10 +1811,6 @@ pub fn prepareFrameReadback(context: *BackendContext, frame: *Frame) ?Readback {
     };
 }
 
-pub fn terminalSnapshotAvailable(context: *const BackendContext) bool {
-    return context.terminal_snapshot != null;
-}
-
 pub const EnsureTerminalSnapshotResult = struct {
     available: bool = false,
     recreated: bool = false,

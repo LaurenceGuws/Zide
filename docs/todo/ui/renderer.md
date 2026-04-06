@@ -194,6 +194,9 @@ Progress note, 2026-04-05:
 - Metal-only `*ForRenderer` terminal snapshot helper exports were removed from
   `metal_backend.zig`; diagnostics now query terminal snapshot state through
   `renderer.presentableAvailable(.terminal)` (shared presentable contract path).
+- The remaining unused `terminalSnapshotAvailable(context)` helper was removed
+  from `metal_backend.zig` to keep snapshot-presentable lifecycle surfaces
+  contract-owned instead of helper-layered.
 - The tiny terminal-specific presentable wrapper module is gone too:
   `terminal_widget_presentation_runtime.zig` now talks to the renderer
   presentable contract directly instead of bouncing through one more
