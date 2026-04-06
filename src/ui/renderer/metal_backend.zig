@@ -1293,7 +1293,6 @@ pub fn atlasPreviewSourceForRenderer(renderer: anytype) AtlasPreviewSource {
 }
 
 pub fn runAtlasUploadDiagnosticAt(renderer: anytype, dest_x: i32, dest_y: i32) bool {
-    if (renderer.backend != .metal) return false;
     if (!hasBackendContext(renderer)) return false;
     clearQueuedSurfaceDraws(renderer);
     renderer.metal_runtime.preview_source = .unavailable;
@@ -1457,7 +1456,6 @@ pub fn addTerminalGlyphQuad(
 pub fn applyClipRect(_: anytype, _: ?types.Rect) void {}
 
 pub fn drawAtlasSampleChar(renderer: anytype, char: u8, x: f32, y: f32, color: iface.Color) bool {
-    if (renderer.backend != .metal) return false;
     if (renderer.plannedTextRenderingMode() != .metal_texture_atlas) return false;
     if (!hasBackendContext(renderer)) return false;
 
@@ -1472,7 +1470,6 @@ pub fn drawSampleTextRequest(
     renderer: anytype,
     request: metal_text_sample_runtime.SampleTextRequest,
 ) bool {
-    if (renderer.backend != .metal) return false;
     if (renderer.plannedTextRenderingMode() != .metal_texture_atlas) return false;
     if (!hasBackendContext(renderer)) return false;
 
@@ -1499,7 +1496,6 @@ pub fn drawTerminalCellRun(
     font: *terminal_font.TerminalFont,
     request: metal_text_sample_runtime.TerminalCellRunRequest,
 ) bool {
-    if (renderer.backend != .metal) return false;
     if (renderer.plannedTextRenderingMode() != .metal_texture_atlas) return false;
     if (!hasBackendContext(renderer)) return false;
     return appendTerminalCellRun(renderer, font, request);
@@ -1556,7 +1552,6 @@ pub fn drawRawImageRgba(
     dest: types.Rect,
     tint: types.Rgba,
 ) bool {
-    if (renderer.backend != .metal) return false;
     return appendRawImageRgba(renderer, width, height, data, dest, tint);
 }
 
@@ -1597,7 +1592,6 @@ pub fn drawRawImageRgb(
     dest: types.Rect,
     tint: types.Rgba,
 ) bool {
-    if (renderer.backend != .metal) return false;
     return appendRawImageRgb(renderer, width, height, data, dest, tint);
 }
 

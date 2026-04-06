@@ -206,6 +206,9 @@ Progress note, 2026-04-05:
 - Fast-present reuse now also tracks overlay state (hover link + composing
   text signature). Reuse is blocked when those change, preventing stale overlay
   artifacts from skipping the overlay redraw phase.
+- Removed remaining `renderer.backend == .metal` guard checks from
+  `metal_backend.zig` helper paths; capability/context checks now gate behavior
+  without backend-label branches inside backend-owned code.
 - Added regression tests for cursor/overlay invalidation gates in
   `terminal_widget_surface_state.zig` to lock the new fast-present reuse rules.
 - The tiny terminal-specific presentable wrapper module is gone too:
