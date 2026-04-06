@@ -102,6 +102,9 @@ Progress note, 2026-04-05:
   (raster `SurfaceDraw` solid + optional pixel clip), so common widget fills use
   the same contract path as Metal queue replay instead of bypassing via
   `drawSolidRect` only.
+- `BackendOps.drawSolidRect` on both backends now calls
+  `enqueueSolidSurfaceFromLogicalRect` / `enqueueSurfaceDraw` (Metal terminal
+  rects still use `appendSolidRect` from `metal_backend.addTerminalRect`).
 - `Renderer.addTerminalRectF` uses the same `enqueueSolidSurfaceFromLogicalRect`
   helper (immediate solid); `addTerminalRect` (i32) still uses `BackendOps` so
   OpenGL keeps terminal batch quads instead of forcing an immediate path.

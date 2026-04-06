@@ -1407,20 +1407,8 @@ pub fn appendRawImage(renderer: anytype, draw: RawImageDraw) bool {
     return appendSurfaceDrawToMetalQueue(renderer, .{ .raw_image = draw });
 }
 
-pub fn drawSolidRect(
-    renderer: anytype,
-    x: f32,
-    y: f32,
-    w: f32,
-    h: f32,
-    color: types.Rgba,
-) bool {
-    if (renderer.backend != .metal) return false;
-    return appendSolidRect(renderer, x, y, w, h, color);
-}
-
 pub fn addTerminalRect(renderer: anytype, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void {
-    _ = drawSolidRect(
+    _ = appendSolidRect(
         renderer,
         @floatFromInt(x),
         @floatFromInt(y),

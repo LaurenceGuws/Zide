@@ -539,7 +539,9 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         fn scrollPresentable(renderer: *Self, surface: PresentableSurface, dx: i32, dy: i32) bool { return gl_backend.scrollPresentable(renderer, surface, dx, dy); }
         fn presentableInfo(renderer: *Self, surface: PresentableSurface) ?PresentableInfo { return gl_backend.presentableInfo(renderer, surface); }
         fn clearThemeBackground(renderer: *Self) void { gl_backend.clearThemeBackground(renderer); }
-        fn drawSolidRect(renderer: *Self, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) bool { return gl_backend.drawSolidRect(renderer, x, y, w, h, color); }
+        fn drawSolidRect(renderer: *Self, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) bool {
+            return renderer.enqueueSolidSurfaceFromLogicalRect(x, y, w, h, color);
+        }
         fn applyClipRect(renderer: *Self, clip: ?types.Rect) void { gl_backend.applyClipRect(renderer, clip); }
         fn addTerminalRect(renderer: *Self, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void { gl_backend.addTerminalRect(renderer, x, y, w, h, color); }
         fn addTerminalGlyphRect(renderer: *Self, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void { gl_backend.addTerminalGlyphRect(renderer, x, y, w, h, color); }
@@ -574,7 +576,9 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
         fn scrollPresentable(renderer: *Self, surface: PresentableSurface, dx: i32, dy: i32) bool { return metal_backend.scrollPresentable(renderer, surface, dx, dy); }
         fn presentableInfo(renderer: *Self, surface: PresentableSurface) ?PresentableInfo { return metal_backend.presentableInfo(renderer, surface); }
         fn clearThemeBackground(renderer: *Self) void { metal_backend.clearThemeBackground(renderer); }
-        fn drawSolidRect(renderer: *Self, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) bool { return metal_backend.drawSolidRect(renderer, x, y, w, h, color); }
+        fn drawSolidRect(renderer: *Self, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) bool {
+            return renderer.enqueueSolidSurfaceFromLogicalRect(x, y, w, h, color);
+        }
         fn applyClipRect(renderer: *Self, clip: ?types.Rect) void { metal_backend.applyClipRect(renderer, clip); }
         fn addTerminalRect(renderer: *Self, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void { metal_backend.addTerminalRect(renderer, x, y, w, h, color); }
         fn addTerminalGlyphRect(renderer: *Self, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void { metal_backend.addTerminalGlyphRect(renderer, x, y, w, h, color); }
