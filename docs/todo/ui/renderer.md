@@ -403,6 +403,10 @@ Progress note, 2026-04-05:
 - Mouse-wheel delta global state moved out of `renderer.zig` into
   `src/ui/renderer/mouse_wheel_runtime.zig` (`get`, `deltaPtr`), so input poll
   and readback paths no longer touch another renderer-root global directly.
+- Renderer mouse-wheel read/poll usage now routes through
+  `input_runtime.mouseWheelMove` /
+  `input_runtime.pollInputEventsWithRuntimeWheel`, so `renderer.zig` no longer
+  imports `mouse_wheel_runtime` directly.
 - Active-renderer global query helpers (`getTime`, `windowChanges`,
   `getScreenWidth`, `getScreenHeight`, active-status logging probe) now route
   through `src/ui/renderer/renderer_global_runtime.zig` instead of open-coding
