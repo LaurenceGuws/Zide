@@ -26,11 +26,26 @@ pub fn windowChanges(comptime RendererType: type) sdl_api.WindowChangeMask {
 }
 
 pub fn getScreenWidth(comptime RendererType: type) i32 {
-    if (active_renderer_runtime.get(RendererType)) |renderer| return renderer.width;
+    if (activeRenderer(RendererType)) |renderer| return renderer.width;
     return 0;
 }
 
 pub fn getScreenHeight(comptime RendererType: type) i32 {
-    if (active_renderer_runtime.get(RendererType)) |renderer| return renderer.height;
+    if (activeRenderer(RendererType)) |renderer| return renderer.height;
     return 0;
+}
+
+pub fn waitForWakeOrTimeout(comptime RendererType: type, seconds: f64) void {
+    if (seconds <= 0) return;
+    if (activeRenderer(RendererType)) |renderer| {
+        if (input_state.hasPendingWaitEvent(renderer.inputDomain())) return;
+        const timeout_ms: c_int = @intFromFloat(@ceil(seconds * 1000.0));
+        if (timeout_ms <= 0) return;
+        var event: sdl_api.c.SDL_Event = undefined;
+        if (sdl_api.waitEventTimeout(&event, timeout_ms)) {
+            input_state.stagePendingWaitEvent(renderer.inputDomain(), event);
+            return;
+        }
+    }
+    time_utils.waitTime(seconds);
 }

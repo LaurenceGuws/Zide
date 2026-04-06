@@ -1988,18 +1988,7 @@ pub fn waitTime(seconds: f64) void {
 }
 
 pub fn waitForWakeOrTimeout(seconds: f64) void {
-    if (seconds <= 0) return;
-    if (renderer_global_runtime.activeRenderer(Renderer)) |renderer| {
-        if (input_state.hasPendingWaitEvent(renderer.inputDomain())) return;
-        const timeout_ms: c_int = @intFromFloat(@ceil(seconds * 1000.0));
-        if (timeout_ms <= 0) return;
-        var event: sdl_api.c.SDL_Event = undefined;
-        if (sdl_api.waitEventTimeout(&event, timeout_ms)) {
-            input_state.stagePendingWaitEvent(renderer.inputDomain(), event);
-            return;
-        }
-    }
-    time_utils.waitTime(seconds);
+    renderer_global_runtime.waitForWakeOrTimeout(Renderer, seconds);
 }
 
 pub fn requestWake() void {
