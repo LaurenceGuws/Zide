@@ -327,6 +327,9 @@ Progress note, 2026-04-05:
   directly from backend ops (including the current "unavailable" stub
   behavior), removing the equivalent forwarding wrappers from
   `metal_backend.zig`.
+- Font-scale diagnostic cache invalidation now goes through a backend-ops hook
+  (`clearDiagnosticFont`) instead of `renderer.zig` directly calling
+  `metal_backend.clearDiagnosticFont`.
 - The macOS OpenGL editor retained-presentable bypass in
   `editor_widget_draw.zig` no longer keys off `renderer.backend` + OS tags;
   `capability_contract.RendererCapabilities` now exposes

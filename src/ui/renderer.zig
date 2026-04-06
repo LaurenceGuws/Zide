@@ -385,6 +385,7 @@ pub const Renderer = struct {
         destroyPersistentTexture: *const fn (*Self, *types.Texture) void,
         drawRawImage: *const fn (*Self, RawImageFormat, i32, i32, []const u8, types.Rect, types.Rgba) bool,
         enqueueSurfaceDraw: *const fn (*Self, surface_draw.SurfaceDraw) bool,
+        clearDiagnosticFont: *const fn (*Self) void,
     };
 
     const BackendBootstrapOps = struct {
@@ -601,6 +602,7 @@ pub const Renderer = struct {
         fn enqueueSurfaceDraw(renderer: *Self, draw: surface_draw.SurfaceDraw) bool {
             return gl_backend.submitSurfaceDrawImmediate(renderer, draw);
         }
+        fn clearDiagnosticFont(_: *Self) void {}
     };
 
     const MetalDispatch = struct {
@@ -682,6 +684,9 @@ pub const Renderer = struct {
         fn enqueueSurfaceDraw(renderer: *Self, draw: surface_draw.SurfaceDraw) bool {
             return metal_backend.appendSurfaceDrawToMetalQueue(renderer, draw);
         }
+        fn clearDiagnosticFont(renderer: *Self) void {
+            metal_backend.clearDiagnosticFont(renderer);
+        }
     };
 
     fn backendOps(backend: RendererBackend) BackendOps {
@@ -712,6 +717,7 @@ pub const Renderer = struct {
                 .destroyPersistentTexture = OpenGlDispatch.destroyPersistentTexture,
                 .drawRawImage = OpenGlDispatch.drawRawImage,
                 .enqueueSurfaceDraw = OpenGlDispatch.enqueueSurfaceDraw,
+                .clearDiagnosticFont = OpenGlDispatch.clearDiagnosticFont,
             },
             .metal => .{
                 .initRuntime = MetalDispatch.initRuntime,
@@ -739,6 +745,7 @@ pub const Renderer = struct {
                 .destroyPersistentTexture = MetalDispatch.destroyPersistentTexture,
                 .drawRawImage = MetalDispatch.drawRawImage,
                 .enqueueSurfaceDraw = MetalDispatch.enqueueSurfaceDraw,
+                .clearDiagnosticFont = MetalDispatch.clearDiagnosticFont,
             },
         };
     }
@@ -1112,7 +1119,7 @@ pub const Renderer = struct {
     }
 
     fn applyFontScale(self: *Renderer) !void {
-        metal_backend.clearDiagnosticFont(self);
+        self.backend_ops.clearDiagnosticFont(self);
         try font_runtime.applyFontScale(self);
     }
 
