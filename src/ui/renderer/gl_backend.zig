@@ -29,9 +29,14 @@ const SceneTargetContract = scene_target_state.SceneTargetContract;
 const SceneTargetInvalidation = scene_target_state.SceneTargetInvalidation;
 const RendererCapabilities = capability_contract.RendererCapabilities;
 
+fn supportsRuntimeProfileForBootstrap(_: bootstrap_contract.RendererRuntimeProfile) bool {
+    return true;
+}
+
 pub fn bootstrapOps() bootstrap_contract.BackendBootstrapOps {
     return .{
         .graphics_binding = .opengl,
+        .supportsRuntimeProfile = supportsRuntimeProfileForBootstrap,
         .configureWindowAttributes = configureWindowAttributes,
         .createBackendContext = createBackendContext,
         .destroyBackendContext = destroyBackendContextForBootstrap,

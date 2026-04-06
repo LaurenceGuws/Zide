@@ -49,9 +49,17 @@ const PresentableDraw = presentable_contract.PresentableDraw;
 const PresentableInfo = presentable_contract.PresentableInfo;
 const RendererCapabilities = capability_contract.RendererCapabilities;
 
+fn supportsRuntimeProfileForBootstrap(profile: bootstrap_contract.RendererRuntimeProfile) bool {
+    return switch (profile) {
+        .backend_smoke => true,
+        .full_ui => builtin.target.os.tag == .macos,
+    };
+}
+
 pub fn bootstrapOps() bootstrap_contract.BackendBootstrapOps {
     return .{
         .graphics_binding = .metal,
+        .supportsRuntimeProfile = supportsRuntimeProfileForBootstrap,
         .configureWindowAttributes = configureWindowAttributes,
         .createBackendContext = createBackendContextForBootstrap,
         .destroyBackendContext = destroyBackendContextForBootstrap,

@@ -366,6 +366,9 @@ Progress note, 2026-04-05:
 - Bootstrap context cleanup now also routes through the shared bootstrap
   contract (`destroyBackendContext`) instead of `renderer.zig` directly calling
   `SDL_GL_DeleteContext` on init error paths.
+- Runtime-profile support policy now routes through backend bootstrap ops
+  (`supportsRuntimeProfile`) instead of `renderer.zig` carrying a backend-label
+  gate for Metal full-ui/macOS readiness inline.
 - The macOS OpenGL editor retained-presentable bypass in
   `editor_widget_draw.zig` no longer keys off `renderer.backend` + OS tags;
   `capability_contract.RendererCapabilities` now exposes

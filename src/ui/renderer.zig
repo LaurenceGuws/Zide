@@ -399,10 +399,7 @@ pub const Renderer = struct {
         opengl,
         metal,
     };
-    pub const RendererRuntimeProfile = enum {
-        full_ui,
-        backend_smoke,
-    };
+    pub const RendererRuntimeProfile = bootstrap_contract.RendererRuntimeProfile;
     pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
 
     allocator: std.mem.Allocator,
@@ -803,13 +800,7 @@ pub const Renderer = struct {
             window_init.deinitRenderSurfaceAttachment(&render_surface_attachment_cleanup);
         }
 
-        const metal_full_ui_macos = startup_backend == .metal and
-            runtime_profile == .full_ui and
-            builtin.target.os.tag == .macos;
-        if (startup_backend != .opengl and
-            runtime_profile != .backend_smoke and
-            !metal_full_ui_macos)
-        {
+        if (!bootstrap_ops.supportsRuntimeProfile(runtime_profile)) {
             return error.RendererBackendRuntimeNotReady;
         }
 
