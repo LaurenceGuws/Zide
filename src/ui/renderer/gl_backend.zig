@@ -1170,10 +1170,38 @@ fn createTextureEmpty(width: i32, height: i32, filter: i32) types.Texture {
     return .{ .id = id, .width = width, .height = height };
 }
 
+fn drawEphemeralTextureRectWithActiveClip(
+    renderer: anytype,
+    texture: types.Texture,
+    src: types.Rect,
+    dest: types.Rect,
+    tint: types.Rgba,
+    bg: types.Rgba,
+) void {
+    var clip_pushed = false;
+    if (renderer.currentClipRect()) |clip_logical| {
+        const pc = metal_text_sample_runtime.pixelClipRect(renderer, clip_logical) orelse return;
+        if (pc.width <= 0 or pc.height <= 0) return;
+        renderer.beginClip(
+            @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.x)))),
+            @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.y)))),
+            @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.width)))),
+            @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.height)))),
+        );
+        clip_pushed = true;
+    }
+    defer if (clip_pushed) renderer.endClip();
+    draw_ops.drawTextureRect(renderer, texture, src, dest, tint, bg, .rgba);
+}
+
 pub fn drawRawImageRgba(renderer: anytype, width: i32, height: i32, data: []const u8, dest: types.Rect, tint: types.Rgba) bool {
     if (width <= 0 or height <= 0) return false;
     if (@as(usize, @intCast(width * height * 4)) > data.len) return false;
     if (dest.width <= 0 or dest.height <= 0) return false;
+    if (renderer.currentClipRect()) |clip_logical| {
+        const pc = metal_text_sample_runtime.pixelClipRect(renderer, clip_logical) orelse return false;
+        if (pc.width <= 0 or pc.height <= 0) return false;
+    }
     var tex = texture_utils.createTextureFromRgba(width, height, data, gl.c.GL_NEAREST) orelse return false;
     defer texture_utils.destroyTexture(&tex);
     const src = types.Rect{
@@ -1182,8 +1210,7 @@ pub fn drawRawImageRgba(renderer: anytype, width: i32, height: i32, data: []cons
         .width = @floatFromInt(width),
         .height = @floatFromInt(height),
     };
-    const bg = renderer.text_render.bg_rgba;
-    draw_ops.drawTextureRect(renderer, tex, src, dest, tint, bg, .rgba);
+    drawEphemeralTextureRectWithActiveClip(renderer, tex, src, dest, tint, renderer.text_render.bg_rgba);
     return true;
 }
 
@@ -1191,6 +1218,10 @@ pub fn drawRawImageRgb(renderer: anytype, width: i32, height: i32, data: []const
     if (width <= 0 or height <= 0) return false;
     if (@as(usize, @intCast(width * height * 3)) > data.len) return false;
     if (dest.width <= 0 or dest.height <= 0) return false;
+    if (renderer.currentClipRect()) |clip_logical| {
+        const pc = metal_text_sample_runtime.pixelClipRect(renderer, clip_logical) orelse return false;
+        if (pc.width <= 0 or pc.height <= 0) return false;
+    }
     var tex = texture_utils.createTextureFromRgb(width, height, data, gl.c.GL_NEAREST) orelse return false;
     defer texture_utils.destroyTexture(&tex);
     const src = types.Rect{
@@ -1199,8 +1230,7 @@ pub fn drawRawImageRgb(renderer: anytype, width: i32, height: i32, data: []const
         .width = @floatFromInt(width),
         .height = @floatFromInt(height),
     };
-    const bg = renderer.text_render.bg_rgba;
-    draw_ops.drawTextureRect(renderer, tex, src, dest, tint, bg, .rgba);
+    drawEphemeralTextureRectWithActiveClip(renderer, tex, src, dest, tint, renderer.text_render.bg_rgba);
     return true;
 }
 

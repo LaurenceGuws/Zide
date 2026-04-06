@@ -94,9 +94,11 @@ Progress note, 2026-04-05:
   atlas path is active. `Renderer.enqueueSurfaceDraw` is the shared entrypoint.
   Metal `appendSolidRect` / `appendAtlasSample` route through `enqueueSurfaceDraw`.
   OpenGL `.raw_image` through `enqueueSurfaceDraw` remains unimplemented (opaque
-  Metal texture handle in the union). OpenGL `drawRawImageRgba` /
+  Metal texture handle in the union). OpenGL   `drawRawImageRgba` /
   `drawRawImageRgb` now upload ephemeral `GL_NEAREST` textures and draw via
-  `draw_ops.drawTextureRect` (Kitty placement path).
+  `draw_ops.drawTextureRect` (Kitty placement path), respecting the active clip
+  stack the same way as other immediate GL draws (nested `beginClip` /
+  `endClip` from `pixelClipRect`).
 - `Renderer.drawRect` / `drawRectF` now submit through `enqueueSurfaceDraw`
   (raster `SurfaceDraw` solid + optional pixel clip), so common widget fills use
   the same contract path as Metal queue replay instead of bypassing via
