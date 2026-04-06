@@ -566,6 +566,10 @@ Rules:
   row fallback route; it uses the same per-cell batched terminal path as the
   rest of overlay rendering instead of advertising a second backend-specific
   policy.
+- next closure after that: the grid-side Metal row-run fallback and its
+  matching diagnostics were removed too. Metal unavailable-text rendering now
+  relies on the same per-cell terminal fallback path instead of carrying a
+  second row-aggregation implementation with separate telemetry.
 - the next meaningful wins should reduce shared renderer ownership, not add
   another backend.
 

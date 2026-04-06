@@ -164,7 +164,6 @@ pub fn run(allocator: std.mem.Allocator) !void {
         widget.completePendingPresentationFeedback(submission);
         if (!submission.succeeded) return error.MetalTerminalDiagnosticPresentFailed;
 
-        const debug_sample = widget.debug.last_metal_terminal_fallback;
         const metrics = terminal_widget_draw.latestFrameLatencyMetrics();
         if (metrics.seq != 0 and metrics.seq != last_metrics_seq) {
             last_metrics_seq = metrics.seq;
@@ -176,19 +175,11 @@ pub fn run(allocator: std.mem.Allocator) !void {
                 metrics.box_glyphs;
             log.logf(
                 .info,
-                "frame={d} submitted={d} sequence={d} grid_runs={d}/{d} overlay_runs={d}/{d} metric_grid_runs={d}/{d} metric_overlay_runs={d}/{d} special_sprite_glyphs={d} shaped_special_glyphs={d} powerline={d} shade={d} braille={d} box={d} other_special={d} kitty_ms={d:.3} snapshot_available={d} metric_present_sample={s}",
+                "frame={d} submitted={d} sequence={d} special_sprite_glyphs={d} shaped_special_glyphs={d} powerline={d} shade={d} braille={d} box={d} other_special={d} kitty_ms={d:.3} snapshot_available={d} metric_present_sample={s}",
                 .{
                     frame_index,
                     @intFromBool(submission.succeeded),
                     submission.sequence,
-                    debug_sample.grid_row_runs,
-                    debug_sample.grid_row_cells,
-                    debug_sample.overlay_row_runs,
-                    debug_sample.overlay_row_cells,
-                    metrics.metal_grid_row_runs,
-                    metrics.metal_grid_row_cells,
-                    metrics.metal_overlay_row_runs,
-                    metrics.metal_overlay_row_cells,
                     metrics.special_sprite_glyphs,
                     metrics.shaped_special_glyphs,
                     metrics.powerline_special_glyphs,
@@ -216,7 +207,6 @@ pub fn run(allocator: std.mem.Allocator) !void {
         app_shell.waitTime(0.016);
     }
 
-    const final_debug = widget.debug.last_metal_terminal_fallback;
     const final_metrics = terminal_widget_draw.latestFrameLatencyMetrics();
     const final_uncategorized_special_glyphs =
         final_metrics.shaped_special_glyphs -
@@ -226,17 +216,9 @@ pub fn run(allocator: std.mem.Allocator) !void {
         final_metrics.box_glyphs;
     log.logf(
         .info,
-        "complete frames={d} final_grid_runs={d}/{d} final_overlay_runs={d}/{d} metric_grid_runs={d}/{d} metric_overlay_runs={d}/{d} special_sprite_glyphs={d} shaped_special_glyphs={d} powerline={d} shade={d} braille={d} box={d} other_special={d} metric_terminal_present={s} metric_present_sample={s} kitty_ms={d:.3} snapshot_available={d}",
+        "complete frames={d} special_sprite_glyphs={d} shaped_special_glyphs={d} powerline={d} shade={d} braille={d} box={d} other_special={d} metric_terminal_present={s} metric_present_sample={s} kitty_ms={d:.3} snapshot_available={d}",
         .{
             frame_index,
-            final_debug.grid_row_runs,
-            final_debug.grid_row_cells,
-            final_debug.overlay_row_runs,
-            final_debug.overlay_row_cells,
-            final_metrics.metal_grid_row_runs,
-            final_metrics.metal_grid_row_cells,
-            final_metrics.metal_overlay_row_runs,
-            final_metrics.metal_overlay_row_cells,
             final_metrics.special_sprite_glyphs,
             final_metrics.shaped_special_glyphs,
             final_metrics.powerline_special_glyphs,
