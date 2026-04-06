@@ -2,6 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const iface = @import("interface.zig");
 const macos_metal_host = @import("../../platform/macos_metal_host.zig");
+const sdl_api = @import("../../platform/sdl_api.zig");
 const capability_contract = @import("capability_contract.zig");
 const metal_runtime_state = @import("metal_runtime_state.zig");
 const metal_text_sample_runtime = @import("metal_text_sample_runtime.zig");
@@ -1143,6 +1144,16 @@ pub fn initRuntime(renderer: anytype) !void {
     renderer.metal_runtime.backend_context = createBackendContext(host, renderer.render_width, renderer.render_height) orelse return error.MetalBackendContextUnavailable;
     try renderer.initFonts();
     renderer.fonts_ready = true;
+}
+
+pub fn configureWindowAttributes() !void {}
+
+pub fn createBackendContextForBootstrap(_: *sdl_api.c.SDL_Window) !?sdl_api.c.SDL_GLContext {
+    return null;
+}
+
+pub fn runStartupSmokeForBootstrap(_: *sdl_api.c.SDL_Window, render_surface_attachment: anytype, width: i32, height: i32) !bool {
+    return runStartupSmoke(render_surface_attachment, width, height);
 }
 
 pub fn runStartupSmoke(render_surface_attachment: anytype, width: i32, height: i32) bool {

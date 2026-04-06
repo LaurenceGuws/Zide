@@ -116,6 +116,16 @@ pub fn configureRuntimePolicy(renderer: anytype) void {
     }
 }
 
+pub fn createBackendContextForBootstrap(window: *sdl.SDL_Window) !?sdl_api.c.SDL_GLContext {
+    const context = try createBackendContext(window);
+    try gl.load();
+    return context;
+}
+
+pub fn runStartupSmokeForBootstrap(window: *sdl.SDL_Window, _: anytype, _: i32, _: i32) !bool {
+    return runStartupSmoke(window);
+}
+
 pub fn runStartupSmoke(window: *sdl.SDL_Window) !bool {
     const gl_context = try createBackendContext(window);
     defer sdl_api.glDeleteContext(gl_context);

@@ -516,26 +516,6 @@ pub const Renderer = struct {
         return self.clip_stack[self.clip_depth - 1];
     }
 
-    fn configureMetalWindowAttributes() !void {}
-
-    fn runOpenGlStartupSmoke(window: *sdl.SDL_Window, _: RenderSurfaceAttachment, _: i32, _: i32) !bool {
-        return gl_backend.runStartupSmoke(window);
-    }
-
-    fn createOpenGlContext(window: *sdl.SDL_Window) !?sdl_api.c.SDL_GLContext {
-        const context = try gl_backend.createBackendContext(window);
-        try gl.load();
-        return context;
-    }
-
-    fn createMetalContext(_: *sdl.SDL_Window) !?sdl_api.c.SDL_GLContext {
-        return null;
-    }
-
-    fn runMetalStartupSmoke(_: *sdl.SDL_Window, render_surface_attachment: RenderSurfaceAttachment, width: i32, height: i32) !bool {
-        return metal_backend.runStartupSmoke(render_surface_attachment, width, height);
-    }
-
     const OpenGlDispatch = struct {
         fn initRuntime(renderer: *Self) !void {
             try gl_backend.initRuntime(renderer);
@@ -782,14 +762,14 @@ pub const Renderer = struct {
             .opengl => .{
                 .graphics_binding = .opengl,
                 .configureWindowAttributes = gl_backend.configureWindowAttributes,
-                .createBackendContext = createOpenGlContext,
-                .runStartupSmoke = runOpenGlStartupSmoke,
+                .createBackendContext = gl_backend.createBackendContextForBootstrap,
+                .runStartupSmoke = gl_backend.runStartupSmokeForBootstrap,
             },
             .metal => .{
                 .graphics_binding = .metal,
-                .configureWindowAttributes = configureMetalWindowAttributes,
-                .createBackendContext = createMetalContext,
-                .runStartupSmoke = runMetalStartupSmoke,
+                .configureWindowAttributes = metal_backend.configureWindowAttributes,
+                .createBackendContext = metal_backend.createBackendContextForBootstrap,
+                .runStartupSmoke = metal_backend.runStartupSmokeForBootstrap,
             },
         };
     }

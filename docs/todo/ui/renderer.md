@@ -337,6 +337,11 @@ Progress note, 2026-04-05:
 - Backend bootstrap now owns context creation too: `Renderer.init()` asks
   `BackendBootstrapOps.createBackendContext` for backend context setup instead
   of open-coding the OpenGL context creation branch in shared init flow.
+- Backend bootstrap helper implementations were moved out of `renderer.zig`:
+  `backendBootstrapOps` now references backend-owned bootstrap entrypoints
+  directly (`gl_backend.*ForBootstrap` / `metal_backend.*ForBootstrap`,
+  plus backend-owned `configureWindowAttributes`) instead of renderer-local
+  OpenGL/Metal wrapper functions.
 - The macOS OpenGL editor retained-presentable bypass in
   `editor_widget_draw.zig` no longer keys off `renderer.backend` + OS tags;
   `capability_contract.RendererCapabilities` now exposes
