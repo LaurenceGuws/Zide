@@ -99,6 +99,9 @@ Progress note, 2026-04-05:
   (raster `SurfaceDraw` solid + optional pixel clip), so common widget fills use
   the same contract path as Metal queue replay instead of bypassing via
   `drawSolidRect` only.
+- `Renderer.addTerminalRectF` uses the same `enqueueSolidSurfaceFromLogicalRect`
+  helper (immediate solid); `addTerminalRect` (i32) still uses `BackendOps` so
+  OpenGL keeps terminal batch quads instead of forcing an immediate path.
 - `src/ui/renderer/presentable_target.zig` now owns the presentable target
   type, so shared runtime code no longer imports a GL-owned target type
   directly.

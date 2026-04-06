@@ -1809,7 +1809,7 @@ pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
 
     pub fn addTerminalRectF(self: *Renderer, x: f32, y: f32, w: f32, h: f32, color: Color) void {
         if (w <= 0 or h <= 0) return;
-        _ = self.backend_ops.drawSolidRect(self, x, y, w, h, color.toRgba());
+        _ = self.enqueueSolidSurfaceFromLogicalRect(x, y, w, h, color.toRgba());
     }
 
     pub fn terminalCellGeometry(self: *Renderer) TerminalCellGeometry {

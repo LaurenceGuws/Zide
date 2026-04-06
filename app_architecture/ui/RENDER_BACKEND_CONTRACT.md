@@ -110,7 +110,9 @@ now build the same `SurfaceDraw` values and submit through `enqueueSurfaceDraw`
 so queueing shares the ops-table entry with external callers. High-level
 `Renderer.drawRect` / `drawRectF` also route solid fills through
 `enqueueSurfaceDraw` so product-level rectangles participate in the same
-submission contract.
+submission contract; `addTerminalRectF` does the same for float terminal rects
+while integer `addTerminalRect` remains on `BackendOps` so OpenGL can keep
+batching terminal quads.
 
 #### Presentable contract
 
