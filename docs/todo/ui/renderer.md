@@ -197,6 +197,9 @@ Progress note, 2026-04-05:
 - The remaining unused `terminalSnapshotAvailable(context)` helper was removed
   from `metal_backend.zig` to keep snapshot-presentable lifecycle surfaces
   contract-owned instead of helper-layered.
+- Dead terminal snapshot wrappers (`appendTerminalSnapshotDraw` and
+  `drawTerminalSnapshotPresentable`) were removed from `metal_backend.zig` once
+  `drawPresentable(.terminal, ...)` became the single snapshot-present path.
 - The tiny terminal-specific presentable wrapper module is gone too:
   `terminal_widget_presentation_runtime.zig` now talks to the renderer
   presentable contract directly instead of bouncing through one more

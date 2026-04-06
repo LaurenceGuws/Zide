@@ -1519,23 +1519,6 @@ pub fn appendTerminalCellRun(
     );
 }
 
-pub fn appendTerminalSnapshotDraw(renderer: anytype, draw: RawImageDraw) bool {
-    const context = backendContext(renderer) orelse return false;
-    const snapshot = context.terminal_snapshot orelse return false;
-    return appendRawImage(renderer, .{
-        .texture = cloneRawImageTexture(snapshot),
-        .source_rect = draw.source_rect,
-        .dest_rect = draw.dest_rect,
-        .tint = draw.tint,
-        .clip_rect = draw.clip_rect,
-    });
-}
-
-pub fn drawTerminalSnapshotPresentable(renderer: anytype, draw: RawImageDraw) bool {
-    if (renderer.backend != .metal) return false;
-    return appendTerminalSnapshotDraw(renderer, draw);
-}
-
 pub fn appendRawImageRgba(
     renderer: anytype,
     width: i32,
