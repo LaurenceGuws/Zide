@@ -389,6 +389,9 @@ Progress note, 2026-04-05:
 - Renderer deinit window/surface teardown now routes through
   `bootstrap_runtime.deinitRendererWindowResources(...)` instead of inlining
   render-surface detach + window destroy sequencing inside `renderer.zig`.
+- Renderer init/deinit SDL shutdown now routes through
+  `bootstrap_runtime.deinitSdlRuntime()` instead of direct `sdl_api.quit()`
+  calls in `renderer.zig`.
 - `bootstrap_runtime.InitBootstrapWindow` was trimmed to only carry bootstrap
   resources (`window`, `render_host`, `render_surface_attachment`); bootstrap
   ops metadata no longer rides along in that state object.

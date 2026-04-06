@@ -64,6 +64,10 @@ pub fn deinitRendererWindowResources(
     sdl_api.destroyWindow(window);
 }
 
+pub fn deinitSdlRuntime() void {
+    sdl_api.quit();
+}
+
 pub fn runStartupBackendSmoke(width: i32, height: i32, title: [*:0]const u8, backend: anytype) !bool {
     try window_init.initSdl();
     errdefer sdl_api.quit();
