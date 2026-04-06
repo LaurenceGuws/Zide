@@ -191,6 +191,9 @@ Progress note, 2026-04-05:
   presentable contract through `metal_backend.zig` entrypoints instead of the
   terminal presentation runtime carrying a separate Metal-only bypass branch
   for availability, ensure, draw, and scroll.
+- Metal-only `*ForRenderer` terminal snapshot helper exports were removed from
+  `metal_backend.zig`; diagnostics now query terminal snapshot state through
+  `renderer.presentableAvailable(.terminal)` (shared presentable contract path).
 - The tiny terminal-specific presentable wrapper module is gone too:
   `terminal_widget_presentation_runtime.zig` now talks to the renderer
   presentable contract directly instead of bouncing through one more

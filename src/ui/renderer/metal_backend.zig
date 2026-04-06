@@ -1187,7 +1187,8 @@ pub fn ensurePresentable(renderer: anytype, surface: PresentableSurface, width: 
             const drawable_width = renderer.render_width;
             const drawable_height = renderer.render_height;
             if (drawable_width <= 0 or drawable_height <= 0) break :blk false;
-            break :blk ensureTerminalSnapshotPresentableForRenderer(renderer, drawable_width, drawable_height);
+            const context = backendContext(renderer) orelse break :blk false;
+            break :blk ensureTerminalSnapshotPresentable(context, drawable_width, drawable_height).recreated;
         },
         .editor => false,
     };
@@ -1199,7 +1200,10 @@ pub fn beginPresentable(_: anytype, _: PresentableSurface) bool {
 
 pub fn presentableAvailable(renderer: anytype, surface: PresentableSurface) bool {
     return switch (surface) {
-        .terminal => terminalSnapshotAvailableForRenderer(renderer),
+        .terminal => blk: {
+            const context = backendContextConst(renderer) orelse break :blk false;
+            break :blk terminalSnapshotMatchesDrawable(context);
+        },
         .editor => false,
     };
 }
@@ -1208,7 +1212,7 @@ pub fn endPresentable(_: anytype, _: PresentableSurface) void {}
 
 pub fn presentableInfo(renderer: anytype, surface: PresentableSurface) ?PresentableInfo {
     if (surface != .terminal) return null;
-    if (!terminalSnapshotAvailableForRenderer(renderer)) return null;
+
     const context = backendContextConst(renderer) orelse return null;
     const snapshot = context.terminal_snapshot orelse return null;
     const snap = switch (snapshot) {
@@ -1257,7 +1261,10 @@ pub fn drawPresentable(renderer: anytype, surface: PresentableSurface, draw: Pre
 
 pub fn scrollPresentable(renderer: anytype, surface: PresentableSurface, dx: i32, dy: i32) bool {
     return switch (surface) {
-        .terminal => scrollTerminalSnapshotPresentableForRenderer(renderer, dx, dy),
+        .terminal => blk: {
+            const context = backendContext(renderer) orelse break :blk false;
+            break :blk scrollTerminalSnapshotPresentable(context, dx, dy);
+        },
         .editor => false,
     };
 }
@@ -1620,21 +1627,6 @@ pub fn createPersistentTextureFromRgb(_: anytype, _: i32, _: i32, _: []const u8)
 }
 
 pub fn destroyPersistentTexture(_: anytype, _: *types.Texture) void {}
-
-pub fn terminalSnapshotAvailableForRenderer(renderer: anytype) bool {
-    const context = backendContextConst(renderer) orelse return false;
-    return terminalSnapshotMatchesDrawable(context);
-}
-
-pub fn ensureTerminalSnapshotPresentableForRenderer(renderer: anytype, width: i32, height: i32) bool {
-    const context = backendContext(renderer) orelse return false;
-    return ensureTerminalSnapshotPresentable(context, width, height).recreated;
-}
-
-pub fn scrollTerminalSnapshotPresentableForRenderer(renderer: anytype, dx: i32, dy: i32) bool {
-    const context = backendContext(renderer) orelse return false;
-    return scrollTerminalSnapshotPresentable(context, dx, dy);
-}
 
 pub fn runSmokeFrame(renderer: anytype) bool {
     const host = prepareHost(renderer) orelse return false;
