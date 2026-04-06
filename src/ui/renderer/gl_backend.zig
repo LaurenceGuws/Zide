@@ -16,6 +16,7 @@ const platform_window = @import("../../platform/window_metrics.zig");
 const app_logger = @import("../../app_logger.zig");
 const types = @import("types.zig");
 const surface_draw = @import("surface_draw.zig");
+const window_init = @import("window_init.zig");
 
 const sdl = gl.c;
 
@@ -122,7 +123,7 @@ pub fn createBackendContextForBootstrap(window: *sdl.SDL_Window) !?sdl_api.c.SDL
     return context;
 }
 
-pub fn runStartupSmokeForBootstrap(window: *sdl.SDL_Window, _: anytype, _: i32, _: i32) !bool {
+pub fn runStartupSmokeForBootstrap(window: *sdl.SDL_Window, _: window_init.RenderSurfaceAttachment, _: i32, _: i32) !bool {
     const gl_context = try createBackendContext(window);
     defer sdl_api.glDeleteContext(gl_context);
     try gl.load();

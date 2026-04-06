@@ -9,6 +9,7 @@ const metal_text_sample_runtime = @import("metal_text_sample_runtime.zig");
 const presentable_contract = @import("presentable_contract.zig");
 const present_trace_runtime = @import("present_trace_runtime.zig");
 const surface_draw = @import("surface_draw.zig");
+const window_init = @import("window_init.zig");
 const terminal_font = @import("../terminal_font.zig");
 const types = @import("types.zig");
 
@@ -1152,7 +1153,7 @@ pub fn createBackendContextForBootstrap(_: *sdl_api.c.SDL_Window) !?sdl_api.c.SD
     return null;
 }
 
-pub fn runStartupSmokeForBootstrap(_: *sdl_api.c.SDL_Window, render_surface_attachment: anytype, width: i32, height: i32) !bool {
+pub fn runStartupSmokeForBootstrap(_: *sdl_api.c.SDL_Window, render_surface_attachment: window_init.RenderSurfaceAttachment, width: i32, height: i32) !bool {
     const host = switch (render_surface_attachment) {
         .macos_metal_host => |value| value,
         else => return false,

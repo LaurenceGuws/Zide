@@ -350,6 +350,10 @@ Progress note, 2026-04-05:
   types; bootstrap function-pointer signatures now use `sdl_api.c` SDL types
   directly, keeping backend bootstrap typing in shared SDL/platform imports
   instead of OpenGL module aliases.
+- Backend bootstrap startup-smoke entrypoints now take a concrete
+  `window_init.RenderSurfaceAttachment` parameter in both backends (instead of
+  `anytype`), tightening bootstrap contract typing across renderer and backend
+  modules.
 - The macOS OpenGL editor retained-presentable bypass in
   `editor_widget_draw.zig` no longer keys off `renderer.backend` + OS tags;
   `capability_contract.RendererCapabilities` now exposes
