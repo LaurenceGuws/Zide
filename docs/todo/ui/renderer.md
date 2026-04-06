@@ -354,6 +354,10 @@ Progress note, 2026-04-05:
   `window_init.RenderSurfaceAttachment` parameter in both backends (instead of
   `anytype`), tightening bootstrap contract typing across renderer and backend
   modules.
+- OpenGL bootstrap context setup no longer goes through a dedicated
+  `createBackendContextForBootstrap` wrapper: `backendBootstrapOps` now points
+  directly to `gl_backend.createBackendContext`, and GL loader setup is owned
+  in that backend context-creation entrypoint.
 - The macOS OpenGL editor retained-presentable bypass in
   `editor_widget_draw.zig` no longer keys off `renderer.backend` + OS tags;
   `capability_contract.RendererCapabilities` now exposes

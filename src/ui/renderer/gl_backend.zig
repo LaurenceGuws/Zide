@@ -90,7 +90,7 @@ pub fn configureWindowAttributes() !void {
     try requireGlAttribute(sdl.SDL_GL_DOUBLEBUFFER, 1);
 }
 
-pub fn createBackendContext(window: *sdl.SDL_Window) !sdl.SDL_GLContext {
+pub fn createBackendContext(window: *sdl.SDL_Window) !?sdl_api.c.SDL_GLContext {
     const gl_context = sdl_api.glCreateContext(window) orelse return error.SdlGlContextFailed;
     if (!sdl_api.glMakeCurrent(window, gl_context)) {
         app_logger.logger("sdl.gl").logStdout(.@"error", "SDL_GL_MakeCurrent failed err={s}", .{sdl_api.getError()});
@@ -100,6 +100,7 @@ pub fn createBackendContext(window: *sdl.SDL_Window) !sdl.SDL_GLContext {
         app_logger.logger("sdl.gl").logStdout(.@"error", "SDL_GL_SetSwapInterval failed interval=1 err={s}", .{sdl_api.getError()});
         return error.SdlSwapIntervalFailed;
     }
+    try gl.load();
     return gl_context;
 }
 
@@ -117,16 +118,9 @@ pub fn configureRuntimePolicy(renderer: anytype) void {
     }
 }
 
-pub fn createBackendContextForBootstrap(window: *sdl.SDL_Window) !?sdl_api.c.SDL_GLContext {
-    const context = try createBackendContext(window);
-    try gl.load();
-    return context;
-}
-
 pub fn runStartupSmokeForBootstrap(window: *sdl.SDL_Window, _: window_init.RenderSurfaceAttachment, _: i32, _: i32) !bool {
-    const gl_context = try createBackendContext(window);
+    const gl_context = (try createBackendContext(window)) orelse return error.SdlGlContextFailed;
     defer sdl_api.glDeleteContext(gl_context);
-    try gl.load();
     return true;
 }
 

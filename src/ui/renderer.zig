@@ -761,7 +761,7 @@ pub const Renderer = struct {
             .opengl => .{
                 .graphics_binding = .opengl,
                 .configureWindowAttributes = gl_backend.configureWindowAttributes,
-                .createBackendContext = gl_backend.createBackendContextForBootstrap,
+                .createBackendContext = gl_backend.createBackendContext,
                 .runStartupSmoke = gl_backend.runStartupSmokeForBootstrap,
             },
             .metal => .{
