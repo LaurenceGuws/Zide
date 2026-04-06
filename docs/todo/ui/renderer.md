@@ -95,11 +95,9 @@ Progress note, 2026-04-05:
   Metal `appendSolidRect` / `appendAtlasSample` route through `enqueueSurfaceDraw`.
   OpenGL `.raw_image` through `enqueueSurfaceDraw` works when `RawImageTexture`
   is the `.opengl` branch; the `.metal` branch is still Metal-queue-only.
-  OpenGL `drawRawImageRgba` /
-  `drawRawImageRgb` now upload ephemeral `GL_NEAREST` textures and draw via
-  `draw_ops.drawTextureRect` (Kitty placement path), respecting the active clip
-  stack the same way as other immediate GL draws (nested `beginClip` /
-  `endClip` from `pixelClipRect`).
+  OpenGL `drawRawImageRgba` / `drawRawImageRgb` upload ephemeral `GL_NEAREST`
+  textures then call `submitSurfaceDrawImmediate` with `SurfaceDraw.raw_image`
+  (Kitty placement path shares the same contract as explicit `.opengl` enqueues).
 - `Renderer.drawRect` / `drawRectF` now submit through `enqueueSurfaceDraw`
   (raster `SurfaceDraw` solid + optional pixel clip), so common widget fills use
   the same contract path as Metal queue replay instead of bypassing via

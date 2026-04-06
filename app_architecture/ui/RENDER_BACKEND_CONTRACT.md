@@ -107,10 +107,10 @@ match how Metal enqueues those draws). Atlas samples on OpenGL require
 textures. `.raw_image` on OpenGL immediate submission interprets only the `.opengl`
 `RawImageTexture` variant (`types.Texture`); the `.metal` variant still
 returns false. For CPU pixel buffers on OpenGL, the
-`BackendOps` `drawRawImageRgba` / `drawRawImageRgb` entrypoints upload ephemeral
-textures and draw immediately, nesting clip state from the active renderer clip
-when present (same raster round-trip as other immediate GL `SurfaceDraw`
-solids). On Metal, `appendSolidRect` / `appendAtlasSample`
+`BackendOps` `drawRawImageRgba` / `drawRawImageRgb` on OpenGL upload ephemeral
+textures then submit one `SurfaceDraw.raw_image` with the `.opengl` texture
+handle (same clip and raster `dest_rect` path as other immediate `SurfaceDraw`
+interpretation). On Metal, `appendSolidRect` / `appendAtlasSample`
 now build the same `SurfaceDraw` values and submit through `enqueueSurfaceDraw`
 so queueing shares the ops-table entry with external callers. High-level
 `Renderer.drawRect` / `drawRectF` also route solid fills through
