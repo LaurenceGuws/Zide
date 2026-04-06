@@ -124,14 +124,6 @@ pub fn runStartupSmoke(window: *sdl.SDL_Window) !bool {
     return true;
 }
 
-pub fn beginFrame(renderer: anytype) void {
-    opengl_frame_runtime.beginFrame(renderer);
-}
-
-pub fn submitFrame(renderer: anytype) @import("present_trace_runtime.zig").FrameSubmission {
-    return opengl_frame_runtime.submitFrame(renderer);
-}
-
 pub fn dumpWindowScreenshotPpm(renderer: anytype, path: []const u8) !void {
     return opengl_frame_runtime.dumpWindowScreenshotPpm(renderer, path);
 }
@@ -1255,4 +1247,3 @@ pub fn drawRawImageRgb(renderer: anytype, width: i32, height: i32, data: []const
         .clip_rect = clip_rect,
     } });
 }
-

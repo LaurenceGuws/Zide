@@ -316,6 +316,10 @@ Progress note, 2026-04-05:
   orchestrating that cleanup first.
 - The next lifecycle step is to reduce shared-runtime ownership of dispatch and
   backend-native frame state, not just move code blocks around.
+- Frame lifecycle dispatch now targets `opengl_frame_runtime.zig` /
+  `metal_frame_runtime.zig` directly from the backend ops table in
+  `renderer.zig`; redundant `beginFrame` / `submitFrame` forwarding wrappers
+  were removed from `gl_backend.zig` and `metal_backend.zig`.
 - The macOS OpenGL editor retained-presentable bypass in
   `editor_widget_draw.zig` no longer keys off `renderer.backend` + OS tags;
   `capability_contract.RendererCapabilities` now exposes

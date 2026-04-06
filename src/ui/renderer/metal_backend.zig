@@ -1163,14 +1163,6 @@ pub fn runStartupSmoke(render_surface_attachment: anytype, width: i32, height: i
     return true;
 }
 
-pub fn beginFrame(renderer: anytype) void {
-    metal_frame_runtime.beginFrame(renderer);
-}
-
-pub fn submitFrame(renderer: anytype) @import("present_trace_runtime.zig").FrameSubmission {
-    return metal_frame_runtime.submitFrame(renderer);
-}
-
 pub fn dumpWindowScreenshotPpm(_: anytype, _: []const u8) !void {
     return error.RendererScreenshotUnavailable;
 }
