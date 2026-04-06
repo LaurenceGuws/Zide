@@ -185,6 +185,20 @@ Current reference scan:
 
 - `docs/research/RENDER_BACKEND_REFERENCE_SCAN_2026-04-05.md`
 
+## Vulkan fit audit (evidence, 2026-04-06)
+
+A dedicated fit audit records whether a future Vulkan backend could implement **this**
+contract as routine backend work without renderer surgery:
+
+- `docs/research/VULKAN_FIT_AUDIT_2026-04-06.md`
+
+**Reader’s guide:** that document is **research evidence**, not a rewrite of this
+authority file. Its conclusion: target seams (`BackendOps`, `SurfaceDraw` intent,
+presentable vocabulary) are **mappable**, but **today’s implementation** still has
+blockers (dual submission semantics, renderer-hosted backend storage, presentable
+parity). Treat the audit as input for **continued** backend closure, not as
+approval to start Vulkan bootstrap code.
+
 ## Immediate Consequence
 
 The next renderer/backend work should be judged against one question:

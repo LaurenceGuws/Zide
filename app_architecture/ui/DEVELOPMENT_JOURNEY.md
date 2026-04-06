@@ -57,6 +57,9 @@ the Vulkan shape reads like routine backend work.
 
 If Vulkan still looks like it needs renderer surgery, the contract is not done.
 
+Evidence writeup: `docs/research/VULKAN_FIT_AUDIT_2026-04-06.md` (verdict: not
+routine yet; closure work remains obvious from named blockers).
+
 ### 4. Android/mobile is future pressure, not current implementation work
 
 Android matters because it pressures the host and renderer contracts away from

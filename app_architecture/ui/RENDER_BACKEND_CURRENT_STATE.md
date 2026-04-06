@@ -19,6 +19,14 @@ So the honest answer to "would Vulkan be easy to add?" is:
 - easier than before
 - not yet easy
 
+**Vulkan fit audit (2026-04-06):** See `docs/research/VULKAN_FIT_AUDIT_2026-04-06.md`. Verdict:
+a Vulkan backend is **not** yet “routine” against the **current** code—dual draw
+submission semantics (GL immediate vs Metal replay), uneven presentable maturity,
+and renderer-hosted backend bundles remain the dominant surgery risks. Android/mobile
+pressure fails the same honesty test until those gaps close. This does not lower
+the target contract bar; it names the remaining contradictions for backend-closure
+continuation.
+
 ## What Is Good
 
 ### Capability naming is better

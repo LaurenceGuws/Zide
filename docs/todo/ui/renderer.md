@@ -153,6 +153,15 @@ Expected output:
 - no implementation drift into Vulkan code unless the audit says the fit is
   clean enough to proceed
 
+**Delivered (2026-04-06):** `docs/research/VULKAN_FIT_AUDIT_2026-04-06.md` — full audit with explicit
+answers to: what can map to Vulkan mostly unchanged; ranked blockers; renderer seams that force
+surgery; GL shaping vs neutral contract; Android/mobile aging. **Conclusion:** fit is **not** clean
+enough for “routine” Vulkan without further backend-closure work; see audit for ordered blockers
+before bootstrap.
+
+**Entry note:** This chunk was executed **explicitly** as Review Chunk 3 while Milestone B remains
+incomplete. The audit treats that as **honest risk**, not as approval to skip Chunk 2 continuation.
+
 Required validation before review:
 
 - updated contract docs
@@ -439,17 +448,31 @@ Purpose:
 
 - prove the contract is strong enough before any Vulkan code exists
 
-Status: blocked on Milestone B exit
+Status: **audit complete (evidence doc); bootstrap not approved on this audit alone**
 
-Entry rule:
+- Primary artifact: `docs/research/VULKAN_FIT_AUDIT_2026-04-06.md`
+- Outcome: the contract is **not** yet strong enough that Vulkan would be routine
+  backend-only work; top blockers are unified surface-draw submission, handle
+  neutrality in draw payloads, presentable parity, and backend storage ownership
+  (see audit table). **Chunk 2 continuation** should be sharpened using this audit
+  before Review Chunk 4.
 
-- do not open this lane until `RB-B1` through `RB-B3` are honestly stronger
+Entry rule (historical):
+
+- intended: do not open this lane until `RB-B1` through `RB-B3` are honestly stronger
+- **Review Chunk 3** was run as an explicit assignment to produce evidence while
+  Milestone B is still open; the audit records that gap honestly.
 
 Acceptance criteria:
 
 - the audit can describe a Vulkan backend in terms of existing contract seams
 - no new `Renderer`-owned Vulkan state is required by the proposed fit
 - no widget/runtime layer needs Vulkan-specific knowledge
+
+**Audit result vs criteria:** The audit **does** describe Vulkan in terms of existing
+seams *and* names where **today’s code** would still force `Renderer`-centric
+changes and shared forks. A honest fit is **not** proven yet; criteria are **not**
+fully satisfied for proceeding to bootstrap without further closure work.
 
 ## Milestone D: Android and Mobile Pressure
 
@@ -472,6 +495,10 @@ Rules:
 
 ## Current Evidence Snapshot
 
+- **Vulkan fit audit (2026-04-06):** `docs/research/VULKAN_FIT_AUDIT_2026-04-06.md` — verdict: **not**
+  routine Vulkan yet; dual GL/Metal submission semantics, renderer-hosted backend bundles, and
+  presentable/draw parity gaps are the named blockers. Use as input for Chunk 2 continuation, not
+  as permission to skip closure work.
 - Review Chunk 1 (2026-04-06): initial window focus/text-input activation now follows SDL on the
   first poll (`InputRuntimeState.window_focused` default false; terminal `FocusUiState` defaults
   aligned). Geometry-only display-metrics merge no longer preserves an all-zero scale/density

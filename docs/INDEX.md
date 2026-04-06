@@ -139,6 +139,8 @@ Quick reading guide:
 - `docs/research/README.md` — research-doc placement and role.
 - `docs/research/APP_HYGIENE_REFERENCE_SCRUTINY_2026-04-01.md` — official-doc and reference-repo scrutiny for the app hygiene cleanup lane.
 - `docs/research/SDL_GL_RENDERER_SCRUTINY_2026-04-02.md` — SDL3/OpenGL renderer scrutiny brief for renderer ownership, host seam, scene/present drift, and backend maturity.
+- `docs/research/VULKAN_FIT_AUDIT_2026-04-06.md` — Vulkan/backend fit audit:
+  blockers and honest feasibility vs current contract implementation (Review Chunk 3).
 - `docs/research/RENDER_BACKEND_REFERENCE_SCAN_2026-04-05.md` — initial
   Ghostty/Zed pressure scan for the backend abstraction campaign.
 - `docs/research/editor/README.md` — editor research subtree entrypoint.
