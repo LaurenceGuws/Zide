@@ -433,6 +433,10 @@ Progress note, 2026-04-05:
 - App lifecycle event-watch install/remove/callback orchestration moved out of
   `renderer.zig` into `src/ui/renderer/app_event_watch_runtime.zig`, so
   renderer init/deinit no longer carry that OS/event-hook management block.
+- App delegate install/uninstall orchestration moved out of `renderer.zig` into
+  `src/ui/renderer/app_delegate_runtime.zig`, so renderer lifecycle now treats
+  app delegate integration as a runtime-helper concern instead of platform
+  management inline.
 - The remaining global poll/time wrappers (`pollInputEvents`, `waitTime`) now
   also route through `renderer_global_runtime.zig`, leaving renderer-root
   global entrypoints as thin delegates for those runtime helper paths too.
