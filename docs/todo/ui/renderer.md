@@ -107,8 +107,9 @@ Progress note, 2026-04-05:
   helper (immediate solid); `addTerminalRect` (i32) still uses `BackendOps` so
   OpenGL keeps terminal batch quads instead of forcing an immediate path.
 - `src/ui/renderer/gl_presentable_target.zig` owns the GL-shaped presentable
-  target type (FBO + texture), so the name matches ownership; shared runtime
-  still re-exports `PresentableTargetState` from `renderer.zig` for now.
+  target type (FBO + texture), so the name matches ownership; `renderer.zig` no
+  longer re-exports `PresentableTargetState` (nothing outside the renderer
+  package referenced it).
 - `src/ui/renderer/presentable_contract.zig` now owns the shared presentable
   contract types instead of leaving them inside the shared runtime wrapper.
 - the shared runtime API now uses presentable-oriented names instead of the old
