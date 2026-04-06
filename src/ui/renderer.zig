@@ -9,6 +9,7 @@ const capability_contract = @import("renderer/capability_contract.zig");
 const bootstrap_runtime = @import("renderer/bootstrap_runtime.zig");
 const active_renderer_runtime = @import("renderer/active_renderer_runtime.zig");
 const mouse_wheel_runtime = @import("renderer/mouse_wheel_runtime.zig");
+const renderer_global_runtime = @import("renderer/renderer_global_runtime.zig");
 const font_manager = @import("renderer/font_manager.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
 const gl_backend = @import("renderer/gl_backend.zig");
@@ -2009,7 +2010,7 @@ pub fn waitForWakeOrTimeout(seconds: f64) void {
 pub fn requestWake() void {
     if (app_lifecycle_runtime.shutdownStarted()) {
         @import("../app_logger.zig").logger("app.lifecycle").logFields(.info, "runtime_wake_request", &.{
-            .{ .key = "renderer_active", .value = .{ .boolean = active_renderer_runtime.get(Renderer) != null } },
+            .{ .key = "renderer_active", .value = .{ .boolean = renderer_global_runtime.rendererActive(Renderer) } },
             .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
         });
     }
@@ -2017,10 +2018,7 @@ pub fn requestWake() void {
 }
 
 pub fn getTime() f64 {
-    if (active_renderer_runtime.get(Renderer)) |renderer| {
-        return time_utils.getTime(renderer.start_counter, renderer.perf_freq);
-    }
-    return time_utils.getTime(null, null);
+    return renderer_global_runtime.getTime(Renderer);
 }
 
 pub fn setSdlLogLevel(level: c_int) void {
@@ -2028,18 +2026,13 @@ pub fn setSdlLogLevel(level: c_int) void {
 }
 
 pub fn windowChanges() WindowChangeMask {
-    if (active_renderer_runtime.get(Renderer)) |renderer| {
-        return input_state.windowChanges(renderer.inputDomain());
-    }
-    return .{};
+    return renderer_global_runtime.windowChanges(Renderer);
 }
 
 pub fn getScreenWidth() i32 {
-    if (active_renderer_runtime.get(Renderer)) |renderer| return renderer.width;
-    return 0;
+    return renderer_global_runtime.getScreenWidth(Renderer);
 }
 
 pub fn getScreenHeight() i32 {
-    if (active_renderer_runtime.get(Renderer)) |renderer| return renderer.height;
-    return 0;
+    return renderer_global_runtime.getScreenHeight(Renderer);
 }

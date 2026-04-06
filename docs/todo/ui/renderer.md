@@ -403,6 +403,10 @@ Progress note, 2026-04-05:
 - Mouse-wheel delta global state moved out of `renderer.zig` into
   `src/ui/renderer/mouse_wheel_runtime.zig` (`get`, `deltaPtr`), so input poll
   and readback paths no longer touch another renderer-root global directly.
+- Active-renderer global query helpers (`getTime`, `windowChanges`,
+  `getScreenWidth`, `getScreenHeight`, active-status logging probe) now route
+  through `src/ui/renderer/renderer_global_runtime.zig` instead of open-coding
+  active-renderer global reads in `renderer.zig`.
 - The remaining renderer-root `sdl` alias is gone too; hit-test callback types
   and constants now use `sdl_api.c` directly so shared renderer code no longer
   depends on a local SDL alias surface.
