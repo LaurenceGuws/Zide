@@ -47,14 +47,13 @@ const native_host = @import("../platform/native_host.zig");
 const platform_window = @import("../platform/window_metrics.zig");
 const platform_input_events = @import("../platform/input_events.zig");
 const build_options = @import("build_options");
-const gl = @import("renderer/gl.zig");
 const sdl_api = @import("../platform/sdl_api.zig");
+const sdl = sdl_api.c;
 const types = @import("renderer/types.zig");
 const app_logger = @import("../app_logger.zig");
 const builtin = @import("builtin");
 const shared_types = @import("../types/mod.zig");
 
-const sdl = gl.c;
 const TextPress = platform_input_events.TextPress;
 pub const WindowSizes = struct {
     width: i32,
@@ -393,8 +392,8 @@ pub const Renderer = struct {
     const BackendBootstrapOps = struct {
         graphics_binding: native_host.RenderSurfaceBinding,
         configureWindowAttributes: *const fn () anyerror!void,
-        createBackendContext: *const fn (*sdl.SDL_Window) anyerror!?sdl_api.c.SDL_GLContext,
-        runStartupSmoke: *const fn (*sdl.SDL_Window, RenderSurfaceAttachment, i32, i32) anyerror!bool,
+        createBackendContext: *const fn (*sdl_api.c.SDL_Window) anyerror!?sdl_api.c.SDL_GLContext,
+        runStartupSmoke: *const fn (*sdl_api.c.SDL_Window, RenderSurfaceAttachment, i32, i32) anyerror!bool,
     };
 
     pub const WindowChromeMode = window_chrome_runtime.WindowChromeMode;
@@ -419,7 +418,7 @@ pub const Renderer = struct {
     appkit_delegate_installation: ?macos_app_delegate.Installation,
     render_host: native_host.PlatformRenderHost,
     render_surface_attachment: RenderSurfaceAttachment,
-    window: *sdl.SDL_Window,
+    window: *sdl_api.c.SDL_Window,
     opengl_runtime: opengl_runtime_state.State,
     metal_runtime: metal_runtime_state.State,
     fonts_ready: bool,
@@ -1783,7 +1782,7 @@ pub const Renderer = struct {
         return macos_host.requestOpenFile(&self.app_host, path);
     }
 
-    fn windowHitTestCallback(_: ?*sdl.SDL_Window, area: [*c]const sdl.SDL_Point, data: ?*anyopaque) callconv(.c) sdl_api.HitTestResult {
+    fn windowHitTestCallback(_: ?*sdl_api.c.SDL_Window, area: [*c]const sdl.SDL_Point, data: ?*anyopaque) callconv(.c) sdl_api.HitTestResult {
         const raw = data orelse return sdl.SDL_HITTEST_NORMAL;
         const self: *Renderer = @ptrCast(@alignCast(raw));
         return window_chrome_runtime.hitTest(
