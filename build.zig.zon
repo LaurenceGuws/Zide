@@ -10,11 +10,11 @@
             .hash = "sdl-0.4.0+3.4.0-SDL--rq2owEZsySGuHCuVJ9naEvH3i3e_pyUIjziBtJ-",
         },
         .zlua = .{
-            .url = "git+https://github.com/natecraddock/ziglua?ref=0.6.0#315b7f25efd29d9e2143d6c0ab685bb7f640450f",
+            .url = "git+https://github.com/natecraddock/ziglua#315b7f25efd29d9e2143d6c0ab685bb7f640450f",
             .hash = "zlua-0.1.0-hGRpCww-BQCx3cX6zbKWfTgOx6B7Peo4P17RK2hm7-xV",
         },
         .zlua_portable = .{
-            .url = "git+https://github.com/LaurenceGuws/zlua-portable?ref=v0.1.0-beta.2",
+            .url = "git+https://github.com/LaurenceGuws/zlua-portable#cb7223f5d4ac2f6fd1e0ecbde03bc2ce0c48ad0a",
             .hash = "zlua_portable-0.1.0-beta.2-e7pElo9FAACbVRUs1z1MaFUhXqXX8KLCSHE2ztjg7V-4",
         },
         .tree_sitter = .{

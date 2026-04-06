@@ -6,7 +6,43 @@ const macos_host = @import("macos_host.zig");
 const objc = if (builtin.target.os.tag == .macos) @cImport({
     @cInclude("objc/message.h");
     @cInclude("objc/runtime.h");
-}) else struct {};
+}) else struct {
+    pub const SEL = *anyopaque;
+    pub const BOOL = c_int;
+
+    pub fn objc_getClass(name: [*:0]const u8) ?*anyopaque {
+        _ = name;
+        return null;
+    }
+
+    pub fn sel_registerName(name: [*:0]const u8) SEL {
+        _ = name;
+        return @ptrFromInt(1);
+    }
+
+    pub fn objc_msgSend() callconv(.c) void {
+        unreachable;
+    }
+
+    pub fn objc_allocateClassPair(superclass: *anyopaque, name: [*:0]const u8, extra_bytes: usize) ?*anyopaque {
+        _ = superclass;
+        _ = name;
+        _ = extra_bytes;
+        return null;
+    }
+
+    pub fn class_addMethod(cls: *anyopaque, name: SEL, imp: *const anyopaque, types: [*:0]const u8) BOOL {
+        _ = cls;
+        _ = name;
+        _ = imp;
+        _ = types;
+        return 0;
+    }
+
+    pub fn objc_registerClassPair(cls: *anyopaque) void {
+        _ = cls;
+    }
+};
 
 const terminate_now: usize = 1;
 

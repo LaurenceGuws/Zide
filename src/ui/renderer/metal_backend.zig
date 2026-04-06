@@ -17,7 +17,23 @@ const types = @import("types.zig");
 const objc = if (builtin.target.os.tag == .macos) @cImport({
     @cInclude("objc/message.h");
     @cInclude("objc/runtime.h");
-}) else struct {};
+}) else struct {
+    pub const SEL = *anyopaque;
+
+    pub fn objc_getClass(name: [*:0]const u8) ?*anyopaque {
+        _ = name;
+        return null;
+    }
+
+    pub fn sel_registerName(name: [*:0]const u8) SEL {
+        _ = name;
+        return @ptrFromInt(1);
+    }
+
+    pub fn objc_msgSend() callconv(.c) void {
+        unreachable;
+    }
+};
 
 const CGSize = extern struct {
     width: f64,

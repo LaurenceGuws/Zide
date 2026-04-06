@@ -1,12 +1,22 @@
+const builtin = @import("builtin");
 const native_host = @import("../../platform/native_host.zig");
-const macos_app_delegate = @import("../../platform/macos_app_delegate.zig");
 
-pub const Installation = macos_app_delegate.Installation;
+pub const Installation = if (builtin.target.os.tag == .macos)
+    @import("../../platform/macos_app_delegate.zig").Installation
+else
+    struct {};
 
 pub fn install(app_host: *native_host.PlatformAppHost) ?Installation {
-    return macos_app_delegate.install(app_host);
+    if (builtin.target.os.tag == .macos) {
+        const macos_app_delegate = @import("../../platform/macos_app_delegate.zig");
+        return macos_app_delegate.install(app_host);
+    }
+    return null;
 }
 
 pub fn uninstall(installation: *Installation) void {
-    macos_app_delegate.uninstall(installation);
+    if (builtin.target.os.tag == .macos) {
+        const macos_app_delegate = @import("../../platform/macos_app_delegate.zig");
+        macos_app_delegate.uninstall(installation);
+    }
 }
