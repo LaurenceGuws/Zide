@@ -330,6 +330,13 @@ Progress note, 2026-04-05:
 - Font-scale diagnostic cache invalidation now goes through a backend-ops hook
   (`clearDiagnosticFont`) instead of `renderer.zig` directly calling
   `metal_backend.clearDiagnosticFont`.
+- Scene-target refresh invalidation flow now routes through backend ops
+  (`sceneTargetInvalidationForRefresh` +
+  `mergePendingSceneTargetInvalidation`) instead of shared renderer lifecycle
+  paths directly calling `gl_backend.zig`.
+- Backend bootstrap now owns context creation too: `Renderer.init()` asks
+  `BackendBootstrapOps.createBackendContext` for backend context setup instead
+  of open-coding the OpenGL context creation branch in shared init flow.
 - The macOS OpenGL editor retained-presentable bypass in
   `editor_widget_draw.zig` no longer keys off `renderer.backend` + OS tags;
   `capability_contract.RendererCapabilities` now exposes

@@ -386,11 +386,14 @@ pub const Renderer = struct {
         drawRawImage: *const fn (*Self, RawImageFormat, i32, i32, []const u8, types.Rect, types.Rgba) bool,
         enqueueSurfaceDraw: *const fn (*Self, surface_draw.SurfaceDraw) bool,
         clearDiagnosticFont: *const fn (*Self) void,
+        sceneTargetInvalidationForRefresh: *const fn (*Self, WindowChangeMask, platform_window.DisplayMetrics) SceneTargetInvalidation,
+        mergePendingSceneTargetInvalidation: *const fn (*Self, SceneTargetInvalidation) void,
     };
 
     const BackendBootstrapOps = struct {
         graphics_binding: native_host.RenderSurfaceBinding,
         configureWindowAttributes: *const fn () anyerror!void,
+        createBackendContext: *const fn (*sdl.SDL_Window) anyerror!?sdl_api.c.SDL_GLContext,
         runStartupSmoke: *const fn (*sdl.SDL_Window, RenderSurfaceAttachment, i32, i32) anyerror!bool,
     };
 
@@ -519,6 +522,16 @@ pub const Renderer = struct {
         return gl_backend.runStartupSmoke(window);
     }
 
+    fn createOpenGlContext(window: *sdl.SDL_Window) !?sdl_api.c.SDL_GLContext {
+        const context = try gl_backend.createBackendContext(window);
+        try gl.load();
+        return context;
+    }
+
+    fn createMetalContext(_: *sdl.SDL_Window) !?sdl_api.c.SDL_GLContext {
+        return null;
+    }
+
     fn runMetalStartupSmoke(_: *sdl.SDL_Window, render_surface_attachment: RenderSurfaceAttachment, width: i32, height: i32) !bool {
         return metal_backend.runStartupSmoke(render_surface_attachment, width, height);
     }
@@ -603,6 +616,12 @@ pub const Renderer = struct {
             return gl_backend.submitSurfaceDrawImmediate(renderer, draw);
         }
         fn clearDiagnosticFont(_: *Self) void {}
+        fn sceneTargetInvalidationForRefresh(renderer: *Self, changes: WindowChangeMask, metrics: platform_window.DisplayMetrics) SceneTargetInvalidation {
+            return gl_backend.sceneTargetInvalidationForRefresh(renderer, changes, metrics);
+        }
+        fn mergePendingSceneTargetInvalidation(renderer: *Self, invalidation: SceneTargetInvalidation) void {
+            gl_backend.mergePendingSceneTargetInvalidation(renderer, invalidation);
+        }
     };
 
     const MetalDispatch = struct {
@@ -687,6 +706,10 @@ pub const Renderer = struct {
         fn clearDiagnosticFont(renderer: *Self) void {
             metal_backend.clearDiagnosticFont(renderer);
         }
+        fn sceneTargetInvalidationForRefresh(_: *Self, _: WindowChangeMask, _: platform_window.DisplayMetrics) SceneTargetInvalidation {
+            return .{};
+        }
+        fn mergePendingSceneTargetInvalidation(_: *Self, _: SceneTargetInvalidation) void {}
     };
 
     fn backendOps(backend: RendererBackend) BackendOps {
@@ -718,6 +741,8 @@ pub const Renderer = struct {
                 .drawRawImage = OpenGlDispatch.drawRawImage,
                 .enqueueSurfaceDraw = OpenGlDispatch.enqueueSurfaceDraw,
                 .clearDiagnosticFont = OpenGlDispatch.clearDiagnosticFont,
+                .sceneTargetInvalidationForRefresh = OpenGlDispatch.sceneTargetInvalidationForRefresh,
+                .mergePendingSceneTargetInvalidation = OpenGlDispatch.mergePendingSceneTargetInvalidation,
             },
             .metal => .{
                 .initRuntime = MetalDispatch.initRuntime,
@@ -746,6 +771,8 @@ pub const Renderer = struct {
                 .drawRawImage = MetalDispatch.drawRawImage,
                 .enqueueSurfaceDraw = MetalDispatch.enqueueSurfaceDraw,
                 .clearDiagnosticFont = MetalDispatch.clearDiagnosticFont,
+                .sceneTargetInvalidationForRefresh = MetalDispatch.sceneTargetInvalidationForRefresh,
+                .mergePendingSceneTargetInvalidation = MetalDispatch.mergePendingSceneTargetInvalidation,
             },
         };
     }
@@ -755,11 +782,13 @@ pub const Renderer = struct {
             .opengl => .{
                 .graphics_binding = .opengl,
                 .configureWindowAttributes = gl_backend.configureWindowAttributes,
+                .createBackendContext = createOpenGlContext,
                 .runStartupSmoke = runOpenGlStartupSmoke,
             },
             .metal => .{
                 .graphics_binding = .metal,
                 .configureWindowAttributes = configureMetalWindowAttributes,
+                .createBackendContext = createMetalContext,
                 .runStartupSmoke = runMetalStartupSmoke,
             },
         };
@@ -819,12 +848,8 @@ pub const Renderer = struct {
             return error.RendererBackendRuntimeNotReady;
         }
 
-        const gl_context = if (startup_backend == .opengl) blk: {
-            const context = try gl_backend.createBackendContext(window);
-            errdefer sdl_api.glDeleteContext(context);
-            try gl.load();
-            break :blk context;
-        } else null;
+        const gl_context = try bootstrap_ops.createBackendContext(window);
+        errdefer if (gl_context) |context| sdl_api.glDeleteContext(context);
 
         var renderer = try allocator.create(Renderer);
         errdefer allocator.destroy(renderer);
@@ -1137,7 +1162,7 @@ pub const Renderer = struct {
             .{ .render_scale_change = true }
         else
             .{};
-        gl_backend.mergePendingSceneTargetInvalidation(self, scene_target_invalidation);
+        self.backend_ops.mergePendingSceneTargetInvalidation(self, scene_target_invalidation);
         return .{
             .changes = .{},
             .geometry = self.windowGeometryDiagnostics(),
@@ -1263,9 +1288,9 @@ pub const Renderer = struct {
 
     pub fn refreshWindowState(self: *Renderer, reason: []const u8, changes: WindowChangeMask) !WindowRefreshResult {
         const metrics = self.collectDisplayMetricsForWindowChanges(changes);
-        const scene_target_invalidation = gl_backend.sceneTargetInvalidationForRefresh(self, changes, metrics);
+        const scene_target_invalidation = self.backend_ops.sceneTargetInvalidationForRefresh(self, changes, metrics);
         self.applyDisplayMetricsSnapshot(metrics);
-        gl_backend.mergePendingSceneTargetInvalidation(self, scene_target_invalidation);
+        self.backend_ops.mergePendingSceneTargetInvalidation(self, scene_target_invalidation);
         self.logWindowMetricsSnapshot(metrics, reason);
         const ui_scale_changed = try self.refreshUiScaleForWindowChanges(changes, metrics);
         return .{
