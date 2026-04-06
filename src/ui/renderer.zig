@@ -542,10 +542,10 @@ pub const Renderer = struct {
             return gl_backend.capabilities(renderer);
         }
         fn dumpWindowScreenshotPpm(renderer: *Self, path: []const u8) !void {
-            return gl_backend.dumpWindowScreenshotPpm(renderer, path);
+            return opengl_frame_runtime.dumpWindowScreenshotPpm(renderer, path);
         }
         fn dumpWindowScreenshotPpmSized(renderer: *Self, path: []const u8, out_width: i32, out_height: i32) !void {
-            return gl_backend.dumpWindowScreenshotPpmSized(renderer, path, out_width, out_height);
+            return opengl_frame_runtime.dumpWindowScreenshotPpmSized(renderer, path, out_width, out_height);
         }
         fn ensurePresentable(renderer: *Self, surface: PresentableSurface, width: i32, height: i32) bool {
             return gl_backend.ensurePresentable(renderer, surface, width, height);

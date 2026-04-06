@@ -2,7 +2,6 @@ const std = @import("std");
 const builtin = @import("builtin");
 const gl = @import("gl.zig");
 const gl_resources = @import("gl_resources.zig");
-const opengl_frame_runtime = @import("opengl_frame_runtime.zig");
 const draw_ops = @import("draw_ops.zig");
 const shape_utils = @import("shape_utils.zig");
 const texture_draw = @import("texture_draw.zig");
@@ -122,14 +121,6 @@ pub fn runStartupSmoke(window: *sdl.SDL_Window) !bool {
     defer sdl_api.glDeleteContext(gl_context);
     try gl.load();
     return true;
-}
-
-pub fn dumpWindowScreenshotPpm(renderer: anytype, path: []const u8) !void {
-    return opengl_frame_runtime.dumpWindowScreenshotPpm(renderer, path);
-}
-
-pub fn dumpWindowScreenshotPpmSized(renderer: anytype, path: []const u8, out_width: i32, out_height: i32) !void {
-    return opengl_frame_runtime.dumpWindowScreenshotPpmSized(renderer, path, out_width, out_height);
 }
 
 pub fn sceneTargetInvalidationForRefresh(
