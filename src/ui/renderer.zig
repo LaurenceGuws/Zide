@@ -7,6 +7,7 @@ const FontRenderingOptions = terminal_font_mod.RenderingOptions;
 const hb = terminal_font_mod.c;
 const capability_contract = @import("renderer/capability_contract.zig");
 const bootstrap_contract = @import("renderer/bootstrap_contract.zig");
+const bootstrap_runtime = @import("renderer/bootstrap_runtime.zig");
 const font_manager = @import("renderer/font_manager.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
 const gl_backend = @import("renderer/gl_backend.zig");
@@ -749,13 +750,6 @@ pub const Renderer = struct {
         };
     }
 
-    fn backendBootstrapOps(backend: RendererBackend) BackendBootstrapOps {
-        return switch (backend) {
-            .opengl => gl_backend.bootstrapOps(),
-            .metal => metal_backend.bootstrapOps(),
-        };
-    }
-
     fn installAppEventWatch(app_host: *native_host.PlatformAppHost) bool {
         if (builtin.target.os.tag != .macos) return false;
         return sdl_api.addEventWatch(appEventWatchCallback, app_host);
@@ -786,7 +780,7 @@ pub const Renderer = struct {
 
         const startup_backend = init_options.renderer_backend;
         const runtime_profile = init_options.runtime_profile;
-        const bootstrap_ops = backendBootstrapOps(startup_backend);
+        const bootstrap_ops = bootstrap_runtime.opsForBackend(startup_backend);
         try bootstrap_ops.configureWindowAttributes();
 
         const graphics_binding = bootstrap_ops.graphics_binding;
@@ -947,7 +941,7 @@ pub const Renderer = struct {
         try window_init.initSdl();
         errdefer sdl.SDL_Quit();
 
-        const bootstrap_ops = backendBootstrapOps(backend);
+        const bootstrap_ops = bootstrap_runtime.opsForBackend(backend);
         try bootstrap_ops.configureWindowAttributes();
 
         const graphics_binding = bootstrap_ops.graphics_binding;

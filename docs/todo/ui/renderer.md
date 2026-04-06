@@ -373,6 +373,10 @@ Progress note, 2026-04-05:
   bootstrap hooks; OpenGL context ownership moved into
   `gl_backend.initRuntime()` and the bootstrap contract dropped the temporary
   context lifecycle function-pointer slots.
+- Backend bootstrap-op backend selection moved out of `renderer.zig` into
+  `src/ui/renderer/bootstrap_runtime.zig`
+  (`bootstrap_runtime.opsForBackend`), removing one more backend-mapping switch
+  from renderer root startup/smoke flow.
 - The macOS OpenGL editor retained-presentable bypass in
   `editor_widget_draw.zig` no longer keys off `renderer.backend` + OS tags;
   `capability_contract.RendererCapabilities` now exposes
