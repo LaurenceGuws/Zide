@@ -426,6 +426,9 @@ Progress note, 2026-04-05:
 - `setSdlLogLevel` now routes through `renderer_global_runtime` too, keeping
   global renderer utility entrypoints consolidated under one runtime-helper
   surface instead of leaving a one-off platform wrapper call in `renderer.zig`.
+- App lifecycle event-watch install/remove/callback orchestration moved out of
+  `renderer.zig` into `src/ui/renderer/app_event_watch_runtime.zig`, so
+  renderer init/deinit no longer carry that OS/event-hook management block.
 - The remaining global poll/time wrappers (`pollInputEvents`, `waitTime`) now
   also route through `renderer_global_runtime.zig`, leaving renderer-root
   global entrypoints as thin delegates for those runtime helper paths too.

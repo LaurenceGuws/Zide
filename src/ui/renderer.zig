@@ -33,6 +33,7 @@ const terminal_glyphs = @import("renderer/terminal_glyphs.zig");
 const terminal_underline = @import("renderer/terminal_underline.zig");
 const texture_draw = @import("renderer/texture_draw.zig");
 const input_runtime = @import("renderer/input_runtime.zig");
+const app_event_watch_runtime = @import("renderer/app_event_watch_runtime.zig");
 const font_runtime = @import("renderer/font_runtime.zig");
 const presentable_contract = @import("renderer/presentable_contract.zig");
 const present_trace_runtime = @import("renderer/present_trace_runtime.zig");
@@ -744,30 +745,6 @@ pub const Renderer = struct {
         };
     }
 
-    fn installAppEventWatch(app_host: *native_host.PlatformAppHost) bool {
-        if (builtin.target.os.tag != .macos) return false;
-        return sdl_api.addEventWatch(appEventWatchCallback, app_host);
-    }
-
-    fn removeAppEventWatch(app_host: *native_host.PlatformAppHost) void {
-        if (builtin.target.os.tag != .macos) return;
-        sdl_api.removeEventWatch(appEventWatchCallback, app_host);
-    }
-
-    fn appEventWatchCallback(userdata: ?*anyopaque, event: [*c]sdl_api.c.SDL_Event) callconv(.c) bool {
-        const raw = userdata orelse return true;
-        const app_host: *native_host.PlatformAppHost = @ptrCast(@alignCast(raw));
-        if (event == null) return true;
-        const evt = event[0];
-        switch (evt.type) {
-            sdl_api.EVENT_APP_TERMINATING => app_host.noteTerminationRequested(),
-            sdl_api.EVENT_APP_DID_ENTER_BACKGROUND => app_host.notePaused(),
-            sdl_api.EVENT_APP_DID_ENTER_FOREGROUND => app_host.noteResumed(),
-            else => {},
-        }
-        return true;
-    }
-
     pub fn init(allocator: std.mem.Allocator, width: i32, height: i32, title: [*:0]const u8, init_options: InitOptions) !*Renderer {
         try window_init.initSdl();
         errdefer sdl_api.quit();
@@ -917,7 +894,7 @@ pub const Renderer = struct {
         };
 
         renderer.appkit_delegate_installation = macos_app_delegate.install(&renderer.app_host);
-        renderer.app_event_watch_installed = installAppEventWatch(&renderer.app_host);
+        renderer.app_event_watch_installed = app_event_watch_runtime.install(&renderer.app_host);
 
         renderer.backend_ops.configureRuntimePolicy(renderer);
         try renderer.backend_ops.initRuntime(renderer);
@@ -948,7 +925,7 @@ pub const Renderer = struct {
         window_chrome_runtime.deinit(self.windowChromeDomain());
         self.backend_ops.deinitRuntime(self);
         if (self.appkit_delegate_installation) |*installation| macos_app_delegate.uninstall(installation);
-        if (self.app_event_watch_installed) removeAppEventWatch(&self.app_host);
+        if (self.app_event_watch_installed) app_event_watch_runtime.remove(&self.app_host);
         window_init.deinitRenderSurfaceAttachment(&self.render_surface_attachment);
         sdl_api.destroyWindow(self.window);
         sdl_api.quit();
