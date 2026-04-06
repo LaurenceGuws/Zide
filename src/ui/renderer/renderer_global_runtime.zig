@@ -69,3 +69,13 @@ pub fn pollInputEvents(comptime RendererType: type, poll_fn: *const fn (*Rendere
 pub fn waitTime(seconds: f64) void {
     time_utils.waitTime(seconds);
 }
+
+pub fn registerRenderer(comptime RendererType: type, renderer: *RendererType) void {
+    input_state.startTextInput(renderer.inputDomain());
+    active_renderer_runtime.set(renderer);
+}
+
+pub fn unregisterRenderer(comptime RendererType: type, renderer: *RendererType) void {
+    input_state.stopTextInput(renderer.inputDomain());
+    active_renderer_runtime.clearIf(renderer);
+}

@@ -7,7 +7,6 @@ const FontRenderingOptions = terminal_font_mod.RenderingOptions;
 const hb = terminal_font_mod.c;
 const capability_contract = @import("renderer/capability_contract.zig");
 const bootstrap_runtime = @import("renderer/bootstrap_runtime.zig");
-const active_renderer_runtime = @import("renderer/active_renderer_runtime.zig");
 const mouse_wheel_runtime = @import("renderer/mouse_wheel_runtime.zig");
 const renderer_global_runtime = @import("renderer/renderer_global_runtime.zig");
 const font_manager = @import("renderer/font_manager.zig");
@@ -923,8 +922,7 @@ pub const Renderer = struct {
         renderer.backend_ops.configureRuntimePolicy(renderer);
         try renderer.backend_ops.initRuntime(renderer);
 
-        input_state.startTextInput(renderer.inputDomain());
-        active_renderer_runtime.set(renderer);
+        renderer_global_runtime.registerRenderer(Renderer, renderer);
         return renderer;
     }
 
@@ -946,7 +944,7 @@ pub const Renderer = struct {
         draw_ops.deinit(&self.batch, self.allocator);
         text_runtime.deinitTerminalTextState(self);
 
-        input_state.stopTextInput(self.inputDomain());
+        renderer_global_runtime.unregisterRenderer(Renderer, self);
         window_chrome_runtime.deinit(self.windowChromeDomain());
         self.backend_ops.deinitRuntime(self);
         if (self.appkit_delegate_installation) |*installation| macos_app_delegate.uninstall(installation);
@@ -955,7 +953,6 @@ pub const Renderer = struct {
         sdl_api.destroyWindow(self.window);
         sdl_api.quit();
 
-        active_renderer_runtime.clearIf(self);
         self.allocator.destroy(self);
     }
 

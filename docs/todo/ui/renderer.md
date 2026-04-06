@@ -407,6 +407,11 @@ Progress note, 2026-04-05:
   `getScreenWidth`, `getScreenHeight`, active-status logging probe) now route
   through `src/ui/renderer/renderer_global_runtime.zig` instead of open-coding
   active-renderer global reads in `renderer.zig`.
+- Renderer startup/deinit global registration side effects now route through
+  `renderer_global_runtime.registerRenderer` /
+  `renderer_global_runtime.unregisterRenderer` (text-input start/stop plus
+  active-renderer set/clear), removing those global mutations from
+  `renderer.zig` lifecycle bodies.
 - Remaining renderer-root global helper reads (`pollInputEvents` and wake/wait
   paths) now use `renderer_global_runtime.activeRenderer(...)` instead of
   reading `active_renderer_runtime` directly; `waitTime` now uses the shared
