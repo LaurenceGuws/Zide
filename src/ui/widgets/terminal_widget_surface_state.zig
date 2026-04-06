@@ -2,6 +2,7 @@ const kitty_mod = @import("terminal_widget_kitty.zig");
 const presentation_state_mod = @import("terminal_widget_presentation_state.zig");
 const view_state = @import("terminal_widget_view_state.zig");
 const terminal_types = @import("../../terminal/model/types.zig");
+const std = @import("std");
 
 const KittyState = kitty_mod.KittyState;
 const PresentationState = presentation_state_mod.PresentationState;
@@ -167,3 +168,42 @@ pub const TerminalWidgetSurfaceState = struct {
         return self.presentation.ensurePartialDrawPlan(allocator, rows);
     }
 };
+
+test "cursorPresentationChanged tracks visible/position/shape transitions" {
+    var state = TerminalWidgetSurfaceState.init(std.testing.allocator);
+    defer state.deinit(std.testing.allocator);
+
+    const block_style = terminal_types.CursorStyle{ .shape = .block, .blink = true };
+    const bar_style = terminal_types.CursorStyle{ .shape = .bar, .blink = true };
+    const cursor_a = CursorPos{ .row = 2, .col = 4 };
+    const cursor_b = CursorPos{ .row = 2, .col = 5 };
+
+    // No cached cursor yet, first visible draw must invalidate.
+    try std.testing.expect(state.cursorPresentationChanged(true, cursor_a, block_style));
+
+    state.presentation.last_cursor_visible = true;
+    state.presentation.last_cursor_row = @intCast(cursor_a.row);
+    state.presentation.last_cursor_col = @intCast(cursor_a.col);
+    state.presentation.last_cursor_shape = @intFromEnum(block_style.shape);
+    try std.testing.expect(!state.cursorPresentationChanged(true, cursor_a, block_style));
+    try std.testing.expect(state.cursorPresentationChanged(true, cursor_b, block_style));
+    try std.testing.expect(state.cursorPresentationChanged(true, cursor_a, bar_style));
+
+    // Visibility transitions must invalidate too.
+    state.presentation.last_cursor_visible = false;
+    try std.testing.expect(state.cursorPresentationChanged(true, cursor_a, block_style));
+}
+
+test "overlayPresentationChanged tracks hover and composing signature" {
+    var state = TerminalWidgetSurfaceState.init(std.testing.allocator);
+    defer state.deinit(std.testing.allocator);
+
+    state.presentation.last_hover_link_id = 17;
+    state.presentation.last_composing_active = true;
+    state.presentation.last_composing_hash = 0xABCD;
+
+    try std.testing.expect(!state.overlayPresentationChanged(17, true, 0xABCD));
+    try std.testing.expect(state.overlayPresentationChanged(18, true, 0xABCD));
+    try std.testing.expect(state.overlayPresentationChanged(17, false, 0xABCD));
+    try std.testing.expect(state.overlayPresentationChanged(17, true, 0x1234));
+}
