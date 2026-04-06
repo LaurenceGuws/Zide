@@ -79,3 +79,7 @@ pub fn unregisterRenderer(comptime RendererType: type, renderer: *RendererType) 
     input_state.stopTextInput(renderer.inputDomain());
     active_renderer_runtime.clearIf(renderer);
 }
+
+pub fn setSdlLogLevel(level: c_int) void {
+    sdl_api.logSetAllPriority(@intCast(level));
+}

@@ -1994,7 +1994,7 @@ pub fn getTime() f64 {
 }
 
 pub fn setSdlLogLevel(level: c_int) void {
-    sdl_api.logSetAllPriority(@intCast(level));
+    renderer_global_runtime.setSdlLogLevel(level);
 }
 
 pub fn windowChanges() WindowChangeMask {

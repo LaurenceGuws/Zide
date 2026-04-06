@@ -423,6 +423,9 @@ Progress note, 2026-04-05:
   `renderer_global_runtime.requestWake(...)`, including shutdown logging and
   wake-event push behavior, so renderer root no longer carries that global
   lifecycle wake path inline.
+- `setSdlLogLevel` now routes through `renderer_global_runtime` too, keeping
+  global renderer utility entrypoints consolidated under one runtime-helper
+  surface instead of leaving a one-off platform wrapper call in `renderer.zig`.
 - The remaining global poll/time wrappers (`pollInputEvents`, `waitTime`) now
   also route through `renderer_global_runtime.zig`, leaving renderer-root
   global entrypoints as thin delegates for those runtime helper paths too.
