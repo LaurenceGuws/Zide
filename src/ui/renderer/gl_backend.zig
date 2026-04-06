@@ -12,7 +12,7 @@ const iface = @import("interface.zig");
 const metal_text_sample_runtime = @import("metal_text_sample_runtime.zig");
 const terminal_font_mod = @import("../terminal_font.zig");
 const presentable_contract = @import("presentable_contract.zig");
-const presentable_target = @import("presentable_target.zig");
+const gl_presentable_target = @import("gl_presentable_target.zig");
 const scene_target_state = @import("scene_target_state.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
 const platform_window = @import("../../platform/window_metrics.zig");
@@ -22,7 +22,7 @@ const surface_draw = @import("surface_draw.zig");
 
 const sdl = gl.c;
 
-pub const RenderTarget = presentable_target.PresentableTarget;
+pub const RenderTarget = gl_presentable_target.PresentableTarget;
 const PresentableSurface = presentable_contract.PresentableSurface;
 const PresentableDraw = presentable_contract.PresentableDraw;
 const PresentableInfo = presentable_contract.PresentableInfo;

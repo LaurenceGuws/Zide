@@ -367,8 +367,8 @@ wrapper. That small façade now lives directly on `Renderer`, which is an
 improvement over carrying one more shared dispatch module.
 
 This has improved slightly: the presentable target type now lives in
-`src/ui/renderer/presentable_target.zig` instead of being owned directly by the
-GL backend.
+`src/ui/renderer/gl_presentable_target.zig` instead of being owned directly by the
+GL backend, so the module name reflects GL-shaped retained storage.
 
 The shared runtime surface has improved too:
 
@@ -473,7 +473,7 @@ with one backend-neutral presentable target surface:
 
 Status, 2026-04-05:
 
-- the presentable target type now lives in `src/ui/renderer/presentable_target.zig`
+- the presentable target type now lives in `src/ui/renderer/gl_presentable_target.zig`
 - the shared runtime surface now exposes presentable-oriented API names
 - the next required step is to move lifecycle behavior behind that ownership,
   not just the storage type
