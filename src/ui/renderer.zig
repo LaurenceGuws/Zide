@@ -32,7 +32,6 @@ const terminal_glyphs = @import("renderer/terminal_glyphs.zig");
 const terminal_underline = @import("renderer/terminal_underline.zig");
 const texture_draw = @import("renderer/texture_draw.zig");
 const input_runtime = @import("renderer/input_runtime.zig");
-const app_event_watch_runtime = @import("renderer/app_event_watch_runtime.zig");
 const font_runtime = @import("renderer/font_runtime.zig");
 const presentable_contract = @import("renderer/presentable_contract.zig");
 const present_trace_runtime = @import("renderer/present_trace_runtime.zig");
@@ -41,7 +40,7 @@ const text_runtime = @import("renderer/text_runtime.zig");
 const metal_frame_runtime = @import("renderer/metal_frame_runtime.zig");
 const window_chrome_runtime = @import("renderer/window_chrome_runtime.zig");
 const macos_host = @import("../platform/macos_host.zig");
-const app_delegate_runtime = @import("renderer/app_delegate_runtime.zig");
+const lifecycle_runtime = @import("renderer/lifecycle_runtime.zig");
 const windows_snap_layout_sink = @import("../platform/windows_snap_layout_sink.zig");
 const windows_frame_material = @import("../platform/windows_frame_material.zig");
 const windows_integrated_frame = @import("../platform/windows_integrated_frame.zig");
@@ -403,7 +402,7 @@ pub const Renderer = struct {
     runtime_profile: RendererRuntimeProfile,
     app_host: native_host.PlatformAppHost,
     app_event_watch_installed: bool,
-    appkit_delegate_installation: ?app_delegate_runtime.Installation,
+    appkit_delegate_installation: ?lifecycle_runtime.Installation,
     render_host: native_host.PlatformRenderHost,
     render_surface_attachment: RenderSurfaceAttachment,
     window: *sdl_api.c.SDL_Window,
@@ -892,8 +891,9 @@ pub const Renderer = struct {
             .clip_depth = 0,
         };
 
-        renderer.appkit_delegate_installation = app_delegate_runtime.install(&renderer.app_host);
-        renderer.app_event_watch_installed = app_event_watch_runtime.install(&renderer.app_host);
+        const app_hooks = lifecycle_runtime.installAppHooks(&renderer.app_host);
+        renderer.appkit_delegate_installation = app_hooks.appkit_delegate_installation;
+        renderer.app_event_watch_installed = app_hooks.app_event_watch_installed;
 
         renderer.backend_ops.configureRuntimePolicy(renderer);
         try renderer.backend_ops.initRuntime(renderer);
@@ -923,8 +923,7 @@ pub const Renderer = struct {
         renderer_global_runtime.unregisterRenderer(Renderer, self);
         window_chrome_runtime.deinit(self.windowChromeDomain());
         self.backend_ops.deinitRuntime(self);
-        if (self.appkit_delegate_installation) |*installation| app_delegate_runtime.uninstall(installation);
-        if (self.app_event_watch_installed) app_event_watch_runtime.remove(&self.app_host);
+        lifecycle_runtime.uninstallAppHooks(&self.app_host, self.appkit_delegate_installation, self.app_event_watch_installed);
         bootstrap_runtime.deinitRendererWindowResources(&self.render_surface_attachment, self.window);
         bootstrap_runtime.deinitSdlRuntime();
 

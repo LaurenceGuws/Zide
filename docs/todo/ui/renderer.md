@@ -443,6 +443,10 @@ Progress note, 2026-04-05:
   `src/ui/renderer/app_delegate_runtime.zig`, so renderer lifecycle now treats
   app delegate integration as a runtime-helper concern instead of platform
   management inline.
+- App hook install/uninstall sequencing (delegate + app event watch) now routes
+  through `src/ui/renderer/lifecycle_runtime.zig`
+  (`installAppHooks` / `uninstallAppHooks`), so `renderer.zig` no longer
+  coordinates those two lifecycle hook families directly.
 - The remaining global poll/time wrappers (`pollInputEvents`, `waitTime`) now
   also route through `renderer_global_runtime.zig`, leaving renderer-root
   global entrypoints as thin delegates for those runtime helper paths too.
