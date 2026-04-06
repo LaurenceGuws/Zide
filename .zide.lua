@@ -17,5 +17,5 @@ end
 ---@type ZideConfig
 return zide.config({
   log_file_filter = "none",
-  log_console_filter = "terminal.capture_trigger",
+  log_console_filter = {},
 })

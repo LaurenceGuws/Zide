@@ -86,6 +86,14 @@ const RowSpecialSpriteCache = struct {
     sprite: ?terminal_font_mod.SpecialGlyphSprite = null,
 };
 
+fn terminalOpaqueColor(color: Color) Color {
+    return .{ .r = color.r, .g = color.g, .b = color.b, .a = 255 };
+}
+
+fn snapInt(value: f32) i32 {
+    return @intFromFloat(std.math.round(value));
+}
+
 fn shouldSnapSpecialGlyphHorizontalEdges(render_scale: f32, variant: terminal_font_mod.SpecialGlyphVariant) bool {
     const scale = if (render_scale > 0.0) render_scale else 1.0;
     if (variant != .shade) return true;
@@ -163,8 +171,8 @@ fn rowSlice(cells: []const Cell, cols_count: usize, row: usize) []const Cell {
 }
 
 fn resolvedBackgroundColor(cell: Cell, screen_reverse_mode: bool) Color {
-    const fg = Color{ .r = cell.attrs.fg.r, .g = cell.attrs.fg.g, .b = cell.attrs.fg.b, .a = cell.attrs.fg.a };
-    const bg = Color{ .r = cell.attrs.bg.r, .g = cell.attrs.bg.g, .b = cell.attrs.bg.b, .a = cell.attrs.bg.a };
+    const fg = terminalOpaqueColor(.{ .r = cell.attrs.fg.r, .g = cell.attrs.fg.g, .b = cell.attrs.fg.b, .a = cell.attrs.fg.a });
+    const bg = terminalOpaqueColor(.{ .r = cell.attrs.bg.r, .g = cell.attrs.bg.g, .b = cell.attrs.bg.b, .a = cell.attrs.bg.a });
     const cell_reverse = cell.attrs.reverse != screen_reverse_mode;
     return if (cell_reverse) fg else bg;
 }
@@ -209,8 +217,8 @@ fn resolvedTerminalCellColors(
     screen_reverse_mode: bool,
     block_cursor_here: bool,
 ) TerminalCellColors {
-    const fg = Color{ .r = cell.attrs.fg.r, .g = cell.attrs.fg.g, .b = cell.attrs.fg.b, .a = cell.attrs.fg.a };
-    const bg = Color{ .r = cell.attrs.bg.r, .g = cell.attrs.bg.g, .b = cell.attrs.bg.b, .a = cell.attrs.bg.a };
+    const fg = terminalOpaqueColor(.{ .r = cell.attrs.fg.r, .g = cell.attrs.fg.g, .b = cell.attrs.fg.b, .a = cell.attrs.fg.a });
+    const bg = terminalOpaqueColor(.{ .r = cell.attrs.bg.r, .g = cell.attrs.bg.g, .b = cell.attrs.bg.b, .a = cell.attrs.bg.a });
     const cell_reverse = cell.attrs.reverse != screen_reverse_mode;
     const normal_fg = if (cell_reverse) bg else fg;
     const normal_bg = if (cell_reverse) fg else bg;
@@ -581,11 +589,15 @@ pub fn drawRowBackgrounds(
             cursor_style,
         );
         const run_width_cols = run_end - col;
-        rr.addTerminalRectF(
-            cell_x,
-            cell_y,
-            cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(run_width_cols)))),
-            cell_h,
+        const rect_x0 = rr.snapLogicalToDevicePixel(cell_x);
+        const rect_y0 = rr.snapLogicalToDevicePixel(cell_y);
+        const rect_x1 = rr.snapLogicalToDevicePixel(cell_x + cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(run_width_cols)))));
+        const rect_y1 = rr.snapLogicalToDevicePixel(cell_y + cell_h);
+        rr.addTerminalRect(
+            snapInt(rect_x0),
+            snapInt(rect_y0),
+            @max(1, snapInt(rect_x1 - rect_x0)),
+            @max(1, snapInt(rect_y1 - rect_y0)),
             run_color,
         );
         col = run_end - 1;
@@ -593,11 +605,15 @@ pub fn drawRowBackgrounds(
 
     if (draw_padding and padding_x_i > 0 and cols_count > 0) {
         const last_cell = row_cells[cols_count - 1];
-        rr.addTerminalRectF(
-            base_x_local + @as(f32, @floatFromInt(@as(i32, @intCast(cols_count)))) * cell_w,
-            base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h,
-            padding_x,
-            cell_h,
+        const pad_x0 = rr.snapLogicalToDevicePixel(base_x_local + @as(f32, @floatFromInt(@as(i32, @intCast(cols_count)))) * cell_w);
+        const pad_y0 = rr.snapLogicalToDevicePixel(base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h);
+        const pad_x1 = rr.snapLogicalToDevicePixel(base_x_local + @as(f32, @floatFromInt(@as(i32, @intCast(cols_count)))) * cell_w + padding_x);
+        const pad_y1 = rr.snapLogicalToDevicePixel(base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h + cell_h);
+        rr.addTerminalRect(
+            snapInt(pad_x0),
+            snapInt(pad_y0),
+            @max(1, snapInt(pad_x1 - pad_x0)),
+            @max(1, snapInt(pad_y1 - pad_y0)),
             resolvedBackgroundColor(last_cell, screen_reverse_mode),
         );
     }
@@ -1451,7 +1467,11 @@ pub fn drawRowGlyphs(
                 if (!style.glyph_visible) continue;
                 if (cell.codepoint == 0 or cell.codepoint == ' ') continue;
                 var behind_rgba = style.bg.toRgba();
-                behind_rgba.a = 255;
+                // Terminal cell backgrounds are already painted as solid rects.
+                // Leave alpha at zero so GL font coverage does not apply
+                // luminance-based background correction that can erase colored
+                // terminal glyphs on overridden cell backgrounds.
+                behind_rgba.a = 0;
                 rr.text_render.bg_rgba = behind_rgba;
 
                 const direct_choice_start = app_shell.getTime();
@@ -1517,7 +1537,9 @@ pub fn drawRowGlyphs(
                 const style = resolveTerminalCellStyle(cell, screen_reverse_mode, hover_link, blink_style_mode, blink_time_s, draw_cursor_mode, cursor_pos, cursor_style, row_idx, special_col);
                 if (!style.glyph_visible) continue;
                 var behind_rgba = style.bg.toRgba();
-                behind_rgba.a = 255;
+                // Special terminal glyphs share the same coverage path and
+                // must avoid bg-aware luminance correction for colored cells.
+                behind_rgba.a = 0;
                 rr.text_render.bg_rgba = behind_rgba;
                 const box_x = base_x_local + @as(f32, @floatFromInt(@as(i32, @intCast(special_col)))) * cell_w;
                 const box_y = base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h;
@@ -1739,7 +1761,10 @@ pub fn drawRowGlyphs(
             if (!style.glyph_visible) continue;
             const followed_by_space = terminalCellFollowedBySpace(row_cells, row_cells.len, abs_col, style.width_units);
             var behind_rgba = style.bg.toRgba();
-            behind_rgba.a = 255;
+            // Shaped terminal glyphs use the same GL coverage atlas path as
+            // direct glyphs; keep bg alpha clear so cell-local bg overrides do
+            // not suppress low-luminance colored foreground text.
+            behind_rgba.a = 0;
             rr.text_render.bg_rgba = behind_rgba;
 
             if (cell.codepoint == 0 or cell.codepoint == kitty_unicode_placeholder) continue;

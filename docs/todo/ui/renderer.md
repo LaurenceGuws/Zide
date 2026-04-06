@@ -30,10 +30,49 @@ not architecture.
 - Do not shape the contract around current OpenGL convenience.
 - Do not add a real Vulkan implementation yet.
 - Do not pivot to Android implementation work yet.
+- Android native-host/platform design may advance, but Android rendering
+  backend work is still gated by this queue.
 - Do not let backend labels substitute for a contract.
 - Do not treat Linux GL regressions as polish-only if they expose contract
   weakness.
 - Do not keep stale duplicate seams just to avoid a clean cut.
+
+## Pre-Android Rendering Gate
+
+Android work now splits into two lanes:
+
+- allowed now:
+  - Android native-host/platform design
+  - Activity / `ANativeWindow` lifecycle authority
+  - IME, focus, clipboard, file intents, permissions, redraw-needed, resize,
+    surface-loss truth
+- not allowed yet:
+  - real Android rendering backend bootstrap
+  - GLES/Vulkan backend work that assumes the renderer contract is already
+    stable
+
+Reason:
+
+- the current renderer still allows one semantic operation to travel through
+  multiple render paths
+- `Renderer` still owns too much backend/runtime shape
+- frame/presentable/draw ownership is still not strict enough
+- starting Android rendering now would either:
+  - bend Android around desktop/GL-shaped seams
+  - or reopen renderer surgery while trying to bootstrap mobile
+
+Android rendering backend work only becomes valid when all of these are true:
+
+1. one semantic operation has one renderer contract path
+   - especially terminal/text/background/presentable drawing
+2. backend choice no longer changes product-level submission semantics
+3. shared draw/resource payloads do not want backend-specific `.opengl` /
+   `.metal` / future `.vulkan` branches
+4. `Renderer` is no longer the hidden owner of backend-native runtime state
+5. presentable/frame ownership is honest enough that a new backend would feel
+   routine rather than invasive
+
+If those are not true, Android rendering is still blocked.
 
 ## How To Use This Queue
 
@@ -510,6 +549,13 @@ Rules:
   paused.
 - recent Linux work proved that focus, scale, redraw, and terminal presentation
   bugs were contract evidence, not just polish.
+- terminal background styling bug (Neovim/Yazi highlight-heavy UI, 2026-04-07)
+  proved a sharper Milestone B point: one semantic operation still had two
+  render paths. Row backgrounds were resolved correctly in widget logic but
+  traveled through generic `SurfaceDraw` via `addTerminalRectF(...)`, while
+  normal terminal cell backgrounds/glyphs used the dedicated terminal rect/glyph
+  batch path. Fixing the bug required moving row backgrounds onto the terminal
+  rect path, not changing widget color decisions.
 - the next meaningful wins should reduce shared renderer ownership, not add
   another backend.
 

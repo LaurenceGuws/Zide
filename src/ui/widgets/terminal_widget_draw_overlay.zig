@@ -27,6 +27,10 @@ const SelectionCornerMask = struct {
     bottom_right_inward: bool = false,
 };
 
+fn terminalOpaqueColor(color: Color) Color {
+    return .{ .r = color.r, .g = color.g, .b = color.b, .a = 255 };
+}
+
 fn softSelectionColor(base: Color) Color {
     return .{
         .r = base.r,
@@ -40,8 +44,8 @@ fn overlayResolvedCursorColors(
     cell: Cell,
     screen_reverse: bool,
 ) struct { fg: Color, bg: Color } {
-    const fg = Color{ .r = cell.attrs.fg.r, .g = cell.attrs.fg.g, .b = cell.attrs.fg.b, .a = cell.attrs.fg.a };
-    const bg = Color{ .r = cell.attrs.bg.r, .g = cell.attrs.bg.g, .b = cell.attrs.bg.b, .a = cell.attrs.bg.a };
+    const fg = terminalOpaqueColor(.{ .r = cell.attrs.fg.r, .g = cell.attrs.fg.g, .b = cell.attrs.fg.b, .a = cell.attrs.fg.a });
+    const bg = terminalOpaqueColor(.{ .r = cell.attrs.bg.r, .g = cell.attrs.bg.g, .b = cell.attrs.bg.b, .a = cell.attrs.bg.a });
     const cell_reverse = cell.attrs.reverse != screen_reverse;
     const normal_fg = if (cell_reverse) bg else fg;
     const normal_bg = if (cell_reverse) fg else bg;
