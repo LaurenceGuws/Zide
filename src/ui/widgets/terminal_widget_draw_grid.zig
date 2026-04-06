@@ -762,6 +762,27 @@ test "resolveTerminalCellStyle hides blinked glyphs" {
     try std.testing.expect(!style.glyph_visible);
 }
 
+test "cellCanDirectSpecial routes representative terminal special glyphs" {
+    const fg = Color.white;
+    const bg = Color.black;
+    try std.testing.expect(cellCanDirectSpecial(cellWithColors(0x2500, fg, bg, false)));
+    try std.testing.expect(cellCanDirectSpecial(cellWithColors(0x2591, fg, bg, false)));
+    try std.testing.expect(cellCanDirectSpecial(cellWithColors(0x2801, fg, bg, false)));
+    try std.testing.expect(cellCanDirectSpecial(cellWithColors(0xE0B0, fg, bg, false)));
+}
+
+test "spanCanBypassShaping rejects representative terminal special glyphs" {
+    const fg = Color.white;
+    const bg = Color.black;
+    const cells = [_]Cell{
+        cellWithColors(0x2500, fg, bg, false),
+        cellWithColors(0x2591, fg, bg, false),
+        cellWithColors(0x2801, fg, bg, false),
+        cellWithColors(0xE0B0, fg, bg, false),
+    };
+    try std.testing.expect(!spanCanBypassShaping(&cells, 0, cells.len));
+}
+
 fn cellWithColors(codepoint: u32, fg: Color, bg: Color, reverse: bool) Cell {
     var cell = std.mem.zeroes(Cell);
     cell.codepoint = codepoint;
@@ -1283,81 +1304,9 @@ pub fn drawRowGlyphs(
                             if (variant == .powerline) sample.powerline_special_glyphs += 1;
                             if (variant == .braille) sample.braille_special_glyphs += 1;
                         }
-                        fallback_col += style.width_units;
-                        continue;
-                    }
-                    if (variant == .shade) {
-                        const special_submit_start = app_shell.getTime();
-                        _ = terminal_glyphs.drawBoxGlyphBatched(addTerminalGlyphRect, rr, cell.codepoint, cell_x, cell_y, cell_w_span, cell_h, style.fg);
-                        if (capture_special) |sample| {
-                            captureTextPaintSample(
-                                sample,
-                                generation,
-                                row_idx,
-                                cursor_pos.col,
-                                fallback_col,
-                                cell,
-                                style.width_units,
-                                cell_x,
-                                cell_y,
-                                cell_w_span,
-                                cell_h,
-                                cell_y,
-                                1.0 / rr.devicePixelStep(),
-                                .{ .x = cell_x, .y = cell_y, .width = cell_w_span, .height = cell_h },
-                                .special,
-                            );
-                        }
-                        if (stats) |s| {
-                            const submit_ms = (app_shell.getTime() - special_submit_start) * 1000.0;
-                            s.shaped_special_glyphs += 1;
-                            s.shaped_special_submit_ms += submit_ms;
-                            s.special_sprite_glyphs += 1;
-                            s.shade_special_glyphs += 1;
-                            s.special_sprite_submit_ms += submit_ms;
-                        }
-                        if (metal_fallback_sample) |sample| {
-                            sample.special_sprite_glyphs += 1;
-                            sample.shaped_special_glyphs += 1;
-                            sample.shade_special_glyphs += 1;
-                        }
-                        fallback_col += style.width_units;
-                        continue;
-                    }
-                }
-                if (isTerminalBoxGlyph(cell.codepoint)) {
-                    const special_submit_start = app_shell.getTime();
-                    _ = terminal_glyphs.drawBoxGlyphBatched(addTerminalGlyphRect, rr, cell.codepoint, cell_x, cell_y, cell_w_span, cell_h, style.fg);
-                    if (capture_special) |sample| {
-                        captureTextPaintSample(
-                            sample,
-                            generation,
-                            row_idx,
-                            cursor_pos.col,
-                            fallback_col,
-                            cell,
-                            style.width_units,
-                            cell_x,
-                            cell_y,
-                            cell_w_span,
-                            cell_h,
-                            cell_y,
-                            1.0 / rr.devicePixelStep(),
-                            .{ .x = cell_x, .y = cell_y, .width = cell_w_span, .height = cell_h },
-                            .special,
-                        );
-                    }
-                    if (stats) |s| {
-                        const submit_ms = (app_shell.getTime() - special_submit_start) * 1000.0;
-                        s.shaped_special_glyphs += 1;
-                        s.shaped_special_submit_ms += submit_ms;
-                        s.box_glyphs += 1;
-                        s.box_submit_ms += submit_ms;
-                        s.box_rect_submit_ms += submit_ms;
                     }
                     if (metal_fallback_sample) |sample| {
-                        sample.shaped_special_glyphs += 1;
-                        sample.box_glyphs += 1;
+                        _ = sample;
                     }
                     fallback_col += style.width_units;
                     continue;
@@ -1579,71 +1528,8 @@ pub fn drawRowGlyphs(
                 else
                     null;
                 if (terminal_glyphs.specialVariantForCodepoint(cell.codepoint)) |variant| {
-                    if (drawAlignedSpecialGlyphSprite(rr, row_cells, special_col, style.width_units, screen_reverse_mode, draw_cursor_mode, cursor_pos, cursor_style, row_idx, cell.codepoint, variant, box_x, box_y, box_w, box_h, style.fg, &row_sprite_cache, stats, capture_special, generation, row_idx, cursor_pos.col, special_col, cell, style.width_units, box_x, box_y)) {
-                        continue;
-                    }
-                    if (variant == .shade) {
-                        const special_submit_start = app_shell.getTime();
-                        _ = terminal_glyphs.drawBoxGlyphBatched(addTerminalGlyphRect, rr, cell.codepoint, box_x, box_y, box_w, box_h, style.fg);
-                        if (capture_special) |sample| {
-                            captureTextPaintSample(
-                                sample,
-                                generation,
-                                row_idx,
-                                cursor_pos.col,
-                                special_col,
-                                cell,
-                                style.width_units,
-                                box_x,
-                                box_y,
-                                box_w,
-                                box_h,
-                                box_y,
-                                1.0 / rr.devicePixelStep(),
-                                .{ .x = box_x, .y = box_y, .width = box_w, .height = box_h },
-                                .special,
-                            );
-                        }
-                        if (stats) |s| {
-                            const submit_ms = (app_shell.getTime() - special_submit_start) * 1000.0;
-                            s.shaped_special_glyphs += 1;
-                            s.shaped_special_submit_ms += submit_ms;
-                            s.special_sprite_glyphs += 1;
-                            s.shade_special_glyphs += 1;
-                            s.special_sprite_submit_ms += submit_ms;
-                        }
-                        continue;
-                    }
-                } else if (isTerminalBoxGlyph(cell.codepoint)) {
-                    const special_submit_start = app_shell.getTime();
-                    _ = terminal_glyphs.drawBoxGlyphBatched(addTerminalGlyphRect, rr, cell.codepoint, box_x, box_y, box_w, box_h, style.fg);
-                    if (capture_special) |sample| {
-                        captureTextPaintSample(
-                            sample,
-                            generation,
-                            row_idx,
-                            cursor_pos.col,
-                            special_col,
-                            cell,
-                            style.width_units,
-                            box_x,
-                            box_y,
-                            box_w,
-                            box_h,
-                            box_y,
-                            1.0 / rr.devicePixelStep(),
-                            .{ .x = box_x, .y = box_y, .width = box_w, .height = box_h },
-                            .special,
-                        );
-                    }
-                    if (stats) |s| {
-                        const submit_ms = (app_shell.getTime() - special_submit_start) * 1000.0;
-                        s.shaped_special_glyphs += 1;
-                        s.shaped_special_submit_ms += submit_ms;
-                        s.box_glyphs += 1;
-                        s.box_submit_ms += submit_ms;
-                        s.box_rect_submit_ms += submit_ms;
-                    }
+                    _ = drawAlignedSpecialGlyphSprite(rr, row_cells, special_col, style.width_units, screen_reverse_mode, draw_cursor_mode, cursor_pos, cursor_style, row_idx, cell.codepoint, variant, box_x, box_y, box_w, box_h, style.fg, &row_sprite_cache, stats, capture_special, generation, row_idx, cursor_pos.col, special_col, cell, style.width_units, box_x, box_y);
+                    continue;
                 }
             }
             col = span_end_excl;
@@ -1825,7 +1711,6 @@ pub fn drawRowGlyphs(
         }
 
         const glyph_len: usize = @intCast(length);
-        const render_scale = 1.0 / rr.devicePixelStep();
         const inv_scale = rr.devicePixelStep();
         const submit_phase_start = app_shell.getTime();
         var pen_x: f32 = 0;
@@ -1872,74 +1757,9 @@ pub fn drawRowGlyphs(
                 else
                     null;
                 if (terminal_glyphs.specialVariantForCodepoint(cell.codepoint)) |variant| {
-                    if (drawAlignedSpecialGlyphSprite(rr, row_cells, abs_col, style.width_units, screen_reverse_mode, draw_cursor_mode, cursor_pos, cursor_style, row_idx, cell.codepoint, variant, box_x, box_y, box_w, box_h, style.fg, &row_sprite_cache, stats, capture_shaped_special, generation, row_idx, cursor_pos.col, abs_col, cell, style.width_units, box_x, box_y)) {
-                        continue;
-                    }
-                    if (variant == .shade) {
-                        const special_submit_start = app_shell.getTime();
-                        _ = terminal_glyphs.drawBoxGlyphBatched(addTerminalGlyphRect, rr, cell.codepoint, box_x, box_y, box_w, box_h, style.fg);
-                        if (capture_shaped_special) |sample| {
-                            captureTextPaintSample(
-                                sample,
-                                generation,
-                                row_idx,
-                                cursor_pos.col,
-                                abs_col,
-                                cell,
-                                style.width_units,
-                                box_x,
-                                box_y,
-                                box_w,
-                                box_h,
-                                box_y,
-                                render_scale,
-                                .{ .x = box_x, .y = box_y, .width = box_w, .height = box_h },
-                                .special,
-                            );
-                        }
-                        if (stats) |s| {
-                            const submit_ms = (app_shell.getTime() - special_submit_start) * 1000.0;
-                            s.shaped_special_glyphs += 1;
-                            s.shaped_special_submit_ms += submit_ms;
-                            s.special_sprite_glyphs += 1;
-                            s.shade_special_glyphs += 1;
-                            s.special_sprite_submit_ms += submit_ms;
-                        }
-                        continue;
-                    }
+                    _ = drawAlignedSpecialGlyphSprite(rr, row_cells, abs_col, style.width_units, screen_reverse_mode, draw_cursor_mode, cursor_pos, cursor_style, row_idx, cell.codepoint, variant, box_x, box_y, box_w, box_h, style.fg, &row_sprite_cache, stats, capture_shaped_special, generation, row_idx, cursor_pos.col, abs_col, cell, style.width_units, box_x, box_y);
+                    continue;
                 }
-            }
-            if (cell.combining_len == 0 and isTerminalBoxGlyph(cell.codepoint)) {
-                const special_submit_start = app_shell.getTime();
-                _ = terminal_glyphs.drawBoxGlyphBatched(addTerminalGlyphRect, rr, cell.codepoint, cell_x, cell_y, cell_w_span, cell_h_span, style.fg);
-                if (shouldCaptureTextPaint(text_paint_sample, row_idx, cursor_pos, abs_col, style.width_units)) {
-                    captureTextPaintSample(
-                        text_paint_sample.?,
-                        generation,
-                        row_idx,
-                        cursor_pos.col,
-                        abs_col,
-                        cell,
-                        style.width_units,
-                        cell_x,
-                        cell_y,
-                        cell_w_span,
-                        cell_h_span,
-                        cell_y,
-                        render_scale,
-                        .{ .x = cell_x, .y = cell_y, .width = cell_w_span, .height = cell_h_span },
-                        .special,
-                    );
-                }
-                if (stats) |s| {
-                    const submit_ms = (app_shell.getTime() - special_submit_start) * 1000.0;
-                    s.shaped_special_glyphs += 1;
-                    s.shaped_special_submit_ms += submit_ms;
-                    s.box_glyphs += 1;
-                    s.box_submit_ms += submit_ms;
-                    s.box_rect_submit_ms += submit_ms;
-                }
-                continue;
             }
 
             const text_submit_start = app_shell.getTime();
