@@ -1915,11 +1915,7 @@ pub const EnsureTerminalSnapshotResult = struct {
 };
 
 pub fn terminalSnapshotMatchesDrawable(context: *const BackendContext) bool {
-    const snapshot = context.terminal_snapshot orelse return false;
-    const snap = switch (snapshot) {
-        .metal => |m| m,
-        .opengl => return false,
-    };
+    const snap = context.terminal_snapshot orelse return false;
     return context.drawable_width > 0 and
         context.drawable_height > 0 and
         snap.width == context.drawable_width and
@@ -1933,10 +1929,7 @@ pub fn ensureTerminalSnapshotPresentable(
 ) EnsureTerminalSnapshotResult {
     if (width <= 0 or height <= 0) return .{};
     if (context.terminal_snapshot) |snapshot| {
-        const matches = switch (snapshot) {
-            .metal => |m| m.width == width and m.height == height,
-            .opengl => false,
-        };
+        const matches = snapshot.width == width and snapshot.height == height;
         if (matches) {
             return .{
                 .available = true,
