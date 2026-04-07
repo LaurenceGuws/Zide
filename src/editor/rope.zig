@@ -1073,3 +1073,44 @@ test "rope line start cache stays bounded and invalidates on edit" {
     try rope.insert(0, "prefix\n");
     try std.testing.expectEqual(@as(usize, 0), rope.line_start_cache.count());
 }
+
+test "rope line start cache concurrent read/invalidate does not panic" {
+    const allocator = std.testing.allocator;
+    var text = std.ArrayList(u8).empty;
+    defer text.deinit(allocator);
+    for (0..4000) |_| {
+        try text.append(allocator, 'x');
+        try text.append(allocator, '\n');
+    }
+
+    var rope = try Rope.init(allocator, text.items);
+    defer rope.deinit();
+
+    const ReaderCtx = struct {
+        rope: *Rope,
+        iterations: usize,
+        fn run(ctx: @This()) void {
+            var i: usize = 0;
+            while (i < ctx.iterations) : (i += 1) {
+                const line = (i % 3999) + 1;
+                _ = ctx.rope.lineStart(line);
+            }
+        }
+    };
+
+    const reader_iterations: usize = 10000;
+    var t1 = try std.Thread.spawn(.{}, ReaderCtx.run, .{ReaderCtx{ .rope = rope, .iterations = reader_iterations }});
+    var t2 = try std.Thread.spawn(.{}, ReaderCtx.run, .{ReaderCtx{ .rope = rope, .iterations = reader_iterations }});
+    defer t1.join();
+    defer t2.join();
+
+    var i: usize = 0;
+    while (i < 2000) : (i += 1) {
+        invalidateLineStartCache(rope);
+        _ = rope.lineStart((i % 3999) + 1);
+    }
+
+    // Ensure workers completed without cache-lock assertions/panics and cache remains usable.
+    const start = rope.lineStart(2000);
+    try std.testing.expect(start > 0);
+}
