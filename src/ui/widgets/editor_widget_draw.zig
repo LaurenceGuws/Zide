@@ -617,9 +617,16 @@ pub fn drawCached(
 
                 if (seg_info.seg_idx == seg_info.seg_start_idx) {
                     var num_buf: [16]u8 = undefined;
-                    _ = segment_paint_mod.addEditorLineBaseOps(draw_list_local, r_local, seg_info.line_idx, seg_y, origin_x_local, widget_local.gutter_width, width_local, seg_info.is_current, &num_buf);
-                    overlay_mod.flushDrawList(draw_list_local, r_local);
-                    draw_list_local.clear();
+                    segment_paint_mod.drawEditorLineBaseImmediate(
+                        r_local,
+                        seg_info.line_idx,
+                        seg_y,
+                        origin_x_local,
+                        widget_local.gutter_width,
+                        width_local,
+                        seg_info.is_current,
+                        &num_buf,
+                    );
                 } else if (seg_info.is_current) {
                     segment_paint_mod.drawEditorSegmentBaseImmediate(
                         r_local,

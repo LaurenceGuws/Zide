@@ -775,6 +775,9 @@ Current evidence:
 - editor checkpoint: the direct/fallback segment base painting is now
   centralized through one helper in `segment_paint.zig` instead of staying as
   scattered immediate rect calls inside `editor_widget_draw.zig`.
+- editor checkpoint: the fallback line-base path is now one explicit immediate
+  helper too, instead of a hybrid path where base fills were immediate but the
+  line-number/current-line label still rode a one-op draw-list flush.
 - editor checkpoint: the cached/list-side segment base painting now follows the
   same rule through one `segment_paint.zig` helper instead of open-coding its
   own row/gutter/current-line rect sequence in `editor_widget_draw.zig`.

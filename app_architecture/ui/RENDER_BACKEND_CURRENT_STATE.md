@@ -555,6 +555,9 @@ That split is now sharper from code inspection too:
   segment-base painting routes through one helper in `segment_paint.zig`
   instead of staying as scattered immediate rect calls in
   `editor_widget_draw.zig`
+- the fallback line-base path is also explicit now: it no longer mixes
+  immediate base fills with a one-op draw-list flush just to render the line
+  number/current-line label
 - cached/list-side segment-base painting now also follows that same rule
   through `segment_paint.zig` instead of open-coding its own row/gutter/
   current-line rect sequence in the widget draw body

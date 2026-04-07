@@ -5,6 +5,7 @@ const draw_list_mod = @import("draw_list.zig");
 const overlay_mod = @import("../../ui/widgets/editor_widget_draw_overlay.zig");
 const text_mod = @import("../../ui/widgets/editor_widget_draw_text.zig");
 const renderer_surface_host = @import("../../ui/renderer/renderer_surface_host.zig");
+const renderer_text_host = @import("../../ui/renderer/renderer_text_host.zig");
 
 const HighlightToken = syntax_mod.HighlightToken;
 const SelectionRange = selection_mod.SelectionRange;
@@ -72,6 +73,24 @@ pub fn drawEditorSegmentBaseImmediate(
         renderer_surface_host.drawRect(r, @intFromFloat(x), @intFromFloat(y), @intFromFloat(gutter_width), @intFromFloat(r.editor_char_height), r.theme.current_line);
         renderer_surface_host.drawRect(r, @intFromFloat(x + gutter_width), @intFromFloat(y), @intFromFloat(content_width - gutter_width), @intFromFloat(r.editor_char_height), r.theme.current_line);
     }
+}
+
+pub fn drawEditorLineBaseImmediate(
+    r: anytype,
+    line_num: usize,
+    y: f32,
+    x: f32,
+    gutter_width: f32,
+    content_width: f32,
+    is_current: bool,
+    num_buf: *[16]u8,
+) void {
+    drawEditorSegmentBaseImmediate(r, x, y, gutter_width, content_width, is_current);
+    const num_str = std.fmt.bufPrint(num_buf, "{d: >4}", .{line_num + 1}) catch return;
+    const pad = 4 * r.uiScaleFactor();
+    const line_color = if (is_current) r.theme.foreground else r.theme.line_number;
+    const line_bg = if (is_current) r.theme.current_line else r.theme.line_number_bg;
+    renderer_text_host.drawTextOnBg(r, num_str, x + pad, y, line_color, line_bg);
 }
 
 pub fn drawSelectionOverlays(
