@@ -915,6 +915,10 @@ Current evidence:
   mutating `renderer.text_render.bg_rgba` globally just to make preview text
   honor the section background. That background is now carried explicitly at
   the sample draw site.
+- sample checkpoint: section text in `font_sample_view.zig` now records through
+  `font_sample_section_host` and flushes via
+  `renderer_sample_section_phase_host`, so the tiny sample seam has explicit
+  local record/replay boundaries instead of inline per-call text host emits.
 - this is good local honesty for the sample lane, but it does not yet turn the
   sample family into a recorded backend-neutral phase.
 - first sample-side proof is acceptable only as a tiny section-composition seam,

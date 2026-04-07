@@ -436,6 +436,10 @@ The current code makes that split more specific:
 - the sample seam is at least locally more honest now when it does that work:
   section background for preview text is carried explicitly at the sample draw
   site instead of leaning on mutable renderer-global text background state
+- the tiny sample seam is now slightly more explicit as a local phase: section
+  text recording/replay runs through `font_sample_section_host` and
+  `renderer_sample_section_phase_host` instead of only inline direct text host
+  calls
 
 **Shell/UI chrome blocker (2026-04-07):** the obvious next family is shell/UI
 chrome bands, but that family is not a free move today because the dependent

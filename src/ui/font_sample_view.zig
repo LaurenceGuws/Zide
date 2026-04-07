@@ -260,22 +260,27 @@ pub const FontSampleView = struct {
         const content_h: f32 = @as(f32, @floatFromInt(lines.len)) * line_h + baselineStressHeight(line_h);
         const section_h: f32 = r.char_height + section_pad_y + content_h + section_pad_y;
         const content_y: f32 = y + r.char_height + section_pad_y;
-        const section = Section.init(r, bg);
+        var section = Section.init(r, bg);
+        defer section.deinit();
+        defer section.flush();
 
         section.fillRect(0, @intFromFloat(y), @intFromFloat(w), @intFromFloat(section_h), bg);
         section.drawTextOnBg(label, 16, y, theme.foreground);
 
-        drawColumnWithColor(self, r, left_x, content_y, col_w, self.left_name, &self.left, fg, bg);
-        drawColumnWithColor(self, r, right_x, content_y, col_w, self.right_name, &self.right, fg, bg);
+        drawColumnWithColor(self, r, &section, left_x, content_y, col_w, self.left_name, &self.left, fg, bg);
+        drawColumnWithColor(self, r, &section, right_x, content_y, col_w, self.right_name, &self.right, fg, bg);
 
         return y + section_h;
     }
 
     fn drawColumn(self: *FontSampleView, r: *Renderer, x: f32, y: f32, w: f32, name: []const u8, font: *SampleFontFace) void {
-        drawColumnWithColor(self, r, x, y, w, name, font, Color.white, r.theme.background);
+        var section = Section.init(r, r.theme.background);
+        defer section.deinit();
+        defer section.flush();
+        drawColumnWithColor(self, r, &section, x, y, w, name, font, Color.white, r.theme.background);
     }
 
-    fn drawColumnWithColor(self: *FontSampleView, r: *Renderer, x: f32, y: f32, w: f32, name: []const u8, font: *SampleFontFace, fg: Color, bg: Color) void {
+    fn drawColumnWithColor(self: *FontSampleView, r: *Renderer, section: *Section, x: f32, y: f32, w: f32, name: []const u8, font: *SampleFontFace, fg: Color, bg: Color) void {
         _ = w;
         const theme = r.theme;
 
@@ -285,7 +290,7 @@ pub const FontSampleView = struct {
             "{s}  line_h={d:.1} cell_w={d:.1}",
             .{ name, font.metrics.line_height, font.metrics.cell_width },
         ) catch name;
-        renderer_text_host.drawTextOnBg(r, header, x, y, theme.foreground, bg);
+        section.drawTextOnColor(header, x, y, theme.foreground, bg);
 
         const start_y = y + r.char_height * 1.6;
         const line_h = font.metrics.line_height;
@@ -298,7 +303,7 @@ pub const FontSampleView = struct {
         }
 
         var stress_y = start_y + @as(f32, @floatFromInt(lines.len)) * line_h + line_h * 0.5;
-        renderer_text_host.drawTextOnBg(r, "baseline zoom stress: x0.9 x1.0 x1.1", x, stress_y, theme.line_number, bg);
+        section.drawTextOnColor("baseline zoom stress: x0.9 x1.0 x1.1", x, stress_y, theme.line_number, bg);
         stress_y += line_h;
 
         const stress_text = "Baseline probe: iiii llll zzzz vava mMwW 1Il|";

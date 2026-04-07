@@ -684,6 +684,10 @@ That split is now sharper from code inspection too:
   depends on mutating `renderer.text_render.bg_rgba` globally just to make
   preview text honor section background. The background is now explicit at the
   sample draw site.
+- that sample seam is now slightly stronger too: section labels/headers are
+  recorded and replayed through a dedicated sample host seam
+  (`renderer_sample_section_phase_host`) rather than emitted inline from every
+  sample draw call.
 
 There is now a first proof of that narrower sample path too: the font sample
 view has its own tiny section-composition seam. That is intentionally not a
