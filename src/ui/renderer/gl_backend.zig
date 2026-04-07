@@ -229,7 +229,7 @@ pub fn drawSceneTargetToDefault(renderer: anytype) void {
         .height = @floatFromInt(target.logical_height),
     };
     gl.Disable(gl.c.GL_BLEND);
-    draw_ops.drawTextureRect(
+    draw_ops.drawTextureRectImmediate(
         renderer,
         target.texture,
         src,
@@ -352,7 +352,7 @@ pub fn drawSolidRect(renderer: anytype, x: f32, y: f32, w: f32, h: f32, color: t
     if (w <= 0 or h <= 0) return false;
     const dest = types.Rect{ .x = x, .y = y, .width = w, .height = h };
     const src = texture_draw.unitSrcRect();
-    draw_ops.drawTextureRect(renderer, whiteTexture(renderer), src, dest, color, .{ .r = 0, .g = 0, .b = 0, .a = 0 }, .rgba);
+    draw_ops.drawTextureRectImmediate(renderer, whiteTexture(renderer), src, dest, color, .{ .r = 0, .g = 0, .b = 0, .a = 0 }, .rgba);
     return true;
 }
 
@@ -403,6 +403,15 @@ pub fn flushQueuedSurfaceDrawsNow(renderer: anytype) void {
     if (renderer.backend.runtime.opengl.queued_surface_draws.items.len == 0) return;
     replayRecordedSurfaceDrawSurfacePhase(renderer);
     clearQueuedSurfaceDraws(renderer);
+}
+
+/// Same as [`flushQueuedSurfaceDrawsNow`] but only when the window uses the OpenGL
+/// surface attachment (avoids touching GL state on Metal-only bootstrap paths).
+pub fn flushQueuedSurfaceDrawsBeforeImmediateWork(renderer: anytype) void {
+    switch (renderer.render_surface_attachment) {
+        .opengl_window => flushQueuedSurfaceDrawsNow(renderer),
+        else => {},
+    }
 }
 
 fn clearQueuedSurfaceDraws(renderer: anytype) void {
@@ -471,10 +480,10 @@ fn executeRecordedSurfaceAtlasBlitInSurfacePhase(renderer: anytype, sample: surf
             @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.height)))),
         );
         defer renderer_clip_host.endClip(renderer);
-        draw_ops.drawTextureRect(renderer, tex, sample.source_rect, dest, sample.tint, bg, kind);
+        draw_ops.drawTextureRectImmediate(renderer, tex, sample.source_rect, dest, sample.tint, bg, kind);
         return true;
     }
-    draw_ops.drawTextureRect(renderer, tex, sample.source_rect, dest, sample.tint, bg, kind);
+    draw_ops.drawTextureRectImmediate(renderer, tex, sample.source_rect, dest, sample.tint, bg, kind);
     return true;
 }
 
@@ -504,10 +513,10 @@ fn executeRecordedSurfaceRawImageBlitInSurfacePhase(renderer: anytype, img: surf
             @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.height)))),
         );
         defer renderer_clip_host.endClip(renderer);
-        draw_ops.drawTextureRect(renderer, tex, source_rect, dest, img.tint, bg, .rgba);
+        draw_ops.drawTextureRectImmediate(renderer, tex, source_rect, dest, img.tint, bg, .rgba);
         return true;
     }
-    draw_ops.drawTextureRect(renderer, tex, source_rect, dest, img.tint, bg, .rgba);
+    draw_ops.drawTextureRectImmediate(renderer, tex, source_rect, dest, img.tint, bg, .rgba);
     return true;
 }
 

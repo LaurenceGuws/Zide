@@ -57,6 +57,7 @@ pub fn beginTerminalBatch(renderer: anytype) void {
 pub fn flushTerminalBatch(renderer: anytype) void {
     const vertex_count = renderer.batch.vertices.items.len;
     if (vertex_count == 0) return;
+    gl_backend.flushQueuedSurfaceDrawsBeforeImmediateWork(renderer);
     ensureVboCapacity(renderer, vertex_count);
     bindBatchPipelineForVertexStream(renderer);
     gl.BufferSubData(
@@ -75,7 +76,10 @@ pub fn flushTerminalBatch(renderer: anytype) void {
     }
 }
 
-pub fn drawTextureRect(renderer: anytype, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, bg_color: types.Rgba, kind: types.TextureKind) void {
+/// Immediate GL textured quad: does **not** flush the deferred `SurfaceDraw` queue.
+/// Use only from OpenGL surface replay (`gl_backend` presentable/scene paths) where
+/// flushing would re-enter replay; normal callers must use [`drawTextureRect`].
+pub fn drawTextureRectImmediate(renderer: anytype, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, bg_color: types.Rgba, kind: types.TextureKind) void {
     if (texture.id == 0 or texture.width <= 0 or texture.height <= 0) return;
     bindBatchPipelineForVertexStream(renderer);
     gl.ActiveTexture(gl.c.GL_TEXTURE0);
@@ -121,6 +125,13 @@ pub fn drawTextureRect(renderer: anytype, texture: types.Texture, src: types.Rec
         &verts,
     );
     gl.DrawArrays(gl.c.GL_TRIANGLES, 0, 6);
+}
+
+/// Single-texture immediate draw used by text and UI paths on OpenGL. Flushes deferred
+/// `SurfaceDraw` work first so list order matches “surface queue, then immediate GL.”
+pub fn drawTextureRect(renderer: anytype, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, bg_color: types.Rgba, kind: types.TextureKind) void {
+    gl_backend.flushQueuedSurfaceDrawsBeforeImmediateWork(renderer);
+    drawTextureRectImmediate(renderer, texture, src, dest, color, bg_color, kind);
 }
 
 fn applyBlendForKind(kind: types.TextureKind) void {

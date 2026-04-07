@@ -760,12 +760,13 @@ Current evidence:
   OpenGL, pane base must replay immediately after record; row-band batches must
   end with a queue drain; scrollbars must flush before later widgets. Landed on
   branch `surface-contract-shared-text-phase` with manual editor/IDE smoke OK.
-- **Next ticket-shaped follow-ups:** (1) repo-wide audit for `text_draw.drawText` /
-  `draw_ops.drawTextureRect` after `renderer_surface_host.drawRect` without a
-  text-host or `flushQueuedSurfaceDrawsBeforeDependentSurfaceWork` on GL;
-  (2) terminal/chrome `SurfaceDraw` blit interleaving; (3) optional rename of
-  `editor_surface_solid_family` trace field to drive real per-family enqueue
-  metrics if needed.
+- **Next ticket-shaped follow-ups:** (1) **partially closed:** `draw_ops.drawTextureRect`
+  (non-replay), `flushTerminalBatch`, and `GlyphCache.flush` now call
+  `gl_backend.flushQueuedSurfaceDrawsBeforeImmediateWork` so immediate GL draws
+  cannot jump ahead of queued `SurfaceDraw` on Linux GL; surface **replay** uses
+  `drawTextureRectImmediate` to avoid re-entrancy; (2) terminal/chrome
+  `SurfaceDraw` blit interleaving; (3) optional rename of `editor_surface_solid_family`
+  trace field to drive real per-family enqueue metrics if needed.
 - that split did **not** produce a broadly safe delayed-blit lane yet:
   kitty/raw-image placements still interleave with terminal text, and shell
   icons still draw before adjacent tab labels. The only relatively isolated

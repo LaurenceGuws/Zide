@@ -2,6 +2,7 @@ const std = @import("std");
 const app_logger = @import("../app_logger.zig");
 const gl = @import("renderer/gl.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
+const gl_backend = @import("renderer/gl_backend.zig");
 const shape_utils = @import("renderer/shape_utils.zig");
 const texture_draw = @import("renderer/texture_draw.zig");
 const types = @import("renderer/types.zig");
@@ -107,6 +108,7 @@ pub const GlyphCache = struct {
     pub fn flush(self: *GlyphCache, renderer: anytype) void {
         const vertex_count = self.vertices.items.len;
         if (vertex_count == 0) return;
+        gl_backend.flushQueuedSurfaceDrawsBeforeImmediateWork(renderer);
         self.frame_metrics.flush_count += 1;
         self.frame_metrics.vertex_count += vertex_count;
         draw_ops.ensureVboCapacity(renderer, vertex_count);

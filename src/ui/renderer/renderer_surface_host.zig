@@ -66,8 +66,5 @@ pub fn recordSolidSurfaceFromLogicalRect(
 /// OpenGL may queue `SurfaceDraw` solids for submit-time replay; flush now so subsequent
 /// immediate surface work (overlays, selection, etc.) composites in list order.
 pub fn flushQueuedSurfaceDrawsBeforeDependentSurfaceWork(renderer: anytype) void {
-    switch (renderer.render_surface_attachment) {
-        .opengl_window => gl_backend.flushQueuedSurfaceDrawsNow(renderer),
-        else => {},
-    }
+    gl_backend.flushQueuedSurfaceDrawsBeforeImmediateWork(renderer);
 }

@@ -327,7 +327,6 @@ pub const FontSampleView = struct {
         bg: Color,
     ) void {
         if (r.textRenderingMode() != .gl_texture_atlas) return;
-        renderer_surface_host.flushQueuedSurfaceDrawsBeforeDependentSurfaceWork(r);
         var draw_ctx = DrawTextureCtx{ .renderer = r, .bg = bg.toRgba() };
         draw_ctx.bg.a = 255;
         const font_draw_ctx = terminal_font_mod.DrawContext{ .ctx = @ptrCast(&draw_ctx), .drawTexture = drawTextureThunk };
@@ -359,7 +358,6 @@ pub const FontSampleView = struct {
         zoom: f32,
     ) void {
         if (r.textRenderingMode() != .gl_texture_atlas) return;
-        renderer_surface_host.flushQueuedSurfaceDrawsBeforeDependentSurfaceWork(r);
         var draw_ctx = DrawTextureCtx{ .renderer = r, .bg = bg.toRgba() };
         draw_ctx.bg.a = 255;
         const font_draw_ctx = terminal_font_mod.DrawContext{ .ctx = @ptrCast(&draw_ctx), .drawTexture = drawTextureThunk };
