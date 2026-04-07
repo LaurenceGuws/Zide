@@ -698,6 +698,8 @@ Current evidence:
 - ownership checkpoint: the seam has graduated out of `widgets/` into
   `renderer_chrome_band_host.zig`. That is the right host-level home for it,
   even though it is still only a local composition seam and not a backend phase.
+- renderer-host checkpoint: the seam now terminates directly in renderer
+  surface/text hosts instead of routing back through `Shell` wrapper verbs.
 - This is real lifecycle cleanup and removes another renderer-root duplication
   seam.
 - This is not closure yet:

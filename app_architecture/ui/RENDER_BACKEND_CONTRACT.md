@@ -294,6 +294,11 @@ backend-neutral phase, but it is the right ownership story: one UI composition
 host adjacent to the other renderer hosts, not a random widget helper that
 looks private but keeps spreading.
 
+**Renderer-host checkpoint (2026-04-07):** this seam now terminates directly in
+renderer surface/text hosts instead of bouncing back through `Shell`
+convenience forwards. That keeps the ownership story honest: it is a renderer
+composition host, not a widget helper wearing renderer clothes.
+
 #### Presentable contract
 
 One backend-neutral presentable surface contract that can express:

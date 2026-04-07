@@ -391,6 +391,10 @@ The seam has also graduated out of `widgets/` and into the renderer host area
 as `renderer_chrome_band_host.zig`. That is an ownership correction, not a
 claim that shell chrome already has a solved backend-neutral phase.
 
+It now also terminates directly in renderer surface/text hosts rather than
+routing back through `Shell` forwards. That reduces one more fake layer between
+chrome composition intent and the renderer host surfaces it really uses.
+
 That is the loudest remaining semantic contradiction in the backend contract.
 It is no longer hidden by renderer-root facade noise or mixed backend dispatch
 buckets, which means the next real cut must either:
