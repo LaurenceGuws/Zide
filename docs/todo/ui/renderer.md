@@ -775,6 +775,12 @@ Current evidence:
 - code-facing checkpoint: the sample pressure is specifically
   section-fill-plus-bg-aware preview text in `font_sample_view.zig`, including
   custom-font preview draws that still go through direct texture draw calls.
+- sample checkpoint: the font-sample section seam no longer depends on
+  mutating `renderer.text_render.bg_rgba` globally just to make preview text
+  honor the section background. That background is now carried explicitly at
+  the sample draw site.
+- this is good local honesty for the sample lane, but it does not yet turn the
+  sample family into a recorded backend-neutral phase.
 - first sample-side proof is acceptable only as a tiny section-composition seam,
   not as a new generic band layer.
 - This is real lifecycle cleanup and removes another renderer-root duplication

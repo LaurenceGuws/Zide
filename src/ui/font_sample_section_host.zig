@@ -25,13 +25,7 @@ pub const Section = struct {
         renderer_text_host.drawText(self.renderer, text, x, y, color);
     }
 
-    pub fn applyBg(self: Section) void {
-        var bg_rgba = self.bg.toRgba();
-        bg_rgba.a = 255;
-        self.renderer.text_render.bg_rgba = bg_rgba;
-    }
-
-    pub fn clearBg(self: Section) void {
-        self.renderer.text_render.bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
+    pub fn drawTextOnBg(self: Section, text: []const u8, x: f32, y: f32, color: Color) void {
+        renderer_text_host.drawTextOnBg(self.renderer, text, x, y, color, self.bg);
     }
 };

@@ -330,6 +330,9 @@ The current code makes that split more specific:
 - sample/diagnostic pressure is the simpler section-fill plus bg-aware preview
   text path in `font_sample_view.zig`, including custom-font preview draws
   that still go straight through texture draw calls
+- the sample seam is at least locally more honest now when it does that work:
+  section background for preview text is carried explicitly at the sample draw
+  site instead of leaning on mutable renderer-global text background state
 
 **Shell/UI chrome blocker (2026-04-07):** the obvious next family is shell/UI
 chrome bands, but that family is not a free move today because the dependent

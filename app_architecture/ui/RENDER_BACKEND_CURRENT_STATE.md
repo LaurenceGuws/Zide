@@ -554,6 +554,10 @@ That split is now sharper from code inspection too:
 - sample pressure is specifically section-fill plus bg-aware text preview work
   in `font_sample_view.zig` / `font_sample_section_host.zig`, including the
   custom-font sample path that still terminates through direct texture draws
+- that sample lane is slightly cleaner now because the section seam no longer
+  depends on mutating `renderer.text_render.bg_rgba` globally just to make
+  preview text honor section background. The background is now explicit at the
+  sample draw site.
 
 There is now a first proof of that narrower sample path too: the font sample
 view has its own tiny section-composition seam. That is intentionally not a

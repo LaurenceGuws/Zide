@@ -263,21 +263,19 @@ pub const FontSampleView = struct {
         const section = Section.init(r, bg);
 
         section.fillRect(0, @intFromFloat(y), @intFromFloat(w), @intFromFloat(section_h), bg);
-        section.drawText(label, 16, y, theme.foreground);
+        section.drawTextOnBg(label, 16, y, theme.foreground);
 
-        section.applyBg();
-        drawColumnWithColor(self, r, left_x, content_y, col_w, self.left_name, &self.left, fg);
-        drawColumnWithColor(self, r, right_x, content_y, col_w, self.right_name, &self.right, fg);
-        section.clearBg();
+        drawColumnWithColor(self, r, left_x, content_y, col_w, self.left_name, &self.left, fg, bg);
+        drawColumnWithColor(self, r, right_x, content_y, col_w, self.right_name, &self.right, fg, bg);
 
         return y + section_h;
     }
 
     fn drawColumn(self: *FontSampleView, r: *Renderer, x: f32, y: f32, w: f32, name: []const u8, font: *SampleFontFace) void {
-        drawColumnWithColor(self, r, x, y, w, name, font, Color.white);
+        drawColumnWithColor(self, r, x, y, w, name, font, Color.white, r.theme.background);
     }
 
-    fn drawColumnWithColor(self: *FontSampleView, r: *Renderer, x: f32, y: f32, w: f32, name: []const u8, font: *SampleFontFace, fg: Color) void {
+    fn drawColumnWithColor(self: *FontSampleView, r: *Renderer, x: f32, y: f32, w: f32, name: []const u8, font: *SampleFontFace, fg: Color, bg: Color) void {
         _ = w;
         const theme = r.theme;
 
@@ -287,7 +285,7 @@ pub const FontSampleView = struct {
             "{s}  line_h={d:.1} cell_w={d:.1}",
             .{ name, font.metrics.line_height, font.metrics.cell_width },
         ) catch name;
-        renderer_text_host.drawText(r, header, x, y, theme.foreground);
+        renderer_text_host.drawTextOnBg(r, header, x, y, theme.foreground, bg);
 
         const start_y = y + r.char_height * 1.6;
         const line_h = font.metrics.line_height;
@@ -296,17 +294,17 @@ pub const FontSampleView = struct {
         var row: usize = 0;
         while (row < lines.len) : (row += 1) {
             const text = lines[row];
-            drawTextWithFont(r, self.allocator, font, text, x, start_y + @as(f32, @floatFromInt(row)) * line_h, fg);
+            drawTextWithFont(r, self.allocator, font, text, x, start_y + @as(f32, @floatFromInt(row)) * line_h, fg, bg);
         }
 
         var stress_y = start_y + @as(f32, @floatFromInt(lines.len)) * line_h + line_h * 0.5;
-        renderer_text_host.drawText(r, "baseline zoom stress: x0.9 x1.0 x1.1", x, stress_y, theme.line_number);
+        renderer_text_host.drawTextOnBg(r, "baseline zoom stress: x0.9 x1.0 x1.1", x, stress_y, theme.line_number, bg);
         stress_y += line_h;
 
         const stress_text = "Baseline probe: iiii llll zzzz vava mMwW 1Il|";
         const zooms = [_]f32{ 0.9, 1.0, 1.1 };
         for (zooms, 0..) |zoom, idx| {
-            drawTextWithFontZoom(r, self.allocator, font, stress_text, x, stress_y, fg, zoom);
+            drawTextWithFontZoom(r, self.allocator, font, stress_text, x, stress_y, fg, bg, zoom);
             if (idx + 1 < zooms.len) {
                 stress_y += line_h * zoom + line_h * 0.1;
             }
@@ -321,14 +319,17 @@ pub const FontSampleView = struct {
         x: f32,
         y: f32,
         color: Color,
+        bg: Color,
     ) void {
         if (r.textRenderingMode() != .gl_texture_atlas) return;
-        const draw_ctx = terminal_font_mod.DrawContext{ .ctx = r, .drawTexture = drawTextureThunk };
+        var draw_ctx = DrawTextureCtx{ .renderer = r, .bg = bg.toRgba() };
+        draw_ctx.bg.a = 255;
+        const font_draw_ctx = terminal_font_mod.DrawContext{ .ctx = @ptrCast(&draw_ctx), .drawTexture = drawTextureThunk };
         text_draw.drawText(
             allocator,
             &face.font,
-            draw_ctx.ctx,
-            draw_ctx.drawTexture,
+            font_draw_ctx.ctx,
+            font_draw_ctx.drawTexture,
             text,
             x,
             y,
@@ -348,13 +349,16 @@ pub const FontSampleView = struct {
         x: f32,
         y: f32,
         color: Color,
+        bg: Color,
         zoom: f32,
     ) void {
         if (r.textRenderingMode() != .gl_texture_atlas) return;
-        const draw_ctx = terminal_font_mod.DrawContext{ .ctx = r, .drawTexture = drawTextureThunk };
+        var draw_ctx = DrawTextureCtx{ .renderer = r, .bg = bg.toRgba() };
+        draw_ctx.bg.a = 255;
+        const font_draw_ctx = terminal_font_mod.DrawContext{ .ctx = @ptrCast(&draw_ctx), .drawTexture = drawTextureThunk };
         const cell_w = face.metrics.cell_width * zoom;
         const cell_h = face.metrics.line_height * zoom;
-        text_draw.drawText(allocator, &face.font, draw_ctx.ctx, draw_ctx.drawTexture, text, x, y, cell_w, cell_h, color.toRgba(), true, false);
+        text_draw.drawText(allocator, &face.font, font_draw_ctx.ctx, font_draw_ctx.drawTexture, text, x, y, cell_w, cell_h, color.toRgba(), true, false);
     }
 
     fn baselineStressHeight(line_h: f32) f32 {
@@ -362,9 +366,14 @@ pub const FontSampleView = struct {
         return line_h * 4.8;
     }
 
+    const DrawTextureCtx = struct {
+        renderer: *Renderer,
+        bg: types.Rgba,
+    };
+
     fn drawTextureThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
-        const renderer: *Renderer = @ptrCast(@alignCast(ctx));
-        draw_ops.drawTextureRect(renderer, texture, src, dest, color, renderer.text_render.bg_rgba, kind);
+        const draw_ctx: *DrawTextureCtx = @ptrCast(@alignCast(ctx));
+        draw_ops.drawTextureRect(draw_ctx.renderer, texture, src, dest, color, draw_ctx.bg, kind);
     }
 
     fn parseEnvF32(env_key: [:0]const u8, default_value: f32) f32 {
