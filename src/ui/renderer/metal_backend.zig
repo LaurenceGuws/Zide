@@ -1305,8 +1305,6 @@ pub fn dumpWindowScreenshotPpmSized(_: anytype, _: []const u8, _: i32, _: i32) !
     return error.RendererScreenshotUnavailable;
 }
 
-pub fn clearThemeBackground(_: anytype) void {}
-
 pub fn backendContext(renderer: anytype) ?*BackendContext {
     if (renderer.backend_runtime.metal.backend_context) |*context| return context;
     return null;

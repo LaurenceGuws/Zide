@@ -46,7 +46,6 @@ pub fn BackendOps(
     };
 
     const ClipOps = struct {
-        clearThemeBackground: *const fn (*RendererType) void,
         applyClipRect: *const fn (*RendererType, ?types.Rect) void,
     };
 
@@ -152,7 +151,6 @@ pub fn opsFor(
                 .presentableInfo = OpenGl.presentableInfo,
             },
             .clip = .{
-                .clearThemeBackground = OpenGl.clearThemeBackground,
                 .applyClipRect = OpenGl.applyClipRect,
             },
             .terminal_draw = .{
@@ -197,7 +195,6 @@ pub fn opsFor(
                 .presentableInfo = Metal.presentableInfo,
             },
             .clip = .{
-                .clearThemeBackground = Metal.clearThemeBackground,
                 .applyClipRect = Metal.applyClipRect,
             },
             .terminal_draw = .{
@@ -275,9 +272,6 @@ fn OpenGlDispatch(
         }
         fn presentableInfo(renderer: *RendererType, surface: PresentableSurface) ?PresentableInfo {
             return gl_presentable_runtime.presentableInfo(renderer, surface);
-        }
-        fn clearThemeBackground(renderer: *RendererType) void {
-            gl_backend.clearThemeBackground(renderer);
         }
         fn applyClipRect(renderer: *RendererType, clip: ?types.Rect) void {
             gl_backend.applyClipRect(renderer, clip);
@@ -378,9 +372,6 @@ fn MetalDispatch(
         }
         fn presentableInfo(renderer: *RendererType, surface: PresentableSurface) ?PresentableInfo {
             return metal_presentable_runtime.presentableInfo(renderer, surface);
-        }
-        fn clearThemeBackground(renderer: *RendererType) void {
-            metal_backend.clearThemeBackground(renderer);
         }
         fn applyClipRect(renderer: *RendererType, clip: ?types.Rect) void {
             metal_backend.applyClipRect(renderer, clip);

@@ -242,6 +242,11 @@ clearer meaning:
 That is more honest than one draw grab bag mixing clip state, terminal cell
 primitives, persistent/raw image operations, and generic surface submission.
 
+That has improved slightly again on the leftovers too: the old backend
+`clearThemeBackground` hook is gone. It only existed as a special-case clear
+path for one caller, and plain `drawRect(...)` semantics were the more honest
+contract path.
+
 That has improved slightly again on backend ownership too: backend dispatch no
 longer terminates presentable operations back into the large generic backend
 files. Dedicated backend presentable modules now own that seam directly:

@@ -1,10 +1,6 @@
 const surface_draw = @import("surface_draw.zig");
 const types = @import("types.zig");
 
-pub fn clearThemeBackground(renderer: anytype) void {
-    renderer.backend_ops.clip.clearThemeBackground(renderer);
-}
-
 pub fn createPersistentImageFromRgba(renderer: anytype, width: i32, height: i32, data: []const u8) ?surface_draw.GpuImageRef {
     return renderer.backend_ops.image_draw.createPersistentImageFromRgba(renderer, width, height, data);
 }

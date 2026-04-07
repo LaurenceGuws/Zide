@@ -555,21 +555,6 @@ pub fn applyClipRect(renderer: anytype, clip: ?types.Rect) void {
     gl.Scissor(sx, sy, sw, sh);
 }
 
-pub fn clearThemeBackground(renderer: anytype) void {
-    const bg = renderer.theme.background.toRgba();
-    var rr = @as(f32, @floatFromInt(bg.r)) / 255.0;
-    var gg = @as(f32, @floatFromInt(bg.g)) / 255.0;
-    var bb = @as(f32, @floatFromInt(bg.b)) / 255.0;
-    const aa = @as(f32, @floatFromInt(bg.a)) / 255.0;
-    if (renderer.text_render.dst_linear_active) {
-        rr = srgbToLinear(rr);
-        gg = srgbToLinear(gg);
-        bb = srgbToLinear(bb);
-    }
-    gl.ClearColor(rr, gg, bb, aa);
-    gl.Clear(gl.c.GL_COLOR_BUFFER_BIT);
-}
-
 pub fn bindBatchPipeline(renderer: anytype) void {
     gl.UseProgram(renderer.backend_runtime.opengl.shader_program);
     gl.BindVertexArray(renderer.backend_runtime.opengl.vao);

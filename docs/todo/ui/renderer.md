@@ -464,6 +464,10 @@ Current evidence:
   - `surface`
 - that is more honest than one `backend_ops.draw` grab bag mixing clip state,
   terminal primitives, persistent images, raw images, and surface submission.
+- the old backend `clearThemeBackground` hook is now gone entirely.
+- it was only one leftover convenience op for the font sample, and normal
+  `drawRect(...)` semantics are the right path instead of preserving a
+  special clear contract for one caller.
 - presentable trace/editor-surface bookkeeping now also lives in
   `renderer_presentable_host.zig` instead of being split across GL and Metal
   presentable lifecycle methods.
