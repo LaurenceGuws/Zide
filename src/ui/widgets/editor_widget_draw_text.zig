@@ -6,6 +6,7 @@ const draw_list_mod = @import("../../editor/render/draw_list.zig");
 const overlay_mod = @import("editor_widget_draw_overlay.zig");
 const renderer_mod = @import("../renderer.zig");
 const renderer_surface_host = @import("../renderer/renderer_surface_host.zig");
+const renderer_text_host = @import("../renderer/renderer_text_host.zig");
 
 const HighlightToken = syntax_mod.HighlightToken;
 const TokenKind = syntax_mod.TokenKind;
@@ -75,7 +76,7 @@ fn drawExpandedTextSliceOnBg(
     if (slice_end <= slice_start) return;
     if (std.mem.indexOfScalar(u8, line_text[slice_start..slice_end], '\t') == null) {
         const x = xForByteOffset(r, line_text, seg_start_byte, seg_start_vis, slice_start, text_start_x);
-        r.drawTextMonospaceOnBgPolicy(line_text[slice_start..slice_end], x, y, fg, bg, disable_programming_ligatures);
+        renderer_text_host.drawTextMonospaceOnBgPolicy(r, line_text[slice_start..slice_end], x, y, fg, bg, disable_programming_ligatures);
         return;
     }
 
@@ -86,10 +87,10 @@ fn drawExpandedTextSliceOnBg(
     while (cursor < slice_end) {
         if (line_text[cursor] == '\t') {
             if (cursor > run_start) {
-                r.drawTextMonospaceOnBgPolicy(line_text[run_start..cursor], run_x, y, fg, bg, disable_programming_ligatures);
+                renderer_text_host.drawTextMonospaceOnBgPolicy(r, line_text[run_start..cursor], run_x, y, fg, bg, disable_programming_ligatures);
             }
             const width = text_columns_mod.cellWidthForCodepoint('\t', vis);
-            r.drawTextMonospaceOnBgPolicy(tab_spaces[0..width], run_x, y, fg, bg, disable_programming_ligatures);
+            renderer_text_host.drawTextMonospaceOnBgPolicy(r, tab_spaces[0..width], run_x, y, fg, bg, disable_programming_ligatures);
             vis += width;
             run_x += @as(f32, @floatFromInt(width)) * r.editor_char_width;
             cursor += 1;
@@ -102,7 +103,7 @@ fn drawExpandedTextSliceOnBg(
         cursor += seq_len;
     }
     if (run_start < slice_end) {
-        r.drawTextMonospaceOnBgPolicy(line_text[run_start..slice_end], run_x, y, fg, bg, disable_programming_ligatures);
+        renderer_text_host.drawTextMonospaceOnBgPolicy(r, line_text[run_start..slice_end], run_x, y, fg, bg, disable_programming_ligatures);
     }
 }
 
@@ -416,8 +417,8 @@ fn drawTextDecorations(r: anytype, x: f32, y: f32, width: f32, color: anytype, f
 }
 
 fn drawStyledTextOnBg(r: anytype, text: []const u8, x: f32, y: f32, fg: anytype, bg: anytype, flags: EditorTextStyleFlags, disable_programming_ligatures: bool) void {
-    r.drawTextMonospaceOnBgStyledPolicy(text, x, y, fg, bg, disable_programming_ligatures, flags.italic);
-    if (flags.bold) r.drawTextMonospaceOnBgStyledPolicy(text, x + 1.0, y, fg, bg, disable_programming_ligatures, flags.italic);
+    renderer_text_host.drawTextMonospaceOnBgStyledPolicy(r, text, x, y, fg, bg, disable_programming_ligatures, flags.italic);
+    if (flags.bold) renderer_text_host.drawTextMonospaceOnBgStyledPolicy(r, text, x + 1.0, y, fg, bg, disable_programming_ligatures, flags.italic);
 }
 
 fn addTextDecorationOps(list: *EditorDrawList, r: anytype, x: f32, y: f32, width: f32, color: anytype, flags: EditorTextStyleFlags) bool {

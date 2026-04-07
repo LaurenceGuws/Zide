@@ -1043,54 +1043,6 @@ pub const Renderer = struct {
         return clipboard.copyData(allocator, mime_type);
     }
 
-    pub fn drawText(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color) void {
-        text_runtime.drawText(self, text, x, y, color);
-    }
-
-    pub fn drawTextMonospace(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color) void {
-        text_runtime.drawTextMonospace(self, text, x, y, color);
-    }
-
-    pub fn drawTextMonospacePolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, disable_programming_ligatures: bool) void {
-        text_runtime.drawTextMonospacePolicy(self, text, x, y, color, disable_programming_ligatures);
-    }
-
-    pub fn drawTextMonospaceStyledPolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, disable_programming_ligatures: bool, italic: bool) void {
-        text_runtime.drawTextMonospaceStyledPolicy(self, text, x, y, color, disable_programming_ligatures, italic);
-    }
-
-    pub fn drawTextMonospaceOnBg(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color) void {
-        text_runtime.drawTextMonospaceOnBg(self, text, x, y, color, bg);
-    }
-
-    pub fn drawTextMonospaceOnBgPolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color, disable_programming_ligatures: bool) void {
-        text_runtime.drawTextMonospaceOnBgPolicy(self, text, x, y, color, bg, disable_programming_ligatures);
-    }
-
-    pub fn drawTextMonospaceOnBgStyledPolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color, disable_programming_ligatures: bool, italic: bool) void {
-        text_runtime.drawTextMonospaceOnBgStyledPolicy(self, text, x, y, color, bg, disable_programming_ligatures, italic);
-    }
-
-    pub fn drawTextOnBg(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color) void {
-        text_runtime.drawTextOnBg(self, text, x, y, color, bg);
-    }
-
-    pub fn drawTextSized(self: *Renderer, text: []const u8, x: f32, y: f32, size: f32, color: Color) void {
-        text_runtime.drawTextSized(self, text, x, y, size, color);
-    }
-
-    pub fn drawIconText(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color) void {
-        text_runtime.drawIconText(self, text, x, y, color);
-    }
-
-    pub fn measureIconTextWidth(self: *Renderer, text: []const u8) f32 {
-        return text_runtime.measureIconTextWidth(self, text);
-    }
-
-    pub fn drawChar(self: *Renderer, char: u8, x: f32, y: f32, color: Color) void {
-        text_runtime.drawChar(self, char, x, y, color);
-    }
-
     pub fn drawTerminalCellGraphemeBatched(
         self: *Renderer,
         base: u32,

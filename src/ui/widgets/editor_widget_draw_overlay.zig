@@ -5,6 +5,7 @@ const chrome_geometry_mod = @import("../../editor/view/chrome_geometry.zig");
 const draw_list_mod = @import("../../editor/render/draw_list.zig");
 const app_logger = @import("../../app_logger.zig");
 const renderer_surface_host = @import("../renderer/renderer_surface_host.zig");
+const renderer_text_host = @import("../renderer/renderer_text_host.zig");
 const scrollbar_mod = @import("editor_scrollbar.zig");
 
 const HighlightToken = syntax_mod.HighlightToken;
@@ -468,11 +469,11 @@ pub fn flushDrawList(list: *EditorDrawList, r: anytype) void {
                 const fg = unpackColor(ColorType, text.color);
                 const bg = unpackColor(ColorType, text.bg_color);
                 if (bg.a != 0) {
-                    r.drawTextMonospaceOnBgStyledPolicy(text.text, text.x, text.y, fg, bg, text.disable_programming_ligatures, text.italic);
-                    if (text.bold) r.drawTextMonospaceOnBgStyledPolicy(text.text, text.x + 1.0, text.y, fg, bg, text.disable_programming_ligatures, text.italic);
+                    renderer_text_host.drawTextMonospaceOnBgStyledPolicy(r, text.text, text.x, text.y, fg, bg, text.disable_programming_ligatures, text.italic);
+                    if (text.bold) renderer_text_host.drawTextMonospaceOnBgStyledPolicy(r, text.text, text.x + 1.0, text.y, fg, bg, text.disable_programming_ligatures, text.italic);
                 } else {
-                    r.drawTextMonospaceStyledPolicy(text.text, text.x, text.y, fg, text.disable_programming_ligatures, text.italic);
-                    if (text.bold) r.drawTextMonospaceStyledPolicy(text.text, text.x + 1.0, text.y, fg, text.disable_programming_ligatures, text.italic);
+                    renderer_text_host.drawTextMonospaceStyledPolicy(r, text.text, text.x, text.y, fg, text.disable_programming_ligatures, text.italic);
+                    if (text.bold) renderer_text_host.drawTextMonospaceStyledPolicy(r, text.text, text.x + 1.0, text.y, fg, text.disable_programming_ligatures, text.italic);
                 }
             },
             .cursor => |cursor| {

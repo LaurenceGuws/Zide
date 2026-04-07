@@ -9,6 +9,7 @@ const metal_text_sample_runtime = @import("renderer/metal_text_sample_runtime.zi
 const metal_backend = @import("renderer/metal_backend.zig");
 const renderer_presentable_host = @import("renderer/renderer_presentable_host.zig");
 const renderer_surface_host = @import("renderer/renderer_surface_host.zig");
+const renderer_text_host = @import("renderer/renderer_text_host.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
 const iface = @import("renderer/interface.zig");
 const text_draw = @import("renderer/text_draw.zig");
@@ -244,10 +245,10 @@ pub const FontSampleView = struct {
 
     fn drawStatusText(r: *Renderer, text: []const u8, x: f32, y: f32, color: Color) void {
         if (r.textRenderingMode() == .unavailable and r.plannedTextRenderingMode() == .metal_texture_atlas) {
-            r.drawTextMonospace(text, x, y, color);
+            renderer_text_host.drawTextMonospace(r, text, x, y, color);
             return;
         }
-        r.drawText(text, x, y, color);
+        renderer_text_host.drawText(r, text, x, y, color);
     }
 
     fn drawSection(
@@ -271,7 +272,7 @@ pub const FontSampleView = struct {
         const content_y: f32 = y + r.char_height + section_pad_y;
 
         renderer_surface_host.drawRect(r, 0, @intFromFloat(y), @intFromFloat(w), @intFromFloat(section_h), bg);
-        r.drawText(label, 16, y, theme.foreground);
+        renderer_text_host.drawText(r, label, 16, y, theme.foreground);
 
         var bg_rgba = bg.toRgba();
         bg_rgba.a = 255;
@@ -297,7 +298,7 @@ pub const FontSampleView = struct {
             "{s}  line_h={d:.1} cell_w={d:.1}",
             .{ name, font.metrics.line_height, font.metrics.cell_width },
         ) catch name;
-        r.drawText(header, x, y, theme.foreground);
+        renderer_text_host.drawText(r, header, x, y, theme.foreground);
 
         const start_y = y + r.char_height * 1.6;
         const line_h = font.metrics.line_height;
@@ -310,7 +311,7 @@ pub const FontSampleView = struct {
         }
 
         var stress_y = start_y + @as(f32, @floatFromInt(lines.len)) * line_h + line_h * 0.5;
-        r.drawText("baseline zoom stress: x0.9 x1.0 x1.1", x, stress_y, theme.line_number);
+        renderer_text_host.drawText(r, "baseline zoom stress: x0.9 x1.0 x1.1", x, stress_y, theme.line_number);
         stress_y += line_h;
 
         const stress_text = "Baseline probe: iiii llll zzzz vava mMwW 1Il|";

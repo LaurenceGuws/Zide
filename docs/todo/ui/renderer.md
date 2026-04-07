@@ -631,6 +631,10 @@ Current evidence:
 - the old public `Renderer.drawTexture(...)` surface is gone; texture drawing
   is now internal renderer/font machinery unless a caller is explicitly using
   the persistent-image contract.
+- shared text draw entrypoints no longer hang off `Renderer` as thin forwards
+  to `text_runtime`. Shell/UI/editor callers now route through
+  `renderer_text_host.zig`, which matches the earlier clip/surface/presentable
+  host cuts and removes another fake renderer-root facade.
 - This is real lifecycle cleanup and removes another renderer-root duplication
   seam.
 - This is not closure yet:

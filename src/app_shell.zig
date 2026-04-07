@@ -2,6 +2,7 @@ const std = @import("std");
 const r = @import("ui/renderer.zig");
 const renderer_clip_host = @import("ui/renderer/renderer_clip_host.zig");
 const renderer_surface_host = @import("ui/renderer/renderer_surface_host.zig");
+const renderer_text_host = @import("ui/renderer/renderer_text_host.zig");
 const iface = @import("ui/renderer/interface.zig");
 const window = @import("platform/window_metrics.zig");
 const platform_input_events = @import("platform/input_events.zig");
@@ -439,23 +440,23 @@ pub const Shell = struct {
     }
 
     pub fn drawText(self: *Shell, text: []const u8, x: f32, y: f32, color: Color) void {
-        self.renderer.drawText(text, x, y, color);
+        renderer_text_host.drawText(self.renderer, text, x, y, color);
     }
 
     pub fn drawTextOnBg(self: *Shell, text: []const u8, x: f32, y: f32, color: Color, bg: Color) void {
-        self.renderer.drawTextOnBg(text, x, y, color, bg);
+        renderer_text_host.drawTextOnBg(self.renderer, text, x, y, color, bg);
     }
 
     pub fn drawTextSized(self: *Shell, text: []const u8, x: f32, y: f32, size: f32, color: Color) void {
-        self.renderer.drawTextSized(text, x, y, size, color);
+        renderer_text_host.drawTextSized(self.renderer, text, x, y, size, color);
     }
 
     pub fn drawIconText(self: *Shell, text: []const u8, x: f32, y: f32, color: Color) void {
-        self.renderer.drawIconText(text, x, y, color);
+        renderer_text_host.drawIconText(self.renderer, text, x, y, color);
     }
 
     pub fn measureIconTextWidth(self: *Shell, text: []const u8) f32 {
-        return self.renderer.measureIconTextWidth(text);
+        return renderer_text_host.measureIconTextWidth(self.renderer, text);
     }
 
     pub fn getMousePos(self: *Shell) MousePos {

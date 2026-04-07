@@ -15,6 +15,7 @@ const app_logger = @import("../../app_logger.zig");
 const renderer_clip_host = @import("../renderer/renderer_clip_host.zig");
 const renderer_presentable_host = @import("../renderer/renderer_presentable_host.zig");
 const renderer_surface_host = @import("../renderer/renderer_surface_host.zig");
+const renderer_text_host = @import("../renderer/renderer_text_host.zig");
 const overlay_mod = @import("editor_widget_draw_overlay.zig");
 const text_mod = @import("editor_widget_draw_text.zig");
 const cache_helpers = @import("editor_widget_draw_cache.zig");
@@ -213,7 +214,7 @@ pub fn draw(
         if (input.composing_active and input.composing_text.len > 0) {
             const comp_x = cursor_draw_x.?;
             const comp_y = cursor_draw_y.?;
-            r.drawTextMonospaceOnBg(input.composing_text, comp_x, comp_y, r.theme.foreground, r.theme.current_line);
+            renderer_text_host.drawTextMonospaceOnBg(r, input.composing_text, comp_x, comp_y, r.theme.foreground, r.theme.current_line);
             renderer_surface_host.drawRect(
                 r,
                 @intFromFloat(comp_x),

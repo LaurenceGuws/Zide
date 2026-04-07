@@ -230,6 +230,13 @@ text/grid/presentation code now routes through `renderer_terminal_draw_host.zig`
 instead, which makes that contract read like one explicit host seam rather
 than one more renderer-root facade over backend draw ops.
 
+That has improved slightly again on the shared text side too: general text draw
+entrypoints (`drawText`, monospace/background variants, icon text, char draw,
+and icon measurement) no longer live as public forwards on `Renderer`.
+Shell/UI/editor callers now route through `renderer_text_host.zig` instead,
+which is more honest than keeping one more renderer-root facade over
+`text_runtime`.
+
 That has improved slightly again inside the backend dispatch contract too: the
 old mixed `backend_ops.draw` bucket has now been split into smaller groups with
 clearer meaning:
