@@ -1,11 +1,13 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
 const app_logger = @import("../../app_logger.zig");
+const chrome_band_host = @import("chrome_band_host.zig");
 const common = @import("common.zig");
 const shared_types = @import("../../types/mod.zig");
 
 const Shell = app_shell.Shell;
 const Color = app_shell.Color;
+const Band = chrome_band_host.Band;
 
 /// Status bar at the bottom
 pub const StatusBar = struct {
@@ -121,8 +123,9 @@ pub const StatusBar = struct {
         const theme = shell.theme();
         const scale = shell.uiScaleFactor();
         const bar_bg = theme.ui_bar_bg;
+        const band = Band.init(shell, bar_bg);
         // Background
-        shell.drawRect(0, @intFromFloat(y), @intFromFloat(width), @intFromFloat(self.height), bar_bg);
+        band.fillRect(0, @intFromFloat(y), @intFromFloat(width), @intFromFloat(self.height), bar_bg);
 
         // Line/column (reserve space on right)
         var pos_buf: [32]u8 = undefined;
@@ -162,7 +165,7 @@ pub const StatusBar = struct {
         const window_focused = shell.windowFocused();
         const mode_hover = window_focused and mouse.x >= 0 and mouse.x <= mode_width and mouse.y >= y and mouse.y <= y + self.height;
         const mode_bg_final = if (mode_hover and pressed) theme.ui_pressed else if (mode_hover) theme.ui_hover else mode_bg;
-        shell.drawRect(0, @intFromFloat(y), @intFromFloat(mode_width), @intFromFloat(self.height), mode_bg_final);
+        band.fillRect(0, @intFromFloat(y), @intFromFloat(mode_width), @intFromFloat(self.height), mode_bg_final);
         shell.drawTextOnBg(mode_text, text_x, text_y, if (mode_hover) theme.ui_text else theme.background, mode_bg_final);
 
         // Active mode field sits between mode and file path when active.
@@ -176,8 +179,8 @@ pub const StatusBar = struct {
                 const box_w = @min(@max(@as(f32, 280 * scale), width * 0.34), @max(@as(f32, 0), pos_start - x - 24 * scale));
                 if (box_w > 64 * scale) {
                     const label_x = box_x;
-                    shell.drawTextOnBg(label, label_x, text_y, palette.muted, bar_bg);
-                    shell.drawTextOnBg(":", label_x + label_w, text_y, palette.muted, bar_bg);
+                    band.drawTextOnBg(label, label_x, text_y, palette.muted);
+                    band.drawTextOnBg(":", label_x + label_w, text_y, palette.muted);
 
                     const query_x = label_x + label_w + 2 * shell.charWidth();
                     const query_available = @max(@as(f32, 0), box_w - (query_x - box_x) - 12 * scale);
@@ -198,7 +201,7 @@ pub const StatusBar = struct {
                         prompt_ui.select_all and prompt_ui.value.len > 0,
                     );
                     const underline_y = y + self.height - 4 * scale;
-                    shell.drawRect(
+                    band.fillRect(
                         @intFromFloat(query_x),
                         @intFromFloat(underline_y),
                         @intFromFloat(@max(@as(f32, 1), query_available)),
@@ -248,8 +251,8 @@ pub const StatusBar = struct {
                 const box_w = @min(@max(@as(f32, 220 * scale), width * 0.28), @max(@as(f32, 0), pos_start - x - 24 * scale));
                 if (box_w > 64 * scale) {
                     const label_x = box_x;
-                    shell.drawTextOnBg(label, label_x, text_y, palette.muted, bar_bg);
-                    shell.drawTextOnBg(":", label_x + label_w, text_y, palette.muted, bar_bg);
+                    band.drawTextOnBg(label, label_x, text_y, palette.muted);
+                    band.drawTextOnBg(":", label_x + label_w, text_y, palette.muted);
 
                     const query_x = label_x + label_w + 2 * shell.charWidth();
                     const query_available = @max(@as(f32, 0), box_w - (query_x - box_x) - meta_w - 12 * scale);
@@ -270,7 +273,7 @@ pub const StatusBar = struct {
                         search_ui.select_all and search_ui.query.len > 0,
                     );
                     const underline_y = y + self.height - 4 * scale;
-                    shell.drawRect(
+                    band.fillRect(
                         @intFromFloat(query_x),
                         @intFromFloat(underline_y),
                         @intFromFloat(@max(@as(f32, 1), query_available)),
@@ -293,7 +296,7 @@ pub const StatusBar = struct {
                             palette.caret,
                         );
                     }
-                    shell.drawTextOnBg(meta, box_x + box_w - meta_w, text_y, palette.muted, bar_bg);
+                    band.drawTextOnBg(meta, box_x + box_w - meta_w, text_y, palette.muted);
                     x = box_x + box_w + 16 * scale;
                 }
             },
@@ -316,7 +319,7 @@ pub const StatusBar = struct {
             const indicator = "[+]";
             const indicator_width = @as(f32, @floatFromInt(indicator.len)) * shell.charWidth();
             if (x + indicator_width <= (if (theme_label != null) theme_start else pos_start) - 8 * scale) {
-                shell.drawTextOnBg(indicator, x, text_y, theme.ui_modified, bar_bg);
+                band.drawTextOnBg(indicator, x, text_y, theme.ui_modified);
             }
         }
 
@@ -324,16 +327,16 @@ pub const StatusBar = struct {
             const theme_hover = window_focused and mouse.x >= theme_start and mouse.x <= theme_start + theme_width and mouse.y >= y and mouse.y <= y + self.height;
             if (theme_hover) {
                 const bg = if (pressed) theme.ui_pressed else theme.ui_hover;
-                shell.drawRect(@intFromFloat(theme_start - 4 * scale), @intFromFloat(y + 2 * scale), @intFromFloat(theme_width + 8 * scale), @intFromFloat(self.height - 4 * scale), bg);
+                band.fillRect(@intFromFloat(theme_start - 4 * scale), @intFromFloat(y + 2 * scale), @intFromFloat(theme_width + 8 * scale), @intFromFloat(self.height - 4 * scale), bg);
             }
-            shell.drawTextOnBg(label, theme_start, text_y, if (theme_hover) theme.ui_text else theme.ui_text_inactive, bar_bg);
+            band.drawTextOnBg(label, theme_start, text_y, if (theme_hover) theme.ui_text else theme.ui_text_inactive);
         }
 
         const pos_hover = window_focused and mouse.x >= pos_start and mouse.x <= pos_start + pos_width and mouse.y >= y and mouse.y <= y + self.height;
         if (pos_hover) {
             const bg = if (pressed) theme.ui_pressed else theme.ui_hover;
-            shell.drawRect(@intFromFloat(pos_start - 4 * scale), @intFromFloat(y + 2 * scale), @intFromFloat(pos_width + 8 * scale), @intFromFloat(self.height - 4 * scale), bg);
+            band.fillRect(@intFromFloat(pos_start - 4 * scale), @intFromFloat(y + 2 * scale), @intFromFloat(pos_width + 8 * scale), @intFromFloat(self.height - 4 * scale), bg);
         }
-        shell.drawTextOnBg(pos_str, pos_start, text_y, if (pos_hover) theme.ui_text else theme.ui_text_inactive, bar_bg);
+        band.drawTextOnBg(pos_str, pos_start, text_y, if (pos_hover) theme.ui_text else theme.ui_text_inactive);
     }
 };

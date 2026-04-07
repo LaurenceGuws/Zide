@@ -689,6 +689,9 @@ Current evidence:
   as one product-level unit. Keep first scope narrow: status bar, tab bar,
   shared top bar, side nav, then nearby notice/confirm/chrome surfaces if they
   fit the same contract.
+- first adopter checkpoint: a narrow widget-side chrome band host now exists
+  and status bar routes through it. This is a seam sketch, not a solved
+  backend phase.
 - This is real lifecycle cleanup and removes another renderer-root duplication
   seam.
 - This is not closure yet:
