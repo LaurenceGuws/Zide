@@ -2,6 +2,7 @@ const std = @import("std");
 const app_logger = @import("../app_logger.zig");
 
 const app_shell = @import("../app_shell.zig");
+const font_sample_section_host = @import("font_sample_section_host.zig");
 const metal_text_diagnostic_view = @import("metal_text_diagnostic_view.zig");
 const terminal_font_mod = @import("terminal_font.zig");
 const renderer_mod = @import("renderer.zig");
@@ -17,6 +18,7 @@ const types = @import("renderer/types.zig");
 
 const Shell = app_shell.Shell;
 const Color = app_shell.Color;
+const Section = font_sample_section_host.Section;
 const Renderer = renderer_mod.Renderer;
 const TerminalFont = terminal_font_mod.TerminalFont;
 const TextRenderingMode = renderer_mod.TextRenderingMode;
@@ -270,16 +272,15 @@ pub const FontSampleView = struct {
         const content_h: f32 = @as(f32, @floatFromInt(lines.len)) * line_h + baselineStressHeight(line_h);
         const section_h: f32 = r.char_height + section_pad_y + content_h + section_pad_y;
         const content_y: f32 = y + r.char_height + section_pad_y;
+        const section = Section.init(r, bg);
 
-        renderer_surface_host.drawRect(r, 0, @intFromFloat(y), @intFromFloat(w), @intFromFloat(section_h), bg);
-        renderer_text_host.drawText(r, label, 16, y, theme.foreground);
+        section.fillRect(0, @intFromFloat(y), @intFromFloat(w), @intFromFloat(section_h), bg);
+        section.drawText(label, 16, y, theme.foreground);
 
-        var bg_rgba = bg.toRgba();
-        bg_rgba.a = 255;
-        r.text_render.bg_rgba = bg_rgba;
+        section.applyBg();
         drawColumnWithColor(self, r, left_x, content_y, col_w, self.left_name, &self.left, fg);
         drawColumnWithColor(self, r, right_x, content_y, col_w, self.right_name, &self.right, fg);
-        r.text_render.bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
+        section.clearBg();
 
         return y + section_h;
     }

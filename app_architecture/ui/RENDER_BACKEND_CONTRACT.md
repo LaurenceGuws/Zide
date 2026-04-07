@@ -382,6 +382,11 @@ Editor already has a stronger local composition model than the sample view, so
 the next cut should respect that difference instead of inventing a fake common
 layer.
 
+The first sample-side proof should stay tiny. A dedicated sample/diagnostic
+section seam is acceptable if it only owns section background plus dependent
+sample text for that lane. It should not be broadened into a repo-wide band
+contract by analogy.
+
 #### Presentable contract
 
 One backend-neutral presentable surface contract that can express:

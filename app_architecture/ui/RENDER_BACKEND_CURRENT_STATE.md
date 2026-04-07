@@ -461,6 +461,12 @@ Those two families should not be treated as one problem shape, though:
   dependent text; if a new seam is proven there, it should stay narrow and not
   pretend to solve editor composition automatically
 
+There is now a first proof of that narrower sample path too: the font sample
+view has its own tiny section-composition seam. That is intentionally not a
+general editor/ui band abstraction. Its value is only that the sample lane no
+longer needs to be discussed as if it were the same problem as editor
+segmentation.
+
 That is the loudest remaining semantic contradiction in the backend contract.
 It is no longer hidden by renderer-root facade noise or mixed backend dispatch
 buckets, which means the next real cut must either:

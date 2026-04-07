@@ -709,6 +709,8 @@ Current evidence:
 - those are not one shape: editor already has a local row/segment composition
   lane, while sample/diagnostic section banding is simpler explicit fill-plus-
   text work. Do not force them under one seam without proving it.
+- first sample-side proof is acceptable only as a tiny section-composition seam,
+  not as a new generic band layer.
 - This is real lifecycle cleanup and removes another renderer-root duplication
   seam.
 - This is not closure yet:
