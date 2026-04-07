@@ -58,7 +58,7 @@ pub fn drawPresentable(renderer: anytype, surface: PresentableSurface, draw: Pre
             const source_height = draw.source_height orelse dest_height;
             const context = metal_backend.backendContext(renderer) orelse return;
             const snapshot = context.terminal_snapshot orelse return;
-            _ = metal_backend.appendSurfaceDrawToMetalQueue(renderer, .{ .raw_image = .{
+            _ = metal_backend.recordSurfaceDrawToMetalQueue(renderer, .{ .raw_image = .{
                 .texture = metal_backend.cloneGpuImageRef(snapshot),
                 .source_rect = .{
                     .x = renderer.logicalLengthToRaster(draw.x),

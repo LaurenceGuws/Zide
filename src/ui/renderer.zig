@@ -957,8 +957,8 @@ pub const Renderer = struct {
         };
     }
 
-    fn enqueueSurfaceDraw(self: *Renderer, draw: surface_draw.SurfaceDraw) bool {
-        return self.backend_ops.surface.enqueueSurfaceDraw(self, draw);
+    fn recordSurfaceDraw(self: *Renderer, draw: surface_draw.SurfaceDraw) bool {
+        return self.backend_ops.surface.recordSurfaceDraw(self, draw);
     }
 
     fn enqueueSolidSurfaceFromLogicalRect(self: *Renderer, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) bool {
@@ -966,7 +966,7 @@ pub const Renderer = struct {
             metal_text_sample_runtime.pixelClipRect(self, c)
         else
             null;
-        return self.enqueueSurfaceDraw(.{ .solid = .{
+        return self.recordSurfaceDraw(.{ .solid = .{
             .dest_rect = .{
                 .x = self.logicalLengthToRaster(x),
                 .y = self.logicalLengthToRaster(y),

@@ -376,11 +376,11 @@ looked like supported contract.
 
 That has improved slightly again on the Metal draw path too: backend-internal
 solid/atlas/raw-image queue helpers now append to Metal queue storage directly
-instead of bouncing back through the shared `backend_ops.enqueueSurfaceDraw`
+instead of bouncing back through the shared `backend_ops.surface.recordSurfaceDraw`
 surface as if they were neutral product-level callers.
 
 That has improved slightly again on the caller-facing shared renderer surface
-too: `Renderer` no longer exports `enqueueSurfaceDraw(...)` as a public method.
+too: `Renderer` no longer exports `recordSurfaceDraw(...)` as a public method.
 That does not solve the deeper submission-semantics split yet, but it removes
 one more fake-neutral verb from the root surface seen by product code.
 

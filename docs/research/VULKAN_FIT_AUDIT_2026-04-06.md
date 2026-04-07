@@ -42,7 +42,7 @@ inventing a parallel API, *provided* the shared layer stops contradicting them:
 1. **`BackendOps`-shaped lifecycle**  
    Init/deinit runtime, `beginFrame` / `submitFrame`, capabilities, screenshot
    hooks, presentable entrypoints, clip application, terminal primitive submission,
-   persistent image textures, `enqueueSurfaceDraw`—as **one row** in the same
+   persistent image textures, `recordSurfaceDraw`—as **one row** in the same
    ops-table pattern OpenGL and Metal use today.
 
 2. **`surface_draw.SurfaceDraw` payload data**  

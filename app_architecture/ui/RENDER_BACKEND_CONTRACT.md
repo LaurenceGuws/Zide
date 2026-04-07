@@ -106,10 +106,11 @@ This list must not embed Metal-native or GL-native draw structs in shared
 renderer state.
 
 **Submission shape today:** the shared union lives in `surface_draw.zig`
-(`SurfaceDraw`). The renderer now keeps `enqueueSurfaceDraw(...)` internal, but
+(`SurfaceDraw`). The renderer now keeps `recordSurfaceDraw(...)` internal, but
 still routes shared solid draws through the grouped backend draw contract.
-Metal appends to the end-of-frame replay queue; OpenGL interprets `.solid` and
-`.atlas` immediately via `gl_backend.submitSurfaceDrawImmediate` (raster-space
+Metal records into the end-of-frame replay queue; OpenGL consumes the same
+record immediately via `gl_backend.consumeRecordedSurfaceDrawImmediate`
+(raster-space
 `dest_rect` / atlas `dest_x`/`dest_y` converted back to logical coordinates to
 match how Metal enqueues those draws). Atlas samples on OpenGL require
 `text_rendering_mode == gl_texture_atlas` and use `terminal_font` coverage/color
@@ -132,8 +133,8 @@ batching terminal quads.
 
 This means the contract vocabulary is ahead of the implementation truth:
 
-- product/shared code can now talk about one `SurfaceDraw` contract
-- but backend choice still changes when that contract is consumed
+- product/shared code can now talk about one `record one SurfaceDraw` contract
+- but backend choice still changes when that record is consumed
 
 That semantic split is still acceptable only as a current-state defect to be
 closed, not as a stable design target.

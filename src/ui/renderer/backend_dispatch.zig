@@ -68,7 +68,7 @@ pub fn BackendOps(
     };
 
     const SurfaceOps = struct {
-        enqueueSurfaceDraw: *const fn (*RendererType, surface_draw.SurfaceDraw) bool,
+        recordSurfaceDraw: *const fn (*RendererType, surface_draw.SurfaceDraw) bool,
     };
 
     return struct {
@@ -170,7 +170,7 @@ pub fn opsFor(
                 .drawRawImage = OpenGl.drawRawImage,
             },
             .surface = .{
-                .enqueueSurfaceDraw = OpenGl.enqueueSurfaceDraw,
+                .recordSurfaceDraw = OpenGl.recordSurfaceDraw,
             },
         },
         .metal => .{
@@ -214,7 +214,7 @@ pub fn opsFor(
                 .drawRawImage = Metal.drawRawImage,
             },
             .surface = .{
-                .enqueueSurfaceDraw = Metal.enqueueSurfaceDraw,
+                .recordSurfaceDraw = Metal.recordSurfaceDraw,
             },
         },
     };
@@ -307,8 +307,8 @@ fn OpenGlDispatch(
                 .rgba => gl_backend.drawRawImageRgba(renderer, width, height, data, dest, tint),
             };
         }
-        fn enqueueSurfaceDraw(renderer: *RendererType, draw: surface_draw.SurfaceDraw) bool {
-            return gl_surface_runtime.enqueueSurfaceDraw(renderer, draw);
+        fn recordSurfaceDraw(renderer: *RendererType, draw: surface_draw.SurfaceDraw) bool {
+            return gl_surface_runtime.recordSurfaceDraw(renderer, draw);
         }
         fn clearDiagnosticFont(_: *RendererType) void {}
         fn sceneTargetInvalidationForRefresh(renderer: *RendererType, changes: WindowChangeMask, metrics: platform_window.DisplayMetrics) SceneTargetInvalidation {
@@ -407,8 +407,8 @@ fn MetalDispatch(
                 .rgba => metal_backend.drawRawImageRgba(renderer, width, height, data, dest, tint),
             };
         }
-        fn enqueueSurfaceDraw(renderer: *RendererType, draw: surface_draw.SurfaceDraw) bool {
-            return metal_surface_runtime.enqueueSurfaceDraw(renderer, draw);
+        fn recordSurfaceDraw(renderer: *RendererType, draw: surface_draw.SurfaceDraw) bool {
+            return metal_surface_runtime.recordSurfaceDraw(renderer, draw);
         }
         fn clearDiagnosticFont(renderer: *RendererType) void {
             metal_backend.clearDiagnosticFont(renderer);

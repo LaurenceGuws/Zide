@@ -1399,7 +1399,7 @@ fn storeCurrentFrame(renderer: anytype, frame: Frame) void {
     renderer.backend_runtime.metal.frame = frame;
 }
 
-pub fn appendSurfaceDrawToMetalQueue(renderer: anytype, draw: SurfaceDraw) bool {
+pub fn recordSurfaceDrawToMetalQueue(renderer: anytype, draw: SurfaceDraw) bool {
     renderer.backend_runtime.metal.queued_surface_draws.append(renderer.allocator, draw) catch {
         var queued_draw = draw;
         switch (queued_draw) {
@@ -1424,7 +1424,7 @@ pub fn appendSolidRect(
         metal_text_sample_runtime.pixelClipRect(renderer, c)
     else
         null;
-    return appendSurfaceDrawToMetalQueue(renderer, .{ .solid = .{
+    return recordSurfaceDrawToMetalQueue(renderer, .{ .solid = .{
         .dest_rect = .{
             .x = renderer.logicalLengthToRaster(x),
             .y = renderer.logicalLengthToRaster(y),
@@ -1437,11 +1437,11 @@ pub fn appendSolidRect(
 }
 
 fn appendAtlasSample(renderer: anytype, sample: AtlasSampleDraw) bool {
-    return appendSurfaceDrawToMetalQueue(renderer, .{ .atlas = sample });
+    return recordSurfaceDrawToMetalQueue(renderer, .{ .atlas = sample });
 }
 
 fn appendRawImage(renderer: anytype, draw: RawImageDraw) bool {
-    return appendSurfaceDrawToMetalQueue(renderer, .{ .raw_image = draw });
+    return recordSurfaceDrawToMetalQueue(renderer, .{ .raw_image = draw });
 }
 
 pub fn addTerminalRect(renderer: anytype, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void {
