@@ -185,6 +185,11 @@ field. It now lives under `opengl_runtime.presentable_targets`, which is a
 better fit for the truth that the richer retained-presentable lifecycle is
 currently an OpenGL-owned implementation shape.
 
+That has improved slightly again inside the OpenGL presentable path too:
+retained-target lookup now routes through small backend-owned slot helpers
+instead of open-coding terminal/editor target storage access at each
+presentable operation site.
+
 That has improved slightly again on the scene-composition side too: the
 offscreen scene-target contract/state now lives in a dedicated
 `scene_target_state` module and is stored under `opengl_runtime.scene_target`

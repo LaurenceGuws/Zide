@@ -419,6 +419,15 @@ Exit bar:
 
 Status: active
 
+Current evidence:
+
+- OpenGL presentable operations now resolve retained-target storage through
+  backend-owned slot helpers instead of open-coding terminal/editor target
+  access at each call site.
+- This is small but useful ownership pressure: presentable storage reads are
+  becoming less ad hoc even before the broader presentable lifecycle is
+  fully re-cut.
+
 Owner docs:
 
 - `app_architecture/ui/RENDER_BACKEND_CONTRACT.md`
@@ -447,7 +456,6 @@ Do not do:
 Status: active
 
 Current evidence:
-
 - `Renderer` now carries one `backend_runtime` bundle instead of separate
   `opengl_runtime` and `metal_runtime` peer fields.
 - This is good host-shape cleanup and reduces one obvious renderer-root

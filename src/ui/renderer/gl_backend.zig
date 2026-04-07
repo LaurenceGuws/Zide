@@ -495,9 +495,24 @@ pub fn syncTextRenderConfig(renderer: anytype) void {
 }
 
 fn deinitPresentables(renderer: anytype) void {
-    destroyRenderTarget(&renderer.backend_runtime.opengl.presentable_targets.terminal);
-    destroyRenderTarget(&renderer.backend_runtime.opengl.presentable_targets.terminal_scroll);
-    destroyRenderTarget(&renderer.backend_runtime.opengl.presentable_targets.editor);
+    destroyRenderTarget(presentableTargetSlot(renderer, .terminal));
+    destroyRenderTarget(terminalScrollTargetSlot(renderer));
+    destroyRenderTarget(presentableTargetSlot(renderer, .editor));
+}
+
+fn presentableTargetSlot(renderer: anytype, surface: PresentableSurface) *?RenderTarget {
+    return switch (surface) {
+        .terminal => &renderer.backend_runtime.opengl.presentable_targets.terminal,
+        .editor => &renderer.backend_runtime.opengl.presentable_targets.editor,
+    };
+}
+
+fn presentableTarget(renderer: anytype, surface: PresentableSurface) ?RenderTarget {
+    return presentableTargetSlot(renderer, surface).*;
+}
+
+fn terminalScrollTargetSlot(renderer: anytype) *?RenderTarget {
+    return &renderer.backend_runtime.opengl.presentable_targets.terminal_scroll;
 }
 
 pub fn ensurePresentable(renderer: anytype, surface: PresentableSurface, width: i32, height: i32) bool {
@@ -506,14 +521,14 @@ pub fn ensurePresentable(renderer: anytype, surface: PresentableSurface, width: 
         .terminal => {
             const recreated = ensureRenderTargetScaledForRenderer(
                 renderer,
-                &renderer.backend_runtime.opengl.presentable_targets.terminal,
+                presentableTargetSlot(renderer, .terminal),
                 width,
                 height,
                 gl.c.GL_NEAREST,
             );
             _ = ensureRenderTargetScaledForRenderer(
                 renderer,
-                &renderer.backend_runtime.opengl.presentable_targets.terminal_scroll,
+                terminalScrollTargetSlot(renderer),
                 width,
                 height,
                 gl.c.GL_NEAREST,
@@ -523,7 +538,7 @@ pub fn ensurePresentable(renderer: anytype, surface: PresentableSurface, width: 
         .editor => {
             return ensureRenderTargetScaledForRenderer(
                 renderer,
-                &renderer.backend_runtime.opengl.presentable_targets.editor,
+                presentableTargetSlot(renderer, .editor),
                 width,
                 height,
                 gl.c.GL_NEAREST,
@@ -535,20 +550,17 @@ pub fn ensurePresentable(renderer: anytype, surface: PresentableSurface, width: 
 pub fn beginPresentable(renderer: anytype, surface: PresentableSurface) bool {
     if (!renderer.capabilities().retained_targets) return false;
     switch (surface) {
-        .terminal => return beginRenderTarget(renderer, renderer.backend_runtime.opengl.presentable_targets.terminal),
+        .terminal => return beginRenderTarget(renderer, presentableTarget(renderer, .terminal)),
         .editor => {
             @import("present_trace_runtime.zig").notePresentableUpdate(renderer, .editor);
-            return beginRenderTarget(renderer, renderer.backend_runtime.opengl.presentable_targets.editor);
+            return beginRenderTarget(renderer, presentableTarget(renderer, .editor));
         },
     }
 }
 
 pub fn presentableAvailable(renderer: anytype, surface: PresentableSurface) bool {
     if (!renderer.capabilities().retained_targets) return false;
-    return switch (surface) {
-        .terminal => renderer.backend_runtime.opengl.presentable_targets.terminal != null,
-        .editor => renderer.backend_runtime.opengl.presentable_targets.editor != null,
-    };
+    return presentableTarget(renderer, surface) != null;
 }
 
 pub fn endPresentable(renderer: anytype, surface: PresentableSurface) void {
@@ -563,7 +575,7 @@ pub fn endPresentable(renderer: anytype, surface: PresentableSurface) void {
 pub fn drawPresentable(renderer: anytype, surface: PresentableSurface, draw: PresentableDraw) void {
     if (!renderer.capabilities().retained_targets) return;
     switch (surface) {
-        .terminal => if (renderer.backend_runtime.opengl.presentable_targets.terminal) |target| {
+        .terminal => if (presentableTarget(renderer, .terminal)) |target| {
             @import("present_trace_runtime.zig").notePresentableDraw(renderer, .terminal, draw.generation);
             const width = draw.width orelse return;
             const height = draw.height orelse return;
@@ -623,7 +635,7 @@ pub fn drawPresentable(renderer: anytype, surface: PresentableSurface, draw: Pre
                 .linear_premul,
             );
         },
-        .editor => if (renderer.backend_runtime.opengl.presentable_targets.editor) |target| {
+        .editor => if (presentableTarget(renderer, .editor)) |target| {
             @import("present_trace_runtime.zig").notePresentableDraw(renderer, .editor, null);
             const snapped_x = snapToDevicePixel(draw.x, renderer.scale.render_scale);
             const snapped_y = snapToDevicePixel(draw.y, renderer.scale.render_scale);
@@ -660,11 +672,11 @@ pub fn drawPresentable(renderer: anytype, surface: PresentableSurface, draw: Pre
 pub fn scrollPresentable(renderer: anytype, surface: PresentableSurface, dx: i32, dy: i32) bool {
     if (!renderer.capabilities().retained_targets) return false;
     if (surface != .terminal) return false;
-    if (renderer.backend_runtime.opengl.presentable_targets.terminal) |target| {
+    if (presentableTarget(renderer, .terminal)) |target| {
         return scrollRenderTarget(
             renderer,
-            renderer.backend_runtime.opengl.presentable_targets.terminal,
-            &renderer.backend_runtime.opengl.presentable_targets.terminal_scroll,
+            presentableTarget(renderer, .terminal),
+            terminalScrollTargetSlot(renderer),
             dx,
             dy,
             target.logical_width,
@@ -675,10 +687,7 @@ pub fn scrollPresentable(renderer: anytype, surface: PresentableSurface, dx: i32
 }
 
 pub fn presentableInfo(renderer: anytype, surface: PresentableSurface) ?PresentableInfo {
-    const target = switch (surface) {
-        .terminal => renderer.backend_runtime.opengl.presentable_targets.terminal,
-        .editor => renderer.backend_runtime.opengl.presentable_targets.editor,
-    } orelse return null;
+    const target = presentableTarget(renderer, surface) orelse return null;
     return .{
         .width_px = target.texture.width,
         .height_px = target.texture.height,
