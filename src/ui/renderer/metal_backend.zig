@@ -210,6 +210,8 @@ pub const BackendContext = struct {
     glyph_atlas: GlyphAtlas,
     terminal_snapshot: ?GpuImageRef,
     terminal_snapshot_scratch: ?GpuImageRef,
+    terminal_snapshot_logical_width: i32,
+    terminal_snapshot_logical_height: i32,
     /// 1×1 white texture for tint-only solid fills (cursor, rects).
     solid_white_brush: ?GpuImageRef,
     drawable_width: i32,
@@ -1160,6 +1162,8 @@ pub fn createBackendContext(
         .glyph_atlas = glyph_atlas,
         .terminal_snapshot = null,
         .terminal_snapshot_scratch = null,
+        .terminal_snapshot_logical_width = 0,
+        .terminal_snapshot_logical_height = 0,
         .solid_white_brush = solid_white_brush,
         .drawable_width = drawable_width,
         .drawable_height = drawable_height,
@@ -1879,6 +1883,15 @@ pub fn ensureTerminalSnapshotPresentable(
         .available = available,
         .recreated = available,
     };
+}
+
+pub fn setTerminalSnapshotLogicalSize(
+    context: *BackendContext,
+    width: i32,
+    height: i32,
+) void {
+    context.terminal_snapshot_logical_width = width;
+    context.terminal_snapshot_logical_height = height;
 }
 
 fn ensureTerminalSnapshotScratch(

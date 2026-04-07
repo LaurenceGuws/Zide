@@ -9,12 +9,11 @@ const PresentableSurface = presentable_contract.PresentableSurface;
 pub fn ensurePresentable(renderer: anytype, surface: PresentableSurface, width: i32, height: i32) bool {
     return switch (surface) {
         .terminal => blk: {
-            _ = width;
-            _ = height;
             const drawable_width = renderer.render_width;
             const drawable_height = renderer.render_height;
             if (drawable_width <= 0 or drawable_height <= 0) break :blk false;
             const context = metal_backend.backendContext(renderer) orelse break :blk false;
+            metal_backend.setTerminalSnapshotLogicalSize(context, width, height);
             break :blk metal_backend.ensureTerminalSnapshotPresentable(context, drawable_width, drawable_height).recreated;
         },
         .editor => false,
@@ -31,11 +30,13 @@ pub fn presentableInfo(renderer: anytype, surface: PresentableSurface) ?Presenta
     if (surface != .terminal) return null;
     const context = metal_backend.backendContextConst(renderer) orelse return null;
     const snap = context.terminal_snapshot orelse return null;
+    const logical_width = if (context.terminal_snapshot_logical_width > 0) context.terminal_snapshot_logical_width else renderer.width;
+    const logical_height = if (context.terminal_snapshot_logical_height > 0) context.terminal_snapshot_logical_height else renderer.height;
     return .{
         .width_px = snap.width,
         .height_px = snap.height,
-        .logical_width = renderer.width,
-        .logical_height = renderer.height,
+        .logical_width = logical_width,
+        .logical_height = logical_height,
     };
 }
 

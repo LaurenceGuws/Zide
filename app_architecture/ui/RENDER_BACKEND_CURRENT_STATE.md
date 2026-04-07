@@ -626,6 +626,10 @@ The shared runtime surface has improved too:
 - shared presentable availability now resolves from `presentableInfo != null`
   instead of keeping a second backend-dispatched availability verb beside the
   existing info contract
+- the Metal terminal snapshot presentable now also stores its logical surface
+  size explicitly in backend state, so `presentableInfo(.terminal)` no longer
+  has to report full-window logical size as a fallback when the retained
+  terminal surface is only a viewport-sized logical region
 
 But the presentable surface story is still not backend-neutral at the shared
 runtime layer:

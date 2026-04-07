@@ -513,6 +513,10 @@ Current evidence:
 - shared presentable availability now resolves from `presentableInfo != null`
   instead of keeping a second backend-dispatched availability verb beside the
   existing info contract.
+- Metal terminal snapshot presentables now also store their logical surface
+  size explicitly in backend state, so `presentableInfo(.terminal)` stops
+  falling back to full-window logical size when the retained terminal surface
+  is only a viewport-sized logical region.
 
 Owner docs:
 
