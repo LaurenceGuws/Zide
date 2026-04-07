@@ -366,6 +366,13 @@ The current code makes that split more specific:
   - scrollbars are pane-level final overlays, not row-band content
 - so the remaining editor timing problem is the row-band/content lane itself,
   not those overlay families.
+- inside that row-band/content lane, the next remaining local split is now
+  specifically styled text + decoration rendering:
+  - fallback path still uses direct text/decor functions in
+    `editor_widget_draw_text.zig`
+  - cached/list path expresses the same semantics through draw-list text/rect
+    ops there
+- that is the next honest editor-family seam if this lane continues.
 - the remaining backend-runtime storage blocker is now more specifically an
   OpenGL runtime-shape problem than a Metal one:
   - Metal live frame/surface/presentable queue state is under backend context

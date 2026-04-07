@@ -581,6 +581,13 @@ That split is now sharper from code inspection too:
   - scrollbars are pane-level final overlays
 - that keeps the remaining editor timing pressure focused on row-band local
   ordering rather than those overlay families.
+- the next editor-local split is now more specific too:
+  - fallback highlighted text + decoration rendering still goes through direct
+    text/decor functions in `editor_widget_draw_text.zig`
+  - cached/list rendering expresses the same semantics through draw-list
+    text/rect ops there
+- so if the editor lane continues, styled text/decorations are now the next
+  honest local seam rather than pane scaffolding or scrollbar/IME drift.
 - the remaining backend-runtime storage blocker is now more specifically
   OpenGL-shaped than Metal-shaped:
   - Metal live frame/surface/presentable queue state now lives under backend

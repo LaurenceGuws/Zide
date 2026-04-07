@@ -807,6 +807,14 @@ Current evidence:
     row-band/content path
 - that means the remaining editor timing pressure is now mostly row-band local
   ordering itself, not those two overlay families.
+- editor audit checkpoint: the next loud editor-local split is now in styled
+  text/decorations, not pane scaffolding:
+  - fallback path still resolves highlighted text + underline/undercurl/
+    strikethrough through direct text/decor paths in
+    `editor_widget_draw_text.zig`
+  - cached/list path resolves the same semantics through draw-list text/rect
+    ops there
+- that is the next honest editor-family seam if we keep pushing this lane.
 - backend-runtime checkpoint: the remaining runtime-storage blocker is now more
   specifically OpenGL-shaped than Metal-shaped. Metal live frame/queue state is
   under backend context.
