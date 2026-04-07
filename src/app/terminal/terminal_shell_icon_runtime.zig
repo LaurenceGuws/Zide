@@ -4,6 +4,7 @@ const app_logger = @import("../../app_logger.zig");
 const app_shell = @import("../../app_shell.zig");
 const config_mod = @import("../../config/lua_config.zig");
 const image_decode = @import("../../ui/image_decode.zig");
+const renderer_draw_host = @import("../../ui/renderer/renderer_draw_host.zig");
 const renderer_mod = @import("../../ui/renderer.zig");
 const renderer_types = @import("../../ui/renderer/types.zig");
 const surface_draw = @import("../../ui/renderer/surface_draw.zig");
@@ -39,7 +40,7 @@ pub const ShellIconCache = struct {
     pub fn clear(self: *ShellIconCache, renderer: *Renderer) void {
         for (self.entries.items) |*entry| {
             if (entry.texture.handle != 0) {
-                renderer.destroyPersistentImage(&entry.texture);
+                renderer_draw_host.destroyPersistentImage(renderer, &entry.texture);
             }
             self.allocator.free(entry.path);
             entry.* = undefined;
@@ -85,7 +86,7 @@ pub const ShellIconCache = struct {
             .width = draw_w,
             .height = draw_h,
         };
-        return shell.rendererPtr().drawPersistentImage(texture, src, dest, app_shell.Color.white.toRgba());
+        return renderer_draw_host.drawPersistentImage(shell.rendererPtr(), texture, src, dest, app_shell.Color.white.toRgba());
     }
 
     fn ensureTexture(self: *ShellIconCache, renderer: *Renderer, icon_path: []const u8) ?GpuImageRef {
@@ -106,7 +107,7 @@ pub const ShellIconCache = struct {
         }
 
         self.entries.append(self.allocator, new_entry) catch {
-            if (new_entry.texture.handle != 0) renderer.destroyPersistentImage(&new_entry.texture);
+            if (new_entry.texture.handle != 0) renderer_draw_host.destroyPersistentImage(renderer, &new_entry.texture);
             return null;
         };
 
@@ -190,7 +191,8 @@ fn loadTexture(renderer: *Renderer, allocator: std.mem.Allocator, icon_path: []c
     };
     defer allocator.free(decoded.data);
 
-    return renderer.createPersistentImageFromRgba(
+    return renderer_draw_host.createPersistentImageFromRgba(
+        renderer,
         @intCast(decoded.width),
         @intCast(decoded.height),
         decoded.data,

@@ -212,6 +212,13 @@ route to `renderer_presentable_host.zig` directly for the shared presentable
 contract surface, which makes the ownership boundary plainer: the renderer root
 no longer claims to own a facade that already lives elsewhere.
 
+That has improved slightly again on the draw/resource side too: persistent
+image upload/draw/destruction and raw-image submission no longer live as public
+methods on the renderer root. Those callers now route through
+`renderer_draw_host.zig`, which is more honest than pretending `Renderer`
+itself owns that caller-facing draw/resource facade when the grouped draw
+contract was already the real owner.
+
 That has improved slightly again on backend ownership too: backend dispatch no
 longer terminates presentable operations back into the large generic backend
 files. Dedicated backend presentable modules now own that seam directly:

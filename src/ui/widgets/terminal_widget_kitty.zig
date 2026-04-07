@@ -4,6 +4,7 @@ const app_logger = @import("../../app_logger.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
 
 const gl = @import("../renderer/gl.zig");
+const renderer_draw_host = @import("../renderer/renderer_draw_host.zig");
 const types = @import("../renderer/types.zig");
 const surface_draw = @import("../renderer/surface_draw.zig");
 
@@ -185,15 +186,15 @@ pub const KittyState = struct {
             const dest = types.Rect{ .x = x, .y = y, .width = draw_w, .height = draw_h };
             if (r.kittyImageMode() == .direct_raw_images) {
                 switch (image.format) {
-                    .rgb => _ = r.drawRawImage(.rgb, @intCast(image.width), @intCast(image.height), image.data, dest, Color.white.toRgba()),
-                    .rgba => _ = r.drawRawImage(.rgba, @intCast(image.width), @intCast(image.height), image.data, dest, Color.white.toRgba()),
+                    .rgb => _ = renderer_draw_host.drawRawImage(r, .rgb, @intCast(image.width), @intCast(image.height), image.data, dest, Color.white.toRgba()),
+                    .rgba => _ = renderer_draw_host.drawRawImage(r, .rgba, @intCast(image.width), @intCast(image.height), image.data, dest, Color.white.toRgba()),
                     .png => {},
                 }
                 continue;
             }
 
             const tex = self.ensureTexture(allocator, r, image) orelse continue;
-            _ = r.drawPersistentImage(tex.texture, null, dest, Color.white.toRgba());
+            _ = renderer_draw_host.drawPersistentImage(r, tex.texture, null, dest, Color.white.toRgba());
         }
     }
 
@@ -265,7 +266,7 @@ pub const KittyState = struct {
     pub fn ensureTexture(self: *KittyState, allocator: std.mem.Allocator, renderer: anytype, image: KittyImage) ?KittyTexture {
         if (self.textures.getEntry(image.id)) |entry| {
             if (entry.value_ptr.version == image.version) return entry.value_ptr.*;
-            if (entry.value_ptr.texture.handle != 0) renderer.destroyPersistentImage(&entry.value_ptr.texture);
+            if (entry.value_ptr.texture.handle != 0) renderer_draw_host.destroyPersistentImage(renderer, &entry.value_ptr.texture);
             _ = self.textures.remove(image.id);
         }
         self.enqueueUpload(allocator, image.id);
@@ -299,7 +300,7 @@ pub const KittyState = struct {
         const log = app_logger.logger("terminal.kitty");
         self.textures.put(image.id, stored) catch |err| {
             var texture_cleanup = stored.texture;
-            if (texture_cleanup.handle != 0) renderer.destroyPersistentImage(&texture_cleanup);
+            if (texture_cleanup.handle != 0) renderer_draw_host.destroyPersistentImage(renderer, &texture_cleanup);
             log.logf(.warning, "kitty texture map insert failed id={d} err={s}", .{ image.id, @errorName(err) });
             return false;
         };
@@ -316,11 +317,11 @@ pub const KittyState = struct {
             },
             .rgb => {
                 if (image.width == 0 or image.height == 0) return null;
-                return renderer.createPersistentImageFromRgb(@intCast(image.width), @intCast(image.height), image.data);
+                return renderer_draw_host.createPersistentImageFromRgb(renderer, @intCast(image.width), @intCast(image.height), image.data);
             },
             .rgba => {
                 if (image.width == 0 or image.height == 0) return null;
-                return renderer.createPersistentImageFromRgba(@intCast(image.width), @intCast(image.height), image.data);
+                return renderer_draw_host.createPersistentImageFromRgba(renderer, @intCast(image.width), @intCast(image.height), image.data);
             },
         }
     }

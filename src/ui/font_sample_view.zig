@@ -7,6 +7,7 @@ const terminal_font_mod = @import("terminal_font.zig");
 const renderer_mod = @import("renderer.zig");
 const metal_text_sample_runtime = @import("renderer/metal_text_sample_runtime.zig");
 const metal_backend = @import("renderer/metal_backend.zig");
+const renderer_draw_host = @import("renderer/renderer_draw_host.zig");
 const renderer_presentable_host = @import("renderer/renderer_presentable_host.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
 const iface = @import("renderer/interface.zig");
@@ -156,7 +157,7 @@ pub const FontSampleView = struct {
         // controlled way (target is linear; presentation converts to sRGB).
         if (renderer_presentable_host.ensurePresentable(r, .editor, @intFromFloat(w), @intFromFloat(h))) {
             if (renderer_presentable_host.beginPresentable(r, .editor)) {
-                r.clearToThemeBackground();
+                renderer_draw_host.clearThemeBackground(r);
                 drawContents(self, r, theme, w, h);
                 renderer_presentable_host.endPresentable(r, .editor);
                 renderer_presentable_host.drawPresentable(r, .editor, .{ .x = 0, .y = 0 });

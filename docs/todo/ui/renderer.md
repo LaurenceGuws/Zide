@@ -439,6 +439,14 @@ Current evidence:
 - this makes the ownership boundary plainer: `Renderer` no longer pretends to
   own a presentable facade while `renderer_presentable_host.zig` and the
   backend presentable modules do the real work.
+- persistent-image/raw-image draw/resource verbs now also route through a
+  dedicated shared host seam:
+  - `src/ui/renderer/renderer_draw_host.zig`
+- kitty images, shell icons, and the font sample no longer depend on
+  `Renderer` methods for that surface.
+- this removes another fake renderer-root facade from the draw/resource lane
+  without inventing a second contract; the grouped draw contract was already
+  the real owner.
 - presentable trace/editor-surface bookkeeping now also lives in
   `renderer_presentable_host.zig` instead of being split across GL and Metal
   presentable lifecycle methods.
