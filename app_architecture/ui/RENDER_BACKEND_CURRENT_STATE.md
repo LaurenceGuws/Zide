@@ -560,6 +560,10 @@ That split is now sharper from code inspection too:
 - cached/list-side segment-base painting now also follows that same rule
   through `segment_paint.zig` instead of open-coding its own row/gutter/
   current-line rect sequence in the widget draw body
+- that makes the next editor requirement explicit too: one editor row-band
+  composition unit still needs to own base fills, line number label,
+  selection/search overlays, text runs, and cursor/caret decoration as one
+  local ordering story
 - sample pressure is specifically section-fill plus bg-aware text preview work
   in `font_sample_view.zig` / `font_sample_section_host.zig`, including the
   custom-font sample path that still terminates through direct texture draws

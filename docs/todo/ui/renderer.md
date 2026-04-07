@@ -784,6 +784,10 @@ Current evidence:
   own row/gutter/current-line rect sequence in `editor_widget_draw.zig`.
 - that is not timing closure, but it makes the remaining editor-family
   ordering dependency easier to change honestly.
+- editor rule checkpoint: the next valid cut is not more helper cleanup. One
+  editor row-band composition unit still needs to own base fills, line number
+  label, selection/search overlays, text runs, and cursor/caret decoration as
+  one local ordering story.
 - code-facing checkpoint: the sample pressure is specifically
   section-fill-plus-bg-aware preview text in `font_sample_view.zig`, including
   custom-font preview draws that still go through direct texture draw calls.

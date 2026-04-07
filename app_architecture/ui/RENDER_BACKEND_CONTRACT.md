@@ -337,6 +337,18 @@ The current code makes that split more specific:
 - cached/list-side segment-base painting now also routes through that same
   helper area instead of open-coding a second row/gutter/current-line rect
   sequence in the widget draw body
+- the next editor cut is therefore not another helper refactor. The required
+  rule is now explicit: one editor row-band composition unit must own the
+  local ordering of:
+  - row/gutter/current-line base fills
+  - line number label
+  - selection/search overlays
+  - text runs
+  - cursor / extra-carets / nearby inline decoration
+- until that is true, editor remains the primary remaining `SurfaceDraw`
+  timing family because the direct path still expresses those layers as
+  immediate neighboring operations rather than one honest local composition
+  unit
 - sample/diagnostic pressure is the simpler section-fill plus bg-aware preview
   text path in `font_sample_view.zig`, including custom-font preview draws
   that still go straight through texture draw calls
