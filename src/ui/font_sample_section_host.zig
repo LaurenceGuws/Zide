@@ -31,6 +31,7 @@ pub const Section = struct {
 
     fn queueTextOp(self: *Section, text: []const u8, x: f32, y: f32, color: Color, bg: Color) void {
         self.text_ops.append(self.renderer.allocator, .{
+            .kind = .text,
             .text = text,
             .x = x,
             .y = y,

@@ -575,6 +575,11 @@ is now explicit and frozen for this lane.
 - `lane guardrail`: no new ad-hoc text phase producers are allowed outside the
   three required adopters while this closure lane is active
 
+**Shared replay surface checkpoint (B-DONE-2, 2026-04-07):** chrome-band and
+sample-section hosts now implement one shared typed replay/group surface in
+`renderer_text_phase_group_host.zig`. Local seam hosts remain only as
+compatibility adapters pending duplicate seam deletion.
+
 Do not create a second chrome helper, and do not keep adopting unrelated popup
 or modal surfaces just to make the seam look more important than it is.
 

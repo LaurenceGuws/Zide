@@ -422,7 +422,7 @@ Milestone B "done" checkpoints (execute in order, do not rerank mid-lane):
     producer shape, replay shape, ordering guarantees, and non-goals
   - name accepted local producers for closure (`chrome band`, `sample section`,
     `editor row-band`) and prohibit new ad-hoc producers
-- [ ] **B-DONE-2: unify local phase hosts under one replay contract**
+- [x] **B-DONE-2: unify local phase hosts under one replay contract**
   - make chrome/sample replay hosts implement the same typed replay/group
     surface instead of parallel host-specific function sets
   - keep behavior identical (no paint-order changes) while contract shape
@@ -962,6 +962,10 @@ Current evidence:
   trace (`sample_section_group_begin_count` /
   `sample_section_group_end_count`) and replay order/bg payload handling is now
   covered by unit tests in `renderer_sample_section_phase_host`.
+- closure checkpoint (`B-DONE-2`): chrome-band and sample-section replay now
+  share one typed host contract surface in
+  `renderer_text_phase_group_host.zig`; seam-specific hosts are now adapters
+  over that shared group/replay API.
 - this is good local honesty for the sample lane, but it does not yet turn the
   sample family into a recorded backend-neutral phase.
 - first sample-side proof is acceptable only as a tiny section-composition seam,

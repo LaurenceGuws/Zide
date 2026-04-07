@@ -554,6 +554,11 @@ text phase group shape (typed ops + explicit begin/end groups + trace parity)
 with three required adopters (chrome band, sample section, editor row-band).
 That removes ambiguity about "what counts as done" for this lane.
 
+That contract has its first concrete unification checkpoint now (`B-DONE-2`):
+chrome-band and sample-section replay share one typed group/replay host surface
+in `renderer_text_phase_group_host.zig`, with seam-local hosts reduced to
+adapters.
+
 That seam is now clean enough that further expansion would be fake progress
 unless it graduates into a real recorded band-composition phase. Until that
 happens, it should be treated as a renderer-host composition helper for the
