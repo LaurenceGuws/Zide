@@ -847,6 +847,12 @@ Current evidence:
   seam; Metal returns `.unsupported`.
 - terminal presentation runtime now tracks that explicit retained-update status
   instead of treating every non-true outcome as the same backend-neutral case.
+- presentable checkpoint: terminal presentable lifecycle model is now explicit
+  in the shared host seam too:
+  - OpenGL: `.retained_update_target`
+  - Metal: `.snapshot_composition`
+- the terminal runtime no longer attempts a retained update cycle on snapshot
+  backends just to learn that the answer is "not here."
 - code-facing checkpoint: the sample pressure is specifically
   section-fill-plus-bg-aware preview text in `font_sample_view.zig`, including
   custom-font preview draws that still go through direct texture draw calls.

@@ -616,6 +616,10 @@ That split is now sharper from code inspection too:
   honestly too: retained-update attempts return an explicit status instead of a
   boolean that used to collapse "unsupported lifecycle model" and
   "retained target unavailable" into the same false path.
+- shared code now knows the lifecycle model explicitly as well:
+  OpenGL reports `.retained_update_target`; Metal reports
+  `.snapshot_composition`. The terminal runtime now uses that to skip bogus
+  retained-update attempts on snapshot backends.
 - sample pressure is specifically section-fill plus bg-aware text preview work
   in `font_sample_view.zig` / `font_sample_section_host.zig`, including the
   custom-font sample path that still terminates through direct texture draws

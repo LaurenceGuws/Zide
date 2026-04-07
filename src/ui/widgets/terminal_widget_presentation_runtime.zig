@@ -27,6 +27,7 @@ const TerminalPresentationSampleMode = terminal_debug_geometry.TerminalPresentat
 const TerminalPresentationSample = terminal_debug_geometry.TerminalPresentationSample;
 const InputSnapshot = shared_types.input.InputSnapshot;
 const RetainedTerminalPresentableUpdate = renderer_presentable_host.RetainedTerminalPresentableUpdate;
+const TerminalPresentableLifecycle = renderer_presentable_host.TerminalPresentableLifecycle;
 
 const drawRowBackgrounds = draw_grid.drawRowBackgrounds;
 const drawRowGlyphs = draw_grid.drawRowGlyphs;
@@ -691,6 +692,10 @@ pub fn runRetainedPresentCycle(
 ) RetainedPresentCycleResult {
     var result = RetainedPresentCycleResult{};
     if (surface_update_plan.mode == .none) return result;
+    if (renderer_presentable_host.terminalPresentableLifecycle(renderer) != .retained_update_target) {
+        result.update = .unsupported;
+        return result;
+    }
     const UpdateCtx = struct {
         self: @TypeOf(self),
         shell: *app_shell.Shell,

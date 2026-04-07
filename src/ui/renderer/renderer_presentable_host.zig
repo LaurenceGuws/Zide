@@ -3,6 +3,11 @@ const presentable_contract = @import("presentable_contract.zig");
 
 pub const RetainedTerminalPresentableUpdate = @import("backend_dispatch.zig").RetainedPresentableUpdateResult;
 const PresentableDraw = presentable_contract.PresentableDraw;
+pub const TerminalPresentableLifecycle = presentable_contract.TerminalPresentableLifecycle;
+
+pub fn terminalPresentableLifecycle(renderer: anytype) TerminalPresentableLifecycle {
+    return renderer.backend.ops.presentable.terminalPresentableLifecycle(renderer);
+}
 
 pub fn ensureTerminalPresentable(renderer: anytype, width: i32, height: i32) bool {
     return renderer.backend.ops.presentable.ensurePresentable(renderer, width, height);

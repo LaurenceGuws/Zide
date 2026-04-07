@@ -400,6 +400,9 @@ The current code makes that split more specific:
   retained-update attempts return an explicit result, not a boolean that
   collapses "unsupported backend model" and "retained target unavailable" into
   the same product-level outcome.
+- the lifecycle model itself is now explicit too: terminal presentables report
+  either `.retained_update_target` or `.snapshot_composition` instead of
+  making shared code probe a retained update path blindly every frame.
 - sample/diagnostic pressure is the simpler section-fill plus bg-aware preview
   text path in `font_sample_view.zig`, including custom-font preview draws
   that still go straight through texture draw calls
