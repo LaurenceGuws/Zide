@@ -419,12 +419,12 @@ The current code makes that split more specific:
   across tabs/wide-glyph slices also has one shared helper now, so the
   remaining editor styled-text difference is increasingly just immediate vs
   draw-list emission.
-- unstyled selection/bg text-run splitting is now shared there too, so the
-  remaining editor text difference is now almost entirely the final immediate
-  vs draw-list emitter target.
-- stop there unless the next cut removes that emitter split itself or changes
-  the actual surface/timing contract. More editor-local helper cleanup beyond
-  this point would be fake progress.
+- unstyled selection/bg text-run splitting is now shared there too.
+- that final editor-local emitter split is now gone as well:
+  `editor_widget_draw_text.zig` uses one small emitter seam for immediate and
+  draw-list text/decor emission.
+- the next editor-local work therefore should not be more text helper cleanup;
+  the louder remaining blocker is still the shared timing contract.
 - the shared timing blocker is now sharper too: ordinary UI/editor text still
   goes through immediate `text_runtime.zig` paths that mutate
   `text_render.bg_rgba` and emit texture draws immediately. So the remaining

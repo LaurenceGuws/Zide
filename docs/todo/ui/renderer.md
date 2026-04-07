@@ -829,20 +829,14 @@ Current evidence:
 - editor checkpoint: expanded styled-text run splitting for tabs/wide glyph
   spans now also runs through one shared helper in
   `editor_widget_draw_text.zig`.
-- the remaining editor styled-text split is now increasingly just the final
-  immediate-vs-draw-list emission target.
 - editor checkpoint: expanded unstyled text run splitting for selection/bg text
   slices now also runs through one shared helper there.
-- at this point both styled and unstyled text-run splitting are shared; the
-  remaining editor text difference is now almost entirely the final immediate
-  vs draw-list emitter target.
-- editor stop rule checkpoint: do not keep grinding local helper cleanup past
-  this point unless a cut removes the final emitter-target split itself or
-  changes the real `SurfaceDraw` timing story.
-- that means the next renderer-quality move is no longer another editor-local
-  helper pass by default. It is either:
-  - one cut that removes the final styled-text emitter split
-  - or a pivot back to the shared `SurfaceDraw` timing blocker
+- editor checkpoint: the final immediate-vs-draw-list emitter split is now
+  gone too; `editor_widget_draw_text.zig` uses one small emitter seam for both
+  text and decoration emission.
+- editor stop rule checkpoint: do not keep grinding local editor text helper
+  cleanup past this point. The next renderer-quality move is back on the
+  shared timing contract.
 - shared timing checkpoint: ordinary UI/editor text is still immediate in
   `text_runtime.zig`
   - text draw paths still mutate `text_render.bg_rgba`
