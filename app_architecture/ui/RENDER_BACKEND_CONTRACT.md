@@ -349,9 +349,14 @@ The current code makes that split more specific:
   timing family because the direct path still expresses those layers as
   immediate neighboring operations rather than one honest local composition
   unit
-- there is now partial proof of the intended shape: the fallback editor path
-  executes one explicit row-band composition helper in `segment_paint.zig`
-  instead of spelling those layers out inline in the widget draw body
+- there is now stronger proof of the intended shape:
+  - the fallback editor path executes one explicit immediate row-band
+    composition helper in `segment_paint.zig`
+  - the cached/list path executes one explicit draw-list row-band composition
+    helper there too, instead of spelling the band payload out inline in the
+    widget draw body
+- that is still not full shared timing closure because those two row-band
+  lanes remain distinct concrete implementations
 - sample/diagnostic pressure is the simpler section-fill plus bg-aware preview
   text path in `font_sample_view.zig`, including custom-font preview draws
   that still go straight through texture draw calls

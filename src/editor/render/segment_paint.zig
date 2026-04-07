@@ -329,6 +329,153 @@ pub fn drawEditorRowBandImmediate(
     overlay_mod.drawExtraCarets(view, r, line_idx, line_text, cluster_slice, seg_start_col, seg_end_col, line_width, seg_y, text_start_x);
 }
 
+pub fn addEditorRowBandOps(
+    list: *EditorDrawList,
+    view: anytype,
+    r: anytype,
+    line_idx: usize,
+    cols: usize,
+    line_width: usize,
+    total_visual_lines: usize,
+    seg_idx: usize,
+    seg_start_idx: usize,
+    seg_start_col: usize,
+    seg_end_col: usize,
+    seg_y: f32,
+    seg_band: anytype,
+    origin_x: f32,
+    text_start_x: f32,
+    gutter_width: f32,
+    content_width: f32,
+    line_text: []const u8,
+    cluster_slice: ?[]const u32,
+    line_start: usize,
+    seg_start_byte: usize,
+    seg_end_byte: usize,
+    effective_tokens: []const HighlightToken,
+    selection_ranges: []const SelectionRange,
+    is_current: bool,
+    is_cursor_segment: bool,
+    cursor_col_vis: usize,
+    disable_programming_ligatures: bool,
+    cursor_draw_x: *?f32,
+    cursor_draw_y: *?f32,
+) bool {
+    var ok = true;
+
+    if (seg_idx == seg_start_idx) {
+        var num_buf: [16]u8 = undefined;
+        ok = ok and addEditorLineBaseOps(list, r, line_idx, seg_y, origin_x, gutter_width, content_width, is_current, &num_buf);
+    } else {
+        ok = ok and addEditorSegmentBaseOps(list, r, origin_x, seg_y, gutter_width, content_width, is_current);
+    }
+
+    ok = ok and addSelectionOverlayOps(
+        list,
+        view,
+        r,
+        line_idx,
+        cols,
+        line_width,
+        total_visual_lines,
+        seg_idx,
+        seg_start_col,
+        seg_end_col,
+        seg_band,
+        text_start_x,
+        selection_ranges,
+    );
+
+    ok = ok and addSearchOverlayOps(
+        list,
+        view,
+        r,
+        line_start,
+        seg_start_byte,
+        seg_end_byte,
+        seg_start_col,
+        line_text,
+        seg_band,
+        text_start_x,
+    );
+
+    const base_bg = if (is_current) r.theme.current_line else r.theme.background;
+    const selection_bg = overlay_mod.softSelectionColor(r.theme.selection);
+    var sel_bytes: [8]ByteRange = undefined;
+    const sel_count = if (selection_ranges.len > 0)
+        text_mod.buildSelectionByteRanges(
+            line_text,
+            cluster_slice,
+            seg_start_col,
+            seg_end_col,
+            seg_start_byte,
+            seg_end_byte,
+            selection_ranges,
+            &sel_bytes,
+        )
+    else
+        0;
+
+    if (effective_tokens.len == 0) {
+        ok = ok and text_mod.addTextSliceOpsWithSelectionBg(
+            list,
+            r,
+            text_start_x,
+            seg_y,
+            line_text,
+            seg_start_byte,
+            seg_start_col,
+            seg_start_byte,
+            seg_end_byte,
+            r.theme.foreground,
+            base_bg,
+            selection_bg,
+            sel_bytes[0..sel_count],
+            disable_programming_ligatures,
+        );
+    } else {
+        ok = ok and text_mod.appendHighlightedLineSegmentOps(
+            list,
+            r,
+            line_text,
+            seg_y,
+            text_start_x,
+            line_start,
+            seg_start_byte,
+            seg_end_byte,
+            seg_start_col,
+            @constCast(effective_tokens),
+            base_bg,
+            selection_bg,
+            seg_start_byte,
+            sel_bytes[0..sel_count],
+            disable_programming_ligatures,
+        );
+    }
+
+    if (is_current and is_cursor_segment) {
+        const local_col = cursor_col_vis - seg_start_col;
+        cursor_draw_x.* = text_start_x + @as(f32, @floatFromInt(local_col)) * r.editor_char_width;
+        cursor_draw_y.* = seg_y;
+    }
+
+    ok = ok and overlay_mod.addExtraCaretOps(
+        list,
+        view,
+        r,
+        line_idx,
+        line_text,
+        cluster_slice,
+        seg_start_col,
+        seg_end_col,
+        line_width,
+        seg_y,
+        text_start_x,
+    );
+
+    return ok;
+}
+
 const FakeColor = struct { r: u8, g: u8, b: u8, a: u8 = 255 };
 const FakeTheme = struct {
     current_line: FakeColor = .{ .r = 30, .g = 31, .b = 32 },

@@ -108,32 +108,7 @@ pub fn draw(
                     .cursor => seg_info.is_current and seg_info.seg_idx == seg_info.cursor_seg,
                 };
 
-                if (seg_info.seg_idx == seg_info.seg_start_idx) {
-                    var num_buf: [16]u8 = undefined;
-                    _ = segment_paint_mod.addEditorLineBaseOps(draw_list_local, r_local, seg_info.line_idx, seg_y, x_local, widget_local.gutter_width, width_local, seg_info.is_current, &num_buf);
-                    overlay_mod.flushDrawList(draw_list_local, r_local);
-                    draw_list_local.clear();
-                } else if (seg_info.is_current) {
-                    renderer_surface_host.drawRect(
-                        r_local,
-                        @intFromFloat(x_local),
-                        seg_band.y_i,
-                        @intFromFloat(widget_local.gutter_width),
-                        seg_band.h_i,
-                        r_local.theme.current_line,
-                    );
-                    renderer_surface_host.drawRect(
-                        r_local,
-                        @intFromFloat(x_local + widget_local.gutter_width),
-                        seg_band.y_i,
-                        @intFromFloat(width_local - widget_local.gutter_width),
-                        seg_band.h_i,
-                        r_local.theme.current_line,
-                    );
-                }
-
-                var list_ok = true;
-                list_ok = list_ok and segment_paint_mod.addSelectionOverlayOps(
+                const row_band_ok = segment_paint_mod.addEditorRowBandOps(
                     draw_list_local,
                     view_local,
                     r_local,
@@ -142,98 +117,30 @@ pub fn draw(
                     seg_info.line_width,
                     seg_info.total_visual_lines,
                     seg_info.seg_idx,
+                    seg_info.seg_start_idx,
                     seg_info.seg_start_col,
                     seg_info.seg_end_col,
+                    seg_y,
                     seg_band,
+                    x_local,
                     text_start_x_local,
-                    ranges_local[0..range_count_local],
-                );
-                list_ok = list_ok and segment_paint_mod.addSearchOverlayOps(
-                    draw_list_local,
-                    view_local,
-                    r_local,
+                    widget_local.gutter_width,
+                    width_local,
+                    line_text_local,
+                    cluster_slice_local,
                     seg_info.line_start,
                     seg_info.seg_start_byte,
                     seg_info.seg_end_byte,
-                    seg_info.seg_start_col,
-                    line_text_local,
-                    seg_band,
-                    text_start_x_local,
+                    effective_tokens_local,
+                    ranges_local[0..range_count_local],
+                    seg_info.is_current,
+                    seg_info.seg_idx == seg_info.cursor_seg,
+                    seg_info.cursor_col_vis,
+                    disable_programming_ligatures,
+                    cursor_draw_x_local,
+                    cursor_draw_y_local,
                 );
-
-                const base_bg = if (seg_info.is_current) r_local.theme.current_line else r_local.theme.background;
-                const selection_bg = overlay_mod.softSelectionColor(r_local.theme.selection);
-                var sel_bytes: [8]ByteRange = undefined;
-                const sel_count = if (range_count_local > 0)
-                    text_mod.buildSelectionByteRanges(
-                        line_text_local,
-                        cluster_slice_local,
-                        seg_info.seg_start_col,
-                        seg_info.seg_end_col,
-                        seg_info.seg_start_byte,
-                        seg_info.seg_end_byte,
-                        ranges_local[0..range_count_local],
-                        &sel_bytes,
-                    )
-                else
-                    0;
-
-                if (effective_tokens_local.len == 0) {
-                    list_ok = list_ok and text_mod.addTextSliceOpsWithSelectionBg(
-                        draw_list_local,
-                        r_local,
-                        text_start_x_local,
-                        seg_y,
-                        line_text_local,
-                        seg_info.seg_start_byte,
-                        seg_info.seg_start_col,
-                        seg_info.seg_start_byte,
-                        seg_info.seg_end_byte,
-                        r_local.theme.foreground,
-                        base_bg,
-                        selection_bg,
-                        sel_bytes[0..sel_count],
-                        disable_programming_ligatures,
-                    );
-                } else {
-                    list_ok = list_ok and text_mod.appendHighlightedLineSegmentOps(
-                        draw_list_local,
-                        r_local,
-                        line_text_local,
-                        seg_y,
-                        text_start_x_local,
-                        seg_info.line_start,
-                        seg_info.seg_start_byte,
-                        seg_info.seg_end_byte,
-                        seg_info.seg_start_col,
-                        effective_tokens_local,
-                        base_bg,
-                        selection_bg,
-                        seg_info.seg_start_byte,
-                        sel_bytes[0..sel_count],
-                        disable_programming_ligatures,
-                    );
-                }
-
-                if (seg_info.is_current and seg_info.seg_idx == seg_info.cursor_seg) {
-                    const local_col = seg_info.cursor_col_vis - seg_info.seg_start_col;
-                    cursor_draw_x_local.* = text_start_x_local + @as(f32, @floatFromInt(local_col)) * r_local.editor_char_width;
-                    cursor_draw_y_local.* = seg_y;
-                }
-                list_ok = list_ok and overlay_mod.addExtraCaretOps(
-                    draw_list_local,
-                    view_local,
-                    r_local,
-                    seg_info.line_idx,
-                    line_text_local,
-                    cluster_slice_local,
-                    seg_info.seg_start_col,
-                    seg_info.seg_end_col,
-                    seg_info.line_width,
-                    seg_y,
-                    text_start_x_local,
-                );
-                if (list_ok) {
+                if (row_band_ok) {
                     overlay_mod.flushDrawList(draw_list_local, r_local);
                 } else {
                     if (range_count_local > 0) {
@@ -474,132 +381,43 @@ pub fn drawCached(
                 defer renderer_clip_host.endClip(r_local);
 
                 draw_list_local.clear();
-                var list_ok = segment_paint_mod.addEditorSegmentBaseOps(
-                    draw_list_local,
-                    r_local,
-                    origin_x_local,
-                    seg_y,
-                    widget_local.gutter_width,
-                    width_local,
-                    false,
-                );
-
-                if (seg_info.seg_idx == seg_info.seg_start_idx) {
-                    var num_buf: [16]u8 = undefined;
-                    list_ok = list_ok and segment_paint_mod.addEditorLineBaseOps(draw_list_local, r_local, seg_info.line_idx, seg_y, origin_x_local, widget_local.gutter_width, width_local, seg_info.is_current, &num_buf);
-                } else if (seg_info.is_current) {
-                    list_ok = list_ok and segment_paint_mod.addEditorSegmentBaseOps(
-                        draw_list_local,
-                        r_local,
-                        origin_x_local,
-                        seg_y,
-                        widget_local.gutter_width,
-                        width_local,
-                        true,
-                    );
-                }
-
-                if (range_count_local > 0) {
-                    const sel_band = overlay_mod.selectionBandForRowBand(seg_band);
-                    const selection_color = overlay_mod.softSelectionColor(r_local.theme.selection);
-                    var r_i: usize = 0;
-                    while (r_i < range_count_local) : (r_i += 1) {
-                        const range = ranges_local[r_i];
-                        const sel_start = @max(range.start_col, seg_info.seg_start_col);
-                        const sel_end = @min(range.end_col, seg_info.seg_end_col);
-                        if (sel_end <= sel_start) continue;
-                        const sel_x = text_start_x + @as(f32, @floatFromInt(sel_start - seg_info.seg_start_col)) * r_local.editor_char_width;
-                        const sel_w = @as(f32, @floatFromInt(sel_end - sel_start)) * r_local.editor_char_width;
-                        const corner_mask = overlay_mod.selectionCornerMaskForSegment(view_local, seg_info.line_idx, cols_local, line_width_local, seg_info.seg_idx, seg_info.total_visual_lines, seg_info.seg_start_col, seg_info.seg_end_col, range);
-                        list_ok = list_ok and overlay_mod.addSoftSelectionRectOp(draw_list_local, r_local, sel_x, sel_band.y_f, sel_w, sel_band.h_f, selection_color, corner_mask);
-                    }
-                }
-
-                list_ok = list_ok and segment_paint_mod.addSearchOverlayOps(
-                    draw_list_local,
-                    view_local,
-                    r_local,
-                    seg_info.line_start,
-                    seg_info.seg_start_byte,
-                    seg_info.seg_end_byte,
-                    seg_info.seg_start_col,
-                    line_text_local,
-                    seg_band,
-                    text_start_x,
-                );
-
-                const base_bg = if (seg_info.is_current) r_local.theme.current_line else r_local.theme.background;
-                const selection_bg = overlay_mod.softSelectionColor(r_local.theme.selection);
-                var sel_bytes: [8]ByteRange = undefined;
-                const sel_count = if (range_count_local > 0)
-                    text_mod.buildSelectionByteRanges(
-                        line_text_local,
-                        cluster_slice_local,
-                        seg_info.seg_start_col,
-                        seg_info.seg_end_col,
-                        seg_info.seg_start_byte,
-                        seg_info.seg_end_byte,
-                        ranges_local[0..range_count_local],
-                        &sel_bytes,
-                    )
-                else
-                    0;
-
-                if (effective_tokens_local.len == 0) {
-                    list_ok = list_ok and text_mod.addTextSliceOpsWithSelectionBg(
-                        draw_list_local,
-                        r_local,
-                        text_start_x,
-                        seg_y,
-                        line_text_local,
-                        seg_info.seg_start_byte,
-                        seg_info.seg_start_col,
-                        seg_info.seg_start_byte,
-                        seg_info.seg_end_byte,
-                        r_local.theme.foreground,
-                        base_bg,
-                        selection_bg,
-                        sel_bytes[0..sel_count],
-                        disable_programming_ligatures,
-                    );
-                } else {
-                    list_ok = list_ok and text_mod.appendHighlightedLineSegmentOps(
-                        draw_list_local,
-                        r_local,
-                        line_text_local,
-                        seg_y,
-                        text_start_x,
-                        seg_info.line_start,
-                        seg_info.seg_start_byte,
-                        seg_info.seg_end_byte,
-                        seg_info.seg_start_col,
-                        effective_tokens_local,
-                        base_bg,
-                        selection_bg,
-                        seg_info.seg_start_byte,
-                        sel_bytes[0..sel_count],
-                        disable_programming_ligatures,
-                    );
-                }
-
-                if (seg_info.is_current and seg_info.seg_idx == seg_info.cursor_seg) {
-                    const local_col = seg_info.cursor_col_vis - seg_info.seg_start_col;
-                    const cursor_draw_x = text_start_x + @as(f32, @floatFromInt(local_col)) * r_local.editor_char_width;
-                    list_ok = list_ok and overlay_mod.addCursorOp(draw_list_local, cursor_draw_x, seg_y, r_local.editor_char_height, r_local.theme.cursor);
-                }
-                list_ok = list_ok and overlay_mod.addExtraCaretOps(
+                var cached_cursor_draw_x: ?f32 = null;
+                var cached_cursor_draw_y: ?f32 = null;
+                var list_ok = segment_paint_mod.addEditorRowBandOps(
                     draw_list_local,
                     view_local,
                     r_local,
                     seg_info.line_idx,
-                    line_text_local,
-                    cluster_slice_local,
+                    cols_local,
+                    line_width_local,
+                    seg_info.total_visual_lines,
+                    seg_info.seg_idx,
+                    seg_info.seg_start_idx,
                     seg_info.seg_start_col,
                     seg_info.seg_end_col,
-                    line_width_local,
                     seg_y,
+                    seg_band,
+                    origin_x_local,
                     text_start_x,
+                    widget_local.gutter_width,
+                    width_local,
+                    line_text_local,
+                    cluster_slice_local,
+                    seg_info.line_start,
+                    seg_info.seg_start_byte,
+                    seg_info.seg_end_byte,
+                    effective_tokens_local,
+                    ranges_local[0..range_count_local],
+                    seg_info.is_current,
+                    seg_info.seg_idx == seg_info.cursor_seg,
+                    seg_info.cursor_col_vis,
+                    disable_programming_ligatures,
+                    &cached_cursor_draw_x,
+                    &cached_cursor_draw_y,
                 );
+                if (cached_cursor_draw_x) |cursor_x| {
+                    list_ok = list_ok and overlay_mod.addCursorOp(draw_list_local, cursor_x, cached_cursor_draw_y.?, r_local.editor_char_height, r_local.theme.cursor);
+                }
 
                 if (list_ok) {
                     overlay_mod.flushDrawList(draw_list_local, r_local);

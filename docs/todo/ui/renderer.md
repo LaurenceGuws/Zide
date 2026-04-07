@@ -788,11 +788,14 @@ Current evidence:
   editor row-band composition unit still needs to own base fills, line number
   label, selection/search overlays, text runs, and cursor/caret decoration as
   one local ordering story.
-- editor proof checkpoint: the fallback path now does execute one explicit
-  row-band composition helper in `segment_paint.zig` instead of spelling those
-  layers out inline in `editor_widget_draw.zig`.
-- that is still only partial proof because the cached/list path remains a draw-
-  list composition lane, not the same concrete implementation path.
+- editor proof checkpoint: the fallback path now executes one explicit
+  immediate row-band composition helper in `segment_paint.zig`.
+- editor proof checkpoint: the cached/list path now executes one explicit
+  draw-list row-band composition helper in `segment_paint.zig` too, instead of
+  spelling that band payload out inline in `editor_widget_draw.zig`.
+- that is stronger proof of the intended editor-local composition rule, but it
+  is still not full shared timing closure because the immediate and draw-list
+  row-band lanes remain distinct concrete implementations.
 - code-facing checkpoint: the sample pressure is specifically
   section-fill-plus-bg-aware preview text in `font_sample_view.zig`, including
   custom-font preview draws that still go through direct texture draw calls.
