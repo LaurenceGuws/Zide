@@ -284,6 +284,13 @@ or per-cell ordering truth. The current contract should therefore be read as:
 If a caller needs tighter phase ordering than "preserved among recorded surface
 draws inside the backend's surface phase," that caller is on the wrong seam.
 
+That has improved slightly again on the terminal overlay side too: selection
+fills, hover underlines, and rect-style cursor overlay pieces no longer use the
+generic `drawRect(...)` / `drawRectF(...)` surface path. They now route through
+the terminal rect path with an explicit overlay batch bracket, which is a
+better fit for the truth that those draws are terminal-phase semantics, not
+generic UI surface draws.
+
 That has improved slightly again on the clip side too: clip dispatch now
 terminates in dedicated backend runtimes (`gl_clip_runtime.zig` /
 `metal_clip_runtime.zig`) instead of remaining one more inline backend-specific

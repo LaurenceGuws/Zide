@@ -3,6 +3,7 @@ const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
 const common = @import("common.zig");
+const renderer_terminal_draw_host = @import("../renderer/renderer_terminal_draw_host.zig");
 
 const Cell = terminal_publication.Cell;
 
@@ -107,7 +108,7 @@ pub fn drawHoverUnderlineOverlay(
             const rect_x = view.origin_x + @as(f32, @floatFromInt(@as(i32, @intCast(start_col)))) * cell_w;
             const rect_y = view.origin_y + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h + (cell_h - (2.0 * pixel_step));
             const rect_w = cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(col_idx - start_col))));
-            r.drawRectF(rect_x, rect_y, rect_w, 2.0 * pixel_step, underline_color);
+            renderer_terminal_draw_host.addTerminalRectLogical(r, rect_x, rect_y, rect_w, 2.0 * pixel_step, underline_color);
         }
     }
 }

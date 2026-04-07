@@ -6,6 +6,7 @@ const shared_types = @import("../../types/mod.zig");
 const common = @import("common.zig");
 const hover_mod = @import("terminal_widget_hover.zig");
 const debug_geometry_mod = @import("terminal_widget_debug_geometry.zig");
+const renderer_terminal_draw_host = @import("../renderer/renderer_terminal_draw_host.zig");
 
 const Shell = app_shell.Shell;
 const Color = app_shell.Color;
@@ -65,7 +66,7 @@ fn drawSoftSelectionRect(r: anytype, x: i32, y: i32, w: i32, h: i32, color: Colo
     if (w <= 0 or h <= 0) return;
     const style = r.terminalSelectionOverlayStyle();
     if (!style.smooth_enabled) {
-        r.drawRect(x, y, w, h, color);
+        renderer_terminal_draw_host.addTerminalRect(r, x, y, w, h, color);
         return;
     }
     const corner_px = style.corner_px orelse @max(1.0, std.math.floor(r.uiScaleFactor() * 0.75));
@@ -97,7 +98,7 @@ fn drawSoftSelectionRect(r: anytype, x: i32, y: i32, w: i32, h: i32, color: Colo
         fn draw(r_local: anytype, x_local: i32, y_local: i32, w_local: i32, color_local: Color, left_inset: i32, right_inset: i32) void {
             const line_x = x_local + left_inset;
             const line_w = w_local - left_inset - right_inset;
-            if (line_w > 0) r_local.drawRect(line_x, y_local, line_w, 1, color_local);
+            if (line_w > 0) renderer_terminal_draw_host.addTerminalRect(r_local, line_x, y_local, line_w, 1, color_local);
         }
     }.draw;
 
@@ -115,12 +116,12 @@ fn drawSoftSelectionRect(r: anytype, x: i32, y: i32, w: i32, h: i32, color: Colo
     }
 
     if (top_left_edge == 0 and top_right_edge == 0 and bottom_left_edge == 0 and bottom_right_edge == 0) {
-        r.drawRect(draw_x, draw_y, draw_w, draw_h, color);
+        renderer_terminal_draw_host.addTerminalRect(r, draw_x, draw_y, draw_w, draw_h, color);
         return;
     }
 
     drawTopRow(r, draw_x, draw_y, draw_w, color, top_left_edge, top_right_edge);
-    r.drawRect(draw_x, draw_y + 1, draw_w, draw_h - 2, color);
+    renderer_terminal_draw_host.addTerminalRect(r, draw_x, draw_y + 1, draw_w, draw_h - 2, color);
     drawTopRow(r, draw_x, draw_y + draw_h - 1, draw_w, color, bottom_left_edge, bottom_right_edge);
 }
 
@@ -163,6 +164,8 @@ pub fn drawOverlays(
 ) void {
     _ = metal_fallback_sample;
     const r = shell.rendererPtr();
+    r.beginTerminalBatch();
+    defer r.flushTerminalBatch();
     const composing_len: usize = if (input.composing_active and input.composing_text.len > 0) blk: {
         var count: usize = 0;
         var count_iter = std.unicode.Utf8Iterator{ .bytes = input.composing_text, .i = 0 };
@@ -256,10 +259,10 @@ pub fn drawOverlays(
                 sample_cursor_y = box_y;
                 sample_cursor_w = box_w;
                 sample_cursor_h = box_h;
-                r.drawRectF(box_x, box_y, box_w, border_w, r.theme.cursor);
-                r.drawRectF(box_x, box_y + box_h - border_w, box_w, border_w, r.theme.cursor);
-                r.drawRectF(box_x, box_y, border_w, box_h, r.theme.cursor);
-                r.drawRectF(box_x + box_w - border_w, box_y, border_w, box_h, r.theme.cursor);
+                renderer_terminal_draw_host.addTerminalRectLogical(r, box_x, box_y, box_w, border_w, r.theme.cursor);
+                renderer_terminal_draw_host.addTerminalRectLogical(r, box_x, box_y + box_h - border_w, box_w, border_w, r.theme.cursor);
+                renderer_terminal_draw_host.addTerminalRectLogical(r, box_x, box_y, border_w, box_h, r.theme.cursor);
+                renderer_terminal_draw_host.addTerminalRectLogical(r, box_x + box_w - border_w, box_y, border_w, box_h, r.theme.cursor);
             } else switch (cursor_style.shape) {
                 .block => {
                     sample_cursor_x = cell_x;
@@ -311,7 +314,7 @@ pub fn drawOverlays(
                     sample_cursor_y = draw_y;
                     sample_cursor_w = draw_w;
                     sample_cursor_h = cursor_stroke_f;
-                    r.drawRectF(draw_x, draw_y, draw_w, cursor_stroke_f, r.theme.cursor);
+                    renderer_terminal_draw_host.addTerminalRectLogical(r, draw_x, draw_y, draw_w, cursor_stroke_f, r.theme.cursor);
                 },
                 .bar => {
                     const draw_x = cell_x + cursor_edge_inset_f;
@@ -321,7 +324,7 @@ pub fn drawOverlays(
                     sample_cursor_y = draw_y;
                     sample_cursor_w = cursor_stroke_f;
                     sample_cursor_h = draw_h;
-                    r.drawRectF(draw_x, draw_y, cursor_stroke_f, draw_h, r.theme.cursor);
+                    renderer_terminal_draw_host.addTerminalRectLogical(r, draw_x, draw_y, cursor_stroke_f, draw_h, r.theme.cursor);
                 },
             }
 
@@ -364,7 +367,7 @@ pub fn drawOverlays(
                 }
                 const underline_w = @as(f32, @floatFromInt(@as(i32, @intCast(@max(@as(usize, 1), comp_col))))) * view.cell_width;
                 const underline_h = 2.0 * pixel_step;
-                r.drawRectF(cell_x, cell_y + cursor_h - underline_h, underline_w, underline_h, r.theme.selection);
+                renderer_terminal_draw_host.addTerminalRectLogical(r, cell_x, cell_y + cursor_h - underline_h, underline_w, underline_h, r.theme.selection);
             }
         }
     }

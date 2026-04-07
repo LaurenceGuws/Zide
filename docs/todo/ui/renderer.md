@@ -597,6 +597,10 @@ Current evidence:
 - contract authority now also pins caller triage:
   `SurfaceDraw` is for generic UI/image/presentable-style draws, not terminal
   grid/cursor/composition work that already needs dedicated seams.
+- terminal overlay rect semantics now follow that rule too:
+  selection, hover underline, and rect-style cursor overlay pieces no longer
+  use generic `drawRect` / `drawRectF`; they route through the terminal rect
+  path with their own overlay batch bracket.
 - dead renderer-root capability convenience verbs with no callers are being
   deleted instead of preserved as speculative API surface.
 - the renderer root no longer stores a dead backend label field when backend
