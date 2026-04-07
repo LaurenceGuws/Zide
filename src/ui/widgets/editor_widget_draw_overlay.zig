@@ -570,6 +570,10 @@ pub fn flushDrawListEditorRowBand(list: *EditorDrawList, r: anytype) void {
         flushDrawListTextOps(list, r);
     }
     flushDrawListCursorOps(list, r);
+    // OpenGL defers all surface rects: overlay/cursor draws above may still be
+    // queued after text flush. Drain the queue here so the next row-band cannot
+    // FIFO-replay them before the next row's backgrounds (fixes lost editor bg).
+    renderer_surface_host.flushQueuedSurfaceDrawsBeforeDependentSurfaceWork(r);
 }
 
 pub fn drawEditorScrollbars(
