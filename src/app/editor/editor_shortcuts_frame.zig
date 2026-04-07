@@ -33,6 +33,7 @@ pub fn handle(
     path_prompt: *app_path_prompt_state.State,
 ) !Result {
     var editor_widget = EditorWidget.initWithCache(editor, editor_cluster_cache, editor_wrap);
+    editor_widget.viewport_width = action_layout.editor.width;
     var out: Result = .{};
 
     for (actions) |action| {

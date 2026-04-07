@@ -68,6 +68,7 @@ pub fn handle(
 
     const editor = app_active_editor_runtime.fromVisualIndex(tab_bar, editors, active_tab) orelse return out;
     var widget = EditorWidget.initWithCache(editor, editor_cluster_cache, editor_wrap);
+    widget.viewport_width = layout.editor.width;
 
     if (!search_panel_consumed_input and try widget.handleInput(shell, layout.editor.height, input_batch)) {
         out.needs_redraw = true;

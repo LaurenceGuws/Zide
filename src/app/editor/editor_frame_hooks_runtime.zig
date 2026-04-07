@@ -159,6 +159,7 @@ pub fn handle(
         out.needs_redraw = true;
     }
     var widget = widgets.EditorWidget.initWithCache(editor, editor_cluster_cache, editor_wrap);
+    widget.viewport_width = layout.editor.width;
     const view = widget.frameView();
     const visible_lines = if (layout.editor.height > 0 and shell.editorCharHeight() > 0)
         @as(usize, @intFromFloat(layout.editor.height / shell.editorCharHeight())) + 1
