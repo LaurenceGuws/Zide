@@ -8,18 +8,8 @@ const Shell = app_shell.Shell;
 const Color = app_shell.Color;
 
 pub const Band = struct {
-    const TextKind = enum {
-        text,
-        icon,
-    };
-    const TextOp = struct {
-        kind: TextKind,
-        text: []const u8,
-        x: f32,
-        y: f32,
-        color: Color,
-        bg: Color,
-    };
+    const TextKind = renderer_band_phase_host.TextKind;
+    const TextOp = renderer_band_phase_host.ReplayOp;
 
     shell: *Shell,
     bg: Color,
@@ -76,13 +66,6 @@ pub const Band = struct {
             self.text_ops.deinit(self.shell.renderer.allocator);
             self.text_ops = .{};
         }
-        renderer_band_phase_host.beginBandCommandGroup(self.shell.renderer);
-        defer renderer_band_phase_host.endBandCommandGroup(self.shell.renderer);
-        for (self.text_ops.items) |op| {
-            switch (op.kind) {
-                .text => renderer_band_phase_host.replayBandTextOnBg(self.shell.renderer, op.text, op.x, op.y, op.color, op.bg),
-                .icon => renderer_band_phase_host.replayBandIconTextOnBg(self.shell.renderer, op.text, op.x, op.y, op.color, op.bg),
-            }
-        }
+        renderer_band_phase_host.replayBandOps(self.shell.renderer, self.text_ops.items);
     }
 };

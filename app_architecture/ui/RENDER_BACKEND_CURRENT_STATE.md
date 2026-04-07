@@ -542,6 +542,9 @@ Replay routing is now one step cleaner too: `Band.flush()` delegates replay
 through `renderer_band_phase_host` helper entrypoints instead of issuing text
 host calls directly from the band recorder.
 
+That host replay seam now has focused unit coverage for group wrapping and
+recorded op replay order/background payload propagation.
+
 That seam is now clean enough that further expansion would be fake progress
 unless it graduates into a real recorded band-composition phase. Until that
 happens, it should be treated as a renderer-host composition helper for the

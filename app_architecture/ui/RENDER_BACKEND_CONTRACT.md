@@ -532,6 +532,9 @@ dynamic rather than fixed-capacity, so the seam no longer carries a hidden
 and icon replay through `renderer_band_phase_host` helpers rather than calling
 text host entrypoints directly from the band recorder.
 
+**Band replay test checkpoint (2026-04-07):** replay group wrapping and replay
+order/bg payload handling are now unit-tested at the band phase host seam.
+
 **Current blocker / stop rule (2026-04-07):** do not keep widening this seam as
 if it were already a backend-neutral phase. Today it is still a renderer-host
 composition helper over immediate text/surface work. The next valid step is

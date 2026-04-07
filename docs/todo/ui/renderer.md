@@ -861,6 +861,8 @@ Current evidence:
 - chrome-band checkpoint: `Band.flush()` replay now routes through
   `renderer_band_phase_host` helper entrypoints, keeping record and replay
   ownership separated at renderer-host level.
+- chrome-band test checkpoint: replay-group semantics are now unit-tested in
+  `renderer_band_phase_host` (group begin/end wrapping, op order, bg payload).
 - backend-runtime checkpoint: the remaining runtime-storage blocker is now more
   specifically OpenGL-shaped than Metal-shaped. Metal live frame/queue state is
   under backend context.
