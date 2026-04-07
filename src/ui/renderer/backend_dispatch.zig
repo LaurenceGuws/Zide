@@ -1,8 +1,10 @@
 const types = @import("types.zig");
 const gl_backend = @import("gl_backend.zig");
+const gl_clip_runtime = @import("gl_clip_runtime.zig");
 const gl_presentable_runtime = @import("gl_presentable_runtime.zig");
 const gl_surface_runtime = @import("gl_surface_runtime.zig");
 const metal_backend = @import("metal_backend.zig");
+const metal_clip_runtime = @import("metal_clip_runtime.zig");
 const metal_presentable_runtime = @import("metal_presentable_runtime.zig");
 const metal_surface_runtime = @import("metal_surface_runtime.zig");
 const surface_draw = @import("surface_draw.zig");
@@ -276,7 +278,7 @@ fn OpenGlDispatch(
             return gl_presentable_runtime.presentableInfo(renderer, surface);
         }
         fn applyClipRect(renderer: *RendererType, clip: ?types.Rect) void {
-            gl_backend.applyClipRect(renderer, clip);
+            gl_clip_runtime.applyClipRect(renderer, clip);
         }
         fn addTerminalRect(renderer: *RendererType, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void {
             gl_backend.addTerminalRect(renderer, x, y, w, h, color);
@@ -376,7 +378,7 @@ fn MetalDispatch(
             return metal_presentable_runtime.presentableInfo(renderer, surface);
         }
         fn applyClipRect(renderer: *RendererType, clip: ?types.Rect) void {
-            metal_backend.applyClipRect(renderer, clip);
+            metal_clip_runtime.applyClipRect(renderer, clip);
         }
         fn addTerminalRect(renderer: *RendererType, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void {
             metal_backend.addTerminalRect(renderer, x, y, w, h, color);

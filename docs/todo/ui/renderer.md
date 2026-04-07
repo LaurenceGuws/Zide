@@ -474,6 +474,12 @@ Current evidence:
 - that does not solve the remaining GL-immediate vs Metal-queued semantic
   split by itself, but it makes the ownership seam honest instead of burying
   surface submission inside the large backend files.
+- `clip` dispatch now terminates in dedicated backend runtimes too:
+  - `src/ui/renderer/gl_clip_runtime.zig`
+  - `src/ui/renderer/metal_clip_runtime.zig`
+- that removes one more tiny backend-specific inline dispatch seam from the
+  switchboard, leaving the surface semantic split as the louder remaining
+  contradiction.
 - presentable trace/editor-surface bookkeeping now also lives in
   `renderer_presentable_host.zig` instead of being split across GL and Metal
   presentable lifecycle methods.

@@ -254,6 +254,13 @@ back into the larger backend files. This does not erase the remaining
 immediate-vs-queued semantic contradiction, but it makes that ownership seam
 more explicit and therefore easier to cut honestly.
 
+That has improved slightly again on the clip side too: clip dispatch now
+terminates in dedicated backend runtimes (`gl_clip_runtime.zig` /
+`metal_clip_runtime.zig`) instead of remaining one more inline backend-specific
+ switch in the shared dispatch module. This is a small structural cleanup, but
+ it helps isolate the real remaining backend contradiction: surface submission
+ semantics still differ materially.
+
 That has improved slightly again on backend ownership too: backend dispatch no
 longer terminates presentable operations back into the large generic backend
 files. Dedicated backend presentable modules now own that seam directly:
