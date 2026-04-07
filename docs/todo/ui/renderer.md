@@ -510,6 +510,9 @@ Current evidence:
   remain exported as fake backend-facing API surface.
 - Metal backend-internal queue helpers now append directly to Metal queue
   storage instead of routing back through the shared dispatch surface.
+- the renderer root no longer exports `enqueueSurfaceDraw(...)` as a public
+  method; that fake-neutral draw verb is now internal renderer machinery
+  instead of part of the caller-facing shared surface.
 - This is real lifecycle cleanup and removes another renderer-root duplication
   seam.
 - This is not closure yet:

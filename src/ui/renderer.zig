@@ -959,7 +959,7 @@ pub const Renderer = struct {
         };
     }
 
-    pub fn enqueueSurfaceDraw(self: *Renderer, draw: surface_draw.SurfaceDraw) bool {
+    fn enqueueSurfaceDraw(self: *Renderer, draw: surface_draw.SurfaceDraw) bool {
         return self.backend_ops.enqueueSurfaceDraw(self, draw);
     }
 

@@ -255,6 +255,11 @@ solid/atlas/raw-image queue helpers now append to Metal queue storage directly
 instead of bouncing back through the shared `backend_ops.enqueueSurfaceDraw`
 surface as if they were neutral product-level callers.
 
+That has improved slightly again on the caller-facing shared renderer surface
+too: `Renderer` no longer exports `enqueueSurfaceDraw(...)` as a public method.
+That does not solve the deeper submission-semantics split yet, but it removes
+one more fake-neutral verb from the root surface seen by product code.
+
 That has improved slightly again on the OpenGL lifecycle side too: the
 OpenGL scene-target and presentable runtimes no longer call GL-only
 render-target helpers through `Renderer`. They now talk to `gl_backend`
