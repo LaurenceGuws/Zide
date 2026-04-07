@@ -98,6 +98,9 @@ as-is and still count as routine backend work.
   explicitly capped until it becomes a real recorded phase
 - the remaining loud generic surface-pressure families are editor banding and
   sample/diagnostic section banding
+- editor composition must honor the editor pane rect as its geometry authority;
+  deriving wrap/segment truth from full-window width is a contract bug, not an
+  acceptable implementation shortcut
 
 ### What Is No Longer Blocking By Itself
 

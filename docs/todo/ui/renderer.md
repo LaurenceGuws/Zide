@@ -778,6 +778,9 @@ rendering adoption?":
   sample/diagnostic sections
 - the retained editor presentable path is currently disabled for correctness and
   remains an explicit broken seam, not an adoption-ready feature
+- editor width/layout truth was still partly derived from full-window geometry
+  instead of the editor pane; that had to be corrected before retained editor
+  presentation can be trusted again
 
 This means:
 

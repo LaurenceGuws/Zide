@@ -67,6 +67,7 @@ fn cursorFreeClusters(ctx: *anyopaque, owned: []const u32) void {
 pub const EditorWidget = struct {
     editor: *Editor,
     gutter_width: f32,
+    viewport_width: f32,
     scroll_x: f32,
     scroll_y: f32,
     cluster_cache: ?*ClusterCache,
@@ -76,6 +77,7 @@ pub const EditorWidget = struct {
         return .{
             .editor = editor,
             .gutter_width = 50,
+            .viewport_width = 0,
             .scroll_x = 0,
             .scroll_y = 0,
             .cluster_cache = null,
@@ -98,6 +100,7 @@ pub const EditorWidget = struct {
         height: f32,
         input: shared_types.input.InputSnapshot,
     ) void {
+        self.viewport_width = width;
         draw_mod.draw(self, shell, x, y, width, height, input);
     }
 
@@ -112,6 +115,7 @@ pub const EditorWidget = struct {
         frame_id: u64,
         input: shared_types.input.InputSnapshot,
     ) void {
+        self.viewport_width = width;
         draw_mod.drawCached(self, shell, cache, x, y, width, height, frame_id, input);
     }
 
@@ -133,7 +137,11 @@ pub const EditorWidget = struct {
 
     pub fn viewportColumns(self: *EditorWidget, shell: *Shell) usize {
         const r = shell.rendererPtr();
-        return metrics_mod.viewportColumns(r.width, self.gutter_width, r.editor_char_width);
+        const editor_width = if (self.viewport_width > 0)
+            @as(i32, @intFromFloat(self.viewport_width))
+        else
+            r.width;
+        return metrics_mod.viewportColumns(editor_width, self.gutter_width, r.editor_char_width);
     }
 
     pub fn clusterOffsets(
@@ -193,6 +201,7 @@ pub const EditorWidget = struct {
         clamp: bool,
     ) ?types.CursorPos {
         const r = shell.rendererPtr();
+        self.viewport_width = width;
         const view = self.frameView();
         const frame_metrics = chrome_geometry_mod.frameMetrics(x, height, r.uiScaleFactor(), r.editor_char_height);
         self.gutter_width = frame_metrics.gutter_width;

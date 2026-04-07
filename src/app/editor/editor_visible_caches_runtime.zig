@@ -91,6 +91,7 @@ pub fn needsLayoutPrecompute(
     editor_render_cache: anytype,
 ) bool {
     if (editor_layout.editor.width <= 0 or editor_layout.editor.height <= 0) return false;
+    widget.viewport_width = editor_layout.editor.width;
     const view = widget.frameView();
     const visible_budget = visibleLineBudget(editor_shell, editor_layout);
     if (visible_budget == 0) return false;
@@ -119,6 +120,7 @@ pub fn precompute(
     const perf_log = app_logger.logger("editor.perf");
     const intent = runtime_policy.editorBackgroundIntent();
     if (editor_layout.editor.width <= 0 or editor_layout.editor.height <= 0) return false;
+    widget.viewport_width = editor_layout.editor.width;
     widget.editor.advanceStartupDeferrals(frame_id);
     if (widget.editor.shouldDeferVisibleCachePrecompute()) {
         perf_log.logFields(.info, "visible_cache_precompute", &.{

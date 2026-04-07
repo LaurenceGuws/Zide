@@ -232,6 +232,12 @@ layout/presentation story. So `editor_presentable_cache_compatible` remains a
 declared capability surface, but the live editor widget currently forces the
 direct path until that retained editor seam is made honest again.
 
+Part of that mismatch was more basic than retained-target ownership: editor
+column/layout truth was still partly derived from full-window width instead of
+the actual editor pane width. That has now been corrected in the widget/runtime
+lane, which sharpens the remaining retained-editor problem instead of letting
+pane-width lies masquerade as a retained-presentable-only bug.
+
 That has improved slightly again inside the OpenGL presentable path too:
 retained-target lookup now routes through small backend-owned slot helpers
 instead of open-coding terminal/editor target storage access at each
