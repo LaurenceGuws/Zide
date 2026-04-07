@@ -155,7 +155,7 @@ pub fn recentInputWindowActive(
     input: InputSnapshot,
     at: f64,
 ) bool {
-    if (renderer.usesDirectTerminalPresentation()) return false;
+    if (renderer_presentable_host.usesDirectTerminalPresentation(renderer)) return false;
     return renderer.forceFullTerminalPresentationRecentInputWindow() and
         ((input.mods.ctrl or input.mods.shift or input.mods.alt or input.mods.super) or
             self.controller.blink.recentInputWindowActive(
@@ -880,7 +880,7 @@ pub fn runPresentation(
 
     renderer_presentable_host.drawTerminalPresentableBackdrop(renderer, x, y, width, height, bg_color.toRgba());
 
-    if (renderer.usesDirectTerminalPresentation()) {
+    if (renderer_presentable_host.usesDirectTerminalPresentation(renderer)) {
         if (tryFastPresentExisting(
             &self.surface,
             renderer,
@@ -1175,7 +1175,7 @@ pub fn tryFastPresentExisting(
     );
     const cursor_changed = surface_state.cursorPresentationChanged(draw_cursor, cursor, cursor_style);
     const overlay_changed = surface_state.overlayPresentationChanged(hover_link_id, composing_active, composing_hash);
-    const direct_snapshot_reusable = renderer.usesDirectTerminalPresentation() and
+    const direct_snapshot_reusable = renderer_presentable_host.usesDirectTerminalPresentation(renderer) and
         !terminal_view.sync_updates_active and
         !blink_requires_partial and
         !cursor_changed and
@@ -1186,7 +1186,7 @@ pub fn tryFastPresentExisting(
         (terminal_view.sync_updates_active or direct_snapshot_reusable))) return false;
 
     renderer_presentable_host.drawTerminalPresentableBackdrop(renderer, x, y, width, height, bg_color.toRgba());
-    if (renderer.usesDirectTerminalPresentation()) {
+    if (renderer_presentable_host.usesDirectTerminalPresentation(renderer)) {
         note_present(
             note_present_ctx,
             renderer,
@@ -1390,7 +1390,7 @@ pub fn tryDirectSnapshotUpdate(
     note_present: anytype,
 ) DirectSnapshotUpdateResult {
     var result = DirectSnapshotUpdateResult{};
-    if (!renderer.usesDirectTerminalPresentation()) return result;
+    if (!renderer_presentable_host.usesDirectTerminalPresentation(renderer)) return result;
     if (has_kitty) return result;
     if (renderer_presentable_host.terminalPresentableInfo(renderer) == null) return result;
     if (terminal_view.rows == 0 or terminal_view.cols == 0 or terminal_view.cells.len == 0) return result;

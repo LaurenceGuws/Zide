@@ -853,6 +853,10 @@ Current evidence:
   - Metal: `.snapshot_composition`
 - the terminal runtime no longer attempts a retained update cycle on snapshot
   backends just to learn that the answer is "not here."
+- presentable ownership checkpoint: terminal widget code no longer asks the
+  renderer root whether terminal presentation is "direct" or what mode it is.
+  That decision now lives in `renderer_presentable_host.zig` with the rest of
+  the terminal presentable seam.
 - code-facing checkpoint: the sample pressure is specifically
   section-fill-plus-bg-aware preview text in `font_sample_view.zig`, including
   custom-font preview draws that still go through direct texture draw calls.

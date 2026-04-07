@@ -991,17 +991,6 @@ pub const Renderer = struct {
         return self.backend.ops.frame.dumpWindowScreenshotPpmSized(self, path, out_width, out_height);
     }
 
-    pub fn terminalPresentationMode(self: *const Renderer) TerminalPresentationMode {
-        return self.capabilities().terminal_presentation_mode;
-    }
-
-    pub fn usesDirectTerminalPresentation(self: *const Renderer) bool {
-        return switch (self.terminalPresentationMode()) {
-            .direct_main_target, .direct_snapshot_cache => true,
-            .retained_surface => false,
-        };
-    }
-
     pub fn kittyImageMode(self: *const Renderer) KittyImageMode {
         return self.capabilities().kitty_image_mode;
     }

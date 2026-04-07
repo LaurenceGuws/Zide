@@ -620,6 +620,10 @@ That split is now sharper from code inspection too:
   OpenGL reports `.retained_update_target`; Metal reports
   `.snapshot_composition`. The terminal runtime now uses that to skip bogus
   retained-update attempts on snapshot backends.
+- terminal widget code no longer asks the renderer root for
+  `terminalPresentationMode()` / `usesDirectTerminalPresentation()`. That
+  terminal-present path decision now lives in `renderer_presentable_host.zig`
+  with the rest of the terminal presentable seam.
 - sample pressure is specifically section-fill plus bg-aware text preview work
   in `font_sample_view.zig` / `font_sample_section_host.zig`, including the
   custom-font sample path that still terminates through direct texture draws

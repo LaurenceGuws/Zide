@@ -13,6 +13,7 @@ const draw_presentation = @import("terminal_widget_draw_presentation.zig");
 const draw_metrics = @import("terminal_widget_draw_metrics.zig");
 const presentation_runtime = @import("terminal_widget_presentation_runtime.zig");
 const view_state = @import("terminal_widget_view_state.zig");
+const renderer_presentable_host = @import("../renderer/renderer_presentable_host.zig");
 
 const hover_mod = @import("terminal_widget_hover.zig");
 const Shell = app_shell.Shell;
@@ -90,7 +91,7 @@ pub fn drawPrepared(
         const draw_ms_total = time_utils.secondsToMs(draw_end - draw_start);
         const render_ms = time_utils.secondsToMs(draw_end - render_phase_start);
         draw_metrics.publishFrameLatencyMetrics(
-            r.terminalPresentationMode(),
+            renderer_presentable_host.terminalPresentationMode(r),
             self.debug.last_terminal_presentation.mode,
             terminal_view.generation,
             lock_ms,

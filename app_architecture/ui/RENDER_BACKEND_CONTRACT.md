@@ -403,6 +403,9 @@ The current code makes that split more specific:
 - the lifecycle model itself is now explicit too: terminal presentables report
   either `.retained_update_target` or `.snapshot_composition` instead of
   making shared code probe a retained update path blindly every frame.
+- terminal-present path choice is now owned by the presentable host seam too,
+  not by renderer-root convenience methods. Shared terminal code asks the
+  terminal presentable host whether the path is direct or retained.
 - sample/diagnostic pressure is the simpler section-fill plus bg-aware preview
   text path in `font_sample_view.zig`, including custom-font preview draws
   that still go straight through texture draw calls

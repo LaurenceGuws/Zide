@@ -1,12 +1,25 @@
 const present_trace_runtime = @import("present_trace_runtime.zig");
 const presentable_contract = @import("presentable_contract.zig");
+const capability_contract = @import("capability_contract.zig");
 
 pub const RetainedTerminalPresentableUpdate = @import("backend_dispatch.zig").RetainedPresentableUpdateResult;
 const PresentableDraw = presentable_contract.PresentableDraw;
 pub const TerminalPresentableLifecycle = presentable_contract.TerminalPresentableLifecycle;
+pub const TerminalPresentationMode = capability_contract.TerminalPresentationMode;
 
 pub fn terminalPresentableLifecycle(renderer: anytype) TerminalPresentableLifecycle {
     return renderer.backend.ops.presentable.terminalPresentableLifecycle(renderer);
+}
+
+pub fn terminalPresentationMode(renderer: anytype) TerminalPresentationMode {
+    return renderer.capabilities().terminal_presentation_mode;
+}
+
+pub fn usesDirectTerminalPresentation(renderer: anytype) bool {
+    return switch (terminalPresentationMode(renderer)) {
+        .direct_main_target, .direct_snapshot_cache => true,
+        .retained_surface => false,
+    };
 }
 
 pub fn ensureTerminalPresentable(renderer: anytype, width: i32, height: i32) bool {
