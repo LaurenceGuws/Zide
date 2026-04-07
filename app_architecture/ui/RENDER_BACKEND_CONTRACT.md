@@ -228,6 +228,15 @@ time or define a stronger shared phase that explicitly contains both the fill
 and its dependent text/outline work. It should not treat all remaining solids
 as one undifferentiated problem.
 
+**Shell/UI chrome blocker (2026-04-07):** the obvious next family is shell/UI
+chrome bands, but that family is not a free move today because the dependent
+text side is still immediate. Shared UI text (`drawText`, `drawTextOnBg`,
+icon text, most app-font draw paths) still terminates in immediate texture draw
+work rather than one recorded phase shared with the corresponding fills. So a
+"move shell chrome fills later" cut would still separate chrome backgrounds
+from their labels/icons unless the phase boundary also grows to own the
+dependent text path.
+
 #### Presentable contract
 
 One backend-neutral presentable surface contract that can express:

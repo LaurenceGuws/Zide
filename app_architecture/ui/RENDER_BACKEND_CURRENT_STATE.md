@@ -339,6 +339,18 @@ explicitly, or define a stronger phase that can own both the fill and its
 dependent follow-up work. Treating all remaining solids as one flat queue would
 hide the real constraint again.
 
+The shell/UI chrome family is the clearest next candidate, but it is also the
+first place where the stronger-phase requirement is undeniable: ordinary UI
+text draw paths (`drawText`, `drawTextOnBg`, icon text, and most app-font draw
+work in `text_runtime.zig`) are still immediate texture draws, not recorded
+surface-phase work. So shell chrome cannot move as "just the fills" without
+splitting labels/icons from their band backgrounds again. The next real cut in
+that family therefore needs either:
+
+- a stronger band/composition phase that owns both fill and dependent text
+- or a narrower shell-chrome subset whose dependent work is already recorded
+  together
+
 That is the loudest remaining semantic contradiction in the backend contract.
 It is no longer hidden by renderer-root facade noise or mixed backend dispatch
 buckets, which means the next real cut must either:

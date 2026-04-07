@@ -676,6 +676,11 @@ Current evidence:
   pane/presentable fills are no longer in the generic surface lane. The next
   semantic cut should target one family or a stronger shared phase for that
   family, not "all remaining solids."
+- shell chrome is the most obvious next family, but it is blocked from an easy
+  cut because its dependent text/icon path is still immediate in
+  `text_runtime.zig`. A fill-only move would recreate the same separation bug
+  at the band level. Any real shell-chrome cut now needs a stronger
+  fill-plus-text phase or a genuinely narrower subset.
 - This is real lifecycle cleanup and removes another renderer-root duplication
   seam.
 - This is not closure yet:
