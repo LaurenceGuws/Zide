@@ -958,7 +958,7 @@ pub const Renderer = struct {
     }
 
     fn enqueueSurfaceDraw(self: *Renderer, draw: surface_draw.SurfaceDraw) bool {
-        return self.backend_ops.draw.enqueueSurfaceDraw(self, draw);
+        return self.backend_ops.surface.enqueueSurfaceDraw(self, draw);
     }
 
     fn enqueueSolidSurfaceFromLogicalRect(self: *Renderer, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) bool {
@@ -989,7 +989,7 @@ pub const Renderer = struct {
     pub fn beginFrame(self: *Renderer) void {
         renderer_frame_host.beginFrameHost(self);
         self.backend_ops.frame.beginFrame(self);
-        self.backend_ops.draw.applyClipRect(self, null);
+        self.backend_ops.clip.applyClipRect(self, null);
     }
 
     pub fn submitFrame(self: *Renderer) FrameSubmission {
@@ -1135,7 +1135,7 @@ pub const Renderer = struct {
         present_trace_runtime.noteCompositionClip(self);
         const requested = logicalClipFromInts(x, y, w, h) orelse {
             self.clip_depth = 0;
-            self.backend_ops.draw.applyClipRect(self, null);
+            self.backend_ops.clip.applyClipRect(self, null);
             return;
         };
         const next = if (self.currentClipRect()) |current|
@@ -1153,12 +1153,12 @@ pub const Renderer = struct {
         } else {
             self.clip_stack[self.clip_stack.len - 1] = next;
         }
-        self.backend_ops.draw.applyClipRect(self, next);
+        self.backend_ops.clip.applyClipRect(self, next);
     }
 
     pub fn endClip(self: *Renderer) void {
         if (self.clip_depth > 0) self.clip_depth -= 1;
-        self.backend_ops.draw.applyClipRect(self, self.currentClipRect());
+        self.backend_ops.clip.applyClipRect(self, self.currentClipRect());
     }
 
     pub fn drawTerminalCellGraphemeBatched(
@@ -1493,12 +1493,12 @@ pub const Renderer = struct {
 
     fn drawTextureGlyphCacheThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
         const renderer: *Renderer = @ptrCast(@alignCast(ctx));
-        renderer.backend_ops.draw.addTerminalGlyphQuad(renderer, texture, src, dest, color, kind);
+        renderer.backend_ops.terminal_draw.addTerminalGlyphQuad(renderer, texture, src, dest, color, kind);
     }
 
     fn addTerminalGlyphRectThunk(ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void {
         const renderer: *Renderer = @ptrCast(@alignCast(ctx));
-        renderer.backend_ops.draw.addTerminalGlyphRect(renderer, x, y, w, h, color.toRgba());
+        renderer.backend_ops.terminal_draw.addTerminalGlyphRect(renderer, x, y, w, h, color.toRgba());
     }
 
     fn drawTextureThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {

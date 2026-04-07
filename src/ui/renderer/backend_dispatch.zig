@@ -45,17 +45,26 @@ pub fn BackendOps(
         presentableInfo: *const fn (*RendererType, PresentableSurface) ?PresentableInfo,
     };
 
-    const DrawOps = struct {
+    const ClipOps = struct {
         clearThemeBackground: *const fn (*RendererType) void,
         applyClipRect: *const fn (*RendererType, ?types.Rect) void,
+    };
+
+    const TerminalDrawOps = struct {
         addTerminalRect: *const fn (*RendererType, i32, i32, i32, i32, types.Rgba) void,
         addTerminalGlyphRect: *const fn (*RendererType, i32, i32, i32, i32, types.Rgba) void,
         addTerminalGlyphQuad: *const fn (*RendererType, types.Texture, types.Rect, types.Rect, types.Rgba, types.TextureKind) void,
+    };
+
+    const ImageDrawOps = struct {
         createPersistentImageFromRgba: *const fn (*RendererType, i32, i32, []const u8) ?GpuImageRef,
         createPersistentImageFromRgb: *const fn (*RendererType, i32, i32, []const u8) ?GpuImageRef,
         destroyPersistentImage: *const fn (*RendererType, *GpuImageRef) void,
         drawPersistentImage: *const fn (*RendererType, GpuImageRef, ?types.Rect, types.Rect, types.Rgba) bool,
         drawRawImage: *const fn (*RendererType, RawImageFormat, i32, i32, []const u8, types.Rect, types.Rgba) bool,
+    };
+
+    const SurfaceOps = struct {
         enqueueSurfaceDraw: *const fn (*RendererType, surface_draw.SurfaceDraw) bool,
     };
 
@@ -63,7 +72,10 @@ pub fn BackendOps(
         runtime: RuntimeOps,
         frame: FrameOps,
         presentable: PresentableOps,
-        draw: DrawOps,
+        clip: ClipOps,
+        terminal_draw: TerminalDrawOps,
+        image_draw: ImageDrawOps,
+        surface: SurfaceOps,
     };
 }
 
@@ -139,17 +151,23 @@ pub fn opsFor(
                 .scrollPresentable = OpenGl.scrollPresentable,
                 .presentableInfo = OpenGl.presentableInfo,
             },
-            .draw = .{
+            .clip = .{
                 .clearThemeBackground = OpenGl.clearThemeBackground,
                 .applyClipRect = OpenGl.applyClipRect,
+            },
+            .terminal_draw = .{
                 .addTerminalRect = OpenGl.addTerminalRect,
                 .addTerminalGlyphRect = OpenGl.addTerminalGlyphRect,
                 .addTerminalGlyphQuad = OpenGl.addTerminalGlyphQuad,
+            },
+            .image_draw = .{
                 .createPersistentImageFromRgba = OpenGl.createPersistentImageFromRgba,
                 .createPersistentImageFromRgb = OpenGl.createPersistentImageFromRgb,
                 .destroyPersistentImage = OpenGl.destroyPersistentImage,
                 .drawPersistentImage = OpenGl.drawPersistentImage,
                 .drawRawImage = OpenGl.drawRawImage,
+            },
+            .surface = .{
                 .enqueueSurfaceDraw = OpenGl.enqueueSurfaceDraw,
             },
         },
@@ -178,17 +196,23 @@ pub fn opsFor(
                 .scrollPresentable = Metal.scrollPresentable,
                 .presentableInfo = Metal.presentableInfo,
             },
-            .draw = .{
+            .clip = .{
                 .clearThemeBackground = Metal.clearThemeBackground,
                 .applyClipRect = Metal.applyClipRect,
+            },
+            .terminal_draw = .{
                 .addTerminalRect = Metal.addTerminalRect,
                 .addTerminalGlyphRect = Metal.addTerminalGlyphRect,
                 .addTerminalGlyphQuad = Metal.addTerminalGlyphQuad,
+            },
+            .image_draw = .{
                 .createPersistentImageFromRgba = Metal.createPersistentImageFromRgba,
                 .createPersistentImageFromRgb = Metal.createPersistentImageFromRgb,
                 .destroyPersistentImage = Metal.destroyPersistentImage,
                 .drawPersistentImage = Metal.drawPersistentImage,
                 .drawRawImage = Metal.drawRawImage,
+            },
+            .surface = .{
                 .enqueueSurfaceDraw = Metal.enqueueSurfaceDraw,
             },
         },

@@ -457,6 +457,13 @@ Current evidence:
   `addTerminalGlyphQuad(...)` methods.
 - this keeps the terminal draw contract on one explicit host seam instead of
   leaving another renderer-root facade in front of backend draw ops.
+- the grouped backend draw bucket has now been split further too:
+  - `clip`
+  - `terminal_draw`
+  - `image_draw`
+  - `surface`
+- that is more honest than one `backend_ops.draw` grab bag mixing clip state,
+  terminal primitives, persistent images, raw images, and surface submission.
 - presentable trace/editor-surface bookkeeping now also lives in
   `renderer_presentable_host.zig` instead of being split across GL and Metal
   presentable lifecycle methods.

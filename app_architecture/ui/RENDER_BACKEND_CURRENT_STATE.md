@@ -230,6 +230,18 @@ text/grid/presentation code now routes through `renderer_terminal_draw_host.zig`
 instead, which makes that contract read like one explicit host seam rather
 than one more renderer-root facade over backend draw ops.
 
+That has improved slightly again inside the backend dispatch contract too: the
+old mixed `backend_ops.draw` bucket has now been split into smaller groups with
+clearer meaning:
+
+- `clip`
+- `terminal_draw`
+- `image_draw`
+- `surface`
+
+That is more honest than one draw grab bag mixing clip state, terminal cell
+primitives, persistent/raw image operations, and generic surface submission.
+
 That has improved slightly again on backend ownership too: backend dispatch no
 longer terminates presentable operations back into the large generic backend
 files. Dedicated backend presentable modules now own that seam directly:
