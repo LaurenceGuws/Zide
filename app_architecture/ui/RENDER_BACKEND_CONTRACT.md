@@ -165,9 +165,13 @@ remaining real `SurfaceDraw` producers are intentionally narrow:
 - generic UI/editor/shell logical fills and outlines through
   `renderer_surface_host.zig`
 - text-runtime background clears that are still just generic UI rects
-- terminal pane / viewport fills in `terminal_widget_presentation_runtime.zig`
 - presentable/snapshot blits through the shared presentable contract
 - raw image and atlas samples that already fit the shared payload model
+
+Terminal pane / viewport fills are no longer counted in that generic caller
+set. They now route through the presentable contract as terminal presentable
+backdrop work, which is the more honest ownership story for a fill that exists
+only to bracket presentable composition.
 
 So the remaining blocker is not broad caller sprawl. The remaining blocker is
 backend phase timing:
@@ -218,8 +222,6 @@ repeatable families:
   overlay decoration in the same visual band
 - font/sample or diagnostic sections where section fills are followed by text
   preview content
-- terminal pane/viewport fills that bracket presentable draw, not generic
-  image/text composition
 
 That means the next real semantic cut should probably target one family at a
 time or define a stronger shared phase that explicitly contains both the fill

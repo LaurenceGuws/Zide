@@ -1,6 +1,7 @@
 const metal_backend = @import("metal_backend.zig");
+const metal_text_sample_runtime = @import("metal_text_sample_runtime.zig");
 const presentable_contract = @import("presentable_contract.zig");
-const surface_draw = @import("surface_draw.zig");
+const types = @import("types.zig");
 
 const PresentableDraw = presentable_contract.PresentableDraw;
 const PresentableInfo = presentable_contract.PresentableInfo;
@@ -26,6 +27,23 @@ pub fn beginPresentable(_: anytype, _: PresentableSurface) bool {
 
 pub fn endPresentable(_: anytype, _: PresentableSurface) void {}
 
+pub fn drawPresentableBackdrop(renderer: anytype, surface: PresentableSurface, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) void {
+    if (surface != .terminal or w <= 0 or h <= 0) return;
+    _ = metal_backend.recordPresentableDrawForComposition(renderer, .{ .solid = .{
+        .dest_rect = .{
+            .x = renderer.logicalLengthToRaster(x),
+            .y = renderer.logicalLengthToRaster(y),
+            .width = renderer.logicalLengthToRaster(w),
+            .height = renderer.logicalLengthToRaster(h),
+        },
+        .color = color,
+        .clip_rect = if (renderer.currentClipRect()) |clip_logical|
+            metal_text_sample_runtime.pixelClipRect(renderer, clip_logical)
+        else
+            null,
+    } });
+}
+
 pub fn presentableInfo(renderer: anytype, surface: PresentableSurface) ?PresentableInfo {
     if (surface != .terminal) return null;
     const context = metal_backend.backendContextConst(renderer) orelse return null;
@@ -46,7 +64,7 @@ pub fn drawPresentable(renderer: anytype, surface: PresentableSurface, draw: Pre
             const resolved = presentable_contract.resolveDraw(draw, null, null) orelse return;
             const context = metal_backend.backendContext(renderer) orelse return;
             const snapshot = context.terminal_snapshot orelse return;
-            _ = metal_backend.recordSurfaceDrawForSurfacePhase(renderer, .{ .raw_image = .{
+            _ = metal_backend.recordPresentableDrawForComposition(renderer, .{ .raw_image = .{
                 .texture = metal_backend.cloneGpuImageRef(snapshot),
                 .source_rect = .{
                     .x = 0,

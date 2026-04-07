@@ -43,6 +43,7 @@ pub fn BackendOps(
         ensurePresentable: *const fn (*RendererType, PresentableSurface, i32, i32) bool,
         beginPresentable: *const fn (*RendererType, PresentableSurface) bool,
         endPresentable: *const fn (*RendererType, PresentableSurface) void,
+        drawPresentableBackdrop: *const fn (*RendererType, PresentableSurface, f32, f32, f32, f32, types.Rgba) void,
         drawPresentable: *const fn (*RendererType, PresentableSurface, PresentableDraw) void,
         scrollPresentable: *const fn (*RendererType, PresentableSurface, i32, i32) bool,
         presentableInfo: *const fn (*RendererType, PresentableSurface) ?PresentableInfo,
@@ -148,6 +149,7 @@ pub fn opsFor(
                 .ensurePresentable = OpenGl.ensurePresentable,
                 .beginPresentable = OpenGl.beginPresentable,
                 .endPresentable = OpenGl.endPresentable,
+                .drawPresentableBackdrop = OpenGl.drawPresentableBackdrop,
                 .drawPresentable = OpenGl.drawPresentable,
                 .scrollPresentable = OpenGl.scrollPresentable,
                 .presentableInfo = OpenGl.presentableInfo,
@@ -191,6 +193,7 @@ pub fn opsFor(
                 .ensurePresentable = Metal.ensurePresentable,
                 .beginPresentable = Metal.beginPresentable,
                 .endPresentable = Metal.endPresentable,
+                .drawPresentableBackdrop = Metal.drawPresentableBackdrop,
                 .drawPresentable = Metal.drawPresentable,
                 .scrollPresentable = Metal.scrollPresentable,
                 .presentableInfo = Metal.presentableInfo,
@@ -261,6 +264,9 @@ fn OpenGlDispatch(
         }
         fn endPresentable(renderer: *RendererType, surface: PresentableSurface) void {
             gl_presentable_runtime.endPresentable(renderer, surface);
+        }
+        fn drawPresentableBackdrop(renderer: *RendererType, surface: PresentableSurface, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) void {
+            gl_presentable_runtime.drawPresentableBackdrop(renderer, surface, x, y, w, h, color);
         }
         fn drawPresentable(renderer: *RendererType, surface: PresentableSurface, draw: PresentableDraw) void {
             gl_presentable_runtime.drawPresentable(renderer, surface, draw);
@@ -358,6 +364,9 @@ fn MetalDispatch(
         }
         fn endPresentable(renderer: *RendererType, surface: PresentableSurface) void {
             metal_presentable_runtime.endPresentable(renderer, surface);
+        }
+        fn drawPresentableBackdrop(renderer: *RendererType, surface: PresentableSurface, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) void {
+            metal_presentable_runtime.drawPresentableBackdrop(renderer, surface, x, y, w, h, color);
         }
         fn drawPresentable(renderer: *RendererType, surface: PresentableSurface, draw: PresentableDraw) void {
             metal_presentable_runtime.drawPresentable(renderer, surface, draw);

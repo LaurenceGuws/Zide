@@ -652,6 +652,10 @@ Current evidence:
   atlas samples that already fit the shared payload model. The live blocker is
   no longer caller sprawl; it is the backend surface-phase split itself
   (GL executes surface phase immediately, Metal replays it at submit).
+- terminal pane / viewport fills have now been peeled off that generic lane.
+  They route through the presentable seam as terminal presentable backdrop
+  work, and Metal replays them in a dedicated presentable-composition queue
+  after terminal snapshot capture.
 - the exact blocker is now named: many remaining `SurfaceDraw.solid` calls are
   local background layers immediately followed by text/outline work at the same
   call site. A broad "defer all GL surface draws to submit" cut would still
@@ -668,9 +672,10 @@ Current evidence:
   own.
 - the remaining solid-ordering dependency is now mapped into concrete families,
   not hand-waved as one giant queue problem:
-  shell chrome bands, editor banding, sample/diagnostic sections, and terminal
-  pane/presentable fills. The next semantic cut should target one family or a
-  stronger shared phase for that family, not "all remaining solids."
+  shell chrome bands, editor banding, and sample/diagnostic sections. Terminal
+  pane/presentable fills are no longer in the generic surface lane. The next
+  semantic cut should target one family or a stronger shared phase for that
+  family, not "all remaining solids."
 - This is real lifecycle cleanup and removes another renderer-root duplication
   seam.
 - This is not closure yet:

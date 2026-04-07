@@ -23,6 +23,10 @@ pub fn endPresentable(renderer: anytype, surface: PresentableSurface) void {
     renderer.backend_ops.presentable.endPresentable(renderer, surface);
 }
 
+pub fn drawPresentableBackdrop(renderer: anytype, surface: PresentableSurface, x: f32, y: f32, w: f32, h: f32, color: @import("types.zig").Rgba) void {
+    renderer.backend_ops.presentable.drawPresentableBackdrop(renderer, surface, x, y, w, h, color);
+}
+
 pub fn drawPresentable(renderer: anytype, surface: PresentableSurface, draw: PresentableDraw) void {
     if (surface == .editor) {
         present_trace_runtime.notePresentableDraw(renderer, .editor, null);

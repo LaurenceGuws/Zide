@@ -274,15 +274,23 @@ The remaining truth is now plain:
   now"
 - Metal surface submission still means "record this draw for the submit-time
   surface phase"
+- Metal terminal presentable composition now also has a second, narrower queue:
+  terminal presentable backdrop fills and terminal presentable blits are
+  recorded separately and replayed after terminal snapshot capture, not mixed
+  into the generic surface phase
 
 And the remaining caller set is already narrow enough that this is no longer a
 caller-sprawl problem. The active shared `SurfaceDraw` producers are mainly:
 
 - generic UI/editor/shell fills through `renderer_surface_host.zig`
 - text-runtime generic background clears
-- terminal pane / viewport fills in terminal presentation
 - presentable/snapshot blits
 - raw image / atlas samples that already fit the shared payload model
+
+Terminal pane / viewport fills are no longer part of that shared caller set.
+They now route through the presentable seam as terminal presentable backdrop
+work, which also lets Metal keep them adjacent to terminal presentable blits in
+one narrower composition queue after snapshot capture.
 
 So the backend-fit blocker is now concentrated:
 
@@ -325,8 +333,6 @@ families:
   overlay decoration in the same visual band
 - sample/diagnostic sections where the fill exists only as the background for
   nearby text preview content
-- terminal pane / viewport fills around presentable draw, which are really a
-  presentable-family concern rather than generic image/text composition
 
 So the next semantic cut should probably attack one of those families
 explicitly, or define a stronger phase that can own both the fill and its

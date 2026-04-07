@@ -9,7 +9,6 @@ const view_state = @import("terminal_widget_view_state.zig");
 const present_trace_runtime = @import("../renderer/present_trace_runtime.zig");
 const renderer_clip_host = @import("../renderer/renderer_clip_host.zig");
 const renderer_presentable_host = @import("../renderer/renderer_presentable_host.zig");
-const renderer_surface_host = @import("../renderer/renderer_surface_host.zig");
 const renderer_terminal_draw_host = @import("../renderer/renderer_terminal_draw_host.zig");
 const draw_grid = @import("terminal_widget_draw_grid.zig");
 const publication_capture = @import("../../terminal/core/publication/render_cache.zig");
@@ -772,8 +771,9 @@ pub fn runRetainedPresentation(
     else
         renderer.theme.background;
     if (view_geometry.viewport.width > 0 and view_geometry.viewport.height > 0) {
-        _ = renderer_surface_host.recordSolidSurfaceFromLogicalRect(
+        renderer_presentable_host.drawPresentableBackdrop(
             renderer,
+            .terminal,
             view_geometry.viewport.x,
             view_geometry.viewport.y,
             view_geometry.viewport.width,
@@ -836,14 +836,7 @@ pub fn runPresentation(
     else
         renderer.theme.background;
 
-    _ = renderer_surface_host.recordSolidSurfaceFromLogicalRect(
-        renderer,
-        x,
-        y,
-        width,
-        height,
-        bg_color.toRgba(),
-    );
+    renderer_presentable_host.drawPresentableBackdrop(renderer, .terminal, x, y, width, height, bg_color.toRgba());
 
     if (renderer.usesDirectTerminalPresentation()) {
         if (tryFastPresentExisting(
@@ -1148,14 +1141,7 @@ pub fn tryFastPresentExisting(
     if (!(view_cells_len > 0 and presentable_ready and
         (terminal_view.sync_updates_active or direct_snapshot_reusable))) return false;
 
-    _ = renderer_surface_host.recordSolidSurfaceFromLogicalRect(
-        renderer,
-        x,
-        y,
-        width,
-        height,
-        bg_color.toRgba(),
-    );
+    renderer_presentable_host.drawPresentableBackdrop(renderer, .terminal, x, y, width, height, bg_color.toRgba());
     if (renderer.usesDirectTerminalPresentation()) {
         note_present(
             note_present_ctx,
@@ -1231,8 +1217,9 @@ pub fn directPresent(
     const viewport_w = @min(width, view_geometry.viewport_width);
     const viewport_h = @min(height, view_geometry.viewport_height);
 
-    _ = renderer_surface_host.recordSolidSurfaceFromLogicalRect(
+    renderer_presentable_host.drawPresentableBackdrop(
         renderer,
+        .terminal,
         view_geometry.viewport.x,
         view_geometry.viewport.y,
         view_geometry.viewport.width,
@@ -1391,8 +1378,9 @@ pub fn tryDirectSnapshotUpdate(
         .b = terminal_view.base_colors.resolved_background.b,
         .a = terminal_view.base_colors.resolved_background.a,
     };
-    _ = renderer_surface_host.recordSolidSurfaceFromLogicalRect(
+    renderer_presentable_host.drawPresentableBackdrop(
         renderer,
+        .terminal,
         view_geometry.viewport.x,
         view_geometry.viewport.y,
         view_geometry.viewport.width,

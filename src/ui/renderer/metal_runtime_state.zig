@@ -16,6 +16,7 @@ pub const State = struct {
     backend_context: ?metal_backend.BackendContext = null,
     frame: ?metal_backend.Frame = null,
     queued_surface_draws: std.ArrayListUnmanaged(surface_draw.SurfaceDraw) = .{},
+    queued_presentable_draws: std.ArrayListUnmanaged(surface_draw.SurfaceDraw) = .{},
     diagnostic_font: ?TerminalFont = null,
     preview_source: AtlasPreviewSource = .unavailable,
 };

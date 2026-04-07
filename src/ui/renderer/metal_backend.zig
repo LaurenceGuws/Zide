@@ -1201,6 +1201,7 @@ pub fn runStartupSmokeForBootstrap(_: *sdl_api.c.SDL_Window, render_surface_atta
 
 pub fn beginFrame(renderer: anytype) void {
     clearQueuedSurfaceDraws(renderer);
+    clearQueuedPresentableDraws(renderer);
     if (backendContext(renderer)) |context| {
         resizeBackendContext(context, renderer.render_width, renderer.render_height);
         var frame = acquireFrame(context) orelse {
@@ -1231,6 +1232,7 @@ pub fn beginFrame(renderer: anytype) void {
 
 pub fn submitFrame(renderer: anytype) present_trace_runtime.FrameSubmission {
     defer clearQueuedSurfaceDraws(renderer);
+    defer clearQueuedPresentableDraws(renderer);
     const present_start = sdl_api.getPerformanceCounter();
     const succeeded = if (backendContext(renderer)) |context|
         if (currentFrame(renderer)) |frame| inner: {
@@ -1243,6 +1245,7 @@ pub fn submitFrame(renderer: anytype) present_trace_runtime.FrameSubmission {
 
             replayRecordedSurfaceDrawSurfacePhase(renderer, context, frame);
             _ = captureTerminalSnapshot(context, frame);
+            replayRecordedPresentableDraws(renderer, context, frame);
             encodePresent(frame);
             commitFrame(frame);
 
@@ -1405,6 +1408,19 @@ fn storeCurrentFrame(renderer: anytype, frame: Frame) void {
 
 pub fn recordSurfaceDrawForSurfacePhase(renderer: anytype, draw: SurfaceDraw) bool {
     renderer.backend_runtime.metal.queued_surface_draws.append(renderer.allocator, draw) catch {
+        var queued_draw = draw;
+        switch (queued_draw) {
+            .atlas => {},
+            .solid => {},
+            .raw_image => |*raw| releaseGpuImageRef(&raw.texture),
+        }
+        return false;
+    };
+    return true;
+}
+
+pub fn recordPresentableDrawForComposition(renderer: anytype, draw: SurfaceDraw) bool {
+    renderer.backend_runtime.metal.queued_presentable_draws.append(renderer.allocator, draw) catch {
         var queued_draw = draw;
         switch (queued_draw) {
             .atlas => {},
@@ -1705,6 +1721,16 @@ fn replayRecordedSurfaceDrawSurfacePhase(renderer: anytype, context: *BackendCon
     }
 }
 
+fn replayRecordedPresentableDraws(renderer: anytype, context: *BackendContext, frame: *Frame) void {
+    for (renderer.backend_runtime.metal.queued_presentable_draws.items) |queued_draw| {
+        switch (queued_draw) {
+            .atlas => |sample| _ = drawAtlasSample(context, frame, sample),
+            .solid => |solid| _ = drawSolidColor(context, frame, solid),
+            .raw_image => |draw| _ = drawRawImage(context, frame, draw),
+        }
+    }
+}
+
 pub fn resizeBackendContext(
     context: *BackendContext,
     drawable_width: i32,
@@ -1736,7 +1762,9 @@ pub fn deinitBackendContext(context: *BackendContext) void {
 pub fn deinitRuntime(renderer: anytype) void {
     clearDiagnosticFont(renderer);
     clearQueuedSurfaceDraws(renderer);
+    clearQueuedPresentableDraws(renderer);
     renderer.backend_runtime.metal.queued_surface_draws.deinit(renderer.allocator);
+    renderer.backend_runtime.metal.queued_presentable_draws.deinit(renderer.allocator);
     if (renderer.backend_runtime.metal.frame) |*frame| abandonFrame(frame);
     if (renderer.backend_runtime.metal.backend_context) |*context| deinitBackendContext(context);
 }
@@ -1782,6 +1810,17 @@ fn clearQueuedSurfaceDraws(renderer: anytype) void {
         }
     }
     renderer.backend_runtime.metal.queued_surface_draws.clearRetainingCapacity();
+}
+
+fn clearQueuedPresentableDraws(renderer: anytype) void {
+    for (renderer.backend_runtime.metal.queued_presentable_draws.items) |*queued_draw| {
+        switch (queued_draw.*) {
+            .atlas => {},
+            .solid => {},
+            .raw_image => |*draw| releaseGpuImageRef(&draw.texture),
+        }
+    }
+    renderer.backend_runtime.metal.queued_presentable_draws.clearRetainingCapacity();
 }
 
 pub fn acquireFrame(context: *BackendContext) ?Frame {

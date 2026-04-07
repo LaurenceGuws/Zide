@@ -3,6 +3,7 @@ const app_logger = @import("../../app_logger.zig");
 const draw_ops = @import("draw_ops.zig");
 const gl_backend = @import("gl_backend.zig");
 const gl = @import("gl.zig");
+const metal_text_sample_runtime = @import("metal_text_sample_runtime.zig");
 const presentable_contract = @import("presentable_contract.zig");
 const texture_draw = @import("texture_draw.zig");
 const types = @import("types.zig");
@@ -71,6 +72,23 @@ pub fn beginPresentable(renderer: anytype, surface: PresentableSurface) bool {
 pub fn endPresentable(renderer: anytype, _: PresentableSurface) void {
     if (!renderer.capabilities().retained_targets) return;
     restoreCompositionTarget(renderer);
+}
+
+pub fn drawPresentableBackdrop(renderer: anytype, _: PresentableSurface, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) void {
+    if (w <= 0 or h <= 0) return;
+    _ = gl_backend.consumeRecordedSurfaceDrawInSurfacePhase(renderer, .{ .solid = .{
+        .dest_rect = .{
+            .x = renderer.logicalLengthToRaster(x),
+            .y = renderer.logicalLengthToRaster(y),
+            .width = renderer.logicalLengthToRaster(w),
+            .height = renderer.logicalLengthToRaster(h),
+        },
+        .color = color,
+        .clip_rect = if (renderer.currentClipRect()) |clip|
+            metal_text_sample_runtime.pixelClipRect(renderer, clip)
+        else
+            null,
+    } });
 }
 
 pub fn drawPresentable(renderer: anytype, surface: PresentableSurface, draw: PresentableDraw) void {
