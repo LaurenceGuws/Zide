@@ -20,7 +20,7 @@ pub fn drawPresentableBackdrop(renderer: anytype, x: f32, y: f32, w: f32, h: f32
 }
 
 pub fn drawPresentable(renderer: anytype, draw: PresentableDraw) void {
-    present_trace_runtime.notePresentableDraw(renderer, .terminal, draw.generation);
+    present_trace_runtime.noteTerminalPresentation(renderer, draw.generation);
     renderer.backend.ops.presentable.drawPresentable(renderer, draw);
 }
 

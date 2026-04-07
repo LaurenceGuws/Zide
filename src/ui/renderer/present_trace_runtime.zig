@@ -1,7 +1,3 @@
-pub const PresentableKind = enum {
-    terminal,
-};
-
 pub const FrameSubmission = struct {
     succeeded: bool,
     sequence: u64,
@@ -46,27 +42,9 @@ pub fn noteCompositionClip(self: anytype) void {
     self.present.trace_current.composition_clip_count += 1;
 }
 
-pub fn notePresentableUpdate(_: anytype, presentable: PresentableKind) void {
-    switch (presentable) {
-        .terminal => {},
-    }
-}
-
-pub fn notePresentableDraw(self: anytype, presentable: PresentableKind, generation: ?u64) void {
-    switch (presentable) {
-        .terminal => noteTerminalPresentation(self, generation),
-    }
-}
-
 pub fn noteTerminalPresentation(self: anytype, generation: ?u64) void {
     self.present.trace_current.terminal_presentation_count += 1;
     if (generation) |value| self.present.trace_current.terminal_presented_generation = value;
-}
-
-pub fn notePresentableEnded(_: anytype, presentable: PresentableKind) void {
-    switch (presentable) {
-        .terminal => {},
-    }
 }
 
 pub fn noteEditorSurfaceFullPaneClear(self: anytype, x: i32, y: i32, w: i32, h: i32) void {
