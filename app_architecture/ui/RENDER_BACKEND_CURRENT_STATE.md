@@ -190,6 +190,12 @@ retained-target lookup now routes through small backend-owned slot helpers
 instead of open-coding terminal/editor target storage access at each
 presentable operation site.
 
+That has improved slightly again at the shared facade boundary too: the
+renderer-owned presentable facade methods now live in
+`renderer_presentable_host.zig` instead of `renderer.zig` directly. This does
+not make the presentable lifecycle fully backend-neutral yet, but it removes
+another small renderer-root ownership seam from that surface.
+
 That has improved slightly again on the scene-composition side too: the
 offscreen scene-target contract/state now lives in a dedicated
 `scene_target_state` module and is stored under `opengl_runtime.scene_target`

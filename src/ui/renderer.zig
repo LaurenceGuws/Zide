@@ -15,6 +15,7 @@ const metal_backend = @import("renderer/metal_backend.zig");
 const backend_runtime_bundle = @import("renderer/backend_runtime_bundle.zig");
 const metal_runtime_state = @import("renderer/metal_runtime_state.zig");
 const renderer_frame_host = @import("renderer/renderer_frame_host.zig");
+const renderer_presentable_host = @import("renderer/renderer_presentable_host.zig");
 const scene_target_state = @import("renderer/scene_target_state.zig");
 const surface_draw = @import("renderer/surface_draw.zig");
 const input_constants = @import("renderer/input_constants.zig");
@@ -1267,31 +1268,31 @@ pub const Renderer = struct {
     }
 
     pub fn ensurePresentable(self: *Renderer, surface: PresentableSurface, width: i32, height: i32) bool {
-        return self.backend_ops.ensurePresentable(self, surface, width, height);
+        return renderer_presentable_host.ensurePresentable(self, surface, width, height);
     }
 
     pub fn beginPresentable(self: *Renderer, surface: PresentableSurface) bool {
-        return self.backend_ops.beginPresentable(self, surface);
+        return renderer_presentable_host.beginPresentable(self, surface);
     }
 
     pub fn presentableAvailable(self: *Renderer, surface: PresentableSurface) bool {
-        return self.backend_ops.presentableAvailable(self, surface);
+        return renderer_presentable_host.presentableAvailable(self, surface);
     }
 
     pub fn endPresentable(self: *Renderer, surface: PresentableSurface) void {
-        self.backend_ops.endPresentable(self, surface);
+        renderer_presentable_host.endPresentable(self, surface);
     }
 
     pub fn drawPresentable(self: *Renderer, surface: PresentableSurface, draw: PresentableDraw) void {
-        self.backend_ops.drawPresentable(self, surface, draw);
+        renderer_presentable_host.drawPresentable(self, surface, draw);
     }
 
     pub fn scrollPresentable(self: *Renderer, surface: PresentableSurface, dx: i32, dy: i32) bool {
-        return self.backend_ops.scrollPresentable(self, surface, dx, dy);
+        return renderer_presentable_host.scrollPresentable(self, surface, dx, dy);
     }
 
     pub fn presentableInfo(self: *Renderer, surface: PresentableSurface) ?PresentableInfo {
-        return self.backend_ops.presentableInfo(self, surface);
+        return renderer_presentable_host.presentableInfo(self, surface);
     }
 
     pub fn clearToThemeBackground(self: *Renderer) void {

@@ -421,6 +421,10 @@ Status: active
 
 Current evidence:
 
+- the renderer-owned presentable facade methods now live in
+  `renderer_presentable_host.zig` instead of `renderer.zig` directly.
+- this removes another small renderer-root ownership seam from the shared
+  presentable contract surface.
 - OpenGL presentable operations now resolve retained-target storage through
   backend-owned slot helpers instead of open-coding terminal/editor target
   access at each call site.
