@@ -831,6 +831,9 @@ Current evidence:
   `editor_widget_draw_text.zig`.
 - the remaining editor styled-text split is now increasingly just the final
   immediate-vs-draw-list emission target.
+- editor stop rule checkpoint: do not keep grinding local helper cleanup past
+  this point unless a cut removes the final emitter-target split itself or
+  changes the real `SurfaceDraw` timing story.
 - backend-runtime checkpoint: the remaining runtime-storage blocker is now more
   specifically OpenGL-shaped than Metal-shaped. Metal live frame/queue state is
   under backend context.
