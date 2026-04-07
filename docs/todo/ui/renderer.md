@@ -836,6 +836,10 @@ Current evidence:
   internal `beginPresentable/endPresentable` split behind the shared retained
   update-cycle contract. It now exposes one `updateRetainedPresentable(...)`
   verb directly, which is the honest shape the shared contract already names.
+- presentable checkpoint: the Metal side no longer hides its lack of retained
+  update-cycle semantics as an inline false stub in backend dispatch. That
+  "no retained update cycle here" result now lives in
+  `metal_presentable_runtime.zig` itself.
 - code-facing checkpoint: the sample pressure is specifically
   section-fill-plus-bg-aware preview text in `font_sample_view.zig`, including
   custom-font preview draws that still go through direct texture draw calls.

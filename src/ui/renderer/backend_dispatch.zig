@@ -355,10 +355,7 @@ fn MetalDispatch(
             ctx: ?*const anyopaque,
             body: *const fn (?*const anyopaque, *RendererType) void,
         ) bool {
-            _ = renderer;
-            _ = ctx;
-            _ = body;
-            return false;
+            return metal_presentable_runtime.updateRetainedPresentable(renderer, ctx, body);
         }
         fn drawPresentableBackdrop(renderer: *RendererType, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) void {
             metal_presentable_runtime.drawPresentableBackdrop(renderer, x, y, w, h, color);

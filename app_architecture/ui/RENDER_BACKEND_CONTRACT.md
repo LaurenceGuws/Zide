@@ -393,6 +393,9 @@ The current code makes that split more specific:
   internal begin/end pair behind the shared retained update-cycle contract.
   It now exposes one update-cycle verb directly, which is the shape the shared
   contract actually means.
+- the Metal side now states the opposite truth in its own runtime module too:
+  absence of retained update-cycle semantics is no longer hidden as an inline
+  false stub in backend dispatch.
 - sample/diagnostic pressure is the simpler section-fill plus bg-aware preview
   text path in `font_sample_view.zig`, including custom-font preview draws
   that still go straight through texture draw calls

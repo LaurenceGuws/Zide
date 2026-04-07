@@ -609,6 +609,9 @@ That split is now sharper from code inspection too:
   no longer carries an internal begin/end retained-update split behind the
   shared host contract. It now exposes one retained update-cycle verb
   directly, matching the current contract surface more honestly.
+- the Metal side now states the opposite truth in its own runtime too:
+  lack of retained update-cycle semantics is no longer an anonymous false stub
+  in backend dispatch; it is named in `metal_presentable_runtime.zig`.
 - sample pressure is specifically section-fill plus bg-aware text preview work
   in `font_sample_view.zig` / `font_sample_section_host.zig`, including the
   custom-font sample path that still terminates through direct texture draws

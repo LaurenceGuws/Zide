@@ -15,11 +15,13 @@ pub fn ensurePresentable(renderer: anytype, width: i32, height: i32) bool {
     return metal_backend.ensureTerminalSnapshotPresentable(context, drawable_width, drawable_height).recreated;
 }
 
-pub fn beginPresentable(_: anytype) bool {
+pub fn updateRetainedPresentable(
+    renderer: anytype,
+    _: ?*const anyopaque,
+    _: *const fn (?*const anyopaque, @TypeOf(renderer)) void,
+) bool {
     return false;
 }
-
-pub fn endPresentable(_: anytype) void {}
 
 pub fn drawPresentableBackdrop(renderer: anytype, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) void {
     if (w <= 0 or h <= 0) return;
