@@ -858,6 +858,9 @@ Current evidence:
 - chrome-band checkpoint: band text op storage moved from a fixed-size local
   array to dynamic list storage, removing the "overflow falls back to immediate
   draw" branch from this seam.
+- chrome-band checkpoint: `Band.flush()` replay now routes through
+  `renderer_band_phase_host` helper entrypoints, keeping record and replay
+  ownership separated at renderer-host level.
 - backend-runtime checkpoint: the remaining runtime-storage blocker is now more
   specifically OpenGL-shaped than Metal-shaped. Metal live frame/queue state is
   under backend context.

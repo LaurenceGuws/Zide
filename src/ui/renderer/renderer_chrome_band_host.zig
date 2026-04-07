@@ -3,7 +3,6 @@ const app_shell = @import("../../app_shell.zig");
 const app_logger = @import("../../app_logger.zig");
 const renderer_band_phase_host = @import("renderer_band_phase_host.zig");
 const renderer_surface_host = @import("renderer_surface_host.zig");
-const renderer_text_host = @import("renderer_text_host.zig");
 
 const Shell = app_shell.Shell;
 const Color = app_shell.Color;
@@ -81,8 +80,8 @@ pub const Band = struct {
         defer renderer_band_phase_host.endBandCommandGroup(self.shell.renderer);
         for (self.text_ops.items) |op| {
             switch (op.kind) {
-                .text => renderer_text_host.drawTextOnBg(self.shell.renderer, op.text, op.x, op.y, op.color, op.bg),
-                .icon => renderer_text_host.drawIconTextOnBg(self.shell.renderer, op.text, op.x, op.y, op.color, op.bg),
+                .text => renderer_band_phase_host.replayBandTextOnBg(self.shell.renderer, op.text, op.x, op.y, op.color, op.bg),
+                .icon => renderer_band_phase_host.replayBandIconTextOnBg(self.shell.renderer, op.text, op.x, op.y, op.color, op.bg),
             }
         }
     }
