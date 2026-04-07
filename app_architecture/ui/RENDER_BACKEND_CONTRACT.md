@@ -299,6 +299,19 @@ renderer surface/text hosts instead of bouncing back through `Shell`
 convenience forwards. That keeps the ownership story honest: it is a renderer
 composition host, not a widget helper wearing renderer clothes.
 
+**Current blocker / stop rule (2026-04-07):** do not keep widening this seam as
+if it were already a backend-neutral phase. Today it is still a renderer-host
+composition helper over immediate text/surface work. The next valid step is
+either:
+
+- introduce a real recorded band-composition phase with one product-level
+  ordering rule
+- or stop here and treat shell chrome as a local renderer-host seam while the
+  larger `SurfaceDraw` phase contradiction remains primary
+
+Do not create a second chrome helper, and do not keep adopting unrelated popup
+or modal surfaces just to make the seam look more important than it is.
+
 #### Presentable contract
 
 One backend-neutral presentable surface contract that can express:

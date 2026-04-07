@@ -395,6 +395,11 @@ It now also terminates directly in renderer surface/text hosts rather than
 routing back through `Shell` forwards. That reduces one more fake layer between
 chrome composition intent and the renderer host surfaces it really uses.
 
+That seam is now clean enough that further expansion would be fake progress
+unless it graduates into a real recorded band-composition phase. Until that
+happens, it should be treated as a renderer-host composition helper for the
+current shell chrome family, not as a solved backend-neutral contract.
+
 That is the loudest remaining semantic contradiction in the backend contract.
 It is no longer hidden by renderer-root facade noise or mixed backend dispatch
 buckets, which means the next real cut must either:
