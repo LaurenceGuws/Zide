@@ -86,6 +86,15 @@ The naming now matches that ownership truth too: the host seam uses
 `terminalPresentable*` names instead of generic `presentable*` names, which is
 more honest while terminal is the only live shared presentable family.
 
+That has improved slightly again at the shared lifecycle boundary too:
+backend dispatch no longer exports `beginPresentable(...)` /
+`endPresentable(...)` as first-class shared presentable verbs. The live shared
+host seam now asks for exactly one thing there: "attempt one retained terminal
+presentable update cycle." OpenGL still satisfies that by opening a retained
+target, running the update body, and restoring composition state; Metal still
+reports that no retained update cycle exists and stays on the snapshot plus
+composition path.
+
 That has improved slightly again on the OpenGL side too: terminal presentable
 target-slot access now routes through `gl_backend` helpers instead of
 `gl_presentable_runtime.zig` reaching directly into

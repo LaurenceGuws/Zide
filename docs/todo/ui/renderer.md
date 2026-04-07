@@ -725,6 +725,18 @@ Current evidence:
 - naming checkpoint: the host seam now says `terminalPresentable*` explicitly
   instead of generic `presentable*` names. That keeps the API aligned with the
   current truth that the live shared presentable lane is terminal-only.
+- retained-update checkpoint: the shared backend dispatch no longer exports
+  `beginPresentable(...)` / `endPresentable(...)` as first-class contract
+  verbs.
+- that pair was still a fake lifecycle leak from the GL retained-target model.
+  The live shared seam now says what the product actually asks for:
+  "attempt one retained terminal presentable update cycle."
+- OpenGL still implements that by opening a retained target, running the body,
+  and restoring composition target state.
+- Metal still reports that no retained update cycle exists and relies on its
+  snapshot-plus-composition path instead.
+- this does not solve the remaining lifecycle-model mismatch, but it removes
+  another false claim that `begin/end` were a backend-neutral vocabulary.
 - OpenGL presentable target slot access now also routes through `gl_backend`
   helpers instead of `gl_presentable_runtime.zig` reaching directly into
   `renderer.backend.runtime.opengl.presentable_targets`.

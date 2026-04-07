@@ -40,8 +40,7 @@ pub fn BackendOps(
 
     const PresentableOps = struct {
         ensurePresentable: *const fn (*RendererType, i32, i32) bool,
-        beginPresentable: *const fn (*RendererType) bool,
-        endPresentable: *const fn (*RendererType) void,
+        updateRetainedPresentable: *const fn (*RendererType, ?*const anyopaque, *const fn (?*const anyopaque, *RendererType) void) bool,
         drawPresentableBackdrop: *const fn (*RendererType, f32, f32, f32, f32, types.Rgba) void,
         drawPresentable: *const fn (*RendererType, PresentableDraw) void,
         scrollPresentable: *const fn (*RendererType, i32, i32) bool,
@@ -142,8 +141,7 @@ pub fn opsFor(
             },
             .presentable = .{
                 .ensurePresentable = OpenGl.ensurePresentable,
-                .beginPresentable = OpenGl.beginPresentable,
-                .endPresentable = OpenGl.endPresentable,
+                .updateRetainedPresentable = OpenGl.updateRetainedPresentable,
                 .drawPresentableBackdrop = OpenGl.drawPresentableBackdrop,
                 .drawPresentable = OpenGl.drawPresentable,
                 .scrollPresentable = OpenGl.scrollPresentable,
@@ -186,8 +184,7 @@ pub fn opsFor(
             },
             .presentable = .{
                 .ensurePresentable = Metal.ensurePresentable,
-                .beginPresentable = Metal.beginPresentable,
-                .endPresentable = Metal.endPresentable,
+                .updateRetainedPresentable = Metal.updateRetainedPresentable,
                 .drawPresentableBackdrop = Metal.drawPresentableBackdrop,
                 .drawPresentable = Metal.drawPresentable,
                 .scrollPresentable = Metal.scrollPresentable,
@@ -253,11 +250,15 @@ fn OpenGlDispatch(
         fn ensurePresentable(renderer: *RendererType, width: i32, height: i32) bool {
             return gl_presentable_runtime.ensurePresentable(renderer, width, height);
         }
-        fn beginPresentable(renderer: *RendererType) bool {
-            return gl_presentable_runtime.beginPresentable(renderer);
-        }
-        fn endPresentable(renderer: *RendererType) void {
-            gl_presentable_runtime.endPresentable(renderer);
+        fn updateRetainedPresentable(
+            renderer: *RendererType,
+            ctx: ?*const anyopaque,
+            body: *const fn (?*const anyopaque, *RendererType) void,
+        ) bool {
+            if (!gl_presentable_runtime.beginPresentable(renderer)) return false;
+            defer gl_presentable_runtime.endPresentable(renderer);
+            body(ctx, renderer);
+            return true;
         }
         fn drawPresentableBackdrop(renderer: *RendererType, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) void {
             gl_presentable_runtime.drawPresentableBackdrop(renderer, x, y, w, h, color);
@@ -352,11 +353,15 @@ fn MetalDispatch(
         fn ensurePresentable(renderer: *RendererType, width: i32, height: i32) bool {
             return metal_presentable_runtime.ensurePresentable(renderer, width, height);
         }
-        fn beginPresentable(renderer: *RendererType) bool {
-            return metal_presentable_runtime.beginPresentable(renderer);
-        }
-        fn endPresentable(renderer: *RendererType) void {
-            metal_presentable_runtime.endPresentable(renderer);
+        fn updateRetainedPresentable(
+            renderer: *RendererType,
+            ctx: ?*const anyopaque,
+            body: *const fn (?*const anyopaque, *RendererType) void,
+        ) bool {
+            _ = renderer;
+            _ = ctx;
+            _ = body;
+            return false;
         }
         fn drawPresentableBackdrop(renderer: *RendererType, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) void {
             metal_presentable_runtime.drawPresentableBackdrop(renderer, x, y, w, h, color);

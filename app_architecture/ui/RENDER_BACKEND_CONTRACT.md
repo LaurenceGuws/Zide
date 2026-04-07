@@ -84,6 +84,11 @@ backend contract.
 That cleanup is now reflected in the API too: the dead one-value
 `PresentableSurface` parameter is gone, so terminal presentable operations no
 longer pretend to stay generic by forwarding `.terminal` through every layer.
+The shared contract is slightly more honest again at the lifecycle edge too:
+it no longer exports `beginPresentable(...)` / `endPresentable(...)` as if
+those were backend-neutral presentable verbs. The live shared seam only asks
+for one higher-level thing there: "attempt one retained terminal presentable
+update cycle."
 The next presentable problem is therefore narrower and more honest: OpenGL
 still models terminal presentation as a real retained update target, while
 Metal still models it as snapshot creation plus composition replay. A future
