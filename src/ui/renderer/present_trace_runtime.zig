@@ -6,6 +6,14 @@ pub const FrameSubmission = struct {
 };
 
 pub const PresentTrace = struct {
+    pub const EditorImmediateSolidFamily = enum {
+        none,
+        overlay,
+        row_base,
+        pane_base,
+        chrome_band,
+    };
+
     frame_seq: u64 = 0,
     terminal_presentation_count: usize = 0,
     terminal_presented_generation: ?u64 = null,
@@ -16,6 +24,17 @@ pub const PresentTrace = struct {
     sample_section_group_end_count: usize = 0,
     editor_row_band_group_begin_count: usize = 0,
     editor_row_band_group_end_count: usize = 0,
+    gl_surface_immediate_solid_count: usize = 0,
+    gl_surface_queued_replay_count: usize = 0,
+    gl_surface_immediate_solid_in_band_group_count: usize = 0,
+    gl_surface_immediate_solid_in_sample_section_group_count: usize = 0,
+    gl_surface_immediate_solid_in_editor_row_band_group_count: usize = 0,
+    gl_surface_immediate_solid_editor_overlay_count: usize = 0,
+    gl_surface_immediate_solid_editor_row_base_count: usize = 0,
+    gl_surface_immediate_solid_editor_pane_base_count: usize = 0,
+    gl_surface_immediate_solid_chrome_band_count: usize = 0,
+    gl_surface_immediate_solid_unattributed_count: usize = 0,
+    editor_immediate_solid_family: EditorImmediateSolidFamily = .none,
     composition_full_pane_clear: bool = false,
     captured_path: ?[]const u8 = null,
 };
@@ -70,6 +89,39 @@ pub fn noteEditorRowBandCommandGroupBegin(self: anytype) void {
 
 pub fn noteEditorRowBandCommandGroupEnd(self: anytype) void {
     self.present.trace_current.editor_row_band_group_end_count += 1;
+}
+
+pub fn noteGlSurfaceImmediateSolid(self: anytype) void {
+    var trace = &self.present.trace_current;
+    trace.gl_surface_immediate_solid_count += 1;
+    if (trace.band_group_begin_count > trace.band_group_end_count) {
+        trace.gl_surface_immediate_solid_in_band_group_count += 1;
+    }
+    if (trace.sample_section_group_begin_count > trace.sample_section_group_end_count) {
+        trace.gl_surface_immediate_solid_in_sample_section_group_count += 1;
+    }
+    if (trace.editor_row_band_group_begin_count > trace.editor_row_band_group_end_count) {
+        trace.gl_surface_immediate_solid_in_editor_row_band_group_count += 1;
+    }
+    switch (trace.editor_immediate_solid_family) {
+        .overlay => trace.gl_surface_immediate_solid_editor_overlay_count += 1,
+        .row_base => trace.gl_surface_immediate_solid_editor_row_base_count += 1,
+        .pane_base => trace.gl_surface_immediate_solid_editor_pane_base_count += 1,
+        .chrome_band => trace.gl_surface_immediate_solid_chrome_band_count += 1,
+        .none => trace.gl_surface_immediate_solid_unattributed_count += 1,
+    }
+}
+
+pub fn noteGlSurfaceQueuedReplay(self: anytype) void {
+    self.present.trace_current.gl_surface_queued_replay_count += 1;
+}
+
+pub fn setEditorImmediateSolidFamily(self: anytype, family: PresentTrace.EditorImmediateSolidFamily) void {
+    self.present.trace_current.editor_immediate_solid_family = family;
+}
+
+pub fn clearEditorImmediateSolidFamily(self: anytype) void {
+    self.present.trace_current.editor_immediate_solid_family = .none;
 }
 
 pub fn noteTerminalPresentation(self: anytype, generation: ?u64) void {

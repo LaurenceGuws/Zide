@@ -3,6 +3,7 @@ const syntax_mod = @import("../syntax.zig");
 const selection_mod = @import("../view/selection.zig");
 const draw_list_mod = @import("draw_list.zig");
 const overlay_mod = @import("../../ui/widgets/editor_widget_draw_overlay.zig");
+const present_trace_runtime = @import("../../ui/renderer/present_trace_runtime.zig");
 const text_mod = @import("../../ui/widgets/editor_widget_draw_text.zig");
 const renderer_surface_host = @import("../../ui/renderer/renderer_surface_host.zig");
 const renderer_text_host = @import("../../ui/renderer/renderer_text_host.zig");
@@ -20,6 +21,8 @@ pub fn drawEditorPaneBaseImmediate(
     height: f32,
     gutter_width: f32,
 ) void {
+    present_trace_runtime.setEditorImmediateSolidFamily(r, .pane_base);
+    defer present_trace_runtime.clearEditorImmediateSolidFamily(r);
     renderer_surface_host.drawRect(r, @intFromFloat(x), @intFromFloat(y), @intFromFloat(width), @intFromFloat(height), r.theme.background);
     renderer_surface_host.drawRect(r, @intFromFloat(x), @intFromFloat(y), @intFromFloat(gutter_width), @intFromFloat(height), r.theme.line_number_bg);
 }
@@ -38,8 +41,8 @@ pub fn addEditorLineBaseOps(
     var ok = true;
 
     if (is_current) {
-        ok = ok and overlay_mod.addRectOp(list, x + gutter_width, y, content_width - gutter_width, r.editor_char_height, r.theme.current_line);
-        ok = ok and overlay_mod.addRectOp(list, x, y, gutter_width, r.editor_char_height, r.theme.current_line);
+        ok = ok and overlay_mod.addRectOpFamily(list, x + gutter_width, y, content_width - gutter_width, r.editor_char_height, r.theme.current_line, .row_base);
+        ok = ok and overlay_mod.addRectOpFamily(list, x, y, gutter_width, r.editor_char_height, r.theme.current_line, .row_base);
     }
 
     const num_str = std.fmt.bufPrint(num_buf, "{d: >4}", .{line_num + 1}) catch return false;
@@ -60,12 +63,12 @@ pub fn addEditorSegmentBaseOps(
     is_current: bool,
 ) bool {
     var ok = true;
-    ok = ok and overlay_mod.addRectOp(list, x, y, content_width, r.editor_char_height, r.theme.background);
-    ok = ok and overlay_mod.addRectOp(list, x, y, gutter_width, r.editor_char_height, r.theme.line_number_bg);
+    ok = ok and overlay_mod.addRectOpFamily(list, x, y, content_width, r.editor_char_height, r.theme.background, .row_base);
+    ok = ok and overlay_mod.addRectOpFamily(list, x, y, gutter_width, r.editor_char_height, r.theme.line_number_bg, .row_base);
 
     if (is_current) {
-        ok = ok and overlay_mod.addRectOp(list, x, y, gutter_width, r.editor_char_height, r.theme.current_line);
-        ok = ok and overlay_mod.addRectOp(list, x + gutter_width, y, content_width - gutter_width, r.editor_char_height, r.theme.current_line);
+        ok = ok and overlay_mod.addRectOpFamily(list, x, y, gutter_width, r.editor_char_height, r.theme.current_line, .row_base);
+        ok = ok and overlay_mod.addRectOpFamily(list, x + gutter_width, y, content_width - gutter_width, r.editor_char_height, r.theme.current_line, .row_base);
     }
     return ok;
 }
@@ -78,6 +81,8 @@ pub fn drawEditorSegmentBaseImmediate(
     content_width: f32,
     is_current: bool,
 ) void {
+    present_trace_runtime.setEditorImmediateSolidFamily(r, .row_base);
+    defer present_trace_runtime.clearEditorImmediateSolidFamily(r);
     renderer_surface_host.drawRect(r, @intFromFloat(x), @intFromFloat(y), @intFromFloat(content_width), @intFromFloat(r.editor_char_height), r.theme.background);
     renderer_surface_host.drawRect(r, @intFromFloat(x), @intFromFloat(y), @intFromFloat(gutter_width), @intFromFloat(r.editor_char_height), r.theme.line_number_bg);
 
@@ -85,6 +90,7 @@ pub fn drawEditorSegmentBaseImmediate(
         renderer_surface_host.drawRect(r, @intFromFloat(x), @intFromFloat(y), @intFromFloat(gutter_width), @intFromFloat(r.editor_char_height), r.theme.current_line);
         renderer_surface_host.drawRect(r, @intFromFloat(x + gutter_width), @intFromFloat(y), @intFromFloat(content_width - gutter_width), @intFromFloat(r.editor_char_height), r.theme.current_line);
     }
+    renderer_surface_host.flushQueuedSurfaceDrawsBeforeDependentSurfaceWork(r);
 }
 
 pub fn drawEditorLineBaseImmediate(
@@ -188,7 +194,9 @@ pub fn drawSearchOverlays(
         const ex = text_mod.xForByteOffset(r, line_text, seg_start_byte, seg_start_col, local_end, text_start_x);
         if (ex <= sx) continue;
         const draw_color = if (active_search) |active| if (overlay_mod.rangeContains(active, match)) overlay_mod.activeSearchHighlightColor(r.theme) else search_color else search_color;
+        present_trace_runtime.setEditorImmediateSolidFamily(r, .overlay);
         renderer_surface_host.drawRect(r, @intFromFloat(sx), search_band.y_i, @intFromFloat(ex - sx), search_band.h_i, draw_color);
+        present_trace_runtime.clearEditorImmediateSolidFamily(r);
     }
 }
 

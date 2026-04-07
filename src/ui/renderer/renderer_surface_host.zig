@@ -1,3 +1,4 @@
+const gl_backend = @import("gl_backend.zig");
 const metal_text_sample_runtime = @import("metal_text_sample_runtime.zig");
 const present_trace_runtime = @import("present_trace_runtime.zig");
 const shape_draw = @import("shape_draw.zig");
@@ -60,4 +61,13 @@ pub fn recordSolidSurfaceFromLogicalRect(
         .color = color,
         .clip_rect = clip,
     } });
+}
+
+/// OpenGL may queue `SurfaceDraw` solids for submit-time replay; flush now so subsequent
+/// immediate surface work (overlays, selection, etc.) composites in list order.
+pub fn flushQueuedSurfaceDrawsBeforeDependentSurfaceWork(renderer: anytype) void {
+    switch (renderer.render_surface_attachment) {
+        .opengl_window => gl_backend.flushQueuedSurfaceDrawsForImmediateText(renderer),
+        else => {},
+    }
 }

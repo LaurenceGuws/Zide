@@ -42,11 +42,18 @@ pub const TextOp = struct {
 };
 
 pub const RectOp = struct {
+    pub const Family = enum {
+        overlay,
+        row_base,
+        pane_base,
+    };
+
     x: f32,
     y: f32,
     w: f32,
     h: f32,
     color: u32,
+    family: Family = .overlay,
 };
 
 pub const CursorOp = struct {

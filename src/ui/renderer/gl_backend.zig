@@ -242,6 +242,7 @@ pub fn drawSceneTargetToDefault(renderer: anytype) void {
 }
 
 pub fn beginFrame(renderer: anytype) void {
+    clearQueuedSurfaceDraws(renderer);
     refreshSceneTargetContract(renderer, renderer.display_metrics);
     if (renderer.capabilities().scene_composition_mode == .offscreen_scene_target) {
         prepareSceneTarget(renderer, gl.c.GL_NEAREST);
@@ -267,6 +268,8 @@ pub fn beginFrame(renderer: anytype) void {
 }
 
 pub fn submitFrame(renderer: anytype) present_trace_runtime.FrameSubmission {
+    defer clearQueuedSurfaceDraws(renderer);
+    replayRecordedSurfaceDrawSurfacePhase(renderer);
     if (renderer.present.main_composition_target == .offscreen_scene_target) drawSceneTargetToDefault(renderer);
     if (renderer.present.capture_armed) {
         if (renderer.present.capture_path) |path| {
@@ -354,8 +357,8 @@ pub fn drawSolidRect(renderer: anytype, x: f32, y: f32, w: f32, h: f32, color: t
 }
 
 /// Consumes one shared recorded `SurfaceDraw` in the OpenGL surface phase.
-/// OpenGL executes that phase immediately at record time; Metal records the
-/// same union for submit-time surface-phase replay.
+/// OpenGL replays queued entries during submit-time surface-phase execution,
+/// matching the shared "record now, consume at submit" contract shape.
 /// `.solid` and `.atlas` are supported when the renderer is in a compatible
 /// text mode (atlas uses `terminal_font` coverage/color textures). `.raw_image`
 /// uses a shared opaque image handle whose `handle` is interpreted here as a GL
@@ -366,6 +369,61 @@ pub fn consumeRecordedSurfaceDrawInSurfacePhase(renderer: anytype, draw: surface
         .atlas => |atlas| executeRecordedSurfaceAtlasBlitInSurfacePhase(renderer, atlas),
         .raw_image => |image| executeRecordedSurfaceRawImageBlitInSurfacePhase(renderer, image),
     };
+}
+
+pub fn recordSurfaceDrawForSurfacePhase(renderer: anytype, draw: surface_draw.SurfaceDraw) bool {
+    return switch (draw) {
+        .solid => immediate: {
+            if (shouldQueueSolidForSubmit(renderer)) {
+                break :immediate enqueueSurfaceDrawForSurfacePhase(renderer, draw, false);
+            }
+            present_trace_runtime.noteGlSurfaceImmediateSolid(renderer);
+            break :immediate consumeRecordedSurfaceDrawInSurfacePhase(renderer, draw);
+        },
+        .atlas, .raw_image => enqueueSurfaceDrawForSurfacePhase(renderer, draw, false),
+    };
+}
+
+fn shouldQueueSolidForSubmit(renderer: anytype) bool {
+    return switch (renderer.present.trace_current.editor_immediate_solid_family) {
+        .chrome_band, .row_base => true,
+        else => false,
+    };
+}
+
+fn enqueueSurfaceDrawForSurfacePhase(renderer: anytype, draw: surface_draw.SurfaceDraw, owns_raw_image_texture: bool) bool {
+    renderer.backend.runtime.opengl.queued_surface_draws.append(renderer.allocator, .{
+        .draw = draw,
+        .owns_raw_image_texture = owns_raw_image_texture,
+    }) catch return false;
+    return true;
+}
+
+fn replayRecordedSurfaceDrawSurfacePhase(renderer: anytype) void {
+    for (renderer.backend.runtime.opengl.queued_surface_draws.items) |queued_draw| {
+        present_trace_runtime.noteGlSurfaceQueuedReplay(renderer);
+        _ = consumeRecordedSurfaceDrawInSurfacePhase(renderer, queued_draw.draw);
+    }
+}
+
+pub fn flushQueuedSurfaceDrawsForImmediateText(renderer: anytype) void {
+    if (renderer.backend.runtime.opengl.queued_surface_draws.items.len == 0) return;
+    replayRecordedSurfaceDrawSurfacePhase(renderer);
+    clearQueuedSurfaceDraws(renderer);
+}
+
+fn clearQueuedSurfaceDraws(renderer: anytype) void {
+    for (renderer.backend.runtime.opengl.queued_surface_draws.items) |queued_draw| {
+        if (!queued_draw.owns_raw_image_texture) continue;
+        switch (queued_draw.draw) {
+            .raw_image => |raw| {
+                var texture = textureFromGpuImageHandle(raw.texture);
+                texture_utils.destroyTexture(&texture);
+            },
+            else => {},
+        }
+    }
+    renderer.backend.runtime.opengl.queued_surface_draws.clearRetainingCapacity();
 }
 
 fn executeRecordedSurfaceFillInSurfacePhase(renderer: anytype, fill: surface_draw.SolidColorDraw) bool {
@@ -512,7 +570,7 @@ pub fn destroyPersistentImage(_: anytype, texture: *surface_draw.GpuImageRef) vo
 }
 
 pub fn drawPersistentImage(renderer: anytype, texture: surface_draw.GpuImageRef, source_rect: ?types.Rect, dest: types.Rect, tint: types.Rgba) bool {
-    return consumeRecordedSurfaceDrawInSurfacePhase(renderer, .{ .raw_image = .{
+    return recordSurfaceDrawForSurfacePhase(renderer, .{ .raw_image = .{
         .texture = texture,
         .source_rect = source_rect,
         .dest_rect = .{
@@ -1001,6 +1059,8 @@ pub fn destroyRenderTarget(target: *?RenderTarget) void {
 }
 
 pub fn deinitRuntime(renderer: anytype) void {
+    clearQueuedSurfaceDraws(renderer);
+    renderer.backend.runtime.opengl.queued_surface_draws.deinit(renderer.allocator);
     deinitPresentables(renderer);
     destroyRenderTarget(&renderer.backend.runtime.opengl.targets.scene_target.target);
     if (renderer.backend.runtime.opengl.resources.resources_ready and renderer.backend.runtime.opengl.resources.white_texture.id != 0) {
@@ -1129,9 +1189,8 @@ pub fn drawRawImageRgba(renderer: anytype, width: i32, height: i32, data: []cons
     if (clip_rect) |pc| {
         if (pc.width <= 0 or pc.height <= 0) return false;
     }
-    var tex = texture_utils.createTextureFromRgba(width, height, data, gl.c.GL_NEAREST) orelse return false;
-    defer texture_utils.destroyTexture(&tex);
-    return consumeRecordedSurfaceDrawInSurfacePhase(renderer, .{ .raw_image = .{
+    const tex = texture_utils.createTextureFromRgba(width, height, data, gl.c.GL_NEAREST) orelse return false;
+    if (!enqueueSurfaceDrawForSurfacePhase(renderer, .{ .raw_image = .{
         .texture = .{
             .handle = tex.id,
             .width = tex.width,
@@ -1146,7 +1205,12 @@ pub fn drawRawImageRgba(renderer: anytype, width: i32, height: i32, data: []cons
         },
         .tint = tint,
         .clip_rect = clip_rect,
-    } });
+    } }, true)) {
+        var cleanup = tex;
+        texture_utils.destroyTexture(&cleanup);
+        return false;
+    }
+    return true;
 }
 
 pub fn drawRawImageRgb(renderer: anytype, width: i32, height: i32, data: []const u8, dest: types.Rect, tint: types.Rgba) bool {
@@ -1160,9 +1224,8 @@ pub fn drawRawImageRgb(renderer: anytype, width: i32, height: i32, data: []const
     if (clip_rect) |pc| {
         if (pc.width <= 0 or pc.height <= 0) return false;
     }
-    var tex = texture_utils.createTextureFromRgb(width, height, data, gl.c.GL_NEAREST) orelse return false;
-    defer texture_utils.destroyTexture(&tex);
-    return consumeRecordedSurfaceDrawInSurfacePhase(renderer, .{ .raw_image = .{
+    const tex = texture_utils.createTextureFromRgb(width, height, data, gl.c.GL_NEAREST) orelse return false;
+    if (!enqueueSurfaceDrawForSurfacePhase(renderer, .{ .raw_image = .{
         .texture = .{
             .handle = tex.id,
             .width = tex.width,
@@ -1177,5 +1240,10 @@ pub fn drawRawImageRgb(renderer: anytype, width: i32, height: i32, data: []const
         },
         .tint = tint,
         .clip_rect = clip_rect,
-    } });
+    } }, true)) {
+        var cleanup = tex;
+        texture_utils.destroyTexture(&cleanup);
+        return false;
+    }
+    return true;
 }

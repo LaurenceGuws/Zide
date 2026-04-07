@@ -30,6 +30,16 @@ fn logFramePresent(state: anytype, shell: anytype, submission: anytype) void {
         .{ .key = "sample_section_group_end", .value = .{ .unsigned = trace.sample_section_group_end_count } },
         .{ .key = "editor_row_band_group_begin", .value = .{ .unsigned = trace.editor_row_band_group_begin_count } },
         .{ .key = "editor_row_band_group_end", .value = .{ .unsigned = trace.editor_row_band_group_end_count } },
+        .{ .key = "gl_surface_immediate_solid", .value = .{ .unsigned = trace.gl_surface_immediate_solid_count } },
+        .{ .key = "gl_surface_queued_replay", .value = .{ .unsigned = trace.gl_surface_queued_replay_count } },
+        .{ .key = "gl_surface_immediate_solid_in_band_group", .value = .{ .unsigned = trace.gl_surface_immediate_solid_in_band_group_count } },
+        .{ .key = "gl_surface_immediate_solid_in_sample_section_group", .value = .{ .unsigned = trace.gl_surface_immediate_solid_in_sample_section_group_count } },
+        .{ .key = "gl_surface_immediate_solid_in_editor_row_band_group", .value = .{ .unsigned = trace.gl_surface_immediate_solid_in_editor_row_band_group_count } },
+        .{ .key = "gl_surface_immediate_solid_editor_overlay", .value = .{ .unsigned = trace.gl_surface_immediate_solid_editor_overlay_count } },
+        .{ .key = "gl_surface_immediate_solid_editor_row_base", .value = .{ .unsigned = trace.gl_surface_immediate_solid_editor_row_base_count } },
+        .{ .key = "gl_surface_immediate_solid_editor_pane_base", .value = .{ .unsigned = trace.gl_surface_immediate_solid_editor_pane_base_count } },
+        .{ .key = "gl_surface_immediate_solid_chrome_band", .value = .{ .unsigned = trace.gl_surface_immediate_solid_chrome_band_count } },
+        .{ .key = "gl_surface_immediate_solid_unattributed", .value = .{ .unsigned = trace.gl_surface_immediate_solid_unattributed_count } },
         .{ .key = "composition_full_pane_clear", .value = .{ .boolean = trace.composition_full_pane_clear } },
         .{ .key = "captured", .value = .{ .boolean = trace.captured_path != null } },
     });
@@ -52,6 +62,53 @@ fn logFramePresent(state: anytype, shell: anytype, submission: anytype) void {
             .warning,
             "editor_row_band_group_mismatch frame={d} begin={d} end={d}",
             .{ state.frame_id, trace.editor_row_band_group_begin_count, trace.editor_row_band_group_end_count },
+        );
+    }
+    if (trace.gl_surface_immediate_solid_count > 0 and
+        (trace.band_group_begin_count > 0 or
+            trace.sample_section_group_begin_count > 0 or
+            trace.editor_row_band_group_begin_count > 0))
+    {
+        render_log.logf(
+            .warning,
+            "gl_surface_immediate_solid_pressure frame={d} immediate_solid={d} queued_replay={d} band_groups={d} sample_groups={d} editor_row_groups={d}",
+            .{
+                state.frame_id,
+                trace.gl_surface_immediate_solid_count,
+                trace.gl_surface_queued_replay_count,
+                trace.band_group_begin_count,
+                trace.sample_section_group_begin_count,
+                trace.editor_row_band_group_begin_count,
+            },
+        );
+    }
+    if (trace.gl_surface_immediate_solid_in_band_group_count > 0 or
+        trace.gl_surface_immediate_solid_in_sample_section_group_count > 0 or
+        trace.gl_surface_immediate_solid_in_editor_row_band_group_count > 0)
+    {
+        render_log.logf(
+            .warning,
+            "gl_surface_immediate_solid_attribution frame={d} band={d} sample={d} editor_row={d}",
+            .{
+                state.frame_id,
+                trace.gl_surface_immediate_solid_in_band_group_count,
+                trace.gl_surface_immediate_solid_in_sample_section_group_count,
+                trace.gl_surface_immediate_solid_in_editor_row_band_group_count,
+            },
+        );
+    }
+    if (trace.gl_surface_immediate_solid_count > 0) {
+        render_log.logf(
+            .warning,
+            "gl_surface_immediate_solid_family frame={d} overlay={d} row_base={d} pane_base={d} chrome_band={d} unattributed={d}",
+            .{
+                state.frame_id,
+                trace.gl_surface_immediate_solid_editor_overlay_count,
+                trace.gl_surface_immediate_solid_editor_row_base_count,
+                trace.gl_surface_immediate_solid_editor_pane_base_count,
+                trace.gl_surface_immediate_solid_chrome_band_count,
+                trace.gl_surface_immediate_solid_unattributed_count,
+            },
         );
     }
     if (trace.captured_path) |path| {

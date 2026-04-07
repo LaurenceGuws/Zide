@@ -1,6 +1,7 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
 const app_logger = @import("../../app_logger.zig");
+const present_trace_runtime = @import("present_trace_runtime.zig");
 const renderer_text_phase_group_host = @import("renderer_text_phase_group_host.zig");
 const renderer_surface_host = @import("renderer_surface_host.zig");
 
@@ -23,10 +24,14 @@ pub const Band = struct {
     }
 
     pub fn fillRect(self: *Band, x: i32, y: i32, w: i32, h: i32, color: Color) void {
+        present_trace_runtime.setEditorImmediateSolidFamily(self.shell.renderer, .chrome_band);
+        defer present_trace_runtime.clearEditorImmediateSolidFamily(self.shell.renderer);
         renderer_surface_host.drawRect(self.shell.renderer, x, y, w, h, color);
     }
 
     pub fn drawRectOutline(self: *Band, x: i32, y: i32, w: i32, h: i32, color: Color) void {
+        present_trace_runtime.setEditorImmediateSolidFamily(self.shell.renderer, .chrome_band);
+        defer present_trace_runtime.clearEditorImmediateSolidFamily(self.shell.renderer);
         renderer_surface_host.drawRectOutline(self.shell.renderer, x, y, w, h, color);
     }
 

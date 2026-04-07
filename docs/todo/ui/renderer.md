@@ -514,7 +514,8 @@ Current evidence:
   split by itself, but it makes the ownership seam honest instead of burying
   surface submission inside the large backend files.
 - the main remaining blocker is now explicit:
-  - OpenGL `surface` submission still means "interpret now"
+  - OpenGL `surface` submission is now split: `.solid` still interprets now for
+    ordering safety, while `.atlas` / `.raw_image` are queued and replayed
   - Metal `surface` submission still means "append now, replay at submit"
 - that is not a naming issue anymore; it is the loudest remaining contract
   contradiction in Milestone B.
@@ -715,8 +716,11 @@ Current evidence:
 - the remaining `SurfaceDraw` producer set is now intentionally narrow:
   generic UI/editor/shell fills, presentable/snapshot blits, and raw image /
   atlas samples that already fit the shared payload model. The live blocker is
-  no longer caller sprawl; it is the backend surface-phase split itself
-  (GL executes surface phase immediately, Metal replays it at submit).
+  no longer caller sprawl; it is the backend surface-phase split itself.
+  transitional truth now:
+  - GL `.solid` is immediate
+  - GL `.atlas` / `.raw_image` are submit-time replay
+  - Metal remains submit-time replay for the surface queue
 - terminal pane / viewport fills have now been peeled off that generic lane.
   They route through the presentable seam as terminal presentable backdrop
   work, and Metal replays them in a dedicated presentable-composition queue
@@ -729,6 +733,9 @@ Current evidence:
   blits internally. That is not a semantic fix yet, but it is the first code
   seam that matches the real blocker and gives us a narrower target than
   "delay everything."
+- observability checkpoint: present trace now emits
+  `gl_surface_immediate_solid` and `gl_surface_queued_replay` per frame so we
+  can measure contraction progress directly.
 - that split did **not** produce a broadly safe delayed-blit lane yet:
   kitty/raw-image placements still interleave with terminal text, and shell
   icons still draw before adjacent tab labels. The only relatively isolated

@@ -395,8 +395,9 @@ were a stable public renderer API.
 
 The remaining truth is now plain:
 
-- OpenGL surface submission still means "execute this draw in the surface phase
-  now"
+- OpenGL surface submission is now split:
+  - `.solid` still executes in the surface phase now
+  - `.atlas` / `.raw_image` now queue and replay in submit-time surface phase
 - Metal surface submission still means "record this draw for the submit-time
   surface phase"
 - Metal terminal presentable composition now also has a second, narrower queue:
@@ -420,7 +421,8 @@ one narrower composition queue after snapshot capture.
 So the backend-fit blocker is now concentrated:
 
 - the same narrow shared payload reaches both backends
-- but backend choice still changes when the surface phase runs
+- but backend choice still changes when the surface phase runs, especially for
+  remaining ordering-sensitive `.solid` paths
 
 There is also now one concrete reason the old "just defer GL to submit" idea is
 still unsafe: many remaining active `SurfaceDraw.solid` calls are UI
@@ -437,6 +439,10 @@ Metal surface-phase helpers now distinguish fills from blits internally. That
 does not change timing yet, but it creates a real seam for a narrower future
 experiment where atlas/raw-image/presentable blits could move without dragging
 ordering-sensitive solid fills with them.
+
+Observability is now slightly stronger too: present traces now report
+`gl_surface_immediate_solid` and `gl_surface_queued_replay`, so this mixed
+phase can be measured per frame instead of inferred by behavior.
 
 That split also exposed the next hard truth more clearly: generic blits are
 still not a free submit-time subset. Kitty images can interleave with terminal

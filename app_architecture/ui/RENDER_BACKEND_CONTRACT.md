@@ -270,7 +270,8 @@ only to bracket presentable composition.
 So the remaining blocker is not broad caller sprawl. The remaining blocker is
 backend phase timing:
 
-- OpenGL executes the surface phase immediately at record time
+- OpenGL currently executes `.solid` immediately at record time, but replays
+  queued `.atlas` / `.raw_image` draws in submit-time surface phase
 - Metal replays the recorded surface phase later in submit
 
 The next contract cut must attack that phase truth directly rather than reopen

@@ -1,7 +1,9 @@
+const std = @import("std");
 const gl = @import("gl.zig");
 const gl_presentable_target = @import("gl_presentable_target.zig");
 const scene_target_state = @import("scene_target_state.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
+const surface_draw = @import("surface_draw.zig");
 const types = @import("types.zig");
 
 const PresentableTargetState = gl_presentable_target.PresentableTargetState;
@@ -28,8 +30,14 @@ pub const ResourceRuntime = struct {
     white_texture: types.Texture = .{ .id = 0, .width = 0, .height = 0 },
 };
 
+pub const QueuedSurfaceDraw = struct {
+    draw: surface_draw.SurfaceDraw,
+    owns_raw_image_texture: bool = false,
+};
+
 pub const State = struct {
     context: ?sdl_api.c.SDL_GLContext = null,
     resources: ResourceRuntime = .{},
     targets: TargetRuntime = .{},
+    queued_surface_draws: std.ArrayListUnmanaged(QueuedSurfaceDraw) = .{},
 };

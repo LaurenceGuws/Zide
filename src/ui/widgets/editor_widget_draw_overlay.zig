@@ -5,6 +5,7 @@ const chrome_geometry_mod = @import("../../editor/view/chrome_geometry.zig");
 const draw_list_mod = @import("../../editor/render/draw_list.zig");
 const app_logger = @import("../../app_logger.zig");
 const renderer_text_phase_group_host = @import("../renderer/renderer_text_phase_group_host.zig");
+const present_trace_runtime = @import("../renderer/present_trace_runtime.zig");
 const renderer_surface_host = @import("../renderer/renderer_surface_host.zig");
 const renderer_text_host = @import("../renderer/renderer_text_host.zig");
 const scrollbar_mod = @import("editor_scrollbar.zig");
@@ -32,7 +33,11 @@ fn unpackColor(comptime ColorType: type, color: u32) ColorType {
 }
 
 pub fn addRectOp(list: *EditorDrawList, x: f32, y: f32, w: f32, h: f32, color: anytype) bool {
-    list.add(.{ .rect = RectOp{ .x = x, .y = y, .w = w, .h = h, .color = packColor(color) } }) catch |err| {
+    return addRectOpFamily(list, x, y, w, h, color, .overlay);
+}
+
+pub fn addRectOpFamily(list: *EditorDrawList, x: f32, y: f32, w: f32, h: f32, color: anytype, family: RectOp.Family) bool {
+    list.add(.{ .rect = RectOp{ .x = x, .y = y, .w = w, .h = h, .color = packColor(color), .family = family } }) catch |err| {
         const log = app_logger.logger("editor.draw");
         log.logf(.warning, "draw list rect append failed err={s}", .{@errorName(err)});
         return false;
@@ -75,7 +80,15 @@ pub fn drawLineCursor(r: anytype, x: f32, y: f32, h: f32, color: anytype) void {
     const cursor_h_i: i32 = @as(i32, @intFromFloat(h));
     const h_i: i32 = @max(1, cursor_h_i - edge_inset * 2);
     const y_i: i32 = @as(i32, @intFromFloat(y)) + @divFloor(@max(0, cursor_h_i - h_i), 2);
+    present_trace_runtime.setEditorImmediateSolidFamily(r, .overlay);
+    defer present_trace_runtime.clearEditorImmediateSolidFamily(r);
     renderer_surface_host.drawRect(r, x_i, y_i, stroke, h_i, color);
+}
+
+fn drawOverlayRect(r: anytype, x: i32, y: i32, w: i32, h: i32, color: anytype) void {
+    present_trace_runtime.setEditorImmediateSolidFamily(r, .overlay);
+    defer present_trace_runtime.clearEditorImmediateSolidFamily(r);
+    renderer_surface_host.drawRect(r, x, y, w, h, color);
 }
 
 pub fn drawExtraCarets(
@@ -198,14 +211,14 @@ fn drawTopSelectionScanline(r: anytype, x: f32, y: f32, w: f32, color: anytype, 
     const line_x = x + left_inset;
     const line_w = w - left_inset - right_inset;
     if (line_w <= 0) return;
-    renderer_surface_host.drawRect(r, @intFromFloat(line_x), @intFromFloat(y), @intFromFloat(line_w), 1, color);
+    drawOverlayRect(r, @intFromFloat(line_x), @intFromFloat(y), @intFromFloat(line_w), 1, color);
 }
 
 pub fn drawSoftSelectionRect(r: anytype, x: f32, y: f32, w: f32, h: f32, color: anytype, mask: SelectionCornerMask) void {
     if (w <= 0 or h <= 0) return;
     const style = r.editorSelectionOverlayStyle();
     if (!style.smooth_enabled) {
-        renderer_surface_host.drawRect(r, @intFromFloat(x), @intFromFloat(y), @intFromFloat(w), @intFromFloat(h), color);
+        drawOverlayRect(r, @intFromFloat(x), @intFromFloat(y), @intFromFloat(w), @intFromFloat(h), color);
         return;
     }
     const smooth_active = mask.top_left_outward or mask.top_right_outward or mask.bottom_left_outward or mask.bottom_right_outward or mask.top_left_inward or mask.top_right_inward or mask.bottom_left_inward or mask.bottom_right_inward;
@@ -259,12 +272,12 @@ pub fn drawSoftSelectionRect(r: anytype, x: f32, y: f32, w: f32, h: f32, color: 
     }
 
     if (top_left_edge == 0 and top_right_edge == 0 and bottom_left_edge == 0 and bottom_right_edge == 0) {
-        renderer_surface_host.drawRect(r, @intFromFloat(draw_x), @intFromFloat(draw_y), @intFromFloat(draw_w), @intFromFloat(draw_h), color);
+        drawOverlayRect(r, @intFromFloat(draw_x), @intFromFloat(draw_y), @intFromFloat(draw_w), @intFromFloat(draw_h), color);
         return;
     }
 
     drawTopSelectionScanline(r, draw_x, draw_y, draw_w, color, top_left_edge, top_right_edge);
-    renderer_surface_host.drawRect(r, @intFromFloat(draw_x), @intFromFloat(draw_y + 1.0), @intFromFloat(draw_w), @intFromFloat(draw_h - 2.0), color);
+    drawOverlayRect(r, @intFromFloat(draw_x), @intFromFloat(draw_y + 1.0), @intFromFloat(draw_w), @intFromFloat(draw_h - 2.0), color);
     drawTopSelectionScanline(r, draw_x, draw_y + draw_h - 1.0, draw_w, color, bottom_left_edge, bottom_right_edge);
 }
 
@@ -454,18 +467,57 @@ pub fn rangeContains(haystack: ByteRange, needle: ByteRange) bool {
     return needle.start >= haystack.start and needle.end <= haystack.end;
 }
 
-fn flushDrawList(list: *EditorDrawList, r: anytype) void {
+fn flushDrawListRectOps(list: *EditorDrawList, r: anytype) void {
+    const ColorType = @TypeOf(r.theme.foreground);
+    // Row-base rects first: on OpenGL they may queue; replay before overlay rects in this band.
+    for (list.ops.items) |op| {
+        switch (op) {
+            .rect => |rect| {
+                if (rect.family != .row_base) continue;
+                present_trace_runtime.setEditorImmediateSolidFamily(r, .row_base);
+                defer present_trace_runtime.clearEditorImmediateSolidFamily(r);
+                renderer_surface_host.drawRect(
+                    r,
+                    @intFromFloat(rect.x),
+                    @intFromFloat(rect.y),
+                    @intFromFloat(rect.w),
+                    @intFromFloat(rect.h),
+                    unpackColor(ColorType, rect.color),
+                );
+            },
+            else => {},
+        }
+    }
+    renderer_surface_host.flushQueuedSurfaceDrawsBeforeDependentSurfaceWork(r);
+    for (list.ops.items) |op| {
+        switch (op) {
+            .rect => |rect| {
+                if (rect.family == .row_base) continue;
+                const family: present_trace_runtime.PresentTrace.EditorImmediateSolidFamily = switch (rect.family) {
+                    .overlay => .overlay,
+                    .row_base => .row_base,
+                    .pane_base => .pane_base,
+                };
+                present_trace_runtime.setEditorImmediateSolidFamily(r, family);
+                defer present_trace_runtime.clearEditorImmediateSolidFamily(r);
+                renderer_surface_host.drawRect(
+                    r,
+                    @intFromFloat(rect.x),
+                    @intFromFloat(rect.y),
+                    @intFromFloat(rect.w),
+                    @intFromFloat(rect.h),
+                    unpackColor(ColorType, rect.color),
+                );
+            },
+            else => {},
+        }
+    }
+}
+
+fn flushDrawListTextOps(list: *EditorDrawList, r: anytype) void {
     const ColorType = @TypeOf(r.theme.foreground);
     for (list.ops.items) |op| {
         switch (op) {
-            .rect => |rect| renderer_surface_host.drawRect(
-                r,
-                @intFromFloat(rect.x),
-                @intFromFloat(rect.y),
-                @intFromFloat(rect.w),
-                @intFromFloat(rect.h),
-                unpackColor(ColorType, rect.color),
-            ),
             .text => |text| {
                 const fg = unpackColor(ColorType, text.color);
                 const bg = unpackColor(ColorType, text.bg_color);
@@ -477,10 +529,20 @@ fn flushDrawList(list: *EditorDrawList, r: anytype) void {
                     if (text.bold) renderer_text_host.drawTextMonospaceStyledPolicy(r, text.text, text.x + 1.0, text.y, fg, text.disable_programming_ligatures, text.italic);
                 }
             },
+            else => {},
+        }
+    }
+}
+
+fn flushDrawListCursorOps(list: *EditorDrawList, r: anytype) void {
+    const ColorType = @TypeOf(r.theme.foreground);
+    for (list.ops.items) |op| {
+        switch (op) {
             .cursor => |cursor| {
                 const color = unpackColor(ColorType, cursor.color);
                 drawLineCursor(r, cursor.x, cursor.y, cursor.h, color);
             },
+            else => {},
         }
     }
 }
@@ -494,9 +556,20 @@ pub fn endEditorRowBandGroup(r: anytype) void {
 }
 
 pub fn flushDrawListEditorRowBand(list: *EditorDrawList, r: anytype) void {
-    beginEditorRowBandGroup(r);
-    defer endEditorRowBandGroup(r);
-    flushDrawList(list, r);
+    flushDrawListRectOps(list, r);
+    var has_text = false;
+    for (list.ops.items) |op| {
+        if (op == .text) {
+            has_text = true;
+            break;
+        }
+    }
+    if (has_text) {
+        beginEditorRowBandGroup(r);
+        defer endEditorRowBandGroup(r);
+        flushDrawListTextOps(list, r);
+    }
+    flushDrawListCursorOps(list, r);
 }
 
 pub fn drawEditorScrollbars(
@@ -560,7 +633,7 @@ fn drawHorizontalScrollbar(r: anytype, h: scrollbar_mod.HorizontalGeometry, list
         if (list) |ops| {
             _ = addRectOp(ops, h.track_x, h.track_max_y, h.track_w, h.track_max_h, r.theme.line_number_bg);
         } else {
-            renderer_surface_host.drawRect(r, @intFromFloat(h.track_x), @intFromFloat(h.track_max_y), @intFromFloat(h.track_w), @intFromFloat(h.track_max_h), r.theme.line_number_bg);
+            drawOverlayRect(r, @intFromFloat(h.track_x), @intFromFloat(h.track_max_y), @intFromFloat(h.track_w), @intFromFloat(h.track_max_h), r.theme.line_number_bg);
         }
     }
     const inset: f32 = if (show_track) blk: {
@@ -570,7 +643,7 @@ fn drawHorizontalScrollbar(r: anytype, h: scrollbar_mod.HorizontalGeometry, list
     if (list) |ops| {
         _ = addRectOp(ops, h.thumb_x, h.track_y + inset, h.thumb_w, @max(1, h.track_h - inset * 2), r.theme.selection);
     } else {
-        renderer_surface_host.drawRect(r, @intFromFloat(h.thumb_x), @intFromFloat(h.track_y + inset), @intFromFloat(h.thumb_w), @intFromFloat(@max(1, h.track_h - inset * 2)), r.theme.selection);
+        drawOverlayRect(r, @intFromFloat(h.thumb_x), @intFromFloat(h.track_y + inset), @intFromFloat(h.thumb_w), @intFromFloat(@max(1, h.track_h - inset * 2)), r.theme.selection);
     }
 }
 
@@ -580,7 +653,7 @@ fn drawVerticalScrollbar(r: anytype, v: scrollbar_mod.VerticalGeometry, list: ?*
         if (list) |ops| {
             _ = addRectOp(ops, v.scrollbar_x, v.scrollbar_y, v.scrollbar_w, v.scrollbar_h, r.theme.line_number_bg);
         } else {
-            renderer_surface_host.drawRect(r, @intFromFloat(v.scrollbar_x), @intFromFloat(v.scrollbar_y), @intFromFloat(v.scrollbar_w), @intFromFloat(v.scrollbar_h), r.theme.line_number_bg);
+            drawOverlayRect(r, @intFromFloat(v.scrollbar_x), @intFromFloat(v.scrollbar_y), @intFromFloat(v.scrollbar_w), @intFromFloat(v.scrollbar_h), r.theme.line_number_bg);
         }
     }
     const inset: f32 = if (show_track) blk: {
@@ -590,6 +663,6 @@ fn drawVerticalScrollbar(r: anytype, v: scrollbar_mod.VerticalGeometry, list: ?*
     if (list) |ops| {
         _ = addRectOp(ops, v.scrollbar_x + inset, v.thumb.thumb_y, @max(1, v.scrollbar_w - inset * 2), v.thumb.thumb_h, r.theme.selection);
     } else {
-        renderer_surface_host.drawRect(r, @intFromFloat(v.scrollbar_x + inset), @intFromFloat(v.thumb.thumb_y), @intFromFloat(@max(1, v.scrollbar_w - inset * 2)), @intFromFloat(v.thumb.thumb_h), r.theme.selection);
+        drawOverlayRect(r, @intFromFloat(v.scrollbar_x + inset), @intFromFloat(v.thumb.thumb_y), @intFromFloat(@max(1, v.scrollbar_w - inset * 2)), @intFromFloat(v.thumb.thumb_h), r.theme.selection);
     }
 }
