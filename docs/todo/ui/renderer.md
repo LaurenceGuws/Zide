@@ -660,6 +660,12 @@ Current evidence:
   blits internally. That is not a semantic fix yet, but it is the first code
   seam that matches the real blocker and gives us a narrower target than
   "delay everything."
+- that split did **not** produce a broadly safe delayed-blit lane yet:
+  kitty/raw-image placements still interleave with terminal text, and shell
+  icons still draw before adjacent tab labels. The only relatively isolated
+  blit family is retained presentable draw, which already belongs under the
+  presentable contract and is too narrow to close `SurfaceDraw` timing on its
+  own.
 - This is real lifecycle cleanup and removes another renderer-root duplication
   seam.
 - This is not closure yet:

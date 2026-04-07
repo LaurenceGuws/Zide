@@ -192,6 +192,21 @@ GL surface draws"; it must either:
 - or define a stronger shared phase boundary that also captures the dependent
   text/background ordering
 
+**Blit-subset reality (2026-04-07):** splitting fills from blits was useful,
+but it did not produce a generally safe "delay these later" subset yet.
+`SurfaceDraw.raw_image` and atlas-style blits are still used in places with
+local text ordering:
+
+- kitty image placements can interleave with terminal text in the same visual
+  lane
+- shell/tab icons draw before adjacent tab labels at the same call site
+
+So generic blits are still not automatically phase-isolated just because they
+are not fills. The one comparatively isolated blit family is retained
+presentable/snapshot draw, but that already belongs under the presentable
+contract and is too narrow to solve the broader `SurfaceDraw` timing split by
+itself.
+
 #### Presentable contract
 
 One backend-neutral presentable surface contract that can express:

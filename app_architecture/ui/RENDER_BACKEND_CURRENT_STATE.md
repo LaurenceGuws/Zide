@@ -305,6 +305,15 @@ does not change timing yet, but it creates a real seam for a narrower future
 experiment where atlas/raw-image/presentable blits could move without dragging
 ordering-sensitive solid fills with them.
 
+That split also exposed the next hard truth more clearly: generic blits are
+still not a free submit-time subset. Kitty images can interleave with terminal
+text, and shell/tab icons still draw before adjacent labels at the same call
+site. So raw-image/atlas blits still carry local ordering dependencies even
+though they are not fills. The only relatively isolated blit family left is
+retained presentable/snapshot draw, which already belongs to the presentable
+contract and is too narrow to close the shared `SurfaceDraw` timing gap on its
+own.
+
 That is the loudest remaining semantic contradiction in the backend contract.
 It is no longer hidden by renderer-root facade noise or mixed backend dispatch
 buckets, which means the next real cut must either:
