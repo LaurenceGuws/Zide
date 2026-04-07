@@ -1048,7 +1048,7 @@ pub fn refreshPresentState(
         surface_state.notePresentationUpdated(terminal_view, surface_geometry, draw_cursor, cursor, cursor_style, hover_link_id, composing_active, composing_hash);
     }
 
-    state.target_available = renderer_presentable_host.presentableAvailable(renderer, .terminal);
+    state.target_available = renderer_presentable_host.presentableInfo(renderer, .terminal) != null;
     state.ready = surface_state.notePresentableAvailability(state.target_available);
     state.present = state.ready and state.visible;
     state.log_unavailable = !state.ready and terminal_view.rows > 0 and terminal_view.cols > 0 and view_cells_len > 0 and state.visible;
@@ -1134,7 +1134,7 @@ pub fn tryFastPresentExisting(
     note_present: anytype,
 ) bool {
     const presentable_ready = surface_state.notePresentableAvailability(
-        renderer_presentable_host.presentableAvailable(renderer, .terminal),
+        renderer_presentable_host.presentableInfo(renderer, .terminal) != null,
     );
     const cursor_changed = surface_state.cursorPresentationChanged(draw_cursor, cursor, cursor_style);
     const overlay_changed = surface_state.overlayPresentationChanged(hover_link_id, composing_active, composing_hash);
@@ -1362,7 +1362,7 @@ pub fn tryDirectSnapshotUpdate(
     var result = DirectSnapshotUpdateResult{};
     if (!renderer.usesDirectTerminalPresentation()) return result;
     if (has_kitty) return result;
-    if (!renderer_presentable_host.presentableAvailable(renderer, .terminal)) return result;
+    if (renderer_presentable_host.presentableInfo(renderer, .terminal) == null) return result;
     if (terminal_view.rows == 0 or terminal_view.cols == 0 or terminal_view.cells.len == 0) return result;
 
     const surface_update_plan = planUpdate(

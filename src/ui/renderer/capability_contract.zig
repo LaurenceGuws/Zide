@@ -34,7 +34,7 @@ pub const KittyImageMode = enum {
 pub const RendererCapabilities = struct {
     scene_composition_mode: SceneCompositionMode,
     retained_targets: bool,
-    /// When true (with `presentableAvailable(.editor)`), the editor may use a retained
+    /// When true (with `presentableInfo(.editor) != null`), the editor may use a retained
     /// presentable surface for incremental draws. OpenGL on macOS reports false: a known
     /// platform workaround keeps the editor on the direct path there.
     editor_presentable_cache_compatible: bool,

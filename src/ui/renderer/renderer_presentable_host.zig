@@ -16,10 +16,6 @@ pub fn beginPresentable(renderer: anytype, surface: PresentableSurface) bool {
     return begun;
 }
 
-pub fn presentableAvailable(renderer: anytype, surface: PresentableSurface) bool {
-    return presentableInfo(renderer, surface) != null;
-}
-
 pub fn endPresentable(renderer: anytype, surface: PresentableSurface) void {
     if (surface == .editor) {
         present_trace_runtime.notePresentableEnded(renderer, .editor);

@@ -273,7 +273,7 @@ pub fn drawCached(
     const draw_list = &cache.draw_list;
 
     const texture_changed = renderer_presentable_host.ensurePresentable(r, .editor, @intFromFloat(width), @intFromFloat(height));
-    const use_retained_editor_surface = renderer_presentable_host.presentableAvailable(r, .editor) and
+    const use_retained_editor_surface = renderer_presentable_host.presentableInfo(r, .editor) != null and
         r.capabilities().editor_presentable_cache_compatible;
     var force_redraw = cache.beginFrame(
         frame_id,
