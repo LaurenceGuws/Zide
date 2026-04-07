@@ -1052,10 +1052,6 @@ pub const Renderer = struct {
         return self.capabilities().scene_composition_mode == .offscreen_scene_target;
     }
 
-    pub fn supportsRetainedTargets(self: *const Renderer) bool {
-        return self.capabilities().retained_targets;
-    }
-
     pub fn terminalPresentationMode(self: *const Renderer) TerminalPresentationMode {
         return self.capabilities().terminal_presentation_mode;
     }
@@ -1065,10 +1061,6 @@ pub const Renderer = struct {
             .direct_main_target, .direct_snapshot_cache => true,
             .retained_surface => false,
         };
-    }
-
-    pub fn supportsRawImageTextures(self: *const Renderer) bool {
-        return self.capabilities().raw_image_textures;
     }
 
     pub fn kittyImageMode(self: *const Renderer) KittyImageMode {

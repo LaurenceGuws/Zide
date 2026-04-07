@@ -513,6 +513,8 @@ Current evidence:
 - the renderer root no longer exports `enqueueSurfaceDraw(...)` as a public
   method; that fake-neutral draw verb is now internal renderer machinery
   instead of part of the caller-facing shared surface.
+- dead renderer-root capability convenience verbs with no callers are being
+  deleted instead of preserved as speculative API surface.
 - This is real lifecycle cleanup and removes another renderer-root duplication
   seam.
 - This is not closure yet:

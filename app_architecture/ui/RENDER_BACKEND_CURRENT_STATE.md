@@ -260,6 +260,10 @@ too: `Renderer` no longer exports `enqueueSurfaceDraw(...)` as a public method.
 That does not solve the deeper submission-semantics split yet, but it removes
 one more fake-neutral verb from the root surface seen by product code.
 
+That has improved slightly again on root-surface sprawl too: dead convenience
+capability verbs with no live callers are being removed from `Renderer`
+instead of left behind as speculative shared API.
+
 That has improved slightly again on the OpenGL lifecycle side too: the
 OpenGL scene-target and presentable runtimes no longer call GL-only
 render-target helpers through `Renderer`. They now talk to `gl_backend`
