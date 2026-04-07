@@ -1,9 +1,11 @@
 const app_bootstrap = @import("bootstrap.zig");
 const app_modes = @import("modes/mod.zig");
 const app_shell = @import("../app_shell.zig");
+const chrome_band_host = @import("../ui/widgets/chrome_band_host.zig");
 const shared_types = @import("../types/mod.zig");
 
 const AppMode = app_bootstrap.AppMode;
+const Band = chrome_band_host.Band;
 const WidgetLayout = shared_types.layout.WidgetLayout;
 const Shell = app_shell.Shell;
 
@@ -43,22 +45,23 @@ pub fn draw(
         app_theme.background
     else
         app_shell.Color{ .r = 255, .g = 255, .b = 255 };
+    const band = Band.init(shell, bg);
 
-    shell.drawRect(
+    band.fillRect(
         @intFromFloat(x),
         @intFromFloat(y),
         @intFromFloat(notice_w),
         @intFromFloat(notice_h),
         bg,
     );
-    shell.drawRectOutline(
+    band.drawRectOutline(
         @intFromFloat(x),
         @intFromFloat(y),
         @intFromFloat(notice_w),
         @intFromFloat(notice_h),
         app_theme.ui_border,
     );
-    shell.drawText(
+    band.drawText(
         text,
         x + pad_x,
         y + (notice_h - shell.charHeight()) / 2.0,

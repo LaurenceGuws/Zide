@@ -282,6 +282,11 @@ backend-neutral phase yet. It is the first explicit contract surface where one
 chrome family can stop reading like "some fills plus unrelated immediate text
 calls." The next cuts should grow this seam carefully, not duplicate it.
 
+The nearby config-reload notice also fits this seam. Centered modals such as
+terminal close confirm do not. They are popup/card surfaces with different
+ownership and should not be forced into the chrome-band contract just because
+they also mix fills and text.
+
 #### Presentable contract
 
 One backend-neutral presentable surface contract that can express:

@@ -383,6 +383,10 @@ backend phase. Its value is that those chrome families now have one explicit
 local composition surface to grow, instead of staying expressed only as
 unrelated shell draw calls.
 
+The config-reload notice now also rides that seam. The terminal close-confirm
+card does not. That split is intentional: the band host is for strip/chrome
+composition, not for generic popup/modal ownership.
+
 That is the loudest remaining semantic contradiction in the backend contract.
 It is no longer hidden by renderer-root facade noise or mixed backend dispatch
 buckets, which means the next real cut must either:
