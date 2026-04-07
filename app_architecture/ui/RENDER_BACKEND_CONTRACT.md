@@ -101,6 +101,9 @@ as-is and still count as routine backend work.
 - editor composition must honor the editor pane rect as its geometry authority;
   deriving wrap/segment truth from full-window width is a contract bug, not an
   acceptable implementation shortcut
+- retained editor presentation is only partially revalidated today: editor-mode
+  live smoke is healthy again after the pane-width fix, but IDE-mode geometry
+  truth is still the standard for clearing this seam as an adoption blocker
 
 ### What Is No Longer Blocking By Itself
 

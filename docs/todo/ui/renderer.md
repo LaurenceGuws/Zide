@@ -776,8 +776,10 @@ rendering adoption?":
 - backend runtime storage still widens under shared renderer ownership
 - the remaining loud ordering families are now editor banding and
   sample/diagnostic sections
-- the retained editor presentable path is currently disabled for correctness and
-  remains an explicit broken seam, not an adoption-ready feature
+- the retained editor presentable path is no longer force-disabled, but it is
+  only partially revalidated so far; editor-mode live smoke is good again, IDE
+  mode still needs explicit truth before this seam stops counting against
+  adoption
 - editor width/layout truth was still partly derived from full-window geometry
   instead of the editor pane; that had to be corrected before retained editor
   presentation can be trusted again

@@ -372,10 +372,7 @@ pub fn drawCached(
     const draw_list = &cache.draw_list;
 
     const texture_changed = renderer_presentable_host.ensurePresentable(r, .editor, @intFromFloat(width), @intFromFloat(height));
-    // The retained editor surface currently has a geometry/presentation mismatch
-    // in IDE mode. Prefer the direct path until the editor presentable contract
-    // is made honest again.
-    const use_retained_editor_surface = false;
+    const use_retained_editor_surface = r.capabilities().editor_presentable_cache_compatible;
     var force_redraw = cache.beginFrame(
         frame_id,
         cols,
