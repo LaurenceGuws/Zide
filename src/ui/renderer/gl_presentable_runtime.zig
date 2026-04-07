@@ -68,11 +68,6 @@ pub fn beginPresentable(renderer: anytype, surface: PresentableSurface) bool {
     };
 }
 
-pub fn presentableAvailable(renderer: anytype, surface: PresentableSurface) bool {
-    if (!renderer.capabilities().retained_targets) return false;
-    return presentableTarget(renderer, surface) != null;
-}
-
 pub fn endPresentable(renderer: anytype, _: PresentableSurface) void {
     if (!renderer.capabilities().retained_targets) return;
     restoreCompositionTarget(renderer);

@@ -616,6 +616,9 @@ The shared runtime surface has improved too:
 - GL and Metal presentable draw paths now also share one normalized draw
   resolution rule from `presentable_contract.zig` instead of each backend
   open-coding width/height/source fallback semantics
+- shared presentable availability now resolves from `presentableInfo != null`
+  instead of keeping a second backend-dispatched availability verb beside the
+  existing info contract
 
 But the presentable surface story is still not backend-neutral at the shared
 runtime layer:

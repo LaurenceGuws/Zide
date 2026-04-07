@@ -510,6 +510,9 @@ Current evidence:
 - GL and Metal presentable draw paths now consume one shared draw-resolution
   helper from `presentable_contract.zig` instead of each backend open-coding
   width/height/source fallback semantics.
+- shared presentable availability now resolves from `presentableInfo != null`
+  instead of keeping a second backend-dispatched availability verb beside the
+  existing info contract.
 
 Owner docs:
 

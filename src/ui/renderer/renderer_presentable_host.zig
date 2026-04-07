@@ -17,7 +17,7 @@ pub fn beginPresentable(renderer: anytype, surface: PresentableSurface) bool {
 }
 
 pub fn presentableAvailable(renderer: anytype, surface: PresentableSurface) bool {
-    return renderer.backend_ops.presentable.presentableAvailable(renderer, surface);
+    return presentableInfo(renderer, surface) != null;
 }
 
 pub fn endPresentable(renderer: anytype, surface: PresentableSurface) void {

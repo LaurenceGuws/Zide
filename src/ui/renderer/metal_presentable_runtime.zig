@@ -25,16 +25,6 @@ pub fn beginPresentable(_: anytype, _: PresentableSurface) bool {
     return false;
 }
 
-pub fn presentableAvailable(renderer: anytype, surface: PresentableSurface) bool {
-    return switch (surface) {
-        .terminal => blk: {
-            const context = metal_backend.backendContextConst(renderer) orelse break :blk false;
-            break :blk metal_backend.terminalSnapshotMatchesDrawable(context);
-        },
-        .editor => false,
-    };
-}
-
 pub fn endPresentable(_: anytype, _: PresentableSurface) void {}
 
 pub fn presentableInfo(renderer: anytype, surface: PresentableSurface) ?PresentableInfo {

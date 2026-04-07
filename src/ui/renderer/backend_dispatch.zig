@@ -42,7 +42,6 @@ pub fn BackendOps(
     const PresentableOps = struct {
         ensurePresentable: *const fn (*RendererType, PresentableSurface, i32, i32) bool,
         beginPresentable: *const fn (*RendererType, PresentableSurface) bool,
-        presentableAvailable: *const fn (*RendererType, PresentableSurface) bool,
         endPresentable: *const fn (*RendererType, PresentableSurface) void,
         drawPresentable: *const fn (*RendererType, PresentableSurface, PresentableDraw) void,
         scrollPresentable: *const fn (*RendererType, PresentableSurface, i32, i32) bool,
@@ -148,7 +147,6 @@ pub fn opsFor(
             .presentable = .{
                 .ensurePresentable = OpenGl.ensurePresentable,
                 .beginPresentable = OpenGl.beginPresentable,
-                .presentableAvailable = OpenGl.presentableAvailable,
                 .endPresentable = OpenGl.endPresentable,
                 .drawPresentable = OpenGl.drawPresentable,
                 .scrollPresentable = OpenGl.scrollPresentable,
@@ -192,7 +190,6 @@ pub fn opsFor(
             .presentable = .{
                 .ensurePresentable = Metal.ensurePresentable,
                 .beginPresentable = Metal.beginPresentable,
-                .presentableAvailable = Metal.presentableAvailable,
                 .endPresentable = Metal.endPresentable,
                 .drawPresentable = Metal.drawPresentable,
                 .scrollPresentable = Metal.scrollPresentable,
@@ -261,9 +258,6 @@ fn OpenGlDispatch(
         }
         fn beginPresentable(renderer: *RendererType, surface: PresentableSurface) bool {
             return gl_presentable_runtime.beginPresentable(renderer, surface);
-        }
-        fn presentableAvailable(renderer: *RendererType, surface: PresentableSurface) bool {
-            return gl_presentable_runtime.presentableAvailable(renderer, surface);
         }
         fn endPresentable(renderer: *RendererType, surface: PresentableSurface) void {
             gl_presentable_runtime.endPresentable(renderer, surface);
@@ -361,9 +355,6 @@ fn MetalDispatch(
         }
         fn beginPresentable(renderer: *RendererType, surface: PresentableSurface) bool {
             return metal_presentable_runtime.beginPresentable(renderer, surface);
-        }
-        fn presentableAvailable(renderer: *RendererType, surface: PresentableSurface) bool {
-            return metal_presentable_runtime.presentableAvailable(renderer, surface);
         }
         fn endPresentable(renderer: *RendererType, surface: PresentableSurface) void {
             metal_presentable_runtime.endPresentable(renderer, surface);
