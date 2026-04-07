@@ -485,9 +485,17 @@ pub fn flushDrawList(list: *EditorDrawList, r: anytype) void {
     }
 }
 
-pub fn flushDrawListEditorRowBand(list: *EditorDrawList, r: anytype) void {
+pub fn beginEditorRowBandGroup(r: anytype) void {
     renderer_text_phase_group_host.beginGroup(r, .editor_row_band);
-    defer renderer_text_phase_group_host.endGroup(r, .editor_row_band);
+}
+
+pub fn endEditorRowBandGroup(r: anytype) void {
+    renderer_text_phase_group_host.endGroup(r, .editor_row_band);
+}
+
+pub fn flushDrawListEditorRowBand(list: *EditorDrawList, r: anytype) void {
+    beginEditorRowBandGroup(r);
+    defer endEditorRowBandGroup(r);
     flushDrawList(list, r);
 }
 

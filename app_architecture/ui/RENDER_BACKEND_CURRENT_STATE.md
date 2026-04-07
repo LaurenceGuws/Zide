@@ -559,9 +559,10 @@ chrome-band and sample-section replay share one typed group/replay host surface
 in `renderer_text_phase_group_host.zig`, with seam-local hosts reduced to
 adapters.
 
-Editor adoption is now started too (`B-DONE-3` partial): editor draw-list
-row-band flush is wrapped in explicit `.editor_row_band` group boundaries via
-the same shared host seam, with trace counters and mismatch warnings wired.
+Editor adoption is now complete for this checkpoint (`B-DONE-3`): both editor
+draw-list row-band flush and immediate/fallback row-band execution are wrapped
+in explicit `.editor_row_band` group boundaries via the same shared host seam,
+with trace counters and mismatch warnings wired.
 
 That seam is now clean enough that further expansion would be fake progress
 unless it graduates into a real recorded band-composition phase. Until that

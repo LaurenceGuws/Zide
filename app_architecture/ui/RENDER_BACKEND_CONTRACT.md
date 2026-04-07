@@ -580,10 +580,9 @@ sample-section hosts now implement one shared typed replay/group surface in
 `renderer_text_phase_group_host.zig`. Local seam hosts remain only as
 compatibility adapters pending duplicate seam deletion.
 
-**Editor adoption checkpoint (B-DONE-3 partial, 2026-04-07):** editor row-band
-draw-list flush now opens/closes explicit `.editor_row_band` text phase groups
-through that shared host seam; full editor adoption still requires parity in
-the immediate/fallback row-band lane.
+**Editor adoption checkpoint (B-DONE-3, 2026-04-07):** editor row-band
+draw-list flush and immediate/fallback row-band execution now both open/close
+explicit `.editor_row_band` text phase groups through the shared host seam.
 
 Do not create a second chrome helper, and do not keep adopting unrelated popup
 or modal surfaces just to make the seam look more important than it is.

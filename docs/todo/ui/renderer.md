@@ -427,7 +427,7 @@ Milestone B "done" checkpoints (execute in order, do not rerank mid-lane):
     surface instead of parallel host-specific function sets
   - keep behavior identical (no paint-order changes) while contract shape
     converges
-- [ ] **B-DONE-3: adopt unified contract in editor row-band lane**
+- [x] **B-DONE-3: adopt unified contract in editor row-band lane**
   - move editor row-band dependent text emission onto the same group/replay seam
     with explicit row-band boundaries
   - preserve existing editor visual ordering and cursor behavior
@@ -966,9 +966,10 @@ Current evidence:
   share one typed host contract surface in
   `renderer_text_phase_group_host.zig`; seam-specific hosts are now adapters
   over that shared group/replay API.
-- editor checkpoint (`B-DONE-3` partial): draw-list row-band flush now uses
-  explicit `.editor_row_band` group boundaries through the shared text phase
-  host seam, with begin/end trace counters and mismatch warnings.
+- editor checkpoint (`B-DONE-3`): both draw-list and immediate/fallback
+  row-band lanes now use explicit `.editor_row_band` group boundaries through
+  the shared text phase host seam, with begin/end trace counters and mismatch
+  warnings.
 - this is good local honesty for the sample lane, but it does not yet turn the
   sample family into a recorded backend-neutral phase.
 - first sample-side proof is acceptable only as a tiny section-composition seam,

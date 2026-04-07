@@ -137,6 +137,8 @@ pub fn draw(
                 if (row_band_ok) {
                     overlay_mod.flushDrawListEditorRowBand(draw_list_local, r_local);
                 } else {
+                    overlay_mod.beginEditorRowBandGroup(r_local);
+                    defer overlay_mod.endEditorRowBandGroup(r_local);
                     if (range_count_local > 0) {
                         segment_paint_mod.drawSelectionOverlays(
                             view_local,
@@ -419,6 +421,8 @@ pub fn drawCached(
                     return;
                 }
 
+                overlay_mod.beginEditorRowBandGroup(r_local);
+                defer overlay_mod.endEditorRowBandGroup(r_local);
                 segment_paint_mod.drawEditorSegmentBaseImmediate(
                     r_local,
                     origin_x_local,
