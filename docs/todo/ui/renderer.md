@@ -563,6 +563,13 @@ Current evidence:
 - backend-facing dispatch and backend-native runtime are now grouped under one
   dedicated `backend` host on `Renderer` instead of remaining two separate
   peer root fields (`backend_ops` and `backend_runtime`).
+- Metal terminal-presentable composition queue ownership is now slightly
+  narrower too: `queued_presentable_draws` lives under Metal backend context
+  instead of as a separate shared runtime-state list beside the backend
+  context/frame slots.
+- that is not closure, but it is a real ownership improvement: one more
+  backend-specific lifecycle queue is owned by backend context state instead
+  of widening the shared renderer-hosted runtime bundle.
 - This is good host-shape cleanup and reduces one obvious renderer-root
   duplication seam.
 - This is not closure yet:

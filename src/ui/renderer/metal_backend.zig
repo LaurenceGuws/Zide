@@ -212,6 +212,7 @@ pub const BackendContext = struct {
     terminal_snapshot_logical_height: i32,
     /// 1×1 white texture for tint-only solid fills (cursor, rects).
     solid_white_brush: ?GpuImageRef,
+    queued_presentable_draws: std.ArrayListUnmanaged(SurfaceDraw) = .{},
     drawable_width: i32,
     drawable_height: i32,
 };
@@ -1243,7 +1244,7 @@ pub fn submitFrame(renderer: anytype) present_trace_runtime.FrameSubmission {
 
             replayRecordedSurfaceDrawSurfacePhase(renderer, context, frame);
             _ = captureTerminalSnapshot(context, frame);
-            replayRecordedPresentableDraws(renderer, context, frame);
+            replayRecordedPresentableDraws(context, frame);
             encodePresent(frame);
             commitFrame(frame);
 
@@ -1418,7 +1419,8 @@ pub fn recordSurfaceDrawForSurfacePhase(renderer: anytype, draw: SurfaceDraw) bo
 }
 
 pub fn recordPresentableDrawForComposition(renderer: anytype, draw: SurfaceDraw) bool {
-    renderer.backend.runtime.metal.queued_presentable_draws.append(renderer.allocator, draw) catch {
+    const context = backendContext(renderer) orelse return false;
+    context.queued_presentable_draws.append(renderer.allocator, draw) catch {
         var queued_draw = draw;
         switch (queued_draw) {
             .atlas => {},
@@ -1719,8 +1721,8 @@ fn replayRecordedSurfaceDrawSurfacePhase(renderer: anytype, context: *BackendCon
     }
 }
 
-fn replayRecordedPresentableDraws(renderer: anytype, context: *BackendContext, frame: *Frame) void {
-    for (renderer.backend.runtime.metal.queued_presentable_draws.items) |queued_draw| {
+fn replayRecordedPresentableDraws(context: *BackendContext, frame: *Frame) void {
+    for (context.queued_presentable_draws.items) |queued_draw| {
         switch (queued_draw) {
             .atlas => |sample| _ = drawAtlasSample(context, frame, sample),
             .solid => |solid| _ = drawSolidColor(context, frame, solid),
@@ -1762,9 +1764,11 @@ pub fn deinitRuntime(renderer: anytype) void {
     clearQueuedSurfaceDraws(renderer);
     clearQueuedPresentableDraws(renderer);
     renderer.backend.runtime.metal.queued_surface_draws.deinit(renderer.allocator);
-    renderer.backend.runtime.metal.queued_presentable_draws.deinit(renderer.allocator);
     if (renderer.backend.runtime.metal.frame) |*frame| abandonFrame(frame);
-    if (renderer.backend.runtime.metal.backend_context) |*context| deinitBackendContext(context);
+    if (renderer.backend.runtime.metal.backend_context) |*context| {
+        context.queued_presentable_draws.deinit(renderer.allocator);
+        deinitBackendContext(context);
+    }
 }
 
 pub fn clearDiagnosticFont(renderer: anytype) void {
@@ -1811,14 +1815,15 @@ fn clearQueuedSurfaceDraws(renderer: anytype) void {
 }
 
 fn clearQueuedPresentableDraws(renderer: anytype) void {
-    for (renderer.backend.runtime.metal.queued_presentable_draws.items) |*queued_draw| {
+    const context = backendContext(renderer) orelse return;
+    for (context.queued_presentable_draws.items) |*queued_draw| {
         switch (queued_draw.*) {
             .atlas => {},
             .solid => {},
             .raw_image => |*draw| releaseGpuImageRef(&draw.texture),
         }
     }
-    renderer.backend.runtime.metal.queued_presentable_draws.clearRetainingCapacity();
+    context.queued_presentable_draws.clearRetainingCapacity();
 }
 
 pub fn acquireFrame(context: *BackendContext) ?Frame {

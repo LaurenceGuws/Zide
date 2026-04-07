@@ -100,6 +100,9 @@ today.
 - adding a backend must not mean adding another renderer-hosted peer runtime
   bundle as the normal move
 - the host must narrow further toward backend-owned or opaque runtime storage
+- moving backend-specific lifecycle queues under backend context is good
+  progress, because it stops widening the shared runtime bundle for state that
+  only one backend-owned lifecycle model understands
 
 4. Resource/image handles stay opaque in shared code
 
