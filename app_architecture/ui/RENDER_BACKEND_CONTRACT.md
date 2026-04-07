@@ -104,6 +104,9 @@ as-is and still count as routine backend work.
 - retained editor presentation is only partially revalidated today: editor-mode
   live smoke is healthy again after the pane-width fix, but IDE-mode geometry
   truth is still the standard for clearing this seam as an adoption blocker
+- backend-runtime storage pressure is now about ownership of the runtime bundle
+  shape, not shared caller leakage; shared code should not read backend-native
+  runtime fields directly
 
 ### What Is No Longer Blocking By Itself
 

@@ -773,7 +773,8 @@ rendering adoption?":
 
 - `SurfaceDraw` semantics are still not one honest product-level story
 - presentable parity/ownership is still not neutral enough
-- backend runtime storage still widens under shared renderer ownership
+- backend runtime storage still widens under shared renderer ownership, even
+  though direct runtime-state reaches are now confined to backend-owned modules
 - the remaining loud ordering families are now editor banding and
   sample/diagnostic sections
 - the retained editor presentable path is no longer force-disabled, but it is

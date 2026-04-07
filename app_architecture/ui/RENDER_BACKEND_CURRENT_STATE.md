@@ -251,6 +251,12 @@ renderer-owned presentable facade methods now live in
 not make the presentable lifecycle fully backend-neutral yet, but it removes
 another small renderer-root ownership seam from that surface.
 
+Backend-runtime truth has improved slightly again too: direct
+`renderer.backend_runtime.*` reaches are now effectively confined to
+backend-owned modules. The remaining runtime-storage blocker is not shared
+widget/app leakage anymore; it is that the renderer root still physically owns
+the backend runtime bundle shape.
+
 That has improved slightly again on the caller-facing lifecycle edge too: the
 renderer root no longer exports `beginPresentable(...)` / `endPresentable(...)`
 as if those were stable product verbs. The widget/view callers that actually
