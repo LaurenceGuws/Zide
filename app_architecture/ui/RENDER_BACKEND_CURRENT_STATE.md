@@ -212,6 +212,13 @@ glyph/rect submission, and backend clip application now route through
 `gl_backend.zig` / `metal_backend.zig` instead of `renderer.zig` acting as the
 implementation center for those backend-specific mechanics.
 
+That has improved slightly again on frame host bookkeeping too: the shared
+frame prelude/epilogue state reset and submission finalization now live in
+`renderer_frame_host.zig` instead of being duplicated between
+`Renderer.beginFrame()` and both backend frame runtimes. This is real lifecycle
+cleanup, but it is still only host-shape progress; backend frame assembly and
+submission ownership remain materially different between OpenGL and Metal.
+
 That has improved slightly again on the OpenGL lifecycle side too: the
 OpenGL scene-target and presentable runtimes no longer call GL-only
 render-target helpers through `Renderer`. They now talk to `gl_backend`

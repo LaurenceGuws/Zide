@@ -478,6 +478,19 @@ Do not do:
 
 Status: active
 
+Current evidence:
+
+- shared frame prelude/epilogue host bookkeeping now lives in
+  `renderer_frame_host.zig` instead of being split between `Renderer.beginFrame`
+  and both backend frame runtimes.
+- This is real lifecycle cleanup and removes another renderer-root duplication
+  seam.
+- This is not closure yet:
+  - backend frame assembly is still materially different between OpenGL and
+    Metal
+  - submission ownership still terminates in backend-specific frame runtimes
+  - `Renderer` still remains the dispatch center through `backend_ops`
+
 Owner docs:
 
 - `app_architecture/ui/RENDER_BACKEND_CONTRACT.md`

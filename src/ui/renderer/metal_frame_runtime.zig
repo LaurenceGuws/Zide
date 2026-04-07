@@ -3,6 +3,7 @@ const screenshot = @import("screenshot.zig");
 const present_trace_runtime = @import("present_trace_runtime.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
 const metal_backend = @import("metal_backend.zig");
+const renderer_frame_host = @import("renderer_frame_host.zig");
 
 pub fn beginFrame(renderer: anytype) void {
     metal_backend.clearQueuedSurfaceDraws(renderer);
@@ -101,19 +102,11 @@ pub fn submitFrame(renderer: anytype) present_trace_runtime.FrameSubmission {
     else
         false;
     const present_end = sdl_api.getPerformanceCounter();
-    renderer.present.last_swap_ms = present_trace_runtime.performanceDeltaMs(present_start, present_end, renderer.perf_freq);
-    renderer.present.main_composition_target = .default_target;
-    renderer.present.trace_last = renderer.present.trace_current;
-    renderer.present.capture_path = null;
-    renderer.present.capture_armed = false;
-    renderer.present.capture_frame_seq = 0;
-    if (succeeded) renderer.present.submission_sequence += 1;
-    return .{
-        .succeeded = succeeded,
-        .sequence = renderer.present.submission_sequence,
-        .terminal_presented = renderer.present.trace_current.terminal_presentation_count > 0,
-        .terminal_presented_generation = renderer.present.trace_current.terminal_presented_generation,
-    };
+    return renderer_frame_host.finishFrameSubmission(
+        renderer,
+        succeeded,
+        present_trace_runtime.performanceDeltaMs(present_start, present_end, renderer.perf_freq),
+    );
 }
 
 pub fn dumpWindowScreenshotPpm(_: anytype, _: []const u8) !void {

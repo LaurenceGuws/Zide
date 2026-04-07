@@ -4,6 +4,7 @@ const screenshot = @import("screenshot.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
 const app_logger = @import("../../app_logger.zig");
 const present_trace_runtime = @import("present_trace_runtime.zig");
+const renderer_frame_host = @import("renderer_frame_host.zig");
 
 pub fn beginFrame(renderer: anytype) void {
     gl_backend.refreshSceneTargetContract(renderer, renderer.display_metrics);
@@ -50,19 +51,11 @@ pub fn submitFrame(renderer: anytype) present_trace_runtime.FrameSubmission {
         app_logger.logger("sdl.gl").logStdout(.warning, "SDL_GL_SwapWindow failed err={s}", .{sdl_api.getError()});
     }
     const swap_end = sdl_api.getPerformanceCounter();
-    renderer.present.last_swap_ms = present_trace_runtime.performanceDeltaMs(swap_start, swap_end, renderer.perf_freq);
-    renderer.present.main_composition_target = .default_target;
-    renderer.present.trace_last = renderer.present.trace_current;
-    renderer.present.capture_path = null;
-    renderer.present.capture_armed = false;
-    renderer.present.capture_frame_seq = 0;
-    if (swap_ok) renderer.present.submission_sequence += 1;
-    return .{
-        .succeeded = swap_ok,
-        .sequence = renderer.present.submission_sequence,
-        .terminal_presented = renderer.present.trace_current.terminal_presentation_count > 0,
-        .terminal_presented_generation = renderer.present.trace_current.terminal_presented_generation,
-    };
+    return renderer_frame_host.finishFrameSubmission(
+        renderer,
+        swap_ok,
+        present_trace_runtime.performanceDeltaMs(swap_start, swap_end, renderer.perf_freq),
+    );
 }
 
 pub fn dumpWindowScreenshotPpm(renderer: anytype, path: []const u8) !void {

@@ -14,6 +14,7 @@ const gl_backend = @import("renderer/gl_backend.zig");
 const metal_backend = @import("renderer/metal_backend.zig");
 const backend_runtime_bundle = @import("renderer/backend_runtime_bundle.zig");
 const metal_runtime_state = @import("renderer/metal_runtime_state.zig");
+const renderer_frame_host = @import("renderer/renderer_frame_host.zig");
 const scene_target_state = @import("renderer/scene_target_state.zig");
 const surface_draw = @import("renderer/surface_draw.zig");
 const input_constants = @import("renderer/input_constants.zig");
@@ -1238,17 +1239,7 @@ pub const Renderer = struct {
     }
 
     pub fn beginFrame(self: *Renderer) void {
-        self.present.frame_seq +%= 1;
-        self.present.trace_current = .{ .frame_seq = self.present.frame_seq };
-        self.present.drawing_editor_surface = false;
-        self.clip_depth = 0;
-        const display_metrics = self.display_metrics;
-        self.width = display_metrics.window_w;
-        self.height = display_metrics.window_h;
-        self.render_width = display_metrics.drawable_w;
-        self.render_height = display_metrics.drawable_h;
-
-        self.text_render.bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
+        renderer_frame_host.beginFrameHost(self);
         self.backend_ops.beginFrame(self);
         self.backend_ops.applyClipRect(self, null);
     }
