@@ -587,6 +587,9 @@ Current evidence:
 - the renderer root no longer exports `recordSurfaceDraw(...)` as a public
   method; that fake-neutral draw verb is now internal renderer machinery
   instead of part of the caller-facing shared surface.
+- the shared surface-record helper for `drawRect(...)` / `drawRectF(...)` now
+  lives in `renderer_surface_host.zig` instead of `renderer.zig`, which is a
+  better ownership fit for that backend-facing seam.
 - dead renderer-root capability convenience verbs with no callers are being
   deleted instead of preserved as speculative API surface.
 - the renderer root no longer stores a dead backend label field when backend

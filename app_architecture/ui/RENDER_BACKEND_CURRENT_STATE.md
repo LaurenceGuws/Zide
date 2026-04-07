@@ -384,6 +384,12 @@ too: `Renderer` no longer exports `recordSurfaceDraw(...)` as a public method.
 That does not solve the deeper submission-semantics split yet, but it removes
 one more fake-neutral verb from the root surface seen by product code.
 
+That has improved slightly again on the shared surface edge too: the common
+surface-record helper for `drawRect(...)` / `drawRectF(...)` now lives in
+`renderer_surface_host.zig` instead of `renderer.zig`, which is a more honest
+ownership shape than leaving that backend-facing seam as one more private root
+helper.
+
 That has improved slightly again on root-surface sprawl too: dead convenience
 capability verbs with no live callers are being removed from `Renderer`
 instead of left behind as speculative shared API.

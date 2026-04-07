@@ -15,6 +15,7 @@ const backend_runtime_bundle = @import("renderer/backend_runtime_bundle.zig");
 const metal_runtime_state = @import("renderer/metal_runtime_state.zig");
 const renderer_frame_host = @import("renderer/renderer_frame_host.zig");
 const renderer_presentable_host = @import("renderer/renderer_presentable_host.zig");
+const renderer_surface_host = @import("renderer/renderer_surface_host.zig");
 const scene_target_state = @import("renderer/scene_target_state.zig");
 const surface_draw = @import("renderer/surface_draw.zig");
 const input_constants = @import("renderer/input_constants.zig");
@@ -957,27 +958,6 @@ pub const Renderer = struct {
         };
     }
 
-    fn recordSurfaceDraw(self: *Renderer, draw: surface_draw.SurfaceDraw) bool {
-        return self.backend_ops.surface.recordSurfaceDraw(self, draw);
-    }
-
-    fn enqueueSolidSurfaceFromLogicalRect(self: *Renderer, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) bool {
-        const clip = if (self.currentClipRect()) |c|
-            metal_text_sample_runtime.pixelClipRect(self, c)
-        else
-            null;
-        return self.recordSurfaceDraw(.{ .solid = .{
-            .dest_rect = .{
-                .x = self.logicalLengthToRaster(x),
-                .y = self.logicalLengthToRaster(y),
-                .width = self.logicalLengthToRaster(w),
-                .height = self.logicalLengthToRaster(h),
-            },
-            .color = color,
-            .clip_rect = clip,
-        } });
-    }
-
     pub fn shouldClose(self: *Renderer) bool {
         return self.input.should_close_flag;
     }
@@ -1052,7 +1032,8 @@ pub const Renderer = struct {
     pub fn drawRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
         if (w <= 0 or h <= 0) return;
         present_trace_runtime.noteEditorSurfaceFullPaneClear(self, x, y, w, h);
-        _ = self.enqueueSolidSurfaceFromLogicalRect(
+        _ = renderer_surface_host.recordSolidSurfaceFromLogicalRect(
+            self,
             @floatFromInt(x),
             @floatFromInt(y),
             @floatFromInt(w),
@@ -1063,7 +1044,7 @@ pub const Renderer = struct {
 
     pub fn drawRectF(self: *Renderer, x: f32, y: f32, w: f32, h: f32, color: Color) void {
         if (w <= 0 or h <= 0) return;
-        _ = self.enqueueSolidSurfaceFromLogicalRect(x, y, w, h, color.toRgba());
+        _ = renderer_surface_host.recordSolidSurfaceFromLogicalRect(self, x, y, w, h, color.toRgba());
     }
 
     pub fn drawRectOutline(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
