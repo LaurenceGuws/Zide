@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
+const present_trace_runtime = @import("present_trace_runtime.zig");
 const renderer_text_host = @import("renderer_text_host.zig");
 const Color = app_shell.Color;
 
@@ -18,11 +19,11 @@ pub const ReplayOp = struct {
 };
 
 pub fn beginBandCommandGroup(renderer: anytype) void {
-    _ = renderer;
+    present_trace_runtime.noteBandCommandGroupBegin(renderer);
 }
 
 pub fn endBandCommandGroup(renderer: anytype) void {
-    _ = renderer;
+    present_trace_runtime.noteBandCommandGroupEnd(renderer);
 }
 
 pub fn replayBandTextOnBg(renderer: anytype, text: []const u8, x: f32, y: f32, color: anytype, bg: anytype) void {

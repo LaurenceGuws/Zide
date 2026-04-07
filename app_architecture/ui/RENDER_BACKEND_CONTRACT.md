@@ -535,6 +535,10 @@ text host entrypoints directly from the band recorder.
 **Band replay test checkpoint (2026-04-07):** replay group wrapping and replay
 order/bg payload handling are now unit-tested at the band phase host seam.
 
+**Band trace checkpoint (2026-04-07):** band group boundaries are now counted in
+present trace (`band_group_begin_count` / `band_group_end_count`) so this seam
+is observable without changing backend draw behavior.
+
 **Current blocker / stop rule (2026-04-07):** do not keep widening this seam as
 if it were already a backend-neutral phase. Today it is still a renderer-host
 composition helper over immediate text/surface work. The next valid step is

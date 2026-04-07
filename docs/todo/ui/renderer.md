@@ -863,6 +863,9 @@ Current evidence:
   ownership separated at renderer-host level.
 - chrome-band test checkpoint: replay-group semantics are now unit-tested in
   `renderer_band_phase_host` (group begin/end wrapping, op order, bg payload).
+- chrome-band trace checkpoint: present trace now records band command-group
+  boundaries (`band_group_begin_count` / `band_group_end_count`) through
+  `renderer_band_phase_host.begin/endBandCommandGroup`.
 - backend-runtime checkpoint: the remaining runtime-storage blocker is now more
   specifically OpenGL-shaped than Metal-shaped. Metal live frame/queue state is
   under backend context.
