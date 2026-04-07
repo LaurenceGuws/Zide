@@ -9,10 +9,13 @@ const metal_runtime_state = @import("metal_runtime_state.zig");
 const metal_text_sample_runtime = @import("metal_text_sample_runtime.zig");
 const presentable_contract = @import("presentable_contract.zig");
 const present_trace_runtime = @import("present_trace_runtime.zig");
+const renderer_frame_host = @import("renderer_frame_host.zig");
+const screenshot = @import("screenshot.zig");
 const surface_draw = @import("surface_draw.zig");
 const window_init = @import("window_init.zig");
 const terminal_font = @import("../terminal_font.zig");
 const types = @import("types.zig");
+const app_logger = @import("../../app_logger.zig");
 
 const objc = if (builtin.target.os.tag == .macos) @cImport({
     @cInclude("objc/message.h");
@@ -1197,6 +1200,116 @@ pub fn runStartupSmokeForBootstrap(_: *sdl_api.c.SDL_Window, render_surface_atta
     }
     presentFrame(&context, &frame);
     return true;
+}
+
+pub fn beginFrame(renderer: anytype) void {
+    clearQueuedSurfaceDraws(renderer);
+    if (backendContext(renderer)) |context| {
+        resizeBackendContext(context, renderer.render_width, renderer.render_height);
+        var frame = acquireFrame(context) orelse {
+            renderer.present.main_composition_target = .default_target;
+            clearCurrentFrame(renderer);
+            return;
+        };
+        const bg = renderer.theme.background.toRgba();
+        const cleared = clearFrame(&frame, .{
+            @as(f32, @floatFromInt(bg.r)) / 255.0,
+            @as(f32, @floatFromInt(bg.g)) / 255.0,
+            @as(f32, @floatFromInt(bg.b)) / 255.0,
+            @as(f32, @floatFromInt(bg.a)) / 255.0,
+        });
+        if (!cleared) {
+            abandonFrame(&frame);
+            renderer.present.main_composition_target = .default_target;
+            clearCurrentFrame(renderer);
+            return;
+        }
+        renderer.present.main_composition_target = .backend_surface;
+        storeCurrentFrame(renderer, frame);
+    } else {
+        renderer.present.main_composition_target = .default_target;
+        clearCurrentFrame(renderer);
+    }
+}
+
+pub fn submitFrame(renderer: anytype) present_trace_runtime.FrameSubmission {
+    defer clearQueuedSurfaceDraws(renderer);
+    const present_start = sdl_api.getPerformanceCounter();
+    const succeeded = if (backendContext(renderer)) |context|
+        if (currentFrame(renderer)) |frame| inner: {
+            var capture_readback: ?Readback = null;
+            defer if (capture_readback) |*readback| deinitReadback(readback);
+
+            if (renderer.present.capture_armed) {
+                capture_readback = prepareFrameReadback(context, frame);
+            }
+
+            replayQueuedSurfaceDraws(renderer, context, frame);
+            _ = captureTerminalSnapshot(context, frame);
+            encodePresent(frame);
+            commitFrame(frame);
+
+            if (capture_readback) |*readback| {
+                waitForFrame(frame);
+                if (renderer.present.capture_path) |path| {
+                    const rgba = copyReadbackRgba(renderer.allocator, readback) catch |err| rgba_capture: {
+                        app_logger.logger("renderer.present").logf(.warning, "capture failed frame_seq={d} path={s} err={s}", .{
+                            renderer.present.frame_seq,
+                            path,
+                            @errorName(err),
+                        });
+                        break :rgba_capture null;
+                    };
+                    if (rgba) |pixels| {
+                        defer renderer.allocator.free(pixels);
+                        screenshot.dumpRgbaPixelsPpmScaled(
+                            renderer.allocator,
+                            pixels,
+                            readback.width,
+                            readback.height,
+                            renderer.width,
+                            renderer.height,
+                            path,
+                            .top_left,
+                        ) catch |err| {
+                            app_logger.logger("renderer.present").logf(.warning, "capture failed frame_seq={d} path={s} err={s}", .{
+                                renderer.present.frame_seq,
+                                path,
+                                @errorName(err),
+                            });
+                        };
+                        renderer.present.trace_current.captured_path = path;
+                    }
+                }
+            } else if (renderer.present.capture_armed) {
+                if (renderer.present.capture_path) |path| {
+                    app_logger.logger("renderer.present").logf(.warning, "capture failed frame_seq={d} path={s} err=MetalReadbackUnavailable", .{
+                        renderer.present.frame_seq,
+                        path,
+                    });
+                }
+            }
+
+            releaseFrame(frame);
+            clearCurrentFrame(renderer);
+            break :inner true;
+        } else false
+    else
+        false;
+    const present_end = sdl_api.getPerformanceCounter();
+    return renderer_frame_host.finishFrameSubmission(
+        renderer,
+        succeeded,
+        present_trace_runtime.performanceDeltaMs(present_start, present_end, renderer.perf_freq),
+    );
+}
+
+pub fn dumpWindowScreenshotPpm(_: anytype, _: []const u8) !void {
+    return error.RendererScreenshotUnavailable;
+}
+
+pub fn dumpWindowScreenshotPpmSized(_: anytype, _: []const u8, _: i32, _: i32) !void {
+    return error.RendererScreenshotUnavailable;
 }
 
 pub fn ensurePresentable(renderer: anytype, surface: PresentableSurface, width: i32, height: i32) bool {

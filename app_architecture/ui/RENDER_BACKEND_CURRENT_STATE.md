@@ -236,6 +236,14 @@ GL/Metal backend ops table and switchboard now live in
 routing block inline. This makes the renderer root less obviously the dispatch
 center, even though backend lifecycle ownership is still not closed.
 
+That has improved slightly again on frame lifecycle termination too:
+backend frame begin/submit and screenshot entrypoints now live directly on
+`gl_backend.zig` / `metal_backend.zig`, and the old
+`opengl_frame_runtime.zig` / `metal_frame_runtime.zig` wrappers are gone.
+This is a real ownership improvement because per-backend frame mechanics now
+terminate in the backend modules themselves instead of one more intermediate
+runtime layer.
+
 That has improved slightly again on the OpenGL lifecycle side too: the
 OpenGL scene-target and presentable runtimes no longer call GL-only
 render-target helpers through `Renderer`. They now talk to `gl_backend`
@@ -476,6 +484,12 @@ The main contradiction centers today are:
 - `src/ui/renderer/backend_dispatch.zig`
   - now owns the backend switchboard, but backend lifecycle ownership is still
     not closed
+- `src/ui/renderer/gl_backend.zig`
+  - now owns OpenGL frame lifecycle directly, but the resulting lifecycle
+    semantics are still not equivalent to Metal
+- `src/ui/renderer/metal_backend.zig`
+  - now owns Metal frame lifecycle directly, but the resulting lifecycle
+    semantics are still not equivalent to OpenGL
 - `src/ui/renderer/present_trace_runtime.zig`
   - now mostly trace/present bookkeeping, but is still part of the shared
     frame lifecycle surface

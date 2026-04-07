@@ -1,8 +1,6 @@
 const types = @import("types.zig");
 const gl_backend = @import("gl_backend.zig");
 const metal_backend = @import("metal_backend.zig");
-const opengl_frame_runtime = @import("opengl_frame_runtime.zig");
-const metal_frame_runtime = @import("metal_frame_runtime.zig");
 const surface_draw = @import("surface_draw.zig");
 const platform_window = @import("../../platform/window_metrics.zig");
 
@@ -181,19 +179,19 @@ fn OpenGlDispatch(
             gl_backend.configureRuntimePolicy(renderer);
         }
         fn beginFrame(renderer: *RendererType) void {
-            opengl_frame_runtime.beginFrame(renderer);
+            gl_backend.beginFrame(renderer);
         }
         fn submitFrame(renderer: *RendererType) FrameSubmission {
-            return opengl_frame_runtime.submitFrame(renderer);
+            return gl_backend.submitFrame(renderer);
         }
         fn capabilities(renderer: *const RendererType) RendererCapabilities {
             return gl_backend.capabilities(renderer);
         }
         fn dumpWindowScreenshotPpm(renderer: *RendererType, path: []const u8) !void {
-            return opengl_frame_runtime.dumpWindowScreenshotPpm(renderer, path);
+            return gl_backend.dumpWindowScreenshotPpm(renderer, path);
         }
         fn dumpWindowScreenshotPpmSized(renderer: *RendererType, path: []const u8, out_width: i32, out_height: i32) !void {
-            return opengl_frame_runtime.dumpWindowScreenshotPpmSized(renderer, path, out_width, out_height);
+            return gl_backend.dumpWindowScreenshotPpmSized(renderer, path, out_width, out_height);
         }
         fn ensurePresentable(renderer: *RendererType, surface: PresentableSurface, width: i32, height: i32) bool {
             return gl_backend.ensurePresentable(renderer, surface, width, height);
@@ -281,19 +279,19 @@ fn MetalDispatch(
             metal_backend.configureRuntimePolicy(renderer);
         }
         fn beginFrame(renderer: *RendererType) void {
-            metal_frame_runtime.beginFrame(renderer);
+            metal_backend.beginFrame(renderer);
         }
         fn submitFrame(renderer: *RendererType) FrameSubmission {
-            return metal_frame_runtime.submitFrame(renderer);
+            return metal_backend.submitFrame(renderer);
         }
         fn capabilities(renderer: *const RendererType) RendererCapabilities {
             return metal_backend.capabilities(renderer);
         }
         fn dumpWindowScreenshotPpm(renderer: *RendererType, path: []const u8) !void {
-            return metal_frame_runtime.dumpWindowScreenshotPpm(renderer, path);
+            return metal_backend.dumpWindowScreenshotPpm(renderer, path);
         }
         fn dumpWindowScreenshotPpmSized(renderer: *RendererType, path: []const u8, out_width: i32, out_height: i32) !void {
-            return metal_frame_runtime.dumpWindowScreenshotPpmSized(renderer, path, out_width, out_height);
+            return metal_backend.dumpWindowScreenshotPpmSized(renderer, path, out_width, out_height);
         }
         fn ensurePresentable(renderer: *RendererType, surface: PresentableSurface, width: i32, height: i32) bool {
             return metal_backend.ensurePresentable(renderer, surface, width, height);
