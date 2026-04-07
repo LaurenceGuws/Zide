@@ -333,10 +333,11 @@ pub fn drawEditorRowBandImmediate(
         text_start_x,
     );
 
-    if (is_current and is_cursor_segment and cursor_col_vis >= seg_start_col and cursor_col_vis < seg_end_col) {
-        const local_col = cursor_col_vis - seg_start_col;
-        const cursor_draw_x = text_start_x + @as(f32, @floatFromInt(local_col)) * r.editor_char_width;
-        overlay_mod.drawLineCursor(r, cursor_draw_x, seg_y, r.editor_char_height, r.theme.cursor);
+    if (is_current and is_cursor_segment) {
+        if (cursorLocalColInSegment(seg_start_col, seg_end_col, cursor_col_vis)) |local_col| {
+            const cursor_draw_x = text_start_x + @as(f32, @floatFromInt(local_col)) * r.editor_char_width;
+            overlay_mod.drawLineCursor(r, cursor_draw_x, seg_y, r.editor_char_height, r.theme.cursor);
+        }
     }
     overlay_mod.drawExtraCarets(view, r, line_idx, line_text, cluster_slice, seg_start_col, seg_end_col, line_width, seg_y, text_start_x);
 }
@@ -465,10 +466,11 @@ pub fn addEditorRowBandOps(
         );
     }
 
-    if (is_current and is_cursor_segment and cursor_col_vis >= seg_start_col and cursor_col_vis < seg_end_col) {
-        const local_col = cursor_col_vis - seg_start_col;
-        cursor_draw_x.* = text_start_x + @as(f32, @floatFromInt(local_col)) * r.editor_char_width;
-        cursor_draw_y.* = seg_y;
+    if (is_current and is_cursor_segment) {
+        if (cursorLocalColInSegment(seg_start_col, seg_end_col, cursor_col_vis)) |local_col| {
+            cursor_draw_x.* = text_start_x + @as(f32, @floatFromInt(local_col)) * r.editor_char_width;
+            cursor_draw_y.* = seg_y;
+        }
     }
 
     ok = ok and overlay_mod.addExtraCaretOps(
@@ -486,6 +488,15 @@ pub fn addEditorRowBandOps(
     );
 
     return ok;
+}
+
+fn cursorLocalColInSegment(seg_start_col: usize, seg_end_col: usize, cursor_col_vis: usize) ?usize {
+    if (seg_end_col <= seg_start_col) return null;
+    if (cursor_col_vis < seg_start_col) return null;
+    if (cursor_col_vis < seg_end_col) return cursor_col_vis - seg_start_col;
+    // Keep end-of-segment caret distinct from the previous column.
+    if (cursor_col_vis == seg_end_col) return seg_end_col - seg_start_col;
+    return null;
 }
 
 const FakeColor = struct { r: u8, g: u8, b: u8, a: u8 = 255 };
@@ -574,6 +585,13 @@ test "addEditorLineBaseOps for non-current line only emits gutter text" {
     try std.testing.expectEqual(@as(usize, 1), list.ops.items.len);
     try std.testing.expect(list.ops.items[0] == .text);
     try std.testing.expectEqualStrings("   1", list.ops.items[0].text.text);
+}
+
+test "cursorLocalColInSegment clamps boundary caret to last cell" {
+    try std.testing.expectEqual(@as(?usize, 5), cursorLocalColInSegment(10, 15, 15));
+    try std.testing.expectEqual(@as(?usize, 3), cursorLocalColInSegment(10, 15, 13));
+    try std.testing.expectEqual(@as(?usize, null), cursorLocalColInSegment(10, 15, 9));
+    try std.testing.expectEqual(@as(?usize, null), cursorLocalColInSegment(10, 15, 16));
 }
 
 test "addSearchOverlayOps emits one rect per visible search match" {
