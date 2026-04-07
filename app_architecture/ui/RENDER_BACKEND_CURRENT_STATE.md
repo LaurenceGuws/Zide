@@ -68,6 +68,11 @@ That sample/diagnostic pressure is narrower again because `font_sample_view.zig`
 no longer rides the editor presentable lane. Diagnostic/sample rendering stays
 direct until the retained editor presentable seam is either fixed or deleted.
 
+The editor widget draw path is now honest about the same truth: it no longer
+keeps a dead retained/direct branch inside `editor_widget_draw.zig`. The live
+editor path is direct-only until retained editor presentation is fixed as its
+own lane or deleted.
+
 That is a much better answer than the repo had before, but it is still a
 blocking answer.
 

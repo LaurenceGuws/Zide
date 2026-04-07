@@ -13,7 +13,6 @@ const segment_paint_mod = @import("../../editor/render/segment_paint.zig");
 const visible_prep_mod = @import("../../editor/render/visible_prep.zig");
 const app_logger = @import("../../app_logger.zig");
 const renderer_clip_host = @import("../renderer/renderer_clip_host.zig");
-const renderer_presentable_host = @import("../renderer/renderer_presentable_host.zig");
 const renderer_surface_host = @import("../renderer/renderer_surface_host.zig");
 const renderer_text_host = @import("../renderer/renderer_text_host.zig");
 const overlay_mod = @import("editor_widget_draw_overlay.zig");
@@ -371,11 +370,9 @@ pub fn drawCached(
     const draw_y = y;
     const draw_list = &cache.draw_list;
 
-    const texture_changed = renderer_presentable_host.ensurePresentable(r, .editor, @intFromFloat(width), @intFromFloat(height));
     // The retained editor surface is still not trustworthy enough in live IDE
-    // usage. Keep the width/layout fixes, but stay on the direct path until the
-    // retained update/presentation seam is actually honest.
-    const use_retained_editor_surface = false;
+    // usage. Keep one honest direct editor path here until the retained seam is
+    // either fixed as a separate lane or deleted.
     var force_redraw = cache.beginFrame(
         frame_id,
         cols,
@@ -389,25 +386,16 @@ pub fn drawCached(
         view.scroll_col,
         view.selectionStateHash(),
     );
-    if (texture_changed) force_redraw = true;
-    if (!use_retained_editor_surface) force_redraw = true;
+    force_redraw = true;
 
-    const origin_x: f32 = if (use_retained_editor_surface) 0 else draw_x;
-    const origin_y: f32 = if (use_retained_editor_surface) 0 else draw_y;
+    const origin_x: f32 = draw_x;
+    const origin_y: f32 = draw_y;
 
     var any_dirty = force_redraw;
 
     if (force_redraw) {
-        if (use_retained_editor_surface) {
-            if (renderer_presentable_host.beginPresentable(r, .editor)) {
-                renderer_surface_host.drawRect(r, 0, 0, @intFromFloat(width), @intFromFloat(height), r.theme.background);
-                renderer_surface_host.drawRect(r, 0, 0, @intFromFloat(widget.gutter_width), @intFromFloat(height), r.theme.line_number_bg);
-                renderer_presentable_host.endPresentable(r, .editor);
-            }
-        } else {
-            renderer_surface_host.drawRect(r, @intFromFloat(draw_x), @intFromFloat(draw_y), @intFromFloat(width), @intFromFloat(height), r.theme.background);
-            renderer_surface_host.drawRect(r, @intFromFloat(draw_x), @intFromFloat(draw_y), @intFromFloat(widget.gutter_width), @intFromFloat(height), r.theme.line_number_bg);
-        }
+        renderer_surface_host.drawRect(r, @intFromFloat(draw_x), @intFromFloat(draw_y), @intFromFloat(width), @intFromFloat(height), r.theme.background);
+        renderer_surface_host.drawRect(r, @intFromFloat(draw_x), @intFromFloat(draw_y), @intFromFloat(widget.gutter_width), @intFromFloat(height), r.theme.line_number_bg);
     }
 
     var line_idx = start_line;
@@ -474,11 +462,6 @@ pub fn drawCached(
                 if (!(ctx.force_redraw or dirty)) return;
 
                 any_dirty_local.* = true;
-                if (ctx.use_retained_editor_surface) {
-                    if (!renderer_presentable_host.beginPresentable(r_local, .editor)) return;
-                    defer renderer_presentable_host.endPresentable(r_local, .editor);
-                }
-
                 const clip_bottom = @as(i32, @intFromFloat(origin_y_local + height_local));
                 const clip_h = clippedEditorRowHeight(seg_band.h_i, clip_bottom - seg_band.y_i);
                 renderer_clip_host.beginClip(
@@ -681,13 +664,8 @@ pub fn drawCached(
             .line_width = line_width,
             .force_redraw = force_redraw,
             .any_dirty = &any_dirty,
-            .use_retained_editor_surface = use_retained_editor_surface,
         };
         traversal_mod.walkVisibleSegments(view, prepared.line_text, prepared.cluster_slice, cols, widget.wrap_enabled, start_line, start_seg, line_idx, visible_lines, &visual_row, line_width, ctx, Local.renderSegment);
-    }
-
-    if (use_retained_editor_surface) {
-        renderer_presentable_host.drawPresentable(r, .editor, .{ .x = draw_x, .y = draw_y });
     }
 
     // Draw scrollbars as final overlays (outside cached editor texture) to avoid

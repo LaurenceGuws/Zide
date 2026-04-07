@@ -705,6 +705,9 @@ Current evidence:
 - sample/diagnostic pressure is narrower too: `font_sample_view.zig` no longer
   borrows the editor presentable seam while retained editor presentation is
   still on probation. It now stays on a direct diagnostic path.
+- editor widget draw is now equally honest: the dead retained/direct branch in
+  `editor_widget_draw.zig` is gone, so the live widget path is direct-only
+  until retained editor presentation is fixed as its own lane or deleted.
 - ownership checkpoint: the seam has graduated out of `widgets/` into
   `renderer_chrome_band_host.zig`. That is the right host-level home for it,
   even though it is still only a local composition seam and not a backend phase.
