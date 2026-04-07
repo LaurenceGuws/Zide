@@ -28,6 +28,8 @@ pub const Rope = struct {
     owns_original: bool,
     add: std.ArrayList(u8),
     line_start_cache: std.AutoHashMap(usize, usize),
+    line_start_cache_mutex: std.Thread.Mutex,
+    line_start_cache_epoch: usize,
     undo_stack: std.ArrayList(UndoOp),
     redo_stack: std.ArrayList(UndoOp),
     history_suspended: bool,
@@ -50,6 +52,8 @@ pub const Rope = struct {
             .owns_original = true,
             .add = .{},
             .line_start_cache = std.AutoHashMap(usize, usize).init(allocator),
+            .line_start_cache_mutex = .{},
+            .line_start_cache_epoch = 0,
             .undo_stack = .{},
             .redo_stack = .{},
             .history_suspended = false,
@@ -74,6 +78,8 @@ pub const Rope = struct {
             .owns_original = true,
             .add = .{},
             .line_start_cache = std.AutoHashMap(usize, usize).init(allocator),
+            .line_start_cache_mutex = .{},
+            .line_start_cache_epoch = 0,
             .undo_stack = .{},
             .redo_stack = .{},
             .history_suspended = false,
@@ -98,6 +104,8 @@ pub const Rope = struct {
             .owns_original = false,
             .add = .{},
             .line_start_cache = std.AutoHashMap(usize, usize).init(allocator),
+            .line_start_cache_mutex = .{},
+            .line_start_cache_epoch = 0,
             .undo_stack = .{},
             .redo_stack = .{},
             .history_suspended = false,
@@ -425,8 +433,12 @@ pub const Rope = struct {
         if (line_index == 0) return 0;
         const total_lines = self.lineCount();
         if (line_index >= total_lines) return self.totalLen();
+        const cache_lookup = lookupLineStartCache(self, line_index);
+        if (cache_lookup.offset) |offset| return offset;
         const newline_offset = self.findNthNewline(self.root, line_index);
-        return newline_offset + 1;
+        const offset = newline_offset + 1;
+        rememberLineStart(self, line_index, offset, cache_lookup.epoch);
+        return offset;
     }
 
     pub fn lineLen(self: *Rope, line_index: usize) usize {
@@ -856,10 +868,30 @@ fn clearHistory(self: *Rope) void {
 }
 
 fn invalidateLineStartCache(self: *Rope) void {
+    self.line_start_cache_mutex.lock();
+    defer self.line_start_cache_mutex.unlock();
     self.line_start_cache.clearRetainingCapacity();
+    self.line_start_cache_epoch +%= 1;
 }
 
-fn rememberLineStart(self: *Rope, line_index: usize, offset: usize) void {
+const LineStartCacheLookup = struct {
+    offset: ?usize,
+    epoch: usize,
+};
+
+fn lookupLineStartCache(self: *Rope, line_index: usize) LineStartCacheLookup {
+    self.line_start_cache_mutex.lock();
+    defer self.line_start_cache_mutex.unlock();
+    return .{
+        .offset = self.line_start_cache.get(line_index),
+        .epoch = self.line_start_cache_epoch,
+    };
+}
+
+fn rememberLineStart(self: *Rope, line_index: usize, offset: usize, expected_epoch: usize) void {
+    self.line_start_cache_mutex.lock();
+    defer self.line_start_cache_mutex.unlock();
+    if (self.line_start_cache_epoch != expected_epoch) return;
     if (!self.line_start_cache.contains(line_index)) {
         if (self.line_start_cache.count() >= Rope.max_line_start_cache_entries) {
             self.line_start_cache.clearRetainingCapacity();
