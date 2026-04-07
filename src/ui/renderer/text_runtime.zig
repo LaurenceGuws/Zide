@@ -53,6 +53,10 @@ fn textRenderingAvailable(self: *Renderer) bool {
     return self.textRenderingMode() != .unavailable;
 }
 
+fn shouldUseMetalTextFallback(self: *Renderer, italic: bool) bool {
+    return self.plannedTextRenderingMode() == .metal_texture_atlas and !italic;
+}
+
 fn snapInt(value: f32) i32 {
     return @intFromFloat(std.math.round(value));
 }
@@ -140,7 +144,7 @@ fn drawMetalUtf8CellRunFallback(
 
 pub fn drawTextMonospacePolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, disable_programming_ligatures: bool) void {
     if (!textRenderingAvailable(self)) {
-        if (self.plannedTextRenderingMode() == .metal_texture_atlas) {
+        if (shouldUseMetalTextFallback(self, false)) {
             _ = drawMetalUtf8CellRunFallback(self, text, x, y, self.editor_metrics, color);
         }
         return;
@@ -157,7 +161,7 @@ pub fn drawTextMonospaceOnBg(self: *Renderer, text: []const u8, x: f32, y: f32, 
 
 pub fn drawTextMonospaceOnBgPolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color, disable_programming_ligatures: bool) void {
     if (!textRenderingAvailable(self)) {
-        if (self.plannedTextRenderingMode() == .metal_texture_atlas) {
+        if (shouldUseMetalTextFallback(self, false)) {
             _ = drawMetalUtf8CellRunFallback(self, text, x, y, self.editor_metrics, color);
         }
         return;
@@ -172,7 +176,7 @@ pub fn drawTextMonospaceOnBgPolicy(self: *Renderer, text: []const u8, x: f32, y:
 
 pub fn drawTextMonospaceStyledPolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, disable_programming_ligatures: bool, italic: bool) void {
     if (!textRenderingAvailable(self)) {
-        if (self.plannedTextRenderingMode() == .metal_texture_atlas and !italic) {
+        if (shouldUseMetalTextFallback(self, italic)) {
             _ = drawMetalUtf8CellRunFallback(self, text, x, y, self.editor_metrics, color);
         }
         return;
@@ -185,7 +189,7 @@ pub fn drawTextMonospaceStyledPolicy(self: *Renderer, text: []const u8, x: f32, 
 
 pub fn drawTextMonospaceOnBgStyledPolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color, disable_programming_ligatures: bool, italic: bool) void {
     if (!textRenderingAvailable(self)) {
-        if (self.plannedTextRenderingMode() == .metal_texture_atlas and !italic) {
+        if (shouldUseMetalTextFallback(self, italic)) {
             _ = drawMetalUtf8CellRunFallback(self, text, x, y, self.editor_metrics, color);
         }
         return;
@@ -243,7 +247,7 @@ pub fn measureIconTextWidth(self: *Renderer, text: []const u8) f32 {
 
 pub fn drawChar(self: *Renderer, char: u8, x: f32, y: f32, color: Color) void {
     if (!textRenderingAvailable(self)) {
-        if (self.plannedTextRenderingMode() == .metal_texture_atlas) {
+        if (shouldUseMetalTextFallback(self, false)) {
             _ = metal_backend.drawAtlasSampleChar(self, char, x, y, color);
         }
         return;
