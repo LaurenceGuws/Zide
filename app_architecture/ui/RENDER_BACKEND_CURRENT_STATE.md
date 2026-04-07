@@ -546,6 +546,15 @@ Those two families should not be treated as one problem shape, though:
   dependent text; if a new seam is proven there, it should stay narrow and not
   pretend to solve editor composition automatically
 
+That split is now sharper from code inspection too:
+
+- editor pressure is specifically row-band/gutter/current-line fill work in
+  `editor_widget_draw.zig` that still pairs with immediate text/overlay
+  rendering in the direct/fallback path
+- sample pressure is specifically section-fill plus bg-aware text preview work
+  in `font_sample_view.zig` / `font_sample_section_host.zig`, including the
+  custom-font sample path that still terminates through direct texture draws
+
 There is now a first proof of that narrower sample path too: the font sample
 view has its own tiny section-composition seam. That is intentionally not a
 general editor/ui band abstraction. Its value is only that the sample lane no

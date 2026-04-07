@@ -769,6 +769,12 @@ Current evidence:
 - those are not one shape: editor already has a local row/segment composition
   lane, while sample/diagnostic section banding is simpler explicit fill-plus-
   text work. Do not force them under one seam without proving it.
+- code-facing checkpoint: the editor pressure is now specifically the
+  row-band/gutter/current-line fills in `editor_widget_draw.zig` that still
+  neighbor immediate text/overlay work in the direct/fallback path.
+- code-facing checkpoint: the sample pressure is specifically
+  section-fill-plus-bg-aware preview text in `font_sample_view.zig`, including
+  custom-font preview draws that still go through direct texture draw calls.
 - first sample-side proof is acceptable only as a tiny section-composition seam,
   not as a new generic band layer.
 - This is real lifecycle cleanup and removes another renderer-root duplication

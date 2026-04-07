@@ -322,6 +322,15 @@ time or define a stronger shared phase that explicitly contains both the fill
 and its dependent text/outline work. It should not treat all remaining solids
 as one undifferentiated problem.
 
+The current code makes that split more specific:
+
+- editor is not "generic banding everywhere"; the pressure is row-band,
+  gutter, and current-line fills in `editor_widget_draw.zig` that still sit
+  next to immediate text/overlay work in the direct/fallback path
+- sample/diagnostic pressure is the simpler section-fill plus bg-aware preview
+  text path in `font_sample_view.zig`, including custom-font preview draws
+  that still go straight through texture draw calls
+
 **Shell/UI chrome blocker (2026-04-07):** the obvious next family is shell/UI
 chrome bands, but that family is not a free move today because the dependent
 text side is still immediate. Shared UI text (`drawText`, `drawTextOnBg`,
