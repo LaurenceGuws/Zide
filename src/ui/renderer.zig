@@ -1029,10 +1029,6 @@ pub const Renderer = struct {
         text_input.setRect(&self.input.text_input_state, self.window, x, y, w, h);
     }
 
-    pub fn drawRectOutline(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
-        shape_draw.drawRectOutline(drawRectThunk, self, x, y, w, h, color);
-    }
-
     pub fn setClipboardText(_: *Renderer, text: [*:0]const u8) void {
         clipboard.setText(text);
     }

@@ -434,7 +434,7 @@ pub const Shell = struct {
     }
 
     pub fn drawRectOutline(self: *Shell, x: i32, y: i32, w: i32, h: i32, color: Color) void {
-        self.renderer.drawRectOutline(x, y, w, h, color);
+        renderer_surface_host.drawRectOutline(self.renderer, x, y, w, h, color);
     }
 
     pub fn drawText(self: *Shell, text: []const u8, x: f32, y: f32, color: Color) void {

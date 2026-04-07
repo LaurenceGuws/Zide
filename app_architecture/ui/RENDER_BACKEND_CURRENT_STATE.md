@@ -411,6 +411,9 @@ presentation and other direct renderer callers now use that host seam
 directly instead of keeping dedicated `Renderer.drawRect(...)` /
 `Renderer.drawRectF(...)` facades alive. That is a more honest ownership
 shape than leaving that backend-facing seam as one more private root helper.
+The same is now true for rect outlines: `Shell` and other callers use
+`renderer_surface_host.zig` directly instead of keeping `Renderer.drawRectOutline(...)`
+alive as another root solid-fill convenience surface.
 
 That has improved slightly again on root-surface sprawl too: dead convenience
 capability verbs with no live callers are being removed from `Renderer`

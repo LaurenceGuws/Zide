@@ -593,6 +593,9 @@ Current evidence:
 - terminal presentation and other direct renderer callers now use that host
   seam directly instead of keeping dedicated `Renderer.drawRect(...)` /
   `Renderer.drawRectF(...)` surfaces alive for generic solid fills.
+- rect outlines now follow that same rule through `renderer_surface_host.zig`
+  instead of keeping `Renderer.drawRectOutline(...)` alive as another root
+  convenience wrapper over the same solid-fill seam.
 - contract authority now pins the next hard rule for `SurfaceDraw`:
   shared code may assume order only relative to other recorded surface draws
   inside the backend's surface phase, not exact interleaving with terminal or
