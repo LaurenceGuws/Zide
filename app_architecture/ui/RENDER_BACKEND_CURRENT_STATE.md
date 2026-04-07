@@ -578,6 +578,10 @@ Stale API cleanup is now done too (`B-DONE-7`): quasi-public bypass helpers were
 reduced and product callers no longer depend on retired chrome/sample adapter
 surfaces.
 
+This closure lane is now complete too (`B-DONE-8`): text phase group adoption
+and closure deltas are reflected in contract/current-state/todo docs, and this
+family is no longer the primary Adoption Gate blocker.
+
 That seam is now clean enough that further expansion would be fake progress
 unless it graduates into a real recorded band-composition phase. Until that
 happens, it should be treated as a renderer-host composition helper for the

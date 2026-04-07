@@ -595,6 +595,10 @@ propagation, and editor row-band group forwarding semantics.
 helper surfaces that bypassed the unified seam were reduced, and product callers
 no longer terminate on retired chrome/sample adapter paths.
 
+**Closure checkpoint (B-DONE-8, 2026-04-07):** text phase group closure deltas
+are now fully reflected in contract/current-state/todo authority, and this lane
+is considered closed for chrome/sample/editor row-band adoption.
+
 **Editor adoption checkpoint (B-DONE-3, 2026-04-07):** editor row-band
 draw-list flush and immediate/fallback row-band execution now both open/close
 explicit `.editor_row_band` text phase groups through the shared host seam.

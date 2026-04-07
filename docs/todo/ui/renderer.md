@@ -449,7 +449,7 @@ Milestone B "done" checkpoints (execute in order, do not rerank mid-lane):
   - delete public or quasi-public verbs that still expose old split semantics
     after migration (renderer/shell helpers that bypass unified phase seam)
   - verify no product caller remains on retired paths
-- [ ] **B-DONE-8: close docs and adoption gate**
+- [x] **B-DONE-8: close docs and adoption gate**
   - update contract/current-state/todo docs to mark Milestone B closure deltas
     with concrete evidence
   - restate Adoption Gate blockers after this closure so next lane is explicit
@@ -981,6 +981,9 @@ Current evidence:
   bypassed the unified seam were reduced (`flushDrawList` internalized; test-
   only replay helper no longer exported), and no product callers remain on
   retired chrome/sample adapter paths.
+- closure checkpoint (`B-DONE-8`): closure deltas are now documented across
+  contract/current-state/todo authority, and Adoption Gate blockers are
+  restated after text phase group closure.
 - this is good local honesty for the sample lane, but it does not yet turn the
   sample family into a recorded backend-neutral phase.
 - first sample-side proof is acceptable only as a tiny section-composition seam,
@@ -1045,12 +1048,14 @@ fully satisfied for proceeding to bootstrap without further closure work.
 Current explicit answer to "what still stands between us and Vulkan/Android
 rendering adoption?":
 
+- text phase group closure for chrome/sample/editor row-band is now complete;
+  this is no longer an active blocker class for Milestone B
 - `SurfaceDraw` semantics are still not one honest product-level story
 - presentable parity/ownership is still not neutral enough
 - backend runtime storage still widens under shared renderer ownership, even
   though direct runtime-state reaches are now confined to backend-owned modules
-- the remaining loud ordering families are now editor banding and
-  sample/diagnostic sections
+- the remaining loud ordering pressure is now primarily lifecycle/submission
+  truth, not local text-phase band composition
 - the shared presentable contract is terminal-only; editor retained
   presentation is no longer a dormant shared seam and would need a deliberate
   reviewed reintroduction
