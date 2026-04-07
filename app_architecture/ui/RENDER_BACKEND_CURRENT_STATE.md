@@ -400,6 +400,17 @@ unless it graduates into a real recorded band-composition phase. Until that
 happens, it should be treated as a renderer-host composition helper for the
 current shell chrome family, not as a solved backend-neutral contract.
 
+That also means the remaining generic `SurfaceDraw` timing pressure is no
+longer led by shell chrome. With terminal presentable fills moved out and shell
+chrome routed through the chrome-band seam, the loudest remaining ordering
+families are now:
+
+- editor banding and editor-adjacent overlay fills
+- sample/diagnostic section banding
+
+Those are the places where background-plus-dependent-text ordering still most
+directly pressures the generic surface phase.
+
 That is the loudest remaining semantic contradiction in the backend contract.
 It is no longer hidden by renderer-root facade noise or mixed backend dispatch
 buckets, which means the next real cut must either:

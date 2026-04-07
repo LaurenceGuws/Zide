@@ -703,6 +703,9 @@ Current evidence:
 - stop rule: do not keep widening this seam unless it becomes a real recorded
   band-composition phase. More adopters without that phase cut would be fake
   progress.
+- with shell chrome carved out behind the chrome-band seam, the loudest
+  remaining generic `SurfaceDraw` ordering families are now editor banding and
+  sample/diagnostic sections.
 - This is real lifecycle cleanup and removes another renderer-root duplication
   seam.
 - This is not closure yet:

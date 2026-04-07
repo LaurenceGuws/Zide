@@ -312,6 +312,11 @@ either:
 Do not create a second chrome helper, and do not keep adopting unrelated popup
 or modal surfaces just to make the seam look more important than it is.
 
+With that family now carved out, the next `SurfaceDraw` timing pressure should
+be read as primarily editor/sample banding pressure rather than shell chrome
+pressure. That is where the remaining generic surface-phase design work should
+look next.
+
 #### Presentable contract
 
 One backend-neutral presentable surface contract that can express:
