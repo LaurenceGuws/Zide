@@ -517,6 +517,10 @@ Current evidence:
   size explicitly in backend state, so `presentableInfo(.terminal)` stops
   falling back to full-window logical size when the retained terminal surface
   is only a viewport-sized logical region.
+- Metal terminal snapshot presentables now also treat `PresentableDraw.x/y` as
+  destination placement only, matching the GL path instead of incorrectly
+  reusing destination coordinates as source crop offsets during raw-image
+  replay.
 
 Owner docs:
 

@@ -630,6 +630,9 @@ The shared runtime surface has improved too:
   size explicitly in backend state, so `presentableInfo(.terminal)` no longer
   has to report full-window logical size as a fallback when the retained
   terminal surface is only a viewport-sized logical region
+- the Metal terminal snapshot draw path now also treats
+  `PresentableDraw.x/y` as destination placement only, matching the GL path
+  instead of reusing those coordinates as implicit source crop offsets
 
 But the presentable surface story is still not backend-neutral at the shared
 runtime layer:

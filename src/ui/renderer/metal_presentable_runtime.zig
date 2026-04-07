@@ -49,8 +49,8 @@ pub fn drawPresentable(renderer: anytype, surface: PresentableSurface, draw: Pre
             _ = metal_backend.recordSurfaceDrawToMetalQueue(renderer, .{ .raw_image = .{
                 .texture = metal_backend.cloneGpuImageRef(snapshot),
                 .source_rect = .{
-                    .x = renderer.logicalLengthToRaster(draw.x),
-                    .y = renderer.logicalLengthToRaster(draw.y),
+                    .x = 0,
+                    .y = 0,
                     .width = renderer.logicalLengthToRaster(resolved.source_width),
                     .height = renderer.logicalLengthToRaster(resolved.source_height),
                 },
