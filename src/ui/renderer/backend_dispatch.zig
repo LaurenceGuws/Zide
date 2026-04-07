@@ -15,7 +15,6 @@ pub fn BackendOps(
     comptime RendererType: type,
     comptime FrameSubmission: type,
     comptime RendererCapabilities: type,
-    comptime PresentableSurface: type,
     comptime PresentableDraw: type,
     comptime PresentableInfo: type,
     comptime RawImageFormat: type,
@@ -40,13 +39,13 @@ pub fn BackendOps(
     };
 
     const PresentableOps = struct {
-        ensurePresentable: *const fn (*RendererType, PresentableSurface, i32, i32) bool,
-        beginPresentable: *const fn (*RendererType, PresentableSurface) bool,
-        endPresentable: *const fn (*RendererType, PresentableSurface) void,
-        drawPresentableBackdrop: *const fn (*RendererType, PresentableSurface, f32, f32, f32, f32, types.Rgba) void,
-        drawPresentable: *const fn (*RendererType, PresentableSurface, PresentableDraw) void,
-        scrollPresentable: *const fn (*RendererType, PresentableSurface, i32, i32) bool,
-        presentableInfo: *const fn (*RendererType, PresentableSurface) ?PresentableInfo,
+        ensurePresentable: *const fn (*RendererType, i32, i32) bool,
+        beginPresentable: *const fn (*RendererType) bool,
+        endPresentable: *const fn (*RendererType) void,
+        drawPresentableBackdrop: *const fn (*RendererType, f32, f32, f32, f32, types.Rgba) void,
+        drawPresentable: *const fn (*RendererType, PresentableDraw) void,
+        scrollPresentable: *const fn (*RendererType, i32, i32) bool,
+        presentableInfo: *const fn (*RendererType) ?PresentableInfo,
     };
 
     const ClipOps = struct {
@@ -87,7 +86,6 @@ pub fn opsFor(
     comptime BackendEnum: type,
     comptime FrameSubmission: type,
     comptime RendererCapabilities: type,
-    comptime PresentableSurface: type,
     comptime PresentableDraw: type,
     comptime PresentableInfo: type,
     comptime RawImageFormat: type,
@@ -98,7 +96,6 @@ pub fn opsFor(
     RendererType,
     FrameSubmission,
     RendererCapabilities,
-    PresentableSurface,
     PresentableDraw,
     PresentableInfo,
     RawImageFormat,
@@ -109,7 +106,6 @@ pub fn opsFor(
         RendererType,
         FrameSubmission,
         RendererCapabilities,
-        PresentableSurface,
         PresentableDraw,
         PresentableInfo,
         RawImageFormat,
@@ -120,7 +116,6 @@ pub fn opsFor(
         RendererType,
         FrameSubmission,
         RendererCapabilities,
-        PresentableSurface,
         PresentableDraw,
         PresentableInfo,
         RawImageFormat,
@@ -224,7 +219,6 @@ fn OpenGlDispatch(
     comptime RendererType: type,
     comptime FrameSubmission: type,
     comptime RendererCapabilities: type,
-    comptime PresentableSurface: type,
     comptime PresentableDraw: type,
     comptime PresentableInfo: type,
     comptime RawImageFormat: type,
@@ -256,26 +250,26 @@ fn OpenGlDispatch(
         fn dumpWindowScreenshotPpmSized(renderer: *RendererType, path: []const u8, out_width: i32, out_height: i32) !void {
             return gl_backend.dumpWindowScreenshotPpmSized(renderer, path, out_width, out_height);
         }
-        fn ensurePresentable(renderer: *RendererType, surface: PresentableSurface, width: i32, height: i32) bool {
-            return gl_presentable_runtime.ensurePresentable(renderer, surface, width, height);
+        fn ensurePresentable(renderer: *RendererType, width: i32, height: i32) bool {
+            return gl_presentable_runtime.ensurePresentable(renderer, width, height);
         }
-        fn beginPresentable(renderer: *RendererType, surface: PresentableSurface) bool {
-            return gl_presentable_runtime.beginPresentable(renderer, surface);
+        fn beginPresentable(renderer: *RendererType) bool {
+            return gl_presentable_runtime.beginPresentable(renderer);
         }
-        fn endPresentable(renderer: *RendererType, surface: PresentableSurface) void {
-            gl_presentable_runtime.endPresentable(renderer, surface);
+        fn endPresentable(renderer: *RendererType) void {
+            gl_presentable_runtime.endPresentable(renderer);
         }
-        fn drawPresentableBackdrop(renderer: *RendererType, surface: PresentableSurface, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) void {
-            gl_presentable_runtime.drawPresentableBackdrop(renderer, surface, x, y, w, h, color);
+        fn drawPresentableBackdrop(renderer: *RendererType, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) void {
+            gl_presentable_runtime.drawPresentableBackdrop(renderer, x, y, w, h, color);
         }
-        fn drawPresentable(renderer: *RendererType, surface: PresentableSurface, draw: PresentableDraw) void {
-            gl_presentable_runtime.drawPresentable(renderer, surface, draw);
+        fn drawPresentable(renderer: *RendererType, draw: PresentableDraw) void {
+            gl_presentable_runtime.drawPresentable(renderer, draw);
         }
-        fn scrollPresentable(renderer: *RendererType, surface: PresentableSurface, dx: i32, dy: i32) bool {
-            return gl_presentable_runtime.scrollPresentable(renderer, surface, dx, dy);
+        fn scrollPresentable(renderer: *RendererType, dx: i32, dy: i32) bool {
+            return gl_presentable_runtime.scrollPresentable(renderer, dx, dy);
         }
-        fn presentableInfo(renderer: *RendererType, surface: PresentableSurface) ?PresentableInfo {
-            return gl_presentable_runtime.presentableInfo(renderer, surface);
+        fn presentableInfo(renderer: *RendererType) ?PresentableInfo {
+            return gl_presentable_runtime.presentableInfo(renderer);
         }
         fn applyClipRect(renderer: *RendererType, clip: ?types.Rect) void {
             gl_clip_runtime.applyClipRect(renderer, clip);
@@ -324,7 +318,6 @@ fn MetalDispatch(
     comptime RendererType: type,
     comptime FrameSubmission: type,
     comptime RendererCapabilities: type,
-    comptime PresentableSurface: type,
     comptime PresentableDraw: type,
     comptime PresentableInfo: type,
     comptime RawImageFormat: type,
@@ -356,26 +349,26 @@ fn MetalDispatch(
         fn dumpWindowScreenshotPpmSized(renderer: *RendererType, path: []const u8, out_width: i32, out_height: i32) !void {
             return metal_backend.dumpWindowScreenshotPpmSized(renderer, path, out_width, out_height);
         }
-        fn ensurePresentable(renderer: *RendererType, surface: PresentableSurface, width: i32, height: i32) bool {
-            return metal_presentable_runtime.ensurePresentable(renderer, surface, width, height);
+        fn ensurePresentable(renderer: *RendererType, width: i32, height: i32) bool {
+            return metal_presentable_runtime.ensurePresentable(renderer, width, height);
         }
-        fn beginPresentable(renderer: *RendererType, surface: PresentableSurface) bool {
-            return metal_presentable_runtime.beginPresentable(renderer, surface);
+        fn beginPresentable(renderer: *RendererType) bool {
+            return metal_presentable_runtime.beginPresentable(renderer);
         }
-        fn endPresentable(renderer: *RendererType, surface: PresentableSurface) void {
-            metal_presentable_runtime.endPresentable(renderer, surface);
+        fn endPresentable(renderer: *RendererType) void {
+            metal_presentable_runtime.endPresentable(renderer);
         }
-        fn drawPresentableBackdrop(renderer: *RendererType, surface: PresentableSurface, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) void {
-            metal_presentable_runtime.drawPresentableBackdrop(renderer, surface, x, y, w, h, color);
+        fn drawPresentableBackdrop(renderer: *RendererType, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) void {
+            metal_presentable_runtime.drawPresentableBackdrop(renderer, x, y, w, h, color);
         }
-        fn drawPresentable(renderer: *RendererType, surface: PresentableSurface, draw: PresentableDraw) void {
-            metal_presentable_runtime.drawPresentable(renderer, surface, draw);
+        fn drawPresentable(renderer: *RendererType, draw: PresentableDraw) void {
+            metal_presentable_runtime.drawPresentable(renderer, draw);
         }
-        fn scrollPresentable(renderer: *RendererType, surface: PresentableSurface, dx: i32, dy: i32) bool {
-            return metal_presentable_runtime.scrollPresentable(renderer, surface, dx, dy);
+        fn scrollPresentable(renderer: *RendererType, dx: i32, dy: i32) bool {
+            return metal_presentable_runtime.scrollPresentable(renderer, dx, dy);
         }
-        fn presentableInfo(renderer: *RendererType, surface: PresentableSurface) ?PresentableInfo {
-            return metal_presentable_runtime.presentableInfo(renderer, surface);
+        fn presentableInfo(renderer: *RendererType) ?PresentableInfo {
+            return metal_presentable_runtime.presentableInfo(renderer);
         }
         fn applyClipRect(renderer: *RendererType, clip: ?types.Rect) void {
             metal_clip_runtime.applyClipRect(renderer, clip);

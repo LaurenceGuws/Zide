@@ -81,6 +81,9 @@ The old retained **editor** presentable arm has been removed rather than left
 as a dormant disabled branch. If editor retained presentation returns, it must
 come back as a deliberate reviewed lane, not as an assumed part of the routine
 backend contract.
+That cleanup is now reflected in the API too: the dead one-value
+`PresentableSurface` parameter is gone, so terminal presentable operations no
+longer pretend to stay generic by forwarding `.terminal` through every layer.
 
 3. Backend-native runtime storage is no longer a widening pattern on `Renderer`
 

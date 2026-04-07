@@ -149,7 +149,6 @@ pub const ScaleState = font_runtime.ScaleState;
 pub const FontConfigState = font_manager.FontConfigState;
 pub const ClipboardState = clipboard.ClipboardState;
 pub const TerminalTextState = text_runtime.TerminalTextState;
-pub const PresentableSurface = presentable_contract.PresentableSurface;
 pub const PresentableDraw = presentable_contract.PresentableDraw;
 pub const PresentableInfo = presentable_contract.PresentableInfo;
 pub const MetalSampleTextRequest = metal_text_sample_runtime.SampleTextRequest;
@@ -361,7 +360,6 @@ pub const Renderer = struct {
         Self,
         FrameSubmission,
         RendererCapabilities,
-        PresentableSurface,
         PresentableDraw,
         PresentableInfo,
         RawImageFormat,
@@ -539,7 +537,6 @@ pub const Renderer = struct {
                 RendererBackend,
                 FrameSubmission,
                 RendererCapabilities,
-                PresentableSurface,
                 PresentableDraw,
                 PresentableInfo,
                 RawImageFormat,

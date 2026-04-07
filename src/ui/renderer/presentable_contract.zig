@@ -1,9 +1,5 @@
-//! Neutral presentable surface identity and draw payloads. OpenGL retained
+//! Neutral terminal presentable draw payloads. OpenGL retained
 //! `PresentableTarget` / `PresentableTargetState` live in `gl_presentable_target.zig`.
-
-pub const PresentableSurface = enum {
-    terminal,
-};
 
 pub const PresentableDraw = struct {
     x: f32,

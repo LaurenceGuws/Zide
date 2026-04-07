@@ -112,7 +112,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
             @tagName(capabilities.atlas_storage_mode),
             @tagName(capabilities.planned_atlas_storage_mode),
             @intFromBool(capabilities.raw_image_textures),
-            @intFromBool(renderer_presentable_host.presentableInfo(shell.rendererPtr(), .terminal) != null),
+            @intFromBool(renderer_presentable_host.presentableInfo(shell.rendererPtr()) != null),
         },
     );
 
@@ -189,7 +189,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
                     metrics.box_glyphs,
                     uncategorized_special_glyphs,
                     metrics.presentation_kitty_ms,
-                    @intFromBool(renderer_presentable_host.presentableInfo(shell.rendererPtr(), .terminal) != null),
+                    @intFromBool(renderer_presentable_host.presentableInfo(shell.rendererPtr()) != null),
                     @tagName(metrics.terminal_presentation_sample_mode),
                 },
             );
@@ -230,7 +230,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
             @tagName(final_metrics.terminal_presentation_mode),
             @tagName(final_metrics.terminal_presentation_sample_mode),
             final_metrics.presentation_kitty_ms,
-            @intFromBool(renderer_presentable_host.presentableInfo(shell.rendererPtr(), .terminal) != null),
+            @intFromBool(renderer_presentable_host.presentableInfo(shell.rendererPtr()) != null),
         },
     );
 }

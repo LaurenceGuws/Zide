@@ -63,7 +63,6 @@ const AtlasFragmentUniforms = extern struct {
 
 pub const PixelClipRect = surface_draw.PixelClipRect;
 pub const AtlasPreviewSource = metal_runtime_state.AtlasPreviewSource;
-const PresentableSurface = presentable_contract.PresentableSurface;
 const PresentableDraw = presentable_contract.PresentableDraw;
 const PresentableInfo = presentable_contract.PresentableInfo;
 const RendererCapabilities = capability_contract.RendererCapabilities;

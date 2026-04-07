@@ -872,12 +872,16 @@ The shared runtime surface has improved too:
   instead of keeping a second backend-dispatched availability verb beside the
   existing info contract
 - the Metal terminal snapshot presentable now also stores its logical surface
-  size explicitly in backend state, so `presentableInfo(.terminal)` no longer
+  size explicitly in backend state, so `presentableInfo()` no longer
   has to report full-window logical size as a fallback when the retained
   terminal surface is only a viewport-sized logical region
 - the Metal terminal snapshot draw path now also treats
   `PresentableDraw.x/y` as destination placement only, matching the GL path
   instead of reusing those coordinates as implicit source crop offsets
+- with editor retained presentation deleted from the shared contract, the dead
+  one-value `PresentableSurface` argument is gone too. The live presentable API
+  is now explicitly terminal-presentable instead of pretending to stay generic
+  by forwarding `.terminal` through every layer.
 
 But the presentable surface story is still not backend-neutral at the shared
 runtime layer:

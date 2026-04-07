@@ -12,27 +12,24 @@ const RenderTarget = gl_backend.RenderTarget;
 const PresentableDraw = presentable_contract.PresentableDraw;
 const PresentableInfo = presentable_contract.PresentableInfo;
 const ResolvedPresentableDraw = presentable_contract.ResolvedPresentableDraw;
-const PresentableSurface = presentable_contract.PresentableSurface;
 
-fn presentableTargetSlot(renderer: anytype, surface: PresentableSurface) *?RenderTarget {
-    return switch (surface) {
-        .terminal => &renderer.backend.runtime.opengl.presentable_targets.terminal,
-    };
+fn presentableTargetSlot(renderer: anytype) *?RenderTarget {
+    return &renderer.backend.runtime.opengl.presentable_targets.terminal;
 }
 
-fn presentableTarget(renderer: anytype, surface: PresentableSurface) ?RenderTarget {
-    return presentableTargetSlot(renderer, surface).*;
+fn presentableTarget(renderer: anytype) ?RenderTarget {
+    return presentableTargetSlot(renderer).*;
 }
 
 fn terminalScrollTargetSlot(renderer: anytype) *?RenderTarget {
     return &renderer.backend.runtime.opengl.presentable_targets.terminal_scroll;
 }
 
-pub fn ensurePresentable(renderer: anytype, _: PresentableSurface, width: i32, height: i32) bool {
+pub fn ensurePresentable(renderer: anytype, width: i32, height: i32) bool {
     if (!renderer.capabilities().retained_targets) return false;
     const recreated = gl_backend.ensureRenderTargetScaledForRenderer(
         renderer,
-        presentableTargetSlot(renderer, .terminal),
+        presentableTargetSlot(renderer),
         width,
         height,
         gl.c.GL_NEAREST,
@@ -47,19 +44,17 @@ pub fn ensurePresentable(renderer: anytype, _: PresentableSurface, width: i32, h
     return recreated;
 }
 
-pub fn beginPresentable(renderer: anytype, surface: PresentableSurface) bool {
+pub fn beginPresentable(renderer: anytype) bool {
     if (!renderer.capabilities().retained_targets) return false;
-    return switch (surface) {
-        .terminal => gl_backend.beginRenderTarget(renderer, presentableTarget(renderer, .terminal)),
-    };
+    return gl_backend.beginRenderTarget(renderer, presentableTarget(renderer));
 }
 
-pub fn endPresentable(renderer: anytype, _: PresentableSurface) void {
+pub fn endPresentable(renderer: anytype) void {
     if (!renderer.capabilities().retained_targets) return;
     restoreCompositionTarget(renderer);
 }
 
-pub fn drawPresentableBackdrop(renderer: anytype, _: PresentableSurface, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) void {
+pub fn drawPresentableBackdrop(renderer: anytype, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) void {
     if (w <= 0 or h <= 0) return;
     _ = gl_backend.consumeRecordedSurfaceDrawInSurfacePhase(renderer, .{ .solid = .{
         .dest_rect = .{
@@ -76,13 +71,11 @@ pub fn drawPresentableBackdrop(renderer: anytype, _: PresentableSurface, x: f32,
     } });
 }
 
-pub fn drawPresentable(renderer: anytype, surface: PresentableSurface, draw: PresentableDraw) void {
+pub fn drawPresentable(renderer: anytype, draw: PresentableDraw) void {
     if (!renderer.capabilities().retained_targets) return;
-    switch (surface) {
-        .terminal => if (presentableTarget(renderer, .terminal)) |target| {
-            const resolved = presentable_contract.resolveDraw(draw, null, null) orelse return;
-            drawResolvedPresentable(renderer, target, resolved);
-        },
+    if (presentableTarget(renderer)) |target| {
+        const resolved = presentable_contract.resolveDraw(draw, null, null) orelse return;
+        drawResolvedPresentable(renderer, target, resolved);
     }
 }
 
@@ -142,13 +135,12 @@ fn drawResolvedPresentable(renderer: anytype, target: RenderTarget, draw: Resolv
     );
 }
 
-pub fn scrollPresentable(renderer: anytype, surface: PresentableSurface, dx: i32, dy: i32) bool {
+pub fn scrollPresentable(renderer: anytype, dx: i32, dy: i32) bool {
     if (!renderer.capabilities().retained_targets) return false;
-    if (surface != .terminal) return false;
-    if (presentableTarget(renderer, .terminal)) |target| {
+    if (presentableTarget(renderer)) |target| {
         return gl_backend.scrollRenderTarget(
             renderer,
-            presentableTarget(renderer, .terminal),
+            presentableTarget(renderer),
             terminalScrollTargetSlot(renderer),
             dx,
             dy,
@@ -159,8 +151,8 @@ pub fn scrollPresentable(renderer: anytype, surface: PresentableSurface, dx: i32
     return false;
 }
 
-pub fn presentableInfo(renderer: anytype, surface: PresentableSurface) ?PresentableInfo {
-    const target = presentableTarget(renderer, surface) orelse return null;
+pub fn presentableInfo(renderer: anytype) ?PresentableInfo {
+    const target = presentableTarget(renderer) orelse return null;
     return .{
         .width_px = target.texture.width,
         .height_px = target.texture.height,

@@ -26,7 +26,6 @@ const renderer_frame_host = @import("renderer_frame_host.zig");
 const sdl = gl.c;
 
 pub const RenderTarget = gl_presentable_target.PresentableTarget;
-const PresentableSurface = presentable_contract.PresentableSurface;
 const PresentableDraw = presentable_contract.PresentableDraw;
 const PresentableInfo = presentable_contract.PresentableInfo;
 const SceneTargetContract = scene_target_state.SceneTargetContract;

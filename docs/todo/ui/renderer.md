@@ -514,13 +514,17 @@ Current evidence:
   instead of keeping a second backend-dispatched availability verb beside the
   existing info contract.
 - Metal terminal snapshot presentables now also store their logical surface
-  size explicitly in backend state, so `presentableInfo(.terminal)` stops
+  size explicitly in backend state, so `presentableInfo()` stops
   falling back to full-window logical size when the retained terminal surface
   is only a viewport-sized logical region.
 - Metal terminal snapshot presentables now also treat `PresentableDraw.x/y` as
   destination placement only, matching the GL path instead of incorrectly
   reusing destination coordinates as source crop offsets during raw-image
   replay.
+- presentable contract cleanup: once editor retained presentation was removed,
+  the dead one-value `PresentableSurface` parameter was removed too. Terminal
+  presentable APIs now say exactly what they are instead of forwarding
+  `.terminal` through every host/backend layer.
 
 Owner docs:
 
