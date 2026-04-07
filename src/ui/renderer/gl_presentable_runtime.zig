@@ -14,7 +14,7 @@ const PresentableInfo = presentable_contract.PresentableInfo;
 const ResolvedPresentableDraw = presentable_contract.ResolvedPresentableDraw;
 
 fn presentableTargetSlot(renderer: anytype) *?RenderTarget {
-    return &renderer.backend.runtime.opengl.presentable_targets.terminal;
+    return gl_backend.terminalPresentableTargetSlot(renderer);
 }
 
 fn presentableTarget(renderer: anytype) ?RenderTarget {
@@ -22,7 +22,7 @@ fn presentableTarget(renderer: anytype) ?RenderTarget {
 }
 
 fn terminalScrollTargetSlot(renderer: anytype) *?RenderTarget {
-    return &renderer.backend.runtime.opengl.presentable_targets.terminal_scroll;
+    return gl_backend.terminalScrollPresentableTargetSlot(renderer);
 }
 
 pub fn ensurePresentable(renderer: anytype, width: i32, height: i32) bool {

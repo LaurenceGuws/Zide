@@ -73,6 +73,14 @@ pub fn capabilities(renderer: anytype) RendererCapabilities {
     };
 }
 
+pub fn terminalPresentableTargetSlot(renderer: anytype) *?RenderTarget {
+    return &renderer.backend.runtime.opengl.presentable_targets.terminal;
+}
+
+pub fn terminalScrollPresentableTargetSlot(renderer: anytype) *?RenderTarget {
+    return &renderer.backend.runtime.opengl.presentable_targets.terminal_scroll;
+}
+
 fn glAttrName(attr: sdl_api.GlAttr) []const u8 {
     return switch (attr) {
         sdl.SDL_GL_CONTEXT_MAJOR_VERSION => "SDL_GL_CONTEXT_MAJOR_VERSION",

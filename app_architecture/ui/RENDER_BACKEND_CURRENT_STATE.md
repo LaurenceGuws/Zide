@@ -86,6 +86,11 @@ The naming now matches that ownership truth too: the host seam uses
 `terminalPresentable*` names instead of generic `presentable*` names, which is
 more honest while terminal is the only live shared presentable family.
 
+That has improved slightly again on the OpenGL side too: terminal presentable
+target-slot access now routes through `gl_backend` helpers instead of
+`gl_presentable_runtime.zig` reaching directly into
+`renderer.backend.runtime.opengl.presentable_targets`.
+
 So the remaining presentable blocker is now more precise than before: OpenGL
 still owns a real retained update target, while Metal still owns a terminal
 snapshot plus composition replay queue. The shared API is cleaner, but the

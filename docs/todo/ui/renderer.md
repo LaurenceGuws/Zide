@@ -725,6 +725,9 @@ Current evidence:
 - naming checkpoint: the host seam now says `terminalPresentable*` explicitly
   instead of generic `presentable*` names. That keeps the API aligned with the
   current truth that the live shared presentable lane is terminal-only.
+- OpenGL presentable target slot access now also routes through `gl_backend`
+  helpers instead of `gl_presentable_runtime.zig` reaching directly into
+  `renderer.backend.runtime.opengl.presentable_targets`.
 - remaining presentable blocker is now sharper: OpenGL still owns a real
   retained update target, while Metal still owns a terminal snapshot plus
   composition replay queue. The API is cleaner, but the lifecycle model is
