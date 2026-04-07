@@ -250,6 +250,11 @@ cell/text append helpers that are now only used internally by
 reduces one more fake API layer where implementation-detail queue mechanics
 looked like supported contract.
 
+That has improved slightly again on the Metal draw path too: backend-internal
+solid/atlas/raw-image queue helpers now append to Metal queue storage directly
+instead of bouncing back through the shared `backend_ops.enqueueSurfaceDraw`
+surface as if they were neutral product-level callers.
+
 That has improved slightly again on the OpenGL lifecycle side too: the
 OpenGL scene-target and presentable runtimes no longer call GL-only
 render-target helpers through `Renderer`. They now talk to `gl_backend`

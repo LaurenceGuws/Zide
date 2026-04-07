@@ -502,6 +502,8 @@ Current evidence:
   `opengl_frame_runtime.zig` / `metal_frame_runtime.zig` wrappers are gone.
 - Metal queue/text/cell append helpers that are now backend-internal no longer
   remain exported as fake backend-facing API surface.
+- Metal backend-internal queue helpers now append directly to Metal queue
+  storage instead of routing back through the shared dispatch surface.
 - This is real lifecycle cleanup and removes another renderer-root duplication
   seam.
 - This is not closure yet:
