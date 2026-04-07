@@ -493,6 +493,10 @@ Current evidence:
 - this is a real ownership improvement because the shared presentable facade
   now owns when presentable update/draw/end bookkeeping happens, instead of
   each backend inlining its own trace semantics.
+- terminal presentable update lifecycle is now a host-owned operation too: the
+  terminal widget no longer calls `beginPresentable(...)` /
+  `endPresentable(...)` directly, and instead asks `renderer_presentable_host`
+  to run one presentable update cycle.
 - OpenGL presentable operations now resolve retained-target storage through
   backend-owned slot helpers instead of open-coding terminal/editor target
   access at each call site.

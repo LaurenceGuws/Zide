@@ -688,30 +688,65 @@ pub fn runRetainedPresentCycle(
 ) RetainedPresentCycleResult {
     var result = RetainedPresentCycleResult{};
     if (surface_update_plan.mode == .none) return result;
-    if (!renderer_presentable_host.beginPresentable(renderer)) return result;
-    defer renderer_presentable_host.endPresentable(renderer);
+    const UpdateCtx = struct {
+        self: @TypeOf(self),
+        shell: *app_shell.Shell,
+        terminal_view: view_state.TerminalViewModel,
+        view_geometry: TerminalViewGeometry,
+        hover_link_id: u32,
+        start_line: usize,
+        draw_cursor: bool,
+        cursor: CursorPos,
+        cursor_style: terminal_types.CursorStyle,
+        blink_style: @TypeOf(blink_style),
+        blink_time: f64,
+        has_kitty: bool,
+        surface_update_plan: PresentationUpdatePlan,
+        result: *RetainedPresentCycleResult,
+    };
+    const Local = struct {
+        fn run(ctx: UpdateCtx, renderer_local: @TypeOf(renderer)) void {
+            renderer_clip_host.endClip(renderer_local);
+            const execution = executePresentableUpdate(
+                ctx.self,
+                ctx.shell,
+                renderer_local,
+                ctx.terminal_view,
+                ctx.view_geometry,
+                ctx.hover_link_id,
+                ctx.start_line,
+                ctx.draw_cursor,
+                ctx.cursor,
+                ctx.cursor_style,
+                ctx.blink_style,
+                ctx.blink_time,
+                ctx.has_kitty,
+                ctx.surface_update_plan,
+            );
+            ctx.result.completed = execution.completed;
+            ctx.result.bg_ms = execution.bg_ms;
+            ctx.result.glyph_ms = execution.glyph_ms;
+            ctx.result.kitty_ms = execution.kitty_ms;
+        }
+    };
+    const update_ctx: UpdateCtx = .{
+        .self = self,
+        .shell = shell,
+        .terminal_view = terminal_view,
+        .view_geometry = view_geometry,
+        .hover_link_id = hover_link_id,
+        .start_line = start_line,
+        .draw_cursor = draw_cursor,
+        .cursor = cursor,
+        .cursor_style = cursor_style,
+        .blink_style = blink_style,
+        .blink_time = blink_time,
+        .has_kitty = has_kitty,
+        .surface_update_plan = surface_update_plan,
+        .result = &result,
+    };
+    if (!renderer_presentable_host.updatePresentable(renderer, update_ctx, Local.run)) return result;
 
-    renderer_clip_host.endClip(renderer);
-    const execution = executePresentableUpdate(
-        self,
-        shell,
-        renderer,
-        terminal_view,
-        view_geometry,
-        hover_link_id,
-        start_line,
-        draw_cursor,
-        cursor,
-        cursor_style,
-        blink_style,
-        blink_time,
-        has_kitty,
-        surface_update_plan,
-    );
-    result.completed = execution.completed;
-    result.bg_ms = execution.bg_ms;
-    result.glyph_ms = execution.glyph_ms;
-    result.kitty_ms = execution.kitty_ms;
     return result;
 }
 

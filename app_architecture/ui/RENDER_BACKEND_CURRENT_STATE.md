@@ -289,6 +289,12 @@ perform retained-surface updates now route to
 than pretending the renderer root owns a backend-neutral begin/end lifecycle
 when Metal still does not.
 
+That has improved slightly again on the terminal lane specifically: the
+terminal widget no longer sequences `beginPresentable(...)` /
+`endPresentable(...)` itself. It now asks `renderer_presentable_host.zig` to
+run one terminal presentable update cycle, which is a better ownership story
+for backend lifecycle primitives that are only meaningful on OpenGL today.
+
 That has improved slightly again on the rest of the facade too: the renderer
 root no longer exports the remaining presentable forwards
 (`ensurePresentable`, `presentableAvailable`, `drawPresentable`,

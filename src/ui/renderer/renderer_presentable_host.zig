@@ -7,12 +7,11 @@ pub fn ensurePresentable(renderer: anytype, width: i32, height: i32) bool {
     return renderer.backend.ops.presentable.ensurePresentable(renderer, width, height);
 }
 
-pub fn beginPresentable(renderer: anytype) bool {
-    return renderer.backend.ops.presentable.beginPresentable(renderer);
-}
-
-pub fn endPresentable(renderer: anytype) void {
-    renderer.backend.ops.presentable.endPresentable(renderer);
+pub fn updatePresentable(renderer: anytype, ctx: anytype, comptime body: fn (@TypeOf(ctx), @TypeOf(renderer)) void) bool {
+    if (!renderer.backend.ops.presentable.beginPresentable(renderer)) return false;
+    defer renderer.backend.ops.presentable.endPresentable(renderer);
+    body(ctx, renderer);
+    return true;
 }
 
 pub fn drawPresentableBackdrop(renderer: anytype, x: f32, y: f32, w: f32, h: f32, color: @import("types.zig").Rgba) void {

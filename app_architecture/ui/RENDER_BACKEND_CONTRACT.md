@@ -410,7 +410,7 @@ contract by analogy.
 One backend-neutral presentable surface contract that can express:
 
 - allocate/ensure
-- begin/end update
+- host-owned update lifecycle
 - direct draw or cached snapshot present
 - snapshot shift/scroll
 - availability/reuse truth
