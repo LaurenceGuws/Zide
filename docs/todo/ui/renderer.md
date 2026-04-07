@@ -776,6 +776,9 @@ Current evidence:
 - editor checkpoint: the direct/fallback segment base painting is now
   centralized through one helper in `segment_paint.zig` instead of staying as
   scattered immediate rect calls inside `editor_widget_draw.zig`.
+- editor checkpoint: pane-level editor background + gutter clears now also run
+  through one explicit helper in `segment_paint.zig` instead of sitting as
+  stray generic surface calls in the widget draw entrypoints.
 - editor checkpoint: the fallback line-base path is now one explicit immediate
   helper too, instead of a hybrid path where base fills were immediate but the
   line-number/current-line label still rode a one-op draw-list flush.

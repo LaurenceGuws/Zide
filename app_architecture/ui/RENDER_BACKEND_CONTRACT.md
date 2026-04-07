@@ -332,6 +332,9 @@ The current code makes that split more specific:
   direct/fallback segment-base painting has one helper home in
   `segment_paint.zig` rather than staying as scattered rect calls in the
   widget draw body
+- pane-level editor background/gutter clears now follow that same rule too:
+  they run through one explicit helper in `segment_paint.zig` instead of
+  sitting as stray generic surface calls at the widget draw entrypoints
 - the fallback line-base path is explicit now too instead of mixing immediate
   fills with a tiny draw-list flush for the line-number/current-line label
 - cached/list-side segment-base painting now also routes through that same

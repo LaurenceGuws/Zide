@@ -12,6 +12,18 @@ const SelectionRange = selection_mod.SelectionRange;
 const EditorDrawList = draw_list_mod.EditorDrawList;
 const ByteRange = overlay_mod.ByteRange;
 
+pub fn drawEditorPaneBaseImmediate(
+    r: anytype,
+    x: f32,
+    y: f32,
+    width: f32,
+    height: f32,
+    gutter_width: f32,
+) void {
+    renderer_surface_host.drawRect(r, @intFromFloat(x), @intFromFloat(y), @intFromFloat(width), @intFromFloat(height), r.theme.background);
+    renderer_surface_host.drawRect(r, @intFromFloat(x), @intFromFloat(y), @intFromFloat(gutter_width), @intFromFloat(height), r.theme.line_number_bg);
+}
+
 pub fn addEditorLineBaseOps(
     list: *EditorDrawList,
     r: anytype,

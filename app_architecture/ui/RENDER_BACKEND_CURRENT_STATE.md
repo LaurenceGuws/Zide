@@ -554,6 +554,9 @@ That split is now sharper from code inspection too:
   segment-base painting routes through one helper in `segment_paint.zig`
   instead of staying as scattered immediate rect calls in
   `editor_widget_draw.zig`
+- pane-level editor background/gutter clears now follow that same rule too:
+  they run through one explicit helper in `segment_paint.zig` instead of
+  sitting as stray generic surface calls at the widget draw entrypoints
 - the fallback line-base path is also explicit now: it no longer mixes
   immediate base fills with a one-op draw-list flush just to render the line
   number/current-line label

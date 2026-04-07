@@ -57,15 +57,7 @@ pub fn draw(
     const highlight_prep = visible_prep_mod.prepareHighlightRange(view, widget.editor.allocator, start_line, end_line);
     defer if (highlight_prep.allocated) widget.editor.allocator.free(highlight_prep.tokens);
 
-    // Draw gutter background
-    renderer_surface_host.drawRect(
-        r,
-        @intFromFloat(x),
-        @intFromFloat(y),
-        @intFromFloat(widget.gutter_width),
-        @intFromFloat(height),
-        r.theme.line_number_bg,
-    );
+    segment_paint_mod.drawEditorPaneBaseImmediate(r, x, y, width, height, widget.gutter_width);
 
     // Draw lines
     var line_idx = start_line;
@@ -301,8 +293,7 @@ pub fn drawCached(
     var any_dirty = force_redraw;
 
     if (force_redraw) {
-        renderer_surface_host.drawRect(r, @intFromFloat(draw_x), @intFromFloat(draw_y), @intFromFloat(width), @intFromFloat(height), r.theme.background);
-        renderer_surface_host.drawRect(r, @intFromFloat(draw_x), @intFromFloat(draw_y), @intFromFloat(widget.gutter_width), @intFromFloat(height), r.theme.line_number_bg);
+        segment_paint_mod.drawEditorPaneBaseImmediate(r, draw_x, draw_y, width, height, widget.gutter_width);
     }
 
     var line_idx = start_line;
