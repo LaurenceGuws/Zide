@@ -225,14 +225,14 @@ field. It now lives under `opengl_runtime.presentable_targets`, which is a
 better fit for the truth that the richer retained-presentable lifecycle is
 currently an OpenGL-owned implementation shape.
 
-However, the retained **editor** presentable path is still not fully cleared as
-an adoption-ready seam. The direct editor path was restored after IDE geometry
+However, the retained **editor** presentable path is still not considered a
+working product path. The direct editor path was restored after IDE geometry
 testing exposed a mismatch between retained editor presentation and the shared
-layout/presentation story. After fixing pane-width/layout truth, the retained
-path has now been re-enabled and passes editor-mode live-smoke capture again,
-but IDE-mode truth is still not fully revalidated. So
-`editor_presentable_cache_compatible` is no longer a dead declaration, but it
-also is not yet strong enough to stop counting as a backend-adoption concern.
+layout/presentation story. After fixing pane-width/layout truth, we retried the
+retained path and it still regressed live editor behavior, so the widget stays
+on the direct path. `editor_presentable_cache_compatible` therefore remains a
+declared capability surface, but in practice this seam is still a fix-or-delete
+question rather than an adoption-ready feature.
 
 Part of that mismatch was more basic than retained-target ownership: editor
 column/layout truth was still partly derived from full-window width instead of

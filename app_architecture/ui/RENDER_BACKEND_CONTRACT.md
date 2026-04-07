@@ -101,9 +101,9 @@ as-is and still count as routine backend work.
 - editor composition must honor the editor pane rect as its geometry authority;
   deriving wrap/segment truth from full-window width is a contract bug, not an
   acceptable implementation shortcut
-- retained editor presentation is only partially revalidated today: editor-mode
-  live smoke is healthy again after the pane-width fix, but IDE-mode geometry
-  truth is still the standard for clearing this seam as an adoption blocker
+- retained editor presentation remains a fix-or-delete seam: pane-width truth
+  is corrected, but the retained path still is not trustworthy enough for live
+  editor use and should not count as an adoption-ready capability
 - backend-runtime storage pressure is now about ownership of the runtime bundle
   shape, not shared caller leakage; shared code should not read backend-native
   runtime fields directly

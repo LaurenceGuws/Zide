@@ -372,7 +372,10 @@ pub fn drawCached(
     const draw_list = &cache.draw_list;
 
     const texture_changed = renderer_presentable_host.ensurePresentable(r, .editor, @intFromFloat(width), @intFromFloat(height));
-    const use_retained_editor_surface = r.capabilities().editor_presentable_cache_compatible;
+    // The retained editor surface is still not trustworthy enough in live IDE
+    // usage. Keep the width/layout fixes, but stay on the direct path until the
+    // retained update/presentation seam is actually honest.
+    const use_retained_editor_surface = false;
     var force_redraw = cache.beginFrame(
         frame_id,
         cols,
