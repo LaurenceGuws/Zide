@@ -19,13 +19,15 @@ So the honest answer to "would Vulkan be easy to add?" is:
 - easier than before
 - not yet easy
 
-**Vulkan fit audit (2026-04-06):** See `docs/research/VULKAN_FIT_AUDIT_2026-04-06.md`. Verdict:
-a Vulkan backend is **not** yet “routine” against the **current** code. The
-audit’s “GL immediate vs Metal deferred `SurfaceDraw`” finding is **superseded**:
-OpenGL now defers the full surface queue too. Remaining dominant risks include
-uneven presentable maturity, renderer-hosted backend bundles, and atlas/raw-image
-ordering around terminal/chrome. Android/mobile pressure fails the same honesty
-test until those gaps close. This does not lower the target contract bar.
+**Vulkan fit audit (2026-04-06):** See `docs/research/VULKAN_FIT_AUDIT_2026-04-06.md` (executive
+verdict updated to match post-deferral code). Verdict: a Vulkan backend is **not**
+yet “routine” against the **current** code. The audit’s “GL immediate vs Metal
+deferred `SurfaceDraw`” finding is **superseded**: OpenGL now defers the full
+surface queue too. Remaining dominant risks: uneven presentable maturity,
+renderer-hosted dual backend bundles, flush/ordering around mixed draw paths, and
+atlas/terminal/chrome composition. **Gate status and readiness** (Vulkan vs
+Android platform vs Android rendering) live in `RENDER_BACKEND_CONTRACT.md`
+§ “Gate status (code truth)” and § “Readiness (authoritative)”.
 
 ## Adoption Answer
 

@@ -74,6 +74,24 @@ Android rendering backend work only becomes valid when all of these are true:
 
 If those are not true, Android rendering is still blocked.
 
+### Gate checklist (code truth, 2026-04-07)
+
+Aligned with `app_architecture/ui/RENDER_BACKEND_CONTRACT.md` § “Gate status
+(code truth)”:
+
+| # | Criterion | Status |
+|---|-----------|--------|
+| 1 | One semantic operation → one renderer contract path | **Partial** — `SurfaceDraw` deferral is unified GL/Metal; some paths still mix queued surface work with immediate draws (flush discipline). |
+| 2 | Backend choice does not change product-level submission semantics | **Partial** — same as (1); presentable/terminal paths still differ by backend lifecycle. |
+| 3 | No backend-specific `.opengl` / `.metal` / `.vulkan` in shared **draw payloads** | **Met for `SurfaceDraw`** — `GpuImageRef` + neutral union; `Renderer` still dispatches by backend enum elsewhere. |
+| 4 | `Renderer` not the hidden owner of backend-native runtime | **Not met** — `backend.runtime` still holds concrete OpenGL + Metal bundles. |
+| 5 | Presentable/frame routine for a new backend | **Not met** — terminal-only presentable; GL retained vs Metal snapshot uneven. |
+
+**Readiness:** Android **platform** work (lifecycle, IME, etc.) stays allowed.
+Android **rendering** backend (GLES/Vulkan) and desktop **Vulkan** bootstrap
+remain **not ready** until this checklist clears (see contract § “Readiness
+(authoritative)”).
+
 ## How To Use This Queue
 
 1. Confirm the repo-wide focus in `docs/AGENT_HANDOFF.md`.

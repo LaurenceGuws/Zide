@@ -24,13 +24,21 @@ that debt.
 **Fit is not clean enough for a minimal Vulkan bootstrap to be “just another
 backend module.”** A third backend would still risk **renderer surgery** unless
 the structural gaps in current-state §§1–5 and “First Required Cut Order” are
-addressed first—especially **unified surface-draw submission**, **presentable
-parity behind neutral types**, and **moving backend-native storage off the
-shared `Renderer` host**.
+addressed first—especially **presentable parity behind neutral types**, **flush
+and ordering discipline** where surface work mixes with other draws, and **moving
+backend-native storage off the shared `Renderer` host** (or narrowing it to an
+opaque backend context).
 
-Vulkan is not blocked by naming; it is blocked by **ownership and submission
-semantics** that are still split across GL immediacy vs Metal end-of-frame replay,
-and by **renderer-carried backend bundles**.
+**Update (code truth, 2026-04):** The earlier **“GL immediate vs Metal deferred
+`SurfaceDraw`”** split is **superseded** — OpenGL now **defers** the full surface
+queue like Metal. Vulkan remains non-routine because of **presentable unevenness**,
+**dual concrete runtime bundles** on the renderer host, **scene-target / frame
+dispatch** centrality, and **composition ordering**, not because of a solids
+timing fork on GL.
+
+Vulkan is not blocked by naming; it is blocked by **ownership and lifecycle
+semantics** (presentable, runtime bundle shape, shared dispatch center), not by
+a remaining GL-vs-Metal **surface-queue timing** fork.
 
 ---
 
@@ -78,7 +86,7 @@ risk language.
 |---|---------|--------------------------------|
 | B1 | **Dual draw submission semantics** | **Superseded (2026-04):** OpenGL now **defers** the full `SurfaceDraw` queue (flush + submit replay), matching Metal at the product level for solids as well as blits. Remaining risk is **composition** (flush discipline for bypass paths), not a GL-vs-Metal fork on `.solid`. |
 | B2 | **Metal-shaped queue consumption** | OpenGL now replays the same deferred `SurfaceDraw` union at frame boundaries; implementation details still differ from Metal’s encoder model, but the shared “record then replay” story is no longer GL-immediate vs Metal-deferred for surface work. |
-| B3 | **Texture handle variants in draw payloads** | `RawImageTexture`-style `.opengl` vs `.metal` branching (per contract doc) implies **new Vulkan-specific variants** or a **real opaque backend handle**—not neutral until unified. |
+| B3 | **Texture handle variants in draw payloads** | **`SurfaceDraw` is addressed:** `raw_image` uses `GpuImageRef` (opaque usize + dimensions), no `.opengl`/`.metal` payload tags. **Remaining risk** is not the `SurfaceDraw` union but **other** renderer surfaces that still branch on `RendererBackend` / concrete runtime, and **lifetime** of GPU images across backends—Vulkan would still stress those until the **host** stops being GL+Metal-shaped. |
 | B4 | **Renderer-hosted backend-native storage** | OpenGL and Metal runtime bundles still live on the shared `Renderer`. A Vulkan bundle would either **widen** that pattern (three backends on the host) or **force** the refactor that Milestone B was supposed to deliver: backend-owned storage. |
 | B5 | **Presentable contract unevenness** | Retained targets remain **FBO/texture-shaped** in practice; OpenGL owns the rich path; Metal is narrower. Vulkan swapchain/images are a third shape—without **one** neutral presentable lifecycle, shared code will keep leaking assumptions. |
 | B6 | **Shared frame / dispatch center** | `Renderer` still orchestrates product frame state + ops dispatch. Adding Vulkan touches the **same** root unless lifecycle moves behind a narrower backend seam (current-state §2). |
@@ -117,14 +125,17 @@ today:
   `begin` / `draw` / `scroll`), and `BackendOps` indirection are deliberate
   neutral vocabulary.
 
-- **GL-shaped in practice:** Immediate submission for GL vs queued replay for
-  Metal; richer retained presentable path on GL; scene-target/offscreen story
-  centered on OpenGL modules. The **written** contract says OpenGL must not be
-  the design authority, but **behavior** still makes GL the “complete” lane for
-  some paths.
+- **GL-shaped in practice (updated):** **`SurfaceDraw` is no longer “immediate
+  on GL”** — it queues and replays like Metal’s surface work. Richer retained
+  presentable path on GL; scene-target/offscreen story still centered on OpenGL
+  modules. The **written** contract says OpenGL must not be the design
+  authority, but **behavior** still makes GL the “complete” lane for some paths
+  (presentable, scene target).
 
-Vulkan would **not** get a fair slot until **one** submission model and **one**
-presentable lifecycle maturity target apply to **all** active backends.
+Vulkan would **not** get a fair slot until **one** presentable lifecycle maturity
+target and **one** honest backend-runtime ownership story apply to **all** active
+backends (surface-draw **submission timing** for `SurfaceDraw` is already aligned
+GL/Metal).
 
 ---
 
@@ -138,11 +149,12 @@ From `app_architecture/platform/android/RENDER_BACKEND.md` and
 - Surfaces are **ephemeral** (`ANativeWindow`, image-queue semantics); desktop
   SDL window assumptions already do not transfer directly.
 
-- A contract that still leaks **desktop GL immediacy**, **Metal queue replay**,
-  or **FBO-shaped** retained targets forces mobile to either **fork** shared
-  code or **pretend** GLES/Vulkan-KHR matches desktop OpenGL—both are the
-  “contract was desktop-shaped” failure mode the target contract explicitly
-  forbids.
+- A contract that still leaks **uneven presentable behavior**, **FBO-shaped**
+  retained targets on GL vs snapshot paths on Metal, or **renderer-hosted dual
+  backend bundles** forces mobile to either **fork** shared code or **pretend**
+  GLES/Vulkan-KHR matches desktop assumptions—both are the “contract was
+  desktop-shaped” failure mode the target contract explicitly forbids. (The old
+  **“GL immediate `SurfaceDraw` vs Metal deferred”** leak is **closed** in code.)
 
 **Pressure test:** If Android had to ship tomorrow, the honest shared layer is
 still **host geometry + neutral draw/present intent**. The current **uneven**
@@ -163,11 +175,12 @@ delivered earlier as **evidence** for planning Chunk 2 continuation.
 
 ## Top blockers before any Vulkan bootstrap (ordered)
 
-1. **Unify surface-draw submission** so OpenGL, Metal, and a future Vulkan path
-   implement the **same** contract (no “immediate vs replay” as a product
-   fork).
-2. **Opaque or unified GPU resource handles** in draw payloads (no growing
-   `.opengl` / `.metal` / `.vulkan` enum sprawl in shared code).
+1. **Close flush and composition ordering** wherever **queued** `SurfaceDraw`
+   work must stay ordered against immediate draws (the GL/Metal **timing** fork
+   for surface solids is already gone).
+2. **Opaque or unified GPU resource handles** everywhere shared code carries
+   images (`SurfaceDraw.raw_image` already uses `GpuImageRef`; eliminate
+   remaining backend-tagged sprawl and **host**-level dual-runtime assumptions).
 3. **Presentable lifecycle parity** behind neutral types (not GL FBO as the
    implicit reference implementation).
 4. **Move backend-native runtime storage** off `Renderer` or narrow the host to
