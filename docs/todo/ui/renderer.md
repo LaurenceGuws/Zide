@@ -431,6 +431,14 @@ Current evidence:
   to `renderer_presentable_host.zig` directly for that lifecycle edge.
 - this is more honest than keeping those lifecycle forwards on `Renderer`,
   because `begin/end` are not equally meaningful across backends today.
+- the remaining root presentable forwards (`ensure`, `available`, `draw`,
+  `scroll`, `info`) are now gone too.
+- widgets/diagnostics that actually use the presentable seam now talk to
+  `renderer_presentable_host.zig` directly instead of bouncing through
+  `Renderer` first.
+- this makes the ownership boundary plainer: `Renderer` no longer pretends to
+  own a presentable facade while `renderer_presentable_host.zig` and the
+  backend presentable modules do the real work.
 - presentable trace/editor-surface bookkeeping now also lives in
   `renderer_presentable_host.zig` instead of being split across GL and Metal
   presentable lifecycle methods.

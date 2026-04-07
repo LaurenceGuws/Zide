@@ -154,12 +154,12 @@ pub const FontSampleView = struct {
 
         // Render into the offscreen target so we can do linear blending in a
         // controlled way (target is linear; presentation converts to sRGB).
-        if (r.ensurePresentable(.editor, @intFromFloat(w), @intFromFloat(h))) {
+        if (renderer_presentable_host.ensurePresentable(r, .editor, @intFromFloat(w), @intFromFloat(h))) {
             if (renderer_presentable_host.beginPresentable(r, .editor)) {
                 r.clearToThemeBackground();
                 drawContents(self, r, theme, w, h);
                 renderer_presentable_host.endPresentable(r, .editor);
-                r.drawPresentable(.editor, .{ .x = 0, .y = 0 });
+                renderer_presentable_host.drawPresentable(r, .editor, .{ .x = 0, .y = 0 });
                 return;
             }
         }

@@ -556,7 +556,7 @@ pub fn notePresentSample(
         .scale_y = if (source_h > 0.0) dest_h / source_h else 1.0,
     };
     if (mode == .retained_surface) {
-        if (renderer.presentableInfo(.terminal)) |info| {
+        if (renderer_presentable_host.presentableInfo(renderer, .terminal)) |info| {
             sample.presentable_w_px = info.width_px;
             sample.presentable_h_px = info.height_px;
             sample.target_logical_w = @floatFromInt(info.logical_width);
@@ -1036,7 +1036,7 @@ pub fn refreshPresentState(
         surface_state.notePresentationUpdated(terminal_view, surface_geometry, draw_cursor, cursor, cursor_style, hover_link_id, composing_active, composing_hash);
     }
 
-    state.target_available = renderer.presentableAvailable(.terminal);
+    state.target_available = renderer_presentable_host.presentableAvailable(renderer, .terminal);
     state.ready = surface_state.notePresentableAvailability(state.target_available);
     state.present = state.ready and state.visible;
     state.log_unavailable = !state.ready and terminal_view.rows > 0 and terminal_view.cols > 0 and view_cells_len > 0 and state.visible;
@@ -1089,7 +1089,7 @@ pub fn presentDraw(
         viewport_w,
         viewport_h,
     );
-    renderer.drawPresentable(.terminal, .{
+    renderer_presentable_host.drawPresentable(renderer, .terminal, .{
         .x = view_geometry.origin_x,
         .y = view_geometry.origin_y,
         .width = viewport_w,
@@ -1122,7 +1122,7 @@ pub fn tryFastPresentExisting(
     note_present: anytype,
 ) bool {
     const presentable_ready = surface_state.notePresentableAvailability(
-        renderer.presentableAvailable(.terminal),
+        renderer_presentable_host.presentableAvailable(renderer, .terminal),
     );
     const cursor_changed = surface_state.cursorPresentationChanged(draw_cursor, cursor, cursor_style);
     const overlay_changed = surface_state.overlayPresentationChanged(hover_link_id, composing_active, composing_hash);
@@ -1150,7 +1150,7 @@ pub fn tryFastPresentExisting(
             view_geometry.viewport_width,
             view_geometry.viewport_height,
         );
-        renderer.drawPresentable(.terminal, .{
+        renderer_presentable_host.drawPresentable(renderer, .terminal, .{
             .x = view_geometry.origin_x,
             .y = view_geometry.origin_y,
             .width = view_geometry.viewport_width,
@@ -1342,7 +1342,7 @@ pub fn tryDirectSnapshotUpdate(
     var result = DirectSnapshotUpdateResult{};
     if (!renderer.usesDirectTerminalPresentation()) return result;
     if (has_kitty) return result;
-    if (!renderer.presentableAvailable(.terminal)) return result;
+    if (!renderer_presentable_host.presentableAvailable(renderer, .terminal)) return result;
     if (terminal_view.rows == 0 or terminal_view.cols == 0 or terminal_view.cells.len == 0) return result;
 
     const surface_update_plan = planUpdate(
@@ -1394,7 +1394,7 @@ pub fn tryDirectSnapshotUpdate(
         view_geometry.viewport_width,
         view_geometry.viewport_height,
     );
-    renderer.drawPresentable(.terminal, .{
+    renderer_presentable_host.drawPresentable(renderer, .terminal, .{
         .x = view_geometry.origin_x,
         .y = view_geometry.origin_y,
         .width = viewport_w,
@@ -1456,7 +1456,7 @@ pub fn planUpdate(
 
     plan.geometry = computePresentationSurfaceGeometry(renderer, terminal_view, view_geometry);
 
-    const recreated = renderer.ensurePresentable(.terminal, plan.geometry.surface_w, plan.geometry.surface_h);
+    const recreated = renderer_presentable_host.ensurePresentable(renderer, .terminal, plan.geometry.surface_w, plan.geometry.surface_h);
     const presentation_delta = surface_state.presentationUpdateDelta(
         terminal_view,
         plan.geometry,
@@ -1499,7 +1499,7 @@ pub fn planUpdate(
     )) {
         .attempt => |shift_rows| {
             const dy_pixels: i32 = -viewport_shift.rows * plan.geometry.cell_h_i;
-            if (renderer.scrollPresentable(.terminal, 0, dy_pixels)) {
+            if (renderer_presentable_host.scrollPresentable(renderer, .terminal, 0, dy_pixels)) {
                 needs_partial = true;
                 shifted_rows = shift_rows;
             } else {

@@ -266,8 +266,8 @@ pub fn drawCached(
     const origin_y: f32 = 0;
     const draw_list = &cache.draw_list;
 
-    const texture_changed = r.ensurePresentable(.editor, @intFromFloat(width), @intFromFloat(height));
-    const use_retained_editor_surface = r.presentableAvailable(.editor) and
+    const texture_changed = renderer_presentable_host.ensurePresentable(r, .editor, @intFromFloat(width), @intFromFloat(height));
+    const use_retained_editor_surface = renderer_presentable_host.presentableAvailable(r, .editor) and
         r.capabilities().editor_presentable_cache_compatible;
     var force_redraw = cache.beginFrame(
         frame_id,
@@ -575,7 +575,7 @@ pub fn drawCached(
     }
 
     if (use_retained_editor_surface) {
-        r.drawPresentable(.editor, .{ .x = draw_x, .y = draw_y });
+        renderer_presentable_host.drawPresentable(r, .editor, .{ .x = draw_x, .y = draw_y });
     }
 
     // Draw scrollbars as final overlays (outside cached editor texture) to avoid

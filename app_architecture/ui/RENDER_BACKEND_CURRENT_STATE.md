@@ -204,6 +204,14 @@ perform retained-surface updates now route to
 than pretending the renderer root owns a backend-neutral begin/end lifecycle
 when Metal still does not.
 
+That has improved slightly again on the rest of the facade too: the renderer
+root no longer exports the remaining presentable forwards
+(`ensurePresentable`, `presentableAvailable`, `drawPresentable`,
+`scrollPresentable`, `presentableInfo`). Widget/view/diagnostic callers now
+route to `renderer_presentable_host.zig` directly for the shared presentable
+contract surface, which makes the ownership boundary plainer: the renderer root
+no longer claims to own a facade that already lives elsewhere.
+
 That has improved slightly again on backend ownership too: backend dispatch no
 longer terminates presentable operations back into the large generic backend
 files. Dedicated backend presentable modules now own that seam directly:

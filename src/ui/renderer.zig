@@ -1014,26 +1014,6 @@ pub const Renderer = struct {
         return self.backend_ops.frame.dumpWindowScreenshotPpmSized(self, path, out_width, out_height);
     }
 
-    pub fn ensurePresentable(self: *Renderer, surface: PresentableSurface, width: i32, height: i32) bool {
-        return renderer_presentable_host.ensurePresentable(self, surface, width, height);
-    }
-
-    pub fn presentableAvailable(self: *Renderer, surface: PresentableSurface) bool {
-        return renderer_presentable_host.presentableAvailable(self, surface);
-    }
-
-    pub fn drawPresentable(self: *Renderer, surface: PresentableSurface, draw: PresentableDraw) void {
-        renderer_presentable_host.drawPresentable(self, surface, draw);
-    }
-
-    pub fn scrollPresentable(self: *Renderer, surface: PresentableSurface, dx: i32, dy: i32) bool {
-        return renderer_presentable_host.scrollPresentable(self, surface, dx, dy);
-    }
-
-    pub fn presentableInfo(self: *Renderer, surface: PresentableSurface) ?PresentableInfo {
-        return renderer_presentable_host.presentableInfo(self, surface);
-    }
-
     pub fn clearToThemeBackground(self: *Renderer) void {
         self.backend_ops.draw.clearThemeBackground(self);
     }

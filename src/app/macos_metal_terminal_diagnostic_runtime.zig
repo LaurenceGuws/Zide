@@ -5,6 +5,7 @@ const app_shell = @import("../app_shell.zig");
 const terminal_runtime = @import("../terminal/core/terminal_runtime.zig");
 const session_runtime = @import("../terminal/core/session/runtime.zig");
 const terminal_session_bootstrap = @import("terminal/terminal_session_bootstrap.zig");
+const renderer_presentable_host = @import("../ui/renderer/renderer_presentable_host.zig");
 const terminal_widget_draw = @import("../ui/widgets/terminal_widget_draw.zig");
 const input_adapter_mod = @import("../ui/widgets/terminal_widget_input_adapter.zig");
 const shared_types = @import("../types/mod.zig");
@@ -111,7 +112,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
             @tagName(capabilities.atlas_storage_mode),
             @tagName(capabilities.planned_atlas_storage_mode),
             @intFromBool(capabilities.raw_image_textures),
-            @intFromBool(shell.rendererPtr().presentableAvailable(.terminal)),
+            @intFromBool(renderer_presentable_host.presentableAvailable(shell.rendererPtr(), .terminal)),
         },
     );
 
@@ -188,7 +189,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
                     metrics.box_glyphs,
                     uncategorized_special_glyphs,
                     metrics.presentation_kitty_ms,
-                    @intFromBool(shell.rendererPtr().presentableAvailable(.terminal)),
+                    @intFromBool(renderer_presentable_host.presentableAvailable(shell.rendererPtr(), .terminal)),
                     @tagName(metrics.terminal_presentation_sample_mode),
                 },
             );
@@ -229,7 +230,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
             @tagName(final_metrics.terminal_presentation_mode),
             @tagName(final_metrics.terminal_presentation_sample_mode),
             final_metrics.presentation_kitty_ms,
-            @intFromBool(shell.rendererPtr().presentableAvailable(.terminal)),
+            @intFromBool(renderer_presentable_host.presentableAvailable(shell.rendererPtr(), .terminal)),
         },
     );
 }
