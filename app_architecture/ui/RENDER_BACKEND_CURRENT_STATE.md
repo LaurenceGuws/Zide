@@ -551,6 +551,10 @@ That split is now sharper from code inspection too:
 - editor pressure is specifically row-band/gutter/current-line fill work in
   `editor_widget_draw.zig` that still pairs with immediate text/overlay
   rendering in the direct/fallback path
+- that editor lane is at least slightly more explicit now: direct/fallback
+  segment-base painting routes through one helper in `segment_paint.zig`
+  instead of staying as scattered immediate rect calls in
+  `editor_widget_draw.zig`
 - sample pressure is specifically section-fill plus bg-aware text preview work
   in `font_sample_view.zig` / `font_sample_section_host.zig`, including the
   custom-font sample path that still terminates through direct texture draws

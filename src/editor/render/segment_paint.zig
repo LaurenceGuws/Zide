@@ -37,6 +37,23 @@ pub fn addEditorLineBaseOps(
     return ok;
 }
 
+pub fn drawEditorSegmentBaseImmediate(
+    r: anytype,
+    x: f32,
+    y: f32,
+    gutter_width: f32,
+    content_width: f32,
+    is_current: bool,
+) void {
+    renderer_surface_host.drawRect(r, @intFromFloat(x), @intFromFloat(y), @intFromFloat(content_width), @intFromFloat(r.editor_char_height), r.theme.background);
+    renderer_surface_host.drawRect(r, @intFromFloat(x), @intFromFloat(y), @intFromFloat(gutter_width), @intFromFloat(r.editor_char_height), r.theme.line_number_bg);
+
+    if (is_current) {
+        renderer_surface_host.drawRect(r, @intFromFloat(x), @intFromFloat(y), @intFromFloat(gutter_width), @intFromFloat(r.editor_char_height), r.theme.current_line);
+        renderer_surface_host.drawRect(r, @intFromFloat(x + gutter_width), @intFromFloat(y), @intFromFloat(content_width - gutter_width), @intFromFloat(r.editor_char_height), r.theme.current_line);
+    }
+}
+
 pub fn drawSelectionOverlays(
     view: anytype,
     r: anytype,

@@ -327,6 +327,10 @@ The current code makes that split more specific:
 - editor is not "generic banding everywhere"; the pressure is row-band,
   gutter, and current-line fills in `editor_widget_draw.zig` that still sit
   next to immediate text/overlay work in the direct/fallback path
+- that editor-family pressure is a little more explicit now because the
+  direct/fallback segment-base painting has one helper home in
+  `segment_paint.zig` rather than staying as scattered rect calls in the
+  widget draw body
 - sample/diagnostic pressure is the simpler section-fill plus bg-aware preview
   text path in `font_sample_view.zig`, including custom-font preview draws
   that still go straight through texture draw calls

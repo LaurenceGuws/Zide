@@ -593,8 +593,14 @@ pub fn drawCached(
                     return;
                 }
 
-                renderer_surface_host.drawRect(r_local, @intFromFloat(origin_x_local), seg_band.y_i, @intFromFloat(width_local), seg_band.h_i, r_local.theme.background);
-                renderer_surface_host.drawRect(r_local, @intFromFloat(origin_x_local), seg_band.y_i, @intFromFloat(widget_local.gutter_width), seg_band.h_i, r_local.theme.line_number_bg);
+                segment_paint_mod.drawEditorSegmentBaseImmediate(
+                    r_local,
+                    origin_x_local,
+                    seg_y,
+                    widget_local.gutter_width,
+                    width_local,
+                    false,
+                );
 
                 if (seg_info.seg_idx == seg_info.seg_start_idx) {
                     var num_buf: [16]u8 = undefined;
@@ -602,8 +608,14 @@ pub fn drawCached(
                     overlay_mod.flushDrawList(draw_list_local, r_local);
                     draw_list_local.clear();
                 } else if (seg_info.is_current) {
-                    renderer_surface_host.drawRect(r_local, @intFromFloat(origin_x_local), seg_band.y_i, @intFromFloat(widget_local.gutter_width), seg_band.h_i, r_local.theme.current_line);
-                    renderer_surface_host.drawRect(r_local, @intFromFloat(origin_x_local + widget_local.gutter_width), seg_band.y_i, @intFromFloat(width_local - widget_local.gutter_width), seg_band.h_i, r_local.theme.current_line);
+                    segment_paint_mod.drawEditorSegmentBaseImmediate(
+                        r_local,
+                        origin_x_local,
+                        seg_y,
+                        widget_local.gutter_width,
+                        width_local,
+                        true,
+                    );
                 }
 
                 segment_paint_mod.drawSelectionOverlays(view_local, r_local, seg_info.line_idx, cols_local, line_width_local, seg_info.total_visual_lines, seg_info.seg_idx, seg_info.seg_start_col, seg_info.seg_end_col, seg_band, text_start_x, ranges_local[0..range_count_local]);
