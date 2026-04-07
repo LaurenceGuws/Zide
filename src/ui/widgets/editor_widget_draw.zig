@@ -269,13 +269,13 @@ pub fn drawCached(
 
     const draw_x = x;
     const draw_y = y;
-    const origin_x: f32 = 0;
-    const origin_y: f32 = 0;
     const draw_list = &cache.draw_list;
 
     const texture_changed = renderer_presentable_host.ensurePresentable(r, .editor, @intFromFloat(width), @intFromFloat(height));
-    const use_retained_editor_surface = renderer_presentable_host.presentableInfo(r, .editor) != null and
-        r.capabilities().editor_presentable_cache_compatible;
+    // The retained editor surface currently has a geometry/presentation mismatch
+    // in IDE mode. Prefer the direct path until the editor presentable contract
+    // is made honest again.
+    const use_retained_editor_surface = false;
     var force_redraw = cache.beginFrame(
         frame_id,
         cols,
@@ -292,6 +292,9 @@ pub fn drawCached(
     if (texture_changed) force_redraw = true;
     if (!use_retained_editor_surface) force_redraw = true;
 
+    const origin_x: f32 = if (use_retained_editor_surface) 0 else draw_x;
+    const origin_y: f32 = if (use_retained_editor_surface) 0 else draw_y;
+
     var any_dirty = force_redraw;
 
     if (force_redraw) {
@@ -302,8 +305,8 @@ pub fn drawCached(
                 renderer_presentable_host.endPresentable(r, .editor);
             }
         } else {
-            renderer_surface_host.drawRect(r, 0, 0, @intFromFloat(width), @intFromFloat(height), r.theme.background);
-            renderer_surface_host.drawRect(r, 0, 0, @intFromFloat(widget.gutter_width), @intFromFloat(height), r.theme.line_number_bg);
+            renderer_surface_host.drawRect(r, @intFromFloat(draw_x), @intFromFloat(draw_y), @intFromFloat(width), @intFromFloat(height), r.theme.background);
+            renderer_surface_host.drawRect(r, @intFromFloat(draw_x), @intFromFloat(draw_y), @intFromFloat(widget.gutter_width), @intFromFloat(height), r.theme.line_number_bg);
         }
     }
 
@@ -376,7 +379,8 @@ pub fn drawCached(
                     defer renderer_presentable_host.endPresentable(r_local, .editor);
                 }
 
-                const clip_h = clippedEditorRowHeight(seg_band.h_i, @as(i32, @intFromFloat(height_local)) - seg_band.y_i);
+                const clip_bottom = @as(i32, @intFromFloat(origin_y_local + height_local));
+                const clip_h = clippedEditorRowHeight(seg_band.h_i, clip_bottom - seg_band.y_i);
                 renderer_clip_host.beginClip(
                     r_local,
                     @intFromFloat(origin_x_local),
