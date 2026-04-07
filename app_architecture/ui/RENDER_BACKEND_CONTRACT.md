@@ -55,6 +55,66 @@ It must not require:
 - teaching widget/runtime code about Vulkan-only present rules
 - reinterpreting capabilities because the shared draw contract was never real
 
+## Backend Adoption Gate
+
+Until the following are true, Vulkan and Android rendering adoption are still
+blocked by contract debt rather than implementation effort.
+
+### Must Be True Before Vulkan Or Android Rendering Starts
+
+1. One product-level submission story for shared draws
+
+- shared code must not care whether a backend consumes recorded work
+  immediately or later
+- backend timing may differ internally, but product semantics must not
+- today this is still the loudest blocker
+
+2. Presentable lifecycle is neutral enough for a third backend
+
+- retained/direct/snapshot draw must read like one contract
+- OpenGL retained targets must not remain the de facto reference shape
+- Android surface loss/replacement and Vulkan swapchain replacement must fit
+  without reopening shared renderer ownership
+
+3. Backend-native runtime storage is no longer a widening pattern on `Renderer`
+
+- adding a backend must not mean adding another renderer-hosted peer runtime
+  bundle as the normal move
+- the host must narrow further toward backend-owned or opaque runtime storage
+
+4. Resource/image handles stay opaque in shared code
+
+- no new backend-tagged handle variants in shared payloads or product APIs
+- Vulkan/Android must not require shared code to learn a new GPU object shape
+
+5. The remaining active ordering families have an honest home
+
+- terminal is already mostly carved out behind terminal/presentable seams
+- shell chrome is now carved out behind `renderer_chrome_band_host.zig`, but is
+  explicitly capped until it becomes a real recorded phase
+- the remaining loud generic surface-pressure families are editor banding and
+  sample/diagnostic section banding
+
+### What Is No Longer Blocking By Itself
+
+- terminal pane/background misuse of generic `SurfaceDraw`
+- terminal overlay/cursor duplicate paths
+- backend-tagged raw-image payload unions
+- product-facing persistent image APIs that exposed backend texture structs
+- shell chrome living as scattered widget-local fill/text calls with no local
+  composition seam
+
+### Current Answer
+
+If Vulkan or Android rendering started today, the repo would still be doing
+renderer surgery, not just backend implementation. The remaining blockers are
+mainly:
+
+- shared surface-phase semantics
+- presentable parity/ownership
+- renderer-hosted backend runtime shape
+- editor/sample ordering families still leaning on generic surface timing
+
 ## Contract Layers
 
 The backend abstraction should be read in this order:

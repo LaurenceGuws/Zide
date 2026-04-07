@@ -27,6 +27,46 @@ pressure fails the same honesty test until those gaps close. This does not lower
 the target contract bar; it names the remaining contradictions for backend-closure
 continuation.
 
+## Adoption Answer
+
+The direct answer to "what is still standing between us and Vulkan/Android
+rendering adoption?" is:
+
+- not terminal correctness anymore
+- not shell chrome ownership anymore
+- still the shared backend contract itself
+
+In current-state terms, the remaining blockers are:
+
+1. `SurfaceDraw` timing is still backend-dependent
+
+- OpenGL still consumes the surface phase immediately
+- Metal still replays it later
+- shared code now has better caller boundaries, but not one fully honest
+  product-level submission model yet
+
+2. Presentable behavior is cleaner but still uneven
+
+- parity has improved
+- ownership is cleaner
+- but retained/direct/snapshot lifecycle is still not neutral enough that a
+  Vulkan or Android renderer would feel routine
+
+3. Backend runtime storage still widens under shared ownership
+
+- the runtime bundle is cleaner than before
+- it is still a renderer-hosted widening pattern
+
+4. Remaining ordering pressure is now concentrated, not solved
+
+- shell chrome has been carved out behind `renderer_chrome_band_host.zig`
+- terminal has been carved out behind terminal/presentable seams
+- the remaining loud generic families are editor banding and sample/diagnostic
+  section banding
+
+That is a much better answer than the repo had before, but it is still a
+blocking answer.
+
 ## What Is Good
 
 ### Capability naming is better

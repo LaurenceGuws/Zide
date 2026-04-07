@@ -764,6 +764,27 @@ seams *and* names where **today’s code** would still force `Renderer`-centric
 changes and shared forks. A honest fit is **not** proven yet; criteria are **not**
 fully satisfied for proceeding to bootstrap without further closure work.
 
+## Adoption Gate
+
+Current explicit answer to "what still stands between us and Vulkan/Android
+rendering adoption?":
+
+- `SurfaceDraw` semantics are still not one honest product-level story
+- presentable parity/ownership is still not neutral enough
+- backend runtime storage still widens under shared renderer ownership
+- the remaining loud ordering families are now editor banding and
+  sample/diagnostic sections
+
+This means:
+
+- Vulkan adoption is still blocked by backend-contract closure, not by lack of
+  a third backend module skeleton
+- Android rendering adoption is blocked by the same contract truth; mobile
+  pressure does not get a separate shortcut
+
+Do not rerank back to "just start Vulkan" or "just start Android rendering"
+until these four lines are materially stronger in code and authority docs.
+
 ## Milestone D: Android and Mobile Pressure
 
 Purpose:
