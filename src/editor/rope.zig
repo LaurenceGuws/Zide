@@ -425,13 +425,8 @@ pub const Rope = struct {
         if (line_index == 0) return 0;
         const total_lines = self.lineCount();
         if (line_index >= total_lines) return self.totalLen();
-        if (self.line_start_cache.get(line_index)) |offset| {
-            return offset;
-        }
         const newline_offset = self.findNthNewline(self.root, line_index);
-        const offset = newline_offset + 1;
-        rememberLineStart(self, line_index, offset);
-        return offset;
+        return newline_offset + 1;
     }
 
     pub fn lineLen(self: *Rope, line_index: usize) usize {
