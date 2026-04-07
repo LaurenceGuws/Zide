@@ -78,6 +78,15 @@ again. If editor retained presentation returns later, it must come back as a
 reviewed lane instead of a dormant branch inside the generic presentable
 contract.
 
+Terminal presentable ownership is cleaner too: the terminal widget no longer
+spells out backend `begin/end` lifecycle directly. That update cycle now
+terminates in `renderer_presentable_host.zig`.
+
+So the remaining presentable blocker is now more precise than before: OpenGL
+still owns a real retained update target, while Metal still owns a terminal
+snapshot plus composition replay queue. The shared API is cleaner, but the
+lifecycle model is still materially uneven.
+
 That is a much better answer than the repo had before, but it is still a
 blocking answer.
 

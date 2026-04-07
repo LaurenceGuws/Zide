@@ -84,6 +84,11 @@ backend contract.
 That cleanup is now reflected in the API too: the dead one-value
 `PresentableSurface` parameter is gone, so terminal presentable operations no
 longer pretend to stay generic by forwarding `.terminal` through every layer.
+The next presentable problem is therefore narrower and more honest: OpenGL
+still models terminal presentation as a real retained update target, while
+Metal still models it as snapshot creation plus composition replay. A future
+backend needs those two lifecycle shapes to converge further than they do
+today.
 
 3. Backend-native runtime storage is no longer a widening pattern on `Renderer`
 

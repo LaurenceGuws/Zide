@@ -719,6 +719,13 @@ Current evidence:
   gone too. The live shared presentable contract is terminal-only again; if
   editor retained presentation returns later, it must come back as a reviewed
   lane instead of a dormant branch inside the generic presentable contract.
+- presentable ownership checkpoint: terminal presentable update lifecycle now
+  terminates in `renderer_presentable_host.zig`, so the terminal widget no
+  longer sequences backend `begin/end` primitives directly.
+- remaining presentable blocker is now sharper: OpenGL still owns a real
+  retained update target, while Metal still owns a terminal snapshot plus
+  composition replay queue. The API is cleaner, but the lifecycle model is
+  still materially uneven.
 - ownership checkpoint: the seam has graduated out of `widgets/` into
   `renderer_chrome_band_host.zig`. That is the right host-level home for it,
   even though it is still only a local composition seam and not a backend phase.
