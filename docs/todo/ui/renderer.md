@@ -503,6 +503,10 @@ Current evidence:
   and backend frame paths.
 - backend dispatch table assembly now lives in `backend_dispatch.zig` instead
   of `renderer.zig` carrying the full GL/Metal switchboard inline.
+- that switchboard is now grouped into `runtime`, `frame`, `presentable`, and
+  `draw` subcontracts instead of one flat `backend_ops` blob, which makes the
+  remaining ownership seams more explicit and reduces the renderer-root
+  “backend god object” shape.
 - backend frame begin/submit and screenshot entrypoints now terminate in
   `gl_backend.zig` / `metal_backend.zig` directly; the separate
   `opengl_frame_runtime.zig` / `metal_frame_runtime.zig` wrappers are gone.

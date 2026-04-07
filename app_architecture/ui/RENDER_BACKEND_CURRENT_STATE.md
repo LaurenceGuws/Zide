@@ -236,6 +236,12 @@ GL/Metal backend ops table and switchboard now live in
 routing block inline. This makes the renderer root less obviously the dispatch
 center, even though backend lifecycle ownership is still not closed.
 
+That has improved slightly again on contract shape too: the backend switchboard
+now reads as grouped `runtime`, `frame`, `presentable`, and `draw`
+subcontracts instead of one flat `backend_ops` blob. This is still the same
+dispatch center, but it makes the remaining contradictions more honest and
+reduces the renderer-root “single backend god object” surface.
+
 That has improved slightly again on frame lifecycle termination too:
 backend frame begin/submit and screenshot entrypoints now live directly on
 `gl_backend.zig` / `metal_backend.zig`, and the old

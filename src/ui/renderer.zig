@@ -663,7 +663,7 @@ pub const Renderer = struct {
 
         lifecycle_runtime.beginRendererShutdown(Renderer, self);
         window_chrome_runtime.deinit(self.windowChromeDomain());
-        self.backend_ops.deinitRuntime(self);
+        self.backend_ops.runtime.deinitRuntime(self);
         bootstrap_runtime.deinitRendererWindowResources(&self.render_surface_attachment, self.window);
         bootstrap_runtime.deinitSdlRuntime();
 
@@ -779,7 +779,7 @@ pub const Renderer = struct {
     }
 
     fn applyFontScale(self: *Renderer) !void {
-        self.backend_ops.clearDiagnosticFont(self);
+        self.backend_ops.runtime.clearDiagnosticFont(self);
         try font_runtime.applyFontScale(self);
     }
 
@@ -797,7 +797,7 @@ pub const Renderer = struct {
             .{ .render_scale_change = true }
         else
             .{};
-        self.backend_ops.mergePendingSceneTargetInvalidation(self, scene_target_invalidation);
+        self.backend_ops.runtime.mergePendingSceneTargetInvalidation(self, scene_target_invalidation);
         return .{
             .changes = .{},
             .geometry = self.windowGeometryDiagnostics(),
@@ -934,9 +934,9 @@ pub const Renderer = struct {
 
     pub fn refreshWindowState(self: *Renderer, reason: []const u8, changes: WindowChangeMask) !WindowRefreshResult {
         const metrics = self.collectDisplayMetricsForWindowChanges(changes);
-        const scene_target_invalidation = self.backend_ops.sceneTargetInvalidationForRefresh(self, changes, metrics);
+        const scene_target_invalidation = self.backend_ops.runtime.sceneTargetInvalidationForRefresh(self, changes, metrics);
         self.applyDisplayMetricsSnapshot(metrics);
-        self.backend_ops.mergePendingSceneTargetInvalidation(self, scene_target_invalidation);
+        self.backend_ops.runtime.mergePendingSceneTargetInvalidation(self, scene_target_invalidation);
         self.logWindowMetricsSnapshot(metrics, reason);
         const ui_scale_changed = try self.refreshScaleStateForWindowChanges(changes, metrics);
         return .{
@@ -960,7 +960,7 @@ pub const Renderer = struct {
     }
 
     fn enqueueSurfaceDraw(self: *Renderer, draw: surface_draw.SurfaceDraw) bool {
-        return self.backend_ops.enqueueSurfaceDraw(self, draw);
+        return self.backend_ops.draw.enqueueSurfaceDraw(self, draw);
     }
 
     fn enqueueSolidSurfaceFromLogicalRect(self: *Renderer, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) bool {
@@ -990,12 +990,12 @@ pub const Renderer = struct {
 
     pub fn beginFrame(self: *Renderer) void {
         renderer_frame_host.beginFrameHost(self);
-        self.backend_ops.beginFrame(self);
-        self.backend_ops.applyClipRect(self, null);
+        self.backend_ops.frame.beginFrame(self);
+        self.backend_ops.draw.applyClipRect(self, null);
     }
 
     pub fn submitFrame(self: *Renderer) FrameSubmission {
-        return self.backend_ops.submitFrame(self);
+        return self.backend_ops.frame.submitFrame(self);
     }
 
     pub fn armPresentCapture(self: *Renderer, path: []const u8) void {
@@ -1009,11 +1009,11 @@ pub const Renderer = struct {
     }
 
     pub fn dumpWindowScreenshotPpm(self: *Renderer, path: []const u8) !void {
-        return self.backend_ops.dumpWindowScreenshotPpm(self, path);
+        return self.backend_ops.frame.dumpWindowScreenshotPpm(self, path);
     }
 
     pub fn dumpWindowScreenshotPpmSized(self: *Renderer, path: []const u8, out_width: i32, out_height: i32) !void {
-        return self.backend_ops.dumpWindowScreenshotPpmSized(self, path, out_width, out_height);
+        return self.backend_ops.frame.dumpWindowScreenshotPpmSized(self, path, out_width, out_height);
     }
 
     pub fn ensurePresentable(self: *Renderer, surface: PresentableSurface, width: i32, height: i32) bool {
@@ -1045,7 +1045,7 @@ pub const Renderer = struct {
     }
 
     pub fn clearToThemeBackground(self: *Renderer) void {
-        self.backend_ops.clearThemeBackground(self);
+        self.backend_ops.draw.clearThemeBackground(self);
     }
 
     pub fn terminalPresentationMode(self: *const Renderer) TerminalPresentationMode {
@@ -1076,7 +1076,7 @@ pub const Renderer = struct {
     }
 
     pub fn capabilities(self: *const Renderer) RendererCapabilities {
-        return self.backend_ops.capabilities(self);
+        return self.backend_ops.runtime.capabilities(self);
     }
 
     pub fn setTextInputRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32) void {
@@ -1169,7 +1169,7 @@ pub const Renderer = struct {
         present_trace_runtime.noteCompositionClip(self);
         const requested = logicalClipFromInts(x, y, w, h) orelse {
             self.clip_depth = 0;
-            self.backend_ops.applyClipRect(self, null);
+            self.backend_ops.draw.applyClipRect(self, null);
             return;
         };
         const next = if (self.currentClipRect()) |current|
@@ -1187,12 +1187,12 @@ pub const Renderer = struct {
         } else {
             self.clip_stack[self.clip_stack.len - 1] = next;
         }
-        self.backend_ops.applyClipRect(self, next);
+        self.backend_ops.draw.applyClipRect(self, next);
     }
 
     pub fn endClip(self: *Renderer) void {
         if (self.clip_depth > 0) self.clip_depth -= 1;
-        self.backend_ops.applyClipRect(self, self.currentClipRect());
+        self.backend_ops.draw.applyClipRect(self, self.currentClipRect());
     }
 
     pub fn drawTerminalCellGraphemeBatched(
@@ -1478,7 +1478,7 @@ pub const Renderer = struct {
     }
 
     pub fn addTerminalRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
-        self.backend_ops.addTerminalRect(self, x, y, w, h, color.toRgba());
+        self.backend_ops.draw.addTerminalRect(self, x, y, w, h, color.toRgba());
     }
 
     pub fn terminalCellGeometry(self: *Renderer) TerminalCellGeometry {
@@ -1526,11 +1526,11 @@ pub const Renderer = struct {
     }
 
     pub fn addTerminalGlyphRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
-        self.backend_ops.addTerminalGlyphRect(self, x, y, w, h, color.toRgba());
+        self.backend_ops.draw.addTerminalGlyphRect(self, x, y, w, h, color.toRgba());
     }
 
     pub fn addTerminalGlyphQuad(self: *Renderer, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
-        self.backend_ops.addTerminalGlyphQuad(self, texture, src, dest, color, kind);
+        self.backend_ops.draw.addTerminalGlyphQuad(self, texture, src, dest, color, kind);
     }
 
     pub fn terminalShapeBuffer(self: *Renderer) *hb.hb_buffer_t {
@@ -1558,19 +1558,19 @@ pub const Renderer = struct {
     }
 
     pub fn createPersistentTextureFromRgba(self: *Renderer, width: i32, height: i32, data: []const u8) ?types.Texture {
-        return self.backend_ops.createPersistentTextureFromRgba(self, width, height, data);
+        return self.backend_ops.draw.createPersistentTextureFromRgba(self, width, height, data);
     }
 
     pub fn createPersistentTextureFromRgb(self: *Renderer, width: i32, height: i32, data: []const u8) ?types.Texture {
-        return self.backend_ops.createPersistentTextureFromRgb(self, width, height, data);
+        return self.backend_ops.draw.createPersistentTextureFromRgb(self, width, height, data);
     }
 
     pub fn destroyPersistentTexture(self: *Renderer, texture: *types.Texture) void {
-        self.backend_ops.destroyPersistentTexture(self, texture);
+        self.backend_ops.draw.destroyPersistentTexture(self, texture);
     }
 
     pub fn drawRawImage(self: *Renderer, format: RawImageFormat, width: i32, height: i32, data: []const u8, dest: types.Rect, tint: types.Rgba) bool {
-        return self.backend_ops.drawRawImage(self, format, width, height, data, dest, tint);
+        return self.backend_ops.draw.drawRawImage(self, format, width, height, data, dest, tint);
     }
 
     pub fn drawTexture(self: *Renderer, texture: types.Texture, src: types.Rect, dest: types.Rect, color: Color) void {

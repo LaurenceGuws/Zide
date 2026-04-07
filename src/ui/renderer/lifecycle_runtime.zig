@@ -27,8 +27,8 @@ pub fn finalizeRendererInit(comptime RendererType: type, renderer: *RendererType
     renderer.appkit_delegate_installation = app_hooks.appkit_delegate_installation;
     renderer.app_event_watch_installed = app_hooks.app_event_watch_installed;
 
-    renderer.backend_ops.configureRuntimePolicy(renderer);
-    try renderer.backend_ops.initRuntime(renderer);
+    renderer.backend_ops.runtime.configureRuntimePolicy(renderer);
+    try renderer.backend_ops.runtime.initRuntime(renderer);
 
     renderer_global_runtime.registerRenderer(RendererType, renderer);
 }
