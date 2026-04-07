@@ -534,6 +534,10 @@ wrapped by `beginBandCommandGroup` / `endBandCommandGroup` in renderer host
 space. That boundary is a no-op today, but it gives this seam one explicit
 group handle for future phase integration.
 
+Band-local text op storage has also moved from a fixed-capacity array to
+dynamic list storage. That removes the previous overflow fallback that escaped
+the local queue path by drawing immediately.
+
 That seam is now clean enough that further expansion would be fake progress
 unless it graduates into a real recorded band-composition phase. Until that
 happens, it should be treated as a renderer-host composition helper for the

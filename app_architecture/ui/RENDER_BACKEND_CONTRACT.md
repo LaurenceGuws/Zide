@@ -524,6 +524,10 @@ a renderer-host command-group boundary (`beginBandCommandGroup` /
 the seam one explicit host-level consumption unit for later backend-neutral
 phase wiring.
 
+**Band queue storage checkpoint (2026-04-07):** band text op storage is now
+dynamic rather than fixed-capacity, so the seam no longer carries a hidden
+"queue full => immediate draw" escape hatch.
+
 **Current blocker / stop rule (2026-04-07):** do not keep widening this seam as
 if it were already a backend-neutral phase. Today it is still a renderer-host
 composition helper over immediate text/surface work. The next valid step is

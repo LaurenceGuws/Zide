@@ -855,6 +855,9 @@ Current evidence:
 - chrome-band checkpoint: `Band.flush()` now runs through explicit renderer-host
   group boundaries (`beginBandCommandGroup` / `endBandCommandGroup`) as a
   no-op consumption unit for future shared phase wiring.
+- chrome-band checkpoint: band text op storage moved from a fixed-size local
+  array to dynamic list storage, removing the "overflow falls back to immediate
+  draw" branch from this seam.
 - backend-runtime checkpoint: the remaining runtime-storage blocker is now more
   specifically OpenGL-shaped than Metal-shaped. Metal live frame/queue state is
   under backend context.

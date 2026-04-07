@@ -1,4 +1,6 @@
+const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
+const app_logger = @import("../../app_logger.zig");
 const renderer_band_phase_host = @import("renderer_band_phase_host.zig");
 const renderer_surface_host = @import("renderer_surface_host.zig");
 const renderer_text_host = @import("renderer_text_host.zig");
@@ -7,7 +9,6 @@ const Shell = app_shell.Shell;
 const Color = app_shell.Color;
 
 pub const Band = struct {
-    const max_text_ops = 128;
     const TextKind = enum {
         text,
         icon,
@@ -23,8 +24,7 @@ pub const Band = struct {
 
     shell: *Shell,
     bg: Color,
-    text_ops: [max_text_ops]TextOp = undefined,
-    text_ops_len: usize = 0,
+    text_ops: std.ArrayListUnmanaged(TextOp) = .{},
 
     pub fn init(shell: *Shell, bg: Color) Band {
         return .{
@@ -42,22 +42,18 @@ pub const Band = struct {
     }
 
     fn queueTextOp(self: *Band, kind: TextKind, text: []const u8, x: f32, y: f32, color: Color, bg: Color) void {
-        if (self.text_ops_len >= max_text_ops) {
-            switch (kind) {
-                .text => renderer_text_host.drawTextOnBg(self.shell.renderer, text, x, y, color, bg),
-                .icon => renderer_text_host.drawIconTextOnBg(self.shell.renderer, text, x, y, color, bg),
-            }
-            return;
-        }
-        self.text_ops[self.text_ops_len] = .{
+        self.text_ops.append(self.shell.renderer.allocator, .{
             .kind = kind,
             .text = text,
             .x = x,
             .y = y,
             .color = color,
             .bg = bg,
+        }) catch |err| {
+            const log = app_logger.logger("renderer.chrome.band");
+            log.logf(.warning, "band text op append failed err={s}", .{@errorName(err)});
+            return;
         };
-        self.text_ops_len += 1;
     }
 
     pub fn drawText(self: *Band, text: []const u8, x: f32, y: f32, color: Color) void {
@@ -77,14 +73,17 @@ pub const Band = struct {
     }
 
     pub fn flush(self: *Band) void {
+        defer {
+            self.text_ops.deinit(self.shell.renderer.allocator);
+            self.text_ops = .{};
+        }
         renderer_band_phase_host.beginBandCommandGroup(self.shell.renderer);
         defer renderer_band_phase_host.endBandCommandGroup(self.shell.renderer);
-        for (self.text_ops[0..self.text_ops_len]) |op| {
+        for (self.text_ops.items) |op| {
             switch (op.kind) {
                 .text => renderer_text_host.drawTextOnBg(self.shell.renderer, op.text, op.x, op.y, op.color, op.bg),
                 .icon => renderer_text_host.drawIconTextOnBg(self.shell.renderer, op.text, op.x, op.y, op.color, op.bg),
             }
         }
-        self.text_ops_len = 0;
     }
 };
