@@ -212,6 +212,7 @@ pub const BackendContext = struct {
     terminal_snapshot_logical_height: i32,
     /// 1×1 white texture for tint-only solid fills (cursor, rects).
     solid_white_brush: ?GpuImageRef,
+    queued_surface_draws: std.ArrayListUnmanaged(SurfaceDraw) = .{},
     queued_presentable_draws: std.ArrayListUnmanaged(SurfaceDraw) = .{},
     drawable_width: i32,
     drawable_height: i32,
@@ -1389,7 +1390,8 @@ pub fn terminalFontAtlasUploadHooksForRenderer(renderer: anytype) ?terminal_font
 }
 
 fn queuedSurfaceDrawCount(renderer: anytype) usize {
-    return renderer.backend.runtime.metal.queued_surface_draws.items.len;
+    const context = backendContextConst(renderer) orelse return 0;
+    return context.queued_surface_draws.items.len;
 }
 
 fn currentFrame(renderer: anytype) ?*Frame {
@@ -1406,7 +1408,8 @@ fn storeCurrentFrame(renderer: anytype, frame: Frame) void {
 }
 
 pub fn recordSurfaceDrawForSurfacePhase(renderer: anytype, draw: SurfaceDraw) bool {
-    renderer.backend.runtime.metal.queued_surface_draws.append(renderer.allocator, draw) catch {
+    const context = backendContext(renderer) orelse return false;
+    context.queued_surface_draws.append(renderer.allocator, draw) catch {
         var queued_draw = draw;
         switch (queued_draw) {
             .atlas => {},
@@ -1549,11 +1552,12 @@ fn appendSampleTextRequest(
     font: *terminal_font.TerminalFont,
     request: metal_text_sample_runtime.SampleTextRequest,
 ) bool {
+    const context = backendContext(renderer) orelse return false;
     return metal_text_sample_runtime.appendUtf8Run(
         renderer,
         font,
         request,
-        &renderer.backend.runtime.metal.queued_surface_draws,
+        &context.queued_surface_draws,
         renderer.allocator,
     );
 }
@@ -1573,11 +1577,12 @@ fn appendTerminalCellRun(
     font: *terminal_font.TerminalFont,
     request: metal_text_sample_runtime.TerminalCellRunRequest,
 ) bool {
+    const context = backendContext(renderer) orelse return false;
     return metal_text_sample_runtime.appendTerminalUtf8Cells(
         renderer,
         font,
         request,
-        &renderer.backend.runtime.metal.queued_surface_draws,
+        &context.queued_surface_draws,
         renderer.allocator,
     );
 }
@@ -1712,7 +1717,8 @@ pub fn runSmokeFrame(renderer: anytype) bool {
 }
 
 fn replayRecordedSurfaceDrawSurfacePhase(renderer: anytype, context: *BackendContext, frame: *Frame) void {
-    for (renderer.backend.runtime.metal.queued_surface_draws.items) |queued_draw| {
+    _ = renderer;
+    for (context.queued_surface_draws.items) |queued_draw| {
         switch (queued_draw) {
             .atlas => |sample| _ = drawAtlasSample(context, frame, sample),
             .solid => |solid| _ = drawSolidColor(context, frame, solid),
@@ -1763,9 +1769,9 @@ pub fn deinitRuntime(renderer: anytype) void {
     clearDiagnosticFont(renderer);
     clearQueuedSurfaceDraws(renderer);
     clearQueuedPresentableDraws(renderer);
-    renderer.backend.runtime.metal.queued_surface_draws.deinit(renderer.allocator);
     if (renderer.backend.runtime.metal.frame) |*frame| abandonFrame(frame);
     if (renderer.backend.runtime.metal.backend_context) |*context| {
+        context.queued_surface_draws.deinit(renderer.allocator);
         context.queued_presentable_draws.deinit(renderer.allocator);
         deinitBackendContext(context);
     }
@@ -1804,14 +1810,15 @@ pub fn ensureDiagnosticFont(renderer: anytype) !*terminal_font.TerminalFont {
 }
 
 fn clearQueuedSurfaceDraws(renderer: anytype) void {
-    for (renderer.backend.runtime.metal.queued_surface_draws.items) |*queued_draw| {
+    const context = backendContext(renderer) orelse return;
+    for (context.queued_surface_draws.items) |*queued_draw| {
         switch (queued_draw.*) {
             .atlas => {},
             .solid => {},
             .raw_image => |*draw| releaseGpuImageRef(&draw.texture),
         }
     }
-    renderer.backend.runtime.metal.queued_surface_draws.clearRetainingCapacity();
+    context.queued_surface_draws.clearRetainingCapacity();
 }
 
 fn clearQueuedPresentableDraws(renderer: anytype) void {

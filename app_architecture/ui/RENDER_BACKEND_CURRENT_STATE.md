@@ -56,10 +56,10 @@ In current-state terms, the remaining blockers are:
 
 - the runtime bundle is cleaner than before
 - it is still a renderer-hosted widening pattern
-- this has narrowed slightly again on the Metal presentable lane:
-  the terminal-presentable composition queue now lives under backend context
-  instead of as a separate renderer-hosted runtime list beside the backend
-  context/frame slots
+- this has narrowed slightly again on the Metal lifecycle lanes:
+  the generic surface queue and the terminal-presentable composition queue now
+  live under backend context instead of as separate renderer-hosted runtime
+  lists beside the backend context/frame slots
 
 4. Remaining ordering pressure is now concentrated, not solved
 
