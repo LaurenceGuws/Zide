@@ -20,12 +20,12 @@ So the honest answer to "would Vulkan be easy to add?" is:
 - not yet easy
 
 **Vulkan fit audit (2026-04-06):** See `docs/research/VULKAN_FIT_AUDIT_2026-04-06.md`. Verdict:
-a Vulkan backend is **not** yet “routine” against the **current** code—dual draw
-submission semantics (GL immediate vs Metal replay), uneven presentable maturity,
-and renderer-hosted backend bundles remain the dominant surgery risks. Android/mobile
-pressure fails the same honesty test until those gaps close. This does not lower
-the target contract bar; it names the remaining contradictions for backend-closure
-continuation.
+a Vulkan backend is **not** yet “routine” against the **current** code. The
+audit’s “GL immediate vs Metal deferred `SurfaceDraw`” finding is **superseded**:
+OpenGL now defers the full surface queue too. Remaining dominant risks include
+uneven presentable maturity, renderer-hosted backend bundles, and atlas/raw-image
+ordering around terminal/chrome. Android/mobile pressure fails the same honesty
+test until those gaps close. This does not lower the target contract bar.
 
 ## Adoption Answer
 
@@ -38,12 +38,14 @@ rendering adoption?" is:
 
 In current-state terms, the remaining blockers are:
 
-1. `SurfaceDraw` timing is still backend-dependent
+1. `SurfaceDraw` solids are no longer a GL-vs-Metal timing fork
 
-- OpenGL still consumes the surface phase immediately
-- Metal still replays it later
-- shared code now has better caller boundaries, but not one fully honest
-  product-level submission model yet
+- OpenGL now **defers** all `SurfaceDraw` variants (including `.solid`) in a
+  per-frame queue and replays at explicit flush boundaries plus `submitFrame`
+- Metal still records into its submit-time surface queue
+- the remaining gap is **flush discipline** for call sites that mix recorded
+  surface work with immediate texture or terminal-batch draws, and **blit**
+  ordering around terminal/chrome—not “solids immediate on GL”
 
 2. Presentable behavior is cleaner but still uneven
 
@@ -382,9 +384,8 @@ contract path.
 That has improved slightly again on the surface-submission side too: the
 `surface` contract now terminates in dedicated backend modules
 (`gl_surface_runtime.zig` / `metal_surface_runtime.zig`) instead of routing
-back into the larger backend files. This does not erase the remaining
-immediate-vs-queued semantic contradiction, but it makes that ownership seam
-more explicit and therefore easier to cut honestly.
+back into the larger backend files. That seam is now the normal place to adjust
+OpenGL/Metal surface queue behavior without widening `renderer.zig`.
 
 That has improved slightly again on enforcement too: the shared `SurfaceDraw`
 payload is no longer exported from `renderer.zig`, and
@@ -395,9 +396,8 @@ were a stable public renderer API.
 
 The remaining truth is now plain:
 
-- OpenGL surface submission is now split:
-  - `.solid` still executes in the surface phase now
-  - `.atlas` / `.raw_image` now queue and replay in submit-time surface phase
+- OpenGL surface submission queues **all** `SurfaceDraw` variants and replays
+  them at `flushQueuedSurfaceDrawsNow` boundaries plus `submitFrame`
 - Metal surface submission still means "record this draw for the submit-time
   surface phase"
 - Metal terminal presentable composition now also has a second, narrower queue:
@@ -421,28 +421,24 @@ one narrower composition queue after snapshot capture.
 So the backend-fit blocker is now concentrated:
 
 - the same narrow shared payload reaches both backends
-- but backend choice still changes when the surface phase runs, especially for
-  remaining ordering-sensitive `.solid` paths
+- surface-phase **submission** is now aligned: both backends treat
+  `recordSurfaceDraw` as deferred work; OpenGL executes it in FIFO order at
+  `flushQueuedSurfaceDrawsNow` (wired through `renderer_text_host` and a few
+  explicit widget boundaries) and again at `submitFrame`
 
-There is also now one concrete reason the old "just defer GL to submit" idea is
-still unsafe: many remaining active `SurfaceDraw.solid` calls are UI
-background layers immediately followed by text or outline rendering at the same
-call site. Status bars, top bars, editor fills, and text-runtime background
-clears all still depend on that local ordering. If OpenGL simply delayed those
-solids to a submit-time surface phase while text kept drawing immediately, the
-deferred fills would overpaint the later text. So the blocker is no longer
-vague timing discomfort; it is a specific background-before-text dependency in
-the remaining caller set.
+The old “GL solids immediate, Metal deferred” contradiction at the surface
+contract is closed. What remains is **composition hygiene**: any path that
+records surface fills/blits and then draws through `draw_ops` or `text_draw`
+without the text host must insert `flushQueuedSurfaceDrawsBeforeDependentSurfaceWork`
+on OpenGL (editor decorations, font sample preview text, etc.). That is a
+caller-bypass problem, not a backend fork on `.solid`.
 
-The code now reflects that distinction a little more honestly too: OpenGL and
-Metal surface-phase helpers now distinguish fills from blits internally. That
-does not change timing yet, but it creates a real seam for a narrower future
-experiment where atlas/raw-image/presentable blits could move without dragging
-ordering-sensitive solid fills with them.
+OpenGL and Metal surface-phase helpers still distinguish fills from blits
+internally for atlas/raw-image lifetimes.
 
-Observability is now slightly stronger too: present traces now report
-`gl_surface_immediate_solid` and `gl_surface_queued_replay`, so this mixed
-phase can be measured per frame instead of inferred by behavior.
+Observability: present traces report `gl_surface_solid_enqueue` (solids accepted
+into the GL deferred queue) and `gl_surface_queued_replay` (draws executed on
+replay).
 
 That split also exposed the next hard truth more clearly: generic blits are
 still not a free submit-time subset. Kitty images can interleave with terminal
@@ -453,22 +449,19 @@ retained presentable/snapshot draw, which already belongs to the presentable
 contract and is too narrow to close the shared `SurfaceDraw` timing gap on its
 own.
 
-The remaining solid-ordering problem is also more structured than it first
-looked. The active `SurfaceDraw.solid` callers now mostly fall into a few
-families:
+The remaining **composition** problem is still structured into a few families
+where one visual band mixes surface-recorded fills with immediate texture or
+outline work:
 
 - shell/UI chrome bands (`status_bar`, `tab_bar`, `shared_top_bar`,
-  `side_nav`, caption/notice/confirm surfaces) where fills are immediately
-  followed by text, icons, or outlines
-- editor row/gutter/current-line banding where fills are followed by text and
-  overlay decoration in the same visual band
-- sample/diagnostic sections where the fill exists only as the background for
-  nearby text preview content
+  `side_nav`, caption/notice/confirm surfaces)
+- editor row/gutter/current-line banding (draw-list ordering + explicit GL
+  flushes at row boundaries)
+- sample/diagnostic sections (section fills + `text_draw` preview paths that
+  bypass the text host)
 
-So the next semantic cut should probably attack one of those families
-explicitly, or define a stronger phase that can own both the fill and its
-dependent follow-up work. Treating all remaining solids as one flat queue would
-hide the real constraint again.
+The next semantic cuts should strengthen those band phases and remove bypass-path
+flush debt, not revisit per-backend `.solid` timing.
 
 The shell/UI chrome family is the clearest next candidate, but it is also the
 first place where the stronger-phase requirement is undeniable: ordinary UI

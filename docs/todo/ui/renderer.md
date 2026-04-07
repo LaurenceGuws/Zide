@@ -510,23 +510,18 @@ Current evidence:
 - the `surface` contract now terminates in dedicated backend modules too:
   - `src/ui/renderer/gl_surface_runtime.zig`
   - `src/ui/renderer/metal_surface_runtime.zig`
-- that does not solve the remaining GL-immediate vs Metal-queued semantic
-  split by itself, but it makes the ownership seam honest instead of burying
-  surface submission inside the large backend files.
-- the main remaining blocker is now explicit:
-  - OpenGL `surface` submission is now split: `.solid` still interprets now for
-    ordering safety, while `.atlas` / `.raw_image` are queued and replayed
-  - Metal `surface` submission still means "append now, replay at submit"
-- that is not a naming issue anymore; it is the loudest remaining contract
-  contradiction in Milestone B.
-- no further structural cleanup should pretend this is solved until backend
-  choice stops changing the product-level meaning of `surface` submission.
+- dedicated `gl_surface_runtime` / `metal_surface_runtime` modules keep surface
+  submission out of the giant backend files; **OpenGL `SurfaceDraw` is now
+  fully deferred** like Metal at the product level (flush + submit replay).
+- remaining surface work is **composition**: call sites that bypass
+  `renderer_text_host` after recording surface draws must flush on OpenGL, and
+  atlas/raw-image ordering around terminal/chrome still needs phase discipline.
 - `clip` dispatch now terminates in dedicated backend runtimes too:
   - `src/ui/renderer/gl_clip_runtime.zig`
   - `src/ui/renderer/metal_clip_runtime.zig`
 - that removes one more tiny backend-specific inline dispatch seam from the
-  switchboard, leaving the surface semantic split as the louder remaining
-  contradiction.
+  switchboard. (The old GL-immediate `.solid` fork is closed; presentable and blit
+  ordering remain the louder gaps.)
 - presentable trace/editor-surface bookkeeping now also lives in
   `renderer_presentable_host.zig` instead of being split across GL and Metal
   presentable lifecycle methods.
@@ -717,37 +712,43 @@ Current evidence:
   generic UI/editor/shell fills, presentable/snapshot blits, and raw image /
   atlas samples that already fit the shared payload model. The live blocker is
   no longer caller sprawl; it is the backend surface-phase split itself.
-  transitional truth now:
-  - GL `.solid` is immediate
-  - GL `.atlas` / `.raw_image` are submit-time replay
+  surface-phase truth now:
+  - OpenGL queues **all** `SurfaceDraw` variants (including `.solid`) and replays
+    at `flushQueuedSurfaceDrawsNow` (wired through `renderer_text_host` and
+    explicit widget boundaries) plus `submitFrame`
   - Metal remains submit-time replay for the surface queue
 - terminal pane / viewport fills have now been peeled off that generic lane.
   They route through the presentable seam as terminal presentable backdrop
   work, and Metal replays them in a dedicated presentable-composition queue
   after terminal snapshot capture.
-- the exact blocker is now named: many remaining `SurfaceDraw.solid` calls are
-  local background layers immediately followed by text/outline work at the same
-  call site. A broad "defer all GL surface draws to submit" cut would still
-  paint those backgrounds over later immediate text.
+- the remaining discipline is **flush boundaries**: call sites that record
+  surface work then draw through `draw_ops` / `text_draw` without the text host
+  must call `flushQueuedSurfaceDrawsBeforeDependentSurfaceWork` on OpenGL (or
+  route through `renderer_text_host`).
 - backend code now also distinguishes surface-phase fills from surface-phase
   blits internally. That is not a semantic fix yet, but it is the first code
   seam that matches the real blocker and gives us a narrower target than
   "delay everything."
-- observability checkpoint: present trace now emits
-  `gl_surface_immediate_solid` and `gl_surface_queued_replay` per frame so we
-  can measure contraction progress directly.
+- observability: present trace emits `gl_surface_solid_enqueue` and
+  `gl_surface_queued_replay` per frame on OpenGL.
+- **Next ticket-shaped follow-ups:** (1) repo-wide audit for `text_draw.drawText` /
+  `draw_ops.drawTextureRect` after `renderer_surface_host.drawRect` without a
+  text-host or `flushQueuedSurfaceDrawsBeforeDependentSurfaceWork` on GL;
+  (2) terminal/chrome `SurfaceDraw` blit interleaving; (3) optional rename of
+  `editor_surface_solid_family` trace field to drive real per-family enqueue
+  metrics if needed.
 - that split did **not** produce a broadly safe delayed-blit lane yet:
   kitty/raw-image placements still interleave with terminal text, and shell
   icons still draw before adjacent tab labels. The only relatively isolated
   blit family is retained presentable draw, which already belongs under the
   presentable contract and is too narrow to close `SurfaceDraw` timing on its
   own.
-- the remaining solid-ordering dependency is now mapped into concrete families,
-  not hand-waved as one giant queue problem:
-  shell chrome bands, editor banding, and sample/diagnostic sections. Terminal
-  pane/presentable fills are no longer in the generic surface lane. The next
-  semantic cut should target one family or a stronger shared phase for that
-  family, not "all remaining solids."
+- remaining work is **band composition + bypass audit**, not GL solid timing:
+  shell chrome bands, editor banding, and sample/diagnostic sections still mix
+  deferred surface fills with immediate texture/outline paths. Terminal
+  pane/presentable fills are not in the generic surface lane. Next cuts: fewer
+  `text_draw`/`draw_ops` bypasses, stronger chrome/sample phases, then blit
+  ordering (kitty/icons).
 - shell chrome is the most obvious next family, but it is blocked from an easy
   cut because its dependent text/icon path is still immediate in
   `text_runtime.zig`. A fill-only move would recreate the same separation bug

@@ -357,8 +357,10 @@ pub fn drawSolidRect(renderer: anytype, x: f32, y: f32, w: f32, h: f32, color: t
 }
 
 /// Consumes one shared recorded `SurfaceDraw` in the OpenGL surface phase.
-/// OpenGL replays queued entries during submit-time surface-phase execution,
-/// matching the shared "record now, consume at submit" contract shape.
+/// OpenGL enqueues every `SurfaceDraw` (including `.solid`) and replays the
+/// queue at explicit flush boundaries (`flushQueuedSurfaceDrawsNow`, including
+/// text entrypoints) and again at `submitFrame`, matching Metal's deferred
+/// surface phase at the product level.
 /// `.solid` and `.atlas` are supported when the renderer is in a compatible
 /// text mode (atlas uses `terminal_font` coverage/color textures). `.raw_image`
 /// uses a shared opaque image handle whose `handle` is interpreted here as a GL
@@ -372,26 +374,14 @@ pub fn consumeRecordedSurfaceDrawInSurfacePhase(renderer: anytype, draw: surface
 }
 
 pub fn recordSurfaceDrawForSurfacePhase(renderer: anytype, draw: surface_draw.SurfaceDraw) bool {
-    return switch (draw) {
-        .solid => immediate: {
-            if (shouldQueueSolidForSubmit(renderer)) {
-                break :immediate enqueueSurfaceDrawForSurfacePhase(renderer, draw, false);
-            }
-            present_trace_runtime.noteGlSurfaceImmediateSolid(renderer);
-            break :immediate consumeRecordedSurfaceDrawInSurfacePhase(renderer, draw);
-        },
-        .atlas, .raw_image => enqueueSurfaceDrawForSurfacePhase(renderer, draw, false),
-    };
-}
-
-fn shouldQueueSolidForSubmit(renderer: anytype) bool {
-    return switch (renderer.present.trace_current.editor_immediate_solid_family) {
-        .chrome_band, .row_base => true,
-        else => false,
-    };
+    return enqueueSurfaceDrawForSurfacePhase(renderer, draw, false);
 }
 
 fn enqueueSurfaceDrawForSurfacePhase(renderer: anytype, draw: surface_draw.SurfaceDraw, owns_raw_image_texture: bool) bool {
+    switch (draw) {
+        .solid => present_trace_runtime.noteGlSurfaceSolidEnqueue(renderer),
+        else => {},
+    }
     renderer.backend.runtime.opengl.queued_surface_draws.append(renderer.allocator, .{
         .draw = draw,
         .owns_raw_image_texture = owns_raw_image_texture,
@@ -406,7 +396,10 @@ fn replayRecordedSurfaceDrawSurfacePhase(renderer: anytype) void {
     }
 }
 
-pub fn flushQueuedSurfaceDrawsForImmediateText(renderer: anytype) void {
+/// Replay and clear the OpenGL `SurfaceDraw` queue now. Call before any draw
+/// path that bypasses `recordSurfaceDraw` (texture/glyph batches, etc.) when
+/// ordering must match "surface work first."
+pub fn flushQueuedSurfaceDrawsNow(renderer: anytype) void {
     if (renderer.backend.runtime.opengl.queued_surface_draws.items.len == 0) return;
     replayRecordedSurfaceDrawSurfacePhase(renderer);
     clearQueuedSurfaceDraws(renderer);

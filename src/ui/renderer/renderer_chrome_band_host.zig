@@ -24,14 +24,14 @@ pub const Band = struct {
     }
 
     pub fn fillRect(self: *Band, x: i32, y: i32, w: i32, h: i32, color: Color) void {
-        present_trace_runtime.setEditorImmediateSolidFamily(self.shell.renderer, .chrome_band);
-        defer present_trace_runtime.clearEditorImmediateSolidFamily(self.shell.renderer);
+        present_trace_runtime.setEditorSurfaceSolidFamily(self.shell.renderer, .chrome_band);
+        defer present_trace_runtime.clearEditorSurfaceSolidFamily(self.shell.renderer);
         renderer_surface_host.drawRect(self.shell.renderer, x, y, w, h, color);
     }
 
     pub fn drawRectOutline(self: *Band, x: i32, y: i32, w: i32, h: i32, color: Color) void {
-        present_trace_runtime.setEditorImmediateSolidFamily(self.shell.renderer, .chrome_band);
-        defer present_trace_runtime.clearEditorImmediateSolidFamily(self.shell.renderer);
+        present_trace_runtime.setEditorSurfaceSolidFamily(self.shell.renderer, .chrome_band);
+        defer present_trace_runtime.clearEditorSurfaceSolidFamily(self.shell.renderer);
         renderer_surface_host.drawRectOutline(self.shell.renderer, x, y, w, h, color);
     }
 

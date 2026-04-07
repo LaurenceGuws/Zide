@@ -67,7 +67,9 @@ blocked by contract debt rather than implementation effort.
 - shared code must not care whether a backend consumes recorded work
   immediately or later
 - backend timing may differ internally, but product semantics must not
-- today this is still the loudest blocker
+- **OpenGL `SurfaceDraw` is now deferred like Metal** (per-frame queue, flush +
+  submit replay); the remaining work is shrinking **bypass-path flush** debt and
+  blit ordering, not restoring a second solid-timing model on GL
 
 2. Presentable lifecycle is neutral enough for a third backend
 
@@ -200,13 +202,28 @@ This list must not embed Metal-native or GL-native draw structs in shared
 renderer state.
 
 **Submission shape today:** the shared union lives in `surface_draw.zig`
-(`SurfaceDraw`). The renderer now keeps `recordSurfaceDraw(...)` internal, but
-still routes shared solid draws through the grouped backend draw contract.
-Metal records into the submit-time surface phase; OpenGL consumes the same
-record immediately via `gl_backend.consumeRecordedSurfaceDrawInSurfacePhase`
-(raster-space
-`dest_rect` / atlas `dest_x`/`dest_y` converted back to logical coordinates to
-match how Metal enqueues those draws). Atlas samples on OpenGL require
+(`SurfaceDraw`). Product code records through `renderer_surface_host` and the
+grouped backend `recordSurfaceDraw(...)` seam.
+
+- **Metal** appends every `SurfaceDraw` variant to the submit-time surface
+  queue and consumes it while presenting.
+- **OpenGL** appends every variant (including `.solid`) to a per-frame deferred
+  queue, then **replays** it at explicit `gl_backend.flushQueuedSurfaceDrawsNow`
+  boundaries (notably all `renderer_text_host` / core editor text entrypoints)
+  and again at `submitFrame` (after scene-target composition, before swap).
+  Replay uses `gl_backend.consumeRecordedSurfaceDrawInSurfacePhase` (raster-space
+  `dest_rect` / atlas `dest_x`/`dest_y` converted back to logical coordinates to
+  match Metal’s enqueue semantics).
+
+Record order is preserved within each replay batch. Callers that record
+surface work and then draw through **non-surface** paths (direct
+`draw_ops.drawTextureRect`, `text_draw.drawText` without the text host, terminal
+glyph batches, etc.) must insert an explicit OpenGL flush
+(`renderer_surface_host.flushQueuedSurfaceDrawsBeforeDependentSurfaceWork`) or
+otherwise guarantee ordering; the text host and editor row-band helpers encode
+the common cases.
+
+Atlas samples on OpenGL require
 `text_rendering_mode == gl_texture_atlas` and use `terminal_font` coverage/color
 textures. Raw images now use one opaque shared `GpuImageRef` handle
 (`handle + width + height`) instead of a backend-tagged `.opengl` / `.metal`
@@ -225,13 +242,12 @@ through that same shared submission contract via `renderer_surface_host.zig`,
 while integer `addTerminalRect` remains on backend draw ops so OpenGL can keep
 batching terminal quads.
 
-This means the contract vocabulary is ahead of the implementation truth:
-
-- product/shared code can now talk about one `record one SurfaceDraw` contract
-- but backend choice still changes when that record is consumed
-
-That semantic split is still acceptable only as a current-state defect to be
-closed, not as a stable design target.
+At the **surface-phase** layer, OpenGL and Metal now share one product-level
+rule: `recordSurfaceDraw` is **deferred execution**, not “maybe immediate,
+maybe not.” Remaining work is tightening **who must flush** before adjacent
+non-surface draw work, and continuing to narrow atlas/raw-image ordering around
+terminal and chrome (see current-state notes), not re-litigating solid timing
+per backend.
 
 **Required ordering rule:** product/shared code may assume that
 `recordSurfaceDraw(...)` preserves order relative to other recorded surface
@@ -267,29 +283,23 @@ set. They now route through the presentable contract as terminal presentable
 backdrop work, which is the more honest ownership story for a fill that exists
 only to bracket presentable composition.
 
-So the remaining blocker is not broad caller sprawl. The remaining blocker is
-backend phase timing:
+So the remaining blocker is not “GL solids are special.” The remaining blockers
+are **local composition** and **flush discipline**:
 
-- OpenGL currently executes `.solid` immediately at record time, but replays
-  queued `.atlas` / `.raw_image` draws in submit-time surface phase
-- Metal replays the recorded surface phase later in submit
+- **Flush discipline:** any call site that mixes recorded `SurfaceDraw` work
+  with immediate texture or terminal-batch draws must either route dependent
+  text through `renderer_text_host` (which flushes on OpenGL) or call
+  `flushQueuedSurfaceDrawsBeforeDependentSurfaceWork` at the right boundary.
+  Editor row-band and font-sample code carry explicit cuts for the non-host
+  paths.
+- **Blit / atlas ordering:** `SurfaceDraw.raw_image` and atlas-style draws can
+  still interleave badly with terminal text and chrome icons; that is separate
+  from solid-fill timing.
 
-The next contract cut must attack that phase truth directly rather than reopen
-caller triage unless a new misuse appears.
-
-**Known ordering blocker (2026-04-07):** a broad "defer all GL surface records
-to submit" cut is still not safe, even after terminal cleanup, because many
-remaining active `SurfaceDraw.solid` callers are immediate background layers
-paired with text or outline work that still renders right after them at the
-same call site. Examples include status/top bars, editor fills, text-runtime
-background clears, and similar UI chrome. If OpenGL deferred those solids to a
-submit-time surface phase while text stayed immediate, the deferred fills would
-still overpaint later text. So the next safe semantic cut cannot be "delay all
-GL surface draws"; it must either:
-
-- move a narrower subset with no immediate text dependency
-- or define a stronger shared phase boundary that also captures the dependent
-  text/background ordering
+The next contract cuts should shrink bypass-path flush obligations (fewer
+one-off `text_draw`/`draw_ops` entrypoints) and strengthen band phases where
+fills and dependent text/icons are one unit—not re-open per-backend solid
+semantics.
 
 **Blit-subset reality (2026-04-07):** splitting fills from blits was useful,
 but it did not produce a generally safe "delay these later" subset yet.

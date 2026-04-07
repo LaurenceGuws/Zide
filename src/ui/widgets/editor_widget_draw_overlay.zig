@@ -80,14 +80,14 @@ pub fn drawLineCursor(r: anytype, x: f32, y: f32, h: f32, color: anytype) void {
     const cursor_h_i: i32 = @as(i32, @intFromFloat(h));
     const h_i: i32 = @max(1, cursor_h_i - edge_inset * 2);
     const y_i: i32 = @as(i32, @intFromFloat(y)) + @divFloor(@max(0, cursor_h_i - h_i), 2);
-    present_trace_runtime.setEditorImmediateSolidFamily(r, .overlay);
-    defer present_trace_runtime.clearEditorImmediateSolidFamily(r);
+    present_trace_runtime.setEditorSurfaceSolidFamily(r, .overlay);
+    defer present_trace_runtime.clearEditorSurfaceSolidFamily(r);
     renderer_surface_host.drawRect(r, x_i, y_i, stroke, h_i, color);
 }
 
 fn drawOverlayRect(r: anytype, x: i32, y: i32, w: i32, h: i32, color: anytype) void {
-    present_trace_runtime.setEditorImmediateSolidFamily(r, .overlay);
-    defer present_trace_runtime.clearEditorImmediateSolidFamily(r);
+    present_trace_runtime.setEditorSurfaceSolidFamily(r, .overlay);
+    defer present_trace_runtime.clearEditorSurfaceSolidFamily(r);
     renderer_surface_host.drawRect(r, x, y, w, h, color);
 }
 
@@ -474,8 +474,8 @@ fn flushDrawListRectOps(list: *EditorDrawList, r: anytype) void {
         switch (op) {
             .rect => |rect| {
                 if (rect.family != .row_base) continue;
-                present_trace_runtime.setEditorImmediateSolidFamily(r, .row_base);
-                defer present_trace_runtime.clearEditorImmediateSolidFamily(r);
+                present_trace_runtime.setEditorSurfaceSolidFamily(r, .row_base);
+                defer present_trace_runtime.clearEditorSurfaceSolidFamily(r);
                 renderer_surface_host.drawRect(
                     r,
                     @intFromFloat(rect.x),
@@ -493,13 +493,13 @@ fn flushDrawListRectOps(list: *EditorDrawList, r: anytype) void {
         switch (op) {
             .rect => |rect| {
                 if (rect.family == .row_base) continue;
-                const family: present_trace_runtime.PresentTrace.EditorImmediateSolidFamily = switch (rect.family) {
+                const family: present_trace_runtime.PresentTrace.EditorSurfaceSolidFamily = switch (rect.family) {
                     .overlay => .overlay,
                     .row_base => .row_base,
                     .pane_base => .pane_base,
                 };
-                present_trace_runtime.setEditorImmediateSolidFamily(r, family);
-                defer present_trace_runtime.clearEditorImmediateSolidFamily(r);
+                present_trace_runtime.setEditorSurfaceSolidFamily(r, family);
+                defer present_trace_runtime.clearEditorSurfaceSolidFamily(r);
                 renderer_surface_host.drawRect(
                     r,
                     @intFromFloat(rect.x),

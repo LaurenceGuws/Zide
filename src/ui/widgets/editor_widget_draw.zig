@@ -218,7 +218,8 @@ pub fn draw(
             const comp_x = cursor_draw_x.?;
             const comp_y = cursor_draw_y.?;
             renderer_text_host.drawTextMonospaceOnBg(r, input.composing_text, comp_x, comp_y, r.theme.foreground, r.theme.current_line);
-            present_trace_runtime.setEditorImmediateSolidFamily(r, .overlay);
+            present_trace_runtime.setEditorSurfaceSolidFamily(r, .overlay);
+            defer present_trace_runtime.clearEditorSurfaceSolidFamily(r);
             renderer_surface_host.drawRect(
                 r,
                 @intFromFloat(comp_x),
@@ -227,7 +228,6 @@ pub fn draw(
                 2,
                 r.theme.selection,
             );
-            present_trace_runtime.clearEditorImmediateSolidFamily(r);
             shell.setTextInputRect(
                 @intFromFloat(comp_x),
                 @intFromFloat(comp_y),

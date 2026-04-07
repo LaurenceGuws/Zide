@@ -21,8 +21,8 @@ pub fn drawEditorPaneBaseImmediate(
     height: f32,
     gutter_width: f32,
 ) void {
-    present_trace_runtime.setEditorImmediateSolidFamily(r, .pane_base);
-    defer present_trace_runtime.clearEditorImmediateSolidFamily(r);
+    present_trace_runtime.setEditorSurfaceSolidFamily(r, .pane_base);
+    defer present_trace_runtime.clearEditorSurfaceSolidFamily(r);
     renderer_surface_host.drawRect(r, @intFromFloat(x), @intFromFloat(y), @intFromFloat(width), @intFromFloat(height), r.theme.background);
     renderer_surface_host.drawRect(r, @intFromFloat(x), @intFromFloat(y), @intFromFloat(gutter_width), @intFromFloat(height), r.theme.line_number_bg);
 }
@@ -81,8 +81,8 @@ pub fn drawEditorSegmentBaseImmediate(
     content_width: f32,
     is_current: bool,
 ) void {
-    present_trace_runtime.setEditorImmediateSolidFamily(r, .row_base);
-    defer present_trace_runtime.clearEditorImmediateSolidFamily(r);
+    present_trace_runtime.setEditorSurfaceSolidFamily(r, .row_base);
+    defer present_trace_runtime.clearEditorSurfaceSolidFamily(r);
     renderer_surface_host.drawRect(r, @intFromFloat(x), @intFromFloat(y), @intFromFloat(content_width), @intFromFloat(r.editor_char_height), r.theme.background);
     renderer_surface_host.drawRect(r, @intFromFloat(x), @intFromFloat(y), @intFromFloat(gutter_width), @intFromFloat(r.editor_char_height), r.theme.line_number_bg);
 
@@ -194,9 +194,9 @@ pub fn drawSearchOverlays(
         const ex = text_mod.xForByteOffset(r, line_text, seg_start_byte, seg_start_col, local_end, text_start_x);
         if (ex <= sx) continue;
         const draw_color = if (active_search) |active| if (overlay_mod.rangeContains(active, match)) overlay_mod.activeSearchHighlightColor(r.theme) else search_color else search_color;
-        present_trace_runtime.setEditorImmediateSolidFamily(r, .overlay);
+        present_trace_runtime.setEditorSurfaceSolidFamily(r, .overlay);
+        defer present_trace_runtime.clearEditorSurfaceSolidFamily(r);
         renderer_surface_host.drawRect(r, @intFromFloat(sx), search_band.y_i, @intFromFloat(ex - sx), search_band.h_i, draw_color);
-        present_trace_runtime.clearEditorImmediateSolidFamily(r);
     }
 }
 

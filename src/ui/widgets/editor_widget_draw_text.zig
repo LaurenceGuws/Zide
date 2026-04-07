@@ -678,6 +678,9 @@ fn emitTextDecorations(emitter: anytype, r: anytype, x: f32, y: f32, width: f32,
     };
     var visitor = Visitor{ .emitter = emitter, .color = color, .ok = &ok };
     forEachDecorationRect(r, x, y, width, flags, &visitor);
+    if (@TypeOf(emitter.*) == ImmediateTextEmitter) {
+        renderer_surface_host.flushQueuedSurfaceDrawsBeforeDependentSurfaceWork(r);
+    }
     return ok;
 }
 

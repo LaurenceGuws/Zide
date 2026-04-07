@@ -400,13 +400,13 @@ fn drawTerminalBoxGlyphBatched(self: *Renderer, codepoint: u32, x: f32, y: f32, 
 }
 
 fn drawTextWithFont(self: *Renderer, font: *TerminalFont, metrics: Renderer.ScaledFontMetrics, text: []const u8, x: f32, y: f32, color: Color, italic: bool) void {
-    gl_backend.flushQueuedSurfaceDrawsForImmediateText(self);
+    gl_backend.flushQueuedSurfaceDrawsNow(self);
     const origin = snapTextOrigin(self, x, y);
     text_draw.drawText(self.allocator, font, self, drawTextureThunk, text, origin.x, origin.y, metrics.cell_width, metrics.cell_height, color.toRgba(), false, italic);
 }
 
 fn drawTextWithFontMonospace(self: *Renderer, font: *TerminalFont, metrics: Renderer.ScaledFontMetrics, text: []const u8, x: f32, y: f32, color: Color, disable_programming_ligatures: bool, italic: bool) void {
-    gl_backend.flushQueuedSurfaceDrawsForImmediateText(self);
+    gl_backend.flushQueuedSurfaceDrawsNow(self);
     const origin = snapTextOrigin(self, x, y);
     if (drawTextWithFontMonospaceShaped(self, font, metrics, text, origin.x, origin.y, color.toRgba(), disable_programming_ligatures, italic)) return;
     text_draw.drawText(self.allocator, font, self, drawTextureThunk, text, origin.x, origin.y, metrics.cell_width, metrics.cell_height, color.toRgba(), true, italic);

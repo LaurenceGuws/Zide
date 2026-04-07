@@ -67,7 +67,7 @@ pub fn recordSolidSurfaceFromLogicalRect(
 /// immediate surface work (overlays, selection, etc.) composites in list order.
 pub fn flushQueuedSurfaceDrawsBeforeDependentSurfaceWork(renderer: anytype) void {
     switch (renderer.render_surface_attachment) {
-        .opengl_window => gl_backend.flushQueuedSurfaceDrawsForImmediateText(renderer),
+        .opengl_window => gl_backend.flushQueuedSurfaceDrawsNow(renderer),
         else => {},
     }
 }

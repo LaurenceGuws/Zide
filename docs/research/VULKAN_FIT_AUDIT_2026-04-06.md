@@ -76,8 +76,8 @@ risk language.
 
 | # | Blocker | Why it forces non-routine work |
 |---|---------|--------------------------------|
-| B1 | **Dual draw submission semantics** | Contract doc admits Metal **appends** `SurfaceDraw` to a replay queue while OpenGL **submits immediately**. Vulkan is inherently deferred; picking one model without a shared contract forces either a third special case in shared code or a redesign of the enqueue path. |
-| B2 | **Metal-shaped queue consumption** | Current-state: Metal is still the backend that **consumes the shared draw union directly** for end-of-frame replay; OpenGL does not participate in the same path. Vulkan is not “like Metal” or “like GL” exclusively—it needs **one** contract. |
+| B1 | **Dual draw submission semantics** | **Superseded (2026-04):** OpenGL now **defers** the full `SurfaceDraw` queue (flush + submit replay), matching Metal at the product level for solids as well as blits. Remaining risk is **composition** (flush discipline for bypass paths), not a GL-vs-Metal fork on `.solid`. |
+| B2 | **Metal-shaped queue consumption** | OpenGL now replays the same deferred `SurfaceDraw` union at frame boundaries; implementation details still differ from Metal’s encoder model, but the shared “record then replay” story is no longer GL-immediate vs Metal-deferred for surface work. |
 | B3 | **Texture handle variants in draw payloads** | `RawImageTexture`-style `.opengl` vs `.metal` branching (per contract doc) implies **new Vulkan-specific variants** or a **real opaque backend handle**—not neutral until unified. |
 | B4 | **Renderer-hosted backend-native storage** | OpenGL and Metal runtime bundles still live on the shared `Renderer`. A Vulkan bundle would either **widen** that pattern (three backends on the host) or **force** the refactor that Milestone B was supposed to deliver: backend-owned storage. |
 | B5 | **Presentable contract unevenness** | Retained targets remain **FBO/texture-shaped** in practice; OpenGL owns the rich path; Metal is narrower. Vulkan swapchain/images are a third shape—without **one** neutral presentable lifecycle, shared code will keep leaking assumptions. |
