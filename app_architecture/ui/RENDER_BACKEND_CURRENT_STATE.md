@@ -289,6 +289,16 @@ So the backend-fit blocker is now concentrated:
 - the same narrow shared payload reaches both backends
 - but backend choice still changes when the surface phase runs
 
+There is also now one concrete reason the old "just defer GL to submit" idea is
+still unsafe: many remaining active `SurfaceDraw.solid` calls are UI
+background layers immediately followed by text or outline rendering at the same
+call site. Status bars, top bars, editor fills, and text-runtime background
+clears all still depend on that local ordering. If OpenGL simply delayed those
+solids to a submit-time surface phase while text kept drawing immediately, the
+deferred fills would overpaint the later text. So the blocker is no longer
+vague timing discomfort; it is a specific background-before-text dependency in
+the remaining caller set.
+
 That is the loudest remaining semantic contradiction in the backend contract.
 It is no longer hidden by renderer-root facade noise or mixed backend dispatch
 buckets, which means the next real cut must either:

@@ -652,6 +652,10 @@ Current evidence:
   atlas samples that already fit the shared payload model. The live blocker is
   no longer caller sprawl; it is the backend surface-phase split itself
   (GL executes surface phase immediately, Metal replays it at submit).
+- the exact blocker is now named: many remaining `SurfaceDraw.solid` calls are
+  local background layers immediately followed by text/outline work at the same
+  call site. A broad "defer all GL surface draws to submit" cut would still
+  paint those backgrounds over later immediate text.
 - This is real lifecycle cleanup and removes another renderer-root duplication
   seam.
 - This is not closure yet:

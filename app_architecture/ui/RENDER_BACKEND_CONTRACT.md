@@ -178,6 +178,20 @@ backend phase timing:
 The next contract cut must attack that phase truth directly rather than reopen
 caller triage unless a new misuse appears.
 
+**Known ordering blocker (2026-04-07):** a broad "defer all GL surface records
+to submit" cut is still not safe, even after terminal cleanup, because many
+remaining active `SurfaceDraw.solid` callers are immediate background layers
+paired with text or outline work that still renders right after them at the
+same call site. Examples include status/top bars, editor fills, text-runtime
+background clears, and similar UI chrome. If OpenGL deferred those solids to a
+submit-time surface phase while text stayed immediate, the deferred fills would
+still overpaint later text. So the next safe semantic cut cannot be "delay all
+GL surface draws"; it must either:
+
+- move a narrower subset with no immediate text dependency
+- or define a stronger shared phase boundary that also captures the dependent
+  text/background ordering
+
 #### Presentable contract
 
 One backend-neutral presentable surface contract that can express:
