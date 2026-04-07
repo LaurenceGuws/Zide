@@ -16,7 +16,8 @@ fn flushTerminalPresentationFeedback(state: anytype, submission: anytype) void {
 
 fn logFramePresent(state: anytype, shell: anytype, submission: anytype) void {
     const trace = shell.lastPresentTrace();
-    app_logger.logger("renderer.present").logFields(.info, "frame_present", &.{
+    const render_log = app_logger.logger("renderer.present");
+    render_log.logFields(.info, "frame_present", &.{
         .{ .key = "frame", .value = .{ .unsigned = state.frame_id } },
         .{ .key = "frame_seq", .value = .{ .unsigned = trace.frame_seq } },
         .{ .key = "submission_seq", .value = .{ .unsigned = submission.sequence } },
@@ -30,6 +31,20 @@ fn logFramePresent(state: anytype, shell: anytype, submission: anytype) void {
         .{ .key = "composition_full_pane_clear", .value = .{ .boolean = trace.composition_full_pane_clear } },
         .{ .key = "captured", .value = .{ .boolean = trace.captured_path != null } },
     });
+    if (trace.band_group_begin_count != trace.band_group_end_count) {
+        render_log.logf(
+            .warning,
+            "band_group_mismatch frame={d} begin={d} end={d}",
+            .{ state.frame_id, trace.band_group_begin_count, trace.band_group_end_count },
+        );
+    }
+    if (trace.sample_section_group_begin_count != trace.sample_section_group_end_count) {
+        render_log.logf(
+            .warning,
+            "sample_section_group_mismatch frame={d} begin={d} end={d}",
+            .{ state.frame_id, trace.sample_section_group_begin_count, trace.sample_section_group_end_count },
+        );
+    }
     if (trace.captured_path) |path| {
         app_logger.logger("editor.live_smoke").logf(.info, "captured_frame frame={d} path={s}", .{ state.frame_id, path });
     }
