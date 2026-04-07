@@ -431,9 +431,9 @@ Milestone B "done" checkpoints (execute in order, do not rerank mid-lane):
   - move editor row-band dependent text emission onto the same group/replay seam
     with explicit row-band boundaries
   - preserve existing editor visual ordering and cursor behavior
-- [ ] **B-DONE-4: delete duplicate local seams**
+- [x] **B-DONE-4: delete duplicate local seams**
   - remove superseded seam-specific helpers once all three producers are on the
-    shared contract (`renderer_band_phase_host`, sample-only replay wrappers,
+    shared contract (legacy band/sample replay wrappers and
     duplicate record/replay adapters)
   - no compatibility shims left behind
 - [ ] **B-DONE-5: close observability parity**
@@ -897,14 +897,13 @@ Current evidence:
 - chrome-band checkpoint: band text op storage moved from a fixed-size local
   array to dynamic list storage, removing the "overflow falls back to immediate
   draw" branch from this seam.
-- chrome-band checkpoint: `Band.flush()` replay now routes through
-  `renderer_band_phase_host` helper entrypoints, keeping record and replay
-  ownership separated at renderer-host level.
-- chrome-band test checkpoint: replay-group semantics are now unit-tested in
-  `renderer_band_phase_host` (group begin/end wrapping, op order, bg payload).
-- chrome-band trace checkpoint: present trace now records band command-group
-  boundaries (`band_group_begin_count` / `band_group_end_count`) through
-  `renderer_band_phase_host.begin/endBandCommandGroup`.
+- chrome-band checkpoint: `Band.flush()` replay is owned by the shared
+  `renderer_text_phase_group_host` seam (via `.chrome_band` group replay).
+- chrome-band test checkpoint: replay-group semantics are unit-tested in the
+  shared `renderer_text_phase_group_host` seam (group wrapping, op order).
+- chrome-band trace checkpoint: present trace records band command-group
+  boundaries (`band_group_begin_count` / `band_group_end_count`) from the
+  shared text phase host group contract.
 - backend-runtime checkpoint: the remaining runtime-storage blocker is now more
   specifically OpenGL-shaped than Metal-shaped. Metal live frame/queue state is
   under backend context.
@@ -954,18 +953,19 @@ Current evidence:
   mutating `renderer.text_render.bg_rgba` globally just to make preview text
   honor the section background. That background is now carried explicitly at
   the sample draw site.
-- sample checkpoint: section text in `font_sample_view.zig` now records through
-  `font_sample_section_host` and flushes via
-  `renderer_sample_section_phase_host`, so the tiny sample seam has explicit
-  local record/replay boundaries instead of inline per-call text host emits.
+- sample checkpoint: section text in `font_sample_view.zig` records through
+  `font_sample_section_host` and flushes via the shared
+  `renderer_text_phase_group_host` (`.sample_section` group), preserving the
+  tiny sample seam while removing seam-specific replay wrappers.
 - sample checkpoint: sample-section group boundaries are now visible in present
   trace (`sample_section_group_begin_count` /
   `sample_section_group_end_count`) and replay order/bg payload handling is now
-  covered by unit tests in `renderer_sample_section_phase_host`.
+  covered by unit tests in `renderer_text_phase_group_host`.
 - closure checkpoint (`B-DONE-2`): chrome-band and sample-section replay now
   share one typed host contract surface in
-  `renderer_text_phase_group_host.zig`; seam-specific hosts are now adapters
-  over that shared group/replay API.
+  `renderer_text_phase_group_host.zig`.
+- closure checkpoint (`B-DONE-4`): seam-specific replay adapters are now
+  deleted; chrome and sample call the shared text phase host contract directly.
 - editor checkpoint (`B-DONE-3`): both draw-list and immediate/fallback
   row-band lanes now use explicit `.editor_row_band` group boundaries through
   the shared text phase host seam, with begin/end trace counters and mismatch

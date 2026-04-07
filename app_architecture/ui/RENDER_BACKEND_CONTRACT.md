@@ -437,8 +437,8 @@ The current code makes that split more specific:
   section background for preview text is carried explicitly at the sample draw
   site instead of leaning on mutable renderer-global text background state
 - the tiny sample seam is now slightly more explicit as a local phase: section
-  text recording/replay runs through `font_sample_section_host` and
-  `renderer_sample_section_phase_host` instead of only inline direct text host
+  text recording/replay runs through `font_sample_section_host` and the shared
+  `renderer_text_phase_group_host` instead of only inline direct text host
   calls
 - that sample seam now also has baseline scrutiny hooks: group begin/end counts
   are recorded in present trace, and replay order/bg payload handling is unit-
@@ -536,8 +536,8 @@ dynamic rather than fixed-capacity, so the seam no longer carries a hidden
 "queue full => immediate draw" escape hatch.
 
 **Band replay host checkpoint (2026-04-07):** `Band.flush()` now delegates text
-and icon replay through `renderer_band_phase_host` helpers rather than calling
-text host entrypoints directly from the band recorder.
+and icon replay through shared text phase host helpers instead of calling text
+host entrypoints directly from the band recorder.
 
 **Band replay test checkpoint (2026-04-07):** replay group wrapping and replay
 order/bg payload handling are now unit-tested at the band phase host seam.
@@ -577,8 +577,11 @@ is now explicit and frozen for this lane.
 
 **Shared replay surface checkpoint (B-DONE-2, 2026-04-07):** chrome-band and
 sample-section hosts now implement one shared typed replay/group surface in
-`renderer_text_phase_group_host.zig`. Local seam hosts remain only as
-compatibility adapters pending duplicate seam deletion.
+`renderer_text_phase_group_host.zig`.
+
+**Duplicate seam deletion checkpoint (B-DONE-4, 2026-04-07):** seam-specific
+replay adapters for chrome/sample have been removed; those lanes now call the
+shared text phase host contract directly.
 
 **Editor adoption checkpoint (B-DONE-3, 2026-04-07):** editor row-band
 draw-list flush and immediate/fallback row-band execution now both open/close

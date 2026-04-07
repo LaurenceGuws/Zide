@@ -1,15 +1,15 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
 const app_logger = @import("../../app_logger.zig");
-const renderer_band_phase_host = @import("renderer_band_phase_host.zig");
+const renderer_text_phase_group_host = @import("renderer_text_phase_group_host.zig");
 const renderer_surface_host = @import("renderer_surface_host.zig");
 
 const Shell = app_shell.Shell;
 const Color = app_shell.Color;
 
 pub const Band = struct {
-    const TextKind = renderer_band_phase_host.TextKind;
-    const TextOp = renderer_band_phase_host.ReplayOp;
+    const TextKind = renderer_text_phase_group_host.TextKind;
+    const TextOp = renderer_text_phase_group_host.ReplayOp;
 
     shell: *Shell,
     bg: Color,
@@ -66,6 +66,6 @@ pub const Band = struct {
             self.text_ops.deinit(self.shell.renderer.allocator);
             self.text_ops = .{};
         }
-        renderer_band_phase_host.replayBandOps(self.shell.renderer, self.text_ops.items);
+        renderer_text_phase_group_host.replayOps(self.shell.renderer, .chrome_band, self.text_ops.items);
     }
 };

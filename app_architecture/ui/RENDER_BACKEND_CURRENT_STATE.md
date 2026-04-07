@@ -538,16 +538,16 @@ Band-local text op storage has also moved from a fixed-capacity array to
 dynamic list storage. That removes the previous overflow fallback that escaped
 the local queue path by drawing immediately.
 
-Replay routing is now one step cleaner too: `Band.flush()` delegates replay
-through `renderer_band_phase_host` helper entrypoints instead of issuing text
-host calls directly from the band recorder.
+Replay routing is now owned by the shared text phase host:
+`Band.flush()` delegates through `renderer_text_phase_group_host` using
+`.chrome_band` group replay instead of issuing text host calls directly.
 
-That host replay seam now has focused unit coverage for group wrapping and
-recorded op replay order/background payload propagation.
+That shared replay seam has focused unit coverage for group wrapping and
+recorded op replay order.
 
-Band group boundaries are now also observable in present trace
-(`band_group_begin_count` / `band_group_end_count`) via
-`renderer_band_phase_host.begin/endBandCommandGroup`.
+Band group boundaries are observable in present trace
+(`band_group_begin_count` / `band_group_end_count`) via the shared text phase
+group begin/end contract.
 
 Milestone B closure planning now has a frozen target contract too: one shared
 text phase group shape (typed ops + explicit begin/end groups + trace parity)
@@ -556,8 +556,10 @@ That removes ambiguity about "what counts as done" for this lane.
 
 That contract has its first concrete unification checkpoint now (`B-DONE-2`):
 chrome-band and sample-section replay share one typed group/replay host surface
-in `renderer_text_phase_group_host.zig`, with seam-local hosts reduced to
-adapters.
+in `renderer_text_phase_group_host.zig`.
+
+`B-DONE-4` has now removed the seam-local replay adapters, so chrome and sample
+call the shared host contract directly.
 
 Editor adoption is now complete for this checkpoint (`B-DONE-3`): both editor
 draw-list row-band flush and immediate/fallback row-band execution are wrapped
@@ -700,9 +702,8 @@ That split is now sharper from code inspection too:
   preview text honor section background. The background is now explicit at the
   sample draw site.
 - that sample seam is now slightly stronger too: section labels/headers are
-  recorded and replayed through a dedicated sample host seam
-  (`renderer_sample_section_phase_host`) rather than emitted inline from every
-  sample draw call.
+  recorded and replayed through the shared text phase host seam using the
+  `.sample_section` group instead of inline per-call text emission.
 - that seam is now observable too: present trace carries sample section group
   begin/end counts, and replay ordering is unit-tested at the sample phase
   host seam.
