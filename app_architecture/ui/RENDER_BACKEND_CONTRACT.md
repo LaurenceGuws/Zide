@@ -396,6 +396,10 @@ The current code makes that split more specific:
 - the Metal side now states the opposite truth in its own runtime module too:
   absence of retained update-cycle semantics is no longer hidden as an inline
   false stub in backend dispatch.
+- the shared host seam now says that distinction explicitly too:
+  retained-update attempts return an explicit result, not a boolean that
+  collapses "unsupported backend model" and "retained target unavailable" into
+  the same product-level outcome.
 - sample/diagnostic pressure is the simpler section-fill plus bg-aware preview
   text path in `font_sample_view.zig`, including custom-font preview draws
   that still go straight through texture draw calls

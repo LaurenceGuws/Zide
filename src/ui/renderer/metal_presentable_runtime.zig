@@ -3,6 +3,7 @@ const metal_text_sample_runtime = @import("metal_text_sample_runtime.zig");
 const presentable_contract = @import("presentable_contract.zig");
 const types = @import("types.zig");
 
+const RetainedPresentableUpdateResult = @import("backend_dispatch.zig").RetainedPresentableUpdateResult;
 const PresentableDraw = presentable_contract.PresentableDraw;
 const PresentableInfo = presentable_contract.PresentableInfo;
 
@@ -19,8 +20,10 @@ pub fn updateRetainedPresentable(
     renderer: anytype,
     _: ?*const anyopaque,
     _: *const fn (?*const anyopaque, @TypeOf(renderer)) void,
-) bool {
-    return false;
+) RetainedPresentableUpdateResult {
+    const Renderer = @TypeOf(renderer);
+    _ = Renderer;
+    return .unsupported;
 }
 
 pub fn drawPresentableBackdrop(renderer: anytype, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) void {

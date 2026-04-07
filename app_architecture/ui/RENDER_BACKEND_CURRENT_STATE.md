@@ -612,6 +612,10 @@ That split is now sharper from code inspection too:
 - the Metal side now states the opposite truth in its own runtime too:
   lack of retained update-cycle semantics is no longer an anonymous false stub
   in backend dispatch; it is named in `metal_presentable_runtime.zig`.
+- the shared terminal presentable host now carries that distinction more
+  honestly too: retained-update attempts return an explicit status instead of a
+  boolean that used to collapse "unsupported lifecycle model" and
+  "retained target unavailable" into the same false path.
 - sample pressure is specifically section-fill plus bg-aware text preview work
   in `font_sample_view.zig` / `font_sample_section_host.zig`, including the
   custom-font sample path that still terminates through direct texture draws

@@ -1,13 +1,14 @@
 const present_trace_runtime = @import("present_trace_runtime.zig");
 const presentable_contract = @import("presentable_contract.zig");
 
+pub const RetainedTerminalPresentableUpdate = @import("backend_dispatch.zig").RetainedPresentableUpdateResult;
 const PresentableDraw = presentable_contract.PresentableDraw;
 
 pub fn ensureTerminalPresentable(renderer: anytype, width: i32, height: i32) bool {
     return renderer.backend.ops.presentable.ensurePresentable(renderer, width, height);
 }
 
-pub fn updateTerminalPresentable(renderer: anytype, ctx: anytype, comptime body: fn (@TypeOf(ctx), @TypeOf(renderer)) void) bool {
+pub fn updateTerminalPresentable(renderer: anytype, ctx: anytype, comptime body: fn (@TypeOf(ctx), @TypeOf(renderer)) void) RetainedTerminalPresentableUpdate {
     const Local = struct {
         fn erasedBody(raw_ctx: ?*const anyopaque, renderer_local: @TypeOf(renderer)) void {
             const typed_ctx: *@TypeOf(ctx) = @constCast(@alignCast(@ptrCast(raw_ctx.?)));

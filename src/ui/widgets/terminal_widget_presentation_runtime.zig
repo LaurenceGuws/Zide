@@ -26,6 +26,7 @@ const GlyphDrawStats = draw_grid.GlyphDrawStats;
 const TerminalPresentationSampleMode = terminal_debug_geometry.TerminalPresentationSampleMode;
 const TerminalPresentationSample = terminal_debug_geometry.TerminalPresentationSample;
 const InputSnapshot = shared_types.input.InputSnapshot;
+const RetainedTerminalPresentableUpdate = renderer_presentable_host.RetainedTerminalPresentableUpdate;
 
 const drawRowBackgrounds = draw_grid.drawRowBackgrounds;
 const drawRowGlyphs = draw_grid.drawRowGlyphs;
@@ -71,6 +72,7 @@ pub fn computePresentationSurfaceGeometry(
 
 pub const PresentationPresentState = struct {
     updated: bool = false,
+    retained_update: RetainedTerminalPresentableUpdate = .unsupported,
     target_available: bool = false,
     ready: bool = false,
     visible: bool = false,
@@ -117,6 +119,7 @@ pub const PresentationExecutionResult = struct {
 
 pub const RetainedPresentCycleResult = struct {
     completed: bool = false,
+    update: RetainedTerminalPresentableUpdate = .unsupported,
     bg_ms: f64 = 0.0,
     glyph_ms: f64 = 0.0,
     kitty_ms: f64 = 0.0,
@@ -745,7 +748,7 @@ pub fn runRetainedPresentCycle(
         .surface_update_plan = surface_update_plan,
         .result = &result,
     };
-    if (!renderer_presentable_host.updateTerminalPresentable(renderer, update_ctx, Local.run)) return result;
+    result.update = renderer_presentable_host.updateTerminalPresentable(renderer, update_ctx, Local.run);
 
     return result;
 }
@@ -784,7 +787,7 @@ pub fn runRetainedPresentation(
         terminal_view,
         surface_update_plan.geometry,
         view_geometry,
-        cycle_result.completed,
+        cycle_result.update,
         draw_cursor,
         cursor,
         cursor_style,
@@ -1055,7 +1058,7 @@ pub fn refreshPresentState(
     terminal_view: view_state.TerminalViewModel,
     surface_geometry: PresentationGeometry,
     view_geometry: TerminalViewGeometry,
-    presentation_update_completed: bool,
+    retained_update: RetainedTerminalPresentableUpdate,
     draw_cursor: bool,
     cursor: CursorPos,
     cursor_style: terminal_types.CursorStyle,
@@ -1067,11 +1070,12 @@ pub fn refreshPresentState(
     view_cells_len: usize,
 ) PresentationPresentState {
     var state = PresentationPresentState{
-        .updated = presentation_update_completed,
+        .updated = retained_update == .updated,
+        .retained_update = retained_update,
         .visible = visible_w > 0 and visible_h > 0,
     };
 
-    if (presentation_update_completed) {
+    if (retained_update == .updated) {
         surface_state.notePresentationUpdated(terminal_view, surface_geometry, draw_cursor, cursor, cursor_style, hover_link_id, composing_active, composing_hash);
     }
 
@@ -1099,6 +1103,7 @@ pub fn logUnavailable(
         .{ .key = "generation", .value = .{ .unsigned = terminal_view.generation } },
         .{ .key = "sync_updates", .value = .{ .boolean = terminal_view.sync_updates_active } },
         .{ .key = "updated", .value = .{ .boolean = present_state.updated } },
+        .{ .key = "retained_update", .value = .{ .unsigned = @intFromEnum(present_state.retained_update) } },
         .{ .key = "presentable_ready", .value = .{ .boolean = surface_state.presentableReady() } },
         .{ .key = "target_available", .value = .{ .boolean = present_state.target_available } },
         .{ .key = "visible_w", .value = .{ .integer = visible_w } },

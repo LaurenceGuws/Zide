@@ -11,6 +11,12 @@ const surface_draw = @import("surface_draw.zig");
 const platform_window = @import("../../platform/window_metrics.zig");
 const GpuImageRef = surface_draw.GpuImageRef;
 
+pub const RetainedPresentableUpdateResult = enum {
+    updated,
+    unavailable,
+    unsupported,
+};
+
 pub fn BackendOps(
     comptime RendererType: type,
     comptime FrameSubmission: type,
@@ -40,7 +46,7 @@ pub fn BackendOps(
 
     const PresentableOps = struct {
         ensurePresentable: *const fn (*RendererType, i32, i32) bool,
-        updateRetainedPresentable: *const fn (*RendererType, ?*const anyopaque, *const fn (?*const anyopaque, *RendererType) void) bool,
+        updateRetainedPresentable: *const fn (*RendererType, ?*const anyopaque, *const fn (?*const anyopaque, *RendererType) void) RetainedPresentableUpdateResult,
         drawPresentableBackdrop: *const fn (*RendererType, f32, f32, f32, f32, types.Rgba) void,
         drawPresentable: *const fn (*RendererType, PresentableDraw) void,
         scrollPresentable: *const fn (*RendererType, i32, i32) bool,
@@ -254,7 +260,7 @@ fn OpenGlDispatch(
             renderer: *RendererType,
             ctx: ?*const anyopaque,
             body: *const fn (?*const anyopaque, *RendererType) void,
-        ) bool {
+        ) RetainedPresentableUpdateResult {
             return gl_presentable_runtime.updateRetainedPresentable(renderer, ctx, body);
         }
         fn drawPresentableBackdrop(renderer: *RendererType, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) void {
@@ -354,7 +360,7 @@ fn MetalDispatch(
             renderer: *RendererType,
             ctx: ?*const anyopaque,
             body: *const fn (?*const anyopaque, *RendererType) void,
-        ) bool {
+        ) RetainedPresentableUpdateResult {
             return metal_presentable_runtime.updateRetainedPresentable(renderer, ctx, body);
         }
         fn drawPresentableBackdrop(renderer: *RendererType, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) void {

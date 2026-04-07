@@ -8,6 +8,7 @@ const presentable_contract = @import("presentable_contract.zig");
 const texture_draw = @import("texture_draw.zig");
 const types = @import("types.zig");
 
+const RetainedPresentableUpdateResult = @import("backend_dispatch.zig").RetainedPresentableUpdateResult;
 const RenderTarget = gl_backend.RenderTarget;
 const PresentableDraw = presentable_contract.PresentableDraw;
 const PresentableInfo = presentable_contract.PresentableInfo;
@@ -48,12 +49,12 @@ pub fn updateRetainedPresentable(
     renderer: anytype,
     ctx: ?*const anyopaque,
     body: *const fn (?*const anyopaque, @TypeOf(renderer)) void,
-) bool {
-    if (!renderer.capabilities().retained_targets) return false;
-    if (!gl_backend.beginRenderTarget(renderer, presentableTarget(renderer))) return false;
+) RetainedPresentableUpdateResult {
+    if (!renderer.capabilities().retained_targets) return .unsupported;
+    if (!gl_backend.beginRenderTarget(renderer, presentableTarget(renderer))) return .unavailable;
     defer restoreCompositionTarget(renderer);
     body(ctx, renderer);
-    return true;
+    return .updated;
 }
 
 pub fn drawPresentableBackdrop(renderer: anytype, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) void {

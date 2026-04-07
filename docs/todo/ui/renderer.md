@@ -840,6 +840,13 @@ Current evidence:
   update-cycle semantics as an inline false stub in backend dispatch. That
   "no retained update cycle here" result now lives in
   `metal_presentable_runtime.zig` itself.
+- presentable checkpoint: the shared terminal presentable host no longer
+  compresses "retained update ran", "retained update unavailable", and
+  "backend has no retained update model" into one boolean result.
+- OpenGL now returns `.updated` or `.unavailable` from the retained-update
+  seam; Metal returns `.unsupported`.
+- terminal presentation runtime now tracks that explicit retained-update status
+  instead of treating every non-true outcome as the same backend-neutral case.
 - code-facing checkpoint: the sample pressure is specifically
   section-fill-plus-bg-aware preview text in `font_sample_view.zig`, including
   custom-font preview draws that still go through direct texture draw calls.
