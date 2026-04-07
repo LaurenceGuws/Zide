@@ -656,6 +656,10 @@ Current evidence:
   local background layers immediately followed by text/outline work at the same
   call site. A broad "defer all GL surface draws to submit" cut would still
   paint those backgrounds over later immediate text.
+- backend code now also distinguishes surface-phase fills from surface-phase
+  blits internally. That is not a semantic fix yet, but it is the first code
+  seam that matches the real blocker and gives us a narrower target than
+  "delay everything."
 - This is real lifecycle cleanup and removes another renderer-root duplication
   seam.
 - This is not closure yet:

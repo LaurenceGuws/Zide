@@ -1416,6 +1416,17 @@ pub fn recordSurfaceDrawForSurfacePhase(renderer: anytype, draw: SurfaceDraw) bo
     return true;
 }
 
+fn recordSurfaceFillForSurfacePhase(renderer: anytype, fill: surface_draw.SolidColorDraw) bool {
+    return recordSurfaceDrawForSurfacePhase(renderer, .{ .solid = fill });
+}
+
+fn recordSurfaceBlitForSurfacePhase(renderer: anytype, draw: SurfaceDraw) bool {
+    return switch (draw) {
+        .atlas, .raw_image => recordSurfaceDrawForSurfacePhase(renderer, draw),
+        .solid => unreachable,
+    };
+}
+
 pub fn appendSolidRect(
     renderer: anytype,
     x: f32,
@@ -1428,7 +1439,7 @@ pub fn appendSolidRect(
         metal_text_sample_runtime.pixelClipRect(renderer, c)
     else
         null;
-    return recordSurfaceDrawForSurfacePhase(renderer, .{ .solid = .{
+    return recordSurfaceFillForSurfacePhase(renderer, .{
         .dest_rect = .{
             .x = renderer.logicalLengthToRaster(x),
             .y = renderer.logicalLengthToRaster(y),
@@ -1437,15 +1448,15 @@ pub fn appendSolidRect(
         },
         .color = color,
         .clip_rect = clip,
-    } });
+    });
 }
 
 fn appendAtlasSample(renderer: anytype, sample: AtlasSampleDraw) bool {
-    return recordSurfaceDrawForSurfacePhase(renderer, .{ .atlas = sample });
+    return recordSurfaceBlitForSurfacePhase(renderer, .{ .atlas = sample });
 }
 
 fn appendRawImage(renderer: anytype, draw: RawImageDraw) bool {
-    return recordSurfaceDrawForSurfacePhase(renderer, .{ .raw_image = draw });
+    return recordSurfaceBlitForSurfacePhase(renderer, .{ .raw_image = draw });
 }
 
 pub fn addTerminalRect(renderer: anytype, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void {

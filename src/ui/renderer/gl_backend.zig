@@ -355,97 +355,103 @@ pub fn drawSolidRect(renderer: anytype, x: f32, y: f32, w: f32, h: f32, color: t
 /// uses a shared opaque image handle whose `handle` is interpreted here as a GL
 /// texture id; the draw does not take ownership.
 pub fn consumeRecordedSurfaceDrawInSurfacePhase(renderer: anytype, draw: surface_draw.SurfaceDraw) bool {
-    switch (draw) {
-        .solid => |s| {
-            const x = renderer.rasterLengthToLogical(s.dest_rect.x);
-            const y = renderer.rasterLengthToLogical(s.dest_rect.y);
-            const w = renderer.rasterLengthToLogical(s.dest_rect.width);
-            const h = renderer.rasterLengthToLogical(s.dest_rect.height);
-            if (w <= 0 or h <= 0) return false;
-            if (s.clip_rect) |pc| {
-                if (pc.width <= 0 or pc.height <= 0) return false;
-                renderer_clip_host.beginClip(
-                    renderer,
-                    @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.x)))),
-                    @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.y)))),
-                    @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.width)))),
-                    @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.height)))),
-                );
-                defer renderer_clip_host.endClip(renderer);
-                return drawSolidRect(renderer, x, y, w, h, s.color);
-            }
-            return drawSolidRect(renderer, x, y, w, h, s.color);
-        },
-        .atlas => |sample| {
-            if (renderer.textRenderingMode() != .gl_texture_atlas) return false;
-            const w_px = @as(i32, @intFromFloat(sample.source_rect.width));
-            const h_px = @as(i32, @intFromFloat(sample.source_rect.height));
-            if (w_px <= 0 or h_px <= 0) return false;
-            const tex = switch (sample.atlas) {
-                .coverage => renderer.terminal_font.coverageTexture(),
-                .color => renderer.terminal_font.colorTexture(),
-            };
-            if (tex.id == 0 or tex.width <= 0 or tex.height <= 0) return false;
-            const dest = types.Rect{
-                .x = renderer.rasterLengthToLogical(@floatFromInt(sample.dest_x)),
-                .y = renderer.rasterLengthToLogical(@floatFromInt(sample.dest_y)),
-                .width = renderer.rasterLengthToLogical(@floatFromInt(w_px)),
-                .height = renderer.rasterLengthToLogical(@floatFromInt(h_px)),
-            };
-            const kind: types.TextureKind = switch (sample.atlas) {
-                .coverage => .font_coverage,
-                .color => .rgba,
-            };
-            const bg = renderer.text_render.bg_rgba;
-            if (sample.clip_rect) |pc| {
-                if (pc.width <= 0 or pc.height <= 0) return false;
-                renderer_clip_host.beginClip(
-                    renderer,
-                    @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.x)))),
-                    @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.y)))),
-                    @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.width)))),
-                    @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.height)))),
-                );
-                defer renderer_clip_host.endClip(renderer);
-                draw_ops.drawTextureRect(renderer, tex, sample.source_rect, dest, sample.tint, bg, kind);
-                return true;
-            }
-            draw_ops.drawTextureRect(renderer, tex, sample.source_rect, dest, sample.tint, bg, kind);
-            return true;
-        },
-        .raw_image => |img| {
-            const tex = textureFromGpuImageHandle(img.texture);
-            if (tex.id == 0 or tex.width <= 0 or tex.height <= 0) return false;
-            const source_rect = img.source_rect orelse types.Rect{
-                .x = 0,
-                .y = 0,
-                .width = @floatFromInt(tex.width),
-                .height = @floatFromInt(tex.height),
-            };
-            const x = renderer.rasterLengthToLogical(img.dest_rect.x);
-            const y = renderer.rasterLengthToLogical(img.dest_rect.y);
-            const w = renderer.rasterLengthToLogical(img.dest_rect.width);
-            const h = renderer.rasterLengthToLogical(img.dest_rect.height);
-            if (w <= 0 or h <= 0) return false;
-            const dest = types.Rect{ .x = x, .y = y, .width = w, .height = h };
-            const bg = renderer.text_render.bg_rgba;
-            if (img.clip_rect) |pc| {
-                if (pc.width <= 0 or pc.height <= 0) return false;
-                renderer_clip_host.beginClip(
-                    renderer,
-                    @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.x)))),
-                    @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.y)))),
-                    @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.width)))),
-                    @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.height)))),
-                );
-                defer renderer_clip_host.endClip(renderer);
-                draw_ops.drawTextureRect(renderer, tex, source_rect, dest, img.tint, bg, .rgba);
-                return true;
-            }
-            draw_ops.drawTextureRect(renderer, tex, source_rect, dest, img.tint, bg, .rgba);
-            return true;
-        },
+    return switch (draw) {
+        .solid => |solid| executeRecordedSurfaceFillInSurfacePhase(renderer, solid),
+        .atlas => |atlas| executeRecordedSurfaceAtlasBlitInSurfacePhase(renderer, atlas),
+        .raw_image => |image| executeRecordedSurfaceRawImageBlitInSurfacePhase(renderer, image),
+    };
+}
+
+fn executeRecordedSurfaceFillInSurfacePhase(renderer: anytype, fill: surface_draw.SolidColorDraw) bool {
+    const x = renderer.rasterLengthToLogical(fill.dest_rect.x);
+    const y = renderer.rasterLengthToLogical(fill.dest_rect.y);
+    const w = renderer.rasterLengthToLogical(fill.dest_rect.width);
+    const h = renderer.rasterLengthToLogical(fill.dest_rect.height);
+    if (w <= 0 or h <= 0) return false;
+    if (fill.clip_rect) |pc| {
+        if (pc.width <= 0 or pc.height <= 0) return false;
+        renderer_clip_host.beginClip(
+            renderer,
+            @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.x)))),
+            @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.y)))),
+            @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.width)))),
+            @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.height)))),
+        );
+        defer renderer_clip_host.endClip(renderer);
+        return drawSolidRect(renderer, x, y, w, h, fill.color);
     }
+    return drawSolidRect(renderer, x, y, w, h, fill.color);
+}
+
+fn executeRecordedSurfaceAtlasBlitInSurfacePhase(renderer: anytype, sample: surface_draw.AtlasSampleDraw) bool {
+    if (renderer.textRenderingMode() != .gl_texture_atlas) return false;
+    const w_px = @as(i32, @intFromFloat(sample.source_rect.width));
+    const h_px = @as(i32, @intFromFloat(sample.source_rect.height));
+    if (w_px <= 0 or h_px <= 0) return false;
+    const tex = switch (sample.atlas) {
+        .coverage => renderer.terminal_font.coverageTexture(),
+        .color => renderer.terminal_font.colorTexture(),
+    };
+    if (tex.id == 0 or tex.width <= 0 or tex.height <= 0) return false;
+    const dest = types.Rect{
+        .x = renderer.rasterLengthToLogical(@floatFromInt(sample.dest_x)),
+        .y = renderer.rasterLengthToLogical(@floatFromInt(sample.dest_y)),
+        .width = renderer.rasterLengthToLogical(@floatFromInt(w_px)),
+        .height = renderer.rasterLengthToLogical(@floatFromInt(h_px)),
+    };
+    const kind: types.TextureKind = switch (sample.atlas) {
+        .coverage => .font_coverage,
+        .color => .rgba,
+    };
+    const bg = renderer.text_render.bg_rgba;
+    if (sample.clip_rect) |pc| {
+        if (pc.width <= 0 or pc.height <= 0) return false;
+        renderer_clip_host.beginClip(
+            renderer,
+            @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.x)))),
+            @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.y)))),
+            @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.width)))),
+            @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.height)))),
+        );
+        defer renderer_clip_host.endClip(renderer);
+        draw_ops.drawTextureRect(renderer, tex, sample.source_rect, dest, sample.tint, bg, kind);
+        return true;
+    }
+    draw_ops.drawTextureRect(renderer, tex, sample.source_rect, dest, sample.tint, bg, kind);
+    return true;
+}
+
+fn executeRecordedSurfaceRawImageBlitInSurfacePhase(renderer: anytype, img: surface_draw.RawImageDraw) bool {
+    const tex = textureFromGpuImageHandle(img.texture);
+    if (tex.id == 0 or tex.width <= 0 or tex.height <= 0) return false;
+    const source_rect = img.source_rect orelse types.Rect{
+        .x = 0,
+        .y = 0,
+        .width = @floatFromInt(tex.width),
+        .height = @floatFromInt(tex.height),
+    };
+    const x = renderer.rasterLengthToLogical(img.dest_rect.x);
+    const y = renderer.rasterLengthToLogical(img.dest_rect.y);
+    const w = renderer.rasterLengthToLogical(img.dest_rect.width);
+    const h = renderer.rasterLengthToLogical(img.dest_rect.height);
+    if (w <= 0 or h <= 0) return false;
+    const dest = types.Rect{ .x = x, .y = y, .width = w, .height = h };
+    const bg = renderer.text_render.bg_rgba;
+    if (img.clip_rect) |pc| {
+        if (pc.width <= 0 or pc.height <= 0) return false;
+        renderer_clip_host.beginClip(
+            renderer,
+            @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.x)))),
+            @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.y)))),
+            @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.width)))),
+            @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.height)))),
+        );
+        defer renderer_clip_host.endClip(renderer);
+        draw_ops.drawTextureRect(renderer, tex, source_rect, dest, img.tint, bg, .rgba);
+        return true;
+    }
+    draw_ops.drawTextureRect(renderer, tex, source_rect, dest, img.tint, bg, .rgba);
+    return true;
 }
 
 fn textureFromGpuImageHandle(texture: surface_draw.GpuImageRef) types.Texture {

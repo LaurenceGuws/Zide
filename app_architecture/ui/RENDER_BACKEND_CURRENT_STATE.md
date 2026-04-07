@@ -299,6 +299,12 @@ deferred fills would overpaint the later text. So the blocker is no longer
 vague timing discomfort; it is a specific background-before-text dependency in
 the remaining caller set.
 
+The code now reflects that distinction a little more honestly too: OpenGL and
+Metal surface-phase helpers now distinguish fills from blits internally. That
+does not change timing yet, but it creates a real seam for a narrower future
+experiment where atlas/raw-image/presentable blits could move without dragging
+ordering-sensitive solid fills with them.
+
 That is the loudest remaining semantic contradiction in the backend contract.
 It is no longer hidden by renderer-root facade noise or mixed backend dispatch
 buckets, which means the next real cut must either:
