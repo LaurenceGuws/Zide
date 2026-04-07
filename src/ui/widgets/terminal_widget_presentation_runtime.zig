@@ -7,6 +7,7 @@ const draw_presentation = @import("terminal_widget_draw_presentation.zig");
 const presentation_state_mod = @import("terminal_widget_presentation_state.zig");
 const view_state = @import("terminal_widget_view_state.zig");
 const present_trace_runtime = @import("../renderer/present_trace_runtime.zig");
+const renderer_presentable_host = @import("../renderer/renderer_presentable_host.zig");
 const draw_grid = @import("terminal_widget_draw_grid.zig");
 const publication_capture = @import("../../terminal/core/publication/render_cache.zig");
 const app_shell = @import("../../app_shell.zig");
@@ -685,8 +686,8 @@ pub fn runRetainedPresentCycle(
 ) RetainedPresentCycleResult {
     var result = RetainedPresentCycleResult{};
     if (surface_update_plan.mode == .none) return result;
-    if (!renderer.beginPresentable(.terminal)) return result;
-    defer renderer.endPresentable(.terminal);
+    if (!renderer_presentable_host.beginPresentable(renderer, .terminal)) return result;
+    defer renderer_presentable_host.endPresentable(renderer, .terminal);
 
     renderer.endClip();
     const execution = executePresentableUpdate(

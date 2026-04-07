@@ -196,6 +196,14 @@ renderer-owned presentable facade methods now live in
 not make the presentable lifecycle fully backend-neutral yet, but it removes
 another small renderer-root ownership seam from that surface.
 
+That has improved slightly again on the caller-facing lifecycle edge too: the
+renderer root no longer exports `beginPresentable(...)` / `endPresentable(...)`
+as if those were stable product verbs. The widget/view callers that actually
+perform retained-surface updates now route to
+`renderer_presentable_host.zig` directly for that edge, which is more honest
+than pretending the renderer root owns a backend-neutral begin/end lifecycle
+when Metal still does not.
+
 That has improved slightly again on the scene-composition side too: the
 offscreen scene-target contract/state now lives in a dedicated
 `scene_target_state` module and is stored under `opengl_runtime.scene_target`

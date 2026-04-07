@@ -425,6 +425,12 @@ Current evidence:
   `renderer_presentable_host.zig` instead of `renderer.zig` directly.
 - this removes another small renderer-root ownership seam from the shared
   presentable contract surface.
+- the renderer root no longer exports `beginPresentable(...)` /
+  `endPresentable(...)` as if they were stable product verbs.
+- widget/view callers that actually perform retained-surface updates now talk
+  to `renderer_presentable_host.zig` directly for that lifecycle edge.
+- this is more honest than keeping those lifecycle forwards on `Renderer`,
+  because `begin/end` are not equally meaningful across backends today.
 - presentable trace/editor-surface bookkeeping now also lives in
   `renderer_presentable_host.zig` instead of being split across GL and Metal
   presentable lifecycle methods.

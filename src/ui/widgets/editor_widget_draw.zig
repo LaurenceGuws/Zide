@@ -12,6 +12,7 @@ const traversal_mod = @import("../../editor/render/traversal.zig");
 const segment_paint_mod = @import("../../editor/render/segment_paint.zig");
 const visible_prep_mod = @import("../../editor/render/visible_prep.zig");
 const app_logger = @import("../../app_logger.zig");
+const renderer_presentable_host = @import("../renderer/renderer_presentable_host.zig");
 const overlay_mod = @import("editor_widget_draw_overlay.zig");
 const text_mod = @import("editor_widget_draw_text.zig");
 const cache_helpers = @import("editor_widget_draw_cache.zig");
@@ -288,10 +289,10 @@ pub fn drawCached(
 
     if (force_redraw) {
         if (use_retained_editor_surface) {
-            if (r.beginPresentable(.editor)) {
+            if (renderer_presentable_host.beginPresentable(r, .editor)) {
                 r.drawRect(0, 0, @intFromFloat(width), @intFromFloat(height), r.theme.background);
                 r.drawRect(0, 0, @intFromFloat(widget.gutter_width), @intFromFloat(height), r.theme.line_number_bg);
-                r.endPresentable(.editor);
+                renderer_presentable_host.endPresentable(r, .editor);
             }
         } else {
             r.drawRect(0, 0, @intFromFloat(width), @intFromFloat(height), r.theme.background);
@@ -364,8 +365,8 @@ pub fn drawCached(
 
                 any_dirty_local.* = true;
                 if (ctx.use_retained_editor_surface) {
-                    if (!r_local.beginPresentable(.editor)) return;
-                    defer r_local.endPresentable(.editor);
+                    if (!renderer_presentable_host.beginPresentable(r_local, .editor)) return;
+                    defer renderer_presentable_host.endPresentable(r_local, .editor);
                 }
 
                 const clip_h = clippedEditorRowHeight(seg_band.h_i, @as(i32, @intFromFloat(height_local)) - seg_band.y_i);

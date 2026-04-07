@@ -6,10 +6,9 @@ pub fn ensurePresentable(renderer: anytype, surface: anytype, width: i32, height
 
 pub fn beginPresentable(renderer: anytype, surface: anytype) bool {
     const begun = renderer.backend_ops.presentable.beginPresentable(renderer, surface);
-    if (begun) switch (surface) {
-        .editor => present_trace_runtime.notePresentableUpdate(renderer, .editor),
-        .terminal => {},
-    };
+    if (begun and surface == .editor) {
+        present_trace_runtime.notePresentableUpdate(renderer, .editor);
+    }
     return begun;
 }
 
@@ -18,9 +17,8 @@ pub fn presentableAvailable(renderer: anytype, surface: anytype) bool {
 }
 
 pub fn endPresentable(renderer: anytype, surface: anytype) void {
-    switch (surface) {
-        .editor => present_trace_runtime.notePresentableEnded(renderer, .editor),
-        .terminal => {},
+    if (surface == .editor) {
+        present_trace_runtime.notePresentableEnded(renderer, .editor);
     }
     renderer.backend_ops.presentable.endPresentable(renderer, surface);
 }

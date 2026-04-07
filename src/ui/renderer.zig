@@ -1018,16 +1018,8 @@ pub const Renderer = struct {
         return renderer_presentable_host.ensurePresentable(self, surface, width, height);
     }
 
-    pub fn beginPresentable(self: *Renderer, surface: PresentableSurface) bool {
-        return renderer_presentable_host.beginPresentable(self, surface);
-    }
-
     pub fn presentableAvailable(self: *Renderer, surface: PresentableSurface) bool {
         return renderer_presentable_host.presentableAvailable(self, surface);
-    }
-
-    pub fn endPresentable(self: *Renderer, surface: PresentableSurface) void {
-        renderer_presentable_host.endPresentable(self, surface);
     }
 
     pub fn drawPresentable(self: *Renderer, surface: PresentableSurface, draw: PresentableDraw) void {

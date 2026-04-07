@@ -7,6 +7,7 @@ const terminal_font_mod = @import("terminal_font.zig");
 const renderer_mod = @import("renderer.zig");
 const metal_text_sample_runtime = @import("renderer/metal_text_sample_runtime.zig");
 const metal_backend = @import("renderer/metal_backend.zig");
+const renderer_presentable_host = @import("renderer/renderer_presentable_host.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
 const iface = @import("renderer/interface.zig");
 const text_draw = @import("renderer/text_draw.zig");
@@ -154,10 +155,10 @@ pub const FontSampleView = struct {
         // Render into the offscreen target so we can do linear blending in a
         // controlled way (target is linear; presentation converts to sRGB).
         if (r.ensurePresentable(.editor, @intFromFloat(w), @intFromFloat(h))) {
-            if (r.beginPresentable(.editor)) {
+            if (renderer_presentable_host.beginPresentable(r, .editor)) {
                 r.clearToThemeBackground();
                 drawContents(self, r, theme, w, h);
-                r.endPresentable(.editor);
+                renderer_presentable_host.endPresentable(r, .editor);
                 r.drawPresentable(.editor, .{ .x = 0, .y = 0 });
                 return;
             }
