@@ -852,6 +852,9 @@ Current evidence:
 - chrome-band checkpoint: band text/icon calls are now queued and flushed
   explicitly at band end (`Band.flush()`), so local chrome ordering is no
   longer only implicit immediate call order.
+- chrome-band checkpoint: `Band.flush()` now runs through explicit renderer-host
+  group boundaries (`beginBandCommandGroup` / `endBandCommandGroup`) as a
+  no-op consumption unit for future shared phase wiring.
 - backend-runtime checkpoint: the remaining runtime-storage blocker is now more
   specifically OpenGL-shaped than Metal-shaped. Metal live frame/queue state is
   under backend context.

@@ -1,4 +1,5 @@
 const app_shell = @import("../../app_shell.zig");
+const renderer_band_phase_host = @import("renderer_band_phase_host.zig");
 const renderer_surface_host = @import("renderer_surface_host.zig");
 const renderer_text_host = @import("renderer_text_host.zig");
 
@@ -76,6 +77,8 @@ pub const Band = struct {
     }
 
     pub fn flush(self: *Band) void {
+        renderer_band_phase_host.beginBandCommandGroup(self.shell.renderer);
+        defer renderer_band_phase_host.endBandCommandGroup(self.shell.renderer);
         for (self.text_ops[0..self.text_ops_len]) |op| {
             switch (op.kind) {
                 .text => renderer_text_host.drawTextOnBg(self.shell.renderer, op.text, op.x, op.y, op.color, op.bg),

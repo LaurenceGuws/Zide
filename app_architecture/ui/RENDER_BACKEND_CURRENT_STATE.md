@@ -529,6 +529,11 @@ It is slightly stronger again too: those band text/icon operations are now
 queued and flushed explicitly at band end (`Band.flush()`), instead of relying
 only on immediate interleaving at each call site.
 
+It now has a tiny host-level consumption boundary too: `Band.flush()` is
+wrapped by `beginBandCommandGroup` / `endBandCommandGroup` in renderer host
+space. That boundary is a no-op today, but it gives this seam one explicit
+group handle for future phase integration.
+
 That seam is now clean enough that further expansion would be fake progress
 unless it graduates into a real recorded band-composition phase. Until that
 happens, it should be treated as a renderer-host composition helper for the

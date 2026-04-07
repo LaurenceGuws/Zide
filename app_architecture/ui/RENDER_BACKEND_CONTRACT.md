@@ -518,6 +518,12 @@ an explicit local record/flush step (`Band.flush()`) at band end. This is still
 renderer-local sequencing, not a backend-neutral recorded phase, but it removes
 "text happens because call order happened to be right" as the band contract.
 
+**Band group boundary checkpoint (2026-04-07):** `Band.flush()` now runs through
+a renderer-host command-group boundary (`beginBandCommandGroup` /
+`endBandCommandGroup`). The boundary is intentionally no-op today, but it gives
+the seam one explicit host-level consumption unit for later backend-neutral
+phase wiring.
+
 **Current blocker / stop rule (2026-04-07):** do not keep widening this seam as
 if it were already a backend-neutral phase. Today it is still a renderer-host
 composition helper over immediate text/surface work. The next valid step is
