@@ -22,8 +22,6 @@ fn logFramePresent(state: anytype, shell: anytype, submission: anytype) void {
         .{ .key = "submission_seq", .value = .{ .unsigned = submission.sequence } },
         .{ .key = "terminal_presentations", .value = .{ .unsigned = trace.terminal_presentation_count } },
         .{ .key = "terminal_presented_generation", .value = .{ .unsigned = if (trace.terminal_presented_generation) |g| g else 0 } },
-        .{ .key = "editor_presentable_updates", .value = .{ .unsigned = trace.editor_presentable_update_count } },
-        .{ .key = "editor_presentable_draws", .value = .{ .unsigned = trace.editor_presentable_draw_count } },
         .{ .key = "composition_clips", .value = .{ .unsigned = trace.composition_clip_count } },
         .{ .key = "composition_full_pane_clear", .value = .{ .boolean = trace.composition_full_pane_clear } },
         .{ .key = "captured", .value = .{ .boolean = trace.captured_path != null } },

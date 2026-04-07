@@ -3,7 +3,6 @@ const present_trace_runtime = @import("present_trace_runtime.zig");
 pub fn beginFrameHost(renderer: anytype) void {
     renderer.present.frame_seq +%= 1;
     renderer.present.trace_current = .{ .frame_seq = renderer.present.frame_seq };
-    renderer.present.drawing_editor_surface = false;
     renderer.clip_depth = 0;
 
     const display_metrics = renderer.display_metrics;

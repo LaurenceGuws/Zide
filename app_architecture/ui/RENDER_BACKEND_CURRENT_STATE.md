@@ -66,12 +66,17 @@ In current-state terms, the remaining blockers are:
 
 That sample/diagnostic pressure is narrower again because `font_sample_view.zig`
 no longer rides the editor presentable lane. Diagnostic/sample rendering stays
-direct until the retained editor presentable seam is either fixed or deleted.
+direct.
 
 The editor widget draw path is now honest about the same truth: it no longer
 keeps a dead retained/direct branch inside `editor_widget_draw.zig`. The live
-editor path is direct-only until retained editor presentation is fixed as its
-own lane or deleted.
+editor path is direct-only.
+
+The shared presentable contract is tighter too: the dead `.editor` presentable
+surface is gone, so the live shared presentable contract is terminal-only
+again. If editor retained presentation returns later, it must come back as a
+reviewed lane instead of a dormant branch inside the generic presentable
+contract.
 
 That is a much better answer than the repo had before, but it is still a
 blocking answer.
@@ -244,14 +249,14 @@ field. It now lives under `opengl_runtime.presentable_targets`, which is a
 better fit for the truth that the richer retained-presentable lifecycle is
 currently an OpenGL-owned implementation shape.
 
-However, the retained **editor** presentable path is still not considered a
-working product path. The direct editor path was restored after IDE geometry
+However, retained **editor** presentation is no longer part of the live shared
+presentable contract. The direct editor path was restored after IDE geometry
 testing exposed a mismatch between retained editor presentation and the shared
 layout/presentation story. After fixing pane-width/layout truth, we retried the
 retained path and it still regressed live editor behavior, so the widget stays
-on the direct path. This seam is therefore still a fix-or-delete question
-rather than an adoption-ready feature, and it is no longer advertised as a
-live capability surface.
+on the direct path and the dead shared `.editor` presentable arm has been
+removed. If editor retained presentation returns later, it must return as a
+fresh reviewed lane rather than a dormant shared contract branch.
 
 Part of that mismatch was more basic than retained-target ownership: editor
 column/layout truth was still partly derived from full-window width instead of

@@ -3,7 +3,6 @@
 
 pub const PresentableSurface = enum {
     terminal,
-    editor,
 };
 
 pub const PresentableDraw = struct {

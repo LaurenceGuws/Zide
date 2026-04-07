@@ -15,5 +15,4 @@ pub const PresentableTarget = struct {
 pub const PresentableTargetState = struct {
     terminal: ?PresentableTarget = null,
     terminal_scroll: ?PresentableTarget = null,
-    editor: ?PresentableTarget = null,
 };

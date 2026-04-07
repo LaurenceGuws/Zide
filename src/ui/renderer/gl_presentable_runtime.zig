@@ -17,7 +17,6 @@ const PresentableSurface = presentable_contract.PresentableSurface;
 fn presentableTargetSlot(renderer: anytype, surface: PresentableSurface) *?RenderTarget {
     return switch (surface) {
         .terminal => &renderer.backend.runtime.opengl.presentable_targets.terminal,
-        .editor => &renderer.backend.runtime.opengl.presentable_targets.editor,
     };
 }
 
@@ -29,43 +28,29 @@ fn terminalScrollTargetSlot(renderer: anytype) *?RenderTarget {
     return &renderer.backend.runtime.opengl.presentable_targets.terminal_scroll;
 }
 
-pub fn ensurePresentable(renderer: anytype, surface: PresentableSurface, width: i32, height: i32) bool {
+pub fn ensurePresentable(renderer: anytype, _: PresentableSurface, width: i32, height: i32) bool {
     if (!renderer.capabilities().retained_targets) return false;
-    switch (surface) {
-        .terminal => {
-            const recreated = gl_backend.ensureRenderTargetScaledForRenderer(
-                renderer,
-                presentableTargetSlot(renderer, .terminal),
-                width,
-                height,
-                gl.c.GL_NEAREST,
-            );
-            _ = gl_backend.ensureRenderTargetScaledForRenderer(
-                renderer,
-                terminalScrollTargetSlot(renderer),
-                width,
-                height,
-                gl.c.GL_NEAREST,
-            );
-            return recreated;
-        },
-        .editor => {
-            return gl_backend.ensureRenderTargetScaledForRenderer(
-                renderer,
-                presentableTargetSlot(renderer, .editor),
-                width,
-                height,
-                gl.c.GL_NEAREST,
-            );
-        },
-    }
+    const recreated = gl_backend.ensureRenderTargetScaledForRenderer(
+        renderer,
+        presentableTargetSlot(renderer, .terminal),
+        width,
+        height,
+        gl.c.GL_NEAREST,
+    );
+    _ = gl_backend.ensureRenderTargetScaledForRenderer(
+        renderer,
+        terminalScrollTargetSlot(renderer),
+        width,
+        height,
+        gl.c.GL_NEAREST,
+    );
+    return recreated;
 }
 
 pub fn beginPresentable(renderer: anytype, surface: PresentableSurface) bool {
     if (!renderer.capabilities().retained_targets) return false;
     return switch (surface) {
         .terminal => gl_backend.beginRenderTarget(renderer, presentableTarget(renderer, .terminal)),
-        .editor => gl_backend.beginRenderTarget(renderer, presentableTarget(renderer, .editor)),
     };
 }
 
@@ -96,14 +81,6 @@ pub fn drawPresentable(renderer: anytype, surface: PresentableSurface, draw: Pre
     switch (surface) {
         .terminal => if (presentableTarget(renderer, .terminal)) |target| {
             const resolved = presentable_contract.resolveDraw(draw, null, null) orelse return;
-            drawResolvedPresentable(renderer, target, resolved);
-        },
-        .editor => if (presentableTarget(renderer, .editor)) |target| {
-            const resolved = presentable_contract.resolveDraw(
-                draw,
-                @floatFromInt(target.logical_width),
-                @floatFromInt(target.logical_height),
-            ) orelse return;
             drawResolvedPresentable(renderer, target, resolved);
         },
     }

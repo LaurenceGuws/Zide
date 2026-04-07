@@ -9,17 +9,10 @@ pub fn ensurePresentable(renderer: anytype, surface: PresentableSurface, width: 
 }
 
 pub fn beginPresentable(renderer: anytype, surface: PresentableSurface) bool {
-    const begun = renderer.backend.ops.presentable.beginPresentable(renderer, surface);
-    if (begun and surface == .editor) {
-        present_trace_runtime.notePresentableUpdate(renderer, .editor);
-    }
-    return begun;
+    return renderer.backend.ops.presentable.beginPresentable(renderer, surface);
 }
 
 pub fn endPresentable(renderer: anytype, surface: PresentableSurface) void {
-    if (surface == .editor) {
-        present_trace_runtime.notePresentableEnded(renderer, .editor);
-    }
     renderer.backend.ops.presentable.endPresentable(renderer, surface);
 }
 
@@ -28,9 +21,7 @@ pub fn drawPresentableBackdrop(renderer: anytype, surface: PresentableSurface, x
 }
 
 pub fn drawPresentable(renderer: anytype, surface: PresentableSurface, draw: PresentableDraw) void {
-    if (surface == .editor) {
-        present_trace_runtime.notePresentableDraw(renderer, .editor, null);
-    } else if (surface == .terminal) {
+    if (surface == .terminal) {
         present_trace_runtime.notePresentableDraw(renderer, .terminal, draw.generation);
     }
     renderer.backend.ops.presentable.drawPresentable(renderer, surface, draw);

@@ -609,7 +609,6 @@ pub fn syncTextRenderConfig(renderer: anytype) void {
 fn deinitPresentables(renderer: anytype) void {
     destroyRenderTarget(&renderer.backend.runtime.opengl.presentable_targets.terminal);
     destroyRenderTarget(&renderer.backend.runtime.opengl.presentable_targets.terminal_scroll);
-    destroyRenderTarget(&renderer.backend.runtime.opengl.presentable_targets.editor);
 }
 
 fn srgbToLinear(c: f32) f32 {

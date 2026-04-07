@@ -76,9 +76,11 @@ blocked by contract debt rather than implementation effort.
 - Android surface loss/replacement and Vulkan swapchain replacement must fit
   without reopening shared renderer ownership
 
-Current warning: the retained **editor** presentable path is explicitly not
-trusted as a live product path today. A future backend cannot inherit that seam
-as-is and still count as routine backend work.
+Current warning: the live shared presentable contract is terminal-only today.
+The old retained **editor** presentable arm has been removed rather than left
+as a dormant disabled branch. If editor retained presentation returns, it must
+come back as a deliberate reviewed lane, not as an assumed part of the routine
+backend contract.
 
 3. Backend-native runtime storage is no longer a widening pattern on `Renderer`
 
@@ -101,9 +103,9 @@ as-is and still count as routine backend work.
 - editor composition must honor the editor pane rect as its geometry authority;
   deriving wrap/segment truth from full-window width is a contract bug, not an
   acceptable implementation shortcut
-- retained editor presentation remains a fix-or-delete seam: pane-width truth
-  is corrected, but the retained path still is not trustworthy enough for live
-  editor use and should not count as an adoption-ready capability
+- retained editor presentation is not part of the live shared presentable
+  contract today; if it returns, it must come back through a reviewed lane
+  with honest ownership and geometry/update truth
 - backend-runtime storage pressure is now about ownership of the runtime bundle
   shape, not shared caller leakage; shared code should not read backend-native
   runtime fields directly

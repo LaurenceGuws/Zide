@@ -17,7 +17,6 @@ pub fn ensurePresentable(renderer: anytype, surface: PresentableSurface, width: 
             metal_backend.setTerminalSnapshotLogicalSize(context, width, height);
             break :blk metal_backend.ensureTerminalSnapshotPresentable(context, drawable_width, drawable_height).recreated;
         },
-        .editor => false,
     };
 }
 
@@ -80,7 +79,6 @@ pub fn drawPresentable(renderer: anytype, surface: PresentableSurface, draw: Pre
                 },
             } });
         },
-        .editor => {},
     }
 }
 
@@ -90,6 +88,5 @@ pub fn scrollPresentable(renderer: anytype, surface: PresentableSurface, dx: i32
             const context = metal_backend.backendContext(renderer) orelse break :blk false;
             break :blk metal_backend.scrollTerminalSnapshotPresentable(context, dx, dy);
         },
-        .editor => false,
     };
 }
