@@ -793,7 +793,7 @@ pub const Renderer = struct {
 
     pub fn applyPendingZoom(self: *Renderer, now: f64) !WindowRefreshResult {
         const changed = try font_runtime.applyPendingZoom(self, now);
-        const scene_target_invalidation: SceneTargetInvalidation = if (changed and self.supportsSceneTargets())
+        const scene_target_invalidation: SceneTargetInvalidation = if (changed and self.capabilities().scene_composition_mode == .offscreen_scene_target)
             .{ .render_scale_change = true }
         else
             .{};
@@ -1046,10 +1046,6 @@ pub const Renderer = struct {
 
     pub fn clearToThemeBackground(self: *Renderer) void {
         self.backend_ops.clearThemeBackground(self);
-    }
-
-    pub fn supportsSceneTargets(self: *const Renderer) bool {
-        return self.capabilities().scene_composition_mode == .offscreen_scene_target;
     }
 
     pub fn terminalPresentationMode(self: *const Renderer) TerminalPresentationMode {

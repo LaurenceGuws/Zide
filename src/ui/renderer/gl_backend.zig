@@ -153,7 +153,7 @@ pub fn sceneTargetInvalidationForRefresh(
         renderer.backend_runtime.opengl.scene_target,
         changes,
         metrics,
-        renderer.supportsSceneTargets(),
+        renderer.capabilities().scene_composition_mode == .offscreen_scene_target,
     );
 }
 
