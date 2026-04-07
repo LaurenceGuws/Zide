@@ -406,6 +406,10 @@ The current code makes that split more specific:
 - terminal-present path choice is now owned by the presentable host seam too,
   not by renderer-root convenience methods. Shared terminal code asks the
   terminal presentable host whether the path is direct or retained.
+- the editor styled-text split is slightly narrower too: highlighted-token
+  traversal now has one shared helper, so the remaining immediate-vs-draw-list
+  difference is at the emission layer rather than two separate token-ordering
+  algorithms.
 - sample/diagnostic pressure is the simpler section-fill plus bg-aware preview
   text path in `font_sample_view.zig`, including custom-font preview draws
   that still go straight through texture draw calls

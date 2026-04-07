@@ -383,6 +383,60 @@ fn selectionOverlapBg(slice_start: usize, slice_end: usize, base_bg: anytype, se
     return base_bg;
 }
 
+fn forEachHighlightedSegmentPart(
+    r: anytype,
+    line_text: []const u8,
+    line_start: usize,
+    seg_start: usize,
+    seg_end: usize,
+    seg_start_vis: usize,
+    tokens: []const HighlightToken,
+    text_x: f32,
+    base_bg: anytype,
+    selection_bg: anytype,
+    sel_ranges: []const ByteRange,
+    visitor: anytype,
+) void {
+    if (seg_start >= seg_end or line_text.len == 0) return;
+
+    var cursor = seg_start;
+    for (tokens) |token| {
+        if (token.end <= line_start + seg_start or token.start >= line_start + seg_end) continue;
+        const rel_start = if (token.start > line_start) token.start - line_start else 0;
+        const start = @max(rel_start, seg_start);
+        const end = @min(token.end - line_start, seg_end);
+
+        if (start > cursor) {
+            visitor.plain(cursor, start, r.theme.foreground, base_bg);
+        }
+
+        const conceal_text: ?[]const u8 = if (token.conceal != null or token.conceal_lines) token.conceal orelse "" else null;
+        var color = colorForToken(r, token.kind);
+        if (token.url != null) color = r.theme.link;
+        const style = tokenStyleInfo(r, token.kind);
+        const decoration_color = style.underline_color orelse color;
+
+        if (conceal_text) |text| {
+            if (text.len > 0) {
+                const bg = selectionOverlapBg(start, end, base_bg, selection_bg, sel_ranges);
+                const x = xForByteOffset(r, line_text, seg_start, seg_start_vis, start, text_x);
+                visitor.conceal(x, text, color, bg, decoration_color, style.flags);
+            }
+        } else {
+            const start_x = xForByteOffset(r, line_text, seg_start, seg_start_vis, start, text_x);
+            const end_x = xForByteOffset(r, line_text, seg_start, seg_start_vis, end, text_x);
+            const bg = selectionOverlapBg(start, end, base_bg, selection_bg, sel_ranges);
+            visitor.highlighted(start, end, color, bg, start_x, end_x, decoration_color, style.flags);
+        }
+
+        if (end > cursor) cursor = end;
+    }
+
+    if (cursor < seg_end) {
+        visitor.plain(cursor, seg_end, r.theme.foreground, base_bg);
+    }
+}
+
 fn tokenStyleInfo(r: anytype, kind: TokenKind) struct {
     flags: EditorTextStyleFlags,
     underline_color: ?@TypeOf(r.theme.foreground),
@@ -510,77 +564,106 @@ pub fn drawTextSliceWithSelectionBg(r: anytype, text_start_x: f32, y: f32, line_
 }
 
 pub fn appendHighlightedLineSegmentOps(list: *EditorDrawList, r: anytype, line_text: []const u8, y: f32, text_x: f32, line_start: usize, seg_start: usize, seg_end: usize, seg_start_vis: usize, tokens: []HighlightToken, base_bg: anytype, selection_bg: anytype, seg_start_byte: usize, sel_ranges: []const ByteRange, disable_programming_ligatures: bool) bool {
-    if (seg_start >= seg_end or line_text.len == 0) return true;
     var ok = true;
-    var cursor = seg_start;
-    for (tokens) |token| {
-        if (token.end <= line_start + seg_start or token.start >= line_start + seg_end) continue;
-        const rel_start = if (token.start > line_start) token.start - line_start else 0;
-        const start = @max(rel_start, seg_start);
-        const end = @min(token.end - line_start, seg_end);
-        if (start > cursor) {
-            ok = ok and addTextSliceOpsWithSelectionBg(list, r, text_x, y, line_text, seg_start_byte, seg_start_vis, cursor, start, r.theme.foreground, base_bg, selection_bg, sel_ranges, disable_programming_ligatures);
+    const Visitor = struct {
+        list: *EditorDrawList,
+        ok: *bool,
+        r: @TypeOf(r),
+        line_text: []const u8,
+        y: f32,
+        text_x: f32,
+        seg_start: usize,
+        seg_start_byte: usize,
+        seg_start_vis: usize,
+        selection_bg: @TypeOf(selection_bg),
+        sel_ranges: []const ByteRange,
+        disable_programming_ligatures: bool,
+
+        fn plain(self: *@This(), start: usize, end: usize, fg: @TypeOf(self.r.theme.foreground), bg: @TypeOf(self.selection_bg)) void {
+            self.ok.* = self.ok.* and addTextSliceOpsWithSelectionBg(
+                self.list,
+                self.r,
+                self.text_x,
+                self.y,
+                self.line_text,
+                self.seg_start_byte,
+                self.seg_start_vis,
+                start,
+                end,
+                fg,
+                bg,
+                self.selection_bg,
+                self.sel_ranges,
+                self.disable_programming_ligatures,
+            );
         }
-        const conceal_text: ?[]const u8 = if (token.conceal != null or token.conceal_lines) token.conceal orelse "" else null;
-        var color = colorForToken(r, token.kind);
-        if (token.url != null) color = r.theme.link;
-        const style = tokenStyleInfo(r, token.kind);
-        const decoration_color = style.underline_color orelse color;
-        if (conceal_text) |ctext| {
-            if (ctext.len > 0) {
-                const bg = selectionOverlapBg(start, end, base_bg, selection_bg, sel_ranges);
-                const x = xForByteOffset(r, line_text, seg_start, seg_start_vis, start, text_x);
-                ok = ok and addStyledTextOpBg(list, x, y, ctext, color, bg, style.flags, disable_programming_ligatures);
-                ok = ok and addTextDecorationOps(list, r, x, y, @as(f32, @floatFromInt(ctext.len)) * r.editor_char_width, decoration_color, style.flags);
-            }
-        } else {
-            const start_x = xForByteOffset(r, line_text, seg_start, seg_start_vis, start, text_x);
-            const end_x = xForByteOffset(r, line_text, seg_start, seg_start_vis, end, text_x);
-            const bg = selectionOverlapBg(start, end, base_bg, selection_bg, sel_ranges);
-            ok = ok and addExpandedStyledTextOpBg(list, r, text_x, y, line_text, seg_start, seg_start_vis, start, end, color, bg, style.flags, disable_programming_ligatures);
-            ok = ok and addTextDecorationOps(list, r, start_x, y, end_x - start_x, decoration_color, style.flags);
+
+        fn conceal(self: *@This(), x: f32, text: []const u8, fg: @TypeOf(self.r.theme.foreground), bg: @TypeOf(self.selection_bg), decoration_color: @TypeOf(self.r.theme.foreground), flags: EditorTextStyleFlags) void {
+            self.ok.* = self.ok.* and addStyledTextOpBg(self.list, x, self.y, text, fg, bg, flags, self.disable_programming_ligatures);
+            self.ok.* = self.ok.* and addTextDecorationOps(self.list, self.r, x, self.y, @as(f32, @floatFromInt(text.len)) * self.r.editor_char_width, decoration_color, flags);
         }
-        if (end > cursor) cursor = end;
-    }
-    if (cursor < seg_end) {
-        ok = ok and addTextSliceOpsWithSelectionBg(list, r, text_x, y, line_text, seg_start_byte, seg_start_vis, cursor, seg_end, r.theme.foreground, base_bg, selection_bg, sel_ranges, disable_programming_ligatures);
-    }
+
+        fn highlighted(self: *@This(), start: usize, end: usize, fg: @TypeOf(self.r.theme.foreground), bg: @TypeOf(self.selection_bg), start_x: f32, end_x: f32, decoration_color: @TypeOf(self.r.theme.foreground), flags: EditorTextStyleFlags) void {
+            self.ok.* = self.ok.* and addExpandedStyledTextOpBg(self.list, self.r, self.text_x, self.y, self.line_text, self.seg_start, self.seg_start_vis, start, end, fg, bg, flags, self.disable_programming_ligatures);
+            self.ok.* = self.ok.* and addTextDecorationOps(self.list, self.r, start_x, self.y, end_x - start_x, decoration_color, flags);
+        }
+    };
+    var visitor = Visitor{
+        .list = list,
+        .ok = &ok,
+        .r = r,
+        .line_text = line_text,
+        .y = y,
+        .text_x = text_x,
+        .seg_start = seg_start,
+        .seg_start_byte = seg_start_byte,
+        .seg_start_vis = seg_start_vis,
+        .selection_bg = selection_bg,
+        .sel_ranges = sel_ranges,
+        .disable_programming_ligatures = disable_programming_ligatures,
+    };
+    forEachHighlightedSegmentPart(r, line_text, line_start, seg_start, seg_end, seg_start_vis, tokens, text_x, base_bg, selection_bg, sel_ranges, &visitor);
     return ok;
 }
 
 pub fn drawHighlightedLineSegment(r: anytype, line_text: []const u8, y: f32, text_x: f32, line_start: usize, seg_start: usize, seg_end: usize, seg_start_vis: usize, tokens: []const HighlightToken, base_bg: anytype, selection_bg: anytype, sel_ranges: []const ByteRange, disable_programming_ligatures: bool) void {
-    if (seg_start >= seg_end or line_text.len == 0) return;
-    var cursor = seg_start;
-    for (tokens) |token| {
-        if (token.end <= line_start + seg_start or token.start >= line_start + seg_end) continue;
-        const start = @max(token.start - line_start, seg_start);
-        const end = @min(token.end - line_start, seg_end);
-        if (start > cursor) {
-            drawTextSliceWithSelectionBg(r, text_x, y, line_text, seg_start, seg_start_vis, cursor, start, r.theme.foreground, base_bg, selection_bg, sel_ranges, disable_programming_ligatures);
+    const Visitor = struct {
+        r: @TypeOf(r),
+        line_text: []const u8,
+        y: f32,
+        text_x: f32,
+        seg_start: usize,
+        seg_start_vis: usize,
+        selection_bg: @TypeOf(selection_bg),
+        sel_ranges: []const ByteRange,
+        disable_programming_ligatures: bool,
+
+        fn plain(self: *@This(), start: usize, end: usize, fg: @TypeOf(self.r.theme.foreground), bg: @TypeOf(self.selection_bg)) void {
+            drawTextSliceWithSelectionBg(self.r, self.text_x, self.y, self.line_text, self.seg_start, self.seg_start_vis, start, end, fg, bg, self.selection_bg, self.sel_ranges, self.disable_programming_ligatures);
         }
-        const x = xForByteOffset(r, line_text, seg_start, seg_start_vis, start, text_x);
-        const conceal_text: ?[]const u8 = if (token.conceal != null or token.conceal_lines) token.conceal orelse "" else null;
-        var color = colorForToken(r, token.kind);
-        if (token.url != null) color = r.theme.link;
-        const style = tokenStyleInfo(r, token.kind);
-        const decoration_color = style.underline_color orelse color;
-        if (conceal_text) |text| {
-            if (text.len > 0) {
-                const bg = selectionOverlapBg(start, end, base_bg, selection_bg, sel_ranges);
-                drawStyledTextOnBg(r, text, x, y, color, bg, style.flags, disable_programming_ligatures);
-                drawTextDecorations(r, x, y, @as(f32, @floatFromInt(text.len)) * r.editor_char_width, decoration_color, style.flags);
-            }
-        } else {
-            const bg = selectionOverlapBg(start, end, base_bg, selection_bg, sel_ranges);
-            drawExpandedStyledTextOnBg(r, text_x, y, line_text, seg_start, seg_start_vis, start, end, color, bg, style.flags, disable_programming_ligatures);
-            const end_x = xForByteOffset(r, line_text, seg_start, seg_start_vis, end, text_x);
-            drawTextDecorations(r, x, y, end_x - x, decoration_color, style.flags);
+
+        fn conceal(self: *@This(), x: f32, text: []const u8, fg: @TypeOf(self.r.theme.foreground), bg: @TypeOf(self.selection_bg), decoration_color: @TypeOf(self.r.theme.foreground), flags: EditorTextStyleFlags) void {
+            drawStyledTextOnBg(self.r, text, x, self.y, fg, bg, flags, self.disable_programming_ligatures);
+            drawTextDecorations(self.r, x, self.y, @as(f32, @floatFromInt(text.len)) * self.r.editor_char_width, decoration_color, flags);
         }
-        if (end > cursor) cursor = end;
-    }
-    if (cursor < seg_end) {
-        drawTextSliceWithSelectionBg(r, text_x, y, line_text, seg_start, seg_start_vis, cursor, seg_end, r.theme.foreground, base_bg, selection_bg, sel_ranges, disable_programming_ligatures);
-    }
+
+        fn highlighted(self: *@This(), start: usize, end: usize, fg: @TypeOf(self.r.theme.foreground), bg: @TypeOf(self.selection_bg), start_x: f32, end_x: f32, decoration_color: @TypeOf(self.r.theme.foreground), flags: EditorTextStyleFlags) void {
+            drawExpandedStyledTextOnBg(self.r, self.text_x, self.y, self.line_text, self.seg_start, self.seg_start_vis, start, end, fg, bg, flags, self.disable_programming_ligatures);
+            drawTextDecorations(self.r, start_x, self.y, end_x - start_x, decoration_color, flags);
+        }
+    };
+    var visitor = Visitor{
+        .r = r,
+        .line_text = line_text,
+        .y = y,
+        .text_x = text_x,
+        .seg_start = seg_start,
+        .seg_start_vis = seg_start_vis,
+        .selection_bg = selection_bg,
+        .sel_ranges = sel_ranges,
+        .disable_programming_ligatures = disable_programming_ligatures,
+    };
+    forEachHighlightedSegmentPart(r, line_text, line_start, seg_start, seg_end, seg_start_vis, tokens, text_x, base_bg, selection_bg, sel_ranges, &visitor);
 }
 
 pub fn highlightTokenLessThan(_: void, a: HighlightToken, b: HighlightToken) bool {

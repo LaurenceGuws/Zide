@@ -815,6 +815,12 @@ Current evidence:
   - cached/list path resolves the same semantics through draw-list text/rect
     ops there
 - that is the next honest editor-family seam if we keep pushing this lane.
+- editor checkpoint: highlighted-token traversal in
+  `editor_widget_draw_text.zig` now runs through one shared helper for both
+  immediate and draw-list paths.
+- that does not unify the emitters yet, but it removes one duplicated
+  traversal/order policy and leaves the remaining split at the emission layer
+  instead of the token-walk layer.
 - backend-runtime checkpoint: the remaining runtime-storage blocker is now more
   specifically OpenGL-shaped than Metal-shaped. Metal live frame/queue state is
   under backend context.

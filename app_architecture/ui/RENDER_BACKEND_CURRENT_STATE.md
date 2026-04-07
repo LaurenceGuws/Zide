@@ -624,6 +624,10 @@ That split is now sharper from code inspection too:
   `terminalPresentationMode()` / `usesDirectTerminalPresentation()`. That
   terminal-present path decision now lives in `renderer_presentable_host.zig`
   with the rest of the terminal presentable seam.
+- the editor styled-text split is slightly narrower now too:
+  `editor_widget_draw_text.zig` uses one shared highlighted-token traversal for
+  both immediate and draw-list paths. The remaining split is still real, but
+  it is now at the emitter layer rather than duplicated traversal policy.
 - sample pressure is specifically section-fill plus bg-aware text preview work
   in `font_sample_view.zig` / `font_sample_section_host.zig`, including the
   custom-font sample path that still terminates through direct texture draws
