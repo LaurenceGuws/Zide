@@ -247,6 +247,34 @@ have the same shape:
 So there is no honest "easy shell subset" today where fills can move alone
 without reopening the same ordering bug under a smaller name.
 
+**Shell/UI chrome direction (2026-04-07):** the next honest move is not
+"another subset hunt." It is to introduce a dedicated band/composition seam for
+UI chrome families that need one local ordering story for:
+
+- band/background fills
+- dependent text and icon text
+- dependent outline/accent primitives
+
+That seam should be read as product-level band composition intent, not generic
+surface submission. The backend-neutral rule should be:
+
+- preserve order inside one recorded band composition unit
+- do not expose backend timing differences to the caller
+- keep generic `SurfaceDraw` for truly generic fills/blits that do not depend
+  on immediate neighboring text/outline work
+
+Initial scope should stay narrow:
+
+- status bar
+- tab bar
+- shared top bar
+- side nav
+- small notice/confirm/chrome surfaces only if they use the same band story
+
+Do not broaden this into "all UI drawing" up front. The point is to give the
+chrome family one honest seam, not to replace every renderer path with a new
+god-queue.
+
 #### Presentable contract
 
 One backend-neutral presentable surface contract that can express:

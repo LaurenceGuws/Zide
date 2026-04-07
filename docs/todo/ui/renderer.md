@@ -684,6 +684,11 @@ Current evidence:
 - narrower shell-chrome subset audit: no free lane found yet. Config reload
   notice, close-confirm UI, and caption buttons still mix fills with immediate
   text and/or immediate outline/icon primitives at the same call site.
+- next design direction is now explicit: introduce a shell/UI chrome
+  band-composition seam that owns fill + dependent text/icon/outline ordering
+  as one product-level unit. Keep first scope narrow: status bar, tab bar,
+  shared top bar, side nav, then nearby notice/confirm/chrome surfaces if they
+  fit the same contract.
 - This is real lifecycle cleanup and removes another renderer-root duplication
   seam.
 - This is not closure yet:

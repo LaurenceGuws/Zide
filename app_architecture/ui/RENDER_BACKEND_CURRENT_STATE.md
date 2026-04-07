@@ -357,6 +357,25 @@ immediate text and/or immediate outline/icon primitives at the same call site.
 So shell chrome remains a real phase-design problem, not a hidden
 micro-refactor.
 
+The current best direction is now clear enough to state: shell/UI chrome needs
+its own band-composition seam. That seam should own one local ordering unit for
+background fills plus the dependent text/icon/outline work that currently sits
+next to those fills at the same call sites. In other words, the next useful
+design cut is not "delay chrome fills"; it is "stop expressing chrome bands as
+one fill path plus one unrelated immediate text path."
+
+That should stay intentionally narrower than a whole new generic UI draw
+system. The pressure is specifically on:
+
+- status bar
+- tab bar
+- shared top bar
+- side nav
+- nearby notice/confirm/chrome surfaces where the same band logic applies
+
+If that seam proves out, it may later inform editor/sample banding too. It
+should not be born as a repo-wide replacement for all generic UI draw paths.
+
 That is the loudest remaining semantic contradiction in the backend contract.
 It is no longer hidden by renderer-root facade noise or mixed backend dispatch
 buckets, which means the next real cut must either:
