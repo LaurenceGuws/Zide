@@ -262,6 +262,11 @@ use `GpuImageRef` plus `drawPersistentImage(...)`, so the shared surface no
 longer teaches product code that a persisted image is “really a GL texture
 struct.”
 
+That has improved slightly again on root-surface sprawl too: the old public
+`Renderer.drawTexture(...)` method is gone. Texture drawing remains an internal
+font/glyph/atlas primitive, but product-level callers no longer get a generic
+GL-shaped texture draw verb by default.
+
 That has improved slightly again on frame lifecycle termination too:
 backend frame begin/submit and screenshot entrypoints now live directly on
 `gl_backend.zig` / `metal_backend.zig`, and the old

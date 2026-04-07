@@ -1575,10 +1575,6 @@ pub const Renderer = struct {
         return self.backend_ops.draw.drawRawImage(self, format, width, height, data, dest, tint);
     }
 
-    pub fn drawTexture(self: *Renderer, texture: types.Texture, src: types.Rect, dest: types.Rect, color: Color) void {
-        self.drawTextureRect(texture, src, dest, color.toRgba());
-    }
-
     pub fn inputDomain(self: *Renderer) input_state.InputDomain {
         return .{
             .allocator = self.allocator,
