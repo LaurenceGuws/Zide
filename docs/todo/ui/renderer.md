@@ -519,6 +519,11 @@ Current evidence:
   instead of part of the caller-facing shared surface.
 - dead renderer-root capability convenience verbs with no callers are being
   deleted instead of preserved as speculative API surface.
+- shared raw-image draw payloads now use one opaque `GpuImageRef` handle
+  instead of a `.opengl` / `.metal` texture union.
+- backend-specific clone/release/interpretation now terminates in backend
+  modules instead of the shared draw contract encoding backend branches in the
+  payload itself.
 - This is real lifecycle cleanup and removes another renderer-root duplication
   seam.
 - This is not closure yet:

@@ -349,10 +349,9 @@ pub fn drawSolidRect(renderer: anytype, x: f32, y: f32, w: f32, h: f32, color: t
 /// Interprets one shared `SurfaceDraw` on the OpenGL path immediately (Metal
 /// queues the same union for end-of-frame replay). `.solid` and `.atlas` are
 /// supported when the renderer is in a compatible text mode (atlas uses
-/// `terminal_font` coverage/color textures). `.raw_image` is supported when
-/// `RawImageTexture` is the `.opengl` variant (`types.Texture`); the draw does
-/// not take ownership. The `.metal` variant returns false (use CPU uploads via
-/// `drawRawImageRgba` / `drawRawImageRgb` when you do not have a GL texture).
+/// `terminal_font` coverage/color textures). `.raw_image` uses a shared opaque
+/// image handle whose `handle` is interpreted here as a GL texture id; the
+/// draw does not take ownership.
 pub fn submitSurfaceDrawImmediate(renderer: anytype, draw: surface_draw.SurfaceDraw) bool {
     switch (draw) {
         .solid => |s| {
@@ -411,10 +410,7 @@ pub fn submitSurfaceDrawImmediate(renderer: anytype, draw: surface_draw.SurfaceD
             return true;
         },
         .raw_image => |img| {
-            const tex = switch (img.texture) {
-                .opengl => |t| t,
-                .metal => return false,
-            };
+            const tex = textureFromGpuImageHandle(img.texture);
             if (tex.id == 0 or tex.width <= 0 or tex.height <= 0) return false;
             const source_rect = img.source_rect orelse types.Rect{
                 .x = 0,
@@ -445,6 +441,14 @@ pub fn submitSurfaceDrawImmediate(renderer: anytype, draw: surface_draw.SurfaceD
             return true;
         },
     }
+}
+
+fn textureFromGpuImageHandle(texture: surface_draw.GpuImageRef) types.Texture {
+    return .{
+        .id = @intCast(texture.handle),
+        .width = texture.width,
+        .height = texture.height,
+    };
 }
 
 pub fn addTerminalRect(renderer: anytype, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void {
@@ -1300,7 +1304,11 @@ pub fn drawRawImageRgba(renderer: anytype, width: i32, height: i32, data: []cons
     var tex = texture_utils.createTextureFromRgba(width, height, data, gl.c.GL_NEAREST) orelse return false;
     defer texture_utils.destroyTexture(&tex);
     return submitSurfaceDrawImmediate(renderer, .{ .raw_image = .{
-        .texture = .{ .opengl = tex },
+        .texture = .{
+            .handle = tex.id,
+            .width = tex.width,
+            .height = tex.height,
+        },
         .source_rect = null,
         .dest_rect = .{
             .x = renderer.logicalLengthToRaster(dest.x),
@@ -1327,7 +1335,11 @@ pub fn drawRawImageRgb(renderer: anytype, width: i32, height: i32, data: []const
     var tex = texture_utils.createTextureFromRgb(width, height, data, gl.c.GL_NEAREST) orelse return false;
     defer texture_utils.destroyTexture(&tex);
     return submitSurfaceDrawImmediate(renderer, .{ .raw_image = .{
-        .texture = .{ .opengl = tex },
+        .texture = .{
+            .handle = tex.id,
+            .width = tex.width,
+            .height = tex.height,
+        },
         .source_rect = null,
         .dest_rect = .{
             .x = renderer.logicalLengthToRaster(dest.x),

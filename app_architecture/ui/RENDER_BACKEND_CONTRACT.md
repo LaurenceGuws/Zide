@@ -106,25 +106,25 @@ This list must not embed Metal-native or GL-native draw structs in shared
 renderer state.
 
 **Submission shape today:** the shared union lives in `surface_draw.zig`
-(`SurfaceDraw`). `Renderer.enqueueSurfaceDraw` routes through `BackendOps`:
+(`SurfaceDraw`). The renderer now keeps `enqueueSurfaceDraw(...)` internal, but
+still routes shared solid draws through the grouped backend draw contract.
 Metal appends to the end-of-frame replay queue; OpenGL interprets `.solid` and
 `.atlas` immediately via `gl_backend.submitSurfaceDrawImmediate` (raster-space
 `dest_rect` / atlas `dest_x`/`dest_y` converted back to logical coordinates to
 match how Metal enqueues those draws). Atlas samples on OpenGL require
 `text_rendering_mode == gl_texture_atlas` and use `terminal_font` coverage/color
-textures. `.raw_image` on OpenGL immediate submission interprets only the `.opengl`
-`RawImageTexture` variant (`types.Texture`); the `.metal` variant still
-returns false. For CPU pixel buffers on OpenGL, the
-`BackendOps` `drawRawImageRgba` / `drawRawImageRgb` on OpenGL upload ephemeral
-textures then submit one `SurfaceDraw.raw_image` with the `.opengl` texture
-handle (same clip and raster `dest_rect` path as other immediate `SurfaceDraw`
-interpretation). On Metal, `appendSolidRect` / `appendAtlasSample`
-now build the same `SurfaceDraw` values and submit through `enqueueSurfaceDraw`
-so queueing shares the ops-table entry with external callers. High-level
-`Renderer.drawRect` / `drawRectF` also route solid fills through
-`enqueueSurfaceDraw` so product-level rectangles participate in the same
-submission contract; `addTerminalRectF` does the same for float terminal rects
-while integer `addTerminalRect` remains on `BackendOps` so OpenGL can keep
+textures. Raw images now use one opaque shared `GpuImageRef` handle
+(`handle + width + height`) instead of a backend-tagged `.opengl` / `.metal`
+union inside the shared payload; backend-specific interpretation and
+clone/release logic terminate in `gl_backend.zig` / `metal_backend.zig`.
+For CPU pixel buffers on OpenGL, `drawRawImageRgba` / `drawRawImageRgb` upload
+ephemeral textures then submit one `SurfaceDraw.raw_image` with a `GpuImageRef`
+whose handle is interpreted as a GL texture id. On Metal,
+`appendSolidRect` / `appendAtlasSample` build the same `SurfaceDraw` values and
+submit through the grouped backend draw contract so queueing shares the same
+payload semantics as other callers. High-level `Renderer.drawRect` / `drawRectF`
+also route solid fills through that same shared submission contract while
+integer `addTerminalRect` remains on backend draw ops so OpenGL can keep
 batching terminal quads.
 
 #### Presentable contract

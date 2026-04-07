@@ -21,22 +21,17 @@ pub const AtlasSampleDraw = struct {
     clip_rect: ?PixelClipRect = null,
 };
 
-/// Metal path: `texture` is an `MTLTexture*`; dimensions match the texture.
-/// OpenGL path: immediate `SurfaceDraw.raw_image` uses `types.Texture` without
-/// ownership transfer (caller keeps the GL texture alive through the draw).
-pub const MetalRawImageTexture = struct {
-    texture: *anyopaque,
+/// Backend-neutral image handle for shared draw payloads.
+/// OpenGL stores the texture id in `handle`.
+/// Metal stores the `MTLTexture*` pointer bits in `handle`.
+pub const GpuImageRef = struct {
+    handle: usize,
     width: i32,
     height: i32,
 };
 
-pub const RawImageTexture = union(enum) {
-    metal: MetalRawImageTexture,
-    opengl: types.Texture,
-};
-
 pub const RawImageDraw = struct {
-    texture: RawImageTexture,
+    texture: GpuImageRef,
     source_rect: ?types.Rect = null,
     dest_rect: types.Rect,
     tint: types.Rgba = .{ .r = 255, .g = 255, .b = 255, .a = 255 },

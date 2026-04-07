@@ -242,6 +242,14 @@ subcontracts instead of one flat `backend_ops` blob. This is still the same
 dispatch center, but it makes the remaining contradictions more honest and
 reduces the renderer-root “single backend god object” surface.
 
+That has improved slightly again on draw-payload neutrality too: shared raw
+image draws no longer carry a `.opengl` / `.metal` texture union in
+`surface_draw.zig`. The payload now carries one opaque `GpuImageRef`
+(`handle + width + height`), while backend-specific interpretation and
+clone/release logic terminate inside `gl_backend.zig` / `metal_backend.zig`.
+This does not finish the whole draw-submission contradiction, but it removes
+one direct “future `.vulkan` arm” pressure point from the shared payload.
+
 That has improved slightly again on frame lifecycle termination too:
 backend frame begin/submit and screenshot entrypoints now live directly on
 `gl_backend.zig` / `metal_backend.zig`, and the old

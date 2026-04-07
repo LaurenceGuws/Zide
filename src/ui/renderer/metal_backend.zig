@@ -195,8 +195,7 @@ pub const GlyphAtlas = struct {
 
 pub const AtlasTextureSource = surface_draw.AtlasTextureSource;
 pub const AtlasSampleDraw = surface_draw.AtlasSampleDraw;
-pub const MetalRawImageTexture = surface_draw.MetalRawImageTexture;
-pub const RawImageTexture = surface_draw.RawImageTexture;
+pub const GpuImageRef = surface_draw.GpuImageRef;
 pub const RawImageDraw = surface_draw.RawImageDraw;
 pub const SolidColorDraw = surface_draw.SolidColorDraw;
 const SurfaceDraw = surface_draw.SurfaceDraw;
@@ -209,10 +208,10 @@ pub const BackendContext = struct {
     atlas_pipeline: *anyopaque,
     atlas_sampler: *anyopaque,
     glyph_atlas: GlyphAtlas,
-    terminal_snapshot: ?RawImageTexture,
-    terminal_snapshot_scratch: ?RawImageTexture,
+    terminal_snapshot: ?GpuImageRef,
+    terminal_snapshot_scratch: ?GpuImageRef,
     /// 1×1 white texture for tint-only solid fills (cursor, rects).
-    solid_white_brush: ?RawImageTexture,
+    solid_white_brush: ?GpuImageRef,
     drawable_width: i32,
     drawable_height: i32,
 };
@@ -228,6 +227,11 @@ pub const Readback = struct {
     height: i32,
     bytes_per_row: usize,
 };
+
+fn ptrFromGpuImageHandle(texture: GpuImageRef) ?*anyopaque {
+    if (texture.handle == 0) return null;
+    return @ptrFromInt(texture.handle);
+}
 
 pub fn prepareHost(renderer: anytype) ?macos_metal_host.Host {
     return switch (renderer.render_surface_attachment) {
@@ -946,22 +950,19 @@ pub fn drawRawImage(
     frame: *Frame,
     draw: RawImageDraw,
 ) bool {
-    const mt = switch (draw.texture) {
-        .metal => |m| m,
-        .opengl => return false,
-    };
+    const texture_ptr = ptrFromGpuImageHandle(draw.texture) orelse return false;
     const source_rect = draw.source_rect orelse types.Rect{
         .x = 0,
         .y = 0,
-        .width = @floatFromInt(mt.width),
-        .height = @floatFromInt(mt.height),
+        .width = @floatFromInt(draw.texture.width),
+        .height = @floatFromInt(draw.texture.height),
     };
     return encodeExternalTextureRegion(
         context,
         frame,
-        mt.texture,
-        mt.width,
-        mt.height,
+        texture_ptr,
+        draw.texture.width,
+        draw.texture.height,
         source_rect,
         draw.dest_rect,
         draw.tint,
@@ -974,15 +975,12 @@ pub fn drawSolidColor(
     frame: *Frame,
     draw: SolidColorDraw,
 ) bool {
-    const brush_tex = context.solid_white_brush orelse return false;
-    const brush = switch (brush_tex) {
-        .metal => |b| b,
-        .opengl => return false,
-    };
+    const brush = context.solid_white_brush orelse return false;
+    const brush_ptr = ptrFromGpuImageHandle(brush) orelse return false;
     return encodeExternalTextureRegion(
         context,
         frame,
-        brush.texture,
+        brush_ptr,
         brush.width,
         brush.height,
         .{
@@ -997,37 +995,32 @@ pub fn drawSolidColor(
     );
 }
 
-pub fn deinitRawImageTexture(texture: *RawImageTexture) void {
+pub fn releaseGpuImageRef(texture: *GpuImageRef) void {
     if (builtin.target.os.tag != .macos) return;
-    switch (texture.*) {
-        .metal => |*m| releaseObject(m.texture),
-        .opengl => {},
-    }
+    if (texture.handle == 0) return;
+    if (ptrFromGpuImageHandle(texture.*)) |ptr| releaseObject(ptr);
+    texture.* = .{ .handle = 0, .width = 0, .height = 0 };
 }
 
-pub fn cloneRawImageTexture(texture: RawImageTexture) RawImageTexture {
-    return switch (texture) {
-        .metal => |m| .{ .metal = .{
-            .texture = retainObject(m.texture),
-            .width = m.width,
-            .height = m.height,
-        } },
-        .opengl => |t| .{ .opengl = t },
-    };
+pub fn cloneGpuImageRef(texture: GpuImageRef) GpuImageRef {
+    if (ptrFromGpuImageHandle(texture)) |ptr| {
+        _ = retainObject(ptr);
+    }
+    return texture;
 }
 
 fn createEmptyRawImageTexture(
     device: *anyopaque,
     width: i32,
     height: i32,
-) ?RawImageTexture {
+) ?GpuImageRef {
     if (builtin.target.os.tag != .macos) return null;
     const atlas_texture = createAtlasTexture(device, width, height, pixel_format_bgra8_unorm) orelse return null;
-    return .{ .metal = .{
-        .texture = atlas_texture.texture,
+    return .{
+        .handle = @intFromPtr(atlas_texture.texture),
         .width = width,
         .height = height,
-    } };
+    };
 }
 
 fn seedGlyphAtlasDiagnostics(atlas: *GlyphAtlas) bool {
@@ -1058,7 +1051,7 @@ pub fn createRawImageTextureRgba(
     width: i32,
     height: i32,
     data: []const u8,
-) ?RawImageTexture {
+) ?GpuImageRef {
     if (builtin.target.os.tag != .macos) return null;
     const atlas_texture = createAtlasTexture(device, width, height, pixel_format_bgra8_unorm) orelse return null;
     errdefer releaseObject(atlas_texture.texture);
@@ -1078,11 +1071,11 @@ pub fn createRawImageTextureRgba(
         converted,
     );
     if (!uploaded) return null;
-    return .{ .metal = .{
-        .texture = atlas_texture.texture,
+    return .{
+        .handle = @intFromPtr(atlas_texture.texture),
         .width = width,
         .height = height,
-    } };
+    };
 }
 
 pub fn createRawImageTextureRgb(
@@ -1090,7 +1083,7 @@ pub fn createRawImageTextureRgb(
     width: i32,
     height: i32,
     data: []const u8,
-) ?RawImageTexture {
+) ?GpuImageRef {
     if (builtin.target.os.tag != .macos) return null;
     const atlas_texture = createAtlasTexture(device, width, height, pixel_format_bgra8_unorm) orelse return null;
     errdefer releaseObject(atlas_texture.texture);
@@ -1115,11 +1108,11 @@ pub fn createRawImageTextureRgb(
         converted,
     );
     if (!uploaded) return null;
-    return .{ .metal = .{
-        .texture = atlas_texture.texture,
+    return .{
+        .handle = @intFromPtr(atlas_texture.texture),
         .width = width,
         .height = height,
-    } };
+    };
 }
 
 pub fn createBackendContext(
@@ -1347,11 +1340,7 @@ pub fn presentableInfo(renderer: anytype, surface: PresentableSurface) ?Presenta
     if (surface != .terminal) return null;
 
     const context = backendContextConst(renderer) orelse return null;
-    const snapshot = context.terminal_snapshot orelse return null;
-    const snap = switch (snapshot) {
-        .metal => |m| m,
-        .opengl => return null,
-    };
+    const snap = context.terminal_snapshot orelse return null;
     return .{
         .width_px = snap.width,
         .height_px = snap.height,
@@ -1372,7 +1361,7 @@ pub fn drawPresentable(renderer: anytype, surface: PresentableSurface, draw: Pre
             const context = backendContext(renderer) orelse return;
             const snapshot = context.terminal_snapshot orelse return;
             _ = appendRawImage(renderer, .{
-                .texture = cloneRawImageTexture(snapshot),
+                .texture = cloneGpuImageRef(snapshot),
                 .source_rect = .{
                     .x = renderer.logicalLengthToRaster(draw.x),
                     .y = renderer.logicalLengthToRaster(draw.y),
@@ -1501,7 +1490,7 @@ pub fn appendSurfaceDrawToMetalQueue(renderer: anytype, draw: SurfaceDraw) bool 
         switch (queued_draw) {
             .atlas => {},
             .solid => {},
-            .raw_image => |*raw| deinitRawImageTexture(&raw.texture),
+            .raw_image => |*raw| releaseGpuImageRef(&raw.texture),
         }
         return false;
     };
@@ -1784,9 +1773,9 @@ pub fn resizeBackendContext(
 
 pub fn deinitBackendContext(context: *BackendContext) void {
     if (builtin.target.os.tag != .macos) return;
-    if (context.terminal_snapshot) |*snapshot| deinitRawImageTexture(snapshot);
-    if (context.terminal_snapshot_scratch) |*scratch| deinitRawImageTexture(scratch);
-    if (context.solid_white_brush) |*brush| deinitRawImageTexture(brush);
+    if (context.terminal_snapshot) |*snapshot| releaseGpuImageRef(snapshot);
+    if (context.terminal_snapshot_scratch) |*scratch| releaseGpuImageRef(scratch);
+    if (context.solid_white_brush) |*brush| releaseGpuImageRef(brush);
     context.terminal_snapshot_scratch = null;
     context.solid_white_brush = null;
     deinitGlyphAtlas(&context.glyph_atlas);
@@ -1841,7 +1830,7 @@ fn clearQueuedSurfaceDraws(renderer: anytype) void {
         switch (queued_draw.*) {
             .atlas => {},
             .solid => {},
-            .raw_image => |*draw| deinitRawImageTexture(&draw.texture),
+            .raw_image => |*draw| releaseGpuImageRef(&draw.texture),
         }
     }
     renderer.backend_runtime.metal.queued_surface_draws.clearRetainingCapacity();
@@ -1955,7 +1944,7 @@ pub fn ensureTerminalSnapshotPresentable(
             };
         }
         var existing = snapshot;
-        deinitRawImageTexture(&existing);
+        releaseGpuImageRef(&existing);
         context.terminal_snapshot = null;
     }
     context.terminal_snapshot = createEmptyRawImageTexture(context.device, width, height);
@@ -1979,7 +1968,7 @@ fn ensureTerminalSnapshotScratch(
         };
         if (matches) return true;
         var existing = scratch;
-        deinitRawImageTexture(&existing);
+        releaseGpuImageRef(&existing);
         context.terminal_snapshot_scratch = null;
     }
     context.terminal_snapshot_scratch = createEmptyRawImageTexture(context.device, width, height);
