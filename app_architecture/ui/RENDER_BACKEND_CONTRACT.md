@@ -363,11 +363,15 @@ The current code makes that split more specific:
   - OpenGL has narrowed one real stratum: retained presentable targets and
     offscreen scene-target lifecycle now sit under
     `opengl_runtime_state.TargetRuntime`
-  - but the OpenGL runtime still mixes two broad backend-native strata:
-    - GL context + shader/VBO/text resource ownership
+  - OpenGL has narrowed another: GL shader/VBO/text resource ownership now sits
+    under `opengl_runtime_state.ResourceRuntime`
+  - the remaining OpenGL runtime shape is now three explicit backend-native
+    strata:
+    - GL context ownership
+    - GL shader/VBO/text resource ownership
     - retained target / scene-target lifecycle
-- that is real progress, but not closure. The next honest cut still has to
-  peel another ownership stratum instead of stopping at a prettier grouping.
+- that is real progress, but not closure. The next honest cut now has to be a
+  semantic ownership decision, not more first-pass storage regrouping.
 - sample/diagnostic pressure is the simpler section-fill plus bg-aware preview
   text path in `font_sample_view.zig`, including custom-font preview draws
   that still go straight through texture draw calls

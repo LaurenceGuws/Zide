@@ -12,8 +12,7 @@ pub const TargetRuntime = struct {
     scene_target: SceneTargetState = .{},
 };
 
-pub const State = struct {
-    context: ?sdl_api.c.SDL_GLContext = null,
+pub const ResourceRuntime = struct {
     resources_ready: bool = false,
     shader_program: gl.GLuint = 0,
     vao: gl.GLuint = 0,
@@ -27,5 +26,10 @@ pub const State = struct {
     uniform_dst_linear: gl.GLint = -1,
     uniform_linear_correction: gl.GLint = -1,
     white_texture: types.Texture = .{ .id = 0, .width = 0, .height = 0 },
+};
+
+pub const State = struct {
+    context: ?sdl_api.c.SDL_GLContext = null,
+    resources: ResourceRuntime = .{},
     targets: TargetRuntime = .{},
 };

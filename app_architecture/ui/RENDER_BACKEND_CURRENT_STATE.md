@@ -579,13 +579,16 @@ That split is now sharper from code inspection too:
   - OpenGL has improved one step: retained presentable targets and offscreen
     scene-target lifecycle now live under one explicit
     `opengl_runtime_state.TargetRuntime` stratum
-  - but `opengl_runtime_state.zig` still keeps two broad OpenGL-native strata
-    in one runtime object:
-    - SDL GL context + shader/VBO/text resource slots
+  - OpenGL improved again: GL shader/VBO/text resource ownership now lives
+    under one explicit `opengl_runtime_state.ResourceRuntime` stratum too
+  - the remaining OpenGL runtime shape is now three explicit backend-native
+    strata in one state object:
+    - SDL GL context ownership
+    - GL shader/VBO/text resource ownership
     - retained target / scene-target lifecycle
-- that is narrower than before, but not closure. The next honest OpenGL runtime
-  cut still has to peel another real ownership stratum instead of regrouping
-  the whole blob.
+- that is materially narrower than before, but not closure. The next honest
+  OpenGL runtime cut now has to be semantic, not just first-pass storage
+  disentangling.
 - sample pressure is specifically section-fill plus bg-aware text preview work
   in `font_sample_view.zig` / `font_sample_section_host.zig`, including the
   custom-font sample path that still terminates through direct texture draws

@@ -803,12 +803,16 @@ Current evidence:
   scene-target lifecycle now live under one explicit
   `opengl_runtime_state.TargetRuntime` stratum instead of being flat peers of
   context/shader/VBO state.
-- that is a real ownership cut, but it is not runtime closure yet:
-  `opengl_runtime_state.zig` still mixes two broad OpenGL-native strata:
-  - SDL GL context + shader/VBO/text resources
+- OpenGL checkpoint: GL shader/VBO/text resource ownership now lives under one
+  explicit `opengl_runtime_state.ResourceRuntime` stratum too, separate from
+  both context ownership and retained-target lifecycle.
+- that is a real ownership narrowing. The remaining OpenGL runtime shape is now
+  three explicit backend-native strata instead of one blob:
+  - SDL GL context ownership
+  - GL shader/VBO/text resource ownership
   - retained target / scene-target lifecycle
-- the next OpenGL runtime cut must keep peeling real strata apart, not rename
-  the remaining blob again.
+- that is still not runtime closure, but the next GL runtime cut now has to be
+  a genuinely semantic one, not a first-pass storage disentangling.
 - code-facing checkpoint: the sample pressure is specifically
   section-fill-plus-bg-aware preview text in `font_sample_view.zig`, including
   custom-font preview draws that still go through direct texture draw calls.
