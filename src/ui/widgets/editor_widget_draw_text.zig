@@ -170,38 +170,27 @@ fn drawExpandedStyledTextOnBg(
     flags: EditorTextStyleFlags,
     disable_programming_ligatures: bool,
 ) void {
-    if (slice_end <= slice_start) return;
-    if (std.mem.indexOfScalar(u8, line_text[slice_start..slice_end], '\t') == null) {
-        const x = xForByteOffset(r, line_text, seg_start_byte, seg_start_vis, slice_start, text_start_x);
-        drawStyledTextOnBg(r, line_text[slice_start..slice_end], x, y, fg, bg, flags, disable_programming_ligatures);
-        return;
-    }
+    const Visitor = struct {
+        renderer: @TypeOf(r),
+        y: f32,
+        fg: @TypeOf(fg),
+        bg: @TypeOf(bg),
+        flags: EditorTextStyleFlags,
+        disable_programming_ligatures: bool,
 
-    var cursor = slice_start;
-    var run_start = slice_start;
-    var vis = visualColumnAtByteOffset(line_text, seg_start_byte, seg_start_vis, slice_start);
-    var run_x = text_start_x + @as(f32, @floatFromInt(vis - seg_start_vis)) * r.editor_char_width;
-    while (cursor < slice_end) {
-        if (line_text[cursor] == '\t') {
-            if (cursor > run_start) {
-                drawStyledTextOnBg(r, line_text[run_start..cursor], run_x, y, fg, bg, flags, disable_programming_ligatures);
-            }
-            const width = text_columns_mod.cellWidthForCodepoint('\t', vis);
-            drawStyledTextOnBg(r, tab_spaces[0..width], run_x, y, fg, bg, flags, disable_programming_ligatures);
-            vis += width;
-            run_x += @as(f32, @floatFromInt(width)) * r.editor_char_width;
-            cursor += 1;
-            run_start = cursor;
-            continue;
+        fn emit(self: *@This(), x: f32, text: []const u8) void {
+            drawStyledTextOnBg(self.renderer, text, x, self.y, self.fg, self.bg, self.flags, self.disable_programming_ligatures);
         }
-        const seq_len = nextUtf8Len(line_text, cursor);
-        const cp = std.unicode.utf8Decode(line_text[cursor .. cursor + seq_len]) catch 0xFFFD;
-        vis += text_columns_mod.cellWidthForCodepoint(cp, vis);
-        cursor += seq_len;
-    }
-    if (run_start < slice_end) {
-        drawStyledTextOnBg(r, line_text[run_start..slice_end], run_x, y, fg, bg, flags, disable_programming_ligatures);
-    }
+    };
+    var visitor = Visitor{
+        .renderer = r,
+        .y = y,
+        .fg = fg,
+        .bg = bg,
+        .flags = flags,
+        .disable_programming_ligatures = disable_programming_ligatures,
+    };
+    forEachExpandedStyledTextRun(r, text_start_x, line_text, seg_start_byte, seg_start_vis, slice_start, slice_end, &visitor);
 }
 
 fn addExpandedStyledTextOpBg(
@@ -219,13 +208,50 @@ fn addExpandedStyledTextOpBg(
     flags: EditorTextStyleFlags,
     disable_programming_ligatures: bool,
 ) bool {
-    if (slice_end <= slice_start) return true;
+    var ok = true;
+    const Visitor = struct {
+        list: *EditorDrawList,
+        y: f32,
+        fg: @TypeOf(fg),
+        bg: @TypeOf(bg),
+        flags: EditorTextStyleFlags,
+        disable_programming_ligatures: bool,
+        ok: *bool,
+
+        fn emit(self: *@This(), x: f32, text: []const u8) void {
+            self.ok.* = self.ok.* and addStyledTextOpBg(self.list, x, self.y, text, self.fg, self.bg, self.flags, self.disable_programming_ligatures);
+        }
+    };
+    var visitor = Visitor{
+        .list = list,
+        .y = y,
+        .fg = fg,
+        .bg = bg,
+        .flags = flags,
+        .disable_programming_ligatures = disable_programming_ligatures,
+        .ok = &ok,
+    };
+    forEachExpandedStyledTextRun(r, text_start_x, line_text, seg_start_byte, seg_start_vis, slice_start, slice_end, &visitor);
+    return ok;
+}
+
+fn forEachExpandedStyledTextRun(
+    r: anytype,
+    text_start_x: f32,
+    line_text: []const u8,
+    seg_start_byte: usize,
+    seg_start_vis: usize,
+    slice_start: usize,
+    slice_end: usize,
+    visitor: anytype,
+) void {
+    if (slice_end <= slice_start) return;
     if (std.mem.indexOfScalar(u8, line_text[slice_start..slice_end], '\t') == null) {
         const x = xForByteOffset(r, line_text, seg_start_byte, seg_start_vis, slice_start, text_start_x);
-        return addStyledTextOpBg(list, x, y, line_text[slice_start..slice_end], fg, bg, flags, disable_programming_ligatures);
+        visitor.emit(x, line_text[slice_start..slice_end]);
+        return;
     }
 
-    var ok = true;
     var cursor = slice_start;
     var run_start = slice_start;
     var vis = visualColumnAtByteOffset(line_text, seg_start_byte, seg_start_vis, slice_start);
@@ -233,10 +259,10 @@ fn addExpandedStyledTextOpBg(
     while (cursor < slice_end) {
         if (line_text[cursor] == '\t') {
             if (cursor > run_start) {
-                ok = ok and addStyledTextOpBg(list, run_x, y, line_text[run_start..cursor], fg, bg, flags, disable_programming_ligatures);
+                visitor.emit(run_x, line_text[run_start..cursor]);
             }
             const width = text_columns_mod.cellWidthForCodepoint('\t', vis);
-            ok = ok and addStyledTextOpBg(list, run_x, y, tab_spaces[0..width], fg, bg, flags, disable_programming_ligatures);
+            visitor.emit(run_x, tab_spaces[0..width]);
             vis += width;
             run_x += @as(f32, @floatFromInt(width)) * r.editor_char_width;
             cursor += 1;
@@ -249,9 +275,8 @@ fn addExpandedStyledTextOpBg(
         cursor += seq_len;
     }
     if (run_start < slice_end) {
-        ok = ok and addStyledTextOpBg(list, run_x, y, line_text[run_start..slice_end], fg, bg, flags, disable_programming_ligatures);
+        visitor.emit(run_x, line_text[run_start..slice_end]);
     }
-    return ok;
 }
 
 pub fn xForByteOffset(

@@ -826,6 +826,11 @@ Current evidence:
   both immediate and draw-list paths.
 - underline / undercurl / strikethrough now differ mainly by emitter target,
   not by separate geometry policy.
+- editor checkpoint: expanded styled-text run splitting for tabs/wide glyph
+  spans now also runs through one shared helper in
+  `editor_widget_draw_text.zig`.
+- the remaining editor styled-text split is now increasingly just the final
+  immediate-vs-draw-list emission target.
 - backend-runtime checkpoint: the remaining runtime-storage blocker is now more
   specifically OpenGL-shaped than Metal-shaped. Metal live frame/queue state is
   under backend context.

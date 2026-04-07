@@ -632,6 +632,9 @@ That split is now sharper from code inspection too:
   strikethrough geometry now also runs through one shared helper there. The
   remaining editor styled-text difference is increasingly about emitter target,
   not separate geometry/traversal policy.
+- that is narrower again too: expanded styled-text run splitting over
+  tabs/wide-glyph spans now shares one helper. The remaining editor styled-text
+  split is now more clearly at the final immediate-vs-draw-list emission edge.
 - sample pressure is specifically section-fill plus bg-aware text preview work
   in `font_sample_view.zig` / `font_sample_section_host.zig`, including the
   custom-font sample path that still terminates through direct texture draws
