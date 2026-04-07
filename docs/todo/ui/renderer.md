@@ -587,9 +587,12 @@ Current evidence:
 - the renderer root no longer exports `recordSurfaceDraw(...)` as a public
   method; that fake-neutral draw verb is now internal renderer machinery
   instead of part of the caller-facing shared surface.
-- the shared surface-record helper for `drawRect(...)` / `drawRectF(...)` now
-  lives in `renderer_surface_host.zig` instead of `renderer.zig`, which is a
-  better ownership fit for that backend-facing seam.
+- the shared surface-record helper for logical solid fills now lives in
+  `renderer_surface_host.zig` instead of `renderer.zig`, which is a better
+  ownership fit for that backend-facing seam.
+- terminal presentation now uses that host seam directly instead of keeping a
+  dedicated `Renderer.drawRectF(...)` surface alive for generic pane/viewport
+  fills.
 - contract authority now pins the next hard rule for `SurfaceDraw`:
   shared code may assume order only relative to other recorded surface draws
   inside the backend's surface phase, not exact interleaving with terminal or

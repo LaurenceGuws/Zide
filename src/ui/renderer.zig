@@ -1042,11 +1042,6 @@ pub const Renderer = struct {
         );
     }
 
-    pub fn drawRectF(self: *Renderer, x: f32, y: f32, w: f32, h: f32, color: Color) void {
-        if (w <= 0 or h <= 0) return;
-        _ = renderer_surface_host.recordSolidSurfaceFromLogicalRect(self, x, y, w, h, color.toRgba());
-    }
-
     pub fn drawRectOutline(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
         shape_draw.drawRectOutline(drawRectThunk, self, x, y, w, h, color);
     }
