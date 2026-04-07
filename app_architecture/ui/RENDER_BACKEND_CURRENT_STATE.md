@@ -254,6 +254,23 @@ back into the larger backend files. This does not erase the remaining
 immediate-vs-queued semantic contradiction, but it makes that ownership seam
 more explicit and therefore easier to cut honestly.
 
+The remaining truth is now plain:
+
+- OpenGL surface submission still means "interpret this draw now"
+- Metal surface submission still means "append this draw now, replay it at
+  frame submit"
+
+That is the loudest remaining semantic contradiction in the backend contract.
+It is no longer hidden by renderer-root facade noise or mixed backend dispatch
+buckets, which means the next real cut must either:
+
+- make that semantic split explicit as backend policy under one product-level
+  record/submit contract
+- or reduce the split directly without repeating the earlier broken "delay all
+  GL surface draws" attempt
+
+Any further structural cleanup that does not address that truth is secondary.
+
 That has improved slightly again on the clip side too: clip dispatch now
 terminates in dedicated backend runtimes (`gl_clip_runtime.zig` /
 `metal_clip_runtime.zig`) instead of remaining one more inline backend-specific

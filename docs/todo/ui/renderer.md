@@ -474,6 +474,13 @@ Current evidence:
 - that does not solve the remaining GL-immediate vs Metal-queued semantic
   split by itself, but it makes the ownership seam honest instead of burying
   surface submission inside the large backend files.
+- the main remaining blocker is now explicit:
+  - OpenGL `surface` submission still means "interpret now"
+  - Metal `surface` submission still means "append now, replay at submit"
+- that is not a naming issue anymore; it is the loudest remaining contract
+  contradiction in Milestone B.
+- no further structural cleanup should pretend this is solved until backend
+  choice stops changing the product-level meaning of `surface` submission.
 - `clip` dispatch now terminates in dedicated backend runtimes too:
   - `src/ui/renderer/gl_clip_runtime.zig`
   - `src/ui/renderer/metal_clip_runtime.zig`

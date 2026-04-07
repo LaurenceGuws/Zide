@@ -130,6 +130,14 @@ also route solid fills through that same shared submission contract while
 integer `addTerminalRect` remains on backend draw ops so OpenGL can keep
 batching terminal quads.
 
+This means the contract vocabulary is ahead of the implementation truth:
+
+- product/shared code can now talk about one `SurfaceDraw` contract
+- but backend choice still changes when that contract is consumed
+
+That semantic split is still acceptable only as a current-state defect to be
+closed, not as a stable design target.
+
 #### Presentable contract
 
 One backend-neutral presentable surface contract that can express:
