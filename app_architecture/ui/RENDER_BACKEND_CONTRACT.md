@@ -139,6 +139,26 @@ This means the contract vocabulary is ahead of the implementation truth:
 That semantic split is still acceptable only as a current-state defect to be
 closed, not as a stable design target.
 
+**Required ordering rule:** product/shared code may assume that
+`recordSurfaceDraw(...)` preserves order relative to other recorded surface
+draws in the same backend-defined surface phase. It must not assume that a
+recorded surface draw interleaves with terminal batching, presentable update
+lifecycle, or backend-native mid-frame work at the exact call site. Any code
+that depends on that tighter interleaving is not a valid `SurfaceDraw` caller;
+it belongs on a more specific seam.
+
+**Required caller rule:** `SurfaceDraw` is for generic UI fills, atlas/image
+samples, and presentable/snapshot-style blits. It is not the contract for:
+
+- terminal grid backgrounds
+- terminal glyph/cursor/composition cells
+- retained-presentable update begin/end lifecycle
+- other backend-specific batched primitives that already have a dedicated seam
+
+If a rendering path needs terminal-cell batching, presentable lifecycle timing,
+or backend-specific phase guarantees, it must not be routed through
+`SurfaceDraw` just because that path already exists.
+
 #### Presentable contract
 
 One backend-neutral presentable surface contract that can express:

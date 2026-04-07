@@ -590,6 +590,13 @@ Current evidence:
 - the shared surface-record helper for `drawRect(...)` / `drawRectF(...)` now
   lives in `renderer_surface_host.zig` instead of `renderer.zig`, which is a
   better ownership fit for that backend-facing seam.
+- contract authority now pins the next hard rule for `SurfaceDraw`:
+  shared code may assume order only relative to other recorded surface draws
+  inside the backend's surface phase, not exact interleaving with terminal or
+  presentable lifecycle work.
+- contract authority now also pins caller triage:
+  `SurfaceDraw` is for generic UI/image/presentable-style draws, not terminal
+  grid/cursor/composition work that already needs dedicated seams.
 - dead renderer-root capability convenience verbs with no callers are being
   deleted instead of preserved as speculative API surface.
 - the renderer root no longer stores a dead backend label field when backend

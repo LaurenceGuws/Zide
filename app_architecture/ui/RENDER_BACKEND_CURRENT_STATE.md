@@ -271,6 +271,19 @@ buckets, which means the next real cut must either:
 
 Any further structural cleanup that does not address that truth is secondary.
 
+One important boundary is clearer now too: `SurfaceDraw` is no longer allowed
+to quietly mean "generic draw anything." Recent terminal fixes proved that
+terminal row backgrounds, cursor/composition cells, and other terminal-grid
+semantics need their own dedicated seams when they depend on terminal batching
+or per-cell ordering truth. The current contract should therefore be read as:
+
+- `SurfaceDraw`: generic UI/image/presentable-style recorded draws
+- terminal draw contracts: terminal-grid/cell batching truth
+- presentable contract: retained/direct present lifecycle truth
+
+If a caller needs tighter phase ordering than "preserved among recorded surface
+draws inside the backend's surface phase," that caller is on the wrong seam.
+
 That has improved slightly again on the clip side too: clip dispatch now
 terminates in dedicated backend runtimes (`gl_clip_runtime.zig` /
 `metal_clip_runtime.zig`) instead of remaining one more inline backend-specific
