@@ -447,6 +447,9 @@ Current evidence:
 - this removes another fake renderer-root facade from the draw/resource lane
   without inventing a second contract; the grouped draw contract was already
   the real owner.
+- even the remaining root theme-background clear forward is now gone; the font
+  sample uses `renderer_draw_host.zig` directly instead of asking `Renderer`
+  to proxy one more draw-contract verb.
 - presentable trace/editor-surface bookkeeping now also lives in
   `renderer_presentable_host.zig` instead of being split across GL and Metal
   presentable lifecycle methods.

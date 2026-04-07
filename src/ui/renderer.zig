@@ -1014,10 +1014,6 @@ pub const Renderer = struct {
         return self.backend_ops.frame.dumpWindowScreenshotPpmSized(self, path, out_width, out_height);
     }
 
-    pub fn clearToThemeBackground(self: *Renderer) void {
-        self.backend_ops.draw.clearThemeBackground(self);
-    }
-
     pub fn terminalPresentationMode(self: *const Renderer) TerminalPresentationMode {
         return self.capabilities().terminal_presentation_mode;
     }

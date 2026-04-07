@@ -219,6 +219,11 @@ methods on the renderer root. Those callers now route through
 itself owns that caller-facing draw/resource facade when the grouped draw
 contract was already the real owner.
 
+That has improved slightly again at the tiny edge too: even the old
+`clearToThemeBackground()` renderer-root forward is gone. The one remaining
+caller (font sample) now talks to `renderer_draw_host.zig` directly instead of
+asking the renderer root to proxy that draw-contract verb.
+
 That has improved slightly again on backend ownership too: backend dispatch no
 longer terminates presentable operations back into the large generic backend
 files. Dedicated backend presentable modules now own that seam directly:
