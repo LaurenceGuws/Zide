@@ -159,6 +159,25 @@ If a rendering path needs terminal-cell batching, presentable lifecycle timing,
 or backend-specific phase guarantees, it must not be routed through
 `SurfaceDraw` just because that path already exists.
 
+**Active caller set (2026-04-07):** after the terminal-path cleanup, the
+remaining real `SurfaceDraw` producers are intentionally narrow:
+
+- generic UI/editor/shell logical fills and outlines through
+  `renderer_surface_host.zig`
+- text-runtime background clears that are still just generic UI rects
+- terminal pane / viewport fills in `terminal_widget_presentation_runtime.zig`
+- presentable/snapshot blits through the shared presentable contract
+- raw image and atlas samples that already fit the shared payload model
+
+So the remaining blocker is not broad caller sprawl. The remaining blocker is
+backend phase timing:
+
+- OpenGL consumes the shared record immediately
+- Metal replays the shared record later in submit
+
+The next contract cut must attack that phase truth directly rather than reopen
+caller triage unless a new misuse appears.
+
 #### Presentable contract
 
 One backend-neutral presentable surface contract that can express:

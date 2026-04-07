@@ -274,6 +274,20 @@ The remaining truth is now plain:
 - Metal surface submission still means "append this draw now, replay it at
   frame submit"
 
+And the remaining caller set is already narrow enough that this is no longer a
+caller-sprawl problem. The active shared `SurfaceDraw` producers are mainly:
+
+- generic UI/editor/shell fills through `renderer_surface_host.zig`
+- text-runtime generic background clears
+- terminal pane / viewport fills in terminal presentation
+- presentable/snapshot blits
+- raw image / atlas samples that already fit the shared payload model
+
+So the backend-fit blocker is now concentrated:
+
+- the same narrow shared payload reaches both backends
+- but backend choice still changes when the payload is consumed
+
 That is the loudest remaining semantic contradiction in the backend contract.
 It is no longer hidden by renderer-root facade noise or mixed backend dispatch
 buckets, which means the next real cut must either:

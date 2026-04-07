@@ -647,6 +647,11 @@ Current evidence:
   and `renderer_surface_host.recordSurfaceDraw(...)` is now host-private. That
   narrows the misuse surface so product code cannot quietly treat generic
   `SurfaceDraw` construction as a normal public rendering API again.
+- the remaining `SurfaceDraw` producer set is now intentionally narrow:
+  generic UI/editor/shell fills, presentable/snapshot blits, and raw image /
+  atlas samples that already fit the shared payload model. The live blocker is
+  no longer caller sprawl; it is the backend phase split itself
+  (GL immediate vs Metal submit-time replay).
 - This is real lifecycle cleanup and removes another renderer-root duplication
   seam.
 - This is not closure yet:
