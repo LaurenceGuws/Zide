@@ -731,6 +731,10 @@ Current evidence:
   "delay everything."
 - observability: present trace emits `gl_surface_solid_enqueue` and
   `gl_surface_queued_replay` per frame on OpenGL.
+- **GL editor + deferral (validated):** with all `SurfaceDraw` deferred on
+  OpenGL, pane base must replay immediately after record; row-band batches must
+  end with a queue drain; scrollbars must flush before later widgets. Landed on
+  branch `surface-contract-shared-text-phase` with manual editor/IDE smoke OK.
 - **Next ticket-shaped follow-ups:** (1) repo-wide audit for `text_draw.drawText` /
   `draw_ops.drawTextureRect` after `renderer_surface_host.drawRect` without a
   text-host or `flushQueuedSurfaceDrawsBeforeDependentSurfaceWork` on GL;
