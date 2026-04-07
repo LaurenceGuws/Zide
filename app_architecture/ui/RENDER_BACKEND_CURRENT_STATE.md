@@ -688,6 +688,9 @@ That split is now sharper from code inspection too:
   recorded and replayed through a dedicated sample host seam
   (`renderer_sample_section_phase_host`) rather than emitted inline from every
   sample draw call.
+- that seam is now observable too: present trace carries sample section group
+  begin/end counts, and replay ordering is unit-tested at the sample phase
+  host seam.
 
 There is now a first proof of that narrower sample path too: the font sample
 view has its own tiny section-composition seam. That is intentionally not a

@@ -919,6 +919,10 @@ Current evidence:
   `font_sample_section_host` and flushes via
   `renderer_sample_section_phase_host`, so the tiny sample seam has explicit
   local record/replay boundaries instead of inline per-call text host emits.
+- sample checkpoint: sample-section group boundaries are now visible in present
+  trace (`sample_section_group_begin_count` /
+  `sample_section_group_end_count`) and replay order/bg payload handling is now
+  covered by unit tests in `renderer_sample_section_phase_host`.
 - this is good local honesty for the sample lane, but it does not yet turn the
   sample family into a recorded backend-neutral phase.
 - first sample-side proof is acceptable only as a tiny section-composition seam,

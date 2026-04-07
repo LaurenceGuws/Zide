@@ -12,6 +12,8 @@ pub const PresentTrace = struct {
     composition_clip_count: usize = 0,
     band_group_begin_count: usize = 0,
     band_group_end_count: usize = 0,
+    sample_section_group_begin_count: usize = 0,
+    sample_section_group_end_count: usize = 0,
     composition_full_pane_clear: bool = false,
     captured_path: ?[]const u8 = null,
 };
@@ -50,6 +52,14 @@ pub fn noteBandCommandGroupBegin(self: anytype) void {
 
 pub fn noteBandCommandGroupEnd(self: anytype) void {
     self.present.trace_current.band_group_end_count += 1;
+}
+
+pub fn noteSampleSectionCommandGroupBegin(self: anytype) void {
+    self.present.trace_current.sample_section_group_begin_count += 1;
+}
+
+pub fn noteSampleSectionCommandGroupEnd(self: anytype) void {
+    self.present.trace_current.sample_section_group_end_count += 1;
 }
 
 pub fn noteTerminalPresentation(self: anytype, generation: ?u64) void {

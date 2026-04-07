@@ -440,6 +440,9 @@ The current code makes that split more specific:
   text recording/replay runs through `font_sample_section_host` and
   `renderer_sample_section_phase_host` instead of only inline direct text host
   calls
+- that sample seam now also has baseline scrutiny hooks: group begin/end counts
+  are recorded in present trace, and replay order/bg payload handling is unit-
+  tested at the sample phase host boundary
 
 **Shell/UI chrome blocker (2026-04-07):** the obvious next family is shell/UI
 chrome bands, but that family is not a free move today because the dependent

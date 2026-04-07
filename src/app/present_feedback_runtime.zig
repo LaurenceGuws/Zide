@@ -25,6 +25,8 @@ fn logFramePresent(state: anytype, shell: anytype, submission: anytype) void {
         .{ .key = "composition_clips", .value = .{ .unsigned = trace.composition_clip_count } },
         .{ .key = "band_group_begin", .value = .{ .unsigned = trace.band_group_begin_count } },
         .{ .key = "band_group_end", .value = .{ .unsigned = trace.band_group_end_count } },
+        .{ .key = "sample_section_group_begin", .value = .{ .unsigned = trace.sample_section_group_begin_count } },
+        .{ .key = "sample_section_group_end", .value = .{ .unsigned = trace.sample_section_group_end_count } },
         .{ .key = "composition_full_pane_clear", .value = .{ .boolean = trace.composition_full_pane_clear } },
         .{ .key = "captured", .value = .{ .boolean = trace.captured_path != null } },
     });
