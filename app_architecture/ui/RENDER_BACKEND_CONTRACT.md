@@ -117,6 +117,9 @@ textures. Raw images now use one opaque shared `GpuImageRef` handle
 (`handle + width + height`) instead of a backend-tagged `.opengl` / `.metal`
 union inside the shared payload; backend-specific interpretation and
 clone/release logic terminate in `gl_backend.zig` / `metal_backend.zig`.
+Persistent image upload/draw used by higher-level product code should follow
+the same rule: public renderer contracts expose `GpuImageRef`, not backend
+texture structs.
 For CPU pixel buffers on OpenGL, `drawRawImageRgba` / `drawRawImageRgb` upload
 ephemeral textures then submit one `SurfaceDraw.raw_image` with a `GpuImageRef`
 whose handle is interpreted as a GL texture id. On Metal,

@@ -6,16 +6,17 @@ const config_mod = @import("../../config/lua_config.zig");
 const image_decode = @import("../../ui/image_decode.zig");
 const renderer_mod = @import("../../ui/renderer.zig");
 const renderer_types = @import("../../ui/renderer/types.zig");
+const surface_draw = @import("../../ui/renderer/surface_draw.zig");
 const tab_bar_mod = @import("../../ui/widgets/tab_bar.zig");
 
 const Renderer = renderer_mod.Renderer;
-const Texture = renderer_types.Texture;
+const GpuImageRef = surface_draw.GpuImageRef;
 const Rect = renderer_types.Rect;
 pub const TerminalShellIconMapping = config_mod.TerminalShellIconMapping;
 
 const CachedIcon = struct {
     path: []u8,
-    texture: Texture = .{ .id = 0, .width = 0, .height = 0 },
+    texture: GpuImageRef = .{ .handle = 0, .width = 0, .height = 0 },
     failed: bool = false,
 };
 
@@ -37,8 +38,8 @@ pub const ShellIconCache = struct {
 
     pub fn clear(self: *ShellIconCache, renderer: *Renderer) void {
         for (self.entries.items) |*entry| {
-            if (entry.texture.id != 0) {
-                renderer.destroyPersistentTexture(&entry.texture);
+            if (entry.texture.handle != 0) {
+                renderer.destroyPersistentImage(&entry.texture);
             }
             self.allocator.free(entry.path);
             entry.* = undefined;
@@ -84,11 +85,10 @@ pub const ShellIconCache = struct {
             .width = draw_w,
             .height = draw_h,
         };
-        shell.rendererPtr().drawTexture(texture, src, dest, app_shell.Color.white);
-        return true;
+        return shell.rendererPtr().drawPersistentImage(texture, src, dest, app_shell.Color.white.toRgba());
     }
 
-    fn ensureTexture(self: *ShellIconCache, renderer: *Renderer, icon_path: []const u8) ?Texture {
+    fn ensureTexture(self: *ShellIconCache, renderer: *Renderer, icon_path: []const u8) ?GpuImageRef {
         if (self.findEntry(icon_path)) |entry| {
             if (entry.failed) return null;
             return entry.texture;
@@ -106,7 +106,7 @@ pub const ShellIconCache = struct {
         }
 
         self.entries.append(self.allocator, new_entry) catch {
-            if (new_entry.texture.id != 0) renderer.destroyPersistentTexture(&new_entry.texture);
+            if (new_entry.texture.handle != 0) renderer.destroyPersistentImage(&new_entry.texture);
             return null;
         };
 
@@ -176,7 +176,7 @@ pub fn resolveIconPath(
     return null;
 }
 
-fn loadTexture(renderer: *Renderer, allocator: std.mem.Allocator, icon_path: []const u8) ?Texture {
+fn loadTexture(renderer: *Renderer, allocator: std.mem.Allocator, icon_path: []const u8) ?GpuImageRef {
     const log = app_logger.logger("terminal.shell_icon");
     const file = std.fs.cwd().readFileAlloc(allocator, icon_path, 8 * 1024 * 1024) catch |err| {
         log.logf(.warning, "tab shell icon read failed path={s} err={s}", .{ icon_path, @errorName(err) });
@@ -190,7 +190,7 @@ fn loadTexture(renderer: *Renderer, allocator: std.mem.Allocator, icon_path: []c
     };
     defer allocator.free(decoded.data);
 
-    return renderer.createPersistentTextureFromRgba(
+    return renderer.createPersistentImageFromRgba(
         @intCast(decoded.width),
         @intCast(decoded.height),
         decoded.data,

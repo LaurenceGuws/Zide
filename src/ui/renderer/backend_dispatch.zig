@@ -3,6 +3,7 @@ const gl_backend = @import("gl_backend.zig");
 const metal_backend = @import("metal_backend.zig");
 const surface_draw = @import("surface_draw.zig");
 const platform_window = @import("../../platform/window_metrics.zig");
+const GpuImageRef = surface_draw.GpuImageRef;
 
 pub fn BackendOps(
     comptime RendererType: type,
@@ -48,9 +49,10 @@ pub fn BackendOps(
         addTerminalRect: *const fn (*RendererType, i32, i32, i32, i32, types.Rgba) void,
         addTerminalGlyphRect: *const fn (*RendererType, i32, i32, i32, i32, types.Rgba) void,
         addTerminalGlyphQuad: *const fn (*RendererType, types.Texture, types.Rect, types.Rect, types.Rgba, types.TextureKind) void,
-        createPersistentTextureFromRgba: *const fn (*RendererType, i32, i32, []const u8) ?types.Texture,
-        createPersistentTextureFromRgb: *const fn (*RendererType, i32, i32, []const u8) ?types.Texture,
-        destroyPersistentTexture: *const fn (*RendererType, *types.Texture) void,
+        createPersistentImageFromRgba: *const fn (*RendererType, i32, i32, []const u8) ?GpuImageRef,
+        createPersistentImageFromRgb: *const fn (*RendererType, i32, i32, []const u8) ?GpuImageRef,
+        destroyPersistentImage: *const fn (*RendererType, *GpuImageRef) void,
+        drawPersistentImage: *const fn (*RendererType, GpuImageRef, ?types.Rect, types.Rect, types.Rgba) bool,
         drawRawImage: *const fn (*RendererType, RawImageFormat, i32, i32, []const u8, types.Rect, types.Rgba) bool,
         enqueueSurfaceDraw: *const fn (*RendererType, surface_draw.SurfaceDraw) bool,
     };
@@ -141,9 +143,10 @@ pub fn opsFor(
                 .addTerminalRect = OpenGl.addTerminalRect,
                 .addTerminalGlyphRect = OpenGl.addTerminalGlyphRect,
                 .addTerminalGlyphQuad = OpenGl.addTerminalGlyphQuad,
-                .createPersistentTextureFromRgba = OpenGl.createPersistentTextureFromRgba,
-                .createPersistentTextureFromRgb = OpenGl.createPersistentTextureFromRgb,
-                .destroyPersistentTexture = OpenGl.destroyPersistentTexture,
+                .createPersistentImageFromRgba = OpenGl.createPersistentImageFromRgba,
+                .createPersistentImageFromRgb = OpenGl.createPersistentImageFromRgb,
+                .destroyPersistentImage = OpenGl.destroyPersistentImage,
+                .drawPersistentImage = OpenGl.drawPersistentImage,
                 .drawRawImage = OpenGl.drawRawImage,
                 .enqueueSurfaceDraw = OpenGl.enqueueSurfaceDraw,
             },
@@ -179,9 +182,10 @@ pub fn opsFor(
                 .addTerminalRect = Metal.addTerminalRect,
                 .addTerminalGlyphRect = Metal.addTerminalGlyphRect,
                 .addTerminalGlyphQuad = Metal.addTerminalGlyphQuad,
-                .createPersistentTextureFromRgba = Metal.createPersistentTextureFromRgba,
-                .createPersistentTextureFromRgb = Metal.createPersistentTextureFromRgb,
-                .destroyPersistentTexture = Metal.destroyPersistentTexture,
+                .createPersistentImageFromRgba = Metal.createPersistentImageFromRgba,
+                .createPersistentImageFromRgb = Metal.createPersistentImageFromRgb,
+                .destroyPersistentImage = Metal.destroyPersistentImage,
+                .drawPersistentImage = Metal.drawPersistentImage,
                 .drawRawImage = Metal.drawRawImage,
                 .enqueueSurfaceDraw = Metal.enqueueSurfaceDraw,
             },
@@ -261,14 +265,17 @@ fn OpenGlDispatch(
         fn addTerminalGlyphQuad(renderer: *RendererType, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
             gl_backend.addTerminalGlyphQuad(renderer, texture, src, dest, color, kind);
         }
-        fn createPersistentTextureFromRgba(renderer: *RendererType, width: i32, height: i32, data: []const u8) ?types.Texture {
-            return gl_backend.createPersistentTextureFromRgba(renderer, width, height, data);
+        fn createPersistentImageFromRgba(renderer: *RendererType, width: i32, height: i32, data: []const u8) ?GpuImageRef {
+            return gl_backend.createPersistentImageFromRgba(renderer, width, height, data);
         }
-        fn createPersistentTextureFromRgb(renderer: *RendererType, width: i32, height: i32, data: []const u8) ?types.Texture {
-            return gl_backend.createPersistentTextureFromRgb(renderer, width, height, data);
+        fn createPersistentImageFromRgb(renderer: *RendererType, width: i32, height: i32, data: []const u8) ?GpuImageRef {
+            return gl_backend.createPersistentImageFromRgb(renderer, width, height, data);
         }
-        fn destroyPersistentTexture(renderer: *RendererType, texture: *types.Texture) void {
-            gl_backend.destroyPersistentTexture(renderer, texture);
+        fn destroyPersistentImage(renderer: *RendererType, texture: *GpuImageRef) void {
+            gl_backend.destroyPersistentImage(renderer, texture);
+        }
+        fn drawPersistentImage(renderer: *RendererType, texture: GpuImageRef, source_rect: ?types.Rect, dest: types.Rect, tint: types.Rgba) bool {
+            return gl_backend.drawPersistentImage(renderer, texture, source_rect, dest, tint);
         }
         fn drawRawImage(renderer: *RendererType, format: RawImageFormat, width: i32, height: i32, data: []const u8, dest: types.Rect, tint: types.Rgba) bool {
             return switch (format) {
@@ -361,14 +368,17 @@ fn MetalDispatch(
         fn addTerminalGlyphQuad(renderer: *RendererType, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
             metal_backend.addTerminalGlyphQuad(renderer, texture, src, dest, color, kind);
         }
-        fn createPersistentTextureFromRgba(renderer: *RendererType, width: i32, height: i32, data: []const u8) ?types.Texture {
-            return metal_backend.createPersistentTextureFromRgba(renderer, width, height, data);
+        fn createPersistentImageFromRgba(renderer: *RendererType, width: i32, height: i32, data: []const u8) ?GpuImageRef {
+            return metal_backend.createPersistentImageFromRgba(renderer, width, height, data);
         }
-        fn createPersistentTextureFromRgb(renderer: *RendererType, width: i32, height: i32, data: []const u8) ?types.Texture {
-            return metal_backend.createPersistentTextureFromRgb(renderer, width, height, data);
+        fn createPersistentImageFromRgb(renderer: *RendererType, width: i32, height: i32, data: []const u8) ?GpuImageRef {
+            return metal_backend.createPersistentImageFromRgb(renderer, width, height, data);
         }
-        fn destroyPersistentTexture(renderer: *RendererType, texture: *types.Texture) void {
-            metal_backend.destroyPersistentTexture(renderer, texture);
+        fn destroyPersistentImage(renderer: *RendererType, texture: *GpuImageRef) void {
+            metal_backend.destroyPersistentImage(renderer, texture);
+        }
+        fn drawPersistentImage(renderer: *RendererType, texture: GpuImageRef, source_rect: ?types.Rect, dest: types.Rect, tint: types.Rgba) bool {
+            return metal_backend.drawPersistentImage(renderer, texture, source_rect, dest, tint);
         }
         fn drawRawImage(renderer: *RendererType, format: RawImageFormat, width: i32, height: i32, data: []const u8, dest: types.Rect, tint: types.Rgba) bool {
             return switch (format) {

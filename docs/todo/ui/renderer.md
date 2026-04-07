@@ -526,6 +526,9 @@ Current evidence:
 - backend-specific clone/release/interpretation now terminates in backend
   modules instead of the shared draw contract encoding backend branches in the
   payload itself.
+- public persistent-image APIs used by kitty images and shell icons now also
+  speak `GpuImageRef` plus `drawPersistentImage(...)` instead of exposing
+  `types.Texture` as a public renderer contract.
 - This is real lifecycle cleanup and removes another renderer-root duplication
   seam.
 - This is not closure yet:

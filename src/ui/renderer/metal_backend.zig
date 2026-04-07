@@ -1716,15 +1716,33 @@ pub fn drawRawImageRgb(
     return appendRawImageRgb(renderer, width, height, data, dest, tint);
 }
 
-pub fn createPersistentTextureFromRgba(_: anytype, _: i32, _: i32, _: []const u8) ?types.Texture {
+pub fn createPersistentImageFromRgba(_: anytype, _: i32, _: i32, _: []const u8) ?GpuImageRef {
     return null;
 }
 
-pub fn createPersistentTextureFromRgb(_: anytype, _: i32, _: i32, _: []const u8) ?types.Texture {
+pub fn createPersistentImageFromRgb(_: anytype, _: i32, _: i32, _: []const u8) ?GpuImageRef {
     return null;
 }
 
-pub fn destroyPersistentTexture(_: anytype, _: *types.Texture) void {}
+pub fn destroyPersistentImage(_: anytype, _: *GpuImageRef) void {}
+
+pub fn drawPersistentImage(renderer: anytype, texture: GpuImageRef, source_rect: ?types.Rect, dest: types.Rect, tint: types.Rgba) bool {
+    return appendRawImage(renderer, .{
+        .texture = cloneGpuImageRef(texture),
+        .source_rect = source_rect,
+        .dest_rect = .{
+            .x = renderer.logicalLengthToRaster(dest.x),
+            .y = renderer.logicalLengthToRaster(dest.y),
+            .width = renderer.logicalLengthToRaster(dest.width),
+            .height = renderer.logicalLengthToRaster(dest.height),
+        },
+        .tint = tint,
+        .clip_rect = if (renderer.currentClipRect()) |clip_logical|
+            metal_text_sample_runtime.pixelClipRect(renderer, clip_logical)
+        else
+            null,
+    });
+}
 
 pub fn runSmokeFrame(renderer: anytype) bool {
     const host = prepareHost(renderer) orelse return false;

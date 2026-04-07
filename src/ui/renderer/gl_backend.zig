@@ -451,6 +451,14 @@ fn textureFromGpuImageHandle(texture: surface_draw.GpuImageRef) types.Texture {
     };
 }
 
+fn gpuImageRefFromTexture(texture: types.Texture) surface_draw.GpuImageRef {
+    return .{
+        .handle = texture.id,
+        .width = texture.width,
+        .height = texture.height,
+    };
+}
+
 pub fn addTerminalRect(renderer: anytype, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void {
     draw_ops.addTerminalRect(renderer, x, y, w, h, color);
 }
@@ -470,16 +478,38 @@ pub fn addTerminalGlyphQuad(
     renderer.terminal_text.glyph_cache.addQuad(texture, src, dest, color, renderer.text_render.bg_rgba, kind);
 }
 
-pub fn createPersistentTextureFromRgba(_: anytype, width: i32, height: i32, data: []const u8) ?types.Texture {
-    return texture_utils.createTextureFromRgba(width, height, data, gl.c.GL_LINEAR);
+pub fn createPersistentImageFromRgba(_: anytype, width: i32, height: i32, data: []const u8) ?surface_draw.GpuImageRef {
+    const texture = texture_utils.createTextureFromRgba(width, height, data, gl.c.GL_LINEAR) orelse return null;
+    return gpuImageRefFromTexture(texture);
 }
 
-pub fn createPersistentTextureFromRgb(_: anytype, width: i32, height: i32, data: []const u8) ?types.Texture {
-    return texture_utils.createTextureFromRgb(width, height, data, gl.c.GL_LINEAR);
+pub fn createPersistentImageFromRgb(_: anytype, width: i32, height: i32, data: []const u8) ?surface_draw.GpuImageRef {
+    const texture = texture_utils.createTextureFromRgb(width, height, data, gl.c.GL_LINEAR) orelse return null;
+    return gpuImageRefFromTexture(texture);
 }
 
-pub fn destroyPersistentTexture(_: anytype, texture: *types.Texture) void {
-    texture_utils.destroyTexture(texture);
+pub fn destroyPersistentImage(_: anytype, texture: *surface_draw.GpuImageRef) void {
+    var gl_texture = textureFromGpuImageHandle(texture.*);
+    texture_utils.destroyTexture(&gl_texture);
+    texture.* = .{ .handle = 0, .width = 0, .height = 0 };
+}
+
+pub fn drawPersistentImage(renderer: anytype, texture: surface_draw.GpuImageRef, source_rect: ?types.Rect, dest: types.Rect, tint: types.Rgba) bool {
+    return submitSurfaceDrawImmediate(renderer, .{ .raw_image = .{
+        .texture = texture,
+        .source_rect = source_rect,
+        .dest_rect = .{
+            .x = renderer.logicalLengthToRaster(dest.x),
+            .y = renderer.logicalLengthToRaster(dest.y),
+            .width = renderer.logicalLengthToRaster(dest.width),
+            .height = renderer.logicalLengthToRaster(dest.height),
+        },
+        .tint = tint,
+        .clip_rect = if (renderer.currentClipRect()) |clip_logical|
+            metal_text_sample_runtime.pixelClipRect(renderer, clip_logical)
+        else
+            null,
+    } });
 }
 
 pub fn applyClipRect(renderer: anytype, clip: ?types.Rect) void {

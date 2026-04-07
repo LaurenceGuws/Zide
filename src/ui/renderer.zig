@@ -1555,16 +1555,20 @@ pub const Renderer = struct {
         draw_ops.drawTextureRect(renderer, texture, src, dest, color, renderer.text_render.bg_rgba, kind);
     }
 
-    pub fn createPersistentTextureFromRgba(self: *Renderer, width: i32, height: i32, data: []const u8) ?types.Texture {
-        return self.backend_ops.draw.createPersistentTextureFromRgba(self, width, height, data);
+    pub fn createPersistentImageFromRgba(self: *Renderer, width: i32, height: i32, data: []const u8) ?surface_draw.GpuImageRef {
+        return self.backend_ops.draw.createPersistentImageFromRgba(self, width, height, data);
     }
 
-    pub fn createPersistentTextureFromRgb(self: *Renderer, width: i32, height: i32, data: []const u8) ?types.Texture {
-        return self.backend_ops.draw.createPersistentTextureFromRgb(self, width, height, data);
+    pub fn createPersistentImageFromRgb(self: *Renderer, width: i32, height: i32, data: []const u8) ?surface_draw.GpuImageRef {
+        return self.backend_ops.draw.createPersistentImageFromRgb(self, width, height, data);
     }
 
-    pub fn destroyPersistentTexture(self: *Renderer, texture: *types.Texture) void {
-        self.backend_ops.draw.destroyPersistentTexture(self, texture);
+    pub fn destroyPersistentImage(self: *Renderer, texture: *surface_draw.GpuImageRef) void {
+        self.backend_ops.draw.destroyPersistentImage(self, texture);
+    }
+
+    pub fn drawPersistentImage(self: *Renderer, texture: surface_draw.GpuImageRef, source_rect: ?types.Rect, dest: types.Rect, tint: types.Rgba) bool {
+        return self.backend_ops.draw.drawPersistentImage(self, texture, source_rect, dest, tint);
     }
 
     pub fn drawRawImage(self: *Renderer, format: RawImageFormat, width: i32, height: i32, data: []const u8, dest: types.Rect, tint: types.Rgba) bool {

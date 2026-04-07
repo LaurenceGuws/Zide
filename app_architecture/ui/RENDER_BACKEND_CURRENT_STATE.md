@@ -255,6 +255,13 @@ clone/release logic terminate inside `gl_backend.zig` / `metal_backend.zig`.
 This does not finish the whole draw-submission contradiction, but it removes
 one direct “future `.vulkan` arm” pressure point from the shared payload.
 
+That has improved slightly again on the caller-facing image surface too:
+persistent image upload/draw APIs used by kitty images and shell icons no
+longer expose `types.Texture` as a public renderer contract. Those callers now
+use `GpuImageRef` plus `drawPersistentImage(...)`, so the shared surface no
+longer teaches product code that a persisted image is “really a GL texture
+struct.”
+
 That has improved slightly again on frame lifecycle termination too:
 backend frame begin/submit and screenshot entrypoints now live directly on
 `gl_backend.zig` / `metal_backend.zig`, and the old

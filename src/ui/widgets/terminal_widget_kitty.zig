@@ -5,6 +5,7 @@ const terminal_publication = @import("../../terminal/core/publication/terminal_p
 
 const gl = @import("../renderer/gl.zig");
 const types = @import("../renderer/types.zig");
+const surface_draw = @import("../renderer/surface_draw.zig");
 
 const Shell = app_shell.Shell;
 const Color = app_shell.Color;
@@ -12,7 +13,7 @@ const KittyImage = terminal_publication.KittyImage;
 const KittyPlacement = terminal_publication.KittyPlacement;
 
 const KittyTexture = struct {
-    texture: types.Texture,
+    texture: surface_draw.GpuImageRef,
     width: i32,
     height: i32,
     version: u64,
@@ -47,8 +48,9 @@ pub const KittyState = struct {
     pub fn deinit(self: *KittyState, allocator: std.mem.Allocator) void {
         var it = self.textures.iterator();
         while (it.next()) |entry| {
-            if (entry.value_ptr.texture.id != 0) {
-                gl.DeleteTextures(1, &entry.value_ptr.texture.id);
+            if (entry.value_ptr.texture.handle != 0) {
+                var id: gl.GLuint = @intCast(entry.value_ptr.texture.handle);
+                gl.DeleteTextures(1, &id);
             }
         }
         self.textures.deinit();
@@ -127,8 +129,9 @@ pub const KittyState = struct {
         }
         for (stale.items) |id| {
             if (self.textures.fetchRemove(id)) |entry| {
-                if (entry.value.texture.id != 0) {
-                    gl.DeleteTextures(1, &entry.value.texture.id);
+                if (entry.value.texture.handle != 0) {
+                    var id_gl: gl.GLuint = @intCast(entry.value.texture.handle);
+                    gl.DeleteTextures(1, &id_gl);
                 }
             }
             _ = self.pending_uploads_set.remove(id);
@@ -189,14 +192,8 @@ pub const KittyState = struct {
                 continue;
             }
 
-            const tex = self.ensureTexture(allocator, image) orelse continue;
-            const src = types.Rect{
-                .x = 0,
-                .y = 0,
-                .width = @as(f32, @floatFromInt(tex.texture.width)),
-                .height = @as(f32, @floatFromInt(tex.texture.height)),
-            };
-            r.drawTexture(tex.texture, src, dest, Color.white);
+            const tex = self.ensureTexture(allocator, r, image) orelse continue;
+            _ = r.drawPersistentImage(tex.texture, null, dest, Color.white.toRgba());
         }
     }
 
@@ -265,12 +262,10 @@ pub const KittyState = struct {
         return .{ .images = uploaded_images, .bytes = used_bytes };
     }
 
-    pub fn ensureTexture(self: *KittyState, allocator: std.mem.Allocator, image: KittyImage) ?KittyTexture {
+    pub fn ensureTexture(self: *KittyState, allocator: std.mem.Allocator, renderer: anytype, image: KittyImage) ?KittyTexture {
         if (self.textures.getEntry(image.id)) |entry| {
             if (entry.value_ptr.version == image.version) return entry.value_ptr.*;
-            if (entry.value_ptr.texture.id != 0) {
-                gl.DeleteTextures(1, &entry.value_ptr.texture.id);
-            }
+            if (entry.value_ptr.texture.handle != 0) renderer.destroyPersistentImage(&entry.value_ptr.texture);
             _ = self.textures.remove(image.id);
         }
         self.enqueueUpload(allocator, image.id);
@@ -303,9 +298,8 @@ pub const KittyState = struct {
         };
         const log = app_logger.logger("terminal.kitty");
         self.textures.put(image.id, stored) catch |err| {
-            if (stored.texture.id != 0) {
-                gl.DeleteTextures(1, &stored.texture.id);
-            }
+            var texture_cleanup = stored.texture;
+            if (texture_cleanup.handle != 0) renderer.destroyPersistentImage(&texture_cleanup);
             log.logf(.warning, "kitty texture map insert failed id={d} err={s}", .{ image.id, @errorName(err) });
             return false;
         };
@@ -313,7 +307,7 @@ pub const KittyState = struct {
         return true;
     }
 
-    fn loadTexture(renderer: anytype, image: KittyImage) ?types.Texture {
+    fn loadTexture(renderer: anytype, image: KittyImage) ?surface_draw.GpuImageRef {
         switch (image.format) {
             .png => {
                 const log = app_logger.logger("terminal.kitty");
@@ -322,14 +316,15 @@ pub const KittyState = struct {
             },
             .rgb => {
                 if (image.width == 0 or image.height == 0) return null;
-                return renderer.createPersistentTextureFromRgb(@intCast(image.width), @intCast(image.height), image.data);
+                return renderer.createPersistentImageFromRgb(@intCast(image.width), @intCast(image.height), image.data);
             },
             .rgba => {
                 if (image.width == 0 or image.height == 0) return null;
-                return renderer.createPersistentTextureFromRgba(@intCast(image.width), @intCast(image.height), image.data);
+                return renderer.createPersistentImageFromRgba(@intCast(image.width), @intCast(image.height), image.data);
             },
         }
     }
+
 
     fn findKittyImage(images: []const KittyImage, image_id: u32) ?KittyImage {
         for (images) |img| {
