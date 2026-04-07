@@ -445,7 +445,7 @@ Milestone B "done" checkpoints (execute in order, do not rerank mid-lane):
     on the unified host seam
   - focused widget-level smoke checks for chrome, sample, and editor row-band
     paths
-- [ ] **B-DONE-7: remove stale API surface**
+- [x] **B-DONE-7: remove stale API surface**
   - delete public or quasi-public verbs that still expose old split semantics
     after migration (renderer/shell helpers that bypass unified phase seam)
   - verify no product caller remains on retired paths
@@ -977,6 +977,10 @@ Current evidence:
 - closure checkpoint (`B-DONE-6`): unified host seam tests now explicitly cover
   empty/non-empty replay, op kind ordering, bg payload propagation, and editor
   row-band group-kind forwarding in `renderer_text_phase_group_host`.
+- closure checkpoint (`B-DONE-7`): stale quasi-public helper surfaces that
+  bypassed the unified seam were reduced (`flushDrawList` internalized; test-
+  only replay helper no longer exported), and no product callers remain on
+  retired chrome/sample adapter paths.
 - this is good local honesty for the sample lane, but it does not yet turn the
   sample family into a recorded backend-neutral phase.
 - first sample-side proof is acceptable only as a tiny section-composition seam,

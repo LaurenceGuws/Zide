@@ -591,6 +591,10 @@ sample, and editor row-band lanes.
 host tests now cover empty/non-empty replay, op-kind ordering, bg payload
 propagation, and editor row-band group forwarding semantics.
 
+**Stale API cleanup checkpoint (B-DONE-7, 2026-04-07):** stale quasi-public
+helper surfaces that bypassed the unified seam were reduced, and product callers
+no longer terminate on retired chrome/sample adapter paths.
+
 **Editor adoption checkpoint (B-DONE-3, 2026-04-07):** editor row-band
 draw-list flush and immediate/fallback row-band execution now both open/close
 explicit `.editor_row_band` text phase groups through the shared host seam.

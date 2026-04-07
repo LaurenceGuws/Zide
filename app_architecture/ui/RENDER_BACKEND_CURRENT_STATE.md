@@ -574,6 +574,10 @@ Regression coverage is now stronger too (`B-DONE-6`): unified host seam tests
 explicitly assert empty/non-empty replay behavior, op-kind order, bg payload
 propagation, and editor row-band group forwarding.
 
+Stale API cleanup is now done too (`B-DONE-7`): quasi-public bypass helpers were
+reduced and product callers no longer depend on retired chrome/sample adapter
+surfaces.
+
 That seam is now clean enough that further expansion would be fake progress
 unless it graduates into a real recorded band-composition phase. Until that
 happens, it should be treated as a renderer-host composition helper for the

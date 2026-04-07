@@ -54,7 +54,7 @@ pub fn replayOps(renderer: anytype, group: GroupKind, ops: []const ReplayOp) voi
     for (ops) |op| replayOpOnBg(renderer, op);
 }
 
-pub fn replayOpsWith(replayer: anytype, group: GroupKind, ops: []const ReplayOp) void {
+fn replayOpsWith(replayer: anytype, group: GroupKind, ops: []const ReplayOp) void {
     replayer.beginGroup(group);
     defer replayer.endGroup(group);
     for (ops) |op| replayer.replayOpOnBg(op);

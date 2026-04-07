@@ -454,7 +454,7 @@ pub fn rangeContains(haystack: ByteRange, needle: ByteRange) bool {
     return needle.start >= haystack.start and needle.end <= haystack.end;
 }
 
-pub fn flushDrawList(list: *EditorDrawList, r: anytype) void {
+fn flushDrawList(list: *EditorDrawList, r: anytype) void {
     const ColorType = @TypeOf(r.theme.foreground);
     for (list.ops.items) |op| {
         switch (op) {
