@@ -333,7 +333,7 @@ pub fn drawEditorRowBandImmediate(
         text_start_x,
     );
 
-    if (is_current and is_cursor_segment) {
+    if (is_current and is_cursor_segment and cursor_col_vis >= seg_start_col and cursor_col_vis < seg_end_col) {
         const local_col = cursor_col_vis - seg_start_col;
         const cursor_draw_x = text_start_x + @as(f32, @floatFromInt(local_col)) * r.editor_char_width;
         overlay_mod.drawLineCursor(r, cursor_draw_x, seg_y, r.editor_char_height, r.theme.cursor);
@@ -465,7 +465,7 @@ pub fn addEditorRowBandOps(
         );
     }
 
-    if (is_current and is_cursor_segment) {
+    if (is_current and is_cursor_segment and cursor_col_vis >= seg_start_col and cursor_col_vis < seg_end_col) {
         const local_col = cursor_col_vis - seg_start_col;
         cursor_draw_x.* = text_start_x + @as(f32, @floatFromInt(local_col)) * r.editor_char_width;
         cursor_draw_y.* = seg_y;
