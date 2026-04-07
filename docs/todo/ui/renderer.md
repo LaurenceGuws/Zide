@@ -29,6 +29,11 @@ not architecture.
 
 - Do not shape the contract around current OpenGL convenience.
 - Do not add a real Vulkan implementation yet.
+- **Do not land Vulkan, GLES, or any third-backend bootstrap in `src/` (including
+  stubs, `RendererBackend` variants, SDL Vulkan/Metal flags, or empty runtime
+  slots) until Milestone B (`RB-B1`–`RB-B3`) and the adoption gate checklist are
+  honestly met and this queue records that the lane is open.** A fit audit or a
+  “readiness” table is **evidence**, not permission to start coding that backend.
 - Do not pivot to Android implementation work yet.
 - Android native-host/platform design may advance, but Android rendering
   backend work is still gated by this queue.
@@ -239,7 +244,9 @@ Suggested review title:
 
 Entry rule:
 
-- only open this chunk after approval from Review Chunk 3
+- only open this chunk after approval from Review Chunk 3 **and** honest closure
+  of Milestone B (`RB-B1`–`RB-B3`) against its exit bar—a fit audit alone is not
+  enough to open implementation
 
 Expected output:
 
