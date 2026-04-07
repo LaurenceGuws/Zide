@@ -634,10 +634,7 @@ pub fn beginPresentable(renderer: anytype, surface: PresentableSurface) bool {
     if (!renderer.capabilities().retained_targets) return false;
     switch (surface) {
         .terminal => return beginRenderTarget(renderer, presentableTarget(renderer, .terminal)),
-        .editor => {
-            @import("present_trace_runtime.zig").notePresentableUpdate(renderer, .editor);
-            return beginRenderTarget(renderer, presentableTarget(renderer, .editor));
-        },
+        .editor => return beginRenderTarget(renderer, presentableTarget(renderer, .editor)),
     }
 }
 
@@ -646,12 +643,8 @@ pub fn presentableAvailable(renderer: anytype, surface: PresentableSurface) bool
     return presentableTarget(renderer, surface) != null;
 }
 
-pub fn endPresentable(renderer: anytype, surface: PresentableSurface) void {
+pub fn endPresentable(renderer: anytype, _: PresentableSurface) void {
     if (!renderer.capabilities().retained_targets) return;
-    switch (surface) {
-        .terminal => {},
-        .editor => @import("present_trace_runtime.zig").notePresentableEnded(renderer, .editor),
-    }
     restoreCompositionTarget(renderer);
 }
 
@@ -659,7 +652,6 @@ pub fn drawPresentable(renderer: anytype, surface: PresentableSurface, draw: Pre
     if (!renderer.capabilities().retained_targets) return;
     switch (surface) {
         .terminal => if (presentableTarget(renderer, .terminal)) |target| {
-            @import("present_trace_runtime.zig").notePresentableDraw(renderer, .terminal, draw.generation);
             const width = draw.width orelse return;
             const height = draw.height orelse return;
             const source_width = draw.source_width orelse width;
@@ -719,7 +711,6 @@ pub fn drawPresentable(renderer: anytype, surface: PresentableSurface, draw: Pre
             );
         },
         .editor => if (presentableTarget(renderer, .editor)) |target| {
-            @import("present_trace_runtime.zig").notePresentableDraw(renderer, .editor, null);
             const snapped_x = snapToDevicePixel(draw.x, renderer.scale.render_scale);
             const snapped_y = snapToDevicePixel(draw.y, renderer.scale.render_scale);
             const width = draw.width orelse @as(f32, @floatFromInt(target.logical_width));

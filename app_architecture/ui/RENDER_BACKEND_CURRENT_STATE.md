@@ -442,6 +442,9 @@ The shared runtime surface has improved too:
   contract module or another backend-local wrapper
 - the renderer-owned presentable facade now routes through backend-owned
   presentable entrypoints on the OpenGL and Metal modules
+- presentable trace/editor-surface bookkeeping now also routes through
+  `src/ui/renderer/renderer_presentable_host.zig` instead of GL and Metal
+  each deciding that lifecycle bookkeeping inline
 
 But the presentable surface story is still not backend-neutral at the shared
 runtime layer:

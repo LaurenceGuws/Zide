@@ -1369,7 +1369,6 @@ pub fn drawPresentable(renderer: anytype, surface: PresentableSurface, draw: Pre
             const dest_height = draw.height orelse return;
             const source_width = draw.source_width orelse dest_width;
             const source_height = draw.source_height orelse dest_height;
-            present_trace_runtime.notePresentableDraw(renderer, .terminal, draw.generation);
             const context = backendContext(renderer) orelse return;
             const snapshot = context.terminal_snapshot orelse return;
             _ = appendRawImage(renderer, .{

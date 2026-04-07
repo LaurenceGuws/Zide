@@ -425,6 +425,12 @@ Current evidence:
   `renderer_presentable_host.zig` instead of `renderer.zig` directly.
 - this removes another small renderer-root ownership seam from the shared
   presentable contract surface.
+- presentable trace/editor-surface bookkeeping now also lives in
+  `renderer_presentable_host.zig` instead of being split across GL and Metal
+  presentable lifecycle methods.
+- this is a real ownership improvement because the shared presentable facade
+  now owns when presentable update/draw/end bookkeeping happens, instead of
+  each backend inlining its own trace semantics.
 - OpenGL presentable operations now resolve retained-target storage through
   backend-owned slot helpers instead of open-coding terminal/editor target
   access at each call site.
