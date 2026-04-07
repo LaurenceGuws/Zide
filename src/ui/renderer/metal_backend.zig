@@ -199,7 +199,7 @@ pub const MetalRawImageTexture = surface_draw.MetalRawImageTexture;
 pub const RawImageTexture = surface_draw.RawImageTexture;
 pub const RawImageDraw = surface_draw.RawImageDraw;
 pub const SolidColorDraw = surface_draw.SolidColorDraw;
-pub const SurfaceDraw = surface_draw.SurfaceDraw;
+const SurfaceDraw = surface_draw.SurfaceDraw;
 
 pub const BackendContext = struct {
     host: macos_metal_host.Host,
@@ -1479,20 +1479,20 @@ pub fn terminalFontAtlasUploadHooksForRenderer(renderer: anytype) ?terminal_font
     return terminalFontAtlasUploadHooks(context);
 }
 
-pub fn queuedSurfaceDrawCount(renderer: anytype) usize {
+fn queuedSurfaceDrawCount(renderer: anytype) usize {
     return renderer.backend_runtime.metal.queued_surface_draws.items.len;
 }
 
-pub fn currentFrame(renderer: anytype) ?*Frame {
+fn currentFrame(renderer: anytype) ?*Frame {
     if (renderer.backend_runtime.metal.frame) |*frame| return frame;
     return null;
 }
 
-pub fn clearCurrentFrame(renderer: anytype) void {
+fn clearCurrentFrame(renderer: anytype) void {
     renderer.backend_runtime.metal.frame = null;
 }
 
-pub fn storeCurrentFrame(renderer: anytype, frame: Frame) void {
+fn storeCurrentFrame(renderer: anytype, frame: Frame) void {
     renderer.backend_runtime.metal.frame = frame;
 }
 
@@ -1533,11 +1533,11 @@ pub fn appendSolidRect(
     } });
 }
 
-pub fn appendAtlasSample(renderer: anytype, sample: AtlasSampleDraw) bool {
+fn appendAtlasSample(renderer: anytype, sample: AtlasSampleDraw) bool {
     return renderer.backend_ops.enqueueSurfaceDraw(renderer, .{ .atlas = sample });
 }
 
-pub fn appendRawImage(renderer: anytype, draw: RawImageDraw) bool {
+fn appendRawImage(renderer: anytype, draw: RawImageDraw) bool {
     return renderer.backend_ops.enqueueSurfaceDraw(renderer, .{ .raw_image = draw });
 }
 
@@ -1610,7 +1610,7 @@ pub fn drawSampleTextRequest(
     return appendSampleTextRequest(renderer, font, request);
 }
 
-pub fn appendSampleTextRequest(
+fn appendSampleTextRequest(
     renderer: anytype,
     font: *terminal_font.TerminalFont,
     request: metal_text_sample_runtime.SampleTextRequest,
@@ -1634,7 +1634,7 @@ pub fn drawTerminalCellRun(
     return appendTerminalCellRun(renderer, font, request);
 }
 
-pub fn appendTerminalCellRun(
+fn appendTerminalCellRun(
     renderer: anytype,
     font: *terminal_font.TerminalFont,
     request: metal_text_sample_runtime.TerminalCellRunRequest,
@@ -1648,7 +1648,7 @@ pub fn appendTerminalCellRun(
     );
 }
 
-pub fn appendRawImageRgba(
+fn appendRawImageRgba(
     renderer: anytype,
     width: i32,
     height: i32,
@@ -1688,7 +1688,7 @@ pub fn drawRawImageRgba(
     return appendRawImageRgba(renderer, width, height, data, dest, tint);
 }
 
-pub fn appendRawImageRgb(
+fn appendRawImageRgb(
     renderer: anytype,
     width: i32,
     height: i32,
@@ -1759,7 +1759,7 @@ pub fn runSmokeFrame(renderer: anytype) bool {
     return true;
 }
 
-pub fn replayQueuedSurfaceDraws(renderer: anytype, context: *BackendContext, frame: *Frame) void {
+fn replayQueuedSurfaceDraws(renderer: anytype, context: *BackendContext, frame: *Frame) void {
     for (renderer.backend_runtime.metal.queued_surface_draws.items) |queued_draw| {
         switch (queued_draw) {
             .atlas => |sample| _ = drawAtlasSample(context, frame, sample),
@@ -1837,7 +1837,7 @@ pub fn ensureDiagnosticFont(renderer: anytype) !*terminal_font.TerminalFont {
     return &renderer.backend_runtime.metal.diagnostic_font.?;
 }
 
-pub fn clearQueuedSurfaceDraws(renderer: anytype) void {
+fn clearQueuedSurfaceDraws(renderer: anytype) void {
     for (renderer.backend_runtime.metal.queued_surface_draws.items) |*queued_draw| {
         switch (queued_draw.*) {
             .atlas => {},

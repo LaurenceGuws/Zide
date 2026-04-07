@@ -500,6 +500,8 @@ Current evidence:
 - backend frame begin/submit and screenshot entrypoints now terminate in
   `gl_backend.zig` / `metal_backend.zig` directly; the separate
   `opengl_frame_runtime.zig` / `metal_frame_runtime.zig` wrappers are gone.
+- Metal queue/text/cell append helpers that are now backend-internal no longer
+  remain exported as fake backend-facing API surface.
 - This is real lifecycle cleanup and removes another renderer-root duplication
   seam.
 - This is not closure yet:

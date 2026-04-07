@@ -244,6 +244,12 @@ This is a real ownership improvement because per-backend frame mechanics now
 terminate in the backend modules themselves instead of one more intermediate
 runtime layer.
 
+That has improved slightly again on the Metal helper surface too: queue and
+cell/text append helpers that are now only used internally by
+`metal_backend.zig` are no longer exported as public backend surface. That
+reduces one more fake API layer where implementation-detail queue mechanics
+looked like supported contract.
+
 That has improved slightly again on the OpenGL lifecycle side too: the
 OpenGL scene-target and presentable runtimes no longer call GL-only
 render-target helpers through `Renderer`. They now talk to `gl_backend`
