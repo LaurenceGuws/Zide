@@ -1,13 +1,13 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
 const app_logger = @import("../../app_logger.zig");
-const chrome_band_host = @import("chrome_band_host.zig");
+const renderer_chrome_band_host = @import("../renderer/renderer_chrome_band_host.zig");
 const common = @import("common.zig");
 const shared_types = @import("../../types/mod.zig");
 
 const Shell = app_shell.Shell;
 const Color = app_shell.Color;
-const Band = chrome_band_host.Band;
+const Band = renderer_chrome_band_host.Band;
 
 /// Status bar at the bottom
 pub const StatusBar = struct {

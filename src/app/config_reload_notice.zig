@@ -1,11 +1,11 @@
 const app_bootstrap = @import("bootstrap.zig");
 const app_modes = @import("modes/mod.zig");
 const app_shell = @import("../app_shell.zig");
-const chrome_band_host = @import("../ui/widgets/chrome_band_host.zig");
+const renderer_chrome_band_host = @import("../ui/renderer/renderer_chrome_band_host.zig");
 const shared_types = @import("../types/mod.zig");
 
 const AppMode = app_bootstrap.AppMode;
-const Band = chrome_band_host.Band;
+const Band = renderer_chrome_band_host.Band;
 const WidgetLayout = shared_types.layout.WidgetLayout;
 const Shell = app_shell.Shell;
 

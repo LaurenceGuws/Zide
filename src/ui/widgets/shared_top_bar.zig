@@ -1,10 +1,10 @@
 const app_shell = @import("../../app_shell.zig");
-const chrome_band_host = @import("chrome_band_host.zig");
+const renderer_chrome_band_host = @import("../renderer/renderer_chrome_band_host.zig");
 const shared_types = @import("../../types/mod.zig");
 const geometry = @import("shared_top_bar_geometry.zig");
 const model = @import("shared_top_bar_model.zig");
 
-const Band = chrome_band_host.Band;
+const Band = renderer_chrome_band_host.Band;
 const Shell = app_shell.Shell;
 const LayoutRect = shared_types.layout.Rect;
 

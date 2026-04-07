@@ -287,6 +287,13 @@ terminal close confirm do not. They are popup/card surfaces with different
 ownership and should not be forced into the chrome-band contract just because
 they also mix fills and text.
 
+**Ownership checkpoint (2026-04-07):** now that the first intended adopters are
+covered, this seam no longer lives under `widgets/`. It has moved into the
+renderer host area as `renderer_chrome_band_host.zig`. That is still not a
+backend-neutral phase, but it is the right ownership story: one UI composition
+host adjacent to the other renderer hosts, not a random widget helper that
+looks private but keeps spreading.
+
 #### Presentable contract
 
 One backend-neutral presentable surface contract that can express:

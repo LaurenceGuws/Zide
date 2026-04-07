@@ -695,6 +695,9 @@ Current evidence:
 - nearby modal/card surfaces such as terminal close confirm do not fit this
   seam and should stay outside it unless a separate popup/modal contract is
   introduced.
+- ownership checkpoint: the seam has graduated out of `widgets/` into
+  `renderer_chrome_band_host.zig`. That is the right host-level home for it,
+  even though it is still only a local composition seam and not a backend phase.
 - This is real lifecycle cleanup and removes another renderer-root duplication
   seam.
 - This is not closure yet:

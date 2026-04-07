@@ -387,6 +387,10 @@ The config-reload notice now also rides that seam. The terminal close-confirm
 card does not. That split is intentional: the band host is for strip/chrome
 composition, not for generic popup/modal ownership.
 
+The seam has also graduated out of `widgets/` and into the renderer host area
+as `renderer_chrome_band_host.zig`. That is an ownership correction, not a
+claim that shell chrome already has a solved backend-neutral phase.
+
 That is the loudest remaining semantic contradiction in the backend contract.
 It is no longer hidden by renderer-root facade noise or mixed backend dispatch
 buckets, which means the next real cut must either:
