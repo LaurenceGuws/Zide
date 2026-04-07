@@ -1241,7 +1241,7 @@ pub fn submitFrame(renderer: anytype) present_trace_runtime.FrameSubmission {
                 capture_readback = prepareFrameReadback(context, frame);
             }
 
-            replayQueuedSurfaceDraws(renderer, context, frame);
+            replayRecordedSurfaceDrawSurfacePhase(renderer, context, frame);
             _ = captureTerminalSnapshot(context, frame);
             encodePresent(frame);
             commitFrame(frame);
@@ -1403,7 +1403,7 @@ fn storeCurrentFrame(renderer: anytype, frame: Frame) void {
     renderer.backend_runtime.metal.frame = frame;
 }
 
-pub fn recordSurfaceDrawToMetalQueue(renderer: anytype, draw: SurfaceDraw) bool {
+pub fn recordSurfaceDrawForSurfacePhase(renderer: anytype, draw: SurfaceDraw) bool {
     renderer.backend_runtime.metal.queued_surface_draws.append(renderer.allocator, draw) catch {
         var queued_draw = draw;
         switch (queued_draw) {
@@ -1428,7 +1428,7 @@ pub fn appendSolidRect(
         metal_text_sample_runtime.pixelClipRect(renderer, c)
     else
         null;
-    return recordSurfaceDrawToMetalQueue(renderer, .{ .solid = .{
+    return recordSurfaceDrawForSurfacePhase(renderer, .{ .solid = .{
         .dest_rect = .{
             .x = renderer.logicalLengthToRaster(x),
             .y = renderer.logicalLengthToRaster(y),
@@ -1441,11 +1441,11 @@ pub fn appendSolidRect(
 }
 
 fn appendAtlasSample(renderer: anytype, sample: AtlasSampleDraw) bool {
-    return recordSurfaceDrawToMetalQueue(renderer, .{ .atlas = sample });
+    return recordSurfaceDrawForSurfacePhase(renderer, .{ .atlas = sample });
 }
 
 fn appendRawImage(renderer: anytype, draw: RawImageDraw) bool {
-    return recordSurfaceDrawToMetalQueue(renderer, .{ .raw_image = draw });
+    return recordSurfaceDrawForSurfacePhase(renderer, .{ .raw_image = draw });
 }
 
 pub fn addTerminalRect(renderer: anytype, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void {
@@ -1684,7 +1684,7 @@ pub fn runSmokeFrame(renderer: anytype) bool {
     return true;
 }
 
-fn replayQueuedSurfaceDraws(renderer: anytype, context: *BackendContext, frame: *Frame) void {
+fn replayRecordedSurfaceDrawSurfacePhase(renderer: anytype, context: *BackendContext, frame: *Frame) void {
     for (renderer.backend_runtime.metal.queued_surface_draws.items) |queued_draw| {
         switch (queued_draw) {
             .atlas => |sample| _ = drawAtlasSample(context, frame, sample),

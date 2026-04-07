@@ -650,8 +650,8 @@ Current evidence:
 - the remaining `SurfaceDraw` producer set is now intentionally narrow:
   generic UI/editor/shell fills, presentable/snapshot blits, and raw image /
   atlas samples that already fit the shared payload model. The live blocker is
-  no longer caller sprawl; it is the backend phase split itself
-  (GL immediate vs Metal submit-time replay).
+  no longer caller sprawl; it is the backend surface-phase split itself
+  (GL executes surface phase immediately, Metal replays it at submit).
 - This is real lifecycle cleanup and removes another renderer-root duplication
   seam.
 - This is not closure yet:

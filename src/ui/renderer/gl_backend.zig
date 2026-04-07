@@ -347,13 +347,14 @@ pub fn drawSolidRect(renderer: anytype, x: f32, y: f32, w: f32, h: f32, color: t
     return true;
 }
 
-/// Consumes one shared recorded `SurfaceDraw` on the OpenGL path immediately.
-/// Metal records the same union into a backend queue for end-of-frame replay.
+/// Consumes one shared recorded `SurfaceDraw` in the OpenGL surface phase.
+/// OpenGL executes that phase immediately at record time; Metal records the
+/// same union for submit-time surface-phase replay.
 /// `.solid` and `.atlas` are supported when the renderer is in a compatible
 /// text mode (atlas uses `terminal_font` coverage/color textures). `.raw_image`
 /// uses a shared opaque image handle whose `handle` is interpreted here as a GL
 /// texture id; the draw does not take ownership.
-pub fn consumeRecordedSurfaceDrawImmediate(renderer: anytype, draw: surface_draw.SurfaceDraw) bool {
+pub fn consumeRecordedSurfaceDrawInSurfacePhase(renderer: anytype, draw: surface_draw.SurfaceDraw) bool {
     switch (draw) {
         .solid => |s| {
             const x = renderer.rasterLengthToLogical(s.dest_rect.x);
@@ -499,7 +500,7 @@ pub fn destroyPersistentImage(_: anytype, texture: *surface_draw.GpuImageRef) vo
 }
 
 pub fn drawPersistentImage(renderer: anytype, texture: surface_draw.GpuImageRef, source_rect: ?types.Rect, dest: types.Rect, tint: types.Rgba) bool {
-    return consumeRecordedSurfaceDrawImmediate(renderer, .{ .raw_image = .{
+    return consumeRecordedSurfaceDrawInSurfacePhase(renderer, .{ .raw_image = .{
         .texture = texture,
         .source_rect = source_rect,
         .dest_rect = .{
@@ -1119,7 +1120,7 @@ pub fn drawRawImageRgba(renderer: anytype, width: i32, height: i32, data: []cons
     }
     var tex = texture_utils.createTextureFromRgba(width, height, data, gl.c.GL_NEAREST) orelse return false;
     defer texture_utils.destroyTexture(&tex);
-    return consumeRecordedSurfaceDrawImmediate(renderer, .{ .raw_image = .{
+    return consumeRecordedSurfaceDrawInSurfacePhase(renderer, .{ .raw_image = .{
         .texture = .{
             .handle = tex.id,
             .width = tex.width,
@@ -1150,7 +1151,7 @@ pub fn drawRawImageRgb(renderer: anytype, width: i32, height: i32, data: []const
     }
     var tex = texture_utils.createTextureFromRgb(width, height, data, gl.c.GL_NEAREST) orelse return false;
     defer texture_utils.destroyTexture(&tex);
-    return consumeRecordedSurfaceDrawImmediate(renderer, .{ .raw_image = .{
+    return consumeRecordedSurfaceDrawInSurfacePhase(renderer, .{ .raw_image = .{
         .texture = .{
             .handle = tex.id,
             .width = tex.width,

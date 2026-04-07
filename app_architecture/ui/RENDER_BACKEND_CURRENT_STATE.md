@@ -270,9 +270,10 @@ were a stable public renderer API.
 
 The remaining truth is now plain:
 
-- OpenGL surface submission still means "interpret this draw now"
-- Metal surface submission still means "append this draw now, replay it at
-  frame submit"
+- OpenGL surface submission still means "execute this draw in the surface phase
+  now"
+- Metal surface submission still means "record this draw for the submit-time
+  surface phase"
 
 And the remaining caller set is already narrow enough that this is no longer a
 caller-sprawl problem. The active shared `SurfaceDraw` producers are mainly:
@@ -286,7 +287,7 @@ caller-sprawl problem. The active shared `SurfaceDraw` producers are mainly:
 So the backend-fit blocker is now concentrated:
 
 - the same narrow shared payload reaches both backends
-- but backend choice still changes when the payload is consumed
+- but backend choice still changes when the surface phase runs
 
 That is the loudest remaining semantic contradiction in the backend contract.
 It is no longer hidden by renderer-root facade noise or mixed backend dispatch

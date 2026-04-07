@@ -108,8 +108,8 @@ renderer state.
 **Submission shape today:** the shared union lives in `surface_draw.zig`
 (`SurfaceDraw`). The renderer now keeps `recordSurfaceDraw(...)` internal, but
 still routes shared solid draws through the grouped backend draw contract.
-Metal records into the end-of-frame replay queue; OpenGL consumes the same
-record immediately via `gl_backend.consumeRecordedSurfaceDrawImmediate`
+Metal records into the submit-time surface phase; OpenGL consumes the same
+record immediately via `gl_backend.consumeRecordedSurfaceDrawInSurfacePhase`
 (raster-space
 `dest_rect` / atlas `dest_x`/`dest_y` converted back to logical coordinates to
 match how Metal enqueues those draws). Atlas samples on OpenGL require
@@ -172,8 +172,8 @@ remaining real `SurfaceDraw` producers are intentionally narrow:
 So the remaining blocker is not broad caller sprawl. The remaining blocker is
 backend phase timing:
 
-- OpenGL consumes the shared record immediately
-- Metal replays the shared record later in submit
+- OpenGL executes the surface phase immediately at record time
+- Metal replays the recorded surface phase later in submit
 
 The next contract cut must attack that phase truth directly rather than reopen
 caller triage unless a new misuse appears.

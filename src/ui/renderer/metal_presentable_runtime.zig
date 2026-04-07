@@ -46,7 +46,7 @@ pub fn drawPresentable(renderer: anytype, surface: PresentableSurface, draw: Pre
             const resolved = presentable_contract.resolveDraw(draw, null, null) orelse return;
             const context = metal_backend.backendContext(renderer) orelse return;
             const snapshot = context.terminal_snapshot orelse return;
-            _ = metal_backend.recordSurfaceDrawToMetalQueue(renderer, .{ .raw_image = .{
+            _ = metal_backend.recordSurfaceDrawForSurfacePhase(renderer, .{ .raw_image = .{
                 .texture = metal_backend.cloneGpuImageRef(snapshot),
                 .source_rect = .{
                     .x = 0,
