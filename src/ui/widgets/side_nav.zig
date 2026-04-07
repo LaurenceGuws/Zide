@@ -1,7 +1,9 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
+const chrome_band_host = @import("chrome_band_host.zig");
 const shared_types = @import("../../types/mod.zig");
 
+const Band = chrome_band_host.Band;
 const Shell = app_shell.Shell;
 const Color = app_shell.Color;
 
@@ -18,8 +20,9 @@ pub const SideNav = struct {
 
     pub fn draw(self: *SideNav, shell: *Shell, height: f32, y: f32) void {
         const theme = shell.theme();
+        const band = Band.init(shell, theme.ui_bar_bg);
         // Background
-        shell.drawRect(0, @intFromFloat(y), @intFromFloat(self.width), @intFromFloat(height), theme.ui_bar_bg);
+        band.fillRect(0, @intFromFloat(y), @intFromFloat(self.width), @intFromFloat(height), theme.ui_bar_bg);
 
         const Item = struct {
             icon: []const u8,
@@ -65,16 +68,16 @@ pub const SideNav = struct {
 
             if (hovered or item.active) {
                 const bg = if (pressed and hovered) theme.ui_pressed else theme.ui_hover;
-                shell.drawRect(@intFromFloat(bx), @intFromFloat(by), @intFromFloat(bw), @intFromFloat(bh), bg);
+                band.fillRect(@intFromFloat(bx), @intFromFloat(by), @intFromFloat(bw), @intFromFloat(bh), bg);
             }
             if (item.active) {
-                shell.drawRect(0, @intFromFloat(by), 2, @intFromFloat(bh), theme.ui_accent);
+                band.fillRect(0, @intFromFloat(by), 2, @intFromFloat(bh), theme.ui_accent);
             }
 
             const icon_color = if (item.active or hovered) theme.ui_text else theme.ui_text_inactive;
             const icon_text_x = icon_x + icon_text_offset;
             const icon_text_y = icon_y + (icon_size - icon_h_unit) / 2;
-            shell.drawIconText(item.icon, icon_text_x, icon_text_y, icon_color);
+            band.drawIconText(item.icon, icon_text_x, icon_text_y, icon_color);
 
             if (item.badge) |count| {
                 var buf: [4]u8 = undefined;
@@ -101,16 +104,16 @@ pub const SideNav = struct {
 
             if (hovered or item.active) {
                 const bg = if (pressed and hovered) theme.ui_pressed else theme.ui_hover;
-                shell.drawRect(@intFromFloat(bx), @intFromFloat(by), @intFromFloat(bw), @intFromFloat(bh), bg);
+                band.fillRect(@intFromFloat(bx), @intFromFloat(by), @intFromFloat(bw), @intFromFloat(bh), bg);
             }
             if (item.active) {
-                shell.drawRect(0, @intFromFloat(by), 2, @intFromFloat(bh), theme.ui_accent);
+                band.fillRect(0, @intFromFloat(by), 2, @intFromFloat(bh), theme.ui_accent);
             }
 
             const icon_color = if (item.active or hovered) theme.ui_text else theme.ui_text_inactive;
             const icon_text_x = icon_x + icon_text_offset;
             const icon_text_y = bottom_y + (icon_size - icon_h_unit) / 2;
-            shell.drawIconText(item.icon, icon_text_x, icon_text_y, icon_color);
+            band.drawIconText(item.icon, icon_text_x, icon_text_y, icon_color);
 
             bottom_y -= icon_size + spacing;
         }

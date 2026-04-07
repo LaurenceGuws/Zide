@@ -377,11 +377,11 @@ If that seam proves out, it may later inform editor/sample banding too. It
 should not be born as a repo-wide replacement for all generic UI draw paths.
 
 There is now one small proof point in code: a narrow widget-side chrome band
-host exists and the status bar, tab bar, and shared top bar have been routed
-through it. That is still an organizational seam, not a solved backend phase.
-Its value is that those chrome families now have one explicit local composition
-surface to grow, instead of staying expressed only as unrelated shell draw
-calls.
+host exists and the status bar, tab bar, shared top bar, and side nav have
+been routed through it. That is still an organizational seam, not a solved
+backend phase. Its value is that those chrome families now have one explicit
+local composition surface to grow, instead of staying expressed only as
+unrelated shell draw calls.
 
 That is the loudest remaining semantic contradiction in the backend contract.
 It is no longer hidden by renderer-root facade noise or mixed backend dispatch

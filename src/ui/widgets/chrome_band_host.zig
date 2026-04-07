@@ -33,4 +33,8 @@ pub const Band = struct {
     pub fn drawTextOnColor(self: Band, text: []const u8, x: f32, y: f32, color: Color, bg: Color) void {
         self.shell.drawTextOnBg(text, x, y, color, bg);
     }
+
+    pub fn drawIconText(self: Band, text: []const u8, x: f32, y: f32, color: Color) void {
+        self.shell.drawIconText(text, x, y, color);
+    }
 };
