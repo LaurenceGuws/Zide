@@ -204,6 +204,17 @@ perform retained-surface updates now route to
 than pretending the renderer root owns a backend-neutral begin/end lifecycle
 when Metal still does not.
 
+That has improved slightly again on backend ownership too: backend dispatch no
+longer terminates presentable operations back into the large generic backend
+files. Dedicated backend presentable modules now own that seam directly:
+
+- `src/ui/renderer/gl_presentable_runtime.zig`
+- `src/ui/renderer/metal_presentable_runtime.zig`
+
+This is still not full presentable parity, but it is a more honest ownership
+shape than keeping presentable lifecycle inline in `gl_backend.zig` and
+`metal_backend.zig` as one more mixed concern.
+
 That has improved slightly again on the scene-composition side too: the
 offscreen scene-target contract/state now lives in a dedicated
 `scene_target_state` module and is stored under `opengl_runtime.scene_target`

@@ -443,6 +443,14 @@ Current evidence:
 - This is small but useful ownership pressure: presentable storage reads are
   becoming less ad hoc even before the broader presentable lifecycle is
   fully re-cut.
+- backend dispatch now terminates presentable operations in dedicated backend
+  presentable modules:
+  - `src/ui/renderer/gl_presentable_runtime.zig`
+  - `src/ui/renderer/metal_presentable_runtime.zig`
+- that is more honest than keeping presentable lifecycle inline in
+  `gl_backend.zig` / `metal_backend.zig`, because it makes presentable
+  ownership a first-class backend lane instead of a sidecar on the general
+  backend modules.
 
 Owner docs:
 

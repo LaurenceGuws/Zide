@@ -1,6 +1,8 @@
 const types = @import("types.zig");
 const gl_backend = @import("gl_backend.zig");
+const gl_presentable_runtime = @import("gl_presentable_runtime.zig");
 const metal_backend = @import("metal_backend.zig");
+const metal_presentable_runtime = @import("metal_presentable_runtime.zig");
 const surface_draw = @import("surface_draw.zig");
 const platform_window = @import("../../platform/window_metrics.zig");
 const GpuImageRef = surface_draw.GpuImageRef;
@@ -230,25 +232,25 @@ fn OpenGlDispatch(
             return gl_backend.dumpWindowScreenshotPpmSized(renderer, path, out_width, out_height);
         }
         fn ensurePresentable(renderer: *RendererType, surface: PresentableSurface, width: i32, height: i32) bool {
-            return gl_backend.ensurePresentable(renderer, surface, width, height);
+            return gl_presentable_runtime.ensurePresentable(renderer, surface, width, height);
         }
         fn beginPresentable(renderer: *RendererType, surface: PresentableSurface) bool {
-            return gl_backend.beginPresentable(renderer, surface);
+            return gl_presentable_runtime.beginPresentable(renderer, surface);
         }
         fn presentableAvailable(renderer: *RendererType, surface: PresentableSurface) bool {
-            return gl_backend.presentableAvailable(renderer, surface);
+            return gl_presentable_runtime.presentableAvailable(renderer, surface);
         }
         fn endPresentable(renderer: *RendererType, surface: PresentableSurface) void {
-            gl_backend.endPresentable(renderer, surface);
+            gl_presentable_runtime.endPresentable(renderer, surface);
         }
         fn drawPresentable(renderer: *RendererType, surface: PresentableSurface, draw: PresentableDraw) void {
-            gl_backend.drawPresentable(renderer, surface, draw);
+            gl_presentable_runtime.drawPresentable(renderer, surface, draw);
         }
         fn scrollPresentable(renderer: *RendererType, surface: PresentableSurface, dx: i32, dy: i32) bool {
-            return gl_backend.scrollPresentable(renderer, surface, dx, dy);
+            return gl_presentable_runtime.scrollPresentable(renderer, surface, dx, dy);
         }
         fn presentableInfo(renderer: *RendererType, surface: PresentableSurface) ?PresentableInfo {
-            return gl_backend.presentableInfo(renderer, surface);
+            return gl_presentable_runtime.presentableInfo(renderer, surface);
         }
         fn clearThemeBackground(renderer: *RendererType) void {
             gl_backend.clearThemeBackground(renderer);
@@ -333,25 +335,25 @@ fn MetalDispatch(
             return metal_backend.dumpWindowScreenshotPpmSized(renderer, path, out_width, out_height);
         }
         fn ensurePresentable(renderer: *RendererType, surface: PresentableSurface, width: i32, height: i32) bool {
-            return metal_backend.ensurePresentable(renderer, surface, width, height);
+            return metal_presentable_runtime.ensurePresentable(renderer, surface, width, height);
         }
         fn beginPresentable(renderer: *RendererType, surface: PresentableSurface) bool {
-            return metal_backend.beginPresentable(renderer, surface);
+            return metal_presentable_runtime.beginPresentable(renderer, surface);
         }
         fn presentableAvailable(renderer: *RendererType, surface: PresentableSurface) bool {
-            return metal_backend.presentableAvailable(renderer, surface);
+            return metal_presentable_runtime.presentableAvailable(renderer, surface);
         }
         fn endPresentable(renderer: *RendererType, surface: PresentableSurface) void {
-            metal_backend.endPresentable(renderer, surface);
+            metal_presentable_runtime.endPresentable(renderer, surface);
         }
         fn drawPresentable(renderer: *RendererType, surface: PresentableSurface, draw: PresentableDraw) void {
-            metal_backend.drawPresentable(renderer, surface, draw);
+            metal_presentable_runtime.drawPresentable(renderer, surface, draw);
         }
         fn scrollPresentable(renderer: *RendererType, surface: PresentableSurface, dx: i32, dy: i32) bool {
-            return metal_backend.scrollPresentable(renderer, surface, dx, dy);
+            return metal_presentable_runtime.scrollPresentable(renderer, surface, dx, dy);
         }
         fn presentableInfo(renderer: *RendererType, surface: PresentableSurface) ?PresentableInfo {
-            return metal_backend.presentableInfo(renderer, surface);
+            return metal_presentable_runtime.presentableInfo(renderer, surface);
         }
         fn clearThemeBackground(renderer: *RendererType) void {
             metal_backend.clearThemeBackground(renderer);
