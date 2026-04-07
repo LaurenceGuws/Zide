@@ -966,6 +966,9 @@ Current evidence:
   share one typed host contract surface in
   `renderer_text_phase_group_host.zig`; seam-specific hosts are now adapters
   over that shared group/replay API.
+- editor checkpoint (`B-DONE-3` partial): draw-list row-band flush now uses
+  explicit `.editor_row_band` group boundaries through the shared text phase
+  host seam, with begin/end trace counters and mismatch warnings.
 - this is good local honesty for the sample lane, but it does not yet turn the
   sample family into a recorded backend-neutral phase.
 - first sample-side proof is acceptable only as a tiny section-composition seam,

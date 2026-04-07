@@ -28,6 +28,8 @@ fn logFramePresent(state: anytype, shell: anytype, submission: anytype) void {
         .{ .key = "band_group_end", .value = .{ .unsigned = trace.band_group_end_count } },
         .{ .key = "sample_section_group_begin", .value = .{ .unsigned = trace.sample_section_group_begin_count } },
         .{ .key = "sample_section_group_end", .value = .{ .unsigned = trace.sample_section_group_end_count } },
+        .{ .key = "editor_row_band_group_begin", .value = .{ .unsigned = trace.editor_row_band_group_begin_count } },
+        .{ .key = "editor_row_band_group_end", .value = .{ .unsigned = trace.editor_row_band_group_end_count } },
         .{ .key = "composition_full_pane_clear", .value = .{ .boolean = trace.composition_full_pane_clear } },
         .{ .key = "captured", .value = .{ .boolean = trace.captured_path != null } },
     });
@@ -43,6 +45,13 @@ fn logFramePresent(state: anytype, shell: anytype, submission: anytype) void {
             .warning,
             "sample_section_group_mismatch frame={d} begin={d} end={d}",
             .{ state.frame_id, trace.sample_section_group_begin_count, trace.sample_section_group_end_count },
+        );
+    }
+    if (trace.editor_row_band_group_begin_count != trace.editor_row_band_group_end_count) {
+        render_log.logf(
+            .warning,
+            "editor_row_band_group_mismatch frame={d} begin={d} end={d}",
+            .{ state.frame_id, trace.editor_row_band_group_begin_count, trace.editor_row_band_group_end_count },
         );
     }
     if (trace.captured_path) |path| {

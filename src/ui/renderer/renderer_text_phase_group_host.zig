@@ -8,6 +8,7 @@ const Color = app_shell.Color;
 pub const GroupKind = enum {
     chrome_band,
     sample_section,
+    editor_row_band,
 };
 
 pub const TextKind = enum {
@@ -28,6 +29,7 @@ pub fn beginGroup(renderer: anytype, kind: GroupKind) void {
     switch (kind) {
         .chrome_band => present_trace_runtime.noteBandCommandGroupBegin(renderer),
         .sample_section => present_trace_runtime.noteSampleSectionCommandGroupBegin(renderer),
+        .editor_row_band => present_trace_runtime.noteEditorRowBandCommandGroupBegin(renderer),
     }
 }
 
@@ -35,6 +37,7 @@ pub fn endGroup(renderer: anytype, kind: GroupKind) void {
     switch (kind) {
         .chrome_band => present_trace_runtime.noteBandCommandGroupEnd(renderer),
         .sample_section => present_trace_runtime.noteSampleSectionCommandGroupEnd(renderer),
+        .editor_row_band => present_trace_runtime.noteEditorRowBandCommandGroupEnd(renderer),
     }
 }
 

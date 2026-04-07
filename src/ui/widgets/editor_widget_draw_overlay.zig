@@ -4,6 +4,7 @@ const selection_mod = @import("../../editor/view/selection.zig");
 const chrome_geometry_mod = @import("../../editor/view/chrome_geometry.zig");
 const draw_list_mod = @import("../../editor/render/draw_list.zig");
 const app_logger = @import("../../app_logger.zig");
+const renderer_text_phase_group_host = @import("../renderer/renderer_text_phase_group_host.zig");
 const renderer_surface_host = @import("../renderer/renderer_surface_host.zig");
 const renderer_text_host = @import("../renderer/renderer_text_host.zig");
 const scrollbar_mod = @import("editor_scrollbar.zig");
@@ -482,6 +483,12 @@ pub fn flushDrawList(list: *EditorDrawList, r: anytype) void {
             },
         }
     }
+}
+
+pub fn flushDrawListEditorRowBand(list: *EditorDrawList, r: anytype) void {
+    renderer_text_phase_group_host.beginGroup(r, .editor_row_band);
+    defer renderer_text_phase_group_host.endGroup(r, .editor_row_band);
+    flushDrawList(list, r);
 }
 
 pub fn drawEditorScrollbars(

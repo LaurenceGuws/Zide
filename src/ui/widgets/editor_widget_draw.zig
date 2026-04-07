@@ -135,7 +135,7 @@ pub fn draw(
                     cursor_draw_y_local,
                 );
                 if (row_band_ok) {
-                    overlay_mod.flushDrawList(draw_list_local, r_local);
+                    overlay_mod.flushDrawListEditorRowBand(draw_list_local, r_local);
                 } else {
                     if (range_count_local > 0) {
                         segment_paint_mod.drawSelectionOverlays(
@@ -415,7 +415,7 @@ pub fn drawCached(
                 }
 
                 if (list_ok) {
-                    overlay_mod.flushDrawList(draw_list_local, r_local);
+                    overlay_mod.flushDrawListEditorRowBand(draw_list_local, r_local);
                     return;
                 }
 
