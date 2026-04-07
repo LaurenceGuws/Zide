@@ -583,6 +583,10 @@ sample-section hosts now implement one shared typed replay/group surface in
 replay adapters for chrome/sample have been removed; those lanes now call the
 shared text phase host contract directly.
 
+**Observability parity checkpoint (B-DONE-5, 2026-04-07):** phase-group trace
+metrics and mismatch guardrails now follow one naming family across chrome,
+sample, and editor row-band lanes.
+
 **Editor adoption checkpoint (B-DONE-3, 2026-04-07):** editor row-band
 draw-list flush and immediate/fallback row-band execution now both open/close
 explicit `.editor_row_band` text phase groups through the shared host seam.

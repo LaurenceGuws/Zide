@@ -436,7 +436,7 @@ Milestone B "done" checkpoints (execute in order, do not rerank mid-lane):
     shared contract (legacy band/sample replay wrappers and
     duplicate record/replay adapters)
   - no compatibility shims left behind
-- [ ] **B-DONE-5: close observability parity**
+- [x] **B-DONE-5: close observability parity**
   - standardize trace metrics for phase groups (begin/end counts and mismatch
     detection) under one naming family
   - keep runtime warning guardrails for begin/end divergence
@@ -970,6 +970,10 @@ Current evidence:
   row-band lanes now use explicit `.editor_row_band` group boundaries through
   the shared text phase host seam, with begin/end trace counters and mismatch
   warnings.
+- closure checkpoint (`B-DONE-5`): phase-group observability now follows one
+  naming family across chrome/sample/editor (`*_group_begin_count`,
+  `*_group_end_count`, `*_group_mismatch`) with frame-present warning
+  guardrails kept enabled.
 - this is good local honesty for the sample lane, but it does not yet turn the
   sample family into a recorded backend-neutral phase.
 - first sample-side proof is acceptable only as a tiny section-composition seam,

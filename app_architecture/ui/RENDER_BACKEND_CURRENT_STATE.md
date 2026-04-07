@@ -566,6 +566,10 @@ draw-list row-band flush and immediate/fallback row-band execution are wrapped
 in explicit `.editor_row_band` group boundaries via the same shared host seam,
 with trace counters and mismatch warnings wired.
 
+Observability parity is now closed too (`B-DONE-5`): chrome, sample, and editor
+row-band groups all expose begin/end counters and mismatch warnings under one
+consistent naming family.
+
 That seam is now clean enough that further expansion would be fake progress
 unless it graduates into a real recorded band-composition phase. Until that
 happens, it should be treated as a renderer-host composition helper for the
