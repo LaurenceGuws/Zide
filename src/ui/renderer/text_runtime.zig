@@ -112,11 +112,26 @@ fn snapTextOrigin(self: *Renderer, x: f32, y: f32) TextOrigin {
     };
 }
 
+fn transparentTextBg() types.Rgba {
+    return .{ .r = 0, .g = 0, .b = 0, .a = 0 };
+}
+
+fn opaqueTextBg(bg: Color) types.Rgba {
+    var bg_rgba = bg.toRgba();
+    bg_rgba.a = 255;
+    return bg_rgba;
+}
+
+fn pushTextBg(self: *Renderer, bg_rgba: types.Rgba) types.Rgba {
+    const prev = self.text_render.bg_rgba;
+    self.text_render.bg_rgba = bg_rgba;
+    return prev;
+}
+
 pub fn drawText(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color) void {
     if (!textRenderingAvailable(self)) return;
-    const prev = self.text_render.bg_rgba;
+    const prev = pushTextBg(self, transparentTextBg());
     defer self.text_render.bg_rgba = prev;
-    self.text_render.bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
     drawTextWithFont(self, &self.app_font, self.app_metrics, text, x, y, color, false);
 }
 
@@ -151,9 +166,8 @@ pub fn drawTextMonospacePolicy(self: *Renderer, text: []const u8, x: f32, y: f32
         }
         return;
     }
-    const prev = self.text_render.bg_rgba;
+    const prev = pushTextBg(self, transparentTextBg());
     defer self.text_render.bg_rgba = prev;
-    self.text_render.bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
     drawTextWithFontMonospace(self, &self.editor_font, self.editor_metrics, text, x, y, color, disable_programming_ligatures, false);
 }
 
@@ -168,11 +182,8 @@ pub fn drawTextMonospaceOnBgPolicy(self: *Renderer, text: []const u8, x: f32, y:
         }
         return;
     }
-    const prev = self.text_render.bg_rgba;
+    const prev = pushTextBg(self, opaqueTextBg(bg));
     defer self.text_render.bg_rgba = prev;
-    var bg_rgba = bg.toRgba();
-    bg_rgba.a = 255;
-    self.text_render.bg_rgba = bg_rgba;
     drawTextWithFontMonospace(self, &self.editor_font, self.editor_metrics, text, x, y, color, disable_programming_ligatures, false);
 }
 
@@ -183,9 +194,8 @@ pub fn drawTextMonospaceStyledPolicy(self: *Renderer, text: []const u8, x: f32, 
         }
         return;
     }
-    const prev = self.text_render.bg_rgba;
+    const prev = pushTextBg(self, transparentTextBg());
     defer self.text_render.bg_rgba = prev;
-    self.text_render.bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
     drawTextWithFontMonospace(self, &self.editor_font, self.editor_metrics, text, x, y, color, disable_programming_ligatures, italic);
 }
 
@@ -196,29 +206,22 @@ pub fn drawTextMonospaceOnBgStyledPolicy(self: *Renderer, text: []const u8, x: f
         }
         return;
     }
-    const prev = self.text_render.bg_rgba;
+    const prev = pushTextBg(self, opaqueTextBg(bg));
     defer self.text_render.bg_rgba = prev;
-    var bg_rgba = bg.toRgba();
-    bg_rgba.a = 255;
-    self.text_render.bg_rgba = bg_rgba;
     drawTextWithFontMonospace(self, &self.editor_font, self.editor_metrics, text, x, y, color, disable_programming_ligatures, italic);
 }
 
 pub fn drawTextOnBg(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color) void {
     if (!textRenderingAvailable(self)) return;
-    const prev = self.text_render.bg_rgba;
+    const prev = pushTextBg(self, opaqueTextBg(bg));
     defer self.text_render.bg_rgba = prev;
-    var bg_rgba = bg.toRgba();
-    bg_rgba.a = 255;
-    self.text_render.bg_rgba = bg_rgba;
     drawTextWithFont(self, &self.app_font, self.app_metrics, text, x, y, color, false);
 }
 
 pub fn drawTextSized(self: *Renderer, text: []const u8, x: f32, y: f32, size: f32, color: Color) void {
     if (!textRenderingAvailable(self)) return;
-    const prev = self.text_render.bg_rgba;
+    const prev = pushTextBg(self, transparentTextBg());
     defer self.text_render.bg_rgba = prev;
-    self.text_render.bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
     const font = font_runtime.fontForSize(self, size) orelse {
         drawText(self, text, x, y, color);
         return;
@@ -236,9 +239,8 @@ pub fn drawTextSized(self: *Renderer, text: []const u8, x: f32, y: f32, size: f3
 
 pub fn drawIconText(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color) void {
     if (!textRenderingAvailable(self)) return;
-    const prev = self.text_render.bg_rgba;
+    const prev = pushTextBg(self, transparentTextBg());
     defer self.text_render.bg_rgba = prev;
-    self.text_render.bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
     drawTextWithFont(self, &self.icon_font, self.icon_metrics, text, x, y, color, false);
 }
 
