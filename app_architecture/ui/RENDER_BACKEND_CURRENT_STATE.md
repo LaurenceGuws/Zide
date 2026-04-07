@@ -242,6 +242,11 @@ subcontracts instead of one flat `backend_ops` blob. This is still the same
 dispatch center, but it makes the remaining contradictions more honest and
 reduces the renderer-root “single backend god object” surface.
 
+That has improved slightly again on renderer-root state honesty too: the
+renderer no longer stores a separate `backend` label field when the selected
+backend contract/runtime already carries that truth. This is small, but it
+removes one more dead “backend enum on the root” relic from the shared host.
+
 That has improved slightly again on draw-payload neutrality too: shared raw
 image draws no longer carry a `.opengl` / `.metal` texture union in
 `surface_draw.zig`. The payload now carries one opaque `GpuImageRef`

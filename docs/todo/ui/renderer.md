@@ -519,6 +519,8 @@ Current evidence:
   instead of part of the caller-facing shared surface.
 - dead renderer-root capability convenience verbs with no callers are being
   deleted instead of preserved as speculative API surface.
+- the renderer root no longer stores a dead backend label field when backend
+  truth already lives in the selected contract/runtime.
 - shared raw-image draw payloads now use one opaque `GpuImageRef` handle
   instead of a `.opengl` / `.metal` texture union.
 - backend-specific clone/release/interpretation now terminates in backend

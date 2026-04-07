@@ -379,7 +379,6 @@ pub const Renderer = struct {
     pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
 
     allocator: std.mem.Allocator,
-    backend: RendererBackend,
     backend_ops: BackendOps,
     runtime_profile: RendererRuntimeProfile,
     app_host: native_host.PlatformAppHost,
@@ -534,7 +533,6 @@ pub const Renderer = struct {
 
         renderer.* = .{
             .allocator = allocator,
-            .backend = startup_backend,
             .backend_ops = backend_dispatch.opsFor(
                 Self,
                 RendererBackend,
