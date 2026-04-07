@@ -1430,21 +1430,12 @@ pub const Renderer = struct {
         self.drawRect(x, y, w, h, color);
     }
 
-    fn addTerminalRectThunk(ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void {
-        const self: *Renderer = @ptrCast(@alignCast(ctx));
-        self.addTerminalRect(x, y, w, h, color);
-    }
-
     fn ensureVboCapacity(self: *Renderer, vertex_count: usize) void {
         draw_ops.ensureVboCapacity(self, vertex_count);
     }
 
     fn addBatchQuad(self: *Renderer, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba) void {
         draw_ops.addBatchQuad(self, texture, src, dest, color, types.Rgba{ .r = 0, .g = 0, .b = 0, .a = 0 }, .rgba);
-    }
-
-    pub fn addTerminalRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
-        self.backend_ops.draw.addTerminalRect(self, x, y, w, h, color.toRgba());
     }
 
     pub fn terminalCellGeometry(self: *Renderer) TerminalCellGeometry {
@@ -1491,14 +1482,6 @@ pub const Renderer = struct {
         };
     }
 
-    pub fn addTerminalGlyphRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
-        self.backend_ops.draw.addTerminalGlyphRect(self, x, y, w, h, color.toRgba());
-    }
-
-    pub fn addTerminalGlyphQuad(self: *Renderer, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
-        self.backend_ops.draw.addTerminalGlyphQuad(self, texture, src, dest, color, kind);
-    }
-
     pub fn terminalShapeBuffer(self: *Renderer) *hb.hb_buffer_t {
         return self.terminal_text.shape_buffer;
     }
@@ -1510,12 +1493,12 @@ pub const Renderer = struct {
 
     fn drawTextureGlyphCacheThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
         const renderer: *Renderer = @ptrCast(@alignCast(ctx));
-        renderer.addTerminalGlyphQuad(texture, src, dest, color, kind);
+        renderer.backend_ops.draw.addTerminalGlyphQuad(renderer, texture, src, dest, color, kind);
     }
 
     fn addTerminalGlyphRectThunk(ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void {
         const renderer: *Renderer = @ptrCast(@alignCast(ctx));
-        renderer.addTerminalGlyphRect(x, y, w, h, color);
+        renderer.backend_ops.draw.addTerminalGlyphRect(renderer, x, y, w, h, color.toRgba());
     }
 
     fn drawTextureThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {

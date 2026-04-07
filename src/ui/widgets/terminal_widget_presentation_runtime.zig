@@ -8,6 +8,7 @@ const presentation_state_mod = @import("terminal_widget_presentation_state.zig")
 const view_state = @import("terminal_widget_view_state.zig");
 const present_trace_runtime = @import("../renderer/present_trace_runtime.zig");
 const renderer_presentable_host = @import("../renderer/renderer_presentable_host.zig");
+const renderer_terminal_draw_host = @import("../renderer/renderer_terminal_draw_host.zig");
 const draw_grid = @import("terminal_widget_draw_grid.zig");
 const publication_capture = @import("../../terminal/core/publication/render_cache.zig");
 const app_shell = @import("../../app_shell.zig");
@@ -293,7 +294,7 @@ fn drawPresentationBackgroundPass(
     const bg_phase_start = app_shell.getTime();
     renderer.beginTerminalBatch();
     if (clear_full_surface) {
-        renderer.addTerminalRect(0, 0, surface_update_plan.geometry.surface_w, surface_update_plan.geometry.surface_h, bg_color);
+        renderer_terminal_draw_host.addTerminalRect(renderer, 0, 0, surface_update_plan.geometry.surface_w, surface_update_plan.geometry.surface_h, bg_color);
     }
     var visitor = struct {
         shell: *app_shell.Shell,

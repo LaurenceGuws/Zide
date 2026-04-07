@@ -11,6 +11,7 @@ const glyph_cache = @import("../glyph_cache.zig");
 const app_logger = @import("../../app_logger.zig");
 const types = @import("types.zig");
 const renderer_root = @import("../renderer.zig");
+const renderer_terminal_draw_host = @import("renderer_terminal_draw_host.zig");
 const metal_text_sample_runtime = @import("metal_text_sample_runtime.zig");
 const metal_backend = @import("metal_backend.zig");
 
@@ -333,7 +334,7 @@ pub fn drawTerminalCellGraphemeBatched(self: *Renderer, base: u32, combining: []
     const snapped_cell_height = snapToDevicePixel(cell_height, self.scale.render_scale);
     const snapped_cell_w_i = snapInt(snapped_cell_width);
     const snapped_cell_h_i = snapInt(snapped_cell_height);
-    if (draw_bg) self.addTerminalRect(snapInt(snapped_x), snapInt(snapped_y), snapped_cell_w_i, snapped_cell_h_i, if (is_cursor) fg else bg);
+    if (draw_bg) renderer_terminal_draw_host.addTerminalRect(self, snapInt(snapped_x), snapInt(snapped_y), snapped_cell_w_i, snapped_cell_h_i, if (is_cursor) fg else bg);
     if (base != 0 and textRenderingAvailable(self)) {
         const text_color = if (is_cursor) bg else fg;
         const draw = terminal_font_mod.DrawContext{ .ctx = self, .drawTexture = drawTextureGlyphCacheThunk };
@@ -359,7 +360,7 @@ pub fn drawTerminalCellBatched(self: *Renderer, codepoint: u32, x: f32, y: f32, 
     const snapped_cell_height = snapToDevicePixel(cell_height, self.scale.render_scale);
     const snapped_cell_w_i = snapInt(snapped_cell_width);
     const snapped_cell_h_i = snapInt(snapped_cell_height);
-    if (draw_bg) self.addTerminalRect(snapInt(snapped_x), snapInt(snapped_y), snapped_cell_w_i, snapped_cell_h_i, if (is_cursor) fg else bg);
+    if (draw_bg) renderer_terminal_draw_host.addTerminalRect(self, snapInt(snapped_x), snapInt(snapped_y), snapped_cell_w_i, snapped_cell_h_i, if (is_cursor) fg else bg);
     if (codepoint != 0 and textRenderingAvailable(self)) {
         const text_color = if (is_cursor) bg else fg;
         _ = bold;
@@ -563,5 +564,5 @@ fn drawTextureGlyphCacheThunk(ctx: *anyopaque, texture: types.Texture, src: type
 
 fn addTerminalGlyphRectThunk(ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void {
     const renderer: *Renderer = @ptrCast(@alignCast(ctx));
-    renderer.addTerminalGlyphRect(x, y, w, h, color);
+    renderer_terminal_draw_host.addTerminalGlyphRect(renderer, x, y, w, h, color);
 }

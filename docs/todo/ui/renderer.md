@@ -450,6 +450,13 @@ Current evidence:
 - even the remaining root theme-background clear forward is now gone; the font
   sample uses `renderer_draw_host.zig` directly instead of asking `Renderer`
   to proxy one more draw-contract verb.
+- terminal rect/glyph submission now also routes through a dedicated host seam:
+  - `src/ui/renderer/renderer_terminal_draw_host.zig`
+- terminal grid/presentation/text code no longer depends on public
+  `Renderer.addTerminalRect(...)` / `addTerminalGlyphRect(...)` /
+  `addTerminalGlyphQuad(...)` methods.
+- this keeps the terminal draw contract on one explicit host seam instead of
+  leaving another renderer-root facade in front of backend draw ops.
 - presentable trace/editor-surface bookkeeping now also lives in
   `renderer_presentable_host.zig` instead of being split across GL and Metal
   presentable lifecycle methods.

@@ -224,6 +224,12 @@ That has improved slightly again at the tiny edge too: even the old
 caller (font sample) now talks to `renderer_draw_host.zig` directly instead of
 asking the renderer root to proxy that draw-contract verb.
 
+That has improved slightly again on the terminal draw side too: terminal rect
+and glyph submission no longer live as public methods on `Renderer`. Terminal
+text/grid/presentation code now routes through `renderer_terminal_draw_host.zig`
+instead, which makes that contract read like one explicit host seam rather
+than one more renderer-root facade over backend draw ops.
+
 That has improved slightly again on backend ownership too: backend dispatch no
 longer terminates presentable operations back into the large generic backend
 files. Dedicated backend presentable modules now own that seam directly:

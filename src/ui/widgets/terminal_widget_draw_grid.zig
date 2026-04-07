@@ -4,6 +4,7 @@ const app_logger = @import("../../app_logger.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
 const shared_types = @import("../../types/mod.zig");
 const renderer_mod = @import("../renderer.zig");
+const renderer_terminal_draw_host = @import("../renderer/renderer_terminal_draw_host.zig");
 const terminal_font_mod = @import("../terminal_font.zig");
 const terminal_glyphs = @import("../renderer/terminal_glyphs.zig");
 const terminal_underline = @import("../renderer/terminal_underline.zig");
@@ -436,13 +437,12 @@ pub fn drawRowBackgrounds(
         const rect_y0 = rr.snapLogicalToDevicePixel(cell_y);
         const rect_x1 = rr.snapLogicalToDevicePixel(cell_x + cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(run_width_cols)))));
         const rect_y1 = rr.snapLogicalToDevicePixel(cell_y + cell_h);
-        rr.addTerminalRect(
+        renderer_terminal_draw_host.addTerminalRect(rr,
             snapInt(rect_x0),
             snapInt(rect_y0),
             @max(1, snapInt(rect_x1 - rect_x0)),
             @max(1, snapInt(rect_y1 - rect_y0)),
-            run_color,
-        );
+            run_color);
         col = run_end - 1;
     }
 
@@ -452,13 +452,12 @@ pub fn drawRowBackgrounds(
         const pad_y0 = rr.snapLogicalToDevicePixel(base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h);
         const pad_x1 = rr.snapLogicalToDevicePixel(base_x_local + @as(f32, @floatFromInt(@as(i32, @intCast(cols_count)))) * cell_w + padding_x);
         const pad_y1 = rr.snapLogicalToDevicePixel(base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h + cell_h);
-        rr.addTerminalRect(
+        renderer_terminal_draw_host.addTerminalRect(rr,
             snapInt(pad_x0),
             snapInt(pad_y0),
             @max(1, snapInt(pad_x1 - pad_x0)),
             @max(1, snapInt(pad_y1 - pad_y0)),
-            resolvedBackgroundColor(last_cell, screen_reverse_mode),
-        );
+            resolvedBackgroundColor(last_cell, screen_reverse_mode));
     }
 }
 
@@ -654,12 +653,12 @@ fn cellWithColors(codepoint: u32, fg: Color, bg: Color, reverse: bool) Cell {
 
 fn drawTextureGlyphCache(ctx: *anyopaque, texture: terminal_font_mod.Texture, src: terminal_font_mod.Rect, dest: terminal_font_mod.Rect, color: terminal_font_mod.Rgba, kind: terminal_font_mod.TextureKind) void {
     const rr: *Renderer = @ptrCast(@alignCast(ctx));
-    rr.addTerminalGlyphQuad(texture, src, dest, color, kind);
+    renderer_terminal_draw_host.addTerminalGlyphQuad(rr, texture, src, dest, color, kind);
 }
 
 fn addTerminalGlyphRect(ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void {
     const rr: *Renderer = @ptrCast(@alignCast(ctx));
-    rr.addTerminalGlyphRect(x, y, w, h, color);
+    renderer_terminal_draw_host.addTerminalGlyphRect(rr, x, y, w, h, color);
 }
 
 fn isTerminalBoxGlyph(codepoint: u32) bool {
@@ -1005,13 +1004,12 @@ fn drawAlignedSpecialGlyphSprite(
                 }
             }
         }
-        rr.addTerminalGlyphQuad(
+        renderer_terminal_draw_host.addTerminalGlyphQuad(rr,
             rr.terminal_font.coverageTexture(),
             sp.rect,
             .{ .x = dest_x, .y = y0, .width = dest_w, .height = snapped_h },
             fg_draw.toRgba(),
-            .font_coverage,
-        );
+            .font_coverage);
         if (capture_sample) |sample| {
             captureTextPaintSample(
                 sample,
