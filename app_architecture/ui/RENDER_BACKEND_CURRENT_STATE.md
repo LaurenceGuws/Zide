@@ -640,6 +640,12 @@ That split is now sharper from code inspection too:
 - that also means the local editor cleanup lane should stop here unless the
   next cut removes that final emitter split or changes the real surface/timing
   contract. More helper cleanup would no longer reduce the adoption blocker.
+- the shared timing blocker is sharper too: ordinary UI/editor text still runs
+  through immediate `text_runtime.zig` paths that mutate `text_render.bg_rgba`
+  and emit texture draws immediately. Even editor draw-list flush ultimately
+  resolves into that same immediate text path. So the remaining blocker is not
+  just generic fills; it is that fills and their dependent text still do not
+  share one backend-neutral phase boundary.
 - sample pressure is specifically section-fill plus bg-aware text preview work
   in `font_sample_view.zig` / `font_sample_section_host.zig`, including the
   custom-font sample path that still terminates through direct texture draws

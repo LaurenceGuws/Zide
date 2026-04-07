@@ -838,6 +838,15 @@ Current evidence:
   helper pass by default. It is either:
   - one cut that removes the final styled-text emitter split
   - or a pivot back to the shared `SurfaceDraw` timing blocker
+- shared timing checkpoint: ordinary UI/editor text is still immediate in
+  `text_runtime.zig`
+  - text draw paths still mutate `text_render.bg_rgba`
+  - then emit texture draws immediately
+  - editor draw-list flush ultimately resolves back into that same immediate
+    text path
+- that means the remaining blocker is not "some fills are still generic". It
+  is that generic fills and their dependent text still do not share one
+  backend-neutral phase boundary.
 - backend-runtime checkpoint: the remaining runtime-storage blocker is now more
   specifically OpenGL-shaped than Metal-shaped. Metal live frame/queue state is
   under backend context.

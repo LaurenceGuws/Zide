@@ -422,6 +422,11 @@ The current code makes that split more specific:
 - stop there unless the next cut removes that emitter split itself or changes
   the actual surface/timing contract. More editor-local helper cleanup beyond
   this point would be fake progress.
+- the shared timing blocker is now sharper too: ordinary UI/editor text still
+  goes through immediate `text_runtime.zig` paths that mutate
+  `text_render.bg_rgba` and emit texture draws immediately. So the remaining
+  problem is not just generic fills; it is the absence of one backend-neutral
+  phase boundary that owns both the fill and its dependent text.
 - sample/diagnostic pressure is the simpler section-fill plus bg-aware preview
   text path in `font_sample_view.zig`, including custom-font preview draws
   that still go straight through texture draw calls
