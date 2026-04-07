@@ -44,14 +44,16 @@ pub fn ensurePresentable(renderer: anytype, width: i32, height: i32) bool {
     return recreated;
 }
 
-pub fn beginPresentable(renderer: anytype) bool {
+pub fn updateRetainedPresentable(
+    renderer: anytype,
+    ctx: ?*const anyopaque,
+    body: *const fn (?*const anyopaque, @TypeOf(renderer)) void,
+) bool {
     if (!renderer.capabilities().retained_targets) return false;
-    return gl_backend.beginRenderTarget(renderer, presentableTarget(renderer));
-}
-
-pub fn endPresentable(renderer: anytype) void {
-    if (!renderer.capabilities().retained_targets) return;
-    restoreCompositionTarget(renderer);
+    if (!gl_backend.beginRenderTarget(renderer, presentableTarget(renderer))) return false;
+    defer restoreCompositionTarget(renderer);
+    body(ctx, renderer);
+    return true;
 }
 
 pub fn drawPresentableBackdrop(renderer: anytype, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) void {

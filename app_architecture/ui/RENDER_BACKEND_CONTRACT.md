@@ -372,6 +372,11 @@ The current code makes that split more specific:
     - retained target / scene-target lifecycle
 - that is real progress, but not closure. The next honest cut now has to be a
   semantic ownership decision, not more first-pass storage regrouping.
+- the same "one honest verb" rule now applies a little better to retained
+  presentable updates too: the OpenGL presentable runtime no longer exposes an
+  internal begin/end pair behind the shared retained update-cycle contract.
+  It now exposes one update-cycle verb directly, which is the shape the shared
+  contract actually means.
 - sample/diagnostic pressure is the simpler section-fill plus bg-aware preview
   text path in `font_sample_view.zig`, including custom-font preview draws
   that still go straight through texture draw calls

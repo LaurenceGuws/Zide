@@ -255,10 +255,7 @@ fn OpenGlDispatch(
             ctx: ?*const anyopaque,
             body: *const fn (?*const anyopaque, *RendererType) void,
         ) bool {
-            if (!gl_presentable_runtime.beginPresentable(renderer)) return false;
-            defer gl_presentable_runtime.endPresentable(renderer);
-            body(ctx, renderer);
-            return true;
+            return gl_presentable_runtime.updateRetainedPresentable(renderer, ctx, body);
         }
         fn drawPresentableBackdrop(renderer: *RendererType, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) void {
             gl_presentable_runtime.drawPresentableBackdrop(renderer, x, y, w, h, color);

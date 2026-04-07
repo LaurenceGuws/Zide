@@ -813,6 +813,10 @@ Current evidence:
   - retained target / scene-target lifecycle
 - that is still not runtime closure, but the next GL runtime cut now has to be
   a genuinely semantic one, not a first-pass storage disentangling.
+- presentable checkpoint: OpenGL presentable runtime no longer keeps an
+  internal `beginPresentable/endPresentable` split behind the shared retained
+  update-cycle contract. It now exposes one `updateRetainedPresentable(...)`
+  verb directly, which is the honest shape the shared contract already names.
 - code-facing checkpoint: the sample pressure is specifically
   section-fill-plus-bg-aware preview text in `font_sample_view.zig`, including
   custom-font preview draws that still go through direct texture draw calls.

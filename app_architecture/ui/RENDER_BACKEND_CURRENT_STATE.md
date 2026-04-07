@@ -589,6 +589,10 @@ That split is now sharper from code inspection too:
 - that is materially narrower than before, but not closure. The next honest
   OpenGL runtime cut now has to be semantic, not just first-pass storage
   disentangling.
+- presentable lifecycle is slightly cleaner too: the OpenGL presentable runtime
+  no longer carries an internal begin/end retained-update split behind the
+  shared host contract. It now exposes one retained update-cycle verb
+  directly, matching the current contract surface more honestly.
 - sample pressure is specifically section-fill plus bg-aware text preview work
   in `font_sample_view.zig` / `font_sample_section_host.zig`, including the
   custom-font sample path that still terminates through direct texture draws
