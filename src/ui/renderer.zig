@@ -1067,10 +1067,6 @@ pub const Renderer = struct {
         return self.capabilities().kitty_image_mode;
     }
 
-    pub fn sceneCompositionMode(self: *const Renderer) SceneCompositionMode {
-        return self.capabilities().scene_composition_mode;
-    }
-
     pub fn screenshotMode(self: *const Renderer) ScreenshotMode {
         return self.capabilities().screenshot_mode;
     }

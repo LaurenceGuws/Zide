@@ -239,7 +239,7 @@ pub fn beginFrame(renderer: anytype) void {
     if (renderer.capabilities().scene_composition_mode == .offscreen_scene_target) {
         prepareSceneTarget(renderer, gl.c.GL_NEAREST);
     }
-    renderer.present.main_composition_target = switch (renderer.sceneCompositionMode()) {
+    renderer.present.main_composition_target = switch (renderer.capabilities().scene_composition_mode) {
         .offscreen_scene_target => if (beginSceneFrame(renderer))
             .offscreen_scene_target
         else
