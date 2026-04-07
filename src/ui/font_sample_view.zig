@@ -8,6 +8,7 @@ const renderer_mod = @import("renderer.zig");
 const metal_text_sample_runtime = @import("renderer/metal_text_sample_runtime.zig");
 const metal_backend = @import("renderer/metal_backend.zig");
 const renderer_presentable_host = @import("renderer/renderer_presentable_host.zig");
+const renderer_surface_host = @import("renderer/renderer_surface_host.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
 const iface = @import("renderer/interface.zig");
 const text_draw = @import("renderer/text_draw.zig");
@@ -156,7 +157,7 @@ pub const FontSampleView = struct {
         // controlled way (target is linear; presentation converts to sRGB).
         if (renderer_presentable_host.ensurePresentable(r, .editor, @intFromFloat(w), @intFromFloat(h))) {
             if (renderer_presentable_host.beginPresentable(r, .editor)) {
-                r.drawRect(0, 0, @intFromFloat(w), @intFromFloat(h), theme.background);
+                renderer_surface_host.drawRect(r, 0, 0, @intFromFloat(w), @intFromFloat(h), theme.background);
                 drawContents(self, r, theme, w, h);
                 renderer_presentable_host.endPresentable(r, .editor);
                 renderer_presentable_host.drawPresentable(r, .editor, .{ .x = 0, .y = 0 });
@@ -165,7 +166,7 @@ pub const FontSampleView = struct {
         }
 
         // Fallback: draw directly to the window.
-        r.drawRect(0, 0, @intFromFloat(w), @intFromFloat(h), theme.background);
+        renderer_surface_host.drawRect(r, 0, 0, @intFromFloat(w), @intFromFloat(h), theme.background);
         drawContents(self, r, theme, w, h);
     }
 
@@ -208,7 +209,8 @@ pub const FontSampleView = struct {
             const swatch_y = y;
             const swatch_size = @max(r.char_height * 1.25, 18.0);
             const swatch_width = @max(r.char_width * 6.0, swatch_size * 3.4);
-            r.drawRect(
+            renderer_surface_host.drawRect(
+                r,
                 @intFromFloat(std.math.round(swatch_x - 6.0)),
                 @intFromFloat(std.math.round(swatch_y - 6.0)),
                 @intFromFloat(std.math.round(swatch_width + 12.0)),
@@ -268,7 +270,7 @@ pub const FontSampleView = struct {
         const section_h: f32 = r.char_height + section_pad_y + content_h + section_pad_y;
         const content_y: f32 = y + r.char_height + section_pad_y;
 
-        r.drawRect(0, @intFromFloat(y), @intFromFloat(w), @intFromFloat(section_h), bg);
+        renderer_surface_host.drawRect(r, 0, @intFromFloat(y), @intFromFloat(w), @intFromFloat(section_h), bg);
         r.drawText(label, 16, y, theme.foreground);
 
         var bg_rgba = bg.toRgba();

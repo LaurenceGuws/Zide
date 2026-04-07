@@ -1,5 +1,6 @@
 const std = @import("std");
 const r = @import("ui/renderer.zig");
+const renderer_surface_host = @import("ui/renderer/renderer_surface_host.zig");
 const iface = @import("ui/renderer/interface.zig");
 const window = @import("platform/window_metrics.zig");
 const platform_input_events = @import("platform/input_events.zig");
@@ -429,7 +430,7 @@ pub const Shell = struct {
     }
 
     pub fn drawRect(self: *Shell, x: i32, y: i32, w: i32, h: i32, color: Color) void {
-        self.renderer.drawRect(x, y, w, h, color);
+        renderer_surface_host.drawRect(self.renderer, x, y, w, h, color);
     }
 
     pub fn drawRectOutline(self: *Shell, x: i32, y: i32, w: i32, h: i32, color: Color) void {

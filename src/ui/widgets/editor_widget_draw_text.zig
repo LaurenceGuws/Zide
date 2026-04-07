@@ -5,6 +5,7 @@ const selection_mod = @import("../../editor/view/selection.zig");
 const draw_list_mod = @import("../../editor/render/draw_list.zig");
 const overlay_mod = @import("editor_widget_draw_overlay.zig");
 const renderer_mod = @import("../renderer.zig");
+const renderer_surface_host = @import("../renderer/renderer_surface_host.zig");
 
 const HighlightToken = syntax_mod.HighlightToken;
 const TokenKind = syntax_mod.TokenKind;
@@ -407,10 +408,10 @@ fn drawTextDecorations(r: anytype, x: f32, y: f32, width: f32, color: anytype, f
         const baseline_y = y_i + h_i - thickness - 1;
         drawUndercurl(r, x_i, baseline_y, w_i, thickness, color);
     } else if (flags.underline) {
-        r.drawRect(x_i, y_i + h_i - thickness, w_i, thickness, color);
+        renderer_surface_host.drawRect(r, x_i, y_i + h_i - thickness, w_i, thickness, color);
     }
     if (flags.strikethrough) {
-        r.drawRect(x_i, y_i + @divFloor(h_i, 2), w_i, thickness, color);
+        renderer_surface_host.drawRect(r, x_i, y_i + @divFloor(h_i, 2), w_i, thickness, color);
     }
 }
 
@@ -443,10 +444,10 @@ fn drawUndercurl(r: anytype, x_i: i32, baseline_y: i32, width_i: i32, thickness:
         const seg_w = @min(step, width_i - pos);
         if (seg_w <= 0) break;
         const half = @max(1, @divFloor(seg_w, 2));
-        r.drawRect(x_i + pos, baseline_y, half, thickness, color);
+        renderer_surface_host.drawRect(r, x_i + pos, baseline_y, half, thickness, color);
         const tail_w = seg_w - half;
         if (tail_w > 0) {
-            r.drawRect(x_i + pos + half, baseline_y + amplitude, tail_w, thickness, color);
+            renderer_surface_host.drawRect(r, x_i + pos + half, baseline_y + amplitude, tail_w, thickness, color);
         }
     }
 }

@@ -11,6 +11,7 @@ const glyph_cache = @import("../glyph_cache.zig");
 const app_logger = @import("../../app_logger.zig");
 const types = @import("types.zig");
 const renderer_root = @import("../renderer.zig");
+const renderer_surface_host = @import("renderer_surface_host.zig");
 const renderer_terminal_draw_host = @import("renderer_terminal_draw_host.zig");
 const metal_text_sample_runtime = @import("metal_text_sample_runtime.zig");
 const metal_backend = @import("metal_backend.zig");
@@ -554,7 +555,7 @@ fn drawTextureThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, de
 
 fn drawRectThunk(ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void {
     const self: *Renderer = @ptrCast(@alignCast(ctx));
-    self.drawRect(x, y, w, h, color);
+    renderer_surface_host.drawRect(self, x, y, w, h, color);
 }
 
 fn drawTextureGlyphCacheThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {

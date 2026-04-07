@@ -4,6 +4,7 @@ const selection_mod = @import("../../editor/view/selection.zig");
 const chrome_geometry_mod = @import("../../editor/view/chrome_geometry.zig");
 const draw_list_mod = @import("../../editor/render/draw_list.zig");
 const app_logger = @import("../../app_logger.zig");
+const renderer_surface_host = @import("../renderer/renderer_surface_host.zig");
 const scrollbar_mod = @import("editor_scrollbar.zig");
 
 const HighlightToken = syntax_mod.HighlightToken;
@@ -72,7 +73,7 @@ pub fn drawLineCursor(r: anytype, x: f32, y: f32, h: f32, color: anytype) void {
     const cursor_h_i: i32 = @as(i32, @intFromFloat(h));
     const h_i: i32 = @max(1, cursor_h_i - edge_inset * 2);
     const y_i: i32 = @as(i32, @intFromFloat(y)) + @divFloor(@max(0, cursor_h_i - h_i), 2);
-    r.drawRect(x_i, y_i, stroke, h_i, color);
+    renderer_surface_host.drawRect(r, x_i, y_i, stroke, h_i, color);
 }
 
 pub fn drawExtraCarets(
@@ -195,14 +196,14 @@ fn drawTopSelectionScanline(r: anytype, x: f32, y: f32, w: f32, color: anytype, 
     const line_x = x + left_inset;
     const line_w = w - left_inset - right_inset;
     if (line_w <= 0) return;
-    r.drawRect(@intFromFloat(line_x), @intFromFloat(y), @intFromFloat(line_w), 1, color);
+    renderer_surface_host.drawRect(r, @intFromFloat(line_x), @intFromFloat(y), @intFromFloat(line_w), 1, color);
 }
 
 pub fn drawSoftSelectionRect(r: anytype, x: f32, y: f32, w: f32, h: f32, color: anytype, mask: SelectionCornerMask) void {
     if (w <= 0 or h <= 0) return;
     const style = r.editorSelectionOverlayStyle();
     if (!style.smooth_enabled) {
-        r.drawRect(@intFromFloat(x), @intFromFloat(y), @intFromFloat(w), @intFromFloat(h), color);
+        renderer_surface_host.drawRect(r, @intFromFloat(x), @intFromFloat(y), @intFromFloat(w), @intFromFloat(h), color);
         return;
     }
     const smooth_active = mask.top_left_outward or mask.top_right_outward or mask.bottom_left_outward or mask.bottom_right_outward or mask.top_left_inward or mask.top_right_inward or mask.bottom_left_inward or mask.bottom_right_inward;
@@ -256,12 +257,12 @@ pub fn drawSoftSelectionRect(r: anytype, x: f32, y: f32, w: f32, h: f32, color: 
     }
 
     if (top_left_edge == 0 and top_right_edge == 0 and bottom_left_edge == 0 and bottom_right_edge == 0) {
-        r.drawRect(@intFromFloat(draw_x), @intFromFloat(draw_y), @intFromFloat(draw_w), @intFromFloat(draw_h), color);
+        renderer_surface_host.drawRect(r, @intFromFloat(draw_x), @intFromFloat(draw_y), @intFromFloat(draw_w), @intFromFloat(draw_h), color);
         return;
     }
 
     drawTopSelectionScanline(r, draw_x, draw_y, draw_w, color, top_left_edge, top_right_edge);
-    r.drawRect(@intFromFloat(draw_x), @intFromFloat(draw_y + 1.0), @intFromFloat(draw_w), @intFromFloat(draw_h - 2.0), color);
+    renderer_surface_host.drawRect(r, @intFromFloat(draw_x), @intFromFloat(draw_y + 1.0), @intFromFloat(draw_w), @intFromFloat(draw_h - 2.0), color);
     drawTopSelectionScanline(r, draw_x, draw_y + draw_h - 1.0, draw_w, color, bottom_left_edge, bottom_right_edge);
 }
 
@@ -455,7 +456,8 @@ pub fn flushDrawList(list: *EditorDrawList, r: anytype) void {
     const ColorType = @TypeOf(r.theme.foreground);
     for (list.ops.items) |op| {
         switch (op) {
-            .rect => |rect| r.drawRect(
+            .rect => |rect| renderer_surface_host.drawRect(
+                r,
                 @intFromFloat(rect.x),
                 @intFromFloat(rect.y),
                 @intFromFloat(rect.w),
@@ -542,7 +544,7 @@ fn drawHorizontalScrollbar(r: anytype, h: scrollbar_mod.HorizontalGeometry, list
         if (list) |ops| {
             _ = addRectOp(ops, h.track_x, h.track_max_y, h.track_w, h.track_max_h, r.theme.line_number_bg);
         } else {
-            r.drawRect(@intFromFloat(h.track_x), @intFromFloat(h.track_max_y), @intFromFloat(h.track_w), @intFromFloat(h.track_max_h), r.theme.line_number_bg);
+            renderer_surface_host.drawRect(r, @intFromFloat(h.track_x), @intFromFloat(h.track_max_y), @intFromFloat(h.track_w), @intFromFloat(h.track_max_h), r.theme.line_number_bg);
         }
     }
     const inset: f32 = if (show_track) blk: {
@@ -552,7 +554,7 @@ fn drawHorizontalScrollbar(r: anytype, h: scrollbar_mod.HorizontalGeometry, list
     if (list) |ops| {
         _ = addRectOp(ops, h.thumb_x, h.track_y + inset, h.thumb_w, @max(1, h.track_h - inset * 2), r.theme.selection);
     } else {
-        r.drawRect(@intFromFloat(h.thumb_x), @intFromFloat(h.track_y + inset), @intFromFloat(h.thumb_w), @intFromFloat(@max(1, h.track_h - inset * 2)), r.theme.selection);
+        renderer_surface_host.drawRect(r, @intFromFloat(h.thumb_x), @intFromFloat(h.track_y + inset), @intFromFloat(h.thumb_w), @intFromFloat(@max(1, h.track_h - inset * 2)), r.theme.selection);
     }
 }
 
@@ -562,7 +564,7 @@ fn drawVerticalScrollbar(r: anytype, v: scrollbar_mod.VerticalGeometry, list: ?*
         if (list) |ops| {
             _ = addRectOp(ops, v.scrollbar_x, v.scrollbar_y, v.scrollbar_w, v.scrollbar_h, r.theme.line_number_bg);
         } else {
-            r.drawRect(@intFromFloat(v.scrollbar_x), @intFromFloat(v.scrollbar_y), @intFromFloat(v.scrollbar_w), @intFromFloat(v.scrollbar_h), r.theme.line_number_bg);
+            renderer_surface_host.drawRect(r, @intFromFloat(v.scrollbar_x), @intFromFloat(v.scrollbar_y), @intFromFloat(v.scrollbar_w), @intFromFloat(v.scrollbar_h), r.theme.line_number_bg);
         }
     }
     const inset: f32 = if (show_track) blk: {
@@ -572,6 +574,6 @@ fn drawVerticalScrollbar(r: anytype, v: scrollbar_mod.VerticalGeometry, list: ?*
     if (list) |ops| {
         _ = addRectOp(ops, v.scrollbar_x + inset, v.thumb.thumb_y, @max(1, v.scrollbar_w - inset * 2), v.thumb.thumb_h, r.theme.selection);
     } else {
-        r.drawRect(@intFromFloat(v.scrollbar_x + inset), @intFromFloat(v.thumb.thumb_y), @intFromFloat(@max(1, v.scrollbar_w - inset * 2)), @intFromFloat(v.thumb.thumb_h), r.theme.selection);
+        renderer_surface_host.drawRect(r, @intFromFloat(v.scrollbar_x + inset), @intFromFloat(v.thumb.thumb_y), @intFromFloat(@max(1, v.scrollbar_w - inset * 2)), @intFromFloat(v.thumb.thumb_h), r.theme.selection);
     }
 }

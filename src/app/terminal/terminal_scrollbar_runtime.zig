@@ -1,4 +1,5 @@
 const app_shell = @import("../../app_shell.zig");
+const renderer_surface_host = @import("../../ui/renderer/renderer_surface_host.zig");
 const scrollback_view = @import("../../terminal/core/scrollback_view.zig");
 const shared_types = @import("../../types/mod.zig");
 const widgets = @import("../../ui/widgets.zig");
@@ -165,7 +166,8 @@ pub fn draw(
     const thumb_inset = @max(1.0, geometry.scrollbar_w * 0.25);
     const thumb_w = @max(1.0, geometry.scrollbar_w - thumb_inset * 2);
     const thumb_color = alphaScale(r.theme.selection, 0.85);
-    r.drawRect(
+    renderer_surface_host.drawRect(
+        r,
         @intFromFloat(geometry.scrollbar_x + thumb_inset),
         @intFromFloat(geometry.thumb.thumb_y),
         @intFromFloat(thumb_w),

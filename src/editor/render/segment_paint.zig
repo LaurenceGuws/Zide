@@ -4,6 +4,7 @@ const selection_mod = @import("../view/selection.zig");
 const draw_list_mod = @import("draw_list.zig");
 const overlay_mod = @import("../../ui/widgets/editor_widget_draw_overlay.zig");
 const text_mod = @import("../../ui/widgets/editor_widget_draw_text.zig");
+const renderer_surface_host = @import("../../ui/renderer/renderer_surface_host.zig");
 
 const HighlightToken = syntax_mod.HighlightToken;
 const SelectionRange = selection_mod.SelectionRange;
@@ -119,7 +120,7 @@ pub fn drawSearchOverlays(
         const ex = text_mod.xForByteOffset(r, line_text, seg_start_byte, seg_start_col, local_end, text_start_x);
         if (ex <= sx) continue;
         const draw_color = if (active_search) |active| if (overlay_mod.rangeContains(active, match)) overlay_mod.activeSearchHighlightColor(r.theme) else search_color else search_color;
-        r.drawRect(@intFromFloat(sx), search_band.y_i, @intFromFloat(ex - sx), search_band.h_i, draw_color);
+        renderer_surface_host.drawRect(r, @intFromFloat(sx), search_band.y_i, @intFromFloat(ex - sx), search_band.h_i, draw_color);
     }
 }
 

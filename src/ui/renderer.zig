@@ -1029,19 +1029,6 @@ pub const Renderer = struct {
         text_input.setRect(&self.input.text_input_state, self.window, x, y, w, h);
     }
 
-    pub fn drawRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
-        if (w <= 0 or h <= 0) return;
-        present_trace_runtime.noteEditorSurfaceFullPaneClear(self, x, y, w, h);
-        _ = renderer_surface_host.recordSolidSurfaceFromLogicalRect(
-            self,
-            @floatFromInt(x),
-            @floatFromInt(y),
-            @floatFromInt(w),
-            @floatFromInt(h),
-            color.toRgba(),
-        );
-    }
-
     pub fn drawRectOutline(self: *Renderer, x: i32, y: i32, w: i32, h: i32, color: Color) void {
         shape_draw.drawRectOutline(drawRectThunk, self, x, y, w, h, color);
     }
@@ -1403,7 +1390,7 @@ pub const Renderer = struct {
 
     fn drawRectThunk(ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void {
         const self: *Renderer = @ptrCast(@alignCast(ctx));
-        self.drawRect(x, y, w, h, color);
+        renderer_surface_host.drawRect(self, x, y, w, h, color);
     }
 
     fn ensureVboCapacity(self: *Renderer, vertex_count: usize) void {

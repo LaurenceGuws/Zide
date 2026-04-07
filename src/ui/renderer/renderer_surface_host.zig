@@ -1,9 +1,28 @@
 const metal_text_sample_runtime = @import("metal_text_sample_runtime.zig");
+const present_trace_runtime = @import("present_trace_runtime.zig");
 const surface_draw = @import("surface_draw.zig");
 const types = @import("types.zig");
 
 pub fn recordSurfaceDraw(renderer: anytype, draw: surface_draw.SurfaceDraw) bool {
     return renderer.backend_ops.surface.recordSurfaceDraw(renderer, draw);
+}
+
+pub fn drawRect(renderer: anytype, x: i32, y: i32, w: i32, h: i32, color: anytype) void {
+    if (w <= 0 or h <= 0) return;
+    present_trace_runtime.noteEditorSurfaceFullPaneClear(renderer, x, y, w, h);
+    _ = recordSolidSurfaceFromLogicalRect(
+        renderer,
+        @floatFromInt(x),
+        @floatFromInt(y),
+        @floatFromInt(w),
+        @floatFromInt(h),
+        color.toRgba(),
+    );
+}
+
+pub fn drawRectF(renderer: anytype, x: f32, y: f32, w: f32, h: f32, color: anytype) void {
+    if (w <= 0 or h <= 0) return;
+    _ = recordSolidSurfaceFromLogicalRect(renderer, x, y, w, h, color.toRgba());
 }
 
 pub fn recordSolidSurfaceFromLogicalRect(

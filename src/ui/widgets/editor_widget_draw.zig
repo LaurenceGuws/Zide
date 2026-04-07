@@ -13,6 +13,7 @@ const segment_paint_mod = @import("../../editor/render/segment_paint.zig");
 const visible_prep_mod = @import("../../editor/render/visible_prep.zig");
 const app_logger = @import("../../app_logger.zig");
 const renderer_presentable_host = @import("../renderer/renderer_presentable_host.zig");
+const renderer_surface_host = @import("../renderer/renderer_surface_host.zig");
 const overlay_mod = @import("editor_widget_draw_overlay.zig");
 const text_mod = @import("editor_widget_draw_text.zig");
 const cache_helpers = @import("editor_widget_draw_cache.zig");
@@ -56,7 +57,8 @@ pub fn draw(
     defer if (highlight_prep.allocated) widget.editor.allocator.free(highlight_prep.tokens);
 
     // Draw gutter background
-    r.drawRect(
+    renderer_surface_host.drawRect(
+        r,
         @intFromFloat(x),
         @intFromFloat(y),
         @intFromFloat(widget.gutter_width),
@@ -111,14 +113,16 @@ pub fn draw(
                     overlay_mod.flushDrawList(draw_list_local, r_local);
                     draw_list_local.clear();
                 } else if (seg_info.is_current) {
-                    r_local.drawRect(
+                    renderer_surface_host.drawRect(
+                        r_local,
                         @intFromFloat(x_local),
                         seg_band.y_i,
                         @intFromFloat(widget_local.gutter_width),
                         seg_band.h_i,
                         r_local.theme.current_line,
                     );
-                    r_local.drawRect(
+                    renderer_surface_host.drawRect(
+                        r_local,
                         @intFromFloat(x_local + widget_local.gutter_width),
                         seg_band.y_i,
                         @intFromFloat(width_local - widget_local.gutter_width),
@@ -209,7 +213,8 @@ pub fn draw(
             const comp_x = cursor_draw_x.?;
             const comp_y = cursor_draw_y.?;
             r.drawTextMonospaceOnBg(input.composing_text, comp_x, comp_y, r.theme.foreground, r.theme.current_line);
-            r.drawRect(
+            renderer_surface_host.drawRect(
+                r,
                 @intFromFloat(comp_x),
                 @intFromFloat(comp_y + r.editor_char_height - 2),
                 @intFromFloat(@as(f32, @floatFromInt(input.composing_text.len)) * r.editor_char_width),
@@ -290,13 +295,13 @@ pub fn drawCached(
     if (force_redraw) {
         if (use_retained_editor_surface) {
             if (renderer_presentable_host.beginPresentable(r, .editor)) {
-                r.drawRect(0, 0, @intFromFloat(width), @intFromFloat(height), r.theme.background);
-                r.drawRect(0, 0, @intFromFloat(widget.gutter_width), @intFromFloat(height), r.theme.line_number_bg);
+                renderer_surface_host.drawRect(r, 0, 0, @intFromFloat(width), @intFromFloat(height), r.theme.background);
+                renderer_surface_host.drawRect(r, 0, 0, @intFromFloat(widget.gutter_width), @intFromFloat(height), r.theme.line_number_bg);
                 renderer_presentable_host.endPresentable(r, .editor);
             }
         } else {
-            r.drawRect(0, 0, @intFromFloat(width), @intFromFloat(height), r.theme.background);
-            r.drawRect(0, 0, @intFromFloat(widget.gutter_width), @intFromFloat(height), r.theme.line_number_bg);
+            renderer_surface_host.drawRect(r, 0, 0, @intFromFloat(width), @intFromFloat(height), r.theme.background);
+            renderer_surface_host.drawRect(r, 0, 0, @intFromFloat(widget.gutter_width), @intFromFloat(height), r.theme.line_number_bg);
         }
     }
 
@@ -498,8 +503,8 @@ pub fn drawCached(
                     return;
                 }
 
-                r_local.drawRect(@intFromFloat(origin_x_local), seg_band.y_i, @intFromFloat(width_local), seg_band.h_i, r_local.theme.background);
-                r_local.drawRect(@intFromFloat(origin_x_local), seg_band.y_i, @intFromFloat(widget_local.gutter_width), seg_band.h_i, r_local.theme.line_number_bg);
+                renderer_surface_host.drawRect(r_local, @intFromFloat(origin_x_local), seg_band.y_i, @intFromFloat(width_local), seg_band.h_i, r_local.theme.background);
+                renderer_surface_host.drawRect(r_local, @intFromFloat(origin_x_local), seg_band.y_i, @intFromFloat(widget_local.gutter_width), seg_band.h_i, r_local.theme.line_number_bg);
 
                 if (seg_info.seg_idx == seg_info.seg_start_idx) {
                     var num_buf: [16]u8 = undefined;
@@ -507,8 +512,8 @@ pub fn drawCached(
                     overlay_mod.flushDrawList(draw_list_local, r_local);
                     draw_list_local.clear();
                 } else if (seg_info.is_current) {
-                    r_local.drawRect(@intFromFloat(origin_x_local), seg_band.y_i, @intFromFloat(widget_local.gutter_width), seg_band.h_i, r_local.theme.current_line);
-                    r_local.drawRect(@intFromFloat(origin_x_local + widget_local.gutter_width), seg_band.y_i, @intFromFloat(width_local - widget_local.gutter_width), seg_band.h_i, r_local.theme.current_line);
+                    renderer_surface_host.drawRect(r_local, @intFromFloat(origin_x_local), seg_band.y_i, @intFromFloat(widget_local.gutter_width), seg_band.h_i, r_local.theme.current_line);
+                    renderer_surface_host.drawRect(r_local, @intFromFloat(origin_x_local + widget_local.gutter_width), seg_band.y_i, @intFromFloat(width_local - widget_local.gutter_width), seg_band.h_i, r_local.theme.current_line);
                 }
 
                 segment_paint_mod.drawSelectionOverlays(view_local, r_local, seg_info.line_idx, cols_local, line_width_local, seg_info.total_visual_lines, seg_info.seg_idx, seg_info.seg_start_col, seg_info.seg_end_col, seg_band, text_start_x, ranges_local[0..range_count_local]);
