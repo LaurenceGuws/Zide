@@ -8,7 +8,7 @@ pub fn beginClip(renderer: *Renderer, x: i32, y: i32, w: i32, h: i32) void {
     present_trace_runtime.noteCompositionClip(renderer);
     const requested = logicalClipFromInts(x, y, w, h) orelse {
         renderer.clip_depth = 0;
-        renderer.backend_ops.clip.applyClipRect(renderer, null);
+        renderer.backend.ops.clip.applyClipRect(renderer, null);
         return;
     };
     const next = if (renderer.currentClipRect()) |current|
@@ -26,12 +26,12 @@ pub fn beginClip(renderer: *Renderer, x: i32, y: i32, w: i32, h: i32) void {
     } else {
         renderer.clip_stack[renderer.clip_stack.len - 1] = next;
     }
-    renderer.backend_ops.clip.applyClipRect(renderer, next);
+    renderer.backend.ops.clip.applyClipRect(renderer, next);
 }
 
 pub fn endClip(renderer: *Renderer) void {
     if (renderer.clip_depth > 0) renderer.clip_depth -= 1;
-    renderer.backend_ops.clip.applyClipRect(renderer, renderer.currentClipRect());
+    renderer.backend.ops.clip.applyClipRect(renderer, renderer.currentClipRect());
 }
 
 fn logicalClipFromInts(x: i32, y: i32, w: i32, h: i32) ?types.Rect {

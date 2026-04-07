@@ -114,38 +114,43 @@ That makes OpenGL and Metal useful comparison pressure instead of paper plans.
 
 ### 1. `Renderer` still stores concrete backend runtime state
 
-In `src/ui/renderer.zig`, the shared renderer now owns one
-`backend_runtime` bundle containing:
+In `src/ui/renderer.zig`, the shared renderer now owns one dedicated backend
+host containing:
 
-- `backend_runtime.opengl`
-- `backend_runtime.metal`
+- `backend.ops`
+- `backend.runtime`
 
-That is cleaner than carrying separate `opengl_runtime` and `metal_runtime`
+That is cleaner than carrying separate backend dispatch and backend runtime
 peer fields on the renderer root, and it is a worthwhile host-shape
 improvement.
 
 But it is still backend-native runtime state living under shared renderer
-ownership. The bundle still contains concrete OpenGL/Metal implementation
+ownership. The runtime bundle still contains concrete OpenGL/Metal implementation
 storage such as:
 
-- `backend_runtime.opengl.context`
-- `backend_runtime.opengl.shader_program`
-- `backend_runtime.opengl.vao`
-- `backend_runtime.opengl.vbo`
-- `backend_runtime.opengl.white_texture`
-- `backend_runtime.metal.backend_context`
-- `backend_runtime.metal.frame`
-- `backend_runtime.metal.queued_surface_draws`
-- `backend_runtime.metal.preview_source`
+- `backend.runtime.opengl.context`
+- `backend.runtime.opengl.shader_program`
+- `backend.runtime.opengl.vao`
+- `backend.runtime.opengl.vbo`
+- `backend.runtime.opengl.white_texture`
+- `backend.runtime.metal.backend_context`
+- `backend.runtime.metal.frame`
+- `backend.runtime.metal.queued_surface_draws`
+- `backend.runtime.metal.preview_source`
 
 That means the renderer root is still partly the backend implementation center,
 not just the backend-neutral host/facade.
 
-This has improved slightly because backend-native state is now bundled per
-backend instead of being scattered as unrelated renderer peers.
+This has improved slightly because backend-native state is now grouped under a
+single backend host instead of being scattered as unrelated renderer peers.
 
 But it is still not the end-state. Shared renderer lifecycle, teardown, and
 submission logic still depend on backend-native state shape directly.
+
+This has improved slightly again at the root shape too: backend-facing ops and
+backend-native runtime no longer sit on `Renderer` as two separate peer
+surfaces. They now live under one backend host, which makes the remaining
+ownership problem narrower and more explicit.
 
 This has improved slightly again: backend teardown now runs through backend
 modules instead of `Renderer.deinit()` spelling out both OpenGL and Metal

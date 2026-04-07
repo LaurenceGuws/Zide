@@ -16,8 +16,8 @@ const PresentableSurface = presentable_contract.PresentableSurface;
 
 fn presentableTargetSlot(renderer: anytype, surface: PresentableSurface) *?RenderTarget {
     return switch (surface) {
-        .terminal => &renderer.backend_runtime.opengl.presentable_targets.terminal,
-        .editor => &renderer.backend_runtime.opengl.presentable_targets.editor,
+        .terminal => &renderer.backend.runtime.opengl.presentable_targets.terminal,
+        .editor => &renderer.backend.runtime.opengl.presentable_targets.editor,
     };
 }
 
@@ -26,7 +26,7 @@ fn presentableTarget(renderer: anytype, surface: PresentableSurface) ?RenderTarg
 }
 
 fn terminalScrollTargetSlot(renderer: anytype) *?RenderTarget {
-    return &renderer.backend_runtime.opengl.presentable_targets.terminal_scroll;
+    return &renderer.backend.runtime.opengl.presentable_targets.terminal_scroll;
 }
 
 pub fn ensurePresentable(renderer: anytype, surface: PresentableSurface, width: i32, height: i32) bool {

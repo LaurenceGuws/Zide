@@ -11,7 +11,7 @@ const renderer_global_runtime = @import("renderer/renderer_global_runtime.zig");
 const font_manager = @import("renderer/font_manager.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
 const backend_dispatch = @import("renderer/backend_dispatch.zig");
-const backend_runtime_bundle = @import("renderer/backend_runtime_bundle.zig");
+const renderer_backend_host = @import("renderer/renderer_backend_host.zig");
 const metal_runtime_state = @import("renderer/metal_runtime_state.zig");
 const renderer_clip_host = @import("renderer/renderer_clip_host.zig");
 const renderer_frame_host = @import("renderer/renderer_frame_host.zig");
@@ -357,7 +357,7 @@ pub const Renderer = struct {
         bg_rgba: types.Rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 },
     };
 
-    const BackendOps = backend_dispatch.BackendOps(
+    const BackendHost = renderer_backend_host.Host(
         Self,
         FrameSubmission,
         RendererCapabilities,
@@ -380,7 +380,7 @@ pub const Renderer = struct {
     pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
 
     allocator: std.mem.Allocator,
-    backend_ops: BackendOps,
+    backend: BackendHost,
     runtime_profile: RendererRuntimeProfile,
     app_host: native_host.PlatformAppHost,
     app_event_watch_installed: bool,
@@ -388,7 +388,6 @@ pub const Renderer = struct {
     render_host: native_host.PlatformRenderHost,
     render_surface_attachment: RenderSurfaceAttachment,
     window: *sdl_api.c.SDL_Window,
-    backend_runtime: backend_runtime_bundle.Bundle,
     fonts_ready: bool,
     width: i32,
     height: i32,
@@ -534,7 +533,8 @@ pub const Renderer = struct {
 
         renderer.* = .{
             .allocator = allocator,
-            .backend_ops = backend_dispatch.opsFor(
+            .backend = .{
+                .ops = backend_dispatch.opsFor(
                 Self,
                 RendererBackend,
                 FrameSubmission,
@@ -547,6 +547,7 @@ pub const Renderer = struct {
                 WindowChangeMask,
                 startup_backend,
             ),
+            },
             .runtime_profile = runtime_profile,
             .app_host = app_host,
             .app_event_watch_installed = false,
@@ -554,7 +555,6 @@ pub const Renderer = struct {
             .render_host = render_host,
             .render_surface_attachment = render_surface_attachment,
             .window = window,
-            .backend_runtime = .{},
             .fonts_ready = false,
             .width = display_metrics.window_w,
             .height = display_metrics.window_h,
@@ -662,7 +662,7 @@ pub const Renderer = struct {
 
         lifecycle_runtime.beginRendererShutdown(Renderer, self);
         window_chrome_runtime.deinit(self.windowChromeDomain());
-        self.backend_ops.runtime.deinitRuntime(self);
+        self.backend.ops.runtime.deinitRuntime(self);
         bootstrap_runtime.deinitRendererWindowResources(&self.render_surface_attachment, self.window);
         bootstrap_runtime.deinitSdlRuntime();
 
@@ -778,7 +778,7 @@ pub const Renderer = struct {
     }
 
     fn applyFontScale(self: *Renderer) !void {
-        self.backend_ops.runtime.clearDiagnosticFont(self);
+        self.backend.ops.runtime.clearDiagnosticFont(self);
         try font_runtime.applyFontScale(self);
     }
 
@@ -796,7 +796,7 @@ pub const Renderer = struct {
             .{ .render_scale_change = true }
         else
             .{};
-        self.backend_ops.runtime.mergePendingSceneTargetInvalidation(self, scene_target_invalidation);
+        self.backend.ops.runtime.mergePendingSceneTargetInvalidation(self, scene_target_invalidation);
         return .{
             .changes = .{},
             .geometry = self.windowGeometryDiagnostics(),
@@ -933,9 +933,9 @@ pub const Renderer = struct {
 
     pub fn refreshWindowState(self: *Renderer, reason: []const u8, changes: WindowChangeMask) !WindowRefreshResult {
         const metrics = self.collectDisplayMetricsForWindowChanges(changes);
-        const scene_target_invalidation = self.backend_ops.runtime.sceneTargetInvalidationForRefresh(self, changes, metrics);
+        const scene_target_invalidation = self.backend.ops.runtime.sceneTargetInvalidationForRefresh(self, changes, metrics);
         self.applyDisplayMetricsSnapshot(metrics);
-        self.backend_ops.runtime.mergePendingSceneTargetInvalidation(self, scene_target_invalidation);
+        self.backend.ops.runtime.mergePendingSceneTargetInvalidation(self, scene_target_invalidation);
         self.logWindowMetricsSnapshot(metrics, reason);
         const ui_scale_changed = try self.refreshScaleStateForWindowChanges(changes, metrics);
         return .{
@@ -968,12 +968,12 @@ pub const Renderer = struct {
 
     pub fn beginFrame(self: *Renderer) void {
         renderer_frame_host.beginFrameHost(self);
-        self.backend_ops.frame.beginFrame(self);
-        self.backend_ops.clip.applyClipRect(self, null);
+        self.backend.ops.frame.beginFrame(self);
+        self.backend.ops.clip.applyClipRect(self, null);
     }
 
     pub fn submitFrame(self: *Renderer) FrameSubmission {
-        return self.backend_ops.frame.submitFrame(self);
+        return self.backend.ops.frame.submitFrame(self);
     }
 
     pub fn armPresentCapture(self: *Renderer, path: []const u8) void {
@@ -987,11 +987,11 @@ pub const Renderer = struct {
     }
 
     pub fn dumpWindowScreenshotPpm(self: *Renderer, path: []const u8) !void {
-        return self.backend_ops.frame.dumpWindowScreenshotPpm(self, path);
+        return self.backend.ops.frame.dumpWindowScreenshotPpm(self, path);
     }
 
     pub fn dumpWindowScreenshotPpmSized(self: *Renderer, path: []const u8, out_width: i32, out_height: i32) !void {
-        return self.backend_ops.frame.dumpWindowScreenshotPpmSized(self, path, out_width, out_height);
+        return self.backend.ops.frame.dumpWindowScreenshotPpmSized(self, path, out_width, out_height);
     }
 
     pub fn terminalPresentationMode(self: *const Renderer) TerminalPresentationMode {
@@ -1022,7 +1022,7 @@ pub const Renderer = struct {
     }
 
     pub fn capabilities(self: *const Renderer) RendererCapabilities {
-        return self.backend_ops.runtime.capabilities(self);
+        return self.backend.ops.runtime.capabilities(self);
     }
 
     pub fn setTextInputRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32) void {
@@ -1374,12 +1374,12 @@ pub const Renderer = struct {
 
     fn drawTextureGlyphCacheThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
         const renderer: *Renderer = @ptrCast(@alignCast(ctx));
-        renderer.backend_ops.terminal_draw.addTerminalGlyphQuad(renderer, texture, src, dest, color, kind);
+        renderer.backend.ops.terminal_draw.addTerminalGlyphQuad(renderer, texture, src, dest, color, kind);
     }
 
     fn addTerminalGlyphRectThunk(ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void {
         const renderer: *Renderer = @ptrCast(@alignCast(ctx));
-        renderer.backend_ops.terminal_draw.addTerminalGlyphRect(renderer, x, y, w, h, color.toRgba());
+        renderer.backend.ops.terminal_draw.addTerminalGlyphRect(renderer, x, y, w, h, color.toRgba());
     }
 
     fn drawTextureThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {

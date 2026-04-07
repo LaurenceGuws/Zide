@@ -5,7 +5,7 @@ const surface_draw = @import("surface_draw.zig");
 const types = @import("types.zig");
 
 fn recordSurfaceDraw(renderer: anytype, draw: surface_draw.SurfaceDraw) bool {
-    return renderer.backend_ops.surface.recordSurfaceDraw(renderer, draw);
+    return renderer.backend.ops.surface.recordSurfaceDraw(renderer, draw);
 }
 
 pub fn drawRect(renderer: anytype, x: i32, y: i32, w: i32, h: i32, color: anytype) void {
