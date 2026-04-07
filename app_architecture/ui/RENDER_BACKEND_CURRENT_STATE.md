@@ -572,6 +572,16 @@ That split is now sharper from code inspection too:
     the widget draw body
 - that is still not full timing closure because the immediate and draw-list
   row-band lanes remain distinct concrete implementations
+- the remaining backend-runtime storage blocker is now more specifically
+  OpenGL-shaped than Metal-shaped:
+  - Metal live frame/surface/presentable queue state now lives under backend
+    context
+  - `opengl_runtime_state.zig` still keeps one flat runtime blob mixing SDL GL
+    context ownership, shader/VBO resource slots, retained presentable target
+    slots, and offscreen scene-target lifecycle state
+- that should not be "fixed" by a fake parity rename. The next honest OpenGL
+  runtime cut has to peel off one real ownership stratum, likely retained
+  target / scene-target lifecycle, instead of regrouping the whole blob.
 - sample pressure is specifically section-fill plus bg-aware text preview work
   in `font_sample_view.zig` / `font_sample_section_host.zig`, including the
   custom-font sample path that still terminates through direct texture draws

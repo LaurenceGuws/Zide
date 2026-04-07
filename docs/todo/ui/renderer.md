@@ -796,6 +796,18 @@ Current evidence:
 - that is stronger proof of the intended editor-local composition rule, but it
   is still not full shared timing closure because the immediate and draw-list
   row-band lanes remain distinct concrete implementations.
+- backend-runtime checkpoint: the remaining runtime-storage blocker is now more
+  specifically OpenGL-shaped than Metal-shaped. Metal live frame/queue state is
+  under backend context, but `opengl_runtime_state.zig` still keeps one flat
+  blob that mixes:
+  - SDL GL context ownership
+  - shader/VBO resource slots
+  - retained presentable target slots
+  - offscreen scene-target lifecycle state
+- do not take a fake parity cut there by merely grouping fields under a new
+  name. The next OpenGL runtime cut must separate one real ownership stratum,
+  likely retained target / scene-target lifecycle, instead of renaming the
+  whole blob.
 - code-facing checkpoint: the sample pressure is specifically
   section-fill-plus-bg-aware preview text in `font_sample_view.zig`, including
   custom-font preview draws that still go through direct texture draw calls.
