@@ -403,8 +403,9 @@ supposed to prevent.
 ### 4. Retained/presentable surfaces are still GL-shaped in shared runtime code
 
 The neutral presentable surface no longer lives in a separate shared runtime
-wrapper. That small façade now lives directly on `Renderer`, which is an
-improvement over carrying one more shared dispatch module.
+wrapper. The small caller-facing facade now lives in
+`src/ui/renderer/renderer_presentable_host.zig` instead of being spread between
+another wrapper layer and the renderer root.
 
 This has improved slightly: the presentable target type now lives in
 `src/ui/renderer/gl_presentable_target.zig` instead of being owned directly by the
@@ -466,12 +467,15 @@ The main contradiction centers today are:
 - `src/ui/renderer/gl_backend.zig`
   - now also owns the actual GL presentable lifecycle directly instead of
     routing that behavior through a second backend-local wrapper module
-- `src/ui/renderer.zig`
-  - now also owns the small neutral presentable facade directly, so renderer
-    root dispatch still remains part of the presentable contract surface
-- `src/ui/renderer.zig`
-  - now owns the small shared frame facade directly, but still exposes
-    renderer-wide per-frame bookkeeping and backend dispatch from one root
+- `src/ui/renderer/renderer_presentable_host.zig`
+  - now owns the small neutral presentable facade, but presentable lifecycle
+    truth is still not backend-neutral
+- `src/ui/renderer/renderer_frame_host.zig`
+  - now owns the small shared frame facade, but frame lifecycle ownership is
+    still not fully backend-neutral
+- `src/ui/renderer/backend_dispatch.zig`
+  - now owns the backend switchboard, but backend lifecycle ownership is still
+    not closed
 - `src/ui/renderer/present_trace_runtime.zig`
   - now mostly trace/present bookkeeping, but is still part of the shared
     frame lifecycle surface

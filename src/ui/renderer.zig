@@ -483,22 +483,6 @@ pub const Renderer = struct {
         return self.clip_stack[self.clip_depth - 1];
     }
 
-    fn backendOps(backend: RendererBackend) BackendOps {
-        return backend_dispatch.opsFor(
-            Self,
-            RendererBackend,
-            FrameSubmission,
-            RendererCapabilities,
-            PresentableSurface,
-            PresentableDraw,
-            PresentableInfo,
-            RawImageFormat,
-            SceneTargetInvalidation,
-            WindowChangeMask,
-            backend,
-        );
-    }
-
     pub fn init(allocator: std.mem.Allocator, width: i32, height: i32, title: [*:0]const u8, init_options: InitOptions) !*Renderer {
         const startup_backend = init_options.renderer_backend;
         const runtime_profile = init_options.runtime_profile;
@@ -551,7 +535,19 @@ pub const Renderer = struct {
         renderer.* = .{
             .allocator = allocator,
             .backend = startup_backend,
-            .backend_ops = backendOps(startup_backend),
+            .backend_ops = backend_dispatch.opsFor(
+                Self,
+                RendererBackend,
+                FrameSubmission,
+                RendererCapabilities,
+                PresentableSurface,
+                PresentableDraw,
+                PresentableInfo,
+                RawImageFormat,
+                SceneTargetInvalidation,
+                WindowChangeMask,
+                startup_backend,
+            ),
             .runtime_profile = runtime_profile,
             .app_host = app_host,
             .app_event_watch_installed = false,
