@@ -451,22 +451,23 @@ fn tokenStyleInfo(r: anytype, kind: TokenKind) struct {
     };
 }
 
-fn drawTextDecorations(r: anytype, x: f32, y: f32, width: f32, color: anytype, flags: EditorTextStyleFlags) void {
+fn forEachDecorationRect(
+    r: anytype,
+    x: f32,
+    y: f32,
+    width: f32,
+    flags: EditorTextStyleFlags,
+    visitor: anytype,
+) void {
     if (width <= 0 or (!flags.underline and !flags.undercurl and !flags.strikethrough)) return;
-    const scale = r.uiScaleFactor();
-    const thickness = @max(1, @as(i32, @intFromFloat(std.math.round(@max(scale, 1.0)))));
-    const x_i = @as(i32, @intFromFloat(std.math.round(x)));
-    const y_i = @as(i32, @intFromFloat(std.math.round(y)));
-    const w_i = @max(1, @as(i32, @intFromFloat(std.math.round(width))));
-    const h_i = @max(1, @as(i32, @intFromFloat(std.math.round(r.editor_char_height))));
+    const thickness = @max(1.0, std.math.round(@max(r.uiScaleFactor(), 1.0)));
     if (flags.undercurl) {
-        const baseline_y = y_i + h_i - thickness - 1;
-        drawUndercurl(r, x_i, baseline_y, w_i, thickness, color);
+        forEachUndercurlRect(x, y + r.editor_char_height - thickness - 1.0, width, thickness, visitor);
     } else if (flags.underline) {
-        renderer_surface_host.drawRect(r, x_i, y_i + h_i - thickness, w_i, thickness, color);
+        visitor.rect(x, y + r.editor_char_height - thickness, width, thickness);
     }
     if (flags.strikethrough) {
-        renderer_surface_host.drawRect(r, x_i, y_i + @divFloor(h_i, 2), w_i, thickness, color);
+        visitor.rect(x, y + std.math.floor(r.editor_char_height * 0.5), width, thickness);
     }
 }
 
@@ -475,56 +476,58 @@ fn drawStyledTextOnBg(r: anytype, text: []const u8, x: f32, y: f32, fg: anytype,
     if (flags.bold) renderer_text_host.drawTextMonospaceOnBgStyledPolicy(r, text, x + 1.0, y, fg, bg, disable_programming_ligatures, flags.italic);
 }
 
+fn drawTextDecorations(r: anytype, x: f32, y: f32, width: f32, color: anytype, flags: EditorTextStyleFlags) void {
+    const Visitor = struct {
+        renderer: @TypeOf(r),
+        color: @TypeOf(color),
+
+        fn rect(self: *@This(), rx: f32, ry: f32, rw: f32, rh: f32) void {
+            renderer_surface_host.drawRect(
+                self.renderer,
+                @as(i32, @intFromFloat(std.math.round(rx))),
+                @as(i32, @intFromFloat(std.math.round(ry))),
+                @max(1, @as(i32, @intFromFloat(std.math.round(rw)))),
+                @max(1, @as(i32, @intFromFloat(std.math.round(rh)))),
+                self.color,
+            );
+        }
+    };
+    var visitor = Visitor{ .renderer = r, .color = color };
+    forEachDecorationRect(r, x, y, width, flags, &visitor);
+}
+
 fn addTextDecorationOps(list: *EditorDrawList, r: anytype, x: f32, y: f32, width: f32, color: anytype, flags: EditorTextStyleFlags) bool {
-    if (width <= 0 or (!flags.underline and !flags.undercurl and !flags.strikethrough)) return true;
-    const thickness = @max(1.0, std.math.round(@max(r.uiScaleFactor(), 1.0)));
     var ok = true;
-    if (flags.undercurl) {
-        ok = ok and addUndercurlOps(list, x, y + r.editor_char_height - thickness - 1.0, width, thickness, color);
-    } else if (flags.underline) {
-        ok = ok and overlay_mod.addRectOp(list, x, y + r.editor_char_height - thickness, width, thickness, color);
-    }
-    if (flags.strikethrough) {
-        ok = ok and overlay_mod.addRectOp(list, x, y + std.math.floor(r.editor_char_height * 0.5), width, thickness, color);
-    }
+    const Visitor = struct {
+        list: *EditorDrawList,
+        color: @TypeOf(color),
+        ok: *bool,
+
+        fn rect(self: *@This(), rx: f32, ry: f32, rw: f32, rh: f32) void {
+            self.ok.* = self.ok.* and overlay_mod.addRectOp(self.list, rx, ry, rw, rh, self.color);
+        }
+    };
+    var visitor = Visitor{ .list = list, .color = color, .ok = &ok };
+    forEachDecorationRect(r, x, y, width, flags, &visitor);
     return ok;
 }
 
-fn drawUndercurl(r: anytype, x_i: i32, baseline_y: i32, width_i: i32, thickness: i32, color: anytype) void {
-    if (width_i <= 0) return;
-    const amplitude = @max(1, thickness);
-    const step = @max(2, thickness * 2);
-    var pos: i32 = 0;
-    while (pos < width_i) : (pos += step) {
-        const seg_w = @min(step, width_i - pos);
-        if (seg_w <= 0) break;
-        const half = @max(1, @divFloor(seg_w, 2));
-        renderer_surface_host.drawRect(r, x_i + pos, baseline_y, half, thickness, color);
-        const tail_w = seg_w - half;
-        if (tail_w > 0) {
-            renderer_surface_host.drawRect(r, x_i + pos + half, baseline_y + amplitude, tail_w, thickness, color);
-        }
-    }
-}
-
-fn addUndercurlOps(list: *EditorDrawList, x: f32, baseline_y: f32, width: f32, thickness: f32, color: anytype) bool {
-    if (width <= 0) return true;
+fn forEachUndercurlRect(x: f32, baseline_y: f32, width: f32, thickness: f32, visitor: anytype) void {
+    if (width <= 0) return;
     const thickness_px = @max(1.0, thickness);
     const amplitude = thickness_px;
     const step = @max(2.0, thickness_px * 2.0);
-    var ok = true;
     var pos: f32 = 0.0;
     while (pos < width) : (pos += step) {
         const seg_w = @min(step, width - pos);
         if (seg_w <= 0) break;
         const half = @max(1.0, std.math.floor(seg_w * 0.5));
-        ok = ok and overlay_mod.addRectOp(list, x + pos, baseline_y, half, thickness_px, color);
+        visitor.rect(x + pos, baseline_y, half, thickness_px);
         const tail_w = seg_w - half;
         if (tail_w > 0) {
-            ok = ok and overlay_mod.addRectOp(list, x + pos + half, baseline_y + amplitude, tail_w, thickness_px, color);
+            visitor.rect(x + pos + half, baseline_y + amplitude, tail_w, thickness_px);
         }
     }
-    return ok;
 }
 
 fn addStyledTextOpBg(list: *EditorDrawList, x: f32, y: f32, text: []const u8, fg: anytype, bg: anytype, flags: EditorTextStyleFlags, disable_programming_ligatures: bool) bool {

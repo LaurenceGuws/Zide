@@ -628,6 +628,10 @@ That split is now sharper from code inspection too:
   `editor_widget_draw_text.zig` uses one shared highlighted-token traversal for
   both immediate and draw-list paths. The remaining split is still real, but
   it is now at the emitter layer rather than duplicated traversal policy.
+- that split is slightly narrower again: underline / undercurl /
+  strikethrough geometry now also runs through one shared helper there. The
+  remaining editor styled-text difference is increasingly about emitter target,
+  not separate geometry/traversal policy.
 - sample pressure is specifically section-fill plus bg-aware text preview work
   in `font_sample_view.zig` / `font_sample_section_host.zig`, including the
   custom-font sample path that still terminates through direct texture draws

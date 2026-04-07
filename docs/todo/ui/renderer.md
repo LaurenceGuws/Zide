@@ -821,6 +821,11 @@ Current evidence:
 - that does not unify the emitters yet, but it removes one duplicated
   traversal/order policy and leaves the remaining split at the emission layer
   instead of the token-walk layer.
+- editor checkpoint: text-decoration geometry in
+  `editor_widget_draw_text.zig` now also runs through one shared helper for
+  both immediate and draw-list paths.
+- underline / undercurl / strikethrough now differ mainly by emitter target,
+  not by separate geometry policy.
 - backend-runtime checkpoint: the remaining runtime-storage blocker is now more
   specifically OpenGL-shaped than Metal-shaped. Metal live frame/queue state is
   under backend context.

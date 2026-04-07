@@ -410,6 +410,9 @@ The current code makes that split more specific:
   traversal now has one shared helper, so the remaining immediate-vs-draw-list
   difference is at the emission layer rather than two separate token-ordering
   algorithms.
+- that is slightly narrower again now: text-decoration geometry
+  (underline/undercurl/strikethrough) also has one shared helper, leaving the
+  remaining editor styled-text split more clearly at the emitter layer.
 - sample/diagnostic pressure is the simpler section-fill plus bg-aware preview
   text path in `font_sample_view.zig`, including custom-font preview draws
   that still go straight through texture draw calls
