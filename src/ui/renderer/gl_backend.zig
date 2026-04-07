@@ -54,7 +54,6 @@ pub fn capabilities(renderer: anytype) RendererCapabilities {
         else
             .direct_main_target,
         .retained_targets = full_ui,
-        .editor_presentable_cache_compatible = full_ui and builtin.target.os.tag != .macos,
         .terminal_presentation_mode = if (full_ui)
             .retained_surface
         else

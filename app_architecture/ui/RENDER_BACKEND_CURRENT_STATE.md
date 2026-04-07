@@ -97,8 +97,6 @@ such as:
 - text rendering mode
 - atlas storage mode
 - raw image texture support
-- editor presentable cache compatibility (macOS OpenGL retains a deliberate
-  false here; widgets query capability instead of `renderer.backend`)
 
 That is a meaningful improvement over backend-label theater.
 
@@ -251,9 +249,9 @@ working product path. The direct editor path was restored after IDE geometry
 testing exposed a mismatch between retained editor presentation and the shared
 layout/presentation story. After fixing pane-width/layout truth, we retried the
 retained path and it still regressed live editor behavior, so the widget stays
-on the direct path. `editor_presentable_cache_compatible` therefore remains a
-declared capability surface, but in practice this seam is still a fix-or-delete
-question rather than an adoption-ready feature.
+on the direct path. This seam is therefore still a fix-or-delete question
+rather than an adoption-ready feature, and it is no longer advertised as a
+live capability surface.
 
 Part of that mismatch was more basic than retained-target ownership: editor
 column/layout truth was still partly derived from full-window width instead of
