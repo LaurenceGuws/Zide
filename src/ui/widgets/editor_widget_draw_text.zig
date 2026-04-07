@@ -16,6 +16,82 @@ const ByteRange = overlay_mod.ByteRange;
 const EditorTextStyleFlags = renderer_mod.EditorTextStyleFlags;
 const tab_spaces = "    ";
 
+const ImmediateTextEmitter = struct {
+    renderer: *renderer_mod.Renderer,
+
+    fn textOnBg(
+        self: *@This(),
+        x: f32,
+        y: f32,
+        text: []const u8,
+        fg: renderer_mod.Color,
+        bg: renderer_mod.Color,
+        flags: EditorTextStyleFlags,
+        disable_programming_ligatures: bool,
+    ) bool {
+        renderer_text_host.drawTextMonospaceOnBgStyledPolicy(self.renderer, text, x, y, fg, bg, disable_programming_ligatures, flags.italic);
+        if (flags.bold) renderer_text_host.drawTextMonospaceOnBgStyledPolicy(self.renderer, text, x + 1.0, y, fg, bg, disable_programming_ligatures, flags.italic);
+        return true;
+    }
+
+    fn decorationRect(
+        self: *@This(),
+        rx: f32,
+        ry: f32,
+        rw: f32,
+        rh: f32,
+        color: renderer_mod.Color,
+    ) bool {
+        renderer_surface_host.drawRect(
+            self.renderer,
+            @as(i32, @intFromFloat(std.math.round(rx))),
+            @as(i32, @intFromFloat(std.math.round(ry))),
+            @max(1, @as(i32, @intFromFloat(std.math.round(rw)))),
+            @max(1, @as(i32, @intFromFloat(std.math.round(rh)))),
+            color,
+        );
+        return true;
+    }
+};
+
+const DrawListTextEmitter = struct {
+    list: *EditorDrawList,
+
+    fn textOnBg(
+        self: *@This(),
+        x: f32,
+        y: f32,
+        text: []const u8,
+        fg: renderer_mod.Color,
+        bg: renderer_mod.Color,
+        flags: EditorTextStyleFlags,
+        disable_programming_ligatures: bool,
+    ) bool {
+        self.list.add(.{ .text = .{
+            .x = x,
+            .y = y,
+            .text = text,
+            .color = overlay_mod.packColor(fg),
+            .bg_color = overlay_mod.packColor(bg),
+            .disable_programming_ligatures = disable_programming_ligatures,
+            .bold = flags.bold,
+            .italic = flags.italic,
+        } }) catch return false;
+        return true;
+    }
+
+    fn decorationRect(
+        self: *@This(),
+        rx: f32,
+        ry: f32,
+        rw: f32,
+        rh: f32,
+        color: renderer_mod.Color,
+    ) bool {
+        return overlay_mod.addRectOp(self.list, rx, ry, rw, rh, color);
+    }
+};
+
 fn visualColumnAtByteOffset(
     line_text: []const u8,
     seg_start_byte: usize,
@@ -397,6 +473,11 @@ pub fn collectSearchByteRanges(seg_abs_start: usize, seg_abs_end: usize, matches
 }
 
 pub fn addTextSliceOpsWithSelectionBg(list: *EditorDrawList, r: anytype, text_start_x: f32, y: f32, line_text: []const u8, seg_start_byte: usize, seg_start_vis: usize, slice_start: usize, slice_end: usize, fg: anytype, base_bg: anytype, selection_bg: anytype, sel_ranges: []const ByteRange, disable_programming_ligatures: bool) bool {
+    var emitter = DrawListTextEmitter{ .list = list };
+    return emitTextSliceWithSelectionBg(&emitter, r, text_start_x, y, line_text, seg_start_byte, seg_start_vis, slice_start, slice_end, fg, base_bg, selection_bg, sel_ranges, disable_programming_ligatures);
+}
+
+fn emitTextSliceWithSelectionBg(emitter: anytype, r: anytype, text_start_x: f32, y: f32, line_text: []const u8, seg_start_byte: usize, seg_start_vis: usize, slice_start: usize, slice_end: usize, fg: anytype, base_bg: anytype, selection_bg: anytype, sel_ranges: []const ByteRange, disable_programming_ligatures: bool) bool {
     if (slice_end <= slice_start) return true;
     var ok = true;
     var cursor = slice_start;
@@ -404,18 +485,18 @@ pub fn addTextSliceOpsWithSelectionBg(list: *EditorDrawList, r: anytype, text_st
         if (sr.end <= cursor) continue;
         if (sr.start >= slice_end) break;
         if (sr.start > cursor) {
-            ok = ok and addExpandedTextSliceOpBg(list, r, text_start_x, y, line_text, seg_start_byte, seg_start_vis, cursor, @min(sr.start, slice_end), fg, base_bg, disable_programming_ligatures);
+            ok = ok and addExpandedTextSliceWithEmitterBg(emitter, r, text_start_x, y, line_text, seg_start_byte, seg_start_vis, cursor, @min(sr.start, slice_end), fg, base_bg, disable_programming_ligatures);
         }
         const b0 = @max(cursor, sr.start);
         const b1 = @min(slice_end, sr.end);
         if (b1 > b0) {
-            ok = ok and addExpandedTextSliceOpBg(list, r, text_start_x, y, line_text, seg_start_byte, seg_start_vis, b0, b1, fg, selection_bg, disable_programming_ligatures);
+            ok = ok and addExpandedTextSliceWithEmitterBg(emitter, r, text_start_x, y, line_text, seg_start_byte, seg_start_vis, b0, b1, fg, selection_bg, disable_programming_ligatures);
             cursor = b1;
         }
         if (cursor >= slice_end) break;
     }
     if (cursor < slice_end) {
-        ok = ok and addExpandedTextSliceOpBg(list, r, text_start_x, y, line_text, seg_start_byte, seg_start_vis, cursor, slice_end, fg, base_bg, disable_programming_ligatures);
+        ok = ok and addExpandedTextSliceWithEmitterBg(emitter, r, text_start_x, y, line_text, seg_start_byte, seg_start_vis, cursor, slice_end, fg, base_bg, disable_programming_ligatures);
     }
     return ok;
 }
@@ -522,40 +603,92 @@ fn drawStyledTextOnBg(r: anytype, text: []const u8, x: f32, y: f32, fg: anytype,
     if (flags.bold) renderer_text_host.drawTextMonospaceOnBgStyledPolicy(r, text, x + 1.0, y, fg, bg, disable_programming_ligatures, flags.italic);
 }
 
-fn drawTextDecorations(r: anytype, x: f32, y: f32, width: f32, color: anytype, flags: EditorTextStyleFlags) void {
-    const Visitor = struct {
-        renderer: @TypeOf(r),
-        color: @TypeOf(color),
-
-        fn rect(self: *@This(), rx: f32, ry: f32, rw: f32, rh: f32) void {
-            renderer_surface_host.drawRect(
-                self.renderer,
-                @as(i32, @intFromFloat(std.math.round(rx))),
-                @as(i32, @intFromFloat(std.math.round(ry))),
-                @max(1, @as(i32, @intFromFloat(std.math.round(rw)))),
-                @max(1, @as(i32, @intFromFloat(std.math.round(rh)))),
-                self.color,
-            );
-        }
-    };
-    var visitor = Visitor{ .renderer = r, .color = color };
-    forEachDecorationRect(r, x, y, width, flags, &visitor);
+fn addExpandedTextSliceWithEmitterBg(
+    emitter: anytype,
+    r: anytype,
+    text_start_x: f32,
+    y: f32,
+    line_text: []const u8,
+    seg_start_byte: usize,
+    seg_start_vis: usize,
+    slice_start: usize,
+    slice_end: usize,
+    fg: anytype,
+    bg: anytype,
+    disable_programming_ligatures: bool,
+) bool {
+    if (slice_end <= slice_start) return true;
+    if (comptime @TypeOf(emitter.*) == DrawListTextEmitter) {
+        return addExpandedTextSliceOpBg(
+            emitter.list,
+            r,
+            text_start_x,
+            y,
+            line_text,
+            seg_start_byte,
+            seg_start_vis,
+            slice_start,
+            slice_end,
+            fg,
+            bg,
+            disable_programming_ligatures,
+        );
+    }
+    drawExpandedTextSliceOnBg(
+        r,
+        text_start_x,
+        y,
+        line_text,
+        seg_start_byte,
+        seg_start_vis,
+        slice_start,
+        slice_end,
+        fg,
+        bg,
+        disable_programming_ligatures,
+    );
+    return true;
 }
 
-fn addTextDecorationOps(list: *EditorDrawList, r: anytype, x: f32, y: f32, width: f32, color: anytype, flags: EditorTextStyleFlags) bool {
+fn emitStyledTextOnBg(
+    emitter: anytype,
+    r: anytype,
+    text: []const u8,
+    x: f32,
+    y: f32,
+    fg: anytype,
+    bg: anytype,
+    flags: EditorTextStyleFlags,
+    disable_programming_ligatures: bool,
+) bool {
+    _ = r;
+    return emitter.textOnBg(x, y, text, fg, bg, flags, disable_programming_ligatures);
+}
+
+fn emitTextDecorations(emitter: anytype, r: anytype, x: f32, y: f32, width: f32, color: anytype, flags: EditorTextStyleFlags) bool {
     var ok = true;
     const Visitor = struct {
-        list: *EditorDrawList,
+        emitter: @TypeOf(emitter),
         color: @TypeOf(color),
         ok: *bool,
 
         fn rect(self: *@This(), rx: f32, ry: f32, rw: f32, rh: f32) void {
-            self.ok.* = self.ok.* and overlay_mod.addRectOp(self.list, rx, ry, rw, rh, self.color);
+            self.ok.* = self.ok.* and self.emitter.decorationRect(rx, ry, rw, rh, self.color);
         }
     };
-    var visitor = Visitor{ .list = list, .color = color, .ok = &ok };
+    var visitor = Visitor{ .emitter = emitter, .color = color, .ok = &ok };
     forEachDecorationRect(r, x, y, width, flags, &visitor);
     return ok;
+}
+
+fn drawTextDecorations(r: anytype, x: f32, y: f32, width: f32, color: anytype, flags: EditorTextStyleFlags) void {
+    var emitter = ImmediateTextEmitter{ .renderer = r };
+    _ = emitTextDecorations(&emitter, r, x, y, width, color, flags);
+}
+
+fn addTextDecorationOps(list: *EditorDrawList, r: anytype, x: f32, y: f32, width: f32, color: anytype, flags: EditorTextStyleFlags) bool {
+    var emitter = DrawListTextEmitter{ .list = list };
+    return emitTextDecorations(&emitter, r, x, y, width, color, flags);
 }
 
 fn forEachUndercurlRect(x: f32, baseline_y: f32, width: f32, thickness: f32, visitor: anytype) void {
@@ -591,31 +724,19 @@ fn addStyledTextOpBg(list: *EditorDrawList, x: f32, y: f32, text: []const u8, fg
 }
 
 pub fn drawTextSliceWithSelectionBg(r: anytype, text_start_x: f32, y: f32, line_text: []const u8, seg_start_byte: usize, seg_start_vis: usize, slice_start: usize, slice_end: usize, fg: anytype, base_bg: anytype, selection_bg: anytype, sel_ranges: []const ByteRange, disable_programming_ligatures: bool) void {
-    if (slice_end <= slice_start) return;
-    var cursor = slice_start;
-    for (sel_ranges) |sr| {
-        if (sr.end <= cursor) continue;
-        if (sr.start >= slice_end) break;
-        if (sr.start > cursor) {
-            drawExpandedTextSliceOnBg(r, text_start_x, y, line_text, seg_start_byte, seg_start_vis, cursor, @min(sr.start, slice_end), fg, base_bg, disable_programming_ligatures);
-        }
-        const b0 = @max(cursor, sr.start);
-        const b1 = @min(slice_end, sr.end);
-        if (b1 > b0) {
-            drawExpandedTextSliceOnBg(r, text_start_x, y, line_text, seg_start_byte, seg_start_vis, b0, b1, fg, selection_bg, disable_programming_ligatures);
-            cursor = b1;
-        }
-        if (cursor >= slice_end) break;
-    }
-    if (cursor < slice_end) {
-        drawExpandedTextSliceOnBg(r, text_start_x, y, line_text, seg_start_byte, seg_start_vis, cursor, slice_end, fg, base_bg, disable_programming_ligatures);
-    }
+    var emitter = ImmediateTextEmitter{ .renderer = r };
+    _ = emitTextSliceWithSelectionBg(&emitter, r, text_start_x, y, line_text, seg_start_byte, seg_start_vis, slice_start, slice_end, fg, base_bg, selection_bg, sel_ranges, disable_programming_ligatures);
 }
 
 pub fn appendHighlightedLineSegmentOps(list: *EditorDrawList, r: anytype, line_text: []const u8, y: f32, text_x: f32, line_start: usize, seg_start: usize, seg_end: usize, seg_start_vis: usize, tokens: []HighlightToken, base_bg: anytype, selection_bg: anytype, seg_start_byte: usize, sel_ranges: []const ByteRange, disable_programming_ligatures: bool) bool {
+    var emitter = DrawListTextEmitter{ .list = list };
+    return emitHighlightedLineSegment(&emitter, r, line_text, y, text_x, line_start, seg_start, seg_end, seg_start_vis, tokens, base_bg, selection_bg, seg_start_byte, sel_ranges, disable_programming_ligatures);
+}
+
+fn emitHighlightedLineSegment(emitter: anytype, r: anytype, line_text: []const u8, y: f32, text_x: f32, line_start: usize, seg_start: usize, seg_end: usize, seg_start_vis: usize, tokens: []const HighlightToken, base_bg: anytype, selection_bg: anytype, seg_start_byte: usize, sel_ranges: []const ByteRange, disable_programming_ligatures: bool) bool {
     var ok = true;
     const Visitor = struct {
-        list: *EditorDrawList,
+        emitter: @TypeOf(emitter),
         ok: *bool,
         r: @TypeOf(r),
         line_text: []const u8,
@@ -629,8 +750,8 @@ pub fn appendHighlightedLineSegmentOps(list: *EditorDrawList, r: anytype, line_t
         disable_programming_ligatures: bool,
 
         fn plain(self: *@This(), start: usize, end: usize, fg: @TypeOf(self.r.theme.foreground), bg: @TypeOf(self.selection_bg)) void {
-            self.ok.* = self.ok.* and addTextSliceOpsWithSelectionBg(
-                self.list,
+            self.ok.* = self.ok.* and emitTextSliceWithSelectionBg(
+                self.emitter,
                 self.r,
                 self.text_x,
                 self.y,
@@ -648,17 +769,21 @@ pub fn appendHighlightedLineSegmentOps(list: *EditorDrawList, r: anytype, line_t
         }
 
         fn conceal(self: *@This(), x: f32, text: []const u8, fg: @TypeOf(self.r.theme.foreground), bg: @TypeOf(self.selection_bg), decoration_color: @TypeOf(self.r.theme.foreground), flags: EditorTextStyleFlags) void {
-            self.ok.* = self.ok.* and addStyledTextOpBg(self.list, x, self.y, text, fg, bg, flags, self.disable_programming_ligatures);
-            self.ok.* = self.ok.* and addTextDecorationOps(self.list, self.r, x, self.y, @as(f32, @floatFromInt(text.len)) * self.r.editor_char_width, decoration_color, flags);
+            self.ok.* = self.ok.* and emitStyledTextOnBg(self.emitter, self.r, text, x, self.y, fg, bg, flags, self.disable_programming_ligatures);
+            self.ok.* = self.ok.* and emitTextDecorations(self.emitter, self.r, x, self.y, @as(f32, @floatFromInt(text.len)) * self.r.editor_char_width, decoration_color, flags);
         }
 
         fn highlighted(self: *@This(), start: usize, end: usize, fg: @TypeOf(self.r.theme.foreground), bg: @TypeOf(self.selection_bg), start_x: f32, end_x: f32, decoration_color: @TypeOf(self.r.theme.foreground), flags: EditorTextStyleFlags) void {
-            self.ok.* = self.ok.* and addExpandedStyledTextOpBg(self.list, self.r, self.text_x, self.y, self.line_text, self.seg_start, self.seg_start_vis, start, end, fg, bg, flags, self.disable_programming_ligatures);
-            self.ok.* = self.ok.* and addTextDecorationOps(self.list, self.r, start_x, self.y, end_x - start_x, decoration_color, flags);
+            if (comptime @TypeOf(self.emitter.*) == DrawListTextEmitter) {
+                self.ok.* = self.ok.* and addExpandedStyledTextOpBg(self.emitter.list, self.r, self.text_x, self.y, self.line_text, self.seg_start, self.seg_start_vis, start, end, fg, bg, flags, self.disable_programming_ligatures);
+            } else {
+                drawExpandedStyledTextOnBg(self.r, self.text_x, self.y, self.line_text, self.seg_start, self.seg_start_vis, start, end, fg, bg, flags, self.disable_programming_ligatures);
+            }
+            self.ok.* = self.ok.* and emitTextDecorations(self.emitter, self.r, start_x, self.y, end_x - start_x, decoration_color, flags);
         }
     };
     var visitor = Visitor{
-        .list = list,
+        .emitter = emitter,
         .ok = &ok,
         .r = r,
         .line_text = line_text,
@@ -676,43 +801,8 @@ pub fn appendHighlightedLineSegmentOps(list: *EditorDrawList, r: anytype, line_t
 }
 
 pub fn drawHighlightedLineSegment(r: anytype, line_text: []const u8, y: f32, text_x: f32, line_start: usize, seg_start: usize, seg_end: usize, seg_start_vis: usize, tokens: []const HighlightToken, base_bg: anytype, selection_bg: anytype, sel_ranges: []const ByteRange, disable_programming_ligatures: bool) void {
-    const Visitor = struct {
-        r: @TypeOf(r),
-        line_text: []const u8,
-        y: f32,
-        text_x: f32,
-        seg_start: usize,
-        seg_start_vis: usize,
-        selection_bg: @TypeOf(selection_bg),
-        sel_ranges: []const ByteRange,
-        disable_programming_ligatures: bool,
-
-        fn plain(self: *@This(), start: usize, end: usize, fg: @TypeOf(self.r.theme.foreground), bg: @TypeOf(self.selection_bg)) void {
-            drawTextSliceWithSelectionBg(self.r, self.text_x, self.y, self.line_text, self.seg_start, self.seg_start_vis, start, end, fg, bg, self.selection_bg, self.sel_ranges, self.disable_programming_ligatures);
-        }
-
-        fn conceal(self: *@This(), x: f32, text: []const u8, fg: @TypeOf(self.r.theme.foreground), bg: @TypeOf(self.selection_bg), decoration_color: @TypeOf(self.r.theme.foreground), flags: EditorTextStyleFlags) void {
-            drawStyledTextOnBg(self.r, text, x, self.y, fg, bg, flags, self.disable_programming_ligatures);
-            drawTextDecorations(self.r, x, self.y, @as(f32, @floatFromInt(text.len)) * self.r.editor_char_width, decoration_color, flags);
-        }
-
-        fn highlighted(self: *@This(), start: usize, end: usize, fg: @TypeOf(self.r.theme.foreground), bg: @TypeOf(self.selection_bg), start_x: f32, end_x: f32, decoration_color: @TypeOf(self.r.theme.foreground), flags: EditorTextStyleFlags) void {
-            drawExpandedStyledTextOnBg(self.r, self.text_x, self.y, self.line_text, self.seg_start, self.seg_start_vis, start, end, fg, bg, flags, self.disable_programming_ligatures);
-            drawTextDecorations(self.r, start_x, self.y, end_x - start_x, decoration_color, flags);
-        }
-    };
-    var visitor = Visitor{
-        .r = r,
-        .line_text = line_text,
-        .y = y,
-        .text_x = text_x,
-        .seg_start = seg_start,
-        .seg_start_vis = seg_start_vis,
-        .selection_bg = selection_bg,
-        .sel_ranges = sel_ranges,
-        .disable_programming_ligatures = disable_programming_ligatures,
-    };
-    forEachHighlightedSegmentPart(r, line_text, line_start, seg_start, seg_end, seg_start_vis, tokens, text_x, base_bg, selection_bg, sel_ranges, &visitor);
+    var emitter = ImmediateTextEmitter{ .renderer = r };
+    _ = emitHighlightedLineSegment(&emitter, r, line_text, y, text_x, line_start, seg_start, seg_end, seg_start_vis, tokens, base_bg, selection_bg, seg_start, sel_ranges, disable_programming_ligatures);
 }
 
 pub fn highlightTokenLessThan(_: void, a: HighlightToken, b: HighlightToken) bool {
