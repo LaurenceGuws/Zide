@@ -25,6 +25,9 @@ pub fn drawEditorPaneBaseImmediate(
     defer present_trace_runtime.clearEditorSurfaceSolidFamily(r);
     renderer_surface_host.drawRect(r, @intFromFloat(x), @intFromFloat(y), @intFromFloat(width), @intFromFloat(height), r.theme.background);
     renderer_surface_host.drawRect(r, @intFromFloat(x), @intFromFloat(y), @intFromFloat(gutter_width), @intFromFloat(height), r.theme.line_number_bg);
+    // OpenGL defers surface fills: replay pane now so row bands (often clip-scoped)
+    // do not depend on FIFO with an unflushed full-pane record.
+    renderer_surface_host.flushQueuedSurfaceDrawsBeforeDependentSurfaceWork(r);
 }
 
 pub fn addEditorLineBaseOps(

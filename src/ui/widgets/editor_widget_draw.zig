@@ -246,6 +246,8 @@ pub fn draw(
 
     if (!widget.wrap_enabled) {
         overlay_mod.drawEditorScrollbars(view, widget.gutter_width, r, x, y, width, height, visible_lines, total_lines, cols, input.mouse_pos, &draw_list);
+        // Scrollbar rects were appended to the draw list; flush them (deferred GL solids).
+        overlay_mod.flushDrawListEditorRowBand(&draw_list, r);
     }
 }
 
@@ -493,6 +495,8 @@ pub fn drawCached(
     if (!widget.wrap_enabled) {
         view = frame_view_mod.EditorFrameView.init(widget.editor, widget.wrap_enabled);
         overlay_mod.drawEditorScrollbars(view, widget.gutter_width, r, draw_x, draw_y, width, height, visible_lines, total_lines, cols, input.mouse_pos, null);
+        // Scrollbars use drawOverlayRect (deferred on GL); drain before later widgets.
+        renderer_surface_host.flushQueuedSurfaceDrawsBeforeDependentSurfaceWork(r);
     }
 }
 
