@@ -67,21 +67,29 @@ That makes OpenGL and Metal useful comparison pressure instead of paper plans.
 
 ### 1. `Renderer` still stores concrete backend runtime state
 
-In `src/ui/renderer.zig`, the shared renderer still owns one bundled Metal
-runtime state:
+In `src/ui/renderer.zig`, the shared renderer now owns one
+`backend_runtime` bundle containing:
 
-- `metal_runtime.backend_context`
-- `metal_runtime.frame`
-- `metal_runtime.queued_surface_draws`
-- `metal_runtime.preview_source`
+- `backend_runtime.opengl`
+- `backend_runtime.metal`
 
-It now also owns one bundled OpenGL runtime state:
+That is cleaner than carrying separate `opengl_runtime` and `metal_runtime`
+peer fields on the renderer root, and it is a worthwhile host-shape
+improvement.
 
-- `opengl_runtime.context`
-- `opengl_runtime.shader_program`
-- `opengl_runtime.vao`
-- `opengl_runtime.vbo`
-- `opengl_runtime.white_texture`
+But it is still backend-native runtime state living under shared renderer
+ownership. The bundle still contains concrete OpenGL/Metal implementation
+storage such as:
+
+- `backend_runtime.opengl.context`
+- `backend_runtime.opengl.shader_program`
+- `backend_runtime.opengl.vao`
+- `backend_runtime.opengl.vbo`
+- `backend_runtime.opengl.white_texture`
+- `backend_runtime.metal.backend_context`
+- `backend_runtime.metal.frame`
+- `backend_runtime.metal.queued_surface_draws`
+- `backend_runtime.metal.preview_source`
 
 That means the renderer root is still partly the backend implementation center,
 not just the backend-neutral host/facade.

@@ -1175,7 +1175,7 @@ pub fn initRuntime(renderer: anytype) !void {
         (renderer.runtime_profile == .full_ui and builtin.target.os.tag == .macos);
     if (!metal_runtime_ok) return error.RendererBackendRuntimeNotReady;
     const host = prepareHost(renderer) orelse return error.MacosMetalAttachmentUnavailable;
-    renderer.metal_runtime.backend_context = createBackendContext(host, renderer.render_width, renderer.render_height) orelse return error.MetalBackendContextUnavailable;
+    renderer.backend_runtime.metal.backend_context = createBackendContext(host, renderer.render_width, renderer.render_height) orelse return error.MetalBackendContextUnavailable;
     try renderer.initFonts();
     renderer.fonts_ready = true;
 }
@@ -1290,12 +1290,12 @@ pub fn scrollPresentable(renderer: anytype, surface: PresentableSurface, dx: i32
 }
 
 pub fn backendContext(renderer: anytype) ?*BackendContext {
-    if (renderer.metal_runtime.backend_context) |*context| return context;
+    if (renderer.backend_runtime.metal.backend_context) |*context| return context;
     return null;
 }
 
 pub fn backendContextConst(renderer: anytype) ?*const BackendContext {
-    if (renderer.metal_runtime.backend_context) |*context| return context;
+    if (renderer.backend_runtime.metal.backend_context) |*context| return context;
     return null;
 }
 
@@ -1309,13 +1309,13 @@ pub fn glyphAtlasReadyForRenderer(renderer: anytype) bool {
 }
 
 pub fn atlasPreviewSourceForRenderer(renderer: anytype) AtlasPreviewSource {
-    return renderer.metal_runtime.preview_source;
+    return renderer.backend_runtime.metal.preview_source;
 }
 
 pub fn runAtlasUploadDiagnosticAt(renderer: anytype, dest_x: i32, dest_y: i32) bool {
     if (!hasBackendContext(renderer)) return false;
     clearQueuedSurfaceDraws(renderer);
-    renderer.metal_runtime.preview_source = .unavailable;
+    renderer.backend_runtime.metal.preview_source = .unavailable;
 
     const font = ensureDiagnosticFont(renderer) catch return false;
     const color_preview_rect = font.uploadDiagnosticColorGlyphPreview();
@@ -1330,7 +1330,7 @@ pub fn runAtlasUploadDiagnosticAt(renderer: anytype, dest_x: i32, dest_y: i32) b
             .dest_y = dest_y,
             .tint = iface.Color.white.toRgba(),
         });
-        renderer.metal_runtime.preview_source = .uploaded_coverage_glyph;
+        renderer.backend_runtime.metal.preview_source = .uploaded_coverage_glyph;
     }
     if (color_preview_rect) |rect| {
         clearQueuedSurfaceDraws(renderer);
@@ -1341,7 +1341,7 @@ pub fn runAtlasUploadDiagnosticAt(renderer: anytype, dest_x: i32, dest_y: i32) b
             .dest_y = dest_y,
             .tint = iface.Color.white.toRgba(),
         });
-        renderer.metal_runtime.preview_source = .uploaded_color_glyph;
+        renderer.backend_runtime.metal.preview_source = .uploaded_color_glyph;
     } else if (queuedSurfaceDrawCount(renderer) == 0) {
         _ = appendAtlasSample(renderer, .{
             .atlas = .color,
@@ -1355,10 +1355,10 @@ pub fn runAtlasUploadDiagnosticAt(renderer: anytype, dest_x: i32, dest_y: i32) b
             .dest_y = dest_y,
             .tint = iface.Color.white.toRgba(),
         });
-        renderer.metal_runtime.preview_source = .seeded_color_block;
+        renderer.backend_runtime.metal.preview_source = .seeded_color_block;
     }
-    return renderer.metal_runtime.preview_source == .uploaded_coverage_glyph or
-        renderer.metal_runtime.preview_source == .uploaded_color_glyph;
+    return renderer.backend_runtime.metal.preview_source == .uploaded_coverage_glyph or
+        renderer.backend_runtime.metal.preview_source == .uploaded_color_glyph;
 }
 
 pub fn terminalFontAtlasUploadHooksForRenderer(renderer: anytype) ?terminal_font.AtlasUploadHooks {
@@ -1367,24 +1367,24 @@ pub fn terminalFontAtlasUploadHooksForRenderer(renderer: anytype) ?terminal_font
 }
 
 pub fn queuedSurfaceDrawCount(renderer: anytype) usize {
-    return renderer.metal_runtime.queued_surface_draws.items.len;
+    return renderer.backend_runtime.metal.queued_surface_draws.items.len;
 }
 
 pub fn currentFrame(renderer: anytype) ?*Frame {
-    if (renderer.metal_runtime.frame) |*frame| return frame;
+    if (renderer.backend_runtime.metal.frame) |*frame| return frame;
     return null;
 }
 
 pub fn clearCurrentFrame(renderer: anytype) void {
-    renderer.metal_runtime.frame = null;
+    renderer.backend_runtime.metal.frame = null;
 }
 
 pub fn storeCurrentFrame(renderer: anytype, frame: Frame) void {
-    renderer.metal_runtime.frame = frame;
+    renderer.backend_runtime.metal.frame = frame;
 }
 
 pub fn appendSurfaceDrawToMetalQueue(renderer: anytype, draw: SurfaceDraw) bool {
-    renderer.metal_runtime.queued_surface_draws.append(renderer.allocator, draw) catch {
+    renderer.backend_runtime.metal.queued_surface_draws.append(renderer.allocator, draw) catch {
         var queued_draw = draw;
         switch (queued_draw) {
             .atlas => {},
@@ -1506,7 +1506,7 @@ pub fn appendSampleTextRequest(
         renderer,
         font,
         request,
-        &renderer.metal_runtime.queued_surface_draws,
+        &renderer.backend_runtime.metal.queued_surface_draws,
         renderer.allocator,
     );
 }
@@ -1530,7 +1530,7 @@ pub fn appendTerminalCellRun(
         renderer,
         font,
         request,
-        &renderer.metal_runtime.queued_surface_draws,
+        &renderer.backend_runtime.metal.queued_surface_draws,
         renderer.allocator,
     );
 }
@@ -1647,7 +1647,7 @@ pub fn runSmokeFrame(renderer: anytype) bool {
 }
 
 pub fn replayQueuedSurfaceDraws(renderer: anytype, context: *BackendContext, frame: *Frame) void {
-    for (renderer.metal_runtime.queued_surface_draws.items) |queued_draw| {
+    for (renderer.backend_runtime.metal.queued_surface_draws.items) |queued_draw| {
         switch (queued_draw) {
             .atlas => |sample| _ = drawAtlasSample(context, frame, sample),
             .solid => |solid| _ = drawSolidColor(context, frame, solid),
@@ -1687,21 +1687,21 @@ pub fn deinitBackendContext(context: *BackendContext) void {
 pub fn deinitRuntime(renderer: anytype) void {
     clearDiagnosticFont(renderer);
     clearQueuedSurfaceDraws(renderer);
-    renderer.metal_runtime.queued_surface_draws.deinit(renderer.allocator);
-    if (renderer.metal_runtime.frame) |*frame| abandonFrame(frame);
-    if (renderer.metal_runtime.backend_context) |*context| deinitBackendContext(context);
+    renderer.backend_runtime.metal.queued_surface_draws.deinit(renderer.allocator);
+    if (renderer.backend_runtime.metal.frame) |*frame| abandonFrame(frame);
+    if (renderer.backend_runtime.metal.backend_context) |*context| deinitBackendContext(context);
 }
 
 pub fn clearDiagnosticFont(renderer: anytype) void {
-    if (renderer.metal_runtime.diagnostic_font) |*font| {
+    if (renderer.backend_runtime.metal.diagnostic_font) |*font| {
         font.deinit();
-        renderer.metal_runtime.diagnostic_font = null;
+        renderer.backend_runtime.metal.diagnostic_font = null;
     }
 }
 
 pub fn ensureDiagnosticFont(renderer: anytype) !*terminal_font.TerminalFont {
     if (!hasBackendContext(renderer)) return error.MetalBackendContextUnavailable;
-    if (renderer.metal_runtime.diagnostic_font) |*font| return font;
+    if (renderer.backend_runtime.metal.diagnostic_font) |*font| return font;
 
     const render_scale = if (renderer.scale.render_scale > 0.0) renderer.scale.render_scale else 1.0;
     const raster_size = renderer.base_font_size * render_scale;
@@ -1720,19 +1720,19 @@ pub fn ensureDiagnosticFont(renderer: anytype) !*terminal_font.TerminalFont {
         terminalFontAtlasUploadHooksForRenderer(renderer) orelse return error.MetalBackendContextUnavailable,
     );
     font.render_scale = render_scale;
-    renderer.metal_runtime.diagnostic_font = font;
-    return &renderer.metal_runtime.diagnostic_font.?;
+    renderer.backend_runtime.metal.diagnostic_font = font;
+    return &renderer.backend_runtime.metal.diagnostic_font.?;
 }
 
 pub fn clearQueuedSurfaceDraws(renderer: anytype) void {
-    for (renderer.metal_runtime.queued_surface_draws.items) |*queued_draw| {
+    for (renderer.backend_runtime.metal.queued_surface_draws.items) |*queued_draw| {
         switch (queued_draw.*) {
             .atlas => {},
             .solid => {},
             .raw_image => |*draw| deinitRawImageTexture(&draw.texture),
         }
     }
-    renderer.metal_runtime.queued_surface_draws.clearRetainingCapacity();
+    renderer.backend_runtime.metal.queued_surface_draws.clearRetainingCapacity();
 }
 
 pub fn acquireFrame(context: *BackendContext) ?Frame {

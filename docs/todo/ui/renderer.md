@@ -446,6 +446,18 @@ Do not do:
 
 Status: active
 
+Current evidence:
+
+- `Renderer` now carries one `backend_runtime` bundle instead of separate
+  `opengl_runtime` and `metal_runtime` peer fields.
+- This is good host-shape cleanup and reduces one obvious renderer-root
+  duplication seam.
+- This is not closure yet:
+  - storage is still renderer-root-owned
+  - backend-specific mutation/storage truth still lives in shared process
+    memory shaped by the renderer host
+  - adding a backend still pressures this shared storage story
+
 Owner docs:
 
 - `app_architecture/ui/RENDER_BACKEND_CONTRACT.md`

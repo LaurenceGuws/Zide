@@ -119,11 +119,11 @@ pub fn createBackendContext(window: *sdl.SDL_Window) !?sdl_api.c.SDL_GLContext {
 }
 
 pub fn initRuntime(renderer: anytype) !void {
-    if (renderer.opengl_runtime.context == null) {
-        renderer.opengl_runtime.context = try createBackendContext(renderer.window);
+    if (renderer.backend_runtime.opengl.context == null) {
+        renderer.backend_runtime.opengl.context = try createBackendContext(renderer.window);
     }
     try initGlResources(renderer);
-    renderer.opengl_runtime.resources_ready = true;
+    renderer.backend_runtime.opengl.resources_ready = true;
     try renderer.initFonts();
     renderer.fonts_ready = true;
 }
@@ -147,7 +147,7 @@ pub fn sceneTargetInvalidationForRefresh(
     metrics: anytype,
 ) SceneTargetInvalidation {
     return scene_target_state.invalidationForRefresh(
-        renderer.opengl_runtime.scene_target,
+        renderer.backend_runtime.opengl.scene_target,
         changes,
         metrics,
         renderer.supportsSceneTargets(),
@@ -158,41 +158,41 @@ pub fn refreshSceneTargetContract(renderer: anytype, display_metrics: platform_w
     const log = app_logger.logger("renderer.scene_target");
     const next = scene_target_state.contractFromDisplayMetrics(display_metrics);
     if (renderer.capabilities().scene_composition_mode != .offscreen_scene_target) {
-        renderer.opengl_runtime.scene_target.pending_invalidation = .{};
-        renderer.opengl_runtime.scene_target.contract = next;
-        renderer.opengl_runtime.scene_target.invalidation = .{};
-        renderer.opengl_runtime.scene_target.ready = false;
-        if (renderer.opengl_runtime.scene_target.target != null) {
-            destroyRenderTarget(&renderer.opengl_runtime.scene_target.target);
+        renderer.backend_runtime.opengl.scene_target.pending_invalidation = .{};
+        renderer.backend_runtime.opengl.scene_target.contract = next;
+        renderer.backend_runtime.opengl.scene_target.invalidation = .{};
+        renderer.backend_runtime.opengl.scene_target.ready = false;
+        if (renderer.backend_runtime.opengl.scene_target.target != null) {
+            destroyRenderTarget(&renderer.backend_runtime.opengl.scene_target.target);
         }
         return;
     }
-    const reasons = renderer.opengl_runtime.scene_target.pending_invalidation;
-    renderer.opengl_runtime.scene_target.pending_invalidation = .{};
-    renderer.opengl_runtime.scene_target.contract = next;
+    const reasons = renderer.backend_runtime.opengl.scene_target.pending_invalidation;
+    renderer.backend_runtime.opengl.scene_target.pending_invalidation = .{};
+    renderer.backend_runtime.opengl.scene_target.contract = next;
     if (!reasons.any()) return;
 
-    renderer.opengl_runtime.scene_target.invalidation = reasons;
-    renderer.opengl_runtime.scene_target.ready = false;
-    if (renderer.opengl_runtime.scene_target.target != null) {
-        destroyRenderTarget(&renderer.opengl_runtime.scene_target.target);
+    renderer.backend_runtime.opengl.scene_target.invalidation = reasons;
+    renderer.backend_runtime.opengl.scene_target.ready = false;
+    if (renderer.backend_runtime.opengl.scene_target.target != null) {
+        destroyRenderTarget(&renderer.backend_runtime.opengl.scene_target.target);
     }
     scene_target_state.logState(
         log,
         "invalidate",
-        renderer.opengl_runtime.scene_target.contract,
-        renderer.opengl_runtime.scene_target.invalidation,
-        renderer.opengl_runtime.scene_target.ready,
+        renderer.backend_runtime.opengl.scene_target.contract,
+        renderer.backend_runtime.opengl.scene_target.invalidation,
+        renderer.backend_runtime.opengl.scene_target.ready,
     );
 }
 
 pub fn mergePendingSceneTargetInvalidation(renderer: anytype, invalidation: SceneTargetInvalidation) void {
-    renderer.opengl_runtime.scene_target.pending_invalidation.merge(invalidation);
+    renderer.backend_runtime.opengl.scene_target.pending_invalidation.merge(invalidation);
 }
 
 pub fn beginSceneFrame(renderer: anytype) bool {
-    if (renderer.opengl_runtime.scene_target.target == null) return false;
-    if (!beginRenderTarget(renderer, renderer.opengl_runtime.scene_target.target)) {
+    if (renderer.backend_runtime.opengl.scene_target.target == null) return false;
+    if (!beginRenderTarget(renderer, renderer.backend_runtime.opengl.scene_target.target)) {
         noteSceneTargetRecreateFailure(renderer);
         return false;
     }
@@ -200,7 +200,7 @@ pub fn beginSceneFrame(renderer: anytype) bool {
 }
 
 pub fn drawSceneTargetToDefault(renderer: anytype) void {
-    const target = renderer.opengl_runtime.scene_target.target orelse return;
+    const target = renderer.backend_runtime.opengl.scene_target.target orelse return;
     bindDefaultTarget(renderer);
     gl.Disable(gl.c.GL_SCISSOR_TEST);
     const bg = renderer.theme.background.toRgba();
@@ -233,9 +233,9 @@ pub fn drawSceneTargetToDefault(renderer: anytype) void {
 
 pub fn prepareSceneTarget(renderer: anytype, filter: i32) void {
     const recreated = ensureSceneTarget(renderer, filter);
-    if (renderer.opengl_runtime.scene_target.target == null or !recreated) return;
+    if (renderer.backend_runtime.opengl.scene_target.target == null or !recreated) return;
 
-    if (!beginRenderTarget(renderer, renderer.opengl_runtime.scene_target.target)) {
+    if (!beginRenderTarget(renderer, renderer.backend_runtime.opengl.scene_target.target)) {
         noteSceneTargetRecreateFailure(renderer);
         return;
     }
@@ -252,7 +252,7 @@ pub fn prepareSceneTarget(renderer: anytype, filter: i32) void {
 }
 
 pub fn whiteTexture(renderer: anytype) types.Texture {
-    return renderer.opengl_runtime.white_texture;
+    return renderer.backend_runtime.opengl.white_texture;
 }
 
 pub fn drawSolidRect(renderer: anytype, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) bool {
@@ -454,50 +454,50 @@ pub fn clearThemeBackground(renderer: anytype) void {
 }
 
 pub fn bindBatchPipeline(renderer: anytype) void {
-    gl.UseProgram(renderer.opengl_runtime.shader_program);
-    gl.BindVertexArray(renderer.opengl_runtime.vao);
-    gl.BindBuffer(gl.c.GL_ARRAY_BUFFER, renderer.opengl_runtime.vbo);
+    gl.UseProgram(renderer.backend_runtime.opengl.shader_program);
+    gl.BindVertexArray(renderer.backend_runtime.opengl.vao);
+    gl.BindBuffer(gl.c.GL_ARRAY_BUFFER, renderer.backend_runtime.opengl.vbo);
 }
 
 pub fn setTextureKind(renderer: anytype, kind: types.TextureKind) void {
-    if (renderer.opengl_runtime.uniform_kind >= 0) {
-        gl.Uniform1i(renderer.opengl_runtime.uniform_kind, @intFromEnum(kind));
+    if (renderer.backend_runtime.opengl.uniform_kind >= 0) {
+        gl.Uniform1i(renderer.backend_runtime.opengl.uniform_kind, @intFromEnum(kind));
     }
 }
 
 pub fn ensureVboCapacity(renderer: anytype, vertex_count: usize, vertex_size: usize) void {
-    if (vertex_count <= renderer.opengl_runtime.vbo_capacity_vertices) return;
-    var next_cap = renderer.opengl_runtime.vbo_capacity_vertices * 2;
+    if (vertex_count <= renderer.backend_runtime.opengl.vbo_capacity_vertices) return;
+    var next_cap = renderer.backend_runtime.opengl.vbo_capacity_vertices * 2;
     if (next_cap < 6) next_cap = 6;
     if (next_cap < vertex_count) next_cap = vertex_count;
-    gl.BindBuffer(gl.c.GL_ARRAY_BUFFER, renderer.opengl_runtime.vbo);
+    gl.BindBuffer(gl.c.GL_ARRAY_BUFFER, renderer.backend_runtime.opengl.vbo);
     gl.BufferData(
         gl.c.GL_ARRAY_BUFFER,
         @as(gl.GLsizeiptr, @intCast(vertex_size * next_cap)),
         null,
         gl.c.GL_DYNAMIC_DRAW,
     );
-    renderer.opengl_runtime.vbo_capacity_vertices = next_cap;
+    renderer.backend_runtime.opengl.vbo_capacity_vertices = next_cap;
 }
 
 pub fn syncTextRenderConfig(renderer: anytype) void {
-    if (renderer.opengl_runtime.shader_program == 0) return;
-    gl.UseProgram(renderer.opengl_runtime.shader_program);
-    if (renderer.opengl_runtime.uniform_text_gamma >= 0) {
-        gl.Uniform1f(renderer.opengl_runtime.uniform_text_gamma, renderer.text_render.gamma);
+    if (renderer.backend_runtime.opengl.shader_program == 0) return;
+    gl.UseProgram(renderer.backend_runtime.opengl.shader_program);
+    if (renderer.backend_runtime.opengl.uniform_text_gamma >= 0) {
+        gl.Uniform1f(renderer.backend_runtime.opengl.uniform_text_gamma, renderer.text_render.gamma);
     }
-    if (renderer.opengl_runtime.uniform_text_contrast >= 0) {
-        gl.Uniform1f(renderer.opengl_runtime.uniform_text_contrast, renderer.text_render.contrast);
+    if (renderer.backend_runtime.opengl.uniform_text_contrast >= 0) {
+        gl.Uniform1f(renderer.backend_runtime.opengl.uniform_text_contrast, renderer.text_render.contrast);
     }
-    if (renderer.opengl_runtime.uniform_linear_correction >= 0) {
-        gl.Uniform1i(renderer.opengl_runtime.uniform_linear_correction, if (renderer.text_render.linear_correction) 1 else 0);
+    if (renderer.backend_runtime.opengl.uniform_linear_correction >= 0) {
+        gl.Uniform1i(renderer.backend_runtime.opengl.uniform_linear_correction, if (renderer.text_render.linear_correction) 1 else 0);
     }
 }
 
 fn deinitPresentables(renderer: anytype) void {
-    destroyRenderTarget(&renderer.opengl_runtime.presentable_targets.terminal);
-    destroyRenderTarget(&renderer.opengl_runtime.presentable_targets.terminal_scroll);
-    destroyRenderTarget(&renderer.opengl_runtime.presentable_targets.editor);
+    destroyRenderTarget(&renderer.backend_runtime.opengl.presentable_targets.terminal);
+    destroyRenderTarget(&renderer.backend_runtime.opengl.presentable_targets.terminal_scroll);
+    destroyRenderTarget(&renderer.backend_runtime.opengl.presentable_targets.editor);
 }
 
 pub fn ensurePresentable(renderer: anytype, surface: PresentableSurface, width: i32, height: i32) bool {
@@ -506,14 +506,14 @@ pub fn ensurePresentable(renderer: anytype, surface: PresentableSurface, width: 
         .terminal => {
             const recreated = ensureRenderTargetScaledForRenderer(
                 renderer,
-                &renderer.opengl_runtime.presentable_targets.terminal,
+                &renderer.backend_runtime.opengl.presentable_targets.terminal,
                 width,
                 height,
                 gl.c.GL_NEAREST,
             );
             _ = ensureRenderTargetScaledForRenderer(
                 renderer,
-                &renderer.opengl_runtime.presentable_targets.terminal_scroll,
+                &renderer.backend_runtime.opengl.presentable_targets.terminal_scroll,
                 width,
                 height,
                 gl.c.GL_NEAREST,
@@ -523,7 +523,7 @@ pub fn ensurePresentable(renderer: anytype, surface: PresentableSurface, width: 
         .editor => {
             return ensureRenderTargetScaledForRenderer(
                 renderer,
-                &renderer.opengl_runtime.presentable_targets.editor,
+                &renderer.backend_runtime.opengl.presentable_targets.editor,
                 width,
                 height,
                 gl.c.GL_NEAREST,
@@ -535,10 +535,10 @@ pub fn ensurePresentable(renderer: anytype, surface: PresentableSurface, width: 
 pub fn beginPresentable(renderer: anytype, surface: PresentableSurface) bool {
     if (!renderer.capabilities().retained_targets) return false;
     switch (surface) {
-        .terminal => return beginRenderTarget(renderer, renderer.opengl_runtime.presentable_targets.terminal),
+        .terminal => return beginRenderTarget(renderer, renderer.backend_runtime.opengl.presentable_targets.terminal),
         .editor => {
             @import("present_trace_runtime.zig").notePresentableUpdate(renderer, .editor);
-            return beginRenderTarget(renderer, renderer.opengl_runtime.presentable_targets.editor);
+            return beginRenderTarget(renderer, renderer.backend_runtime.opengl.presentable_targets.editor);
         },
     }
 }
@@ -546,8 +546,8 @@ pub fn beginPresentable(renderer: anytype, surface: PresentableSurface) bool {
 pub fn presentableAvailable(renderer: anytype, surface: PresentableSurface) bool {
     if (!renderer.capabilities().retained_targets) return false;
     return switch (surface) {
-        .terminal => renderer.opengl_runtime.presentable_targets.terminal != null,
-        .editor => renderer.opengl_runtime.presentable_targets.editor != null,
+        .terminal => renderer.backend_runtime.opengl.presentable_targets.terminal != null,
+        .editor => renderer.backend_runtime.opengl.presentable_targets.editor != null,
     };
 }
 
@@ -563,7 +563,7 @@ pub fn endPresentable(renderer: anytype, surface: PresentableSurface) void {
 pub fn drawPresentable(renderer: anytype, surface: PresentableSurface, draw: PresentableDraw) void {
     if (!renderer.capabilities().retained_targets) return;
     switch (surface) {
-        .terminal => if (renderer.opengl_runtime.presentable_targets.terminal) |target| {
+        .terminal => if (renderer.backend_runtime.opengl.presentable_targets.terminal) |target| {
             @import("present_trace_runtime.zig").notePresentableDraw(renderer, .terminal, draw.generation);
             const width = draw.width orelse return;
             const height = draw.height orelse return;
@@ -623,7 +623,7 @@ pub fn drawPresentable(renderer: anytype, surface: PresentableSurface, draw: Pre
                 .linear_premul,
             );
         },
-        .editor => if (renderer.opengl_runtime.presentable_targets.editor) |target| {
+        .editor => if (renderer.backend_runtime.opengl.presentable_targets.editor) |target| {
             @import("present_trace_runtime.zig").notePresentableDraw(renderer, .editor, null);
             const snapped_x = snapToDevicePixel(draw.x, renderer.scale.render_scale);
             const snapped_y = snapToDevicePixel(draw.y, renderer.scale.render_scale);
@@ -660,11 +660,11 @@ pub fn drawPresentable(renderer: anytype, surface: PresentableSurface, draw: Pre
 pub fn scrollPresentable(renderer: anytype, surface: PresentableSurface, dx: i32, dy: i32) bool {
     if (!renderer.capabilities().retained_targets) return false;
     if (surface != .terminal) return false;
-    if (renderer.opengl_runtime.presentable_targets.terminal) |target| {
+    if (renderer.backend_runtime.opengl.presentable_targets.terminal) |target| {
         return scrollRenderTarget(
             renderer,
-            renderer.opengl_runtime.presentable_targets.terminal,
-            &renderer.opengl_runtime.presentable_targets.terminal_scroll,
+            renderer.backend_runtime.opengl.presentable_targets.terminal,
+            &renderer.backend_runtime.opengl.presentable_targets.terminal_scroll,
             dx,
             dy,
             target.logical_width,
@@ -676,8 +676,8 @@ pub fn scrollPresentable(renderer: anytype, surface: PresentableSurface, dx: i32
 
 pub fn presentableInfo(renderer: anytype, surface: PresentableSurface) ?PresentableInfo {
     const target = switch (surface) {
-        .terminal => renderer.opengl_runtime.presentable_targets.terminal,
-        .editor => renderer.opengl_runtime.presentable_targets.editor,
+        .terminal => renderer.backend_runtime.opengl.presentable_targets.terminal,
+        .editor => renderer.backend_runtime.opengl.presentable_targets.editor,
     } orelse return null;
     return .{
         .width_px = target.texture.width,
@@ -709,31 +709,31 @@ fn restoreCompositionTarget(renderer: anytype) void {
 }
 
 fn noteSceneTargetRecreateFailure(renderer: anytype) void {
-    renderer.opengl_runtime.scene_target.invalidation.target_recreate_failure = true;
-    renderer.opengl_runtime.scene_target.ready = false;
+    renderer.backend_runtime.opengl.scene_target.invalidation.target_recreate_failure = true;
+    renderer.backend_runtime.opengl.scene_target.ready = false;
     scene_target_state.logState(
         app_logger.logger("renderer.scene_target"),
         "recreate_failed",
-        renderer.opengl_runtime.scene_target.contract,
-        renderer.opengl_runtime.scene_target.invalidation,
-        renderer.opengl_runtime.scene_target.ready,
+        renderer.backend_runtime.opengl.scene_target.contract,
+        renderer.backend_runtime.opengl.scene_target.invalidation,
+        renderer.backend_runtime.opengl.scene_target.ready,
     );
 }
 
 fn clearSceneTargetInvalidation(renderer: anytype) void {
-    renderer.opengl_runtime.scene_target.invalidation = .{};
-    renderer.opengl_runtime.scene_target.ready = true;
+    renderer.backend_runtime.opengl.scene_target.invalidation = .{};
+    renderer.backend_runtime.opengl.scene_target.ready = true;
     scene_target_state.logState(
         app_logger.logger("renderer.scene_target"),
         "ready",
-        renderer.opengl_runtime.scene_target.contract,
-        renderer.opengl_runtime.scene_target.invalidation,
-        renderer.opengl_runtime.scene_target.ready,
+        renderer.backend_runtime.opengl.scene_target.contract,
+        renderer.backend_runtime.opengl.scene_target.invalidation,
+        renderer.backend_runtime.opengl.scene_target.ready,
     );
 }
 
 fn ensureSceneTarget(renderer: anytype, filter: i32) bool {
-    const contract: SceneTargetContract = renderer.opengl_runtime.scene_target.contract;
+    const contract: SceneTargetContract = renderer.backend_runtime.opengl.scene_target.contract;
     if (contract.logical_width <= 0 or contract.logical_height <= 0 or
         contract.drawable_width <= 0 or contract.drawable_height <= 0)
     {
@@ -743,16 +743,16 @@ fn ensureSceneTarget(renderer: anytype, filter: i32) bool {
 
     const recreated = ensureRenderTargetScaledForRenderer(
         renderer,
-        &renderer.opengl_runtime.scene_target.target,
+        &renderer.backend_runtime.opengl.scene_target.target,
         contract.logical_width,
         contract.logical_height,
         filter,
     );
-    if (renderer.opengl_runtime.scene_target.target == null) {
+    if (renderer.backend_runtime.opengl.scene_target.target == null) {
         noteSceneTargetRecreateFailure(renderer);
         return false;
     }
-    if (recreated or !renderer.opengl_runtime.scene_target.ready) {
+    if (recreated or !renderer.backend_runtime.opengl.scene_target.ready) {
         clearSceneTargetInvalidation(renderer);
     }
     return recreated;
@@ -866,36 +866,36 @@ pub fn initGlResources(renderer: anytype) !void {
     const frag = try compileShader(gl.c.GL_FRAGMENT_SHADER, fragment_src);
     defer gl.DeleteShader(frag);
     const program = try linkProgram(vert, frag);
-    renderer.opengl_runtime.shader_program = program;
+    renderer.backend_runtime.opengl.shader_program = program;
     gl.UseProgram(program);
 
-    renderer.opengl_runtime.uniform_proj = gl.GetUniformLocation(program, "u_proj");
-    renderer.opengl_runtime.uniform_tex = gl.GetUniformLocation(program, "u_tex");
-    renderer.opengl_runtime.uniform_kind = gl.GetUniformLocation(program, "u_kind");
-    renderer.opengl_runtime.uniform_dst_linear = gl.GetUniformLocation(program, "u_dst_linear");
-    renderer.opengl_runtime.uniform_linear_correction = gl.GetUniformLocation(program, "u_linear_correction");
-    renderer.opengl_runtime.uniform_text_gamma = gl.GetUniformLocation(program, "u_text_gamma");
-    renderer.opengl_runtime.uniform_text_contrast = gl.GetUniformLocation(program, "u_text_contrast");
-    if (renderer.opengl_runtime.uniform_tex >= 0) gl.Uniform1i(renderer.opengl_runtime.uniform_tex, 0);
-    if (renderer.opengl_runtime.uniform_kind >= 0) gl.Uniform1i(renderer.opengl_runtime.uniform_kind, 0);
-    if (renderer.opengl_runtime.uniform_dst_linear >= 0) gl.Uniform1i(renderer.opengl_runtime.uniform_dst_linear, 0);
-    if (renderer.opengl_runtime.uniform_linear_correction >= 0) gl.Uniform1i(renderer.opengl_runtime.uniform_linear_correction, if (renderer.text_render.linear_correction) 1 else 0);
+    renderer.backend_runtime.opengl.uniform_proj = gl.GetUniformLocation(program, "u_proj");
+    renderer.backend_runtime.opengl.uniform_tex = gl.GetUniformLocation(program, "u_tex");
+    renderer.backend_runtime.opengl.uniform_kind = gl.GetUniformLocation(program, "u_kind");
+    renderer.backend_runtime.opengl.uniform_dst_linear = gl.GetUniformLocation(program, "u_dst_linear");
+    renderer.backend_runtime.opengl.uniform_linear_correction = gl.GetUniformLocation(program, "u_linear_correction");
+    renderer.backend_runtime.opengl.uniform_text_gamma = gl.GetUniformLocation(program, "u_text_gamma");
+    renderer.backend_runtime.opengl.uniform_text_contrast = gl.GetUniformLocation(program, "u_text_contrast");
+    if (renderer.backend_runtime.opengl.uniform_tex >= 0) gl.Uniform1i(renderer.backend_runtime.opengl.uniform_tex, 0);
+    if (renderer.backend_runtime.opengl.uniform_kind >= 0) gl.Uniform1i(renderer.backend_runtime.opengl.uniform_kind, 0);
+    if (renderer.backend_runtime.opengl.uniform_dst_linear >= 0) gl.Uniform1i(renderer.backend_runtime.opengl.uniform_dst_linear, 0);
+    if (renderer.backend_runtime.opengl.uniform_linear_correction >= 0) gl.Uniform1i(renderer.backend_runtime.opengl.uniform_linear_correction, if (renderer.text_render.linear_correction) 1 else 0);
 
     // Coverage tuning (applies only to font coverage atlas).
-    if (renderer.opengl_runtime.uniform_text_gamma >= 0) gl.Uniform1f(renderer.opengl_runtime.uniform_text_gamma, clampPositive(renderer.text_render.gamma, 1.0));
-    if (renderer.opengl_runtime.uniform_text_contrast >= 0) gl.Uniform1f(renderer.opengl_runtime.uniform_text_contrast, clampPositive(renderer.text_render.contrast, 1.0));
+    if (renderer.backend_runtime.opengl.uniform_text_gamma >= 0) gl.Uniform1f(renderer.backend_runtime.opengl.uniform_text_gamma, clampPositive(renderer.text_render.gamma, 1.0));
+    if (renderer.backend_runtime.opengl.uniform_text_contrast >= 0) gl.Uniform1f(renderer.backend_runtime.opengl.uniform_text_contrast, clampPositive(renderer.text_render.contrast, 1.0));
 
-    gl.GenVertexArrays(1, &renderer.opengl_runtime.vao);
-    gl.GenBuffers(1, &renderer.opengl_runtime.vbo);
-    gl.BindVertexArray(renderer.opengl_runtime.vao);
-    gl.BindBuffer(gl.c.GL_ARRAY_BUFFER, renderer.opengl_runtime.vbo);
+    gl.GenVertexArrays(1, &renderer.backend_runtime.opengl.vao);
+    gl.GenBuffers(1, &renderer.backend_runtime.opengl.vbo);
+    gl.BindVertexArray(renderer.backend_runtime.opengl.vao);
+    gl.BindBuffer(gl.c.GL_ARRAY_BUFFER, renderer.backend_runtime.opengl.vbo);
     gl.BufferData(
         gl.c.GL_ARRAY_BUFFER,
         gl_resources.computeBufferBytes(@sizeOf(@TypeOf(renderer.batch.vertices.items[0])), 6),
         null,
         gl.c.GL_DYNAMIC_DRAW,
     );
-    renderer.opengl_runtime.vbo_capacity_vertices = 6;
+    renderer.backend_runtime.opengl.vbo_capacity_vertices = 6;
 
     gl.EnableVertexAttribArray(0);
     gl.VertexAttribPointer(0, 2, gl.c.GL_FLOAT, gl.c.GL_FALSE, @sizeOf(@TypeOf(renderer.batch.vertices.items[0])), @ptrFromInt(0));
@@ -933,7 +933,7 @@ pub fn initGlResources(renderer: anytype) !void {
     gl.Disable(gl.c.GL_DEPTH_TEST);
     gl.Disable(gl.c.GL_CULL_FACE);
 
-    renderer.opengl_runtime.white_texture = createSolidTexture(1, 1, .{ 255, 255, 255, 255 });
+    renderer.backend_runtime.opengl.white_texture = createSolidTexture(1, 1, .{ 255, 255, 255, 255 });
     updateProjection(renderer, renderer.render_width, renderer.render_height);
 }
 
@@ -948,9 +948,9 @@ pub fn bindDefaultTarget(renderer: anytype) void {
     renderer.target_pixel_width = renderer.render_width;
     renderer.target_pixel_height = renderer.render_height;
     updateProjection(renderer, renderer.width, renderer.height);
-    if (renderer.opengl_runtime.uniform_dst_linear >= 0) {
-        gl.UseProgram(renderer.opengl_runtime.shader_program);
-        gl.Uniform1i(renderer.opengl_runtime.uniform_dst_linear, 0);
+    if (renderer.backend_runtime.opengl.uniform_dst_linear >= 0) {
+        gl.UseProgram(renderer.backend_runtime.opengl.shader_program);
+        gl.Uniform1i(renderer.backend_runtime.opengl.uniform_dst_linear, 0);
     }
 }
 
@@ -961,9 +961,9 @@ pub fn beginRenderTarget(renderer: anytype, target: ?RenderTarget) bool {
         renderer.target_pixel_width = t.texture.width;
         renderer.target_pixel_height = t.texture.height;
         updateProjection(renderer, t.logical_width, t.logical_height);
-        if (renderer.opengl_runtime.uniform_dst_linear >= 0) {
-            gl.UseProgram(renderer.opengl_runtime.shader_program);
-            gl.Uniform1i(renderer.opengl_runtime.uniform_dst_linear, 1);
+        if (renderer.backend_runtime.opengl.uniform_dst_linear >= 0) {
+            gl.UseProgram(renderer.backend_runtime.opengl.shader_program);
+            gl.Uniform1i(renderer.backend_runtime.opengl.uniform_dst_linear, 1);
         }
         return true;
     }
@@ -1087,20 +1087,20 @@ pub fn destroyRenderTarget(target: *?RenderTarget) void {
 
 pub fn deinitRuntime(renderer: anytype) void {
     deinitPresentables(renderer);
-    destroyRenderTarget(&renderer.opengl_runtime.scene_target.target);
-    if (renderer.opengl_runtime.resources_ready and renderer.opengl_runtime.white_texture.id != 0) {
-        gl.DeleteTextures(1, &renderer.opengl_runtime.white_texture.id);
+    destroyRenderTarget(&renderer.backend_runtime.opengl.scene_target.target);
+    if (renderer.backend_runtime.opengl.resources_ready and renderer.backend_runtime.opengl.white_texture.id != 0) {
+        gl.DeleteTextures(1, &renderer.backend_runtime.opengl.white_texture.id);
     }
-    if (renderer.opengl_runtime.resources_ready) {
+    if (renderer.backend_runtime.opengl.resources_ready) {
         gl_resources.destroy(.{
-            .shader_program = renderer.opengl_runtime.shader_program,
-            .vao = renderer.opengl_runtime.vao,
-            .vbo = renderer.opengl_runtime.vbo,
-            .uniform_proj = renderer.opengl_runtime.uniform_proj,
-            .uniform_tex = renderer.opengl_runtime.uniform_tex,
+            .shader_program = renderer.backend_runtime.opengl.shader_program,
+            .vao = renderer.backend_runtime.opengl.vao,
+            .vbo = renderer.backend_runtime.opengl.vbo,
+            .uniform_proj = renderer.backend_runtime.opengl.uniform_proj,
+            .uniform_tex = renderer.backend_runtime.opengl.uniform_tex,
         });
     }
-    if (renderer.opengl_runtime.context) |context| sdl_api.glDeleteContext(context);
+    if (renderer.backend_runtime.opengl.context) |context| sdl_api.glDeleteContext(context);
 }
 
 pub fn updateProjection(renderer: anytype, width: i32, height: i32) void {
@@ -1109,7 +1109,7 @@ pub fn updateProjection(renderer: anytype, width: i32, height: i32) void {
     const viewport_w = if (renderer.target_pixel_width > 0) renderer.target_pixel_width else width;
     const viewport_h = if (renderer.target_pixel_height > 0) renderer.target_pixel_height else height;
     gl.Viewport(0, 0, viewport_w, viewport_h);
-    if (renderer.opengl_runtime.uniform_proj >= 0) {
+    if (renderer.backend_runtime.opengl.uniform_proj >= 0) {
         const w = @as(f32, @floatFromInt(width));
         const h = @as(f32, @floatFromInt(height));
         const proj = [_]f32{
@@ -1118,8 +1118,8 @@ pub fn updateProjection(renderer: anytype, width: i32, height: i32) void {
             0,       0,        1, 0,
             -1,      1,        0, 1,
         };
-        gl.UseProgram(renderer.opengl_runtime.shader_program);
-        gl.UniformMatrix4fv(renderer.opengl_runtime.uniform_proj, 1, gl.c.GL_FALSE, &proj);
+        gl.UseProgram(renderer.backend_runtime.opengl.shader_program);
+        gl.UniformMatrix4fv(renderer.backend_runtime.opengl.uniform_proj, 1, gl.c.GL_FALSE, &proj);
     }
 }
 

@@ -12,7 +12,7 @@ const font_manager = @import("renderer/font_manager.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
 const gl_backend = @import("renderer/gl_backend.zig");
 const metal_backend = @import("renderer/metal_backend.zig");
-const opengl_runtime_state = @import("renderer/opengl_runtime_state.zig");
+const backend_runtime_bundle = @import("renderer/backend_runtime_bundle.zig");
 const metal_runtime_state = @import("renderer/metal_runtime_state.zig");
 const scene_target_state = @import("renderer/scene_target_state.zig");
 const surface_draw = @import("renderer/surface_draw.zig");
@@ -408,8 +408,7 @@ pub const Renderer = struct {
     render_host: native_host.PlatformRenderHost,
     render_surface_attachment: RenderSurfaceAttachment,
     window: *sdl_api.c.SDL_Window,
-    opengl_runtime: opengl_runtime_state.State,
-    metal_runtime: metal_runtime_state.State,
+    backend_runtime: backend_runtime_bundle.Bundle,
     fonts_ready: bool,
     width: i32,
     height: i32,
@@ -805,8 +804,7 @@ pub const Renderer = struct {
             .render_host = render_host,
             .render_surface_attachment = render_surface_attachment,
             .window = window,
-            .opengl_runtime = .{},
-            .metal_runtime = .{},
+            .backend_runtime = .{},
             .fonts_ready = false,
             .width = display_metrics.window_w,
             .height = display_metrics.window_h,
