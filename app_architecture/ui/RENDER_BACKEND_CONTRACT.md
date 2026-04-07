@@ -317,6 +317,11 @@ be read as primarily editor/sample banding pressure rather than shell chrome
 pressure. That is where the remaining generic surface-phase design work should
 look next.
 
+Do not collapse editor and sample/diagnostic work into one new seam by default.
+Editor already has a stronger local composition model than the sample view, so
+the next cut should respect that difference instead of inventing a fake common
+layer.
+
 #### Presentable contract
 
 One backend-neutral presentable surface contract that can express:

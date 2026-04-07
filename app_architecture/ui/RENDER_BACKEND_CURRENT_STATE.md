@@ -411,6 +411,16 @@ families are now:
 Those are the places where background-plus-dependent-text ordering still most
 directly pressures the generic surface phase.
 
+Those two families should not be treated as one problem shape, though:
+
+- editor already has a local row/segment composition path through its draw list
+  and cached presentable flow; its pressure is about where the remaining direct
+  `renderer_surface_host.drawRect(...)` calls still escape that local ordering
+  story
+- font/sample sections are much simpler explicit band draws followed by
+  dependent text; if a new seam is proven there, it should stay narrow and not
+  pretend to solve editor composition automatically
+
 That is the loudest remaining semantic contradiction in the backend contract.
 It is no longer hidden by renderer-root facade noise or mixed backend dispatch
 buckets, which means the next real cut must either:

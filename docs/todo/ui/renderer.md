@@ -706,6 +706,9 @@ Current evidence:
 - with shell chrome carved out behind the chrome-band seam, the loudest
   remaining generic `SurfaceDraw` ordering families are now editor banding and
   sample/diagnostic sections.
+- those are not one shape: editor already has a local row/segment composition
+  lane, while sample/diagnostic section banding is simpler explicit fill-plus-
+  text work. Do not force them under one seam without proving it.
 - This is real lifecycle cleanup and removes another renderer-root duplication
   seam.
 - This is not closure yet:
