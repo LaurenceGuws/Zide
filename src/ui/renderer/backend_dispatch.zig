@@ -1,8 +1,10 @@
 const types = @import("types.zig");
 const gl_backend = @import("gl_backend.zig");
 const gl_presentable_runtime = @import("gl_presentable_runtime.zig");
+const gl_surface_runtime = @import("gl_surface_runtime.zig");
 const metal_backend = @import("metal_backend.zig");
 const metal_presentable_runtime = @import("metal_presentable_runtime.zig");
+const metal_surface_runtime = @import("metal_surface_runtime.zig");
 const surface_draw = @import("surface_draw.zig");
 const platform_window = @import("../../platform/window_metrics.zig");
 const GpuImageRef = surface_draw.GpuImageRef;
@@ -304,7 +306,7 @@ fn OpenGlDispatch(
             };
         }
         fn enqueueSurfaceDraw(renderer: *RendererType, draw: surface_draw.SurfaceDraw) bool {
-            return gl_backend.submitSurfaceDrawImmediate(renderer, draw);
+            return gl_surface_runtime.enqueueSurfaceDraw(renderer, draw);
         }
         fn clearDiagnosticFont(_: *RendererType) void {}
         fn sceneTargetInvalidationForRefresh(renderer: *RendererType, changes: WindowChangeMask, metrics: platform_window.DisplayMetrics) SceneTargetInvalidation {
@@ -404,7 +406,7 @@ fn MetalDispatch(
             };
         }
         fn enqueueSurfaceDraw(renderer: *RendererType, draw: surface_draw.SurfaceDraw) bool {
-            return metal_backend.appendSurfaceDrawToMetalQueue(renderer, draw);
+            return metal_surface_runtime.enqueueSurfaceDraw(renderer, draw);
         }
         fn clearDiagnosticFont(renderer: *RendererType) void {
             metal_backend.clearDiagnosticFont(renderer);

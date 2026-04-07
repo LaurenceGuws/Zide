@@ -247,6 +247,13 @@ That has improved slightly again on the leftovers too: the old backend
 path for one caller, and plain `drawRect(...)` semantics were the more honest
 contract path.
 
+That has improved slightly again on the surface-submission side too: the
+`surface` contract now terminates in dedicated backend modules
+(`gl_surface_runtime.zig` / `metal_surface_runtime.zig`) instead of routing
+back into the larger backend files. This does not erase the remaining
+immediate-vs-queued semantic contradiction, but it makes that ownership seam
+more explicit and therefore easier to cut honestly.
+
 That has improved slightly again on backend ownership too: backend dispatch no
 longer terminates presentable operations back into the large generic backend
 files. Dedicated backend presentable modules now own that seam directly:

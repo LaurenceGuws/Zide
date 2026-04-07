@@ -468,6 +468,12 @@ Current evidence:
 - it was only one leftover convenience op for the font sample, and normal
   `drawRect(...)` semantics are the right path instead of preserving a
   special clear contract for one caller.
+- the `surface` contract now terminates in dedicated backend modules too:
+  - `src/ui/renderer/gl_surface_runtime.zig`
+  - `src/ui/renderer/metal_surface_runtime.zig`
+- that does not solve the remaining GL-immediate vs Metal-queued semantic
+  split by itself, but it makes the ownership seam honest instead of burying
+  surface submission inside the large backend files.
 - presentable trace/editor-surface bookkeeping now also lives in
   `renderer_presentable_host.zig` instead of being split across GL and Metal
   presentable lifecycle methods.
