@@ -702,6 +702,9 @@ Current evidence:
 - nearby modal/card surfaces such as terminal close confirm do not fit this
   seam and should stay outside it unless a separate popup/modal contract is
   introduced.
+- sample/diagnostic pressure is narrower too: `font_sample_view.zig` no longer
+  borrows the editor presentable seam while retained editor presentation is
+  still on probation. It now stays on a direct diagnostic path.
 - ownership checkpoint: the seam has graduated out of `widgets/` into
   `renderer_chrome_band_host.zig`. That is the right host-level home for it,
   even though it is still only a local composition seam and not a backend phase.

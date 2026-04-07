@@ -8,7 +8,6 @@ const terminal_font_mod = @import("terminal_font.zig");
 const renderer_mod = @import("renderer.zig");
 const metal_text_sample_runtime = @import("renderer/metal_text_sample_runtime.zig");
 const metal_backend = @import("renderer/metal_backend.zig");
-const renderer_presentable_host = @import("renderer/renderer_presentable_host.zig");
 const renderer_surface_host = @import("renderer/renderer_surface_host.zig");
 const renderer_text_host = @import("renderer/renderer_text_host.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
@@ -156,19 +155,8 @@ pub const FontSampleView = struct {
             _ = (metal_text_diagnostic_view.View{}).activate(shell);
         }
 
-        // Render into the offscreen target so we can do linear blending in a
-        // controlled way (target is linear; presentation converts to sRGB).
-        if (renderer_presentable_host.ensurePresentable(r, .editor, @intFromFloat(w), @intFromFloat(h))) {
-            if (renderer_presentable_host.beginPresentable(r, .editor)) {
-                renderer_surface_host.drawRect(r, 0, 0, @intFromFloat(w), @intFromFloat(h), theme.background);
-                drawContents(self, r, theme, w, h);
-                renderer_presentable_host.endPresentable(r, .editor);
-                renderer_presentable_host.drawPresentable(r, .editor, .{ .x = 0, .y = 0 });
-                return;
-            }
-        }
-
-        // Fallback: draw directly to the window.
+        // Keep sample/diagnostic rendering off the editor presentable seam
+        // until retained editor presentation is either fixed or deleted.
         renderer_surface_host.drawRect(r, 0, 0, @intFromFloat(w), @intFromFloat(h), theme.background);
         drawContents(self, r, theme, w, h);
     }

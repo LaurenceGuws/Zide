@@ -64,6 +64,10 @@ In current-state terms, the remaining blockers are:
 - the remaining loud generic families are editor banding and sample/diagnostic
   section banding
 
+That sample/diagnostic pressure is narrower again because `font_sample_view.zig`
+no longer rides the editor presentable lane. Diagnostic/sample rendering stays
+direct until the retained editor presentable seam is either fixed or deleted.
+
 That is a much better answer than the repo had before, but it is still a
 blocking answer.
 
