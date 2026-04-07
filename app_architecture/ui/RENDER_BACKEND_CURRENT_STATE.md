@@ -549,6 +549,11 @@ Band group boundaries are now also observable in present trace
 (`band_group_begin_count` / `band_group_end_count`) via
 `renderer_band_phase_host.begin/endBandCommandGroup`.
 
+Milestone B closure planning now has a frozen target contract too: one shared
+text phase group shape (typed ops + explicit begin/end groups + trace parity)
+with three required adopters (chrome band, sample section, editor row-band).
+That removes ambiguity about "what counts as done" for this lane.
+
 That seam is now clean enough that further expansion would be fake progress
 unless it graduates into a real recorded band-composition phase. Until that
 happens, it should be treated as a renderer-host composition helper for the

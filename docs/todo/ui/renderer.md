@@ -415,6 +415,45 @@ Exit bar:
 - adding a future backend no longer implies reopening `renderer.zig` as the
   implementation center
 
+Milestone B "done" checkpoints (execute in order, do not rerank mid-lane):
+
+- [x] **B-DONE-1: freeze seam target contract**
+  - add one explicit "text phase group" target contract in authority docs:
+    producer shape, replay shape, ordering guarantees, and non-goals
+  - name accepted local producers for closure (`chrome band`, `sample section`,
+    `editor row-band`) and prohibit new ad-hoc producers
+- [ ] **B-DONE-2: unify local phase hosts under one replay contract**
+  - make chrome/sample replay hosts implement the same typed replay/group
+    surface instead of parallel host-specific function sets
+  - keep behavior identical (no paint-order changes) while contract shape
+    converges
+- [ ] **B-DONE-3: adopt unified contract in editor row-band lane**
+  - move editor row-band dependent text emission onto the same group/replay seam
+    with explicit row-band boundaries
+  - preserve existing editor visual ordering and cursor behavior
+- [ ] **B-DONE-4: delete duplicate local seams**
+  - remove superseded seam-specific helpers once all three producers are on the
+    shared contract (`renderer_band_phase_host`, sample-only replay wrappers,
+    duplicate record/replay adapters)
+  - no compatibility shims left behind
+- [ ] **B-DONE-5: close observability parity**
+  - standardize trace metrics for phase groups (begin/end counts and mismatch
+    detection) under one naming family
+  - keep runtime warning guardrails for begin/end divergence
+- [ ] **B-DONE-6: lock regression coverage**
+  - unit tests for empty/non-empty group replay, op order, bg payload propagation
+    on the unified host seam
+  - focused widget-level smoke checks for chrome, sample, and editor row-band
+    paths
+- [ ] **B-DONE-7: remove stale API surface**
+  - delete public or quasi-public verbs that still expose old split semantics
+    after migration (renderer/shell helpers that bypass unified phase seam)
+  - verify no product caller remains on retired paths
+- [ ] **B-DONE-8: close docs and adoption gate**
+  - update contract/current-state/todo docs to mark Milestone B closure deltas
+    with concrete evidence
+  - restate Adoption Gate blockers after this closure so next lane is explicit
+
 ### `RB-B1` Presentable ownership
 
 Status: active

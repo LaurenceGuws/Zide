@@ -556,6 +556,25 @@ either:
 - or stop here and treat shell chrome as a local renderer-host seam while the
   larger `SurfaceDraw` phase contradiction remains primary
 
+**Text phase group target contract (B-DONE-1, 2026-04-07):** the closure target
+is now explicit and frozen for this lane.
+
+- `producer`: local lane records typed `TextPhaseOp` values plus one explicit
+  `beginGroup`/`endGroup` boundary per composition unit
+- `replay`: one renderer-host replay surface consumes ordered ops and applies
+  bg-aware text/icon emission without caller-visible backend policy branches
+- `ordering guarantee`: preserve operation order inside a group and preserve
+  group boundary pairing (`begin == end`) for each frame
+- `observability`: group begin/end counts are exposed in present trace, and
+  mismatch warnings remain enabled at frame-present logging
+- `required adopters for closure`: chrome band, sample section, editor row-band
+  dependent text lane
+- `non-goals`: this contract does not own terminal grid/cursor rendering, does
+  not replace presentable lifecycle contracts, and does not become a generic
+  repo-wide draw queue
+- `lane guardrail`: no new ad-hoc text phase producers are allowed outside the
+  three required adopters while this closure lane is active
+
 Do not create a second chrome helper, and do not keep adopting unrelated popup
 or modal surfaces just to make the seam look more important than it is.
 
