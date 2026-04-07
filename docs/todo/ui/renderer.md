@@ -776,6 +776,8 @@ rendering adoption?":
 - backend runtime storage still widens under shared renderer ownership
 - the remaining loud ordering families are now editor banding and
   sample/diagnostic sections
+- the retained editor presentable path is currently disabled for correctness and
+  remains an explicit broken seam, not an adoption-ready feature
 
 This means:
 

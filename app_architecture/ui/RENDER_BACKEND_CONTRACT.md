@@ -76,6 +76,10 @@ blocked by contract debt rather than implementation effort.
 - Android surface loss/replacement and Vulkan swapchain replacement must fit
   without reopening shared renderer ownership
 
+Current warning: the retained **editor** presentable path is explicitly not
+trusted as a live product path today. A future backend cannot inherit that seam
+as-is and still count as routine backend work.
+
 3. Backend-native runtime storage is no longer a widening pattern on `Renderer`
 
 - adding a backend must not mean adding another renderer-hosted peer runtime

@@ -225,6 +225,13 @@ field. It now lives under `opengl_runtime.presentable_targets`, which is a
 better fit for the truth that the richer retained-presentable lifecycle is
 currently an OpenGL-owned implementation shape.
 
+However, the retained **editor** presentable path is currently not considered a
+working product path. The direct editor path was restored after IDE geometry
+testing exposed a mismatch between retained editor presentation and the shared
+layout/presentation story. So `editor_presentable_cache_compatible` remains a
+declared capability surface, but the live editor widget currently forces the
+direct path until that retained editor seam is made honest again.
+
 That has improved slightly again inside the OpenGL presentable path too:
 retained-target lookup now routes through small backend-owned slot helpers
 instead of open-coding terminal/editor target storage access at each
