@@ -99,6 +99,7 @@ pub fn draw(
                     .always => true,
                     .cursor => seg_info.is_current and seg_info.seg_idx == seg_info.cursor_seg,
                 };
+                var gutter_num_buf: [16]u8 = undefined;
 
                 const row_band_ok = segment_paint_mod.addEditorRowBandOps(
                     draw_list_local,
@@ -129,6 +130,7 @@ pub fn draw(
                     seg_info.seg_idx == seg_info.cursor_seg,
                     seg_info.cursor_col_vis,
                     disable_programming_ligatures,
+                    &gutter_num_buf,
                     cursor_draw_x_local,
                     cursor_draw_y_local,
                 );
@@ -340,6 +342,7 @@ pub fn drawCached(
                     .always => true,
                     .cursor => seg_info.is_current and seg_info.seg_idx == seg_info.cursor_seg,
                 };
+                var gutter_num_buf: [16]u8 = undefined;
                 const text_start_x = origin_x_local + widget_local.gutter_width + 8 * r_local.uiScaleFactor();
 
                 const seg_hash = cache_helpers.hashSegment(
@@ -403,6 +406,7 @@ pub fn drawCached(
                     seg_info.seg_idx == seg_info.cursor_seg,
                     seg_info.cursor_col_vis,
                     disable_programming_ligatures,
+                    &gutter_num_buf,
                     &cached_cursor_draw_x,
                     &cached_cursor_draw_y,
                 );

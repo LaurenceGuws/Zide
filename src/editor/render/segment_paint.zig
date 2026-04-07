@@ -370,14 +370,14 @@ pub fn addEditorRowBandOps(
     is_cursor_segment: bool,
     cursor_col_vis: usize,
     disable_programming_ligatures: bool,
+    gutter_num_buf: *[16]u8,
     cursor_draw_x: *?f32,
     cursor_draw_y: *?f32,
 ) bool {
     var ok = true;
 
     if (seg_idx == seg_start_idx) {
-        var num_buf: [16]u8 = undefined;
-        ok = ok and addEditorLineBaseOps(list, r, line_idx, seg_y, origin_x, gutter_width, content_width, is_current, &num_buf);
+        ok = ok and addEditorLineBaseOps(list, r, line_idx, seg_y, origin_x, gutter_width, content_width, is_current, gutter_num_buf);
     } else {
         ok = ok and addEditorSegmentBaseOps(list, r, origin_x, seg_y, gutter_width, content_width, is_current);
     }
