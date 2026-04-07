@@ -527,11 +527,10 @@ current shell chrome family, not as a solved backend-neutral contract.
 
 That also means the remaining generic `SurfaceDraw` timing pressure is no
 longer led by shell chrome. With terminal presentable fills moved out and shell
-chrome routed through the chrome-band seam, the loudest remaining ordering
-families are now:
-
-- editor banding and editor-adjacent overlay fills
-- sample/diagnostic section banding
+chrome routed through the chrome-band seam, the primary remaining ordering
+family is now editor banding and editor-adjacent overlay fills. The
+sample/diagnostic section lane is still active, but it is the narrower
+secondary family now.
 
 Those are the places where background-plus-dependent-text ordering still most
 directly pressures the generic surface phase.

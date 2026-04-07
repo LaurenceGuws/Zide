@@ -764,8 +764,9 @@ Current evidence:
   band-composition phase. More adopters without that phase cut would be fake
   progress.
 - with shell chrome carved out behind the chrome-band seam, the loudest
-  remaining generic `SurfaceDraw` ordering families are now editor banding and
-  sample/diagnostic sections.
+  remaining generic `SurfaceDraw` ordering family is now editor banding and
+  editor-adjacent overlay work. Sample/diagnostic sections are still active,
+  but they are the narrower secondary lane now.
 - those are not one shape: editor already has a local row/segment composition
   lane, while sample/diagnostic section banding is simpler explicit fill-plus-
   text work. Do not force them under one seam without proving it.

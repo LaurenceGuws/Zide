@@ -306,8 +306,9 @@ contract and is too narrow to solve the broader `SurfaceDraw` timing split by
 itself.
 
 **Active ordering families (2026-04-07):** the remaining
-background-before-dependent-work problem is no longer diffuse. It clusters into
-repeatable families:
+background-before-dependent-work problem is no longer diffuse. Editor is now
+the primary remaining family. The pressure still clusters into repeatable
+families:
 
 - shell/UI chrome bands where a bar or badge fill is followed immediately by
   adjacent text, icons, or outlines (`status_bar`, `tab_bar`, `shared_top_bar`,
@@ -315,7 +316,7 @@ repeatable families:
 - editor banding where row/gutter/current-line fills are followed by text and
   overlay decoration in the same visual band
 - font/sample or diagnostic sections where section fills are followed by text
-  preview content
+  preview content; this is now the narrower secondary lane
 
 That means the next real semantic cut should probably target one family at a
 time or define a stronger shared phase that explicitly contains both the fill
