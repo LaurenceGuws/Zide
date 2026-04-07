@@ -666,6 +666,11 @@ Current evidence:
   blit family is retained presentable draw, which already belongs under the
   presentable contract and is too narrow to close `SurfaceDraw` timing on its
   own.
+- the remaining solid-ordering dependency is now mapped into concrete families,
+  not hand-waved as one giant queue problem:
+  shell chrome bands, editor banding, sample/diagnostic sections, and terminal
+  pane/presentable fills. The next semantic cut should target one family or a
+  stronger shared phase for that family, not "all remaining solids."
 - This is real lifecycle cleanup and removes another renderer-root duplication
   seam.
 - This is not closure yet:

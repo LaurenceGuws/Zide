@@ -314,6 +314,25 @@ retained presentable/snapshot draw, which already belongs to the presentable
 contract and is too narrow to close the shared `SurfaceDraw` timing gap on its
 own.
 
+The remaining solid-ordering problem is also more structured than it first
+looked. The active `SurfaceDraw.solid` callers now mostly fall into a few
+families:
+
+- shell/UI chrome bands (`status_bar`, `tab_bar`, `shared_top_bar`,
+  `side_nav`, caption/notice/confirm surfaces) where fills are immediately
+  followed by text, icons, or outlines
+- editor row/gutter/current-line banding where fills are followed by text and
+  overlay decoration in the same visual band
+- sample/diagnostic sections where the fill exists only as the background for
+  nearby text preview content
+- terminal pane / viewport fills around presentable draw, which are really a
+  presentable-family concern rather than generic image/text composition
+
+So the next semantic cut should probably attack one of those families
+explicitly, or define a stronger phase that can own both the fill and its
+dependent follow-up work. Treating all remaining solids as one flat queue would
+hide the real constraint again.
+
 That is the loudest remaining semantic contradiction in the backend contract.
 It is no longer hidden by renderer-root facade noise or mixed backend dispatch
 buckets, which means the next real cut must either:

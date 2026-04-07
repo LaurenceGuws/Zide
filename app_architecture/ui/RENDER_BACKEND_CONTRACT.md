@@ -207,6 +207,25 @@ presentable/snapshot draw, but that already belongs under the presentable
 contract and is too narrow to solve the broader `SurfaceDraw` timing split by
 itself.
 
+**Active ordering families (2026-04-07):** the remaining
+background-before-dependent-work problem is no longer diffuse. It clusters into
+repeatable families:
+
+- shell/UI chrome bands where a bar or badge fill is followed immediately by
+  adjacent text, icons, or outlines (`status_bar`, `tab_bar`, `shared_top_bar`,
+  `side_nav`, notice/confirm surfaces, caption buttons)
+- editor banding where row/gutter/current-line fills are followed by text and
+  overlay decoration in the same visual band
+- font/sample or diagnostic sections where section fills are followed by text
+  preview content
+- terminal pane/viewport fills that bracket presentable draw, not generic
+  image/text composition
+
+That means the next real semantic cut should probably target one family at a
+time or define a stronger shared phase that explicitly contains both the fill
+and its dependent text/outline work. It should not treat all remaining solids
+as one undifferentiated problem.
+
 #### Presentable contract
 
 One backend-neutral presentable surface contract that can express:
