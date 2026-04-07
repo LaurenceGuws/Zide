@@ -7,6 +7,11 @@ const types = @import("types.zig");
 const PresentableTargetState = gl_presentable_target.PresentableTargetState;
 const SceneTargetState = scene_target_state.SceneTargetState;
 
+pub const TargetRuntime = struct {
+    presentable_targets: PresentableTargetState = .{},
+    scene_target: SceneTargetState = .{},
+};
+
 pub const State = struct {
     context: ?sdl_api.c.SDL_GLContext = null,
     resources_ready: bool = false,
@@ -22,6 +27,5 @@ pub const State = struct {
     uniform_dst_linear: gl.GLint = -1,
     uniform_linear_correction: gl.GLint = -1,
     white_texture: types.Texture = .{ .id = 0, .width = 0, .height = 0 },
-    presentable_targets: PresentableTargetState = .{},
-    scene_target: SceneTargetState = .{},
+    targets: TargetRuntime = .{},
 };

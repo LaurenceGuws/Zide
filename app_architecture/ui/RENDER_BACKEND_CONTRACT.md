@@ -360,12 +360,14 @@ The current code makes that split more specific:
 - the remaining backend-runtime storage blocker is now more specifically an
   OpenGL runtime-shape problem than a Metal one:
   - Metal live frame/surface/presentable queue state is under backend context
-  - `opengl_runtime_state.zig` still mixes GL context ownership, shader/VBO
-    resource slots, retained presentable target slots, and offscreen
-    scene-target lifecycle in one flat runtime blob
-- do not claim progress there by grouping those fields under a prettier name.
-  The next honest cut must separate one real ownership stratum, likely the
-  retained-target / scene-target lifecycle lane.
+  - OpenGL has narrowed one real stratum: retained presentable targets and
+    offscreen scene-target lifecycle now sit under
+    `opengl_runtime_state.TargetRuntime`
+  - but the OpenGL runtime still mixes two broad backend-native strata:
+    - GL context + shader/VBO/text resource ownership
+    - retained target / scene-target lifecycle
+- that is real progress, but not closure. The next honest cut still has to
+  peel another ownership stratum instead of stopping at a prettier grouping.
 - sample/diagnostic pressure is the simpler section-fill plus bg-aware preview
   text path in `font_sample_view.zig`, including custom-font preview draws
   that still go straight through texture draw calls

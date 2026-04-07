@@ -576,12 +576,16 @@ That split is now sharper from code inspection too:
   OpenGL-shaped than Metal-shaped:
   - Metal live frame/surface/presentable queue state now lives under backend
     context
-  - `opengl_runtime_state.zig` still keeps one flat runtime blob mixing SDL GL
-    context ownership, shader/VBO resource slots, retained presentable target
-    slots, and offscreen scene-target lifecycle state
-- that should not be "fixed" by a fake parity rename. The next honest OpenGL
-  runtime cut has to peel off one real ownership stratum, likely retained
-  target / scene-target lifecycle, instead of regrouping the whole blob.
+  - OpenGL has improved one step: retained presentable targets and offscreen
+    scene-target lifecycle now live under one explicit
+    `opengl_runtime_state.TargetRuntime` stratum
+  - but `opengl_runtime_state.zig` still keeps two broad OpenGL-native strata
+    in one runtime object:
+    - SDL GL context + shader/VBO/text resource slots
+    - retained target / scene-target lifecycle
+- that is narrower than before, but not closure. The next honest OpenGL runtime
+  cut still has to peel another real ownership stratum instead of regrouping
+  the whole blob.
 - sample pressure is specifically section-fill plus bg-aware text preview work
   in `font_sample_view.zig` / `font_sample_section_host.zig`, including the
   custom-font sample path that still terminates through direct texture draws
