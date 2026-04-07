@@ -230,6 +230,12 @@ frame prelude/epilogue state reset and submission finalization now live in
 cleanup, but it is still only host-shape progress; backend frame assembly and
 submission ownership remain materially different between OpenGL and Metal.
 
+That has improved slightly again at the backend dispatch boundary too: the
+GL/Metal backend ops table and switchboard now live in
+`backend_dispatch.zig` instead of `renderer.zig` carrying the full backend
+routing block inline. This makes the renderer root less obviously the dispatch
+center, even though backend lifecycle ownership is still not closed.
+
 That has improved slightly again on the OpenGL lifecycle side too: the
 OpenGL scene-target and presentable runtimes no longer call GL-only
 render-target helpers through `Renderer`. They now talk to `gl_backend`

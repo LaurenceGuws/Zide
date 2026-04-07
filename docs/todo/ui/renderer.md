@@ -495,6 +495,8 @@ Current evidence:
 - shared frame prelude/epilogue host bookkeeping now lives in
   `renderer_frame_host.zig` instead of being split between `Renderer.beginFrame`
   and both backend frame runtimes.
+- backend dispatch table assembly now lives in `backend_dispatch.zig` instead
+  of `renderer.zig` carrying the full GL/Metal switchboard inline.
 - This is real lifecycle cleanup and removes another renderer-root duplication
   seam.
 - This is not closure yet:

@@ -10,8 +10,7 @@ const bootstrap_runtime = @import("renderer/bootstrap_runtime.zig");
 const renderer_global_runtime = @import("renderer/renderer_global_runtime.zig");
 const font_manager = @import("renderer/font_manager.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
-const gl_backend = @import("renderer/gl_backend.zig");
-const metal_backend = @import("renderer/metal_backend.zig");
+const backend_dispatch = @import("renderer/backend_dispatch.zig");
 const backend_runtime_bundle = @import("renderer/backend_runtime_bundle.zig");
 const metal_runtime_state = @import("renderer/metal_runtime_state.zig");
 const renderer_frame_host = @import("renderer/renderer_frame_host.zig");
@@ -27,7 +26,6 @@ const input_state = @import("renderer/input_state.zig");
 const scale_utils = @import("renderer/scale_utils.zig");
 const text_draw = @import("renderer/text_draw.zig");
 const gl_resources = @import("renderer/gl_resources.zig");
-const opengl_frame_runtime = @import("renderer/opengl_frame_runtime.zig");
 const shape_utils = @import("renderer/shape_utils.zig");
 const shape_draw = @import("renderer/shape_draw.zig");
 const terminal_glyphs = @import("renderer/terminal_glyphs.zig");
@@ -39,7 +37,6 @@ const presentable_contract = @import("renderer/presentable_contract.zig");
 const present_trace_runtime = @import("renderer/present_trace_runtime.zig");
 const metal_text_sample_runtime = @import("renderer/metal_text_sample_runtime.zig");
 const text_runtime = @import("renderer/text_runtime.zig");
-const metal_frame_runtime = @import("renderer/metal_frame_runtime.zig");
 const window_chrome_runtime = @import("renderer/window_chrome_runtime.zig");
 const macos_host = @import("../platform/macos_host.zig");
 const lifecycle_runtime = @import("renderer/lifecycle_runtime.zig");
@@ -359,36 +356,17 @@ pub const Renderer = struct {
         bg_rgba: types.Rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 },
     };
 
-    const BackendOps = struct {
-        initRuntime: *const fn (*Self) anyerror!void,
-        deinitRuntime: *const fn (*Self) void,
-        configureRuntimePolicy: *const fn (*Self) void,
-        beginFrame: *const fn (*Self) void,
-        submitFrame: *const fn (*Self) FrameSubmission,
-        capabilities: *const fn (*const Self) RendererCapabilities,
-        dumpWindowScreenshotPpm: *const fn (*Self, []const u8) anyerror!void,
-        dumpWindowScreenshotPpmSized: *const fn (*Self, []const u8, i32, i32) anyerror!void,
-        ensurePresentable: *const fn (*Self, PresentableSurface, i32, i32) bool,
-        beginPresentable: *const fn (*Self, PresentableSurface) bool,
-        presentableAvailable: *const fn (*Self, PresentableSurface) bool,
-        endPresentable: *const fn (*Self, PresentableSurface) void,
-        drawPresentable: *const fn (*Self, PresentableSurface, PresentableDraw) void,
-        scrollPresentable: *const fn (*Self, PresentableSurface, i32, i32) bool,
-        presentableInfo: *const fn (*Self, PresentableSurface) ?PresentableInfo,
-        clearThemeBackground: *const fn (*Self) void,
-        applyClipRect: *const fn (*Self, ?types.Rect) void,
-        addTerminalRect: *const fn (*Self, i32, i32, i32, i32, types.Rgba) void,
-        addTerminalGlyphRect: *const fn (*Self, i32, i32, i32, i32, types.Rgba) void,
-        addTerminalGlyphQuad: *const fn (*Self, types.Texture, types.Rect, types.Rect, types.Rgba, types.TextureKind) void,
-        createPersistentTextureFromRgba: *const fn (*Self, i32, i32, []const u8) ?types.Texture,
-        createPersistentTextureFromRgb: *const fn (*Self, i32, i32, []const u8) ?types.Texture,
-        destroyPersistentTexture: *const fn (*Self, *types.Texture) void,
-        drawRawImage: *const fn (*Self, RawImageFormat, i32, i32, []const u8, types.Rect, types.Rgba) bool,
-        enqueueSurfaceDraw: *const fn (*Self, surface_draw.SurfaceDraw) bool,
-        clearDiagnosticFont: *const fn (*Self) void,
-        sceneTargetInvalidationForRefresh: *const fn (*Self, WindowChangeMask, platform_window.DisplayMetrics) SceneTargetInvalidation,
-        mergePendingSceneTargetInvalidation: *const fn (*Self, SceneTargetInvalidation) void,
-    };
+    const BackendOps = backend_dispatch.BackendOps(
+        Self,
+        FrameSubmission,
+        RendererCapabilities,
+        PresentableSurface,
+        PresentableDraw,
+        PresentableInfo,
+        RawImageFormat,
+        SceneTargetInvalidation,
+        WindowChangeMask,
+    );
 
     pub const WindowChromeMode = window_chrome_runtime.WindowChromeMode;
     pub const WindowChromeContract = window_chrome_runtime.WindowChromeContract;
@@ -505,245 +483,20 @@ pub const Renderer = struct {
         return self.clip_stack[self.clip_depth - 1];
     }
 
-    const OpenGlDispatch = struct {
-        fn initRuntime(renderer: *Self) !void {
-            try gl_backend.initRuntime(renderer);
-        }
-        fn deinitRuntime(renderer: *Self) void {
-            gl_backend.deinitRuntime(renderer);
-        }
-        fn configureRuntimePolicy(renderer: *Self) void {
-            gl_backend.configureRuntimePolicy(renderer);
-        }
-        fn beginFrame(renderer: *Self) void {
-            opengl_frame_runtime.beginFrame(renderer);
-        }
-        fn submitFrame(renderer: *Self) FrameSubmission {
-            return opengl_frame_runtime.submitFrame(renderer);
-        }
-        fn capabilities(renderer: *const Self) RendererCapabilities {
-            return gl_backend.capabilities(renderer);
-        }
-        fn dumpWindowScreenshotPpm(renderer: *Self, path: []const u8) !void {
-            return opengl_frame_runtime.dumpWindowScreenshotPpm(renderer, path);
-        }
-        fn dumpWindowScreenshotPpmSized(renderer: *Self, path: []const u8, out_width: i32, out_height: i32) !void {
-            return opengl_frame_runtime.dumpWindowScreenshotPpmSized(renderer, path, out_width, out_height);
-        }
-        fn ensurePresentable(renderer: *Self, surface: PresentableSurface, width: i32, height: i32) bool {
-            return gl_backend.ensurePresentable(renderer, surface, width, height);
-        }
-        fn beginPresentable(renderer: *Self, surface: PresentableSurface) bool {
-            return gl_backend.beginPresentable(renderer, surface);
-        }
-        fn presentableAvailable(renderer: *Self, surface: PresentableSurface) bool {
-            return gl_backend.presentableAvailable(renderer, surface);
-        }
-        fn endPresentable(renderer: *Self, surface: PresentableSurface) void {
-            gl_backend.endPresentable(renderer, surface);
-        }
-        fn drawPresentable(renderer: *Self, surface: PresentableSurface, draw: PresentableDraw) void {
-            gl_backend.drawPresentable(renderer, surface, draw);
-        }
-        fn scrollPresentable(renderer: *Self, surface: PresentableSurface, dx: i32, dy: i32) bool {
-            return gl_backend.scrollPresentable(renderer, surface, dx, dy);
-        }
-        fn presentableInfo(renderer: *Self, surface: PresentableSurface) ?PresentableInfo {
-            return gl_backend.presentableInfo(renderer, surface);
-        }
-        fn clearThemeBackground(renderer: *Self) void {
-            gl_backend.clearThemeBackground(renderer);
-        }
-        fn applyClipRect(renderer: *Self, clip: ?types.Rect) void {
-            gl_backend.applyClipRect(renderer, clip);
-        }
-        fn addTerminalRect(renderer: *Self, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void {
-            gl_backend.addTerminalRect(renderer, x, y, w, h, color);
-        }
-        fn addTerminalGlyphRect(renderer: *Self, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void {
-            gl_backend.addTerminalGlyphRect(renderer, x, y, w, h, color);
-        }
-        fn addTerminalGlyphQuad(renderer: *Self, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
-            gl_backend.addTerminalGlyphQuad(renderer, texture, src, dest, color, kind);
-        }
-        fn createPersistentTextureFromRgba(renderer: *Self, width: i32, height: i32, data: []const u8) ?types.Texture {
-            return gl_backend.createPersistentTextureFromRgba(renderer, width, height, data);
-        }
-        fn createPersistentTextureFromRgb(renderer: *Self, width: i32, height: i32, data: []const u8) ?types.Texture {
-            return gl_backend.createPersistentTextureFromRgb(renderer, width, height, data);
-        }
-        fn destroyPersistentTexture(renderer: *Self, texture: *types.Texture) void {
-            gl_backend.destroyPersistentTexture(renderer, texture);
-        }
-        fn drawRawImage(renderer: *Self, format: RawImageFormat, width: i32, height: i32, data: []const u8, dest: types.Rect, tint: types.Rgba) bool {
-            return switch (format) {
-                .rgb => gl_backend.drawRawImageRgb(renderer, width, height, data, dest, tint),
-                .rgba => gl_backend.drawRawImageRgba(renderer, width, height, data, dest, tint),
-            };
-        }
-        fn enqueueSurfaceDraw(renderer: *Self, draw: surface_draw.SurfaceDraw) bool {
-            return gl_backend.submitSurfaceDrawImmediate(renderer, draw);
-        }
-        fn clearDiagnosticFont(_: *Self) void {}
-        fn sceneTargetInvalidationForRefresh(renderer: *Self, changes: WindowChangeMask, metrics: platform_window.DisplayMetrics) SceneTargetInvalidation {
-            return gl_backend.sceneTargetInvalidationForRefresh(renderer, changes, metrics);
-        }
-        fn mergePendingSceneTargetInvalidation(renderer: *Self, invalidation: SceneTargetInvalidation) void {
-            gl_backend.mergePendingSceneTargetInvalidation(renderer, invalidation);
-        }
-    };
-
-    const MetalDispatch = struct {
-        fn initRuntime(renderer: *Self) !void {
-            try metal_backend.initRuntime(renderer);
-        }
-        fn deinitRuntime(renderer: *Self) void {
-            metal_backend.deinitRuntime(renderer);
-        }
-        fn configureRuntimePolicy(renderer: *Self) void {
-            metal_backend.configureRuntimePolicy(renderer);
-        }
-        fn beginFrame(renderer: *Self) void {
-            metal_frame_runtime.beginFrame(renderer);
-        }
-        fn submitFrame(renderer: *Self) FrameSubmission {
-            return metal_frame_runtime.submitFrame(renderer);
-        }
-        fn capabilities(renderer: *const Self) RendererCapabilities {
-            return metal_backend.capabilities(renderer);
-        }
-        fn dumpWindowScreenshotPpm(renderer: *Self, path: []const u8) !void {
-            return metal_frame_runtime.dumpWindowScreenshotPpm(renderer, path);
-        }
-        fn dumpWindowScreenshotPpmSized(renderer: *Self, path: []const u8, out_width: i32, out_height: i32) !void {
-            return metal_frame_runtime.dumpWindowScreenshotPpmSized(renderer, path, out_width, out_height);
-        }
-        fn ensurePresentable(renderer: *Self, surface: PresentableSurface, width: i32, height: i32) bool {
-            return metal_backend.ensurePresentable(renderer, surface, width, height);
-        }
-        fn beginPresentable(renderer: *Self, surface: PresentableSurface) bool {
-            return metal_backend.beginPresentable(renderer, surface);
-        }
-        fn presentableAvailable(renderer: *Self, surface: PresentableSurface) bool {
-            return metal_backend.presentableAvailable(renderer, surface);
-        }
-        fn endPresentable(renderer: *Self, surface: PresentableSurface) void {
-            metal_backend.endPresentable(renderer, surface);
-        }
-        fn drawPresentable(renderer: *Self, surface: PresentableSurface, draw: PresentableDraw) void {
-            metal_backend.drawPresentable(renderer, surface, draw);
-        }
-        fn scrollPresentable(renderer: *Self, surface: PresentableSurface, dx: i32, dy: i32) bool {
-            return metal_backend.scrollPresentable(renderer, surface, dx, dy);
-        }
-        fn presentableInfo(renderer: *Self, surface: PresentableSurface) ?PresentableInfo {
-            return metal_backend.presentableInfo(renderer, surface);
-        }
-        fn clearThemeBackground(renderer: *Self) void {
-            metal_backend.clearThemeBackground(renderer);
-        }
-        fn applyClipRect(renderer: *Self, clip: ?types.Rect) void {
-            metal_backend.applyClipRect(renderer, clip);
-        }
-        fn addTerminalRect(renderer: *Self, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void {
-            metal_backend.addTerminalRect(renderer, x, y, w, h, color);
-        }
-        fn addTerminalGlyphRect(renderer: *Self, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void {
-            metal_backend.addTerminalGlyphRect(renderer, x, y, w, h, color);
-        }
-        fn addTerminalGlyphQuad(renderer: *Self, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
-            metal_backend.addTerminalGlyphQuad(renderer, texture, src, dest, color, kind);
-        }
-        fn createPersistentTextureFromRgba(renderer: *Self, width: i32, height: i32, data: []const u8) ?types.Texture {
-            return metal_backend.createPersistentTextureFromRgba(renderer, width, height, data);
-        }
-        fn createPersistentTextureFromRgb(renderer: *Self, width: i32, height: i32, data: []const u8) ?types.Texture {
-            return metal_backend.createPersistentTextureFromRgb(renderer, width, height, data);
-        }
-        fn destroyPersistentTexture(renderer: *Self, texture: *types.Texture) void {
-            metal_backend.destroyPersistentTexture(renderer, texture);
-        }
-        fn drawRawImage(renderer: *Self, format: RawImageFormat, width: i32, height: i32, data: []const u8, dest: types.Rect, tint: types.Rgba) bool {
-            return switch (format) {
-                .rgb => metal_backend.drawRawImageRgb(renderer, width, height, data, dest, tint),
-                .rgba => metal_backend.drawRawImageRgba(renderer, width, height, data, dest, tint),
-            };
-        }
-        fn enqueueSurfaceDraw(renderer: *Self, draw: surface_draw.SurfaceDraw) bool {
-            return metal_backend.appendSurfaceDrawToMetalQueue(renderer, draw);
-        }
-        fn clearDiagnosticFont(renderer: *Self) void {
-            metal_backend.clearDiagnosticFont(renderer);
-        }
-        fn sceneTargetInvalidationForRefresh(_: *Self, _: WindowChangeMask, _: platform_window.DisplayMetrics) SceneTargetInvalidation {
-            return .{};
-        }
-        fn mergePendingSceneTargetInvalidation(_: *Self, _: SceneTargetInvalidation) void {}
-    };
-
     fn backendOps(backend: RendererBackend) BackendOps {
-        return switch (backend) {
-            .opengl => .{
-                .initRuntime = OpenGlDispatch.initRuntime,
-                .deinitRuntime = OpenGlDispatch.deinitRuntime,
-                .configureRuntimePolicy = OpenGlDispatch.configureRuntimePolicy,
-                .beginFrame = OpenGlDispatch.beginFrame,
-                .submitFrame = OpenGlDispatch.submitFrame,
-                .capabilities = OpenGlDispatch.capabilities,
-                .dumpWindowScreenshotPpm = OpenGlDispatch.dumpWindowScreenshotPpm,
-                .dumpWindowScreenshotPpmSized = OpenGlDispatch.dumpWindowScreenshotPpmSized,
-                .ensurePresentable = OpenGlDispatch.ensurePresentable,
-                .beginPresentable = OpenGlDispatch.beginPresentable,
-                .presentableAvailable = OpenGlDispatch.presentableAvailable,
-                .endPresentable = OpenGlDispatch.endPresentable,
-                .drawPresentable = OpenGlDispatch.drawPresentable,
-                .scrollPresentable = OpenGlDispatch.scrollPresentable,
-                .presentableInfo = OpenGlDispatch.presentableInfo,
-                .clearThemeBackground = OpenGlDispatch.clearThemeBackground,
-                .applyClipRect = OpenGlDispatch.applyClipRect,
-                .addTerminalRect = OpenGlDispatch.addTerminalRect,
-                .addTerminalGlyphRect = OpenGlDispatch.addTerminalGlyphRect,
-                .addTerminalGlyphQuad = OpenGlDispatch.addTerminalGlyphQuad,
-                .createPersistentTextureFromRgba = OpenGlDispatch.createPersistentTextureFromRgba,
-                .createPersistentTextureFromRgb = OpenGlDispatch.createPersistentTextureFromRgb,
-                .destroyPersistentTexture = OpenGlDispatch.destroyPersistentTexture,
-                .drawRawImage = OpenGlDispatch.drawRawImage,
-                .enqueueSurfaceDraw = OpenGlDispatch.enqueueSurfaceDraw,
-                .clearDiagnosticFont = OpenGlDispatch.clearDiagnosticFont,
-                .sceneTargetInvalidationForRefresh = OpenGlDispatch.sceneTargetInvalidationForRefresh,
-                .mergePendingSceneTargetInvalidation = OpenGlDispatch.mergePendingSceneTargetInvalidation,
-            },
-            .metal => .{
-                .initRuntime = MetalDispatch.initRuntime,
-                .deinitRuntime = MetalDispatch.deinitRuntime,
-                .configureRuntimePolicy = MetalDispatch.configureRuntimePolicy,
-                .beginFrame = MetalDispatch.beginFrame,
-                .submitFrame = MetalDispatch.submitFrame,
-                .capabilities = MetalDispatch.capabilities,
-                .dumpWindowScreenshotPpm = MetalDispatch.dumpWindowScreenshotPpm,
-                .dumpWindowScreenshotPpmSized = MetalDispatch.dumpWindowScreenshotPpmSized,
-                .ensurePresentable = MetalDispatch.ensurePresentable,
-                .beginPresentable = MetalDispatch.beginPresentable,
-                .presentableAvailable = MetalDispatch.presentableAvailable,
-                .endPresentable = MetalDispatch.endPresentable,
-                .drawPresentable = MetalDispatch.drawPresentable,
-                .scrollPresentable = MetalDispatch.scrollPresentable,
-                .presentableInfo = MetalDispatch.presentableInfo,
-                .clearThemeBackground = MetalDispatch.clearThemeBackground,
-                .applyClipRect = MetalDispatch.applyClipRect,
-                .addTerminalRect = MetalDispatch.addTerminalRect,
-                .addTerminalGlyphRect = MetalDispatch.addTerminalGlyphRect,
-                .addTerminalGlyphQuad = MetalDispatch.addTerminalGlyphQuad,
-                .createPersistentTextureFromRgba = MetalDispatch.createPersistentTextureFromRgba,
-                .createPersistentTextureFromRgb = MetalDispatch.createPersistentTextureFromRgb,
-                .destroyPersistentTexture = MetalDispatch.destroyPersistentTexture,
-                .drawRawImage = MetalDispatch.drawRawImage,
-                .enqueueSurfaceDraw = MetalDispatch.enqueueSurfaceDraw,
-                .clearDiagnosticFont = MetalDispatch.clearDiagnosticFont,
-                .sceneTargetInvalidationForRefresh = MetalDispatch.sceneTargetInvalidationForRefresh,
-                .mergePendingSceneTargetInvalidation = MetalDispatch.mergePendingSceneTargetInvalidation,
-            },
-        };
+        return backend_dispatch.opsFor(
+            Self,
+            RendererBackend,
+            FrameSubmission,
+            RendererCapabilities,
+            PresentableSurface,
+            PresentableDraw,
+            PresentableInfo,
+            RawImageFormat,
+            SceneTargetInvalidation,
+            WindowChangeMask,
+            backend,
+        );
     }
 
     pub fn init(allocator: std.mem.Allocator, width: i32, height: i32, title: [*:0]const u8, init_options: InitOptions) !*Renderer {
