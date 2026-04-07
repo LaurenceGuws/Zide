@@ -1,8 +1,10 @@
 const app_shell = @import("../../app_shell.zig");
+const chrome_band_host = @import("chrome_band_host.zig");
 const shared_types = @import("../../types/mod.zig");
 const geometry = @import("shared_top_bar_geometry.zig");
 const model = @import("shared_top_bar_model.zig");
 
+const Band = chrome_band_host.Band;
 const Shell = app_shell.Shell;
 const LayoutRect = shared_types.layout.Rect;
 
@@ -43,7 +45,8 @@ pub const SharedTopBar = struct {
 
     pub fn draw(self: *SharedTopBar, shell: *Shell, bar: LayoutRect, model_: *const model.SharedTopBarModel) void {
         const theme = shell.theme();
-        shell.drawRect(
+        const band = Band.init(shell, theme.ui_panel_bg);
+        band.fillRect(
             @intFromFloat(bar.x),
             @intFromFloat(bar.y),
             @intFromFloat(bar.width),
@@ -64,9 +67,9 @@ pub const SharedTopBar = struct {
             const active = label.menu != null and self.open_menu == label.menu.?;
             if (hovered or active) {
                 const bg = if (active or pressed) theme.ui_pressed else theme.ui_hover;
-                shell.drawRect(@intFromFloat(rect.x), @intFromFloat(rect.y), @intFromFloat(rect.w), @intFromFloat(rect.h), bg);
+                band.fillRect(@intFromFloat(rect.x), @intFromFloat(rect.y), @intFromFloat(rect.w), @intFromFloat(rect.h), bg);
             }
-            shell.drawText(label.title, x, y, if (hovered or active) theme.ui_text else theme.ui_text_inactive);
+            band.drawText(label.title, x, y, if (hovered or active) theme.ui_text else theme.ui_text_inactive);
             x += rect.w + 4 * scale;
         }
 
@@ -85,16 +88,17 @@ pub const SharedTopBar = struct {
         const mouse = self.last_mouse;
         const menu_box = geometry.menuRect(shell, model_, bar, menu);
         const shadow = app_shell.Color{ .r = 0, .g = 0, .b = 0, .a = 120 };
+        const menu_band = Band.init(shell, theme.ui_bar_bg);
         shell.drawRect(@intFromFloat(menu_box.x + 3 * scale), @intFromFloat(menu_box.y + 4 * scale), @intFromFloat(menu_box.w), @intFromFloat(menu_box.h), shadow);
-        shell.drawRect(@intFromFloat(menu_box.x), @intFromFloat(menu_box.y), @intFromFloat(menu_box.w), @intFromFloat(menu_box.h), theme.ui_bar_bg);
-        shell.drawRectOutline(@intFromFloat(menu_box.x), @intFromFloat(menu_box.y), @intFromFloat(menu_box.w), @intFromFloat(menu_box.h), theme.ui_border);
+        menu_band.fillRect(@intFromFloat(menu_box.x), @intFromFloat(menu_box.y), @intFromFloat(menu_box.w), @intFromFloat(menu_box.h), theme.ui_bar_bg);
+        menu_band.drawRectOutline(@intFromFloat(menu_box.x), @intFromFloat(menu_box.y), @intFromFloat(menu_box.w), @intFromFloat(menu_box.h), theme.ui_border);
 
         for (model_.itemsFor(menu), 0..) |item, idx| {
             const rect = geometry.itemRect(shell, model_, bar, menu, idx);
             const hovered = rect.contains(mouse);
             const item_bg = if (hovered) theme.ui_pressed else theme.ui_bar_bg;
-            shell.drawRect(@intFromFloat(rect.x), @intFromFloat(rect.y), @intFromFloat(rect.w), @intFromFloat(rect.h), item_bg);
-            shell.drawTextOnBg(item.label, rect.x + 10 * scale, rect.y + 5 * scale, theme.ui_text, item_bg);
+            menu_band.fillRect(@intFromFloat(rect.x), @intFromFloat(rect.y), @intFromFloat(rect.w), @intFromFloat(rect.h), item_bg);
+            menu_band.drawTextOnColor(item.label, rect.x + 10 * scale, rect.y + 5 * scale, theme.ui_text, item_bg);
         }
     }
 };

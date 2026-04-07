@@ -29,4 +29,8 @@ pub const Band = struct {
     pub fn drawTextOnBg(self: Band, text: []const u8, x: f32, y: f32, color: Color) void {
         self.shell.drawTextOnBg(text, x, y, color, self.bg);
     }
+
+    pub fn drawTextOnColor(self: Band, text: []const u8, x: f32, y: f32, color: Color, bg: Color) void {
+        self.shell.drawTextOnBg(text, x, y, color, bg);
+    }
 };
