@@ -775,6 +775,9 @@ Current evidence:
 - editor checkpoint: the direct/fallback segment base painting is now
   centralized through one helper in `segment_paint.zig` instead of staying as
   scattered immediate rect calls inside `editor_widget_draw.zig`.
+- editor checkpoint: the cached/list-side segment base painting now follows the
+  same rule through one `segment_paint.zig` helper instead of open-coding its
+  own row/gutter/current-line rect sequence in `editor_widget_draw.zig`.
 - that is not timing closure, but it makes the remaining editor-family
   ordering dependency easier to change honestly.
 - code-facing checkpoint: the sample pressure is specifically

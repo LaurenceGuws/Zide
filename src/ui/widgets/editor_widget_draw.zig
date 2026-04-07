@@ -474,16 +474,29 @@ pub fn drawCached(
                 defer renderer_clip_host.endClip(r_local);
 
                 draw_list_local.clear();
-                var list_ok = true;
-                list_ok = list_ok and overlay_mod.addRectOp(draw_list_local, origin_x_local, seg_band.y_f, width_local, seg_band.h_f, r_local.theme.background);
-                list_ok = list_ok and overlay_mod.addRectOp(draw_list_local, origin_x_local, seg_band.y_f, widget_local.gutter_width, seg_band.h_f, r_local.theme.line_number_bg);
+                var list_ok = segment_paint_mod.addEditorSegmentBaseOps(
+                    draw_list_local,
+                    r_local,
+                    origin_x_local,
+                    seg_y,
+                    widget_local.gutter_width,
+                    width_local,
+                    false,
+                );
 
                 if (seg_info.seg_idx == seg_info.seg_start_idx) {
                     var num_buf: [16]u8 = undefined;
                     list_ok = list_ok and segment_paint_mod.addEditorLineBaseOps(draw_list_local, r_local, seg_info.line_idx, seg_y, origin_x_local, widget_local.gutter_width, width_local, seg_info.is_current, &num_buf);
                 } else if (seg_info.is_current) {
-                    list_ok = list_ok and overlay_mod.addRectOp(draw_list_local, origin_x_local, seg_band.y_f, widget_local.gutter_width, seg_band.h_f, r_local.theme.current_line);
-                    list_ok = list_ok and overlay_mod.addRectOp(draw_list_local, origin_x_local + widget_local.gutter_width, seg_band.y_f, width_local - widget_local.gutter_width, seg_band.h_f, r_local.theme.current_line);
+                    list_ok = list_ok and segment_paint_mod.addEditorSegmentBaseOps(
+                        draw_list_local,
+                        r_local,
+                        origin_x_local,
+                        seg_y,
+                        widget_local.gutter_width,
+                        width_local,
+                        true,
+                    );
                 }
 
                 if (range_count_local > 0) {

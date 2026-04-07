@@ -37,6 +37,26 @@ pub fn addEditorLineBaseOps(
     return ok;
 }
 
+pub fn addEditorSegmentBaseOps(
+    list: *EditorDrawList,
+    r: anytype,
+    x: f32,
+    y: f32,
+    gutter_width: f32,
+    content_width: f32,
+    is_current: bool,
+) bool {
+    var ok = true;
+    ok = ok and overlay_mod.addRectOp(list, x, y, content_width, r.editor_char_height, r.theme.background);
+    ok = ok and overlay_mod.addRectOp(list, x, y, gutter_width, r.editor_char_height, r.theme.line_number_bg);
+
+    if (is_current) {
+        ok = ok and overlay_mod.addRectOp(list, x, y, gutter_width, r.editor_char_height, r.theme.current_line);
+        ok = ok and overlay_mod.addRectOp(list, x + gutter_width, y, content_width - gutter_width, r.editor_char_height, r.theme.current_line);
+    }
+    return ok;
+}
+
 pub fn drawEditorSegmentBaseImmediate(
     r: anytype,
     x: f32,

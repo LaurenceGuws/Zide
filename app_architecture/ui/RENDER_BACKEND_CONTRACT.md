@@ -331,6 +331,9 @@ The current code makes that split more specific:
   direct/fallback segment-base painting has one helper home in
   `segment_paint.zig` rather than staying as scattered rect calls in the
   widget draw body
+- cached/list-side segment-base painting now also routes through that same
+  helper area instead of open-coding a second row/gutter/current-line rect
+  sequence in the widget draw body
 - sample/diagnostic pressure is the simpler section-fill plus bg-aware preview
   text path in `font_sample_view.zig`, including custom-font preview draws
   that still go straight through texture draw calls
