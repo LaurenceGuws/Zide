@@ -564,6 +564,9 @@ That split is now sharper from code inspection too:
   composition unit still needs to own base fills, line number label,
   selection/search overlays, text runs, and cursor/caret decoration as one
   local ordering story
+- there is now partial proof of that in code: the fallback editor path runs
+  through one explicit row-band composition helper in `segment_paint.zig`
+  instead of spelling those layers out inline in the widget draw body
 - sample pressure is specifically section-fill plus bg-aware text preview work
   in `font_sample_view.zig` / `font_sample_section_host.zig`, including the
   custom-font sample path that still terminates through direct texture draws

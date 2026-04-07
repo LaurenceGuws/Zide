@@ -615,66 +615,34 @@ pub fn drawCached(
                     false,
                 );
 
-                if (seg_info.seg_idx == seg_info.seg_start_idx) {
-                    var num_buf: [16]u8 = undefined;
-                    segment_paint_mod.drawEditorLineBaseImmediate(
-                        r_local,
-                        seg_info.line_idx,
-                        seg_y,
-                        origin_x_local,
-                        widget_local.gutter_width,
-                        width_local,
-                        seg_info.is_current,
-                        &num_buf,
-                    );
-                } else if (seg_info.is_current) {
-                    segment_paint_mod.drawEditorSegmentBaseImmediate(
-                        r_local,
-                        origin_x_local,
-                        seg_y,
-                        widget_local.gutter_width,
-                        width_local,
-                        true,
-                    );
-                }
-
-                segment_paint_mod.drawSelectionOverlays(view_local, r_local, seg_info.line_idx, cols_local, line_width_local, seg_info.total_visual_lines, seg_info.seg_idx, seg_info.seg_start_col, seg_info.seg_end_col, seg_band, text_start_x, ranges_local[0..range_count_local]);
-
-                segment_paint_mod.drawSegmentText(
+                segment_paint_mod.drawEditorRowBandImmediate(
+                    view_local,
                     r_local,
+                    seg_info.line_idx,
+                    cols_local,
+                    line_width_local,
+                    seg_info.total_visual_lines,
+                    seg_info.seg_idx,
+                    seg_info.seg_start_col,
+                    seg_info.seg_end_col,
+                    seg_y,
+                    seg_band,
+                    origin_x_local,
+                    text_start_x,
+                    widget_local.gutter_width,
+                    width_local,
                     line_text_local,
                     cluster_slice_local,
-                    seg_y,
-                    text_start_x,
                     seg_info.line_start,
                     seg_info.seg_start_byte,
                     seg_info.seg_end_byte,
-                    seg_info.seg_start_col,
-                    seg_info.seg_end_col,
                     effective_tokens_local,
                     ranges_local[0..range_count_local],
                     seg_info.is_current,
+                    seg_info.seg_idx == seg_info.cursor_seg,
+                    seg_info.cursor_col_vis,
                     disable_programming_ligatures,
                 );
-
-                segment_paint_mod.drawSearchOverlays(
-                    view_local,
-                    r_local,
-                    seg_info.line_start,
-                    seg_info.seg_start_byte,
-                    seg_info.seg_end_byte,
-                    seg_info.seg_start_col,
-                    line_text_local,
-                    seg_band,
-                    text_start_x,
-                );
-
-                if (seg_info.is_current and seg_info.seg_idx == seg_info.cursor_seg) {
-                    const local_col = seg_info.cursor_col_vis - seg_info.seg_start_col;
-                    const cursor_draw_x = text_start_x + @as(f32, @floatFromInt(local_col)) * r_local.editor_char_width;
-                    overlay_mod.drawLineCursor(r_local, cursor_draw_x, seg_y, r_local.editor_char_height, r_local.theme.cursor);
-                }
-                overlay_mod.drawExtraCarets(view_local, r_local, seg_info.line_idx, line_text_local, cluster_slice_local, seg_info.seg_start_col, seg_info.seg_end_col, line_width_local, seg_y, text_start_x);
             }
         };
         const ctx = .{
