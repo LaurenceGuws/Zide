@@ -4,7 +4,7 @@ const shape_draw = @import("shape_draw.zig");
 const surface_draw = @import("surface_draw.zig");
 const types = @import("types.zig");
 
-pub fn recordSurfaceDraw(renderer: anytype, draw: surface_draw.SurfaceDraw) bool {
+fn recordSurfaceDraw(renderer: anytype, draw: surface_draw.SurfaceDraw) bool {
     return renderer.backend_ops.surface.recordSurfaceDraw(renderer, draw);
 }
 

@@ -643,6 +643,10 @@ Current evidence:
   to `text_runtime`. Shell/UI/editor callers now route through
   `renderer_text_host.zig`, which matches the earlier clip/surface/presentable
   host cuts and removes another fake renderer-root facade.
+- the generic `SurfaceDraw` payload is no longer exported from `renderer.zig`,
+  and `renderer_surface_host.recordSurfaceDraw(...)` is now host-private. That
+  narrows the misuse surface so product code cannot quietly treat generic
+  `SurfaceDraw` construction as a normal public rendering API again.
 - This is real lifecycle cleanup and removes another renderer-root duplication
   seam.
 - This is not closure yet:

@@ -261,6 +261,13 @@ back into the larger backend files. This does not erase the remaining
 immediate-vs-queued semantic contradiction, but it makes that ownership seam
 more explicit and therefore easier to cut honestly.
 
+That has improved slightly again on enforcement too: the shared `SurfaceDraw`
+payload is no longer exported from `renderer.zig`, and
+`renderer_surface_host.recordSurfaceDraw(...)` is now host-private. Product
+code still has the higher-level solid/image/presentable helpers, but it can no
+longer quietly depend on direct generic `SurfaceDraw` construction as if that
+were a stable public renderer API.
+
 The remaining truth is now plain:
 
 - OpenGL surface submission still means "interpret this draw now"

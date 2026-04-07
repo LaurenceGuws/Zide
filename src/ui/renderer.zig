@@ -152,7 +152,6 @@ pub const TerminalTextState = text_runtime.TerminalTextState;
 pub const PresentableSurface = presentable_contract.PresentableSurface;
 pub const PresentableDraw = presentable_contract.PresentableDraw;
 pub const PresentableInfo = presentable_contract.PresentableInfo;
-pub const SurfaceDraw = surface_draw.SurfaceDraw;
 pub const MetalSampleTextRequest = metal_text_sample_runtime.SampleTextRequest;
 pub const MetalTerminalCellRunRequest = metal_text_sample_runtime.TerminalCellRunRequest;
 pub const SceneTargetInvalidation = scene_target_state.SceneTargetInvalidation;
