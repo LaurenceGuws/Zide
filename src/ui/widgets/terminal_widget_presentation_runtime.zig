@@ -558,7 +558,7 @@ pub fn notePresentSample(
         .scale_y = if (source_h > 0.0) dest_h / source_h else 1.0,
     };
     if (mode == .retained_surface) {
-        if (renderer_presentable_host.presentableInfo(renderer)) |info| {
+        if (renderer_presentable_host.terminalPresentableInfo(renderer)) |info| {
             sample.presentable_w_px = info.width_px;
             sample.presentable_h_px = info.height_px;
             sample.target_logical_w = @floatFromInt(info.logical_width);
@@ -745,7 +745,7 @@ pub fn runRetainedPresentCycle(
         .surface_update_plan = surface_update_plan,
         .result = &result,
     };
-    if (!renderer_presentable_host.updatePresentable(renderer, update_ctx, Local.run)) return result;
+    if (!renderer_presentable_host.updateTerminalPresentable(renderer, update_ctx, Local.run)) return result;
 
     return result;
 }
@@ -806,7 +806,7 @@ pub fn runRetainedPresentation(
     else
         renderer.theme.background;
     if (view_geometry.viewport.width > 0 and view_geometry.viewport.height > 0) {
-        renderer_presentable_host.drawPresentableBackdrop(
+        renderer_presentable_host.drawTerminalPresentableBackdrop(
             renderer,
             view_geometry.viewport.x,
             view_geometry.viewport.y,
@@ -870,7 +870,7 @@ pub fn runPresentation(
     else
         renderer.theme.background;
 
-    renderer_presentable_host.drawPresentableBackdrop(renderer, x, y, width, height, bg_color.toRgba());
+    renderer_presentable_host.drawTerminalPresentableBackdrop(renderer, x, y, width, height, bg_color.toRgba());
 
     if (renderer.usesDirectTerminalPresentation()) {
         if (tryFastPresentExisting(
@@ -1075,7 +1075,7 @@ pub fn refreshPresentState(
         surface_state.notePresentationUpdated(terminal_view, surface_geometry, draw_cursor, cursor, cursor_style, hover_link_id, composing_active, composing_hash);
     }
 
-    state.target_available = renderer_presentable_host.presentableInfo(renderer) != null;
+    state.target_available = renderer_presentable_host.terminalPresentableInfo(renderer) != null;
     state.ready = surface_state.notePresentableAvailability(state.target_available);
     state.present = state.ready and state.visible;
     state.log_unavailable = !state.ready and terminal_view.rows > 0 and terminal_view.cols > 0 and view_cells_len > 0 and state.visible;
@@ -1128,7 +1128,7 @@ pub fn presentDraw(
         viewport_w,
         viewport_h,
     );
-    renderer_presentable_host.drawPresentable(renderer, .{
+    renderer_presentable_host.drawTerminalPresentable(renderer, .{
         .x = view_geometry.origin_x,
         .y = view_geometry.origin_y,
         .width = viewport_w,
@@ -1161,7 +1161,7 @@ pub fn tryFastPresentExisting(
     note_present: anytype,
 ) bool {
     const presentable_ready = surface_state.notePresentableAvailability(
-        renderer_presentable_host.presentableInfo(renderer) != null,
+        renderer_presentable_host.terminalPresentableInfo(renderer) != null,
     );
     const cursor_changed = surface_state.cursorPresentationChanged(draw_cursor, cursor, cursor_style);
     const overlay_changed = surface_state.overlayPresentationChanged(hover_link_id, composing_active, composing_hash);
@@ -1175,7 +1175,7 @@ pub fn tryFastPresentExisting(
     if (!(view_cells_len > 0 and presentable_ready and
         (terminal_view.sync_updates_active or direct_snapshot_reusable))) return false;
 
-    renderer_presentable_host.drawPresentableBackdrop(renderer, x, y, width, height, bg_color.toRgba());
+    renderer_presentable_host.drawTerminalPresentableBackdrop(renderer, x, y, width, height, bg_color.toRgba());
     if (renderer.usesDirectTerminalPresentation()) {
         note_present(
             note_present_ctx,
@@ -1189,7 +1189,7 @@ pub fn tryFastPresentExisting(
             view_geometry.viewport_width,
             view_geometry.viewport_height,
         );
-        renderer_presentable_host.drawPresentable(renderer, .{
+        renderer_presentable_host.drawTerminalPresentable(renderer, .{
             .x = view_geometry.origin_x,
             .y = view_geometry.origin_y,
             .width = view_geometry.viewport_width,
@@ -1251,7 +1251,7 @@ pub fn directPresent(
     const viewport_w = @min(width, view_geometry.viewport_width);
     const viewport_h = @min(height, view_geometry.viewport_height);
 
-    renderer_presentable_host.drawPresentableBackdrop(
+    renderer_presentable_host.drawTerminalPresentableBackdrop(
         renderer,
         view_geometry.viewport.x,
         view_geometry.viewport.y,
@@ -1382,7 +1382,7 @@ pub fn tryDirectSnapshotUpdate(
     var result = DirectSnapshotUpdateResult{};
     if (!renderer.usesDirectTerminalPresentation()) return result;
     if (has_kitty) return result;
-    if (renderer_presentable_host.presentableInfo(renderer) == null) return result;
+    if (renderer_presentable_host.terminalPresentableInfo(renderer) == null) return result;
     if (terminal_view.rows == 0 or terminal_view.cols == 0 or terminal_view.cells.len == 0) return result;
 
     const surface_update_plan = planUpdate(
@@ -1411,7 +1411,7 @@ pub fn tryDirectSnapshotUpdate(
         .b = terminal_view.base_colors.resolved_background.b,
         .a = terminal_view.base_colors.resolved_background.a,
     };
-    renderer_presentable_host.drawPresentableBackdrop(
+    renderer_presentable_host.drawTerminalPresentableBackdrop(
         renderer,
         view_geometry.viewport.x,
         view_geometry.viewport.y,
@@ -1435,7 +1435,7 @@ pub fn tryDirectSnapshotUpdate(
         view_geometry.viewport_width,
         view_geometry.viewport_height,
     );
-    renderer_presentable_host.drawPresentable(renderer, .{
+    renderer_presentable_host.drawTerminalPresentable(renderer, .{
         .x = view_geometry.origin_x,
         .y = view_geometry.origin_y,
         .width = viewport_w,
@@ -1497,7 +1497,7 @@ pub fn planUpdate(
 
     plan.geometry = computePresentationSurfaceGeometry(renderer, terminal_view, view_geometry);
 
-    const recreated = renderer_presentable_host.ensurePresentable(renderer, plan.geometry.surface_w, plan.geometry.surface_h);
+    const recreated = renderer_presentable_host.ensureTerminalPresentable(renderer, plan.geometry.surface_w, plan.geometry.surface_h);
     const presentation_delta = surface_state.presentationUpdateDelta(
         terminal_view,
         plan.geometry,
@@ -1540,7 +1540,7 @@ pub fn planUpdate(
     )) {
         .attempt => |shift_rows| {
             const dy_pixels: i32 = -viewport_shift.rows * plan.geometry.cell_h_i;
-            if (renderer_presentable_host.scrollPresentable(renderer, 0, dy_pixels)) {
+            if (renderer_presentable_host.scrollTerminalPresentable(renderer, 0, dy_pixels)) {
                 needs_partial = true;
                 shifted_rows = shift_rows;
             } else {
