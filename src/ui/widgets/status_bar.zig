@@ -124,7 +124,8 @@ pub const StatusBar = struct {
         const theme = shell.theme();
         const scale = shell.uiScaleFactor();
         const bar_bg = theme.ui_bar_bg;
-        const band = Band.init(shell, bar_bg);
+        var band = Band.init(shell, bar_bg);
+        defer band.flush();
         // Background
         band.fillRect(0, @intFromFloat(y), @intFromFloat(width), @intFromFloat(self.height), bar_bg);
 

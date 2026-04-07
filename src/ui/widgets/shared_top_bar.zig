@@ -46,7 +46,8 @@ pub const SharedTopBar = struct {
 
     pub fn draw(self: *SharedTopBar, shell: *Shell, bar: LayoutRect, model_: *const model.SharedTopBarModel) void {
         const theme = shell.theme();
-        const band = Band.init(shell, theme.ui_panel_bg);
+        var band = Band.init(shell, theme.ui_panel_bg);
+        defer band.flush();
         band.fillRect(
             @intFromFloat(bar.x),
             @intFromFloat(bar.y),
@@ -89,7 +90,8 @@ pub const SharedTopBar = struct {
         const mouse = self.last_mouse;
         const menu_box = geometry.menuRect(shell, model_, bar, menu);
         const shadow = app_shell.Color{ .r = 0, .g = 0, .b = 0, .a = 120 };
-        const menu_band = Band.init(shell, theme.ui_bar_bg);
+        var menu_band = Band.init(shell, theme.ui_bar_bg);
+        defer menu_band.flush();
         renderer_surface_host.drawRect(shell.rendererPtr(), @intFromFloat(menu_box.x + 3 * scale), @intFromFloat(menu_box.y + 4 * scale), @intFromFloat(menu_box.w), @intFromFloat(menu_box.h), shadow);
         menu_band.fillRect(@intFromFloat(menu_box.x), @intFromFloat(menu_box.y), @intFromFloat(menu_box.w), @intFromFloat(menu_box.h), theme.ui_bar_bg);
         menu_band.drawRectOutline(@intFromFloat(menu_box.x), @intFromFloat(menu_box.y), @intFromFloat(menu_box.w), @intFromFloat(menu_box.h), theme.ui_border);

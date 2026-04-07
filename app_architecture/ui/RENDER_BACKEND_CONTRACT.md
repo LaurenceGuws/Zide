@@ -508,6 +508,16 @@ renderer surface/text hosts instead of bouncing back through `Shell`
 convenience forwards. That keeps the ownership story honest: it is a renderer
 composition host, not a widget helper wearing renderer clothes.
 
+**Band text checkpoint (2026-04-07):** band-local text/icon emission should use
+bg-aware text entrypoints by default (`drawTextOnBg` / icon equivalent) so a
+chrome band keeps one explicit background + dependent label/icon composition
+story instead of silently mixing transparent-text defaults into that seam.
+
+**Band flush checkpoint (2026-04-07):** chrome-band text/icon emission now uses
+an explicit local record/flush step (`Band.flush()`) at band end. This is still
+renderer-local sequencing, not a backend-neutral recorded phase, but it removes
+"text happens because call order happened to be right" as the band contract.
+
 **Current blocker / stop rule (2026-04-07):** do not keep widening this seam as
 if it were already a backend-neutral phase. Today it is still a renderer-host
 composition helper over immediate text/surface work. The next valid step is

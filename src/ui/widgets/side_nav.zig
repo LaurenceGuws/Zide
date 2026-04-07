@@ -20,7 +20,8 @@ pub const SideNav = struct {
 
     pub fn draw(self: *SideNav, shell: *Shell, height: f32, y: f32) void {
         const theme = shell.theme();
-        const band = Band.init(shell, theme.ui_bar_bg);
+        var band = Band.init(shell, theme.ui_bar_bg);
+        defer band.flush();
         // Background
         band.fillRect(0, @intFromFloat(y), @intFromFloat(self.width), @intFromFloat(height), theme.ui_bar_bg);
 

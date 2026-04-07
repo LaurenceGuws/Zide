@@ -43,6 +43,10 @@ pub fn drawIconText(renderer: anytype, text: []const u8, x: f32, y: f32, color: 
     text_runtime.drawIconText(renderer, text, x, y, color);
 }
 
+pub fn drawIconTextOnBg(renderer: anytype, text: []const u8, x: f32, y: f32, color: Color, bg: Color) void {
+    text_runtime.drawIconTextOnBg(renderer, text, x, y, color, bg);
+}
+
 pub fn measureIconTextWidth(renderer: anytype, text: []const u8) f32 {
     return text_runtime.measureIconTextWidth(renderer, text);
 }

@@ -45,7 +45,8 @@ pub fn draw(
         app_theme.background
     else
         app_shell.Color{ .r = 255, .g = 255, .b = 255 };
-    const band = Band.init(shell, bg);
+    var band = Band.init(shell, bg);
+    defer band.flush();
 
     band.fillRect(
         @intFromFloat(x),

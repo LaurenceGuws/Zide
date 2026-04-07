@@ -846,6 +846,12 @@ Current evidence:
 - that means the remaining blocker is not "some fills are still generic". It
   is that generic fills and their dependent text still do not share one
   backend-neutral phase boundary.
+- chrome-band checkpoint: `renderer_chrome_band_host` now uses bg-aware text
+  and icon-text entrypoints by default for band labels/icons. This improves
+  local seam honesty but is still not recorded text/surface phase closure.
+- chrome-band checkpoint: band text/icon calls are now queued and flushed
+  explicitly at band end (`Band.flush()`), so local chrome ordering is no
+  longer only implicit immediate call order.
 - backend-runtime checkpoint: the remaining runtime-storage blocker is now more
   specifically OpenGL-shaped than Metal-shaped. Metal live frame/queue state is
   under backend context.

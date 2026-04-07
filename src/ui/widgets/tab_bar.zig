@@ -164,7 +164,8 @@ pub const TabBar = struct {
 
     pub fn drawWithIconProvider(self: *TabBar, shell: *Shell, x: f32, y: f32, width: f32, icon_provider: ?IconProvider) ?Tooltip {
         const theme = shell.theme();
-        const band = Band.init(shell, theme.ui_bar_bg);
+        var band = Band.init(shell, theme.ui_bar_bg);
+        defer band.flush();
         self.last_char_width = shell.charWidth();
         self.last_ui_scale = shell.uiScaleFactor();
         // Draw tab bar background

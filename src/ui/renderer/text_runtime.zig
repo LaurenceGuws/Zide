@@ -244,6 +244,13 @@ pub fn drawIconText(self: *Renderer, text: []const u8, x: f32, y: f32, color: Co
     drawTextWithFont(self, &self.icon_font, self.icon_metrics, text, x, y, color, false);
 }
 
+pub fn drawIconTextOnBg(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color) void {
+    if (!textRenderingAvailable(self)) return;
+    const prev = pushTextBg(self, opaqueTextBg(bg));
+    defer self.text_render.bg_rgba = prev;
+    drawTextWithFont(self, &self.icon_font, self.icon_metrics, text, x, y, color, false);
+}
+
 pub fn measureIconTextWidth(self: *Renderer, text: []const u8) f32 {
     if (!textRenderingAvailable(self)) return 0;
     return measureTextWidth(self, &self.icon_font, text);

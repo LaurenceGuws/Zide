@@ -520,6 +520,15 @@ It now also terminates directly in renderer surface/text hosts rather than
 routing back through `Shell` forwards. That reduces one more fake layer between
 chrome composition intent and the renderer host surfaces it really uses.
 
+That seam is slightly more honest again now: band-local `drawText(...)` /
+`drawIconText(...)` use explicit bg-aware text entrypoints, so chrome labels and
+icons no longer implicitly rely on transparent text defaults while the seam
+already carries a band background color.
+
+It is slightly stronger again too: those band text/icon operations are now
+queued and flushed explicitly at band end (`Band.flush()`), instead of relying
+only on immediate interleaving at each call site.
+
 That seam is now clean enough that further expansion would be fake progress
 unless it graduates into a real recorded band-composition phase. Until that
 happens, it should be treated as a renderer-host composition helper for the
