@@ -351,6 +351,12 @@ that family therefore needs either:
 - or a narrower shell-chrome subset whose dependent work is already recorded
   together
 
+The narrower-subset audit did not find a free lane yet. Config reload notice,
+terminal close-confirm UI, and caption buttons all still combine fills with
+immediate text and/or immediate outline/icon primitives at the same call site.
+So shell chrome remains a real phase-design problem, not a hidden
+micro-refactor.
+
 That is the loudest remaining semantic contradiction in the backend contract.
 It is no longer hidden by renderer-root facade noise or mixed backend dispatch
 buckets, which means the next real cut must either:

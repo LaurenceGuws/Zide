@@ -681,6 +681,9 @@ Current evidence:
   `text_runtime.zig`. A fill-only move would recreate the same separation bug
   at the band level. Any real shell-chrome cut now needs a stronger
   fill-plus-text phase or a genuinely narrower subset.
+- narrower shell-chrome subset audit: no free lane found yet. Config reload
+  notice, close-confirm UI, and caption buttons still mix fills with immediate
+  text and/or immediate outline/icon primitives at the same call site.
 - This is real lifecycle cleanup and removes another renderer-root duplication
   seam.
 - This is not closure yet:

@@ -237,6 +237,16 @@ work rather than one recorded phase shared with the corresponding fills. So a
 from their labels/icons unless the phase boundary also grows to own the
 dependent text path.
 
+That is not just true for the big bars. The smaller obvious subsets also still
+have the same shape:
+
+- config reload notice: fill + outline + immediate text
+- close-confirm modal/buttons: fills + outlines + immediate text
+- caption buttons: fills + immediate icon strokes/rects
+
+So there is no honest "easy shell subset" today where fills can move alone
+without reopening the same ordering bug under a smaller name.
+
 #### Presentable contract
 
 One backend-neutral presentable surface contract that can express:
