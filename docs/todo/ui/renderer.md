@@ -799,6 +799,14 @@ Current evidence:
 - that is stronger proof of the intended editor-local composition rule, but it
   is still not full shared timing closure because the immediate and draw-list
   row-band lanes remain distinct concrete implementations.
+- editor boundary checkpoint: two remaining editor visuals should stay outside
+  the row-band contract unless their owning interaction model changes:
+  - IME/composition text and underline are cursor-anchored widget interaction
+    overlays, not per-row-band content
+  - scrollbars are pane-level final overlays and intentionally render after the
+    row-band/content path
+- that means the remaining editor timing pressure is now mostly row-band local
+  ordering itself, not those two overlay families.
 - backend-runtime checkpoint: the remaining runtime-storage blocker is now more
   specifically OpenGL-shaped than Metal-shaped. Metal live frame/queue state is
   under backend context.

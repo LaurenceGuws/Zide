@@ -575,6 +575,12 @@ That split is now sharper from code inspection too:
     the widget draw body
 - that is still not full timing closure because the immediate and draw-list
   row-band lanes remain distinct concrete implementations
+- two remaining editor visuals are now explicitly outside that row-band
+  contract by ownership rather than accident:
+  - IME/composition text + underline are cursor-anchored interaction overlays
+  - scrollbars are pane-level final overlays
+- that keeps the remaining editor timing pressure focused on row-band local
+  ordering rather than those overlay families.
 - the remaining backend-runtime storage blocker is now more specifically
   OpenGL-shaped than Metal-shaped:
   - Metal live frame/surface/presentable queue state now lives under backend

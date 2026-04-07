@@ -360,6 +360,12 @@ The current code makes that split more specific:
     widget draw body
 - that is still not full shared timing closure because those two row-band
   lanes remain distinct concrete implementations
+- the row-band contract also now has a clearer stop rule:
+  - IME/composition text + underline are cursor-anchored interaction overlays,
+    not row-band content
+  - scrollbars are pane-level final overlays, not row-band content
+- so the remaining editor timing problem is the row-band/content lane itself,
+  not those overlay families.
 - the remaining backend-runtime storage blocker is now more specifically an
   OpenGL runtime-shape problem than a Metal one:
   - Metal live frame/surface/presentable queue state is under backend context
