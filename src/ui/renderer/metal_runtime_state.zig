@@ -12,7 +12,6 @@ pub const AtlasPreviewSource = enum {
 
 pub const State = struct {
     backend_context: ?metal_backend.BackendContext = null,
-    frame: ?metal_backend.Frame = null,
     diagnostic_font: ?TerminalFont = null,
     preview_source: AtlasPreviewSource = .unavailable,
 };

@@ -60,6 +60,9 @@ In current-state terms, the remaining blockers are:
   the generic surface queue and the terminal-presentable composition queue now
   live under backend context instead of as separate renderer-hosted runtime
   lists beside the backend context/frame slots
+- the live Metal frame slot now follows that same rule too, so acquire/submit/
+  abandon state is kept with backend context instead of as another renderer-
+  hosted runtime peer
 
 4. Remaining ordering pressure is now concentrated, not solved
 

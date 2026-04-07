@@ -103,6 +103,9 @@ today.
 - moving backend-specific lifecycle queues under backend context is good
   progress, because it stops widening the shared runtime bundle for state that
   only one backend-owned lifecycle model understands
+- the same is true for live backend frame slots: if only one backend-owned
+  submit/acquire model understands that state, it should live with backend
+  context, not as a shared runtime peer
 
 4. Resource/image handles stay opaque in shared code
 

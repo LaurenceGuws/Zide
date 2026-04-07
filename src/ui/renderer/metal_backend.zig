@@ -214,6 +214,7 @@ pub const BackendContext = struct {
     solid_white_brush: ?GpuImageRef,
     queued_surface_draws: std.ArrayListUnmanaged(SurfaceDraw) = .{},
     queued_presentable_draws: std.ArrayListUnmanaged(SurfaceDraw) = .{},
+    frame: ?Frame = null,
     drawable_width: i32,
     drawable_height: i32,
 };
@@ -1395,16 +1396,19 @@ fn queuedSurfaceDrawCount(renderer: anytype) usize {
 }
 
 fn currentFrame(renderer: anytype) ?*Frame {
-    if (renderer.backend.runtime.metal.frame) |*frame| return frame;
+    const context = backendContext(renderer) orelse return null;
+    if (context.frame) |*frame| return frame;
     return null;
 }
 
 fn clearCurrentFrame(renderer: anytype) void {
-    renderer.backend.runtime.metal.frame = null;
+    const context = backendContext(renderer) orelse return;
+    context.frame = null;
 }
 
 fn storeCurrentFrame(renderer: anytype, frame: Frame) void {
-    renderer.backend.runtime.metal.frame = frame;
+    const context = backendContext(renderer) orelse return;
+    context.frame = frame;
 }
 
 pub fn recordSurfaceDrawForSurfacePhase(renderer: anytype, draw: SurfaceDraw) bool {
@@ -1769,8 +1773,8 @@ pub fn deinitRuntime(renderer: anytype) void {
     clearDiagnosticFont(renderer);
     clearQueuedSurfaceDraws(renderer);
     clearQueuedPresentableDraws(renderer);
-    if (renderer.backend.runtime.metal.frame) |*frame| abandonFrame(frame);
     if (renderer.backend.runtime.metal.backend_context) |*context| {
+        if (context.frame) |*frame| abandonFrame(frame);
         context.queued_surface_draws.deinit(renderer.allocator);
         context.queued_presentable_draws.deinit(renderer.allocator);
         deinitBackendContext(context);

@@ -570,6 +570,10 @@ Current evidence:
 - that is not closure, but it is a real ownership improvement: the two active
   Metal lifecycle queues are now owned by backend context state instead of
   widening the shared renderer-hosted runtime bundle.
+- the live Metal frame slot now follows that same rule too: it lives under
+  backend context instead of as a separate shared runtime field.
+- that keeps Metal acquire/submit/abandon state with the backend-owned
+  lifecycle model it actually belongs to.
 - This is good host-shape cleanup and reduces one obvious renderer-root
   duplication seam.
 - This is not closure yet:
