@@ -75,3 +75,30 @@ test "replaySampleSectionTextOpsWith preserves order and wraps group boundaries"
     try std.testing.expectEqual(@as(u8, 11), events.items[2].bg_r);
     try std.testing.expectEqual(EventKind.end, events.items[3].kind);
 }
+
+test "replaySampleSectionTextOpsWith wraps empty section ops" {
+    const EventKind = enum { begin, end };
+    const Event = struct { kind: EventKind };
+
+    const FakeReplayer = struct {
+        events: *std.ArrayList(Event),
+        fn beginSampleSectionCommandGroup(self: @This()) void {
+            self.events.append(std.testing.allocator, .{ .kind = .begin }) catch unreachable;
+        }
+        fn endSampleSectionCommandGroup(self: @This()) void {
+            self.events.append(std.testing.allocator, .{ .kind = .end }) catch unreachable;
+        }
+        fn replaySampleSectionTextOnBg(self: @This(), op: TextOp) void {
+            _ = self;
+            _ = op;
+            unreachable;
+        }
+    };
+
+    var events = std.ArrayList(Event).empty;
+    defer events.deinit(std.testing.allocator);
+    replaySampleSectionTextOpsWith(FakeReplayer{ .events = &events }, &[_]TextOp{});
+    try std.testing.expectEqual(@as(usize, 2), events.items.len);
+    try std.testing.expectEqual(EventKind.begin, events.items[0].kind);
+    try std.testing.expectEqual(EventKind.end, events.items[1].kind);
+}
