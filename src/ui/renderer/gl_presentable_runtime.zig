@@ -10,6 +10,7 @@ const types = @import("types.zig");
 const RenderTarget = gl_backend.RenderTarget;
 const PresentableDraw = presentable_contract.PresentableDraw;
 const PresentableInfo = presentable_contract.PresentableInfo;
+const ResolvedPresentableDraw = presentable_contract.ResolvedPresentableDraw;
 const PresentableSurface = presentable_contract.PresentableSurface;
 
 fn presentableTargetSlot(renderer: anytype, surface: PresentableSurface) *?RenderTarget {
@@ -81,95 +82,74 @@ pub fn drawPresentable(renderer: anytype, surface: PresentableSurface, draw: Pre
     if (!renderer.capabilities().retained_targets) return;
     switch (surface) {
         .terminal => if (presentableTarget(renderer, .terminal)) |target| {
-            const width = draw.width orelse return;
-            const height = draw.height orelse return;
-            const source_width = draw.source_width orelse width;
-            const source_height = draw.source_height orelse height;
-            const snapped_x = snapToDevicePixel(draw.x, renderer.scale.render_scale);
-            const snapped_y = snapToDevicePixel(draw.y, renderer.scale.render_scale);
-            const src = texture_draw.logicalTextureSrcRect(
-                target.texture,
-                @floatFromInt(target.logical_width),
-                @floatFromInt(target.logical_height),
-                source_width,
-                source_height,
-            );
-            const dest = types.Rect{
-                .x = snapped_x,
-                .y = snapped_y,
-                .width = width,
-                .height = height,
-            };
-            const log = app_logger.logger("renderer.terminal_present");
-            if (log.enabled_file or log.enabled_console) {
-                log.logf(
-                    .info,
-                    "draw tex={d} tex_px={d}x{d} target_logical={d}x{d} src_rect={d:.2},{d:.2} {d:.2}x{d:.2} dest={d:.2},{d:.2} {d:.2}x{d:.2} framebuffer={d}x{d} target_px={d}x{d} window={d}x{d} render_scale={d:.3}",
-                    .{
-                        target.texture.id,
-                        target.texture.width,
-                        target.texture.height,
-                        target.logical_width,
-                        target.logical_height,
-                        src.x,
-                        src.y,
-                        src.width,
-                        src.height,
-                        dest.x,
-                        dest.y,
-                        dest.width,
-                        dest.height,
-                        renderer.render_width,
-                        renderer.render_height,
-                        renderer.target_pixel_width,
-                        renderer.target_pixel_height,
-                        renderer.width,
-                        renderer.height,
-                        renderer.scale.render_scale,
-                    },
-                );
-            }
-            draw_ops.drawTextureRect(
-                renderer,
-                target.texture,
-                src,
-                dest,
-                .{ .r = 255, .g = 255, .b = 255, .a = 255 },
-                .{ .r = 0, .g = 0, .b = 0, .a = 0 },
-                .linear_premul,
-            );
+            const resolved = presentable_contract.resolveDraw(draw, null, null) orelse return;
+            drawResolvedPresentable(renderer, target, resolved);
         },
         .editor => if (presentableTarget(renderer, .editor)) |target| {
-            const snapped_x = snapToDevicePixel(draw.x, renderer.scale.render_scale);
-            const snapped_y = snapToDevicePixel(draw.y, renderer.scale.render_scale);
-            const width = draw.width orelse @as(f32, @floatFromInt(target.logical_width));
-            const height = draw.height orelse @as(f32, @floatFromInt(target.logical_height));
-            const source_width = draw.source_width orelse width;
-            const source_height = draw.source_height orelse height;
-            const src = texture_draw.logicalTextureSrcRect(
-                target.texture,
+            const resolved = presentable_contract.resolveDraw(
+                draw,
                 @floatFromInt(target.logical_width),
                 @floatFromInt(target.logical_height),
-                source_width,
-                source_height,
-            );
-            const dest = types.Rect{
-                .x = snapped_x,
-                .y = snapped_y,
-                .width = width,
-                .height = height,
-            };
-            draw_ops.drawTextureRect(
-                renderer,
-                target.texture,
-                src,
-                dest,
-                .{ .r = 255, .g = 255, .b = 255, .a = 255 },
-                .{ .r = 0, .g = 0, .b = 0, .a = 0 },
-                .linear_premul,
-            );
+            ) orelse return;
+            drawResolvedPresentable(renderer, target, resolved);
         },
     }
+}
+
+fn drawResolvedPresentable(renderer: anytype, target: RenderTarget, draw: ResolvedPresentableDraw) void {
+    const snapped_x = snapToDevicePixel(draw.x, renderer.scale.render_scale);
+    const snapped_y = snapToDevicePixel(draw.y, renderer.scale.render_scale);
+    const src = texture_draw.logicalTextureSrcRect(
+        target.texture,
+        @floatFromInt(target.logical_width),
+        @floatFromInt(target.logical_height),
+        draw.source_width,
+        draw.source_height,
+    );
+    const dest = types.Rect{
+        .x = snapped_x,
+        .y = snapped_y,
+        .width = draw.width,
+        .height = draw.height,
+    };
+    const log = app_logger.logger("renderer.terminal_present");
+    if (log.enabled_file or log.enabled_console) {
+        log.logf(
+            .info,
+            "draw tex={d} tex_px={d}x{d} target_logical={d}x{d} src_rect={d:.2},{d:.2} {d:.2}x{d:.2} dest={d:.2},{d:.2} {d:.2}x{d:.2} framebuffer={d}x{d} target_px={d}x{d} window={d}x{d} render_scale={d:.3}",
+            .{
+                target.texture.id,
+                target.texture.width,
+                target.texture.height,
+                target.logical_width,
+                target.logical_height,
+                src.x,
+                src.y,
+                src.width,
+                src.height,
+                dest.x,
+                dest.y,
+                dest.width,
+                dest.height,
+                renderer.render_width,
+                renderer.render_height,
+                renderer.target_pixel_width,
+                renderer.target_pixel_height,
+                renderer.width,
+                renderer.height,
+                renderer.scale.render_scale,
+            },
+        );
+    }
+    draw_ops.drawTextureRect(
+        renderer,
+        target.texture,
+        src,
+        dest,
+        .{ .r = 255, .g = 255, .b = 255, .a = 255 },
+        .{ .r = 0, .g = 0, .b = 0, .a = 0 },
+        .linear_premul,
+    );
 }
 
 pub fn scrollPresentable(renderer: anytype, surface: PresentableSurface, dx: i32, dy: i32) bool {

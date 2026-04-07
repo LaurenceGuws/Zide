@@ -52,10 +52,7 @@ pub fn presentableInfo(renderer: anytype, surface: PresentableSurface) ?Presenta
 pub fn drawPresentable(renderer: anytype, surface: PresentableSurface, draw: PresentableDraw) void {
     switch (surface) {
         .terminal => {
-            const dest_width = draw.width orelse return;
-            const dest_height = draw.height orelse return;
-            const source_width = draw.source_width orelse dest_width;
-            const source_height = draw.source_height orelse dest_height;
+            const resolved = presentable_contract.resolveDraw(draw, null, null) orelse return;
             const context = metal_backend.backendContext(renderer) orelse return;
             const snapshot = context.terminal_snapshot orelse return;
             _ = metal_backend.recordSurfaceDrawToMetalQueue(renderer, .{ .raw_image = .{
@@ -63,14 +60,14 @@ pub fn drawPresentable(renderer: anytype, surface: PresentableSurface, draw: Pre
                 .source_rect = .{
                     .x = renderer.logicalLengthToRaster(draw.x),
                     .y = renderer.logicalLengthToRaster(draw.y),
-                    .width = renderer.logicalLengthToRaster(source_width),
-                    .height = renderer.logicalLengthToRaster(source_height),
+                    .width = renderer.logicalLengthToRaster(resolved.source_width),
+                    .height = renderer.logicalLengthToRaster(resolved.source_height),
                 },
                 .dest_rect = .{
-                    .x = renderer.logicalLengthToRaster(draw.x),
-                    .y = renderer.logicalLengthToRaster(draw.y),
-                    .width = renderer.logicalLengthToRaster(dest_width),
-                    .height = renderer.logicalLengthToRaster(dest_height),
+                    .x = renderer.logicalLengthToRaster(resolved.x),
+                    .y = renderer.logicalLengthToRaster(resolved.y),
+                    .width = renderer.logicalLengthToRaster(resolved.width),
+                    .height = renderer.logicalLengthToRaster(resolved.height),
                 },
             } });
         },

@@ -613,6 +613,9 @@ The shared runtime surface has improved too:
 - presentable trace/editor-surface bookkeeping now also routes through
   `src/ui/renderer/renderer_presentable_host.zig` instead of GL and Metal
   each deciding that lifecycle bookkeeping inline
+- GL and Metal presentable draw paths now also share one normalized draw
+  resolution rule from `presentable_contract.zig` instead of each backend
+  open-coding width/height/source fallback semantics
 
 But the presentable surface story is still not backend-neutral at the shared
 runtime layer:

@@ -507,6 +507,9 @@ Current evidence:
   `gl_backend.zig` / `metal_backend.zig`, because it makes presentable
   ownership a first-class backend lane instead of a sidecar on the general
   backend modules.
+- GL and Metal presentable draw paths now consume one shared draw-resolution
+  helper from `presentable_contract.zig` instead of each backend open-coding
+  width/height/source fallback semantics.
 
 Owner docs:
 
