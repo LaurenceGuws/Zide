@@ -66,6 +66,8 @@ test "replayOpsWith keeps order and wraps group" {
         kind: EventKind,
         group: GroupKind,
         text: []const u8 = "",
+        op_kind: ?TextKind = null,
+        bg_r: u8 = 0,
     };
     const FakeReplayer = struct {
         events: *std.ArrayList(Event),
@@ -76,7 +78,13 @@ test "replayOpsWith keeps order and wraps group" {
             self.events.append(std.testing.allocator, .{ .kind = .end, .group = group }) catch unreachable;
         }
         fn replayOpOnBg(self: @This(), op: ReplayOp) void {
-            self.events.append(std.testing.allocator, .{ .kind = .op, .group = .chrome_band, .text = op.text }) catch unreachable;
+            self.events.append(std.testing.allocator, .{
+                .kind = .op,
+                .group = .chrome_band,
+                .text = op.text,
+                .op_kind = op.kind,
+                .bg_r = op.bg.r,
+            }) catch unreachable;
         }
     };
     var events = std.ArrayList(Event).empty;
@@ -91,8 +99,12 @@ test "replayOpsWith keeps order and wraps group" {
     try std.testing.expectEqual(GroupKind.sample_section, events.items[0].group);
     try std.testing.expectEqual(EventKind.op, events.items[1].kind);
     try std.testing.expectEqualStrings("A", events.items[1].text);
+    try std.testing.expectEqual(@as(?TextKind, .text), events.items[1].op_kind);
+    try std.testing.expectEqual(@as(u8, 2), events.items[1].bg_r);
     try std.testing.expectEqual(EventKind.op, events.items[2].kind);
     try std.testing.expectEqualStrings("I", events.items[2].text);
+    try std.testing.expectEqual(@as(?TextKind, .icon), events.items[2].op_kind);
+    try std.testing.expectEqual(@as(u8, 4), events.items[2].bg_r);
     try std.testing.expectEqual(EventKind.end, events.items[3].kind);
     try std.testing.expectEqual(GroupKind.sample_section, events.items[3].group);
 }
@@ -122,4 +134,33 @@ test "replayOpsWith wraps empty group" {
     try std.testing.expectEqual(GroupKind.chrome_band, events.items[0].group);
     try std.testing.expectEqual(EventKind.end, events.items[1].kind);
     try std.testing.expectEqual(GroupKind.chrome_band, events.items[1].group);
+}
+
+test "replayOpsWith forwards editor row-band group kind" {
+    const Event = struct { group: GroupKind };
+    const FakeReplayer = struct {
+        begin_group: *?GroupKind,
+        end_group: *?GroupKind,
+        fn beginGroup(self: @This(), group: GroupKind) void {
+            self.begin_group.* = group;
+        }
+        fn endGroup(self: @This(), group: GroupKind) void {
+            self.end_group.* = group;
+        }
+        fn replayOpOnBg(self: @This(), op: ReplayOp) void {
+            _ = self;
+            _ = op;
+        }
+    };
+
+    _ = Event;
+    var begin_group: ?GroupKind = null;
+    var end_group: ?GroupKind = null;
+    replayOpsWith(
+        FakeReplayer{ .begin_group = &begin_group, .end_group = &end_group },
+        .editor_row_band,
+        &[_]ReplayOp{},
+    );
+    try std.testing.expectEqual(@as(?GroupKind, .editor_row_band), begin_group);
+    try std.testing.expectEqual(@as(?GroupKind, .editor_row_band), end_group);
 }

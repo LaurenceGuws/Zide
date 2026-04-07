@@ -440,7 +440,7 @@ Milestone B "done" checkpoints (execute in order, do not rerank mid-lane):
   - standardize trace metrics for phase groups (begin/end counts and mismatch
     detection) under one naming family
   - keep runtime warning guardrails for begin/end divergence
-- [ ] **B-DONE-6: lock regression coverage**
+- [x] **B-DONE-6: lock regression coverage**
   - unit tests for empty/non-empty group replay, op order, bg payload propagation
     on the unified host seam
   - focused widget-level smoke checks for chrome, sample, and editor row-band
@@ -974,6 +974,9 @@ Current evidence:
   naming family across chrome/sample/editor (`*_group_begin_count`,
   `*_group_end_count`, `*_group_mismatch`) with frame-present warning
   guardrails kept enabled.
+- closure checkpoint (`B-DONE-6`): unified host seam tests now explicitly cover
+  empty/non-empty replay, op kind ordering, bg payload propagation, and editor
+  row-band group-kind forwarding in `renderer_text_phase_group_host`.
 - this is good local honesty for the sample lane, but it does not yet turn the
   sample family into a recorded backend-neutral phase.
 - first sample-side proof is acceptable only as a tiny section-composition seam,

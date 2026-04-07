@@ -570,6 +570,10 @@ Observability parity is now closed too (`B-DONE-5`): chrome, sample, and editor
 row-band groups all expose begin/end counters and mismatch warnings under one
 consistent naming family.
 
+Regression coverage is now stronger too (`B-DONE-6`): unified host seam tests
+explicitly assert empty/non-empty replay behavior, op-kind order, bg payload
+propagation, and editor row-band group forwarding.
+
 That seam is now clean enough that further expansion would be fake progress
 unless it graduates into a real recorded band-composition phase. Until that
 happens, it should be treated as a renderer-host composition helper for the

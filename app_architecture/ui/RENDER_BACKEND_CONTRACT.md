@@ -587,6 +587,10 @@ shared text phase host contract directly.
 metrics and mismatch guardrails now follow one naming family across chrome,
 sample, and editor row-band lanes.
 
+**Regression coverage checkpoint (B-DONE-6, 2026-04-07):** unified text phase
+host tests now cover empty/non-empty replay, op-kind ordering, bg payload
+propagation, and editor row-band group forwarding semantics.
+
 **Editor adoption checkpoint (B-DONE-3, 2026-04-07):** editor row-band
 draw-list flush and immediate/fallback row-band execution now both open/close
 explicit `.editor_row_band` text phase groups through the shared host seam.
