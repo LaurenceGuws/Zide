@@ -610,6 +610,10 @@ Current evidence:
 - rect outlines now follow that same rule through `renderer_surface_host.zig`
   instead of keeping `Renderer.drawRectOutline(...)` alive as another root
   convenience wrapper over the same solid-fill seam.
+- generic shell-level solid/outline wrappers are now gone too:
+  app/widget callers that still need generic fills now terminate in
+  `renderer_surface_host.zig` directly instead of bouncing through
+  `Shell.drawRect(...)` / `Shell.drawRectOutline(...)`.
 - clip lifecycle now follows the same rule through `renderer_clip_host.zig`
   instead of keeping `beginClip(...)` / `endClip(...)` as renderer-root
   convenience surfaces over already-owned backend clip runtimes.

@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_shell = @import("../app_shell.zig");
+const renderer_surface_host = @import("../ui/renderer/renderer_surface_host.zig");
 const widgets_common = @import("../ui/widgets/common.zig");
 const window_caption_buttons_runtime = @import("window_caption_buttons_runtime.zig");
 
@@ -60,7 +61,7 @@ fn drawCaptionButton(shell: anytype, rect: anytype, hovered: bool, pressed: bool
     else
         theme.ui_window_control_fg;
 
-    shell.drawRect(
+    renderer_surface_host.drawRect(shell.rendererPtr(),
         @intFromFloat(rect.x),
         @intFromFloat(rect.y),
         @intFromFloat(rect.width),
@@ -84,15 +85,15 @@ fn drawCaptionButton(shell: anytype, rect: anytype, hovered: bool, pressed: bool
     const restore_offset = @max(@as(i32, 1), stroke * 2);
 
     switch (kind) {
-        .minimize => shell.drawRect(line_left, mid_y, line_len, stroke, fg),
+        .minimize => renderer_surface_host.drawRect(shell.rendererPtr(), line_left, mid_y, line_len, stroke, fg),
         .maximize_restore => {
             if (shell.windowIsMaximized()) {
                 const back_w = @max(1, size - restore_offset);
                 const back_h = @max(1, size - restore_offset);
-                shell.drawRectOutline(left + restore_offset, top, back_w, back_h, fg);
-                shell.drawRectOutline(left, top + restore_offset, back_w, back_h, fg);
+                renderer_surface_host.drawRectOutline(shell.rendererPtr(), left + restore_offset, top, back_w, back_h, fg);
+                renderer_surface_host.drawRectOutline(shell.rendererPtr(), left, top + restore_offset, back_w, back_h, fg);
             } else {
-                shell.drawRectOutline(left, top, size, size, fg);
+                renderer_surface_host.drawRectOutline(shell.rendererPtr(), left, top, size, size, fg);
             }
         },
         .close => {
@@ -113,7 +114,7 @@ fn drawDiagonalLine(shell: anytype, x1: i32, y1: i32, x2: i32, y2: i32, stroke: 
 
     while (true) {
         const half = @divTrunc(stroke, 2);
-        shell.drawRect(x - half, y - half, stroke, stroke, color);
+        renderer_surface_host.drawRect(shell.rendererPtr(), x - half, y - half, stroke, stroke, color);
         if (x == x2 and y == y2) break;
         const e2 = err * 2;
         if (e2 >= dy) {

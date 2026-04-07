@@ -3,6 +3,7 @@ const app_shell = @import("../../app_shell.zig");
 const app_terminal_window_chrome_runtime = @import("../terminal/window_chrome_runtime.zig");
 const app_theme_utils = @import("../theme_utils.zig");
 const app_window_caption_buttons_draw_runtime = @import("../window_caption_buttons_draw_runtime.zig");
+const renderer_surface_host = @import("../../ui/renderer/renderer_surface_host.zig");
 const widgets_common = @import("../../ui/widgets/common.zig");
 const shared_types = @import("../../types/mod.zig");
 
@@ -66,7 +67,7 @@ pub fn draw(state: anytype, shell: anytype, layout: layout_types.WidgetLayout, c
 }
 
 fn drawIntegratedBackground(shell: anytype, band: layout_types.Rect, color: Color) void {
-    shell.drawRect(
+    renderer_surface_host.drawRect(shell.rendererPtr(),
         @intFromFloat(band.x),
         @intFromFloat(band.y),
         @intFromFloat(band.width),

@@ -2,6 +2,7 @@ const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
 const app_logger = @import("../../app_logger.zig");
 const renderer_chrome_band_host = @import("../renderer/renderer_chrome_band_host.zig");
+const renderer_surface_host = @import("../renderer/renderer_surface_host.zig");
 const common = @import("common.zig");
 const shared_types = @import("../../types/mod.zig");
 
@@ -92,7 +93,7 @@ pub const StatusBar = struct {
         drawn_width: f32,
     } {
         if (select_all and text.len > 0) {
-            shell.drawRect(
+            renderer_surface_host.drawRect(shell.rendererPtr(),
                 @intFromFloat(query_x),
                 @intFromFloat(field_y + 2),
                 @intFromFloat(@max(@as(f32, 1), query_available)),
@@ -216,7 +217,7 @@ pub const StatusBar = struct {
                             @intFromFloat(self.height),
                         );
                         const caret_x = @min(query_x + result.drawn_width + shell.charWidth() * 0.1, query_x + query_available - 2 * scale);
-                        shell.drawRect(
+                        renderer_surface_host.drawRect(shell.rendererPtr(),
                             @intFromFloat(caret_x),
                             @intFromFloat(y + 3 * scale),
                             @intFromFloat(@max(@as(f32, 1), 2 * scale)),
@@ -288,7 +289,7 @@ pub const StatusBar = struct {
                             @intFromFloat(self.height),
                         );
                         const caret_x = @min(query_x + result.drawn_width + shell.charWidth() * 0.1, query_x + query_available - 2 * scale);
-                        shell.drawRect(
+                        renderer_surface_host.drawRect(shell.rendererPtr(),
                             @intFromFloat(caret_x),
                             @intFromFloat(y + 3 * scale),
                             @intFromFloat(@max(@as(f32, 1), 2 * scale)),

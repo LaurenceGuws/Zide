@@ -3,6 +3,7 @@ const app_terminal_active_widget = @import("terminal_active_widget.zig");
 const app_terminal_progress_runtime = @import("terminal_progress_runtime.zig");
 const app_terminal_scrollbar_runtime = @import("terminal_scrollbar_runtime.zig");
 const app_terminal_surface_gate = @import("terminal_surface_gate.zig");
+const renderer_surface_host = @import("../../ui/renderer/renderer_surface_host.zig");
 const host_queries = @import("../../terminal/core/session/host_queries.zig");
 const shared_types = @import("../../types/mod.zig");
 
@@ -15,7 +16,7 @@ pub fn draw(state: anytype, shell: anytype, layout: layout_types.WidgetLayout) v
 
     if (app_modes.ide.shouldRenderTerminalSeparator(state.app_mode)) {
         shell.setTheme(state.app_theme);
-        shell.drawRect(@intFromFloat(layout.terminal.x), @intFromFloat(term_y), @intFromFloat(layout.terminal.width), 2, state.app_theme.ui_border);
+        renderer_surface_host.drawRect(shell.rendererPtr(), @intFromFloat(layout.terminal.x), @intFromFloat(term_y), @intFromFloat(layout.terminal.width), 2, state.app_theme.ui_border);
     }
 
     shell.setTheme(state.terminal_theme);

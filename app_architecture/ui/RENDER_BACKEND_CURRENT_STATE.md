@@ -67,6 +67,13 @@ In current-state terms, the remaining blockers are:
 That is a much better answer than the repo had before, but it is still a
 blocking answer.
 
+One more caller-surface leak is gone: generic app/widget solid and outline
+fills no longer bounce through `Shell.drawRect(...)` /
+`Shell.drawRectOutline(...)`. Those callers now terminate in
+`renderer_surface_host.zig` directly. This does not solve the remaining
+surface-phase timing contradiction, but it does remove another broad
+convenience seam between product code and the shared surface host.
+
 ## What Is Good
 
 ### Capability naming is better

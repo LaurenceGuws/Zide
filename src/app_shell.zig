@@ -1,7 +1,6 @@
 const std = @import("std");
 const r = @import("ui/renderer.zig");
 const renderer_clip_host = @import("ui/renderer/renderer_clip_host.zig");
-const renderer_surface_host = @import("ui/renderer/renderer_surface_host.zig");
 const renderer_text_host = @import("ui/renderer/renderer_text_host.zig");
 const iface = @import("ui/renderer/interface.zig");
 const window = @import("platform/window_metrics.zig");
@@ -429,14 +428,6 @@ pub const Shell = struct {
 
     pub fn endClip(self: *Shell) void {
         renderer_clip_host.endClip(self.renderer);
-    }
-
-    pub fn drawRect(self: *Shell, x: i32, y: i32, w: i32, h: i32, color: Color) void {
-        renderer_surface_host.drawRect(self.renderer, x, y, w, h, color);
-    }
-
-    pub fn drawRectOutline(self: *Shell, x: i32, y: i32, w: i32, h: i32, color: Color) void {
-        renderer_surface_host.drawRectOutline(self.renderer, x, y, w, h, color);
     }
 
     pub fn drawText(self: *Shell, text: []const u8, x: f32, y: f32, color: Color) void {
