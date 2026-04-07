@@ -834,6 +834,10 @@ Current evidence:
 - editor stop rule checkpoint: do not keep grinding local helper cleanup past
   this point unless a cut removes the final emitter-target split itself or
   changes the real `SurfaceDraw` timing story.
+- that means the next renderer-quality move is no longer another editor-local
+  helper pass by default. It is either:
+  - one cut that removes the final styled-text emitter split
+  - or a pivot back to the shared `SurfaceDraw` timing blocker
 - backend-runtime checkpoint: the remaining runtime-storage blocker is now more
   specifically OpenGL-shaped than Metal-shaped. Metal live frame/queue state is
   under backend context.
