@@ -277,10 +277,10 @@ god-queue.
 
 **First adopter checkpoint (2026-04-07):** the first useful code step is now
 present too: a narrow widget-side chrome band host exists and the status bar
-uses it. That is not the final backend-neutral phase yet. It is the first
-explicit contract surface where one chrome family can stop reading like "some
-fills plus unrelated immediate text calls." The next cuts should grow this seam
-carefully, not duplicate it.
+and tab bar use it. That is not the final backend-neutral phase yet. It is the
+first explicit contract surface where one chrome family can stop reading like
+"some fills plus unrelated immediate text calls." The next cuts should grow
+this seam carefully, not duplicate it.
 
 #### Presentable contract
 

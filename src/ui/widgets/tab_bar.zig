@@ -1,11 +1,13 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
 const app_logger = @import("../../app_logger.zig");
+const chrome_band_host = @import("chrome_band_host.zig");
 const common = @import("common.zig");
 const shared_types = @import("../../types/mod.zig");
 
 const Shell = app_shell.Shell;
 const Color = app_shell.Color;
+const Band = chrome_band_host.Band;
 const Tooltip = common.Tooltip;
 
 pub const TabBar = struct {
@@ -162,10 +164,11 @@ pub const TabBar = struct {
 
     pub fn drawWithIconProvider(self: *TabBar, shell: *Shell, x: f32, y: f32, width: f32, icon_provider: ?IconProvider) ?Tooltip {
         const theme = shell.theme();
+        const band = Band.init(shell, theme.ui_bar_bg);
         self.last_char_width = shell.charWidth();
         self.last_ui_scale = shell.uiScaleFactor();
         // Draw tab bar background
-        shell.drawRect(@intFromFloat(x), @intFromFloat(y), @intFromFloat(width), @intFromFloat(self.height), theme.ui_bar_bg);
+        band.fillRect(@intFromFloat(x), @intFromFloat(y), @intFromFloat(width), @intFromFloat(self.height), theme.ui_bar_bg);
 
         if (width <= 0 or self.height <= 0) return null;
 
@@ -202,7 +205,7 @@ pub const TabBar = struct {
                 theme.background
             else
                 theme.ui_tab_inactive_bg;
-            shell.drawRect(
+            band.fillRect(
                 @intFromFloat(cursor_x),
                 @intFromFloat(tab_y),
                 @intFromFloat(tab_w),
@@ -213,7 +216,7 @@ pub const TabBar = struct {
             // Tab border
             if (is_active) {
                 const border_h: f32 = @max(1.0, shell.uiScaleFactor() * 2.0);
-                shell.drawRect(
+                band.fillRect(
                     @intFromFloat(cursor_x),
                     @intFromFloat(tab_y + tab_h - border_h),
                     @intFromFloat(tab_w),
@@ -223,7 +226,7 @@ pub const TabBar = struct {
             }
             if (is_dragging_tab) {
                 const top_h: f32 = @max(1.0, shell.uiScaleFactor() * 2.0);
-                shell.drawRect(
+                band.fillRect(
                     @intFromFloat(cursor_x),
                     @intFromFloat(tab_y),
                     @intFromFloat(tab_w),
@@ -250,13 +253,13 @@ pub const TabBar = struct {
 
             // Modified indicator
             if (tab.modified) {
-                shell.drawText("* ", title_x, title_y, theme.ui_modified);
+                band.drawText("* ", title_x, title_y, theme.ui_modified);
             }
 
             const prefix_width: f32 = if (tab.modified) shell.charWidth() * 2 else 0;
             const title_max = @max(0, tab_w - 16 * shell.uiScaleFactor() - prefix_width - icon_reserved);
             const result = common.drawTruncatedText(
-                shell,
+                band.shell,
                 tab.title,
                 title_x + prefix_width,
                 title_y,
