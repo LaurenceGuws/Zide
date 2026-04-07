@@ -419,6 +419,9 @@ The current code makes that split more specific:
   across tabs/wide-glyph slices also has one shared helper now, so the
   remaining editor styled-text difference is increasingly just immediate vs
   draw-list emission.
+- unstyled selection/bg text-run splitting is now shared there too, so the
+  remaining editor text difference is now almost entirely the final immediate
+  vs draw-list emitter target.
 - stop there unless the next cut removes that emitter split itself or changes
   the actual surface/timing contract. More editor-local helper cleanup beyond
   this point would be fake progress.

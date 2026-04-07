@@ -831,6 +831,11 @@ Current evidence:
   `editor_widget_draw_text.zig`.
 - the remaining editor styled-text split is now increasingly just the final
   immediate-vs-draw-list emission target.
+- editor checkpoint: expanded unstyled text run splitting for selection/bg text
+  slices now also runs through one shared helper there.
+- at this point both styled and unstyled text-run splitting are shared; the
+  remaining editor text difference is now almost entirely the final immediate
+  vs draw-list emitter target.
 - editor stop rule checkpoint: do not keep grinding local helper cleanup past
   this point unless a cut removes the final emitter-target split itself or
   changes the real `SurfaceDraw` timing story.
