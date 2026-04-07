@@ -596,6 +596,9 @@ Current evidence:
 - rect outlines now follow that same rule through `renderer_surface_host.zig`
   instead of keeping `Renderer.drawRectOutline(...)` alive as another root
   convenience wrapper over the same solid-fill seam.
+- clip lifecycle now follows the same rule through `renderer_clip_host.zig`
+  instead of keeping `beginClip(...)` / `endClip(...)` as renderer-root
+  convenience surfaces over already-owned backend clip runtimes.
 - contract authority now pins the next hard rule for `SurfaceDraw`:
   shared code may assume order only relative to other recorded surface draws
   inside the backend's surface phase, not exact interleaving with terminal or

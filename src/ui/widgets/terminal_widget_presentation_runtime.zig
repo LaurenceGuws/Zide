@@ -7,6 +7,7 @@ const draw_presentation = @import("terminal_widget_draw_presentation.zig");
 const presentation_state_mod = @import("terminal_widget_presentation_state.zig");
 const view_state = @import("terminal_widget_view_state.zig");
 const present_trace_runtime = @import("../renderer/present_trace_runtime.zig");
+const renderer_clip_host = @import("../renderer/renderer_clip_host.zig");
 const renderer_presentable_host = @import("../renderer/renderer_presentable_host.zig");
 const renderer_surface_host = @import("../renderer/renderer_surface_host.zig");
 const renderer_terminal_draw_host = @import("../renderer/renderer_terminal_draw_host.zig");
@@ -691,7 +692,7 @@ pub fn runRetainedPresentCycle(
     if (!renderer_presentable_host.beginPresentable(renderer, .terminal)) return result;
     defer renderer_presentable_host.endPresentable(renderer, .terminal);
 
-    renderer.endClip();
+    renderer_clip_host.endClip(renderer);
     const execution = executePresentableUpdate(
         self,
         shell,
@@ -760,7 +761,7 @@ pub fn runRetainedPresentation(
         visible_h,
         view_cells_len,
     );
-    defer if (present_state.present) renderer.endClip();
+    defer if (present_state.present) renderer_clip_host.endClip(renderer);
     const bg = if (view_cells_len > 0)
         Color{
             .r = terminal_view.base_colors.resolved_background.r,
@@ -1012,7 +1013,8 @@ pub fn beginViewportClip(
     visible_h: i32,
 ) void {
     if (visible_w <= 0 or visible_h <= 0) return;
-    renderer.beginClip(
+    renderer_clip_host.beginClip(
+        renderer,
         @intFromFloat(std.math.round(view_geometry.origin_x)),
         @intFromFloat(std.math.round(view_geometry.origin_y)),
         visible_w,
@@ -1428,7 +1430,7 @@ pub fn tryDirectSnapshotUpdate(
         surface_update_plan.geometry.visible_w,
         surface_update_plan.geometry.visible_h,
     );
-    defer renderer.endClip();
+    defer renderer_clip_host.endClip(renderer);
 
     result = executeDirectSnapshotUpdate(
         self,

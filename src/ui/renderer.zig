@@ -13,6 +13,7 @@ const draw_ops = @import("renderer/draw_ops.zig");
 const backend_dispatch = @import("renderer/backend_dispatch.zig");
 const backend_runtime_bundle = @import("renderer/backend_runtime_bundle.zig");
 const metal_runtime_state = @import("renderer/metal_runtime_state.zig");
+const renderer_clip_host = @import("renderer/renderer_clip_host.zig");
 const renderer_frame_host = @import("renderer/renderer_frame_host.zig");
 const renderer_presentable_host = @import("renderer/renderer_presentable_host.zig");
 const renderer_surface_host = @import("renderer/renderer_surface_host.zig");
@@ -1088,36 +1089,6 @@ pub const Renderer = struct {
 
     pub fn drawChar(self: *Renderer, char: u8, x: f32, y: f32, color: Color) void {
         text_runtime.drawChar(self, char, x, y, color);
-    }
-
-    pub fn beginClip(self: *Renderer, x: i32, y: i32, w: i32, h: i32) void {
-        present_trace_runtime.noteCompositionClip(self);
-        const requested = logicalClipFromInts(x, y, w, h) orelse {
-            self.clip_depth = 0;
-            self.backend_ops.clip.applyClipRect(self, null);
-            return;
-        };
-        const next = if (self.currentClipRect()) |current|
-            intersectRect(current, requested) orelse types.Rect{
-                .x = requested.x,
-                .y = requested.y,
-                .width = 0,
-                .height = 0,
-            }
-        else
-            requested;
-        if (self.clip_depth < self.clip_stack.len) {
-            self.clip_stack[self.clip_depth] = next;
-            self.clip_depth += 1;
-        } else {
-            self.clip_stack[self.clip_stack.len - 1] = next;
-        }
-        self.backend_ops.clip.applyClipRect(self, next);
-    }
-
-    pub fn endClip(self: *Renderer) void {
-        if (self.clip_depth > 0) self.clip_depth -= 1;
-        self.backend_ops.clip.applyClipRect(self, self.currentClipRect());
     }
 
     pub fn drawTerminalCellGraphemeBatched(

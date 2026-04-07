@@ -20,6 +20,7 @@ const surface_draw = @import("surface_draw.zig");
 const window_init = @import("window_init.zig");
 const screenshot = @import("screenshot.zig");
 const present_trace_runtime = @import("present_trace_runtime.zig");
+const renderer_clip_host = @import("renderer_clip_host.zig");
 const renderer_frame_host = @import("renderer_frame_host.zig");
 
 const sdl = gl.c;
@@ -362,13 +363,14 @@ pub fn consumeRecordedSurfaceDrawImmediate(renderer: anytype, draw: surface_draw
             if (w <= 0 or h <= 0) return false;
             if (s.clip_rect) |pc| {
                 if (pc.width <= 0 or pc.height <= 0) return false;
-                renderer.beginClip(
+                renderer_clip_host.beginClip(
+                    renderer,
                     @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.x)))),
                     @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.y)))),
                     @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.width)))),
                     @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.height)))),
                 );
-                defer renderer.endClip();
+                defer renderer_clip_host.endClip(renderer);
                 return drawSolidRect(renderer, x, y, w, h, s.color);
             }
             return drawSolidRect(renderer, x, y, w, h, s.color);
@@ -396,13 +398,14 @@ pub fn consumeRecordedSurfaceDrawImmediate(renderer: anytype, draw: surface_draw
             const bg = renderer.text_render.bg_rgba;
             if (sample.clip_rect) |pc| {
                 if (pc.width <= 0 or pc.height <= 0) return false;
-                renderer.beginClip(
+                renderer_clip_host.beginClip(
+                    renderer,
                     @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.x)))),
                     @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.y)))),
                     @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.width)))),
                     @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.height)))),
                 );
-                defer renderer.endClip();
+                defer renderer_clip_host.endClip(renderer);
                 draw_ops.drawTextureRect(renderer, tex, sample.source_rect, dest, sample.tint, bg, kind);
                 return true;
             }
@@ -427,13 +430,14 @@ pub fn consumeRecordedSurfaceDrawImmediate(renderer: anytype, draw: surface_draw
             const bg = renderer.text_render.bg_rgba;
             if (img.clip_rect) |pc| {
                 if (pc.width <= 0 or pc.height <= 0) return false;
-                renderer.beginClip(
+                renderer_clip_host.beginClip(
+                    renderer,
                     @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.x)))),
                     @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.y)))),
                     @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.width)))),
                     @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.height)))),
                 );
-                defer renderer.endClip();
+                defer renderer_clip_host.endClip(renderer);
                 draw_ops.drawTextureRect(renderer, tex, source_rect, dest, img.tint, bg, .rgba);
                 return true;
             }

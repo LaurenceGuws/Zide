@@ -12,6 +12,7 @@ const traversal_mod = @import("../../editor/render/traversal.zig");
 const segment_paint_mod = @import("../../editor/render/segment_paint.zig");
 const visible_prep_mod = @import("../../editor/render/visible_prep.zig");
 const app_logger = @import("../../app_logger.zig");
+const renderer_clip_host = @import("../renderer/renderer_clip_host.zig");
 const renderer_presentable_host = @import("../renderer/renderer_presentable_host.zig");
 const renderer_surface_host = @import("../renderer/renderer_surface_host.zig");
 const overlay_mod = @import("editor_widget_draw_overlay.zig");
@@ -375,13 +376,14 @@ pub fn drawCached(
                 }
 
                 const clip_h = clippedEditorRowHeight(seg_band.h_i, @as(i32, @intFromFloat(height_local)) - seg_band.y_i);
-                r_local.beginClip(
+                renderer_clip_host.beginClip(
+                    r_local,
                     @intFromFloat(origin_x_local),
                     seg_band.y_i,
                     @intFromFloat(width_local),
                     @max(1, clip_h),
                 );
-                defer r_local.endClip();
+                defer renderer_clip_host.endClip(r_local);
 
                 draw_list_local.clear();
                 var list_ok = true;
