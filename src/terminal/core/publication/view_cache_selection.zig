@@ -1,7 +1,5 @@
 const types = @import("../../model/types.zig");
-const publication = @import("view_cache_publication.zig");
-
-const Cell = types.Cell;
+const std = @import("std");
 
 pub fn projectSelection(
     self: anytype,
@@ -40,31 +38,141 @@ pub fn projectSelection(
         var row: usize = 0;
         while (row < rows) : (row += 1) {
             const global_row = start_line + row;
-            const row_start = row * cols;
-            const row_cells: []const Cell = cache.cells.items[row_start .. row_start + cols];
-            const last_content_col = publication.rowLastContentCol(row_cells, cols);
             if (global_row < start_sel.row or global_row > end_sel.row) {
                 cache.selection_rows.items[row] = false;
                 continue;
             }
             const col_start = if (global_row == start_sel.row) start_sel.col else 0;
             const col_end = if (global_row == end_sel.row) end_sel.col else cols - 1;
-            if (last_content_col == null) {
-                cache.selection_rows.items[row] = false;
-                continue;
-            }
-            const clamped_end = @min(col_end, last_content_col.?);
-            if (clamped_end < col_start) {
+            if (col_end < col_start) {
                 cache.selection_rows.items[row] = false;
                 continue;
             }
             cache.selection_rows.items[row] = true;
             cache.selection_cols_start.items[row] = @intCast(col_start);
-            cache.selection_cols_end.items[row] = @intCast(clamped_end);
+            cache.selection_cols_end.items[row] = @intCast(col_end);
         }
     } else {
         for (cache.selection_rows.items) |*row_selected| {
             row_selected.* = false;
         }
     }
+}
+
+test "projectSelection keeps empty middle rows visible inside multiline selection" {
+    const FakeHistory = struct {
+        selection: ?types.TerminalSelection,
+        fn selectionState(self: @This()) ?types.TerminalSelection {
+            return self.selection;
+        }
+    };
+    const FakeCore = struct {
+        active: enum { primary, alt },
+        history: FakeHistory,
+    };
+    const FakeSelf = struct {
+        core: FakeCore,
+    };
+    const FakeCache = struct {
+        selection_rows: std.ArrayList(bool),
+        selection_cols_start: std.ArrayList(u16),
+        selection_cols_end: std.ArrayList(u16),
+    };
+
+    var rows = std.ArrayList(bool).empty;
+    var starts = std.ArrayList(u16).empty;
+    var ends = std.ArrayList(u16).empty;
+    defer rows.deinit(std.testing.allocator);
+    defer starts.deinit(std.testing.allocator);
+    defer ends.deinit(std.testing.allocator);
+    try rows.resize(std.testing.allocator, 3);
+    try starts.resize(std.testing.allocator, 3);
+    try ends.resize(std.testing.allocator, 3);
+
+    var cache = FakeCache{
+        .selection_rows = rows,
+        .selection_cols_start = starts,
+        .selection_cols_end = ends,
+    };
+    const self = FakeSelf{
+        .core = .{
+            .active = .primary,
+            .history = .{
+                .selection = .{
+                    .active = true,
+                    .selecting = false,
+                    .start = .{ .row = 10, .col = 2 },
+                    .end = .{ .row = 12, .col = 1 },
+                },
+            },
+        },
+    };
+
+    projectSelection(self, &cache, 20, 10, 3, 5, true);
+
+    try std.testing.expect(cache.selection_rows.items[0]);
+    try std.testing.expect(cache.selection_rows.items[1]);
+    try std.testing.expect(cache.selection_rows.items[2]);
+    try std.testing.expectEqual(@as(u16, 2), cache.selection_cols_start.items[0]);
+    try std.testing.expectEqual(@as(u16, 4), cache.selection_cols_end.items[0]);
+    try std.testing.expectEqual(@as(u16, 0), cache.selection_cols_start.items[1]);
+    try std.testing.expectEqual(@as(u16, 4), cache.selection_cols_end.items[1]);
+    try std.testing.expectEqual(@as(u16, 0), cache.selection_cols_start.items[2]);
+    try std.testing.expectEqual(@as(u16, 1), cache.selection_cols_end.items[2]);
+}
+
+test "projectSelection does not drop a selected row just because it has no content" {
+    const FakeHistory = struct {
+        selection: ?types.TerminalSelection,
+        fn selectionState(self: @This()) ?types.TerminalSelection {
+            return self.selection;
+        }
+    };
+    const FakeCore = struct {
+        active: enum { primary, alt },
+        history: FakeHistory,
+    };
+    const FakeSelf = struct {
+        core: FakeCore,
+    };
+    const FakeCache = struct {
+        selection_rows: std.ArrayList(bool),
+        selection_cols_start: std.ArrayList(u16),
+        selection_cols_end: std.ArrayList(u16),
+    };
+
+    var rows = std.ArrayList(bool).empty;
+    var starts = std.ArrayList(u16).empty;
+    var ends = std.ArrayList(u16).empty;
+    defer rows.deinit(std.testing.allocator);
+    defer starts.deinit(std.testing.allocator);
+    defer ends.deinit(std.testing.allocator);
+    try rows.resize(std.testing.allocator, 1);
+    try starts.resize(std.testing.allocator, 1);
+    try ends.resize(std.testing.allocator, 1);
+
+    var cache = FakeCache{
+        .selection_rows = rows,
+        .selection_cols_start = starts,
+        .selection_cols_end = ends,
+    };
+    const self = FakeSelf{
+        .core = .{
+            .active = .primary,
+            .history = .{
+                .selection = .{
+                    .active = true,
+                    .selecting = false,
+                    .start = .{ .row = 4, .col = 0 },
+                    .end = .{ .row = 4, .col = 3 },
+                },
+            },
+        },
+    };
+
+    projectSelection(self, &cache, 8, 4, 1, 5, true);
+
+    try std.testing.expect(cache.selection_rows.items[0]);
+    try std.testing.expectEqual(@as(u16, 0), cache.selection_cols_start.items[0]);
+    try std.testing.expectEqual(@as(u16, 3), cache.selection_cols_end.items[0]);
 }
