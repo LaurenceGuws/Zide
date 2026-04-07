@@ -86,6 +86,11 @@ pub fn canCleanAdvancePublish(
     total_lines: usize,
     view_dirty: anytype,
 ) bool {
+    // Clean-advance is only safe when selection geometry is absent. The
+    // published-state match only tracks whether selection exists, not its
+    // current bounds, so an active drag can otherwise skip reprojection.
+    if (expected.selection_active or active_cache.hasSelection()) return false;
+
     return active_cache.matchesPublishedState(expected) and
         view_dirty == .none and
         active_cache.dirty == .none and

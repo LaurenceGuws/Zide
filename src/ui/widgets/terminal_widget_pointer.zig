@@ -129,8 +129,10 @@ pub fn handlePointerInput(
                             result.handled = true;
                         }
                     } else {
-                        const row_cells = view_cells[hit.row * params.view.cols .. (hit.row + 1) * params.view.cols];
-                        if (input_adapter.selectOrUpdateCellInRow(row_cells, global_row, hit.col)) {
+                        if (input_adapter.selectOrUpdateCell(.{
+                            .row = global_row,
+                            .col = hit.col,
+                        })) {
                             selection_active = true;
                             result.handled = true;
                         }

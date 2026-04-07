@@ -11,6 +11,7 @@ pub fn consumeSelectionMutationLocked(
 ) bool {
     if (!effect.changed) return false;
     _ = requestViewRefreshLocked(self, effect.scroll_offset);
+    view_cache.updateViewCacheForScrollLocked(self);
     return true;
 }
 

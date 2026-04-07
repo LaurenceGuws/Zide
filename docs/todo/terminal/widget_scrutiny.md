@@ -76,6 +76,13 @@ Current front, 2026-04-06:
   - terminal pane background ownership now starts from the terminal's live
     resolved background color for the whole pane, so centered-grid remainder
     space no longer leaks shell/app chrome color around the viewport
+- Checkpoint, 2026-04-07:
+  - drag selection now updates from raw cell geometry instead of the
+    row-content-clamped helper used for click selection follow-up
+  - view-cache publication no longer treats active selection drag as a
+    clean-advance publish case; selection bounds now force reprojection
+  - multiline/blank-row selection projection no longer clips to visible
+    content columns, so selection geometry matches the actual selected range
 - That means this lane now has one concrete product-quality bar in addition to
   the broader widget-hosting audit:
   - resizing the terminal after output already exists must preserve sane

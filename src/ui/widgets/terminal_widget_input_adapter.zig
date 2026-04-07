@@ -91,6 +91,12 @@ pub const TerminalInputAdapter = struct {
         terminal_selection.selectRange(self.session, start, end, finished);
     }
 
+    pub fn selectOrUpdateCell(self: *const Self, pos: terminal_types.SelectionPos) bool {
+        self.session.lock();
+        defer self.session.unlock();
+        return terminal_selection.selectOrUpdateCellLocked(self.session, pos);
+    }
+
     pub fn selectOrUpdateCellInRow(self: *const Self, row_cells: []const terminal_types.Cell, global_row: usize, col: usize) bool {
         return terminal_selection.selectOrUpdateCellInRow(self.session, row_cells, global_row, col);
     }
