@@ -138,6 +138,51 @@ pub const PresentationRunResult = struct {
     kitty_ms: f64 = 0.0,
 };
 
+pub fn runFastPresentIfAvailable(
+    surface_state: anytype,
+    renderer: anytype,
+    terminal_view: view_state.TerminalViewModel,
+    view_cells_len: usize,
+    blink_requires_partial: bool,
+    draw_cursor: bool,
+    cursor: CursorPos,
+    cursor_style: terminal_types.CursorStyle,
+    hover_link_id: u32,
+    composing_active: bool,
+    composing_hash: u64,
+    bg_color: Color,
+    x: f32,
+    y: f32,
+    width: f32,
+    height: f32,
+    view_geometry: TerminalViewGeometry,
+    note_present_ctx: anytype,
+    note_present: anytype,
+) PresentationRunResult {
+    if (!tryFastPresentExisting(
+        surface_state,
+        renderer,
+        terminal_view,
+        view_cells_len,
+        blink_requires_partial,
+        draw_cursor,
+        cursor,
+        cursor_style,
+        hover_link_id,
+        composing_active,
+        composing_hash,
+        bg_color,
+        x,
+        y,
+        width,
+        height,
+        view_geometry,
+        note_present_ctx,
+        note_present,
+    )) return .{};
+    return .{ .early_return = true };
+}
+
 pub const SurfacePresentResult = struct {
     early_return: bool = false,
     presentation_update_ms: f64 = 0.0,
@@ -834,6 +879,85 @@ pub fn runRetainedPresentation(
     return result;
 }
 
+pub fn executeRetainedPresentFlow(
+    self: anytype,
+    shell: *app_shell.Shell,
+    renderer: anytype,
+    terminal_view: view_state.TerminalViewModel,
+    view_geometry: TerminalViewGeometry,
+    view_cells_len: usize,
+    hover_link_id: u32,
+    composing_active: bool,
+    composing_hash: u64,
+    start_line: usize,
+    scroll_offset: usize,
+    draw_cursor: bool,
+    cursor: CursorPos,
+    cursor_style: terminal_types.CursorStyle,
+    blink_style: anytype,
+    blink_time: f64,
+    blink_requires_partial: bool,
+    has_kitty: bool,
+    recent_input_window_active: bool,
+    note_present_ctx: anytype,
+    note_present: anytype,
+) PresentationRunResult {
+    var result: PresentationRunResult = .{};
+    if (terminal_view.rows == 0 or terminal_view.cols == 0) return result;
+
+    const surface_update_plan = planUpdate(
+        &self.surface,
+        self.session.allocator,
+        renderer,
+        self.publication.cacheConst(),
+        terminal_view,
+        view_geometry,
+        blink_requires_partial,
+        draw_cursor,
+        cursor,
+        cursor_style,
+        scroll_offset,
+        recent_input_window_active,
+    );
+    const cycle = runRetainedPresentCycle(
+        self,
+        shell,
+        renderer,
+        terminal_view,
+        view_geometry,
+        hover_link_id,
+        start_line,
+        draw_cursor,
+        cursor,
+        cursor_style,
+        blink_style,
+        blink_time,
+        has_kitty,
+        surface_update_plan,
+    );
+    const retained = runRetainedPresentation(
+        self,
+        renderer,
+        terminal_view,
+        view_geometry,
+        view_cells_len,
+        draw_cursor,
+        cursor,
+        cursor_style,
+        hover_link_id,
+        composing_active,
+        composing_hash,
+        surface_update_plan,
+        cycle,
+        note_present_ctx,
+        note_present,
+    );
+    result.bg_ms = retained.bg_ms;
+    result.glyph_ms = retained.glyph_ms;
+    result.kitty_ms = retained.kitty_ms;
+    return result;
+}
+
 pub fn runPresentation(
     self: anytype,
     shell: *app_shell.Shell,
@@ -903,8 +1027,7 @@ pub fn runPresentation(
         pub const Result = PresentationRunResult;
 
         pub fn runDirect(ctx: Ctx, renderer_local: @TypeOf(renderer)) Result {
-            var local: Result = .{};
-            if (tryFastPresentExisting(
+            const fast = runFastPresentIfAvailable(
                 &ctx.self_widget.surface,
                 renderer_local,
                 ctx.terminal_view,
@@ -924,10 +1047,9 @@ pub fn runPresentation(
                 ctx.view_geometry,
                 ctx.note_present_ctx,
                 note_present,
-            )) {
-                local.early_return = true;
-                return local;
-            }
+            );
+            if (fast.early_return) return fast;
+            var local: Result = .{};
             const partial = tryDirectSnapshotUpdate(
                 ctx.self_widget,
                 ctx.shell,
@@ -985,8 +1107,7 @@ pub fn runPresentation(
         }
 
         pub fn runRetained(ctx: Ctx, renderer_local: @TypeOf(renderer)) Result {
-            var local: Result = .{};
-            if (tryFastPresentExisting(
+            const fast = runFastPresentIfAvailable(
                 &ctx.self_widget.surface,
                 renderer_local,
                 ctx.terminal_view,
@@ -1006,64 +1127,31 @@ pub fn runPresentation(
                 ctx.view_geometry,
                 ctx.note_present_ctx,
                 note_present,
-            )) {
-                local.early_return = true;
-                return local;
-            }
-
-            if (ctx.terminal_view.rows == 0 or ctx.terminal_view.cols == 0) return local;
-
-            const surface_update_plan = planUpdate(
-                &ctx.self_widget.surface,
-                ctx.self_widget.session.allocator,
-                renderer_local,
-                ctx.self_widget.publication.cacheConst(),
-                ctx.terminal_view,
-                ctx.view_geometry,
-                ctx.blink_requires_partial,
-                ctx.draw_cursor,
-                ctx.cursor,
-                ctx.cursor_style,
-                ctx.scroll_offset,
-                ctx.recent_input_window_active,
             );
-            const cycle = runRetainedPresentCycle(
+            if (fast.early_return) return fast;
+            return executeRetainedPresentFlow(
                 ctx.self_widget,
                 ctx.shell,
                 renderer_local,
                 ctx.terminal_view,
                 ctx.view_geometry,
+                ctx.view_cells_len,
                 ctx.hover_link_id,
+                ctx.composing_active,
+                ctx.composing_hash,
                 ctx.start_line,
+                ctx.scroll_offset,
                 ctx.draw_cursor,
                 ctx.cursor,
                 ctx.cursor_style,
                 ctx.blink_style,
                 ctx.blink_time,
+                ctx.blink_requires_partial,
                 ctx.has_kitty,
-                surface_update_plan,
-            );
-            const retained = runRetainedPresentation(
-                ctx.self_widget,
-                renderer_local,
-                ctx.terminal_view,
-                ctx.view_geometry,
-                ctx.view_cells_len,
-                ctx.draw_cursor,
-                ctx.cursor,
-                ctx.cursor_style,
-                ctx.hover_link_id,
-                ctx.composing_active,
-                ctx.composing_hash,
-                surface_update_plan,
-                cycle,
+                ctx.recent_input_window_active,
                 ctx.note_present_ctx,
                 note_present,
             );
-            local.bg_ms = retained.bg_ms;
-            local.glyph_ms = retained.glyph_ms;
-            local.kitty_ms = retained.kitty_ms;
-            return local;
         }
     };
     return renderer_presentable_host.runTerminalPresentPath(renderer, Ctx{
