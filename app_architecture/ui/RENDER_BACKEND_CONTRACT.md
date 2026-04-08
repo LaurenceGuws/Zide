@@ -154,9 +154,9 @@ are mainly:
 - presentable parity/ownership (terminal-only shared contract; GL retained vs
   Metal snapshot still uneven)
 - renderer-hosted backend runtime shape (`Renderer.backend.runtime` now stores
-  only the selected backend runtime and no longer embeds it inline, but
-  `Renderer` still owns the backend-tagged storage surface for that concrete
-  backend-native runtime)
+  only the selected backend runtime behind one opaque handle and no longer
+  embeds it inline or exposes a backend-tagged storage surface, but `Renderer`
+  still owns selected-runtime lifecycle and teardown)
 - editor/sample ordering families still leaning on generic surface timing in
   places
 
@@ -169,7 +169,7 @@ It must stay aligned with `src/ui/renderer/` (not aspiration).
 |------|-------|--------|-----------------------------|
 | **1** | One product-level submission story for shared draws | **Met** | OpenGL queues every `SurfaceDraw` variant and replays at `flushQueuedSurfaceDrawsNow` / submit, matching Metal’s deferred surface phase. Flush discipline is now enforced: `drawTextureRect`, `flushTerminalBatch`, and `GlyphCache.flush` all drain the surface queue before any immediate GL draw. `gl_presentable_runtime::updateRetainedPresentable` flushes the queue into the retained FBO at body-end before restoring the scene target, so kitty-above and other deferred draws land in the right target. No remaining call site allows an immediate draw to jump ahead of a queued `SurfaceDraw`. |
 | **2** | Presentable lifecycle neutral for a third backend | **Not met** | Shared presentable seam is **terminal-only**; OpenGL uses a retained update target path, Metal uses snapshot + composition replay. A third backend would still inherit that **lifecycle split**, not one neutral shape. |
-| **3** | Backend-native runtime not a widening pattern on `Renderer` | **Not met** | `renderer_backend_host` still owns `ops` + `runtime`. `backend_runtime_bundle.Bundle` now stores only the **selected** concrete backend runtime and no longer embeds it inline, which is better than materializing both GL and Metal side-by-side, but `Renderer` still owns the backend-tagged storage surface for that runtime. Adding Vulkan/Android rendering would still widen this renderer-owned storage story unless runtime becomes opaque or backend-owned. |
+| **3** | Backend-native runtime not a widening pattern on `Renderer` | **Not met** | `renderer_backend_host` still owns `kind` + `ops` + `runtime`. `backend_runtime_bundle.Bundle` now stores only the **selected** concrete backend runtime behind one opaque handle and no longer exposes a backend-tagged storage surface, which is better than materializing both GL and Metal side-by-side. But `Renderer` still owns selected-runtime lifecycle and teardown plumbing. Adding Vulkan/Android rendering would still pressure this renderer-owned lifecycle story unless runtime becomes more backend-owned. |
 | **4** | Resource/image handles opaque in shared draw payloads | **Met for `SurfaceDraw`** | `surface_draw.GpuImageRef` + `SurfaceDraw` union (`atlas` / `raw_image` / `solid`) has **no** `.opengl` / `.metal` tags. Backends interpret handles inside ops. (Wider “no backend branches in shared code” is still false—see gate 3 and `RendererBackend` dispatch.) |
 | **5** | Ordering families have an honest home | **Partial** | Terminal, chrome (`renderer_chrome_band_host.zig`), and editor paths are **more** explicitly phased; chrome is still **capped** until a full recorded phase; editor/sample banding remains **pressure** to close, not a solved theorem. |
 

@@ -19,17 +19,19 @@ Current code truth is now more specific than it used to be:
   states at once
 - `Renderer.backend.runtime` no longer embeds selected concrete backend state
   inline either
-- but `Renderer` still owns a backend-tagged pointer surface to the selected
-  concrete backend runtime storage through `backend_runtime_bundle.Bundle`
+- but `Renderer` still owns selected-runtime lifecycle and the opaque runtime
+  handle through `backend_runtime_bundle.Bundle`
 
 That means the remaining gate-4 pressure is no longer "shared code is poking
 backend state everywhere."
 
 It is this:
 
-- `Renderer` is still the owner of the backend-tagged selected-runtime storage
-  surface
-- adding a third backend would still widen that renderer-owned storage story
+- `Renderer` is still the owner of selected-runtime lifecycle and storage
+  handle plumbing
+- adding a third backend would still pressure that renderer-owned runtime
+  lifecycle story even though the concrete storage surface is no longer
+  backend-tagged
   again
 
 Android host work now makes that pressure immediate instead of theoretical.
@@ -68,7 +70,7 @@ Required rule for `RB-B2.a`:
 - `Renderer` must stop materializing both OpenGL and Metal runtime structs in
   one widening bundle
 - the selected backend may still be reachable through shared host seams, but
-  its concrete storage shape must be backend-owned
+  its concrete storage shape must be backend-owned or opaque to shared code
 
 ### 2. Who owns runtime init, deinit, and mutation?
 
@@ -171,11 +173,11 @@ The first code cut now exists:
 
 Immediate remaining pressure after this proof:
 
-- `Renderer` still owns the backend-tagged pointer surface for selected
-  backend-native runtime storage
-- another backend would still widen that renderer-owned selected-runtime story
+- `Renderer` no longer owns a backend-tagged selected-runtime storage surface;
+  selected runtime now lives behind one opaque storage handle plus backend kind
+- `Renderer` still owns selected-runtime lifecycle and teardown plumbing
 - the next gate-4 cut should only open when it can move that ownership
-  boundary again, not merely rename the selected-storage wrapper
+  boundary again, not merely reshuffle helper routing
 
 Latest narrowing cut:
 

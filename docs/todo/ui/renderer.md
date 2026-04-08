@@ -89,7 +89,7 @@ Aligned with `app_architecture/ui/RENDER_BACKEND_CONTRACT.md` § “Gate status
 | 1 | One semantic operation → one renderer contract path | **Met** — `SurfaceDraw` deferral unified GL/Metal; flush discipline enforced at `drawTextureRect`, `flushTerminalBatch`, `GlyphCache.flush`; `updateRetainedPresentable` flushes surface queue into retained FBO before restoring scene target (fixes kitty-above ordering). No immediate-draw bypass remains. |
 | 2 | Backend choice does not change product-level submission semantics | **Structurally met on GL** — terminal-present transaction/execution seams are in place and GL behavioral equivalence passed adversarial cases; Metal is still unverified against the new seam contract and remains deferred verification rather than a structural blocker. |
 | 3 | No backend-specific `.opengl` / `.metal` / `.vulkan` in shared **draw payloads** | **Met for `SurfaceDraw`** — `GpuImageRef` + neutral union; `Renderer` still dispatches by backend enum elsewhere. |
-| 4 | `Renderer` not the hidden owner of backend-native runtime | **Not met** — `backend.runtime` now stores only the selected backend runtime and no longer embeds it inline, which is better than the old GL+Metal bundle, but `Renderer` still owns the backend-tagged storage surface for concrete backend-native runtime state. |
+| 4 | `Renderer` not the hidden owner of backend-native runtime | **Not met** — `backend.runtime` now stores only the selected backend runtime behind one opaque handle and no longer embeds it inline or exposes a backend-tagged storage surface, which is better than the old GL+Metal bundle. But `Renderer` still owns selected-runtime lifecycle and teardown plumbing. |
 | 5 | Presentable/frame routine for a new backend | **Not met** — terminal-only presentable; GL retained vs Metal snapshot uneven. |
 
 **Readiness:** Android **platform** work (lifecycle, IME, etc.) stays allowed.
@@ -100,8 +100,10 @@ remain **not ready** until this checklist clears (see contract § “Readiness
 **Branch scope (2026-04-09):** Gate #2 is now structurally closed on GL and
 gate #5 is paused unless a stronger ordering/ownership leak appears. That
 means the next honest blocker for Android rendering is gate #4: `Renderer`
-still materializes a widening `backend.runtime` bundle. Android host/bootstrap
-work is now merged, so a third backend would widen that storage story again.
+still owns selected-runtime lifecycle even though the widening `backend.runtime`
+bundle and backend-tagged storage surface are gone. Android host/bootstrap
+work is now merged, so a third backend would still pressure that runtime
+ownership story.
 Gate #3 is already met for the `SurfaceDraw` surface; the residual
 backend-enum dispatch elsewhere is addressed as part of gate #4. Do not bundle
 gates or declare a gate met until the code and docs both reflect it honestly.
