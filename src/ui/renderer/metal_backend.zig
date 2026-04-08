@@ -16,6 +16,7 @@ const window_init = @import("window_init.zig");
 const terminal_font = @import("../terminal_font.zig");
 const types = @import("types.zig");
 const app_logger = @import("../../app_logger.zig");
+const backend_runtime_bundle = @import("backend_runtime_bundle.zig");
 
 const objc = if (builtin.target.os.tag == .macos) @cImport({
     @cInclude("objc/message.h");
@@ -1176,7 +1177,8 @@ pub fn initRuntime(renderer: anytype) !void {
         (renderer.runtime_profile == .full_ui and builtin.target.os.tag == .macos);
     if (!metal_runtime_ok) return error.RendererBackendRuntimeNotReady;
     const host = prepareHost(renderer) orelse return error.MacosMetalAttachmentUnavailable;
-    renderer.backend.runtime.metalState().backend_context = createBackendContext(host, renderer.render_width, renderer.render_height) orelse return error.MetalBackendContextUnavailable;
+    const state = runtimeState(renderer) orelse unreachable;
+    state.backend_context = createBackendContext(host, renderer.render_width, renderer.render_height) orelse return error.MetalBackendContextUnavailable;
     try renderer.initFonts();
     renderer.fonts_ready = true;
 }
@@ -1325,13 +1327,29 @@ pub fn dumpWindowScreenshotPpmSized(_: anytype, _: []const u8, _: i32, _: i32) !
     return error.RendererScreenshotUnavailable;
 }
 
+fn runtimeState(renderer: anytype) ?*metal_runtime_state.State {
+    return switch (renderer.backend.runtime) {
+        .metal => renderer.backend.runtime.metalState(),
+        else => null,
+    };
+}
+
+fn runtimeStateConst(renderer: anytype) ?*const metal_runtime_state.State {
+    return switch (renderer.backend.runtime) {
+        .metal => renderer.backend.runtime.metalState(),
+        else => null,
+    };
+}
+
 pub fn backendContext(renderer: anytype) ?*BackendContext {
-    if (renderer.backend.runtime.metalState().backend_context) |*context| return context;
+    const state = runtimeState(renderer) orelse return null;
+    if (state.backend_context) |*context| return context;
     return null;
 }
 
 pub fn backendContextConst(renderer: anytype) ?*const BackendContext {
-    if (renderer.backend.runtime.metalState().backend_context) |*context| return context;
+    const state = runtimeStateConst(renderer) orelse return null;
+    if (state.backend_context) |*context| return context;
     return null;
 }
 
@@ -1345,13 +1363,15 @@ pub fn glyphAtlasReadyForRenderer(renderer: anytype) bool {
 }
 
 pub fn atlasPreviewSourceForRenderer(renderer: anytype) AtlasPreviewSource {
-    return renderer.backend.runtime.metalState().preview_source;
+    const state = runtimeStateConst(renderer) orelse return .unavailable;
+    return state.preview_source;
 }
 
 pub fn runAtlasUploadDiagnosticAt(renderer: anytype, dest_x: i32, dest_y: i32) bool {
+    const state = runtimeState(renderer) orelse return false;
     if (!hasBackendContext(renderer)) return false;
     clearQueuedSurfaceDraws(renderer);
-    renderer.backend.runtime.metalState().preview_source = .unavailable;
+    state.preview_source = .unavailable;
 
     const font = ensureDiagnosticFont(renderer) catch return false;
     const color_preview_rect = font.uploadDiagnosticColorGlyphPreview();
@@ -1366,7 +1386,7 @@ pub fn runAtlasUploadDiagnosticAt(renderer: anytype, dest_x: i32, dest_y: i32) b
             .dest_y = dest_y,
             .tint = iface.Color.white.toRgba(),
         });
-        renderer.backend.runtime.metalState().preview_source = .uploaded_coverage_glyph;
+        state.preview_source = .uploaded_coverage_glyph;
     }
     if (color_preview_rect) |rect| {
         clearQueuedSurfaceDraws(renderer);
@@ -1377,7 +1397,7 @@ pub fn runAtlasUploadDiagnosticAt(renderer: anytype, dest_x: i32, dest_y: i32) b
             .dest_y = dest_y,
             .tint = iface.Color.white.toRgba(),
         });
-        renderer.backend.runtime.metalState().preview_source = .uploaded_color_glyph;
+        state.preview_source = .uploaded_color_glyph;
     } else if (queuedSurfaceDrawCount(renderer) == 0) {
         _ = appendAtlasSample(renderer, .{
             .atlas = .color,
@@ -1391,10 +1411,10 @@ pub fn runAtlasUploadDiagnosticAt(renderer: anytype, dest_x: i32, dest_y: i32) b
             .dest_y = dest_y,
             .tint = iface.Color.white.toRgba(),
         });
-        renderer.backend.runtime.metalState().preview_source = .seeded_color_block;
+        state.preview_source = .seeded_color_block;
     }
-    return renderer.backend.runtime.metalState().preview_source == .uploaded_coverage_glyph or
-        renderer.backend.runtime.metalState().preview_source == .uploaded_color_glyph;
+    return state.preview_source == .uploaded_coverage_glyph or
+        state.preview_source == .uploaded_color_glyph;
 }
 
 pub fn terminalFontAtlasUploadHooksForRenderer(renderer: anytype) ?terminal_font.AtlasUploadHooks {
@@ -1782,10 +1802,11 @@ pub fn deinitBackendContext(context: *BackendContext) void {
 }
 
 pub fn deinitRuntime(renderer: anytype) void {
+    const state = runtimeState(renderer) orelse return;
     clearDiagnosticFont(renderer);
     clearQueuedSurfaceDraws(renderer);
     clearQueuedPresentableDraws(renderer);
-    if (renderer.backend.runtime.metalState().backend_context) |*context| {
+    if (state.backend_context) |*context| {
         if (context.frame) |*frame| abandonFrame(frame);
         context.queued_surface_draws.deinit(renderer.allocator);
         context.queued_presentable_draws.deinit(renderer.allocator);
@@ -1794,15 +1815,17 @@ pub fn deinitRuntime(renderer: anytype) void {
 }
 
 pub fn clearDiagnosticFont(renderer: anytype) void {
-    if (renderer.backend.runtime.metalState().diagnostic_font) |*font| {
+    const state = runtimeState(renderer) orelse return;
+    if (state.diagnostic_font) |*font| {
         font.deinit();
-        renderer.backend.runtime.metalState().diagnostic_font = null;
+        state.diagnostic_font = null;
     }
 }
 
 pub fn ensureDiagnosticFont(renderer: anytype) !*terminal_font.TerminalFont {
     if (!hasBackendContext(renderer)) return error.MetalBackendContextUnavailable;
-    if (renderer.backend.runtime.metalState().diagnostic_font) |*font| return font;
+    const state = runtimeState(renderer) orelse return error.MetalBackendContextUnavailable;
+    if (state.diagnostic_font) |*font| return font;
 
     const render_scale = if (renderer.scale.render_scale > 0.0) renderer.scale.render_scale else 1.0;
     const raster_size = renderer.base_font_size * render_scale;
@@ -1821,8 +1844,29 @@ pub fn ensureDiagnosticFont(renderer: anytype) !*terminal_font.TerminalFont {
         terminalFontAtlasUploadHooksForRenderer(renderer) orelse return error.MetalBackendContextUnavailable,
     );
     font.render_scale = render_scale;
-    renderer.backend.runtime.metalState().diagnostic_font = font;
-    return &renderer.backend.runtime.metalState().diagnostic_font.?;
+    state.diagnostic_font = font;
+    return &state.diagnostic_font.?;
+}
+
+test "non-metal renderer returns neutral metal runtime hooks" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const FakeRenderer = struct {
+        backend: struct {
+            runtime: backend_runtime_bundle.Bundle,
+        },
+    };
+
+    var renderer = FakeRenderer{
+        .backend = .{
+            .runtime = try backend_runtime_bundle.Bundle.init(allocator, enum { opengl, metal }.opengl),
+        },
+    };
+
+    try std.testing.expectEqual(@as(?terminal_font.AtlasUploadHooks, null), terminalFontAtlasUploadHooksForRenderer(&renderer));
+    try std.testing.expectEqual(AtlasPreviewSource.unavailable, atlasPreviewSourceForRenderer(&renderer));
 }
 
 fn clearQueuedSurfaceDraws(renderer: anytype) void {
