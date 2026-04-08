@@ -137,9 +137,9 @@ pub const RetainedPresentationResult = struct {
 pub fn runFastPresentIfAvailable(
     surface_state: anytype,
     renderer: anytype,
+    plan: TerminalPresentPlan,
     terminal_view: view_state.TerminalViewModel,
     view_cells_len: usize,
-    blink_requires_partial: bool,
     draw_cursor: bool,
     cursor: CursorPos,
     cursor_style: terminal_types.CursorStyle,
@@ -158,9 +158,9 @@ pub fn runFastPresentIfAvailable(
     if (!tryFastPresentExisting(
         surface_state,
         renderer,
+        plan,
         terminal_view,
         view_cells_len,
-        blink_requires_partial,
         draw_cursor,
         cursor,
         cursor_style,
@@ -990,22 +990,28 @@ fn buildTerminalPresentPlan(
     );
     const overlay_changed = self.surface.overlayPresentationChanged(hover_link_id, composing_active, composing_hash);
     const viewport_shifted = terminal_view.partial_capture.active_viewport_shift_rows != 0;
+    const presentable_ready = self.surface.presentableReady();
+    const generation_matches_presented = terminal_view.generation == self.surface.lastRenderGeneration() and
+        terminal_view.clear_generation == self.surface.lastRenderClearGeneration();
     const invalidation_blocks_reuse = delta.clear_generation_changed or
         delta.cell_metrics_changed or
         delta.render_scale_changed or
         delta.cursor_changed or
         overlay_changed or
         blink_requires_partial;
+    const reuse_allowed = presentable_ready and terminal_view.cells.len > 0;
+    const reuse_requested = reuse_allowed and
+        !viewport_shifted and
+        (terminal_view.sync_updates_active or
+            (!invalidation_blocks_reuse and generation_matches_presented));
     return .{
-        .update_intent = if (terminal_view.rows == 0 or terminal_view.cols == 0)
+        .update_intent = if (terminal_view.rows == 0 or terminal_view.cols == 0 or reuse_requested)
             .none
         else if (viewport_shifted or invalidation_blocks_reuse)
             .full
         else
             .partial,
-        .present_intent = if (renderer_presentable_host.usesDirectTerminalPresentation(renderer))
-            .direct_present
-        else if (self.surface.presentableReady())
+        .present_intent = if (reuse_requested)
             .reuse
         else
             .update_and_present,
@@ -1020,7 +1026,7 @@ fn buildTerminalPresentPlan(
             .dest_height = height,
         },
         .reuse_policy = .{
-            .reuse_allowed = self.surface.presentableReady() and terminal_view.cells.len > 0,
+            .reuse_allowed = reuse_allowed,
             .shift_reuse_requested = viewport_shifted,
             .invalidation_blocks_reuse = invalidation_blocks_reuse,
         },
@@ -1112,13 +1118,13 @@ pub fn runPresentation(
     const Hooks = struct {
         pub const Result = TerminalPresentResult;
 
-        pub fn runDirect(_: TerminalPresentPlan, ctx: Ctx, renderer_local: @TypeOf(renderer)) Result {
+        pub fn runDirect(plan: TerminalPresentPlan, ctx: Ctx, renderer_local: @TypeOf(renderer)) Result {
             const fast = runFastPresentIfAvailable(
                 &ctx.self_widget.surface,
                 renderer_local,
+                plan,
                 ctx.terminal_view,
                 ctx.view_cells_len,
-                ctx.blink_requires_partial,
                 ctx.draw_cursor,
                 ctx.cursor,
                 ctx.cursor_style,
@@ -1198,13 +1204,13 @@ pub fn runPresentation(
             return local;
         }
 
-        pub fn runRetained(_: TerminalPresentPlan, ctx: Ctx, renderer_local: @TypeOf(renderer)) Result {
+        pub fn runRetained(plan: TerminalPresentPlan, ctx: Ctx, renderer_local: @TypeOf(renderer)) Result {
             const fast = runFastPresentIfAvailable(
                 &ctx.self_widget.surface,
                 renderer_local,
+                plan,
                 ctx.terminal_view,
                 ctx.view_cells_len,
-                ctx.blink_requires_partial,
                 ctx.draw_cursor,
                 ctx.cursor,
                 ctx.cursor_style,
@@ -1402,9 +1408,9 @@ pub fn presentDraw(
 pub fn tryFastPresentExisting(
     surface_state: anytype,
     renderer: anytype,
+    plan: TerminalPresentPlan,
     terminal_view: view_state.TerminalViewModel,
     view_cells_len: usize,
-    blink_requires_partial: bool,
     draw_cursor: bool,
     cursor: CursorPos,
     cursor_style: terminal_types.CursorStyle,
@@ -1420,18 +1426,12 @@ pub fn tryFastPresentExisting(
     note_present_ctx: anytype,
     note_present: anytype,
 ) bool {
+    if (plan.present_intent != .reuse) return false;
     const presentable_ready = surface_state.notePresentableAvailability(
         renderer_presentable_host.terminalPresentableInfo(renderer) != null,
     );
-    const cursor_changed = surface_state.cursorPresentationChanged(draw_cursor, cursor, cursor_style);
-    const overlay_changed = surface_state.overlayPresentationChanged(hover_link_id, composing_active, composing_hash);
     const direct_snapshot_reusable = renderer_presentable_host.usesDirectTerminalPresentation(renderer) and
-        !terminal_view.sync_updates_active and
-        !blink_requires_partial and
-        !cursor_changed and
-        !overlay_changed and
-        terminal_view.generation == surface_state.lastRenderGeneration() and
-        terminal_view.clear_generation == surface_state.lastRenderClearGeneration();
+        !terminal_view.sync_updates_active;
     if (!(view_cells_len > 0 and presentable_ready and
         (terminal_view.sync_updates_active or direct_snapshot_reusable))) return false;
 

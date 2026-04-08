@@ -612,6 +612,19 @@ Current evidence:
   the dead one-value `PresentableSurface` parameter was removed too. Terminal
   presentable APIs now say exactly what they are instead of forwarding
   `.terminal` through every host/backend layer.
+- terminal presentation now routes through one explicit shared transaction
+  vocabulary too: `TerminalPresentPlan` / `TerminalPresentResult` exist in
+  presentable-contract space instead of keeping fast-present / update /
+  present inputs as branch-local runtime plumbing.
+- shared terminal plan construction no longer decides `present_intent` from
+  backend identity. Reuse intent now comes from product truth
+  (presentable-ready state, invalidation causes, generation match, viewport
+  shift, sync-update state), and the fast-present path consumes that shared
+  plan instead of re-deriving cursor/overlay/composition reuse inputs
+  locally.
+- this is the first real `RB-B1.c` normalization checkpoint: plan intent is
+  now product-owned, while backend execution still decides how to satisfy that
+  intent underneath.
 
 Owner docs:
 
@@ -639,13 +652,13 @@ Do not do:
 
 Next reviewable cut:
 
-- `RB-B1.a` Host-owned terminal present execution seam
+- `RB-B1.d` Backend-owned execution against one shared transaction
 
 Purpose:
 
-- move the top-level terminal present-path choice behind one
-  `renderer_presentable_host` execution seam so shared terminal UI code stops
-  branching first on backend present path and only then on presentation work.
+- move the remaining direct/retained execution bodies behind backend-owned
+  presentable implementations so shared terminal runtime no longer owns two
+  main execution stories for the same transaction.
 
 Owner docs:
 
@@ -660,24 +673,25 @@ Primary code pressure:
 
 Acceptance criteria:
 
-- `terminal_widget_presentation_runtime.zig` no longer makes the top-level
-  "direct vs retained" dispatch decision itself for the main terminal
-  presentation flow
-- one host-owned seam chooses the terminal present path and returns one shared
-  result shape for that execution entrypoint
+- shared terminal runtime no longer owns separate retained/direct execution
+  trees for the main transaction
+- backend presentable implementations satisfy the shared
+  `TerminalPresentPlan` / `TerminalPresentResult` contract
 - no rendering behavior changes are introduced for GL or Metal in this cut
 
 Do not do:
 
 - do not bundle frame-lifecycle ownership (`RB-B3`) into this cut
-- do not rewrite direct-snapshot partial-update behavior yet
-- do not widen `RendererCapabilities` or add a new backend enum query to
-  compensate for moving the branch
+- do not broaden the shared plan/result schema unless execution pressure
+  proves a current field dishonest
+- do not move backend-specific upload/reuse mechanics back into shared widget
+  code
 
 Stop marker:
 
-- top-level terminal presentation entry now routes through one
-  `renderer_presentable_host` execution seam
+- the shared transaction still exists, but the remaining direct/retained
+  execution bodies terminate behind backend presentable seams instead of in
+  `terminal_widget_presentation_runtime.zig`
 - validation green
 
 Follow-on redesign authority:

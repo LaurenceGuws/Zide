@@ -323,6 +323,15 @@ Purpose:
 
 - unify the common planning layer before deeper backend execution movement
 
+Current checkpoint:
+
+- `TerminalPresentPlan.present_intent` is now derived from product reuse truth
+  instead of backend identity checks in widget/runtime code
+- fast-present reuse now consumes that shared plan rather than re-deriving
+  cursor/overlay/composition reuse inputs in branch-local logic
+- deeper direct/retained execution bodies still exist and remain the next
+  pressure for `RB-B1.d`
+
 Acceptance criteria:
 
 - fast-present eligibility is computed once
