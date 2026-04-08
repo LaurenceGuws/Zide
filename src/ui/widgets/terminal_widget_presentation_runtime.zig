@@ -1456,30 +1456,61 @@ pub fn presentDraw(
     note_present_ctx: anytype,
     note_present: anytype,
 ) void {
-    note_present(
-        note_present_ctx,
+    const Hooks = struct {
+        pub fn noteDirectReuse(
+            ctx: @TypeOf(note_present_ctx),
+            renderer_local: @TypeOf(renderer),
+            generation: u64,
+            geometry: TerminalViewGeometry,
+            width_local: f32,
+            height_local: f32,
+        ) void {
+            note_present(
+                ctx,
+                renderer_local,
+                .direct_snapshot_presentable,
+                generation,
+                geometry.origin_x,
+                geometry.origin_y,
+                width_local,
+                height_local,
+                width_local,
+                height_local,
+            );
+        }
+
+        pub fn noteRetainedReuse(
+            ctx: @TypeOf(note_present_ctx),
+            renderer_local: @TypeOf(renderer),
+            generation: u64,
+            geometry: TerminalViewGeometry,
+            width_local: f32,
+            height_local: f32,
+        ) void {
+            note_present(
+                ctx,
+                renderer_local,
+                .retained_surface,
+                generation,
+                geometry.origin_x,
+                geometry.origin_y,
+                width_local,
+                height_local,
+                width_local,
+                height_local,
+            );
+        }
+    };
+    renderer_presentable_host.presentExistingTerminalPresentable(
         renderer,
-        if (renderer_presentable_host.usesDirectTerminalPresentation(renderer))
-            .direct_snapshot_presentable
-        else
-            .retained_surface,
         sample_generation,
-        view_geometry.origin_x,
-        view_geometry.origin_y,
+        surface_generation,
+        view_geometry,
         viewport_w,
         viewport_h,
-        viewport_w,
-        viewport_h,
+        note_present_ctx,
+        Hooks,
     );
-    renderer_presentable_host.drawTerminalPresentable(renderer, .{
-        .x = view_geometry.origin_x,
-        .y = view_geometry.origin_y,
-        .width = viewport_w,
-        .height = viewport_h,
-        .source_width = viewport_w,
-        .source_height = viewport_h,
-        .generation = surface_generation,
-    });
 }
 
 pub fn tryFastPresentExisting(

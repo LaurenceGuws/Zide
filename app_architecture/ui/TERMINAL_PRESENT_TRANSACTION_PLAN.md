@@ -368,6 +368,9 @@ Current checkpoint:
   - shared code still finalizes product outcomes from partial execution data
 - the remaining work is now mostly orchestration collapse and gate-boundary
   re-audit rather than moving another major execution branch
+- shared reuse-present finalization no longer chooses direct-vs-retained note
+  semantics itself; that interpretation now routes through
+  `renderer_presentable_host.presentExistingTerminalPresentable(...)`
 
 Execution-completion rule for this stage:
 

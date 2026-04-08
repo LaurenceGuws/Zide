@@ -650,6 +650,9 @@ Current evidence:
   tightening shared finalization/orchestration honesty and re-auditing the
   gate boundary, not discovering another major direct-vs-retained ownership
   transfer.
+- shared reuse-present finalization now also routes its direct-vs-retained
+  note choice through `renderer_presentable_host` instead of interpreting
+  backend mode inline in widget runtime.
 
 Owner docs:
 
