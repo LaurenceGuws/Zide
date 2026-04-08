@@ -3,6 +3,7 @@ const backend_runtime_bundle = @import("backend_runtime_bundle.zig");
 
 pub fn Host(
     comptime RendererType: type,
+    comptime BackendEnum: type,
     comptime FrameSubmission: type,
     comptime RendererCapabilities: type,
     comptime PresentableDraw: type,
@@ -23,7 +24,8 @@ pub fn Host(
             WindowChangeMask,
         );
 
+        kind: BackendEnum,
         ops: BackendOps,
-        runtime: backend_runtime_bundle.Bundle = .none,
+        runtime: backend_runtime_bundle.Bundle = .{},
     };
 }

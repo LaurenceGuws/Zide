@@ -1328,17 +1328,13 @@ pub fn dumpWindowScreenshotPpmSized(_: anytype, _: []const u8, _: i32, _: i32) !
 }
 
 fn runtimeState(renderer: anytype) ?*metal_runtime_state.State {
-    return switch (renderer.backend.runtime) {
-        .metal => renderer.backend.runtime.metalState(),
-        else => null,
-    };
+    if (renderer.backend.kind != .metal) return null;
+    return renderer.backend.runtime.metalState();
 }
 
 fn runtimeStateConst(renderer: anytype) ?*const metal_runtime_state.State {
-    return switch (renderer.backend.runtime) {
-        .metal => renderer.backend.runtime.metalState(),
-        else => null,
-    };
+    if (renderer.backend.kind != .metal) return null;
+    return renderer.backend.runtime.metalState();
 }
 
 pub fn backendContext(renderer: anytype) ?*BackendContext {
@@ -1855,12 +1851,14 @@ test "non-metal renderer returns neutral metal runtime hooks" {
 
     const FakeRenderer = struct {
         backend: struct {
+            kind: enum { opengl, metal },
             runtime: backend_runtime_bundle.Bundle,
         },
     };
 
     var renderer = FakeRenderer{
         .backend = .{
+            .kind = .opengl,
             .runtime = try backend_runtime_bundle.Bundle.init(allocator, enum { opengl, metal }.opengl),
         },
     };

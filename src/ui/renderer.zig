@@ -359,6 +359,7 @@ pub const Renderer = struct {
 
     const BackendHost = renderer_backend_host.Host(
         Self,
+        RendererBackend,
         FrameSubmission,
         RendererCapabilities,
         PresentableDraw,
@@ -533,6 +534,7 @@ pub const Renderer = struct {
         renderer.* = .{
             .allocator = allocator,
             .backend = .{
+                .kind = startup_backend,
                 .ops = backend_dispatch.opsFor(
                 Self,
                 RendererBackend,
@@ -636,7 +638,7 @@ pub const Renderer = struct {
             .clip_stack = undefined,
             .clip_depth = 0,
         };
-        errdefer renderer.backend.runtime.deinitStorage(allocator);
+        errdefer renderer.backend.runtime.deinitStorage(allocator, renderer.backend.kind);
 
         try lifecycle_runtime.finalizeRendererInit(Renderer, renderer);
         return renderer;
@@ -663,7 +665,7 @@ pub const Renderer = struct {
         lifecycle_runtime.beginRendererShutdown(Renderer, self);
         window_chrome_runtime.deinit(self.windowChromeDomain());
         self.backend.ops.runtime.deinitRuntime(self);
-        self.backend.runtime.deinitStorage(self.allocator);
+        self.backend.runtime.deinitStorage(self.allocator, self.backend.kind);
         bootstrap_runtime.deinitRendererWindowResources(&self.render_surface_attachment, self.window);
         bootstrap_runtime.deinitSdlRuntime();
 
