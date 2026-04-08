@@ -261,14 +261,26 @@ Current `AH-A4` checkpoint:
   - `native.onStart seq=2`
   - `native.onResume seq=3`
   - `native.surfaceAvailable seq=4`
-  - `native.onWindowFocus seq=5`
+  - `native.onWindowFocus seq=6`
+- the bridge now routes those callbacks through `android_host.zig` and shared
+  host state instead of a private lifecycle stub
+- a HOME/background pass now also confirms:
+  - `native.onPause seq=7`
+  - `native.surfaceAvailable seq=8`
+  - `native.surfaceAvailable seq=9`
+  - `native.onWindowFocus seq=10`
+  - `native.surfaceDestroyed seq=11`
+  - `native.onStop seq=12`
 - the first shared-host cleanup forced by this lane is also done:
   - `PlatformRenderHost` no longer carries an SDL window pointer
   - SDL-only surface capture moved out of `native_host.zig`
+  - Android SDL refresh capture moved out of `android_host.zig`
 
 The next Android-native follow-up is now narrower:
 
-- move the bootstrap bridge callbacks into shared host truth
+- surface real Android native-window identity into shared render-host truth
+- decide whether host depth or PTY lifetime is the stronger next Android
+  blocker
 - do not jump to GLES from native-load success alone
 
 ## Explicit Anti-Goals

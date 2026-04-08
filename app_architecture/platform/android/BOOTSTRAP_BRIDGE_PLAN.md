@@ -99,10 +99,21 @@ Current checkpoint:
   - `native.onStart seq=2`
   - `native.onResume seq=3`
   - `native.surfaceAvailable seq=4`
-  - `native.onWindowFocus seq=5`
+  - `native.onWindowFocus seq=6`
+- the bootstrap bridge now routes lifecycle/focus/surface callbacks through
+  `src/platform/android_host.zig` and shared host state instead of the earlier
+  freestanding sequence stub
+- a HOME/background smoke pass on the Note10 now confirms:
+  - `native.onPause seq=7`
+  - `native.surfaceAvailable seq=8`
+  - `native.surfaceAvailable seq=9`
+  - `native.onWindowFocus seq=10`
+  - `native.surfaceDestroyed seq=11`
+  - `native.onStop seq=12`
 - enabling shared-host cleanup also landed:
   - `PlatformRenderHost` no longer carries an SDL window pointer
   - SDL-only host capture moved to `src/platform/sdl_native_host.zig`
+  - Android SDL refresh capture moved to `src/platform/sdl_android_host.zig`
 
 Do not do:
 
@@ -120,15 +131,17 @@ Stop `AH-A4` when:
 - the native library loads successfully on device
 - native bridge logging proves lifecycle and surface signals are crossing into
   repo-owned native code
-- the next blocker is honestly shared-host integration of those callbacks, not
-  "we still do not have Android entry"
+- the next blocker is honestly Android host capability depth beyond native
+  entry, not "we still do not have Android entry"
 
 ## Next Honest Follow-Up
 
 The next `AH-A4` sub-cut should be:
 
-- route the bootstrap bridge callbacks into `PlatformAppHost` /
-  `PlatformRenderHost` truth instead of the current freestanding sequence stub
+- surface real Android-native window identity into `PlatformRenderHost`
+- decide whether the stronger next blocker is:
+  - Android native-window/render-host truth
+  - Android PTY/runtime lifetime truth
 
-That is now a reasonable follow-up because native loading and JNI callback
-crossing are already proven on device.
+The bootstrap-entry problem is now solved well enough that those are the real
+next questions.

@@ -89,6 +89,9 @@ Status:
   semantics there where applicable
 - `android_host.noteSurfaceFocus(...)` no longer treats Android window focus as
   implicit text-input focus
+- Android SDL refresh capture now lives in `src/platform/sdl_android_host.zig`
+- `android_host.zig` is now freestanding enough for the runtime bootstrap
+  bridge to route through shared host semantics
 - actual Android event-source wiring is still pending
 
 ### `AH-A3` Android Host Harness Bootstrap
@@ -162,9 +165,19 @@ Status:
   - `native.onStart seq=2`
   - `native.onResume seq=3`
   - `native.surfaceAvailable seq=4`
-  - `native.onWindowFocus seq=5`
-- the next blocker is no longer native entry; it is moving those callbacks into
-  shared host truth instead of the current freestanding bridge stub
+  - `native.onWindowFocus seq=6`
+- the bootstrap bridge now routes lifecycle/focus/surface callbacks through
+  shared Android host semantics instead of the earlier freestanding sequence
+  stub
+- HOME/background smoke now confirms:
+  - `native.onPause seq=7`
+  - `native.surfaceAvailable seq=8`
+  - `native.surfaceAvailable seq=9`
+  - `native.onWindowFocus seq=10`
+  - `native.surfaceDestroyed seq=11`
+  - `native.onStop seq=12`
+- the next blocker is no longer native entry; it is deeper Android host/runtime
+  ownership
 
 Do not do:
 
@@ -175,12 +188,11 @@ Do not do:
 
 Next likely follow-ups:
 
-1. route bootstrap lifecycle/surface callbacks into `android_host.zig` and
-   `native_host.zig` truth instead of the current sequence-only bridge state
-2. add one on-device background/stop/surface-destroy smoke pass against the
-   bootstrap bridge, not just the host harness
-3. only after that, decide whether Android host pressure or Android PTY
-   pressure is the stronger next blocker
+1. surface real Android native-window identity into `PlatformRenderHost`
+2. decide whether Android host pressure or Android PTY lifetime pressure is the
+   stronger next blocker
+3. only then choose whether the next lane is native-window/render-host depth or
+   PTY/runtime ownership
 
 ## Current Research Read
 

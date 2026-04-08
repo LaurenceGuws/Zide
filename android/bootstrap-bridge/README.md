@@ -73,11 +73,20 @@ Current successful bootstrap run:
 - `native.onStart seq=2`
 - `native.onResume seq=3`
 - `native.surfaceAvailable seq=4`
-- `native.onWindowFocus seq=5`
+- `native.onWindowFocus seq=6`
+- HOME/background also confirms:
+  - `native.onPause seq=7`
+  - `native.surfaceAvailable seq=8`
+  - `native.surfaceAvailable seq=9`
+  - `native.onWindowFocus seq=10`
+  - `native.surfaceDestroyed seq=11`
+  - `native.onStop seq=12`
 
 That proves:
 
 - the APK loads a repo-built Zig native library
 - Java lifecycle/surface callbacks are crossing into repo-owned Zig code
-- Android native entry is now real enough to move on to shared-host
-  integration rather than more bootstrap speculation
+- those callbacks now route through shared Android host semantics rather than a
+  private bridge-only lifecycle model
+- Android native entry is now real enough to move on to deeper host/runtime
+  ownership questions rather than more bootstrap speculation
