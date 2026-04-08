@@ -6,6 +6,13 @@ const PresentableDraw = presentable_contract.PresentableDraw;
 const TerminalPresentPath = presentable_contract.TerminalPresentPath;
 pub const TerminalPresentPlan = presentable_contract.TerminalPresentPlan;
 pub const TerminalPresentResult = presentable_contract.TerminalPresentResult;
+pub const TerminalPresentTiming = presentable_contract.TerminalPresentTiming;
+
+pub const RetainedTerminalPresentExecutionResult = struct {
+    completed: bool = false,
+    update: RetainedTerminalPresentableUpdate = .unsupported,
+    timing: TerminalPresentTiming = .{},
+};
 
 pub fn runTerminalPresentPath(renderer: anytype, plan: TerminalPresentPlan, ctx: anytype, comptime Hooks: type) TerminalPresentResult {
     return switch (renderer.backend.ops.presentable.terminalPresentPath(renderer)) {
@@ -34,6 +41,37 @@ pub fn updateTerminalPresentable(renderer: anytype, ctx: anytype, comptime body:
         @ptrCast(&ctx),
         Local.erasedBody,
     );
+}
+
+pub fn runRetainedTerminalPresentExecution(
+    renderer: anytype,
+    plan: TerminalPresentPlan,
+    ctx: anytype,
+    comptime Hooks: type,
+) RetainedTerminalPresentExecutionResult {
+    var result = RetainedTerminalPresentExecutionResult{};
+    if (plan.update_intent == .none) return result;
+
+    const ExecCtx = struct {
+        inner: @TypeOf(ctx),
+        plan: TerminalPresentPlan,
+    };
+    const Local = struct {
+        fn run(raw_ctx: ?*const anyopaque, renderer_local: @TypeOf(renderer)) void {
+            const typed_ctx: *ExecCtx = @constCast(@alignCast(@ptrCast(raw_ctx.?)));
+            typed_ctx.inner.result.timing = Hooks.executeUpdate(typed_ctx.inner, renderer_local, typed_ctx.plan);
+            typed_ctx.inner.result.completed = true;
+        }
+    };
+    var exec_ctx = ctx;
+    exec_ctx.result = &result;
+    var call_ctx = ExecCtx{ .inner = exec_ctx, .plan = plan };
+    result.update = renderer.backend.ops.presentable.updateRetainedPresentable(
+        renderer,
+        @ptrCast(&call_ctx),
+        Local.run,
+    );
+    return result;
 }
 
 pub fn drawTerminalPresentableBackdrop(renderer: anytype, x: f32, y: f32, w: f32, h: f32, color: @import("types.zig").Rgba) void {

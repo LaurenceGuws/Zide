@@ -27,6 +27,7 @@ const TerminalPresentationSampleMode = terminal_debug_geometry.TerminalPresentat
 const TerminalPresentationSample = terminal_debug_geometry.TerminalPresentationSample;
 const InputSnapshot = shared_types.input.InputSnapshot;
 const RetainedTerminalPresentableUpdate = renderer_presentable_host.RetainedTerminalPresentableUpdate;
+const RetainedTerminalPresentExecutionResult = renderer_presentable_host.RetainedTerminalPresentExecutionResult;
 const TerminalPresentPlan = renderer_presentable_host.TerminalPresentPlan;
 const TerminalPresentResult = renderer_presentable_host.TerminalPresentResult;
 const TerminalPresentOutcome = @import("../renderer/presentable_contract.zig").TerminalPresentOutcome;
@@ -115,14 +116,6 @@ pub const DirectSnapshotUpdateResult = struct {
 
 pub const PresentationExecutionResult = struct {
     completed: bool = false,
-    bg_ms: f64 = 0.0,
-    glyph_ms: f64 = 0.0,
-    kitty_ms: f64 = 0.0,
-};
-
-pub const RetainedPresentCycleResult = struct {
-    completed: bool = false,
-    update: RetainedTerminalPresentableUpdate = .unsupported,
     bg_ms: f64 = 0.0,
     glyph_ms: f64 = 0.0,
     kitty_ms: f64 = 0.0,
@@ -733,9 +726,7 @@ pub fn runRetainedPresentCycle(
     blink_time: f64,
     has_kitty: bool,
     surface_update_plan: PresentationUpdatePlan,
-) RetainedPresentCycleResult {
-    var result = RetainedPresentCycleResult{};
-    if (surface_update_plan.mode == .none) return result;
+) RetainedTerminalPresentExecutionResult {
     const UpdateCtx = struct {
         self: @TypeOf(self),
         shell: *app_shell.Shell,
@@ -750,10 +741,14 @@ pub fn runRetainedPresentCycle(
         blink_time: f64,
         has_kitty: bool,
         surface_update_plan: PresentationUpdatePlan,
-        result: *RetainedPresentCycleResult,
+        result: *RetainedTerminalPresentExecutionResult = undefined,
     };
     const Local = struct {
-        fn run(ctx: UpdateCtx, renderer_local: @TypeOf(renderer)) void {
+        pub fn executeUpdate(
+            ctx: UpdateCtx,
+            renderer_local: @TypeOf(renderer),
+            _: TerminalPresentPlan,
+        ) renderer_presentable_host.TerminalPresentTiming {
             renderer_clip_host.endClip(renderer_local);
             const execution = executePresentableUpdate(
                 ctx.self,
@@ -771,10 +766,11 @@ pub fn runRetainedPresentCycle(
                 ctx.has_kitty,
                 ctx.surface_update_plan,
             );
-            ctx.result.completed = execution.completed;
-            ctx.result.bg_ms = execution.bg_ms;
-            ctx.result.glyph_ms = execution.glyph_ms;
-            ctx.result.kitty_ms = execution.kitty_ms;
+            return .{
+                .background_ms = execution.bg_ms,
+                .glyph_ms = execution.glyph_ms,
+                .kitty_ms = execution.kitty_ms,
+            };
         }
     };
     const update_ctx: UpdateCtx = .{
@@ -791,11 +787,14 @@ pub fn runRetainedPresentCycle(
         .blink_time = blink_time,
         .has_kitty = has_kitty,
         .surface_update_plan = surface_update_plan,
-        .result = &result,
     };
-    result.update = renderer_presentable_host.updateTerminalPresentable(renderer, update_ctx, Local.run);
-
-    return result;
+    return renderer_presentable_host.runRetainedTerminalPresentExecution(renderer, .{
+        .update_intent = switch (surface_update_plan.mode) {
+            .none => .none,
+            .partial => .partial,
+            .full => .full,
+        },
+    }, update_ctx, Local);
 }
 
 pub fn runRetainedPresentation(
@@ -811,14 +810,14 @@ pub fn runRetainedPresentation(
     composing_active: bool,
     composing_hash: u64,
     surface_update_plan: PresentationUpdatePlan,
-    cycle_result: RetainedPresentCycleResult,
+    cycle_result: RetainedTerminalPresentExecutionResult,
     note_present_ctx: anytype,
     note_present: anytype,
 ) RetainedPresentationResult {
     const result = RetainedPresentationResult{
-        .bg_ms = cycle_result.bg_ms,
-        .glyph_ms = cycle_result.glyph_ms,
-        .kitty_ms = cycle_result.kitty_ms,
+        .bg_ms = cycle_result.timing.background_ms,
+        .glyph_ms = cycle_result.timing.glyph_ms,
+        .kitty_ms = cycle_result.timing.kitty_ms,
     };
 
     const visible_w = surface_update_plan.geometry.visible_w;

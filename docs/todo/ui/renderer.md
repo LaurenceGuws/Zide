@@ -629,6 +629,13 @@ Current evidence:
   direct-partial / retained helpers and into the hook layer, so the chosen
   execution path consumes one shared update-plan build before entering its
   backend-shaped body.
+- retained update-cycle execution now terminates at
+  `renderer_presentable_host.runRetainedTerminalPresentExecution(...)`
+  instead of being open-coded directly in widget runtime.
+- this is intentionally narrower than full `RB-B1.d` closure: shared code
+  still owns retained present-state bookkeeping and final retained
+  present/unavailable handling, while the larger direct/snapshot execution
+  body still remains in `terminal_widget_presentation_runtime.zig`.
 
 Owner docs:
 

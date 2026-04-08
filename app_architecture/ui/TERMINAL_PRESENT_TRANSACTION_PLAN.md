@@ -353,6 +353,17 @@ Purpose:
 
 - push concrete direct/retained execution behind backend presentable seams
 
+Current checkpoint:
+
+- retained update-cycle execution now terminates at
+  `renderer_presentable_host.runRetainedTerminalPresentExecution(...)`
+  instead of being open-coded directly in widget runtime
+- this is still a narrow ownership transfer:
+  - shared code still owns retained present-state bookkeeping
+  - shared code still owns final retained present / unavailable logging
+- direct/snapshot execution remains in shared terminal runtime and is still
+  the next larger backend transfer
+
 Acceptance criteria:
 
 - shared terminal runtime no longer owns separate retained/direct execution
