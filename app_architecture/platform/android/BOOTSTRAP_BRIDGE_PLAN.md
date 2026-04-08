@@ -10,6 +10,7 @@ Owner docs:
 
 - `app_architecture/platform/NATIVE_HOST_CONTRACT.md`
 - `app_architecture/platform/android/RENDER_BACKEND.md`
+- `app_architecture/platform/android/SURFACE_IDENTITY_POLICY.md`
 - `docs/todo/android/implementation.md`
 
 ## Why This Is Next

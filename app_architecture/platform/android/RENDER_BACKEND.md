@@ -9,6 +9,7 @@ Supporting research:
 
 - `docs/research/terminal/ANDROID_HOST_PTY_SCAN_2026-04-08.md`
 - `app_architecture/platform/android/BOOTSTRAP_BRIDGE_PLAN.md`
+- `app_architecture/platform/android/SURFACE_IDENTITY_POLICY.md`
 
 ## Target Stack
 

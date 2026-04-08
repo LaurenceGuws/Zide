@@ -20,6 +20,7 @@ Do not use this queue for:
 - `app_architecture/platform/NATIVE_HOST_CONTRACT.md`
 - `app_architecture/platform/android/RENDER_BACKEND.md`
 - `app_architecture/platform/android/BOOTSTRAP_BRIDGE_PLAN.md`
+- `app_architecture/platform/android/SURFACE_IDENTITY_POLICY.md`
 - `docs/research/terminal/ANDROID_HOST_PTY_SCAN_2026-04-08.md`
 - `docs/todo/ui/renderer.md` (for the pre-Android rendering gate)
 
@@ -199,8 +200,8 @@ Do not do:
 
 Next likely follow-ups:
 
-1. tighten Android surface replacement / destruction policy around the real
-   token-bearing `surfaceIdentityEpoch` path
+1. execute `AH-A5` from
+   `app_architecture/platform/android/SURFACE_IDENTITY_POLICY.md`
 2. only after that, decide whether PTY/runtime lifetime has become the stronger
    remaining Android blocker
 3. do not jump to GLES from native-load success plus one bootstrap pass
