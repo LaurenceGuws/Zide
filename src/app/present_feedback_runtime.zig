@@ -17,8 +17,9 @@ fn flushTerminalPresentationFeedback(state: anytype, submission: anytype) void {
 fn logFramePresent(state: anytype, shell: anytype, submission: anytype) void {
     const trace = shell.lastPresentTrace();
     const render_log = app_logger.logger("renderer.present");
-    render_log.logFields(.info, "frame_present", &.{
+    render_log.logFields(.info, "frame_submission", &.{
         .{ .key = "frame", .value = .{ .unsigned = state.frame_id } },
+        .{ .key = "submitted", .value = .{ .boolean = submission.succeeded } },
         .{ .key = "frame_seq", .value = .{ .unsigned = trace.frame_seq } },
         .{ .key = "submission_seq", .value = .{ .unsigned = submission.sequence } },
         .{ .key = "terminal_presentations", .value = .{ .unsigned = trace.terminal_presentation_count } },

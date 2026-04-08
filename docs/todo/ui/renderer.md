@@ -1256,6 +1256,10 @@ Current implication:
   `abandoned` outcomes where no drawable frame existed
 - capture now stays armed across those no-drawable-frame outcomes and clears
   only once a drawable frame actually reaches submit
+- failed-submit inspection did not prove a larger structural cut either; the
+  next honest correction there was observability only
+- present feedback now logs `frame_submission` with explicit submitted truth
+  instead of logging failed submits under `frame_present`
 
 ## Milestone C: Vulkan Fit Audit
 

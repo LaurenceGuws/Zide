@@ -1333,6 +1333,14 @@ clear only once a drawable frame actually reaches submit. That still fits the
 current narrow frame-readiness/finalization surfaces; it does not yet force a
 larger frame transaction redesign.
 
+Inspection of failed-submit handling did not prove a larger gate-5 cut either.
+The next honest correction there was only observability:
+
+- present feedback no longer logs failed submissions as `frame_present`
+- logging now records `frame_submission` with explicit submitted truth
+
+So current evidence still does not justify opening `RB-B3.c`.
+
 ## Ranked Contradictions
 
 ### High

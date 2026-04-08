@@ -169,3 +169,17 @@ Current implication:
   larger transaction object
 - the remaining gate-5 pressure is still about stronger ordering/ownership
   leaks, not about widening the current readiness/outcome surfaces
+
+Failed-submit inspection did not prove a new structural cut either.
+
+What it did prove:
+
+- the current submit/finalization surfaces were strong enough that the next
+  honest follow-up was only observability wording
+- present feedback no longer logs failed submissions as `frame_present`; it now
+  logs `frame_submission` with explicit submitted truth
+
+Current implication:
+
+- `RB-B3.c` should still wait for a stronger ordering/ownership leak than log
+  wording around failed submit outcomes
