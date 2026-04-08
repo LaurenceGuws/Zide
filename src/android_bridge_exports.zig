@@ -80,3 +80,38 @@ export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeCurrentSurf
 ) callconv(.c) i32 {
     return @intFromEnum(android_runtime_bridge.currentSurfaceIdentityTransition());
 }
+
+export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeStartPtyProbeBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+) callconv(.c) i64 {
+    return @intCast(android_runtime_bridge.startPtyLifetimeProbe());
+}
+
+export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeStopPtyProbeBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+) callconv(.c) void {
+    android_runtime_bridge.stopPtyLifetimeProbe();
+}
+
+export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeIsPtyProbeAliveBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+) callconv(.c) bool {
+    return android_runtime_bridge.isPtyLifetimeProbeAlive();
+}
+
+export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativePtyProbeChildPidBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+) callconv(.c) i64 {
+    return @intCast(android_runtime_bridge.ptyLifetimeProbeChildPid());
+}
+
+export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativePtyProbeStartStatusBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+) callconv(.c) i32 {
+    return android_runtime_bridge.ptyLifetimeProbeStartStatus();
+}

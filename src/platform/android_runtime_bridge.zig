@@ -1,5 +1,6 @@
 const builtin = @import("builtin");
 const android_host = @import("android_host.zig");
+const android_pty_probe = @import("android_pty_probe.zig");
 const native_host = @import("native_host.zig");
 
 extern fn ANativeWindow_fromSurface(env: ?*anyopaque, surface: ?*anyopaque) ?*anyopaque;
@@ -111,6 +112,26 @@ pub fn currentSurfaceIdentityEpoch() u64 {
 
 pub fn currentSurfaceIdentityTransition() native_host.SurfaceIdentityTransition {
     return bridge_state.last_surface_transition;
+}
+
+pub fn startPtyLifetimeProbe() i64 {
+    return android_pty_probe.start() catch -1;
+}
+
+pub fn stopPtyLifetimeProbe() void {
+    android_pty_probe.stop();
+}
+
+pub fn isPtyLifetimeProbeAlive() bool {
+    return android_pty_probe.isAlive();
+}
+
+pub fn ptyLifetimeProbeChildPid() i64 {
+    return android_pty_probe.childPid();
+}
+
+pub fn ptyLifetimeProbeStartStatus() i32 {
+    return @intFromEnum(android_pty_probe.lastStartStatus());
 }
 
 test "bridge routes Android lifecycle and surface truth through shared host state" {

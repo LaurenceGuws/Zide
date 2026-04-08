@@ -31,6 +31,7 @@ fi
 
 zig build-obj \
   -target aarch64-linux-android \
+  -lc \
   "$ROOT/src/android_bridge_exports.zig" \
   -femit-bin="$OBJ_PATH"
 

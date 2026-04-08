@@ -16,6 +16,8 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     private static final String TAG = "ZideAndroidBootstrap";
     private static final int MAX_LOG_CHARS = 12000;
     private static final String EXTRA_DEBUG_RECREATE_SURFACE_ONCE = "debug_recreate_surface_once";
+    private static final String EXTRA_DEBUG_START_PTY_PROBE_ONCE = "debug_start_pty_probe_once";
+    private static final String PTY_PROBE_LOG_PATH = "/data/data/dev.zide.androidbootstrap/files/pty_probe.log";
 
     private static boolean nativeLoaded = false;
     private static String nativeLoadError = null;
@@ -36,6 +38,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     private FrameLayout surfaceContainer;
     private SurfaceView surfaceView;
     private boolean surfaceRecreationScheduled = false;
+    private boolean ptyProbeScheduled = false;
     private int surfaceHostGeneration = 0;
 
     private static native long nativeOnCreateBridge();
@@ -49,6 +52,11 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     private static native long nativeCurrentWindowTokenBridge();
     private static native long nativeCurrentSurfaceEpochBridge();
     private static native int nativeCurrentSurfaceTransitionBridge();
+    private static native long nativeStartPtyProbeBridge();
+    private static native void nativeStopPtyProbeBridge();
+    private static native boolean nativeIsPtyProbeAliveBridge();
+    private static native long nativePtyProbeChildPidBridge();
+    private static native int nativePtyProbeStartStatusBridge();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -82,12 +90,16 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         appendEvent("activity.onResume");
         callNative("native.onResume", nativeLoaded ? nativeOnResumeBridge() : -1);
         maybeScheduleSurfaceRecreation();
+        maybeSchedulePtyProbe();
         updateStatus("resumed");
     }
 
     @Override
     protected void onPause() {
         appendEvent("activity.onPause");
+        if (nativeLoaded && nativeIsPtyProbeAliveBridge()) {
+            appendEvent("debug.ptyProbeAliveOnPause pid=" + nativePtyProbeChildPidBridge());
+        }
         callNative("native.onPause", nativeLoaded ? nativeOnPauseBridge() : -1);
         updateStatus("paused");
         super.onPause();
@@ -162,6 +174,28 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         }, 700);
     }
 
+    private void maybeSchedulePtyProbe() {
+        if (!getIntent().getBooleanExtra(EXTRA_DEBUG_START_PTY_PROBE_ONCE, false)) {
+            return;
+        }
+        if (ptyProbeScheduled) {
+            return;
+        }
+        ptyProbeScheduled = true;
+        surfaceContainer.postDelayed(() -> {
+            final long pid = nativeLoaded ? nativeStartPtyProbeBridge() : -1;
+            final boolean alive = nativeLoaded && nativeIsPtyProbeAliveBridge();
+            final int status = nativeLoaded ? nativePtyProbeStartStatusBridge() : 0;
+            appendEvent(
+                "debug.ptyProbeStart pid=" + pid +
+                    " alive=" + alive +
+                    " status=" + ptyProbeStartStatusLabel(status) +
+                    " log=" + PTY_PROBE_LOG_PATH
+            );
+            updateStatus("debug-pty-probe-started");
+        }, 900);
+    }
+
     private void installSurfaceView(String reason) {
         if (surfaceView != null) {
             surfaceView.getHolder().removeCallback(this);
@@ -202,6 +236,18 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
             case 2 -> "replaced";
             case 3 -> "retired";
             default -> "unchanged";
+        };
+    }
+
+    private static String ptyProbeStartStatusLabel(int status) {
+        return switch (status) {
+            case 1 -> "started";
+            case 2 -> "unsupported";
+            case 3 -> "delete-log-failed";
+            case 4 -> "init-failed";
+            case 5 -> "write-failed";
+            case 6 -> "missing-pid";
+            default -> "none";
         };
     }
 
