@@ -52,6 +52,10 @@ Execution discipline:
   behaviorally validated there.
 - Metal remains unverified against that new seam contract; treat that as
   deferred verification, not as a reason to reopen gate-2 extraction work.
+- Gate #5 has now crossed its first two narrow frame-lifecycle cuts:
+  - frame submission/finalization now routes through one small shared outcome
+    surface
+  - frame begin readiness is now visible to shared draw/runtime code
 - Metal is now a real live implementation, especially on the terminal lane, but
   it still depends on backend-specific state and draw descriptions carried by
   the shared renderer.
@@ -61,6 +65,8 @@ Execution discipline:
   - or do they prove that `src/ui/renderer.zig` still knows too much about both
     backends
 - The honest answer today is still "not yet."
+- The next gate-5 move should come from proven ordering/ownership pressure, not
+  from guessing a larger frame redesign in prose.
 
 ### Where To Look
 
