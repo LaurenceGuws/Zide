@@ -5,6 +5,13 @@ pub const RetainedTerminalPresentableUpdate = @import("backend_dispatch.zig").Re
 const PresentableDraw = presentable_contract.PresentableDraw;
 const TerminalPresentPath = presentable_contract.TerminalPresentPath;
 
+pub fn runTerminalPresentPath(renderer: anytype, ctx: anytype, comptime Hooks: type) Hooks.Result {
+    return switch (renderer.backend.ops.presentable.terminalPresentPath(renderer)) {
+        .direct_surface => Hooks.runDirect(ctx, renderer),
+        .retained_surface => Hooks.runRetained(ctx, renderer),
+    };
+}
+
 pub fn usesDirectTerminalPresentation(renderer: anytype) bool {
     return renderer.backend.ops.presentable.terminalPresentPath(renderer) == .direct_surface;
 }

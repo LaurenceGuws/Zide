@@ -689,6 +689,12 @@ That split is now sharper from code inspection too:
 - shared code no longer asks for a backend lifecycle enum there at all. The
   terminal runtime now simply attempts the retained update-cycle contract and
   receives `.updated`, `.unavailable`, or `.unsupported`.
+- the top-level terminal presentation entry is now slightly cleaner too:
+  `terminal_widget_presentation_runtime.zig` no longer chooses direct-vs-
+  retained execution first in its own body. That present-path decision now
+  routes through one host-owned seam in `renderer_presentable_host.zig`
+  (`runTerminalPresentPath(...)`), while the existing direct and retained
+  execution bodies remain behavior-identical behind it.
 - terminal widget code no longer asks the renderer root for
   `terminalPresentationMode()` / `usesDirectTerminalPresentation()`. That
   terminal-present path decision now lives in `renderer_presentable_host.zig`

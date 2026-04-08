@@ -636,6 +636,49 @@ Do not do:
 
 - do not rename GL-owned concepts to neutral names without changing ownership
 
+Next reviewable cut:
+
+- `RB-B1.a` Host-owned terminal present execution seam
+
+Purpose:
+
+- move the top-level terminal present-path choice behind one
+  `renderer_presentable_host` execution seam so shared terminal UI code stops
+  branching first on backend present path and only then on presentation work.
+
+Owner docs:
+
+- `app_architecture/ui/RENDER_BACKEND_CONTRACT.md`
+- `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md`
+
+Primary code pressure:
+
+- `src/ui/widgets/terminal_widget_presentation_runtime.zig`
+- `src/ui/renderer/renderer_presentable_host.zig`
+- `src/ui/renderer/presentable_contract.zig`
+
+Acceptance criteria:
+
+- `terminal_widget_presentation_runtime.zig` no longer makes the top-level
+  "direct vs retained" dispatch decision itself for the main terminal
+  presentation flow
+- one host-owned seam chooses the terminal present path and returns one shared
+  result shape for that execution entrypoint
+- no rendering behavior changes are introduced for GL or Metal in this cut
+
+Do not do:
+
+- do not bundle frame-lifecycle ownership (`RB-B3`) into this cut
+- do not rewrite direct-snapshot partial-update behavior yet
+- do not widen `RendererCapabilities` or add a new backend enum query to
+  compensate for moving the branch
+
+Stop marker:
+
+- top-level terminal presentation entry now routes through one
+  `renderer_presentable_host` execution seam
+- validation green
+
 ### `RB-B2` Backend runtime ownership
 
 Status: active
