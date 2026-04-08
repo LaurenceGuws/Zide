@@ -1341,6 +1341,26 @@ The next honest correction there was only observability:
 
 So current evidence still does not justify opening `RB-B3.c`.
 
+The current product-state rule on `submitted = false` is now explicit too:
+
+- allowed to advance:
+  - frame attempt sequence
+  - observability trace rollover
+  - last submission timing publication
+  - composition-target reset
+  - frame-execution state reset
+- must remain pending:
+  - submission sequence
+  - terminal presentation retirement/ack
+  - presented-generation feedback
+- failure-class distinction:
+  - `not_attempted` / `begin_failed` / `abandoned` keep present capture armed
+  - `submit_failed` may clear present capture because a drawable frame did
+    reach submit
+
+That answer still fits the current readiness/outcome surfaces, so it does not
+yet trigger `RB-B3.c`.
+
 ## Ranked Contradictions
 
 ### High

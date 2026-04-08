@@ -183,3 +183,36 @@ Current implication:
 
 - `RB-B3.c` should still wait for a stronger ordering/ownership leak than log
   wording around failed submit outcomes
+
+## Current Product-State Rule On `submitted = false`
+
+The current code now answers the restart question concretely.
+
+### State allowed to advance on `submitted = false`
+
+- per-frame attempt sequence (`frame_seq`)
+- per-frame observability trace rollover (`trace_current` -> `trace_last`)
+- last submission timing publication (`last_swap_ms`)
+- composition-target reset back to default
+- frame-execution state reset back to neutral
+- submission logging/diagnostic publication
+
+### State that must remain pending on `submitted = false`
+
+- submission sequence must not advance
+- terminal presentation retirement/ack must not advance
+- presented-generation feedback must not advance
+
+### Additional rule by failure class
+
+For `not_attempted` / `begin_failed` / `abandoned`:
+
+- present capture remains armed, because no drawable frame ever reached submit
+
+For `submit_failed`:
+
+- present capture may clear, because a drawable frame did reach submit even
+  though submission did not succeed
+
+This is still small enough to live inside the current readiness/outcome
+surfaces. It does not yet justify `RB-B3.c`.

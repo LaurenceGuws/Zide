@@ -1260,6 +1260,11 @@ Current implication:
   next honest correction there was observability only
 - present feedback now logs `frame_submission` with explicit submitted truth
   instead of logging failed submits under `frame_present`
+- the restart question is now answered explicitly in authority docs:
+  - `submitted = false` may still advance per-frame observability/reset state
+  - it must not advance submission sequence or terminal presentation retirement
+  - capture stays armed for `not_attempted` / `begin_failed` / `abandoned`, but
+    may clear for `submit_failed`
 
 ## Milestone C: Vulkan Fit Audit
 
