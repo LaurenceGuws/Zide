@@ -252,6 +252,25 @@ So Android progress should now move through app/bootstrap and native-entry
 work, not through more host-harness polish and not through premature renderer
 backend work.
 
+Current `AH-A4` checkpoint:
+
+- `android/bootstrap-bridge/` now builds and installs on the Note10
+- the bootstrap app now loads a repo-built Zig native library successfully
+- launch-path native callback acknowledgements are live on device:
+  - `native.onCreate seq=1`
+  - `native.onStart seq=2`
+  - `native.onResume seq=3`
+  - `native.surfaceAvailable seq=4`
+  - `native.onWindowFocus seq=5`
+- the first shared-host cleanup forced by this lane is also done:
+  - `PlatformRenderHost` no longer carries an SDL window pointer
+  - SDL-only surface capture moved out of `native_host.zig`
+
+The next Android-native follow-up is now narrower:
+
+- move the bootstrap bridge callbacks into shared host truth
+- do not jump to GLES from native-load success alone
+
 ## Explicit Anti-Goals
 
 Do not:

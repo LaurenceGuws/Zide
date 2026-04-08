@@ -48,8 +48,9 @@ The bootstrap bridge should prove these four things:
 1. the repo can build an Android app project for the real runtime lane
 2. that app can load a repo-built native Zig library
 3. Android lifecycle and surface callbacks can cross the Java/native bridge
-4. those callbacks can terminate at `src/platform/android_host.zig` /
-   `src/platform/native_host.zig` truth rather than being trapped in Java glue
+4. after native loading is proven, those callbacks can be moved into
+   `src/platform/android_host.zig` / `src/platform/native_host.zig` truth
+   rather than being trapped in Java glue or a freestanding bridge stub
 
 ## Preferred Bridge Direction
 
@@ -86,6 +87,23 @@ Acceptance:
   callbacks into native bridge code
 - the owning Android docs explain how to build/install/run that bootstrap path
 
+Current checkpoint:
+
+- `android/bootstrap-bridge/` now exists as the first repo-owned runtime-lane
+  Android app
+- `ops/android_build_bootstrap_bridge.sh` now builds the Zig bridge through a
+  Zig object + NDK clang link path
+- the Note10 now loads the repo-built Zig library successfully
+- first observed native callback acknowledgements are:
+  - `native.onCreate seq=1`
+  - `native.onStart seq=2`
+  - `native.onResume seq=3`
+  - `native.surfaceAvailable seq=4`
+  - `native.onWindowFocus seq=5`
+- enabling shared-host cleanup also landed:
+  - `PlatformRenderHost` no longer carries an SDL window pointer
+  - SDL-only host capture moved to `src/platform/sdl_native_host.zig`
+
 Do not do:
 
 - no GLES or Vulkan backend bootstrap
@@ -102,5 +120,15 @@ Stop `AH-A4` when:
 - the native library loads successfully on device
 - native bridge logging proves lifecycle and surface signals are crossing into
   repo-owned native code
-- the next blocker is honestly either renderer/backend pressure or PTY/runtime
-  pressure rather than "we still do not have Android entry"
+- the next blocker is honestly shared-host integration of those callbacks, not
+  "we still do not have Android entry"
+
+## Next Honest Follow-Up
+
+The next `AH-A4` sub-cut should be:
+
+- route the bootstrap bridge callbacks into `PlatformAppHost` /
+  `PlatformRenderHost` truth instead of the current freestanding sequence stub
+
+That is now a reasonable follow-up because native loading and JNI callback
+crossing are already proven on device.

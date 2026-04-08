@@ -55,6 +55,8 @@ Status:
 - first shared-host contract cut landed in `src/platform/native_host.zig`
 - first shared SDL event-mapping cut now updates app-host lifecycle/focus and
   render-host surface/redraw truth
+- `PlatformRenderHost` no longer carries an SDL window pointer
+- SDL-only host capture now lives in `src/platform/sdl_native_host.zig`
 - Android-specific lifecycle/event mapping is still not implemented
 - Note10 harness validation now confirms that Android window focus and IME
   focus must remain separate signals
@@ -147,10 +149,22 @@ Acceptance:
 
 Status:
 
-- ready to start
+- in progress
 - the host harness proved the Android callback ordering we needed first
 - `build_system/platform_capabilities.zig` and the current app build graph are
   still desktop-only, so bootstrap/native-entry is now the real next blocker
+- `android/bootstrap-bridge/` now exists as the first runtime-lane Android app
+- `ops/android_build_bootstrap_bridge.sh` builds the Zig bridge through a Zig
+  object + NDK clang link path
+- the Note10 now loads the repo-built Zig library successfully
+- first launch-path native callback acknowledgements are live:
+  - `native.onCreate seq=1`
+  - `native.onStart seq=2`
+  - `native.onResume seq=3`
+  - `native.surfaceAvailable seq=4`
+  - `native.onWindowFocus seq=5`
+- the next blocker is no longer native entry; it is moving those callbacks into
+  shared host truth instead of the current freestanding bridge stub
 
 Do not do:
 
@@ -158,6 +172,15 @@ Do not do:
 - no Android PTY/service design yet
 - no pretending Android is already a first-class build target across the whole
   repo
+
+Next likely follow-ups:
+
+1. route bootstrap lifecycle/surface callbacks into `android_host.zig` and
+   `native_host.zig` truth instead of the current sequence-only bridge state
+2. add one on-device background/stop/surface-destroy smoke pass against the
+   bootstrap bridge, not just the host harness
+3. only after that, decide whether Android host pressure or Android PTY
+   pressure is the stronger next blocker
 
 ## Current Research Read
 
