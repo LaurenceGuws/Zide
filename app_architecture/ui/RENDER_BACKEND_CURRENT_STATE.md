@@ -181,9 +181,10 @@ improvement.
 
 But it is still backend-native runtime state living under shared renderer
 ownership. The runtime host no longer materializes both OpenGL and Metal state
-side-by-side; it now stores only the selected backend runtime. But that
-selected runtime is still concrete backend-native storage living under shared
-renderer ownership, with implementation state such as:
+side-by-side; it now stores only the selected backend runtime and no longer
+embeds it inline on `Renderer`. But that selected runtime is still concrete
+backend-native storage living behind a renderer-owned backend-tagged surface,
+with implementation state such as:
 
 - OpenGL:
   - `backend.runtime.opengl.context`
@@ -199,8 +200,9 @@ Current pressure is narrower than it used to be:
 - shared code outside backend modules no longer meaningfully reads this bundle
   directly
 - `Renderer` no longer materializes both backend states at once
-- the remaining blocker is that `Renderer` still owns the selected concrete
-  backend storage shape itself
+- `Renderer` no longer embeds selected concrete backend runtime inline either
+- the remaining blocker is that `Renderer` still owns the backend-tagged
+  surface for selected concrete backend storage itself
 
 Android host/bootstrap work now makes that blocker immediate instead of
 theoretical:

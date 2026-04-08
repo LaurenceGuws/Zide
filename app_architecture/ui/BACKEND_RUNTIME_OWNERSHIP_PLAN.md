@@ -17,15 +17,18 @@ Current code truth is now more specific than it used to be:
   backend modules
 - `Renderer.backend.runtime` no longer materializes both concrete backend
   states at once
-- but `Renderer` still owns the selected concrete backend runtime storage
-  shape through `backend_runtime_bundle.Bundle`
+- `Renderer.backend.runtime` no longer embeds selected concrete backend state
+  inline either
+- but `Renderer` still owns a backend-tagged pointer surface to the selected
+  concrete backend runtime storage through `backend_runtime_bundle.Bundle`
 
 That means the remaining gate-4 pressure is no longer "shared code is poking
 backend state everywhere."
 
 It is this:
 
-- `Renderer` is still the owner of selected concrete backend runtime storage
+- `Renderer` is still the owner of the backend-tagged selected-runtime storage
+  surface
 - adding a third backend would still widen that renderer-owned storage story
   again
 
@@ -159,12 +162,14 @@ The first code cut now exists:
 - `backend_runtime_bundle.Bundle` is now selected-backend storage instead of a
   widening GL+Metal struct
 - `Renderer` no longer materializes both concrete runtime states at once
+- `Renderer` no longer embeds selected concrete backend runtime inline either
 - GL and Metal backend modules now reach runtime through selected-backend
   accessors with no intended behavior change
 
 Immediate remaining pressure after this proof:
 
-- `Renderer` still owns the selected concrete backend-native runtime shape
+- `Renderer` still owns the backend-tagged pointer surface for selected
+  backend-native runtime storage
 - another backend would still widen that renderer-owned selected-runtime story
 - the next gate-4 cut should only open when it can move that ownership
   boundary again, not merely rename the selected-storage wrapper

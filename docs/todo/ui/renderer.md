@@ -89,7 +89,7 @@ Aligned with `app_architecture/ui/RENDER_BACKEND_CONTRACT.md` § “Gate status
 | 1 | One semantic operation → one renderer contract path | **Met** — `SurfaceDraw` deferral unified GL/Metal; flush discipline enforced at `drawTextureRect`, `flushTerminalBatch`, `GlyphCache.flush`; `updateRetainedPresentable` flushes surface queue into retained FBO before restoring scene target (fixes kitty-above ordering). No immediate-draw bypass remains. |
 | 2 | Backend choice does not change product-level submission semantics | **Structurally met on GL** — terminal-present transaction/execution seams are in place and GL behavioral equivalence passed adversarial cases; Metal is still unverified against the new seam contract and remains deferred verification rather than a structural blocker. |
 | 3 | No backend-specific `.opengl` / `.metal` / `.vulkan` in shared **draw payloads** | **Met for `SurfaceDraw`** — `GpuImageRef` + neutral union; `Renderer` still dispatches by backend enum elsewhere. |
-| 4 | `Renderer` not the hidden owner of backend-native runtime | **Not met** — `backend.runtime` now stores only the selected backend runtime, which is better than the old GL+Metal bundle, but `Renderer` still owns concrete backend-native storage shape. |
+| 4 | `Renderer` not the hidden owner of backend-native runtime | **Not met** — `backend.runtime` now stores only the selected backend runtime and no longer embeds it inline, which is better than the old GL+Metal bundle, but `Renderer` still owns the backend-tagged storage surface for concrete backend-native runtime state. |
 | 5 | Presentable/frame routine for a new backend | **Not met** — terminal-only presentable; GL retained vs Metal snapshot uneven. |
 
 **Readiness:** Android **platform** work (lifecycle, IME, etc.) stays allowed.
@@ -816,11 +816,13 @@ Current checkpoint:
 
 - `backend_runtime_bundle.Bundle` now stores only the selected backend runtime
   instead of concrete GL and Metal state side-by-side
+- selected concrete backend runtime is no longer embedded inline on `Renderer`
 - GL and Metal backend modules now reach runtime storage through
   selected-backend accessors
 - build/test validation stayed green with no intended behavior change
 - gate 4 is improved, but not closed:
-  - `Renderer` still owns the selected concrete backend-native runtime shape
+  - `Renderer` still owns the backend-tagged storage surface for selected
+    concrete backend-native runtime
   - adding another backend would still widen that renderer-owned storage story
 
 ### `RB-B3` Frame lifecycle ownership
