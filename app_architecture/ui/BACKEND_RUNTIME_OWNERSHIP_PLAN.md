@@ -175,7 +175,10 @@ Immediate remaining pressure after this proof:
 
 - `Renderer` no longer owns a backend-tagged selected-runtime storage surface;
   selected runtime now lives behind one opaque storage handle plus backend kind
-- `Renderer` still owns selected-runtime lifecycle and teardown plumbing
+- `Renderer` no longer spells selected-runtime storage init/deinit directly;
+  that now routes through backend runtime ops
+- the remaining blocker is the renderer-owned backend host itself
+  (`kind` + `ops` + opaque runtime handle)
 - the next gate-4 cut should only open when it can move that ownership
   boundary again, not merely reshuffle helper routing
 

@@ -202,14 +202,16 @@ Current pressure is narrower than it used to be:
   directly
 - `Renderer` no longer materializes both backend states at once
 - `Renderer` no longer embeds selected concrete backend runtime inline either
-- the remaining blocker is that `Renderer` still owns selected-runtime
-  lifecycle and teardown plumbing itself
+- runtime storage init/deinit no longer runs directly out of
+  `Renderer.init()` / `Renderer.deinit()`; it now routes through backend
+  runtime ops
+- the remaining blocker is that `Renderer` still owns the backend host surface
+  itself (`kind` + ops + opaque runtime handle)
 
 Android host/bootstrap work now makes that blocker immediate instead of
 theoretical:
 
-- a third backend would still pressure this renderer-owned selected-runtime
-  lifecycle story
+- a third backend would still pressure this renderer-owned backend-host story
 - Android rendering is now blocked here, not by host-surface ambiguity
 
 That means the renderer root is still partly the backend implementation center,
