@@ -28,6 +28,7 @@ const TerminalPresentationSample = terminal_debug_geometry.TerminalPresentationS
 const InputSnapshot = shared_types.input.InputSnapshot;
 const RetainedTerminalPresentableUpdate = renderer_presentable_host.RetainedTerminalPresentableUpdate;
 const RetainedTerminalPresentExecutionResult = renderer_presentable_host.RetainedTerminalPresentExecutionResult;
+const DirectTerminalPresentExecutionResult = renderer_presentable_host.DirectTerminalPresentExecutionResult;
 const TerminalPresentPlan = renderer_presentable_host.TerminalPresentPlan;
 const TerminalPresentResult = renderer_presentable_host.TerminalPresentResult;
 const TerminalPresentOutcome = @import("../renderer/presentable_contract.zig").TerminalPresentOutcome;
@@ -1032,6 +1033,34 @@ fn buildTerminalPresentPlan(
     };
 }
 
+fn buildExecutionUpdatePlan(
+    self: anytype,
+    renderer: anytype,
+    terminal_view: view_state.TerminalViewModel,
+    view_geometry: TerminalViewGeometry,
+    blink_requires_partial: bool,
+    draw_cursor: bool,
+    cursor: CursorPos,
+    cursor_style: terminal_types.CursorStyle,
+    scroll_offset: usize,
+    recent_input_window_active: bool,
+) PresentationUpdatePlan {
+    return planUpdate(
+        &self.surface,
+        self.session.allocator,
+        renderer,
+        self.publication.cacheConst(),
+        terminal_view,
+        view_geometry,
+        blink_requires_partial,
+        draw_cursor,
+        cursor,
+        cursor_style,
+        scroll_offset,
+        recent_input_window_active,
+    );
+}
+
 pub fn runPresentation(
     self: anytype,
     shell: *app_shell.Shell,
@@ -1123,18 +1152,15 @@ pub fn runPresentation(
                 note_present,
             );
             if (fast.outcome == .reused) return fast;
-            var local: Result = .{};
             const can_attempt_partial = !ctx.has_kitty and
                 renderer_presentable_host.terminalPresentableInfo(renderer_local) != null and
                 ctx.terminal_view.rows > 0 and
                 ctx.terminal_view.cols > 0 and
                 ctx.terminal_view.cells.len > 0;
             const surface_update_plan = if (can_attempt_partial)
-                planUpdate(
-                    &ctx.self_widget.surface,
-                    ctx.self_widget.session.allocator,
+                buildExecutionUpdatePlan(
+                    ctx.self_widget,
                     renderer_local,
-                    ctx.self_widget.publication.cacheConst(),
                     ctx.terminal_view,
                     ctx.view_geometry,
                     ctx.blink_requires_partial,
@@ -1146,64 +1172,100 @@ pub fn runPresentation(
                 )
             else
                 PresentationUpdatePlan{};
-            const partial = tryDirectSnapshotUpdate(
-                ctx.self_widget,
-                ctx.shell,
+            const DirectCtx = struct {
+                base: Ctx,
+                surface_update_plan: PresentationUpdatePlan,
+            };
+            const direct_ctx = DirectCtx{
+                .base = ctx,
+                .surface_update_plan = surface_update_plan,
+            };
+            const Local = struct {
+                pub fn tryPartialUpdate(
+                    local_ctx: DirectCtx,
+                    local_renderer: @TypeOf(renderer),
+                    _: TerminalPresentPlan,
+                ) DirectTerminalPresentExecutionResult {
+                    const partial = tryDirectSnapshotUpdate(
+                        local_ctx.base.self_widget,
+                        local_ctx.base.shell,
+                        local_renderer,
+                        local_ctx.surface_update_plan,
+                        local_ctx.base.terminal_view,
+                        local_ctx.base.view_geometry,
+                        local_ctx.base.hover_link_id,
+                        local_ctx.base.composing_active,
+                        local_ctx.base.composing_hash,
+                        local_ctx.base.draw_cursor,
+                        local_ctx.base.cursor,
+                        local_ctx.base.cursor_style,
+                        local_ctx.base.blink_style,
+                        local_ctx.base.blink_time,
+                        local_ctx.base.has_kitty,
+                        local_ctx.base.width,
+                        local_ctx.base.height,
+                        local_ctx.base.note_present_ctx,
+                        note_present,
+                    );
+                    return .{
+                        .completed = partial.completed,
+                        .updated = partial.completed,
+                        .timing = .{
+                            .background_ms = partial.bg_ms,
+                            .glyph_ms = partial.glyph_ms,
+                            .kitty_ms = partial.kitty_ms,
+                        },
+                    };
+                }
+
+                pub fn executePresent(
+                    local_ctx: DirectCtx,
+                    local_renderer: @TypeOf(renderer),
+                    _: TerminalPresentPlan,
+                ) DirectTerminalPresentExecutionResult {
+                    const direct = directPresent(
+                        local_ctx.base.self_widget,
+                        local_ctx.base.shell,
+                        local_renderer,
+                        local_ctx.base.terminal_view,
+                        local_ctx.base.view_geometry,
+                        local_ctx.base.hover_link_id,
+                        local_ctx.base.draw_cursor,
+                        local_ctx.base.cursor,
+                        local_ctx.base.cursor_style,
+                        local_ctx.base.composing_active,
+                        local_ctx.base.composing_hash,
+                        local_ctx.base.blink_style,
+                        local_ctx.base.blink_time,
+                        local_ctx.base.start_line,
+                        local_ctx.base.has_kitty,
+                        local_ctx.base.width,
+                        local_ctx.base.height,
+                        local_ctx.base.note_present_ctx,
+                        note_present,
+                    );
+                    return .{
+                        .updated = false,
+                        .timing = .{
+                            .background_ms = direct.bg_ms,
+                            .glyph_ms = direct.glyph_ms,
+                            .kitty_ms = direct.kitty_ms,
+                        },
+                    };
+                }
+            };
+            const direct = renderer_presentable_host.runDirectTerminalPresentExecution(
                 renderer_local,
-                surface_update_plan,
-                ctx.terminal_view,
-                ctx.view_geometry,
-                ctx.hover_link_id,
-                ctx.composing_active,
-                ctx.composing_hash,
-                ctx.draw_cursor,
-                ctx.cursor,
-                ctx.cursor_style,
-                ctx.blink_style,
-                ctx.blink_time,
-                ctx.has_kitty,
-                ctx.width,
-                ctx.height,
-                ctx.note_present_ctx,
-                note_present,
+                plan,
+                direct_ctx,
+                Local,
             );
-            if (partial.completed) {
-                local.outcome = .updated_and_presented;
-                local.cache_state_advanced = true;
-                local.target_available = true;
-                local.timing.background_ms = partial.bg_ms;
-                local.timing.glyph_ms = partial.glyph_ms;
-                local.timing.kitty_ms = partial.kitty_ms;
-                return local;
-            }
-            const direct = directPresent(
-                ctx.self_widget,
-                ctx.shell,
-                renderer_local,
-                ctx.terminal_view,
-                ctx.view_geometry,
-                ctx.hover_link_id,
-                ctx.draw_cursor,
-                ctx.cursor,
-                ctx.cursor_style,
-                ctx.composing_active,
-                ctx.composing_hash,
-                ctx.blink_style,
-                ctx.blink_time,
-                ctx.start_line,
-                ctx.has_kitty,
-                ctx.width,
-                ctx.height,
-                ctx.note_present_ctx,
-                note_present,
-            );
-            local.outcome = .presented;
-            local.cache_state_advanced = true;
-            local.target_available = true;
-            local.timing.background_ms = direct.bg_ms;
-            local.timing.glyph_ms = direct.glyph_ms;
-            local.timing.kitty_ms = direct.kitty_ms;
-            return local;
+            return .{
+                .outcome = if (direct.updated) .updated_and_presented else .presented,
+                .cache_state_advanced = true,
+                .target_available = true,
+                .timing = direct.timing,
+            };
         }
 
         pub fn runRetained(plan: TerminalPresentPlan, ctx: Ctx, renderer_local: @TypeOf(renderer)) Result {
@@ -1229,11 +1291,9 @@ pub fn runPresentation(
                 note_present,
             );
             if (fast.outcome == .reused) return fast;
-            const surface_update_plan = planUpdate(
-                &ctx.self_widget.surface,
-                ctx.self_widget.session.allocator,
+            const surface_update_plan = buildExecutionUpdatePlan(
+                ctx.self_widget,
                 renderer_local,
-                ctx.self_widget.publication.cacheConst(),
                 ctx.terminal_view,
                 ctx.view_geometry,
                 ctx.blink_requires_partial,

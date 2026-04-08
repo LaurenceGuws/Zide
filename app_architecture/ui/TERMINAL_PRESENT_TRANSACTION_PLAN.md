@@ -358,11 +358,34 @@ Current checkpoint:
 - retained update-cycle execution now terminates at
   `renderer_presentable_host.runRetainedTerminalPresentExecution(...)`
   instead of being open-coded directly in widget runtime
+- direct/snapshot execution now also terminates at
+  `renderer_presentable_host.runDirectTerminalPresentExecution(...)`
+  instead of keeping direct partial-vs-full orchestration open-coded in
+  widget runtime
 - this is still a narrow ownership transfer:
   - shared code still owns retained present-state bookkeeping
   - shared code still owns final retained present / unavailable logging
-- direct/snapshot execution remains in shared terminal runtime and is still
-  the next larger backend transfer
+  - shared code still finalizes product outcomes from partial execution data
+- the remaining work is now mostly orchestration collapse and gate-boundary
+  re-audit rather than moving another major execution branch
+
+Execution-completion rule for this stage:
+
+- backend execution hooks do not return a fully resolved `TerminalPresentResult`
+- backend execution hooks return partial execution data only
+  - update status
+  - execution timing
+  - any narrow execution-owned failure signal already represented in the
+    current shared vocabulary
+- shared code still finalizes product outcome/state for this stage
+  - cache-state advance
+  - present-state bookkeeping
+  - unavailable logging
+  - final `TerminalPresentResult` assembly
+
+This rule is mandatory for the Metal move unless the code proves that a
+full-result backend seam is expressing product semantics rather than backend
+mechanics.
 
 Acceptance criteria:
 
@@ -380,6 +403,22 @@ Do not do:
 Purpose:
 
 - decide what is truly left in gate #2 vs what is actually gate #5
+
+Current read after `RB-B1.d` checkpoints:
+
+- gate #2 now covers:
+  - one shared terminal present transaction vocabulary
+  - shared planning and invalidation truth
+  - backend execution shape terminating behind presentable seams
+  - shared finalization of product outcomes from partial execution data
+- gate #2 no longer requires:
+  - another major direct-vs-retained execution ownership transfer in widget
+    runtime for terminal presentation
+- gate #5 still covers:
+  - renderer-wide frame routine ownership
+  - cross-widget present/order alignment
+  - any move of shared finalization/bookkeeping into a broader frame lifecycle
+    contract rather than the terminal-present seam alone
 
 Acceptance criteria:
 

@@ -1249,6 +1249,36 @@ cursor/overlay state deltas in presentation cache/reuse decisions, but this
 class should be treated as an explicit scrutiny target when comparing OpenGL
 and Metal lifecycle equivalence after the current cut order is complete.
 
+## Terminal Present Contract Status (2026-04-08)
+
+The terminal-present contract lane has now crossed the main gate-2 transfer:
+
+- shared code owns one terminal present transaction vocabulary
+- shared code owns planning/invalidation truth
+- retained update-cycle execution terminates behind
+  `renderer_presentable_host.runRetainedTerminalPresentExecution(...)`
+- direct/snapshot execution terminates behind
+  `renderer_presentable_host.runDirectTerminalPresentExecution(...)`
+- shared code still finalizes product outcomes from partial execution data
+
+That means gate #2 is now mostly about validating and tightening this
+contract, not about discovering another major direct-vs-retained ownership cut.
+
+What remains in gate #2:
+
+- keep shared finalization honest against the partial execution seam
+- remove any leftover backend-shaped orchestration that survives only as local
+  glue around the terminal-present seam
+- keep GL/Metal behavior equivalent while the shared transaction remains the
+  authority
+
+What has moved into gate #5:
+
+- broader frame/present/order ownership
+- cross-widget frame lifecycle alignment
+- any attempt to absorb shared terminal-present finalization into a larger
+  renderer-wide frame contract
+
 ## Ranked Contradictions
 
 ### High

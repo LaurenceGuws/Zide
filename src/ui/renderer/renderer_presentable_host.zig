@@ -14,6 +14,12 @@ pub const RetainedTerminalPresentExecutionResult = struct {
     timing: TerminalPresentTiming = .{},
 };
 
+pub const DirectTerminalPresentExecutionResult = struct {
+    completed: bool = false,
+    updated: bool = false,
+    timing: TerminalPresentTiming = .{},
+};
+
 pub fn runTerminalPresentPath(renderer: anytype, plan: TerminalPresentPlan, ctx: anytype, comptime Hooks: type) TerminalPresentResult {
     return switch (renderer.backend.ops.presentable.terminalPresentPath(renderer)) {
         .direct_surface => Hooks.runDirect(plan, ctx, renderer),
@@ -71,6 +77,25 @@ pub fn runRetainedTerminalPresentExecution(
         @ptrCast(&call_ctx),
         Local.run,
     );
+    return result;
+}
+
+pub fn runDirectTerminalPresentExecution(
+    renderer: anytype,
+    plan: TerminalPresentPlan,
+    ctx: anytype,
+    comptime Hooks: type,
+) DirectTerminalPresentExecutionResult {
+    var result = DirectTerminalPresentExecutionResult{};
+    if (renderer.backend.ops.presentable.terminalPresentPath(renderer) != .direct_surface) return result;
+
+    if (plan.update_intent == .partial) {
+        result = Hooks.tryPartialUpdate(ctx, renderer, plan);
+        if (result.completed) return result;
+    }
+
+    result = Hooks.executePresent(ctx, renderer, plan);
+    result.completed = true;
     return result;
 }
 

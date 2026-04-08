@@ -632,10 +632,24 @@ Current evidence:
 - retained update-cycle execution now terminates at
   `renderer_presentable_host.runRetainedTerminalPresentExecution(...)`
   instead of being open-coded directly in widget runtime.
+- direct/snapshot execution now also terminates at
+  `renderer_presentable_host.runDirectTerminalPresentExecution(...)`
+  instead of keeping partial-vs-full direct orchestration open-coded in
+  widget runtime.
 - this is intentionally narrower than full `RB-B1.d` closure: shared code
   still owns retained present-state bookkeeping and final retained
-  present/unavailable handling, while the larger direct/snapshot execution
-  body still remains in `terminal_widget_presentation_runtime.zig`.
+  present/unavailable handling, and shared code still finalizes product
+  outcomes from partial execution data.
+- guardrail for the next Metal move: backend execution seams still return
+  partial execution data, not a fully resolved `TerminalPresentResult`.
+  Shared code continues to finalize cache-state advance, present-state
+  bookkeeping, unavailable logging, and final result assembly unless a wider
+  seam proves product-level semantics rather than backend mechanics.
+- both retained and direct/snapshot execution now terminate behind
+  presentable-host execution seams. The remaining `RB-B1` work is mostly
+  tightening shared finalization/orchestration honesty and re-auditing the
+  gate boundary, not discovering another major direct-vs-retained ownership
+  transfer.
 
 Owner docs:
 
@@ -689,6 +703,8 @@ Acceptance criteria:
 - backend presentable implementations satisfy the shared
   `TerminalPresentPlan` / `TerminalPresentResult` contract
 - no rendering behavior changes are introduced for GL or Metal in this cut
+- queue and authority docs restate what remains in gate #2 versus what has now
+  moved into gate #5
 
 Do not do:
 
