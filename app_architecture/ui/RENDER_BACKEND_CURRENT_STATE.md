@@ -193,6 +193,18 @@ storage such as:
 - `backend.runtime.metal.queued_surface_draws`
 - `backend.runtime.metal.preview_source`
 
+Current pressure is narrower than it used to be:
+
+- shared code outside backend modules no longer meaningfully reads this bundle
+  directly
+- the remaining blocker is the renderer-owned widening storage shape itself
+
+Android host/bootstrap work now makes that blocker immediate instead of
+theoretical:
+
+- a third backend would still widen `Renderer.backend.runtime`
+- Android rendering is now blocked here, not by host-surface ambiguity
+
 That means the renderer root is still partly the backend implementation center,
 not just the backend-neutral host/facade.
 

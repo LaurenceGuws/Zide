@@ -97,14 +97,14 @@ Android **rendering** backend (GLES/Vulkan) and desktop **Vulkan** bootstrap
 remain **not ready** until this checklist clears (see contract § “Readiness
 (authoritative)”).
 
-**Branch scope (2026-04-08):** The active branch now covers all outstanding
-gate criteria (#2, #4, #5) — not just gate 1. Work proceeds one gate at a
-time, fully closing each criterion before moving to the next. Order: #2
-(submission semantics / presentable lifecycle) → #5 (presentable/frame
-routine) → #4 (Renderer not hidden backend owner). Gate #3 is already met for
-the `SurfaceDraw` surface; the residual backend-enum dispatch elsewhere is
-addressed as part of gate #4. Do not bundle gates or declare a gate met until
-the code and docs both reflect it honestly.
+**Branch scope (2026-04-09):** Gate #2 is now structurally closed on GL and
+gate #5 is paused unless a stronger ordering/ownership leak appears. That
+means the next honest blocker for Android rendering is gate #4: `Renderer`
+still materializes a widening `backend.runtime` bundle. Android host/bootstrap
+work is now merged, so a third backend would widen that storage story again.
+Gate #3 is already met for the `SurfaceDraw` surface; the residual
+backend-enum dispatch elsewhere is addressed as part of gate #4. Do not bundle
+gates or declare a gate met until the code and docs both reflect it honestly.
 
 ## How To Use This Queue
 
@@ -741,11 +741,20 @@ Current evidence:
   - backend-specific mutation/storage truth still lives in shared process
     memory shaped by the renderer host
   - adding a backend still pressures this shared storage story
+- current code pressure is now narrower than before:
+  - shared code no longer meaningfully reads `renderer.backend.runtime`
+    outside backend modules
+  - the remaining blocker is storage ownership itself, not another generic
+    "stop shared leaks" cleanup
+- Android host/bootstrap truth is now merged, so this is no longer theoretical
+  third-backend pressure:
+  - Android rendering would currently widen `Renderer.backend.runtime` again
 
 Owner docs:
 
 - `app_architecture/ui/RENDER_BACKEND_CONTRACT.md`
 - `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md`
+- `app_architecture/ui/BACKEND_RUNTIME_OWNERSHIP_PLAN.md`
 
 Acceptance criteria:
 
@@ -757,6 +766,51 @@ Do not do:
 
 - do not add new backend-native peer fields on `Renderer`
 - do not solve "quickly" by widening shared state
+
+Next reviewable cut:
+
+- `RB-B2.a` Selected backend runtime ownership
+
+Purpose:
+
+- remove the widening `backend_runtime_bundle.Bundle` shape so `Renderer` stops
+  materializing concrete GL and Metal runtime state side-by-side
+
+Owner docs:
+
+- `app_architecture/ui/BACKEND_RUNTIME_OWNERSHIP_PLAN.md`
+- `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md`
+
+Primary code pressure:
+
+- `src/ui/renderer/renderer_backend_host.zig`
+- `src/ui/renderer/backend_runtime_bundle.zig`
+- `src/ui/renderer/backend_dispatch.zig`
+- `src/ui/renderer/gl_backend.zig`
+- `src/ui/renderer/metal_backend.zig`
+- `src/ui/renderer.zig`
+
+Acceptance criteria:
+
+- `Renderer.backend` no longer materializes both backend runtime structs at
+  once
+- shared code still triggers runtime lifecycle, but backend code owns concrete
+  runtime storage init/deinit/mutation
+- the first cut does not widen into frame ordering, presentable lifecycle, or
+  third-backend bootstrap
+
+Do not do:
+
+- do not invent a larger generic backend object framework than this pressure
+  actually needs
+- do not reopen gate-5 frame/present redesign while addressing runtime storage
+
+Stop marker:
+
+- one selected-backend-owned runtime storage surface replaces the widening
+  bundle
+- GL and Metal behavior stays unchanged
+- queue/docs clearly state what later gate-4 pressure still remains
 
 ### `RB-B3` Frame lifecycle ownership
 
