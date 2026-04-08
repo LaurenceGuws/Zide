@@ -365,8 +365,8 @@ pub const Shell = struct {
         return self.renderer;
     }
 
-    pub fn beginFrame(self: *Shell) void {
-        self.renderer.beginFrame();
+    pub fn beginFrame(self: *Shell) bool {
+        return self.renderer.beginFrame();
     }
 
     pub fn endFrame(self: *Shell) FrameSubmission {

@@ -963,10 +963,11 @@ pub const Renderer = struct {
         return input_state.windowFocused(self.inputDomain());
     }
 
-    pub fn beginFrame(self: *Renderer) void {
+    pub fn beginFrame(self: *Renderer) bool {
         renderer_frame_host.beginFrameHost(self);
         self.backend.ops.frame.beginFrame(self);
         self.backend.ops.clip.applyClipRect(self, null);
+        return renderer_frame_host.frameReadyForDraw(self);
     }
 
     pub fn submitFrame(self: *Renderer) FrameSubmission {

@@ -1184,6 +1184,62 @@ Stop marker:
 - backend begin/submit/abandon results report through it
 - shared frame finalization consumes it without backend-shaped schema growth
 
+Latest reviewable cut:
+
+- `RB-B3.b` Frame begin readiness ownership
+
+Purpose:
+
+- expose backend frame-entry readiness to shared draw/runtime code so a begin
+  failure does not silently run the full draw path with no drawable backend
+  frame
+
+Owner docs:
+
+- `app_architecture/ui/FRAME_BEGIN_READINESS_PLAN.md`
+- `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md`
+
+Primary code pressure:
+
+- `src/ui/renderer.zig`
+- `src/ui/renderer/renderer_frame_host.zig`
+- `src/ui/renderer/gl_backend.zig`
+- `src/ui/renderer/metal_backend.zig`
+- `src/app_shell.zig`
+- `src/app/draw_frame_runtime.zig`
+
+Acceptance criteria:
+
+- shared redraw policy still decides whether a frame is attempted
+- backend begin/acquire reports one narrow shared readiness result
+- shared draw/runtime can skip draw work when frame begin is not ready
+- the cut does not widen into broader frame ordering or transaction redesign
+
+Do not do:
+
+- do not turn this into a general frame transaction object yet
+- do not move redraw policy into backend code
+- do not widen `FrameSubmission` or reopen terminal-present seams
+
+Stop marker:
+
+- `Renderer.beginFrame()` no longer hides backend begin readiness behind `void`
+- OpenGL and Metal both report frame-entry readiness through one small shared
+  surface
+- draw/runtime code can exit early on a non-ready frame without backend-shaped
+  branches
+
+Current evidence:
+
+- `Renderer.beginFrame()` now returns shared frame-entry readiness instead of
+  hiding backend begin/acquire truth behind `void`
+- `draw_frame_runtime.zig` now skips the draw body and goes straight to normal
+  frame submission/finalization when frame begin is not ready
+- Metal live-smoke and diagnostic paths now gate capture/draw work on that same
+  readiness truth
+- this did not require a broader frame transaction object or a widened
+  `FrameSubmission`
+
 ## Milestone C: Vulkan Fit Audit
 
 Purpose:

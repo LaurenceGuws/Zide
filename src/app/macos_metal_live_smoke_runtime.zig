@@ -64,10 +64,11 @@ pub fn run(allocator: std.mem.Allocator) !void {
             _ = try shell.refreshWindowState("macos-metal-live-smoke-frame", changes);
         }
 
-        shell.beginFrame();
-        if (screenshot_path) |path| {
-            if (frame_index + 1 == frame_budget) {
-                shell.armPresentCapture(path);
+        if (shell.beginFrame()) {
+            if (screenshot_path) |path| {
+                if (frame_index + 1 == frame_budget) {
+                    shell.armPresentCapture(path);
+                }
             }
         }
         const submission = shell.endFrame();

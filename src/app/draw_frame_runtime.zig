@@ -19,7 +19,12 @@ pub const Hooks = struct {
 };
 
 pub fn draw(state: anytype, shell: anytype, ctx: *anyopaque, hooks: Hooks) void {
-    shell.beginFrame();
+    const frame_ready = shell.beginFrame();
+    if (!frame_ready) {
+        const submission = shell.endFrame();
+        app_present_feedback_runtime.completePresent(state, shell, submission);
+        return;
+    }
 
     if (app_font_sample_draw_runtime.handle(state, shell)) {
         const submission = shell.endFrame();

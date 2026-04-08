@@ -1299,6 +1299,18 @@ This is the right scope for `RB-B3.a`. It does not yet redesign broader
 frame/present ordering, and it did not require backend-shaped schema growth to
 get shared finalization off raw backend return values.
 
+That next pressure is now cut too:
+
+- `Renderer.beginFrame()` now returns shared frame-entry readiness instead of
+  hiding it behind `void`
+- Metal begin/acquire failure no longer silently runs the shared draw body
+- shared draw/runtime can stop early and still flow through normal frame
+  submission/finalization
+
+This is the right scope for `RB-B3.b`. It still does not redesign broader
+frame ordering, and it did not require a new generic frame transaction object
+to make frame-entry readiness part of the shared contract.
+
 ## Ranked Contradictions
 
 ### High

@@ -30,6 +30,10 @@ pub fn noteFrameAbandoned(renderer: anytype) void {
     renderer.present.frame_execution_state = .abandoned;
 }
 
+pub fn frameReadyForDraw(renderer: anytype) bool {
+    return renderer.present.frame_execution_state == .ready;
+}
+
 pub fn finishFrameSubmission(renderer: anytype, outcome: FrameExecutionOutcome) present_trace_runtime.FrameSubmission {
     renderer.present.last_swap_ms = outcome.present_ms;
     renderer.present.main_composition_target = .default_target;
