@@ -1,6 +1,4 @@
 const builtin = @import("builtin");
-const std = @import("std");
-const sdl_api = @import("sdl_api.zig");
 
 pub const AppLifecycleState = enum {
     started,
@@ -125,7 +123,6 @@ pub const PlatformAppHost = struct {
 };
 
 pub const PlatformRenderHost = struct {
-    sdl_window: *sdl_api.c.SDL_Window,
     binding: RenderSurfaceBinding,
     surface_availability: RenderSurfaceAvailability,
     surface_metrics: RenderSurfaceMetrics,
@@ -194,43 +191,9 @@ pub fn currentAppHost() PlatformAppHost {
     };
 }
 
-pub fn captureWindowSurfaceMetrics(window: *sdl_api.c.SDL_Window) RenderSurfaceMetrics {
-    var logical_width: c_int = 0;
-    var logical_height: c_int = 0;
-    var drawable_width: c_int = 0;
-    var drawable_height: c_int = 0;
-    sdl_api.getWindowSize(window, &logical_width, &logical_height);
-    sdl_api.getDrawableSize(window, &drawable_width, &drawable_height);
-    return .{
-        .logical_width = logical_width,
-        .logical_height = logical_height,
-        .drawable_width = drawable_width,
-        .drawable_height = drawable_height,
-        .display_scale = sdl_api.getWindowDisplayScale(window),
-        .pixel_density = sdl_api.getWindowPixelDensity(window),
-    };
-}
-
-pub fn captureRenderHost(
-    window: *sdl_api.c.SDL_Window,
-    binding: RenderSurfaceBinding,
-) PlatformRenderHost {
-    return .{
-        .sdl_window = window,
-        .binding = binding,
-        .surface_availability = .available,
-        .surface_metrics = captureWindowSurfaceMetrics(window),
-        .native_handles = .{
-            .cocoa_window = sdl_api.getWindowCocoaWindow(window),
-            .cocoa_view = sdl_api.getWindowCocoaView(window),
-            .win32_hwnd = sdl_api.getWindowWin32Hwnd(window),
-        },
-    };
-}
-
 test "render host surface transitions clear redraw and native window on loss" {
+    const std = @import("std");
     var host = PlatformRenderHost{
-        .sdl_window = @ptrFromInt(1),
         .binding = .none,
         .surface_availability = .available,
         .surface_metrics = .{
@@ -257,8 +220,8 @@ test "render host surface transitions clear redraw and native window on loss" {
 }
 
 test "render host redraw and android window state can be re-armed after surface return" {
+    const std = @import("std");
     var host = PlatformRenderHost{
-        .sdl_window = @ptrFromInt(1),
         .binding = .opengl,
         .surface_availability = .unavailable,
         .surface_metrics = .{},
@@ -286,6 +249,7 @@ test "render host redraw and android window state can be re-armed after surface 
 }
 
 test "app host keeps lifecycle separate from focus and text input" {
+    const std = @import("std");
     var app_host = PlatformAppHost{
         .kind = .android_activity,
         .lifecycle_state = .started,

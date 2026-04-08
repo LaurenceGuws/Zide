@@ -58,11 +58,14 @@ pub fn createWindow(
     return window;
 }
 
-pub fn attachRenderSurface(render_host: native_host.PlatformRenderHost) !RenderSurfaceAttachment {
+pub fn attachRenderSurface(
+    window: *sdl.SDL_Window,
+    render_host: native_host.PlatformRenderHost,
+) !RenderSurfaceAttachment {
     return switch (render_host.binding) {
         .none => .none,
         .opengl => .opengl_window,
-        .metal => .{ .macos_metal_host = macos_metal_host.prepareForRenderHost(render_host) orelse return error.MacosMetalAttachmentUnavailable },
+        .metal => .{ .macos_metal_host = macos_metal_host.prepareForRenderHost(render_host, window) orelse return error.MacosMetalAttachmentUnavailable },
     };
 }
 
