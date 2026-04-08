@@ -2,6 +2,7 @@ const bootstrap_contract = @import("bootstrap_contract.zig");
 const gl_backend = @import("gl_backend.zig");
 const metal_backend = @import("metal_backend.zig");
 const native_host = @import("../../platform/native_host.zig");
+const sdl_native_host = @import("../../platform/sdl_native_host.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
 const window_init = @import("window_init.zig");
 
@@ -41,8 +42,8 @@ pub fn initBootstrapWindow(
     const window = try window_init.createWindow(width, height, title, graphics_binding);
     errdefer sdl_api.destroyWindow(window);
 
-    const render_host = native_host.captureRenderHost(window, graphics_binding);
-    const render_surface_attachment = try window_init.attachRenderSurface(render_host);
+    const render_host = sdl_native_host.captureRenderHost(window, graphics_binding);
+    const render_surface_attachment = try window_init.attachRenderSurface(window, render_host);
     errdefer {
         var cleanup = render_surface_attachment;
         window_init.deinitRenderSurfaceAttachment(&cleanup);

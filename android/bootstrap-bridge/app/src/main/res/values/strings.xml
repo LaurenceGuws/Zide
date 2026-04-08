@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Zide Bootstrap Bridge</string>
+    <string name="status_booting">state=booting</string>
+</resources>

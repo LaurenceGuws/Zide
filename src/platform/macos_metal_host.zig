@@ -40,9 +40,12 @@ pub fn deinit(host: *Host) void {
     host.attached = false;
 }
 
-pub fn prepareForRenderHost(render_host: native_host.PlatformRenderHost) ?Host {
+pub fn prepareForRenderHost(
+    render_host: native_host.PlatformRenderHost,
+    window: *sdl_api.c.SDL_Window,
+) ?Host {
     const target = macos_host.metalAttachmentTarget(render_host) orelse return null;
-    const sdl_metal_view = sdl_api.metalCreateView(render_host.sdl_window) orelse return null;
+    const sdl_metal_view = sdl_api.metalCreateView(window) orelse return null;
     const metal_layer = sdl_api.metalGetLayer(sdl_metal_view) orelse {
         sdl_api.metalDestroyView(sdl_metal_view);
         return null;
