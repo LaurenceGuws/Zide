@@ -108,6 +108,10 @@ Current checkpoint:
   `PlatformRenderHost`, with the Note10 showing:
   - stable non-zero token across repeated `surface.changed` callbacks
   - stable `surfaceIdentityEpoch=1` across those same-window updates
+  - explicit `acquired`, `unchanged`, and `retired` transition labels from the
+    shared host seam
+  - a later foreground return after `retired` becomes a fresh `acquired`, even
+    when the raw token value can recur
   - `token=0x0` and `surfaceIdentityEpoch=2` after `surface.destroyed`
 - the bootstrap bridge now routes lifecycle/focus/surface callbacks through
   `src/platform/android_host.zig` and shared host state instead of the earlier
@@ -149,6 +153,9 @@ The next `AH-A4` sub-cut should be:
 
 - tighten Android surface replacement / destruction policy around the now
   explicit native-window token + `surfaceIdentityEpoch` path
+- determine whether an in-process `replaced` transition is real on this
+  Android path, or whether replacement effectively means `retired` followed by
+  later `acquired`
 - keep Android PTY/runtime lifetime as a parallel concern, but not the next
   blocker for rendering-oriented host work
 

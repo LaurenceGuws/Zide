@@ -74,16 +74,23 @@ Current successful bootstrap run:
 - `native.onCreate seq=1`
 - `native.onStart seq=2`
 - `native.onResume seq=3`
-- `native.surfaceAvailable seq=4 token=0x... epoch=1`
-- `native.surfaceAvailable seq=5 token=0x... epoch=1`
+- `native.surfaceAvailable seq=4 token=0x... epoch=1 transition=acquired`
+- `native.surfaceAvailable seq=5 token=0x... epoch=1 transition=unchanged`
 - `native.onWindowFocus seq=6`
+- forced rotation also stayed on the same surface identity:
+  - `native.surfaceAvailable seq=7 token=0x... epoch=1 transition=unchanged`
+  - `native.surfaceAvailable seq=8 token=0x... epoch=1 transition=unchanged`
+  - `native.surfaceAvailable seq=9 token=0x... epoch=1 transition=unchanged`
 - HOME/background also confirms:
-  - `native.onPause seq=7`
-  - `native.surfaceAvailable seq=8 token=0x... epoch=1`
-  - `native.surfaceAvailable seq=9 token=0x... epoch=1`
-  - `native.onWindowFocus seq=10`
-  - `native.surfaceDestroyed seq=11 token=0x0 epoch=2`
-  - `native.onStop seq=12`
+  - `native.onPause seq=10`
+  - `native.surfaceAvailable seq=11 token=0x... epoch=1 transition=unchanged`
+  - `native.surfaceAvailable seq=12 token=0x... epoch=1 transition=unchanged`
+  - `native.onWindowFocus seq=13`
+  - `native.surfaceDestroyed seq=14 token=0x0 epoch=2 transition=retired`
+  - `native.onStop seq=15`
+- bringing the task back to foreground then produced:
+  - a fresh `native.surfaceAvailable ... epoch=3 transition=acquired`
+  - even though the raw token value could recur, the epoch still advanced
 
 That proves:
 
@@ -91,8 +98,11 @@ That proves:
 - Java lifecycle/surface callbacks are crossing into repo-owned Zig code
 - those callbacks now route through shared Android host semantics rather than a
   private bridge-only lifecycle model
-- the bridge can surface a real stable `ANativeWindow` token through repeated
-  `surface.changed` callbacks, while `surfaceIdentityEpoch` stays stable for
-  same-window updates and advances on surface destruction
+- the bridge can now surface explicit surface identity transitions:
+  `acquired`, `unchanged`, and `retired`
+- on the current Note10 path, forced rotation and pause-side geometry churn are
+  still `transition=unchanged`, so large size changes do not imply replacement
+- on this same path, foreground return after `retired` becomes a fresh
+  `acquired`, so raw token reuse is not sufficient to define identity
 - Android native entry is now real enough to move on to deeper host/runtime
   ownership questions rather than more bootstrap speculation

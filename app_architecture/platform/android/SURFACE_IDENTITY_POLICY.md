@@ -33,20 +33,31 @@ It is now:
 Observed through `android/bootstrap-bridge/` on the Note10:
 
 - cold launch:
-  - `native.surfaceAvailable seq=4 token=0x... epoch=1`
-  - `native.surfaceAvailable seq=5 token=0x... epoch=1`
+  - `native.surfaceAvailable seq=4 token=0x... epoch=1 transition=acquired`
+  - `native.surfaceAvailable seq=5 token=0x... epoch=1 transition=unchanged`
 - forced rotation via system settings:
-  - `native.surfaceAvailable seq=7 token=0x... epoch=1`
-  - `native.surfaceAvailable seq=8 token=0x... epoch=1`
-  - `native.surfaceAvailable seq=9 token=0x... epoch=1`
+  - `native.surfaceAvailable seq=7 token=0x... epoch=1 transition=unchanged`
+  - `native.surfaceAvailable seq=8 token=0x... epoch=1 transition=unchanged`
+  - `native.surfaceAvailable seq=9 token=0x... epoch=1 transition=unchanged`
+- HOME/background:
+  - extra pause-side `surface.changed` callbacks still stayed
+    `transition=unchanged`
 - backgrounding:
-  - `native.surfaceDestroyed seq=11 token=0x0 epoch=2`
+  - `native.surfaceDestroyed seq=14 token=0x0 epoch=2 transition=retired`
+- foreground return after that retirement:
+  - `native.surfaceAvailable seq=15 token=0x... epoch=3 transition=acquired`
+  - the raw token value may recur even though the surface identity is new
 
 The important result is:
 
 - large geometry changes can still be same-surface updates
 - identity change is not implied by resize, redraw, pause, or rotation alone
 - identity change is explicit when `surfaceIdentityEpoch` advances
+- current device evidence has proved `acquired`, `unchanged`, and `retired`
+- current device evidence has not yet proved an in-process `replaced`
+  transition
+- current device evidence also proves that raw token reuse does not imply same
+  surface identity; epoch and transition are the real identity authority
 
 ## Decision
 
@@ -82,6 +93,22 @@ Epoch-advance updates mean:
   window-bound resources
 - shared code should not need to guess whether a new surface identity exists
 
+Transition labels mean:
+
+- `acquired`: a new surface identity appeared where none existed
+- `unchanged`: geometry/redraw truth changed without surface identity changing
+- `replaced`: one live native window identity was replaced by another without a
+  prior retirement event
+- `retired`: the current native window identity was retired and no surface is
+  available
+
+Important consequence:
+
+- a later `acquired` may reuse the same raw pointer value that an earlier
+  surface identity used
+- future renderer/backend work must trust `surfaceIdentityEpoch` plus
+  transition state, not raw pointer equality alone
+
 Unavailable surface means:
 
 - no drawable surface is available
@@ -113,9 +140,21 @@ Acceptance:
   Android renderer work
 - the next Android rendering-adjacent blocker is surface replacement policy,
   not bootstrap uncertainty
+- the current device truth clearly states which transition kinds have and have
+  not been observed so far
 
 Do not do:
 
 - no GLES or Vulkan work
 - no PTY/runtime lifetime design
 - no fake renderer integration just to prove the policy
+
+## Next Honest Follow-Up
+
+The next `AH-A5` sub-cut should be:
+
+- determine whether this Android path can produce an in-process `replaced`
+  transition at all
+- if it can, capture and document that ordering
+- if it cannot, treat `retired` followed by later `acquired` as the real
+  replacement story for future backend work, even when raw pointer values recur

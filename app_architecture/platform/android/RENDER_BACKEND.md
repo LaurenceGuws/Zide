@@ -273,6 +273,12 @@ Current `AH-A4` checkpoint:
 - the shared host seam now also carries a `surfaceIdentityEpoch` that stayed at
   `1` across those same-window updates and advanced to `2` on
   `surface.destroyed`
+- the shared Android bridge now also classifies those updates as:
+  - `acquired` on first live surface identity
+  - `unchanged` across same-window geometry churn, including forced rotation
+  - `retired` on `surface.destroyed`
+- foreground return after `retired` now also proves a later fresh `acquired`
+  path, even when the raw native-window token value can recur
 - the bridge now routes those callbacks through `android_host.zig` and shared
   host state instead of a private lifecycle stub
 - a HOME/background pass now also confirms:
@@ -291,6 +297,9 @@ The next Android-native follow-up is now narrower:
 
 - tighten Android surface replacement / destruction policy around the now
   explicit native-window token + `surfaceIdentityEpoch` path
+- determine whether this path can produce an in-process `replaced` transition,
+  or whether `retired` then later `acquired` is the only real replacement
+  story the future backend must honor
 - keep PTY lifetime pressure as a real Android concern, but not the stronger
   blocker for rendering-oriented host work yet
 - do not jump to GLES from native-load success alone

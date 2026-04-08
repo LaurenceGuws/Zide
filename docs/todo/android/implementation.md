@@ -177,6 +177,13 @@ Status:
     updates
   - `surface.destroyed` cleared that token back to `0x0` and advanced
     `surfaceIdentityEpoch` to `2`
+- the bridge now classifies surface identity transitions explicitly:
+  - first live surface callback was `acquired`
+  - repeated geometry churn, forced rotation, and pause-side `surface.changed`
+    stayed `unchanged`
+  - `surface.destroyed` was `retired`
+  - later foreground return becomes a fresh `acquired`, even when the raw
+    native-window token value can recur
 - the bootstrap bridge now routes lifecycle/focus/surface callbacks through
   shared Android host semantics instead of the earlier freestanding sequence
   stub
@@ -200,8 +207,9 @@ Do not do:
 
 Next likely follow-ups:
 
-1. execute `AH-A5` from
-   `app_architecture/platform/android/SURFACE_IDENTITY_POLICY.md`
+1. determine whether this Android path can produce an in-process `replaced`
+   transition, or whether `retired` then later `acquired` is the real
+   replacement story
 2. only after that, decide whether PTY/runtime lifetime has become the stronger
    remaining Android blocker
 3. do not jump to GLES from native-load success plus one bootstrap pass
