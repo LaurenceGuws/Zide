@@ -686,10 +686,9 @@ That split is now sharper from code inspection too:
   honestly too: retained-update attempts return an explicit status instead of a
   boolean that used to collapse "unsupported lifecycle model" and
   "retained target unavailable" into the same false path.
-- shared code now knows the lifecycle model explicitly as well:
-  OpenGL reports `.retained_update_target`; Metal reports
-  `.snapshot_composition`. The terminal runtime now uses that to skip bogus
-  retained-update attempts on snapshot backends.
+- shared code no longer asks for a backend lifecycle enum there at all. The
+  terminal runtime now simply attempts the retained update-cycle contract and
+  receives `.updated`, `.unavailable`, or `.unsupported`.
 - terminal widget code no longer asks the renderer root for
   `terminalPresentationMode()` / `usesDirectTerminalPresentation()`. That
   terminal-present path decision now lives in `renderer_presentable_host.zig`

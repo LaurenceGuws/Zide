@@ -45,8 +45,3 @@ pub const PresentableInfo = struct {
     logical_width: i32,
     logical_height: i32,
 };
-
-pub const TerminalPresentableLifecycle = enum {
-    retained_update_target,
-    snapshot_composition,
-};

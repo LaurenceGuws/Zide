@@ -97,6 +97,15 @@ Android **rendering** backend (GLES/Vulkan) and desktop **Vulkan** bootstrap
 remain **not ready** until this checklist clears (see contract § “Readiness
 (authoritative)”).
 
+**Branch scope (2026-04-08):** The active branch now covers all outstanding
+gate criteria (#2, #4, #5) — not just gate 1. Work proceeds one gate at a
+time, fully closing each criterion before moving to the next. Order: #2
+(submission semantics / presentable lifecycle) → #5 (presentable/frame
+routine) → #4 (Renderer not hidden backend owner). Gate #3 is already met for
+the `SurfaceDraw` surface; the residual backend-enum dispatch elsewhere is
+addressed as part of gate #4. Do not bundle gates or declare a gate met until
+the code and docs both reflect it honestly.
+
 ## How To Use This Queue
 
 1. Confirm the repo-wide focus in `docs/AGENT_HANDOFF.md`.
@@ -557,6 +566,10 @@ Current evidence:
   terminal widget no longer calls `beginPresentable(...)` /
   `endPresentable(...)` directly, and instead asks `renderer_presentable_host`
   to run one presentable update cycle.
+- the shared presentable contract no longer exports a backend lifecycle query
+  either; terminal presentation now attempts the retained update-cycle seam
+  directly and branches on `.updated` / `.unavailable` / `.unsupported`
+  instead of asking whether the backend is "retained" first.
 - OpenGL presentable operations now resolve retained-target storage through
   backend-owned slot helpers instead of open-coding terminal/editor target
   access at each call site.

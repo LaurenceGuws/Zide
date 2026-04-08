@@ -439,9 +439,9 @@ The current code makes that split more specific:
   retained-update attempts return an explicit result, not a boolean that
   collapses "unsupported backend model" and "retained target unavailable" into
   the same product-level outcome.
-- the lifecycle model itself is now explicit too: terminal presentables report
-  either `.retained_update_target` or `.snapshot_composition` instead of
-  making shared code probe a retained update path blindly every frame.
+- shared code no longer queries a backend lifecycle enum before using that
+  seam. It asks the host to attempt one retained terminal presentable update
+  cycle and branches only on the returned contract result.
 - terminal-present path choice is now owned by the presentable host seam too,
   not by renderer-root convenience methods. Shared terminal code asks the
   terminal presentable host whether the path is direct or retained.

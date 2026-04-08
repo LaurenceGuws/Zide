@@ -4,12 +4,7 @@ const capability_contract = @import("capability_contract.zig");
 
 pub const RetainedTerminalPresentableUpdate = @import("backend_dispatch.zig").RetainedPresentableUpdateResult;
 const PresentableDraw = presentable_contract.PresentableDraw;
-pub const TerminalPresentableLifecycle = presentable_contract.TerminalPresentableLifecycle;
 pub const TerminalPresentationMode = capability_contract.TerminalPresentationMode;
-
-pub fn terminalPresentableLifecycle(renderer: anytype) TerminalPresentableLifecycle {
-    return renderer.backend.ops.presentable.terminalPresentableLifecycle(renderer);
-}
 
 pub fn terminalPresentationMode(renderer: anytype) TerminalPresentationMode {
     return renderer.capabilities().terminal_presentation_mode;
