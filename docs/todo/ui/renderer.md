@@ -120,6 +120,8 @@ Latest gate-4 narrowing note:
 - shared `renderer_text_host.zig` and `renderer_surface_host.zig` now route
   GL flush helper access through small backend-host files instead of importing
   `gl_backend.zig` directly
+- `draw_ops.zig` and `glyph_cache.zig` now route GL vertex-stream helper
+  access through `src/ui/renderer/renderer_vertex_stream_backend_host.zig`
 
 ## How To Use This Queue
 

@@ -193,3 +193,7 @@ Latest narrowing cut:
   through `renderer_text_backend_host.zig` and
   `renderer_surface_backend_host.zig` instead of importing `gl_backend.zig`
   directly
+- `draw_ops.zig` and `glyph_cache.zig` now route GL vertex-stream helper
+  access through `renderer_vertex_stream_backend_host.zig`; the remaining
+  OpenGL-specific code there is now explicit vertex-stream machinery rather
+  than direct backend helper leakage
