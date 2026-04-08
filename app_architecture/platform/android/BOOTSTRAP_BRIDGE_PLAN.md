@@ -106,7 +106,8 @@ Current checkpoint:
 - the bootstrap bridge now surfaces real `ANativeWindow` identity into
   `PlatformRenderHost`, with the Note10 showing:
   - stable non-zero token across repeated `surface.changed` callbacks
-  - `token=0x0` after `surface.destroyed`
+  - stable `surfaceIdentityEpoch=1` across those same-window updates
+  - `token=0x0` and `surfaceIdentityEpoch=2` after `surface.destroyed`
 - the bootstrap bridge now routes lifecycle/focus/surface callbacks through
   `src/platform/android_host.zig` and shared host state instead of the earlier
   freestanding sequence stub
@@ -145,9 +146,10 @@ Stop `AH-A4` when:
 
 The next `AH-A4` sub-cut should be:
 
-- decide whether the stronger next blocker is:
-  - Android native-window/render-host truth
-  - Android PTY/runtime lifetime truth
+- tighten Android surface replacement / destruction policy around the now
+  explicit native-window token + `surfaceIdentityEpoch` path
+- keep Android PTY/runtime lifetime as a parallel concern, but not the next
+  blocker for rendering-oriented host work
 
 The bootstrap-entry problem is now solved well enough that those are the real
 next questions.

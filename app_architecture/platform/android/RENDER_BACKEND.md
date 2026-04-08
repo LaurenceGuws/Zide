@@ -269,6 +269,9 @@ Current `AH-A4` checkpoint:
 - the Note10 currently shows one stable non-zero native-window token across
   repeated `surface.changed` callbacks, then `token=0x0` after
   `surface.destroyed`
+- the shared host seam now also carries a `surfaceIdentityEpoch` that stayed at
+  `1` across those same-window updates and advanced to `2` on
+  `surface.destroyed`
 - the bridge now routes those callbacks through `android_host.zig` and shared
   host state instead of a private lifecycle stub
 - a HOME/background pass now also confirms:
@@ -285,9 +288,10 @@ Current `AH-A4` checkpoint:
 
 The next Android-native follow-up is now narrower:
 
-- surface real Android native-window identity into shared render-host truth
-- decide whether host depth or PTY lifetime is the stronger next Android
-  blocker
+- tighten Android surface replacement / destruction policy around the now
+  explicit native-window token + `surfaceIdentityEpoch` path
+- keep PTY lifetime pressure as a real Android concern, but not the stronger
+  blocker for rendering-oriented host work yet
 - do not jump to GLES from native-load success alone
 
 ## Explicit Anti-Goals

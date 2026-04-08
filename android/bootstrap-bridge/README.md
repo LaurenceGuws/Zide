@@ -74,14 +74,15 @@ Current successful bootstrap run:
 - `native.onCreate seq=1`
 - `native.onStart seq=2`
 - `native.onResume seq=3`
-- `native.surfaceAvailable seq=4 token=0x...`
+- `native.surfaceAvailable seq=4 token=0x... epoch=1`
+- `native.surfaceAvailable seq=5 token=0x... epoch=1`
 - `native.onWindowFocus seq=6`
 - HOME/background also confirms:
   - `native.onPause seq=7`
-  - `native.surfaceAvailable seq=8 token=0x...`
-  - `native.surfaceAvailable seq=9 token=0x...`
+  - `native.surfaceAvailable seq=8 token=0x... epoch=1`
+  - `native.surfaceAvailable seq=9 token=0x... epoch=1`
   - `native.onWindowFocus seq=10`
-  - `native.surfaceDestroyed seq=11 token=0x0`
+  - `native.surfaceDestroyed seq=11 token=0x0 epoch=2`
   - `native.onStop seq=12`
 
 That proves:
@@ -91,6 +92,7 @@ That proves:
 - those callbacks now route through shared Android host semantics rather than a
   private bridge-only lifecycle model
 - the bridge can surface a real stable `ANativeWindow` token through repeated
-  `surface.changed` callbacks and clear it on `surface.destroyed`
+  `surface.changed` callbacks, while `surfaceIdentityEpoch` stays stable for
+  same-window updates and advances on surface destruction
 - Android native entry is now real enough to move on to deeper host/runtime
   ownership questions rather than more bootstrap speculation

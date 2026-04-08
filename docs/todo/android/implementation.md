@@ -172,7 +172,10 @@ Status:
   host state:
   - repeated `surface.changed` callbacks kept one stable non-zero token on the
     Note10
-  - `surface.destroyed` cleared that token back to `0x0`
+  - shared `surfaceIdentityEpoch` stayed at `1` across those same-window
+    updates
+  - `surface.destroyed` cleared that token back to `0x0` and advanced
+    `surfaceIdentityEpoch` to `2`
 - the bootstrap bridge now routes lifecycle/focus/surface callbacks through
   shared Android host semantics instead of the earlier freestanding sequence
   stub
@@ -184,7 +187,8 @@ Status:
   - `native.surfaceDestroyed seq=11`
   - `native.onStop seq=12`
 - the next blocker is no longer native entry; it is deeper Android host/runtime
-  ownership
+  ownership, with native-window/render-host truth now clearly ahead of PTY
+  lifetime for rendering-oriented work
 
 Do not do:
 
@@ -195,12 +199,11 @@ Do not do:
 
 Next likely follow-ups:
 
-1. decide whether Android native-window/render-host truth or Android PTY
-   lifetime truth is the stronger next blocker
-2. if host pressure wins, tighten Android surface replacement / destruction
-   policy around the real token-bearing window path
-3. only then choose whether the next lane is native-window/render-host depth
-   or PTY/runtime ownership
+1. tighten Android surface replacement / destruction policy around the real
+   token-bearing `surfaceIdentityEpoch` path
+2. only after that, decide whether PTY/runtime lifetime has become the stronger
+   remaining Android blocker
+3. do not jump to GLES from native-load success plus one bootstrap pass
 
 ## Current Research Read
 
