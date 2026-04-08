@@ -79,15 +79,15 @@ Android rendering backend work only becomes valid when all of these are true:
 
 If those are not true, Android rendering is still blocked.
 
-### Gate checklist (code truth, 2026-04-07)
+### Gate checklist (code truth, 2026-04-08)
 
 Aligned with `app_architecture/ui/RENDER_BACKEND_CONTRACT.md` § “Gate status
 (code truth)”:
 
 | # | Criterion | Status |
 |---|-----------|--------|
-| 1 | One semantic operation → one renderer contract path | **Partial** — `SurfaceDraw` deferral is unified GL/Metal; some paths still mix queued surface work with immediate draws (flush discipline). |
-| 2 | Backend choice does not change product-level submission semantics | **Partial** — same as (1); presentable/terminal paths still differ by backend lifecycle. |
+| 1 | One semantic operation → one renderer contract path | **Met** — `SurfaceDraw` deferral unified GL/Metal; flush discipline enforced at `drawTextureRect`, `flushTerminalBatch`, `GlyphCache.flush`; `updateRetainedPresentable` flushes surface queue into retained FBO before restoring scene target (fixes kitty-above ordering). No immediate-draw bypass remains. |
+| 2 | Backend choice does not change product-level submission semantics | **Partial** — presentable/terminal paths still differ by backend lifecycle (GL retained vs Metal snapshot). |
 | 3 | No backend-specific `.opengl` / `.metal` / `.vulkan` in shared **draw payloads** | **Met for `SurfaceDraw`** — `GpuImageRef` + neutral union; `Renderer` still dispatches by backend enum elsewhere. |
 | 4 | `Renderer` not the hidden owner of backend-native runtime | **Not met** — `backend.runtime` still holds concrete OpenGL + Metal bundles. |
 | 5 | Presentable/frame routine for a new backend | **Not met** — terminal-only presentable; GL retained vs Metal snapshot uneven. |
@@ -760,25 +760,17 @@ Current evidence:
   OpenGL, pane base must replay immediately after record; row-band batches must
   end with a queue drain; scrollbars must flush before later widgets. Landed on
   branch `surface-contract-shared-text-phase` with manual editor/IDE smoke OK.
-- **Next ticket-shaped follow-ups:** (1) **partially closed:** `draw_ops.drawTextureRect`
-  (non-replay), `flushTerminalBatch`, and `GlyphCache.flush` now call
-  `gl_backend.flushQueuedSurfaceDrawsBeforeImmediateWork` so immediate GL draws
-  cannot jump ahead of queued `SurfaceDraw` on Linux GL; surface **replay** uses
-  `drawTextureRectImmediate` to avoid re-entrancy; (2) terminal/chrome
-  `SurfaceDraw` blit interleaving; (3) optional rename of `editor_surface_solid_family`
-  trace field to drive real per-family enqueue metrics if needed.
-- that split did **not** produce a broadly safe delayed-blit lane yet:
-  kitty/raw-image placements still interleave with terminal text, and shell
-  icons still draw before adjacent tab labels. The only relatively isolated
-  blit family is retained presentable draw, which already belongs under the
-  presentable contract and is too narrow to close `SurfaceDraw` timing on its
-  own.
-- remaining work is **band composition + bypass audit**, not GL solid timing:
-  shell chrome bands, editor banding, and sample/diagnostic sections still mix
-  deferred surface fills with immediate texture/outline paths. Terminal
-  pane/presentable fills are not in the generic surface lane. Next cuts: fewer
-  `text_draw`/`draw_ops` bypasses, stronger chrome/sample phases, then blit
-  ordering (kitty/icons).
+- **Gate 1 flush discipline — closed (2026-04-08):** `draw_ops.drawTextureRect`
+  (non-replay), `flushTerminalBatch`, and `GlyphCache.flush` call
+  `gl_backend.flushQueuedSurfaceDrawsBeforeImmediateWork`; surface **replay**
+  uses `drawTextureRectImmediate` to avoid re-entrancy. Additionally,
+  `gl_presentable_runtime::updateRetainedPresentable` now calls
+  `gl_backend.flushQueuedSurfaceDrawsNow` at body-end before
+  `restoreCompositionTarget` fires — this flushes kitty-above and any other
+  deferred `SurfaceDraw`s into the retained FBO while it is still bound, instead
+  of letting them leak to the scene target and be covered by the presentable blit.
+  No remaining call site allows an immediate GL draw to jump ahead of a queued
+  `SurfaceDraw`. Gate 1 status updated to **Met**.
 - shell chrome is the most obvious next family, but it is blocked from an easy
   cut because its dependent text/icon path is still immediate in
   `text_runtime.zig`. A fill-only move would recreate the same separation bug

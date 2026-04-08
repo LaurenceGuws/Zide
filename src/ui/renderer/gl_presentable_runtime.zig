@@ -54,6 +54,11 @@ pub fn updateRetainedPresentable(
     if (!gl_backend.beginRenderTarget(renderer, presentableTarget(renderer))) return .unavailable;
     defer restoreCompositionTarget(renderer);
     body(ctx, renderer);
+    // Flush any surface draws recorded during the body (e.g. kitty-above images)
+    // into the retained FBO now, before restoreCompositionTarget switches to the
+    // scene target.  Without this, deferred SurfaceDraws are replayed later
+    // against the scene target and end up underneath the presentable blit.
+    gl_backend.flushQueuedSurfaceDrawsNow(renderer);
     return .updated;
 }
 

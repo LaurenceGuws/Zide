@@ -40,14 +40,19 @@ rendering adoption?" is:
 
 In current-state terms, the remaining blockers are:
 
-1. `SurfaceDraw` solids are no longer a GL-vs-Metal timing fork
+1. `SurfaceDraw` submission story is now unified — **Gate 1 met (2026-04-08)**
 
-- OpenGL now **defers** all `SurfaceDraw` variants (including `.solid`) in a
-  per-frame queue and replays at explicit flush boundaries plus `submitFrame`
-- Metal still records into its submit-time surface queue
-- the remaining gap is **flush discipline** for call sites that mix recorded
-  surface work with immediate texture or terminal-batch draws, and **blit**
-  ordering around terminal/chrome—not “solids immediate on GL”
+- OpenGL defers all `SurfaceDraw` variants in a per-frame queue and replays at
+  explicit flush boundaries plus `submitFrame`, matching Metal's deferred surface
+  phase at the product level
+- flush discipline is now enforced at every immediate-draw site:
+  `drawTextureRect`, `flushTerminalBatch`, and `GlyphCache.flush` all drain the
+  surface queue before any immediate GL work
+- `gl_presentable_runtime::updateRetainedPresentable` flushes the surface queue
+  at body-end before restoring the scene target, so kitty-above images and other
+  deferred draws land in the retained FBO instead of leaking to the scene target
+- no remaining call site allows an immediate GL draw to jump ahead of a queued
+  `SurfaceDraw`
 
 2. Presentable behavior is cleaner but still uneven
 
