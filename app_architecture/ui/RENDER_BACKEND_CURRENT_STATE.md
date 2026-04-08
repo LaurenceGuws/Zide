@@ -1322,6 +1322,17 @@ frame-entry readiness instead of running unconditionally after backend begin.
 So the current evidence does not yet force a larger unified begin/prelude host
 seam; the next gate-5 move should wait for a stronger ordering leak.
 
+One more product-level leak from the same seam is now fixed too:
+
+- shared frame finalization was still clearing present-capture requests on
+  `not_attempted` / `begin_failed` / `abandoned` outcomes where no drawable
+  frame ever existed
+
+Capture requests now stay armed across those no-drawable-frame outcomes and
+clear only once a drawable frame actually reaches submit. That still fits the
+current narrow frame-readiness/finalization surfaces; it does not yet force a
+larger frame transaction redesign.
+
 ## Ranked Contradictions
 
 ### High

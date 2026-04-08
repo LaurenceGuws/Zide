@@ -153,3 +153,19 @@ Current implication:
   seam just to become honest
 - the next gate-5 cut should wait for a stronger ordering/ownership pressure
   than one early backend clip reset
+
+One additional product-level follow-up fell out of that same seam:
+
+- present-capture requests were still being cleared even on
+  `not_attempted` / `begin_failed` / `abandoned` outcomes where no drawable
+  frame ever existed
+- that is now fixed in shared finalization: capture requests stay armed across
+  no-drawable-frame outcomes and clear only once a drawable frame actually
+  reaches submit
+
+Current implication:
+
+- frame begin readiness is still staying declarative instead of turning into a
+  larger transaction object
+- the remaining gate-5 pressure is still about stronger ordering/ownership
+  leaks, not about widening the current readiness/outcome surfaces

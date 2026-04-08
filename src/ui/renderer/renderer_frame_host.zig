@@ -38,9 +38,14 @@ pub fn finishFrameSubmission(renderer: anytype, outcome: FrameExecutionOutcome) 
     renderer.present.last_swap_ms = outcome.present_ms;
     renderer.present.main_composition_target = .default_target;
     renderer.present.trace_last = renderer.present.trace_current;
-    renderer.present.capture_path = null;
-    renderer.present.capture_armed = false;
-    renderer.present.capture_frame_seq = 0;
+    switch (outcome.kind) {
+        .submitted, .submit_failed => {
+            renderer.present.capture_path = null;
+            renderer.present.capture_armed = false;
+            renderer.present.capture_frame_seq = 0;
+        },
+        .not_attempted, .begin_failed, .abandoned => {},
+    }
     renderer.present.frame_execution_state = .not_attempted;
     const succeeded = outcome.kind == .submitted;
     if (succeeded) renderer.present.submission_sequence += 1;

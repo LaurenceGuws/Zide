@@ -1251,6 +1251,11 @@ Current implication:
   seam
 - the next gate-5 cut should wait for a stronger ordering/ownership leak than
   one early backend clip reset
+- one more product-level leak from the same seam is now fixed too: present
+  capture is no longer cleared on `not_attempted` / `begin_failed` /
+  `abandoned` outcomes where no drawable frame existed
+- capture now stays armed across those no-drawable-frame outcomes and clears
+  only once a drawable frame actually reaches submit
 
 ## Milestone C: Vulkan Fit Audit
 
