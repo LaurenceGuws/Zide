@@ -3,6 +3,7 @@ const app_logger = @import("../../app_logger.zig");
 const android_host = @import("../../platform/android_host.zig");
 const native_host = @import("../../platform/native_host.zig");
 const sdl_native_host = @import("../../platform/sdl_native_host.zig");
+const sdl_android_host = @import("../../platform/sdl_android_host.zig");
 const platform_input_events = @import("../../platform/input_events.zig");
 const input_state = @import("input_state.zig");
 const iface = @import("interface.zig");
@@ -324,7 +325,7 @@ fn handleWindowEvent(
     if (change.any()) {
         window_changes.merge(change);
         if (change.affectsWindowRefresh()) {
-            if (!android_host.noteWindowRefresh(app_host, render_host, window)) {
+            if (!sdl_android_host.noteWindowRefresh(app_host, render_host, window)) {
                 render_host.noteSurfaceAvailable(sdl_native_host.captureWindowSurfaceMetrics(window));
                 render_host.noteRedrawRequested();
             }
