@@ -11,6 +11,7 @@ const BridgeState = struct {
         .kind = .android_activity,
         .lifecycle_state = .started,
     },
+    last_surface_transition: native_host.SurfaceIdentityTransition = .unchanged,
     render_host: native_host.PlatformRenderHost = .{
         .binding = .none,
         .surface_availability = .unavailable,
@@ -34,7 +35,7 @@ fn releaseNativeWindow(window: ?*anyopaque) void {
 
 fn swapNativeWindow(window: ?*anyopaque) void {
     releaseNativeWindow(bridge_state.render_host.androidNativeWindow());
-    bridge_state.render_host.noteAndroidNativeWindow(window);
+    bridge_state.last_surface_transition = bridge_state.render_host.noteAndroidNativeWindow(window);
 }
 
 pub fn noteCreate() u64 {
@@ -108,6 +109,10 @@ pub fn currentSurfaceIdentityEpoch() u64 {
     return bridge_state.render_host.surfaceIdentityEpoch();
 }
 
+pub fn currentSurfaceIdentityTransition() native_host.SurfaceIdentityTransition {
+    return bridge_state.last_surface_transition;
+}
+
 test "bridge routes Android lifecycle and surface truth through shared host state" {
     const std = @import("std");
 
@@ -130,12 +135,14 @@ test "bridge routes Android lifecycle and surface truth through shared host stat
     try std.testing.expect(bridge_state.render_host.redraw_requested);
     try std.testing.expectEqual(@as(usize, 0x1000), currentNativeWindowToken());
     try std.testing.expectEqual(@as(u64, 1), currentSurfaceIdentityEpoch());
+    try std.testing.expectEqual(native_host.SurfaceIdentityTransition.acquired, currentSurfaceIdentityTransition());
 
     bridge_state.render_host.clearRedrawRequested();
     try std.testing.expectEqual(@as(u64, 5), noteSurfaceAvailableFromJava(@ptrFromInt(1), @ptrFromInt(0x1000), 420, 210));
     try std.testing.expectEqual(@as(i32, 420), bridge_state.render_host.surface_metrics.drawable_width);
     try std.testing.expectEqual(@as(usize, 0x1000), currentNativeWindowToken());
     try std.testing.expectEqual(@as(u64, 1), currentSurfaceIdentityEpoch());
+    try std.testing.expectEqual(native_host.SurfaceIdentityTransition.unchanged, currentSurfaceIdentityTransition());
 
     try std.testing.expectEqual(@as(u64, 6), noteWindowFocusChanged(true));
     try std.testing.expect(bridge_state.app_host.surface_focused);
@@ -150,7 +157,14 @@ test "bridge routes Android lifecycle and surface truth through shared host stat
     try std.testing.expectEqual(native_host.RenderSurfaceAvailability.unavailable, bridge_state.render_host.surface_availability);
     try std.testing.expectEqual(@as(usize, 0), currentNativeWindowToken());
     try std.testing.expectEqual(@as(u64, 2), currentSurfaceIdentityEpoch());
+    try std.testing.expectEqual(native_host.SurfaceIdentityTransition.retired, currentSurfaceIdentityTransition());
 
-    try std.testing.expectEqual(@as(u64, 9), noteStop());
+    try std.testing.expectEqual(@as(u64, 9), noteSurfaceAvailableFromJava(@ptrFromInt(1), @ptrFromInt(0x1000), 430, 220));
+    try std.testing.expectEqual(native_host.RenderSurfaceAvailability.available, bridge_state.render_host.surface_availability);
+    try std.testing.expectEqual(@as(usize, 0x1000), currentNativeWindowToken());
+    try std.testing.expectEqual(@as(u64, 3), currentSurfaceIdentityEpoch());
+    try std.testing.expectEqual(native_host.SurfaceIdentityTransition.acquired, currentSurfaceIdentityTransition());
+
+    try std.testing.expectEqual(@as(u64, 10), noteStop());
     try std.testing.expectEqual(native_host.AppLifecycleState.stopped, bridge_state.app_host.lifecycle_state);
 }

@@ -73,3 +73,10 @@ export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeCurrentSurf
 ) callconv(.c) i64 {
     return @intCast(android_runtime_bridge.currentSurfaceIdentityEpoch());
 }
+
+export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeCurrentSurfaceTransitionBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+) callconv(.c) i32 {
+    return @intFromEnum(android_runtime_bridge.currentSurfaceIdentityTransition());
+}

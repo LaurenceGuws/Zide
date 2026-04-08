@@ -26,6 +26,13 @@ pub const RenderSurfaceAvailability = enum {
     available,
 };
 
+pub const SurfaceIdentityTransition = enum {
+    unchanged,
+    acquired,
+    replaced,
+    retired,
+};
+
 pub const RenderSurfaceMetrics = struct {
     logical_width: i32 = 0,
     logical_height: i32 = 0,
@@ -179,16 +186,28 @@ pub const PlatformRenderHost = struct {
         return self.surface_identity_epoch;
     }
 
-    pub fn noteAndroidNativeWindow(self: *PlatformRenderHost, native_window: ?*anyopaque) void {
-        if (self.native_handles.android_native_window != native_window and
-            (self.native_handles.android_native_window != null or native_window != null))
-        {
+    pub fn noteAndroidNativeWindow(
+        self: *PlatformRenderHost,
+        native_window: ?*anyopaque,
+    ) SurfaceIdentityTransition {
+        const prior_window = self.native_handles.android_native_window;
+        const transition: SurfaceIdentityTransition = if (prior_window == native_window)
+            .unchanged
+        else if (prior_window == null and native_window != null)
+            .acquired
+        else if (prior_window != null and native_window == null)
+            .retired
+        else
+            .replaced;
+
+        if (transition != .unchanged) {
             self.advanceSurfaceIdentityEpoch();
         }
         self.native_handles.android_native_window = native_window;
         if (native_window == null) {
             self.surface_availability = .unavailable;
         }
+        return transition;
     }
 };
 
@@ -243,7 +262,7 @@ test "render host redraw and android window state can be re-armed after surface 
         .native_handles = .{},
     };
 
-    host.noteAndroidNativeWindow(@ptrFromInt(3));
+    try std.testing.expectEqual(SurfaceIdentityTransition.acquired, host.noteAndroidNativeWindow(@ptrFromInt(3)));
     host.noteSurfaceAvailable(.{
         .logical_width = 360,
         .logical_height = 760,
@@ -275,16 +294,16 @@ test "android surface identity epoch advances only when the native window change
 
     try std.testing.expectEqual(@as(u64, 0), host.surfaceIdentityEpoch());
 
-    host.noteAndroidNativeWindow(@ptrFromInt(3));
+    try std.testing.expectEqual(SurfaceIdentityTransition.acquired, host.noteAndroidNativeWindow(@ptrFromInt(3)));
     try std.testing.expectEqual(@as(u64, 1), host.surfaceIdentityEpoch());
 
-    host.noteAndroidNativeWindow(@ptrFromInt(3));
+    try std.testing.expectEqual(SurfaceIdentityTransition.unchanged, host.noteAndroidNativeWindow(@ptrFromInt(3)));
     try std.testing.expectEqual(@as(u64, 1), host.surfaceIdentityEpoch());
 
-    host.noteAndroidNativeWindow(@ptrFromInt(4));
+    try std.testing.expectEqual(SurfaceIdentityTransition.replaced, host.noteAndroidNativeWindow(@ptrFromInt(4)));
     try std.testing.expectEqual(@as(u64, 2), host.surfaceIdentityEpoch());
 
-    host.noteAndroidNativeWindow(null);
+    try std.testing.expectEqual(SurfaceIdentityTransition.retired, host.noteAndroidNativeWindow(null));
     try std.testing.expectEqual(@as(u64, 3), host.surfaceIdentityEpoch());
 }
 

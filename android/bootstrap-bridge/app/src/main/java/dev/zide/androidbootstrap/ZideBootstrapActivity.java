@@ -41,6 +41,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     private static native long nativeOnSurfaceDestroyedBridge();
     private static native long nativeCurrentWindowTokenBridge();
     private static native long nativeCurrentSurfaceEpochBridge();
+    private static native int nativeCurrentSurfaceTransitionBridge();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -112,7 +113,8 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         final long seq = nativeLoaded ? nativeOnSurfaceAvailableBridge(holder.getSurface(), width, height) : -1;
         final long token = nativeLoaded ? nativeCurrentWindowTokenBridge() : 0;
         final long epoch = nativeLoaded ? nativeCurrentSurfaceEpochBridge() : 0;
-        callNativeWithSurfaceState("native.surfaceAvailable", seq, token, epoch);
+        final int transition = nativeLoaded ? nativeCurrentSurfaceTransitionBridge() : 0;
+        callNativeWithSurfaceState("native.surfaceAvailable", seq, token, epoch, transition);
         updateStatus("surface-changed");
     }
 
@@ -122,7 +124,8 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         final long seq = nativeLoaded ? nativeOnSurfaceDestroyedBridge() : -1;
         final long token = nativeLoaded ? nativeCurrentWindowTokenBridge() : 0;
         final long epoch = nativeLoaded ? nativeCurrentSurfaceEpochBridge() : 0;
-        callNativeWithSurfaceState("native.surfaceDestroyed", seq, token, epoch);
+        final int transition = nativeLoaded ? nativeCurrentSurfaceTransitionBridge() : 0;
+        callNativeWithSurfaceState("native.surfaceDestroyed", seq, token, epoch, transition);
         updateStatus("surface-destroyed");
     }
 
@@ -136,12 +139,22 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         appendEvent(event + " seq=" + seq);
     }
 
-    private void callNativeWithSurfaceState(String event, long seq, long token, long epoch) {
+    private void callNativeWithSurfaceState(String event, long seq, long token, long epoch, int transition) {
         appendEvent(
             event + " seq=" + seq +
                 " token=0x" + Long.toHexString(token) +
-                " epoch=" + epoch
+                " epoch=" + epoch +
+                " transition=" + surfaceTransitionLabel(transition)
         );
+    }
+
+    private static String surfaceTransitionLabel(int transition) {
+        return switch (transition) {
+            case 1 -> "acquired";
+            case 2 -> "replaced";
+            case 3 -> "retired";
+            default -> "unchanged";
+        };
     }
 
     private void updateStatus(String state) {
