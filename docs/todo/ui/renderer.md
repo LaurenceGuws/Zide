@@ -842,9 +842,12 @@ Current checkpoint:
   runtime instead of panicking through selected-runtime assertions
 - build/test validation stayed green with no intended behavior change
 - gate 4 is improved, but not closed:
-  - `Renderer` still owns the backend-tagged storage surface for selected
-    concrete backend-native runtime
-  - adding another backend would still widen that renderer-owned storage story
+  - `Renderer` no longer owns a backend-tagged selected-runtime storage
+    surface; selected runtime now lives behind one opaque handle plus backend
+    kind
+  - `Renderer` still owns selected-runtime lifecycle and teardown plumbing
+  - adding another backend would still pressure that renderer-owned lifecycle
+    story
 
 ### `RB-B3` Frame lifecycle ownership
 
