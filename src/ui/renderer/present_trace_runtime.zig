@@ -5,6 +5,26 @@ pub const FrameSubmission = struct {
     terminal_presented_generation: ?u64 = null,
 };
 
+pub const FrameExecutionState = enum {
+    not_attempted,
+    ready,
+    begin_failed,
+    abandoned,
+};
+
+pub const FrameExecutionOutcomeKind = enum {
+    not_attempted,
+    begin_failed,
+    abandoned,
+    submitted,
+    submit_failed,
+};
+
+pub const FrameExecutionOutcome = struct {
+    kind: FrameExecutionOutcomeKind = .not_attempted,
+    present_ms: f64 = 0.0,
+};
+
 pub const PresentTrace = struct {
     /// Optional callsite tag for GL surface `.solid` records (debug / future metrics).
     pub const EditorSurfaceSolidFamily = enum {
@@ -43,6 +63,7 @@ pub const MainCompositionTarget = enum {
 pub const PresentState = struct {
     frame_seq: u64 = 0,
     submission_sequence: u64 = 0,
+    frame_execution_state: FrameExecutionState = .not_attempted,
     last_present_counter: u64 = 0,
     last_present_gap_ms: f64 = 0.0,
     last_swap_ms: f64 = 0.0,

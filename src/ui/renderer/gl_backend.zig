@@ -265,6 +265,7 @@ pub fn beginFrame(renderer: anytype) void {
         @as(f32, @floatFromInt(bg.a)) / 255.0,
     );
     gl.Clear(gl.c.GL_COLOR_BUFFER_BIT);
+    renderer_frame_host.noteFrameReady(renderer);
 }
 
 pub fn submitFrame(renderer: anytype) present_trace_runtime.FrameSubmission {
@@ -289,11 +290,10 @@ pub fn submitFrame(renderer: anytype) present_trace_runtime.FrameSubmission {
         app_logger.logger("sdl.gl").logStdout(.warning, "SDL_GL_SwapWindow failed err={s}", .{sdl_api.getError()});
     }
     const swap_end = sdl_api.getPerformanceCounter();
-    return renderer_frame_host.finishFrameSubmission(
-        renderer,
-        swap_ok,
-        present_trace_runtime.performanceDeltaMs(swap_start, swap_end, renderer.perf_freq),
-    );
+    return renderer_frame_host.finishFrameSubmission(renderer, .{
+        .kind = if (swap_ok) .submitted else .submit_failed,
+        .present_ms = present_trace_runtime.performanceDeltaMs(swap_start, swap_end, renderer.perf_freq),
+    });
 }
 
 pub fn dumpWindowScreenshotPpm(renderer: anytype, path: []const u8) !void {

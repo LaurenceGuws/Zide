@@ -1286,6 +1286,19 @@ What has moved into gate #5:
 - any attempt to absorb shared terminal-present finalization into a larger
   renderer-wide frame contract
 
+## Frame Outcome Ownership Status (2026-04-08)
+
+The first gate-5 cut now exists too:
+
+- shared frame lifecycle now uses one small frame-execution outcome surface
+- OpenGL and Metal report begin/submit/abandon results through that surface
+- `renderer_frame_host.zig` now finalizes frame bookkeeping from that shared
+  outcome instead of taking raw backend success booleans
+
+This is the right scope for `RB-B3.a`. It does not yet redesign broader
+frame/present ordering, and it did not require backend-shaped schema growth to
+get shared finalization off raw backend return values.
+
 ## Ranked Contradictions
 
 ### High

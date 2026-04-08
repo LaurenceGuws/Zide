@@ -1208,6 +1208,7 @@ pub fn beginFrame(renderer: anytype) void {
         var frame = acquireFrame(context) orelse {
             renderer.present.main_composition_target = .default_target;
             clearCurrentFrame(renderer);
+            renderer_frame_host.noteFrameBeginFailed(renderer);
             return;
         };
         const bg = renderer.theme.background.toRgba();
@@ -1221,13 +1222,16 @@ pub fn beginFrame(renderer: anytype) void {
             abandonFrame(&frame);
             renderer.present.main_composition_target = .default_target;
             clearCurrentFrame(renderer);
+            renderer_frame_host.noteFrameAbandoned(renderer);
             return;
         }
         renderer.present.main_composition_target = .backend_surface;
         storeCurrentFrame(renderer, frame);
+        renderer_frame_host.noteFrameReady(renderer);
     } else {
         renderer.present.main_composition_target = .default_target;
         clearCurrentFrame(renderer);
+        renderer_frame_host.noteFrameBeginFailed(renderer);
     }
 }
 
@@ -1298,11 +1302,19 @@ pub fn submitFrame(renderer: anytype) present_trace_runtime.FrameSubmission {
     else
         false;
     const present_end = sdl_api.getPerformanceCounter();
-    return renderer_frame_host.finishFrameSubmission(
-        renderer,
-        succeeded,
-        present_trace_runtime.performanceDeltaMs(present_start, present_end, renderer.perf_freq),
-    );
+    const present_ms = present_trace_runtime.performanceDeltaMs(present_start, present_end, renderer.perf_freq);
+    const outcome_kind: renderer_frame_host.FrameExecutionOutcomeKind = if (succeeded)
+        .submitted
+    else switch (renderer.present.frame_execution_state) {
+        .begin_failed => .begin_failed,
+        .abandoned => .abandoned,
+        .ready => .submit_failed,
+        .not_attempted => .not_attempted,
+    };
+    return renderer_frame_host.finishFrameSubmission(renderer, .{
+        .kind = outcome_kind,
+        .present_ms = present_ms,
+    });
 }
 
 pub fn dumpWindowScreenshotPpm(_: anytype, _: []const u8) !void {

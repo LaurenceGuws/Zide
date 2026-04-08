@@ -128,3 +128,25 @@ Primary code pressure:
 - backend begin/submit/abandon paths report through it
 - shared finalization bookkeeping consumes it
 - queue/docs clearly state what still belongs to later gate-5 work
+
+## Current Checkpoint
+
+The first code cut now exists:
+
+- shared frame execution uses one small outcome surface
+  - `not_attempted`
+  - `begin_failed`
+  - `abandoned`
+  - `submitted`
+  - `submit_failed`
+- shared frame host finalization now consumes that surface
+- OpenGL and Metal both report through it without widening the schema for
+  backend-specific mechanics
+
+Immediate remaining pressure after this proof:
+
+- keep `renderer_frame_host.zig` limited to shared finalization bookkeeping
+- do not let later frame-ordering or widget-present policy drift into the new
+  outcome surface
+- restate later gate-5 work only where the code now shows real pressure:
+  broader frame/present/order ownership, not more frame-outcome schema growth

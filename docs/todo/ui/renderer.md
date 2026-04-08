@@ -494,6 +494,21 @@ Status: structurally complete on GL; Metal verification deferred
 
 Current evidence:
 
+- shared frame lifecycle now uses one small frame-execution outcome surface
+  instead of passing raw backend success booleans into
+  `renderer_frame_host.finishFrameSubmission(...)`
+- that surface currently carries only:
+  - `not_attempted`
+  - `begin_failed`
+  - `abandoned`
+  - `submitted`
+  - `submit_failed`
+- OpenGL and Metal both report through that same surface
+- `renderer_frame_host.zig` now finalizes submission bookkeeping from the
+  shared outcome instead of backend-shaped raw success/failure truth
+- this is good first proof for `RB-B3.a`: shared finalization did not require
+  extra backend flags or frame-ordering policy to become honest
+
 - the renderer-owned presentable facade methods now live in
   `renderer_presentable_host.zig` instead of `renderer.zig` directly.
 - this removes another small renderer-root ownership seam from the shared
@@ -1154,6 +1169,8 @@ Acceptance criteria:
 - the first cut does not smuggle terminal-present policy back into the broader
   frame lane
 - the next code step is obvious enough to implement without reopening gate #2
+- shared finalization no longer consumes raw backend success booleans for frame
+  submission
 
 Do not do:
 
@@ -1163,8 +1180,9 @@ Do not do:
 
 Stop marker:
 
-- gate #5 has an explicit first ticket with clear scope, ownership, and
-  non-goals instead of inheriting leftover momentum from `RB-B1`
+- one shared frame-execution outcome surface exists
+- backend begin/submit/abandon results report through it
+- shared frame finalization consumes it without backend-shaped schema growth
 
 ## Milestone C: Vulkan Fit Audit
 
