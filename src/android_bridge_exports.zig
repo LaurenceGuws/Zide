@@ -66,3 +66,10 @@ export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeCurrentWind
 ) callconv(.c) i64 {
     return @intCast(android_runtime_bridge.currentNativeWindowToken());
 }
+
+export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeCurrentSurfaceEpochBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+) callconv(.c) i64 {
+    return @intCast(android_runtime_bridge.currentSurfaceIdentityEpoch());
+}

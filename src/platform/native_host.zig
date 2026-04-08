@@ -126,8 +126,14 @@ pub const PlatformRenderHost = struct {
     binding: RenderSurfaceBinding,
     surface_availability: RenderSurfaceAvailability,
     surface_metrics: RenderSurfaceMetrics,
+    surface_identity_epoch: u64 = 0,
     redraw_requested: bool = false,
     native_handles: NativeViewHandles,
+
+    fn advanceSurfaceIdentityEpoch(self: *PlatformRenderHost) void {
+        self.surface_identity_epoch +%= 1;
+        if (self.surface_identity_epoch == 0) self.surface_identity_epoch = 1;
+    }
 
     pub fn hasSurface(self: PlatformRenderHost) bool {
         return self.surface_availability == .available;
@@ -169,7 +175,16 @@ pub const PlatformRenderHost = struct {
         return self.native_handles.android_native_window;
     }
 
+    pub fn surfaceIdentityEpoch(self: PlatformRenderHost) u64 {
+        return self.surface_identity_epoch;
+    }
+
     pub fn noteAndroidNativeWindow(self: *PlatformRenderHost, native_window: ?*anyopaque) void {
+        if (self.native_handles.android_native_window != native_window and
+            (self.native_handles.android_native_window != null or native_window != null))
+        {
+            self.advanceSurfaceIdentityEpoch();
+        }
         self.native_handles.android_native_window = native_window;
         if (native_window == null) {
             self.surface_availability = .unavailable;
@@ -241,11 +256,36 @@ test "render host redraw and android window state can be re-armed after surface 
 
     try std.testing.expect(host.hasSurface());
     try std.testing.expectEqual(@as(?*anyopaque, @ptrFromInt(3)), host.androidNativeWindow());
+    try std.testing.expectEqual(@as(u64, 1), host.surfaceIdentityEpoch());
     try std.testing.expectEqual(@as(i32, 1080), host.surface_metrics.drawable_width);
     try std.testing.expect(host.redraw_requested);
 
     host.clearRedrawRequested();
     try std.testing.expect(!host.redraw_requested);
+}
+
+test "android surface identity epoch advances only when the native window changes" {
+    const std = @import("std");
+    var host = PlatformRenderHost{
+        .binding = .none,
+        .surface_availability = .unavailable,
+        .surface_metrics = .{},
+        .native_handles = .{},
+    };
+
+    try std.testing.expectEqual(@as(u64, 0), host.surfaceIdentityEpoch());
+
+    host.noteAndroidNativeWindow(@ptrFromInt(3));
+    try std.testing.expectEqual(@as(u64, 1), host.surfaceIdentityEpoch());
+
+    host.noteAndroidNativeWindow(@ptrFromInt(3));
+    try std.testing.expectEqual(@as(u64, 1), host.surfaceIdentityEpoch());
+
+    host.noteAndroidNativeWindow(@ptrFromInt(4));
+    try std.testing.expectEqual(@as(u64, 2), host.surfaceIdentityEpoch());
+
+    host.noteAndroidNativeWindow(null);
+    try std.testing.expectEqual(@as(u64, 3), host.surfaceIdentityEpoch());
 }
 
 test "app host keeps lifecycle separate from focus and text input" {

@@ -40,6 +40,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     private static native long nativeOnSurfaceAvailableBridge(Surface surface, int width, int height);
     private static native long nativeOnSurfaceDestroyedBridge();
     private static native long nativeCurrentWindowTokenBridge();
+    private static native long nativeCurrentSurfaceEpochBridge();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -110,7 +111,8 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         appendEvent("surface.changed format=" + format + " size=" + width + "x" + height);
         final long seq = nativeLoaded ? nativeOnSurfaceAvailableBridge(holder.getSurface(), width, height) : -1;
         final long token = nativeLoaded ? nativeCurrentWindowTokenBridge() : 0;
-        callNativeWithToken("native.surfaceAvailable", seq, token);
+        final long epoch = nativeLoaded ? nativeCurrentSurfaceEpochBridge() : 0;
+        callNativeWithSurfaceState("native.surfaceAvailable", seq, token, epoch);
         updateStatus("surface-changed");
     }
 
@@ -119,7 +121,8 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         appendEvent("surface.destroyed");
         final long seq = nativeLoaded ? nativeOnSurfaceDestroyedBridge() : -1;
         final long token = nativeLoaded ? nativeCurrentWindowTokenBridge() : 0;
-        callNativeWithToken("native.surfaceDestroyed", seq, token);
+        final long epoch = nativeLoaded ? nativeCurrentSurfaceEpochBridge() : 0;
+        callNativeWithSurfaceState("native.surfaceDestroyed", seq, token, epoch);
         updateStatus("surface-destroyed");
     }
 
@@ -133,8 +136,12 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         appendEvent(event + " seq=" + seq);
     }
 
-    private void callNativeWithToken(String event, long seq, long token) {
-        appendEvent(event + " seq=" + seq + " token=0x" + Long.toHexString(token));
+    private void callNativeWithSurfaceState(String event, long seq, long token, long epoch) {
+        appendEvent(
+            event + " seq=" + seq +
+                " token=0x" + Long.toHexString(token) +
+                " epoch=" + epoch
+        );
     }
 
     private void updateStatus(String state) {

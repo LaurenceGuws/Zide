@@ -104,6 +104,10 @@ pub fn currentNativeWindowToken() usize {
     return @intFromPtr(bridge_state.render_host.androidNativeWindow() orelse return 0);
 }
 
+pub fn currentSurfaceIdentityEpoch() u64 {
+    return bridge_state.render_host.surfaceIdentityEpoch();
+}
+
 test "bridge routes Android lifecycle and surface truth through shared host state" {
     const std = @import("std");
 
@@ -125,20 +129,28 @@ test "bridge routes Android lifecycle and surface truth through shared host stat
     try std.testing.expectEqual(@as(i32, 400), bridge_state.render_host.surface_metrics.drawable_width);
     try std.testing.expect(bridge_state.render_host.redraw_requested);
     try std.testing.expectEqual(@as(usize, 0x1000), currentNativeWindowToken());
+    try std.testing.expectEqual(@as(u64, 1), currentSurfaceIdentityEpoch());
 
-    try std.testing.expectEqual(@as(u64, 5), noteWindowFocusChanged(true));
+    bridge_state.render_host.clearRedrawRequested();
+    try std.testing.expectEqual(@as(u64, 5), noteSurfaceAvailableFromJava(@ptrFromInt(1), @ptrFromInt(0x1000), 420, 210));
+    try std.testing.expectEqual(@as(i32, 420), bridge_state.render_host.surface_metrics.drawable_width);
+    try std.testing.expectEqual(@as(usize, 0x1000), currentNativeWindowToken());
+    try std.testing.expectEqual(@as(u64, 1), currentSurfaceIdentityEpoch());
+
+    try std.testing.expectEqual(@as(u64, 6), noteWindowFocusChanged(true));
     try std.testing.expect(bridge_state.app_host.surface_focused);
     try std.testing.expect(!bridge_state.app_host.text_input_active);
 
-    try std.testing.expectEqual(@as(u64, 6), notePause());
+    try std.testing.expectEqual(@as(u64, 7), notePause());
     try std.testing.expectEqual(native_host.AppLifecycleState.paused, bridge_state.app_host.lifecycle_state);
     try std.testing.expect(!bridge_state.app_host.active);
     try std.testing.expect(!bridge_state.app_host.surface_focused);
 
-    try std.testing.expectEqual(@as(u64, 7), noteSurfaceDestroyed());
+    try std.testing.expectEqual(@as(u64, 8), noteSurfaceDestroyed());
     try std.testing.expectEqual(native_host.RenderSurfaceAvailability.unavailable, bridge_state.render_host.surface_availability);
     try std.testing.expectEqual(@as(usize, 0), currentNativeWindowToken());
+    try std.testing.expectEqual(@as(u64, 2), currentSurfaceIdentityEpoch());
 
-    try std.testing.expectEqual(@as(u64, 8), noteStop());
+    try std.testing.expectEqual(@as(u64, 9), noteStop());
     try std.testing.expectEqual(native_host.AppLifecycleState.stopped, bridge_state.app_host.lifecycle_state);
 }
