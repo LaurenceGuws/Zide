@@ -1,4 +1,6 @@
 const bootstrap_contract = @import("bootstrap_contract.zig");
+const std = @import("std");
+const backend_runtime_bundle = @import("backend_runtime_bundle.zig");
 const types = @import("types.zig");
 const gl_backend = @import("gl_backend.zig");
 const gl_clip_runtime = @import("gl_clip_runtime.zig");
@@ -31,6 +33,8 @@ pub fn BackendOps(
     comptime WindowChangeMask: type,
 ) type {
     const RuntimeOps = struct {
+        initStorage: *const fn (std.mem.Allocator) anyerror!backend_runtime_bundle.Bundle,
+        deinitStorage: *const fn (*backend_runtime_bundle.Bundle, std.mem.Allocator) void,
         initRuntime: *const fn (*RendererType) anyerror!void,
         deinitRuntime: *const fn (*RendererType) void,
         configureRuntimePolicy: *const fn (*RendererType) void,
@@ -135,6 +139,8 @@ pub fn opsFor(
     return switch (backend) {
         .opengl => .{
             .runtime = .{
+                .initStorage = OpenGl.initStorage,
+                .deinitStorage = OpenGl.deinitStorage,
                 .initRuntime = OpenGl.initRuntime,
                 .deinitRuntime = OpenGl.deinitRuntime,
                 .configureRuntimePolicy = OpenGl.configureRuntimePolicy,
@@ -179,6 +185,8 @@ pub fn opsFor(
         },
         .metal => .{
             .runtime = .{
+                .initStorage = Metal.initStorage,
+                .deinitStorage = Metal.deinitStorage,
                 .initRuntime = Metal.initRuntime,
                 .deinitRuntime = Metal.deinitRuntime,
                 .configureRuntimePolicy = Metal.configureRuntimePolicy,
@@ -242,6 +250,12 @@ fn OpenGlDispatch(
     comptime WindowChangeMask: type,
 ) type {
     return struct {
+        fn initStorage(allocator: std.mem.Allocator) !backend_runtime_bundle.Bundle {
+            return backend_runtime_bundle.Bundle.init(allocator, enum { opengl, metal }.opengl);
+        }
+        fn deinitStorage(bundle: *backend_runtime_bundle.Bundle, allocator: std.mem.Allocator) void {
+            bundle.deinitStorage(allocator, enum { opengl, metal }.opengl);
+        }
         fn initRuntime(renderer: *RendererType) !void {
             try gl_backend.initRuntime(renderer);
         }
@@ -345,6 +359,12 @@ fn MetalDispatch(
     comptime WindowChangeMask: type,
 ) type {
     return struct {
+        fn initStorage(allocator: std.mem.Allocator) !backend_runtime_bundle.Bundle {
+            return backend_runtime_bundle.Bundle.init(allocator, enum { opengl, metal }.metal);
+        }
+        fn deinitStorage(bundle: *backend_runtime_bundle.Bundle, allocator: std.mem.Allocator) void {
+            bundle.deinitStorage(allocator, enum { opengl, metal }.metal);
+        }
         fn initRuntime(renderer: *RendererType) !void {
             try metal_backend.initRuntime(renderer);
         }

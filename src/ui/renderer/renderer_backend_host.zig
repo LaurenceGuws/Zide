@@ -1,5 +1,6 @@
 const backend_dispatch = @import("backend_dispatch.zig");
 const backend_runtime_bundle = @import("backend_runtime_bundle.zig");
+const std = @import("std");
 
 pub fn Host(
     comptime RendererType: type,
@@ -27,5 +28,13 @@ pub fn Host(
         kind: BackendEnum,
         ops: BackendOps,
         runtime: backend_runtime_bundle.Bundle = .{},
+
+        pub fn initRuntimeStorage(self: *@This(), allocator: std.mem.Allocator) !void {
+            self.runtime = try self.ops.runtime.initStorage(allocator);
+        }
+
+        pub fn deinitRuntimeStorage(self: *@This(), allocator: std.mem.Allocator) void {
+            self.ops.runtime.deinitStorage(&self.runtime, allocator);
+        }
     };
 }

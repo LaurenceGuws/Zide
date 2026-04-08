@@ -11,7 +11,6 @@ const renderer_global_runtime = @import("renderer/renderer_global_runtime.zig");
 const font_manager = @import("renderer/font_manager.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
 const backend_dispatch = @import("renderer/backend_dispatch.zig");
-const backend_runtime_bundle = @import("renderer/backend_runtime_bundle.zig");
 const renderer_backend_host = @import("renderer/renderer_backend_host.zig");
 const metal_runtime_state = @import("renderer/metal_runtime_state.zig");
 const renderer_clip_host = @import("renderer/renderer_clip_host.zig");
@@ -547,7 +546,7 @@ pub const Renderer = struct {
                 WindowChangeMask,
                 startup_backend,
             ),
-                .runtime = try backend_runtime_bundle.Bundle.init(allocator, startup_backend),
+                .runtime = .{},
             },
             .runtime_profile = runtime_profile,
             .app_host = app_host,
@@ -638,7 +637,8 @@ pub const Renderer = struct {
             .clip_stack = undefined,
             .clip_depth = 0,
         };
-        errdefer renderer.backend.runtime.deinitStorage(allocator, renderer.backend.kind);
+        try renderer.backend.initRuntimeStorage(allocator);
+        errdefer renderer.backend.deinitRuntimeStorage(allocator);
 
         try lifecycle_runtime.finalizeRendererInit(Renderer, renderer);
         return renderer;
@@ -665,7 +665,7 @@ pub const Renderer = struct {
         lifecycle_runtime.beginRendererShutdown(Renderer, self);
         window_chrome_runtime.deinit(self.windowChromeDomain());
         self.backend.ops.runtime.deinitRuntime(self);
-        self.backend.runtime.deinitStorage(self.allocator, self.backend.kind);
+        self.backend.deinitRuntimeStorage(self.allocator);
         bootstrap_runtime.deinitRendererWindowResources(&self.render_surface_attachment, self.window);
         bootstrap_runtime.deinitSdlRuntime();
 
