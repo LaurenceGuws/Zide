@@ -45,6 +45,45 @@ pub fn drawTerminalPresentable(renderer: anytype, draw: PresentableDraw) void {
     renderer.backend.ops.presentable.drawPresentable(renderer, draw);
 }
 
+pub fn presentExistingTerminalPresentable(
+    renderer: anytype,
+    sample_generation: u64,
+    surface_generation: u64,
+    view_geometry: anytype,
+    viewport_w: f32,
+    viewport_h: f32,
+    note_present_ctx: anytype,
+    comptime Hooks: type,
+) void {
+    switch (renderer.backend.ops.presentable.terminalPresentPath(renderer)) {
+        .direct_surface => Hooks.noteDirectReuse(
+            note_present_ctx,
+            renderer,
+            sample_generation,
+            view_geometry,
+            viewport_w,
+            viewport_h,
+        ),
+        .retained_surface => Hooks.noteRetainedReuse(
+            note_present_ctx,
+            renderer,
+            sample_generation,
+            view_geometry,
+            viewport_w,
+            viewport_h,
+        ),
+    }
+    drawTerminalPresentable(renderer, .{
+        .x = view_geometry.origin_x,
+        .y = view_geometry.origin_y,
+        .width = viewport_w,
+        .height = viewport_h,
+        .source_width = viewport_w,
+        .source_height = viewport_h,
+        .generation = surface_generation,
+    });
+}
+
 pub fn scrollTerminalPresentable(renderer: anytype, dx: i32, dy: i32) bool {
     return renderer.backend.ops.presentable.scrollPresentable(renderer, dx, dy);
 }

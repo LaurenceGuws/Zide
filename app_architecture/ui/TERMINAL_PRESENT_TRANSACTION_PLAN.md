@@ -329,6 +329,9 @@ Current checkpoint:
   instead of backend identity checks in widget/runtime code
 - fast-present reuse now consumes that shared plan rather than re-deriving
   cursor/overlay/composition reuse inputs in branch-local logic
+- non-reuse execution now also lifts `planUpdate(...)` to the hook level so
+  direct-partial and retained paths consume one shared update-plan build
+  instead of each hiding it inside deeper branch-local helpers
 - deeper direct/retained execution bodies still exist and remain the next
   pressure for `RB-B1.d`
 

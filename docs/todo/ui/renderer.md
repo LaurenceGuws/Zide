@@ -625,6 +625,10 @@ Current evidence:
 - this is the first real `RB-B1.c` normalization checkpoint: plan intent is
   now product-owned, while backend execution still decides how to satisfy that
   intent underneath.
+- non-reuse execution now also lifts `planUpdate(...)` out of the deeper
+  direct-partial / retained helpers and into the hook layer, so the chosen
+  execution path consumes one shared update-plan build before entering its
+  backend-shaped body.
 
 Owner docs:
 

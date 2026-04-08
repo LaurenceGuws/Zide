@@ -890,35 +890,18 @@ pub fn executeRetainedPresentFlow(
     composing_active: bool,
     composing_hash: u64,
     start_line: usize,
-    scroll_offset: usize,
     draw_cursor: bool,
     cursor: CursorPos,
     cursor_style: terminal_types.CursorStyle,
     blink_style: anytype,
     blink_time: f64,
-    blink_requires_partial: bool,
     has_kitty: bool,
-    recent_input_window_active: bool,
+    surface_update_plan: PresentationUpdatePlan,
     note_present_ctx: anytype,
     note_present: anytype,
 ) TerminalPresentResult {
     var result: TerminalPresentResult = .{};
     if (terminal_view.rows == 0 or terminal_view.cols == 0) return result;
-
-    const surface_update_plan = planUpdate(
-        &self.surface,
-        self.session.allocator,
-        renderer,
-        self.publication.cacheConst(),
-        terminal_view,
-        view_geometry,
-        blink_requires_partial,
-        draw_cursor,
-        cursor,
-        cursor_style,
-        scroll_offset,
-        recent_input_window_active,
-    );
     const cycle = runRetainedPresentCycle(
         self,
         shell,
@@ -1142,26 +1125,46 @@ pub fn runPresentation(
             );
             if (fast.outcome == .reused) return fast;
             var local: Result = .{};
+            const can_attempt_partial = !ctx.has_kitty and
+                renderer_presentable_host.terminalPresentableInfo(renderer_local) != null and
+                ctx.terminal_view.rows > 0 and
+                ctx.terminal_view.cols > 0 and
+                ctx.terminal_view.cells.len > 0;
+            const surface_update_plan = if (can_attempt_partial)
+                planUpdate(
+                    &ctx.self_widget.surface,
+                    ctx.self_widget.session.allocator,
+                    renderer_local,
+                    ctx.self_widget.publication.cacheConst(),
+                    ctx.terminal_view,
+                    ctx.view_geometry,
+                    ctx.blink_requires_partial,
+                    ctx.draw_cursor,
+                    ctx.cursor,
+                    ctx.cursor_style,
+                    ctx.scroll_offset,
+                    ctx.recent_input_window_active,
+                )
+            else
+                PresentationUpdatePlan{};
             const partial = tryDirectSnapshotUpdate(
                 ctx.self_widget,
                 ctx.shell,
                 renderer_local,
+                surface_update_plan,
                 ctx.terminal_view,
                 ctx.view_geometry,
                 ctx.hover_link_id,
                 ctx.composing_active,
                 ctx.composing_hash,
-                ctx.scroll_offset,
                 ctx.draw_cursor,
                 ctx.cursor,
                 ctx.cursor_style,
                 ctx.blink_style,
                 ctx.blink_time,
-                ctx.blink_requires_partial,
                 ctx.has_kitty,
                 ctx.width,
                 ctx.height,
-                ctx.recent_input_window_active,
                 ctx.note_present_ctx,
                 note_present,
             );
@@ -1227,6 +1230,20 @@ pub fn runPresentation(
                 note_present,
             );
             if (fast.outcome == .reused) return fast;
+            const surface_update_plan = planUpdate(
+                &ctx.self_widget.surface,
+                ctx.self_widget.session.allocator,
+                renderer_local,
+                ctx.self_widget.publication.cacheConst(),
+                ctx.terminal_view,
+                ctx.view_geometry,
+                ctx.blink_requires_partial,
+                ctx.draw_cursor,
+                ctx.cursor,
+                ctx.cursor_style,
+                ctx.scroll_offset,
+                ctx.recent_input_window_active,
+            );
             return executeRetainedPresentFlow(
                 ctx.self_widget,
                 ctx.shell,
@@ -1238,15 +1255,13 @@ pub fn runPresentation(
                 ctx.composing_active,
                 ctx.composing_hash,
                 ctx.start_line,
-                ctx.scroll_offset,
                 ctx.draw_cursor,
                 ctx.cursor,
                 ctx.cursor_style,
                 ctx.blink_style,
                 ctx.blink_time,
-                ctx.blink_requires_partial,
                 ctx.has_kitty,
-                ctx.recent_input_window_active,
+                surface_update_plan,
                 ctx.note_present_ctx,
                 note_present,
             );
@@ -1385,7 +1400,10 @@ pub fn presentDraw(
     note_present(
         note_present_ctx,
         renderer,
-        .retained_surface,
+        if (renderer_presentable_host.usesDirectTerminalPresentation(renderer))
+            .direct_snapshot_presentable
+        else
+            .retained_surface,
         sample_generation,
         view_geometry.origin_x,
         view_geometry.origin_y,
@@ -1436,40 +1454,16 @@ pub fn tryFastPresentExisting(
         (terminal_view.sync_updates_active or direct_snapshot_reusable))) return false;
 
     renderer_presentable_host.drawTerminalPresentableBackdrop(renderer, x, y, width, height, bg_color.toRgba());
-    if (renderer_presentable_host.usesDirectTerminalPresentation(renderer)) {
-        note_present(
-            note_present_ctx,
-            renderer,
-            .direct_snapshot_presentable,
-            terminal_view.generation,
-            view_geometry.origin_x,
-            view_geometry.origin_y,
-            view_geometry.viewport_width,
-            view_geometry.viewport_height,
-            view_geometry.viewport_width,
-            view_geometry.viewport_height,
-        );
-        renderer_presentable_host.drawTerminalPresentable(renderer, .{
-            .x = view_geometry.origin_x,
-            .y = view_geometry.origin_y,
-            .width = view_geometry.viewport_width,
-            .height = view_geometry.viewport_height,
-            .source_width = view_geometry.viewport_width,
-            .source_height = view_geometry.viewport_height,
-            .generation = surface_state.lastRenderGeneration(),
-        });
-    } else {
-        presentDraw(
-            renderer,
-            terminal_view.generation,
-            surface_state.lastRenderGeneration(),
-            view_geometry,
-            view_geometry.viewport_width,
-            view_geometry.viewport_height,
-            note_present_ctx,
-            note_present,
-        );
-    }
+    presentDraw(
+        renderer,
+        terminal_view.generation,
+        surface_state.lastRenderGeneration(),
+        view_geometry,
+        view_geometry.viewport_width,
+        view_geometry.viewport_height,
+        note_present_ctx,
+        note_present,
+    );
     const pres_geom = computePresentationSurfaceGeometry(renderer, terminal_view, view_geometry);
     surface_state.notePresentationUpdated(terminal_view, pres_geom, draw_cursor, cursor, cursor_style, hover_link_id, composing_active, composing_hash);
     return true;
@@ -1620,22 +1614,20 @@ pub fn tryDirectSnapshotUpdate(
     self: anytype,
     shell: *app_shell.Shell,
     renderer: anytype,
+    surface_update_plan: PresentationUpdatePlan,
     terminal_view: view_state.TerminalViewModel,
     view_geometry: TerminalViewGeometry,
     hover_link_id: u32,
     composing_active: bool,
     composing_hash: u64,
-    scroll_offset: usize,
     draw_cursor: bool,
     cursor: CursorPos,
     cursor_style: terminal_types.CursorStyle,
     blink_style: anytype,
     blink_time: f64,
-    blink_requires_partial: bool,
     has_kitty: bool,
     width: f32,
     height: f32,
-    recent_input_window_active: bool,
     note_present_ctx: anytype,
     note_present: anytype,
 ) DirectSnapshotUpdateResult {
@@ -1644,21 +1636,6 @@ pub fn tryDirectSnapshotUpdate(
     if (has_kitty) return result;
     if (renderer_presentable_host.terminalPresentableInfo(renderer) == null) return result;
     if (terminal_view.rows == 0 or terminal_view.cols == 0 or terminal_view.cells.len == 0) return result;
-
-    const surface_update_plan = planUpdate(
-        &self.surface,
-        self.session.allocator,
-        renderer,
-        self.publication.cacheConst(),
-        terminal_view,
-        view_geometry,
-        blink_requires_partial,
-        draw_cursor,
-        cursor,
-        cursor_style,
-        scroll_offset,
-        recent_input_window_active,
-    );
     if (surface_update_plan.mode != .partial) return result;
 
     const viewport_w = @min(width, view_geometry.viewport_width);
