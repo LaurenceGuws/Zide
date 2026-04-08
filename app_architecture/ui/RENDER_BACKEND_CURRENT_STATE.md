@@ -1361,6 +1361,15 @@ The current product-state rule on `submitted = false` is now explicit too:
 That answer still fits the current readiness/outcome surfaces, so it does not
 yet trigger `RB-B3.c`.
 
+The current stop marker is now stronger too:
+
+- focused `renderer_frame_host.zig` unit tests lock begin prelude reset,
+  submission-sequence advancement, and capture preservation/clearing semantics
+  across `submitted`, `begin_failed`, and `submit_failed`
+
+So the present gate-5 policy is no longer just doc authority; it is regression
+checked in code.
+
 ## Ranked Contradictions
 
 ### High

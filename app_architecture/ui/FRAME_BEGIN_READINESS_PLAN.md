@@ -216,3 +216,16 @@ For `submit_failed`:
 
 This is still small enough to live inside the current readiness/outcome
 surfaces. It does not yet justify `RB-B3.c`.
+
+## Regression Lock
+
+Focused unit coverage now locks the current shared frame-host policy in
+`src/ui/renderer/renderer_frame_host.zig`:
+
+- frame prelude reset and metric publication on `beginFrameHost(...)`
+- submission success advancing only the submission sequence
+- `begin_failed` preserving capture state
+- `submit_failed` clearing capture while still not advancing submission sequence
+
+That means the current gate-5 stop marker is now backed by code, not only by
+authority prose.
