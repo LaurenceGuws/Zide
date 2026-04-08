@@ -658,6 +658,7 @@ Owner docs:
 
 - `app_architecture/ui/RENDER_BACKEND_CONTRACT.md`
 - `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md`
+- `app_architecture/ui/FRAME_SUBMISSION_OUTCOME_OWNERSHIP_PLAN.md`
 - `app_architecture/ui/TERMINAL_PRESENT_TRANSACTION_PLAN.md`
 
 Primary code pressure:
