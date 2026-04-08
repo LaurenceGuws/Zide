@@ -112,6 +112,9 @@ Latest gate-4 narrowing note:
   `src/ui/renderer/renderer_font_backend_host.zig` instead of importing
   backend modules directly; this reduces shared helper leakage but does not
   yet close selected-runtime ownership
+- shared `text_runtime.zig` flush/fallback helper access now uses
+  `src/ui/renderer/renderer_text_backend_host.zig` instead of importing GL and
+  Metal backend modules directly
 
 ## How To Use This Queue
 

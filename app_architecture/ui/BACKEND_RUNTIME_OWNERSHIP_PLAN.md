@@ -184,3 +184,6 @@ Latest narrowing cut:
   modules directly
 - this does not move selected-runtime storage ownership yet, but it removes
   one more shared helper leak ahead of any later gate-4 ownership move
+- shared text-runtime flush/fallback helper access now routes through
+  `renderer_text_backend_host.zig` instead of importing GL/Metal backend
+  modules directly from `text_runtime.zig`
