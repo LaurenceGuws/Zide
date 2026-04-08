@@ -4,7 +4,7 @@ const hb = terminal_font_mod.c;
 const RenderingOptions = terminal_font_mod.RenderingOptions;
 const scale_utils = @import("scale_utils.zig");
 const font_manager = @import("font_manager.zig");
-const gl_backend = @import("gl_backend.zig");
+const renderer_font_backend_host = @import("renderer_font_backend_host.zig");
 const text_input = @import("text_input.zig");
 const app_logger = @import("../../app_logger.zig");
 const platform_window = @import("../../platform/window_metrics.zig");
@@ -58,7 +58,7 @@ pub fn setTextRenderingConfig(self: anytype, gamma: ?f32, contrast: ?f32, linear
         self.text_render.linear_correction = v;
     }
 
-    gl_backend.syncTextRenderConfig(self);
+    renderer_font_backend_host.syncTextRenderConfig(self);
 }
 
 pub fn setTerminalLigatureConfig(self: anytype, strategy: ?TerminalDisableLigaturesStrategy, features_raw: ?[]const u8) void {

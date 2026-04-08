@@ -8,6 +8,7 @@ const terminal_font_mod = @import("terminal_font.zig");
 const renderer_mod = @import("renderer.zig");
 const metal_text_sample_runtime = @import("renderer/metal_text_sample_runtime.zig");
 const metal_backend = @import("renderer/metal_backend.zig");
+const renderer_font_backend_host = @import("renderer/renderer_font_backend_host.zig");
 const renderer_surface_host = @import("renderer/renderer_surface_host.zig");
 const renderer_text_host = @import("renderer/renderer_text_host.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
@@ -29,7 +30,7 @@ const SampleFontFace = struct {
     fn init(allocator: std.mem.Allocator, renderer: *Renderer, path: [*:0]const u8, layout_size: f32) !SampleFontFace {
         const raster_scale = renderer.logicalLengthToRaster(1.0);
         const raster_size = renderer.logicalLengthToRaster(layout_size);
-        const atlas_upload_hooks = metal_backend.terminalFontAtlasUploadHooksForRenderer(renderer) orelse switch (renderer.capabilities().planned_atlas_storage_mode) {
+        const atlas_upload_hooks = renderer_font_backend_host.atlasUploadHooksForFontInit(renderer) orelse switch (renderer.capabilities().planned_atlas_storage_mode) {
             .metal_textures => return error.MetalBackendContextUnavailable,
             else => null,
         };
