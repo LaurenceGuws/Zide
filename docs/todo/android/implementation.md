@@ -19,6 +19,7 @@ Do not use this queue for:
 
 - `app_architecture/platform/NATIVE_HOST_CONTRACT.md`
 - `app_architecture/platform/android/RENDER_BACKEND.md`
+- `app_architecture/platform/android/BOOTSTRAP_BRIDGE_PLAN.md`
 - `docs/research/terminal/ANDROID_HOST_PTY_SCAN_2026-04-08.md`
 - `docs/todo/ui/renderer.md` (for the pre-Android rendering gate)
 
@@ -128,6 +129,35 @@ Status:
   - IME show/hide causes `surface.changed` + `surface.redrawNeeded`
   - backgrounding causes `onPause -> windowFocus(false) -> surface.destroyed -> onStop`
 - next step is tightening the host mapping against that observed ordering
+
+### `AH-A4` Android Bootstrap Bridge
+
+Purpose:
+
+- create the first repo-owned Android bootstrap path for the real Zig runtime,
+  so Android progress can move from host probing into native entry/bridge work
+
+Acceptance:
+
+- the repo contains an Android app/bootstrap project for the real runtime lane
+- the app loads a repo-built native Zig library
+- launch + pause/resume + surface-available/lost callbacks reach repo-owned
+  native bridge code
+- build/install/run instructions are recorded in the owning docs
+
+Status:
+
+- ready to start
+- the host harness proved the Android callback ordering we needed first
+- `build_system/platform_capabilities.zig` and the current app build graph are
+  still desktop-only, so bootstrap/native-entry is now the real next blocker
+
+Do not do:
+
+- no GLES or Vulkan backend bootstrap
+- no Android PTY/service design yet
+- no pretending Android is already a first-class build target across the whole
+  repo
 
 ## Current Research Read
 

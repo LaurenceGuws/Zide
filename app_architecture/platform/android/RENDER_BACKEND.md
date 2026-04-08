@@ -8,6 +8,7 @@ This doc is architecture authority for Android-native render-host shape.
 Supporting research:
 
 - `docs/research/terminal/ANDROID_HOST_PTY_SCAN_2026-04-08.md`
+- `app_architecture/platform/android/BOOTSTRAP_BRIDGE_PLAN.md`
 
 ## Target Stack
 
@@ -234,6 +235,22 @@ Practical consequences from that Note10 run:
 - IME visibility is geometry and redraw pressure, not lifecycle pressure.
 - surface destruction can follow pause during backgrounding, but must still be
   modeled as explicit surface truth rather than inferred from lifecycle alone.
+
+## Next Active Android Lane
+
+The next honest Android step is now:
+
+- `AH-A4` Android bootstrap bridge
+
+Reason:
+
+- the host harness has already proved platform callback ordering on device
+- the shared host seam is now ready to receive Android truth
+- the repo still has no Android bootstrap path for the actual Zig runtime
+
+So Android progress should now move through app/bootstrap and native-entry
+work, not through more host-harness polish and not through premature renderer
+backend work.
 
 ## Explicit Anti-Goals
 
