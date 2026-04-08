@@ -443,8 +443,9 @@ The current code makes that split more specific:
   seam. It asks the host to attempt one retained terminal presentable update
   cycle and branches only on the returned contract result.
 - terminal-present path choice is now owned by the presentable host seam too,
-  not by renderer-root convenience methods. Shared terminal code asks the
-  terminal presentable host whether the path is direct or retained.
+  not by renderer-root convenience methods or capability inference. Shared
+  terminal code asks the terminal presentable host whether the path is direct
+  or retained.
 - the editor styled-text split is slightly narrower too: highlighted-token
   traversal now has one shared helper, so the remaining immediate-vs-draw-list
   difference is at the emission layer rather than two separate token-ordering

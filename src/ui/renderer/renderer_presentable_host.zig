@@ -4,6 +4,7 @@ const capability_contract = @import("capability_contract.zig");
 
 pub const RetainedTerminalPresentableUpdate = @import("backend_dispatch.zig").RetainedPresentableUpdateResult;
 const PresentableDraw = presentable_contract.PresentableDraw;
+const TerminalPresentPath = presentable_contract.TerminalPresentPath;
 pub const TerminalPresentationMode = capability_contract.TerminalPresentationMode;
 
 pub fn terminalPresentationMode(renderer: anytype) TerminalPresentationMode {
@@ -11,10 +12,7 @@ pub fn terminalPresentationMode(renderer: anytype) TerminalPresentationMode {
 }
 
 pub fn usesDirectTerminalPresentation(renderer: anytype) bool {
-    return switch (terminalPresentationMode(renderer)) {
-        .direct_main_target, .direct_snapshot_cache => true,
-        .retained_surface => false,
-    };
+    return renderer.backend.ops.presentable.terminalPresentPath(renderer) == .direct_surface;
 }
 
 pub fn ensureTerminalPresentable(renderer: anytype, width: i32, height: i32) bool {

@@ -692,7 +692,9 @@ That split is now sharper from code inspection too:
 - terminal widget code no longer asks the renderer root for
   `terminalPresentationMode()` / `usesDirectTerminalPresentation()`. That
   terminal-present path decision now lives in `renderer_presentable_host.zig`
-  with the rest of the terminal presentable seam.
+  with the rest of the terminal presentable seam, and the host now resolves it
+  from backend presentable ops instead of inferring it from capability
+  metadata.
 - the editor styled-text split is slightly narrower now too:
   `editor_widget_draw_text.zig` uses one shared highlighted-token traversal for
   both immediate and draw-list paths. The remaining split is still real, but

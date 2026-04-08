@@ -570,6 +570,9 @@ Current evidence:
   either; terminal presentation now attempts the retained update-cycle seam
   directly and branches on `.updated` / `.unavailable` / `.unsupported`
   instead of asking whether the backend is "retained" first.
+- direct-vs-retained terminal present choice is now presentable-owned too:
+  `renderer_presentable_host` resolves that path from backend presentable ops
+  instead of deriving it from `RendererCapabilities.terminal_presentation_mode`.
 - OpenGL presentable operations now resolve retained-target storage through
   backend-owned slot helpers instead of open-coding terminal/editor target
   access at each call site.
@@ -979,12 +982,10 @@ Current evidence:
   seam; Metal returns `.unsupported`.
 - terminal presentation runtime now tracks that explicit retained-update status
   instead of treating every non-true outcome as the same backend-neutral case.
-- presentable checkpoint: terminal presentable lifecycle model is now explicit
-  in the shared host seam too:
-  - OpenGL: `.retained_update_target`
-  - Metal: `.snapshot_composition`
-- the terminal runtime no longer attempts a retained update cycle on snapshot
-  backends just to learn that the answer is "not here."
+- presentable checkpoint: shared code no longer carries a backend lifecycle
+  enum query for that seam at all.
+- the terminal runtime now attempts the retained update-cycle contract
+  directly and receives `.updated`, `.unavailable`, or `.unsupported`.
 - presentable ownership checkpoint: terminal widget code no longer asks the
   renderer root whether terminal presentation is "direct" or what mode it is.
   That decision now lives in `renderer_presentable_host.zig` with the rest of

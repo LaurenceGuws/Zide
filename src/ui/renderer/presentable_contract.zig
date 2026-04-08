@@ -45,3 +45,8 @@ pub const PresentableInfo = struct {
     logical_width: i32,
     logical_height: i32,
 };
+
+pub const TerminalPresentPath = enum {
+    retained_surface,
+    direct_surface,
+};
