@@ -966,8 +966,9 @@ pub const Renderer = struct {
     pub fn beginFrame(self: *Renderer) bool {
         renderer_frame_host.beginFrameHost(self);
         self.backend.ops.frame.beginFrame(self);
-        self.backend.ops.clip.applyClipRect(self, null);
-        return renderer_frame_host.frameReadyForDraw(self);
+        const frame_ready = renderer_frame_host.frameReadyForDraw(self);
+        if (frame_ready) self.backend.ops.clip.applyClipRect(self, null);
+        return frame_ready;
     }
 
     pub fn submitFrame(self: *Renderer) FrameSubmission {

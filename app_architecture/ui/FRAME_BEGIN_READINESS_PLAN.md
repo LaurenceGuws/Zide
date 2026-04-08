@@ -138,3 +138,18 @@ Immediate remaining pressure after this proof:
   frame transaction surface prematurely
 - only define the next gate-5 cut where the code now proves a real ordering or
   ownership gap
+
+That pressure tightened once more in the next follow-up:
+
+- the smallest remaining ordering leak after `RB-B3.b` was that
+  `Renderer.beginFrame()` still reset backend clip state before shared code knew
+  whether a drawable frame existed
+- that is now removed by gating the initial clip reset on shared frame-entry
+  readiness
+
+Current implication:
+
+- shared frame prelude and backend begin do not yet need a larger unified host
+  seam just to become honest
+- the next gate-5 cut should wait for a stronger ordering/ownership pressure
+  than one early backend clip reset

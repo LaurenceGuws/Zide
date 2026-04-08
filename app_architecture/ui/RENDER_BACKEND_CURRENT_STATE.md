@@ -1311,6 +1311,17 @@ This is the right scope for `RB-B3.b`. It still does not redesign broader
 frame ordering, and it did not require a new generic frame transaction object
 to make frame-entry readiness part of the shared contract.
 
+The smallest remaining ordering leak after that cut was narrower than a new
+host seam:
+
+- `Renderer.beginFrame()` still reset backend clip state before shared code
+  knew whether begin had produced a drawable frame
+
+That follow-up is now fixed too. Initial clip reset now follows shared
+frame-entry readiness instead of running unconditionally after backend begin.
+So the current evidence does not yet force a larger unified begin/prelude host
+seam; the next gate-5 move should wait for a stronger ordering leak.
+
 ## Ranked Contradictions
 
 ### High

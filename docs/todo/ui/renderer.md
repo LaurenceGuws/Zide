@@ -1239,6 +1239,18 @@ Current evidence:
   readiness truth
 - this did not require a broader frame transaction object or a widened
   `FrameSubmission`
+- the smallest remaining ordering leak after that cut was just the initial
+  backend clip reset running before shared code knew whether a drawable frame
+  existed
+- that follow-up is now fixed too: initial clip reset only runs when frame
+  begin reports ready
+
+Current implication:
+
+- the current evidence does not yet force a larger unified begin/prelude host
+  seam
+- the next gate-5 cut should wait for a stronger ordering/ownership leak than
+  one early backend clip reset
 
 ## Milestone C: Vulkan Fit Audit
 
