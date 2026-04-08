@@ -48,7 +48,7 @@ pub fn noteWindowRefresh(
 pub fn noteSurfaceFocus(app_host: *native_host.PlatformAppHost, focused: bool) bool {
     if (!usesAndroidActivityHost(app_host.*)) return false;
     app_host.noteSurfaceFocused(focused);
-    app_host.noteTextInputActive(focused);
+    if (!focused) app_host.noteTextInputActive(false);
     return true;
 }
 
@@ -74,7 +74,14 @@ test "android host lifecycle transitions update shared host state" {
 
     try std.testing.expect(noteSurfaceFocus(&app_host, true));
     try std.testing.expect(app_host.surface_focused);
+    try std.testing.expect(!app_host.text_input_active);
+
+    app_host.noteTextInputActive(true);
     try std.testing.expect(app_host.text_input_active);
+
+    try std.testing.expect(noteSurfaceFocus(&app_host, false));
+    try std.testing.expect(!app_host.surface_focused);
+    try std.testing.expect(!app_host.text_input_active);
 
     try std.testing.expect(noteWillEnterBackground(&app_host));
     try std.testing.expectEqual(native_host.AppLifecycleState.paused, app_host.lifecycle_state);
