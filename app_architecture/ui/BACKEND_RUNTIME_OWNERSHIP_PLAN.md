@@ -15,16 +15,19 @@ Current code truth is now more specific than it used to be:
   backend modules
 - OpenGL and Metal now terminate most concrete runtime mutation behind their
   backend modules
-- but `Renderer.backend.runtime` still materializes both concrete backend
-  states at once through `backend_runtime_bundle.Bundle`
+- `Renderer.backend.runtime` no longer materializes both concrete backend
+  states at once
+- but `Renderer` still owns the selected concrete backend runtime storage
+  shape through `backend_runtime_bundle.Bundle`
 
 That means the remaining gate-4 pressure is no longer "shared code is poking
 backend state everywhere."
 
 It is this:
 
-- `Renderer` is still the owner of a widening concrete runtime bundle
-- adding a third backend would widen that renderer-owned storage story again
+- `Renderer` is still the owner of selected concrete backend runtime storage
+- adding a third backend would still widen that renderer-owned storage story
+  again
 
 Android host work now makes that pressure immediate instead of theoretical.
 The repo can now represent Android surface/lifecycle truth honestly, so the
@@ -109,7 +112,7 @@ That means the repo can now honestly say:
 The runtime-storage part of that blocker is now concrete:
 
 - an Android renderer backend would currently require another widening branch
-  under `Renderer.backend.runtime`
+  in the renderer-owned selected-runtime storage story
 
 That is enough evidence to open `RB-B2` now, even while gate 5 remains closed
 to speculative redesign.
@@ -118,8 +121,8 @@ to speculative redesign.
 
 The first code cut should stay narrow:
 
-- remove the widening `backend_runtime_bundle.Bundle` shape
-- replace it with one selected-backend-owned runtime storage surface
+- remove the old widening `backend_runtime_bundle.Bundle` shape
+- replace it with one selected-backend runtime surface
 - keep GL and Metal behavior unchanged
 
 Primary code pressure:
@@ -144,7 +147,24 @@ Primary code pressure:
 
 - `Renderer.backend` no longer materializes concrete OpenGL and Metal runtime
   storage side-by-side
-- the selected backend runtime is owned behind a backend-owned storage surface
+- one selected-backend runtime storage surface replaces the widening bundle
 - GL and Metal init/deinit/draw/present paths still work without behavior
   change
 - queue/docs clearly state what later gate-4 pressure still remains
+
+## Current Checkpoint
+
+The first code cut now exists:
+
+- `backend_runtime_bundle.Bundle` is now selected-backend storage instead of a
+  widening GL+Metal struct
+- `Renderer` no longer materializes both concrete runtime states at once
+- GL and Metal backend modules now reach runtime through selected-backend
+  accessors with no intended behavior change
+
+Immediate remaining pressure after this proof:
+
+- `Renderer` still owns the selected concrete backend-native runtime shape
+- another backend would still widen that renderer-owned selected-runtime story
+- the next gate-4 cut should only open when it can move that ownership
+  boundary again, not merely rename the selected-storage wrapper

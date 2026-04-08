@@ -89,7 +89,7 @@ Aligned with `app_architecture/ui/RENDER_BACKEND_CONTRACT.md` § “Gate status
 | 1 | One semantic operation → one renderer contract path | **Met** — `SurfaceDraw` deferral unified GL/Metal; flush discipline enforced at `drawTextureRect`, `flushTerminalBatch`, `GlyphCache.flush`; `updateRetainedPresentable` flushes surface queue into retained FBO before restoring scene target (fixes kitty-above ordering). No immediate-draw bypass remains. |
 | 2 | Backend choice does not change product-level submission semantics | **Structurally met on GL** — terminal-present transaction/execution seams are in place and GL behavioral equivalence passed adversarial cases; Metal is still unverified against the new seam contract and remains deferred verification rather than a structural blocker. |
 | 3 | No backend-specific `.opengl` / `.metal` / `.vulkan` in shared **draw payloads** | **Met for `SurfaceDraw`** — `GpuImageRef` + neutral union; `Renderer` still dispatches by backend enum elsewhere. |
-| 4 | `Renderer` not the hidden owner of backend-native runtime | **Not met** — `backend.runtime` still holds concrete OpenGL + Metal bundles. |
+| 4 | `Renderer` not the hidden owner of backend-native runtime | **Not met** — `backend.runtime` now stores only the selected backend runtime, which is better than the old GL+Metal bundle, but `Renderer` still owns concrete backend-native storage shape. |
 | 5 | Presentable/frame routine for a new backend | **Not met** — terminal-only presentable; GL retained vs Metal snapshot uneven. |
 
 **Readiness:** Android **platform** work (lifecycle, IME, etc.) stays allowed.
@@ -748,7 +748,8 @@ Current evidence:
     "stop shared leaks" cleanup
 - Android host/bootstrap truth is now merged, so this is no longer theoretical
   third-backend pressure:
-  - Android rendering would currently widen `Renderer.backend.runtime` again
+  - Android rendering would currently widen this renderer-owned
+    selected-runtime story again
 
 Owner docs:
 
@@ -767,14 +768,14 @@ Do not do:
 - do not add new backend-native peer fields on `Renderer`
 - do not solve "quickly" by widening shared state
 
-Next reviewable cut:
+Latest reviewable cut:
 
 - `RB-B2.a` Selected backend runtime ownership
 
 Purpose:
 
-- remove the widening `backend_runtime_bundle.Bundle` shape so `Renderer` stops
-  materializing concrete GL and Metal runtime state side-by-side
+- replace the widening `backend_runtime_bundle.Bundle` shape so `Renderer`
+  stops materializing concrete GL and Metal runtime state side-by-side
 
 Owner docs:
 
@@ -807,10 +808,20 @@ Do not do:
 
 Stop marker:
 
-- one selected-backend-owned runtime storage surface replaces the widening
-  bundle
+- one selected-backend runtime storage surface replaces the widening bundle
 - GL and Metal behavior stays unchanged
 - queue/docs clearly state what later gate-4 pressure still remains
+
+Current checkpoint:
+
+- `backend_runtime_bundle.Bundle` now stores only the selected backend runtime
+  instead of concrete GL and Metal state side-by-side
+- GL and Metal backend modules now reach runtime storage through
+  selected-backend accessors
+- build/test validation stayed green with no intended behavior change
+- gate 4 is improved, but not closed:
+  - `Renderer` still owns the selected concrete backend-native runtime shape
+  - adding another backend would still widen that renderer-owned storage story
 
 ### `RB-B3` Frame lifecycle ownership
 

@@ -180,29 +180,32 @@ peer fields on the renderer root, and it is a worthwhile host-shape
 improvement.
 
 But it is still backend-native runtime state living under shared renderer
-ownership. The runtime bundle still contains concrete OpenGL/Metal implementation
-storage such as:
+ownership. The runtime host no longer materializes both OpenGL and Metal state
+side-by-side; it now stores only the selected backend runtime. But that
+selected runtime is still concrete backend-native storage living under shared
+renderer ownership, with implementation state such as:
 
-- `backend.runtime.opengl.context`
-- `backend.runtime.opengl.shader_program`
-- `backend.runtime.opengl.vao`
-- `backend.runtime.opengl.vbo`
-- `backend.runtime.opengl.white_texture`
-- `backend.runtime.metal.backend_context`
-- `backend.runtime.metal.frame`
-- `backend.runtime.metal.queued_surface_draws`
-- `backend.runtime.metal.preview_source`
+- OpenGL:
+  - `backend.runtime.opengl.context`
+  - `backend.runtime.opengl.resources`
+  - `backend.runtime.opengl.targets`
+- Metal:
+  - `backend.runtime.metal.backend_context`
+  - `backend.runtime.metal.preview_source`
+  - `backend.runtime.metal.diagnostic_font`
 
 Current pressure is narrower than it used to be:
 
 - shared code outside backend modules no longer meaningfully reads this bundle
   directly
-- the remaining blocker is the renderer-owned widening storage shape itself
+- `Renderer` no longer materializes both backend states at once
+- the remaining blocker is that `Renderer` still owns the selected concrete
+  backend storage shape itself
 
 Android host/bootstrap work now makes that blocker immediate instead of
 theoretical:
 
-- a third backend would still widen `Renderer.backend.runtime`
+- a third backend would still widen this renderer-owned selected-runtime story
 - Android rendering is now blocked here, not by host-surface ambiguity
 
 That means the renderer root is still partly the backend implementation center,
