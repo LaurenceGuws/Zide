@@ -1,7 +1,7 @@
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const gl = @import("gl.zig");
-const gl_backend = @import("gl_backend.zig");
+const renderer_vertex_stream_backend_host = @import("renderer_vertex_stream_backend_host.zig");
 const shape_utils = @import("shape_utils.zig");
 const texture_draw = @import("texture_draw.zig");
 const types = @import("types.zig");
@@ -41,12 +41,12 @@ pub fn deinit(state: *BatchState, allocator: std.mem.Allocator) void {
 /// OpenGL-only: shared batch pipeline binding for vertex-stream glyph uploads
 /// (terminal batch flush and `glyph_cache` flush).
 pub fn bindBatchPipelineForVertexStream(renderer: anytype) void {
-    gl_backend.bindBatchPipeline(renderer);
+    renderer_vertex_stream_backend_host.bindBatchPipelineForVertexStream(renderer);
 }
 
 /// OpenGL-only: texture-kind uniform for vertex-stream glyph draws.
 pub fn setTextureKindForVertexStream(renderer: anytype, kind: types.TextureKind) void {
-    gl_backend.setTextureKind(renderer, kind);
+    renderer_vertex_stream_backend_host.setTextureKindForVertexStream(renderer, kind);
 }
 
 pub fn beginTerminalBatch(renderer: anytype) void {
@@ -57,7 +57,7 @@ pub fn beginTerminalBatch(renderer: anytype) void {
 pub fn flushTerminalBatch(renderer: anytype) void {
     const vertex_count = renderer.batch.vertices.items.len;
     if (vertex_count == 0) return;
-    gl_backend.flushQueuedSurfaceDrawsBeforeImmediateWork(renderer);
+    renderer_vertex_stream_backend_host.flushQueuedSurfaceDrawsBeforeImmediateVertexStreamWork(renderer);
     ensureVboCapacity(renderer, vertex_count);
     bindBatchPipelineForVertexStream(renderer);
     gl.BufferSubData(
@@ -130,7 +130,7 @@ pub fn drawTextureRectImmediate(renderer: anytype, texture: types.Texture, src: 
 /// Single-texture immediate draw used by text and UI paths on OpenGL. Flushes deferred
 /// `SurfaceDraw` work first so list order matches “surface queue, then immediate GL.”
 pub fn drawTextureRect(renderer: anytype, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, bg_color: types.Rgba, kind: types.TextureKind) void {
-    gl_backend.flushQueuedSurfaceDrawsBeforeImmediateWork(renderer);
+    renderer_vertex_stream_backend_host.flushQueuedSurfaceDrawsBeforeImmediateVertexStreamWork(renderer);
     drawTextureRectImmediate(renderer, texture, src, dest, color, bg_color, kind);
 }
 
@@ -201,9 +201,9 @@ pub fn addTerminalRect(renderer: anytype, x: i32, y: i32, w: i32, h: i32, color:
     if (w <= 0 or h <= 0) return;
     const dest = shape_utils.rectFromInts(x, y, w, h);
     const src = texture_draw.unitSrcRect();
-    addBatchQuad(renderer, gl_backend.whiteTexture(renderer), src, dest, color, types.Rgba{ .r = 0, .g = 0, .b = 0, .a = 0 }, .rgba);
+    addBatchQuad(renderer, renderer_vertex_stream_backend_host.whiteTexture(renderer), src, dest, color, types.Rgba{ .r = 0, .g = 0, .b = 0, .a = 0 }, .rgba);
 }
 
 pub fn ensureVboCapacity(renderer: anytype, vertex_count: usize) void {
-    gl_backend.ensureVboCapacity(renderer, vertex_count, @sizeOf(Vertex));
+    renderer_vertex_stream_backend_host.ensureVboCapacity(renderer, vertex_count, @sizeOf(Vertex));
 }
