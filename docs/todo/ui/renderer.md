@@ -87,7 +87,7 @@ Aligned with `app_architecture/ui/RENDER_BACKEND_CONTRACT.md` § “Gate status
 | # | Criterion | Status |
 |---|-----------|--------|
 | 1 | One semantic operation → one renderer contract path | **Met** — `SurfaceDraw` deferral unified GL/Metal; flush discipline enforced at `drawTextureRect`, `flushTerminalBatch`, `GlyphCache.flush`; `updateRetainedPresentable` flushes surface queue into retained FBO before restoring scene target (fixes kitty-above ordering). No immediate-draw bypass remains. |
-| 2 | Backend choice does not change product-level submission semantics | **Partial** — presentable/terminal paths still differ by backend lifecycle (GL retained vs Metal snapshot). |
+| 2 | Backend choice does not change product-level submission semantics | **Structurally met on GL** — terminal-present transaction/execution seams are in place and GL behavioral equivalence passed adversarial cases; Metal is still unverified against the new seam contract and remains deferred verification rather than a structural blocker. |
 | 3 | No backend-specific `.opengl` / `.metal` / `.vulkan` in shared **draw payloads** | **Met for `SurfaceDraw`** — `GpuImageRef` + neutral union; `Renderer` still dispatches by backend enum elsewhere. |
 | 4 | `Renderer` not the hidden owner of backend-native runtime | **Not met** — `backend.runtime` still holds concrete OpenGL + Metal bundles. |
 | 5 | Presentable/frame routine for a new backend | **Not met** — terminal-only presentable; GL retained vs Metal snapshot uneven. |
@@ -490,7 +490,7 @@ Milestone B "done" checkpoints (execute in order, do not rerank mid-lane):
 
 ### `RB-B1` Presentable ownership
 
-Status: active
+Status: structurally complete on GL; Metal verification deferred
 
 Current evidence:
 
@@ -678,51 +678,20 @@ Do not do:
 
 - do not rename GL-owned concepts to neutral names without changing ownership
 
-Next reviewable cut:
+Stop marker reached:
 
-- `RB-B1.d` Backend-owned execution against one shared transaction
+- shared terminal transaction vocabulary exists and is the authority
+- retained/direct execution now terminate behind presentable-host execution
+  seams instead of widget-owned execution trees
+- GL behavioral equivalence passed the defined adversarial seam-hardening cases
+- Metal remains unverified against the new seam contract and should be treated
+  as deferred verification, not as a reason to reopen gate #2 extraction work
 
-Purpose:
+Remaining gate-2 work:
 
-- move the remaining direct/retained execution bodies behind backend-owned
-  presentable implementations so shared terminal runtime no longer owns two
-  main execution stories for the same transaction.
-
-Owner docs:
-
-- `app_architecture/ui/RENDER_BACKEND_CONTRACT.md`
-- `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md`
-
-Primary code pressure:
-
-- `src/ui/widgets/terminal_widget_presentation_runtime.zig`
-- `src/ui/renderer/renderer_presentable_host.zig`
-- `src/ui/renderer/presentable_contract.zig`
-
-Acceptance criteria:
-
-- shared terminal runtime no longer owns separate retained/direct execution
-  trees for the main transaction
-- backend presentable implementations satisfy the shared
-  `TerminalPresentPlan` / `TerminalPresentResult` contract
-- no rendering behavior changes are introduced for GL or Metal in this cut
-- queue and authority docs restate what remains in gate #2 versus what has now
-  moved into gate #5
-
-Do not do:
-
-- do not bundle frame-lifecycle ownership (`RB-B3`) into this cut
-- do not broaden the shared plan/result schema unless execution pressure
-  proves a current field dishonest
-- do not move backend-specific upload/reuse mechanics back into shared widget
-  code
-
-Stop marker:
-
-- the shared transaction still exists, but the remaining direct/retained
-  execution bodies terminate behind backend presentable seams instead of in
-  `terminal_widget_presentation_runtime.zig`
-- validation green
+- drift prevention only
+- treat future Metal regressions here as contract violations to fix, not as a
+  reason to relabel the lane as structurally incomplete
 
 Follow-on redesign authority:
 
@@ -1153,6 +1122,48 @@ Do not do:
 
 - do not keep backend-specific frame assembly inline in shared runtime merely
   because the wrapper names became cleaner
+
+Next reviewable cut:
+
+- `RB-B3.a` Frame submission outcome/finalization ownership
+
+Purpose:
+
+- define the first honest gate-5 contract cut: separate backend frame
+  execution from shared frame-outcome finalization so frame/present/order
+  ownership stops drifting through `renderer_frame_host.zig`
+
+Owner docs:
+
+- `app_architecture/ui/RENDER_BACKEND_CONTRACT.md`
+- `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md`
+
+Primary code pressure:
+
+- `src/ui/renderer/renderer_frame_host.zig`
+- `src/ui/renderer.zig`
+- `src/ui/renderer/backend_dispatch.zig`
+- `src/ui/renderer/gl_backend.zig`
+- `src/ui/renderer/metal_backend.zig`
+
+Acceptance criteria:
+
+- queue/authority docs explicitly distinguish product-level frame outcome
+  finalization from backend-native begin/submit/abandon execution
+- the first cut does not smuggle terminal-present policy back into the broader
+  frame lane
+- the next code step is obvious enough to implement without reopening gate #2
+
+Do not do:
+
+- do not widen this into a renderer-wide rewrite in one commit
+- do not let `backend_dispatch` become a general policy bucket
+- do not collapse frame and terminal-present finalization into one vague seam
+
+Stop marker:
+
+- gate #5 has an explicit first ticket with clear scope, ownership, and
+  non-goals instead of inheriting leftover momentum from `RB-B1`
 
 ## Milestone C: Vulkan Fit Audit
 

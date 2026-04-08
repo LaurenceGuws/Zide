@@ -48,6 +48,10 @@ Execution discipline:
 
 - OpenGL is still the most complete renderer implementation.
 - OpenGL is the proving ground, not the design authority.
+- The terminal-present gate-2 lane is now structurally complete on GL and
+  behaviorally validated there.
+- Metal remains unverified against that new seam contract; treat that as
+  deferred verification, not as a reason to reopen gate-2 extraction work.
 - Metal is now a real live implementation, especially on the terminal lane, but
   it still depends on backend-specific state and draw descriptions carried by
   the shared renderer.

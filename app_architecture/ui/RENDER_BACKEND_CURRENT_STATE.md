@@ -1264,6 +1264,13 @@ The terminal-present contract lane has now crossed the main gate-2 transfer:
 That means gate #2 is now mostly about validating and tightening this
 contract, not about discovering another major direct-vs-retained ownership cut.
 
+Validation status:
+
+- OpenGL/Linux: behavioral equivalence validated across the defined
+  adversarial seam-hardening cases
+- Metal/macOS: still unverified against the new seam contract; this is
+  deferred verification, not evidence that gate #2 remains structurally open
+
 What remains in gate #2:
 
 - keep shared finalization honest against the partial execution seam

@@ -417,6 +417,10 @@ Current read after `RB-B1.d` checkpoints:
 - gate #2 no longer requires:
   - another major direct-vs-retained execution ownership transfer in widget
     runtime for terminal presentation
+- gate #2 is now structurally complete on the GL proving ground:
+  - GL passed the defined adversarial seam-hardening cases
+  - Metal remains unverified against the new seam contract and should be
+    treated as deferred verification rather than a structural blocker
 - gate #5 still covers:
   - renderer-wide frame routine ownership
   - cross-widget present/order alignment
