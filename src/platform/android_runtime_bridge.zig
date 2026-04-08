@@ -168,3 +168,21 @@ test "bridge routes Android lifecycle and surface truth through shared host stat
     try std.testing.expectEqual(@as(u64, 10), noteStop());
     try std.testing.expectEqual(native_host.AppLifecycleState.stopped, bridge_state.app_host.lifecycle_state);
 }
+
+test "bridge reports replaced when a live Android surface identity changes without retirement" {
+    const std = @import("std");
+
+    try std.testing.expectEqual(@as(u64, 1), noteCreate());
+    try std.testing.expectEqual(@as(u64, 2), noteResume());
+
+    try std.testing.expectEqual(@as(u64, 3), noteSurfaceAvailableFromJava(@ptrFromInt(1), @ptrFromInt(0x1000), 400, 200));
+    try std.testing.expectEqual(@as(usize, 0x1000), currentNativeWindowToken());
+    try std.testing.expectEqual(@as(u64, 1), currentSurfaceIdentityEpoch());
+    try std.testing.expectEqual(native_host.SurfaceIdentityTransition.acquired, currentSurfaceIdentityTransition());
+
+    try std.testing.expectEqual(@as(u64, 4), noteSurfaceAvailableFromJava(@ptrFromInt(1), @ptrFromInt(0x2000), 410, 210));
+    try std.testing.expectEqual(@as(usize, 0x2000), currentNativeWindowToken());
+    try std.testing.expectEqual(@as(u64, 2), currentSurfaceIdentityEpoch());
+    try std.testing.expectEqual(native_host.SurfaceIdentityTransition.replaced, currentSurfaceIdentityTransition());
+    try std.testing.expectEqual(native_host.RenderSurfaceAvailability.available, bridge_state.render_host.surface_availability);
+}

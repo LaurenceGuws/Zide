@@ -4,14 +4,18 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.TextView;
 
 public final class ZideBootstrapActivity extends Activity implements SurfaceHolder.Callback2 {
     private static final String TAG = "ZideAndroidBootstrap";
     private static final int MAX_LOG_CHARS = 12000;
+    private static final String EXTRA_DEBUG_RECREATE_SURFACE_ONCE = "debug_recreate_surface_once";
 
     private static boolean nativeLoaded = false;
     private static String nativeLoadError = null;
@@ -29,7 +33,10 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     private final StringBuilder eventLog = new StringBuilder();
     private TextView statusText;
     private TextView eventLogText;
+    private FrameLayout surfaceContainer;
     private SurfaceView surfaceView;
+    private boolean surfaceRecreationScheduled = false;
+    private int surfaceHostGeneration = 0;
 
     private static native long nativeOnCreateBridge();
     private static native long nativeOnStartBridge();
@@ -50,8 +57,8 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
 
         statusText = findViewById(R.id.status_text);
         eventLogText = findViewById(R.id.event_log);
-        surfaceView = findViewById(R.id.host_surface);
-        surfaceView.getHolder().addCallback(this);
+        surfaceContainer = findViewById(R.id.host_surface_container);
+        installSurfaceView("activity-create");
 
         appendEvent("activity.onCreate nativeLoaded=" + nativeLoaded);
         if (nativeLoadError != null) {
@@ -74,6 +81,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         super.onResume();
         appendEvent("activity.onResume");
         callNative("native.onResume", nativeLoaded ? nativeOnResumeBridge() : -1);
+        maybeScheduleSurfaceRecreation();
         updateStatus("resumed");
     }
 
@@ -103,13 +111,17 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
-        appendEvent("surface.created valid=" + holder.getSurface().isValid());
+        appendEvent("surface.created generation=" + surfaceHostGeneration + " valid=" + holder.getSurface().isValid());
         updateStatus("surface-created");
     }
 
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-        appendEvent("surface.changed format=" + format + " size=" + width + "x" + height);
+        appendEvent(
+            "surface.changed generation=" + surfaceHostGeneration +
+                " format=" + format +
+                " size=" + width + "x" + height
+        );
         final long seq = nativeLoaded ? nativeOnSurfaceAvailableBridge(holder.getSurface(), width, height) : -1;
         final long token = nativeLoaded ? nativeCurrentWindowTokenBridge() : 0;
         final long epoch = nativeLoaded ? nativeCurrentSurfaceEpochBridge() : 0;
@@ -120,7 +132,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
-        appendEvent("surface.destroyed");
+        appendEvent("surface.destroyed generation=" + surfaceHostGeneration);
         final long seq = nativeLoaded ? nativeOnSurfaceDestroyedBridge() : -1;
         final long token = nativeLoaded ? nativeCurrentWindowTokenBridge() : 0;
         final long epoch = nativeLoaded ? nativeCurrentSurfaceEpochBridge() : 0;
@@ -131,8 +143,44 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
 
     @Override
     public void surfaceRedrawNeeded(SurfaceHolder holder) {
-        appendEvent("surface.redrawNeeded valid=" + holder.getSurface().isValid());
+        appendEvent("surface.redrawNeeded generation=" + surfaceHostGeneration + " valid=" + holder.getSurface().isValid());
         updateStatus("surface-redraw-needed");
+    }
+
+    private void maybeScheduleSurfaceRecreation() {
+        if (!getIntent().getBooleanExtra(EXTRA_DEBUG_RECREATE_SURFACE_ONCE, false)) {
+            return;
+        }
+        if (surfaceRecreationScheduled) {
+            return;
+        }
+        surfaceRecreationScheduled = true;
+        surfaceContainer.postDelayed(() -> {
+            appendEvent("debug.recreateSurfaceView");
+            installSurfaceView("debug-recreate");
+            updateStatus("debug-recreated-surface");
+        }, 700);
+    }
+
+    private void installSurfaceView(String reason) {
+        if (surfaceView != null) {
+            surfaceView.getHolder().removeCallback(this);
+            surfaceContainer.removeView(surfaceView);
+            appendEvent("surface.hostRemoved reason=" + reason + " generation=" + surfaceHostGeneration);
+        }
+
+        surfaceHostGeneration += 1;
+        final SurfaceView nextSurfaceView = new SurfaceView(this);
+        nextSurfaceView.setBackgroundColor(0xff162028);
+        final FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            Gravity.CENTER
+        );
+        surfaceContainer.addView(nextSurfaceView, params);
+        nextSurfaceView.getHolder().addCallback(this);
+        surfaceView = nextSurfaceView;
+        appendEvent("surface.hostInstalled reason=" + reason + " generation=" + surfaceHostGeneration);
     }
 
     private void callNative(String event, long seq) {
