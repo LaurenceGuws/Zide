@@ -146,11 +146,19 @@ It does justify this narrower conclusion:
   the honest baseline is disposable app-process-owned PTY lifetime with
   reconnect/restart semantics after process death
 
+## Current Baseline Decision
+
+For the current tree:
+
+- service-owned PTY survival is not justified yet
+- disposable app-process-owned PTY lifetime is the Android terminal baseline
+- any future service-owned survival design must open as a separate lane with
+  explicit product authority
+
 ## Next Honest Follow-Up
 
 The next `AP-A1` sub-cut should be:
 
-- decide whether Zide actually wants service-owned PTY survival on Android
-- if yes, define that as a separate product/ownership lane
-- if no, record disposable app-process-owned PTY lifetime as the current
-  Android terminal baseline and stop widening this lane
+- stop widening this lane unless a later product decision explicitly wants
+  service-owned PTY survival on Android
+- if that happens, define it as a separate product/ownership lane

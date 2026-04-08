@@ -158,9 +158,10 @@ Do not do:
 
 ## Next Honest Follow-Up
 
-The next `AH-A5` sub-cut should be:
+This policy lane is now at its honest boundary:
 
-- treat both `replaced` and `retired` then later `acquired` as real Android
-  replacement stories for future backend work
-- reassess whether Android PTY/runtime lifetime or Android renderer binding is
-  now the stronger next blocker
+- future Android renderer work must treat both `replaced` and `retired` then
+  later `acquired` as real replacement stories
+- PTY/runtime lifetime has now been answered separately with a disposable
+  app-process-owned baseline
+- Android rendering binding remains blocked by the shared renderer queue

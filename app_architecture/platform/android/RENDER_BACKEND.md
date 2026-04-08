@@ -238,21 +238,22 @@ Practical consequences from that Note10 run:
 - surface destruction can follow pause during backgrounding, but must still be
   modeled as explicit surface truth rather than inferred from lifecycle alone.
 
-## Next Active Android Lane
+## Current Android Boundary
 
-The next honest Android step is now:
+The Android-native host/bootstrap lane has now answered its next two honest
+Android-specific questions:
 
-- `AH-A4` Android bootstrap bridge
+- surface identity/replacement truth is explicit enough for future renderer
+  work
+- PTY lifetime baseline is explicit enough for future Android terminal work
 
-Reason:
+That means there is no new Android-specific execution lane that should be
+opened by default right now.
 
-- the host harness has already proved platform callback ordering on device
-- the shared host seam is now ready to receive Android truth
-- the repo still has no Android bootstrap path for the actual Zig runtime
+The next Android moves are now gated by stronger external pressure:
 
-So Android progress should now move through app/bootstrap and native-entry
-work, not through more host-harness polish and not through premature renderer
-backend work.
+- Android rendering backend work is still blocked by the shared renderer queue
+- service-owned PTY survival is still blocked by explicit product authority
 
 Current `AH-A4` checkpoint:
 
@@ -296,19 +297,17 @@ Current `AH-A4` checkpoint:
   - SDL-only surface capture moved out of `native_host.zig`
   - Android SDL refresh capture moved out of `android_host.zig`
 
-The next Android-native follow-up is now narrower:
+Current Android-native follow-up constraints:
 
-- tighten Android surface replacement / destruction policy around the now
-  explicit native-window token + `surfaceIdentityEpoch` path
 - future Android renderer work must honor both:
   - `replaced` while a surface is still live
   - `retired` then later fresh `acquired`
-- Android-specific forward progress now shifts to PTY/runtime lifetime
-  ownership, because Android renderer binding remains blocked by the shared
-  renderer queue
 - current PTY probe result says app-process-owned PTY lifetime can outlive
   visible surface lifetime briefly, but not app-process death
-- do not jump to GLES from native-load success alone
+- disposable app-process-owned PTY lifetime is the current Android terminal
+  baseline
+- do not jump to GLES from native-load success, surface truth, or PTY
+  confidence alone while the renderer queue still blocks Android rendering
 
 ## Explicit Anti-Goals
 

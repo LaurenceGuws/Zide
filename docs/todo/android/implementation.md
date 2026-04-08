@@ -32,6 +32,17 @@ Android host work is allowed now.
 Android rendering backend work is still blocked until the renderer queue says
 the pre-Android rendering gate is met.
 
+Current boundary:
+
+- the Android-native host/bootstrap lane is structurally complete enough for
+  future renderer binding
+- disposable app-process-owned PTY lifetime is the current Android terminal
+  baseline
+- no new Android-specific execution lane should open by default from this
+  queue until either:
+  - the shared renderer queue opens Android rendering work
+  - or a separate product lane explicitly asks for service-owned PTY survival
+
 ## Active Tickets
 
 ### `AH-A1` Shared Native Host Surface Truth
@@ -53,22 +64,15 @@ Acceptance:
 
 Status:
 
-- in progress
-- first shared-host contract cut landed in `src/platform/native_host.zig`
-- first shared SDL event-mapping cut now updates app-host lifecycle/focus and
-  render-host surface/redraw truth
-- `PlatformRenderHost` no longer carries an SDL window pointer
-- SDL-only host capture now lives in `src/platform/sdl_native_host.zig`
-- Android-specific lifecycle/event mapping is still not implemented
-- Note10 harness validation now confirms that Android window focus and IME
-  focus must remain separate signals
-
-Next likely follow-ups:
-
-1. define Android app-host state transitions and focus/text-input signals
-2. define the first Android-specific host mapper against `PlatformAppHost` and
-   `PlatformRenderHost`
-3. only then decide what real renderer/backend pressure Android exposes
+- met
+- `src/platform/native_host.zig` now carries:
+  - surface available vs unavailable
+  - logical and drawable size
+  - scale and density truth
+  - redraw-requested state
+  - Android native-window identity
+  - surface identity epoch and transition
+- shared and Android-specific host paths both now consume that contract
 
 ### `AH-A2` First Android Host Mapper
 
@@ -86,15 +90,13 @@ Acceptance:
 
 Status:
 
-- in progress
-- first mapper module exists and shared input/runtime now delegates Android
-  semantics there where applicable
-- `android_host.noteSurfaceFocus(...)` no longer treats Android window focus as
-  implicit text-input focus
-- Android SDL refresh capture now lives in `src/platform/sdl_android_host.zig`
-- `android_host.zig` is now freestanding enough for the runtime bootstrap
-  bridge to route through shared host semantics
-- actual Android event-source wiring is still pending
+- met
+- `src/platform/android_host.zig` exists as the Android-owned host semantics
+  module
+- shared input/runtime delegates Android-specific host meaning there
+- the runtime bootstrap bridge now routes actual Android lifecycle/focus/
+  surface callbacks through it
+- Android SDL refresh capture lives in `src/platform/sdl_android_host.zig`
 
 ### `AH-A3` Android Host Harness Bootstrap
 
@@ -113,7 +115,7 @@ Acceptance:
 
 Status:
 
-- in progress
+- met
 - initial Java-only host harness scaffold exists
 - `zig build` and `zig build test` still pass after the scaffold
 - first local `:app:assembleDebug` attempt hit transient Google Maven artifact
@@ -135,7 +137,7 @@ Status:
 - Note10 smoke checks also confirmed:
   - IME show/hide causes `surface.changed` + `surface.redrawNeeded`
   - backgrounding causes `onPause -> windowFocus(false) -> surface.destroyed -> onStop`
-- next step is tightening the host mapping against that observed ordering
+- the observed Note10 ordering is now part of the owning Android authority
 
 ### `AH-A4` Android Bootstrap Bridge
 
@@ -154,7 +156,7 @@ Acceptance:
 
 Status:
 
-- in progress
+- met
 - the host harness proved the Android callback ordering we needed first
 - `build_system/platform_capabilities.zig` and the current app build graph are
   still desktop-only, so bootstrap/native-entry is now the real next blocker
@@ -197,9 +199,9 @@ Status:
   - `native.onWindowFocus seq=10`
   - `native.surfaceDestroyed seq=11`
   - `native.onStop seq=12`
-- the next blocker is no longer native entry; it is deeper Android host/runtime
-  ownership, with native-window/render-host truth now clearly ahead of PTY
-  lifetime for rendering-oriented work
+- bootstrap/native-entry is no longer the blocker for Android-native progress
+- this lane now feeds future renderer work by providing real native lifecycle,
+  surface identity, and replacement truth
 
 Do not do:
 
@@ -210,8 +212,9 @@ Do not do:
 
 Next likely follow-ups:
 
-1. decide whether Zide actually wants service-owned PTY survival on Android, or
-   whether disposable app-process-owned PTY lifetime is the honest baseline
+1. keep disposable app-process-owned PTY lifetime as the current Android
+   terminal baseline unless a separate product lane explicitly asks for
+   service-owned survival
 2. if Android renderer binding resumes later, treat both `replaced` and
    `retired` then later `acquired` as required host replacement stories
 3. do not jump to GLES from native-load success plus one bootstrap pass
@@ -225,7 +228,7 @@ Purpose:
 
 Status:
 
-- in progress
+- structurally met
 - first execution probe now exists in `android/bootstrap-bridge/`
 - Note10 result so far:
   - app-process-owned PTY probe started successfully
@@ -235,8 +238,10 @@ Status:
 - current honest baseline:
   - PTY/process lifetime can outlive visible surface lifetime briefly
   - PTY/process lifetime does not outlive app-process death
-  - disposable app-process-owned PTY lifetime is the current honest baseline
-    until a stronger service-owned decision is made
+  - disposable app-process-owned PTY lifetime is the current Android terminal
+    baseline
+- no further PTY/service architecture work is open in this queue unless a
+  separate product lane explicitly asks for service-owned survival
 
 Do not do:
 
