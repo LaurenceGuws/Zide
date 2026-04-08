@@ -12,10 +12,9 @@ const app_logger = @import("../../app_logger.zig");
 const types = @import("types.zig");
 const renderer_root = @import("../renderer.zig");
 const renderer_surface_host = @import("renderer_surface_host.zig");
+const renderer_text_backend_host = @import("renderer_text_backend_host.zig");
 const renderer_terminal_draw_host = @import("renderer_terminal_draw_host.zig");
 const metal_text_sample_runtime = @import("metal_text_sample_runtime.zig");
-const metal_backend = @import("metal_backend.zig");
-const gl_backend = @import("gl_backend.zig");
 
 const Color = renderer_root.Color;
 const Renderer = renderer_root.Renderer;
@@ -150,7 +149,7 @@ fn drawMetalUtf8CellRunFallback(
 ) bool {
     if (self.plannedTextRenderingMode() != .metal_texture_atlas) return false;
     if (text.len == 0) return false;
-    return metal_backend.drawTerminalCellRun(self, &self.editor_font, .{
+    return renderer_text_backend_host.drawTerminalCellRun(self, &self.editor_font, .{
         .text = text,
         .x = x,
         .y = y,
@@ -260,7 +259,7 @@ pub fn measureIconTextWidth(self: *Renderer, text: []const u8) f32 {
 pub fn drawChar(self: *Renderer, char: u8, x: f32, y: f32, color: Color) void {
     if (!textRenderingAvailable(self)) {
         if (shouldUseMetalTextFallback(self, false)) {
-            _ = metal_backend.drawAtlasSampleChar(self, char, x, y, color);
+            _ = renderer_text_backend_host.drawAtlasSampleChar(self, char, x, y, color);
         }
         return;
     }
@@ -279,7 +278,7 @@ fn drawMetalTerminalScalarFallback(
 ) bool {
     if (self.plannedTextRenderingMode() != .metal_texture_atlas) return false;
     if (scalar_text.len == 0) return false;
-    return metal_backend.drawTerminalCellRun(self, &self.terminal_font, .{
+    return renderer_text_backend_host.drawTerminalCellRun(self, &self.terminal_font, .{
         .text = scalar_text,
         .x = x,
         .y = y,
@@ -400,13 +399,13 @@ fn drawTerminalBoxGlyphBatched(self: *Renderer, codepoint: u32, x: f32, y: f32, 
 }
 
 fn drawTextWithFont(self: *Renderer, font: *TerminalFont, metrics: Renderer.ScaledFontMetrics, text: []const u8, x: f32, y: f32, color: Color, italic: bool) void {
-    gl_backend.flushQueuedSurfaceDrawsNow(self);
+    renderer_text_backend_host.flushQueuedSurfaceDrawsBeforeTextWork(self);
     const origin = snapTextOrigin(self, x, y);
     text_draw.drawText(self.allocator, font, self, drawTextureThunk, text, origin.x, origin.y, metrics.cell_width, metrics.cell_height, color.toRgba(), false, italic);
 }
 
 fn drawTextWithFontMonospace(self: *Renderer, font: *TerminalFont, metrics: Renderer.ScaledFontMetrics, text: []const u8, x: f32, y: f32, color: Color, disable_programming_ligatures: bool, italic: bool) void {
-    gl_backend.flushQueuedSurfaceDrawsNow(self);
+    renderer_text_backend_host.flushQueuedSurfaceDrawsBeforeTextWork(self);
     const origin = snapTextOrigin(self, x, y);
     if (drawTextWithFontMonospaceShaped(self, font, metrics, text, origin.x, origin.y, color.toRgba(), disable_programming_ligatures, italic)) return;
     text_draw.drawText(self.allocator, font, self, drawTextureThunk, text, origin.x, origin.y, metrics.cell_width, metrics.cell_height, color.toRgba(), true, italic);
