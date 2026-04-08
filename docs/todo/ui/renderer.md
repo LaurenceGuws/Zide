@@ -106,6 +106,13 @@ Gate #3 is already met for the `SurfaceDraw` surface; the residual
 backend-enum dispatch elsewhere is addressed as part of gate #4. Do not bundle
 gates or declare a gate met until the code and docs both reflect it honestly.
 
+Latest gate-4 narrowing note:
+
+- shared font init/text-config paths now use
+  `src/ui/renderer/renderer_font_backend_host.zig` instead of importing
+  backend modules directly; this reduces shared helper leakage but does not
+  yet close selected-runtime ownership
+
 ## How To Use This Queue
 
 1. Confirm the repo-wide focus in `docs/AGENT_HANDOFF.md`.

@@ -176,3 +176,11 @@ Immediate remaining pressure after this proof:
 - another backend would still widen that renderer-owned selected-runtime story
 - the next gate-4 cut should only open when it can move that ownership
   boundary again, not merely rename the selected-storage wrapper
+
+Latest narrowing cut:
+
+- shared font init/text-config paths now route backend helper access through
+  `renderer_font_backend_host.zig` instead of importing GL/Metal backend
+  modules directly
+- this does not move selected-runtime storage ownership yet, but it removes
+  one more shared helper leak ahead of any later gate-4 ownership move
