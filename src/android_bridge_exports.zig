@@ -44,12 +44,13 @@ export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeOnWindowFoc
 }
 
 export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeOnSurfaceAvailableBridge(
+    env: ?*anyopaque,
     _: ?*anyopaque,
-    _: ?*anyopaque,
+    surface: ?*anyopaque,
     width: i32,
     height: i32,
 ) callconv(.c) i64 {
-    return @intCast(android_runtime_bridge.noteSurfaceAvailable(width, height));
+    return @intCast(android_runtime_bridge.noteSurfaceAvailableFromJava(env, surface, width, height));
 }
 
 export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeOnSurfaceDestroyedBridge(
@@ -57,4 +58,11 @@ export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeOnSurfaceDe
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return @intCast(android_runtime_bridge.noteSurfaceDestroyed());
+}
+
+export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeCurrentWindowTokenBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+) callconv(.c) i64 {
+    return @intCast(android_runtime_bridge.currentNativeWindowToken());
 }

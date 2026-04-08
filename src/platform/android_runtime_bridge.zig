@@ -1,5 +1,9 @@
+const builtin = @import("builtin");
 const android_host = @import("android_host.zig");
 const native_host = @import("native_host.zig");
+
+extern fn ANativeWindow_fromSurface(env: ?*anyopaque, surface: ?*anyopaque) ?*anyopaque;
+extern fn ANativeWindow_release(window: *anyopaque) void;
 
 const BridgeState = struct {
     seq: u64 = 0,
@@ -20,6 +24,17 @@ var bridge_state = BridgeState{};
 fn nextSequence() u64 {
     bridge_state.seq += 1;
     return bridge_state.seq;
+}
+
+fn releaseNativeWindow(window: ?*anyopaque) void {
+    if (builtin.is_test) return;
+    const value = window orelse return;
+    ANativeWindow_release(value);
+}
+
+fn swapNativeWindow(window: ?*anyopaque) void {
+    releaseNativeWindow(bridge_state.render_host.androidNativeWindow());
+    bridge_state.render_host.noteAndroidNativeWindow(window);
 }
 
 pub fn noteCreate() u64 {
@@ -64,9 +79,29 @@ pub fn noteSurfaceAvailable(width: i32, height: i32) u64 {
     return nextSequence();
 }
 
+pub fn noteSurfaceAvailableFromJava(
+    env: ?*anyopaque,
+    surface: ?*anyopaque,
+    width: i32,
+    height: i32,
+) u64 {
+    const native_window = if (builtin.is_test)
+        surface
+    else
+        ANativeWindow_fromSurface(env, surface);
+    swapNativeWindow(native_window);
+    if (native_window == null) return noteSurfaceDestroyed();
+    return noteSurfaceAvailable(width, height);
+}
+
 pub fn noteSurfaceDestroyed() u64 {
+    swapNativeWindow(null);
     _ = android_host.noteSurfaceDestroyed(&bridge_state.app_host, &bridge_state.render_host);
     return nextSequence();
+}
+
+pub fn currentNativeWindowToken() usize {
+    return @intFromPtr(bridge_state.render_host.androidNativeWindow() orelse return 0);
 }
 
 test "bridge routes Android lifecycle and surface truth through shared host state" {
@@ -85,10 +120,11 @@ test "bridge routes Android lifecycle and surface truth through shared host stat
     try std.testing.expect(bridge_state.render_host.redraw_requested);
 
     bridge_state.render_host.clearRedrawRequested();
-    try std.testing.expectEqual(@as(u64, 4), noteSurfaceAvailable(400, 200));
+    try std.testing.expectEqual(@as(u64, 4), noteSurfaceAvailableFromJava(@ptrFromInt(1), @ptrFromInt(0x1000), 400, 200));
     try std.testing.expectEqual(native_host.RenderSurfaceAvailability.available, bridge_state.render_host.surface_availability);
     try std.testing.expectEqual(@as(i32, 400), bridge_state.render_host.surface_metrics.drawable_width);
     try std.testing.expect(bridge_state.render_host.redraw_requested);
+    try std.testing.expectEqual(@as(usize, 0x1000), currentNativeWindowToken());
 
     try std.testing.expectEqual(@as(u64, 5), noteWindowFocusChanged(true));
     try std.testing.expect(bridge_state.app_host.surface_focused);
@@ -101,6 +137,7 @@ test "bridge routes Android lifecycle and surface truth through shared host stat
 
     try std.testing.expectEqual(@as(u64, 7), noteSurfaceDestroyed());
     try std.testing.expectEqual(native_host.RenderSurfaceAvailability.unavailable, bridge_state.render_host.surface_availability);
+    try std.testing.expectEqual(@as(usize, 0), currentNativeWindowToken());
 
     try std.testing.expectEqual(@as(u64, 8), noteStop());
     try std.testing.expectEqual(native_host.AppLifecycleState.stopped, bridge_state.app_host.lifecycle_state);

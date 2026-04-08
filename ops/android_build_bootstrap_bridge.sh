@@ -34,6 +34,11 @@ zig build-obj \
   "$ROOT/src/android_bridge_exports.zig" \
   -femit-bin="$OBJ_PATH"
 
-"$CLANG" -shared "$OBJ_PATH" -o "$OUT_LIB"
+"$CLANG" \
+  -shared \
+  -Wl,--no-undefined \
+  "$OBJ_PATH" \
+  -landroid \
+  -o "$OUT_LIB"
 
 echo "built $OUT_LIB"

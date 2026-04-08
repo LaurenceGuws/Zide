@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.util.Log;
+import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.widget.TextView;
@@ -36,8 +37,9 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     private static native long nativeOnPauseBridge();
     private static native long nativeOnStopBridge();
     private static native long nativeOnWindowFocusBridge(boolean focused);
-    private static native long nativeOnSurfaceAvailableBridge(int width, int height);
+    private static native long nativeOnSurfaceAvailableBridge(Surface surface, int width, int height);
     private static native long nativeOnSurfaceDestroyedBridge();
+    private static native long nativeCurrentWindowTokenBridge();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -106,14 +108,18 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
         appendEvent("surface.changed format=" + format + " size=" + width + "x" + height);
-        callNative("native.surfaceAvailable", nativeLoaded ? nativeOnSurfaceAvailableBridge(width, height) : -1);
+        final long seq = nativeLoaded ? nativeOnSurfaceAvailableBridge(holder.getSurface(), width, height) : -1;
+        final long token = nativeLoaded ? nativeCurrentWindowTokenBridge() : 0;
+        callNativeWithToken("native.surfaceAvailable", seq, token);
         updateStatus("surface-changed");
     }
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
         appendEvent("surface.destroyed");
-        callNative("native.surfaceDestroyed", nativeLoaded ? nativeOnSurfaceDestroyedBridge() : -1);
+        final long seq = nativeLoaded ? nativeOnSurfaceDestroyedBridge() : -1;
+        final long token = nativeLoaded ? nativeCurrentWindowTokenBridge() : 0;
+        callNativeWithToken("native.surfaceDestroyed", seq, token);
         updateStatus("surface-destroyed");
     }
 
@@ -125,6 +131,10 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
 
     private void callNative(String event, long seq) {
         appendEvent(event + " seq=" + seq);
+    }
+
+    private void callNativeWithToken(String event, long seq, long token) {
+        appendEvent(event + " seq=" + seq + " token=0x" + Long.toHexString(token));
     }
 
     private void updateStatus(String state) {
