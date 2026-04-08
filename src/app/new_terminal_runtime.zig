@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_modes = @import("modes/mod.zig");
+const app_terminal_active_widget = @import("terminal/terminal_active_widget.zig");
 const app_terminal_grid = @import("terminal/terminal_grid.zig");
 const app_terminal_refresh_sizing_runtime = @import("terminal/terminal_refresh_sizing_runtime.zig");
 const app_terminal_session_bootstrap = @import("terminal/terminal_session_bootstrap.zig");
@@ -258,6 +259,13 @@ fn syncTerminalStartupState(state: anytype) !void {
         state.show_terminal,
         state.terminal_height,
         state.shell,
+    );
+    app_terminal_active_widget.syncUiFocus(
+        state.app_mode,
+        &state.terminal_workspace,
+        state.terminals.items.len,
+        state.terminal_widgets.items,
+        state.active_kind == .terminal,
     );
 }
 

@@ -10,6 +10,13 @@ pub fn focusByIndex(state: anytype, index: usize) bool {
     );
     if (!changed) return false;
     state.terminal_close_confirm_tab = null;
+    app_terminal_active_widget.syncUiFocus(
+        state.app_mode,
+        &state.terminal_workspace,
+        state.terminals.items.len,
+        state.terminal_widgets.items,
+        state.active_kind == .terminal,
+    );
     if (app_terminal_active_widget.resolveActive(
         state.app_mode,
         &state.terminal_workspace,
@@ -30,6 +37,13 @@ pub fn cycle(state: anytype, next: bool) bool {
     );
     if (!changed) return false;
     state.terminal_close_confirm_tab = null;
+    app_terminal_active_widget.syncUiFocus(
+        state.app_mode,
+        &state.terminal_workspace,
+        state.terminals.items.len,
+        state.terminal_widgets.items,
+        state.active_kind == .terminal,
+    );
     if (app_terminal_active_widget.resolveActive(
         state.app_mode,
         &state.terminal_workspace,

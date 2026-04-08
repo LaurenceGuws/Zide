@@ -44,6 +44,13 @@ pub fn closeActive(state: anytype, ctx: *anyopaque, hooks: Hooks) !bool {
                 state.terminal_height,
                 state.shell,
             );
+            app_terminal_active_widget.syncUiFocus(
+                state.app_mode,
+                &state.terminal_workspace,
+                state.terminals.items.len,
+                state.terminal_widgets.items,
+                state.active_kind == .terminal,
+            );
             if (app_terminal_active_widget.resolveActive(
                 state.app_mode,
                 &state.terminal_workspace,

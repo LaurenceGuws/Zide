@@ -576,6 +576,10 @@ Current evidence:
 - `renderer_presentable_host` no longer proxies
   `RendererCapabilities.terminal_presentation_mode` for draw metrics either;
   that diagnostic capability read now comes from `Renderer` directly.
+- terminal workspace tab activation now synchronizes `ui_focused` across all
+  terminal widgets instead of only invalidating the new active widget. This
+  fixes focused-cursor state sticking to the old tab until a window-focus
+  event forces a refresh.
 - OpenGL presentable operations now resolve retained-target storage through
   backend-owned slot helpers instead of open-coding terminal/editor target
   access at each call site.
