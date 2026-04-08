@@ -53,3 +53,23 @@ packages, a user-writable clone works fine. This branch was validated with:
 4. tap the IME field and use the show/hide buttons
 5. watch whether focus, text-input, and surface callbacks occur in stable,
    explainable order
+
+## Current Note10 Read
+
+Observed on the Note10 so far:
+
+- first launch:
+  - `onCreate -> onStart -> onResume -> surfaceCreated -> surfaceChanged -> surfaceRedrawNeeded -> onWindowFocusChanged(true)`
+- IME:
+  - showing the keyboard changes surface height and triggers redraw
+  - IME focus is separate from window focus
+- backgrounding:
+  - `onPause -> onWindowFocusChanged(false) -> surfaceDestroyed -> onStop`
+
+Useful log pull:
+
+```sh
+/opt/android-sdk/platform-tools/adb logcat -c
+# reproduce the behavior you care about
+/opt/android-sdk/platform-tools/adb logcat -d -s ZideAndroidHost:I
+```

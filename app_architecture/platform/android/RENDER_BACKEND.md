@@ -208,6 +208,32 @@ Current validation checkpoint:
 - the harness installs and launches on the Note10
 - the first observed device log sequence already confirms real lifecycle +
   surface callback ordering before any renderer backend work
+- Note10 callback ordering observed so far:
+  - first launch:
+    - `activity.onCreate`
+    - `activity.onStart`
+    - `activity.onResume`
+    - `surface.created`
+    - `surface.changed`
+    - `surface.redrawNeeded`
+    - `activity.onWindowFocusChanged focus=true`
+  - IME show/hide:
+    - IME focus is distinct from window focus
+    - showing the IME triggers `surface.changed` with a much smaller surface
+      height and then `surface.redrawNeeded`
+    - hiding the IME restores the larger surface size and redraw request
+  - backgrounding:
+    - `activity.onPause`
+    - `activity.onWindowFocusChanged focus=false`
+    - `surface.destroyed`
+    - `activity.onStop`
+
+Practical consequences from that Note10 run:
+
+- Android window/surface focus must not be treated as text-input focus.
+- IME visibility is geometry and redraw pressure, not lifecycle pressure.
+- surface destruction can follow pause during backgrounding, but must still be
+  modeled as explicit surface truth rather than inferred from lifecycle alone.
 
 ## Explicit Anti-Goals
 

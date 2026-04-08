@@ -55,6 +55,8 @@ Status:
 - first shared SDL event-mapping cut now updates app-host lifecycle/focus and
   render-host surface/redraw truth
 - Android-specific lifecycle/event mapping is still not implemented
+- Note10 harness validation now confirms that Android window focus and IME
+  focus must remain separate signals
 
 Next likely follow-ups:
 
@@ -82,6 +84,8 @@ Status:
 - in progress
 - first mapper module exists and shared input/runtime now delegates Android
   semantics there where applicable
+- `android_host.noteSurfaceFocus(...)` no longer treats Android window focus as
+  implicit text-input focus
 - actual Android event-source wiring is still pending
 
 ### `AH-A3` Android Host Harness Bootstrap
@@ -120,7 +124,10 @@ Status:
   - `surface.changed`
   - `surface.redrawNeeded`
   - `activity.onWindowFocusChanged focus=true`
-- next step is on-device lifecycle/surface/IME smoke checks
+- Note10 smoke checks also confirmed:
+  - IME show/hide causes `surface.changed` + `surface.redrawNeeded`
+  - backgrounding causes `onPause -> windowFocus(false) -> surface.destroyed -> onStop`
+- next step is tightening the host mapping against that observed ordering
 
 ## Current Research Read
 
