@@ -105,3 +105,52 @@ The first honest probe after this authority step should be:
   - or a narrower owned survival seam is justified
 
 That probe should optimize for truth, not feature completeness.
+
+## Current Probe Result
+
+The first probe is now implemented through `android/bootstrap-bridge/` using a
+debug-only PTY-backed shell heartbeat.
+
+Observed on the Note10:
+
+- the probe starts successfully from the bootstrap app:
+  - `debug.ptyProbeStart pid=29746 alive=true status=started`
+- after `HOME` / background:
+  - `activity.onPause`
+  - `debug.ptyProbeAliveOnPause pid=29746`
+  - `surface.destroyed`
+  - `activity.onStop`
+- the private heartbeat file kept growing while the app was backgrounded:
+  - foreground sample: `COUNT1=25`
+  - after background/stop: `COUNT2=29`
+- after `am force-stop`:
+  - heartbeat growth stopped:
+    - `COUNT3=30`
+  - direct PID probe returned `dead`
+
+## Decision From Probe
+
+Current honest baseline:
+
+- app-process-owned Android PTYs can survive pause, stop, and surface
+  retirement for at least a short window on this device
+- app-process-owned Android PTYs do not survive app-process death
+- product architecture must treat PTY/process loss on app death as normal
+  platform pressure, not as an exceptional bug
+
+This does not yet justify a service-owned survival design.
+
+It does justify this narrower conclusion:
+
+- if Android terminal work starts before a stronger service decision is made,
+  the honest baseline is disposable app-process-owned PTY lifetime with
+  reconnect/restart semantics after process death
+
+## Next Honest Follow-Up
+
+The next `AP-A1` sub-cut should be:
+
+- decide whether Zide actually wants service-owned PTY survival on Android
+- if yes, define that as a separate product/ownership lane
+- if no, record disposable app-process-owned PTY lifetime as the current
+  Android terminal baseline and stop widening this lane

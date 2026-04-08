@@ -210,11 +210,39 @@ Do not do:
 
 Next likely follow-ups:
 
-1. execute `AP-A1` from
-   `app_architecture/platform/android/ANDROID_PTY_LIFETIME_PLAN.md`
+1. decide whether Zide actually wants service-owned PTY survival on Android, or
+   whether disposable app-process-owned PTY lifetime is the honest baseline
 2. if Android renderer binding resumes later, treat both `replaced` and
    `retired` then later `acquired` as required host replacement stories
 3. do not jump to GLES from native-load success plus one bootstrap pass
+
+### `AP-A1` Android PTY Lifetime Ownership
+
+Purpose:
+
+- define the Android PTY/process lifetime baseline under pause/stop/background
+  pressure before any real Android terminal integration
+
+Status:
+
+- in progress
+- first execution probe now exists in `android/bootstrap-bridge/`
+- Note10 result so far:
+  - app-process-owned PTY probe started successfully
+  - PTY heartbeat survived `HOME` / pause / stop / surface retirement
+  - PTY heartbeat stopped after `am force-stop`
+  - direct PID check confirmed the PTY child was dead after force-stop
+- current honest baseline:
+  - PTY/process lifetime can outlive visible surface lifetime briefly
+  - PTY/process lifetime does not outlive app-process death
+  - disposable app-process-owned PTY lifetime is the current honest baseline
+    until a stronger service-owned decision is made
+
+Do not do:
+
+- no Android terminal product integration yet
+- no foreground-service architecture leap from one probe
+- no renderer binding work from PTY confidence
 
 ## Current Research Read
 

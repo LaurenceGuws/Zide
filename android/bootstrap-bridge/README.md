@@ -66,6 +66,14 @@ Optional in-process surface recreation probe:
   --ez debug_recreate_surface_once true
 ```
 
+Optional PTY lifetime probe:
+
+```sh
+/opt/android-sdk/platform-tools/adb shell am start \
+  -n dev.zide.androidbootstrap/.ZideBootstrapActivity \
+  --ez debug_start_pty_probe_once true
+```
+
 ## Useful Logs
 
 ```sh
@@ -114,5 +122,9 @@ That proves:
   `acquired`, so raw token reuse is not sufficient to define identity
 - an explicit in-activity `SurfaceView` recreation probe can also produce a
   true `transition=replaced`
+- the PTY lifetime probe also now shows:
+  - app-process-owned PTY survives `HOME` / pause / stop briefly on the
+    Note10
+  - app-process-owned PTY does not survive `am force-stop`
 - Android native entry is now real enough to move on to deeper host/runtime
   ownership questions rather than more bootstrap speculation

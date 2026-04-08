@@ -306,6 +306,8 @@ The next Android-native follow-up is now narrower:
 - Android-specific forward progress now shifts to PTY/runtime lifetime
   ownership, because Android renderer binding remains blocked by the shared
   renderer queue
+- current PTY probe result says app-process-owned PTY lifetime can outlive
+  visible surface lifetime briefly, but not app-process death
 - do not jump to GLES from native-load success alone
 
 ## Explicit Anti-Goals
