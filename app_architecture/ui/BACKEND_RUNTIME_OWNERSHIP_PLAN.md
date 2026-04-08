@@ -189,3 +189,7 @@ Latest narrowing cut:
   modules directly from `text_runtime.zig`
 - shared bootstrap backend selection now routes through `backend_dispatch.zig`
   instead of a separate GL/Metal switch in `bootstrap_runtime.zig`
+- shared text/surface host boundary files now route GL flush helper access
+  through `renderer_text_backend_host.zig` and
+  `renderer_surface_backend_host.zig` instead of importing `gl_backend.zig`
+  directly

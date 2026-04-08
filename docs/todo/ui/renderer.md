@@ -117,6 +117,9 @@ Latest gate-4 narrowing note:
   Metal backend modules directly
 - shared `bootstrap_runtime.zig` backend selection now terminates through
   `src/ui/renderer/backend_dispatch.zig` instead of a separate GL/Metal switch
+- shared `renderer_text_host.zig` and `renderer_surface_host.zig` now route
+  GL flush helper access through small backend-host files instead of importing
+  `gl_backend.zig` directly
 
 ## How To Use This Queue
 
