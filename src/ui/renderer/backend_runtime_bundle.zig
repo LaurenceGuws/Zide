@@ -9,30 +9,45 @@ fn runtimePtrType(comptime Ptr: type, comptime State: type) type {
 
 pub const Bundle = union(enum) {
     none,
-    opengl: opengl_runtime_state.State,
-    metal: metal_runtime_state.State,
+    opengl: *opengl_runtime_state.State,
+    metal: *metal_runtime_state.State,
 
-    pub fn init(backend: anytype) Bundle {
+    pub fn init(allocator: std.mem.Allocator, backend: anytype) !Bundle {
         return switch (backend) {
-            .opengl => .{ .opengl = .{} },
-            .metal => .{ .metal = .{} },
+            .opengl => initState(allocator, opengl_runtime_state.State, "opengl"),
+            .metal => initState(allocator, metal_runtime_state.State, "metal"),
         };
     }
 
     pub fn openglState(self: anytype) runtimePtrType(@TypeOf(self), opengl_runtime_state.State) {
         return switch (self.*) {
-            .opengl => |*state| state,
+            .opengl => |state| state,
             else => unreachable,
         };
     }
 
     pub fn metalState(self: anytype) runtimePtrType(@TypeOf(self), metal_runtime_state.State) {
         return switch (self.*) {
-            .metal => |*state| state,
+            .metal => |state| state,
             else => unreachable,
         };
     }
+
+    pub fn deinitStorage(self: *Bundle, allocator: std.mem.Allocator) void {
+        switch (self.*) {
+            .none => {},
+            .opengl => |state| allocator.destroy(state),
+            .metal => |state| allocator.destroy(state),
+        }
+        self.* = .none;
+    }
 };
+
+fn initState(allocator: std.mem.Allocator, comptime State: type, comptime tag_name: []const u8) !Bundle {
+    const state = try allocator.create(State);
+    state.* = .{};
+    return @unionInit(Bundle, tag_name, state);
+}
 
 const TestBackend = enum {
     opengl,
@@ -40,12 +55,16 @@ const TestBackend = enum {
 };
 
 test "init selects only requested backend runtime" {
-    var gl_bundle = Bundle.init(TestBackend.opengl);
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    var gl_bundle = try Bundle.init(allocator, TestBackend.opengl);
     try std.testing.expectEqual(Bundle.Tag.opengl, std.meta.activeTag(gl_bundle));
     gl_bundle.openglState().resources.resources_ready = true;
     try std.testing.expect(gl_bundle.openglState().resources.resources_ready);
 
-    var metal_bundle = Bundle.init(TestBackend.metal);
+    var metal_bundle = try Bundle.init(allocator, TestBackend.metal);
     try std.testing.expectEqual(Bundle.Tag.metal, std.meta.activeTag(metal_bundle));
     metal_bundle.metalState().preview_source = .uploaded_coverage_glyph;
     try std.testing.expectEqual(metal_runtime_state.AtlasPreviewSource.uploaded_coverage_glyph, metal_bundle.metalState().preview_source);
