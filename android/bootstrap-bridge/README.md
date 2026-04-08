@@ -58,6 +58,14 @@ APK output:
 /opt/android-sdk/platform-tools/adb shell am start -n dev.zide.androidbootstrap/.ZideBootstrapActivity
 ```
 
+Optional in-process surface recreation probe:
+
+```sh
+/opt/android-sdk/platform-tools/adb shell am start \
+  -n dev.zide.androidbootstrap/.ZideBootstrapActivity \
+  --ez debug_recreate_surface_once true
+```
+
 ## Useful Logs
 
 ```sh
@@ -104,5 +112,7 @@ That proves:
   still `transition=unchanged`, so large size changes do not imply replacement
 - on this same path, foreground return after `retired` becomes a fresh
   `acquired`, so raw token reuse is not sufficient to define identity
+- an explicit in-activity `SurfaceView` recreation probe can also produce a
+  true `transition=replaced`
 - Android native entry is now real enough to move on to deeper host/runtime
   ownership questions rather than more bootstrap speculation

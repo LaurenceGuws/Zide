@@ -47,6 +47,9 @@ Observed through `android/bootstrap-bridge/` on the Note10:
 - foreground return after that retirement:
   - `native.surfaceAvailable seq=15 token=0x... epoch=3 transition=acquired`
   - the raw token value may recur even though the surface identity is new
+- explicit in-activity `SurfaceView` recreation probe:
+  - `native.surfaceAvailable seq=7 token=0x... epoch=2 transition=replaced`
+  - this happened without a prior `retired` event
 
 The important result is:
 
@@ -54,7 +57,7 @@ The important result is:
 - identity change is not implied by resize, redraw, pause, or rotation alone
 - identity change is explicit when `surfaceIdentityEpoch` advances
 - current device evidence has proved `acquired`, `unchanged`, and `retired`
-- current device evidence has not yet proved an in-process `replaced`
+- current device evidence has now also proved an in-process `replaced`
   transition
 - current device evidence also proves that raw token reuse does not imply same
   surface identity; epoch and transition are the real identity authority
@@ -108,6 +111,10 @@ Important consequence:
   surface identity used
 - future renderer/backend work must trust `surfaceIdentityEpoch` plus
   transition state, not raw pointer equality alone
+- future Android renderer work must also treat both of these as real
+  replacement stories:
+  - `replaced` while a surface is still live
+  - `retired` followed later by fresh `acquired`
 
 Unavailable surface means:
 
@@ -153,8 +160,7 @@ Do not do:
 
 The next `AH-A5` sub-cut should be:
 
-- determine whether this Android path can produce an in-process `replaced`
-  transition at all
-- if it can, capture and document that ordering
-- if it cannot, treat `retired` followed by later `acquired` as the real
-  replacement story for future backend work, even when raw pointer values recur
+- treat both `replaced` and `retired` then later `acquired` as real Android
+  replacement stories for future backend work
+- reassess whether Android PTY/runtime lifetime or Android renderer binding is
+  now the stronger next blocker

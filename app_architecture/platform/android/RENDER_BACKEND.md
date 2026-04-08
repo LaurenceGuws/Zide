@@ -10,6 +10,7 @@ Supporting research:
 - `docs/research/terminal/ANDROID_HOST_PTY_SCAN_2026-04-08.md`
 - `app_architecture/platform/android/BOOTSTRAP_BRIDGE_PLAN.md`
 - `app_architecture/platform/android/SURFACE_IDENTITY_POLICY.md`
+- `app_architecture/platform/android/ANDROID_PTY_LIFETIME_PLAN.md`
 
 ## Target Stack
 
@@ -279,6 +280,8 @@ Current `AH-A4` checkpoint:
   - `retired` on `surface.destroyed`
 - foreground return after `retired` now also proves a later fresh `acquired`
   path, even when the raw native-window token value can recur
+- explicit in-activity `SurfaceView` recreation now also proves a true
+  in-process `replaced` path on this Android stack
 - the bridge now routes those callbacks through `android_host.zig` and shared
   host state instead of a private lifecycle stub
 - a HOME/background pass now also confirms:
@@ -297,11 +300,12 @@ The next Android-native follow-up is now narrower:
 
 - tighten Android surface replacement / destruction policy around the now
   explicit native-window token + `surfaceIdentityEpoch` path
-- determine whether this path can produce an in-process `replaced` transition,
-  or whether `retired` then later `acquired` is the only real replacement
-  story the future backend must honor
-- keep PTY lifetime pressure as a real Android concern, but not the stronger
-  blocker for rendering-oriented host work yet
+- future Android renderer work must honor both:
+  - `replaced` while a surface is still live
+  - `retired` then later fresh `acquired`
+- Android-specific forward progress now shifts to PTY/runtime lifetime
+  ownership, because Android renderer binding remains blocked by the shared
+  renderer queue
 - do not jump to GLES from native-load success alone
 
 ## Explicit Anti-Goals

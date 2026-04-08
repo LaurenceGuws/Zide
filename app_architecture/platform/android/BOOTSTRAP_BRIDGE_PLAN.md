@@ -112,6 +112,8 @@ Current checkpoint:
     shared host seam
   - a later foreground return after `retired` becomes a fresh `acquired`, even
     when the raw token value can recur
+  - an explicit in-activity `SurfaceView` recreation probe can also produce
+    `transition=replaced` without a prior `retired`
   - `token=0x0` and `surfaceIdentityEpoch=2` after `surface.destroyed`
 - the bootstrap bridge now routes lifecycle/focus/surface callbacks through
   `src/platform/android_host.zig` and shared host state instead of the earlier
@@ -153,9 +155,8 @@ The next `AH-A4` sub-cut should be:
 
 - tighten Android surface replacement / destruction policy around the now
   explicit native-window token + `surfaceIdentityEpoch` path
-- determine whether an in-process `replaced` transition is real on this
-  Android path, or whether replacement effectively means `retired` followed by
-  later `acquired`
+- treat both `replaced` and `retired` followed by later `acquired` as real
+  surface replacement stories on this Android path
 - keep Android PTY/runtime lifetime as a parallel concern, but not the next
   blocker for rendering-oriented host work
 

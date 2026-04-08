@@ -21,6 +21,7 @@ Do not use this queue for:
 - `app_architecture/platform/android/RENDER_BACKEND.md`
 - `app_architecture/platform/android/BOOTSTRAP_BRIDGE_PLAN.md`
 - `app_architecture/platform/android/SURFACE_IDENTITY_POLICY.md`
+- `app_architecture/platform/android/ANDROID_PTY_LIFETIME_PLAN.md`
 - `docs/research/terminal/ANDROID_HOST_PTY_SCAN_2026-04-08.md`
 - `docs/todo/ui/renderer.md` (for the pre-Android rendering gate)
 
@@ -184,6 +185,8 @@ Status:
   - `surface.destroyed` was `retired`
   - later foreground return becomes a fresh `acquired`, even when the raw
     native-window token value can recur
+  - explicit in-activity `SurfaceView` recreation produced a true
+    `replaced` transition without a prior `retired`
 - the bootstrap bridge now routes lifecycle/focus/surface callbacks through
   shared Android host semantics instead of the earlier freestanding sequence
   stub
@@ -207,11 +210,10 @@ Do not do:
 
 Next likely follow-ups:
 
-1. determine whether this Android path can produce an in-process `replaced`
-   transition, or whether `retired` then later `acquired` is the real
-   replacement story
-2. only after that, decide whether PTY/runtime lifetime has become the stronger
-   remaining Android blocker
+1. execute `AP-A1` from
+   `app_architecture/platform/android/ANDROID_PTY_LIFETIME_PLAN.md`
+2. if Android renderer binding resumes later, treat both `replaced` and
+   `retired` then later `acquired` as required host replacement stories
 3. do not jump to GLES from native-load success plus one bootstrap pass
 
 ## Current Research Read
