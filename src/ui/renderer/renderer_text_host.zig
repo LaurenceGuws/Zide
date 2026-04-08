@@ -1,11 +1,11 @@
 const iface = @import("interface.zig");
-const gl_backend = @import("gl_backend.zig");
+const renderer_text_backend_host = @import("renderer_text_backend_host.zig");
 const text_runtime = @import("text_runtime.zig");
 
 const Color = iface.Color;
 
 fn prepareTextDrawing(renderer: anytype) void {
-    gl_backend.flushQueuedSurfaceDrawsNow(renderer);
+    renderer_text_backend_host.flushQueuedSurfaceDrawsBeforeTextWork(renderer);
 }
 
 pub fn drawText(renderer: anytype, text: []const u8, x: f32, y: f32, color: Color) void {

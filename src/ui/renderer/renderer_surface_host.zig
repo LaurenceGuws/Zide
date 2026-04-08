@@ -1,6 +1,6 @@
-const gl_backend = @import("gl_backend.zig");
 const metal_text_sample_runtime = @import("metal_text_sample_runtime.zig");
 const present_trace_runtime = @import("present_trace_runtime.zig");
+const renderer_surface_backend_host = @import("renderer_surface_backend_host.zig");
 const shape_draw = @import("shape_draw.zig");
 const surface_draw = @import("surface_draw.zig");
 const types = @import("types.zig");
@@ -66,5 +66,5 @@ pub fn recordSolidSurfaceFromLogicalRect(
 /// OpenGL may queue `SurfaceDraw` solids for submit-time replay; flush now so subsequent
 /// immediate surface work (overlays, selection, etc.) composites in list order.
 pub fn flushQueuedSurfaceDrawsBeforeDependentSurfaceWork(renderer: anytype) void {
-    gl_backend.flushQueuedSurfaceDrawsBeforeImmediateWork(renderer);
+    renderer_surface_backend_host.flushQueuedSurfaceDrawsBeforeDependentSurfaceWork(renderer);
 }
