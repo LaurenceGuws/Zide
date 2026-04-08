@@ -115,6 +115,8 @@ Latest gate-4 narrowing note:
 - shared `text_runtime.zig` flush/fallback helper access now uses
   `src/ui/renderer/renderer_text_backend_host.zig` instead of importing GL and
   Metal backend modules directly
+- shared `bootstrap_runtime.zig` backend selection now terminates through
+  `src/ui/renderer/backend_dispatch.zig` instead of a separate GL/Metal switch
 
 ## How To Use This Queue
 

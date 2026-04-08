@@ -187,3 +187,5 @@ Latest narrowing cut:
 - shared text-runtime flush/fallback helper access now routes through
   `renderer_text_backend_host.zig` instead of importing GL/Metal backend
   modules directly from `text_runtime.zig`
+- shared bootstrap backend selection now routes through `backend_dispatch.zig`
+  instead of a separate GL/Metal switch in `bootstrap_runtime.zig`
