@@ -1,15 +1,9 @@
 const present_trace_runtime = @import("present_trace_runtime.zig");
 const presentable_contract = @import("presentable_contract.zig");
-const capability_contract = @import("capability_contract.zig");
 
 pub const RetainedTerminalPresentableUpdate = @import("backend_dispatch.zig").RetainedPresentableUpdateResult;
 const PresentableDraw = presentable_contract.PresentableDraw;
 const TerminalPresentPath = presentable_contract.TerminalPresentPath;
-pub const TerminalPresentationMode = capability_contract.TerminalPresentationMode;
-
-pub fn terminalPresentationMode(renderer: anytype) TerminalPresentationMode {
-    return renderer.capabilities().terminal_presentation_mode;
-}
 
 pub fn usesDirectTerminalPresentation(renderer: anytype) bool {
     return renderer.backend.ops.presentable.terminalPresentPath(renderer) == .direct_surface;

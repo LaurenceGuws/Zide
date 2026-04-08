@@ -573,6 +573,9 @@ Current evidence:
 - direct-vs-retained terminal present choice is now presentable-owned too:
   `renderer_presentable_host` resolves that path from backend presentable ops
   instead of deriving it from `RendererCapabilities.terminal_presentation_mode`.
+- `renderer_presentable_host` no longer proxies
+  `RendererCapabilities.terminal_presentation_mode` for draw metrics either;
+  that diagnostic capability read now comes from `Renderer` directly.
 - OpenGL presentable operations now resolve retained-target storage through
   backend-owned slot helpers instead of open-coding terminal/editor target
   access at each call site.

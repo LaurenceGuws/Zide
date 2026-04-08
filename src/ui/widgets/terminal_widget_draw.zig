@@ -91,7 +91,7 @@ pub fn drawPrepared(
         const draw_ms_total = time_utils.secondsToMs(draw_end - draw_start);
         const render_ms = time_utils.secondsToMs(draw_end - render_phase_start);
         draw_metrics.publishFrameLatencyMetrics(
-            renderer_presentable_host.terminalPresentationMode(r),
+            r.capabilities().terminal_presentation_mode,
             self.debug.last_terminal_presentation.mode,
             terminal_view.generation,
             lock_ms,
