@@ -165,6 +165,9 @@ The first code cut now exists:
 - `Renderer` no longer embeds selected concrete backend runtime inline either
 - GL and Metal backend modules now reach runtime through selected-backend
   accessors with no intended behavior change
+- Metal runtime optional/helper callers now return neutral results when the
+  selected backend is not Metal, instead of tripping selected-runtime
+  assertions from shared optional hook paths
 
 Immediate remaining pressure after this proof:
 

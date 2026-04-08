@@ -819,6 +819,8 @@ Current checkpoint:
 - selected concrete backend runtime is no longer embedded inline on `Renderer`
 - GL and Metal backend modules now reach runtime storage through
   selected-backend accessors
+- Metal optional helper paths now return neutral results on non-Metal selected
+  runtime instead of panicking through selected-runtime assertions
 - build/test validation stayed green with no intended behavior change
 - gate 4 is improved, but not closed:
   - `Renderer` still owns the backend-tagged storage surface for selected
