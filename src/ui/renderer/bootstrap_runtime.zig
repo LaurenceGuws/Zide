@@ -1,6 +1,5 @@
 const bootstrap_contract = @import("bootstrap_contract.zig");
-const gl_backend = @import("gl_backend.zig");
-const metal_backend = @import("metal_backend.zig");
+const backend_dispatch = @import("backend_dispatch.zig");
 const native_host = @import("../../platform/native_host.zig");
 const sdl_native_host = @import("../../platform/sdl_native_host.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
@@ -19,10 +18,7 @@ pub const InitBootstrapWindow = struct {
 };
 
 pub fn opsForBackend(backend: anytype) bootstrap_contract.BackendBootstrapOps {
-    return switch (backend) {
-        .opengl => gl_backend.bootstrapOps(),
-        .metal => metal_backend.bootstrapOps(),
-    };
+    return backend_dispatch.bootstrapOpsFor(@TypeOf(backend), backend);
 }
 
 pub fn initBootstrapWindow(

@@ -1,3 +1,4 @@
+const bootstrap_contract = @import("bootstrap_contract.zig");
 const types = @import("types.zig");
 const gl_backend = @import("gl_backend.zig");
 const gl_clip_runtime = @import("gl_clip_runtime.zig");
@@ -220,6 +221,13 @@ pub fn opsFor(
                 .recordSurfaceDraw = Metal.recordSurfaceDraw,
             },
         },
+    };
+}
+
+pub fn bootstrapOpsFor(comptime BackendEnum: type, backend: BackendEnum) bootstrap_contract.BackendBootstrapOps {
+    return switch (backend) {
+        .opengl => gl_backend.bootstrapOps(),
+        .metal => metal_backend.bootstrapOps(),
     };
 }
 
