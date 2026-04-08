@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Zide Host Harness</string>
+    <string name="status_booting">Booting host harness…</string>
+    <string name="ime_hint">Tap here to probe IME focus and composition</string>
+    <string name="show_ime">Show IME</string>
+    <string name="hide_ime">Hide IME</string>
+</resources>

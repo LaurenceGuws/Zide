@@ -53,6 +53,7 @@ pub const InputRuntimeState = struct {
 pub const InputDomain = struct {
     allocator: std.mem.Allocator,
     app_host: *native_host.PlatformAppHost,
+    render_host: *native_host.PlatformRenderHost,
     window: *sdl_api.c.SDL_Window,
     should_close_flag: *bool,
     key_down: []bool,
@@ -268,10 +269,12 @@ pub fn addMouseWheel(delta: *f32, value: f32) void {
 
 pub fn startTextInput(domain: InputDomain) void {
     sdl_api.startTextInput(domain.window);
+    domain.app_host.noteTextInputActive(true);
 }
 
 pub fn stopTextInput(domain: InputDomain) void {
     sdl_api.stopTextInput(domain.window);
+    domain.app_host.noteTextInputActive(false);
 }
 
 pub fn deinit(domain: InputDomain) void {

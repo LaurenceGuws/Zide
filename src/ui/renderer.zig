@@ -1379,6 +1379,7 @@ pub const Renderer = struct {
         return .{
             .allocator = self.allocator,
             .app_host = &self.app_host,
+            .render_host = &self.render_host,
             .window = self.window,
             .should_close_flag = &self.input.should_close_flag,
             .key_down = self.input.key_down[0..],

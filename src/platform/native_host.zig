@@ -1,4 +1,5 @@
 const builtin = @import("builtin");
+const std = @import("std");
 const sdl_api = @import("sdl_api.zig");
 
 pub const AppLifecycleState = enum {
@@ -22,10 +23,25 @@ pub const RenderSurfaceBinding = enum {
     metal,
 };
 
+pub const RenderSurfaceAvailability = enum {
+    unavailable,
+    available,
+};
+
+pub const RenderSurfaceMetrics = struct {
+    logical_width: i32 = 0,
+    logical_height: i32 = 0,
+    drawable_width: i32 = 0,
+    drawable_height: i32 = 0,
+    display_scale: f32 = 0.0,
+    pixel_density: f32 = 0.0,
+};
+
 pub const NativeViewHandles = struct {
     cocoa_window: ?*anyopaque = null,
     cocoa_view: ?*anyopaque = null,
     win32_hwnd: ?*anyopaque = null,
+    android_native_window: ?*anyopaque = null,
 };
 
 pub const OpenFileIntent = struct {
@@ -48,20 +64,48 @@ pub const ExternalIntent = union(enum) {
 pub const PlatformAppHost = struct {
     kind: AppHostKind,
     lifecycle_state: AppLifecycleState,
+    active: bool = false,
+    surface_focused: bool = false,
+    text_input_active: bool = false,
     pending_intent: ?ExternalIntent = null,
+
+    pub fn noteStarted(self: *PlatformAppHost) void {
+        self.lifecycle_state = .started;
+    }
 
     pub fn noteResumed(self: *PlatformAppHost) void {
         self.lifecycle_state = .resumed;
+        self.active = true;
         self.pending_intent = .activation_requested;
     }
 
     pub fn notePaused(self: *PlatformAppHost) void {
         self.lifecycle_state = .paused;
+        self.active = false;
+        self.surface_focused = false;
+        self.text_input_active = false;
+    }
+
+    pub fn noteStopped(self: *PlatformAppHost) void {
+        self.lifecycle_state = .stopped;
+        self.active = false;
+        self.surface_focused = false;
+        self.text_input_active = false;
     }
 
     pub fn noteTerminationRequested(self: *PlatformAppHost) void {
         self.lifecycle_state = .terminating;
+        self.active = false;
         self.pending_intent = .quit_requested;
+    }
+
+    pub fn noteSurfaceFocused(self: *PlatformAppHost, focused: bool) void {
+        self.surface_focused = focused;
+        if (!focused) self.text_input_active = false;
+    }
+
+    pub fn noteTextInputActive(self: *PlatformAppHost, active: bool) void {
+        self.text_input_active = active;
     }
 
     pub fn noteOpenFileRequested(self: *PlatformAppHost, path: []const u8) bool {
@@ -83,7 +127,34 @@ pub const PlatformAppHost = struct {
 pub const PlatformRenderHost = struct {
     sdl_window: *sdl_api.c.SDL_Window,
     binding: RenderSurfaceBinding,
+    surface_availability: RenderSurfaceAvailability,
+    surface_metrics: RenderSurfaceMetrics,
+    redraw_requested: bool = false,
     native_handles: NativeViewHandles,
+
+    pub fn hasSurface(self: PlatformRenderHost) bool {
+        return self.surface_availability == .available;
+    }
+
+    pub fn noteSurfaceAvailable(self: *PlatformRenderHost, metrics: RenderSurfaceMetrics) void {
+        self.surface_availability = .available;
+        self.surface_metrics = metrics;
+    }
+
+    pub fn noteSurfaceUnavailable(self: *PlatformRenderHost) void {
+        self.surface_availability = .unavailable;
+        self.surface_metrics = .{};
+        self.redraw_requested = false;
+        self.native_handles.android_native_window = null;
+    }
+
+    pub fn noteRedrawRequested(self: *PlatformRenderHost) void {
+        self.redraw_requested = true;
+    }
+
+    pub fn clearRedrawRequested(self: *PlatformRenderHost) void {
+        self.redraw_requested = false;
+    }
 
     pub fn cocoaWindow(self: PlatformRenderHost) ?*anyopaque {
         return self.native_handles.cocoa_window;
@@ -96,16 +167,47 @@ pub const PlatformRenderHost = struct {
     pub fn win32Hwnd(self: PlatformRenderHost) ?*anyopaque {
         return self.native_handles.win32_hwnd;
     }
+
+    pub fn androidNativeWindow(self: PlatformRenderHost) ?*anyopaque {
+        return self.native_handles.android_native_window;
+    }
+
+    pub fn noteAndroidNativeWindow(self: *PlatformRenderHost, native_window: ?*anyopaque) void {
+        self.native_handles.android_native_window = native_window;
+        if (native_window == null) {
+            self.surface_availability = .unavailable;
+        }
+    }
 };
 
 pub fn currentAppHost() PlatformAppHost {
+    const kind: AppHostKind = if (builtin.target.os.tag == .linux and builtin.target.abi == .android)
+        .android_activity
+    else switch (builtin.target.os.tag) {
+        .macos => .appkit,
+        .windows => .windows_desktop,
+        else => .sdl_desktop,
+    };
     return .{
-        .kind = switch (builtin.target.os.tag) {
-            .macos => .appkit,
-            .windows => .windows_desktop,
-            else => .sdl_desktop,
-        },
+        .kind = kind,
         .lifecycle_state = .started,
+    };
+}
+
+pub fn captureWindowSurfaceMetrics(window: *sdl_api.c.SDL_Window) RenderSurfaceMetrics {
+    var logical_width: c_int = 0;
+    var logical_height: c_int = 0;
+    var drawable_width: c_int = 0;
+    var drawable_height: c_int = 0;
+    sdl_api.getWindowSize(window, &logical_width, &logical_height);
+    sdl_api.getDrawableSize(window, &drawable_width, &drawable_height);
+    return .{
+        .logical_width = logical_width,
+        .logical_height = logical_height,
+        .drawable_width = drawable_width,
+        .drawable_height = drawable_height,
+        .display_scale = sdl_api.getWindowDisplayScale(window),
+        .pixel_density = sdl_api.getWindowPixelDensity(window),
     };
 }
 
@@ -116,10 +218,96 @@ pub fn captureRenderHost(
     return .{
         .sdl_window = window,
         .binding = binding,
+        .surface_availability = .available,
+        .surface_metrics = captureWindowSurfaceMetrics(window),
         .native_handles = .{
             .cocoa_window = sdl_api.getWindowCocoaWindow(window),
             .cocoa_view = sdl_api.getWindowCocoaView(window),
             .win32_hwnd = sdl_api.getWindowWin32Hwnd(window),
         },
     };
+}
+
+test "render host surface transitions clear redraw and native window on loss" {
+    var host = PlatformRenderHost{
+        .sdl_window = @ptrFromInt(1),
+        .binding = .none,
+        .surface_availability = .available,
+        .surface_metrics = .{
+            .logical_width = 100,
+            .logical_height = 60,
+            .drawable_width = 200,
+            .drawable_height = 120,
+            .display_scale = 2.0,
+            .pixel_density = 2.0,
+        },
+        .redraw_requested = true,
+        .native_handles = .{
+            .android_native_window = @ptrFromInt(2),
+        },
+    };
+
+    host.noteSurfaceUnavailable();
+
+    try std.testing.expectEqual(RenderSurfaceAvailability.unavailable, host.surface_availability);
+    try std.testing.expectEqual(@as(i32, 0), host.surface_metrics.logical_width);
+    try std.testing.expectEqual(@as(i32, 0), host.surface_metrics.drawable_width);
+    try std.testing.expect(!host.redraw_requested);
+    try std.testing.expectEqual(@as(?*anyopaque, null), host.androidNativeWindow());
+}
+
+test "render host redraw and android window state can be re-armed after surface return" {
+    var host = PlatformRenderHost{
+        .sdl_window = @ptrFromInt(1),
+        .binding = .opengl,
+        .surface_availability = .unavailable,
+        .surface_metrics = .{},
+        .native_handles = .{},
+    };
+
+    host.noteAndroidNativeWindow(@ptrFromInt(3));
+    host.noteSurfaceAvailable(.{
+        .logical_width = 360,
+        .logical_height = 760,
+        .drawable_width = 1080,
+        .drawable_height = 2280,
+        .display_scale = 3.0,
+        .pixel_density = 3.0,
+    });
+    host.noteRedrawRequested();
+
+    try std.testing.expect(host.hasSurface());
+    try std.testing.expectEqual(@as(?*anyopaque, @ptrFromInt(3)), host.androidNativeWindow());
+    try std.testing.expectEqual(@as(i32, 1080), host.surface_metrics.drawable_width);
+    try std.testing.expect(host.redraw_requested);
+
+    host.clearRedrawRequested();
+    try std.testing.expect(!host.redraw_requested);
+}
+
+test "app host keeps lifecycle separate from focus and text input" {
+    var app_host = PlatformAppHost{
+        .kind = .android_activity,
+        .lifecycle_state = .started,
+    };
+
+    app_host.noteResumed();
+    app_host.noteSurfaceFocused(true);
+    app_host.noteTextInputActive(true);
+    try std.testing.expect(app_host.active);
+    try std.testing.expect(app_host.surface_focused);
+    try std.testing.expect(app_host.text_input_active);
+
+    app_host.notePaused();
+    try std.testing.expectEqual(AppLifecycleState.paused, app_host.lifecycle_state);
+    try std.testing.expect(!app_host.active);
+    try std.testing.expect(!app_host.surface_focused);
+    try std.testing.expect(!app_host.text_input_active);
+
+    app_host.noteStarted();
+    try std.testing.expectEqual(AppLifecycleState.started, app_host.lifecycle_state);
+    try std.testing.expect(!app_host.active);
+
+    app_host.noteStopped();
+    try std.testing.expectEqual(AppLifecycleState.stopped, app_host.lifecycle_state);
 }

@@ -1,5 +1,6 @@
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
+const android_host = @import("../../platform/android_host.zig");
 const native_host = @import("../../platform/native_host.zig");
 const platform_input_events = @import("../../platform/input_events.zig");
 const input_state = @import("input_state.zig");
@@ -73,6 +74,25 @@ fn handleEvent(
             domain.should_close_flag.* = true;
             domain.app_host.noteTerminationRequested();
         },
+        sdl_api.EVENT_APP_WILL_ENTER_FOREGROUND => {
+            if (!android_host.noteWillEnterForeground(domain.app_host)) domain.app_host.noteStarted();
+        },
+        sdl_api.EVENT_APP_DID_ENTER_FOREGROUND => {
+            if (!android_host.noteDidEnterForeground(domain.app_host, domain.render_host)) {
+                domain.app_host.noteResumed();
+                domain.render_host.noteRedrawRequested();
+            }
+        },
+        sdl_api.EVENT_APP_WILL_ENTER_BACKGROUND => {
+            if (!android_host.noteWillEnterBackground(domain.app_host)) domain.app_host.notePaused();
+        },
+        sdl_api.EVENT_APP_DID_ENTER_BACKGROUND => {
+            if (!android_host.noteDidEnterBackground(domain.app_host)) domain.app_host.noteStopped();
+        },
+        sdl_api.EVENT_APP_TERMINATING => {
+            domain.should_close_flag.* = true;
+            domain.app_host.noteTerminationRequested();
+        },
         sdl_api.EVENT_DROP_FILE => {
             if (sdl_api.dropEventWindowId(event) != main_window_id) return;
             const path = sdl_api.dropEventData(event) orelse return;
@@ -80,7 +100,7 @@ fn handleEvent(
         },
         sdl_api.EVENT_WINDOW => {
             if (sdl_api.windowEventId(event) != main_window_id) return;
-            handleWindowEvent(event.type, domain.app_host, domain.should_close_flag, domain.window_changes);
+            handleWindowEvent(event.type, domain.app_host, domain.render_host, domain.window, domain.should_close_flag, domain.window_changes);
             if (sdl_api.isFocusGainedEvent(event.type)) {
                 applyWindowFocusState(domain, window_log, true, sdl_api.windowEventName(event.type));
             }
@@ -132,7 +152,7 @@ fn handleEvent(
             if (sdl_api.isRuntimeWakeEvent(event.type)) return;
             if (sdl_api.isWindowEventType(event.type)) {
                 if (sdl_api.windowEventId(event) != main_window_id) return;
-                handleWindowEvent(event.type, domain.app_host, domain.should_close_flag, domain.window_changes);
+                handleWindowEvent(event.type, domain.app_host, domain.render_host, domain.window, domain.should_close_flag, domain.window_changes);
                 if (sdl_api.isFocusGainedEvent(event.type)) {
                     applyWindowFocusState(domain, window_log, true, sdl_api.windowEventName(event.type));
                 }
@@ -252,9 +272,16 @@ fn applyWindowFocusState(
     if (focused) {
         sdl_api.startTextInput(domain.window);
         text_input.reapplyRect(domain.text_input_state, domain.window);
-        domain.app_host.noteResumed();
+        if (!android_host.noteSurfaceFocus(domain.app_host, true)) {
+            domain.app_host.noteSurfaceFocused(true);
+            domain.app_host.noteTextInputActive(true);
+        }
     } else {
-        domain.app_host.notePaused();
+        sdl_api.stopTextInput(domain.window);
+        if (!android_host.noteSurfaceFocus(domain.app_host, false)) {
+            domain.app_host.noteSurfaceFocused(false);
+            domain.app_host.noteTextInputActive(false);
+        }
     }
     domain.window_focused.* = focused;
     window_log.logf(.info, "window focus source={s} focused={d}", .{
@@ -287,12 +314,20 @@ fn resetSdlKeyboardState() void {
 fn handleWindowEvent(
     event_type: c_uint,
     app_host: *native_host.PlatformAppHost,
+    render_host: *native_host.PlatformRenderHost,
+    window: *sdl_api.c.SDL_Window,
     should_close: *bool,
     window_changes: *sdl_api.WindowChangeMask,
 ) void {
     const change = sdl_api.classifyWindowChange(event_type);
     if (change.any()) {
         window_changes.merge(change);
+        if (change.affectsWindowRefresh()) {
+            if (!android_host.noteWindowRefresh(app_host, render_host, window)) {
+                render_host.noteSurfaceAvailable(native_host.captureWindowSurfaceMetrics(window));
+                render_host.noteRedrawRequested();
+            }
+        }
     }
     if (sdl_api.isCloseEvent(event_type)) {
         should_close.* = true;
@@ -396,10 +431,18 @@ test "keyboard state resets across focus transitions" {
     var pending_wait_event: sdl_api.c.SDL_Event = undefined;
     var pending_wait_event_valid = false;
     var app_host = native_host.currentAppHost();
+    var render_host = native_host.PlatformRenderHost{
+        .sdl_window = @ptrFromInt(1),
+        .binding = .none,
+        .surface_availability = .available,
+        .surface_metrics = .{},
+        .native_handles = .{},
+    };
 
     const domain: input_state.InputDomain = .{
         .allocator = std.testing.allocator,
         .app_host = &app_host,
+        .render_host = &render_host,
         .window = undefined,
         .should_close_flag = &should_close,
         .key_down = key_down[0..],

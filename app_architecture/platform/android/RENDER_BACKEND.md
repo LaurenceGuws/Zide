@@ -5,6 +5,10 @@ Android lifecycle and native window ownership.
 
 This doc is architecture authority for Android-native render-host shape.
 
+Supporting research:
+
+- `docs/research/terminal/ANDROID_HOST_PTY_SCAN_2026-04-08.md`
+
 ## Target Stack
 
 - app host: Android `Activity`
@@ -150,6 +154,60 @@ The correct migration order is:
 3. make surface creation/loss/replacement explicit in the host contract
 4. bind the first backend to that contract
 5. validate pause/resume/resize/redraw-needed truth
+
+## Current Code Checkpoint
+
+The first executable Android-host cut is now active in the shared host seam:
+
+- `src/platform/native_host.zig` can now carry:
+  - surface available vs unavailable
+  - logical and drawable size
+  - display scale and pixel density
+  - redraw-requested truth
+  - Android native window identity slot
+
+This is intentionally not GLES work.
+
+What is still missing:
+
+- Android `Activity` lifecycle mapping into `PlatformAppHost`
+- Android `Surface` / `ANativeWindow` event mapping into `PlatformRenderHost`
+- focus and IME ownership points
+- real redraw-needed / resize / surface-loss event wiring
+- Android PTY/runtime lifetime policy against pause/stop/background pressure
+
+Current event-mapping checkpoint:
+
+- the shared SDL input/event path now updates:
+  - `PlatformAppHost` lifecycle transitions for foreground/background
+  - `PlatformAppHost` surface-focus and text-input-active truth separately
+  - `PlatformRenderHost` surface metrics and redraw-requested truth on refresh
+    events
+
+This is still shared host plumbing, not Android-specific event ingestion yet.
+
+The first Android-owned mapper seam now exists too:
+
+- `src/platform/android_host.zig` owns the first Android-shaped lifecycle and
+  surface helper functions against `PlatformAppHost` and `PlatformRenderHost`
+- shared input/runtime code can delegate Android semantics there instead of
+  embedding them in renderer-owned logic
+
+The first repo-owned Android bootstrap surface now exists outside `src/`:
+
+- `android/host-harness/` is a plain Android host harness app
+- it is for lifecycle/surface/focus/IME validation only
+- it is intentionally not SDL, NDK, GLES, or Vulkan bootstrap yet
+- first APK build pressure was local environment/tooling state, not a proven
+  host-architecture problem
+
+Current validation checkpoint:
+
+- local APK build now succeeds against a writable user-local SDK root with API
+  35 packages
+- the harness installs and launches on the Note10
+- the first observed device log sequence already confirms real lifecycle +
+  surface callback ordering before any renderer backend work
 
 ## Explicit Anti-Goals
 

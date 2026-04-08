@@ -43,3 +43,7 @@ __pycache__/
 
 # Local JS package installs
 node_modules/
+
+# Android local build state
+.gradle/
+local.properties
