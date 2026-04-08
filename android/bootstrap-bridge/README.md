@@ -31,6 +31,8 @@ This writes:
 `android/bootstrap-bridge/app/src/main/jniLibs/arm64-v8a/libzide_android_bridge.so`
 
 The bridge build expects NDK `27.1.12297006` in the selected SDK root.
+It links `libandroid` because the bridge now uses
+`ANativeWindow_fromSurface(...)` and `ANativeWindow_release(...)`.
 
 ## Build APK
 
@@ -72,14 +74,14 @@ Current successful bootstrap run:
 - `native.onCreate seq=1`
 - `native.onStart seq=2`
 - `native.onResume seq=3`
-- `native.surfaceAvailable seq=4`
+- `native.surfaceAvailable seq=4 token=0x...`
 - `native.onWindowFocus seq=6`
 - HOME/background also confirms:
   - `native.onPause seq=7`
-  - `native.surfaceAvailable seq=8`
-  - `native.surfaceAvailable seq=9`
+  - `native.surfaceAvailable seq=8 token=0x...`
+  - `native.surfaceAvailable seq=9 token=0x...`
   - `native.onWindowFocus seq=10`
-  - `native.surfaceDestroyed seq=11`
+  - `native.surfaceDestroyed seq=11 token=0x0`
   - `native.onStop seq=12`
 
 That proves:
@@ -88,5 +90,7 @@ That proves:
 - Java lifecycle/surface callbacks are crossing into repo-owned Zig code
 - those callbacks now route through shared Android host semantics rather than a
   private bridge-only lifecycle model
+- the bridge can surface a real stable `ANativeWindow` token through repeated
+  `surface.changed` callbacks and clear it on `surface.destroyed`
 - Android native entry is now real enough to move on to deeper host/runtime
   ownership questions rather than more bootstrap speculation

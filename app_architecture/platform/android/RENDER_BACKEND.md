@@ -256,12 +256,19 @@ Current `AH-A4` checkpoint:
 
 - `android/bootstrap-bridge/` now builds and installs on the Note10
 - the bootstrap app now loads a repo-built Zig native library successfully
+- the bridge build now links `libandroid`, so native-window symbol resolution
+  fails at build time instead of later during `System.loadLibrary(...)`
 - launch-path native callback acknowledgements are live on device:
   - `native.onCreate seq=1`
   - `native.onStart seq=2`
   - `native.onResume seq=3`
   - `native.surfaceAvailable seq=4`
   - `native.onWindowFocus seq=6`
+- the bootstrap bridge now surfaces real native-window identity into
+  `PlatformRenderHost`
+- the Note10 currently shows one stable non-zero native-window token across
+  repeated `surface.changed` callbacks, then `token=0x0` after
+  `surface.destroyed`
 - the bridge now routes those callbacks through `android_host.zig` and shared
   host state instead of a private lifecycle stub
 - a HOME/background pass now also confirms:

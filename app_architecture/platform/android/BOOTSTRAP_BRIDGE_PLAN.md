@@ -93,6 +93,9 @@ Current checkpoint:
   Android app
 - `ops/android_build_bootstrap_bridge.sh` now builds the Zig bridge through a
   Zig object + NDK clang link path
+- the bridge link path now links `libandroid` and rejects unresolved native
+  symbols at build time, because `ANativeWindow_fromSurface(...)` and
+  `ANativeWindow_release(...)` are part of the real bootstrap surface now
 - the Note10 now loads the repo-built Zig library successfully
 - first observed native callback acknowledgements are:
   - `native.onCreate seq=1`
@@ -100,6 +103,10 @@ Current checkpoint:
   - `native.onResume seq=3`
   - `native.surfaceAvailable seq=4`
   - `native.onWindowFocus seq=6`
+- the bootstrap bridge now surfaces real `ANativeWindow` identity into
+  `PlatformRenderHost`, with the Note10 showing:
+  - stable non-zero token across repeated `surface.changed` callbacks
+  - `token=0x0` after `surface.destroyed`
 - the bootstrap bridge now routes lifecycle/focus/surface callbacks through
   `src/platform/android_host.zig` and shared host state instead of the earlier
   freestanding sequence stub
@@ -138,7 +145,6 @@ Stop `AH-A4` when:
 
 The next `AH-A4` sub-cut should be:
 
-- surface real Android-native window identity into `PlatformRenderHost`
 - decide whether the stronger next blocker is:
   - Android native-window/render-host truth
   - Android PTY/runtime lifetime truth

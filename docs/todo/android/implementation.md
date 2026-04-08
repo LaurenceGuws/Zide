@@ -159,6 +159,8 @@ Status:
 - `android/bootstrap-bridge/` now exists as the first runtime-lane Android app
 - `ops/android_build_bootstrap_bridge.sh` builds the Zig bridge through a Zig
   object + NDK clang link path
+- that bridge link now pulls in `libandroid` and rejects unresolved native
+  symbols at build time
 - the Note10 now loads the repo-built Zig library successfully
 - first launch-path native callback acknowledgements are live:
   - `native.onCreate seq=1`
@@ -166,6 +168,11 @@ Status:
   - `native.onResume seq=3`
   - `native.surfaceAvailable seq=4`
   - `native.onWindowFocus seq=6`
+- the bootstrap bridge now surfaces real `ANativeWindow` identity into shared
+  host state:
+  - repeated `surface.changed` callbacks kept one stable non-zero token on the
+    Note10
+  - `surface.destroyed` cleared that token back to `0x0`
 - the bootstrap bridge now routes lifecycle/focus/surface callbacks through
   shared Android host semantics instead of the earlier freestanding sequence
   stub
@@ -188,11 +195,12 @@ Do not do:
 
 Next likely follow-ups:
 
-1. surface real Android native-window identity into `PlatformRenderHost`
-2. decide whether Android host pressure or Android PTY lifetime pressure is the
-   stronger next blocker
-3. only then choose whether the next lane is native-window/render-host depth or
-   PTY/runtime ownership
+1. decide whether Android native-window/render-host truth or Android PTY
+   lifetime truth is the stronger next blocker
+2. if host pressure wins, tighten Android surface replacement / destruction
+   policy around the real token-bearing window path
+3. only then choose whether the next lane is native-window/render-host depth
+   or PTY/runtime ownership
 
 ## Current Research Read
 
