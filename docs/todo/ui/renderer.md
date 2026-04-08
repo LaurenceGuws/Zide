@@ -617,6 +617,7 @@ Owner docs:
 
 - `app_architecture/ui/RENDER_BACKEND_CONTRACT.md`
 - `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md`
+- `app_architecture/ui/TERMINAL_PRESENT_TRANSACTION_PLAN.md`
 
 Primary code pressure:
 
@@ -678,6 +679,10 @@ Stop marker:
 - top-level terminal presentation entry now routes through one
   `renderer_presentable_host` execution seam
 - validation green
+
+Follow-on redesign authority:
+
+- `app_architecture/ui/TERMINAL_PRESENT_TRANSACTION_PLAN.md`
 
 ### `RB-B2` Backend runtime ownership
 

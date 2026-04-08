@@ -27,6 +27,9 @@ const TerminalPresentationSampleMode = terminal_debug_geometry.TerminalPresentat
 const TerminalPresentationSample = terminal_debug_geometry.TerminalPresentationSample;
 const InputSnapshot = shared_types.input.InputSnapshot;
 const RetainedTerminalPresentableUpdate = renderer_presentable_host.RetainedTerminalPresentableUpdate;
+const TerminalPresentPlan = renderer_presentable_host.TerminalPresentPlan;
+const TerminalPresentResult = renderer_presentable_host.TerminalPresentResult;
+const TerminalPresentOutcome = @import("../renderer/presentable_contract.zig").TerminalPresentOutcome;
 
 const drawRowBackgrounds = draw_grid.drawRowBackgrounds;
 const drawRowGlyphs = draw_grid.drawRowGlyphs;
@@ -131,13 +134,6 @@ pub const RetainedPresentationResult = struct {
     kitty_ms: f64 = 0.0,
 };
 
-pub const PresentationRunResult = struct {
-    early_return: bool = false,
-    bg_ms: f64 = 0.0,
-    glyph_ms: f64 = 0.0,
-    kitty_ms: f64 = 0.0,
-};
-
 pub fn runFastPresentIfAvailable(
     surface_state: anytype,
     renderer: anytype,
@@ -158,7 +154,7 @@ pub fn runFastPresentIfAvailable(
     view_geometry: TerminalViewGeometry,
     note_present_ctx: anytype,
     note_present: anytype,
-) PresentationRunResult {
+) TerminalPresentResult {
     if (!tryFastPresentExisting(
         surface_state,
         renderer,
@@ -180,7 +176,11 @@ pub fn runFastPresentIfAvailable(
         note_present_ctx,
         note_present,
     )) return .{};
-    return .{ .early_return = true };
+    return .{
+        .outcome = .reused,
+        .cache_state_advanced = true,
+        .target_available = true,
+    };
 }
 
 pub const SurfacePresentResult = struct {
@@ -269,10 +269,10 @@ pub fn updateAndPresent(
         self,
         notePresentSample,
     );
-    result.early_return = presentation.early_return;
-    result.presentation_bg_ms = presentation.bg_ms;
-    result.presentation_glyph_ms = presentation.glyph_ms;
-    result.presentation_kitty_ms = presentation.kitty_ms;
+    result.early_return = presentation.outcome == .reused;
+    result.presentation_bg_ms = presentation.timing.background_ms;
+    result.presentation_glyph_ms = presentation.timing.glyph_ms;
+    result.presentation_kitty_ms = presentation.timing.kitty_ms;
     result.special_sprite_glyphs = self.debug.last_metal_terminal_fallback.special_sprite_glyphs;
     result.shaped_special_glyphs = self.debug.last_metal_terminal_fallback.shaped_special_glyphs;
     if (result.early_return) return result;
@@ -901,8 +901,8 @@ pub fn executeRetainedPresentFlow(
     recent_input_window_active: bool,
     note_present_ctx: anytype,
     note_present: anytype,
-) PresentationRunResult {
-    var result: PresentationRunResult = .{};
+) TerminalPresentResult {
+    var result: TerminalPresentResult = .{};
     if (terminal_view.rows == 0 or terminal_view.cols == 0) return result;
 
     const surface_update_plan = planUpdate(
@@ -952,10 +952,96 @@ pub fn executeRetainedPresentFlow(
         note_present_ctx,
         note_present,
     );
-    result.bg_ms = retained.bg_ms;
-    result.glyph_ms = retained.glyph_ms;
-    result.kitty_ms = retained.kitty_ms;
+    result.outcome = if (cycle.update == .updated) .updated_and_presented else .presented;
+    result.cache_state_advanced = cycle.update == .updated;
+    result.target_available = cycle.update != .unsupported and cycle.update != .unavailable;
+    result.followup.required = cycle.update == .unavailable;
+    result.followup.reason = if (cycle.update == .unavailable) .target_unavailable else .none;
+    result.timing.background_ms = retained.bg_ms;
+    result.timing.glyph_ms = retained.glyph_ms;
+    result.timing.kitty_ms = retained.kitty_ms;
     return result;
+}
+
+fn buildTerminalPresentPlan(
+    self: anytype,
+    renderer: anytype,
+    terminal_view: view_state.TerminalViewModel,
+    view_geometry: TerminalViewGeometry,
+    hover_link_id: u32,
+    draw_cursor: bool,
+    cursor: CursorPos,
+    cursor_style: terminal_types.CursorStyle,
+    composing_active: bool,
+    composing_hash: u64,
+    x: f32,
+    y: f32,
+    width: f32,
+    height: f32,
+    blink_requires_partial: bool,
+) TerminalPresentPlan {
+    const geometry = computePresentationSurfaceGeometry(renderer, terminal_view, view_geometry);
+    const delta = self.surface.presentationUpdateDelta(
+        terminal_view,
+        geometry,
+        draw_cursor,
+        cursor,
+        cursor_style,
+    );
+    const overlay_changed = self.surface.overlayPresentationChanged(hover_link_id, composing_active, composing_hash);
+    const viewport_shifted = terminal_view.partial_capture.active_viewport_shift_rows != 0;
+    const invalidation_blocks_reuse = delta.clear_generation_changed or
+        delta.cell_metrics_changed or
+        delta.render_scale_changed or
+        delta.cursor_changed or
+        overlay_changed or
+        blink_requires_partial;
+    return .{
+        .update_intent = if (terminal_view.rows == 0 or terminal_view.cols == 0)
+            .none
+        else if (viewport_shifted or invalidation_blocks_reuse)
+            .full
+        else
+            .partial,
+        .present_intent = if (renderer_presentable_host.usesDirectTerminalPresentation(renderer))
+            .direct_present
+        else if (self.surface.presentableReady())
+            .reuse
+        else
+            .update_and_present,
+        .surface_geometry = .{
+            .logical_width = geometry.surface_w,
+            .logical_height = geometry.surface_h,
+            .visible_width = geometry.visible_w,
+            .visible_height = geometry.visible_h,
+            .dest_x = x,
+            .dest_y = y,
+            .dest_width = width,
+            .dest_height = height,
+        },
+        .reuse_policy = .{
+            .reuse_allowed = self.surface.presentableReady() and terminal_view.cells.len > 0,
+            .shift_reuse_requested = viewport_shifted,
+            .invalidation_blocks_reuse = invalidation_blocks_reuse,
+        },
+        .damage = .{
+            .mode = switch (self.publication.cacheConst().dirty) {
+                .none => .none,
+                .partial => .partial,
+                .full => .full,
+            },
+            .has_partial_payload = self.publication.cacheConst().dirty == .partial,
+        },
+        .invalidation_reasons = .{
+            .generation_changed = delta.generation_changed,
+            .clear_generation_changed = delta.clear_generation_changed,
+            .cell_metrics_changed = delta.cell_metrics_changed,
+            .scale_changed = delta.render_scale_changed,
+            .cursor_changed = delta.cursor_changed,
+            .overlay_changed = overlay_changed,
+            .viewport_shifted = viewport_shifted,
+        },
+    };
 }
 
 pub fn runPresentation(
@@ -983,7 +1069,7 @@ pub fn runPresentation(
     recent_input_window_active: bool,
     note_present_ctx: anytype,
     note_present: anytype,
-) PresentationRunResult {
+) TerminalPresentResult {
     clearPresentationSample(self);
     const view_cells_len = terminal_view.cells.len;
     const bg_color = if (view_cells_len > 0)
@@ -1024,9 +1110,9 @@ pub fn runPresentation(
         bg_color: Color,
     };
     const Hooks = struct {
-        pub const Result = PresentationRunResult;
+        pub const Result = TerminalPresentResult;
 
-        pub fn runDirect(ctx: Ctx, renderer_local: @TypeOf(renderer)) Result {
+        pub fn runDirect(_: TerminalPresentPlan, ctx: Ctx, renderer_local: @TypeOf(renderer)) Result {
             const fast = runFastPresentIfAvailable(
                 &ctx.self_widget.surface,
                 renderer_local,
@@ -1048,7 +1134,7 @@ pub fn runPresentation(
                 ctx.note_present_ctx,
                 note_present,
             );
-            if (fast.early_return) return fast;
+            if (fast.outcome == .reused) return fast;
             var local: Result = .{};
             const partial = tryDirectSnapshotUpdate(
                 ctx.self_widget,
@@ -1074,9 +1160,12 @@ pub fn runPresentation(
                 note_present,
             );
             if (partial.completed) {
-                local.bg_ms = partial.bg_ms;
-                local.glyph_ms = partial.glyph_ms;
-                local.kitty_ms = partial.kitty_ms;
+                local.outcome = .updated_and_presented;
+                local.cache_state_advanced = true;
+                local.target_available = true;
+                local.timing.background_ms = partial.bg_ms;
+                local.timing.glyph_ms = partial.glyph_ms;
+                local.timing.kitty_ms = partial.kitty_ms;
                 return local;
             }
             const direct = directPresent(
@@ -1100,13 +1189,16 @@ pub fn runPresentation(
                 ctx.note_present_ctx,
                 note_present,
             );
-            local.bg_ms = direct.bg_ms;
-            local.glyph_ms = direct.glyph_ms;
-            local.kitty_ms = direct.kitty_ms;
+            local.outcome = .presented;
+            local.cache_state_advanced = true;
+            local.target_available = true;
+            local.timing.background_ms = direct.bg_ms;
+            local.timing.glyph_ms = direct.glyph_ms;
+            local.timing.kitty_ms = direct.kitty_ms;
             return local;
         }
 
-        pub fn runRetained(ctx: Ctx, renderer_local: @TypeOf(renderer)) Result {
+        pub fn runRetained(_: TerminalPresentPlan, ctx: Ctx, renderer_local: @TypeOf(renderer)) Result {
             const fast = runFastPresentIfAvailable(
                 &ctx.self_widget.surface,
                 renderer_local,
@@ -1128,7 +1220,7 @@ pub fn runPresentation(
                 ctx.note_present_ctx,
                 note_present,
             );
-            if (fast.early_return) return fast;
+            if (fast.outcome == .reused) return fast;
             return executeRetainedPresentFlow(
                 ctx.self_widget,
                 ctx.shell,
@@ -1154,7 +1246,24 @@ pub fn runPresentation(
             );
         }
     };
-    return renderer_presentable_host.runTerminalPresentPath(renderer, Ctx{
+    const plan = buildTerminalPresentPlan(
+        self,
+        renderer,
+        terminal_view,
+        view_geometry,
+        hover_link_id,
+        draw_cursor,
+        cursor,
+        cursor_style,
+        composing_active,
+        composing_hash,
+        x,
+        y,
+        width,
+        height,
+        blink_requires_partial,
+    );
+    return renderer_presentable_host.runTerminalPresentPath(renderer, plan, Ctx{
         .self_widget = self,
         .shell = shell,
         .terminal_view = terminal_view,

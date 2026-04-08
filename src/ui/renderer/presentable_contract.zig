@@ -50,3 +50,98 @@ pub const TerminalPresentPath = enum {
     retained_surface,
     direct_surface,
 };
+
+pub const TerminalPresentUpdateIntent = enum {
+    none,
+    partial,
+    full,
+};
+
+pub const TerminalPresentIntent = enum {
+    reuse,
+    update_and_present,
+    direct_present,
+};
+
+pub const TerminalPresentDamageMode = enum {
+    none,
+    full,
+    partial,
+};
+
+pub const TerminalPresentGeometry = struct {
+    logical_width: i32 = 0,
+    logical_height: i32 = 0,
+    visible_width: i32 = 0,
+    visible_height: i32 = 0,
+    dest_x: f32 = 0,
+    dest_y: f32 = 0,
+    dest_width: f32 = 0,
+    dest_height: f32 = 0,
+};
+
+pub const TerminalPresentReusePolicy = struct {
+    reuse_allowed: bool = false,
+    shift_reuse_requested: bool = false,
+    invalidation_blocks_reuse: bool = false,
+};
+
+pub const TerminalPresentDamage = struct {
+    mode: TerminalPresentDamageMode = .none,
+    has_partial_payload: bool = false,
+};
+
+pub const TerminalPresentInvalidationReasons = struct {
+    generation_changed: bool = false,
+    clear_generation_changed: bool = false,
+    cell_metrics_changed: bool = false,
+    scale_changed: bool = false,
+    cursor_changed: bool = false,
+    overlay_changed: bool = false,
+    viewport_shifted: bool = false,
+};
+
+pub const TerminalPresentPlan = struct {
+    update_intent: TerminalPresentUpdateIntent = .none,
+    present_intent: TerminalPresentIntent = .update_and_present,
+    surface_geometry: TerminalPresentGeometry = .{},
+    reuse_policy: TerminalPresentReusePolicy = .{},
+    damage: TerminalPresentDamage = .{},
+    invalidation_reasons: TerminalPresentInvalidationReasons = .{},
+};
+
+pub const TerminalPresentOutcome = enum {
+    presented,
+    reused,
+    updated_and_presented,
+    unavailable,
+    skipped,
+};
+
+pub const TerminalPresentFollowupReason = enum {
+    none,
+    target_unavailable,
+    reuse_rejected,
+    update_invalidated,
+    geometry_changed,
+};
+
+pub const TerminalPresentTiming = struct {
+    update_ms: f64 = 0.0,
+    background_ms: f64 = 0.0,
+    glyph_ms: f64 = 0.0,
+    kitty_ms: f64 = 0.0,
+};
+
+pub const TerminalPresentFollowup = struct {
+    required: bool = false,
+    reason: TerminalPresentFollowupReason = .none,
+};
+
+pub const TerminalPresentResult = struct {
+    outcome: TerminalPresentOutcome = .skipped,
+    cache_state_advanced: bool = false,
+    target_available: bool = false,
+    timing: TerminalPresentTiming = .{},
+    followup: TerminalPresentFollowup = .{},
+};

@@ -4,11 +4,13 @@ const presentable_contract = @import("presentable_contract.zig");
 pub const RetainedTerminalPresentableUpdate = @import("backend_dispatch.zig").RetainedPresentableUpdateResult;
 const PresentableDraw = presentable_contract.PresentableDraw;
 const TerminalPresentPath = presentable_contract.TerminalPresentPath;
+pub const TerminalPresentPlan = presentable_contract.TerminalPresentPlan;
+pub const TerminalPresentResult = presentable_contract.TerminalPresentResult;
 
-pub fn runTerminalPresentPath(renderer: anytype, ctx: anytype, comptime Hooks: type) Hooks.Result {
+pub fn runTerminalPresentPath(renderer: anytype, plan: TerminalPresentPlan, ctx: anytype, comptime Hooks: type) TerminalPresentResult {
     return switch (renderer.backend.ops.presentable.terminalPresentPath(renderer)) {
-        .direct_surface => Hooks.runDirect(ctx, renderer),
-        .retained_surface => Hooks.runRetained(ctx, renderer),
+        .direct_surface => Hooks.runDirect(plan, ctx, renderer),
+        .retained_surface => Hooks.runRetained(plan, ctx, renderer),
     };
 }
 
