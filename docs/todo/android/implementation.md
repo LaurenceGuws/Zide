@@ -1,19 +1,19 @@
-# Android Native Host Queue
+# Android Terminal Queue
 
-This is the active execution queue for Android-native host work that is allowed
-before Android renderer backend bootstrap.
+This is the active execution queue for Android terminal work.
 
 Use this queue for:
 
-- `Activity` lifecycle truth
-- `Surface` / `ANativeWindow` lifecycle truth
-- focus, IME, redraw-needed, resize, and surface-loss ownership
+- Android host/bootstrap/runtime work
+- Android PTY/runtime lifetime work
+- Android renderer-unblocking work when Android is the forcing function
+- Android terminal product decisions and sequencing
 
 Do not use this queue for:
 
-- GLES backend bootstrap
-- Vulkan backend bootstrap
-- renderer contract work that is not forced by Android host pressure
+- generic renderer cleanup with no Android leverage
+- desktop-only work with no Android leverage
+- speculative backend work that bypasses the queue's current blocker notes
 
 ## Owner Docs
 
@@ -29,22 +29,52 @@ Do not use this queue for:
 
 ## Current Rule
 
-Android host work is allowed now.
-
-Android rendering backend work is still blocked until the renderer queue says
-the pre-Android rendering gate is met.
+Android terminal excellence is the active repo goal until further notice.
 
 Current boundary:
 
-- the Android-native host/bootstrap lane is structurally complete enough for
-  future renderer binding
+- the Android-native host/bootstrap lane is structurally complete enough to
+  stop being the main unknown
 - disposable app-process-owned PTY lifetime is the current Android terminal
   baseline
 - service-owned PTY survival is now a validated separate Android product lane,
   but it has not displaced the disposable baseline as the default answer
-- Android rendering backend work is still blocked by the renderer queue
-- the first honest Android rendering-adjacent move is now authority for a
-  bootstrap-owned EGL/GLES binding cut, not shared renderer integration
+- bootstrap-owned EGL/GLES proof is now strong enough that it is no longer the
+  main unknown either
+- first-class Android rendering/backend work in `src/ui/renderer/` is still
+  blocked by renderer gate #5
+- renderer work is only in scope here when it is the next highest-leverage
+  Android blocker
+
+## Priority Rule
+
+When choosing what to do next, rank work like this:
+
+1. the highest-leverage blocker to a first-class Android terminal
+2. if that blocker is Android-owned, execute it from this queue
+3. if that blocker is a renderer gate, execute the exact renderer ticket that
+   unblocks Android and then return here
+
+Do not drift back into renderer cleanup just because renderer docs are more
+developed.
+
+## Current Biggest Blocker
+
+Right now the biggest shared blocker to first-class Android renderer adoption
+is renderer gate #5:
+
+- presentable/frame routine is still not neutral enough for a new backend to
+  feel routine
+
+That means:
+
+- gate #2 is treated as closed for active work until Metal validation is
+  explicitly reopened
+- gate #4 is met
+- Android bootstrap proof should only continue if it answers a stronger
+  Android-specific runtime question than gate #5 does
+- otherwise the next honest move is the next gate-5 cut done explicitly in
+  service of Android terminal progress
 
 ## Active Tickets
 
@@ -352,6 +382,38 @@ Do not do:
 - no new `RendererBackend` variant
 - no terminal/text rendering integration
 - no bypass of `replaced` / `retired` surface truth
+
+### `AR-B1` Android Renderer Adoption Unblock
+
+Purpose:
+
+- execute only the next renderer cut that materially unblocks first-class
+  Android renderer adoption
+
+Owner docs:
+
+- `docs/todo/ui/renderer.md`
+- `app_architecture/ui/RENDER_BACKEND_CONTRACT.md`
+- `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md`
+
+Current target:
+
+- renderer gate #5
+
+Acceptance:
+
+- the next renderer cut is explicit about what Android backend adoption would
+  stop having to special-case afterward
+- Android queue and renderer queue both point at the same blocker
+- Android work returns here after that renderer cut lands
+
+Do not do:
+
+- no reopening gate #2 for active work unless Mac validation is explicitly
+  reopened
+- no generic renderer cleanup with no Android leverage
+- no pretending bootstrap EGL proof by itself is equivalent to shared Android
+  renderer readiness
 
 ## Current Research Read
 

@@ -5,91 +5,77 @@ not a progress log and should stay brief.
 
 ### Current Focus
 
-- The only default architecture focus is now renderer backend contract quality.
-- Treat OpenGL and Metal as the two reference implementations for the shared
-  backend abstraction.
-- Linux GL is the active proving ground.
-- Metal is paused for live validation, not removed from the contract.
-- The standard is no longer "make Metal work for one more terminal case."
-- The standard is:
-  - define the renderer/backend contract we actually want
-  - audit the renderer/backend contract we actually have
-  - use OpenGL and Metal to prove the contract is backend-neutral instead of
-    backend theater
-  - make a future Vulkan backend feel like straightforward backend work, not
-    renderer surgery
-  - keep Android/mobile pressure in mind without letting mobile implementation
-    work reshape the contract too early
+- The only default product focus is Android terminal excellence until replaced
+  by new authority.
+- The repo goal is not generic renderer cleanup for its own sake.
+- The repo goal is:
+  - build the best Android terminal emulator we can
+  - preserve Zide's resource-discipline and correctness values while doing it
+  - use renderer/backend work only when it directly unblocks honest Android
+    terminal implementation
+- Android host/bootstrap/device truth is now real enough that Android is no
+  longer a hypothetical future pressure.
+- Metal live validation is paused until explicitly reopened; do not let that
+  stall active Android work.
 
 ### Current Direction
 
-- Capability naming is better than it used to be, but the renderer root still
-  owns too much concrete GL and Metal machinery.
-- The active campaign is to make OpenGL and Metal read like two
-  implementations of one rendering system instead of one renderer carrying both
-  implementations inside itself.
+- The Android queue is now the default execution queue.
+- Renderer work is still important, but only as a dependency lane for Android
+  terminal adoption.
 - Preferred execution style:
-  - no new backend-specific leakage in shared renderer state without an
-    explicit deletion story
-  - no "easy later" Vulkan claims while GL and Metal still need different
-    structural treatment today
-  - no polishing-first drift when the shared backend contract is still weak
-  - no fake neutrality through enums/capabilities when control flow still
-    depends on backend-native types
+  - do the highest-leverage Android-unblocking work next
+  - keep bootstrap-only Android proof work below `src/ui/renderer/` until the
+    renderer queue explicitly opens that lane
+  - do not reopen old renderer lanes unless they are the actual next blocker
+    for Android terminal progress
+  - do not drift into generic desktop/backend cleanup once the Android blocker
+    is known
 
 Execution discipline:
 
-- default to the renderer ticket queue:
-  - `docs/todo/ui/renderer.md`
+- default to the Android execution queue:
+  - `docs/todo/android/implementation.md`
+- use the renderer queue only when the Android queue says the next blocker is a
+  renderer gate
 - treat queue items as executable tickets, not vague themes
-- if a task does not clearly map to the renderer queue, it is probably drift
+- if a task does not clearly map to the Android queue or a named Android
+  blocker, it is probably drift
 
 ### Current State
 
-- OpenGL is still the most complete renderer implementation.
-- OpenGL is the proving ground, not the design authority.
-- The terminal-present gate-2 lane is now structurally complete on GL and
-  behaviorally validated there.
-- Metal remains unverified against that new seam contract; treat that as
-  deferred verification, not as a reason to reopen gate-2 extraction work.
-- Gate #4 is now structurally met: selected backend runtime storage is opaque,
-  selected-backend-only, and owned through one sanctioned backend host surface
-  instead of a widening renderer runtime pattern.
-- Gate #5 has now crossed its first two narrow frame-lifecycle cuts:
-  - frame submission/finalization now routes through one small shared outcome
-    surface
-  - frame begin readiness is now visible to shared draw/runtime code
-- The active renderer pressure is now gate #5 plus drift prevention on gate
-  #2, not more speculative gate-4 cleanup.
-- Metal is now a real live implementation, especially on the terminal lane, but
-  it still depends on backend-specific state and draw descriptions carried by
-  the shared renderer.
-- The current repo question is no longer "can Metal present frames?"
+- Android host/bootstrap truth is strong on the Note10:
+  - lifecycle and surface identity are real
+  - EGL surface recreation is proved for `replaced` and `retired -> acquired`
+  - one EGL context and one minimal GLES texture survive those transitions on
+    the current device path
+- Android PTY baseline is also real:
+  - disposable app-process-owned PTY lifetime is the baseline
+  - service-owned PTY survival is validated as an optional product lane, not
+    the default answer
+- The remaining shared-renderer blocker for first-class Android renderer work
+  is gate #5, not gate #4.
+- Gate #2 should be treated as closed for active work until Metal validation is
+  explicitly reopened.
 - The current repo question is:
-  - do OpenGL and Metal prove a solid backend abstraction
-  - or do they prove that `src/ui/renderer.zig` still knows too much about both
-    backends
-- The honest answer today is still "not yet."
-- The next gate-5 move should come from proven ordering/ownership pressure, not
-  from guessing a larger frame redesign in prose.
+  - what is the next highest-leverage move toward a first-class Android
+    terminal
+  - and is that move still bootstrap-owned Android work or the next honest
+    gate-5 renderer cut
+- Do not let the older renderer-campaign framing hide that product goal.
 
 ### Where To Look
 
-- Target backend contract authority:
-  - `app_architecture/ui/RENDER_BACKEND_CONTRACT.md`
-- Current-state backend contract authority:
-  - `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md`
 - Active execution queue:
-  - `docs/todo/ui/renderer.md`
-- Rendering journey orientation:
-  - `app_architecture/ui/DEVELOPMENT_JOURNEY.md`
-- Reference-pressure scan:
-  - `docs/research/RENDER_BACKEND_REFERENCE_SCAN_2026-04-05.md`
-- Supporting platform/renderer authority:
-  - `app_architecture/platform/PLATFORM_CAPABILITY_MODEL.md`
-  - `app_architecture/platform/macos/RENDER_BACKEND.md`
+  - `docs/todo/android/implementation.md`
+- Android authority:
   - `app_architecture/platform/android/RENDER_BACKEND.md`
-  - `app_architecture/RENDERER_SCENE_PUBLICATION_CONTRACT.md`
+  - `app_architecture/platform/android/ANDROID_GLES_BINDING_PLAN.md`
+  - `app_architecture/platform/android/ANDROID_PTY_LIFETIME_PLAN.md`
+- Renderer dependency authority:
+  - `docs/todo/ui/renderer.md`
+  - `app_architecture/ui/RENDER_BACKEND_CONTRACT.md`
+  - `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md`
 
 ### Deferred Focuses
 
@@ -104,8 +90,8 @@ Execution discipline:
 - Keep this file high-level only.
 - Detailed progress belongs in the owning files under `docs/todo/` and the
   relevant `app_architecture/` authority docs.
-- Do not let old "rendering roadmap" docs outrank the renderer queue and
-  contract docs.
+- Do not let older renderer-campaign framing outrank the Android queue while
+  Android terminal excellence is the active goal.
 - Do not work directly on `main`; treat it as merge-only and start active work
   on a branch from current `main`.
 - Weaker agents must stay on feature branches and keep small reviewable

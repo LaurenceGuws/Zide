@@ -14,6 +14,13 @@ Read this queue as the renderer version of a small ticket board:
 
 Architect and enforce a reference-grade renderer backend abstraction API.
 
+Current priority note:
+
+- this queue is no longer the repo-wide identity by default
+- Android terminal excellence is the active product goal
+- execute renderer tickets from this queue when, and only when, they are the
+  next highest-leverage blocker for Android terminal progress
+
 The standard is:
 
 - OpenGL on Linux is the current proving ground

@@ -1,7 +1,8 @@
 # Android Render Backend
 
 Purpose: define how Android satisfies Zide's native host contract with native
-Android lifecycle and native window ownership.
+Android lifecycle and native window ownership on the path to a first-class
+Android terminal.
 
 This doc is architecture authority for Android-native render-host shape.
 
@@ -242,6 +243,9 @@ Practical consequences from that Note10 run:
 
 ## Current Android Boundary
 
+This repo is now explicitly optimizing for Android terminal excellence, not for
+renderer/backend cleanup as an end in itself.
+
 The Android-native host/bootstrap lane has now answered its next two honest
 Android-specific questions:
 
@@ -277,6 +281,14 @@ The next Android moves are now gated by stronger external pressure:
 - bootstrap-owned EGL hardening may continue only if it answers another
   concrete Android runtime question without smuggling work into
   `src/ui/renderer/`
+
+Current priority rule:
+
+- if Android has a stronger Android-owned blocker, do that first
+- if Android's strongest blocker is a renderer gate, execute only that exact
+  renderer cut and return to the Android queue
+- do not let legacy renderer-campaign framing hide the actual Android product
+  goal
 
 What is now allowed:
 
