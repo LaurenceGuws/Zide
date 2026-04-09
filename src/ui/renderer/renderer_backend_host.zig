@@ -31,6 +31,27 @@ pub fn Host(
         ops: BackendOps,
         runtime: backend_runtime_bundle.Bundle = .{},
 
+        pub fn init(allocator: std.mem.Allocator, backend: BackendEnum) !@This() {
+            var host: @This() = .{
+                .kind = backend,
+                .ops = backend_dispatch.opsFor(
+                    RendererType,
+                    BackendEnum,
+                    FrameSubmission,
+                    RendererCapabilities,
+                    PresentableDraw,
+                    PresentableInfo,
+                    RawImageFormat,
+                    SceneTargetInvalidation,
+                    WindowChangeMask,
+                    backend,
+                ),
+                .runtime = .{},
+            };
+            try host.initRuntimeStorage(allocator);
+            return host;
+        }
+
         pub fn initRuntimeStorage(self: *@This(), allocator: std.mem.Allocator) !void {
             self.runtime = try self.ops.runtime.initStorage(allocator);
         }

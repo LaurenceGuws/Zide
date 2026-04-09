@@ -532,22 +532,7 @@ pub const Renderer = struct {
 
         renderer.* = .{
             .allocator = allocator,
-            .backend = .{
-                .kind = startup_backend,
-                .ops = backend_dispatch.opsFor(
-                Self,
-                RendererBackend,
-                FrameSubmission,
-                RendererCapabilities,
-                PresentableDraw,
-                PresentableInfo,
-                RawImageFormat,
-                SceneTargetInvalidation,
-                WindowChangeMask,
-                startup_backend,
-            ),
-                .runtime = .{},
-            },
+            .backend = try BackendHost.init(allocator, startup_backend),
             .runtime_profile = runtime_profile,
             .app_host = app_host,
             .app_event_watch_installed = false,
@@ -637,7 +622,6 @@ pub const Renderer = struct {
             .clip_stack = undefined,
             .clip_depth = 0,
         };
-        try renderer.backend.initRuntimeStorage(allocator);
         errdefer renderer.backend.deinitRuntimeStorage(allocator);
 
         try lifecycle_runtime.finalizeRendererInit(Renderer, renderer);
