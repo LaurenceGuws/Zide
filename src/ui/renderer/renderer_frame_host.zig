@@ -49,12 +49,16 @@ pub fn finishFrameSubmission(renderer: anytype, outcome: FrameExecutionOutcome) 
     }
     renderer.present.frame_execution_state = .not_attempted;
     const succeeded = outcome.kind == .submitted;
+    const terminal_presented = succeeded and renderer.present.trace_current.terminal_presentation_count > 0;
     if (succeeded) renderer.present.submission_sequence += 1;
     return .{
         .succeeded = succeeded,
         .sequence = renderer.present.submission_sequence,
-        .terminal_presented = renderer.present.trace_current.terminal_presentation_count > 0,
-        .terminal_presented_generation = renderer.present.trace_current.terminal_presented_generation,
+        .terminal_presented = terminal_presented,
+        .terminal_presented_generation = if (terminal_presented)
+            renderer.present.trace_current.terminal_presented_generation
+        else
+            null,
     };
 }
 
@@ -190,7 +194,11 @@ test "finishFrameSubmission submit_failed clears capture but does not advance se
             .submission_sequence = 8,
             .frame_execution_state = .ready,
             .main_composition_target = .backend_surface,
-            .trace_current = .{ .frame_seq = 21 },
+            .trace_current = .{
+                .frame_seq = 21,
+                .terminal_presentation_count = 1,
+                .terminal_presented_generation = 55,
+            },
             .capture_path = "capture.ppm",
             .capture_armed = true,
             .capture_frame_seq = 21,
@@ -204,6 +212,8 @@ test "finishFrameSubmission submit_failed clears capture but does not advance se
 
     try std.testing.expect(!submission.succeeded);
     try std.testing.expectEqual(@as(u64, 8), submission.sequence);
+    try std.testing.expect(!submission.terminal_presented);
+    try std.testing.expectEqual(@as(?u64, null), submission.terminal_presented_generation);
     try std.testing.expectEqual(@as(u64, 8), renderer.present.submission_sequence);
     try std.testing.expectEqual(@as(?[]const u8, null), renderer.present.capture_path);
     try std.testing.expect(!renderer.present.capture_armed);

@@ -1379,6 +1379,10 @@ The current product-state rule on `submitted = false` is now explicit too:
   - `not_attempted` / `begin_failed` / `abandoned` keep present capture armed
   - `submit_failed` may clear present capture because a drawable frame did
     reach submit
+- shared frame-submission feedback now follows that same policy:
+  `terminal_presented` stays false and
+  `terminal_presented_generation` stays null on every `submitted = false`
+  outcome
 
 That answer still fits the current readiness/outcome surfaces, so it does not
 yet trigger `RB-B3.c`.
@@ -1388,6 +1392,8 @@ The current stop marker is now stronger too:
 - focused `renderer_frame_host.zig` unit tests lock begin prelude reset,
   submission-sequence advancement, and capture preservation/clearing semantics
   across `submitted`, `begin_failed`, and `submit_failed`
+- those tests now also lock that failed submission does not surface ambiguous
+  terminal-presented feedback through the shared `FrameSubmission`
 
 So the present gate-5 policy is no longer just doc authority; it is regression
 checked in code.

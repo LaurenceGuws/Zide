@@ -1356,12 +1356,16 @@ Current implication:
   - it must not advance submission sequence or terminal presentation retirement
   - capture stays armed for `not_attempted` / `begin_failed` / `abandoned`, but
     may clear for `submit_failed`
+- shared `FrameSubmission` feedback now matches that rule too:
+  `terminal_presented` stays false and
+  `terminal_presented_generation` stays null on `submitted = false`
 - focused `renderer_frame_host.zig` tests now lock the current gate-5 frame
   policy in code:
   - begin prelude reset
   - submission sequence only advancing on `submitted`
   - capture preserved for `begin_failed`
   - capture cleared for `submit_failed`
+  - failed submission not surfacing terminal-presented feedback
 
 ## Milestone C: Vulkan Fit Audit
 

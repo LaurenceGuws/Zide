@@ -214,6 +214,14 @@ For `submit_failed`:
 - present capture may clear, because a drawable frame did reach submit even
   though submission did not succeed
 
+Shared `FrameSubmission` truth now also follows that rule:
+
+- `terminal_presented` is false on every `submitted = false` outcome
+- `terminal_presented_generation` stays null on every `submitted = false`
+  outcome
+- terminal presentation retirement/ack no longer receives ambiguous feedback
+  from failed submission paths
+
 This is still small enough to live inside the current readiness/outcome
 surfaces. It does not yet justify `RB-B3.c`.
 
@@ -226,6 +234,7 @@ Focused unit coverage now locks the current shared frame-host policy in
 - submission success advancing only the submission sequence
 - `begin_failed` preserving capture state
 - `submit_failed` clearing capture while still not advancing submission sequence
+- `submit_failed` suppressing terminal-presented feedback in `FrameSubmission`
 
 That means the current gate-5 stop marker is now backed by code, not only by
 authority prose.
