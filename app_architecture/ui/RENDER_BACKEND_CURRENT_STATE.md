@@ -205,6 +205,8 @@ Current pressure is narrower than it used to be:
 - runtime storage init/deinit no longer runs directly out of
   `Renderer.init()` / `Renderer.deinit()`; it now routes through backend
   runtime ops
+- shared code no longer reaches directly into `renderer.backend.ops` /
+  `renderer.backend.kind`; that now terminates at `renderer_backend_host.zig`
 - the remaining blocker is that `Renderer` still owns the backend host surface
   itself (`kind` + ops + opaque runtime handle)
 

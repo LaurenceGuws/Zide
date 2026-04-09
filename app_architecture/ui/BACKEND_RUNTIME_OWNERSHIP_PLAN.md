@@ -177,8 +177,12 @@ Immediate remaining pressure after this proof:
   selected runtime now lives behind one opaque storage handle plus backend kind
 - `Renderer` no longer spells selected-runtime storage init/deinit directly;
   that now routes through backend runtime ops
-- the remaining blocker is the renderer-owned backend host itself
-  (`kind` + `ops` + opaque runtime handle)
+- shared code no longer reaches into `renderer.backend.ops` or
+  `renderer.backend.kind` directly; it now terminates at
+  `renderer_backend_host.zig`
+- the remaining blocker is the renderer-owned backend host itself, which still
+  carries backend selection, dispatch, and runtime handle ownership even if
+  shared callers now go through host methods
 - the next gate-4 cut should only open when it can move that ownership
   boundary again, not merely reshuffle helper routing
 
