@@ -7,7 +7,9 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.os.Looper;
+import android.util.Log;
 import android.view.Gravity;
+import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
@@ -20,12 +22,26 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 public final class ZideBootstrapActivity extends Activity implements SurfaceHolder.Callback2, ShellInputView.Host {
+    private static final String TAG = "ZideAndroidBootstrap";
     private static final int MAX_LOG_CHARS = 12000;
     private static final String EXTRA_DEBUG_RECREATE_SURFACE_ONCE = "debug_recreate_surface_once";
     private static final String EXTRA_DEBUG_RESIZE_SURFACE_ONCE = "debug_resize_surface_once";
     private static final String EXTRA_DEBUG_START_SHELL_ONCE = "debug_start_shell_once";
     private static final String SHELL_TRANSCRIPT_PATH = "/data/data/dev.zide.androidbootstrap/files/bootstrap_shell.log";
     private static final long SHELL_REFRESH_MS = 150L;
+
+    private static boolean nativeLoaded = false;
+    private static String nativeLoadError = null;
+
+    static {
+        try {
+            System.loadLibrary("zide_android_bridge");
+            nativeLoaded = true;
+        } catch (UnsatisfiedLinkError err) {
+            nativeLoadError = err.toString();
+            Log.e(TAG, "failed to load native bridge", err);
+        }
+    }
 
     private final StringBuilder eventLog = new StringBuilder();
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -80,21 +96,21 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
                 new ShellSessionController.Bridge() {
                     @Override
                     public int restart() {
-                        return BootstrapNativeBridge.restartShellSession();
+                        return nativeRestartShellSessionBridge();
                     }
 
                     @Override
                     public int poll() {
-                        return BootstrapNativeBridge.pollShellSession();
+                        return nativePollShellSessionBridge();
                     }
 
                     @Override
                     public boolean isAlive() {
-                        return BootstrapNativeBridge.isShellSessionAlive();
+                        return nativeIsShellSessionAliveBridge();
                     }
                 },
                 SHELL_TRANSCRIPT_PATH,
-                BootstrapNativeBridge.isLoaded());
+                nativeLoaded);
         installShellInputView();
         installInsetsHandling();
         shellTranscriptController.installScrollHandling();
@@ -104,11 +120,11 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         applyViewMode();
         installSurfaceView("activity-create");
 
-        appendEvent("activity.onCreate nativeLoaded=" + BootstrapNativeBridge.isLoaded());
-        if (BootstrapNativeBridge.loadError() != null) {
-            appendEvent("native.load.error=" + BootstrapNativeBridge.loadError());
+        appendEvent("activity.onCreate nativeLoaded=" + nativeLoaded);
+        if (nativeLoadError != null) {
+            appendEvent("native.load.error=" + nativeLoadError);
         }
-        callNative("native.onCreate", BootstrapNativeBridge.onCreate());
+        callNative("native.onCreate", nativeLoaded ? nativeOnCreateBridge() : -1);
         updateStatus("created");
     }
 
@@ -139,7 +155,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     protected void onStart() {
         super.onStart();
         appendEvent("activity.onStart");
-        callNative("native.onStart", BootstrapNativeBridge.onStart());
+        callNative("native.onStart", nativeLoaded ? nativeOnStartBridge() : -1);
         updateStatus("started");
     }
 
@@ -147,7 +163,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     protected void onResume() {
         super.onResume();
         appendEvent("activity.onResume");
-        callNative("native.onResume", BootstrapNativeBridge.onResume());
+        callNative("native.onResume", nativeLoaded ? nativeOnResumeBridge() : -1);
         maybeScheduleSurfaceRecreation();
         maybeScheduleSurfaceResize();
         maybeScheduleShellStart();
@@ -165,7 +181,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     @Override
     protected void onPause() {
         appendEvent("activity.onPause");
-        callNative("native.onPause", BootstrapNativeBridge.onPause());
+        callNative("native.onPause", nativeLoaded ? nativeOnPauseBridge() : -1);
         stopShellRefresh();
         refreshShellState(false);
         updateStatus("paused");
@@ -175,7 +191,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     @Override
     protected void onStop() {
         appendEvent("activity.onStop");
-        callNative("native.onStop", BootstrapNativeBridge.onStop());
+        callNative("native.onStop", nativeLoaded ? nativeOnStopBridge() : -1);
         updateStatus("stopped");
         super.onStop();
     }
@@ -184,7 +200,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
         appendEvent("activity.onWindowFocusChanged focus=" + hasFocus);
-        callNative("native.onWindowFocus", BootstrapNativeBridge.onWindowFocus(hasFocus));
+        callNative("native.onWindowFocus", nativeLoaded ? nativeOnWindowFocusBridge(hasFocus) : -1);
         updateStatus(hasFocus ? "window-focused" : "window-unfocused");
     }
 
@@ -200,24 +216,22 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
                 "surface.changed generation=" + surfaceHostGeneration +
                         " format=" + format +
                         " size=" + width + "x" + height);
-        final long seq = BootstrapNativeBridge.onSurfaceAvailable(holder.getSurface(), width, height);
-        final BootstrapNativeBridge.SurfaceStateSnapshot state = BootstrapNativeBridge.currentSurfaceState();
+        final long seq = nativeLoaded ? nativeOnSurfaceAvailableBridge(holder.getSurface(), width, height) : -1;
         callNativeWithSurfaceState(
                 "native.surfaceAvailable",
                 seq,
-                state);
+                currentSurfaceStateSnapshot());
         updateStatus("surface-changed");
     }
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
         appendEvent("surface.destroyed generation=" + surfaceHostGeneration);
-        final long seq = BootstrapNativeBridge.onSurfaceDestroyed();
-        final BootstrapNativeBridge.SurfaceStateSnapshot state = BootstrapNativeBridge.currentSurfaceState();
+        final long seq = nativeLoaded ? nativeOnSurfaceDestroyedBridge() : -1;
         callNativeWithSurfaceState(
                 "native.surfaceDestroyed",
                 seq,
-                state);
+                currentSurfaceStateSnapshot());
         updateStatus("surface-destroyed");
     }
 
@@ -225,11 +239,11 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     public void surfaceRedrawNeeded(SurfaceHolder holder) {
         appendEvent(
                 "surface.redrawNeeded generation=" + surfaceHostGeneration + " valid=" + holder.getSurface().isValid());
-        final long seq = BootstrapNativeBridge.onSurfaceRedrawNeeded();
-        final BootstrapNativeBridge.SurfaceStateSnapshot state = BootstrapNativeBridge.currentSurfaceState();
+        final long seq = nativeLoaded ? nativeOnSurfaceRedrawNeededBridge() : -1;
+        final BootstrapDebugFormatter.SurfaceEventSnapshot state = currentSurfaceStateSnapshot();
         appendEvent(
                 "native.surfaceRedrawNeeded seq=" + seq +
-                        " gles=" + BootstrapNativeBridge.glesProbeStatusLabel(state.glesStatus) +
+                        " gles=" + state.glesStatus +
                         " glesSwaps=" + state.glesSwapCount +
                         " glesBoundEpoch=" + state.glesBoundEpoch +
                         " glesContextCreates=" + state.glesContextCreateCount +
@@ -301,8 +315,8 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         }
         shellStartScheduled = true;
         handler.postDelayed(() -> {
-            final int status = BootstrapNativeBridge.restartShellSession();
-            appendEvent("debug.shellStart status=" + BootstrapNativeBridge.shellStartStatusLabel(status));
+            final int status = nativeLoaded ? nativeRestartShellSessionBridge() : 0;
+            appendEvent("debug.shellStart status=" + shellStartStatusLabel(status));
             sendDirectText("printf 'android-shell-ok\\n'\n");
             refreshShellState(false);
             updateStatus("debug-shell-started");
@@ -330,8 +344,8 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         final Button restartButton = findViewById(R.id.shell_restart_button);
 
         restartButton.setOnClickListener(view -> {
-            final int status = BootstrapNativeBridge.restartShellSession();
-            appendEvent("manual.shellRestart status=" + BootstrapNativeBridge.shellStartStatusLabel(status));
+            final int status = nativeLoaded ? nativeRestartShellSessionBridge() : 0;
+            appendEvent("manual.shellRestart status=" + shellStartStatusLabel(status));
             refreshShellState(false);
             updateStatus("shell-restarted");
         });
@@ -349,18 +363,18 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
 
     @Override
     public void sendDirectCodepoint(int codepoint) {
-        if (!BootstrapNativeBridge.isLoaded())
+        if (!nativeLoaded)
             return;
-        BootstrapNativeBridge.sendShellCodepoint(codepoint);
+        nativeSendShellCodepointBridge(codepoint);
     }
 
     @Override
     public void sendDirectText(String text) {
-        if (!BootstrapNativeBridge.isLoaded())
+        if (!nativeLoaded)
             return;
         for (int i = 0; i < text.length();) {
             final int cp = text.codePointAt(i);
-            BootstrapNativeBridge.sendShellCodepoint(cp);
+            nativeSendShellCodepointBridge(cp);
             i += Character.charCount(cp);
         }
     }
@@ -427,12 +441,12 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     private void refreshShellState(boolean logEvent) {
         final ShellSessionController.PollResult pollResult = shellSessionController.poll();
         if (pollResult.autoStarted) {
-            appendEvent("auto.shellStart status=" + BootstrapNativeBridge.shellStartStatusLabel(pollResult.autoStartStatus));
+            appendEvent("auto.shellStart status=" + shellStartStatusLabel(pollResult.autoStartStatus));
         }
 
         shellTranscriptController.applyTranscript(pollResult.transcript);
         if (logEvent) {
-            appendEvent("manual.shellRefresh alive=" + pollResult.alive + " status=" + BootstrapNativeBridge.shellStartStatusLabel(pollResult.status));
+            appendEvent("manual.shellRefresh alive=" + pollResult.alive + " status=" + shellStartStatusLabel(pollResult.status));
         }
     }
 
@@ -463,15 +477,15 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     private void callNativeWithSurfaceState(
             String event,
             long seq,
-            BootstrapNativeBridge.SurfaceStateSnapshot state) {
+            BootstrapDebugFormatter.SurfaceEventSnapshot state) {
         appendEvent(BootstrapDebugFormatter.formatSurfaceEvent(
                 event,
                 new BootstrapDebugFormatter.SurfaceEventSnapshot(
                         seq,
                         state.token,
                         state.epoch,
-                        BootstrapNativeBridge.surfaceTransitionLabel(state.transition),
-                        BootstrapNativeBridge.glesProbeStatusLabel(state.glesStatus),
+                        state.transition,
+                        state.glesStatus,
                         state.glesSwapCount,
                         state.glesBoundEpoch,
                         state.glesContextCreateCount,
@@ -485,18 +499,38 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
                         state.glesTextureHeight)));
     }
 
+    private BootstrapDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot() {
+        return new BootstrapDebugFormatter.SurfaceEventSnapshot(
+                0,
+                nativeLoaded ? nativeCurrentWindowTokenBridge() : 0,
+                nativeLoaded ? nativeCurrentSurfaceEpochBridge() : 0,
+                surfaceTransitionLabel(nativeLoaded ? nativeCurrentSurfaceTransitionBridge() : 0),
+                glesProbeStatusLabel(nativeLoaded ? nativeCurrentGlesProbeStatusBridge() : 0),
+                nativeLoaded ? nativeCurrentGlesProbeSwapCountBridge() : 0,
+                nativeLoaded ? nativeCurrentGlesProbeBoundEpochBridge() : 0,
+                nativeLoaded ? nativeCurrentGlesProbeContextCreateCountBridge() : 0,
+                nativeLoaded ? nativeCurrentGlesProbeSurfaceCreateCountBridge() : 0,
+                nativeLoaded ? nativeCurrentGlesProbeTextureCreateCountBridge() : 0,
+                nativeLoaded && nativeCurrentGlesProbeTextureAliveBridge(),
+                nativeLoaded ? nativeCurrentGlesProbeTextureUploadCountBridge() : 0,
+                nativeLoaded ? nativeCurrentGlesProbeTextureUpdateCountBridge() : 0,
+                nativeLoaded ? nativeCurrentGlesProbeTextureResizeCountBridge() : 0,
+                nativeLoaded ? nativeCurrentGlesProbeTextureWidthBridge() : 0,
+                nativeLoaded ? nativeCurrentGlesProbeTextureHeightBridge() : 0);
+    }
+
     private void updateStatus(String state) {
-        final BootstrapNativeBridge.SurfaceStateSnapshot surfaceState = BootstrapNativeBridge.currentSurfaceState();
+        final BootstrapDebugFormatter.SurfaceEventSnapshot surfaceState = currentSurfaceStateSnapshot();
         statusText.setText(BootstrapDebugFormatter.formatStatus(
                 new BootstrapDebugFormatter.StatusSnapshot(
                         state,
-                        BootstrapNativeBridge.isLoaded(),
+                        nativeLoaded,
                         hasWindowFocus(),
                         imeVisible,
                         surfaceView.getHolder().getSurface().isValid(),
                         surfaceView.getWidth(),
                         surfaceView.getHeight(),
-                        BootstrapNativeBridge.glesProbeStatusLabel(surfaceState.glesStatus),
+                        surfaceState.glesStatus,
                         surfaceState.glesSwapCount,
                         surfaceState.glesBoundEpoch,
                         surfaceState.glesContextCreateCount,
@@ -511,9 +545,46 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         updateImeToggleLabel();
     }
 
+    private static String surfaceTransitionLabel(int transition) {
+        return switch (transition) {
+            case 1 -> "acquired";
+            case 2 -> "replaced";
+            case 3 -> "retired";
+            default -> "unchanged";
+        };
+    }
+
+    private static String shellStartStatusLabel(int status) {
+        return switch (status) {
+            case 1 -> "started";
+            case 2 -> "unsupported";
+            case 3 -> "create-failed";
+            case 4 -> "resize-failed";
+            case 5 -> "start-failed";
+            case 6 -> "send-failed";
+            case 7 -> "poll-failed";
+            case 8 -> "snapshot-failed";
+            default -> "none";
+        };
+    }
+
+    private static String glesProbeStatusLabel(int status) {
+        return switch (status) {
+            case 1 -> "ready";
+            case 2 -> "drawn";
+            case 3 -> "surface-destroyed";
+            case 4 -> "init-failed";
+            case 5 -> "surface-failed";
+            case 6 -> "make-current-failed";
+            case 7 -> "swap-failed";
+            default -> "unavailable";
+        };
+    }
+
     @Override
     public void appendEvent(String message) {
         final String line = String.format("[%08d] %s", SystemClock.uptimeMillis(), message);
+        Log.i(TAG, line);
         if (eventLog.length() > 0) {
             eventLog.append('\n');
         }
@@ -523,4 +594,60 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         }
         eventLogText.setText(eventLog.toString());
     }
+
+    private static native long nativeOnCreateBridge();
+
+    private static native long nativeOnStartBridge();
+
+    private static native long nativeOnResumeBridge();
+
+    private static native long nativeOnPauseBridge();
+
+    private static native long nativeOnStopBridge();
+
+    private static native long nativeOnWindowFocusBridge(boolean focused);
+
+    private static native long nativeOnSurfaceAvailableBridge(Surface surface, int width, int height);
+
+    private static native long nativeOnSurfaceDestroyedBridge();
+
+    private static native long nativeOnSurfaceRedrawNeededBridge();
+
+    private static native long nativeCurrentWindowTokenBridge();
+
+    private static native long nativeCurrentSurfaceEpochBridge();
+
+    private static native int nativeCurrentSurfaceTransitionBridge();
+
+    private static native int nativeCurrentGlesProbeStatusBridge();
+
+    private static native long nativeCurrentGlesProbeSwapCountBridge();
+
+    private static native long nativeCurrentGlesProbeBoundEpochBridge();
+
+    private static native long nativeCurrentGlesProbeContextCreateCountBridge();
+
+    private static native long nativeCurrentGlesProbeSurfaceCreateCountBridge();
+
+    private static native long nativeCurrentGlesProbeTextureCreateCountBridge();
+
+    private static native boolean nativeCurrentGlesProbeTextureAliveBridge();
+
+    private static native long nativeCurrentGlesProbeTextureUploadCountBridge();
+
+    private static native long nativeCurrentGlesProbeTextureUpdateCountBridge();
+
+    private static native long nativeCurrentGlesProbeTextureResizeCountBridge();
+
+    private static native int nativeCurrentGlesProbeTextureWidthBridge();
+
+    private static native int nativeCurrentGlesProbeTextureHeightBridge();
+
+    private static native int nativeRestartShellSessionBridge();
+
+    private static native int nativePollShellSessionBridge();
+
+    private static native boolean nativeIsShellSessionAliveBridge();
+
+    private static native int nativeSendShellCodepointBridge(int codepoint);
 }
