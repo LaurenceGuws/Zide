@@ -151,6 +151,27 @@ export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeCurrentGles
     return @intCast(android_runtime_bridge.currentGlesProbeTextureUpdateCount());
 }
 
+export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeCurrentGlesProbeTextureResizeCountBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+) callconv(.c) i64 {
+    return @intCast(android_runtime_bridge.currentGlesProbeTextureResizeCount());
+}
+
+export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeCurrentGlesProbeTextureWidthBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+) callconv(.c) i32 {
+    return android_runtime_bridge.currentGlesProbeTextureWidth();
+}
+
+export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeCurrentGlesProbeTextureHeightBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+) callconv(.c) i32 {
+    return android_runtime_bridge.currentGlesProbeTextureHeight();
+}
+
 export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeStartPtyProbeBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,

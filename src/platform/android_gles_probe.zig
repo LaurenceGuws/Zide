@@ -86,6 +86,9 @@ const ProbeState = struct {
     texture_alive: bool = false,
     texture_upload_count: u32 = 0,
     texture_update_count: u32 = 0,
+    texture_resize_count: u32 = 0,
+    texture_width: i32 = 0,
+    texture_height: i32 = 0,
     bound_epoch: u64 = 0,
     surface_create_count: u32 = 0,
     last_status: ProbeStatus = .unavailable,
@@ -183,7 +186,7 @@ fn ensureWindowSurface(window: ?*anyopaque, epoch: u64, transition: native_host.
     return setStatus(.ready);
 }
 
-fn drawCurrent(epoch: u64) ProbeStatus {
+fn drawCurrent(epoch: u64, width: i32, height: i32) ProbeStatus {
     if (probe_state.display == null or probe_state.context == null or probe_state.surface == null) {
         return setStatus(.unavailable);
     }
@@ -192,7 +195,7 @@ fn drawCurrent(epoch: u64) ProbeStatus {
         return noteError(.make_current_failed);
     }
 
-    ensureProbeTexture();
+    ensureProbeTexture(width, height);
 
     const phase: u32 = @intCast(epoch % 3);
     const red: f32 = if (phase == 0) 0.88 else 0.14;
@@ -209,12 +212,17 @@ fn drawCurrent(epoch: u64) ProbeStatus {
     return setStatus(.drawn);
 }
 
-fn ensureProbeTexture() void {
+fn ensureProbeTexture(width: i32, height: i32) void {
+    const texture_width = if (width > 0) width else 2;
+    const texture_height = if (height > 0) height else 2;
     if (builtin.is_test) {
         if (probe_state.texture == 0) {
             probe_state.texture = 1;
             probe_state.texture_create_count += 1;
-            probe_state.texture_upload_count += 1;
+            uploadProbeTexture(texture_width, texture_height);
+        } else if (probe_state.texture_width != texture_width or probe_state.texture_height != texture_height) {
+            probe_state.texture_resize_count += 1;
+            uploadProbeTexture(texture_width, texture_height);
         }
         probe_state.texture_update_count += 1;
         probe_state.texture_alive = probe_state.texture != 0;
@@ -222,6 +230,11 @@ fn ensureProbeTexture() void {
     }
 
     if (probe_state.texture != 0 and glIsTexture(probe_state.texture) != 0) {
+        glBindTexture(GL_TEXTURE_2D, probe_state.texture);
+        if (probe_state.texture_width != texture_width or probe_state.texture_height != texture_height) {
+            probe_state.texture_resize_count += 1;
+            uploadProbeTexture(texture_width, texture_height);
+        }
         updateProbeTexture();
         probe_state.texture_alive = true;
         return;
@@ -238,19 +251,15 @@ fn ensureProbeTexture() void {
     glBindTexture(GL_TEXTURE_2D, texture);
     probe_state.texture = texture;
     probe_state.texture_create_count += 1;
-    uploadProbeTexture();
+    uploadProbeTexture(texture_width, texture_height);
     probe_state.texture_alive = glIsTexture(probe_state.texture) != 0;
 }
 
-fn uploadProbeTexture() void {
-    const pixels = [_]u8{
-        0xFF, 0x33, 0x33, 0xFF,
-        0x33, 0xFF, 0x33, 0xFF,
-        0x33, 0x33, 0xFF, 0xFF,
-        0xFF, 0xCC, 0x33, 0xFF,
-    };
-    glTexImage2D(GL_TEXTURE_2D, 0, @intCast(GL_RGBA), 2, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, @ptrCast(&pixels));
+fn uploadProbeTexture(width: i32, height: i32) void {
+    glTexImage2D(GL_TEXTURE_2D, 0, @intCast(GL_RGBA), width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, null);
     probe_state.texture_upload_count += 1;
+    probe_state.texture_width = width;
+    probe_state.texture_height = height;
 }
 
 fn updateProbeTexture() void {
@@ -281,14 +290,16 @@ pub fn noteSurfaceAvailable(
     window: ?*anyopaque,
     epoch: u64,
     transition: native_host.SurfaceIdentityTransition,
+    width: i32,
+    height: i32,
 ) ProbeStatus {
     const surface_status = ensureWindowSurface(window, epoch, transition);
     if (surface_status != .ready and surface_status != .drawn) return surface_status;
-    return drawCurrent(epoch);
+    return drawCurrent(epoch, width, height);
 }
 
 pub fn noteSurfaceRedrawNeeded() ProbeStatus {
-    return drawCurrent(probe_state.bound_epoch);
+    return drawCurrent(probe_state.bound_epoch, probe_state.texture_width, probe_state.texture_height);
 }
 
 pub fn noteSurfaceDestroyed() ProbeStatus {
@@ -332,35 +343,56 @@ pub fn currentTextureUpdateCount() u32 {
     return probe_state.texture_update_count;
 }
 
+pub fn currentTextureResizeCount() u32 {
+    return probe_state.texture_resize_count;
+}
+
+pub fn currentTextureWidth() i32 {
+    return probe_state.texture_width;
+}
+
+pub fn currentTextureHeight() i32 {
+    return probe_state.texture_height;
+}
+
 test "probe recreates the surface when identity epoch changes" {
     const std = @import("std");
 
     reset();
-    try std.testing.expectEqual(ProbeStatus.drawn, noteSurfaceAvailable(@ptrFromInt(0x1111), 1, .acquired));
+    try std.testing.expectEqual(ProbeStatus.drawn, noteSurfaceAvailable(@ptrFromInt(0x1111), 1, .acquired, 400, 200));
     try std.testing.expectEqual(@as(u32, 1), currentSwapCount());
     try std.testing.expectEqual(@as(u32, 1), currentContextCreateCount());
     try std.testing.expectEqual(@as(u32, 1), currentSurfaceCreateCount());
     try std.testing.expectEqual(@as(u32, 1), currentTextureCreateCount());
     try std.testing.expectEqual(@as(u32, 1), currentTextureUploadCount());
     try std.testing.expectEqual(@as(u32, 1), currentTextureUpdateCount());
+    try std.testing.expectEqual(@as(u32, 0), currentTextureResizeCount());
+    try std.testing.expectEqual(@as(i32, 400), currentTextureWidth());
+    try std.testing.expectEqual(@as(i32, 200), currentTextureHeight());
     try std.testing.expect(currentTextureAlive());
 
-    try std.testing.expectEqual(ProbeStatus.drawn, noteSurfaceAvailable(@ptrFromInt(0x1111), 1, .unchanged));
+    try std.testing.expectEqual(ProbeStatus.drawn, noteSurfaceAvailable(@ptrFromInt(0x1111), 1, .unchanged, 420, 210));
     try std.testing.expectEqual(@as(u32, 2), currentSwapCount());
     try std.testing.expectEqual(@as(u32, 1), currentContextCreateCount());
     try std.testing.expectEqual(@as(u32, 1), currentSurfaceCreateCount());
     try std.testing.expectEqual(@as(u32, 1), currentTextureCreateCount());
-    try std.testing.expectEqual(@as(u32, 1), currentTextureUploadCount());
+    try std.testing.expectEqual(@as(u32, 2), currentTextureUploadCount());
     try std.testing.expectEqual(@as(u32, 2), currentTextureUpdateCount());
+    try std.testing.expectEqual(@as(u32, 1), currentTextureResizeCount());
+    try std.testing.expectEqual(@as(i32, 420), currentTextureWidth());
+    try std.testing.expectEqual(@as(i32, 210), currentTextureHeight());
     try std.testing.expect(currentTextureAlive());
 
-    try std.testing.expectEqual(ProbeStatus.drawn, noteSurfaceAvailable(@ptrFromInt(0x2222), 2, .replaced));
+    try std.testing.expectEqual(ProbeStatus.drawn, noteSurfaceAvailable(@ptrFromInt(0x2222), 2, .replaced, 430, 220));
     try std.testing.expectEqual(@as(u32, 3), currentSwapCount());
     try std.testing.expectEqual(@as(u32, 1), currentContextCreateCount());
     try std.testing.expectEqual(@as(u32, 2), currentSurfaceCreateCount());
     try std.testing.expectEqual(@as(u32, 1), currentTextureCreateCount());
-    try std.testing.expectEqual(@as(u32, 1), currentTextureUploadCount());
+    try std.testing.expectEqual(@as(u32, 3), currentTextureUploadCount());
     try std.testing.expectEqual(@as(u32, 3), currentTextureUpdateCount());
+    try std.testing.expectEqual(@as(u32, 2), currentTextureResizeCount());
+    try std.testing.expectEqual(@as(i32, 430), currentTextureWidth());
+    try std.testing.expectEqual(@as(i32, 220), currentTextureHeight());
     try std.testing.expect(currentTextureAlive());
 
     try std.testing.expectEqual(ProbeStatus.surface_destroyed, noteSurfaceDestroyed());

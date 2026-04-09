@@ -266,32 +266,106 @@ It still does not prove:
 - that full renderer resource graphs should adopt this policy without later
   shared-backend authority
 
-## Next Runtime Question
+## Upload/Update Probe Result
 
-The next honest Android-owned GLES question is narrower than renderer adoption:
+The next honest Android-owned GLES question was:
 
 - can one bootstrap-owned GLES texture survive the proven surface transitions
   while also accepting repeated content upload/update, not just continued
   object existence checks
 
-Why this matters:
-
-- current proof already says one context-owned texture object survives
-- that is useful, but renderer pressure later will care about content upload
-  and update, not only object identity
-- this remains bootstrap-owned runtime evidence, not shared renderer work
-
-Current checkpoint (2026-04-09):
+Observed on the Note10 (2026-04-09):
 
 - the bootstrap GLES probe now tracks:
   - `glesTextureUploads`
   - `glesTextureUpdates`
-- texture creation now performs one explicit `glTexImage2D` upload
+- texture creation performs one explicit `glTexImage2D` upload
 - later redraw/surface passes perform `glTexSubImage2D` updates against the
   same texture when the context still owns it
-- the bootstrap bridge/status UI now surfaces those counters alongside:
+- the bootstrap bridge/status UI surfaces those counters alongside:
   - `glesTextureCreates`
   - `glesTextureAlive`
+- the first acquire showed:
+  - `glesTextureUploads=1`
+  - `glesTextureUpdates=0`
+- the first redraw advanced to:
+  - `glesTextureUploads=1`
+  - `glesTextureUpdates=1`
+- a true in-process `replaced` transition then showed:
+  - `glesTextureUploads=1`
+  - `glesTextureUpdates=4`
+  - `glesContextCreates=1`
+  - `glesSurfaceCreates=2`
+  - `glesTextureCreates=1`
+  - `glesTextureAlive=true`
+- later background-side retirement showed:
+  - `glesTextureUploads=1`
+  - `glesTextureUpdates=11`
+  - `glesContextCreates=1`
+  - `glesTextureCreates=1`
+  - `glesTextureAlive=true`
+- later fresh `acquired` after retirement showed:
+  - `glesTextureUploads=1`
+  - `glesTextureUpdates=12`
+  - `glesContextCreates=1`
+  - `glesSurfaceCreates=3`
+  - `glesTextureCreates=1`
+  - `glesTextureAlive=true`
+
+This proves:
+
+- one bootstrap-owned GLES texture can survive the proven surface transitions
+  while also accepting repeated content updates on the Note10
+- the current bootstrap policy still performs one initial upload, then keeps
+  updating the surviving texture rather than recreating or reuploading it
+- `replaced` and `retired -> acquired` do not currently force hidden context
+  or texture recreation on this device path
+
+## Texture-Resize Pressure Checkpoint
+
+The first `AH-A7` runtime-pressure pass is now implemented and observed.
+
+Current probe additions:
+
+- `glesTextureResizes`
+- `glesTextureSize`
+- a bootstrap debug path that forces one synthetic `SurfaceView` size change
+
+Observed on the Note10 (2026-04-09):
+
+- the cleaner holder-driven resize path now produces an explicit sane
+  `surface.changed` callback:
+  - `size=1356x552`
+  - later restore back to `size=1356x1104`
+- those callbacks advanced the probe state like this:
+  - shrink:
+    - `glesTextureUploads=2`
+    - `glesTextureUpdates=2`
+    - `glesTextureResizes=1`
+    - `glesTextureSize=1356x552`
+  - restore:
+    - `glesTextureUploads=3`
+    - `glesTextureUpdates=4`
+    - `glesTextureResizes=2`
+    - `glesTextureSize=1356x1104`
+  - throughout:
+    - `glesContextCreates=1`
+    - `glesSurfaceCreates=1`
+    - `glesTextureCreates=1`
+- that means size pressure can force a texture reallocation/upload while still
+  keeping the same EGL context, EGL surface, and texture object identity on
+  this path
+
+Important caveat:
+
+- after the clean shrink/restore sequence, Android still later emitted an
+  extra odd callback:
+  - `surface.changed ... size=2675x0`
+- the probe clamps non-positive dimensions before `glTexImage2D`, so this
+  became `glesTextureSize=2675x2` instead of a literal zero-height upload
+- that late callback does not invalidate the cleaner earlier result, but it
+  means the current debug resize path is still not perfect enough to serve as
+  final product resize authority
 
 ## Decision From Probe
 
@@ -317,3 +391,17 @@ After that:
 - do not claim a shared Android backend exists yet
 - let later Android backend work inherit this replacement truth instead of
   rediscovering it
+- the next Android-owned GLES question is now:
+  - texture-size/resize pressure
+  - specifically, whether materially different content dimensions force honest
+    texture reallocation/upload behavior while context and surface policy stay
+    legible
+- the current answer is partial:
+  - yes, size pressure can force honest reallocation/upload without hidden
+    context churn on the Note10
+  - but the debug resize path still needs one more tightening pass because
+    Android later emits an extra pathological callback after the clean
+    shrink/restore sequence
+  - IME is not that tightening pass on this device/configuration, because the
+    cleaned-up product-view IME probe now behaves as an overlay and does not
+    materially interact with surface geometry

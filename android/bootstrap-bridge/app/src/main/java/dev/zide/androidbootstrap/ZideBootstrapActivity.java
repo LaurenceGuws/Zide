@@ -11,8 +11,11 @@ import android.view.Gravity;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
@@ -25,6 +28,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     private static final String TAG = "ZideAndroidBootstrap";
     private static final int MAX_LOG_CHARS = 12000;
     private static final String EXTRA_DEBUG_RECREATE_SURFACE_ONCE = "debug_recreate_surface_once";
+    private static final String EXTRA_DEBUG_RESIZE_SURFACE_ONCE = "debug_resize_surface_once";
     private static final String EXTRA_DEBUG_START_PTY_PROBE_ONCE = "debug_start_pty_probe_once";
     private static final String EXTRA_DEBUG_START_SERVICE_PTY_PROBE_ONCE = "debug_start_service_pty_probe_once";
     private static final String EXTRA_DEBUG_STOP_SERVICE_PTY_PROBE_ONCE = "debug_stop_service_pty_probe_once";
@@ -46,12 +50,19 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
 
     private final StringBuilder eventLog = new StringBuilder();
     private final Handler handler = new Handler(Looper.getMainLooper());
+    private TextView progressSummaryText;
     private TextView statusText;
-    private TextView ptyStatusText;
     private TextView eventLogText;
-    private FrameLayout surfaceContainer;
+    private View productView;
+    private View debugView;
+    private FrameLayout productSurfaceContainer;
+    private EditText imeProbeInput;
+    private Button imeToggleButton;
     private SurfaceView surfaceView;
+    private boolean debugViewEnabled = false;
+    private boolean imeVisible = false;
     private boolean surfaceRecreationScheduled = false;
+    private boolean surfaceResizeScheduled = false;
     private boolean ptyProbeScheduled = false;
     private boolean servicePtyProbeScheduled = false;
     private boolean servicePtyProbeStopScheduled = false;
@@ -88,6 +99,9 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     private static native boolean nativeCurrentGlesProbeTextureAliveBridge();
     private static native long nativeCurrentGlesProbeTextureUploadCountBridge();
     private static native long nativeCurrentGlesProbeTextureUpdateCountBridge();
+    private static native long nativeCurrentGlesProbeTextureResizeCountBridge();
+    private static native int nativeCurrentGlesProbeTextureWidthBridge();
+    private static native int nativeCurrentGlesProbeTextureHeightBridge();
     private static native long nativeStartPtyProbeBridge();
     private static native void nativeStopPtyProbeBridge();
     private static native boolean nativeIsPtyProbeAliveBridge();
@@ -99,11 +113,17 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        progressSummaryText = findViewById(R.id.progress_summary_text);
         statusText = findViewById(R.id.status_text);
-        ptyStatusText = findViewById(R.id.pty_status_text);
         eventLogText = findViewById(R.id.event_log);
-        surfaceContainer = findViewById(R.id.host_surface_container);
-        bindPtyControls();
+        productView = findViewById(R.id.product_view);
+        debugView = findViewById(R.id.debug_view);
+        productSurfaceContainer = findViewById(R.id.product_surface_container);
+        imeProbeInput = findViewById(R.id.ime_probe_input);
+        imeToggleButton = findViewById(R.id.ime_toggle_button);
+        bindViewModeToggle();
+        bindImeToggle();
+        applyViewMode();
         installSurfaceView("activity-create");
 
         appendEvent("activity.onCreate nativeLoaded=" + nativeLoaded);
@@ -130,6 +150,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         appendEvent("activity.onResume");
         callNative("native.onResume", nativeLoaded ? nativeOnResumeBridge() : -1);
         maybeScheduleSurfaceRecreation();
+        maybeScheduleSurfaceResize();
         maybeSchedulePtyProbe();
         maybeScheduleServicePtyProbe();
         maybeScheduleServicePtyProbeStop();
@@ -202,6 +223,9 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         final boolean glesTextureAlive = nativeLoaded && nativeCurrentGlesProbeTextureAliveBridge();
         final long glesTextureUploadCount = nativeLoaded ? nativeCurrentGlesProbeTextureUploadCountBridge() : 0;
         final long glesTextureUpdateCount = nativeLoaded ? nativeCurrentGlesProbeTextureUpdateCountBridge() : 0;
+        final long glesTextureResizeCount = nativeLoaded ? nativeCurrentGlesProbeTextureResizeCountBridge() : 0;
+        final int glesTextureWidth = nativeLoaded ? nativeCurrentGlesProbeTextureWidthBridge() : 0;
+        final int glesTextureHeight = nativeLoaded ? nativeCurrentGlesProbeTextureHeightBridge() : 0;
         callNativeWithSurfaceState(
             "native.surfaceAvailable",
             seq,
@@ -216,7 +240,10 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
             glesTextureCreateCount,
             glesTextureAlive,
             glesTextureUploadCount,
-            glesTextureUpdateCount
+            glesTextureUpdateCount,
+            glesTextureResizeCount,
+            glesTextureWidth,
+            glesTextureHeight
         );
         updateStatus("surface-changed");
     }
@@ -237,6 +264,9 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         final boolean glesTextureAlive = nativeLoaded && nativeCurrentGlesProbeTextureAliveBridge();
         final long glesTextureUploadCount = nativeLoaded ? nativeCurrentGlesProbeTextureUploadCountBridge() : 0;
         final long glesTextureUpdateCount = nativeLoaded ? nativeCurrentGlesProbeTextureUpdateCountBridge() : 0;
+        final long glesTextureResizeCount = nativeLoaded ? nativeCurrentGlesProbeTextureResizeCountBridge() : 0;
+        final int glesTextureWidth = nativeLoaded ? nativeCurrentGlesProbeTextureWidthBridge() : 0;
+        final int glesTextureHeight = nativeLoaded ? nativeCurrentGlesProbeTextureHeightBridge() : 0;
         callNativeWithSurfaceState(
             "native.surfaceDestroyed",
             seq,
@@ -251,7 +281,10 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
             glesTextureCreateCount,
             glesTextureAlive,
             glesTextureUploadCount,
-            glesTextureUpdateCount
+            glesTextureUpdateCount,
+            glesTextureResizeCount,
+            glesTextureWidth,
+            glesTextureHeight
         );
         updateStatus("surface-destroyed");
     }
@@ -269,6 +302,9 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         final boolean glesTextureAlive = nativeLoaded && nativeCurrentGlesProbeTextureAliveBridge();
         final long glesTextureUploadCount = nativeLoaded ? nativeCurrentGlesProbeTextureUploadCountBridge() : 0;
         final long glesTextureUpdateCount = nativeLoaded ? nativeCurrentGlesProbeTextureUpdateCountBridge() : 0;
+        final long glesTextureResizeCount = nativeLoaded ? nativeCurrentGlesProbeTextureResizeCountBridge() : 0;
+        final int glesTextureWidth = nativeLoaded ? nativeCurrentGlesProbeTextureWidthBridge() : 0;
+        final int glesTextureHeight = nativeLoaded ? nativeCurrentGlesProbeTextureHeightBridge() : 0;
         appendEvent(
             "native.surfaceRedrawNeeded seq=" + seq +
                 " gles=" + glesProbeStatusLabel(glesStatus) +
@@ -279,7 +315,9 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
                 " glesTextureCreates=" + glesTextureCreateCount +
                 " glesTextureAlive=" + glesTextureAlive +
                 " glesTextureUploads=" + glesTextureUploadCount +
-                " glesTextureUpdates=" + glesTextureUpdateCount
+                " glesTextureUpdates=" + glesTextureUpdateCount +
+                " glesTextureResizes=" + glesTextureResizeCount +
+                " glesTextureSize=" + glesTextureWidth + "x" + glesTextureHeight
         );
         updateStatus("surface-redraw-needed");
     }
@@ -292,11 +330,45 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
             return;
         }
         surfaceRecreationScheduled = true;
-        surfaceContainer.postDelayed(() -> {
+        productSurfaceContainer.postDelayed(() -> {
             appendEvent("debug.recreateSurfaceView");
             installSurfaceView("debug-recreate");
             updateStatus("debug-recreated-surface");
         }, 700);
+    }
+
+    private void maybeScheduleSurfaceResize() {
+        final boolean resizeRequested = getIntent().getBooleanExtra(EXTRA_DEBUG_RESIZE_SURFACE_ONCE, false);
+        appendEvent("debug.resizeSurface requested=" + resizeRequested + " scheduled=" + surfaceResizeScheduled);
+        if (!resizeRequested) {
+            return;
+        }
+        if (surfaceResizeScheduled) {
+            return;
+        }
+        surfaceResizeScheduled = true;
+        handler.postDelayed(() -> {
+            final SurfaceHolder holder = surfaceView.getHolder();
+            final int originalWidth = Math.max(2, surfaceView.getWidth());
+            final int originalHeight = Math.max(2, surfaceView.getHeight());
+            final int shrunkHeight = Math.max(200, originalHeight / 2);
+            holder.setFixedSize(originalWidth, shrunkHeight);
+            appendEvent(
+                "debug.resizeSurface fixedSize=" + originalWidth + "x" + shrunkHeight +
+                    " original=" + originalWidth + "x" + originalHeight +
+                    " target=surfaceHolder"
+            );
+            updateStatus("debug-resized-surface-shrink");
+
+            handler.postDelayed(() -> {
+                holder.setFixedSize(originalWidth, originalHeight);
+                appendEvent(
+                    "debug.resizeSurface restoreSize=" + originalWidth + "x" + originalHeight +
+                        " target=surfaceHolder"
+                );
+                updateStatus("debug-resized-surface-restore");
+            }, 900);
+        }, 900);
     }
 
     private void maybeSchedulePtyProbe() {
@@ -307,7 +379,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
             return;
         }
         ptyProbeScheduled = true;
-        surfaceContainer.postDelayed(() -> {
+        productSurfaceContainer.postDelayed(() -> {
             startPtyProbe("debug.ptyProbeStart", "debug-pty-probe-started");
         }, 900);
     }
@@ -320,7 +392,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
             return;
         }
         servicePtyProbeScheduled = true;
-        surfaceContainer.postDelayed(() -> {
+        productSurfaceContainer.postDelayed(() -> {
             final Intent intent = new Intent(this, ZidePtyProbeService.class)
                 .setAction(ZidePtyProbeService.ACTION_START_FOREGROUND_PTY_PROBE);
             startForegroundService(intent);
@@ -337,7 +409,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
             return;
         }
         servicePtyProbeStopScheduled = true;
-        surfaceContainer.postDelayed(() -> {
+        productSurfaceContainer.postDelayed(() -> {
             final Intent intent = new Intent(this, ZidePtyProbeService.class)
                 .setAction(ZidePtyProbeService.ACTION_STOP_FOREGROUND_PTY_PROBE);
             startService(intent);
@@ -346,29 +418,56 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         }, 1100);
     }
 
-    private void bindPtyControls() {
-        final Button startButton = findViewById(R.id.pty_start_button);
-        final Button stopButton = findViewById(R.id.pty_stop_button);
-        final Button restartButton = findViewById(R.id.pty_restart_button);
-        final Button refreshButton = findViewById(R.id.pty_refresh_button);
+    private void bindImeToggle() {
+        imeToggleButton.setOnClickListener(view -> toggleIme());
+    }
 
-        startButton.setOnClickListener(view -> startPtyProbe("manual.ptyProbeStart", "manual-pty-probe-started"));
-        stopButton.setOnClickListener(view -> {
-            if (nativeLoaded) {
-                nativeStopPtyProbeBridge();
-            }
-            appendEvent("manual.ptyProbeStop alive=" + (nativeLoaded && nativeIsPtyProbeAliveBridge()));
-            refreshPtyProbeStatus(true);
-            updateStatus("manual-pty-probe-stopped");
-        });
-        restartButton.setOnClickListener(view -> {
-            if (nativeLoaded) {
-                nativeStopPtyProbeBridge();
-            }
-            appendEvent("manual.ptyProbeRestart stopIssued=true");
-            startPtyProbe("manual.ptyProbeRestart", "manual-pty-probe-restarted");
-        });
-        refreshButton.setOnClickListener(view -> refreshPtyProbeStatus(true));
+    private void bindViewModeToggle() {
+        final Button productViewModeButton = findViewById(R.id.view_mode_button);
+        final Button debugViewModeButton = findViewById(R.id.debug_view_mode_button);
+        final View.OnClickListener toggleListener = view -> {
+            debugViewEnabled = !debugViewEnabled;
+            appendEvent("view.mode debug=" + debugViewEnabled);
+            applyViewMode();
+            updateStatus(debugViewEnabled ? "debug-view" : "product-view");
+        };
+        productViewModeButton.setOnClickListener(toggleListener);
+        debugViewModeButton.setOnClickListener(toggleListener);
+    }
+
+    private void applyViewMode() {
+        productView.setVisibility(debugViewEnabled ? View.GONE : View.VISIBLE);
+        debugView.setVisibility(debugViewEnabled ? View.VISIBLE : View.GONE);
+    }
+
+    private void toggleIme() {
+        final InputMethodManager imm = getSystemService(InputMethodManager.class);
+        if (imm == null) {
+            appendEvent("manual.imeToggle unavailable=true");
+            return;
+        }
+
+        if (imeVisible) {
+            imm.hideSoftInputFromWindow(imeProbeInput.getWindowToken(), 0);
+            imeProbeInput.clearFocus();
+            imeVisible = false;
+            appendEvent("manual.imeToggle visible=false");
+            updateImeToggleLabel();
+            updateStatus("ime-hidden");
+            return;
+        }
+
+        imeProbeInput.requestFocus();
+        imeProbeInput.setSelection(imeProbeInput.getText().length());
+        final boolean shown = imm.showSoftInput(imeProbeInput, InputMethodManager.SHOW_IMPLICIT);
+        imeVisible = shown || imeProbeInput.hasFocus();
+        appendEvent("manual.imeToggle visible=true shown=" + shown);
+        updateImeToggleLabel();
+        updateStatus("ime-shown");
+    }
+
+    private void updateImeToggleLabel() {
+        imeToggleButton.setText(imeVisible ? R.string.hide_ime : R.string.show_ime);
     }
 
     private void startPtyProbe(String eventPrefix, String stateLabel) {
@@ -406,15 +505,6 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         final long pid = nativeLoaded ? nativePtyProbeChildPidBridge() : -1;
         final int status = nativeLoaded ? nativePtyProbeStartStatusBridge() : 0;
         final PtyProbeSnapshot snapshot = readPtyProbeSnapshot();
-        ptyStatusText.setText(
-            "pty.alive=" + alive +
-                " pid=" + pid +
-                " status=" + ptyProbeStartStatusLabel(status) +
-                " beats=" + snapshot.heartbeatCount +
-                " bytes=" + snapshot.fileSizeBytes +
-                "\npty.last=" + snapshot.lastLine +
-                "\npty.log=" + PTY_PROBE_LOG_PATH
-        );
         if (logEvent) {
             appendEvent(
                 "manual.ptyProbeRefresh alive=" + alive +
@@ -481,7 +571,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     private void installSurfaceView(String reason) {
         if (surfaceView != null) {
             surfaceView.getHolder().removeCallback(this);
-            surfaceContainer.removeView(surfaceView);
+            productSurfaceContainer.removeView(surfaceView);
             appendEvent("surface.hostRemoved reason=" + reason + " generation=" + surfaceHostGeneration);
         }
 
@@ -493,7 +583,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
             ViewGroup.LayoutParams.MATCH_PARENT,
             Gravity.CENTER
         );
-        surfaceContainer.addView(nextSurfaceView, params);
+        productSurfaceContainer.addView(nextSurfaceView, params);
         nextSurfaceView.getHolder().addCallback(this);
         surfaceView = nextSurfaceView;
         appendEvent("surface.hostInstalled reason=" + reason + " generation=" + surfaceHostGeneration);
@@ -517,7 +607,10 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         long glesTextureCreateCount,
         boolean glesTextureAlive,
         long glesTextureUploadCount,
-        long glesTextureUpdateCount
+        long glesTextureUpdateCount,
+        long glesTextureResizeCount,
+        int glesTextureWidth,
+        int glesTextureHeight
     ) {
         appendEvent(
             event + " seq=" + seq +
@@ -532,7 +625,9 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
                 " glesTextureCreates=" + glesTextureCreateCount +
                 " glesTextureAlive=" + glesTextureAlive +
                 " glesTextureUploads=" + glesTextureUploadCount +
-                " glesTextureUpdates=" + glesTextureUpdateCount
+                " glesTextureUpdates=" + glesTextureUpdateCount +
+                " glesTextureResizes=" + glesTextureResizeCount +
+                " glesTextureSize=" + glesTextureWidth + "x" + glesTextureHeight
         );
     }
 
@@ -586,22 +681,41 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         final int surfaceWidth = surfaceView.getWidth();
         final int surfaceHeight = surfaceView.getHeight();
         final boolean surfaceValid = surfaceView.getHolder().getSurface().isValid();
+        final String glesStatus = nativeLoaded ? glesProbeStatusLabel(nativeCurrentGlesProbeStatusBridge()) : "unavailable";
+        progressSummaryText.setText(
+            "state=" + state +
+                " surface=" + surfaceWidth + "x" + surfaceHeight +
+                " valid=" + surfaceValid +
+                " gles=" + glesStatus +
+                " imeVisible=" + imeVisible
+        );
         statusText.setText(
             "state=" + state +
                 " nativeLoaded=" + nativeLoaded +
                 " windowFocus=" + hasWindowFocus() +
-                " surfaceValid=" + surfaceValid +
+                " imeVisible=" + imeVisible +
+                "\n" +
+                "surfaceValid=" + surfaceValid +
                 " surfaceSize=" + surfaceWidth + "x" + surfaceHeight +
-                " gles=" + (nativeLoaded ? glesProbeStatusLabel(nativeCurrentGlesProbeStatusBridge()) : "unavailable") +
+                "\n" +
+                "gles=" + glesStatus +
                 " swaps=" + (nativeLoaded ? nativeCurrentGlesProbeSwapCountBridge() : 0) +
                 " boundEpoch=" + (nativeLoaded ? nativeCurrentGlesProbeBoundEpochBridge() : 0) +
-                " contextCreates=" + (nativeLoaded ? nativeCurrentGlesProbeContextCreateCountBridge() : 0) +
+                "\n" +
+                "contextCreates=" + (nativeLoaded ? nativeCurrentGlesProbeContextCreateCountBridge() : 0) +
                 " surfaceCreates=" + (nativeLoaded ? nativeCurrentGlesProbeSurfaceCreateCountBridge() : 0) +
-                " textureCreates=" + (nativeLoaded ? nativeCurrentGlesProbeTextureCreateCountBridge() : 0) +
+                "\n" +
+                "textureCreates=" + (nativeLoaded ? nativeCurrentGlesProbeTextureCreateCountBridge() : 0) +
                 " textureAlive=" + (nativeLoaded && nativeCurrentGlesProbeTextureAliveBridge()) +
-                " textureUploads=" + (nativeLoaded ? nativeCurrentGlesProbeTextureUploadCountBridge() : 0) +
-                " textureUpdates=" + (nativeLoaded ? nativeCurrentGlesProbeTextureUpdateCountBridge() : 0)
+                "\n" +
+                "textureUploads=" + (nativeLoaded ? nativeCurrentGlesProbeTextureUploadCountBridge() : 0) +
+                " textureUpdates=" + (nativeLoaded ? nativeCurrentGlesProbeTextureUpdateCountBridge() : 0) +
+                " textureResizes=" + (nativeLoaded ? nativeCurrentGlesProbeTextureResizeCountBridge() : 0) +
+                "\n" +
+                "textureSize=" + (nativeLoaded ? nativeCurrentGlesProbeTextureWidthBridge() : 0) +
+                "x" + (nativeLoaded ? nativeCurrentGlesProbeTextureHeightBridge() : 0)
         );
+        updateImeToggleLabel();
     }
 
     private void appendEvent(String message) {

@@ -84,6 +84,18 @@ Current next renderer-unblock ticket:
   `usesDirectTerminalPresentation(...)` decisions from terminal widget runtime
   so Android does not inherit direct-vs-retained path checks in shared code
 
+Current next Android-owned runtime ticket:
+
+- `AH-A7`
+- probe bootstrap GLES texture-size/resize pressure so we know whether the
+  current Note10-style “one context, one texture, many updates” story still
+  holds once content dimensions change materially
+  - current Note10 read:
+    - holder-driven synthetic resize proves honest texture resize/reupload
+      without context churn
+    - IME is overlay-only on the current device/configuration, so it is not a
+      valid geometry-pressure source for this ticket
+
 ## Active Tickets
 
 ### `AH-A1` Shared Native Host Surface Truth
@@ -179,6 +191,23 @@ Status:
   - IME show/hide causes `surface.changed` + `surface.redrawNeeded`
   - backgrounding causes `onPause -> windowFocus(false) -> surface.destroyed -> onStop`
 - the observed Note10 ordering is now part of the owning Android authority
+- `android/host-harness/` is now superseded by `android/bootstrap-bridge/` for
+  active Android work and may be retired from the live tree
+
+Current bootstrap UI operating model:
+
+- product view owns the one canonical `SurfaceView`
+- product view now carries the single `Show IME` / `Hide IME` probe control
+- debug view is diagnostics only
+- debug view no longer contains a second GPU surface or old PTY control rows
+
+Current Android pivot:
+
+- bootstrap UI/harness work is sufficient for current runtime probing
+- the next highest-leverage Android lane is first real shell bring-up on
+  device
+- IME/prompt-avoidance should follow against a live shell rather than keep
+  driving bootstrap-only polish
 
 ### `AH-A4` Android Bootstrap Bridge
 
@@ -398,7 +427,7 @@ Purpose:
 
 Status:
 
-- active
+- met
 - current probe now tracks:
   - `glesTextureUploads`
   - `glesTextureUpdates`
@@ -409,6 +438,19 @@ Status:
   - `ops/android_build_bootstrap_bridge.sh`
   - `gradle -p android/bootstrap-bridge :app:assembleDebug`
 - device launch remained stable after the new JNI bridge surface was added
+- Note10 proof now shows:
+  - first acquire reported `glesTextureUploads=1 glesTextureUpdates=0`
+  - first redraw advanced to `glesTextureUploads=1 glesTextureUpdates=1`
+  - true in-process `replaced` later reported:
+    `glesTextureUploads=1 glesTextureUpdates=4`
+  - later background-side `retired` reported:
+    `glesTextureUploads=1 glesTextureUpdates=11`
+  - later fresh `acquired` after retirement reported:
+    `glesTextureUploads=1 glesTextureUpdates=12`
+  - all of those still kept:
+    `glesContextCreates=1`
+    `glesTextureCreates=1`
+    `glesTextureAlive=true`
 
 Acceptance:
 
@@ -417,6 +459,76 @@ Acceptance:
   surviving texture
 - the bootstrap bridge UI/logs expose those counters on-device
 - no shared renderer/backend code lands in `src/ui/renderer/`
+
+Next likely follow-up:
+
+1. if Android-owned bootstrap work stays open, make the next question a
+   stronger runtime-pressure probe such as texture-size/resize behavior rather
+   than basic upload/update truth
+2. otherwise return to the renderer queue only if it is again the highest
+   Android blocker
+
+### `AH-A7` Android GLES Texture-Resize Pressure
+
+Purpose:
+
+- prove whether the current bootstrap GLES policy can stay honest when content
+  size changes materially, not just when the surface is recreated or the same
+  texture receives repeated updates
+
+Status:
+
+- active
+- `AH-A6` proved:
+  - one initial upload
+  - repeated updates
+  - no hidden texture recreation across `replaced` and `retired -> acquired`
+    on the current Note10 path
+- the next Android-owned question is whether larger size pressure forces:
+  - texture reallocation
+  - upload count reset/advance
+  - hidden context/resource churn
+- first Note10 runtime-pressure pass now shows:
+  - a cleaner holder-driven resize can force:
+    - shrink to `glesTextureSize=1356x552`
+    - restore to `glesTextureSize=1356x1104`
+    - `glesTextureUploads` advancing from `1` to `3`
+    - `glesTextureResizes` advancing from `0` to `2`
+  - while still keeping:
+    - `glesContextCreates=1`
+    - `glesSurfaceCreates=1`
+    - `glesTextureCreates=1`
+- current caveat:
+  - after the clean shrink/restore sequence, Android still later produced
+    `surface.changed ... size=2675x0`
+  - the probe clamps that before upload, so this is useful runtime evidence
+    but not yet final product resize authority
+
+Acceptance:
+
+- the bootstrap probe can surface whether a texture resize/reallocation
+  happened
+- the Note10 run captures at least one explicit size-growth or size-change
+  case and records whether:
+  - `glesTextureCreates` changes
+  - `glesTextureUploads` advances beyond the initial upload
+  - `glesTextureUpdates` continues as before
+  - `glesContextCreates` stays stable
+- docs record the resulting policy truth clearly
+
+Next likely follow-up:
+
+1. replace the current ugly synthetic resize trigger with a cleaner
+   Android-owned size-pressure source
+2. tighten the current holder-driven debug path so the late pathological
+   callback does not pollute the result
+
+Do not do:
+
+- no shared Android renderer backend
+- no renderer atlas/text integration
+- no product claim that bootstrap resize pressure proof equals renderer
+  readiness
 
 Do not do:
 

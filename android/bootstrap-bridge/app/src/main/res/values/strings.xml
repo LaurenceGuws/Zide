@@ -6,4 +6,9 @@
     <string name="pty_stop">Stop PTY</string>
     <string name="pty_restart">Restart PTY</string>
     <string name="pty_refresh">Refresh PTY</string>
+    <string name="show_debug_view">Show Debug</string>
+    <string name="show_product_view">Show Product</string>
+    <string name="debug_view_title">Debug View</string>
+    <string name="show_ime">Show IME</string>
+    <string name="hide_ime">Hide IME</string>
 </resources>

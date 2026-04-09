@@ -94,21 +94,15 @@ Optional foreground-service PTY probe stop:
 The service is intentionally internal-only (`exported=false`), so the activity
 extras are the supported debug entrypoints for this probe.
 
-The app also now exposes on-device PTY controls:
+The bootstrap app now uses two screens:
 
-- `Start PTY`
-- `Stop PTY`
-- `Restart PTY`
-- `Refresh PTY`
-
-And a live PTY status panel showing:
-
-- alive vs dead
-- child pid
-- last start status
-- heartbeat count
-- last heartbeat line
-- log path
+- product view:
+  - one canonical `SurfaceView`
+  - short runtime summary
+  - `Show IME` / `Hide IME` probe toggle
+- debug view:
+  - grouped GLES/runtime status
+  - event log only
 
 ## Useful Logs
 
@@ -162,9 +156,7 @@ That proves:
   - app-process-owned PTY survives `HOME` / pause / stop briefly on the
     Note10
   - app-process-owned PTY does not survive `am force-stop`
-- the bootstrap app can now observe that disposable baseline directly on
-  device instead of relying on adb-only file checks
-- the bootstrap app now also logs PTY lifecycle snapshots at:
+- PTY lifetime snapshots are still logged through the activity at:
   - `activity.onStart.pty`
   - `activity.onResume.pty`
   - `activity.onPause.pty`
@@ -189,18 +181,33 @@ That proves:
   - `glesSurfaceCreates`
   - `glesTextureCreates`
   - `glesTextureAlive`
+  - `glesTextureUploads`
+  - `glesTextureUpdates`
 - Note10 lifecycle hardening now shows both replacement stories are real:
   - in-process `SurfaceView` recreation produced
-    `transition=replaced ... glesBoundEpoch=2 glesContextCreates=1 glesSurfaceCreates=2 glesTextureCreates=1 glesTextureAlive=true`
+    `transition=replaced ... glesBoundEpoch=2 glesContextCreates=1 glesSurfaceCreates=2 glesTextureCreates=1 glesTextureAlive=true glesTextureUploads=1 glesTextureUpdates=4`
   - later background-side retirement produced
-    `transition=retired ... gles=surface-destroyed glesBoundEpoch=0 glesContextCreates=1 glesTextureCreates=1 glesTextureAlive=true`
+    `transition=retired ... gles=surface-destroyed glesBoundEpoch=0 glesContextCreates=1 glesTextureCreates=1 glesTextureAlive=true glesTextureUploads=1 glesTextureUpdates=11`
   - the next foreground acquire produced
-    `transition=acquired ... glesBoundEpoch=4 glesContextCreates=1 glesSurfaceCreates=3 glesTextureCreates=1 glesTextureAlive=true`
+    `transition=acquired ... glesBoundEpoch=4 glesContextCreates=1 glesSurfaceCreates=3 glesTextureCreates=1 glesTextureAlive=true glesTextureUploads=1 glesTextureUpdates=12`
 - that means the bootstrap EGL path now proves clean window-surface recreation
   for both `replaced` and `retired` then later `acquired`
 - on the current Note10 path it also proves EGL context reuse across those
   transitions, rather than hidden context teardown/recreation
 - and it now proves one minimal context-owned GLES texture survives across
   those same transitions too
+- the upload/update counters now also show:
+  - one initial upload at texture creation
+  - repeated `glTexSubImage2D`-style updates on redraw and across surface
+    replacement/retirement without hidden texture recreation on this device
+- the first size-pressure probe now also shows:
+  - a holder-driven resize can advance `glesTextureUploads` and
+    `glesTextureResizes` with a clean shrink/restore pair:
+    `1356x1104 -> 1356x552 -> 1356x1104`
+  - that still keeps `glesContextCreates=1`, `glesSurfaceCreates=1`, and
+    `glesTextureCreates=1`
+  - Android still later emits one odd extra `surface.changed ... size=2675x0`
+    on this debug path, so it is strong runtime-pressure evidence but not yet
+    final product resize authority
 - Android native entry is now real enough to move on to deeper host/runtime
   ownership questions rather than more bootstrap speculation

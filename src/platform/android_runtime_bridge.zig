@@ -101,6 +101,8 @@ pub fn noteSurfaceAvailableFromJava(
         bridge_state.render_host.androidNativeWindow(),
         bridge_state.render_host.surfaceIdentityEpoch(),
         bridge_state.last_surface_transition,
+        bridge_state.render_host.surface_metrics.drawable_width,
+        bridge_state.render_host.surface_metrics.drawable_height,
     );
     return seq;
 }
@@ -163,6 +165,18 @@ pub fn currentGlesProbeTextureUploadCount() u32 {
 
 pub fn currentGlesProbeTextureUpdateCount() u32 {
     return android_gles_probe.currentTextureUpdateCount();
+}
+
+pub fn currentGlesProbeTextureResizeCount() u32 {
+    return android_gles_probe.currentTextureResizeCount();
+}
+
+pub fn currentGlesProbeTextureWidth() i32 {
+    return android_gles_probe.currentTextureWidth();
+}
+
+pub fn currentGlesProbeTextureHeight() i32 {
+    return android_gles_probe.currentTextureHeight();
 }
 
 pub fn startPtyLifetimeProbe() i64 {
