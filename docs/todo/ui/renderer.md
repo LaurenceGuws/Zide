@@ -118,6 +118,17 @@ blockers are:
   backend to feel routine, even though shared frame feedback is no longer
   terminal-only across the planned non-terminal family adopters
 
+Current strongest gate-5 code pressure after `RB-B3.c`:
+
+- `terminal_widget_presentation_runtime.zig` still contains surviving
+  product-significant `usesDirectTerminalPresentation(...)` checks for
+  recent-input force-full behavior, fast-present reuse gating, and direct
+  partial-update entry
+- that means shared widget/runtime code still knows too much about direct vs
+  retained terminal-present path shape
+- the next honest ticket is to move those path decisions behind the shared
+  terminal present contract instead of keeping them as widget-runtime branches
+
 Android note:
 
 - Android may continue with bootstrap-owned EGL/GLES binding authority and
@@ -1439,6 +1450,14 @@ Current implication:
 - `sample_section` is now also adopted into shared frame family summary.
 - present feedback now also reports `sample_section_touched` /
   `sample_section_presented`
+- terminal presentation retirement feedback now also consumes
+  `family_summary.terminal` directly instead of separate
+  `FrameSubmission` compatibility fields
+- the next concrete gate-5 pressure is now explicit:
+  `terminal_widget_presentation_runtime.zig` still branches on
+  `usesDirectTerminalPresentation(...)` for some product-significant decisions,
+  so the next reviewable cut is to move those decisions behind the terminal
+  present contract
 - focused `renderer_frame_host.zig` tests now lock the current gate-5 frame
   policy in code:
   - begin prelude reset
@@ -1446,6 +1465,37 @@ Current implication:
   - capture preserved for `begin_failed`
   - capture cleared for `submit_failed`
   - failed submission not surfacing terminal-presented feedback
+
+Next reviewable cut:
+
+- `RB-B3.d` Terminal present path decision ownership
+
+Purpose:
+
+- remove the remaining product-significant
+  `usesDirectTerminalPresentation(...)` decisions from
+  `terminal_widget_presentation_runtime.zig`
+
+Owner docs:
+
+- `app_architecture/ui/TERMINAL_PRESENT_PATH_DECISION_PLAN.md`
+- `app_architecture/ui/TERMINAL_PRESENT_TRANSACTION_PLAN.md`
+
+Acceptance criteria:
+
+- widget/runtime code no longer branches on direct-vs-retained terminal path
+  mode for recent-input force-full policy, fast-present reuse gating, or
+  direct partial-update entry
+- shared planning stays product-owned
+- presentable host / shared transaction contract owns path-satisfaction
+  decisions
+
+Do not do:
+
+- do not widen into another terminal-present redesign
+- do not reopen Metal validation
+- do not introduce new plan/result schema unless the current vocabulary proves
+  insufficient
 
 ## Milestone C: Vulkan Fit Audit
 

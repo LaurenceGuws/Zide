@@ -77,6 +77,13 @@ That means:
 - otherwise the next honest move is the next gate-5 cut done explicitly in
   service of Android terminal progress
 
+Current next renderer-unblock ticket:
+
+- `AR-B2` / `RB-B3.d`
+- remove the remaining product-significant
+  `usesDirectTerminalPresentation(...)` decisions from terminal widget runtime
+  so Android does not inherit direct-vs-retained path checks in shared code
+
 ## Active Tickets
 
 ### `AH-A1` Shared Native Host Surface Truth
@@ -441,6 +448,13 @@ Do not do:
 - no generic renderer cleanup with no Android leverage
 - no pretending bootstrap EGL proof by itself is equivalent to shared Android
   renderer readiness
+
+Current follow-up:
+
+- `AR-B1` is structurally complete
+- the next Android renderer adoption unblock is `AR-B2`:
+  move the remaining direct-vs-retained terminal-present path decisions behind
+  the shared present contract instead of leaving them in widget runtime
 
 ## Current Research Read
 
