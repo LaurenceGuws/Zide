@@ -221,6 +221,14 @@ the host contract requires:
     gles=drawn`
   - `glesSurfaceCreates` advanced from `2` to `3`
 
+Current Note10 context policy evidence:
+
+- `glesContextCreates` stayed at `1` through:
+  - first `acquired`
+  - later in-process `replaced`
+  - later `retired`
+  - later fresh `acquired`
+
 This proves:
 
 - `replaced` recreates the EGL window surface against the new identity epoch
@@ -228,14 +236,20 @@ This proves:
   the old surface still exists
 - later fresh `acquired` recreates the EGL window surface cleanly after
   retirement
+- the current bootstrap-owned EGL policy can honestly reuse one EGL context
+  across those surface transitions on the Note10
 - `glesBoundEpoch` and `glesSurfaceCreates` are now enough to falsify fake
   “same surface” assumptions during bootstrap hardening
+- `glesContextCreates` is now enough to falsify fake “context was quietly
+  recreated” assumptions during bootstrap hardening
 
 It still does not prove:
 
 - a shared Android renderer backend exists
 - presentable/frame routines are ready for Android in `src/ui/renderer/`
 - terminal/text/product rendering belongs in this lane yet
+- that every Android device should keep the EGL context alive across the same
+  transitions without stronger device pressure
 
 ## Decision From Probe
 
@@ -249,6 +263,8 @@ Current honest answer:
 - that reduces Android uncertainty materially
 - surface replacement and retirement/reacquire now both have device proof on
   the Note10
+- current bootstrap policy can keep one EGL context alive while recreating only
+  the window surface across those transitions on the Note10
 - it still remains bootstrap-owned proof work, not shared renderer adoption
 
 After that:

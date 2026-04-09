@@ -318,6 +318,9 @@ Status:
   - later fresh `transition=acquired` recreated the EGL window surface cleanly
   - `glesBoundEpoch` and `glesSurfaceCreates` now make those transitions
     directly observable in the bootstrap app logs/UI
+  - `glesContextCreates` stayed at `1` across those transitions, so current
+    bootstrap policy reuses one EGL context while recreating only the window
+    surface on this device
 
 Acceptance:
 
@@ -333,6 +336,7 @@ Acceptance:
   - `transition=replaced ... glesBoundEpoch=2 glesSurfaceCreates=2`
   - `transition=retired ... gles=surface-destroyed glesBoundEpoch=0`
   - later `transition=acquired ... glesBoundEpoch=4 glesSurfaceCreates=3`
+  - all of those still reported `glesContextCreates=1`
 - docs explicitly require surface replacement to follow
   `surfaceIdentityEpoch` / transition truth, not raw pointer comparison
 - docs explicitly forbid new shared renderer/backend work in `src/ui/renderer/`
