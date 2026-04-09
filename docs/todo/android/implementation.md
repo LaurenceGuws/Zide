@@ -398,7 +398,14 @@ Owner docs:
 
 Current target:
 
-- renderer gate #5
+- renderer gate #5 via `RB-B3.c`
+
+Current branch goal:
+
+- `renderer/ar-b1-nonterminal-frame-family`
+- first adopter: `chrome_band`
+- stop after one non-terminal family becomes first-class in shared
+  frame/present bookkeeping
 
 Acceptance:
 

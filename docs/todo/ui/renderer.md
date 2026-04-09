@@ -1335,6 +1335,50 @@ Stop marker:
 - draw/runtime code can exit early on a non-ready frame without backend-shaped
   branches
 
+Next reviewable cut:
+
+- `RB-B3.c` Non-terminal frame family ownership
+
+Purpose:
+
+- make the first non-terminal composition family first-class in shared
+  frame/present bookkeeping so Android renderer adoption no longer inherits a
+  terminal-only product feedback surface
+
+Owner docs:
+
+- `app_architecture/ui/NONTERMINAL_FRAME_FAMILY_PLAN.md`
+- `app_architecture/ui/RENDER_BACKEND_CONTRACT.md`
+- `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md`
+
+Primary code pressure:
+
+- `src/ui/renderer/present_trace_runtime.zig`
+- `src/ui/renderer/renderer_frame_host.zig`
+- `src/app/present_feedback_runtime.zig`
+- `src/ui/renderer/renderer_chrome_band_host.zig`
+
+Acceptance criteria:
+
+- one shared family-level frame summary surface exists
+- product-level frame feedback is no longer terminal-only in meaning
+- `chrome_band` is the first non-terminal adopter through that surface
+- terminal feedback remains correct
+- editor/sample adoption stays explicitly out of scope for this cut
+
+Do not do:
+
+- do not widen this into a generic multi-family present framework
+- do not adopt `editor_row_band` or `sample_section` on the same branch
+- do not reopen terminal-present redesign while doing this cut
+
+Stop marker:
+
+- terminal and `chrome_band` both report through one shared family summary
+  surface
+- present feedback no longer needs trace-only inference for `chrome_band`
+- queue/docs clearly state that later adopters still remain
+
 Current evidence:
 
 - `Renderer.beginFrame()` now returns shared frame-entry readiness instead of

@@ -55,6 +55,11 @@ Execution discipline:
     the default answer
 - The remaining shared-renderer blocker for first-class Android renderer work
   is gate #5, not gate #4.
+- The next explicit Android-unblock lane is now:
+  - `AR-B1` in `docs/todo/android/implementation.md`
+  - implemented as `RB-B3.c` in `docs/todo/ui/renderer.md`
+  - branch goal: first non-terminal frame family ownership with
+    `chrome_band` as the first adopter
 - Gate #2 should be treated as closed for active work until Metal validation is
   explicitly reopened.
 - The current repo question is:
