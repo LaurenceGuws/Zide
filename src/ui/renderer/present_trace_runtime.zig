@@ -1,6 +1,32 @@
+pub const FrameFamily = enum {
+    terminal,
+    chrome_band,
+};
+
+pub const FrameFamilySummary = struct {
+    pub const FamilyState = struct {
+        touched: bool = false,
+        presented: bool = false,
+        presented_generation: ?u64 = null,
+    };
+
+    terminal: FamilyState = .{},
+    chrome_band: FamilyState = .{},
+};
+
+pub fn finalizedFrameFamilySummary(current: FrameFamilySummary, submitted: bool) FrameFamilySummary {
+    var summary = current;
+    summary.terminal.presented = submitted and summary.terminal.touched;
+    if (!summary.terminal.presented) summary.terminal.presented_generation = null;
+    summary.chrome_band.presented = submitted and summary.chrome_band.touched;
+    summary.chrome_band.presented_generation = null;
+    return summary;
+}
+
 pub const FrameSubmission = struct {
     succeeded: bool,
     sequence: u64,
+    family_summary: FrameFamilySummary = .{},
     terminal_presented: bool = false,
     terminal_presented_generation: ?u64 = null,
 };
@@ -38,6 +64,7 @@ pub const PresentTrace = struct {
     frame_seq: u64 = 0,
     terminal_presentation_count: usize = 0,
     terminal_presented_generation: ?u64 = null,
+    chrome_band_touch_count: usize = 0,
     composition_clip_count: usize = 0,
     band_group_begin_count: usize = 0,
     band_group_end_count: usize = 0,
@@ -68,6 +95,7 @@ pub const PresentState = struct {
     last_present_gap_ms: f64 = 0.0,
     last_swap_ms: f64 = 0.0,
     main_composition_target: MainCompositionTarget = .default_target,
+    frame_family_current: FrameFamilySummary = .{},
     trace_current: PresentTrace = .{},
     trace_last: PresentTrace = .{},
     capture_path: ?[]const u8 = null,
@@ -89,6 +117,19 @@ pub fn noteBandCommandGroupBegin(self: anytype) void {
 
 pub fn noteBandCommandGroupEnd(self: anytype) void {
     self.present.trace_current.band_group_end_count += 1;
+}
+
+pub fn noteFrameFamilyTouch(self: anytype, family: FrameFamily) void {
+    switch (family) {
+        .terminal => {
+            self.present.frame_family_current.terminal.touched = true;
+            self.present.trace_current.terminal_presentation_count += 1;
+        },
+        .chrome_band => {
+            self.present.frame_family_current.chrome_band.touched = true;
+            self.present.trace_current.chrome_band_touch_count += 1;
+        },
+    }
 }
 
 pub fn noteSampleSectionCommandGroupBegin(self: anytype) void {
@@ -124,8 +165,11 @@ pub fn clearEditorSurfaceSolidFamily(self: anytype) void {
 }
 
 pub fn noteTerminalPresentation(self: anytype, generation: ?u64) void {
-    self.present.trace_current.terminal_presentation_count += 1;
-    if (generation) |value| self.present.trace_current.terminal_presented_generation = value;
+    noteFrameFamilyTouch(self, .terminal);
+    if (generation) |value| {
+        self.present.frame_family_current.terminal.presented_generation = value;
+        self.present.trace_current.terminal_presented_generation = value;
+    }
 }
 
 pub fn noteEditorSurfaceFullPaneClear(self: anytype, x: i32, y: i32, w: i32, h: i32) void {

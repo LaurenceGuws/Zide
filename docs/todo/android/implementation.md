@@ -407,6 +407,15 @@ Current branch goal:
 - stop after one non-terminal family becomes first-class in shared
   frame/present bookkeeping
 
+Current evidence:
+
+- shared frame finalization now emits one family summary surface on
+  `FrameSubmission` for `terminal` and `chrome_band`
+- `chrome_band` reports touch participation through that summary via
+  `renderer_chrome_band_host`
+- present feedback now reports terminal/chrome-band frame-family submission
+  truth without inferring chrome-band participation from trace-only counters
+
 Acceptance:
 
 - the next renderer cut is explicit about what Android backend adoption would

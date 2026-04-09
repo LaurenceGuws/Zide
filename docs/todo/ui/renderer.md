@@ -1418,6 +1418,18 @@ Current implication:
 - shared `FrameSubmission` feedback now matches that rule too:
   `terminal_presented` stays false and
   `terminal_presented_generation` stays null on `submitted = false`
+- `RB-B3.c` checkpoint: shared frame finalization now produces one
+  `FrameFamilySummary` surface (`terminal`, `chrome_band`) and stores it on
+  `FrameSubmission`.
+- terminal-presented compatibility fields remain, but now derive from that
+  shared family summary instead of terminal-only inference in
+  `renderer_frame_host`.
+- `renderer_chrome_band_host` is the first non-terminal adopter: chrome band
+  fill/outline/text operations now mark family touch participation, and present
+  feedback reports `chrome_band_touched` / `chrome_band_presented` directly
+  from submission family summary.
+- `editor_row_band` and `sample_section` remain explicit later adopters;
+  this cut does not move them onto frame family summary ownership.
 - focused `renderer_frame_host.zig` tests now lock the current gate-5 frame
   policy in code:
   - begin prelude reset

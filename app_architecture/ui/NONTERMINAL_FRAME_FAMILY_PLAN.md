@@ -142,6 +142,20 @@ Stop this branch when:
 
 Do not continue from there into editor/sample adoption on the same branch.
 
+## Implementation Checkpoint (2026-04-09)
+
+- shared frame finalization now computes one `FrameFamilySummary` surface at
+  submission time with first-class `terminal` and `chrome_band` family state
+  (`touched`, `presented`, optional `presented_generation`)
+- `FrameSubmission` now carries that summary while preserving terminal
+  compatibility fields for existing retirement feedback consumers
+- `renderer_chrome_band_host` is the first non-terminal adopter and reports
+  family touch participation from band fill/outline/text operations
+- present feedback now logs terminal/chrome-band family state from submission
+  summary instead of using trace-only inference for chrome-band participation
+- explicit non-goal upheld: `editor_row_band` and `sample_section` are not
+  adopted into this frame-family summary cut
+
 ## Expected Review Questions
 
 The implementation review for this branch should answer exactly:

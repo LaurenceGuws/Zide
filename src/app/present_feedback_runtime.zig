@@ -16,14 +16,18 @@ fn flushTerminalPresentationFeedback(state: anytype, submission: anytype) void {
 
 fn logFramePresent(state: anytype, shell: anytype, submission: anytype) void {
     const trace = shell.lastPresentTrace();
+    const family_summary = submission.family_summary;
     const render_log = app_logger.logger("renderer.present");
     render_log.logFields(.info, "frame_submission", &.{
         .{ .key = "frame", .value = .{ .unsigned = state.frame_id } },
         .{ .key = "submitted", .value = .{ .boolean = submission.succeeded } },
         .{ .key = "frame_seq", .value = .{ .unsigned = trace.frame_seq } },
         .{ .key = "submission_seq", .value = .{ .unsigned = submission.sequence } },
-        .{ .key = "terminal_presentations", .value = .{ .unsigned = trace.terminal_presentation_count } },
-        .{ .key = "terminal_presented_generation", .value = .{ .unsigned = if (trace.terminal_presented_generation) |g| g else 0 } },
+        .{ .key = "terminal_touched", .value = .{ .boolean = family_summary.terminal.touched } },
+        .{ .key = "terminal_presented", .value = .{ .boolean = family_summary.terminal.presented } },
+        .{ .key = "terminal_presented_generation", .value = .{ .unsigned = if (family_summary.terminal.presented_generation) |g| g else 0 } },
+        .{ .key = "chrome_band_touched", .value = .{ .boolean = family_summary.chrome_band.touched } },
+        .{ .key = "chrome_band_presented", .value = .{ .boolean = family_summary.chrome_band.presented } },
         .{ .key = "composition_clips", .value = .{ .unsigned = trace.composition_clip_count } },
         .{ .key = "band_group_begin", .value = .{ .unsigned = trace.band_group_begin_count } },
         .{ .key = "band_group_end", .value = .{ .unsigned = trace.band_group_end_count } },

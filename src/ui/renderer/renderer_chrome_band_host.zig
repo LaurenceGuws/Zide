@@ -24,15 +24,59 @@ pub const Band = struct {
     }
 
     pub fn fillRect(self: *Band, x: i32, y: i32, w: i32, h: i32, color: Color) void {
+        if (w <= 0 or h <= 0) return;
         present_trace_runtime.setEditorSurfaceSolidFamily(self.shell.renderer, .chrome_band);
         defer present_trace_runtime.clearEditorSurfaceSolidFamily(self.shell.renderer);
-        renderer_surface_host.drawRect(self.shell.renderer, x, y, w, h, color);
+        const recorded = renderer_surface_host.recordSolidSurfaceFromLogicalRect(
+            self.shell.renderer,
+            @floatFromInt(x),
+            @floatFromInt(y),
+            @floatFromInt(w),
+            @floatFromInt(h),
+            color.toRgba(),
+        );
+        if (recorded) present_trace_runtime.noteFrameFamilyTouch(self.shell.renderer, .chrome_band);
     }
 
     pub fn drawRectOutline(self: *Band, x: i32, y: i32, w: i32, h: i32, color: Color) void {
+        if (w <= 0 or h <= 0) return;
         present_trace_runtime.setEditorSurfaceSolidFamily(self.shell.renderer, .chrome_band);
         defer present_trace_runtime.clearEditorSurfaceSolidFamily(self.shell.renderer);
-        renderer_surface_host.drawRectOutline(self.shell.renderer, x, y, w, h, color);
+        const thick: i32 = 1;
+        var recorded_any = false;
+        recorded_any = renderer_surface_host.recordSolidSurfaceFromLogicalRect(
+            self.shell.renderer,
+            @floatFromInt(x),
+            @floatFromInt(y),
+            @floatFromInt(w),
+            @floatFromInt(thick),
+            color.toRgba(),
+        ) or recorded_any;
+        recorded_any = renderer_surface_host.recordSolidSurfaceFromLogicalRect(
+            self.shell.renderer,
+            @floatFromInt(x),
+            @floatFromInt(y + h - thick),
+            @floatFromInt(w),
+            @floatFromInt(thick),
+            color.toRgba(),
+        ) or recorded_any;
+        recorded_any = renderer_surface_host.recordSolidSurfaceFromLogicalRect(
+            self.shell.renderer,
+            @floatFromInt(x),
+            @floatFromInt(y),
+            @floatFromInt(thick),
+            @floatFromInt(h),
+            color.toRgba(),
+        ) or recorded_any;
+        recorded_any = renderer_surface_host.recordSolidSurfaceFromLogicalRect(
+            self.shell.renderer,
+            @floatFromInt(x + w - thick),
+            @floatFromInt(y),
+            @floatFromInt(thick),
+            @floatFromInt(h),
+            color.toRgba(),
+        ) or recorded_any;
+        if (recorded_any) present_trace_runtime.noteFrameFamilyTouch(self.shell.renderer, .chrome_band);
     }
 
     fn queueTextOp(self: *Band, kind: TextKind, text: []const u8, x: f32, y: f32, color: Color, bg: Color) void {
@@ -48,6 +92,7 @@ pub const Band = struct {
             log.logf(.warning, "band text op append failed err={s}", .{@errorName(err)});
             return;
         };
+        present_trace_runtime.noteFrameFamilyTouch(self.shell.renderer, .chrome_band);
     }
 
     pub fn drawText(self: *Band, text: []const u8, x: f32, y: f32, color: Color) void {
