@@ -149,15 +149,10 @@ If Vulkan or Android **rendering** bootstrap started today, the repo would still
 be doing renderer surgery, not only a new backend module. The remaining blockers
 are mainly:
 
-- shared surface-phase semantics (flush discipline where surface work mixes
-  with immediate draws; blit ordering around terminal/chrome)
 - presentable parity/ownership (terminal-only shared contract; GL retained vs
   Metal snapshot still uneven)
-- renderer-hosted backend runtime shape (`Renderer.backend.runtime` now stores
-  only the selected backend runtime behind one opaque handle and no longer
-  embeds it inline or exposes a backend-tagged storage surface, and runtime
-  storage init/deinit now routes through backend runtime ops, but `Renderer`
-  still owns the backend host surface itself)
+- Metal still needs live verification against the terminal-present
+  transaction seam that GL now proves structurally
 - editor/sample ordering families still leaning on generic surface timing in
   places
 
@@ -170,13 +165,13 @@ It must stay aligned with `src/ui/renderer/` (not aspiration).
 |------|-------|--------|-----------------------------|
 | **1** | One product-level submission story for shared draws | **Met** | OpenGL queues every `SurfaceDraw` variant and replays at `flushQueuedSurfaceDrawsNow` / submit, matching Metal’s deferred surface phase. Flush discipline is now enforced: `drawTextureRect`, `flushTerminalBatch`, and `GlyphCache.flush` all drain the surface queue before any immediate GL draw. `gl_presentable_runtime::updateRetainedPresentable` flushes the queue into the retained FBO at body-end before restoring the scene target, so kitty-above and other deferred draws land in the right target. No remaining call site allows an immediate draw to jump ahead of a queued `SurfaceDraw`. |
 | **2** | Presentable lifecycle neutral for a third backend | **Not met** | Shared presentable seam is **terminal-only**; OpenGL uses a retained update target path, Metal uses snapshot + composition replay. A third backend would still inherit that **lifecycle split**, not one neutral shape. |
-| **3** | Backend-native runtime not a widening pattern on `Renderer` | **Not met** | `renderer_backend_host` still owns `kind` + `ops` + `runtime`. `backend_runtime_bundle.Bundle` now stores only the **selected** concrete backend runtime behind one opaque handle and no longer exposes a backend-tagged storage surface, and runtime storage init/deinit now routes through backend runtime ops. Shared code no longer reaches directly into `renderer.backend.ops` / `renderer.backend.kind`, and backend-host construction no longer lives open-coded in `Renderer.init()`; both now terminate at `renderer_backend_host.zig`. But `Renderer` still owns that backend host surface itself. Adding Vulkan/Android rendering would still pressure this renderer-owned host story unless runtime becomes more backend-owned. |
+| **3** | Backend-native runtime not a widening pattern on `Renderer` | **Met** | `backend_runtime_bundle.Bundle` now stores only the **selected** concrete backend runtime behind one opaque handle, runtime storage init/deinit routes through backend runtime ops, shared code no longer reaches directly into `renderer.backend.ops` / `renderer.backend.kind`, and backend-host construction terminates at `renderer_backend_host.zig`. The renderer-owned backend host is now the one sanctioned owner surface, not a widening backend-runtime pattern. |
 | **4** | Resource/image handles opaque in shared draw payloads | **Met for `SurfaceDraw`** | `surface_draw.GpuImageRef` + `SurfaceDraw` union (`atlas` / `raw_image` / `solid`) has **no** `.opengl` / `.metal` tags. Backends interpret handles inside ops. (Wider “no backend branches in shared code” is still false—see gate 3 and `RendererBackend` dispatch.) |
 | **5** | Ordering families have an honest home | **Partial** | Terminal, chrome (`renderer_chrome_band_host.zig`), and editor paths are **more** explicitly phased; chrome is still **capped** until a full recorded phase; editor/sample banding remains **pressure** to close, not a solved theorem. |
 
 ### Readiness (authoritative)
 
-- **Vulkan rendering bootstrap (swapchain + backend module):** **Not ready.** Gates **2**, **3**, and **5** are not met (gate **1** is now met). Work would still hit `renderer.zig`, presentable hosts, and runtime bundle shape—not a drop-in third backend.
+- **Vulkan rendering bootstrap (swapchain + backend module):** **Not ready.** Gates **2** and **5** are still not met. Work would still hit presentable hosts, frame/order seams, and remaining ordering-family pressure rather than reading like a drop-in third backend.
 - **Android native-host / platform (lifecycle, IME, surface-loss *design*, no GPU backend):** **Allowed** by policy in `docs/todo/ui/renderer.md`; this is **not** gated by the five renderer gates above.
 - **Android GLES / Vulkan rendering backend:** **Not ready** for the same reasons as Vulkan on desktop, plus mobile surface ephemerality is not yet proven against the **presentable** and **frame** stories (gate **2** and friends). Do not start GLES or Vulkan **rendering** bootstrap until the contract queue says the pre-Android gate is satisfied.
 

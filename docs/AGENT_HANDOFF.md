@@ -52,10 +52,15 @@ Execution discipline:
   behaviorally validated there.
 - Metal remains unverified against that new seam contract; treat that as
   deferred verification, not as a reason to reopen gate-2 extraction work.
+- Gate #4 is now structurally met: selected backend runtime storage is opaque,
+  selected-backend-only, and owned through one sanctioned backend host surface
+  instead of a widening renderer runtime pattern.
 - Gate #5 has now crossed its first two narrow frame-lifecycle cuts:
   - frame submission/finalization now routes through one small shared outcome
     surface
   - frame begin readiness is now visible to shared draw/runtime code
+- The active renderer pressure is now gate #5 plus drift prevention on gate
+  #2, not more speculative gate-4 cleanup.
 - Metal is now a real live implementation, especially on the terminal lane, but
   it still depends on backend-specific state and draw descriptions carried by
   the shared renderer.

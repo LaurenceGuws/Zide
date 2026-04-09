@@ -1,6 +1,7 @@
 # Backend Runtime Ownership Plan
 
-Purpose: define the next narrow gate-4 cut under `RB-B2`.
+Purpose: record the gate-4 backend-runtime ownership lane under `RB-B2`, the
+cuts taken, and the closure decision.
 
 This plan is intentionally narrow. It does not redesign frame ordering,
 presentable lifecycle, or backend capability shape. It only answers the
@@ -238,6 +239,28 @@ That means the next gate-4 move must answer a stronger question first:
 - if `Renderer` should not own the backend host surface, what higher-level
   owner should, and why is that owner more honest than the current renderer
   field?
+
+## Closure Decision
+
+Current evidence is now strong enough to close `RB-B2` as a structural gate:
+
+- backend-native runtime is no longer a widening renderer field pattern
+- selected runtime storage is opaque
+- selected runtime storage init/deinit is backend-owned in practice
+- shared code terminates at one sanctioned backend host surface instead of
+  reaching backend dispatch/runtime internals directly
+- backend-host construction is centralized
+
+Conclusion:
+
+- a renderer-owned `renderer_backend_host` is acceptable as the one sanctioned
+  owner surface for backend selection, dispatch, and opaque runtime handle
+- making that host heap-owned or pointer-wrapped would not currently improve
+  contract honesty
+- future simplification here is optional cleanup, not an adoption blocker
+
+So gate 4 should now be treated as structurally met, and Android rendering
+should no longer be blocked on `RB-B2`
 
 Latest narrowing cut:
 

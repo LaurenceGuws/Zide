@@ -34,9 +34,9 @@ not architecture.
   slots) until Milestone B (`RB-B1`–`RB-B3`) and the adoption gate checklist are
   honestly met and this queue records that the lane is open.** A fit audit or a
   “readiness” table is **evidence**, not permission to start coding that backend.
-- Do not pivot to Android implementation work yet.
-- Android native-host/platform design may advance, but Android rendering
-  backend work is still gated by this queue.
+- Do not pivot to Android rendering implementation yet.
+- Android native-host/platform work may advance, but Android rendering backend
+  work is still gated by this queue.
 - Do not let backend labels substitute for a contract.
 - Do not treat Linux GL regressions as polish-only if they expose contract
   weakness.
@@ -89,7 +89,7 @@ Aligned with `app_architecture/ui/RENDER_BACKEND_CONTRACT.md` § “Gate status
 | 1 | One semantic operation → one renderer contract path | **Met** — `SurfaceDraw` deferral unified GL/Metal; flush discipline enforced at `drawTextureRect`, `flushTerminalBatch`, `GlyphCache.flush`; `updateRetainedPresentable` flushes surface queue into retained FBO before restoring scene target (fixes kitty-above ordering). No immediate-draw bypass remains. |
 | 2 | Backend choice does not change product-level submission semantics | **Structurally met on GL** — terminal-present transaction/execution seams are in place and GL behavioral equivalence passed adversarial cases; Metal is still unverified against the new seam contract and remains deferred verification rather than a structural blocker. |
 | 3 | No backend-specific `.opengl` / `.metal` / `.vulkan` in shared **draw payloads** | **Met for `SurfaceDraw`** — `GpuImageRef` + neutral union; `Renderer` still dispatches by backend enum elsewhere. |
-| 4 | `Renderer` not the hidden owner of backend-native runtime | **Not met** — `backend.runtime` now stores only the selected backend runtime behind one opaque handle and no longer embeds it inline or exposes a backend-tagged storage surface, and runtime storage init/deinit now routes through backend runtime ops. Shared code no longer reaches directly into `renderer.backend.ops` / `renderer.backend.kind`, and backend-host construction no longer lives open-coded in `Renderer.init()`; both now terminate at `renderer_backend_host.zig`. But `Renderer` still owns the backend host surface itself (`kind` + ops + opaque runtime handle). |
+| 4 | `Renderer` not the hidden owner of backend-native runtime | **Met** — selected runtime storage is opaque, only the selected backend runtime is materialized, runtime storage init/deinit now routes through backend runtime ops, shared code no longer reaches directly into backend dispatch/runtime internals, and backend-host construction is centralized in `renderer_backend_host.zig`. The renderer-owned backend host is now the one sanctioned owner surface rather than a widening runtime-storage pattern. |
 | 5 | Presentable/frame routine for a new backend | **Not met** — terminal-only presentable; GL retained vs Metal snapshot uneven. |
 
 **Readiness:** Android **platform** work (lifecycle, IME, etc.) stays allowed.
@@ -97,35 +97,32 @@ Android **rendering** backend (GLES/Vulkan) and desktop **Vulkan** bootstrap
 remain **not ready** until this checklist clears (see contract § “Readiness
 (authoritative)”).
 
-**Branch scope (2026-04-09):** Gate #2 is now structurally closed on GL and
-gate #5 is paused unless a stronger ordering/ownership leak appears. That
-means the next honest blocker for Android rendering is gate #4: `Renderer`
-still owns the backend host surface even though the widening `backend.runtime`
-bundle and backend-tagged storage surface are gone and runtime storage
-init/deinit now routes through backend runtime ops and shared code no longer
-reaches into backend dispatch fields directly and backend-host construction no
-longer lives in `Renderer.init()`. Android host/bootstrap work is now merged,
-so a third backend would still pressure that backend-host ownership story.
-Gate #3 is already met for the `SurfaceDraw` surface; the residual
-backend-enum dispatch elsewhere is addressed as part of gate #4. Do not bundle
-gates or declare a gate met until the code and docs both reflect it honestly.
+**Branch scope (2026-04-09):** Gate #2 is structurally closed on GL and gate
+#4 is now structurally met. Gate #5 remains paused unless a stronger
+ordering/ownership leak appears again. That means Android rendering is still
+blocked, but not by backend-runtime ownership anymore. The remaining contract
+blockers are:
 
-Latest gate-4 narrowing note:
+- gate #2: Metal still needs live verification against the terminal-present
+  transaction seam
+- gate #5: presentable/frame routine is still not neutral enough for a new
+  backend to feel routine
 
-- shared font init/text-config paths now use
-  `src/ui/renderer/renderer_font_backend_host.zig` instead of importing
-  backend modules directly; this reduces shared helper leakage but does not
-  yet close selected-runtime ownership
-- shared `text_runtime.zig` flush/fallback helper access now uses
-  `src/ui/renderer/renderer_text_backend_host.zig` instead of importing GL and
-  Metal backend modules directly
-- shared `bootstrap_runtime.zig` backend selection now terminates through
-  `src/ui/renderer/backend_dispatch.zig` instead of a separate GL/Metal switch
-- shared `renderer_text_host.zig` and `renderer_surface_host.zig` now route
-  GL flush helper access through small backend-host files instead of importing
-  `gl_backend.zig` directly
-- `draw_ops.zig` and `glyph_cache.zig` now route GL vertex-stream helper
-  access through `src/ui/renderer/renderer_vertex_stream_backend_host.zig`
+Gate #3 remains met for the `SurfaceDraw` surface. Do not reopen gate #4
+without new ownership pressure that proves the sanctioned backend-host surface
+is no longer honest.
+
+Gate-4 closure note:
+
+- shared font/text/surface/vertex-stream helper access now routes through
+  dedicated backend-host files instead of generic shared files importing
+  backend modules directly
+- selected runtime storage is opaque and selected-backend-only
+- runtime storage init/deinit now routes through backend runtime ops
+- shared code no longer reaches directly into `renderer.backend.ops` /
+  `renderer.backend.kind`
+- `renderer_backend_host.zig` is now the sanctioned owner surface for backend
+  selection, dispatch, and opaque runtime storage
 
 ## How To Use This Queue
 
@@ -736,7 +733,7 @@ Follow-on redesign authority:
 
 ### `RB-B2` Backend runtime ownership
 
-Status: active
+Status: structurally complete
 
 Current evidence:
 - `Renderer` now carries one `backend_runtime` bundle instead of separate
@@ -757,20 +754,18 @@ Current evidence:
   lifecycle model it actually belongs to.
 - This is good host-shape cleanup and reduces one obvious renderer-root
   duplication seam.
-- This is not closure yet:
-  - backend host storage is still renderer-root-owned
-  - backend-specific mutation/storage truth still lives in shared process
-    memory shaped by the renderer host
-  - adding a backend still pressures this shared storage story
-- current code pressure is now narrower than before:
+- current code pressure narrowed enough to close the structural gate:
   - shared code no longer meaningfully reads `renderer.backend.runtime`
     outside backend modules
-  - the remaining blocker is storage ownership itself, not another generic
-    "stop shared leaks" cleanup
-- Android host/bootstrap truth is now merged, so this is no longer theoretical
-  third-backend pressure:
-  - Android rendering would currently widen this renderer-owned
-    selected-runtime story again
+  - selected runtime storage is opaque and selected-backend-only
+  - runtime storage init/deinit is backend-owned in practice
+  - `renderer_backend_host.zig` is now the one sanctioned owner surface for
+    backend selection, dispatch, and opaque runtime storage
+- Android host/bootstrap truth forced the audit, but the conclusion is now the
+  opposite of the older assumption:
+  - Android rendering is no longer blocked on `RB-B2`
+  - reopening this lane now would require new ownership pressure, not just the
+    existence of a renderer-owned backend host field
 
 Owner docs:
 
@@ -843,13 +838,16 @@ Current checkpoint:
 - Metal optional helper paths now return neutral results on non-Metal selected
   runtime instead of panicking through selected-runtime assertions
 - build/test validation stayed green with no intended behavior change
-- gate 4 is improved, but not closed:
-  - `Renderer` no longer owns a backend-tagged selected-runtime storage
-    surface; selected runtime now lives behind one opaque handle plus backend
-    kind
-  - `Renderer` still owns selected-runtime lifecycle and teardown plumbing
-  - adding another backend would still pressure that renderer-owned lifecycle
-    story
+- gate 4 is now structurally complete:
+  - `Renderer` no longer owns a widening or backend-tagged runtime-storage
+    surface
+  - selected runtime storage is opaque and selected-backend-only
+  - selected runtime storage lifecycle now routes through backend runtime ops
+  - shared code terminates at `renderer_backend_host.zig` instead of reaching
+    backend dispatch/runtime internals directly
+  - the renderer-owned backend host is now accepted as the one sanctioned
+    owner surface, and pointer-wrapping or heap-owning it would be indirection
+    theater rather than a real contract improvement
 
 ### `RB-B3` Frame lifecycle ownership
 
