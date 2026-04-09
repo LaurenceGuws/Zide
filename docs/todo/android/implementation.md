@@ -423,6 +423,9 @@ Current evidence:
 - present feedback now reports terminal/chrome-band/editor-row-band/
   sample-section frame-family submission truth without inferring non-terminal
   participation from trace-only counters
+- terminal presentation retirement feedback now also consumes the shared
+  terminal family state directly instead of separate terminal-only
+  `FrameSubmission` compatibility fields
 
 Acceptance:
 

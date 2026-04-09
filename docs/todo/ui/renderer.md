@@ -1426,9 +1426,9 @@ Current implication:
   `terminal_presented_generation` stays null on `submitted = false`
 - `RB-B3.c` checkpoint: shared frame finalization now produces one
   `FrameFamilySummary` surface and stores it on `FrameSubmission`.
-- terminal-presented compatibility fields remain, but now derive from that
-  shared family summary instead of terminal-only inference in
-  `renderer_frame_host`.
+- terminal presentation retirement feedback now also consumes
+  `family_summary.terminal` directly instead of separate
+  `FrameSubmission` compatibility fields.
 - `renderer_chrome_band_host` is the first non-terminal adopter: chrome band
   fill/outline/text operations now mark family touch participation, and present
   feedback reports `chrome_band_touched` / `chrome_band_presented` directly

@@ -54,14 +54,11 @@ pub fn finishFrameSubmission(renderer: anytype, outcome: FrameExecutionOutcome) 
         renderer.present.frame_family_current,
         succeeded,
     );
-    const terminal_presented = family_summary.terminal.presented;
     if (succeeded) renderer.present.submission_sequence += 1;
     return .{
         .succeeded = succeeded,
         .sequence = renderer.present.submission_sequence,
         .family_summary = family_summary,
-        .terminal_presented = terminal_presented,
-        .terminal_presented_generation = family_summary.terminal.presented_generation,
     };
 }
 
@@ -155,8 +152,6 @@ test "finishFrameSubmission submitted advances sequence and clears capture" {
     try std.testing.expectEqual(@as(?u64, 77), submission.family_summary.terminal.presented_generation);
     try std.testing.expect(!submission.family_summary.chrome_band.touched);
     try std.testing.expect(!submission.family_summary.chrome_band.presented);
-    try std.testing.expect(submission.terminal_presented);
-    try std.testing.expectEqual(@as(?u64, 77), submission.terminal_presented_generation);
     try std.testing.expectEqual(@as(f64, 3.25), renderer.present.last_swap_ms);
     try std.testing.expectEqual(@as(u64, 12), renderer.present.submission_sequence);
     try std.testing.expectEqual(present_trace_runtime.MainCompositionTarget.default_target, renderer.present.main_composition_target);
@@ -225,8 +220,6 @@ test "finishFrameSubmission submit_failed clears capture but does not advance se
     try std.testing.expect(submission.family_summary.terminal.touched);
     try std.testing.expect(!submission.family_summary.terminal.presented);
     try std.testing.expect(!submission.family_summary.chrome_band.presented);
-    try std.testing.expect(!submission.terminal_presented);
-    try std.testing.expectEqual(@as(?u64, null), submission.terminal_presented_generation);
     try std.testing.expectEqual(@as(u64, 8), renderer.present.submission_sequence);
     try std.testing.expectEqual(@as(?[]const u8, null), renderer.present.capture_path);
     try std.testing.expect(!renderer.present.capture_armed);
@@ -259,7 +252,6 @@ test "finishFrameSubmission submitted reports chrome band through shared family 
     try std.testing.expect(submission.family_summary.chrome_band.touched);
     try std.testing.expect(submission.family_summary.chrome_band.presented);
     try std.testing.expect(!submission.family_summary.terminal.touched);
-    try std.testing.expect(!submission.terminal_presented);
 }
 
 test "finishFrameSubmission submitted reports editor row-band through shared family summary" {

@@ -35,8 +35,6 @@ pub const FrameSubmission = struct {
     succeeded: bool,
     sequence: u64,
     family_summary: FrameFamilySummary = .{},
-    terminal_presented: bool = false,
-    terminal_presented_generation: ?u64 = null,
 };
 
 pub const FrameExecutionState = enum {

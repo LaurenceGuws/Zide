@@ -148,7 +148,8 @@ Do not continue from there into editor/sample adoption on the same branch.
   submission time with first-class `terminal` and `chrome_band` family state
   (`touched`, `presented`, optional `presented_generation`)
 - `FrameSubmission` now carries that summary while preserving terminal
-  compatibility fields for existing retirement feedback consumers
+  family state as the single shared terminal/chrome/editor/sample submission
+  surface
 - `renderer_chrome_band_host` is the first non-terminal adopter and reports
   family touch participation from band fill/outline/text operations
 - present feedback now logs terminal/chrome-band family state from submission
@@ -176,6 +177,9 @@ Do not continue from there into editor/sample adoption on the same branch.
 - sample-section queued text now marks family touch only after append succeeds
 - present feedback now reports `sample_section_touched` /
   `sample_section_presented`
+- terminal presentation retirement feedback now also reads
+  `family_summary.terminal` directly instead of `FrameSubmission`
+  compatibility fields
 - this family-adopter lane is now structurally complete for its planned
   adopters:
   - `terminal`
