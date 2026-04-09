@@ -141,6 +141,10 @@ pub fn currentGlesProbeBoundEpoch() u64 {
     return android_gles_probe.currentBoundEpoch();
 }
 
+pub fn currentGlesProbeContextCreateCount() u32 {
+    return android_gles_probe.currentContextCreateCount();
+}
+
 pub fn currentGlesProbeSurfaceCreateCount() u32 {
     return android_gles_probe.currentSurfaceCreateCount();
 }

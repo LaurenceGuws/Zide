@@ -71,6 +71,7 @@ const ProbeState = struct {
     display: EGLDisplay = null,
     config: EGLConfig = null,
     context: EGLContext = null,
+    context_create_count: u32 = 0,
     surface: EGLSurface = null,
     bound_epoch: u64 = 0,
     surface_create_count: u32 = 0,
@@ -133,6 +134,7 @@ fn ensureDisplayContext() ProbeStatus {
         else
             eglCreateContext(probe_state.display, probe_state.config, null, &context_attribs);
         if (probe_state.context == null) return noteError(.init_failed);
+        probe_state.context_create_count += 1;
     }
 
     return setStatus(.ready);
@@ -234,6 +236,10 @@ pub fn currentBoundEpoch() u64 {
     return probe_state.bound_epoch;
 }
 
+pub fn currentContextCreateCount() u32 {
+    return probe_state.context_create_count;
+}
+
 pub fn currentSurfaceCreateCount() u32 {
     return probe_state.surface_create_count;
 }
@@ -244,12 +250,18 @@ test "probe recreates the surface when identity epoch changes" {
     reset();
     try std.testing.expectEqual(ProbeStatus.drawn, noteSurfaceAvailable(@ptrFromInt(0x1111), 1, .acquired));
     try std.testing.expectEqual(@as(u32, 1), currentSwapCount());
+    try std.testing.expectEqual(@as(u32, 1), currentContextCreateCount());
+    try std.testing.expectEqual(@as(u32, 1), currentSurfaceCreateCount());
 
     try std.testing.expectEqual(ProbeStatus.drawn, noteSurfaceAvailable(@ptrFromInt(0x1111), 1, .unchanged));
     try std.testing.expectEqual(@as(u32, 2), currentSwapCount());
+    try std.testing.expectEqual(@as(u32, 1), currentContextCreateCount());
+    try std.testing.expectEqual(@as(u32, 1), currentSurfaceCreateCount());
 
     try std.testing.expectEqual(ProbeStatus.drawn, noteSurfaceAvailable(@ptrFromInt(0x2222), 2, .replaced));
     try std.testing.expectEqual(@as(u32, 3), currentSwapCount());
+    try std.testing.expectEqual(@as(u32, 1), currentContextCreateCount());
+    try std.testing.expectEqual(@as(u32, 2), currentSurfaceCreateCount());
 
     try std.testing.expectEqual(ProbeStatus.surface_destroyed, noteSurfaceDestroyed());
     try std.testing.expectEqual(ProbeStatus.unavailable, noteSurfaceRedrawNeeded());

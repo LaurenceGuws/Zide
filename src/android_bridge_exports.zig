@@ -109,6 +109,13 @@ export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeCurrentGles
     return @intCast(android_runtime_bridge.currentGlesProbeBoundEpoch());
 }
 
+export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeCurrentGlesProbeContextCreateCountBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+) callconv(.c) i64 {
+    return @intCast(android_runtime_bridge.currentGlesProbeContextCreateCount());
+}
+
 export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeCurrentGlesProbeSurfaceCreateCountBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,

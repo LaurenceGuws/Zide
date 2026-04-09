@@ -82,6 +82,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     private static native int nativeCurrentGlesProbeStatusBridge();
     private static native long nativeCurrentGlesProbeSwapCountBridge();
     private static native long nativeCurrentGlesProbeBoundEpochBridge();
+    private static native long nativeCurrentGlesProbeContextCreateCountBridge();
     private static native long nativeCurrentGlesProbeSurfaceCreateCountBridge();
     private static native long nativeStartPtyProbeBridge();
     private static native void nativeStopPtyProbeBridge();
@@ -191,6 +192,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         final int glesStatus = nativeLoaded ? nativeCurrentGlesProbeStatusBridge() : 0;
         final long glesSwapCount = nativeLoaded ? nativeCurrentGlesProbeSwapCountBridge() : 0;
         final long glesBoundEpoch = nativeLoaded ? nativeCurrentGlesProbeBoundEpochBridge() : 0;
+        final long glesContextCreateCount = nativeLoaded ? nativeCurrentGlesProbeContextCreateCountBridge() : 0;
         final long glesSurfaceCreateCount = nativeLoaded ? nativeCurrentGlesProbeSurfaceCreateCountBridge() : 0;
         callNativeWithSurfaceState(
             "native.surfaceAvailable",
@@ -201,6 +203,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
             glesStatus,
             glesSwapCount,
             glesBoundEpoch,
+            glesContextCreateCount,
             glesSurfaceCreateCount
         );
         updateStatus("surface-changed");
@@ -216,6 +219,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         final int glesStatus = nativeLoaded ? nativeCurrentGlesProbeStatusBridge() : 0;
         final long glesSwapCount = nativeLoaded ? nativeCurrentGlesProbeSwapCountBridge() : 0;
         final long glesBoundEpoch = nativeLoaded ? nativeCurrentGlesProbeBoundEpochBridge() : 0;
+        final long glesContextCreateCount = nativeLoaded ? nativeCurrentGlesProbeContextCreateCountBridge() : 0;
         final long glesSurfaceCreateCount = nativeLoaded ? nativeCurrentGlesProbeSurfaceCreateCountBridge() : 0;
         callNativeWithSurfaceState(
             "native.surfaceDestroyed",
@@ -226,6 +230,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
             glesStatus,
             glesSwapCount,
             glesBoundEpoch,
+            glesContextCreateCount,
             glesSurfaceCreateCount
         );
         updateStatus("surface-destroyed");
@@ -238,12 +243,14 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         final int glesStatus = nativeLoaded ? nativeCurrentGlesProbeStatusBridge() : 0;
         final long glesSwapCount = nativeLoaded ? nativeCurrentGlesProbeSwapCountBridge() : 0;
         final long glesBoundEpoch = nativeLoaded ? nativeCurrentGlesProbeBoundEpochBridge() : 0;
+        final long glesContextCreateCount = nativeLoaded ? nativeCurrentGlesProbeContextCreateCountBridge() : 0;
         final long glesSurfaceCreateCount = nativeLoaded ? nativeCurrentGlesProbeSurfaceCreateCountBridge() : 0;
         appendEvent(
             "native.surfaceRedrawNeeded seq=" + seq +
                 " gles=" + glesProbeStatusLabel(glesStatus) +
                 " glesSwaps=" + glesSwapCount +
                 " glesBoundEpoch=" + glesBoundEpoch +
+                " glesContextCreates=" + glesContextCreateCount +
                 " glesSurfaceCreates=" + glesSurfaceCreateCount
         );
         updateStatus("surface-redraw-needed");
@@ -477,6 +484,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         int glesStatus,
         long glesSwapCount,
         long glesBoundEpoch,
+        long glesContextCreateCount,
         long glesSurfaceCreateCount
     ) {
         appendEvent(
@@ -487,6 +495,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
                 " gles=" + glesProbeStatusLabel(glesStatus) +
                 " glesSwaps=" + glesSwapCount +
                 " glesBoundEpoch=" + glesBoundEpoch +
+                " glesContextCreates=" + glesContextCreateCount +
                 " glesSurfaceCreates=" + glesSurfaceCreateCount
         );
     }
@@ -550,6 +559,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
                 " gles=" + (nativeLoaded ? glesProbeStatusLabel(nativeCurrentGlesProbeStatusBridge()) : "unavailable") +
                 " swaps=" + (nativeLoaded ? nativeCurrentGlesProbeSwapCountBridge() : 0) +
                 " boundEpoch=" + (nativeLoaded ? nativeCurrentGlesProbeBoundEpochBridge() : 0) +
+                " contextCreates=" + (nativeLoaded ? nativeCurrentGlesProbeContextCreateCountBridge() : 0) +
                 " surfaceCreates=" + (nativeLoaded ? nativeCurrentGlesProbeSurfaceCreateCountBridge() : 0)
         );
     }
