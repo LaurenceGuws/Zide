@@ -182,5 +182,18 @@ That proves:
   - `native.surfaceRedrawNeeded ... gles=drawn`
   - later same-surface geometry churn still reporting
     `transition=unchanged gles=drawn`
+- the EGL probe now also exposes:
+  - `glesSwaps`
+  - `glesBoundEpoch`
+  - `glesSurfaceCreates`
+- Note10 lifecycle hardening now shows both replacement stories are real:
+  - in-process `SurfaceView` recreation produced
+    `transition=replaced ... glesBoundEpoch=2 glesSurfaceCreates=2`
+  - later background-side retirement produced
+    `transition=retired ... gles=surface-destroyed glesBoundEpoch=0`
+  - the next foreground acquire produced
+    `transition=acquired ... glesBoundEpoch=4 glesSurfaceCreates=3`
+- that means the bootstrap EGL path now proves clean window-surface recreation
+  for both `replaced` and `retired` then later `acquired`
 - Android native entry is now real enough to move on to deeper host/runtime
   ownership questions rather than more bootstrap speculation

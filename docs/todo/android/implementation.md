@@ -311,6 +311,13 @@ Status:
   `app_architecture/platform/android/ANDROID_GLES_BINDING_PLAN.md`
 - first executable bootstrap-owned EGL/GLES clear/swap proof now exists in the
   Android bootstrap bridge and validated on the Note10
+- bootstrap-owned EGL lifecycle hardening is now also structurally met on the
+  Note10:
+  - true in-process `transition=replaced` recreated the EGL window surface
+  - `transition=retired` cleared live surface binding state
+  - later fresh `transition=acquired` recreated the EGL window surface cleanly
+  - `glesBoundEpoch` and `glesSurfaceCreates` now make those transitions
+    directly observable in the bootstrap app logs/UI
 
 Acceptance:
 
@@ -322,6 +329,10 @@ Acceptance:
 - Note10 device proof now shows:
   - `native.surfaceAvailable ... gles=drawn`
   - `native.surfaceRedrawNeeded ... gles=drawn`
+- Note10 lifecycle hardening now also shows:
+  - `transition=replaced ... glesBoundEpoch=2 glesSurfaceCreates=2`
+  - `transition=retired ... gles=surface-destroyed glesBoundEpoch=0`
+  - later `transition=acquired ... glesBoundEpoch=4 glesSurfaceCreates=3`
 - docs explicitly require surface replacement to follow
   `surfaceIdentityEpoch` / transition truth, not raw pointer comparison
 - docs explicitly forbid new shared renderer/backend work in `src/ui/renderer/`

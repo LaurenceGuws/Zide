@@ -248,15 +248,30 @@ Android-specific questions:
 - surface identity/replacement truth is explicit enough for future renderer
   work
 - PTY lifetime baseline is explicit enough for future Android terminal work
+- bootstrap-owned EGL binding is explicit enough to prove real
+  `ANativeWindow` + EGL surface lifecycle behavior on-device
+
+The current EGL proof is now stronger than a one-frame clear/swap demo:
+
+- `transition=replaced` recreates the EGL window surface in-process
+- `transition=retired` clears the bound surface state
+- later fresh `transition=acquired` recreates the EGL window surface cleanly
+- the bootstrap bridge now exposes `glesBoundEpoch` and
+  `glesSurfaceCreates` so replacement/reacquire behavior can be audited
+  directly on-device
 
 That means there is no new Android-specific execution lane that should be
 opened by default right now.
 
 The next Android moves are now gated by stronger external pressure:
 
-- Android rendering backend work is still blocked by the shared renderer queue
+- shared Android renderer backend work is still blocked by the shared
+  renderer queue
 - service-owned PTY survival may move only through its own explicit product
   lane, not through renderer or generic host drift
+- bootstrap-owned EGL hardening may continue only if it answers another
+  concrete Android runtime question without smuggling work into
+  `src/ui/renderer/`
 
 What is now allowed:
 

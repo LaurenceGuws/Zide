@@ -207,6 +207,30 @@ This proves:
 - the probe already follows the Android surface identity contract rather than
   trusting raw pointer equality alone
 
+Lifecycle hardening on the Note10 now also proves the two replacement stories
+the host contract requires:
+
+- true in-process replacement:
+  - `native.surfaceAvailable ... epoch=2 transition=replaced gles=drawn`
+  - `glesBoundEpoch=2`
+  - `glesSurfaceCreates` advanced from `1` to `2`
+- retirement then later fresh acquire:
+  - `native.surfaceDestroyed ... epoch=3 transition=retired
+    gles=surface-destroyed glesBoundEpoch=0`
+  - later `native.surfaceAvailable ... epoch=4 transition=acquired
+    gles=drawn`
+  - `glesSurfaceCreates` advanced from `2` to `3`
+
+This proves:
+
+- `replaced` recreates the EGL window surface against the new identity epoch
+- `retired` clears live EGL window-surface binding state instead of pretending
+  the old surface still exists
+- later fresh `acquired` recreates the EGL window surface cleanly after
+  retirement
+- `glesBoundEpoch` and `glesSurfaceCreates` are now enough to falsify fake
+  “same surface” assumptions during bootstrap hardening
+
 It still does not prove:
 
 - a shared Android renderer backend exists
@@ -217,13 +241,19 @@ It still does not prove:
 
 The first Android EGL binding cut is now structurally met.
 
+Bootstrap EGL lifecycle hardening is now structurally met too.
+
 Current honest answer:
 
 - bootstrap-owned Android EGL/GLES binding is viable in this repo
 - that reduces Android uncertainty materially
+- surface replacement and retirement/reacquire now both have device proof on
+  the Note10
 - it still remains bootstrap-owned proof work, not shared renderer adoption
 
 After that:
 
-- either execute the bootstrap-owned EGL clear/swap proof on device
-- or stop if stronger renderer authority says Android rendering must wait again
+- keep this lane below `src/ui/renderer/`
+- do not claim a shared Android backend exists yet
+- let later Android backend work inherit this replacement truth instead of
+  rediscovering it
