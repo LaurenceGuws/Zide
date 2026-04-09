@@ -109,25 +109,15 @@ That probe should optimize for truth, not feature completeness.
 
 ## Current Probe Result
 
-The first probe is now implemented through `android/bootstrap-bridge/` using a
-debug-only PTY-backed shell heartbeat.
+The bootstrap bridge PTY heartbeat probe is enough to answer the baseline
+question.
 
-Observed on the Note10:
+Observed truth on the Note10:
 
-- the probe starts successfully from the bootstrap app:
-  - `debug.ptyProbeStart pid=29746 alive=true status=started`
-- after `HOME` / background:
-  - `activity.onPause`
-  - `debug.ptyProbeAliveOnPause pid=29746`
-  - `surface.destroyed`
-  - `activity.onStop`
-- the private heartbeat file kept growing while the app was backgrounded:
-  - foreground sample: `COUNT1=25`
-  - after background/stop: `COUNT2=29`
-- after `am force-stop`:
-  - heartbeat growth stopped:
-    - `COUNT3=30`
-  - direct PID probe returned `dead`
+- app-process-owned PTY survives pause, stop, and surface retirement briefly
+- app-process-owned PTY does not survive app-process death
+- visible surface lifetime and PTY lifetime are different things on this
+  device
 
 ## Decision From Probe
 
@@ -155,6 +145,8 @@ For the current tree:
 - disposable app-process-owned PTY lifetime is the Android terminal baseline
 - any future service-owned survival design must open as a separate lane with
   explicit product authority
+- the earlier bootstrap PTY probe implementation is retired from the live app;
+  this doc keeps the validated result, not the old probe surface
 
 That separate lane is now opened explicitly as `AP-A2` in
 `app_architecture/platform/android/ANDROID_PTY_SERVICE_SURVIVAL_PLAN.md`.
@@ -164,48 +156,15 @@ the observed Android survival story.
 
 ## Current `AP-A1.b` Probe Hardening
 
-The bootstrap bridge should now be the live truth tool for this disposable
-baseline.
+The bootstrap bridge now owns the live truth surface for this baseline:
 
-Required shape:
+- on-device PTY status
+- manual start / stop / restart
+- observation across pause / stop / surface retirement and later foreground
+  return
 
-- the app can start, stop, and restart the PTY probe without adb-only control
-- the app can show live PTY status on-device:
-  - alive vs dead
-  - child pid
-  - last start status
-  - heartbeat count / last heartbeat line
-- the app can keep observing that state across pause / stop / surface
-  retirement and later foreground return
-
-Observed on the Note10 after this hardening:
-
-- a restarted probe stayed alive through `HOME` / pause / stop:
-  - `activity.onPause.pty alive=true pid=22550 status=started beats=3`
-  - `activity.onStop.pty alive=true pid=22550 status=started beats=4`
-- the same probe was still alive on foreground return before the new surface
-  was reacquired:
-  - `activity.onStart.pty alive=true pid=22550 status=started beats=6`
-  - `activity.onResume.pty alive=true pid=22550 status=started beats=6`
-- surface retirement and later fresh `acquired` still happened independently:
-  - `native.surfaceDestroyed ... epoch=2 transition=retired`
-  - later `native.surfaceAvailable ... epoch=3 transition=acquired`
-
-This is the strongest current proof that app-process-owned PTY lifetime and
-visible Android surface lifetime are different things on this device.
-
-Reason:
-
-- this strengthens the disposable baseline without opening service-owned
-  survival architecture
-- it makes future Android terminal ownership decisions testable on-device
-  without more bootstrap archaeology
-
-This is still intentionally not:
-
-- Android terminal product integration
-- foreground-service survival design
-- Android renderer binding work
+That hardening is complete. It strengthens the disposable baseline without
+opening service-owned survival architecture.
 
 ## Next Honest Follow-Up
 

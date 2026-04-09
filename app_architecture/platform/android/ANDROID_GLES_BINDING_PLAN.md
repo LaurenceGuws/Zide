@@ -181,80 +181,21 @@ Stop `AH-A5` when:
 
 ## Current Probe Result
 
-The first executable cut is now implemented through the bootstrap bridge:
+The first executable GLES cut is implemented in the bootstrap bridge.
 
-- `src/platform/android_gles_probe.zig` owns one Android-only EGL display /
-  context / window-surface probe
-- `android_runtime_bridge.zig` routes current surface identity epoch and
-  transition truth into that probe
-- the bootstrap activity logs native EGL probe state as `gles=...`
+Current Note10 truth:
 
-Observed on the Note10:
-
-- first surface acquire now produces:
-  - `native.surfaceAvailable seq=4 ... epoch=1 transition=acquired gles=drawn`
-- redraw-needed now also produces:
-  - `native.surfaceRedrawNeeded seq=5 gles=drawn`
-- later same-surface geometry churn stays:
-  - `transition=unchanged gles=drawn`
-- redraw-needed continues to succeed under those same-window updates
-
-This proves:
-
-- the repo can create an EGL display/context/window-surface against the current
+- EGL display/context/window-surface binding works against the live
   `ANativeWindow`
-- one visible GLES clear/swap path is real on-device
-- the probe already follows the Android surface identity contract rather than
-  trusting raw pointer equality alone
-
-Lifecycle hardening on the Note10 now also proves the two replacement stories
-the host contract requires:
-
-- true in-process replacement:
-  - `native.surfaceAvailable ... epoch=2 transition=replaced gles=drawn`
-  - `glesBoundEpoch=2`
-  - `glesSurfaceCreates` advanced from `1` to `2`
-- retirement then later fresh acquire:
-  - `native.surfaceDestroyed ... epoch=3 transition=retired
-    gles=surface-destroyed glesBoundEpoch=0`
-  - later `native.surfaceAvailable ... epoch=4 transition=acquired
-    gles=drawn`
-  - `glesSurfaceCreates` advanced from `2` to `3`
-
-Current Note10 context policy evidence:
-
-- `glesContextCreates` stayed at `1` through:
-  - first `acquired`
-  - later in-process `replaced`
-  - later `retired`
-  - later fresh `acquired`
-
-Current Note10 bootstrap resource-lifetime evidence:
-
-- one bootstrap-owned GLES texture object stayed alive through:
-  - first `acquired`
-  - later in-process `replaced`
-  - later `retired`
-  - later fresh `acquired`
-- logs showed:
-  - `glesTextureCreates=1`
-  - `glesTextureAlive=true`
-
-This proves:
-
-- `replaced` recreates the EGL window surface against the new identity epoch
-- `retired` clears live EGL window-surface binding state instead of pretending
-  the old surface still exists
-- later fresh `acquired` recreates the EGL window surface cleanly after
-  retirement
-- the current bootstrap-owned EGL policy can honestly reuse one EGL context
-  across those surface transitions on the Note10
-- `glesBoundEpoch` and `glesSurfaceCreates` are now enough to falsify fake
-  “same surface” assumptions during bootstrap hardening
-- `glesContextCreates` is now enough to falsify fake “context was quietly
-  recreated” assumptions during bootstrap hardening
-- a minimal context-owned GLES object can survive those same transitions on
-  the Note10 without hidden resource recreation
+- the probe follows `surfaceIdentityEpoch` and transition truth instead of raw
+  pointer equality
+- both replacement stories are proved:
+  - `replaced`
+  - `retired -> acquired`
+- current bootstrap policy reuses one EGL context across those surface
+  transitions
+- one minimal GLES texture survives redraw and surface replacement on the
+  current device path
 
 It still does not prove:
 

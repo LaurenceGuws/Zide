@@ -126,39 +126,4 @@
         </ScrollView>
     </LinearLayout>
 
-    <LinearLayout
-        android:id="@+id/shell_input_overlay"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        android:background="#dd10161d"
-        android:elevation="8dp"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:padding="8dp"
-        android:visibility="gone">
-
-        <EditText
-            android:id="@+id/shell_input"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:background="#18222c"
-            android:hint="@string/shell_input_hint"
-            android:imeOptions="actionSend|flagNoExtractUi"
-            android:inputType="text|textNoSuggestions"
-            android:maxLines="1"
-            android:padding="10dp"
-            android:privateImeOptions="disableFullscreenMode=true"
-            android:textColor="#f5f7fa"
-            android:textColorHint="#5f6f82"
-            android:textSize="14sp" />
-
-        <Button
-            android:id="@+id/shell_send_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:text="@string/shell_send" />
-    </LinearLayout>
 </FrameLayout>

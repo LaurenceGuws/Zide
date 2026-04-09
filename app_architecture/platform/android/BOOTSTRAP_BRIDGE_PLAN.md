@@ -90,45 +90,17 @@ Acceptance:
 
 Current checkpoint:
 
-- `android/bootstrap-bridge/` now exists as the first repo-owned runtime-lane
-  Android app
-- `ops/android_build_bootstrap_bridge.sh` now builds the Zig bridge through a
-  Zig object + NDK clang link path
-- the bridge link path now links `libandroid` and rejects unresolved native
-  symbols at build time, because `ANativeWindow_fromSurface(...)` and
-  `ANativeWindow_release(...)` are part of the real bootstrap surface now
-- the Note10 now loads the repo-built Zig library successfully
-- first observed native callback acknowledgements are:
-  - `native.onCreate seq=1`
-  - `native.onStart seq=2`
-  - `native.onResume seq=3`
-  - `native.surfaceAvailable seq=4`
-  - `native.onWindowFocus seq=6`
-- the bootstrap bridge now surfaces real `ANativeWindow` identity into
-  `PlatformRenderHost`, with the Note10 showing:
-  - stable non-zero token across repeated `surface.changed` callbacks
-  - stable `surfaceIdentityEpoch=1` across those same-window updates
-  - explicit `acquired`, `unchanged`, and `retired` transition labels from the
-    shared host seam
-  - a later foreground return after `retired` becomes a fresh `acquired`, even
-    when the raw token value can recur
-  - an explicit in-activity `SurfaceView` recreation probe can also produce
-    `transition=replaced` without a prior `retired`
-  - `token=0x0` and `surfaceIdentityEpoch=2` after `surface.destroyed`
-- the bootstrap bridge now routes lifecycle/focus/surface callbacks through
-  `src/platform/android_host.zig` and shared host state instead of the earlier
-  freestanding sequence stub
-- a HOME/background smoke pass on the Note10 now confirms:
-  - `native.onPause seq=7`
-  - `native.surfaceAvailable seq=8`
-  - `native.surfaceAvailable seq=9`
-  - `native.onWindowFocus seq=10`
-  - `native.surfaceDestroyed seq=11`
-  - `native.onStop seq=12`
-- enabling shared-host cleanup also landed:
-  - `PlatformRenderHost` no longer carries an SDL window pointer
-  - SDL-only host capture moved to `src/platform/sdl_native_host.zig`
-  - Android SDL refresh capture moved to `src/platform/sdl_android_host.zig`
+- `android/bootstrap-bridge/` is the first repo-owned Android runtime app
+- `ops/android_build_bootstrap_bridge.sh` builds the native Zig bridge through
+  the NDK toolchain
+- the Note10 loads the repo-built native library and routes lifecycle/focus/
+  surface callbacks into repo-owned native code
+- bootstrap/native entry now carries real shared host truth:
+  - `ANativeWindow` identity
+  - `surfaceIdentityEpoch`
+  - `acquired` / `unchanged` / `replaced` / `retired`
+- lifecycle and surface callbacks now terminate through shared Android host
+  semantics instead of a private bridge-only model
 
 Do not do:
 

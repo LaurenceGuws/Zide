@@ -16,9 +16,14 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
+import android.view.KeyEvent;
+import android.view.inputmethod.BaseInputConnection;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.ExtractedText;
+import android.view.inputmethod.ExtractedTextRequest;
+import android.view.inputmethod.InputConnection;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -27,8 +32,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.FileOutputStream;
-import java.nio.charset.StandardCharsets;
 
 public final class ZideBootstrapActivity extends Activity implements SurfaceHolder.Callback2 {
     private static final String TAG = "ZideAndroidBootstrap";
@@ -36,13 +39,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     private static final String EXTRA_DEBUG_RECREATE_SURFACE_ONCE = "debug_recreate_surface_once";
     private static final String EXTRA_DEBUG_RESIZE_SURFACE_ONCE = "debug_resize_surface_once";
     private static final String EXTRA_DEBUG_START_SHELL_ONCE = "debug_start_shell_once";
-    private static final String EXTRA_DEBUG_START_PTY_PROBE_ONCE = "debug_start_pty_probe_once";
-    private static final String EXTRA_DEBUG_START_SERVICE_PTY_PROBE_ONCE = "debug_start_service_pty_probe_once";
-    private static final String EXTRA_DEBUG_STOP_SERVICE_PTY_PROBE_ONCE = "debug_stop_service_pty_probe_once";
-    private static final String PTY_PROBE_LOG_PATH = "/data/data/dev.zide.androidbootstrap/files/pty_probe.log";
     private static final String SHELL_TRANSCRIPT_PATH = "/data/data/dev.zide.androidbootstrap/files/bootstrap_shell.log";
-    private static final String SHELL_INPUT_PATH = "/data/data/dev.zide.androidbootstrap/files/bootstrap_shell_input.txt";
-    private static final long PTY_STATUS_REFRESH_MS = 1000L;
     private static final long SHELL_REFRESH_MS = 150L;
 
     private static boolean nativeLoaded = false;
@@ -65,10 +62,9 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     private TextView eventLogText;
     private View productView;
     private View debugView;
-    private View shellInputOverlay;
     private FrameLayout productSurfaceContainer;
     private Button imeToggleButton;
-    private EditText shellInput;
+    private View shellInputView;
     private ScrollView shellOutputScroll;
     private SurfaceView surfaceView;
     private boolean debugViewEnabled = false;
@@ -76,27 +72,15 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     private boolean surfaceRecreationScheduled = false;
     private boolean surfaceResizeScheduled = false;
     private boolean shellStartScheduled = false;
-    private boolean ptyProbeScheduled = false;
-    private boolean servicePtyProbeScheduled = false;
-    private boolean servicePtyProbeStopScheduled = false;
-    private boolean ptyStatusRefreshActive = false;
     private boolean shellRefreshActive = false;
     private boolean shellAutoStartAttempted = false;
     private boolean shellAutoFollowEnabled = true;
+    private String lastShellTranscript = "";
     private int surfaceHostGeneration = 0;
     private int productViewBasePaddingLeft = 0;
     private int productViewBasePaddingTop = 0;
     private int productViewBasePaddingRight = 0;
     private int productViewBasePaddingBottom = 0;
-    private final Runnable ptyStatusRefreshRunnable = new Runnable() {
-        @Override
-        public void run() {
-            refreshPtyProbeStatus(false);
-            if (ptyStatusRefreshActive) {
-                handler.postDelayed(this, PTY_STATUS_REFRESH_MS);
-            }
-        }
-    };
     private final Runnable shellRefreshRunnable = new Runnable() {
         @Override
         public void run() {
@@ -108,38 +92,60 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     };
 
     private static native long nativeOnCreateBridge();
+
     private static native long nativeOnStartBridge();
+
     private static native long nativeOnResumeBridge();
+
     private static native long nativeOnPauseBridge();
+
     private static native long nativeOnStopBridge();
+
     private static native long nativeOnWindowFocusBridge(boolean focused);
+
     private static native long nativeOnSurfaceAvailableBridge(Surface surface, int width, int height);
+
     private static native long nativeOnSurfaceDestroyedBridge();
+
     private static native long nativeOnSurfaceRedrawNeededBridge();
+
     private static native long nativeCurrentWindowTokenBridge();
+
     private static native long nativeCurrentSurfaceEpochBridge();
+
     private static native int nativeCurrentSurfaceTransitionBridge();
+
     private static native int nativeCurrentGlesProbeStatusBridge();
+
     private static native long nativeCurrentGlesProbeSwapCountBridge();
+
     private static native long nativeCurrentGlesProbeBoundEpochBridge();
+
     private static native long nativeCurrentGlesProbeContextCreateCountBridge();
+
     private static native long nativeCurrentGlesProbeSurfaceCreateCountBridge();
+
     private static native long nativeCurrentGlesProbeTextureCreateCountBridge();
+
     private static native boolean nativeCurrentGlesProbeTextureAliveBridge();
+
     private static native long nativeCurrentGlesProbeTextureUploadCountBridge();
+
     private static native long nativeCurrentGlesProbeTextureUpdateCountBridge();
+
     private static native long nativeCurrentGlesProbeTextureResizeCountBridge();
+
     private static native int nativeCurrentGlesProbeTextureWidthBridge();
+
     private static native int nativeCurrentGlesProbeTextureHeightBridge();
-    private static native long nativeStartPtyProbeBridge();
-    private static native void nativeStopPtyProbeBridge();
-    private static native boolean nativeIsPtyProbeAliveBridge();
-    private static native long nativePtyProbeChildPidBridge();
-    private static native int nativePtyProbeStartStatusBridge();
+
     private static native int nativeRestartShellSessionBridge();
-    private static native void nativeStopShellSessionBridge();
+
     private static native int nativePollShellSessionBridge();
+
     private static native boolean nativeIsShellSessionAliveBridge();
+
+    private static native int nativeSendShellCodepointBridge(int codepoint);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -151,11 +157,10 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         eventLogText = findViewById(R.id.event_log);
         productView = findViewById(R.id.product_view);
         debugView = findViewById(R.id.debug_view);
-        shellInputOverlay = findViewById(R.id.shell_input_overlay);
         productSurfaceContainer = findViewById(R.id.product_surface_container);
         imeToggleButton = findViewById(R.id.ime_toggle_button);
-        shellInput = findViewById(R.id.shell_input);
         shellOutputScroll = findViewById(R.id.shell_output_scroll);
+        installShellInputView();
         installInsetsHandling();
         installShellScrollHandling();
         bindViewModeToggle();
@@ -169,7 +174,6 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
             appendEvent("native.load.error=" + nativeLoadError);
         }
         callNative("native.onCreate", nativeLoaded ? nativeOnCreateBridge() : -1);
-        refreshPtyProbeStatus(false);
         updateStatus("created");
     }
 
@@ -184,12 +188,10 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
             final int bottomInset = Math.max(navInsets.bottom, imeInsets.bottom);
             imeVisible = imeInsets.bottom > navInsets.bottom;
             view.setPadding(
-                productViewBasePaddingLeft,
-                productViewBasePaddingTop,
-                productViewBasePaddingRight,
-                productViewBasePaddingBottom + bottomInset
-            );
-            shellInputOverlay.setVisibility(imeVisible ? View.VISIBLE : View.GONE);
+                    productViewBasePaddingLeft,
+                    productViewBasePaddingTop,
+                    productViewBasePaddingRight,
+                    productViewBasePaddingBottom + bottomInset);
             updateImeToggleLabel();
             shellOutputScroll.post(() -> shellOutputScroll.fullScroll(View.FOCUS_DOWN));
             return windowInsets;
@@ -217,7 +219,6 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         super.onStart();
         appendEvent("activity.onStart");
         callNative("native.onStart", nativeLoaded ? nativeOnStartBridge() : -1);
-        logPtyProbeSnapshot("activity.onStart.pty");
         updateStatus("started");
     }
 
@@ -229,12 +230,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         maybeScheduleSurfaceRecreation();
         maybeScheduleSurfaceResize();
         maybeScheduleShellStart();
-        maybeSchedulePtyProbe();
-        maybeScheduleServicePtyProbe();
-        maybeScheduleServicePtyProbeStop();
-        startPtyStatusRefresh();
         startShellRefresh();
-        logPtyProbeSnapshot("activity.onResume.pty");
         updateStatus("resumed");
     }
 
@@ -248,15 +244,9 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     @Override
     protected void onPause() {
         appendEvent("activity.onPause");
-        if (nativeLoaded && nativeIsPtyProbeAliveBridge()) {
-            appendEvent("debug.ptyProbeAliveOnPause pid=" + nativePtyProbeChildPidBridge());
-        }
         callNative("native.onPause", nativeLoaded ? nativeOnPauseBridge() : -1);
-        stopPtyStatusRefresh();
         stopShellRefresh();
-        refreshPtyProbeStatus(false);
         refreshShellState(false);
-        logPtyProbeSnapshot("activity.onPause.pty");
         updateStatus("paused");
         super.onPause();
     }
@@ -265,7 +255,6 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     protected void onStop() {
         appendEvent("activity.onStop");
         callNative("native.onStop", nativeLoaded ? nativeOnStopBridge() : -1);
-        logPtyProbeSnapshot("activity.onStop.pty");
         updateStatus("stopped");
         super.onStop();
     }
@@ -287,10 +276,9 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
         appendEvent(
-            "surface.changed generation=" + surfaceHostGeneration +
-                " format=" + format +
-                " size=" + width + "x" + height
-        );
+                "surface.changed generation=" + surfaceHostGeneration +
+                        " format=" + format +
+                        " size=" + width + "x" + height);
         final long seq = nativeLoaded ? nativeOnSurfaceAvailableBridge(holder.getSurface(), width, height) : -1;
         final long token = nativeLoaded ? nativeCurrentWindowTokenBridge() : 0;
         final long epoch = nativeLoaded ? nativeCurrentSurfaceEpochBridge() : 0;
@@ -308,24 +296,23 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         final int glesTextureWidth = nativeLoaded ? nativeCurrentGlesProbeTextureWidthBridge() : 0;
         final int glesTextureHeight = nativeLoaded ? nativeCurrentGlesProbeTextureHeightBridge() : 0;
         callNativeWithSurfaceState(
-            "native.surfaceAvailable",
-            seq,
-            token,
-            epoch,
-            transition,
-            glesStatus,
-            glesSwapCount,
-            glesBoundEpoch,
-            glesContextCreateCount,
-            glesSurfaceCreateCount,
-            glesTextureCreateCount,
-            glesTextureAlive,
-            glesTextureUploadCount,
-            glesTextureUpdateCount,
-            glesTextureResizeCount,
-            glesTextureWidth,
-            glesTextureHeight
-        );
+                "native.surfaceAvailable",
+                seq,
+                token,
+                epoch,
+                transition,
+                glesStatus,
+                glesSwapCount,
+                glesBoundEpoch,
+                glesContextCreateCount,
+                glesSurfaceCreateCount,
+                glesTextureCreateCount,
+                glesTextureAlive,
+                glesTextureUploadCount,
+                glesTextureUpdateCount,
+                glesTextureResizeCount,
+                glesTextureWidth,
+                glesTextureHeight);
         updateStatus("surface-changed");
     }
 
@@ -349,30 +336,30 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         final int glesTextureWidth = nativeLoaded ? nativeCurrentGlesProbeTextureWidthBridge() : 0;
         final int glesTextureHeight = nativeLoaded ? nativeCurrentGlesProbeTextureHeightBridge() : 0;
         callNativeWithSurfaceState(
-            "native.surfaceDestroyed",
-            seq,
-            token,
-            epoch,
-            transition,
-            glesStatus,
-            glesSwapCount,
-            glesBoundEpoch,
-            glesContextCreateCount,
-            glesSurfaceCreateCount,
-            glesTextureCreateCount,
-            glesTextureAlive,
-            glesTextureUploadCount,
-            glesTextureUpdateCount,
-            glesTextureResizeCount,
-            glesTextureWidth,
-            glesTextureHeight
-        );
+                "native.surfaceDestroyed",
+                seq,
+                token,
+                epoch,
+                transition,
+                glesStatus,
+                glesSwapCount,
+                glesBoundEpoch,
+                glesContextCreateCount,
+                glesSurfaceCreateCount,
+                glesTextureCreateCount,
+                glesTextureAlive,
+                glesTextureUploadCount,
+                glesTextureUpdateCount,
+                glesTextureResizeCount,
+                glesTextureWidth,
+                glesTextureHeight);
         updateStatus("surface-destroyed");
     }
 
     @Override
     public void surfaceRedrawNeeded(SurfaceHolder holder) {
-        appendEvent("surface.redrawNeeded generation=" + surfaceHostGeneration + " valid=" + holder.getSurface().isValid());
+        appendEvent(
+                "surface.redrawNeeded generation=" + surfaceHostGeneration + " valid=" + holder.getSurface().isValid());
         final long seq = nativeLoaded ? nativeOnSurfaceRedrawNeededBridge() : -1;
         final int glesStatus = nativeLoaded ? nativeCurrentGlesProbeStatusBridge() : 0;
         final long glesSwapCount = nativeLoaded ? nativeCurrentGlesProbeSwapCountBridge() : 0;
@@ -387,19 +374,18 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         final int glesTextureWidth = nativeLoaded ? nativeCurrentGlesProbeTextureWidthBridge() : 0;
         final int glesTextureHeight = nativeLoaded ? nativeCurrentGlesProbeTextureHeightBridge() : 0;
         appendEvent(
-            "native.surfaceRedrawNeeded seq=" + seq +
-                " gles=" + glesProbeStatusLabel(glesStatus) +
-                " glesSwaps=" + glesSwapCount +
-                " glesBoundEpoch=" + glesBoundEpoch +
-                " glesContextCreates=" + glesContextCreateCount +
-                " glesSurfaceCreates=" + glesSurfaceCreateCount +
-                " glesTextureCreates=" + glesTextureCreateCount +
-                " glesTextureAlive=" + glesTextureAlive +
-                " glesTextureUploads=" + glesTextureUploadCount +
-                " glesTextureUpdates=" + glesTextureUpdateCount +
-                " glesTextureResizes=" + glesTextureResizeCount +
-                " glesTextureSize=" + glesTextureWidth + "x" + glesTextureHeight
-        );
+                "native.surfaceRedrawNeeded seq=" + seq +
+                        " gles=" + glesProbeStatusLabel(glesStatus) +
+                        " glesSwaps=" + glesSwapCount +
+                        " glesBoundEpoch=" + glesBoundEpoch +
+                        " glesContextCreates=" + glesContextCreateCount +
+                        " glesSurfaceCreates=" + glesSurfaceCreateCount +
+                        " glesTextureCreates=" + glesTextureCreateCount +
+                        " glesTextureAlive=" + glesTextureAlive +
+                        " glesTextureUploads=" + glesTextureUploadCount +
+                        " glesTextureUpdates=" + glesTextureUpdateCount +
+                        " glesTextureResizes=" + glesTextureResizeCount +
+                        " glesTextureSize=" + glesTextureWidth + "x" + glesTextureHeight);
         updateStatus("surface-redraw-needed");
     }
 
@@ -435,18 +421,16 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
             final int shrunkHeight = Math.max(200, originalHeight / 2);
             holder.setFixedSize(originalWidth, shrunkHeight);
             appendEvent(
-                "debug.resizeSurface fixedSize=" + originalWidth + "x" + shrunkHeight +
-                    " original=" + originalWidth + "x" + originalHeight +
-                    " target=surfaceHolder"
-            );
+                    "debug.resizeSurface fixedSize=" + originalWidth + "x" + shrunkHeight +
+                            " original=" + originalWidth + "x" + originalHeight +
+                            " target=surfaceHolder");
             updateStatus("debug-resized-surface-shrink");
 
             handler.postDelayed(() -> {
                 holder.setFixedSize(originalWidth, originalHeight);
                 appendEvent(
-                    "debug.resizeSurface restoreSize=" + originalWidth + "x" + originalHeight +
-                        " target=surfaceHolder"
-                );
+                        "debug.resizeSurface restoreSize=" + originalWidth + "x" + originalHeight +
+                                " target=surfaceHolder");
                 updateStatus("debug-resized-surface-restore");
             }, 900);
         }, 900);
@@ -465,57 +449,10 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         handler.postDelayed(() -> {
             final int status = nativeLoaded ? nativeRestartShellSessionBridge() : 0;
             appendEvent("debug.shellStart status=" + shellStartStatusLabel(status));
-            writeShellInput("printf 'android-shell-ok\\n'\n");
+            sendDirectText("printf 'android-shell-ok\\n'\n");
             refreshShellState(false);
             updateStatus("debug-shell-started");
         }, 900);
-    }
-
-    private void maybeSchedulePtyProbe() {
-        if (!getIntent().getBooleanExtra(EXTRA_DEBUG_START_PTY_PROBE_ONCE, false)) {
-            return;
-        }
-        if (ptyProbeScheduled) {
-            return;
-        }
-        ptyProbeScheduled = true;
-        productSurfaceContainer.postDelayed(() -> {
-            startPtyProbe("debug.ptyProbeStart", "debug-pty-probe-started");
-        }, 900);
-    }
-
-    private void maybeScheduleServicePtyProbe() {
-        if (!getIntent().getBooleanExtra(EXTRA_DEBUG_START_SERVICE_PTY_PROBE_ONCE, false)) {
-            return;
-        }
-        if (servicePtyProbeScheduled) {
-            return;
-        }
-        servicePtyProbeScheduled = true;
-        productSurfaceContainer.postDelayed(() -> {
-            final Intent intent = new Intent(this, ZidePtyProbeService.class)
-                .setAction(ZidePtyProbeService.ACTION_START_FOREGROUND_PTY_PROBE);
-            startForegroundService(intent);
-            appendEvent("debug.servicePtyProbeStartIssued");
-            updateStatus("debug-service-pty-probe-started");
-        }, 1100);
-    }
-
-    private void maybeScheduleServicePtyProbeStop() {
-        if (!getIntent().getBooleanExtra(EXTRA_DEBUG_STOP_SERVICE_PTY_PROBE_ONCE, false)) {
-            return;
-        }
-        if (servicePtyProbeStopScheduled) {
-            return;
-        }
-        servicePtyProbeStopScheduled = true;
-        productSurfaceContainer.postDelayed(() -> {
-            final Intent intent = new Intent(this, ZidePtyProbeService.class)
-                .setAction(ZidePtyProbeService.ACTION_STOP_FOREGROUND_PTY_PROBE);
-            startService(intent);
-            appendEvent("debug.servicePtyProbeStopIssued");
-            updateStatus("debug-service-pty-probe-stopped");
-        }, 1100);
     }
 
     private void bindImeToggle() {
@@ -537,7 +474,6 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
 
     private void bindShellControls() {
         final Button restartButton = findViewById(R.id.shell_restart_button);
-        final Button sendButton = findViewById(R.id.shell_send_button);
 
         restartButton.setOnClickListener(view -> {
             final int status = nativeLoaded ? nativeRestartShellSessionBridge() : 0;
@@ -545,16 +481,278 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
             refreshShellState(false);
             updateStatus("shell-restarted");
         });
+    }
 
-        sendButton.setOnClickListener(view -> {
-            final String input = shellInput.getText().toString();
-            if (input.isEmpty()) return;
-            writeShellInput(input + "\n");
-            shellInput.setText("");
-            shellInput.clearFocus();
-            refreshShellState(false);
-            updateStatus("shell-input-sent");
-        });
+    // Minimal editor model: the IME needs a coherent buffer + cursor to trust us
+    // with navigation. We maintain a multi-line buffer with sentinel lines above
+    // and below so the IME always sees content in all four directions.
+    //
+    // Layout: "<sentinel>\n<current line content>\n<sentinel>"
+    // The sentinel lines are fixed padding; the middle line tracks typed content.
+    // setSelection movement across newlines → up/down terminal escapes.
+    // setSelection movement within a line → left/right terminal escapes.
+    private static final String SENTINEL = "........";
+    private final StringBuilder editorBuffer = new StringBuilder();
+    private int editorCursor = 0;
+    private int editorComposingStart = -1;
+    private int editorComposingEnd = -1;
+
+    private void resetEditorState() {
+        editorBuffer.setLength(0);
+        editorBuffer.append(SENTINEL).append('\n').append(SENTINEL).append('\n').append(SENTINEL);
+        editorCursor = SENTINEL.length() + 1; // start of middle line
+        editorComposingStart = -1;
+        editorComposingEnd = -1;
+    }
+
+    private int editorLineStart() {
+        int i = editorCursor - 1;
+        while (i >= 0 && editorBuffer.charAt(i) != '\n') i--;
+        return i + 1;
+    }
+
+    private int editorLineEnd() {
+        int i = editorCursor;
+        while (i < editorBuffer.length() && editorBuffer.charAt(i) != '\n') i++;
+        return i;
+    }
+
+    private void installShellInputView() {
+        resetEditorState();
+        final ZideBootstrapActivity activity = this;
+        shellInputView = new View(this) {
+            @Override
+            public boolean onCheckIsTextEditor() {
+                return true;
+            }
+
+            @Override
+            public InputConnection onCreateInputConnection(EditorInfo outAttrs) {
+                outAttrs.inputType = EditorInfo.TYPE_CLASS_TEXT
+                    | EditorInfo.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+                    | EditorInfo.TYPE_TEXT_FLAG_MULTI_LINE;
+                outAttrs.imeOptions = EditorInfo.IME_FLAG_NO_EXTRACT_UI
+                    | EditorInfo.IME_FLAG_NO_FULLSCREEN
+                    | EditorInfo.IME_ACTION_NONE;
+                outAttrs.initialSelStart = editorCursor;
+                outAttrs.initialSelEnd = editorCursor;
+                return new BaseInputConnection(this, false) {
+
+                    @Override
+                    public ExtractedText getExtractedText(ExtractedTextRequest request, int flags) {
+                        final ExtractedText et = new ExtractedText();
+                        et.text = editorBuffer.toString();
+                        et.startOffset = 0;
+                        et.selectionStart = editorCursor;
+                        et.selectionEnd = editorCursor;
+                        return et;
+                    }
+
+                    @Override
+                    public CharSequence getTextBeforeCursor(int n, int flags) {
+                        final int start = Math.max(0, editorCursor - n);
+                        return editorBuffer.substring(start, editorCursor);
+                    }
+
+                    @Override
+                    public CharSequence getTextAfterCursor(int n, int flags) {
+                        final int end = Math.min(editorBuffer.length(), editorCursor + n);
+                        return editorBuffer.substring(editorCursor, end);
+                    }
+
+                    @Override
+                    public boolean setSelection(int start, int end) {
+                        final int oldCursor = editorCursor;
+                        final int newCursor = Math.max(0, Math.min(start, editorBuffer.length()));
+                        if (newCursor == oldCursor) return true;
+
+                        final int from = Math.min(oldCursor, newCursor);
+                        final int to = Math.max(oldCursor, newCursor);
+                        int newlinesCrossed = 0;
+                        for (int i = from; i < to; i++) {
+                            if (editorBuffer.charAt(i) == '\n') newlinesCrossed++;
+                        }
+
+                        if (newlinesCrossed > 0) {
+                            final String esc = (newCursor < oldCursor) ? "\u001b[A" : "\u001b[B";
+                            for (int i = 0; i < newlinesCrossed; i++) {
+                                activity.sendDirectText(esc);
+                            }
+                            activity.appendEvent("input.nav " + (newCursor < oldCursor ? "up" : "down") + " x" + newlinesCrossed);
+                        } else {
+                            final int delta = newCursor - oldCursor;
+                            final String esc = (delta < 0) ? "\u001b[D" : "\u001b[C";
+                            final int count = Math.abs(delta);
+                            for (int i = 0; i < count; i++) {
+                                activity.sendDirectText(esc);
+                            }
+                            activity.appendEvent("input.nav " + (delta < 0 ? "left" : "right") + " x" + count);
+                        }
+
+                        // Reset to neutral so IME always has room in all directions
+                        resetEditorState();
+                        activity.refreshShellState(false);
+                        return true;
+                    }
+
+                    @Override
+                    public boolean setComposingText(CharSequence text, int newCursorPosition) {
+                        // Erase previous composing region from buffer
+                        if (editorComposingStart >= 0 && editorComposingEnd > editorComposingStart) {
+                            final int len = editorComposingEnd - editorComposingStart;
+                            editorBuffer.delete(editorComposingStart, editorComposingEnd);
+                            editorCursor = editorComposingStart;
+                            for (int i = 0; i < len; i++) {
+                                activity.sendDirectCodepoint('\u007f');
+                            }
+                        }
+                        // Insert new composing text
+                        final String s = text.toString();
+                        if (s.length() > 0) {
+                            editorBuffer.insert(editorCursor, s);
+                            editorComposingStart = editorCursor;
+                            editorCursor += s.length();
+                            editorComposingEnd = editorCursor;
+                            activity.sendDirectText(s);
+                        } else {
+                            editorComposingStart = -1;
+                            editorComposingEnd = -1;
+                        }
+                        activity.appendEvent("input.compose len=" + s.length());
+                        activity.refreshShellState(false);
+                        return true;
+                    }
+
+                    @Override
+                    public boolean finishComposingText() {
+                        editorComposingStart = -1;
+                        editorComposingEnd = -1;
+                        return true;
+                    }
+
+                    @Override
+                    public boolean commitText(CharSequence text, int newCursorPosition) {
+                        // Erase composing region if active
+                        if (editorComposingStart >= 0 && editorComposingEnd > editorComposingStart) {
+                            final int len = editorComposingEnd - editorComposingStart;
+                            editorBuffer.delete(editorComposingStart, editorComposingEnd);
+                            editorCursor = editorComposingStart;
+                            for (int i = 0; i < len; i++) {
+                                activity.sendDirectCodepoint('\u007f');
+                            }
+                        }
+                        editorComposingStart = -1;
+                        editorComposingEnd = -1;
+                        // Insert committed text
+                        final String s = text.toString();
+                        editorBuffer.insert(editorCursor, s);
+                        editorCursor += s.length();
+                        activity.sendDirectText(s);
+                        activity.appendEvent("input.commit text=" + text);
+                        activity.refreshShellState(false);
+                        return true;
+                    }
+
+                    @Override
+                    public boolean deleteSurroundingText(int beforeLength, int afterLength) {
+                        if (beforeLength > 0) {
+                            final int delStart = Math.max(0, editorCursor - beforeLength);
+                            final int count = editorCursor - delStart;
+                            editorBuffer.delete(delStart, editorCursor);
+                            editorCursor = delStart;
+                            for (int i = 0; i < count; i++) {
+                                activity.sendDirectCodepoint('\u007f');
+                            }
+                            activity.appendEvent("input.delete before=" + count);
+                        }
+                        if (afterLength > 0) {
+                            final int delEnd = Math.min(editorBuffer.length(), editorCursor + afterLength);
+                            editorBuffer.delete(editorCursor, delEnd);
+                            activity.appendEvent("input.delete after=" + (delEnd - editorCursor));
+                        }
+                        activity.refreshShellState(false);
+                        return true;
+                    }
+
+                    @Override
+                    public boolean sendKeyEvent(KeyEvent event) {
+                        if (event.getAction() != KeyEvent.ACTION_DOWN) return super.sendKeyEvent(event);
+                        activity.appendEvent("input.key code=" + event.getKeyCode()
+                            + " name=" + KeyEvent.keyCodeToString(event.getKeyCode()));
+                        final String esc = mapKeyToEscape(event.getKeyCode());
+                        if (esc != null) {
+                            activity.sendDirectText(esc);
+                            activity.refreshShellState(false);
+                            return true;
+                        }
+                        switch (event.getKeyCode()) {
+                            case KeyEvent.KEYCODE_DEL:
+                                activity.sendDirectCodepoint('\u007f');
+                                if (editorCursor > editorLineStart()) {
+                                    editorBuffer.deleteCharAt(editorCursor - 1);
+                                    editorCursor--;
+                                }
+                                activity.refreshShellState(false);
+                                return true;
+                            case KeyEvent.KEYCODE_ENTER:
+                                activity.sendDirectCodepoint('\n');
+                                resetEditorState();
+                                activity.refreshShellState(false);
+                                return true;
+                            case KeyEvent.KEYCODE_TAB:
+                                activity.sendDirectCodepoint('\t');
+                                activity.refreshShellState(false);
+                                return true;
+                            case KeyEvent.KEYCODE_ESCAPE:
+                                activity.sendDirectCodepoint('\u001b');
+                                activity.refreshShellState(false);
+                                return true;
+                        }
+                        return super.sendKeyEvent(event);
+                    }
+
+                    private String mapKeyToEscape(int keyCode) {
+                        return switch (keyCode) {
+                            case KeyEvent.KEYCODE_DPAD_UP -> "\u001b[A";
+                            case KeyEvent.KEYCODE_DPAD_DOWN -> "\u001b[B";
+                            case KeyEvent.KEYCODE_DPAD_RIGHT -> "\u001b[C";
+                            case KeyEvent.KEYCODE_DPAD_LEFT -> "\u001b[D";
+                            case KeyEvent.KEYCODE_MOVE_HOME -> "\u001b[H";
+                            case KeyEvent.KEYCODE_MOVE_END -> "\u001b[F";
+                            case KeyEvent.KEYCODE_INSERT -> "\u001b[2~";
+                            case KeyEvent.KEYCODE_FORWARD_DEL -> "\u001b[3~";
+                            case KeyEvent.KEYCODE_PAGE_UP -> "\u001b[5~";
+                            case KeyEvent.KEYCODE_PAGE_DOWN -> "\u001b[6~";
+                            default -> null;
+                        };
+                    }
+                };
+            }
+        };
+        shellInputView.setFocusable(true);
+        shellInputView.setFocusableInTouchMode(true);
+        final FrameLayout root = (FrameLayout) productView.getParent();
+        final FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(1, 1);
+        lp.gravity = Gravity.BOTTOM | Gravity.START;
+        root.addView(shellInputView, lp);
+
+        shellOutputScroll.setOnClickListener(v -> toggleIme());
+    }
+
+    private void sendDirectCodepoint(int codepoint) {
+        if (!nativeLoaded)
+            return;
+        nativeSendShellCodepointBridge(codepoint);
+    }
+
+    private void sendDirectText(String text) {
+        if (!nativeLoaded)
+            return;
+        for (int i = 0; i < text.length();) {
+            final int cp = text.codePointAt(i);
+            nativeSendShellCodepointBridge(cp);
+            i += Character.charCount(cp);
+        }
     }
 
     private void applyViewMode() {
@@ -570,23 +768,20 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         }
 
         if (imeVisible) {
-            imm.hideSoftInputFromWindow(shellInput.getWindowToken(), 0);
-            shellInput.clearFocus();
+            imm.hideSoftInputFromWindow(shellInputView.getWindowToken(), 0);
+            shellInputView.clearFocus();
             imeVisible = false;
-            shellInputOverlay.setVisibility(View.GONE);
             appendEvent("manual.imeToggle visible=false");
             updateImeToggleLabel();
             updateStatus("ime-hidden");
             return;
         }
 
-        shellInputOverlay.setVisibility(View.VISIBLE);
-        shellInput.post(() -> {
-            shellInput.requestFocus();
-            shellInput.setSelection(shellInput.getText().length());
-            imm.restartInput(shellInput);
-            final boolean shown = imm.showSoftInput(shellInput, InputMethodManager.SHOW_FORCED);
-            imeVisible = shown || shellInput.hasFocus();
+        shellInputView.post(() -> {
+            shellInputView.requestFocus();
+            imm.restartInput(shellInputView);
+            final boolean shown = imm.showSoftInput(shellInputView, InputMethodManager.SHOW_FORCED);
+            imeVisible = shown || shellInputView.hasFocus();
             appendEvent("manual.imeToggle visible=true shown=" + shown);
             updateImeToggleLabel();
             updateStatus("ime-shown");
@@ -628,9 +823,12 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
             transcript = readTextFile(SHELL_TRANSCRIPT_PATH);
         }
 
-        shellOutputText.setText(transcript);
-        if (shouldFollowOutput) {
-            shellOutputScroll.post(() -> shellOutputScroll.fullScroll(View.FOCUS_DOWN));
+        if (!transcript.equals(lastShellTranscript)) {
+            lastShellTranscript = transcript;
+            shellOutputText.setText(transcript);
+            if (shouldFollowOutput) {
+                shellOutputScroll.post(() -> shellOutputScroll.fullScroll(View.FOCUS_DOWN));
+            }
         }
         if (logEvent) {
             appendEvent("manual.shellRefresh alive=" + alive + " status=" + shellStartStatusLabel(status));
@@ -638,69 +836,17 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     }
 
     private boolean shouldFollowShellOutput() {
-        if (imeVisible) return true;
+        if (imeVisible)
+            return true;
         return shellAutoFollowEnabled;
     }
 
     private boolean isShellOutputNearBottom() {
         final View content = shellOutputScroll.getChildCount() > 0 ? shellOutputScroll.getChildAt(0) : null;
-        if (content == null) return true;
+        if (content == null)
+            return true;
         final int remaining = content.getBottom() - (shellOutputScroll.getScrollY() + shellOutputScroll.getHeight());
         return remaining <= 32;
-    }
-
-    private void writeShellInput(String text) {
-        try (FileOutputStream out = new FileOutputStream(SHELL_INPUT_PATH, false)) {
-            out.write(text.getBytes(StandardCharsets.UTF_8));
-            appendEvent("manual.shellInput bytes=" + text.length());
-        } catch (IOException err) {
-            appendEvent("manual.shellInput error=" + err.getClass().getSimpleName());
-        }
-    }
-
-    private void startPtyProbe(String eventPrefix, String stateLabel) {
-        final long pid = nativeLoaded ? nativeStartPtyProbeBridge() : -1;
-        final boolean alive = nativeLoaded && nativeIsPtyProbeAliveBridge();
-        final int status = nativeLoaded ? nativePtyProbeStartStatusBridge() : 0;
-        appendEvent(
-            eventPrefix + " pid=" + pid +
-                " alive=" + alive +
-                " status=" + ptyProbeStartStatusLabel(status) +
-                " log=" + PTY_PROBE_LOG_PATH
-        );
-        refreshPtyProbeStatus(false);
-        updateStatus(stateLabel);
-    }
-
-    private void startPtyStatusRefresh() {
-        if (ptyStatusRefreshActive) {
-            return;
-        }
-        ptyStatusRefreshActive = true;
-        handler.post(ptyStatusRefreshRunnable);
-    }
-
-    private void stopPtyStatusRefresh() {
-        if (!ptyStatusRefreshActive) {
-            return;
-        }
-        ptyStatusRefreshActive = false;
-        handler.removeCallbacks(ptyStatusRefreshRunnable);
-    }
-
-    private void refreshPtyProbeStatus(boolean logEvent) {
-        final boolean alive = nativeLoaded && nativeIsPtyProbeAliveBridge();
-        final long pid = nativeLoaded ? nativePtyProbeChildPidBridge() : -1;
-        final int status = nativeLoaded ? nativePtyProbeStartStatusBridge() : 0;
-        final PtyProbeSnapshot snapshot = readPtyProbeSnapshot();
-        if (logEvent) {
-            appendEvent(
-                "manual.ptyProbeRefresh alive=" + alive +
-                    " pid=" + pid +
-                    " status=" + ptyProbeStartStatusLabel(status) +
-                    " beats=" + snapshot.heartbeatCount
-            );
-        }
     }
 
     private String readTextFile(String path) {
@@ -726,59 +872,6 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         return out.toString();
     }
 
-    private void logPtyProbeSnapshot(String prefix) {
-        final boolean alive = nativeLoaded && nativeIsPtyProbeAliveBridge();
-        final long pid = nativeLoaded ? nativePtyProbeChildPidBridge() : -1;
-        final int status = nativeLoaded ? nativePtyProbeStartStatusBridge() : 0;
-        final PtyProbeSnapshot snapshot = readPtyProbeSnapshot();
-        appendEvent(
-            prefix +
-                " alive=" + alive +
-                " pid=" + pid +
-                " status=" + ptyProbeStartStatusLabel(status) +
-                " beats=" + snapshot.heartbeatCount +
-                " last=" + snapshot.lastLine
-        );
-    }
-
-    private static PtyProbeSnapshot readPtyProbeSnapshot() {
-        final File logFile = new File(PTY_PROBE_LOG_PATH);
-        if (!logFile.exists()) {
-            return new PtyProbeSnapshot(0L, "missing", 0L);
-        }
-
-        long heartbeatCount = 0L;
-        String lastLine = "empty";
-        try (BufferedReader reader = new BufferedReader(new FileReader(logFile))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (!line.isEmpty()) {
-                    lastLine = line;
-                }
-            }
-            heartbeatCount = parseHeartbeatCount(lastLine);
-        } catch (IOException err) {
-            lastLine = "read-error:" + err.getClass().getSimpleName();
-        }
-        return new PtyProbeSnapshot(heartbeatCount, lastLine, logFile.length());
-    }
-
-    private static long parseHeartbeatCount(String line) {
-        final String prefix = "heartbeat:";
-        if (!line.startsWith(prefix)) {
-            return 0L;
-        }
-        final int secondColon = line.indexOf(':', prefix.length());
-        if (secondColon <= prefix.length()) {
-            return 0L;
-        }
-        try {
-            return Long.parseLong(line.substring(prefix.length(), secondColon));
-        } catch (NumberFormatException err) {
-            return 0L;
-        }
-    }
-
     private void installSurfaceView(String reason) {
         if (surfaceView != null) {
             surfaceView.getHolder().removeCallback(this);
@@ -790,10 +883,9 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         final SurfaceView nextSurfaceView = new SurfaceView(this);
         nextSurfaceView.setBackgroundColor(0xff162028);
         final FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            Gravity.CENTER
-        );
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                Gravity.CENTER);
         productSurfaceContainer.addView(nextSurfaceView, params);
         nextSurfaceView.getHolder().addCallback(this);
         surfaceView = nextSurfaceView;
@@ -805,41 +897,39 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     }
 
     private void callNativeWithSurfaceState(
-        String event,
-        long seq,
-        long token,
-        long epoch,
-        int transition,
-        int glesStatus,
-        long glesSwapCount,
-        long glesBoundEpoch,
-        long glesContextCreateCount,
-        long glesSurfaceCreateCount,
-        long glesTextureCreateCount,
-        boolean glesTextureAlive,
-        long glesTextureUploadCount,
-        long glesTextureUpdateCount,
-        long glesTextureResizeCount,
-        int glesTextureWidth,
-        int glesTextureHeight
-    ) {
+            String event,
+            long seq,
+            long token,
+            long epoch,
+            int transition,
+            int glesStatus,
+            long glesSwapCount,
+            long glesBoundEpoch,
+            long glesContextCreateCount,
+            long glesSurfaceCreateCount,
+            long glesTextureCreateCount,
+            boolean glesTextureAlive,
+            long glesTextureUploadCount,
+            long glesTextureUpdateCount,
+            long glesTextureResizeCount,
+            int glesTextureWidth,
+            int glesTextureHeight) {
         appendEvent(
-            event + " seq=" + seq +
-                " token=0x" + Long.toHexString(token) +
-                " epoch=" + epoch +
-                " transition=" + surfaceTransitionLabel(transition) +
-                " gles=" + glesProbeStatusLabel(glesStatus) +
-                " glesSwaps=" + glesSwapCount +
-                " glesBoundEpoch=" + glesBoundEpoch +
-                " glesContextCreates=" + glesContextCreateCount +
-                " glesSurfaceCreates=" + glesSurfaceCreateCount +
-                " glesTextureCreates=" + glesTextureCreateCount +
-                " glesTextureAlive=" + glesTextureAlive +
-                " glesTextureUploads=" + glesTextureUploadCount +
-                " glesTextureUpdates=" + glesTextureUpdateCount +
-                " glesTextureResizes=" + glesTextureResizeCount +
-                " glesTextureSize=" + glesTextureWidth + "x" + glesTextureHeight
-        );
+                event + " seq=" + seq +
+                        " token=0x" + Long.toHexString(token) +
+                        " epoch=" + epoch +
+                        " transition=" + surfaceTransitionLabel(transition) +
+                        " gles=" + glesProbeStatusLabel(glesStatus) +
+                        " glesSwaps=" + glesSwapCount +
+                        " glesBoundEpoch=" + glesBoundEpoch +
+                        " glesContextCreates=" + glesContextCreateCount +
+                        " glesSurfaceCreates=" + glesSurfaceCreateCount +
+                        " glesTextureCreates=" + glesTextureCreateCount +
+                        " glesTextureAlive=" + glesTextureAlive +
+                        " glesTextureUploads=" + glesTextureUploadCount +
+                        " glesTextureUpdates=" + glesTextureUpdateCount +
+                        " glesTextureResizes=" + glesTextureResizeCount +
+                        " glesTextureSize=" + glesTextureWidth + "x" + glesTextureHeight);
     }
 
     private static String surfaceTransitionLabel(int transition) {
@@ -848,18 +938,6 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
             case 2 -> "replaced";
             case 3 -> "retired";
             default -> "unchanged";
-        };
-    }
-
-    private static String ptyProbeStartStatusLabel(int status) {
-        return switch (status) {
-            case 1 -> "started";
-            case 2 -> "unsupported";
-            case 3 -> "delete-log-failed";
-            case 4 -> "init-failed";
-            case 5 -> "write-failed";
-            case 6 -> "missing-pid";
-            default -> "none";
         };
     }
 
@@ -890,49 +968,37 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         };
     }
 
-    private static final class PtyProbeSnapshot {
-        final long heartbeatCount;
-        final String lastLine;
-        final long fileSizeBytes;
-
-        PtyProbeSnapshot(long heartbeatCount, String lastLine, long fileSizeBytes) {
-            this.heartbeatCount = heartbeatCount;
-            this.lastLine = lastLine;
-            this.fileSizeBytes = fileSizeBytes;
-        }
-    }
-
     private void updateStatus(String state) {
         final int surfaceWidth = surfaceView.getWidth();
         final int surfaceHeight = surfaceView.getHeight();
         final boolean surfaceValid = surfaceView.getHolder().getSurface().isValid();
-        final String glesStatus = nativeLoaded ? glesProbeStatusLabel(nativeCurrentGlesProbeStatusBridge()) : "unavailable";
+        final String glesStatus = nativeLoaded ? glesProbeStatusLabel(nativeCurrentGlesProbeStatusBridge())
+                : "unavailable";
         statusText.setText(
-            "state=" + state +
-                " nativeLoaded=" + nativeLoaded +
-                " windowFocus=" + hasWindowFocus() +
-                " imeVisible=" + imeVisible +
-                "\n" +
-                "surfaceValid=" + surfaceValid +
-                " surfaceSize=" + surfaceWidth + "x" + surfaceHeight +
-                "\n" +
-                "gles=" + glesStatus +
-                " swaps=" + (nativeLoaded ? nativeCurrentGlesProbeSwapCountBridge() : 0) +
-                " boundEpoch=" + (nativeLoaded ? nativeCurrentGlesProbeBoundEpochBridge() : 0) +
-                "\n" +
-                "contextCreates=" + (nativeLoaded ? nativeCurrentGlesProbeContextCreateCountBridge() : 0) +
-                " surfaceCreates=" + (nativeLoaded ? nativeCurrentGlesProbeSurfaceCreateCountBridge() : 0) +
-                "\n" +
-                "textureCreates=" + (nativeLoaded ? nativeCurrentGlesProbeTextureCreateCountBridge() : 0) +
-                " textureAlive=" + (nativeLoaded && nativeCurrentGlesProbeTextureAliveBridge()) +
-                "\n" +
-                "textureUploads=" + (nativeLoaded ? nativeCurrentGlesProbeTextureUploadCountBridge() : 0) +
-                " textureUpdates=" + (nativeLoaded ? nativeCurrentGlesProbeTextureUpdateCountBridge() : 0) +
-                " textureResizes=" + (nativeLoaded ? nativeCurrentGlesProbeTextureResizeCountBridge() : 0) +
-                "\n" +
-                "textureSize=" + (nativeLoaded ? nativeCurrentGlesProbeTextureWidthBridge() : 0) +
-                "x" + (nativeLoaded ? nativeCurrentGlesProbeTextureHeightBridge() : 0)
-        );
+                "state=" + state +
+                        " nativeLoaded=" + nativeLoaded +
+                        " windowFocus=" + hasWindowFocus() +
+                        " imeVisible=" + imeVisible +
+                        "\n" +
+                        "surfaceValid=" + surfaceValid +
+                        " surfaceSize=" + surfaceWidth + "x" + surfaceHeight +
+                        "\n" +
+                        "gles=" + glesStatus +
+                        " swaps=" + (nativeLoaded ? nativeCurrentGlesProbeSwapCountBridge() : 0) +
+                        " boundEpoch=" + (nativeLoaded ? nativeCurrentGlesProbeBoundEpochBridge() : 0) +
+                        "\n" +
+                        "contextCreates=" + (nativeLoaded ? nativeCurrentGlesProbeContextCreateCountBridge() : 0) +
+                        " surfaceCreates=" + (nativeLoaded ? nativeCurrentGlesProbeSurfaceCreateCountBridge() : 0) +
+                        "\n" +
+                        "textureCreates=" + (nativeLoaded ? nativeCurrentGlesProbeTextureCreateCountBridge() : 0) +
+                        " textureAlive=" + (nativeLoaded && nativeCurrentGlesProbeTextureAliveBridge()) +
+                        "\n" +
+                        "textureUploads=" + (nativeLoaded ? nativeCurrentGlesProbeTextureUploadCountBridge() : 0) +
+                        " textureUpdates=" + (nativeLoaded ? nativeCurrentGlesProbeTextureUpdateCountBridge() : 0) +
+                        " textureResizes=" + (nativeLoaded ? nativeCurrentGlesProbeTextureResizeCountBridge() : 0) +
+                        "\n" +
+                        "textureSize=" + (nativeLoaded ? nativeCurrentGlesProbeTextureWidthBridge() : 0) +
+                        "x" + (nativeLoaded ? nativeCurrentGlesProbeTextureHeightBridge() : 0));
         updateImeToggleLabel();
     }
 

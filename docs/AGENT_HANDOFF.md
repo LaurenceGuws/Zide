@@ -13,6 +13,15 @@ not a progress log and should stay brief.
   - preserve Zide's resource-discipline and correctness values while doing it
   - use renderer/backend work only when it directly unblocks honest Android
     terminal implementation
+- Current product sequencing:
+  - mobile terminal first
+  - extract reusable mobile-native fundamentals while building it
+  - mobile editor second
+  - integrated IDE mode only after terminal and editor each stand on their own
+- Do not force a packaging decision yet:
+  - one APK with multiple modes may be right later
+  - separate mobile products sharing core code may also be right later
+  - keep the architecture loose enough to support either
 - Android host/bootstrap/device truth is now real enough that Android is no
   longer a hypothetical future pressure.
 - Metal live validation is paused until explicitly reopened; do not let that
@@ -23,6 +32,9 @@ not a progress log and should stay brief.
 - The Android queue is now the default execution queue.
 - Renderer work is still important, but only as a dependency lane for Android
   terminal adoption.
+- Android platform code should stay disciplined, but it is allowed to own
+  native mobile interaction surfaces where that produces the best UX.
+- Do not force all mobile product behavior through the GPU texture path.
 - Preferred execution style:
   - do the highest-leverage Android-unblocking work next
   - keep bootstrap-only Android proof work below `src/ui/renderer/` until the
@@ -53,27 +65,28 @@ Execution discipline:
   - disposable app-process-owned PTY lifetime is the baseline
   - service-owned PTY survival is validated as an optional product lane, not
     the default answer
+- Android shell is now real on device:
+  - `/system/bin/sh` runs through the repo terminal engine
+  - product view is shell-first
+  - IME overlay handling is live against the real shell path
+- The current mobile product boundary is:
+  - Zig owns terminal/runtime/core rendering primitives
+  - Android code owns Android lifecycle/input/insets/overlay behavior
+  - future mobile UX may live on both sides when that is the more honest fit
+- The current active Android ticket is:
+  - `AS-A3` in `docs/todo/android/implementation.md`
+  - direct shell input ownership beyond the temporary composer
 - The remaining shared-renderer blocker for first-class Android renderer work
-  is gate #5, not gate #4.
-- The next explicit Android-unblock lane is now:
-  - `AR-B1` in `docs/todo/android/implementation.md`
-  - implemented as `RB-B3.c` in `docs/todo/ui/renderer.md`
-  - branch goal: first non-terminal frame family ownership with
-    `chrome_band` as the first adopter
+  is still gate #5, but it is not the default lane right now.
 - Gate #2 should be treated as closed for active work until Metal validation is
   explicitly reopened.
-- The current repo question is:
-  - what is the next highest-leverage move toward a first-class Android
-    terminal
-  - and is that move still bootstrap-owned Android work or the next honest
-    gate-5 renderer cut
-- Do not let the older renderer-campaign framing hide that product goal.
 
 ### Where To Look
 
 - Active execution queue:
   - `docs/todo/android/implementation.md`
 - Android authority:
+  - `app_architecture/platform/android/ANDROID_SHELL_BRINGUP_PLAN.md`
   - `app_architecture/platform/android/RENDER_BACKEND.md`
   - `app_architecture/platform/android/ANDROID_GLES_BINDING_PLAN.md`
   - `app_architecture/platform/android/ANDROID_PTY_LIFETIME_PLAN.md`

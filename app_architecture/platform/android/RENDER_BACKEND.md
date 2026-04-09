@@ -17,6 +17,16 @@ Supporting research:
 
 ## Target Stack
 
+This doc is subordinate to the current mobile product sequence:
+
+- mobile terminal first
+- reusable mobile-native fundamentals alongside it
+- mobile editor second
+- integrated IDE mode later
+
+So Android render/backend work here must support that sequence rather than
+trying to decide full mobile product packaging or full IDE composition early.
+
 - app host: Android `Activity`
 - render host: `Surface` / `ANativeWindow`
 - backend: GLES first, with any future Vulkan decision requiring separate
@@ -35,6 +45,14 @@ But SDL is not the final owner of:
 - surface availability/loss/replacement
 - redraw-needed semantics
 - pause/resume/stop/destroy sequencing
+
+The same rule applies above SDL:
+
+- Zig should own terminal/runtime/core rendering primitives
+- Android platform code should own Android-native lifecycle/input/insets and
+  any mobile-native overlays needed for a first-class UX
+- do not force all mobile product behavior through the terminal texture path
+  just to keep Java/Kotlin thin
 
 ## Why Android Is Different
 
@@ -245,6 +263,15 @@ Practical consequences from that Note10 run:
 
 This repo is now explicitly optimizing for Android terminal excellence, not for
 renderer/backend cleanup as an end in itself.
+
+That does not mean Android is a throwaway bootstrap shell around a Zig-only
+product. The current intended shape is:
+
+- strong shared Zig core
+- Android-native mobile interaction surfaces where the hardware and OS call
+  for them
+- no premature commitment yet on whether terminal/editor later ship as one APK
+  or multiple products sharing the same core
 
 The Android-native host/bootstrap lane has now answered its next two honest
 Android-specific questions:

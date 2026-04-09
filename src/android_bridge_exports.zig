@@ -172,53 +172,11 @@ export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeCurrentGles
     return android_runtime_bridge.currentGlesProbeTextureHeight();
 }
 
-export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeStartPtyProbeBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) i64 {
-    return @intCast(android_runtime_bridge.startPtyLifetimeProbe());
-}
-
-export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeStopPtyProbeBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) void {
-    android_runtime_bridge.stopPtyLifetimeProbe();
-}
-
-export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeIsPtyProbeAliveBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) bool {
-    return android_runtime_bridge.isPtyLifetimeProbeAlive();
-}
-
-export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativePtyProbeChildPidBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) i64 {
-    return @intCast(android_runtime_bridge.ptyLifetimeProbeChildPid());
-}
-
-export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativePtyProbeStartStatusBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) i32 {
-    return android_runtime_bridge.ptyLifetimeProbeStartStatus();
-}
-
 export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeRestartShellSessionBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return android_runtime_bridge.restartShellSession();
-}
-
-export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeStopShellSessionBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) void {
-    android_runtime_bridge.stopShellSession();
 }
 
 export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativePollShellSessionBridge(
@@ -235,37 +193,10 @@ export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeIsShellSess
     return android_runtime_bridge.isShellSessionAlive();
 }
 
-export fn Java_dev_zide_androidbootstrap_ZidePtyProbeService_nativeStartPtyProbeBridge(
+export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeSendShellCodepointBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
-) callconv(.c) i64 {
-    return @intCast(android_runtime_bridge.startPtyLifetimeProbe());
-}
-
-export fn Java_dev_zide_androidbootstrap_ZidePtyProbeService_nativeStopPtyProbeBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) void {
-    android_runtime_bridge.stopPtyLifetimeProbe();
-}
-
-export fn Java_dev_zide_androidbootstrap_ZidePtyProbeService_nativeIsPtyProbeAliveBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) bool {
-    return android_runtime_bridge.isPtyLifetimeProbeAlive();
-}
-
-export fn Java_dev_zide_androidbootstrap_ZidePtyProbeService_nativePtyProbeChildPidBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) i64 {
-    return @intCast(android_runtime_bridge.ptyLifetimeProbeChildPid());
-}
-
-export fn Java_dev_zide_androidbootstrap_ZidePtyProbeService_nativePtyProbeStartStatusBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
+    codepoint: i32,
 ) callconv(.c) i32 {
-    return android_runtime_bridge.ptyLifetimeProbeStartStatus();
+    return android_runtime_bridge.sendShellCodepoint(codepoint);
 }

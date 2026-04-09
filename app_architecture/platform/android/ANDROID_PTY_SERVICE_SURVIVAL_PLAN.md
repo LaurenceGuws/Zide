@@ -123,31 +123,13 @@ Stop `AP-A2` when:
 
 ## Current Probe Result
 
-The minimal foreground-service probe is now implemented in
-`android/bootstrap-bridge/`:
+The minimal foreground-service probe was implemented and validated through
+`android/bootstrap-bridge/` and is now retired from the live app.
 
-- `ZidePtyProbeService` owns the existing native PTY heartbeat probe while the
-  foreground notification is active
-- the exported bootstrap activity provides the debug-only start and stop
-  entrypoints for that internal service
-- the service itself remains internal-only (`exported=false`)
+Current truth:
 
-Observed on the Note10:
-
-- service-owned PTY probe start succeeds:
-  - `debug.servicePtyProbeStartIssued`
-  - `service.start pid=25741 alive=true status=started`
-- after `HOME` / pause / stop / surface retirement:
-  - `activity.onPause.pty alive=true pid=25741 status=started ...`
-  - `activity.onStop.pty alive=true pid=25741 status=started ...`
-- bringing the activity back to the foreground still shows the same live probe
-  before the new surface is reacquired:
-  - `activity.onStart.pty alive=true pid=25741 status=started ...`
-  - `activity.onResume.pty alive=true pid=25741 status=started ...`
-- explicit stop now also works through the internal service path:
-  - `debug.servicePtyProbeStopIssued`
-  - `service.stop pid=-1 alive=false`
-  - `service.destroy pid=-1 alive=false`
+- a foreground service can own the PTY heartbeat probe on the Note10
+- service ownership is viable, but viability alone is not product approval
 
 ## Decision From Probe
 

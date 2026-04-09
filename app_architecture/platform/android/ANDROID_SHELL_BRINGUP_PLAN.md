@@ -137,50 +137,66 @@ This proves:
 
 ## Next Cut
 
-`AS-A2` live-shell viewport and prompt behavior
+`AS-A3` direct shell input
 
 Purpose:
 
-- move the live shell interaction onto the product screen so prompt visibility,
-  input focus, and IME behavior are exercised where they matter
+- move beyond the temporary line-composer path toward real key-by-key shell
+  input on Android
 
-Acceptance:
+## Previous Cut
 
-- product view owns the live shell transcript and input controls
-- IME toggle targets the real shell input field
-- transcript auto-follows live output so the prompt stays visible by default
-- debug view returns to diagnostics only
-
-Do not do:
-
-- no shared renderer integration
-- no cell-accurate terminal rendering
-- no selection/scrollback polish beyond keeping live output visible
+`AS-A2` is met. See `docs/todo/android/implementation.md` for the full record.
 
 ## Current Product Result
 
-`AS-A2` is now implemented in the bootstrap bridge.
+`AS-A3` first cut is now implemented in the bootstrap bridge.
 
-Current product shape on the Note10:
+Current input shape:
 
-- product view is shell-first:
-  - one large live transcript area
-  - one compact control row: `IME`, `Restart`, `Debug`
-  - temporary floating input composer only while IME is active
-- IME handling now follows Android overlay truth instead of assuming resize:
-  - product view applies bottom insets
-  - the keyboard no longer covers the prompt/input row by default
-  - landscape fullscreen extract mode is disabled for the temporary composer
-- transcript behavior is now product-usable:
-  - dead trailing blank rows are trimmed after geometry change
-  - manual upward scroll detaches auto-follow until the view returns near the
-    bottom
-  - IME-active prompt entry still forces follow to the bottom
+- each character typed in the IME composer is sent immediately to the PTY via a
+  direct JNI → Zig → `zide_terminal_send_text` path
+- the Java side now owns a real `InputConnection` surface with a minimal editor
+  model instead of relying on `TextWatcher` tricks
+- Enter sends `\n` directly
+- Backspace sends `\x7f` directly
+- Samsung text-editing arrows now work through the editor model and VT escape
+  output
+- stale file-indirection input has been removed from the active shell path
+- input latency is now bounded by JNI call overhead instead of the 150ms poll
+  interval
 
-This proves:
+Architecture:
 
-- the live shell loop is no longer stuck behind a debug-only screen
-- prompt/viewport/IME behavior is now being solved against the real Android
-  shell loop
-- the next Android shell question should move from layout/bootstrap behavior to
-  richer shell interaction, most likely direct key-by-key PTY input
+- `android_shell_session.zig` now exposes `sendText` and `sendCodepoint`
+  directly on the active session handle
+- `android_runtime_bridge.zig` exposes `sendShellCodepoint` for JNI
+- `android_bridge_exports.zig` exports `nativeSendShellCodepointBridge`
+- the bootstrap activity now exposes a dedicated IME surface with:
+  - `onCheckIsTextEditor()`
+  - `onCreateInputConnection(...)`
+  - composing/commit/selection handling
+
+What this proves:
+
+- Android shell input is no longer limited to "type a whole line then send"
+- the direct JNI path works for character-by-character terminal input
+- the temporary floating composer is now a key-by-key input surface
+- the minimal editor model is sufficient for current Samsung keyboard input and
+  navigation behavior on the Note10
+
+What this does not yet prove:
+
+- real hardware key events (physical keyboard, Bluetooth keyboard)
+- control key combinations (Ctrl+C, Ctrl+D, etc.)
+- special terminal keys beyond the currently proved editor-navigation subset
+- whether the temporary floating composer is the right long-term input surface
+
+Next likely follow-up:
+
+1. add Ctrl+C / Ctrl+D support through the existing `zide_terminal_send_key`
+   FFI path or by sending the appropriate control bytes directly
+2. keep the current `InputConnection` model but reduce the temporary-composer
+   UI debt if it starts fighting product expectations
+3. do not jump to a larger terminal-input surface unless the current model
+   proves materially broken for the next product question

@@ -1,7 +1,6 @@
 const builtin = @import("builtin");
 const android_gles_probe = @import("android_gles_probe.zig");
 const android_host = @import("android_host.zig");
-const android_pty_probe = @import("android_pty_probe.zig");
 const android_shell_session = @import("android_shell_session.zig");
 const native_host = @import("native_host.zig");
 
@@ -180,33 +179,9 @@ pub fn currentGlesProbeTextureHeight() i32 {
     return android_gles_probe.currentTextureHeight();
 }
 
-pub fn startPtyLifetimeProbe() i64 {
-    return android_pty_probe.start() catch -1;
-}
-
-pub fn stopPtyLifetimeProbe() void {
-    android_pty_probe.stop();
-}
-
-pub fn isPtyLifetimeProbeAlive() bool {
-    return android_pty_probe.isAlive();
-}
-
-pub fn ptyLifetimeProbeChildPid() i64 {
-    return android_pty_probe.childPid();
-}
-
-pub fn ptyLifetimeProbeStartStatus() i32 {
-    return @intFromEnum(android_pty_probe.lastStartStatus());
-}
-
 pub fn restartShellSession() i32 {
     android_shell_session.restart() catch return @intFromEnum(android_shell_session.lastStartStatus());
     return @intFromEnum(android_shell_session.lastStartStatus());
-}
-
-pub fn stopShellSession() void {
-    android_shell_session.stop();
 }
 
 pub fn pollShellSession() i32 {
@@ -216,6 +191,11 @@ pub fn pollShellSession() i32 {
 
 pub fn isShellSessionAlive() bool {
     return android_shell_session.isAlive();
+}
+
+pub fn sendShellCodepoint(codepoint: i32) i32 {
+    if (codepoint < 0 or codepoint > 0x10ffff) return @intFromEnum(android_shell_session.SendStatus.send_failed);
+    return @intFromEnum(android_shell_session.sendCodepoint(@intCast(codepoint)));
 }
 
 test "bridge routes Android lifecycle and surface truth through shared host state" {

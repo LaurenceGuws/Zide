@@ -67,14 +67,6 @@ Optional in-process surface recreation probe:
   --ez debug_recreate_surface_once true
 ```
 
-Optional PTY lifetime probe:
-
-```sh
-/opt/android-sdk/platform-tools/adb shell am start \
-  -n dev.zide.androidbootstrap/.ZideBootstrapActivity \
-  --ez debug_start_pty_probe_once true
-```
-
 Optional shell bring-up smoke:
 
 ```sh
@@ -83,31 +75,12 @@ Optional shell bring-up smoke:
   --ez debug_start_shell_once true
 ```
 
-Optional foreground-service PTY probe:
-
-```sh
-/opt/android-sdk/platform-tools/adb shell am start \
-  -n dev.zide.androidbootstrap/.ZideBootstrapActivity \
-  --ez debug_start_service_pty_probe_once true
-```
-
-Optional foreground-service PTY probe stop:
-
-```sh
-/opt/android-sdk/platform-tools/adb shell am start \
-  -n dev.zide.androidbootstrap/.ZideBootstrapActivity \
-  --ez debug_stop_service_pty_probe_once true
-```
-
-The service is intentionally internal-only (`exported=false`), so the activity
-extras are the supported debug entrypoints for this probe.
-
 The bootstrap app now uses two screens:
 
 - product view:
   - large live shell transcript
   - compact permanent controls: `IME`, `Restart`, `Debug`
-  - temporary floating input composer while IME is active
+  - IME targets the hidden `InputConnection` view that feeds the live shell
   - hidden probe `SurfaceView` kept only for bootstrap runtime/native checks
 - debug view:
   - grouped GLES/runtime status
@@ -161,22 +134,6 @@ That proves:
   `acquired`, so raw token reuse is not sufficient to define identity
 - an explicit in-activity `SurfaceView` recreation probe can also produce a
   true `transition=replaced`
-- the PTY lifetime probe also now shows:
-  - app-process-owned PTY survives `HOME` / pause / stop briefly on the
-    Note10
-  - app-process-owned PTY does not survive `am force-stop`
-- PTY lifetime snapshots are still logged through the activity at:
-  - `activity.onStart.pty`
-  - `activity.onResume.pty`
-  - `activity.onPause.pty`
-  - `activity.onStop.pty`
-- the bootstrap lane now also contains the minimal foreground-service PTY
-  probe needed for the separate service-survival decision lane
-- that probe now validates on the Note10:
-  - `debug.servicePtyProbeStartIssued`
-  - `service.start pid=... alive=true status=started`
-  - later `debug.servicePtyProbeStopIssued`
-  - `service.stop pid=-1 alive=false`
 - the bootstrap lane now also contains the first Android EGL/GLES binding
   proof, with current Note10 logs showing:
   - `native.surfaceAvailable ... gles=drawn`

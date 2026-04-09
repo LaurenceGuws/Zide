@@ -8,7 +8,6 @@ const cell_width: u16 = 8;
 const cell_height: u16 = 16;
 const shell_path: [:0]const u8 = "/system/bin/sh";
 const transcript_path = "/data/data/dev.zide.androidbootstrap/files/bootstrap_shell.log";
-const input_path = "/data/data/dev.zide.androidbootstrap/files/bootstrap_shell_input.txt";
 
 pub const StartStatus = enum(i32) {
     none = 0,
@@ -38,10 +37,6 @@ pub fn transcriptPath() []const u8 {
     return transcript_path;
 }
 
-pub fn inputPath() []const u8 {
-    return input_path;
-}
-
 pub fn lastStartStatus() StartStatus {
     return last_start_status;
 }
@@ -49,6 +44,27 @@ pub fn lastStartStatus() StartStatus {
 pub fn isAlive() bool {
     const active = session orelse return false;
     return c_api.zide_terminal_is_alive(active.handle) != 0;
+}
+
+pub const SendStatus = enum(i32) {
+    ok = 0,
+    no_session = 1,
+    send_failed = 2,
+};
+
+pub fn sendText(text: []const u8) SendStatus {
+    const active = session orelse return .no_session;
+    if (text.len == 0) return .ok;
+    if (c_api.zide_terminal_send_text(active.handle, text.ptr, text.len) != 0) {
+        return .send_failed;
+    }
+    return .ok;
+}
+
+pub fn sendCodepoint(cp: u21) SendStatus {
+    var buf: [4]u8 = undefined;
+    const len = std.unicode.utf8Encode(cp, &buf) catch return .send_failed;
+    return sendText(buf[0..len]);
 }
 
 pub fn restart() !void {
@@ -59,10 +75,6 @@ pub fn restart() !void {
 
     stop();
     std.fs.deleteFileAbsolute(transcript_path) catch |err| switch (err) {
-        error.FileNotFound => {},
-        else => return err,
-    };
-    std.fs.deleteFileAbsolute(input_path) catch |err| switch (err) {
         error.FileNotFound => {},
         else => return err,
     };
@@ -99,8 +111,6 @@ pub fn stop() void {
 pub fn pollAndRefresh() !void {
     const active = session orelse return;
 
-    try consumePendingInput(active.handle);
-
     if (c_api.zide_terminal_poll(active.handle) != 0) {
         last_start_status = .poll_failed;
         return error.PollFailed;
@@ -122,35 +132,6 @@ pub fn pollAndRefresh() !void {
     defer c_api.zide_terminal_snapshot_release(&snapshot);
 
     try writeTranscriptSnapshot(&snapshot);
-}
-
-fn consumePendingInput(handle: ?*c_api.ZideTerminalHandle) !void {
-    const file = std.fs.openFileAbsolute(input_path, .{}) catch |err| switch (err) {
-        error.FileNotFound => return,
-        else => return err,
-    };
-    defer file.close();
-
-    const data = try file.readToEndAlloc(std.heap.page_allocator, 4096);
-    defer std.heap.page_allocator.free(data);
-
-    if (data.len == 0) {
-        std.fs.deleteFileAbsolute(input_path) catch |err| switch (err) {
-            error.FileNotFound => {},
-            else => return err,
-        };
-        return;
-    }
-
-    if (c_api.zide_terminal_send_text(handle, data.ptr, data.len) != 0) {
-        last_start_status = .send_failed;
-        return error.SendTextFailed;
-    }
-
-    std.fs.deleteFileAbsolute(input_path) catch |err| switch (err) {
-        error.FileNotFound => {},
-        else => return err,
-    };
 }
 
 fn writeTranscriptSnapshot(snapshot: *const c_api.ZideTerminalSnapshot) !void {
