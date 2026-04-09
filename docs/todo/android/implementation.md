@@ -455,6 +455,10 @@ Current follow-up:
 - the next Android renderer adoption unblock is `AR-B2`:
   move the remaining direct-vs-retained terminal-present path decisions behind
   the shared present contract instead of leaving them in widget runtime
+- first `AR-B2` checkpoint is now in code:
+  `terminal_widget_presentation_runtime.zig` no longer asks
+  `usesDirectTerminalPresentation(...)` directly for recent-input, fast-reuse,
+  or direct-partial-update entry decisions
 
 ## Current Research Read
 

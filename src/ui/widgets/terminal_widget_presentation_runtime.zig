@@ -193,7 +193,7 @@ pub fn recentInputWindowActive(
     input: InputSnapshot,
     at: f64,
 ) bool {
-    if (renderer_presentable_host.usesDirectTerminalPresentation(renderer)) return false;
+    if (!renderer_presentable_host.terminalAllowsRecentInputForceFullPresentation(renderer)) return false;
     return renderer.forceFullTerminalPresentationRecentInputWindow() and
         ((input.mods.ctrl or input.mods.shift or input.mods.alt or input.mods.super) or
             self.controller.blink.recentInputWindowActive(
@@ -1538,10 +1538,11 @@ pub fn tryFastPresentExisting(
     const presentable_ready = surface_state.notePresentableAvailability(
         renderer_presentable_host.terminalPresentableInfo(renderer) != null,
     );
-    const direct_snapshot_reusable = renderer_presentable_host.usesDirectTerminalPresentation(renderer) and
-        !terminal_view.sync_updates_active;
     if (!(view_cells_len > 0 and presentable_ready and
-        (terminal_view.sync_updates_active or direct_snapshot_reusable))) return false;
+        renderer_presentable_host.terminalAllowsFastPresentReuse(
+            renderer,
+            terminal_view.sync_updates_active,
+        ))) return false;
 
     renderer_presentable_host.drawTerminalPresentableBackdrop(renderer, x, y, width, height, bg_color.toRgba());
     presentDraw(
@@ -1722,7 +1723,7 @@ pub fn tryDirectSnapshotUpdate(
     note_present: anytype,
 ) DirectSnapshotUpdateResult {
     var result = DirectSnapshotUpdateResult{};
-    if (!renderer_presentable_host.usesDirectTerminalPresentation(renderer)) return result;
+    if (!renderer_presentable_host.terminalSupportsDirectPartialUpdate(renderer)) return result;
     if (has_kitty) return result;
     if (renderer_presentable_host.terminalPresentableInfo(renderer) == null) return result;
     if (terminal_view.rows == 0 or terminal_view.cols == 0 or terminal_view.cells.len == 0) return result;

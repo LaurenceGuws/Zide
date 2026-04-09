@@ -1497,6 +1497,16 @@ Do not do:
 - do not introduce new plan/result schema unless the current vocabulary proves
   insufficient
 
+Current evidence:
+
+- `terminal_widget_presentation_runtime.zig` no longer calls
+  `usesDirectTerminalPresentation(...)`
+- recent-input force-full policy, fast-present reuse gating, and direct
+  partial-update entry now terminate in `renderer_presentable_host.zig`
+  instead of open-coded widget-runtime path checks
+- this is a narrow path-decision ownership transfer only; execution behavior
+  still flows through the existing terminal present transaction seams
+
 ## Milestone C: Vulkan Fit Audit
 
 Purpose:

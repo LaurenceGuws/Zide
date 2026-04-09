@@ -31,6 +31,18 @@ pub fn usesDirectTerminalPresentation(renderer: anytype) bool {
     return renderer.backend.terminalPresentPath(renderer) == .direct_surface;
 }
 
+pub fn terminalAllowsRecentInputForceFullPresentation(renderer: anytype) bool {
+    return renderer.backend.terminalPresentPath(renderer) != .direct_surface;
+}
+
+pub fn terminalAllowsFastPresentReuse(renderer: anytype, sync_updates_active: bool) bool {
+    return sync_updates_active or renderer.backend.terminalPresentPath(renderer) == .direct_surface;
+}
+
+pub fn terminalSupportsDirectPartialUpdate(renderer: anytype) bool {
+    return renderer.backend.terminalPresentPath(renderer) == .direct_surface;
+}
+
 pub fn ensureTerminalPresentable(renderer: anytype, width: i32, height: i32) bool {
     return renderer.backend.ensurePresentable(renderer, width, height);
 }

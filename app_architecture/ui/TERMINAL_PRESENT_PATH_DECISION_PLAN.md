@@ -92,3 +92,17 @@ Stop when:
 - the surviving direct-vs-retained mode checks are gone from widget runtime
 - validation is green
 - docs/queue explicitly name the next blocker instead of leaving gate 5 vague
+
+## Current Checkpoint (2026-04-09)
+
+- `terminal_widget_presentation_runtime.zig` no longer calls
+  `usesDirectTerminalPresentation(...)`
+- recent-input force-full policy now routes through
+  `renderer_presentable_host.terminalAllowsRecentInputForceFullPresentation(...)`
+- fast-present reuse gating now routes through
+  `renderer_presentable_host.terminalAllowsFastPresentReuse(...)`
+- direct partial-update entry now routes through
+  `renderer_presentable_host.terminalSupportsDirectPartialUpdate(...)`
+- this is intentionally only a path-decision ownership cut:
+  widget/runtime behavior is unchanged, and execution still terminates through
+  the existing terminal present transaction seams
