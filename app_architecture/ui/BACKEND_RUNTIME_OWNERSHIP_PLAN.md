@@ -219,6 +219,26 @@ Practical consequence for the next gate-4 cut:
   everything behind another opaque object" unless local code pressure says that
   object will stay honest
 
+## Current Stop Marker
+
+The next superficially available move would be to heap-own or pointer-wrap the
+backend host itself.
+
+Current code pressure does **not** justify that:
+
+- shared code is already off `renderer.backend.ops` / `renderer.backend.kind`
+- backend-host construction is already centralized
+- runtime storage is already opaque and backend-owned in practice
+
+So a heap-owned backend host would currently be indirection theater unless it
+also changes who owns backend selection/dispatch/runtime at the product level.
+
+That means the next gate-4 move must answer a stronger question first:
+
+- if `Renderer` should not own the backend host surface, what higher-level
+  owner should, and why is that owner more honest than the current renderer
+  field?
+
 Latest narrowing cut:
 
 - shared font init/text-config paths now route backend helper access through
