@@ -1504,6 +1504,7 @@ Current evidence:
 - recent-input force-full policy, fast-present reuse gating, and direct
   partial-update entry now terminate in `renderer_presentable_host.zig`
   instead of open-coded widget-runtime path checks
+- the old `usesDirectTerminalPresentation(...)` helper is now removed
 - this is a narrow path-decision ownership transfer only; execution behavior
   still flows through the existing terminal present transaction seams
 

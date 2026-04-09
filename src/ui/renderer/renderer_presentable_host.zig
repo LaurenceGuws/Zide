@@ -27,10 +27,6 @@ pub fn runTerminalPresentPath(renderer: anytype, plan: TerminalPresentPlan, ctx:
     };
 }
 
-pub fn usesDirectTerminalPresentation(renderer: anytype) bool {
-    return renderer.backend.terminalPresentPath(renderer) == .direct_surface;
-}
-
 pub fn terminalAllowsRecentInputForceFullPresentation(renderer: anytype) bool {
     return renderer.backend.terminalPresentPath(renderer) != .direct_surface;
 }
