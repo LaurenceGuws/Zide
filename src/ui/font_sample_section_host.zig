@@ -1,6 +1,7 @@
 const std = @import("std");
 const app_shell = @import("../app_shell.zig");
 const app_logger = @import("../app_logger.zig");
+const present_trace_runtime = @import("renderer/present_trace_runtime.zig");
 const renderer_text_phase_group_host = @import("renderer/renderer_text_phase_group_host.zig");
 const renderer_surface_host = @import("renderer/renderer_surface_host.zig");
 const renderer_mod = @import("renderer.zig");
@@ -26,7 +27,16 @@ pub const Section = struct {
     }
 
     pub fn fillRect(self: *Section, x: i32, y: i32, w: i32, h: i32, color: Color) void {
-        renderer_surface_host.drawRect(self.renderer, x, y, w, h, color);
+        if (w <= 0 or h <= 0) return;
+        const recorded = renderer_surface_host.recordSolidSurfaceFromLogicalRect(
+            self.renderer,
+            @floatFromInt(x),
+            @floatFromInt(y),
+            @floatFromInt(w),
+            @floatFromInt(h),
+            color.toRgba(),
+        );
+        if (recorded) present_trace_runtime.noteFrameFamilyTouch(self.renderer, .sample_section);
     }
 
     fn queueTextOp(self: *Section, text: []const u8, x: f32, y: f32, color: Color, bg: Color) void {
@@ -40,7 +50,9 @@ pub const Section = struct {
         }) catch |err| {
             const log = app_logger.logger("ui.font-sample.section");
             log.logf(.warning, "section text op append failed err={s}", .{@errorName(err)});
+            return;
         };
+        present_trace_runtime.noteFrameFamilyTouch(self.renderer, .sample_section);
     }
 
     pub fn drawTextOnBg(self: *Section, text: []const u8, x: f32, y: f32, color: Color) void {

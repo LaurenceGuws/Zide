@@ -2,6 +2,7 @@ pub const FrameFamily = enum {
     terminal,
     chrome_band,
     editor_row_band,
+    sample_section,
 };
 
 pub const FrameFamilySummary = struct {
@@ -14,6 +15,7 @@ pub const FrameFamilySummary = struct {
     terminal: FamilyState = .{},
     chrome_band: FamilyState = .{},
     editor_row_band: FamilyState = .{},
+    sample_section: FamilyState = .{},
 };
 
 pub fn finalizedFrameFamilySummary(current: FrameFamilySummary, submitted: bool) FrameFamilySummary {
@@ -24,6 +26,8 @@ pub fn finalizedFrameFamilySummary(current: FrameFamilySummary, submitted: bool)
     summary.chrome_band.presented_generation = null;
     summary.editor_row_band.presented = submitted and summary.editor_row_band.touched;
     summary.editor_row_band.presented_generation = null;
+    summary.sample_section.presented = submitted and summary.sample_section.touched;
+    summary.sample_section.presented_generation = null;
     return summary;
 }
 
@@ -70,6 +74,7 @@ pub const PresentTrace = struct {
     terminal_presented_generation: ?u64 = null,
     chrome_band_touch_count: usize = 0,
     editor_row_band_touch_count: usize = 0,
+    sample_section_touch_count: usize = 0,
     composition_clip_count: usize = 0,
     band_group_begin_count: usize = 0,
     band_group_end_count: usize = 0,
@@ -137,6 +142,10 @@ pub fn noteFrameFamilyTouch(self: anytype, family: FrameFamily) void {
         .editor_row_band => {
             self.present.frame_family_current.editor_row_band.touched = true;
             self.present.trace_current.editor_row_band_touch_count += 1;
+        },
+        .sample_section => {
+            self.present.frame_family_current.sample_section.touched = true;
+            self.present.trace_current.sample_section_touch_count += 1;
         },
     }
 }

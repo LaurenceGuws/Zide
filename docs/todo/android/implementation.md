@@ -64,7 +64,8 @@ Right now the biggest shared blocker to first-class Android renderer adoption
 is renderer gate #5:
 
 - presentable/frame routine is still not neutral enough for a new backend to
-  feel routine
+  feel routine, even though shared frame-family feedback now covers terminal,
+  chrome band, editor row-band, and sample section
 
 That means:
 
@@ -403,23 +404,25 @@ Current target:
 Current branch goal:
 
 - `renderer/ar-b1-nonterminal-frame-family`
-- first adopters now landed:
+- adopters now landed:
   - `chrome_band`
   - `editor_row_band`
-- next later adopter:
   - `sample_section`
 
 Current evidence:
 
 - shared frame finalization now emits one family summary surface on
-  `FrameSubmission` for `terminal`, `chrome_band`, and `editor_row_band`
+  `FrameSubmission` for `terminal`, `chrome_band`, `editor_row_band`, and
+  `sample_section`
 - `chrome_band` reports touch participation through that summary via
   `renderer_chrome_band_host`
 - `editor_row_band` now also reports touch participation through shared
   row-band flush/direct paths
-- present feedback now reports terminal/chrome-band/editor-row-band
-  frame-family submission truth without inferring chrome/editor participation
-  from trace-only counters
+- `sample_section` now reports touch participation through
+  `font_sample_section_host`
+- present feedback now reports terminal/chrome-band/editor-row-band/
+  sample-section frame-family submission truth without inferring non-terminal
+  participation from trace-only counters
 
 Acceptance:
 

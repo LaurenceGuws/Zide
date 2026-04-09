@@ -287,3 +287,30 @@ test "finishFrameSubmission submitted reports editor row-band through shared fam
     try std.testing.expect(!submission.family_summary.chrome_band.touched);
     try std.testing.expect(!submission.family_summary.terminal.touched);
 }
+
+test "finishFrameSubmission submitted reports sample section through shared family summary" {
+    var renderer: FakeRenderer = .{
+        .present = .{
+            .submission_sequence = 6,
+            .frame_execution_state = .ready,
+            .frame_family_current = .{
+                .sample_section = .{ .touched = true },
+            },
+            .trace_current = .{
+                .frame_seq = 18,
+            },
+        },
+    };
+
+    const submission = finishFrameSubmission(&renderer, .{
+        .kind = .submitted,
+        .present_ms = 2.5,
+    });
+
+    try std.testing.expect(submission.succeeded);
+    try std.testing.expect(submission.family_summary.sample_section.touched);
+    try std.testing.expect(submission.family_summary.sample_section.presented);
+    try std.testing.expect(!submission.family_summary.editor_row_band.touched);
+    try std.testing.expect(!submission.family_summary.chrome_band.touched);
+    try std.testing.expect(!submission.family_summary.terminal.touched);
+}

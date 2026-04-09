@@ -106,14 +106,17 @@ remain **not ready** until this checklist clears (see contract § “Readiness
 
 **Branch scope (2026-04-09):** Gate #2 is structurally closed on GL and gate
 #4 is now structurally met. Gate #5 remains paused unless a stronger
-ordering/ownership leak appears again. That means Android rendering is still
+ordering/ownership leak appears again. The non-terminal frame-family adopter
+lane under `RB-B3.c` is now structurally complete for `chrome_band`,
+`editor_row_band`, and `sample_section`. That means Android rendering is still
 blocked, but not by backend-runtime ownership anymore. The remaining contract
 blockers are:
 
 - gate #2: Metal still needs live verification against the terminal-present
   transaction seam
 - gate #5: presentable/frame routine is still not neutral enough for a new
-  backend to feel routine
+  backend to feel routine, even though shared frame feedback is no longer
+  terminal-only across the planned non-terminal family adopters
 
 Android note:
 
@@ -1362,22 +1365,25 @@ Acceptance criteria:
 
 - one shared family-level frame summary surface exists
 - product-level frame feedback is no longer terminal-only in meaning
-- `chrome_band` is the first non-terminal adopter through that surface
+- the planned non-terminal adopters report through that surface:
+  - `chrome_band`
+  - `editor_row_band`
+  - `sample_section`
 - terminal feedback remains correct
-- editor/sample adoption stays explicitly out of scope for this cut
 
 Do not do:
 
 - do not widen this into a generic multi-family present framework
-- do not adopt `editor_row_band` or `sample_section` on the same branch
 - do not reopen terminal-present redesign while doing this cut
 
 Stop marker:
 
-- terminal and `chrome_band` both report through one shared family summary
-  surface
-- present feedback no longer needs trace-only inference for `chrome_band`
-- queue/docs clearly state that later adopters still remain
+- terminal, `chrome_band`, `editor_row_band`, and `sample_section` all report
+  through one shared family summary surface
+- present feedback no longer needs trace-only inference for those non-terminal
+  families
+- queue/docs clearly state the lane is structurally complete for its planned
+  adopters
 
 Current evidence:
 
@@ -1419,8 +1425,7 @@ Current implication:
   `terminal_presented` stays false and
   `terminal_presented_generation` stays null on `submitted = false`
 - `RB-B3.c` checkpoint: shared frame finalization now produces one
-  `FrameFamilySummary` surface (`terminal`, `chrome_band`) and stores it on
-  `FrameSubmission`.
+  `FrameFamilySummary` surface and stores it on `FrameSubmission`.
 - terminal-presented compatibility fields remain, but now derive from that
   shared family summary instead of terminal-only inference in
   `renderer_frame_host`.
@@ -1428,13 +1433,12 @@ Current implication:
   fill/outline/text operations now mark family touch participation, and present
   feedback reports `chrome_band_touched` / `chrome_band_presented` directly
   from submission family summary.
-- `editor_row_band` and `sample_section` remain explicit later adopters;
-  this cut does not move them onto frame family summary ownership.
-- later adopter order is now explicit:
-  - `editor_row_band` is now adopted into shared frame family summary
-  - later: `sample_section`
+- `editor_row_band` is now also adopted into shared frame family summary.
 - present feedback now also reports `editor_row_band_touched` /
   `editor_row_band_presented`
+- `sample_section` is now also adopted into shared frame family summary.
+- present feedback now also reports `sample_section_touched` /
+  `sample_section_presented`
 - focused `renderer_frame_host.zig` tests now lock the current gate-5 frame
   policy in code:
   - begin prelude reset

@@ -156,21 +156,6 @@ Do not continue from there into editor/sample adoption on the same branch.
 - explicit non-goal upheld: `editor_row_band` and `sample_section` are not
   adopted into this frame-family summary cut
 
-## Follow-Up Order
-
-If this lane continues, the adopter order is:
-
-1. `editor_row_band` — now met
-2. `sample_section` — still later
-
-Why:
-
-- `editor_row_band` has stronger Android renderer leverage than
-  `sample_section`
-- `editor_row_band` already has explicit group/flush ownership surfaces
-- `sample_section` is still the weakest product-pressure family and should stay
-  later unless it proves a stronger blocker
-
 ## Follow-Up Checkpoint (2026-04-09)
 
 - `editor_row_band` is now the second non-terminal adopter on the shared
@@ -181,7 +166,22 @@ Why:
   path too
 - present feedback now reports `editor_row_band_touched` /
   `editor_row_band_presented`
-- `sample_section` remains the only explicit later adopter in this family lane
+
+## Final Adopter Checkpoint (2026-04-09)
+
+- `sample_section` is now the third non-terminal adopter on the shared
+  `FrameFamilySummary` surface
+- sample-section fill rects now mark family touch only when the surface record
+  actually succeeds
+- sample-section queued text now marks family touch only after append succeeds
+- present feedback now reports `sample_section_touched` /
+  `sample_section_presented`
+- this family-adopter lane is now structurally complete for its planned
+  adopters:
+  - `terminal`
+  - `chrome_band`
+  - `editor_row_band`
+  - `sample_section`
 
 ## Expected Review Questions
 

@@ -30,6 +30,8 @@ fn logFramePresent(state: anytype, shell: anytype, submission: anytype) void {
         .{ .key = "chrome_band_presented", .value = .{ .boolean = family_summary.chrome_band.presented } },
         .{ .key = "editor_row_band_touched", .value = .{ .boolean = family_summary.editor_row_band.touched } },
         .{ .key = "editor_row_band_presented", .value = .{ .boolean = family_summary.editor_row_band.presented } },
+        .{ .key = "sample_section_touched", .value = .{ .boolean = family_summary.sample_section.touched } },
+        .{ .key = "sample_section_presented", .value = .{ .boolean = family_summary.sample_section.presented } },
         .{ .key = "composition_clips", .value = .{ .unsigned = trace.composition_clip_count } },
         .{ .key = "band_group_begin", .value = .{ .unsigned = trace.band_group_begin_count } },
         .{ .key = "band_group_end", .value = .{ .unsigned = trace.band_group_end_count } },
