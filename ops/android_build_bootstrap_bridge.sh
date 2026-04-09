@@ -40,6 +40,8 @@ zig build-obj \
   -Wl,--no-undefined \
   "$OBJ_PATH" \
   -landroid \
+  -lEGL \
+  -lGLESv2 \
   -o "$OUT_LIB"
 
 echo "built $OUT_LIB"

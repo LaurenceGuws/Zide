@@ -1,4 +1,5 @@
 const builtin = @import("builtin");
+const android_gles_probe = @import("android_gles_probe.zig");
 const android_host = @import("android_host.zig");
 const android_pty_probe = @import("android_pty_probe.zig");
 const native_host = @import("native_host.zig");
@@ -12,6 +13,7 @@ const BridgeState = struct {
         .kind = .android_activity,
         .lifecycle_state = .started,
     },
+    last_gles_probe_status: android_gles_probe.ProbeStatus = .unavailable,
     last_surface_transition: native_host.SurfaceIdentityTransition = .unchanged,
     render_host: native_host.PlatformRenderHost = .{
         .binding = .none,
@@ -40,6 +42,7 @@ fn swapNativeWindow(window: ?*anyopaque) void {
 }
 
 pub fn noteCreate() u64 {
+    android_gles_probe.reset();
     bridge_state = .{};
     return nextSequence();
 }
@@ -93,12 +96,24 @@ pub fn noteSurfaceAvailableFromJava(
         ANativeWindow_fromSurface(env, surface);
     swapNativeWindow(native_window);
     if (native_window == null) return noteSurfaceDestroyed();
-    return noteSurfaceAvailable(width, height);
+    const seq = noteSurfaceAvailable(width, height);
+    bridge_state.last_gles_probe_status = android_gles_probe.noteSurfaceAvailable(
+        bridge_state.render_host.androidNativeWindow(),
+        bridge_state.render_host.surfaceIdentityEpoch(),
+        bridge_state.last_surface_transition,
+    );
+    return seq;
 }
 
 pub fn noteSurfaceDestroyed() u64 {
     swapNativeWindow(null);
     _ = android_host.noteSurfaceDestroyed(&bridge_state.app_host, &bridge_state.render_host);
+    bridge_state.last_gles_probe_status = android_gles_probe.noteSurfaceDestroyed();
+    return nextSequence();
+}
+
+pub fn noteSurfaceRedrawNeeded() u64 {
+    bridge_state.last_gles_probe_status = android_gles_probe.noteSurfaceRedrawNeeded();
     return nextSequence();
 }
 
@@ -112,6 +127,10 @@ pub fn currentSurfaceIdentityEpoch() u64 {
 
 pub fn currentSurfaceIdentityTransition() native_host.SurfaceIdentityTransition {
     return bridge_state.last_surface_transition;
+}
+
+pub fn currentGlesProbeStatus() android_gles_probe.ProbeStatus {
+    return bridge_state.last_gles_probe_status;
 }
 
 pub fn startPtyLifetimeProbe() i64 {
@@ -157,6 +176,7 @@ test "bridge routes Android lifecycle and surface truth through shared host stat
     try std.testing.expectEqual(@as(usize, 0x1000), currentNativeWindowToken());
     try std.testing.expectEqual(@as(u64, 1), currentSurfaceIdentityEpoch());
     try std.testing.expectEqual(native_host.SurfaceIdentityTransition.acquired, currentSurfaceIdentityTransition());
+    try std.testing.expectEqual(android_gles_probe.ProbeStatus.drawn, currentGlesProbeStatus());
 
     bridge_state.render_host.clearRedrawRequested();
     try std.testing.expectEqual(@as(u64, 5), noteSurfaceAvailableFromJava(@ptrFromInt(1), @ptrFromInt(0x1000), 420, 210));
@@ -179,6 +199,7 @@ test "bridge routes Android lifecycle and surface truth through shared host stat
     try std.testing.expectEqual(@as(usize, 0), currentNativeWindowToken());
     try std.testing.expectEqual(@as(u64, 2), currentSurfaceIdentityEpoch());
     try std.testing.expectEqual(native_host.SurfaceIdentityTransition.retired, currentSurfaceIdentityTransition());
+    try std.testing.expectEqual(android_gles_probe.ProbeStatus.surface_destroyed, currentGlesProbeStatus());
 
     try std.testing.expectEqual(@as(u64, 9), noteSurfaceAvailableFromJava(@ptrFromInt(1), @ptrFromInt(0x1000), 430, 220));
     try std.testing.expectEqual(native_host.RenderSurfaceAvailability.available, bridge_state.render_host.surface_availability);
