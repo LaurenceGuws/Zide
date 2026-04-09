@@ -261,6 +261,9 @@ The current EGL proof is now stronger than a one-frame clear/swap demo:
   directly on-device
 - the current Note10 path also keeps `glesContextCreates=1` across those
   transitions, so bootstrap EGL context reuse is honest there today
+- the current Note10 path also keeps one bootstrap-owned GLES texture alive
+  with `glesTextureCreates=1`, so minimal context-owned resource lifetime is
+  honest there today
 
 That means there is no new Android-specific execution lane that should be
 opened by default right now.

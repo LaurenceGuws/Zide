@@ -187,16 +187,20 @@ That proves:
   - `glesBoundEpoch`
   - `glesContextCreates`
   - `glesSurfaceCreates`
+  - `glesTextureCreates`
+  - `glesTextureAlive`
 - Note10 lifecycle hardening now shows both replacement stories are real:
   - in-process `SurfaceView` recreation produced
-    `transition=replaced ... glesBoundEpoch=2 glesContextCreates=1 glesSurfaceCreates=2`
+    `transition=replaced ... glesBoundEpoch=2 glesContextCreates=1 glesSurfaceCreates=2 glesTextureCreates=1 glesTextureAlive=true`
   - later background-side retirement produced
-    `transition=retired ... gles=surface-destroyed glesBoundEpoch=0 glesContextCreates=1`
+    `transition=retired ... gles=surface-destroyed glesBoundEpoch=0 glesContextCreates=1 glesTextureCreates=1 glesTextureAlive=true`
   - the next foreground acquire produced
-    `transition=acquired ... glesBoundEpoch=4 glesContextCreates=1 glesSurfaceCreates=3`
+    `transition=acquired ... glesBoundEpoch=4 glesContextCreates=1 glesSurfaceCreates=3 glesTextureCreates=1 glesTextureAlive=true`
 - that means the bootstrap EGL path now proves clean window-surface recreation
   for both `replaced` and `retired` then later `acquired`
 - on the current Note10 path it also proves EGL context reuse across those
   transitions, rather than hidden context teardown/recreation
+- and it now proves one minimal context-owned GLES texture survives across
+  those same transitions too
 - Android native entry is now real enough to move on to deeper host/runtime
   ownership questions rather than more bootstrap speculation

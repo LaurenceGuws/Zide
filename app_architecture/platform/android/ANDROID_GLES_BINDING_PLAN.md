@@ -229,6 +229,17 @@ Current Note10 context policy evidence:
   - later `retired`
   - later fresh `acquired`
 
+Current Note10 bootstrap resource-lifetime evidence:
+
+- one bootstrap-owned GLES texture object stayed alive through:
+  - first `acquired`
+  - later in-process `replaced`
+  - later `retired`
+  - later fresh `acquired`
+- logs showed:
+  - `glesTextureCreates=1`
+  - `glesTextureAlive=true`
+
 This proves:
 
 - `replaced` recreates the EGL window surface against the new identity epoch
@@ -242,6 +253,8 @@ This proves:
   “same surface” assumptions during bootstrap hardening
 - `glesContextCreates` is now enough to falsify fake “context was quietly
   recreated” assumptions during bootstrap hardening
+- a minimal context-owned GLES object can survive those same transitions on
+  the Note10 without hidden resource recreation
 
 It still does not prove:
 
@@ -250,6 +263,8 @@ It still does not prove:
 - terminal/text/product rendering belongs in this lane yet
 - that every Android device should keep the EGL context alive across the same
   transitions without stronger device pressure
+- that full renderer resource graphs should adopt this policy without later
+  shared-backend authority
 
 ## Decision From Probe
 
@@ -265,6 +280,8 @@ Current honest answer:
   the Note10
 - current bootstrap policy can keep one EGL context alive while recreating only
   the window surface across those transitions on the Note10
+- one minimal context-owned GLES resource also survives those transitions on
+  the Note10
 - it still remains bootstrap-owned proof work, not shared renderer adoption
 
 After that:

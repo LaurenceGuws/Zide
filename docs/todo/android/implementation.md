@@ -321,6 +321,8 @@ Status:
   - `glesContextCreates` stayed at `1` across those transitions, so current
     bootstrap policy reuses one EGL context while recreating only the window
     surface on this device
+  - `glesTextureCreates` also stayed at `1` with `glesTextureAlive=true`, so a
+    minimal context-owned GLES resource survived those transitions too
 
 Acceptance:
 
@@ -337,6 +339,8 @@ Acceptance:
   - `transition=retired ... gles=surface-destroyed glesBoundEpoch=0`
   - later `transition=acquired ... glesBoundEpoch=4 glesSurfaceCreates=3`
   - all of those still reported `glesContextCreates=1`
+  - all of those also still reported
+    `glesTextureCreates=1 glesTextureAlive=true`
 - docs explicitly require surface replacement to follow
   `surfaceIdentityEpoch` / transition truth, not raw pointer comparison
 - docs explicitly forbid new shared renderer/backend work in `src/ui/renderer/`
