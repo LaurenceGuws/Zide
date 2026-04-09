@@ -390,6 +390,7 @@ pub const KittyTransport = struct {
     fn readSharedMemory(self: anytype, name: []const u8, size: u32) ?[]u8 {
         const log = app_logger.logger("terminal.kitty");
         if (builtin.target.os.tag == .windows) return null;
+        if (builtin.target.abi == .android) return null;
         if (!builtin.link_libc) return null;
         if (builtin.target.os.tag == .windows) return null;
         var buf: [std.fs.max_path_bytes]u8 = undefined;

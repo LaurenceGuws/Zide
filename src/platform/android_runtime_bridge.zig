@@ -2,6 +2,7 @@ const builtin = @import("builtin");
 const android_gles_probe = @import("android_gles_probe.zig");
 const android_host = @import("android_host.zig");
 const android_pty_probe = @import("android_pty_probe.zig");
+const android_shell_session = @import("android_shell_session.zig");
 const native_host = @import("native_host.zig");
 
 extern fn ANativeWindow_fromSurface(env: ?*anyopaque, surface: ?*anyopaque) ?*anyopaque;
@@ -197,6 +198,24 @@ pub fn ptyLifetimeProbeChildPid() i64 {
 
 pub fn ptyLifetimeProbeStartStatus() i32 {
     return @intFromEnum(android_pty_probe.lastStartStatus());
+}
+
+pub fn restartShellSession() i32 {
+    android_shell_session.restart() catch return @intFromEnum(android_shell_session.lastStartStatus());
+    return @intFromEnum(android_shell_session.lastStartStatus());
+}
+
+pub fn stopShellSession() void {
+    android_shell_session.stop();
+}
+
+pub fn pollShellSession() i32 {
+    android_shell_session.pollAndRefresh() catch return @intFromEnum(android_shell_session.lastStartStatus());
+    return @intFromEnum(android_shell_session.lastStartStatus());
+}
+
+pub fn isShellSessionAlive() bool {
+    return android_shell_session.isAlive();
 }
 
 test "bridge routes Android lifecycle and surface truth through shared host state" {

@@ -75,6 +75,14 @@ Optional PTY lifetime probe:
   --ez debug_start_pty_probe_once true
 ```
 
+Optional shell bring-up smoke:
+
+```sh
+/opt/android-sdk/platform-tools/adb shell am start \
+  -n dev.zide.androidbootstrap/.ZideBootstrapActivity \
+  --ez debug_start_shell_once true
+```
+
 Optional foreground-service PTY probe:
 
 ```sh
@@ -97,9 +105,10 @@ extras are the supported debug entrypoints for this probe.
 The bootstrap app now uses two screens:
 
 - product view:
-  - one canonical `SurfaceView`
-  - short runtime summary
-  - `Show IME` / `Hide IME` probe toggle
+  - large live shell transcript
+  - compact permanent controls: `IME`, `Restart`, `Debug`
+  - temporary floating input composer while IME is active
+  - hidden probe `SurfaceView` kept only for bootstrap runtime/native checks
 - debug view:
   - grouped GLES/runtime status
   - event log only
@@ -211,3 +220,10 @@ That proves:
     final product resize authority
 - Android native entry is now real enough to move on to deeper host/runtime
   ownership questions rather than more bootstrap speculation
+- the bootstrap lane now also contains the first real shell bring-up through
+  the repo terminal engine:
+  - `debug.shellStart status=started`
+  - `manual.shellInput bytes=28`
+  - transcript output showed:
+    - `:/ $ printf 'android-shell-ok\n'`
+    - `android-shell-ok`

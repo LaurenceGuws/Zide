@@ -24,6 +24,7 @@ Do not use this queue for:
 - `app_architecture/platform/android/SURFACE_IDENTITY_POLICY.md`
 - `app_architecture/platform/android/ANDROID_PTY_LIFETIME_PLAN.md`
 - `app_architecture/platform/android/ANDROID_PTY_SERVICE_SURVIVAL_PLAN.md`
+- `app_architecture/platform/android/ANDROID_SHELL_BRINGUP_PLAN.md`
 - `docs/research/terminal/ANDROID_HOST_PTY_SCAN_2026-04-08.md`
 - `docs/todo/ui/renderer.md` (for the pre-Android rendering gate)
 
@@ -86,15 +87,10 @@ Current next renderer-unblock ticket:
 
 Current next Android-owned runtime ticket:
 
-- `AH-A7`
-- probe bootstrap GLES texture-size/resize pressure so we know whether the
-  current Note10-style “one context, one texture, many updates” story still
-  holds once content dimensions change materially
-  - current Note10 read:
-    - holder-driven synthetic resize proves honest texture resize/reupload
-      without context churn
-    - IME is overlay-only on the current device/configuration, so it is not a
-      valid geometry-pressure source for this ticket
+- `AS-A3`
+- direct shell input ownership beyond the temporary composer
+  - stop treating product input as line-only bootstrap UI
+  - define the first honest key-by-key PTY input path for Android shell use
 
 ## Active Tickets
 
@@ -208,6 +204,93 @@ Current Android pivot:
   device
 - IME/prompt-avoidance should follow against a live shell rather than keep
   driving bootstrap-only polish
+
+### `AS-A1` Android First Shell Bring-Up
+
+Purpose:
+
+- prove one real Android shell process and transcript loop through the repo's
+  real terminal engine before more rendering or IME polish
+
+Status:
+
+- active
+- owner doc: `app_architecture/platform/android/ANDROID_SHELL_BRINGUP_PLAN.md`
+- bootstrap-owned shell session manager now exists in:
+  - `src/platform/android_shell_session.zig`
+- bootstrap app now exposes shell bring-up controls on the debug screen:
+  - `Start / Restart Shell`
+  - input field
+  - `Send`
+  - live transcript panel
+- Note10 proof now shows:
+  - `/system/bin/sh` starts through the repo terminal engine
+  - input can be written into the shell loop
+  - transcript output comes back through terminal snapshots
+- observed transcript:
+  - `:/ $ printf 'android-shell-ok\\n'`
+  - `android-shell-ok`
+- product view now owns the live shell loop for the next cut
+
+Acceptance:
+
+- bootstrap-owned shell session manager exists under `src/platform/`
+- it creates and starts one terminal-FFI-backed `/system/bin/sh` session
+- the bootstrap app can send one line of input to it
+- the bootstrap app can display transcript output from terminal snapshots
+- device proof shows repeatable shell I/O on the Note10
+
+Do not do:
+
+- no shared Android renderer backend work
+- no terminal widget integration in `src/ui/renderer/`
+- no IME/prompt-avoidance polish yet
+
+### `AS-A2` Android Live-Shell Product View
+
+Purpose:
+
+- move the live shell onto the product screen so IME and prompt visibility are
+  solved against the real shell loop, not against bootstrap probes
+
+Status:
+
+- met
+- owner doc: `app_architecture/platform/android/ANDROID_SHELL_BRINGUP_PLAN.md`
+
+Acceptance:
+
+- product view shows live shell transcript
+- product view owns shell restart plus IME entry
+- IME toggle targets the real shell input
+- live transcript follows output by default, but manual upward scroll detaches
+  auto-follow until the view returns near the bottom
+- debug view is diagnostics only
+
+Current result:
+
+- product view is now shell-first:
+  - large transcript area
+  - compact permanent row: `IME`, `Restart`, `Debug`
+  - temporary floating input composer while IME is active
+- IME overlay handling now uses window insets instead of waiting for resize
+- landscape fullscreen extract mode is disabled for the temporary composer
+- transcript trimming removes dead trailing blank rows after geometry change
+
+### `AS-A3` Android Direct Shell Input
+
+Purpose:
+
+- move beyond the temporary line-composer path toward real shell input
+  ownership on Android
+
+Acceptance:
+
+- the next Android input cut is defined against the live shell, not the old
+  bootstrap probe
+- product input is no longer limited to “type a whole line then send”
+- docs keep the temporary composer explicit so it does not become a fake-final
+  answer
 
 ### `AH-A4` Android Bootstrap Bridge
 

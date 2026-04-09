@@ -2,38 +2,48 @@ package dev.zide.androidbootstrap;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.graphics.Insets;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.os.Looper;
 import android.util.Log;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowInsets;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.FileOutputStream;
+import java.nio.charset.StandardCharsets;
 
 public final class ZideBootstrapActivity extends Activity implements SurfaceHolder.Callback2 {
     private static final String TAG = "ZideAndroidBootstrap";
     private static final int MAX_LOG_CHARS = 12000;
     private static final String EXTRA_DEBUG_RECREATE_SURFACE_ONCE = "debug_recreate_surface_once";
     private static final String EXTRA_DEBUG_RESIZE_SURFACE_ONCE = "debug_resize_surface_once";
+    private static final String EXTRA_DEBUG_START_SHELL_ONCE = "debug_start_shell_once";
     private static final String EXTRA_DEBUG_START_PTY_PROBE_ONCE = "debug_start_pty_probe_once";
     private static final String EXTRA_DEBUG_START_SERVICE_PTY_PROBE_ONCE = "debug_start_service_pty_probe_once";
     private static final String EXTRA_DEBUG_STOP_SERVICE_PTY_PROBE_ONCE = "debug_stop_service_pty_probe_once";
     private static final String PTY_PROBE_LOG_PATH = "/data/data/dev.zide.androidbootstrap/files/pty_probe.log";
+    private static final String SHELL_TRANSCRIPT_PATH = "/data/data/dev.zide.androidbootstrap/files/bootstrap_shell.log";
+    private static final String SHELL_INPUT_PATH = "/data/data/dev.zide.androidbootstrap/files/bootstrap_shell_input.txt";
     private static final long PTY_STATUS_REFRESH_MS = 1000L;
+    private static final long SHELL_REFRESH_MS = 150L;
 
     private static boolean nativeLoaded = false;
     private static String nativeLoadError = null;
@@ -50,30 +60,49 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
 
     private final StringBuilder eventLog = new StringBuilder();
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private TextView progressSummaryText;
     private TextView statusText;
+    private TextView shellOutputText;
     private TextView eventLogText;
     private View productView;
     private View debugView;
+    private View shellInputOverlay;
     private FrameLayout productSurfaceContainer;
-    private EditText imeProbeInput;
     private Button imeToggleButton;
+    private EditText shellInput;
+    private ScrollView shellOutputScroll;
     private SurfaceView surfaceView;
     private boolean debugViewEnabled = false;
     private boolean imeVisible = false;
     private boolean surfaceRecreationScheduled = false;
     private boolean surfaceResizeScheduled = false;
+    private boolean shellStartScheduled = false;
     private boolean ptyProbeScheduled = false;
     private boolean servicePtyProbeScheduled = false;
     private boolean servicePtyProbeStopScheduled = false;
     private boolean ptyStatusRefreshActive = false;
+    private boolean shellRefreshActive = false;
+    private boolean shellAutoStartAttempted = false;
+    private boolean shellAutoFollowEnabled = true;
     private int surfaceHostGeneration = 0;
+    private int productViewBasePaddingLeft = 0;
+    private int productViewBasePaddingTop = 0;
+    private int productViewBasePaddingRight = 0;
+    private int productViewBasePaddingBottom = 0;
     private final Runnable ptyStatusRefreshRunnable = new Runnable() {
         @Override
         public void run() {
             refreshPtyProbeStatus(false);
             if (ptyStatusRefreshActive) {
                 handler.postDelayed(this, PTY_STATUS_REFRESH_MS);
+            }
+        }
+    };
+    private final Runnable shellRefreshRunnable = new Runnable() {
+        @Override
+        public void run() {
+            refreshShellState(false);
+            if (shellRefreshActive) {
+                handler.postDelayed(this, SHELL_REFRESH_MS);
             }
         }
     };
@@ -107,22 +136,31 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     private static native boolean nativeIsPtyProbeAliveBridge();
     private static native long nativePtyProbeChildPidBridge();
     private static native int nativePtyProbeStartStatusBridge();
+    private static native int nativeRestartShellSessionBridge();
+    private static native void nativeStopShellSessionBridge();
+    private static native int nativePollShellSessionBridge();
+    private static native boolean nativeIsShellSessionAliveBridge();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        progressSummaryText = findViewById(R.id.progress_summary_text);
         statusText = findViewById(R.id.status_text);
+        shellOutputText = findViewById(R.id.shell_output_text);
         eventLogText = findViewById(R.id.event_log);
         productView = findViewById(R.id.product_view);
         debugView = findViewById(R.id.debug_view);
+        shellInputOverlay = findViewById(R.id.shell_input_overlay);
         productSurfaceContainer = findViewById(R.id.product_surface_container);
-        imeProbeInput = findViewById(R.id.ime_probe_input);
         imeToggleButton = findViewById(R.id.ime_toggle_button);
+        shellInput = findViewById(R.id.shell_input);
+        shellOutputScroll = findViewById(R.id.shell_output_scroll);
+        installInsetsHandling();
+        installShellScrollHandling();
         bindViewModeToggle();
         bindImeToggle();
+        bindShellControls();
         applyViewMode();
         installSurfaceView("activity-create");
 
@@ -133,6 +171,45 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         callNative("native.onCreate", nativeLoaded ? nativeOnCreateBridge() : -1);
         refreshPtyProbeStatus(false);
         updateStatus("created");
+    }
+
+    private void installInsetsHandling() {
+        productViewBasePaddingLeft = productView.getPaddingLeft();
+        productViewBasePaddingTop = productView.getPaddingTop();
+        productViewBasePaddingRight = productView.getPaddingRight();
+        productViewBasePaddingBottom = productView.getPaddingBottom();
+        productView.setOnApplyWindowInsetsListener((view, windowInsets) -> {
+            final Insets navInsets = windowInsets.getInsets(WindowInsets.Type.navigationBars());
+            final Insets imeInsets = windowInsets.getInsets(WindowInsets.Type.ime());
+            final int bottomInset = Math.max(navInsets.bottom, imeInsets.bottom);
+            imeVisible = imeInsets.bottom > navInsets.bottom;
+            view.setPadding(
+                productViewBasePaddingLeft,
+                productViewBasePaddingTop,
+                productViewBasePaddingRight,
+                productViewBasePaddingBottom + bottomInset
+            );
+            shellInputOverlay.setVisibility(imeVisible ? View.VISIBLE : View.GONE);
+            updateImeToggleLabel();
+            shellOutputScroll.post(() -> shellOutputScroll.fullScroll(View.FOCUS_DOWN));
+            return windowInsets;
+        });
+        productView.requestApplyInsets();
+    }
+
+    private void installShellScrollHandling() {
+        shellOutputScroll.setOnTouchListener((view, event) -> {
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    shellOutputScroll.post(() -> shellAutoFollowEnabled = isShellOutputNearBottom());
+                    break;
+                default:
+                    shellAutoFollowEnabled = false;
+                    break;
+            }
+            return false;
+        });
     }
 
     @Override
@@ -151,10 +228,12 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         callNative("native.onResume", nativeLoaded ? nativeOnResumeBridge() : -1);
         maybeScheduleSurfaceRecreation();
         maybeScheduleSurfaceResize();
+        maybeScheduleShellStart();
         maybeSchedulePtyProbe();
         maybeScheduleServicePtyProbe();
         maybeScheduleServicePtyProbeStop();
         startPtyStatusRefresh();
+        startShellRefresh();
         logPtyProbeSnapshot("activity.onResume.pty");
         updateStatus("resumed");
     }
@@ -174,7 +253,9 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         }
         callNative("native.onPause", nativeLoaded ? nativeOnPauseBridge() : -1);
         stopPtyStatusRefresh();
+        stopShellRefresh();
         refreshPtyProbeStatus(false);
+        refreshShellState(false);
         logPtyProbeSnapshot("activity.onPause.pty");
         updateStatus("paused");
         super.onPause();
@@ -371,6 +452,25 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         }, 900);
     }
 
+    private void maybeScheduleShellStart() {
+        final boolean startRequested = getIntent().getBooleanExtra(EXTRA_DEBUG_START_SHELL_ONCE, false);
+        appendEvent("debug.shellStart requested=" + startRequested + " scheduled=" + shellStartScheduled);
+        if (!startRequested) {
+            return;
+        }
+        if (shellStartScheduled) {
+            return;
+        }
+        shellStartScheduled = true;
+        handler.postDelayed(() -> {
+            final int status = nativeLoaded ? nativeRestartShellSessionBridge() : 0;
+            appendEvent("debug.shellStart status=" + shellStartStatusLabel(status));
+            writeShellInput("printf 'android-shell-ok\\n'\n");
+            refreshShellState(false);
+            updateStatus("debug-shell-started");
+        }, 900);
+    }
+
     private void maybeSchedulePtyProbe() {
         if (!getIntent().getBooleanExtra(EXTRA_DEBUG_START_PTY_PROBE_ONCE, false)) {
             return;
@@ -435,6 +535,28 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         debugViewModeButton.setOnClickListener(toggleListener);
     }
 
+    private void bindShellControls() {
+        final Button restartButton = findViewById(R.id.shell_restart_button);
+        final Button sendButton = findViewById(R.id.shell_send_button);
+
+        restartButton.setOnClickListener(view -> {
+            final int status = nativeLoaded ? nativeRestartShellSessionBridge() : 0;
+            appendEvent("manual.shellRestart status=" + shellStartStatusLabel(status));
+            refreshShellState(false);
+            updateStatus("shell-restarted");
+        });
+
+        sendButton.setOnClickListener(view -> {
+            final String input = shellInput.getText().toString();
+            if (input.isEmpty()) return;
+            writeShellInput(input + "\n");
+            shellInput.setText("");
+            shellInput.clearFocus();
+            refreshShellState(false);
+            updateStatus("shell-input-sent");
+        });
+    }
+
     private void applyViewMode() {
         productView.setVisibility(debugViewEnabled ? View.GONE : View.VISIBLE);
         debugView.setVisibility(debugViewEnabled ? View.VISIBLE : View.GONE);
@@ -448,26 +570,92 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         }
 
         if (imeVisible) {
-            imm.hideSoftInputFromWindow(imeProbeInput.getWindowToken(), 0);
-            imeProbeInput.clearFocus();
+            imm.hideSoftInputFromWindow(shellInput.getWindowToken(), 0);
+            shellInput.clearFocus();
             imeVisible = false;
+            shellInputOverlay.setVisibility(View.GONE);
             appendEvent("manual.imeToggle visible=false");
             updateImeToggleLabel();
             updateStatus("ime-hidden");
             return;
         }
 
-        imeProbeInput.requestFocus();
-        imeProbeInput.setSelection(imeProbeInput.getText().length());
-        final boolean shown = imm.showSoftInput(imeProbeInput, InputMethodManager.SHOW_IMPLICIT);
-        imeVisible = shown || imeProbeInput.hasFocus();
-        appendEvent("manual.imeToggle visible=true shown=" + shown);
-        updateImeToggleLabel();
-        updateStatus("ime-shown");
+        shellInputOverlay.setVisibility(View.VISIBLE);
+        shellInput.post(() -> {
+            shellInput.requestFocus();
+            shellInput.setSelection(shellInput.getText().length());
+            imm.restartInput(shellInput);
+            final boolean shown = imm.showSoftInput(shellInput, InputMethodManager.SHOW_FORCED);
+            imeVisible = shown || shellInput.hasFocus();
+            appendEvent("manual.imeToggle visible=true shown=" + shown);
+            updateImeToggleLabel();
+            updateStatus("ime-shown");
+        });
     }
 
     private void updateImeToggleLabel() {
         imeToggleButton.setText(imeVisible ? R.string.hide_ime : R.string.show_ime);
+    }
+
+    private void startShellRefresh() {
+        if (shellRefreshActive) {
+            return;
+        }
+        shellRefreshActive = true;
+        handler.post(shellRefreshRunnable);
+    }
+
+    private void stopShellRefresh() {
+        if (!shellRefreshActive) {
+            return;
+        }
+        shellRefreshActive = false;
+        handler.removeCallbacks(shellRefreshRunnable);
+    }
+
+    private void refreshShellState(boolean logEvent) {
+        int status = nativeLoaded ? nativePollShellSessionBridge() : 0;
+        boolean alive = nativeLoaded && nativeIsShellSessionAliveBridge();
+        String transcript = readTextFile(SHELL_TRANSCRIPT_PATH);
+        final boolean shouldFollowOutput = shouldFollowShellOutput();
+
+        if (nativeLoaded && !alive && !shellAutoStartAttempted) {
+            shellAutoStartAttempted = true;
+            status = nativeRestartShellSessionBridge();
+            appendEvent("auto.shellStart status=" + shellStartStatusLabel(status));
+            status = nativePollShellSessionBridge();
+            alive = nativeIsShellSessionAliveBridge();
+            transcript = readTextFile(SHELL_TRANSCRIPT_PATH);
+        }
+
+        shellOutputText.setText(transcript);
+        if (shouldFollowOutput) {
+            shellOutputScroll.post(() -> shellOutputScroll.fullScroll(View.FOCUS_DOWN));
+        }
+        if (logEvent) {
+            appendEvent("manual.shellRefresh alive=" + alive + " status=" + shellStartStatusLabel(status));
+        }
+    }
+
+    private boolean shouldFollowShellOutput() {
+        if (imeVisible) return true;
+        return shellAutoFollowEnabled;
+    }
+
+    private boolean isShellOutputNearBottom() {
+        final View content = shellOutputScroll.getChildCount() > 0 ? shellOutputScroll.getChildAt(0) : null;
+        if (content == null) return true;
+        final int remaining = content.getBottom() - (shellOutputScroll.getScrollY() + shellOutputScroll.getHeight());
+        return remaining <= 32;
+    }
+
+    private void writeShellInput(String text) {
+        try (FileOutputStream out = new FileOutputStream(SHELL_INPUT_PATH, false)) {
+            out.write(text.getBytes(StandardCharsets.UTF_8));
+            appendEvent("manual.shellInput bytes=" + text.length());
+        } catch (IOException err) {
+            appendEvent("manual.shellInput error=" + err.getClass().getSimpleName());
+        }
     }
 
     private void startPtyProbe(String eventPrefix, String stateLabel) {
@@ -513,6 +701,29 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
                     " beats=" + snapshot.heartbeatCount
             );
         }
+    }
+
+    private String readTextFile(String path) {
+        final File file = new File(path);
+        if (!file.exists()) {
+            return "";
+        }
+
+        final StringBuilder out = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line;
+            boolean first = true;
+            while ((line = reader.readLine()) != null) {
+                if (!first) {
+                    out.append('\n');
+                }
+                out.append(line);
+                first = false;
+            }
+        } catch (IOException err) {
+            return "read-error:" + err.getClass().getSimpleName();
+        }
+        return out.toString();
     }
 
     private void logPtyProbeSnapshot(String prefix) {
@@ -652,6 +863,20 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         };
     }
 
+    private static String shellStartStatusLabel(int status) {
+        return switch (status) {
+            case 1 -> "started";
+            case 2 -> "unsupported";
+            case 3 -> "create-failed";
+            case 4 -> "resize-failed";
+            case 5 -> "start-failed";
+            case 6 -> "send-failed";
+            case 7 -> "poll-failed";
+            case 8 -> "snapshot-failed";
+            default -> "none";
+        };
+    }
+
     private static String glesProbeStatusLabel(int status) {
         return switch (status) {
             case 1 -> "ready";
@@ -682,13 +907,6 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         final int surfaceHeight = surfaceView.getHeight();
         final boolean surfaceValid = surfaceView.getHolder().getSurface().isValid();
         final String glesStatus = nativeLoaded ? glesProbeStatusLabel(nativeCurrentGlesProbeStatusBridge()) : "unavailable";
-        progressSummaryText.setText(
-            "state=" + state +
-                " surface=" + surfaceWidth + "x" + surfaceHeight +
-                " valid=" + surfaceValid +
-                " gles=" + glesStatus +
-                " imeVisible=" + imeVisible
-        );
         statusText.setText(
             "state=" + state +
                 " nativeLoaded=" + nativeLoaded +

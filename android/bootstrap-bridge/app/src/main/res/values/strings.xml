@@ -7,8 +7,18 @@
     <string name="pty_restart">Restart PTY</string>
     <string name="pty_refresh">Refresh PTY</string>
     <string name="show_debug_view">Show Debug</string>
+    <string name="show_debug_short">Debug</string>
     <string name="show_product_view">Show Product</string>
     <string name="debug_view_title">Debug View</string>
     <string name="show_ime">Show IME</string>
     <string name="hide_ime">Hide IME</string>
+    <string name="shell_status_booting">shell=booting</string>
+    <string name="shell_status_starting">Starting shell…</string>
+    <string name="shell_status_ready">Shell ready</string>
+    <string name="shell_status_unavailable">Shell unavailable</string>
+    <string name="shell_restart">Start / Restart Shell</string>
+    <string name="shell_restart_short">Restart</string>
+    <string name="shell_send">Send</string>
+    <string name="shell_input_hint">echo hello</string>
+    <string name="event_log_label">Event Log</string>
 </resources>

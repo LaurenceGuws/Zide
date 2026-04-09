@@ -1,0 +1,226 @@
+const std = @import("std");
+const builtin = @import("builtin");
+const c_api = @import("../terminal/ffi/c_api.zig");
+
+const cols: u16 = 80;
+const rows: u16 = 24;
+const cell_width: u16 = 8;
+const cell_height: u16 = 16;
+const shell_path: [:0]const u8 = "/system/bin/sh";
+const transcript_path = "/data/data/dev.zide.androidbootstrap/files/bootstrap_shell.log";
+const input_path = "/data/data/dev.zide.androidbootstrap/files/bootstrap_shell_input.txt";
+
+pub const StartStatus = enum(i32) {
+    none = 0,
+    started = 1,
+    unsupported = 2,
+    create_failed = 3,
+    resize_failed = 4,
+    start_failed = 5,
+    send_failed = 6,
+    poll_failed = 7,
+    snapshot_failed = 8,
+};
+
+const Session = struct {
+    handle: ?*c_api.ZideTerminalHandle,
+
+    fn deinit(self: *Session) void {
+        c_api.zide_terminal_destroy(self.handle);
+        self.handle = null;
+    }
+};
+
+var session: ?Session = null;
+var last_start_status: StartStatus = .none;
+
+pub fn transcriptPath() []const u8 {
+    return transcript_path;
+}
+
+pub fn inputPath() []const u8 {
+    return input_path;
+}
+
+pub fn lastStartStatus() StartStatus {
+    return last_start_status;
+}
+
+pub fn isAlive() bool {
+    const active = session orelse return false;
+    return c_api.zide_terminal_is_alive(active.handle) != 0;
+}
+
+pub fn restart() !void {
+    if (!(builtin.target.os.tag == .linux and builtin.target.abi == .android)) {
+        last_start_status = .unsupported;
+        return error.Unsupported;
+    }
+
+    stop();
+    std.fs.deleteFileAbsolute(transcript_path) catch |err| switch (err) {
+        error.FileNotFound => {},
+        else => return err,
+    };
+    std.fs.deleteFileAbsolute(input_path) catch |err| switch (err) {
+        error.FileNotFound => {},
+        else => return err,
+    };
+
+    var handle: ?*c_api.ZideTerminalHandle = null;
+    if (c_api.zide_terminal_create(null, &handle) != 0) {
+        last_start_status = .create_failed;
+        return error.CreateFailed;
+    }
+    errdefer c_api.zide_terminal_destroy(handle);
+
+    if (c_api.zide_terminal_resize(handle, cols, rows, cell_width, cell_height) != 0) {
+        last_start_status = .resize_failed;
+        return error.ResizeFailed;
+    }
+
+    if (c_api.zide_terminal_start(handle, shell_path.ptr) != 0) {
+        last_start_status = .start_failed;
+        return error.StartFailed;
+    }
+
+    session = .{ .handle = handle };
+    last_start_status = .started;
+    try pollAndRefresh();
+}
+
+pub fn stop() void {
+    if (session) |*active| {
+        active.deinit();
+        session = null;
+    }
+}
+
+pub fn pollAndRefresh() !void {
+    const active = session orelse return;
+
+    try consumePendingInput(active.handle);
+
+    if (c_api.zide_terminal_poll(active.handle) != 0) {
+        last_start_status = .poll_failed;
+        return error.PollFailed;
+    }
+
+    var events: c_api.ZideTerminalEventBuffer = .{};
+    if (c_api.zide_terminal_event_drain(active.handle, &events) != 0) {
+        last_start_status = .poll_failed;
+        return error.EventDrainFailed;
+    }
+    defer c_api.zide_terminal_events_free(&events);
+
+    var snapshot: c_api.ZideTerminalSnapshot = .{};
+    const request = snapshotRequest();
+    if (c_api.zide_terminal_snapshot_acquire(active.handle, &request, &snapshot) != 0) {
+        last_start_status = .snapshot_failed;
+        return error.SnapshotAcquireFailed;
+    }
+    defer c_api.zide_terminal_snapshot_release(&snapshot);
+
+    try writeTranscriptSnapshot(&snapshot);
+}
+
+fn consumePendingInput(handle: ?*c_api.ZideTerminalHandle) !void {
+    const file = std.fs.openFileAbsolute(input_path, .{}) catch |err| switch (err) {
+        error.FileNotFound => return,
+        else => return err,
+    };
+    defer file.close();
+
+    const data = try file.readToEndAlloc(std.heap.page_allocator, 4096);
+    defer std.heap.page_allocator.free(data);
+
+    if (data.len == 0) {
+        std.fs.deleteFileAbsolute(input_path) catch |err| switch (err) {
+            error.FileNotFound => {},
+            else => return err,
+        };
+        return;
+    }
+
+    if (c_api.zide_terminal_send_text(handle, data.ptr, data.len) != 0) {
+        last_start_status = .send_failed;
+        return error.SendTextFailed;
+    }
+
+    std.fs.deleteFileAbsolute(input_path) catch |err| switch (err) {
+        error.FileNotFound => {},
+        else => return err,
+    };
+}
+
+fn writeTranscriptSnapshot(snapshot: *const c_api.ZideTerminalSnapshot) !void {
+    var out = std.ArrayList(u8).empty;
+    defer out.deinit(std.heap.page_allocator);
+
+    var lines = std.ArrayList(std.ArrayList(u8)).empty;
+    defer {
+        for (lines.items) |*line| line.deinit(std.heap.page_allocator);
+        lines.deinit(std.heap.page_allocator);
+    }
+
+    var last_nonempty_row: usize = 0;
+    var saw_nonempty = false;
+
+    var row: usize = 0;
+    while (row < snapshot.rows) : (row += 1) {
+        var line = try snapshotRowText(snapshot, row);
+        const trimmed = std.mem.trimRight(u8, line.items, " ");
+        if (trimmed.len != line.items.len) {
+            try line.resize(std.heap.page_allocator, trimmed.len);
+        }
+        if (line.items.len > 0) {
+            last_nonempty_row = row;
+            saw_nonempty = true;
+        }
+        try lines.append(std.heap.page_allocator, line);
+    }
+
+    const line_count = if (saw_nonempty) last_nonempty_row + 1 else 0;
+    row = 0;
+    while (row < line_count) : (row += 1) {
+        try out.appendSlice(std.heap.page_allocator, lines.items[row].items);
+        if (row + 1 < line_count) try out.append(std.heap.page_allocator, '\n');
+    }
+
+    const file = try std.fs.createFileAbsolute(transcript_path, .{ .truncate = true });
+    defer file.close();
+    try file.writeAll(out.items);
+}
+
+fn snapshotRowText(snapshot: *const c_api.ZideTerminalSnapshot, row: usize) !std.ArrayList(u8) {
+    var line = std.ArrayList(u8).empty;
+    errdefer line.deinit(std.heap.page_allocator);
+    if (snapshot.cells == null) return line;
+    const cells = snapshot.cells.?[0..snapshot.cell_count];
+    const snapshot_cols: usize = @intCast(snapshot.cols);
+    var col: usize = 0;
+    while (col < snapshot_cols) : (col += 1) {
+        const idx = row * snapshot_cols + col;
+        const cell = cells[idx];
+        if (cell.width == 0) continue;
+        const cp = cell.codepoint;
+        try line.append(std.heap.page_allocator, if (cp == 0 or cp > 0x7f) ' ' else @intCast(cp));
+    }
+    return line;
+}
+
+fn snapshotRequest() c_api.ZideTerminalSnapshotRequest {
+    return .{
+        .abi_version = c_api.ZIDE_TERMINAL_SNAPSHOT_ABI_VERSION,
+        .struct_size = @sizeOf(c_api.ZideTerminalSnapshotRequest),
+        .reserved0 = 0,
+        .reserved1 = 0,
+    };
+}
+
+test "shell transcript path is stable" {
+    try std.testing.expectEqualStrings(
+        "/data/data/dev.zide.androidbootstrap/files/bootstrap_shell.log",
+        transcriptPath(),
+    );
+}

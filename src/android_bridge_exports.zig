@@ -207,6 +207,34 @@ export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativePtyProbeSta
     return android_runtime_bridge.ptyLifetimeProbeStartStatus();
 }
 
+export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeRestartShellSessionBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+) callconv(.c) i32 {
+    return android_runtime_bridge.restartShellSession();
+}
+
+export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeStopShellSessionBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+) callconv(.c) void {
+    android_runtime_bridge.stopShellSession();
+}
+
+export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativePollShellSessionBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+) callconv(.c) i32 {
+    return android_runtime_bridge.pollShellSession();
+}
+
+export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeIsShellSessionAliveBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+) callconv(.c) bool {
+    return android_runtime_bridge.isShellSessionAlive();
+}
+
 export fn Java_dev_zide_androidbootstrap_ZidePtyProbeService_nativeStartPtyProbeBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,

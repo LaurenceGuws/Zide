@@ -16,7 +16,9 @@ if [[ ! -d "$SDK_ROOT/ndk/$NDK_VERSION" && -d "$HOME/.local/share/zide-android-s
 fi
 NDK_ROOT="$SDK_ROOT/ndk/$NDK_VERSION"
 CLANG="$NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android29-clang"
+SYSROOT="$NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
 OBJ_PATH="$ROOT/android/bootstrap-bridge/app/build/native/android_bridge_exports.o"
+STB_OBJ_PATH="$ROOT/android/bootstrap-bridge/app/build/native/stb_image.o"
 OUT_DIR="$ROOT/android/bootstrap-bridge/app/src/main/jniLibs/arm64-v8a"
 OUT_LIB="$OUT_DIR/libzide_android_bridge.so"
 
@@ -30,18 +32,31 @@ if [[ ! -x "$CLANG" ]]; then
 fi
 
 zig build-obj \
-  -target aarch64-linux-android \
+  -target aarch64-linux-android.29 \
   -lc \
+  --sysroot "$SYSROOT" \
+  -isystem "$SYSROOT/usr/include" \
+  -isystem "$SYSROOT/usr/include/aarch64-linux-android" \
+  -I "$ROOT/vendor" \
   "$ROOT/src/android_bridge_exports.zig" \
   -femit-bin="$OBJ_PATH"
+
+"$CLANG" \
+  --sysroot="$SYSROOT" \
+  -fPIC \
+  -I "$ROOT/vendor" \
+  -c "$ROOT/src/c/stb_image.c" \
+  -o "$STB_OBJ_PATH"
 
 "$CLANG" \
   -shared \
   -Wl,--no-undefined \
   "$OBJ_PATH" \
+  "$STB_OBJ_PATH" \
   -landroid \
   -lEGL \
   -lGLESv2 \
+  -lm \
   -o "$OUT_LIB"
 
 echo "built $OUT_LIB"
