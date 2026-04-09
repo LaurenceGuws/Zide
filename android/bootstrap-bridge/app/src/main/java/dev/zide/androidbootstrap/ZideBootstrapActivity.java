@@ -2,15 +2,23 @@ package dev.zide.androidbootstrap;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.SystemClock;
+import android.os.Looper;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.TextView;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 
 public final class ZideBootstrapActivity extends Activity implements SurfaceHolder.Callback2 {
     private static final String TAG = "ZideAndroidBootstrap";
@@ -18,6 +26,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     private static final String EXTRA_DEBUG_RECREATE_SURFACE_ONCE = "debug_recreate_surface_once";
     private static final String EXTRA_DEBUG_START_PTY_PROBE_ONCE = "debug_start_pty_probe_once";
     private static final String PTY_PROBE_LOG_PATH = "/data/data/dev.zide.androidbootstrap/files/pty_probe.log";
+    private static final long PTY_STATUS_REFRESH_MS = 1000L;
 
     private static boolean nativeLoaded = false;
     private static String nativeLoadError = null;
@@ -33,13 +42,25 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     }
 
     private final StringBuilder eventLog = new StringBuilder();
+    private final Handler handler = new Handler(Looper.getMainLooper());
     private TextView statusText;
+    private TextView ptyStatusText;
     private TextView eventLogText;
     private FrameLayout surfaceContainer;
     private SurfaceView surfaceView;
     private boolean surfaceRecreationScheduled = false;
     private boolean ptyProbeScheduled = false;
+    private boolean ptyStatusRefreshActive = false;
     private int surfaceHostGeneration = 0;
+    private final Runnable ptyStatusRefreshRunnable = new Runnable() {
+        @Override
+        public void run() {
+            refreshPtyProbeStatus(false);
+            if (ptyStatusRefreshActive) {
+                handler.postDelayed(this, PTY_STATUS_REFRESH_MS);
+            }
+        }
+    };
 
     private static native long nativeOnCreateBridge();
     private static native long nativeOnStartBridge();
@@ -64,8 +85,10 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         setContentView(R.layout.activity_main);
 
         statusText = findViewById(R.id.status_text);
+        ptyStatusText = findViewById(R.id.pty_status_text);
         eventLogText = findViewById(R.id.event_log);
         surfaceContainer = findViewById(R.id.host_surface_container);
+        bindPtyControls();
         installSurfaceView("activity-create");
 
         appendEvent("activity.onCreate nativeLoaded=" + nativeLoaded);
@@ -73,6 +96,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
             appendEvent("native.load.error=" + nativeLoadError);
         }
         callNative("native.onCreate", nativeLoaded ? nativeOnCreateBridge() : -1);
+        refreshPtyProbeStatus(false);
         updateStatus("created");
     }
 
@@ -91,6 +115,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         callNative("native.onResume", nativeLoaded ? nativeOnResumeBridge() : -1);
         maybeScheduleSurfaceRecreation();
         maybeSchedulePtyProbe();
+        startPtyStatusRefresh();
         updateStatus("resumed");
     }
 
@@ -101,6 +126,8 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
             appendEvent("debug.ptyProbeAliveOnPause pid=" + nativePtyProbeChildPidBridge());
         }
         callNative("native.onPause", nativeLoaded ? nativeOnPauseBridge() : -1);
+        stopPtyStatusRefresh();
+        refreshPtyProbeStatus(false);
         updateStatus("paused");
         super.onPause();
     }
@@ -183,17 +210,125 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         }
         ptyProbeScheduled = true;
         surfaceContainer.postDelayed(() -> {
-            final long pid = nativeLoaded ? nativeStartPtyProbeBridge() : -1;
-            final boolean alive = nativeLoaded && nativeIsPtyProbeAliveBridge();
-            final int status = nativeLoaded ? nativePtyProbeStartStatusBridge() : 0;
-            appendEvent(
-                "debug.ptyProbeStart pid=" + pid +
-                    " alive=" + alive +
-                    " status=" + ptyProbeStartStatusLabel(status) +
-                    " log=" + PTY_PROBE_LOG_PATH
-            );
-            updateStatus("debug-pty-probe-started");
+            startPtyProbe("debug.ptyProbeStart", "debug-pty-probe-started");
         }, 900);
+    }
+
+    private void bindPtyControls() {
+        final Button startButton = findViewById(R.id.pty_start_button);
+        final Button stopButton = findViewById(R.id.pty_stop_button);
+        final Button restartButton = findViewById(R.id.pty_restart_button);
+        final Button refreshButton = findViewById(R.id.pty_refresh_button);
+
+        startButton.setOnClickListener(view -> startPtyProbe("manual.ptyProbeStart", "manual-pty-probe-started"));
+        stopButton.setOnClickListener(view -> {
+            if (nativeLoaded) {
+                nativeStopPtyProbeBridge();
+            }
+            appendEvent("manual.ptyProbeStop alive=" + (nativeLoaded && nativeIsPtyProbeAliveBridge()));
+            refreshPtyProbeStatus(true);
+            updateStatus("manual-pty-probe-stopped");
+        });
+        restartButton.setOnClickListener(view -> {
+            if (nativeLoaded) {
+                nativeStopPtyProbeBridge();
+            }
+            appendEvent("manual.ptyProbeRestart stopIssued=true");
+            startPtyProbe("manual.ptyProbeRestart", "manual-pty-probe-restarted");
+        });
+        refreshButton.setOnClickListener(view -> refreshPtyProbeStatus(true));
+    }
+
+    private void startPtyProbe(String eventPrefix, String stateLabel) {
+        final long pid = nativeLoaded ? nativeStartPtyProbeBridge() : -1;
+        final boolean alive = nativeLoaded && nativeIsPtyProbeAliveBridge();
+        final int status = nativeLoaded ? nativePtyProbeStartStatusBridge() : 0;
+        appendEvent(
+            eventPrefix + " pid=" + pid +
+                " alive=" + alive +
+                " status=" + ptyProbeStartStatusLabel(status) +
+                " log=" + PTY_PROBE_LOG_PATH
+        );
+        refreshPtyProbeStatus(false);
+        updateStatus(stateLabel);
+    }
+
+    private void startPtyStatusRefresh() {
+        if (ptyStatusRefreshActive) {
+            return;
+        }
+        ptyStatusRefreshActive = true;
+        handler.post(ptyStatusRefreshRunnable);
+    }
+
+    private void stopPtyStatusRefresh() {
+        if (!ptyStatusRefreshActive) {
+            return;
+        }
+        ptyStatusRefreshActive = false;
+        handler.removeCallbacks(ptyStatusRefreshRunnable);
+    }
+
+    private void refreshPtyProbeStatus(boolean logEvent) {
+        final boolean alive = nativeLoaded && nativeIsPtyProbeAliveBridge();
+        final long pid = nativeLoaded ? nativePtyProbeChildPidBridge() : -1;
+        final int status = nativeLoaded ? nativePtyProbeStartStatusBridge() : 0;
+        final PtyProbeSnapshot snapshot = readPtyProbeSnapshot();
+        ptyStatusText.setText(
+            "pty.alive=" + alive +
+                " pid=" + pid +
+                " status=" + ptyProbeStartStatusLabel(status) +
+                " beats=" + snapshot.heartbeatCount +
+                " bytes=" + snapshot.fileSizeBytes +
+                "\npty.last=" + snapshot.lastLine +
+                "\npty.log=" + PTY_PROBE_LOG_PATH
+        );
+        if (logEvent) {
+            appendEvent(
+                "manual.ptyProbeRefresh alive=" + alive +
+                    " pid=" + pid +
+                    " status=" + ptyProbeStartStatusLabel(status) +
+                    " beats=" + snapshot.heartbeatCount
+            );
+        }
+    }
+
+    private static PtyProbeSnapshot readPtyProbeSnapshot() {
+        final File logFile = new File(PTY_PROBE_LOG_PATH);
+        if (!logFile.exists()) {
+            return new PtyProbeSnapshot(0L, "missing", 0L);
+        }
+
+        long heartbeatCount = 0L;
+        String lastLine = "empty";
+        try (BufferedReader reader = new BufferedReader(new FileReader(logFile))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (!line.isEmpty()) {
+                    lastLine = line;
+                }
+            }
+            heartbeatCount = parseHeartbeatCount(lastLine);
+        } catch (IOException err) {
+            lastLine = "read-error:" + err.getClass().getSimpleName();
+        }
+        return new PtyProbeSnapshot(heartbeatCount, lastLine, logFile.length());
+    }
+
+    private static long parseHeartbeatCount(String line) {
+        final String prefix = "heartbeat:";
+        if (!line.startsWith(prefix)) {
+            return 0L;
+        }
+        final int secondColon = line.indexOf(':', prefix.length());
+        if (secondColon <= prefix.length()) {
+            return 0L;
+        }
+        try {
+            return Long.parseLong(line.substring(prefix.length(), secondColon));
+        } catch (NumberFormatException err) {
+            return 0L;
+        }
     }
 
     private void installSurfaceView(String reason) {
@@ -249,6 +384,18 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
             case 6 -> "missing-pid";
             default -> "none";
         };
+    }
+
+    private static final class PtyProbeSnapshot {
+        final long heartbeatCount;
+        final String lastLine;
+        final long fileSizeBytes;
+
+        PtyProbeSnapshot(long heartbeatCount, String lastLine, long fileSizeBytes) {
+            this.heartbeatCount = heartbeatCount;
+            this.lastLine = lastLine;
+            this.fileSizeBytes = fileSizeBytes;
+        }
     }
 
     private void updateStatus(String state) {

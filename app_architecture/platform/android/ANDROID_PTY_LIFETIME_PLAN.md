@@ -155,9 +155,43 @@ For the current tree:
 - any future service-owned survival design must open as a separate lane with
   explicit product authority
 
+## Current `AP-A1.b` Probe Hardening
+
+The bootstrap bridge should now be the live truth tool for this disposable
+baseline.
+
+Required shape:
+
+- the app can start, stop, and restart the PTY probe without adb-only control
+- the app can show live PTY status on-device:
+  - alive vs dead
+  - child pid
+  - last start status
+  - heartbeat count / last heartbeat line
+- the app can keep observing that state across pause / stop / surface
+  retirement and later foreground return
+
+Reason:
+
+- this strengthens the disposable baseline without opening service-owned
+  survival architecture
+- it makes future Android terminal ownership decisions testable on-device
+  without more bootstrap archaeology
+
+This is still intentionally not:
+
+- Android terminal product integration
+- foreground-service survival design
+- Android renderer binding work
+
 ## Next Honest Follow-Up
 
-The next `AP-A1` sub-cut should be:
+The next `AP-A1` sub-cut is now:
+
+- make the bootstrap bridge expose live PTY status and manual
+  start/stop/restart controls for the disposable baseline
+
+After that:
 
 - stop widening this lane unless a later product decision explicitly wants
   service-owned PTY survival on Android

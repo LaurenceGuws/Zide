@@ -74,6 +74,22 @@ Optional PTY lifetime probe:
   --ez debug_start_pty_probe_once true
 ```
 
+The app also now exposes on-device PTY controls:
+
+- `Start PTY`
+- `Stop PTY`
+- `Restart PTY`
+- `Refresh PTY`
+
+And a live PTY status panel showing:
+
+- alive vs dead
+- child pid
+- last start status
+- heartbeat count
+- last heartbeat line
+- log path
+
 ## Useful Logs
 
 ```sh
@@ -126,5 +142,7 @@ That proves:
   - app-process-owned PTY survives `HOME` / pause / stop briefly on the
     Note10
   - app-process-owned PTY does not survive `am force-stop`
+- the bootstrap app can now observe that disposable baseline directly on
+  device instead of relying on adb-only file checks
 - Android native entry is now real enough to move on to deeper host/runtime
   ownership questions rather than more bootstrap speculation

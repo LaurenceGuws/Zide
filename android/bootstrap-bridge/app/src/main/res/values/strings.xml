@@ -1,4 +1,9 @@
 <resources>
     <string name="app_name">Zide Bootstrap Bridge</string>
     <string name="status_booting">state=booting</string>
+    <string name="pty_status_booting">pty=booting</string>
+    <string name="pty_start">Start PTY</string>
+    <string name="pty_stop">Stop PTY</string>
+    <string name="pty_restart">Restart PTY</string>
+    <string name="pty_refresh">Refresh PTY</string>
 </resources>

@@ -38,10 +38,10 @@ Current boundary:
   future renderer binding
 - disposable app-process-owned PTY lifetime is the current Android terminal
   baseline
-- no new Android-specific execution lane should open by default from this
-  queue until either:
-  - the shared renderer queue opens Android rendering work
-  - or a separate product lane explicitly asks for service-owned PTY survival
+- the only remaining honest Android-specific execution work before renderer
+  binding is disposable-baseline hardening in the bootstrap bridge itself
+- no service-owned PTY lane should open from this queue without explicit
+  product authority
 
 ## Active Tickets
 
@@ -240,6 +240,11 @@ Status:
   - PTY/process lifetime does not outlive app-process death
   - disposable app-process-owned PTY lifetime is the current Android terminal
     baseline
+- `android/bootstrap-bridge/` now also owns the live disposable-baseline
+  observability surface:
+  - on-device PTY status panel
+  - manual start / stop / restart controls
+  - heartbeat count / last heartbeat line readout without adb-only inspection
 - no further PTY/service architecture work is open in this queue unless a
   separate product lane explicitly asks for service-owned survival
 

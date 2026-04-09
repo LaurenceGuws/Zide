@@ -12,6 +12,54 @@
         android:text="@string/status_booting"
         android:textAppearance="@android:style/TextAppearance.Material.Medium" />
 
+    <TextView
+        android:id="@+id/pty_status_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fontFamily="monospace"
+        android:paddingBottom="8dp"
+        android:text="@string/pty_status_booting"
+        android:textAppearance="@android:style/TextAppearance.Material.Small" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/pty_start_button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/pty_start" />
+
+        <Button
+            android:id="@+id/pty_stop_button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:text="@string/pty_stop" />
+
+        <Button
+            android:id="@+id/pty_restart_button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:text="@string/pty_restart" />
+
+        <Button
+            android:id="@+id/pty_refresh_button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:text="@string/pty_refresh" />
+    </LinearLayout>
+
     <FrameLayout
         android:id="@+id/host_surface_container"
         android:layout_width="match_parent"
@@ -21,7 +69,7 @@
 
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="240dp"
+        android:layout_height="220dp"
         android:fillViewport="true">
 
         <TextView

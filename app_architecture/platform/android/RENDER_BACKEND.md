@@ -306,6 +306,10 @@ Current Android-native follow-up constraints:
   visible surface lifetime briefly, but not app-process death
 - disposable app-process-owned PTY lifetime is the current Android terminal
   baseline
+- `android/bootstrap-bridge/` now also exposes that disposable baseline
+  directly on-device through a PTY status panel plus manual start/stop/restart
+  controls, so future Android terminal decisions do not depend on adb-only
+  file inspection
 - do not jump to GLES from native-load success, surface truth, or PTY
   confidence alone while the renderer queue still blocks Android rendering
 
