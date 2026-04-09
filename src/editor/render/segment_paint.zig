@@ -84,6 +84,7 @@ pub fn drawEditorSegmentBaseImmediate(
     content_width: f32,
     is_current: bool,
 ) void {
+    present_trace_runtime.noteFrameFamilyTouch(r, .editor_row_band);
     present_trace_runtime.setEditorSurfaceSolidFamily(r, .row_base);
     defer present_trace_runtime.clearEditorSurfaceSolidFamily(r);
     renderer_surface_host.drawRect(r, @intFromFloat(x), @intFromFloat(y), @intFromFloat(content_width), @intFromFloat(r.editor_char_height), r.theme.background);

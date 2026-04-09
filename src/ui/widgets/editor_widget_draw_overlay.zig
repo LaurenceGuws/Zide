@@ -555,7 +555,12 @@ pub fn endEditorRowBandGroup(r: anytype) void {
     renderer_text_phase_group_host.endGroup(r, .editor_row_band);
 }
 
+fn noteEditorRowBandTouch(r: anytype) void {
+    present_trace_runtime.noteFrameFamilyTouch(r, .editor_row_band);
+}
+
 pub fn flushDrawListEditorRowBand(list: *EditorDrawList, r: anytype) void {
+    if (list.ops.items.len > 0) noteEditorRowBandTouch(r);
     flushDrawListRectOps(list, r);
     var has_text = false;
     for (list.ops.items) |op| {

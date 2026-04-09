@@ -1430,6 +1430,11 @@ Current implication:
   from submission family summary.
 - `editor_row_band` and `sample_section` remain explicit later adopters;
   this cut does not move them onto frame family summary ownership.
+- later adopter order is now explicit:
+  - `editor_row_band` is now adopted into shared frame family summary
+  - later: `sample_section`
+- present feedback now also reports `editor_row_band_touched` /
+  `editor_row_band_presented`
 - focused `renderer_frame_host.zig` tests now lock the current gate-5 frame
   policy in code:
   - begin prelude reset
