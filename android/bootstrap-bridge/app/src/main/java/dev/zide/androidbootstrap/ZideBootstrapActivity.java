@@ -1,6 +1,7 @@
 package dev.zide.androidbootstrap;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.SystemClock;
@@ -25,6 +26,8 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     private static final int MAX_LOG_CHARS = 12000;
     private static final String EXTRA_DEBUG_RECREATE_SURFACE_ONCE = "debug_recreate_surface_once";
     private static final String EXTRA_DEBUG_START_PTY_PROBE_ONCE = "debug_start_pty_probe_once";
+    private static final String EXTRA_DEBUG_START_SERVICE_PTY_PROBE_ONCE = "debug_start_service_pty_probe_once";
+    private static final String EXTRA_DEBUG_STOP_SERVICE_PTY_PROBE_ONCE = "debug_stop_service_pty_probe_once";
     private static final String PTY_PROBE_LOG_PATH = "/data/data/dev.zide.androidbootstrap/files/pty_probe.log";
     private static final long PTY_STATUS_REFRESH_MS = 1000L;
 
@@ -50,6 +53,8 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     private SurfaceView surfaceView;
     private boolean surfaceRecreationScheduled = false;
     private boolean ptyProbeScheduled = false;
+    private boolean servicePtyProbeScheduled = false;
+    private boolean servicePtyProbeStopScheduled = false;
     private boolean ptyStatusRefreshActive = false;
     private int surfaceHostGeneration = 0;
     private final Runnable ptyStatusRefreshRunnable = new Runnable() {
@@ -116,9 +121,18 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         callNative("native.onResume", nativeLoaded ? nativeOnResumeBridge() : -1);
         maybeScheduleSurfaceRecreation();
         maybeSchedulePtyProbe();
+        maybeScheduleServicePtyProbe();
+        maybeScheduleServicePtyProbeStop();
         startPtyStatusRefresh();
         logPtyProbeSnapshot("activity.onResume.pty");
         updateStatus("resumed");
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        appendEvent("activity.onNewIntent");
     }
 
     @Override
@@ -216,6 +230,40 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         surfaceContainer.postDelayed(() -> {
             startPtyProbe("debug.ptyProbeStart", "debug-pty-probe-started");
         }, 900);
+    }
+
+    private void maybeScheduleServicePtyProbe() {
+        if (!getIntent().getBooleanExtra(EXTRA_DEBUG_START_SERVICE_PTY_PROBE_ONCE, false)) {
+            return;
+        }
+        if (servicePtyProbeScheduled) {
+            return;
+        }
+        servicePtyProbeScheduled = true;
+        surfaceContainer.postDelayed(() -> {
+            final Intent intent = new Intent(this, ZidePtyProbeService.class)
+                .setAction(ZidePtyProbeService.ACTION_START_FOREGROUND_PTY_PROBE);
+            startForegroundService(intent);
+            appendEvent("debug.servicePtyProbeStartIssued");
+            updateStatus("debug-service-pty-probe-started");
+        }, 1100);
+    }
+
+    private void maybeScheduleServicePtyProbeStop() {
+        if (!getIntent().getBooleanExtra(EXTRA_DEBUG_STOP_SERVICE_PTY_PROBE_ONCE, false)) {
+            return;
+        }
+        if (servicePtyProbeStopScheduled) {
+            return;
+        }
+        servicePtyProbeStopScheduled = true;
+        surfaceContainer.postDelayed(() -> {
+            final Intent intent = new Intent(this, ZidePtyProbeService.class)
+                .setAction(ZidePtyProbeService.ACTION_STOP_FOREGROUND_PTY_PROBE);
+            startService(intent);
+            appendEvent("debug.servicePtyProbeStopIssued");
+            updateStatus("debug-service-pty-probe-stopped");
+        }, 1100);
     }
 
     private void bindPtyControls() {

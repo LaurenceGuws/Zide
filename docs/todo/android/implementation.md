@@ -22,6 +22,7 @@ Do not use this queue for:
 - `app_architecture/platform/android/BOOTSTRAP_BRIDGE_PLAN.md`
 - `app_architecture/platform/android/SURFACE_IDENTITY_POLICY.md`
 - `app_architecture/platform/android/ANDROID_PTY_LIFETIME_PLAN.md`
+- `app_architecture/platform/android/ANDROID_PTY_SERVICE_SURVIVAL_PLAN.md`
 - `docs/research/terminal/ANDROID_HOST_PTY_SCAN_2026-04-08.md`
 - `docs/todo/ui/renderer.md` (for the pre-Android rendering gate)
 
@@ -38,10 +39,9 @@ Current boundary:
   future renderer binding
 - disposable app-process-owned PTY lifetime is the current Android terminal
   baseline
-- the only remaining honest Android-specific execution work before renderer
-  binding is disposable-baseline hardening in the bootstrap bridge itself
-- no service-owned PTY lane should open from this queue without explicit
-  product authority
+- service-owned PTY survival is now a validated separate Android product lane,
+  but it has not displaced the disposable baseline as the default answer
+- Android rendering backend work is still blocked by the renderer queue
 
 ## Active Tickets
 
@@ -258,6 +258,41 @@ Do not do:
 - no Android terminal product integration yet
 - no foreground-service architecture leap from one probe
 - no renderer binding work from PTY confidence
+
+### `AP-A2` Android PTY Service Survival Probe
+
+Purpose:
+
+- define and execute the narrowest honest foreground-service-owned PTY probe
+  without implying terminal product approval
+
+Status:
+
+- met as a probe lane
+- authority now exists in
+  `app_architecture/platform/android/ANDROID_PTY_SERVICE_SURVIVAL_PLAN.md`
+- bootstrap foreground-service probe now exists and has device validation on
+  the Note10
+- current result:
+  - service-owned PTY survival is technically viable
+  - it did not yet prove a materially better default survival story than the
+    disposable app-process baseline
+
+Acceptance:
+
+- `android/bootstrap-bridge/` can start a foreground service that owns the
+  existing native PTY heartbeat probe
+- the service can be started and stopped explicitly
+- the service path is validated on-device
+- docs record whether foreground-service ownership changes the observed
+  survival story enough to justify a future product lane
+
+Do not do:
+
+- no renderer work
+- no terminal UI/service integration
+- no wake-lock policy expansion unless the narrow probe proves it necessary
+- no product claim that foreground-service PTY survival is now the default
 
 ## Current Research Read
 

@@ -8,7 +8,7 @@ This is intentionally:
 - Android app + native Zig bridge
 - lifecycle/surface focused
 - not a renderer backend bootstrap
-- not PTY/runtime design
+- not terminal product integration
 
 Use it to prove:
 
@@ -73,6 +73,25 @@ Optional PTY lifetime probe:
   -n dev.zide.androidbootstrap/.ZideBootstrapActivity \
   --ez debug_start_pty_probe_once true
 ```
+
+Optional foreground-service PTY probe:
+
+```sh
+/opt/android-sdk/platform-tools/adb shell am start \
+  -n dev.zide.androidbootstrap/.ZideBootstrapActivity \
+  --ez debug_start_service_pty_probe_once true
+```
+
+Optional foreground-service PTY probe stop:
+
+```sh
+/opt/android-sdk/platform-tools/adb shell am start \
+  -n dev.zide.androidbootstrap/.ZideBootstrapActivity \
+  --ez debug_stop_service_pty_probe_once true
+```
+
+The service is intentionally internal-only (`exported=false`), so the activity
+extras are the supported debug entrypoints for this probe.
 
 The app also now exposes on-device PTY controls:
 
@@ -149,5 +168,12 @@ That proves:
   - `activity.onResume.pty`
   - `activity.onPause.pty`
   - `activity.onStop.pty`
+- the bootstrap lane now also contains the minimal foreground-service PTY
+  probe needed for the separate service-survival decision lane
+- that probe now validates on the Note10:
+  - `debug.servicePtyProbeStartIssued`
+  - `service.start pid=... alive=true status=started`
+  - later `debug.servicePtyProbeStopIssued`
+  - `service.stop pid=-1 alive=false`
 - Android native entry is now real enough to move on to deeper host/runtime
   ownership questions rather than more bootstrap speculation

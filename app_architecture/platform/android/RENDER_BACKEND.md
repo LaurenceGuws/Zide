@@ -11,6 +11,7 @@ Supporting research:
 - `app_architecture/platform/android/BOOTSTRAP_BRIDGE_PLAN.md`
 - `app_architecture/platform/android/SURFACE_IDENTITY_POLICY.md`
 - `app_architecture/platform/android/ANDROID_PTY_LIFETIME_PLAN.md`
+- `app_architecture/platform/android/ANDROID_PTY_SERVICE_SURVIVAL_PLAN.md`
 
 ## Target Stack
 
@@ -253,7 +254,8 @@ opened by default right now.
 The next Android moves are now gated by stronger external pressure:
 
 - Android rendering backend work is still blocked by the shared renderer queue
-- service-owned PTY survival is still blocked by explicit product authority
+- service-owned PTY survival may move only through its own explicit product
+  lane, not through renderer or generic host drift
 
 Current `AH-A4` checkpoint:
 
@@ -310,6 +312,13 @@ Current Android-native follow-up constraints:
   directly on-device through a PTY status panel plus manual start/stop/restart
   controls, so future Android terminal decisions do not depend on adb-only
   file inspection
+- the separate service-owned survival probe lane is now explicit:
+  - it exists to measure whether foreground-service ownership changes the
+    survival story materially enough to justify future product cost
+  - the first Note10 probe now proves that service-owned PTY survival is
+    technically viable, but not yet compelling enough to replace the current
+    disposable baseline by default
+  - it is still not renderer work and not terminal product integration
 - do not jump to GLES from native-load success, surface truth, or PTY
   confidence alone while the renderer queue still blocks Android rendering
 

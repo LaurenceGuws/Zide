@@ -9,6 +9,7 @@ Owner docs:
 - `docs/research/terminal/ANDROID_HOST_PTY_SCAN_2026-04-08.md`
 - `app_architecture/platform/android/RENDER_BACKEND.md`
 - `app_architecture/platform/android/SURFACE_IDENTITY_POLICY.md`
+- `app_architecture/platform/android/ANDROID_PTY_SERVICE_SURVIVAL_PLAN.md`
 - `docs/todo/android/implementation.md`
 
 ## Why This Is Next
@@ -154,6 +155,12 @@ For the current tree:
 - disposable app-process-owned PTY lifetime is the Android terminal baseline
 - any future service-owned survival design must open as a separate lane with
   explicit product authority
+
+That separate lane is now opened explicitly as `AP-A2` in
+`app_architecture/platform/android/ANDROID_PTY_SERVICE_SURVIVAL_PLAN.md`.
+That does not change the current baseline. It only creates the narrow probe
+surface needed to test whether foreground-service ownership materially changes
+the observed Android survival story.
 
 ## Current `AP-A1.b` Probe Hardening
 
