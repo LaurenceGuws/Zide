@@ -144,5 +144,10 @@ That proves:
   - app-process-owned PTY does not survive `am force-stop`
 - the bootstrap app can now observe that disposable baseline directly on
   device instead of relying on adb-only file checks
+- the bootstrap app now also logs PTY lifecycle snapshots at:
+  - `activity.onStart.pty`
+  - `activity.onResume.pty`
+  - `activity.onPause.pty`
+  - `activity.onStop.pty`
 - Android native entry is now real enough to move on to deeper host/runtime
   ownership questions rather than more bootstrap speculation

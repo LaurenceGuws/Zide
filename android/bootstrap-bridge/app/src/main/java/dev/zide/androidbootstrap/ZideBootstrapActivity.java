@@ -105,6 +105,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         super.onStart();
         appendEvent("activity.onStart");
         callNative("native.onStart", nativeLoaded ? nativeOnStartBridge() : -1);
+        logPtyProbeSnapshot("activity.onStart.pty");
         updateStatus("started");
     }
 
@@ -116,6 +117,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         maybeScheduleSurfaceRecreation();
         maybeSchedulePtyProbe();
         startPtyStatusRefresh();
+        logPtyProbeSnapshot("activity.onResume.pty");
         updateStatus("resumed");
     }
 
@@ -128,6 +130,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         callNative("native.onPause", nativeLoaded ? nativeOnPauseBridge() : -1);
         stopPtyStatusRefresh();
         refreshPtyProbeStatus(false);
+        logPtyProbeSnapshot("activity.onPause.pty");
         updateStatus("paused");
         super.onPause();
     }
@@ -136,6 +139,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     protected void onStop() {
         appendEvent("activity.onStop");
         callNative("native.onStop", nativeLoaded ? nativeOnStopBridge() : -1);
+        logPtyProbeSnapshot("activity.onStop.pty");
         updateStatus("stopped");
         super.onStop();
     }
@@ -291,6 +295,21 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
                     " beats=" + snapshot.heartbeatCount
             );
         }
+    }
+
+    private void logPtyProbeSnapshot(String prefix) {
+        final boolean alive = nativeLoaded && nativeIsPtyProbeAliveBridge();
+        final long pid = nativeLoaded ? nativePtyProbeChildPidBridge() : -1;
+        final int status = nativeLoaded ? nativePtyProbeStartStatusBridge() : 0;
+        final PtyProbeSnapshot snapshot = readPtyProbeSnapshot();
+        appendEvent(
+            prefix +
+                " alive=" + alive +
+                " pid=" + pid +
+                " status=" + ptyProbeStartStatusLabel(status) +
+                " beats=" + snapshot.heartbeatCount +
+                " last=" + snapshot.lastLine
+        );
     }
 
     private static PtyProbeSnapshot readPtyProbeSnapshot() {

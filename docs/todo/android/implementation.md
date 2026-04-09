@@ -245,6 +245,11 @@ Status:
   - on-device PTY status panel
   - manual start / stop / restart controls
   - heartbeat count / last heartbeat line readout without adb-only inspection
+- hardened Note10 observation now confirms:
+  - restarted probe stayed alive across `onPause` and `onStop`
+  - the same pid was still alive on `onStart` / `onResume` before surface
+    reacquire completed
+  - surface retirement/reacquire still happened independently of PTY lifetime
 - no further PTY/service architecture work is open in this queue unless a
   separate product lane explicitly asks for service-owned survival
 

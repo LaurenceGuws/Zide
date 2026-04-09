@@ -171,6 +171,22 @@ Required shape:
 - the app can keep observing that state across pause / stop / surface
   retirement and later foreground return
 
+Observed on the Note10 after this hardening:
+
+- a restarted probe stayed alive through `HOME` / pause / stop:
+  - `activity.onPause.pty alive=true pid=22550 status=started beats=3`
+  - `activity.onStop.pty alive=true pid=22550 status=started beats=4`
+- the same probe was still alive on foreground return before the new surface
+  was reacquired:
+  - `activity.onStart.pty alive=true pid=22550 status=started beats=6`
+  - `activity.onResume.pty alive=true pid=22550 status=started beats=6`
+- surface retirement and later fresh `acquired` still happened independently:
+  - `native.surfaceDestroyed ... epoch=2 transition=retired`
+  - later `native.surfaceAvailable ... epoch=3 transition=acquired`
+
+This is the strongest current proof that app-process-owned PTY lifetime and
+visible Android surface lifetime are different things on this device.
+
 Reason:
 
 - this strengthens the disposable baseline without opening service-owned
