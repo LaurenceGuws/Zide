@@ -180,6 +180,9 @@ Immediate remaining pressure after this proof:
 - shared code no longer reaches into `renderer.backend.ops` or
   `renderer.backend.kind` directly; it now terminates at
   `renderer_backend_host.zig`
+- `Renderer` no longer assembles backend dispatch plus runtime storage by hand
+  in `Renderer.init()`; backend-host construction now lives in
+  `renderer_backend_host.zig`
 - the remaining blocker is the renderer-owned backend host itself, which still
   carries backend selection, dispatch, and runtime handle ownership even if
   shared callers now go through host methods

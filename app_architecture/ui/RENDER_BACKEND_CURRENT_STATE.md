@@ -207,6 +207,8 @@ Current pressure is narrower than it used to be:
   runtime ops
 - shared code no longer reaches directly into `renderer.backend.ops` /
   `renderer.backend.kind`; that now terminates at `renderer_backend_host.zig`
+- backend-host construction also no longer lives open-coded in
+  `Renderer.init()`; it now routes through `renderer_backend_host.zig`
 - the remaining blocker is that `Renderer` still owns the backend host surface
   itself (`kind` + ops + opaque runtime handle)
 
