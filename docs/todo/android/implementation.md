@@ -155,8 +155,8 @@ Acceptance:
 - the next Android input cut is defined against the live shell, not the old
   bootstrap probe
 - product input is no longer limited to “type a whole line then send”
-- docs keep the temporary composer explicit so it does not become a fake-final
-  answer
+- the live `InputConnection` path stays explicit so it does not regress into
+  hidden fallback input paths
 
 Status:
 
@@ -176,16 +176,22 @@ Current result:
 
 - product input is no longer limited to “type a whole line then send”
 - input latency is now JNI call overhead instead of 150ms poll interval
-- the temporary floating composer is now a key-by-key input surface
 - the Android input path is now based on a minimal editor model rather than a
   fragile `TextWatcher`
+- Java ownership is now split into Android-owned components instead of one
+  activity blob:
+  - `ShellInputView`
+  - `ShellTranscriptController`
+  - `ShellSessionController`
+  - `BootstrapDebugFormatter`
+  - `BootstrapNativeBridge`
 
 Remaining for this ticket:
 
-- control key support (Ctrl+C, Ctrl+D)
+- broader control-key/device coverage beyond the current Ctrl+A..Z cut
 - special terminal keys beyond the currently proved editor-navigation subset
-- decision on whether to keep the current temporary composer shape or move
-  sooner to a more terminal-native input surface
+- decision on how far the current hidden-input terminal path should go before a
+  more terminal-native mobile input surface is worth opening
 
 ### `AH-A4` Android Bootstrap Bridge
 

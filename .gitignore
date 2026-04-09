@@ -47,3 +47,6 @@ node_modules/
 # Android local build state
 .gradle/
 local.properties
+.classpath
+.project
+.settings/

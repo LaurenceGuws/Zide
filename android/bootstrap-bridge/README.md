@@ -86,6 +86,23 @@ The bootstrap app now uses two screens:
   - grouped GLES/runtime status
   - event log only
 
+## Neovim Workspace
+
+For Java/LSP work, treat `android/bootstrap-bridge/` as the Android workspace
+root, not the whole repo.
+
+- repo root now ships a local [`.nvim.lua`](/home/home/personal/zide/.nvim.lua)
+  that:
+  - pins `ANDROID_HOME` / `ANDROID_SDK_ROOT` to
+    `~/.local/share/zide-android-sdk` when present
+  - exposes `:ZideAndroidBootstrapCd` to switch the local cwd to
+    `android/bootstrap-bridge`
+  - exposes `:ZideAndroidEnv` to print the active Android env seen by Neovim
+- `dev_references/` is reference-only; do not treat those Gradle projects as
+  active workspace imports
+- generated Eclipse/JDT junk (`.project`, `.classpath`, `.settings/`) is now
+  ignored repo-wide
+
 ## Useful Logs
 
 ```sh

@@ -181,22 +181,37 @@ What this proves:
 
 - Android shell input is no longer limited to "type a whole line then send"
 - the direct JNI path works for character-by-character terminal input
-- the temporary floating composer is now a key-by-key input surface
+- the live Android `InputConnection` path is now the active input surface
 - the minimal editor model is sufficient for current Samsung keyboard input and
   navigation behavior on the Note10
 
 What this does not yet prove:
 
-- real hardware key events (physical keyboard, Bluetooth keyboard)
-- control key combinations (Ctrl+C, Ctrl+D, etc.)
+- the full physical-keyboard story
 - special terminal keys beyond the currently proved editor-navigation subset
-- whether the temporary floating composer is the right long-term input surface
+- the full long-term mobile terminal input surface design
 
 Next likely follow-up:
 
-1. add Ctrl+C / Ctrl+D support through the existing `zide_terminal_send_key`
-   FFI path or by sending the appropriate control bytes directly
-2. keep the current `InputConnection` model but reduce the temporary-composer
-   UI debt if it starts fighting product expectations
+1. extend the new Ctrl-modified key path beyond ASCII letters only if a real
+   Android input device proves that narrower mapping insufficient
+2. keep the current `InputConnection` model small and honest while terminal UX
+   pressure is still local to shell mode
 3. do not jump to a larger terminal-input surface unless the current model
    proves materially broken for the next product question
+
+## Current `AS-A3` Hardening
+
+The direct-input path now also accepts Ctrl-modified key events for `A` through
+`Z` and sends the corresponding control bytes directly to the PTY. That keeps
+the current Android input surface small while covering the first control-key
+subset needed for real shell use such as `Ctrl+C` and `Ctrl+D`.
+
+Current Java ownership is also cleaner:
+
+- `ZideBootstrapActivity` is now orchestration only
+- `ShellInputView` owns the editor model and `InputConnection`
+- `ShellTranscriptController` owns transcript follow behavior
+- `ShellSessionController` owns shell polling/transcript file reads
+- `BootstrapDebugFormatter` and `BootstrapNativeBridge` own debug formatting
+  and JNI/native bridge detail
