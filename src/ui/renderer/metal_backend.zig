@@ -1328,12 +1328,12 @@ pub fn dumpWindowScreenshotPpmSized(_: anytype, _: []const u8, _: i32, _: i32) !
 }
 
 fn runtimeState(renderer: anytype) ?*metal_runtime_state.State {
-    if (renderer.backend.kind != .metal) return null;
+    if (!renderer.backend.isKind(.metal)) return null;
     return renderer.backend.runtime.metalState();
 }
 
 fn runtimeStateConst(renderer: anytype) ?*const metal_runtime_state.State {
-    if (renderer.backend.kind != .metal) return null;
+    if (!renderer.backend.isKind(.metal)) return null;
     return renderer.backend.runtime.metalState();
 }
 

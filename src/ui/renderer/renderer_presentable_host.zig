@@ -21,18 +21,18 @@ pub const DirectTerminalPresentExecutionResult = struct {
 };
 
 pub fn runTerminalPresentPath(renderer: anytype, plan: TerminalPresentPlan, ctx: anytype, comptime Hooks: type) TerminalPresentResult {
-    return switch (renderer.backend.ops.presentable.terminalPresentPath(renderer)) {
+    return switch (renderer.backend.terminalPresentPath(renderer)) {
         .direct_surface => Hooks.runDirect(plan, ctx, renderer),
         .retained_surface => Hooks.runRetained(plan, ctx, renderer),
     };
 }
 
 pub fn usesDirectTerminalPresentation(renderer: anytype) bool {
-    return renderer.backend.ops.presentable.terminalPresentPath(renderer) == .direct_surface;
+    return renderer.backend.terminalPresentPath(renderer) == .direct_surface;
 }
 
 pub fn ensureTerminalPresentable(renderer: anytype, width: i32, height: i32) bool {
-    return renderer.backend.ops.presentable.ensurePresentable(renderer, width, height);
+    return renderer.backend.ensurePresentable(renderer, width, height);
 }
 
 pub fn updateTerminalPresentable(renderer: anytype, ctx: anytype, comptime body: fn (@TypeOf(ctx), @TypeOf(renderer)) void) RetainedTerminalPresentableUpdate {
@@ -42,7 +42,7 @@ pub fn updateTerminalPresentable(renderer: anytype, ctx: anytype, comptime body:
             body(typed_ctx.*, renderer_local);
         }
     };
-    return renderer.backend.ops.presentable.updateRetainedPresentable(
+    return renderer.backend.updateRetainedPresentable(
         renderer,
         @ptrCast(&ctx),
         Local.erasedBody,
@@ -72,7 +72,7 @@ pub fn runRetainedTerminalPresentExecution(
     var exec_ctx = ctx;
     exec_ctx.result = &result;
     var call_ctx = ExecCtx{ .inner = exec_ctx, .plan = plan };
-    result.update = renderer.backend.ops.presentable.updateRetainedPresentable(
+    result.update = renderer.backend.updateRetainedPresentable(
         renderer,
         @ptrCast(&call_ctx),
         Local.run,
@@ -87,7 +87,7 @@ pub fn runDirectTerminalPresentExecution(
     comptime Hooks: type,
 ) DirectTerminalPresentExecutionResult {
     var result = DirectTerminalPresentExecutionResult{};
-    if (renderer.backend.ops.presentable.terminalPresentPath(renderer) != .direct_surface) return result;
+    if (renderer.backend.terminalPresentPath(renderer) != .direct_surface) return result;
 
     if (plan.update_intent == .partial) {
         result = Hooks.tryPartialUpdate(ctx, renderer, plan);
@@ -100,12 +100,12 @@ pub fn runDirectTerminalPresentExecution(
 }
 
 pub fn drawTerminalPresentableBackdrop(renderer: anytype, x: f32, y: f32, w: f32, h: f32, color: @import("types.zig").Rgba) void {
-    renderer.backend.ops.presentable.drawPresentableBackdrop(renderer, x, y, w, h, color);
+    renderer.backend.drawPresentableBackdrop(renderer, x, y, w, h, color);
 }
 
 pub fn drawTerminalPresentable(renderer: anytype, draw: PresentableDraw) void {
     present_trace_runtime.noteTerminalPresentation(renderer, draw.generation);
-    renderer.backend.ops.presentable.drawPresentable(renderer, draw);
+    renderer.backend.drawPresentable(renderer, draw);
 }
 
 pub fn presentExistingTerminalPresentable(
@@ -118,7 +118,7 @@ pub fn presentExistingTerminalPresentable(
     note_present_ctx: anytype,
     comptime Hooks: type,
 ) void {
-    switch (renderer.backend.ops.presentable.terminalPresentPath(renderer)) {
+    switch (renderer.backend.terminalPresentPath(renderer)) {
         .direct_surface => Hooks.noteDirectReuse(
             note_present_ctx,
             renderer,
@@ -148,9 +148,9 @@ pub fn presentExistingTerminalPresentable(
 }
 
 pub fn scrollTerminalPresentable(renderer: anytype, dx: i32, dy: i32) bool {
-    return renderer.backend.ops.presentable.scrollPresentable(renderer, dx, dy);
+    return renderer.backend.scrollPresentable(renderer, dx, dy);
 }
 
-pub fn terminalPresentableInfo(renderer: anytype) @TypeOf(renderer.backend.ops.presentable.presentableInfo(renderer)) {
-    return renderer.backend.ops.presentable.presentableInfo(renderer);
+pub fn terminalPresentableInfo(renderer: anytype) @TypeOf(renderer.backend.presentableInfo(renderer)) {
+    return renderer.backend.presentableInfo(renderer);
 }

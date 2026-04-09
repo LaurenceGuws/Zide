@@ -664,7 +664,7 @@ pub const Renderer = struct {
 
         lifecycle_runtime.beginRendererShutdown(Renderer, self);
         window_chrome_runtime.deinit(self.windowChromeDomain());
-        self.backend.ops.runtime.deinitRuntime(self);
+        self.backend.deinitRuntime(self);
         self.backend.deinitRuntimeStorage(self.allocator);
         bootstrap_runtime.deinitRendererWindowResources(&self.render_surface_attachment, self.window);
         bootstrap_runtime.deinitSdlRuntime();
@@ -781,7 +781,7 @@ pub const Renderer = struct {
     }
 
     fn applyFontScale(self: *Renderer) !void {
-        self.backend.ops.runtime.clearDiagnosticFont(self);
+        self.backend.clearDiagnosticFont(self);
         try font_runtime.applyFontScale(self);
     }
 
@@ -799,7 +799,7 @@ pub const Renderer = struct {
             .{ .render_scale_change = true }
         else
             .{};
-        self.backend.ops.runtime.mergePendingSceneTargetInvalidation(self, scene_target_invalidation);
+        self.backend.mergePendingSceneTargetInvalidation(self, scene_target_invalidation);
         return .{
             .changes = .{},
             .geometry = self.windowGeometryDiagnostics(),
@@ -936,9 +936,9 @@ pub const Renderer = struct {
 
     pub fn refreshWindowState(self: *Renderer, reason: []const u8, changes: WindowChangeMask) !WindowRefreshResult {
         const metrics = self.collectDisplayMetricsForWindowChanges(changes);
-        const scene_target_invalidation = self.backend.ops.runtime.sceneTargetInvalidationForRefresh(self, changes, metrics);
+        const scene_target_invalidation = self.backend.sceneTargetInvalidationForRefresh(self, changes, metrics);
         self.applyDisplayMetricsSnapshot(metrics);
-        self.backend.ops.runtime.mergePendingSceneTargetInvalidation(self, scene_target_invalidation);
+        self.backend.mergePendingSceneTargetInvalidation(self, scene_target_invalidation);
         self.logWindowMetricsSnapshot(metrics, reason);
         const ui_scale_changed = try self.refreshScaleStateForWindowChanges(changes, metrics);
         return .{
@@ -971,14 +971,14 @@ pub const Renderer = struct {
 
     pub fn beginFrame(self: *Renderer) bool {
         renderer_frame_host.beginFrameHost(self);
-        self.backend.ops.frame.beginFrame(self);
+        self.backend.beginFrame(self);
         const frame_ready = renderer_frame_host.frameReadyForDraw(self);
-        if (frame_ready) self.backend.ops.clip.applyClipRect(self, null);
+        if (frame_ready) self.backend.applyClipRect(self, null);
         return frame_ready;
     }
 
     pub fn submitFrame(self: *Renderer) FrameSubmission {
-        return self.backend.ops.frame.submitFrame(self);
+        return self.backend.submitFrame(self);
     }
 
     pub fn armPresentCapture(self: *Renderer, path: []const u8) void {
@@ -992,11 +992,11 @@ pub const Renderer = struct {
     }
 
     pub fn dumpWindowScreenshotPpm(self: *Renderer, path: []const u8) !void {
-        return self.backend.ops.frame.dumpWindowScreenshotPpm(self, path);
+        return self.backend.dumpWindowScreenshotPpm(self, path);
     }
 
     pub fn dumpWindowScreenshotPpmSized(self: *Renderer, path: []const u8, out_width: i32, out_height: i32) !void {
-        return self.backend.ops.frame.dumpWindowScreenshotPpmSized(self, path, out_width, out_height);
+        return self.backend.dumpWindowScreenshotPpmSized(self, path, out_width, out_height);
     }
 
     pub fn kittyImageMode(self: *const Renderer) KittyImageMode {
@@ -1016,7 +1016,7 @@ pub const Renderer = struct {
     }
 
     pub fn capabilities(self: *const Renderer) RendererCapabilities {
-        return self.backend.ops.runtime.capabilities(self);
+        return self.backend.capabilities(self);
     }
 
     pub fn setTextInputRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32) void {
@@ -1368,12 +1368,12 @@ pub const Renderer = struct {
 
     fn drawTextureGlyphCacheThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
         const renderer: *Renderer = @ptrCast(@alignCast(ctx));
-        renderer.backend.ops.terminal_draw.addTerminalGlyphQuad(renderer, texture, src, dest, color, kind);
+        renderer.backend.addTerminalGlyphQuad(renderer, texture, src, dest, color, kind);
     }
 
     fn addTerminalGlyphRectThunk(ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void {
         const renderer: *Renderer = @ptrCast(@alignCast(ctx));
-        renderer.backend.ops.terminal_draw.addTerminalGlyphRect(renderer, x, y, w, h, color.toRgba());
+        renderer.backend.addTerminalGlyphRect(renderer, x, y, w, h, color.toRgba());
     }
 
     fn drawTextureThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {

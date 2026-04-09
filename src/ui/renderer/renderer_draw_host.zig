@@ -2,15 +2,15 @@ const surface_draw = @import("surface_draw.zig");
 const types = @import("types.zig");
 
 pub fn createPersistentImageFromRgba(renderer: anytype, width: i32, height: i32, data: []const u8) ?surface_draw.GpuImageRef {
-    return renderer.backend.ops.image_draw.createPersistentImageFromRgba(renderer, width, height, data);
+    return renderer.backend.createPersistentImageFromRgba(renderer, width, height, data);
 }
 
 pub fn createPersistentImageFromRgb(renderer: anytype, width: i32, height: i32, data: []const u8) ?surface_draw.GpuImageRef {
-    return renderer.backend.ops.image_draw.createPersistentImageFromRgb(renderer, width, height, data);
+    return renderer.backend.createPersistentImageFromRgb(renderer, width, height, data);
 }
 
 pub fn destroyPersistentImage(renderer: anytype, texture: *surface_draw.GpuImageRef) void {
-    renderer.backend.ops.image_draw.destroyPersistentImage(renderer, texture);
+    renderer.backend.destroyPersistentImage(renderer, texture);
 }
 
 pub fn drawPersistentImage(
@@ -20,7 +20,7 @@ pub fn drawPersistentImage(
     dest: types.Rect,
     tint: types.Rgba,
 ) bool {
-    return renderer.backend.ops.image_draw.drawPersistentImage(renderer, texture, source_rect, dest, tint);
+    return renderer.backend.drawPersistentImage(renderer, texture, source_rect, dest, tint);
 }
 
 pub fn drawRawImage(
@@ -32,5 +32,5 @@ pub fn drawRawImage(
     dest: types.Rect,
     tint: types.Rgba,
 ) bool {
-    return renderer.backend.ops.image_draw.drawRawImage(renderer, format, width, height, data, dest, tint);
+    return renderer.backend.drawRawImage(renderer, format, width, height, data, dest, tint);
 }
