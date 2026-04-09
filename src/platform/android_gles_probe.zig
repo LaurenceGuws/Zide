@@ -19,6 +19,7 @@ const EGL_OPENGL_ES2_BIT: i32 = 0x0004;
 const EGL_CONTEXT_CLIENT_VERSION: i32 = 0x3098;
 
 const GL_COLOR_BUFFER_BIT: u32 = 0x0000_4000;
+const GL_TEXTURE_2D: u32 = 0x0DE1;
 
 extern fn eglGetDisplay(native_display: ?*anyopaque) EGLDisplay;
 extern fn eglInitialize(display: EGLDisplay, major: ?*i32, minor: ?*i32) u32;
@@ -55,6 +56,9 @@ extern fn eglGetError() u32;
 
 extern fn glClearColor(red: f32, green: f32, blue: f32, alpha: f32) void;
 extern fn glClear(mask: u32) void;
+extern fn glGenTextures(n: i32, textures: [*]u32) void;
+extern fn glBindTexture(target: u32, texture: u32) void;
+extern fn glIsTexture(texture: u32) u8;
 
 pub const ProbeStatus = enum(i32) {
     unavailable = 0,
@@ -73,6 +77,9 @@ const ProbeState = struct {
     context: EGLContext = null,
     context_create_count: u32 = 0,
     surface: EGLSurface = null,
+    texture: u32 = 0,
+    texture_create_count: u32 = 0,
+    texture_alive: bool = false,
     bound_epoch: u64 = 0,
     surface_create_count: u32 = 0,
     last_status: ProbeStatus = .unavailable,
@@ -179,6 +186,8 @@ fn drawCurrent(epoch: u64) ProbeStatus {
         return noteError(.make_current_failed);
     }
 
+    ensureProbeTexture();
+
     const phase: u32 = @intCast(epoch % 3);
     const red: f32 = if (phase == 0) 0.88 else 0.14;
     const green: f32 = if (phase == 1) 0.78 else 0.18;
@@ -192,6 +201,35 @@ fn drawCurrent(epoch: u64) ProbeStatus {
     }
     probe_state.swap_count += 1;
     return setStatus(.drawn);
+}
+
+fn ensureProbeTexture() void {
+    if (builtin.is_test) {
+        if (probe_state.texture == 0) {
+            probe_state.texture = 1;
+            probe_state.texture_create_count += 1;
+        }
+        probe_state.texture_alive = probe_state.texture != 0;
+        return;
+    }
+
+    if (probe_state.texture != 0 and glIsTexture(probe_state.texture) != 0) {
+        probe_state.texture_alive = true;
+        return;
+    }
+
+    var texture: u32 = 0;
+    glGenTextures(1, @ptrCast(&texture));
+    if (texture == 0) {
+        probe_state.texture = 0;
+        probe_state.texture_alive = false;
+        return;
+    }
+
+    glBindTexture(GL_TEXTURE_2D, texture);
+    probe_state.texture = texture;
+    probe_state.texture_create_count += 1;
+    probe_state.texture_alive = glIsTexture(probe_state.texture) != 0;
 }
 
 pub fn reset() void {
@@ -244,6 +282,14 @@ pub fn currentSurfaceCreateCount() u32 {
     return probe_state.surface_create_count;
 }
 
+pub fn currentTextureCreateCount() u32 {
+    return probe_state.texture_create_count;
+}
+
+pub fn currentTextureAlive() bool {
+    return probe_state.texture_alive;
+}
+
 test "probe recreates the surface when identity epoch changes" {
     const std = @import("std");
 
@@ -252,16 +298,22 @@ test "probe recreates the surface when identity epoch changes" {
     try std.testing.expectEqual(@as(u32, 1), currentSwapCount());
     try std.testing.expectEqual(@as(u32, 1), currentContextCreateCount());
     try std.testing.expectEqual(@as(u32, 1), currentSurfaceCreateCount());
+    try std.testing.expectEqual(@as(u32, 1), currentTextureCreateCount());
+    try std.testing.expect(currentTextureAlive());
 
     try std.testing.expectEqual(ProbeStatus.drawn, noteSurfaceAvailable(@ptrFromInt(0x1111), 1, .unchanged));
     try std.testing.expectEqual(@as(u32, 2), currentSwapCount());
     try std.testing.expectEqual(@as(u32, 1), currentContextCreateCount());
     try std.testing.expectEqual(@as(u32, 1), currentSurfaceCreateCount());
+    try std.testing.expectEqual(@as(u32, 1), currentTextureCreateCount());
+    try std.testing.expect(currentTextureAlive());
 
     try std.testing.expectEqual(ProbeStatus.drawn, noteSurfaceAvailable(@ptrFromInt(0x2222), 2, .replaced));
     try std.testing.expectEqual(@as(u32, 3), currentSwapCount());
     try std.testing.expectEqual(@as(u32, 1), currentContextCreateCount());
     try std.testing.expectEqual(@as(u32, 2), currentSurfaceCreateCount());
+    try std.testing.expectEqual(@as(u32, 1), currentTextureCreateCount());
+    try std.testing.expect(currentTextureAlive());
 
     try std.testing.expectEqual(ProbeStatus.surface_destroyed, noteSurfaceDestroyed());
     try std.testing.expectEqual(ProbeStatus.unavailable, noteSurfaceRedrawNeeded());

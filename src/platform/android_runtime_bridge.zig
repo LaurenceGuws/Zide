@@ -149,6 +149,14 @@ pub fn currentGlesProbeSurfaceCreateCount() u32 {
     return android_gles_probe.currentSurfaceCreateCount();
 }
 
+pub fn currentGlesProbeTextureCreateCount() u32 {
+    return android_gles_probe.currentTextureCreateCount();
+}
+
+pub fn currentGlesProbeTextureAlive() bool {
+    return android_gles_probe.currentTextureAlive();
+}
+
 pub fn startPtyLifetimeProbe() i64 {
     return android_pty_probe.start() catch -1;
 }
