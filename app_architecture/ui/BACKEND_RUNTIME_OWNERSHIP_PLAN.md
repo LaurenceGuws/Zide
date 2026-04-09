@@ -186,6 +186,36 @@ Immediate remaining pressure after this proof:
 - the next gate-4 cut should only open when it can move that ownership
   boundary again, not merely reshuffle helper routing
 
+## Reference Pressure: Ghostty
+
+Ghostty is useful here as pressure, not as a template.
+
+What it validates:
+
+- higher-level code should terminate at one host/surface owner instead of
+  reaching into backend machinery directly
+- backend/device/runtime details should stay local to the backend owner
+- platform/view truth can stay platform-native without weakening the renderer
+  contract
+
+What it does **not** justify:
+
+- copying Ghostty's object model wholesale into Zide
+- collapsing Zide's IDE renderer into a terminal-first surface model
+- introducing a large new generic backend framework just because Ghostty keeps
+  high-level code away from backend details
+
+Practical consequence for the next gate-4 cut:
+
+- the next move should target the renderer-owned backend host object itself
+  only if that ownership can be reduced without turning `renderer_backend_host`
+  into abstraction theater
+- Ghostty pressure says "one sanctioned owner surface," which Zide now has
+  (`renderer_backend_host.zig`)
+- it does **not** by itself prove that the next step should be "hide
+  everything behind another opaque object" unless local code pressure says that
+  object will stay honest
+
 Latest narrowing cut:
 
 - shared font init/text-config paths now route backend helper access through
