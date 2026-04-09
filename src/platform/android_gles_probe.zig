@@ -20,6 +20,8 @@ const EGL_CONTEXT_CLIENT_VERSION: i32 = 0x3098;
 
 const GL_COLOR_BUFFER_BIT: u32 = 0x0000_4000;
 const GL_TEXTURE_2D: u32 = 0x0DE1;
+const GL_RGBA: u32 = 0x1908;
+const GL_UNSIGNED_BYTE: u32 = 0x1401;
 
 extern fn eglGetDisplay(native_display: ?*anyopaque) EGLDisplay;
 extern fn eglInitialize(display: EGLDisplay, major: ?*i32, minor: ?*i32) u32;
@@ -59,6 +61,8 @@ extern fn glClear(mask: u32) void;
 extern fn glGenTextures(n: i32, textures: [*]u32) void;
 extern fn glBindTexture(target: u32, texture: u32) void;
 extern fn glIsTexture(texture: u32) u8;
+extern fn glTexImage2D(target: u32, level: i32, internalformat: i32, width: i32, height: i32, border: i32, format: u32, type_: u32, pixels: ?*const anyopaque) void;
+extern fn glTexSubImage2D(target: u32, level: i32, xoffset: i32, yoffset: i32, width: i32, height: i32, format: u32, type_: u32, pixels: ?*const anyopaque) void;
 
 pub const ProbeStatus = enum(i32) {
     unavailable = 0,
@@ -80,6 +84,8 @@ const ProbeState = struct {
     texture: u32 = 0,
     texture_create_count: u32 = 0,
     texture_alive: bool = false,
+    texture_upload_count: u32 = 0,
+    texture_update_count: u32 = 0,
     bound_epoch: u64 = 0,
     surface_create_count: u32 = 0,
     last_status: ProbeStatus = .unavailable,
@@ -208,12 +214,15 @@ fn ensureProbeTexture() void {
         if (probe_state.texture == 0) {
             probe_state.texture = 1;
             probe_state.texture_create_count += 1;
+            probe_state.texture_upload_count += 1;
         }
+        probe_state.texture_update_count += 1;
         probe_state.texture_alive = probe_state.texture != 0;
         return;
     }
 
     if (probe_state.texture != 0 and glIsTexture(probe_state.texture) != 0) {
+        updateProbeTexture();
         probe_state.texture_alive = true;
         return;
     }
@@ -229,7 +238,32 @@ fn ensureProbeTexture() void {
     glBindTexture(GL_TEXTURE_2D, texture);
     probe_state.texture = texture;
     probe_state.texture_create_count += 1;
+    uploadProbeTexture();
     probe_state.texture_alive = glIsTexture(probe_state.texture) != 0;
+}
+
+fn uploadProbeTexture() void {
+    const pixels = [_]u8{
+        0xFF, 0x33, 0x33, 0xFF,
+        0x33, 0xFF, 0x33, 0xFF,
+        0x33, 0x33, 0xFF, 0xFF,
+        0xFF, 0xCC, 0x33, 0xFF,
+    };
+    glTexImage2D(GL_TEXTURE_2D, 0, @intCast(GL_RGBA), 2, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, @ptrCast(&pixels));
+    probe_state.texture_upload_count += 1;
+}
+
+fn updateProbeTexture() void {
+    const phase: u8 = @intCast(probe_state.swap_count % 255);
+    const pixel = [_]u8{
+        phase,
+        0x80,
+        0xFF - phase,
+        0xFF,
+    };
+    glBindTexture(GL_TEXTURE_2D, probe_state.texture);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, @ptrCast(&pixel));
+    probe_state.texture_update_count += 1;
 }
 
 pub fn reset() void {
@@ -290,6 +324,14 @@ pub fn currentTextureAlive() bool {
     return probe_state.texture_alive;
 }
 
+pub fn currentTextureUploadCount() u32 {
+    return probe_state.texture_upload_count;
+}
+
+pub fn currentTextureUpdateCount() u32 {
+    return probe_state.texture_update_count;
+}
+
 test "probe recreates the surface when identity epoch changes" {
     const std = @import("std");
 
@@ -299,6 +341,8 @@ test "probe recreates the surface when identity epoch changes" {
     try std.testing.expectEqual(@as(u32, 1), currentContextCreateCount());
     try std.testing.expectEqual(@as(u32, 1), currentSurfaceCreateCount());
     try std.testing.expectEqual(@as(u32, 1), currentTextureCreateCount());
+    try std.testing.expectEqual(@as(u32, 1), currentTextureUploadCount());
+    try std.testing.expectEqual(@as(u32, 1), currentTextureUpdateCount());
     try std.testing.expect(currentTextureAlive());
 
     try std.testing.expectEqual(ProbeStatus.drawn, noteSurfaceAvailable(@ptrFromInt(0x1111), 1, .unchanged));
@@ -306,6 +350,8 @@ test "probe recreates the surface when identity epoch changes" {
     try std.testing.expectEqual(@as(u32, 1), currentContextCreateCount());
     try std.testing.expectEqual(@as(u32, 1), currentSurfaceCreateCount());
     try std.testing.expectEqual(@as(u32, 1), currentTextureCreateCount());
+    try std.testing.expectEqual(@as(u32, 1), currentTextureUploadCount());
+    try std.testing.expectEqual(@as(u32, 2), currentTextureUpdateCount());
     try std.testing.expect(currentTextureAlive());
 
     try std.testing.expectEqual(ProbeStatus.drawn, noteSurfaceAvailable(@ptrFromInt(0x2222), 2, .replaced));
@@ -313,6 +359,8 @@ test "probe recreates the surface when identity epoch changes" {
     try std.testing.expectEqual(@as(u32, 1), currentContextCreateCount());
     try std.testing.expectEqual(@as(u32, 2), currentSurfaceCreateCount());
     try std.testing.expectEqual(@as(u32, 1), currentTextureCreateCount());
+    try std.testing.expectEqual(@as(u32, 1), currentTextureUploadCount());
+    try std.testing.expectEqual(@as(u32, 3), currentTextureUpdateCount());
     try std.testing.expect(currentTextureAlive());
 
     try std.testing.expectEqual(ProbeStatus.surface_destroyed, noteSurfaceDestroyed());

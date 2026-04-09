@@ -266,6 +266,33 @@ It still does not prove:
 - that full renderer resource graphs should adopt this policy without later
   shared-backend authority
 
+## Next Runtime Question
+
+The next honest Android-owned GLES question is narrower than renderer adoption:
+
+- can one bootstrap-owned GLES texture survive the proven surface transitions
+  while also accepting repeated content upload/update, not just continued
+  object existence checks
+
+Why this matters:
+
+- current proof already says one context-owned texture object survives
+- that is useful, but renderer pressure later will care about content upload
+  and update, not only object identity
+- this remains bootstrap-owned runtime evidence, not shared renderer work
+
+Current checkpoint (2026-04-09):
+
+- the bootstrap GLES probe now tracks:
+  - `glesTextureUploads`
+  - `glesTextureUpdates`
+- texture creation now performs one explicit `glTexImage2D` upload
+- later redraw/surface passes perform `glTexSubImage2D` updates against the
+  same texture when the context still owns it
+- the bootstrap bridge/status UI now surfaces those counters alongside:
+  - `glesTextureCreates`
+  - `glesTextureAlive`
+
 ## Decision From Probe
 
 The first Android EGL binding cut is now structurally met.

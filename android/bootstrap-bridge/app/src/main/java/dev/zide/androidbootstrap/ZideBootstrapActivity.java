@@ -86,6 +86,8 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     private static native long nativeCurrentGlesProbeSurfaceCreateCountBridge();
     private static native long nativeCurrentGlesProbeTextureCreateCountBridge();
     private static native boolean nativeCurrentGlesProbeTextureAliveBridge();
+    private static native long nativeCurrentGlesProbeTextureUploadCountBridge();
+    private static native long nativeCurrentGlesProbeTextureUpdateCountBridge();
     private static native long nativeStartPtyProbeBridge();
     private static native void nativeStopPtyProbeBridge();
     private static native boolean nativeIsPtyProbeAliveBridge();
@@ -198,6 +200,8 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         final long glesSurfaceCreateCount = nativeLoaded ? nativeCurrentGlesProbeSurfaceCreateCountBridge() : 0;
         final long glesTextureCreateCount = nativeLoaded ? nativeCurrentGlesProbeTextureCreateCountBridge() : 0;
         final boolean glesTextureAlive = nativeLoaded && nativeCurrentGlesProbeTextureAliveBridge();
+        final long glesTextureUploadCount = nativeLoaded ? nativeCurrentGlesProbeTextureUploadCountBridge() : 0;
+        final long glesTextureUpdateCount = nativeLoaded ? nativeCurrentGlesProbeTextureUpdateCountBridge() : 0;
         callNativeWithSurfaceState(
             "native.surfaceAvailable",
             seq,
@@ -210,7 +214,9 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
             glesContextCreateCount,
             glesSurfaceCreateCount,
             glesTextureCreateCount,
-            glesTextureAlive
+            glesTextureAlive,
+            glesTextureUploadCount,
+            glesTextureUpdateCount
         );
         updateStatus("surface-changed");
     }
@@ -229,6 +235,8 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         final long glesSurfaceCreateCount = nativeLoaded ? nativeCurrentGlesProbeSurfaceCreateCountBridge() : 0;
         final long glesTextureCreateCount = nativeLoaded ? nativeCurrentGlesProbeTextureCreateCountBridge() : 0;
         final boolean glesTextureAlive = nativeLoaded && nativeCurrentGlesProbeTextureAliveBridge();
+        final long glesTextureUploadCount = nativeLoaded ? nativeCurrentGlesProbeTextureUploadCountBridge() : 0;
+        final long glesTextureUpdateCount = nativeLoaded ? nativeCurrentGlesProbeTextureUpdateCountBridge() : 0;
         callNativeWithSurfaceState(
             "native.surfaceDestroyed",
             seq,
@@ -241,7 +249,9 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
             glesContextCreateCount,
             glesSurfaceCreateCount,
             glesTextureCreateCount,
-            glesTextureAlive
+            glesTextureAlive,
+            glesTextureUploadCount,
+            glesTextureUpdateCount
         );
         updateStatus("surface-destroyed");
     }
@@ -257,6 +267,8 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         final long glesSurfaceCreateCount = nativeLoaded ? nativeCurrentGlesProbeSurfaceCreateCountBridge() : 0;
         final long glesTextureCreateCount = nativeLoaded ? nativeCurrentGlesProbeTextureCreateCountBridge() : 0;
         final boolean glesTextureAlive = nativeLoaded && nativeCurrentGlesProbeTextureAliveBridge();
+        final long glesTextureUploadCount = nativeLoaded ? nativeCurrentGlesProbeTextureUploadCountBridge() : 0;
+        final long glesTextureUpdateCount = nativeLoaded ? nativeCurrentGlesProbeTextureUpdateCountBridge() : 0;
         appendEvent(
             "native.surfaceRedrawNeeded seq=" + seq +
                 " gles=" + glesProbeStatusLabel(glesStatus) +
@@ -265,7 +277,9 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
                 " glesContextCreates=" + glesContextCreateCount +
                 " glesSurfaceCreates=" + glesSurfaceCreateCount +
                 " glesTextureCreates=" + glesTextureCreateCount +
-                " glesTextureAlive=" + glesTextureAlive
+                " glesTextureAlive=" + glesTextureAlive +
+                " glesTextureUploads=" + glesTextureUploadCount +
+                " glesTextureUpdates=" + glesTextureUpdateCount
         );
         updateStatus("surface-redraw-needed");
     }
@@ -501,7 +515,9 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         long glesContextCreateCount,
         long glesSurfaceCreateCount,
         long glesTextureCreateCount,
-        boolean glesTextureAlive
+        boolean glesTextureAlive,
+        long glesTextureUploadCount,
+        long glesTextureUpdateCount
     ) {
         appendEvent(
             event + " seq=" + seq +
@@ -514,7 +530,9 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
                 " glesContextCreates=" + glesContextCreateCount +
                 " glesSurfaceCreates=" + glesSurfaceCreateCount +
                 " glesTextureCreates=" + glesTextureCreateCount +
-                " glesTextureAlive=" + glesTextureAlive
+                " glesTextureAlive=" + glesTextureAlive +
+                " glesTextureUploads=" + glesTextureUploadCount +
+                " glesTextureUpdates=" + glesTextureUpdateCount
         );
     }
 
@@ -580,7 +598,9 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
                 " contextCreates=" + (nativeLoaded ? nativeCurrentGlesProbeContextCreateCountBridge() : 0) +
                 " surfaceCreates=" + (nativeLoaded ? nativeCurrentGlesProbeSurfaceCreateCountBridge() : 0) +
                 " textureCreates=" + (nativeLoaded ? nativeCurrentGlesProbeTextureCreateCountBridge() : 0) +
-                " textureAlive=" + (nativeLoaded && nativeCurrentGlesProbeTextureAliveBridge())
+                " textureAlive=" + (nativeLoaded && nativeCurrentGlesProbeTextureAliveBridge()) +
+                " textureUploads=" + (nativeLoaded ? nativeCurrentGlesProbeTextureUploadCountBridge() : 0) +
+                " textureUpdates=" + (nativeLoaded ? nativeCurrentGlesProbeTextureUpdateCountBridge() : 0)
         );
     }
 

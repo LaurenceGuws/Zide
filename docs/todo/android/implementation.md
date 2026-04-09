@@ -388,6 +388,42 @@ Do not do:
 
 - no shared Android renderer backend
 - no new `RendererBackend` variant
+
+### `AH-A6` Android GLES Upload/Update Probe
+
+Purpose:
+
+- prove whether one bootstrap-owned GLES texture can survive the already-proved
+  surface transitions while also accepting repeated content upload/update
+
+Status:
+
+- active
+- current probe now tracks:
+  - `glesTextureUploads`
+  - `glesTextureUpdates`
+- this is still bootstrap-owned Android runtime evidence only
+- local validation is green:
+  - `zig build`
+  - `zig build test`
+  - `ops/android_build_bootstrap_bridge.sh`
+  - `gradle -p android/bootstrap-bridge :app:assembleDebug`
+- device launch remained stable after the new JNI bridge surface was added
+
+Acceptance:
+
+- one explicit texture upload occurs at texture creation
+- later redraw/surface passes can report repeated texture updates against the
+  surviving texture
+- the bootstrap bridge UI/logs expose those counters on-device
+- no shared renderer/backend code lands in `src/ui/renderer/`
+
+Do not do:
+
+- no shared Android renderer backend
+- no renderer atlas/text integration
+- no product claim that bootstrap texture update proof equals renderer
+  readiness
 - no terminal/text rendering integration
 - no bypass of `replaced` / `retired` surface truth
 
