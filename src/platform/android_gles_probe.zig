@@ -73,6 +73,7 @@ const ProbeState = struct {
     context: EGLContext = null,
     surface: EGLSurface = null,
     bound_epoch: u64 = 0,
+    surface_create_count: u32 = 0,
     last_status: ProbeStatus = .unavailable,
     last_error: u32 = 0,
     swap_count: u32 = 0,
@@ -161,6 +162,7 @@ fn ensureWindowSurface(window: ?*anyopaque, epoch: u64, transition: native_host.
             eglCreateWindowSurface(probe_state.display, probe_state.config, window, &surface_attribs);
         if (probe_state.surface == null) return noteError(.surface_failed);
         probe_state.bound_epoch = epoch;
+        probe_state.surface_create_count += 1;
     }
 
     return setStatus(.ready);
@@ -226,6 +228,14 @@ pub fn currentStatus() ProbeStatus {
 
 pub fn currentSwapCount() u32 {
     return probe_state.swap_count;
+}
+
+pub fn currentBoundEpoch() u64 {
+    return probe_state.bound_epoch;
+}
+
+pub fn currentSurfaceCreateCount() u32 {
+    return probe_state.surface_create_count;
 }
 
 test "probe recreates the surface when identity epoch changes" {

@@ -133,6 +133,18 @@ pub fn currentGlesProbeStatus() android_gles_probe.ProbeStatus {
     return bridge_state.last_gles_probe_status;
 }
 
+pub fn currentGlesProbeSwapCount() u32 {
+    return android_gles_probe.currentSwapCount();
+}
+
+pub fn currentGlesProbeBoundEpoch() u64 {
+    return android_gles_probe.currentBoundEpoch();
+}
+
+pub fn currentGlesProbeSurfaceCreateCount() u32 {
+    return android_gles_probe.currentSurfaceCreateCount();
+}
+
 pub fn startPtyLifetimeProbe() i64 {
     return android_pty_probe.start() catch -1;
 }
