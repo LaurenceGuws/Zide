@@ -9,6 +9,7 @@ Supporting research:
 
 - `docs/research/terminal/ANDROID_HOST_PTY_SCAN_2026-04-08.md`
 - `app_architecture/platform/android/BOOTSTRAP_BRIDGE_PLAN.md`
+- `app_architecture/platform/android/ANDROID_GLES_BINDING_PLAN.md`
 - `app_architecture/platform/android/SURFACE_IDENTITY_POLICY.md`
 - `app_architecture/platform/android/ANDROID_PTY_LIFETIME_PLAN.md`
 - `app_architecture/platform/android/ANDROID_PTY_SERVICE_SURVIVAL_PLAN.md`
@@ -257,6 +258,18 @@ The next Android moves are now gated by stronger external pressure:
 - service-owned PTY survival may move only through its own explicit product
   lane, not through renderer or generic host drift
 
+What is now allowed:
+
+- define the first Android GLES/EGL binding cut precisely enough to execute it
+  later as bootstrap-owned Android work
+- execute that first bootstrap-owned EGL/GLES clear/swap proof without adding
+  a real renderer backend in `src/ui/renderer/`
+
+What is still not allowed:
+
+- treat that binding plan as permission to add a real Android backend in
+  `src/ui/renderer/`
+
 Current `AH-A4` checkpoint:
 
 - `android/bootstrap-bridge/` now builds and installs on the Note10
@@ -321,6 +334,13 @@ Current Android-native follow-up constraints:
   - it is still not renderer work and not terminal product integration
 - do not jump to GLES from native-load success, surface truth, or PTY
   confidence alone while the renderer queue still blocks Android rendering
+- if Android GLES/EGL binding work resumes, the first honest cut must stay in
+  `android/bootstrap-bridge/` plus the native bridge surface defined in
+  `ANDROID_GLES_BINDING_PLAN.md`
+- that first probe is now real on the Note10:
+  - `native.surfaceAvailable ... gles=drawn`
+  - `native.surfaceRedrawNeeded ... gles=drawn`
+  - same-surface geometry churn stays `transition=unchanged gles=drawn`
 
 ## Explicit Anti-Goals
 

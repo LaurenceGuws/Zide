@@ -33,6 +33,7 @@ This writes:
 The bridge build expects NDK `27.1.12297006` in the selected SDK root.
 It links `libandroid` because the bridge now uses
 `ANativeWindow_fromSurface(...)` and `ANativeWindow_release(...)`.
+It now also links `libEGL` and `libGLESv2` for the bootstrap-owned EGL probe.
 
 ## Build APK
 
@@ -175,5 +176,11 @@ That proves:
   - `service.start pid=... alive=true status=started`
   - later `debug.servicePtyProbeStopIssued`
   - `service.stop pid=-1 alive=false`
+- the bootstrap lane now also contains the first Android EGL/GLES binding
+  proof, with current Note10 logs showing:
+  - `native.surfaceAvailable ... gles=drawn`
+  - `native.surfaceRedrawNeeded ... gles=drawn`
+  - later same-surface geometry churn still reporting
+    `transition=unchanged gles=drawn`
 - Android native entry is now real enough to move on to deeper host/runtime
   ownership questions rather than more bootstrap speculation

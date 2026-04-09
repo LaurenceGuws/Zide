@@ -108,6 +108,14 @@ blockers are:
 - gate #5: presentable/frame routine is still not neutral enough for a new
   backend to feel routine
 
+Android note:
+
+- Android may continue with bootstrap-owned EGL/GLES binding authority and
+  bootstrap-bridge-local proof work
+- Android may not use that as permission to add a real renderer backend in
+  `src/ui/renderer/` while gates #2 and #5 still block routine third-backend
+  adoption
+
 Gate #3 remains met for the `SurfaceDraw` surface. Do not reopen gate #4
 without new ownership pressure that proves the sanctioned backend-host surface
 is no longer honest.

@@ -20,6 +20,7 @@ Do not use this queue for:
 - `app_architecture/platform/NATIVE_HOST_CONTRACT.md`
 - `app_architecture/platform/android/RENDER_BACKEND.md`
 - `app_architecture/platform/android/BOOTSTRAP_BRIDGE_PLAN.md`
+- `app_architecture/platform/android/ANDROID_GLES_BINDING_PLAN.md`
 - `app_architecture/platform/android/SURFACE_IDENTITY_POLICY.md`
 - `app_architecture/platform/android/ANDROID_PTY_LIFETIME_PLAN.md`
 - `app_architecture/platform/android/ANDROID_PTY_SERVICE_SURVIVAL_PLAN.md`
@@ -42,6 +43,8 @@ Current boundary:
 - service-owned PTY survival is now a validated separate Android product lane,
   but it has not displaced the disposable baseline as the default answer
 - Android rendering backend work is still blocked by the renderer queue
+- the first honest Android rendering-adjacent move is now authority for a
+  bootstrap-owned EGL/GLES binding cut, not shared renderer integration
 
 ## Active Tickets
 
@@ -293,6 +296,43 @@ Do not do:
 - no terminal UI/service integration
 - no wake-lock policy expansion unless the narrow probe proves it necessary
 - no product claim that foreground-service PTY survival is now the default
+
+### `AH-A5` Android GLES Binding Authority
+
+Purpose:
+
+- define the first Android EGL/GLES binding cut precisely enough that it can
+  be implemented next without drifting into a fake Android renderer backend
+
+Status:
+
+- structurally met
+- authority now exists in
+  `app_architecture/platform/android/ANDROID_GLES_BINDING_PLAN.md`
+- first executable bootstrap-owned EGL/GLES clear/swap proof now exists in the
+  Android bootstrap bridge and validated on the Note10
+
+Acceptance:
+
+- the first Android rendering proof is explicitly scoped to
+  `android/bootstrap-bridge/` and the native bridge
+- the first executable cut is defined as EGL display/config/context creation
+  plus EGL window-surface bind / clear / swap against the current
+  `ANativeWindow`
+- Note10 device proof now shows:
+  - `native.surfaceAvailable ... gles=drawn`
+  - `native.surfaceRedrawNeeded ... gles=drawn`
+- docs explicitly require surface replacement to follow
+  `surfaceIdentityEpoch` / transition truth, not raw pointer comparison
+- docs explicitly forbid new shared renderer/backend work in `src/ui/renderer/`
+  in this cut
+
+Do not do:
+
+- no shared Android renderer backend
+- no new `RendererBackend` variant
+- no terminal/text rendering integration
+- no bypass of `replaced` / `retired` surface truth
 
 ## Current Research Read
 
