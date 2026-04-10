@@ -1,7 +1,8 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root_view"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="12dp">
+    android:background="#10161d">
 
     <LinearLayout
         android:id="@+id/product_view"
@@ -22,38 +23,110 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:fontFamily="monospace"
-                android:padding="8dp"
+                android:padding="4dp"
                 android:textColor="#f5f7fa"
                 android:textSize="13sp"
                 android:typeface="monospace" />
         </ScrollView>
 
-        <LinearLayout
+        <HorizontalScrollView
+            android:id="@+id/input_assist_scroll"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
+            android:layout_height="36dp"
+            android:background="#0d1319"
+            android:fillViewport="false"
+            android:scrollbars="none">
 
-            <Button
-                android:id="@+id/ime_toggle_button"
+            <LinearLayout
+                android:id="@+id/input_assist_bar"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/show_ime" />
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp">
 
-            <Button
-                android:id="@+id/shell_restart_button"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="@string/shell_restart_short" />
+                <Button
+                    android:id="@+id/assist_esc_button"
+                    style="@android:style/Widget.Material.Button.Borderless"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:minWidth="48dp"
+                    android:text="@string/assist_esc" />
 
-            <Button
-                android:id="@+id/view_mode_button"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="@string/show_debug_short" />
-        </LinearLayout>
+                <Button
+                    android:id="@+id/assist_tab_button"
+                    style="@android:style/Widget.Material.Button.Borderless"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:minWidth="48dp"
+                    android:text="@string/assist_tab" />
+
+                <Button
+                    android:id="@+id/assist_ctrl_c_button"
+                    style="@android:style/Widget.Material.Button.Borderless"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:minWidth="58dp"
+                    android:text="@string/assist_ctrl_c" />
+
+                <Button
+                    android:id="@+id/assist_ctrl_d_button"
+                    style="@android:style/Widget.Material.Button.Borderless"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:minWidth="58dp"
+                    android:text="@string/assist_ctrl_d" />
+
+                <Button
+                    android:id="@+id/assist_pipe_button"
+                    style="@android:style/Widget.Material.Button.Borderless"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:minWidth="48dp"
+                    android:text="@string/assist_pipe" />
+
+                <Button
+                    android:id="@+id/assist_slash_button"
+                    style="@android:style/Widget.Material.Button.Borderless"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:minWidth="48dp"
+                    android:text="@string/assist_slash" />
+
+                <Button
+                    android:id="@+id/assist_up_button"
+                    style="@android:style/Widget.Material.Button.Borderless"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:minWidth="48dp"
+                    android:text="@string/assist_up" />
+
+                <Button
+                    android:id="@+id/assist_down_button"
+                    style="@android:style/Widget.Material.Button.Borderless"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:minWidth="48dp"
+                    android:text="@string/assist_down" />
+
+                <Button
+                    android:id="@+id/assist_left_button"
+                    style="@android:style/Widget.Material.Button.Borderless"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:minWidth="48dp"
+                    android:text="@string/assist_left" />
+
+                <Button
+                    android:id="@+id/assist_right_button"
+                    style="@android:style/Widget.Material.Button.Borderless"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:minWidth="48dp"
+                    android:text="@string/assist_right" />
+            </LinearLayout>
+        </HorizontalScrollView>
 
         <FrameLayout
             android:id="@+id/product_surface_container"
@@ -68,6 +141,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
+        android:padding="12dp"
         android:visibility="gone">
 
         <LinearLayout
@@ -125,5 +199,52 @@
                 android:textAppearance="@android:style/TextAppearance.Material.Small" />
         </ScrollView>
     </LinearLayout>
+
+    <View
+        android:id="@+id/drawer_scrim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#66000000"
+        android:visibility="gone" />
+
+    <LinearLayout
+        android:id="@+id/left_sidebar"
+        android:layout_width="220dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        android:background="#111820"
+        android:elevation="12dp"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <TextView
+            android:id="@+id/sidebar_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingBottom="12dp"
+            android:text="@string/sidebar_title"
+            android:textAppearance="@android:style/TextAppearance.Material.Medium"
+            android:textColor="#f5f7fa" />
+
+        <Button
+            android:id="@+id/sidebar_restart_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/shell_restart_short" />
+
+        <Button
+            android:id="@+id/sidebar_debug_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/show_debug_short" />
+    </LinearLayout>
+
+    <View
+        android:id="@+id/left_edge_swipe_hotspot"
+        android:layout_width="20dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        android:background="#00000000" />
 
 </FrameLayout>

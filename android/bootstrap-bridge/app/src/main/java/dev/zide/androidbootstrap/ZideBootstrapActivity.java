@@ -9,6 +9,7 @@ import android.os.SystemClock;
 import android.os.Looper;
 import android.util.Log;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -48,10 +49,13 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     private TextView statusText;
     private TextView shellOutputText;
     private TextView eventLogText;
+    private View rootView;
     private View productView;
     private View debugView;
+    private View drawerScrim;
+    private View drawerEdgeHotspot;
+    private View leftSidebar;
     private FrameLayout productSurfaceContainer;
-    private Button imeToggleButton;
     private ShellInputView shellInputView;
     private ScrollView shellOutputScroll;
     private ShellTranscriptController shellTranscriptController;
@@ -63,6 +67,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     private boolean surfaceResizeScheduled = false;
     private boolean shellStartScheduled = false;
     private boolean shellRefreshActive = false;
+    private boolean sidebarOpen = false;
     private int surfaceHostGeneration = 0;
     private int productViewBasePaddingLeft = 0;
     private int productViewBasePaddingTop = 0;
@@ -86,10 +91,13 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         statusText = findViewById(R.id.status_text);
         shellOutputText = findViewById(R.id.shell_output_text);
         eventLogText = findViewById(R.id.event_log);
+        rootView = findViewById(R.id.root_view);
         productView = findViewById(R.id.product_view);
         debugView = findViewById(R.id.debug_view);
+        drawerScrim = findViewById(R.id.drawer_scrim);
+        drawerEdgeHotspot = findViewById(R.id.left_edge_swipe_hotspot);
+        leftSidebar = findViewById(R.id.left_sidebar);
         productSurfaceContainer = findViewById(R.id.product_surface_container);
-        imeToggleButton = findViewById(R.id.ime_toggle_button);
         shellOutputScroll = findViewById(R.id.shell_output_scroll);
         shellTranscriptController = new ShellTranscriptController(shellOutputScroll, shellOutputText);
         shellSessionController = new ShellSessionController(
@@ -114,11 +122,15 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         installShellInputView();
         installInsetsHandling();
         shellTranscriptController.installScrollHandling();
+        bindSidebarControls();
         bindViewModeToggle();
-        bindImeToggle();
-        bindShellControls();
+        bindAssistBar();
         applyViewMode();
         installSurfaceView("activity-create");
+        leftSidebar.post(() -> {
+            leftSidebar.setTranslationX(-leftSidebar.getWidth());
+            updateSidebarVisibility(false);
+        });
 
         appendEvent("activity.onCreate nativeLoaded=" + nativeLoaded);
         if (nativeLoadError != null) {
@@ -144,7 +156,6 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
                     productViewBasePaddingTop,
                     productViewBasePaddingRight,
                     productViewBasePaddingBottom + bottomInset);
-            updateImeToggleLabel();
             shellOutputScroll.post(() -> shellOutputScroll.fullScroll(View.FOCUS_DOWN));
             return windowInsets;
         });
@@ -323,42 +334,74 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         }, 900);
     }
 
-    private void bindImeToggle() {
-        imeToggleButton.setOnClickListener(view -> toggleIme());
-    }
-
     private void bindViewModeToggle() {
-        final Button productViewModeButton = findViewById(R.id.view_mode_button);
         final Button debugViewModeButton = findViewById(R.id.debug_view_mode_button);
-        final View.OnClickListener toggleListener = view -> {
-            debugViewEnabled = !debugViewEnabled;
-            appendEvent("view.mode debug=" + debugViewEnabled);
+        debugViewModeButton.setOnClickListener(view -> {
+            debugViewEnabled = false;
+            appendEvent("view.mode debug=false");
             applyViewMode();
-            updateStatus(debugViewEnabled ? "debug-view" : "product-view");
-        };
-        productViewModeButton.setOnClickListener(toggleListener);
-        debugViewModeButton.setOnClickListener(toggleListener);
+            updateStatus("product-view");
+        });
     }
 
-    private void bindShellControls() {
-        final Button restartButton = findViewById(R.id.shell_restart_button);
+    private void bindSidebarControls() {
+        final Button restartButton = findViewById(R.id.sidebar_restart_button);
+        final Button debugButton = findViewById(R.id.sidebar_debug_button);
 
         restartButton.setOnClickListener(view -> {
             final int status = nativeLoaded ? nativeRestartShellSessionBridge() : 0;
             appendEvent("manual.shellRestart status=" + shellStartStatusLabel(status));
             refreshShellState(false);
             updateStatus("shell-restarted");
+            closeSidebar();
+        });
+
+        debugButton.setOnClickListener(view -> {
+            debugViewEnabled = true;
+            appendEvent("view.mode debug=true");
+            applyViewMode();
+            updateStatus("debug-view");
+            closeSidebar();
+        });
+
+        drawerScrim.setOnClickListener(view -> closeSidebar());
+        drawerEdgeHotspot.setOnTouchListener(new EdgeSwipeListener(true));
+        leftSidebar.setOnTouchListener(new EdgeSwipeListener(false));
+    }
+
+    private void bindAssistBar() {
+        bindAssistButton(R.id.assist_esc_button, "\u001b", "assist.esc");
+        bindAssistButton(R.id.assist_tab_button, "\t", "assist.tab");
+        bindAssistButton(R.id.assist_ctrl_c_button, "\u0003", "assist.ctrl_c");
+        bindAssistButton(R.id.assist_ctrl_d_button, "\u0004", "assist.ctrl_d");
+        bindAssistButton(R.id.assist_pipe_button, "|", "assist.pipe");
+        bindAssistButton(R.id.assist_slash_button, "/", "assist.slash");
+        bindAssistButton(R.id.assist_up_button, "\u001b[A", "assist.up");
+        bindAssistButton(R.id.assist_down_button, "\u001b[B", "assist.down");
+        bindAssistButton(R.id.assist_left_button, "\u001b[D", "assist.left");
+        bindAssistButton(R.id.assist_right_button, "\u001b[C", "assist.right");
+    }
+
+    private void bindAssistButton(int id, String text, String eventName) {
+        final Button button = findViewById(id);
+        button.setOnClickListener(view -> {
+            sendDirectText(text);
+            appendEvent(eventName);
+            refreshShellState(false);
         });
     }
 
     private void installShellInputView() {
         shellInputView = new ShellInputView(this, this);
-        final FrameLayout root = (FrameLayout) productView.getParent();
+        final FrameLayout root = (FrameLayout) rootView;
         final FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(1, 1);
         lp.gravity = Gravity.BOTTOM | Gravity.START;
         root.addView(shellInputView, lp);
 
-        shellOutputScroll.setOnClickListener(v -> toggleIme());
+        shellOutputScroll.setOnClickListener(v -> openIme());
+        // Taps land on the transcript TextView, not the ScrollView parent, so both
+        // must open the IME or most of the terminal area appears "dead" to touch.
+        shellOutputText.setOnClickListener(v -> openIme());
     }
 
     @Override
@@ -382,39 +425,49 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     private void applyViewMode() {
         productView.setVisibility(debugViewEnabled ? View.GONE : View.VISIBLE);
         debugView.setVisibility(debugViewEnabled ? View.VISIBLE : View.GONE);
+        if (debugViewEnabled) {
+            closeSidebar();
+        }
     }
 
-    private void toggleIme() {
+    private void openIme() {
         final InputMethodManager imm = getSystemService(InputMethodManager.class);
         if (imm == null) {
-            appendEvent("manual.imeToggle unavailable=true");
+            appendEvent("manual.ime unavailable=true");
             return;
         }
 
-        if (imeVisible) {
-            imm.hideSoftInputFromWindow(shellInputView.getWindowToken(), 0);
-            shellInputView.clearFocus();
-            imeVisible = false;
-            appendEvent("manual.imeToggle visible=false");
-            updateImeToggleLabel();
-            updateStatus("ime-hidden");
-            return;
-        }
-
-        shellInputView.post(() -> {
+        // From transcript tap/click we are in a user touch sequence; focus must be
+        // requested in that context for many devices to accept showSoftInput.
+        shellInputView.requestFocusFromTouch();
+        if (!shellInputView.hasFocus()) {
             shellInputView.requestFocus();
-            imm.restartInput(shellInputView);
-            final boolean shown = imm.showSoftInput(shellInputView, InputMethodManager.SHOW_FORCED);
-            imeVisible = shown || shellInputView.hasFocus();
-            shellTranscriptController.setImeVisible(imeVisible);
-            appendEvent("manual.imeToggle visible=true shown=" + shown);
-            updateImeToggleLabel();
-            updateStatus("ime-shown");
-        });
+        }
+        imm.restartInput(shellInputView);
+        final boolean shown = imm.showSoftInput(shellInputView, InputMethodManager.SHOW_IMPLICIT);
+        imeVisible = shown || shellInputView.hasFocus();
+        shellTranscriptController.setImeVisible(imeVisible);
+        appendEvent("manual.imeOpen shown=" + shown + " focus=" + shellInputView.hasFocus());
+        updateStatus("ime-shown");
     }
 
-    private void updateImeToggleLabel() {
-        imeToggleButton.setText(imeVisible ? R.string.hide_ime : R.string.show_ime);
+    private void openSidebar() {
+        if (sidebarOpen || debugViewEnabled) return;
+        sidebarOpen = true;
+        leftSidebar.animate().translationX(0).setDuration(180).start();
+        updateSidebarVisibility(true);
+    }
+
+    private void closeSidebar() {
+        if (!sidebarOpen) return;
+        sidebarOpen = false;
+        leftSidebar.animate().translationX(-leftSidebar.getWidth()).setDuration(180).start();
+        updateSidebarVisibility(false);
+    }
+
+    private void updateSidebarVisibility(boolean visible) {
+        drawerScrim.setVisibility(visible ? View.VISIBLE : View.GONE);
+        drawerEdgeHotspot.setVisibility(visible ? View.GONE : View.VISIBLE);
     }
 
     private void startShellRefresh() {
@@ -542,7 +595,6 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
                         surfaceState.glesTextureResizeCount,
                         surfaceState.glesTextureWidth,
                         surfaceState.glesTextureHeight)));
-        updateImeToggleLabel();
     }
 
     private static String surfaceTransitionLabel(int transition) {
@@ -579,6 +631,40 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
             case 7 -> "swap-failed";
             default -> "unavailable";
         };
+    }
+
+    private final class EdgeSwipeListener implements View.OnTouchListener {
+        private static final float OPEN_THRESHOLD_PX = 48f;
+        private final boolean openListener;
+        private float downX;
+
+        EdgeSwipeListener(boolean openListener) {
+            this.openListener = openListener;
+        }
+
+        @Override
+        public boolean onTouch(View view, MotionEvent event) {
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    downX = event.getRawX();
+                    return true;
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    final float delta = event.getRawX() - downX;
+                    if (openListener) {
+                        if (delta > OPEN_THRESHOLD_PX) {
+                            openSidebar();
+                            return true;
+                        }
+                    } else if (delta < -OPEN_THRESHOLD_PX) {
+                        closeSidebar();
+                        return true;
+                    }
+                    return openListener;
+                default:
+                    return openListener;
+            }
+        }
     }
 
     @Override

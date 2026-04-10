@@ -50,3 +50,5 @@ local.properties
 .classpath
 .project
 .settings/
+# JDT / Eclipse output under Android module (not Gradle out/)
+android/bootstrap-bridge/app/bin/

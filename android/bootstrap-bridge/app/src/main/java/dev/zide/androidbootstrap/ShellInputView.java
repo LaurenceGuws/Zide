@@ -212,6 +212,7 @@ final class ShellInputView extends View {
                         host.refreshShellState();
                         return true;
                     case KeyEvent.KEYCODE_ENTER:
+                    case KeyEvent.KEYCODE_NUMPAD_ENTER:
                         host.sendDirectCodepoint('\n');
                         resetEditorState();
                         host.refreshShellState();
@@ -299,6 +300,12 @@ final class ShellInputView extends View {
             case KeyEvent.KEYCODE_X -> 0x18;
             case KeyEvent.KEYCODE_Y -> 0x19;
             case KeyEvent.KEYCODE_Z -> 0x1a;
+            case KeyEvent.KEYCODE_LEFT_BRACKET -> 0x1b;
+            case KeyEvent.KEYCODE_BACKSLASH -> 0x1c;
+            case KeyEvent.KEYCODE_RIGHT_BRACKET -> 0x1d;
+            case KeyEvent.KEYCODE_6 -> 0x1e;
+            case KeyEvent.KEYCODE_MINUS, KeyEvent.KEYCODE_SLASH -> 0x1f;
+            case KeyEvent.KEYCODE_SPACE, KeyEvent.KEYCODE_2 -> 0x00;
             default -> null;
         };
     }
