@@ -166,7 +166,7 @@ Status:
 - direct JNI → Zig → PTY input path now exists:
   - `android_shell_session.zig` exposes direct send helpers
   - `android_bridge_exports.zig` exports `nativeSendShellCodepointBridge`
-  - the bootstrap activity now owns a real `InputConnection` surface
+  - `ZideTerminalActivity` now owns a real `InputConnection` surface
 - device validation on the Note10 now proves:
   - character input reaches the shell immediately
   - Enter and Backspace work directly

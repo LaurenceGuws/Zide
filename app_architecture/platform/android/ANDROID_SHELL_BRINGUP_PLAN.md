@@ -98,7 +98,8 @@ Stop `AS-A1` when:
 
 ## Current Device Result
 
-The first `AS-A1` cut is now implemented through the bootstrap bridge.
+The first `AS-A1` cut is now implemented through the Android terminal host app
+(`android/bootstrap-bridge/`).
 
 Current shape:
 
@@ -150,7 +151,8 @@ Purpose:
 
 ## Current Product Result
 
-`AS-A3` first cut is now implemented in the bootstrap bridge.
+`AS-A3` first cut is now implemented in the Android terminal host app
+(`android/bootstrap-bridge/`).
 
 Current input shape:
 
@@ -172,7 +174,7 @@ Architecture:
   directly on the active session handle
 - `android_runtime_bridge.zig` exposes `sendShellCodepoint` for JNI
 - `android_bridge_exports.zig` exports `nativeSendShellCodepointBridge`
-- the bootstrap activity now exposes a dedicated IME surface with:
+- `ZideTerminalActivity` now exposes a dedicated IME surface with:
   - `onCheckIsTextEditor()`
   - `onCreateInputConnection(...)`
   - composing/commit/selection handling

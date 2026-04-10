@@ -76,7 +76,7 @@ Repo-side support for that workflow now lives in Gradle:
 
 ## Current Product Shell
 
-Current bootstrap product view is shell-first:
+Current product view is shell-first:
 
 - transcript owns the screen
 - terminal tap opens the IME path
