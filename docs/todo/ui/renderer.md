@@ -1508,14 +1508,35 @@ Current evidence:
 - this is a narrow path-decision ownership transfer only; execution behavior
   still flows through the existing terminal present transaction seams
 
-Next step rule:
+Next reviewable cut:
 
-- do not guess the follow-up ticket from stale gate-5 momentum
-- rerank from current contract evidence before opening another renderer cut
-- current candidate blocker classes are:
-  - presentable lifecycle parity
-  - frame/present routine neutrality for a third backend
-  - any stronger Android-forcing contradiction proved after `RB-B3.d`
+- `RB-B3.e` Presentable lifecycle parity
+
+Purpose:
+
+- make the next shared terminal presentable lifecycle seam more backend-neutral
+  so OpenGL retained-target semantics do not remain the de facto reference
+  shape over Metal snapshot/composition behavior
+
+Owner docs:
+
+- `app_architecture/ui/PRESENTABLE_LIFECYCLE_PARITY_PLAN.md`
+- `app_architecture/ui/RENDER_BACKEND_CONTRACT.md`
+- `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md`
+
+Acceptance criteria:
+
+- the next presentable lifecycle seam is explicit in shared code and docs
+- shared code no longer reads like it is asking for "retained update if
+  possible, fallback otherwise" as the primary lifecycle contract
+- OpenGL and Metal satisfy one clearer presentable lifecycle vocabulary through
+  backend-owned mechanics
+
+Do not do:
+
+- do not widen into general backend-runtime storage cleanup
+- do not reopen Metal validation as part of the structural cut
+- do not start Android renderer backend code here
 
 ## Milestone C: Vulkan Fit Audit
 

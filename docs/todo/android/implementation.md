@@ -102,23 +102,22 @@ That means:
 
 ## Current Priority
 
-No new Android-owned ticket should be invented here until the renderer queue
-reranks the next shared blocker explicitly.
+**`AR-B3` / `RB-B3.e`** — this is the active ticket.
 
-Current renderer truth:
+Make presentable lifecycle parity more honest behind neutral types so Android
+does not inherit "OpenGL retained target is the real model, Metal is the
+fallback model" as shared renderer truth.
 
-- `AR-B2` / `RB-B3.d` is already met
-- shared widget/runtime no longer branches on
-  `usesDirectTerminalPresentation(...)`
-- the next blocker must now be named from current gate #2 / gate #5 evidence,
-  not from stale pre-completion wording
+Owner docs:
 
-Immediate rule:
+- `app_architecture/ui/PRESENTABLE_LIFECYCLE_PARITY_PLAN.md`
+- `docs/todo/ui/renderer.md`
+
+Guardrails:
 
 - do not drift back into Android host/tooling cleanup
 - do not reopen `AS-A3` polish
-- take the next renderer cut only after the renderer queue records the new
-  blocker explicitly
+- do not start Android GLES backend code from this ticket
 
 ## Parked (not blocking)
 
@@ -383,9 +382,8 @@ Current follow-up:
 - `AR-B2` is also structurally complete:
   widget/runtime no longer carries direct-vs-retained terminal-present path
   decisions
-- the next Android renderer adoption unblock must now be reranked explicitly
-  from current renderer authority instead of leaving a vague "more gate 5"
-  continuation here
+- the next Android renderer adoption unblock is `AR-B3`:
+  presentable lifecycle parity behind neutral types
 
 ## Current Research Read
 
