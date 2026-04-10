@@ -1129,29 +1129,7 @@ pub fn runPresentation(
     const Hooks = struct {
         pub const Result = TerminalPresentResult;
 
-        pub fn runDirect(plan: TerminalPresentPlan, ctx: Ctx, renderer_local: @TypeOf(renderer)) Result {
-            const fast = runFastPresentIfAvailable(
-                &ctx.self_widget.surface,
-                renderer_local,
-                plan,
-                ctx.terminal_view,
-                ctx.view_cells_len,
-                ctx.draw_cursor,
-                ctx.cursor,
-                ctx.cursor_style,
-                ctx.hover_link_id,
-                ctx.composing_active,
-                ctx.composing_hash,
-                ctx.bg_color,
-                ctx.x,
-                ctx.y,
-                ctx.width,
-                ctx.height,
-                ctx.view_geometry,
-                ctx.note_present_ctx,
-                note_present,
-            );
-            if (fast.outcome == .reused) return fast;
+        pub fn executeDirectPresentFlow(plan: TerminalPresentPlan, ctx: Ctx, renderer_local: @TypeOf(renderer)) Result {
             const can_attempt_partial = !ctx.has_kitty and
                 renderer_presentable_host.terminalPresentableInfo(renderer_local) != null and
                 ctx.terminal_view.rows > 0 and
@@ -1268,29 +1246,7 @@ pub fn runPresentation(
             };
         }
 
-        pub fn runRetained(plan: TerminalPresentPlan, ctx: Ctx, renderer_local: @TypeOf(renderer)) Result {
-            const fast = runFastPresentIfAvailable(
-                &ctx.self_widget.surface,
-                renderer_local,
-                plan,
-                ctx.terminal_view,
-                ctx.view_cells_len,
-                ctx.draw_cursor,
-                ctx.cursor,
-                ctx.cursor_style,
-                ctx.hover_link_id,
-                ctx.composing_active,
-                ctx.composing_hash,
-                ctx.bg_color,
-                ctx.x,
-                ctx.y,
-                ctx.width,
-                ctx.height,
-                ctx.view_geometry,
-                ctx.note_present_ctx,
-                note_present,
-            );
-            if (fast.outcome == .reused) return fast;
+        pub fn executePresentableRefreshFlow(_: TerminalPresentPlan, ctx: Ctx, renderer_local: @TypeOf(renderer)) Result {
             const surface_update_plan = buildExecutionUpdatePlan(
                 ctx.self_widget,
                 renderer_local,
@@ -1343,7 +1299,7 @@ pub fn runPresentation(
         height,
         blink_requires_partial,
     );
-    return renderer_presentable_host.runTerminalPresentPath(renderer, plan, Ctx{
+    const ctx = Ctx{
         .self_widget = self,
         .shell = shell,
         .terminal_view = terminal_view,
@@ -1368,7 +1324,30 @@ pub fn runPresentation(
         .note_present_ctx = note_present_ctx,
         .view_cells_len = view_cells_len,
         .bg_color = bg_color,
-    }, Hooks);
+    };
+    const fast = runFastPresentIfAvailable(
+        &self.surface,
+        renderer,
+        plan,
+        terminal_view,
+        view_cells_len,
+        draw_cursor,
+        cursor,
+        cursor_style,
+        hover_link_id,
+        composing_active,
+        composing_hash,
+        bg_color,
+        x,
+        y,
+        width,
+        height,
+        view_geometry,
+        note_present_ctx,
+        note_present,
+    );
+    if (fast.outcome == .reused) return fast;
+    return renderer_presentable_host.runTerminalPresentExecution(renderer, plan, ctx, Hooks);
 }
 
 pub fn beginViewportClip(

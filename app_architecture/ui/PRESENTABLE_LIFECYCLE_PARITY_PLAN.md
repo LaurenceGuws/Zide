@@ -113,3 +113,10 @@ Stop when:
   cycle" to the more honest remaining problem:
   OpenGL and Metal still satisfy that refresh seam through uneven underlying
   mechanics
+- the third code-facing cut is now in too:
+  - shared terminal widget runtime no longer owns the direct-surface versus
+    retained-surface execution branch
+  - fast reuse remains widget-owned, but the present-path execution decision
+    now terminates in `renderer_presentable_host.zig`
+  - this removes another product-significant backend split from shared widget
+    code without overclaiming lifecycle parity

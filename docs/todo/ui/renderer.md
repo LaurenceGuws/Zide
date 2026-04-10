@@ -141,6 +141,17 @@ Gate #3 remains met for the `SurfaceDraw` surface. Do not reopen gate #4
 without new ownership pressure that proves the sanctioned backend-host surface
 is no longer honest.
 
+Current `RB-B3.e` checkpoint:
+
+- shared terminal widget runtime no longer owns the direct-surface versus
+  retained-surface execution branch for terminal presentation
+- that execution split now terminates in
+  `src/ui/renderer/renderer_presentable_host.zig`
+- the remaining blocker is therefore narrower:
+  backend-owned mechanics still differ, and `TerminalPresentPath` still
+  exists as a backend-host decision surface, but shared widget/runtime flow no
+  longer branches on it directly
+
 Gate-4 closure note:
 
 - shared font/text/surface/vertex-stream helper access now routes through

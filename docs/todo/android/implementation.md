@@ -126,6 +126,9 @@ Current checkpoint:
   than retained-target update terms
 - the active widget/runtime refresh flow now also uses that neutral language
   end-to-end instead of retained-path naming
+- shared widget/runtime no longer owns the direct-versus-retained execution
+  branch for terminal presentation; that choice now terminates in
+  `renderer_presentable_host.zig`
 - this does not claim parity is solved yet
 - it makes the remaining blocker narrower and more honest before deeper
   presentable work

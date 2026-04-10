@@ -20,23 +20,32 @@ pub const DirectTerminalPresentExecutionResult = struct {
     timing: TerminalPresentTiming = .{},
 };
 
-pub fn runTerminalPresentPath(renderer: anytype, plan: TerminalPresentPlan, ctx: anytype, comptime Hooks: type) TerminalPresentResult {
-    return switch (renderer.backend.terminalPresentPath(renderer)) {
-        .direct_surface => Hooks.runDirect(plan, ctx, renderer),
-        .retained_surface => Hooks.runRetained(plan, ctx, renderer),
-    };
+pub fn terminalUsesRetainedPresentSurface(renderer: anytype) bool {
+    return renderer.backend.terminalPresentPath(renderer) == .retained_surface;
+}
+
+pub fn runTerminalPresentExecution(
+    renderer: anytype,
+    plan: TerminalPresentPlan,
+    ctx: anytype,
+    comptime Hooks: type,
+) TerminalPresentResult {
+    if (terminalUsesRetainedPresentSurface(renderer)) {
+        return Hooks.executePresentableRefreshFlow(plan, ctx, renderer);
+    }
+    return Hooks.executeDirectPresentFlow(plan, ctx, renderer);
 }
 
 pub fn terminalAllowsRecentInputForceFullPresentation(renderer: anytype) bool {
-    return renderer.backend.terminalPresentPath(renderer) != .direct_surface;
+    return terminalUsesRetainedPresentSurface(renderer);
 }
 
 pub fn terminalAllowsFastPresentReuse(renderer: anytype, sync_updates_active: bool) bool {
-    return sync_updates_active or renderer.backend.terminalPresentPath(renderer) == .direct_surface;
+    return sync_updates_active or !terminalUsesRetainedPresentSurface(renderer);
 }
 
 pub fn terminalSupportsDirectPartialUpdate(renderer: anytype) bool {
-    return renderer.backend.terminalPresentPath(renderer) == .direct_surface;
+    return !terminalUsesRetainedPresentSurface(renderer);
 }
 
 pub fn ensureTerminalPresentable(renderer: anytype, width: i32, height: i32) bool {
@@ -95,7 +104,7 @@ pub fn runDirectTerminalPresentExecution(
     comptime Hooks: type,
 ) DirectTerminalPresentExecutionResult {
     var result = DirectTerminalPresentExecutionResult{};
-    if (renderer.backend.terminalPresentPath(renderer) != .direct_surface) return result;
+    if (terminalUsesRetainedPresentSurface(renderer)) return result;
 
     if (plan.update_intent == .partial) {
         result = Hooks.tryPartialUpdate(ctx, renderer, plan);
@@ -126,23 +135,24 @@ pub fn presentExistingTerminalPresentable(
     note_present_ctx: anytype,
     comptime Hooks: type,
 ) void {
-    switch (renderer.backend.terminalPresentPath(renderer)) {
-        .direct_surface => Hooks.noteDirectReuse(
+    if (terminalUsesRetainedPresentSurface(renderer)) {
+        Hooks.noteRetainedReuse(
             note_present_ctx,
             renderer,
             sample_generation,
             view_geometry,
             viewport_w,
             viewport_h,
-        ),
-        .retained_surface => Hooks.noteRetainedReuse(
+        );
+    } else {
+        Hooks.noteDirectReuse(
             note_present_ctx,
             renderer,
             sample_generation,
             view_geometry,
             viewport_w,
             viewport_h,
-        ),
+        );
     }
     drawTerminalPresentable(renderer, .{
         .x = view_geometry.origin_x,
