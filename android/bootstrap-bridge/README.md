@@ -3,6 +3,14 @@
 This is the active Android app host for Zide shell bring-up and Android-native
 product work.
 
+## Naming Note
+
+- directory path is still `android/bootstrap-bridge/` for continuity
+- active app identity is terminal-first:
+  - package/application id: `dev.zide.terminal`
+  - launcher activity: `ZideTerminalActivity`
+- treat directory rename as a separate, optional repo-structure cut
+
 ## Default Workflow
 
 From repo root:

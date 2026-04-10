@@ -69,6 +69,10 @@ Execution discipline:
   - `/system/bin/sh` runs through the repo terminal engine
   - product view is shell-first
   - IME overlay handling is live against the real shell path
+  - app identity is now terminal-first:
+    - package/application id: `dev.zide.terminal`
+    - launcher activity: `ZideTerminalActivity`
+  - repo path remains `android/bootstrap-bridge/` intentionally for now
 - The current mobile product boundary is:
   - Zig owns terminal/runtime/core rendering primitives
   - Android code owns Android lifecycle/input/insets/overlay behavior
