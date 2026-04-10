@@ -16,7 +16,7 @@ Clean up file and folder layout for ownership clarity, navigability, and removal
 
 - `docs/review/archive/FILE_LAYOUT_HOTSPOTS_REVIEW.md`
 - `docs/review/archive/SRC_APP_DOMAIN_MAP.md`
-- `docs/todo/terminal/modularization.md`
+- `docs/todo/terminal/vt_core_rearchitecture.md`
 - `docs/todo/ui/widget_modularization.md`
 - `docs/todo/editor/modularization.md`
 - `docs/todo/ui/renderer.md`

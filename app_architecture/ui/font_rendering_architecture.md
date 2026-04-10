@@ -168,9 +168,7 @@ Current correction, 2026-04-04:
 
 - the renderer/font contract correction was necessary but not sufficient
 - the app still leaks raw scale and snap policy into widgets
-- the active high-level ownership proposal for fixing that broader problem is:
-  - [WINDOW_SCALE_GEOMETRY_CONTRACT_PROPOSAL_2026-04-04.md](/home/home/personal/zide/app_architecture/ui/WINDOW_SCALE_GEOMETRY_CONTRACT_PROPOSAL_2026-04-04.md)
-- the exact frozen public contract for that lane now lives in:
+- the exact public contract for that lane now lives in:
   - [WINDOW_SCALE_GEOMETRY_DESIGN.md](/home/home/personal/zide/app_architecture/ui/WINDOW_SCALE_GEOMETRY_DESIGN.md)
 - the active execution queue for that broader lane is:
   - [window_scale_geometry.md](/home/home/personal/zide/docs/todo/ui/window_scale_geometry.md)

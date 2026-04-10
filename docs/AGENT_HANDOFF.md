@@ -3,87 +3,47 @@
 This file is a high-level session entrypoint for contributors and agents. It is
 not a progress log and should stay brief.
 
+### Product Identity (permanent)
+
+See `app_architecture/ENGINEERING.md` § "Product Identity" for the full
+statement. The short version:
+
+- The core is pure Zig — ruthlessly clean, fast, lean. No single platform
+  shapes it.
+- Native implementations are first-class, not wrappers. Each targets the most
+  competitive version of Zide on its platform.
+- No fallbacks, no stale code, no compromise for delivery speed.
+- The renderer backend abstraction is intentionally open-ended — it adapts to
+  proved truth, not speculation.
+
 ### Current Focus
 
-- The only default product focus is Android terminal excellence until replaced
-  by new authority.
-- The repo goal is not generic renderer cleanup for its own sake.
-- The repo goal is:
-  - build the best Android terminal emulator we can
-  - preserve Zide's resource-discipline and correctness values while doing it
-  - use renderer/backend work only when it directly unblocks honest Android
-    terminal implementation
-- Current product sequencing:
-  - mobile terminal first
-  - extract reusable mobile-native fundamentals while building it
-  - mobile editor second
-  - integrated IDE mode only after terminal and editor each stand on their own
-- Do not force a packaging decision yet:
-  - one APK with multiple modes may be right later
-  - separate mobile products sharing core code may also be right later
-  - keep the architecture loose enough to support either
-- Android host/device truth is now real enough that Android is no
-  longer a hypothetical future pressure.
-- Metal live validation is paused until explicitly reopened; do not let that
-  stall active Android work.
+Get native Android rendering working. That means completing renderer gate #5
+so the backend abstraction is clean enough for a first-class Android GLES
+backend.
 
-### Current Direction
-
-- The Android queue is now the default execution queue.
-- Renderer work is still important, but only as a dependency lane for Android
-  terminal adoption.
-- Android platform code should stay disciplined, but it is allowed to own
-  native mobile interaction surfaces where that produces the best UX.
-- Do not force all mobile product behavior through the GPU texture path.
-- Preferred execution style:
-  - do the highest-leverage Android-unblocking work next
-  - keep terminal-host-scoped Android proof work below `src/ui/renderer/` until the
-    renderer queue explicitly opens that lane
-  - do not reopen old renderer lanes unless they are the actual next blocker
-    for Android terminal progress
-  - do not drift into generic desktop/backend cleanup once the Android blocker
-    is known
-
-Execution discipline:
-
-- default to the Android execution queue:
-  - `docs/todo/android/implementation.md`
-- use the renderer queue only when the Android queue says the next blocker is a
-  renderer gate
-- treat queue items as executable tickets, not vague themes
-- if a task does not clearly map to the Android queue or a named Android
-  blocker, it is probably drift
+- Active ticket: `AR-B2` / `RB-B3.d`
+  - remove remaining `usesDirectTerminalPresentation(...)` decisions from
+    terminal widget runtime
+  - owner: `app_architecture/ui/TERMINAL_PRESENT_PATH_DECISION_PLAN.md`
+- Renderer work is in scope only when it is the direct next blocker — not for
+  generic cleanup
+- `AS-A3` (modifier-latch input UX) is parked open — works well enough now,
+  do not polish or let it block rendering progress
+- Gate #2 (Metal live verification) is paused; do not let it stall Android
 
 ### Current State
 
-- Android host truth is strong on the Note10:
-  - lifecycle and surface identity are real
-  - EGL surface recreation is proved for `replaced` and `retired -> acquired`
-  - one EGL context and one minimal GLES texture survive those transitions on
-    the current device path
-- Android PTY baseline is also real:
+- Android foundation is real on the Note10:
+  - lifecycle, surface identity, EGL surface recreation all proved
   - disposable app-process-owned PTY lifetime is the baseline
-  - service-owned PTY survival is validated as an optional product lane, not
-    the default answer
-- Android shell is now real on device:
-  - `/system/bin/sh` runs through the repo terminal engine
-  - product view is shell-first
-  - IME overlay handling is live against the real shell path
-  - app identity is now terminal-first:
-    - package/application id: `dev.zide.terminal`
-    - launcher activity: `ZideTerminalActivity`
-  - repo path remains `android/terminal-host/` intentionally for now
-- The current mobile product boundary is:
+  - live shell via terminal engine, key-by-key PTY input via `InputConnection`
+  - app identity: `dev.zide.terminal` / `ZideTerminalActivity`
+  - repo path: `android/terminal-host/`
+- Ownership boundary:
   - Zig owns terminal/runtime/core rendering primitives
-  - Android code owns Android lifecycle/input/insets/overlay behavior
-  - future mobile UX may live on both sides when that is the more honest fit
-- The current active Android ticket is:
-  - `AS-A3` in `docs/todo/android/implementation.md`
-  - direct shell input ownership beyond the temporary composer
-- The remaining shared-renderer blocker for first-class Android renderer work
-  is still gate #5, but it is not the default lane right now.
-- Gate #2 should be treated as closed for active work until Metal validation is
-  explicitly reopened.
+  - Android owns lifecycle/input/insets/overlay surfaces
+- Renderer gate status: #1–#4 met, #5 active blocker, #2 deferred
 
 ### Where To Look
 
@@ -92,6 +52,7 @@ Execution discipline:
 - Android authority:
   - `app_architecture/platform/android/ANDROID_SHELL_BRINGUP_PLAN.md`
   - `app_architecture/platform/android/RENDER_BACKEND.md`
+  - `app_architecture/platform/android/ANDROID_TERMINAL_HOST_PLAN.md`
   - `app_architecture/platform/android/ANDROID_GLES_BINDING_PLAN.md`
   - `app_architecture/platform/android/ANDROID_PTY_LIFETIME_PLAN.md`
 - Renderer dependency authority:

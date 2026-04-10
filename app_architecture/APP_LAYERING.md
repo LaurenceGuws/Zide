@@ -120,7 +120,7 @@ Historical rollout and validation for this split live in:
 
 ## Current Anchors
 - **Editor modularization plan**: `docs/todo/editor/modularization.md`.
-- **Terminal modularization plan**: `docs/todo/terminal/modularization.md`.
+- **Terminal rearchitecture**: `docs/todo/terminal/vt_core_rearchitecture.md`.
 - **Terminal API + layering rules**: `app_architecture/terminal/TERMINAL_API.md`.
 
 ## Layer Boundaries (import rules)

@@ -399,7 +399,6 @@ Why:
 
 ## Related docs
 
-- Alt screen redesign proposal: `app_architecture/terminal/ALT_SCREEN_REDESIGN.md`.
 - Engine split authority: `app_architecture/terminal/VT_CORE_DESIGN.md`.
 - Present-path authority:
   - `app_architecture/terminal/present/WAYLAND_DESIGN_BRIEF.md`

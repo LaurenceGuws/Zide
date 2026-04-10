@@ -136,14 +136,14 @@ This proves:
 - the next Android product question should be prompt/viewport/IME behavior
   against that live shell, not more terminal-host speculation
 
-## Next Cut
+## Current Cut
 
-`AS-A3` direct shell input
+`AS-A3` direct shell input — modifier-latch assist bar
 
 Purpose:
 
-- move beyond the temporary line-composer path toward real key-by-key shell
-  input on Android
+- own the full Android terminal input surface with a mobile-first model, not a
+  Termux clone: modifier state is a first-class toggle, not a per-combo button
 
 ## Previous Cut
 
@@ -195,12 +195,14 @@ What this does not yet prove:
 
 Next likely follow-up:
 
-1. extend the new Ctrl-modified key path beyond ASCII letters only if a real
-   Android input device proves that narrower mapping insufficient
-2. keep the current `InputConnection` model small and honest while terminal UX
-   pressure is still local to shell mode
-3. do not jump to a larger terminal-input surface unless the current model
-   proves materially broken for the next product question
+1. implement the modifier-latch assist bar: Ctrl/Alt/Esc/Tab as stateful
+   toggle buttons — latch → tap IME key → send modified byte → unlatch; retire
+   the current hardcoded Ctrl+A..Z byte path once the latch model is
+   device-validated
+2. let real shell use on the Note10 drive which gaps are worth closing next;
+   do not extend input coverage speculatively beyond the latch model
+3. keep the `InputConnection` editor model stable; only widen the input surface
+   if a concrete device or use case proves the current model materially broken
 
 ## Current `AS-A3` Hardening
 

@@ -184,6 +184,6 @@ Use `zig build check-terminal-imports` to enforce these rules.
 | harness | any (test-only) |
 
 ## Fixture Scope (authoritative)
-- VT replay fixtures: see `docs/todo/terminal/modularization.md`
+- VT replay fixtures: see `docs/todo/terminal/vt_core_rearchitecture.md`
 - Harness API fixtures (selection)
 - Encoder unit tests (CSI-u)

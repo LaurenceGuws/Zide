@@ -15,7 +15,6 @@ shape.
 
 Related docs:
 
-- [WINDOW_SCALE_GEOMETRY_CONTRACT_PROPOSAL_2026-04-04.md](/home/home/personal/zide/app_architecture/ui/WINDOW_SCALE_GEOMETRY_CONTRACT_PROPOSAL_2026-04-04.md)
 - [UI_SCALE_GEOMETRY_SCRUTINY_2026-04-04.md](/home/home/personal/zide/docs/research/UI_SCALE_GEOMETRY_SCRUTINY_2026-04-04.md)
 - [window_scale_geometry.md](/home/home/personal/zide/docs/todo/ui/window_scale_geometry.md)
 

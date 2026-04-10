@@ -22,7 +22,6 @@ Status note, 2026-03-15:
 ## Context
 
 - Renderer work is tracked in `docs/todo/ui/renderer.md`.
-- SDL3 migration is tracked in `docs/todo/ui/sdl3_migration.md`.
 
 ```mermaid
 flowchart TB

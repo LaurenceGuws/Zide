@@ -100,21 +100,27 @@ That means:
 - otherwise the next honest move is the next gate-5 cut done explicitly in
   service of Android terminal progress
 
-Current next renderer-unblock ticket:
+## Current Priority
 
-- `AR-B2` / `RB-B3.d`
-- remove the remaining product-significant
-  `usesDirectTerminalPresentation(...)` decisions from terminal widget runtime
-  so Android does not inherit direct-vs-retained path checks in shared code
+**`AR-B2` / `RB-B3.d`** — this is the active ticket.
 
-Current next Android-owned runtime ticket:
+Remove the remaining product-significant `usesDirectTerminalPresentation(...)`
+decisions from terminal widget runtime so Android does not inherit
+direct-vs-retained path checks in shared code. This is the gate-5 cut that
+unblocks first-class native Android rendering.
 
-- `AS-A3`
-- Android direct shell input ownership
-  - remove the last temporary-composer framing from the active product path
-  - harden the real `InputConnection` + key-by-key PTY route
-  - extend direct terminal input toward control/special keys without reopening
-    renderer work early
+Owner docs:
+
+- `app_architecture/ui/TERMINAL_PRESENT_PATH_DECISION_PLAN.md`
+- `docs/todo/ui/renderer.md`
+
+## Parked (not blocking)
+
+**`AS-A3`** — Android direct shell input, modifier-latch assist bar.
+
+The current input path works for real shell use. The latch-model assist bar is
+the right long-term direction but is not being polished now. Keep the ticket
+open; do not block renderer work on it.
 
 ## Completed Tickets
 
@@ -148,16 +154,19 @@ with manual scroll detach.
 
 Purpose:
 
-- move beyond the temporary line-composer path toward real shell input
-  ownership on Android
+- own the full Android terminal input surface — not a Termux clone, but a
+  mobile-first model that treats modifier state, key sequences, and the assist
+  bar as first-class UX rather than bolted-on workarounds
 
 Acceptance:
 
-- the next Android input cut is defined against the live shell, not the old
-  terminal-host probe
-- product input is no longer limited to “type a whole line then send”
-- the live `InputConnection` path stays explicit so it does not regress into
-  hidden fallback input paths
+- the modifier-latch assist bar replaces the current hardcoded per-combo Ctrl
+  path: each modifier (Ctrl, Alt, Esc, Tab) is a toggle that latches down,
+  next IME key tap sends the modified input, modifier releases
+- no per-combo special casing for common sequences — the latch model covers
+  them all without explicit buttons for each
+- the assist bar visually reflects modifier state (latched vs idle)
+- the live `InputConnection` path stays the single active input surface
 
 Status:
 
@@ -204,12 +213,15 @@ Current result:
 
 Remaining for this ticket:
 
-- broader control-key/device coverage beyond the current Ctrl+A..Z plus
-  standard punctuation subset (`Ctrl+[`, `Ctrl+\`, `Ctrl+]`, `Ctrl+6`,
-  `Ctrl+/`, `Ctrl+Space`, `Ctrl+2`)
-- special terminal keys beyond the currently proved editor-navigation subset
-- decision on how far the current hidden-input terminal path should go before a
-  more terminal-native mobile input surface is worth opening
+- replace the current hardcoded Ctrl+A..Z path with a proper modifier-latch
+  model on the assist bar:
+  - Ctrl, Alt, Esc (and Tab) as stateful toggle buttons, not per-combo helpers
+  - latched modifier + any IME key tap → send modified byte → unlatch
+  - assist bar reflects latch state visually
+- the current hardcoded Ctrl+A..Z bytes stay in place until the latch model
+  supersedes them on device
+- stop here: do not extend special-key coverage further until the latch model
+  is device-validated and the next real gap is clear
 
 ### `AH-A4` Android Terminal Host Bridge
 

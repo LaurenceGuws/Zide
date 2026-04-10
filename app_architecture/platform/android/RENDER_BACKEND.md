@@ -181,82 +181,20 @@ The correct migration order is:
 
 ## Current Code Checkpoint
 
-The first executable Android-host cut is now active in the shared host seam:
+The shared host seam now carries full Android truth:
 
-- `src/platform/native_host.zig` can now carry:
-  - surface available vs unavailable
-  - logical and drawable size
-  - display scale and pixel density
-  - redraw-requested truth
-  - Android native window identity slot
-
-This is intentionally not GLES work.
-
-What is still missing:
-
-- Android `Activity` lifecycle mapping into `PlatformAppHost`
-- Android `Surface` / `ANativeWindow` event mapping into `PlatformRenderHost`
-- focus and IME ownership points
-- real redraw-needed / resize / surface-loss event wiring
-- Android PTY/runtime lifetime policy against pause/stop/background pressure
-
-Current event-mapping checkpoint:
-
-- the shared SDL input/event path now updates:
-  - `PlatformAppHost` lifecycle transitions for foreground/background
-  - `PlatformAppHost` surface-focus and text-input-active truth separately
-  - `PlatformRenderHost` surface metrics and redraw-requested truth on refresh
-    events
-
-This is still shared host plumbing, not Android-specific event ingestion yet.
-
-The first Android-owned mapper seam now exists too:
-
-- `src/platform/android_host.zig` owns the first Android-shaped lifecycle and
-  surface helper functions against `PlatformAppHost` and `PlatformRenderHost`
-- shared input/runtime code can delegate Android semantics there instead of
-  embedding them in renderer-owned logic
+- `src/platform/native_host.zig` carries surface availability, size, density,
+  redraw-requested, and Android native-window identity with epoch-based
+  transition tracking
+- `src/platform/android_host.zig` owns Android lifecycle/surface semantics;
+  shared code delegates there instead of embedding Android logic in SDL paths
+- `android/terminal-host/` is the active Android host app for native runtime,
+  shell, surface, and product work
 
 Historical note:
 
 - `android/host-harness/` proved the first Java-only lifecycle/surface/focus/IME
   callback ordering and has since been retired from the live tree
-- `android/terminal-host/` is the active Android host app for current native
-  runtime, shell, surface, and product work
-
-Current validation checkpoint:
-
-- local APK build now succeeds against a writable user-local SDK root with API
-  35 packages
-- the harness installs and launches on the Note10
-- the first observed device log sequence already confirms real lifecycle +
-  surface callback ordering before any renderer backend work
-- Note10 callback ordering observed so far:
-  - first launch:
-    - `activity.onCreate`
-    - `activity.onStart`
-    - `activity.onResume`
-    - `surface.created`
-    - `surface.changed`
-    - `surface.redrawNeeded`
-    - `activity.onWindowFocusChanged focus=true`
-  - IME show/hide:
-    - IME focus is distinct from window focus
-    - showing the IME triggers `surface.changed` with a much smaller surface
-      height and then `surface.redrawNeeded`
-    - hiding the IME restores the larger surface size and redraw request
-  - backgrounding:
-    - `activity.onPause`
-    - `activity.onWindowFocusChanged focus=false`
-    - `surface.destroyed`
-    - `activity.onStop`
-
-Practical consequences from that Note10 run:
-
-- Android window/surface focus must not be treated as text-input focus.
-- IME visibility is geometry and redraw pressure, not lifecycle pressure.
-- surface destruction can follow pause during backgrounding, but must still be
-  modeled as explicit surface truth rather than inferred from lifecycle alone.
 
 ## Current Android Boundary
 
@@ -318,86 +256,29 @@ Current priority rule:
 
 What is now allowed:
 
-- define the first Android GLES/EGL binding cut precisely enough to execute it
-  later as terminal-host-owned Android work
-- execute that first terminal-host-owned EGL/GLES clear/swap proof without adding
-  a real renderer backend in `src/ui/renderer/`
+- terminal-host-owned EGL/GLES binding and proof work in `android/terminal-host/`
+- executing the next Android-owned runtime question without smuggling work into
+  `src/ui/renderer/`
 
 What is still not allowed:
 
-- treat that binding plan as permission to add a real Android backend in
-  `src/ui/renderer/`
+- treating terminal-host EGL proof as permission to add a real Android backend
+  in `src/ui/renderer/`
 
-Current `AH-A4` checkpoint:
+Current Android-native state (see owning plan docs for full evidence):
 
-- `android/terminal-host/` now builds and installs on the Note10
-- the terminal host app now loads a repo-built Zig native library successfully
-- the bridge build now links `libandroid`, so native-window symbol resolution
-  fails at build time instead of later during `System.loadLibrary(...)`
-- launch-path native callback acknowledgements are live on device:
-  - `native.onCreate seq=1`
-  - `native.onStart seq=2`
-  - `native.onResume seq=3`
-  - `native.surfaceAvailable seq=4`
-  - `native.onWindowFocus seq=6`
-- the terminal host app now surfaces real native-window identity into
-  `PlatformRenderHost`
-- the Note10 currently shows one stable non-zero native-window token across
-  repeated `surface.changed` callbacks, then `token=0x0` after
-  `surface.destroyed`
-- the shared host seam now also carries a `surfaceIdentityEpoch` that stayed at
-  `1` across those same-window updates and advanced to `2` on
-  `surface.destroyed`
-- the shared Android bridge now also classifies those updates as:
-  - `acquired` on first live surface identity
-  - `unchanged` across same-window geometry churn, including forced rotation
-  - `retired` on `surface.destroyed`
-- foreground return after `retired` now also proves a later fresh `acquired`
-  path, even when the raw native-window token value can recur
-- explicit in-activity `SurfaceView` recreation now also proves a true
-  in-process `replaced` path on this Android stack
-- the bridge now routes those callbacks through `android_host.zig` and shared
-  host state instead of a private lifecycle stub
-- a HOME/background pass now also confirms:
-  - `native.onPause seq=7`
-  - `native.surfaceAvailable seq=8`
-  - `native.surfaceAvailable seq=9`
-  - `native.onWindowFocus seq=10`
-  - `native.surfaceDestroyed seq=11`
-  - `native.onStop seq=12`
-- the first shared-host cleanup forced by this lane is also done:
-  - `PlatformRenderHost` no longer carries an SDL window pointer
-  - SDL-only surface capture moved out of `native_host.zig`
-  - Android SDL refresh capture moved out of `android_host.zig`
-
-Current Android-native follow-up constraints:
-
-- future Android renderer work must honor both:
-  - `replaced` while a surface is still live
-  - `retired` then later fresh `acquired`
-- current PTY probe result says app-process-owned PTY lifetime can outlive
-  visible surface lifetime briefly, but not app-process death
-- disposable app-process-owned PTY lifetime is the current Android terminal
-  baseline
-- `android/terminal-host/` now carries the live shell path; the earlier
-  disposable PTY probe UI is retired from the app and retained only as
-  architecture evidence
-- the separate service-owned survival probe lane is now explicit:
-  - it exists to measure whether foreground-service ownership changes the
-    survival story materially enough to justify future product cost
-  - the first Note10 probe now proves that service-owned PTY survival is
-    technically viable, but not yet compelling enough to replace the current
-    disposable baseline by default
-  - it is still not renderer work and not terminal product integration
-- do not jump to GLES from native-load success, surface truth, or PTY
-  confidence alone while the renderer queue still blocks Android rendering
-- if Android GLES/EGL binding work resumes, the first honest cut must stay in
-  `android/terminal-host/` plus the native bridge surface defined in
-  `ANDROID_GLES_BINDING_PLAN.md`
-- that first probe is now real on the Note10:
-  - `native.surfaceAvailable ... gles=drawn`
-  - `native.surfaceRedrawNeeded ... gles=drawn`
-  - same-surface geometry churn stays `transition=unchanged gles=drawn`
+- `AH-A4` terminal-host bridge: met — `android/terminal-host/` loads the repo
+  Zig library, lifecycle/surface callbacks route through `android_host.zig` and
+  shared host state, surface identity transitions (`acquired`, `unchanged`,
+  `replaced`, `retired`) are real on the Note10
+- `AP-A1` PTY lifetime: met — disposable app-process-owned PTY lifetime is the
+  Android terminal baseline; the live shell path in `android/terminal-host/`
+  has replaced the earlier probe UI
+- `AP-A2` service PTY probe: met — service-owned PTY survival is technically
+  viable but has not displaced the disposable baseline as the default answer
+- `AH-A5`–`AH-A7` EGL binding + texture probes: met — terminal-host-owned
+  EGL/GLES clear/swap and texture upload/update/resize are proved on the Note10;
+  one EGL context survives surface replacement; resize forces honest reallocation
 
 ## Explicit Anti-Goals
 

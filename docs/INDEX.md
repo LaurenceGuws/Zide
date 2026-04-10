@@ -81,6 +81,9 @@ Quick reading guide:
   Metal backend structure, ownership truth, and contributor workflow.
 - `app_architecture/platform/android/RENDER_BACKEND.md` — Android Activity +
   `ANativeWindow` host/backend authority.
+- `app_architecture/platform/android/ANDROID_TERMINAL_HOST_PLAN.md` — first
+  repo-owned Android terminal-host bridge: native library loading, lifecycle,
+  and surface callbacks into native code.
 - `app_architecture/ui/WINDOW_SCALE_GEOMETRY_DESIGN.md` — exact public widget
   and terminal geometry contract plus first API deletion list for the scale
   ownership lane.

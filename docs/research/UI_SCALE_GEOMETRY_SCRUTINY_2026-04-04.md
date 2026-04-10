@@ -12,10 +12,10 @@ This document does four things:
 4. sets up a high-level redesign proposal without prematurely turning it into a
    TODO queue
 
-This is scrutiny material, not final architecture authority. The proposed
-target contract lives in:
+This is scrutiny material, not final architecture authority. The current
+contract lives in:
 
-- `app_architecture/ui/WINDOW_SCALE_GEOMETRY_CONTRACT_PROPOSAL_2026-04-04.md`
+- `app_architecture/ui/WINDOW_SCALE_GEOMETRY_DESIGN.md`
 
 ## External Comparison
 
@@ -578,6 +578,6 @@ It is a half-normalized hybrid.
 
 ## Next Authority
 
-The proposed end-state contract is documented in:
+The current contract is documented in:
 
-- `app_architecture/ui/WINDOW_SCALE_GEOMETRY_CONTRACT_PROPOSAL_2026-04-04.md`
+- `app_architecture/ui/WINDOW_SCALE_GEOMETRY_DESIGN.md`

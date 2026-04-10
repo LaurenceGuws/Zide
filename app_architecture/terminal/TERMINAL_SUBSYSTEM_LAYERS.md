@@ -11,7 +11,7 @@ This doc complements, but does not replace:
 
 - `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md`
 - `app_architecture/terminal/VT_CORE_DESIGN.md`
-- `app_architecture/terminal/TERMINAL_ARCHITECTURE_COMPARISON.md`
+- `docs/review/archive/terminal/TERMINAL_ARCHITECTURE_COMPARISON_2026-03-14.md`
 - `docs/todo/terminal/vt_core_rearchitecture.md`
 
 Use this file when the question is:

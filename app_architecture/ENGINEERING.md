@@ -1,5 +1,39 @@
 # Engineering guidelines
 
+## Product Identity
+
+Zide is a pure-Zig terminal engine with first-class native implementations on
+each target platform. These are not separable things.
+
+**The core is the real product.** It is a ruthlessly clean, fast, lean Zig
+engine layer. It is not shaped by any single platform. It does not carry
+platform-specific concessions, fallbacks, or convenience shims. No single
+target environment gets to decide core shape or standards.
+
+**Native implementations are first-class, not wrappers.** Each one targets the
+most competitive version of Zide achievable on its platform:
+
+- Linux: native OpenGL, compositor-aware, full terminal fidelity
+- Windows: native shell integration, compositor-native chrome
+- macOS: Metal by the official spec, not approximated
+- Android: first-class mobile terminal — aim beyond what the platform has seen
+
+**Quality rules that follow:**
+
+- No fallbacks in core for platform weaknesses — those belong in the native
+  layer or do not exist
+- No stale code blocks tolerated at any layer
+- No reinventing what the platform already provides cleanly
+- The renderer backend abstraction is intentionally open-ended — it adapts to
+  proved real-world truth, not speculation
+- If two platforms need different behavior, the difference lives in the native
+  layer, not the core
+- Pure architecture is not negotiable for delivery speed
+
+---
+
+## Implementation guidelines
+
 Goal: keep memory and threading safe and boring. These rules are simple on purpose.
 
 Scope note, 2026-03-15:

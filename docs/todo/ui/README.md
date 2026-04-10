@@ -7,7 +7,6 @@ Use it for:
 - renderer backend abstraction execution
 - widget modularization
 - font-rendering execution work
-- SDL3 migration cleanup
 - terminal-specific UI polish lanes
 
 Current high-signal entrypoints:
@@ -22,7 +21,6 @@ Current high-signal entrypoints:
 Maintenance or supporting queues:
 
 - `widget_modularization.md` — mostly-complete extraction queue with a few remaining boundary/verification items
-- `sdl3_migration.md` — effectively closed except for small cleanup residue
 - `terminal_ligatures.md` — focused future quality lane, not active baseline hardening
 
 Durable UI architecture and rendering direction live under

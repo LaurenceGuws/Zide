@@ -18,7 +18,6 @@ It is the app-wide ownership lane for:
 Current authority and evidence:
 
 - [WINDOW_SCALE_GEOMETRY_DESIGN.md](/home/home/personal/zide/app_architecture/ui/WINDOW_SCALE_GEOMETRY_DESIGN.md)
-- [WINDOW_SCALE_GEOMETRY_CONTRACT_PROPOSAL_2026-04-04.md](/home/home/personal/zide/app_architecture/ui/WINDOW_SCALE_GEOMETRY_CONTRACT_PROPOSAL_2026-04-04.md)
 - [UI_SCALE_GEOMETRY_SCRUTINY_2026-04-04.md](/home/home/personal/zide/docs/research/UI_SCALE_GEOMETRY_SCRUTINY_2026-04-04.md)
 - [font_rendering_architecture.md](/home/home/personal/zide/app_architecture/ui/font_rendering_architecture.md)
 - [font_rendering.md](/home/home/personal/zide/docs/todo/ui/font_rendering.md)
