@@ -5,7 +5,7 @@ product work.
 
 ## Naming Note
 
-- directory path is still `android/bootstrap-bridge/` for continuity
+- directory path is still `android/terminal-host/` for continuity
 - active app identity is terminal-first:
   - package/application id: `dev.zide.terminal`
   - launcher activity: `ZideTerminalActivity`
@@ -43,7 +43,7 @@ ops/android_bootstrap_bridge.py logcat
 ## Tooling Rules
 
 - use env-driven SDK paths
-- use the Gradle wrapper under `android/bootstrap-bridge/`
+- use the Gradle wrapper under `android/terminal-host/`
 - do not track `.classpath`, `.project`, `.settings/`, or generated IDE output
 - do not import `dev_references/` as active Java projects
 
@@ -61,17 +61,17 @@ things:
 - exposes `:ZideAndroidHostCd`
 - exposes `:ZideAndroidEnv`
 
-For Java work, prefer opening `android/bootstrap-bridge/` as the workspace
+For Java work, prefer opening `android/terminal-host/` as the workspace
 root.
 
 Current JDTLS rule:
 
-- treat `android/bootstrap-bridge/` as the Java/Gradle root
+- treat `android/terminal-host/` as the Java/Gradle root
 - do not point JDTLS at the repo root
 - if JDTLS gets stuck on stale Android metadata, clear the workspace and reopen:
 
 ```sh
-rm -rf ~/.local/share/nvim/site/java/workspace-root/bootstrap-bridge-7912295e
+rm -rf ~/.local/share/nvim/site/java/workspace-root/terminal-host-*
 ```
 
 Repo-side support for that workflow now lives in Gradle:

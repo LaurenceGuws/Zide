@@ -14,7 +14,7 @@ from typing import NoReturn
 
 
 ROOT = Path(__file__).resolve().parents[1]
-BRIDGE_DIR = ROOT / "android" / "bootstrap-bridge"
+BRIDGE_DIR = ROOT / "android" / "terminal-host"
 APK_PATH = BRIDGE_DIR / "app" / "build" / "outputs" / "apk" / "debug" / "app-debug.apk"
 PACKAGE_NAME = "dev.zide.terminal"
 ACTIVITY_NAME = f"{PACKAGE_NAME}/.ZideTerminalActivity"
@@ -226,7 +226,14 @@ def logcat() -> None:
 
 def uninstall_legacy_packages(adb: Path) -> None:
     for package_name in LEGACY_PACKAGE_NAMES:
-        subprocess.run([str(adb), "uninstall", package_name], check=False)
+        listing = subprocess.run(
+            [str(adb), "shell", "pm", "list", "packages", package_name],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if f"package:{package_name}" in listing.stdout:
+            subprocess.run([str(adb), "uninstall", package_name], check=False)
 
 
 def doctor() -> None:

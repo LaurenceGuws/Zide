@@ -31,7 +31,7 @@ It is:
 
 The first Android shell cut should be:
 
-- bootstrap-bridge-owned
+- terminal-host-owned
 - terminal-FFI-backed
 - PTY-backed through the real terminal engine
 - transcript-oriented, not renderer-oriented
@@ -99,7 +99,7 @@ Stop `AS-A1` when:
 ## Current Device Result
 
 The first `AS-A1` cut is now implemented through the Android terminal host app
-(`android/bootstrap-bridge/`).
+(`android/terminal-host/`).
 
 Current shape:
 
@@ -152,7 +152,7 @@ Purpose:
 ## Current Product Result
 
 `AS-A3` first cut is now implemented in the Android terminal host app
-(`android/bootstrap-bridge/`).
+(`android/terminal-host/`).
 
 Current input shape:
 
@@ -232,7 +232,7 @@ Current Java ownership is also cleaner:
 
 Current local-tooling support is also explicit:
 
-- Neovim/JDTLS should import `android/bootstrap-bridge/` as the Java root
+- Neovim/JDTLS should import `android/terminal-host/` as the Java root
 - `app/build.gradle` now declares the Eclipse/Buildship classpath support JDTLS
   was missing for this Android app module:
   - `src/main/java`

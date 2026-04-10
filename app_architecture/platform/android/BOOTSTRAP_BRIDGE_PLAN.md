@@ -4,7 +4,7 @@ Purpose: define the first repo-owned Android bootstrap lane for the real Zig
 runtime, after host-truth probing and before Android renderer backend work.
 
 This doc is retained as completed architecture authority for `AH-A4`.
-`android/bootstrap-bridge/` is now the active Android terminal host, not a
+`android/terminal-host/` is now the active Android terminal host, not a
 future bootstrap proposal.
 
 Owner docs:
@@ -74,7 +74,7 @@ Acceptance:
 
 Current checkpoint:
 
-- `android/bootstrap-bridge/` is the first repo-owned Android runtime app
+- `android/terminal-host/` is the first repo-owned Android runtime app
 - `ops/android_bootstrap_bridge.py native` builds the native Zig bridge through
   the NDK toolchain; this should become a named `zig build` step once the
   native artifact shape stabilizes

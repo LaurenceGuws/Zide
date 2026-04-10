@@ -47,7 +47,7 @@ So the next Android rendering step must stay below that line:
 
 The first Android rendering-binding cut should be:
 
-- bootstrap-bridge-owned
+- terminal-host-owned
 - EGL + GLES based
 - surface-identity-aware
 - behaviorally tiny
@@ -126,7 +126,7 @@ Purpose:
 Acceptance:
 
 - one authority doc defines the first Android EGL/GLES binding cut
-- the cut is explicitly scoped to `android/bootstrap-bridge/` and the native
+- the cut is explicitly scoped to `android/terminal-host/` and the native
   bridge, not `src/ui/renderer/`
 - the first executable binding step is defined as:
   - acquire EGL display

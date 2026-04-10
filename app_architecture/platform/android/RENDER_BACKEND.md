@@ -221,7 +221,7 @@ Historical note:
 
 - `android/host-harness/` proved the first Java-only lifecycle/surface/focus/IME
   callback ordering and has since been retired from the live tree
-- `android/bootstrap-bridge/` is the active Android host app for current native
+- `android/terminal-host/` is the active Android host app for current native
   runtime, shell, surface, and product work
 
 Current validation checkpoint:
@@ -330,7 +330,7 @@ What is still not allowed:
 
 Current `AH-A4` checkpoint:
 
-- `android/bootstrap-bridge/` now builds and installs on the Note10
+- `android/terminal-host/` now builds and installs on the Note10
 - the bootstrap app now loads a repo-built Zig native library successfully
 - the bridge build now links `libandroid`, so native-window symbol resolution
   fails at build time instead of later during `System.loadLibrary(...)`
@@ -379,7 +379,7 @@ Current Android-native follow-up constraints:
   visible surface lifetime briefly, but not app-process death
 - disposable app-process-owned PTY lifetime is the current Android terminal
   baseline
-- `android/bootstrap-bridge/` now carries the live shell path; the earlier
+- `android/terminal-host/` now carries the live shell path; the earlier
   disposable PTY probe UI is retired from the app and retained only as
   architecture evidence
 - the separate service-owned survival probe lane is now explicit:
@@ -392,7 +392,7 @@ Current Android-native follow-up constraints:
 - do not jump to GLES from native-load success, surface truth, or PTY
   confidence alone while the renderer queue still blocks Android rendering
 - if Android GLES/EGL binding work resumes, the first honest cut must stay in
-  `android/bootstrap-bridge/` plus the native bridge surface defined in
+  `android/terminal-host/` plus the native bridge surface defined in
   `ANDROID_GLES_BINDING_PLAN.md`
 - that first probe is now real on the Note10:
   - `native.surfaceAvailable ... gles=drawn`

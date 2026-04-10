@@ -131,7 +131,7 @@ delegates there instead of embedding Android logic in SDL input paths.
 ### `AH-A3` Android Host Harness Bootstrap — met, superseded
 
 Java-only host harness proved Note10 callback ordering. Now superseded by
-`android/bootstrap-bridge/` for all active work.
+`android/terminal-host/` for all active work.
 
 ### `AS-A1` Android First Shell Bring-Up — met
 
@@ -192,7 +192,7 @@ Current result:
   - a slim bottom assist bar provides phone keyboard helpers
   - restart/debug live in a hidden left drawer instead of the main bar
 - local Java tooling is now explicitly supported for this Android app module:
-  - JDTLS/Buildship imports should target `android/bootstrap-bridge/`, not repo
+  - JDTLS/Buildship imports should target `android/terminal-host/`, not repo
     root
   - `app/build.gradle` now declares Eclipse/Buildship source and library
     entries for:
@@ -229,7 +229,7 @@ Acceptance:
 Status:
 
 - met
-- `android/bootstrap-bridge/` is the active Android runtime lane app
+- `android/terminal-host/` is the active Android runtime lane app
 - the Note10 loads the repo-built Zig library and routes lifecycle/focus/
   surface callbacks into repo-owned native code
 - surface identity now has stable authority:

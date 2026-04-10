@@ -132,7 +132,7 @@ Current strongest gate-5 code pressure after `RB-B3.c`:
 Android note:
 
 - Android may continue with bootstrap-owned EGL/GLES binding authority and
-  bootstrap-bridge-local proof work
+  terminal-host-local proof work
 - Android may not use that as permission to add a real renderer backend in
   `src/ui/renderer/` while gates #2 and #5 still block routine third-backend
   adoption

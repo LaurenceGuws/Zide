@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "zide-android-bootstrap-bridge"
+rootProject.name = "zide-android-terminal-host"
 include(":app")

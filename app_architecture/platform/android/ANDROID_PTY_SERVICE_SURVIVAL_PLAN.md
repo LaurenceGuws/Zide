@@ -124,7 +124,7 @@ Stop `AP-A2` when:
 ## Current Probe Result
 
 The minimal foreground-service probe was implemented and validated through
-`android/bootstrap-bridge/` and is now retired from the live app.
+`android/terminal-host/` and is now retired from the live app.
 
 Current truth:
 

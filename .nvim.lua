@@ -1,5 +1,5 @@
 local repo_root = vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":p:h")
-local android_root = repo_root .. "/android/bootstrap-bridge"
+local android_root = repo_root .. "/android/terminal-host"
 local sdk_root = vim.fn.expand("~/.local/share/zide-android-sdk")
 
 if vim.fn.isdirectory(sdk_root) == 1 then

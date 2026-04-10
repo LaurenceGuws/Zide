@@ -30,7 +30,7 @@ It is now:
 
 ## Current Proven Device Truth
 
-Observed through `android/bootstrap-bridge/` on the Note10:
+Observed through `android/terminal-host/` on the Note10:
 
 - cold launch:
   - `native.surfaceAvailable seq=4 token=0x... epoch=1 transition=acquired`
