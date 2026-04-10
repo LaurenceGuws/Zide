@@ -9,7 +9,7 @@ This doc is architecture authority for Android-native render-host shape.
 Supporting research:
 
 - `docs/research/terminal/ANDROID_HOST_PTY_SCAN_2026-04-08.md`
-- `app_architecture/platform/android/BOOTSTRAP_BRIDGE_PLAN.md`
+- `app_architecture/platform/android/ANDROID_TERMINAL_HOST_PLAN.md`
 - `app_architecture/platform/android/ANDROID_GLES_BINDING_PLAN.md`
 - `app_architecture/platform/android/SURFACE_IDENTITY_POLICY.md`
 - `app_architecture/platform/android/ANDROID_PTY_LIFETIME_PLAN.md`
@@ -286,7 +286,7 @@ The current EGL proof is now stronger than a one-frame clear/swap demo:
 - `transition=replaced` recreates the EGL window surface in-process
 - `transition=retired` clears the bound surface state
 - later fresh `transition=acquired` recreates the EGL window surface cleanly
-- the bootstrap bridge now exposes `glesBoundEpoch` and
+- the terminal host app now exposes `glesBoundEpoch` and
   `glesSurfaceCreates` so replacement/reacquire behavior can be audited
   directly on-device
 - the current Note10 path also keeps `glesContextCreates=1` across those
@@ -331,7 +331,7 @@ What is still not allowed:
 Current `AH-A4` checkpoint:
 
 - `android/terminal-host/` now builds and installs on the Note10
-- the bootstrap app now loads a repo-built Zig native library successfully
+- the terminal host app now loads a repo-built Zig native library successfully
 - the bridge build now links `libandroid`, so native-window symbol resolution
   fails at build time instead of later during `System.loadLibrary(...)`
 - launch-path native callback acknowledgements are live on device:
@@ -340,7 +340,7 @@ Current `AH-A4` checkpoint:
   - `native.onResume seq=3`
   - `native.surfaceAvailable seq=4`
   - `native.onWindowFocus seq=6`
-- the bootstrap bridge now surfaces real native-window identity into
+- the terminal host app now surfaces real native-window identity into
   `PlatformRenderHost`
 - the Note10 currently shows one stable non-zero native-window token across
   repeated `surface.changed` callbacks, then `token=0x0` after

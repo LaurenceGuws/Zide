@@ -2,18 +2,18 @@
 
 Purpose: define the product-level host truth for Android surface metrics
 updates, surface identity changes, and render-host invalidation pressure after
-the bootstrap bridge proved real `ANativeWindow` identity on device.
+the terminal host app proved real `ANativeWindow` identity on device.
 
 Owner docs:
 
 - `app_architecture/platform/NATIVE_HOST_CONTRACT.md`
 - `app_architecture/platform/android/RENDER_BACKEND.md`
-- `app_architecture/platform/android/BOOTSTRAP_BRIDGE_PLAN.md`
+- `app_architecture/platform/android/ANDROID_TERMINAL_HOST_PLAN.md`
 - `docs/todo/android/implementation.md`
 
 ## Why This Is Next
 
-The bootstrap bridge now proves three different Android surface behaviors on
+The terminal host app now proves three different Android surface behaviors on
 the Note10:
 
 1. repeated `surface.changed` callbacks can happen against one stable native

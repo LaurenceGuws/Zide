@@ -19,7 +19,7 @@ Do not use this queue for:
 
 - `app_architecture/platform/NATIVE_HOST_CONTRACT.md`
 - `app_architecture/platform/android/RENDER_BACKEND.md`
-- `app_architecture/platform/android/BOOTSTRAP_BRIDGE_PLAN.md`
+- `app_architecture/platform/android/ANDROID_TERMINAL_HOST_PLAN.md`
 - `app_architecture/platform/android/ANDROID_GLES_BINDING_PLAN.md`
 - `app_architecture/platform/android/SURFACE_IDENTITY_POLICY.md`
 - `app_architecture/platform/android/ANDROID_PTY_LIFETIME_PLAN.md`
@@ -211,16 +211,16 @@ Remaining for this ticket:
 - decision on how far the current hidden-input terminal path should go before a
   more terminal-native mobile input surface is worth opening
 
-### `AH-A4` Android Bootstrap Bridge
+### `AH-A4` Android Terminal Host Bridge
 
 Purpose:
 
-- create the first repo-owned Android bootstrap path for the real Zig runtime,
+- create the first repo-owned Android terminal-host path for the real Zig runtime,
   so Android progress can move from host probing into native entry/bridge work
 
 Acceptance:
 
-- the repo contains an Android app/bootstrap project for the real runtime lane
+- the repo contains an Android app project for the real runtime lane
 - the app loads a repo-built native Zig library
 - launch + pause/resume + surface-available/lost callbacks reach repo-owned
   native bridge code
@@ -237,7 +237,7 @@ Status:
   - `unchanged`
   - `replaced`
   - `retired`
-- bootstrap/native entry is no longer the Android blocker
+- terminal-host/native entry is no longer the Android blocker
 
 ### `AP-A1` Android PTY Lifetime Ownership
 
@@ -281,8 +281,8 @@ Purpose:
 
 Status:
 
-- met as bootstrap-owned authority
-- the bootstrap bridge proves EGL/GLES clear/swap against the live
+- met as terminal-host-owned authority
+- the terminal host app proves EGL/GLES clear/swap against the live
   `ANativeWindow`
 - Note10 proof includes both replacement stories:
   - `replaced`
@@ -294,13 +294,13 @@ Status:
 
 Purpose:
 
-- prove whether one bootstrap-owned GLES texture can survive the already-proved
+- prove whether one terminal-host-owned GLES texture can survive the already-proved
   surface transitions while also accepting repeated content upload/update
 
 Status:
 
 - met
-- bootstrap GLES proof now tracks upload/update separately
+- terminal-host GLES proof now tracks upload/update separately
 - Note10 proved one texture survives redraw and surface replacement while
   accepting repeated content updates
 
@@ -308,13 +308,13 @@ Status:
 
 Purpose:
 
-- prove whether the current bootstrap GLES policy can stay honest when content
+- prove whether the current terminal-host GLES policy can stay honest when content
   size changes materially, not just when the surface is recreated or the same
   texture receives repeated updates
 
 Status:
 
-- met as bootstrap runtime evidence
+- met as terminal-host runtime evidence
 - holder-driven size pressure advances texture upload/resize counts without
   hidden context churn on the Note10
 - this remains runtime evidence, not product resize authority

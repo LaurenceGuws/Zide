@@ -5,18 +5,17 @@ product work.
 
 ## Naming Note
 
-- directory path is still `android/terminal-host/` for continuity
+- directory path is `android/terminal-host/`
 - active app identity is terminal-first:
   - package/application id: `dev.zide.terminal`
   - launcher activity: `ZideTerminalActivity`
-- treat directory rename as a separate, optional repo-structure cut
 
 ## Default Workflow
 
 From repo root:
 
 ```sh
-ops/android_bootstrap_bridge.py deploy
+ops/android_terminal_host.py deploy
 ```
 
 That will:
@@ -31,13 +30,13 @@ That will:
 From repo root:
 
 ```sh
-ops/android_bootstrap_bridge.py doctor
-ops/android_bootstrap_bridge.py native
-ops/android_bootstrap_bridge.py apk
-ops/android_bootstrap_bridge.py install
-ops/android_bootstrap_bridge.py launch
-ops/android_bootstrap_bridge.py reinstall
-ops/android_bootstrap_bridge.py logcat
+ops/android_terminal_host.py doctor
+ops/android_terminal_host.py native
+ops/android_terminal_host.py apk
+ops/android_terminal_host.py install
+ops/android_terminal_host.py launch
+ops/android_terminal_host.py reinstall
+ops/android_terminal_host.py logcat
 ```
 
 ## Tooling Rules
@@ -94,5 +93,5 @@ Current product view is shell-first:
 ## Logs
 
 ```sh
-ops/android_bootstrap_bridge.py logcat
+ops/android_terminal_host.py logcat
 ```

@@ -8,7 +8,7 @@ This doc is authority for the first Android GLES/EGL binding step.
 Owner docs:
 
 - `app_architecture/platform/android/RENDER_BACKEND.md`
-- `app_architecture/platform/android/BOOTSTRAP_BRIDGE_PLAN.md`
+- `app_architecture/platform/android/ANDROID_TERMINAL_HOST_PLAN.md`
 - `app_architecture/platform/android/SURFACE_IDENTITY_POLICY.md`
 - `app_architecture/ui/RENDER_BACKEND_CONTRACT.md`
 - `docs/todo/android/implementation.md`
@@ -181,7 +181,7 @@ Stop `AH-A5` when:
 
 ## Current Probe Result
 
-The first executable GLES cut is implemented in the bootstrap bridge.
+The first executable GLES cut is implemented in the terminal host app.
 
 Current Note10 truth:
 
@@ -223,7 +223,7 @@ Observed on the Note10 (2026-04-09):
 - texture creation performs one explicit `glTexImage2D` upload
 - later redraw/surface passes perform `glTexSubImage2D` updates against the
   same texture when the context still owns it
-- the bootstrap bridge/status UI surfaces those counters alongside:
+- the terminal host app/status UI surfaces those counters alongside:
   - `glesTextureCreates`
   - `glesTextureAlive`
 - the first acquire showed:
