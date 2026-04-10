@@ -92,3 +92,20 @@ Stop when:
 - validation is green
 - docs state what blocker remains after this cut instead of falling back to
   generic "presentable parity later"
+
+## Current Checkpoint (2026-04-11)
+
+- the first code-facing cut is in:
+  - the shared seam no longer speaks in backend-shaped "retained update"
+    language
+  - backend dispatch and presentable host now route through
+    `refreshTerminalPresentable(...)`
+  - the shared result surface now uses lifecycle-neutral refresh outcomes:
+    - `.refreshed`
+    - `.target_unavailable`
+    - `.unsupported`
+- widget/runtime behavior is intentionally unchanged in this cut
+- this narrows the contradiction from "shared code asks for a retained update
+  cycle" to the more honest remaining problem:
+  OpenGL and Metal still satisfy that refresh seam through uneven underlying
+  mechanics

@@ -1,7 +1,7 @@
 const present_trace_runtime = @import("present_trace_runtime.zig");
 const presentable_contract = @import("presentable_contract.zig");
 
-pub const RetainedTerminalPresentableUpdate = @import("backend_dispatch.zig").RetainedPresentableUpdateResult;
+pub const TerminalPresentableRefresh = @import("backend_dispatch.zig").TerminalPresentableRefreshResult;
 const PresentableDraw = presentable_contract.PresentableDraw;
 const TerminalPresentPath = presentable_contract.TerminalPresentPath;
 pub const TerminalPresentPlan = presentable_contract.TerminalPresentPlan;
@@ -10,7 +10,7 @@ pub const TerminalPresentTiming = presentable_contract.TerminalPresentTiming;
 
 pub const RetainedTerminalPresentExecutionResult = struct {
     completed: bool = false,
-    update: RetainedTerminalPresentableUpdate = .unsupported,
+    refresh: TerminalPresentableRefresh = .unsupported,
     timing: TerminalPresentTiming = .{},
 };
 
@@ -43,14 +43,14 @@ pub fn ensureTerminalPresentable(renderer: anytype, width: i32, height: i32) boo
     return renderer.backend.ensurePresentable(renderer, width, height);
 }
 
-pub fn updateTerminalPresentable(renderer: anytype, ctx: anytype, comptime body: fn (@TypeOf(ctx), @TypeOf(renderer)) void) RetainedTerminalPresentableUpdate {
+pub fn refreshTerminalPresentable(renderer: anytype, ctx: anytype, comptime body: fn (@TypeOf(ctx), @TypeOf(renderer)) void) TerminalPresentableRefresh {
     const Local = struct {
         fn erasedBody(raw_ctx: ?*const anyopaque, renderer_local: @TypeOf(renderer)) void {
             const typed_ctx: *@TypeOf(ctx) = @constCast(@alignCast(@ptrCast(raw_ctx.?)));
             body(typed_ctx.*, renderer_local);
         }
     };
-    return renderer.backend.updateRetainedPresentable(
+    return renderer.backend.refreshTerminalPresentable(
         renderer,
         @ptrCast(&ctx),
         Local.erasedBody,
@@ -80,7 +80,7 @@ pub fn runRetainedTerminalPresentExecution(
     var exec_ctx = ctx;
     exec_ctx.result = &result;
     var call_ctx = ExecCtx{ .inner = exec_ctx, .plan = plan };
-    result.update = renderer.backend.updateRetainedPresentable(
+    result.refresh = renderer.backend.refreshTerminalPresentable(
         renderer,
         @ptrCast(&call_ctx),
         Local.run,

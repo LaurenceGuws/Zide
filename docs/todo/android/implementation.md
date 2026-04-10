@@ -119,6 +119,15 @@ Guardrails:
 - do not reopen `AS-A3` polish
 - do not start Android GLES backend code from this ticket
 
+Current checkpoint:
+
+- the first `AR-B3` code cut is in:
+  shared renderer code now speaks in terminal-presentable refresh terms rather
+  than retained-target update terms
+- this does not claim parity is solved yet
+- it makes the remaining blocker narrower and more honest before deeper
+  presentable work
+
 ## Parked (not blocking)
 
 **`AS-A3`** — Android direct shell input, modifier-latch assist bar.

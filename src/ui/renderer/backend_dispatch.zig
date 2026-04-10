@@ -16,9 +16,9 @@ const platform_window = @import("../../platform/window_metrics.zig");
 const GpuImageRef = surface_draw.GpuImageRef;
 const TerminalPresentPath = presentable_contract.TerminalPresentPath;
 
-pub const RetainedPresentableUpdateResult = enum {
-    updated,
-    unavailable,
+pub const TerminalPresentableRefreshResult = enum {
+    refreshed,
+    target_unavailable,
     unsupported,
 };
 
@@ -54,7 +54,7 @@ pub fn BackendOps(
     const PresentableOps = struct {
         terminalPresentPath: *const fn (*const RendererType) TerminalPresentPath,
         ensurePresentable: *const fn (*RendererType, i32, i32) bool,
-        updateRetainedPresentable: *const fn (*RendererType, ?*const anyopaque, *const fn (?*const anyopaque, *RendererType) void) RetainedPresentableUpdateResult,
+        refreshTerminalPresentable: *const fn (*RendererType, ?*const anyopaque, *const fn (?*const anyopaque, *RendererType) void) TerminalPresentableRefreshResult,
         drawPresentableBackdrop: *const fn (*RendererType, f32, f32, f32, f32, types.Rgba) void,
         drawPresentable: *const fn (*RendererType, PresentableDraw) void,
         scrollPresentable: *const fn (*RendererType, i32, i32) bool,
@@ -158,7 +158,7 @@ pub fn opsFor(
             .presentable = .{
                 .terminalPresentPath = OpenGl.terminalPresentPath,
                 .ensurePresentable = OpenGl.ensurePresentable,
-                .updateRetainedPresentable = OpenGl.updateRetainedPresentable,
+                .refreshTerminalPresentable = OpenGl.refreshTerminalPresentable,
                 .drawPresentableBackdrop = OpenGl.drawPresentableBackdrop,
                 .drawPresentable = OpenGl.drawPresentable,
                 .scrollPresentable = OpenGl.scrollPresentable,
@@ -204,7 +204,7 @@ pub fn opsFor(
             .presentable = .{
                 .terminalPresentPath = Metal.terminalPresentPath,
                 .ensurePresentable = Metal.ensurePresentable,
-                .updateRetainedPresentable = Metal.updateRetainedPresentable,
+                .refreshTerminalPresentable = Metal.refreshTerminalPresentable,
                 .drawPresentableBackdrop = Metal.drawPresentableBackdrop,
                 .drawPresentable = Metal.drawPresentable,
                 .scrollPresentable = Metal.scrollPresentable,
@@ -286,12 +286,12 @@ fn OpenGlDispatch(
         fn terminalPresentPath(_: *const RendererType) TerminalPresentPath {
             return .retained_surface;
         }
-        fn updateRetainedPresentable(
+        fn refreshTerminalPresentable(
             renderer: *RendererType,
             ctx: ?*const anyopaque,
             body: *const fn (?*const anyopaque, *RendererType) void,
-        ) RetainedPresentableUpdateResult {
-            return gl_presentable_runtime.updateRetainedPresentable(renderer, ctx, body);
+        ) TerminalPresentableRefreshResult {
+            return gl_presentable_runtime.refreshTerminalPresentable(renderer, ctx, body);
         }
         fn drawPresentableBackdrop(renderer: *RendererType, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) void {
             gl_presentable_runtime.drawPresentableBackdrop(renderer, x, y, w, h, color);
@@ -395,12 +395,12 @@ fn MetalDispatch(
         fn terminalPresentPath(_: *const RendererType) TerminalPresentPath {
             return .direct_surface;
         }
-        fn updateRetainedPresentable(
+        fn refreshTerminalPresentable(
             renderer: *RendererType,
             ctx: ?*const anyopaque,
             body: *const fn (?*const anyopaque, *RendererType) void,
-        ) RetainedPresentableUpdateResult {
-            return metal_presentable_runtime.updateRetainedPresentable(renderer, ctx, body);
+        ) TerminalPresentableRefreshResult {
+            return metal_presentable_runtime.refreshTerminalPresentable(renderer, ctx, body);
         }
         fn drawPresentableBackdrop(renderer: *RendererType, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) void {
             metal_presentable_runtime.drawPresentableBackdrop(renderer, x, y, w, h, color);

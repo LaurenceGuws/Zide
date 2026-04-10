@@ -26,7 +26,7 @@ const GlyphDrawStats = draw_grid.GlyphDrawStats;
 const TerminalPresentationSampleMode = terminal_debug_geometry.TerminalPresentationSampleMode;
 const TerminalPresentationSample = terminal_debug_geometry.TerminalPresentationSample;
 const InputSnapshot = shared_types.input.InputSnapshot;
-const RetainedTerminalPresentableUpdate = renderer_presentable_host.RetainedTerminalPresentableUpdate;
+const TerminalPresentableRefresh = renderer_presentable_host.TerminalPresentableRefresh;
 const RetainedTerminalPresentExecutionResult = renderer_presentable_host.RetainedTerminalPresentExecutionResult;
 const DirectTerminalPresentExecutionResult = renderer_presentable_host.DirectTerminalPresentExecutionResult;
 const TerminalPresentPlan = renderer_presentable_host.TerminalPresentPlan;
@@ -77,7 +77,7 @@ pub fn computePresentationSurfaceGeometry(
 
 pub const PresentationPresentState = struct {
     updated: bool = false,
-    retained_update: RetainedTerminalPresentableUpdate = .unsupported,
+    presentable_refresh: TerminalPresentableRefresh = .unsupported,
     target_available: bool = false,
     ready: bool = false,
     visible: bool = false,
@@ -832,7 +832,7 @@ pub fn runRetainedPresentation(
         terminal_view,
         surface_update_plan.geometry,
         view_geometry,
-        cycle_result.update,
+        cycle_result.refresh,
         draw_cursor,
         cursor,
         cursor_style,
@@ -935,11 +935,11 @@ pub fn executeRetainedPresentFlow(
         note_present_ctx,
         note_present,
     );
-    result.outcome = if (cycle.update == .updated) .updated_and_presented else .presented;
-    result.cache_state_advanced = cycle.update == .updated;
-    result.target_available = cycle.update != .unsupported and cycle.update != .unavailable;
-    result.followup.required = cycle.update == .unavailable;
-    result.followup.reason = if (cycle.update == .unavailable) .target_unavailable else .none;
+    result.outcome = if (cycle.refresh == .refreshed) .updated_and_presented else .presented;
+    result.cache_state_advanced = cycle.refresh == .refreshed;
+    result.target_available = cycle.refresh != .unsupported and cycle.refresh != .target_unavailable;
+    result.followup.required = cycle.refresh == .target_unavailable;
+    result.followup.reason = if (cycle.refresh == .target_unavailable) .target_unavailable else .none;
     result.timing.background_ms = retained.bg_ms;
     result.timing.glyph_ms = retained.glyph_ms;
     result.timing.kitty_ms = retained.kitty_ms;
@@ -1393,7 +1393,7 @@ pub fn refreshPresentState(
     terminal_view: view_state.TerminalViewModel,
     surface_geometry: PresentationGeometry,
     view_geometry: TerminalViewGeometry,
-    retained_update: RetainedTerminalPresentableUpdate,
+    presentable_refresh: TerminalPresentableRefresh,
     draw_cursor: bool,
     cursor: CursorPos,
     cursor_style: terminal_types.CursorStyle,
@@ -1405,12 +1405,12 @@ pub fn refreshPresentState(
     view_cells_len: usize,
 ) PresentationPresentState {
     var state = PresentationPresentState{
-        .updated = retained_update == .updated,
-        .retained_update = retained_update,
+        .updated = presentable_refresh == .refreshed,
+        .presentable_refresh = presentable_refresh,
         .visible = visible_w > 0 and visible_h > 0,
     };
 
-    if (retained_update == .updated) {
+    if (presentable_refresh == .refreshed) {
         surface_state.notePresentationUpdated(terminal_view, surface_geometry, draw_cursor, cursor, cursor_style, hover_link_id, composing_active, composing_hash);
     }
 
@@ -1438,7 +1438,7 @@ pub fn logUnavailable(
         .{ .key = "generation", .value = .{ .unsigned = terminal_view.generation } },
         .{ .key = "sync_updates", .value = .{ .boolean = terminal_view.sync_updates_active } },
         .{ .key = "updated", .value = .{ .boolean = present_state.updated } },
-        .{ .key = "retained_update", .value = .{ .unsigned = @intFromEnum(present_state.retained_update) } },
+        .{ .key = "presentable_refresh", .value = .{ .unsigned = @intFromEnum(present_state.presentable_refresh) } },
         .{ .key = "presentable_ready", .value = .{ .boolean = surface_state.presentableReady() } },
         .{ .key = "target_available", .value = .{ .boolean = present_state.target_available } },
         .{ .key = "visible_w", .value = .{ .integer = visible_w } },

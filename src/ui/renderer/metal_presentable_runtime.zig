@@ -3,7 +3,7 @@ const metal_text_sample_runtime = @import("metal_text_sample_runtime.zig");
 const presentable_contract = @import("presentable_contract.zig");
 const types = @import("types.zig");
 
-const RetainedPresentableUpdateResult = @import("backend_dispatch.zig").RetainedPresentableUpdateResult;
+const TerminalPresentableRefreshResult = @import("backend_dispatch.zig").TerminalPresentableRefreshResult;
 const PresentableDraw = presentable_contract.PresentableDraw;
 const PresentableInfo = presentable_contract.PresentableInfo;
 
@@ -16,11 +16,11 @@ pub fn ensurePresentable(renderer: anytype, width: i32, height: i32) bool {
     return metal_backend.ensureTerminalSnapshotPresentable(context, drawable_width, drawable_height).recreated;
 }
 
-pub fn updateRetainedPresentable(
+pub fn refreshTerminalPresentable(
     renderer: anytype,
     _: ?*const anyopaque,
     _: *const fn (?*const anyopaque, @TypeOf(renderer)) void,
-) RetainedPresentableUpdateResult {
+) TerminalPresentableRefreshResult {
     const Renderer = @TypeOf(renderer);
     _ = Renderer;
     return .unsupported;

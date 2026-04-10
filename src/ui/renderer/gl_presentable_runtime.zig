@@ -8,7 +8,7 @@ const presentable_contract = @import("presentable_contract.zig");
 const texture_draw = @import("texture_draw.zig");
 const types = @import("types.zig");
 
-const RetainedPresentableUpdateResult = @import("backend_dispatch.zig").RetainedPresentableUpdateResult;
+const TerminalPresentableRefreshResult = @import("backend_dispatch.zig").TerminalPresentableRefreshResult;
 const RenderTarget = gl_backend.RenderTarget;
 const PresentableDraw = presentable_contract.PresentableDraw;
 const PresentableInfo = presentable_contract.PresentableInfo;
@@ -45,13 +45,13 @@ pub fn ensurePresentable(renderer: anytype, width: i32, height: i32) bool {
     return recreated;
 }
 
-pub fn updateRetainedPresentable(
+pub fn refreshTerminalPresentable(
     renderer: anytype,
     ctx: ?*const anyopaque,
     body: *const fn (?*const anyopaque, @TypeOf(renderer)) void,
-) RetainedPresentableUpdateResult {
+) TerminalPresentableRefreshResult {
     if (!renderer.capabilities().retained_targets) return .unsupported;
-    if (!gl_backend.beginRenderTarget(renderer, presentableTarget(renderer))) return .unavailable;
+    if (!gl_backend.beginRenderTarget(renderer, presentableTarget(renderer))) return .target_unavailable;
     defer restoreCompositionTarget(renderer);
     body(ctx, renderer);
     // Flush any surface draws recorded during the body (e.g. kitty-above images)
@@ -59,7 +59,7 @@ pub fn updateRetainedPresentable(
     // scene target.  Without this, deferred SurfaceDraws are replayed later
     // against the scene target and end up underneath the presentable blit.
     gl_backend.flushQueuedSurfaceDrawsNow(renderer);
-    return .updated;
+    return .refreshed;
 }
 
 pub fn drawPresentableBackdrop(renderer: anytype, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) void {

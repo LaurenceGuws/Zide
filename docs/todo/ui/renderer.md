@@ -1532,6 +1532,18 @@ Acceptance criteria:
 - OpenGL and Metal satisfy one clearer presentable lifecycle vocabulary through
   backend-owned mechanics
 
+Current evidence:
+
+- backend dispatch and presentable host now route through
+  `refreshTerminalPresentable(...)` instead of
+  `updateRetainedPresentable(...)`
+- the shared refresh result surface is now:
+  - `.refreshed`
+  - `.target_unavailable`
+  - `.unsupported`
+- widget/runtime behavior is unchanged in this first cut; only the shared
+  lifecycle vocabulary moved away from retained-target-shaped naming
+
 Do not do:
 
 - do not widen into general backend-runtime storage cleanup
