@@ -191,6 +191,16 @@ Current result:
     a permanent toggle
   - a slim bottom assist bar provides phone keyboard helpers
   - restart/debug live in a hidden left drawer instead of the main bar
+- local Java tooling is now explicitly supported for this Android app module:
+  - JDTLS/Buildship imports should target `android/bootstrap-bridge/`, not repo
+    root
+  - `app/build.gradle` now declares Eclipse/Buildship source and library
+    entries for:
+    - `src/main/java`
+    - Android SDK `android.jar`
+    - generated debug `R.jar`
+  - that keeps Neovim/JDTLS Android Java resolution honest without tracked
+    `.classpath` / `.project` files
 
 Remaining for this ticket:
 

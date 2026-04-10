@@ -1,5 +1,6 @@
 plugins {
     id 'com.android.application'
+    id 'eclipse'
 }
 
 android {
@@ -28,5 +29,81 @@ android {
         // Keep app bytecode conservative while Gradle itself runs on the host JDK.
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+// Buildship/JDTLS does not infer Android app Java roots reliably on its own.
+// Keep the source root declaration in Gradle so local Java tooling can import
+// the app module without checked-in Eclipse metadata.
+eclipse {
+    classpath {
+        defaultOutputDir = file('bin/default')
+        file {
+            whenMerged { classpath ->
+                def declaredSourceDirs = [
+                    'src/main/java',
+                    'src/debug/java',
+                    'src/release/java',
+                    'src/test/java',
+                    'src/testDebug/java',
+                    'src/testRelease/java',
+                    'src/androidTest/java',
+                    'src/androidTestDebug/java',
+                    'src/androidTestRelease/java',
+                ]
+                def existingSourceDirs = classpath.entries
+                        .findAll { it.kind == 'src' }
+                        .collect { it.path } as Set
+                declaredSourceDirs.each { dir ->
+                    if (!existingSourceDirs.contains(dir)) {
+                        classpath.entries.add(new org.gradle.plugins.ide.eclipse.model.SourceFolder(dir, null))
+                    }
+                }
+                def localProperties = new Properties()
+                def localPropertiesFile = rootProject.file('local.properties')
+                if (localPropertiesFile.exists()) {
+                    localPropertiesFile.withInputStream { stream ->
+                        localProperties.load(stream)
+                    }
+                }
+                def sdkRoot = [
+                    localProperties.getProperty('sdk.dir'),
+                    System.getenv('ANDROID_SDK_ROOT'),
+                    System.getenv('ANDROID_HOME'),
+                    "${System.properties['user.home']}/.local/share/zide-android-sdk",
+                ].find { candidate -> candidate && file(candidate).isDirectory() }
+                def androidJarPath = null
+                if (sdkRoot) {
+                    def candidate = file("${sdkRoot}/platforms/android-${android.compileSdk}/android.jar")
+                    if (candidate.isFile()) {
+                        androidJarPath = candidate.absolutePath
+                    }
+                }
+                def debugRJarPath = null
+                def debugRJar = file(
+                        "${buildDir}/intermediates/compile_and_runtime_not_namespaced_r_class_jar/debug/processDebugResources/R.jar"
+                )
+                if (debugRJar.isFile()) {
+                    debugRJarPath = debugRJar.absolutePath
+                }
+                def existingLibraries = classpath.entries
+                        .findAll { it.kind == 'lib' }
+                        .collect { it.path } as Set
+                if (androidJarPath && !existingLibraries.contains(androidJarPath)) {
+                    classpath.entries.add(
+                            new org.gradle.plugins.ide.eclipse.model.Library(
+                                    classpath.fileReference(androidJarPath)
+                            )
+                    )
+                }
+                if (debugRJarPath && !existingLibraries.contains(debugRJarPath)) {
+                    classpath.entries.add(
+                            new org.gradle.plugins.ide.eclipse.model.Library(
+                                    classpath.fileReference(debugRJarPath)
+                            )
+                    )
+                }
+            }
+        }
     }
 }

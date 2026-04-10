@@ -228,6 +228,17 @@ Current Java ownership is also cleaner:
 - `ShellSessionController` owns shell polling/transcript file reads
 - `BootstrapDebugFormatter` owns debug formatting
 
+Current local-tooling support is also explicit:
+
+- Neovim/JDTLS should import `android/bootstrap-bridge/` as the Java root
+- `app/build.gradle` now declares the Eclipse/Buildship classpath support JDTLS
+  was missing for this Android app module:
+  - `src/main/java`
+  - Android SDK `android.jar`
+  - generated debug `R.jar`
+- this is the sanctioned local Java-tooling path; do not reintroduce tracked
+  `.classpath` / `.project` files as repo authority
+
 Current product-shell layout is also now moving toward a mobile-native shape:
 
 - the terminal transcript owns the screen without outer padding

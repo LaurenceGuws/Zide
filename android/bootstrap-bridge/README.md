@@ -56,6 +56,24 @@ things:
 For Java work, prefer opening `android/bootstrap-bridge/` as the workspace
 root.
 
+Current JDTLS rule:
+
+- treat `android/bootstrap-bridge/` as the Java/Gradle root
+- do not point JDTLS at the repo root
+- if JDTLS gets stuck on stale Android metadata, clear the workspace and reopen:
+
+```sh
+rm -rf ~/.local/share/nvim/site/java/workspace-root/bootstrap-bridge-7912295e
+```
+
+Repo-side support for that workflow now lives in Gradle:
+
+- `app/build.gradle` declares Eclipse/Buildship source roots for JDTLS
+- it also adds the Android SDK `android.jar` and generated debug `R.jar` to the
+  Eclipse classpath model
+- this keeps Android Java resolution working in Neovim without tracked
+  `.classpath` / `.project` files
+
 ## Current Product Shell
 
 Current bootstrap product view is shell-first:
