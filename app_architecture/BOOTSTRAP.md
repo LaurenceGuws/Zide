@@ -6,9 +6,12 @@ For dependency source policy, use [`docs/DEPENDENCIES.md`](../docs/DEPENDENCIES.
 For customer-facing product overview and hosted docs links, use
 [`README.md`](../README.md).
 
-## Current Dependency Model
+Current product focus is Android terminal work, but this doc stays cross-repo
+and operational: bootstrap, build, run, and test.
 
-Normal build flow now uses Zig package-managed dependencies for:
+## Dependency Model
+
+Normal build flow uses Zig package-managed dependencies for:
 
 - SDL3
 - Lua
@@ -16,9 +19,9 @@ Normal build flow now uses Zig package-managed dependencies for:
 - FreeType
 - HarfBuzz
 
-That means Linux and macOS no longer use the old "install SDL3, Lua,
-FreeType, HarfBuzz, and tree-sitter from the system package manager first"
-workflow as the normal path.
+Linux and macOS no longer use the old "install SDL3, Lua, FreeType,
+HarfBuzz, and tree-sitter from the system package manager first" workflow as
+the normal path.
 
 You still need platform/system libraries and native runtime support:
 
@@ -92,17 +95,9 @@ Fresh local checkout example:
 ```bash
 cd /home/home/personal
 git clone git@github.com:LaurenceGuws/Zide.git zide
-git clone git@github.com:LaurenceGuws/zide-tree-sitter.git zide-tree-sitter
 cd zide
 ./ops/bootstrap.sh
 ```
-
-Current branch note:
-
-- the active macOS GL bring-up now builds from published pinned package
-  dependencies again
-- `ziglua` is on the pinned package path
-- `zlua-portable` is back on the published `v0.1.0-beta.2` package pin
 
 Local co-development note:
 
@@ -134,10 +129,6 @@ Proxy note:
   `tools/editor/tree_sitter/grammar_update_proxy.sh`
 - set `ZIDE_TREE_SITTER_REPO` if your local repo layout is not the standard
   sibling checkout shape
-
-The main app-library stack is not vendored and not expected to come from the
-system package manager in normal Linux/macOS flow; it is pinned in the Zig
-package graph.
 
 ## Build
 
@@ -189,6 +180,13 @@ Useful build reports:
 zig build run
 ```
 
+Android terminal host flow:
+
+```bash
+./ops/android_terminal_host.py deploy
+./ops/android_terminal_host.py logcat
+```
+
 Write the shipped default config to the platform user-config path:
 
 ```bash
@@ -233,7 +231,7 @@ Then start a fresh shell inside Zide and verify:
 printf '%s\n' "$TERM"
 ```
 
-Current runtime TERM selection order is:
+Current runtime `TERM` selection order is:
 
 - `xterm-kitty` when available
 - `xterm-zide`

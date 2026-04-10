@@ -32,6 +32,7 @@ Quick reading guide:
 
 ## Task tracking (source of truth)
 - `docs/todo/README.md` — active work-queue policy and ownership split.
+  - `docs/todo/android/implementation.md` — active Android terminal execution queue.
   - `docs/todo/linux/implementation.md` — temporary Linux-native catch-up queue after the Win11 integration sprint.
   - `docs/todo/macos/implementation.md` — first-class macOS implementation journey and milestone tracker.
   - `docs/todo/terminal/README.md` — terminal queue map and ownership split.
@@ -42,7 +43,6 @@ Quick reading guide:
   - `docs/todo/editor/stress_and_reference.md` — editor stress-testing and cross-reference comparison queue.
   - `docs/todo/repo_structure.md` — non-product repo structure cleanup (tests, tools, stale docs/tests).
   - `docs/todo/file_layout.md` — file/folder layout cleanup queue (split large folders/files, collapse low-value micro-files).
-  - `docs/todo/android/implementation.md` — active Android terminal execution queue.
   - `docs/todo/terminal/vt_core_rearchitecture.md` — active VT maturity purity
     queue; currently deferred as the repo-wide default focus.
   - `docs/todo/terminal/widget_scrutiny.md` — active native terminal widget
@@ -60,7 +60,7 @@ Quick reading guide:
   - `docs/todo/dependencies.md` — Zig-managed dependency migration plan (SDL3/FreeType/HarfBuzz/Lua/tree-sitter).
   - `docs/todo/app_hygiene_cleanup.md` — app/build/platform hygiene cleanup queue for dependency boundaries, SDL3 residue, and repo-contract hardening.
 
-## Architecture + design
+## Architecture + Design
 - `app_architecture/platform/NATIVE_HOST_CONTRACT.md` — strict shared native
   host contract for lifecycle, surface, focus, IME, and present semantics.
 - `app_architecture/ui/DEVELOPMENT_JOURNEY.md` — high-level renderer journey
@@ -199,18 +199,3 @@ under `docs/review/archive/`.
 - `app_architecture/` is for current designs, boundaries, and technical authority.
 - `docs/research/` and `docs/reference/` are for exploratory and reference material that should not masquerade as current architecture authority.
 - `docs/review/` is for historical reviews, audits, and investigation records.
-
-## Current Linux Scope Note
-
-- Immediate shared-platform focus is Linux native catch-up after the recent
-  Win11 integration sprint.
-- Use `docs/todo/linux/implementation.md` as the coordination point for Linux
-  parity gaps, regressions, and polish follow-up.
-- Push durable subsystem ownership back into the relevant editor/UI/terminal or
-  architecture docs once a Linux issue is understood.
-
-## Current Windows Scope Note
-
-- First stable Windows shell scope is the packaged Win11 Explorer command lane.
-- Legacy classic Explorer verbs are not the supported product surface.
-- Windows default terminal integration is deferred indefinitely.

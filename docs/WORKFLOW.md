@@ -136,6 +136,9 @@ Doc-placement authority:
 
 - Put current task progress in the owning todo or architecture doc, not in `docs/AGENT_HANDOFF.md`.
 - If a doc contradicts code, fix the doc or remove the stale claim.
+- If a tool, script, doc, or queue is no longer owned by this repo or no
+  longer matches the live workflow, remove it instead of keeping a stale
+  surface around "just in case."
 - Prefer one clear authority per topic.
 - Prefer one clear queue per active campaign.
 - If a doc defines the intended subsystem shape, boundary, contract, or design target, it belongs in `app_architecture/`.
