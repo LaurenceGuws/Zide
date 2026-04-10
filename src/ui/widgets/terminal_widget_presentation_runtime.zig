@@ -27,7 +27,7 @@ const TerminalPresentationSampleMode = terminal_debug_geometry.TerminalPresentat
 const TerminalPresentationSample = terminal_debug_geometry.TerminalPresentationSample;
 const InputSnapshot = shared_types.input.InputSnapshot;
 const TerminalPresentableRefresh = renderer_presentable_host.TerminalPresentableRefresh;
-const RetainedTerminalPresentExecutionResult = renderer_presentable_host.RetainedTerminalPresentExecutionResult;
+const TerminalPresentableRefreshExecutionResult = renderer_presentable_host.TerminalPresentableRefreshExecutionResult;
 const DirectTerminalPresentExecutionResult = renderer_presentable_host.DirectTerminalPresentExecutionResult;
 const TerminalPresentPlan = renderer_presentable_host.TerminalPresentPlan;
 const TerminalPresentResult = renderer_presentable_host.TerminalPresentResult;
@@ -122,7 +122,7 @@ pub const PresentationExecutionResult = struct {
     kitty_ms: f64 = 0.0,
 };
 
-pub const RetainedPresentationResult = struct {
+pub const RefreshedPresentablePresentationResult = struct {
     bg_ms: f64 = 0.0,
     glyph_ms: f64 = 0.0,
     kitty_ms: f64 = 0.0,
@@ -712,7 +712,7 @@ pub fn executePresentableUpdate(
     return result;
 }
 
-pub fn runRetainedPresentCycle(
+pub fn runPresentableRefreshCycle(
     self: anytype,
     shell: *app_shell.Shell,
     renderer: anytype,
@@ -727,7 +727,7 @@ pub fn runRetainedPresentCycle(
     blink_time: f64,
     has_kitty: bool,
     surface_update_plan: PresentationUpdatePlan,
-) RetainedTerminalPresentExecutionResult {
+) TerminalPresentableRefreshExecutionResult {
     const UpdateCtx = struct {
         self: @TypeOf(self),
         shell: *app_shell.Shell,
@@ -742,7 +742,7 @@ pub fn runRetainedPresentCycle(
         blink_time: f64,
         has_kitty: bool,
         surface_update_plan: PresentationUpdatePlan,
-        result: *RetainedTerminalPresentExecutionResult = undefined,
+        result: *TerminalPresentableRefreshExecutionResult = undefined,
     };
     const Local = struct {
         pub fn executeUpdate(
@@ -789,7 +789,7 @@ pub fn runRetainedPresentCycle(
         .has_kitty = has_kitty,
         .surface_update_plan = surface_update_plan,
     };
-    return renderer_presentable_host.runRetainedTerminalPresentExecution(renderer, .{
+    return renderer_presentable_host.runTerminalPresentableRefreshExecution(renderer, .{
         .update_intent = switch (surface_update_plan.mode) {
             .none => .none,
             .partial => .partial,
@@ -798,7 +798,7 @@ pub fn runRetainedPresentCycle(
     }, update_ctx, Local);
 }
 
-pub fn runRetainedPresentation(
+pub fn runRefreshedPresentablePresentation(
     self: anytype,
     renderer: anytype,
     terminal_view: view_state.TerminalViewModel,
@@ -811,11 +811,11 @@ pub fn runRetainedPresentation(
     composing_active: bool,
     composing_hash: u64,
     surface_update_plan: PresentationUpdatePlan,
-    cycle_result: RetainedTerminalPresentExecutionResult,
+    cycle_result: TerminalPresentableRefreshExecutionResult,
     note_present_ctx: anytype,
     note_present: anytype,
-) RetainedPresentationResult {
-    const result = RetainedPresentationResult{
+) RefreshedPresentablePresentationResult {
+    const result = RefreshedPresentablePresentationResult{
         .bg_ms = cycle_result.timing.background_ms,
         .glyph_ms = cycle_result.timing.glyph_ms,
         .kitty_ms = cycle_result.timing.kitty_ms,
@@ -879,7 +879,7 @@ pub fn runRetainedPresentation(
     return result;
 }
 
-pub fn executeRetainedPresentFlow(
+pub fn executeRefreshPresentFlow(
     self: anytype,
     shell: *app_shell.Shell,
     renderer: anytype,
@@ -902,7 +902,7 @@ pub fn executeRetainedPresentFlow(
 ) TerminalPresentResult {
     var result: TerminalPresentResult = .{};
     if (terminal_view.rows == 0 or terminal_view.cols == 0) return result;
-    const cycle = runRetainedPresentCycle(
+    const cycle = runPresentableRefreshCycle(
         self,
         shell,
         renderer,
@@ -918,7 +918,7 @@ pub fn executeRetainedPresentFlow(
         has_kitty,
         surface_update_plan,
     );
-    const retained = runRetainedPresentation(
+    const refreshed = runRefreshedPresentablePresentation(
         self,
         renderer,
         terminal_view,
@@ -940,9 +940,9 @@ pub fn executeRetainedPresentFlow(
     result.target_available = cycle.refresh != .unsupported and cycle.refresh != .target_unavailable;
     result.followup.required = cycle.refresh == .target_unavailable;
     result.followup.reason = if (cycle.refresh == .target_unavailable) .target_unavailable else .none;
-    result.timing.background_ms = retained.bg_ms;
-    result.timing.glyph_ms = retained.glyph_ms;
-    result.timing.kitty_ms = retained.kitty_ms;
+    result.timing.background_ms = refreshed.bg_ms;
+    result.timing.glyph_ms = refreshed.glyph_ms;
+    result.timing.kitty_ms = refreshed.kitty_ms;
     return result;
 }
 
@@ -1303,7 +1303,7 @@ pub fn runPresentation(
                 ctx.scroll_offset,
                 ctx.recent_input_window_active,
             );
-            return executeRetainedPresentFlow(
+            return executeRefreshPresentFlow(
                 ctx.self_widget,
                 ctx.shell,
                 renderer_local,

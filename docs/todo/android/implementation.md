@@ -124,6 +124,8 @@ Current checkpoint:
 - the first `AR-B3` code cut is in:
   shared renderer code now speaks in terminal-presentable refresh terms rather
   than retained-target update terms
+- the active widget/runtime refresh flow now also uses that neutral language
+  end-to-end instead of retained-path naming
 - this does not claim parity is solved yet
 - it makes the remaining blocker narrower and more honest before deeper
   presentable work

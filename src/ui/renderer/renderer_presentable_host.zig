@@ -8,7 +8,7 @@ pub const TerminalPresentPlan = presentable_contract.TerminalPresentPlan;
 pub const TerminalPresentResult = presentable_contract.TerminalPresentResult;
 pub const TerminalPresentTiming = presentable_contract.TerminalPresentTiming;
 
-pub const RetainedTerminalPresentExecutionResult = struct {
+pub const TerminalPresentableRefreshExecutionResult = struct {
     completed: bool = false,
     refresh: TerminalPresentableRefresh = .unsupported,
     timing: TerminalPresentTiming = .{},
@@ -57,13 +57,13 @@ pub fn refreshTerminalPresentable(renderer: anytype, ctx: anytype, comptime body
     );
 }
 
-pub fn runRetainedTerminalPresentExecution(
+pub fn runTerminalPresentableRefreshExecution(
     renderer: anytype,
     plan: TerminalPresentPlan,
     ctx: anytype,
     comptime Hooks: type,
-) RetainedTerminalPresentExecutionResult {
-    var result = RetainedTerminalPresentExecutionResult{};
+) TerminalPresentableRefreshExecutionResult {
+    var result = TerminalPresentableRefreshExecutionResult{};
     if (plan.update_intent == .none) return result;
 
     const ExecCtx = struct {

@@ -105,6 +105,10 @@ Stop when:
     - `.target_unavailable`
     - `.unsupported`
 - widget/runtime behavior is intentionally unchanged in this cut
+- the second code-facing cut is also in:
+  - active widget/runtime functions and result types no longer use retained-path
+    naming for the shared terminal-presentable refresh flow
+  - the active shared path now reads in refresh/presentable language end-to-end
 - this narrows the contradiction from "shared code asks for a retained update
   cycle" to the more honest remaining problem:
   OpenGL and Metal still satisfy that refresh seam through uneven underlying

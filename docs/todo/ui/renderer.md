@@ -1541,8 +1541,9 @@ Current evidence:
   - `.refreshed`
   - `.target_unavailable`
   - `.unsupported`
-- widget/runtime behavior is unchanged in this first cut; only the shared
-  lifecycle vocabulary moved away from retained-target-shaped naming
+- widget/runtime behavior is unchanged in this cut
+- active widget/runtime refresh flow names are now also presentable/refresh-
+  shaped instead of retained-path-shaped
 
 Do not do:
 
