@@ -139,6 +139,9 @@ Current checkpoint:
 - Metal terminal presentable refresh now satisfies the shared refresh seam
   structurally by replaying queued terminal update draws into its snapshot
   presentable on the current command buffer
+- refresh-capable backends now also route through the active shared refresh
+  execution path instead of reserving that path only for retained-surface
+  backends
 - this does not claim parity is solved yet
 - it makes the remaining blocker narrower and more honest before deeper
   presentable work

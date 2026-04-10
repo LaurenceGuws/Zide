@@ -143,3 +143,9 @@ Stop when:
     snapshot presentable texture on the current Metal command buffer
   - this is a structural lifecycle-parity improvement, not a claim that live
     Metal verification is complete again
+- the eighth code-facing cut is now in too:
+  - active terminal present dispatch no longer reserves the refresh flow only
+    for retained-surface backends
+  - refresh-capable backends now use the shared refresh execution path, so
+    Metal participates in the active presentable refresh lane instead of only
+    satisfying it as a dormant backend capability

@@ -159,6 +159,8 @@ Current `RB-B3.e` checkpoint:
 - the behavior-level parity gap is narrower too:
   Metal now satisfies the shared terminal presentable refresh seam
   structurally instead of reporting refresh as unsupported by definition
+- refresh-capable backends now also use the active shared refresh execution
+  path instead of treating refresh as a retained-only route
 
 Gate-4 closure note:
 

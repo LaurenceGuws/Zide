@@ -29,13 +29,17 @@ pub fn terminalUsesRetainedPresentSurface(renderer: anytype) bool {
     return terminalPresentationMode(renderer) == .retained_surface;
 }
 
+pub fn terminalSupportsPresentableRefresh(renderer: anytype) bool {
+    return terminalPresentationMode(renderer) != .direct_main_target;
+}
+
 pub fn runTerminalPresentExecution(
     renderer: anytype,
     plan: TerminalPresentPlan,
     ctx: anytype,
     comptime Hooks: type,
 ) TerminalPresentResult {
-    if (terminalUsesRetainedPresentSurface(renderer)) {
+    if (terminalSupportsPresentableRefresh(renderer)) {
         return Hooks.executePresentableRefreshFlow(plan, ctx, renderer);
     }
     return Hooks.executeDirectPresentFlow(plan, ctx, renderer);
@@ -109,7 +113,7 @@ pub fn runDirectTerminalPresentExecution(
     comptime Hooks: type,
 ) DirectTerminalPresentExecutionResult {
     var result = DirectTerminalPresentExecutionResult{};
-    if (terminalUsesRetainedPresentSurface(renderer)) return result;
+    if (terminalSupportsPresentableRefresh(renderer)) return result;
 
     if (plan.update_intent == .partial) {
         result = Hooks.tryPartialUpdate(ctx, renderer, plan);
