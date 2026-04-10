@@ -87,13 +87,15 @@ final class ShellInputView extends View {
             public boolean setSelection(int start, int end) {
                 final int oldCursor = editorCursor;
                 final int newCursor = Math.max(0, Math.min(start, editorBuffer.length()));
-                if (newCursor == oldCursor) return true;
+                if (newCursor == oldCursor)
+                    return true;
 
                 final int from = Math.min(oldCursor, newCursor);
                 final int to = Math.max(oldCursor, newCursor);
                 int newlinesCrossed = 0;
                 for (int i = from; i < to; i++) {
-                    if (editorBuffer.charAt(i) == '\n') newlinesCrossed++;
+                    if (editorBuffer.charAt(i) == '\n')
+                        newlinesCrossed++;
                 }
 
                 if (newlinesCrossed > 0) {
@@ -194,7 +196,8 @@ final class ShellInputView extends View {
 
     private int editorLineStart() {
         int i = editorCursor - 1;
-        while (i >= 0 && editorBuffer.charAt(i) != '\n') i--;
+        while (i >= 0 && editorBuffer.charAt(i) != '\n')
+            i--;
         return i + 1;
     }
 
@@ -208,7 +211,8 @@ final class ShellInputView extends View {
     private void replaceComposition(String next) {
         final String previous = currentCompositionText();
         final int composeStart = editorComposingStart >= 0 ? editorComposingStart : editorCursor;
-        final int oldEnd = editorComposingEnd >= editorComposingStart && editorComposingStart >= 0 ? editorComposingEnd : editorCursor;
+        final int oldEnd = editorComposingEnd >= editorComposingStart && editorComposingStart >= 0 ? editorComposingEnd
+                : editorCursor;
 
         int commonPrefix = 0;
         final int maxPrefix = Math.min(previous.length(), next.length());

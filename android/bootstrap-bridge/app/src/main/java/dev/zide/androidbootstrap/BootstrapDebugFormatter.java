@@ -118,7 +118,8 @@ final class BootstrapDebugFormatter {
         }
     }
 
-    private BootstrapDebugFormatter() {}
+    private BootstrapDebugFormatter() {
+    }
 
     static String formatSurfaceEvent(String event, SurfaceEventSnapshot s) {
         return event + " seq=" + s.seq +
