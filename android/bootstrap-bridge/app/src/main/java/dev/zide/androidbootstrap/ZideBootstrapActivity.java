@@ -14,6 +14,7 @@ import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
 import android.view.inputmethod.InputMethodManager;
@@ -68,6 +69,8 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     private boolean shellStartScheduled = false;
     private boolean shellRefreshActive = false;
     private boolean sidebarOpen = false;
+    private float transcriptTouchDownX = 0;
+    private float transcriptTouchDownY = 0;
     private int surfaceHostGeneration = 0;
     private int productViewBasePaddingLeft = 0;
     private int productViewBasePaddingTop = 0;
@@ -398,10 +401,27 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         lp.gravity = Gravity.BOTTOM | Gravity.START;
         root.addView(shellInputView, lp);
 
-        shellOutputScroll.setOnClickListener(v -> openIme());
-        // Taps land on the transcript TextView, not the ScrollView parent, so both
-        // must open the IME or most of the terminal area appears "dead" to touch.
-        shellOutputText.setOnClickListener(v -> openIme());
+        final int touchSlop = ViewConfiguration.get(this).getScaledTouchSlop();
+        final View.OnTouchListener transcriptTapListener = (view, event) -> {
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    transcriptTouchDownX = event.getX();
+                    transcriptTouchDownY = event.getY();
+                    break;
+                case MotionEvent.ACTION_UP:
+                    final float dx = Math.abs(event.getX() - transcriptTouchDownX);
+                    final float dy = Math.abs(event.getY() - transcriptTouchDownY);
+                    if (dx <= touchSlop && dy <= touchSlop) {
+                        openIme();
+                    }
+                    break;
+                default:
+                    break;
+            }
+            return false;
+        };
+        shellOutputScroll.setOnTouchListener(transcriptTapListener);
+        shellOutputText.setOnTouchListener(transcriptTapListener);
     }
 
     @Override
@@ -598,39 +618,60 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     }
 
     private static String surfaceTransitionLabel(int transition) {
-        return switch (transition) {
-            case 1 -> "acquired";
-            case 2 -> "replaced";
-            case 3 -> "retired";
-            default -> "unchanged";
-        };
+        switch (transition) {
+            case 1:
+                return "acquired";
+            case 2:
+                return "replaced";
+            case 3:
+                return "retired";
+            default:
+                return "unchanged";
+        }
     }
 
     private static String shellStartStatusLabel(int status) {
-        return switch (status) {
-            case 1 -> "started";
-            case 2 -> "unsupported";
-            case 3 -> "create-failed";
-            case 4 -> "resize-failed";
-            case 5 -> "start-failed";
-            case 6 -> "send-failed";
-            case 7 -> "poll-failed";
-            case 8 -> "snapshot-failed";
-            default -> "none";
-        };
+        switch (status) {
+            case 1:
+                return "started";
+            case 2:
+                return "unsupported";
+            case 3:
+                return "create-failed";
+            case 4:
+                return "resize-failed";
+            case 5:
+                return "start-failed";
+            case 6:
+                return "send-failed";
+            case 7:
+                return "poll-failed";
+            case 8:
+                return "snapshot-failed";
+            default:
+                return "none";
+        }
     }
 
     private static String glesProbeStatusLabel(int status) {
-        return switch (status) {
-            case 1 -> "ready";
-            case 2 -> "drawn";
-            case 3 -> "surface-destroyed";
-            case 4 -> "init-failed";
-            case 5 -> "surface-failed";
-            case 6 -> "make-current-failed";
-            case 7 -> "swap-failed";
-            default -> "unavailable";
-        };
+        switch (status) {
+            case 1:
+                return "ready";
+            case 2:
+                return "drawn";
+            case 3:
+                return "surface-destroyed";
+            case 4:
+                return "init-failed";
+            case 5:
+                return "surface-failed";
+            case 6:
+                return "make-current-failed";
+            case 7:
+                return "swap-failed";
+            default:
+                return "unavailable";
+        }
     }
 
     private final class EdgeSwipeListener implements View.OnTouchListener {

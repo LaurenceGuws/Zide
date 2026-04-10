@@ -24,13 +24,3 @@ vim.api.nvim_create_user_command("ZideAndroidEnv", function()
     vim.log.levels.INFO
   )
 end, {})
-
-if vim.lsp and vim.lsp.config then
-  local current = vim.lsp.config.jdtls or {}
-  vim.lsp.config("jdtls", vim.tbl_deep_extend("force", current, {
-    cmd_env = vim.tbl_extend("force", current.cmd_env or {}, {
-      ANDROID_HOME = vim.env.ANDROID_HOME,
-      ANDROID_SDK_ROOT = vim.env.ANDROID_SDK_ROOT,
-    }),
-  }))
-end

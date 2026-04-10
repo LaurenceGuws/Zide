@@ -247,19 +247,30 @@ final class ShellInputView extends View {
     }
 
     private String mapKeyToEscape(int keyCode) {
-        return switch (keyCode) {
-            case KeyEvent.KEYCODE_DPAD_UP -> "\u001b[A";
-            case KeyEvent.KEYCODE_DPAD_DOWN -> "\u001b[B";
-            case KeyEvent.KEYCODE_DPAD_RIGHT -> "\u001b[C";
-            case KeyEvent.KEYCODE_DPAD_LEFT -> "\u001b[D";
-            case KeyEvent.KEYCODE_MOVE_HOME -> "\u001b[H";
-            case KeyEvent.KEYCODE_MOVE_END -> "\u001b[F";
-            case KeyEvent.KEYCODE_INSERT -> "\u001b[2~";
-            case KeyEvent.KEYCODE_FORWARD_DEL -> "\u001b[3~";
-            case KeyEvent.KEYCODE_PAGE_UP -> "\u001b[5~";
-            case KeyEvent.KEYCODE_PAGE_DOWN -> "\u001b[6~";
-            default -> null;
-        };
+        switch (keyCode) {
+            case KeyEvent.KEYCODE_DPAD_UP:
+                return "\u001b[A";
+            case KeyEvent.KEYCODE_DPAD_DOWN:
+                return "\u001b[B";
+            case KeyEvent.KEYCODE_DPAD_RIGHT:
+                return "\u001b[C";
+            case KeyEvent.KEYCODE_DPAD_LEFT:
+                return "\u001b[D";
+            case KeyEvent.KEYCODE_MOVE_HOME:
+                return "\u001b[H";
+            case KeyEvent.KEYCODE_MOVE_END:
+                return "\u001b[F";
+            case KeyEvent.KEYCODE_INSERT:
+                return "\u001b[2~";
+            case KeyEvent.KEYCODE_FORWARD_DEL:
+                return "\u001b[3~";
+            case KeyEvent.KEYCODE_PAGE_UP:
+                return "\u001b[5~";
+            case KeyEvent.KEYCODE_PAGE_DOWN:
+                return "\u001b[6~";
+            default:
+                return null;
+        }
     }
 
     private Integer mapKeyToControlCodepoint(KeyEvent event) {
@@ -273,40 +284,75 @@ final class ShellInputView extends View {
         if (unicode >= 'A' && unicode <= 'Z') {
             return unicode - 'A' + 1;
         }
-        return switch (event.getKeyCode()) {
-            case KeyEvent.KEYCODE_A -> 0x01;
-            case KeyEvent.KEYCODE_B -> 0x02;
-            case KeyEvent.KEYCODE_C -> 0x03;
-            case KeyEvent.KEYCODE_D -> 0x04;
-            case KeyEvent.KEYCODE_E -> 0x05;
-            case KeyEvent.KEYCODE_F -> 0x06;
-            case KeyEvent.KEYCODE_G -> 0x07;
-            case KeyEvent.KEYCODE_H -> 0x08;
-            case KeyEvent.KEYCODE_I -> 0x09;
-            case KeyEvent.KEYCODE_J -> 0x0a;
-            case KeyEvent.KEYCODE_K -> 0x0b;
-            case KeyEvent.KEYCODE_L -> 0x0c;
-            case KeyEvent.KEYCODE_M -> 0x0d;
-            case KeyEvent.KEYCODE_N -> 0x0e;
-            case KeyEvent.KEYCODE_O -> 0x0f;
-            case KeyEvent.KEYCODE_P -> 0x10;
-            case KeyEvent.KEYCODE_Q -> 0x11;
-            case KeyEvent.KEYCODE_R -> 0x12;
-            case KeyEvent.KEYCODE_S -> 0x13;
-            case KeyEvent.KEYCODE_T -> 0x14;
-            case KeyEvent.KEYCODE_U -> 0x15;
-            case KeyEvent.KEYCODE_V -> 0x16;
-            case KeyEvent.KEYCODE_W -> 0x17;
-            case KeyEvent.KEYCODE_X -> 0x18;
-            case KeyEvent.KEYCODE_Y -> 0x19;
-            case KeyEvent.KEYCODE_Z -> 0x1a;
-            case KeyEvent.KEYCODE_LEFT_BRACKET -> 0x1b;
-            case KeyEvent.KEYCODE_BACKSLASH -> 0x1c;
-            case KeyEvent.KEYCODE_RIGHT_BRACKET -> 0x1d;
-            case KeyEvent.KEYCODE_6 -> 0x1e;
-            case KeyEvent.KEYCODE_MINUS, KeyEvent.KEYCODE_SLASH -> 0x1f;
-            case KeyEvent.KEYCODE_SPACE, KeyEvent.KEYCODE_2 -> 0x00;
-            default -> null;
-        };
+        switch (event.getKeyCode()) {
+            case KeyEvent.KEYCODE_A:
+                return 0x01;
+            case KeyEvent.KEYCODE_B:
+                return 0x02;
+            case KeyEvent.KEYCODE_C:
+                return 0x03;
+            case KeyEvent.KEYCODE_D:
+                return 0x04;
+            case KeyEvent.KEYCODE_E:
+                return 0x05;
+            case KeyEvent.KEYCODE_F:
+                return 0x06;
+            case KeyEvent.KEYCODE_G:
+                return 0x07;
+            case KeyEvent.KEYCODE_H:
+                return 0x08;
+            case KeyEvent.KEYCODE_I:
+                return 0x09;
+            case KeyEvent.KEYCODE_J:
+                return 0x0a;
+            case KeyEvent.KEYCODE_K:
+                return 0x0b;
+            case KeyEvent.KEYCODE_L:
+                return 0x0c;
+            case KeyEvent.KEYCODE_M:
+                return 0x0d;
+            case KeyEvent.KEYCODE_N:
+                return 0x0e;
+            case KeyEvent.KEYCODE_O:
+                return 0x0f;
+            case KeyEvent.KEYCODE_P:
+                return 0x10;
+            case KeyEvent.KEYCODE_Q:
+                return 0x11;
+            case KeyEvent.KEYCODE_R:
+                return 0x12;
+            case KeyEvent.KEYCODE_S:
+                return 0x13;
+            case KeyEvent.KEYCODE_T:
+                return 0x14;
+            case KeyEvent.KEYCODE_U:
+                return 0x15;
+            case KeyEvent.KEYCODE_V:
+                return 0x16;
+            case KeyEvent.KEYCODE_W:
+                return 0x17;
+            case KeyEvent.KEYCODE_X:
+                return 0x18;
+            case KeyEvent.KEYCODE_Y:
+                return 0x19;
+            case KeyEvent.KEYCODE_Z:
+                return 0x1a;
+            case KeyEvent.KEYCODE_LEFT_BRACKET:
+                return 0x1b;
+            case KeyEvent.KEYCODE_BACKSLASH:
+                return 0x1c;
+            case KeyEvent.KEYCODE_RIGHT_BRACKET:
+                return 0x1d;
+            case KeyEvent.KEYCODE_6:
+                return 0x1e;
+            case KeyEvent.KEYCODE_MINUS:
+            case KeyEvent.KEYCODE_SLASH:
+                return 0x1f;
+            case KeyEvent.KEYCODE_SPACE:
+            case KeyEvent.KEYCODE_2:
+                return 0x00;
+            default:
+                return null;
+        }
     }
 }
