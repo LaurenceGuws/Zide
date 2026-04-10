@@ -207,11 +207,32 @@ The direct-input path now also accepts Ctrl-modified key events for `A` through
 the current Android input surface small while covering the first control-key
 subset needed for real shell use such as `Ctrl+C` and `Ctrl+D`.
 
+It now also covers the standard terminal-control punctuation subset:
+
+- `Ctrl+[`
+- `Ctrl+\`
+- `Ctrl+]`
+- `Ctrl+6`
+- `Ctrl+/`
+- `Ctrl+Space`
+- `Ctrl+2`
+
+And Android `KEYCODE_NUMPAD_ENTER` now routes to `\n` the same as normal
+Enter.
+
 Current Java ownership is also cleaner:
 
 - `ZideBootstrapActivity` is now orchestration only
 - `ShellInputView` owns the editor model and `InputConnection`
 - `ShellTranscriptController` owns transcript follow behavior
 - `ShellSessionController` owns shell polling/transcript file reads
-- `BootstrapDebugFormatter` and `BootstrapNativeBridge` own debug formatting
-  and JNI/native bridge detail
+- `BootstrapDebugFormatter` owns debug formatting
+
+Current product-shell layout is also now moving toward a mobile-native shape:
+
+- the terminal transcript owns the screen without outer padding
+- transcript tap opens the IME path directly (listeners on both the scroll host
+  and inner transcript `TextView`, because touches usually hit the child)
+- a slim bottom assist strip provides terminal helper input for phone-first use
+- restart/debug controls now live behind a hidden left drawer instead of taking
+  permanent vertical space

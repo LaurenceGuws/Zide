@@ -86,6 +86,17 @@ The bootstrap app now uses two screens:
   - grouped GLES/runtime status
   - event log only
 
+## Cursor / VS Code (Java language server)
+
+The repo root `.vscode/settings.json` turns on **experimental Android Gradle
+import** (`java.jdt.ls.androidSupport.enabled` = `on`). Without it, stable
+VS Code / Cursor often shows “not on the classpath of project `app`” for every
+file under `app/src/main/java` even though Gradle builds fine.
+
+After pulling this, run **Java: Clean Java Language Server Workspace** (then
+reload) once. Ensure `ANDROID_HOME` / `ANDROID_SDK_ROOT` are set in the
+environment where you launch the editor so the importer can resolve the SDK.
+
 ## Neovim Workspace
 
 For Java/LSP work, treat `android/bootstrap-bridge/` as the Android workspace

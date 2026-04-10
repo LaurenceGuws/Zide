@@ -140,8 +140,9 @@ engine. Note10 proved repeatable shell I/O via terminal FFI.
 
 ### `AS-A2` Android Live-Shell Product View — met
 
-Product view is shell-first: transcript area, compact controls (IME, Restart,
-Debug). IME uses window insets. Auto-follow with manual scroll detach.
+Product view is shell-first: transcript area, slim assist bar, restart/debug in
+a left drawer. IME uses window insets; tap transcript opens IME. Auto-follow
+with manual scroll detach.
 
 ### `AS-A3` Android Direct Shell Input
 
@@ -184,11 +185,18 @@ Current result:
   - `ShellTranscriptController`
   - `ShellSessionController`
   - `BootstrapDebugFormatter`
-  - `BootstrapNativeBridge`
+- the product shell now also follows a more honest mobile layout:
+  - main terminal area keeps the screen
+  - IME opens from transcript tap (ScrollView + `shell_output_text`) instead of
+    a permanent toggle
+  - a slim bottom assist bar provides phone keyboard helpers
+  - restart/debug live in a hidden left drawer instead of the main bar
 
 Remaining for this ticket:
 
-- broader control-key/device coverage beyond the current Ctrl+A..Z cut
+- broader control-key/device coverage beyond the current Ctrl+A..Z plus
+  standard punctuation subset (`Ctrl+[`, `Ctrl+\`, `Ctrl+]`, `Ctrl+6`,
+  `Ctrl+/`, `Ctrl+Space`, `Ctrl+2`)
 - special terminal keys beyond the currently proved editor-navigation subset
 - decision on how far the current hidden-input terminal path should go before a
   more terminal-native mobile input surface is worth opening
