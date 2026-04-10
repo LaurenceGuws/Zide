@@ -131,3 +131,8 @@ Stop when:
     specifically "direct partial update"
   - the remaining shared capability question is now phrased more neutrally as
     incremental presentable update support
+- the sixth code-facing cut is now in too:
+  - presentable-host helpers no longer mix backend capability truth with
+    widget policy inputs like sync-update state
+  - widget/runtime now owns its own sync-update reuse policy while the host
+    answers only backend requirement/support questions

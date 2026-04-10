@@ -41,12 +41,12 @@ pub fn runTerminalPresentExecution(
     return Hooks.executeDirectPresentFlow(plan, ctx, renderer);
 }
 
-pub fn terminalAllowsRecentInputForceFullPresentation(renderer: anytype) bool {
+pub fn terminalRequiresFullPresentAfterRecentInput(renderer: anytype) bool {
     return terminalUsesRetainedPresentSurface(renderer);
 }
 
-pub fn terminalAllowsFastPresentReuse(renderer: anytype, sync_updates_active: bool) bool {
-    return sync_updates_active or !terminalUsesRetainedPresentSurface(renderer);
+pub fn terminalSupportsPresentableReuse(renderer: anytype) bool {
+    return !terminalUsesRetainedPresentSurface(renderer);
 }
 
 pub fn terminalSupportsIncrementalPresentableUpdate(renderer: anytype) bool {

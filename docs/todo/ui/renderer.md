@@ -153,6 +153,9 @@ Current `RB-B3.e` checkpoint:
 - the shared capability question is also slightly cleaner now:
   widget/runtime asks for incremental presentable update support instead of a
   backend-shaped "direct partial update" concept
+- widget/runtime also now keeps its own sync-update reuse policy locally
+  instead of asking the presentable host to blend backend truth with widget
+  policy state
 
 Gate-4 closure note:
 

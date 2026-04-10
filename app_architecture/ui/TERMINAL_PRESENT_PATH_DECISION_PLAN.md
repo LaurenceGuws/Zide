@@ -98,9 +98,10 @@ Stop when:
 - `terminal_widget_presentation_runtime.zig` no longer calls
   `usesDirectTerminalPresentation(...)`
 - recent-input force-full policy now routes through
-  `renderer_presentable_host.terminalAllowsRecentInputForceFullPresentation(...)`
-- fast-present reuse gating now routes through
-  `renderer_presentable_host.terminalAllowsFastPresentReuse(...)`
+  `renderer_presentable_host.terminalRequiresFullPresentAfterRecentInput(...)`
+- backend reuse support now routes through
+  `renderer_presentable_host.terminalSupportsPresentableReuse(...)`
+  while widget/runtime keeps its own sync-update policy locally
 - incremental presentable-update entry now routes through
   `renderer_presentable_host.terminalSupportsIncrementalPresentableUpdate(...)`
 - the old `usesDirectTerminalPresentation(...)` helper is now deleted

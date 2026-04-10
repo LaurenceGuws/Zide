@@ -134,6 +134,8 @@ Current checkpoint:
   from declared `TerminalPresentationMode` capability truth instead
 - shared code now asks for incremental presentable update support instead of
   specifically "direct partial update" support
+- presentable-host helpers no longer mix backend capability truth with
+  widget-owned sync-update policy
 - this does not claim parity is solved yet
 - it makes the remaining blocker narrower and more honest before deeper
   presentable work
