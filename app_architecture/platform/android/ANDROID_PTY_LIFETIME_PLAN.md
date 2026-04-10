@@ -109,7 +109,7 @@ That probe should optimize for truth, not feature completeness.
 
 ## Current Probe Result
 
-The bootstrap bridge PTY heartbeat probe is enough to answer the baseline
+The terminal host app PTY heartbeat probe is enough to answer the baseline
 question.
 
 Observed truth on the Note10:
@@ -145,7 +145,7 @@ For the current tree:
 - disposable app-process-owned PTY lifetime is the Android terminal baseline
 - any future service-owned survival design must open as a separate lane with
   explicit product authority
-- the earlier bootstrap PTY probe implementation is retired from the live app;
+- the earlier legacy PTY probe implementation is retired from the live app;
   this doc keeps the validated result, not the old probe surface
 
 That separate lane is now opened explicitly as `AP-A2` in
@@ -156,7 +156,7 @@ the observed Android survival story.
 
 ## Retired Probe Surface
 
-The bootstrap bridge previously exposed disposable PTY status plus manual
+The terminal host app previously exposed disposable PTY status plus manual
 start/stop/restart controls to prove the baseline on-device. That live probe UI
 is now retired from the app. The result remains authoritative; the active app
 has moved on to the real shell path.

@@ -51,4 +51,4 @@ local.properties
 .project
 .settings/
 # JDT / Eclipse output under Android module (not Gradle out/)
-android/bootstrap-bridge/app/bin/
+android/terminal-host/app/bin/

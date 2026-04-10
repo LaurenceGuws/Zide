@@ -34,7 +34,7 @@ trying to decide full mobile product packaging or full IDE composition early.
 
 SDL may remain a bridge for:
 
-- Android bootstrap
+- Android terminal host setup
 - JNI glue
 - event routing
 - packaging integration
@@ -145,7 +145,7 @@ So Android rendering must support:
 
 ## SDL Role On Android
 
-SDL is allowed to remain the practical bootstrap and integration bridge.
+SDL is allowed to remain the practical integration bridge.
 
 SDL is still useful for:
 
@@ -263,7 +263,7 @@ Practical consequences from that Note10 run:
 This repo is now explicitly optimizing for Android terminal excellence, not for
 renderer/backend cleanup as an end in itself.
 
-That does not mean Android is a throwaway bootstrap shell around a Zig-only
+That does not mean Android is a throwaway host shell around a Zig-only
 product. The current intended shape is:
 
 - strong shared Zig core
@@ -272,13 +272,13 @@ product. The current intended shape is:
 - no premature commitment yet on whether terminal/editor later ship as one APK
   or multiple products sharing the same core
 
-The Android-native host/bootstrap lane has now answered its next two honest
+The Android-native terminal-host lane has now answered its next two honest
 Android-specific questions:
 
 - surface identity/replacement truth is explicit enough for future renderer
   work
 - PTY lifetime baseline is explicit enough for future Android terminal work
-- bootstrap-owned EGL binding is explicit enough to prove real
+- terminal-host-owned EGL binding is explicit enough to prove real
   `ANativeWindow` + EGL surface lifecycle behavior on-device
 
 The current EGL proof is now stronger than a one-frame clear/swap demo:
@@ -290,8 +290,8 @@ The current EGL proof is now stronger than a one-frame clear/swap demo:
   `glesSurfaceCreates` so replacement/reacquire behavior can be audited
   directly on-device
 - the current Note10 path also keeps `glesContextCreates=1` across those
-  transitions, so bootstrap EGL context reuse is honest there today
-- the current Note10 path also keeps one bootstrap-owned GLES texture alive
+  transitions, so terminal-host EGL context reuse is honest there today
+- the current Note10 path also keeps one terminal-host-owned GLES texture alive
   with `glesTextureCreates=1`, so minimal context-owned resource lifetime is
   honest there today
 
@@ -304,7 +304,7 @@ The next Android moves are now gated by stronger external pressure:
   renderer queue
 - service-owned PTY survival may move only through its own explicit product
   lane, not through renderer or generic host drift
-- bootstrap-owned EGL hardening may continue only if it answers another
+- terminal-host-owned EGL hardening may continue only if it answers another
   concrete Android runtime question without smuggling work into
   `src/ui/renderer/`
 
@@ -319,8 +319,8 @@ Current priority rule:
 What is now allowed:
 
 - define the first Android GLES/EGL binding cut precisely enough to execute it
-  later as bootstrap-owned Android work
-- execute that first bootstrap-owned EGL/GLES clear/swap proof without adding
+  later as terminal-host-owned Android work
+- execute that first terminal-host-owned EGL/GLES clear/swap proof without adding
   a real renderer backend in `src/ui/renderer/`
 
 What is still not allowed:

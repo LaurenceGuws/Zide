@@ -1,7 +1,7 @@
 # Android GLES Binding Plan
 
 Purpose: define the first honest Android rendering-binding cut after Android
-host/bootstrap truth, without reopening blocked shared-renderer work.
+terminal-host truth, without reopening blocked shared-renderer work.
 
 This doc is authority for the first Android GLES/EGL binding step.
 
@@ -22,7 +22,7 @@ Reference pressure:
 
 ## Why This Is Separate
 
-The Android-native host/bootstrap lane already proved:
+The Android-native terminal-host lane already proved:
 
 - lifecycle truth
 - replaceable `ANativeWindow` truth
@@ -91,7 +91,7 @@ This lane must answer:
 2. How does `surfaceIdentityEpoch` drive EGL surface retirement/recreation?
 3. What is the smallest visible rendering proof that exercises real Android
    surface replacement truth without smuggling renderer architecture?
-4. What exact boundary keeps this as bootstrap-owned binding work instead of
+4. What exact boundary keeps this as terminal-host-owned binding work instead of
    premature backend implementation?
 
 ## Binding Boundary
@@ -101,7 +101,7 @@ The first cut must keep ownership here:
 - Java activity / `SurfaceView` callbacks
 - `android_runtime_bridge.zig`
 - one Android-only native rendering binding module under `src/platform/`
-  or a clearly Android-bootstrap-owned native file
+  or a clearly Android-terminal-host-owned native file
 
 It must not cross into:
 
@@ -136,7 +136,7 @@ Acceptance:
   - draw one trivial frame
   - swap buffers
   - recreate the EGL window surface when surface identity changes
-- docs record that this is a bootstrap-owned proof, not a real backend launch
+- docs record that this is a terminal-host-owned proof, not a real backend launch
 
 Do not do:
 
@@ -149,7 +149,7 @@ Do not do:
 
 The first executable GLES/EGL proof should be exactly:
 
-- keep the existing bootstrap activity and native bridge
+- keep the existing terminal-host activity and native bridge
 - add one Android-only EGL binding owner behind that bridge
 - on surface available:
   - ensure EGL display/config/context exist
@@ -192,7 +192,7 @@ Current Note10 truth:
 - both replacement stories are proved:
   - `replaced`
   - `retired -> acquired`
-- current bootstrap policy reuses one EGL context across those surface
+- current terminal-host policy reuses one EGL context across those surface
   transitions
 - one minimal GLES texture survives redraw and surface replacement on the
   current device path
@@ -211,13 +211,13 @@ It still does not prove:
 
 The next honest Android-owned GLES question was:
 
-- can one bootstrap-owned GLES texture survive the proven surface transitions
+- can one terminal-host-owned GLES texture survive the proven surface transitions
   while also accepting repeated content upload/update, not just continued
   object existence checks
 
 Observed on the Note10 (2026-04-09):
 
-- the bootstrap GLES probe now tracks:
+- the terminal-host GLES probe now tracks:
   - `glesTextureUploads`
   - `glesTextureUpdates`
 - texture creation performs one explicit `glTexImage2D` upload
@@ -255,9 +255,9 @@ Observed on the Note10 (2026-04-09):
 
 This proves:
 
-- one bootstrap-owned GLES texture can survive the proven surface transitions
+- one terminal-host-owned GLES texture can survive the proven surface transitions
   while also accepting repeated content updates on the Note10
-- the current bootstrap policy still performs one initial upload, then keeps
+- the current terminal-host policy still performs one initial upload, then keeps
   updating the surviving texture rather than recreating or reuploading it
 - `replaced` and `retired -> acquired` do not currently force hidden context
   or texture recreation on this device path
@@ -270,7 +270,7 @@ Current probe additions:
 
 - `glesTextureResizes`
 - `glesTextureSize`
-- a bootstrap debug path that forces one synthetic `SurfaceView` size change
+- a terminal-host debug path that forces one synthetic `SurfaceView` size change
 
 Observed on the Note10 (2026-04-09):
 
@@ -312,19 +312,19 @@ Important caveat:
 
 The first Android EGL binding cut is now structurally met.
 
-Bootstrap EGL lifecycle hardening is now structurally met too.
+Terminal-host EGL lifecycle hardening is now structurally met too.
 
 Current honest answer:
 
-- bootstrap-owned Android EGL/GLES binding is viable in this repo
+- terminal-host-owned Android EGL/GLES binding is viable in this repo
 - that reduces Android uncertainty materially
 - surface replacement and retirement/reacquire now both have device proof on
   the Note10
-- current bootstrap policy can keep one EGL context alive while recreating only
+- current terminal-host policy can keep one EGL context alive while recreating only
   the window surface across those transitions on the Note10
 - one minimal context-owned GLES resource also survives those transitions on
   the Note10
-- it still remains bootstrap-owned proof work, not shared renderer adoption
+- it still remains terminal-host-owned proof work, not shared renderer adoption
 
 After that:
 

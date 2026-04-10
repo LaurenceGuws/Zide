@@ -1,6 +1,6 @@
 # Android Shell Bring-Up Plan
 
-Purpose: define the first honest Android shell lane after host/bootstrap and
+Purpose: define the first honest Android shell lane after terminal-host and
 PTY baseline proof, without pretending shared Android renderer work is open.
 
 Owner docs:
@@ -15,7 +15,7 @@ Owner docs:
 The current Android truth is already strong enough in the two prerequisite
 areas:
 
-- host/bootstrap/runtime truth is real on the Note10
+- terminal-host/runtime truth is real on the Note10
 - disposable app-process-owned PTY lifetime is the current Android baseline
 
 That means the next highest-leverage Android step is no longer another probe.
@@ -47,10 +47,10 @@ It should not be:
 
 This lane must answer:
 
-1. Can the bootstrap app start `/system/bin/sh` through the repo's real
+1. Can the terminal host app start `/system/bin/sh` through the repo's real
    terminal FFI path on Android?
-2. Can the bootstrap app send text/newline input into that shell?
-3. Can the bootstrap app poll/snapshot the resulting terminal state and expose
+2. Can the terminal host app send text/newline input into that shell?
+3. Can the terminal host app poll/snapshot the resulting terminal state and expose
    visible output on device?
 4. Does that loop work honestly enough that later IME/prompt handling can be
    solved against a live terminal instead of a probe surface?
@@ -65,13 +65,13 @@ Purpose:
 
 Acceptance:
 
-- one bootstrap-owned shell session manager exists under `src/platform/`
+- one terminal-host-owned shell session manager exists under `src/platform/`
 - it creates one `ZideTerminalHandle`
-- it resizes the session to a fixed bootstrap size
+- it resizes the session to a fixed terminal-host probe size
 - it starts `/system/bin/sh`
 - it supports sending plain text plus newline
 - it polls and snapshots terminal output into a plain transcript string
-- the bootstrap app can:
+- the terminal host app can:
   - start or restart the shell
   - send one line of input
   - display live transcript output
@@ -103,14 +103,14 @@ The first `AS-A1` cut is now implemented through the Android terminal host app
 
 Current shape:
 
-- `src/platform/android_shell_session.zig` owns one bootstrap-only shell
+- `src/platform/android_shell_session.zig` owns one terminal-host-scoped shell
   session manager
 - it creates one `ZideTerminalHandle`
-- it resizes to a fixed bootstrap terminal size
+- it resizes to a fixed terminal-host probe terminal size
 - it starts `/system/bin/sh`
-- it consumes pending input from a bootstrap-owned input file
+- it consumes pending input from a terminal-host-owned input file
 - it snapshots terminal state back into a plain transcript file
-- the bootstrap app exposes:
+- the terminal host app exposes:
   - product view:
     - live shell transcript
     - shell input/send
@@ -134,7 +134,7 @@ This proves:
 - Android input and output can now be exercised against a live shell instead
   of a PTY heartbeat probe
 - the next Android product question should be prompt/viewport/IME behavior
-  against that live shell, not more bootstrap speculation
+  against that live shell, not more terminal-host speculation
 
 ## Next Cut
 

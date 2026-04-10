@@ -127,8 +127,8 @@ Unavailable surface means:
 
 This policy does not decide:
 
-- GLES backend bootstrap
-- Vulkan backend bootstrap
+- GLES backend bringup
+- Vulkan backend bringup
 - Android PTY/service lifetime policy
 - renderer frame/present sequencing beyond surface identity truth
 
@@ -146,7 +146,7 @@ Acceptance:
 - the shared host seam is documented as the identity authority for future
   Android renderer work
 - the next Android rendering-adjacent blocker is surface replacement policy,
-  not bootstrap uncertainty
+  not terminal-host uncertainty
 - the current device truth clearly states which transition kinds have and have
   not been observed so far
 

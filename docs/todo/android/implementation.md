@@ -4,7 +4,7 @@ This is the active execution queue for Android terminal work.
 
 Use this queue for:
 
-- Android host/bootstrap/runtime work
+- Android host/runtime work
 - Android PTY/runtime lifetime work
 - Android renderer-unblocking work when Android is the forcing function
 - Android terminal product decisions and sequencing
@@ -34,13 +34,13 @@ Android terminal excellence is the active repo goal until further notice.
 
 Current boundary:
 
-- the Android-native host/bootstrap lane is structurally complete enough to
+- the Android-native terminal-host lane is structurally complete enough to
   stop being the main unknown
 - disposable app-process-owned PTY lifetime is the current Android terminal
   baseline
 - service-owned PTY survival is now a validated separate Android product lane,
   but it has not displaced the disposable baseline as the default answer
-- bootstrap-owned EGL/GLES proof is now strong enough that it is no longer the
+- terminal-host-owned EGL/GLES proof is now strong enough that it is no longer the
   main unknown either
 - first-class Android rendering/backend work in `src/ui/renderer/` is still
   blocked by renderer gate #5
@@ -95,7 +95,7 @@ That means:
 - gate #2 is treated as closed for active work until Metal validation is
   explicitly reopened
 - gate #4 is met
-- Android bootstrap proof should only continue if it answers a stronger
+- Android terminal-host proof should only continue if it answers a stronger
   Android-specific runtime question than gate #5 does
 - otherwise the next honest move is the next gate-5 cut done explicitly in
   service of Android terminal progress
@@ -128,7 +128,7 @@ Android native-window identity with epoch-based transition tracking.
 `android_host.zig` owns Android lifecycle/surface semantics. Shared code
 delegates there instead of embedding Android logic in SDL input paths.
 
-### `AH-A3` Android Host Harness Bootstrap — met, superseded
+### `AH-A3` Android Host Harness — met, superseded
 
 Java-only host harness proved Note10 callback ordering. Now superseded by
 `android/terminal-host/` for all active work.
@@ -154,7 +154,7 @@ Purpose:
 Acceptance:
 
 - the next Android input cut is defined against the live shell, not the old
-  bootstrap probe
+  terminal-host probe
 - product input is no longer limited to “type a whole line then send”
 - the live `InputConnection` path stays explicit so it does not regress into
   hidden fallback input paths
@@ -254,7 +254,7 @@ Status:
   - PTY does not outlive app-process death
 - disposable app-process-owned PTY lifetime remains the default Android
   terminal baseline
-- the earlier bootstrap PTY probe implementation is retired from the live app;
+- the earlier legacy PTY probe implementation is retired from the live app;
   this result remains as architecture evidence only
 
 ### `AP-A2` Android PTY Service Survival Probe
@@ -269,7 +269,7 @@ Status:
 - met as a separate probe lane
 - foreground-service PTY survival is technically viable
 - it did not displace the disposable baseline as the default answer
-- the earlier bootstrap service probe implementation is retired from the live
+- the earlier legacy service probe implementation is retired from the live
   app; this result remains as architecture evidence only
 
 ### `AH-A5` Android GLES Binding Authority
@@ -356,7 +356,7 @@ Do not do:
 - no reopening gate #2 for active work unless Mac validation is explicitly
   reopened
 - no generic renderer cleanup with no Android leverage
-- no pretending bootstrap EGL proof by itself is equivalent to shared Android
+- no pretending terminal-host EGL proof by itself is equivalent to shared Android
   renderer readiness
 
 Current follow-up:

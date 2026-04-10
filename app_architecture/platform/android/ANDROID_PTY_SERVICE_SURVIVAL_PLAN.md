@@ -37,7 +37,7 @@ That is a separate question because it changes:
 - background execution policy
 - user-visible behavior
 
-So this lane must not hide under generic host/bootstrap work.
+So this lane must not hide under generic host work.
 
 ## Reference Pressure
 
@@ -84,7 +84,7 @@ Purpose:
 Acceptance:
 
 - one authority doc records why service-owned survival is a separate lane
-- the bootstrap bridge can run a minimal foreground-service PTY probe
+- the terminal host app can run a minimal foreground-service PTY probe
 - the probe proves whether service-owned PTY lifetime changes the observed
   survival story under backgrounding on the Note10
 - queue/docs record the result without claiming product approval
@@ -100,7 +100,7 @@ Do not do:
 
 The first probe should be:
 
-- one bootstrap foreground service
+- one terminal-host foreground service
 - start action and stop action
 - foreground notification while active
 - service starts the existing native PTY heartbeat probe
@@ -116,7 +116,7 @@ This is enough to answer:
 
 Stop `AP-A2` when:
 
-- the bootstrap app/service can start a foreground PTY probe
+- the terminal host app/service can start a foreground PTY probe
 - the service path is validated on-device
 - docs record whether foreground-service ownership changes the practical
   Android survival story enough to justify a future product lane

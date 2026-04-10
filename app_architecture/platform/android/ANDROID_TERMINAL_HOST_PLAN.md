@@ -5,7 +5,7 @@ runtime, after host-truth probing and before Android renderer backend work.
 
 This doc is retained as completed architecture authority for `AH-A4`.
 `android/terminal-host/` is now the active Android terminal host, not a
-future bootstrap proposal.
+future host proposal.
 
 Owner docs:
 
@@ -22,7 +22,7 @@ The completed lane created:
 
 It is not:
 
-- Android renderer backend bootstrap
+- Android renderer backend bringup
 - Android PTY/runtime design
 - a continuation of the retired Java-only host-harness probe
 
@@ -45,8 +45,8 @@ Use the practical bridge with the least speculation:
 - Java/Kotlin activity glue as needed
 - native Zig library loaded by the app
 
-SDL may still be used later for Android packaging/bootstrap if it reduces
-repeated glue, but the bootstrap lane should not wait on a final SDL-vs-native
+SDL may still be used later for Android packaging/bringup if it reduces
+repeated glue, but the terminal-host lane should not wait on a final SDL-vs-native
 purity answer before proving the bridge.
 
 The real requirement is:
@@ -70,7 +70,7 @@ Acceptance:
 - the app loads a native Zig library built from this repo
 - the app can surface at least launch + pause/resume + surface-available/lost
   callbacks into native bridge code
-- the owning Android docs explain how to build/install/run that bootstrap path
+- the owning Android docs explain how to build/install/run that terminal-host path
 
 Current checkpoint:
 
@@ -89,7 +89,7 @@ Current checkpoint:
 
 Do not do:
 
-- no GLES or Vulkan backend bootstrap
+- no GLES or Vulkan backend bringup
 - no terminal PTY/service design
 - no attempt to make Android a supported production target in the whole build
   graph yet

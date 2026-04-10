@@ -22,7 +22,7 @@ not a progress log and should stay brief.
   - one APK with multiple modes may be right later
   - separate mobile products sharing core code may also be right later
   - keep the architecture loose enough to support either
-- Android host/bootstrap/device truth is now real enough that Android is no
+- Android host/device truth is now real enough that Android is no
   longer a hypothetical future pressure.
 - Metal live validation is paused until explicitly reopened; do not let that
   stall active Android work.
@@ -37,7 +37,7 @@ not a progress log and should stay brief.
 - Do not force all mobile product behavior through the GPU texture path.
 - Preferred execution style:
   - do the highest-leverage Android-unblocking work next
-  - keep bootstrap-only Android proof work below `src/ui/renderer/` until the
+  - keep terminal-host-scoped Android proof work below `src/ui/renderer/` until the
     renderer queue explicitly opens that lane
   - do not reopen old renderer lanes unless they are the actual next blocker
     for Android terminal progress
@@ -56,7 +56,7 @@ Execution discipline:
 
 ### Current State
 
-- Android host/bootstrap truth is strong on the Note10:
+- Android host truth is strong on the Note10:
   - lifecycle and surface identity are real
   - EGL surface recreation is proved for `replaced` and `retired -> acquired`
   - one EGL context and one minimal GLES texture survive those transitions on
