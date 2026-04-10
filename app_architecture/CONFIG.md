@@ -206,7 +206,6 @@ flowchart LR
 | Lua path | Meaning | Runtime consumer | Status | Notes |
 |---|---|---|---|---|
 | `sdl.log_level` | SDL log verbosity | `src/main.zig` -> app shell SDL logger | `reloadable` | Accepted values: `none`, `critical`, `error`, `warning`/`warn`, `info`, `debug`, `trace`. |
-| `raylib.log_level` | Legacy alias for SDL log verbosity | `src/config/lua_config.zig` | `legacy` | Accepted if `sdl` is absent. Should be documented as compat only. |
 
 ### `theme`
 
@@ -378,7 +377,7 @@ Current policy: `altgr` is supported as an advanced desktop modifier for exact-m
 
 For current config examples and docs, prefer:
 - nested `theme.palette` / `theme.syntax`
-- `sdl.log_level`, not `raylib.log_level`
+- `sdl.log_level`
 - string values for `terminal.blink` (`kitty`, `off`), not boolean shorthand
 - partial override configs that rely on merge-by-default keybind behavior
 - `app.font` as the base public font knob

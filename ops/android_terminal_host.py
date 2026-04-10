@@ -21,6 +21,18 @@ ACTIVITY_NAME = f"{PACKAGE_NAME}/.ZideTerminalActivity"
 LEGACY_PACKAGE_NAMES = ("dev.zide.androidbootstrap",)
 NDK_VERSION = os.environ.get("ZIDE_ANDROID_NDK_VERSION", "27.1.12297006")
 ANDROID_API = "29"
+COMMAND_HELP: dict[str, str] = {
+    "native": "Build the Zig Android shared library (.so) into jniLibs.",
+    "apk": "Build the debug APK with Gradle.",
+    "install": "Install the current debug APK on the connected device.",
+    "launch": "Launch the terminal host activity on the connected device.",
+    "deploy": "Run native + apk + install + launch.",
+    "clean": "Run Gradle clean for android/terminal-host.",
+    "reinstall": "Uninstall current + legacy package names, then install + launch.",
+    "logcat": "Print filtered Android logs for the terminal host lane.",
+    "doctor": "Print resolved toolchain paths and run adb version.",
+    "help": "Show this help.",
+}
 
 
 def die(message: str) -> NoReturn:
@@ -253,23 +265,20 @@ def doctor() -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
+    command_names = list(COMMAND_HELP.keys())
+    commands_help = "\n".join(f"  {name:<10} {COMMAND_HELP[name]}" for name in command_names)
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=f"commands:\n{commands_help}",
+    )
     parser.add_argument(
         "command",
         nargs="?",
         default="help",
-        choices=[
-            "native",
-            "apk",
-            "install",
-            "launch",
-            "deploy",
-            "clean",
-            "reinstall",
-            "logcat",
-            "doctor",
-            "help",
-        ],
+        choices=command_names,
+        metavar="{" + ",".join(command_names) + "}",
+        help="Operation to execute (default: help).",
     )
     args = parser.parse_args()
 

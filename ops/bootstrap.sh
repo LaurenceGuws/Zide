@@ -1,6 +1,25 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+usage() {
+  cat <<'EOF'
+usage: bootstrap.sh [-h|--help]
+
+Bootstrap checked-in vendor dependencies for Zide.
+EOF
+}
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  exit 0
+fi
+
+if [[ $# -ne 0 ]]; then
+  echo "unexpected arguments: $*" >&2
+  usage >&2
+  exit 2
+fi
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Bootstrap script for zide dependencies
 # ─────────────────────────────────────────────────────────────────────────────

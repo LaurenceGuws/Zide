@@ -166,9 +166,9 @@ Contributor/operator navigation lives in [docs/INDEX.md](docs/INDEX.md).
 The repo ships LuaLS-facing config metadata and a scaffold snippet for
 `.zide.lua` authoring:
 
-- [lua/zide-meta.lua](/home/home/personal/worktrees/zide-portable-zbar-lua/lua/zide-meta.lua)
-- [snippets/lua.json](/home/home/personal/worktrees/zide-portable-zbar-lua/snippets/lua.json)
-- [.luarc.json](/home/home/personal/worktrees/zide-portable-zbar-lua/.luarc.json)
+- [lua/zide-meta.lua](lua/zide-meta.lua)
+- [snippets/lua.json](snippets/lua.json)
+- [.luarc.json](.luarc.json)
 
 Refresh them with:
 
@@ -240,12 +240,6 @@ Repository-local docs own the detailed operator guidance:
   [dev_references/README.md](dev_references/README.md)
 - docs explorer repository:
   <https://github.com/LaurenceGuws/docs-explorer>
-
-Local docs explorer workflow:
-
-```bash
-./ops/open_docs_browser.sh
-```
 
 Project-owned docs browser config lives under `app_architecture/docs_browser/`.
 

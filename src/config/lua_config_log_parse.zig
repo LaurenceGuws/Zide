@@ -269,14 +269,4 @@ pub fn parseLogSettings(allocator: std.mem.Allocator, lua: *zlua.Lua, table_inde
         }
     }
 
-    if (out.sdl_log_level == null) {
-        if (parseSdlLogLevelField(reader, "raylib")) |lvl| {
-            out.sdl_log_level = lvl;
-        } else if (reader.child("raylib")) |raylib_reader| {
-            defer raylib_reader.finish();
-            if (parseSdlLogLevelField(wrapReader(lua, allocator, raylib_reader), "log_level")) |lvl| {
-                out.sdl_log_level = lvl;
-            }
-        }
-    }
 }

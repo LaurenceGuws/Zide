@@ -1,4 +1,17 @@
+param(
+    [switch]$Help
+)
+
 $ErrorActionPreference = 'Stop'
+
+if ($Help) {
+    @"
+usage: bootstrap.ps1 [-Help]
+
+Bootstrap checked-in vendor dependencies for Zide.
+"@ | Write-Host
+    exit 0
+}
 
 # Bootstrap script for zide dependencies (Windows)
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path

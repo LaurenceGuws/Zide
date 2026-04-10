@@ -17,10 +17,6 @@ Primary setup tool:
 
 - `python3 ops/setup_reference_corpus.py`
 
-Related helper:
-
-- `ops/setup_khronos_refpages_md.sh`
-
 Reference groups currently used by the corpus:
 
 - `terminals/`
