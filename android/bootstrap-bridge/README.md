@@ -1,4 +1,4 @@
-# Zide Android Bootstrap Bridge
+# Zide Android Terminal Host
 
 This is the active Android app host for Zide shell bring-up and Android-native
 product work.
@@ -8,7 +8,7 @@ product work.
 From repo root:
 
 ```sh
-ops/android_bootstrap_bridge.sh deploy
+ops/android_bootstrap_bridge.py deploy
 ```
 
 That will:
@@ -23,13 +23,13 @@ That will:
 From repo root:
 
 ```sh
-ops/android_bootstrap_bridge.sh doctor
-ops/android_bootstrap_bridge.sh native
-ops/android_bootstrap_bridge.sh apk
-ops/android_bootstrap_bridge.sh install
-ops/android_bootstrap_bridge.sh launch
-ops/android_bootstrap_bridge.sh reinstall
-ops/android_bootstrap_bridge.sh logcat
+ops/android_bootstrap_bridge.py doctor
+ops/android_bootstrap_bridge.py native
+ops/android_bootstrap_bridge.py apk
+ops/android_bootstrap_bridge.py install
+ops/android_bootstrap_bridge.py launch
+ops/android_bootstrap_bridge.py reinstall
+ops/android_bootstrap_bridge.py logcat
 ```
 
 ## Tooling Rules
@@ -50,7 +50,7 @@ Repo-root [`.nvim.lua`](/home/home/personal/zide/.nvim.lua) only does three
 things:
 
 - sets `ANDROID_HOME` / `ANDROID_SDK_ROOT` defaults when the local SDK exists
-- exposes `:ZideAndroidBootstrapCd`
+- exposes `:ZideAndroidHostCd`
 - exposes `:ZideAndroidEnv`
 
 For Java work, prefer opening `android/bootstrap-bridge/` as the workspace
@@ -86,5 +86,5 @@ Current bootstrap product view is shell-first:
 ## Logs
 
 ```sh
-ops/android_bootstrap_bridge.sh logcat
+ops/android_bootstrap_bridge.py logcat
 ```

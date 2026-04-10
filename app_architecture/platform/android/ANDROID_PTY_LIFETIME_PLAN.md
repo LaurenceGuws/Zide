@@ -154,26 +154,14 @@ That does not change the current baseline. It only creates the narrow probe
 surface needed to test whether foreground-service ownership materially changes
 the observed Android survival story.
 
-## Current `AP-A1.b` Probe Hardening
+## Retired Probe Surface
 
-The bootstrap bridge now owns the live truth surface for this baseline:
+The bootstrap bridge previously exposed disposable PTY status plus manual
+start/stop/restart controls to prove the baseline on-device. That live probe UI
+is now retired from the app. The result remains authoritative; the active app
+has moved on to the real shell path.
 
-- on-device PTY status
-- manual start / stop / restart
-- observation across pause / stop / surface retirement and later foreground
-  return
-
-That hardening is complete. It strengthens the disposable baseline without
-opening service-owned survival architecture.
-
-## Next Honest Follow-Up
-
-The next `AP-A1` sub-cut is now:
-
-- make the bootstrap bridge expose live PTY status and manual
-  start/stop/restart controls for the disposable baseline
-
-After that:
+Current follow-up rule:
 
 - stop widening this lane unless a later product decision explicitly wants
   service-owned PTY survival on Android

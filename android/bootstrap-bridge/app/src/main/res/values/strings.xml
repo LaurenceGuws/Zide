@@ -1,12 +1,9 @@
 <resources>
-    <string name="app_name">Zide Bootstrap Bridge</string>
+    <string name="app_name">Zide Terminal</string>
     <string name="status_booting">state=booting</string>
-    <string name="show_debug_view">Show Debug</string>
     <string name="show_debug_short">Debug</string>
     <string name="show_product_view">Show Product</string>
     <string name="debug_view_title">Debug View</string>
-    <string name="show_ime">Show IME</string>
-    <string name="hide_ime">Hide IME</string>
     <string name="shell_restart_short">Restart</string>
     <string name="event_log_label">Event Log</string>
     <string name="sidebar_title">Terminal Controls</string>

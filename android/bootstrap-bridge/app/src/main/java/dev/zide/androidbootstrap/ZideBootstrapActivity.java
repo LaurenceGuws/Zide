@@ -24,8 +24,9 @@ import android.widget.FrameLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-public final class ZideBootstrapActivity extends Activity implements SurfaceHolder.Callback2, ShellInputView.Host, ShellTranscriptController.Host {
-    private static final String TAG = "ZideAndroidBootstrap";
+public final class ZideBootstrapActivity extends Activity
+        implements SurfaceHolder.Callback2, ShellInputView.Host, ShellTranscriptController.Host {
+    private static final String TAG = "ZideAndroidTerminal";
     private static final int MAX_LOG_CHARS = 12000;
     private static final String EXTRA_DEBUG_RECREATE_SURFACE_ONCE = "debug_recreate_surface_once";
     private static final String EXTRA_DEBUG_RESIZE_SURFACE_ONCE = "debug_resize_surface_once";
@@ -496,14 +497,16 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     }
 
     private void openSidebar() {
-        if (sidebarOpen || debugViewEnabled) return;
+        if (sidebarOpen || debugViewEnabled)
+            return;
         sidebarOpen = true;
         leftSidebar.animate().translationX(0).setDuration(180).start();
         updateSidebarVisibility(true);
     }
 
     private void closeSidebar() {
-        if (!sidebarOpen) return;
+        if (!sidebarOpen)
+            return;
         sidebarOpen = false;
         leftSidebar.animate().translationX(-leftSidebar.getWidth()).setDuration(180).start();
         updateSidebarVisibility(false);
@@ -550,7 +553,8 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
 
         shellTranscriptController.applyTranscript(pollResult.transcript);
         if (logEvent) {
-            appendEvent("manual.shellRefresh alive=" + pollResult.alive + " status=" + shellStartStatusLabel(pollResult.status));
+            appendEvent("manual.shellRefresh alive=" + pollResult.alive + " status="
+                    + shellStartStatusLabel(pollResult.status));
         }
     }
 

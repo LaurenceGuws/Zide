@@ -119,21 +119,7 @@ export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeOnCreateBri
     return onCreateBridge();
 }
 
-export fn Java_dev_zide_androidbootstrap_BootstrapNativeBridge_nativeOnCreateBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) i64 {
-    return onCreateBridge();
-}
-
 export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeOnStartBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) i64 {
-    return onStartBridge();
-}
-
-export fn Java_dev_zide_androidbootstrap_BootstrapNativeBridge_nativeOnStartBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
@@ -147,21 +133,7 @@ export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeOnResumeBri
     return onResumeBridge();
 }
 
-export fn Java_dev_zide_androidbootstrap_BootstrapNativeBridge_nativeOnResumeBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) i64 {
-    return onResumeBridge();
-}
-
 export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeOnPauseBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) i64 {
-    return onPauseBridge();
-}
-
-export fn Java_dev_zide_androidbootstrap_BootstrapNativeBridge_nativeOnPauseBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
@@ -175,22 +147,7 @@ export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeOnStopBridg
     return onStopBridge();
 }
 
-export fn Java_dev_zide_androidbootstrap_BootstrapNativeBridge_nativeOnStopBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) i64 {
-    return onStopBridge();
-}
-
 export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeOnWindowFocusBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-    focused: bool,
-) callconv(.c) i64 {
-    return onWindowFocusBridge(focused);
-}
-
-export fn Java_dev_zide_androidbootstrap_BootstrapNativeBridge_nativeOnWindowFocusBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
     focused: bool,
@@ -208,24 +165,7 @@ export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeOnSurfaceAv
     return onSurfaceAvailableBridge(env, surface, width, height);
 }
 
-export fn Java_dev_zide_androidbootstrap_BootstrapNativeBridge_nativeOnSurfaceAvailableBridge(
-    env: ?*anyopaque,
-    _: ?*anyopaque,
-    surface: ?*anyopaque,
-    width: i32,
-    height: i32,
-) callconv(.c) i64 {
-    return onSurfaceAvailableBridge(env, surface, width, height);
-}
-
 export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeOnSurfaceDestroyedBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) i64 {
-    return onSurfaceDestroyedBridge();
-}
-
-export fn Java_dev_zide_androidbootstrap_BootstrapNativeBridge_nativeOnSurfaceDestroyedBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
@@ -239,21 +179,7 @@ export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeOnSurfaceRe
     return onSurfaceRedrawNeededBridge();
 }
 
-export fn Java_dev_zide_androidbootstrap_BootstrapNativeBridge_nativeOnSurfaceRedrawNeededBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) i64 {
-    return onSurfaceRedrawNeededBridge();
-}
-
 export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeCurrentWindowTokenBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) i64 {
-    return currentWindowTokenBridge();
-}
-
-export fn Java_dev_zide_androidbootstrap_BootstrapNativeBridge_nativeCurrentWindowTokenBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
@@ -267,21 +193,7 @@ export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeCurrentSurf
     return currentSurfaceEpochBridge();
 }
 
-export fn Java_dev_zide_androidbootstrap_BootstrapNativeBridge_nativeCurrentSurfaceEpochBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) i64 {
-    return currentSurfaceEpochBridge();
-}
-
 export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeCurrentSurfaceTransitionBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) i32 {
-    return currentSurfaceTransitionBridge();
-}
-
-export fn Java_dev_zide_androidbootstrap_BootstrapNativeBridge_nativeCurrentSurfaceTransitionBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
@@ -295,21 +207,7 @@ export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeCurrentGles
     return currentGlesProbeStatusBridge();
 }
 
-export fn Java_dev_zide_androidbootstrap_BootstrapNativeBridge_nativeCurrentGlesProbeStatusBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) i32 {
-    return currentGlesProbeStatusBridge();
-}
-
 export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeCurrentGlesProbeSwapCountBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) i64 {
-    return currentGlesProbeSwapCountBridge();
-}
-
-export fn Java_dev_zide_androidbootstrap_BootstrapNativeBridge_nativeCurrentGlesProbeSwapCountBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
@@ -323,21 +221,7 @@ export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeCurrentGles
     return currentGlesProbeBoundEpochBridge();
 }
 
-export fn Java_dev_zide_androidbootstrap_BootstrapNativeBridge_nativeCurrentGlesProbeBoundEpochBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) i64 {
-    return currentGlesProbeBoundEpochBridge();
-}
-
 export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeCurrentGlesProbeContextCreateCountBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) i64 {
-    return currentGlesProbeContextCreateCountBridge();
-}
-
-export fn Java_dev_zide_androidbootstrap_BootstrapNativeBridge_nativeCurrentGlesProbeContextCreateCountBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
@@ -351,21 +235,7 @@ export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeCurrentGles
     return currentGlesProbeSurfaceCreateCountBridge();
 }
 
-export fn Java_dev_zide_androidbootstrap_BootstrapNativeBridge_nativeCurrentGlesProbeSurfaceCreateCountBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) i64 {
-    return currentGlesProbeSurfaceCreateCountBridge();
-}
-
 export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeCurrentGlesProbeTextureCreateCountBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) i64 {
-    return currentGlesProbeTextureCreateCountBridge();
-}
-
-export fn Java_dev_zide_androidbootstrap_BootstrapNativeBridge_nativeCurrentGlesProbeTextureCreateCountBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
@@ -379,21 +249,7 @@ export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeCurrentGles
     return currentGlesProbeTextureAliveBridge();
 }
 
-export fn Java_dev_zide_androidbootstrap_BootstrapNativeBridge_nativeCurrentGlesProbeTextureAliveBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) u8 {
-    return currentGlesProbeTextureAliveBridge();
-}
-
 export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeCurrentGlesProbeTextureUploadCountBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) i64 {
-    return currentGlesProbeTextureUploadCountBridge();
-}
-
-export fn Java_dev_zide_androidbootstrap_BootstrapNativeBridge_nativeCurrentGlesProbeTextureUploadCountBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
@@ -407,21 +263,7 @@ export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeCurrentGles
     return currentGlesProbeTextureUpdateCountBridge();
 }
 
-export fn Java_dev_zide_androidbootstrap_BootstrapNativeBridge_nativeCurrentGlesProbeTextureUpdateCountBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) i64 {
-    return currentGlesProbeTextureUpdateCountBridge();
-}
-
 export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeCurrentGlesProbeTextureResizeCountBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) i64 {
-    return currentGlesProbeTextureResizeCountBridge();
-}
-
-export fn Java_dev_zide_androidbootstrap_BootstrapNativeBridge_nativeCurrentGlesProbeTextureResizeCountBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
@@ -435,21 +277,7 @@ export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeCurrentGles
     return currentGlesProbeTextureWidthBridge();
 }
 
-export fn Java_dev_zide_androidbootstrap_BootstrapNativeBridge_nativeCurrentGlesProbeTextureWidthBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) i32 {
-    return currentGlesProbeTextureWidthBridge();
-}
-
 export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeCurrentGlesProbeTextureHeightBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) i32 {
-    return currentGlesProbeTextureHeightBridge();
-}
-
-export fn Java_dev_zide_androidbootstrap_BootstrapNativeBridge_nativeCurrentGlesProbeTextureHeightBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
@@ -463,13 +291,6 @@ export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeRestartShel
     return restartShellSessionBridge();
 }
 
-export fn Java_dev_zide_androidbootstrap_BootstrapNativeBridge_nativeRestartShellSessionBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) i32 {
-    return restartShellSessionBridge();
-}
-
 export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativePollShellSessionBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
@@ -477,21 +298,7 @@ export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativePollShellSe
     return pollShellSessionBridge();
 }
 
-export fn Java_dev_zide_androidbootstrap_BootstrapNativeBridge_nativePollShellSessionBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) i32 {
-    return pollShellSessionBridge();
-}
-
 export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeIsShellSessionAliveBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-) callconv(.c) bool {
-    return isShellSessionAliveBridge();
-}
-
-export fn Java_dev_zide_androidbootstrap_BootstrapNativeBridge_nativeIsShellSessionAliveBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) bool {
@@ -506,10 +313,3 @@ export fn Java_dev_zide_androidbootstrap_ZideBootstrapActivity_nativeSendShellCo
     return sendShellCodepointBridge(codepoint);
 }
 
-export fn Java_dev_zide_androidbootstrap_BootstrapNativeBridge_nativeSendShellCodepointBridge(
-    _: ?*anyopaque,
-    _: ?*anyopaque,
-    codepoint: i32,
-) callconv(.c) i32 {
-    return sendShellCodepointBridge(codepoint);
-}

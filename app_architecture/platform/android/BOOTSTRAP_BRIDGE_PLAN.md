@@ -3,8 +3,9 @@
 Purpose: define the first repo-owned Android bootstrap lane for the real Zig
 runtime, after host-truth probing and before Android renderer backend work.
 
-This doc is architecture authority for the next Android execution cut after the
-host harness.
+This doc is retained as completed architecture authority for `AH-A4`.
+`android/bootstrap-bridge/` is now the active Android terminal host, not a
+future bootstrap proposal.
 
 Owner docs:
 
@@ -13,26 +14,9 @@ Owner docs:
 - `app_architecture/platform/android/SURFACE_IDENTITY_POLICY.md`
 - `docs/todo/android/implementation.md`
 
-## Why This Is Next
-
-The current tree now has:
-
-- a shared native-host contract that can represent Android lifecycle, focus,
-  surface metrics, redraw-needed, and native-window identity
-- a first Android-owned host mapper in `src/platform/android_host.zig`
-- a repo-owned host harness app that proved real Note10 callback ordering
-
-The current tree still does not have:
-
-- any Android bootstrap path for the actual Zig app/runtime
-- Android support in `build_system/platform_capabilities.zig`
-- Android support in the current app/executable build graph
-
-So the next blocker is not GLES design. It is bootstrap and native entry.
-
 ## Decision
 
-The next Android lane is:
+The completed lane created:
 
 - a repo-owned Android app/bootstrap bridge for the real Zig runtime
 
@@ -40,7 +24,7 @@ It is not:
 
 - Android renderer backend bootstrap
 - Android PTY/runtime design
-- another host-harness-only improvement pass
+- a continuation of the retired Java-only host-harness probe
 
 ## Target Shape
 
@@ -91,8 +75,9 @@ Acceptance:
 Current checkpoint:
 
 - `android/bootstrap-bridge/` is the first repo-owned Android runtime app
-- `ops/android_build_bootstrap_bridge.sh` builds the native Zig bridge through
-  the NDK toolchain
+- `ops/android_bootstrap_bridge.py native` builds the native Zig bridge through
+  the NDK toolchain; this should become a named `zig build` step once the
+  native artifact shape stabilizes
 - the Note10 loads the repo-built native library and routes lifecycle/focus/
   surface callbacks into repo-owned native code
 - bootstrap/native entry now carries real shared host truth:
@@ -121,16 +106,14 @@ Stop `AH-A4` when:
 - the next blocker is honestly Android host capability depth beyond native
   entry, not "we still do not have Android entry"
 
-## Next Honest Follow-Up
+## Current Follow-Up
 
-The next `AH-A4` sub-cut should be:
+Bootstrap entry is complete. Active Android work now belongs in:
 
-- tighten Android surface replacement / destruction policy around the now
-  explicit native-window token + `surfaceIdentityEpoch` path
-- treat both `replaced` and `retired` followed by later `acquired` as real
-  surface replacement stories on this Android path
-- keep Android PTY/runtime lifetime as a parallel concern, but not the next
-  blocker for rendering-oriented host work
+- `docs/todo/android/implementation.md`
+- `app_architecture/platform/android/ANDROID_SHELL_BRINGUP_PLAN.md`
 
-The bootstrap-entry problem is now solved well enough that those are the real
-next questions.
+Native bridge production currently lives behind
+`ops/android_bootstrap_bridge.py native`. Once the Android native artifact shape
+is stable, that build should move behind a named `zig build` step while
+deploy/install/logcat stay in ops.

@@ -217,13 +217,12 @@ The first Android-owned mapper seam now exists too:
 - shared input/runtime code can delegate Android semantics there instead of
   embedding them in renderer-owned logic
 
-The first repo-owned Android bootstrap surface now exists outside `src/`:
+Historical note:
 
-- `android/host-harness/` is a plain Android host harness app
-- it is for lifecycle/surface/focus/IME validation only
-- it is intentionally not SDL, NDK, GLES, or Vulkan bootstrap yet
-- first APK build pressure was local environment/tooling state, not a proven
-  host-architecture problem
+- `android/host-harness/` proved the first Java-only lifecycle/surface/focus/IME
+  callback ordering and has since been retired from the live tree
+- `android/bootstrap-bridge/` is the active Android host app for current native
+  runtime, shell, surface, and product work
 
 Current validation checkpoint:
 
@@ -380,10 +379,9 @@ Current Android-native follow-up constraints:
   visible surface lifetime briefly, but not app-process death
 - disposable app-process-owned PTY lifetime is the current Android terminal
   baseline
-- `android/bootstrap-bridge/` now also exposes that disposable baseline
-  directly on-device through a PTY status panel plus manual start/stop/restart
-  controls, so future Android terminal decisions do not depend on adb-only
-  file inspection
+- `android/bootstrap-bridge/` now carries the live shell path; the earlier
+  disposable PTY probe UI is retired from the app and retained only as
+  architecture evidence
 - the separate service-owned survival probe lane is now explicit:
   - it exists to measure whether foreground-service ownership changes the
     survival story materially enough to justify future product cost
