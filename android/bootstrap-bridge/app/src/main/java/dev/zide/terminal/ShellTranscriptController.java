@@ -1,4 +1,4 @@
-package dev.zide.androidbootstrap;
+package dev.zide.terminal;
 
 import android.view.MotionEvent;
 import android.view.View;

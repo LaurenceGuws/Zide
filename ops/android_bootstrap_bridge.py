@@ -10,18 +10,20 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from typing import NoReturn
 
 
 ROOT = Path(__file__).resolve().parents[1]
 BRIDGE_DIR = ROOT / "android" / "bootstrap-bridge"
 APK_PATH = BRIDGE_DIR / "app" / "build" / "outputs" / "apk" / "debug" / "app-debug.apk"
-PACKAGE_NAME = "dev.zide.androidbootstrap"
-ACTIVITY_NAME = f"{PACKAGE_NAME}/.ZideBootstrapActivity"
+PACKAGE_NAME = "dev.zide.terminal"
+ACTIVITY_NAME = f"{PACKAGE_NAME}/.ZideTerminalActivity"
+LEGACY_PACKAGE_NAMES = ("dev.zide.androidbootstrap",)
 NDK_VERSION = os.environ.get("ZIDE_ANDROID_NDK_VERSION", "27.1.12297006")
 ANDROID_API = "29"
 
 
-def die(message: str) -> None:
+def die(message: str) -> NoReturn:
     print(message, file=sys.stderr)
     raise SystemExit(1)
 
@@ -35,13 +37,15 @@ def run(args: list[str | os.PathLike[str]], *, cwd: Path | None = None) -> None:
     subprocess.run([str(arg) for arg in args], cwd=cwd, check=True)
 
 
-def sdk_candidates() -> list[str | None]:
-    return [
-        os.environ.get("ANDROID_SDK_ROOT"),
-        os.environ.get("ANDROID_HOME"),
-        str(Path.home() / ".local" / "share" / "zide-android-sdk"),
-        "/opt/android-sdk",
-    ]
+def sdk_candidates() -> list[str]:
+    candidates: list[str] = []
+    for name in ("ANDROID_SDK_ROOT", "ANDROID_HOME"):
+        value = os.environ.get(name)
+        if value:
+            candidates.append(value)
+    candidates.append(str(Path.home() / ".local" / "share" / "zide-android-sdk"))
+    candidates.append("/opt/android-sdk")
+    return candidates
 
 
 def sdk_root(*, require_ndk: bool = False) -> Path:
@@ -201,6 +205,7 @@ def launch() -> None:
 
 def reinstall() -> None:
     adb = adb_path(sdk_root())
+    uninstall_legacy_packages(adb)
     subprocess.run([str(adb), "uninstall", PACKAGE_NAME], check=False)
     install()
     launch()
@@ -209,6 +214,7 @@ def reinstall() -> None:
 def deploy() -> None:
     native()
     apk()
+    uninstall_legacy_packages(adb_path(sdk_root()))
     install()
     launch()
 
@@ -216,6 +222,11 @@ def deploy() -> None:
 def logcat() -> None:
     adb = adb_path(sdk_root())
     run([adb, "logcat", "-d", "-s", "ZideAndroidTerminal:I", "AndroidRuntime:E", "*:S"])
+
+
+def uninstall_legacy_packages(adb: Path) -> None:
+    for package_name in LEGACY_PACKAGE_NAMES:
+        subprocess.run([str(adb), "uninstall", package_name], check=False)
 
 
 def doctor() -> None:

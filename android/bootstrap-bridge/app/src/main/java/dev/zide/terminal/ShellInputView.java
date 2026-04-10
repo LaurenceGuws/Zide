@@ -1,4 +1,4 @@
-package dev.zide.androidbootstrap;
+package dev.zide.terminal;
 
 import android.content.Context;
 import android.view.KeyEvent;

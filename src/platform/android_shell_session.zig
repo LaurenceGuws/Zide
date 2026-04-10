@@ -7,7 +7,7 @@ const rows: u16 = 24;
 const cell_width: u16 = 8;
 const cell_height: u16 = 16;
 const shell_path: [:0]const u8 = "/system/bin/sh";
-const transcript_path = "/data/data/dev.zide.androidbootstrap/files/bootstrap_shell.log";
+const transcript_path = "/data/data/dev.zide.terminal/files/zide_terminal_shell.log";
 
 pub const StartStatus = enum(i32) {
     none = 0,
@@ -201,7 +201,7 @@ fn snapshotRequest() c_api.ZideTerminalSnapshotRequest {
 
 test "shell transcript path is stable" {
     try std.testing.expectEqualStrings(
-        "/data/data/dev.zide.androidbootstrap/files/bootstrap_shell.log",
+        "/data/data/dev.zide.terminal/files/zide_terminal_shell.log",
         transcriptPath(),
     );
 }

@@ -184,7 +184,7 @@ Current result:
   - `ShellInputView`
   - `ShellTranscriptController`
   - `ShellSessionController`
-  - `BootstrapDebugFormatter`
+  - `AndroidDebugFormatter`
 - the product shell now also follows a more honest mobile layout:
   - main terminal area keeps the screen
   - IME opens from transcript tap (ScrollView + `shell_output_text`) instead of

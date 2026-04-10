@@ -1,4 +1,4 @@
-package dev.zide.androidbootstrap;
+package dev.zide.terminal;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -24,14 +24,14 @@ import android.widget.FrameLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-public final class ZideBootstrapActivity extends Activity
+public final class ZideTerminalActivity extends Activity
         implements SurfaceHolder.Callback2, ShellInputView.Host, ShellTranscriptController.Host {
     private static final String TAG = "ZideAndroidTerminal";
     private static final int MAX_LOG_CHARS = 12000;
     private static final String EXTRA_DEBUG_RECREATE_SURFACE_ONCE = "debug_recreate_surface_once";
     private static final String EXTRA_DEBUG_RESIZE_SURFACE_ONCE = "debug_resize_surface_once";
     private static final String EXTRA_DEBUG_START_SHELL_ONCE = "debug_start_shell_once";
-    private static final String SHELL_TRANSCRIPT_PATH = "/data/data/dev.zide.androidbootstrap/files/bootstrap_shell.log";
+    private static final String SHELL_TRANSCRIPT_PATH = "/data/data/dev.zide.terminal/files/zide_terminal_shell.log";
     private static final long SHELL_REFRESH_MS = 150L;
 
     private static boolean nativeLoaded = false;
@@ -275,7 +275,7 @@ public final class ZideBootstrapActivity extends Activity
         appendEvent(
                 "surface.redrawNeeded generation=" + surfaceHostGeneration + " valid=" + holder.getSurface().isValid());
         final long seq = nativeLoaded ? nativeOnSurfaceRedrawNeededBridge() : -1;
-        final BootstrapDebugFormatter.SurfaceEventSnapshot state = currentSurfaceStateSnapshot();
+        final AndroidDebugFormatter.SurfaceEventSnapshot state = currentSurfaceStateSnapshot();
         appendEvent(
                 "native.surfaceRedrawNeeded seq=" + seq +
                         " gles=" + state.glesStatus +
@@ -585,10 +585,10 @@ public final class ZideBootstrapActivity extends Activity
     private void callNativeWithSurfaceState(
             String event,
             long seq,
-            BootstrapDebugFormatter.SurfaceEventSnapshot state) {
-        appendEvent(BootstrapDebugFormatter.formatSurfaceEvent(
+            AndroidDebugFormatter.SurfaceEventSnapshot state) {
+        appendEvent(AndroidDebugFormatter.formatSurfaceEvent(
                 event,
-                new BootstrapDebugFormatter.SurfaceEventSnapshot(
+                new AndroidDebugFormatter.SurfaceEventSnapshot(
                         seq,
                         state.token,
                         state.epoch,
@@ -607,8 +607,8 @@ public final class ZideBootstrapActivity extends Activity
                         state.glesTextureHeight)));
     }
 
-    private BootstrapDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot() {
-        return new BootstrapDebugFormatter.SurfaceEventSnapshot(
+    private AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot() {
+        return new AndroidDebugFormatter.SurfaceEventSnapshot(
                 0,
                 nativeLoaded ? nativeCurrentWindowTokenBridge() : 0,
                 nativeLoaded ? nativeCurrentSurfaceEpochBridge() : 0,
@@ -628,9 +628,9 @@ public final class ZideBootstrapActivity extends Activity
     }
 
     private void updateStatus(String state) {
-        final BootstrapDebugFormatter.SurfaceEventSnapshot surfaceState = currentSurfaceStateSnapshot();
-        statusText.setText(BootstrapDebugFormatter.formatStatus(
-                new BootstrapDebugFormatter.StatusSnapshot(
+        final AndroidDebugFormatter.SurfaceEventSnapshot surfaceState = currentSurfaceStateSnapshot();
+        statusText.setText(AndroidDebugFormatter.formatStatus(
+                new AndroidDebugFormatter.StatusSnapshot(
                         state,
                         nativeLoaded,
                         hasWindowFocus(),

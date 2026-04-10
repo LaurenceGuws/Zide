@@ -16,7 +16,7 @@ That will:
 1. build the Zig native bridge
 2. build the Android debug APK with the Gradle wrapper
 3. install it on the connected device
-4. launch `ZideBootstrapActivity`
+4. launch `ZideTerminalActivity`
 
 ## Other Useful Commands
 

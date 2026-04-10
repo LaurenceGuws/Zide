@@ -4,12 +4,12 @@ plugins {
 }
 
 android {
-    namespace 'dev.zide.androidbootstrap'
+    namespace 'dev.zide.terminal'
     compileSdk 35
     buildToolsVersion '35.0.0'
 
     defaultConfig {
-        applicationId 'dev.zide.androidbootstrap'
+        applicationId 'dev.zide.terminal'
         minSdk 29
         targetSdk 35
         versionCode 1

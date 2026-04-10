@@ -222,11 +222,11 @@ Enter.
 
 Current Java ownership is also cleaner:
 
-- `ZideBootstrapActivity` is now orchestration only
+- `ZideTerminalActivity` is now orchestration only
 - `ShellInputView` owns the editor model and `InputConnection`
 - `ShellTranscriptController` owns transcript follow behavior
 - `ShellSessionController` owns shell polling/transcript file reads
-- `BootstrapDebugFormatter` owns debug formatting
+- `AndroidDebugFormatter` owns debug formatting
 
 Current local-tooling support is also explicit:
 

@@ -1,4 +1,4 @@
-package dev.zide.androidbootstrap;
+package dev.zide.terminal;
 
 import java.io.BufferedReader;
 import java.io.File;

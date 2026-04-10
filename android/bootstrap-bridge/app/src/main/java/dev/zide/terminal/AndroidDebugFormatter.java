@@ -1,6 +1,6 @@
-package dev.zide.androidbootstrap;
+package dev.zide.terminal;
 
-final class BootstrapDebugFormatter {
+final class AndroidDebugFormatter {
     static final class SurfaceEventSnapshot {
         final long seq;
         final long token;
@@ -118,7 +118,7 @@ final class BootstrapDebugFormatter {
         }
     }
 
-    private BootstrapDebugFormatter() {
+    private AndroidDebugFormatter() {
     }
 
     static String formatSurfaceEvent(String event, SurfaceEventSnapshot s) {
