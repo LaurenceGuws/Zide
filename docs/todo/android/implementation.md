@@ -132,6 +132,8 @@ Current checkpoint:
 - the parallel `TerminalPresentPath` classifier is also gone from the active
   presentable dispatch/host surface; presentable-host decisions now resolve
   from declared `TerminalPresentationMode` capability truth instead
+- shared code now asks for incremental presentable update support instead of
+  specifically "direct partial update" support
 - this does not claim parity is solved yet
 - it makes the remaining blocker narrower and more honest before deeper
   presentable work

@@ -126,3 +126,8 @@ Stop when:
   - presentable-host decisions now resolve from declared
     `TerminalPresentationMode` capability truth instead of a duplicate path
     enum
+- the fifth code-facing cut is now in too:
+  - shared code no longer asks whether terminal presentation supports
+    specifically "direct partial update"
+  - the remaining shared capability question is now phrased more neutrally as
+    incremental presentable update support

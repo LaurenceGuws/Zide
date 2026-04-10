@@ -49,7 +49,7 @@ pub fn terminalAllowsFastPresentReuse(renderer: anytype, sync_updates_active: bo
     return sync_updates_active or !terminalUsesRetainedPresentSurface(renderer);
 }
 
-pub fn terminalSupportsDirectPartialUpdate(renderer: anytype) bool {
+pub fn terminalSupportsIncrementalPresentableUpdate(renderer: anytype) bool {
     return terminalPresentationMode(renderer) == .direct_snapshot_cache;
 }
 

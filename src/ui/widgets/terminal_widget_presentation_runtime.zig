@@ -108,7 +108,7 @@ pub const DirectPresentResult = struct {
     kitty_ms: f64 = 0.0,
 };
 
-pub const DirectSnapshotUpdateResult = struct {
+pub const IncrementalPresentableUpdateResult = struct {
     completed: bool = false,
     bg_ms: f64 = 0.0,
     glyph_ms: f64 = 0.0,
@@ -487,7 +487,7 @@ fn drawPresentationGlyphPass(
     return time_utils.secondsToMs(app_shell.getTime() - glyph_phase_start);
 }
 
-fn executeDirectSnapshotUpdate(
+fn executeIncrementalPresentableUpdate(
     self: anytype,
     shell: *app_shell.Shell,
     renderer: anytype,
@@ -500,8 +500,8 @@ fn executeDirectSnapshotUpdate(
     blink_style: anytype,
     blink_time: f64,
     surface_update_plan: PresentationUpdatePlan,
-) DirectSnapshotUpdateResult {
-    var result = DirectSnapshotUpdateResult{};
+) IncrementalPresentableUpdateResult {
+    var result = IncrementalPresentableUpdateResult{};
     if (surface_update_plan.mode != .partial or surface_update_plan.partial_plan == null) return result;
 
     const rows = terminal_view.rows;
@@ -1164,7 +1164,7 @@ pub fn runPresentation(
                     local_renderer: @TypeOf(renderer),
                     _: TerminalPresentPlan,
                 ) DirectTerminalPresentExecutionResult {
-                    const partial = tryDirectSnapshotUpdate(
+                    const partial = tryIncrementalPresentableUpdate(
                         local_ctx.base.self_widget,
                         local_ctx.base.shell,
                         local_renderer,
@@ -1680,7 +1680,7 @@ pub fn directPresent(
     return result;
 }
 
-pub fn tryDirectSnapshotUpdate(
+pub fn tryIncrementalPresentableUpdate(
     self: anytype,
     shell: *app_shell.Shell,
     renderer: anytype,
@@ -1700,9 +1700,9 @@ pub fn tryDirectSnapshotUpdate(
     height: f32,
     note_present_ctx: anytype,
     note_present: anytype,
-) DirectSnapshotUpdateResult {
-    var result = DirectSnapshotUpdateResult{};
-    if (!renderer_presentable_host.terminalSupportsDirectPartialUpdate(renderer)) return result;
+) IncrementalPresentableUpdateResult {
+    var result = IncrementalPresentableUpdateResult{};
+    if (!renderer_presentable_host.terminalSupportsIncrementalPresentableUpdate(renderer)) return result;
     if (has_kitty) return result;
     if (renderer_presentable_host.terminalPresentableInfo(renderer) == null) return result;
     if (terminal_view.rows == 0 or terminal_view.cols == 0 or terminal_view.cells.len == 0) return result;
@@ -1759,7 +1759,7 @@ pub fn tryDirectSnapshotUpdate(
     );
     defer renderer_clip_host.endClip(renderer);
 
-    result = executeDirectSnapshotUpdate(
+    result = executeIncrementalPresentableUpdate(
         self,
         shell,
         renderer,

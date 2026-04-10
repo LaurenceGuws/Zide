@@ -150,6 +150,9 @@ Current `RB-B3.e` checkpoint:
 - the remaining blocker is therefore narrower:
   backend-owned mechanics still differ, but shared widget/runtime flow no
   longer branches on a separate terminal-present path enum directly
+- the shared capability question is also slightly cleaner now:
+  widget/runtime asks for incremental presentable update support instead of a
+  backend-shaped "direct partial update" concept
 
 Gate-4 closure note:
 

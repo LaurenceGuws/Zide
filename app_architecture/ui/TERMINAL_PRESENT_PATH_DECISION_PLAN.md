@@ -101,8 +101,8 @@ Stop when:
   `renderer_presentable_host.terminalAllowsRecentInputForceFullPresentation(...)`
 - fast-present reuse gating now routes through
   `renderer_presentable_host.terminalAllowsFastPresentReuse(...)`
-- direct partial-update entry now routes through
-  `renderer_presentable_host.terminalSupportsDirectPartialUpdate(...)`
+- incremental presentable-update entry now routes through
+  `renderer_presentable_host.terminalSupportsIncrementalPresentableUpdate(...)`
 - the old `usesDirectTerminalPresentation(...)` helper is now deleted
 - this is intentionally only a path-decision ownership cut:
   widget/runtime behavior is unchanged, and execution still terminates through
