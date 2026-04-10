@@ -13,8 +13,8 @@ project landing page.
 Quick reading guide:
 
 - start with `docs/AGENT_HANDOFF.md` if you are joining an active work session
-- if you are doing architecture work, treat the renderer backend contract docs
-  as the current default priority and bar for what counts
+- if you are doing active product work, default to the Android queue and
+  authority docs first
 - use `docs/todo/` for current execution queues
 - use `app_architecture/` for current technical authority
 - use `docs/reference/`, `docs/research/`, and `docs/review/` for supporting material
@@ -23,10 +23,10 @@ Quick reading guide:
 - `docs/AGENT_HANDOFF.md` — current focus, constraints, and entrypoints.
 - `AGENTS.md` — workflow rules and constraints.
 - `docs/WORKFLOW.md` — doc roles and update rules.
-- `docs/todo/ui/renderer.md` — active renderer ticket queue; the main
-  execution board for the current architecture campaign.
-- `app_architecture/ui/RENDER_BACKEND_CONTRACT.md` — current indefinite
-  default architecture focus and the target backend contract.
+- `docs/todo/android/implementation.md` — active Android execution queue; the
+  current default product board.
+- `app_architecture/platform/android/RENDER_BACKEND.md` — Android host/backend
+  authority for the current default product lane.
 - `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md` — current-state audit
   for the same backend contract.
 
@@ -42,7 +42,7 @@ Quick reading guide:
   - `docs/todo/editor/stress_and_reference.md` — editor stress-testing and cross-reference comparison queue.
   - `docs/todo/repo_structure.md` — non-product repo structure cleanup (tests, tools, stale docs/tests).
   - `docs/todo/file_layout.md` — file/folder layout cleanup queue (split large folders/files, collapse low-value micro-files).
-  - `docs/todo/ui/renderer.md` — active renderer backend abstraction campaign.
+  - `docs/todo/android/implementation.md` — active Android terminal execution queue.
   - `docs/todo/terminal/vt_core_rearchitecture.md` — active VT maturity purity
     queue; currently deferred as the repo-wide default focus.
   - `docs/todo/terminal/widget_scrutiny.md` — active native terminal widget
