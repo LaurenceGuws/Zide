@@ -9,21 +9,22 @@ import android.os.SystemClock;
 import android.os.Looper;
 import android.util.Log;
 import android.view.Gravity;
+import android.view.InputDevice;
 import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
-import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
+import android.view.KeyEvent;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-public final class ZideBootstrapActivity extends Activity implements SurfaceHolder.Callback2, ShellInputView.Host {
+public final class ZideBootstrapActivity extends Activity implements SurfaceHolder.Callback2, ShellInputView.Host, ShellTranscriptController.Host {
     private static final String TAG = "ZideAndroidBootstrap";
     private static final int MAX_LOG_CHARS = 12000;
     private static final String EXTRA_DEBUG_RECREATE_SURFACE_ONCE = "debug_recreate_surface_once";
@@ -68,9 +69,8 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
     private boolean surfaceResizeScheduled = false;
     private boolean shellStartScheduled = false;
     private boolean shellRefreshActive = false;
+    private boolean shellRefreshQueued = false;
     private boolean sidebarOpen = false;
-    private float transcriptTouchDownX = 0;
-    private float transcriptTouchDownY = 0;
     private int surfaceHostGeneration = 0;
     private int productViewBasePaddingLeft = 0;
     private int productViewBasePaddingTop = 0;
@@ -102,7 +102,7 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         leftSidebar = findViewById(R.id.left_sidebar);
         productSurfaceContainer = findViewById(R.id.product_surface_container);
         shellOutputScroll = findViewById(R.id.shell_output_scroll);
-        shellTranscriptController = new ShellTranscriptController(shellOutputScroll, shellOutputText);
+        shellTranscriptController = new ShellTranscriptController(shellOutputScroll, shellOutputText, this);
         shellSessionController = new ShellSessionController(
                 new ShellSessionController.Bridge() {
                     @Override
@@ -216,6 +216,26 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         appendEvent("activity.onWindowFocusChanged focus=" + hasFocus);
         callNative("native.onWindowFocus", nativeLoaded ? nativeOnWindowFocusBridge(hasFocus) : -1);
         updateStatus(hasFocus ? "window-focused" : "window-unfocused");
+    }
+
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        if (shouldHandleHardwareKeyboardEvent(event)) {
+            shellInputView.requestFocus();
+            if (imeVisible) {
+                final InputMethodManager imm = getSystemService(InputMethodManager.class);
+                if (imm != null) {
+                    imm.hideSoftInputFromWindow(shellInputView.getWindowToken(), 0);
+                }
+                imeVisible = false;
+                shellTranscriptController.setImeVisible(false);
+                updateStatus("hardware-keyboard");
+            }
+            if (shellInputView.handleHardwareKeyEvent(event)) {
+                return true;
+            }
+        }
+        return super.dispatchKeyEvent(event);
     }
 
     @Override
@@ -400,28 +420,12 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         final FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(1, 1);
         lp.gravity = Gravity.BOTTOM | Gravity.START;
         root.addView(shellInputView, lp);
+    }
 
-        final int touchSlop = ViewConfiguration.get(this).getScaledTouchSlop();
-        final View.OnTouchListener transcriptTapListener = (view, event) -> {
-            switch (event.getActionMasked()) {
-                case MotionEvent.ACTION_DOWN:
-                    transcriptTouchDownX = event.getX();
-                    transcriptTouchDownY = event.getY();
-                    break;
-                case MotionEvent.ACTION_UP:
-                    final float dx = Math.abs(event.getX() - transcriptTouchDownX);
-                    final float dy = Math.abs(event.getY() - transcriptTouchDownY);
-                    if (dx <= touchSlop && dy <= touchSlop) {
-                        openIme();
-                    }
-                    break;
-                default:
-                    break;
-            }
-            return false;
-        };
-        shellOutputScroll.setOnTouchListener(transcriptTapListener);
-        shellOutputText.setOnTouchListener(transcriptTapListener);
+    @Override
+    public void onTranscriptTap() {
+        appendEvent("input.tap transcript");
+        openIme();
     }
 
     @Override
@@ -442,6 +446,26 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         }
     }
 
+    @Override
+    public void onInputFocusChanged(boolean hasFocus) {
+        if (hasFocus || !imeVisible) {
+            return;
+        }
+        shellInputView.post(() -> {
+            appendEvent("input.focus recoverAttempt");
+            shellInputView.requestFocusFromTouch();
+            if (!shellInputView.hasFocus()) {
+                shellInputView.requestFocus();
+            }
+            final InputMethodManager imm = getSystemService(InputMethodManager.class);
+            if (imm != null) {
+                imm.restartInput(shellInputView);
+                final boolean shown = imm.showSoftInput(shellInputView, InputMethodManager.SHOW_IMPLICIT);
+                appendEvent("input.focus recoverShown=" + shown + " focus=" + shellInputView.hasFocus());
+            }
+        });
+    }
+
     private void applyViewMode() {
         productView.setVisibility(debugViewEnabled ? View.GONE : View.VISIBLE);
         debugView.setVisibility(debugViewEnabled ? View.VISIBLE : View.GONE);
@@ -457,12 +481,12 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
             return;
         }
 
-        // From transcript tap/click we are in a user touch sequence; focus must be
-        // requested in that context for many devices to accept showSoftInput.
+        appendEvent("manual.imeOpen begin focus=" + shellInputView.hasFocus());
         shellInputView.requestFocusFromTouch();
         if (!shellInputView.hasFocus()) {
             shellInputView.requestFocus();
         }
+        appendEvent("manual.imeOpen focusAfterRequest=" + shellInputView.hasFocus());
         imm.restartInput(shellInputView);
         final boolean shown = imm.showSoftInput(shellInputView, InputMethodManager.SHOW_IMPLICIT);
         imeVisible = shown || shellInputView.hasFocus();
@@ -508,7 +532,14 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
 
     @Override
     public void refreshShellState() {
-        refreshShellState(false);
+        if (shellRefreshQueued) {
+            return;
+        }
+        shellRefreshQueued = true;
+        handler.post(() -> {
+            shellRefreshQueued = false;
+            refreshShellState(false);
+        });
     }
 
     private void refreshShellState(boolean logEvent) {
@@ -708,7 +739,6 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
         }
     }
 
-    @Override
     public void appendEvent(String message) {
         final String line = String.format("[%08d] %s", SystemClock.uptimeMillis(), message);
         Log.i(TAG, line);
@@ -720,6 +750,24 @@ public final class ZideBootstrapActivity extends Activity implements SurfaceHold
             eventLog.delete(0, eventLog.length() - MAX_LOG_CHARS);
         }
         eventLogText.setText(eventLog.toString());
+    }
+
+    private static boolean shouldHandleHardwareKeyboardEvent(KeyEvent event) {
+        if ((event.getSource() & InputDevice.SOURCE_KEYBOARD) == 0) {
+            return false;
+        }
+        switch (event.getKeyCode()) {
+            case KeyEvent.KEYCODE_VOLUME_DOWN:
+            case KeyEvent.KEYCODE_VOLUME_UP:
+            case KeyEvent.KEYCODE_VOLUME_MUTE:
+            case KeyEvent.KEYCODE_BACK:
+            case KeyEvent.KEYCODE_HOME:
+            case KeyEvent.KEYCODE_APP_SWITCH:
+            case KeyEvent.KEYCODE_POWER:
+                return false;
+            default:
+                return true;
+        }
     }
 
     private static native long nativeOnCreateBridge();

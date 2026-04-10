@@ -11,13 +11,13 @@ import android.view.inputmethod.InputConnection;
 
 final class ShellInputView extends View {
     interface Host {
-        void appendEvent(String message);
-
         void sendDirectText(String text);
 
         void sendDirectCodepoint(int codepoint);
 
         void refreshShellState();
+
+        void onInputFocusChanged(boolean hasFocus);
     }
 
     private static final String SENTINEL = "........";
@@ -33,6 +33,15 @@ final class ShellInputView extends View {
         this.host = host;
         setFocusable(true);
         setFocusableInTouchMode(true);
+        setOnFocusChangeListener((view, hasFocus) -> {
+            if (hasFocus) {
+                resetEditorState();
+            } else {
+                editorComposingStart = -1;
+                editorComposingEnd = -1;
+            }
+            host.onInputFocusChanged(hasFocus);
+        });
         resetEditorState();
     }
 
@@ -92,7 +101,6 @@ final class ShellInputView extends View {
                     for (int i = 0; i < newlinesCrossed; i++) {
                         host.sendDirectText(esc);
                     }
-                    host.appendEvent("input.nav " + (newCursor < oldCursor ? "up" : "down") + " x" + newlinesCrossed);
                 } else {
                     final int delta = newCursor - oldCursor;
                     final String esc = (delta < 0) ? "\u001b[D" : "\u001b[C";
@@ -100,7 +108,6 @@ final class ShellInputView extends View {
                     for (int i = 0; i < count; i++) {
                         host.sendDirectText(esc);
                     }
-                    host.appendEvent("input.nav " + (delta < 0 ? "left" : "right") + " x" + count);
                 }
 
                 resetEditorState();
@@ -110,27 +117,8 @@ final class ShellInputView extends View {
 
             @Override
             public boolean setComposingText(CharSequence text, int newCursorPosition) {
-                if (editorComposingStart >= 0 && editorComposingEnd > editorComposingStart) {
-                    final int len = editorComposingEnd - editorComposingStart;
-                    editorBuffer.delete(editorComposingStart, editorComposingEnd);
-                    editorCursor = editorComposingStart;
-                    for (int i = 0; i < len; i++) {
-                        host.sendDirectCodepoint('\u007f');
-                    }
-                }
-
                 final String s = text.toString();
-                if (s.length() > 0) {
-                    editorBuffer.insert(editorCursor, s);
-                    editorComposingStart = editorCursor;
-                    editorCursor += s.length();
-                    editorComposingEnd = editorCursor;
-                    host.sendDirectText(s);
-                } else {
-                    editorComposingStart = -1;
-                    editorComposingEnd = -1;
-                }
-                host.appendEvent("input.compose len=" + s.length());
+                replaceComposition(s);
                 host.refreshShellState();
                 return true;
             }
@@ -144,22 +132,21 @@ final class ShellInputView extends View {
 
             @Override
             public boolean commitText(CharSequence text, int newCursorPosition) {
-                if (editorComposingStart >= 0 && editorComposingEnd > editorComposingStart) {
-                    final int len = editorComposingEnd - editorComposingStart;
-                    editorBuffer.delete(editorComposingStart, editorComposingEnd);
-                    editorCursor = editorComposingStart;
-                    for (int i = 0; i < len; i++) {
-                        host.sendDirectCodepoint('\u007f');
-                    }
-                }
-                editorComposingStart = -1;
-                editorComposingEnd = -1;
-
                 final String s = text.toString();
-                editorBuffer.insert(editorCursor, s);
-                editorCursor += s.length();
-                host.sendDirectText(s);
-                host.appendEvent("input.commit text=" + text);
+                final String previous = currentCompositionText();
+                if (editorComposingStart >= 0) {
+                    replaceComposition(s);
+                    editorComposingStart = -1;
+                    editorComposingEnd = -1;
+                } else {
+                    editorBuffer.insert(editorCursor, s);
+                    editorCursor += s.length();
+                    host.sendDirectText(s);
+                }
+                if (previous.equals(s)) {
+                    editorComposingStart = -1;
+                    editorComposingEnd = -1;
+                }
                 host.refreshShellState();
                 return true;
             }
@@ -174,12 +161,10 @@ final class ShellInputView extends View {
                     for (int i = 0; i < count; i++) {
                         host.sendDirectCodepoint('\u007f');
                     }
-                    host.appendEvent("input.delete before=" + count);
                 }
                 if (afterLength > 0) {
                     final int delEnd = Math.min(editorBuffer.length(), editorCursor + afterLength);
                     editorBuffer.delete(editorCursor, delEnd);
-                    host.appendEvent("input.delete after=" + (delEnd - editorCursor));
                 }
                 host.refreshShellState();
                 return true;
@@ -187,49 +172,16 @@ final class ShellInputView extends View {
 
             @Override
             public boolean sendKeyEvent(KeyEvent event) {
-                if (event.getAction() != KeyEvent.ACTION_DOWN) return super.sendKeyEvent(event);
-                host.appendEvent("input.key code=" + event.getKeyCode()
-                        + " name=" + KeyEvent.keyCodeToString(event.getKeyCode()));
-                final Integer controlCodepoint = mapKeyToControlCodepoint(event);
-                if (controlCodepoint != null) {
-                    host.sendDirectCodepoint(controlCodepoint);
-                    host.refreshShellState();
+                if (handleTerminalKeyEvent(event)) {
                     return true;
                 }
-                final String esc = mapKeyToEscape(event.getKeyCode());
-                if (esc != null) {
-                    host.sendDirectText(esc);
-                    host.refreshShellState();
-                    return true;
-                }
-                switch (event.getKeyCode()) {
-                    case KeyEvent.KEYCODE_DEL:
-                        host.sendDirectCodepoint('\u007f');
-                        if (editorCursor > editorLineStart()) {
-                            editorBuffer.deleteCharAt(editorCursor - 1);
-                            editorCursor--;
-                        }
-                        host.refreshShellState();
-                        return true;
-                    case KeyEvent.KEYCODE_ENTER:
-                    case KeyEvent.KEYCODE_NUMPAD_ENTER:
-                        host.sendDirectCodepoint('\n');
-                        resetEditorState();
-                        host.refreshShellState();
-                        return true;
-                    case KeyEvent.KEYCODE_TAB:
-                        host.sendDirectCodepoint('\t');
-                        host.refreshShellState();
-                        return true;
-                    case KeyEvent.KEYCODE_ESCAPE:
-                        host.sendDirectCodepoint('\u001b');
-                        host.refreshShellState();
-                        return true;
-                    default:
-                        return super.sendKeyEvent(event);
-                }
+                return super.sendKeyEvent(event);
             }
         };
+    }
+
+    boolean handleHardwareKeyEvent(KeyEvent event) {
+        return handleTerminalKeyEvent(event);
     }
 
     private void resetEditorState() {
@@ -244,6 +196,45 @@ final class ShellInputView extends View {
         int i = editorCursor - 1;
         while (i >= 0 && editorBuffer.charAt(i) != '\n') i--;
         return i + 1;
+    }
+
+    private String currentCompositionText() {
+        if (editorComposingStart >= 0 && editorComposingEnd >= editorComposingStart) {
+            return editorBuffer.substring(editorComposingStart, editorComposingEnd);
+        }
+        return "";
+    }
+
+    private void replaceComposition(String next) {
+        final String previous = currentCompositionText();
+        final int composeStart = editorComposingStart >= 0 ? editorComposingStart : editorCursor;
+        final int oldEnd = editorComposingEnd >= editorComposingStart && editorComposingStart >= 0 ? editorComposingEnd : editorCursor;
+
+        int commonPrefix = 0;
+        final int maxPrefix = Math.min(previous.length(), next.length());
+        while (commonPrefix < maxPrefix && previous.charAt(commonPrefix) == next.charAt(commonPrefix)) {
+            commonPrefix += 1;
+        }
+
+        final int removed = previous.length() - commonPrefix;
+        for (int i = 0; i < removed; i++) {
+            host.sendDirectCodepoint('\u007f');
+        }
+
+        final String appended = next.substring(commonPrefix);
+        if (!appended.isEmpty()) {
+            host.sendDirectText(appended);
+        }
+
+        editorBuffer.delete(composeStart, oldEnd);
+        editorBuffer.insert(composeStart, next);
+        editorComposingStart = composeStart;
+        editorComposingEnd = composeStart + next.length();
+        editorCursor = editorComposingEnd;
+        if (next.isEmpty()) {
+            editorComposingStart = -1;
+            editorComposingEnd = -1;
+        }
     }
 
     private String mapKeyToEscape(int keyCode) {
@@ -353,6 +344,59 @@ final class ShellInputView extends View {
                 return 0x00;
             default:
                 return null;
+        }
+    }
+
+    private boolean handleTerminalKeyEvent(KeyEvent event) {
+        if (event.getAction() != KeyEvent.ACTION_DOWN) {
+            return false;
+        }
+        final Integer controlCodepoint = mapKeyToControlCodepoint(event);
+        if (controlCodepoint != null) {
+            host.sendDirectCodepoint(controlCodepoint);
+            host.refreshShellState();
+            return true;
+        }
+        final String esc = mapKeyToEscape(event.getKeyCode());
+        if (esc != null) {
+            host.sendDirectText(esc);
+            host.refreshShellState();
+            return true;
+        }
+        switch (event.getKeyCode()) {
+            case KeyEvent.KEYCODE_DEL:
+                host.sendDirectCodepoint('\u007f');
+                if (editorCursor > editorLineStart()) {
+                    editorBuffer.deleteCharAt(editorCursor - 1);
+                    editorCursor--;
+                }
+                host.refreshShellState();
+                return true;
+            case KeyEvent.KEYCODE_ENTER:
+            case KeyEvent.KEYCODE_NUMPAD_ENTER:
+                host.sendDirectCodepoint('\n');
+                resetEditorState();
+                host.refreshShellState();
+                return true;
+            case KeyEvent.KEYCODE_TAB:
+                host.sendDirectCodepoint('\t');
+                host.refreshShellState();
+                return true;
+            case KeyEvent.KEYCODE_ESCAPE:
+                host.sendDirectCodepoint('\u001b');
+                host.refreshShellState();
+                return true;
+            default:
+                final int unicode = event.getUnicodeChar();
+                if (unicode == 0 || Character.isISOControl(unicode)) {
+                    return false;
+                }
+                final String text = new String(Character.toChars(unicode));
+                editorBuffer.insert(editorCursor, text);
+                editorCursor += text.length();
+                host.sendDirectText(text);
+                host.refreshShellState();
+                return true;
         }
     }
 }
