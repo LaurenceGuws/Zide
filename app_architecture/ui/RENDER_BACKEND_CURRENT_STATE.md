@@ -726,6 +726,13 @@ That split is now sharper from code inspection too:
 - draw metrics no longer need `renderer_presentable_host.zig` to proxy
   capability state either; they read `RendererCapabilities.terminal_presentation_mode`
   directly, leaving the presentable host focused on the presentable contract.
+- the behavior-level presentable contradiction is narrower now too:
+  Metal terminal presentable refresh no longer reports `.unsupported`
+  structurally. It now consumes the queued terminal update body into the
+  existing snapshot texture on the current command buffer, so both reference
+  backends satisfy the shared refresh seam through backend-owned mechanics.
+  That is a structural parity gain, not a replacement for later live Metal
+  verification.
 - the editor styled-text split is slightly narrower now too:
   `editor_widget_draw_text.zig` uses one shared highlighted-token traversal for
   both immediate and draw-list paths. The remaining split is still real, but

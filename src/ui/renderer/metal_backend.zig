@@ -225,6 +225,12 @@ pub const Frame = struct {
     command_buffer: *anyopaque,
 };
 
+const RenderTargetSurface = struct {
+    texture: *anyopaque,
+    width: i32,
+    height: i32,
+};
+
 pub const Readback = struct {
     buffer: *anyopaque,
     width: i32,
@@ -722,9 +728,19 @@ fn createAtlasSampler(device: *anyopaque) ?*anyopaque {
     return msgSendPointerArgPointer(device, "newSamplerStateWithDescriptor:", descriptor);
 }
 
-fn encodeAtlasTextureRegion(
+fn renderTargetSurfaceForFrame(context: *BackendContext, frame: *Frame) ?RenderTargetSurface {
+    const texture = msgSendPointer(frame.drawable, "texture") orelse return null;
+    return .{
+        .texture = texture,
+        .width = context.drawable_width,
+        .height = context.drawable_height,
+    };
+}
+
+fn encodeAtlasTextureRegionToTarget(
     context: *BackendContext,
-    frame: *Frame,
+    command_buffer: *anyopaque,
+    target: RenderTargetSurface,
     source: AtlasTextureSource,
     source_rect: types.Rect,
     dest_x: i32,
@@ -733,21 +749,20 @@ fn encodeAtlasTextureRegion(
     clip_rect: ?PixelClipRect,
 ) bool {
     if (builtin.target.os.tag != .macos) return false;
-    const drawable_texture = msgSendPointer(frame.drawable, "texture") orelse return false;
     const width: i32 = @intFromFloat(source_rect.width);
     const height: i32 = @intFromFloat(source_rect.height);
     if (width <= 0 or height <= 0) return false;
-    if (context.drawable_width <= 0 or context.drawable_height <= 0) return false;
+    if (target.width <= 0 or target.height <= 0) return false;
 
     const render_pass_descriptor_class = classPointer("MTLRenderPassDescriptor") orelse return false;
     const render_pass_descriptor = msgSendClassPointer(render_pass_descriptor_class, "renderPassDescriptor") orelse return false;
     const color_attachments = msgSendPointer(render_pass_descriptor, "colorAttachments") orelse return false;
     const color_attachment = msgSendU64ArgPointer(color_attachments, "objectAtIndexedSubscript:", 0) orelse return false;
-    msgSendSetPointer(color_attachment, "setTexture:", drawable_texture);
+    msgSendSetPointer(color_attachment, "setTexture:", target.texture);
     msgSendSetU64(color_attachment, "setLoadAction:", load_action_load);
     msgSendSetU64(color_attachment, "setStoreAction:", store_action_store);
 
-    const encoder = msgSendPointerArgPointer(frame.command_buffer, "renderCommandEncoderWithDescriptor:", render_pass_descriptor) orelse return false;
+    const encoder = msgSendPointerArgPointer(command_buffer, "renderCommandEncoderWithDescriptor:", render_pass_descriptor) orelse return false;
     defer msgSendVoid(encoder, "endEncoding");
 
     msgSendSetPointer(encoder, "setRenderPipelineState:", context.atlas_pipeline);
@@ -755,10 +770,10 @@ fn encodeAtlasTextureRegion(
     msgSendSetPointerU64(encoder, "setFragmentTexture:atIndex:", atlasTexture(&context.glyph_atlas, source).texture, 0);
 
     if (clip_rect) |rect| {
-        const clip_x0 = @max(0, @min(rect.x, context.drawable_width));
-        const clip_y0 = @max(0, @min(rect.y, context.drawable_height));
-        const clip_x1 = @max(clip_x0, @min(rect.x + rect.width, context.drawable_width));
-        const clip_y1 = @max(clip_y0, @min(rect.y + rect.height, context.drawable_height));
+        const clip_x0 = @max(0, @min(rect.x, target.width));
+        const clip_y0 = @max(0, @min(rect.y, target.height));
+        const clip_x1 = @max(clip_x0, @min(rect.x + rect.width, target.width));
+        const clip_y1 = @max(clip_y0, @min(rect.y + rect.height, target.height));
         const clip_w = clip_x1 - clip_x0;
         const clip_h = clip_y1 - clip_y0;
         if (clip_w <= 0 or clip_h <= 0) return false;
@@ -775,8 +790,8 @@ fn encodeAtlasTextureRegion(
     const dest_y0 = @as(f32, @floatFromInt(dest_y));
     const dest_x1 = dest_x0 + @as(f32, @floatFromInt(width));
     const dest_y1 = dest_y0 + @as(f32, @floatFromInt(height));
-    const drawable_w = @as(f32, @floatFromInt(context.drawable_width));
-    const drawable_h = @as(f32, @floatFromInt(context.drawable_height));
+    const drawable_w = @as(f32, @floatFromInt(target.width));
+    const drawable_h = @as(f32, @floatFromInt(target.height));
     const src_x0 = source_rect.x / @as(f32, @floatFromInt(atlas.width));
     const src_y0 = source_rect.y / @as(f32, @floatFromInt(atlas.height));
     const src_x1 = (source_rect.x + source_rect.width) / @as(f32, @floatFromInt(atlas.width));
@@ -827,9 +842,10 @@ fn encodeAtlasTextureRegion(
     return true;
 }
 
-fn encodeExternalTextureRegion(
+fn encodeExternalTextureRegionToTarget(
     context: *BackendContext,
-    frame: *Frame,
+    command_buffer: *anyopaque,
+    target: RenderTargetSurface,
     texture: *anyopaque,
     texture_width: i32,
     texture_height: i32,
@@ -839,21 +855,20 @@ fn encodeExternalTextureRegion(
     clip_rect: ?PixelClipRect,
 ) bool {
     if (builtin.target.os.tag != .macos) return false;
-    const drawable_texture = msgSendPointer(frame.drawable, "texture") orelse return false;
     const width: i32 = @intFromFloat(source_rect.width);
     const height: i32 = @intFromFloat(source_rect.height);
     if (width <= 0 or height <= 0) return false;
-    if (context.drawable_width <= 0 or context.drawable_height <= 0) return false;
+    if (target.width <= 0 or target.height <= 0) return false;
 
     const render_pass_descriptor_class = classPointer("MTLRenderPassDescriptor") orelse return false;
     const render_pass_descriptor = msgSendClassPointer(render_pass_descriptor_class, "renderPassDescriptor") orelse return false;
     const color_attachments = msgSendPointer(render_pass_descriptor, "colorAttachments") orelse return false;
     const color_attachment = msgSendU64ArgPointer(color_attachments, "objectAtIndexedSubscript:", 0) orelse return false;
-    msgSendSetPointer(color_attachment, "setTexture:", drawable_texture);
+    msgSendSetPointer(color_attachment, "setTexture:", target.texture);
     msgSendSetU64(color_attachment, "setLoadAction:", load_action_load);
     msgSendSetU64(color_attachment, "setStoreAction:", store_action_store);
 
-    const encoder = msgSendPointerArgPointer(frame.command_buffer, "renderCommandEncoderWithDescriptor:", render_pass_descriptor) orelse return false;
+    const encoder = msgSendPointerArgPointer(command_buffer, "renderCommandEncoderWithDescriptor:", render_pass_descriptor) orelse return false;
     defer msgSendVoid(encoder, "endEncoding");
 
     msgSendSetPointer(encoder, "setRenderPipelineState:", context.atlas_pipeline);
@@ -861,10 +876,10 @@ fn encodeExternalTextureRegion(
     msgSendSetPointerU64(encoder, "setFragmentTexture:atIndex:", texture, 0);
 
     if (clip_rect) |rect| {
-        const clip_x0 = @max(0, @min(rect.x, context.drawable_width));
-        const clip_y0 = @max(0, @min(rect.y, context.drawable_height));
-        const clip_x1 = @max(clip_x0, @min(rect.x + rect.width, context.drawable_width));
-        const clip_y1 = @max(clip_y0, @min(rect.y + rect.height, context.drawable_height));
+        const clip_x0 = @max(0, @min(rect.x, target.width));
+        const clip_y0 = @max(0, @min(rect.y, target.height));
+        const clip_x1 = @max(clip_x0, @min(rect.x + rect.width, target.width));
+        const clip_y1 = @max(clip_y0, @min(rect.y + rect.height, target.height));
         const clip_w = clip_x1 - clip_x0;
         const clip_h = clip_y1 - clip_y0;
         if (clip_w <= 0 or clip_h <= 0) return false;
@@ -880,8 +895,8 @@ fn encodeExternalTextureRegion(
     const dest_y0 = dest_rect.y;
     const dest_x1 = dest_rect.x + dest_rect.width;
     const dest_y1 = dest_rect.y + dest_rect.height;
-    const drawable_w = @as(f32, @floatFromInt(context.drawable_width));
-    const drawable_h = @as(f32, @floatFromInt(context.drawable_height));
+    const drawable_w = @as(f32, @floatFromInt(target.width));
+    const drawable_h = @as(f32, @floatFromInt(target.height));
     const src_x0 = source_rect.x / @as(f32, @floatFromInt(texture_width));
     const src_y0 = source_rect.y / @as(f32, @floatFromInt(texture_height));
     const src_x1 = (source_rect.x + source_rect.width) / @as(f32, @floatFromInt(texture_width));
@@ -937,9 +952,11 @@ pub fn drawAtlasSample(
     frame: *Frame,
     sample: AtlasSampleDraw,
 ) bool {
-    return encodeAtlasTextureRegion(
+    const target = renderTargetSurfaceForFrame(context, frame) orelse return false;
+    return encodeAtlasTextureRegionToTarget(
         context,
-        frame,
+        frame.command_buffer,
+        target,
         sample.atlas,
         sample.source_rect,
         sample.dest_x,
@@ -954,6 +971,7 @@ pub fn drawRawImage(
     frame: *Frame,
     draw: RawImageDraw,
 ) bool {
+    const target = renderTargetSurfaceForFrame(context, frame) orelse return false;
     const texture_ptr = ptrFromGpuImageHandle(draw.texture) orelse return false;
     const source_rect = draw.source_rect orelse types.Rect{
         .x = 0,
@@ -961,9 +979,10 @@ pub fn drawRawImage(
         .width = @floatFromInt(draw.texture.width),
         .height = @floatFromInt(draw.texture.height),
     };
-    return encodeExternalTextureRegion(
+    return encodeExternalTextureRegionToTarget(
         context,
-        frame,
+        frame.command_buffer,
+        target,
         texture_ptr,
         draw.texture.width,
         draw.texture.height,
@@ -981,9 +1000,11 @@ pub fn drawSolidColor(
 ) bool {
     const brush = context.solid_white_brush orelse return false;
     const brush_ptr = ptrFromGpuImageHandle(brush) orelse return false;
-    return encodeExternalTextureRegion(
+    const target = renderTargetSurfaceForFrame(context, frame) orelse return false;
+    return encodeExternalTextureRegionToTarget(
         context,
-        frame,
+        frame.command_buffer,
+        target,
         brush_ptr,
         brush.width,
         brush.height,
@@ -1769,6 +1790,70 @@ fn replayRecordedPresentableDraws(context: *BackendContext, frame: *Frame) void 
     }
 }
 
+fn replayQueuedSurfaceDrawsToTarget(
+    context: *BackendContext,
+    command_buffer: *anyopaque,
+    target: RenderTargetSurface,
+) void {
+    for (context.queued_surface_draws.items) |queued_draw| {
+        switch (queued_draw) {
+            .atlas => |sample| _ = encodeAtlasTextureRegionToTarget(
+                context,
+                command_buffer,
+                target,
+                sample.atlas,
+                sample.source_rect,
+                sample.dest_x,
+                sample.dest_y,
+                sample.tint,
+                sample.clip_rect,
+            ),
+            .solid => |solid| {
+                const brush = context.solid_white_brush orelse continue;
+                const brush_ptr = ptrFromGpuImageHandle(brush) orelse continue;
+                _ = encodeExternalTextureRegionToTarget(
+                    context,
+                    command_buffer,
+                    target,
+                    brush_ptr,
+                    brush.width,
+                    brush.height,
+                    .{
+                        .x = 0,
+                        .y = 0,
+                        .width = @floatFromInt(brush.width),
+                        .height = @floatFromInt(brush.height),
+                    },
+                    solid.dest_rect,
+                    solid.color,
+                    solid.clip_rect,
+                );
+            },
+            .raw_image => |draw| {
+                const texture_ptr = ptrFromGpuImageHandle(draw.texture) orelse continue;
+                const source_rect = draw.source_rect orelse types.Rect{
+                    .x = 0,
+                    .y = 0,
+                    .width = @floatFromInt(draw.texture.width),
+                    .height = @floatFromInt(draw.texture.height),
+                };
+                _ = encodeExternalTextureRegionToTarget(
+                    context,
+                    command_buffer,
+                    target,
+                    texture_ptr,
+                    draw.texture.width,
+                    draw.texture.height,
+                    source_rect,
+                    draw.dest_rect,
+                    draw.tint,
+                    draw.clip_rect,
+                );
+            },
+        }
+    }
+}
+
 pub fn resizeBackendContext(
     context: *BackendContext,
     drawable_width: i32,
@@ -1927,6 +2012,26 @@ pub fn clearFrame(frame: *Frame, rgba: [4]f32) bool {
     return true;
 }
 
+fn clearRenderTargetSurface(command_buffer: *anyopaque, target: RenderTargetSurface, rgba: [4]f32) bool {
+    if (builtin.target.os.tag != .macos) return false;
+    const render_pass_descriptor_class = classPointer("MTLRenderPassDescriptor") orelse return false;
+    const render_pass_descriptor = msgSendClassPointer(render_pass_descriptor_class, "renderPassDescriptor") orelse return false;
+    const color_attachments = msgSendPointer(render_pass_descriptor, "colorAttachments") orelse return false;
+    const color_attachment = msgSendU64ArgPointer(color_attachments, "objectAtIndexedSubscript:", 0) orelse return false;
+    msgSendSetPointer(color_attachment, "setTexture:", target.texture);
+    msgSendSetU64(color_attachment, "setLoadAction:", load_action_clear);
+    msgSendSetU64(color_attachment, "setStoreAction:", store_action_store);
+    msgSendSetClearColor(color_attachment, "setClearColor:", .{
+        .red = @as(f64, rgba[0]),
+        .green = @as(f64, rgba[1]),
+        .blue = @as(f64, rgba[2]),
+        .alpha = @as(f64, rgba[3]),
+    });
+    const encoder = msgSendPointerArgPointer(command_buffer, "renderCommandEncoderWithDescriptor:", render_pass_descriptor) orelse return false;
+    msgSendVoid(encoder, "endEncoding");
+    return true;
+}
+
 pub fn prepareFrameReadback(context: *BackendContext, frame: *Frame) ?Readback {
     if (builtin.target.os.tag != .macos) return null;
     if (context.drawable_width <= 0 or context.drawable_height <= 0) return null;
@@ -2010,6 +2115,29 @@ pub fn setTerminalSnapshotLogicalSize(
 ) void {
     context.terminal_snapshot_logical_width = width;
     context.terminal_snapshot_logical_height = height;
+}
+
+pub fn refreshTerminalSnapshotPresentable(renderer: anytype) bool {
+    if (builtin.target.os.tag != .macos) return false;
+    const context = backendContext(renderer) orelse return false;
+    const frame = currentFrame(renderer) orelse return false;
+    if (!ensureTerminalSnapshotPresentable(context, context.drawable_width, context.drawable_height).available) return false;
+    const snapshot = context.terminal_snapshot orelse return false;
+    const target = RenderTargetSurface{
+        .texture = ptrFromGpuImageHandle(snapshot) orelse return false,
+        .width = snapshot.width,
+        .height = snapshot.height,
+    };
+    const bg = renderer.theme.background.toRgba();
+    if (!clearRenderTargetSurface(frame.command_buffer, target, .{
+        @as(f32, @floatFromInt(bg.r)) / 255.0,
+        @as(f32, @floatFromInt(bg.g)) / 255.0,
+        @as(f32, @floatFromInt(bg.b)) / 255.0,
+        @as(f32, @floatFromInt(bg.a)) / 255.0,
+    })) return false;
+    replayQueuedSurfaceDrawsToTarget(context, frame.command_buffer, target);
+    clearQueuedSurfaceDraws(renderer);
+    return true;
 }
 
 fn ensureTerminalSnapshotScratch(

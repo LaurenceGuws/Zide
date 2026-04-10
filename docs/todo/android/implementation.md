@@ -136,6 +136,9 @@ Current checkpoint:
   specifically "direct partial update" support
 - presentable-host helpers no longer mix backend capability truth with
   widget-owned sync-update policy
+- Metal terminal presentable refresh now satisfies the shared refresh seam
+  structurally by replaying queued terminal update draws into its snapshot
+  presentable on the current command buffer
 - this does not claim parity is solved yet
 - it makes the remaining blocker narrower and more honest before deeper
   presentable work

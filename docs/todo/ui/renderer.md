@@ -156,6 +156,9 @@ Current `RB-B3.e` checkpoint:
 - widget/runtime also now keeps its own sync-update reuse policy locally
   instead of asking the presentable host to blend backend truth with widget
   policy state
+- the behavior-level parity gap is narrower too:
+  Metal now satisfies the shared terminal presentable refresh seam
+  structurally instead of reporting refresh as unsupported by definition
 
 Gate-4 closure note:
 

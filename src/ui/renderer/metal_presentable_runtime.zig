@@ -18,12 +18,20 @@ pub fn ensurePresentable(renderer: anytype, width: i32, height: i32) bool {
 
 pub fn refreshTerminalPresentable(
     renderer: anytype,
-    _: ?*const anyopaque,
-    _: *const fn (?*const anyopaque, @TypeOf(renderer)) void,
+    ctx: ?*const anyopaque,
+    body: *const fn (?*const anyopaque, @TypeOf(renderer)) void,
 ) TerminalPresentableRefreshResult {
-    const Renderer = @TypeOf(renderer);
-    _ = Renderer;
-    return .unsupported;
+    const drawable_width = renderer.render_width;
+    const drawable_height = renderer.render_height;
+    if (drawable_width <= 0 or drawable_height <= 0) return .target_unavailable;
+    const context = metal_backend.backendContext(renderer) orelse return .target_unavailable;
+    metal_backend.setTerminalSnapshotLogicalSize(context, drawable_width, drawable_height);
+    if (!metal_backend.ensureTerminalSnapshotPresentable(context, drawable_width, drawable_height).available) {
+        return .target_unavailable;
+    }
+    body(ctx, renderer);
+    if (!metal_backend.refreshTerminalSnapshotPresentable(renderer)) return .target_unavailable;
+    return .refreshed;
 }
 
 pub fn drawPresentableBackdrop(renderer: anytype, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) void {

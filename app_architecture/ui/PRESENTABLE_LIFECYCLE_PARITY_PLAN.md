@@ -136,3 +136,10 @@ Stop when:
     widget policy inputs like sync-update state
   - widget/runtime now owns its own sync-update reuse policy while the host
     answers only backend requirement/support questions
+- the seventh code-facing cut is now in too:
+  - Metal no longer answers terminal presentable refresh as structurally
+    unsupported
+  - it now replays the queued terminal surface-update body into the existing
+    snapshot presentable texture on the current Metal command buffer
+  - this is a structural lifecycle-parity improvement, not a claim that live
+    Metal verification is complete again
