@@ -148,9 +148,8 @@ Current `RB-B3.e` checkpoint:
 - that execution split now terminates in
   `src/ui/renderer/renderer_presentable_host.zig`
 - the remaining blocker is therefore narrower:
-  backend-owned mechanics still differ, and `TerminalPresentPath` still
-  exists as a backend-host decision surface, but shared widget/runtime flow no
-  longer branches on it directly
+  backend-owned mechanics still differ, but shared widget/runtime flow no
+  longer branches on a separate terminal-present path enum directly
 
 Gate-4 closure note:
 

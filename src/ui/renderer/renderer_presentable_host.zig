@@ -1,12 +1,13 @@
 const present_trace_runtime = @import("present_trace_runtime.zig");
+const capability_contract = @import("capability_contract.zig");
 const presentable_contract = @import("presentable_contract.zig");
 
 pub const TerminalPresentableRefresh = @import("backend_dispatch.zig").TerminalPresentableRefreshResult;
 const PresentableDraw = presentable_contract.PresentableDraw;
-const TerminalPresentPath = presentable_contract.TerminalPresentPath;
 pub const TerminalPresentPlan = presentable_contract.TerminalPresentPlan;
 pub const TerminalPresentResult = presentable_contract.TerminalPresentResult;
 pub const TerminalPresentTiming = presentable_contract.TerminalPresentTiming;
+const TerminalPresentationMode = capability_contract.TerminalPresentationMode;
 
 pub const TerminalPresentableRefreshExecutionResult = struct {
     completed: bool = false,
@@ -20,8 +21,12 @@ pub const DirectTerminalPresentExecutionResult = struct {
     timing: TerminalPresentTiming = .{},
 };
 
+pub fn terminalPresentationMode(renderer: anytype) TerminalPresentationMode {
+    return renderer.capabilities().terminal_presentation_mode;
+}
+
 pub fn terminalUsesRetainedPresentSurface(renderer: anytype) bool {
-    return renderer.backend.terminalPresentPath(renderer) == .retained_surface;
+    return terminalPresentationMode(renderer) == .retained_surface;
 }
 
 pub fn runTerminalPresentExecution(
@@ -45,7 +50,7 @@ pub fn terminalAllowsFastPresentReuse(renderer: anytype, sync_updates_active: bo
 }
 
 pub fn terminalSupportsDirectPartialUpdate(renderer: anytype) bool {
-    return !terminalUsesRetainedPresentSurface(renderer);
+    return terminalPresentationMode(renderer) == .direct_snapshot_cache;
 }
 
 pub fn ensureTerminalPresentable(renderer: anytype, width: i32, height: i32) bool {

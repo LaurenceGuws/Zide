@@ -715,14 +715,14 @@ That split is now sharper from code inspection too:
   `terminal_widget_presentation_runtime.zig` no longer chooses direct-vs-
   retained execution first in its own body. That present-path decision now
   routes through one host-owned seam in `renderer_presentable_host.zig`
-  (`runTerminalPresentPath(...)`), while the existing direct and retained
+  (`runTerminalPresentExecution(...)`), while the existing direct and retained
   execution bodies remain behavior-identical behind it.
 - terminal widget code no longer asks the renderer root for
   `terminalPresentationMode()` / `usesDirectTerminalPresentation()`. That
   terminal-present path decision now lives in `renderer_presentable_host.zig`
   with the rest of the terminal presentable seam, and the host now resolves it
-  from backend presentable ops instead of inferring it from capability
-  metadata.
+  from declared `RendererCapabilities.terminal_presentation_mode` instead of a
+  parallel terminal-present path enum.
 - draw metrics no longer need `renderer_presentable_host.zig` to proxy
   capability state either; they read `RendererCapabilities.terminal_presentation_mode`
   directly, leaving the presentable host focused on the presentable contract.

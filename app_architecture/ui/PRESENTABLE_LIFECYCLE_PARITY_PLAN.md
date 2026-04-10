@@ -120,3 +120,9 @@ Stop when:
     now terminates in `renderer_presentable_host.zig`
   - this removes another product-significant backend split from shared widget
     code without overclaiming lifecycle parity
+- the fourth code-facing cut is now in too:
+  - the parallel `TerminalPresentPath` classifier has been removed from the
+    active presentable dispatch/host surface
+  - presentable-host decisions now resolve from declared
+    `TerminalPresentationMode` capability truth instead of a duplicate path
+    enum

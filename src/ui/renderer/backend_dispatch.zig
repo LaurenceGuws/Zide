@@ -11,10 +11,8 @@ const metal_clip_runtime = @import("metal_clip_runtime.zig");
 const metal_presentable_runtime = @import("metal_presentable_runtime.zig");
 const metal_surface_runtime = @import("metal_surface_runtime.zig");
 const surface_draw = @import("surface_draw.zig");
-const presentable_contract = @import("presentable_contract.zig");
 const platform_window = @import("../../platform/window_metrics.zig");
 const GpuImageRef = surface_draw.GpuImageRef;
-const TerminalPresentPath = presentable_contract.TerminalPresentPath;
 
 pub const TerminalPresentableRefreshResult = enum {
     refreshed,
@@ -52,7 +50,6 @@ pub fn BackendOps(
     };
 
     const PresentableOps = struct {
-        terminalPresentPath: *const fn (*const RendererType) TerminalPresentPath,
         ensurePresentable: *const fn (*RendererType, i32, i32) bool,
         refreshTerminalPresentable: *const fn (*RendererType, ?*const anyopaque, *const fn (?*const anyopaque, *RendererType) void) TerminalPresentableRefreshResult,
         drawPresentableBackdrop: *const fn (*RendererType, f32, f32, f32, f32, types.Rgba) void,
@@ -156,7 +153,6 @@ pub fn opsFor(
                 .dumpWindowScreenshotPpmSized = OpenGl.dumpWindowScreenshotPpmSized,
             },
             .presentable = .{
-                .terminalPresentPath = OpenGl.terminalPresentPath,
                 .ensurePresentable = OpenGl.ensurePresentable,
                 .refreshTerminalPresentable = OpenGl.refreshTerminalPresentable,
                 .drawPresentableBackdrop = OpenGl.drawPresentableBackdrop,
@@ -202,7 +198,6 @@ pub fn opsFor(
                 .dumpWindowScreenshotPpmSized = Metal.dumpWindowScreenshotPpmSized,
             },
             .presentable = .{
-                .terminalPresentPath = Metal.terminalPresentPath,
                 .ensurePresentable = Metal.ensurePresentable,
                 .refreshTerminalPresentable = Metal.refreshTerminalPresentable,
                 .drawPresentableBackdrop = Metal.drawPresentableBackdrop,
@@ -282,9 +277,6 @@ fn OpenGlDispatch(
         }
         fn ensurePresentable(renderer: *RendererType, width: i32, height: i32) bool {
             return gl_presentable_runtime.ensurePresentable(renderer, width, height);
-        }
-        fn terminalPresentPath(_: *const RendererType) TerminalPresentPath {
-            return .retained_surface;
         }
         fn refreshTerminalPresentable(
             renderer: *RendererType,
@@ -391,9 +383,6 @@ fn MetalDispatch(
         }
         fn ensurePresentable(renderer: *RendererType, width: i32, height: i32) bool {
             return metal_presentable_runtime.ensurePresentable(renderer, width, height);
-        }
-        fn terminalPresentPath(_: *const RendererType) TerminalPresentPath {
-            return .direct_surface;
         }
         fn refreshTerminalPresentable(
             renderer: *RendererType,

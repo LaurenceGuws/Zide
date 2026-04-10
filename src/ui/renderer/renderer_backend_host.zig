@@ -1,6 +1,5 @@
 const backend_dispatch = @import("backend_dispatch.zig");
 const backend_runtime_bundle = @import("backend_runtime_bundle.zig");
-const presentable_contract = @import("presentable_contract.zig");
 const surface_draw = @import("surface_draw.zig");
 const std = @import("std");
 
@@ -115,10 +114,6 @@ pub fn Host(
 
         pub fn dumpWindowScreenshotPpmSized(self: @This(), renderer: *RendererType, path: []const u8, out_width: i32, out_height: i32) !void {
             return self.ops.frame.dumpWindowScreenshotPpmSized(renderer, path, out_width, out_height);
-        }
-
-        pub fn terminalPresentPath(self: @This(), renderer: *const RendererType) presentable_contract.TerminalPresentPath {
-            return self.ops.presentable.terminalPresentPath(renderer);
         }
 
         pub fn ensurePresentable(self: @This(), renderer: *RendererType, width: i32, height: i32) bool {

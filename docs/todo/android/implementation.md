@@ -129,6 +129,9 @@ Current checkpoint:
 - shared widget/runtime no longer owns the direct-versus-retained execution
   branch for terminal presentation; that choice now terminates in
   `renderer_presentable_host.zig`
+- the parallel `TerminalPresentPath` classifier is also gone from the active
+  presentable dispatch/host surface; presentable-host decisions now resolve
+  from declared `TerminalPresentationMode` capability truth instead
 - this does not claim parity is solved yet
 - it makes the remaining blocker narrower and more honest before deeper
   presentable work
