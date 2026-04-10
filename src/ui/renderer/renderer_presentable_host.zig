@@ -45,11 +45,11 @@ pub fn runTerminalPresentExecution(
     return Hooks.executeDirectPresentFlow(plan, ctx, renderer);
 }
 
-pub fn terminalRequiresFullPresentAfterRecentInput(renderer: anytype) bool {
+pub fn terminalUsesRefreshDrivenRecentInputPolicy(renderer: anytype) bool {
     return terminalUsesRetainedPresentSurface(renderer);
 }
 
-pub fn terminalSupportsPresentableReuse(renderer: anytype) bool {
+pub fn terminalSupportsReuseWithoutSyncUpdates(renderer: anytype) bool {
     return !terminalUsesRetainedPresentSurface(renderer);
 }
 

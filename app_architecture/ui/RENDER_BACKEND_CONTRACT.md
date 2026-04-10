@@ -671,6 +671,12 @@ Retained targets, direct snapshot caches, and future Vulkan surfaces should all
 fit under this seam without shared code importing a backend-specific surface
 type.
 
+Backend-neutral does not mean every helper at this layer is a pure capability.
+If a helper exists to answer product policy questions like "does this mode use
+refresh-driven recent-input behavior" or "can this mode reuse without sync
+updates", its name must say that explicitly instead of pretending it is a
+universal backend capability fact.
+
 #### Atlas and image contract
 
 One backend-neutral resource story for:

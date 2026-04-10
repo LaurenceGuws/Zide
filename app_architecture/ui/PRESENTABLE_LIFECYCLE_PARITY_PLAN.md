@@ -149,3 +149,8 @@ Stop when:
   - refresh-capable backends now use the shared refresh execution path, so
     Metal participates in the active presentable refresh lane instead of only
     satisfying it as a dormant backend capability
+- the ninth code-facing cut is now in too:
+  - the remaining host helpers that answer product-policy-shaped questions are
+    named as policy questions now, not as generic backend capabilities
+  - that makes the remaining blocker clearer: what is left is behavior and
+    verification pressure, not vague helper ambiguity

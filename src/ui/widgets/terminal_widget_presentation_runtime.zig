@@ -193,7 +193,7 @@ pub fn recentInputWindowActive(
     input: InputSnapshot,
     at: f64,
 ) bool {
-    if (!renderer_presentable_host.terminalRequiresFullPresentAfterRecentInput(renderer)) return false;
+    if (!renderer_presentable_host.terminalUsesRefreshDrivenRecentInputPolicy(renderer)) return false;
     return renderer.forceFullTerminalPresentationRecentInputWindow() and
         ((input.mods.ctrl or input.mods.shift or input.mods.alt or input.mods.super) or
             self.controller.blink.recentInputWindowActive(
@@ -1519,7 +1519,7 @@ pub fn tryFastPresentExisting(
     );
     if (!(view_cells_len > 0 and presentable_ready and
         (terminal_view.sync_updates_active or
-            renderer_presentable_host.terminalSupportsPresentableReuse(renderer)))) return false;
+            renderer_presentable_host.terminalSupportsReuseWithoutSyncUpdates(renderer)))) return false;
 
     renderer_presentable_host.drawTerminalPresentableBackdrop(renderer, x, y, width, height, bg_color.toRgba());
     presentDraw(

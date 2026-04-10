@@ -736,6 +736,9 @@ That split is now sharper from code inspection too:
 - active host dispatch is slightly cleaner there too:
   refresh-capable backends now route through the shared refresh execution path
   instead of reserving that path only for retained-surface backends.
+- the remaining host helper vocabulary is slightly cleaner too:
+  helpers that answer product-policy-shaped questions are now named as policy
+  questions rather than as generic backend capability facts.
 - the editor styled-text split is slightly narrower now too:
   `editor_widget_draw_text.zig` uses one shared highlighted-token traversal for
   both immediate and draw-list paths. The remaining split is still real, but
