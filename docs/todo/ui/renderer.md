@@ -1259,7 +1259,7 @@ Do not do:
 - do not keep backend-specific frame assembly inline in shared runtime merely
   because the wrapper names became cleaner
 
-Next reviewable cut:
+Completed reviewable cut:
 
 - `RB-B3.a` Frame submission outcome/finalization ownership
 
@@ -1507,6 +1507,15 @@ Current evidence:
 - the old `usesDirectTerminalPresentation(...)` helper is now removed
 - this is a narrow path-decision ownership transfer only; execution behavior
   still flows through the existing terminal present transaction seams
+
+Next step rule:
+
+- do not guess the follow-up ticket from stale gate-5 momentum
+- rerank from current contract evidence before opening another renderer cut
+- current candidate blocker classes are:
+  - presentable lifecycle parity
+  - frame/present routine neutrality for a third backend
+  - any stronger Android-forcing contradiction proved after `RB-B3.d`
 
 ## Milestone C: Vulkan Fit Audit
 

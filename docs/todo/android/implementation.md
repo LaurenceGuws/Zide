@@ -102,17 +102,23 @@ That means:
 
 ## Current Priority
 
-**`AR-B2` / `RB-B3.d`** — this is the active ticket.
+No new Android-owned ticket should be invented here until the renderer queue
+reranks the next shared blocker explicitly.
 
-Remove the remaining product-significant `usesDirectTerminalPresentation(...)`
-decisions from terminal widget runtime so Android does not inherit
-direct-vs-retained path checks in shared code. This is the gate-5 cut that
-unblocks first-class native Android rendering.
+Current renderer truth:
 
-Owner docs:
+- `AR-B2` / `RB-B3.d` is already met
+- shared widget/runtime no longer branches on
+  `usesDirectTerminalPresentation(...)`
+- the next blocker must now be named from current gate #2 / gate #5 evidence,
+  not from stale pre-completion wording
 
-- `app_architecture/ui/TERMINAL_PRESENT_PATH_DECISION_PLAN.md`
-- `docs/todo/ui/renderer.md`
+Immediate rule:
+
+- do not drift back into Android host/tooling cleanup
+- do not reopen `AS-A3` polish
+- take the next renderer cut only after the renderer queue records the new
+  blocker explicitly
 
 ## Parked (not blocking)
 
@@ -374,9 +380,12 @@ Do not do:
 Current follow-up:
 
 - `AR-B1` is structurally complete
-- the next Android renderer adoption unblock is `AR-B2`:
-  remove remaining direct-vs-retained terminal-present path decisions from
-  widget runtime
+- `AR-B2` is also structurally complete:
+  widget/runtime no longer carries direct-vs-retained terminal-present path
+  decisions
+- the next Android renderer adoption unblock must now be reranked explicitly
+  from current renderer authority instead of leaving a vague "more gate 5"
+  continuation here
 
 ## Current Research Read
 

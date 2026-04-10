@@ -22,10 +22,11 @@ Get native Android rendering working. That means completing renderer gate #5
 so the backend abstraction is clean enough for a first-class Android GLES
 backend.
 
-- Active ticket: `AR-B2` / `RB-B3.d`
-  - remove remaining `usesDirectTerminalPresentation(...)` decisions from
-    terminal widget runtime
-  - owner: `app_architecture/ui/TERMINAL_PRESENT_PATH_DECISION_PLAN.md`
+- `RB-B3.d` is already met:
+  - widget/runtime no longer calls `usesDirectTerminalPresentation(...)`
+  - those path decisions now terminate in the presentable host seam
+- the next renderer move must be reranked explicitly from current gate #2 /
+  gate #5 evidence, not guessed from stale queue text
 - Renderer work is in scope only when it is the direct next blocker — not for
   generic cleanup
 - `AS-A3` (modifier-latch input UX) is parked open — works well enough now,
