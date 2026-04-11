@@ -19,18 +19,18 @@ statement. The short version:
 ### Current Focus
 
 Get native Android rendering working through the shared renderer path. Renderer
-gate #5 is no longer the live blocker; the active next move is minimal terminal
-rect/glyph rendering on the shared Android GLES path.
+gate #5 is no longer the live blocker; the active next move is first live
+terminal-grid ownership on the shared Android GLES path.
 
-- Active ticket: `AR-B4.d`
-  - Android GLES minimal terminal rect/glyph rendering
+- Active ticket: `AR-B4.e`
+  - Android GLES first live terminal-grid ownership
   - owner: `docs/todo/android/implementation.md`
   - current state:
     backend/runtime/frame binding is in, `AR-B4.b` external-host bootstrap is
-    met, `AR-B4.c` first shared solid replay is met, and terminal-host product
-    view now exposes the shared renderer surface at real size on-device; the
-    next direct blocker is no longer host exposure but the lack of shared
-    terminal rect/glyph rendering on Android GLES
+    met, `AR-B4.c` first shared solid replay is met, and `AR-B4.d` minimal
+    terminal rect/glyph replay is now met on-device; the next direct blocker is
+    no longer backend visibility but product ownership still living in the Java
+    transcript overlay instead of the shared renderer
 - `RB-B3.d` is already met:
   - widget/runtime no longer calls `usesDirectTerminalPresentation(...)`
   - those path decisions now terminate in the presentable host seam
@@ -57,8 +57,8 @@ rect/glyph rendering on the shared Android GLES path.
     phase-boundary problem
 - Renderer work is in scope only when it is the direct next blocker — not for
   generic cleanup
-- `AS-A3` (modifier-latch input UX) is parked open — works well enough now,
-  do not polish or let it block rendering progress
+- `AS-A3` (modifier-latch input UX) is parked open — works well enough now, do
+  not polish or let it block rendering progress
 - Gate #2 (Metal live verification) is paused; do not let it stall Android
 
 ### Current State
@@ -75,6 +75,13 @@ rect/glyph rendering on the shared Android GLES path.
 - Ownership boundary:
   - Zig owns terminal/runtime/core rendering primitives
   - Android owns lifecycle/input/insets/overlay surfaces
+- Android GLES device truth now also includes:
+  - visible shared clear/swap in terminal-host product view
+  - `SurfaceDraw.solid` replay on-device
+  - minimal terminal rect/glyph-rect replay on-device
+  - the visible-output blocker was the host `SurfaceView` defaulting to
+    `RGB_565`; terminal-host now requests `RGBA_8888`, and the shared EGL
+    runtime also applies the config visual format to the `ANativeWindow`
 - Renderer gate status: #1–#5 structurally met for active Android planning,
   #2 live Metal verification deferred until Mac access returns
 

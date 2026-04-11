@@ -191,12 +191,31 @@ Current checkpoint:
 - device validation now proves real product-view surface sizing too:
   - `surface.changed ... size=2759x1230` in landscape
   - `surface.changed ... size=1440x2632` in portrait
-- next concrete cut is `AR-B4.d`:
+- `AR-B4.d` is now met:
   minimal terminal rect/glyph rendering through the shared Android GLES backend
-- stopping point:
-  Android terminal-host can select Android GLES and produce a visible
-  clear/swap through the shared backend-host path, with no terminal grid/text,
-  atlas, image, screenshot, or presentable claims
+- current `AR-B4.d` code truth:
+  - Android GLES backend now accepts terminal rect and terminal glyph-rect ops
+    through the same queued solid replay path used for `SurfaceDraw.solid`
+  - backend-smoke rendering now proves that path with explicit terminal-colored
+    rects and glyph-rect accents inside the shared Android product surface
+  - terminal-host now requests `RGBA_8888` for its `SurfaceView`, and the
+    shared EGL runtime also applies `EGL_NATIVE_VISUAL_ID` to the native window
+  - that format alignment was the blocker for visible output:
+    before the cut the host reported `surface.changed ... format=4`
+    (`RGB_565`) and swaps only revealed the Java background; after the cut the
+    host reports `surface.changed ... format=1` and screenshot pixels match the
+    shared clear/rect colors
+- current stopping point now met:
+  Android terminal-host can select Android GLES and produce visible
+  clear/swap, shared solid replay, and minimal terminal rect/glyph-rect replay
+  through the shared backend-host path, with no terminal grid, glyph atlas,
+  image, screenshot, or presentable claims
+- next concrete cut is `AR-B4.e`:
+  first live terminal-grid ownership through the shared Android GLES backend
+- `AR-B4.e` stop marker:
+  product view shows live shell content from the shared renderer path and the
+  temporary Java transcript overlay is no longer the product-owned shell
+  display
 - `RB-B3.e` materially narrowed terminal-presentable lifecycle pressure:
   - shared widget/runtime no longer owns the direct-vs-retained execution split
   - active dispatch no longer treats refresh as retained-only

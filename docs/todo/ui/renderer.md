@@ -141,8 +141,10 @@ Android note:
   first Android GLES `SurfaceDraw.solid` replay
 - terminal-host product layout now exposes the renderer surface as the main
   content host at real device size
-- the next Android-side slice is `AR-B4.d`:
-  minimal terminal rect/glyph rendering through the shared Android GLES backend
+- `AR-B4.d` is now met:
+  Android GLES minimal terminal rect/glyph rendering is visible on-device
+- the next Android-side slice is `AR-B4.e`:
+  first live terminal-grid ownership through the shared Android GLES backend
 
 Gate #3 remains met for the `SurfaceDraw` surface. Do not reopen gate #4
 without new ownership pressure that proves the sanctioned backend-host surface

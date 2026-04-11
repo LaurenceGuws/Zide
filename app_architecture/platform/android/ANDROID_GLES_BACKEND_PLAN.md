@@ -273,6 +273,10 @@ Current status:
     in landscape and `1440x2632` in portrait)
   - visible product view is surface-backed instead of using the old hidden host
   - shared clear/swap still executes on the live path after the host layout cut
+  - visible output now requires explicit host/runtime format alignment:
+    terminal-host `SurfaceView` must not stay on the default `RGB_565` path;
+    the host now requests `RGBA_8888`, and the shared EGL runtime also applies
+    `EGL_NATIVE_VISUAL_ID` to the `ANativeWindow`
 - local validation stays green:
   - `zig build`
   - `zig build test`
@@ -289,3 +293,60 @@ Status:
 - `AR-B4.c` is now structurally met.
 - The next active slice is `AR-B4.d`: minimal terminal rect/glyph rendering
   through the shared Android GLES backend.
+
+## `AR-B4.d` Next Cut
+
+Purpose:
+
+- let the shared Android GLES backend accept the first dedicated terminal
+  rect/glyph-rect draw ops instead of only generic `SurfaceDraw.solid`
+
+Current status:
+
+- Android GLES backend now maps:
+  - `addTerminalRect(...)` to the shared queued solid replay path
+  - `addTerminalGlyphRect(...)` to the shared queued solid replay path
+- backend-smoke rendering now proves those terminal draw ops directly with
+  explicit terminal-colored rects plus glyph-rect accents inside the shared
+  Android surface
+- device validation now proves:
+  - visible shared clear color on-device
+  - visible shared `SurfaceDraw.solid` preview band on-device
+  - visible shared terminal rect colors on-device
+  - visible shared terminal glyph-rect accents on-device
+  - host surface format alignment is real in logs too:
+    `surface.changed ... format=1` after the host `RGBA_8888` cut
+
+Stop marker:
+
+- the shared Android GLES backend can execute one minimal terminal
+  rect/glyph-rect proof on-device without a backend-private immediate draw path
+- this still does **not** claim live terminal-widget product ownership,
+  glyph-atlas parity, or Java transcript retirement
+
+Status:
+
+- `AR-B4.d` is now structurally met.
+- The next active slice is `AR-B4.e`: first live terminal-grid ownership
+  through the shared Android GLES backend.
+
+## `AR-B4.e` Next Cut
+
+Purpose:
+
+- move the visible shell product surface from the temporary Java transcript
+  overlay onto the shared Android GLES renderer path
+
+Required behavior:
+
+- draw live terminal cell backgrounds and glyph fallback from real terminal
+  state through the shared renderer path
+- keep Java-side IME/input/overlay ownership, but stop using the Java
+  transcript as the visible shell product surface
+- keep the cut honest: no glyph-atlas parity, no presentable path, no editor
+  claims
+
+Stop marker:
+
+- product view shows live shell content from the shared renderer path
+- the Java transcript overlay is no longer the product-owned shell display
