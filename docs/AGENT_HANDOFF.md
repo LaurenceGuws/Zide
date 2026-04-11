@@ -19,18 +19,18 @@ statement. The short version:
 ### Current Focus
 
 Get native Android rendering working through the shared renderer path. Renderer
-gate #5 is no longer the live blocker; the current blocker is exposing the
-shared Android GLES surface honestly in terminal-host product layout.
+gate #5 is no longer the live blocker; the active next move is minimal terminal
+rect/glyph rendering on the shared Android GLES path.
 
-- Active ticket: `AR-B4.c`
-  - Android GLES first `SurfaceDraw.solid` replay
+- Active ticket: `AR-B4.d`
+  - Android GLES minimal terminal rect/glyph rendering
   - owner: `docs/todo/android/implementation.md`
   - current state:
     backend/runtime/frame binding is in, `AR-B4.b` external-host bootstrap is
-    met, device validation proves shared Android GLES clear/swap on terminal-host,
-    and the first shared solid surface-draw replay is in; the next direct
-    blocker is no longer backend boot, it is that terminal-host still hides the
-    renderer surface at `1dp x 1dp` in product view
+    met, `AR-B4.c` first shared solid replay is met, and terminal-host product
+    view now exposes the shared renderer surface at real size on-device; the
+    next direct blocker is no longer host exposure but the lack of shared
+    terminal rect/glyph rendering on Android GLES
 - `RB-B3.d` is already met:
   - widget/runtime no longer calls `usesDirectTerminalPresentation(...)`
   - those path decisions now terminate in the presentable host seam

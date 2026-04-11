@@ -234,10 +234,6 @@ Current status:
   - shared Android GLES clear/swap now runs on-device through the renderer path
   - stale Java/native `probe` labels are renamed to `renderer` labels
 - remaining caveat after `AR-B4.b`:
-  - terminal-host still gives the renderer a deliberately hidden `1dp x 1dp`
-    surface host in product view
-  - that means visible shared-renderer output is still blocked by host layout,
-    not backend bringup
   - build/deploy confusion is no longer the blocker: Android terminal-host now
     has one repo-owned native build target and one operator wrapper instead of
     a manual native link script
@@ -254,10 +250,8 @@ Stop marker:
 Status:
 
 - `AR-B4.b` is now structurally met.
-- The next live blocker is not shared renderer bootstrap anymore.
-- The next live blocker is that terminal-host still hides the renderer surface,
-  so device-visible renderer proof cannot be claimed from the current product
-  layout.
+- terminal-host product view now exposes the renderer surface as the real main
+  content host instead of a hidden `1dp x 1dp` container.
 
 ## `AR-B4.c` Next Cut
 
@@ -272,15 +266,26 @@ Current status:
 - submit-time replay uses GLES scissor + clear for solid rect fills
 - backend-smoke frame execution now records one shared solid rect through
   `renderer_surface_host.recordSolidSurfaceFromLogicalRect(...)`
+- terminal-host product view now hosts the renderer surface at real size with
+  the Java transcript overlaid temporarily for shell usability
+- device validation now proves:
+  - shared surface size is real on-device (`surface.changed ... size=2759x1230`
+    in landscape and `1440x2632` in portrait)
+  - visible product view is surface-backed instead of using the old hidden host
+  - shared clear/swap still executes on the live path after the host layout cut
 - local validation stays green:
   - `zig build`
   - `zig build test`
   - `./ops/android_terminal_host.py deploy`
-- current live blocker for visible proof is still terminal-host layout:
-  `product_surface_container` is intentionally `1dp x 1dp` and transparent
 
 Stop marker:
 
 - Android GLES backend can accept and replay one shared `SurfaceDraw.solid`
   without a backend-private draw bypass
-- docs name the remaining blocker honestly if the host still hides the surface
+- product view is visibly backed by the shared renderer surface on-device
+
+Status:
+
+- `AR-B4.c` is now structurally met.
+- The next active slice is `AR-B4.d`: minimal terminal rect/glyph rendering
+  through the shared Android GLES backend.

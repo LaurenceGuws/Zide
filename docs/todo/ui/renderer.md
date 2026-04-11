@@ -137,11 +137,12 @@ Android note:
   Android terminal-host can create a shared external-host `Renderer`,
   execute shared Android GLES clear/swap on-device, and load the bridge without
   SDL runtime leakage
-- `AR-B4.c` is now the active Android-side slice:
+- `AR-B4.c` is now met:
   first Android GLES `SurfaceDraw.solid` replay
-- current remaining blocker is no longer backend bootstrap:
-  terminal-host product layout still hides the renderer surface at `1dp x 1dp`,
-  so visible product-facing renderer proof is still blocked by host layout
+- terminal-host product layout now exposes the renderer surface as the main
+  content host at real device size
+- the next Android-side slice is `AR-B4.d`:
+  minimal terminal rect/glyph rendering through the shared Android GLES backend
 
 Gate #3 remains met for the `SurfaceDraw` surface. Do not reopen gate #4
 without new ownership pressure that proves the sanctioned backend-host surface

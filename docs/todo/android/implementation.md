@@ -179,17 +179,20 @@ Current checkpoint:
   - shared Android GLES clear/swap executes on-device
   - Java/native diagnostics no longer expose stale `probe` naming for the live
     renderer path
-- next concrete cut is `AR-B4.c`:
+- `AR-B4.c` is now met:
   first `SurfaceDraw.solid` replay through Android GLES
 - current `AR-B4.c` code truth:
   - Android GLES backend now accepts queued `SurfaceDraw.solid`
   - submit-time replay uses GLES scissor + clear for solid fills
   - backend-smoke frame execution now records one shared solid rect through
     `renderer_surface_host.recordSolidSurfaceFromLogicalRect(...)`
-- current honest blocker:
-  terminal-host still gives the renderer a deliberately hidden `1dp x 1dp`
-  surface host in product view, so visible shared-renderer output is still
-  blocked by host layout rather than backend boot/runtime ownership
+- terminal-host product view now exposes the renderer surface as the main
+  content host instead of the old hidden `1dp x 1dp` container
+- device validation now proves real product-view surface sizing too:
+  - `surface.changed ... size=2759x1230` in landscape
+  - `surface.changed ... size=1440x2632` in portrait
+- next concrete cut is `AR-B4.d`:
+  minimal terminal rect/glyph rendering through the shared Android GLES backend
 - stopping point:
   Android terminal-host can select Android GLES and produce a visible
   clear/swap through the shared backend-host path, with no terminal grid/text,
