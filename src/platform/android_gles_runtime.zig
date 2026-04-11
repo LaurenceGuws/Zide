@@ -19,6 +19,8 @@ const EGL_SURFACE_TYPE: i32 = 0x3033;
 const EGL_WINDOW_BIT: i32 = 0x0004;
 const EGL_OPENGL_ES2_BIT: i32 = 0x0004;
 const EGL_CONTEXT_CLIENT_VERSION: i32 = 0x3098;
+const EGL_NATIVE_VISUAL_ID: i32 = 0x302E;
+const EGL_OPENGL_ES_API: u32 = 0x30A0;
 
 const egl = if (target_has_android_egl) struct {
     extern fn eglGetDisplay(native_display: ?*anyopaque) EGLDisplay;
@@ -36,6 +38,8 @@ const egl = if (target_has_android_egl) struct {
         share_context: EGLContext,
         attrib_list: [*]const i32,
     ) EGLContext;
+    extern fn eglBindAPI(api: u32) u32;
+    extern fn eglGetConfigAttrib(display: EGLDisplay, config: EGLConfig, attribute: i32, value: *i32) u32;
     extern fn eglCreateWindowSurface(
         display: EGLDisplay,
         config: EGLConfig,
@@ -66,6 +70,12 @@ const egl = if (target_has_android_egl) struct {
     fn eglCreateContext(_: EGLDisplay, _: EGLConfig, _: EGLContext, _: [*]const i32) EGLContext {
         unreachable;
     }
+    fn eglBindAPI(_: u32) u32 {
+        unreachable;
+    }
+    fn eglGetConfigAttrib(_: EGLDisplay, _: EGLConfig, _: i32, _: *i32) u32 {
+        unreachable;
+    }
     fn eglCreateWindowSurface(_: EGLDisplay, _: EGLConfig, _: ?*anyopaque, _: [*]const i32) EGLSurface {
         unreachable;
     }
@@ -88,6 +98,8 @@ const egl = if (target_has_android_egl) struct {
         unreachable;
     }
 };
+
+extern fn ANativeWindow_setBuffersGeometry(window: *anyopaque, width: i32, height: i32, format: i32) i32;
 
 pub const RuntimeStatus = enum {
     ready,
@@ -135,11 +147,11 @@ pub fn ensureDisplayContext(state: *State) RuntimeStatus {
         var config_count: i32 = 0;
         const config_attribs = [_]i32{
             EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
-            EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
-            EGL_RED_SIZE, 8,
-            EGL_GREEN_SIZE, 8,
-            EGL_BLUE_SIZE, 8,
-            EGL_ALPHA_SIZE, 8,
+            EGL_SURFACE_TYPE,    EGL_WINDOW_BIT,
+            EGL_RED_SIZE,        8,
+            EGL_GREEN_SIZE,      8,
+            EGL_BLUE_SIZE,       8,
+            EGL_ALPHA_SIZE,      8,
             EGL_NONE,
         };
         if (!builtin.is_test and egl.eglChooseConfig(state.display, &config_attribs, @ptrCast(&config), 1, &config_count) == EGL_FALSE) {
@@ -150,6 +162,9 @@ pub fn ensureDisplayContext(state: *State) RuntimeStatus {
     }
 
     if (state.context == null) {
+        if (!builtin.is_test and egl.eglBindAPI(EGL_OPENGL_ES_API) == EGL_FALSE) {
+            return noteError(state, .init_failed);
+        }
         const context_attribs = [_]i32{
             EGL_CONTEXT_CLIENT_VERSION, 2,
             EGL_NONE,
@@ -187,6 +202,15 @@ pub fn ensureWindowSurface(
 
     if (state.surface == null or state.bound_epoch != epoch or transition != .unchanged) {
         destroySurface(state);
+        if (!builtin.is_test) {
+            var visual_id: i32 = 0;
+            if (egl.eglGetConfigAttrib(state.display, state.config, EGL_NATIVE_VISUAL_ID, &visual_id) == EGL_FALSE) {
+                return noteError(state, .surface_failed);
+            }
+            if (ANativeWindow_setBuffersGeometry(@ptrCast(window.?), 0, 0, visual_id) != 0) {
+                return noteError(state, .surface_failed);
+            }
+        }
         const surface_attribs = [_]i32{EGL_NONE};
         state.surface = if (builtin.is_test)
             @ptrFromInt(0xE004)

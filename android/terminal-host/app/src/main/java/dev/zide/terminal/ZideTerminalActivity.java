@@ -2,6 +2,7 @@ package dev.zide.terminal;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.graphics.PixelFormat;
 import android.graphics.Insets;
 import android.os.Bundle;
 import android.os.Handler;
@@ -567,13 +568,14 @@ public final class ZideTerminalActivity extends Activity
 
         surfaceHostGeneration += 1;
         final SurfaceView nextSurfaceView = new SurfaceView(this);
-        nextSurfaceView.setBackgroundColor(0xff162028);
+        final SurfaceHolder holder = nextSurfaceView.getHolder();
+        holder.setFormat(PixelFormat.RGBA_8888);
         final FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 Gravity.CENTER);
         productSurfaceContainer.addView(nextSurfaceView, params);
-        nextSurfaceView.getHolder().addCallback(this);
+        holder.addCallback(this);
         surfaceView = nextSurfaceView;
         appendEvent("surface.hostInstalled reason=" + reason + " generation=" + surfaceHostGeneration);
     }

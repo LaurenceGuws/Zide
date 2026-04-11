@@ -5,6 +5,7 @@ const android_shell_session = @import("android_shell_session.zig");
 const native_host = @import("native_host.zig");
 const renderer_mod = @import("../ui/renderer.zig");
 const renderer_surface_host = @import("../ui/renderer/renderer_surface_host.zig");
+const renderer_terminal_draw_host = @import("../ui/renderer/renderer_terminal_draw_host.zig");
 const std = @import("std");
 
 const RendererStatus = android_gles_probe.ProbeStatus;
@@ -260,16 +261,68 @@ fn drawSharedRendererSurfaceFrame() RendererStatus {
 fn drawBackendSmokeFrame(renderer: *renderer_mod.Renderer) void {
     const width = @as(f32, @floatFromInt(@max(renderer.width, 1)));
     const height = @as(f32, @floatFromInt(@max(renderer.height, 1)));
-    const inset = @max(2.0, @min(width, height) * 0.03);
-    const accent_height = @max(16.0, @min(height * 0.07, 32.0));
-    const accent_y = @max(inset, height - inset - accent_height - 44.0);
+    const inset = @max(8.0, @min(width, height) * 0.03);
+    const preview_band_height = @max(72.0, @min(height * 0.22, 160.0));
+    const preview_y = @max(inset, height - inset - preview_band_height);
+    const preview_x = inset;
+    const preview_w = @max(1.0, width - (inset * 2.0));
     _ = renderer_surface_host.recordSolidSurfaceFromLogicalRect(
         renderer,
-        inset,
-        accent_y,
-        @max(1.0, width - (inset * 2.0)),
-        accent_height,
-        .{ .r = 77, .g = 196, .b = 255, .a = 255 },
+        preview_x,
+        preview_y,
+        preview_w,
+        preview_band_height,
+        .{ .r = 20, .g = 44, .b = 118, .a = 255 },
+    );
+
+    const preview_px = @as(i32, @intFromFloat(std.math.round(preview_x)));
+    const preview_py = @as(i32, @intFromFloat(std.math.round(preview_y)));
+    const preview_ph = @as(i32, @intFromFloat(std.math.round(preview_band_height)));
+    const preview_top = preview_py + 18;
+    const cell_w = @max(28, @as(i32, @intFromFloat(std.math.round(preview_w * 0.08))));
+    const cell_h = @max(24, @min(42, @divTrunc(preview_ph, 3)));
+    const gap = @max(10, cell_w / 4);
+    const grid_x = preview_px + 18;
+    const grid_y = preview_top;
+    const colors = [_]renderer_mod.Color{
+        .{ .r = 255, .g = 95, .b = 86, .a = 255 },
+        .{ .r = 255, .g = 194, .b = 46, .a = 255 },
+        .{ .r = 89, .g = 196, .b = 255, .a = 255 },
+        .{ .r = 87, .g = 227, .b = 137, .a = 255 },
+    };
+    inline for (colors, 0..) |color, idx| {
+        renderer_terminal_draw_host.addTerminalRect(
+            renderer,
+            grid_x + (@as(i32, @intCast(idx)) * (cell_w + gap)),
+            grid_y,
+            cell_w,
+            cell_h,
+            color,
+        );
+    }
+    renderer_terminal_draw_host.addTerminalRect(
+        renderer,
+        grid_x,
+        grid_y + cell_h,
+        (cell_w * 4) + (gap * 3),
+        cell_h,
+        renderer_mod.Color{ .r = 19, .g = 28, .b = 44, .a = 255 },
+    );
+    renderer_terminal_draw_host.addTerminalGlyphRect(
+        renderer,
+        grid_x + @divTrunc(cell_w, 3),
+        grid_y + cell_h + @divTrunc(cell_h, 4),
+        @max(3, @divTrunc(cell_w, 6)),
+        @max(6, @divTrunc(cell_h, 2)),
+        renderer_mod.Color{ .r = 250, .g = 250, .b = 250, .a = 255 },
+    );
+    renderer_terminal_draw_host.addTerminalGlyphRect(
+        renderer,
+        grid_x + cell_w + gap + @divTrunc(cell_w, 6),
+        grid_y + (cell_h * 2) - 6,
+        @max(8, (cell_w * 2) + gap),
+        4,
+        renderer_mod.Color{ .r = 250, .g = 250, .b = 250, .a = 255 },
     );
 }
 

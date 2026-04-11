@@ -2,6 +2,7 @@ const builtin = @import("builtin");
 const bootstrap_contract = @import("bootstrap_contract.zig");
 const capability_contract = @import("capability_contract.zig");
 const android_gles_runtime = @import("../../platform/android_gles_runtime.zig");
+const metal_text_sample_runtime = @import("metal_text_sample_runtime.zig");
 const native_host = @import("../../platform/native_host.zig");
 const present_trace_runtime = @import("present_trace_runtime.zig");
 const renderer_frame_host = @import("renderer_frame_host.zig");
@@ -20,6 +21,7 @@ const gl = if (target_has_android_gles) struct {
     extern fn glEnable(cap: u32) void;
     extern fn glDisable(cap: u32) void;
     extern fn glScissor(x: i32, y: i32, width: i32, height: i32) void;
+    extern fn glViewport(x: i32, y: i32, width: i32, height: i32) void;
 } else struct {
     fn glClearColor(_: f32, _: f32, _: f32, _: f32) void {
         unreachable;
@@ -34,6 +36,9 @@ const gl = if (target_has_android_gles) struct {
         unreachable;
     }
     fn glScissor(_: i32, _: i32, _: i32, _: i32) void {
+        unreachable;
+    }
+    fn glViewport(_: i32, _: i32, _: i32, _: i32) void {
         unreachable;
     }
 };
@@ -130,10 +135,11 @@ pub fn beginFrame(renderer: anytype) void {
 
     renderer.present.main_composition_target = .default_target;
     const bg: types.Rgba = if (renderer.runtime_profile == .backend_smoke)
-        .{ .r = 24, .g = 43, .b = 64, .a = 255 }
+        .{ .r = 10, .g = 16, .b = 24, .a = 255 }
     else
         renderer.theme.background.toRgba();
     if (!builtin.is_test) {
+        gl.glViewport(0, 0, @max(renderer.render_width, 1), @max(renderer.render_height, 1));
         gl.glClearColor(
             @as(f32, @floatFromInt(bg.r)) / 255.0,
             @as(f32, @floatFromInt(bg.g)) / 255.0,
@@ -212,9 +218,13 @@ pub fn presentableInfo(_: anytype) ?@import("presentable_contract.zig").Presenta
 
 pub fn applyClipRect(_: anytype, _: ?types.Rect) void {}
 
-pub fn addTerminalRect(_: anytype, _: i32, _: i32, _: i32, _: i32, _: types.Rgba) void {}
+pub fn addTerminalRect(renderer: anytype, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void {
+    _ = appendSolidPixels(renderer, x, y, w, h, color);
+}
 
-pub fn addTerminalGlyphRect(_: anytype, _: i32, _: i32, _: i32, _: i32, _: types.Rgba) void {}
+pub fn addTerminalGlyphRect(renderer: anytype, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void {
+    _ = appendSolidPixels(renderer, x, y, w, h, color);
+}
 
 pub fn addTerminalGlyphQuad(_: anytype, _: types.Texture, _: types.Rect, _: types.Rect, _: types.Rgba, _: types.TextureKind) void {}
 
@@ -242,6 +252,27 @@ pub fn recordSurfaceDraw(renderer: anytype, draw: surface_draw.SurfaceDraw) bool
         else => return false,
     }
     renderer.backend.runtime.androidGlesState().queued_surface_draws.append(renderer.allocator, draw) catch return false;
+    return true;
+}
+
+fn appendSolidPixels(renderer: anytype, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) bool {
+    if (w <= 0 or h <= 0) return false;
+    const clip_rect = if (renderer.currentClipRect()) |clip|
+        metal_text_sample_runtime.pixelClipRect(renderer, clip)
+    else
+        null;
+    renderer.backend.runtime.androidGlesState().queued_surface_draws.append(renderer.allocator, .{
+        .solid = .{
+            .dest_rect = .{
+                .x = @floatFromInt(x),
+                .y = @floatFromInt(y),
+                .width = @floatFromInt(w),
+                .height = @floatFromInt(h),
+            },
+            .color = color,
+            .clip_rect = clip_rect,
+        },
+    }) catch return false;
     return true;
 }
 
