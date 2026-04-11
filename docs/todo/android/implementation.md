@@ -148,11 +148,10 @@ Current checkpoint:
   - EGL/context/window-surface lifetime ownership is now extracted into
     `src/platform/android_gles_runtime.zig`; `android_gles_probe.zig` uses that
     shared owner instead of carrying a second EGL lifetime implementation
-- current missing stop-marker work:
-  - terminal-host still does not instantiate shared `Renderer`
-  - no Android-side shared renderer bootstrap path exists yet for terminal-host
-  - visible clear/swap is not yet claimed on device through that shared path
-- next concrete cut is `AR-B4.b`:
+- `AR-B4.a` is met:
+  shared Android GLES backend/runtime/frame binding exists and now drives the
+  shared terminal-host renderer path on-device
+- `AR-B4.b` is now met:
   external-host renderer bootstrap for Android `backend_smoke`
 - current `AR-B4.b` code truth:
   - shared renderer now exposes an external-host bootstrap seam for
@@ -173,11 +172,24 @@ Current checkpoint:
     - SDL headers only where shared renderer contracts still mention SDL
   - `ops/android_terminal_host.py native` is now just the operator wrapper:
     resolve SDK/NDK, invoke the Zig target, copy the built `.so` into `jniLibs`
-- `AR-B4.b` stop marker:
-  terminal-host can create/destroy a shared `Renderer` instance with
-  `renderer_backend = .android_gles` and `runtime_profile = .backend_smoke`
-  without SDL window ownership, and that renderer can execute shared
-  `beginFrame` / `submitFrame` against Android surface epoch truth
+- device validation now proves:
+  - terminal-host loads the shared bridge on-device without unresolved SDL
+    symbols
+  - live surface callbacks route through the shared renderer path
+  - shared Android GLES clear/swap executes on-device
+  - Java/native diagnostics no longer expose stale `probe` naming for the live
+    renderer path
+- next concrete cut is `AR-B4.c`:
+  first `SurfaceDraw.solid` replay through Android GLES
+- current `AR-B4.c` code truth:
+  - Android GLES backend now accepts queued `SurfaceDraw.solid`
+  - submit-time replay uses GLES scissor + clear for solid fills
+  - backend-smoke frame execution now records one shared solid rect through
+    `renderer_surface_host.recordSolidSurfaceFromLogicalRect(...)`
+- current honest blocker:
+  terminal-host still gives the renderer a deliberately hidden `1dp x 1dp`
+  surface host in product view, so visible shared-renderer output is still
+  blocked by host layout rather than backend boot/runtime ownership
 - stopping point:
   Android terminal-host can select Android GLES and produce a visible
   clear/swap through the shared backend-host path, with no terminal grid/text,

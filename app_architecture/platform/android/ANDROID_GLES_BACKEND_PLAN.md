@@ -228,14 +228,19 @@ Current status:
   - execute one `beginFrame` / `submitFrame` cycle in tests
   - route live surface-available / redraw callbacks through that shared
     renderer path instead of the old probe draw path
-- this is still not the `AR-B4.b` stop marker:
-  - device validation is still required before claiming visible clear/swap
-  - Java diagnostics still expose old `currentGlesProbe...` bridge names even
-    though they now read shared renderer/runtime counters when the renderer is
-    active
-  - build/deploy confusion is no longer the blocker:
-    Android terminal-host now has one repo-owned native build target and one
-    operator wrapper instead of a manual native link script
+- device validation now confirms that:
+  - terminal-host loads the shared bridge without unresolved SDL symbols
+  - live surface callbacks execute shared `beginFrame` / `submitFrame`
+  - shared Android GLES clear/swap now runs on-device through the renderer path
+  - stale Java/native `probe` labels are renamed to `renderer` labels
+- remaining caveat after `AR-B4.b`:
+  - terminal-host still gives the renderer a deliberately hidden `1dp x 1dp`
+    surface host in product view
+  - that means visible shared-renderer output is still blocked by host layout,
+    not backend bringup
+  - build/deploy confusion is no longer the blocker: Android terminal-host now
+    has one repo-owned native build target and one operator wrapper instead of
+    a manual native link script
 
 Stop marker:
 
@@ -245,3 +250,37 @@ Stop marker:
   surface epoch truth without probe-owned drawing
 - no shared input polling, window chrome, or full app-shell startup is claimed
   yet
+
+Status:
+
+- `AR-B4.b` is now structurally met.
+- The next live blocker is not shared renderer bootstrap anymore.
+- The next live blocker is that terminal-host still hides the renderer surface,
+  so device-visible renderer proof cannot be claimed from the current product
+  layout.
+
+## `AR-B4.c` Next Cut
+
+Purpose:
+
+- let the shared Android GLES backend replay the first backend-neutral
+  `SurfaceDraw.solid`
+
+Current status:
+
+- Android GLES backend now accepts queued `SurfaceDraw.solid` payloads
+- submit-time replay uses GLES scissor + clear for solid rect fills
+- backend-smoke frame execution now records one shared solid rect through
+  `renderer_surface_host.recordSolidSurfaceFromLogicalRect(...)`
+- local validation stays green:
+  - `zig build`
+  - `zig build test`
+  - `./ops/android_terminal_host.py deploy`
+- current live blocker for visible proof is still terminal-host layout:
+  `product_surface_container` is intentionally `1dp x 1dp` and transparent
+
+Stop marker:
+
+- Android GLES backend can accept and replay one shared `SurfaceDraw.solid`
+  without a backend-private draw bypass
+- docs name the remaining blocker honestly if the host still hides the surface

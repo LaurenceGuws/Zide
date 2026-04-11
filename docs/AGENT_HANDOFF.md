@@ -18,20 +18,19 @@ statement. The short version:
 
 ### Current Focus
 
-Get native Android rendering working. That means completing renderer gate #5
-so the backend abstraction is clean enough for a first-class Android GLES
-backend.
+Get native Android rendering working through the shared renderer path. Renderer
+gate #5 is no longer the live blocker; the current blocker is exposing the
+shared Android GLES surface honestly in terminal-host product layout.
 
-- Active ticket: `AR-B4.a`
-  - Android GLES backend skeleton and frame binding
+- Active ticket: `AR-B4.c`
+  - Android GLES first `SurfaceDraw.solid` replay
   - owner: `docs/todo/android/implementation.md`
   - current state:
-    backend/runtime/frame binding is in, the shared external-host renderer
-    bootstrap seam exists for `backend_smoke`, and native surface callbacks now
-    route through that shared renderer path; Android terminal-host native build
-    now has a real `zig build android-terminal-host-bridge` target; next direct
-    cut is device validation plus Java/debug cleanup around the old probe
-    naming
+    backend/runtime/frame binding is in, `AR-B4.b` external-host bootstrap is
+    met, device validation proves shared Android GLES clear/swap on terminal-host,
+    and the first shared solid surface-draw replay is in; the next direct
+    blocker is no longer backend boot, it is that terminal-host still hides the
+    renderer surface at `1dp x 1dp` in product view
 - `RB-B3.d` is already met:
   - widget/runtime no longer calls `usesDirectTerminalPresentation(...)`
   - those path decisions now terminate in the presentable host seam

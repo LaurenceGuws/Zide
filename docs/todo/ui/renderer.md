@@ -133,6 +133,15 @@ Android note:
 - the first shared renderer backend skeleton is now allowed and in progress
 - that does not authorize a second parallel renderer path or a premature
   product handoff before the shared backend owns real EGL/context/surface truth
+- `AR-B4.b` is now met:
+  Android terminal-host can create a shared external-host `Renderer`,
+  execute shared Android GLES clear/swap on-device, and load the bridge without
+  SDL runtime leakage
+- `AR-B4.c` is now the active Android-side slice:
+  first Android GLES `SurfaceDraw.solid` replay
+- current remaining blocker is no longer backend bootstrap:
+  terminal-host product layout still hides the renderer surface at `1dp x 1dp`,
+  so visible product-facing renderer proof is still blocked by host layout
 
 Gate #3 remains met for the `SurfaceDraw` surface. Do not reopen gate #4
 without new ownership pressure that proves the sanctioned backend-host surface
