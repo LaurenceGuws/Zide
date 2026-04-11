@@ -197,9 +197,16 @@ Current `RB-B3.f` checkpoint:
 - fourth narrow chrome-band adoption is in:
   integrated terminal tab-bar background and shared window caption button
   backgrounds/glyph strokes now route through the chrome-band seam
-- the next loud pressure inside this ticket is any remaining terminal-widget
-  chrome fill plus dependent text/icon path that still bypasses
-  `renderer_chrome_band_host.Band`
+- narrowing scan no longer shows shell/UI chrome-band composition as the loudest
+  remaining pressure
+- remaining direct draw hits are separate semantics:
+  editor row/overlay composition, common tooltip overlay, terminal progress /
+  scrollbar / content-edge visuals, and close-confirm modal overlay
+
+Next renderer move:
+
+- open the next narrow gate-5 ticket against one of those remaining families
+  instead of stretching `RB-B3.f` past chrome-band ownership
 
 Gate-4 closure note:
 

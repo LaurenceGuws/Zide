@@ -121,7 +121,21 @@ Stop when:
     seam instead of a direct surface rect next to tab text
   - shared window caption buttons now draw their backgrounds and glyph strokes
     through the chrome-band seam
-- this does not claim shell/UI chrome is solved globally
-- the next likely pressure inside this ticket is the terminal widget chrome
-  boundary: any remaining shell/UI chrome fill plus dependent text/icon path
-  that still bypasses `renderer_chrome_band_host.Band`
+- shell/UI chrome-band composition is now structurally covered for the scanned
+  side-nav, status-bar, shared top-bar, tab-bar, config notice, and integrated
+  window-caption paths
+- remaining direct draws found by the narrowing scan are different semantics:
+  editor row/overlay composition, common tooltip overlay, terminal progress /
+  scrollbar / content-edge visuals, and close-confirm modal overlay
+
+## Next Pressure
+
+The chrome-band subtarget is no longer the loudest gate-5 pressure.
+
+The next honest pressure should be opened as a separate narrow ticket, not
+hidden under chrome-band work:
+
+- either terminal overlay/modal composition, if Android terminal product chrome
+  needs those visuals before GLES backend work
+- or editor row/overlay composition, if the renderer gate needs the next
+  non-terminal family before Android can feel routine

@@ -143,6 +143,10 @@ Current checkpoint:
 - fourth `RB-B3.f` slice is now in:
   integrated terminal tab-bar background and shared window caption button
   backgrounds/glyph strokes now route through the chrome-band seam
+- chrome-band composition is no longer the loudest scanned gate-5 pressure;
+  the next move should pick one remaining family explicitly:
+  terminal overlay/modal visuals, terminal progress/scrollbar/content-edge
+  visuals, or editor row/overlay composition
 
 ## Parked (not blocking)
 

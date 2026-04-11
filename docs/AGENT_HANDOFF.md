@@ -22,7 +22,7 @@ Get native Android rendering working. That means completing renderer gate #5
 so the backend abstraction is clean enough for a first-class Android GLES
 backend.
 
-- Active ticket: `AR-B3` / `RB-B3.e`
+- Active ticket: `AR-B3` / `RB-B3.f`
   - band composition phase boundary for fill + dependent text/icon work
   - owner: `app_architecture/ui/BAND_COMPOSITION_PHASE_PLAN.md`
 - `RB-B3.d` is already met:
