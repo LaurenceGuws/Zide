@@ -129,7 +129,10 @@ pub fn beginFrame(renderer: anytype) void {
     }
 
     renderer.present.main_composition_target = .default_target;
-    const bg = renderer.theme.background.toRgba();
+    const bg: types.Rgba = if (renderer.runtime_profile == .backend_smoke)
+        .{ .r = 24, .g = 43, .b = 64, .a = 255 }
+    else
+        renderer.theme.background.toRgba();
     if (!builtin.is_test) {
         gl.glClearColor(
             @as(f32, @floatFromInt(bg.r)) / 255.0,

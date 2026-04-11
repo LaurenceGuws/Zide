@@ -10,24 +10,37 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
-        <ScrollView
-            android:id="@+id/shell_output_scroll"
+        <FrameLayout
+            android:id="@+id/product_content_frame"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"
-            android:background="#10161d"
-            android:fillViewport="true">
+            android:layout_weight="1">
 
-            <TextView
-                android:id="@+id/shell_output_text"
+            <FrameLayout
+                android:id="@+id/product_surface_container"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:fontFamily="monospace"
-                android:padding="4dp"
-                android:textColor="#f5f7fa"
-                android:textSize="13sp"
-                android:typeface="monospace" />
-        </ScrollView>
+                android:layout_height="match_parent"
+                android:background="#162028" />
+
+            <ScrollView
+                android:id="@+id/shell_output_scroll"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@android:color/transparent"
+                android:fillViewport="true">
+
+                <TextView
+                    android:id="@+id/shell_output_text"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@android:color/transparent"
+                    android:fontFamily="monospace"
+                    android:padding="6dp"
+                    android:textColor="#f5f7fa"
+                    android:textSize="13sp"
+                    android:typeface="monospace" />
+            </ScrollView>
+        </FrameLayout>
 
         <HorizontalScrollView
             android:id="@+id/input_assist_scroll"
@@ -128,12 +141,6 @@
             </LinearLayout>
         </HorizontalScrollView>
 
-        <FrameLayout
-            android:id="@+id/product_surface_container"
-            android:layout_width="1dp"
-            android:layout_height="1dp"
-            android:alpha="0"
-            android:background="#162028" />
     </LinearLayout>
 
     <LinearLayout

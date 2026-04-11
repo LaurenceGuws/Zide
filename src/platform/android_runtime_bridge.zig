@@ -260,16 +260,16 @@ fn drawSharedRendererSurfaceFrame() RendererStatus {
 fn drawBackendSmokeFrame(renderer: *renderer_mod.Renderer) void {
     const width = @as(f32, @floatFromInt(@max(renderer.width, 1)));
     const height = @as(f32, @floatFromInt(@max(renderer.height, 1)));
-    const inset = @max(1.0, @min(width, height) * 0.04);
-    const band_height = @max(1.0, @min(height * 0.12, 28.0));
-    const band_width = @max(1.0, width - (inset * 2.0));
+    const inset = @max(2.0, @min(width, height) * 0.03);
+    const accent_height = @max(16.0, @min(height * 0.07, 32.0));
+    const accent_y = @max(inset, height - inset - accent_height - 44.0);
     _ = renderer_surface_host.recordSolidSurfaceFromLogicalRect(
         renderer,
         inset,
-        inset,
-        band_width,
-        band_height,
-        .{ .r = 224, .g = 241, .b = 255, .a = 255 },
+        accent_y,
+        @max(1.0, width - (inset * 2.0)),
+        accent_height,
+        .{ .r = 77, .g = 196, .b = 255, .a = 255 },
     );
 }
 
