@@ -125,6 +125,10 @@ def android_clang(sdk: Path) -> Path:
     return clang
 
 
+def android_sysroot(sdk: Path) -> Path:
+    return android_clang(sdk).parents[1] / "sysroot"
+
+
 def zig_path() -> str:
     zig = shutil.which("zig")
     if zig is None:
@@ -134,64 +138,26 @@ def zig_path() -> str:
 
 def native() -> None:
     sdk = sdk_root(require_ndk=True)
-    clang = android_clang(sdk)
-    toolchain = clang.parents[1]
-    sysroot = toolchain / "sysroot"
-    obj_path = BRIDGE_DIR / "app" / "build" / "native" / "android_bridge_exports.o"
-    stb_obj_path = BRIDGE_DIR / "app" / "build" / "native" / "stb_image.o"
+    sysroot = android_sysroot(sdk)
     out_dir = BRIDGE_DIR / "app" / "src" / "main" / "jniLibs" / "arm64-v8a"
     out_lib = out_dir / "libzide_android_bridge.so"
-
-    obj_path.parent.mkdir(parents=True, exist_ok=True)
+    built_lib = ROOT / "zig-out" / "lib" / "libzide_android_bridge.so"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     run(
         [
             zig_path(),
-            "build-obj",
-            "-target",
-            f"aarch64-linux-android.{ANDROID_API}",
-            "-lc",
+            "build",
+            "android-terminal-host-bridge",
+            "-Dtarget=aarch64-linux-android",
+            "-Dmode=terminal",
             "--sysroot",
             sysroot,
-            "-isystem",
-            sysroot / "usr" / "include",
-            "-isystem",
-            sysroot / "usr" / "include" / "aarch64-linux-android",
-            "-I",
-            ROOT / "vendor",
-            ROOT / "src" / "android_bridge_exports.zig",
-            f"-femit-bin={obj_path}",
         ]
     )
-    run(
-        [
-            clang,
-            f"--sysroot={sysroot}",
-            "-fPIC",
-            "-I",
-            ROOT / "vendor",
-            "-c",
-            ROOT / "src" / "c" / "stb_image.c",
-            "-o",
-            stb_obj_path,
-        ]
-    )
-    run(
-        [
-            clang,
-            "-shared",
-            "-Wl,--no-undefined",
-            obj_path,
-            stb_obj_path,
-            "-landroid",
-            "-lEGL",
-            "-lGLESv2",
-            "-lm",
-            "-o",
-            out_lib,
-        ]
-    )
+    if not built_lib.is_file():
+        die(f"missing built Android bridge library: {built_lib}")
+    shutil.copy2(built_lib, out_lib)
     print(f"built {out_lib}", flush=True)
 
 
@@ -261,6 +227,7 @@ def doctor() -> None:
     print(f"NDK_VERSION={NDK_VERSION}", flush=True)
     print(f"NDK_SDK_ROOT={ndk_sdk}", flush=True)
     print(f"ANDROID_CLANG={android_clang(ndk_sdk)}", flush=True)
+    print(f"ANDROID_SYSROOT={android_sysroot(ndk_sdk)}", flush=True)
     run([adb, "version"])
 
 

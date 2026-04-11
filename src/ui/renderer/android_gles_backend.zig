@@ -7,6 +7,7 @@ const present_trace_runtime = @import("present_trace_runtime.zig");
 const renderer_frame_host = @import("renderer_frame_host.zig");
 const scene_target_state = @import("scene_target_state.zig");
 const surface_draw = @import("surface_draw.zig");
+const std = @import("std");
 const types = @import("types.zig");
 const window_init = @import("window_init.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
@@ -141,12 +142,12 @@ pub fn submitFrame(renderer: anytype) present_trace_runtime.FrameSubmission {
         });
     }
 
-    const swap_start = sdl_api.getPerformanceCounter();
+    const swap_start = std.time.nanoTimestamp();
     const swap_status = android_gles_runtime.swapBuffers(&state.runtime);
-    const swap_end = sdl_api.getPerformanceCounter();
+    const swap_end = std.time.nanoTimestamp();
     return renderer_frame_host.finishFrameSubmission(renderer, .{
         .kind = if (swap_status == .ready) .submitted else .submit_failed,
-        .present_ms = present_trace_runtime.performanceDeltaMs(swap_start, swap_end, renderer.perf_freq),
+        .present_ms = @as(f64, @floatFromInt(swap_end - swap_start)) / std.time.ns_per_ms,
     });
 }
 

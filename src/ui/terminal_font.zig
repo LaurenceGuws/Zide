@@ -237,7 +237,9 @@ pub fn applyHbLoadFlags(hb_font: *c.hb_font_t, ft_load_flags: c_int) void {
     }
 }
 
-pub const fc = if (builtin.target.os.tag == .linux) @cImport({
+const target_has_fontconfig = builtin.target.os.tag == .linux and builtin.target.abi != .android;
+
+pub const fc = if (target_has_fontconfig) @cImport({
     @cInclude("fontconfig/fontconfig.h");
 }) else struct {
     pub const FcConfig = opaque {};

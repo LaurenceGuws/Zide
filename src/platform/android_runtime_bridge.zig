@@ -249,13 +249,11 @@ pub fn drawAndroidGlesRendererFrame() !bool {
 }
 
 fn drawSharedRendererSurfaceFrame() android_gles_probe.ProbeStatus {
-    ensureAndroidGlesRenderer() catch return .init_failed;
+    _ = ensureAndroidGlesRenderer() catch return .init_failed;
     return if (drawAndroidGlesRendererFrame() catch false) .drawn else .surface_failed;
 }
 
 test "bridge routes Android lifecycle and surface truth through shared host state" {
-    const std = @import("std");
-
     try std.testing.expectEqual(@as(u64, 1), noteCreate());
     try std.testing.expectEqual(native_host.AppLifecycleState.started, bridge_state.app_host.lifecycle_state);
     try std.testing.expectEqual(native_host.RenderSurfaceAvailability.unavailable, bridge_state.render_host.surface_availability);
@@ -325,8 +323,6 @@ test "bridge can create and draw a shared android gles renderer for backend smok
 }
 
 test "bridge reports replaced when a live Android surface identity changes without retirement" {
-    const std = @import("std");
-
     try std.testing.expectEqual(@as(u64, 1), noteCreate());
     try std.testing.expectEqual(@as(u64, 2), noteResume());
 
