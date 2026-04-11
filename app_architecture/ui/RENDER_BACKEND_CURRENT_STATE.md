@@ -74,9 +74,14 @@ In current-state terms, the remaining blockers are:
 4. Remaining ordering pressure is now concentrated, not solved
 
 - shell chrome has been carved out behind `renderer_chrome_band_host.zig`
-- terminal has been carved out behind terminal/presentable seams
-- the remaining loud generic families are editor banding and sample/diagnostic
-  section banding
+- terminal presentable work has been carved out behind terminal/presentable
+  seams
+- terminal overlay/progress/modal visuals now route through
+  `terminal_composition_host.zig`
+- editor row/overlay immediate helpers now route through the editor overlay /
+  row-band owner instead of importing renderer surface/text hosts directly
+- the remaining loud generic families are sample/diagnostic section banding and
+  generic tooltip overlay composition
 
 That sample/diagnostic pressure is narrower again because `font_sample_view.zig`
 no longer rides the editor presentable lane. Diagnostic/sample rendering stays
