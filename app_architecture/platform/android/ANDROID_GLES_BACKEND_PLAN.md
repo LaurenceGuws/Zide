@@ -381,24 +381,34 @@ Current status:
 
 `AR-B4.e` is now met.
 
-The next active slice is `AR-B4.f`: first product-fit live grid sizing.
+`AR-B4.f` is now met:
 
-## `AR-B4.f` Next Cut
+- Android now computes the PTY grid from the real shared-renderer surface
+  bounds using the same terminal-grid fit helper as the main app
+- the Android shell session no longer stays pinned to the bootstrap-era fixed
+  `80x24` size once the shared renderer is active
+- device validation screenshot now shows the live shell using the product
+  surface bounds instead of a small centered bootstrap grid island
+
+The next active slice is `AR-B4.g`: IME-aware live viewport sizing.
+
+## `AR-B4.g` Next Cut
 
 Purpose:
 
-- make the shared-renderer shell use product-fit terminal bounds instead of the
-  current undersized live grid island
+- make Android IME/inset changes participate in live terminal viewport sizing
+  instead of behaving as a pure overlay over the product shell
 
 Required behavior:
 
 - keep the shared Android GLES renderer as the only product-owned shell surface
-- size the live terminal grid from real product surface bounds instead of a
-  visibly undersized bootstrap-era layout
+- drive live terminal sizing from the effective visible product viewport, not
+  only the raw surface bounds
 - keep Java ownership limited to lifecycle/input/IME/debug overlays
 
 Stop marker:
 
-- product view shell content uses readable live glyphs at product-fit bounds
-- the remaining Java transcript path is no longer part of active product shell
-  refresh ownership
+- showing the IME updates the live terminal viewport/grid instead of covering
+  the active prompt area
+- hiding the IME restores the larger product-fit terminal viewport without
+  resetting shell ownership back to Java

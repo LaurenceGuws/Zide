@@ -239,6 +239,18 @@ Current checkpoint:
   product view shell content uses readable live glyphs at product-fit bounds,
   and the Java transcript path is no longer part of active product refresh
   ownership
+- `AR-B4.f` is now met:
+  - Android computes the PTY grid from the real shared-renderer surface bounds
+  - the live shell is no longer pinned to a fixed bootstrap `80x24` grid once
+    the shared renderer is active
+  - device screenshot now shows the live shell using the product surface
+    bounds instead of a centered bootstrap grid island
+- next concrete cut is `AR-B4.g`:
+  IME-aware live viewport sizing through the shared Android GLES backend
+- `AR-B4.g` stop marker:
+  showing the IME updates the live terminal viewport/grid instead of covering
+  the active prompt area, and hiding the IME restores the larger product-fit
+  viewport without returning shell ownership to Java
 - `RB-B3.e` materially narrowed terminal-presentable lifecycle pressure:
   - shared widget/runtime no longer owns the direct-vs-retained execution split
   - active dispatch no longer treats refresh as retained-only

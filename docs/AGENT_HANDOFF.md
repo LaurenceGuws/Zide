@@ -19,11 +19,11 @@ statement. The short version:
 ### Current Focus
 
 Get native Android rendering working through the shared renderer path. Renderer
-gate #5 is no longer the live blocker; the active next move is product-fit live
-terminal-grid sizing on the shared Android GLES path.
+gate #5 is no longer the live blocker; the active next move is IME-aware live
+viewport sizing on the shared Android GLES path.
 
-- Active ticket: `AR-B4.f`
-  - Android GLES first product-fit live terminal-grid sizing
+- Active ticket: `AR-B4.g`
+  - Android GLES IME-aware live viewport sizing
   - owner: `docs/todo/android/implementation.md`
   - current state:
     backend/runtime/frame binding is in, `AR-B4.b` external-host bootstrap is
@@ -31,8 +31,9 @@ terminal-grid sizing on the shared Android GLES path.
     terminal rect/glyph replay is met on-device; `AR-B4.e` is now met, with
     the live Android shell session routed through a shared `TerminalWidget`,
     product view ownership moved off the Java transcript, and readable atlas
-    glyph replay visible on-device; the next direct blocker is product-fit live
-    grid sizing rather than glyph replay or Java product ownership
+    glyph replay visible on-device; `AR-B4.f` is now met too, with the live
+    shell sizing from the real product surface instead of a fixed bootstrap
+    `80x24` island; the next direct blocker is IME-aware viewport sizing
 - `RB-B3.d` is already met:
   - widget/runtime no longer calls `usesDirectTerminalPresentation(...)`
   - those path decisions now terminate in the presentable host seam
@@ -85,6 +86,8 @@ terminal-grid sizing on the shared Android GLES path.
     transcript overlay
   - readable live shell text/prompt replay through atlas glyph rendering on
     the shared Android GLES path
+  - product-fit live shell sizing from the real renderer surface instead of a
+    fixed bootstrap grid island
   - the visible-output blocker was the host `SurfaceView` defaulting to
     `RGB_565`; terminal-host now requests `RGBA_8888`, and the shared EGL
     runtime also applies the config visual format to the `ANativeWindow`

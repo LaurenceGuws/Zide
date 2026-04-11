@@ -148,8 +148,11 @@ Android note:
   Java transcript is no longer present in product view while that path is
   active, and readable atlas glyph replay is visible on-device through the
   shared Android GLES path
-- the next Android-side slice is `AR-B4.f`:
-  first product-fit live grid sizing and transcript-refresh retirement
+- `AR-B4.f` is now met:
+  the live shell now sizes from the real product surface instead of a fixed
+  bootstrap `80x24` grid island
+- the next Android-side slice is `AR-B4.g`:
+  IME-aware live viewport sizing on the shared Android GLES path
 
 Gate #3 remains met for the `SurfaceDraw` surface. Do not reopen gate #4
 without new ownership pressure that proves the sanctioned backend-host surface
