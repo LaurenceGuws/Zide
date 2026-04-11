@@ -123,6 +123,9 @@ Current strongest Android renderer pressure:
   shared contracts
 - keep it narrow enough that any remaining renderer-contract weakness is found
   before a broad backend sprint starts
+- `AR-B4.a` is now the named Android-side slice:
+  Android GLES backend skeleton and frame binding
+- owner: `app_architecture/platform/android/ANDROID_GLES_BACKEND_PLAN.md`
 
 Android note:
 

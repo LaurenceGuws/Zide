@@ -10,6 +10,7 @@ Supporting research:
 
 - `docs/research/terminal/ANDROID_HOST_PTY_SCAN_2026-04-08.md`
 - `app_architecture/platform/android/ANDROID_TERMINAL_HOST_PLAN.md`
+- `app_architecture/platform/android/ANDROID_GLES_BACKEND_PLAN.md`
 - `app_architecture/platform/android/ANDROID_GLES_BINDING_PLAN.md`
 - `app_architecture/platform/android/SURFACE_IDENTITY_POLICY.md`
 - `app_architecture/platform/android/ANDROID_PTY_LIFETIME_PLAN.md`
@@ -236,15 +237,15 @@ The current EGL proof is now stronger than a one-frame clear/swap demo:
 That means there is no new Android-specific execution lane that should be
 opened by default right now.
 
-The next Android moves are now gated by stronger external pressure:
+The next Android move is now `AR-B4`: the first controlled Android GLES backend
+planning cut.
 
-- shared Android renderer backend work is still blocked by the shared
-  renderer queue
-- service-owned PTY survival may move only through its own explicit product
-  lane, not through renderer or generic host drift
-- terminal-host-owned EGL hardening may continue only if it answers another
-  concrete Android runtime question without smuggling work into
-  `src/ui/renderer/`
+That does not mean a broad backend sprint is open. It means the terminal-host
+EGL/GLES proof and the renderer gate-5 composition cuts are strong enough to
+define the smallest shared-backend entry point.
+
+Service-owned PTY survival may still move only through its own explicit
+product lane, not through renderer or generic host drift.
 
 Current priority rule:
 
@@ -257,13 +258,15 @@ Current priority rule:
 What is now allowed:
 
 - terminal-host-owned EGL/GLES binding and proof work in `android/terminal-host/`
-- executing the next Android-owned runtime question without smuggling work into
-  `src/ui/renderer/`
+- `AR-B4.a` Android GLES backend skeleton/frame-binding planning and then the
+  first controlled implementation slice named by that plan
 
 What is still not allowed:
 
-- treating terminal-host EGL proof as permission to add a real Android backend
-  in `src/ui/renderer/`
+- broad Android renderer implementation before `AR-B4.a` names the exact files,
+  ownership boundary, validation, and stopping point
+- Android Vulkan
+- product-specific renderer bypasses
 
 Current Android-native state (see owning plan docs for full evidence):
 

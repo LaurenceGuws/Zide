@@ -22,9 +22,8 @@ Get native Android rendering working. That means completing renderer gate #5
 so the backend abstraction is clean enough for a first-class Android GLES
 backend.
 
-- Active ticket: `AR-B3` / `RB-B3.i`
-  - completed sample/diagnostic section composition check and Android GLES
-    readiness re-rank
+- Active ticket: `AR-B4.a`
+  - Android GLES backend skeleton and frame binding
   - owner: `docs/todo/android/implementation.md`
 - `RB-B3.d` is already met:
   - widget/runtime no longer calls `usesDirectTerminalPresentation(...)`
@@ -42,7 +41,8 @@ backend.
 - `RB-B3.i` is met for sample/diagnostic section composition:
   - font sample section chrome now routes through `font_sample_section_host.zig`
 - Next active move is `AR-B4`:
-  - define the first controlled Android GLES backend planning cut
+  - first controlled Android GLES backend implementation slice
+  - authority: `app_architecture/platform/android/ANDROID_GLES_BACKEND_PLAN.md`
 - `RB-B3.e` is now structurally narrowed enough that it is no longer the
   strongest blocker:
   - presentable lifecycle parity work materially reduced direct-vs-retained

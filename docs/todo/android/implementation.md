@@ -20,6 +20,7 @@ Do not use this queue for:
 - `app_architecture/platform/NATIVE_HOST_CONTRACT.md`
 - `app_architecture/platform/android/RENDER_BACKEND.md`
 - `app_architecture/platform/android/ANDROID_TERMINAL_HOST_PLAN.md`
+- `app_architecture/platform/android/ANDROID_GLES_BACKEND_PLAN.md`
 - `app_architecture/platform/android/ANDROID_GLES_BINDING_PLAN.md`
 - `app_architecture/platform/android/SURFACE_IDENTITY_POLICY.md`
 - `app_architecture/platform/android/ANDROID_PTY_LIFETIME_PLAN.md`
@@ -111,6 +112,7 @@ product-specific bypasses.
 
 Owner docs:
 
+- `app_architecture/platform/android/ANDROID_GLES_BACKEND_PLAN.md`
 - `app_architecture/platform/android/ANDROID_GLES_BINDING_PLAN.md`
 - `app_architecture/ui/RENDER_BACKEND_CONTRACT.md`
 - `docs/todo/ui/renderer.md`
@@ -124,6 +126,17 @@ Guardrails:
 
 Current checkpoint:
 
+- `AR-B4.a` is now defined:
+  Android GLES backend skeleton and frame binding
+- allowed first files:
+  `renderer.zig`, `backend_dispatch.zig`, `backend_runtime_bundle.zig`, new
+  `android_gles_backend.zig`, new `android_gles_runtime_state.zig`, narrow
+  Android build/link changes, and probe extraction only if the terminal-host
+  probe remains honest
+- stopping point:
+  Android terminal-host can select Android GLES and produce a visible
+  clear/swap through the shared backend-host path, with no terminal grid/text,
+  atlas, image, screenshot, or presentable claims
 - `RB-B3.e` materially narrowed terminal-presentable lifecycle pressure:
   - shared widget/runtime no longer owns the direct-vs-retained execution split
   - active dispatch no longer treats refresh as retained-only

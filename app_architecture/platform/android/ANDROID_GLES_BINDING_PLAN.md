@@ -31,17 +31,21 @@ The Android-native terminal-host lane already proved:
 
 That is enough to define the first Android rendering-binding cut precisely.
 
-It is not enough to start a real Android renderer backend in `src/`.
+That proof was originally not enough to start a real Android renderer backend
+because renderer gate #5 was still open.
 
-The renderer queue still says:
+That has changed.
 
-- gate #2 remains deferred on live Metal verification
-- gate #5 is not yet routine enough for a new backend to feel boring
+Current renderer authority now says:
 
-So the next Android rendering step must stay below that line:
+- gate #5 is structurally met for scanned composition families
+- gate #2 live Metal verification remains deferred until Mac access returns
+- Android GLES may start as a controlled planning/first-slice lane
 
-- prove Android EGL + `ANativeWindow` binding shape
-- do not claim a real shared Android backend exists yet
+So this doc is now historical/probe authority. The new backend-planning
+authority is:
+
+- `app_architecture/platform/android/ANDROID_GLES_BACKEND_PLAN.md`
 
 ## Decision
 
@@ -346,3 +350,19 @@ After that:
   - IME is not that tightening pass on this device/configuration, because the
     cleaned-up product-view IME probe now behaves as an overlay and does not
     materially interact with surface geometry
+
+## Backend Handoff
+
+`AH-A5` through `AH-A7` are now probe-complete for the purpose of opening the
+first controlled backend planning cut.
+
+Handoff rule:
+
+- do not keep hardening `android_gles_probe.zig` by default
+- use its EGL/context/surface/texture evidence to inform `AR-B4.a`
+- once `AR-B4.a` validates, either collapse the probe behind the shared Android
+  GLES runtime owner or delete it if fully superseded
+
+Next authority:
+
+- `app_architecture/platform/android/ANDROID_GLES_BACKEND_PLAN.md`
