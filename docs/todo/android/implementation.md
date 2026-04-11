@@ -163,6 +163,8 @@ Current checkpoint:
   - external-host metrics seed from `PlatformRenderHost.surface_metrics`
   - Android native bridge can now create, sync, draw, and destroy a shared
     `android_gles` renderer in tests
+  - live surface-available and redraw callbacks now route through that shared
+    renderer path in native code instead of the old probe draw path
 - `AR-B4.b` stop marker:
   terminal-host can create/destroy a shared `Renderer` instance with
   `renderer_backend = .android_gles` and `runtime_profile = .backend_smoke`

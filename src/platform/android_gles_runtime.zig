@@ -105,6 +105,7 @@ pub const State = struct {
     bound_epoch: u64 = 0,
     context_create_count: u32 = 0,
     surface_create_count: u32 = 0,
+    swap_count: u32 = 0,
     last_error: u32 = 0,
 };
 
@@ -214,6 +215,7 @@ pub fn swapBuffers(state: *State) RuntimeStatus {
     if (!builtin.is_test and egl.eglSwapBuffers(state.display, state.surface) == EGL_FALSE) {
         return noteError(state, .swap_failed);
     }
+    state.swap_count += 1;
     return setReady(state);
 }
 
@@ -245,6 +247,9 @@ test "runtime recreates the surface when identity epoch changes" {
     try std.testing.expectEqual(@as(u32, 1), state.context_create_count);
     try std.testing.expectEqual(@as(u32, 2), state.surface_create_count);
     try std.testing.expectEqual(@as(u64, 2), state.bound_epoch);
+    try std.testing.expectEqual(RuntimeStatus.ready, makeCurrent(&state));
+    try std.testing.expectEqual(RuntimeStatus.ready, swapBuffers(&state));
+    try std.testing.expectEqual(@as(u32, 1), state.swap_count);
 
     reset(&state);
     try std.testing.expectEqual(@as(?*anyopaque, null), state.surface);

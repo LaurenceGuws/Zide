@@ -216,11 +216,13 @@ Current status:
   - create a shared `Renderer` with `renderer_backend = .android_gles`
   - sync bridge host state into that renderer
   - execute one `beginFrame` / `submitFrame` cycle in tests
+  - route live surface-available / redraw callbacks through that shared
+    renderer path instead of the old probe draw path
 - this is still not the `AR-B4.b` stop marker:
-  - terminal-host surface callbacks still do not call the new shared bootstrap
-    path live
-  - no device claim is made until Android terminal-host creates the renderer
-    and proves visible clear/swap through it
+  - device validation is still required before claiming visible clear/swap
+  - Java diagnostics still expose old `currentGlesProbe...` bridge names even
+    though they now read shared renderer/runtime counters when the renderer is
+    active
 
 Stop marker:
 

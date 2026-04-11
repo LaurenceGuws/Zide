@@ -26,9 +26,10 @@ backend.
   - Android GLES backend skeleton and frame binding
   - owner: `docs/todo/android/implementation.md`
   - current state:
-    backend/runtime/frame binding is in, and the shared external-host renderer
-    bootstrap seam now exists for `backend_smoke`; next direct cut is wiring
-    Android terminal-host to instantiate that renderer
+    backend/runtime/frame binding is in, the shared external-host renderer
+    bootstrap seam exists for `backend_smoke`, and native surface callbacks now
+    route through that shared renderer path; next direct cut is device
+    validation plus Java/debug cleanup around the old probe naming
 - `RB-B3.d` is already met:
   - widget/runtime no longer calls `usesDirectTerminalPresentation(...)`
   - those path decisions now terminate in the presentable host seam

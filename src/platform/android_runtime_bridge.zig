@@ -107,25 +107,22 @@ pub fn noteSurfaceAvailableFromJava(
     swapNativeWindow(native_window);
     if (native_window == null) return noteSurfaceDestroyed();
     const seq = noteSurfaceAvailable(width, height);
-    bridge_state.last_gles_probe_status = android_gles_probe.noteSurfaceAvailable(
-        bridge_state.render_host.androidNativeWindow(),
-        bridge_state.render_host.surfaceIdentityEpoch(),
-        bridge_state.last_surface_transition,
-        bridge_state.render_host.surface_metrics.drawable_width,
-        bridge_state.render_host.surface_metrics.drawable_height,
-    );
+    bridge_state.last_gles_probe_status = drawSharedRendererSurfaceFrame();
     return seq;
 }
 
 pub fn noteSurfaceDestroyed() u64 {
     swapNativeWindow(null);
     _ = android_host.noteSurfaceDestroyed(&bridge_state.app_host, &bridge_state.render_host);
-    bridge_state.last_gles_probe_status = android_gles_probe.noteSurfaceDestroyed();
+    if (bridge_state.renderer) |renderer| {
+        renderer.syncExternalHostState(bridge_state.app_host, bridge_state.render_host);
+    }
+    bridge_state.last_gles_probe_status = .surface_destroyed;
     return nextSequence();
 }
 
 pub fn noteSurfaceRedrawNeeded() u64 {
-    bridge_state.last_gles_probe_status = android_gles_probe.noteSurfaceRedrawNeeded();
+    bridge_state.last_gles_probe_status = drawSharedRendererSurfaceFrame();
     return nextSequence();
 }
 
@@ -146,46 +143,65 @@ pub fn currentGlesProbeStatus() android_gles_probe.ProbeStatus {
 }
 
 pub fn currentGlesProbeSwapCount() u32 {
+    if (bridge_state.renderer) |renderer| {
+        return renderer.backend.runtime.androidGlesState().runtime.swap_count;
+    }
     return android_gles_probe.currentSwapCount();
 }
 
 pub fn currentGlesProbeBoundEpoch() u64 {
+    if (bridge_state.renderer) |renderer| {
+        return renderer.backend.runtime.androidGlesState().runtime.bound_epoch;
+    }
     return android_gles_probe.currentBoundEpoch();
 }
 
 pub fn currentGlesProbeContextCreateCount() u32 {
+    if (bridge_state.renderer) |renderer| {
+        return renderer.backend.runtime.androidGlesState().runtime.context_create_count;
+    }
     return android_gles_probe.currentContextCreateCount();
 }
 
 pub fn currentGlesProbeSurfaceCreateCount() u32 {
+    if (bridge_state.renderer) |renderer| {
+        return renderer.backend.runtime.androidGlesState().runtime.surface_create_count;
+    }
     return android_gles_probe.currentSurfaceCreateCount();
 }
 
 pub fn currentGlesProbeTextureCreateCount() u32 {
+    if (bridge_state.renderer != null) return 0;
     return android_gles_probe.currentTextureCreateCount();
 }
 
 pub fn currentGlesProbeTextureAlive() bool {
+    if (bridge_state.renderer != null) return false;
     return android_gles_probe.currentTextureAlive();
 }
 
 pub fn currentGlesProbeTextureUploadCount() u32 {
+    if (bridge_state.renderer != null) return 0;
     return android_gles_probe.currentTextureUploadCount();
 }
 
 pub fn currentGlesProbeTextureUpdateCount() u32 {
+    if (bridge_state.renderer != null) return 0;
     return android_gles_probe.currentTextureUpdateCount();
 }
 
 pub fn currentGlesProbeTextureResizeCount() u32 {
+    if (bridge_state.renderer != null) return 0;
     return android_gles_probe.currentTextureResizeCount();
 }
 
 pub fn currentGlesProbeTextureWidth() i32 {
+    if (bridge_state.renderer != null) return 0;
     return android_gles_probe.currentTextureWidth();
 }
 
 pub fn currentGlesProbeTextureHeight() i32 {
+    if (bridge_state.renderer != null) return 0;
     return android_gles_probe.currentTextureHeight();
 }
 
@@ -230,6 +246,11 @@ pub fn drawAndroidGlesRendererFrame() !bool {
     renderer.syncExternalHostState(bridge_state.app_host, bridge_state.render_host);
     if (!renderer.beginFrame()) return false;
     return renderer.submitFrame().succeeded;
+}
+
+fn drawSharedRendererSurfaceFrame() android_gles_probe.ProbeStatus {
+    ensureAndroidGlesRenderer() catch return .init_failed;
+    return if (drawAndroidGlesRendererFrame() catch false) .drawn else .surface_failed;
 }
 
 test "bridge routes Android lifecycle and surface truth through shared host state" {
