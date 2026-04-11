@@ -382,12 +382,36 @@ Stop this lane when:
 
 ## Immediate Next Moves
 
-1. Commit the current AU-A2 handshake checkpoint and keep `main` as the one
-   cohesive Android terminal line.
-2. Implement the first in-app artifact install/update flow against the
-   published manifest/archive contract instead of leaving staging as ops-only.
-3. Keep `termux-main` as the first supported Android provider while preserving
+1. Record the AU-A2 execution plan before more code lands, then keep `main` as
+   the one cohesive Android terminal line.
+2. Add Android-host-owned userland install state so the app can represent:
+   idle, installing, install-failed, ready-current, and ready-upgrade-needed.
+3. Replace the current ops-only artifact staging posture with an app-owned
+   install/update path that still consumes only the published manifest/archive
+   contract.
+4. Keep `termux-main` as the first supported Android provider while preserving
    provider provenance and leaving room for a future Zide-owned default
    provider.
-4. Treat current `dev` naming only as bootstrap-profile/channel maturity
+5. Treat current `dev` naming only as bootstrap-profile/channel maturity
    language, not as long-term product semantics.
+
+## AU-A2 Execution Plan
+
+Execute the remaining AU-A2 work in this order:
+
+1. lock the plan in repo authority and keep commits small
+2. add one app-owned install state machine for userland install/update
+3. wire one honest product action that starts install/update from the published
+   artifact contract
+4. persist installed/requested artifact identity in one app-owned place
+5. prove the staged prefix still contains and can run `zide-pm`
+6. stop the lane once install/update/userland state is boring enough that
+   native rendering can retake priority
+
+Implementation guardrails for this sequence:
+
+- do not reopen direct provider-package staging in product flow
+- do not add a second package-management surface beside `zide-pm`
+- do not bake temporary `dev` wording deeper into runtime ownership
+- do not fake an in-app installer if the artifact source is not reachable from
+  the app

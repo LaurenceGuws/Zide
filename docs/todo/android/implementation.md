@@ -240,8 +240,10 @@ Immediate next step:
     product identity
   - future Zide-owned Android providers may become the default without changing
     the `zide-pm` surface
-- wire first-run/user-facing bootstrap UI around the artifact-staging contract
-  instead of requiring the developer ops command
+- add one app-owned userland install/update state machine before more
+  user-facing flow lands
+- wire first-run/user-facing install/update around the published artifact
+  contract instead of requiring the developer ops command
 - stop this lane only when the package/userland layer is functional, correct,
   and boring enough that we do not need near-term refactors before returning to
   native rendering:
