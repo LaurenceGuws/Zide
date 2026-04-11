@@ -212,8 +212,13 @@ Current status:
   - skips global SDL text-input registration
   - synthesizes initial display metrics from `PlatformRenderHost.surface_metrics`
   - keeps SDL-owned shutdown limited to SDL-owned bootstrap instances
+- the Android native bridge can now:
+  - create a shared `Renderer` with `renderer_backend = .android_gles`
+  - sync bridge host state into that renderer
+  - execute one `beginFrame` / `submitFrame` cycle in tests
 - this is still not the `AR-B4.b` stop marker:
-  - terminal-host does not call the new shared bootstrap path yet
+  - terminal-host surface callbacks still do not call the new shared bootstrap
+    path live
   - no device claim is made until Android terminal-host creates the renderer
     and proves visible clear/swap through it
 

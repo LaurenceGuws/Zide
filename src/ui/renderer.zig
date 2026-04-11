@@ -865,6 +865,17 @@ pub const Renderer = struct {
         };
     }
 
+    pub fn syncExternalHostState(
+        self: *Renderer,
+        app_host: native_host.PlatformAppHost,
+        render_host: native_host.PlatformRenderHost,
+    ) void {
+        if (self.bootstrap_kind != .external_host) return;
+        self.app_host = app_host;
+        self.render_host = render_host;
+        self.applyDisplayMetricsSnapshot(displayMetricsFromRenderHost(render_host));
+    }
+
     pub fn uiGeometryContext(self: *const Renderer) UiGeometryContext {
         return .{
             .window = .{

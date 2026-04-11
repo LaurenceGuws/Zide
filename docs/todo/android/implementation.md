@@ -161,6 +161,8 @@ Current checkpoint:
     registration
   - shutdown now distinguishes SDL-owned bootstrap from external-host bootstrap
   - external-host metrics seed from `PlatformRenderHost.surface_metrics`
+  - Android native bridge can now create, sync, draw, and destroy a shared
+    `android_gles` renderer in tests
 - `AR-B4.b` stop marker:
   terminal-host can create/destroy a shared `Renderer` instance with
   `renderer_backend = .android_gles` and `runtime_profile = .backend_smoke`

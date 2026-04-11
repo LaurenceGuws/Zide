@@ -3,6 +3,8 @@ const android_gles_probe = @import("android_gles_probe.zig");
 const android_host = @import("android_host.zig");
 const android_shell_session = @import("android_shell_session.zig");
 const native_host = @import("native_host.zig");
+const renderer_mod = @import("../ui/renderer.zig");
+const std = @import("std");
 
 extern fn ANativeWindow_fromSurface(env: ?*anyopaque, surface: ?*anyopaque) ?*anyopaque;
 extern fn ANativeWindow_release(window: *anyopaque) void;
@@ -15,6 +17,7 @@ const BridgeState = struct {
     },
     last_gles_probe_status: android_gles_probe.ProbeStatus = .unavailable,
     last_surface_transition: native_host.SurfaceIdentityTransition = .unchanged,
+    renderer: ?*renderer_mod.Renderer = null,
     render_host: native_host.PlatformRenderHost = .{
         .binding = .none,
         .surface_availability = .unavailable,
@@ -30,6 +33,12 @@ fn nextSequence() u64 {
     return bridge_state.seq;
 }
 
+fn destroyRenderer() void {
+    const renderer = bridge_state.renderer orelse return;
+    renderer.deinit();
+    bridge_state.renderer = null;
+}
+
 fn releaseNativeWindow(window: ?*anyopaque) void {
     if (builtin.is_test) return;
     const value = window orelse return;
@@ -42,6 +51,7 @@ fn swapNativeWindow(window: ?*anyopaque) void {
 }
 
 pub fn noteCreate() u64 {
+    destroyRenderer();
     android_gles_probe.reset();
     bridge_state = .{};
     return nextSequence();
@@ -198,6 +208,30 @@ pub fn sendShellCodepoint(codepoint: i32) i32 {
     return @intFromEnum(android_shell_session.sendCodepoint(@intCast(codepoint)));
 }
 
+pub fn ensureAndroidGlesRenderer() !bool {
+    if (bridge_state.renderer != null) return false;
+    if (!bridge_state.render_host.hasSurface()) return false;
+
+    const renderer = try renderer_mod.Renderer.initExternalHostBackendSmoke(
+        std.heap.c_allocator,
+        bridge_state.app_host,
+        bridge_state.render_host,
+        .{
+            .renderer_backend = .android_gles,
+            .runtime_profile = .backend_smoke,
+        },
+    );
+    bridge_state.renderer = renderer;
+    return true;
+}
+
+pub fn drawAndroidGlesRendererFrame() !bool {
+    const renderer = bridge_state.renderer orelse return false;
+    renderer.syncExternalHostState(bridge_state.app_host, bridge_state.render_host);
+    if (!renderer.beginFrame()) return false;
+    return renderer.submitFrame().succeeded;
+}
+
 test "bridge routes Android lifecycle and surface truth through shared host state" {
     const std = @import("std");
 
@@ -254,6 +288,19 @@ test "bridge routes Android lifecycle and surface truth through shared host stat
 
     try std.testing.expectEqual(@as(u64, 10), noteStop());
     try std.testing.expectEqual(native_host.AppLifecycleState.stopped, bridge_state.app_host.lifecycle_state);
+}
+
+test "bridge can create and draw a shared android gles renderer for backend smoke" {
+    try std.testing.expectEqual(@as(u64, 1), noteCreate());
+    try std.testing.expectEqual(@as(u64, 2), noteResume());
+    try std.testing.expectEqual(@as(u64, 3), noteSurfaceAvailableFromJava(@ptrFromInt(1), @ptrFromInt(0x1000), 400, 200));
+
+    try std.testing.expect(try ensureAndroidGlesRenderer());
+    try std.testing.expect(!try ensureAndroidGlesRenderer());
+    try std.testing.expect(try drawAndroidGlesRendererFrame());
+
+    destroyRenderer();
+    try std.testing.expectEqual(@as(?*renderer_mod.Renderer, null), bridge_state.renderer);
 }
 
 test "bridge reports replaced when a live Android surface identity changes without retirement" {
