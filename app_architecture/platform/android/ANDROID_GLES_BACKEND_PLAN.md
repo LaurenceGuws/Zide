@@ -203,6 +203,20 @@ Required behavior:
 - keep shutdown honest: no SDL window destroy / SDL quit from an external-host
   renderer instance
 
+Current status:
+
+- the shared renderer now has an external-host bootstrap seam for
+  `runtime_profile = .backend_smoke`
+- that seam:
+  - bypasses SDL window bootstrap
+  - skips global SDL text-input registration
+  - synthesizes initial display metrics from `PlatformRenderHost.surface_metrics`
+  - keeps SDL-owned shutdown limited to SDL-owned bootstrap instances
+- this is still not the `AR-B4.b` stop marker:
+  - terminal-host does not call the new shared bootstrap path yet
+  - no device claim is made until Android terminal-host creates the renderer
+    and proves visible clear/swap through it
+
 Stop marker:
 
 - terminal-host can create and destroy a shared `Renderer` instance with

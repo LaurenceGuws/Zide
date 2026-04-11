@@ -154,6 +154,13 @@ Current checkpoint:
   - visible clear/swap is not yet claimed on device through that shared path
 - next concrete cut is `AR-B4.b`:
   external-host renderer bootstrap for Android `backend_smoke`
+- current `AR-B4.b` code truth:
+  - shared renderer now exposes an external-host bootstrap seam for
+    `runtime_profile = .backend_smoke`
+  - that seam skips SDL window bootstrap and global SDL text-input
+    registration
+  - shutdown now distinguishes SDL-owned bootstrap from external-host bootstrap
+  - external-host metrics seed from `PlatformRenderHost.surface_metrics`
 - `AR-B4.b` stop marker:
   terminal-host can create/destroy a shared `Renderer` instance with
   `renderer_backend = .android_gles` and `runtime_profile = .backend_smoke`

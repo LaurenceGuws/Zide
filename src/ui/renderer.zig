@@ -294,6 +294,22 @@ pub fn logSceneTargetState(
 pub const Renderer = struct {
     const Self = @This();
 
+    const BootstrapKind = enum {
+        sdl_owned,
+        external_host,
+    };
+
+    const BootstrapSeed = struct {
+        bootstrap_kind: BootstrapKind,
+        app_host: native_host.PlatformAppHost,
+        window: *sdl_api.c.SDL_Window,
+        render_host: native_host.PlatformRenderHost,
+        render_surface_attachment: RenderSurfaceAttachment,
+        display_metrics: platform_window.DisplayMetrics,
+        start_counter: u64,
+        perf_freq: f64,
+    };
+
     pub const InitOptions = struct {
         app_font_size: f32 = 16.0,
         app_font_path: ?[]const u8 = null,
@@ -380,6 +396,8 @@ pub const Renderer = struct {
     pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
 
     allocator: std.mem.Allocator,
+    bootstrap_kind: BootstrapKind,
+    global_runtime_registered: bool,
     backend: BackendHost,
     runtime_profile: RendererRuntimeProfile,
     app_host: native_host.PlatformAppHost,
@@ -494,139 +512,38 @@ pub const Renderer = struct {
         );
         errdefer bootstrap_runtime.deinitRendererBootstrap(&renderer_bootstrap);
 
-        const app_host = native_host.currentAppHost();
-        const window = renderer_bootstrap.window_state.window;
-        const render_host = renderer_bootstrap.window_state.render_host;
-        const render_surface_attachment = renderer_bootstrap.window_state.render_surface_attachment;
-
-        const renderer = try allocator.create(Renderer);
-        errdefer allocator.destroy(renderer);
-
-        const display_metrics = platform_window.collectDisplayMetrics(window);
-        const scale = font_runtime.initScaleState(allocator, display_metrics);
-        const base_font_size = if (init_options.app_font_size > 0.0) init_options.app_font_size else 16.0;
-        const editor_base_font_size = if (init_options.editor_font_size) |value| if (value > 0.0) value else base_font_size else base_font_size;
-        const terminal_base_font_size = if (init_options.terminal_font_size) |value| if (value > 0.0) value else base_font_size else base_font_size;
-        const font_size = base_font_size * scale.ui_scale;
-        const editor_font_size = editor_base_font_size * scale.ui_scale;
-        const terminal_font_size = terminal_base_font_size * scale.ui_scale;
-        const terminal_text = try text_runtime.initTerminalTextState(allocator);
-        errdefer {
-            var terminal_text_cleanup = terminal_text;
-            terminal_text_cleanup.glyph_cache.deinit();
-            hb.hb_buffer_destroy(terminal_text_cleanup.shape_buffer);
-            terminal_text_cleanup.shape_first_pen.deinit(allocator);
-            terminal_text_cleanup.shape_first_pen_set.deinit(allocator);
-        }
-        const font_config = try font_manager.initFontConfigState(allocator, init_options);
-        errdefer {
-            var font_config_cleanup = font_config;
-            if (font_config_cleanup.terminal_font_features_raw) |owned| allocator.free(owned);
-            font_config_cleanup.terminal_font_features.deinit(allocator);
-            if (font_config_cleanup.editor_font_features_raw) |owned| allocator.free(owned);
-            font_config_cleanup.editor_font_features.deinit(allocator);
-            font_config_cleanup.font_cache.deinit();
-            if (font_config_cleanup.app_font_path_owned) |owned| allocator.free(owned);
-            if (font_config_cleanup.editor_font_path_owned) |owned| allocator.free(owned);
-            if (font_config_cleanup.terminal_font_path_owned) |owned| allocator.free(owned);
-        }
-
-        renderer.* = .{
-            .allocator = allocator,
-            .backend = try BackendHost.init(allocator, startup_backend),
-            .runtime_profile = runtime_profile,
-            .app_host = app_host,
-            .app_event_watch_installed = false,
-            .appkit_delegate_installation = null,
-            .render_host = render_host,
-            .render_surface_attachment = render_surface_attachment,
-            .window = window,
-            .fonts_ready = false,
-            .width = display_metrics.window_w,
-            .height = display_metrics.window_h,
-            .render_width = display_metrics.drawable_w,
-            .render_height = display_metrics.drawable_h,
-            .display_metrics = display_metrics,
-            .target_width = display_metrics.drawable_w,
-            .target_height = display_metrics.drawable_h,
-            .target_pixel_width = display_metrics.drawable_w,
-            .target_pixel_height = display_metrics.drawable_h,
-            .text_render = .{
-                .gamma = init_options.text_gamma,
-                .contrast = init_options.text_contrast,
-                .linear_correction = init_options.text_linear_correction,
-            },
-            .selection_overlay = .{},
-            .terminal_render_policy = .{},
-            .font_size = font_size,
-            .base_font_size = base_font_size,
-            .char_width = font_size * 0.6,
-            .char_height = font_size * 1.2,
-            .app_font = undefined,
-            .app_metrics = .{
-                .ascent = font_size,
-                .descent = font_size * 0.2,
-                .line_height = font_size * 1.2,
-                .cell_width = font_size * 0.6,
-                .cell_height = font_size * 1.2,
-                .baseline_from_top = font_size,
-            },
-            .editor_font_size = editor_font_size,
-            .editor_base_font_size = editor_base_font_size,
-            .editor_char_width = editor_font_size * 0.6,
-            .editor_char_height = editor_font_size * 1.2,
-            .editor_metrics = .{
-                .ascent = editor_font_size,
-                .descent = editor_font_size * 0.2,
-                .line_height = editor_font_size * 1.2,
-                .cell_width = editor_font_size * 0.6,
-                .cell_height = editor_font_size * 1.2,
-                .baseline_from_top = editor_font_size,
-            },
-            .editor_font = undefined,
-            .icon_font = undefined,
-            .icon_font_size = font_size * 2.0,
-            .icon_char_width = font_size * 1.2,
-            .icon_char_height = font_size * 1.2,
-            .icon_metrics = .{
-                .ascent = font_size,
-                .descent = font_size * 0.2,
-                .line_height = font_size * 1.2,
-                .cell_width = font_size * 1.2,
-                .cell_height = font_size * 1.2,
-                .baseline_from_top = font_size,
-            },
-            .terminal_cell_width = terminal_font_size * 0.6,
-            .terminal_cell_height = terminal_font_size * 1.2,
-            .terminal_font_size = terminal_font_size,
-            .terminal_base_font_size = terminal_base_font_size,
-            .terminal_metrics = .{
-                .ascent = terminal_font_size,
-                .descent = terminal_font_size * 0.2,
-                .line_height = terminal_font_size * 1.2,
-                .cell_width = terminal_font_size * 0.6,
-                .cell_height = terminal_font_size * 1.2,
-                .baseline_from_top = terminal_font_size,
-            },
-            .terminal_font = undefined,
-            .font_config = font_config,
-            .window_chrome = .{},
-            .theme = .{},
-            .scale = scale,
-            .input = .{},
-            .clipboard = .{},
-            .batch = .{},
-            .terminal_text = terminal_text,
+        return initWithSeed(allocator, init_options, .{
+            .bootstrap_kind = .sdl_owned,
+            .app_host = native_host.currentAppHost(),
+            .window = renderer_bootstrap.window_state.window,
+            .render_host = renderer_bootstrap.window_state.render_host,
+            .render_surface_attachment = renderer_bootstrap.window_state.render_surface_attachment,
+            .display_metrics = platform_window.collectDisplayMetrics(renderer_bootstrap.window_state.window),
             .start_counter = sdl_api.getPerformanceCounter(),
             .perf_freq = @as(f64, @floatFromInt(sdl_api.getPerformanceFrequency())),
-            .present = .{},
-            .clip_stack = undefined,
-            .clip_depth = 0,
-        };
-        errdefer renderer.backend.deinitRuntimeStorage(allocator);
+        }, true);
+    }
 
-        try lifecycle_runtime.finalizeRendererInit(Renderer, renderer);
-        return renderer;
+    pub fn initExternalHostBackendSmoke(
+        allocator: std.mem.Allocator,
+        app_host: native_host.PlatformAppHost,
+        render_host: native_host.PlatformRenderHost,
+        init_options: InitOptions,
+    ) !*Renderer {
+        if (init_options.runtime_profile != .backend_smoke) {
+            return error.RendererExternalHostRequiresBackendSmoke;
+        }
+
+        return initWithSeed(allocator, init_options, .{
+            .bootstrap_kind = .external_host,
+            .app_host = app_host,
+            .window = undefined,
+            .render_host = render_host,
+            .render_surface_attachment = .none,
+            .display_metrics = displayMetricsFromRenderHost(render_host),
+            .start_counter = 0,
+            .perf_freq = 1.0,
+        }, false);
     }
 
     pub fn runStartupBackendSmoke(width: i32, height: i32, title: [*:0]const u8, backend: RendererBackend) !bool {
@@ -651,8 +568,10 @@ pub const Renderer = struct {
         window_chrome_runtime.deinit(self.windowChromeDomain());
         self.backend.deinitRuntime(self);
         self.backend.deinitRuntimeStorage(self.allocator);
-        bootstrap_runtime.deinitRendererWindowResources(&self.render_surface_attachment, self.window);
-        bootstrap_runtime.deinitSdlRuntime();
+        if (self.bootstrap_kind == .sdl_owned) {
+            bootstrap_runtime.deinitRendererWindowResources(&self.render_surface_attachment, self.window);
+            bootstrap_runtime.deinitSdlRuntime();
+        }
 
         self.allocator.destroy(self);
     }
@@ -851,7 +770,10 @@ pub const Renderer = struct {
     }
 
     fn windowGeometryDiagnosticsFromDisplayMetrics(self: *const Renderer, metrics: platform_window.DisplayMetrics) WindowGeometryDiagnostics {
-        const monitor = platform_window.getMonitorSize(self.window);
+        const monitor: MousePos = if (self.bootstrap_kind == .sdl_owned)
+            platform_window.getMonitorSize(self.window)
+        else
+            .{ .x = @as(f32, @floatFromInt(metrics.window_w)), .y = @as(f32, @floatFromInt(metrics.window_h)) };
         return .{
             .window_w = metrics.window_w,
             .window_h = metrics.window_h,
@@ -865,7 +787,10 @@ pub const Renderer = struct {
             .pixel_density = metrics.pixel_density,
             .ui_scale = self.uiScaleFactor(),
             .render_scale = metrics.render_scale,
-            .screen = platform_window.getScreenSize(self.window),
+            .screen = if (self.bootstrap_kind == .sdl_owned)
+                platform_window.getScreenSize(self.window)
+            else
+                .{ .x = @as(f32, @floatFromInt(metrics.window_w)), .y = @as(f32, @floatFromInt(metrics.window_h)) },
             .render = .{ .x = @floatFromInt(metrics.drawable_w), .y = @floatFromInt(metrics.drawable_h) },
             .monitor = monitor,
         };
@@ -894,6 +819,9 @@ pub const Renderer = struct {
     }
 
     fn collectDisplayMetricsForWindowChanges(self: *Renderer, changes: WindowChangeMask) platform_window.DisplayMetrics {
+        if (self.bootstrap_kind == .external_host) {
+            return displayMetricsFromRenderHost(self.render_host);
+        }
         if (changes.affectsUiScale()) {
             return platform_window.collectDisplayMetrics(self.window);
         }
@@ -913,7 +841,10 @@ pub const Renderer = struct {
     }
 
     pub fn refreshWindowGeometryDiagnostics(self: *Renderer, reason: []const u8) WindowGeometryDiagnostics {
-        const metrics = platform_window.collectDisplayMetrics(self.window);
+        const metrics = if (self.bootstrap_kind == .sdl_owned)
+            platform_window.collectDisplayMetrics(self.window)
+        else
+            displayMetricsFromRenderHost(self.render_host);
         self.applyDisplayMetricsSnapshot(metrics);
         self.logWindowMetricsSnapshot(metrics, reason);
         return self.windowGeometryDiagnosticsFromDisplayMetrics(metrics);
@@ -1005,6 +936,7 @@ pub const Renderer = struct {
     }
 
     pub fn setTextInputRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32) void {
+        if (self.bootstrap_kind != .sdl_owned) return;
         text_input.setRect(&self.input.text_input_state, self.window, x, y, w, h);
     }
 
@@ -1410,7 +1342,170 @@ pub const Renderer = struct {
     }
 
     fn pollInputEvents(self: *Renderer) void {
+        if (self.bootstrap_kind != .sdl_owned) return;
         input_runtime.pollInputEventsWithRuntimeWheel(self.inputDomain());
+    }
+
+    fn initWithSeed(
+        allocator: std.mem.Allocator,
+        init_options: InitOptions,
+        seed: BootstrapSeed,
+        register_global_runtime: bool,
+    ) !*Renderer {
+        const startup_backend = init_options.renderer_backend;
+        const runtime_profile = init_options.runtime_profile;
+
+        const renderer = try allocator.create(Renderer);
+        errdefer allocator.destroy(renderer);
+
+        const display_metrics = seed.display_metrics;
+        const scale = font_runtime.initScaleState(allocator, display_metrics);
+        const base_font_size = if (init_options.app_font_size > 0.0) init_options.app_font_size else 16.0;
+        const editor_base_font_size = if (init_options.editor_font_size) |value| if (value > 0.0) value else base_font_size else base_font_size;
+        const terminal_base_font_size = if (init_options.terminal_font_size) |value| if (value > 0.0) value else base_font_size else base_font_size;
+        const font_size = base_font_size * scale.ui_scale;
+        const editor_font_size = editor_base_font_size * scale.ui_scale;
+        const terminal_font_size = terminal_base_font_size * scale.ui_scale;
+        const terminal_text = try text_runtime.initTerminalTextState(allocator);
+        errdefer {
+            var terminal_text_cleanup = terminal_text;
+            terminal_text_cleanup.glyph_cache.deinit();
+            hb.hb_buffer_destroy(terminal_text_cleanup.shape_buffer);
+            terminal_text_cleanup.shape_first_pen.deinit(allocator);
+            terminal_text_cleanup.shape_first_pen_set.deinit(allocator);
+        }
+        const font_config = try font_manager.initFontConfigState(allocator, init_options);
+        errdefer {
+            var font_config_cleanup = font_config;
+            if (font_config_cleanup.terminal_font_features_raw) |owned| allocator.free(owned);
+            font_config_cleanup.terminal_font_features.deinit(allocator);
+            if (font_config_cleanup.editor_font_features_raw) |owned| allocator.free(owned);
+            font_config_cleanup.editor_font_features.deinit(allocator);
+            font_config_cleanup.font_cache.deinit();
+            if (font_config_cleanup.app_font_path_owned) |owned| allocator.free(owned);
+            if (font_config_cleanup.editor_font_path_owned) |owned| allocator.free(owned);
+            if (font_config_cleanup.terminal_font_path_owned) |owned| allocator.free(owned);
+        }
+
+        renderer.* = .{
+            .allocator = allocator,
+            .bootstrap_kind = seed.bootstrap_kind,
+            .global_runtime_registered = false,
+            .backend = try BackendHost.init(allocator, startup_backend),
+            .runtime_profile = runtime_profile,
+            .app_host = seed.app_host,
+            .app_event_watch_installed = false,
+            .appkit_delegate_installation = null,
+            .render_host = seed.render_host,
+            .render_surface_attachment = seed.render_surface_attachment,
+            .window = seed.window,
+            .fonts_ready = false,
+            .width = display_metrics.window_w,
+            .height = display_metrics.window_h,
+            .render_width = display_metrics.drawable_w,
+            .render_height = display_metrics.drawable_h,
+            .display_metrics = display_metrics,
+            .target_width = display_metrics.drawable_w,
+            .target_height = display_metrics.drawable_h,
+            .target_pixel_width = display_metrics.drawable_w,
+            .target_pixel_height = display_metrics.drawable_h,
+            .text_render = .{
+                .gamma = init_options.text_gamma,
+                .contrast = init_options.text_contrast,
+                .linear_correction = init_options.text_linear_correction,
+            },
+            .selection_overlay = .{},
+            .terminal_render_policy = .{},
+            .font_size = font_size,
+            .base_font_size = base_font_size,
+            .char_width = font_size * 0.6,
+            .char_height = font_size * 1.2,
+            .app_font = undefined,
+            .app_metrics = .{
+                .ascent = font_size,
+                .descent = font_size * 0.2,
+                .line_height = font_size * 1.2,
+                .cell_width = font_size * 0.6,
+                .cell_height = font_size * 1.2,
+                .baseline_from_top = font_size,
+            },
+            .editor_font_size = editor_font_size,
+            .editor_base_font_size = editor_base_font_size,
+            .editor_char_width = editor_font_size * 0.6,
+            .editor_char_height = editor_font_size * 1.2,
+            .editor_metrics = .{
+                .ascent = editor_font_size,
+                .descent = editor_font_size * 0.2,
+                .line_height = editor_font_size * 1.2,
+                .cell_width = editor_font_size * 0.6,
+                .cell_height = editor_font_size * 1.2,
+                .baseline_from_top = editor_font_size,
+            },
+            .editor_font = undefined,
+            .icon_font = undefined,
+            .icon_font_size = font_size * 2.0,
+            .icon_char_width = font_size * 1.2,
+            .icon_char_height = font_size * 1.2,
+            .icon_metrics = .{
+                .ascent = font_size,
+                .descent = font_size * 0.2,
+                .line_height = font_size * 1.2,
+                .cell_width = font_size * 1.2,
+                .cell_height = font_size * 1.2,
+                .baseline_from_top = font_size,
+            },
+            .terminal_cell_width = terminal_font_size * 0.6,
+            .terminal_cell_height = terminal_font_size * 1.2,
+            .terminal_font_size = terminal_font_size,
+            .terminal_base_font_size = terminal_base_font_size,
+            .terminal_metrics = .{
+                .ascent = terminal_font_size,
+                .descent = terminal_font_size * 0.2,
+                .line_height = terminal_font_size * 1.2,
+                .cell_width = terminal_font_size * 0.6,
+                .cell_height = terminal_font_size * 1.2,
+                .baseline_from_top = terminal_font_size,
+            },
+            .terminal_font = undefined,
+            .font_config = font_config,
+            .window_chrome = .{},
+            .theme = .{},
+            .scale = scale,
+            .input = .{},
+            .clipboard = .{},
+            .batch = .{},
+            .terminal_text = terminal_text,
+            .start_counter = seed.start_counter,
+            .perf_freq = seed.perf_freq,
+            .present = .{},
+            .clip_stack = undefined,
+            .clip_depth = 0,
+        };
+        errdefer renderer.backend.deinitRuntimeStorage(allocator);
+
+        if (register_global_runtime) {
+            try lifecycle_runtime.finalizeRendererInit(Renderer, renderer);
+        } else {
+            try lifecycle_runtime.finalizeExternalHostRendererInit(Renderer, renderer);
+        }
+        return renderer;
+    }
+
+    fn displayMetricsFromRenderHost(render_host: native_host.PlatformRenderHost) platform_window.DisplayMetrics {
+        const metrics = render_host.surface_metrics;
+        const display_scale = if (metrics.display_scale > 0.0) metrics.display_scale else 1.0;
+        const pixel_density = if (metrics.pixel_density > 0.0) metrics.pixel_density else display_scale;
+        return .{
+            .window_w = metrics.logical_width,
+            .window_h = metrics.logical_height,
+            .drawable_w = metrics.drawable_width,
+            .drawable_h = metrics.drawable_height,
+            .display_index = -1,
+            .dpi = .{ .x = display_scale, .y = display_scale },
+            .display_scale = display_scale,
+            .pixel_density = pixel_density,
+            .render_scale = pixel_density,
+        };
     }
 };
 

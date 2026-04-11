@@ -31,9 +31,23 @@ pub fn finalizeRendererInit(comptime RendererType: type, renderer: *RendererType
     try renderer.backend.initRuntime(renderer);
 
     renderer_global_runtime.registerRenderer(RendererType, renderer);
+    renderer.global_runtime_registered = true;
+}
+
+pub fn finalizeExternalHostRendererInit(comptime RendererType: type, renderer: *RendererType) !void {
+    const app_hooks = installAppHooks(&renderer.app_host);
+    renderer.appkit_delegate_installation = app_hooks.appkit_delegate_installation;
+    renderer.app_event_watch_installed = app_hooks.app_event_watch_installed;
+
+    renderer.backend.configureRuntimePolicy(renderer);
+    try renderer.backend.initRuntime(renderer);
+
+    renderer.global_runtime_registered = false;
 }
 
 pub fn beginRendererShutdown(comptime RendererType: type, renderer: *RendererType) void {
-    renderer_global_runtime.unregisterRenderer(RendererType, renderer);
+    if (renderer.global_runtime_registered) {
+        renderer_global_runtime.unregisterRenderer(RendererType, renderer);
+    }
     uninstallAppHooks(&renderer.app_host, renderer.appkit_delegate_installation, renderer.app_event_watch_installed);
 }
