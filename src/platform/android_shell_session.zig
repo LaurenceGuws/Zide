@@ -1,6 +1,8 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const c_api = @import("../terminal/ffi/c_api.zig");
+const ffi_shared = @import("../terminal/ffi/shared.zig");
+const terminal_runtime = @import("../terminal/core/terminal_runtime.zig");
 
 const cols: u16 = 80;
 const rows: u16 = 24;
@@ -39,6 +41,12 @@ pub fn transcriptPath() []const u8 {
 
 pub fn lastStartStatus() StartStatus {
     return last_start_status;
+}
+
+pub fn activeRuntimeShell() ?*terminal_runtime.TerminalRuntimeShell {
+    const active = session orelse return null;
+    const handle = ffi_shared.fromOpaqueActive(active.handle) orelse return null;
+    return handle.shell;
 }
 
 pub fn isAlive() bool {

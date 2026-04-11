@@ -2,6 +2,7 @@ const builtin = @import("builtin");
 const bootstrap_contract = @import("bootstrap_contract.zig");
 const capability_contract = @import("capability_contract.zig");
 const android_gles_runtime = @import("../../platform/android_gles_runtime.zig");
+const shared_gl = @import("gl.zig");
 const metal_text_sample_runtime = @import("metal_text_sample_runtime.zig");
 const native_host = @import("../../platform/native_host.zig");
 const present_trace_runtime = @import("present_trace_runtime.zig");
@@ -22,6 +23,13 @@ const gl = if (target_has_android_gles) struct {
     extern fn glDisable(cap: u32) void;
     extern fn glScissor(x: i32, y: i32, width: i32, height: i32) void;
     extern fn glViewport(x: i32, y: i32, width: i32, height: i32) void;
+    extern fn glGenTextures(n: i32, textures: [*]u32) void;
+    extern fn glBindTexture(target: u32, texture: u32) void;
+    extern fn glTexParameteri(target: u32, pname: u32, param: i32) void;
+    extern fn glTexImage2D(target: u32, level: i32, internalformat: i32, width: i32, height: i32, border: i32, format: u32, type_: u32, pixels: ?*const anyopaque) void;
+    extern fn glTexSubImage2D(target: u32, level: i32, xoffset: i32, yoffset: i32, width: i32, height: i32, format: u32, type_: u32, pixels: ?*const anyopaque) void;
+    extern fn glDeleteTextures(n: i32, textures: [*]const u32) void;
+    extern fn glPixelStorei(pname: u32, param: i32) void;
 } else struct {
     fn glClearColor(_: f32, _: f32, _: f32, _: f32) void {
         unreachable;
@@ -39,6 +47,27 @@ const gl = if (target_has_android_gles) struct {
         unreachable;
     }
     fn glViewport(_: i32, _: i32, _: i32, _: i32) void {
+        unreachable;
+    }
+    fn glGenTextures(_: i32, _: [*]u32) void {
+        unreachable;
+    }
+    fn glBindTexture(_: u32, _: u32) void {
+        unreachable;
+    }
+    fn glTexParameteri(_: u32, _: u32, _: i32) void {
+        unreachable;
+    }
+    fn glTexImage2D(_: u32, _: i32, _: i32, _: i32, _: i32, _: i32, _: u32, _: u32, _: ?*const anyopaque) void {
+        unreachable;
+    }
+    fn glTexSubImage2D(_: u32, _: i32, _: i32, _: i32, _: i32, _: i32, _: u32, _: u32, _: ?*const anyopaque) void {
+        unreachable;
+    }
+    fn glDeleteTextures(_: i32, _: [*]const u32) void {
+        unreachable;
+    }
+    fn glPixelStorei(_: u32, _: i32) void {
         unreachable;
     }
 };
@@ -132,6 +161,14 @@ pub fn beginFrame(renderer: anytype) void {
             return;
         },
     }
+    if (!renderer.fonts_ready) {
+        bindFontAtlasTextureApi();
+        renderer.initFonts() catch {
+            renderer_frame_host.noteFrameBeginFailed(renderer);
+            return;
+        };
+        renderer.fonts_ready = true;
+    }
 
     renderer.present.main_composition_target = .default_target;
     const bg: types.Rgba = if (renderer.runtime_profile == .backend_smoke)
@@ -149,6 +186,17 @@ pub fn beginFrame(renderer: anytype) void {
         gl.glClear(GL_COLOR_BUFFER_BIT);
     }
     renderer_frame_host.noteFrameReady(renderer);
+}
+
+fn bindFontAtlasTextureApi() void {
+    if (!target_has_android_gles or builtin.is_test) return;
+    shared_gl.GenTextures = @ptrCast(&gl.glGenTextures);
+    shared_gl.BindTexture = @ptrCast(&gl.glBindTexture);
+    shared_gl.TexParameteri = @ptrCast(&gl.glTexParameteri);
+    shared_gl.TexImage2D = @ptrCast(&gl.glTexImage2D);
+    shared_gl.TexSubImage2D = @ptrCast(&gl.glTexSubImage2D);
+    shared_gl.DeleteTextures = @ptrCast(&gl.glDeleteTextures);
+    shared_gl.PixelStorei = @ptrCast(&gl.glPixelStorei);
 }
 
 pub fn submitFrame(renderer: anytype) present_trace_runtime.FrameSubmission {
@@ -226,7 +274,20 @@ pub fn addTerminalGlyphRect(renderer: anytype, x: i32, y: i32, w: i32, h: i32, c
     _ = appendSolidPixels(renderer, x, y, w, h, color);
 }
 
-pub fn addTerminalGlyphQuad(_: anytype, _: types.Texture, _: types.Rect, _: types.Rect, _: types.Rgba, _: types.TextureKind) void {}
+pub fn addTerminalGlyphQuad(
+    renderer: anytype,
+    _: types.Texture,
+    _: types.Rect,
+    dest: types.Rect,
+    color: types.Rgba,
+    _: types.TextureKind,
+) void {
+    const x = @as(i32, @intFromFloat(std.math.round(dest.x)));
+    const y = @as(i32, @intFromFloat(std.math.round(dest.y)));
+    const w = @as(i32, @intFromFloat(std.math.round(dest.width)));
+    const h = @as(i32, @intFromFloat(std.math.round(dest.height)));
+    _ = appendSolidPixels(renderer, x, y, w, h, color);
+}
 
 pub fn createPersistentImageFromRgba(_: anytype, _: i32, _: i32, _: []const u8) ?surface_draw.GpuImageRef {
     return null;

@@ -112,6 +112,10 @@ fn sendShellCodepointBridge(codepoint: i32) i32 {
     return android_runtime_bridge.sendShellCodepoint(codepoint);
 }
 
+fn sharedShellRendererActiveBridge() bool {
+    return android_runtime_bridge.sharedShellRendererActive();
+}
+
 export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeOnCreateBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
@@ -311,4 +315,11 @@ export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeSendShellCodepointBr
     codepoint: i32,
 ) callconv(.c) i32 {
     return sendShellCodepointBridge(codepoint);
+}
+
+export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeSharedShellRendererActiveBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+) callconv(.c) bool {
+    return sharedShellRendererActiveBridge();
 }

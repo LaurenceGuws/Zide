@@ -2,11 +2,18 @@ const builtin = @import("builtin");
 const android_gles_probe = @import("android_gles_probe.zig");
 const android_host = @import("android_host.zig");
 const android_shell_session = @import("android_shell_session.zig");
+const app_shell = @import("../app_shell.zig");
 const native_host = @import("native_host.zig");
 const renderer_mod = @import("../ui/renderer.zig");
 const renderer_surface_host = @import("../ui/renderer/renderer_surface_host.zig");
 const renderer_terminal_draw_host = @import("../ui/renderer/renderer_terminal_draw_host.zig");
+const shared_types = @import("../types/mod.zig");
 const std = @import("std");
+const terminal_runtime = @import("../terminal/core/terminal_runtime.zig");
+const terminal_session_bootstrap = @import("../app/terminal/terminal_session_bootstrap.zig");
+const widgets = @import("../ui/widgets.zig");
+
+const android_terminal_runtime_font_path = "/data/data/dev.zide.terminal/files/assets/fonts/JetBrainsMonoNerdFont-Regular.ttf";
 
 const RendererStatus = android_gles_probe.ProbeStatus;
 
@@ -22,6 +29,8 @@ const BridgeState = struct {
     last_renderer_status: RendererStatus = .unavailable,
     last_surface_transition: native_host.SurfaceIdentityTransition = .unchanged,
     renderer: ?*renderer_mod.Renderer = null,
+    terminal_widget_session: ?*terminal_runtime.TerminalRuntimeShell = null,
+    terminal_widget: ?widgets.TerminalWidget = null,
     render_host: native_host.PlatformRenderHost = .{
         .binding = .none,
         .surface_availability = .unavailable,
@@ -43,6 +52,14 @@ fn destroyRenderer() void {
     bridge_state.renderer = null;
 }
 
+fn destroyTerminalWidget() void {
+    if (bridge_state.terminal_widget) |*widget| {
+        widget.deinit();
+        bridge_state.terminal_widget = null;
+    }
+    bridge_state.terminal_widget_session = null;
+}
+
 fn releaseNativeWindow(window: ?*anyopaque) void {
     if (builtin.is_test) return;
     const value = window orelse return;
@@ -56,6 +73,7 @@ fn swapNativeWindow(window: ?*anyopaque) void {
 
 pub fn noteCreate() u64 {
     destroyRenderer();
+    destroyTerminalWidget();
     android_gles_probe.reset();
     bridge_state = .{};
     return nextSequence();
@@ -210,12 +228,16 @@ pub fn currentRendererTextureHeight() i32 {
 }
 
 pub fn restartShellSession() i32 {
+    destroyTerminalWidget();
     android_shell_session.restart() catch return @intFromEnum(android_shell_session.lastStartStatus());
     return @intFromEnum(android_shell_session.lastStartStatus());
 }
 
 pub fn pollShellSession() i32 {
     android_shell_session.pollAndRefresh() catch return @intFromEnum(android_shell_session.lastStartStatus());
+    if (bridge_state.render_host.hasSurface()) {
+        bridge_state.last_renderer_status = drawSharedRendererSurfaceFrame();
+    }
     return @intFromEnum(android_shell_session.lastStartStatus());
 }
 
@@ -228,6 +250,10 @@ pub fn sendShellCodepoint(codepoint: i32) i32 {
     return @intFromEnum(android_shell_session.sendCodepoint(@intCast(codepoint)));
 }
 
+pub fn sharedShellRendererActive() bool {
+    return bridge_state.renderer != null and bridge_state.terminal_widget_session != null and bridge_state.render_host.hasSurface();
+}
+
 pub fn ensureAndroidGlesRenderer() !bool {
     if (bridge_state.renderer != null) return false;
     if (!bridge_state.render_host.hasSurface()) return false;
@@ -237,6 +263,9 @@ pub fn ensureAndroidGlesRenderer() !bool {
         bridge_state.app_host,
         bridge_state.render_host,
         .{
+            .app_font_path = android_terminal_runtime_font_path,
+            .editor_font_path = android_terminal_runtime_font_path,
+            .terminal_font_path = android_terminal_runtime_font_path,
             .renderer_backend = .android_gles,
             .runtime_profile = .backend_smoke,
         },
@@ -249,6 +278,12 @@ pub fn drawAndroidGlesRendererFrame() !bool {
     const renderer = bridge_state.renderer orelse return false;
     renderer.syncExternalHostState(bridge_state.app_host, bridge_state.render_host);
     if (!renderer.beginFrame()) return false;
+    if (ensureTerminalWidget()) |widget| {
+        drawLiveTerminalWidgetFrame(renderer, widget);
+        const submission = renderer.submitFrame();
+        widget.completePendingPresentationFeedback(submission);
+        return submission.succeeded;
+    }
     drawBackendSmokeFrame(renderer);
     return renderer.submitFrame().succeeded;
 }
@@ -256,6 +291,35 @@ pub fn drawAndroidGlesRendererFrame() !bool {
 fn drawSharedRendererSurfaceFrame() RendererStatus {
     _ = ensureAndroidGlesRenderer() catch return .init_failed;
     return if (drawAndroidGlesRendererFrame() catch false) .drawn else .surface_failed;
+}
+
+fn ensureTerminalWidget() ?*widgets.TerminalWidget {
+    const session = android_shell_session.activeRuntimeShell() orelse {
+        destroyTerminalWidget();
+        return null;
+    };
+    if (bridge_state.terminal_widget_session != session) {
+        destroyTerminalWidget();
+        var widget = terminal_session_bootstrap.initWidget(session, .kitty, false, false);
+        widget.setUiFocused(true);
+        bridge_state.terminal_widget = widget;
+        bridge_state.terminal_widget_session = session;
+    }
+    return if (bridge_state.terminal_widget) |*widget| widget else null;
+}
+
+fn drawLiveTerminalWidgetFrame(renderer: *renderer_mod.Renderer, widget: *widgets.TerminalWidget) void {
+    var shell: app_shell.Shell = .{ .renderer = renderer };
+    const input = shared_types.input.InputSnapshot.init(.{ .x = 0, .y = 0 }, .{});
+    const draw_outcome = widget.draw(
+        &shell,
+        0.0,
+        0.0,
+        @floatFromInt(@max(renderer.width, 1)),
+        @floatFromInt(@max(renderer.height, 1)),
+        input,
+    );
+    widget.stagePresentationFeedback(draw_outcome);
 }
 
 fn drawBackendSmokeFrame(renderer: *renderer_mod.Renderer) void {

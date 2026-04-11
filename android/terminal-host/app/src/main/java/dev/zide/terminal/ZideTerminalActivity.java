@@ -24,6 +24,12 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import java.io.File;
+import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 
 public final class ZideTerminalActivity extends Activity
         implements SurfaceHolder.Callback2, ShellInputView.Host, ShellTranscriptController.Host {
@@ -34,6 +40,17 @@ public final class ZideTerminalActivity extends Activity
     private static final String EXTRA_DEBUG_START_SHELL_ONCE = "debug_start_shell_once";
     private static final String SHELL_TRANSCRIPT_PATH = "/data/data/dev.zide.terminal/files/zide_terminal_shell.log";
     private static final long SHELL_REFRESH_MS = 150L;
+    private static final String[] RUNTIME_FONT_ASSETS = {
+            "IosevkaTermNerdFont-Regular.ttf",
+            "JetBrainsMonoNerdFont-Regular.ttf",
+            "NotoColorEmoji.ttf",
+            "NotoEmoji-Regular.ttf",
+            "NotoSans-Regular.ttf",
+            "NotoSansMono-Regular.ttf",
+            "NotoSansSymbols-Regular.ttf",
+            "NotoSansSymbols2-Regular.ttf",
+            "SymbolsNerdFontMono-Regular.ttf",
+    };
 
     private static boolean nativeLoaded = false;
     private static String nativeLoadError = null;
@@ -130,8 +147,10 @@ public final class ZideTerminalActivity extends Activity
         bindSidebarControls();
         bindViewModeToggle();
         bindAssistBar();
+        prepareRuntimeAssets();
         applyViewMode();
         installSurfaceView("activity-create");
+        updateProductShellVisibility();
         leftSidebar.post(() -> {
             leftSidebar.setTranslationX(-leftSidebar.getWidth());
             updateSidebarVisibility(false);
@@ -165,6 +184,88 @@ public final class ZideTerminalActivity extends Activity
             return windowInsets;
         });
         productView.requestApplyInsets();
+    }
+
+    private void prepareRuntimeAssets() {
+        final File runtimeRoot = getFilesDir();
+        final File fontsDir = new File(new File(runtimeRoot, "assets"), "fonts");
+        if (!fontsDir.isDirectory() && !fontsDir.mkdirs()) {
+            appendEvent("runtime.assets mkdirFailed path=" + fontsDir.getAbsolutePath());
+            return;
+        }
+
+        final long assetStamp = currentPackageAssetStamp();
+        final File stampFile = new File(fontsDir, ".stamp");
+        final String expectedStamp = Long.toString(assetStamp);
+        final String currentStamp = readTextFile(stampFile);
+        if (!expectedStamp.equals(currentStamp)) {
+            for (String assetName : RUNTIME_FONT_ASSETS) {
+                try {
+                    copyAssetToFile(assetName, new File(fontsDir, assetName));
+                } catch (IOException err) {
+                    appendEvent("runtime.assets copyFailed asset=" + assetName + " err=" + err.getClass().getSimpleName());
+                    return;
+                }
+            }
+            writeTextFile(stampFile, expectedStamp);
+            appendEvent("runtime.assets refreshed stamp=" + expectedStamp);
+        } else {
+            appendEvent("runtime.assets reused stamp=" + expectedStamp);
+        }
+
+        appendEvent("runtime.assets ready path=" + fontsDir.getAbsolutePath());
+    }
+
+    private long currentPackageAssetStamp() {
+        try {
+            return getPackageManager().getPackageInfo(getPackageName(), 0).lastUpdateTime;
+        } catch (Exception err) {
+            return 0L;
+        }
+    }
+
+    private static String readTextFile(File file) {
+        if (!file.isFile()) {
+            return "";
+        }
+        try (FileInputStream in = new FileInputStream(file)) {
+            final ByteArrayOutputStream out = new ByteArrayOutputStream();
+            final byte[] buffer = new byte[256];
+            while (true) {
+                final int read = in.read(buffer);
+                if (read < 0) {
+                    break;
+                }
+                out.write(buffer, 0, read);
+            }
+            return out.toString().trim();
+        } catch (IOException err) {
+            return "";
+        }
+    }
+
+    private void writeTextFile(File file, String text) {
+        try (FileOutputStream out = new FileOutputStream(file, false)) {
+            out.write(text.getBytes());
+            out.getFD().sync();
+        } catch (IOException err) {
+            appendEvent("runtime.assets stampWriteFailed err=" + err.getClass().getSimpleName());
+        }
+    }
+
+    private void copyAssetToFile(String assetName, File destination) throws IOException {
+        try (InputStream in = getAssets().open(assetName);
+                FileOutputStream out = new FileOutputStream(destination, false)) {
+            final byte[] buffer = new byte[8192];
+            while (true) {
+                final int read = in.read(buffer);
+                if (read < 0) {
+                    break;
+                }
+                out.write(buffer, 0, read);
+            }
+            out.getFD().sync();
+        }
     }
 
     @Override
@@ -553,6 +654,7 @@ public final class ZideTerminalActivity extends Activity
         }
 
         shellTranscriptController.applyTranscript(pollResult.transcript);
+        updateProductShellVisibility();
         if (logEvent) {
             appendEvent("manual.shellRefresh alive=" + pollResult.alive + " status="
                     + shellStartStatusLabel(pollResult.status));
@@ -570,6 +672,7 @@ public final class ZideTerminalActivity extends Activity
         final SurfaceView nextSurfaceView = new SurfaceView(this);
         final SurfaceHolder holder = nextSurfaceView.getHolder();
         holder.setFormat(PixelFormat.RGBA_8888);
+        nextSurfaceView.setOnClickListener(view -> onTranscriptTap());
         final FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -578,6 +681,11 @@ public final class ZideTerminalActivity extends Activity
         holder.addCallback(this);
         surfaceView = nextSurfaceView;
         appendEvent("surface.hostInstalled reason=" + reason + " generation=" + surfaceHostGeneration);
+    }
+
+    private void updateProductShellVisibility() {
+        final boolean sharedShellActive = nativeLoaded && nativeSharedShellRendererActiveBridge();
+        shellOutputScroll.setVisibility(sharedShellActive ? View.GONE : View.VISIBLE);
     }
 
     private void callNative(String event, long seq) {
@@ -831,4 +939,6 @@ public final class ZideTerminalActivity extends Activity
     private static native boolean nativeIsShellSessionAliveBridge();
 
     private static native int nativeSendShellCodepointBridge(int codepoint);
+
+    private static native boolean nativeSharedShellRendererActiveBridge();
 }
