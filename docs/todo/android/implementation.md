@@ -242,6 +242,13 @@ Immediate next step:
     the `zide-pm` surface
 - wire first-run/user-facing bootstrap UI around the artifact-staging contract
   instead of requiring the developer ops command
+- stop this lane only when the package/userland layer is functional, correct,
+  and boring enough that we do not need near-term refactors before returning to
+  native rendering:
+  - artifact-only install/update contract
+  - explicit missing/current/upgrade-needed state
+  - `zide-pm` staged as the intended first-class package surface
+  - provider semantics explicit and decoupled from product identity
 
 ## Parked (not blocking)
 

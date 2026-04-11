@@ -307,6 +307,10 @@ Acceptance:
   from real shell-start failures before auto-start
 - the consumer path can distinguish no staged artifact vs already-current vs
   restage-required artifact state before pushing files
+- product view can surface missing/invalid/upgrade-needed userland state
+  honestly instead of pretending the shell is simply broken
+- the package/userland model is explicit enough that the repo does not need
+  near-term naming or ownership churn before returning to rendering work
 - `apt update` works against the configured repo/channel
 - one small package can be installed or materialized from that channel through
   a repo-owned package flow
@@ -318,6 +322,37 @@ Stop `AU-A2` before:
 - broad package curation
 - editor bootstrap
 - background package-daemon ideas
+- arbitrary provider-switching UX
+
+## AU-A2 Work Spree Stop Marker
+
+Leave `AU-A2` only when this narrower foundation is true:
+
+- app-private userland install/update is coherent enough that the app does not
+  need to be refactored or renamed again next week
+- the artifact contract is the only install/update input; no provider package
+  internals leak into product flow
+- staged state is explicit:
+  - missing
+  - invalid
+  - ready-current
+  - ready-upgrade-needed
+- `zide-pm` is staged as part of the installed prefix and remains the intended
+  first-class package surface
+- provider semantics are explicit:
+  - `termux-main` is the first supported Android provider
+  - provider is not product identity
+  - future Zide-owned providers can replace the default without changing the
+    package UX
+- shell policy is structurally configurable later even if Bash remains the only
+  supported default today
+
+Do not leave this lane claiming:
+
+- broad package UX
+- multiple Android shells fully supported
+- product-polished onboarding
+- product-clean provider replacement already implemented
 
 ## `AU-A3` Scope
 
@@ -347,11 +382,12 @@ Stop this lane when:
 
 ## Immediate Next Moves
 
-1. Make the artifact-staged prefix the normal dev bootstrap path.
-2. Define provider policy for Android product installs:
-   - keep `termux-main` as the first supported provider
-   - keep provider provenance/configuration explicit
-   - leave room for a future Zide-owned default provider without changing the
-     product package UX.
-3. Wire first-run/user-facing bootstrap UI around the artifact-staging contract
-   instead of requiring the developer ops command.
+1. Commit the current AU-A2 handshake checkpoint and keep `main` as the one
+   cohesive Android terminal line.
+2. Implement the first in-app artifact install/update flow against the
+   published manifest/archive contract instead of leaving staging as ops-only.
+3. Keep `termux-main` as the first supported Android provider while preserving
+   provider provenance and leaving room for a future Zide-owned default
+   provider.
+4. Treat current `dev` naming only as bootstrap-profile/channel maturity
+   language, not as long-term product semantics.

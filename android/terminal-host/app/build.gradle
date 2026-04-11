@@ -8,10 +8,6 @@ android {
     compileSdk 35
     buildToolsVersion '35.0.0'
 
-    buildFeatures {
-        buildConfig true
-    }
-
     defaultConfig {
         applicationId 'dev.zide.terminal'
         minSdk 23
@@ -21,9 +17,6 @@ android {
         targetSdk 28
         versionCode 1
         versionName '0.1'
-        buildConfigField "String", "USERLAND_EXPECTED_ARTIFACT_NAME", "\"zide-android-dev-prefix\""
-        buildConfigField "String", "USERLAND_EXPECTED_ARTIFACT_VERSION", "\"sha256-59d31f9046aa\""
-        buildConfigField "String", "USERLAND_EXPECTED_PROVIDER", "\"termux-main\""
     }
 
     buildTypes {
