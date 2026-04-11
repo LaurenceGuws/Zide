@@ -97,10 +97,19 @@ Stop when:
 
 - the first narrow chrome-band slice is now in:
   - `renderer_chrome_band_host.Band` can now queue/replay sized text ops
+  - band text ops now copy queued text so stack-built/truncated labels are safe
+    to replay at `Band.flush()`
   - `side_nav.zig` badge counts no longer bypass the band seam through
     immediate `shell.drawTextSized(...)`
   - that means the side-nav family now keeps background fills, icon text, and
     badge text inside one chrome-band ordering unit
+- the second narrow chrome-band slice is now in:
+  - `common.zig` exposes pure text truncation separate from immediate drawing
+  - `status_bar.zig` routes mode chip text, active field text, selection/caret
+    rects, error text, and file-path text through the chrome-band seam
+  - tooltip drawing remains outside this seam because it is an overlay, not
+    local status-bar composition
 - this does not claim shell/UI chrome is solved globally
-- the next likely pressure inside this ticket is status-bar field text, which
-  still mixes band fills with immediate truncated/input text paths
+- the next likely pressure inside this ticket is the terminal widget chrome
+  boundary: any remaining shell/UI chrome fill plus dependent text/icon path
+  that still bypasses `renderer_chrome_band_host.Band`

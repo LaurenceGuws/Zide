@@ -184,8 +184,15 @@ Current `RB-B3.f` checkpoint:
   instead of bypassing it with immediate `shell.drawTextSized(...)`
 - that is one real family slice where fills + icon text + badge text now live
   inside one local band ordering unit
-- the next loud pressure inside this ticket is status-bar field text, which
-  still mixes band fills with immediate truncated/input text paths
+- second narrow chrome-band adoption is in:
+  `status_bar.zig` mode chip text, active field text, selection/caret rects,
+  error text, and file-path text now replay through the shared chrome-band seam
+  instead of mixing band fills with immediate truncated/input text drawing
+- `common.zig` now separates truncation from immediate drawing so band-owned
+  truncated labels do not need a duplicate truncation path
+- the next loud pressure inside this ticket is any remaining terminal-widget
+  chrome fill plus dependent text/icon path that still bypasses
+  `renderer_chrome_band_host.Band`
 
 Gate-4 closure note:
 

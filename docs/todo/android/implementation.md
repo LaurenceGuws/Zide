@@ -133,6 +133,10 @@ Current checkpoint:
 - first `RB-B3.f` slice is now in:
   side-nav badge text no longer bypasses the chrome-band seam through
   immediate sized text drawing
+- second `RB-B3.f` slice is now in:
+  status-bar mode chip text, active field text, selection/caret rects, error
+  text, and file-path text now route through the chrome-band seam instead of
+  mixing band fills with immediate text/surface paths
 
 ## Parked (not blocking)
 

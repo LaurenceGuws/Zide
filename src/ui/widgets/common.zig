@@ -12,6 +12,13 @@ pub const TruncResult = struct {
     drawn_len: usize,
 };
 
+pub const TruncatedText = struct {
+    text: []const u8,
+    drawn_width: f32,
+    truncated: bool,
+    drawn_len: usize,
+};
+
 pub const Tooltip = struct {
     text: []const u8,
     x: f32,
@@ -115,16 +122,15 @@ pub fn drawTruncatedTextOnBg(shell: *Shell, text: []const u8, x: f32, y: f32, co
     return drawTruncatedTextImpl(shell, text, x, y, color, max_width, bg);
 }
 
-fn drawTruncatedTextImpl(shell: *Shell, text: []const u8, x: f32, y: f32, color: Color, max_width: f32, bg: ?Color) TruncResult {
+pub fn truncateText(shell: *Shell, text: []const u8, max_width: f32, out: []u8) TruncatedText {
     if (max_width <= 0 or text.len == 0) {
-        return .{ .drawn_width = 0, .truncated = text.len > 0, .drawn_len = 0 };
+        return .{ .text = out[0..0], .drawn_width = 0, .truncated = text.len > 0, .drawn_len = 0 };
     }
     const max_chars: usize = @intCast(@max(0, @as(i32, @intFromFloat(max_width / shell.charWidth()))));
     if (max_chars == 0) {
-        return .{ .drawn_width = 0, .truncated = text.len > 0, .drawn_len = 0 };
+        return .{ .text = out[0..0], .drawn_width = 0, .truncated = text.len > 0, .drawn_len = 0 };
     }
 
-    var buf: [256]u8 = undefined;
     var out_len: usize = 0;
 
     var idx: usize = 0;
@@ -142,31 +148,43 @@ fn drawTruncatedTextImpl(shell: *Shell, text: []const u8, x: f32, y: f32, color:
 
     if (!truncated) {
         idx = 0;
-        out_len = copyCodepointsLossy(text, &idx, count, buf[0..]);
+        out_len = copyCodepointsLossy(text, &idx, count, out);
         if (idx < text.len) truncated = true;
     } else if (max_chars <= 3) {
         idx = 0;
-        out_len = copyCodepointsLossy(text, &idx, max_chars, buf[0..]);
+        out_len = copyCodepointsLossy(text, &idx, max_chars, out);
     } else {
         idx = 0;
-        out_len = copyCodepointsLossy(text, &idx, max_chars - 3, buf[0..]);
-        if (out_len + 3 <= buf.len) {
-            buf[out_len + 0] = '.';
-            buf[out_len + 1] = '.';
-            buf[out_len + 2] = '.';
+        out_len = copyCodepointsLossy(text, &idx, max_chars - 3, out);
+        if (out_len + 3 <= out.len) {
+            out[out_len + 0] = '.';
+            out[out_len + 1] = '.';
+            out[out_len + 2] = '.';
             out_len += 3;
         }
     }
 
-    if (bg) |background| {
-        shell.drawTextOnBg(buf[0..out_len], x, y, color, background);
-    } else {
-        shell.drawText(buf[0..out_len], x, y, color);
-    }
     return .{
+        .text = out[0..out_len],
         .drawn_width = @as(f32, @floatFromInt(out_len)) * shell.charWidth(),
         .truncated = truncated,
         .drawn_len = out_len,
+    };
+}
+
+fn drawTruncatedTextImpl(shell: *Shell, text: []const u8, x: f32, y: f32, color: Color, max_width: f32, bg: ?Color) TruncResult {
+    var buf: [256]u8 = undefined;
+    const truncated = truncateText(shell, text, max_width, buf[0..]);
+
+    if (bg) |background| {
+        shell.drawTextOnBg(truncated.text, x, y, color, background);
+    } else {
+        shell.drawText(truncated.text, x, y, color);
+    }
+    return .{
+        .drawn_width = truncated.drawn_width,
+        .truncated = truncated.truncated,
+        .drawn_len = truncated.drawn_len,
     };
 }
 

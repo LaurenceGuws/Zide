@@ -2,7 +2,6 @@ const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
 const app_logger = @import("../../app_logger.zig");
 const renderer_chrome_band_host = @import("../renderer/renderer_chrome_band_host.zig");
-const renderer_surface_host = @import("../renderer/renderer_surface_host.zig");
 const common = @import("common.zig");
 const shared_types = @import("../../types/mod.zig");
 
@@ -77,6 +76,7 @@ pub const StatusBar = struct {
     }
 
     fn drawFieldText(
+        band: *Band,
         shell: *Shell,
         text_y: f32,
         field_y: f32,
@@ -92,19 +92,42 @@ pub const StatusBar = struct {
     ) struct {
         drawn_width: f32,
     } {
+        var truncated_buf: [256]u8 = undefined;
         if (select_all and text.len > 0) {
-            renderer_surface_host.drawRect(shell.rendererPtr(),
+            band.fillRect(
                 @intFromFloat(query_x),
                 @intFromFloat(field_y + 2),
                 @intFromFloat(@max(@as(f32, 1), query_available)),
                 @intFromFloat(@max(@as(f32, 1), field_h - 4)),
                 selection_bg,
             );
-            const result = common.drawTruncatedTextOnBg(shell, text, query_x, text_y, selection_text, selection_bg, query_available);
+            const result = common.truncateText(shell, text, query_available, truncated_buf[0..]);
+            band.drawTextOnColor(result.text, query_x, text_y, selection_text, selection_bg);
             return .{ .drawn_width = result.drawn_width };
         }
-        const result = common.drawTruncatedTextOnBg(shell, text, query_x, text_y, text_color, bg_color, query_available);
+        const result = common.truncateText(shell, text, query_available, truncated_buf[0..]);
+        band.drawTextOnColor(result.text, query_x, text_y, text_color, bg_color);
         return .{ .drawn_width = result.drawn_width };
+    }
+
+    fn drawBandTruncatedTextOnBg(
+        band: *Band,
+        shell: *Shell,
+        text: []const u8,
+        x: f32,
+        y: f32,
+        color: Color,
+        bg: Color,
+        max_width: f32,
+    ) common.TruncResult {
+        var truncated_buf: [256]u8 = undefined;
+        const result = common.truncateText(shell, text, max_width, truncated_buf[0..]);
+        band.drawTextOnColor(result.text, x, y, color, bg);
+        return .{
+            .drawn_width = result.drawn_width,
+            .truncated = result.truncated,
+            .drawn_len = result.drawn_len,
+        };
     }
 
     pub fn updateInput(self: *StatusBar, input: shared_types.input.InputSnapshot) void {
@@ -168,7 +191,7 @@ pub const StatusBar = struct {
         const mode_hover = window_focused and mouse.x >= 0 and mouse.x <= mode_width and mouse.y >= y and mouse.y <= y + self.height;
         const mode_bg_final = if (mode_hover and pressed) theme.ui_pressed else if (mode_hover) theme.ui_hover else mode_bg;
         band.fillRect(0, @intFromFloat(y), @intFromFloat(mode_width), @intFromFloat(self.height), mode_bg_final);
-        shell.drawTextOnBg(mode_text, text_x, text_y, if (mode_hover) theme.ui_text else theme.background, mode_bg_final);
+        band.drawTextOnColor(mode_text, text_x, text_y, if (mode_hover) theme.ui_text else theme.background, mode_bg_final);
 
         // Active mode field sits between mode and file path when active.
         var x: f32 = 88 * scale;
@@ -189,6 +212,7 @@ pub const StatusBar = struct {
                     const query_text = if (prompt_ui.value.len > 0) prompt_ui.value else prompt_ui.placeholder;
                     const query_color = if (prompt_ui.value.len > 0) palette.text else palette.muted;
                     const result = drawFieldText(
+                        &band,
                         shell,
                         text_y,
                         y,
@@ -218,7 +242,7 @@ pub const StatusBar = struct {
                             @intFromFloat(self.height),
                         );
                         const caret_x = @min(query_x + result.drawn_width + shell.charWidth() * 0.1, query_x + query_available - 2 * scale);
-                        renderer_surface_host.drawRect(shell.rendererPtr(),
+                        band.fillRect(
                             @intFromFloat(caret_x),
                             @intFromFloat(y + 3 * scale),
                             @intFromFloat(@max(@as(f32, 1), 2 * scale)),
@@ -231,7 +255,7 @@ pub const StatusBar = struct {
                         const error_x = box_x + box_w + 8 * scale;
                         const available = @max(@as(f32, 0), pos_start - error_x - 8 * scale);
                         if (available > shell.charWidth() * 6) {
-                            _ = common.drawTruncatedTextOnBg(shell, error_text, error_x, text_y, theme.ui_modified, bar_bg, available);
+                            _ = drawBandTruncatedTextOnBg(&band, shell, error_text, error_x, text_y, theme.ui_modified, bar_bg, available);
                         }
                     }
                 }
@@ -261,6 +285,7 @@ pub const StatusBar = struct {
                     const query_text = if (search_ui.query.len > 0) search_ui.query else "type to search";
                     const query_color = if (search_ui.query.len > 0) palette.text else palette.muted;
                     const result = drawFieldText(
+                        &band,
                         shell,
                         text_y,
                         y,
@@ -290,7 +315,7 @@ pub const StatusBar = struct {
                             @intFromFloat(self.height),
                         );
                         const caret_x = @min(query_x + result.drawn_width + shell.charWidth() * 0.1, query_x + query_available - 2 * scale);
-                        renderer_surface_host.drawRect(shell.rendererPtr(),
+                        band.fillRect(
                             @intFromFloat(caret_x),
                             @intFromFloat(y + 3 * scale),
                             @intFromFloat(@max(@as(f32, 1), 2 * scale)),
@@ -307,7 +332,7 @@ pub const StatusBar = struct {
         // File path
         if (editor_ui.file_path) |path| {
             const available = (if (theme_label != null) theme_start else pos_start) - 16 * scale - x;
-            const result = common.drawTruncatedTextOnBg(shell, path, x, text_y, theme.ui_text, bar_bg, available);
+            const result = drawBandTruncatedTextOnBg(&band, shell, path, x, text_y, theme.ui_text, bar_bg, available);
             const in_path = window_focused and mouse.x >= x and mouse.x <= x + result.drawn_width and
                 mouse.y >= y and mouse.y <= y + self.height;
             if (result.truncated and in_path) {

@@ -80,9 +80,15 @@ pub const Band = struct {
     }
 
     fn queueTextOp(self: *Band, kind: TextKind, text: []const u8, x: f32, y: f32, color: Color, bg: Color) void {
+        const owned_text = self.shell.renderer.allocator.dupe(u8, text) catch |err| {
+            const log = app_logger.logger("renderer.chrome.band");
+            log.logf(.warning, "band text op copy failed err={s}", .{@errorName(err)});
+            return;
+        };
+        errdefer self.shell.renderer.allocator.free(owned_text);
         self.text_ops.append(self.shell.renderer.allocator, .{
             .kind = kind,
-            .text = text,
+            .text = owned_text,
             .x = x,
             .y = y,
             .color = color,
@@ -96,9 +102,15 @@ pub const Band = struct {
     }
 
     fn queueSizedTextOp(self: *Band, text: []const u8, x: f32, y: f32, size: f32, color: Color) void {
+        const owned_text = self.shell.renderer.allocator.dupe(u8, text) catch |err| {
+            const log = app_logger.logger("renderer.chrome.band");
+            log.logf(.warning, "band sized text op copy failed err={s}", .{@errorName(err)});
+            return;
+        };
+        errdefer self.shell.renderer.allocator.free(owned_text);
         self.text_ops.append(self.shell.renderer.allocator, .{
             .kind = .sized_text,
-            .text = text,
+            .text = owned_text,
             .x = x,
             .y = y,
             .color = color,
@@ -134,6 +146,9 @@ pub const Band = struct {
 
     pub fn flush(self: *Band) void {
         defer {
+            for (self.text_ops.items) |op| {
+                self.shell.renderer.allocator.free(op.text);
+            }
             self.text_ops.deinit(self.shell.renderer.allocator);
             self.text_ops = .{};
         }
