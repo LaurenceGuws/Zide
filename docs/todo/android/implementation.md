@@ -130,6 +130,9 @@ Current checkpoint:
 - the next stronger shared blocker is text/surface phase-boundary pressure:
   fills and their dependent text/icon work still do not share one
   backend-neutral ordering seam
+- first `RB-B3.f` slice is now in:
+  side-nav badge text no longer bypasses the chrome-band seam through
+  immediate sized text drawing
 
 ## Parked (not blocking)
 

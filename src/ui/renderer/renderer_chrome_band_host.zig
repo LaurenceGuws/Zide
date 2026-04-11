@@ -95,6 +95,23 @@ pub const Band = struct {
         present_trace_runtime.noteFrameFamilyTouch(self.shell.renderer, .chrome_band);
     }
 
+    fn queueSizedTextOp(self: *Band, text: []const u8, x: f32, y: f32, size: f32, color: Color) void {
+        self.text_ops.append(self.shell.renderer.allocator, .{
+            .kind = .sized_text,
+            .text = text,
+            .x = x,
+            .y = y,
+            .color = color,
+            .bg = self.bg,
+            .size = size,
+        }) catch |err| {
+            const log = app_logger.logger("renderer.chrome.band");
+            log.logf(.warning, "band sized text op append failed err={s}", .{@errorName(err)});
+            return;
+        };
+        present_trace_runtime.noteFrameFamilyTouch(self.shell.renderer, .chrome_band);
+    }
+
     pub fn drawText(self: *Band, text: []const u8, x: f32, y: f32, color: Color) void {
         self.queueTextOp(.text, text, x, y, color, self.bg);
     }
@@ -109,6 +126,10 @@ pub const Band = struct {
 
     pub fn drawIconText(self: *Band, text: []const u8, x: f32, y: f32, color: Color) void {
         self.queueTextOp(.icon, text, x, y, color, self.bg);
+    }
+
+    pub fn drawTextSized(self: *Band, text: []const u8, x: f32, y: f32, size: f32, color: Color) void {
+        self.queueSizedTextOp(text, x, y, size, color);
     }
 
     pub fn flush(self: *Band) void {

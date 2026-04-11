@@ -86,7 +86,7 @@ pub const SideNav = struct {
                 const text_h = badge_h_unit;
                 const badge_x = icon_x + icon_text_offset + 2;
                 const badge_y = icon_y + (icon_size - text_h) / 2 + 1;
-                shell.drawTextSized(text, badge_x, badge_y, badge_size, theme.ui_text);
+                band.drawTextSized(text, badge_x, badge_y, badge_size, theme.ui_text);
             }
 
             icon_y += icon_size + spacing;

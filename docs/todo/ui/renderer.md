@@ -177,6 +177,16 @@ Next active ticket:
 - owner:
   `app_architecture/ui/BAND_COMPOSITION_PHASE_PLAN.md`
 
+Current `RB-B3.f` checkpoint:
+
+- first narrow chrome-band adoption is in:
+  `side_nav.zig` badge text now replays through the shared chrome-band seam
+  instead of bypassing it with immediate `shell.drawTextSized(...)`
+- that is one real family slice where fills + icon text + badge text now live
+  inside one local band ordering unit
+- the next loud pressure inside this ticket is status-bar field text, which
+  still mixes band fills with immediate truncated/input text paths
+
 Gate-4 closure note:
 
 - shared font/text/surface/vertex-stream helper access now routes through

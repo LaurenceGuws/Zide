@@ -92,3 +92,15 @@ Stop when:
 - one narrow band/composition seam is landed and validated
 - docs say exactly what family or pressure remains next
 - no speculative expansion is added just to make the seam feel more general
+
+## Current Checkpoint (2026-04-11)
+
+- the first narrow chrome-band slice is now in:
+  - `renderer_chrome_band_host.Band` can now queue/replay sized text ops
+  - `side_nav.zig` badge counts no longer bypass the band seam through
+    immediate `shell.drawTextSized(...)`
+  - that means the side-nav family now keeps background fills, icon text, and
+    badge text inside one chrome-band ordering unit
+- this does not claim shell/UI chrome is solved globally
+- the next likely pressure inside this ticket is status-bar field text, which
+  still mixes band fills with immediate truncated/input text paths

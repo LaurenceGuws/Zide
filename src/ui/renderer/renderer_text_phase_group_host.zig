@@ -14,6 +14,7 @@ pub const GroupKind = enum {
 pub const TextKind = enum {
     text,
     icon,
+    sized_text,
 };
 
 pub const ReplayOp = struct {
@@ -23,6 +24,7 @@ pub const ReplayOp = struct {
     y: f32,
     color: Color,
     bg: Color,
+    size: f32 = 0,
 };
 
 pub fn beginGroup(renderer: anytype, kind: GroupKind) void {
@@ -45,6 +47,7 @@ pub fn replayOpOnBg(renderer: anytype, op: ReplayOp) void {
     switch (op.kind) {
         .text => renderer_text_host.drawTextOnBg(renderer, op.text, op.x, op.y, op.color, op.bg),
         .icon => renderer_text_host.drawIconTextOnBg(renderer, op.text, op.x, op.y, op.color, op.bg),
+        .sized_text => renderer_text_host.drawTextSized(renderer, op.text, op.x, op.y, op.size, op.color),
     }
 }
 
