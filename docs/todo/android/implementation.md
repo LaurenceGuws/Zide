@@ -143,8 +143,11 @@ Current checkpoint:
   execution path instead of reserving that path only for retained-surface
   backends
 - this does not claim parity is solved yet
-- it makes the remaining blocker narrower and more honest before deeper
-  presentable work
+- it makes the remaining blocker narrower and more honest:
+  the next pressure is no longer generic terminal-presentable parity cleanup,
+  but live reference verification of the Metal refresh-backed path and the
+  stronger shared renderer phase-boundary pressure recorded in the renderer
+  authority docs
 
 ## Parked (not blocking)
 

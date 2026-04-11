@@ -162,6 +162,17 @@ Current `RB-B3.e` checkpoint:
 - refresh-capable backends now also use the active shared refresh execution
   path instead of treating refresh as a retained-only route
 
+Current blocker reading after `RB-B3.e` progress:
+
+- the surviving `direct_snapshot_*` / `retained_surface` names are now
+  primarily debug/reporting surfaces, not shared product control flow
+- that means the remaining pressure is no longer generic terminal-presentable
+  parity wording cleanup
+- the honest remaining blocker is:
+  live reference verification of the Metal refresh-backed snapshot path, plus
+  the stronger shared renderer pressure already recorded in
+  `RENDER_BACKEND_CURRENT_STATE.md` around text/surface phase boundaries
+
 Gate-4 closure note:
 
 - shared font/text/surface/vertex-stream helper access now routes through

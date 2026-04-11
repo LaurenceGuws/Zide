@@ -748,3 +748,24 @@ And one guardrail:
   were added later
 
 If not, it is probably backend momentum, not backend architecture.
+
+## Current Gate-5 Reading
+
+After the current `RB-B3.e` work:
+
+- terminal-presentable lifecycle has been narrowed substantially as a blocker
+- shared terminal product flow no longer branches on a separate
+  direct-vs-retained path enum
+- Metal now satisfies the shared refresh seam structurally and participates in
+  the active refresh path
+
+That means the remaining gate-5 pressure should be read more precisely:
+
+- debug/reporting labels that still mention `direct_snapshot_*` or
+  `retained_surface` are not, by themselves, the blocker
+- the next blocker is whichever stronger shared behavior or verification gap
+  still prevents OpenGL and Metal from reading like routine implementations of
+  one renderer contract
+- current evidence points more strongly at the broader text/surface
+  phase-boundary pressure than at generic terminal-presentable lifecycle
+  wording

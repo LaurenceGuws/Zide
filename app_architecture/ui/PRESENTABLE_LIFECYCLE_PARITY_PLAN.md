@@ -154,3 +154,26 @@ Stop when:
     named as policy questions now, not as generic backend capabilities
   - that makes the remaining blocker clearer: what is left is behavior and
     verification pressure, not vague helper ambiguity
+
+## Remaining Blocker
+
+The remaining pressure after these cuts is no longer "shared terminal
+presentable parity" in the generic sense.
+
+That blocker is now narrower:
+
+- product control flow no longer branches on a separate direct-vs-retained
+  terminal-present enum
+- Metal now satisfies the shared refresh seam structurally and participates in
+  the active refresh path
+- the surviving `direct_snapshot_*` / `retained_surface` labels are debug and
+  reporting vocabulary, not live shared contract branching
+
+What still remains is:
+
+- live reference verification that the Metal refresh-backed snapshot path is
+  behaviorally equivalent enough under the current seam
+- and, beyond that, the next stronger shared renderer blocker is likely no
+  longer terminal presentable lifecycle itself, but the broader text/surface
+  phase-boundary pressure already recorded in
+  `RENDER_BACKEND_CURRENT_STATE.md`
