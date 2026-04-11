@@ -218,6 +218,21 @@ Current `RB-B3.g` checkpoint:
 - remaining direct draw pressure is now mainly editor row/overlay composition,
   common tooltip overlay composition, and terminal cell/content internals
 
+Next renderer move:
+
+- `RB-B3.h` editor row/overlay composition is now the active narrow follow-up
+- owner: `app_architecture/ui/EDITOR_COMPOSITION_PHASE_PLAN.md`
+
+Current `RB-B3.h` checkpoint:
+
+- `segment_paint.zig` no longer imports renderer surface/text hosts directly
+- immediate editor pane/row/search helpers route through
+  `editor_widget_draw_overlay.zig`, the existing editor overlay/row-band owner
+- text-decoration rects, composing underline, and explicit editor surface-flush
+  handoffs also route through that owner
+- remaining direct draw pressure is now mostly inside the editor overlay owner
+  itself plus common tooltip overlay composition
+
 Gate-4 closure note:
 
 - shared font/text/surface/vertex-stream helper access now routes through

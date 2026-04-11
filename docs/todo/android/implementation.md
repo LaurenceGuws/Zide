@@ -150,6 +150,10 @@ Current checkpoint:
 - `RB-B3.g` terminal overlay/progress composition is now in:
   close-confirm modal, active-tab progress bar, terminal scrollbar thumb, and
   terminal separator route through a terminal-owned composition seam
+- `RB-B3.h` editor row/overlay composition is now in:
+  segment-paint immediate helpers, text-decoration rects, composing underline,
+  and editor surface-flush handoffs route through the editor overlay/row-band
+  owner instead of importing renderer surface/text hosts directly
 
 ## Parked (not blocking)
 

@@ -3,10 +3,7 @@ const syntax_mod = @import("../syntax.zig");
 const selection_mod = @import("../view/selection.zig");
 const draw_list_mod = @import("draw_list.zig");
 const overlay_mod = @import("../../ui/widgets/editor_widget_draw_overlay.zig");
-const present_trace_runtime = @import("../../ui/renderer/present_trace_runtime.zig");
 const text_mod = @import("../../ui/widgets/editor_widget_draw_text.zig");
-const renderer_surface_host = @import("../../ui/renderer/renderer_surface_host.zig");
-const renderer_text_host = @import("../../ui/renderer/renderer_text_host.zig");
 
 const HighlightToken = syntax_mod.HighlightToken;
 const SelectionRange = selection_mod.SelectionRange;
@@ -21,13 +18,11 @@ pub fn drawEditorPaneBaseImmediate(
     height: f32,
     gutter_width: f32,
 ) void {
-    present_trace_runtime.setEditorSurfaceSolidFamily(r, .pane_base);
-    defer present_trace_runtime.clearEditorSurfaceSolidFamily(r);
-    renderer_surface_host.drawRect(r, @intFromFloat(x), @intFromFloat(y), @intFromFloat(width), @intFromFloat(height), r.theme.background);
-    renderer_surface_host.drawRect(r, @intFromFloat(x), @intFromFloat(y), @intFromFloat(gutter_width), @intFromFloat(height), r.theme.line_number_bg);
+    overlay_mod.drawEditorSurfaceRect(r, .pane_base, x, y, width, height, r.theme.background);
+    overlay_mod.drawEditorSurfaceRect(r, .pane_base, x, y, gutter_width, height, r.theme.line_number_bg);
     // OpenGL defers surface fills: replay pane now so row bands (often clip-scoped)
     // do not depend on FIFO with an unflushed full-pane record.
-    renderer_surface_host.flushQueuedSurfaceDrawsBeforeDependentSurfaceWork(r);
+    overlay_mod.flushEditorSurfaceRects(r);
 }
 
 pub fn addEditorLineBaseOps(
@@ -84,17 +79,15 @@ pub fn drawEditorSegmentBaseImmediate(
     content_width: f32,
     is_current: bool,
 ) void {
-    present_trace_runtime.noteFrameFamilyTouch(r, .editor_row_band);
-    present_trace_runtime.setEditorSurfaceSolidFamily(r, .row_base);
-    defer present_trace_runtime.clearEditorSurfaceSolidFamily(r);
-    renderer_surface_host.drawRect(r, @intFromFloat(x), @intFromFloat(y), @intFromFloat(content_width), @intFromFloat(r.editor_char_height), r.theme.background);
-    renderer_surface_host.drawRect(r, @intFromFloat(x), @intFromFloat(y), @intFromFloat(gutter_width), @intFromFloat(r.editor_char_height), r.theme.line_number_bg);
+    overlay_mod.noteEditorRowBandTouch(r);
+    overlay_mod.drawEditorSurfaceRect(r, .row_base, x, y, content_width, r.editor_char_height, r.theme.background);
+    overlay_mod.drawEditorSurfaceRect(r, .row_base, x, y, gutter_width, r.editor_char_height, r.theme.line_number_bg);
 
     if (is_current) {
-        renderer_surface_host.drawRect(r, @intFromFloat(x), @intFromFloat(y), @intFromFloat(gutter_width), @intFromFloat(r.editor_char_height), r.theme.current_line);
-        renderer_surface_host.drawRect(r, @intFromFloat(x + gutter_width), @intFromFloat(y), @intFromFloat(content_width - gutter_width), @intFromFloat(r.editor_char_height), r.theme.current_line);
+        overlay_mod.drawEditorSurfaceRect(r, .row_base, x, y, gutter_width, r.editor_char_height, r.theme.current_line);
+        overlay_mod.drawEditorSurfaceRect(r, .row_base, x + gutter_width, y, content_width - gutter_width, r.editor_char_height, r.theme.current_line);
     }
-    renderer_surface_host.flushQueuedSurfaceDrawsBeforeDependentSurfaceWork(r);
+    overlay_mod.flushEditorSurfaceRects(r);
 }
 
 pub fn drawEditorLineBaseImmediate(
@@ -112,7 +105,7 @@ pub fn drawEditorLineBaseImmediate(
     const pad = 4 * r.uiScaleFactor();
     const line_color = if (is_current) r.theme.foreground else r.theme.line_number;
     const line_bg = if (is_current) r.theme.current_line else r.theme.line_number_bg;
-    renderer_text_host.drawTextOnBg(r, num_str, x + pad, y, line_color, line_bg);
+    overlay_mod.drawEditorTextOnBg(r, num_str, x + pad, y, line_color, line_bg);
 }
 
 pub fn drawSelectionOverlays(
@@ -198,9 +191,7 @@ pub fn drawSearchOverlays(
         const ex = text_mod.xForByteOffset(r, line_text, seg_start_byte, seg_start_col, local_end, text_start_x);
         if (ex <= sx) continue;
         const draw_color = if (active_search) |active| if (overlay_mod.rangeContains(active, match)) overlay_mod.activeSearchHighlightColor(r.theme) else search_color else search_color;
-        present_trace_runtime.setEditorSurfaceSolidFamily(r, .overlay);
-        defer present_trace_runtime.clearEditorSurfaceSolidFamily(r);
-        renderer_surface_host.drawRect(r, @intFromFloat(sx), search_band.y_i, @intFromFloat(ex - sx), search_band.h_i, draw_color);
+        overlay_mod.drawEditorSurfaceRect(r, .overlay, sx, @floatFromInt(search_band.y_i), ex - sx, @floatFromInt(search_band.h_i), draw_color);
     }
 }
 

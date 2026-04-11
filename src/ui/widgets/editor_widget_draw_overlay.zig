@@ -91,6 +91,26 @@ fn drawOverlayRect(r: anytype, x: i32, y: i32, w: i32, h: i32, color: anytype) v
     renderer_surface_host.drawRect(r, x, y, w, h, color);
 }
 
+pub fn drawEditorSurfaceRect(r: anytype, family: present_trace_runtime.PresentTrace.EditorSurfaceSolidFamily, x: f32, y: f32, w: f32, h: f32, color: anytype) void {
+    present_trace_runtime.setEditorSurfaceSolidFamily(r, family);
+    defer present_trace_runtime.clearEditorSurfaceSolidFamily(r);
+    renderer_surface_host.drawRect(
+        r,
+        @intFromFloat(x),
+        @intFromFloat(y),
+        @intFromFloat(w),
+        @intFromFloat(h),
+        color,
+    );
+}
+
+pub fn drawEditorTextOnBg(r: anytype, text: []const u8, x: f32, y: f32, color: anytype, bg: anytype) void {
+    renderer_text_phase_group_host.beginGroup(r, .editor_row_band);
+    defer renderer_text_phase_group_host.endGroup(r, .editor_row_band);
+    present_trace_runtime.noteFrameFamilyTouch(r, .editor_row_band);
+    renderer_text_host.drawTextOnBg(r, text, x, y, color, bg);
+}
+
 pub fn drawExtraCarets(
     view: anytype,
     r: anytype,
@@ -555,8 +575,12 @@ pub fn endEditorRowBandGroup(r: anytype) void {
     renderer_text_phase_group_host.endGroup(r, .editor_row_band);
 }
 
-fn noteEditorRowBandTouch(r: anytype) void {
+pub fn noteEditorRowBandTouch(r: anytype) void {
     present_trace_runtime.noteFrameFamilyTouch(r, .editor_row_band);
+}
+
+pub fn flushEditorSurfaceRects(r: anytype) void {
+    renderer_surface_host.flushQueuedSurfaceDrawsBeforeDependentSurfaceWork(r);
 }
 
 pub fn flushDrawListEditorRowBand(list: *EditorDrawList, r: anytype) void {

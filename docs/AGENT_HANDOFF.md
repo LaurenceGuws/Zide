@@ -22,15 +22,18 @@ Get native Android rendering working. That means completing renderer gate #5
 so the backend abstraction is clean enough for a first-class Android GLES
 backend.
 
-- Active ticket: `AR-B3` / `RB-B3.g`
-  - terminal overlay/progress composition phase boundary
-  - owner: `app_architecture/ui/TERMINAL_COMPOSITION_PHASE_PLAN.md`
+- Active ticket: `AR-B3` / `RB-B3.h`
+  - editor row/overlay composition phase boundary
+  - owner: `app_architecture/ui/EDITOR_COMPOSITION_PHASE_PLAN.md`
 - `RB-B3.d` is already met:
   - widget/runtime no longer calls `usesDirectTerminalPresentation(...)`
   - those path decisions now terminate in the presentable host seam
 - `RB-B3.f` is met for scanned shell/UI chrome-band composition:
   - side-nav, status-bar, top-bar, tab-bar, config notice, and integrated
     window-caption paths now route through explicit band composition seams
+- `RB-B3.g` is met for terminal overlay/progress composition:
+  - close-confirm modal, progress bar, scrollbar thumb, and terminal separator
+    now route through a terminal-owned composition seam
 - `RB-B3.e` is now structurally narrowed enough that it is no longer the
   strongest blocker:
   - presentable lifecycle parity work materially reduced direct-vs-retained

@@ -5,7 +5,6 @@ const selection_mod = @import("../../editor/view/selection.zig");
 const draw_list_mod = @import("../../editor/render/draw_list.zig");
 const overlay_mod = @import("editor_widget_draw_overlay.zig");
 const renderer_mod = @import("../renderer.zig");
-const renderer_surface_host = @import("../renderer/renderer_surface_host.zig");
 const renderer_text_host = @import("../renderer/renderer_text_host.zig");
 
 const HighlightToken = syntax_mod.HighlightToken;
@@ -42,14 +41,7 @@ const ImmediateTextEmitter = struct {
         rh: f32,
         color: renderer_mod.Color,
     ) bool {
-        renderer_surface_host.drawRect(
-            self.renderer,
-            @as(i32, @intFromFloat(std.math.round(rx))),
-            @as(i32, @intFromFloat(std.math.round(ry))),
-            @max(1, @as(i32, @intFromFloat(std.math.round(rw)))),
-            @max(1, @as(i32, @intFromFloat(std.math.round(rh)))),
-            color,
-        );
+        overlay_mod.drawEditorSurfaceRect(self.renderer, .overlay, std.math.round(rx), std.math.round(ry), @max(1, std.math.round(rw)), @max(1, std.math.round(rh)), color);
         return true;
     }
 };
@@ -679,7 +671,7 @@ fn emitTextDecorations(emitter: anytype, r: anytype, x: f32, y: f32, width: f32,
     var visitor = Visitor{ .emitter = emitter, .color = color, .ok = &ok };
     forEachDecorationRect(r, x, y, width, flags, &visitor);
     if (@TypeOf(emitter.*) == ImmediateTextEmitter) {
-        renderer_surface_host.flushQueuedSurfaceDrawsBeforeDependentSurfaceWork(r);
+        overlay_mod.flushEditorSurfaceRects(r);
     }
     return ok;
 }

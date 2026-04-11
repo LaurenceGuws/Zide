@@ -13,8 +13,6 @@ const segment_paint_mod = @import("../../editor/render/segment_paint.zig");
 const visible_prep_mod = @import("../../editor/render/visible_prep.zig");
 const app_logger = @import("../../app_logger.zig");
 const renderer_clip_host = @import("../renderer/renderer_clip_host.zig");
-const renderer_surface_host = @import("../renderer/renderer_surface_host.zig");
-const present_trace_runtime = @import("../renderer/present_trace_runtime.zig");
 const renderer_text_host = @import("../renderer/renderer_text_host.zig");
 const overlay_mod = @import("editor_widget_draw_overlay.zig");
 const text_mod = @import("editor_widget_draw_text.zig");
@@ -218,14 +216,13 @@ pub fn draw(
             const comp_x = cursor_draw_x.?;
             const comp_y = cursor_draw_y.?;
             renderer_text_host.drawTextMonospaceOnBg(r, input.composing_text, comp_x, comp_y, r.theme.foreground, r.theme.current_line);
-            present_trace_runtime.setEditorSurfaceSolidFamily(r, .overlay);
-            defer present_trace_runtime.clearEditorSurfaceSolidFamily(r);
-            renderer_surface_host.drawRect(
+            overlay_mod.drawEditorSurfaceRect(
                 r,
-                @intFromFloat(comp_x),
-                @intFromFloat(comp_y + r.editor_char_height - 2),
-                @intFromFloat(@as(f32, @floatFromInt(input.composing_text.len)) * r.editor_char_width),
-                2,
+                .overlay,
+                comp_x,
+                comp_y + r.editor_char_height - 2,
+                @as(f32, @floatFromInt(input.composing_text.len)) * r.editor_char_width,
+                2.0,
                 r.theme.selection,
             );
             shell.setTextInputRect(
@@ -496,7 +493,7 @@ pub fn drawCached(
         view = frame_view_mod.EditorFrameView.init(widget.editor, widget.wrap_enabled);
         overlay_mod.drawEditorScrollbars(view, widget.gutter_width, r, draw_x, draw_y, width, height, visible_lines, total_lines, cols, input.mouse_pos, null);
         // Scrollbars use drawOverlayRect (deferred on GL); drain before later widgets.
-        renderer_surface_host.flushQueuedSurfaceDrawsBeforeDependentSurfaceWork(r);
+        overlay_mod.flushEditorSurfaceRects(r);
     }
 }
 
