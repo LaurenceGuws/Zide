@@ -210,13 +210,11 @@ Current checkpoint:
   clear/swap, shared solid replay, and minimal terminal rect/glyph-rect replay
   through the shared backend-host path, with no terminal grid, glyph atlas,
   image, screenshot, or presentable claims
-- next concrete cut is `AR-B4.e`:
-  first live terminal-grid ownership through the shared Android GLES backend
 - `AR-B4.e` stop marker:
   product view shows live shell content from the shared renderer path and the
   temporary Java transcript overlay is no longer the product-owned shell
   display
-- `AR-B4.e` first cut is now in:
+- `AR-B4.e` is now met:
   - terminal-host stages required repo font assets into the app files sandbox
   - Android GLES defers font init until the first live `beginFrame` after
     `makeCurrent`
@@ -224,18 +222,23 @@ Current checkpoint:
     `TerminalWidget`
   - product view hides the Java transcript when the shared shell renderer is
     active
-  - current glyphs are visible only as occupancy blocks from live glyph quads,
-    not readable textured atlas text yet
+  - Android GLES now owns a shared atlas vertex-stream pipeline instead of the
+    temporary glyph-block fallback
+  - live terminal rects/glyphs now replay through shared atlas textures on the
+    device
 - device truth now proves:
   - `native.surfaceAvailable ... gles=drawn` on the live shell path
   - the process stays alive after first frame
   - product view hierarchy no longer contains the Java transcript nodes while
     the shared shell renderer is active
-  - screenshot sampling shows bright live glyph-occupancy blocks in the shared
-    surface instead of a blank dark view
-- remaining blocker inside `AR-B4.e`:
-  readable textured glyph replay on Android GLES; do not pretend occupancy
-  blocks are the endpoint
+  - screenshot capture shows readable live shell text and prompt content in the
+    shared product surface
+- next concrete cut is `AR-B4.f`:
+  first product-fit live grid sizing through the shared Android GLES backend
+- `AR-B4.f` stop marker:
+  product view shell content uses readable live glyphs at product-fit bounds,
+  and the Java transcript path is no longer part of active product refresh
+  ownership
 - `RB-B3.e` materially narrowed terminal-presentable lifecycle pressure:
   - shared widget/runtime no longer owns the direct-vs-retained execution split
   - active dispatch no longer treats refresh as retained-only

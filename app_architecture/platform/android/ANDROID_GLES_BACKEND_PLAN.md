@@ -363,19 +363,42 @@ Current status:
   create a shared `TerminalWidget` against the real shell runtime
 - product view now hides the Java transcript when that shared shell renderer is
   active, so product shell ownership is no longer Java-owned
-- current live glyph quads still use a strict temporary visibility fallback:
-  Android GLES paints glyph occupancy blocks from the live shell quads instead
-  of replaying readable textured atlas glyphs yet
+- Android GLES now binds the shared atlas vertex-stream pipeline instead of a
+  glyph-block fallback:
+  - backend-owned GL shader/VBO/VAO resources now live under
+    `android_gles_runtime_state`
+  - `renderer_vertex_stream_backend_host.zig` now dispatches Android GLES
+    through the shared vertex-stream seam instead of forcing desktop GL
+  - live terminal rects/glyphs now replay through shared atlas textures and
+    shared glyph-cache flushes on Android GLES
 - device validation now proves:
   - `native.surfaceAvailable ... gles=drawn` on the live shell path
   - the process stays alive after first frame
   - product view hierarchy no longer contains the Java transcript scroll/text
     nodes while the shared shell renderer is active
-  - screenshot sampling shows live bright glyph-occupancy blocks inside the
-    shared product surface instead of a blank dark surface
+  - screenshot capture now shows readable live shell text and prompt content
+    through the shared Android GLES renderer path
 
-Remaining blocker inside `AR-B4.e`:
+`AR-B4.e` is now met.
 
-- readable textured glyph replay is still missing on Android GLES
-- the next honest cut is to replace the occupancy-block glyph fallback with
-  real atlas-backed textured quad replay
+The next active slice is `AR-B4.f`: first product-fit live grid sizing.
+
+## `AR-B4.f` Next Cut
+
+Purpose:
+
+- make the shared-renderer shell use product-fit terminal bounds instead of the
+  current undersized live grid island
+
+Required behavior:
+
+- keep the shared Android GLES renderer as the only product-owned shell surface
+- size the live terminal grid from real product surface bounds instead of a
+  visibly undersized bootstrap-era layout
+- keep Java ownership limited to lifecycle/input/IME/debug overlays
+
+Stop marker:
+
+- product view shell content uses readable live glyphs at product-fit bounds
+- the remaining Java transcript path is no longer part of active product shell
+  refresh ownership
