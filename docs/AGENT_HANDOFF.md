@@ -23,9 +23,9 @@ so the backend abstraction is clean enough for a first-class Android GLES
 backend.
 
 - Active ticket: `AR-B3` / `RB-B3.i`
-  - sample/diagnostic section composition check, then Android GLES readiness
-    re-rank
-  - owner: `docs/todo/ui/renderer.md`
+  - completed sample/diagnostic section composition check and Android GLES
+    readiness re-rank
+  - owner: `docs/todo/android/implementation.md`
 - `RB-B3.d` is already met:
   - widget/runtime no longer calls `usesDirectTerminalPresentation(...)`
   - those path decisions now terminate in the presentable host seam
@@ -39,6 +39,10 @@ backend.
   - immediate editor helpers now route through the editor overlay/row-band owner
   - generic tooltip overlay composition now terminates in
     `renderer_tooltip_host.zig`
+- `RB-B3.i` is met for sample/diagnostic section composition:
+  - font sample section chrome now routes through `font_sample_section_host.zig`
+- Next active move is `AR-B4`:
+  - define the first controlled Android GLES backend planning cut
 - `RB-B3.e` is now structurally narrowed enough that it is no longer the
   strongest blocker:
   - presentable lifecycle parity work materially reduced direct-vs-retained
@@ -62,8 +66,8 @@ backend.
 - Ownership boundary:
   - Zig owns terminal/runtime/core rendering primitives
   - Android owns lifecycle/input/insets/overlay surfaces
-- Renderer gate status: #1–#4 met, #5 narrowed to sample/diagnostic section
-  check plus Android readiness re-rank, #2 deferred
+- Renderer gate status: #1–#5 structurally met for active Android planning,
+  #2 live Metal verification deferred until Mac access returns
 
 ### Where To Look
 

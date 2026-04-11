@@ -97,12 +97,11 @@ Aligned with `app_architecture/ui/RENDER_BACKEND_CONTRACT.md` § “Gate status
 | 2 | Backend choice does not change product-level submission semantics | **Structurally met on GL** — terminal-present transaction/execution seams are in place and GL behavioral equivalence passed adversarial cases; Metal is still unverified against the new seam contract and remains deferred verification rather than a structural blocker. |
 | 3 | No backend-specific `.opengl` / `.metal` / `.vulkan` in shared **draw payloads** | **Met for `SurfaceDraw`** — `GpuImageRef` + neutral union; `Renderer` still dispatches by backend enum elsewhere. |
 | 4 | `Renderer` not the hidden owner of backend-native runtime | **Met** — selected runtime storage is opaque, only the selected backend runtime is materialized, runtime storage init/deinit now routes through backend runtime ops, shared code no longer reaches directly into backend dispatch/runtime internals, and backend-host construction is centralized in `renderer_backend_host.zig`. The renderer-owned backend host is now the one sanctioned owner surface rather than a widening runtime-storage pattern. |
-| 5 | Presentable/frame routine for a new backend | **Not met** — terminal-only presentable; GL retained vs Metal snapshot uneven. |
+| 5 | Presentable/frame routine for a new backend | **Structurally met for scanned composition families** — chrome, terminal overlays, editor row/overlay, tooltips, and sample sections now have explicit owners. The remaining presentable lifecycle split is tracked under gate #2 / Metal parity, not generic composition-family ownership. |
 
 **Readiness:** Android **platform** work (lifecycle, IME, etc.) stays allowed.
-Android **rendering** backend (GLES/Vulkan) and desktop **Vulkan** bootstrap
-remain **not ready** until this checklist clears (see contract § “Readiness
-(authoritative)”).
+Android **GLES rendering** is ready for a first controlled planning cut, not a
+full backend sprint. Desktop Vulkan and Android Vulkan remain not ready.
 
 **Branch scope (2026-04-09):** Gate #2 is structurally closed on GL and gate
 #4 is now structurally met. Gate #5 remains paused unless a stronger
@@ -118,13 +117,12 @@ blockers are:
   backend to feel routine, even though shared frame feedback is no longer
   terminal-only across the planned non-terminal family adopters
 
-Current strongest gate-5 code pressure:
+Current strongest Android renderer pressure:
 
-- fills and their dependent text/icon work still do not share one
-  backend-neutral phase boundary
-- current strongest initial family is shell/UI chrome band composition
-- the next honest ticket is to land one narrow band/composition seam that owns
-  fill plus dependent text/icon ordering under one backend-neutral unit
+- plan the first controlled Android GLES backend cut against the existing
+  shared contracts
+- keep it narrow enough that any remaining renderer-contract weakness is found
+  before a broad backend sprint starts
 
 Android note:
 
@@ -244,6 +242,11 @@ Next renderer move:
   readiness re-rank
 - do not continue broad direct-draw cleanup unless this check finds a real
   Android-blocking ownership leak
+- `RB-B3.i` result:
+  sample/diagnostic section chrome now routes through
+  `font_sample_section_host.Section`
+- next active Android-facing move is `AR-B4`:
+  first controlled Android GLES backend planning cut
 
 Gate-4 closure note:
 

@@ -82,7 +82,10 @@ In current-state terms, the remaining blockers are:
   row-band owner instead of importing renderer surface/text hosts directly
 - generic tooltip overlay composition now terminates in
   `renderer_tooltip_host.zig`
-- the remaining loud generic family is sample/diagnostic section banding
+- sample/diagnostic section banding now terminates in
+  `font_sample_section_host.zig`
+- no scanned composition-family leak is currently stronger than the remaining
+  terminal presentable lifecycle split
 
 That sample/diagnostic pressure is narrower again because `font_sample_view.zig`
 no longer rides the editor presentable lane. Diagnostic/sample rendering stays

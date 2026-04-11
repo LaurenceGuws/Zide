@@ -83,41 +83,44 @@ developed.
 
 ## Current Biggest Blocker
 
-Right now the biggest shared blocker to first-class Android renderer adoption
-is renderer gate #5:
+The renderer gate-5 composition cleanup is no longer the biggest Android
+blocker.
 
-- presentable/frame routine is still not neutral enough for a new backend to
-  feel routine, even though shared frame-family feedback now covers terminal,
-  chrome band, editor row-band, and sample section
+Current blocker:
+
+- define the first controlled Android GLES backend planning cut against the
+  now-narrower renderer contract
+- do not start a broad backend sprint or add product-specific renderer bypasses
 
 That means:
 
 - gate #2 is treated as closed for active work until Metal validation is
   explicitly reopened
 - gate #4 is met
-- Android terminal-host proof should only continue if it answers a stronger
-  Android-specific runtime question than gate #5 does
-- otherwise the next honest move is the next gate-5 cut done explicitly in
-  service of Android terminal progress
+- gate #5 is structurally met for scanned composition families
+- Android terminal-host proof should continue only if it feeds the first GLES
+  backend planning cut
 
 ## Current Priority
 
-**`AR-B3` / `RB-B3.f`** — this is the active ticket.
+**`AR-B4` Android GLES Backend Planning Cut** — this is the active ticket.
 
-Land a narrow band-composition seam for shell/UI chrome so one ordering unit
-owns both fills and dependent text/icon work under a backend-neutral phase
-boundary.
+Define the smallest Android GLES backend implementation step that maps existing
+Android EGL/GLES host truth onto the shared renderer contracts without adding
+product-specific bypasses.
 
 Owner docs:
 
-- `app_architecture/ui/BAND_COMPOSITION_PHASE_PLAN.md`
+- `app_architecture/platform/android/ANDROID_GLES_BINDING_PLAN.md`
+- `app_architecture/ui/RENDER_BACKEND_CONTRACT.md`
 - `docs/todo/ui/renderer.md`
 
 Guardrails:
 
 - do not drift back into Android host/tooling cleanup
 - do not reopen `AS-A3` polish
-- do not start Android GLES backend code from this ticket
+- do not implement the GLES backend until this planning cut names the first
+  files, ownership boundary, and stopping point
 
 Current checkpoint:
 
@@ -161,6 +164,12 @@ Current checkpoint:
   sample/diagnostic section composition check, then an Android GLES readiness
   re-rank; do not continue broad renderer cleanup unless this check finds a
   real Android-blocking ownership leak
+- `RB-B3.i` sample/diagnostic check is now in:
+  `font_sample_view.zig` routes its full-view background and unavailable-mode
+  status/swatch through `font_sample_section_host.Section`
+- Android GLES readiness re-rank result:
+  the next move is `AR-B4`, a planning cut for the first controlled Android
+  GLES backend step
 
 ## Parked (not blocking)
 

@@ -9,8 +9,6 @@ const renderer_mod = @import("renderer.zig");
 const metal_text_sample_runtime = @import("renderer/metal_text_sample_runtime.zig");
 const metal_backend = @import("renderer/metal_backend.zig");
 const renderer_font_backend_host = @import("renderer/renderer_font_backend_host.zig");
-const renderer_surface_host = @import("renderer/renderer_surface_host.zig");
-const renderer_text_host = @import("renderer/renderer_text_host.zig");
 const draw_ops = @import("renderer/draw_ops.zig");
 const iface = @import("renderer/interface.zig");
 const text_draw = @import("renderer/text_draw.zig");
@@ -158,7 +156,10 @@ pub const FontSampleView = struct {
 
         // Keep sample/diagnostic rendering off the editor presentable seam
         // until retained editor presentation is either fixed or deleted.
-        renderer_surface_host.drawRect(r, 0, 0, @intFromFloat(w), @intFromFloat(h), theme.background);
+        var background = Section.init(r, theme.background);
+        defer background.deinit();
+        background.fillRect(0, 0, @intFromFloat(w), @intFromFloat(h), theme.background);
+        background.flush();
         drawContents(self, r, theme, w, h);
     }
 
@@ -176,10 +177,13 @@ pub const FontSampleView = struct {
             "Font Sample (size={d:.1})  keys: +/-",
             .{self.size},
         ) catch "Font Sample";
-        drawStatusText(r, title, padding, header_y, theme.foreground);
+        var header_section = Section.init(r, theme.background);
+        defer header_section.deinit();
+        defer header_section.flush();
+        header_section.drawTextOnBg(title, padding, header_y, theme.foreground);
 
         if (r.textRenderingMode() != .gl_texture_atlas) {
-            drawTextModeStatus(r, theme, padding, header_y + r.char_height * 1.8);
+            drawTextModeStatus(r, &header_section, theme, padding, header_y + r.char_height * 1.8);
             return;
         }
 
@@ -195,14 +199,13 @@ pub const FontSampleView = struct {
         _ = h;
     }
 
-    fn drawTextModeStatus(r: *Renderer, theme: *const app_shell.Theme, x: f32, y: f32) void {
+    fn drawTextModeStatus(r: *Renderer, section: *Section, theme: *const app_shell.Theme, x: f32, y: f32) void {
         if (r.textRenderingMode() == .unavailable and r.plannedTextRenderingMode() == .metal_texture_atlas) {
             const swatch_x = x;
             const swatch_y = y;
             const swatch_size = @max(r.char_height * 1.25, 18.0);
             const swatch_width = @max(r.char_width * 6.0, swatch_size * 3.4);
-            renderer_surface_host.drawRect(
-                r,
+            section.fillRect(
                 @intFromFloat(std.math.round(swatch_x - 6.0)),
                 @intFromFloat(std.math.round(swatch_y - 6.0)),
                 @intFromFloat(std.math.round(swatch_width + 12.0)),
@@ -223,23 +226,15 @@ pub const FontSampleView = struct {
                 },
             });
         }
-        drawStatusText(r, "Text sample unavailable on this runtime path.", x, y, theme.foreground);
+        section.drawTextOnBg("Text sample unavailable on this runtime path.", x, y, theme.foreground);
 
         var live_buf: [96]u8 = undefined;
         const live = std.fmt.bufPrint(&live_buf, "live text mode: {s}", .{@tagName(r.textRenderingMode())}) catch "live text mode: <error>";
-        drawStatusText(r, live, x, y + r.char_height * 1.4, theme.ui_text_inactive);
+        section.drawTextOnBg(live, x, y + r.char_height * 1.4, theme.ui_text_inactive);
 
         var planned_buf: [96]u8 = undefined;
         const planned = std.fmt.bufPrint(&planned_buf, "planned text mode: {s}", .{@tagName(r.plannedTextRenderingMode())}) catch "planned text mode: <error>";
-        drawStatusText(r, planned, x, y + r.char_height * 2.8, theme.ui_modified);
-    }
-
-    fn drawStatusText(r: *Renderer, text: []const u8, x: f32, y: f32, color: Color) void {
-        if (r.textRenderingMode() == .unavailable and r.plannedTextRenderingMode() == .metal_texture_atlas) {
-            renderer_text_host.drawTextMonospace(r, text, x, y, color);
-            return;
-        }
-        renderer_text_host.drawText(r, text, x, y, color);
+        section.drawTextOnBg(planned, x, y + r.char_height * 2.8, theme.ui_modified);
     }
 
     fn drawSection(

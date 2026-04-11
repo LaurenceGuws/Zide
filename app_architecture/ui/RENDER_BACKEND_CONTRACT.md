@@ -127,8 +127,8 @@ today.
   row-band owner instead of importing renderer surface/text hosts directly
 - generic tooltip overlay composition now terminates in
   `renderer_tooltip_host.zig`
-- the remaining loud generic surface-pressure family is now sample /
-  diagnostic section banding
+- sample/diagnostic section banding now terminates in
+  `font_sample_section_host.zig`
 - editor composition must honor the editor pane rect as its geometry authority;
   deriving wrap/segment truth from full-window width is a contract bug, not an
   acceptable implementation shortcut
@@ -158,8 +158,8 @@ are mainly:
   Metal snapshot still uneven)
 - Metal still needs live verification against the terminal-present
   transaction seam that GL now proves structurally
-- sample/diagnostic section composition still leaning on generic surface/text
-  timing in places
+- no scanned composition-family leak is currently stronger than the remaining
+  terminal presentable lifecycle issue
 
 ### Gate status (code truth)
 
@@ -172,13 +172,21 @@ It must stay aligned with `src/ui/renderer/` (not aspiration).
 | **2** | Presentable lifecycle neutral for a third backend | **Not met** | Shared presentable seam is **terminal-only**; OpenGL uses a retained update target path, Metal uses snapshot + composition replay. A third backend would still inherit that **lifecycle split**, not one neutral shape. |
 | **3** | Backend-native runtime not a widening pattern on `Renderer` | **Met** | `backend_runtime_bundle.Bundle` now stores only the **selected** concrete backend runtime behind one opaque handle, runtime storage init/deinit routes through backend runtime ops, shared code no longer reaches directly into `renderer.backend.ops` / `renderer.backend.kind`, and backend-host construction terminates at `renderer_backend_host.zig`. The renderer-owned backend host is now the one sanctioned owner surface, not a widening backend-runtime pattern. |
 | **4** | Resource/image handles opaque in shared draw payloads | **Met for `SurfaceDraw`** | `surface_draw.GpuImageRef` + `SurfaceDraw` union (`atlas` / `raw_image` / `solid`) has **no** `.opengl` / `.metal` tags. Backends interpret handles inside ops. (Wider “no backend branches in shared code” is still false—see gate 3 and `RendererBackend` dispatch.) |
-| **5** | Ordering families have an honest home | **Partial, narrowed** | Shell chrome routes through `renderer_chrome_band_host.zig`; terminal overlay/progress routes through `terminal_composition_host.zig`; editor row/overlay immediate helpers terminate at the editor overlay owner; generic tooltips route through `renderer_tooltip_host.zig`. Remaining pressure is now narrower: sample/diagnostic section banding and the still-uneven terminal presentable lifecycle under gate 2. |
+| **5** | Ordering families have an honest home | **Structurally met for scanned families** | Shell chrome routes through `renderer_chrome_band_host.zig`; terminal overlay/progress routes through `terminal_composition_host.zig`; editor row/overlay immediate helpers terminate at the editor overlay owner; generic tooltips route through `renderer_tooltip_host.zig`; sample sections route through `font_sample_section_host.zig`. Remaining direct draw calls are inside owner modules/lower-level renderer hosts, not product call-site ownership leaks. |
 
 ### Readiness (authoritative)
 
-- **Vulkan rendering bootstrap (swapchain + backend module):** **Not ready.** Gates **2** and **5** are still not met. Work would still hit presentable hosts, frame/order seams, and remaining ordering-family pressure rather than reading like a drop-in third backend.
+- **Vulkan rendering bootstrap (swapchain + backend module):** **Not ready.** Gate **2** is still not met. Gate **5** is structurally met for scanned families, but a new desktop backend would still hit the terminal presentable lifecycle split rather than reading like a drop-in third backend.
 - **Android native-host / platform (lifecycle, IME, surface-loss *design*, no GPU backend):** **Allowed** by policy in `docs/todo/ui/renderer.md`; this is **not** gated by the five renderer gates above.
-- **Android GLES / Vulkan rendering backend:** **Not ready** for the same reasons as Vulkan on desktop, plus mobile surface ephemerality is not yet proven against the **presentable** and **frame** stories (gate **2** and friends). Do not start GLES or Vulkan **rendering** bootstrap until the contract queue says the pre-Android gate is satisfied.
+- **Android GLES rendering backend:** **Ready for the first controlled planning
+  cut, not a full backend sprint.** Gate **5** is structurally met for scanned
+  families and gate **2** is deferred rather than allowed to block Android
+  while Mac live verification is unavailable. The first Android renderer move
+  must still be narrow: map the existing Android EGL/GLES host truth onto the
+  shared backend contracts without adding product-specific bypasses.
+- **Android Vulkan rendering backend:** **Not ready.** Vulkan should wait until
+  the Android GLES planning cut proves the mobile surface/presentable contract
+  shape without reopening shared renderer ownership.
 
 ## Contract Layers
 
