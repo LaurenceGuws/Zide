@@ -156,8 +156,58 @@ Device validation before claiming the slice:
 
 If the skeleton/frame binding works, the next slices are:
 
-1. `AR-B4.b` bind real Android EGL/context/window-surface runtime ownership
-   into the shared backend and prove visible clear/swap
+1. `AR-B4.b` external-host renderer bootstrap for Android `backend_smoke`
 2. `AR-B4.c` surface draw replay for `SurfaceDraw.solid`
 3. `AR-B4.d` terminal glyph/rect minimal path, then probe-to-renderer product
    handoff
+
+## `AR-B4.b` Next Cut
+
+Purpose:
+
+- let Android terminal-host create a real shared `Renderer` instance for
+  `android_gles` without faking SDL window ownership
+
+Why this is the blocker now:
+
+- `android_gles_backend.zig` can now bind live Android native-window identity,
+  clear, and swap through the shared backend path
+- but `Renderer.init(...)` still hard-requires SDL bootstrap/window ownership
+- terminal-host therefore still cannot prove the shared renderer on device even
+  though the backend itself is no longer the loud blocker
+
+Allowed files:
+
+- `src/ui/renderer.zig`
+- `src/ui/renderer/bootstrap_runtime.zig`
+- `src/ui/renderer/lifecycle_runtime.zig`
+- `src/ui/renderer/renderer_global_runtime.zig`
+- `src/ui/renderer/input_state.zig`
+- `src/ui/renderer/font_runtime.zig`
+- narrow Android bridge/host files only if needed to carry external surface
+  metrics into the new bootstrap path
+- docs in this file, `docs/todo/android/implementation.md`, and
+  `docs/AGENT_HANDOFF.md`
+
+Required behavior:
+
+- define a shared renderer bootstrap path for externally-owned host state
+- keep it explicitly scoped to Android `backend_smoke`
+- do not require an SDL window or SDL-owned render-surface attachment
+- do not start SDL text input from that path
+- do not claim full shared app-shell/runtime parity from that path yet
+- allow the Android host to supply:
+  - `PlatformAppHost`
+  - `PlatformRenderHost`
+  - initial display/surface metrics
+- keep shutdown honest: no SDL window destroy / SDL quit from an external-host
+  renderer instance
+
+Stop marker:
+
+- terminal-host can create and destroy a shared `Renderer` instance with
+  `renderer_backend = .android_gles` and `runtime_profile = .backend_smoke`
+- that renderer can execute `beginFrame` / `submitFrame` against Android
+  surface epoch truth without probe-owned drawing
+- no shared input polling, window chrome, or full app-shell startup is claimed
+  yet

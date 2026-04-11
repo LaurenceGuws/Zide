@@ -26,8 +26,8 @@ backend.
   - Android GLES backend skeleton and frame binding
   - owner: `docs/todo/android/implementation.md`
   - current state:
-    shared enum/runtime/dispatch skeleton is in; real EGL/context/window-surface
-    runtime ownership and terminal-host selection are still the next cut
+    backend/runtime/frame binding is in; the next direct cut is `AR-B4.b`
+    external-host shared renderer bootstrap for Android `backend_smoke`
 - `RB-B3.d` is already met:
   - widget/runtime no longer calls `usesDirectTerminalPresentation(...)`
   - those path decisions now terminate in the presentable host seam

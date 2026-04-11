@@ -152,6 +152,13 @@ Current checkpoint:
   - terminal-host still does not instantiate shared `Renderer`
   - no Android-side shared renderer bootstrap path exists yet for terminal-host
   - visible clear/swap is not yet claimed on device through that shared path
+- next concrete cut is `AR-B4.b`:
+  external-host renderer bootstrap for Android `backend_smoke`
+- `AR-B4.b` stop marker:
+  terminal-host can create/destroy a shared `Renderer` instance with
+  `renderer_backend = .android_gles` and `runtime_profile = .backend_smoke`
+  without SDL window ownership, and that renderer can execute shared
+  `beginFrame` / `submitFrame` against Android surface epoch truth
 - stopping point:
   Android terminal-host can select Android GLES and produce a visible
   clear/swap through the shared backend-host path, with no terminal grid/text,
