@@ -100,6 +100,14 @@ Current status:
     a live `Renderer` instance in terminal-host
   - visible clear/swap is implemented in the backend, but not yet claimed on
     device through terminal-host
+- Android terminal-host native build truth is now explicit too:
+  - `zig build android-terminal-host-bridge` is the owning native build target
+  - that target uses an NDK-backed Android libc file plus explicit Android
+    system `.so` paths
+  - the Android bridge no longer links the SDL package as a compiled Android
+    library just to satisfy shared renderer headers
+  - the ops wrapper only resolves toolchain paths and copies the built `.so`
+    into `android/terminal-host/app/src/main/jniLibs`
 
 Stopping point:
 
@@ -142,7 +150,9 @@ Local validation before commit:
 
 - `zig build`
 - `zig build test`
-- Android terminal-host build command from `ops/android_terminal_host.py`
+- `zig build android-terminal-host-bridge -Dtarget=aarch64-linux-android
+  -Dmode=terminal --sysroot <ndk-sysroot>`
+- `./ops/android_terminal_host.py apk`
 
 Device validation before claiming the slice:
 
@@ -223,6 +233,9 @@ Current status:
   - Java diagnostics still expose old `currentGlesProbe...` bridge names even
     though they now read shared renderer/runtime counters when the renderer is
     active
+  - build/deploy confusion is no longer the blocker:
+    Android terminal-host now has one repo-owned native build target and one
+    operator wrapper instead of a manual native link script
 
 Stop marker:
 

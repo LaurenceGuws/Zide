@@ -28,8 +28,10 @@ backend.
   - current state:
     backend/runtime/frame binding is in, the shared external-host renderer
     bootstrap seam exists for `backend_smoke`, and native surface callbacks now
-    route through that shared renderer path; next direct cut is device
-    validation plus Java/debug cleanup around the old probe naming
+    route through that shared renderer path; Android terminal-host native build
+    now has a real `zig build android-terminal-host-bridge` target; next direct
+    cut is device validation plus Java/debug cleanup around the old probe
+    naming
 - `RB-B3.d` is already met:
   - widget/runtime no longer calls `usesDirectTerminalPresentation(...)`
   - those path decisions now terminate in the presentable host seam
@@ -68,6 +70,9 @@ backend.
   - live shell via terminal engine, key-by-key PTY input via `InputConnection`
   - app identity: `dev.zide.terminal` / `ZideTerminalActivity`
   - repo path: `android/terminal-host/`
+  - native bridge build path:
+    `zig build android-terminal-host-bridge -Dtarget=aarch64-linux-android
+    -Dmode=terminal --sysroot <ndk-sysroot>`
 - Ownership boundary:
   - Zig owns terminal/runtime/core rendering primitives
   - Android owns lifecycle/input/insets/overlay surfaces

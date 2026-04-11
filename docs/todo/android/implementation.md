@@ -165,6 +165,14 @@ Current checkpoint:
     `android_gles` renderer in tests
   - live surface-available and redraw callbacks now route through that shared
     renderer path in native code instead of the old probe draw path
+  - Android terminal-host native build is now a real repo build target:
+    `zig build android-terminal-host-bridge`
+  - that target uses:
+    - explicit NDK-backed Android libc configuration
+    - explicit Android system `.so` linkage
+    - SDL headers only where shared renderer contracts still mention SDL
+  - `ops/android_terminal_host.py native` is now just the operator wrapper:
+    resolve SDK/NDK, invoke the Zig target, copy the built `.so` into `jniLibs`
 - `AR-B4.b` stop marker:
   terminal-host can create/destroy a shared `Renderer` instance with
   `renderer_backend = .android_gles` and `runtime_profile = .backend_smoke`

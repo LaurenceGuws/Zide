@@ -75,9 +75,17 @@ Acceptance:
 Current checkpoint:
 
 - `android/terminal-host/` is the first repo-owned Android runtime app
-- `ops/android_terminal_host.py native` builds the native Zig bridge through
-  the NDK toolchain; this should become a named `zig build` step once the
-  native artifact shape stabilizes
+- the native Zig bridge is now a named build target:
+  `zig build android-terminal-host-bridge -Dtarget=aarch64-linux-android
+  -Dmode=terminal --sysroot <ndk-sysroot>`
+- that build target owns:
+  - the Android bridge shared library compile
+  - explicit NDK-backed libc configuration
+  - explicit Android system `.so` linkage for `android` / `EGL` / `GLESv2`
+  - SDL header-only access where shared renderer contracts still mention SDL
+- `ops/android_terminal_host.py native` is now only the operator wrapper:
+  it resolves SDK/NDK paths, invokes the named Zig target, and copies the
+  built `.so` into `jniLibs`
 - the Note10 loads the repo-built native library and routes lifecycle/focus/
   surface callbacks into repo-owned native code
 - terminal-host/native entry now carries real shared host truth:
@@ -114,6 +122,6 @@ Terminal-host entry is complete. Active Android work now belongs in:
 - `app_architecture/platform/android/ANDROID_SHELL_BRINGUP_PLAN.md`
 
 Native bridge production currently lives behind
-`ops/android_terminal_host.py native`. Once the Android native artifact shape
-is stable, that build should move behind a named `zig build` step while
-deploy/install/logcat stay in ops.
+`zig build android-terminal-host-bridge`. `ops/android_terminal_host.py`
+remains the operator entrypoint for deploy/install/logcat and for copying the
+built bridge into the Android app project.
