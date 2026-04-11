@@ -4,10 +4,10 @@ const c_api = @import("../terminal/ffi/c_api.zig");
 const ffi_shared = @import("../terminal/ffi/shared.zig");
 const terminal_runtime = @import("../terminal/core/terminal_runtime.zig");
 
-const cols: u16 = 80;
-const rows: u16 = 24;
-const cell_width: u16 = 8;
-const cell_height: u16 = 16;
+const initial_cols: u16 = 80;
+const initial_rows: u16 = 24;
+const initial_cell_width: u16 = 8;
+const initial_cell_height: u16 = 16;
 const shell_path: [:0]const u8 = "/system/bin/sh";
 const transcript_path = "/data/data/dev.zide.terminal/files/zide_terminal_shell.log";
 
@@ -25,6 +25,10 @@ pub const StartStatus = enum(i32) {
 
 const Session = struct {
     handle: ?*c_api.ZideTerminalHandle,
+    cols: u16,
+    rows: u16,
+    cell_width: u16,
+    cell_height: u16,
 
     fn deinit(self: *Session) void {
         c_api.zide_terminal_destroy(self.handle);
@@ -75,6 +79,29 @@ pub fn sendCodepoint(cp: u21) SendStatus {
     return sendText(buf[0..len]);
 }
 
+pub fn resizeToGrid(cols: u16, rows: u16, cell_width: u16, cell_height: u16) !bool {
+    const active = session orelse return false;
+    if (cols == 0 or rows == 0 or cell_width == 0 or cell_height == 0) return false;
+    if (active.cols == cols and active.rows == rows and active.cell_width == cell_width and active.cell_height == cell_height) {
+        return false;
+    }
+
+    if (c_api.zide_terminal_resize(active.handle, cols, rows, cell_width, cell_height) != 0) {
+        last_start_status = .resize_failed;
+        return error.ResizeFailed;
+    }
+
+    session = .{
+        .handle = active.handle,
+        .cols = cols,
+        .rows = rows,
+        .cell_width = cell_width,
+        .cell_height = cell_height,
+    };
+    try pollAndRefresh();
+    return true;
+}
+
 pub fn restart() !void {
     if (!(builtin.target.os.tag == .linux and builtin.target.abi == .android)) {
         last_start_status = .unsupported;
@@ -94,7 +121,7 @@ pub fn restart() !void {
     }
     errdefer c_api.zide_terminal_destroy(handle);
 
-    if (c_api.zide_terminal_resize(handle, cols, rows, cell_width, cell_height) != 0) {
+    if (c_api.zide_terminal_resize(handle, initial_cols, initial_rows, initial_cell_width, initial_cell_height) != 0) {
         last_start_status = .resize_failed;
         return error.ResizeFailed;
     }
@@ -104,7 +131,13 @@ pub fn restart() !void {
         return error.StartFailed;
     }
 
-    session = .{ .handle = handle };
+    session = .{
+        .handle = handle,
+        .cols = initial_cols,
+        .rows = initial_rows,
+        .cell_width = initial_cell_width,
+        .cell_height = initial_cell_height,
+    };
     last_start_status = .started;
     try pollAndRefresh();
 }

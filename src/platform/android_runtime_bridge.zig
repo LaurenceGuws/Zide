@@ -3,6 +3,7 @@ const android_gles_probe = @import("android_gles_probe.zig");
 const android_host = @import("android_host.zig");
 const android_shell_session = @import("android_shell_session.zig");
 const app_shell = @import("../app_shell.zig");
+const app_terminal_grid = @import("../app/terminal/terminal_grid.zig");
 const native_host = @import("native_host.zig");
 const renderer_mod = @import("../ui/renderer.zig");
 const renderer_surface_host = @import("../ui/renderer/renderer_surface_host.zig");
@@ -309,6 +310,7 @@ fn ensureTerminalWidget() ?*widgets.TerminalWidget {
 }
 
 fn drawLiveTerminalWidgetFrame(renderer: *renderer_mod.Renderer, widget: *widgets.TerminalWidget) void {
+    ensureProductFitTerminalGrid(renderer, widget) catch {};
     var shell: app_shell.Shell = .{ .renderer = renderer };
     const input = shared_types.input.InputSnapshot.init(.{ .x = 0, .y = 0 }, .{});
     const draw_outcome = widget.draw(
@@ -320,6 +322,18 @@ fn drawLiveTerminalWidgetFrame(renderer: *renderer_mod.Renderer, widget: *widget
         input,
     );
     widget.stagePresentationFeedback(draw_outcome);
+}
+
+fn ensureProductFitTerminalGrid(renderer: *renderer_mod.Renderer, widget: *widgets.TerminalWidget) !void {
+    const grid = app_terminal_grid.computeWithEnvOverride(
+        @floatFromInt(@max(renderer.width, 1)),
+        @floatFromInt(@max(renderer.height, 1)),
+        renderer.terminalCellGeometry(),
+        1,
+        1,
+    );
+    const resized = try android_shell_session.resizeToGrid(grid.cols, grid.rows, grid.cell_width, grid.cell_height);
+    if (resized) widget.invalidatePresentationCache();
 }
 
 fn drawBackendSmokeFrame(renderer: *renderer_mod.Renderer) void {
