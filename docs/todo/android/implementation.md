@@ -154,6 +154,9 @@ Current checkpoint:
   segment-paint immediate helpers, text-decoration rects, composing underline,
   and editor surface-flush handoffs route through the editor overlay/row-band
   owner instead of importing renderer surface/text hosts directly
+- generic tooltip overlay composition now routes through
+  `renderer_tooltip_host.zig`; widget common code no longer owns tooltip
+  fill/outline/text ordering directly
 
 ## Parked (not blocking)
 

@@ -80,8 +80,9 @@ In current-state terms, the remaining blockers are:
   `terminal_composition_host.zig`
 - editor row/overlay immediate helpers now route through the editor overlay /
   row-band owner instead of importing renderer surface/text hosts directly
-- the remaining loud generic families are sample/diagnostic section banding and
-  generic tooltip overlay composition
+- generic tooltip overlay composition now terminates in
+  `renderer_tooltip_host.zig`
+- the remaining loud generic family is sample/diagnostic section banding
 
 That sample/diagnostic pressure is narrower again because `font_sample_view.zig`
 no longer rides the editor presentable lane. Diagnostic/sample rendering stays

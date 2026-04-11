@@ -1,6 +1,6 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
-const renderer_surface_host = @import("../renderer/renderer_surface_host.zig");
+const renderer_tooltip_host = @import("../renderer/renderer_tooltip_host.zig");
 const shared_types = @import("../../types/mod.zig");
 
 const Shell = app_shell.Shell;
@@ -242,9 +242,11 @@ pub fn drawTooltip(shell: *Shell, text: []const u8, x: f32, y: f32) void {
     if (draw_x < 4) draw_x = 4;
     if (draw_y < 4) draw_y = 4;
 
-    renderer_surface_host.drawRect(shell.rendererPtr(), @intFromFloat(draw_x), @intFromFloat(draw_y), @intFromFloat(w), @intFromFloat(h), theme.ui_panel_overlay);
-    renderer_surface_host.drawRectOutline(shell.rendererPtr(), @intFromFloat(draw_x), @intFromFloat(draw_y), @intFromFloat(w), @intFromFloat(h), theme.ui_border);
-    shell.drawText(text, draw_x + padding, draw_y + padding, theme.ui_text);
+    renderer_tooltip_host.draw(shell.rendererPtr(), text, draw_x, draw_y, w, h, padding, .{
+        .bg = theme.ui_panel_overlay,
+        .border = theme.ui_border,
+        .text = theme.ui_text,
+    });
 }
 
 test "terminalVisibleCellHit ignores pane remainder outside centered grid" {

@@ -125,8 +125,10 @@ today.
   `terminal_composition_host.zig`
 - editor row/overlay immediate helpers now terminate at the editor overlay /
   row-band owner instead of importing renderer surface/text hosts directly
-- the remaining loud generic surface-pressure families are now sample /
-  diagnostic section banding and generic tooltip overlay composition
+- generic tooltip overlay composition now terminates in
+  `renderer_tooltip_host.zig`
+- the remaining loud generic surface-pressure family is now sample /
+  diagnostic section banding
 - editor composition must honor the editor pane rect as its geometry authority;
   deriving wrap/segment truth from full-window width is a contract bug, not an
   acceptable implementation shortcut
@@ -156,8 +158,8 @@ are mainly:
   Metal snapshot still uneven)
 - Metal still needs live verification against the terminal-present
   transaction seam that GL now proves structurally
-- sample/diagnostic and generic tooltip overlay composition still leaning on
-  generic surface/text timing in places
+- sample/diagnostic section composition still leaning on generic surface/text
+  timing in places
 
 ### Gate status (code truth)
 
@@ -170,7 +172,7 @@ It must stay aligned with `src/ui/renderer/` (not aspiration).
 | **2** | Presentable lifecycle neutral for a third backend | **Not met** | Shared presentable seam is **terminal-only**; OpenGL uses a retained update target path, Metal uses snapshot + composition replay. A third backend would still inherit that **lifecycle split**, not one neutral shape. |
 | **3** | Backend-native runtime not a widening pattern on `Renderer` | **Met** | `backend_runtime_bundle.Bundle` now stores only the **selected** concrete backend runtime behind one opaque handle, runtime storage init/deinit routes through backend runtime ops, shared code no longer reaches directly into `renderer.backend.ops` / `renderer.backend.kind`, and backend-host construction terminates at `renderer_backend_host.zig`. The renderer-owned backend host is now the one sanctioned owner surface, not a widening backend-runtime pattern. |
 | **4** | Resource/image handles opaque in shared draw payloads | **Met for `SurfaceDraw`** | `surface_draw.GpuImageRef` + `SurfaceDraw` union (`atlas` / `raw_image` / `solid`) has **no** `.opengl` / `.metal` tags. Backends interpret handles inside ops. (Wider “no backend branches in shared code” is still false—see gate 3 and `RendererBackend` dispatch.) |
-| **5** | Ordering families have an honest home | **Partial, narrowed** | Shell chrome routes through `renderer_chrome_band_host.zig`; terminal overlay/progress routes through `terminal_composition_host.zig`; editor row/overlay immediate helpers terminate at the editor overlay owner. Remaining pressure is now narrower: sample/diagnostic section banding, generic tooltip overlay composition, and the still-uneven terminal presentable lifecycle under gate 2. |
+| **5** | Ordering families have an honest home | **Partial, narrowed** | Shell chrome routes through `renderer_chrome_band_host.zig`; terminal overlay/progress routes through `terminal_composition_host.zig`; editor row/overlay immediate helpers terminate at the editor overlay owner; generic tooltips route through `renderer_tooltip_host.zig`. Remaining pressure is now narrower: sample/diagnostic section banding and the still-uneven terminal presentable lifecycle under gate 2. |
 
 ### Readiness (authoritative)
 

@@ -232,6 +232,11 @@ Current `RB-B3.h` checkpoint:
   handoffs also route through that owner
 - remaining direct draw pressure is now mostly inside the editor overlay owner
   itself plus common tooltip overlay composition
+- generic tooltip overlay composition now terminates in
+  `renderer_tooltip_host.zig` instead of mixing fill/outline/text calls inside
+  widget common code
+- remaining direct draw pressure is now mostly inside explicit owner modules:
+  editor overlay owner and lower-level renderer/text hosts
 
 Gate-4 closure note:
 
