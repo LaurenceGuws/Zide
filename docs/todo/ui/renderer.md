@@ -238,6 +238,13 @@ Current `RB-B3.h` checkpoint:
 - remaining direct draw pressure is now mostly inside explicit owner modules:
   editor overlay owner and lower-level renderer/text hosts
 
+Next renderer move:
+
+- `RB-B3.i` sample/diagnostic section composition check, then Android GLES
+  readiness re-rank
+- do not continue broad direct-draw cleanup unless this check finds a real
+  Android-blocking ownership leak
+
 Gate-4 closure note:
 
 - shared font/text/surface/vertex-stream helper access now routes through

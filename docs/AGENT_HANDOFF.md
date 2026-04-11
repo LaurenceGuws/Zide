@@ -22,9 +22,10 @@ Get native Android rendering working. That means completing renderer gate #5
 so the backend abstraction is clean enough for a first-class Android GLES
 backend.
 
-- Active ticket: `AR-B3` / `RB-B3.h`
-  - editor row/overlay composition phase boundary
-  - owner: `app_architecture/ui/EDITOR_COMPOSITION_PHASE_PLAN.md`
+- Active ticket: `AR-B3` / `RB-B3.i`
+  - sample/diagnostic section composition check, then Android GLES readiness
+    re-rank
+  - owner: `docs/todo/ui/renderer.md`
 - `RB-B3.d` is already met:
   - widget/runtime no longer calls `usesDirectTerminalPresentation(...)`
   - those path decisions now terminate in the presentable host seam
@@ -34,6 +35,10 @@ backend.
 - `RB-B3.g` is met for terminal overlay/progress composition:
   - close-confirm modal, progress bar, scrollbar thumb, and terminal separator
     now route through a terminal-owned composition seam
+- `RB-B3.h` is met for editor row/overlay composition:
+  - immediate editor helpers now route through the editor overlay/row-band owner
+  - generic tooltip overlay composition now terminates in
+    `renderer_tooltip_host.zig`
 - `RB-B3.e` is now structurally narrowed enough that it is no longer the
   strongest blocker:
   - presentable lifecycle parity work materially reduced direct-vs-retained
@@ -57,7 +62,8 @@ backend.
 - Ownership boundary:
   - Zig owns terminal/runtime/core rendering primitives
   - Android owns lifecycle/input/insets/overlay surfaces
-- Renderer gate status: #1–#4 met, #5 active blocker, #2 deferred
+- Renderer gate status: #1–#4 met, #5 narrowed to sample/diagnostic section
+  check plus Android readiness re-rank, #2 deferred
 
 ### Where To Look
 

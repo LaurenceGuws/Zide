@@ -157,6 +157,10 @@ Current checkpoint:
 - generic tooltip overlay composition now routes through
   `renderer_tooltip_host.zig`; widget common code no longer owns tooltip
   fill/outline/text ordering directly
+- next renderer move is `RB-B3.i`:
+  sample/diagnostic section composition check, then an Android GLES readiness
+  re-rank; do not continue broad renderer cleanup unless this check finds a
+  real Android-blocking ownership leak
 
 ## Parked (not blocking)
 
