@@ -23,11 +23,17 @@ so the backend abstraction is clean enough for a first-class Android GLES
 backend.
 
 - Active ticket: `AR-B3` / `RB-B3.e`
-  - presentable lifecycle parity behind neutral types
-  - owner: `app_architecture/ui/PRESENTABLE_LIFECYCLE_PARITY_PLAN.md`
+  - band composition phase boundary for fill + dependent text/icon work
+  - owner: `app_architecture/ui/BAND_COMPOSITION_PHASE_PLAN.md`
 - `RB-B3.d` is already met:
   - widget/runtime no longer calls `usesDirectTerminalPresentation(...)`
   - those path decisions now terminate in the presentable host seam
+- `RB-B3.e` is now structurally narrowed enough that it is no longer the
+  strongest blocker:
+  - presentable lifecycle parity work materially reduced direct-vs-retained
+    shared pressure
+  - the stronger remaining renderer pressure is the text/surface
+    phase-boundary problem
 - Renderer work is in scope only when it is the direct next blocker — not for
   generic cleanup
 - `AS-A3` (modifier-latch input UX) is parked open — works well enough now,

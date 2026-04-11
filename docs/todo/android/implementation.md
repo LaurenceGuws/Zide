@@ -102,15 +102,15 @@ That means:
 
 ## Current Priority
 
-**`AR-B3` / `RB-B3.e`** — this is the active ticket.
+**`AR-B3` / `RB-B3.f`** — this is the active ticket.
 
-Make presentable lifecycle parity more honest behind neutral types so Android
-does not inherit "OpenGL retained target is the real model, Metal is the
-fallback model" as shared renderer truth.
+Land a narrow band-composition seam for shell/UI chrome so one ordering unit
+owns both fills and dependent text/icon work under a backend-neutral phase
+boundary.
 
 Owner docs:
 
-- `app_architecture/ui/PRESENTABLE_LIFECYCLE_PARITY_PLAN.md`
+- `app_architecture/ui/BAND_COMPOSITION_PHASE_PLAN.md`
 - `docs/todo/ui/renderer.md`
 
 Guardrails:
@@ -121,33 +121,15 @@ Guardrails:
 
 Current checkpoint:
 
-- the first `AR-B3` code cut is in:
-  shared renderer code now speaks in terminal-presentable refresh terms rather
-  than retained-target update terms
-- the active widget/runtime refresh flow now also uses that neutral language
-  end-to-end instead of retained-path naming
-- shared widget/runtime no longer owns the direct-versus-retained execution
-  branch for terminal presentation; that choice now terminates in
-  `renderer_presentable_host.zig`
-- the parallel `TerminalPresentPath` classifier is also gone from the active
-  presentable dispatch/host surface; presentable-host decisions now resolve
-  from declared `TerminalPresentationMode` capability truth instead
-- shared code now asks for incremental presentable update support instead of
-  specifically "direct partial update" support
-- presentable-host helpers no longer mix backend capability truth with
-  widget-owned sync-update policy
-- Metal terminal presentable refresh now satisfies the shared refresh seam
-  structurally by replaying queued terminal update draws into its snapshot
-  presentable on the current command buffer
-- refresh-capable backends now also route through the active shared refresh
-  execution path instead of reserving that path only for retained-surface
-  backends
-- this does not claim parity is solved yet
-- it makes the remaining blocker narrower and more honest:
-  the next pressure is no longer generic terminal-presentable parity cleanup,
-  but live reference verification of the Metal refresh-backed path and the
-  stronger shared renderer phase-boundary pressure recorded in the renderer
-  authority docs
+- `RB-B3.e` materially narrowed terminal-presentable lifecycle pressure:
+  - shared widget/runtime no longer owns the direct-vs-retained execution split
+  - active dispatch no longer treats refresh as retained-only
+  - Metal now satisfies the shared refresh seam structurally
+- that means the stronger remaining Android-forcing renderer blocker is no
+  longer generic terminal-presentable parity cleanup
+- the next stronger shared blocker is text/surface phase-boundary pressure:
+  fills and their dependent text/icon work still do not share one
+  backend-neutral ordering seam
 
 ## Parked (not blocking)
 

@@ -118,16 +118,13 @@ blockers are:
   backend to feel routine, even though shared frame feedback is no longer
   terminal-only across the planned non-terminal family adopters
 
-Current strongest gate-5 code pressure after `RB-B3.c`:
+Current strongest gate-5 code pressure:
 
-- `terminal_widget_presentation_runtime.zig` still contains surviving
-  product-significant `usesDirectTerminalPresentation(...)` checks for
-  recent-input force-full behavior, fast-present reuse gating, and direct
-  partial-update entry
-- that means shared widget/runtime code still knows too much about direct vs
-  retained terminal-present path shape
-- the next honest ticket is to move those path decisions behind the shared
-  terminal present contract instead of keeping them as widget-runtime branches
+- fills and their dependent text/icon work still do not share one
+  backend-neutral phase boundary
+- current strongest initial family is shell/UI chrome band composition
+- the next honest ticket is to land one narrow band/composition seam that owns
+  fill plus dependent text/icon ordering under one backend-neutral unit
 
 Android note:
 
@@ -172,6 +169,13 @@ Current blocker reading after `RB-B3.e` progress:
   live reference verification of the Metal refresh-backed snapshot path, plus
   the stronger shared renderer pressure already recorded in
   `RENDER_BACKEND_CURRENT_STATE.md` around text/surface phase boundaries
+
+Next active ticket:
+
+- `AR-B3` / `RB-B3.f`
+- band composition phase boundary for fill + dependent text/icon work
+- owner:
+  `app_architecture/ui/BAND_COMPOSITION_PHASE_PLAN.md`
 
 Gate-4 closure note:
 
