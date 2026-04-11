@@ -147,6 +147,9 @@ Current checkpoint:
   the next move should pick one remaining family explicitly:
   terminal overlay/modal visuals, terminal progress/scrollbar/content-edge
   visuals, or editor row/overlay composition
+- `RB-B3.g` terminal overlay/progress composition is now in:
+  close-confirm modal, active-tab progress bar, terminal scrollbar thumb, and
+  terminal separator route through a terminal-owned composition seam
 
 ## Parked (not blocking)
 

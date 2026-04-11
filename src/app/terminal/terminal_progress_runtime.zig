@@ -1,10 +1,11 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
-const renderer_surface_host = @import("../../ui/renderer/renderer_surface_host.zig");
+const terminal_composition_host = @import("terminal_composition_host.zig");
 const host_types = @import("../../terminal/core/session/host_types.zig");
 
 const Shell = app_shell.Shell;
 const Color = app_shell.Color;
+const TerminalBand = terminal_composition_host.TerminalBand;
 const ProgressMetadata = host_types.ProgressMetadata;
 const ProgressState = host_types.ProgressState;
 
@@ -21,7 +22,9 @@ pub fn drawActiveTabProgress(
     const ui_scale = shell.uiScaleFactor();
     const bar_h = @max(@as(f32, 2), 2 * ui_scale);
     const bg = alphaScale(shell.theme().ui_text_inactive, 0.25);
-    renderer_surface_host.drawRect(shell.rendererPtr(), @intFromFloat(x), @intFromFloat(y), @intFromFloat(width), @intFromFloat(bar_h), bg);
+    var band = TerminalBand.init(shell, bg);
+    defer band.flush();
+    band.fillRect(@intFromFloat(x), @intFromFloat(y), @intFromFloat(width), @intFromFloat(bar_h), bg);
 
     const fill_color = switch (progress.state) {
         .@"error" => alphaScale(shell.theme().error_token, 0.85),
@@ -32,7 +35,7 @@ pub fn drawActiveTabProgress(
     const fill_w = progressFillWidth(width, progress.state, progress.value);
     if (fill_w <= 0) return;
     const fill_x = progressFillX(x, width, progress.state, fill_w);
-    renderer_surface_host.drawRect(shell.rendererPtr(), @intFromFloat(fill_x), @intFromFloat(y), @intFromFloat(fill_w), @intFromFloat(bar_h), fill_color);
+    band.fillRect(@intFromFloat(fill_x), @intFromFloat(y), @intFromFloat(fill_w), @intFromFloat(bar_h), fill_color);
 }
 
 fn progressFillWidth(width: f32, state: ProgressState, value: ?u8) f32 {

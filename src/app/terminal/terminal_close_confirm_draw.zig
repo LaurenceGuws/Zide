@@ -1,11 +1,12 @@
 const app_modes = @import("../modes/mod.zig");
 const app_shell = @import("../../app_shell.zig");
 const app_state_types = @import("../app_state_types.zig");
-const renderer_surface_host = @import("../../ui/renderer/renderer_surface_host.zig");
+const terminal_composition_host = @import("terminal_composition_host.zig");
 const workspace_host = @import("../../terminal/core/workspace_host.zig");
 const shared_types = @import("../../types/mod.zig");
 
 const Shell = app_shell.Shell;
+const TerminalBand = terminal_composition_host.TerminalBand;
 const WidgetLayout = shared_types.layout.WidgetLayout;
 
 fn closeConfirmMessage(ctx: ?app_state_types.TerminalCloseConfirmContext) []const u8 {
@@ -35,7 +36,10 @@ pub fn draw(state: anytype, shell: *Shell, layout: WidgetLayout, app_theme: app_
     else
         null;
 
-    renderer_surface_host.drawRect(shell.rendererPtr(),
+    var band = TerminalBand.init(shell, card_bg);
+    defer band.flush();
+
+    band.fillRect(
         @intFromFloat(layout.window.x),
         @intFromFloat(layout.window.y),
         @intFromFloat(layout.window.width),
@@ -43,14 +47,14 @@ pub fn draw(state: anytype, shell: *Shell, layout: WidgetLayout, app_theme: app_
         overlay,
     );
 
-    renderer_surface_host.drawRect(shell.rendererPtr(),
+    band.fillRect(
         @intFromFloat(modal.card.x),
         @intFromFloat(modal.card.y),
         @intFromFloat(modal.card.width),
         @intFromFloat(modal.card.height),
         card_bg,
     );
-    renderer_surface_host.drawRectOutline(shell.rendererPtr(),
+    band.drawRectOutline(
         @intFromFloat(modal.card.x),
         @intFromFloat(modal.card.y),
         @intFromFloat(modal.card.width),
@@ -64,45 +68,45 @@ pub fn draw(state: anytype, shell: *Shell, layout: WidgetLayout, app_theme: app_
     const title_x = modal.card.x + 16.0 * scale;
     const title_y = modal.card.y + 14.0 * scale;
     const msg_y = title_y + shell.charHeight() + 10.0 * scale;
-    shell.drawText(title, title_x, title_y, app_theme.ui_text);
-    shell.drawText(message, title_x, msg_y, app_theme.ui_text_inactive);
+    band.drawText(title, title_x, title_y, app_theme.ui_text);
+    band.drawText(message, title_x, msg_y, app_theme.ui_text_inactive);
 
-    renderer_surface_host.drawRect(shell.rendererPtr(),
+    band.fillRect(
         @intFromFloat(modal.cancel_button.x),
         @intFromFloat(modal.cancel_button.y),
         @intFromFloat(modal.cancel_button.width),
         @intFromFloat(modal.cancel_button.height),
         cancel_bg,
     );
-    renderer_surface_host.drawRectOutline(shell.rendererPtr(),
+    band.drawRectOutline(
         @intFromFloat(modal.cancel_button.x),
         @intFromFloat(modal.cancel_button.y),
         @intFromFloat(modal.cancel_button.width),
         @intFromFloat(modal.cancel_button.height),
         card_border,
     );
-    shell.drawText(
+    band.drawText(
         "Cancel (Esc / N)",
         modal.cancel_button.x + 10.0 * scale,
         modal.cancel_button.y + (modal.cancel_button.height - shell.charHeight()) / 2.0,
         app_theme.ui_text,
     );
 
-    renderer_surface_host.drawRect(shell.rendererPtr(),
+    band.fillRect(
         @intFromFloat(modal.confirm_button.x),
         @intFromFloat(modal.confirm_button.y),
         @intFromFloat(modal.confirm_button.width),
         @intFromFloat(modal.confirm_button.height),
         confirm_bg,
     );
-    renderer_surface_host.drawRectOutline(shell.rendererPtr(),
+    band.drawRectOutline(
         @intFromFloat(modal.confirm_button.x),
         @intFromFloat(modal.confirm_button.y),
         @intFromFloat(modal.confirm_button.width),
         @intFromFloat(modal.confirm_button.height),
         card_border,
     );
-    shell.drawText(
+    band.drawText(
         "Close Tab (Enter / Y)",
         modal.confirm_button.x + 10.0 * scale,
         modal.confirm_button.y + (modal.confirm_button.height - shell.charHeight()) / 2.0,

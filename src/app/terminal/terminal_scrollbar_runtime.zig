@@ -1,5 +1,5 @@
 const app_shell = @import("../../app_shell.zig");
-const renderer_surface_host = @import("../../ui/renderer/renderer_surface_host.zig");
+const terminal_composition_host = @import("terminal_composition_host.zig");
 const scrollback_view = @import("../../terminal/core/scrollback_view.zig");
 const shared_types = @import("../../types/mod.zig");
 const widgets = @import("../../ui/widgets.zig");
@@ -11,6 +11,7 @@ const MousePos = shared_types.input.MousePos;
 const InputBatch = shared_types.input.InputBatch;
 const TerminalWidget = widgets.TerminalWidget;
 const Color = app_shell.Color;
+const TerminalBand = terminal_composition_host.TerminalBand;
 
 pub const Result = struct {
     blocking: bool = false,
@@ -166,8 +167,9 @@ pub fn draw(
     const thumb_inset = @max(1.0, geometry.scrollbar_w * 0.25);
     const thumb_w = @max(1.0, geometry.scrollbar_w - thumb_inset * 2);
     const thumb_color = alphaScale(r.theme.selection, 0.85);
-    renderer_surface_host.drawRect(
-        r,
+    var band = TerminalBand.init(shell, thumb_color);
+    defer band.flush();
+    band.fillRect(
         @intFromFloat(geometry.scrollbar_x + thumb_inset),
         @intFromFloat(geometry.thumb.thumb_y),
         @intFromFloat(thumb_w),

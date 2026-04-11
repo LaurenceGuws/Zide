@@ -205,8 +205,18 @@ Current `RB-B3.f` checkpoint:
 
 Next renderer move:
 
-- open the next narrow gate-5 ticket against one of those remaining families
-  instead of stretching `RB-B3.f` past chrome-band ownership
+- `RB-B3.g` terminal overlay/progress composition is now the active narrow
+  follow-up
+- owner: `app_architecture/ui/TERMINAL_COMPOSITION_PHASE_PLAN.md`
+
+Current `RB-B3.g` checkpoint:
+
+- `terminal_composition_host.zig` defines a terminal-owned composition seam
+- close-confirm modal fills, outlines, and text now route through that seam
+- active-tab progress bar, terminal scrollbar thumb, and terminal separator now
+  route through that seam
+- remaining direct draw pressure is now mainly editor row/overlay composition,
+  common tooltip overlay composition, and terminal cell/content internals
 
 Gate-4 closure note:
 

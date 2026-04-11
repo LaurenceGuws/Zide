@@ -3,11 +3,12 @@ const app_terminal_active_widget = @import("terminal_active_widget.zig");
 const app_terminal_progress_runtime = @import("terminal_progress_runtime.zig");
 const app_terminal_scrollbar_runtime = @import("terminal_scrollbar_runtime.zig");
 const app_terminal_surface_gate = @import("terminal_surface_gate.zig");
-const renderer_surface_host = @import("../../ui/renderer/renderer_surface_host.zig");
+const terminal_composition_host = @import("terminal_composition_host.zig");
 const host_queries = @import("../../terminal/core/session/host_queries.zig");
 const shared_types = @import("../../types/mod.zig");
 
 const layout_types = shared_types.layout;
+const TerminalBand = terminal_composition_host.TerminalBand;
 
 pub fn draw(state: anytype, shell: anytype, layout: layout_types.WidgetLayout) void {
     if (!app_terminal_surface_gate.hasVisibleTerminalTabs(state.app_mode, state.show_terminal, state.terminal_workspace, state.terminals.items.len)) return;
@@ -16,7 +17,9 @@ pub fn draw(state: anytype, shell: anytype, layout: layout_types.WidgetLayout) v
 
     if (app_modes.ide.shouldRenderTerminalSeparator(state.app_mode)) {
         shell.setTheme(state.app_theme);
-        renderer_surface_host.drawRect(shell.rendererPtr(), @intFromFloat(layout.terminal.x), @intFromFloat(term_y), @intFromFloat(layout.terminal.width), 2, state.app_theme.ui_border);
+        var band = TerminalBand.init(shell, state.app_theme.ui_border);
+        defer band.flush();
+        band.fillRect(@intFromFloat(layout.terminal.x), @intFromFloat(term_y), @intFromFloat(layout.terminal.width), 2, state.app_theme.ui_border);
     }
 
     shell.setTheme(state.terminal_theme);
