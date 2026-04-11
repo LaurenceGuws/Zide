@@ -155,7 +155,8 @@ Current checkpoint:
     unpack under `/data/data/com.termux/...`, which this app cannot own
   - host-side `.deb` extraction/relocation is a dev bootstrap tool, not the
     final package-manager contract
-- the first `zide-pm-admin` Android dev snapshot prerelease now exists:
+- the first published Android dev snapshot prerelease from
+  `../zide-mobile-pm` now exists:
   - manifest:
     `https://github.com/LaurenceGuws/zide-mobile-pm/releases/download/android-dev-2026.04.11.211834/android-dev-prefix.release.manifest.json`
   - Zide command:
@@ -163,6 +164,17 @@ Current checkpoint:
   - the command verifies package/prefix/provider metadata, downloads the
     release-local archive asset, verifies size/SHA-256, and stages only the
     `android-prefix-archive` contract into the app-private files directory
+  - terminal-host now reads `.zide-userland-bootstrap.json` before blind
+    auto-start and reports blocked userland readiness honestly when the staged
+    prefix is missing/invalid/not launchable
+  - `./ops/android_terminal_host.py userland-state` now reports the staged
+    device userland state, and `userland-stage-artifact` skips restaging when
+    the same ready artifact/version/provider is already installed unless
+    `--force` is used
+  - product view now shows a bootstrap blocker when staged userland is missing,
+    invalid, or not launchable, with direct Retry and Open Debug actions
+  - terminal-host now distinguishes `ready-current` vs
+    `ready-upgrade-needed` against the pinned requested dev artifact identity
   - Note10 validation proves the artifact-staged prefix:
     - Bash 5.3.9
     - Neovim 0.12.1
@@ -208,7 +220,7 @@ Status:
   - `apt-get update` refreshes package metadata with staged certs and current
     overrides
   - `./ops/android_terminal_host.py userland-stage-artifact` now consumes the
-    published `zide-pm-admin` Android dev manifest and stages the produced
+    published Android dev manifest and stages the produced
     prefix archive as Zide's normal dev artifact contract
   - `./ops/android_terminal_host.py userland-stage-packages neovim htop gotop`
     remains available as an explicit dev-provider path for package-lane
@@ -222,8 +234,12 @@ Status:
 Immediate next step:
 
 - treat the artifact-staged prefix as the normal dev bootstrap path
-- decide whether product artifacts continue from audited `termux-main`,
-  move to a controlled mirror/fork, or become a Zide-owned Android provider
+- define Android provider policy around the mobile package authority model:
+  - `termux-main` remains the first supported Android provider
+  - Zide keeps provider provenance explicit instead of making Termux the
+    product identity
+  - future Zide-owned Android providers may become the default without changing
+    the `zide-pm` surface
 - wire first-run/user-facing bootstrap UI around the artifact-staging contract
   instead of requiring the developer ops command
 

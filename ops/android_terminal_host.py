@@ -36,7 +36,7 @@ USERLAND_PACKAGE_CACHE_DIR = USERLAND_CACHE_DIR / "packages"
 USERLAND_ARTIFACT_CACHE_DIR = USERLAND_CACHE_DIR / "artifacts"
 USERLAND_RELEASE_API = "https://api.github.com/repos/termux/termux-packages/releases/latest"
 USERLAND_ASSET_NAME = "bootstrap-aarch64.zip"
-ZIDE_MOBILE_PM_ANDROID_DEV_MANIFEST_URL = (
+ZIDE_ANDROID_DEV_PREFIX_MANIFEST_URL = (
     "https://github.com/LaurenceGuws/zide-mobile-pm/releases/download/"
     "android-dev-2026.04.11.211834/android-dev-prefix.release.manifest.json"
 )
@@ -70,7 +70,8 @@ COMMAND_HELP: dict[str, str] = {
     "userland-fetch-ref": "Download the latest upstream aarch64 bootstrap zip on Linux for inspection/staging.",
     "userland-inspect": "Inspect a local bootstrap archive/tree, or the cached upstream reference if none is provided.",
     "userland-stage": "Stage a bootstrap archive/tree into the Android app sandbox, defaulting to the cached upstream reference.",
-    "userland-stage-artifact": "Stage a zide-pm-admin Android prefix archive manifest into the app sandbox.",
+    "userland-stage-artifact": "Stage a published Android prefix archive manifest into the app sandbox.",
+    "userland-state": "Print the currently staged Android userland state from the device.",
     "userland-stage-packages": "Dev-provider path: stage relocated Termux packages into the app sandbox.",
     "userland-bash-version": "Run the staged app-private Bash under run-as and print its version banner.",
     "userland-apt-update": "Probe apt-get update against the staged userland with the current relocation overrides.",
@@ -109,6 +110,17 @@ class UserlandArtifact:
     archive_root: str
     provider: str
     hardcoded_termux_policy: str
+
+
+@dataclass(frozen=True)
+class InstalledUserlandState:
+    installed: bool
+    format_name: str
+    artifact: str
+    version: str
+    provider: str
+    shell_exists: bool
+    launch_ready: bool
 
 
 def die(message: str) -> NoReturn:
@@ -792,7 +804,7 @@ def build_userland_artifact_stage_tar(
     stamp_path = staging_root / ".zide-userland-bootstrap.json"
     stamp_payload = {
         "source": manifest_source,
-        "format": "zide-mobile-pm-artifact",
+        "format": "android-prefix-artifact",
         "artifact": artifact.name,
         "version": artifact.version,
         "provider": artifact.provider,
@@ -1021,6 +1033,59 @@ def android_prefix_artifact_from_manifest(manifest: dict[str, object]) -> Userla
     )
 
 
+def remote_userland_state(adb: Path) -> InstalledUserlandState:
+    stamp_result = run_remote_shell(
+        adb,
+        f"run-as {PACKAGE_NAME} sh -c "
+        + shlex.quote(f"if [ -f {REMOTE_USERLAND_STAMP} ]; then cat {REMOTE_USERLAND_STAMP}; fi"),
+        capture_output=True,
+        check=False,
+    )
+    shell_result = run_remote_shell(
+        adb,
+        f"run-as {PACKAGE_NAME} sh -c "
+        + shlex.quote(
+            f"if [ -f {REMOTE_USERLAND_PREFIX}/bin/bash ]; then echo true; else echo false; fi"
+        ),
+        capture_output=True,
+        check=False,
+    )
+    shell_exists = shell_result.stdout.strip() == "true"
+    stamp_text = stamp_result.stdout.strip()
+    if not stamp_text:
+        return InstalledUserlandState(
+            installed=False,
+            format_name="",
+            artifact="",
+            version="",
+            provider="",
+            shell_exists=shell_exists,
+            launch_ready=False,
+        )
+    try:
+        stamp = json.loads(stamp_text)
+    except json.JSONDecodeError:
+        return InstalledUserlandState(
+            installed=True,
+            format_name="invalid-stamp",
+            artifact="",
+            version="",
+            provider="",
+            shell_exists=shell_exists,
+            launch_ready=False,
+        )
+    has_bash = bool(stamp.get("has_bash", False))
+    return InstalledUserlandState(
+        installed=True,
+        format_name=str(stamp.get("format", "")),
+        artifact=str(stamp.get("artifact", "")),
+        version=str(stamp.get("version", "")),
+        provider=str(stamp.get("provider", "")),
+        shell_exists=shell_exists,
+        launch_ready=has_bash and shell_exists,
+    )
+
+
 def fetch_userland_artifact(manifest_source: str, artifact: UserlandArtifact) -> Path:
     url = manifest_artifact_url(manifest_source, artifact.url)
     cache_name = f"{artifact.name}-{artifact.version}-{artifact.sha256[:12]}.tar.gz"
@@ -1047,11 +1112,47 @@ def fetch_userland_artifact(manifest_source: str, artifact: UserlandArtifact) ->
     return target
 
 
-def userland_stage_artifact(manifest_source: str) -> None:
+def userland_state() -> None:
+    adb = adb_path(sdk_root())
+    state = remote_userland_state(adb)
+    print(f"installed={state.installed}", flush=True)
+    print(f"format={state.format_name}", flush=True)
+    print(f"artifact={state.artifact}", flush=True)
+    print(f"version={state.version}", flush=True)
+    print(f"provider={state.provider}", flush=True)
+    print(f"shell_exists={state.shell_exists}", flush=True)
+    print(f"launch_ready={state.launch_ready}", flush=True)
+
+
+def userland_stage_artifact(manifest_source: str, *, force: bool = False) -> None:
     manifest, resolved_manifest_source = read_userland_manifest(manifest_source)
     artifact = android_prefix_artifact_from_manifest(manifest)
     archive = fetch_userland_artifact(resolved_manifest_source, artifact)
     adb = adb_path(sdk_root())
+    installed_state = remote_userland_state(adb)
+
+    print(f"installed_before={installed_state.installed}", flush=True)
+    print(f"installed_format={installed_state.format_name}", flush=True)
+    print(f"installed_artifact={installed_state.artifact}", flush=True)
+    print(f"installed_version={installed_state.version}", flush=True)
+    print(f"installed_provider={installed_state.provider}", flush=True)
+    print(f"installed_launch_ready={installed_state.launch_ready}", flush=True)
+
+    already_current = (
+        installed_state.launch_ready
+        and installed_state.format_name == "android-prefix-artifact"
+        and installed_state.artifact == artifact.name
+        and installed_state.version == artifact.version
+        and installed_state.provider == artifact.provider
+    )
+    if already_current and not force:
+        print("artifact_stage=already-current", flush=True)
+        print(f"staged_prefix={REMOTE_USERLAND_PREFIX}", flush=True)
+        print(f"artifact={artifact.name}", flush=True)
+        print(f"artifact_version={artifact.version}", flush=True)
+        print(f"artifact_provider={artifact.provider}", flush=True)
+        print(f"artifact_hardcoded_termux_policy={artifact.hardcoded_termux_policy}", flush=True)
+        return
 
     with tempfile.TemporaryDirectory(prefix="zide-userland-artifact-") as work_name:
         work_dir = Path(work_name)
@@ -1060,6 +1161,7 @@ def userland_stage_artifact(manifest_source: str) -> None:
         build_userland_artifact_stage_tar(artifact_root, artifact, resolved_manifest_source, stage_tar)
         install_userland_stage_tar(adb, stage_tar)
 
+    print("artifact_stage=restaged", flush=True)
     print(f"staged_prefix={REMOTE_USERLAND_PREFIX}", flush=True)
     print(f"artifact={artifact.name}", flush=True)
     print(f"artifact_version={artifact.version}", flush=True)
@@ -1305,11 +1407,16 @@ def main() -> None:
     )
     parser.add_argument(
         "--manifest",
-        default=ZIDE_MOBILE_PM_ANDROID_DEV_MANIFEST_URL,
+        default=ZIDE_ANDROID_DEV_PREFIX_MANIFEST_URL,
         help=(
-            "zide-pm-admin Android prefix manifest URL/path for userland-stage-artifact. "
-            "Defaults to the current published Android dev prerelease."
+            "Published Android prefix manifest URL/path for userland-stage-artifact. "
+            "Defaults to the current published Android dev prefix manifest from ../zide-mobile-pm."
         ),
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Force restaging for userland-stage-artifact even if the same artifact is already staged.",
     )
     parser.add_argument(
         "--output",
@@ -1331,7 +1438,8 @@ def main() -> None:
         "userland-fetch-ref": lambda: userland_fetch_ref(args.output),
         "userland-inspect": lambda: userland_inspect(args.archive),
         "userland-stage": lambda: userland_stage(args.archive),
-        "userland-stage-artifact": lambda: userland_stage_artifact(args.manifest),
+        "userland-stage-artifact": lambda: userland_stage_artifact(args.manifest, force=args.force),
+        "userland-state": userland_state,
         "userland-stage-packages": lambda: userland_stage_packages(args.archive, args.packages),
         "userland-bash-version": userland_bash_version,
         "userland-apt-update": userland_apt_update,

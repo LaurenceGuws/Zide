@@ -89,6 +89,22 @@ Current measured truth is narrower and better than the first assumption:
   `./ops/android_terminal_host.py userland-stage-artifact`, that reads the
   published manifest, verifies the archive contract, and stages the prefix
   without parsing provider package internals
+- terminal-host now reads the staged bootstrap stamp before auto-starting the
+  shell:
+  missing/invalid stamp or missing `${PREFIX}/bin/bash` blocks blind auto-start
+  and reports explicit userland readiness in debug status instead
+- product view now carries a minimal bootstrap blocker flow when userland is
+  not launch-ready:
+  retry rechecks staged state, and debug jumps directly to the detailed debug
+  surface
+- the Linux-host consumer path can now read the currently staged stamp from the
+  device and compare it against the requested artifact:
+  `userland-stage-artifact` reports `already-current` for matching staged
+  artifact/version/provider state and only restages when the state differs or
+  `--force` is used
+- terminal-host also carries the pinned requested dev artifact identity in the
+  app build, so launchable staged userland is classified as `ready-current` or
+  `ready-upgrade-needed` instead of one generic ready state
 - device-proven dev package set now includes:
   - Bash 5.3.9 from the staged bootstrap
   - Neovim 0.12.1 staged from relocated package payloads
@@ -179,12 +195,15 @@ Package authority should be Zide-controlled, not vague upstream drift.
 
 That now means:
 
-- `../zide-mobile-pm` owns mobile package/artifact production and trust metadata
-- package recipes or binary mirrors are rooted in pinned inputs, not blind
-  floating trust
-- `zide` consumes explicit manifests, checksums, archive URLs, and version
-  stamps
-- initial package set kept intentionally small and product-driven
+- `../zide-mobile-pm` owns mobile package/artifact production and trust
+  metadata
+- providers are inputs to that package authority, not the product identity
+- `termux-main` is the first supported Android provider
+- `zide` consumes explicit manifests, checksums, archive URLs, version stamps,
+  and provider provenance
+- initial package set stays intentionally small and product-driven
+- future Zide-owned Android providers may be added or become the default
+  without changing the `zide-pm` surface
 
 Initial package goals are not "all of Linux". They are:
 
@@ -200,8 +219,9 @@ Development staging exception:
 - it is not the final package-manager contract
 - it exists because upstream Termux package payloads are package-name rooted
   and cannot be installed directly by our app-owned `dpkg`
-- the normal Zide dev consumer path is now the `zide-pm-admin`
-  `android-prefix-archive` manifest, not direct `.deb` staging
+- the normal Zide dev consumer path is now the published Android
+  `android-prefix-archive` manifest from `../zide-mobile-pm`, not direct `.deb`
+  staging
 
 ## `AU-A1` Scope
 
@@ -247,7 +267,7 @@ Current checkpoint:
   `/data/data/com.termux/files/usr` payloads, relocates them to
   `dev.zide.terminal`, and stages the merged prefix
 - `./ops/android_terminal_host.py userland-stage-artifact` stages the published
-  `zide-pm-admin` dev prefix artifact by manifest:
+  Android dev prefix artifact by manifest:
   `https://github.com/LaurenceGuws/zide-mobile-pm/releases/download/android-dev-2026.04.11.211834/android-dev-prefix.release.manifest.json`
 - artifact staging verifies package name, prefix, archive root, provider
   metadata, size, and SHA-256 before pushing the prefix to the device
@@ -281,8 +301,12 @@ Current checkpoint:
 
 Acceptance:
 
-- Zide can stage a prefix from a `zide-pm-admin` manifest/release URL without
+- Zide can stage a prefix from a published manifest/release URL without
   parsing provider package internals
+- terminal-host can distinguish missing/invalid/not-launchable staged userland
+  from real shell-start failures before auto-start
+- the consumer path can distinguish no staged artifact vs already-current vs
+  restage-required artifact state before pushing files
 - `apt update` works against the configured repo/channel
 - one small package can be installed or materialized from that channel through
   a repo-owned package flow
@@ -324,8 +348,10 @@ Stop this lane when:
 ## Immediate Next Moves
 
 1. Make the artifact-staged prefix the normal dev bootstrap path.
-2. Decide whether the product provider remains audited `termux-main`, moves to
-   a controlled mirror/fork, or becomes a Zide-owned Android provider before
-   claiming product installs.
+2. Define provider policy for Android product installs:
+   - keep `termux-main` as the first supported provider
+   - keep provider provenance/configuration explicit
+   - leave room for a future Zide-owned default provider without changing the
+     product package UX.
 3. Wire first-run/user-facing bootstrap UI around the artifact-staging contract
    instead of requiring the developer ops command.

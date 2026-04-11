@@ -40,6 +40,57 @@
                     android:textSize="13sp"
                     android:typeface="monospace" />
             </ScrollView>
+
+            <LinearLayout
+                android:id="@+id/product_bootstrap_blocker"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#cc10161d"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="20dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/product_bootstrap_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:text="@string/product_bootstrap_title_missing"
+                    android:textAppearance="@android:style/TextAppearance.Material.Large"
+                    android:textColor="#f5f7fa" />
+
+                <TextView
+                    android:id="@+id/product_bootstrap_detail"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center"
+                    android:text="@string/product_bootstrap_detail_missing"
+                    android:textAppearance="@android:style/TextAppearance.Material.Small"
+                    android:textColor="#c2ccd6" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:gravity="center"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/product_bootstrap_retry_button"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/product_bootstrap_retry" />
+
+                    <Button
+                        android:id="@+id/product_bootstrap_debug_button"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:text="@string/product_bootstrap_debug" />
+                </LinearLayout>
+            </LinearLayout>
         </FrameLayout>
 
         <HorizontalScrollView

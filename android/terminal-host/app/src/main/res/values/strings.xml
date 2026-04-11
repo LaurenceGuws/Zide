@@ -7,6 +7,16 @@
     <string name="shell_restart_short">Restart</string>
     <string name="event_log_label">Event Log</string>
     <string name="sidebar_title">Terminal Controls</string>
+    <string name="product_bootstrap_title_missing">Userland Not Staged</string>
+    <string name="product_bootstrap_title_invalid">Userland Needs Restaging</string>
+    <string name="product_bootstrap_title_shell_missing">Shell Payload Missing</string>
+    <string name="product_bootstrap_title_upgrade">Userland Update Available</string>
+    <string name="product_bootstrap_detail_missing">Stage the Android dev prefix before launching the product shell.</string>
+    <string name="product_bootstrap_detail_invalid">The staged bootstrap metadata is invalid. Restage the Android dev prefix.</string>
+    <string name="product_bootstrap_detail_shell_missing">The staged prefix does not currently provide a launchable Bash shell.</string>
+    <string name="product_bootstrap_detail_upgrade">The staged userland is launchable but older than the current requested dev artifact.</string>
+    <string name="product_bootstrap_retry">Retry</string>
+    <string name="product_bootstrap_debug">Open Debug</string>
     <string name="assist_esc">Esc</string>
     <string name="assist_tab">Tab</string>
     <string name="assist_ctrl">Ctrl</string>

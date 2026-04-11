@@ -90,9 +90,14 @@ gap.
     - staged Bash is also the live product shell on the SDK 28 terminal-host
       path; transcript proof shows `bash-5.3$`, `pwd`, and `/`
     - `apt-get update` refreshes package metadata with relocation overrides
-    - `zide-pm-admin` publishes the current Android dev snapshot prerelease;
+    - `zide-pm-admin` publishes the current Android dev snapshot prerelease in
+      `../zide-mobile-pm`;
       `userland-stage-artifact` verifies the manifest/archive and stages the
       prefix without parsing provider package internals
+    - provider model is explicit:
+      `termux-main` is the first supported Android provider, not the product
+      identity; future Zide-owned providers can replace the default without
+      changing `zide-pm`
     - Note10 validation proves the artifact-staged prefix runs Bash 5.3.9,
       Neovim 0.12.1, `nvim --headless +qall`, `htop` 3.5.0, and `gotop` 4.2.0
     - fresh terminal-host launch after artifact staging reports shell start and

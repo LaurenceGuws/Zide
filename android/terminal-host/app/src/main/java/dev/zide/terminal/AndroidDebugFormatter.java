@@ -65,6 +65,13 @@ final class AndroidDebugFormatter {
         final int surfaceHeight;
         final int viewportWidth;
         final int viewportHeight;
+        final String userlandState;
+        final String userlandFormat;
+        final String userlandArtifact;
+        final String userlandVersion;
+        final String userlandProvider;
+        final boolean userlandLaunchReady;
+        final boolean userlandExpectedCurrent;
         final String glesStatus;
         final long glesSwapCount;
         final long glesBoundEpoch;
@@ -88,6 +95,13 @@ final class AndroidDebugFormatter {
                 int surfaceHeight,
                 int viewportWidth,
                 int viewportHeight,
+                String userlandState,
+                String userlandFormat,
+                String userlandArtifact,
+                String userlandVersion,
+                String userlandProvider,
+                boolean userlandLaunchReady,
+                boolean userlandExpectedCurrent,
                 String glesStatus,
                 long glesSwapCount,
                 long glesBoundEpoch,
@@ -109,6 +123,13 @@ final class AndroidDebugFormatter {
             this.surfaceHeight = surfaceHeight;
             this.viewportWidth = viewportWidth;
             this.viewportHeight = viewportHeight;
+            this.userlandState = userlandState;
+            this.userlandFormat = userlandFormat;
+            this.userlandArtifact = userlandArtifact;
+            this.userlandVersion = userlandVersion;
+            this.userlandProvider = userlandProvider;
+            this.userlandLaunchReady = userlandLaunchReady;
+            this.userlandExpectedCurrent = userlandExpectedCurrent;
             this.glesStatus = glesStatus;
             this.glesSwapCount = glesSwapCount;
             this.glesBoundEpoch = glesBoundEpoch;
@@ -154,6 +175,15 @@ final class AndroidDebugFormatter {
                 "surfaceValid=" + s.surfaceValid +
                 " surfaceSize=" + s.surfaceWidth + "x" + s.surfaceHeight +
                 " viewportSize=" + s.viewportWidth + "x" + s.viewportHeight +
+                "\n" +
+                "userland=" + s.userlandState +
+                " launchReady=" + s.userlandLaunchReady +
+                " expectedCurrent=" + s.userlandExpectedCurrent +
+                " format=" + s.userlandFormat +
+                "\n" +
+                "artifact=" + s.userlandArtifact +
+                " version=" + s.userlandVersion +
+                " provider=" + s.userlandProvider +
                 "\n" +
                 "gles=" + s.glesStatus +
                 " swaps=" + s.glesSwapCount +

@@ -39,6 +39,8 @@ public final class ZideTerminalActivity extends Activity
     private static final String EXTRA_DEBUG_RESIZE_SURFACE_ONCE = "debug_resize_surface_once";
     private static final String EXTRA_DEBUG_START_SHELL_ONCE = "debug_start_shell_once";
     private static final String SHELL_TRANSCRIPT_PATH = "/data/data/dev.zide.terminal/files/zide_terminal_shell.log";
+    private static final String USERLAND_BOOTSTRAP_STAMP_PATH = "/data/data/dev.zide.terminal/files/.zide-userland-bootstrap.json";
+    private static final String USERLAND_SHELL_PATH = "/data/data/dev.zide.terminal/files/usr/bin/bash";
     private static final long SHELL_REFRESH_MS = 150L;
     private static final String[] RUNTIME_FONT_ASSETS = {
             "IosevkaTermNerdFont-Regular.ttf",
@@ -70,9 +72,14 @@ public final class ZideTerminalActivity extends Activity
     private TextView statusText;
     private TextView shellOutputText;
     private TextView eventLogText;
+    private TextView productBootstrapTitle;
+    private TextView productBootstrapDetail;
+    private Button productBootstrapRetryButton;
+    private Button productBootstrapDebugButton;
     private View rootView;
     private View productView;
     private View debugView;
+    private View productBootstrapBlocker;
     private View drawerScrim;
     private View drawerEdgeHotspot;
     private View leftSidebar;
@@ -93,6 +100,9 @@ public final class ZideTerminalActivity extends Activity
     private boolean shellRefreshActive = false;
     private boolean shellRefreshQueued = false;
     private boolean sidebarOpen = false;
+    private String lastAutoStartBlockedState = "";
+    private UserlandBootstrapState currentBootstrapState = new UserlandBootstrapState(
+            UserlandBootstrapState.STATE_MISSING_STAMP, "", "", "", "", false, false);
     private int surfaceHostGeneration = 0;
     private int productViewBasePaddingLeft = 0;
     private int productViewBasePaddingTop = 0;
@@ -121,9 +131,14 @@ public final class ZideTerminalActivity extends Activity
         statusText = findViewById(R.id.status_text);
         shellOutputText = findViewById(R.id.shell_output_text);
         eventLogText = findViewById(R.id.event_log);
+        productBootstrapTitle = findViewById(R.id.product_bootstrap_title);
+        productBootstrapDetail = findViewById(R.id.product_bootstrap_detail);
+        productBootstrapRetryButton = findViewById(R.id.product_bootstrap_retry_button);
+        productBootstrapDebugButton = findViewById(R.id.product_bootstrap_debug_button);
         rootView = findViewById(R.id.root_view);
         productView = findViewById(R.id.product_view);
         debugView = findViewById(R.id.debug_view);
+        productBootstrapBlocker = findViewById(R.id.product_bootstrap_blocker);
         drawerScrim = findViewById(R.id.drawer_scrim);
         drawerEdgeHotspot = findViewById(R.id.left_edge_swipe_hotspot);
         leftSidebar = findViewById(R.id.left_sidebar);
@@ -151,6 +166,8 @@ public final class ZideTerminalActivity extends Activity
                     }
                 },
                 SHELL_TRANSCRIPT_PATH,
+                USERLAND_BOOTSTRAP_STAMP_PATH,
+                USERLAND_SHELL_PATH,
                 nativeLoaded);
         installShellInputView();
         installInsetsHandling();
@@ -158,6 +175,7 @@ public final class ZideTerminalActivity extends Activity
         shellTranscriptController.installScrollHandling();
         bindSidebarControls();
         bindViewModeToggle();
+        bindProductBootstrapBlocker();
         bindAssistBar();
         prepareRuntimeAssets();
         applyViewMode();
@@ -532,6 +550,20 @@ public final class ZideTerminalActivity extends Activity
         applyModifierLatchState(shellInputView.modifierLatchState());
     }
 
+    private void bindProductBootstrapBlocker() {
+        productBootstrapRetryButton.setOnClickListener(view -> {
+            appendEvent("product.bootstrap retry");
+            refreshShellState(true);
+            updateStatus("product-bootstrap-retry");
+        });
+        productBootstrapDebugButton.setOnClickListener(view -> {
+            debugViewEnabled = true;
+            appendEvent("product.bootstrap debug");
+            applyViewMode();
+            updateStatus("debug-view");
+        });
+    }
+
     private void bindAssistButton(int id, String text, String eventName) {
         final Button button = findViewById(id);
         button.setOnClickListener(view -> {
@@ -711,12 +743,25 @@ public final class ZideTerminalActivity extends Activity
 
     private void refreshShellState(boolean logEvent) {
         final ShellSessionController.PollResult pollResult = shellSessionController.poll();
+        currentBootstrapState = pollResult.bootstrapState;
         if (pollResult.autoStarted) {
             appendEvent("auto.shellStart status=" + shellStartStatusLabel(pollResult.autoStartStatus));
+        }
+        if (pollResult.autoStartBlocked) {
+            if (!pollResult.bootstrapState.state.equals(lastAutoStartBlockedState)) {
+                appendEvent(
+                        "auto.shellStart blocked=" + pollResult.bootstrapState.state +
+                                " artifact=" + pollResult.bootstrapState.artifact +
+                                " version=" + pollResult.bootstrapState.version);
+                lastAutoStartBlockedState = pollResult.bootstrapState.state;
+            }
+        } else {
+            lastAutoStartBlockedState = "";
         }
 
         shellTranscriptController.applyTranscript(pollResult.transcript);
         updateProductShellVisibility();
+        updateStatus("shell-state", pollResult.bootstrapState);
         if (logEvent) {
             appendEvent("manual.shellRefresh alive=" + pollResult.alive + " status="
                     + shellStartStatusLabel(pollResult.status));
@@ -782,8 +827,45 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void updateProductShellVisibility() {
-        final boolean sharedShellActive = nativeLoaded && nativeSharedShellRendererActiveBridge();
-        shellOutputScroll.setVisibility(sharedShellActive ? View.GONE : View.VISIBLE);
+        final boolean launchReady = currentBootstrapState.launchReady;
+        final boolean sharedShellActive = launchReady && nativeLoaded && nativeSharedShellRendererActiveBridge();
+        shellOutputScroll.setVisibility(launchReady && !sharedShellActive ? View.VISIBLE : View.GONE);
+        final boolean showBlocker = !launchReady || !currentBootstrapState.expectedCurrent;
+        productBootstrapBlocker.setVisibility(showBlocker ? View.VISIBLE : View.GONE);
+        if (showBlocker) {
+            productBootstrapTitle.setText(productBootstrapTitle(currentBootstrapState));
+            productBootstrapDetail.setText(productBootstrapDetail(currentBootstrapState));
+        }
+    }
+
+    private int productBootstrapTitle(UserlandBootstrapState state) {
+        switch (state.state) {
+            case UserlandBootstrapState.STATE_INVALID_STAMP:
+                return R.string.product_bootstrap_title_invalid;
+            case UserlandBootstrapState.STATE_READY_UPGRADE_NEEDED:
+                return R.string.product_bootstrap_title_upgrade;
+            case UserlandBootstrapState.STATE_MISSING_SHELL:
+            case UserlandBootstrapState.STATE_STAMP_NO_BASH:
+                return R.string.product_bootstrap_title_shell_missing;
+            case UserlandBootstrapState.STATE_MISSING_STAMP:
+            default:
+                return R.string.product_bootstrap_title_missing;
+        }
+    }
+
+    private int productBootstrapDetail(UserlandBootstrapState state) {
+        switch (state.state) {
+            case UserlandBootstrapState.STATE_INVALID_STAMP:
+                return R.string.product_bootstrap_detail_invalid;
+            case UserlandBootstrapState.STATE_READY_UPGRADE_NEEDED:
+                return R.string.product_bootstrap_detail_upgrade;
+            case UserlandBootstrapState.STATE_MISSING_SHELL:
+            case UserlandBootstrapState.STATE_STAMP_NO_BASH:
+                return R.string.product_bootstrap_detail_shell_missing;
+            case UserlandBootstrapState.STATE_MISSING_STAMP:
+            default:
+                return R.string.product_bootstrap_detail_missing;
+        }
     }
 
     private void callNative(String event, long seq) {
@@ -836,6 +918,10 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void updateStatus(String state) {
+        updateStatus(state, UserlandBootstrapState.load(USERLAND_BOOTSTRAP_STAMP_PATH, USERLAND_SHELL_PATH));
+    }
+
+    private void updateStatus(String state, UserlandBootstrapState bootstrapState) {
         final AndroidDebugFormatter.SurfaceEventSnapshot surfaceState = currentSurfaceStateSnapshot();
         statusText.setText(AndroidDebugFormatter.formatStatus(
                 new AndroidDebugFormatter.StatusSnapshot(
@@ -848,6 +934,13 @@ public final class ZideTerminalActivity extends Activity
                         surfaceView.getHeight(),
                         visibleViewportWidth,
                         visibleViewportHeight,
+                        bootstrapState.state,
+                        bootstrapState.format,
+                        bootstrapState.artifact,
+                        bootstrapState.version,
+                        bootstrapState.provider,
+                        bootstrapState.launchReady,
+                        bootstrapState.expectedCurrent,
                         surfaceState.glesStatus,
                         surfaceState.glesSwapCount,
                         surfaceState.glesBoundEpoch,
