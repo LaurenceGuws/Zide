@@ -164,8 +164,8 @@ Current `RB-B3.e` checkpoint:
 
 Current blocker reading after `RB-B3.e` progress:
 
-- the surviving `direct_snapshot_*` / `retained_surface` names are now
-  primarily debug/reporting surfaces, not shared product control flow
+- the surviving terminal presentation sample labels are now primarily
+  debug/reporting surfaces, not shared product control flow
 - that means the remaining pressure is no longer generic terminal-presentable
   parity wording cleanup
 - the honest remaining blocker is:

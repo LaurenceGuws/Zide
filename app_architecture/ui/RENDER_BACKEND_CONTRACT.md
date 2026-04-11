@@ -761,8 +761,8 @@ After the current `RB-B3.e` work:
 
 That means the remaining gate-5 pressure should be read more precisely:
 
-- debug/reporting labels that still mention `direct_snapshot_*` or
-  `retained_surface` are not, by themselves, the blocker
+- debug/reporting terminal presentation sample labels are not, by
+  themselves, the blocker
 - the next blocker is whichever stronger shared behavior or verification gap
   still prevents OpenGL and Metal from reading like routine implementations of
   one renderer contract

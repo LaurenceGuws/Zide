@@ -166,8 +166,8 @@ That blocker is now narrower:
   terminal-present enum
 - Metal now satisfies the shared refresh seam structurally and participates in
   the active refresh path
-- the surviving `direct_snapshot_*` / `retained_surface` labels are debug and
-  reporting vocabulary, not live shared contract branching
+- the surviving terminal presentation sample labels are debug and reporting
+  vocabulary, not live shared contract branching
 
 What still remains is:
 

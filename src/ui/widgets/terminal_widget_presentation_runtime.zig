@@ -599,7 +599,7 @@ pub fn notePresentSample(
         .scale_x = if (source_w > 0.0) dest_w / source_w else 1.0,
         .scale_y = if (source_h > 0.0) dest_h / source_h else 1.0,
     };
-    if (mode == .retained_surface) {
+    if (mode == .refreshed_presentable) {
         if (renderer_presentable_host.terminalPresentableInfo(renderer)) |info| {
             sample.presentable_w_px = info.width_px;
             sample.presentable_h_px = info.height_px;
@@ -1447,7 +1447,7 @@ pub fn presentDraw(
             note_present(
                 ctx,
                 renderer_local,
-                .direct_snapshot_presentable,
+                .cached_presentable_reuse,
                 generation,
                 geometry.origin_x,
                 geometry.origin_y,
@@ -1469,7 +1469,7 @@ pub fn presentDraw(
             note_present(
                 ctx,
                 renderer_local,
-                .retained_surface,
+                .refreshed_presentable,
                 generation,
                 geometry.origin_x,
                 geometry.origin_y,
@@ -1584,7 +1584,7 @@ pub fn directPresent(
     note_present(
         note_present_ctx,
         renderer,
-        .direct_main_target,
+        .immediate_surface_present,
         terminal_view.generation,
         view_geometry.origin_x,
         view_geometry.origin_y,
@@ -1729,9 +1729,9 @@ pub fn tryIncrementalPresentableUpdate(
         note_present_ctx,
         renderer,
         if (terminal_view.partial_capture.active_viewport_shift_rows != 0)
-            .direct_snapshot_shift_update
+            .incremental_presentable_shift_update
         else
-            .direct_snapshot_update,
+            .incremental_presentable_update,
         terminal_view.generation,
         view_geometry.origin_x,
         view_geometry.origin_y,

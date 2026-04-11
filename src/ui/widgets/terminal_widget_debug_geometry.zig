@@ -47,16 +47,16 @@ pub const CursorOverlaySample = struct {
 };
 
 pub const TerminalPresentationSampleMode = enum {
-    direct_main_target,
-    direct_snapshot_update,
-    direct_snapshot_shift_update,
-    direct_snapshot_presentable,
-    retained_surface,
+    immediate_surface_present,
+    incremental_presentable_update,
+    incremental_presentable_shift_update,
+    cached_presentable_reuse,
+    refreshed_presentable,
 };
 
 pub const TerminalPresentationSample = struct {
     valid: bool = false,
-    mode: TerminalPresentationSampleMode = .retained_surface,
+    mode: TerminalPresentationSampleMode = .refreshed_presentable,
     generation: u64 = 0,
     presentable_w_px: i32 = 0,
     presentable_h_px: i32 = 0,
