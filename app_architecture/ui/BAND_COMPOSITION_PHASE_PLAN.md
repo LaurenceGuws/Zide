@@ -116,6 +116,11 @@ Stop when:
     queues tab title text through the chrome-band seam
   - tab-bar band text now flushes before `endClip()` so the band replay remains
     inside the tab strip clip boundary
+- the fourth narrow chrome-band slice is now in:
+  - integrated terminal tab-bar background now routes through the chrome-band
+    seam instead of a direct surface rect next to tab text
+  - shared window caption buttons now draw their backgrounds and glyph strokes
+    through the chrome-band seam
 - this does not claim shell/UI chrome is solved globally
 - the next likely pressure inside this ticket is the terminal widget chrome
   boundary: any remaining shell/UI chrome fill plus dependent text/icon path

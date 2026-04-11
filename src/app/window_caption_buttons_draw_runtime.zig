@@ -1,13 +1,17 @@
 const std = @import("std");
 const app_shell = @import("../app_shell.zig");
-const renderer_surface_host = @import("../ui/renderer/renderer_surface_host.zig");
+const renderer_chrome_band_host = @import("../ui/renderer/renderer_chrome_band_host.zig");
 const widgets_common = @import("../ui/widgets/common.zig");
 const window_caption_buttons_runtime = @import("window_caption_buttons_runtime.zig");
 
 const Color = app_shell.Color;
+const Band = renderer_chrome_band_host.Band;
 const CaptionButton = window_caption_buttons_runtime.CaptionButton;
 
 pub fn drawButtons(shell: anytype, rects: anytype, pressed_button: ?CaptionButton, base_bg: Color) void {
+    var band = Band.init(shell, base_bg);
+    defer band.flush();
+
     const mouse = shell.getMousePos();
     const focused = shell.windowFocused();
     const native_sink_active = shell.integratedWindowChromeSinkActive();
@@ -35,12 +39,12 @@ pub fn drawButtons(shell: anytype, rects: anytype, pressed_button: ?CaptionButto
         shell.integratedWindowChromeClosePressed() and close_hovered
     else
         pressed_button == .close and close_hovered;
-    drawCaptionButton(shell, rects.minimize_rect, minimize_hovered, minimize_pressed, .minimize, base_bg);
-    drawCaptionButton(shell, rects.maximize_rect, maximize_hovered, maximize_pressed, .maximize_restore, base_bg);
-    drawCaptionButton(shell, rects.close_rect, close_hovered, close_pressed, .close, base_bg);
+    drawCaptionButton(&band, shell, rects.minimize_rect, minimize_hovered, minimize_pressed, .minimize, base_bg);
+    drawCaptionButton(&band, shell, rects.maximize_rect, maximize_hovered, maximize_pressed, .maximize_restore, base_bg);
+    drawCaptionButton(&band, shell, rects.close_rect, close_hovered, close_pressed, .close, base_bg);
 }
 
-fn drawCaptionButton(shell: anytype, rect: anytype, hovered: bool, pressed: bool, kind: CaptionButton, base_bg: Color) void {
+fn drawCaptionButton(band: *Band, shell: anytype, rect: anytype, hovered: bool, pressed: bool, kind: CaptionButton, base_bg: Color) void {
     const theme = shell.theme();
     const bg = switch (kind) {
         .close => if (pressed)
@@ -61,7 +65,7 @@ fn drawCaptionButton(shell: anytype, rect: anytype, hovered: bool, pressed: bool
     else
         theme.ui_window_control_fg;
 
-    renderer_surface_host.drawRect(shell.rendererPtr(),
+    band.fillRect(
         @intFromFloat(rect.x),
         @intFromFloat(rect.y),
         @intFromFloat(rect.width),
@@ -85,25 +89,25 @@ fn drawCaptionButton(shell: anytype, rect: anytype, hovered: bool, pressed: bool
     const restore_offset = @max(@as(i32, 1), stroke * 2);
 
     switch (kind) {
-        .minimize => renderer_surface_host.drawRect(shell.rendererPtr(), line_left, mid_y, line_len, stroke, fg),
+        .minimize => band.fillRect(line_left, mid_y, line_len, stroke, fg),
         .maximize_restore => {
             if (shell.windowIsMaximized()) {
                 const back_w = @max(1, size - restore_offset);
                 const back_h = @max(1, size - restore_offset);
-                renderer_surface_host.drawRectOutline(shell.rendererPtr(), left + restore_offset, top, back_w, back_h, fg);
-                renderer_surface_host.drawRectOutline(shell.rendererPtr(), left, top + restore_offset, back_w, back_h, fg);
+                band.drawRectOutline(left + restore_offset, top, back_w, back_h, fg);
+                band.drawRectOutline(left, top + restore_offset, back_w, back_h, fg);
             } else {
-                renderer_surface_host.drawRectOutline(shell.rendererPtr(), left, top, size, size, fg);
+                band.drawRectOutline(left, top, size, size, fg);
             }
         },
         .close => {
-            drawDiagonalLine(shell, left, top, right, bottom, stroke, fg);
-            drawDiagonalLine(shell, left, bottom, right, top, stroke, fg);
+            drawDiagonalLine(band, left, top, right, bottom, stroke, fg);
+            drawDiagonalLine(band, left, bottom, right, top, stroke, fg);
         },
     }
 }
 
-fn drawDiagonalLine(shell: anytype, x1: i32, y1: i32, x2: i32, y2: i32, stroke: i32, color: Color) void {
+fn drawDiagonalLine(band: *Band, x1: i32, y1: i32, x2: i32, y2: i32, stroke: i32, color: Color) void {
     var x = x1;
     var y = y1;
     const dx: i32 = @intCast(@abs(x2 - x1));
@@ -114,7 +118,7 @@ fn drawDiagonalLine(shell: anytype, x1: i32, y1: i32, x2: i32, y2: i32, stroke: 
 
     while (true) {
         const half = @divTrunc(stroke, 2);
-        renderer_surface_host.drawRect(shell.rendererPtr(), x - half, y - half, stroke, stroke, color);
+        band.fillRect(x - half, y - half, stroke, stroke, color);
         if (x == x2 and y == y2) break;
         const e2 = err * 2;
         if (e2 >= dy) {

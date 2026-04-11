@@ -194,6 +194,9 @@ Current `RB-B3.f` checkpoint:
   `shared_top_bar.zig` menu shadow now routes through the menu band, and
   `tab_bar.zig` truncated tab titles now replay through the chrome-band seam
   while flushing before `endClip()` keeps tab text under the tab-strip clip
+- fourth narrow chrome-band adoption is in:
+  integrated terminal tab-bar background and shared window caption button
+  backgrounds/glyph strokes now route through the chrome-band seam
 - the next loud pressure inside this ticket is any remaining terminal-widget
   chrome fill plus dependent text/icon path that still bypasses
   `renderer_chrome_band_host.Band`

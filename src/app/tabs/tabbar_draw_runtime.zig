@@ -3,11 +3,12 @@ const app_shell = @import("../../app_shell.zig");
 const app_terminal_window_chrome_runtime = @import("../terminal/window_chrome_runtime.zig");
 const app_theme_utils = @import("../theme_utils.zig");
 const app_window_caption_buttons_draw_runtime = @import("../window_caption_buttons_draw_runtime.zig");
-const renderer_surface_host = @import("../../ui/renderer/renderer_surface_host.zig");
+const renderer_chrome_band_host = @import("../../ui/renderer/renderer_chrome_band_host.zig");
 const widgets_common = @import("../../ui/widgets/common.zig");
 const shared_types = @import("../../types/mod.zig");
 
 const layout_types = shared_types.layout;
+const Band = renderer_chrome_band_host.Band;
 const Color = app_shell.Color;
 
 pub const Hooks = struct {
@@ -67,7 +68,9 @@ pub fn draw(state: anytype, shell: anytype, layout: layout_types.WidgetLayout, c
 }
 
 fn drawIntegratedBackground(shell: anytype, band: layout_types.Rect, color: Color) void {
-    renderer_surface_host.drawRect(shell.rendererPtr(),
+    var chrome_band = Band.init(shell, color);
+    defer chrome_band.flush();
+    chrome_band.fillRect(
         @intFromFloat(band.x),
         @intFromFloat(band.y),
         @intFromFloat(band.width),

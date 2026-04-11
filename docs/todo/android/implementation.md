@@ -140,6 +140,9 @@ Current checkpoint:
 - third `RB-B3.f` slice is now in:
   shared top-bar menu shadow and truncated tab titles now route through the
   chrome-band seam; tab title replay also stays inside the tab-strip clip
+- fourth `RB-B3.f` slice is now in:
+  integrated terminal tab-bar background and shared window caption button
+  backgrounds/glyph strokes now route through the chrome-band seam
 
 ## Parked (not blocking)
 
