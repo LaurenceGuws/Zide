@@ -247,6 +247,9 @@ Current checkpoint:
     bounds instead of a centered bootstrap grid island
 - next concrete cut is `AR-B4.g`:
   IME-aware live viewport sizing through the shared Android GLES backend
+- current observed blocker:
+  tap-to-open IME still behaves like an overlay on the current terminal-host
+  path; on-device audit did not produce a matching live product-surface resize
 - `AR-B4.g` stop marker:
   showing the IME updates the live terminal viewport/grid instead of covering
   the active prompt area, and hiding the IME restores the larger product-fit

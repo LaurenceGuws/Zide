@@ -392,6 +392,12 @@ Current status:
 
 The next active slice is `AR-B4.g`: IME-aware live viewport sizing.
 
+Current observed blocker:
+
+- tap-to-open IME still behaves like an overlay on the current terminal-host
+  path; on-device audit did not produce a matching live product-surface resize,
+  so the prompt area can still be covered today
+
 ## `AR-B4.g` Next Cut
 
 Purpose:

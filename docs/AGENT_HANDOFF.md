@@ -33,7 +33,9 @@ viewport sizing on the shared Android GLES path.
     product view ownership moved off the Java transcript, and readable atlas
     glyph replay visible on-device; `AR-B4.f` is now met too, with the live
     shell sizing from the real product surface instead of a fixed bootstrap
-    `80x24` island; the next direct blocker is IME-aware viewport sizing
+    `80x24` island; the next direct blocker is IME-aware viewport sizing, and
+    current device truth says the tap-open IME path still behaves like an
+    overlay instead of producing a live surface resize
 - `RB-B3.d` is already met:
   - widget/runtime no longer calls `usesDirectTerminalPresentation(...)`
   - those path decisions now terminate in the presentable host seam
@@ -88,6 +90,8 @@ viewport sizing on the shared Android GLES path.
     the shared Android GLES path
   - product-fit live shell sizing from the real renderer surface instead of a
     fixed bootstrap grid island
+  - tap-open IME still behaves like an overlay on the current host path; it is
+    not yet resizing the live product viewport
   - the visible-output blocker was the host `SurfaceView` defaulting to
     `RGB_565`; terminal-host now requests `RGBA_8888`, and the shared EGL
     runtime also applies the config visual format to the `ANativeWindow`
