@@ -613,18 +613,18 @@ public final class ZideTerminalActivity extends Activity
                 nativeLoaded ? nativeCurrentWindowTokenBridge() : 0,
                 nativeLoaded ? nativeCurrentSurfaceEpochBridge() : 0,
                 surfaceTransitionLabel(nativeLoaded ? nativeCurrentSurfaceTransitionBridge() : 0),
-                glesProbeStatusLabel(nativeLoaded ? nativeCurrentGlesProbeStatusBridge() : 0),
-                nativeLoaded ? nativeCurrentGlesProbeSwapCountBridge() : 0,
-                nativeLoaded ? nativeCurrentGlesProbeBoundEpochBridge() : 0,
-                nativeLoaded ? nativeCurrentGlesProbeContextCreateCountBridge() : 0,
-                nativeLoaded ? nativeCurrentGlesProbeSurfaceCreateCountBridge() : 0,
-                nativeLoaded ? nativeCurrentGlesProbeTextureCreateCountBridge() : 0,
-                nativeLoaded && nativeCurrentGlesProbeTextureAliveBridge(),
-                nativeLoaded ? nativeCurrentGlesProbeTextureUploadCountBridge() : 0,
-                nativeLoaded ? nativeCurrentGlesProbeTextureUpdateCountBridge() : 0,
-                nativeLoaded ? nativeCurrentGlesProbeTextureResizeCountBridge() : 0,
-                nativeLoaded ? nativeCurrentGlesProbeTextureWidthBridge() : 0,
-                nativeLoaded ? nativeCurrentGlesProbeTextureHeightBridge() : 0);
+                glesRendererStatusLabel(nativeLoaded ? nativeCurrentRendererStatusBridge() : 0),
+                nativeLoaded ? nativeCurrentRendererSwapCountBridge() : 0,
+                nativeLoaded ? nativeCurrentRendererBoundEpochBridge() : 0,
+                nativeLoaded ? nativeCurrentRendererContextCreateCountBridge() : 0,
+                nativeLoaded ? nativeCurrentRendererSurfaceCreateCountBridge() : 0,
+                nativeLoaded ? nativeCurrentRendererTextureCreateCountBridge() : 0,
+                nativeLoaded && nativeCurrentRendererTextureAliveBridge(),
+                nativeLoaded ? nativeCurrentRendererTextureUploadCountBridge() : 0,
+                nativeLoaded ? nativeCurrentRendererTextureUpdateCountBridge() : 0,
+                nativeLoaded ? nativeCurrentRendererTextureResizeCountBridge() : 0,
+                nativeLoaded ? nativeCurrentRendererTextureWidthBridge() : 0,
+                nativeLoaded ? nativeCurrentRendererTextureHeightBridge() : 0);
     }
 
     private void updateStatus(String state) {
@@ -688,7 +688,7 @@ public final class ZideTerminalActivity extends Activity
         }
     }
 
-    private static String glesProbeStatusLabel(int status) {
+    private static String glesRendererStatusLabel(int status) {
         switch (status) {
             case 1:
                 return "ready";
@@ -798,29 +798,29 @@ public final class ZideTerminalActivity extends Activity
 
     private static native int nativeCurrentSurfaceTransitionBridge();
 
-    private static native int nativeCurrentGlesProbeStatusBridge();
+    private static native int nativeCurrentRendererStatusBridge();
 
-    private static native long nativeCurrentGlesProbeSwapCountBridge();
+    private static native long nativeCurrentRendererSwapCountBridge();
 
-    private static native long nativeCurrentGlesProbeBoundEpochBridge();
+    private static native long nativeCurrentRendererBoundEpochBridge();
 
-    private static native long nativeCurrentGlesProbeContextCreateCountBridge();
+    private static native long nativeCurrentRendererContextCreateCountBridge();
 
-    private static native long nativeCurrentGlesProbeSurfaceCreateCountBridge();
+    private static native long nativeCurrentRendererSurfaceCreateCountBridge();
 
-    private static native long nativeCurrentGlesProbeTextureCreateCountBridge();
+    private static native long nativeCurrentRendererTextureCreateCountBridge();
 
-    private static native boolean nativeCurrentGlesProbeTextureAliveBridge();
+    private static native boolean nativeCurrentRendererTextureAliveBridge();
 
-    private static native long nativeCurrentGlesProbeTextureUploadCountBridge();
+    private static native long nativeCurrentRendererTextureUploadCountBridge();
 
-    private static native long nativeCurrentGlesProbeTextureUpdateCountBridge();
+    private static native long nativeCurrentRendererTextureUpdateCountBridge();
 
-    private static native long nativeCurrentGlesProbeTextureResizeCountBridge();
+    private static native long nativeCurrentRendererTextureResizeCountBridge();
 
-    private static native int nativeCurrentGlesProbeTextureWidthBridge();
+    private static native int nativeCurrentRendererTextureWidthBridge();
 
-    private static native int nativeCurrentGlesProbeTextureHeightBridge();
+    private static native int nativeCurrentRendererTextureHeightBridge();
 
     private static native int nativeRestartShellSessionBridge();
 

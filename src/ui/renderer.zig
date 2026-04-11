@@ -54,6 +54,7 @@ const types = @import("renderer/types.zig");
 const app_logger = @import("../app_logger.zig");
 const builtin = @import("builtin");
 const shared_types = @import("../types/mod.zig");
+const target_has_sdl_window_host = !(builtin.target.os.tag == .linux and builtin.target.abi == .android);
 
 const TextPress = platform_input_events.TextPress;
 pub const WindowSizes = struct {
@@ -501,6 +502,7 @@ pub const Renderer = struct {
     }
 
     pub fn init(allocator: std.mem.Allocator, width: i32, height: i32, title: [*:0]const u8, init_options: InitOptions) !*Renderer {
+        if (!target_has_sdl_window_host) return error.RendererBootstrapUnavailable;
         const startup_backend = init_options.renderer_backend;
         const runtime_profile = init_options.runtime_profile;
         var renderer_bootstrap = try bootstrap_runtime.initRendererBootstrap(
@@ -547,6 +549,7 @@ pub const Renderer = struct {
     }
 
     pub fn runStartupBackendSmoke(width: i32, height: i32, title: [*:0]const u8, backend: RendererBackend) !bool {
+        if (!target_has_sdl_window_host) return error.RendererBootstrapUnavailable;
         return bootstrap_runtime.runStartupBackendSmoke(width, height, title, backend);
     }
 
@@ -568,7 +571,7 @@ pub const Renderer = struct {
         window_chrome_runtime.deinit(self.windowChromeDomain());
         self.backend.deinitRuntime(self);
         self.backend.deinitRuntimeStorage(self.allocator);
-        if (self.bootstrap_kind == .sdl_owned) {
+        if (target_has_sdl_window_host and self.bootstrap_kind == .sdl_owned) {
             bootstrap_runtime.deinitRendererWindowResources(&self.render_surface_attachment, self.window);
             bootstrap_runtime.deinitSdlRuntime();
         }
@@ -947,7 +950,7 @@ pub const Renderer = struct {
     }
 
     pub fn setTextInputRect(self: *Renderer, x: i32, y: i32, w: i32, h: i32) void {
-        if (self.bootstrap_kind != .sdl_owned) return;
+        if (!target_has_sdl_window_host or self.bootstrap_kind != .sdl_owned) return;
         text_input.setRect(&self.input.text_input_state, self.window, x, y, w, h);
     }
 
@@ -1100,10 +1103,12 @@ pub const Renderer = struct {
     }
 
     pub fn windowIsMaximized(self: *Renderer) bool {
+        if (!target_has_sdl_window_host) return false;
         return window_chrome_runtime.windowIsMaximized(self.window);
     }
 
     pub fn windowIsFullscreen(self: *Renderer) bool {
+        if (!target_has_sdl_window_host) return false;
         return window_chrome_runtime.windowIsFullscreen(self.window);
     }
 

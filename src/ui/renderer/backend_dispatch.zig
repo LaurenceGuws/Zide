@@ -1,3 +1,4 @@
+const builtin = @import("builtin");
 const bootstrap_contract = @import("bootstrap_contract.zig");
 const std = @import("std");
 const backend_runtime_bundle = @import("backend_runtime_bundle.zig");
@@ -5,15 +6,21 @@ const types = @import("types.zig");
 const gl_backend = @import("gl_backend.zig");
 const gl_clip_runtime = @import("gl_clip_runtime.zig");
 const gl_presentable_runtime = @import("gl_presentable_runtime.zig");
+const opengl_runtime_state = @import("opengl_runtime_state.zig");
 const gl_surface_runtime = @import("gl_surface_runtime.zig");
 const android_gles_backend = @import("android_gles_backend.zig");
 const metal_backend = @import("metal_backend.zig");
 const metal_clip_runtime = @import("metal_clip_runtime.zig");
 const metal_presentable_runtime = @import("metal_presentable_runtime.zig");
+const metal_runtime_state = @import("metal_runtime_state.zig");
 const metal_surface_runtime = @import("metal_surface_runtime.zig");
+const renderer_frame_host = @import("renderer_frame_host.zig");
 const surface_draw = @import("surface_draw.zig");
+const window_init = @import("window_init.zig");
 const platform_window = @import("../../platform/window_metrics.zig");
+const sdl_api = @import("../../platform/sdl_api.zig");
 const GpuImageRef = surface_draw.GpuImageRef;
+const target_has_desktop_backends = !(builtin.target.os.tag == .linux and builtin.target.abi == .android);
 
 pub const TerminalPresentableRefreshResult = enum {
     refreshed,
@@ -113,26 +120,52 @@ pub fn opsFor(
     SceneTargetInvalidation,
     WindowChangeMask,
 ) {
-    const OpenGl = OpenGlDispatch(
-        RendererType,
-        FrameSubmission,
-        RendererCapabilities,
-        PresentableDraw,
-        PresentableInfo,
-        RawImageFormat,
-        SceneTargetInvalidation,
-        WindowChangeMask,
-    );
-    const Metal = MetalDispatch(
-        RendererType,
-        FrameSubmission,
-        RendererCapabilities,
-        PresentableDraw,
-        PresentableInfo,
-        RawImageFormat,
-        SceneTargetInvalidation,
-        WindowChangeMask,
-    );
+    const OpenGl = if (target_has_desktop_backends)
+        OpenGlDispatch(
+            RendererType,
+            FrameSubmission,
+            RendererCapabilities,
+            PresentableDraw,
+            PresentableInfo,
+            RawImageFormat,
+            SceneTargetInvalidation,
+            WindowChangeMask,
+        )
+    else
+        UnavailableDesktopDispatch(
+            RendererType,
+            FrameSubmission,
+            RendererCapabilities,
+            PresentableDraw,
+            PresentableInfo,
+            RawImageFormat,
+            SceneTargetInvalidation,
+            WindowChangeMask,
+            .opengl,
+        );
+    const Metal = if (target_has_desktop_backends)
+        MetalDispatch(
+            RendererType,
+            FrameSubmission,
+            RendererCapabilities,
+            PresentableDraw,
+            PresentableInfo,
+            RawImageFormat,
+            SceneTargetInvalidation,
+            WindowChangeMask,
+        )
+    else
+        UnavailableDesktopDispatch(
+            RendererType,
+            FrameSubmission,
+            RendererCapabilities,
+            PresentableDraw,
+            PresentableInfo,
+            RawImageFormat,
+            SceneTargetInvalidation,
+            WindowChangeMask,
+            .metal,
+        );
     const AndroidGles = AndroidGlesDispatch(
         RendererType,
         FrameSubmission,
@@ -285,9 +318,150 @@ pub fn opsFor(
 
 pub fn bootstrapOpsFor(comptime BackendEnum: type, backend: BackendEnum) bootstrap_contract.BackendBootstrapOps {
     return switch (backend) {
-        .opengl => gl_backend.bootstrapOps(),
-        .metal => metal_backend.bootstrapOps(),
+        .opengl => if (target_has_desktop_backends)
+            gl_backend.bootstrapOps()
+        else
+            unavailableDesktopBootstrapOps(),
+        .metal => if (target_has_desktop_backends)
+            metal_backend.bootstrapOps()
+        else
+            unavailableDesktopBootstrapOps(),
         .android_gles => android_gles_backend.bootstrapOps(),
+    };
+}
+
+fn desktopBootstrapUnavailable(_: bootstrap_contract.RendererRuntimeProfile) bool {
+    return false;
+}
+
+fn unavailableDesktopConfigureWindowAttributes() !void {
+    return error.RendererBackendUnavailable;
+}
+
+fn unavailableDesktopRunStartupSmoke(
+    _: *sdl_api.c.SDL_Window,
+    _: window_init.RenderSurfaceAttachment,
+    _: i32,
+    _: i32,
+) !bool {
+    return error.RendererBackendUnavailable;
+}
+
+fn unavailableDesktopBootstrapOps() bootstrap_contract.BackendBootstrapOps {
+    return .{
+        .graphics_binding = .none,
+        .supportsRuntimeProfile = desktopBootstrapUnavailable,
+        .configureWindowAttributes = unavailableDesktopConfigureWindowAttributes,
+        .runStartupSmoke = unavailableDesktopRunStartupSmoke,
+    };
+}
+
+fn UnavailableDesktopDispatch(
+    comptime RendererType: type,
+    comptime FrameSubmission: type,
+    comptime RendererCapabilities: type,
+    comptime PresentableDraw: type,
+    comptime PresentableInfo: type,
+    comptime RawImageFormat: type,
+    comptime SceneTargetInvalidation: type,
+    comptime WindowChangeMask: type,
+    comptime desktop_backend: anytype,
+) type {
+    return struct {
+        fn initStorage(allocator: std.mem.Allocator) !backend_runtime_bundle.Bundle {
+            const storage = if (desktop_backend == .opengl)
+                try allocator.create(opengl_runtime_state.State)
+            else
+                try allocator.create(metal_runtime_state.State);
+            storage.* = .{};
+            return .{ .storage = storage };
+        }
+        fn deinitStorage(bundle: *backend_runtime_bundle.Bundle, allocator: std.mem.Allocator) void {
+            const storage = bundle.storage orelse return;
+            if (desktop_backend == .opengl) {
+                allocator.destroy(@as(*opengl_runtime_state.State, @ptrCast(@alignCast(storage))));
+            } else {
+                allocator.destroy(@as(*metal_runtime_state.State, @ptrCast(@alignCast(storage))));
+            }
+            bundle.storage = null;
+        }
+        fn initRuntime(_: *RendererType) !void {
+            return error.RendererBackendUnavailable;
+        }
+        fn deinitRuntime(_: *RendererType) void {}
+        fn configureRuntimePolicy(_: *RendererType) void {}
+        fn beginFrame(renderer: *RendererType) void {
+            renderer_frame_host.noteFrameBeginFailed(renderer);
+        }
+        fn submitFrame(renderer: *RendererType) FrameSubmission {
+            return renderer_frame_host.finishFrameSubmission(renderer, .{
+                .kind = .begin_failed,
+                .present_ms = 0,
+            });
+        }
+        fn capabilities(_: *const RendererType) RendererCapabilities {
+            return .{
+                .scene_composition_mode = .direct_main_target,
+                .retained_targets = false,
+                .terminal_presentation_mode = .direct_main_target,
+                .screenshot_mode = .unavailable,
+                .text_rendering_mode = .unavailable,
+                .planned_text_rendering_mode = .unavailable,
+                .kitty_image_mode = .unsupported,
+                .atlas_storage_mode = .opengl_textures,
+                .planned_atlas_storage_mode = .opengl_textures,
+                .raw_image_textures = false,
+            };
+        }
+        fn dumpWindowScreenshotPpm(_: *RendererType, _: []const u8) !void {
+            return error.RendererBackendUnavailable;
+        }
+        fn dumpWindowScreenshotPpmSized(_: *RendererType, _: []const u8, _: i32, _: i32) !void {
+            return error.RendererBackendUnavailable;
+        }
+        fn ensurePresentable(_: *RendererType, _: i32, _: i32) bool {
+            return false;
+        }
+        fn refreshTerminalPresentable(
+            _: *RendererType,
+            _: ?*const anyopaque,
+            _: *const fn (?*const anyopaque, *RendererType) void,
+        ) TerminalPresentableRefreshResult {
+            return .unsupported;
+        }
+        fn drawPresentableBackdrop(_: *RendererType, _: f32, _: f32, _: f32, _: f32, _: types.Rgba) void {}
+        fn drawPresentable(_: *RendererType, _: PresentableDraw) void {}
+        fn scrollPresentable(_: *RendererType, _: i32, _: i32) bool {
+            return false;
+        }
+        fn presentableInfo(_: *RendererType) ?PresentableInfo {
+            return null;
+        }
+        fn applyClipRect(_: *RendererType, _: ?types.Rect) void {}
+        fn addTerminalRect(_: *RendererType, _: i32, _: i32, _: i32, _: i32, _: types.Rgba) void {}
+        fn addTerminalGlyphRect(_: *RendererType, _: i32, _: i32, _: i32, _: i32, _: types.Rgba) void {}
+        fn addTerminalGlyphQuad(_: *RendererType, _: types.Texture, _: types.Rect, _: types.Rect, _: types.Rgba, _: types.TextureKind) void {}
+        fn createPersistentImageFromRgba(_: *RendererType, _: i32, _: i32, _: []const u8) ?GpuImageRef {
+            return null;
+        }
+        fn createPersistentImageFromRgb(_: *RendererType, _: i32, _: i32, _: []const u8) ?GpuImageRef {
+            return null;
+        }
+        fn destroyPersistentImage(_: *RendererType, _: *GpuImageRef) void {}
+        fn drawPersistentImage(_: *RendererType, _: GpuImageRef, _: ?types.Rect, _: types.Rect, _: types.Rgba) bool {
+            return false;
+        }
+        fn drawRawImage(_: *RendererType, _: RawImageFormat, _: i32, _: i32, _: []const u8, _: types.Rect, _: types.Rgba) bool {
+            return false;
+        }
+        fn recordSurfaceDraw(_: *RendererType, _: surface_draw.SurfaceDraw) bool {
+            return false;
+        }
+        fn clearDiagnosticFont(_: *RendererType) void {}
+        fn sceneTargetInvalidationForRefresh(_: *RendererType, _: WindowChangeMask, _: platform_window.DisplayMetrics) SceneTargetInvalidation {
+            return .{};
+        }
+        fn mergePendingSceneTargetInvalidation(_: *RendererType, _: SceneTargetInvalidation) void {}
     };
 }
 

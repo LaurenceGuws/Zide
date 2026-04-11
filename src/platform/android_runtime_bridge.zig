@@ -4,7 +4,10 @@ const android_host = @import("android_host.zig");
 const android_shell_session = @import("android_shell_session.zig");
 const native_host = @import("native_host.zig");
 const renderer_mod = @import("../ui/renderer.zig");
+const renderer_surface_host = @import("../ui/renderer/renderer_surface_host.zig");
 const std = @import("std");
+
+const RendererStatus = android_gles_probe.ProbeStatus;
 
 extern fn ANativeWindow_fromSurface(env: ?*anyopaque, surface: ?*anyopaque) ?*anyopaque;
 extern fn ANativeWindow_release(window: *anyopaque) void;
@@ -15,7 +18,7 @@ const BridgeState = struct {
         .kind = .android_activity,
         .lifecycle_state = .started,
     },
-    last_gles_probe_status: android_gles_probe.ProbeStatus = .unavailable,
+    last_renderer_status: RendererStatus = .unavailable,
     last_surface_transition: native_host.SurfaceIdentityTransition = .unchanged,
     renderer: ?*renderer_mod.Renderer = null,
     render_host: native_host.PlatformRenderHost = .{
@@ -107,7 +110,7 @@ pub fn noteSurfaceAvailableFromJava(
     swapNativeWindow(native_window);
     if (native_window == null) return noteSurfaceDestroyed();
     const seq = noteSurfaceAvailable(width, height);
-    bridge_state.last_gles_probe_status = drawSharedRendererSurfaceFrame();
+    bridge_state.last_renderer_status = drawSharedRendererSurfaceFrame();
     return seq;
 }
 
@@ -117,12 +120,12 @@ pub fn noteSurfaceDestroyed() u64 {
     if (bridge_state.renderer) |renderer| {
         renderer.syncExternalHostState(bridge_state.app_host, bridge_state.render_host);
     }
-    bridge_state.last_gles_probe_status = .surface_destroyed;
+    bridge_state.last_renderer_status = .surface_destroyed;
     return nextSequence();
 }
 
 pub fn noteSurfaceRedrawNeeded() u64 {
-    bridge_state.last_gles_probe_status = drawSharedRendererSurfaceFrame();
+    bridge_state.last_renderer_status = drawSharedRendererSurfaceFrame();
     return nextSequence();
 }
 
@@ -138,69 +141,69 @@ pub fn currentSurfaceIdentityTransition() native_host.SurfaceIdentityTransition 
     return bridge_state.last_surface_transition;
 }
 
-pub fn currentGlesProbeStatus() android_gles_probe.ProbeStatus {
-    return bridge_state.last_gles_probe_status;
+pub fn currentRendererStatus() RendererStatus {
+    return bridge_state.last_renderer_status;
 }
 
-pub fn currentGlesProbeSwapCount() u32 {
+pub fn currentRendererSwapCount() u32 {
     if (bridge_state.renderer) |renderer| {
         return renderer.backend.runtime.androidGlesState().runtime.swap_count;
     }
     return android_gles_probe.currentSwapCount();
 }
 
-pub fn currentGlesProbeBoundEpoch() u64 {
+pub fn currentRendererBoundEpoch() u64 {
     if (bridge_state.renderer) |renderer| {
         return renderer.backend.runtime.androidGlesState().runtime.bound_epoch;
     }
     return android_gles_probe.currentBoundEpoch();
 }
 
-pub fn currentGlesProbeContextCreateCount() u32 {
+pub fn currentRendererContextCreateCount() u32 {
     if (bridge_state.renderer) |renderer| {
         return renderer.backend.runtime.androidGlesState().runtime.context_create_count;
     }
     return android_gles_probe.currentContextCreateCount();
 }
 
-pub fn currentGlesProbeSurfaceCreateCount() u32 {
+pub fn currentRendererSurfaceCreateCount() u32 {
     if (bridge_state.renderer) |renderer| {
         return renderer.backend.runtime.androidGlesState().runtime.surface_create_count;
     }
     return android_gles_probe.currentSurfaceCreateCount();
 }
 
-pub fn currentGlesProbeTextureCreateCount() u32 {
+pub fn currentRendererTextureCreateCount() u32 {
     if (bridge_state.renderer != null) return 0;
     return android_gles_probe.currentTextureCreateCount();
 }
 
-pub fn currentGlesProbeTextureAlive() bool {
+pub fn currentRendererTextureAlive() bool {
     if (bridge_state.renderer != null) return false;
     return android_gles_probe.currentTextureAlive();
 }
 
-pub fn currentGlesProbeTextureUploadCount() u32 {
+pub fn currentRendererTextureUploadCount() u32 {
     if (bridge_state.renderer != null) return 0;
     return android_gles_probe.currentTextureUploadCount();
 }
 
-pub fn currentGlesProbeTextureUpdateCount() u32 {
+pub fn currentRendererTextureUpdateCount() u32 {
     if (bridge_state.renderer != null) return 0;
     return android_gles_probe.currentTextureUpdateCount();
 }
 
-pub fn currentGlesProbeTextureResizeCount() u32 {
+pub fn currentRendererTextureResizeCount() u32 {
     if (bridge_state.renderer != null) return 0;
     return android_gles_probe.currentTextureResizeCount();
 }
 
-pub fn currentGlesProbeTextureWidth() i32 {
+pub fn currentRendererTextureWidth() i32 {
     if (bridge_state.renderer != null) return 0;
     return android_gles_probe.currentTextureWidth();
 }
 
-pub fn currentGlesProbeTextureHeight() i32 {
+pub fn currentRendererTextureHeight() i32 {
     if (bridge_state.renderer != null) return 0;
     return android_gles_probe.currentTextureHeight();
 }
@@ -245,12 +248,29 @@ pub fn drawAndroidGlesRendererFrame() !bool {
     const renderer = bridge_state.renderer orelse return false;
     renderer.syncExternalHostState(bridge_state.app_host, bridge_state.render_host);
     if (!renderer.beginFrame()) return false;
+    drawBackendSmokeFrame(renderer);
     return renderer.submitFrame().succeeded;
 }
 
-fn drawSharedRendererSurfaceFrame() android_gles_probe.ProbeStatus {
+fn drawSharedRendererSurfaceFrame() RendererStatus {
     _ = ensureAndroidGlesRenderer() catch return .init_failed;
     return if (drawAndroidGlesRendererFrame() catch false) .drawn else .surface_failed;
+}
+
+fn drawBackendSmokeFrame(renderer: *renderer_mod.Renderer) void {
+    const width = @as(f32, @floatFromInt(@max(renderer.width, 1)));
+    const height = @as(f32, @floatFromInt(@max(renderer.height, 1)));
+    const inset = @max(1.0, @min(width, height) * 0.04);
+    const band_height = @max(1.0, @min(height * 0.12, 28.0));
+    const band_width = @max(1.0, width - (inset * 2.0));
+    _ = renderer_surface_host.recordSolidSurfaceFromLogicalRect(
+        renderer,
+        inset,
+        inset,
+        band_width,
+        band_height,
+        .{ .r = 224, .g = 241, .b = 255, .a = 255 },
+    );
 }
 
 test "bridge routes Android lifecycle and surface truth through shared host state" {
@@ -274,7 +294,7 @@ test "bridge routes Android lifecycle and surface truth through shared host stat
     try std.testing.expectEqual(@as(usize, 0x1000), currentNativeWindowToken());
     try std.testing.expectEqual(@as(u64, 1), currentSurfaceIdentityEpoch());
     try std.testing.expectEqual(native_host.SurfaceIdentityTransition.acquired, currentSurfaceIdentityTransition());
-    try std.testing.expectEqual(android_gles_probe.ProbeStatus.drawn, currentGlesProbeStatus());
+    try std.testing.expectEqual(RendererStatus.drawn, currentRendererStatus());
 
     bridge_state.render_host.clearRedrawRequested();
     try std.testing.expectEqual(@as(u64, 5), noteSurfaceAvailableFromJava(@ptrFromInt(1), @ptrFromInt(0x1000), 420, 210));
@@ -297,7 +317,7 @@ test "bridge routes Android lifecycle and surface truth through shared host stat
     try std.testing.expectEqual(@as(usize, 0), currentNativeWindowToken());
     try std.testing.expectEqual(@as(u64, 2), currentSurfaceIdentityEpoch());
     try std.testing.expectEqual(native_host.SurfaceIdentityTransition.retired, currentSurfaceIdentityTransition());
-    try std.testing.expectEqual(android_gles_probe.ProbeStatus.surface_destroyed, currentGlesProbeStatus());
+    try std.testing.expectEqual(RendererStatus.surface_destroyed, currentRendererStatus());
 
     try std.testing.expectEqual(@as(u64, 9), noteSurfaceAvailableFromJava(@ptrFromInt(1), @ptrFromInt(0x1000), 430, 220));
     try std.testing.expectEqual(native_host.RenderSurfaceAvailability.available, bridge_state.render_host.surface_availability);

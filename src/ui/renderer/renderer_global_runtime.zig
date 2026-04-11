@@ -1,9 +1,12 @@
+const builtin = @import("builtin");
 const active_renderer_runtime = @import("active_renderer_runtime.zig");
 const input_state = @import("input_state.zig");
 const time_utils = @import("time_utils.zig");
 const sdl_api = @import("../../platform/sdl_api.zig");
 const app_lifecycle_runtime = @import("../../app/lifecycle_runtime.zig");
 const app_logger = @import("../../app_logger.zig");
+
+const target_has_sdl_text_input = !(builtin.target.os.tag == .linux and builtin.target.abi == .android);
 
 pub fn activeRenderer(comptime RendererType: type) ?*RendererType {
     return active_renderer_runtime.get(RendererType);
@@ -71,12 +74,20 @@ pub fn waitTime(seconds: f64) void {
 }
 
 pub fn registerRenderer(comptime RendererType: type, renderer: *RendererType) void {
-    input_state.startTextInput(renderer.inputDomain());
+    if (target_has_sdl_text_input) {
+        input_state.startTextInput(renderer.inputDomain());
+    } else {
+        renderer.app_host.noteTextInputActive(false);
+    }
     active_renderer_runtime.set(renderer);
 }
 
 pub fn unregisterRenderer(comptime RendererType: type, renderer: *RendererType) void {
-    input_state.stopTextInput(renderer.inputDomain());
+    if (target_has_sdl_text_input) {
+        input_state.stopTextInput(renderer.inputDomain());
+    } else {
+        renderer.app_host.noteTextInputActive(false);
+    }
     active_renderer_runtime.clearIf(renderer);
 }
 

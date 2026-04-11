@@ -48,52 +48,52 @@ fn currentSurfaceTransitionBridge() i32 {
     return @intFromEnum(android_runtime_bridge.currentSurfaceIdentityTransition());
 }
 
-fn currentGlesProbeStatusBridge() i32 {
-    return @intFromEnum(android_runtime_bridge.currentGlesProbeStatus());
+fn currentRendererStatusBridge() i32 {
+    return @intFromEnum(android_runtime_bridge.currentRendererStatus());
 }
 
-fn currentGlesProbeSwapCountBridge() i64 {
-    return @intCast(android_runtime_bridge.currentGlesProbeSwapCount());
+fn currentRendererSwapCountBridge() i64 {
+    return @intCast(android_runtime_bridge.currentRendererSwapCount());
 }
 
-fn currentGlesProbeBoundEpochBridge() i64 {
-    return @intCast(android_runtime_bridge.currentGlesProbeBoundEpoch());
+fn currentRendererBoundEpochBridge() i64 {
+    return @intCast(android_runtime_bridge.currentRendererBoundEpoch());
 }
 
-fn currentGlesProbeContextCreateCountBridge() i64 {
-    return @intCast(android_runtime_bridge.currentGlesProbeContextCreateCount());
+fn currentRendererContextCreateCountBridge() i64 {
+    return @intCast(android_runtime_bridge.currentRendererContextCreateCount());
 }
 
-fn currentGlesProbeSurfaceCreateCountBridge() i64 {
-    return @intCast(android_runtime_bridge.currentGlesProbeSurfaceCreateCount());
+fn currentRendererSurfaceCreateCountBridge() i64 {
+    return @intCast(android_runtime_bridge.currentRendererSurfaceCreateCount());
 }
 
-fn currentGlesProbeTextureCreateCountBridge() i64 {
-    return @intCast(android_runtime_bridge.currentGlesProbeTextureCreateCount());
+fn currentRendererTextureCreateCountBridge() i64 {
+    return @intCast(android_runtime_bridge.currentRendererTextureCreateCount());
 }
 
-fn currentGlesProbeTextureAliveBridge() u8 {
-    return @intFromBool(android_runtime_bridge.currentGlesProbeTextureAlive());
+fn currentRendererTextureAliveBridge() u8 {
+    return @intFromBool(android_runtime_bridge.currentRendererTextureAlive());
 }
 
-fn currentGlesProbeTextureUploadCountBridge() i64 {
-    return @intCast(android_runtime_bridge.currentGlesProbeTextureUploadCount());
+fn currentRendererTextureUploadCountBridge() i64 {
+    return @intCast(android_runtime_bridge.currentRendererTextureUploadCount());
 }
 
-fn currentGlesProbeTextureUpdateCountBridge() i64 {
-    return @intCast(android_runtime_bridge.currentGlesProbeTextureUpdateCount());
+fn currentRendererTextureUpdateCountBridge() i64 {
+    return @intCast(android_runtime_bridge.currentRendererTextureUpdateCount());
 }
 
-fn currentGlesProbeTextureResizeCountBridge() i64 {
-    return @intCast(android_runtime_bridge.currentGlesProbeTextureResizeCount());
+fn currentRendererTextureResizeCountBridge() i64 {
+    return @intCast(android_runtime_bridge.currentRendererTextureResizeCount());
 }
 
-fn currentGlesProbeTextureWidthBridge() i32 {
-    return android_runtime_bridge.currentGlesProbeTextureWidth();
+fn currentRendererTextureWidthBridge() i32 {
+    return android_runtime_bridge.currentRendererTextureWidth();
 }
 
-fn currentGlesProbeTextureHeightBridge() i32 {
-    return android_runtime_bridge.currentGlesProbeTextureHeight();
+fn currentRendererTextureHeightBridge() i32 {
+    return android_runtime_bridge.currentRendererTextureHeight();
 }
 
 fn restartShellSessionBridge() i32 {
@@ -200,88 +200,88 @@ export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentSurfaceTransi
     return currentSurfaceTransitionBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentGlesProbeStatusBridge(
+export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentRendererStatusBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
-    return currentGlesProbeStatusBridge();
+    return currentRendererStatusBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentGlesProbeSwapCountBridge(
+export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentRendererSwapCountBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
-    return currentGlesProbeSwapCountBridge();
+    return currentRendererSwapCountBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentGlesProbeBoundEpochBridge(
+export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentRendererBoundEpochBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
-    return currentGlesProbeBoundEpochBridge();
+    return currentRendererBoundEpochBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentGlesProbeContextCreateCountBridge(
+export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentRendererContextCreateCountBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
-    return currentGlesProbeContextCreateCountBridge();
+    return currentRendererContextCreateCountBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentGlesProbeSurfaceCreateCountBridge(
+export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentRendererSurfaceCreateCountBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
-    return currentGlesProbeSurfaceCreateCountBridge();
+    return currentRendererSurfaceCreateCountBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentGlesProbeTextureCreateCountBridge(
+export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentRendererTextureCreateCountBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
-    return currentGlesProbeTextureCreateCountBridge();
+    return currentRendererTextureCreateCountBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentGlesProbeTextureAliveBridge(
+export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentRendererTextureAliveBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) u8 {
-    return currentGlesProbeTextureAliveBridge();
+    return currentRendererTextureAliveBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentGlesProbeTextureUploadCountBridge(
+export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentRendererTextureUploadCountBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
-    return currentGlesProbeTextureUploadCountBridge();
+    return currentRendererTextureUploadCountBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentGlesProbeTextureUpdateCountBridge(
+export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentRendererTextureUpdateCountBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
-    return currentGlesProbeTextureUpdateCountBridge();
+    return currentRendererTextureUpdateCountBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentGlesProbeTextureResizeCountBridge(
+export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentRendererTextureResizeCountBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
-    return currentGlesProbeTextureResizeCountBridge();
+    return currentRendererTextureResizeCountBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentGlesProbeTextureWidthBridge(
+export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentRendererTextureWidthBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
-    return currentGlesProbeTextureWidthBridge();
+    return currentRendererTextureWidthBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentGlesProbeTextureHeightBridge(
+export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentRendererTextureHeightBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
-    return currentGlesProbeTextureHeightBridge();
+    return currentRendererTextureHeightBridge();
 }
 
 export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeRestartShellSessionBridge(
@@ -312,4 +312,3 @@ export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeSendShellCodepointBr
 ) callconv(.c) i32 {
     return sendShellCodepointBridge(codepoint);
 }
-
