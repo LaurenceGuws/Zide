@@ -350,3 +350,32 @@ Stop marker:
 
 - product view shows live shell content from the shared renderer path
 - the Java transcript overlay is no longer the product-owned shell display
+
+Current status:
+
+- terminal-host now stages the repo-owned font assets it needs into the app
+  files sandbox instead of pretending Android can open repo-relative desktop
+  font paths directly
+- Android GLES font initialization now waits until the first live frame after
+  `makeCurrent`; it no longer tries to allocate atlas textures during backend
+  bootstrap before a current Android surface exists
+- the Android bridge now reuses the existing live shell session handle to
+  create a shared `TerminalWidget` against the real shell runtime
+- product view now hides the Java transcript when that shared shell renderer is
+  active, so product shell ownership is no longer Java-owned
+- current live glyph quads still use a strict temporary visibility fallback:
+  Android GLES paints glyph occupancy blocks from the live shell quads instead
+  of replaying readable textured atlas glyphs yet
+- device validation now proves:
+  - `native.surfaceAvailable ... gles=drawn` on the live shell path
+  - the process stays alive after first frame
+  - product view hierarchy no longer contains the Java transcript scroll/text
+    nodes while the shared shell renderer is active
+  - screenshot sampling shows live bright glyph-occupancy blocks inside the
+    shared product surface instead of a blank dark surface
+
+Remaining blocker inside `AR-B4.e`:
+
+- readable textured glyph replay is still missing on Android GLES
+- the next honest cut is to replace the occupancy-block glyph fallback with
+  real atlas-backed textured quad replay

@@ -28,9 +28,11 @@ terminal-grid ownership on the shared Android GLES path.
   - current state:
     backend/runtime/frame binding is in, `AR-B4.b` external-host bootstrap is
     met, `AR-B4.c` first shared solid replay is met, and `AR-B4.d` minimal
-    terminal rect/glyph replay is now met on-device; the next direct blocker is
-    no longer backend visibility but product ownership still living in the Java
-    transcript overlay instead of the shared renderer
+    terminal rect/glyph replay is met on-device; `AR-B4.e` first cut now has
+    the live Android shell session routed through a shared `TerminalWidget`,
+    product view ownership has moved off the Java transcript, and the next
+    direct blocker is readable textured glyph replay on Android GLES instead of
+    Java product ownership
 - `RB-B3.d` is already met:
   - widget/runtime no longer calls `usesDirectTerminalPresentation(...)`
   - those path decisions now terminate in the presentable host seam
@@ -79,6 +81,10 @@ terminal-grid ownership on the shared Android GLES path.
   - visible shared clear/swap in terminal-host product view
   - `SurfaceDraw.solid` replay on-device
   - minimal terminal rect/glyph-rect replay on-device
+  - live shared-renderer shell ownership in product view without the Java
+    transcript overlay
+  - current live shell glyphs are only visible as occupancy blocks; readable
+    textured glyph replay is still the next blocker
   - the visible-output blocker was the host `SurfaceView` defaulting to
     `RGB_565`; terminal-host now requests `RGBA_8888`, and the shared EGL
     runtime also applies the config visual format to the `ANativeWindow`

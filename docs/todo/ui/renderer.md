@@ -145,6 +145,11 @@ Android note:
   Android GLES minimal terminal rect/glyph rendering is visible on-device
 - the next Android-side slice is `AR-B4.e`:
   first live terminal-grid ownership through the shared Android GLES backend
+- `AR-B4.e` first cut is now in:
+  live shell product ownership is on the shared Android renderer path, the
+  Java transcript is no longer present in product view while that path is
+  active, and the remaining blocker is readable textured glyph replay rather
+  than Java-owned shell display
 
 Gate #3 remains met for the `SurfaceDraw` surface. Do not reopen gate #4
 without new ownership pressure that proves the sanctioned backend-host surface

@@ -216,6 +216,26 @@ Current checkpoint:
   product view shows live shell content from the shared renderer path and the
   temporary Java transcript overlay is no longer the product-owned shell
   display
+- `AR-B4.e` first cut is now in:
+  - terminal-host stages required repo font assets into the app files sandbox
+  - Android GLES defers font init until the first live `beginFrame` after
+    `makeCurrent`
+  - the bridge now reuses the existing live shell session to create a shared
+    `TerminalWidget`
+  - product view hides the Java transcript when the shared shell renderer is
+    active
+  - current glyphs are visible only as occupancy blocks from live glyph quads,
+    not readable textured atlas text yet
+- device truth now proves:
+  - `native.surfaceAvailable ... gles=drawn` on the live shell path
+  - the process stays alive after first frame
+  - product view hierarchy no longer contains the Java transcript nodes while
+    the shared shell renderer is active
+  - screenshot sampling shows bright live glyph-occupancy blocks in the shared
+    surface instead of a blank dark view
+- remaining blocker inside `AR-B4.e`:
+  readable textured glyph replay on Android GLES; do not pretend occupancy
+  blocks are the endpoint
 - `RB-B3.e` materially narrowed terminal-presentable lifecycle pressure:
   - shared widget/runtime no longer owns the direct-vs-retained execution split
   - active dispatch no longer treats refresh as retained-only
