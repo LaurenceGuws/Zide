@@ -1,5 +1,6 @@
 const bootstrap_contract = @import("bootstrap_contract.zig");
 const capability_contract = @import("capability_contract.zig");
+const android_gles_runtime = @import("../../platform/android_gles_runtime.zig");
 const present_trace_runtime = @import("present_trace_runtime.zig");
 const renderer_frame_host = @import("renderer_frame_host.zig");
 const scene_target_state = @import("scene_target_state.zig");
@@ -50,9 +51,17 @@ pub fn capabilities(_: anytype) RendererCapabilities {
     };
 }
 
-pub fn initRuntime(_: anytype) !void {}
+pub fn initRuntime(renderer: anytype) !void {
+    switch (android_gles_runtime.ensureDisplayContext(&renderer.backend.runtime.androidGlesState().runtime)) {
+        .ready => {},
+        .init_failed => return error.AndroidGlesInitFailed,
+        .surface_failed, .make_current_failed, .swap_failed => return error.AndroidGlesInitFailed,
+    }
+}
 
-pub fn deinitRuntime(_: anytype) void {}
+pub fn deinitRuntime(renderer: anytype) void {
+    android_gles_runtime.reset(&renderer.backend.runtime.androidGlesState().runtime);
+}
 
 pub fn configureRuntimePolicy(_: anytype) void {}
 

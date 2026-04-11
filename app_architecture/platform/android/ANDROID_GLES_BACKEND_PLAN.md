@@ -83,6 +83,8 @@ Current status:
   - shared backend enum/runtime slot
   - backend dispatch wiring
   - honest minimal capabilities
+  - backend runtime init/deinit now owns the shared EGL display/config/context
+    state instead of leaving that owner probe-only
   - frame begin/submit bookkeeping through the shared frame host
   - explicit unavailable behavior for presentables, screenshots, images, and
     surface draw replay
@@ -92,8 +94,8 @@ Current status:
     instead of duplicating EGL lifetime logic locally
 - this does **not** yet meet the full stop marker:
   - terminal-host does not instantiate `Renderer` yet
-  - that EGL/context/window-surface owner is still not wired into the shared
-    Android GLES backend runtime state
+  - that runtime owner is not yet bound to live Android native-window identity
+    during frame begin/submit
   - no visible clear/swap is claimed yet
 
 Stopping point:

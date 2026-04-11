@@ -1,6 +1,8 @@
 const builtin = @import("builtin");
 const native_host = @import("native_host.zig");
 
+const target_has_android_egl = builtin.target.os.tag == .linux and builtin.target.abi == .android;
+
 pub const EGLDisplay = ?*anyopaque;
 pub const EGLSurface = ?*anyopaque;
 pub const EGLContext = ?*anyopaque;
@@ -18,38 +20,74 @@ const EGL_WINDOW_BIT: i32 = 0x0004;
 const EGL_OPENGL_ES2_BIT: i32 = 0x0004;
 const EGL_CONTEXT_CLIENT_VERSION: i32 = 0x3098;
 
-extern fn eglGetDisplay(native_display: ?*anyopaque) EGLDisplay;
-extern fn eglInitialize(display: EGLDisplay, major: ?*i32, minor: ?*i32) u32;
-extern fn eglChooseConfig(
-    display: EGLDisplay,
-    attrib_list: [*]const i32,
-    configs: [*]EGLConfig,
-    config_size: i32,
-    num_config: *i32,
-) u32;
-extern fn eglCreateContext(
-    display: EGLDisplay,
-    config: EGLConfig,
-    share_context: EGLContext,
-    attrib_list: [*]const i32,
-) EGLContext;
-extern fn eglCreateWindowSurface(
-    display: EGLDisplay,
-    config: EGLConfig,
-    native_window: ?*anyopaque,
-    attrib_list: [*]const i32,
-) EGLSurface;
-extern fn eglDestroySurface(display: EGLDisplay, surface: EGLSurface) u32;
-extern fn eglDestroyContext(display: EGLDisplay, context: EGLContext) u32;
-extern fn eglMakeCurrent(
-    display: EGLDisplay,
-    draw: EGLSurface,
-    read: EGLSurface,
-    context: EGLContext,
-) u32;
-extern fn eglSwapBuffers(display: EGLDisplay, surface: EGLSurface) u32;
-extern fn eglTerminate(display: EGLDisplay) u32;
-extern fn eglGetError() u32;
+const egl = if (target_has_android_egl) struct {
+    extern fn eglGetDisplay(native_display: ?*anyopaque) EGLDisplay;
+    extern fn eglInitialize(display: EGLDisplay, major: ?*i32, minor: ?*i32) u32;
+    extern fn eglChooseConfig(
+        display: EGLDisplay,
+        attrib_list: [*]const i32,
+        configs: [*]EGLConfig,
+        config_size: i32,
+        num_config: *i32,
+    ) u32;
+    extern fn eglCreateContext(
+        display: EGLDisplay,
+        config: EGLConfig,
+        share_context: EGLContext,
+        attrib_list: [*]const i32,
+    ) EGLContext;
+    extern fn eglCreateWindowSurface(
+        display: EGLDisplay,
+        config: EGLConfig,
+        native_window: ?*anyopaque,
+        attrib_list: [*]const i32,
+    ) EGLSurface;
+    extern fn eglDestroySurface(display: EGLDisplay, surface: EGLSurface) u32;
+    extern fn eglDestroyContext(display: EGLDisplay, context: EGLContext) u32;
+    extern fn eglMakeCurrent(
+        display: EGLDisplay,
+        draw: EGLSurface,
+        read: EGLSurface,
+        context: EGLContext,
+    ) u32;
+    extern fn eglSwapBuffers(display: EGLDisplay, surface: EGLSurface) u32;
+    extern fn eglTerminate(display: EGLDisplay) u32;
+    extern fn eglGetError() u32;
+} else struct {
+    fn eglGetDisplay(_: ?*anyopaque) EGLDisplay {
+        unreachable;
+    }
+    fn eglInitialize(_: EGLDisplay, _: ?*i32, _: ?*i32) u32 {
+        unreachable;
+    }
+    fn eglChooseConfig(_: EGLDisplay, _: [*]const i32, _: [*]EGLConfig, _: i32, _: *i32) u32 {
+        unreachable;
+    }
+    fn eglCreateContext(_: EGLDisplay, _: EGLConfig, _: EGLContext, _: [*]const i32) EGLContext {
+        unreachable;
+    }
+    fn eglCreateWindowSurface(_: EGLDisplay, _: EGLConfig, _: ?*anyopaque, _: [*]const i32) EGLSurface {
+        unreachable;
+    }
+    fn eglDestroySurface(_: EGLDisplay, _: EGLSurface) u32 {
+        unreachable;
+    }
+    fn eglDestroyContext(_: EGLDisplay, _: EGLContext) u32 {
+        unreachable;
+    }
+    fn eglMakeCurrent(_: EGLDisplay, _: EGLSurface, _: EGLSurface, _: EGLContext) u32 {
+        unreachable;
+    }
+    fn eglSwapBuffers(_: EGLDisplay, _: EGLSurface) u32 {
+        unreachable;
+    }
+    fn eglTerminate(_: EGLDisplay) u32 {
+        unreachable;
+    }
+    fn eglGetError() u32 {
+        unreachable;
+    }
+};
 
 pub const RuntimeStatus = enum {
     ready,
@@ -71,7 +109,7 @@ pub const State = struct {
 };
 
 fn noteError(state: *State, status: RuntimeStatus) RuntimeStatus {
-    state.last_error = if (builtin.is_test) 0 else eglGetError();
+    state.last_error = if (!target_has_android_egl or builtin.is_test) 0 else egl.eglGetError();
     return status;
 }
 
@@ -81,10 +119,12 @@ fn setReady(state: *State) RuntimeStatus {
 }
 
 pub fn ensureDisplayContext(state: *State) RuntimeStatus {
+    if (!target_has_android_egl and !builtin.is_test) return .init_failed;
+
     if (state.display == null) {
-        state.display = if (builtin.is_test) @ptrFromInt(0xE001) else eglGetDisplay(null);
+        state.display = if (builtin.is_test) @ptrFromInt(0xE001) else egl.eglGetDisplay(null);
         if (state.display == null) return noteError(state, .init_failed);
-        if (!builtin.is_test and eglInitialize(state.display, null, null) == EGL_FALSE) {
+        if (!builtin.is_test and egl.eglInitialize(state.display, null, null) == EGL_FALSE) {
             return noteError(state, .init_failed);
         }
     }
@@ -101,7 +141,7 @@ pub fn ensureDisplayContext(state: *State) RuntimeStatus {
             EGL_ALPHA_SIZE, 8,
             EGL_NONE,
         };
-        if (!builtin.is_test and eglChooseConfig(state.display, &config_attribs, @ptrCast(&config), 1, &config_count) == EGL_FALSE) {
+        if (!builtin.is_test and egl.eglChooseConfig(state.display, &config_attribs, @ptrCast(&config), 1, &config_count) == EGL_FALSE) {
             return noteError(state, .init_failed);
         }
         if (!builtin.is_test and (config_count <= 0 or config == null)) return noteError(state, .init_failed);
@@ -116,7 +156,7 @@ pub fn ensureDisplayContext(state: *State) RuntimeStatus {
         state.context = if (builtin.is_test)
             @ptrFromInt(0xE003)
         else
-            eglCreateContext(state.display, state.config, null, &context_attribs);
+            egl.eglCreateContext(state.display, state.config, null, &context_attribs);
         if (state.context == null) return noteError(state, .init_failed);
         state.context_create_count += 1;
     }
@@ -126,8 +166,8 @@ pub fn ensureDisplayContext(state: *State) RuntimeStatus {
 
 pub fn destroySurface(state: *State) void {
     if (state.display != null and state.surface != null and !builtin.is_test) {
-        _ = eglMakeCurrent(state.display, null, null, null);
-        _ = eglDestroySurface(state.display, state.surface);
+        _ = egl.eglMakeCurrent(state.display, null, null, null);
+        _ = egl.eglDestroySurface(state.display, state.surface);
     }
     state.surface = null;
     state.bound_epoch = 0;
@@ -150,7 +190,7 @@ pub fn ensureWindowSurface(
         state.surface = if (builtin.is_test)
             @ptrFromInt(0xE004)
         else
-            eglCreateWindowSurface(state.display, state.config, window, &surface_attribs);
+            egl.eglCreateWindowSurface(state.display, state.config, window, &surface_attribs);
         if (state.surface == null) return noteError(state, .surface_failed);
         state.bound_epoch = epoch;
         state.surface_create_count += 1;
@@ -163,7 +203,7 @@ pub fn makeCurrent(state: *State) RuntimeStatus {
     if (state.display == null or state.context == null or state.surface == null) {
         return .make_current_failed;
     }
-    if (!builtin.is_test and eglMakeCurrent(state.display, state.surface, state.surface, state.context) == EGL_FALSE) {
+    if (!builtin.is_test and egl.eglMakeCurrent(state.display, state.surface, state.surface, state.context) == EGL_FALSE) {
         return noteError(state, .make_current_failed);
     }
     return setReady(state);
@@ -171,7 +211,7 @@ pub fn makeCurrent(state: *State) RuntimeStatus {
 
 pub fn swapBuffers(state: *State) RuntimeStatus {
     if (state.display == null or state.surface == null) return .swap_failed;
-    if (!builtin.is_test and eglSwapBuffers(state.display, state.surface) == EGL_FALSE) {
+    if (!builtin.is_test and egl.eglSwapBuffers(state.display, state.surface) == EGL_FALSE) {
         return noteError(state, .swap_failed);
     }
     return setReady(state);
@@ -180,10 +220,10 @@ pub fn swapBuffers(state: *State) RuntimeStatus {
 pub fn reset(state: *State) void {
     destroySurface(state);
     if (state.display != null and state.context != null and !builtin.is_test) {
-        _ = eglDestroyContext(state.display, state.context);
+        _ = egl.eglDestroyContext(state.display, state.context);
     }
     if (state.display != null and !builtin.is_test) {
-        _ = eglTerminate(state.display);
+        _ = egl.eglTerminate(state.display);
     }
     state.* = .{};
 }

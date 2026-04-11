@@ -138,6 +138,8 @@ Current checkpoint:
   - backend runtime storage has an Android GLES slot
   - backend dispatch wiring exists for Android GLES
   - capabilities are minimal and unsupported operations report unavailable
+  - backend runtime init/deinit now owns the shared EGL display/config/context
+    state through `src/platform/android_gles_runtime.zig`
   - frame begin/submit now route through the shared frame host for this backend
   - bootstrap selection fails explicitly instead of pretending an SDL bootstrap
     path exists
@@ -146,8 +148,8 @@ Current checkpoint:
     shared owner instead of carrying a second EGL lifetime implementation
 - current missing stop-marker work:
   - terminal-host still does not instantiate `Renderer`
-  - that shared EGL owner is still not bound into the shared Android GLES
-    backend runtime state
+  - that shared EGL owner is still not bound to live Android surface identity
+    during backend frame execution
   - no visible clear/swap claim yet
 - stopping point:
   Android terminal-host can select Android GLES and produce a visible
