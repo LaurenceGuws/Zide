@@ -137,6 +137,9 @@ Current checkpoint:
   status-bar mode chip text, active field text, selection/caret rects, error
   text, and file-path text now route through the chrome-band seam instead of
   mixing band fills with immediate text/surface paths
+- third `RB-B3.f` slice is now in:
+  shared top-bar menu shadow and truncated tab titles now route through the
+  chrome-band seam; tab title replay also stays inside the tab-strip clip
 
 ## Parked (not blocking)
 

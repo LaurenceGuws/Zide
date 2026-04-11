@@ -165,13 +165,15 @@ pub const TabBar = struct {
     pub fn drawWithIconProvider(self: *TabBar, shell: *Shell, x: f32, y: f32, width: f32, icon_provider: ?IconProvider) ?Tooltip {
         const theme = shell.theme();
         var band = Band.init(shell, theme.ui_bar_bg);
-        defer band.flush();
         self.last_char_width = shell.charWidth();
         self.last_ui_scale = shell.uiScaleFactor();
         // Draw tab bar background
         band.fillRect(@intFromFloat(x), @intFromFloat(y), @intFromFloat(width), @intFromFloat(self.height), theme.ui_bar_bg);
 
-        if (width <= 0 or self.height <= 0) return null;
+        if (width <= 0 or self.height <= 0) {
+            band.flush();
+            return null;
+        }
 
         shell.beginClip(@intFromFloat(x), @intFromFloat(y), @intFromFloat(width), @intFromFloat(self.height));
 
@@ -259,14 +261,14 @@ pub const TabBar = struct {
 
             const prefix_width: f32 = if (tab.modified) shell.charWidth() * 2 else 0;
             const title_max = @max(0, tab_w - 16 * shell.uiScaleFactor() - prefix_width - icon_reserved);
-            const result = common.drawTruncatedText(
-                band.shell,
+            var truncated_buf: [256]u8 = undefined;
+            const result = common.truncateText(
+                shell,
                 tab.title,
-                title_x + prefix_width,
-                title_y,
-                if (is_active) theme.ui_text else theme.ui_text_inactive,
                 title_max,
+                truncated_buf[0..],
             );
+            band.drawText(result.text, title_x + prefix_width, title_y, if (is_active) theme.ui_text else theme.ui_text_inactive);
             const in_tab = window_focused and mouse.x >= cursor_x and mouse.x <= cursor_x + tab_w and
                 mouse.y >= y and mouse.y <= y + self.height;
             if (result.truncated and in_tab) {
@@ -276,6 +278,7 @@ pub const TabBar = struct {
             cursor_x += tab_w + self.tab_spacing;
         }
 
+        band.flush();
         shell.endClip();
         return tooltip;
     }

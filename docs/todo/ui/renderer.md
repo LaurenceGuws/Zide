@@ -190,6 +190,10 @@ Current `RB-B3.f` checkpoint:
   instead of mixing band fills with immediate truncated/input text drawing
 - `common.zig` now separates truncation from immediate drawing so band-owned
   truncated labels do not need a duplicate truncation path
+- third narrow chrome-band adoption is in:
+  `shared_top_bar.zig` menu shadow now routes through the menu band, and
+  `tab_bar.zig` truncated tab titles now replay through the chrome-band seam
+  while flushing before `endClip()` keeps tab text under the tab-strip clip
 - the next loud pressure inside this ticket is any remaining terminal-widget
   chrome fill plus dependent text/icon path that still bypasses
   `renderer_chrome_band_host.Band`

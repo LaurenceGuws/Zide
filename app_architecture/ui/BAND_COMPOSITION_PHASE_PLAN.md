@@ -109,6 +109,13 @@ Stop when:
     rects, error text, and file-path text through the chrome-band seam
   - tooltip drawing remains outside this seam because it is an overlay, not
     local status-bar composition
+- the third narrow chrome-band slice is now in:
+  - `shared_top_bar.zig` menu shadow now routes through the menu band instead
+    of a direct surface rect next to band-owned menu fill/text
+  - `tab_bar.zig` title truncation now separates truncation from drawing and
+    queues tab title text through the chrome-band seam
+  - tab-bar band text now flushes before `endClip()` so the band replay remains
+    inside the tab strip clip boundary
 - this does not claim shell/UI chrome is solved globally
 - the next likely pressure inside this ticket is the terminal widget chrome
   boundary: any remaining shell/UI chrome fill plus dependent text/icon path

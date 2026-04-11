@@ -1,6 +1,5 @@
 const app_shell = @import("../../app_shell.zig");
 const renderer_chrome_band_host = @import("../renderer/renderer_chrome_band_host.zig");
-const renderer_surface_host = @import("../renderer/renderer_surface_host.zig");
 const shared_types = @import("../../types/mod.zig");
 const geometry = @import("shared_top_bar_geometry.zig");
 const model = @import("shared_top_bar_model.zig");
@@ -92,7 +91,7 @@ pub const SharedTopBar = struct {
         const shadow = app_shell.Color{ .r = 0, .g = 0, .b = 0, .a = 120 };
         var menu_band = Band.init(shell, theme.ui_bar_bg);
         defer menu_band.flush();
-        renderer_surface_host.drawRect(shell.rendererPtr(), @intFromFloat(menu_box.x + 3 * scale), @intFromFloat(menu_box.y + 4 * scale), @intFromFloat(menu_box.w), @intFromFloat(menu_box.h), shadow);
+        menu_band.fillRect(@intFromFloat(menu_box.x + 3 * scale), @intFromFloat(menu_box.y + 4 * scale), @intFromFloat(menu_box.w), @intFromFloat(menu_box.h), shadow);
         menu_band.fillRect(@intFromFloat(menu_box.x), @intFromFloat(menu_box.y), @intFromFloat(menu_box.w), @intFromFloat(menu_box.h), theme.ui_bar_bg);
         menu_band.drawRectOutline(@intFromFloat(menu_box.x), @intFromFloat(menu_box.y), @intFromFloat(menu_box.w), @intFromFloat(menu_box.h), theme.ui_border);
 
