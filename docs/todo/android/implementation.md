@@ -22,6 +22,7 @@ Do not use this queue for:
 - `app_architecture/platform/android/ANDROID_TERMINAL_HOST_PLAN.md`
 - `app_architecture/platform/android/ANDROID_GLES_BACKEND_PLAN.md`
 - `app_architecture/platform/android/ANDROID_GLES_BINDING_PLAN.md`
+- `app_architecture/platform/android/ANDROID_USERLAND_BOOTSTRAP_PLAN.md`
 - `app_architecture/platform/android/SURFACE_IDENTITY_POLICY.md`
 - `app_architecture/platform/android/ANDROID_PTY_LIFETIME_PLAN.md`
 - `app_architecture/platform/android/ANDROID_PTY_SERVICE_SURVIVAL_PLAN.md`
@@ -43,10 +44,10 @@ Current boundary:
   but it has not displaced the disposable baseline as the default answer
 - terminal-host-owned EGL/GLES proof is now strong enough that it is no longer the
   main unknown either
-- first-class Android rendering/backend work in `src/ui/renderer/` is still
-  blocked by renderer gate #5
-- renderer work is only in scope here when it is the next highest-leverage
-  Android blocker
+- shared Android renderer/backend proof is now strong enough that it should
+  reopen only if a concrete product blocker proves a missing capability
+- renderer work is only in scope here when it becomes the next
+  highest-leverage Android blocker again
 - product sequencing is explicit:
   - mobile terminal first
   - extract reusable mobile-native fundamentals while building it
@@ -89,9 +90,13 @@ blocker.
 
 Current blocker:
 
-- define the first controlled Android GLES backend planning cut against the
-  now-narrower renderer contract
-- do not start a broad backend sprint or add product-specific renderer bypasses
+- backend bring-up is no longer the loud Android blocker
+- current input assistance is now good enough locally to stop outranking a
+  stronger product gap
+- app-private Bash is now the live product shell on the SDK 28 terminal-host
+  path
+- the next strongest Android product gap is package authority for the Zide
+  prefix
 
 That means:
 
@@ -99,214 +104,134 @@ That means:
   explicitly reopened
 - gate #4 is met
 - gate #5 is structurally met for scanned composition families
-- Android terminal-host proof should continue only if it feeds the first GLES
-  backend planning cut
+- Android terminal-host/product work should now continue only where it closes
+  the package/userland gap or a concrete terminal product blocker
 
 ## Current Priority
 
-**`AR-B4` Android GLES Backend Cut** — this is the active ticket.
+**`AU-A2` Android Package-Manager Handshake** — this is the active ticket now.
 
-Land the smallest Android GLES backend implementation steps that map existing
-Android EGL/GLES host truth onto the shared renderer contracts without adding
-product-specific bypasses.
+Shared Android renderer bring-up and current direct-input work are now strong
+enough on-device that they should stop outranking the next product-owned gap.
+The current highest-leverage move is replacing dev-only relocated package
+staging with explicit package authority for the Zide prefix.
 
 Owner docs:
 
-- `app_architecture/platform/android/ANDROID_GLES_BACKEND_PLAN.md`
-- `app_architecture/platform/android/ANDROID_GLES_BINDING_PLAN.md`
-- `app_architecture/ui/RENDER_BACKEND_CONTRACT.md`
-- `docs/todo/ui/renderer.md`
+- `app_architecture/platform/android/ANDROID_USERLAND_BOOTSTRAP_PLAN.md`
+- `docs/research/terminal/ANDROID_USERLAND_EXEC_POLICY_2026-04-11.md`
+- `app_architecture/platform/android/ANDROID_SHELL_BRINGUP_PLAN.md`
+- `app_architecture/platform/android/ANDROID_TERMINAL_HOST_PLAN.md`
+- sibling mobile package authority repo: `../zide-mobile-pm`
 
 Guardrails:
 
 - do not drift back into Android host/tooling cleanup
-- do not reopen `AS-A3` polish
-- do not widen into a broad backend sprint before the current slice reaches its
-  explicit stop marker
+- do not invent a custom Android package manager
+- do not depend on the external Termux app as product infrastructure
+- do not claim unmodified `com.termux` package payloads are product-correct for
+  `dev.zide.terminal`
+- keep the live `InputConnection` path as the single active input surface
+- keep Java focused on bootstrap/progress/lifecycle ownership; do not move the
+  core shell/runtime semantics out of Zig
 
 Current checkpoint:
 
-- `AR-B4.a` is now in progress:
-  Android GLES backend skeleton and frame binding
-- allowed first files:
-  `renderer.zig`, `backend_dispatch.zig`, `backend_runtime_bundle.zig`, new
-  `android_gles_backend.zig`, new `android_gles_runtime_state.zig`, narrow
-  Android build/link changes, and probe extraction only if the terminal-host
-  probe remains honest
-- current landed code truth:
-  - shared renderer backend enum now includes `android_gles`
-  - backend runtime storage has an Android GLES slot
-  - backend dispatch wiring exists for Android GLES
-  - capabilities are minimal and unsupported operations report unavailable
-  - backend runtime init/deinit now owns the shared EGL display/config/context
-    state through `src/platform/android_gles_runtime.zig`
-  - frame begin/submit now bind live Android native-window identity through
-    surface epoch truth, clear one frame, and swap buffers through the shared
-    frame host path
-  - bootstrap selection fails explicitly instead of pretending an SDL bootstrap
-    path exists
-  - EGL/context/window-surface lifetime ownership is now extracted into
-    `src/platform/android_gles_runtime.zig`; `android_gles_probe.zig` uses that
-    shared owner instead of carrying a second EGL lifetime implementation
-- `AR-B4.a` is met:
-  shared Android GLES backend/runtime/frame binding exists and now drives the
-  shared terminal-host renderer path on-device
-- `AR-B4.b` is now met:
-  external-host renderer bootstrap for Android `backend_smoke`
-- current `AR-B4.b` code truth:
-  - shared renderer now exposes an external-host bootstrap seam for
-    `runtime_profile = .backend_smoke`
-  - that seam skips SDL window bootstrap and global SDL text-input
-    registration
-  - shutdown now distinguishes SDL-owned bootstrap from external-host bootstrap
-  - external-host metrics seed from `PlatformRenderHost.surface_metrics`
-  - Android native bridge can now create, sync, draw, and destroy a shared
-    `android_gles` renderer in tests
-  - live surface-available and redraw callbacks now route through that shared
-    renderer path in native code instead of the old probe draw path
-  - Android terminal-host native build is now a real repo build target:
-    `zig build android-terminal-host-bridge`
-  - that target uses:
-    - explicit NDK-backed Android libc configuration
-    - explicit Android system `.so` linkage
-    - SDL headers only where shared renderer contracts still mention SDL
-  - `ops/android_terminal_host.py native` is now just the operator wrapper:
-    resolve SDK/NDK, invoke the Zig target, copy the built `.so` into `jniLibs`
-- device validation now proves:
-  - terminal-host loads the shared bridge on-device without unresolved SDL
-    symbols
-  - live surface callbacks route through the shared renderer path
-  - shared Android GLES clear/swap executes on-device
-  - Java/native diagnostics no longer expose stale `probe` naming for the live
-    renderer path
-- `AR-B4.c` is now met:
-  first `SurfaceDraw.solid` replay through Android GLES
-- current `AR-B4.c` code truth:
-  - Android GLES backend now accepts queued `SurfaceDraw.solid`
-  - submit-time replay uses GLES scissor + clear for solid fills
-  - backend-smoke frame execution now records one shared solid rect through
-    `renderer_surface_host.recordSolidSurfaceFromLogicalRect(...)`
-- terminal-host product view now exposes the renderer surface as the main
-  content host instead of the old hidden `1dp x 1dp` container
-- device validation now proves real product-view surface sizing too:
-  - `surface.changed ... size=2759x1230` in landscape
-  - `surface.changed ... size=1440x2632` in portrait
-- `AR-B4.d` is now met:
-  minimal terminal rect/glyph rendering through the shared Android GLES backend
-- current `AR-B4.d` code truth:
-  - Android GLES backend now accepts terminal rect and terminal glyph-rect ops
-    through the same queued solid replay path used for `SurfaceDraw.solid`
-  - backend-smoke rendering now proves that path with explicit terminal-colored
-    rects and glyph-rect accents inside the shared Android product surface
-  - terminal-host now requests `RGBA_8888` for its `SurfaceView`, and the
-    shared EGL runtime also applies `EGL_NATIVE_VISUAL_ID` to the native window
-  - that format alignment was the blocker for visible output:
-    before the cut the host reported `surface.changed ... format=4`
-    (`RGB_565`) and swaps only revealed the Java background; after the cut the
-    host reports `surface.changed ... format=1` and screenshot pixels match the
-    shared clear/rect colors
-- current stopping point now met:
-  Android terminal-host can select Android GLES and produce visible
-  clear/swap, shared solid replay, and minimal terminal rect/glyph-rect replay
-  through the shared backend-host path, with no terminal grid, glyph atlas,
-  image, screenshot, or presentable claims
-- `AR-B4.e` stop marker:
-  product view shows live shell content from the shared renderer path and the
-  temporary Java transcript overlay is no longer the product-owned shell
-  display
-- `AR-B4.e` is now met:
-  - terminal-host stages required repo font assets into the app files sandbox
-  - Android GLES defers font init until the first live `beginFrame` after
-    `makeCurrent`
-  - the bridge now reuses the existing live shell session to create a shared
-    `TerminalWidget`
-  - product view hides the Java transcript when the shared shell renderer is
-    active
-  - Android GLES now owns a shared atlas vertex-stream pipeline instead of the
-    temporary glyph-block fallback
-  - live terminal rects/glyphs now replay through shared atlas textures on the
-    device
-- device truth now proves:
-  - `native.surfaceAvailable ... gles=drawn` on the live shell path
-  - the process stays alive after first frame
-  - product view hierarchy no longer contains the Java transcript nodes while
-    the shared shell renderer is active
-  - screenshot capture shows readable live shell text and prompt content in the
-    shared product surface
-- next concrete cut is `AR-B4.f`:
-  first product-fit live grid sizing through the shared Android GLES backend
-- `AR-B4.f` stop marker:
-  product view shell content uses readable live glyphs at product-fit bounds,
-  and the Java transcript path is no longer part of active product refresh
-  ownership
-- `AR-B4.f` is now met:
-  - Android computes the PTY grid from the real shared-renderer surface bounds
-  - the live shell is no longer pinned to a fixed bootstrap `80x24` grid once
-    the shared renderer is active
-  - device screenshot now shows the live shell using the product surface
-    bounds instead of a centered bootstrap grid island
-- next concrete cut is `AR-B4.g`:
-  IME-aware live viewport sizing through the shared Android GLES backend
-- current observed blocker:
-  tap-to-open IME still behaves like an overlay on the current terminal-host
-  path; on-device audit did not produce a matching live product-surface resize
-- `AR-B4.g` stop marker:
-  showing the IME updates the live terminal viewport/grid instead of covering
-  the active prompt area, and hiding the IME restores the larger product-fit
-  viewport without returning shell ownership to Java
-- `RB-B3.e` materially narrowed terminal-presentable lifecycle pressure:
-  - shared widget/runtime no longer owns the direct-vs-retained execution split
-  - active dispatch no longer treats refresh as retained-only
-  - Metal now satisfies the shared refresh seam structurally
-- that means the stronger remaining Android-forcing renderer blocker is no
-  longer generic terminal-presentable parity cleanup
-- the next stronger shared blocker is text/surface phase-boundary pressure:
-  fills and their dependent text/icon work still do not share one
-  backend-neutral ordering seam
-- first `RB-B3.f` slice is now in:
-  side-nav badge text no longer bypasses the chrome-band seam through
-  immediate sized text drawing
-- second `RB-B3.f` slice is now in:
-  status-bar mode chip text, active field text, selection/caret rects, error
-  text, and file-path text now route through the chrome-band seam instead of
-  mixing band fills with immediate text/surface paths
-- third `RB-B3.f` slice is now in:
-  shared top-bar menu shadow and truncated tab titles now route through the
-  chrome-band seam; tab title replay also stays inside the tab-strip clip
-- fourth `RB-B3.f` slice is now in:
-  integrated terminal tab-bar background and shared window caption button
-  backgrounds/glyph strokes now route through the chrome-band seam
-- chrome-band composition is no longer the loudest scanned gate-5 pressure;
-  the next move should pick one remaining family explicitly:
-  terminal overlay/modal visuals, terminal progress/scrollbar/content-edge
-  visuals, or editor row/overlay composition
-- `RB-B3.g` terminal overlay/progress composition is now in:
-  close-confirm modal, active-tab progress bar, terminal scrollbar thumb, and
-  terminal separator route through a terminal-owned composition seam
-- `RB-B3.h` editor row/overlay composition is now in:
-  segment-paint immediate helpers, text-decoration rects, composing underline,
-  and editor surface-flush handoffs route through the editor overlay/row-band
-  owner instead of importing renderer surface/text hosts directly
-- generic tooltip overlay composition now routes through
-  `renderer_tooltip_host.zig`; widget common code no longer owns tooltip
-  fill/outline/text ordering directly
-- next renderer move is `RB-B3.i`:
-  sample/diagnostic section composition check, then an Android GLES readiness
-  re-rank; do not continue broad renderer cleanup unless this check finds a
-  real Android-blocking ownership leak
-- `RB-B3.i` sample/diagnostic check is now in:
-  `font_sample_view.zig` routes its full-view background and unavailable-mode
-  status/swatch through `font_sample_section_host.Section`
-- Android GLES readiness re-rank result:
-  the next move is `AR-B4`, now executing as a controlled backend-skeleton lane
+- Linux-host bootstrap staging is now real:
+  - `./ops/android_terminal_host.py userland-fetch-ref`
+  - `./ops/android_terminal_host.py userland-inspect`
+  - `./ops/android_terminal_host.py userland-stage`
+- the current upstream bootstrap is better than the earlier assumption:
+  - staged Bash runs on the Note10 via `run-as`
+  - after the SDK 28 target cut, the live product shell launches staged Bash
+    from the app process
+  - product transcript proof: `bash-5.3$`, `pwd`, `/`
+  - staged `apt-get update` can be relocated far enough to refresh package
+    metadata on-device
+  - Linux-host package staging can now materialize selected Termux `.deb`
+    payloads into the Zide app-private prefix for development
+- the current upstream package flow is still not product-ready:
+  - direct on-device `apt-get install` is blocked because Termux packages
+    unpack under `/data/data/com.termux/...`, which this app cannot own
+  - host-side `.deb` extraction/relocation is a dev bootstrap tool, not the
+    final package-manager contract
+- the first `zide-pm-admin` Android dev snapshot prerelease now exists:
+  - manifest:
+    `https://github.com/LaurenceGuws/zide-mobile-pm/releases/download/android-dev-2026.04.11.211834/android-dev-prefix.release.manifest.json`
+  - Zide command:
+    `./ops/android_terminal_host.py userland-stage-artifact`
+  - the command verifies package/prefix/provider metadata, downloads the
+    release-local archive asset, verifies size/SHA-256, and stages only the
+    `android-prefix-archive` contract into the app-private files directory
+  - Note10 validation proves the artifact-staged prefix:
+    - Bash 5.3.9
+    - Neovim 0.12.1
+    - `nvim --headless +qall`
+    - `htop` 3.5.0
+    - `gotop` 4.2.0
+  - fresh terminal-host launch after artifact staging reports
+    `auto.shellStart status=started` and a Bash child under `dev.zide.terminal`
+- product posture is now explicit:
+  terminal-host targets SDK 28 until a modern-target userland execution model
+  is proven
+- `../zide-mobile-pm` is the mobile package authority boundary;
+  Zide-side Termux package staging remains temporary dev-provider tooling
+
+### `AU-A1` Android Userland Bootstrap
+
+Purpose:
+
+- replace Android system `sh` with a repo-owned Bash baseline
+- create the first honest Android package-management contract for terminal work
+
+Acceptance:
+
+- one versioned app-private prefix exists
+- staged Bash is device-proven from that prefix
+- device proof shows `bash --version`
+- package-manager authority is explicit (`apt` / `dpkg`), not a custom Android
+  manager
+
+Status:
+
+- met for live Bash shell handoff; package-manager authority continues in
+  `AU-A2`
+- owner doc: `app_architecture/platform/android/ANDROID_USERLAND_BOOTSTRAP_PLAN.md`
+- current device truth:
+  - latest upstream aarch64 bootstrap can be downloaded and staged from Linux
+  - staged Bash runs on-device under `run-as`
+  - terminal-host now targets SDK 28 and launches staged Bash as the live
+    product shell
+  - product transcript proof shows `bash-5.3$`; input smoke `pwd` returned `/`
+  - `apt-get` reaches the network with relocation overrides after adding
+    `android.permission.INTERNET`
+  - `apt-get update` refreshes package metadata with staged certs and current
+    overrides
+  - `./ops/android_terminal_host.py userland-stage-artifact` now consumes the
+    published `zide-pm-admin` Android dev manifest and stages the produced
+    prefix archive as Zide's normal dev artifact contract
+  - `./ops/android_terminal_host.py userland-stage-packages neovim htop gotop`
+    remains available as an explicit dev-provider path for package-lane
+    investigation, not the default Zide consumer contract
+  - device validation proves `bash --version`, `nvim --version`,
+    `nvim --headless +qall`, `htop --version`, and `gotop --version`
+  - `btop` is not in the current Termux main aarch64 package index
+  - direct on-device `apt-get install` is blocked by package payloads rooted
+    under `/data/data/com.termux/...`
+
+Immediate next step:
+
+- treat the artifact-staged prefix as the normal dev bootstrap path
+- decide whether product artifacts continue from audited `termux-main`,
+  move to a controlled mirror/fork, or become a Zide-owned Android provider
+- wire first-run/user-facing bootstrap UI around the artifact-staging contract
+  instead of requiring the developer ops command
 
 ## Parked (not blocking)
 
-**`AS-A3`** — Android direct shell input, modifier-latch assist bar.
+`AS-A3` is now locally strong enough to stop blocking the next lane.
 
-The current input path works for real shell use. The latch-model assist bar is
-the right long-term direction but is not being polished now. Keep the ticket
-open; do not block renderer work on it.
+Reopen it only if real shell use proves a concrete input gap.
 
 ## Completed Tickets
 
@@ -336,7 +261,7 @@ Product view is shell-first: transcript area, slim assist bar, restart/debug in
 a left drawer. IME uses window insets; tap transcript opens IME. Auto-follow
 with manual scroll detach.
 
-### `AS-A3` Android Direct Shell Input
+### `AS-A3` Android Direct Shell Input — locally sufficient, parked
 
 Purpose:
 
@@ -356,7 +281,9 @@ Acceptance:
 
 Status:
 
-- active — device-validated
+- parked — first modifier-latch cut is locally device-validated enough to stop
+  more speculative polishing:
+  `Ctrl` is shell-validated and `Alt` is emitted-byte-validated
 - owner doc: `app_architecture/platform/android/ANDROID_SHELL_BRINGUP_PLAN.md`
 - direct JNI → Zig → PTY input path now exists:
   - `android_shell_session.zig` exposes direct send helpers
@@ -384,8 +311,19 @@ Current result:
   - main terminal area keeps the screen
   - IME opens from transcript tap (ScrollView + `shell_output_text`) instead of
     a permanent toggle
-  - a slim bottom assist bar provides phone keyboard helpers
+  - a slim bottom assist bar now exposes:
+    - one-shot `Esc` and `Tab`
+    - stateful `Ctrl` and `Alt` latches
+    - direct punctuation/arrow helpers
   - restart/debug live in a hidden left drawer instead of the main bar
+- `ShellInputView` now owns modifier-latch state too:
+  - tapping `Ctrl` or `Alt` arms the next IME/hardware key
+  - the next input consumes the latch and clears the button state
+  - the old hardcoded `Ctrl+C` / `Ctrl+D` assist buttons are gone
+- operator tooling also now handles the common dual-endpoint phone setup:
+  - `ops/android_terminal_host.py` auto-prefers the one USB device when both
+    USB and `adb tcpip` endpoints are connected
+  - otherwise it requires `ZIDE_ANDROID_SERIAL` / `ANDROID_SERIAL`
 - local Java tooling is now explicitly supported for this Android app module:
   - JDTLS/Buildship imports should target `android/terminal-host/`, not repo
     root
@@ -399,15 +337,22 @@ Current result:
 
 Remaining for this ticket:
 
-- replace the current hardcoded Ctrl+A..Z path with a proper modifier-latch
-  model on the assist bar:
-  - Ctrl, Alt, Esc (and Tab) as stateful toggle buttons, not per-combo helpers
-  - latched modifier + any IME key tap → send modified byte → unlatch
-  - assist bar reflects latch state visually
-- the current hardcoded Ctrl+A..Z bytes stay in place until the latch model
-  supersedes them on device
-- stop here: do not extend special-key coverage further until the latch model
-  is device-validated and the next real gap is clear
+- `Ctrl` latch is now proven on-device against a real shell command:
+  - `sleep 99`
+  - arm `CTRL`
+  - inject `c`
+  - prompt returns, proving the latch sends `^C` through the IME path
+- `Alt` latch is now also proved on-device at the emitted-byte level:
+  - arm `ALT`
+  - inject `a`
+  - the host send seam emits `ESC` followed by `a`
+  - the next UI dump shows the latch returned to idle
+- a fresh plain-text rerun on the current build also no longer reproduced the
+  earlier duplicate compose/commit report
+- once that is confirmed, treat the old hardcoded hardware-only Ctrl mapping as
+  compatibility for physical keyboards, not as the product assist model
+- stop here: do not extend special-key coverage further unless a real shell-use
+  gap proves the current latch model materially insufficient
 
 ### `AH-A4` Android Terminal Host Bridge
 

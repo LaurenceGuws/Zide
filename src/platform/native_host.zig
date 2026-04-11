@@ -133,6 +133,7 @@ pub const PlatformRenderHost = struct {
     binding: RenderSurfaceBinding,
     surface_availability: RenderSurfaceAvailability,
     surface_metrics: RenderSurfaceMetrics,
+    visible_viewport_metrics: RenderSurfaceMetrics = .{},
     surface_identity_epoch: u64 = 0,
     redraw_requested: bool = false,
     native_handles: NativeViewHandles,
@@ -149,13 +150,30 @@ pub const PlatformRenderHost = struct {
     pub fn noteSurfaceAvailable(self: *PlatformRenderHost, metrics: RenderSurfaceMetrics) void {
         self.surface_availability = .available;
         self.surface_metrics = metrics;
+        self.visible_viewport_metrics = metrics;
     }
 
     pub fn noteSurfaceUnavailable(self: *PlatformRenderHost) void {
         self.surface_availability = .unavailable;
         self.surface_metrics = .{};
+        self.visible_viewport_metrics = .{};
         self.redraw_requested = false;
         self.native_handles.android_native_window = null;
+    }
+
+    pub fn noteVisibleViewport(self: *PlatformRenderHost, metrics: RenderSurfaceMetrics) void {
+        self.visible_viewport_metrics = metrics;
+    }
+
+    pub fn effectiveViewportMetrics(self: PlatformRenderHost) RenderSurfaceMetrics {
+        if (self.visible_viewport_metrics.logical_width > 0 and
+            self.visible_viewport_metrics.logical_height > 0 and
+            self.visible_viewport_metrics.drawable_width > 0 and
+            self.visible_viewport_metrics.drawable_height > 0)
+        {
+            return self.visible_viewport_metrics;
+        }
+        return self.surface_metrics;
     }
 
     pub fn noteRedrawRequested(self: *PlatformRenderHost) void {
@@ -249,6 +267,8 @@ test "render host surface transitions clear redraw and native window on loss" {
     try std.testing.expectEqual(RenderSurfaceAvailability.unavailable, host.surface_availability);
     try std.testing.expectEqual(@as(i32, 0), host.surface_metrics.logical_width);
     try std.testing.expectEqual(@as(i32, 0), host.surface_metrics.drawable_width);
+    try std.testing.expectEqual(@as(i32, 0), host.visible_viewport_metrics.logical_width);
+    try std.testing.expectEqual(@as(i32, 0), host.visible_viewport_metrics.drawable_width);
     try std.testing.expect(!host.redraw_requested);
     try std.testing.expectEqual(@as(?*anyopaque, null), host.androidNativeWindow());
 }
@@ -277,10 +297,44 @@ test "render host redraw and android window state can be re-armed after surface 
     try std.testing.expectEqual(@as(?*anyopaque, @ptrFromInt(3)), host.androidNativeWindow());
     try std.testing.expectEqual(@as(u64, 1), host.surfaceIdentityEpoch());
     try std.testing.expectEqual(@as(i32, 1080), host.surface_metrics.drawable_width);
+    try std.testing.expectEqual(@as(i32, 1080), host.visible_viewport_metrics.drawable_width);
     try std.testing.expect(host.redraw_requested);
 
     host.clearRedrawRequested();
     try std.testing.expect(!host.redraw_requested);
+}
+
+test "visible viewport can override raw surface metrics without replacing surface identity" {
+    const std = @import("std");
+    var host = PlatformRenderHost{
+        .binding = .opengl,
+        .surface_availability = .available,
+        .surface_metrics = .{
+            .logical_width = 360,
+            .logical_height = 760,
+            .drawable_width = 1080,
+            .drawable_height = 2280,
+            .display_scale = 3.0,
+            .pixel_density = 3.0,
+        },
+        .native_handles = .{},
+    };
+    host.visible_viewport_metrics = host.surface_metrics;
+
+    host.noteVisibleViewport(.{
+        .logical_width = 360,
+        .logical_height = 480,
+        .drawable_width = 1080,
+        .drawable_height = 1440,
+        .display_scale = 3.0,
+        .pixel_density = 3.0,
+    });
+
+    const viewport = host.effectiveViewportMetrics();
+    try std.testing.expectEqual(@as(i32, 760), host.surface_metrics.logical_height);
+    try std.testing.expectEqual(@as(i32, 480), viewport.logical_height);
+    try std.testing.expectEqual(@as(i32, 1440), viewport.drawable_height);
+    try std.testing.expectEqual(@as(u64, 0), host.surfaceIdentityEpoch());
 }
 
 test "android surface identity epoch advances only when the native window changes" {

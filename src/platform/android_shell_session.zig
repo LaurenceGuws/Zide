@@ -4,11 +4,19 @@ const c_api = @import("../terminal/ffi/c_api.zig");
 const ffi_shared = @import("../terminal/ffi/shared.zig");
 const terminal_runtime = @import("../terminal/core/terminal_runtime.zig");
 
+const c = @cImport({
+    @cInclude("stdlib.h");
+});
+
 const initial_cols: u16 = 80;
 const initial_rows: u16 = 24;
 const initial_cell_width: u16 = 8;
 const initial_cell_height: u16 = 16;
-const shell_path: [:0]const u8 = "/system/bin/sh";
+const app_files_path = "/data/data/dev.zide.terminal/files";
+const userland_prefix = app_files_path ++ "/usr";
+const userland_home = app_files_path ++ "/home";
+const userland_tmp = "/data/user/0/dev.zide.terminal/tmp";
+const shell_path: [:0]const u8 = userland_prefix ++ "/bin/bash";
 const transcript_path = "/data/data/dev.zide.terminal/files/zide_terminal_shell.log";
 
 pub const StartStatus = enum(i32) {
@@ -109,6 +117,7 @@ pub fn restart() !void {
     }
 
     stop();
+    try configureUserlandEnvironment();
     std.fs.deleteFileAbsolute(transcript_path) catch |err| switch (err) {
         error.FileNotFound => {},
         else => return err,
@@ -140,6 +149,42 @@ pub fn restart() !void {
     };
     last_start_status = .started;
     try pollAndRefresh();
+}
+
+fn configureUserlandEnvironment() !void {
+    try makePathAbsolute(userland_home);
+    try makePathAbsolute(userland_tmp);
+    try makePathAbsolute(userland_prefix ++ "/tmp");
+    try makePathAbsolute(userland_home ++ "/.config");
+    try makePathAbsolute(userland_home ++ "/.local/share");
+    try makePathAbsolute(userland_home ++ "/.local/state");
+
+    setEnv("PREFIX", userland_prefix);
+    setEnv("HOME", userland_home);
+    setEnv("TMPDIR", userland_tmp);
+    setEnv("PATH", userland_prefix ++ "/bin:/system/bin");
+    setEnv("SHELL", shell_path);
+    setEnv("SSL_CERT_FILE", userland_prefix ++ "/etc/tls/cert.pem");
+    setEnv("CURL_CA_BUNDLE", userland_prefix ++ "/etc/tls/cert.pem");
+    setEnv("VIMRUNTIME", userland_prefix ++ "/share/nvim/runtime");
+    setEnv("XDG_CONFIG_HOME", userland_home ++ "/.config");
+    setEnv("XDG_DATA_HOME", userland_home ++ "/.local/share");
+    setEnv("XDG_STATE_HOME", userland_home ++ "/.local/state");
+    setEnv("TERMINFO", userland_prefix ++ "/share/terminfo");
+    setEnv("LD_LIBRARY_PATH", userland_prefix ++ "/lib");
+    setEnv("INPUTRC", userland_home ++ "/.inputrc");
+}
+
+fn setEnv(name: [:0]const u8, value: [:0]const u8) void {
+    _ = c.setenv(name.ptr, value.ptr, 1);
+}
+
+fn makePathAbsolute(dir_path: []const u8) !void {
+    var dir = try std.fs.openDirAbsolute("/", .{});
+    defer dir.close();
+    const relative = std.mem.trimLeft(u8, dir_path, "/");
+    if (relative.len == 0) return;
+    try dir.makePath(relative);
 }
 
 pub fn stop() void {

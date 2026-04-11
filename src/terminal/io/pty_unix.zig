@@ -548,8 +548,8 @@ fn childProcess(slave_fd: posix.fd_t, shell: ?[:0]const u8) !void {
     }
     if (std.c.getenv("INPUTRC") == null) {
         const pid = c.getpid();
-        var path_buf: [128:0]u8 = undefined;
-        const path = try std.fmt.bufPrintZ(&path_buf, "/tmp/zide-inputrc-{d}", .{pid});
+        var path_buf: [std.fs.max_path_bytes:0]u8 = undefined;
+        const path = try tempPathZ(&path_buf, "zide-inputrc", pid);
         if (std.fs.cwd().createFile(path, .{ .truncate = true, .read = false })) |file| {
             defer file.close();
             try file.writeAll("$include ~/.inputrc\nset enable-bracketed-paste on\n");
@@ -560,8 +560,8 @@ fn childProcess(slave_fd: posix.fd_t, shell: ?[:0]const u8) !void {
     const shell_base = std.fs.path.basename(shell_path);
     if (std.mem.eql(u8, shell_base, "bash")) {
         const pid = c.getpid();
-        var rc_path_buf: [128:0]u8 = undefined;
-        const rc_path = try std.fmt.bufPrintZ(&rc_path_buf, "/tmp/zide-bashrc-{d}", .{pid});
+        var rc_path_buf: [std.fs.max_path_bytes:0]u8 = undefined;
+        const rc_path = try tempPathZ(&rc_path_buf, "zide-bashrc", pid);
         if (std.fs.createFileAbsolute(rc_path, .{ .truncate = true, .read = false })) |file| {
             defer file.close();
             try file.writeAll(
@@ -629,6 +629,11 @@ fn childProcess(slave_fd: posix.fd_t, shell: ?[:0]const u8) !void {
     const exec_err = posix.execvpeZ(shell_path.ptr, &argv, envp);
     env_log.logf(.warning, "spawn exec shell failed shell={s} err={s}", .{ shell_path, @errorName(exec_err) });
     posix.exit(127);
+}
+
+fn tempPathZ(buf: *[std.fs.max_path_bytes:0]u8, basename: []const u8, pid: c.pid_t) ![:0]u8 {
+    const dir = if (std.c.getenv("TMPDIR")) |tmp| std.mem.sliceTo(tmp, 0) else "/tmp";
+    return std.fmt.bufPrintZ(buf, "{s}/{s}-{d}", .{ dir, basename, pid });
 }
 
 fn defaultShell() [:0]const u8 {

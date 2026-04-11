@@ -63,6 +63,8 @@ final class AndroidDebugFormatter {
         final boolean surfaceValid;
         final int surfaceWidth;
         final int surfaceHeight;
+        final int viewportWidth;
+        final int viewportHeight;
         final String glesStatus;
         final long glesSwapCount;
         final long glesBoundEpoch;
@@ -84,6 +86,8 @@ final class AndroidDebugFormatter {
                 boolean surfaceValid,
                 int surfaceWidth,
                 int surfaceHeight,
+                int viewportWidth,
+                int viewportHeight,
                 String glesStatus,
                 long glesSwapCount,
                 long glesBoundEpoch,
@@ -103,6 +107,8 @@ final class AndroidDebugFormatter {
             this.surfaceValid = surfaceValid;
             this.surfaceWidth = surfaceWidth;
             this.surfaceHeight = surfaceHeight;
+            this.viewportWidth = viewportWidth;
+            this.viewportHeight = viewportHeight;
             this.glesStatus = glesStatus;
             this.glesSwapCount = glesSwapCount;
             this.glesBoundEpoch = glesBoundEpoch;
@@ -147,6 +153,7 @@ final class AndroidDebugFormatter {
                 "\n" +
                 "surfaceValid=" + s.surfaceValid +
                 " surfaceSize=" + s.surfaceWidth + "x" + s.surfaceHeight +
+                " viewportSize=" + s.viewportWidth + "x" + s.viewportHeight +
                 "\n" +
                 "gles=" + s.glesStatus +
                 " swaps=" + s.glesSwapCount +

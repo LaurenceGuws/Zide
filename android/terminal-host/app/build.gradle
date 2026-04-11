@@ -10,8 +10,11 @@ android {
 
     defaultConfig {
         applicationId 'dev.zide.terminal'
-        minSdk 29
-        targetSdk 35
+        minSdk 23
+        // The Android terminal product intentionally uses the Termux-compatible
+        // execution posture until the repo proves a modern-target userland
+        // model that can run app-private Bash/nvim-class tools honestly.
+        targetSdk 28
         versionCode 1
         versionName '0.1'
     }

@@ -18,24 +18,21 @@ statement. The short version:
 
 ### Current Focus
 
-Get native Android rendering working through the shared renderer path. Renderer
-gate #5 is no longer the live blocker; the active next move is IME-aware live
-viewport sizing on the shared Android GLES path.
+Android shared-renderer bring-up and current direct shell input are now strong
+enough on-device that they should stop outranking the next product-owned Android
+gap.
 
-- Active ticket: `AR-B4.g`
-  - Android GLES IME-aware live viewport sizing
+- Active ticket: `AU-A2`
+  - Android package-manager handshake for the Zide prefix
   - owner: `docs/todo/android/implementation.md`
   - current state:
-    backend/runtime/frame binding is in, `AR-B4.b` external-host bootstrap is
-    met, `AR-B4.c` first shared solid replay is met, and `AR-B4.d` minimal
-    terminal rect/glyph replay is met on-device; `AR-B4.e` is now met, with
-    the live Android shell session routed through a shared `TerminalWidget`,
-    product view ownership moved off the Java transcript, and readable atlas
-    glyph replay visible on-device; `AR-B4.f` is now met too, with the live
-    shell sizing from the real product surface instead of a fixed bootstrap
-    `80x24` island; the next direct blocker is IME-aware viewport sizing, and
-    current device truth says the tap-open IME path still behaves like an
-    overlay instead of producing a live surface resize
+    Android now has a real host, real renderer ownership, real IME-aware
+    viewport sizing, and a locally-validated modifier-latch input surface; the
+    product shell now runs staged Bash under the intentional SDK 28
+    Termux-compatible posture; `../zide-mobile-pm` now publishes a dev Android
+    prefix artifact and Zide can stage it by manifest, but product package
+    authority is still unresolved because current provider payloads retain
+    audited `com.termux` assumptions
 - `RB-B3.d` is already met:
   - widget/runtime no longer calls `usesDirectTerminalPresentation(...)`
   - those path decisions now terminate in the presentable host seam
@@ -51,9 +48,12 @@ viewport sizing on the shared Android GLES path.
     `renderer_tooltip_host.zig`
 - `RB-B3.i` is met for sample/diagnostic section composition:
   - font sample section chrome now routes through `font_sample_section_host.zig`
-- Next active move is `AR-B4`:
-  - first controlled Android GLES backend implementation slice
-  - authority: `app_architecture/platform/android/ANDROID_GLES_BACKEND_PLAN.md`
+- `AR-B4.g` is now met:
+  - terminal-host opts into `ADJUST_RESIZE`
+  - Java reports the effective visible product viewport into native code
+  - the shared terminal widget/grid now sizes from that visible viewport
+  - Note10 validation now proves IME-open shrink and IME-hide restore on the
+    shared Android GLES path
 - `RB-B3.e` is now structurally narrowed enough that it is no longer the
   strongest blocker:
   - presentable lifecycle parity work materially reduced direct-vs-retained
@@ -62,8 +62,8 @@ viewport sizing on the shared Android GLES path.
     phase-boundary problem
 - Renderer work is in scope only when it is the direct next blocker — not for
   generic cleanup
-- `AS-A3` (modifier-latch input UX) is parked open — works well enough now, do
-  not polish or let it block rendering progress
+- Android renderer/backend work should now reopen only if a concrete product
+  blocker proves the shared path still lacks required capability
 - Gate #2 (Metal live verification) is paused; do not let it stall Android
 
 ### Current State
@@ -77,6 +77,35 @@ viewport sizing on the shared Android GLES path.
   - native bridge build path:
     `zig build android-terminal-host-bridge -Dtarget=aarch64-linux-android
     -Dmode=terminal --sysroot <ndk-sysroot>`
+  - Linux-host userland bootstrap tooling now exists:
+    - `./ops/android_terminal_host.py userland-fetch-ref`
+    - `./ops/android_terminal_host.py userland-inspect`
+    - `./ops/android_terminal_host.py userland-stage`
+    - `./ops/android_terminal_host.py userland-stage-artifact`
+    - `./ops/android_terminal_host.py userland-stage-packages neovim htop gotop`
+    - `./ops/android_terminal_host.py userland-bash-version`
+    - `./ops/android_terminal_host.py userland-apt-update`
+  - Current AU-A1 device truth:
+    - staged Bash 5.3.9 runs under `run-as`
+    - staged Bash is also the live product shell on the SDK 28 terminal-host
+      path; transcript proof shows `bash-5.3$`, `pwd`, and `/`
+    - `apt-get update` refreshes package metadata with relocation overrides
+    - `zide-pm-admin` publishes the current Android dev snapshot prerelease;
+      `userland-stage-artifact` verifies the manifest/archive and stages the
+      prefix without parsing provider package internals
+    - Note10 validation proves the artifact-staged prefix runs Bash 5.3.9,
+      Neovim 0.12.1, `nvim --headless +qall`, `htop` 3.5.0, and `gotop` 4.2.0
+    - fresh terminal-host launch after artifact staging reports shell start and
+      a Bash child under `dev.zide.terminal`
+    - host-side `.deb` extraction/relocation remains available as explicit
+      dev-provider tooling for investigation
+    - `btop` is not present in the current Termux main aarch64 package index
+    - direct on-device `apt-get install` is blocked by Termux package payloads
+      rooted under `/data/data/com.termux/...`
+    - terminal-host target SDK 28 is intentional product policy for the Bash
+      userland lane, not stale Android configuration
+    - `../zide-mobile-pm` is the producer/manifest owner; Zide should consume
+      pinned artifacts, not package internals
 - Ownership boundary:
   - Zig owns terminal/runtime/core rendering primitives
   - Android owns lifecycle/input/insets/overlay surfaces
@@ -90,8 +119,8 @@ viewport sizing on the shared Android GLES path.
     the shared Android GLES path
   - product-fit live shell sizing from the real renderer surface instead of a
     fixed bootstrap grid island
-  - tap-open IME still behaves like an overlay on the current host path; it is
-    not yet resizing the live product viewport
+  - IME-open now shrinks the live product surface/viewport and IME-hide
+    restores it on-device through the shared Android renderer path
   - the visible-output blocker was the host `SurfaceView` defaulting to
     `RGB_565`; terminal-host now requests `RGBA_8888`, and the shared EGL
     runtime also applies the config visual format to the `ANativeWindow`
@@ -104,6 +133,7 @@ viewport sizing on the shared Android GLES path.
   - `docs/todo/android/implementation.md`
 - Android authority:
   - `app_architecture/platform/android/ANDROID_SHELL_BRINGUP_PLAN.md`
+  - `app_architecture/platform/android/ANDROID_USERLAND_BOOTSTRAP_PLAN.md`
   - `app_architecture/platform/android/RENDER_BACKEND.md`
   - `app_architecture/platform/android/ANDROID_TERMINAL_HOST_PLAN.md`
   - `app_architecture/platform/android/ANDROID_GLES_BINDING_PLAN.md`
@@ -126,8 +156,8 @@ viewport sizing on the shared Android GLES path.
 - Keep this file high-level only.
 - Detailed progress belongs in the owning files under `docs/todo/` and the
   relevant `app_architecture/` authority docs.
-- Do not let older renderer-campaign framing outrank the Android queue while
-  Android terminal excellence is the active goal.
+- Do not let older renderer-campaign framing or finished input polish outrank
+  the Android queue while Android terminal excellence is the active goal.
 - Do not work directly on `main`; treat it as merge-only and start active work
   on a branch from current `main`.
 - Weaker agents must stay on feature branches and keep small reviewable

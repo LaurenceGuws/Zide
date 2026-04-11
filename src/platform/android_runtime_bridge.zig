@@ -42,6 +42,10 @@ const BridgeState = struct {
 
 var bridge_state = BridgeState{};
 
+fn scaleOrDefault(value: f32) f32 {
+    return if (value > 0.0) value else 1.0;
+}
+
 fn nextSequence() u64 {
     bridge_state.seq += 1;
     return bridge_state.seq;
@@ -114,6 +118,25 @@ pub fn noteSurfaceAvailable(width: i32, height: i32) u64 {
         .display_scale = 1.0,
         .pixel_density = 1.0,
     });
+    return nextSequence();
+}
+
+pub fn noteVisibleViewport(width: i32, height: i32, ime_visible: bool) u64 {
+    bridge_state.app_host.noteTextInputActive(ime_visible);
+
+    const surface = bridge_state.render_host.surface_metrics;
+    bridge_state.render_host.noteVisibleViewport(.{
+        .logical_width = @max(width, 1),
+        .logical_height = @max(height, 1),
+        .drawable_width = @max(width, 1),
+        .drawable_height = @max(height, 1),
+        .display_scale = scaleOrDefault(surface.display_scale),
+        .pixel_density = scaleOrDefault(surface.pixel_density),
+    });
+    bridge_state.render_host.noteRedrawRequested();
+    if (bridge_state.render_host.hasSurface()) {
+        bridge_state.last_renderer_status = drawSharedRendererSurfaceFrame();
+    }
     return nextSequence();
 }
 
@@ -311,23 +334,27 @@ fn ensureTerminalWidget() ?*widgets.TerminalWidget {
 
 fn drawLiveTerminalWidgetFrame(renderer: *renderer_mod.Renderer, widget: *widgets.TerminalWidget) void {
     ensureProductFitTerminalGrid(renderer, widget) catch {};
+    const viewport = bridge_state.render_host.effectiveViewportMetrics();
+    const width = @as(f32, @floatFromInt(@max(viewport.logical_width, 1)));
+    const height = @as(f32, @floatFromInt(@max(viewport.logical_height, 1)));
     var shell: app_shell.Shell = .{ .renderer = renderer };
     const input = shared_types.input.InputSnapshot.init(.{ .x = 0, .y = 0 }, .{});
     const draw_outcome = widget.draw(
         &shell,
         0.0,
         0.0,
-        @floatFromInt(@max(renderer.width, 1)),
-        @floatFromInt(@max(renderer.height, 1)),
+        width,
+        height,
         input,
     );
     widget.stagePresentationFeedback(draw_outcome);
 }
 
 fn ensureProductFitTerminalGrid(renderer: *renderer_mod.Renderer, widget: *widgets.TerminalWidget) !void {
+    const viewport = bridge_state.render_host.effectiveViewportMetrics();
     const grid = app_terminal_grid.computeWithEnvOverride(
-        @floatFromInt(@max(renderer.width, 1)),
-        @floatFromInt(@max(renderer.height, 1)),
+        @floatFromInt(@max(viewport.logical_width, 1)),
+        @floatFromInt(@max(viewport.logical_height, 1)),
         renderer.terminalCellGeometry(),
         1,
         1,
@@ -471,6 +498,23 @@ test "bridge can create and draw a shared android gles renderer for backend smok
 
     destroyRenderer();
     try std.testing.expectEqual(@as(?*renderer_mod.Renderer, null), bridge_state.renderer);
+}
+
+test "bridge visible viewport updates text-input ownership and effective sizing" {
+    try std.testing.expectEqual(@as(u64, 1), noteCreate());
+    try std.testing.expectEqual(@as(u64, 2), noteResume());
+    try std.testing.expectEqual(@as(u64, 3), noteSurfaceAvailableFromJava(@ptrFromInt(1), @ptrFromInt(0x1000), 400, 200));
+    try std.testing.expect(!bridge_state.app_host.text_input_active);
+    try std.testing.expectEqual(@as(i32, 200), bridge_state.render_host.effectiveViewportMetrics().logical_height);
+
+    try std.testing.expectEqual(@as(u64, 4), noteVisibleViewport(400, 120, true));
+    try std.testing.expect(bridge_state.app_host.text_input_active);
+    try std.testing.expectEqual(@as(i32, 120), bridge_state.render_host.effectiveViewportMetrics().logical_height);
+    try std.testing.expectEqual(RendererStatus.drawn, currentRendererStatus());
+
+    try std.testing.expectEqual(@as(u64, 5), noteVisibleViewport(400, 200, false));
+    try std.testing.expect(!bridge_state.app_host.text_input_active);
+    try std.testing.expectEqual(@as(i32, 200), bridge_state.render_host.effectiveViewportMetrics().logical_height);
 }
 
 test "bridge reports replaced when a live Android surface identity changes without retirement" {

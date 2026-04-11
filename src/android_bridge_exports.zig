@@ -36,6 +36,10 @@ fn onSurfaceRedrawNeededBridge() i64 {
     return @intCast(android_runtime_bridge.noteSurfaceRedrawNeeded());
 }
 
+fn onVisibleViewportBridge(width: i32, height: i32, ime_visible: bool) i64 {
+    return @intCast(android_runtime_bridge.noteVisibleViewport(width, height, ime_visible));
+}
+
 fn currentWindowTokenBridge() i64 {
     return @intCast(android_runtime_bridge.currentNativeWindowToken());
 }
@@ -181,6 +185,16 @@ export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeOnSurfaceRedrawNeede
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return onSurfaceRedrawNeededBridge();
+}
+
+export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeOnVisibleViewportBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+    width: i32,
+    height: i32,
+    ime_visible: bool,
+) callconv(.c) i64 {
+    return onVisibleViewportBridge(width, height, ime_visible);
 }
 
 export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentWindowTokenBridge(

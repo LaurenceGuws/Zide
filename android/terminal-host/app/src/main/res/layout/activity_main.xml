@@ -76,20 +76,20 @@
                     android:text="@string/assist_tab" />
 
                 <Button
-                    android:id="@+id/assist_ctrl_c_button"
+                    android:id="@+id/assist_ctrl_button"
                     style="@android:style/Widget.Material.Button.Borderless"
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
                     android:minWidth="58dp"
-                    android:text="@string/assist_ctrl_c" />
+                    android:text="@string/assist_ctrl" />
 
                 <Button
-                    android:id="@+id/assist_ctrl_d_button"
+                    android:id="@+id/assist_alt_button"
                     style="@android:style/Widget.Material.Button.Borderless"
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
                     android:minWidth="58dp"
-                    android:text="@string/assist_ctrl_d" />
+                    android:text="@string/assist_alt" />
 
                 <Button
                     android:id="@+id/assist_pipe_button"

@@ -76,7 +76,10 @@ public final class ZideTerminalActivity extends Activity
     private View drawerScrim;
     private View drawerEdgeHotspot;
     private View leftSidebar;
+    private FrameLayout productContentFrame;
     private FrameLayout productSurfaceContainer;
+    private Button assistCtrlButton;
+    private Button assistAltButton;
     private ShellInputView shellInputView;
     private ScrollView shellOutputScroll;
     private ShellTranscriptController shellTranscriptController;
@@ -95,6 +98,11 @@ public final class ZideTerminalActivity extends Activity
     private int productViewBasePaddingTop = 0;
     private int productViewBasePaddingRight = 0;
     private int productViewBasePaddingBottom = 0;
+    private int visibleViewportWidth = 0;
+    private int visibleViewportHeight = 0;
+    private int notifiedViewportWidth = 0;
+    private int notifiedViewportHeight = 0;
+    private boolean notifiedViewportImeVisible = false;
     private final Runnable shellRefreshRunnable = new Runnable() {
         @Override
         public void run() {
@@ -119,7 +127,10 @@ public final class ZideTerminalActivity extends Activity
         drawerScrim = findViewById(R.id.drawer_scrim);
         drawerEdgeHotspot = findViewById(R.id.left_edge_swipe_hotspot);
         leftSidebar = findViewById(R.id.left_sidebar);
+        productContentFrame = findViewById(R.id.product_content_frame);
         productSurfaceContainer = findViewById(R.id.product_surface_container);
+        assistCtrlButton = findViewById(R.id.assist_ctrl_button);
+        assistAltButton = findViewById(R.id.assist_alt_button);
         shellOutputScroll = findViewById(R.id.shell_output_scroll);
         shellTranscriptController = new ShellTranscriptController(shellOutputScroll, shellOutputText, this);
         shellSessionController = new ShellSessionController(
@@ -143,6 +154,7 @@ public final class ZideTerminalActivity extends Activity
                 nativeLoaded);
         installShellInputView();
         installInsetsHandling();
+        installViewportTracking();
         shellTranscriptController.installScrollHandling();
         bindSidebarControls();
         bindViewModeToggle();
@@ -181,9 +193,19 @@ public final class ZideTerminalActivity extends Activity
                     productViewBasePaddingRight,
                     productViewBasePaddingBottom + bottomInset);
             shellOutputScroll.post(() -> shellOutputScroll.fullScroll(View.FOCUS_DOWN));
+            productSurfaceContainer.post(() -> notifyVisibleViewport("insets"));
             return windowInsets;
         });
         productView.requestApplyInsets();
+    }
+
+    private void installViewportTracking() {
+        productSurfaceContainer.addOnLayoutChangeListener((view, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
+            if (left == oldLeft && top == oldTop && right == oldRight && bottom == oldBottom) {
+                return;
+            }
+            notifyVisibleViewport("layout");
+        });
     }
 
     private void prepareRuntimeAssets() {
@@ -358,6 +380,7 @@ public final class ZideTerminalActivity extends Activity
                 "native.surfaceAvailable",
                 seq,
                 currentSurfaceStateSnapshot());
+        productSurfaceContainer.post(() -> notifyVisibleViewport("surface-changed"));
         updateStatus("surface-changed");
     }
 
@@ -498,14 +521,15 @@ public final class ZideTerminalActivity extends Activity
     private void bindAssistBar() {
         bindAssistButton(R.id.assist_esc_button, "\u001b", "assist.esc");
         bindAssistButton(R.id.assist_tab_button, "\t", "assist.tab");
-        bindAssistButton(R.id.assist_ctrl_c_button, "\u0003", "assist.ctrl_c");
-        bindAssistButton(R.id.assist_ctrl_d_button, "\u0004", "assist.ctrl_d");
+        bindModifierAssistButton(assistCtrlButton, ShellInputView.ModifierLatch.CTRL, "assist.ctrl");
+        bindModifierAssistButton(assistAltButton, ShellInputView.ModifierLatch.ALT, "assist.alt");
         bindAssistButton(R.id.assist_pipe_button, "|", "assist.pipe");
         bindAssistButton(R.id.assist_slash_button, "/", "assist.slash");
         bindAssistButton(R.id.assist_up_button, "\u001b[A", "assist.up");
         bindAssistButton(R.id.assist_down_button, "\u001b[B", "assist.down");
         bindAssistButton(R.id.assist_left_button, "\u001b[D", "assist.left");
         bindAssistButton(R.id.assist_right_button, "\u001b[C", "assist.right");
+        applyModifierLatchState(shellInputView.modifierLatchState());
     }
 
     private void bindAssistButton(int id, String text, String eventName) {
@@ -514,6 +538,14 @@ public final class ZideTerminalActivity extends Activity
             sendDirectText(text);
             appendEvent(eventName);
             refreshShellState(false);
+        });
+    }
+
+    private void bindModifierAssistButton(Button button, ShellInputView.ModifierLatch modifier, String eventName) {
+        button.setOnClickListener(view -> {
+            shellInputView.toggleModifierLatch(modifier);
+            appendEvent(eventName + " toggled");
+            openIme();
         });
     }
 
@@ -569,11 +601,41 @@ public final class ZideTerminalActivity extends Activity
         });
     }
 
+    @Override
+    public void onModifierLatchChanged(ShellInputView.Host.ModifierLatchState state) {
+        applyModifierLatchState(state);
+    }
+
+    private void applyModifierLatchState(ShellInputView.Host.ModifierLatchState state) {
+        applyModifierButtonState(
+                assistCtrlButton,
+                state.ctrlLatched,
+                R.string.assist_ctrl,
+                R.string.assist_ctrl_latched);
+        applyModifierButtonState(
+                assistAltButton,
+                state.altLatched,
+                R.string.assist_alt,
+                R.string.assist_alt_latched);
+    }
+
+    private void applyModifierButtonState(Button button, boolean latched, int idleLabelResId, int activeLabelResId) {
+        if (button == null) {
+            return;
+        }
+        button.setText(latched ? activeLabelResId : idleLabelResId);
+        button.setAlpha(latched ? 1.0f : 0.72f);
+        button.setActivated(latched);
+        button.setSelected(latched);
+    }
+
     private void applyViewMode() {
         productView.setVisibility(debugViewEnabled ? View.GONE : View.VISIBLE);
         debugView.setVisibility(debugViewEnabled ? View.VISIBLE : View.GONE);
         if (debugViewEnabled) {
             closeSidebar();
+        } else {
+            productSurfaceContainer.post(() -> notifyVisibleViewport("product-view"));
         }
     }
 
@@ -681,6 +743,42 @@ public final class ZideTerminalActivity extends Activity
         holder.addCallback(this);
         surfaceView = nextSurfaceView;
         appendEvent("surface.hostInstalled reason=" + reason + " generation=" + surfaceHostGeneration);
+        productSurfaceContainer.post(() -> notifyVisibleViewport("surface-install"));
+    }
+
+    private void notifyVisibleViewport(String reason) {
+        if (debugViewEnabled || productView.getVisibility() != View.VISIBLE) {
+            return;
+        }
+        final boolean viewportImeVisible = currentImeVisible();
+        imeVisible = viewportImeVisible;
+        shellTranscriptController.setImeVisible(imeVisible);
+        final int width = Math.max(productContentFrame.getWidth(), 1);
+        final int height = Math.max(productContentFrame.getHeight(), 1);
+        visibleViewportWidth = width;
+        visibleViewportHeight = height;
+        if (width == notifiedViewportWidth &&
+                height == notifiedViewportHeight &&
+                viewportImeVisible == notifiedViewportImeVisible) {
+            return;
+        }
+        notifiedViewportWidth = width;
+        notifiedViewportHeight = height;
+        notifiedViewportImeVisible = viewportImeVisible;
+        appendEvent("viewport.changed reason=" + reason + " size=" + width + "x" + height + " imeVisible=" + viewportImeVisible);
+        final long seq = nativeLoaded ? nativeOnVisibleViewportBridge(width, height, viewportImeVisible) : -1;
+        callNativeWithSurfaceState("native.viewportChanged", seq, currentSurfaceStateSnapshot());
+        updateStatus("viewport-updated");
+    }
+
+    private boolean currentImeVisible() {
+        final WindowInsets insets = productView.getRootWindowInsets();
+        if (insets == null) {
+            return imeVisible;
+        }
+        final Insets navInsets = insets.getInsets(WindowInsets.Type.navigationBars());
+        final Insets imeInsets = insets.getInsets(WindowInsets.Type.ime());
+        return imeInsets.bottom > navInsets.bottom;
     }
 
     private void updateProductShellVisibility() {
@@ -748,6 +846,8 @@ public final class ZideTerminalActivity extends Activity
                         surfaceView.getHolder().getSurface().isValid(),
                         surfaceView.getWidth(),
                         surfaceView.getHeight(),
+                        visibleViewportWidth,
+                        visibleViewportHeight,
                         surfaceState.glesStatus,
                         surfaceState.glesSwapCount,
                         surfaceState.glesBoundEpoch,
@@ -901,6 +1001,8 @@ public final class ZideTerminalActivity extends Activity
     private static native long nativeOnSurfaceDestroyedBridge();
 
     private static native long nativeOnSurfaceRedrawNeededBridge();
+
+    private static native long nativeOnVisibleViewportBridge(int width, int height, boolean imeVisible);
 
     private static native long nativeCurrentWindowTokenBridge();
 

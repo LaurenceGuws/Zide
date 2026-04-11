@@ -151,8 +151,10 @@ Android note:
 - `AR-B4.f` is now met:
   the live shell now sizes from the real product surface instead of a fixed
   bootstrap `80x24` grid island
-- the next Android-side slice is `AR-B4.g`:
-  IME-aware live viewport sizing on the shared Android GLES path
+- `AR-B4.g` is now met:
+  IME-aware live viewport sizing is now live on the shared Android GLES path
+- Android renderer/backend work should now reopen only if a concrete product
+  blocker proves the shared path still lacks required capability
 
 Gate #3 remains met for the `SurfaceDraw` surface. Do not reopen gate #4
 without new ownership pressure that proves the sanctioned backend-host surface

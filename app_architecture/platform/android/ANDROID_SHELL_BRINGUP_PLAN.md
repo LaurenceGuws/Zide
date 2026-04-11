@@ -195,14 +195,13 @@ What this does not yet prove:
 
 Next likely follow-up:
 
-1. implement the modifier-latch assist bar: Ctrl/Alt/Esc/Tab as stateful
-   toggle buttons — latch → tap IME key → send modified byte → unlatch; retire
-   the current hardcoded Ctrl+A..Z byte path once the latch model is
-   device-validated
+1. stop treating `/system/bin/sh` as a product shell baseline; the next Android
+   shell step is now app-private Bash userland bootstrap
 2. let real shell use on the Note10 drive which gaps are worth closing next;
    do not extend input coverage speculatively beyond the latch model
-3. keep the `InputConnection` editor model stable; only widen the input surface
-   if a concrete device or use case proves the current model materially broken
+3. keep the `InputConnection` editor model stable while the userland lane
+   advances; only widen the input surface if a concrete device or use case
+   proves the current model materially broken
 
 ## Current `AS-A3` Hardening
 
@@ -248,6 +247,46 @@ Current product-shell layout is also now moving toward a mobile-native shape:
 - the terminal transcript owns the screen without outer padding
 - transcript tap opens the IME path directly (listeners on both the scroll host
   and inner transcript `TextView`, because touches usually hit the child)
-- a slim bottom assist strip provides terminal helper input for phone-first use
+- the slim bottom assist strip now uses a cleaner split:
+  - one-shot `Esc` and `Tab`
+  - stateful `Ctrl` and `Alt` latches for the next IME/hardware key
+  - direct punctuation/arrow helpers remain available for phone-first use
+- the old hardcoded `Ctrl+C` / `Ctrl+D` assist buttons are removed
+- `ShellInputView` now owns the modifier-latch state so the live
+  `InputConnection` path remains the single active input owner
 - restart/debug controls now live behind a hidden left drawer instead of taking
   permanent vertical space
+
+Current validation truth for this cut:
+
+- `zig build`
+- `zig build test`
+- `./ops/android_terminal_host.py deploy`
+- on-device UI dump now proves:
+  - tapping `CTRL` changes the button text/state to `CTRL*`
+  - the next injected input clears it back to `CTRL`
+- an automated Note10 shell pass also now proves `Ctrl` latch behavior against
+  a live process:
+  - inject `sleep 99`
+  - arm `CTRL`
+  - inject `c`
+  - prompt returns, proving the IME path emitted `^C`
+- a second on-device byte-emission pass now proves `Alt` latch behavior too:
+  - arm `ALT`
+  - inject `a`
+  - the host send seam emits `ESC` followed by `a`
+  - the next UI dump shows `ALT` returned to idle
+- a fresh plain-text rerun also no longer reproduced the earlier duplicate-send
+  report on the current installed build
+- that proves the `Ctrl` one-shot latch lifecycle and shell delivery path, and
+  it proves the `Alt` emitted-byte contract on-device
+- it does **not** yet separately automate every shell-visible `Alt` semantic;
+  if a real shell-use gap appears there later, reopen that exact case instead
+  of widening input coverage speculatively
+
+Current boundary after this cut:
+
+- Android shell bring-up is no longer blocked on input surface basics
+- the stronger next product gap is the missing Bash/package-managed userland
+- that lane is now owned by
+  `app_architecture/platform/android/ANDROID_USERLAND_BOOTSTRAP_PLAN.md`

@@ -11,6 +11,16 @@ import android.view.inputmethod.InputConnection;
 
 final class ShellInputView extends View {
     interface Host {
+        final class ModifierLatchState {
+            final boolean ctrlLatched;
+            final boolean altLatched;
+
+            ModifierLatchState(boolean ctrlLatched, boolean altLatched) {
+                this.ctrlLatched = ctrlLatched;
+                this.altLatched = altLatched;
+            }
+        }
+
         void sendDirectText(String text);
 
         void sendDirectCodepoint(int codepoint);
@@ -18,15 +28,25 @@ final class ShellInputView extends View {
         void refreshShellState();
 
         void onInputFocusChanged(boolean hasFocus);
+
+        void onModifierLatchChanged(ModifierLatchState state);
     }
 
     private static final String SENTINEL = "........";
+
+    enum ModifierLatch {
+        CTRL,
+        ALT,
+    }
 
     private final Host host;
     private final StringBuilder editorBuffer = new StringBuilder();
     private int editorCursor = 0;
     private int editorComposingStart = -1;
     private int editorComposingEnd = -1;
+    private boolean ctrlLatched = false;
+    private boolean altLatched = false;
+    private String suppressedCommitText = null;
 
     ShellInputView(Context context, Host host) {
         super(context);
@@ -39,10 +59,12 @@ final class ShellInputView extends View {
             } else {
                 editorComposingStart = -1;
                 editorComposingEnd = -1;
+                clearLatchedModifiers();
             }
             host.onInputFocusChanged(hasFocus);
         });
         resetEditorState();
+        notifyModifierLatchChanged();
     }
 
     @Override
@@ -120,6 +142,10 @@ final class ShellInputView extends View {
             @Override
             public boolean setComposingText(CharSequence text, int newCursorPosition) {
                 final String s = text.toString();
+                if (consumeLatchedImeText(s)) {
+                    host.refreshShellState();
+                    return true;
+                }
                 replaceComposition(s);
                 host.refreshShellState();
                 return true;
@@ -135,6 +161,14 @@ final class ShellInputView extends View {
             @Override
             public boolean commitText(CharSequence text, int newCursorPosition) {
                 final String s = text.toString();
+                if (suppressedCommitText != null && suppressedCommitText.equals(s)) {
+                    suppressedCommitText = null;
+                    return true;
+                }
+                if (consumeLatchedImeText(s)) {
+                    host.refreshShellState();
+                    return true;
+                }
                 final String previous = currentCompositionText();
                 if (editorComposingStart >= 0) {
                     replaceComposition(s);
@@ -184,6 +218,22 @@ final class ShellInputView extends View {
 
     boolean handleHardwareKeyEvent(KeyEvent event) {
         return handleTerminalKeyEvent(event);
+    }
+
+    void toggleModifierLatch(ModifierLatch modifier) {
+        switch (modifier) {
+            case CTRL:
+                ctrlLatched = !ctrlLatched;
+                break;
+            case ALT:
+                altLatched = !altLatched;
+                break;
+        }
+        notifyModifierLatchChanged();
+    }
+
+    Host.ModifierLatchState modifierLatchState() {
+        return new Host.ModifierLatchState(ctrlLatched, altLatched);
     }
 
     private void resetEditorState() {
@@ -268,16 +318,16 @@ final class ShellInputView extends View {
         }
     }
 
-    private Integer mapKeyToControlCodepoint(KeyEvent event) {
-        if (!event.isCtrlPressed()) {
+    private Integer mapKeyToControlCodepoint(KeyEvent event, boolean ctrlActive) {
+        if (!ctrlActive) {
             return null;
         }
         final int unicode = event.getUnicodeChar(KeyEvent.META_CTRL_ON);
-        if (unicode >= 'a' && unicode <= 'z') {
-            return unicode - 'a' + 1;
-        }
-        if (unicode >= 'A' && unicode <= 'Z') {
-            return unicode - 'A' + 1;
+        if (unicode != 0) {
+            final Integer mapped = mapCodepointToControlCodepoint(unicode);
+            if (mapped != null) {
+                return mapped;
+            }
         }
         switch (event.getKeyCode()) {
             case KeyEvent.KEYCODE_A:
@@ -351,19 +401,102 @@ final class ShellInputView extends View {
         }
     }
 
+    private Integer mapCodepointToControlCodepoint(int codepoint) {
+        if (codepoint >= 'a' && codepoint <= 'z') {
+            return codepoint - 'a' + 1;
+        }
+        if (codepoint >= 'A' && codepoint <= 'Z') {
+            return codepoint - 'A' + 1;
+        }
+        switch (codepoint) {
+            case '[':
+                return 0x1b;
+            case '\\':
+                return 0x1c;
+            case ']':
+                return 0x1d;
+            case '6':
+                return 0x1e;
+            case '-':
+            case '/':
+                return 0x1f;
+            case ' ':
+            case '2':
+                return 0x00;
+            default:
+                return null;
+        }
+    }
+
+    private boolean consumeLatchedImeText(String text) {
+        if ((!ctrlLatched && !altLatched) || text.isEmpty()) {
+            return false;
+        }
+        final int firstCodepoint = text.codePointAt(0);
+        final int firstCodepointLength = Character.charCount(firstCodepoint);
+        if (altLatched) {
+            host.sendDirectCodepoint('\u001b');
+        }
+        if (ctrlLatched) {
+            final Integer controlCodepoint = mapCodepointToControlCodepoint(firstCodepoint);
+            if (controlCodepoint != null) {
+                host.sendDirectCodepoint(controlCodepoint);
+            } else {
+                host.sendDirectCodepoint(firstCodepoint);
+            }
+        } else {
+            host.sendDirectCodepoint(firstCodepoint);
+        }
+        if (firstCodepointLength < text.length()) {
+            host.sendDirectText(text.substring(firstCodepointLength));
+        }
+        suppressedCommitText = text;
+        resetEditorState();
+        clearLatchedModifiers();
+        return true;
+    }
+
+    private void clearLatchedModifiers() {
+        if (!ctrlLatched && !altLatched) {
+            return;
+        }
+        ctrlLatched = false;
+        altLatched = false;
+        notifyModifierLatchChanged();
+    }
+
+    private void notifyModifierLatchChanged() {
+        host.onModifierLatchChanged(modifierLatchState());
+    }
+
     private boolean handleTerminalKeyEvent(KeyEvent event) {
         if (event.getAction() != KeyEvent.ACTION_DOWN) {
             return false;
         }
-        final Integer controlCodepoint = mapKeyToControlCodepoint(event);
+        final boolean ctrlActive = event.isCtrlPressed() || ctrlLatched;
+        final boolean altActive = event.isAltPressed() || altLatched;
+        final boolean latchedModifiersConsumed = ctrlLatched || altLatched;
+        final Integer controlCodepoint = mapKeyToControlCodepoint(event, ctrlActive);
         if (controlCodepoint != null) {
+            if (altActive) {
+                host.sendDirectCodepoint('\u001b');
+            }
             host.sendDirectCodepoint(controlCodepoint);
+            if (latchedModifiersConsumed) {
+                clearLatchedModifiers();
+            }
             host.refreshShellState();
             return true;
         }
         final String esc = mapKeyToEscape(event.getKeyCode());
         if (esc != null) {
+            if (altActive) {
+                host.sendDirectCodepoint('\u001b');
+            }
             host.sendDirectText(esc);
+            if (latchedModifiersConsumed) {
+                clearLatchedModifiers();
+            }
             host.refreshShellState();
             return true;
         }
@@ -396,9 +529,24 @@ final class ShellInputView extends View {
                     return false;
                 }
                 final String text = new String(Character.toChars(unicode));
-                editorBuffer.insert(editorCursor, text);
-                editorCursor += text.length();
-                host.sendDirectText(text);
+                if (altActive) {
+                    host.sendDirectCodepoint('\u001b');
+                }
+                if (ctrlActive) {
+                    final Integer mapped = mapCodepointToControlCodepoint(unicode);
+                    if (mapped != null) {
+                        host.sendDirectCodepoint(mapped);
+                    } else {
+                        host.sendDirectText(text);
+                    }
+                } else {
+                    editorBuffer.insert(editorCursor, text);
+                    editorCursor += text.length();
+                    host.sendDirectText(text);
+                }
+                if (latchedModifiersConsumed) {
+                    clearLatchedModifiers();
+                }
                 host.refreshShellState();
                 return true;
         }

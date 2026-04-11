@@ -390,13 +390,27 @@ Current status:
 - device validation screenshot now shows the live shell using the product
   surface bounds instead of a small centered bootstrap grid island
 
-The next active slice is `AR-B4.g`: IME-aware live viewport sizing.
+`AR-B4.g` is now met:
 
-Current observed blocker:
+- `ZideTerminalActivity` now opts into `ADJUST_RESIZE` instead of the previous
+  default `ADJUST_PAN` host behavior
+- Java now reports the effective visible product viewport into native code
+  through `nativeOnVisibleViewportBridge(...)`
+- shared host state now keeps raw surface metrics separate from the effective
+  visible viewport used for live terminal layout
+- the live terminal widget/grid now sizes from that visible viewport instead of
+  only the raw surface bounds
+- device validation on the Note10 now proves:
+  - IME-open drives `surface.changed ... size=2759x436`
+  - native viewport updates follow with
+    `viewport.changed ... size=2759x436 imeVisible=true`
+  - IME-hide restores
+    `surface.changed ... size=2759x1230`
+  - native viewport updates follow with
+    `viewport.changed ... size=2759x1230 imeVisible=false`
 
-- tap-to-open IME still behaves like an overlay on the current terminal-host
-  path; on-device audit did not produce a matching live product-surface resize,
-  so the prompt area can still be covered today
+That closes the first shared-renderer Android bring-up lane cleanly enough to
+stop forcing more backend work by inertia.
 
 ## `AR-B4.g` Next Cut
 
@@ -418,3 +432,15 @@ Stop marker:
   the active prompt area
 - hiding the IME restores the larger product-fit terminal viewport without
   resetting shell ownership back to Java
+
+Current result:
+
+- met on-device
+
+Next move:
+
+- return to Android terminal product/input work unless a new concrete renderer
+  backend gap appears
+- the next strongest Android product ticket is `AS-A3`:
+  modifier-latch assist-bar ownership instead of the temporary hardcoded Ctrl
+  helper buttons
