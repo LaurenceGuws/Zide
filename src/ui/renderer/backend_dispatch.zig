@@ -6,6 +6,7 @@ const gl_backend = @import("gl_backend.zig");
 const gl_clip_runtime = @import("gl_clip_runtime.zig");
 const gl_presentable_runtime = @import("gl_presentable_runtime.zig");
 const gl_surface_runtime = @import("gl_surface_runtime.zig");
+const android_gles_backend = @import("android_gles_backend.zig");
 const metal_backend = @import("metal_backend.zig");
 const metal_clip_runtime = @import("metal_clip_runtime.zig");
 const metal_presentable_runtime = @import("metal_presentable_runtime.zig");
@@ -132,6 +133,16 @@ pub fn opsFor(
         SceneTargetInvalidation,
         WindowChangeMask,
     );
+    const AndroidGles = AndroidGlesDispatch(
+        RendererType,
+        FrameSubmission,
+        RendererCapabilities,
+        PresentableDraw,
+        PresentableInfo,
+        RawImageFormat,
+        SceneTargetInvalidation,
+        WindowChangeMask,
+    );
 
     return switch (backend) {
         .opengl => .{
@@ -224,6 +235,51 @@ pub fn opsFor(
                 .recordSurfaceDraw = Metal.recordSurfaceDraw,
             },
         },
+        .android_gles => .{
+            .runtime = .{
+                .initStorage = AndroidGles.initStorage,
+                .deinitStorage = AndroidGles.deinitStorage,
+                .initRuntime = AndroidGles.initRuntime,
+                .deinitRuntime = AndroidGles.deinitRuntime,
+                .configureRuntimePolicy = AndroidGles.configureRuntimePolicy,
+                .capabilities = AndroidGles.capabilities,
+                .clearDiagnosticFont = AndroidGles.clearDiagnosticFont,
+                .sceneTargetInvalidationForRefresh = AndroidGles.sceneTargetInvalidationForRefresh,
+                .mergePendingSceneTargetInvalidation = AndroidGles.mergePendingSceneTargetInvalidation,
+            },
+            .frame = .{
+                .beginFrame = AndroidGles.beginFrame,
+                .submitFrame = AndroidGles.submitFrame,
+                .dumpWindowScreenshotPpm = AndroidGles.dumpWindowScreenshotPpm,
+                .dumpWindowScreenshotPpmSized = AndroidGles.dumpWindowScreenshotPpmSized,
+            },
+            .presentable = .{
+                .ensurePresentable = AndroidGles.ensurePresentable,
+                .refreshTerminalPresentable = AndroidGles.refreshTerminalPresentable,
+                .drawPresentableBackdrop = AndroidGles.drawPresentableBackdrop,
+                .drawPresentable = AndroidGles.drawPresentable,
+                .scrollPresentable = AndroidGles.scrollPresentable,
+                .presentableInfo = AndroidGles.presentableInfo,
+            },
+            .clip = .{
+                .applyClipRect = AndroidGles.applyClipRect,
+            },
+            .terminal_draw = .{
+                .addTerminalRect = AndroidGles.addTerminalRect,
+                .addTerminalGlyphRect = AndroidGles.addTerminalGlyphRect,
+                .addTerminalGlyphQuad = AndroidGles.addTerminalGlyphQuad,
+            },
+            .image_draw = .{
+                .createPersistentImageFromRgba = AndroidGles.createPersistentImageFromRgba,
+                .createPersistentImageFromRgb = AndroidGles.createPersistentImageFromRgb,
+                .destroyPersistentImage = AndroidGles.destroyPersistentImage,
+                .drawPersistentImage = AndroidGles.drawPersistentImage,
+                .drawRawImage = AndroidGles.drawRawImage,
+            },
+            .surface = .{
+                .recordSurfaceDraw = AndroidGles.recordSurfaceDraw,
+            },
+        },
     };
 }
 
@@ -231,6 +287,7 @@ pub fn bootstrapOpsFor(comptime BackendEnum: type, backend: BackendEnum) bootstr
     return switch (backend) {
         .opengl => gl_backend.bootstrapOps(),
         .metal => metal_backend.bootstrapOps(),
+        .android_gles => android_gles_backend.bootstrapOps(),
     };
 }
 
@@ -246,10 +303,10 @@ fn OpenGlDispatch(
 ) type {
     return struct {
         fn initStorage(allocator: std.mem.Allocator) !backend_runtime_bundle.Bundle {
-            return backend_runtime_bundle.Bundle.init(allocator, enum { opengl, metal }.opengl);
+            return backend_runtime_bundle.Bundle.init(allocator, enum { opengl, metal, android_gles }.opengl);
         }
         fn deinitStorage(bundle: *backend_runtime_bundle.Bundle, allocator: std.mem.Allocator) void {
-            bundle.deinitStorage(allocator, enum { opengl, metal }.opengl);
+            bundle.deinitStorage(allocator, enum { opengl, metal, android_gles }.opengl);
         }
         fn initRuntime(renderer: *RendererType) !void {
             try gl_backend.initRuntime(renderer);
@@ -352,10 +409,10 @@ fn MetalDispatch(
 ) type {
     return struct {
         fn initStorage(allocator: std.mem.Allocator) !backend_runtime_bundle.Bundle {
-            return backend_runtime_bundle.Bundle.init(allocator, enum { opengl, metal }.metal);
+            return backend_runtime_bundle.Bundle.init(allocator, enum { opengl, metal, android_gles }.metal);
         }
         fn deinitStorage(bundle: *backend_runtime_bundle.Bundle, allocator: std.mem.Allocator) void {
-            bundle.deinitStorage(allocator, enum { opengl, metal }.metal);
+            bundle.deinitStorage(allocator, enum { opengl, metal, android_gles }.metal);
         }
         fn initRuntime(renderer: *RendererType) !void {
             try metal_backend.initRuntime(renderer);
@@ -443,5 +500,110 @@ fn MetalDispatch(
             return .{};
         }
         fn mergePendingSceneTargetInvalidation(_: *RendererType, _: SceneTargetInvalidation) void {}
+    };
+}
+
+fn AndroidGlesDispatch(
+    comptime RendererType: type,
+    comptime FrameSubmission: type,
+    comptime RendererCapabilities: type,
+    comptime PresentableDraw: type,
+    comptime PresentableInfo: type,
+    comptime RawImageFormat: type,
+    comptime SceneTargetInvalidation: type,
+    comptime WindowChangeMask: type,
+) type {
+    return struct {
+        fn initStorage(allocator: std.mem.Allocator) !backend_runtime_bundle.Bundle {
+            return backend_runtime_bundle.Bundle.init(allocator, enum { opengl, metal, android_gles }.android_gles);
+        }
+        fn deinitStorage(bundle: *backend_runtime_bundle.Bundle, allocator: std.mem.Allocator) void {
+            bundle.deinitStorage(allocator, enum { opengl, metal, android_gles }.android_gles);
+        }
+        fn initRuntime(renderer: *RendererType) !void {
+            try android_gles_backend.initRuntime(renderer);
+        }
+        fn deinitRuntime(renderer: *RendererType) void {
+            android_gles_backend.deinitRuntime(renderer);
+        }
+        fn configureRuntimePolicy(renderer: *RendererType) void {
+            android_gles_backend.configureRuntimePolicy(renderer);
+        }
+        fn beginFrame(renderer: *RendererType) void {
+            android_gles_backend.beginFrame(renderer);
+        }
+        fn submitFrame(renderer: *RendererType) FrameSubmission {
+            return android_gles_backend.submitFrame(renderer);
+        }
+        fn capabilities(renderer: *const RendererType) RendererCapabilities {
+            return android_gles_backend.capabilities(renderer);
+        }
+        fn dumpWindowScreenshotPpm(renderer: *RendererType, path: []const u8) !void {
+            return android_gles_backend.dumpWindowScreenshotPpm(renderer, path);
+        }
+        fn dumpWindowScreenshotPpmSized(renderer: *RendererType, path: []const u8, out_width: i32, out_height: i32) !void {
+            return android_gles_backend.dumpWindowScreenshotPpmSized(renderer, path, out_width, out_height);
+        }
+        fn ensurePresentable(renderer: *RendererType, width: i32, height: i32) bool {
+            return android_gles_backend.ensurePresentable(renderer, width, height);
+        }
+        fn refreshTerminalPresentable(
+            renderer: *RendererType,
+            ctx: ?*const anyopaque,
+            body: *const fn (?*const anyopaque, *RendererType) void,
+        ) TerminalPresentableRefreshResult {
+            return android_gles_backend.refreshTerminalPresentable(renderer, ctx, body);
+        }
+        fn drawPresentableBackdrop(renderer: *RendererType, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) void {
+            android_gles_backend.drawPresentableBackdrop(renderer, x, y, w, h, color);
+        }
+        fn drawPresentable(renderer: *RendererType, draw: PresentableDraw) void {
+            android_gles_backend.drawPresentable(renderer, draw);
+        }
+        fn scrollPresentable(renderer: *RendererType, dx: i32, dy: i32) bool {
+            return android_gles_backend.scrollPresentable(renderer, dx, dy);
+        }
+        fn presentableInfo(renderer: *RendererType) ?PresentableInfo {
+            return android_gles_backend.presentableInfo(renderer);
+        }
+        fn applyClipRect(renderer: *RendererType, clip: ?types.Rect) void {
+            android_gles_backend.applyClipRect(renderer, clip);
+        }
+        fn addTerminalRect(renderer: *RendererType, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void {
+            android_gles_backend.addTerminalRect(renderer, x, y, w, h, color);
+        }
+        fn addTerminalGlyphRect(renderer: *RendererType, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void {
+            android_gles_backend.addTerminalGlyphRect(renderer, x, y, w, h, color);
+        }
+        fn addTerminalGlyphQuad(renderer: *RendererType, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
+            android_gles_backend.addTerminalGlyphQuad(renderer, texture, src, dest, color, kind);
+        }
+        fn createPersistentImageFromRgba(renderer: *RendererType, width: i32, height: i32, data: []const u8) ?GpuImageRef {
+            return android_gles_backend.createPersistentImageFromRgba(renderer, width, height, data);
+        }
+        fn createPersistentImageFromRgb(renderer: *RendererType, width: i32, height: i32, data: []const u8) ?GpuImageRef {
+            return android_gles_backend.createPersistentImageFromRgb(renderer, width, height, data);
+        }
+        fn destroyPersistentImage(renderer: *RendererType, texture: *GpuImageRef) void {
+            android_gles_backend.destroyPersistentImage(renderer, texture);
+        }
+        fn drawPersistentImage(renderer: *RendererType, texture: GpuImageRef, source_rect: ?types.Rect, dest: types.Rect, tint: types.Rgba) bool {
+            return android_gles_backend.drawPersistentImage(renderer, texture, source_rect, dest, tint);
+        }
+        fn drawRawImage(renderer: *RendererType, format: RawImageFormat, width: i32, height: i32, data: []const u8, dest: types.Rect, tint: types.Rgba) bool {
+            return android_gles_backend.drawRawImage(renderer, format, width, height, data, dest, tint);
+        }
+        fn recordSurfaceDraw(renderer: *RendererType, draw: surface_draw.SurfaceDraw) bool {
+            return android_gles_backend.recordSurfaceDraw(renderer, draw);
+        }
+        fn clearDiagnosticFont(renderer: *RendererType) void {
+            android_gles_backend.clearDiagnosticFont(renderer);
+        }
+        fn sceneTargetInvalidationForRefresh(renderer: *RendererType, changes: WindowChangeMask, metrics: platform_window.DisplayMetrics) SceneTargetInvalidation {
+            return android_gles_backend.sceneTargetInvalidationForRefresh(renderer, changes, metrics);
+        }
+        fn mergePendingSceneTargetInvalidation(renderer: *RendererType, invalidation: SceneTargetInvalidation) void {
+            android_gles_backend.mergePendingSceneTargetInvalidation(renderer, invalidation);
+        }
     };
 }

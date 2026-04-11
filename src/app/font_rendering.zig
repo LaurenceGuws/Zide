@@ -24,6 +24,7 @@ fn rendererBackendFromEnv() ?renderer_mod.Renderer.RendererBackend {
     const slice = app_bootstrap.envSlice("ZIDE_RENDERER_BACKEND") orelse return null;
     if (std.mem.eql(u8, slice, "metal")) return .metal;
     if (std.mem.eql(u8, slice, "opengl")) return .opengl;
+    if (builtin.target.os.tag == .linux and builtin.target.abi == .android and std.mem.eql(u8, slice, "android_gles")) return .android_gles;
     return null;
 }
 

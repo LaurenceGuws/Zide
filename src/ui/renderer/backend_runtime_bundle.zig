@@ -1,6 +1,7 @@
 const std = @import("std");
 const opengl_runtime_state = @import("opengl_runtime_state.zig");
 const metal_runtime_state = @import("metal_runtime_state.zig");
+const android_gles_runtime_state = @import("android_gles_runtime_state.zig");
 
 fn runtimePtrType(comptime Ptr: type, comptime State: type) type {
     const info = @typeInfo(Ptr).pointer;
@@ -14,6 +15,7 @@ pub const Bundle = struct {
         return switch (backend) {
             .opengl => initState(allocator, opengl_runtime_state.State),
             .metal => initState(allocator, metal_runtime_state.State),
+            .android_gles => initState(allocator, android_gles_runtime_state.State),
         };
     }
 
@@ -27,11 +29,17 @@ pub const Bundle = struct {
         return @ptrCast(@alignCast(storage));
     }
 
+    pub fn androidGlesState(self: anytype) runtimePtrType(@TypeOf(self), android_gles_runtime_state.State) {
+        const storage = self.storage orelse unreachable;
+        return @ptrCast(@alignCast(storage));
+    }
+
     pub fn deinitStorage(self: *Bundle, allocator: std.mem.Allocator, backend: anytype) void {
         const storage = self.storage orelse return;
         switch (backend) {
             .opengl => allocator.destroy(@as(*opengl_runtime_state.State, @ptrCast(@alignCast(storage)))),
             .metal => allocator.destroy(@as(*metal_runtime_state.State, @ptrCast(@alignCast(storage)))),
+            .android_gles => allocator.destroy(@as(*android_gles_runtime_state.State, @ptrCast(@alignCast(storage)))),
         }
         self.storage = null;
     }
@@ -46,6 +54,7 @@ fn initState(allocator: std.mem.Allocator, comptime State: type) !Bundle {
 const TestBackend = enum {
     opengl,
     metal,
+    android_gles,
 };
 
 test "init selects only requested backend runtime" {
@@ -66,4 +75,11 @@ test "init selects only requested backend runtime" {
     try std.testing.expectEqual(metal_runtime_state.AtlasPreviewSource.uploaded_coverage_glyph, metal_bundle.metalState().preview_source);
     metal_bundle.deinitStorage(allocator, TestBackend.metal);
     try std.testing.expect(metal_bundle.storage == null);
+
+    var android_gles_bundle = try Bundle.init(allocator, TestBackend.android_gles);
+    try std.testing.expect(android_gles_bundle.storage != null);
+    android_gles_bundle.androidGlesState().frame_begin_count = 1;
+    try std.testing.expectEqual(@as(u64, 1), android_gles_bundle.androidGlesState().frame_begin_count);
+    android_gles_bundle.deinitStorage(allocator, TestBackend.android_gles);
+    try std.testing.expect(android_gles_bundle.storage == null);
 }

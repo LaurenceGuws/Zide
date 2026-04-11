@@ -36,11 +36,10 @@ not architecture.
 
 - Do not shape the contract around current OpenGL convenience.
 - Do not add a real Vulkan implementation yet.
-- **Do not land Vulkan, GLES, or any third-backend bootstrap in `src/` (including
-  stubs, `RendererBackend` variants, SDL Vulkan/Metal flags, or empty runtime
-  slots) until Milestone B (`RB-B1`–`RB-B3`) and the adoption gate checklist are
-  honestly met and this queue records that the lane is open.** A fit audit or a
-  “readiness” table is **evidence**, not permission to start coding that backend.
+- **Do not widen Android GLES into a broad backend sprint until the controlled
+  `AR-B4` stop markers are met.** Gate readiness allows the narrow Android GLES
+  lane now; it does not allow speculative Vulkan work, duplicate bootstrap
+  paths, or backend breadth by inertia.
 - Do not pivot to Android rendering implementation yet.
 - Android native-host/platform work may advance, but Android rendering backend
   work is still gated by this queue.
@@ -100,7 +99,7 @@ Aligned with `app_architecture/ui/RENDER_BACKEND_CONTRACT.md` § “Gate status
 | 5 | Presentable/frame routine for a new backend | **Structurally met for scanned composition families** — chrome, terminal overlays, editor row/overlay, tooltips, and sample sections now have explicit owners. The remaining presentable lifecycle split is tracked under gate #2 / Metal parity, not generic composition-family ownership. |
 
 **Readiness:** Android **platform** work (lifecycle, IME, etc.) stays allowed.
-Android **GLES rendering** is ready for a first controlled planning cut, not a
+Android **GLES rendering** is open for a first controlled backend slice, not a
 full backend sprint. Desktop Vulkan and Android Vulkan remain not ready.
 
 **Branch scope (2026-04-09):** Gate #2 is structurally closed on GL and gate
@@ -119,11 +118,11 @@ blockers are:
 
 Current strongest Android renderer pressure:
 
-- plan the first controlled Android GLES backend cut against the existing
+- execute the first controlled Android GLES backend cut against the existing
   shared contracts
 - keep it narrow enough that any remaining renderer-contract weakness is found
   before a broad backend sprint starts
-- `AR-B4.a` is now the named Android-side slice:
+- `AR-B4.a` is the current Android-side slice:
   Android GLES backend skeleton and frame binding
 - owner: `app_architecture/platform/android/ANDROID_GLES_BACKEND_PLAN.md`
 
@@ -131,9 +130,9 @@ Android note:
 
 - Android may continue with bootstrap-owned EGL/GLES binding authority and
   terminal-host-local proof work
-- Android may not use that as permission to add a real renderer backend in
-  `src/ui/renderer/` while gates #2 and #5 still block routine third-backend
-  adoption
+- the first shared renderer backend skeleton is now allowed and in progress
+- that does not authorize a second parallel renderer path or a premature
+  product handoff before the shared backend owns real EGL/context/surface truth
 
 Gate #3 remains met for the `SurfaceDraw` surface. Do not reopen gate #4
 without new ownership pressure that proves the sanctioned backend-host surface

@@ -104,9 +104,9 @@ That means:
 
 ## Current Priority
 
-**`AR-B4` Android GLES Backend Planning Cut** — this is the active ticket.
+**`AR-B4` Android GLES Backend Cut** — this is the active ticket.
 
-Define the smallest Android GLES backend implementation step that maps existing
+Land the smallest Android GLES backend implementation steps that map existing
 Android EGL/GLES host truth onto the shared renderer contracts without adding
 product-specific bypasses.
 
@@ -121,18 +121,31 @@ Guardrails:
 
 - do not drift back into Android host/tooling cleanup
 - do not reopen `AS-A3` polish
-- do not implement the GLES backend until this planning cut names the first
-  files, ownership boundary, and stopping point
+- do not widen into a broad backend sprint before the current slice reaches its
+  explicit stop marker
 
 Current checkpoint:
 
-- `AR-B4.a` is now defined:
+- `AR-B4.a` is now in progress:
   Android GLES backend skeleton and frame binding
 - allowed first files:
   `renderer.zig`, `backend_dispatch.zig`, `backend_runtime_bundle.zig`, new
   `android_gles_backend.zig`, new `android_gles_runtime_state.zig`, narrow
   Android build/link changes, and probe extraction only if the terminal-host
   probe remains honest
+- current landed code truth:
+  - shared renderer backend enum now includes `android_gles`
+  - backend runtime storage has an Android GLES slot
+  - backend dispatch wiring exists for Android GLES
+  - capabilities are minimal and unsupported operations report unavailable
+  - frame begin/submit now route through the shared frame host for this backend
+  - bootstrap selection fails explicitly instead of pretending an SDL bootstrap
+    path exists
+- current missing stop-marker work:
+  - terminal-host still does not instantiate `Renderer`
+  - real EGL display/context/window-surface runtime ownership is still probe-
+    owned, not shared-backend-owned
+  - no visible clear/swap claim yet
 - stopping point:
   Android terminal-host can select Android GLES and produce a visible
   clear/swap through the shared backend-host path, with no terminal grid/text,
@@ -181,8 +194,7 @@ Current checkpoint:
   `font_sample_view.zig` routes its full-view background and unavailable-mode
   status/swatch through `font_sample_section_host.Section`
 - Android GLES readiness re-rank result:
-  the next move is `AR-B4`, a planning cut for the first controlled Android
-  GLES backend step
+  the next move is `AR-B4`, now executing as a controlled backend-skeleton lane
 
 ## Parked (not blocking)
 

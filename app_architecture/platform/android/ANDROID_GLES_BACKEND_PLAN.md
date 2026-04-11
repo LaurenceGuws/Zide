@@ -74,6 +74,25 @@ Required behavior:
 - use `surfaceIdentityEpoch`/transition truth, not raw pointer equality, for
   surface replacement
 
+Current status:
+
+- the first shared-backend skeleton is now in:
+  `renderer.zig`, `backend_dispatch.zig`, `backend_runtime_bundle.zig`,
+  `android_gles_backend.zig`, and `android_gles_runtime_state.zig`
+- Android GLES now has:
+  - shared backend enum/runtime slot
+  - backend dispatch wiring
+  - honest minimal capabilities
+  - frame begin/submit bookkeeping through the shared frame host
+  - explicit unavailable behavior for presentables, screenshots, images, and
+    surface draw replay
+  - explicit bootstrap failure instead of a fake SDL bootstrap path
+- this does **not** yet meet the full stop marker:
+  - terminal-host does not instantiate `Renderer` yet
+  - no EGL display/context/window-surface runtime owner has been moved over
+    from the Android probe path
+  - no visible clear/swap is claimed yet
+
 Stopping point:
 
 - the Android terminal-host can select the Android GLES backend and produce a
@@ -129,7 +148,8 @@ Device validation before claiming the slice:
 
 If the skeleton/frame binding works, the next slices are:
 
-1. `AR-B4.b` surface draw replay for `SurfaceDraw.solid`
-2. `AR-B4.c` terminal glyph/rect minimal path
-3. `AR-B4.d` Android terminal product render handoff from probe texture to real
-   renderer output
+1. `AR-B4.b` bind real Android EGL/context/window-surface runtime ownership
+   into the shared backend and prove visible clear/swap
+2. `AR-B4.c` surface draw replay for `SurfaceDraw.solid`
+3. `AR-B4.d` terminal glyph/rect minimal path, then probe-to-renderer product
+   handoff

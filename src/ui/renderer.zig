@@ -374,6 +374,7 @@ pub const Renderer = struct {
     pub const RendererBackend = enum {
         opengl,
         metal,
+        android_gles,
     };
     pub const RendererRuntimeProfile = bootstrap_runtime.RendererRuntimeProfile;
     pub const RenderSurfaceAttachment = window_init.RenderSurfaceAttachment;
