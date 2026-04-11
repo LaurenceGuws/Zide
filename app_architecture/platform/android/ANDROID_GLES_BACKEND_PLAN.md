@@ -87,10 +87,13 @@ Current status:
   - explicit unavailable behavior for presentables, screenshots, images, and
     surface draw replay
   - explicit bootstrap failure instead of a fake SDL bootstrap path
+  - shared EGL/context/window-surface ownership extraction in
+    `src/platform/android_gles_runtime.zig`; the probe now uses that owner
+    instead of duplicating EGL lifetime logic locally
 - this does **not** yet meet the full stop marker:
   - terminal-host does not instantiate `Renderer` yet
-  - no EGL display/context/window-surface runtime owner has been moved over
-    from the Android probe path
+  - that EGL/context/window-surface owner is still not wired into the shared
+    Android GLES backend runtime state
   - no visible clear/swap is claimed yet
 
 Stopping point:
