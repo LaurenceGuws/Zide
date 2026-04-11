@@ -85,7 +85,9 @@ Current status:
   - honest minimal capabilities
   - backend runtime init/deinit now owns the shared EGL display/config/context
     state instead of leaving that owner probe-only
-  - frame begin/submit bookkeeping through the shared frame host
+  - frame begin/submit now binds Android native-window identity through
+    surface epoch truth, clears one frame, and swaps buffers through the shared
+    frame host path
   - explicit unavailable behavior for presentables, screenshots, images, and
     surface draw replay
   - explicit bootstrap failure instead of a fake SDL bootstrap path
@@ -94,9 +96,10 @@ Current status:
     instead of duplicating EGL lifetime logic locally
 - this does **not** yet meet the full stop marker:
   - terminal-host does not instantiate `Renderer` yet
-  - that runtime owner is not yet bound to live Android native-window identity
-    during frame begin/submit
-  - no visible clear/swap is claimed yet
+  - there is still no Android-side shared renderer bootstrap path that creates
+    a live `Renderer` instance in terminal-host
+  - visible clear/swap is implemented in the backend, but not yet claimed on
+    device through terminal-host
 
 Stopping point:
 

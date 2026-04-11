@@ -140,17 +140,18 @@ Current checkpoint:
   - capabilities are minimal and unsupported operations report unavailable
   - backend runtime init/deinit now owns the shared EGL display/config/context
     state through `src/platform/android_gles_runtime.zig`
-  - frame begin/submit now route through the shared frame host for this backend
+  - frame begin/submit now bind live Android native-window identity through
+    surface epoch truth, clear one frame, and swap buffers through the shared
+    frame host path
   - bootstrap selection fails explicitly instead of pretending an SDL bootstrap
     path exists
   - EGL/context/window-surface lifetime ownership is now extracted into
     `src/platform/android_gles_runtime.zig`; `android_gles_probe.zig` uses that
     shared owner instead of carrying a second EGL lifetime implementation
 - current missing stop-marker work:
-  - terminal-host still does not instantiate `Renderer`
-  - that shared EGL owner is still not bound to live Android surface identity
-    during backend frame execution
-  - no visible clear/swap claim yet
+  - terminal-host still does not instantiate shared `Renderer`
+  - no Android-side shared renderer bootstrap path exists yet for terminal-host
+  - visible clear/swap is not yet claimed on device through that shared path
 - stopping point:
   Android terminal-host can select Android GLES and produce a visible
   clear/swap through the shared backend-host path, with no terminal grid/text,
