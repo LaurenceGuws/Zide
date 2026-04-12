@@ -813,6 +813,10 @@ That split is now sharper from code inspection too:
   it from drawable pixel dimensions during refresh. This narrows the
   retained-vs-snapshot lifecycle mismatch without pretending live Metal
   verification has happened.
+- Metal `presentableInfo()` also no longer falls back to full-window logical
+  dimensions when snapshot logical size is missing. If no terminal logical size
+  was recorded, the snapshot presentable now reports unavailable instead of
+  fabricating product geometry.
 - sample pressure is specifically section-fill plus bg-aware text preview work
   in `font_sample_view.zig` / `font_sample_section_host.zig`, including the
   custom-font sample path that still terminates through direct texture draws

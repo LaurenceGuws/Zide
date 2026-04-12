@@ -55,13 +55,12 @@ pub fn drawPresentableBackdrop(renderer: anytype, x: f32, y: f32, w: f32, h: f32
 pub fn presentableInfo(renderer: anytype) ?PresentableInfo {
     const context = metal_backend.backendContextConst(renderer) orelse return null;
     const snap = context.terminal_snapshot orelse return null;
-    const logical_width = if (context.terminal_snapshot_logical_width > 0) context.terminal_snapshot_logical_width else renderer.width;
-    const logical_height = if (context.terminal_snapshot_logical_height > 0) context.terminal_snapshot_logical_height else renderer.height;
+    if (context.terminal_snapshot_logical_width <= 0 or context.terminal_snapshot_logical_height <= 0) return null;
     return .{
         .width_px = snap.width,
         .height_px = snap.height,
-        .logical_width = logical_width,
-        .logical_height = logical_height,
+        .logical_width = context.terminal_snapshot_logical_width,
+        .logical_height = context.terminal_snapshot_logical_height,
     };
 }
 

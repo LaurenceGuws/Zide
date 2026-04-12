@@ -268,6 +268,8 @@ Next renderer move:
   instead of overwriting that state with drawable pixel dimensions during
   refresh. GL ignores the plan for retained-target refresh because its retained
   target already owns logical size.
+  Metal `presentableInfo()` also no longer falls back to full-window logical
+  dimensions if no terminal logical size was recorded.
 - do not reopen Android backend work unless that audit proves a new concrete
   renderer-owned Android blocker
 
