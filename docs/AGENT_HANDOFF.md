@@ -33,16 +33,16 @@ stop outranking the active renderer blocker.
     product work should return to the shared renderer blocker instead of
     extending AU-A2 further without a concrete regression. The strongest
     remaining renderer pressure is no longer the tiny editor-local overlay
-    leaks that were just closed, and it is no longer ambient
-    `renderer.text_render.bg_rgba` mutation either. Ordinary UI/editor text and
-    terminal glyph batching now carry background explicitly. The next honest
-    structural blocker is narrower: a few legacy renderer texture thunks and
-    GL `SurfaceDraw` atlas/raw-image replay paths still read ambient
-    `renderer.text_render.bg_rgba` instead of carrying background as explicit
-    draw data, so fill-plus-text/image work still lacks one fully
-    backend-neutral background contract. Presentable lifecycle unevenness and
-    deferred live Metal verification remain real too, but they are no longer
-    the only thing left to say.
+    leaks that were just closed, and it is no longer ambient text/background
+    state either. Ordinary UI/editor text, terminal glyph batching, and
+    `SurfaceDraw` blit replay now carry background explicitly; the old
+    `Renderer.TextRenderState.bg_rgba` channel is gone. The next honest
+    structural pressure has moved back to terminal presentable lifecycle:
+    refresh/update execution must carry terminal-present plan geometry all the
+    way to backend-owned refresh mechanics so snapshot/retained paths stop
+    guessing logical size from drawable state. Deferred live Metal verification
+    remains real, but Linux/shared-code work should still remove any concrete
+    lifecycle-contract mismatch found locally.
 - `RB-B3.d` is already met:
   - widget/runtime no longer calls `usesDirectTerminalPresentation(...)`
   - those path decisions now terminate in the presentable host seam

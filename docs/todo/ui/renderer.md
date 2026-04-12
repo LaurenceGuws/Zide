@@ -261,6 +261,13 @@ Next renderer move:
   `Renderer.TextRenderState.bg_rgba` no longer exists. Remaining `bg_rgba`
   references are explicit payload/context fields. The ambient
   text/background-state blocker is closed.
+- next presentable checkpoint:
+  terminal presentable refresh now receives the full `TerminalPresentPlan`
+  instead of only an erased update body. Metal snapshot refresh uses
+  `plan.surface_geometry.logical_width/height` for presentable logical size
+  instead of overwriting that state with drawable pixel dimensions during
+  refresh. GL ignores the plan for retained-target refresh because its retained
+  target already owns logical size.
 - do not reopen Android backend work unless that audit proves a new concrete
   renderer-owned Android blocker
 

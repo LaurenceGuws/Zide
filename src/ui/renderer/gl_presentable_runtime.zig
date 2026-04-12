@@ -47,9 +47,11 @@ pub fn ensurePresentable(renderer: anytype, width: i32, height: i32) bool {
 
 pub fn refreshTerminalPresentable(
     renderer: anytype,
+    plan: presentable_contract.TerminalPresentPlan,
     ctx: ?*const anyopaque,
     body: *const fn (?*const anyopaque, @TypeOf(renderer)) void,
 ) TerminalPresentableRefreshResult {
+    _ = plan;
     if (!renderer.capabilities().retained_targets) return .unsupported;
     if (!gl_backend.beginRenderTarget(renderer, presentableTarget(renderer))) return .target_unavailable;
     defer restoreCompositionTarget(renderer);

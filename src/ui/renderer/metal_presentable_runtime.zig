@@ -18,6 +18,7 @@ pub fn ensurePresentable(renderer: anytype, width: i32, height: i32) bool {
 
 pub fn refreshTerminalPresentable(
     renderer: anytype,
+    plan: presentable_contract.TerminalPresentPlan,
     ctx: ?*const anyopaque,
     body: *const fn (?*const anyopaque, @TypeOf(renderer)) void,
 ) TerminalPresentableRefreshResult {
@@ -25,7 +26,7 @@ pub fn refreshTerminalPresentable(
     const drawable_height = renderer.render_height;
     if (drawable_width <= 0 or drawable_height <= 0) return .target_unavailable;
     const context = metal_backend.backendContext(renderer) orelse return .target_unavailable;
-    metal_backend.setTerminalSnapshotLogicalSize(context, drawable_width, drawable_height);
+    metal_backend.setTerminalSnapshotLogicalSize(context, plan.surface_geometry.logical_width, plan.surface_geometry.logical_height);
     if (!metal_backend.ensureTerminalSnapshotPresentable(context, drawable_width, drawable_height).available) {
         return .target_unavailable;
     }

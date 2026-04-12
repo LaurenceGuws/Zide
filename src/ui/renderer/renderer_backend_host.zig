@@ -123,10 +123,11 @@ pub fn Host(
         pub fn refreshTerminalPresentable(
             self: @This(),
             renderer: *RendererType,
+            plan: backend_dispatch.TerminalPresentPlan,
             ctx: ?*const anyopaque,
             body: *const fn (?*const anyopaque, *RendererType) void,
         ) backend_dispatch.TerminalPresentableRefreshResult {
-            return self.ops.presentable.refreshTerminalPresentable(renderer, ctx, body);
+            return self.ops.presentable.refreshTerminalPresentable(renderer, plan, ctx, body);
         }
 
         pub fn drawPresentableBackdrop(self: @This(), renderer: *RendererType, x: f32, y: f32, w: f32, h: f32, color: anytype) void {

@@ -15,6 +15,7 @@ const metal_presentable_runtime = @import("metal_presentable_runtime.zig");
 const metal_runtime_state = @import("metal_runtime_state.zig");
 const metal_surface_runtime = @import("metal_surface_runtime.zig");
 const renderer_frame_host = @import("renderer_frame_host.zig");
+const presentable_contract = @import("presentable_contract.zig");
 const surface_draw = @import("surface_draw.zig");
 const window_init = @import("window_init.zig");
 const platform_window = @import("../../platform/window_metrics.zig");
@@ -27,6 +28,7 @@ pub const TerminalPresentableRefreshResult = enum {
     target_unavailable,
     unsupported,
 };
+pub const TerminalPresentPlan = presentable_contract.TerminalPresentPlan;
 
 pub fn BackendOps(
     comptime RendererType: type,
@@ -59,7 +61,7 @@ pub fn BackendOps(
 
     const PresentableOps = struct {
         ensurePresentable: *const fn (*RendererType, i32, i32) bool,
-        refreshTerminalPresentable: *const fn (*RendererType, ?*const anyopaque, *const fn (?*const anyopaque, *RendererType) void) TerminalPresentableRefreshResult,
+        refreshTerminalPresentable: *const fn (*RendererType, TerminalPresentPlan, ?*const anyopaque, *const fn (?*const anyopaque, *RendererType) void) TerminalPresentableRefreshResult,
         drawPresentableBackdrop: *const fn (*RendererType, f32, f32, f32, f32, types.Rgba) void,
         drawPresentable: *const fn (*RendererType, PresentableDraw) void,
         scrollPresentable: *const fn (*RendererType, i32, i32) bool,
@@ -424,6 +426,7 @@ fn UnavailableDesktopDispatch(
         }
         fn refreshTerminalPresentable(
             _: *RendererType,
+            _: TerminalPresentPlan,
             _: ?*const anyopaque,
             _: *const fn (?*const anyopaque, *RendererType) void,
         ) TerminalPresentableRefreshResult {
@@ -511,10 +514,11 @@ fn OpenGlDispatch(
         }
         fn refreshTerminalPresentable(
             renderer: *RendererType,
+            plan: TerminalPresentPlan,
             ctx: ?*const anyopaque,
             body: *const fn (?*const anyopaque, *RendererType) void,
         ) TerminalPresentableRefreshResult {
-            return gl_presentable_runtime.refreshTerminalPresentable(renderer, ctx, body);
+            return gl_presentable_runtime.refreshTerminalPresentable(renderer, plan, ctx, body);
         }
         fn drawPresentableBackdrop(renderer: *RendererType, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) void {
             gl_presentable_runtime.drawPresentableBackdrop(renderer, x, y, w, h, color);
@@ -617,10 +621,11 @@ fn MetalDispatch(
         }
         fn refreshTerminalPresentable(
             renderer: *RendererType,
+            plan: TerminalPresentPlan,
             ctx: ?*const anyopaque,
             body: *const fn (?*const anyopaque, *RendererType) void,
         ) TerminalPresentableRefreshResult {
-            return metal_presentable_runtime.refreshTerminalPresentable(renderer, ctx, body);
+            return metal_presentable_runtime.refreshTerminalPresentable(renderer, plan, ctx, body);
         }
         fn drawPresentableBackdrop(renderer: *RendererType, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) void {
             metal_presentable_runtime.drawPresentableBackdrop(renderer, x, y, w, h, color);
@@ -723,10 +728,11 @@ fn AndroidGlesDispatch(
         }
         fn refreshTerminalPresentable(
             renderer: *RendererType,
+            plan: TerminalPresentPlan,
             ctx: ?*const anyopaque,
             body: *const fn (?*const anyopaque, *RendererType) void,
         ) TerminalPresentableRefreshResult {
-            return android_gles_backend.refreshTerminalPresentable(renderer, ctx, body);
+            return android_gles_backend.refreshTerminalPresentable(renderer, plan, ctx, body);
         }
         fn drawPresentableBackdrop(renderer: *RendererType, x: f32, y: f32, w: f32, h: f32, color: types.Rgba) void {
             android_gles_backend.drawPresentableBackdrop(renderer, x, y, w, h, color);

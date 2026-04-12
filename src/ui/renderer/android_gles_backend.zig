@@ -453,6 +453,7 @@ pub fn ensurePresentable(_: anytype, _: i32, _: i32) bool {
 
 pub fn refreshTerminalPresentable(
     _: anytype,
+    _: anytype,
     _: ?*const anyopaque,
     _: anytype,
 ) @import("backend_dispatch.zig").TerminalPresentableRefreshResult {

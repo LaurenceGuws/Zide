@@ -806,6 +806,13 @@ That split is now sharper from code inspection too:
 - this closes the ambient text/background state blocker. The next renderer
   pressure should be selected from current code truth rather than continuing to
   chase the removed `text_render.bg_rgba` channel.
+- the next concrete presentable lifecycle cut is now in:
+  terminal presentable refresh receives `TerminalPresentPlan` instead of just
+  an erased update body. Metal snapshot refresh now records terminal logical
+  size from `plan.surface_geometry.logical_width/height` rather than deriving
+  it from drawable pixel dimensions during refresh. This narrows the
+  retained-vs-snapshot lifecycle mismatch without pretending live Metal
+  verification has happened.
 - sample pressure is specifically section-fill plus bg-aware text preview work
   in `font_sample_view.zig` / `font_sample_section_host.zig`, including the
   custom-font sample path that still terminates through direct texture draws

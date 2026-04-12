@@ -795,6 +795,16 @@ pub fn runPresentableRefreshCycle(
             .partial => .partial,
             .full => .full,
         },
+        .surface_geometry = .{
+            .logical_width = surface_update_plan.geometry.surface_w,
+            .logical_height = surface_update_plan.geometry.surface_h,
+            .visible_width = surface_update_plan.geometry.visible_w,
+            .visible_height = surface_update_plan.geometry.visible_h,
+            .dest_x = view_geometry.origin_x,
+            .dest_y = view_geometry.origin_y,
+            .dest_width = view_geometry.viewport_width,
+            .dest_height = view_geometry.viewport_height,
+        },
     }, update_ctx, Local);
 }
 

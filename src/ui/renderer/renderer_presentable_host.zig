@@ -61,7 +61,7 @@ pub fn ensureTerminalPresentable(renderer: anytype, width: i32, height: i32) boo
     return renderer.backend.ensurePresentable(renderer, width, height);
 }
 
-pub fn refreshTerminalPresentable(renderer: anytype, ctx: anytype, comptime body: fn (@TypeOf(ctx), @TypeOf(renderer)) void) TerminalPresentableRefresh {
+pub fn refreshTerminalPresentable(renderer: anytype, plan: TerminalPresentPlan, ctx: anytype, comptime body: fn (@TypeOf(ctx), @TypeOf(renderer)) void) TerminalPresentableRefresh {
     const Local = struct {
         fn erasedBody(raw_ctx: ?*const anyopaque, renderer_local: @TypeOf(renderer)) void {
             const typed_ctx: *@TypeOf(ctx) = @constCast(@alignCast(@ptrCast(raw_ctx.?)));
@@ -70,6 +70,7 @@ pub fn refreshTerminalPresentable(renderer: anytype, ctx: anytype, comptime body
     };
     return renderer.backend.refreshTerminalPresentable(
         renderer,
+        plan,
         @ptrCast(&ctx),
         Local.erasedBody,
     );
@@ -100,6 +101,7 @@ pub fn runTerminalPresentableRefreshExecution(
     var call_ctx = ExecCtx{ .inner = exec_ctx, .plan = plan };
     result.refresh = renderer.backend.refreshTerminalPresentable(
         renderer,
+        plan,
         @ptrCast(&call_ctx),
         Local.run,
     );
