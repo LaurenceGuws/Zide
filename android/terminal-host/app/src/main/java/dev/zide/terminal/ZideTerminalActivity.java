@@ -211,6 +211,7 @@ public final class ZideTerminalActivity extends Activity
         applyViewMode();
         installSurfaceView("activity-create");
         updateProductShellVisibility();
+        reevaluateProductFrameLoop();
         leftSidebar.post(() -> {
             leftSidebar.setTranslationX(-leftSidebar.getWidth());
             updateSidebarVisibility(false);
@@ -362,7 +363,7 @@ public final class ZideTerminalActivity extends Activity
         maybeScheduleSurfaceResize();
         maybeScheduleShellStart();
         handler.post(() -> refreshDebugShellState(false));
-        reevaluateShellRefreshLoop();
+        reevaluateProductFrameLoop();
         updateStatus("resumed");
     }
 
@@ -878,7 +879,7 @@ public final class ZideTerminalActivity extends Activity
         handler.removeCallbacks(productFrameRunnable);
     }
 
-    private void reevaluateShellRefreshLoop() {
+    private void reevaluateProductFrameLoop() {
         if (shouldRunProductFrameLoop()) {
             startProductFrameLoop();
         } else {
@@ -913,7 +914,7 @@ public final class ZideTerminalActivity extends Activity
         }
 
         updateProductShellVisibility();
-        reevaluateShellRefreshLoop();
+        reevaluateProductFrameLoop();
         if (shouldUpdateDebugStatus()) {
             updateStatus("shell-state", currentBootstrapState);
         }
@@ -998,7 +999,6 @@ public final class ZideTerminalActivity extends Activity
             productBootstrapRetryButton.setEnabled(!currentInstallState.isInstalling());
             productBootstrapRetryButton.setText(productBootstrapActionLabel(currentBootstrapState, currentInstallState));
         }
-        reevaluateShellRefreshLoop();
     }
 
     private int productBootstrapTitle(UserlandBootstrapState state, UserlandInstallState installState, boolean rendererMissing) {
@@ -1072,6 +1072,7 @@ public final class ZideTerminalActivity extends Activity
     private void startUserlandInstall() {
         currentInstallState = UserlandInstallState.installing("Fetching and staging " + userlandRelease.artifactName + "...");
         updateProductShellVisibility();
+        reevaluateProductFrameLoop();
         updateStatus("userland-install-started");
         appendEvent("userland.install begin expected=" + userlandRelease.artifactVersion);
         new Thread(() -> {
@@ -1091,6 +1092,7 @@ public final class ZideTerminalActivity extends Activity
                     currentInstallState = UserlandInstallState.failed(err.getMessage() == null ? "unknown install failure" : err.getMessage());
                     appendEvent("userland.install failed err=" + err.getClass().getSimpleName() + " detail=" + currentInstallState.detail);
                     updateProductShellVisibility();
+                    reevaluateProductFrameLoop();
                     updateStatus("userland-install-failed");
                 });
             }

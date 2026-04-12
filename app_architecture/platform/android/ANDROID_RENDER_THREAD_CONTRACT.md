@@ -1080,6 +1080,11 @@ Current progress:
   - the 150ms debug shell refresh loop is removed
   - debug/operator upkeep now refreshes from explicit events instead of acting
     as a periodic main-thread coordinator
+- fifth host ownership cut landed:
+  - product bootstrap-blocker visibility no longer reevaluates the product
+    frame loop as a hidden side effect
+  - product frame-loop reevaluation is now an explicit activity operation with
+    product ownership in its name
 - that does not finish this category:
   - `ZideTerminalActivity` still owns too much product/debug orchestration
 

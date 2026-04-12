@@ -465,6 +465,8 @@ Status:
     reloading bootstrap stamp state from disk on every call
   - the 150ms debug shell refresh loop is removed; debug upkeep now refreshes
     from explicit events instead of periodic main-thread polling
+  - product bootstrap-blocker visibility no longer controls the frame loop as
+    a hidden side effect; product frame-loop reevaluation is now explicit
   - this cut is aimed directly at the product scroll snap-back / host-thickness
     issue, not at renderer internals yet
   - validation:
