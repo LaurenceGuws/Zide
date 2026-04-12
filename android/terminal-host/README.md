@@ -37,6 +37,8 @@ ops/android_terminal_host.py install
 ops/android_terminal_host.py launch
 ops/android_terminal_host.py reinstall
 ops/android_terminal_host.py logcat
+ops/android_terminal_host.py userland-state
+ops/android_terminal_host.py userland-smoke-baseline
 ```
 
 ## Tooling Rules

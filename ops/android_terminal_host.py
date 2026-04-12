@@ -73,6 +73,7 @@ COMMAND_HELP: dict[str, str] = {
     "userland-state": "Print the currently staged Android userland state from the device.",
     "userland-stage-packages": "Dev-provider path: stage relocated Termux packages into the app sandbox.",
     "userland-bash-version": "Run the staged app-private Bash under run-as and print its version banner.",
+    "userland-smoke-baseline": "Run the curated staged-userland smoke: Bash, Git, ripgrep, Neovim, htop, gotop, zide-pm.",
     "userland-apt-update": "Probe apt-get update against the staged userland with the current relocation overrides.",
     "userland-apt-install": "Install packages into the staged app-private userland with the current relocation overrides.",
     "help": "Show this help.",
@@ -1254,6 +1255,33 @@ def userland_bash_version() -> None:
     print(result.stdout, end="")
 
 
+def userland_smoke_baseline() -> None:
+    adb = adb_path(sdk_root())
+    bash = shlex.quote(REMOTE_USERLAND_PREFIX + "/bin/bash")
+    command = (
+        f"{bash} --noprofile --norc -lc "
+        + shlex.quote(
+            "set -e; "
+            "bash --version | head -1; "
+            "git --version; "
+            "rg --version | head -1; "
+            "nvim --headless +qall; "
+            "htop --version | head -1; "
+            "gotop --version | head -1; "
+            "zide-pm doctor; "
+            "zide-pm list-available"
+        )
+    )
+    result = run_remote_shell(
+        adb,
+        build_userland_remote_command(command),
+        capture_output=True,
+    )
+    print(result.stdout, end="")
+    if result.stderr:
+        print(result.stderr, end="", file=sys.stderr)
+
+
 def userland_apt_update() -> None:
     adb = adb_path(sdk_root())
     command = (
@@ -1458,6 +1486,7 @@ def main() -> None:
         "userland-state": userland_state,
         "userland-stage-packages": lambda: userland_stage_packages(args.archive, args.packages),
         "userland-bash-version": userland_bash_version,
+        "userland-smoke-baseline": userland_smoke_baseline,
         "userland-apt-update": userland_apt_update,
         "userland-apt-install": lambda: userland_apt_install(args.packages),
         "help": parser.print_help,

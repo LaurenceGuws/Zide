@@ -109,14 +109,14 @@ That means:
 
 ## Current Priority
 
-**`AU-A3` First Curated Terminal-Dev Baseline** — this is the active Android
+**`AN-A1` Interactive Neovim Terminal Baseline** — this is the active Android
 ticket now.
 
-`AU-A2` is met for the current foundation: install/update is app-owned,
-artifact-contract-only, stateful, and no longer a naming/ownership churn
-blocker. The next highest-leverage move is proving a small curated terminal
-baseline that makes the app useful for real development without turning package
-management back into the product lane.
+`AU-A2` and `AU-A3` are met for the current foundation: install/update is
+app-owned, artifact-contract-only, stateful, and the staged prefix now
+device-proves a curated terminal-dev baseline. The next highest-leverage move
+is proving interactive Neovim behavior in the live terminal surface rather than
+broadening package curation.
 
 Owner docs:
 
@@ -139,6 +139,8 @@ Guardrails:
 - keep terminal-host consuming the published artifact contract; provider
   package internals stay in `../zide-mobile-pm` / dev-provider tooling
 - do not broaden into package curation beyond the first terminal-dev baseline
+- do not start mobile IDE/editor product work yet; this ticket is terminal
+  behavior under Neovim, not Zide editor mode
 
 Current checkpoint:
 
@@ -190,8 +192,8 @@ Current checkpoint:
     - Bash 5.3.9
     - Neovim 0.12.1
     - `nvim --headless +qall`
-    - latest published snapshot includes Git 2.53.0 and ripgrep 15.1.0-1;
-      device execution proof is still pending
+    - Git 2.53.0
+    - ripgrep 15.1.0-1
     - `htop` 3.5.0
     - `gotop` 4.2.0
   - the current published snapshot is now
@@ -215,6 +217,40 @@ Current checkpoint:
   is proven
 - `../zide-mobile-pm` is the mobile package authority boundary;
   Zide-side Termux package staging remains temporary dev-provider tooling
+
+Status:
+
+- `AU-A3` is met for the first curated terminal-dev artifact
+- device state reports `sha256-b641f8c69638` installed and launch-ready
+- device smoke proves Bash, Git, ripgrep, Neovim headless, `htop`, and `gotop`
+  from the staged prefix
+- `./ops/android_terminal_host.py userland-smoke-baseline` now repeats that
+  staged-device smoke
+- stop here unless a real terminal workflow proves the current baseline is too
+  thin
+
+### `AN-A1` Interactive Neovim Terminal Baseline
+
+Purpose:
+
+- make Neovim the first serious terminal application used to harden Android
+  terminal behavior
+
+Acceptance:
+
+- launch `nvim` from the live product shell, not only `--headless`
+- verify screen clear/alternate-screen behavior is legible on Android GLES
+- verify arrow/navigation input reaches Neovim through the current
+  `InputConnection` + assist-bar model
+- verify `Esc`, `Ctrl`, and resize/IME viewport behavior are usable enough for
+  editing a small file
+- record any terminal-rendering or input gaps as concrete tickets instead of
+  reopening package/userland architecture
+
+Status:
+
+- open
+- package prerequisite is met by `AU-A3`
 
 Status:
 

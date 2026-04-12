@@ -22,7 +22,7 @@ Renderer cleanup is parked at an honest boundary unless code truth or Android
 product testing exposes a concrete new seam. Android terminal excellence is the
 active product goal again.
 
-- Active ticket: `AU-A3` first curated terminal-dev baseline
+- Active ticket: `AN-A1` interactive Neovim terminal baseline
   - owner:
     `docs/todo/android/implementation.md`
     `app_architecture/platform/android/ANDROID_USERLAND_BOOTSTRAP_PLAN.md`
@@ -30,10 +30,10 @@ active product goal again.
   - current state:
     Android now has a real terminal-host package/userland foundation: in-app
     artifact install/update, explicit staged-state reporting, staged `zide-pm`,
-    one app-owned package action, and clean Bash startup. `AU-A2` is met for
-    the current foundation. The next Android package/userland work should be
-    curated terminal capability, not another package-manager architecture
-    rename or staging model.
+    one app-owned package action, clean Bash startup, and a curated
+    terminal-dev baseline. `AU-A2` and `AU-A3` are met for the current
+    foundation. The next Android product work should prove interactive Neovim
+    terminal behavior, not broaden package curation.
 - Renderer checkpoint:
   - ordinary UI/editor text, terminal glyph batching, and `SurfaceDraw` blit
     replay now carry background explicitly
@@ -108,9 +108,13 @@ active product goal again.
       `termux-main` is the first supported Android provider, not the product
       identity; future Zide-owned providers can replace the default without
       changing `zide-pm`
-    - latest published dev snapshot now contains Bash 5.3.9, Neovim 0.12.1,
-      Git 2.53.0, ripgrep 15.1.0-1, `htop` 3.5.0, and `gotop` 4.2.0
+    - latest published dev snapshot now contains and device-proves Bash 5.3.9,
+      Neovim 0.12.1, Git 2.53.0, ripgrep 15.1.0-1, `htop` 3.5.0, and `gotop`
+      4.2.0
     - the current published snapshot is `android-dev-2026.04.12.023407`
+    - `./ops/android_terminal_host.py userland-smoke-baseline` repeats the
+      staged-device smoke for Bash, Git, ripgrep, Neovim, htop/gotop, and
+      `zide-pm`
     - product Install/Update now fetches that published manifest/archive
       contract in-app
     - device validation now also proves the staged prefix contains and runs

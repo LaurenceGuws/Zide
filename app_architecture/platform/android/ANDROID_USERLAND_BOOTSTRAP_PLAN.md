@@ -24,7 +24,7 @@ What is still not product-real:
 
 - broad curated package UX
 - product-clean provider replacement
-- device validation of the latest Git/ripgrep baseline
+- broad device validation beyond the first curated Git/ripgrep baseline
 - the rest of a serious terminal/IDE package universe
 
 That means the next Android product blocker is not more shell polish.
@@ -117,7 +117,8 @@ Current measured truth is narrower and better than the first assumption:
   - Neovim 0.12.1 staged from relocated package payloads
   - `htop` 3.5.0 and `gotop` 4.2.0 as current top-like test tools
 - the latest published dev snapshot now also includes Git 2.53.0 and ripgrep
-  15.1.0-1 for the first curated terminal-dev baseline
+  15.1.0-1 for the first curated terminal-dev baseline, and those commands
+  are device-proven under the staged prefix
 - `btop` is not present in the current Termux main aarch64 package index
 - the executable-location boundary is target-SDK policy, not an unknown bug:
   Android 10/API 29+ blocks `execve()` from writable app home directories for
@@ -284,8 +285,8 @@ Current checkpoint:
   - Bash 5.3.9
   - Neovim 0.12.1
   - `nvim --headless +qall`
-  - latest published snapshot includes Git 2.53.0 and ripgrep 15.1.0-1;
-    device execution proof is still pending
+  - Git 2.53.0
+  - ripgrep 15.1.0-1
   - `htop` 3.5.0
   - `gotop` 4.2.0
 - the current published Android dev snapshot is now
@@ -446,6 +447,23 @@ Initial stop marker:
   install paths
 - product/runtime code still consumes the published artifact contract; provider
   package internals remain outside terminal-host
+
+Current result:
+
+- met for the first curated terminal-dev artifact:
+  `android-dev-2026.04.12.023407`
+- staged device state reports `sha256-b641f8c69638` as installed and
+  launch-ready
+- device smoke proves:
+  - Bash 5.3.9
+  - Git 2.53.0
+  - ripgrep 15.1.0
+  - Neovim 0.12.1 `--headless +qall` with the same `VIMRUNTIME` policy owned
+    by `android_shell_session.zig`
+  - `htop` 3.5.0
+  - `gotop` 4.2.0
+- Zide operator smoke:
+  `./ops/android_terminal_host.py userland-smoke-baseline`
 
 ## Stop Marker
 
