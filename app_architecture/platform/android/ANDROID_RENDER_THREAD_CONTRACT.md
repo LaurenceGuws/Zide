@@ -918,6 +918,10 @@ Current progress:
     consumer
   - the hook is deleted instead of being gated because it was investigation
     residue, not operator telemetry or correctness state
+- font-prep operator telemetry gated:
+  - `renderer.font` glyph-prep/adopt logs are now guarded before formatting
+  - disabled telemetry no longer formats large hot-path messages just for
+    `logf(...)` to drop them later
 
 ### 7. Remaining Android host/UI-thread contamination
 

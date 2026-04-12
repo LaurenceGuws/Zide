@@ -434,6 +434,8 @@ Status:
       when enabled
     - stale `editor_surface_solid_family` trace state and set/clear helpers are
       removed because they had no active consumer
+    - `renderer.font` glyph-prep/adopt logs now check tag enablement before
+      formatting hot-path messages
 - first iteration cut landed from that queue:
   - narrowed Android host/UI-thread contamination around stale transcript-era
     ownership

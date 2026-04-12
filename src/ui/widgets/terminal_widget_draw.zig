@@ -86,6 +86,7 @@ fn stageVisibleTerminalGlyphPrepRequest(
 ) void {
     if (terminal_view.rows == 0 or terminal_view.cols == 0) return;
     const log = app_logger.logger("renderer.font");
+    const log_enabled = log.enabled_file or log.enabled_console;
     const committed_raster_size_px = terminalGlyphPrepCommittedRasterSize(renderer);
     const render_scale_milli = terminalGlyphPrepRenderScaleMilli(renderer);
 
@@ -99,13 +100,15 @@ fn stageVisibleTerminalGlyphPrepRequest(
     );
     renderer.unlockTerminalGlyphPrepRuntime();
     if (!should_collect) {
-        log.logf(.info, "terminal_glyph_prep_collect_skip generation={d} raster={d} scale_milli={d} rows={d} cols={d}", .{
-            terminal_view.generation,
-            committed_raster_size_px,
-            render_scale_milli,
-            terminal_view.rows,
-            terminal_view.cols,
-        });
+        if (log_enabled) {
+            log.logf(.info, "terminal_glyph_prep_collect_skip generation={d} raster={d} scale_milli={d} rows={d} cols={d}", .{
+                terminal_view.generation,
+                committed_raster_size_px,
+                render_scale_milli,
+                terminal_view.rows,
+                terminal_view.cols,
+            });
+        }
         return;
     }
 
@@ -145,42 +148,49 @@ fn stageVisibleTerminalGlyphPrepRequest(
         entries.items,
     ) catch return;
     if (!stage_outcome.staged) {
-        log.logf(.info, "terminal_glyph_prep_request_skip generation={d} raster={d} scale_milli={d} rows={d} cols={d} entries={d}", .{
+        if (log_enabled) {
+            log.logf(.info, "terminal_glyph_prep_request_skip generation={d} raster={d} scale_milli={d} rows={d} cols={d} entries={d}", .{
+                stage_outcome.generation,
+                committed_raster_size_px,
+                render_scale_milli,
+                terminal_view.rows,
+                terminal_view.cols,
+                entries.items.len,
+            });
+        }
+        return;
+    }
+    renderer.signalTerminalGlyphPrepRuntime();
+    if (log_enabled) {
+        log.logf(.info, "terminal_glyph_prep_request generation={d} raster={d} scale_milli={d} rows={d} cols={d} entries={d} live_term_font={d:.2} cell={d:.2}x{d:.2}", .{
             stage_outcome.generation,
             committed_raster_size_px,
             render_scale_milli,
             terminal_view.rows,
             terminal_view.cols,
             entries.items.len,
+            renderer.terminal_font_size,
+            renderer.terminal_cell_width,
+            renderer.terminal_cell_height,
         });
-        return;
     }
-    renderer.signalTerminalGlyphPrepRuntime();
-    log.logf(.info, "terminal_glyph_prep_request generation={d} raster={d} scale_milli={d} rows={d} cols={d} entries={d} live_term_font={d:.2} cell={d:.2}x{d:.2}", .{
-        stage_outcome.generation,
-        committed_raster_size_px,
-        render_scale_milli,
-        terminal_view.rows,
-        terminal_view.cols,
-        entries.items.len,
-        renderer.terminal_font_size,
-        renderer.terminal_cell_width,
-        renderer.terminal_cell_height,
-    });
 }
 
 fn adoptPreparedTerminalGlyphResult(renderer: anytype, result: *TerminalGlyphPrepResult) void {
     const log = app_logger.logger("renderer.font");
+    const log_enabled = log.enabled_file or log.enabled_console;
     const current_render_scale_milli = terminalGlyphPrepRenderScaleMilli(renderer);
     if (result.render_scale_milli != current_render_scale_milli) {
-        log.logf(.info, "terminal_glyph_prep_adopt_skip generation={d} result_raster={d} current_raster={d} result_scale_milli={d} current_scale_milli={d} glyphs={d}", .{
-            result.generation,
-            result.committed_raster_size_px,
-            terminalGlyphPrepCommittedRasterSize(renderer),
-            result.render_scale_milli,
-            current_render_scale_milli,
-            result.glyphs.len,
-        });
+        if (log_enabled) {
+            log.logf(.info, "terminal_glyph_prep_adopt_skip generation={d} result_raster={d} current_raster={d} result_scale_milli={d} current_scale_milli={d} glyphs={d}", .{
+                result.generation,
+                result.committed_raster_size_px,
+                terminalGlyphPrepCommittedRasterSize(renderer),
+                result.render_scale_milli,
+                current_render_scale_milli,
+                result.glyphs.len,
+            });
+        }
         return;
     }
 
@@ -190,12 +200,14 @@ fn adoptPreparedTerminalGlyphResult(renderer: anytype, result: *TerminalGlyphPre
         result.committed_raster_size_px,
         render_scale,
     ) orelse {
-        log.logf(.warning, "terminal_glyph_prep_adopt_target_missing generation={d} raster={d} scale_milli={d} glyphs={d}", .{
-            result.generation,
-            result.committed_raster_size_px,
-            result.render_scale_milli,
-            result.glyphs.len,
-        });
+        if (log_enabled) {
+            log.logf(.warning, "terminal_glyph_prep_adopt_target_missing generation={d} raster={d} scale_milli={d} glyphs={d}", .{
+                result.generation,
+                result.committed_raster_size_px,
+                result.render_scale_milli,
+                result.glyphs.len,
+            });
+        }
         return;
     };
 
@@ -226,30 +238,35 @@ fn adoptPreparedTerminalGlyphResult(renderer: anytype, result: *TerminalGlyphPre
         glyph.raster.data = &.{};
         adopted += 1;
     }
-    log.logf(.info, "terminal_glyph_prep_adopt generation={d} raster={d} scale_milli={d} glyphs={d} adopted={d} cached={d} missing_face={d} adopt_failed={d}", .{
-        result.generation,
-        result.committed_raster_size_px,
-        result.render_scale_milli,
-        result.glyphs.len,
-        adopted,
-        already_cached,
-        missing_face,
-        adopt_failed,
-    });
+    if (log_enabled) {
+        log.logf(.info, "terminal_glyph_prep_adopt generation={d} raster={d} scale_milli={d} glyphs={d} adopted={d} cached={d} missing_face={d} adopt_failed={d}", .{
+            result.generation,
+            result.committed_raster_size_px,
+            result.render_scale_milli,
+            result.glyphs.len,
+            adopted,
+            already_cached,
+            missing_face,
+            adopt_failed,
+        });
+    }
 }
 
 fn adoptAvailableTerminalGlyphPrepResult(renderer: anytype) void {
     const log = app_logger.logger("renderer.font");
+    const log_enabled = log.enabled_file or log.enabled_console;
     var result = renderer.takeTerminalGlyphPrepResult() orelse return;
     defer result.deinit(renderer.allocator);
     adoptPreparedTerminalGlyphResult(renderer, &result);
     if (font_manager.commitPreparedTerminalFontScale(renderer)) {
-        log.logf(.info, "terminal_glyph_prep_commit_after_adopt generation={d} raster={d} scale_milli={d} live_visual={d:.3}", .{
-            result.generation,
-            renderer.terminal_font.committed_raster_size_px,
-            terminalGlyphPrepRenderScaleMilli(renderer),
-            renderer.terminal_font.live_visual_scale,
-        });
+        if (log_enabled) {
+            log.logf(.info, "terminal_glyph_prep_commit_after_adopt generation={d} raster={d} scale_milli={d} live_visual={d:.3}", .{
+                result.generation,
+                renderer.terminal_font.committed_raster_size_px,
+                terminalGlyphPrepRenderScaleMilli(renderer),
+                renderer.terminal_font.live_visual_scale,
+            });
+        }
     }
 }
 
