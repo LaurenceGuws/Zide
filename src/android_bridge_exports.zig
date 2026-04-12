@@ -40,6 +40,10 @@ fn onVisibleViewportBridge(width: i32, height: i32, ime_visible: bool) i64 {
     return @intCast(android_runtime_bridge.noteVisibleViewport(width, height, ime_visible));
 }
 
+fn applyTerminalZoomDeltaBridge(delta: f32) i32 {
+    return android_runtime_bridge.applyTerminalZoomDelta(delta);
+}
+
 fn currentWindowTokenBridge() i64 {
     return @intCast(android_runtime_bridge.currentNativeWindowToken());
 }
@@ -195,6 +199,14 @@ export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeOnVisibleViewportBri
     ime_visible: bool,
 ) callconv(.c) i64 {
     return onVisibleViewportBridge(width, height, ime_visible);
+}
+
+export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeApplyTerminalZoomDeltaBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+    delta: f32,
+) callconv(.c) i32 {
+    return applyTerminalZoomDeltaBridge(delta);
 }
 
 export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentWindowTokenBridge(

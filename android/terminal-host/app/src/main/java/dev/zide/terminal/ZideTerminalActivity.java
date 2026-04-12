@@ -36,7 +36,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 public final class ZideTerminalActivity extends Activity
-        implements SurfaceHolder.Callback2, ShellInputView.Host, ShellTranscriptController.Host {
+        implements SurfaceHolder.Callback2, ShellInputView.Host, ShellTranscriptController.Host, ProductGestureController.Host {
     private static final String TAG = "ZideAndroidTerminal";
     private static final int MAX_LOG_CHARS = 12000;
     private static final String EXTRA_DEBUG_RECREATE_SURFACE_ONCE = "debug_recreate_surface_once";
@@ -91,6 +91,7 @@ public final class ZideTerminalActivity extends Activity
     private Button assistCtrlButton;
     private Button assistAltButton;
     private ShellInputView shellInputView;
+    private ProductGestureController productGestureController;
     private ScrollView shellOutputScroll;
     private ShellTranscriptController shellTranscriptController;
     private ShellSessionController shellSessionController;
@@ -630,6 +631,26 @@ public final class ZideTerminalActivity extends Activity
     }
 
     @Override
+    public void onProductSingleTap() {
+        appendEvent("gesture.singleTap terminal");
+        openIme();
+    }
+
+    @Override
+    public void onProductPinchZoom(float scaleFactor) {
+        if (!nativeLoaded || scaleFactor <= 0.0f) {
+            return;
+        }
+        final float delta = Math.max(-0.08f, Math.min(0.08f, scaleFactor - 1.0f));
+        if (Math.abs(delta) < 0.003f) {
+            return;
+        }
+        final int status = nativeApplyTerminalZoomDeltaBridge(delta);
+        appendEvent("gesture.pinchZoom scale=" + scaleFactor + " delta=" + delta + " status=" + status);
+        updateStatus("pinch-zoom");
+    }
+
+    @Override
     public void sendDirectCodepoint(int codepoint) {
         if (!nativeLoaded)
             return;
@@ -813,7 +834,8 @@ public final class ZideTerminalActivity extends Activity
         final SurfaceView nextSurfaceView = new SurfaceView(this);
         final SurfaceHolder holder = nextSurfaceView.getHolder();
         holder.setFormat(PixelFormat.RGBA_8888);
-        nextSurfaceView.setOnClickListener(view -> onTranscriptTap());
+        productGestureController = new ProductGestureController(nextSurfaceView, this);
+        productGestureController.install();
         final FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -1268,6 +1290,8 @@ public final class ZideTerminalActivity extends Activity
     private static native long nativeOnSurfaceRedrawNeededBridge();
 
     private static native long nativeOnVisibleViewportBridge(int width, int height, boolean imeVisible);
+
+    private static native int nativeApplyTerminalZoomDeltaBridge(float delta);
 
     private static native long nativeCurrentWindowTokenBridge();
 

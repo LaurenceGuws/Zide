@@ -244,6 +244,9 @@ Acceptance:
   `InputConnection` + assist-bar model
 - verify `Esc`, `Ctrl`, and resize/IME viewport behavior are usable enough for
   editing a small file
+- verify pinch font zoom is usable while preserving keyboard defaults:
+  single tap opens IME; pinch changes shared renderer zoom; long press remains
+  unclaimed until a concrete product gesture owns it
 - record any terminal-rendering or input gaps as concrete tickets instead of
   reopening package/userland architecture
 
@@ -251,13 +254,14 @@ Status:
 
 - open
 - package prerequisite is met by `AU-A3`
-
-Status:
-
-- met for the current Android foundation
-- owner stop marker: `app_architecture/platform/android/ANDROID_USERLAND_BOOTSTRAP_PLAN.md`
-- return to Android package/userland work only if a concrete regression or
-  product blocker appears
+- first gesture-control cut is implemented:
+  - `ProductGestureController` owns terminal-surface touch gestures
+  - single tap opens IME through one product route
+  - pinch routes to shared renderer user zoom and forces terminal-grid resize
+    through the existing Android GLES path
+  - keyboard shortcuts/defaults are unchanged
+- Android applies the zoom through the external-host renderer path, not the SDL
+  window/input refresh path
 
 ### `AU-A1` Android Userland Bootstrap
 

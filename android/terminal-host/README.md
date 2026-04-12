@@ -41,6 +41,14 @@ ops/android_terminal_host.py userland-state
 ops/android_terminal_host.py userland-smoke-baseline
 ```
 
+Product gesture ownership:
+
+- single tap on the terminal surface opens the IME
+- pinch on the terminal surface adjusts shared renderer zoom / terminal font
+  size
+- keyboard defaults stay unchanged
+- long press is intentionally unassigned until it has one clear product owner
+
 ## Tooling Rules
 
 - use env-driven SDK paths

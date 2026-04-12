@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const terminal_font_mod = @import("../terminal_font.zig");
 const hb = terminal_font_mod.c;
 const RenderingOptions = terminal_font_mod.RenderingOptions;
@@ -150,7 +151,9 @@ pub fn queryUiScale(self: anytype) f32 {
 
 pub fn applyFontScale(self: anytype) !void {
     try font_manager.applyFontScale(self);
-    text_input.reapplyRect(&self.input.text_input_state, self.window);
+    if (comptime !(builtin.target.os.tag == .linux and builtin.target.abi == .android)) {
+        text_input.reapplyRect(&self.input.text_input_state, self.window);
+    }
 }
 
 pub fn queueUserZoom(self: anytype, delta: f32, now: f64) bool {

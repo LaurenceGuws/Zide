@@ -247,6 +247,11 @@ Current product-shell layout is also now moving toward a mobile-native shape:
 - the terminal transcript owns the screen without outer padding
 - transcript tap opens the IME path directly (listeners on both the scroll host
   and inner transcript `TextView`, because touches usually hit the child)
+- when the shared renderer surface is active, `ProductGestureController` owns
+  product terminal gestures:
+  - single tap opens IME
+  - pinch adjusts shared renderer zoom / terminal font size
+  - long press is deliberately unclaimed for now
 - the slim bottom assist strip now uses a cleaner split:
   - one-shot `Esc` and `Tab`
   - stateful `Ctrl` and `Alt` latches for the next IME/hardware key

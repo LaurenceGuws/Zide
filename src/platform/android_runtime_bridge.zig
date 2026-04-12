@@ -140,6 +140,24 @@ pub fn noteVisibleViewport(width: i32, height: i32, ime_visible: bool) u64 {
     return nextSequence();
 }
 
+pub fn applyTerminalZoomDelta(delta: f32) i32 {
+    if (delta == 0.0 or std.math.isNan(delta)) return 0;
+    const renderer = bridge_state.renderer orelse return 1;
+    var shell: app_shell.Shell = .{ .renderer = renderer };
+    const now = app_shell.getTime();
+    if (!shell.queueUserZoom(std.math.clamp(delta, -0.1, 0.1), now)) return 0;
+    const changed = renderer.applyPendingZoomForExternalHost(now + 0.05) catch return 2;
+    if (changed) {
+        if (bridge_state.terminal_widget) |*widget| {
+            widget.invalidatePresentationCache();
+        }
+    }
+    if (bridge_state.render_host.hasSurface()) {
+        bridge_state.last_renderer_status = drawSharedRendererSurfaceFrame();
+    }
+    return 0;
+}
+
 pub fn noteSurfaceAvailableFromJava(
     env: ?*anyopaque,
     surface: ?*anyopaque,

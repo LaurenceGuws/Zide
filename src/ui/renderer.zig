@@ -713,6 +713,16 @@ pub const Renderer = struct {
         };
     }
 
+    pub fn applyPendingZoomForExternalHost(self: *Renderer, now: f64) !bool {
+        const changed = try font_runtime.applyPendingZoom(self, now);
+        const scene_target_invalidation: SceneTargetInvalidation = if (changed and self.capabilities().scene_composition_mode == .offscreen_scene_target)
+            .{ .render_scale_change = true }
+        else
+            .{};
+        self.backend.mergePendingSceneTargetInvalidation(self, scene_target_invalidation);
+        return changed;
+    }
+
     pub fn uiScaleFactor(self: *const Renderer) f32 {
         return self.scale.ui_scale * self.scale.user_zoom;
     }
