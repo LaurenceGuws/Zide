@@ -36,9 +36,8 @@ USERLAND_PACKAGE_CACHE_DIR = USERLAND_CACHE_DIR / "packages"
 USERLAND_ARTIFACT_CACHE_DIR = USERLAND_CACHE_DIR / "artifacts"
 USERLAND_RELEASE_API = "https://api.github.com/repos/termux/termux-packages/releases/latest"
 USERLAND_ASSET_NAME = "bootstrap-aarch64.zip"
-ZIDE_ANDROID_DEV_PREFIX_MANIFEST_URL = (
-    "https://github.com/LaurenceGuws/zide-mobile-pm/releases/download/"
-    "android-dev-2026.04.12.002012/android-dev-prefix.release.manifest.json"
+USERLAND_RELEASE_DESCRIPTOR = (
+    ROOT / "android" / "terminal-host" / "app" / "src" / "main" / "assets" / "userland_release.json"
 )
 TERMUX_MAIN_BASE_URL = "https://packages.termux.dev/apt/termux-main/"
 TERMUX_MAIN_PACKAGES_URL = TERMUX_MAIN_BASE_URL + "dists/stable/main/binary-aarch64/Packages"
@@ -121,6 +120,22 @@ class InstalledUserlandState:
     provider: str
     shell_exists: bool
     launch_ready: bool
+
+
+def userland_release_descriptor() -> dict[str, str]:
+    payload = json.loads(USERLAND_RELEASE_DESCRIPTOR.read_text(encoding="utf-8"))
+    manifest_url = payload.get("manifest_url")
+    artifact_name = payload.get("artifact_name")
+    artifact_version = payload.get("artifact_version")
+    provider = payload.get("provider")
+    if not all(isinstance(value, str) and value for value in (manifest_url, artifact_name, artifact_version, provider)):
+        die(f"invalid userland release descriptor: {USERLAND_RELEASE_DESCRIPTOR}")
+    return {
+        "manifest_url": manifest_url,
+        "artifact_name": artifact_name,
+        "artifact_version": artifact_version,
+        "provider": provider,
+    }
 
 
 def die(message: str) -> NoReturn:
@@ -1380,6 +1395,7 @@ def doctor() -> None:
 
 
 def main() -> None:
+    release_descriptor = userland_release_descriptor()
     command_names = list(COMMAND_HELP.keys())
     commands_help = "\n".join(f"  {name:<18} {COMMAND_HELP[name]}" for name in command_names)
     parser = argparse.ArgumentParser(
@@ -1407,10 +1423,10 @@ def main() -> None:
     )
     parser.add_argument(
         "--manifest",
-        default=ZIDE_ANDROID_DEV_PREFIX_MANIFEST_URL,
+        default=release_descriptor["manifest_url"],
         help=(
             "Published Android prefix manifest URL/path for userland-stage-artifact. "
-            "Defaults to the current published Android dev prefix manifest from ../zide-mobile-pm."
+            "Defaults to the checked-in Android release descriptor under android/terminal-host."
         ),
     )
     parser.add_argument(

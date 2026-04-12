@@ -292,6 +292,11 @@ Current checkpoint:
   `zide-pm` under `run-as dev.zide.terminal`:
   - `zide-pm doctor --prefix /data/user/0/dev.zide.terminal/files/usr`
   - `zide-pm list-available --prefix /data/user/0/dev.zide.terminal/files/usr`
+- the published snapshot contract is now owned in one checked-in descriptor:
+  `android/terminal-host/app/src/main/assets/userland_release.json`
+  - Android runtime reads it for in-app install/update
+  - `./ops/android_terminal_host.py userland-stage-artifact` reads the same
+    file for its default manifest URL
 - fresh terminal-host launch after artifact staging reports
   `auto.shellStart status=started` and a Bash child under the
   `dev.zide.terminal` app process

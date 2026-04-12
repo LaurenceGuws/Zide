@@ -40,7 +40,7 @@ final class UserlandBootstrapState {
         this.expectedCurrent = expectedCurrent;
     }
 
-    static UserlandBootstrapState load(String stampPath, String shellPath) {
+    static UserlandBootstrapState load(String stampPath, String shellPath, UserlandRelease release) {
         final File stampFile = new File(stampPath);
         if (!stampFile.isFile()) {
             return new UserlandBootstrapState(STATE_MISSING_STAMP, "", "", "", "", false, false);
@@ -60,9 +60,9 @@ final class UserlandBootstrapState {
         final boolean hasBash = stamp.optBoolean("has_bash", false);
         final boolean shellExists = new File(shellPath).isFile();
         final boolean expectedCurrent =
-                UserlandPolicy.EXPECTED_ARTIFACT_NAME.equals(artifact)
-                        && UserlandPolicy.EXPECTED_ARTIFACT_VERSION.equals(version)
-                        && UserlandPolicy.EXPECTED_PROVIDER.equals(provider);
+                release.artifactName.equals(artifact)
+                        && release.artifactVersion.equals(version)
+                        && release.provider.equals(provider);
 
         if (!hasBash) {
             return new UserlandBootstrapState(STATE_STAMP_NO_BASH, format, artifact, version, provider, false, expectedCurrent);

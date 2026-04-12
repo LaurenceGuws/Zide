@@ -2,12 +2,6 @@ package dev.zide.terminal;
 
 final class UserlandPolicy {
     static final String PACKAGE_NAME = "dev.zide.terminal";
-    static final String MANIFEST_URL =
-            "https://github.com/LaurenceGuws/zide-mobile-pm/releases/download/"
-                    + "android-dev-2026.04.12.002012/android-dev-prefix.release.manifest.json";
-    static final String EXPECTED_ARTIFACT_NAME = "zide-android-dev-prefix";
-    static final String EXPECTED_ARTIFACT_VERSION = "sha256-b123a7b39cc2";
-    static final String EXPECTED_PROVIDER = "termux-main";
 
     private UserlandPolicy() {
     }

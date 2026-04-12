@@ -99,9 +99,9 @@ public final class ZideTerminalActivity extends Activity
     private boolean shellRefreshQueued = false;
     private boolean sidebarOpen = false;
     private String lastAutoStartBlockedState = "";
+    private UserlandRelease userlandRelease;
     private UserlandInstallState currentInstallState = UserlandInstallState.idle();
-    private UserlandBootstrapState currentBootstrapState = new UserlandBootstrapState(
-            UserlandBootstrapState.STATE_MISSING_STAMP, "", "", "", "", false, false);
+    private UserlandBootstrapState currentBootstrapState;
     private int surfaceHostGeneration = 0;
     private int productViewBasePaddingLeft = 0;
     private int productViewBasePaddingTop = 0;
@@ -147,6 +147,7 @@ public final class ZideTerminalActivity extends Activity
         assistAltButton = findViewById(R.id.assist_alt_button);
         shellOutputScroll = findViewById(R.id.shell_output_scroll);
         shellTranscriptController = new ShellTranscriptController(shellOutputScroll, shellOutputText, this);
+        userlandRelease = loadUserlandRelease();
         shellSessionController = new ShellSessionController(
                 new ShellSessionController.Bridge() {
                     @Override
@@ -167,7 +168,12 @@ public final class ZideTerminalActivity extends Activity
                 SHELL_TRANSCRIPT_PATH,
                 UserlandPolicy.bootstrapStampPath(this),
                 UserlandPolicy.shellPath(this),
+                userlandRelease,
                 nativeLoaded);
+        currentBootstrapState = UserlandBootstrapState.load(
+                UserlandPolicy.bootstrapStampPath(this),
+                UserlandPolicy.shellPath(this),
+                userlandRelease);
         installShellInputView();
         installInsetsHandling();
         installViewportTracking();
@@ -253,6 +259,15 @@ public final class ZideTerminalActivity extends Activity
         }
 
         appendEvent("runtime.assets ready path=" + fontsDir.getAbsolutePath());
+    }
+
+    private UserlandRelease loadUserlandRelease() {
+        try {
+            return UserlandRelease.load(this);
+        } catch (IOException err) {
+            appendEvent("userland.release loadFailed err=" + err.getClass().getSimpleName());
+            return new UserlandRelease("", "", "", "");
+        }
     }
 
     private long currentPackageAssetStamp() {
@@ -910,13 +925,13 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void startUserlandInstall() {
-        currentInstallState = UserlandInstallState.installing("Fetching and staging " + UserlandPolicy.EXPECTED_ARTIFACT_NAME + "...");
+        currentInstallState = UserlandInstallState.installing("Fetching and staging " + userlandRelease.artifactName + "...");
         updateProductShellVisibility();
         updateStatus("userland-install-started");
-        appendEvent("userland.install begin expected=" + UserlandPolicy.EXPECTED_ARTIFACT_VERSION);
+        appendEvent("userland.install begin expected=" + userlandRelease.artifactVersion);
         new Thread(() -> {
             try {
-                final UserlandInstaller.Result result = UserlandInstaller.install(this);
+                final UserlandInstaller.Result result = UserlandInstaller.install(this, userlandRelease);
                 handler.post(() -> {
                     currentInstallState = UserlandInstallState.idle();
                     currentBootstrapState = result.bootstrapState;
@@ -987,7 +1002,8 @@ public final class ZideTerminalActivity extends Activity
     private void updateStatus(String state) {
         updateStatus(state, UserlandBootstrapState.load(
                 UserlandPolicy.bootstrapStampPath(this),
-                UserlandPolicy.shellPath(this)));
+                UserlandPolicy.shellPath(this),
+                userlandRelease));
     }
 
     private void updateStatus(String state, UserlandBootstrapState bootstrapState) {

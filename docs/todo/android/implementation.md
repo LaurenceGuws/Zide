@@ -189,6 +189,8 @@ Current checkpoint:
     - `gotop` 4.2.0
   - the current published snapshot is now
     `android-dev-2026.04.12.002012`
+  - the snapshot contract is now owned in one checked-in descriptor:
+    `android/terminal-host/app/src/main/assets/userland_release.json`
   - terminal-host in-app `Update` now installs that snapshot from the
     published manifest/archive contract
   - device validation now also proves the staged prefix contains and runs

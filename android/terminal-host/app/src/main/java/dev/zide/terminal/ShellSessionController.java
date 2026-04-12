@@ -45,6 +45,7 @@ final class ShellSessionController {
     private final String transcriptPath;
     private final String bootstrapStampPath;
     private final String shellPath;
+    private final UserlandRelease release;
     private final boolean nativeLoaded;
     private boolean autoStartAttempted = false;
 
@@ -53,11 +54,13 @@ final class ShellSessionController {
             String transcriptPath,
             String bootstrapStampPath,
             String shellPath,
+            UserlandRelease release,
             boolean nativeLoaded) {
         this.bridge = bridge;
         this.transcriptPath = transcriptPath;
         this.bootstrapStampPath = bootstrapStampPath;
         this.shellPath = shellPath;
+        this.release = release;
         this.nativeLoaded = nativeLoaded;
     }
 
@@ -66,7 +69,7 @@ final class ShellSessionController {
         boolean alive = nativeLoaded && bridge.isAlive();
         boolean autoStarted = false;
         int autoStartStatus = 0;
-        final UserlandBootstrapState bootstrapState = UserlandBootstrapState.load(bootstrapStampPath, shellPath);
+        final UserlandBootstrapState bootstrapState = UserlandBootstrapState.load(bootstrapStampPath, shellPath, release);
         boolean autoStartBlocked = false;
 
         if (nativeLoaded && !alive && !autoStartAttempted) {

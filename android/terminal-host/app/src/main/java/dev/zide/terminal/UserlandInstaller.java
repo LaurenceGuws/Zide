@@ -38,13 +38,14 @@ final class UserlandInstaller {
     private UserlandInstaller() {
     }
 
-    static Result install(Context context) throws IOException {
-        final UserlandArtifact artifact = readArtifactManifest(context);
+    static Result install(Context context, UserlandRelease release) throws IOException {
+        final UserlandArtifact artifact = readArtifactManifest(context, release);
         final File archive = fetchArtifact(context, artifact);
         installArchive(context, archive, artifact);
         final UserlandBootstrapState bootstrapState = UserlandBootstrapState.load(
                 UserlandPolicy.bootstrapStampPath(context),
-                UserlandPolicy.shellPath(context));
+                UserlandPolicy.shellPath(context),
+                release);
         if (!bootstrapState.launchReady) {
             throw new IOException("install finished without a launchable bash shell");
         }
@@ -53,8 +54,8 @@ final class UserlandInstaller {
                 "artifact=" + artifact.name + " version=" + artifact.version + " provider=" + artifact.provider);
     }
 
-    private static UserlandArtifact readArtifactManifest(Context context) throws IOException {
-        final byte[] payload = readUrlBytes(UserlandPolicy.MANIFEST_URL);
+    private static UserlandArtifact readArtifactManifest(Context context, UserlandRelease release) throws IOException {
+        final byte[] payload = readUrlBytes(release.manifestUrl);
         final JSONObject manifest;
         try {
             manifest = new JSONObject(new String(payload, StandardCharsets.UTF_8));
@@ -121,10 +122,10 @@ final class UserlandInstaller {
             throw new IOException("android-prefix-archive missing required fields");
         }
 
-        final String resolvedUrl = resolveManifestUrl(UserlandPolicy.MANIFEST_URL, url);
+        final String resolvedUrl = resolveManifestUrl(release.manifestUrl, url);
         final String hardcodedPolicy = metadata.optString("hardcoded_termux_policy", "unknown");
         return new UserlandArtifact(
-                UserlandPolicy.MANIFEST_URL,
+                release.manifestUrl,
                 name,
                 version,
                 resolvedUrl,
