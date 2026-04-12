@@ -412,9 +412,10 @@ AU-A2 intentionally does not claim:
 - product-polished onboarding
 - product-clean provider replacement
 
-That means the next highest-leverage work should leave package/userland churn
-and return to the active renderer blocker unless a concrete Android package
-regression appears.
+That means the next highest-leverage package/userland work should leave
+package-manager architecture churn and move to curated terminal capability.
+Renderer cleanup should reopen only when a concrete renderer seam blocks that
+product work.
 
 ## `AU-A3` Scope
 
@@ -430,6 +431,17 @@ Initial likely package targets:
 - `git`
 - `neovim` or the smallest package subset that proves the first `nvim`
   baseline honestly
+
+Initial stop marker:
+
+- the default published Android prefix manifest names one curated terminal-dev
+  baseline rather than only ad hoc proof packages
+- the baseline is intentionally small and boring:
+  Bash, `zide-pm`, Neovim headless smoke, Git, and ripgrep
+- unsupported or unavailable tools stay explicit instead of growing fallback
+  install paths
+- product/runtime code still consumes the published artifact contract; provider
+  package internals remain outside terminal-host
 
 ## Stop Marker
 

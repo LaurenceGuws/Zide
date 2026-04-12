@@ -18,33 +18,32 @@ statement. The short version:
 
 ### Current Focus
 
-Android package/userland work is now strong enough on-device that it should
-stop outranking the active renderer blocker.
+Renderer cleanup is parked at an honest boundary unless code truth or Android
+product testing exposes a concrete new seam. Android terminal excellence is the
+active product goal again.
 
-- Active ticket: text/surface phase-boundary follow-up
+- Active ticket: `AU-A3` first curated terminal-dev baseline
   - owner:
-    `docs/todo/ui/renderer.md`
-    `app_architecture/ui/BAND_COMPOSITION_PHASE_PLAN.md`
-    `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md`
+    `docs/todo/android/implementation.md`
+    `app_architecture/platform/android/ANDROID_USERLAND_BOOTSTRAP_PLAN.md`
+    sibling mobile package authority repo: `../zide-mobile-pm`
   - current state:
     Android now has a real terminal-host package/userland foundation: in-app
     artifact install/update, explicit staged-state reporting, staged `zide-pm`,
-    one app-owned package action, and clean Bash startup. That means Android
-    product work should return to the shared renderer blocker instead of
-    extending AU-A2 further without a concrete regression. The strongest
-    remaining renderer pressure is no longer the tiny editor-local overlay
-    leaks that were just closed, and it is no longer ambient text/background
-    state either. Ordinary UI/editor text, terminal glyph batching, and
-    `SurfaceDraw` blit replay now carry background explicitly; the old
-    `Renderer.TextRenderState.bg_rgba` channel is gone. The next honest
-    structural pressure moved back to terminal presentable lifecycle and the
-    local code cut is now in: refresh/update execution carries
-    `TerminalPresentPlan` geometry to backend-owned refresh mechanics, and
-    Metal snapshot presentables no longer guess logical size from drawable
-    state. The remaining presentable risk is now live Metal verification of the
-    refresh-backed snapshot path, not another known Linux/shared-code cleanup.
-    Keep renderer work active only if a new concrete contract seam appears from
-    code truth or Android product testing.
+    one app-owned package action, and clean Bash startup. `AU-A2` is met for
+    the current foundation. The next Android package/userland work should be
+    curated terminal capability, not another package-manager architecture
+    rename or staging model.
+- Renderer checkpoint:
+  - ordinary UI/editor text, terminal glyph batching, and `SurfaceDraw` blit
+    replay now carry background explicitly
+  - `Renderer.TextRenderState.bg_rgba` is gone
+  - terminal presentable refresh/update execution now carries
+    `TerminalPresentPlan` geometry to backend-owned refresh mechanics
+  - Metal snapshot presentables no longer guess logical size from drawable
+    state
+  - remaining presentable risk is live Metal verification of the
+    refresh-backed snapshot path, not another known Linux/shared-code cleanup
 - `RB-B3.d` is already met:
   - widget/runtime no longer calls `usesDirectTerminalPresentation(...)`
   - those path decisions now terminate in the presentable host seam
@@ -66,12 +65,11 @@ stop outranking the active renderer blocker.
   - the shared terminal widget/grid now sizes from that visible viewport
   - Note10 validation now proves IME-open shrink and IME-hide restore on the
     shared Android GLES path
-- `RB-B3.e` is now structurally narrowed enough that it is no longer the
-  strongest blocker:
+- `RB-B3.e` is now structurally narrowed enough to park local Linux-only
+  cleanup:
   - presentable lifecycle parity work materially reduced direct-vs-retained
     shared pressure
-  - the stronger remaining renderer pressure is the text/surface
-    phase-boundary problem
+  - remaining risk is Mac/Metal verification or a concrete new product blocker
 - Renderer work is in scope only when it is the direct next blocker — not for
   generic cleanup
 - Android renderer/backend work should now reopen only if a concrete product

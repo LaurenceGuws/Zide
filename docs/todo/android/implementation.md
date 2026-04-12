@@ -109,12 +109,14 @@ That means:
 
 ## Current Priority
 
-**`AU-A2` Android Package-Manager Handshake** — this is the active ticket now.
+**`AU-A3` First Curated Terminal-Dev Baseline** — this is the active Android
+ticket now.
 
-Shared Android renderer bring-up and current direct-input work are now strong
-enough on-device that they should stop outranking the next product-owned gap.
-The current highest-leverage move is replacing dev-only relocated package
-staging with explicit package authority for the Zide prefix.
+`AU-A2` is met for the current foundation: install/update is app-owned,
+artifact-contract-only, stateful, and no longer a naming/ownership churn
+blocker. The next highest-leverage move is proving a small curated terminal
+baseline that makes the app useful for real development without turning package
+management back into the product lane.
 
 Owner docs:
 
@@ -134,6 +136,9 @@ Guardrails:
 - keep the live `InputConnection` path as the single active input surface
 - keep Java focused on bootstrap/progress/lifecycle ownership; do not move the
   core shell/runtime semantics out of Zig
+- keep terminal-host consuming the published artifact contract; provider
+  package internals stay in `../zide-mobile-pm` / dev-provider tooling
+- do not broaden into package curation beyond the first terminal-dev baseline
 
 Current checkpoint:
 
