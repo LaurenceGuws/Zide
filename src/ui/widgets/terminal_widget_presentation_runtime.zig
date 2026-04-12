@@ -930,7 +930,6 @@ pub fn runRefreshedPresentablePresentation(
         renderer,
         terminal_view,
         surface_update_plan.geometry,
-        view_geometry,
         cycle_result.refresh,
         draw_cursor,
         cursor,
@@ -942,6 +941,9 @@ pub fn runRefreshedPresentablePresentation(
         visible_h,
         view_cells_len,
     );
+    if (present_state.present) {
+        beginViewportClip(renderer, view_geometry, visible_w, visible_h);
+    }
     defer if (present_state.present) renderer_clip_host.endClip(renderer);
     const bg = if (view_cells_len > 0)
         Color{
@@ -1479,7 +1481,6 @@ pub fn refreshPresentState(
     renderer: anytype,
     terminal_view: view_state.TerminalViewModel,
     surface_geometry: PresentationGeometry,
-    view_geometry: TerminalViewGeometry,
     presentable_refresh: TerminalPresentableRefresh,
     draw_cursor: bool,
     cursor: CursorPos,
@@ -1515,10 +1516,6 @@ pub fn refreshPresentState(
     state.ready = surface_state.notePresentableAvailability(state.target_available);
     state.present = state.ready and state.visible;
     state.log_unavailable = !state.ready and terminal_view.rows > 0 and terminal_view.cols > 0 and view_cells_len > 0 and state.visible;
-
-    if (state.present) {
-        beginViewportClip(renderer, view_geometry, visible_w, visible_h);
-    }
 
     return state;
 }

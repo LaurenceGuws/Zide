@@ -509,6 +509,9 @@ Status:
   - fast present reuse now returns explicit reuse-outcome state instead of
     hard-coding a synthetic reused result beside its own
     availability/cache-advance path
+  - refreshed-present state classification no longer begins viewport clip as
+    a hidden side effect; clip execution now stays with the refreshed-present
+    caller
   - the remaining lifecycle-critical direct-submit path now routes through one
     explicit Android bridge seam instead of hand-rolling the same
     flush-and-submit sequence at both surface-available and redraw-needed call

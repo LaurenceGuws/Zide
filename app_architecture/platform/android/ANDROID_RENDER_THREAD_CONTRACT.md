@@ -690,6 +690,11 @@ Current progress:
     assembly pattern as refresh/direct execution paths
   - behavior is unchanged; this narrows the remaining mixed ownership around
     execution outcome vs availability/cache policy
+- seventh execution-seam cut landed:
+  - refresh present-state classification no longer begins viewport clip as a
+    hidden side effect
+  - clip execution now happens at the refreshed-presentable caller after state
+    classification, keeping the state helper declarative
 
 Do not do:
 
