@@ -103,9 +103,28 @@ pub const MetalTerminalFallbackSample = struct {
 };
 
 pub const DebugCaptureState = struct {
+    samples_enabled: bool = false,
     last_view_geometry: ViewGeometrySample = .{},
     last_cursor_overlay: CursorOverlaySample = .{},
     last_terminal_presentation: TerminalPresentationSample = .{},
     last_text_paint: TextPaintSample = .{},
     last_metal_terminal_fallback: MetalTerminalFallbackSample = .{},
+
+    /// Optional diagnostic sample sink. Product rendering must not update this
+    /// state unless a debug capture path explicitly arms it.
+    pub fn textPaintSampleSink(self: *@This()) ?*TextPaintSample {
+        return if (self.samples_enabled) &self.last_text_paint else null;
+    }
+
+    /// Optional diagnostic sample sink. Product rendering must not update this
+    /// state unless a debug capture path explicitly arms it.
+    pub fn metalFallbackSampleSink(self: *@This()) ?*MetalTerminalFallbackSample {
+        return if (self.samples_enabled) &self.last_metal_terminal_fallback else null;
+    }
+
+    pub fn clearFrameSamples(self: *@This()) void {
+        if (!self.samples_enabled) return;
+        self.last_text_paint.valid = false;
+        self.last_metal_terminal_fallback = .{};
+    }
 };

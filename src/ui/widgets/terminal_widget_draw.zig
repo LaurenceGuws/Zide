@@ -351,11 +351,7 @@ pub fn drawPrepared(
         terminal_view,
     );
     self.debug.last_cursor_overlay.valid = false;
-    self.debug.last_text_paint.valid = false;
-    self.debug.last_metal_terminal_fallback = .{
-        .valid = true,
-        .generation = terminal_view.generation,
-    };
+    self.debug.clearFrameSamples();
 
     self.controller.hover.dirty = false;
     const hover_link_id = hover_mod.hoverLinkId(&self.controller.hover);
@@ -398,23 +394,25 @@ pub fn drawPrepared(
     presentation_kitty_ms = surface_result.presentation_kitty_ms;
     if (surface_result.early_return) return outcome;
 
-    self.debug.last_view_geometry = .{
-        .valid = rows > 0 and cols > 0,
-        .generation = terminal_view.generation,
-        .base_x = view_geometry.origin_x,
-        .base_y = view_geometry.origin_y,
-        .viewport_w = view_geometry.viewport_width,
-        .viewport_h = view_geometry.viewport_height,
-        .rows = view_geometry.rows,
-        .cols = view_geometry.cols,
-        .ui_scale = shell.uiGeometryContext().ui_scale,
-        .render_scale = render_scale,
-        .cell_width_logical = view_geometry.cell_width,
-        .cell_height_logical = view_geometry.cell_height,
-        .cell_width_device = r.terminalCellGeometry().cell_width_device_px,
-        .cell_height_device = r.terminalCellGeometry().cell_height_device_px,
-        .baseline_logical = view_geometry.baseline_from_top,
-    };
+    if (self.debug.samples_enabled) {
+        self.debug.last_view_geometry = .{
+            .valid = rows > 0 and cols > 0,
+            .generation = terminal_view.generation,
+            .base_x = view_geometry.origin_x,
+            .base_y = view_geometry.origin_y,
+            .viewport_w = view_geometry.viewport_width,
+            .viewport_h = view_geometry.viewport_height,
+            .rows = view_geometry.rows,
+            .cols = view_geometry.cols,
+            .ui_scale = shell.uiGeometryContext().ui_scale,
+            .render_scale = render_scale,
+            .cell_width_logical = view_geometry.cell_width,
+            .cell_height_logical = view_geometry.cell_height,
+            .cell_width_device = r.terminalCellGeometry().cell_width_device_px,
+            .cell_height_device = r.terminalCellGeometry().cell_height_device_px,
+            .baseline_logical = view_geometry.baseline_from_top,
+        };
+    }
     const overlay_phase_start = app_shell.getTime();
     self.surface.finishDraw(self.session.allocator, kitty_generation, has_kitty);
     drawOverlays(

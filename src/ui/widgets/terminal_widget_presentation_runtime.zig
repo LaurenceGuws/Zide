@@ -276,6 +276,7 @@ pub fn updateAndPresent(
 }
 
 pub fn clearPresentationSample(self: anytype) void {
+    if (!self.debug.samples_enabled) return;
     self.debug.last_terminal_presentation.valid = false;
 }
 
@@ -433,7 +434,7 @@ fn drawPresentationGlyphPass(
         disable_ligatures: @TypeOf(renderer.font_config.terminal_disable_ligatures),
         terminal_generation: u64,
         glyph_draw_stats: *GlyphDrawStats,
-        metal_fallback_sample: *@import("terminal_widget_debug_geometry.zig").MetalTerminalFallbackSample,
+        metal_fallback_sample: ?*@import("terminal_widget_debug_geometry.zig").MetalTerminalFallbackSample,
 
         fn visit(ctx: *@This(), row: usize, col_start: usize, col_end: usize, _: bool) void {
             drawRowGlyphs(
@@ -457,7 +458,7 @@ fn drawPresentationGlyphPass(
                 ctx.disable_ligatures,
                 ctx.terminal_generation,
                 ctx.glyph_draw_stats,
-                &ctx.self_widget.debug.last_text_paint,
+                ctx.self_widget.debug.textPaintSampleSink(),
                 ctx.metal_fallback_sample,
             );
         }
@@ -480,7 +481,7 @@ fn drawPresentationGlyphPass(
         .disable_ligatures = renderer.font_config.terminal_disable_ligatures,
         .terminal_generation = terminal_generation,
         .glyph_draw_stats = glyph_draw_stats,
-        .metal_fallback_sample = &self.debug.last_metal_terminal_fallback,
+        .metal_fallback_sample = self.debug.metalFallbackSampleSink(),
     };
     forEachPresentationDrawSpan(rows, cols, surface_update_plan, &visitor);
     renderer.flushTerminalGlyphBatch();
@@ -560,12 +561,7 @@ fn executeIncrementalPresentableUpdate(
         surface_update_plan,
         &glyph_draw_stats,
     );
-    self.debug.last_metal_terminal_fallback.special_sprite_glyphs = glyph_draw_stats.special_sprite_glyphs;
-    self.debug.last_metal_terminal_fallback.shaped_special_glyphs = glyph_draw_stats.shaped_special_glyphs;
-    self.debug.last_metal_terminal_fallback.powerline_special_glyphs = glyph_draw_stats.powerline_special_glyphs;
-    self.debug.last_metal_terminal_fallback.shade_special_glyphs = glyph_draw_stats.shade_special_glyphs;
-    self.debug.last_metal_terminal_fallback.braille_special_glyphs = glyph_draw_stats.braille_special_glyphs;
-    self.debug.last_metal_terminal_fallback.box_glyphs = glyph_draw_stats.box_glyphs;
+    recordMetalFallbackStats(self, terminal_view.generation, glyph_draw_stats);
     result.completed = true;
     return result;
 }
@@ -582,6 +578,7 @@ pub fn notePresentSample(
     source_w: f32,
     source_h: f32,
 ) void {
+    if (!self.debug.samples_enabled) return;
     var sample = TerminalPresentationSample{
         .valid = true,
         .mode = mode,
@@ -610,6 +607,20 @@ pub fn notePresentSample(
         }
     }
     self.debug.last_terminal_presentation = sample;
+}
+
+fn recordMetalFallbackStats(self: anytype, generation: u64, glyph_draw_stats: GlyphDrawStats) void {
+    if (!self.debug.samples_enabled) return;
+    self.debug.last_metal_terminal_fallback = .{
+        .valid = true,
+        .generation = generation,
+        .special_sprite_glyphs = glyph_draw_stats.special_sprite_glyphs,
+        .shaped_special_glyphs = glyph_draw_stats.shaped_special_glyphs,
+        .powerline_special_glyphs = glyph_draw_stats.powerline_special_glyphs,
+        .shade_special_glyphs = glyph_draw_stats.shade_special_glyphs,
+        .braille_special_glyphs = glyph_draw_stats.braille_special_glyphs,
+        .box_glyphs = glyph_draw_stats.box_glyphs,
+    };
 }
 
 pub fn executePresentableUpdate(
@@ -697,12 +708,7 @@ pub fn executePresentableUpdate(
         surface_update_plan,
         &glyph_draw_stats,
     );
-    self.debug.last_metal_terminal_fallback.special_sprite_glyphs = glyph_draw_stats.special_sprite_glyphs;
-    self.debug.last_metal_terminal_fallback.shaped_special_glyphs = glyph_draw_stats.shaped_special_glyphs;
-    self.debug.last_metal_terminal_fallback.powerline_special_glyphs = glyph_draw_stats.powerline_special_glyphs;
-    self.debug.last_metal_terminal_fallback.shade_special_glyphs = glyph_draw_stats.shade_special_glyphs;
-    self.debug.last_metal_terminal_fallback.braille_special_glyphs = glyph_draw_stats.braille_special_glyphs;
-    self.debug.last_metal_terminal_fallback.box_glyphs = glyph_draw_stats.box_glyphs;
+    recordMetalFallbackStats(self, terminal_view.generation, glyph_draw_stats);
     if (has_kitty) {
         const kitty_phase_start = app_shell.getTime();
         self.surface.kitty.drawImages(self.session.allocator, shell, base_x_local, base_y_local, true, start_line, rows, cols);
@@ -1669,16 +1675,11 @@ pub fn directPresent(
             renderer.font_config.terminal_disable_ligatures,
             terminal_view.generation,
             &glyph_stats,
-            &self.debug.last_text_paint,
-            &self.debug.last_metal_terminal_fallback,
+            self.debug.textPaintSampleSink(),
+            self.debug.metalFallbackSampleSink(),
         );
     }
-    self.debug.last_metal_terminal_fallback.special_sprite_glyphs = glyph_stats.special_sprite_glyphs;
-    self.debug.last_metal_terminal_fallback.shaped_special_glyphs = glyph_stats.shaped_special_glyphs;
-    self.debug.last_metal_terminal_fallback.powerline_special_glyphs = glyph_stats.powerline_special_glyphs;
-    self.debug.last_metal_terminal_fallback.shade_special_glyphs = glyph_stats.shade_special_glyphs;
-    self.debug.last_metal_terminal_fallback.braille_special_glyphs = glyph_stats.braille_special_glyphs;
-    self.debug.last_metal_terminal_fallback.box_glyphs = glyph_stats.box_glyphs;
+    recordMetalFallbackStats(self, terminal_view.generation, glyph_stats);
     renderer.flushTerminalGlyphBatch();
     result.glyph_ms = time_utils.secondsToMs(app_shell.getTime() - glyph_phase_start);
 
