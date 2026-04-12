@@ -270,6 +270,12 @@ Next renderer move:
   target already owns logical size.
   Metal `presentableInfo()` also no longer falls back to full-window logical
   dimensions if no terminal logical size was recorded.
+- presentable audit checkpoint:
+  local shared-code presentable geometry pressure is now narrowed enough that
+  no further Linux-only cleanup is the obvious next cut. The remaining
+  presentable risk is live Metal verification of the refresh-backed snapshot
+  path. Do not keep carving presentable lifecycle code unless a new concrete
+  seam appears.
 - do not reopen Android backend work unless that audit proves a new concrete
   renderer-owned Android blocker
 

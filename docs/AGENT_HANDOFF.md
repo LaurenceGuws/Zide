@@ -37,12 +37,14 @@ stop outranking the active renderer blocker.
     state either. Ordinary UI/editor text, terminal glyph batching, and
     `SurfaceDraw` blit replay now carry background explicitly; the old
     `Renderer.TextRenderState.bg_rgba` channel is gone. The next honest
-    structural pressure has moved back to terminal presentable lifecycle:
-    refresh/update execution must carry terminal-present plan geometry all the
-    way to backend-owned refresh mechanics so snapshot/retained paths stop
-    guessing logical size from drawable state. Deferred live Metal verification
-    remains real, but Linux/shared-code work should still remove any concrete
-    lifecycle-contract mismatch found locally.
+    structural pressure moved back to terminal presentable lifecycle and the
+    local code cut is now in: refresh/update execution carries
+    `TerminalPresentPlan` geometry to backend-owned refresh mechanics, and
+    Metal snapshot presentables no longer guess logical size from drawable
+    state. The remaining presentable risk is now live Metal verification of the
+    refresh-backed snapshot path, not another known Linux/shared-code cleanup.
+    Keep renderer work active only if a new concrete contract seam appears from
+    code truth or Android product testing.
 - `RB-B3.d` is already met:
   - widget/runtime no longer calls `usesDirectTerminalPresentation(...)`
   - those path decisions now terminate in the presentable host seam

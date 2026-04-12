@@ -817,6 +817,9 @@ That split is now sharper from code inspection too:
   dimensions when snapshot logical size is missing. If no terminal logical size
   was recorded, the snapshot presentable now reports unavailable instead of
   fabricating product geometry.
+- local shared-code presentable geometry pressure is therefore narrowed enough
+  that the remaining presentable risk is live Metal verification of the
+  refresh-backed snapshot path, not another known Linux-only lifecycle cleanup.
 - sample pressure is specifically section-fill plus bg-aware text preview work
   in `font_sample_view.zig` / `font_sample_section_host.zig`, including the
   custom-font sample path that still terminates through direct texture draws
