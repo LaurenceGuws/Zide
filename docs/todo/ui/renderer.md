@@ -214,31 +214,24 @@ Current checkpoint:
 
 Next renderer move:
 
-- `RB-B3.j` editor overlay phase-boundary closure
-- owner: `app_architecture/ui/BAND_COMPOSITION_PHASE_PLAN.md`
+- `RB-B3.j` editor overlay phase-boundary closure is met
+- closure truth:
+  `editor_widget_draw_overlay.zig` is now the explicit owner seam for editor
+  row-band local ordering; non-owner files no longer spell immediate
+  begin/end/flush choreography or direct surface-queue drains for that family
+- next active ticket:
+  editor text emitter closure
+- owner:
+  `app_architecture/ui/BAND_COMPOSITION_PHASE_PLAN.md`
+  `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md`
 - concrete pressure:
-  `editor_widget_draw_overlay.zig` still manually sequences queued surface
-  fills and dependent text with repeated
-  `flushQueuedSurfaceDrawsBeforeDependentSurfaceWork(...)` calls
+  `editor_widget_draw_text.zig` still expresses the same highlighted text /
+  decoration semantics through two emitter implementations:
+  direct fallback emission and draw-list emission
 - required outcome:
-  one explicit local seam owns that editor overlay ordering unit instead of
-  making the owner module choreograph the queued-surface versus immediate-text
-  split itself
-- current checkpoint:
-  first ownership cut is in:
-  `editor_widget_draw.zig` and `editor_widget_draw_text.zig` no longer spell
-  immediate row-band begin/end/flush choreography directly; they now route
-  through `editor_widget_draw_overlay.runImmediateEditorRowBand(...)`.
-  Second ownership cut is in too:
-  non-owner immediate surface-phase callers no longer invoke
-  `flushEditorSurfaceRects(...)` directly; pane-base, row-base, scrollbar, and
-  immediate-decoration paths now route through owner APIs.
-  Third ownership cut is in:
-  owner-local draw-list rect replay now routes through explicit
-  `replayDrawListRectFamily(...)` / `drawEditorSurfaceRectOp(...)` helpers, and
-  `drawEditorTextOnBg(...)` now also routes through the owner-side row-band
-  helper. Remaining pressure is now only whether that owner-local helper
-  surface is the final explicit seam or wants one last small naming cleanup.
+  one explicit local seam owns that text/decor emission family without leaving
+  a separate direct-emitter versus list-emitter split as the last editor-local
+  phase/owner wrinkle
 - do not reopen Android backend work unless that audit proves a new concrete
   renderer-owned Android blocker
 

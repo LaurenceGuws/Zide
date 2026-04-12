@@ -225,6 +225,22 @@ Non-goals:
 - current blocker reading:
   - external choreography is gone
   - rect/text/cursor phase knowledge is now centralized in owner-local helpers
-  - `RB-B3.j` is close to closure; the remaining question is whether the owner
-    helper surface is explicit enough as the lasting seam, or whether one
-    final owner-local naming/structure pass is still needed
+  - `RB-B3.j` is now met:
+    one explicit owner-local seam now owns editor row-band local ordering, and
+    non-owner files no longer spell the queued-surface versus immediate-text
+    phase boundary directly
+
+## Next Pressure After `RB-B3.j`
+
+The next honest editor-local pressure is narrower than row-band phase
+ownership:
+
+- `editor_widget_draw_text.zig` still has two emitter implementations for the
+  same highlighted-text/decor semantics:
+  immediate fallback emission versus draw-list emission
+- traversal and decoration geometry are already shared there, so the remaining
+  split is now the final direct-emitter versus list-emitter surface for that
+  family
+- IME/composition preview and scrollbars stay outside this ticket by ownership:
+  they are cursor-anchored and pane-final overlays, not row-band-local
+  ordering leaks
