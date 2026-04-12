@@ -33,10 +33,13 @@ stop outranking the active renderer blocker.
     product work should return to the shared renderer blocker instead of
     extending AU-A2 further without a concrete regression. The strongest
     remaining renderer pressure is no longer the tiny editor-local overlay
-    leaks that were just closed. The broader remaining blocker is again the
-    one already named in renderer authority: terminal presentable lifecycle is
-    still materially uneven across backends, and live Metal verification of the
-    refresh-backed snapshot path remains deferred.
+    leaks that were just closed. The next honest structural blocker is again
+    the one already named in renderer authority: fills are deferred while
+    ordinary UI/editor dependent text still resolves through immediate
+    `text_runtime.zig` paths, so fill-plus-text work still lacks one
+    backend-neutral phase boundary. Presentable lifecycle unevenness and
+    deferred live Metal verification remain real too, but they are no longer
+    the only thing left to say.
 - `RB-B3.d` is already met:
   - widget/runtime no longer calls `usesDirectTerminalPresentation(...)`
   - those path decisions now terminate in the presentable host seam
