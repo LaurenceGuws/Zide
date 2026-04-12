@@ -220,19 +220,19 @@ Next renderer move:
   row-band local ordering; non-owner files no longer spell immediate
   begin/end/flush choreography or direct surface-queue drains for that family
 - next active ticket:
-  editor text emitter closure
+  IME composition overlay ownership
 - owner:
   `app_architecture/ui/BAND_COMPOSITION_PHASE_PLAN.md`
   `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md`
 - concrete pressure:
-  `editor_widget_draw_text.zig` now shares highlighted text / decoration
-  traversal through one generic emitter-driven path, but it still terminates in
-  two emitter surfaces:
-  `ImmediateTextEmitter` and `DrawListTextEmitter`
+  `editor_widget_draw_text.zig` emitter closure is now met enough that the
+  remaining stronger editor-local leak has shifted:
+  `editor_widget_draw.zig` still draws the cursor-anchored IME composition
+  preview directly through `renderer_text_host.drawTextMonospaceOnBg(...)`
+  plus a direct underline rect
 - required outcome:
-  one explicit local seam owns that text/decor emission family without leaving
-  the immediate-emitter versus draw-list-emitter surface as the last
-  editor-local owner wrinkle
+  one explicit editor-owned overlay seam owns IME composition preview text +
+  underline instead of leaving that interaction overlay as a direct draw pair
 - do not reopen Android backend work unless that audit proves a new concrete
   renderer-owned Android blocker
 

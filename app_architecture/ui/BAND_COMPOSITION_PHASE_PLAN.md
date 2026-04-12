@@ -238,8 +238,18 @@ ownership:
 - `editor_widget_draw_text.zig` no longer has separate expanded-text helper
   stacks for immediate fallback versus draw-list emission; highlighted text and
   decoration traversal now run through one generic emitter-driven path
-- the remaining split there is now the final emitter surface itself:
-  `ImmediateTextEmitter` versus `DrawListTextEmitter`
+- the remaining emitter surface there is now small enough to be an accepted
+  owner seam; it no longer carries the real contract split
 - IME/composition preview and scrollbars stay outside this ticket by ownership:
   they are cursor-anchored and pane-final overlays, not row-band-local
   ordering leaks
+
+## Next Pressure After Editor Text Emitter Closure
+
+The next honest leak is the cursor-anchored IME composition preview:
+
+- `src/ui/widgets/editor_widget_draw.zig` still draws composing text directly
+  through `renderer_text_host.drawTextMonospaceOnBg(...)`
+- it also draws the composition underline directly beside that text path
+- that means one editor interaction overlay still bypasses an explicit local
+  owner seam even though row-band-local ordering is now settled

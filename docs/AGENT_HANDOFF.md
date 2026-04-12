@@ -34,12 +34,11 @@ stop outranking the active renderer blocker.
     extending AU-A2 further without a concrete regression. The strongest
     remaining renderer pressure is the shared text/surface phase-boundary
     problem already called out in renderer authority. `RB-B3.j` editor overlay
-    phase-boundary closure is now met: row-band local ordering terminates in
-    `editor_widget_draw_overlay.zig` without non-owner begin/end/flush
-    choreography. The next concrete remaining editor leak is now narrower:
-    `editor_widget_draw_text.zig` still carries a direct-emitter versus
-    draw-list-emitter split for the same highlighted text / decoration
-    semantics.
+    phase-boundary closure is now met, and the editor text-emitter follow-up is
+    now met enough that the stronger remaining editor leak has shifted again:
+    `editor_widget_draw.zig` still draws the cursor-anchored IME composition
+    preview directly as text plus underline instead of terminating in one
+    editor-owned overlay seam.
 - `RB-B3.d` is already met:
   - widget/runtime no longer calls `usesDirectTerminalPresentation(...)`
   - those path decisions now terminate in the presentable host seam

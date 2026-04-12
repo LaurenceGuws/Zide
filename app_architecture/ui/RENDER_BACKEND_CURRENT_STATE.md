@@ -684,13 +684,17 @@ That split is now sharper from code inspection too:
   - the old expanded-text / expanded-styled-text immediate-vs-list helper
     split is now gone; highlighted text and decoration traversal run through
     one generic emitter-driven path in `editor_widget_draw_text.zig`
-  - the remaining seam there is smaller:
-    `ImmediateTextEmitter` versus `DrawListTextEmitter` still own the final
-    side-effect surface for text/background and decoration-rect emission
+  - the remaining emitter surface there is now small enough to be an accepted
+    owner seam: `ImmediateTextEmitter` and `DrawListTextEmitter` only adapt the
+    final side-effect target, not traversal or semantic branching
 - traversal, decoration geometry, and expanded styled-text run splitting are
   now shared there, so further local editor cleanup is only honest if it
-  removes that last emitter-surface split or changes the real surface/timing
-  contract.
+  changes the real surface/timing contract.
+- the next louder editor-local leak is now elsewhere:
+  `editor_widget_draw.zig` still renders the cursor-anchored IME composition
+  preview directly with `renderer_text_host.drawTextMonospaceOnBg(...)` plus a
+  direct underline rect, instead of terminating in one editor-owned overlay
+  seam
 - the remaining backend-runtime storage blocker is now more specifically
   OpenGL-shaped than Metal-shaped:
   - Metal live frame/surface/presentable queue state now lives under backend
