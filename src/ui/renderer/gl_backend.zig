@@ -469,7 +469,6 @@ fn executeRecordedSurfaceAtlasBlitInSurfacePhase(renderer: anytype, sample: surf
         .coverage => .font_coverage,
         .color => .rgba,
     };
-    const bg = renderer.text_render.bg_rgba;
     if (sample.clip_rect) |pc| {
         if (pc.width <= 0 or pc.height <= 0) return false;
         renderer_clip_host.beginClip(
@@ -480,10 +479,10 @@ fn executeRecordedSurfaceAtlasBlitInSurfacePhase(renderer: anytype, sample: surf
             @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.height)))),
         );
         defer renderer_clip_host.endClip(renderer);
-        draw_ops.drawTextureRectImmediate(renderer, tex, sample.source_rect, dest, sample.tint, bg, kind);
+        draw_ops.drawTextureRectImmediate(renderer, tex, sample.source_rect, dest, sample.tint, sample.bg_rgba, kind);
         return true;
     }
-    draw_ops.drawTextureRectImmediate(renderer, tex, sample.source_rect, dest, sample.tint, bg, kind);
+    draw_ops.drawTextureRectImmediate(renderer, tex, sample.source_rect, dest, sample.tint, sample.bg_rgba, kind);
     return true;
 }
 
@@ -502,7 +501,6 @@ fn executeRecordedSurfaceRawImageBlitInSurfacePhase(renderer: anytype, img: surf
     const h = renderer.rasterLengthToLogical(img.dest_rect.height);
     if (w <= 0 or h <= 0) return false;
     const dest = types.Rect{ .x = x, .y = y, .width = w, .height = h };
-    const bg = renderer.text_render.bg_rgba;
     if (img.clip_rect) |pc| {
         if (pc.width <= 0 or pc.height <= 0) return false;
         renderer_clip_host.beginClip(
@@ -513,10 +511,10 @@ fn executeRecordedSurfaceRawImageBlitInSurfacePhase(renderer: anytype, img: surf
             @intFromFloat(std.math.round(renderer.rasterLengthToLogical(@floatFromInt(pc.height)))),
         );
         defer renderer_clip_host.endClip(renderer);
-        draw_ops.drawTextureRectImmediate(renderer, tex, source_rect, dest, img.tint, bg, .rgba);
+        draw_ops.drawTextureRectImmediate(renderer, tex, source_rect, dest, img.tint, img.bg_rgba, .rgba);
         return true;
     }
-    draw_ops.drawTextureRectImmediate(renderer, tex, source_rect, dest, img.tint, bg, .rgba);
+    draw_ops.drawTextureRectImmediate(renderer, tex, source_rect, dest, img.tint, img.bg_rgba, .rgba);
     return true;
 }
 

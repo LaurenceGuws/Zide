@@ -18,6 +18,7 @@ pub const AtlasSampleDraw = struct {
     dest_x: i32,
     dest_y: i32,
     tint: types.Rgba = .{ .r = 255, .g = 255, .b = 255, .a = 255 },
+    bg_rgba: types.Rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 },
     clip_rect: ?PixelClipRect = null,
 };
 
@@ -35,6 +36,7 @@ pub const RawImageDraw = struct {
     source_rect: ?types.Rect = null,
     dest_rect: types.Rect,
     tint: types.Rgba = .{ .r = 255, .g = 255, .b = 255, .a = 255 },
+    bg_rgba: types.Rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 },
     clip_rect: ?PixelClipRect = null,
 };
 

@@ -251,6 +251,11 @@ Next renderer move:
   renderer texture thunks still depend on ambient background reads. The next
   cut should either carry bg explicitly through those payloads/thunks or prove
   that those reads are dead enough to remove.
+- current read-side checkpoint:
+  `SurfaceDraw.atlas` and `SurfaceDraw.raw_image` now carry explicit
+  `bg_rgba`; GL surface-phase replay uses that payload field instead of
+  reading `renderer.text_render.bg_rgba`. Remaining ambient bg reads are now
+  limited to legacy renderer-local texture thunks in `renderer.zig`.
 - do not reopen Android backend work unless that audit proves a new concrete
   renderer-owned Android blocker
 

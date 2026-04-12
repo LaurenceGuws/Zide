@@ -1556,7 +1556,6 @@ pub fn addTerminalGlyphQuad(
     kind: types.TextureKind,
 ) void {
     _ = texture;
-    _ = bg_rgba;
     const clip_rect = if (renderer.currentClipRect()) |clip|
         metal_text_sample_runtime.pixelClipRect(renderer, clip)
     else
@@ -1573,6 +1572,7 @@ pub fn addTerminalGlyphQuad(
             .dest_x = @intFromFloat(std.math.round(renderer.logicalLengthToRaster(dest.x))),
             .dest_y = @intFromFloat(std.math.round(renderer.logicalLengthToRaster(dest.y))),
             .tint = color,
+            .bg_rgba = bg_rgba,
             .clip_rect = clip_rect,
         });
     }
