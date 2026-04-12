@@ -1030,9 +1030,9 @@ pub const Renderer = struct {
     }
 
     pub fn armPresentCapture(self: *Renderer, path: []const u8) void {
-        self.present.capture_path = path;
-        self.present.capture_armed = true;
-        self.present.capture_frame_seq = self.present.frame_seq;
+        self.present.capture.path = path;
+        self.present.capture.armed = true;
+        self.present.capture.frame_seq = self.present.frame_seq;
     }
 
     pub fn lastPresentTrace(self: *const Renderer) PresentTrace {

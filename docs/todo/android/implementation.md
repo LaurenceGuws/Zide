@@ -446,6 +446,8 @@ Status:
       glyph-prep worker lifecycle now checks tag enablement before formatting
     - `Logger.logf(...)` now returns before formatting when no file, console,
       or group sink can emit the requested tag/level
+    - present-capture arm/path/frame state now lives in an explicit capture
+      state object instead of flat fields beside correctness/trace state
 - first iteration cut landed from that queue:
   - narrowed Android host/UI-thread contamination around stale transcript-era
     ownership

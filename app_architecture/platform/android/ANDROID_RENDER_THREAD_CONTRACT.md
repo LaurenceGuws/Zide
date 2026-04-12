@@ -943,6 +943,10 @@ Current progress:
     requested tag/level
   - future disabled telemetry cannot silently reintroduce formatting cost just
     by calling `logf(...)`
+- capture ownership naming cut landed:
+  - present-capture arm/path/frame state now lives in an explicit capture state
+    object instead of being flat fields beside correctness/trace state
+  - shared GL and Metal capture helpers now name that ownership directly
 
 ### 7. Remaining Android host/UI-thread contamination
 

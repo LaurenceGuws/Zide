@@ -1,4 +1,5 @@
 const present_feedback_state = @import("present_feedback_state.zig");
+const present_capture_state = @import("present_capture_state.zig");
 
 pub const PresentTrace = struct {
     frame_seq: u64 = 0,
@@ -34,9 +35,7 @@ pub const PresentState = struct {
     trace_enabled: bool = false,
     trace_current: PresentTrace = .{},
     trace_last: PresentTrace = .{},
-    capture_path: ?[]const u8 = null,
-    capture_armed: bool = false,
-    capture_frame_seq: u64 = 0,
+    capture: present_capture_state.PresentCaptureState = .{},
 };
 
 pub fn noteCompositionFullPaneClear(self: anytype) void {

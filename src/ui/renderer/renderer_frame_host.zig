@@ -45,9 +45,7 @@ pub fn finishFrameSubmission(renderer: anytype, outcome: FrameExecutionOutcome) 
     renderer.present.trace_last = renderer.present.trace_current;
     switch (outcome.kind) {
         .submitted, .submit_failed => {
-            renderer.present.capture_path = null;
-            renderer.present.capture_armed = false;
-            renderer.present.capture_frame_seq = 0;
+            renderer.present.capture = .{};
         },
         .not_attempted, .begin_failed, .abandoned => {},
     }
@@ -125,9 +123,11 @@ test "finishFrameSubmission submitted advances sequence and clears capture" {
                 .terminal_presentation_count = 1,
                 .terminal_presented_generation = 77,
             },
-            .capture_path = "capture.ppm",
-            .capture_armed = true,
-            .capture_frame_seq = 44,
+            .capture = .{
+                .path = "capture.ppm",
+                .armed = true,
+                .frame_seq = 44,
+            },
         },
     };
 
@@ -147,9 +147,9 @@ test "finishFrameSubmission submitted advances sequence and clears capture" {
     try std.testing.expectEqual(@as(u64, 12), renderer.present.submission_sequence);
     try std.testing.expectEqual(present_feedback_state.MainCompositionTarget.default_target, renderer.present.main_composition_target);
     try std.testing.expectEqual(renderer.present.trace_current, renderer.present.trace_last);
-    try std.testing.expectEqual(@as(?[]const u8, null), renderer.present.capture_path);
-    try std.testing.expect(!renderer.present.capture_armed);
-    try std.testing.expectEqual(@as(u64, 0), renderer.present.capture_frame_seq);
+    try std.testing.expectEqual(@as(?[]const u8, null), renderer.present.capture.path);
+    try std.testing.expect(!renderer.present.capture.armed);
+    try std.testing.expectEqual(@as(u64, 0), renderer.present.capture.frame_seq);
     try std.testing.expectEqual(present_feedback_state.FrameExecutionState.not_attempted, renderer.present.frame_execution_state);
 }
 
@@ -160,9 +160,11 @@ test "finishFrameSubmission begin_failed preserves capture and does not advance 
             .frame_execution_state = .begin_failed,
             .main_composition_target = .backend_surface,
             .trace_current = .{ .frame_seq = 12 },
-            .capture_path = "capture.ppm",
-            .capture_armed = true,
-            .capture_frame_seq = 12,
+            .capture = .{
+                .path = "capture.ppm",
+                .armed = true,
+                .frame_seq = 12,
+            },
         },
     };
 
@@ -176,9 +178,9 @@ test "finishFrameSubmission begin_failed preserves capture and does not advance 
     try std.testing.expect(!submission.family_summary.terminal.presented);
     try std.testing.expect(!submission.family_summary.chrome_band.presented);
     try std.testing.expectEqual(@as(u64, 5), renderer.present.submission_sequence);
-    try std.testing.expectEqual(@as(?[]const u8, "capture.ppm"), renderer.present.capture_path);
-    try std.testing.expect(renderer.present.capture_armed);
-    try std.testing.expectEqual(@as(u64, 12), renderer.present.capture_frame_seq);
+    try std.testing.expectEqual(@as(?[]const u8, "capture.ppm"), renderer.present.capture.path);
+    try std.testing.expect(renderer.present.capture.armed);
+    try std.testing.expectEqual(@as(u64, 12), renderer.present.capture.frame_seq);
     try std.testing.expectEqual(present_feedback_state.MainCompositionTarget.default_target, renderer.present.main_composition_target);
     try std.testing.expectEqual(renderer.present.trace_current, renderer.present.trace_last);
     try std.testing.expectEqual(present_feedback_state.FrameExecutionState.not_attempted, renderer.present.frame_execution_state);
@@ -195,9 +197,11 @@ test "finishFrameSubmission submit_failed clears capture but does not advance se
                 .terminal_presentation_count = 1,
                 .terminal_presented_generation = 55,
             },
-            .capture_path = "capture.ppm",
-            .capture_armed = true,
-            .capture_frame_seq = 21,
+            .capture = .{
+                .path = "capture.ppm",
+                .armed = true,
+                .frame_seq = 21,
+            },
         },
     };
 
@@ -212,9 +216,9 @@ test "finishFrameSubmission submit_failed clears capture but does not advance se
     try std.testing.expect(!submission.family_summary.terminal.presented);
     try std.testing.expect(!submission.family_summary.chrome_band.presented);
     try std.testing.expectEqual(@as(u64, 8), renderer.present.submission_sequence);
-    try std.testing.expectEqual(@as(?[]const u8, null), renderer.present.capture_path);
-    try std.testing.expect(!renderer.present.capture_armed);
-    try std.testing.expectEqual(@as(u64, 0), renderer.present.capture_frame_seq);
+    try std.testing.expectEqual(@as(?[]const u8, null), renderer.present.capture.path);
+    try std.testing.expect(!renderer.present.capture.armed);
+    try std.testing.expectEqual(@as(u64, 0), renderer.present.capture.frame_seq);
     try std.testing.expectEqual(@as(f64, 4.5), renderer.present.last_swap_ms);
     try std.testing.expectEqual(present_feedback_state.MainCompositionTarget.default_target, renderer.present.main_composition_target);
     try std.testing.expectEqual(present_feedback_state.FrameExecutionState.not_attempted, renderer.present.frame_execution_state);

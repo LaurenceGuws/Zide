@@ -289,8 +289,8 @@ pub fn submitFrame(renderer: anytype) present_feedback_state.FrameSubmission {
 /// Debug/capture-only submit work. This is intentionally named separately from
 /// normal presentation so ordinary frame cost is not mistaken for capture cost.
 fn runDebugCaptureIfArmedAfterComposition(renderer: anytype) void {
-    if (!renderer.present.capture_armed) return;
-    const path = renderer.present.capture_path orelse return;
+    if (!renderer.present.capture.armed) return;
+    const path = renderer.present.capture.path orelse return;
     dumpWindowScreenshotPpm(renderer, path) catch |err| {
         app_logger.logger("renderer.present").logf(.warning, "capture failed frame_seq={d} path={s} err={s}", .{
             renderer.present.frame_seq,

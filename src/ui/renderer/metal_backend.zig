@@ -1303,13 +1303,13 @@ pub fn submitFrame(renderer: anytype) present_feedback_state.FrameSubmission {
 /// Debug/capture-only pre-submit readback setup. Keeping this outside the
 /// ordinary replay helpers makes capture cost explicit in the submit path.
 fn prepareDebugFrameReadbackIfArmed(renderer: anytype, context: *BackendContext, frame: *Frame) ?Readback {
-    if (!renderer.present.capture_armed) return null;
+    if (!renderer.present.capture.armed) return null;
     return prepareFrameReadback(context, frame);
 }
 
 fn finishFrameCaptureIfArmed(renderer: anytype, frame: *Frame, capture_readback: ?Readback) void {
-    if (!renderer.present.capture_armed) return;
-    const path = renderer.present.capture_path orelse return;
+    if (!renderer.present.capture.armed) return;
+    const path = renderer.present.capture.path orelse return;
 
     var readback = capture_readback orelse {
         app_logger.logger("renderer.present").logf(.warning, "capture failed frame_seq={d} path={s} err=MetalReadbackUnavailable", .{
