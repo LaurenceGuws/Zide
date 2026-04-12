@@ -764,6 +764,9 @@ Current progress:
     work, not generic swap/submit mechanics
   - debug capture/readback setup is now named separately from ordinary product
     presentation
+  - Metal's ordinary terminal snapshot-cache refresh is named separately from
+    debug capture because it is product presentable state for
+    `direct_snapshot_cache`, not a diagnostic readback
   - behavior is intentionally unchanged; this cut makes the remaining submit
     work auditable before any movement across backend boundaries
 - remaining Android GLES frame-entry pressure is now:

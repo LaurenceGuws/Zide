@@ -1270,7 +1270,7 @@ pub fn submitFrame(renderer: anytype) present_trace_runtime.FrameSubmission {
             capture_readback = prepareDebugFrameReadbackIfArmed(renderer, context, frame);
 
             replayFrameCriticalSurfaceDrawsBeforePresent(renderer, context, frame);
-            _ = captureTerminalSnapshot(context, frame);
+            _ = refreshTerminalSnapshotCacheBeforePresentableReplay(context, frame);
             replayFrameCriticalPresentableDrawsBeforePresent(context, frame);
             encodePresent(frame);
             commitFrame(frame);
@@ -2256,7 +2256,10 @@ pub fn scrollTerminalSnapshotPresentable(
     return true;
 }
 
-pub fn captureTerminalSnapshot(context: *BackendContext, frame: *Frame) bool {
+/// Product snapshot-cache maintenance for Metal's `direct_snapshot_cache`
+/// terminal presentation mode. This is not debug capture; retained
+/// presentables read this texture on later draws.
+pub fn refreshTerminalSnapshotCacheBeforePresentableReplay(context: *BackendContext, frame: *Frame) bool {
     if (builtin.target.os.tag != .macos) return false;
     if (context.drawable_width <= 0 or context.drawable_height <= 0) return false;
     if (!ensureTerminalSnapshotPresentable(context, context.drawable_width, context.drawable_height).available) return false;

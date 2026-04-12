@@ -410,6 +410,8 @@ Status:
       and Metal
     - debug capture/readback work is now separated by name from ordinary
       product presentation
+    - Metal's terminal snapshot-cache refresh is explicitly named as product
+      presentable state, not debug capture
     - behavior is unchanged; the point of this cut is to make the remaining
       submit work auditable before moving ownership
 - first iteration cut landed from that queue:
