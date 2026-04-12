@@ -333,6 +333,10 @@ Status:
       runtime/FFI path
     - Android product-fit only uses full resize/reflow when rows or cols change
     - regression coverage proves stable rows/cols survive metric-only updates
+  - draw-path fallback removed:
+    - surface-available/redraw-needed and paced frame ticks now flush dirty
+      product-fit grid state before frame submission
+    - `drawLiveTerminalWidgetFrame(...)` no longer performs resize/layout work
 - font-scale reference audit result:
   - the remaining pinch-end thickness snap is not an Android gesture problem
   - it is the expected seam between a live-scaled hinted glyph atlas and a
@@ -348,6 +352,13 @@ Status:
     - settled zoom commits can reuse a prepared terminal atlas instead of
       always destroying/recreating the active terminal font
     - the cache now keeps a bounded neighbor set: twelve raster-pixel sizes
+  - presentation invalidation cut:
+    - backend target availability is now tracked separately from cached
+      presentation readiness
+    - target-unavailable invalidation no longer discards cached terminal
+      presentation content
+    - geometry/content/overlay invalidation still marks cached presentation
+      content stale
       below and twelve above the committed terminal size
     - terminal live glyph visual scale remains continuous so glyph geometry
       stays coupled to live cell geometry

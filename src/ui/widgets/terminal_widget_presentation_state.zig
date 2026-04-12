@@ -20,6 +20,7 @@ pub const PresentationState = struct {
     partial_draw_cols_start: std.ArrayList(u16),
     partial_draw_cols_end: std.ArrayList(u16),
     terminal_presentable_ready: bool = false,
+    target_available: bool = false,
     last_render_generation: u64 = 0,
     last_render_clear_generation: u64 = 0,
     last_alt_active: bool = false,
@@ -64,7 +65,12 @@ pub const PresentationState = struct {
     }
 
     pub fn invalidatePresentationCache(self: *PresentationState, flags: InvalidationFlags) void {
-        self.terminal_presentable_ready = false;
+        if (flags.geometry or flags.content or flags.overlay) {
+            self.terminal_presentable_ready = false;
+        }
+        if (flags.availability) {
+            self.target_available = false;
+        }
         self.invalidation_flags.geometry = self.invalidation_flags.geometry or flags.geometry;
         self.invalidation_flags.content = self.invalidation_flags.content or flags.content;
         self.invalidation_flags.overlay = self.invalidation_flags.overlay or flags.overlay;
@@ -111,3 +117,32 @@ pub const PresentationState = struct {
         };
     }
 };
+
+test "availability invalidation does not discard cached presentation content" {
+    var state = PresentationState.init();
+    defer state.deinit(std.testing.allocator);
+
+    state.terminal_presentable_ready = true;
+    state.target_available = true;
+
+    state.invalidatePresentationCache(.{ .availability = true });
+
+    try std.testing.expect(state.terminal_presentable_ready);
+    try std.testing.expect(!state.target_available);
+    try std.testing.expect(state.invalidation_flags.availability);
+}
+
+test "geometry content and overlay invalidation discard cached presentation content" {
+    inline for (.{ PresentationState.InvalidationFlags{ .geometry = true }, .{ .content = true }, .{ .overlay = true } }) |flags| {
+        var state = PresentationState.init();
+        defer state.deinit(std.testing.allocator);
+
+        state.terminal_presentable_ready = true;
+        state.target_available = true;
+
+        state.invalidatePresentationCache(flags);
+
+        try std.testing.expect(!state.terminal_presentable_ready);
+        try std.testing.expect(state.target_available);
+    }
+}

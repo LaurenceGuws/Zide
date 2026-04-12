@@ -190,6 +190,7 @@ pub fn noteSurfaceAvailableFromJava(
     swapNativeWindow(native_window);
     if (native_window == null) return noteSurfaceDestroyed();
     const seq = noteSurfaceAvailable(width, height);
+    prepareProductFitTerminalGridForFrame();
     bridge_state.last_renderer_status = drawSharedRendererSurfaceFrame();
     return seq;
 }
@@ -205,6 +206,7 @@ pub fn noteSurfaceDestroyed() u64 {
 }
 
 pub fn noteSurfaceRedrawNeeded() u64 {
+    prepareProductFitTerminalGridForFrame();
     bridge_state.last_renderer_status = drawSharedRendererSurfaceFrame();
     return nextSequence();
 }
@@ -332,7 +334,7 @@ pub fn tickProductShellFrame() i32 {
     }
 
     if (bridge_state.product_fit_grid_dirty) {
-        updateProductFitTerminalGrid() catch {};
+        prepareProductFitTerminalGridForFrame();
     }
 
     const prep_result_ready = if (bridge_state.renderer) |renderer|
@@ -379,6 +381,17 @@ fn updateProductFitTerminalGrid() !void {
     const widget = ensureTerminalWidget() orelse return;
     try ensureProductFitTerminalGrid(renderer, widget);
     bridge_state.product_fit_grid_dirty = false;
+}
+
+fn updateProductFitTerminalGridIfDirty() void {
+    if (!bridge_state.product_fit_grid_dirty) return;
+    updateProductFitTerminalGrid() catch return;
+}
+
+fn prepareProductFitTerminalGridForFrame() void {
+    if (!bridge_state.product_fit_grid_dirty) return;
+    _ = ensureAndroidGlesRenderer() catch return;
+    updateProductFitTerminalGridIfDirty();
 }
 
 pub fn sharedShellRendererActive() bool {
@@ -444,14 +457,10 @@ fn ensureTerminalWidget() ?*widgets.TerminalWidget {
     return if (bridge_state.terminal_widget) |*widget| widget else null;
 }
 
-/// Current debt: product-fit grid sizing still lives in the draw path.
-/// Keep scrutiny high here; any resize/layout work that is not truly needed
-/// for this frame should be staged out of the render path.
+/// Live terminal draw is not allowed to own product-fit/grid resize decisions.
+/// Callers must flush any required grid commit before entering frame draw, so
+/// this path stays limited to viewport draw and presentation feedback staging.
 fn drawLiveTerminalWidgetFrame(renderer: *renderer_mod.Renderer, widget: *widgets.TerminalWidget) void {
-    if (bridge_state.product_fit_grid_dirty) {
-        ensureProductFitTerminalGrid(renderer, widget) catch {};
-        bridge_state.product_fit_grid_dirty = false;
-    }
     const viewport = bridge_state.render_host.effectiveViewportMetrics();
     const width = @as(f32, @floatFromInt(@max(viewport.logical_width, 1)));
     const height = @as(f32, @floatFromInt(@max(viewport.logical_height, 1)));

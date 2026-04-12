@@ -98,6 +98,10 @@ pub const TerminalWidgetSurfaceState = struct {
         return self.presentation.terminal_presentable_ready;
     }
 
+    pub fn targetAvailable(self: *const TerminalWidgetSurfaceState) bool {
+        return self.presentation.target_available;
+    }
+
     pub fn presentationUpdateDelta(
         self: *const TerminalWidgetSurfaceState,
         terminal_view: view_state.TerminalViewModel,
@@ -155,6 +159,7 @@ pub const TerminalWidgetSurfaceState = struct {
         composing_hash: u64,
     ) void {
         self.presentation.terminal_presentable_ready = true;
+        self.presentation.target_available = true;
         self.presentation.clearInvalidationFlags();
         self.presentation.last_render_generation = terminal_view.generation;
         self.presentation.last_render_clear_generation = terminal_view.clear_generation;
@@ -174,7 +179,8 @@ pub const TerminalWidgetSurfaceState = struct {
 
     pub fn notePresentableAvailability(self: *TerminalWidgetSurfaceState, available: bool) bool {
         if (!available) self.presentation.invalidatePresentationCache(.{ .availability = true });
-        return self.presentation.terminal_presentable_ready and available;
+        self.presentation.target_available = available;
+        return self.presentation.terminal_presentable_ready and self.presentation.target_available;
     }
 
     pub fn ensurePartialDrawPlan(

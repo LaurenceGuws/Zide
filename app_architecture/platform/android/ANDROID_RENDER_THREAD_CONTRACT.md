@@ -482,8 +482,13 @@ Current progress:
     acquisition, and shell restarts mark product-fit dirty explicitly
   - the paced product frame loop now owns the normal product-fit grid commit
     path
-  - the draw path keeps only a first-frame fallback when dirty state still
-    remains at submission time
+- third ownership cut landed:
+  - direct surface-available/redraw-needed callbacks now flush dirty product-fit
+    grid state before frame submission
+  - the first-frame path creates the renderer before flushing dirty grid-fit
+    state
+  - `drawLiveTerminalWidgetFrame(...)` no longer performs resize/layout
+    fallback work
 - font/atlas follow-up:
   - ASCII glyph warmup was rejected after device testing and reference audit:
     the visible defect is the hinted-raster-size swap, not lazy glyph
@@ -618,6 +623,14 @@ Current progress:
     explicitly
   - present-plan construction now reads explicit invalidation flags in addition
     to the existing generation/metric/cursor deltas
+- second cause-aware invalidation cut landed:
+  - backend target availability now has its own tracked state
+  - target-unavailable invalidation no longer discards cached presentation
+    content
+  - geometry/content/overlay invalidation still marks the cached presentation
+    stale
+  - tests lock the distinction so target loss does not masquerade as content
+    or geometry invalidation
 - this is not the full invalidation redesign yet:
   - execution policy and cache-state advancement still share one runtime seam
   - but the state now preserves enough caller intent that the next cut can
