@@ -564,7 +564,16 @@ fn childProcess(slave_fd: posix.fd_t, shell: ?[:0]const u8) !void {
             "printf '\\033]7;file://%s%s\\007' \"${HOSTNAME:-$(hostname 2>/dev/null || printf localhost)}\" \"$PWD\"",
             1,
         );
+        const rcfile_c = std.c.getenv("ZIDE_BASH_RCFILE");
         if (command_c) |command_ptr| {
+            if (rcfile_c) |rcfile_ptr| {
+                const argv = [_:null]?[*:0]const u8{ shell_path.ptr, "--noprofile", "--rcfile", rcfile_ptr, "-ic", command_ptr };
+                env_log.logf(.info, "spawn exec shell={s} rcfile={s} command={s} (bash clean startup)", .{ shell_path, std.mem.sliceTo(rcfile_ptr, 0), command.? });
+                const envp: [*:null]const ?[*:0]const u8 = @ptrCast(@constCast(std.c.environ));
+                const exec_err = posix.execvpeZ(shell_path.ptr, &argv, envp);
+                env_log.logf(.warning, "spawn exec shell failed shell={s} err={s}", .{ shell_path, @errorName(exec_err) });
+                posix.exit(127);
+            }
             const argv = [_:null]?[*:0]const u8{ shell_path.ptr, "--noprofile", "--norc", "-ic", command_ptr };
             env_log.logf(.info, "spawn exec shell={s} command={s} (bash clean startup)", .{ shell_path, command.? });
             const envp: [*:null]const ?[*:0]const u8 = @ptrCast(@constCast(std.c.environ));
@@ -572,6 +581,14 @@ fn childProcess(slave_fd: posix.fd_t, shell: ?[:0]const u8) !void {
             env_log.logf(.warning, "spawn exec shell failed shell={s} err={s}", .{ shell_path, @errorName(exec_err) });
             posix.exit(127);
         } else {
+            if (rcfile_c) |rcfile_ptr| {
+                const argv = [_:null]?[*:0]const u8{ shell_path.ptr, "--noprofile", "--rcfile", rcfile_ptr, "-i" };
+                env_log.logf(.info, "spawn exec shell={s} rcfile={s} (bash clean startup)", .{ shell_path, std.mem.sliceTo(rcfile_ptr, 0) });
+                const envp: [*:null]const ?[*:0]const u8 = @ptrCast(@constCast(std.c.environ));
+                const exec_err = posix.execvpeZ(shell_path.ptr, &argv, envp);
+                env_log.logf(.warning, "spawn exec shell failed shell={s} err={s}", .{ shell_path, @errorName(exec_err) });
+                posix.exit(127);
+            }
             const argv = [_:null]?[*:0]const u8{ shell_path.ptr, "--noprofile", "--norc", "-i" };
             env_log.logf(.info, "spawn exec shell={s} (bash clean startup)", .{shell_path});
             const envp: [*:null]const ?[*:0]const u8 = @ptrCast(@constCast(std.c.environ));
