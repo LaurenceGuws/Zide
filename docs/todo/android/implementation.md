@@ -497,6 +497,8 @@ Status:
     explicit helper instead of staying inline inside `beginFrame(...)`
   - OpenGL steady-state bound-target clear/setup now routes through one
     explicit helper instead of staying inline inside `beginFrame(...)`
+  - backend frame begin/submit mechanics are now narrow enough to park unless
+    a concrete product bug or measurement proves another real offender there
   - terminal presentation execution update planning now happens once in
     `runPresentation(...)` instead of being rebuilt separately inside both
     execution hooks

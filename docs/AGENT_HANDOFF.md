@@ -84,8 +84,12 @@ blocker for Android terminal progress.
   generic cleanup
 - Current renderer-thread front after pinch:
   - keep removing render-thread ownership violations from the audited queue
-  - next priority is not more Android gesture work; it is thinner render-entry
-    submission and stricter resize/grid-fit ownership on the shared path
+  - render-entry, resize/grid-fit, presentation-runtime, and backend
+    frame-mechanics ownership are materially narrowed enough to stop forcing
+    symmetry cleanup
+  - next priority is not more Android gesture work; it is the next direct
+    Android product blocker, with renderer-thread work reopening only for a
+    concrete shared offender
 - Android renderer/backend work should now reopen only if a concrete product
   blocker proves the shared path still lacks required capability
 - Gate #2 (Metal live verification) is paused; do not let it stall Android

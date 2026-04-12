@@ -867,6 +867,12 @@ Current progress:
     explicit helper instead of remaining inline inside `beginFrame(...)`
   - behavior is unchanged; OpenGL frame entry now reads more honestly as
     target-policy selection, then bound-target clear/setup
+- current checkpoint:
+  - backend frame begin/submit mechanics are now narrow enough to stop forcing
+    symmetry cuts without a new concrete offender
+  - reopen this subcategory only if a real product bug or measurement still
+    proves begin/submit owns unjustified policy beyond the now-explicit
+    frame-entry/replay/capture seams
 - second submit-path classification cut landed:
   - Metal ordinary pre-present replay now routes through one explicit helper
     instead of spelling surface replay, snapshot-cache refresh, and presentable
