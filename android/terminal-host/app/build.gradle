@@ -22,9 +22,17 @@ android {
     buildTypes {
         debug {
             minifyEnabled false
+            signingConfig signingConfigs.debug
+        }
+        profile {
+            initWith release
+            debuggable true
+            signingConfig signingConfigs.debug
+            matchingFallbacks = ['release']
         }
         release {
             minifyEnabled false
+            signingConfig signingConfigs.debug
         }
     }
 

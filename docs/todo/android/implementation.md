@@ -256,6 +256,8 @@ Status:
 - package prerequisite is met by `AU-A3`
 - operator/manual entrypoint is now explicit:
   `./ops/android_terminal_host.py userland-nvim-manual-check`
+- performance-testing build entrypoint is now explicit too:
+  `./ops/android_terminal_host.py --variant profile deploy`
 - first gesture-control cut is implemented:
   - `ProductGestureController` owns terminal-surface touch gestures
   - single tap opens IME through one product route
@@ -266,6 +268,12 @@ Status:
   window/input refresh path
 - next honest proof is one tiny real edit flow:
   `nvim test.txt` → insert text → `Esc` → `:wq`
+- current performance lane is explicit:
+  - debug APK is no longer the only deploy path
+  - shared-renderer product mode no longer keeps the 150ms Java transcript poll
+    loop alive by default
+  - next audit target is native renderer/font-scale cost, not more Android
+    gesture guessing
 
 ### `AU-A1` Android Userland Bootstrap
 

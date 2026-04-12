@@ -16,6 +16,8 @@ From repo root:
 
 ```sh
 ops/android_terminal_host.py deploy
+ops/android_terminal_host.py --variant profile deploy
+ops/android_terminal_host.py --variant release deploy
 ```
 
 That will:
@@ -24,6 +26,14 @@ That will:
 2. build the Android debug APK with the Gradle wrapper
 3. install it on the connected device
 4. launch `ZideTerminalActivity`
+
+Variant policy:
+
+- `debug`: default bring-up lane
+- `profile`: local performance-testing build, `ReleaseFast` Zig optimize, Android
+  `profile` build type, debug signing, debuggable true
+- `release`: local release-shape build, `ReleaseFast` Zig optimize, Android
+  `release` build type, debug signing for local install
 
 ## Other Useful Commands
 
@@ -49,6 +59,18 @@ Product gesture ownership:
   size
 - keyboard defaults stay unchanged
 - long press is intentionally unassigned until it has one clear product owner
+
+Current performance-testing entrypoint:
+
+```sh
+ops/android_terminal_host.py --variant profile deploy
+```
+
+That uses:
+
+- Android `profile` build type
+- Zig `ReleaseFast` for the native bridge
+- debug signing for local install
 
 ## Tooling Rules
 

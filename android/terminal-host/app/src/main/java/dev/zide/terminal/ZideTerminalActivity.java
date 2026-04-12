@@ -349,7 +349,7 @@ public final class ZideTerminalActivity extends Activity
         maybeScheduleSurfaceRecreation();
         maybeScheduleSurfaceResize();
         maybeScheduleShellStart();
-        startShellRefresh();
+        reevaluateShellRefreshLoop();
         updateStatus("resumed");
     }
 
@@ -840,8 +840,25 @@ public final class ZideTerminalActivity extends Activity
         });
     }
 
+    private boolean shouldPollTranscriptOnUiThread() {
+        return debugViewEnabled || shellOutputScroll.getVisibility() == View.VISIBLE;
+    }
+
+    private boolean shouldUpdateDebugStatus() {
+        return debugViewEnabled;
+    }
+
+    private void reevaluateShellRefreshLoop() {
+        if (shouldPollTranscriptOnUiThread()) {
+            startShellRefresh();
+        } else {
+            stopShellRefresh();
+        }
+    }
+
     private void refreshShellState(boolean logEvent) {
-        final ShellSessionController.PollResult pollResult = shellSessionController.poll();
+        final boolean includeTranscript = shouldPollTranscriptOnUiThread();
+        final ShellSessionController.PollResult pollResult = shellSessionController.poll(includeTranscript);
         currentBootstrapState = pollResult.bootstrapState;
         if (pollResult.autoStarted) {
             appendEvent("auto.shellStart status=" + shellStartStatusLabel(pollResult.autoStartStatus));
@@ -858,9 +875,14 @@ public final class ZideTerminalActivity extends Activity
             lastAutoStartBlockedState = "";
         }
 
-        shellTranscriptController.applyTranscript(pollResult.transcript);
+        if (includeTranscript) {
+            shellTranscriptController.applyTranscript(pollResult.transcript);
+        }
         updateProductShellVisibility();
-        updateStatus("shell-state", pollResult.bootstrapState);
+        reevaluateShellRefreshLoop();
+        if (shouldUpdateDebugStatus()) {
+            updateStatus("shell-state", pollResult.bootstrapState);
+        }
         if (logEvent) {
             appendEvent("manual.shellRefresh alive=" + pollResult.alive + " status="
                     + shellStartStatusLabel(pollResult.status));
@@ -938,6 +960,7 @@ public final class ZideTerminalActivity extends Activity
             productBootstrapRetryButton.setEnabled(!currentInstallState.isInstalling());
             productBootstrapRetryButton.setText(productBootstrapActionLabel(currentBootstrapState, currentInstallState));
         }
+        reevaluateShellRefreshLoop();
     }
 
     private int productBootstrapTitle(UserlandBootstrapState state, UserlandInstallState installState) {

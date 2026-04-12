@@ -25,7 +25,6 @@ from typing import NoReturn
 
 ROOT = Path(__file__).resolve().parents[1]
 BRIDGE_DIR = ROOT / "android" / "terminal-host"
-APK_PATH = BRIDGE_DIR / "app" / "build" / "outputs" / "apk" / "debug" / "app-debug.apk"
 PACKAGE_NAME = "dev.zide.terminal"
 ACTIVITY_NAME = f"{PACKAGE_NAME}/.ZideTerminalActivity"
 LEGACY_PACKAGE_NAMES = ("dev.zide.androidbootstrap",)
@@ -79,6 +78,33 @@ COMMAND_HELP: dict[str, str] = {
     "userland-apt-install": "Install packages into the staged app-private userland with the current relocation overrides.",
     "help": "Show this help.",
 }
+
+ACTIVE_VARIANT = "debug"
+
+
+def current_variant() -> str:
+    return ACTIVE_VARIANT
+
+
+def gradle_variant_name() -> str:
+    variant = current_variant()
+    if variant not in ("debug", "profile", "release"):
+        die(f"unsupported Android variant: {variant}")
+    return variant
+
+
+def apk_path() -> Path:
+    variant = gradle_variant_name()
+    return BRIDGE_DIR / "app" / "build" / "outputs" / "apk" / variant / f"app-{variant}.apk"
+
+
+def zig_optimize_flag() -> str:
+    variant = current_variant()
+    if variant == "debug":
+        return "Debug"
+    if variant in ("profile", "release"):
+        return "ReleaseFast"
+    die(f"unsupported Android variant for Zig optimize mode: {variant}")
 
 
 @dataclass(frozen=True)
@@ -1374,6 +1400,7 @@ def native() -> None:
             "android-terminal-host-bridge",
             "-Dtarget=aarch64-linux-android",
             "-Dmode=terminal",
+            "-Doptimize=" + zig_optimize_flag(),
             "--sysroot",
             sysroot,
         ]
@@ -1386,7 +1413,9 @@ def native() -> None:
 
 def apk() -> None:
     sdk_root()
-    run([gradle_wrapper(), ":app:assembleDebug"], cwd=BRIDGE_DIR)
+    variant = gradle_variant_name()
+    task = f":app:assemble{variant.capitalize()}"
+    run([gradle_wrapper(), task], cwd=BRIDGE_DIR)
 
 
 def clean() -> None:
@@ -1396,7 +1425,7 @@ def clean() -> None:
 
 def install() -> None:
     adb = adb_path(sdk_root())
-    run([*adb_target_args(adb), "install", "-r", APK_PATH])
+    run([*adb_target_args(adb), "install", "-r", apk_path()])
 
 
 def launch() -> None:
@@ -1448,6 +1477,9 @@ def doctor() -> None:
     print(f"ANDROID_TOOL_SDK_ROOT={sdk}", flush=True)
     print(f"ADB={adb}", flush=True)
     print(f"GRADLEW={wrapper}", flush=True)
+    print(f"ANDROID_VARIANT={current_variant()}", flush=True)
+    print(f"APK_PATH={apk_path()}", flush=True)
+    print(f"ZIG_OPTIMIZE={zig_optimize_flag()}", flush=True)
     print(f"NDK_VERSION={NDK_VERSION}", flush=True)
     print(f"NDK_SDK_ROOT={ndk_sdk}", flush=True)
     print(f"ANDROID_CLANG={android_clang(ndk_sdk)}", flush=True)
@@ -1496,11 +1528,19 @@ def main() -> None:
         help="Force restaging for userland-stage-artifact even if the same artifact is already staged.",
     )
     parser.add_argument(
+        "--variant",
+        default="debug",
+        choices=("debug", "profile", "release"),
+        help="Android app build/deploy variant and matching Zig optimize mode (default: debug).",
+    )
+    parser.add_argument(
         "--output",
         type=Path,
         help="Download destination for userland-fetch-ref.",
     )
     args = parser.parse_args()
+    global ACTIVE_VARIANT
+    ACTIVE_VARIANT = args.variant
 
     commands = {
         "native": native,

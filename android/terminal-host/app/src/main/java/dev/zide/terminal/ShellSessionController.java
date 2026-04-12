@@ -64,7 +64,7 @@ final class ShellSessionController {
         this.nativeLoaded = nativeLoaded;
     }
 
-    PollResult poll() {
+    PollResult poll(boolean includeTranscript) {
         int status = nativeLoaded ? bridge.poll() : 0;
         boolean alive = nativeLoaded && bridge.isAlive();
         boolean autoStarted = false;
@@ -87,7 +87,7 @@ final class ShellSessionController {
         return new PollResult(
                 status,
                 alive,
-                readTextFile(transcriptPath),
+                includeTranscript ? readTextFile(transcriptPath) : "",
                 autoStarted,
                 autoStartStatus,
                 autoStartBlocked,
