@@ -543,12 +543,7 @@ public final class ZideTerminalActivity extends Activity
 
     private void bindViewModeToggle() {
         final Button debugViewModeButton = findViewById(R.id.debug_view_mode_button);
-        debugViewModeButton.setOnClickListener(view -> {
-            debugViewEnabled = false;
-            appendEvent("view.mode debug=false");
-            applyViewMode();
-            updateStatus("product-view");
-        });
+        debugViewModeButton.setOnClickListener(view -> showProductView("view.mode debug=false", "product-view"));
     }
 
     private void bindSidebarControls() {
@@ -565,11 +560,7 @@ public final class ZideTerminalActivity extends Activity
         });
 
         debugButton.setOnClickListener(view -> {
-            debugViewEnabled = true;
-            appendEvent("view.mode debug=true");
-            applyViewMode();
-            refreshDebugShellState(false);
-            updateStatus("debug-view");
+            showDebugView("view.mode debug=true", "debug-view");
             closeSidebar();
         });
 
@@ -611,13 +602,7 @@ public final class ZideTerminalActivity extends Activity
             refreshDebugShellState(true);
             updateStatus("product-bootstrap-retry");
         });
-        productBootstrapDebugButton.setOnClickListener(view -> {
-            debugViewEnabled = true;
-            appendEvent("product.bootstrap debug");
-            applyViewMode();
-            refreshDebugShellState(false);
-            updateStatus("debug-view");
-        });
+        productBootstrapDebugButton.setOnClickListener(view -> showDebugView("product.bootstrap debug", "debug-view"));
     }
 
     private void bindAssistButton(int id, String text, String eventName) {
@@ -802,6 +787,21 @@ public final class ZideTerminalActivity extends Activity
         } else {
             productSurfaceContainer.post(() -> notifyVisibleViewport("product-view"));
         }
+    }
+
+    private void showProductView(String eventName, String statusLabel) {
+        debugViewEnabled = false;
+        appendEvent(eventName);
+        applyViewMode();
+        updateStatus(statusLabel);
+    }
+
+    private void showDebugView(String eventName, String statusLabel) {
+        debugViewEnabled = true;
+        appendEvent(eventName);
+        applyViewMode();
+        refreshDebugShellState(false);
+        updateStatus(statusLabel);
     }
 
     private void openIme() {
@@ -1118,11 +1118,7 @@ public final class ZideTerminalActivity extends Activity
 
     private void runPackageDoctor() {
         packageStatusText.setText("Running zide-pm...");
-        appendEvent("packages.doctor begin");
-        debugViewEnabled = true;
-        applyViewMode();
-        refreshDebugShellState(false);
-        updateStatus("packages-doctor");
+        showDebugView("packages.doctor begin", "packages-doctor");
         new Thread(() -> {
             try {
                 final String doctor = runUserlandCommand("zide-pm-doctor", "doctor", "--prefix", UserlandPolicy.prefixPath(this));

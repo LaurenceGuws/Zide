@@ -1100,6 +1100,11 @@ Current progress:
     blocker visibility, product frame-loop reevaluation, and status upkeep
   - install failure handling no longer fans that ownership out manually across
     multiple UI calls
+- ninth host ownership cut landed:
+  - product/debug view-mode transitions now route through explicit activity
+    owner methods instead of repeated open-coded toggle sequences
+  - package-doctor/debug entry points now reuse the same view-mode ownership
+    seam
 - that does not finish this category:
   - `ZideTerminalActivity` still owns too much product/debug orchestration
 

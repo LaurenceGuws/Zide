@@ -474,6 +474,8 @@ Status:
     refresh operation
   - install-state transitions now route through one explicit activity seam for
     blocker visibility, product frame-loop reevaluation, and status upkeep
+  - product/debug view-mode transitions now route through explicit owner
+    methods instead of repeated open-coded toggle sequences
   - this cut is aimed directly at the product scroll snap-back / host-thickness
     issue, not at renderer internals yet
   - validation:
