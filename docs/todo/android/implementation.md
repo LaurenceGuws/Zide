@@ -506,6 +506,9 @@ Status:
   - successful presentation paths now advance cached presentation state
     through one explicit helper instead of calling
     `notePresentationUpdated(...)` directly at multiple execution sites
+  - fast present reuse now returns explicit reuse-outcome state instead of
+    hard-coding a synthetic reused result beside its own
+    availability/cache-advance path
   - the remaining lifecycle-critical direct-submit path now routes through one
     explicit Android bridge seam instead of hand-rolling the same
     flush-and-submit sequence at both surface-available and redraw-needed call

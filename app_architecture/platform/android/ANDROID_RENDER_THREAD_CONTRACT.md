@@ -683,6 +683,13 @@ Current progress:
     directly at multiple execution sites
   - behavior is unchanged; this starts separating cache-state advancement from
     the draw/refresh execution bodies themselves
+- sixth execution-seam cut landed:
+  - fast reuse no longer hard-codes a synthetic `.reused/advanced/available`
+    present result beside its own availability/cache path
+  - reuse now returns explicit reuse-outcome state and shares the same result
+    assembly pattern as refresh/direct execution paths
+  - behavior is unchanged; this narrows the remaining mixed ownership around
+    execution outcome vs availability/cache policy
 
 Do not do:
 

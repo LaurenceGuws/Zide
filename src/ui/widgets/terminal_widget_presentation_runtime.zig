@@ -143,6 +143,13 @@ pub const DirectPresentOutcomeState = struct {
     target_available: bool = true,
 };
 
+pub const ReusePresentOutcomeState = struct {
+    reused: bool = false,
+    outcome: TerminalPresentOutcome = .skipped,
+    cache_state_advanced: bool = false,
+    target_available: bool = false,
+};
+
 fn presentResultFromOutcomeState(
     outcome: TerminalPresentOutcome,
     cache_state_advanced: bool,
@@ -170,6 +177,18 @@ fn presentResultFromRefreshOutcomeState(
     result.followup.required = outcome_state.followup_required;
     result.followup.reason = outcome_state.followup_reason;
     return result;
+}
+
+fn presentResultFromReuseOutcomeState(
+    outcome_state: ReusePresentOutcomeState,
+    timing: renderer_presentable_host.TerminalPresentTiming,
+) TerminalPresentResult {
+    return presentResultFromOutcomeState(
+        outcome_state.outcome,
+        outcome_state.cache_state_advanced,
+        outcome_state.target_available,
+        timing,
+    );
 }
 
 fn advancePresentationCache(
@@ -216,7 +235,7 @@ pub fn runFastPresentIfAvailable(
     note_present_ctx: anytype,
     note_present: anytype,
 ) TerminalPresentResult {
-    if (!tryFastPresentExisting(
+    const outcome_state = tryFastPresentExisting(
         surface_state,
         renderer,
         plan,
@@ -236,8 +255,9 @@ pub fn runFastPresentIfAvailable(
         view_geometry,
         note_present_ctx,
         note_present,
-    )) return .{};
-    return presentResultFromOutcomeState(.reused, true, true, .{});
+    );
+    if (!outcome_state.reused) return .{};
+    return presentResultFromReuseOutcomeState(outcome_state, .{});
 }
 
 pub const SurfacePresentResult = struct {
@@ -1610,14 +1630,18 @@ pub fn tryFastPresentExisting(
     view_geometry: TerminalViewGeometry,
     note_present_ctx: anytype,
     note_present: anytype,
-) bool {
-    if (plan.present_intent != .reuse) return false;
+) ReusePresentOutcomeState {
+    if (plan.present_intent != .reuse) return .{};
     const presentable_ready = surface_state.notePresentableAvailability(
         renderer_presentable_host.terminalPresentableInfo(renderer) != null,
     );
     if (!(view_cells_len > 0 and presentable_ready and
         (terminal_view.sync_updates_active or
-            renderer_presentable_host.terminalSupportsReuseWithoutSyncUpdates(renderer)))) return false;
+            renderer_presentable_host.terminalSupportsReuseWithoutSyncUpdates(renderer)))) {
+        return .{
+            .target_available = presentable_ready,
+        };
+    }
 
     renderer_presentable_host.drawTerminalPresentableBackdrop(renderer, x, y, width, height, bg_color.toRgba());
     presentDraw(
@@ -1642,7 +1666,12 @@ pub fn tryFastPresentExisting(
         composing_active,
         composing_hash,
     );
-    return true;
+    return .{
+        .reused = true,
+        .outcome = .reused,
+        .cache_state_advanced = true,
+        .target_available = true,
+    };
 }
 
 pub fn directPresent(
