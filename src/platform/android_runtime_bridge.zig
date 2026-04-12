@@ -190,7 +190,7 @@ pub fn noteSurfaceAvailableFromJava(
     swapNativeWindow(native_window);
     if (native_window == null) return noteSurfaceDestroyed();
     const seq = noteSurfaceAvailable(width, height);
-    prepareProductFitTerminalGridForFrame();
+    flushDirtyProductFitGridBeforeFrame();
     bridge_state.last_renderer_status = drawSharedRendererSurfaceFrame();
     return seq;
 }
@@ -206,7 +206,7 @@ pub fn noteSurfaceDestroyed() u64 {
 }
 
 pub fn noteSurfaceRedrawNeeded() u64 {
-    prepareProductFitTerminalGridForFrame();
+    flushDirtyProductFitGridBeforeFrame();
     bridge_state.last_renderer_status = drawSharedRendererSurfaceFrame();
     return nextSequence();
 }
@@ -334,7 +334,7 @@ pub fn tickProductShellFrame() i32 {
     }
 
     if (bridge_state.product_fit_grid_dirty) {
-        prepareProductFitTerminalGridForFrame();
+        flushDirtyProductFitGridBeforeFrame();
     }
 
     const prep_result_ready = if (bridge_state.renderer) |renderer|
@@ -388,7 +388,10 @@ fn updateProductFitTerminalGridIfDirty() void {
     updateProductFitTerminalGrid() catch return;
 }
 
-fn prepareProductFitTerminalGridForFrame() void {
+/// Android product-fit ownership seam: if product-fit state is dirty, create
+/// the renderer if needed and flush the pending grid commit before any frame
+/// draw/submission path enters live widget rendering.
+fn flushDirtyProductFitGridBeforeFrame() void {
     if (!bridge_state.product_fit_grid_dirty) return;
     _ = ensureAndroidGlesRenderer() catch return;
     updateProductFitTerminalGridIfDirty();

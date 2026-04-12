@@ -489,6 +489,11 @@ Current progress:
     state
   - `drawLiveTerminalWidgetFrame(...)` no longer performs resize/layout
     fallback work
+- fourth ownership cut landed:
+  - Android bridge now names the pre-draw seam as “flush dirty product-fit
+    grid before frame” instead of a vague prepare helper
+  - surface-available, redraw-needed, and paced product frames all now read as
+    the same ownership rule at the call site
 - font/atlas follow-up:
   - ASCII glyph warmup was rejected after device testing and reference audit:
     the visible defect is the hinted-raster-size swap, not lazy glyph

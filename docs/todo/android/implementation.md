@@ -337,6 +337,8 @@ Status:
     - surface-available/redraw-needed and paced frame ticks now flush dirty
       product-fit grid state before frame submission
     - `drawLiveTerminalWidgetFrame(...)` no longer performs resize/layout work
+    - Android bridge now names that pre-draw seam explicitly as flush-dirty
+      product-fit grid before frame
 - font-scale reference audit result:
   - the remaining pinch-end thickness snap is not an Android gesture problem
   - it is the expected seam between a live-scaled hinted glyph atlas and a
