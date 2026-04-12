@@ -462,24 +462,27 @@ fn setOwnedFontPath(renderer: anytype, owned_slot: *?[]u8, path_slot: *[*:0]cons
 
 pub fn initFonts(renderer: anytype) !void {
     const log = app_logger.logger("renderer.font");
+    const log_enabled = log.enabled_file or log.enabled_console;
     const render_scale = if (renderer.scale.render_scale > 0.0) renderer.scale.render_scale else 1.0;
 
-    log.logf(
-        .info,
-        "initFonts app_path={s} app_base={d:.2} editor_path={s} editor_base={d:.2} terminal_path={s} terminal_base={d:.2} render_scale={d:.3} hinting={s} autohint={d} lcd={d}",
-        .{
-            renderer.font_config.app_font_path,
-            renderer.font_size,
-            renderer.font_config.editor_font_path,
-            renderer.editor_font_size,
-            renderer.font_config.terminal_font_path,
-            renderer.terminal_font_size,
-            render_scale,
-            @tagName(renderer.font_config.font_rendering.hinting),
-            @intFromBool(renderer.font_config.font_rendering.autohint),
-            @intFromBool(renderer.font_config.font_rendering.lcd),
-        },
-    );
+    if (log_enabled) {
+        log.logf(
+            .info,
+            "initFonts app_path={s} app_base={d:.2} editor_path={s} editor_base={d:.2} terminal_path={s} terminal_base={d:.2} render_scale={d:.3} hinting={s} autohint={d} lcd={d}",
+            .{
+                renderer.font_config.app_font_path,
+                renderer.font_size,
+                renderer.font_config.editor_font_path,
+                renderer.editor_font_size,
+                renderer.font_config.terminal_font_path,
+                renderer.terminal_font_size,
+                render_scale,
+                @tagName(renderer.font_config.font_rendering.hinting),
+                @intFromBool(renderer.font_config.font_rendering.autohint),
+                @intFromBool(renderer.font_config.font_rendering.lcd),
+            },
+        );
+    }
 
     var app_init = try initFont(renderer, renderer.font_config.app_font_path, renderer.font_size);
     errdefer app_init.font.deinit();
@@ -511,22 +514,24 @@ pub fn initFonts(renderer: anytype) !void {
     renderer.icon_char_width = renderer.icon_metrics.cell_width;
     renderer.icon_char_height = renderer.icon_metrics.cell_height;
 
-    log.logf(
-        .info,
-        "metrics app={d:.2} app_cell={d:.2}x{d:.2} editor={d:.2} editor_cell={d:.2}x{d:.2} terminal={d:.2} terminal_cell={d:.2}x{d:.2} icon={d:.2}",
-        .{
-            renderer.font_size,
-            renderer.app_metrics.cell_width,
-            renderer.app_metrics.cell_height,
-            renderer.editor_font_size,
-            renderer.editor_metrics.cell_width,
-            renderer.editor_metrics.cell_height,
-            renderer.terminal_font_size,
-            renderer.terminal_metrics.cell_width,
-            renderer.terminal_metrics.cell_height,
-            renderer.icon_font_size,
-        },
-    );
+    if (log_enabled) {
+        log.logf(
+            .info,
+            "metrics app={d:.2} app_cell={d:.2}x{d:.2} editor={d:.2} editor_cell={d:.2}x{d:.2} terminal={d:.2} terminal_cell={d:.2}x{d:.2} icon={d:.2}",
+            .{
+                renderer.font_size,
+                renderer.app_metrics.cell_width,
+                renderer.app_metrics.cell_height,
+                renderer.editor_font_size,
+                renderer.editor_metrics.cell_width,
+                renderer.editor_metrics.cell_height,
+                renderer.terminal_font_size,
+                renderer.terminal_metrics.cell_width,
+                renderer.terminal_metrics.cell_height,
+                renderer.icon_font_size,
+            },
+        );
+    }
 }
 
 pub fn loadFont(renderer: anytype, path: [*:0]const u8, size: f32) void {

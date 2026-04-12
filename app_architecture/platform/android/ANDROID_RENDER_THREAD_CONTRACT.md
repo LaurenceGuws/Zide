@@ -929,6 +929,10 @@ Current progress:
   - key-path and hover info logs now check tag enablement before formatting
   - disabled input diagnostics no longer add string-formatting work to ordinary
     product input frames
+- remaining renderer-font info telemetry gated:
+  - font init metrics and glyph-prep worker lifecycle logs now check tag
+    enablement before formatting
+  - exceptional warning logs remain available on failure paths
 
 ### 7. Remaining Android host/UI-thread contamination
 

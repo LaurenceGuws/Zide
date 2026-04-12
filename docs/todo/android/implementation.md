@@ -440,6 +440,8 @@ Status:
       gesture-pressure diagnostics
     - terminal key-path and hover info logs now check tag enablement before
       formatting ordinary product input-frame diagnostics
+    - remaining renderer-font info telemetry for font init metrics and
+      glyph-prep worker lifecycle now checks tag enablement before formatting
 - first iteration cut landed from that queue:
   - narrowed Android host/UI-thread contamination around stale transcript-era
     ownership
