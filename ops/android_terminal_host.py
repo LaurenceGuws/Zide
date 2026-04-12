@@ -41,6 +41,7 @@ USERLAND_RELEASE_DESCRIPTOR = (
 TERMUX_MAIN_BASE_URL = "https://packages.termux.dev/apt/termux-main/"
 TERMUX_MAIN_PACKAGES_URL = TERMUX_MAIN_BASE_URL + "dists/stable/main/binary-aarch64/Packages"
 REMOTE_APP_FILES_DIR = f"/data/data/{PACKAGE_NAME}/files"
+REMOTE_APP_PACKAGE_DIR = f"/data/user/0/{PACKAGE_NAME}"
 REMOTE_USERLAND_PREFIX = f"{REMOTE_APP_FILES_DIR}/usr"
 REMOTE_USERLAND_HOME = f"{REMOTE_APP_FILES_DIR}/home"
 REMOTE_USERLAND_TMP = f"/data/user/0/{PACKAGE_NAME}/tmp"
@@ -137,6 +138,7 @@ class UserlandArtifact:
     archive_root: str
     provider: str
     hardcoded_termux_policy: str
+    runtime_support_links: tuple[tuple[str, str], ...]
 
 
 @dataclass(frozen=True)
@@ -1043,6 +1045,7 @@ def android_prefix_artifact_from_manifest(manifest: dict[str, object]) -> Userla
     archive_root = metadata.get("archive_root")
     provider = metadata.get("provider")
     hardcoded_policy = metadata.get("hardcoded_termux_policy")
+    runtime_support_links = parse_runtime_support_links(metadata.get("runtime_support_links"))
     if package_name != PACKAGE_NAME:
         die(f"userland artifact package_name mismatch: {package_name!r}")
     if prefix != REMOTE_USERLAND_PREFIX:
@@ -1073,7 +1076,39 @@ def android_prefix_artifact_from_manifest(manifest: dict[str, object]) -> Userla
         archive_root=archive_root,
         provider=provider,
         hardcoded_termux_policy=hardcoded_policy,
+        runtime_support_links=runtime_support_links,
     )
+
+
+def parse_runtime_support_links(raw: object) -> tuple[tuple[str, str], ...]:
+    if raw is None or raw == "":
+        return ()
+    if not isinstance(raw, str):
+        die("runtime_support_links metadata must be a string")
+    links: list[tuple[str, str]] = []
+    for entry in raw.split(","):
+        if not entry:
+            continue
+        source, separator, target = entry.partition("=>")
+        if separator != "=>":
+            die(f"invalid runtime support link entry: {entry!r}")
+        if not source.startswith(REMOTE_APP_PACKAGE_DIR + "/") or not target.startswith(REMOTE_APP_PACKAGE_DIR + "/"):
+            die(f"runtime support link escapes app package dir: {entry!r}")
+        links.append((source, target))
+    return tuple(links)
+
+
+def runtime_support_link_command(artifact: UserlandArtifact) -> str:
+    commands: list[str] = []
+    for source, target in artifact.runtime_support_links:
+        commands.append(
+            "mkdir -p {parent} && rm -f {source} && ln -s {target} {source}".format(
+                parent=shlex.quote(str(Path(source).parent)),
+                source=shlex.quote(source),
+                target=shlex.quote(target),
+            )
+        )
+    return " && ".join(commands)
 
 
 def remote_userland_state(adb: Path) -> InstalledUserlandState:
@@ -1202,7 +1237,7 @@ def userland_stage_artifact(manifest_source: str, *, force: bool = False) -> Non
         artifact_root = extract_userland_artifact_archive(archive, work_dir)
         stage_tar = work_dir / "userland-artifact-stage.tar"
         build_userland_artifact_stage_tar(artifact_root, artifact, resolved_manifest_source, stage_tar)
-        install_userland_stage_tar(adb, stage_tar)
+        install_userland_stage_tar(adb, stage_tar, artifact)
 
     print("artifact_stage=restaged", flush=True)
     print(f"staged_prefix={REMOTE_USERLAND_PREFIX}", flush=True)
@@ -1224,7 +1259,7 @@ def stage_prepared_userland(
 
     stage_tar = work_dir / "userland-stage.tar"
     build_userland_stage_tar(prefix_root, inspection, stage_tar)
-    install_userland_stage_tar(adb, stage_tar)
+    install_userland_stage_tar(adb, stage_tar, None)
     print(f"staged_prefix={REMOTE_USERLAND_PREFIX}", flush=True)
     print(f"text_prefix_rewrites={text_rewrites}", flush=True)
     print(f"symlink_prefix_rewrites={symlink_rewrites}", flush=True)
@@ -1238,7 +1273,7 @@ def stage_prepared_userland(
         )
 
 
-def install_userland_stage_tar(adb: Path, stage_tar: Path) -> None:
+def install_userland_stage_tar(adb: Path, stage_tar: Path, artifact: UserlandArtifact | None) -> None:
     run([*adb_target_args(adb), "push", stage_tar, REMOTE_STAGE_TAR])
     run_remote_shell(
         adb,
@@ -1254,6 +1289,8 @@ def install_userland_stage_tar(adb: Path, stage_tar: Path) -> None:
                     "ln -s {prefix}/etc/apt/apt.conf.d {apt_conf_parts} && "
                     "ln -s {prefix}/etc/dpkg {dpkg_etc} && "
                     "ln -s {prefix}/var/lib/dpkg {dpkg_db} && "
+                    "{runtime_links}"
+                    "{runtime_link_separator}"
                     "chmod 700 {home} {tmp}"
                 ).format(
                     prefix=REMOTE_USERLAND_PREFIX,
@@ -1264,6 +1301,8 @@ def install_userland_stage_tar(adb: Path, stage_tar: Path) -> None:
                     apt_conf_parts=REMOTE_USERLAND_APT_CONF_PARTS,
                     dpkg_etc=REMOTE_USERLAND_DPKG_ETC,
                     dpkg_db=REMOTE_USERLAND_DPKG_DB,
+                    runtime_links=runtime_support_link_command(artifact) if artifact else "",
+                    runtime_link_separator=" && " if artifact and artifact.runtime_support_links else "",
                     remote=REMOTE_STAGE_TAR,
                 ),
             ]

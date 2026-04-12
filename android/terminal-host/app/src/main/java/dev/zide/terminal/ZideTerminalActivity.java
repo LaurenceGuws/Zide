@@ -1107,8 +1107,10 @@ public final class ZideTerminalActivity extends Activity
                     currentInstallState = UserlandInstallState.idle();
                     currentBootstrapState = result.bootstrapState;
                     appendEvent("userland.install success " + result.detail);
+                    final int restartStatus = nativeLoaded ? nativeRestartShellSessionBridge() : 0;
+                    appendEvent("userland.install shellRestart status=" + shellStartStatusLabel(restartStatus));
                     refreshShellState(true);
-                    updateStatus("userland-install-succeeded", result.bootstrapState);
+                    updateStatus("userland-install-succeeded-restarted", result.bootstrapState);
                 });
             } catch (IOException err) {
                 handler.post(() -> {

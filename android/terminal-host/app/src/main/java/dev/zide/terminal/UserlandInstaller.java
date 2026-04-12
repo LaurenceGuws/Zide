@@ -124,6 +124,7 @@ final class UserlandInstaller {
 
         final String resolvedUrl = resolveManifestUrl(release.manifestUrl, url);
         final String hardcodedPolicy = metadata.optString("hardcoded_termux_policy", "unknown");
+        final String runtimeSupportLinks = metadata.optString("runtime_support_links", "");
         return new UserlandArtifact(
                 release.manifestUrl,
                 name,
@@ -133,7 +134,8 @@ final class UserlandInstaller {
                 size,
                 archiveRoot,
                 provider,
-                hardcodedPolicy);
+                hardcodedPolicy,
+                runtimeSupportLinks);
     }
 
     private static File fetchArtifact(Context context, UserlandArtifact artifact) throws IOException {
@@ -187,6 +189,7 @@ final class UserlandInstaller {
                 " " + shellQuote(dpkgEtcLink.getAbsolutePath()) +
                 " && ln -s " + shellQuote(new File(prefixDir, "var/lib/dpkg").getAbsolutePath()) +
                 " " + shellQuote(dpkgDbLink.getAbsolutePath()) +
+                runtimeSupportLinkCommand(packageRoot, artifact.runtimeSupportLinks) +
                 " && chmod 700 " + shellQuote(homeDir.getAbsolutePath()) +
                 " " + shellQuote(tmpDir.getAbsolutePath());
         runShell(command);
@@ -347,6 +350,43 @@ final class UserlandInstaller {
         if (exitCode != 0) {
             throw new IOException(output.isEmpty() ? "userland install shell command failed" : output);
         }
+    }
+
+    private static String runtimeSupportLinkCommand(File packageRoot, String rawLinks) throws IOException {
+        if (rawLinks == null || rawLinks.isEmpty()) {
+            return "";
+        }
+        final String packagePath = packageRoot.getAbsolutePath();
+        final StringBuilder command = new StringBuilder();
+        final String[] entries = rawLinks.split(",");
+        for (String entry : entries) {
+            if (entry.isEmpty()) {
+                continue;
+            }
+            final int separator = entry.indexOf("=>");
+            if (separator <= 0 || separator + 2 >= entry.length()) {
+                throw new IOException("invalid runtime support link: " + entry);
+            }
+            final String source = entry.substring(0, separator);
+            final String target = entry.substring(separator + 2);
+            if (!source.startsWith(packagePath + "/") || !target.startsWith(packagePath + "/")) {
+                throw new IOException("runtime support link escapes package root");
+            }
+            final File sourceFile = new File(source);
+            final File sourceParent = sourceFile.getParentFile();
+            if (sourceParent == null) {
+                throw new IOException("runtime support link has no parent");
+            }
+            command.append(" && mkdir -p ")
+                    .append(shellQuote(sourceParent.getAbsolutePath()))
+                    .append(" && rm -f ")
+                    .append(shellQuote(source))
+                    .append(" && ln -s ")
+                    .append(shellQuote(target))
+                    .append(" ")
+                    .append(shellQuote(source));
+        }
+        return command.toString();
     }
 
     private static void writeFile(File file, String text) throws IOException {

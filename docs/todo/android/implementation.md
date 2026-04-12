@@ -166,7 +166,7 @@ Current checkpoint:
 - the first curated Android dev snapshot prerelease from
   `../zide-mobile-pm` now exists:
   - manifest:
-    `https://github.com/LaurenceGuws/zide-mobile-pm/releases/download/android-dev-2026.04.12.023407/android-dev-prefix.release.manifest.json`
+    `https://github.com/LaurenceGuws/zide-mobile-pm/releases/download/android-dev-2026.04.12.193048/android-dev-prefix.release.manifest.json`
   - Zide command:
     `./ops/android_terminal_host.py userland-stage-artifact`
   - the command verifies package/prefix/provider metadata, downloads the
@@ -187,6 +187,10 @@ Current checkpoint:
     it fetches the published manifest/archive contract, verifies size/SHA-256,
     extracts the prefix into app-private storage, and rewrites the local
     userland stamp
+  - `userland-stage-artifact` and the in-app installer now consume
+    `runtime_support_links` from the artifact manifest; shortened app-owned
+    paths produced by binary relocation are materialized as symlinks instead
+    of hardcoded in Zig or Java
   - blocker/debug surfaces now also carry explicit install state:
     `idle`, `installing`, `failed`
   - Note10 validation proves the artifact-staged prefix:
@@ -198,7 +202,7 @@ Current checkpoint:
     - `htop` 3.5.0
     - `gotop` 4.2.0
   - the current published snapshot is now
-    `android-dev-2026.04.12.023407`
+    `android-dev-2026.04.12.193048`
   - the snapshot contract is now owned in one checked-in descriptor:
     `android/terminal-host/app/src/main/assets/userland_release.json`
   - terminal-host in-app `Update` now installs that snapshot from the
@@ -218,11 +222,14 @@ Current checkpoint:
   is proven
 - `../zide-mobile-pm` is the mobile package authority boundary;
   Zide-side Termux package staging remains temporary dev-provider tooling
+- Bash/htop permission issues caused by compiled Termux paths are now treated
+  as `../zide-mobile-pm` artifact relocation output; Zide only consumes the
+  resulting runtime-support-link metadata
 
 Status:
 
 - `AU-A3` is met for the first curated terminal-dev artifact
-- device state reports `sha256-b641f8c69638` installed and launch-ready
+- device state reports `sha256-fb7b4fd4cd40` installed and launch-ready
 - device smoke proves Bash, Git, ripgrep, Neovim headless, `htop`, and `gotop`
   from the staged prefix
 - `./ops/android_terminal_host.py userland-smoke-baseline` now repeats that

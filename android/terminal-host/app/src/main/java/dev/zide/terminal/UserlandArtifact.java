@@ -10,6 +10,7 @@ final class UserlandArtifact {
     final String archiveRoot;
     final String provider;
     final String hardcodedTermuxPolicy;
+    final String runtimeSupportLinks;
 
     UserlandArtifact(
             String manifestSource,
@@ -20,7 +21,8 @@ final class UserlandArtifact {
             long size,
             String archiveRoot,
             String provider,
-            String hardcodedTermuxPolicy) {
+            String hardcodedTermuxPolicy,
+            String runtimeSupportLinks) {
         this.manifestSource = manifestSource;
         this.name = name;
         this.version = version;
@@ -30,5 +32,6 @@ final class UserlandArtifact {
         this.archiveRoot = archiveRoot;
         this.provider = provider;
         this.hardcodedTermuxPolicy = hardcodedTermuxPolicy;
+        this.runtimeSupportLinks = runtimeSupportLinks;
     }
 }

@@ -210,6 +210,9 @@ That now means:
 - `termux-main` is the first supported Android provider
 - `zide` consumes explicit manifests, checksums, archive URLs, version stamps,
   and provider provenance
+- `zide` may materialize `runtime_support_links` declared by the artifact
+  manifest; those links are produced by `../zide-mobile-pm`, not inferred from
+  provider package internals
 - initial package set stays intentionally small and product-driven
 - future Zide-owned Android providers may be added or become the default
   without changing the `zide-pm` surface
@@ -277,7 +280,7 @@ Current checkpoint:
   `dev.zide.terminal`, and stages the merged prefix
 - `./ops/android_terminal_host.py userland-stage-artifact` stages the published
   Android dev prefix artifact by manifest:
-  `https://github.com/LaurenceGuws/zide-mobile-pm/releases/download/android-dev-2026.04.12.023407/android-dev-prefix.release.manifest.json`
+  `https://github.com/LaurenceGuws/zide-mobile-pm/releases/download/android-dev-2026.04.12.193048/android-dev-prefix.release.manifest.json`
 - artifact staging verifies package name, prefix, archive root, provider
   metadata, size, and SHA-256 before pushing the prefix to the device
 - Note10 validation confirms the artifact-staged prefix runs:
@@ -289,7 +292,7 @@ Current checkpoint:
   - `htop` 3.5.0
   - `gotop` 4.2.0
 - the current published Android dev snapshot is now
-  `android-dev-2026.04.12.023407`
+  `android-dev-2026.04.12.193048`
 - terminal-host product flow can now press `Install` / `Update` and fetch that
   published snapshot without going through the developer ops command
 - device validation now also proves the staged prefix contains and runs
@@ -458,8 +461,8 @@ Initial stop marker:
 Current result:
 
 - met for the first curated terminal-dev artifact:
-  `android-dev-2026.04.12.023407`
-- staged device state reports `sha256-b641f8c69638` as installed and
+  `android-dev-2026.04.12.193048`
+- staged device state reports `sha256-fb7b4fd4cd40` as installed and
   launch-ready
 - device smoke proves:
   - Bash 5.3.9

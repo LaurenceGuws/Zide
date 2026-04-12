@@ -126,7 +126,7 @@ blocker for Android terminal progress.
     - latest published dev snapshot now contains and device-proves Bash 5.3.9,
       Neovim 0.12.1, Git 2.53.0, ripgrep 15.1.0-1, `htop` 3.5.0, and `gotop`
       4.2.0
-    - the current published snapshot is `android-dev-2026.04.12.023407`
+    - the current published snapshot is `android-dev-2026.04.12.193048`
     - `./ops/android_terminal_host.py userland-smoke-baseline` repeats the
       staged-device smoke for Bash, Git, ripgrep, Neovim, htop/gotop, and
       `zide-pm`
