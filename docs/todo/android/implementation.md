@@ -493,6 +493,8 @@ Status:
     inside `submitFrame(...)`
   - Android GLES steady-state target setup plus clear now routes through one
     explicit helper instead of staying inline inside `beginFrame(...)`
+  - Metal steady-state setup after frame acquisition now routes through one
+    explicit helper instead of staying inline inside `beginFrame(...)`
   - terminal presentation execution update planning now happens once in
     `runPresentation(...)` instead of being rebuilt separately inside both
     execution hooks

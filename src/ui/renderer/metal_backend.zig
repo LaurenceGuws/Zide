@@ -1236,28 +1236,35 @@ pub fn beginFrame(renderer: anytype) void {
             renderer_frame_host.noteFrameBeginFailed(renderer);
             return;
         };
-        const bg = renderer.theme.background.toRgba();
-        const cleared = clearFrame(&frame, .{
-            @as(f32, @floatFromInt(bg.r)) / 255.0,
-            @as(f32, @floatFromInt(bg.g)) / 255.0,
-            @as(f32, @floatFromInt(bg.b)) / 255.0,
-            @as(f32, @floatFromInt(bg.a)) / 255.0,
-        });
-        if (!cleared) {
-            abandonFrame(&frame);
-            renderer.present.main_composition_target = .default_target;
-            clearCurrentFrame(renderer);
-            renderer_frame_host.noteFrameAbandoned(renderer);
-            return;
-        }
-        renderer.present.main_composition_target = .backend_surface;
-        storeCurrentFrame(renderer, frame);
-        renderer_frame_host.noteFrameReady(renderer);
+        prepareSteadyStateFrame(renderer, &frame);
     } else {
         renderer.present.main_composition_target = .default_target;
         clearCurrentFrame(renderer);
         renderer_frame_host.noteFrameBeginFailed(renderer);
     }
+}
+
+/// Metal steady-state frame-entry setup after backend-context resize and frame
+/// acquisition. This keeps beginFrame readable as resize, acquire, setup/clear,
+/// then ready.
+fn prepareSteadyStateFrame(renderer: anytype, frame: *Frame) void {
+    const bg = renderer.theme.background.toRgba();
+    const cleared = clearFrame(frame, .{
+        @as(f32, @floatFromInt(bg.r)) / 255.0,
+        @as(f32, @floatFromInt(bg.g)) / 255.0,
+        @as(f32, @floatFromInt(bg.b)) / 255.0,
+        @as(f32, @floatFromInt(bg.a)) / 255.0,
+    });
+    if (!cleared) {
+        abandonFrame(frame);
+        renderer.present.main_composition_target = .default_target;
+        clearCurrentFrame(renderer);
+        renderer_frame_host.noteFrameAbandoned(renderer);
+        return;
+    }
+    renderer.present.main_composition_target = .backend_surface;
+    storeCurrentFrame(renderer, frame.*);
+    renderer_frame_host.noteFrameReady(renderer);
 }
 
 pub fn submitFrame(renderer: anytype) present_feedback_state.FrameSubmission {

@@ -857,6 +857,11 @@ Current progress:
     explicit helper instead of remaining inline inside `beginFrame(...)`
   - behavior is unchanged; this keeps frame entry readable as acquire,
     readiness check, setup/clear, then ready
+- fifth frame-entry cut landed:
+  - Metal steady-state setup after frame acquisition now routes through one
+    explicit helper instead of remaining inline inside `beginFrame(...)`
+  - behavior is unchanged; Metal frame entry now reads more honestly as
+    resize, acquire, setup/clear, then ready
 - second submit-path classification cut landed:
   - Metal ordinary pre-present replay now routes through one explicit helper
     instead of spelling surface replay, snapshot-cache refresh, and presentable
