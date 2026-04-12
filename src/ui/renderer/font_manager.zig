@@ -1,3 +1,7 @@
+//! Font-manager ownership note:
+//! live interactive scale changes are currently too expensive because font
+//! state rebuild still tears down cached/active fonts. Keep this file under
+//! render-thread scrutiny until that cost is split or staged properly.
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const renderer_root = @import("../renderer.zig");
@@ -338,7 +342,3 @@ pub fn fontForSize(renderer: anytype, size: f32) ?*TerminalFont {
     };
     return font_ptr;
 }
-//! Font-manager ownership note:
-//! live interactive scale changes are currently too expensive because font
-//! state rebuild still tears down cached/active fonts. Keep this file under
-//! render-thread scrutiny until that cost is split or staged properly.
