@@ -219,19 +219,20 @@ Next renderer move:
   `editor_widget_draw_overlay.zig` is now the explicit owner seam for editor
   row-band local ordering; non-owner files no longer spell immediate
   begin/end/flush choreography or direct surface-queue drains for that family
-- next active ticket:
-  IME composition overlay ownership
-- owner:
-  `app_architecture/ui/BAND_COMPOSITION_PHASE_PLAN.md`
-  `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md`
-- concrete pressure:
-  this cut is now in:
+- editor text-emitter follow-up is also now met enough:
+  highlighted text / decoration traversal now shares one generic emitter-driven
+  path, and the remaining emitter structs are just accepted side-effect
+  adapters
+- IME composition overlay ownership is now in too:
   `editor_widget_draw.zig` no longer draws the cursor-anchored IME composition
   preview directly; composing text + underline now terminate in
   `editor_widget_draw_overlay.drawImeCompositionPreview(...)`
-- required outcome:
-  one explicit editor-owned overlay seam owns IME composition preview text +
-  underline instead of leaving that interaction overlay as a direct draw pair
+- next stronger blocker:
+  return to the broader renderer contract pressure already named in current
+  authority:
+  terminal presentable lifecycle is still materially uneven across backends,
+  and live Metal verification of the refresh-backed snapshot path remains
+  deferred
 - do not reopen Android backend work unless that audit proves a new concrete
   renderer-owned Android blocker
 

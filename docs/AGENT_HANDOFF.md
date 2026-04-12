@@ -32,13 +32,11 @@ stop outranking the active renderer blocker.
     one app-owned package action, and clean Bash startup. That means Android
     product work should return to the shared renderer blocker instead of
     extending AU-A2 further without a concrete regression. The strongest
-    remaining renderer pressure is the shared text/surface phase-boundary
-    problem already called out in renderer authority. `RB-B3.j` editor overlay
-    phase-boundary closure is now met, and the editor text-emitter follow-up is
-    now met enough that the stronger remaining editor leak has shifted again:
-    `editor_widget_draw.zig` still draws the cursor-anchored IME composition
-    preview directly as text plus underline instead of terminating in one
-    editor-owned overlay seam.
+    remaining renderer pressure is no longer the tiny editor-local overlay
+    leaks that were just closed. The broader remaining blocker is again the
+    one already named in renderer authority: terminal presentable lifecycle is
+    still materially uneven across backends, and live Metal verification of the
+    refresh-backed snapshot path remains deferred.
 - `RB-B3.d` is already met:
   - widget/runtime no longer calls `usesDirectTerminalPresentation(...)`
   - those path decisions now terminate in the presentable host seam
