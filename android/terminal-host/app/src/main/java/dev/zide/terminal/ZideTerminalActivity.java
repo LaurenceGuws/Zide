@@ -1081,17 +1081,23 @@ public final class ZideTerminalActivity extends Activity
                 || UserlandBootstrapState.STATE_READY_UPGRADE_NEEDED.equals(state.state);
     }
 
+    private void applyInstallState(UserlandInstallState installState, String statusLabel) {
+        currentInstallState = installState;
+        refreshProductShellState();
+        updateStatus(statusLabel);
+    }
+
     private void startUserlandInstall() {
-        currentInstallState = UserlandInstallState.installing("Fetching and staging " + userlandRelease.artifactName + "...");
-        updateProductShellVisibility();
-        reevaluateProductFrameLoop();
-        updateStatus("userland-install-started");
+        applyInstallState(
+                UserlandInstallState.installing("Fetching and staging " + userlandRelease.artifactName + "..."),
+                "userland-install-started");
         appendEvent("userland.install begin expected=" + userlandRelease.artifactVersion);
         new Thread(() -> {
             try {
                 final UserlandInstaller.Result result = UserlandInstaller.install(this, userlandRelease);
                 handler.post(() -> {
-                    currentInstallState = UserlandInstallState.idle();
+                    final UserlandInstallState installState = UserlandInstallState.idle();
+                    currentInstallState = installState;
                     currentBootstrapState = result.bootstrapState;
                     appendEvent("userland.install success " + result.detail);
                     final int restartStatus = nativeLoaded ? nativeRestartShellSessionBridge() : 0;
@@ -1101,11 +1107,10 @@ public final class ZideTerminalActivity extends Activity
                 });
             } catch (IOException err) {
                 handler.post(() -> {
-                    currentInstallState = UserlandInstallState.failed(err.getMessage() == null ? "unknown install failure" : err.getMessage());
-                    appendEvent("userland.install failed err=" + err.getClass().getSimpleName() + " detail=" + currentInstallState.detail);
-                    updateProductShellVisibility();
-                    reevaluateProductFrameLoop();
-                    updateStatus("userland-install-failed");
+                    final UserlandInstallState installState = UserlandInstallState.failed(
+                            err.getMessage() == null ? "unknown install failure" : err.getMessage());
+                    appendEvent("userland.install failed err=" + err.getClass().getSimpleName() + " detail=" + installState.detail);
+                    applyInstallState(installState, "userland-install-failed");
                 });
             }
         }, "userland-install").start();

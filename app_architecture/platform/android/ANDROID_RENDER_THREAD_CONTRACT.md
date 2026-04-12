@@ -1095,6 +1095,11 @@ Current progress:
     refresh no longer live as one broad activity operation
   - `refreshDebugShellState(...)` now delegates those responsibilities through
     explicit helper seams
+- eighth host ownership cut landed:
+  - install-state transitions now route through one explicit activity seam for
+    blocker visibility, product frame-loop reevaluation, and status upkeep
+  - install failure handling no longer fans that ownership out manually across
+    multiple UI calls
 - that does not finish this category:
   - `ZideTerminalActivity` still owns too much product/debug orchestration
 

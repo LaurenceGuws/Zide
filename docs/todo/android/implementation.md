@@ -472,6 +472,8 @@ Status:
   - shell poll telemetry, product shell state upkeep, and debug status-surface
     refresh are now separated inside the activity instead of sharing one broad
     refresh operation
+  - install-state transitions now route through one explicit activity seam for
+    blocker visibility, product frame-loop reevaluation, and status upkeep
   - this cut is aimed directly at the product scroll snap-back / host-thickness
     issue, not at renderer internals yet
   - validation:
