@@ -486,6 +486,11 @@ Status:
     - `./ops/android_terminal_host.py apk` passed
     - repo-wide `zig build` is currently blocked by an unrelated existing
       `font_manager.zig` doc-comment regression outside this Java cut
+  - current stop reading:
+    - the Android host is no longer the dominant performance/ownership mystery
+      for terminal progress
+    - keep Android host cleanup paused unless a concrete product bug proves a
+      remaining mixed-ownership seam still matters
 - current Android product-shell rule is now explicit:
   - direct PTY input must own its own native poll + shared-renderer draw path
   - product shell redraw must not depend on the old Java refresh loop or other

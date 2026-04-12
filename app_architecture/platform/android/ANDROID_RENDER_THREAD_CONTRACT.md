@@ -1040,6 +1040,18 @@ Current stop marker for this subcategory:
   coordinator; product scrolling and debug/status upkeep must have narrower
   ownership and no longer distort renderer performance diagnosis
 
+Current stop reading after the latest host cuts:
+
+- that stop marker is now materially met for the active Android terminal lane
+- the remaining `ZideTerminalActivity` surface is still large, but most of it
+  now reads as legitimate Android ownership:
+  lifecycle dispatch, surface callbacks, IME/focus, gesture intake, sidebar
+  controls, and JNI handoff
+- further Java extraction without a new concrete product bug would now risk
+  cosmetic OO churn more than real contract tightening
+- the next honest pressure returns to the shared renderer-thread queue unless a
+  new Android host regression proves otherwise
+
 Initial fix queue:
 
 1. separate product shell state refresh from debug/operator refresh
@@ -1115,8 +1127,14 @@ Current progress:
     product/debug aftermath sequence
   - callback-side shell refresh, product frame-loop reevaluation, and status
     upkeep now route through one explicit activity seam
+- current checkpoint:
+  - Java host cleanup is no longer the dominant performance or ownership
+    mystery for Android terminal progress
+  - reopen this subcategory only for a concrete host-side product blocker, not
+    more generalized thinning
 - that does not finish this category:
-  - `ZideTerminalActivity` still owns too much product/debug orchestration
+  - `ZideTerminalActivity` is still large, but the remaining breadth is not by
+    itself proof of wrong ownership
 
 ## Current Non-Render Cleanup Already Landed
 
