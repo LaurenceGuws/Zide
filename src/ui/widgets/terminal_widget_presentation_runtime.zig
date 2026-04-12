@@ -172,6 +172,29 @@ fn presentResultFromRefreshOutcomeState(
     return result;
 }
 
+fn advancePresentationCache(
+    surface_state: anytype,
+    terminal_view: view_state.TerminalViewModel,
+    surface_geometry: PresentationGeometry,
+    draw_cursor: bool,
+    cursor: CursorPos,
+    cursor_style: terminal_types.CursorStyle,
+    hover_link_id: u32,
+    composing_active: bool,
+    composing_hash: u64,
+) void {
+    surface_state.notePresentationUpdated(
+        terminal_view,
+        surface_geometry,
+        draw_cursor,
+        cursor,
+        cursor_style,
+        hover_link_id,
+        composing_active,
+        composing_hash,
+    );
+}
+
 pub fn runFastPresentIfAvailable(
     surface_state: anytype,
     renderer: anytype,
@@ -1455,7 +1478,17 @@ pub fn refreshPresentState(
     };
 
     if (presentable_refresh == .refreshed) {
-        surface_state.notePresentationUpdated(terminal_view, surface_geometry, draw_cursor, cursor, cursor_style, hover_link_id, composing_active, composing_hash);
+        advancePresentationCache(
+            surface_state,
+            terminal_view,
+            surface_geometry,
+            draw_cursor,
+            cursor,
+            cursor_style,
+            hover_link_id,
+            composing_active,
+            composing_hash,
+        );
     }
 
     state.target_available = renderer_presentable_host.terminalPresentableInfo(renderer) != null;
@@ -1598,7 +1631,17 @@ pub fn tryFastPresentExisting(
         note_present,
     );
     const pres_geom = computePresentationSurfaceGeometry(renderer, terminal_view, view_geometry);
-    surface_state.notePresentationUpdated(terminal_view, pres_geom, draw_cursor, cursor, cursor_style, hover_link_id, composing_active, composing_hash);
+    advancePresentationCache(
+        surface_state,
+        terminal_view,
+        pres_geom,
+        draw_cursor,
+        cursor,
+        cursor_style,
+        hover_link_id,
+        composing_active,
+        composing_hash,
+    );
     return true;
 }
 
@@ -1734,7 +1777,17 @@ pub fn directPresent(
     }
 
     const pres_geom = computePresentationSurfaceGeometry(renderer, terminal_view, view_geometry);
-    self.surface.notePresentationUpdated(terminal_view, pres_geom, draw_cursor, cursor, cursor_style, hover_link_id, composing_active, composing_hash);
+    advancePresentationCache(
+        &self.surface,
+        terminal_view,
+        pres_geom,
+        draw_cursor,
+        cursor,
+        cursor_style,
+        hover_link_id,
+        composing_active,
+        composing_hash,
+    );
     return result;
 }
 
@@ -1833,7 +1886,17 @@ pub fn tryIncrementalPresentableUpdate(
     );
     if (!result.completed) return result;
     present_feedback_host.noteTerminalPresentation(renderer, terminal_view.generation);
-    self.surface.notePresentationUpdated(terminal_view, surface_update_plan.geometry, draw_cursor, cursor, cursor_style, hover_link_id, composing_active, composing_hash);
+    advancePresentationCache(
+        &self.surface,
+        terminal_view,
+        surface_update_plan.geometry,
+        draw_cursor,
+        cursor,
+        cursor_style,
+        hover_link_id,
+        composing_active,
+        composing_hash,
+    );
     return result;
 }
 

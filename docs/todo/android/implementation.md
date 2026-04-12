@@ -498,6 +498,9 @@ Status:
   - terminal present result assembly now routes through explicit helpers
     instead of being rebuilt separately across reuse, refresh, and direct
     execution paths
+  - successful presentation paths now advance cached presentation state
+    through one explicit helper instead of calling
+    `notePresentationUpdated(...)` directly at multiple execution sites
   - this cut is aimed directly at the product scroll snap-back / host-thickness
     issue, not at renderer internals yet
   - validation:

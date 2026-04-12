@@ -664,6 +664,12 @@ Current progress:
     refresh, and direct execution paths
   - behavior is unchanged; execution sites now hand off classified policy plus
     timing instead of rebuilding result objects themselves
+- fifth execution-seam cut landed:
+  - successful presentation paths now advance cached presentation state through
+    one explicit helper instead of calling `notePresentationUpdated(...)`
+    directly at multiple execution sites
+  - behavior is unchanged; this starts separating cache-state advancement from
+    the draw/refresh execution bodies themselves
 
 Do not do:
 
