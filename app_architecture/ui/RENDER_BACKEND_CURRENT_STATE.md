@@ -690,11 +690,11 @@ That split is now sharper from code inspection too:
 - traversal, decoration geometry, and expanded styled-text run splitting are
   now shared there, so further local editor cleanup is only honest if it
   changes the real surface/timing contract.
-- the next louder editor-local leak is now elsewhere:
-  `editor_widget_draw.zig` still renders the cursor-anchored IME composition
-  preview directly with `renderer_text_host.drawTextMonospaceOnBg(...)` plus a
-  direct underline rect, instead of terminating in one editor-owned overlay
-  seam
+- the cursor-anchored IME composition preview now also terminates in the
+  editor overlay owner seam:
+  `editor_widget_draw.zig` no longer draws composing text + underline
+  directly; that path now routes through
+  `editor_widget_draw_overlay.drawImeCompositionPreview(...)`
 - the remaining backend-runtime storage blocker is now more specifically
   OpenGL-shaped than Metal-shaped:
   - Metal live frame/surface/presentable queue state now lives under backend

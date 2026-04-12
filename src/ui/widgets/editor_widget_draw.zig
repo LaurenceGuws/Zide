@@ -13,7 +13,6 @@ const segment_paint_mod = @import("../../editor/render/segment_paint.zig");
 const visible_prep_mod = @import("../../editor/render/visible_prep.zig");
 const app_logger = @import("../../app_logger.zig");
 const renderer_clip_host = @import("../renderer/renderer_clip_host.zig");
-const renderer_text_host = @import("../renderer/renderer_text_host.zig");
 const overlay_mod = @import("editor_widget_draw_overlay.zig");
 const text_mod = @import("editor_widget_draw_text.zig");
 const cache_helpers = @import("editor_widget_draw_cache.zig");
@@ -245,16 +244,7 @@ pub fn draw(
         if (input.composing_active and input.composing_text.len > 0) {
             const comp_x = cursor_draw_x.?;
             const comp_y = cursor_draw_y.?;
-            renderer_text_host.drawTextMonospaceOnBg(r, input.composing_text, comp_x, comp_y, r.theme.foreground, r.theme.current_line);
-            overlay_mod.drawEditorSurfaceRect(
-                r,
-                .overlay,
-                comp_x,
-                comp_y + r.editor_char_height - 2,
-                @as(f32, @floatFromInt(input.composing_text.len)) * r.editor_char_width,
-                2.0,
-                r.theme.selection,
-            );
+            overlay_mod.drawImeCompositionPreview(r, input.composing_text, comp_x, comp_y, r.theme.foreground, r.theme.current_line, r.theme.selection);
             shell.setTextInputRect(
                 @intFromFloat(comp_x),
                 @intFromFloat(comp_y),

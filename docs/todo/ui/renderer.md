@@ -225,11 +225,10 @@ Next renderer move:
   `app_architecture/ui/BAND_COMPOSITION_PHASE_PLAN.md`
   `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md`
 - concrete pressure:
-  `editor_widget_draw_text.zig` emitter closure is now met enough that the
-  remaining stronger editor-local leak has shifted:
-  `editor_widget_draw.zig` still draws the cursor-anchored IME composition
-  preview directly through `renderer_text_host.drawTextMonospaceOnBg(...)`
-  plus a direct underline rect
+  this cut is now in:
+  `editor_widget_draw.zig` no longer draws the cursor-anchored IME composition
+  preview directly; composing text + underline now terminate in
+  `editor_widget_draw_overlay.drawImeCompositionPreview(...)`
 - required outcome:
   one explicit editor-owned overlay seam owns IME composition preview text +
   underline instead of leaving that interaction overlay as a direct draw pair

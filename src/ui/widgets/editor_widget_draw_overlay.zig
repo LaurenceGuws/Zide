@@ -117,6 +117,35 @@ pub fn drawEditorTextOnBg(r: anytype, text: []const u8, x: f32, y: f32, color: a
     );
 }
 
+pub fn drawImeCompositionPreview(r: anytype, text: []const u8, x: f32, y: f32, text_color: anytype, bg_color: anytype, underline_color: anytype) void {
+    runImmediateEditorSurfacePhase(
+        r,
+        .{
+            .r = r,
+            .text = text,
+            .x = x,
+            .y = y,
+            .text_color = text_color,
+            .bg_color = bg_color,
+            .underline_color = underline_color,
+        },
+        struct {
+            fn draw(ctx: anytype) void {
+                renderer_text_host.drawTextMonospaceOnBg(ctx.r, ctx.text, ctx.x, ctx.y, ctx.text_color, ctx.bg_color);
+                drawEditorSurfaceRect(
+                    ctx.r,
+                    .overlay,
+                    ctx.x,
+                    ctx.y + ctx.r.editor_char_height - 2,
+                    @as(f32, @floatFromInt(ctx.text.len)) * ctx.r.editor_char_width,
+                    2.0,
+                    ctx.underline_color,
+                );
+            }
+        }.draw,
+    );
+}
+
 pub fn drawExtraCarets(
     view: anytype,
     r: anytype,

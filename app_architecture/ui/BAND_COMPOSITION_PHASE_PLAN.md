@@ -244,12 +244,11 @@ ownership:
   they are cursor-anchored and pane-final overlays, not row-band-local
   ordering leaks
 
-## Next Pressure After Editor Text Emitter Closure
+## Current Checkpoint After Editor Text Emitter Closure
 
-The next honest leak is the cursor-anchored IME composition preview:
-
-- `src/ui/widgets/editor_widget_draw.zig` still draws composing text directly
-  through `renderer_text_host.drawTextMonospaceOnBg(...)`
-- it also draws the composition underline directly beside that text path
-- that means one editor interaction overlay still bypasses an explicit local
-  owner seam even though row-band-local ordering is now settled
+- the cursor-anchored IME composition preview now also terminates in the
+  editor overlay owner seam:
+  `editor_widget_draw.zig` routes composing text + underline through
+  `editor_widget_draw_overlay.drawImeCompositionPreview(...)`
+- that means the previously named direct IME overlay pair is no longer a
+  stronger editor-local owner leak
