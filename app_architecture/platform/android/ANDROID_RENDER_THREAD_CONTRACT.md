@@ -646,6 +646,12 @@ Current progress:
     direct-present and presentable-refresh execution hooks
   - behavior is unchanged; the cut narrows execution hooks toward consuming
     policy instead of recomputing it
+- second execution-seam cut landed:
+  - refresh-path outcome classification now routes through one explicit helper
+    instead of recomputing cache-advance, target-availability, and followup
+    policy inline at the refresh execution site
+  - behavior is unchanged; this starts separating "what happened" from
+    "what cache-state/followup policy should advance"
 
 Do not do:
 

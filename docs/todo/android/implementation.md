@@ -489,6 +489,9 @@ Status:
   - terminal presentation execution update planning now happens once in
     `runPresentation(...)` instead of being rebuilt separately inside both
     execution hooks
+  - refresh-path outcome classification now routes through one explicit helper
+    instead of recomputing cache-advance / target-availability / followup
+    policy inline
   - this cut is aimed directly at the product scroll snap-back / host-thickness
     issue, not at renderer internals yet
   - validation:

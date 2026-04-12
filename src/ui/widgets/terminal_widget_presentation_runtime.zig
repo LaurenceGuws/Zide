@@ -32,6 +32,7 @@ const DirectTerminalPresentExecutionResult = renderer_presentable_host.DirectTer
 const TerminalPresentPlan = renderer_presentable_host.TerminalPresentPlan;
 const TerminalPresentResult = renderer_presentable_host.TerminalPresentResult;
 const TerminalPresentOutcome = @import("../renderer/presentable_contract.zig").TerminalPresentOutcome;
+const TerminalPresentFollowupReason = @import("../renderer/presentable_contract.zig").TerminalPresentFollowupReason;
 
 const drawRowBackgrounds = draw_grid.drawRowBackgrounds;
 const drawRowGlyphs = draw_grid.drawRowGlyphs;
@@ -126,6 +127,14 @@ pub const RefreshedPresentablePresentationResult = struct {
     bg_ms: f64 = 0.0,
     glyph_ms: f64 = 0.0,
     kitty_ms: f64 = 0.0,
+};
+
+pub const RefreshOutcomeState = struct {
+    outcome: TerminalPresentOutcome = .presented,
+    cache_state_advanced: bool = false,
+    target_available: bool = false,
+    followup_required: bool = false,
+    followup_reason: TerminalPresentFollowupReason = .none,
 };
 
 pub fn runFastPresentIfAvailable(
@@ -934,6 +943,7 @@ pub fn executeRefreshPresentFlow(
         has_kitty,
         surface_update_plan,
     );
+    const outcome_state = classifyRefreshOutcome(cycle.refresh);
     const refreshed = runRefreshedPresentablePresentation(
         self,
         renderer,
@@ -951,11 +961,11 @@ pub fn executeRefreshPresentFlow(
         note_present_ctx,
         note_present,
     );
-    result.outcome = if (cycle.refresh == .refreshed) .updated_and_presented else .presented;
-    result.cache_state_advanced = cycle.refresh == .refreshed;
-    result.target_available = cycle.refresh != .unsupported and cycle.refresh != .target_unavailable;
-    result.followup.required = cycle.refresh == .target_unavailable;
-    result.followup.reason = if (cycle.refresh == .target_unavailable) .target_unavailable else .none;
+    result.outcome = outcome_state.outcome;
+    result.cache_state_advanced = outcome_state.cache_state_advanced;
+    result.target_available = outcome_state.target_available;
+    result.followup.required = outcome_state.followup_required;
+    result.followup.reason = outcome_state.followup_reason;
     result.timing.background_ms = refreshed.bg_ms;
     result.timing.glyph_ms = refreshed.glyph_ms;
     result.timing.kitty_ms = refreshed.kitty_ms;
@@ -1080,6 +1090,16 @@ fn buildExecutionUpdatePlan(
         scroll_offset,
         recent_input_window_active,
     );
+}
+
+fn classifyRefreshOutcome(refresh: TerminalPresentableRefresh) RefreshOutcomeState {
+    return .{
+        .outcome = if (refresh == .refreshed) .updated_and_presented else .presented,
+        .cache_state_advanced = refresh == .refreshed,
+        .target_available = refresh != .unsupported and refresh != .target_unavailable,
+        .followup_required = refresh == .target_unavailable,
+        .followup_reason = if (refresh == .target_unavailable) .target_unavailable else .none,
+    };
 }
 
 pub fn runPresentation(
