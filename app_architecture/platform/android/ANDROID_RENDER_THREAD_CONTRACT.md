@@ -922,6 +922,9 @@ Current progress:
   - `renderer.font` glyph-prep/adopt logs are now guarded before formatting
   - disabled telemetry no longer formats large hot-path messages just for
     `logf(...)` to drop them later
+- zoom-path operator telemetry gated:
+  - pinch/UI-scale zoom logs now check tag enablement before formatting
+  - disabled zoom diagnostics no longer add formatting work to gesture pressure
 
 ### 7. Remaining Android host/UI-thread contamination
 

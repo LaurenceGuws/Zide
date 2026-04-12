@@ -565,41 +565,47 @@ pub fn applyPinchZoomScale(self: anytype, scale_factor: f32, now: f64) !bool {
     self.scale.last_zoom_apply_time = now;
     const ui_log = app_logger.logger("ui.scale");
     const font_log = app_logger.logger("renderer.font");
+    const ui_log_enabled = ui_log.enabled_file or ui_log.enabled_console;
+    const font_log_enabled = font_log.enabled_file or font_log.enabled_console;
     const layout_size = self.base_font_size * self.scale.ui_scale * self.scale.user_zoom;
     const raster_size = layout_size * self.scale.render_scale;
-    ui_log.logf(.info, "ui_pinch_zoom window={d:.3} render={d:.3} user_zoom={d:.3} font={d:.2}->{d:.2}", .{
-        self.scale.ui_scale,
-        self.scale.render_scale,
-        self.scale.user_zoom,
-        self.font_size,
-        layout_size,
-    });
-    ui_log.logf(.info, "ui_pinch_zoom layout_size={d:.2} raster_size={d:.2}", .{ layout_size, raster_size });
+    if (ui_log_enabled) {
+        ui_log.logf(.info, "ui_pinch_zoom window={d:.3} render={d:.3} user_zoom={d:.3} font={d:.2}->{d:.2}", .{
+            self.scale.ui_scale,
+            self.scale.render_scale,
+            self.scale.user_zoom,
+            self.font_size,
+            layout_size,
+        });
+        ui_log.logf(.info, "ui_pinch_zoom layout_size={d:.2} raster_size={d:.2}", .{ layout_size, raster_size });
+    }
     applyLiveUserZoomScale(self);
     const prepared_target = font_manager.prepareCurrentCommittedTerminalFontForLiveZoom(self, now);
     const committed_swap = font_manager.commitPreparedTerminalFontScale(self);
     if (committed_swap) {
         self.scale.font_rebuild_pending = true;
     }
-    font_log.logf(.info, "terminal_pinch_tick t={d:.3} factor={d:.4} zoom={d:.3}->{d:.3} app_font={d:.2}->{d:.2} term_font={d:.2}->{d:.2} cell={d:.2}x{d:.2}->{d:.2}x{d:.2} committed_raster={d} live_visual={d:.3} cache_entries={d} prepared_target={d} committed_swap={d}", .{
-        now,
-        scale_factor,
-        prev_zoom,
-        self.scale.user_zoom,
-        prev_font,
-        self.font_size,
-        prev_terminal_font,
-        self.terminal_font_size,
-        prev_cell_w,
-        prev_cell_h,
-        self.terminal_cell_width,
-        self.terminal_cell_height,
-        self.terminal_font.committed_raster_size_px,
-        self.terminal_font.live_visual_scale,
-        self.font_config.terminal_font_cache.count(),
-        @intFromBool(prepared_target),
-        @intFromBool(committed_swap),
-    });
+    if (font_log_enabled) {
+        font_log.logf(.info, "terminal_pinch_tick t={d:.3} factor={d:.4} zoom={d:.3}->{d:.3} app_font={d:.2}->{d:.2} term_font={d:.2}->{d:.2} cell={d:.2}x{d:.2}->{d:.2}x{d:.2} committed_raster={d} live_visual={d:.3} cache_entries={d} prepared_target={d} committed_swap={d}", .{
+            now,
+            scale_factor,
+            prev_zoom,
+            self.scale.user_zoom,
+            prev_font,
+            self.font_size,
+            prev_terminal_font,
+            self.terminal_font_size,
+            prev_cell_w,
+            prev_cell_h,
+            self.terminal_cell_width,
+            self.terminal_cell_height,
+            self.terminal_font.committed_raster_size_px,
+            self.terminal_font.live_visual_scale,
+            self.font_config.terminal_font_cache.count(),
+            @intFromBool(prepared_target),
+            @intFromBool(committed_swap),
+        });
+    }
     return true;
 }
 
@@ -623,17 +629,20 @@ pub fn refreshUiScaleFromDisplayMetrics(self: anytype, metrics: platform_window.
     const render_changed = !std.math.approxEqAbs(f32, next_render, self.scale.render_scale, 0.0001);
     if (!scale_changed and !render_changed) return false;
     const log = app_logger.logger("ui.scale");
+    const log_enabled = log.enabled_file or log.enabled_console;
     const layout_size = self.base_font_size * next * self.scale.user_zoom;
     const raster_size = layout_size * next_render;
-    log.logf(.info, "ui_scale window={d:.3} render={d:.3}->{d:.3} user_zoom={d:.3} font={d:.2}->{d:.2}", .{
-        next,
-        self.scale.render_scale,
-        next_render,
-        self.scale.user_zoom,
-        self.font_size,
-        layout_size,
-    });
-    log.logf(.info, "ui_scale layout_size={d:.2} raster_size={d:.2}", .{ layout_size, raster_size });
+    if (log_enabled) {
+        log.logf(.info, "ui_scale window={d:.3} render={d:.3}->{d:.3} user_zoom={d:.3} font={d:.2}->{d:.2}", .{
+            next,
+            self.scale.render_scale,
+            next_render,
+            self.scale.user_zoom,
+            self.font_size,
+            layout_size,
+        });
+        log.logf(.info, "ui_scale layout_size={d:.2} raster_size={d:.2}", .{ layout_size, raster_size });
+    }
     self.scale.ui_scale = next;
     self.scale.render_scale = next_render;
     try applyFontScale(self);
@@ -664,31 +673,36 @@ pub fn applyPendingZoom(self: anytype, now: f64) !bool {
     }
     self.scale.user_zoom = result.next_zoom;
     const log = app_logger.logger("ui.scale");
+    const log_enabled = log.enabled_file or log.enabled_console;
     const layout_size = self.base_font_size * self.scale.ui_scale * self.scale.user_zoom;
     const raster_size = layout_size * self.scale.render_scale;
-    log.logf(.info, "ui_zoom window={d:.3} render={d:.3} user_zoom={d:.3} font={d:.2}->{d:.2}", .{
-        self.scale.ui_scale,
-        self.scale.render_scale,
-        self.scale.user_zoom,
-        self.font_size,
-        layout_size,
-    });
-    log.logf(.info, "ui_zoom layout_size={d:.2} raster_size={d:.2}", .{ layout_size, raster_size });
-    applyLiveUserZoomScale(self);
-    log.logf(
-        .info,
-        "ui_zoom_effective base={d:.2} ui={d:.3} zoom={d:.3} target={d:.3} render={d:.3} font={d:.2} term_cell={d:.2}x{d:.2}",
-        .{
-            self.base_font_size,
+    if (log_enabled) {
+        log.logf(.info, "ui_zoom window={d:.3} render={d:.3} user_zoom={d:.3} font={d:.2}->{d:.2}", .{
             self.scale.ui_scale,
-            self.scale.user_zoom,
-            self.scale.user_zoom_target,
             self.scale.render_scale,
+            self.scale.user_zoom,
             self.font_size,
-            self.terminal_cell_width,
-            self.terminal_cell_height,
-        },
-    );
+            layout_size,
+        });
+        log.logf(.info, "ui_zoom layout_size={d:.2} raster_size={d:.2}", .{ layout_size, raster_size });
+    }
+    applyLiveUserZoomScale(self);
+    if (log_enabled) {
+        log.logf(
+            .info,
+            "ui_zoom_effective base={d:.2} ui={d:.3} zoom={d:.3} target={d:.3} render={d:.3} font={d:.2} term_cell={d:.2}x{d:.2}",
+            .{
+                self.base_font_size,
+                self.scale.ui_scale,
+                self.scale.user_zoom,
+                self.scale.user_zoom_target,
+                self.scale.render_scale,
+                self.font_size,
+                self.terminal_cell_width,
+                self.terminal_cell_height,
+            },
+        );
+    }
     self.scale.last_zoom_apply_time = result.apply_time;
     return true;
 }
