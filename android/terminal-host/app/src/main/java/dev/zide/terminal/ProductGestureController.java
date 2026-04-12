@@ -9,16 +9,22 @@ final class ProductGestureController {
     interface Host {
         void onProductSingleTap();
 
+        void onProductPinchBegin();
+
         void onProductPinchZoom(float scaleFactor);
+
+        void onProductPinchEnd();
     }
 
     private final View target;
     private final Host host;
     private final ScaleGestureDetector scaleDetector;
     private final int touchSlop;
+    private static final float MIN_PINCH_DISPATCH_DELTA = 0.01f;
 
     private float downX = 0.0f;
     private float downY = 0.0f;
+    private float lastDispatchedScaleFactor = 1.0f;
     private boolean moved = false;
     private boolean pinchActive = false;
 
@@ -32,18 +38,27 @@ final class ProductGestureController {
                     @Override
                     public boolean onScaleBegin(ScaleGestureDetector detector) {
                         pinchActive = true;
+                        lastDispatchedScaleFactor = 1.0f;
+                        host.onProductPinchBegin();
                         return true;
                     }
 
                     @Override
                     public boolean onScale(ScaleGestureDetector detector) {
-                        host.onProductPinchZoom(detector.getScaleFactor());
+                        final float scaleFactor = detector.getScaleFactor();
+                        if (Math.abs(scaleFactor - lastDispatchedScaleFactor) < MIN_PINCH_DISPATCH_DELTA) {
+                            return true;
+                        }
+                        lastDispatchedScaleFactor = scaleFactor;
+                        host.onProductPinchZoom(scaleFactor);
                         return true;
                     }
 
                     @Override
                     public void onScaleEnd(ScaleGestureDetector detector) {
                         pinchActive = false;
+                        lastDispatchedScaleFactor = 1.0f;
+                        host.onProductPinchEnd();
                     }
                 });
     }
@@ -79,6 +94,7 @@ final class ProductGestureController {
                 break;
             case MotionEvent.ACTION_CANCEL:
                 pinchActive = false;
+                lastDispatchedScaleFactor = 1.0f;
                 moved = false;
                 break;
             default:

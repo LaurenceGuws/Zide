@@ -38,6 +38,7 @@ const BridgeState = struct {
         .surface_metrics = .{},
         .native_handles = .{},
     },
+    pinch_zoom_active: bool = false,
 };
 
 var bridge_state = BridgeState{};
@@ -140,19 +141,25 @@ pub fn noteVisibleViewport(width: i32, height: i32, ime_visible: bool) u64 {
     return nextSequence();
 }
 
-pub fn applyTerminalZoomDelta(delta: f32) i32 {
-    if (delta == 0.0 or std.math.isNan(delta)) return 0;
+pub fn applyTerminalPinchZoom(scale_factor: f32) i32 {
+    if (!(scale_factor > 0.0) or std.math.isNan(scale_factor)) return 0;
     const renderer = bridge_state.renderer orelse return 1;
-    var shell: app_shell.Shell = .{ .renderer = renderer };
     const now = app_shell.getTime();
-    if (!shell.queueUserZoom(std.math.clamp(delta, -0.1, 0.1), now)) return 0;
-    const changed = renderer.applyPendingZoomForExternalHost(now + 0.05) catch return 2;
+    const changed = renderer.applyPinchZoomForExternalHost(scale_factor, now) catch return 2;
     if (changed) {
         if (bridge_state.terminal_widget) |*widget| {
             widget.invalidatePresentationCache();
         }
     }
     if (bridge_state.render_host.hasSurface()) {
+        bridge_state.last_renderer_status = drawSharedRendererSurfaceFrame();
+    }
+    return 0;
+}
+
+pub fn setTerminalPinchActive(active: bool) i32 {
+    bridge_state.pinch_zoom_active = active;
+    if (!active and bridge_state.render_host.hasSurface()) {
         bridge_state.last_renderer_status = drawSharedRendererSurfaceFrame();
     }
     return 0;
@@ -351,7 +358,9 @@ fn ensureTerminalWidget() ?*widgets.TerminalWidget {
 }
 
 fn drawLiveTerminalWidgetFrame(renderer: *renderer_mod.Renderer, widget: *widgets.TerminalWidget) void {
-    ensureProductFitTerminalGrid(renderer, widget) catch {};
+    if (!bridge_state.pinch_zoom_active) {
+        ensureProductFitTerminalGrid(renderer, widget) catch {};
+    }
     const viewport = bridge_state.render_host.effectiveViewportMetrics();
     const width = @as(f32, @floatFromInt(@max(viewport.logical_width, 1)));
     const height = @as(f32, @floatFromInt(@max(viewport.logical_height, 1)));

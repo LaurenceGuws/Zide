@@ -40,8 +40,12 @@ fn onVisibleViewportBridge(width: i32, height: i32, ime_visible: bool) i64 {
     return @intCast(android_runtime_bridge.noteVisibleViewport(width, height, ime_visible));
 }
 
-fn applyTerminalZoomDeltaBridge(delta: f32) i32 {
-    return android_runtime_bridge.applyTerminalZoomDelta(delta);
+fn applyTerminalPinchZoomBridge(scale_factor: f32) i32 {
+    return android_runtime_bridge.applyTerminalPinchZoom(scale_factor);
+}
+
+fn setTerminalPinchActiveBridge(active: bool) i32 {
+    return android_runtime_bridge.setTerminalPinchActive(active);
 }
 
 fn currentWindowTokenBridge() i64 {
@@ -201,12 +205,20 @@ export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeOnVisibleViewportBri
     return onVisibleViewportBridge(width, height, ime_visible);
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeApplyTerminalZoomDeltaBridge(
+export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeApplyTerminalPinchZoomBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
-    delta: f32,
+    scale_factor: f32,
 ) callconv(.c) i32 {
-    return applyTerminalZoomDeltaBridge(delta);
+    return applyTerminalPinchZoomBridge(scale_factor);
+}
+
+export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeSetTerminalPinchActiveBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+    active: bool,
+) callconv(.c) i32 {
+    return setTerminalPinchActiveBridge(active);
 }
 
 export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentWindowTokenBridge(

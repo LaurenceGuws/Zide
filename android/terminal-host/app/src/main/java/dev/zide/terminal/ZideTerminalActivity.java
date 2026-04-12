@@ -9,6 +9,7 @@ import android.os.Handler;
 import android.os.SystemClock;
 import android.os.Looper;
 import android.util.Log;
+import android.view.Choreographer;
 import android.view.Gravity;
 import android.view.InputDevice;
 import android.view.MotionEvent;
@@ -92,6 +93,9 @@ public final class ZideTerminalActivity extends Activity
     private Button assistAltButton;
     private ShellInputView shellInputView;
     private ProductGestureController productGestureController;
+    private boolean pinchZoomActive = false;
+    private boolean pinchZoomFrameScheduled = false;
+    private float pendingPinchScaleFactor = 1.0f;
     private ScrollView shellOutputScroll;
     private ShellTranscriptController shellTranscriptController;
     private ShellSessionController shellSessionController;
@@ -637,17 +641,57 @@ public final class ZideTerminalActivity extends Activity
     }
 
     @Override
+    public void onProductPinchBegin() {
+        if (!nativeLoaded) {
+            return;
+        }
+        pinchZoomActive = true;
+        pendingPinchScaleFactor = 1.0f;
+        nativeSetTerminalPinchActiveBridge(true);
+    }
+
+    @Override
     public void onProductPinchZoom(float scaleFactor) {
         if (!nativeLoaded || scaleFactor <= 0.0f) {
             return;
         }
-        final float delta = Math.max(-0.08f, Math.min(0.08f, scaleFactor - 1.0f));
-        if (Math.abs(delta) < 0.003f) {
+        if (Math.abs(scaleFactor - 1.0f) < 0.002f) {
             return;
         }
-        final int status = nativeApplyTerminalZoomDeltaBridge(delta);
-        appendEvent("gesture.pinchZoom scale=" + scaleFactor + " delta=" + delta + " status=" + status);
-        updateStatus("pinch-zoom");
+        pendingPinchScaleFactor = scaleFactor;
+        schedulePinchZoomFrame();
+    }
+
+    @Override
+    public void onProductPinchEnd() {
+        if (!nativeLoaded) {
+            return;
+        }
+        pinchZoomActive = false;
+        pendingPinchScaleFactor = 1.0f;
+        nativeSetTerminalPinchActiveBridge(false);
+    }
+
+    private void schedulePinchZoomFrame() {
+        if (pinchZoomFrameScheduled) {
+            return;
+        }
+        pinchZoomFrameScheduled = true;
+        Choreographer.getInstance().postFrameCallback(frameTimeNanos -> {
+            pinchZoomFrameScheduled = false;
+            if (!nativeLoaded || !pinchZoomActive) {
+                return;
+            }
+            final float scaleFactor = pendingPinchScaleFactor;
+            pendingPinchScaleFactor = 1.0f;
+            if (Math.abs(scaleFactor - 1.0f) < 0.002f) {
+                return;
+            }
+            nativeApplyTerminalPinchZoomBridge(scaleFactor);
+            if (pinchZoomActive && Math.abs(pendingPinchScaleFactor - 1.0f) >= 0.002f) {
+                schedulePinchZoomFrame();
+            }
+        });
     }
 
     @Override
@@ -1291,7 +1335,9 @@ public final class ZideTerminalActivity extends Activity
 
     private static native long nativeOnVisibleViewportBridge(int width, int height, boolean imeVisible);
 
-    private static native int nativeApplyTerminalZoomDeltaBridge(float delta);
+    private static native int nativeApplyTerminalPinchZoomBridge(float scaleFactor);
+
+    private static native int nativeSetTerminalPinchActiveBridge(boolean active);
 
     private static native long nativeCurrentWindowTokenBridge();
 

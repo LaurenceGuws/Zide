@@ -163,6 +163,29 @@ pub fn queueUserZoom(self: anytype, delta: f32, now: f64) bool {
     return result.changed;
 }
 
+pub fn applyPinchZoomScale(self: anytype, scale_factor: f32, now: f64) !bool {
+    if (!(scale_factor > 0.0) or std.math.isNan(scale_factor)) return false;
+    const next_zoom = std.math.clamp(self.scale.user_zoom * scale_factor, 0.5, 3.0);
+    if (std.math.approxEqAbs(f32, next_zoom, self.scale.user_zoom, 0.0001)) return false;
+    self.scale.user_zoom = next_zoom;
+    self.scale.user_zoom_target = next_zoom;
+    self.scale.last_zoom_request_time = now;
+    self.scale.last_zoom_apply_time = now;
+    const log = app_logger.logger("ui.scale");
+    const layout_size = self.base_font_size * self.scale.ui_scale * self.scale.user_zoom;
+    const raster_size = layout_size * self.scale.render_scale;
+    log.logf(.info, "ui_pinch_zoom window={d:.3} render={d:.3} user_zoom={d:.3} font={d:.2}->{d:.2}", .{
+        self.scale.ui_scale,
+        self.scale.render_scale,
+        self.scale.user_zoom,
+        self.font_size,
+        layout_size,
+    });
+    log.logf(.info, "ui_pinch_zoom layout_size={d:.2} raster_size={d:.2}", .{ layout_size, raster_size });
+    try applyFontScale(self);
+    return true;
+}
+
 pub fn resetUserZoomTarget(self: anytype, now: f64) bool {
     const result = scale_utils.resetUserZoomTarget(self.scale.user_zoom_target, now);
     self.scale.user_zoom_target = result.next_target;
