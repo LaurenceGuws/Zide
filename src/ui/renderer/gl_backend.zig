@@ -256,6 +256,14 @@ pub fn beginFrame(renderer: anytype) void {
             .default_target,
         .direct_main_target => .default_target,
     };
+    prepareSteadyStateFrameSurface(renderer);
+    renderer_frame_host.noteFrameReady(renderer);
+}
+
+/// OpenGL steady-state frame-entry setup after composition-target policy has
+/// been selected. This keeps beginFrame readable as target-policy selection,
+/// then bound-target clear/setup.
+fn prepareSteadyStateFrameSurface(renderer: anytype) void {
     if (renderer.present.main_composition_target == .default_target) bindDefaultTarget(renderer);
     gl.Disable(gl.c.GL_SCISSOR_TEST);
 
@@ -267,7 +275,6 @@ pub fn beginFrame(renderer: anytype) void {
         @as(f32, @floatFromInt(bg.a)) / 255.0,
     );
     gl.Clear(gl.c.GL_COLOR_BUFFER_BIT);
-    renderer_frame_host.noteFrameReady(renderer);
 }
 
 pub fn submitFrame(renderer: anytype) present_feedback_state.FrameSubmission {

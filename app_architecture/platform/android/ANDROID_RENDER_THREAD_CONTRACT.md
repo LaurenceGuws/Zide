@@ -862,6 +862,11 @@ Current progress:
     explicit helper instead of remaining inline inside `beginFrame(...)`
   - behavior is unchanged; Metal frame entry now reads more honestly as
     resize, acquire, setup/clear, then ready
+- sixth frame-entry cut landed:
+  - OpenGL steady-state bound-target clear/setup now routes through one
+    explicit helper instead of remaining inline inside `beginFrame(...)`
+  - behavior is unchanged; OpenGL frame entry now reads more honestly as
+    target-policy selection, then bound-target clear/setup
 - second submit-path classification cut landed:
   - Metal ordinary pre-present replay now routes through one explicit helper
     instead of spelling surface replay, snapshot-cache refresh, and presentable
