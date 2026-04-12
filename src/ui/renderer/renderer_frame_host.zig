@@ -1,9 +1,10 @@
 const app_logger = @import("../../app_logger.zig");
+const present_feedback_state = @import("present_feedback_state.zig");
 const present_trace_runtime = @import("present_trace_runtime.zig");
 const std = @import("std");
 
-pub const FrameExecutionOutcome = present_trace_runtime.FrameExecutionOutcome;
-pub const FrameExecutionOutcomeKind = present_trace_runtime.FrameExecutionOutcomeKind;
+pub const FrameExecutionOutcome = present_feedback_state.FrameExecutionOutcome;
+pub const FrameExecutionOutcomeKind = present_feedback_state.FrameExecutionOutcomeKind;
 
 pub fn beginFrameHost(renderer: anytype) void {
     renderer.present.frame_seq +%= 1;
@@ -38,7 +39,7 @@ pub fn frameReadyForDraw(renderer: anytype) bool {
     return renderer.present.frame_execution_state == .ready;
 }
 
-pub fn finishFrameSubmission(renderer: anytype, outcome: FrameExecutionOutcome) present_trace_runtime.FrameSubmission {
+pub fn finishFrameSubmission(renderer: anytype, outcome: FrameExecutionOutcome) present_feedback_state.FrameSubmission {
     renderer.present.last_swap_ms = outcome.present_ms;
     renderer.present.main_composition_target = .default_target;
     renderer.present.trace_last = renderer.present.trace_current;
@@ -52,7 +53,7 @@ pub fn finishFrameSubmission(renderer: anytype, outcome: FrameExecutionOutcome) 
     }
     renderer.present.frame_execution_state = .not_attempted;
     const succeeded = outcome.kind == .submitted;
-    const family_summary = present_trace_runtime.finalizedFrameFamilySummary(
+    const family_summary = present_feedback_state.finalizedFrameFamilySummary(
         renderer.present.frame_family_current,
         succeeded,
     );
@@ -103,7 +104,7 @@ test "beginFrameHost resets per-frame prelude state" {
     beginFrameHost(&renderer);
 
     try std.testing.expectEqual(@as(u64, 10), renderer.present.frame_seq);
-    try std.testing.expectEqual(present_trace_runtime.FrameExecutionState.not_attempted, renderer.present.frame_execution_state);
+    try std.testing.expectEqual(present_feedback_state.FrameExecutionState.not_attempted, renderer.present.frame_execution_state);
     try std.testing.expectEqual(@as(u64, 10), renderer.present.trace_current.frame_seq);
     try std.testing.expectEqual(@as(usize, 0), renderer.present.trace_current.terminal_presentation_count);
     try std.testing.expectEqual(@as(usize, 0), renderer.clip_depth);
@@ -144,12 +145,12 @@ test "finishFrameSubmission submitted advances sequence and clears capture" {
     try std.testing.expect(!submission.family_summary.chrome_band.presented);
     try std.testing.expectEqual(@as(f64, 3.25), renderer.present.last_swap_ms);
     try std.testing.expectEqual(@as(u64, 12), renderer.present.submission_sequence);
-    try std.testing.expectEqual(present_trace_runtime.MainCompositionTarget.default_target, renderer.present.main_composition_target);
+    try std.testing.expectEqual(present_feedback_state.MainCompositionTarget.default_target, renderer.present.main_composition_target);
     try std.testing.expectEqual(renderer.present.trace_current, renderer.present.trace_last);
     try std.testing.expectEqual(@as(?[]const u8, null), renderer.present.capture_path);
     try std.testing.expect(!renderer.present.capture_armed);
     try std.testing.expectEqual(@as(u64, 0), renderer.present.capture_frame_seq);
-    try std.testing.expectEqual(present_trace_runtime.FrameExecutionState.not_attempted, renderer.present.frame_execution_state);
+    try std.testing.expectEqual(present_feedback_state.FrameExecutionState.not_attempted, renderer.present.frame_execution_state);
 }
 
 test "finishFrameSubmission begin_failed preserves capture and does not advance sequence" {
@@ -178,9 +179,9 @@ test "finishFrameSubmission begin_failed preserves capture and does not advance 
     try std.testing.expectEqual(@as(?[]const u8, "capture.ppm"), renderer.present.capture_path);
     try std.testing.expect(renderer.present.capture_armed);
     try std.testing.expectEqual(@as(u64, 12), renderer.present.capture_frame_seq);
-    try std.testing.expectEqual(present_trace_runtime.MainCompositionTarget.default_target, renderer.present.main_composition_target);
+    try std.testing.expectEqual(present_feedback_state.MainCompositionTarget.default_target, renderer.present.main_composition_target);
     try std.testing.expectEqual(renderer.present.trace_current, renderer.present.trace_last);
-    try std.testing.expectEqual(present_trace_runtime.FrameExecutionState.not_attempted, renderer.present.frame_execution_state);
+    try std.testing.expectEqual(present_feedback_state.FrameExecutionState.not_attempted, renderer.present.frame_execution_state);
 }
 
 test "finishFrameSubmission submit_failed clears capture but does not advance sequence" {
@@ -215,8 +216,8 @@ test "finishFrameSubmission submit_failed clears capture but does not advance se
     try std.testing.expect(!renderer.present.capture_armed);
     try std.testing.expectEqual(@as(u64, 0), renderer.present.capture_frame_seq);
     try std.testing.expectEqual(@as(f64, 4.5), renderer.present.last_swap_ms);
-    try std.testing.expectEqual(present_trace_runtime.MainCompositionTarget.default_target, renderer.present.main_composition_target);
-    try std.testing.expectEqual(present_trace_runtime.FrameExecutionState.not_attempted, renderer.present.frame_execution_state);
+    try std.testing.expectEqual(present_feedback_state.MainCompositionTarget.default_target, renderer.present.main_composition_target);
+    try std.testing.expectEqual(present_feedback_state.FrameExecutionState.not_attempted, renderer.present.frame_execution_state);
 }
 
 test "finishFrameSubmission submitted reports chrome band through shared family summary" {

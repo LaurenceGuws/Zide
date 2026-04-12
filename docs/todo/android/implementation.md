@@ -427,6 +427,8 @@ Status:
       logging is enabled by config
     - frame submission logging now exits before reading trace state when that
       tag is disabled
+    - frame-family/submission/execution correctness state now lives in
+      `present_feedback_state.zig` instead of being defined by the trace module
 - first iteration cut landed from that queue:
   - narrowed Android host/UI-thread contamination around stale transcript-era
     ownership

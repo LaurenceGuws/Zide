@@ -35,6 +35,7 @@ const texture_draw = @import("renderer/texture_draw.zig");
 const input_runtime = @import("renderer/input_runtime.zig");
 const font_runtime = @import("renderer/font_runtime.zig");
 const presentable_contract = @import("renderer/presentable_contract.zig");
+const present_feedback_state = @import("renderer/present_feedback_state.zig");
 const present_trace_runtime = @import("renderer/present_trace_runtime.zig");
 const metal_text_sample_runtime = @import("renderer/metal_text_sample_runtime.zig");
 const text_runtime = @import("renderer/text_runtime.zig");
@@ -141,7 +142,7 @@ pub const RendererCapabilities = capability_contract.RendererCapabilities;
 pub const EditorTextStyleFlags = iface.EditorTextStyleFlags;
 pub const editor_syntax_style_slots = iface.editor_syntax_style_slots;
 
-pub const FrameSubmission = present_trace_runtime.FrameSubmission;
+pub const FrameSubmission = present_feedback_state.FrameSubmission;
 pub const PresentTrace = present_trace_runtime.PresentTrace;
 pub const InputRuntimeState = input_state.InputRuntimeState;
 pub const WindowChromeState = window_chrome_runtime.WindowChromeState;
@@ -159,7 +160,7 @@ pub const MetalSampleTextRequest = metal_text_sample_runtime.SampleTextRequest;
 pub const MetalTerminalCellRunRequest = metal_text_sample_runtime.TerminalCellRunRequest;
 pub const SceneTargetInvalidation = scene_target_state.SceneTargetInvalidation;
 pub const SceneTargetContract = scene_target_state.SceneTargetContract;
-const MainCompositionTarget = present_trace_runtime.MainCompositionTarget;
+const MainCompositionTarget = present_feedback_state.MainCompositionTarget;
 pub const TerminalDisableLigaturesStrategy = enum {
     never,
     cursor,

@@ -7,6 +7,7 @@ const gl_resources = @import("gl_resources.zig");
 const shared_gl = @import("gl.zig");
 const metal_text_sample_runtime = @import("metal_text_sample_runtime.zig");
 const native_host = @import("../../platform/native_host.zig");
+const present_feedback_state = @import("present_feedback_state.zig");
 const present_trace_runtime = @import("present_trace_runtime.zig");
 const renderer_frame_host = @import("renderer_frame_host.zig");
 const scene_target_state = @import("scene_target_state.zig");
@@ -392,7 +393,7 @@ fn bindSharedGlApi() void {
     shared_gl.DrawArrays = @ptrCast(&gl.glDrawArrays);
 }
 
-pub fn submitFrame(renderer: anytype) present_trace_runtime.FrameSubmission {
+pub fn submitFrame(renderer: anytype) present_feedback_state.FrameSubmission {
     const state = renderer.backend.runtime.androidGlesState();
     state.frame_submit_count += 1;
     if (renderer.present.frame_execution_state != .ready) {

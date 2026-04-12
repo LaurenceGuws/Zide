@@ -19,6 +19,7 @@ const types = @import("types.zig");
 const surface_draw = @import("surface_draw.zig");
 const window_init = @import("window_init.zig");
 const screenshot = @import("screenshot.zig");
+const present_feedback_state = @import("present_feedback_state.zig");
 const present_trace_runtime = @import("present_trace_runtime.zig");
 const renderer_clip_host = @import("renderer_clip_host.zig");
 const renderer_frame_host = @import("renderer_frame_host.zig");
@@ -268,7 +269,7 @@ pub fn beginFrame(renderer: anytype) void {
     renderer_frame_host.noteFrameReady(renderer);
 }
 
-pub fn submitFrame(renderer: anytype) present_trace_runtime.FrameSubmission {
+pub fn submitFrame(renderer: anytype) present_feedback_state.FrameSubmission {
     defer clearQueuedSurfaceDraws(renderer);
     replayFrameCriticalSurfaceDrawsBeforePresent(renderer);
     if (renderer.present.main_composition_target == .offscreen_scene_target) drawSceneTargetToDefault(renderer);

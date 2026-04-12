@@ -8,6 +8,7 @@ const bootstrap_contract = @import("bootstrap_contract.zig");
 const metal_runtime_state = @import("metal_runtime_state.zig");
 const metal_text_sample_runtime = @import("metal_text_sample_runtime.zig");
 const presentable_contract = @import("presentable_contract.zig");
+const present_feedback_state = @import("present_feedback_state.zig");
 const present_trace_runtime = @import("present_trace_runtime.zig");
 const renderer_frame_host = @import("renderer_frame_host.zig");
 const screenshot = @import("screenshot.zig");
@@ -1258,7 +1259,7 @@ pub fn beginFrame(renderer: anytype) void {
     }
 }
 
-pub fn submitFrame(renderer: anytype) present_trace_runtime.FrameSubmission {
+pub fn submitFrame(renderer: anytype) present_feedback_state.FrameSubmission {
     defer clearQueuedSurfaceDraws(renderer);
     defer clearQueuedPresentableDraws(renderer);
     const present_start = sdl_api.getPerformanceCounter();

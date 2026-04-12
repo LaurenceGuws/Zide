@@ -898,6 +898,14 @@ Current progress:
     `renderer.present` tag is disabled
   - this keeps correctness feedback hot, but moves observability behind config
     instead of treating it as product execution
+- correctness naming cut landed:
+  - frame-family/submission/execution state moved to
+    `present_feedback_state.zig`
+  - backend submit return types now name the correctness feedback module, not
+    the trace module
+  - `present_trace_runtime.zig` now carries optional trace counters/helpers
+    plus the aggregate `PresentState`; correctness types are no longer defined
+    there
 
 ### 7. Remaining Android host/UI-thread contamination
 
