@@ -1270,10 +1270,7 @@ pub fn submitFrame(renderer: anytype) present_feedback_state.FrameSubmission {
             defer if (capture_readback) |*readback| deinitReadback(readback);
 
             capture_readback = prepareDebugFrameReadbackIfArmed(renderer, context, frame);
-
-            replayFrameCriticalSurfaceDrawsBeforePresent(renderer, context, frame);
-            _ = refreshTerminalSnapshotCacheBeforePresentableReplay(context, frame);
-            replayFrameCriticalPresentableDrawsBeforePresent(context, frame);
+            replayFrameCriticalWorkBeforePresent(renderer, context, frame);
             encodePresent(frame);
             commitFrame(frame);
 
@@ -1306,6 +1303,15 @@ pub fn submitFrame(renderer: anytype) present_feedback_state.FrameSubmission {
 fn prepareDebugFrameReadbackIfArmed(renderer: anytype, context: *BackendContext, frame: *Frame) ?Readback {
     if (!present_capture_host.state(renderer).armed) return null;
     return prepareFrameReadback(context, frame);
+}
+
+/// Ordinary product submit work that must complete before present encoding.
+/// This stays explicit so submit-time replay remains reviewable instead of
+/// reading like generic "submit does whatever is left".
+fn replayFrameCriticalWorkBeforePresent(renderer: anytype, context: *BackendContext, frame: *Frame) void {
+    replayFrameCriticalSurfaceDrawsBeforePresent(renderer, context, frame);
+    _ = refreshTerminalSnapshotCacheBeforePresentableReplay(context, frame);
+    replayFrameCriticalPresentableDrawsBeforePresent(context, frame);
 }
 
 fn finishFrameCaptureIfArmed(renderer: anytype, frame: *Frame, capture_readback: ?Readback) void {

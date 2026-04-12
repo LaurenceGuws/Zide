@@ -797,6 +797,12 @@ Current progress:
     helper shared by preframe warmup and steady-state `beginFrame(...)`
   - steady-state frame entry now reads more honestly as surface/context acquire,
     then clear/setup, instead of duplicating acquire mechanics across seams
+- second submit-path classification cut landed:
+  - Metal ordinary pre-present replay now routes through one explicit helper
+    instead of spelling surface replay, snapshot-cache refresh, and presentable
+    replay inline inside `submitFrame(...)`
+  - behavior is unchanged; this just keeps ordinary submit mechanics readable
+    before any deeper replay movement
 
 ### 6. Debug/observability contamination of product execution
 
