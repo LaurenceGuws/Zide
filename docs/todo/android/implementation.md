@@ -417,7 +417,8 @@ Status:
   - debug/observability contamination first cut:
     - terminal debug sample state now has an explicit `samples_enabled` gate
     - ordinary product rendering no longer writes terminal presentation,
-      text-paint, or Metal fallback debug sample structs by default
+      cursor-overlay, text-paint, or Metal fallback debug sample structs by
+      default
     - future diagnostic capture must explicitly arm those samples instead of
       relying on always-on product-path writes
 - first iteration cut landed from that queue:

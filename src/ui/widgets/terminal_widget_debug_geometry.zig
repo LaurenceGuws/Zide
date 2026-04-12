@@ -112,6 +112,12 @@ pub const DebugCaptureState = struct {
 
     /// Optional diagnostic sample sink. Product rendering must not update this
     /// state unless a debug capture path explicitly arms it.
+    pub fn cursorOverlaySampleSink(self: *@This()) ?*CursorOverlaySample {
+        return if (self.samples_enabled) &self.last_cursor_overlay else null;
+    }
+
+    /// Optional diagnostic sample sink. Product rendering must not update this
+    /// state unless a debug capture path explicitly arms it.
     pub fn textPaintSampleSink(self: *@This()) ?*TextPaintSample {
         return if (self.samples_enabled) &self.last_text_paint else null;
     }
@@ -124,6 +130,7 @@ pub const DebugCaptureState = struct {
 
     pub fn clearFrameSamples(self: *@This()) void {
         if (!self.samples_enabled) return;
+        self.last_cursor_overlay.valid = false;
         self.last_text_paint.valid = false;
         self.last_metal_terminal_fallback = .{};
     }

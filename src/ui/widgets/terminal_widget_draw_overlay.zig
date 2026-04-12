@@ -330,26 +330,28 @@ pub fn drawOverlays(
 
             const composing_cells: usize = composing_len;
             const cursor_rect_w_f = if (composing_cells > 0) @as(f32, @floatFromInt(@as(i32, @intCast(@max(@as(usize, 1), composing_cells))))) * view.cell_width else view.cell_width;
-            self.debug.last_cursor_overlay = CursorOverlaySample{
-                .valid = true,
-                .generation = cache.generation,
-                .row = cursor.row,
-                .col = cursor.col,
-                .codepoint = cell.codepoint,
-                .width_units = cell_width_units,
-                .cell_x = cell_x,
-                .cell_y = cell_y,
-                .cell_w = cursor_w,
-                .cell_h = cursor_h,
-                .cursor_x = sample_cursor_x,
-                .cursor_y = sample_cursor_y,
-                .cursor_w = sample_cursor_w,
-                .cursor_h = sample_cursor_h,
-                .text_input_w = cursor_rect_w_f,
-                .edge_inset = cursor_edge_inset_f,
-                .stroke = cursor_stroke_f,
-                .render_scale = render_scale,
-            };
+            if (self.debug.cursorOverlaySampleSink()) |sample| {
+                sample.* = CursorOverlaySample{
+                    .valid = true,
+                    .generation = cache.generation,
+                    .row = cursor.row,
+                    .col = cursor.col,
+                    .codepoint = cell.codepoint,
+                    .width_units = cell_width_units,
+                    .cell_x = cell_x,
+                    .cell_y = cell_y,
+                    .cell_w = cursor_w,
+                    .cell_h = cursor_h,
+                    .cursor_x = sample_cursor_x,
+                    .cursor_y = sample_cursor_y,
+                    .cursor_w = sample_cursor_w,
+                    .cursor_h = sample_cursor_h,
+                    .text_input_w = cursor_rect_w_f,
+                    .edge_inset = cursor_edge_inset_f,
+                    .stroke = cursor_stroke_f,
+                    .render_scale = render_scale,
+                };
+            }
             shell.setTextInputRect(
                 @as(i32, @intFromFloat(std.math.round(cell_x))),
                 @as(i32, @intFromFloat(std.math.round(cell_y))),

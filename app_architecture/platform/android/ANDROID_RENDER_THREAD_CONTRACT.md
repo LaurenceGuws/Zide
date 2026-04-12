@@ -883,8 +883,8 @@ Current progress:
 
 - first debug-sample ownership cut landed:
   - `DebugCaptureState` now has an explicit `samples_enabled` gate
-  - terminal presentation/text-paint/Metal fallback diagnostic sample sinks are
-    null in ordinary product rendering
+  - terminal presentation/cursor-overlay/text-paint/Metal fallback diagnostic
+    sample sinks are null in ordinary product rendering
   - product frames still draw and submit normally, but they no longer refresh
     those debug capture structs by default
   - future debug capture must explicitly arm sample collection instead of

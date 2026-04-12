@@ -350,7 +350,6 @@ pub fn drawPrepared(
         shell,
         terminal_view,
     );
-    self.debug.last_cursor_overlay.valid = false;
     self.debug.clearFrameSamples();
 
     self.controller.hover.dirty = false;
