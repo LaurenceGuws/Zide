@@ -925,6 +925,10 @@ Current progress:
 - zoom-path operator telemetry gated:
   - pinch/UI-scale zoom logs now check tag enablement before formatting
   - disabled zoom diagnostics no longer add formatting work to gesture pressure
+- terminal input/hover operator telemetry gated:
+  - key-path and hover info logs now check tag enablement before formatting
+  - disabled input diagnostics no longer add string-formatting work to ordinary
+    product input frames
 
 ### 7. Remaining Android host/UI-thread contamination
 

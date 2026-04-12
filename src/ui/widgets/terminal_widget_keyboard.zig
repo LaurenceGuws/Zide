@@ -35,6 +35,7 @@ pub fn handleKeyboardInput(
     const altmeta_log = app_logger.logger("terminal.input.altmeta");
     const key_log = app_logger.logger("terminal.input.keys");
     const dump_log = app_logger.logger("terminal.ui.dump");
+    const key_log_enabled = key_log.enabled_file or key_log.enabled_console;
 
     const key_mode_flags = input_adapter.keyModeFlags();
     const report_text_enabled = key_encoder.reportTextEnabled(key_mode_flags);
@@ -62,7 +63,7 @@ pub fn handleKeyboardInput(
     }
 
     if (allow_terminal_key) {
-        if (input_batch.events.items.len > 0) {
+        if (key_log_enabled and input_batch.events.items.len > 0) {
             key_log.logf(
                 .info,
                 "frame key_mode_flags={d} report_text={d} auto_repeat={d} events={d}",
@@ -93,41 +94,51 @@ pub fn handleKeyboardInput(
                 result.skip_chars = true;
                 continue;
             }
-            key_log.logf(
-                .info,
-                "event key={d} pressed={d} repeated={d} mods(s={d} a={d} c={d} g={d} super={d})",
-                .{
-                    @intFromEnum(key),
-                    @intFromBool(event.key.pressed),
-                    @intFromBool(event.key.repeated),
-                    @intFromBool(event.key.mods.shift),
-                    @intFromBool(event.key.mods.alt),
-                    @intFromBool(event.key.mods.ctrl),
-                    @intFromBool(event.key.mods.altgr),
-                    @intFromBool(event.key.mods.super),
-                },
-            );
+            if (key_log_enabled) {
+                key_log.logf(
+                    .info,
+                    "event key={d} pressed={d} repeated={d} mods(s={d} a={d} c={d} g={d} super={d})",
+                    .{
+                        @intFromEnum(key),
+                        @intFromBool(event.key.pressed),
+                        @intFromBool(event.key.repeated),
+                        @intFromBool(event.key.mods.shift),
+                        @intFromBool(event.key.mods.alt),
+                        @intFromBool(event.key.mods.ctrl),
+                        @intFromBool(event.key.mods.altgr),
+                        @intFromBool(event.key.mods.super),
+                    },
+                );
+            }
             if (suppress_shortcuts and input_batch.mods.ctrl and input_batch.mods.shift and (key == .c or key == .v)) {
-                key_log.logf(.info, "skip key={d} reason=suppress_shortcuts", .{@intFromEnum(key)});
+                if (key_log_enabled) {
+                    key_log.logf(.info, "skip key={d} reason=suppress_shortcuts", .{@intFromEnum(key)});
+                }
                 continue;
             }
             if (!event.key.pressed) {
                 if (!report_text_enabled and isModifierKey(key)) {
-                    key_log.logf(.info, "skip key={d} reason=modifier_release_without_report_text", .{@intFromEnum(key)});
+                    if (key_log_enabled) {
+                        key_log.logf(.info, "skip key={d} reason=modifier_release_without_report_text", .{@intFromEnum(key)});
+                    }
                     continue;
                 }
                 if (report_text_enabled) {
                     if (key_encoder.baseCharForKey(key)) |base_char| {
                         clearLiveState(input_adapter);
                         try input_adapter.sendCharActionWithMetadata(base_char, event_mod, .release, keyAltMeta(renderer, altmeta_log, event.key, base_char));
-                        key_log.logf(.info, "send char key={d} action=release base_char={d}", .{ @intFromEnum(key), base_char });
+                        if (key_log_enabled) {
+                            key_log.logf(.info, "send char key={d} action=release base_char={d}", .{ @intFromEnum(key), base_char });
+                        }
                         result.handled = true;
                         result.skip_chars = true;
                         continue;
                     }
                 }
                 const handled_release = try input_adapter.sendKeyAction(key, event_mod, .release);
-                key_log.logf(.info, "send key={d} action=release handled={d}", .{ @intFromEnum(key), @intFromBool(handled_release) });
+                if (key_log_enabled) {
+                    key_log.logf(.info, "send key={d} action=release handled={d}", .{ @intFromEnum(key), @intFromBool(handled_release) });
+                }
                 if (handled_release) {
                     clearLiveState(input_adapter);
                     result.handled = true;
@@ -137,18 +148,24 @@ pub fn handleKeyboardInput(
             }
             const action: input_mod.KeyAction = if (event.key.repeated) .repeat else .press;
             if (action == .repeat and !input_adapter.autoRepeatEnabled()) {
-                key_log.logf(.info, "skip key={d} action=repeat reason=auto_repeat_disabled", .{@intFromEnum(key)});
+                if (key_log_enabled) {
+                    key_log.logf(.info, "skip key={d} action=repeat reason=auto_repeat_disabled", .{@intFromEnum(key)});
+                }
                 continue;
             }
             if (!report_text_enabled and isModifierKey(key)) {
-                key_log.logf(.info, "skip key={d} action={s} reason=modifier_without_report_text", .{ @intFromEnum(key), @tagName(action) });
+                if (key_log_enabled) {
+                    key_log.logf(.info, "skip key={d} action={s} reason=modifier_without_report_text", .{ @intFromEnum(key), @tagName(action) });
+                }
                 continue;
             }
             if (report_text_enabled) {
                 if (key_encoder.baseCharForKey(key)) |base_char| {
                     clearLiveState(input_adapter);
                     try input_adapter.sendCharActionWithMetadata(base_char, event_mod, action, keyAltMeta(renderer, altmeta_log, event.key, base_char));
-                    key_log.logf(.info, "send char key={d} action={s} base_char={d}", .{ @intFromEnum(key), @tagName(action), base_char });
+                    if (key_log_enabled) {
+                        key_log.logf(.info, "send char key={d} action={s} base_char={d}", .{ @intFromEnum(key), @tagName(action), base_char });
+                    }
                     result.handled = true;
                     result.skip_chars = true;
                     continue;
@@ -156,7 +173,9 @@ pub fn handleKeyboardInput(
             }
 
             const handled_key = try input_adapter.sendKeyAction(key, event_mod, action);
-            key_log.logf(.info, "send key={d} action={s} handled={d}", .{ @intFromEnum(key), @tagName(action), @intFromBool(handled_key) });
+            if (key_log_enabled) {
+                key_log.logf(.info, "send key={d} action={s} handled={d}", .{ @intFromEnum(key), @tagName(action), @intFromBool(handled_key) });
+            }
 
             if (handled_key) {
                 clearLiveState(input_adapter);
@@ -167,7 +186,9 @@ pub fn handleKeyboardInput(
 
             if (!report_text_enabled and (event.key.mods.ctrl or event.key.mods.alt)) {
                 if (try input_adapter.sendCharForKey(key, event_mod, action, event.key.mods.ctrl, event.key.mods.alt)) {
-                    key_log.logf(.info, "send ctrl_alt_char key={d} action={s}", .{ @intFromEnum(key), @tagName(action) });
+                    if (key_log_enabled) {
+                        key_log.logf(.info, "send ctrl_alt_char key={d} action={s}", .{ @intFromEnum(key), @tagName(action) });
+                    }
                     clearLiveState(input_adapter);
                     result.handled = true;
                     result.skip_chars = true;
@@ -328,29 +349,31 @@ fn keyAltMeta(
         .explicit_altgr = explicit_altgr,
         .explicit_non_altgr_alt = explicit_non_altgr_alt,
     });
-    log.logf(
-        .info,
-        "key={d} sc={d} sym={d} sdl_mods={d} flags(exp_altgr={d} exp_non_alt={d}) mods(s={d} a={d} c={d} g={d}) trans(base={d} shift={d} altgr={d} altgr_shift={d}) meta(base={d} shift={d} alt={d})",
-        .{
-            @intFromEnum(key_event.key),
-            key_event.scancode orelse -1,
-            key_event.sym orelse 0,
-            key_event.sdl_mod_bits orelse 0,
-            @intFromBool(explicit_altgr),
-            @intFromBool(explicit_non_altgr_alt),
-            @intFromBool(key_event.mods.shift),
-            @intFromBool(key_event.mods.alt),
-            @intFromBool(key_event.mods.ctrl),
-            @intFromBool(key_event.mods.super),
-            translated_base orelse 0,
-            translated_shifted orelse 0,
-            translated_altgr orelse 0,
-            translated_shift_altgr orelse 0,
-            meta.base_codepoint orelse 0,
-            meta.shifted_codepoint orelse 0,
-            meta.alternate_layout_codepoint orelse 0,
-        },
-    );
+    if (log.enabled_file or log.enabled_console) {
+        log.logf(
+            .info,
+            "key={d} sc={d} sym={d} sdl_mods={d} flags(exp_altgr={d} exp_non_alt={d}) mods(s={d} a={d} c={d} g={d}) trans(base={d} shift={d} altgr={d} altgr_shift={d}) meta(base={d} shift={d} alt={d})",
+            .{
+                @intFromEnum(key_event.key),
+                key_event.scancode orelse -1,
+                key_event.sym orelse 0,
+                key_event.sdl_mod_bits orelse 0,
+                @intFromBool(explicit_altgr),
+                @intFromBool(explicit_non_altgr_alt),
+                @intFromBool(key_event.mods.shift),
+                @intFromBool(key_event.mods.alt),
+                @intFromBool(key_event.mods.ctrl),
+                @intFromBool(key_event.mods.super),
+                translated_base orelse 0,
+                translated_shifted orelse 0,
+                translated_altgr orelse 0,
+                translated_shift_altgr orelse 0,
+                meta.base_codepoint orelse 0,
+                meta.shifted_codepoint orelse 0,
+                meta.alternate_layout_codepoint orelse 0,
+            },
+        );
+    }
     return meta;
 }
 

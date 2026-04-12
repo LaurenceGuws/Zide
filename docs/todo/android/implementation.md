@@ -438,6 +438,8 @@ Status:
       formatting hot-path messages
     - pinch/UI-scale zoom logs now check tag enablement before formatting
       gesture-pressure diagnostics
+    - terminal key-path and hover info logs now check tag enablement before
+      formatting ordinary product input-frame diagnostics
 - first iteration cut landed from that queue:
   - narrowed Android host/UI-thread contamination around stale transcript-era
     ownership
