@@ -234,6 +234,13 @@ Next renderer move:
   through immediate `text_runtime.zig` paths that mutate shared
   `renderer.text_render.bg_rgba` state and emit texture draws immediately, so
   fill-plus-text work still lacks one backend-neutral phase boundary
+- current checkpoint:
+  first cut is now in:
+  non-terminal text paths in `text_runtime.zig` no longer mutate ambient
+  `renderer.text_render.bg_rgba` before drawing; they carry background through
+  a local text draw context into the texture draw thunk instead.
+  Remaining `bg_rgba` mutation is now narrowed to terminal-grid / terminal
+  glyph batching paths.
 - do not reopen Android backend work unless that audit proves a new concrete
   renderer-owned Android blocker
 

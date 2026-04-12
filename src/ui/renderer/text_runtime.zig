@@ -122,17 +122,21 @@ fn opaqueTextBg(bg: Color) types.Rgba {
     return bg_rgba;
 }
 
-fn pushTextBg(self: *Renderer, bg_rgba: types.Rgba) types.Rgba {
-    const prev = self.text_render.bg_rgba;
-    self.text_render.bg_rgba = bg_rgba;
-    return prev;
+const TextDrawContext = struct {
+    renderer: *Renderer,
+    bg_rgba: types.Rgba,
+};
+
+fn makeTextDrawContext(renderer: *Renderer, bg_rgba: types.Rgba) TextDrawContext {
+    return .{
+        .renderer = renderer,
+        .bg_rgba = bg_rgba,
+    };
 }
 
 pub fn drawText(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color) void {
     if (!textRenderingAvailable(self)) return;
-    const prev = pushTextBg(self, transparentTextBg());
-    defer self.text_render.bg_rgba = prev;
-    drawTextWithFont(self, &self.app_font, self.app_metrics, text, x, y, color, false);
+    drawTextWithFont(self, transparentTextBg(), &self.app_font, self.app_metrics, text, x, y, color, false);
 }
 
 pub fn drawTextMonospace(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color) void {
@@ -166,9 +170,7 @@ pub fn drawTextMonospacePolicy(self: *Renderer, text: []const u8, x: f32, y: f32
         }
         return;
     }
-    const prev = pushTextBg(self, transparentTextBg());
-    defer self.text_render.bg_rgba = prev;
-    drawTextWithFontMonospace(self, &self.editor_font, self.editor_metrics, text, x, y, color, disable_programming_ligatures, false);
+    drawTextWithFontMonospace(self, transparentTextBg(), &self.editor_font, self.editor_metrics, text, x, y, color, disable_programming_ligatures, false);
 }
 
 pub fn drawTextMonospaceOnBg(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color) void {
@@ -182,9 +184,7 @@ pub fn drawTextMonospaceOnBgPolicy(self: *Renderer, text: []const u8, x: f32, y:
         }
         return;
     }
-    const prev = pushTextBg(self, opaqueTextBg(bg));
-    defer self.text_render.bg_rgba = prev;
-    drawTextWithFontMonospace(self, &self.editor_font, self.editor_metrics, text, x, y, color, disable_programming_ligatures, false);
+    drawTextWithFontMonospace(self, opaqueTextBg(bg), &self.editor_font, self.editor_metrics, text, x, y, color, disable_programming_ligatures, false);
 }
 
 pub fn drawTextMonospaceStyledPolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, disable_programming_ligatures: bool, italic: bool) void {
@@ -194,9 +194,7 @@ pub fn drawTextMonospaceStyledPolicy(self: *Renderer, text: []const u8, x: f32, 
         }
         return;
     }
-    const prev = pushTextBg(self, transparentTextBg());
-    defer self.text_render.bg_rgba = prev;
-    drawTextWithFontMonospace(self, &self.editor_font, self.editor_metrics, text, x, y, color, disable_programming_ligatures, italic);
+    drawTextWithFontMonospace(self, transparentTextBg(), &self.editor_font, self.editor_metrics, text, x, y, color, disable_programming_ligatures, italic);
 }
 
 pub fn drawTextMonospaceOnBgStyledPolicy(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color, disable_programming_ligatures: bool, italic: bool) void {
@@ -206,28 +204,22 @@ pub fn drawTextMonospaceOnBgStyledPolicy(self: *Renderer, text: []const u8, x: f
         }
         return;
     }
-    const prev = pushTextBg(self, opaqueTextBg(bg));
-    defer self.text_render.bg_rgba = prev;
-    drawTextWithFontMonospace(self, &self.editor_font, self.editor_metrics, text, x, y, color, disable_programming_ligatures, italic);
+    drawTextWithFontMonospace(self, opaqueTextBg(bg), &self.editor_font, self.editor_metrics, text, x, y, color, disable_programming_ligatures, italic);
 }
 
 pub fn drawTextOnBg(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color) void {
     if (!textRenderingAvailable(self)) return;
-    const prev = pushTextBg(self, opaqueTextBg(bg));
-    defer self.text_render.bg_rgba = prev;
-    drawTextWithFont(self, &self.app_font, self.app_metrics, text, x, y, color, false);
+    drawTextWithFont(self, opaqueTextBg(bg), &self.app_font, self.app_metrics, text, x, y, color, false);
 }
 
 pub fn drawTextSized(self: *Renderer, text: []const u8, x: f32, y: f32, size: f32, color: Color) void {
     if (!textRenderingAvailable(self)) return;
-    const prev = pushTextBg(self, transparentTextBg());
-    defer self.text_render.bg_rgba = prev;
     const font = font_runtime.fontForSize(self, size) orelse {
         drawText(self, text, x, y, color);
         return;
     };
     const scale = if (self.scale.render_scale > 0.0) self.scale.render_scale else 1.0;
-    drawTextWithFont(self, font, .{
+    drawTextWithFont(self, transparentTextBg(), font, .{
         .ascent = font.ascent / scale,
         .descent = font.descent / scale,
         .line_height = font.line_height / scale,
@@ -239,16 +231,12 @@ pub fn drawTextSized(self: *Renderer, text: []const u8, x: f32, y: f32, size: f3
 
 pub fn drawIconText(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color) void {
     if (!textRenderingAvailable(self)) return;
-    const prev = pushTextBg(self, transparentTextBg());
-    defer self.text_render.bg_rgba = prev;
-    drawTextWithFont(self, &self.icon_font, self.icon_metrics, text, x, y, color, false);
+    drawTextWithFont(self, transparentTextBg(), &self.icon_font, self.icon_metrics, text, x, y, color, false);
 }
 
 pub fn drawIconTextOnBg(self: *Renderer, text: []const u8, x: f32, y: f32, color: Color, bg: Color) void {
     if (!textRenderingAvailable(self)) return;
-    const prev = pushTextBg(self, opaqueTextBg(bg));
-    defer self.text_render.bg_rgba = prev;
-    drawTextWithFont(self, &self.icon_font, self.icon_metrics, text, x, y, color, false);
+    drawTextWithFont(self, opaqueTextBg(bg), &self.icon_font, self.icon_metrics, text, x, y, color, false);
 }
 
 pub fn measureIconTextWidth(self: *Renderer, text: []const u8) f32 {
@@ -398,20 +386,22 @@ fn drawTerminalBoxGlyphBatched(self: *Renderer, codepoint: u32, x: f32, y: f32, 
     return terminal_glyphs.drawBoxGlyphBatched(addTerminalGlyphRectThunk, self, codepoint, x, y, w, h, color);
 }
 
-fn drawTextWithFont(self: *Renderer, font: *TerminalFont, metrics: Renderer.ScaledFontMetrics, text: []const u8, x: f32, y: f32, color: Color, italic: bool) void {
+fn drawTextWithFont(self: *Renderer, bg_rgba: types.Rgba, font: *TerminalFont, metrics: Renderer.ScaledFontMetrics, text: []const u8, x: f32, y: f32, color: Color, italic: bool) void {
     renderer_text_backend_host.flushQueuedSurfaceDrawsBeforeTextWork(self);
     const origin = snapTextOrigin(self, x, y);
-    text_draw.drawText(self.allocator, font, self, drawTextureThunk, text, origin.x, origin.y, metrics.cell_width, metrics.cell_height, color.toRgba(), false, italic);
+    var draw_ctx = makeTextDrawContext(self, bg_rgba);
+    text_draw.drawText(self.allocator, font, &draw_ctx, drawTextureThunk, text, origin.x, origin.y, metrics.cell_width, metrics.cell_height, color.toRgba(), false, italic);
 }
 
-fn drawTextWithFontMonospace(self: *Renderer, font: *TerminalFont, metrics: Renderer.ScaledFontMetrics, text: []const u8, x: f32, y: f32, color: Color, disable_programming_ligatures: bool, italic: bool) void {
+fn drawTextWithFontMonospace(self: *Renderer, bg_rgba: types.Rgba, font: *TerminalFont, metrics: Renderer.ScaledFontMetrics, text: []const u8, x: f32, y: f32, color: Color, disable_programming_ligatures: bool, italic: bool) void {
     renderer_text_backend_host.flushQueuedSurfaceDrawsBeforeTextWork(self);
     const origin = snapTextOrigin(self, x, y);
-    if (drawTextWithFontMonospaceShaped(self, font, metrics, text, origin.x, origin.y, color.toRgba(), disable_programming_ligatures, italic)) return;
-    text_draw.drawText(self.allocator, font, self, drawTextureThunk, text, origin.x, origin.y, metrics.cell_width, metrics.cell_height, color.toRgba(), true, italic);
+    if (drawTextWithFontMonospaceShaped(self, bg_rgba, font, metrics, text, origin.x, origin.y, color.toRgba(), disable_programming_ligatures, italic)) return;
+    var draw_ctx = makeTextDrawContext(self, bg_rgba);
+    text_draw.drawText(self.allocator, font, &draw_ctx, drawTextureThunk, text, origin.x, origin.y, metrics.cell_width, metrics.cell_height, color.toRgba(), true, italic);
 }
 
-fn drawTextWithFontMonospaceShaped(self: *Renderer, font: *TerminalFont, metrics: Renderer.ScaledFontMetrics, text: []const u8, x: f32, y: f32, color: types.Rgba, disable_programming_ligatures: bool, italic: bool) bool {
+fn drawTextWithFontMonospaceShaped(self: *Renderer, bg_rgba: types.Rgba, font: *TerminalFont, metrics: Renderer.ScaledFontMetrics, text: []const u8, x: f32, y: f32, color: types.Rgba, disable_programming_ligatures: bool, italic: bool) bool {
     const log = app_logger.logger("renderer.text");
     if (text.len == 0) return true;
     if (!textLikelyNeedsShaping(text)) {
@@ -476,7 +466,8 @@ fn drawTextWithFontMonospaceShaped(self: *Renderer, font: *TerminalFont, metrics
             var fallback_x = x + @as(f32, @floatFromInt(span_start)) * metrics.cell_width;
             var j = span_start;
             while (j < span_end) : (j += 1) {
-                font.drawGlyph(.{ .ctx = self, .drawTexture = drawTextureThunk }, codepoints.items[j], fallback_x, y, metrics.cell_width, metrics.cell_height, false, color, italic);
+                var fallback_draw_ctx = makeTextDrawContext(self, bg_rgba);
+                font.drawGlyph(.{ .ctx = @ptrCast(&fallback_draw_ctx), .drawTexture = drawTextureThunk }, codepoints.items[j], fallback_x, y, metrics.cell_width, metrics.cell_height, false, color, italic);
                 fallback_x += metrics.cell_width;
             }
             span_start = span_end;
@@ -530,9 +521,11 @@ fn drawTextWithFontMonospaceShaped(self: *Renderer, font: *TerminalFont, metrics
             };
             const draw_color = if (glyph.is_color) types.Rgba{ .r = 255, .g = 255, .b = 255, .a = 255 } else color;
             if (glyph.is_color) {
-                drawTextureThunk(self, font.colorTexture(), glyph.rect, dest, draw_color, .rgba);
+                var draw_ctx = makeTextDrawContext(self, bg_rgba);
+                drawTextureThunk(@ptrCast(&draw_ctx), font.colorTexture(), glyph.rect, dest, draw_color, .rgba);
             } else {
-                drawTextureThunk(self, font.coverageTexture(), glyph.rect, dest, draw_color, .font_coverage);
+                var draw_ctx = makeTextDrawContext(self, bg_rgba);
+                drawTextureThunk(@ptrCast(&draw_ctx), font.coverageTexture(), glyph.rect, dest, draw_color, .font_coverage);
             }
         }
         span_start = span_end;
@@ -556,8 +549,8 @@ fn measureTextWidth(self: *Renderer, font: *TerminalFont, text: []const u8) f32 
 }
 
 fn drawTextureRectThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
-    const self: *Renderer = @ptrCast(@alignCast(ctx));
-    draw_ops.drawTextureRect(self, texture, src, dest, color, self.text_render.bg_rgba, kind);
+    const draw_ctx: *TextDrawContext = @ptrCast(@alignCast(ctx));
+    draw_ops.drawTextureRect(draw_ctx.renderer, texture, src, dest, color, draw_ctx.bg_rgba, kind);
 }
 
 fn drawTextureThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {

@@ -776,6 +776,15 @@ That split is now sharper from code inspection too:
   resolves into that same immediate text path. So the remaining blocker is not
   just generic fills; it is that fills and their dependent text still do not
   share one backend-neutral phase boundary.
+- first cut on that blocker is now in:
+  non-terminal text paths in `text_runtime.zig` no longer push ambient
+  `renderer.text_render.bg_rgba` state before drawing. Ordinary UI/editor text
+  now carries its background through a tiny local text draw context into the
+  texture draw thunk instead.
+- that means the surviving `bg_rgba` mutation story is now narrower and more
+  honest:
+  terminal-grid / batched terminal glyph paths still use renderer-owned
+  background state, but ordinary UI/editor text no longer does
 - sample pressure is specifically section-fill plus bg-aware text preview work
   in `font_sample_view.zig` / `font_sample_section_host.zig`, including the
   custom-font sample path that still terminates through direct texture draws
