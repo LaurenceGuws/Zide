@@ -246,6 +246,11 @@ Next renderer move:
   Remaining pressure is no longer ambient bg mutation; it is the smaller set
   of legacy renderer thunks and GL surface-phase replay paths that still read
   ambient bg instead of taking explicit background data.
+- next honest blocker:
+  `SurfaceDraw.atlas` / `SurfaceDraw.raw_image` replay and a few legacy
+  renderer texture thunks still depend on ambient background reads. The next
+  cut should either carry bg explicitly through those payloads/thunks or prove
+  that those reads are dead enough to remove.
 - do not reopen Android backend work unless that audit proves a new concrete
   renderer-owned Android blocker
 

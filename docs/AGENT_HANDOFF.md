@@ -33,14 +33,16 @@ stop outranking the active renderer blocker.
     product work should return to the shared renderer blocker instead of
     extending AU-A2 further without a concrete regression. The strongest
     remaining renderer pressure is no longer the tiny editor-local overlay
-    leaks that were just closed. The next honest structural blocker is again
-    the one already named in renderer authority: ordinary UI/editor dependent
-    text still resolves through immediate `text_runtime.zig` paths that mutate
-    shared `renderer.text_render.bg_rgba` state and emit texture draws
-    immediately, so fill-plus-text work still lacks one backend-neutral phase
-    boundary. Presentable lifecycle unevenness and deferred live Metal
-    verification remain real too, but they are no longer the only thing left
-    to say.
+    leaks that were just closed, and it is no longer ambient
+    `renderer.text_render.bg_rgba` mutation either. Ordinary UI/editor text and
+    terminal glyph batching now carry background explicitly. The next honest
+    structural blocker is narrower: a few legacy renderer texture thunks and
+    GL `SurfaceDraw` atlas/raw-image replay paths still read ambient
+    `renderer.text_render.bg_rgba` instead of carrying background as explicit
+    draw data, so fill-plus-text/image work still lacks one fully
+    backend-neutral background contract. Presentable lifecycle unevenness and
+    deferred live Metal verification remain real too, but they are no longer
+    the only thing left to say.
 - `RB-B3.d` is already met:
   - widget/runtime no longer calls `usesDirectTerminalPresentation(...)`
   - those path decisions now terminate in the presentable host seam
