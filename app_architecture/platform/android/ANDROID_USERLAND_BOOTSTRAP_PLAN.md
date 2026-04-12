@@ -22,10 +22,10 @@ Current Android truth is already strong enough in the prerequisite lanes:
 
 What is still not product-real:
 
-- the current shell is still Android system `sh`
-- there is no repo-owned Bash userland
-- there is no package-managed path for `ripgrep`, `git`, `neovim`, or the
-  rest of a serious terminal/IDE baseline
+- broad curated package UX
+- product-clean provider replacement
+- device validation of the latest Git/ripgrep baseline
+- the rest of a serious terminal/IDE package universe
 
 That means the next Android product blocker is not more shell polish.
 
@@ -116,6 +116,8 @@ Current measured truth is narrower and better than the first assumption:
   - Bash 5.3.9 from the staged bootstrap
   - Neovim 0.12.1 staged from relocated package payloads
   - `htop` 3.5.0 and `gotop` 4.2.0 as current top-like test tools
+- the latest published dev snapshot now also includes Git 2.53.0 and ripgrep
+  15.1.0-1 for the first curated terminal-dev baseline
 - `btop` is not present in the current Termux main aarch64 package index
 - the executable-location boundary is target-SDK policy, not an unknown bug:
   Android 10/API 29+ blocks `execve()` from writable app home directories for
@@ -275,17 +277,19 @@ Current checkpoint:
   `dev.zide.terminal`, and stages the merged prefix
 - `./ops/android_terminal_host.py userland-stage-artifact` stages the published
   Android dev prefix artifact by manifest:
-  `https://github.com/LaurenceGuws/zide-mobile-pm/releases/download/android-dev-2026.04.12.002012/android-dev-prefix.release.manifest.json`
+  `https://github.com/LaurenceGuws/zide-mobile-pm/releases/download/android-dev-2026.04.12.023407/android-dev-prefix.release.manifest.json`
 - artifact staging verifies package name, prefix, archive root, provider
   metadata, size, and SHA-256 before pushing the prefix to the device
 - Note10 validation confirms the artifact-staged prefix runs:
   - Bash 5.3.9
   - Neovim 0.12.1
   - `nvim --headless +qall`
+  - latest published snapshot includes Git 2.53.0 and ripgrep 15.1.0-1;
+    device execution proof is still pending
   - `htop` 3.5.0
   - `gotop` 4.2.0
 - the current published Android dev snapshot is now
-  `android-dev-2026.04.12.002012`
+  `android-dev-2026.04.12.023407`
 - terminal-host product flow can now press `Install` / `Update` and fetch that
   published snapshot without going through the developer ops command
 - device validation now also proves the staged prefix contains and runs

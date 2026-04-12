@@ -108,9 +108,9 @@ active product goal again.
       `termux-main` is the first supported Android provider, not the product
       identity; future Zide-owned providers can replace the default without
       changing `zide-pm`
-    - Note10 validation proves the artifact-staged prefix runs Bash 5.3.9,
-      Neovim 0.12.1, `nvim --headless +qall`, `htop` 3.5.0, and `gotop` 4.2.0
-    - the current published snapshot is `android-dev-2026.04.12.002012`
+    - latest published dev snapshot now contains Bash 5.3.9, Neovim 0.12.1,
+      Git 2.53.0, ripgrep 15.1.0-1, `htop` 3.5.0, and `gotop` 4.2.0
+    - the current published snapshot is `android-dev-2026.04.12.023407`
     - product Install/Update now fetches that published manifest/archive
       contract in-app
     - device validation now also proves the staged prefix contains and runs

@@ -160,10 +160,10 @@ Current checkpoint:
     unpack under `/data/data/com.termux/...`, which this app cannot own
   - host-side `.deb` extraction/relocation is a dev bootstrap tool, not the
     final package-manager contract
-- the first published Android dev snapshot prerelease from
+- the first curated Android dev snapshot prerelease from
   `../zide-mobile-pm` now exists:
   - manifest:
-    `https://github.com/LaurenceGuws/zide-mobile-pm/releases/download/android-dev-2026.04.12.002012/android-dev-prefix.release.manifest.json`
+    `https://github.com/LaurenceGuws/zide-mobile-pm/releases/download/android-dev-2026.04.12.023407/android-dev-prefix.release.manifest.json`
   - Zide command:
     `./ops/android_terminal_host.py userland-stage-artifact`
   - the command verifies package/prefix/provider metadata, downloads the
@@ -190,10 +190,12 @@ Current checkpoint:
     - Bash 5.3.9
     - Neovim 0.12.1
     - `nvim --headless +qall`
+    - latest published snapshot includes Git 2.53.0 and ripgrep 15.1.0-1;
+      device execution proof is still pending
     - `htop` 3.5.0
     - `gotop` 4.2.0
   - the current published snapshot is now
-    `android-dev-2026.04.12.002012`
+    `android-dev-2026.04.12.023407`
   - the snapshot contract is now owned in one checked-in descriptor:
     `android/terminal-host/app/src/main/assets/userland_release.json`
   - terminal-host in-app `Update` now installs that snapshot from the
