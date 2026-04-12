@@ -100,6 +100,11 @@ gap.
       changing `zide-pm`
     - Note10 validation proves the artifact-staged prefix runs Bash 5.3.9,
       Neovim 0.12.1, `nvim --headless +qall`, `htop` 3.5.0, and `gotop` 4.2.0
+    - the current published snapshot is `android-dev-2026.04.12.002012`
+    - product Install/Update now fetches that published manifest/archive
+      contract in-app
+    - device validation now also proves the staged prefix contains and runs
+      `zide-pm` under `run-as dev.zide.terminal`
     - fresh terminal-host launch after artifact staging reports shell start and
       a Bash child under `dev.zide.terminal`
     - host-side `.deb` extraction/relocation remains available as explicit

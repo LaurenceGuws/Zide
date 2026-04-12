@@ -158,7 +158,7 @@ Current checkpoint:
 - the first published Android dev snapshot prerelease from
   `../zide-mobile-pm` now exists:
   - manifest:
-    `https://github.com/LaurenceGuws/zide-mobile-pm/releases/download/android-dev-2026.04.11.211834/android-dev-prefix.release.manifest.json`
+    `https://github.com/LaurenceGuws/zide-mobile-pm/releases/download/android-dev-2026.04.12.002012/android-dev-prefix.release.manifest.json`
   - Zide command:
     `./ops/android_terminal_host.py userland-stage-artifact`
   - the command verifies package/prefix/provider metadata, downloads the
@@ -175,12 +175,26 @@ Current checkpoint:
     invalid, or not launchable, with direct Retry and Open Debug actions
   - terminal-host now distinguishes `ready-current` vs
     `ready-upgrade-needed` against the pinned requested dev artifact identity
+  - terminal-host now owns the first in-app artifact install/update path:
+    it fetches the published manifest/archive contract, verifies size/SHA-256,
+    extracts the prefix into app-private storage, and rewrites the local
+    userland stamp
+  - blocker/debug surfaces now also carry explicit install state:
+    `idle`, `installing`, `failed`
   - Note10 validation proves the artifact-staged prefix:
     - Bash 5.3.9
     - Neovim 0.12.1
     - `nvim --headless +qall`
     - `htop` 3.5.0
     - `gotop` 4.2.0
+  - the current published snapshot is now
+    `android-dev-2026.04.12.002012`
+  - terminal-host in-app `Update` now installs that snapshot from the
+    published manifest/archive contract
+  - device validation now also proves the staged prefix contains and runs
+    `zide-pm`:
+    - `zide-pm doctor --prefix /data/user/0/dev.zide.terminal/files/usr`
+    - `zide-pm list-available --prefix /data/user/0/dev.zide.terminal/files/usr`
   - fresh terminal-host launch after artifact staging reports
     `auto.shellStart status=started` and a Bash child under `dev.zide.terminal`
 - product posture is now explicit:

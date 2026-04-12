@@ -39,8 +39,6 @@ public final class ZideTerminalActivity extends Activity
     private static final String EXTRA_DEBUG_RESIZE_SURFACE_ONCE = "debug_resize_surface_once";
     private static final String EXTRA_DEBUG_START_SHELL_ONCE = "debug_start_shell_once";
     private static final String SHELL_TRANSCRIPT_PATH = "/data/data/dev.zide.terminal/files/zide_terminal_shell.log";
-    private static final String USERLAND_BOOTSTRAP_STAMP_PATH = "/data/data/dev.zide.terminal/files/.zide-userland-bootstrap.json";
-    private static final String USERLAND_SHELL_PATH = "/data/data/dev.zide.terminal/files/usr/bin/bash";
     private static final long SHELL_REFRESH_MS = 150L;
     private static final String[] RUNTIME_FONT_ASSETS = {
             "IosevkaTermNerdFont-Regular.ttf",
@@ -101,6 +99,7 @@ public final class ZideTerminalActivity extends Activity
     private boolean shellRefreshQueued = false;
     private boolean sidebarOpen = false;
     private String lastAutoStartBlockedState = "";
+    private UserlandInstallState currentInstallState = UserlandInstallState.idle();
     private UserlandBootstrapState currentBootstrapState = new UserlandBootstrapState(
             UserlandBootstrapState.STATE_MISSING_STAMP, "", "", "", "", false, false);
     private int surfaceHostGeneration = 0;
@@ -166,8 +165,8 @@ public final class ZideTerminalActivity extends Activity
                     }
                 },
                 SHELL_TRANSCRIPT_PATH,
-                USERLAND_BOOTSTRAP_STAMP_PATH,
-                USERLAND_SHELL_PATH,
+                UserlandPolicy.bootstrapStampPath(this),
+                UserlandPolicy.shellPath(this),
                 nativeLoaded);
         installShellInputView();
         installInsetsHandling();
@@ -552,6 +551,14 @@ public final class ZideTerminalActivity extends Activity
 
     private void bindProductBootstrapBlocker() {
         productBootstrapRetryButton.setOnClickListener(view -> {
+            if (currentInstallState.isInstalling()) {
+                appendEvent("product.install ignored=already-installing");
+                return;
+            }
+            if (shouldStartInstall(currentBootstrapState)) {
+                startUserlandInstall();
+                return;
+            }
             appendEvent("product.bootstrap retry");
             refreshShellState(true);
             updateStatus("product-bootstrap-retry");
@@ -830,15 +837,23 @@ public final class ZideTerminalActivity extends Activity
         final boolean launchReady = currentBootstrapState.launchReady;
         final boolean sharedShellActive = launchReady && nativeLoaded && nativeSharedShellRendererActiveBridge();
         shellOutputScroll.setVisibility(launchReady && !sharedShellActive ? View.VISIBLE : View.GONE);
-        final boolean showBlocker = !launchReady || !currentBootstrapState.expectedCurrent;
+        final boolean showBlocker = currentInstallState.isInstalling() || currentInstallState.isFailed() || !launchReady || !currentBootstrapState.expectedCurrent;
         productBootstrapBlocker.setVisibility(showBlocker ? View.VISIBLE : View.GONE);
         if (showBlocker) {
-            productBootstrapTitle.setText(productBootstrapTitle(currentBootstrapState));
-            productBootstrapDetail.setText(productBootstrapDetail(currentBootstrapState));
+            productBootstrapTitle.setText(productBootstrapTitle(currentBootstrapState, currentInstallState));
+            productBootstrapDetail.setText(productBootstrapDetail(currentBootstrapState, currentInstallState));
+            productBootstrapRetryButton.setEnabled(!currentInstallState.isInstalling());
+            productBootstrapRetryButton.setText(productBootstrapActionLabel(currentBootstrapState, currentInstallState));
         }
     }
 
-    private int productBootstrapTitle(UserlandBootstrapState state) {
+    private int productBootstrapTitle(UserlandBootstrapState state, UserlandInstallState installState) {
+        if (installState.isInstalling()) {
+            return R.string.product_bootstrap_title_installing;
+        }
+        if (installState.isFailed()) {
+            return R.string.product_bootstrap_title_install_failed;
+        }
         switch (state.state) {
             case UserlandBootstrapState.STATE_INVALID_STAMP:
                 return R.string.product_bootstrap_title_invalid;
@@ -853,19 +868,71 @@ public final class ZideTerminalActivity extends Activity
         }
     }
 
-    private int productBootstrapDetail(UserlandBootstrapState state) {
+    private CharSequence productBootstrapDetail(UserlandBootstrapState state, UserlandInstallState installState) {
+        if (installState.isInstalling()) {
+            return installState.detail;
+        }
+        if (installState.isFailed()) {
+            return getString(R.string.product_bootstrap_detail_install_failed, installState.detail);
+        }
         switch (state.state) {
             case UserlandBootstrapState.STATE_INVALID_STAMP:
-                return R.string.product_bootstrap_detail_invalid;
+                return getText(R.string.product_bootstrap_detail_invalid);
             case UserlandBootstrapState.STATE_READY_UPGRADE_NEEDED:
-                return R.string.product_bootstrap_detail_upgrade;
+                return getText(R.string.product_bootstrap_detail_upgrade);
             case UserlandBootstrapState.STATE_MISSING_SHELL:
             case UserlandBootstrapState.STATE_STAMP_NO_BASH:
-                return R.string.product_bootstrap_detail_shell_missing;
+                return getText(R.string.product_bootstrap_detail_shell_missing);
             case UserlandBootstrapState.STATE_MISSING_STAMP:
             default:
-                return R.string.product_bootstrap_detail_missing;
+                return getText(R.string.product_bootstrap_detail_missing);
         }
+    }
+
+    private int productBootstrapActionLabel(UserlandBootstrapState state, UserlandInstallState installState) {
+        if (installState.isInstalling()) {
+            return R.string.product_bootstrap_installing;
+        }
+        if (shouldStartInstall(state)) {
+            return UserlandBootstrapState.STATE_READY_UPGRADE_NEEDED.equals(state.state)
+                    ? R.string.product_bootstrap_update
+                    : R.string.product_bootstrap_install;
+        }
+        return R.string.product_bootstrap_retry;
+    }
+
+    private boolean shouldStartInstall(UserlandBootstrapState state) {
+        return UserlandBootstrapState.STATE_MISSING_STAMP.equals(state.state)
+                || UserlandBootstrapState.STATE_INVALID_STAMP.equals(state.state)
+                || UserlandBootstrapState.STATE_MISSING_SHELL.equals(state.state)
+                || UserlandBootstrapState.STATE_STAMP_NO_BASH.equals(state.state)
+                || UserlandBootstrapState.STATE_READY_UPGRADE_NEEDED.equals(state.state);
+    }
+
+    private void startUserlandInstall() {
+        currentInstallState = UserlandInstallState.installing("Fetching and staging " + UserlandPolicy.EXPECTED_ARTIFACT_NAME + "...");
+        updateProductShellVisibility();
+        updateStatus("userland-install-started");
+        appendEvent("userland.install begin expected=" + UserlandPolicy.EXPECTED_ARTIFACT_VERSION);
+        new Thread(() -> {
+            try {
+                final UserlandInstaller.Result result = UserlandInstaller.install(this);
+                handler.post(() -> {
+                    currentInstallState = UserlandInstallState.idle();
+                    currentBootstrapState = result.bootstrapState;
+                    appendEvent("userland.install success " + result.detail);
+                    refreshShellState(true);
+                    updateStatus("userland-install-succeeded", result.bootstrapState);
+                });
+            } catch (IOException err) {
+                handler.post(() -> {
+                    currentInstallState = UserlandInstallState.failed(err.getMessage() == null ? "unknown install failure" : err.getMessage());
+                    appendEvent("userland.install failed err=" + err.getClass().getSimpleName() + " detail=" + currentInstallState.detail);
+                    updateProductShellVisibility();
+                    updateStatus("userland-install-failed");
+                });
+            }
+        }, "userland-install").start();
     }
 
     private void callNative(String event, long seq) {
@@ -918,7 +985,9 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void updateStatus(String state) {
-        updateStatus(state, UserlandBootstrapState.load(USERLAND_BOOTSTRAP_STAMP_PATH, USERLAND_SHELL_PATH));
+        updateStatus(state, UserlandBootstrapState.load(
+                UserlandPolicy.bootstrapStampPath(this),
+                UserlandPolicy.shellPath(this)));
     }
 
     private void updateStatus(String state, UserlandBootstrapState bootstrapState) {
@@ -934,6 +1003,8 @@ public final class ZideTerminalActivity extends Activity
                         surfaceView.getHeight(),
                         visibleViewportWidth,
                         visibleViewportHeight,
+                        currentInstallState.status,
+                        currentInstallState.detail,
                         bootstrapState.state,
                         bootstrapState.format,
                         bootstrapState.artifact,

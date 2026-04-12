@@ -1,0 +1,34 @@
+package dev.zide.terminal;
+
+final class UserlandArtifact {
+    final String manifestSource;
+    final String name;
+    final String version;
+    final String url;
+    final String sha256;
+    final long size;
+    final String archiveRoot;
+    final String provider;
+    final String hardcodedTermuxPolicy;
+
+    UserlandArtifact(
+            String manifestSource,
+            String name,
+            String version,
+            String url,
+            String sha256,
+            long size,
+            String archiveRoot,
+            String provider,
+            String hardcodedTermuxPolicy) {
+        this.manifestSource = manifestSource;
+        this.name = name;
+        this.version = version;
+        this.url = url;
+        this.sha256 = sha256;
+        this.size = size;
+        this.archiveRoot = archiveRoot;
+        this.provider = provider;
+        this.hardcodedTermuxPolicy = hardcodedTermuxPolicy;
+    }
+}

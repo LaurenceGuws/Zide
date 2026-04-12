@@ -105,6 +105,13 @@ Current measured truth is narrower and better than the first assumption:
 - terminal-host also carries the pinned requested dev artifact identity in the
   app build, so launchable staged userland is classified as `ready-current` or
   `ready-upgrade-needed` instead of one generic ready state
+- terminal-host now also owns the first in-app artifact install/update path:
+  it can fetch the published manifest, resolve/download the archive, verify the
+  SHA-256 + size contract, extract the prefix into app-private storage, and
+  rewrite the local `.zide-userland-bootstrap.json` stamp without going through
+  the developer ops command
+- product blocker/debug surfaces now also carry explicit install state:
+  `idle`, `installing`, and `failed`
 - device-proven dev package set now includes:
   - Bash 5.3.9 from the staged bootstrap
   - Neovim 0.12.1 staged from relocated package payloads
@@ -268,7 +275,7 @@ Current checkpoint:
   `dev.zide.terminal`, and stages the merged prefix
 - `./ops/android_terminal_host.py userland-stage-artifact` stages the published
   Android dev prefix artifact by manifest:
-  `https://github.com/LaurenceGuws/zide-mobile-pm/releases/download/android-dev-2026.04.11.211834/android-dev-prefix.release.manifest.json`
+  `https://github.com/LaurenceGuws/zide-mobile-pm/releases/download/android-dev-2026.04.12.002012/android-dev-prefix.release.manifest.json`
 - artifact staging verifies package name, prefix, archive root, provider
   metadata, size, and SHA-256 before pushing the prefix to the device
 - Note10 validation confirms the artifact-staged prefix runs:
@@ -277,6 +284,14 @@ Current checkpoint:
   - `nvim --headless +qall`
   - `htop` 3.5.0
   - `gotop` 4.2.0
+- the current published Android dev snapshot is now
+  `android-dev-2026.04.12.002012`
+- terminal-host product flow can now press `Install` / `Update` and fetch that
+  published snapshot without going through the developer ops command
+- device validation now also proves the staged prefix contains and runs
+  `zide-pm` under `run-as dev.zide.terminal`:
+  - `zide-pm doctor --prefix /data/user/0/dev.zide.terminal/files/usr`
+  - `zide-pm list-available --prefix /data/user/0/dev.zide.terminal/files/usr`
 - fresh terminal-host launch after artifact staging reports
   `auto.shellStart status=started` and a Bash child under the
   `dev.zide.terminal` app process
@@ -413,5 +428,5 @@ Implementation guardrails for this sequence:
 - do not reopen direct provider-package staging in product flow
 - do not add a second package-management surface beside `zide-pm`
 - do not bake temporary `dev` wording deeper into runtime ownership
-- do not fake an in-app installer if the artifact source is not reachable from
-  the app
+- keep the in-app installer strictly artifact-contract-owned; do not let
+  provider package internals leak into it

@@ -65,6 +65,8 @@ final class AndroidDebugFormatter {
         final int surfaceHeight;
         final int viewportWidth;
         final int viewportHeight;
+        final String installState;
+        final String installDetail;
         final String userlandState;
         final String userlandFormat;
         final String userlandArtifact;
@@ -95,6 +97,8 @@ final class AndroidDebugFormatter {
                 int surfaceHeight,
                 int viewportWidth,
                 int viewportHeight,
+                String installState,
+                String installDetail,
                 String userlandState,
                 String userlandFormat,
                 String userlandArtifact,
@@ -123,6 +127,8 @@ final class AndroidDebugFormatter {
             this.surfaceHeight = surfaceHeight;
             this.viewportWidth = viewportWidth;
             this.viewportHeight = viewportHeight;
+            this.installState = installState;
+            this.installDetail = installDetail;
             this.userlandState = userlandState;
             this.userlandFormat = userlandFormat;
             this.userlandArtifact = userlandArtifact;
@@ -175,6 +181,9 @@ final class AndroidDebugFormatter {
                 "surfaceValid=" + s.surfaceValid +
                 " surfaceSize=" + s.surfaceWidth + "x" + s.surfaceHeight +
                 " viewportSize=" + s.viewportWidth + "x" + s.viewportHeight +
+                "\n" +
+                "install=" + s.installState +
+                " detail=" + s.installDetail +
                 "\n" +
                 "userland=" + s.userlandState +
                 " launchReady=" + s.userlandLaunchReady +

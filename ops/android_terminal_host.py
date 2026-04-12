@@ -38,7 +38,7 @@ USERLAND_RELEASE_API = "https://api.github.com/repos/termux/termux-packages/rele
 USERLAND_ASSET_NAME = "bootstrap-aarch64.zip"
 ZIDE_ANDROID_DEV_PREFIX_MANIFEST_URL = (
     "https://github.com/LaurenceGuws/zide-mobile-pm/releases/download/"
-    "android-dev-2026.04.11.211834/android-dev-prefix.release.manifest.json"
+    "android-dev-2026.04.12.002012/android-dev-prefix.release.manifest.json"
 )
 TERMUX_MAIN_BASE_URL = "https://packages.termux.dev/apt/termux-main/"
 TERMUX_MAIN_PACKAGES_URL = TERMUX_MAIN_BASE_URL + "dists/stable/main/binary-aarch64/Packages"
