@@ -39,6 +39,7 @@ ops/android_terminal_host.py reinstall
 ops/android_terminal_host.py logcat
 ops/android_terminal_host.py userland-state
 ops/android_terminal_host.py userland-smoke-baseline
+ops/android_terminal_host.py userland-nvim-manual-check
 ```
 
 Product gesture ownership:
@@ -99,6 +100,17 @@ Current product view is shell-first:
 - terminal tap opens the IME path
 - slim bottom assist strip provides phone keyboard helpers
 - restart/debug live in a hidden left drawer
+
+## Current Neovim Check
+
+Use:
+
+```sh
+ops/android_terminal_host.py userland-nvim-manual-check
+```
+
+That prints the current `AN-A1` manual validation flow and the exact behaviors
+that should count as concrete Android blockers.
 
 ## Logs
 

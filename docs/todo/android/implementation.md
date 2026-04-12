@@ -254,6 +254,8 @@ Status:
 
 - open
 - package prerequisite is met by `AU-A3`
+- operator/manual entrypoint is now explicit:
+  `./ops/android_terminal_host.py userland-nvim-manual-check`
 - first gesture-control cut is implemented:
   - `ProductGestureController` owns terminal-surface touch gestures
   - single tap opens IME through one product route
@@ -262,6 +264,8 @@ Status:
   - keyboard shortcuts/defaults are unchanged
 - Android applies the zoom through the external-host renderer path, not the SDL
   window/input refresh path
+- next honest proof is one tiny real edit flow:
+  `nvim test.txt` → insert text → `Esc` → `:wq`
 
 ### `AU-A1` Android Userland Bootstrap
 

@@ -74,6 +74,7 @@ COMMAND_HELP: dict[str, str] = {
     "userland-stage-packages": "Dev-provider path: stage relocated Termux packages into the app sandbox.",
     "userland-bash-version": "Run the staged app-private Bash under run-as and print its version banner.",
     "userland-smoke-baseline": "Run the curated staged-userland smoke: Bash, Git, ripgrep, Neovim, htop, gotop, zide-pm.",
+    "userland-nvim-manual-check": "Print the exact in-app Neovim validation steps for the current Android terminal lane.",
     "userland-apt-update": "Probe apt-get update against the staged userland with the current relocation overrides.",
     "userland-apt-install": "Install packages into the staged app-private userland with the current relocation overrides.",
     "help": "Show this help.",
@@ -1282,6 +1283,38 @@ def userland_smoke_baseline() -> None:
         print(result.stderr, end="", file=sys.stderr)
 
 
+def userland_nvim_manual_check() -> None:
+    print(
+        """AN-A1 Neovim manual check
+
+In-app commands:
+  1. nvim test.txt
+  2. i
+  3. type a short line
+  4. <Esc>
+  5. :wq
+
+What to verify:
+  - alternate screen opens and clears cleanly
+  - text remains legible on the GLES terminal surface
+  - IME input reaches Neovim insert mode correctly
+  - Esc leaves insert mode
+  - arrow keys / assist-bar navigation move as expected
+  - Ctrl-based actions needed for a tiny edit are usable enough
+  - IME open/close and rotation do not corrupt the visible viewport
+  - product scroll behavior does not snap/fight during normal editor use
+  - pinch zoom is usable enough for testing, even if not yet Termux-quality
+
+Record as concrete blockers only:
+  - rendering corruption
+  - broken alternate-screen behavior
+  - missing editor input/navigation needed for the flow above
+  - viewport/IME behavior that makes the edit flow fail
+""",
+        end="",
+    )
+
+
 def userland_apt_update() -> None:
     adb = adb_path(sdk_root())
     command = (
@@ -1487,6 +1520,7 @@ def main() -> None:
         "userland-stage-packages": lambda: userland_stage_packages(args.archive, args.packages),
         "userland-bash-version": userland_bash_version,
         "userland-smoke-baseline": userland_smoke_baseline,
+        "userland-nvim-manual-check": userland_nvim_manual_check,
         "userland-apt-update": userland_apt_update,
         "userland-apt-install": lambda: userland_apt_install(args.packages),
         "help": parser.print_help,
