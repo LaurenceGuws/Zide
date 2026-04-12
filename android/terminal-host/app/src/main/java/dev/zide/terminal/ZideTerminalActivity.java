@@ -1251,7 +1251,7 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void updateStatus(String state) {
-        updateStatus(state, shellSessionController.loadBootstrapState());
+        updateStatus(state, currentBootstrapState);
     }
 
     private void updateStatus(String state, UserlandBootstrapState bootstrapState) {

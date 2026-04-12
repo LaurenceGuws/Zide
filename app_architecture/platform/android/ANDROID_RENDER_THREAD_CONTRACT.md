@@ -1072,6 +1072,10 @@ Current progress:
     operations in the activity/controller contract
   - the debug refresh loop now names itself as debug/operator upkeep instead of
     a generic product shell refresh entrypoint
+- third host ownership cut landed:
+  - ordinary status updates now use the activity's tracked bootstrap state
+    instead of reloading bootstrap stamp state from disk on every call
+  - hidden operator-state I/O is reduced in broad UI status/update paths
 - that does not finish this category:
   - the 150ms poll model still exists
   - `ZideTerminalActivity` still owns too much product/debug orchestration
