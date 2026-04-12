@@ -27,10 +27,75 @@ If you cannot name the active ticket, you are probably about to drift.
 2. Read the owning TODO doc in `docs/todo/`.
 3. Read only the design docs needed for that ticket.
 4. Confirm the ticket scope, exit bar, and "do not do" rules.
-5. Implement the change.
-6. Update the owning docs.
-7. Validate locally.
-8. Commit only after approval, unless the user explicitly asks for a commit.
+5. If the lane is an architecture/performance/refactor campaign, finish the
+   audit and queue-shaping work before starting code.
+6. Implement the next queued change.
+7. Update the owning docs.
+8. Validate locally.
+9. Commit only after approval, unless the user explicitly asks for a commit.
+
+## War-Campaign Prep
+
+When the active lane is a "war" against a broad design problem, do not start
+with opportunistic local fixes.
+
+Preparation order:
+
+1. fully audit the current war scope
+2. identify explicit subcategories within that scope
+3. fully audit one subcategory at a time
+4. record findings plus fix queue / stop markers before code changes start
+
+For each audited subcategory, the owning docs should answer:
+
+- what the subcategory is
+- why it is in scope
+- what work is allowed there
+- what work is forbidden there
+- what the known offenders are
+- what the next logical code cuts are
+
+Only after that prep is complete should implementation begin.
+
+## War Iteration Loop
+
+Once the audit and subcategory map exist, use this loop:
+
+1. choose the next logical-sized cut from the audited queue
+2. implement it
+3. validate it
+4. record todo / authority progress
+5. restart the loop from the audited queue
+
+Do not replace this loop with ad hoc "validate -> audit -> tiny tweak" cycles.
+The audit should lead the cuts, not trail them.
+
+## Contract Pressure Rule
+
+Treat platform pressure as a forcing function, not automatically as
+platform-local scope.
+
+That means:
+
+- if Android exposes a flaw that lives in shared renderer/backend/runtime
+  design, that flaw is shared-contract work
+- if an issue is spread across supported renderers, it is in scope for the
+  current war even if Android surfaced it first
+- keep only truly platform-owned issues local to the platform lane
+
+Examples of platform-local scope:
+
+- Activity / window / IME host behavior
+- Java/Kotlin/UI-thread ownership
+- JNI handoff shape
+
+Examples of shared-contract scope:
+
+- render-thread work that cannot defend its existence
+- frame submission policy
+- font/atlas/scale hot-path cost
+- present/invalidation policy
+- layout/resize work on live draw paths
 
 ## Ticket Execution Rules
 

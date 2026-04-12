@@ -157,6 +157,7 @@ active product goal again.
   - `docs/todo/android/implementation.md`
 - Android authority:
   - `app_architecture/platform/android/ANDROID_SHELL_BRINGUP_PLAN.md`
+  - `app_architecture/platform/android/ANDROID_RENDER_THREAD_CONTRACT.md`
   - `app_architecture/platform/android/ANDROID_USERLAND_BOOTSTRAP_PLAN.md`
   - `app_architecture/platform/android/RENDER_BACKEND.md`
   - `app_architecture/platform/android/ANDROID_TERMINAL_HOST_PLAN.md`

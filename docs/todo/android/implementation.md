@@ -274,6 +274,8 @@ Status:
     loop alive by default
   - next audit target is native renderer/font-scale cost, not more Android
     gesture guessing
+- Android render-thread scrutiny now has explicit authority:
+  `app_architecture/platform/android/ANDROID_RENDER_THREAD_CONTRACT.md`
 
 ### `AU-A1` Android Userland Bootstrap
 

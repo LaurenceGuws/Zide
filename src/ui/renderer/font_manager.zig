@@ -277,6 +277,10 @@ pub fn setFontConfig(renderer: anytype, app_path: ?[]const u8, app_size: ?f32, e
     try applyFontScale(renderer);
 }
 
+/// Render-thread scrutiny: this is currently too expensive for a hot
+/// interactive path. It tears down cached fonts and rebuilds active font
+/// state from scratch. Keep this design under active pressure until live scale
+/// changes stop paying full font-stack rebuild cost.
 pub fn applyFontScale(renderer: anytype) !void {
     renderer.font_size = renderer.base_font_size * renderer.scale.ui_scale * renderer.scale.user_zoom;
     renderer.editor_font_size = renderer.editor_base_font_size * renderer.scale.ui_scale * renderer.scale.user_zoom;
@@ -334,3 +338,7 @@ pub fn fontForSize(renderer: anytype, size: f32) ?*TerminalFont {
     };
     return font_ptr;
 }
+//! Font-manager ownership note:
+//! live interactive scale changes are currently too expensive because font
+//! state rebuild still tears down cached/active fonts. Keep this file under
+//! render-thread scrutiny until that cost is split or staged properly.

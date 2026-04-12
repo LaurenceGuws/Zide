@@ -11,22 +11,55 @@ Follow this workflow for every feature/task:
 1. Read `docs/AGENT_HANDOFF.md`.
 2. Use the handoff to confirm current focus and constraints.
 3. Read the current todo file(s), reference implementations, and Zide's current implementation to learn best practices and feature-specific guidance.
-4. Implement the feature.
-5. Update all relevant docs to reflect changes and progress.
-6. Inform the user how to test changes and debug until approved.
-7. Default: do not commit until tests have been run and the user explicitly approves.
-8. If the user explicitly says to commit, treat that instruction as approval and comply without blocking on test approval.
-9. Do not work directly on `main`. `main` is merge-only; start feature work on a branch from current `main`.
-10. Every feature branch is owned end-to-end: branch from current `main`, keep commits coherent, merge back into `main` after validation, and delete the branch once its work is on `main`.
-11. A temporary "war branch" is allowed for a large architecture campaign when it improves checkpoint discipline, but it must still merge into `main` at each validated milestone rather than drifting across multiple unmerged milestones.
-12. Do not keep compatibility shims, dead paths, or duplicate seams purely to avoid a clean cut. If the old surface is wrong and removing it improves the architecture, replace it directly in a reviewable step.
-13. Keep diffs reviewable; no file moves before baseline tests exist unless the move is itself the point of the approved change.
-14. No behavior changes during extraction-only refactors; any semantic change must be separately scoped and test-driven.
-15. Extraction-only constraint: no renaming of public symbols, no logic changes, no behavior-motivated simplifications, no "while we're here" cleanups.
-16. Before any refactor, implement the replay harness, capture baseline goldens, and lock the fixture list as regression authority.
-17. Once approved (or explicitly instructed to commit), commit each step labeled as the step header.
-18. Prefer **small, scoped commits**: one logical change per commit when practical, each leaving the tree **buildable** (`zig build` at minimum; run `zig build test` when the lane touches test-covered code). Split doc-only updates from code. When a change cannot be split without a broken intermediate tree or a compatibility shim you are explicitly avoiding, use **one atomic commit** for that refactor rather than landing partial steps.
-19. Return to the todo and suggest 3 next changes.
+4. If the lane is a broad architecture/performance/refactor campaign, perform the full audit and queue-shaping work before code changes start.
+5. Implement the next logical-sized cut from the audited queue.
+6. Update all relevant docs to reflect changes and progress.
+7. Inform the user how to test changes and debug until approved.
+8. Default: do not commit until tests have been run and the user explicitly approves.
+9. If the user explicitly says to commit, treat that instruction as approval and comply without blocking on test approval.
+10. Do not work directly on `main`. `main` is merge-only; start feature work on a branch from current `main`.
+11. Every feature branch is owned end-to-end: branch from current `main`, keep commits coherent, merge back into `main` after validation, and delete the branch once its work is on `main`.
+12. A temporary "war branch" is allowed for a large architecture campaign when it improves checkpoint discipline, but it must still merge into `main` at each validated milestone rather than drifting across multiple unmerged milestones.
+13. Do not keep compatibility shims, dead paths, or duplicate seams purely to avoid a clean cut. If the old surface is wrong and removing it improves the architecture, replace it directly in a reviewable step.
+14. Keep diffs reviewable; no file moves before baseline tests exist unless the move is itself the point of the approved change.
+15. No behavior changes during extraction-only refactors; any semantic change must be separately scoped and test-driven.
+16. Extraction-only constraint: no renaming of public symbols, no logic changes, no behavior-motivated simplifications, no "while we're here" cleanups.
+17. Before any refactor, implement the replay harness, capture baseline goldens, and lock the fixture list as regression authority.
+18. Once approved (or explicitly instructed to commit), commit each step labeled as the step header.
+19. Prefer **small, scoped commits**: one logical change per commit when practical, each leaving the tree **buildable** (`zig build` at minimum; run `zig build test` when the lane touches test-covered code). Split doc-only updates from code. When a change cannot be split without a broken intermediate tree or a compatibility shim you are explicitly avoiding, use **one atomic commit** for that refactor rather than landing partial steps.
+20. Return to the todo and suggest 3 next changes.
+
+## War-Campaign Discipline
+
+When a lane is a "war" against a design problem, do not drift into reactive
+micro-iterations.
+
+Preparation order:
+
+1. fully audit the current war scope
+2. identify explicit subcategories inside that scope
+3. fully audit one subcategory at a time
+4. write findings and fix queue before starting code
+
+Implementation loop:
+
+1. take the next logical-sized cut from the audited queue
+2. implement it
+3. validate it
+4. record todo/authority progress
+5. restart the loop from the audited queue
+
+The audit should lead the code cuts, not trail them.
+
+## Contract Pressure Rule
+
+Treat platform pressure as a forcing function, not automatically as
+platform-local scope.
+
+- if Android exposes a flaw that exists across shared renderer/backend/runtime
+  design, that flaw is shared-contract work
+- if an issue is spread across supported renderers, it is in scope
+- only truly platform-owned issues should remain local to the platform lane
 
 ## Continuous unattended workflow
 

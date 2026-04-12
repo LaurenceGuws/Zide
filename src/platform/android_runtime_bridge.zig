@@ -337,6 +337,10 @@ pub fn drawAndroidGlesRendererFrame() !bool {
     return renderer.submitFrame().succeeded;
 }
 
+/// Render-path rule: callers must justify any work that reaches this entry.
+/// This path should stay limited to frame-critical surface sync, draw, and
+/// submission mechanics; debug/reporting, transcript churn, and broad staging
+/// work do not belong here.
 fn drawSharedRendererSurfaceFrame() RendererStatus {
     _ = ensureAndroidGlesRenderer() catch return .init_failed;
     return if (drawAndroidGlesRendererFrame() catch false) .drawn else .surface_failed;
@@ -357,6 +361,9 @@ fn ensureTerminalWidget() ?*widgets.TerminalWidget {
     return if (bridge_state.terminal_widget) |*widget| widget else null;
 }
 
+/// Current debt: product-fit grid sizing still lives in the draw path.
+/// Keep scrutiny high here; any resize/layout work that is not truly needed
+/// for this frame should be staged out of the render path.
 fn drawLiveTerminalWidgetFrame(renderer: *renderer_mod.Renderer, widget: *widgets.TerminalWidget) void {
     if (!bridge_state.pinch_zoom_active) {
         ensureProductFitTerminalGrid(renderer, widget) catch {};
