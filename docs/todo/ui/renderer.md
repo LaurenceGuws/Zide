@@ -214,9 +214,31 @@ Current checkpoint:
 
 Next renderer move:
 
-- audit and name the first remaining concrete text/surface phase-boundary leak
-- define that leak as the next narrow renderer ticket instead of reviving
-  already-met `RB-B3.*` slices
+- `RB-B3.j` editor overlay phase-boundary closure
+- owner: `app_architecture/ui/BAND_COMPOSITION_PHASE_PLAN.md`
+- concrete pressure:
+  `editor_widget_draw_overlay.zig` still manually sequences queued surface
+  fills and dependent text with repeated
+  `flushQueuedSurfaceDrawsBeforeDependentSurfaceWork(...)` calls
+- required outcome:
+  one explicit local seam owns that editor overlay ordering unit instead of
+  making the owner module choreograph the queued-surface versus immediate-text
+  split itself
+- current checkpoint:
+  first ownership cut is in:
+  `editor_widget_draw.zig` and `editor_widget_draw_text.zig` no longer spell
+  immediate row-band begin/end/flush choreography directly; they now route
+  through `editor_widget_draw_overlay.runImmediateEditorRowBand(...)`.
+  Second ownership cut is in too:
+  non-owner immediate surface-phase callers no longer invoke
+  `flushEditorSurfaceRects(...)` directly; pane-base, row-base, scrollbar, and
+  immediate-decoration paths now route through owner APIs.
+  Third ownership cut is in:
+  owner-local draw-list rect replay now routes through explicit
+  `replayDrawListRectFamily(...)` / `drawEditorSurfaceRectOp(...)` helpers, and
+  `drawEditorTextOnBg(...)` now also routes through the owner-side row-band
+  helper. Remaining pressure is now only whether that owner-local helper
+  surface is the final explicit seam or wants one last small naming cleanup.
 - do not reopen Android backend work unless that audit proves a new concrete
   renderer-owned Android blocker
 

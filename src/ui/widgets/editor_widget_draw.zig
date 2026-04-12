@@ -136,54 +136,84 @@ pub fn draw(
                 if (row_band_ok) {
                     overlay_mod.flushDrawListEditorRowBand(draw_list_local, r_local);
                 } else {
-                    overlay_mod.beginEditorRowBandGroup(r_local);
-                    defer overlay_mod.endEditorRowBandGroup(r_local);
-                    if (range_count_local > 0) {
-                        segment_paint_mod.drawSelectionOverlays(
-                            view_local,
-                            r_local,
-                            seg_info.line_idx,
-                            cols_local,
-                            seg_info.line_width,
-                            seg_info.total_visual_lines,
-                            seg_info.seg_idx,
-                            seg_info.seg_start_col,
-                            seg_info.seg_end_col,
-                            seg_band,
-                            text_start_x_local,
-                            ranges_local[0..range_count_local],
-                        );
-                    }
-
-                    segment_paint_mod.drawSearchOverlays(
-                        view_local,
+                    overlay_mod.runImmediateEditorRowBand(
                         r_local,
-                        seg_info.line_start,
-                        seg_info.seg_start_byte,
-                        seg_info.seg_end_byte,
-                        seg_info.seg_start_col,
-                        line_text_local,
-                        seg_band,
-                        text_start_x_local,
-                    );
+                        .{
+                            .view = view_local,
+                            .r = r_local,
+                            .seg_info = seg_info,
+                            .cols = cols_local,
+                            .seg_band = seg_band,
+                            .text_start_x = text_start_x_local,
+                            .ranges = ranges_local[0..range_count_local],
+                            .line_text = line_text_local,
+                            .cluster_slice = cluster_slice_local,
+                            .effective_tokens = effective_tokens_local,
+                            .disable_programming_ligatures = disable_programming_ligatures,
+                            .seg_y = seg_y,
+                        },
+                        struct {
+                            fn draw(draw_ctx: anytype) void {
+                                if (draw_ctx.ranges.len > 0) {
+                                    segment_paint_mod.drawSelectionOverlays(
+                                        draw_ctx.view,
+                                        draw_ctx.r,
+                                        draw_ctx.seg_info.line_idx,
+                                        draw_ctx.cols,
+                                        draw_ctx.seg_info.line_width,
+                                        draw_ctx.seg_info.total_visual_lines,
+                                        draw_ctx.seg_info.seg_idx,
+                                        draw_ctx.seg_info.seg_start_col,
+                                        draw_ctx.seg_info.seg_end_col,
+                                        draw_ctx.seg_band,
+                                        draw_ctx.text_start_x,
+                                        draw_ctx.ranges,
+                                    );
+                                }
 
-                    segment_paint_mod.drawSegmentText(
-                        r_local,
-                        line_text_local,
-                        cluster_slice_local,
-                        seg_y,
-                        text_start_x_local,
-                        seg_info.line_start,
-                        seg_info.seg_start_byte,
-                        seg_info.seg_end_byte,
-                        seg_info.seg_start_col,
-                        seg_info.seg_end_col,
-                        effective_tokens_local,
-                        ranges_local[0..range_count_local],
-                        seg_info.is_current,
-                        disable_programming_ligatures,
+                                segment_paint_mod.drawSearchOverlays(
+                                    draw_ctx.view,
+                                    draw_ctx.r,
+                                    draw_ctx.seg_info.line_start,
+                                    draw_ctx.seg_info.seg_start_byte,
+                                    draw_ctx.seg_info.seg_end_byte,
+                                    draw_ctx.seg_info.seg_start_col,
+                                    draw_ctx.line_text,
+                                    draw_ctx.seg_band,
+                                    draw_ctx.text_start_x,
+                                );
+
+                                segment_paint_mod.drawSegmentText(
+                                    draw_ctx.r,
+                                    draw_ctx.line_text,
+                                    draw_ctx.cluster_slice,
+                                    draw_ctx.seg_y,
+                                    draw_ctx.text_start_x,
+                                    draw_ctx.seg_info.line_start,
+                                    draw_ctx.seg_info.seg_start_byte,
+                                    draw_ctx.seg_info.seg_end_byte,
+                                    draw_ctx.seg_info.seg_start_col,
+                                    draw_ctx.seg_info.seg_end_col,
+                                    draw_ctx.effective_tokens,
+                                    draw_ctx.ranges,
+                                    draw_ctx.seg_info.is_current,
+                                    draw_ctx.disable_programming_ligatures,
+                                );
+                                overlay_mod.drawExtraCarets(
+                                    draw_ctx.view,
+                                    draw_ctx.r,
+                                    draw_ctx.seg_info.line_idx,
+                                    draw_ctx.line_text,
+                                    draw_ctx.cluster_slice,
+                                    draw_ctx.seg_info.seg_start_col,
+                                    draw_ctx.seg_info.seg_end_col,
+                                    draw_ctx.seg_info.line_width,
+                                    draw_ctx.seg_y,
+                                    draw_ctx.text_start_x,
+                                );
+                            }
+                        }.draw,
                     );
-                    overlay_mod.drawExtraCarets(view_local, r_local, seg_info.line_idx, line_text_local, cluster_slice_local, seg_info.seg_start_col, seg_info.seg_end_col, seg_info.line_width, seg_y, text_start_x_local);
                 }
                 draw_list_local.clear();
             }
@@ -423,44 +453,67 @@ pub fn drawCached(
                     return;
                 }
 
-                overlay_mod.beginEditorRowBandGroup(r_local);
-                defer overlay_mod.endEditorRowBandGroup(r_local);
-                segment_paint_mod.drawEditorSegmentBaseImmediate(
+                overlay_mod.runImmediateEditorRowBand(
                     r_local,
-                    origin_x_local,
-                    seg_y,
-                    widget_local.gutter_width,
-                    width_local,
-                    false,
-                );
+                    .{
+                        .view = view_local,
+                        .r = r_local,
+                        .origin_x = origin_x_local,
+                        .seg_y = seg_y,
+                        .gutter_width = widget_local.gutter_width,
+                        .width = width_local,
+                        .seg_info = seg_info,
+                        .cols = cols_local,
+                        .line_width = line_width_local,
+                        .seg_band = seg_band,
+                        .text_start_x = text_start_x,
+                        .line_text = line_text_local,
+                        .cluster_slice = cluster_slice_local,
+                        .effective_tokens = effective_tokens_local,
+                        .ranges = ranges_local[0..range_count_local],
+                        .disable_programming_ligatures = disable_programming_ligatures,
+                    },
+                    struct {
+                        fn draw(draw_ctx: anytype) void {
+                            segment_paint_mod.drawEditorSegmentBaseImmediate(
+                                draw_ctx.r,
+                                draw_ctx.origin_x,
+                                draw_ctx.seg_y,
+                                draw_ctx.gutter_width,
+                                draw_ctx.width,
+                                false,
+                            );
 
-                segment_paint_mod.drawEditorRowBandImmediate(
-                    view_local,
-                    r_local,
-                    seg_info.line_idx,
-                    cols_local,
-                    line_width_local,
-                    seg_info.total_visual_lines,
-                    seg_info.seg_idx,
-                    seg_info.seg_start_col,
-                    seg_info.seg_end_col,
-                    seg_y,
-                    seg_band,
-                    origin_x_local,
-                    text_start_x,
-                    widget_local.gutter_width,
-                    width_local,
-                    line_text_local,
-                    cluster_slice_local,
-                    seg_info.line_start,
-                    seg_info.seg_start_byte,
-                    seg_info.seg_end_byte,
-                    effective_tokens_local,
-                    ranges_local[0..range_count_local],
-                    seg_info.is_current,
-                    seg_info.seg_idx == seg_info.cursor_seg,
-                    seg_info.cursor_col_vis,
-                    disable_programming_ligatures,
+                            segment_paint_mod.drawEditorRowBandImmediate(
+                                draw_ctx.view,
+                                draw_ctx.r,
+                                draw_ctx.seg_info.line_idx,
+                                draw_ctx.cols,
+                                draw_ctx.line_width,
+                                draw_ctx.seg_info.total_visual_lines,
+                                draw_ctx.seg_info.seg_idx,
+                                draw_ctx.seg_info.seg_start_col,
+                                draw_ctx.seg_info.seg_end_col,
+                                draw_ctx.seg_y,
+                                draw_ctx.seg_band,
+                                draw_ctx.origin_x,
+                                draw_ctx.text_start_x,
+                                draw_ctx.gutter_width,
+                                draw_ctx.width,
+                                draw_ctx.line_text,
+                                draw_ctx.cluster_slice,
+                                draw_ctx.seg_info.line_start,
+                                draw_ctx.seg_info.seg_start_byte,
+                                draw_ctx.seg_info.seg_end_byte,
+                                draw_ctx.effective_tokens,
+                                draw_ctx.ranges,
+                                draw_ctx.seg_info.is_current,
+                                draw_ctx.seg_info.seg_idx == draw_ctx.seg_info.cursor_seg,
+                                draw_ctx.seg_info.cursor_col_vis,
+                                draw_ctx.disable_programming_ligatures,
+                            );
+                        }
+                    }.draw,
                 );
             }
         };
@@ -491,9 +544,40 @@ pub fn drawCached(
     // stale dirty-region artifacts when geometry changes frame-to-frame.
     if (!widget.wrap_enabled) {
         view = frame_view_mod.EditorFrameView.init(widget.editor, widget.wrap_enabled);
-        overlay_mod.drawEditorScrollbars(view, widget.gutter_width, r, draw_x, draw_y, width, height, visible_lines, total_lines, cols, input.mouse_pos, null);
-        // Scrollbars use drawOverlayRect (deferred on GL); drain before later widgets.
-        overlay_mod.flushEditorSurfaceRects(r);
+        overlay_mod.runImmediateEditorSurfacePhase(
+            r,
+            .{
+                .view = view,
+                .gutter_width = widget.gutter_width,
+                .r = r,
+                .draw_x = draw_x,
+                .draw_y = draw_y,
+                .width = width,
+                .height = height,
+                .visible_lines = visible_lines,
+                .total_lines = total_lines,
+                .cols = cols,
+                .mouse_pos = input.mouse_pos,
+            },
+            struct {
+                fn draw(ctx: anytype) void {
+                    overlay_mod.drawEditorScrollbars(
+                        ctx.view,
+                        ctx.gutter_width,
+                        ctx.r,
+                        ctx.draw_x,
+                        ctx.draw_y,
+                        ctx.width,
+                        ctx.height,
+                        ctx.visible_lines,
+                        ctx.total_lines,
+                        ctx.cols,
+                        ctx.mouse_pos,
+                        null,
+                    );
+                }
+            }.draw,
+        );
     }
 }
 

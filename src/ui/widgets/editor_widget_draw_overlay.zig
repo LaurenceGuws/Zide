@@ -105,10 +105,16 @@ pub fn drawEditorSurfaceRect(r: anytype, family: present_trace_runtime.PresentTr
 }
 
 pub fn drawEditorTextOnBg(r: anytype, text: []const u8, x: f32, y: f32, color: anytype, bg: anytype) void {
-    renderer_text_phase_group_host.beginGroup(r, .editor_row_band);
-    defer renderer_text_phase_group_host.endGroup(r, .editor_row_band);
-    present_trace_runtime.noteFrameFamilyTouch(r, .editor_row_band);
-    renderer_text_host.drawTextOnBg(r, text, x, y, color, bg);
+    noteEditorRowBandTouch(r);
+    runImmediateEditorRowBand(
+        r,
+        .{ .r = r, .text = text, .x = x, .y = y, .color = color, .bg = bg },
+        struct {
+            fn draw(ctx: anytype) void {
+                renderer_text_host.drawTextOnBg(ctx.r, ctx.text, ctx.x, ctx.y, ctx.color, ctx.bg);
+            }
+        }.draw,
+    );
 }
 
 pub fn drawExtraCarets(
@@ -487,51 +493,44 @@ pub fn rangeContains(haystack: ByteRange, needle: ByteRange) bool {
     return needle.start >= haystack.start and needle.end <= haystack.end;
 }
 
-fn flushDrawListRectOps(list: *EditorDrawList, r: anytype) void {
+fn drawEditorSurfaceRectOp(r: anytype, rect: RectOp) void {
     const ColorType = @TypeOf(r.theme.foreground);
-    // Row-base rects first: on OpenGL they may queue; replay before overlay rects in this band.
+    const family: present_trace_runtime.PresentTrace.EditorSurfaceSolidFamily = switch (rect.family) {
+        .overlay => .overlay,
+        .row_base => .row_base,
+        .pane_base => .pane_base,
+    };
+    present_trace_runtime.setEditorSurfaceSolidFamily(r, family);
+    defer present_trace_runtime.clearEditorSurfaceSolidFamily(r);
+    renderer_surface_host.drawRect(
+        r,
+        @intFromFloat(rect.x),
+        @intFromFloat(rect.y),
+        @intFromFloat(rect.w),
+        @intFromFloat(rect.h),
+        unpackColor(ColorType, rect.color),
+    );
+}
+
+fn replayDrawListRectFamily(list: *EditorDrawList, r: anytype, family: RectOp.Family) void {
     for (list.ops.items) |op| {
         switch (op) {
             .rect => |rect| {
-                if (rect.family != .row_base) continue;
-                present_trace_runtime.setEditorSurfaceSolidFamily(r, .row_base);
-                defer present_trace_runtime.clearEditorSurfaceSolidFamily(r);
-                renderer_surface_host.drawRect(
-                    r,
-                    @intFromFloat(rect.x),
-                    @intFromFloat(rect.y),
-                    @intFromFloat(rect.w),
-                    @intFromFloat(rect.h),
-                    unpackColor(ColorType, rect.color),
-                );
+                if (rect.family != family) continue;
+                drawEditorSurfaceRectOp(r, rect);
             },
             else => {},
         }
     }
-    renderer_surface_host.flushQueuedSurfaceDrawsBeforeDependentSurfaceWork(r);
-    for (list.ops.items) |op| {
-        switch (op) {
-            .rect => |rect| {
-                if (rect.family == .row_base) continue;
-                const family: present_trace_runtime.PresentTrace.EditorSurfaceSolidFamily = switch (rect.family) {
-                    .overlay => .overlay,
-                    .row_base => .row_base,
-                    .pane_base => .pane_base,
-                };
-                present_trace_runtime.setEditorSurfaceSolidFamily(r, family);
-                defer present_trace_runtime.clearEditorSurfaceSolidFamily(r);
-                renderer_surface_host.drawRect(
-                    r,
-                    @intFromFloat(rect.x),
-                    @intFromFloat(rect.y),
-                    @intFromFloat(rect.w),
-                    @intFromFloat(rect.h),
-                    unpackColor(ColorType, rect.color),
-                );
-            },
-            else => {},
-        }
-    }
+}
+
+fn flushDrawListRectOps(list: *EditorDrawList, r: anytype) void {
+    // Row-base rects must land before dependent text for this band. Overlay and
+    // cursor-owned rects can stay in the later surface phase after text.
+    replayDrawListRectFamily(list, r, .row_base);
+    flushEditorSurfaceRects(r);
+    replayDrawListRectFamily(list, r, .overlay);
+    replayDrawListRectFamily(list, r, .pane_base);
 }
 
 fn flushDrawListTextOps(list: *EditorDrawList, r: anytype) void {
@@ -583,26 +582,65 @@ pub fn flushEditorSurfaceRects(r: anytype) void {
     renderer_surface_host.flushQueuedSurfaceDrawsBeforeDependentSurfaceWork(r);
 }
 
+pub fn runImmediateEditorSurfacePhase(r: anytype, context: anytype, draw_fn: anytype) void {
+    draw_fn(context);
+    flushEditorSurfaceRects(r);
+}
+
+pub fn runImmediateEditorRowBand(r: anytype, context: anytype, draw_fn: anytype) void {
+    beginEditorRowBandGroup(r);
+    defer endEditorRowBandGroup(r);
+    draw_fn(context);
+    flushEditorSurfaceRects(r);
+}
+
+fn runEditorRowBandPhases(
+    r: anytype,
+    context: anytype,
+    rect_phase_fn: anytype,
+    text_phase_fn: anytype,
+    cursor_phase_fn: anytype,
+) void {
+    rect_phase_fn(context);
+    text_phase_fn(context);
+    cursor_phase_fn(context);
+    // OpenGL defers overlay/cursor rects too. Drain them before the next row
+    // band so FIFO replay cannot leak one row's overlays into the next row's
+    // background phase.
+    flushEditorSurfaceRects(r);
+}
+
 pub fn flushDrawListEditorRowBand(list: *EditorDrawList, r: anytype) void {
     if (list.ops.items.len > 0) noteEditorRowBandTouch(r);
-    flushDrawListRectOps(list, r);
-    var has_text = false;
-    for (list.ops.items) |op| {
-        if (op == .text) {
-            has_text = true;
-            break;
-        }
-    }
-    if (has_text) {
-        beginEditorRowBandGroup(r);
-        defer endEditorRowBandGroup(r);
-        flushDrawListTextOps(list, r);
-    }
-    flushDrawListCursorOps(list, r);
-    // OpenGL defers all surface rects: overlay/cursor draws above may still be
-    // queued after text flush. Drain the queue here so the next row-band cannot
-    // FIFO-replay them before the next row's backgrounds (fixes lost editor bg).
-    renderer_surface_host.flushQueuedSurfaceDrawsBeforeDependentSurfaceWork(r);
+    runEditorRowBandPhases(
+        r,
+        .{ .list = list, .r = r },
+        struct {
+            fn run(ctx: anytype) void {
+                flushDrawListRectOps(ctx.list, ctx.r);
+            }
+        }.run,
+        struct {
+            fn run(ctx: anytype) void {
+                var has_text = false;
+                for (ctx.list.ops.items) |op| {
+                    if (op == .text) {
+                        has_text = true;
+                        break;
+                    }
+                }
+                if (!has_text) return;
+                beginEditorRowBandGroup(ctx.r);
+                defer endEditorRowBandGroup(ctx.r);
+                flushDrawListTextOps(ctx.list, ctx.r);
+            }
+        }.run,
+        struct {
+            fn run(ctx: anytype) void {
+                flushDrawListCursorOps(ctx.list, ctx.r);
+            }
+        }.run,
+    );
 }
 
 pub fn drawEditorScrollbars(

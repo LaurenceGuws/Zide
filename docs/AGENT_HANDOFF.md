@@ -33,7 +33,11 @@ stop outranking the active renderer blocker.
     product work should return to the shared renderer blocker instead of
     extending AU-A2 further without a concrete regression. The strongest
     remaining renderer pressure is the shared text/surface phase-boundary
-    problem already called out in renderer authority.
+    problem already called out in renderer authority. The first concrete
+    remaining leak is now named too:
+    `RB-B3.j` editor overlay phase-boundary closure, where
+    `editor_widget_draw_overlay.zig` still manually sequences queued surface
+    fills and dependent text via repeated surface flush calls.
 - `RB-B3.d` is already met:
   - widget/runtime no longer calls `usesDirectTerminalPresentation(...)`
   - those path decisions now terminate in the presentable host seam

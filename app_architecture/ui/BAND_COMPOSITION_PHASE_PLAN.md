@@ -139,3 +139,92 @@ hidden under chrome-band work:
   needs those visuals before GLES backend work
 - or editor row/overlay composition, if the renderer gate needs the next
   non-terminal family before Android can feel routine
+
+## Remaining Concrete Leak
+
+The strongest remaining concrete leak is now inside the editor overlay owner
+itself.
+
+Current code truth:
+
+- `src/ui/widgets/editor_widget_draw_overlay.zig` is the sanctioned owner for
+  editor row/overlay composition
+- but it still composes fill/background work through
+  `renderer_surface_host.drawRect(...)`
+- then manually forces ordering with repeated
+  `renderer_surface_host.flushQueuedSurfaceDrawsBeforeDependentSurfaceWork(...)`
+- then emits dependent text through `renderer_text_host.*`
+
+That means the code now has an honest owner, but it does not yet have one
+backend-neutral phase boundary for the whole local ordering unit.
+
+The owner still has to know:
+
+- surface fills are queued
+- text is immediate
+- a manual flush is required before dependent text or later surface work
+
+That is exactly the remaining text/surface phase-boundary pressure.
+
+## Next Ticket
+
+`RB-B3.j` editor overlay phase-boundary closure
+
+Purpose:
+
+- replace editor-overlay-local manual surface flush choreography with one
+  explicit local composition seam that owns both queued fills and dependent
+  text/decor emission order
+
+Required outcome:
+
+- `editor_widget_draw_overlay.zig` no longer manually sequences local fill/text
+  ordering with repeated surface flush calls
+- one local owner seam expresses that ordering unit directly
+- docs can then say whether any stronger text/surface leak remains elsewhere
+
+Non-goals:
+
+- no repo-wide text phase rewrite
+- no terminal grid/cell batching changes
+- no new Android backend work
+
+## Current Checkpoint (2026-04-12)
+
+- first ownership cut is in:
+  - immediate editor row-band fallback paths no longer spell
+    `beginEditorRowBandGroup(...)` / `endEditorRowBandGroup(...)` directly in
+    `editor_widget_draw.zig`
+  - immediate decoration emission in `editor_widget_draw_text.zig` no longer
+    flushes queued surface rects directly
+  - those call sites now route through one owner API:
+    `editor_widget_draw_overlay.runImmediateEditorRowBand(...)`
+- remaining pressure is now narrower and fully local to the owner module:
+  - `editor_widget_draw_overlay.zig` still contains the internal queued-rect
+    flush points that separate row-base rect replay, dependent text, and final
+    overlay/cursor rect drain
+  - that means external choreography is cleaner, but full phase-boundary
+    closure is not met yet
+- second ownership cut is now in too:
+  - non-owner immediate surface-phase callers no longer invoke
+    `flushEditorSurfaceRects(...)` directly
+  - pane-base, row-base, scrollbar, and immediate-decoration callers now go
+    through owner APIs:
+    `runImmediateEditorSurfacePhase(...)` or
+    `runImmediateEditorRowBand(...)`
+  - that means the surviving text/surface phase-boundary knowledge is now
+    entirely inside `editor_widget_draw_overlay.zig`
+- third ownership cut is now in:
+  - the owner module no longer expresses draw-list rect replay as a raw
+    two-loop plus unnamed mid-flush block
+  - row-base replay and later overlay/pane replay now route through explicit
+    owner helpers:
+    `replayDrawListRectFamily(...)` and `drawEditorSurfaceRectOp(...)`
+  - the remaining direct line-number text helper `drawEditorTextOnBg(...)`
+    now also routes through `runImmediateEditorRowBand(...)`
+- current blocker reading:
+  - external choreography is gone
+  - rect/text/cursor phase knowledge is now centralized in owner-local helpers
+  - `RB-B3.j` is close to closure; the remaining question is whether the owner
+    helper surface is explicit enough as the lasting seam, or whether one
+    final owner-local naming/structure pass is still needed

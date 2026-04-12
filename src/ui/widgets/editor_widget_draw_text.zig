@@ -669,9 +669,18 @@ fn emitTextDecorations(emitter: anytype, r: anytype, x: f32, y: f32, width: f32,
         }
     };
     var visitor = Visitor{ .emitter = emitter, .color = color, .ok = &ok };
-    forEachDecorationRect(r, x, y, width, flags, &visitor);
     if (@TypeOf(emitter.*) == ImmediateTextEmitter) {
-        overlay_mod.flushEditorSurfaceRects(r);
+        overlay_mod.runImmediateEditorRowBand(
+            r,
+            .{ .r = r, .x = x, .y = y, .width = width, .flags = flags, .visitor = &visitor },
+            struct {
+                fn draw(ctx: anytype) void {
+                    forEachDecorationRect(ctx.r, ctx.x, ctx.y, ctx.width, ctx.flags, ctx.visitor);
+                }
+            }.draw,
+        );
+    } else {
+        forEachDecorationRect(r, x, y, width, flags, &visitor);
     }
     return ok;
 }

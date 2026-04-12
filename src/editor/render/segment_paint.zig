@@ -18,11 +18,16 @@ pub fn drawEditorPaneBaseImmediate(
     height: f32,
     gutter_width: f32,
 ) void {
-    overlay_mod.drawEditorSurfaceRect(r, .pane_base, x, y, width, height, r.theme.background);
-    overlay_mod.drawEditorSurfaceRect(r, .pane_base, x, y, gutter_width, height, r.theme.line_number_bg);
-    // OpenGL defers surface fills: replay pane now so row bands (often clip-scoped)
-    // do not depend on FIFO with an unflushed full-pane record.
-    overlay_mod.flushEditorSurfaceRects(r);
+    overlay_mod.runImmediateEditorSurfacePhase(
+        r,
+        .{ .r = r, .x = x, .y = y, .width = width, .height = height, .gutter_width = gutter_width },
+        struct {
+            fn draw(ctx: anytype) void {
+                overlay_mod.drawEditorSurfaceRect(ctx.r, .pane_base, ctx.x, ctx.y, ctx.width, ctx.height, ctx.r.theme.background);
+                overlay_mod.drawEditorSurfaceRect(ctx.r, .pane_base, ctx.x, ctx.y, ctx.gutter_width, ctx.height, ctx.r.theme.line_number_bg);
+            }
+        }.draw,
+    );
 }
 
 pub fn addEditorLineBaseOps(
@@ -79,15 +84,29 @@ pub fn drawEditorSegmentBaseImmediate(
     content_width: f32,
     is_current: bool,
 ) void {
-    overlay_mod.noteEditorRowBandTouch(r);
-    overlay_mod.drawEditorSurfaceRect(r, .row_base, x, y, content_width, r.editor_char_height, r.theme.background);
-    overlay_mod.drawEditorSurfaceRect(r, .row_base, x, y, gutter_width, r.editor_char_height, r.theme.line_number_bg);
+    overlay_mod.runImmediateEditorSurfacePhase(
+        r,
+        .{
+            .r = r,
+            .x = x,
+            .y = y,
+            .gutter_width = gutter_width,
+            .content_width = content_width,
+            .is_current = is_current,
+        },
+        struct {
+            fn draw(ctx: anytype) void {
+                overlay_mod.noteEditorRowBandTouch(ctx.r);
+                overlay_mod.drawEditorSurfaceRect(ctx.r, .row_base, ctx.x, ctx.y, ctx.content_width, ctx.r.editor_char_height, ctx.r.theme.background);
+                overlay_mod.drawEditorSurfaceRect(ctx.r, .row_base, ctx.x, ctx.y, ctx.gutter_width, ctx.r.editor_char_height, ctx.r.theme.line_number_bg);
 
-    if (is_current) {
-        overlay_mod.drawEditorSurfaceRect(r, .row_base, x, y, gutter_width, r.editor_char_height, r.theme.current_line);
-        overlay_mod.drawEditorSurfaceRect(r, .row_base, x + gutter_width, y, content_width - gutter_width, r.editor_char_height, r.theme.current_line);
-    }
-    overlay_mod.flushEditorSurfaceRects(r);
+                if (ctx.is_current) {
+                    overlay_mod.drawEditorSurfaceRect(ctx.r, .row_base, ctx.x, ctx.y, ctx.gutter_width, ctx.r.editor_char_height, ctx.r.theme.current_line);
+                    overlay_mod.drawEditorSurfaceRect(ctx.r, .row_base, ctx.x + ctx.gutter_width, ctx.y, ctx.content_width - ctx.gutter_width, ctx.r.editor_char_height, ctx.r.theme.current_line);
+                }
+            }
+        }.draw,
+    );
 }
 
 pub fn drawEditorLineBaseImmediate(
