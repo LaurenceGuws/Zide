@@ -256,6 +256,11 @@ Next renderer move:
   `bg_rgba`; GL surface-phase replay uses that payload field instead of
   reading `renderer.text_render.bg_rgba`. Remaining ambient bg reads are now
   limited to legacy renderer-local texture thunks in `renderer.zig`.
+- closure checkpoint:
+  the legacy renderer-local texture thunks were dead and are removed, and
+  `Renderer.TextRenderState.bg_rgba` no longer exists. Remaining `bg_rgba`
+  references are explicit payload/context fields. The ambient
+  text/background-state blocker is closed.
 - do not reopen Android backend work unless that audit proves a new concrete
   renderer-owned Android blocker
 

@@ -17,7 +17,6 @@ pub fn beginFrameHost(renderer: anytype) void {
     renderer.render_width = display_metrics.drawable_w;
     renderer.render_height = display_metrics.drawable_h;
 
-    renderer.text_render.bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 };
 }
 
 pub fn noteFrameReady(renderer: anytype) void {
@@ -69,13 +68,6 @@ const FakeDisplayMetrics = struct {
     drawable_h: i32 = 0,
 };
 
-const FakeRgba = struct {
-    r: u8 = 255,
-    g: u8 = 255,
-    b: u8 = 255,
-    a: u8 = 255,
-};
-
 const FakeRenderer = struct {
     present: present_trace_runtime.PresentState = .{},
     clip_depth: usize = 0,
@@ -84,9 +76,6 @@ const FakeRenderer = struct {
     height: i32 = 0,
     render_width: i32 = 0,
     render_height: i32 = 0,
-    text_render: struct {
-        bg_rgba: FakeRgba = .{},
-    } = .{},
 };
 
 test "beginFrameHost resets per-frame prelude state" {
@@ -106,7 +95,6 @@ test "beginFrameHost resets per-frame prelude state" {
             .drawable_w = 202,
             .drawable_h = 110,
         },
-        .text_render = .{ .bg_rgba = .{ .r = 9, .g = 8, .b = 7, .a = 6 } },
     };
 
     beginFrameHost(&renderer);
@@ -120,7 +108,6 @@ test "beginFrameHost resets per-frame prelude state" {
     try std.testing.expectEqual(@as(i32, 55), renderer.height);
     try std.testing.expectEqual(@as(i32, 202), renderer.render_width);
     try std.testing.expectEqual(@as(i32, 110), renderer.render_height);
-    try std.testing.expectEqual(FakeRgba{ .r = 0, .g = 0, .b = 0, .a = 0 }, renderer.text_render.bg_rgba);
 }
 
 test "finishFrameSubmission submitted advances sequence and clears capture" {

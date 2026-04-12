@@ -798,9 +798,14 @@ That split is now sharper from code inspection too:
   `SurfaceDraw.atlas` and `SurfaceDraw.raw_image` now carry explicit
   `bg_rgba`, and GL surface-phase replay consumes the recorded payload
   background instead of consulting renderer ambient state.
-- remaining ambient bg reads are therefore limited to legacy renderer-local
-  texture thunks in `renderer.zig`; those should be audited next and either
-  removed as dead seams or converted to explicit draw contexts.
+- final read-side cut is now in:
+  the legacy renderer-local texture thunks were dead and are removed, and
+  `Renderer.TextRenderState.bg_rgba` is gone entirely. Remaining `bg_rgba`
+  references are explicit draw-context or payload fields, not renderer ambient
+  state.
+- this closes the ambient text/background state blocker. The next renderer
+  pressure should be selected from current code truth rather than continuing to
+  chase the removed `text_render.bg_rgba` channel.
 - sample pressure is specifically section-fill plus bg-aware text preview work
   in `font_sample_view.zig` / `font_sample_section_host.zig`, including the
   custom-font sample path that still terminates through direct texture draws

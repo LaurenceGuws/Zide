@@ -16,7 +16,6 @@ const metal_runtime_state = @import("renderer/metal_runtime_state.zig");
 const renderer_clip_host = @import("renderer/renderer_clip_host.zig");
 const renderer_frame_host = @import("renderer/renderer_frame_host.zig");
 const renderer_presentable_host = @import("renderer/renderer_presentable_host.zig");
-const renderer_surface_host = @import("renderer/renderer_surface_host.zig");
 const scene_target_state = @import("renderer/scene_target_state.zig");
 const surface_draw = @import("renderer/surface_draw.zig");
 const input_constants = @import("renderer/input_constants.zig");
@@ -370,7 +369,6 @@ pub const Renderer = struct {
         contrast: f32 = 1.0,
         linear_correction: bool = true,
         dst_linear_active: bool = false,
-        bg_rgba: types.Rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 },
     };
 
     const BackendHost = renderer_backend_host.Host(
@@ -1228,16 +1226,6 @@ pub const Renderer = struct {
         draw_ops.drawTextureRect(self, texture, src, dest, color, types.Rgba{ .r = 0, .g = 0, .b = 0, .a = 0 }, .rgba);
     }
 
-    fn drawTextureRectThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
-        const self: *Renderer = @ptrCast(@alignCast(ctx));
-        draw_ops.drawTextureRect(self, texture, src, dest, color, self.text_render.bg_rgba, kind);
-    }
-
-    fn drawRectThunk(ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void {
-        const self: *Renderer = @ptrCast(@alignCast(ctx));
-        renderer_surface_host.drawRect(self, x, y, w, h, color);
-    }
-
     fn ensureVboCapacity(self: *Renderer, vertex_count: usize) void {
         draw_ops.ensureVboCapacity(self, vertex_count);
     }
@@ -1292,26 +1280,6 @@ pub const Renderer = struct {
 
     pub fn terminalShapeBuffer(self: *Renderer) *hb.hb_buffer_t {
         return self.terminal_text.shape_buffer;
-    }
-
-    fn drawTextureBatchThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
-        const renderer: *Renderer = @ptrCast(@alignCast(ctx));
-        draw_ops.addBatchQuad(renderer, texture, src, dest, color, renderer.text_render.bg_rgba, kind);
-    }
-
-    fn drawTextureGlyphCacheThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
-        const renderer: *Renderer = @ptrCast(@alignCast(ctx));
-        renderer.backend.addTerminalGlyphQuad(renderer, texture, src, dest, color, renderer.text_render.bg_rgba, kind);
-    }
-
-    fn addTerminalGlyphRectThunk(ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void {
-        const renderer: *Renderer = @ptrCast(@alignCast(ctx));
-        renderer.backend.addTerminalGlyphRect(renderer, x, y, w, h, color.toRgba());
-    }
-
-    fn drawTextureThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
-        const renderer: *Renderer = @ptrCast(@alignCast(ctx));
-        draw_ops.drawTextureRect(renderer, texture, src, dest, color, renderer.text_render.bg_rgba, kind);
     }
 
     pub fn inputDomain(self: *Renderer) input_state.InputDomain {
