@@ -272,8 +272,7 @@ pub fn beginFrame(renderer: anytype) void {
 
 pub fn submitFrame(renderer: anytype) present_feedback_state.FrameSubmission {
     defer clearQueuedSurfaceDraws(renderer);
-    replayFrameCriticalSurfaceDrawsBeforePresent(renderer);
-    if (renderer.present.main_composition_target == .offscreen_scene_target) drawSceneTargetToDefault(renderer);
+    replayFrameCriticalWorkBeforePresent(renderer);
     runDebugCaptureIfArmedAfterComposition(renderer);
     const swap_start = sdl_api.getPerformanceCounter();
     const swap_ok = sdl_api.glSwapWindow(renderer.window);
@@ -285,6 +284,16 @@ pub fn submitFrame(renderer: anytype) present_feedback_state.FrameSubmission {
         .kind = if (swap_ok) .submitted else .submit_failed,
         .present_ms = present_trace_runtime.performanceDeltaMs(swap_start, swap_end, renderer.perf_freq),
     });
+}
+
+/// Ordinary product submit work that must complete before swap/present.
+/// Keeping this separate from capture makes steady-state submit cost easier to
+/// audit as frame-critical replay/resolve work rather than a generic bucket.
+fn replayFrameCriticalWorkBeforePresent(renderer: anytype) void {
+    replayFrameCriticalSurfaceDrawsBeforePresent(renderer);
+    if (renderer.present.main_composition_target == .offscreen_scene_target) {
+        drawSceneTargetToDefault(renderer);
+    }
 }
 
 /// Debug/capture-only submit work. This is intentionally named separately from

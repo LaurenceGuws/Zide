@@ -803,6 +803,12 @@ Current progress:
     replay inline inside `submitFrame(...)`
   - behavior is unchanged; this just keeps ordinary submit mechanics readable
     before any deeper replay movement
+- third submit-path classification cut landed:
+  - OpenGL ordinary pre-present replay/resolve now routes through one explicit
+    helper instead of spelling surface replay plus offscreen-scene resolve
+    inline inside `submitFrame(...)`
+  - debug capture remains separate, so ordinary submit reads as
+    replay/resolve/swap first
 
 ### 6. Debug/observability contamination of product execution
 

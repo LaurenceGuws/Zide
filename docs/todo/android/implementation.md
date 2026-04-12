@@ -483,6 +483,9 @@ Status:
   - Metal ordinary pre-present replay now routes through one explicit helper
     instead of spelling replay/cache-refresh/replay inline inside
     `submitFrame(...)`
+  - OpenGL ordinary pre-present replay/resolve now routes through one explicit
+    helper instead of spelling replay plus offscreen-scene resolve inline
+    inside `submitFrame(...)`
   - this cut is aimed directly at the product scroll snap-back / host-thickness
     issue, not at renderer internals yet
   - validation:
