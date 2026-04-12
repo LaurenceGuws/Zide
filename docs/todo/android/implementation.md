@@ -209,6 +209,13 @@ Current checkpoint:
 - `../zide-mobile-pm` is the mobile package authority boundary;
   Zide-side Termux package staging remains temporary dev-provider tooling
 
+Status:
+
+- met for the current Android foundation
+- owner stop marker: `app_architecture/platform/android/ANDROID_USERLAND_BOOTSTRAP_PLAN.md`
+- return to Android package/userland work only if a concrete regression or
+  product blocker appears
+
 ### `AU-A1` Android Userland Bootstrap
 
 Purpose:

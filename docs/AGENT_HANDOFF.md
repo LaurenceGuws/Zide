@@ -18,21 +18,18 @@ statement. The short version:
 
 ### Current Focus
 
-Android shared-renderer bring-up and current direct shell input are now strong
-enough on-device that they should stop outranking the next product-owned Android
-gap.
+Android package/userland work is now strong enough on-device that it should
+stop outranking the active renderer blocker.
 
-- Active ticket: `AU-A2`
-  - Android package-manager handshake for the Zide prefix
-  - owner: `docs/todo/android/implementation.md`
+- Active ticket: `AR-B3` / `RB-B3.f`
+  - band composition phase boundary for fill + dependent text/icon work
+  - owner: `docs/todo/ui/renderer.md`
   - current state:
-    Android now has a real host, real renderer ownership, real IME-aware
-    viewport sizing, and a locally-validated modifier-latch input surface; the
-    product shell now runs staged Bash under the intentional SDK 28
-    Termux-compatible posture; `../zide-mobile-pm` now publishes a dev Android
-    prefix artifact and Zide can stage it by manifest, but product package
-    authority is still unresolved because current provider payloads retain
-    audited `com.termux` assumptions
+    Android now has a real terminal-host package/userland foundation: in-app
+    artifact install/update, explicit staged-state reporting, staged `zide-pm`,
+    one app-owned package action, and clean Bash startup. That means Android
+    product work should return to the shared renderer blocker instead of
+    extending AU-A2 further without a concrete regression.
 - `RB-B3.d` is already met:
   - widget/runtime no longer calls `usesDirectTerminalPresentation(...)`
   - those path decisions now terminate in the presentable host seam

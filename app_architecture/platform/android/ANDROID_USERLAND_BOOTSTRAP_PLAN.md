@@ -378,6 +378,44 @@ Do not leave this lane claiming:
 - product-polished onboarding
 - product-clean provider replacement already implemented
 
+## AU-A2 Exit Checklist
+
+`AU-A2` is now met for the current Android foundation.
+
+Validated truth:
+
+- app-private userland install/update is app-owned and coherent enough for the
+  current terminal-host lane
+- the artifact contract is the only install/update input in product flow
+- staged state is explicit and product-visible:
+  - missing
+  - invalid
+  - ready-current
+  - ready-upgrade-needed
+- the hidden sidebar exposes one honest package action:
+  `Packages` runs `zide-pm doctor` plus `zide-pm list-available` from the
+  installed prefix and surfaces the result in debug view
+- `zide-pm` is staged in the installed prefix and device-proven runnable
+- provider semantics are explicit:
+  - `termux-main` is the first supported Android provider
+  - provider is not product identity
+  - a future Zide-owned provider can replace the default without changing the
+    package UX
+- Bash startup no longer touches the stale
+  `/data/data/com.termux/files/usr/etc/bash.bashrc` path; terminal-host now
+  launches Bash with clean startup flags and environment-owned prompt hooks
+
+AU-A2 intentionally does not claim:
+
+- broad package curation
+- multiple Android shells fully supported
+- product-polished onboarding
+- product-clean provider replacement
+
+That means the next highest-leverage work should leave package/userland churn
+and return to the active renderer blocker unless a concrete Android package
+regression appears.
+
 ## `AU-A3` Scope
 
 `AU-A3` first curated terminal-dev baseline
