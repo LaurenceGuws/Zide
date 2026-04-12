@@ -231,9 +231,9 @@ Next renderer move:
   return to the broader renderer contract pressure already named in current
   authority:
   fills are deferred while ordinary UI/editor dependent text still resolves
-  through immediate `text_runtime.zig` paths that mutate background state and
-  emit texture draws immediately, so fill-plus-text work still lacks one
-  backend-neutral phase boundary
+  through immediate `text_runtime.zig` paths that mutate shared
+  `renderer.text_render.bg_rgba` state and emit texture draws immediately, so
+  fill-plus-text work still lacks one backend-neutral phase boundary
 - do not reopen Android backend work unless that audit proves a new concrete
   renderer-owned Android blocker
 
