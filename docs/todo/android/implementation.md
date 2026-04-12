@@ -492,6 +492,9 @@ Status:
   - refresh-path outcome classification now routes through one explicit helper
     instead of recomputing cache-advance / target-availability / followup
     policy inline
+  - direct-present outcome classification now routes through one explicit
+    helper instead of open-coding result-policy assembly inside the direct
+    execution hook
   - this cut is aimed directly at the product scroll snap-back / host-thickness
     issue, not at renderer internals yet
   - validation:

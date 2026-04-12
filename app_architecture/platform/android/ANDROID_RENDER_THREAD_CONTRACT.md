@@ -652,6 +652,12 @@ Current progress:
     policy inline at the refresh execution site
   - behavior is unchanged; this starts separating "what happened" from
     "what cache-state/followup policy should advance"
+- third execution-seam cut landed:
+  - direct-present outcome classification now routes through one explicit
+    helper instead of open-coding result-policy assembly inside the direct
+    execution hook
+  - behavior is unchanged; both execution paths now classify result policy
+    explicitly before the next cache-advancement split
 
 Do not do:
 

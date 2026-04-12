@@ -137,6 +137,12 @@ pub const RefreshOutcomeState = struct {
     followup_reason: TerminalPresentFollowupReason = .none,
 };
 
+pub const DirectPresentOutcomeState = struct {
+    outcome: TerminalPresentOutcome = .presented,
+    cache_state_advanced: bool = true,
+    target_available: bool = true,
+};
+
 pub fn runFastPresentIfAvailable(
     surface_state: anytype,
     renderer: anytype,
@@ -1102,6 +1108,12 @@ fn classifyRefreshOutcome(refresh: TerminalPresentableRefresh) RefreshOutcomeSta
     };
 }
 
+fn classifyDirectPresentOutcome(updated: bool) DirectPresentOutcomeState {
+    return .{
+        .outcome = if (updated) .updated_and_presented else .presented,
+    };
+}
+
 pub fn runPresentation(
     self: anytype,
     shell: *app_shell.Shell,
@@ -1269,10 +1281,11 @@ pub fn runPresentation(
                 direct_ctx,
                 Local,
             );
+            const outcome_state = classifyDirectPresentOutcome(direct.updated);
             return .{
-                .outcome = if (direct.updated) .updated_and_presented else .presented,
-                .cache_state_advanced = true,
-                .target_available = true,
+                .outcome = outcome_state.outcome,
+                .cache_state_advanced = outcome_state.cache_state_advanced,
+                .target_available = outcome_state.target_available,
                 .timing = direct.timing,
             };
         }
