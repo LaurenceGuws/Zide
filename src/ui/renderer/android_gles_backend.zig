@@ -264,28 +264,10 @@ pub fn beginFrame(renderer: anytype) void {
         renderer_frame_host.noteFrameBeginFailed(renderer);
         return;
     }
-
-    const native_window = renderer.render_host.androidNativeWindow() orelse {
+    if (!ensureBoundCurrentSurface(renderer)) {
         renderer_frame_host.noteFrameBeginFailed(renderer);
         return;
-    };
-    const epoch = renderer.render_host.surfaceIdentityEpoch();
-    const transition = runtimeTransition(state.runtime.bound_epoch, epoch, native_window);
-    switch (android_gles_runtime.ensureWindowSurface(&state.runtime, native_window, epoch, transition)) {
-        .ready => {},
-        .init_failed, .surface_failed, .make_current_failed, .swap_failed => {
-            renderer_frame_host.noteFrameBeginFailed(renderer);
-            return;
-        },
     }
-    switch (android_gles_runtime.makeCurrent(&state.runtime)) {
-        .ready => {},
-        .init_failed, .surface_failed, .make_current_failed, .swap_failed => {
-            renderer_frame_host.noteFrameBeginFailed(renderer);
-            return;
-        },
-    }
-    bindSharedGlApi();
     if (!state.resources.resources_ready or !renderer.fonts_ready) {
         renderer_frame_host.noteFrameBeginFailed(renderer);
         return;
@@ -321,19 +303,7 @@ pub fn beginFrame(renderer: anytype) void {
 pub fn prepareFrameResources(renderer: anytype) !void {
     const state = renderer.backend.runtime.androidGlesState();
     if (!target_has_android_gles and !builtin.is_test) return error.AndroidGlesInitFailed;
-
-    const native_window = renderer.render_host.androidNativeWindow() orelse return error.AndroidGlesInitFailed;
-    const epoch = renderer.render_host.surfaceIdentityEpoch();
-    const transition = runtimeTransition(state.runtime.bound_epoch, epoch, native_window);
-    switch (android_gles_runtime.ensureWindowSurface(&state.runtime, native_window, epoch, transition)) {
-        .ready => {},
-        .init_failed, .surface_failed, .make_current_failed, .swap_failed => return error.AndroidGlesInitFailed,
-    }
-    switch (android_gles_runtime.makeCurrent(&state.runtime)) {
-        .ready => {},
-        .init_failed, .surface_failed, .make_current_failed, .swap_failed => return error.AndroidGlesInitFailed,
-    }
-    bindSharedGlApi();
+    if (!ensureBoundCurrentSurface(renderer)) return error.AndroidGlesInitFailed;
 
     if (!state.resources.resources_ready) {
         try initGlResources(renderer);
@@ -344,6 +314,27 @@ pub fn prepareFrameResources(renderer: anytype) !void {
         renderer.fonts_ready = true;
     }
     syncTextRenderConfig(renderer);
+}
+
+/// Frame-entry ownership seam: acquire/bind the current Android window surface
+/// and GL context before either steady-state frame begin or preframe warmup.
+/// This keeps the remaining frame-entry work auditable as clear/setup instead
+/// of repeating surface/context mechanics in multiple call sites.
+fn ensureBoundCurrentSurface(renderer: anytype) bool {
+    const state = renderer.backend.runtime.androidGlesState();
+    const native_window = renderer.render_host.androidNativeWindow() orelse return false;
+    const epoch = renderer.render_host.surfaceIdentityEpoch();
+    const transition = runtimeTransition(state.runtime.bound_epoch, epoch, native_window);
+    switch (android_gles_runtime.ensureWindowSurface(&state.runtime, native_window, epoch, transition)) {
+        .ready => {},
+        .init_failed, .surface_failed, .make_current_failed, .swap_failed => return false,
+    }
+    switch (android_gles_runtime.makeCurrent(&state.runtime)) {
+        .ready => {},
+        .init_failed, .surface_failed, .make_current_failed, .swap_failed => return false,
+    }
+    bindSharedGlApi();
+    return true;
 }
 
 fn bindSharedGlApi() void {

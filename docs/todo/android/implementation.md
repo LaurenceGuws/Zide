@@ -405,6 +405,8 @@ Status:
   - backend frame begin/submit scrutiny:
     - Android GLES frame-resource warmup now runs through an explicit preframe
       seam instead of lazy `beginFrame(...)` initialization
+    - Android GLES surface/context acquire now routes through one explicit
+      helper shared by preframe warmup and steady-state `beginFrame(...)`
     - submit-time queued surface replay is now explicitly labeled as
       frame-critical replay-before-present work across Android GLES, OpenGL,
       and Metal

@@ -787,6 +787,11 @@ Current progress:
   - text-render uniform sync is now dirty-driven by `TextRenderState`
   - Android GLES no longer resends static text-render uniforms on every frame
   - OpenGL config sync uses the same dirty bit so config updates remain explicit
+- third frame-entry cut landed:
+  - Android GLES window-surface/context acquire now routes through one explicit
+    helper shared by preframe warmup and steady-state `beginFrame(...)`
+  - steady-state frame entry now reads more honestly as surface/context acquire,
+    then clear/setup, instead of duplicating acquire mechanics across seams
 
 ### 6. Debug/observability contamination of product execution
 
