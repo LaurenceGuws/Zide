@@ -359,9 +359,6 @@ Status:
       presentation content
     - geometry/content/overlay invalidation still marks cached presentation
       content stale
-      below and twelve above the committed terminal size
-    - terminal live glyph visual scale remains continuous so glyph geometry
-      stays coupled to live cell geometry
   - Android gesture tracking bug fixed:
     - `ScaleGestureDetector.getScaleFactor()` is incremental per event, so the
       host must accumulate factors between choreographer frames
@@ -405,6 +402,16 @@ Status:
       - do not keep this open as an active polish war
       - reopen only if a concrete future product need proves the deferred
         extreme-burst edge case matters again
+  - backend frame begin/submit scrutiny:
+    - Android GLES frame-resource warmup now runs through an explicit preframe
+      seam instead of lazy `beginFrame(...)` initialization
+    - submit-time queued surface replay is now explicitly labeled as
+      frame-critical replay-before-present work across Android GLES, OpenGL,
+      and Metal
+    - debug capture/readback work is now separated by name from ordinary
+      product presentation
+    - behavior is unchanged; the point of this cut is to make the remaining
+      submit work auditable before moving ownership
 - first iteration cut landed from that queue:
   - narrowed Android host/UI-thread contamination around stale transcript-era
     ownership

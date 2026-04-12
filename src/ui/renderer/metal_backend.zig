@@ -1267,13 +1267,11 @@ pub fn submitFrame(renderer: anytype) present_trace_runtime.FrameSubmission {
             var capture_readback: ?Readback = null;
             defer if (capture_readback) |*readback| deinitReadback(readback);
 
-            if (renderer.present.capture_armed) {
-                capture_readback = prepareFrameReadback(context, frame);
-            }
+            capture_readback = prepareDebugFrameReadbackIfArmed(renderer, context, frame);
 
-            replayRecordedSurfaceDrawSurfacePhase(renderer, context, frame);
+            replayFrameCriticalSurfaceDrawsBeforePresent(renderer, context, frame);
             _ = captureTerminalSnapshot(context, frame);
-            replayRecordedPresentableDraws(context, frame);
+            replayFrameCriticalPresentableDrawsBeforePresent(context, frame);
             encodePresent(frame);
             commitFrame(frame);
 
@@ -1299,6 +1297,13 @@ pub fn submitFrame(renderer: anytype) present_trace_runtime.FrameSubmission {
         .kind = outcome_kind,
         .present_ms = present_ms,
     });
+}
+
+/// Debug/capture-only pre-submit readback setup. Keeping this outside the
+/// ordinary replay helpers makes capture cost explicit in the submit path.
+fn prepareDebugFrameReadbackIfArmed(renderer: anytype, context: *BackendContext, frame: *Frame) ?Readback {
+    if (!renderer.present.capture_armed) return null;
+    return prepareFrameReadback(context, frame);
 }
 
 fn finishFrameCaptureIfArmed(renderer: anytype, frame: *Frame, capture_readback: ?Readback) void {
@@ -1775,7 +1780,10 @@ pub fn runSmokeFrame(renderer: anytype) bool {
     return true;
 }
 
-fn replayRecordedSurfaceDrawSurfacePhase(renderer: anytype, context: *BackendContext, frame: *Frame) void {
+/// Frame-critical submit replay for Metal surface work. This is still real
+/// drawing work, not present mechanics, and remains here only because Metal
+/// command encoding must happen against the current frame.
+fn replayFrameCriticalSurfaceDrawsBeforePresent(renderer: anytype, context: *BackendContext, frame: *Frame) void {
     _ = renderer;
     for (context.queued_surface_draws.items) |queued_draw| {
         switch (queued_draw) {
@@ -1786,7 +1794,8 @@ fn replayRecordedSurfaceDrawSurfacePhase(renderer: anytype, context: *BackendCon
     }
 }
 
-fn replayRecordedPresentableDraws(context: *BackendContext, frame: *Frame) void {
+/// Frame-critical submit replay for retained presentable draws.
+fn replayFrameCriticalPresentableDrawsBeforePresent(context: *BackendContext, frame: *Frame) void {
     for (context.queued_presentable_draws.items) |queued_draw| {
         switch (queued_draw) {
             .atlas => |sample| _ = drawAtlasSample(context, frame, sample),

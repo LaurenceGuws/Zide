@@ -758,6 +758,14 @@ Current progress:
   - Android bridge now calls an explicit preframe
     `prepareFrameResources(...)` seam before normal frame begin
   - steady-state frame entry is narrower and easier to measure honestly
+- submit-time ownership classification landed across Android GLES, OpenGL, and
+  Metal:
+  - frame-critical queued surface replay is now named as replay-before-present
+    work, not generic swap/submit mechanics
+  - debug capture/readback setup is now named separately from ordinary product
+    presentation
+  - behavior is intentionally unchanged; this cut makes the remaining submit
+    work auditable before any movement across backend boundaries
 - remaining Android GLES frame-entry pressure is now:
   - surface/context ensure + make-current
   - clear/setup

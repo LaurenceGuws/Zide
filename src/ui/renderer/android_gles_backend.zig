@@ -407,7 +407,7 @@ pub fn submitFrame(renderer: anytype) present_trace_runtime.FrameSubmission {
         });
     }
 
-    flushQueuedSurfaceDrawsBeforeImmediateWork(renderer);
+    replayFrameCriticalSurfaceDrawsBeforePresent(renderer);
     const swap_start = std.time.nanoTimestamp();
     const swap_status = android_gles_runtime.swapBuffers(&state.runtime);
     const swap_end = std.time.nanoTimestamp();
@@ -438,6 +438,13 @@ pub fn whiteTexture(renderer: anytype) types.Texture {
 pub fn flushQueuedSurfaceDrawsBeforeImmediateWork(renderer: anytype) void {
     replayRecordedSurfaceDraws(renderer);
     renderer.backend.runtime.androidGlesState().queued_surface_draws.clearRetainingCapacity();
+}
+
+/// Submit-time replay contract: Android GLES records some surface draws during
+/// widget rendering and must replay them before `eglSwapBuffers`. This is
+/// frame-critical today, but it is not swap/present mechanics.
+fn replayFrameCriticalSurfaceDrawsBeforePresent(renderer: anytype) void {
+    flushQueuedSurfaceDrawsBeforeImmediateWork(renderer);
 }
 
 pub fn bindBatchPipeline(renderer: anytype) void {

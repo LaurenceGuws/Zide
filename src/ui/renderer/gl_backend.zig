@@ -270,9 +270,9 @@ pub fn beginFrame(renderer: anytype) void {
 
 pub fn submitFrame(renderer: anytype) present_trace_runtime.FrameSubmission {
     defer clearQueuedSurfaceDraws(renderer);
-    replayRecordedSurfaceDrawSurfacePhase(renderer);
+    replayFrameCriticalSurfaceDrawsBeforePresent(renderer);
     if (renderer.present.main_composition_target == .offscreen_scene_target) drawSceneTargetToDefault(renderer);
-    captureFrameIfArmed(renderer);
+    runDebugCaptureIfArmedAfterComposition(renderer);
     const swap_start = sdl_api.getPerformanceCounter();
     const swap_ok = sdl_api.glSwapWindow(renderer.window);
     if (!swap_ok) {
@@ -285,7 +285,9 @@ pub fn submitFrame(renderer: anytype) present_trace_runtime.FrameSubmission {
     });
 }
 
-fn captureFrameIfArmed(renderer: anytype) void {
+/// Debug/capture-only submit work. This is intentionally named separately from
+/// normal presentation so ordinary frame cost is not mistaken for capture cost.
+fn runDebugCaptureIfArmedAfterComposition(renderer: anytype) void {
     if (!renderer.present.capture_armed) return;
     const path = renderer.present.capture_path orelse return;
     dumpWindowScreenshotPpm(renderer, path) catch |err| {
@@ -391,7 +393,10 @@ fn enqueueSurfaceDrawForSurfacePhase(renderer: anytype, draw: surface_draw.Surfa
     return true;
 }
 
-fn replayRecordedSurfaceDrawSurfacePhase(renderer: anytype) void {
+/// Frame-critical submit replay. OpenGL surface draws may be queued while
+/// higher-level code records shared surface work; until that queue is moved to
+/// an earlier explicit stage, submit must replay it before scene blit/swap.
+fn replayFrameCriticalSurfaceDrawsBeforePresent(renderer: anytype) void {
     for (renderer.backend.runtime.openglState().queued_surface_draws.items) |queued_draw| {
         present_trace_runtime.noteGlSurfaceQueuedReplay(renderer);
         _ = consumeRecordedSurfaceDrawInSurfacePhase(renderer, queued_draw.draw);
@@ -403,7 +408,7 @@ fn replayRecordedSurfaceDrawSurfacePhase(renderer: anytype) void {
 /// ordering must match "surface work first."
 pub fn flushQueuedSurfaceDrawsNow(renderer: anytype) void {
     if (renderer.backend.runtime.openglState().queued_surface_draws.items.len == 0) return;
-    replayRecordedSurfaceDrawSurfacePhase(renderer);
+    replayFrameCriticalSurfaceDrawsBeforePresent(renderer);
     clearQueuedSurfaceDraws(renderer);
 }
 
