@@ -225,13 +225,14 @@ Next renderer move:
   `app_architecture/ui/BAND_COMPOSITION_PHASE_PLAN.md`
   `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md`
 - concrete pressure:
-  `editor_widget_draw_text.zig` still expresses the same highlighted text /
-  decoration semantics through two emitter implementations:
-  direct fallback emission and draw-list emission
+  `editor_widget_draw_text.zig` now shares highlighted text / decoration
+  traversal through one generic emitter-driven path, but it still terminates in
+  two emitter surfaces:
+  `ImmediateTextEmitter` and `DrawListTextEmitter`
 - required outcome:
   one explicit local seam owns that text/decor emission family without leaving
-  a separate direct-emitter versus list-emitter split as the last editor-local
-  phase/owner wrinkle
+  the immediate-emitter versus draw-list-emitter surface as the last
+  editor-local owner wrinkle
 - do not reopen Android backend work unless that audit proves a new concrete
   renderer-owned Android blocker
 

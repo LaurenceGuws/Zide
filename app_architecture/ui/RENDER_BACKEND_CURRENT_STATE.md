@@ -681,13 +681,15 @@ That split is now sharper from code inspection too:
 - that keeps the remaining editor timing pressure focused on row-band local
   ordering rather than those overlay families.
 - the next editor-local split is now more specific too:
-  - fallback highlighted text still emits through direct text/decor functions
-    in `editor_widget_draw_text.zig`
-  - cached/list rendering emits the same semantics through draw-list text/rect
-    ops there
+  - the old expanded-text / expanded-styled-text immediate-vs-list helper
+    split is now gone; highlighted text and decoration traversal run through
+    one generic emitter-driven path in `editor_widget_draw_text.zig`
+  - the remaining seam there is smaller:
+    `ImmediateTextEmitter` versus `DrawListTextEmitter` still own the final
+    side-effect surface for text/background and decoration-rect emission
 - traversal, decoration geometry, and expanded styled-text run splitting are
   now shared there, so further local editor cleanup is only honest if it
-  removes that final emitter split or changes the real surface/timing
+  removes that last emitter-surface split or changes the real surface/timing
   contract.
 - the remaining backend-runtime storage blocker is now more specifically
   OpenGL-shaped than Metal-shaped:

@@ -128,7 +128,8 @@ fn nextUtf8Len(text: []const u8, idx: usize) usize {
     return seq_len;
 }
 
-fn drawExpandedTextSliceOnBg(
+fn emitExpandedTextSliceOnBg(
+    emitter: anytype,
     r: anytype,
     text_start_x: f32,
     y: f32,
@@ -139,61 +140,37 @@ fn drawExpandedTextSliceOnBg(
     slice_end: usize,
     fg: anytype,
     bg: anytype,
-    disable_programming_ligatures: bool,
-) void {
-    const Visitor = struct {
-        renderer: @TypeOf(r),
-        y: f32,
-        fg: @TypeOf(fg),
-        bg: @TypeOf(bg),
-        disable_programming_ligatures: bool,
-
-        fn emit(self: *@This(), x: f32, text: []const u8) void {
-            renderer_text_host.drawTextMonospaceOnBgPolicy(self.renderer, text, x, self.y, self.fg, self.bg, self.disable_programming_ligatures);
-        }
-    };
-    var visitor = Visitor{
-        .renderer = r,
-        .y = y,
-        .fg = fg,
-        .bg = bg,
-        .disable_programming_ligatures = disable_programming_ligatures,
-    };
-    forEachExpandedTextRun(r, text_start_x, line_text, seg_start_byte, seg_start_vis, slice_start, slice_end, &visitor);
-}
-
-fn addExpandedTextSliceOpBg(
-    list: *EditorDrawList,
-    r: anytype,
-    text_start_x: f32,
-    y: f32,
-    line_text: []const u8,
-    seg_start_byte: usize,
-    seg_start_vis: usize,
-    slice_start: usize,
-    slice_end: usize,
-    fg: anytype,
-    bg: anytype,
+    flags: EditorTextStyleFlags,
     disable_programming_ligatures: bool,
 ) bool {
     var ok = true;
     const Visitor = struct {
-        list: *EditorDrawList,
+        emitter: @TypeOf(emitter),
         y: f32,
         fg: @TypeOf(fg),
         bg: @TypeOf(bg),
+        flags: EditorTextStyleFlags,
         disable_programming_ligatures: bool,
         ok: *bool,
 
         fn emit(self: *@This(), x: f32, text: []const u8) void {
-            self.ok.* = self.ok.* and overlay_mod.addTextOpBg(self.list, x, self.y, text, self.fg, self.bg, self.disable_programming_ligatures);
+            self.ok.* = self.ok.* and self.emitter.textOnBg(
+                x,
+                self.y,
+                text,
+                self.fg,
+                self.bg,
+                self.flags,
+                self.disable_programming_ligatures,
+            );
         }
     };
     var visitor = Visitor{
-        .list = list,
+        .emitter = emitter,
         .y = y,
         .fg = fg,
         .bg = bg,
+        .flags = flags,
         .disable_programming_ligatures = disable_programming_ligatures,
         .ok = &ok,
     };
@@ -243,85 +220,6 @@ fn forEachExpandedTextRun(
     if (run_start < slice_end) {
         visitor.emit(run_x, line_text[run_start..slice_end]);
     }
-}
-
-fn drawExpandedStyledTextOnBg(
-    r: anytype,
-    text_start_x: f32,
-    y: f32,
-    line_text: []const u8,
-    seg_start_byte: usize,
-    seg_start_vis: usize,
-    slice_start: usize,
-    slice_end: usize,
-    fg: anytype,
-    bg: anytype,
-    flags: EditorTextStyleFlags,
-    disable_programming_ligatures: bool,
-) void {
-    const Visitor = struct {
-        renderer: @TypeOf(r),
-        y: f32,
-        fg: @TypeOf(fg),
-        bg: @TypeOf(bg),
-        flags: EditorTextStyleFlags,
-        disable_programming_ligatures: bool,
-
-        fn emit(self: *@This(), x: f32, text: []const u8) void {
-            drawStyledTextOnBg(self.renderer, text, x, self.y, self.fg, self.bg, self.flags, self.disable_programming_ligatures);
-        }
-    };
-    var visitor = Visitor{
-        .renderer = r,
-        .y = y,
-        .fg = fg,
-        .bg = bg,
-        .flags = flags,
-        .disable_programming_ligatures = disable_programming_ligatures,
-    };
-    forEachExpandedStyledTextRun(r, text_start_x, line_text, seg_start_byte, seg_start_vis, slice_start, slice_end, &visitor);
-}
-
-fn addExpandedStyledTextOpBg(
-    list: *EditorDrawList,
-    r: anytype,
-    text_start_x: f32,
-    y: f32,
-    line_text: []const u8,
-    seg_start_byte: usize,
-    seg_start_vis: usize,
-    slice_start: usize,
-    slice_end: usize,
-    fg: anytype,
-    bg: anytype,
-    flags: EditorTextStyleFlags,
-    disable_programming_ligatures: bool,
-) bool {
-    var ok = true;
-    const Visitor = struct {
-        list: *EditorDrawList,
-        y: f32,
-        fg: @TypeOf(fg),
-        bg: @TypeOf(bg),
-        flags: EditorTextStyleFlags,
-        disable_programming_ligatures: bool,
-        ok: *bool,
-
-        fn emit(self: *@This(), x: f32, text: []const u8) void {
-            self.ok.* = self.ok.* and addStyledTextOpBg(self.list, x, self.y, text, self.fg, self.bg, self.flags, self.disable_programming_ligatures);
-        }
-    };
-    var visitor = Visitor{
-        .list = list,
-        .y = y,
-        .fg = fg,
-        .bg = bg,
-        .flags = flags,
-        .disable_programming_ligatures = disable_programming_ligatures,
-        .ok = &ok,
-    };
-    forEachExpandedStyledTextRun(r, text_start_x, line_text, seg_start_byte, seg_start_vis, slice_start, slice_end, &visitor);
-    return ok;
 }
 
 fn forEachExpandedStyledTextRun(
@@ -590,11 +488,6 @@ fn forEachDecorationRect(
     }
 }
 
-fn drawStyledTextOnBg(r: anytype, text: []const u8, x: f32, y: f32, fg: anytype, bg: anytype, flags: EditorTextStyleFlags, disable_programming_ligatures: bool) void {
-    renderer_text_host.drawTextMonospaceOnBgStyledPolicy(r, text, x, y, fg, bg, disable_programming_ligatures, flags.italic);
-    if (flags.bold) renderer_text_host.drawTextMonospaceOnBgStyledPolicy(r, text, x + 1.0, y, fg, bg, disable_programming_ligatures, flags.italic);
-}
-
 fn addExpandedTextSliceWithEmitterBg(
     emitter: anytype,
     r: anytype,
@@ -610,23 +503,8 @@ fn addExpandedTextSliceWithEmitterBg(
     disable_programming_ligatures: bool,
 ) bool {
     if (slice_end <= slice_start) return true;
-    if (comptime @TypeOf(emitter.*) == DrawListTextEmitter) {
-        return addExpandedTextSliceOpBg(
-            emitter.list,
-            r,
-            text_start_x,
-            y,
-            line_text,
-            seg_start_byte,
-            seg_start_vis,
-            slice_start,
-            slice_end,
-            fg,
-            bg,
-            disable_programming_ligatures,
-        );
-    }
-    drawExpandedTextSliceOnBg(
+    return emitExpandedTextSliceOnBg(
+        emitter,
         r,
         text_start_x,
         y,
@@ -637,9 +515,9 @@ fn addExpandedTextSliceWithEmitterBg(
         slice_end,
         fg,
         bg,
+        .{},
         disable_programming_ligatures,
     );
-    return true;
 }
 
 fn emitStyledTextOnBg(
@@ -713,20 +591,6 @@ fn forEachUndercurlRect(x: f32, baseline_y: f32, width: f32, thickness: f32, vis
     }
 }
 
-fn addStyledTextOpBg(list: *EditorDrawList, x: f32, y: f32, text: []const u8, fg: anytype, bg: anytype, flags: EditorTextStyleFlags, disable_programming_ligatures: bool) bool {
-    list.add(.{ .text = .{
-        .x = x,
-        .y = y,
-        .text = text,
-        .color = overlay_mod.packColor(fg),
-        .bg_color = overlay_mod.packColor(bg),
-        .disable_programming_ligatures = disable_programming_ligatures,
-        .bold = flags.bold,
-        .italic = flags.italic,
-    } }) catch return false;
-    return true;
-}
-
 pub fn drawTextSliceWithSelectionBg(r: anytype, text_start_x: f32, y: f32, line_text: []const u8, seg_start_byte: usize, seg_start_vis: usize, slice_start: usize, slice_end: usize, fg: anytype, base_bg: anytype, selection_bg: anytype, sel_ranges: []const ByteRange, disable_programming_ligatures: bool) void {
     var emitter = ImmediateTextEmitter{ .renderer = r };
     _ = emitTextSliceWithSelectionBg(&emitter, r, text_start_x, y, line_text, seg_start_byte, seg_start_vis, slice_start, slice_end, fg, base_bg, selection_bg, sel_ranges, disable_programming_ligatures);
@@ -778,11 +642,21 @@ fn emitHighlightedLineSegment(emitter: anytype, r: anytype, line_text: []const u
         }
 
         fn highlighted(self: *@This(), start: usize, end: usize, fg: @TypeOf(self.r.theme.foreground), bg: @TypeOf(self.selection_bg), start_x: f32, end_x: f32, decoration_color: @TypeOf(self.r.theme.foreground), flags: EditorTextStyleFlags) void {
-            if (comptime @TypeOf(self.emitter.*) == DrawListTextEmitter) {
-                self.ok.* = self.ok.* and addExpandedStyledTextOpBg(self.emitter.list, self.r, self.text_x, self.y, self.line_text, self.seg_start, self.seg_start_vis, start, end, fg, bg, flags, self.disable_programming_ligatures);
-            } else {
-                drawExpandedStyledTextOnBg(self.r, self.text_x, self.y, self.line_text, self.seg_start, self.seg_start_vis, start, end, fg, bg, flags, self.disable_programming_ligatures);
-            }
+            self.ok.* = self.ok.* and emitExpandedTextSliceOnBg(
+                self.emitter,
+                self.r,
+                self.text_x,
+                self.y,
+                self.line_text,
+                self.seg_start,
+                self.seg_start_vis,
+                start,
+                end,
+                fg,
+                bg,
+                flags,
+                self.disable_programming_ligatures,
+            );
             self.ok.* = self.ok.* and emitTextDecorations(self.emitter, self.r, start_x, self.y, end_x - start_x, decoration_color, flags);
         }
     };

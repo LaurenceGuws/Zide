@@ -235,12 +235,11 @@ Non-goals:
 The next honest editor-local pressure is narrower than row-band phase
 ownership:
 
-- `editor_widget_draw_text.zig` still has two emitter implementations for the
-  same highlighted-text/decor semantics:
-  immediate fallback emission versus draw-list emission
-- traversal and decoration geometry are already shared there, so the remaining
-  split is now the final direct-emitter versus list-emitter surface for that
-  family
+- `editor_widget_draw_text.zig` no longer has separate expanded-text helper
+  stacks for immediate fallback versus draw-list emission; highlighted text and
+  decoration traversal now run through one generic emitter-driven path
+- the remaining split there is now the final emitter surface itself:
+  `ImmediateTextEmitter` versus `DrawListTextEmitter`
 - IME/composition preview and scrollbars stay outside this ticket by ownership:
   they are cursor-anchored and pane-final overlays, not row-band-local
   ordering leaks
