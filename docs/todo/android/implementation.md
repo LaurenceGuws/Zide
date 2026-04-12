@@ -299,6 +299,7 @@ Status:
     gesture end
   - pinch end commits the expensive font rebuild once, after the interaction
     settles
+  - queued desktop/user zoom now follows the same staged live-scale model
   - remaining font-scale war work is shared renderer ownership, not Android
     gesture plumbing
 - first iteration cut landed from that queue:

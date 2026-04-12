@@ -19,6 +19,7 @@ pub const ScaleState = struct {
     ui_scale: f32 = 1.0,
     last_zoom_request_time: f64 = 0.0,
     last_zoom_apply_time: f64 = 0.0,
+    font_rebuild_pending: bool = false,
     wayland_scale_cache: ?f32 = null,
     wayland_scale_last_update: f64 = 0.0,
 };
@@ -39,6 +40,7 @@ pub fn initScaleState(
         .ui_scale = ui_scale,
         .last_zoom_request_time = 0.0,
         .last_zoom_apply_time = 0.0,
+        .font_rebuild_pending = false,
         .wayland_scale_cache = wayland_scale.cache,
         .wayland_scale_last_update = wayland_scale.last_update,
     };
@@ -151,6 +153,7 @@ pub fn queryUiScale(self: anytype) f32 {
 
 pub fn applyFontScale(self: anytype) !void {
     try font_manager.applyFontScale(self);
+    self.scale.font_rebuild_pending = false;
     if (comptime !(builtin.target.os.tag == .linux and builtin.target.abi == .android)) {
         text_input.reapplyRect(&self.input.text_input_state, self.window);
     }
@@ -158,6 +161,7 @@ pub fn applyFontScale(self: anytype) !void {
 
 pub fn applyLiveUserZoomScale(self: anytype) void {
     font_manager.applyLiveUserZoomScale(self);
+    self.scale.font_rebuild_pending = true;
 }
 
 pub fn queueUserZoom(self: anytype, delta: f32, now: f64) bool {
@@ -228,6 +232,7 @@ pub fn refreshUiScaleFromDisplayMetrics(self: anytype, metrics: platform_window.
 }
 
 pub fn applyPendingZoom(self: anytype, now: f64) !bool {
+    const commit_delay = 0.12;
     const result = scale_utils.applyPendingZoom(
         self.scale.user_zoom,
         self.scale.user_zoom_target,
@@ -237,7 +242,16 @@ pub fn applyPendingZoom(self: anytype, now: f64) !bool {
         0.04,
         0.02,
     );
-    if (!result.changed) return false;
+    if (!result.changed) {
+        if (self.scale.font_rebuild_pending and
+            std.math.approxEqAbs(f32, self.scale.user_zoom_target, self.scale.user_zoom, 0.0001) and
+            now - self.scale.last_zoom_apply_time >= commit_delay)
+        {
+            try applyFontScale(self);
+            return true;
+        }
+        return false;
+    }
     self.scale.user_zoom = result.next_zoom;
     const log = app_logger.logger("ui.scale");
     const layout_size = self.base_font_size * self.scale.ui_scale * self.scale.user_zoom;
@@ -250,7 +264,7 @@ pub fn applyPendingZoom(self: anytype, now: f64) !bool {
         layout_size,
     });
     log.logf(.info, "ui_zoom layout_size={d:.2} raster_size={d:.2}", .{ layout_size, raster_size });
-    try applyFontScale(self);
+    applyLiveUserZoomScale(self);
     log.logf(
         .info,
         "ui_zoom_effective base={d:.2} ui={d:.3} zoom={d:.3} target={d:.3} render={d:.3} font={d:.2} term_cell={d:.2}x{d:.2}",

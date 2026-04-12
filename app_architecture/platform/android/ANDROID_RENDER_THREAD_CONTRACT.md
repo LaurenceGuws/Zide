@@ -207,8 +207,9 @@ Current progress:
     shrinking inside a larger parent until gesture end
   - pinch end commits the expensive `applyFontScale(...)` rebuild once so
     raster font assets catch up to the final settled size
+  - queued user zoom now uses the same cheap live scale path and commits the
+    expensive font rebuild only after the zoom target settles
 - remaining work:
-  - queued desktop/user zoom still uses the full rebuild path
   - display-metric and config font changes intentionally still use the full
     rebuild path until their ownership is audited separately
   - font-cache reuse across committed scale targets is still unresolved
