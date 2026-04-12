@@ -101,6 +101,7 @@ public final class ZideTerminalActivity extends Activity
     private boolean surfaceResizeScheduled = false;
     private boolean shellStartScheduled = false;
     private boolean shellRefreshActive = false;
+    private boolean productFrameLoopActive = false;
     private boolean sidebarOpen = false;
     private String lastAutoStartBlockedState = "";
     private UserlandRelease userlandRelease;
@@ -123,6 +124,20 @@ public final class ZideTerminalActivity extends Activity
             if (shellRefreshActive) {
                 handler.postDelayed(this, SHELL_REFRESH_MS);
             }
+        }
+    };
+    private final Runnable productFrameRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (!productFrameLoopActive) {
+                return;
+            }
+            final int tick = nativeLoaded ? nativeTickProductShellFrameBridge() : 0;
+            if (!shouldRunProductFrameLoop() || tick == 0) {
+                stopProductFrameLoop();
+                return;
+            }
+            handler.postDelayed(this, tick == 2 ? 16L : 33L);
         }
     };
 
@@ -336,6 +351,7 @@ public final class ZideTerminalActivity extends Activity
         maybeScheduleSurfaceRecreation();
         maybeScheduleSurfaceResize();
         maybeScheduleShellStart();
+        handler.post(() -> refreshShellState(false));
         reevaluateShellRefreshLoop();
         updateStatus("resumed");
     }
@@ -352,6 +368,7 @@ public final class ZideTerminalActivity extends Activity
         appendEvent("activity.onPause");
         callNative("native.onPause", nativeLoaded ? nativeOnPauseBridge() : -1);
         stopShellRefresh();
+        stopProductFrameLoop();
         refreshShellState(false);
         updateStatus("paused");
         super.onPause();
@@ -410,12 +427,14 @@ public final class ZideTerminalActivity extends Activity
                 seq,
                 currentSurfaceStateSnapshot());
         productSurfaceContainer.post(() -> notifyVisibleViewport("surface-changed"));
+        handler.post(() -> refreshShellState(false));
         updateStatus("surface-changed");
     }
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
         appendEvent("surface.destroyed generation=" + surfaceHostGeneration);
+        stopProductFrameLoop();
         final long seq = nativeLoaded ? nativeOnSurfaceDestroyedBridge() : -1;
         callNativeWithSurfaceState(
                 "native.surfaceDestroyed",
@@ -810,11 +829,46 @@ public final class ZideTerminalActivity extends Activity
         return debugViewEnabled;
     }
 
+    private boolean shouldRunProductFrameLoop() {
+        return !debugViewEnabled
+                && nativeLoaded
+                && !currentInstallState.isInstalling()
+                && !currentInstallState.isFailed()
+                && currentBootstrapState.launchReady
+                && currentBootstrapState.expectedCurrent
+                && surfaceView != null
+                && surfaceView.getHolder().getSurface().isValid();
+    }
+
+    private void startProductFrameLoop() {
+        if (productFrameLoopActive) {
+            return;
+        }
+        if (!shouldRunProductFrameLoop()) {
+            return;
+        }
+        productFrameLoopActive = true;
+        handler.post(productFrameRunnable);
+    }
+
+    private void stopProductFrameLoop() {
+        if (!productFrameLoopActive) {
+            return;
+        }
+        productFrameLoopActive = false;
+        handler.removeCallbacks(productFrameRunnable);
+    }
+
     private void reevaluateShellRefreshLoop() {
         if (debugViewEnabled) {
             startShellRefresh();
         } else {
             stopShellRefresh();
+        }
+        if (shouldRunProductFrameLoop()) {
+            startProductFrameLoop();
+        } else {
+            stopProductFrameLoop();
         }
     }
 
@@ -908,25 +962,31 @@ public final class ZideTerminalActivity extends Activity
     private void updateProductShellVisibility() {
         final boolean launchReady = currentBootstrapState.launchReady;
         final boolean sharedShellActive = launchReady && nativeLoaded && nativeSharedShellRendererActiveBridge();
-        final boolean showBlocker = currentInstallState.isInstalling() || currentInstallState.isFailed() || !launchReady || !currentBootstrapState.expectedCurrent || !sharedShellActive;
+        final boolean surfaceReady = surfaceView != null && surfaceView.getHolder().getSurface().isValid();
+        final boolean rendererMissing = launchReady && currentBootstrapState.expectedCurrent && surfaceReady && !sharedShellActive;
+        final boolean showBlocker = currentInstallState.isInstalling()
+                || currentInstallState.isFailed()
+                || !launchReady
+                || !currentBootstrapState.expectedCurrent
+                || rendererMissing;
         productBootstrapBlocker.setVisibility(showBlocker ? View.VISIBLE : View.GONE);
         if (showBlocker) {
-            productBootstrapTitle.setText(productBootstrapTitle(currentBootstrapState, currentInstallState, sharedShellActive));
-            productBootstrapDetail.setText(productBootstrapDetail(currentBootstrapState, currentInstallState, sharedShellActive));
+            productBootstrapTitle.setText(productBootstrapTitle(currentBootstrapState, currentInstallState, rendererMissing));
+            productBootstrapDetail.setText(productBootstrapDetail(currentBootstrapState, currentInstallState, rendererMissing));
             productBootstrapRetryButton.setEnabled(!currentInstallState.isInstalling());
             productBootstrapRetryButton.setText(productBootstrapActionLabel(currentBootstrapState, currentInstallState));
         }
         reevaluateShellRefreshLoop();
     }
 
-    private int productBootstrapTitle(UserlandBootstrapState state, UserlandInstallState installState, boolean sharedShellActive) {
+    private int productBootstrapTitle(UserlandBootstrapState state, UserlandInstallState installState, boolean rendererMissing) {
         if (installState.isInstalling()) {
             return R.string.product_bootstrap_title_installing;
         }
         if (installState.isFailed()) {
             return R.string.product_bootstrap_title_install_failed;
         }
-        if (state.launchReady && state.expectedCurrent && !sharedShellActive) {
+        if (rendererMissing) {
             return R.string.product_bootstrap_title_renderer_missing;
         }
         switch (state.state) {
@@ -943,14 +1003,14 @@ public final class ZideTerminalActivity extends Activity
         }
     }
 
-    private CharSequence productBootstrapDetail(UserlandBootstrapState state, UserlandInstallState installState, boolean sharedShellActive) {
+    private CharSequence productBootstrapDetail(UserlandBootstrapState state, UserlandInstallState installState, boolean rendererMissing) {
         if (installState.isInstalling()) {
             return installState.detail;
         }
         if (installState.isFailed()) {
             return getString(R.string.product_bootstrap_detail_install_failed, installState.detail);
         }
-        if (state.launchReady && state.expectedCurrent && !sharedShellActive) {
+        if (rendererMissing) {
             return getText(R.string.product_bootstrap_detail_renderer_missing);
         }
         switch (state.state) {
@@ -1359,6 +1419,8 @@ public final class ZideTerminalActivity extends Activity
     private static native int nativePollShellSessionBridge();
 
     private static native boolean nativeIsShellSessionAliveBridge();
+
+    private static native int nativeTickProductShellFrameBridge();
 
     private static native int nativeSendShellCodepointBridge(int codepoint);
 

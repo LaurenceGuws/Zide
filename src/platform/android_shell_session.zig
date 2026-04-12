@@ -100,6 +100,11 @@ pub fn isAlive() bool {
     return c_api.zide_terminal_is_alive(active.handle) != 0;
 }
 
+pub fn needsRedraw() bool {
+    const active = session orelse return false;
+    return c_api.zide_terminal_needs_redraw(active.handle) != 0;
+}
+
 pub const SendStatus = enum(i32) {
     ok = 0,
     no_session = 1,

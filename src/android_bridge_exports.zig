@@ -120,6 +120,10 @@ fn isShellSessionAliveBridge() bool {
     return android_runtime_bridge.isShellSessionAlive();
 }
 
+fn tickProductShellFrameBridge() i32 {
+    return android_runtime_bridge.tickProductShellFrame();
+}
+
 fn sendShellCodepointBridge(codepoint: i32) i32 {
     return android_runtime_bridge.sendShellCodepoint(codepoint);
 }
@@ -345,6 +349,13 @@ export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeIsShellSessionAliveB
     _: ?*anyopaque,
 ) callconv(.c) bool {
     return isShellSessionAliveBridge();
+}
+
+export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeTickProductShellFrameBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+) callconv(.c) i32 {
+    return tickProductShellFrameBridge();
 }
 
 export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeSendShellCodepointBridge(

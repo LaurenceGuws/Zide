@@ -283,10 +283,7 @@ pub fn restartShellSession() i32 {
 }
 
 pub fn pollShellSession() i32 {
-    android_shell_session.poll() catch return @intFromEnum(android_shell_session.lastStartStatus());
-    if (bridge_state.render_host.hasSurface()) {
-        bridge_state.last_renderer_status = drawSharedRendererSurfaceFrame();
-    }
+    refreshShellSurfaceAfterInput();
     return @intFromEnum(android_shell_session.lastStartStatus());
 }
 
@@ -294,9 +291,38 @@ pub fn isShellSessionAlive() bool {
     return android_shell_session.isAlive();
 }
 
+pub fn tickProductShellFrame() i32 {
+    if (!android_shell_session.isAlive()) return 0;
+    android_shell_session.poll() catch return 0;
+
+    const should_draw =
+        bridge_state.render_host.hasSurface() and
+        (android_shell_session.needsRedraw() or
+            bridge_state.render_host.redraw_requested or
+            bridge_state.pinch_zoom_active);
+    if (!should_draw) return 1;
+
+    bridge_state.last_renderer_status = drawSharedRendererSurfaceFrame();
+    bridge_state.render_host.clearRedrawRequested();
+    return 2;
+}
+
 pub fn sendShellCodepoint(codepoint: i32) i32 {
     if (codepoint < 0 or codepoint > 0x10ffff) return @intFromEnum(android_shell_session.SendStatus.send_failed);
-    return @intFromEnum(android_shell_session.sendCodepoint(@intCast(codepoint)));
+    const status = android_shell_session.sendCodepoint(@intCast(codepoint));
+    if (status == .ok) refreshShellSurfaceAfterInput();
+    return @intFromEnum(status);
+}
+
+/// Direct shell input must not depend on a separate Java refresh loop to become
+/// visible. When input reaches the PTY successfully, Android-owned shell
+/// hosting must also poll terminal state and submit a fresh frame through the
+/// shared renderer path if a surface is present.
+fn refreshShellSurfaceAfterInput() void {
+    android_shell_session.poll() catch return;
+    if (bridge_state.render_host.hasSurface()) {
+        bridge_state.last_renderer_status = drawSharedRendererSurfaceFrame();
+    }
 }
 
 pub fn sharedShellRendererActive() bool {
