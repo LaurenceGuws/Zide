@@ -25,11 +25,15 @@ import android.widget.FrameLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import java.io.File;
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 public final class ZideTerminalActivity extends Activity
         implements SurfaceHolder.Callback2, ShellInputView.Host, ShellTranscriptController.Host {
@@ -68,6 +72,7 @@ public final class ZideTerminalActivity extends Activity
     private final StringBuilder eventLog = new StringBuilder();
     private final Handler handler = new Handler(Looper.getMainLooper());
     private TextView statusText;
+    private TextView packageStatusText;
     private TextView shellOutputText;
     private TextView eventLogText;
     private TextView productBootstrapTitle;
@@ -128,6 +133,7 @@ public final class ZideTerminalActivity extends Activity
         setContentView(R.layout.activity_main);
 
         statusText = findViewById(R.id.status_text);
+        packageStatusText = findViewById(R.id.package_status_text);
         shellOutputText = findViewById(R.id.shell_output_text);
         eventLogText = findViewById(R.id.event_log);
         productBootstrapTitle = findViewById(R.id.product_bootstrap_title);
@@ -528,6 +534,7 @@ public final class ZideTerminalActivity extends Activity
     private void bindSidebarControls() {
         final Button restartButton = findViewById(R.id.sidebar_restart_button);
         final Button debugButton = findViewById(R.id.sidebar_debug_button);
+        final Button packagesButton = findViewById(R.id.sidebar_packages_button);
 
         restartButton.setOnClickListener(view -> {
             final int status = nativeLoaded ? nativeRestartShellSessionBridge() : 0;
@@ -543,6 +550,11 @@ public final class ZideTerminalActivity extends Activity
             applyViewMode();
             updateStatus("debug-view");
             closeSidebar();
+        });
+
+        packagesButton.setOnClickListener(view -> {
+            closeSidebar();
+            runPackageDoctor();
         });
 
         drawerScrim.setOnClickListener(view -> closeSidebar());
@@ -948,6 +960,79 @@ public final class ZideTerminalActivity extends Activity
                 });
             }
         }, "userland-install").start();
+    }
+
+    private void runPackageDoctor() {
+        packageStatusText.setText("Running zide-pm...");
+        appendEvent("packages.doctor begin");
+        debugViewEnabled = true;
+        applyViewMode();
+        updateStatus("packages-doctor");
+        new Thread(() -> {
+            try {
+                final String doctor = runUserlandCommand("zide-pm-doctor", "doctor", "--prefix", UserlandPolicy.prefixPath(this));
+                final String available = runUserlandCommand("zide-pm-list", "list-available", "--prefix", UserlandPolicy.prefixPath(this));
+                final String combined = doctor.trim() + "\n---\n" + available.trim();
+                handler.post(() -> {
+                    packageStatusText.setText(combined);
+                    appendEvent("packages.doctor success");
+                    updateStatus("packages-doctor");
+                });
+            } catch (IOException err) {
+                handler.post(() -> {
+                    final String detail = err.getMessage() == null ? err.getClass().getSimpleName() : err.getMessage();
+                    packageStatusText.setText("zide-pm failed: " + detail);
+                    appendEvent("packages.doctor failed err=" + err.getClass().getSimpleName());
+                    updateStatus("packages-doctor-failed");
+                });
+            }
+        }, "packages-doctor").start();
+    }
+
+    private String runUserlandCommand(String processName, String... args) throws IOException {
+        final String binaryPath = UserlandPolicy.prefixPath(this) + "/bin/zide-pm";
+        final ProcessBuilder builder = new ProcessBuilder();
+        final java.util.ArrayList<String> command = new java.util.ArrayList<>();
+        command.add(binaryPath);
+        for (String arg : args) {
+            command.add(arg);
+        }
+        builder.command(command);
+        builder.directory(getFilesDir());
+        builder.redirectErrorStream(true);
+        final Map<String, String> env = builder.environment();
+        env.put("PREFIX", UserlandPolicy.prefixPath(this));
+        env.put("HOME", new File(getFilesDir(), "home").getAbsolutePath());
+        env.put("TMPDIR", new File(getFilesDir().getParentFile(), "tmp").getAbsolutePath());
+        env.put("PATH", UserlandPolicy.prefixPath(this) + "/bin:/system/bin");
+        env.put("SHELL", UserlandPolicy.shellPath(this));
+        env.put("LD_LIBRARY_PATH", UserlandPolicy.prefixPath(this) + "/lib");
+        final Process process = builder.start();
+        final String output;
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+            final StringBuilder out = new StringBuilder();
+            String line;
+            boolean first = true;
+            while ((line = reader.readLine()) != null) {
+                if (!first) {
+                    out.append('\n');
+                }
+                out.append(line);
+                first = false;
+            }
+            output = out.toString();
+        }
+        final int exitCode;
+        try {
+            exitCode = process.waitFor();
+        } catch (InterruptedException err) {
+            Thread.currentThread().interrupt();
+            throw new IOException("interrupted while running " + processName, err);
+        }
+        if (exitCode != 0) {
+            throw new IOException(processName + " exit=" + exitCode + " output=" + output);
+        }
+        return output;
     }
 
     private void callNative(String event, long seq) {

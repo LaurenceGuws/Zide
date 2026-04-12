@@ -234,6 +234,23 @@
             android:textAppearance="@android:style/TextAppearance.Material.Medium" />
 
         <TextView
+            android:id="@+id/package_status_label"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/package_status_label"
+            android:textAppearance="@android:style/TextAppearance.Material.Small" />
+
+        <TextView
+            android:id="@+id/package_status_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="monospace"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:text="@string/package_status_idle"
+            android:textAppearance="@android:style/TextAppearance.Material.Small" />
+
+        <TextView
             android:id="@+id/event_log_label"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -296,6 +313,13 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:text="@string/show_debug_short" />
+
+        <Button
+            android:id="@+id/sidebar_packages_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/sidebar_packages" />
     </LinearLayout>
 
     <View

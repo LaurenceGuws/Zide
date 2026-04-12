@@ -197,6 +197,10 @@ Current checkpoint:
     `zide-pm`:
     - `zide-pm doctor --prefix /data/user/0/dev.zide.terminal/files/usr`
     - `zide-pm list-available --prefix /data/user/0/dev.zide.terminal/files/usr`
+  - product host now exposes one app-owned package action through the hidden
+    sidebar:
+    `Packages` runs `zide-pm doctor` plus `zide-pm list-available` against the
+    installed prefix and surfaces the result in debug view
   - fresh terminal-host launch after artifact staging reports
     `auto.shellStart status=started` and a Bash child under `dev.zide.terminal`
 - product posture is now explicit:

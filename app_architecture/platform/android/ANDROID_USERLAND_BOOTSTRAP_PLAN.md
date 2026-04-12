@@ -292,6 +292,10 @@ Current checkpoint:
   `zide-pm` under `run-as dev.zide.terminal`:
   - `zide-pm doctor --prefix /data/user/0/dev.zide.terminal/files/usr`
   - `zide-pm list-available --prefix /data/user/0/dev.zide.terminal/files/usr`
+- terminal-host now exposes one honest app-owned package action through the
+  hidden sidebar:
+  `Packages` runs `zide-pm doctor` plus `zide-pm list-available` against the
+  installed prefix and surfaces the output in debug view
 - the published snapshot contract is now owned in one checked-in descriptor:
   `android/terminal-host/app/src/main/assets/userland_release.json`
   - Android runtime reads it for in-app install/update

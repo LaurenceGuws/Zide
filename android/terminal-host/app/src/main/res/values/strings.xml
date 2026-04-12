@@ -6,7 +6,10 @@
     <string name="debug_view_title">Debug View</string>
     <string name="shell_restart_short">Restart</string>
     <string name="event_log_label">Event Log</string>
+    <string name="package_status_label">Package Status</string>
+    <string name="package_status_idle">Not queried yet.</string>
     <string name="sidebar_title">Terminal Controls</string>
+    <string name="sidebar_packages">Packages</string>
     <string name="product_bootstrap_title_missing">Userland Not Staged</string>
     <string name="product_bootstrap_title_invalid">Userland Needs Restaging</string>
     <string name="product_bootstrap_title_shell_missing">Shell Payload Missing</string>
