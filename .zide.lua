@@ -15,7 +15,4 @@ else
 end
 
 ---@type ZideConfig
-return zide.config({
-  log_file_filter = { "renderer.present" },
-  log_console_filter = "none",
-})
+return zide.config({})

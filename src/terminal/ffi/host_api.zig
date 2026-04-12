@@ -26,6 +26,13 @@ pub fn resize(handle: ?*shared.ZideTerminalHandle, cols: u16, rows: u16, cell_wi
     return shared.syncDerivedEvents(h);
 }
 
+pub fn updateCellSize(handle: ?*shared.ZideTerminalHandle, cell_width: u16, cell_height: u16) shared.Status {
+    const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
+    if (cell_width == 0 or cell_height == 0) return .invalid_argument;
+    session_runtime.updateCellSizeOnly(h.shell, cell_width, cell_height) catch |err| return shared.mapError(err);
+    return shared.syncDerivedEvents(h);
+}
+
 pub fn sendBytes(handle: ?*shared.ZideTerminalHandle, bytes: ?[*]const u8, len: usize) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     const slice = shared.ptrLen(bytes, len) orelse return .invalid_argument;

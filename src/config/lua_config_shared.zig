@@ -194,6 +194,7 @@ pub fn findUserConfigPath(allocator: std.mem.Allocator) iface.LuaConfigError!?[]
 
 pub fn emptyConfig() Config {
     return .{
+        .log_file_path = null,
         .log_file_filter = null,
         .log_console_filter = null,
         .log_file_level = null,
@@ -439,6 +440,12 @@ fn mergeKeybinds(
 }
 
 pub fn mergeConfig(allocator: std.mem.Allocator, base: *Config, overlay: Config) void {
+    if (overlay.log_file_path) |path| {
+        if (allocator.dupe(u8, path)) |dup| {
+            if (base.log_file_path) |old| allocator.free(old);
+            base.log_file_path = dup;
+        } else |_| {}
+    }
     if (overlay.log_file_filter) |filter| {
         if (allocator.dupe(u8, filter)) |dup| {
             if (base.log_file_filter) |old| allocator.free(old);

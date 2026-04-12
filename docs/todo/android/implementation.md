@@ -259,6 +259,15 @@ Status:
   `./ops/android_terminal_host.py userland-nvim-manual-check`
 - performance-testing build entrypoint is now explicit too:
   `./ops/android_terminal_host.py --variant profile deploy`
+- current Android pinch/zoom result is accepted for this lane:
+  - host-side gesture policy is explicit and stable
+  - raw detector churn is quantized/coalesced host-side
+  - identical renderer prep churn is deduped
+  - slow/medium pinch now feels strong on device
+  - release-build large-burst pinch is acceptable for the current product
+    target
+  - any remaining extreme-burst refinement is deferred; it is not the active
+    Android blocker anymore
 - first gesture-control cut is implemented:
   - `ProductGestureController` owns terminal-surface touch gestures
   - single tap opens IME through one product route
@@ -302,6 +311,82 @@ Status:
   - queued desktop/user zoom now follows the same staged live-scale model
   - remaining font-scale war work is shared renderer ownership, not Android
     gesture plumbing
+- render-entry submission first cut landed:
+  - viewport and pinch interaction paths now mark redraw intent instead of
+    synchronously calling the shared renderer frame submission path
+  - surface lifecycle/redraw-needed and direct input still submit immediately
+    because they remain lifecycle-critical or latency-critical at this stage
+- resize/grid-fit audit result:
+  - the lower terminal resize path currently treats cell-pixel changes and
+    row/column changes as the same resize operation
+  - that forces shared terminal reflow/PTTY/publication work even when a live
+    zoom step only needs cell-metric/pixel-size metadata updated
+  - first shared split landed:
+    - stable-grid cell width/height changes now use a metric-only terminal
+      runtime/FFI path
+    - Android product-fit only uses full resize/reflow when rows or cols change
+    - regression coverage proves stable rows/cols survive metric-only updates
+- font-scale reference audit result:
+  - the remaining pinch-end thickness snap is not an Android gesture problem
+  - it is the expected seam between a live-scaled hinted glyph atlas and a
+    newly rasterized/hinted committed atlas
+  - ASCII warmup was rejected because it does not address size-specific
+    FreeType hinting changes
+  - next renderer cut should build a size-keyed font/atlas lifecycle instead of
+    more Java-side gesture tuning
+  - first committed-size lifecycle cut landed:
+    - `TerminalFont` records committed raster pixel size
+    - renderer font config retains committed terminal-font atlases by render
+      scale plus raster pixel size
+    - settled zoom commits can reuse a prepared terminal atlas instead of
+      always destroying/recreating the active terminal font
+    - the cache now keeps a bounded neighbor set: twelve raster-pixel sizes
+      below and twelve above the committed terminal size
+    - terminal live glyph visual scale remains continuous so glyph geometry
+      stays coupled to live cell geometry
+  - Android gesture tracking bug fixed:
+    - `ScaleGestureDetector.getScaleFactor()` is incremental per event, so the
+      host must accumulate factors between choreographer frames
+    - slow pinch events are no longer dropped by comparing each incremental
+      factor against the previous incremental factor
+  - prepared terminal raster-size swap added:
+    - active pinch now attempts a terminal-only committed raster swap when the
+      rounded terminal raster-pixel size crosses into a prepared neighbor
+    - the hot path still avoids full app/editor/icon font rebuilds
+    - prepared neighbor window is now intentionally widened to `+-12`
+      raster-pixel sizes so current Android pinch jumps can still land on a
+      prepared committed atlas during the gesture
+  - fast-pinch audit result:
+    - slow pinch now looks correct because the live geometry path is no longer
+      the primary blocker
+    - Android exposed the remaining renderer-core ownership gaps clearly enough
+      to justify the deeper terminal-font preparation work below
+    - first prerequisite cut for that lane is now in:
+      visible terminal glyph demand can be collected from the actual shared
+      direct/shaped draw path as deduped prep entries
+    - second prerequisite cut is now in:
+      the terminal draw path stages renderer-owned prep requests keyed by
+      committed raster size, render scale, and visible glyph demand
+    - third prerequisite cut is now in:
+      a dedicated renderer worker consumes those requests and publishes
+      CPU-only prepared glyph rasters back into renderer-owned result state
+    - fourth prerequisite cut is now in:
+      the render thread adopts ready glyph rasters into the live committed
+      terminal atlas before terminal draw lookup falls back to inline glyph
+      realization
+    - shared renderer/core pressure exposed by Android:
+      `TerminalFont` creation was still coupled to GPU atlas allocation on the
+      fallback path, so Android/GLES could not safely prepare committed target
+      font state off-thread
+    - first unblock landed:
+      the async worker now uses a backend-agnostic CPU-prepared `TerminalFont`
+      init path instead of the old GL-backed fallback
+    - current accepted boundary, 2026-04-12:
+      - release-build device testing now puts pinch/zoom responsiveness in the
+        accepted range for the current Android terminal product lane
+      - do not keep this open as an active polish war
+      - reopen only if a concrete future product need proves the deferred
+        extreme-burst edge case matters again
 - first iteration cut landed from that queue:
   - narrowed Android host/UI-thread contamination around stale transcript-era
     ownership

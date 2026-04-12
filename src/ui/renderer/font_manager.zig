@@ -27,6 +27,7 @@ pub const FontConfigState = struct {
     editor_font_features: std.ArrayListUnmanaged(terminal_font_mod.c.hb_feature_t) = .{},
     font_rendering: terminal_font_mod.RenderingOptions = .{},
     font_cache: std.AutoHashMap(u32, *TerminalFont),
+    terminal_font_cache: std.AutoHashMap(u64, *TerminalFont),
 };
 
 const OwnedFontPath = struct {
@@ -38,6 +39,12 @@ const FontInitResult = struct {
     font: TerminalFont,
     metrics: Renderer.ScaledFontMetrics,
 };
+
+const terminal_neighbor_steps = [_]i32{
+    -12, -11, -10, -9, -8, -7, -6, -5, -4, -3, -2, -1,
+    1,   2,   3,   4,  5,  6,  7,  8,  9,  10, 11, 12,
+};
+const max_terminal_font_cache_entries = terminal_neighbor_steps.len + 1;
 
 fn scaleMetrics(metrics: *Renderer.ScaledFontMetrics, factor: f32) void {
     metrics.ascent *= factor;
@@ -117,7 +124,17 @@ pub fn initFontConfigState(
         .editor_font_features = .{},
         .font_rendering = init_options.font_rendering,
         .font_cache = std.AutoHashMap(u32, *TerminalFont).init(allocator),
+        .terminal_font_cache = std.AutoHashMap(u64, *TerminalFont).init(allocator),
     };
+}
+
+pub fn clearCommittedTerminalFontCache(renderer: anytype) void {
+    var font_it = renderer.font_config.terminal_font_cache.iterator();
+    while (font_it.next()) |entry| {
+        entry.value_ptr.*.deinit();
+        renderer.allocator.destroy(entry.value_ptr.*);
+    }
+    renderer.font_config.terminal_font_cache.clearRetainingCapacity();
 }
 
 pub fn deinitFontConfigState(renderer: anytype) void {
@@ -127,6 +144,8 @@ pub fn deinitFontConfigState(renderer: anytype) void {
         renderer.allocator.destroy(entry.value_ptr.*);
     }
     renderer.font_config.font_cache.deinit();
+    clearCommittedTerminalFontCache(renderer);
+    renderer.font_config.terminal_font_cache.deinit();
 
     if (renderer.font_config.terminal_font_features_raw) |owned| {
         renderer.allocator.free(owned);
@@ -154,6 +173,24 @@ pub fn deinitFontConfigState(renderer: anytype) void {
 
 fn metalAtlasHooks(renderer: anytype) ?terminal_font_mod.AtlasUploadHooks {
     return renderer_font_backend_host.atlasUploadHooksForFontInit(renderer);
+}
+
+fn committedFontKey(raster_size_px: u32, render_scale: f32) u64 {
+    const scale_key: u32 = @intFromFloat(@max(1.0, std.math.round((if (render_scale > 0.0) render_scale else 1.0) * 1000.0)));
+    return (@as(u64, scale_key) << 32) | @as(u64, raster_size_px);
+}
+
+fn committedFontKeyForLayout(layout_size: f32, render_scale: f32) u64 {
+    const raster_size_px: u32 = @intFromFloat(@max(1.0, std.math.round(layout_size * (if (render_scale > 0.0) render_scale else 1.0))));
+    return committedFontKey(raster_size_px, render_scale);
+}
+
+fn committedRasterSizeForLayout(layout_size: f32, render_scale: f32) u32 {
+    return @intFromFloat(@max(1.0, std.math.round(layout_size * (if (render_scale > 0.0) render_scale else 1.0))));
+}
+
+fn layoutSizeForCommittedRaster(raster_size_px: u32, render_scale: f32) f32 {
+    return @as(f32, @floatFromInt(raster_size_px)) / (if (render_scale > 0.0) render_scale else 1.0);
 }
 
 fn initFont(renderer: anytype, path: [*:0]const u8, layout_size: f32) !FontInitResult {
@@ -185,6 +222,231 @@ fn initFont(renderer: anytype, path: [*:0]const u8, layout_size: f32) !FontInitR
             .cell_height = font.line_height / render_scale,
             .baseline_from_top = font.baseline_from_top / render_scale,
         },
+    };
+}
+
+fn metricsFromFont(font: *const TerminalFont, render_scale: f32) Renderer.ScaledFontMetrics {
+    return .{
+        .ascent = font.ascent / render_scale,
+        .descent = font.descent / render_scale,
+        .line_height = font.line_height / render_scale,
+        .cell_width = font.cell_width / render_scale,
+        .cell_height = font.line_height / render_scale,
+        .baseline_from_top = font.baseline_from_top / render_scale,
+    };
+}
+
+fn takeCachedTerminalFont(renderer: anytype, layout_size: f32, render_scale: f32) ?FontInitResult {
+    const key = committedFontKeyForLayout(layout_size, render_scale);
+    const font_ptr = renderer.font_config.terminal_font_cache.fetchRemove(key) orelse return null;
+    defer renderer.allocator.destroy(font_ptr.value);
+    font_ptr.value.live_visual_scale = 1.0;
+    font_ptr.value.render_scale = render_scale;
+    return .{
+        .font = font_ptr.value.*,
+        .metrics = metricsFromFont(font_ptr.value, render_scale),
+    };
+}
+
+fn initTerminalFont(renderer: anytype, layout_size: f32) !FontInitResult {
+    const render_scale = if (renderer.scale.render_scale > 0.0) renderer.scale.render_scale else 1.0;
+    if (takeCachedTerminalFont(renderer, layout_size, render_scale)) |cached| return cached;
+    return initFont(renderer, renderer.font_config.terminal_font_path, layout_size);
+}
+
+fn prepareCommittedTerminalFont(renderer: anytype, raster_size_px: u32, render_scale: f32) void {
+    const key = committedFontKey(raster_size_px, render_scale);
+    if (renderer.terminal_font.committed_raster_size_px == raster_size_px and
+        std.math.approxEqAbs(f32, renderer.terminal_font.render_scale, render_scale, 0.0001))
+    {
+        return;
+    }
+    if (renderer.font_config.terminal_font_cache.get(key) != null) return;
+    const font_ptr = renderer.allocator.create(TerminalFont) catch return;
+    const layout_size = layoutSizeForCommittedRaster(raster_size_px, render_scale);
+    const init = initFont(renderer, renderer.font_config.terminal_font_path, layout_size) catch {
+        renderer.allocator.destroy(font_ptr);
+        return;
+    };
+    font_ptr.* = init.font;
+    renderer.font_config.terminal_font_cache.put(key, font_ptr) catch {
+        font_ptr.deinit();
+        renderer.allocator.destroy(font_ptr);
+    };
+}
+
+fn pruneTerminalFontCache(renderer: anytype, center_raster_size_px: u32, render_scale: f32) void {
+    var keep_keys: [max_terminal_font_cache_entries]u64 = undefined;
+    var keep_len: usize = 0;
+    keep_keys[keep_len] = committedFontKey(center_raster_size_px, render_scale);
+    keep_len += 1;
+    for (terminal_neighbor_steps) |step| {
+        const candidate_i32 = @as(i32, @intCast(center_raster_size_px)) + step;
+        if (candidate_i32 <= 0) continue;
+        keep_keys[keep_len] = committedFontKey(@intCast(candidate_i32), render_scale);
+        keep_len += 1;
+    }
+
+    var remove_keys: [16]u64 = undefined;
+    var remove_len: usize = 0;
+    var it = renderer.font_config.terminal_font_cache.iterator();
+    while (it.next()) |entry| {
+        var keep = false;
+        for (keep_keys[0..keep_len]) |key| {
+            if (entry.key_ptr.* == key) {
+                keep = true;
+                break;
+            }
+        }
+        if (!keep and remove_len < remove_keys.len) {
+            remove_keys[remove_len] = entry.key_ptr.*;
+            remove_len += 1;
+        }
+    }
+
+    for (remove_keys[0..remove_len]) |key| {
+        if (renderer.font_config.terminal_font_cache.fetchRemove(key)) |entry| {
+            entry.value.deinit();
+            renderer.allocator.destroy(entry.value);
+        }
+    }
+}
+
+pub fn prepareNeighborTerminalFonts(renderer: anytype) void {
+    const render_scale = if (renderer.scale.render_scale > 0.0) renderer.scale.render_scale else 1.0;
+    const center = committedRasterSizeForLayout(renderer.terminal_font_size, render_scale);
+    for (terminal_neighbor_steps) |step| {
+        const candidate_i32 = @as(i32, @intCast(center)) + step;
+        if (candidate_i32 <= 0) continue;
+        prepareCommittedTerminalFont(renderer, @intCast(candidate_i32), render_scale);
+    }
+    pruneTerminalFontCache(renderer, center, render_scale);
+}
+
+pub fn ensureCommittedTerminalFontCacheEntry(
+    renderer: anytype,
+    raster_size_px: u32,
+    render_scale: f32,
+) ?*TerminalFont {
+    if (renderer.terminal_font.committed_raster_size_px == raster_size_px and
+        std.math.approxEqAbs(f32, renderer.terminal_font.render_scale, render_scale, 0.0001))
+    {
+        return &renderer.terminal_font;
+    }
+
+    const key = committedFontKey(raster_size_px, render_scale);
+    if (renderer.font_config.terminal_font_cache.getPtr(key)) |font_ptr_ptr| {
+        return font_ptr_ptr.*;
+    }
+
+    const font_ptr = renderer.allocator.create(TerminalFont) catch return null;
+    const layout_size = layoutSizeForCommittedRaster(raster_size_px, render_scale);
+    const init = initFont(renderer, renderer.font_config.terminal_font_path, layout_size) catch {
+        renderer.allocator.destroy(font_ptr);
+        return null;
+    };
+    font_ptr.* = init.font;
+    renderer.font_config.terminal_font_cache.put(key, font_ptr) catch {
+        font_ptr.deinit();
+        renderer.allocator.destroy(font_ptr);
+        return null;
+    };
+    return renderer.font_config.terminal_font_cache.getPtr(key).?.*;
+}
+
+/// During aggressive live pinch, the exact committed target can jump outside
+/// the prewarmed neighbor window. This bounded helper prepares that exact
+/// target on a slower cadence so committed raster adoption can still progress
+/// mid-gesture instead of waiting entirely for the settled rebuild.
+pub fn prepareCurrentCommittedTerminalFontForLiveZoom(renderer: anytype, now: f64) bool {
+    const prepare_interval = 0.03;
+    const max_inline_raster_delta = 2;
+    if (now - renderer.scale.last_terminal_prepare_time < prepare_interval) return false;
+    const render_scale = if (renderer.scale.render_scale > 0.0) renderer.scale.render_scale else 1.0;
+    const target_raster_px = committedRasterSizeForLayout(renderer.terminal_font_size, render_scale);
+    const key = committedFontKey(target_raster_px, render_scale);
+    if (renderer.terminal_font.committed_raster_size_px == target_raster_px and
+        std.math.approxEqAbs(f32, renderer.terminal_font.render_scale, render_scale, 0.0001))
+    {
+        renderer.scale.last_terminal_prepare_time = now;
+        return false;
+    }
+    if (renderer.font_config.terminal_font_cache.get(key) != null) {
+        renderer.scale.last_terminal_prepare_time = now;
+        return false;
+    }
+    const current_raster_px = renderer.terminal_font.committed_raster_size_px;
+    const raster_delta = if (target_raster_px > current_raster_px)
+        target_raster_px - current_raster_px
+    else
+        current_raster_px - target_raster_px;
+    if (raster_delta > max_inline_raster_delta) {
+        return false;
+    }
+    renderer.scale.last_terminal_prepare_time = now;
+    prepareCommittedTerminalFont(renderer, target_raster_px, render_scale);
+    return renderer.font_config.terminal_font_cache.get(key) != null;
+}
+
+/// Swap the terminal font to a prepared committed raster size during live
+/// terminal zoom. This deliberately does not rebuild app/editor/icon fonts;
+/// those remain owned by the settled `applyFontScale(...)` commit path.
+pub fn commitPreparedTerminalFontScale(renderer: anytype) bool {
+    const render_scale = if (renderer.scale.render_scale > 0.0) renderer.scale.render_scale else 1.0;
+    const target_raster_px = committedRasterSizeForLayout(renderer.terminal_font_size, render_scale);
+    if (renderer.terminal_font.committed_raster_size_px == target_raster_px and
+        std.math.approxEqAbs(f32, renderer.terminal_font.render_scale, render_scale, 0.0001))
+    {
+        renderer.terminal_font.live_visual_scale = 1.0;
+        return false;
+    }
+
+    const committed_layout_size = layoutSizeForCommittedRaster(target_raster_px, render_scale);
+    const terminal_init = takeCachedTerminalFont(renderer, committed_layout_size, render_scale) orelse return false;
+    cacheActiveTerminalFont(renderer);
+    renderer.terminal_font = terminal_init.font;
+    renderer.terminal_metrics = terminal_init.metrics;
+    renderer.terminal_cell_width = renderer.terminal_metrics.cell_width;
+    renderer.terminal_cell_height = renderer.terminal_metrics.cell_height;
+    prepareNeighborTerminalFonts(renderer);
+    return true;
+}
+
+/// Cheap terminal-only settle for external-host pinch flows.
+///
+/// If the current committed terminal target is already active, this just clears
+/// any remaining live preview scale. If a prepared committed target is ready,
+/// it swaps to that target without rebuilding the app/editor/icon font stack.
+pub fn settlePreparedTerminalFontScale(renderer: anytype) bool {
+    const render_scale = if (renderer.scale.render_scale > 0.0) renderer.scale.render_scale else 1.0;
+    const target_raster_px = committedRasterSizeForLayout(renderer.terminal_font_size, render_scale);
+    if (renderer.terminal_font.committed_raster_size_px == target_raster_px and
+        std.math.approxEqAbs(f32, renderer.terminal_font.render_scale, render_scale, 0.0001))
+    {
+        if (std.math.approxEqAbs(f32, renderer.terminal_font.live_visual_scale, 1.0, 0.0001)) {
+            return false;
+        }
+        renderer.terminal_font.live_visual_scale = 1.0;
+        return true;
+    }
+    return commitPreparedTerminalFontScale(renderer);
+}
+
+fn cacheActiveTerminalFont(renderer: anytype) void {
+    const key = committedFontKey(renderer.terminal_font.committed_raster_size_px, renderer.terminal_font.render_scale);
+    if (renderer.font_config.terminal_font_cache.get(key) != null) {
+        renderer.terminal_font.deinit();
+        return;
+    }
+    const font_ptr = renderer.allocator.create(TerminalFont) catch {
+        renderer.terminal_font.deinit();
+        return;
+    };
+    renderer.terminal_font.live_visual_scale = 1.0;
+    font_ptr.* = renderer.terminal_font;
+    renderer.font_config.terminal_font_cache.put(key, font_ptr) catch {
+        font_ptr.deinit();
+        renderer.allocator.destroy(font_ptr);
     };
 }
 
@@ -223,7 +485,7 @@ pub fn initFonts(renderer: anytype) !void {
     errdefer app_init.font.deinit();
     var editor_init = try initFont(renderer, renderer.font_config.editor_font_path, renderer.editor_font_size);
     errdefer editor_init.font.deinit();
-    var terminal_init = try initFont(renderer, renderer.font_config.terminal_font_path, renderer.terminal_font_size);
+    var terminal_init = try initTerminalFont(renderer, renderer.terminal_font_size);
     errdefer terminal_init.font.deinit();
     var icon_init = try initFont(renderer, renderer.font_config.app_font_path, renderer.font_size * 2.0);
     errdefer icon_init.font.deinit();
@@ -293,6 +555,7 @@ pub fn setFontConfig(renderer: anytype, app_path: ?[]const u8, app_size: ?f32, e
     if (terminal_size) |value| {
         if (value > 0.0) renderer.terminal_base_font_size = value;
     }
+    clearCommittedTerminalFontCache(renderer);
     try applyFontScale(renderer);
 }
 
@@ -314,9 +577,10 @@ pub fn applyFontScale(renderer: anytype) !void {
 
     renderer.app_font.deinit();
     renderer.editor_font.deinit();
-    renderer.terminal_font.deinit();
+    cacheActiveTerminalFont(renderer);
     renderer.icon_font.deinit();
     try initFonts(renderer);
+    prepareNeighborTerminalFonts(renderer);
 }
 
 /// Cheap live zoom path for interactive gestures.

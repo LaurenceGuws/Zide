@@ -232,7 +232,7 @@ pub fn handle(state: anytype, shell: *Shell, batch: *input_types.InputBatch, now
                             );
                         }
                         for (inner_state.terminal_widgets.items) |*widget| {
-                            widget.invalidatePresentationCache();
+                            widget.invalidatePresentationGeometry();
                         }
                     }
                     if (result.needs_redraw) inner_state.needs_redraw = true;

@@ -8,6 +8,7 @@ const terminal_publication = @import("../../terminal/core/publication/terminal_p
 const KittyState = kitty_mod.KittyState;
 const PresentationState = presentation_state_mod.PresentationState;
 const CursorPos = terminal_publication.CursorPos;
+const InvalidationFlags = PresentationState.InvalidationFlags;
 
 pub const TerminalWidgetSurfaceState = struct {
     pub const PresentationUpdateDelta = struct {
@@ -17,6 +18,7 @@ pub const TerminalWidgetSurfaceState = struct {
         clear_generation_changed: bool,
         presentable_ready: bool,
         cursor_changed: bool,
+        invalidation_flags: InvalidationFlags,
     };
 
     kitty: KittyState,
@@ -34,8 +36,20 @@ pub const TerminalWidgetSurfaceState = struct {
         self.kitty.deinit(allocator);
     }
 
-    pub fn invalidatePresentationCache(self: *TerminalWidgetSurfaceState) void {
-        self.presentation.invalidatePresentationCache();
+    pub fn invalidatePresentationCache(self: *TerminalWidgetSurfaceState, flags: InvalidationFlags) void {
+        self.presentation.invalidatePresentationCache(flags);
+    }
+
+    pub fn invalidatePresentationGeometry(self: *TerminalWidgetSurfaceState) void {
+        self.invalidatePresentationCache(.{ .geometry = true });
+    }
+
+    pub fn invalidatePresentationContent(self: *TerminalWidgetSurfaceState) void {
+        self.invalidatePresentationCache(.{ .content = true });
+    }
+
+    pub fn invalidatePresentationOverlay(self: *TerminalWidgetSurfaceState) void {
+        self.invalidatePresentationCache(.{ .overlay = true });
     }
 
     pub fn lifecycleTransition(
@@ -100,6 +114,7 @@ pub const TerminalWidgetSurfaceState = struct {
             .clear_generation_changed = terminal_view.clear_generation != self.presentation.last_render_clear_generation,
             .presentable_ready = self.presentation.terminal_presentable_ready,
             .cursor_changed = self.cursorPresentationChanged(draw_cursor, cursor, cursor_style),
+            .invalidation_flags = self.presentation.invalidation_flags,
         };
     }
 
@@ -140,6 +155,7 @@ pub const TerminalWidgetSurfaceState = struct {
         composing_hash: u64,
     ) void {
         self.presentation.terminal_presentable_ready = true;
+        self.presentation.clearInvalidationFlags();
         self.presentation.last_render_generation = terminal_view.generation;
         self.presentation.last_render_clear_generation = terminal_view.clear_generation;
         self.presentation.last_cell_w_i = surface_geometry.cell_w_i;
@@ -157,7 +173,7 @@ pub const TerminalWidgetSurfaceState = struct {
     }
 
     pub fn notePresentableAvailability(self: *TerminalWidgetSurfaceState, available: bool) bool {
-        if (!available) self.presentation.terminal_presentable_ready = false;
+        if (!available) self.presentation.invalidatePresentationCache(.{ .availability = true });
         return self.presentation.terminal_presentable_ready and available;
     }
 

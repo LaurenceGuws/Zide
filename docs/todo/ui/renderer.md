@@ -20,6 +20,10 @@ Current priority note:
 - Android terminal excellence is the active product goal
 - execute renderer tickets from this queue when, and only when, they are the
   next highest-leverage blocker for Android terminal progress
+- Android pinch / resize-pressure work is accepted and parked
+- do not reopen renderer work by drifting back into gesture-threshold polish
+- return to this queue only for the broader shared render-thread ownership cuts
+  that still constrain Android terminal quality
 
 The standard is:
 
@@ -194,10 +198,10 @@ Current blocker reading after `RB-B3.e` progress:
 
 Next active ticket:
 
-- text/surface phase-boundary follow-up
+- render-entry submission / resize-grid ownership follow-up
 - owner:
-  `app_architecture/ui/BAND_COMPOSITION_PHASE_PLAN.md`
-  `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md`
+  `app_architecture/platform/android/ANDROID_RENDER_THREAD_CONTRACT.md`
+  `docs/todo/android/implementation.md`
 
 Current checkpoint:
 
@@ -212,7 +216,42 @@ Current checkpoint:
   backend-neutral phase boundary consistently enough that a new backend would
   feel routine
 
+Current Android render-thread boundary:
+
+- accepted and parked:
+  - pinch / resize-pressure responsiveness on the release-build terminal-host
+    path
+  - host-side gesture quantization/coalescing for the product surface
+  - async terminal glyph preparation and prepared-target promotion as the
+    current renderer baseline
+- still active:
+  - backend frame begin/submit mechanics
+  - remaining draw-path policy that still runs too deep on the render thread
+  - any debug/host contamination of product execution that cannot justify its
+    presence on the hot path
+
 Next renderer move:
+
+- do not take another pinch-polish cut by default
+- next shared cut should come from the audited Android render-thread authority:
+  1. continue backend frame begin/submit mechanics
+  2. split terminal widget presentation runtime cache-state advancement from
+     execution-path selection
+  3. clean Android host contamination only where it affects hot product
+     execution
+
+Recent renderer-thread cleanup checkpoints:
+
+- direct shell input no longer submits a frame inline; it polls terminal state,
+  invalidates presentation, and hands redraw to the paced product loop
+- Android product-fit grid sizing is dirty-driven instead of recomputed on
+  every draw
+- terminal widget presentation invalidation now carries explicit families:
+  geometry, content, overlay, and availability
+- Android GLES frame entry no longer lazily initializes GL resources/fonts;
+  that warmup is behind an explicit preframe readiness seam
+- text-render uniform sync is now dirty-driven, and GL/Metal capture handling
+  is isolated from ordinary product submission flow
 
 - `RB-B3.j` editor overlay phase-boundary closure is met
 - closure truth:

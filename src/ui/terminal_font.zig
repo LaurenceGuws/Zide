@@ -338,6 +338,21 @@ pub const Glyph = struct {
     is_color: bool,
 };
 
+pub const PreparedGlyphRaster = struct {
+    bearing_x: i32,
+    bearing_y: i32,
+    advance: f32,
+    width: i32,
+    height: i32,
+    is_color: bool,
+    data: []u8,
+
+    pub fn deinit(self: *PreparedGlyphRaster, allocator: std.mem.Allocator) void {
+        allocator.free(self.data);
+        self.* = undefined;
+    }
+};
+
 pub const SpecialGlyphSpriteKey = types.SpecialGlyphSpriteKey;
 pub const SpecialGlyphVariant = types.SpecialGlyphVariant;
 pub const SpecialGlyphSprite = types.SpecialGlyphSprite;
@@ -350,6 +365,17 @@ pub const FacePair = struct {
     // If a face was created via FT_New_Memory_Face, this buffer must stay alive
     // until the face is destroyed.
     owned_data: ?[]u8 = null,
+};
+
+pub const FaceSlot = enum {
+    primary,
+    symbols,
+    unicode_symbols2,
+    unicode_symbols,
+    unicode_mono,
+    unicode_sans,
+    emoji_color,
+    emoji_text,
 };
 
 pub const GlyphError = error{
@@ -369,6 +395,7 @@ const GlyphKey = struct {
 };
 
 pub const AtlasStorageMode = enum {
+    cpu_prepared,
     opengl_textures,
     metal_textures,
 };
@@ -444,6 +471,7 @@ pub const TerminalFont = struct {
     cell_width: f32,
     ft_load_flags_base: c_int,
     render_scale: f32,
+    committed_raster_size_px: u32,
     live_visual_scale: f32,
     use_lcd: bool,
     overflow_policy: AllowSquareGlyphOverflow,
@@ -451,6 +479,7 @@ pub const TerminalFont = struct {
     frame_atlas_stats: FrameAtlasStats = .{},
 
     pub const FontChoice = struct {
+        slot: FaceSlot,
         face: c.FT_Face,
         hb_font: *c.hb_font_t,
         want_color: bool,
@@ -485,6 +514,36 @@ pub const TerminalFont = struct {
         );
     }
 
+    pub fn initCpuPrepared(
+        allocator: std.mem.Allocator,
+        path: [*:0]const u8,
+        size: f32,
+        symbols_path: ?[*:0]const u8,
+        unicode_symbols2_path: ?[*:0]const u8,
+        unicode_symbols_path: ?[*:0]const u8,
+        unicode_mono_path: ?[*:0]const u8,
+        unicode_sans_path: ?[*:0]const u8,
+        emoji_color_path: ?[*:0]const u8,
+        emoji_text_path: ?[*:0]const u8,
+        opts: RenderingOptions,
+    ) !TerminalFont {
+        return initWithStorageMode(
+            allocator,
+            path,
+            size,
+            symbols_path,
+            unicode_symbols2_path,
+            unicode_symbols_path,
+            unicode_mono_path,
+            unicode_sans_path,
+            emoji_color_path,
+            emoji_text_path,
+            opts,
+            .cpu_prepared,
+            null,
+        );
+    }
+
     pub fn initWithAtlasUploadHooks(
         allocator: std.mem.Allocator,
         path: [*:0]const u8,
@@ -497,6 +556,39 @@ pub const TerminalFont = struct {
         emoji_color_path: ?[*:0]const u8,
         emoji_text_path: ?[*:0]const u8,
         opts: RenderingOptions,
+        atlas_upload_hooks: ?AtlasUploadHooks,
+    ) !TerminalFont {
+        const storage_mode: AtlasStorageMode = if (atlas_upload_hooks != null) .metal_textures else .opengl_textures;
+        return initWithStorageMode(
+            allocator,
+            path,
+            size,
+            symbols_path,
+            unicode_symbols2_path,
+            unicode_symbols_path,
+            unicode_mono_path,
+            unicode_sans_path,
+            emoji_color_path,
+            emoji_text_path,
+            opts,
+            storage_mode,
+            atlas_upload_hooks,
+        );
+    }
+
+    fn initWithStorageMode(
+        allocator: std.mem.Allocator,
+        path: [*:0]const u8,
+        size: f32,
+        symbols_path: ?[*:0]const u8,
+        unicode_symbols2_path: ?[*:0]const u8,
+        unicode_symbols_path: ?[*:0]const u8,
+        unicode_mono_path: ?[*:0]const u8,
+        unicode_sans_path: ?[*:0]const u8,
+        emoji_color_path: ?[*:0]const u8,
+        emoji_text_path: ?[*:0]const u8,
+        opts: RenderingOptions,
+        atlas_storage_mode: AtlasStorageMode,
         atlas_upload_hooks: ?AtlasUploadHooks,
     ) !TerminalFont {
         var ft_library: c.FT_Library = null;
@@ -707,6 +799,19 @@ pub const TerminalFont = struct {
         const padding: i32 = 1;
 
         const atlas_storage: AtlasStorage = atlas_init: {
+            switch (atlas_storage_mode) {
+                .cpu_prepared => break :atlas_init .{
+                    .mode = .cpu_prepared,
+                    .coverage_texture = .{ .id = 0, .width = atlas_width, .height = atlas_height },
+                    .color_texture = .{ .id = 0, .width = atlas_width, .height = atlas_height },
+                },
+                .metal_textures => break :atlas_init .{
+                    .mode = .metal_textures,
+                    .coverage_texture = .{ .id = 0, .width = atlas_width, .height = atlas_height },
+                    .color_texture = .{ .id = 0, .width = atlas_width, .height = atlas_height },
+                },
+                .opengl_textures => {},
+            }
             if (atlas_upload_hooks) |_| {
                 break :atlas_init .{
                     .mode = .metal_textures,
@@ -776,6 +881,7 @@ pub const TerminalFont = struct {
             .cell_width = if (cell_width_px > 0) cell_width_px else size * 0.6,
             .ft_load_flags_base = ft_load_flags_base,
             .render_scale = 1.0,
+            .committed_raster_size_px = primary_size_px,
             .live_visual_scale = 1.0,
             .use_lcd = opts.lcd,
             .overflow_policy = opts.glyph_overflow,
@@ -866,11 +972,13 @@ pub const TerminalFont = struct {
         var codepoint = codepoint_in;
         if (codepoint == 0) codepoint = ' ';
 
+        var slot: FaceSlot = .primary;
         var face = self.ft_face;
         var hb_font = self.hb_font;
         const preferred = font_fallback.pickPreferred(self, codepoint);
         if (preferred.face) |p_face| {
             if (preferred.hb) |p_hb| {
+                slot = self.faceSlotForFace(p_face) orelse .primary;
                 face = p_face;
                 hb_font = p_hb;
             }
@@ -878,6 +986,7 @@ pub const TerminalFont = struct {
             const fallback = font_fallback.pickFallback(self, codepoint);
             if (fallback.face) |fb_face| {
                 if (fallback.hb) |fb_hb| {
+                    slot = self.faceSlotForFace(fb_face) orelse .primary;
                     face = fb_face;
                     hb_font = fb_hb;
                 }
@@ -886,6 +995,7 @@ pub const TerminalFont = struct {
                 if (self.systemFallback(codepoint)) |pair| {
                     if (pair.face) |sf_face| {
                         if (pair.hb) |sf_hb| {
+                            slot = self.faceSlotForFace(sf_face) orelse .primary;
                             face = sf_face;
                             hb_font = sf_hb;
                         }
@@ -895,10 +1005,11 @@ pub const TerminalFont = struct {
         }
 
         const is_color_face = c.FT_HAS_COLOR(face) or (self.emoji_color_ft_face != null and face == self.emoji_color_ft_face.?);
-        return .{ .face = face, .hb_font = hb_font, .want_color = is_color_face };
+        return .{ .slot = slot, .face = face, .hb_font = hb_font, .want_color = is_color_face };
     }
 
     pub const DirectFastGlyph = struct {
+        slot: FaceSlot,
         face: c.FT_Face,
         want_color: bool,
         glyph_id: u32,
@@ -911,6 +1022,7 @@ pub const TerminalFont = struct {
             const glyph_id = self.ascii_primary_glyph_ids[codepoint];
             if (glyph_id != 0) {
                 return .{
+                    .slot = .primary,
                     .face = self.ft_face,
                     .want_color = false,
                     .glyph_id = glyph_id,
@@ -919,6 +1031,31 @@ pub const TerminalFont = struct {
             }
         }
         return null;
+    }
+
+    pub fn faceSlotForFace(self: *const TerminalFont, face: c.FT_Face) ?FaceSlot {
+        if (face == self.ft_face) return .primary;
+        if (self.symbols_ft_face) |candidate| if (face == candidate) return .symbols;
+        if (self.unicode_symbols2_ft_face) |candidate| if (face == candidate) return .unicode_symbols2;
+        if (self.unicode_symbols_ft_face) |candidate| if (face == candidate) return .unicode_symbols;
+        if (self.unicode_mono_ft_face) |candidate| if (face == candidate) return .unicode_mono;
+        if (self.unicode_sans_ft_face) |candidate| if (face == candidate) return .unicode_sans;
+        if (self.emoji_color_ft_face) |candidate| if (face == candidate) return .emoji_color;
+        if (self.emoji_text_ft_face) |candidate| if (face == candidate) return .emoji_text;
+        return null;
+    }
+
+    pub fn faceForSlot(self: *const TerminalFont, slot: FaceSlot) ?c.FT_Face {
+        return switch (slot) {
+            .primary => self.ft_face,
+            .symbols => self.symbols_ft_face,
+            .unicode_symbols2 => self.unicode_symbols2_ft_face,
+            .unicode_symbols => self.unicode_symbols_ft_face,
+            .unicode_mono => self.unicode_mono_ft_face,
+            .unicode_sans => self.unicode_sans_ft_face,
+            .emoji_color => self.emoji_color_ft_face,
+            .emoji_text => self.emoji_text_ft_face,
+        };
     }
 
     pub fn uploadDiagnosticColorGlyphPreview(self: *TerminalFont) ?Rect {
@@ -965,6 +1102,7 @@ pub const TerminalFont = struct {
 
     pub fn uploadAtlasRegion(self: *TerminalFont, kind: AtlasUploadKind, rect: Rect, data: []const u8) bool {
         return switch (self.atlas_storage.mode) {
+            .cpu_prepared => false,
             .opengl_textures => switch (kind) {
                 .coverage => blk: {
                     font_atlas.updateTextureRegionR8(self.atlas_storage.coverage_texture, rect, data);
@@ -1204,6 +1342,26 @@ pub const TerminalFont = struct {
 
     fn systemFallback(self: *TerminalFont, codepoint: u32) ?FacePair {
         return font_system_fallback.systemFallback(self, codepoint);
+    }
+
+    pub fn prepareGlyphRaster(self: *TerminalFont, face: c.FT_Face, glyph_id: u32, want_color: bool, italic: bool, hb_x_advance: c_int) GlyphError!PreparedGlyphRaster {
+        const key = GlyphKey{
+            .face = face,
+            .glyph_id = glyph_id,
+            .want_color = want_color,
+            .italic = italic,
+        };
+        return try font_atlas.prepareGlyphRaster(self, key, hb_x_advance);
+    }
+
+    pub fn adoptPreparedGlyph(self: *TerminalFont, face: c.FT_Face, glyph_id: u32, want_color: bool, italic: bool, prepared: PreparedGlyphRaster, allow_compact: bool) GlyphError!void {
+        const key = GlyphKey{
+            .face = face,
+            .glyph_id = glyph_id,
+            .want_color = want_color,
+            .italic = italic,
+        };
+        try font_atlas.adoptPreparedGlyph(self, key, prepared, allow_compact);
     }
 
     fn rasterizeGlyphKey(self: *TerminalFont, key: GlyphKey, hb_x_advance: c_int, allow_compact: bool) GlyphError!void {

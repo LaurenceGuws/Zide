@@ -133,9 +133,17 @@ pub fn resizeToGrid(cols: u16, rows: u16, cell_width: u16, cell_height: u16) !bo
         return false;
     }
 
-    if (c_api.zide_terminal_resize(active.handle, cols, rows, cell_width, cell_height) != 0) {
-        last_start_status = .resize_failed;
-        return error.ResizeFailed;
+    const grid_changed = active.cols != cols or active.rows != rows;
+    if (grid_changed) {
+        if (c_api.zide_terminal_resize(active.handle, cols, rows, cell_width, cell_height) != 0) {
+            last_start_status = .resize_failed;
+            return error.ResizeFailed;
+        }
+    } else {
+        if (c_api.zide_terminal_update_cell_size(active.handle, cell_width, cell_height) != 0) {
+            last_start_status = .resize_failed;
+            return error.ResizeFailed;
+        }
     }
 
     session = .{
@@ -145,7 +153,7 @@ pub fn resizeToGrid(cols: u16, rows: u16, cell_width: u16, cell_height: u16) !bo
         .cell_width = cell_width,
         .cell_height = cell_height,
     };
-    try poll();
+    if (grid_changed) try poll();
     return true;
 }
 

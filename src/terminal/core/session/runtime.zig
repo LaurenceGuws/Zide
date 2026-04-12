@@ -109,6 +109,10 @@ pub fn resizeWithCellSize(self: anytype, rows: u16, cols: u16, cell_width: u16, 
     try session_transport_runtime.resizeWithCellSize(self, rows, cols, cell_width, cell_height);
 }
 
+pub fn updateCellSizeOnly(self: anytype, cell_width: u16, cell_height: u16) !void {
+    try session_transport_runtime.updateCellSizeOnly(self, cell_width, cell_height);
+}
+
 pub fn replaceDiagnosticKittyState(self: anytype, seeds: []const DiagnosticKittySeed) !void {
     self.lock();
     defer self.unlock();

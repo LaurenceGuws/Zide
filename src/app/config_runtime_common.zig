@@ -36,6 +36,11 @@ pub fn resolveTerminalShellPath(
 
 pub fn applyLoggerConfig(config: *const config_mod.Config, comptime prefix: []const u8) void {
     app_logger.resetConfig();
+    if (config.log_file_path) |path| {
+        app_logger.setFilePathString(path) catch |err| {
+            std.debug.print("{s} log file path parse error: {any}\n", .{ prefix, err });
+        };
+    }
     if (config.log_file_filter) |filter| {
         app_logger.setFileFilterString(filter) catch |err| {
             std.debug.print("{s} log file filter parse error: {any}\n", .{ prefix, err });

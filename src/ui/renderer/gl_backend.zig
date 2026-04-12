@@ -272,18 +272,7 @@ pub fn submitFrame(renderer: anytype) present_trace_runtime.FrameSubmission {
     defer clearQueuedSurfaceDraws(renderer);
     replayRecordedSurfaceDrawSurfacePhase(renderer);
     if (renderer.present.main_composition_target == .offscreen_scene_target) drawSceneTargetToDefault(renderer);
-    if (renderer.present.capture_armed) {
-        if (renderer.present.capture_path) |path| {
-            dumpWindowScreenshotPpm(renderer, path) catch |err| {
-                app_logger.logger("renderer.present").logf(.warning, "capture failed frame_seq={d} path={s} err={s}", .{
-                    renderer.present.frame_seq,
-                    path,
-                    @errorName(err),
-                });
-            };
-            renderer.present.trace_current.captured_path = path;
-        }
-    }
+    captureFrameIfArmed(renderer);
     const swap_start = sdl_api.getPerformanceCounter();
     const swap_ok = sdl_api.glSwapWindow(renderer.window);
     if (!swap_ok) {
@@ -294,6 +283,19 @@ pub fn submitFrame(renderer: anytype) present_trace_runtime.FrameSubmission {
         .kind = if (swap_ok) .submitted else .submit_failed,
         .present_ms = present_trace_runtime.performanceDeltaMs(swap_start, swap_end, renderer.perf_freq),
     });
+}
+
+fn captureFrameIfArmed(renderer: anytype) void {
+    if (!renderer.present.capture_armed) return;
+    const path = renderer.present.capture_path orelse return;
+    dumpWindowScreenshotPpm(renderer, path) catch |err| {
+        app_logger.logger("renderer.present").logf(.warning, "capture failed frame_seq={d} path={s} err={s}", .{
+            renderer.present.frame_seq,
+            path,
+            @errorName(err),
+        });
+    };
+    renderer.present.trace_current.captured_path = path;
 }
 
 pub fn dumpWindowScreenshotPpm(renderer: anytype, path: []const u8) !void {
@@ -659,6 +661,7 @@ pub fn ensureVboCapacity(renderer: anytype, vertex_count: usize, vertex_size: us
 }
 
 pub fn syncTextRenderConfig(renderer: anytype) void {
+    if (!renderer.text_render.config_dirty) return;
     if (renderer.backend.runtime.openglState().resources.shader_program == 0) return;
     gl.UseProgram(renderer.backend.runtime.openglState().resources.shader_program);
     if (renderer.backend.runtime.openglState().resources.uniform_text_gamma >= 0) {
@@ -670,6 +673,7 @@ pub fn syncTextRenderConfig(renderer: anytype) void {
     if (renderer.backend.runtime.openglState().resources.uniform_linear_correction >= 0) {
         gl.Uniform1i(renderer.backend.runtime.openglState().resources.uniform_linear_correction, if (renderer.text_render.linear_correction) 1 else 0);
     }
+    renderer.text_render.config_dirty = false;
 }
 
 fn deinitPresentables(renderer: anytype) void {

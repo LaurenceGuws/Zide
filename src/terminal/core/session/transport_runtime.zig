@@ -60,3 +60,8 @@ pub fn resizeWithCellSize(self: anytype, rows: u16, cols: u16, cell_width: u16, 
     try @import("../resize_reflow.zig").resizeWithCellSize(self, rows, cols, cell_width, cell_height);
     try host_reporting.reportInBandResize2048(self, rows, cols);
 }
+
+pub fn updateCellSizeOnly(self: anytype, cell_width: u16, cell_height: u16) !void {
+    try @import("../resize_reflow.zig").updateCellSizeOnly(self, cell_width, cell_height);
+    try host_reporting.reportInBandResize2048(self, self.core.primary.grid.rows, self.core.primary.grid.cols);
+}

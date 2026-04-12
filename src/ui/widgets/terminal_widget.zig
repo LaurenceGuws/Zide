@@ -100,7 +100,19 @@ pub const TerminalWidget = struct {
     }
 
     pub fn invalidatePresentationCache(self: *TerminalWidget) void {
-        self.surface.invalidatePresentationCache();
+        self.surface.invalidatePresentationContent();
+    }
+
+    pub fn invalidatePresentationContent(self: *TerminalWidget) void {
+        self.surface.invalidatePresentationContent();
+    }
+
+    pub fn invalidatePresentationGeometry(self: *TerminalWidget) void {
+        self.surface.invalidatePresentationGeometry();
+    }
+
+    pub fn invalidatePresentationOverlay(self: *TerminalWidget) void {
+        self.surface.invalidatePresentationOverlay();
     }
 
     pub fn dumpVisibleAsciiView(self: *TerminalWidget, shell: *Shell, log: anytype) !void {

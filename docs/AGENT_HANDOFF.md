@@ -18,9 +18,10 @@ statement. The short version:
 
 ### Current Focus
 
-Renderer cleanup is parked at an honest boundary unless code truth or Android
-product testing exposes a concrete new seam. Android terminal excellence is the
-active product goal again.
+Android terminal excellence is the active product goal again. The Android pinch
+/ resize-pressure lane is accepted and parked for now, but the broader
+render-thread cleanup campaign is still active whenever it is the next direct
+blocker for Android terminal progress.
 
 - Active ticket: `AN-A1` interactive Neovim terminal baseline
   - owner:
@@ -34,6 +35,15 @@ active product goal again.
     terminal-dev baseline. `AU-A2` and `AU-A3` are met for the current
     foundation. The next Android product work should prove interactive Neovim
     terminal behavior, not broaden package curation.
+- Accepted Android renderer checkpoint:
+  - pinch / resize-pressure responsiveness is now accepted on the current
+    release-build terminal-host path
+  - do not reopen Android gesture tuning unless a new concrete product
+    regression appears
+  - the enduring output of that lane is renderer-core cleanup:
+    size-keyed terminal font caching, async visible-glyph prep, CPU-prepared
+    terminal font state, committed-target cache population, and prepared-target
+    promotion after adopt
 - Renderer checkpoint:
   - ordinary UI/editor text, terminal glyph batching, and `SurfaceDraw` blit
     replay now carry background explicitly
@@ -72,6 +82,10 @@ active product goal again.
   - remaining risk is Mac/Metal verification or a concrete new product blocker
 - Renderer work is in scope only when it is the direct next blocker — not for
   generic cleanup
+- Current renderer-thread front after pinch:
+  - keep removing render-thread ownership violations from the audited queue
+  - next priority is not more Android gesture work; it is thinner render-entry
+    submission and stricter resize/grid-fit ownership on the shared path
 - Android renderer/backend work should now reopen only if a concrete product
   blocker proves the shared path still lacks required capability
 - Gate #2 (Metal live verification) is paused; do not let it stall Android

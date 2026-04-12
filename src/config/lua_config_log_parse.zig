@@ -189,6 +189,8 @@ pub fn parseLogSettings(allocator: std.mem.Allocator, lua: *zlua.Lua, table_inde
         out.log_console_filter = try allocator.dupe(u8, v);
     }
 
+    if (try reader.ownedStringField("log_file_path")) |v| out.log_file_path = v;
+
     if (try reader.stringOrStringListOwned("log_file_filter")) |v| out.log_file_filter = v;
 
     if (try reader.stringOrStringListOwned("log_console_filter")) |v| out.log_console_filter = v;
@@ -215,6 +217,10 @@ pub fn parseLogSettings(allocator: std.mem.Allocator, lua: *zlua.Lua, table_inde
 
         if (try logs_reader.stringOrStringListOwned("file")) |v| {
             replaceOwnedString(allocator, &out.log_file_filter, v);
+        }
+
+        if (try logs_reader.ownedStringField("file_path")) |v| {
+            replaceOwnedString(allocator, &out.log_file_path, v);
         }
 
         if (try logs_reader.stringOrStringListOwned("console")) |v| {

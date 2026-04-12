@@ -2,8 +2,10 @@ const builtin = @import("builtin");
 const android_gles_probe = @import("android_gles_probe.zig");
 const android_host = @import("android_host.zig");
 const android_shell_session = @import("android_shell_session.zig");
+const app_logger = @import("../app_logger.zig");
 const app_shell = @import("../app_shell.zig");
 const app_terminal_grid = @import("../app/terminal/terminal_grid.zig");
+const android_gles_backend = @import("../ui/renderer/android_gles_backend.zig");
 const native_host = @import("native_host.zig");
 const renderer_mod = @import("../ui/renderer.zig");
 const renderer_surface_host = @import("../ui/renderer/renderer_surface_host.zig");
@@ -39,6 +41,7 @@ const BridgeState = struct {
         .native_handles = .{},
     },
     pinch_zoom_active: bool = false,
+    product_fit_grid_dirty: bool = true,
 };
 
 var bridge_state = BridgeState{};
@@ -78,6 +81,9 @@ fn swapNativeWindow(window: ?*anyopaque) void {
 }
 
 pub fn noteCreate() u64 {
+    app_logger.resetConfig();
+    app_logger.setFilePathString("/data/user/0/dev.zide.terminal/files/home/.local/state/zide/zide.log") catch {};
+    app_logger.init() catch {};
     destroyRenderer();
     destroyTerminalWidget();
     android_gles_probe.reset();
@@ -119,6 +125,7 @@ pub fn noteSurfaceAvailable(width: i32, height: i32) u64 {
         .display_scale = 1.0,
         .pixel_density = 1.0,
     });
+    bridge_state.product_fit_grid_dirty = true;
     return nextSequence();
 }
 
@@ -134,10 +141,8 @@ pub fn noteVisibleViewport(width: i32, height: i32, ime_visible: bool) u64 {
         .display_scale = scaleOrDefault(surface.display_scale),
         .pixel_density = scaleOrDefault(surface.pixel_density),
     });
+    bridge_state.product_fit_grid_dirty = true;
     bridge_state.render_host.noteRedrawRequested();
-    if (bridge_state.render_host.hasSurface()) {
-        bridge_state.last_renderer_status = drawSharedRendererSurfaceFrame();
-    }
     return nextSequence();
 }
 
@@ -147,12 +152,11 @@ pub fn applyTerminalPinchZoom(scale_factor: f32) i32 {
     const now = app_shell.getTime();
     const changed = renderer.applyPinchZoomForExternalHost(scale_factor, now) catch return 2;
     if (changed) {
+        bridge_state.product_fit_grid_dirty = true;
         if (bridge_state.terminal_widget) |*widget| {
-            widget.invalidatePresentationCache();
+            widget.invalidatePresentationGeometry();
         }
-    }
-    if (bridge_state.render_host.hasSurface()) {
-        bridge_state.last_renderer_status = drawSharedRendererSurfaceFrame();
+        bridge_state.render_host.noteRedrawRequested();
     }
     return 0;
 }
@@ -161,14 +165,14 @@ pub fn setTerminalPinchActive(active: bool) i32 {
     bridge_state.pinch_zoom_active = active;
     if (!active) {
         if (bridge_state.renderer) |renderer| {
-            renderer.commitExternalHostFontScale() catch return 2;
+            if (renderer.settleExternalHostTerminalFontScale()) {
+                bridge_state.product_fit_grid_dirty = true;
+            }
         }
         if (bridge_state.terminal_widget) |*widget| {
-            widget.invalidatePresentationCache();
+            widget.invalidatePresentationGeometry();
         }
-    }
-    if (!active and bridge_state.render_host.hasSurface()) {
-        bridge_state.last_renderer_status = drawSharedRendererSurfaceFrame();
+        bridge_state.render_host.noteRedrawRequested();
     }
     return 0;
 }
@@ -286,6 +290,7 @@ pub fn currentRendererTextureHeight() i32 {
 
 pub fn restartShellSession() i32 {
     destroyTerminalWidget();
+    bridge_state.product_fit_grid_dirty = true;
     android_shell_session.restart() catch return @intFromEnum(android_shell_session.lastStartStatus());
     return @intFromEnum(android_shell_session.lastStartStatus());
 }
@@ -303,11 +308,45 @@ pub fn tickProductShellFrame() i32 {
     if (!android_shell_session.isAlive()) return 0;
     android_shell_session.poll() catch return 0;
 
+    var pending_zoom_changed = false;
+    if (!bridge_state.pinch_zoom_active) {
+        if (bridge_state.renderer) |renderer| {
+            pending_zoom_changed = renderer.applyPendingZoomForExternalHost(app_shell.getTime()) catch false;
+            if (pending_zoom_changed) {
+                bridge_state.product_fit_grid_dirty = true;
+            }
+            if (renderer.settleExternalHostTerminalFontScale()) {
+                bridge_state.product_fit_grid_dirty = true;
+                if (bridge_state.terminal_widget) |*widget| {
+                    widget.invalidatePresentationGeometry();
+                }
+                bridge_state.render_host.noteRedrawRequested();
+            }
+            if (pending_zoom_changed) {
+                if (bridge_state.terminal_widget) |*widget| {
+                    widget.invalidatePresentationGeometry();
+                }
+                bridge_state.render_host.noteRedrawRequested();
+            }
+        }
+    }
+
+    if (bridge_state.product_fit_grid_dirty) {
+        updateProductFitTerminalGrid() catch {};
+    }
+
+    const prep_result_ready = if (bridge_state.renderer) |renderer|
+        renderer.terminalGlyphPrepResultNeedsRedraw()
+    else
+        false;
+
     const should_draw =
         bridge_state.render_host.hasSurface() and
         (android_shell_session.needsRedraw() or
             bridge_state.render_host.redraw_requested or
-            bridge_state.pinch_zoom_active);
+            bridge_state.pinch_zoom_active or
+            pending_zoom_changed or
+            prep_result_ready);
     if (!should_draw) return 1;
 
     bridge_state.last_renderer_status = drawSharedRendererSurfaceFrame();
@@ -324,13 +363,22 @@ pub fn sendShellCodepoint(codepoint: i32) i32 {
 
 /// Direct shell input must not depend on a separate Java refresh loop to become
 /// visible. When input reaches the PTY successfully, Android-owned shell
-/// hosting must also poll terminal state and submit a fresh frame through the
-/// shared renderer path if a surface is present.
+/// hosting must poll terminal state immediately, invalidate widget
+/// presentation, and hand redraw authority back to the paced product frame
+/// loop instead of submitting a frame inline on the input path.
 fn refreshShellSurfaceAfterInput() void {
     android_shell_session.poll() catch return;
-    if (bridge_state.render_host.hasSurface()) {
-        bridge_state.last_renderer_status = drawSharedRendererSurfaceFrame();
+    if (bridge_state.terminal_widget) |*widget| {
+        widget.invalidatePresentationCache();
     }
+    bridge_state.render_host.noteRedrawRequested();
+}
+
+fn updateProductFitTerminalGrid() !void {
+    const renderer = bridge_state.renderer orelse return;
+    const widget = ensureTerminalWidget() orelse return;
+    try ensureProductFitTerminalGrid(renderer, widget);
+    bridge_state.product_fit_grid_dirty = false;
 }
 
 pub fn sharedShellRendererActive() bool {
@@ -360,6 +408,7 @@ pub fn ensureAndroidGlesRenderer() !bool {
 pub fn drawAndroidGlesRendererFrame() !bool {
     const renderer = bridge_state.renderer orelse return false;
     renderer.syncExternalHostState(bridge_state.app_host, bridge_state.render_host);
+    try android_gles_backend.prepareFrameResources(renderer);
     if (!renderer.beginFrame()) return false;
     if (ensureTerminalWidget()) |widget| {
         drawLiveTerminalWidgetFrame(renderer, widget);
@@ -399,7 +448,10 @@ fn ensureTerminalWidget() ?*widgets.TerminalWidget {
 /// Keep scrutiny high here; any resize/layout work that is not truly needed
 /// for this frame should be staged out of the render path.
 fn drawLiveTerminalWidgetFrame(renderer: *renderer_mod.Renderer, widget: *widgets.TerminalWidget) void {
-    ensureProductFitTerminalGrid(renderer, widget) catch {};
+    if (bridge_state.product_fit_grid_dirty) {
+        ensureProductFitTerminalGrid(renderer, widget) catch {};
+        bridge_state.product_fit_grid_dirty = false;
+    }
     const viewport = bridge_state.render_host.effectiveViewportMetrics();
     const width = @as(f32, @floatFromInt(@max(viewport.logical_width, 1)));
     const height = @as(f32, @floatFromInt(@max(viewport.logical_height, 1)));
@@ -426,7 +478,7 @@ fn ensureProductFitTerminalGrid(renderer: *renderer_mod.Renderer, widget: *widge
         1,
     );
     const resized = try android_shell_session.resizeToGrid(grid.cols, grid.rows, grid.cell_width, grid.cell_height);
-    if (resized) widget.invalidatePresentationCache();
+    if (resized) widget.invalidatePresentationGeometry();
 }
 
 fn drawBackendSmokeFrame(renderer: *renderer_mod.Renderer) void {

@@ -23,7 +23,7 @@ pub fn focusByIndex(state: anytype, index: usize) bool {
         state.terminals.items.len,
         state.terminal_widgets.items,
     )) |widget| {
-        widget.invalidatePresentationCache();
+        widget.*.invalidatePresentationContent();
     }
     return true;
 }
@@ -50,7 +50,7 @@ pub fn cycle(state: anytype, next: bool) bool {
         state.terminals.items.len,
         state.terminal_widgets.items,
     )) |widget| {
-        widget.invalidatePresentationCache();
+        widget.*.invalidatePresentationContent();
     }
     return true;
 }

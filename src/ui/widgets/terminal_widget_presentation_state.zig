@@ -6,6 +6,14 @@ const RowDirtySpan = render_cache_mod.RowDirtySpan;
 const max_row_dirty_spans = render_cache_mod.max_row_dirty_spans;
 
 pub const PresentationState = struct {
+    pub const InvalidationFlags = packed struct(u8) {
+        geometry: bool = false,
+        content: bool = false,
+        overlay: bool = false,
+        availability: bool = false,
+        _reserved: u4 = 0,
+    };
+
     partial_draw_rows: std.ArrayList(bool),
     partial_draw_span_counts: std.ArrayList(u8),
     partial_draw_spans: std.ArrayList([render_cache_mod.max_row_dirty_spans]render_cache_mod.RowDirtySpan),
@@ -27,6 +35,7 @@ pub const PresentationState = struct {
     last_hover_link_id: u32 = 0,
     last_composing_active: bool = false,
     last_composing_hash: u64 = 0,
+    invalidation_flags: InvalidationFlags = .{},
 
     pub const PresentationPartialDrawPlan = struct {
         rows: []bool,
@@ -54,8 +63,16 @@ pub const PresentationState = struct {
         self.partial_draw_cols_end.deinit(allocator);
     }
 
-    pub fn invalidatePresentationCache(self: *PresentationState) void {
+    pub fn invalidatePresentationCache(self: *PresentationState, flags: InvalidationFlags) void {
         self.terminal_presentable_ready = false;
+        self.invalidation_flags.geometry = self.invalidation_flags.geometry or flags.geometry;
+        self.invalidation_flags.content = self.invalidation_flags.content or flags.content;
+        self.invalidation_flags.overlay = self.invalidation_flags.overlay or flags.overlay;
+        self.invalidation_flags.availability = self.invalidation_flags.availability or flags.availability;
+    }
+
+    pub fn clearInvalidationFlags(self: *PresentationState) void {
+        self.invalidation_flags = .{};
     }
 
     pub fn ensurePartialDrawPlan(self: *PresentationState, allocator: std.mem.Allocator, rows: usize) ?PresentationPartialDrawPlan {

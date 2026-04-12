@@ -2,9 +2,12 @@ const std = @import("std");
 const builtin = @import("builtin");
 const terminal_font_mod = @import("../terminal_font.zig");
 const hb = terminal_font_mod.c;
+const FaceSlot = terminal_font_mod.FaceSlot;
 const RenderingOptions = terminal_font_mod.RenderingOptions;
+const PreparedGlyphRaster = terminal_font_mod.PreparedGlyphRaster;
 const scale_utils = @import("scale_utils.zig");
 const font_manager = @import("font_manager.zig");
+const iface = @import("interface.zig");
 const renderer_font_backend_host = @import("renderer_font_backend_host.zig");
 const text_input = @import("text_input.zig");
 const app_logger = @import("../../app_logger.zig");
@@ -19,10 +22,372 @@ pub const ScaleState = struct {
     ui_scale: f32 = 1.0,
     last_zoom_request_time: f64 = 0.0,
     last_zoom_apply_time: f64 = 0.0,
+    last_terminal_prepare_time: f64 = 0.0,
     font_rebuild_pending: bool = false,
     wayland_scale_cache: ?f32 = null,
     wayland_scale_last_update: f64 = 0.0,
 };
+
+pub const TerminalGlyphPrepEntry = struct {
+    face_slot: FaceSlot,
+    glyph_id: u32,
+    want_color: bool,
+    italic: bool,
+    hb_x_advance: i32,
+};
+
+pub const TerminalGlyphPrepRequest = struct {
+    generation: u64,
+    committed_raster_size_px: u32,
+    render_scale_milli: u32,
+    entries: []TerminalGlyphPrepEntry,
+
+    pub fn deinit(self: *TerminalGlyphPrepRequest, allocator: std.mem.Allocator) void {
+        allocator.free(self.entries);
+        self.* = undefined;
+    }
+};
+
+pub const PreparedTerminalGlyph = struct {
+    entry: TerminalGlyphPrepEntry,
+    raster: PreparedGlyphRaster,
+
+    pub fn deinit(self: *PreparedTerminalGlyph, allocator: std.mem.Allocator) void {
+        self.raster.deinit(allocator);
+        self.* = undefined;
+    }
+};
+
+pub const TerminalGlyphPrepResult = struct {
+    generation: u64,
+    committed_raster_size_px: u32,
+    render_scale_milli: u32,
+    glyphs: []PreparedTerminalGlyph,
+
+    pub fn deinit(self: *TerminalGlyphPrepResult, allocator: std.mem.Allocator) void {
+        for (self.glyphs) |*glyph| glyph.deinit(allocator);
+        allocator.free(self.glyphs);
+        self.* = undefined;
+    }
+};
+
+pub const TerminalGlyphPrepRuntimeState = struct {
+    worker: ?std.Thread = null,
+    worker_running: bool = false,
+    stop_requested: bool = false,
+    mutex: std.Thread.Mutex = .{},
+    cond: std.Thread.Condition = .{},
+    compute_in_flight: bool = false,
+    next_generation: u64 = 0,
+    last_request_hash: u64 = 0,
+    last_request_raster_size_px: u32 = 0,
+    last_request_render_scale_milli: u32 = 0,
+    last_request_entry_count: usize = 0,
+    last_collect_view_generation: u64 = 0,
+    last_collect_rows: usize = 0,
+    last_collect_cols: usize = 0,
+    last_collect_raster_size_px: u32 = 0,
+    last_collect_render_scale_milli: u32 = 0,
+    has_last_collect_signature: bool = false,
+    result_needs_redraw: bool = false,
+    request: ?TerminalGlyphPrepRequest = null,
+    result: ?TerminalGlyphPrepResult = null,
+};
+
+pub fn deinitTerminalGlyphPrepRuntimeState(self: anytype) void {
+    self.terminal_glyph_prep.mutex.lock();
+    self.terminal_glyph_prep.stop_requested = true;
+    self.terminal_glyph_prep.cond.broadcast();
+    self.terminal_glyph_prep.mutex.unlock();
+    if (self.terminal_glyph_prep.worker) |worker| worker.join();
+    self.terminal_glyph_prep.worker = null;
+    self.terminal_glyph_prep.worker_running = false;
+    self.terminal_glyph_prep.mutex.lock();
+    defer self.terminal_glyph_prep.mutex.unlock();
+    if (self.terminal_glyph_prep.request) |*request| request.deinit(self.allocator);
+    self.terminal_glyph_prep.request = null;
+    if (self.terminal_glyph_prep.result) |*result| result.deinit(self.allocator);
+    self.terminal_glyph_prep.result = null;
+}
+
+pub fn lockTerminalGlyphPrepRuntime(self: anytype) void {
+    self.terminal_glyph_prep.mutex.lock();
+}
+
+pub fn unlockTerminalGlyphPrepRuntime(self: anytype) void {
+    self.terminal_glyph_prep.mutex.unlock();
+}
+
+pub fn waitTerminalGlyphPrepRuntime(self: anytype) void {
+    self.terminal_glyph_prep.cond.wait(&self.terminal_glyph_prep.mutex);
+}
+
+pub fn signalTerminalGlyphPrepRuntime(self: anytype) void {
+    self.terminal_glyph_prep.cond.signal();
+}
+
+pub fn broadcastTerminalGlyphPrepRuntime(self: anytype) void {
+    self.terminal_glyph_prep.cond.broadcast();
+}
+
+pub fn clearPendingTerminalGlyphPrepRequest(self: anytype) void {
+    if (self.terminal_glyph_prep.request) |*request| request.deinit(self.allocator);
+    self.terminal_glyph_prep.request = null;
+}
+
+pub fn clearPendingTerminalGlyphPrepResult(self: anytype) void {
+    if (self.terminal_glyph_prep.result) |*result| result.deinit(self.allocator);
+    self.terminal_glyph_prep.result = null;
+}
+
+pub const StageTerminalGlyphPrepRequestOutcome = struct {
+    generation: u64,
+    staged: bool,
+};
+
+pub fn stageTerminalGlyphPrepRequest(
+    self: anytype,
+    committed_raster_size_px: u32,
+    render_scale_milli: u32,
+    request_hash: u64,
+    entries: []const TerminalGlyphPrepEntry,
+) !StageTerminalGlyphPrepRequestOutcome {
+    if (self.terminal_glyph_prep.last_request_hash == request_hash and
+        self.terminal_glyph_prep.last_request_raster_size_px == committed_raster_size_px and
+        self.terminal_glyph_prep.last_request_render_scale_milli == render_scale_milli and
+        self.terminal_glyph_prep.last_request_entry_count == entries.len)
+    {
+        return .{
+            .generation = self.terminal_glyph_prep.next_generation,
+            .staged = false,
+        };
+    }
+
+    ensureTerminalGlyphPrepWorkerRunning(self);
+    const owned_entries = try self.allocator.dupe(TerminalGlyphPrepEntry, entries);
+    clearPendingTerminalGlyphPrepRequest(self);
+    self.terminal_glyph_prep.next_generation +|= 1;
+    self.terminal_glyph_prep.last_request_hash = request_hash;
+    self.terminal_glyph_prep.last_request_raster_size_px = committed_raster_size_px;
+    self.terminal_glyph_prep.last_request_render_scale_milli = render_scale_milli;
+    self.terminal_glyph_prep.last_request_entry_count = entries.len;
+    self.terminal_glyph_prep.request = .{
+        .generation = self.terminal_glyph_prep.next_generation,
+        .committed_raster_size_px = committed_raster_size_px,
+        .render_scale_milli = render_scale_milli,
+        .entries = owned_entries,
+    };
+    return .{
+        .generation = self.terminal_glyph_prep.next_generation,
+        .staged = true,
+    };
+}
+
+pub fn publishTerminalGlyphPrepResult(self: anytype, result: TerminalGlyphPrepResult) void {
+    clearPendingTerminalGlyphPrepResult(self);
+    self.terminal_glyph_prep.result = result;
+    self.terminal_glyph_prep.result_needs_redraw = true;
+}
+
+pub fn shouldCollectTerminalGlyphPrepEntries(
+    self: anytype,
+    view_generation: u64,
+    rows: usize,
+    cols: usize,
+    committed_raster_size_px: u32,
+    render_scale_milli: u32,
+) bool {
+    if (!self.terminal_glyph_prep.has_last_collect_signature) return true;
+    return !(self.terminal_glyph_prep.last_collect_view_generation == view_generation and
+        self.terminal_glyph_prep.last_collect_rows == rows and
+        self.terminal_glyph_prep.last_collect_cols == cols and
+        self.terminal_glyph_prep.last_collect_raster_size_px == committed_raster_size_px and
+        self.terminal_glyph_prep.last_collect_render_scale_milli == render_scale_milli);
+}
+
+pub fn noteTerminalGlyphPrepCollection(
+    self: anytype,
+    view_generation: u64,
+    rows: usize,
+    cols: usize,
+    committed_raster_size_px: u32,
+    render_scale_milli: u32,
+) void {
+    self.terminal_glyph_prep.last_collect_view_generation = view_generation;
+    self.terminal_glyph_prep.last_collect_rows = rows;
+    self.terminal_glyph_prep.last_collect_cols = cols;
+    self.terminal_glyph_prep.last_collect_raster_size_px = committed_raster_size_px;
+    self.terminal_glyph_prep.last_collect_render_scale_milli = render_scale_milli;
+    self.terminal_glyph_prep.has_last_collect_signature = true;
+}
+
+pub fn takeTerminalGlyphPrepResult(self: anytype) ?TerminalGlyphPrepResult {
+    const result = self.terminal_glyph_prep.result;
+    self.terminal_glyph_prep.result = null;
+    self.terminal_glyph_prep.result_needs_redraw = false;
+    return result;
+}
+
+pub fn terminalGlyphPrepResultNeedsRedraw(self: anytype) bool {
+    return self.terminal_glyph_prep.result_needs_redraw;
+}
+
+fn ensureTerminalGlyphPrepWorkerRunning(self: anytype) void {
+    if (self.terminal_glyph_prep.worker_running) return;
+    const worker = std.Thread.spawn(.{}, terminalGlyphPrepWorkerMain, .{self}) catch |err| {
+        const log = app_logger.logger("renderer.font");
+        log.logf(.warning, "terminal glyph prep worker spawn failed err={s}", .{@errorName(err)});
+        return;
+    };
+    self.terminal_glyph_prep.worker = worker;
+    self.terminal_glyph_prep.worker_running = true;
+}
+
+const TerminalGlyphPrepConfigSnapshot = struct {
+    font_path: [:0]u8,
+    render_options: RenderingOptions,
+
+    fn deinit(self: *TerminalGlyphPrepConfigSnapshot, allocator: std.mem.Allocator) void {
+        allocator.free(self.font_path);
+        self.* = undefined;
+    }
+};
+
+fn snapshotTerminalGlyphPrepConfig(self: *renderer_root.Renderer) ?TerminalGlyphPrepConfigSnapshot {
+    self.lockTerminalGlyphPrepRuntime();
+    defer self.unlockTerminalGlyphPrepRuntime();
+    const font_path = self.allocator.dupeZ(u8, std.mem.span(self.font_config.terminal_font_path)) catch return null;
+    return .{
+        .font_path = font_path,
+        .render_options = self.font_config.font_rendering,
+    };
+}
+
+fn terminalGlyphPrepLayoutSize(request: TerminalGlyphPrepRequest) f32 {
+    const render_scale = @as(f32, @floatFromInt(request.render_scale_milli)) / 1000.0;
+    return @as(f32, @floatFromInt(request.committed_raster_size_px)) / (if (render_scale > 0.0) render_scale else 1.0);
+}
+
+fn initTerminalGlyphPrepFont(
+    allocator: std.mem.Allocator,
+    config: TerminalGlyphPrepConfigSnapshot,
+    request: TerminalGlyphPrepRequest,
+) !terminal_font_mod.TerminalFont {
+    return terminal_font_mod.TerminalFont.initCpuPrepared(
+        allocator,
+        @ptrCast(config.font_path.ptr),
+        terminalGlyphPrepLayoutSize(request) * (@as(f32, @floatFromInt(request.render_scale_milli)) / 1000.0),
+        iface.SYMBOLS_FALLBACK_PATH,
+        iface.UNICODE_SYMBOLS2_PATH,
+        iface.UNICODE_SYMBOLS_PATH,
+        iface.UNICODE_MONO_PATH,
+        iface.UNICODE_SANS_PATH,
+        iface.EMOJI_COLOR_FALLBACK_PATH,
+        iface.EMOJI_TEXT_FALLBACK_PATH,
+        config.render_options,
+    );
+}
+
+fn computeTerminalGlyphPrepResult(
+    allocator: std.mem.Allocator,
+    config: TerminalGlyphPrepConfigSnapshot,
+    request: TerminalGlyphPrepRequest,
+) !TerminalGlyphPrepResult {
+    var font = try initTerminalGlyphPrepFont(allocator, config, request);
+    defer font.deinit();
+
+    var glyphs = try allocator.alloc(PreparedTerminalGlyph, request.entries.len);
+    var produced: usize = 0;
+    errdefer {
+        var i: usize = 0;
+        while (i < produced) : (i += 1) glyphs[i].deinit(allocator);
+        allocator.free(glyphs);
+    }
+
+    for (request.entries) |entry| {
+        const face = font.faceForSlot(entry.face_slot) orelse continue;
+        const raster = font.prepareGlyphRaster(face, entry.glyph_id, entry.want_color, entry.italic, entry.hb_x_advance) catch continue;
+        glyphs[produced] = .{
+            .entry = entry,
+            .raster = raster,
+        };
+        produced += 1;
+    }
+
+    return .{
+        .generation = request.generation,
+        .committed_raster_size_px = request.committed_raster_size_px,
+        .render_scale_milli = request.render_scale_milli,
+        .glyphs = glyphs[0..produced],
+    };
+}
+
+fn terminalGlyphPrepWorkerMain(self: *renderer_root.Renderer) void {
+    const log = app_logger.logger("renderer.font");
+    while (true) {
+        self.lockTerminalGlyphPrepRuntime();
+        while (!self.terminal_glyph_prep.stop_requested and
+            (self.terminal_glyph_prep.request == null or self.terminal_glyph_prep.compute_in_flight))
+        {
+            self.waitTerminalGlyphPrepRuntime();
+        }
+        if (self.terminal_glyph_prep.stop_requested) {
+            self.unlockTerminalGlyphPrepRuntime();
+            return;
+        }
+
+        var request = self.terminal_glyph_prep.request.?;
+        self.terminal_glyph_prep.request = null;
+        self.terminal_glyph_prep.compute_in_flight = true;
+        self.unlockTerminalGlyphPrepRuntime();
+
+        var config = snapshotTerminalGlyphPrepConfig(self) orelse {
+            request.deinit(self.allocator);
+            self.lockTerminalGlyphPrepRuntime();
+            self.terminal_glyph_prep.compute_in_flight = false;
+            self.broadcastTerminalGlyphPrepRuntime();
+            continue;
+        };
+        defer config.deinit(self.allocator);
+        log.logf(.info, "terminal_glyph_prep_worker_start generation={d} raster={d} scale_milli={d} entries={d}", .{
+            request.generation,
+            request.committed_raster_size_px,
+            request.render_scale_milli,
+            request.entries.len,
+        });
+
+        const result = computeTerminalGlyphPrepResult(self.allocator, config, request) catch |err| blk: {
+            log.logf(.warning, "terminal glyph prep compute failed generation={d} err={s}", .{ request.generation, @errorName(err) });
+            break :blk null;
+        };
+        request.deinit(self.allocator);
+
+        self.lockTerminalGlyphPrepRuntime();
+        self.terminal_glyph_prep.compute_in_flight = false;
+        if (result) |prepared| {
+            if (prepared.generation == self.terminal_glyph_prep.next_generation and !self.terminal_glyph_prep.stop_requested) {
+                log.logf(.info, "terminal_glyph_prep_worker_publish generation={d} raster={d} scale_milli={d} glyphs={d}", .{
+                    prepared.generation,
+                    prepared.committed_raster_size_px,
+                    prepared.render_scale_milli,
+                    prepared.glyphs.len,
+                });
+                self.publishTerminalGlyphPrepResult(prepared);
+            } else {
+                log.logf(.info, "terminal_glyph_prep_worker_stale generation={d} next_generation={d} stop={d} glyphs={d}", .{
+                    prepared.generation,
+                    self.terminal_glyph_prep.next_generation,
+                    @intFromBool(self.terminal_glyph_prep.stop_requested),
+                    prepared.glyphs.len,
+                });
+                var stale = prepared;
+                stale.deinit(self.allocator);
+            }
+        }
+        self.broadcastTerminalGlyphPrepRuntime();
+        self.unlockTerminalGlyphPrepRuntime();
+    }
+}
 
 pub fn initScaleState(
     allocator: std.mem.Allocator,
@@ -40,6 +405,7 @@ pub fn initScaleState(
         .ui_scale = ui_scale,
         .last_zoom_request_time = 0.0,
         .last_zoom_apply_time = 0.0,
+        .last_terminal_prepare_time = 0.0,
         .font_rebuild_pending = false,
         .wayland_scale_cache = wayland_scale.cache,
         .wayland_scale_last_update = wayland_scale.last_update,
@@ -48,19 +414,32 @@ pub fn initScaleState(
 
 pub fn setFontRenderingOptions(self: anytype, opts: RenderingOptions) void {
     self.font_config.font_rendering = opts;
+    font_manager.clearCommittedTerminalFontCache(self);
 }
 
 pub fn setTextRenderingConfig(self: anytype, gamma: ?f32, contrast: ?f32, linear_correction: ?bool) void {
+    var changed = false;
     if (gamma) |v| {
-        if (v > 0) self.text_render.gamma = v;
+        if (v > 0 and self.text_render.gamma != v) {
+            self.text_render.gamma = v;
+            changed = true;
+        }
     }
     if (contrast) |v| {
-        if (v > 0) self.text_render.contrast = v;
+        if (v > 0 and self.text_render.contrast != v) {
+            self.text_render.contrast = v;
+            changed = true;
+        }
     }
     if (linear_correction) |v| {
-        self.text_render.linear_correction = v;
+        if (self.text_render.linear_correction != v) {
+            self.text_render.linear_correction = v;
+            changed = true;
+        }
     }
 
+    if (!changed) return;
+    self.text_render.config_dirty = true;
     renderer_font_backend_host.syncTextRenderConfig(self);
 }
 
@@ -175,22 +554,52 @@ pub fn applyPinchZoomScale(self: anytype, scale_factor: f32, now: f64) !bool {
     if (!(scale_factor > 0.0) or std.math.isNan(scale_factor)) return false;
     const next_zoom = std.math.clamp(self.scale.user_zoom * scale_factor, 0.5, 3.0);
     if (std.math.approxEqAbs(f32, next_zoom, self.scale.user_zoom, 0.0001)) return false;
+    const prev_zoom = self.scale.user_zoom;
+    const prev_font = self.font_size;
+    const prev_terminal_font = self.terminal_font_size;
+    const prev_cell_w = self.terminal_cell_width;
+    const prev_cell_h = self.terminal_cell_height;
     self.scale.user_zoom = next_zoom;
     self.scale.user_zoom_target = next_zoom;
     self.scale.last_zoom_request_time = now;
     self.scale.last_zoom_apply_time = now;
-    const log = app_logger.logger("ui.scale");
+    const ui_log = app_logger.logger("ui.scale");
+    const font_log = app_logger.logger("renderer.font");
     const layout_size = self.base_font_size * self.scale.ui_scale * self.scale.user_zoom;
     const raster_size = layout_size * self.scale.render_scale;
-    log.logf(.info, "ui_pinch_zoom window={d:.3} render={d:.3} user_zoom={d:.3} font={d:.2}->{d:.2}", .{
+    ui_log.logf(.info, "ui_pinch_zoom window={d:.3} render={d:.3} user_zoom={d:.3} font={d:.2}->{d:.2}", .{
         self.scale.ui_scale,
         self.scale.render_scale,
         self.scale.user_zoom,
         self.font_size,
         layout_size,
     });
-    log.logf(.info, "ui_pinch_zoom layout_size={d:.2} raster_size={d:.2}", .{ layout_size, raster_size });
+    ui_log.logf(.info, "ui_pinch_zoom layout_size={d:.2} raster_size={d:.2}", .{ layout_size, raster_size });
     applyLiveUserZoomScale(self);
+    const prepared_target = font_manager.prepareCurrentCommittedTerminalFontForLiveZoom(self, now);
+    const committed_swap = font_manager.commitPreparedTerminalFontScale(self);
+    if (committed_swap) {
+        self.scale.font_rebuild_pending = true;
+    }
+    font_log.logf(.info, "terminal_pinch_tick t={d:.3} factor={d:.4} zoom={d:.3}->{d:.3} app_font={d:.2}->{d:.2} term_font={d:.2}->{d:.2} cell={d:.2}x{d:.2}->{d:.2}x{d:.2} committed_raster={d} live_visual={d:.3} cache_entries={d} prepared_target={d} committed_swap={d}", .{
+        now,
+        scale_factor,
+        prev_zoom,
+        self.scale.user_zoom,
+        prev_font,
+        self.font_size,
+        prev_terminal_font,
+        self.terminal_font_size,
+        prev_cell_w,
+        prev_cell_h,
+        self.terminal_cell_width,
+        self.terminal_cell_height,
+        self.terminal_font.committed_raster_size_px,
+        self.terminal_font.live_visual_scale,
+        self.font_config.terminal_font_cache.count(),
+        @intFromBool(prepared_target),
+        @intFromBool(committed_swap),
+    });
     return true;
 }
 
@@ -248,6 +657,7 @@ pub fn applyPendingZoom(self: anytype, now: f64) !bool {
             now - self.scale.last_zoom_apply_time >= commit_delay)
         {
             try applyFontScale(self);
+            font_manager.prepareNeighborTerminalFonts(self);
             return true;
         }
         return false;

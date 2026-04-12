@@ -65,6 +65,10 @@ pub fn resize(handle: ?*ZideTerminalHandle, cols: u16, rows: u16, cell_width: u1
     return host_api.resize(handle, cols, rows, cell_width, cell_height);
 }
 
+pub fn updateCellSize(handle: ?*ZideTerminalHandle, cell_width: u16, cell_height: u16) Status {
+    return host_api.updateCellSize(handle, cell_width, cell_height);
+}
+
 pub fn sendBytes(handle: ?*ZideTerminalHandle, bytes: ?[*]const u8, len: usize) Status {
     return host_api.sendBytes(handle, bytes, len);
 }

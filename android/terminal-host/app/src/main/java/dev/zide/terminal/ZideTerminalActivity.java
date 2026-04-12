@@ -43,6 +43,15 @@ public final class ZideTerminalActivity extends Activity
     private static final String EXTRA_DEBUG_RESIZE_SURFACE_ONCE = "debug_resize_surface_once";
     private static final String EXTRA_DEBUG_START_SHELL_ONCE = "debug_start_shell_once";
     private static final long SHELL_REFRESH_MS = 150L;
+    private static final float MIN_PENDING_PINCH_APPLY_DELTA = 0.008f;
+    /**
+     * Product pinch budget for native zoom work.
+     *
+     * <p>Pinch is much more sensitive than shortcut zoom. The host therefore coalesces pinch intent
+     * and applies at most one native zoom update per interval instead of trying to honor every raw
+     * detector burst synchronously.
+     */
+    private static final long MIN_PINCH_APPLY_INTERVAL_MS = 24L;
     private static final String[] RUNTIME_FONT_ASSETS = {
             "IosevkaTermNerdFont-Regular.ttf",
             "JetBrainsMonoNerdFont-Regular.ttf",
@@ -92,7 +101,9 @@ public final class ZideTerminalActivity extends Activity
     private ProductGestureController productGestureController;
     private boolean pinchZoomActive = false;
     private boolean pinchZoomFrameScheduled = false;
+    private boolean pinchZoomRetryScheduled = false;
     private float pendingPinchScaleFactor = 1.0f;
+    private long lastPinchApplyUptimeMs = 0L;
     private ShellSessionController shellSessionController;
     private SurfaceView surfaceView;
     private boolean debugViewEnabled = false;
@@ -138,6 +149,19 @@ public final class ZideTerminalActivity extends Activity
                 return;
             }
             handler.postDelayed(this, tick == 2 ? 16L : 33L);
+        }
+    };
+    private final Runnable pinchZoomRetryRunnable = new Runnable() {
+        @Override
+        public void run() {
+            pinchZoomRetryScheduled = false;
+            if (!pinchZoomActive) {
+                return;
+            }
+            if (Math.abs(pendingPinchScaleFactor - 1.0f) < MIN_PENDING_PINCH_APPLY_DELTA) {
+                return;
+            }
+            schedulePinchZoomFrame();
         }
     };
 
@@ -634,7 +658,6 @@ public final class ZideTerminalActivity extends Activity
 
     @Override
     public void onProductSingleTap() {
-        appendEvent("gesture.singleTap terminal");
         openIme();
     }
 
@@ -644,6 +667,7 @@ public final class ZideTerminalActivity extends Activity
             return;
         }
         pinchZoomActive = true;
+        pinchZoomRetryScheduled = false;
         pendingPinchScaleFactor = 1.0f;
         nativeSetTerminalPinchActiveBridge(true);
     }
@@ -653,10 +677,10 @@ public final class ZideTerminalActivity extends Activity
         if (!nativeLoaded || scaleFactor <= 0.0f) {
             return;
         }
-        if (Math.abs(scaleFactor - 1.0f) < 0.002f) {
+        if (Math.abs(scaleFactor - 1.0f) < MIN_PENDING_PINCH_APPLY_DELTA) {
             return;
         }
-        pendingPinchScaleFactor = scaleFactor;
+        pendingPinchScaleFactor *= scaleFactor;
         schedulePinchZoomFrame();
     }
 
@@ -665,7 +689,14 @@ public final class ZideTerminalActivity extends Activity
         if (!nativeLoaded) {
             return;
         }
+        final float finalScaleFactor = pendingPinchScaleFactor;
+        if (Math.abs(finalScaleFactor - 1.0f) >= MIN_PENDING_PINCH_APPLY_DELTA) {
+            nativeApplyTerminalPinchZoomBridge(finalScaleFactor);
+            lastPinchApplyUptimeMs = SystemClock.uptimeMillis();
+        }
         pinchZoomActive = false;
+        pinchZoomRetryScheduled = false;
+        handler.removeCallbacks(pinchZoomRetryRunnable);
         pendingPinchScaleFactor = 1.0f;
         nativeSetTerminalPinchActiveBridge(false);
     }
@@ -682,14 +713,31 @@ public final class ZideTerminalActivity extends Activity
             }
             final float scaleFactor = pendingPinchScaleFactor;
             pendingPinchScaleFactor = 1.0f;
-            if (Math.abs(scaleFactor - 1.0f) < 0.002f) {
+            if (Math.abs(scaleFactor - 1.0f) < MIN_PENDING_PINCH_APPLY_DELTA) {
+                return;
+            }
+            final long now = SystemClock.uptimeMillis();
+            final long elapsedSinceLastApply = now - lastPinchApplyUptimeMs;
+            if (lastPinchApplyUptimeMs != 0L && elapsedSinceLastApply < MIN_PINCH_APPLY_INTERVAL_MS) {
+                final long delayMs = MIN_PINCH_APPLY_INTERVAL_MS - elapsedSinceLastApply;
+                pendingPinchScaleFactor *= scaleFactor;
+                schedulePinchZoomRetry(delayMs);
                 return;
             }
             nativeApplyTerminalPinchZoomBridge(scaleFactor);
-            if (pinchZoomActive && Math.abs(pendingPinchScaleFactor - 1.0f) >= 0.002f) {
+            lastPinchApplyUptimeMs = now;
+            if (pinchZoomActive && Math.abs(pendingPinchScaleFactor - 1.0f) >= MIN_PENDING_PINCH_APPLY_DELTA) {
                 schedulePinchZoomFrame();
             }
         });
+    }
+
+    private void schedulePinchZoomRetry(long delayMs) {
+        if (pinchZoomRetryScheduled) {
+            return;
+        }
+        pinchZoomRetryScheduled = true;
+        handler.postDelayed(pinchZoomRetryRunnable, Math.max(1L, delayMs));
     }
 
     @Override

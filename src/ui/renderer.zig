@@ -146,6 +146,10 @@ pub const PresentTrace = present_trace_runtime.PresentTrace;
 pub const InputRuntimeState = input_state.InputRuntimeState;
 pub const WindowChromeState = window_chrome_runtime.WindowChromeState;
 pub const ScaleState = font_runtime.ScaleState;
+pub const TerminalGlyphPrepRuntimeState = font_runtime.TerminalGlyphPrepRuntimeState;
+pub const TerminalGlyphPrepRequest = font_runtime.TerminalGlyphPrepRequest;
+pub const TerminalGlyphPrepResult = font_runtime.TerminalGlyphPrepResult;
+pub const TerminalGlyphPrepEntry = font_runtime.TerminalGlyphPrepEntry;
 pub const FontConfigState = font_manager.FontConfigState;
 pub const ClipboardState = clipboard.ClipboardState;
 pub const TerminalTextState = text_runtime.TerminalTextState;
@@ -368,6 +372,7 @@ pub const Renderer = struct {
         gamma: f32 = 1.0,
         contrast: f32 = 1.0,
         linear_correction: bool = true,
+        config_dirty: bool = true,
         dst_linear_active: bool = false,
     };
 
@@ -453,6 +458,7 @@ pub const Renderer = struct {
     clipboard: ClipboardState,
     batch: BatchState,
     terminal_text: TerminalTextState,
+    terminal_glyph_prep: TerminalGlyphPrepRuntimeState,
 
     start_counter: u64,
     perf_freq: f64,
@@ -564,6 +570,7 @@ pub const Renderer = struct {
         clipboard.deinit(&self.clipboard, self.allocator);
         draw_ops.deinit(&self.batch, self.allocator);
         text_runtime.deinitTerminalTextState(self);
+        font_runtime.deinitTerminalGlyphPrepRuntimeState(self);
 
         lifecycle_runtime.beginRendererShutdown(Renderer, self);
         window_chrome_runtime.deinit(self.windowChromeDomain());
@@ -694,8 +701,96 @@ pub const Renderer = struct {
         try self.applyFontScale();
     }
 
+    pub fn settleExternalHostTerminalFontScale(self: *Renderer) bool {
+        return font_manager.settlePreparedTerminalFontScale(self);
+    }
+
     pub fn queueUserZoom(self: *Renderer, delta: f32, now: f64) bool {
         return font_runtime.queueUserZoom(self, delta, now);
+    }
+
+    pub fn lockTerminalGlyphPrepRuntime(self: *Renderer) void {
+        font_runtime.lockTerminalGlyphPrepRuntime(self);
+    }
+
+    pub fn unlockTerminalGlyphPrepRuntime(self: *Renderer) void {
+        font_runtime.unlockTerminalGlyphPrepRuntime(self);
+    }
+
+    pub fn waitTerminalGlyphPrepRuntime(self: *Renderer) void {
+        font_runtime.waitTerminalGlyphPrepRuntime(self);
+    }
+
+    pub fn signalTerminalGlyphPrepRuntime(self: *Renderer) void {
+        font_runtime.signalTerminalGlyphPrepRuntime(self);
+    }
+
+    pub fn broadcastTerminalGlyphPrepRuntime(self: *Renderer) void {
+        font_runtime.broadcastTerminalGlyphPrepRuntime(self);
+    }
+
+    pub fn stageTerminalGlyphPrepRequest(
+        self: *Renderer,
+        committed_raster_size_px: u32,
+        render_scale_milli: u32,
+        request_hash: u64,
+        entries: []const TerminalGlyphPrepEntry,
+    ) !font_runtime.StageTerminalGlyphPrepRequestOutcome {
+        return try font_runtime.stageTerminalGlyphPrepRequest(
+            self,
+            committed_raster_size_px,
+            render_scale_milli,
+            request_hash,
+            entries,
+        );
+    }
+
+    pub fn shouldCollectTerminalGlyphPrepEntries(
+        self: *Renderer,
+        view_generation: u64,
+        rows: usize,
+        cols: usize,
+        committed_raster_size_px: u32,
+        render_scale_milli: u32,
+    ) bool {
+        return font_runtime.shouldCollectTerminalGlyphPrepEntries(
+            self,
+            view_generation,
+            rows,
+            cols,
+            committed_raster_size_px,
+            render_scale_milli,
+        );
+    }
+
+    pub fn noteTerminalGlyphPrepCollection(
+        self: *Renderer,
+        view_generation: u64,
+        rows: usize,
+        cols: usize,
+        committed_raster_size_px: u32,
+        render_scale_milli: u32,
+    ) void {
+        font_runtime.noteTerminalGlyphPrepCollection(
+            self,
+            view_generation,
+            rows,
+            cols,
+            committed_raster_size_px,
+            render_scale_milli,
+        );
+    }
+
+    pub fn publishTerminalGlyphPrepResult(self: *Renderer, result: TerminalGlyphPrepResult) void {
+        font_runtime.publishTerminalGlyphPrepResult(self, result);
+    }
+
+    pub fn takeTerminalGlyphPrepResult(self: *Renderer) ?TerminalGlyphPrepResult {
+        return font_runtime.takeTerminalGlyphPrepResult(self);
+    }
+
+    pub fn terminalGlyphPrepResultNeedsRedraw(self: *Renderer) bool {
+        return font_runtime.terminalGlyphPrepResultNeedsRedraw(self);
     }
 
     pub fn resetUserZoomTarget(self: *Renderer, now: f64) bool {
@@ -1390,6 +1485,7 @@ pub const Renderer = struct {
             if (font_config_cleanup.editor_font_features_raw) |owned| allocator.free(owned);
             font_config_cleanup.editor_font_features.deinit(allocator);
             font_config_cleanup.font_cache.deinit();
+            font_config_cleanup.terminal_font_cache.deinit();
             if (font_config_cleanup.app_font_path_owned) |owned| allocator.free(owned);
             if (font_config_cleanup.editor_font_path_owned) |owned| allocator.free(owned);
             if (font_config_cleanup.terminal_font_path_owned) |owned| allocator.free(owned);
@@ -1483,6 +1579,7 @@ pub const Renderer = struct {
             .clipboard = .{},
             .batch = .{},
             .terminal_text = terminal_text,
+            .terminal_glyph_prep = .{},
             .start_counter = seed.start_counter,
             .perf_freq = seed.perf_freq,
             .present = .{},

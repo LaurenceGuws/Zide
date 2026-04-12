@@ -19,6 +19,7 @@ const TerminalFont = terminal_font_mod.TerminalFont;
 const hb = terminal_font_mod.c;
 const DrawContext = terminal_font_mod.DrawContext;
 const Renderer = renderer_mod.Renderer;
+const TerminalGlyphPrepEntry = renderer_mod.TerminalGlyphPrepEntry;
 const TerminalDisableLigaturesStrategy = renderer_mod.TerminalDisableLigaturesStrategy;
 const Rgba = terminal_font_mod.Rgba;
 const TextPaintSample = debug_geometry_mod.TextPaintSample;
@@ -26,6 +27,7 @@ const TextPaintSource = debug_geometry_mod.TextPaintSource;
 const MetalTerminalFallbackSample = debug_geometry_mod.MetalTerminalFallbackSample;
 
 const kitty_unicode_placeholder: u32 = 0x10EEEE;
+const TerminalGlyphPrepSet = std.AutoArrayHashMapUnmanaged(TerminalGlyphPrepEntry, void);
 
 pub const BackgroundRunSummary = struct {
     pub const RunSample = struct {
@@ -710,6 +712,275 @@ fn cellCanDirectSpecial(cell: Cell) bool {
     return terminal_glyphs.specialVariantForCodepoint(cell.codepoint) != null or isTerminalBoxGlyph(cell.codepoint);
 }
 
+fn appendUniqueTerminalGlyphPrepEntry(
+    allocator: std.mem.Allocator,
+    seen: *TerminalGlyphPrepSet,
+    out: *std.ArrayListUnmanaged(TerminalGlyphPrepEntry),
+    entry: TerminalGlyphPrepEntry,
+) !void {
+    const gop = try seen.getOrPut(allocator, entry);
+    if (gop.found_existing) return;
+    gop.value_ptr.* = {};
+    errdefer _ = seen.orderedRemoveAt(gop.index);
+    try out.append(allocator, entry);
+}
+
+fn collectVisibleTerminalGlyphPrepEntriesForRow(
+    allocator: std.mem.Allocator,
+    rr: *Renderer,
+    snapshot_cells: []const Cell,
+    cols_count: usize,
+    row_idx: usize,
+    col_start_in: usize,
+    col_end_in: usize,
+    hover_link: u32,
+    screen_reverse_mode: bool,
+    blink_style_mode: anytype,
+    blink_time_s: f64,
+    draw_cursor_mode: bool,
+    cursor_pos: CursorPos,
+    cursor_style: anytype,
+    ligature_strategy: TerminalDisableLigaturesStrategy,
+    seen: *TerminalGlyphPrepSet,
+    out: *std.ArrayListUnmanaged(TerminalGlyphPrepEntry),
+) !void {
+    if (rr.textRenderingMode() == .unavailable and rr.plannedTextRenderingMode() == .metal_texture_atlas) return;
+    const row_cells = rowSlice(snapshot_cells, cols_count, row_idx);
+    if (row_cells.len != cols_count) return;
+    const col_start = @min(col_start_in, cols_count - 1);
+    const col_end = @min(col_end_in, cols_count - 1);
+    if (col_start > col_end) return;
+
+    const cursor_row_active = ligature_strategy == .cursor and draw_cursor_mode and row_idx == cursor_pos.row and cursor_pos.col < cols_count;
+    const cursor_split_col: usize = if (cursor_row_active) blk: {
+        const cursor_cell = row_cells[cursor_pos.col];
+        break :blk if (cursor_cell.x > 0) cursor_pos.col - @as(usize, @intCast(cursor_cell.x)) else cursor_pos.col;
+    } else 0;
+    const cursor_split_end: usize = if (cursor_row_active) blk: {
+        const split_cell = row_cells[cursor_split_col];
+        const span_w = @as(usize, @max(@as(u8, 1), split_cell.width));
+        break :blk @min(cols_count, cursor_split_col + span_w);
+    } else 0;
+
+    var col: usize = col_start;
+    while (col <= col_end and col < cols_count) {
+        const cell0 = row_cells[col];
+        if (cell0.x != 0 or cell0.y != 0) {
+            col += 1;
+            continue;
+        }
+
+        const span_fast = rr.terminal_font.directFastGlyphForCodepoint(cell0.codepoint);
+        const span_choice = if (span_fast != null) terminal_font_mod.TerminalFont.FontChoice{
+            .slot = .primary,
+            .face = rr.terminal_font.ft_face,
+            .hb_font = rr.terminal_font.hb_font,
+            .want_color = false,
+        } else rr.terminal_font.pickFontForCodepoint(cell0.codepoint);
+        const span_hb_font = span_choice.hb_font;
+        const span_can_bypass = cellCanBypassShaping(cell0);
+        const span_can_direct_special = cellCanDirectSpecial(cell0);
+        const span_start_col = col;
+        var scan_col: usize = col;
+        if (span_fast != null and span_can_bypass and !span_can_direct_special) {
+            while (scan_col <= col_end and scan_col < cols_count) {
+                const ccell = row_cells[scan_col];
+                if (ccell.x != 0 or ccell.y != 0) {
+                    scan_col += 1;
+                    continue;
+                }
+                const cwidth_units = @as(usize, @max(@as(u8, 1), ccell.width));
+                if (rr.terminal_font.directFastGlyphForCodepoint(ccell.codepoint) == null) break;
+                scan_col += cwidth_units;
+            }
+        } else {
+            while (scan_col <= col_end and scan_col < cols_count) {
+                const ccell = row_cells[scan_col];
+                if (ccell.x != 0 or ccell.y != 0) {
+                    scan_col += 1;
+                    continue;
+                }
+                const cwidth_units = @as(usize, @max(@as(u8, 1), ccell.width));
+                if (span_fast != null) {
+                    if (rr.terminal_font.directFastGlyphForCodepoint(ccell.codepoint) == null) break;
+                } else {
+                    const choice = rr.terminal_font.pickFontForCodepoint(ccell.codepoint);
+                    if (choice.hb_font != span_hb_font) break;
+                }
+                if (cellCanBypassShaping(ccell) != span_can_bypass) break;
+                if (cellCanDirectSpecial(ccell) != span_can_direct_special) break;
+                scan_col += cwidth_units;
+            }
+        }
+
+        var span_end_excl = @min(scan_col, col_end + 1);
+        if (cursor_row_active) {
+            if (span_start_col < cursor_split_col and span_end_excl > cursor_split_col) {
+                span_end_excl = cursor_split_col;
+            } else if (span_start_col == cursor_split_col and span_end_excl > cursor_split_end) {
+                span_end_excl = cursor_split_end;
+            }
+        }
+        if (span_end_excl <= span_start_col) {
+            const advance = @as(usize, @max(@as(u8, 1), row_cells[span_start_col].width));
+            span_end_excl = @min(col_end + 1, span_start_col + advance);
+        }
+        const span_cols = span_end_excl - span_start_col;
+
+        const disable_programming_ligatures = switch (ligature_strategy) {
+            .never => false,
+            .always => true,
+            .cursor => cursor_row_active and span_start_col == cursor_split_col,
+        };
+        var shape_features_buf: [16]hb.hb_feature_t = undefined;
+        const shape_features_len = rr.collectShapeFeatures(.terminal, disable_programming_ligatures, shape_features_buf[0..]);
+
+        if (shape_features_len == 0 and span_can_bypass and spanCanBypassShaping(row_cells, span_start_col, span_end_excl)) {
+            var direct_col = span_start_col;
+            while (direct_col < span_end_excl and direct_col < row_cells.len) : (direct_col += 1) {
+                const cell = row_cells[direct_col];
+                if (cell.x != 0 or cell.y != 0) continue;
+                const style = resolveTerminalCellStyle(cell, screen_reverse_mode, hover_link, blink_style_mode, blink_time_s, draw_cursor_mode, cursor_pos, cursor_style, row_idx, direct_col);
+                if (!style.glyph_visible) continue;
+                if (cell.codepoint == 0 or cell.codepoint == ' ') continue;
+
+                const choice = if (rr.terminal_font.directFastGlyphForCodepoint(cell.codepoint)) |fast|
+                    fast
+                else blk: {
+                    const picked = rr.terminal_font.pickFontForCodepoint(cell.codepoint);
+                    const glyph_id = hb.FT_Get_Char_Index(picked.face, if (cell.codepoint == 0) ' ' else cell.codepoint);
+                    if (glyph_id == 0) continue;
+                    break :blk terminal_font_mod.TerminalFont.DirectFastGlyph{
+                        .slot = picked.slot,
+                        .face = picked.face,
+                        .want_color = picked.want_color,
+                        .glyph_id = glyph_id,
+                        .simple_ascii = false,
+                    };
+                };
+
+                try appendUniqueTerminalGlyphPrepEntry(allocator, seen, out, .{
+                    .face_slot = choice.slot,
+                    .glyph_id = choice.glyph_id,
+                    .want_color = choice.want_color,
+                    .italic = false,
+                    .hb_x_advance = 0,
+                });
+            }
+            col = span_end_excl;
+            continue;
+        }
+
+        if (shape_features_len == 0 and span_can_direct_special) {
+            col = span_end_excl;
+            continue;
+        }
+
+        const buffer = rr.terminalShapeBuffer();
+        hb.hb_buffer_reset(buffer);
+        hb.hb_buffer_set_content_type(buffer, hb.HB_BUFFER_CONTENT_TYPE_UNICODE);
+        var cc: usize = span_start_col;
+        while (cc < span_end_excl and cc < cols_count) {
+            const ccell = row_cells[cc];
+            if (ccell.x != 0 or ccell.y != 0) {
+                cc += 1;
+                continue;
+            }
+            const cwidth_units = @as(usize, @max(@as(u8, 1), ccell.width));
+            const cluster: u32 = @intCast(cc - span_start_col);
+            const cp_base: u32 = if (ccell.codepoint == 0) ' ' else ccell.codepoint;
+            hb.hb_buffer_add(buffer, cp_base, cluster);
+            if (ccell.combining_len > 0) {
+                var j: usize = 0;
+                while (j < @as(usize, @intCast(ccell.combining_len)) and j < ccell.combining.len) : (j += 1) {
+                    hb.hb_buffer_add(buffer, ccell.combining[j], cluster);
+                }
+            }
+            cc += cwidth_units;
+        }
+        hb.hb_buffer_guess_segment_properties(buffer);
+        hb.hb_shape(span_hb_font, buffer, if (shape_features_len > 0) shape_features_buf[0..].ptr else null, @intCast(shape_features_len));
+
+        var length: c_uint = 0;
+        const infos = hb.hb_buffer_get_glyph_infos(buffer, &length);
+        const positions = hb.hb_buffer_get_glyph_positions(buffer, &length);
+        if (length == 0) {
+            col = span_end_excl;
+            continue;
+        }
+
+        const glyph_len: usize = @intCast(length);
+        var i: usize = 0;
+        while (i < glyph_len) : (i += 1) {
+            const cluster_rel_u32: u32 = infos[i].cluster;
+            if (cluster_rel_u32 >= span_cols) continue;
+            const cluster_rel: usize = @intCast(cluster_rel_u32);
+            const abs_col = span_start_col + cluster_rel;
+            if (abs_col >= row_cells.len) continue;
+            const cell = row_cells[abs_col];
+            if (cell.x != 0 or cell.y != 0) continue;
+            const style = resolveTerminalCellStyle(cell, screen_reverse_mode, hover_link, blink_style_mode, blink_time_s, draw_cursor_mode, cursor_pos, cursor_style, row_idx, abs_col);
+            if (!style.glyph_visible) continue;
+            if (cell.codepoint == 0 or cell.codepoint == kitty_unicode_placeholder) continue;
+            if (cell.codepoint == ' ' and cell.combining_len == 0) continue;
+            if (cell.combining_len == 0 and terminal_glyphs.specialVariantForCodepoint(cell.codepoint) != null) continue;
+
+            try appendUniqueTerminalGlyphPrepEntry(allocator, seen, out, .{
+                .face_slot = span_choice.slot,
+                .glyph_id = infos[i].codepoint,
+                .want_color = span_choice.want_color,
+                .italic = false,
+                .hb_x_advance = positions[i].x_advance,
+            });
+        }
+
+        col = span_end_excl;
+    }
+}
+
+pub fn collectVisibleTerminalGlyphPrepEntries(
+    allocator: std.mem.Allocator,
+    rr: *Renderer,
+    snapshot_cells: []const Cell,
+    rows_count: usize,
+    cols_count: usize,
+    hover_link: u32,
+    screen_reverse_mode: bool,
+    blink_style_mode: anytype,
+    blink_time_s: f64,
+    draw_cursor_mode: bool,
+    cursor_pos: CursorPos,
+    cursor_style: anytype,
+    ligature_strategy: TerminalDisableLigaturesStrategy,
+    out: *std.ArrayListUnmanaged(TerminalGlyphPrepEntry),
+) !void {
+    var seen: TerminalGlyphPrepSet = .{};
+    defer seen.deinit(allocator);
+
+    var row_idx: usize = 0;
+    while (row_idx < rows_count) : (row_idx += 1) {
+        try collectVisibleTerminalGlyphPrepEntriesForRow(
+            allocator,
+            rr,
+            snapshot_cells,
+            cols_count,
+            row_idx,
+            0,
+            cols_count - 1,
+            hover_link,
+            screen_reverse_mode,
+            blink_style_mode,
+            blink_time_s,
+            draw_cursor_mode,
+            cursor_pos,
+            cursor_style,
+            ligature_strategy,
+            &seen,
+            out,
+        );
+    }
+}
+
 fn drawShapedGlyph(
     rr: *Renderer,
     font: *TerminalFont,
@@ -802,6 +1073,27 @@ fn drawShapedGlyph(
             .shaped,
         );
     }
+}
+
+test "appendUniqueTerminalGlyphPrepEntry deduplicates identical entries" {
+    var seen: TerminalGlyphPrepSet = .{};
+    defer seen.deinit(std.testing.allocator);
+    var entries: std.ArrayListUnmanaged(TerminalGlyphPrepEntry) = .{};
+    defer entries.deinit(std.testing.allocator);
+
+    const entry = TerminalGlyphPrepEntry{
+        .face_slot = .primary,
+        .glyph_id = 17,
+        .want_color = false,
+        .italic = false,
+        .hb_x_advance = 64,
+    };
+
+    try appendUniqueTerminalGlyphPrepEntry(std.testing.allocator, &seen, &entries, entry);
+    try appendUniqueTerminalGlyphPrepEntry(std.testing.allocator, &seen, &entries, entry);
+
+    try std.testing.expectEqual(@as(usize, 1), entries.items.len);
+    try std.testing.expectEqual(@as(usize, 1), seen.count());
 }
 
 fn drawDirectGlyphById(
@@ -1208,6 +1500,7 @@ pub fn drawRowGlyphs(
         }
         const span_fast = rr.terminal_font.directFastGlyphForCodepoint(cell0.codepoint);
         const span_choice = if (span_fast != null) terminal_font_mod.TerminalFont.FontChoice{
+            .slot = .primary,
             .face = rr.terminal_font.ft_face,
             .hb_font = rr.terminal_font.hb_font,
             .want_color = false,
@@ -1302,6 +1595,7 @@ pub fn drawRowGlyphs(
                     const glyph_id = hb.FT_Get_Char_Index(picked.face, if (cell.codepoint == 0) ' ' else cell.codepoint);
                     if (glyph_id == 0) continue;
                     break :blk terminal_font_mod.TerminalFont.DirectFastGlyph{
+                        .slot = picked.slot,
                         .face = picked.face,
                         .want_color = picked.want_color,
                         .glyph_id = glyph_id,

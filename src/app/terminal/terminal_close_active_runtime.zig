@@ -57,7 +57,7 @@ pub fn closeActive(state: anytype, ctx: *anyopaque, hooks: Hooks) !bool {
                 state.terminals.items.len,
                 state.terminal_widgets.items,
             )) |widget| {
-                widget.invalidatePresentationCache();
+                widget.*.invalidatePresentationContent();
             }
         }
         return true;

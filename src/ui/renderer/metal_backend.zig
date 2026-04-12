@@ -1277,46 +1277,7 @@ pub fn submitFrame(renderer: anytype) present_trace_runtime.FrameSubmission {
             encodePresent(frame);
             commitFrame(frame);
 
-            if (capture_readback) |*readback| {
-                waitForFrame(frame);
-                if (renderer.present.capture_path) |path| {
-                    const rgba = copyReadbackRgba(renderer.allocator, readback) catch |err| rgba_capture: {
-                        app_logger.logger("renderer.present").logf(.warning, "capture failed frame_seq={d} path={s} err={s}", .{
-                            renderer.present.frame_seq,
-                            path,
-                            @errorName(err),
-                        });
-                        break :rgba_capture null;
-                    };
-                    if (rgba) |pixels| {
-                        defer renderer.allocator.free(pixels);
-                        screenshot.dumpRgbaPixelsPpmScaled(
-                            renderer.allocator,
-                            pixels,
-                            readback.width,
-                            readback.height,
-                            renderer.width,
-                            renderer.height,
-                            path,
-                            .top_left,
-                        ) catch |err| {
-                            app_logger.logger("renderer.present").logf(.warning, "capture failed frame_seq={d} path={s} err={s}", .{
-                                renderer.present.frame_seq,
-                                path,
-                                @errorName(err),
-                            });
-                        };
-                        renderer.present.trace_current.captured_path = path;
-                    }
-                }
-            } else if (renderer.present.capture_armed) {
-                if (renderer.present.capture_path) |path| {
-                    app_logger.logger("renderer.present").logf(.warning, "capture failed frame_seq={d} path={s} err=MetalReadbackUnavailable", .{
-                        renderer.present.frame_seq,
-                        path,
-                    });
-                }
-            }
+            finishFrameCaptureIfArmed(renderer, frame, capture_readback);
 
             releaseFrame(frame);
             clearCurrentFrame(renderer);
@@ -1338,6 +1299,49 @@ pub fn submitFrame(renderer: anytype) present_trace_runtime.FrameSubmission {
         .kind = outcome_kind,
         .present_ms = present_ms,
     });
+}
+
+fn finishFrameCaptureIfArmed(renderer: anytype, frame: *Frame, capture_readback: ?Readback) void {
+    if (!renderer.present.capture_armed) return;
+    const path = renderer.present.capture_path orelse return;
+
+    var readback = capture_readback orelse {
+        app_logger.logger("renderer.present").logf(.warning, "capture failed frame_seq={d} path={s} err=MetalReadbackUnavailable", .{
+            renderer.present.frame_seq,
+            path,
+        });
+        return;
+    };
+
+    waitForFrame(frame);
+    const rgba = copyReadbackRgba(renderer.allocator, &readback) catch |err| {
+        app_logger.logger("renderer.present").logf(.warning, "capture failed frame_seq={d} path={s} err={s}", .{
+            renderer.present.frame_seq,
+            path,
+            @errorName(err),
+        });
+        return;
+    };
+    defer renderer.allocator.free(rgba);
+
+    screenshot.dumpRgbaPixelsPpmScaled(
+        renderer.allocator,
+        rgba,
+        readback.width,
+        readback.height,
+        renderer.width,
+        renderer.height,
+        path,
+        .top_left,
+    ) catch |err| {
+        app_logger.logger("renderer.present").logf(.warning, "capture failed frame_seq={d} path={s} err={s}", .{
+            renderer.present.frame_seq,
+            path,
+            @errorName(err),
+        });
+        return;
+    };
+    renderer.present.trace_current.captured_path = path;
 }
 
 pub fn dumpWindowScreenshotPpm(_: anytype, _: []const u8) !void {

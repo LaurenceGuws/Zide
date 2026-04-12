@@ -142,6 +142,27 @@ test "resizeWithCellSize uses current cell metrics for in-band resize report" {
     try std.testing.expectEqualStrings("\x1b[48;3;4;48;32t", bytes);
 }
 
+test "updateCellSizeOnly preserves grid dimensions and reports pixel size" {
+    const allocator = std.testing.allocator;
+
+    var session = try runtime_mod.init(allocator, 3, 4);
+    defer session.deinit();
+    session_runtime.attachExternalTransport(session);
+    session.session.interaction.host_contract.inband_resize_notifications_2048 = true;
+
+    try session_runtime.updateCellSizeOnly(session, 10, 20);
+
+    try std.testing.expectEqual(@as(u16, 3), session.core.primary.grid.rows);
+    try std.testing.expectEqual(@as(u16, 4), session.core.primary.grid.cols);
+    const metrics = session.core.currentCellMetrics();
+    try std.testing.expectEqual(@as(u16, 10), metrics.width);
+    try std.testing.expectEqual(@as(u16, 20), metrics.height);
+
+    const bytes = (try session_runtime.takeExternalOutgoingBytes(session, allocator)).?;
+    defer allocator.free(bytes);
+    try std.testing.expectEqualStrings("\x1b[48;3;4;60;40t", bytes);
+}
+
 test "alt screen core helpers preserve cursor save restore behavior" {
     const allocator = std.testing.allocator;
 

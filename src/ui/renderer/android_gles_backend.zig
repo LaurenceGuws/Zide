@@ -285,19 +285,9 @@ pub fn beginFrame(renderer: anytype) void {
         },
     }
     bindSharedGlApi();
-    if (!state.resources.resources_ready) {
-        initGlResources(renderer) catch {
-            renderer_frame_host.noteFrameBeginFailed(renderer);
-            return;
-        };
-        state.resources.resources_ready = true;
-    }
-    if (!renderer.fonts_ready) {
-        renderer.initFonts() catch {
-            renderer_frame_host.noteFrameBeginFailed(renderer);
-            return;
-        };
-        renderer.fonts_ready = true;
+    if (!state.resources.resources_ready or !renderer.fonts_ready) {
+        renderer_frame_host.noteFrameBeginFailed(renderer);
+        return;
     }
     syncTextRenderConfig(renderer);
 
@@ -321,6 +311,38 @@ pub fn beginFrame(renderer: anytype) void {
         gl.glClear(GL_COLOR_BUFFER_BIT);
     }
     renderer_frame_host.noteFrameReady(renderer);
+}
+
+/// Frame-entry scrutiny: backend beginFrame must not lazily initialize GL
+/// resources or fonts. Android surface acquisition can legally bind/make
+/// current before the first normal frame, so callers must prepare backend
+/// frame resources explicitly through this preframe seam.
+pub fn prepareFrameResources(renderer: anytype) !void {
+    const state = renderer.backend.runtime.androidGlesState();
+    if (!target_has_android_gles and !builtin.is_test) return error.AndroidGlesInitFailed;
+
+    const native_window = renderer.render_host.androidNativeWindow() orelse return error.AndroidGlesInitFailed;
+    const epoch = renderer.render_host.surfaceIdentityEpoch();
+    const transition = runtimeTransition(state.runtime.bound_epoch, epoch, native_window);
+    switch (android_gles_runtime.ensureWindowSurface(&state.runtime, native_window, epoch, transition)) {
+        .ready => {},
+        .init_failed, .surface_failed, .make_current_failed, .swap_failed => return error.AndroidGlesInitFailed,
+    }
+    switch (android_gles_runtime.makeCurrent(&state.runtime)) {
+        .ready => {},
+        .init_failed, .surface_failed, .make_current_failed, .swap_failed => return error.AndroidGlesInitFailed,
+    }
+    bindSharedGlApi();
+
+    if (!state.resources.resources_ready) {
+        try initGlResources(renderer);
+        state.resources.resources_ready = true;
+    }
+    if (!renderer.fonts_ready) {
+        try renderer.initFonts();
+        renderer.fonts_ready = true;
+    }
+    syncTextRenderConfig(renderer);
 }
 
 fn bindSharedGlApi() void {
@@ -771,6 +793,7 @@ fn initGlResources(renderer: anytype) !void {
 }
 
 fn syncTextRenderConfig(renderer: anytype) void {
+    if (!renderer.text_render.config_dirty) return;
     const resources = &renderer.backend.runtime.androidGlesState().resources;
     if (resources.shader_program == 0) return;
     shared_gl.UseProgram(resources.shader_program);
@@ -783,6 +806,7 @@ fn syncTextRenderConfig(renderer: anytype) void {
     if (resources.uniform_linear_correction >= 0) {
         shared_gl.Uniform1i(resources.uniform_linear_correction, if (renderer.text_render.linear_correction) 1 else 0);
     }
+    renderer.text_render.config_dirty = false;
 }
 
 fn updateProjection(renderer: anytype, width: i32, height: i32) void {

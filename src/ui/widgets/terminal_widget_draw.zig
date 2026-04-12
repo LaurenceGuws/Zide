@@ -7,6 +7,7 @@ const app_logger = @import("../../app_logger.zig");
 const shared_types = @import("../../types/mod.zig");
 const time_utils = @import("../renderer/time_utils.zig");
 const terminal_font_mod = @import("../terminal_font.zig");
+const font_manager = @import("../renderer/font_manager.zig");
 const draw_grid = @import("terminal_widget_draw_grid.zig");
 const draw_overlay = @import("terminal_widget_draw_overlay.zig");
 const draw_presentation = @import("terminal_widget_draw_presentation.zig");
@@ -27,6 +28,8 @@ pub const DrawOutcome = PresentationFeedback;
 const drawRowBackgrounds = draw_grid.drawRowBackgrounds;
 const drawRowGlyphs = draw_grid.drawRowGlyphs;
 const drawOverlays = draw_overlay.drawOverlays;
+const TerminalGlyphPrepEntry = @import("../renderer.zig").TerminalGlyphPrepEntry;
+const TerminalGlyphPrepResult = @import("../renderer.zig").TerminalGlyphPrepResult;
 
 pub const DrawPreparation = struct {
     draw_start: f64,
@@ -58,6 +61,196 @@ pub fn latestFrameLatencyMetrics() FrameLatencyMetrics {
 
 fn spansOverlap(start_a: usize, end_a: usize, start_b: usize, end_b: usize) bool {
     return start_a <= end_b and start_b <= end_a;
+}
+
+fn terminalGlyphPrepRenderScaleMilli(renderer: anytype) u32 {
+    const scale = if (renderer.scale.render_scale > 0.0) renderer.scale.render_scale else 1.0;
+    return @intFromFloat(@max(1.0, std.math.round(scale * 1000.0)));
+}
+
+fn terminalGlyphPrepCommittedRasterSize(renderer: anytype) u32 {
+    const scale = if (renderer.scale.render_scale > 0.0) renderer.scale.render_scale else 1.0;
+    return @intFromFloat(@max(1.0, std.math.round(renderer.terminal_font_size * scale)));
+}
+
+fn stageVisibleTerminalGlyphPrepRequest(
+    renderer: anytype,
+    terminal_view: view_state.TerminalViewModel,
+    hover_link_id: u32,
+    screen_reverse_mode: bool,
+    blink_style: anytype,
+    blink_time: f64,
+    draw_cursor: bool,
+    cursor: CursorPos,
+    cursor_style: anytype,
+) void {
+    if (terminal_view.rows == 0 or terminal_view.cols == 0) return;
+    const log = app_logger.logger("renderer.font");
+    const committed_raster_size_px = terminalGlyphPrepCommittedRasterSize(renderer);
+    const render_scale_milli = terminalGlyphPrepRenderScaleMilli(renderer);
+
+    renderer.lockTerminalGlyphPrepRuntime();
+    const should_collect = renderer.shouldCollectTerminalGlyphPrepEntries(
+        terminal_view.generation,
+        terminal_view.rows,
+        terminal_view.cols,
+        committed_raster_size_px,
+        render_scale_milli,
+    );
+    renderer.unlockTerminalGlyphPrepRuntime();
+    if (!should_collect) {
+        log.logf(.info, "terminal_glyph_prep_collect_skip generation={d} raster={d} scale_milli={d} rows={d} cols={d}", .{
+            terminal_view.generation,
+            committed_raster_size_px,
+            render_scale_milli,
+            terminal_view.rows,
+            terminal_view.cols,
+        });
+        return;
+    }
+
+    var entries: std.ArrayListUnmanaged(TerminalGlyphPrepEntry) = .{};
+    defer entries.deinit(renderer.allocator);
+    draw_grid.collectVisibleTerminalGlyphPrepEntries(
+        renderer.allocator,
+        renderer,
+        terminal_view.cells,
+        terminal_view.rows,
+        terminal_view.cols,
+        hover_link_id,
+        screen_reverse_mode,
+        blink_style,
+        blink_time,
+        draw_cursor,
+        cursor,
+        cursor_style,
+        renderer.font_config.terminal_disable_ligatures,
+        &entries,
+    ) catch return;
+
+    const request_hash = std.hash.Wyhash.hash(0, std.mem.sliceAsBytes(entries.items));
+    renderer.lockTerminalGlyphPrepRuntime();
+    defer renderer.unlockTerminalGlyphPrepRuntime();
+    renderer.noteTerminalGlyphPrepCollection(
+        terminal_view.generation,
+        terminal_view.rows,
+        terminal_view.cols,
+        committed_raster_size_px,
+        render_scale_milli,
+    );
+    const stage_outcome = renderer.stageTerminalGlyphPrepRequest(
+        committed_raster_size_px,
+        render_scale_milli,
+        request_hash,
+        entries.items,
+    ) catch return;
+    if (!stage_outcome.staged) {
+        log.logf(.info, "terminal_glyph_prep_request_skip generation={d} raster={d} scale_milli={d} rows={d} cols={d} entries={d}", .{
+            stage_outcome.generation,
+            committed_raster_size_px,
+            render_scale_milli,
+            terminal_view.rows,
+            terminal_view.cols,
+            entries.items.len,
+        });
+        return;
+    }
+    renderer.signalTerminalGlyphPrepRuntime();
+    log.logf(.info, "terminal_glyph_prep_request generation={d} raster={d} scale_milli={d} rows={d} cols={d} entries={d} live_term_font={d:.2} cell={d:.2}x{d:.2}", .{
+        stage_outcome.generation,
+        committed_raster_size_px,
+        render_scale_milli,
+        terminal_view.rows,
+        terminal_view.cols,
+        entries.items.len,
+        renderer.terminal_font_size,
+        renderer.terminal_cell_width,
+        renderer.terminal_cell_height,
+    });
+}
+
+fn adoptPreparedTerminalGlyphResult(renderer: anytype, result: *TerminalGlyphPrepResult) void {
+    const log = app_logger.logger("renderer.font");
+    const current_render_scale_milli = terminalGlyphPrepRenderScaleMilli(renderer);
+    if (result.render_scale_milli != current_render_scale_milli) {
+        log.logf(.info, "terminal_glyph_prep_adopt_skip generation={d} result_raster={d} current_raster={d} result_scale_milli={d} current_scale_milli={d} glyphs={d}", .{
+            result.generation,
+            result.committed_raster_size_px,
+            terminalGlyphPrepCommittedRasterSize(renderer),
+            result.render_scale_milli,
+            current_render_scale_milli,
+            result.glyphs.len,
+        });
+        return;
+    }
+
+    const render_scale = @as(f32, @floatFromInt(result.render_scale_milli)) / 1000.0;
+    const target_font = font_manager.ensureCommittedTerminalFontCacheEntry(
+        renderer,
+        result.committed_raster_size_px,
+        render_scale,
+    ) orelse {
+        log.logf(.warning, "terminal_glyph_prep_adopt_target_missing generation={d} raster={d} scale_milli={d} glyphs={d}", .{
+            result.generation,
+            result.committed_raster_size_px,
+            result.render_scale_milli,
+            result.glyphs.len,
+        });
+        return;
+    };
+
+    var adopted: usize = 0;
+    var already_cached: usize = 0;
+    var missing_face: usize = 0;
+    var adopt_failed: usize = 0;
+    for (result.glyphs) |*glyph| {
+        const face = target_font.faceForSlot(glyph.entry.face_slot) orelse {
+            missing_face += 1;
+            continue;
+        };
+        if (target_font.hasGlyphCachedById(face, glyph.entry.glyph_id, glyph.entry.want_color, glyph.entry.italic)) {
+            already_cached += 1;
+            continue;
+        }
+        target_font.adoptPreparedGlyph(
+            face,
+            glyph.entry.glyph_id,
+            glyph.entry.want_color,
+            glyph.entry.italic,
+            glyph.raster,
+            true,
+        ) catch {
+            adopt_failed += 1;
+            continue;
+        };
+        glyph.raster.data = &.{};
+        adopted += 1;
+    }
+    log.logf(.info, "terminal_glyph_prep_adopt generation={d} raster={d} scale_milli={d} glyphs={d} adopted={d} cached={d} missing_face={d} adopt_failed={d}", .{
+        result.generation,
+        result.committed_raster_size_px,
+        result.render_scale_milli,
+        result.glyphs.len,
+        adopted,
+        already_cached,
+        missing_face,
+        adopt_failed,
+    });
+}
+
+fn adoptAvailableTerminalGlyphPrepResult(renderer: anytype) void {
+    const log = app_logger.logger("renderer.font");
+    var result = renderer.takeTerminalGlyphPrepResult() orelse return;
+    defer result.deinit(renderer.allocator);
+    adoptPreparedTerminalGlyphResult(renderer, &result);
+    if (font_manager.commitPreparedTerminalFontScale(renderer)) {
+        log.logf(.info, "terminal_glyph_prep_commit_after_adopt generation={d} raster={d} scale_milli={d} live_visual={d:.3}", .{
+            result.generation,
+            renderer.terminal_font.committed_raster_size_px,
+            terminalGlyphPrepRenderScaleMilli(renderer),
+            renderer.terminal_font.live_visual_scale,
+        });
+    }
 }
 
 pub fn drawPrepared(
@@ -166,6 +359,18 @@ pub fn drawPrepared(
 
     self.controller.hover.dirty = false;
     const hover_link_id = hover_mod.hoverLinkId(&self.controller.hover);
+    adoptAvailableTerminalGlyphPrepResult(r);
+    stageVisibleTerminalGlyphPrepRequest(
+        r,
+        terminal_view,
+        hover_link_id,
+        screen_reverse,
+        blink_style,
+        blink_time,
+        draw_cursor,
+        cursor,
+        cursor_style,
+    );
     const surface_result = presentation_runtime.updateAndPresent(
         self,
         shell,

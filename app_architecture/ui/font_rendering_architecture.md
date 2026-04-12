@@ -198,6 +198,160 @@ Current reference priority for runtime scaling work:
 - Windows DPI/DirectWrite docs
   - define platform expectations, not the full renderer implementation
 
+## Runtime Font Scaling Contract
+
+Android pinch testing exposed a shared renderer truth: hinted bitmap glyphs are
+not continuously scalable assets.
+
+Current authoritative interpretation:
+
+- FreeType raster output is tied to the committed pixel size and load flags.
+  Grid-fitting/hinting can change bitmap dimensions, bearings, advances, and
+  stem placement when the size changes.
+- HarfBuzz FreeType integration depends on the `FT_Face` size and load flags,
+  so shaping and rasterization must agree for each committed font state.
+- A live-scaled atlas is only a preview. When the renderer later swaps to a
+  freshly rasterized atlas at the settled size, visible stroke/thickness changes
+  are expected with hinted text.
+- Glyph warmup can reduce lazy upload misses, but it cannot make a stretched
+  old-size atlas visually identical to a newly hinted target-size atlas.
+
+Required direction:
+
+- Treat terminal font states as size-keyed committed resources:
+  font identity, rendering options, render scale, rounded raster pixel size,
+  and domain.
+- Reuse prepared `TerminalFont`/atlas instances across nearby committed sizes
+  instead of destroying all active font state on every settled zoom.
+- Keep live pinch/zoom geometry cheap, but do not claim hinted glyph weight is
+  final until the committed size-keyed font state is active.
+- Preserve integer pixel metric discipline for terminal cells, baseline, and
+  glyph placement. Local reference notes from kitty/wezterm already point in
+  that direction.
+
+Current implementation checkpoint:
+
+- `TerminalFont` records the committed raster pixel size that produced its
+  atlas.
+- The renderer now retains committed terminal-font atlases by render scale and
+  raster pixel size across settled zoom commits.
+- The renderer prepares a bounded neighbor set around the active committed
+  terminal raster size: twelve raster-pixel intervals smaller and twelve
+  larger.
+- Terminal live visual scale remains continuous during pinch so glyph geometry
+  stays coupled to live cell geometry.
+- Active terminal pinch swaps to a prepared committed raster-size neighbor
+  when available. This keeps the gesture path terminal-only and avoids a full
+  app/editor/icon font rebuild while reducing release-only thickness snapping.
+- Cache invalidation is tied to terminal font path/config and rendering-option
+  changes.
+- Validated boundary, 2026-04-12:
+  - Android host gesture cleanup materially improved the interaction seam
+  - the renderer-core follow-up work is now sufficient to treat the current
+    Android terminal pinch path as accepted for the active product target
+  - keep the architecture lesson: renderer-owned committed/live font cadence is
+    the real authority, not more host gesture tuning
+- The next ownership split is explicit:
+  background work may prepare CPU font state plus the visible glyph-set plan,
+  but GPU atlas upload/adoption must stay render-thread-owned.
+- First code seam landed:
+  - `TerminalFont` now exposes CPU-only prepared glyph raster payloads
+  - atlas upload/adoption is now a separate step from glyph raster
+    preparation
+  - current behavior is intentionally unchanged; the render path still prepares
+    and adopts inline for now
+  - this cut exists to make worker-owned CPU preparation legal in the next
+    step without moving GPU atlas mutation off the render thread
+- Renderer ownership checkpoint:
+  - renderer runtime now owns a dedicated terminal glyph-prep request/result
+    state with generation tracking
+  - this is the landing zone for worker-produced CPU glyph payloads
+  - renderer now also exposes explicit queue/publish/take helpers for terminal
+    glyph-prep requests/results
+- the worker loop itself is not wired yet; this cut is storage/lifecycle
+  authority only
+- Visible-demand checkpoint:
+  - the terminal widget draw path can now collect a deduped visible glyph-set
+    plan from the same direct/shaped row-span decisions the product frame uses
+  - the plan is expressed as `Renderer.TerminalGlyphPrepEntry`
+    (`face`, `glyph_id`, `want_color`, `italic`, `hb_x_advance`)
+  - this is the required authority for async preparation; worker scheduling
+    should follow visible product demand, not speculative whole-font warmup
+  - the terminal draw path now stages renderer-owned prep requests from that
+    plan, keyed by committed raster size and render scale
+  - renderer now owns a dedicated worker loop that consumes those requests and
+    prepares CPU-only glyph rasters using a temporary committed-size font
+    instance
+  - worker results publish back into renderer-owned result state and are
+    dropped if their generation is stale
+  - render-thread adoption is now explicit too: ready worker rasters are
+    resolved against the live committed terminal font by face slot and adopted
+    into the live atlas before draw lookup falls back to inline realization
+
+Kitty reference mapping, 2026-04-12:
+
+- Kitty's `fonts.c` plus `glyph-cache.c` separates sprite identity from sprite
+  readiness.
+- `find_or_create_sprite_position(...)` creates a CPU-side sprite-position
+  record keyed by glyph sequence, scale/subscale, multicell state, and
+  alignment.
+- That record carries readiness bits (`rendered`, `colored`) separately from
+  the cache key, so the system can know "this glyph instance exists" before it
+  is actually uploaded/adopted for rendering.
+- GPU sprite upload/adoption is a separate step (`current_send_sprite_to_gpu`
+  / `send_sprite_to_gpu`), not the cache-key definition itself.
+- This maps cleanly to Zide's next seam:
+  - terminal committed size + visible glyph-set key must exist independently of
+    readiness
+  - worker-owned CPU prep should produce "ready to upload" glyph payloads, not
+    mutate live renderer atlases
+  - render-thread code should only adopt/upload prepared glyph payloads and
+    flip readiness for the current committed terminal size
+
+Do not cargo-cult from kitty:
+
+- kitty's current lazy render-on-demand path is still acceptable for its own
+  architecture, but it is the exact behavior Android fast pinch is now proving
+  too bursty for our live zoom contract
+- the thing to copy is the ownership split between keying/readiness/upload, not
+  the decision to realize every glyph lazily on the hot path
+
+Renderer-core pressure resolved for the current Android boundary, 2026-04-12:
+
+- Android exposed the missing seam first, but the fix belongs to shared font
+  ownership:
+  - CPU-only prepared terminal-font state
+  - render-thread-owned GPU atlas allocation/upload/adoption
+- That split is now part of the active renderer baseline:
+  - worker-safe `TerminalFont.initCpuPrepared(...)`
+  - async visible-glyph preparation
+  - committed-target cache population
+  - prepared-target promotion after adopt
+- Remaining extreme-burst behavior is deferred. It is no longer the active
+  correctness blocker for the Android terminal lane.
+
+Why this is shared-core pressure:
+
+- `TerminalFont.initWithAtlasUploadHooks(...)` still couples font-instance
+  creation to atlas allocation
+- without backend hooks it falls back to GL texture creation
+- that makes committed target font-instance preparation worker-unsafe on
+  Android/GLES today
+- Android only exposed it first; the design gap is shared terminal/font
+  lifecycle immaturity
+- first `FR-6-03` cut is now in:
+  - `TerminalFont.initCpuPrepared(...)` creates a worker-safe CPU-prepared font
+    instance without GL texture allocation
+  - the async terminal glyph-prep worker now uses that path
+  - this is the first backend-agnostic prepared-font primitive, not a CPU-only
+    renderer backend
+
+Non-goal:
+
+- Do not chase perfectly continuous hinted-stem thickness through ad hoc
+  FreeType warmups. If the product later requires continuous text-scale preview
+  without stroke-weight jumps, that is a separate SDF/vector-preview design.
+
 ## Configuration Surface (Lua)
 
 All appearance-affecting knobs should be in `assets/config/init.lua`:

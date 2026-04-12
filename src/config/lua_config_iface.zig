@@ -138,6 +138,7 @@ pub const EditorManualHighlightMode = enum {
 };
 
 pub const Config = struct {
+    log_file_path: ?[]u8 = null,
     log_file_filter: ?[]u8,
     log_console_filter: ?[]u8,
     log_file_level: ?app_logger.Level = null,

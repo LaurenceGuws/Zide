@@ -31,6 +31,7 @@ pub const root_sections = [_]FieldMeta{
     .{ .name = "keybinds", .type_expr = "ZideKeybindConfig", .doc = "Custom key bindings.", .snippet_value = "{ no_defaults = false, bindings = { { scope = \"global\", key = \"r\", mods = { \"ctrl\" }, action = \"reload_config\" } } }" },
     .{ .name = "log_file_filter", .type_expr = "string|string[]", .doc = "Legacy alias for file log filter.", .snippet_value = "\"none\"" },
     .{ .name = "log_console_filter", .type_expr = "string|string[]", .doc = "Legacy alias for console log filter.", .snippet_value = "\"none\"" },
+    .{ .name = "log_file_path", .type_expr = "string", .doc = "Legacy alias for the primary file log path.", .snippet_value = "\"~/.local/state/zide/zide.log\"" },
     .{ .name = "editor_font_features", .type_expr = "string|string[]", .doc = "Legacy alias for editor font features.", .snippet_value = "{ \"liga\", \"calt\" }" },
     .{ .name = "terminal_font_features", .type_expr = "string|string[]", .doc = "Legacy alias for terminal font features.", .snippet_value = "{ \"liga\", \"calt\" }" },
 };
@@ -44,6 +45,7 @@ pub const log_fields = [_]FieldMeta{
 pub const logs_fields = [_]FieldMeta{
     .{ .name = "mode", .type_expr = "ZideOutputMode", .doc = "Shared output-mode default for file + console.", .snippet_value = "\"text\"" },
     .{ .name = "file_mode", .type_expr = "ZideOutputMode", .doc = "File sink output mode.", .snippet_value = "\"text\"" },
+    .{ .name = "file_path", .type_expr = "string", .doc = "Primary file sink path.", .snippet_value = "\"~/.local/state/zide/zide.log\"" },
     .{ .name = "console_mode", .type_expr = "ZideOutputMode", .doc = "Console sink output mode.", .snippet_value = "\"text\"" },
     .{ .name = "file_level", .type_expr = "ZideLogLevel", .doc = "Default file log level.", .snippet_value = "\"info\"" },
     .{ .name = "console_level", .type_expr = "ZideLogLevel", .doc = "Default console log level.", .snippet_value = "\"info\"" },

@@ -6,6 +6,7 @@ const Rect = types.Rect;
 const Texture = types.Texture;
 const Glyph = @import("../terminal_font.zig").Glyph;
 const GlyphError = @import("../terminal_font.zig").GlyphError;
+const PreparedGlyphRaster = @import("../terminal_font.zig").PreparedGlyphRaster;
 const app_logger = @import("../../app_logger.zig");
 const c = @import("../terminal_font.zig").c;
 
@@ -23,8 +24,7 @@ pub fn setAtlasFilterPoint(self: anytype) void {
     }
 }
 
-pub fn rasterizeGlyphKey(self: anytype, key: anytype, hb_x_advance: c_int, allow_compact: bool) GlyphError!void {
-    self.frame_atlas_stats.rasterized_glyphs += 1;
+pub fn prepareGlyphRaster(self: anytype, key: anytype, hb_x_advance: c_int) GlyphError!PreparedGlyphRaster {
     var face = key.face;
     const want_color = key.want_color;
     const synthetic_italic = key.italic and !want_color;
@@ -66,31 +66,14 @@ pub fn rasterizeGlyphKey(self: anytype, key: anytype, hb_x_advance: c_int, allow
     const bitmap = slot.*.bitmap;
     const width: i32 = if (bitmap.pixel_mode == c.FT_PIXEL_MODE_LCD) @intCast(bitmap.width / 3) else @intCast(bitmap.width);
     const height: i32 = @intCast(bitmap.rows);
+    const advance = @as(f32, @floatFromInt(hb_x_advance)) / 64.0;
 
     if (width > 0 and height > 0) {
-        if (self.pen_x + width + self.padding > self.atlas_width) {
-            self.pen_x = self.padding;
-            self.pen_y += self.row_h + self.padding;
-            self.row_h = 0;
-        }
-        if (self.pen_y + height + self.padding > self.atlas_height) {
-            if (allow_compact) {
-                try compactAtlas(self);
-                try rasterizeGlyphKey(self, key, hb_x_advance, false);
-                return;
-            }
-            return error.AtlasFull;
-        }
-
         const pixel_count = @as(usize, @intCast(width * height));
         const is_color_bitmap = bitmap.pixel_mode == c.FT_PIXEL_MODE_BGRA;
         const needed = if (is_color_bitmap) pixel_count * 4 else pixel_count;
-        if (needed > self.upload_buffer_capacity) {
-            if (self.upload_buffer_capacity > 0) self.allocator.free(self.upload_buffer);
-            self.upload_buffer = try self.allocator.alloc(u8, needed);
-            self.upload_buffer_capacity = needed;
-        }
-        const upload = self.upload_buffer[0..needed];
+        const upload = try self.allocator.alloc(u8, needed);
+        errdefer self.allocator.free(upload);
 
         var y: i32 = 0;
         while (y < height) : (y += 1) {
@@ -125,32 +108,66 @@ pub fn rasterizeGlyphKey(self: anytype, key: anytype, hb_x_advance: c_int, allow
             }
         }
 
+        return .{
+            .bearing_x = slot.*.bitmap_left,
+            .bearing_y = slot.*.bitmap_top,
+            .advance = if (advance > 0) advance else @as(f32, @floatFromInt(slot.*.advance.x)) / 64.0,
+            .width = width,
+            .height = height,
+            .is_color = is_color_bitmap,
+            .data = upload,
+        };
+    }
+
+    return .{
+        .bearing_x = 0,
+        .bearing_y = 0,
+        .advance = @as(f32, @floatFromInt(slot.*.advance.x)) / 64.0,
+        .width = 0,
+        .height = 0,
+        .is_color = false,
+        .data = &.{},
+    };
+}
+
+pub fn adoptPreparedGlyph(self: anytype, key: anytype, prepared: PreparedGlyphRaster, allow_compact: bool) GlyphError!void {
+    if (prepared.width > 0 and prepared.height > 0) {
+        if (self.pen_x + prepared.width + self.padding > self.atlas_width) {
+            self.pen_x = self.padding;
+            self.pen_y += self.row_h + self.padding;
+            self.row_h = 0;
+        }
+        if (self.pen_y + prepared.height + self.padding > self.atlas_height) {
+            if (allow_compact) {
+                try compactAtlas(self);
+                try adoptPreparedGlyph(self, key, prepared, false);
+                return;
+            }
+            return error.AtlasFull;
+        }
+
         const rec = Rect{
             .x = @floatFromInt(self.pen_x),
             .y = @floatFromInt(self.pen_y),
-            .width = @floatFromInt(width),
-            .height = @floatFromInt(height),
+            .width = @floatFromInt(prepared.width),
+            .height = @floatFromInt(prepared.height),
         };
-        if (is_color_bitmap) {
-            if (!self.uploadColorAtlasRegion(rec, upload)) return error.AtlasUploadFailed;
+        const pixel_count = @as(usize, @intCast(prepared.width * prepared.height));
+        if (prepared.is_color) {
+            if (!self.uploadColorAtlasRegion(rec, prepared.data)) return error.AtlasUploadFailed;
             self.frame_atlas_stats.uploaded_color_glyphs += 1;
         } else {
-            if (!self.uploadCoverageAtlasRegion(rec, upload)) return error.AtlasUploadFailed;
+            if (!self.uploadCoverageAtlasRegion(rec, prepared.data)) return error.AtlasUploadFailed;
             if (self.atlasStorageMode() == .metal_textures) {
                 const rgba_needed = pixel_count * 4;
-                const rgba_upload, const owned_temp = if (rgba_needed <= self.upload_buffer_capacity)
-                    .{ self.upload_buffer[0..rgba_needed], false }
-                else blk: {
-                    const temp = try self.allocator.alloc(u8, rgba_needed);
-                    break :blk .{ temp, true };
-                };
-                defer if (owned_temp) self.allocator.free(rgba_upload);
+                const rgba_upload = try self.allocator.alloc(u8, rgba_needed);
+                defer self.allocator.free(rgba_upload);
                 var src_idx: usize = pixel_count;
                 var dst_idx: usize = rgba_needed;
                 while (src_idx > 0) {
                     src_idx -= 1;
                     dst_idx -= 4;
-                    const alpha = upload[src_idx];
+                    const alpha = prepared.data[src_idx];
                     rgba_upload[dst_idx + 0] = 0xFF;
                     rgba_upload[dst_idx + 1] = 0xFF;
                     rgba_upload[dst_idx + 2] = 0xFF;
@@ -162,16 +179,15 @@ pub fn rasterizeGlyphKey(self: anytype, key: anytype, hb_x_advance: c_int, allow
         }
         self.frame_atlas_stats.uploaded_pixels += pixel_count;
 
-        if (height > self.row_h) self.row_h = height;
-        const advance = @as(f32, @floatFromInt(hb_x_advance)) / 64.0;
+        if (prepared.height > self.row_h) self.row_h = prepared.height;
         const glyph = Glyph{
             .rect = rec,
-            .bearing_x = slot.*.bitmap_left,
-            .bearing_y = slot.*.bitmap_top,
-            .advance = if (advance > 0) advance else @as(f32, @floatFromInt(slot.*.advance.x)) / 64.0,
-            .width = width,
-            .height = height,
-            .is_color = is_color_bitmap,
+            .bearing_x = prepared.bearing_x,
+            .bearing_y = prepared.bearing_y,
+            .advance = prepared.advance,
+            .width = prepared.width,
+            .height = prepared.height,
+            .is_color = prepared.is_color,
         };
         if (self.max_glyphs > 0 and self.glyphs.count() >= self.max_glyphs) {
             if (self.glyph_order.items.len > 0) {
@@ -181,15 +197,15 @@ pub fn rasterizeGlyphKey(self: anytype, key: anytype, hb_x_advance: c_int, allow
         }
         try self.glyphs.put(key, glyph);
         try self.glyph_order.append(self.allocator, key);
-        self.pen_x += width + self.padding;
+        self.pen_x += prepared.width + self.padding;
         return;
     }
 
     const glyph = Glyph{
         .rect = .{ .x = 0, .y = 0, .width = 0, .height = 0 },
-        .bearing_x = 0,
-        .bearing_y = 0,
-        .advance = @as(f32, @floatFromInt(slot.*.advance.x)) / 64.0,
+        .bearing_x = prepared.bearing_x,
+        .bearing_y = prepared.bearing_y,
+        .advance = prepared.advance,
         .width = 0,
         .height = 0,
         .is_color = false,
@@ -202,6 +218,13 @@ pub fn rasterizeGlyphKey(self: anytype, key: anytype, hb_x_advance: c_int, allow
     }
     try self.glyphs.put(key, glyph);
     try self.glyph_order.append(self.allocator, key);
+}
+
+pub fn rasterizeGlyphKey(self: anytype, key: anytype, hb_x_advance: c_int, allow_compact: bool) GlyphError!void {
+    self.frame_atlas_stats.rasterized_glyphs += 1;
+    var prepared = try prepareGlyphRaster(self, key, hb_x_advance);
+    defer if (prepared.data.len > 0) prepared.deinit(self.allocator);
+    try adoptPreparedGlyph(self, key, prepared, allow_compact);
 }
 
 pub fn compactAtlas(self: anytype) GlyphError!void {

@@ -23,6 +23,30 @@ pub fn resizeWithCellSize(self: anytype, rows: u16, cols: u16, cell_width: u16, 
     });
 }
 
+pub fn updateCellSizeOnly(self: anytype, cell_width: u16, cell_height: u16) !void {
+    if (cell_width == 0 or cell_height == 0) return;
+
+    self.session.control.state_mutex.lock();
+    const old_metrics = self.core.currentCellMetrics();
+    if (old_metrics.width == cell_width and old_metrics.height == cell_height) {
+        self.session.control.state_mutex.unlock();
+        return;
+    }
+    self.core.setCellMetrics(cell_width, cell_height);
+    const rows = self.core.primary.grid.rows;
+    const cols = self.core.primary.grid.cols;
+    self.session.control.state_mutex.unlock();
+
+    if (terminal_transport.Transport.fromSession(self)) |transport| {
+        try transport.resize(.{
+            .rows = rows,
+            .cols = cols,
+            .cell_width = cell_width,
+            .cell_height = cell_height,
+        });
+    }
+}
+
 fn resizeInternal(
     self: anytype,
     rows: u16,

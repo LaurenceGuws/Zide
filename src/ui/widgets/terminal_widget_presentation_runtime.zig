@@ -986,7 +986,12 @@ fn buildTerminalPresentPlan(
     const presentable_ready = self.surface.presentableReady();
     const generation_matches_presented = terminal_view.generation == self.surface.lastRenderGeneration() and
         terminal_view.clear_generation == self.surface.lastRenderClearGeneration();
-    const invalidation_blocks_reuse = delta.clear_generation_changed or
+    const explicit_invalidation_blocks_reuse = delta.invalidation_flags.geometry or
+        delta.invalidation_flags.content or
+        delta.invalidation_flags.overlay or
+        delta.invalidation_flags.availability;
+    const invalidation_blocks_reuse = explicit_invalidation_blocks_reuse or
+        delta.clear_generation_changed or
         delta.cell_metrics_changed or
         delta.render_scale_changed or
         delta.cursor_changed or
@@ -1034,10 +1039,10 @@ fn buildTerminalPresentPlan(
         .invalidation_reasons = .{
             .generation_changed = delta.generation_changed,
             .clear_generation_changed = delta.clear_generation_changed,
-            .cell_metrics_changed = delta.cell_metrics_changed,
-            .scale_changed = delta.render_scale_changed,
+            .cell_metrics_changed = delta.cell_metrics_changed or delta.invalidation_flags.geometry,
+            .scale_changed = delta.render_scale_changed or delta.invalidation_flags.geometry,
             .cursor_changed = delta.cursor_changed,
-            .overlay_changed = overlay_changed,
+            .overlay_changed = overlay_changed or delta.invalidation_flags.overlay,
             .viewport_shifted = viewport_shifted,
         },
     };

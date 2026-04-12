@@ -64,6 +64,13 @@ So:
   work
 - render-thread cleanup is not optional just because some earlier overhead
   lived on the UI thread too
+- gesture policy belongs in the Android host seam:
+  - raw `ScaleGestureDetector` deltas are host noise, not renderer authority
+  - the Android host should normalize gesture input into coarse product actions
+    before handing work to native code
+  - if pinch floods the renderer with tiny multiplicative updates, that is an
+    Android host contract bug first, not a justification for render-thread
+    churn
 
 ## Current Offenders
 
@@ -205,14 +212,119 @@ Current progress:
   - Android product-fit grid resize now remains live during pinch, so terminal
     cell backgrounds continue fitting the Java-owned surface instead of
     shrinking inside a larger parent until gesture end
-  - pinch end commits the expensive `applyFontScale(...)` rebuild once so
-    raster font assets catch up to the final settled size
+  - pinch end is no longer the only credible recovery path; prepared target
+    promotion can now recover in the interaction path too
   - queued user zoom now uses the same cheap live scale path and commits the
     expensive font rebuild only after the zoom target settles
 - remaining work:
   - display-metric and config font changes intentionally still use the full
     rebuild path until their ownership is audited separately
   - font-cache reuse across committed scale targets is still unresolved
+
+Reference-backed finding, 2026-04-12:
+
+- the remaining "text thickness snaps when pinch ends" behavior is not fixed by
+  warming common glyphs
+- FreeType hinting/grid-fitting is final-pixel-size dependent: glyph width,
+  height, bearings, advances, and stem placement can change when the face is
+  rasterized at a new pixel size
+- our current live path scales an already rasterized atlas during the gesture,
+  then swaps to a newly hinted/rasterized atlas at the settled size
+- that means the preview glyphs and committed glyphs are not the same visual
+  object; a weight/thickness change at commit is expected under hinted bitmap
+  rendering
+- HarfBuzz also treats the FreeType face size/load flags as part of the font
+  contract, so shaping/rasterization must stay aligned per committed size
+
+Reference direction:
+
+- follow terminal references by treating font/cell metrics as pixel-rounded
+  committed states, not continuously mutable hinted bitmap state
+- keep live pinch cheap, but make committed font assets size-keyed and reusable
+  instead of destroying/recreating active font state each time
+- model the next cut as a shared renderer font-size/atlas lifecycle problem:
+  cache prepared `TerminalFont` instances by domain, font identity, rendering
+  options, render scale, and rounded raster pixel size; swap to a prepared
+  committed size atomically
+- if product ever requires perfectly continuous stroke weight during pinch, that
+  is a different renderer design such as SDF/vector text preview, not a small
+  FreeType atlas warmup
+
+Current progress:
+
+- first committed-size lifecycle cut landed:
+  - `TerminalFont` now records the committed raster pixel size that produced
+    its atlas
+  - renderer font config now owns a committed terminal-font cache keyed by
+    render scale plus committed raster pixel size
+  - `applyFontScale(...)` no longer blindly destroys the old active terminal
+    font on every committed zoom; it parks the committed atlas for reuse
+  - terminal font rendering-option/path changes clear that committed cache
+  - the cache now prepares a bounded neighbor set around the committed terminal
+    raster size: twelve raster-pixel intervals smaller and twelve larger
+  - terminal live glyph visual scale remains continuous, so live glyph
+    geometry still tracks live cell geometry during pinch
+  - active Android pinch can now swap the terminal font to a prepared committed
+    raster-size neighbor during the gesture, so glyph thickness is no longer
+    intentionally held until gesture release
+  - the live swap is terminal-only; full app/editor/icon font rebuild remains
+    owned by the settled `applyFontScale(...)` path
+- accepted Android boundary, 2026-04-12:
+  - host gesture cleanup plus renderer-core prep/adoption work now puts the
+    release-build Android terminal pinch path in the accepted range for the
+    current product target
+  - do not keep Android pinch open as the active render-thread war front
+  - any future extreme-burst refinement should reopen only on concrete product
+    need
+  - the useful enduring result is the shared ownership cleanup below, not more
+    host-threshold tuning
+  - the async terminal glyph-preparation lane with a strict CPU-prep vs
+    GPU-upload ownership split is now part of the renderer baseline
+  - kitty reference backs the ownership direction here:
+    cache-key identity and readiness must be separate concepts, and GPU upload
+    must remain distinct from CPU-side glyph-instance preparation
+  - first shared seam now exists in code:
+    terminal glyph raster preparation is separate from atlas upload/adoption,
+    so the next async cut can move CPU prep off the render path without moving
+    renderer-owned GPU mutation with it
+  - renderer state now also owns a dedicated terminal glyph-prep
+    request/result runtime with generation tracking, so async preparation can
+    publish into renderer-owned state instead of inventing a side channel
+  - queue/publish/take helpers now exist on the renderer side too, so the next
+    worker cut can use one explicit ownership surface instead of mutating raw
+    runtime fields ad hoc
+  - the terminal widget draw authority can now collect a deduped visible
+    glyph-set plan from the actual direct/shaped row-span decisions used for
+    product rendering
+  - that same draw authority now stages renderer-owned prep requests keyed by
+    committed raster size, render scale, and visible glyph demand
+  - renderer now also owns a dedicated worker that consumes those requests and
+    prepares CPU-only glyph rasters against a temporary committed-size font
+    instance; live atlas mutation still has not moved off the render thread
+  - live atlas mutation now stays where it belongs:
+    published worker rasters are adopted on the render thread into the live
+    committed terminal atlas before draw lookup falls back to inline glyph
+    realization
+  - this is a lifecycle foundation, not a claim that first-time target sizes
+    can avoid hinted-stem differences or that preparation has moved off-thread
+    yet
+  - deeper blocker now proved by device testing:
+    async glyph rasters alone are not enough to make burst-pinch recovery
+    scene-ready because the renderer still lacks a worker-safe committed
+    terminal-font target state
+  - `TerminalFont` creation is still coupled to GPU atlas allocation unless a
+    backend hook replaces it; on Android/GLES the fallback still creates GL
+    textures, so this is shared renderer/font immaturity, not an Android-only
+    edge case
+
+References:
+
+- FreeType glyph conventions: grid-fitting modifies glyph metrics and advances
+  at small pixel sizes.
+- HarfBuzz `hb-ft` integration: FreeType face size and load flags are part of
+  the HarfBuzz font contract.
+- Local terminal references: kitty/wezterm notes prefer integer pixel metrics
+  for cell/font rendering stability.
 
 ### 2. Direct interaction-to-frame submission path
 
@@ -241,19 +353,44 @@ Scope:
   `drawSharedRendererSurfaceFrame()`
 - render-entry state sync before `beginFrame()` / `submitFrame()`
 
-Initial findings:
+Caller classification:
 
-- `applyTerminalPinchZoom(...)` still performs renderer mutation plus immediate
-  frame draw
-- surface and viewport entry points can still trigger direct draw from the
-  bridge layer
+- lifecycle-critical direct submit:
+  - `noteSurfaceAvailableFromJava(...)`
+  - `noteSurfaceRedrawNeeded(...)`
+- product-critical direct submit retained for latency until a better native
+  pacing contract exists:
+  - `tickProductShellFrame(...)`
+- stageable through redraw intent/product frame loop:
+  - `noteVisibleViewport(...)`
+  - `applyTerminalPinchZoom(...)`
+  - `setTerminalPinchActive(false)`
+  - `refreshShellSurfaceAfterInput(...)`
+
+Findings:
+
+- first stageable cut landed:
+  - viewport changes now mark redraw intent instead of synchronously drawing
+  - active pinch changes now mutate scale/presentation state and mark redraw
+    intent instead of synchronously drawing
+  - pinch-end font rebuild now marks redraw intent instead of drawing inline
+- second stageable cut landed:
+  - successful shell input now polls terminal state immediately but only marks
+    redraw intent; it no longer submits a frame inline on the direct input path
+  - the paced product frame loop remains the one owner of ordinary product draw
+    submission on Android
+- surface lifecycle/redraw-needed paths still submit immediately because they
+  are the current acquisition/readiness authority
+- direct input no longer owns a separate immediate-submit exception here; the
+  remaining direct-submit authority is lifecycle/surface critical
 - the render-entry seam is still responsible for too much policy, not just
   frame-critical submission
 
 Initial fix queue:
 
-1. list every current caller of `drawSharedRendererSurfaceFrame()`
+1. list every current caller of `drawSharedRendererSurfaceFrame()` — done
 2. classify each caller as lifecycle-critical, product-critical, or stageable
+   — done
 3. remove stageable callers from the direct submission path before deeper
    backend tuning
 
@@ -284,23 +421,82 @@ Scope:
 - `ensureProductFitTerminalGrid(...)`
 - any render-path terminal-grid recompute/resize calls
 
-Initial findings:
+Findings:
 
 - live draw still owns product-fit terminal-grid checks
-- the draw path may still trigger PTY resize and presentation invalidation
-- pinch currently bypasses one part of this cost, but the design remains hot
-  draw-path coupled
+- the draw path may still trigger terminal resize and presentation invalidation
+- the current Android product-fit call computes:
+  - rows/cols from visible viewport and renderer cell geometry
+  - cell width/height in device pixels
+- `android_shell_session.resizeToGrid(...)` treats any difference in
+  rows/cols/cell width/cell height as the same resize event
+- that crosses:
+  - Android shell-session bookkeeping
+  - terminal FFI `zide_terminal_resize(...)`
+  - `host_api.resize(...)`
+  - `session_runtime.resizeWithCellSize(...)`
+  - `resize_reflow.resizeWithCellSize(...)`
+  - `core.setCellMetrics(...)`
+  - `core.resizeLocked(...)`
+  - PTY `TIOCSWINSZ`
+  - in-band resize report
+  - publication/event sync
+- row/column changes are real terminal resize events and may legitimately
+  require reflow, grid allocation, PTY notification, and publication refresh
+- cell-pixel changes are not the same thing:
+  - they affect renderer geometry and PTY pixel-size metadata
+  - they should not force terminal grid reflow when rows/cols are unchanged
+- Android pinch exposed this because live font scale changes produce frequent
+  cell-pixel changes before the viewport rows/cols meaningfully change
+
+What this means:
+
+- the lower path currently lacks a cell-metric-only resize contract
+- rendering, PTY metadata, terminal model reflow, and publication invalidation
+  are coupled too tightly
+- the fix belongs in the shared terminal/runtime boundary, not in Java gesture
+  throttling
 
 Initial fix queue:
 
 1. prove which grid-fit decisions are truly required before draw
-2. separate "viewport changed" from "must resize PTY right now"
+2. split terminal resize into:
+   - grid resize: rows/cols changed, may reflow and notify PTY
+   - cell-metric update: rows/cols unchanged, update metrics and PTY pixel size
+     without grid reflow
 3. stage non-critical grid commits outside the hottest render path
+
+Current progress:
+
+- first shared resize split landed:
+  - `updateCellSizeOnly(...)` now exists under terminal runtime/FFI
+  - Android product-fit uses full resize only when rows or cols change
+  - stable-grid cell width/height changes update terminal cell metrics and PTY
+    pixel-size metadata without calling `core.resizeLocked(...)`
+  - regression coverage proves stable rows/cols are preserved while in-band
+    resize reporting reflects the new pixel dimensions
+- second ownership cut landed:
+  - product-fit grid sizing is now dirty-driven in the Android bridge instead
+    of recomputing on every draw
+  - visible viewport changes, live zoom changes, settled zoom changes, surface
+    acquisition, and shell restarts mark product-fit dirty explicitly
+  - the paced product frame loop now owns the normal product-fit grid commit
+    path
+  - the draw path keeps only a first-frame fallback when dirty state still
+    remains at submission time
+- font/atlas follow-up:
+  - ASCII glyph warmup was rejected after device testing and reference audit:
+    the visible defect is the hinted-raster-size swap, not lazy glyph
+    population
 
 Do not do:
 
 - do not keep layout policy inside draw just because it is convenient for the
   current Android bridge
+- do not hide this behind Android-only gesture preview if the shared terminal
+  resize boundary is the real defect
+- do not add glyph warmup as a substitute for a real size-keyed atlas/font
+  lifecycle
 
 ### 4. Terminal widget presentation invalidation path
 
@@ -409,6 +605,24 @@ Initial fix queue:
    hot present decision path where possible
 5. document which callers are allowed to request which invalidation family
 
+Current progress:
+
+- first cause-aware invalidation cut landed:
+  - shared terminal widget presentation state now records explicit invalidation
+    families instead of relying only on one broad
+    `terminal_presentable_ready = false` reset
+  - current explicit families are:
+    geometry, content, overlay, and target availability
+  - Android zoom/grid-fit callers now request geometry invalidation explicitly
+  - tab navigation / close-active callers now request content invalidation
+    explicitly
+  - present-plan construction now reads explicit invalidation flags in addition
+    to the existing generation/metric/cursor deltas
+- this is not the full invalidation redesign yet:
+  - execution policy and cache-state advancement still share one runtime seam
+  - but the state now preserves enough caller intent that the next cut can
+    tighten reuse/update ownership without another blind broad reset
+
 Do not do:
 
 - do not add more one-off `invalidatePresentationCache()` callers while the
@@ -448,8 +662,6 @@ Findings:
   per-frame state reset, display metrics sync, clip reset
 - Android GLES `beginFrame(...)` still owns more than pure frame begin:
   - surface/context ensure + make-current
-  - lazy GL resource init
-  - lazy font init
   - text render config sync
   - clear/setup
 - OpenGL `beginFrame(...)` also owns target policy:
@@ -525,6 +737,32 @@ Do not do:
   in GL or Metal
 - do not move work around blindly; each moved item must justify its new
   ownership boundary
+
+Current progress:
+
+- first backend frame-entry cut landed on Android GLES:
+  - `beginFrame(...)` no longer lazily initializes GL resources or fonts
+  - Android bridge now calls an explicit preframe
+    `prepareFrameResources(...)` seam before normal frame begin
+  - steady-state frame entry is narrower and easier to measure honestly
+- remaining Android GLES frame-entry pressure is now:
+  - surface/context ensure + make-current
+  - clear/setup
+- remaining backend work for this subcategory should now focus on:
+  - whether surface/context acquire can be narrowed further without inventing
+    fake EGL state
+  - submit-time replay/capture classification across GL / Android GLES / Metal
+- first submit-path classification cut landed:
+  - OpenGL capture handling now lives behind an explicit helper instead of
+    being inline in ordinary `submitFrame(...)`
+  - Metal capture/readback completion now lives behind an explicit helper
+    instead of dominating the ordinary submit flow
+  - this is extraction-only; capture behavior is preserved, but ordinary
+    product submission now reads as replay/encode/present first
+- second frame-entry cut landed:
+  - text-render uniform sync is now dirty-driven by `TextRenderState`
+  - Android GLES no longer resends static text-render uniforms on every frame
+  - OpenGL config sync uses the same dirty bit so config updates remain explicit
 
 ### 6. Debug/observability contamination of product execution
 

@@ -94,6 +94,12 @@ Current checkpoint:
   - `acquired` / `unchanged` / `replaced` / `retired`
 - lifecycle and surface callbacks now terminate through shared Android host
   semantics instead of a private bridge-only model
+- product gesture policy is now also an explicit Android-host seam:
+  - `ProductGestureController` owns touch/pinch detection for the product surface
+  - raw Android detector noise is normalized into a small host contract
+    (`singleTap`, `pinchBegin`, quantized `pinchZoom`, `pinchEnd`)
+  - this keeps product-touch policy local to Android while preventing raw gesture
+    churn from leaking directly into shared renderer work
 
 Do not do:
 

@@ -5,6 +5,7 @@ var log_file: ?std.fs.File = null;
 var log_mutex: std.Thread.Mutex = .{};
 var log_filter_file: ?[]u8 = null;
 var log_filter_console: ?[]u8 = null;
+var log_file_path: ?[]u8 = null;
 var log_level_file: Level = .info;
 var log_level_console: Level = .info;
 var log_level_overrides_file: ?[]u8 = null;
@@ -122,6 +123,9 @@ fn writeLogLine(file: std.fs.File, prefix: []const u8, msg: []const u8) !void {
 }
 
 fn openLogFile(path: []const u8) !std.fs.File {
+    if (std.fs.path.dirname(path)) |dir_path| {
+        if (dir_path.len != 0) try std.fs.cwd().makePath(dir_path);
+    }
     var file = try std.fs.cwd().createFile(path, .{ .truncate = false, .read = false });
     try file.seekFromEnd(0);
     return file;
@@ -143,9 +147,15 @@ fn openWindowsFallbackLogFile() !std.fs.File {
     return openLogFile(file_path);
 }
 
+fn defaultLogFilePath() []const u8 {
+    if (builtin.target.abi == .android) return "/data/user/0/dev.zide.terminal/files/home/.local/state/zide/zide.log";
+    return "zide.log";
+}
+
 pub fn init() !void {
     if (log_file != null) return;
-    log_file = openLogFile("zide.log") catch |err| blk: {
+    const path = log_file_path orelse defaultLogFilePath();
+    log_file = openLogFile(path) catch |err| blk: {
         if (builtin.target.os.tag == .windows and err == error.AccessDenied) {
             break :blk try openWindowsFallbackLogFile();
         }
@@ -174,6 +184,10 @@ pub fn resetConfig() void {
         std.heap.c_allocator.free(filter);
     }
     log_filter_console = null;
+    if (log_file_path) |path| {
+        std.heap.c_allocator.free(path);
+    }
+    log_file_path = null;
     if (log_level_overrides_file) |overrides| {
         std.heap.c_allocator.free(overrides);
     }
@@ -300,6 +314,13 @@ pub fn setFileFilterString(value: []const u8) !void {
         std.heap.c_allocator.free(filter);
     }
     log_filter_file = try std.heap.c_allocator.dupe(u8, value);
+}
+
+pub fn setFilePathString(value: []const u8) !void {
+    if (log_file_path) |path| {
+        std.heap.c_allocator.free(path);
+    }
+    log_file_path = try std.heap.c_allocator.dupe(u8, value);
 }
 
 pub fn setConsoleFilterString(value: []const u8) !void {

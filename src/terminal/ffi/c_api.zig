@@ -65,6 +65,10 @@ pub fn zide_terminal_resize(handle: ?*ZideTerminalHandle, cols: u16, rows: u16, 
     return @intFromEnum(bridge.resize(handle, cols, rows, cell_width, cell_height));
 }
 
+pub fn zide_terminal_update_cell_size(handle: ?*ZideTerminalHandle, cell_width: u16, cell_height: u16) c_int {
+    return @intFromEnum(bridge.updateCellSize(handle, cell_width, cell_height));
+}
+
 pub fn zide_terminal_send_bytes(handle: ?*ZideTerminalHandle, bytes: ?[*]const u8, len: usize) c_int {
     return @intFromEnum(bridge.sendBytes(handle, bytes, len));
 }
