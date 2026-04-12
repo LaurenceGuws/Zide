@@ -339,6 +339,11 @@ Status:
     - `drawLiveTerminalWidgetFrame(...)` no longer performs resize/layout work
     - Android bridge now names that pre-draw seam explicitly as flush-dirty
       product-fit grid before frame
+  - pre-draw ownership narrowed again:
+    - the Android bridge now separates product-fit commit-readiness
+      (renderer/widget availability) from the dirty grid commit itself
+    - the flush-before-frame seam now reads as bounded readiness plus one
+      explicit grid commit instead of one mixed helper blob
 - font-scale reference audit result:
   - the remaining pinch-end thickness snap is not an Android gesture problem
   - it is the expected seam between a live-scaled hinted glyph atlas and a

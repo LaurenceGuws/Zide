@@ -44,6 +44,11 @@ const BridgeState = struct {
     product_fit_grid_dirty: bool = true,
 };
 
+const ProductFitGridCommitInputs = struct {
+    renderer: *renderer_mod.Renderer,
+    widget: *widgets.TerminalWidget,
+};
+
 var bridge_state = BridgeState{};
 
 fn scaleOrDefault(value: f32) f32 {
@@ -374,16 +379,24 @@ fn refreshShellSurfaceAfterInput() void {
     bridge_state.render_host.noteRedrawRequested();
 }
 
-fn updateProductFitTerminalGrid() !void {
-    const renderer = bridge_state.renderer orelse return;
-    const widget = ensureTerminalWidget() orelse return;
-    try ensureProductFitTerminalGrid(renderer, widget);
+fn productFitGridCommitInputs() ?ProductFitGridCommitInputs {
+    const renderer = bridge_state.renderer orelse return null;
+    const widget = ensureTerminalWidget() orelse return null;
+    return .{
+        .renderer = renderer,
+        .widget = widget,
+    };
+}
+
+fn commitDirtyProductFitTerminalGrid(inputs: ProductFitGridCommitInputs) !void {
+    try ensureProductFitTerminalGrid(inputs.renderer, inputs.widget);
     bridge_state.product_fit_grid_dirty = false;
 }
 
-fn updateProductFitTerminalGridIfDirty() void {
+fn commitDirtyProductFitTerminalGridIfReady() void {
     if (!bridge_state.product_fit_grid_dirty) return;
-    updateProductFitTerminalGrid() catch return;
+    const inputs = productFitGridCommitInputs() orelse return;
+    commitDirtyProductFitTerminalGrid(inputs) catch return;
 }
 
 /// Android product-fit ownership seam: if product-fit state is dirty, create
@@ -392,7 +405,7 @@ fn updateProductFitTerminalGridIfDirty() void {
 fn flushDirtyProductFitGridBeforeFrame() void {
     if (!bridge_state.product_fit_grid_dirty) return;
     _ = ensureAndroidGlesRenderer() catch return;
-    updateProductFitTerminalGridIfDirty();
+    commitDirtyProductFitTerminalGridIfReady();
 }
 
 /// Lifecycle/surface-critical direct submit seam. Surface-available and

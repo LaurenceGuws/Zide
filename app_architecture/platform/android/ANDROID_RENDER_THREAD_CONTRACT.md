@@ -501,6 +501,12 @@ Current progress:
     grid before frame” instead of a vague prepare helper
   - surface-available, redraw-needed, and paced product frames all now read as
     the same ownership rule at the call site
+- fifth ownership cut landed:
+  - pre-draw product-fit flush no longer hides renderer/widget readiness and
+    grid commit inside one helper blob
+  - Android bridge now separates “commit inputs are ready” from “commit dirty
+    product-fit grid state,” keeping the pre-draw seam closer to explicit
+    frame-readiness plus one bounded grid commit
 - font/atlas follow-up:
   - ASCII glyph warmup was rejected after device testing and reference audit:
     the visible defect is the hinted-raster-size swap, not lazy glyph
