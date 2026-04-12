@@ -190,8 +190,7 @@ pub fn noteSurfaceAvailableFromJava(
     swapNativeWindow(native_window);
     if (native_window == null) return noteSurfaceDestroyed();
     const seq = noteSurfaceAvailable(width, height);
-    flushDirtyProductFitGridBeforeFrame();
-    bridge_state.last_renderer_status = drawSharedRendererSurfaceFrame();
+    submitLifecycleCriticalSurfaceFrame();
     return seq;
 }
 
@@ -206,8 +205,7 @@ pub fn noteSurfaceDestroyed() u64 {
 }
 
 pub fn noteSurfaceRedrawNeeded() u64 {
-    flushDirtyProductFitGridBeforeFrame();
-    bridge_state.last_renderer_status = drawSharedRendererSurfaceFrame();
+    submitLifecycleCriticalSurfaceFrame();
     return nextSequence();
 }
 
@@ -395,6 +393,14 @@ fn flushDirtyProductFitGridBeforeFrame() void {
     if (!bridge_state.product_fit_grid_dirty) return;
     _ = ensureAndroidGlesRenderer() catch return;
     updateProductFitTerminalGridIfDirty();
+}
+
+/// Lifecycle/surface-critical direct submit seam. Surface-available and
+/// redraw-needed remain the only direct frame submission authority on Android;
+/// ordinary product work must stay on the paced product frame loop.
+fn submitLifecycleCriticalSurfaceFrame() void {
+    flushDirtyProductFitGridBeforeFrame();
+    bridge_state.last_renderer_status = drawSharedRendererSurfaceFrame();
 }
 
 pub fn sharedShellRendererActive() bool {

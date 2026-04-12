@@ -379,6 +379,13 @@ Findings:
     redraw intent; it no longer submits a frame inline on the direct input path
   - the paced product frame loop remains the one owner of ordinary product draw
     submission on Android
+- direct-submit ownership cut landed:
+  - the remaining lifecycle-critical direct-submit path now routes through one
+    explicit Android bridge seam instead of hand-rolling the same
+    flush-and-submit sequence at both surface-available and redraw-needed
+    call sites
+  - behavior is unchanged; this names the surviving direct-submit authority
+    more honestly before any deeper pacing change
 - surface lifecycle/redraw-needed paths still submit immediately because they
   are the current acquisition/readiness authority
 - direct input no longer owns a separate immediate-submit exception here; the

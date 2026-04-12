@@ -501,6 +501,10 @@ Status:
   - successful presentation paths now advance cached presentation state
     through one explicit helper instead of calling
     `notePresentationUpdated(...)` directly at multiple execution sites
+  - the remaining lifecycle-critical direct-submit path now routes through one
+    explicit Android bridge seam instead of hand-rolling the same
+    flush-and-submit sequence at both surface-available and redraw-needed call
+    sites
   - this cut is aimed directly at the product scroll snap-back / host-thickness
     issue, not at renderer internals yet
   - validation:
