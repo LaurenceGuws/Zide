@@ -1085,6 +1085,11 @@ Current progress:
     frame loop as a hidden side effect
   - product frame-loop reevaluation is now an explicit activity operation with
     product ownership in its name
+- sixth host ownership cut landed:
+  - debug status formatting no longer runs on ordinary product events while the
+    debug view is hidden
+  - debug-mode entry remains the explicit owner of when the status surface is
+    refreshed
 - that does not finish this category:
   - `ZideTerminalActivity` still owns too much product/debug orchestration
 

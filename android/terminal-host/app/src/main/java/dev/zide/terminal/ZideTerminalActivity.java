@@ -1227,6 +1227,9 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void updateStatus(String state, UserlandBootstrapState bootstrapState) {
+        if (!shouldUpdateDebugStatus()) {
+            return;
+        }
         final AndroidDebugFormatter.SurfaceEventSnapshot surfaceState = currentSurfaceStateSnapshot();
         statusText.setText(AndroidDebugFormatter.formatStatus(
                 new AndroidDebugFormatter.StatusSnapshot(

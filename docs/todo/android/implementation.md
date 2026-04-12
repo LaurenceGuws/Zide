@@ -467,6 +467,8 @@ Status:
     from explicit events instead of periodic main-thread polling
   - product bootstrap-blocker visibility no longer controls the frame loop as
     a hidden side effect; product frame-loop reevaluation is now explicit
+  - debug status formatting no longer runs on ordinary product events while
+    the debug view is hidden
   - this cut is aimed directly at the product scroll snap-back / host-thickness
     issue, not at renderer internals yet
   - validation:
