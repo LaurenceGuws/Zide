@@ -559,46 +559,25 @@ fn childProcess(slave_fd: posix.fd_t, shell: ?[:0]const u8) !void {
 
     const shell_base = std.fs.path.basename(shell_path);
     if (std.mem.eql(u8, shell_base, "bash")) {
-        const pid = c.getpid();
-        var rc_path_buf: [std.fs.max_path_bytes:0]u8 = undefined;
-        const rc_path = try tempPathZ(&rc_path_buf, "zide-bashrc", pid);
-        if (std.fs.createFileAbsolute(rc_path, .{ .truncate = true, .read = false })) |file| {
-            defer file.close();
-            try file.writeAll(
-                \\[[ -f ~/.bashrc ]] && . ~/.bashrc
-                \\__zide_emit_osc7() {
-                \\  local _host
-                \\  _host="${HOSTNAME:-$(hostname 2>/dev/null || printf localhost)}"
-                \\  printf '\033]7;file://%s%s\007' "$_host" "$PWD"
-                \\}
-                \\if [[ "$(declare -p PROMPT_COMMAND 2>/dev/null)" == "declare -a"* ]]; then
-                \\  PROMPT_COMMAND+=("__zide_emit_osc7")
-                \\else
-                \\  case ";${PROMPT_COMMAND:-};" in
-                \\    *";__zide_emit_osc7;"*) ;;
-                \\    *) PROMPT_COMMAND="${PROMPT_COMMAND:+${PROMPT_COMMAND};}__zide_emit_osc7" ;;
-                \\  esac
-                \\fi
-                \\__zide_emit_osc7
-            );
-            env_log.logf(.info, "spawn bash rcfile prepared path={s}", .{rc_path});
-            if (command_c) |command_ptr| {
-                const argv = [_:null]?[*:0]const u8{ shell_path.ptr, "--rcfile", rc_path.ptr, "-ic", command_ptr };
-                env_log.logf(.info, "spawn exec shell={s} command={s} (bash rcfile inject)", .{ shell_path, command.? });
-                const envp: [*:null]const ?[*:0]const u8 = @ptrCast(@constCast(std.c.environ));
-                const exec_err = posix.execvpeZ(shell_path.ptr, &argv, envp);
-                env_log.logf(.warning, "spawn exec shell failed shell={s} err={s}", .{ shell_path, @errorName(exec_err) });
-                posix.exit(127);
-            } else {
-                const argv = [_:null]?[*:0]const u8{ shell_path.ptr, "--rcfile", rc_path.ptr, "-i" };
-                env_log.logf(.info, "spawn exec shell={s} (bash rcfile inject)", .{shell_path});
-                const envp: [*:null]const ?[*:0]const u8 = @ptrCast(@constCast(std.c.environ));
-                const exec_err = posix.execvpeZ(shell_path.ptr, &argv, envp);
-                env_log.logf(.warning, "spawn exec shell failed shell={s} err={s}", .{ shell_path, @errorName(exec_err) });
-                posix.exit(127);
-            }
-        } else |err| {
-            env_log.logf(.info, "spawn bash rcfile prepare failed path={s} err={s}", .{ rc_path, @errorName(err) });
+        _ = c.setenv(
+            "PROMPT_COMMAND",
+            "printf '\\033]7;file://%s%s\\007' \"${HOSTNAME:-$(hostname 2>/dev/null || printf localhost)}\" \"$PWD\"",
+            1,
+        );
+        if (command_c) |command_ptr| {
+            const argv = [_:null]?[*:0]const u8{ shell_path.ptr, "--noprofile", "--norc", "-ic", command_ptr };
+            env_log.logf(.info, "spawn exec shell={s} command={s} (bash clean startup)", .{ shell_path, command.? });
+            const envp: [*:null]const ?[*:0]const u8 = @ptrCast(@constCast(std.c.environ));
+            const exec_err = posix.execvpeZ(shell_path.ptr, &argv, envp);
+            env_log.logf(.warning, "spawn exec shell failed shell={s} err={s}", .{ shell_path, @errorName(exec_err) });
+            posix.exit(127);
+        } else {
+            const argv = [_:null]?[*:0]const u8{ shell_path.ptr, "--noprofile", "--norc", "-i" };
+            env_log.logf(.info, "spawn exec shell={s} (bash clean startup)", .{shell_path});
+            const envp: [*:null]const ?[*:0]const u8 = @ptrCast(@constCast(std.c.environ));
+            const exec_err = posix.execvpeZ(shell_path.ptr, &argv, envp);
+            env_log.logf(.warning, "spawn exec shell failed shell={s} err={s}", .{ shell_path, @errorName(exec_err) });
+            posix.exit(127);
         }
     }
 
@@ -673,16 +652,6 @@ fn forceKillProcessTree(pid: posix.pid_t) void {
 
 fn cleanupSpawnTempFilesForPid(pid: posix.pid_t) void {
     const log = app_logger.logger("terminal.env");
-    var bashrc_buf: [128:0]u8 = undefined;
-    const bashrc_path = std.fmt.bufPrintZ(&bashrc_buf, "/tmp/zide-bashrc-{d}", .{pid}) catch |err| {
-        log.logf(.warning, "spawn cleanup path format failed kind=bashrc pid={d} err={s}", .{ pid, @errorName(err) });
-        return;
-    };
-    std.fs.deleteFileAbsolute(bashrc_path) catch |err| switch (err) {
-        error.FileNotFound => {},
-        else => log.logf(.debug, "spawn cleanup failed path={s} err={s}", .{ bashrc_path, @errorName(err) }),
-    };
-
     var inputrc_buf: [128:0]u8 = undefined;
     const inputrc_path = std.fmt.bufPrintZ(&inputrc_buf, "/tmp/zide-inputrc-{d}", .{pid}) catch |err| {
         log.logf(.warning, "spawn cleanup path format failed kind=inputrc pid={d} err={s}", .{ pid, @errorName(err) });
