@@ -42,7 +42,6 @@ public final class ZideTerminalActivity extends Activity
     private static final String EXTRA_DEBUG_RECREATE_SURFACE_ONCE = "debug_recreate_surface_once";
     private static final String EXTRA_DEBUG_RESIZE_SURFACE_ONCE = "debug_resize_surface_once";
     private static final String EXTRA_DEBUG_START_SHELL_ONCE = "debug_start_shell_once";
-    private static final long SHELL_REFRESH_MS = 150L;
     private static final float MIN_PENDING_PINCH_APPLY_DELTA = 0.008f;
     /**
      * Product pinch budget for native zoom work.
@@ -111,7 +110,6 @@ public final class ZideTerminalActivity extends Activity
     private boolean surfaceRecreationScheduled = false;
     private boolean surfaceResizeScheduled = false;
     private boolean shellStartScheduled = false;
-    private boolean shellRefreshActive = false;
     private boolean productFrameLoopActive = false;
     private boolean sidebarOpen = false;
     private String lastAutoStartBlockedState = "";
@@ -128,15 +126,6 @@ public final class ZideTerminalActivity extends Activity
     private int notifiedViewportWidth = 0;
     private int notifiedViewportHeight = 0;
     private boolean notifiedViewportImeVisible = false;
-    private final Runnable shellRefreshRunnable = new Runnable() {
-        @Override
-        public void run() {
-            refreshDebugShellState(false);
-            if (shellRefreshActive) {
-                handler.postDelayed(this, SHELL_REFRESH_MS);
-            }
-        }
-    };
     private final Runnable productFrameRunnable = new Runnable() {
         @Override
         public void run() {
@@ -388,7 +377,6 @@ public final class ZideTerminalActivity extends Activity
     protected void onPause() {
         appendEvent("activity.onPause");
         callNative("native.onPause", nativeLoaded ? nativeOnPauseBridge() : -1);
-        stopShellRefresh();
         stopProductFrameLoop();
         refreshDebugShellState(false);
         updateStatus("paused");
@@ -579,6 +567,7 @@ public final class ZideTerminalActivity extends Activity
             debugViewEnabled = true;
             appendEvent("view.mode debug=true");
             applyViewMode();
+            refreshDebugShellState(false);
             updateStatus("debug-view");
             closeSidebar();
         });
@@ -625,6 +614,7 @@ public final class ZideTerminalActivity extends Activity
             debugViewEnabled = true;
             appendEvent("product.bootstrap debug");
             applyViewMode();
+            refreshDebugShellState(false);
             updateStatus("debug-view");
         });
     }
@@ -854,22 +844,6 @@ public final class ZideTerminalActivity extends Activity
         drawerEdgeHotspot.setVisibility(visible ? View.GONE : View.VISIBLE);
     }
 
-    private void startShellRefresh() {
-        if (shellRefreshActive) {
-            return;
-        }
-        shellRefreshActive = true;
-        handler.post(shellRefreshRunnable);
-    }
-
-    private void stopShellRefresh() {
-        if (!shellRefreshActive) {
-            return;
-        }
-        shellRefreshActive = false;
-        handler.removeCallbacks(shellRefreshRunnable);
-    }
-
     private boolean shouldUpdateDebugStatus() {
         return debugViewEnabled;
     }
@@ -905,11 +879,6 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void reevaluateShellRefreshLoop() {
-        if (debugViewEnabled) {
-            startShellRefresh();
-        } else {
-            stopShellRefresh();
-        }
         if (shouldRunProductFrameLoop()) {
             startProductFrameLoop();
         } else {
@@ -1133,6 +1102,7 @@ public final class ZideTerminalActivity extends Activity
         appendEvent("packages.doctor begin");
         debugViewEnabled = true;
         applyViewMode();
+        refreshDebugShellState(false);
         updateStatus("packages-doctor");
         new Thread(() -> {
             try {

@@ -463,6 +463,8 @@ Status:
     operations; the 150ms loop now names itself as debug refresh upkeep
   - ordinary status updates now use tracked bootstrap state instead of
     reloading bootstrap stamp state from disk on every call
+  - the 150ms debug shell refresh loop is removed; debug upkeep now refreshes
+    from explicit events instead of periodic main-thread polling
   - this cut is aimed directly at the product scroll snap-back / host-thickness
     issue, not at renderer internals yet
   - validation:

@@ -1076,8 +1076,11 @@ Current progress:
   - ordinary status updates now use the activity's tracked bootstrap state
     instead of reloading bootstrap stamp state from disk on every call
   - hidden operator-state I/O is reduced in broad UI status/update paths
+- fourth host ownership cut landed:
+  - the 150ms debug shell refresh loop is removed
+  - debug/operator upkeep now refreshes from explicit events instead of acting
+    as a periodic main-thread coordinator
 - that does not finish this category:
-  - the 150ms poll model still exists
   - `ZideTerminalActivity` still owns too much product/debug orchestration
 
 ## Current Non-Render Cleanup Already Landed
