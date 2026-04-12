@@ -486,6 +486,9 @@ Status:
   - OpenGL ordinary pre-present replay/resolve now routes through one explicit
     helper instead of spelling replay plus offscreen-scene resolve inline
     inside `submitFrame(...)`
+  - terminal presentation execution update planning now happens once in
+    `runPresentation(...)` instead of being rebuilt separately inside both
+    execution hooks
   - this cut is aimed directly at the product scroll snap-back / host-thickness
     issue, not at renderer internals yet
   - validation:

@@ -640,6 +640,12 @@ Current progress:
   - execution policy and cache-state advancement still share one runtime seam
   - but the state now preserves enough caller intent that the next cut can
     tighten reuse/update ownership without another blind broad reset
+- first execution-seam cut landed:
+  - terminal presentation execution update planning now happens once in
+    `runPresentation(...)` instead of being rebuilt independently inside both
+    direct-present and presentable-refresh execution hooks
+  - behavior is unchanged; the cut narrows execution hooks toward consuming
+    policy instead of recomputing it
 
 Do not do:
 

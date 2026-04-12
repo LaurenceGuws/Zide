@@ -1143,6 +1143,7 @@ pub fn runPresentation(
         x: f32,
         y: f32,
         recent_input_window_active: bool,
+        execution_update_plan: PresentationUpdatePlan,
         note_present_ctx: @TypeOf(note_present_ctx),
         view_cells_len: usize,
         bg_color: Color,
@@ -1157,18 +1158,7 @@ pub fn runPresentation(
                 ctx.terminal_view.cols > 0 and
                 ctx.terminal_view.cells.len > 0;
             const surface_update_plan = if (can_attempt_partial)
-                buildExecutionUpdatePlan(
-                    ctx.self_widget,
-                    renderer_local,
-                    ctx.terminal_view,
-                    ctx.view_geometry,
-                    ctx.blink_requires_partial,
-                    ctx.draw_cursor,
-                    ctx.cursor,
-                    ctx.cursor_style,
-                    ctx.scroll_offset,
-                    ctx.recent_input_window_active,
-                )
+                ctx.execution_update_plan
             else
                 PresentationUpdatePlan{};
             const DirectCtx = struct {
@@ -1268,18 +1258,6 @@ pub fn runPresentation(
         }
 
         pub fn executePresentableRefreshFlow(_: TerminalPresentPlan, ctx: Ctx, renderer_local: @TypeOf(renderer)) Result {
-            const surface_update_plan = buildExecutionUpdatePlan(
-                ctx.self_widget,
-                renderer_local,
-                ctx.terminal_view,
-                ctx.view_geometry,
-                ctx.blink_requires_partial,
-                ctx.draw_cursor,
-                ctx.cursor,
-                ctx.cursor_style,
-                ctx.scroll_offset,
-                ctx.recent_input_window_active,
-            );
             return executeRefreshPresentFlow(
                 ctx.self_widget,
                 ctx.shell,
@@ -1297,7 +1275,7 @@ pub fn runPresentation(
                 ctx.blink_style,
                 ctx.blink_time,
                 ctx.has_kitty,
-                surface_update_plan,
+                ctx.execution_update_plan,
                 ctx.note_present_ctx,
                 note_present,
             );
@@ -1319,6 +1297,18 @@ pub fn runPresentation(
         width,
         height,
         blink_requires_partial,
+    );
+    const execution_update_plan = buildExecutionUpdatePlan(
+        self,
+        renderer,
+        terminal_view,
+        view_geometry,
+        blink_requires_partial,
+        draw_cursor,
+        cursor,
+        cursor_style,
+        scroll_offset,
+        recent_input_window_active,
     );
     const ctx = Ctx{
         .self_widget = self,
@@ -1342,6 +1332,7 @@ pub fn runPresentation(
         .x = x,
         .y = y,
         .recent_input_window_active = recent_input_window_active,
+        .execution_update_plan = execution_update_plan,
         .note_present_ctx = note_present_ctx,
         .view_cells_len = view_cells_len,
         .bg_color = bg_color,
