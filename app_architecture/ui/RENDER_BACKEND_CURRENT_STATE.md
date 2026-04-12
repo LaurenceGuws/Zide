@@ -770,12 +770,12 @@ That split is now sharper from code inspection too:
   `editor_widget_draw_text.zig` uses one small emitter seam for both immediate
   and draw-list text/decor emission, so editor-local styled text is no longer
   the main remaining blocker.
-- the shared timing blocker is sharper too: ordinary UI/editor text still runs
-  through immediate `text_runtime.zig` paths that mutate `text_render.bg_rgba`
-  and emit texture draws immediately. Even editor draw-list flush ultimately
-  resolves into that same immediate text path. So the remaining blocker is not
-  just generic fills; it is that fills and their dependent text still do not
-  share one backend-neutral phase boundary.
+- the shared timing blocker has been narrowed substantially: ordinary
+  UI/editor text no longer mutates ambient `text_render.bg_rgba`, terminal
+  glyph submission carries cell background explicitly, and `SurfaceDraw`
+  atlas/raw-image replay consumes explicit background payloads. Even editor
+  draw-list flush still resolves through the shared text runtime, but the old
+  ambient-background channel is closed.
 - first cut on that blocker is now in:
   non-terminal text paths in `text_runtime.zig` no longer push ambient
   `renderer.text_render.bg_rgba` state before drawing. Ordinary UI/editor text

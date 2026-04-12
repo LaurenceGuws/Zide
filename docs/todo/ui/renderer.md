@@ -228,12 +228,11 @@ Next renderer move:
   preview directly; composing text + underline now terminate in
   `editor_widget_draw_overlay.drawImeCompositionPreview(...)`
 - next stronger blocker:
-  return to the broader renderer contract pressure already named in current
-  authority:
-  fills are deferred while ordinary UI/editor dependent text still resolves
-  through immediate `text_runtime.zig` paths that mutate shared
-  `renderer.text_render.bg_rgba` state and emit texture draws immediately, so
-  fill-plus-text work still lacks one backend-neutral phase boundary
+  return to current code truth before opening another renderer cut. The old
+  ambient text/background-state blocker is closed; ordinary UI/editor text,
+  terminal glyph batching, and `SurfaceDraw` replay now carry background
+  explicitly. Do not reopen this as generic phase-boundary work unless a
+  concrete live owner leak or backend-verification gap is identified.
 - current checkpoint:
   first cut is now in:
   non-terminal text paths in `text_runtime.zig` no longer mutate ambient
@@ -1265,14 +1264,10 @@ Current evidence:
   cleanup past this point. The next renderer-quality move is back on the
   shared timing contract.
 - shared timing checkpoint: ordinary UI/editor text is still immediate in
-  `text_runtime.zig`
-  - text draw paths still mutate `text_render.bg_rgba`
-  - then emit texture draws immediately
-  - editor draw-list flush ultimately resolves back into that same immediate
-    text path
-- that means the remaining blocker is not "some fills are still generic". It
-  is that generic fills and their dependent text still do not share one
-  backend-neutral phase boundary.
+  `text_runtime.zig`, and editor draw-list flush ultimately resolves back into
+  that same text runtime. The old ambient `text_render.bg_rgba` mutation/read
+  channel is now closed, so the next blocker must be a concrete live
+  phase-boundary leak rather than generic background-state cleanup.
 - chrome-band checkpoint: `renderer_chrome_band_host` now uses bg-aware text
   and icon-text entrypoints by default for band labels/icons. This improves
   local seam honesty but is still not recorded text/surface phase closure.

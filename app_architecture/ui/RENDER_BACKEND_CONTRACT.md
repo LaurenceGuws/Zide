@@ -474,11 +474,13 @@ The current code makes that split more specific:
   draw-list text/decor emission.
 - the next editor-local work therefore should not be more text helper cleanup;
   the louder remaining blocker is still the shared timing contract.
-- the shared timing blocker is now sharper too: ordinary UI/editor text still
-  goes through immediate `text_runtime.zig` paths that mutate
-  `text_render.bg_rgba` and emit texture draws immediately. So the remaining
-  problem is not just generic fills; it is the absence of one backend-neutral
-  phase boundary that owns both the fill and its dependent text.
+- the shared timing blocker was narrowed substantially: ordinary UI/editor
+  text no longer mutates ambient `text_render.bg_rgba`, terminal glyph
+  submission carries cell background explicitly, `SurfaceDraw` atlas/raw-image
+  payloads carry background explicitly, and `Renderer.TextRenderState.bg_rgba`
+  is gone. So the old ambient-background channel is closed; any remaining
+  text/surface work must be selected from live phase-boundary pressure rather
+  than from stale background-state wording.
 - sample/diagnostic pressure is the simpler section-fill plus bg-aware preview
   text path in `font_sample_view.zig`, including custom-font preview draws
   that still go straight through texture draw calls
@@ -779,6 +781,7 @@ That means the remaining gate-5 pressure should be read more precisely:
 - the next blocker is whichever stronger shared behavior or verification gap
   still prevents OpenGL and Metal from reading like routine implementations of
   one renderer contract
-- current evidence points more strongly at the broader text/surface
-  phase-boundary pressure than at generic terminal-presentable lifecycle
-  wording
+- current evidence no longer identifies ambient text/background state as a
+  blocker; the next renderer cut should come from a concrete live
+  phase-boundary or backend-verification gap, not from historical
+  `text_render.bg_rgba` cleanup
