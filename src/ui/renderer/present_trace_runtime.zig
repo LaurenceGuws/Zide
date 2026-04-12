@@ -1,15 +1,6 @@
 const present_feedback_state = @import("present_feedback_state.zig");
 
 pub const PresentTrace = struct {
-    /// Optional callsite tag for GL surface `.solid` records (debug / future metrics).
-    pub const EditorSurfaceSolidFamily = enum {
-        none,
-        overlay,
-        row_base,
-        pane_base,
-        chrome_band,
-    };
-
     frame_seq: u64 = 0,
     terminal_presentation_count: usize = 0,
     terminal_presented_generation: ?u64 = null,
@@ -27,7 +18,6 @@ pub const PresentTrace = struct {
     gl_surface_solid_enqueue_count: usize = 0,
     /// OpenGL: individual draws executed when the deferred queue is replayed.
     gl_surface_queued_replay_count: usize = 0,
-    editor_surface_solid_family: EditorSurfaceSolidFamily = .none,
     composition_full_pane_clear: bool = false,
     captured_path: ?[]const u8 = null,
 };
@@ -115,16 +105,6 @@ pub fn noteGlSurfaceSolidEnqueue(self: anytype) void {
 pub fn noteGlSurfaceQueuedReplay(self: anytype) void {
     if (!self.present.trace_enabled) return;
     self.present.trace_current.gl_surface_queued_replay_count += 1;
-}
-
-pub fn setEditorSurfaceSolidFamily(self: anytype, family: PresentTrace.EditorSurfaceSolidFamily) void {
-    if (!self.present.trace_enabled) return;
-    self.present.trace_current.editor_surface_solid_family = family;
-}
-
-pub fn clearEditorSurfaceSolidFamily(self: anytype) void {
-    if (!self.present.trace_enabled) return;
-    self.present.trace_current.editor_surface_solid_family = .none;
 }
 
 pub fn noteTerminalPresentedGeneration(self: anytype, generation: u64) void {

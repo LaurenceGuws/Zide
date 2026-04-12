@@ -432,6 +432,8 @@ Status:
     - frame-family and terminal-presentation correctness updates now route
       through `present_feedback_host.zig`; trace only mirrors optional counters
       when enabled
+    - stale `editor_surface_solid_family` trace state and set/clear helpers are
+      removed because they had no active consumer
 - first iteration cut landed from that queue:
   - narrowed Android host/UI-thread contamination around stale transcript-era
     ownership

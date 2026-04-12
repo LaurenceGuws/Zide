@@ -913,6 +913,11 @@ Current progress:
     only mirrors optional counters when trace logging is enabled
   - call sites that retire/present terminal/editor/chrome/sample families now
     name feedback ownership rather than trace ownership
+- stale trace artifact removed:
+  - `editor_surface_solid_family` and its set/clear helpers had no active
+    consumer
+  - the hook is deleted instead of being gated because it was investigation
+    residue, not operator telemetry or correctness state
 
 ### 7. Remaining Android host/UI-thread contamination
 

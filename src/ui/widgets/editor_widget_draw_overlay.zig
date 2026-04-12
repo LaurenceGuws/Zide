@@ -5,7 +5,6 @@ const chrome_geometry_mod = @import("../../editor/view/chrome_geometry.zig");
 const draw_list_mod = @import("../../editor/render/draw_list.zig");
 const app_logger = @import("../../app_logger.zig");
 const renderer_text_phase_group_host = @import("../renderer/renderer_text_phase_group_host.zig");
-const present_trace_runtime = @import("../renderer/present_trace_runtime.zig");
 const present_feedback_host = @import("../renderer/present_feedback_host.zig");
 const renderer_surface_host = @import("../renderer/renderer_surface_host.zig");
 const renderer_text_host = @import("../renderer/renderer_text_host.zig");
@@ -81,20 +80,15 @@ pub fn drawLineCursor(r: anytype, x: f32, y: f32, h: f32, color: anytype) void {
     const cursor_h_i: i32 = @as(i32, @intFromFloat(h));
     const h_i: i32 = @max(1, cursor_h_i - edge_inset * 2);
     const y_i: i32 = @as(i32, @intFromFloat(y)) + @divFloor(@max(0, cursor_h_i - h_i), 2);
-    present_trace_runtime.setEditorSurfaceSolidFamily(r, .overlay);
-    defer present_trace_runtime.clearEditorSurfaceSolidFamily(r);
     renderer_surface_host.drawRect(r, x_i, y_i, stroke, h_i, color);
 }
 
 fn drawOverlayRect(r: anytype, x: i32, y: i32, w: i32, h: i32, color: anytype) void {
-    present_trace_runtime.setEditorSurfaceSolidFamily(r, .overlay);
-    defer present_trace_runtime.clearEditorSurfaceSolidFamily(r);
     renderer_surface_host.drawRect(r, x, y, w, h, color);
 }
 
-pub fn drawEditorSurfaceRect(r: anytype, family: present_trace_runtime.PresentTrace.EditorSurfaceSolidFamily, x: f32, y: f32, w: f32, h: f32, color: anytype) void {
-    present_trace_runtime.setEditorSurfaceSolidFamily(r, family);
-    defer present_trace_runtime.clearEditorSurfaceSolidFamily(r);
+pub fn drawEditorSurfaceRect(r: anytype, family: RectOp.Family, x: f32, y: f32, w: f32, h: f32, color: anytype) void {
+    _ = family;
     renderer_surface_host.drawRect(
         r,
         @intFromFloat(x),
@@ -525,13 +519,6 @@ pub fn rangeContains(haystack: ByteRange, needle: ByteRange) bool {
 
 fn drawEditorSurfaceRectOp(r: anytype, rect: RectOp) void {
     const ColorType = @TypeOf(r.theme.foreground);
-    const family: present_trace_runtime.PresentTrace.EditorSurfaceSolidFamily = switch (rect.family) {
-        .overlay => .overlay,
-        .row_base => .row_base,
-        .pane_base => .pane_base,
-    };
-    present_trace_runtime.setEditorSurfaceSolidFamily(r, family);
-    defer present_trace_runtime.clearEditorSurfaceSolidFamily(r);
     renderer_surface_host.drawRect(
         r,
         @intFromFloat(rect.x),
