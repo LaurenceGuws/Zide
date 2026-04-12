@@ -658,6 +658,12 @@ Current progress:
     execution hook
   - behavior is unchanged; both execution paths now classify result policy
     explicitly before the next cache-advancement split
+- fourth execution-seam cut landed:
+  - terminal present result assembly now routes through explicit helpers
+    instead of open-coding result construction separately across reuse,
+    refresh, and direct execution paths
+  - behavior is unchanged; execution sites now hand off classified policy plus
+    timing instead of rebuilding result objects themselves
 
 Do not do:
 

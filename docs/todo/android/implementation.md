@@ -495,6 +495,9 @@ Status:
   - direct-present outcome classification now routes through one explicit
     helper instead of open-coding result-policy assembly inside the direct
     execution hook
+  - terminal present result assembly now routes through explicit helpers
+    instead of being rebuilt separately across reuse, refresh, and direct
+    execution paths
   - this cut is aimed directly at the product scroll snap-back / host-thickness
     issue, not at renderer internals yet
   - validation:

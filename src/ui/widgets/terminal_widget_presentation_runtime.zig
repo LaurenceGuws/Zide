@@ -143,6 +143,35 @@ pub const DirectPresentOutcomeState = struct {
     target_available: bool = true,
 };
 
+fn presentResultFromOutcomeState(
+    outcome: TerminalPresentOutcome,
+    cache_state_advanced: bool,
+    target_available: bool,
+    timing: renderer_presentable_host.TerminalPresentTiming,
+) TerminalPresentResult {
+    return .{
+        .outcome = outcome,
+        .cache_state_advanced = cache_state_advanced,
+        .target_available = target_available,
+        .timing = timing,
+    };
+}
+
+fn presentResultFromRefreshOutcomeState(
+    outcome_state: RefreshOutcomeState,
+    timing: renderer_presentable_host.TerminalPresentTiming,
+) TerminalPresentResult {
+    var result = presentResultFromOutcomeState(
+        outcome_state.outcome,
+        outcome_state.cache_state_advanced,
+        outcome_state.target_available,
+        timing,
+    );
+    result.followup.required = outcome_state.followup_required;
+    result.followup.reason = outcome_state.followup_reason;
+    return result;
+}
+
 pub fn runFastPresentIfAvailable(
     surface_state: anytype,
     renderer: anytype,
@@ -185,11 +214,7 @@ pub fn runFastPresentIfAvailable(
         note_present_ctx,
         note_present,
     )) return .{};
-    return .{
-        .outcome = .reused,
-        .cache_state_advanced = true,
-        .target_available = true,
-    };
+    return presentResultFromOutcomeState(.reused, true, true, .{});
 }
 
 pub const SurfacePresentResult = struct {
@@ -931,8 +956,7 @@ pub fn executeRefreshPresentFlow(
     note_present_ctx: anytype,
     note_present: anytype,
 ) TerminalPresentResult {
-    var result: TerminalPresentResult = .{};
-    if (terminal_view.rows == 0 or terminal_view.cols == 0) return result;
+    if (terminal_view.rows == 0 or terminal_view.cols == 0) return .{};
     const cycle = runPresentableRefreshCycle(
         self,
         shell,
@@ -967,15 +991,11 @@ pub fn executeRefreshPresentFlow(
         note_present_ctx,
         note_present,
     );
-    result.outcome = outcome_state.outcome;
-    result.cache_state_advanced = outcome_state.cache_state_advanced;
-    result.target_available = outcome_state.target_available;
-    result.followup.required = outcome_state.followup_required;
-    result.followup.reason = outcome_state.followup_reason;
-    result.timing.background_ms = refreshed.bg_ms;
-    result.timing.glyph_ms = refreshed.glyph_ms;
-    result.timing.kitty_ms = refreshed.kitty_ms;
-    return result;
+    return presentResultFromRefreshOutcomeState(outcome_state, .{
+        .background_ms = refreshed.bg_ms,
+        .glyph_ms = refreshed.glyph_ms,
+        .kitty_ms = refreshed.kitty_ms,
+    });
 }
 
 fn buildTerminalPresentPlan(
@@ -1282,12 +1302,12 @@ pub fn runPresentation(
                 Local,
             );
             const outcome_state = classifyDirectPresentOutcome(direct.updated);
-            return .{
-                .outcome = outcome_state.outcome,
-                .cache_state_advanced = outcome_state.cache_state_advanced,
-                .target_available = outcome_state.target_available,
-                .timing = direct.timing,
-            };
+            return presentResultFromOutcomeState(
+                outcome_state.outcome,
+                outcome_state.cache_state_advanced,
+                outcome_state.target_available,
+                direct.timing,
+            );
         }
 
         pub fn executePresentableRefreshFlow(_: TerminalPresentPlan, ctx: Ctx, renderer_local: @TypeOf(renderer)) Result {
