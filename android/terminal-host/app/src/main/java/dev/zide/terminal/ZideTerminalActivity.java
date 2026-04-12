@@ -533,11 +533,8 @@ public final class ZideTerminalActivity extends Activity
         }
         shellStartScheduled = true;
         handler.postDelayed(() -> {
-            final int status = nativeLoaded ? nativeRestartShellSessionBridge() : 0;
-            appendEvent("debug.shellStart status=" + shellStartStatusLabel(status));
+            restartShellSession("debug.shellStart", "debug-shell-started", false);
             sendDirectText("printf 'android-shell-ok\\n'\n");
-            refreshDebugShellState(false);
-            updateStatus("debug-shell-started");
         }, 900);
     }
 
@@ -552,10 +549,7 @@ public final class ZideTerminalActivity extends Activity
         final Button packagesButton = findViewById(R.id.sidebar_packages_button);
 
         restartButton.setOnClickListener(view -> {
-            final int status = nativeLoaded ? nativeRestartShellSessionBridge() : 0;
-            appendEvent("manual.shellRestart status=" + shellStartStatusLabel(status));
-            refreshDebugShellState(false);
-            updateStatus("shell-restarted");
+            restartShellSession("manual.shellRestart", "shell-restarted", false);
             closeSidebar();
         });
 
@@ -1087,6 +1081,13 @@ public final class ZideTerminalActivity extends Activity
         updateStatus(statusLabel);
     }
 
+    private void restartShellSession(String eventName, String statusLabel, boolean logRefresh) {
+        final int status = nativeLoaded ? nativeRestartShellSessionBridge() : 0;
+        appendEvent(eventName + " status=" + shellStartStatusLabel(status));
+        refreshDebugShellState(logRefresh);
+        updateStatus(statusLabel);
+    }
+
     private void startUserlandInstall() {
         applyInstallState(
                 UserlandInstallState.installing("Fetching and staging " + userlandRelease.artifactName + "..."),
@@ -1100,10 +1101,7 @@ public final class ZideTerminalActivity extends Activity
                     currentInstallState = installState;
                     currentBootstrapState = result.bootstrapState;
                     appendEvent("userland.install success " + result.detail);
-                    final int restartStatus = nativeLoaded ? nativeRestartShellSessionBridge() : 0;
-                    appendEvent("userland.install shellRestart status=" + shellStartStatusLabel(restartStatus));
-                    refreshDebugShellState(true);
-                    updateStatus("userland-install-succeeded-restarted", result.bootstrapState);
+                    restartShellSession("userland.install shellRestart", "userland-install-succeeded-restarted", true);
                 });
             } catch (IOException err) {
                 handler.post(() -> {

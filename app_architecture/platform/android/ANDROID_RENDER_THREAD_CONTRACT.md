@@ -1105,6 +1105,11 @@ Current progress:
     owner methods instead of repeated open-coded toggle sequences
   - package-doctor/debug entry points now reuse the same view-mode ownership
     seam
+- tenth host ownership cut landed:
+  - shell restart now routes through one explicit activity seam for restart
+    status logging, shell-state refresh, and status-surface upkeep
+  - manual restart, debug shell-start, and install-success restart no longer
+    hand-roll that sequence separately
 - that does not finish this category:
   - `ZideTerminalActivity` still owns too much product/debug orchestration
 
