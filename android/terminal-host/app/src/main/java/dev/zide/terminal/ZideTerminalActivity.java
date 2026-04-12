@@ -131,7 +131,7 @@ public final class ZideTerminalActivity extends Activity
     private final Runnable shellRefreshRunnable = new Runnable() {
         @Override
         public void run() {
-            refreshShellState(false);
+            refreshDebugShellState(false);
             if (shellRefreshActive) {
                 handler.postDelayed(this, SHELL_REFRESH_MS);
             }
@@ -210,10 +210,7 @@ public final class ZideTerminalActivity extends Activity
                 UserlandPolicy.shellPath(this),
                 userlandRelease,
                 nativeLoaded);
-        currentBootstrapState = UserlandBootstrapState.load(
-                UserlandPolicy.bootstrapStampPath(this),
-                UserlandPolicy.shellPath(this),
-                userlandRelease);
+        currentBootstrapState = shellSessionController.loadBootstrapState();
         installShellInputView();
         installInsetsHandling();
         installViewportTracking();
@@ -375,7 +372,7 @@ public final class ZideTerminalActivity extends Activity
         maybeScheduleSurfaceRecreation();
         maybeScheduleSurfaceResize();
         maybeScheduleShellStart();
-        handler.post(() -> refreshShellState(false));
+        handler.post(() -> refreshDebugShellState(false));
         reevaluateShellRefreshLoop();
         updateStatus("resumed");
     }
@@ -393,7 +390,7 @@ public final class ZideTerminalActivity extends Activity
         callNative("native.onPause", nativeLoaded ? nativeOnPauseBridge() : -1);
         stopShellRefresh();
         stopProductFrameLoop();
-        refreshShellState(false);
+        refreshDebugShellState(false);
         updateStatus("paused");
         super.onPause();
     }
@@ -451,7 +448,7 @@ public final class ZideTerminalActivity extends Activity
                 seq,
                 currentSurfaceStateSnapshot());
         productSurfaceContainer.post(() -> notifyVisibleViewport("surface-changed"));
-        handler.post(() -> refreshShellState(false));
+        handler.post(() -> refreshDebugShellState(false));
         updateStatus("surface-changed");
     }
 
@@ -550,7 +547,7 @@ public final class ZideTerminalActivity extends Activity
             final int status = nativeLoaded ? nativeRestartShellSessionBridge() : 0;
             appendEvent("debug.shellStart status=" + shellStartStatusLabel(status));
             sendDirectText("printf 'android-shell-ok\\n'\n");
-            refreshShellState(false);
+            refreshDebugShellState(false);
             updateStatus("debug-shell-started");
         }, 900);
     }
@@ -573,7 +570,7 @@ public final class ZideTerminalActivity extends Activity
         restartButton.setOnClickListener(view -> {
             final int status = nativeLoaded ? nativeRestartShellSessionBridge() : 0;
             appendEvent("manual.shellRestart status=" + shellStartStatusLabel(status));
-            refreshShellState(false);
+            refreshDebugShellState(false);
             updateStatus("shell-restarted");
             closeSidebar();
         });
@@ -621,7 +618,7 @@ public final class ZideTerminalActivity extends Activity
                 return;
             }
             appendEvent("product.bootstrap retry");
-            refreshShellState(true);
+            refreshDebugShellState(true);
             updateStatus("product-bootstrap-retry");
         });
         productBootstrapDebugButton.setOnClickListener(view -> {
@@ -920,19 +917,27 @@ public final class ZideTerminalActivity extends Activity
         }
     }
 
-    private void refreshShellState(boolean logEvent) {
-        final ShellSessionController.PollResult pollResult = shellSessionController.poll();
-        currentBootstrapState = pollResult.bootstrapState;
+    private void reloadBootstrapState() {
+        currentBootstrapState = shellSessionController.loadBootstrapState();
+    }
+
+    private ShellSessionController.PollResult pollShellSession() {
+        return shellSessionController.poll(currentBootstrapState);
+    }
+
+    private void refreshDebugShellState(boolean logEvent) {
+        reloadBootstrapState();
+        final ShellSessionController.PollResult pollResult = pollShellSession();
         if (pollResult.autoStarted) {
             appendEvent("auto.shellStart status=" + shellStartStatusLabel(pollResult.autoStartStatus));
         }
         if (pollResult.autoStartBlocked) {
-            if (!pollResult.bootstrapState.state.equals(lastAutoStartBlockedState)) {
+            if (!currentBootstrapState.state.equals(lastAutoStartBlockedState)) {
                 appendEvent(
-                        "auto.shellStart blocked=" + pollResult.bootstrapState.state +
-                                " artifact=" + pollResult.bootstrapState.artifact +
-                                " version=" + pollResult.bootstrapState.version);
-                lastAutoStartBlockedState = pollResult.bootstrapState.state;
+                        "auto.shellStart blocked=" + currentBootstrapState.state +
+                                " artifact=" + currentBootstrapState.artifact +
+                                " version=" + currentBootstrapState.version);
+                lastAutoStartBlockedState = currentBootstrapState.state;
             }
         } else {
             lastAutoStartBlockedState = "";
@@ -941,7 +946,7 @@ public final class ZideTerminalActivity extends Activity
         updateProductShellVisibility();
         reevaluateShellRefreshLoop();
         if (shouldUpdateDebugStatus()) {
-            updateStatus("shell-state", pollResult.bootstrapState);
+            updateStatus("shell-state", currentBootstrapState);
         }
         if (logEvent) {
             appendEvent("manual.shellRefresh alive=" + pollResult.alive + " status="
@@ -1109,7 +1114,7 @@ public final class ZideTerminalActivity extends Activity
                     appendEvent("userland.install success " + result.detail);
                     final int restartStatus = nativeLoaded ? nativeRestartShellSessionBridge() : 0;
                     appendEvent("userland.install shellRestart status=" + shellStartStatusLabel(restartStatus));
-                    refreshShellState(true);
+                    refreshDebugShellState(true);
                     updateStatus("userland-install-succeeded-restarted", result.bootstrapState);
                 });
             } catch (IOException err) {
@@ -1246,10 +1251,7 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void updateStatus(String state) {
-        updateStatus(state, UserlandBootstrapState.load(
-                UserlandPolicy.bootstrapStampPath(this),
-                UserlandPolicy.shellPath(this),
-                userlandRelease));
+        updateStatus(state, shellSessionController.loadBootstrapState());
     }
 
     private void updateStatus(String state, UserlandBootstrapState bootstrapState) {

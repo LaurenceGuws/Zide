@@ -15,21 +15,18 @@ final class ShellSessionController {
         final boolean autoStarted;
         final int autoStartStatus;
         final boolean autoStartBlocked;
-        final UserlandBootstrapState bootstrapState;
 
         PollResult(
                 int status,
                 boolean alive,
                 boolean autoStarted,
                 int autoStartStatus,
-                boolean autoStartBlocked,
-                UserlandBootstrapState bootstrapState) {
+                boolean autoStartBlocked) {
             this.status = status;
             this.alive = alive;
             this.autoStarted = autoStarted;
             this.autoStartStatus = autoStartStatus;
             this.autoStartBlocked = autoStartBlocked;
-            this.bootstrapState = bootstrapState;
         }
     }
 
@@ -53,12 +50,15 @@ final class ShellSessionController {
         this.nativeLoaded = nativeLoaded;
     }
 
-    PollResult poll() {
+    UserlandBootstrapState loadBootstrapState() {
+        return UserlandBootstrapState.load(bootstrapStampPath, shellPath, release);
+    }
+
+    PollResult poll(UserlandBootstrapState bootstrapState) {
         int status = nativeLoaded ? bridge.poll() : 0;
         boolean alive = nativeLoaded && bridge.isAlive();
         boolean autoStarted = false;
         int autoStartStatus = 0;
-        final UserlandBootstrapState bootstrapState = UserlandBootstrapState.load(bootstrapStampPath, shellPath, release);
         boolean autoStartBlocked = false;
 
         if (nativeLoaded && !alive && !autoStartAttempted) {
@@ -78,7 +78,6 @@ final class ShellSessionController {
                 alive,
                 autoStarted,
                 autoStartStatus,
-                autoStartBlocked,
-                bootstrapState);
+                autoStartBlocked);
     }
 }

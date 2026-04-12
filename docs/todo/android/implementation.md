@@ -459,6 +459,8 @@ Status:
     input paths
   - stale auto-follow behavior no longer forces bottom-follow just because IME
     or insets changed
+  - bootstrap-state reload and shell-session poll are now explicit separate
+    operations; the 150ms loop now names itself as debug refresh upkeep
   - this cut is aimed directly at the product scroll snap-back / host-thickness
     issue, not at renderer internals yet
   - validation:

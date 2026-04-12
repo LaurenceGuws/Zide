@@ -1067,6 +1067,11 @@ Current progress:
     ordinary input events
   - stale follow behavior no longer forces bottom-follow from IME-visible state
     or inset application alone
+- second host ownership cut landed:
+  - bootstrap-state reload and shell-session poll are now explicit separate
+    operations in the activity/controller contract
+  - the debug refresh loop now names itself as debug/operator upkeep instead of
+    a generic product shell refresh entrypoint
 - that does not finish this category:
   - the 150ms poll model still exists
   - `ZideTerminalActivity` still owns too much product/debug orchestration
