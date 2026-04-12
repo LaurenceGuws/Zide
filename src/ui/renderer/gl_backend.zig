@@ -20,6 +20,7 @@ const surface_draw = @import("surface_draw.zig");
 const window_init = @import("window_init.zig");
 const screenshot = @import("screenshot.zig");
 const present_feedback_state = @import("present_feedback_state.zig");
+const present_capture_host = @import("present_capture_host.zig");
 const present_trace_runtime = @import("present_trace_runtime.zig");
 const renderer_clip_host = @import("renderer_clip_host.zig");
 const renderer_frame_host = @import("renderer_frame_host.zig");
@@ -289,8 +290,9 @@ pub fn submitFrame(renderer: anytype) present_feedback_state.FrameSubmission {
 /// Debug/capture-only submit work. This is intentionally named separately from
 /// normal presentation so ordinary frame cost is not mistaken for capture cost.
 fn runDebugCaptureIfArmedAfterComposition(renderer: anytype) void {
-    if (!renderer.present.capture.armed) return;
-    const path = renderer.present.capture.path orelse return;
+    const capture = present_capture_host.state(renderer);
+    if (!capture.armed) return;
+    const path = capture.path orelse return;
     dumpWindowScreenshotPpm(renderer, path) catch |err| {
         app_logger.logger("renderer.present").logf(.warning, "capture failed frame_seq={d} path={s} err={s}", .{
             renderer.present.frame_seq,
@@ -298,7 +300,7 @@ fn runDebugCaptureIfArmedAfterComposition(renderer: anytype) void {
             @errorName(err),
         });
     };
-    renderer.present.trace_current.captured_path = path;
+    present_capture_host.noteCapturedPath(renderer, path);
 }
 
 pub fn dumpWindowScreenshotPpm(renderer: anytype, path: []const u8) !void {

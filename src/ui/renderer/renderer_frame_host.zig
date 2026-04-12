@@ -1,4 +1,5 @@
 const app_logger = @import("../../app_logger.zig");
+const present_capture_host = @import("present_capture_host.zig");
 const present_feedback_state = @import("present_feedback_state.zig");
 const present_trace_runtime = @import("present_trace_runtime.zig");
 const std = @import("std");
@@ -45,7 +46,7 @@ pub fn finishFrameSubmission(renderer: anytype, outcome: FrameExecutionOutcome) 
     renderer.present.trace_last = renderer.present.trace_current;
     switch (outcome.kind) {
         .submitted, .submit_failed => {
-            renderer.present.capture = .{};
+            present_capture_host.clearAfterSubmission(renderer);
         },
         .not_attempted, .begin_failed, .abandoned => {},
     }

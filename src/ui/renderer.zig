@@ -15,6 +15,7 @@ const renderer_backend_host = @import("renderer/renderer_backend_host.zig");
 const metal_runtime_state = @import("renderer/metal_runtime_state.zig");
 const renderer_clip_host = @import("renderer/renderer_clip_host.zig");
 const renderer_frame_host = @import("renderer/renderer_frame_host.zig");
+const present_capture_host = @import("renderer/present_capture_host.zig");
 const renderer_presentable_host = @import("renderer/renderer_presentable_host.zig");
 const scene_target_state = @import("renderer/scene_target_state.zig");
 const surface_draw = @import("renderer/surface_draw.zig");
@@ -1030,9 +1031,7 @@ pub const Renderer = struct {
     }
 
     pub fn armPresentCapture(self: *Renderer, path: []const u8) void {
-        self.present.capture.path = path;
-        self.present.capture.armed = true;
-        self.present.capture.frame_seq = self.present.frame_seq;
+        present_capture_host.armCapture(self, path);
     }
 
     pub fn lastPresentTrace(self: *const Renderer) PresentTrace {

@@ -448,6 +448,8 @@ Status:
       or group sink can emit the requested tag/level
     - present-capture arm/path/frame state now lives in an explicit capture
       state object instead of flat fields beside correctness/trace state
+    - capture arm/reset/captured-path mutation now routes through
+      `present_capture_host.zig`
 - first iteration cut landed from that queue:
   - narrowed Android host/UI-thread contamination around stale transcript-era
     ownership

@@ -947,6 +947,11 @@ Current progress:
   - present-capture arm/path/frame state now lives in an explicit capture state
     object instead of being flat fields beside correctness/trace state
   - shared GL and Metal capture helpers now name that ownership directly
+- capture ownership host cut landed:
+  - arm/reset/captured-path mutation now routes through
+    `present_capture_host.zig`
+  - shared renderer/backend call sites no longer reach into capture fields
+    directly just to mutate capture ownership state
 
 ### 7. Remaining Android host/UI-thread contamination
 
