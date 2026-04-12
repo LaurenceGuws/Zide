@@ -1,6 +1,7 @@
 const std = @import("std");
 const app_shell = @import("../../app_shell.zig");
 const app_logger = @import("../../app_logger.zig");
+const present_feedback_host = @import("present_feedback_host.zig");
 const present_trace_runtime = @import("present_trace_runtime.zig");
 const renderer_text_phase_group_host = @import("renderer_text_phase_group_host.zig");
 const renderer_surface_host = @import("renderer_surface_host.zig");
@@ -35,7 +36,7 @@ pub const Band = struct {
             @floatFromInt(h),
             color.toRgba(),
         );
-        if (recorded) present_trace_runtime.noteFrameFamilyTouch(self.shell.renderer, .chrome_band);
+        if (recorded) present_feedback_host.noteFrameFamilyTouch(self.shell.renderer, .chrome_band);
     }
 
     pub fn drawRectOutline(self: *Band, x: i32, y: i32, w: i32, h: i32, color: Color) void {
@@ -76,7 +77,7 @@ pub const Band = struct {
             @floatFromInt(h),
             color.toRgba(),
         ) or recorded_any;
-        if (recorded_any) present_trace_runtime.noteFrameFamilyTouch(self.shell.renderer, .chrome_band);
+        if (recorded_any) present_feedback_host.noteFrameFamilyTouch(self.shell.renderer, .chrome_band);
     }
 
     fn queueTextOp(self: *Band, kind: TextKind, text: []const u8, x: f32, y: f32, color: Color, bg: Color) void {
@@ -98,7 +99,7 @@ pub const Band = struct {
             log.logf(.warning, "band text op append failed err={s}", .{@errorName(err)});
             return;
         };
-        present_trace_runtime.noteFrameFamilyTouch(self.shell.renderer, .chrome_band);
+        present_feedback_host.noteFrameFamilyTouch(self.shell.renderer, .chrome_band);
     }
 
     fn queueSizedTextOp(self: *Band, text: []const u8, x: f32, y: f32, size: f32, color: Color) void {
@@ -121,7 +122,7 @@ pub const Band = struct {
             log.logf(.warning, "band sized text op append failed err={s}", .{@errorName(err)});
             return;
         };
-        present_trace_runtime.noteFrameFamilyTouch(self.shell.renderer, .chrome_band);
+        present_feedback_host.noteFrameFamilyTouch(self.shell.renderer, .chrome_band);
     }
 
     pub fn drawText(self: *Band, text: []const u8, x: f32, y: f32, color: Color) void {

@@ -70,25 +70,18 @@ pub fn noteBandCommandGroupEnd(self: anytype) void {
 }
 
 pub fn noteFrameFamilyTouch(self: anytype, family: present_feedback_state.FrameFamily) void {
+    if (!self.present.trace_enabled) return;
     switch (family) {
         .terminal => {
-            self.present.frame_family_current.terminal.touched = true;
-            if (!self.present.trace_enabled) return;
             self.present.trace_current.terminal_presentation_count += 1;
         },
         .chrome_band => {
-            self.present.frame_family_current.chrome_band.touched = true;
-            if (!self.present.trace_enabled) return;
             self.present.trace_current.chrome_band_touch_count += 1;
         },
         .editor_row_band => {
-            self.present.frame_family_current.editor_row_band.touched = true;
-            if (!self.present.trace_enabled) return;
             self.present.trace_current.editor_row_band_touch_count += 1;
         },
         .sample_section => {
-            self.present.frame_family_current.sample_section.touched = true;
-            if (!self.present.trace_enabled) return;
             self.present.trace_current.sample_section_touch_count += 1;
         },
     }
@@ -134,13 +127,9 @@ pub fn clearEditorSurfaceSolidFamily(self: anytype) void {
     self.present.trace_current.editor_surface_solid_family = .none;
 }
 
-pub fn noteTerminalPresentation(self: anytype, generation: ?u64) void {
-    noteFrameFamilyTouch(self, .terminal);
-    if (generation) |value| {
-        self.present.frame_family_current.terminal.presented_generation = value;
-        if (!self.present.trace_enabled) return;
-        self.present.trace_current.terminal_presented_generation = value;
-    }
+pub fn noteTerminalPresentedGeneration(self: anytype, generation: u64) void {
+    if (!self.present.trace_enabled) return;
+    self.present.trace_current.terminal_presented_generation = generation;
 }
 
 pub fn noteEditorSurfaceFullPaneClear(self: anytype, x: i32, y: i32, w: i32, h: i32) void {

@@ -6,6 +6,7 @@ const draw_list_mod = @import("../../editor/render/draw_list.zig");
 const app_logger = @import("../../app_logger.zig");
 const renderer_text_phase_group_host = @import("../renderer/renderer_text_phase_group_host.zig");
 const present_trace_runtime = @import("../renderer/present_trace_runtime.zig");
+const present_feedback_host = @import("../renderer/present_feedback_host.zig");
 const renderer_surface_host = @import("../renderer/renderer_surface_host.zig");
 const renderer_text_host = @import("../renderer/renderer_text_host.zig");
 const scrollbar_mod = @import("editor_scrollbar.zig");
@@ -604,7 +605,7 @@ pub fn endEditorRowBandGroup(r: anytype) void {
 }
 
 pub fn noteEditorRowBandTouch(r: anytype) void {
-    present_trace_runtime.noteFrameFamilyTouch(r, .editor_row_band);
+    present_feedback_host.noteFrameFamilyTouch(r, .editor_row_band);
 }
 
 pub fn flushEditorSurfaceRects(r: anytype) void {

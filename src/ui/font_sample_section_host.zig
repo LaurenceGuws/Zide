@@ -1,7 +1,7 @@
 const std = @import("std");
 const app_shell = @import("../app_shell.zig");
 const app_logger = @import("../app_logger.zig");
-const present_trace_runtime = @import("renderer/present_trace_runtime.zig");
+const present_feedback_host = @import("renderer/present_feedback_host.zig");
 const renderer_text_phase_group_host = @import("renderer/renderer_text_phase_group_host.zig");
 const renderer_surface_host = @import("renderer/renderer_surface_host.zig");
 const renderer_mod = @import("renderer.zig");
@@ -36,7 +36,7 @@ pub const Section = struct {
             @floatFromInt(h),
             color.toRgba(),
         );
-        if (recorded) present_trace_runtime.noteFrameFamilyTouch(self.renderer, .sample_section);
+        if (recorded) present_feedback_host.noteFrameFamilyTouch(self.renderer, .sample_section);
     }
 
     fn queueTextOp(self: *Section, text: []const u8, x: f32, y: f32, color: Color, bg: Color) void {
@@ -52,7 +52,7 @@ pub const Section = struct {
             log.logf(.warning, "section text op append failed err={s}", .{@errorName(err)});
             return;
         };
-        present_trace_runtime.noteFrameFamilyTouch(self.renderer, .sample_section);
+        present_feedback_host.noteFrameFamilyTouch(self.renderer, .sample_section);
     }
 
     pub fn drawTextOnBg(self: *Section, text: []const u8, x: f32, y: f32, color: Color) void {

@@ -6,7 +6,7 @@ const shared_types = @import("../../types/mod.zig");
 const draw_presentation = @import("terminal_widget_draw_presentation.zig");
 const presentation_state_mod = @import("terminal_widget_presentation_state.zig");
 const view_state = @import("terminal_widget_view_state.zig");
-const present_trace_runtime = @import("../renderer/present_trace_runtime.zig");
+const present_feedback_host = @import("../renderer/present_feedback_host.zig");
 const renderer_clip_host = @import("../renderer/renderer_clip_host.zig");
 const renderer_presentable_host = @import("../renderer/renderer_presentable_host.zig");
 const renderer_terminal_draw_host = @import("../renderer/renderer_terminal_draw_host.zig");
@@ -1614,7 +1614,7 @@ pub fn directPresent(
         view_geometry.viewport_width,
         view_geometry.viewport_height,
     );
-    present_trace_runtime.noteTerminalPresentation(renderer, terminal_view.generation);
+    present_feedback_host.noteTerminalPresentation(renderer, terminal_view.generation);
 
     const bg_phase_start = app_shell.getTime();
     renderer.beginTerminalBatch();
@@ -1788,7 +1788,7 @@ pub fn tryIncrementalPresentableUpdate(
         surface_update_plan,
     );
     if (!result.completed) return result;
-    present_trace_runtime.noteTerminalPresentation(renderer, terminal_view.generation);
+    present_feedback_host.noteTerminalPresentation(renderer, terminal_view.generation);
     self.surface.notePresentationUpdated(terminal_view, surface_update_plan.geometry, draw_cursor, cursor, cursor_style, hover_link_id, composing_active, composing_hash);
     return result;
 }

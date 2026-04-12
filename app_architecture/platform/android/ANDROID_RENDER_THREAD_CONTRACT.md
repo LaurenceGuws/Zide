@@ -906,6 +906,13 @@ Current progress:
   - `present_trace_runtime.zig` now carries optional trace counters/helpers
     plus the aggregate `PresentState`; correctness types are no longer defined
     there
+- correctness update host cut landed:
+  - frame-family and terminal-presentation updates now route through
+    `present_feedback_host.zig`
+  - `present_trace_runtime.zig` no longer owns the correctness mutation; it
+    only mirrors optional counters when trace logging is enabled
+  - call sites that retire/present terminal/editor/chrome/sample families now
+    name feedback ownership rather than trace ownership
 
 ### 7. Remaining Android host/UI-thread contamination
 

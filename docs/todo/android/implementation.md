@@ -429,6 +429,9 @@ Status:
       tag is disabled
     - frame-family/submission/execution correctness state now lives in
       `present_feedback_state.zig` instead of being defined by the trace module
+    - frame-family and terminal-presentation correctness updates now route
+      through `present_feedback_host.zig`; trace only mirrors optional counters
+      when enabled
 - first iteration cut landed from that queue:
   - narrowed Android host/UI-thread contamination around stale transcript-era
     ownership

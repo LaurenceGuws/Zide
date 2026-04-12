@@ -1,4 +1,4 @@
-const present_trace_runtime = @import("present_trace_runtime.zig");
+const present_feedback_host = @import("present_feedback_host.zig");
 const capability_contract = @import("capability_contract.zig");
 const presentable_contract = @import("presentable_contract.zig");
 
@@ -132,7 +132,7 @@ pub fn drawTerminalPresentableBackdrop(renderer: anytype, x: f32, y: f32, w: f32
 }
 
 pub fn drawTerminalPresentable(renderer: anytype, draw: PresentableDraw) void {
-    present_trace_runtime.noteTerminalPresentation(renderer, draw.generation);
+    present_feedback_host.noteTerminalPresentation(renderer, draw.generation);
     renderer.backend.drawPresentable(renderer, draw);
 }
 
