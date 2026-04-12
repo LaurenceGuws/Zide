@@ -478,6 +478,8 @@ Status:
     methods instead of repeated open-coded toggle sequences
   - shell restart now routes through one explicit activity seam instead of
     repeated manual restart / debug start / install-success restart sequences
+  - lifecycle and surface callbacks now route their shared post-event shell
+    refresh / frame-loop / status aftermath through one explicit activity seam
   - this cut is aimed directly at the product scroll snap-back / host-thickness
     issue, not at renderer internals yet
   - validation:

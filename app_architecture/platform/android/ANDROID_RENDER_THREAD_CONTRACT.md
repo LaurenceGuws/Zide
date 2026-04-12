@@ -1110,6 +1110,11 @@ Current progress:
     status logging, shell-state refresh, and status-surface upkeep
   - manual restart, debug shell-start, and install-success restart no longer
     hand-roll that sequence separately
+- eleventh host ownership cut landed:
+  - lifecycle and surface callbacks no longer hand-roll the same post-event
+    product/debug aftermath sequence
+  - callback-side shell refresh, product frame-loop reevaluation, and status
+    upkeep now route through one explicit activity seam
 - that does not finish this category:
   - `ZideTerminalActivity` still owns too much product/debug orchestration
 

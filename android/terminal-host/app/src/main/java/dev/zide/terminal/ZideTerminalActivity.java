@@ -362,9 +362,7 @@ public final class ZideTerminalActivity extends Activity
         maybeScheduleSurfaceRecreation();
         maybeScheduleSurfaceResize();
         maybeScheduleShellStart();
-        handler.post(() -> refreshDebugShellState(false));
-        reevaluateProductFrameLoop();
-        updateStatus("resumed");
+        handleProductShellStateEvent("resumed");
     }
 
     @Override
@@ -437,8 +435,7 @@ public final class ZideTerminalActivity extends Activity
                 seq,
                 currentSurfaceStateSnapshot());
         productSurfaceContainer.post(() -> notifyVisibleViewport("surface-changed"));
-        handler.post(() -> refreshDebugShellState(false));
-        updateStatus("surface-changed");
+        handleProductShellStateEvent("surface-changed");
     }
 
     @Override
@@ -928,6 +925,12 @@ public final class ZideTerminalActivity extends Activity
         applyShellPollTelemetry(pollResult, logEvent);
         refreshProductShellState();
         refreshDebugStatusSurface();
+    }
+
+    private void handleProductShellStateEvent(String statusLabel) {
+        handler.post(() -> refreshDebugShellState(false));
+        reevaluateProductFrameLoop();
+        updateStatus(statusLabel);
     }
 
     private void installSurfaceView(String reason) {
