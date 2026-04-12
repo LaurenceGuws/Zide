@@ -216,6 +216,7 @@ pub const Logger = struct {
     }
 
     pub fn logf(self: Logger, level: Level, comptime fmt: []const u8, args: anytype) void {
+        if (!self.wouldEmit(level)) return;
         var buf: [1024]u8 = undefined;
         const msg = std.fmt.bufPrint(&buf, fmt, args) catch |err| {
             std.debug.print("[app.logger][Warning][{s}] dropped log message due to fmt error: {s}\n", .{ self.name, @errorName(err) });
@@ -226,6 +227,13 @@ pub const Logger = struct {
 
     pub fn logFields(self: Logger, level: Level, msg: []const u8, fields: []const Field) void {
         self.emit(level, msg, fields);
+    }
+
+    fn wouldEmit(self: Logger, level: Level) bool {
+        const emit_file = self.enabled_file and log_file != null and shouldEmit(level, self.file_level);
+        const emit_console = self.enabled_console and shouldEmit(level, self.console_level);
+        const emit_group = shouldEmit(level, self.file_level) and groupSinkEnabled(self.name);
+        return emit_file or emit_console or emit_group;
     }
 
     fn emit(self: Logger, level: Level, msg: []const u8, fields: []const Field) void {

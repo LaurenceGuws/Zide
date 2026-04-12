@@ -442,6 +442,8 @@ Status:
       formatting ordinary product input-frame diagnostics
     - remaining renderer-font info telemetry for font init metrics and
       glyph-prep worker lifecycle now checks tag enablement before formatting
+    - `Logger.logf(...)` now returns before formatting when no file, console,
+      or group sink can emit the requested tag/level
 - first iteration cut landed from that queue:
   - narrowed Android host/UI-thread contamination around stale transcript-era
     ownership

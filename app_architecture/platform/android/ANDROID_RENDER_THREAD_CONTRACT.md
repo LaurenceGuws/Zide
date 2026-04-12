@@ -933,6 +933,11 @@ Current progress:
   - font init metrics and glyph-prep worker lifecycle logs now check tag
     enablement before formatting
   - exceptional warning logs remain available on failure paths
+- logger boundary hardened:
+  - `Logger.logf(...)` now returns before formatting when no sink can emit the
+    requested tag/level
+  - future disabled telemetry cannot silently reintroduce formatting cost just
+    by calling `logf(...)`
 
 ### 7. Remaining Android host/UI-thread contamination
 
