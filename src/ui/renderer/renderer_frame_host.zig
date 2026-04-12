@@ -1,3 +1,4 @@
+const app_logger = @import("../../app_logger.zig");
 const present_trace_runtime = @import("present_trace_runtime.zig");
 const std = @import("std");
 
@@ -8,6 +9,8 @@ pub fn beginFrameHost(renderer: anytype) void {
     renderer.present.frame_seq +%= 1;
     renderer.present.frame_execution_state = .not_attempted;
     renderer.present.frame_family_current = .{};
+    const present_log = app_logger.logger("renderer.present");
+    renderer.present.trace_enabled = present_log.enabled_file or present_log.enabled_console;
     renderer.present.trace_current = .{ .frame_seq = renderer.present.frame_seq };
     renderer.clip_depth = 0;
 

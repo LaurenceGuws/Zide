@@ -421,6 +421,12 @@ Status:
       default
     - future diagnostic capture must explicitly arm those samples instead of
       relying on always-on product-path writes
+    - `FrameFamilySummary` remains always-on correctness state for terminal
+      publication feedback
+    - optional `PresentTrace` counters now advance only when `renderer.present`
+      logging is enabled by config
+    - frame submission logging now exits before reading trace state when that
+      tag is disabled
 - first iteration cut landed from that queue:
   - narrowed Android host/UI-thread contamination around stale transcript-era
     ownership

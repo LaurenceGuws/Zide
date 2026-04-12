@@ -889,6 +889,15 @@ Current progress:
     those debug capture structs by default
   - future debug capture must explicitly arm sample collection instead of
     relying on stale always-on product-path writes
+- present-trace ownership cut landed:
+  - `FrameFamilySummary` remains always-on correctness state because terminal
+    publication retirement depends on submitted/presented generation truth
+  - optional `PresentTrace` counters now advance only when `renderer.present`
+    logging is enabled through normal logging config
+  - frame submission logging now returns before reading trace state when the
+    `renderer.present` tag is disabled
+  - this keeps correctness feedback hot, but moves observability behind config
+    instead of treating it as product execution
 
 ### 7. Remaining Android host/UI-thread contamination
 
