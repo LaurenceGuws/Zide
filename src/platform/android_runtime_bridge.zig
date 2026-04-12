@@ -361,8 +361,36 @@ pub fn tickProductShellFrame() i32 {
 
 pub fn sendShellCodepoint(codepoint: i32) i32 {
     if (codepoint < 0 or codepoint > 0x10ffff) return @intFromEnum(android_shell_session.SendStatus.send_failed);
+    if (android_shell_session.currentScrollbackState().offset > 0) {
+        _ = android_shell_session.followLiveBottom();
+    }
     const status = android_shell_session.sendCodepoint(@intCast(codepoint));
     if (status == .ok) refreshShellSurfaceAfterInput();
+    return @intFromEnum(status);
+}
+
+pub fn currentShellVisibleRows() i32 {
+    return @intCast(android_shell_session.currentScrollbackState().rows);
+}
+
+pub fn currentShellScrollbackCount() i32 {
+    return @intCast(android_shell_session.currentScrollbackState().count);
+}
+
+pub fn currentShellScrollbackOffset() i32 {
+    return @intCast(android_shell_session.currentScrollbackState().offset);
+}
+
+pub fn setShellScrollbackOffset(offset_rows: i32) i32 {
+    if (offset_rows < 0) return @intFromEnum(android_shell_session.ScrollbackStatus.failed);
+    const status = android_shell_session.setScrollbackOffset(@intCast(offset_rows));
+    if (status == .ok) refreshShellSurfaceAfterScrollbackChange();
+    return @intFromEnum(status);
+}
+
+pub fn followShellLiveBottom() i32 {
+    const status = android_shell_session.followLiveBottom();
+    if (status == .ok) refreshShellSurfaceAfterScrollbackChange();
     return @intFromEnum(status);
 }
 
@@ -373,6 +401,13 @@ pub fn sendShellCodepoint(codepoint: i32) i32 {
 /// loop instead of submitting a frame inline on the input path.
 fn refreshShellSurfaceAfterInput() void {
     android_shell_session.poll() catch return;
+    if (bridge_state.terminal_widget) |*widget| {
+        widget.invalidatePresentationCache();
+    }
+    bridge_state.render_host.noteRedrawRequested();
+}
+
+fn refreshShellSurfaceAfterScrollbackChange() void {
     if (bridge_state.terminal_widget) |*widget| {
         widget.invalidatePresentationCache();
     }

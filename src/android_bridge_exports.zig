@@ -128,6 +128,26 @@ fn sendShellCodepointBridge(codepoint: i32) i32 {
     return android_runtime_bridge.sendShellCodepoint(codepoint);
 }
 
+fn currentShellVisibleRowsBridge() i32 {
+    return android_runtime_bridge.currentShellVisibleRows();
+}
+
+fn currentShellScrollbackCountBridge() i32 {
+    return android_runtime_bridge.currentShellScrollbackCount();
+}
+
+fn currentShellScrollbackOffsetBridge() i32 {
+    return android_runtime_bridge.currentShellScrollbackOffset();
+}
+
+fn setShellScrollbackOffsetBridge(offset_rows: i32) i32 {
+    return android_runtime_bridge.setShellScrollbackOffset(offset_rows);
+}
+
+fn followShellLiveBottomBridge() i32 {
+    return android_runtime_bridge.followShellLiveBottom();
+}
+
 fn sharedShellRendererActiveBridge() bool {
     return android_runtime_bridge.sharedShellRendererActive();
 }
@@ -364,6 +384,42 @@ export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeSendShellCodepointBr
     codepoint: i32,
 ) callconv(.c) i32 {
     return sendShellCodepointBridge(codepoint);
+}
+
+export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentShellVisibleRowsBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+) callconv(.c) i32 {
+    return currentShellVisibleRowsBridge();
+}
+
+export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentShellScrollbackCountBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+) callconv(.c) i32 {
+    return currentShellScrollbackCountBridge();
+}
+
+export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentShellScrollbackOffsetBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+) callconv(.c) i32 {
+    return currentShellScrollbackOffsetBridge();
+}
+
+export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeSetShellScrollbackOffsetBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+    offset_rows: i32,
+) callconv(.c) i32 {
+    return setShellScrollbackOffsetBridge(offset_rows);
+}
+
+export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeFollowShellLiveBottomBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+) callconv(.c) i32 {
+    return followShellLiveBottomBridge();
 }
 
 export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeSharedShellRendererActiveBridge(

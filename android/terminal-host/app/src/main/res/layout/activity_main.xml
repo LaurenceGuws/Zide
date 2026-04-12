@@ -22,6 +22,15 @@
                 android:layout_height="match_parent"
                 android:background="#162028" />
 
+            <dev.zide.terminal.TerminalScrollOverlayView
+                android:id="@+id/terminal_scroll_overlay"
+                android:layout_width="24dp"
+                android:layout_height="match_parent"
+                android:layout_gravity="end"
+                android:paddingTop="6dp"
+                android:paddingBottom="6dp"
+                android:visibility="gone" />
+
             <LinearLayout
                 android:id="@+id/product_bootstrap_blocker"
                 android:layout_width="match_parent"

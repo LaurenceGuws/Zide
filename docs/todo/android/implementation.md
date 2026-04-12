@@ -266,6 +266,66 @@ Status:
   `./ops/android_terminal_host.py userland-nvim-manual-check`
 - performance-testing build entrypoint is now explicit too:
   `./ops/android_terminal_host.py --variant profile deploy`
+- Android-owned interaction lane audit, 2026-04-13:
+  - current ownership mismatch is explicit:
+    - shared Zig terminal widget still owns scrollbar rendering, pointer-driven
+      scrollback drag, and pointer-driven selection behavior
+    - Android host owns only single-tap IME focus and pinch zoom
+  - that does not match the intended mobile product model:
+    - scrollbar should be Android-owned overlay rendering, not texture content
+    - scrollback scrolling should be driven by Android gesture policy
+    - text selection/copy/paste should feel like native Android text handling,
+      not desktop-terminal mouse emulation
+  - lower-level primitives already exist in the shared terminal/FFI layer:
+    - scrollback metadata (`scrollback_count`, `scrollback_offset`)
+    - scrollback control (`set_scrollback_offset`, `follow_live_bottom`)
+    - selection/export text (`selection_text`, `clipboard_write`)
+  - missing product contract is the Android host bridge:
+    - Java cannot currently read scrollback state or drive it through the
+      native bridge
+    - Java cannot currently request selection/export state through the native
+      bridge
+  - first implementation sequence for this lane:
+    1. expose scrollback state/control through the Android bridge
+    2. add a Java-owned product overlay seam for scrollbar rendering above the
+       `SurfaceView`
+    3. route Android gesture policy to that bridge instead of the shared
+       widget pointer path
+    4. only then add Android-native selection handles/copy actions against the
+       existing terminal selection/export primitives
+- first Android-owned scrollback checkpoint is now implemented:
+  - Zig Android bridge now exposes:
+    - visible terminal rows
+    - `scrollback_count`
+    - `scrollback_offset`
+    - `set_scrollback_offset`
+    - `follow_live_bottom`
+  - product view now mounts a Java-owned `TerminalScrollOverlayView` above the
+    live `SurfaceView`
+  - overlay drag/tap now drives scrollback through the Android bridge instead
+    of the shared widget pointer path
+  - scrollback changes invalidate terminal presentation and request redraw
+    through the paced product frame loop, not an old Java refresh loop
+  - selection/copy/paste remains intentionally deferred to the next checkpoint
+- Android gesture contract for the next scrollback cut:
+  - left-edge sidebar swipe remains owned by the dedicated edge-hotspot view,
+    not by the product surface
+  - product surface single-pointer contract is:
+    - tap with no resolved drag: open/focus IME
+    - resolved vertical drag: scrollback gesture
+    - long press: reserved for future selection, still unclaimed for now
+  - product surface multi-pointer contract is:
+    - two-pointer gesture immediately steals ownership for pinch zoom
+    - an active single-pointer scroll gesture must end before pinch begins
+  - drag resolution rules:
+    - vertical drag only resolves after touch-slop
+    - horizontal drift must not steal ownership from terminal product gestures
+    - once scrollback drag is resolved, tap-to-focus must no longer fire for
+      that gesture
+  - sequencing rule:
+    - finish scrollback default behavior first
+    - then add long-press selection / copy / paste on top of the settled
+      tap-scroll-pinch contract
 - current Android pinch/zoom result is accepted for this lane:
   - host-side gesture policy is explicit and stable
   - raw detector churn is quantized/coalesced host-side

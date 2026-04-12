@@ -13,6 +13,7 @@ import android.view.Choreographer;
 import android.view.Gravity;
 import android.view.InputDevice;
 import android.view.MotionEvent;
+import android.widget.OverScroller;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -36,7 +37,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 public final class ZideTerminalActivity extends Activity
-        implements SurfaceHolder.Callback2, ShellInputView.Host, ProductGestureController.Host {
+        implements SurfaceHolder.Callback2,
+                ShellInputView.Host,
+                ProductGestureController.Host,
+                TerminalScrollOverlayView.Host {
     private static final String TAG = "ZideAndroidTerminal";
     private static final int MAX_LOG_CHARS = 12000;
     private static final String EXTRA_DEBUG_RECREATE_SURFACE_ONCE = "debug_recreate_surface_once";
@@ -94,6 +98,7 @@ public final class ZideTerminalActivity extends Activity
     private View leftSidebar;
     private FrameLayout productContentFrame;
     private FrameLayout productSurfaceContainer;
+    private TerminalScrollOverlayView terminalScrollOverlay;
     private Button assistCtrlButton;
     private Button assistAltButton;
     private ShellInputView shellInputView;
@@ -126,6 +131,13 @@ public final class ZideTerminalActivity extends Activity
     private int notifiedViewportWidth = 0;
     private int notifiedViewportHeight = 0;
     private boolean notifiedViewportImeVisible = false;
+    private int activeGestureVisibleRows = 0;
+    private int activeGestureScrollbackCount = 0;
+    private int activeGestureScrollbackOffset = 0;
+    private float activeGestureScrollRemainderRows = 0.0f;
+    private int flingLastScrollY = 0;
+    private boolean flingScrollScheduled = false;
+    private OverScroller scrollbackFlingScroller;
     private final Runnable productFrameRunnable = new Runnable() {
         @Override
         public void run() {
@@ -133,6 +145,7 @@ public final class ZideTerminalActivity extends Activity
                 return;
             }
             final int tick = nativeLoaded ? nativeTickProductShellFrameBridge() : 0;
+            refreshProductScrollOverlay();
             if (!shouldRunProductFrameLoop() || tick == 0) {
                 stopProductFrameLoop();
                 return;
@@ -151,6 +164,25 @@ public final class ZideTerminalActivity extends Activity
                 return;
             }
             schedulePinchZoomFrame();
+        }
+    };
+    private final Runnable scrollbackFlingRunnable = new Runnable() {
+        @Override
+        public void run() {
+            flingScrollScheduled = false;
+            if (scrollbackFlingScroller == null) {
+                return;
+            }
+            if (!scrollbackFlingScroller.computeScrollOffset()) {
+                return;
+            }
+            final int currentY = scrollbackFlingScroller.getCurrY();
+            final float deltaY = currentY - flingLastScrollY;
+            flingLastScrollY = currentY;
+            applyProductScrollDelta(deltaY);
+            if (!scrollbackFlingScroller.isFinished()) {
+                scheduleScrollbackFlingFrame();
+            }
         }
     };
 
@@ -175,8 +207,11 @@ public final class ZideTerminalActivity extends Activity
         leftSidebar = findViewById(R.id.left_sidebar);
         productContentFrame = findViewById(R.id.product_content_frame);
         productSurfaceContainer = findViewById(R.id.product_surface_container);
+        terminalScrollOverlay = findViewById(R.id.terminal_scroll_overlay);
         assistCtrlButton = findViewById(R.id.assist_ctrl_button);
         assistAltButton = findViewById(R.id.assist_alt_button);
+        terminalScrollOverlay.setHost(this);
+        scrollbackFlingScroller = new OverScroller(this);
         userlandRelease = loadUserlandRelease();
         shellSessionController = new ShellSessionController(
                 new ShellSessionController.Bridge() {
@@ -403,6 +438,10 @@ public final class ZideTerminalActivity extends Activity
         if (shouldHandleHardwareKeyboardEvent(event)) {
             shellInputView.requestFocus();
             if (imeVisible) {
+                if (nativeLoaded) {
+                    nativeFollowShellLiveBottomBridge();
+                    refreshProductScrollOverlay();
+                }
                 final InputMethodManager imm = getSystemService(InputMethodManager.class);
                 if (imm != null) {
                     imm.hideSoftInputFromWindow(shellInputView.getWindowToken(), 0);
@@ -626,10 +665,81 @@ public final class ZideTerminalActivity extends Activity
     }
 
     @Override
+    public void onProductScrollBegin() {
+        if (!nativeLoaded) {
+            return;
+        }
+        stopScrollbackFling();
+        activeGestureVisibleRows = nativeCurrentShellVisibleRowsBridge();
+        activeGestureScrollbackCount = nativeCurrentShellScrollbackCountBridge();
+        activeGestureScrollbackOffset = nativeCurrentShellScrollbackOffsetBridge();
+        activeGestureScrollRemainderRows = 0.0f;
+    }
+
+    @Override
+    public void onProductScrollBy(float deltaY) {
+        applyProductScrollDelta(deltaY);
+    }
+
+    @Override
+    public void onProductScrollEnd() {
+        activeGestureVisibleRows = 0;
+        activeGestureScrollbackCount = 0;
+        activeGestureScrollbackOffset = 0;
+        activeGestureScrollRemainderRows = 0.0f;
+    }
+
+    @Override
+    public void onProductScrollFling(float velocityY) {
+        if (!nativeLoaded || scrollbackFlingScroller == null || productContentFrame.getHeight() <= 0) {
+            return;
+        }
+        stopScrollbackFling();
+        activeGestureVisibleRows = nativeCurrentShellVisibleRowsBridge();
+        activeGestureScrollbackCount = nativeCurrentShellScrollbackCountBridge();
+        activeGestureScrollbackOffset = nativeCurrentShellScrollbackOffsetBridge();
+        activeGestureScrollRemainderRows = 0.0f;
+        flingLastScrollY = 0;
+        scrollbackFlingScroller.fling(
+                0,
+                0,
+                0,
+                Math.round(velocityY),
+                0,
+                0,
+                Integer.MIN_VALUE / 4,
+                Integer.MAX_VALUE / 4);
+        scheduleScrollbackFlingFrame();
+    }
+
+    @Override
+    public void onScrollbackOffsetRequested(int offsetRows) {
+        if (!nativeLoaded) {
+            return;
+        }
+        final int status = nativeSetShellScrollbackOffsetBridge(offsetRows);
+        appendEvent("product.scrollback offset=" + offsetRows + " status=" + status);
+        refreshProductScrollOverlay();
+        reevaluateProductFrameLoop();
+    }
+
+    @Override
+    public void onFollowLiveBottomRequested() {
+        if (!nativeLoaded) {
+            return;
+        }
+        final int status = nativeFollowShellLiveBottomBridge();
+        appendEvent("product.scrollback followBottom status=" + status);
+        refreshProductScrollOverlay();
+        reevaluateProductFrameLoop();
+    }
+
+    @Override
     public void onProductPinchBegin() {
         if (!nativeLoaded) {
             return;
         }
+        stopScrollbackFling();
         pinchZoomActive = true;
         pinchZoomRetryScheduled = false;
         pendingPinchScaleFactor = 1.0f;
@@ -694,6 +804,50 @@ public final class ZideTerminalActivity extends Activity
                 schedulePinchZoomFrame();
             }
         });
+    }
+
+    private void applyProductScrollDelta(float deltaY) {
+        if (!nativeLoaded || activeGestureVisibleRows <= 0 || productContentFrame.getHeight() <= 0) {
+            return;
+        }
+        final float rowHeightPx = (float) productContentFrame.getHeight() / (float) activeGestureVisibleRows;
+        if (!(rowHeightPx > 0.0f)) {
+            return;
+        }
+        activeGestureScrollRemainderRows += (deltaY / rowHeightPx);
+        final int wholeRows = (int) activeGestureScrollRemainderRows;
+        if (wholeRows == 0) {
+            return;
+        }
+        activeGestureScrollRemainderRows -= wholeRows;
+        final int nextOffset = Math.max(0, Math.min(activeGestureScrollbackOffset + wholeRows, activeGestureScrollbackCount));
+        if (nextOffset == activeGestureScrollbackOffset) {
+            return;
+        }
+        if (nextOffset == 0) {
+            nativeFollowShellLiveBottomBridge();
+        } else {
+            nativeSetShellScrollbackOffsetBridge(nextOffset);
+        }
+        activeGestureScrollbackOffset = nextOffset;
+        refreshProductScrollOverlay();
+        reevaluateProductFrameLoop();
+    }
+
+    private void scheduleScrollbackFlingFrame() {
+        if (flingScrollScheduled) {
+            return;
+        }
+        flingScrollScheduled = true;
+        Choreographer.getInstance().postFrameCallback(frameTimeNanos -> scrollbackFlingRunnable.run());
+    }
+
+    private void stopScrollbackFling() {
+        if (scrollbackFlingScroller != null && !scrollbackFlingScroller.isFinished()) {
+            scrollbackFlingScroller.forceFinished(true);
+        }
+        flingScrollScheduled = false;
+        flingLastScrollY = 0;
     }
 
     private void schedulePinchZoomRetry(long delayMs) {
@@ -775,8 +929,10 @@ public final class ZideTerminalActivity extends Activity
         debugView.setVisibility(debugViewEnabled ? View.VISIBLE : View.GONE);
         if (debugViewEnabled) {
             closeSidebar();
+            terminalScrollOverlay.setVisibility(View.GONE);
         } else {
             productSurfaceContainer.post(() -> notifyVisibleViewport("product-view"));
+            productSurfaceContainer.post(this::refreshProductScrollOverlay);
         }
     }
 
@@ -803,6 +959,10 @@ public final class ZideTerminalActivity extends Activity
         }
 
         appendEvent("manual.imeOpen begin focus=" + shellInputView.hasFocus());
+        if (nativeLoaded) {
+            nativeFollowShellLiveBottomBridge();
+            refreshProductScrollOverlay();
+        }
         shellInputView.requestFocusFromTouch();
         if (!shellInputView.hasFocus()) {
             shellInputView.requestFocus();
@@ -909,6 +1069,7 @@ public final class ZideTerminalActivity extends Activity
 
     private void refreshProductShellState() {
         updateProductShellVisibility();
+        refreshProductScrollOverlay();
         reevaluateProductFrameLoop();
     }
 
@@ -962,6 +1123,7 @@ public final class ZideTerminalActivity extends Activity
             return;
         }
         final boolean viewportImeVisible = currentImeVisible();
+        final boolean imeVisibilityChanged = viewportImeVisible != notifiedViewportImeVisible;
         imeVisible = viewportImeVisible;
         final int width = Math.max(productContentFrame.getWidth(), 1);
         final int height = Math.max(productContentFrame.getHeight(), 1);
@@ -975,6 +1137,10 @@ public final class ZideTerminalActivity extends Activity
         notifiedViewportWidth = width;
         notifiedViewportHeight = height;
         notifiedViewportImeVisible = viewportImeVisible;
+        if (imeVisibilityChanged && nativeLoaded) {
+            nativeFollowShellLiveBottomBridge();
+            refreshProductScrollOverlay();
+        }
         appendEvent("viewport.changed reason=" + reason + " size=" + width + "x" + height + " imeVisible=" + viewportImeVisible);
         final long seq = nativeLoaded ? nativeOnVisibleViewportBridge(width, height, viewportImeVisible) : -1;
         callNativeWithSurfaceState("native.viewportChanged", seq, currentSurfaceStateSnapshot());
@@ -1003,11 +1169,34 @@ public final class ZideTerminalActivity extends Activity
                 || rendererMissing;
         productBootstrapBlocker.setVisibility(showBlocker ? View.VISIBLE : View.GONE);
         if (showBlocker) {
+            terminalScrollOverlay.setVisibility(View.GONE);
+        }
+        if (showBlocker) {
             productBootstrapTitle.setText(productBootstrapTitle(currentBootstrapState, currentInstallState, rendererMissing));
             productBootstrapDetail.setText(productBootstrapDetail(currentBootstrapState, currentInstallState, rendererMissing));
             productBootstrapRetryButton.setEnabled(!currentInstallState.isInstalling());
             productBootstrapRetryButton.setText(productBootstrapActionLabel(currentBootstrapState, currentInstallState));
         }
+    }
+
+    private void refreshProductScrollOverlay() {
+        if (terminalScrollOverlay == null) {
+            return;
+        }
+        if (debugViewEnabled
+                || !nativeLoaded
+                || currentInstallState.isInstalling()
+                || currentInstallState.isFailed()
+                || !currentBootstrapState.launchReady
+                || !currentBootstrapState.expectedCurrent
+                || productBootstrapBlocker.getVisibility() == View.VISIBLE) {
+            terminalScrollOverlay.updateScrollMetrics(0, 0, 0);
+            return;
+        }
+        terminalScrollOverlay.updateScrollMetrics(
+                nativeCurrentShellVisibleRowsBridge(),
+                nativeCurrentShellScrollbackCountBridge(),
+                nativeCurrentShellScrollbackOffsetBridge());
     }
 
     private int productBootstrapTitle(UserlandBootstrapState state, UserlandInstallState installState, boolean rendererMissing) {
@@ -1464,6 +1653,16 @@ public final class ZideTerminalActivity extends Activity
     private static native int nativeTickProductShellFrameBridge();
 
     private static native int nativeSendShellCodepointBridge(int codepoint);
+
+    private static native int nativeCurrentShellVisibleRowsBridge();
+
+    private static native int nativeCurrentShellScrollbackCountBridge();
+
+    private static native int nativeCurrentShellScrollbackOffsetBridge();
+
+    private static native int nativeSetShellScrollbackOffsetBridge(int offsetRows);
+
+    private static native int nativeFollowShellLiveBottomBridge();
 
     private static native boolean nativeSharedShellRendererActiveBridge();
 }

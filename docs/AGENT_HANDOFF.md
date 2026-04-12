@@ -33,8 +33,9 @@ blocker for Android terminal progress.
     artifact install/update, explicit staged-state reporting, staged `zide-pm`,
     one app-owned package action, clean Bash startup, and a curated
     terminal-dev baseline. `AU-A2` and `AU-A3` are met for the current
-    foundation. The next Android product work should prove interactive Neovim
-    terminal behavior, not broaden package curation.
+    foundation. The next Android product work is the Neovim baseline plus the
+    first Android-owned scrollback/selection interaction seam needed to make
+    terminal use feel native instead of desktop-pointer-shaped.
 - Accepted Android renderer checkpoint:
   - pinch / resize-pressure responsiveness is now accepted on the current
     release-build terminal-host path

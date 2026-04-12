@@ -4,6 +4,7 @@ import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.view.ViewConfiguration;
+import android.view.VelocityTracker;
 
 /**
  * Owns product-surface touch gesture policy for the Android terminal host.
@@ -13,6 +14,7 @@ import android.view.ViewConfiguration;
  *
  * <ul>
  *   <li>single-tap for IME focus
+ *   <li>resolved vertical drag for scrollback
  *   <li>pinch-begin / quantized pinch-step / pinch-end for terminal zoom
  * </ul>
  *
@@ -28,6 +30,18 @@ final class ProductGestureController {
     interface Host {
         /** Opens or focuses the product IME target after a resolved single tap. */
         void onProductSingleTap();
+
+        /** Marks the beginning of a resolved single-pointer vertical scrollback gesture. */
+        void onProductScrollBegin();
+
+        /** Applies one resolved vertical scroll delta for Android-owned scrollback. */
+        void onProductScrollBy(float deltaY);
+
+        /** Closes the active single-pointer vertical scrollback gesture. */
+        void onProductScrollEnd();
+
+        /** Starts Android-owned momentum scrolling after a resolved vertical drag release. */
+        void onProductScrollFling(float velocityY);
 
         /** Marks the beginning of an interactive pinch session. */
         void onProductPinchBegin();
@@ -48,6 +62,8 @@ final class ProductGestureController {
     private final Host host;
     private final ScaleGestureDetector scaleDetector;
     private final int touchSlop;
+    private final int minimumFlingVelocity;
+    private final int maximumFlingVelocity;
 
     /**
      * Raw detector deltas smaller than this are treated as touch noise and only accumulate
@@ -64,20 +80,30 @@ final class ProductGestureController {
 
     private float downX = 0.0f;
     private float downY = 0.0f;
+    private float lastY = 0.0f;
     private float accumulatedPinchScaleFactor = 1.0f;
     private boolean moved = false;
     private boolean pinchActive = false;
+    private boolean scrollActive = false;
+    private VelocityTracker velocityTracker = null;
 
     /** Creates a gesture controller bound to the product interaction surface. */
     ProductGestureController(View target, Host host) {
         this.target = target;
         this.host = host;
-        this.touchSlop = ViewConfiguration.get(target.getContext()).getScaledTouchSlop();
+        final ViewConfiguration viewConfig = ViewConfiguration.get(target.getContext());
+        this.touchSlop = viewConfig.getScaledTouchSlop();
+        this.minimumFlingVelocity = viewConfig.getScaledMinimumFlingVelocity();
+        this.maximumFlingVelocity = viewConfig.getScaledMaximumFlingVelocity();
         this.scaleDetector = new ScaleGestureDetector(
                 target.getContext(),
                 new ScaleGestureDetector.SimpleOnScaleGestureListener() {
                     @Override
                     public boolean onScaleBegin(ScaleGestureDetector detector) {
+                        if (scrollActive) {
+                            scrollActive = false;
+                            host.onProductScrollEnd();
+                        }
                         pinchActive = true;
                         accumulatedPinchScaleFactor = 1.0f;
                         host.onProductPinchBegin();
@@ -111,34 +137,71 @@ final class ProductGestureController {
     }
 
     private boolean onTouch(View view, MotionEvent event) {
+        ensureVelocityTracker();
+        velocityTracker.addMovement(event);
         scaleDetector.onTouchEvent(event);
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
                 downX = event.getX();
                 downY = event.getY();
+                lastY = downY;
                 moved = false;
+                scrollActive = false;
                 break;
             case MotionEvent.ACTION_MOVE:
-                if (Math.abs(event.getX() - downX) > touchSlop ||
-                        Math.abs(event.getY() - downY) > touchSlop) {
+                final float deltaX = event.getX() - downX;
+                final float deltaY = event.getY() - downY;
+                if (!scrollActive &&
+                        Math.abs(deltaY) > touchSlop &&
+                        Math.abs(deltaY) > Math.abs(deltaX)) {
+                    scrollActive = true;
+                    moved = true;
+                    lastY = event.getY();
+                    host.onProductScrollBegin();
+                }
+                if (scrollActive) {
+                    final float stepY = event.getY() - lastY;
+                    lastY = event.getY();
+                    if (stepY != 0.0f) {
+                        host.onProductScrollBy(stepY);
+                    }
+                } else if (Math.abs(deltaX) > touchSlop || Math.abs(deltaY) > touchSlop) {
                     moved = true;
                 }
                 break;
             case MotionEvent.ACTION_POINTER_DOWN:
+                if (scrollActive) {
+                    scrollActive = false;
+                    host.onProductScrollEnd();
+                }
                 pinchActive = true;
                 moved = true;
                 break;
             case MotionEvent.ACTION_UP:
-                if (!pinchActive && !moved && event.getPointerCount() == 1) {
+                if (scrollActive) {
+                    velocityTracker.computeCurrentVelocity(1000, maximumFlingVelocity);
+                    final float velocityY = velocityTracker.getYVelocity(event.getPointerId(0));
+                    scrollActive = false;
+                    host.onProductScrollEnd();
+                    if (Math.abs(velocityY) >= minimumFlingVelocity) {
+                        host.onProductScrollFling(velocityY);
+                    }
+                } else if (!pinchActive && !moved && event.getPointerCount() == 1) {
                     host.onProductSingleTap();
                 }
                 pinchActive = false;
                 moved = false;
+                releaseVelocityTracker();
                 break;
             case MotionEvent.ACTION_CANCEL:
+                if (scrollActive) {
+                    scrollActive = false;
+                    host.onProductScrollEnd();
+                }
                 pinchActive = false;
                 accumulatedPinchScaleFactor = 1.0f;
                 moved = false;
+                releaseVelocityTracker();
                 break;
             default:
                 break;
@@ -164,5 +227,19 @@ final class ProductGestureController {
             host.onProductPinchZoom(accumulatedPinchScaleFactor);
             accumulatedPinchScaleFactor = 1.0f;
         }
+    }
+
+    private void ensureVelocityTracker() {
+        if (velocityTracker == null) {
+            velocityTracker = VelocityTracker.obtain();
+        }
+    }
+
+    private void releaseVelocityTracker() {
+        if (velocityTracker == null) {
+            return;
+        }
+        velocityTracker.recycle();
+        velocityTracker = null;
     }
 }

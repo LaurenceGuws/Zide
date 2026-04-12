@@ -111,6 +111,18 @@ pub const SendStatus = enum(i32) {
     send_failed = 2,
 };
 
+pub const ScrollbackStatus = enum(i32) {
+    ok = 0,
+    no_session = 1,
+    failed = 2,
+};
+
+pub const ScrollbackState = struct {
+    rows: u16 = 0,
+    count: u32 = 0,
+    offset: u32 = 0,
+};
+
 pub fn sendText(text: []const u8) SendStatus {
     const active = session orelse return .no_session;
     if (text.len == 0) return .ok;
@@ -124,6 +136,42 @@ pub fn sendCodepoint(cp: u21) SendStatus {
     var buf: [4]u8 = undefined;
     const len = std.unicode.utf8Encode(cp, &buf) catch return .send_failed;
     return sendText(buf[0..len]);
+}
+
+pub fn currentScrollbackState() ScrollbackState {
+    const active = session orelse return .{};
+    var request = std.mem.zeroes(c_api.ZideTerminalMetadataRequest);
+    request.abi_version = c_api.ZIDE_TERMINAL_METADATA_ABI_VERSION;
+    request.struct_size = @sizeOf(c_api.ZideTerminalMetadataRequest);
+
+    var metadata = std.mem.zeroes(c_api.ZideTerminalMetadata);
+    metadata.abi_version = c_api.ZIDE_TERMINAL_METADATA_ABI_VERSION;
+    metadata.struct_size = @sizeOf(c_api.ZideTerminalMetadata);
+    if (c_api.zide_terminal_metadata_acquire(active.handle, &request, &metadata) != 0) {
+        return .{ .rows = active.rows };
+    }
+    defer c_api.zide_terminal_metadata_release(&metadata);
+    return .{
+        .rows = active.rows,
+        .count = metadata.scrollback_count,
+        .offset = metadata.scrollback_offset,
+    };
+}
+
+pub fn setScrollbackOffset(offset_rows: u32) ScrollbackStatus {
+    const active = session orelse return .no_session;
+    if (c_api.zide_terminal_set_scrollback_offset(active.handle, offset_rows) != 0) {
+        return .failed;
+    }
+    return .ok;
+}
+
+pub fn followLiveBottom() ScrollbackStatus {
+    const active = session orelse return .no_session;
+    if (c_api.zide_terminal_follow_live_bottom(active.handle) != 0) {
+        return .failed;
+    }
+    return .ok;
 }
 
 pub fn resizeToGrid(cols: u16, rows: u16, cell_width: u16, cell_height: u16) !bool {
