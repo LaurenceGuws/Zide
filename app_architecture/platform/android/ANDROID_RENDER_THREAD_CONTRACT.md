@@ -1090,6 +1090,11 @@ Current progress:
     debug view is hidden
   - debug-mode entry remains the explicit owner of when the status surface is
     refreshed
+- seventh host ownership cut landed:
+  - shell poll telemetry, product shell state upkeep, and debug status-surface
+    refresh no longer live as one broad activity operation
+  - `refreshDebugShellState(...)` now delegates those responsibilities through
+    explicit helper seams
 - that does not finish this category:
   - `ZideTerminalActivity` still owns too much product/debug orchestration
 

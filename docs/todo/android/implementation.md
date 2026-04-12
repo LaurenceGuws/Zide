@@ -469,6 +469,9 @@ Status:
     a hidden side effect; product frame-loop reevaluation is now explicit
   - debug status formatting no longer runs on ordinary product events while
     the debug view is hidden
+  - shell poll telemetry, product shell state upkeep, and debug status-surface
+    refresh are now separated inside the activity instead of sharing one broad
+    refresh operation
   - this cut is aimed directly at the product scroll snap-back / host-thickness
     issue, not at renderer internals yet
   - validation:

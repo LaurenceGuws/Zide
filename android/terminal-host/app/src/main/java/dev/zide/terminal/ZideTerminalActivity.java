@@ -895,9 +895,7 @@ public final class ZideTerminalActivity extends Activity
         return shellSessionController.poll(currentBootstrapState);
     }
 
-    private void refreshDebugShellState(boolean logEvent) {
-        reloadBootstrapState();
-        final ShellSessionController.PollResult pollResult = pollShellSession();
+    private void applyShellPollTelemetry(ShellSessionController.PollResult pollResult, boolean logEvent) {
         if (pollResult.autoStarted) {
             appendEvent("auto.shellStart status=" + shellStartStatusLabel(pollResult.autoStartStatus));
         }
@@ -912,16 +910,30 @@ public final class ZideTerminalActivity extends Activity
         } else {
             lastAutoStartBlockedState = "";
         }
-
-        updateProductShellVisibility();
-        reevaluateProductFrameLoop();
-        if (shouldUpdateDebugStatus()) {
-            updateStatus("shell-state", currentBootstrapState);
-        }
         if (logEvent) {
             appendEvent("manual.shellRefresh alive=" + pollResult.alive + " status="
                     + shellStartStatusLabel(pollResult.status));
         }
+    }
+
+    private void refreshProductShellState() {
+        updateProductShellVisibility();
+        reevaluateProductFrameLoop();
+    }
+
+    private void refreshDebugStatusSurface() {
+        if (!shouldUpdateDebugStatus()) {
+            return;
+        }
+        updateStatus("shell-state", currentBootstrapState);
+    }
+
+    private void refreshDebugShellState(boolean logEvent) {
+        reloadBootstrapState();
+        final ShellSessionController.PollResult pollResult = pollShellSession();
+        applyShellPollTelemetry(pollResult, logEvent);
+        refreshProductShellState();
+        refreshDebugStatusSurface();
     }
 
     private void installSurfaceView(String reason) {
