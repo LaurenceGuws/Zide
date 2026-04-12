@@ -191,6 +191,28 @@ Do not do:
 - do not add more debug timing noise on this path before the ownership split is
   clear
 
+Current progress:
+
+- first cut landed:
+  - active Android pinch now applies a cheap live user-zoom scale update through
+    shared renderer font state
+  - that path updates logical font sizes and derived metrics without clearing
+    the dynamic font cache or deinitializing active app/editor/terminal/icon
+    fonts
+  - existing glyph atlas output now carries a temporary live visual scale, so
+    glyph size tracks cell size during the interaction instead of waiting for
+    pinch end
+  - Android product-fit grid resize now remains live during pinch, so terminal
+    cell backgrounds continue fitting the Java-owned surface instead of
+    shrinking inside a larger parent until gesture end
+  - pinch end commits the expensive `applyFontScale(...)` rebuild once so
+    raster font assets catch up to the final settled size
+- remaining work:
+  - queued desktop/user zoom still uses the full rebuild path
+  - display-metric and config font changes intentionally still use the full
+    rebuild path until their ownership is audited separately
+  - font-cache reuse across committed scale targets is still unresolved
+
 ### 2. Direct interaction-to-frame submission path
 
 `src/platform/android_runtime_bridge.zig`

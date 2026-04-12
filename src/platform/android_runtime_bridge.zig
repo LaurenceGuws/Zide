@@ -159,6 +159,14 @@ pub fn applyTerminalPinchZoom(scale_factor: f32) i32 {
 
 pub fn setTerminalPinchActive(active: bool) i32 {
     bridge_state.pinch_zoom_active = active;
+    if (!active) {
+        if (bridge_state.renderer) |renderer| {
+            renderer.commitExternalHostFontScale() catch return 2;
+        }
+        if (bridge_state.terminal_widget) |*widget| {
+            widget.invalidatePresentationCache();
+        }
+    }
     if (!active and bridge_state.render_host.hasSurface()) {
         bridge_state.last_renderer_status = drawSharedRendererSurfaceFrame();
     }
@@ -391,9 +399,7 @@ fn ensureTerminalWidget() ?*widgets.TerminalWidget {
 /// Keep scrutiny high here; any resize/layout work that is not truly needed
 /// for this frame should be staged out of the render path.
 fn drawLiveTerminalWidgetFrame(renderer: *renderer_mod.Renderer, widget: *widgets.TerminalWidget) void {
-    if (!bridge_state.pinch_zoom_active) {
-        ensureProductFitTerminalGrid(renderer, widget) catch {};
-    }
+    ensureProductFitTerminalGrid(renderer, widget) catch {};
     const viewport = bridge_state.render_host.effectiveViewportMetrics();
     const width = @as(f32, @floatFromInt(@max(viewport.logical_width, 1)));
     const height = @as(f32, @floatFromInt(@max(viewport.logical_height, 1)));

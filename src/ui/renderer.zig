@@ -690,6 +690,10 @@ pub const Renderer = struct {
         try font_runtime.applyFontScale(self);
     }
 
+    pub fn commitExternalHostFontScale(self: *Renderer) !void {
+        try self.applyFontScale();
+    }
+
     pub fn queueUserZoom(self: *Renderer, delta: f32, now: f64) bool {
         return font_runtime.queueUserZoom(self, delta, now);
     }

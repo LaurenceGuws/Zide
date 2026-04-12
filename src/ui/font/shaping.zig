@@ -27,7 +27,8 @@ pub fn drawGlyph(
         return;
     };
     const render_scale = if (self.render_scale > 0.0) self.render_scale else 1.0;
-    const inv_scale = 1.0 / render_scale;
+    const live_visual_scale = if (self.live_visual_scale > 0.0) self.live_visual_scale else 1.0;
+    const inv_scale = live_visual_scale / render_scale;
     const baseline = y + self.baseline_from_top * inv_scale;
 
     const glyph_w = @as(f32, @floatFromInt(glyph.width)) * inv_scale;
@@ -123,7 +124,8 @@ pub fn drawGrapheme(
     if (length == 0) return;
 
     const render_scale = if (self.render_scale > 0.0) self.render_scale else 1.0;
-    const inv_scale = 1.0 / render_scale;
+    const live_visual_scale = if (self.live_visual_scale > 0.0) self.live_visual_scale else 1.0;
+    const inv_scale = live_visual_scale / render_scale;
     const baseline = y + self.baseline_from_top * inv_scale;
     const is_symbol_glyph = isSymbolGlyph(base);
 
@@ -170,7 +172,8 @@ pub fn drawGrapheme(
 pub fn glyphAdvance(self: anytype, codepoint: u32, italic: bool) GlyphError!f32 {
     const glyph = try getGlyphForCodepoint(self, codepoint, italic);
     const render_scale = if (self.render_scale > 0.0) self.render_scale else 1.0;
-    return glyph.advance / render_scale;
+    const live_visual_scale = if (self.live_visual_scale > 0.0) self.live_visual_scale else 1.0;
+    return glyph.advance * live_visual_scale / render_scale;
 }
 
 pub fn getGlyphForCodepoint(self: anytype, codepoint: u32, italic: bool) GlyphError!*Glyph {

@@ -39,6 +39,21 @@ const FontInitResult = struct {
     metrics: Renderer.ScaledFontMetrics,
 };
 
+fn scaleMetrics(metrics: *Renderer.ScaledFontMetrics, factor: f32) void {
+    metrics.ascent *= factor;
+    metrics.descent *= factor;
+    metrics.line_height *= factor;
+    metrics.cell_width *= factor;
+    metrics.cell_height *= factor;
+    metrics.baseline_from_top *= factor;
+}
+
+fn scaleLiveFontVisual(font: *TerminalFont, factor: f32) void {
+    if (!(factor > 0.0) or std.math.isNan(factor)) return;
+    const current = if (font.live_visual_scale > 0.0) font.live_visual_scale else 1.0;
+    font.live_visual_scale = current * factor;
+}
+
 fn resolveFontPath(allocator: std.mem.Allocator, raw: []const u8) !OwnedFontPath {
     if (std.fs.path.isAbsolute(raw)) {
         const owned = try allocator.alloc(u8, raw.len + 1);
@@ -302,6 +317,53 @@ pub fn applyFontScale(renderer: anytype) !void {
     renderer.terminal_font.deinit();
     renderer.icon_font.deinit();
     try initFonts(renderer);
+}
+
+/// Cheap live zoom path for interactive gestures.
+///
+/// This updates logical font sizes and derived cell metrics without destroying
+/// font atlases or rebuilding active font faces. A later commit step must call
+/// `applyFontScale(...)` when the interaction settles so raster font assets
+/// catch up to the final target size.
+pub fn applyLiveUserZoomScale(renderer: anytype) void {
+    const old_app = renderer.font_size;
+    const old_editor = renderer.editor_font_size;
+    const old_terminal = renderer.terminal_font_size;
+    const old_icon = renderer.icon_font_size;
+
+    renderer.font_size = renderer.base_font_size * renderer.scale.ui_scale * renderer.scale.user_zoom;
+    renderer.editor_font_size = renderer.editor_base_font_size * renderer.scale.ui_scale * renderer.scale.user_zoom;
+    renderer.terminal_font_size = renderer.terminal_base_font_size * renderer.scale.ui_scale * renderer.scale.user_zoom;
+    renderer.icon_font_size = renderer.font_size * 2.0;
+
+    if (old_app > 0.0) {
+        const factor = renderer.font_size / old_app;
+        scaleMetrics(&renderer.app_metrics, factor);
+        scaleLiveFontVisual(&renderer.app_font, factor);
+        renderer.char_width = renderer.app_metrics.cell_width;
+        renderer.char_height = renderer.app_metrics.cell_height;
+    }
+    if (old_editor > 0.0) {
+        const factor = renderer.editor_font_size / old_editor;
+        scaleMetrics(&renderer.editor_metrics, factor);
+        scaleLiveFontVisual(&renderer.editor_font, factor);
+        renderer.editor_char_width = renderer.editor_metrics.cell_width;
+        renderer.editor_char_height = renderer.editor_metrics.cell_height;
+    }
+    if (old_terminal > 0.0) {
+        const factor = renderer.terminal_font_size / old_terminal;
+        scaleMetrics(&renderer.terminal_metrics, factor);
+        scaleLiveFontVisual(&renderer.terminal_font, factor);
+        renderer.terminal_cell_width = renderer.terminal_metrics.cell_width;
+        renderer.terminal_cell_height = renderer.terminal_metrics.cell_height;
+    }
+    if (old_icon > 0.0) {
+        const factor = renderer.icon_font_size / old_icon;
+        scaleMetrics(&renderer.icon_metrics, factor);
+        scaleLiveFontVisual(&renderer.icon_font, factor);
+        renderer.icon_char_width = renderer.icon_metrics.cell_width;
+        renderer.icon_char_height = renderer.icon_metrics.cell_height;
+    }
 }
 
 pub fn fontForSize(renderer: anytype, size: f32) ?*TerminalFont {

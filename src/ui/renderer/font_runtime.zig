@@ -156,6 +156,10 @@ pub fn applyFontScale(self: anytype) !void {
     }
 }
 
+pub fn applyLiveUserZoomScale(self: anytype) void {
+    font_manager.applyLiveUserZoomScale(self);
+}
+
 pub fn queueUserZoom(self: anytype, delta: f32, now: f64) bool {
     const result = scale_utils.queueUserZoom(self.scale.user_zoom_target, delta, now, 0.5, 3.0);
     self.scale.user_zoom_target = result.next_target;
@@ -182,7 +186,7 @@ pub fn applyPinchZoomScale(self: anytype, scale_factor: f32, now: f64) !bool {
         layout_size,
     });
     log.logf(.info, "ui_pinch_zoom layout_size={d:.2} raster_size={d:.2}", .{ layout_size, raster_size });
-    try applyFontScale(self);
+    applyLiveUserZoomScale(self);
     return true;
 }
 

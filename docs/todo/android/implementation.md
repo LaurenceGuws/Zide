@@ -288,6 +288,19 @@ Status:
     - debug/observability contamination of product execution
     - remaining Android host/UI-thread contamination
   - next code cuts should come from that audited queue, not ad hoc tuning
+- live font-scale first cut landed:
+  - Android pinch frames no longer run the full active-font teardown/cache-reset
+    path
+  - live pinch updates shared renderer font sizes and cell metrics cheaply
+  - live pinch also applies temporary glyph visual scaling so glyph size follows
+    the updated cell geometry
+  - product-fit grid sizing now remains active during pinch so the terminal
+    cell background continues filling the host surface instead of lagging until
+    gesture end
+  - pinch end commits the expensive font rebuild once, after the interaction
+    settles
+  - remaining font-scale war work is shared renderer ownership, not Android
+    gesture plumbing
 - first iteration cut landed from that queue:
   - narrowed Android host/UI-thread contamination around stale transcript-era
     ownership
