@@ -194,83 +194,31 @@ Current blocker reading after `RB-B3.e` progress:
 
 Next active ticket:
 
-- `AR-B3` / `RB-B3.f`
-- band composition phase boundary for fill + dependent text/icon work
+- text/surface phase-boundary follow-up
 - owner:
   `app_architecture/ui/BAND_COMPOSITION_PHASE_PLAN.md`
+  `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md`
 
-Current `RB-B3.f` checkpoint:
+Current checkpoint:
 
-- first narrow chrome-band adoption is in:
-  `side_nav.zig` badge text now replays through the shared chrome-band seam
-  instead of bypassing it with immediate `shell.drawTextSized(...)`
-- that is one real family slice where fills + icon text + badge text now live
-  inside one local band ordering unit
-- second narrow chrome-band adoption is in:
-  `status_bar.zig` mode chip text, active field text, selection/caret rects,
-  error text, and file-path text now replay through the shared chrome-band seam
-  instead of mixing band fills with immediate truncated/input text drawing
-- `common.zig` now separates truncation from immediate drawing so band-owned
-  truncated labels do not need a duplicate truncation path
-- third narrow chrome-band adoption is in:
-  `shared_top_bar.zig` menu shadow now routes through the menu band, and
-  `tab_bar.zig` truncated tab titles now replay through the chrome-band seam
-  while flushing before `endClip()` keeps tab text under the tab-strip clip
-- fourth narrow chrome-band adoption is in:
-  integrated terminal tab-bar background and shared window caption button
-  backgrounds/glyph strokes now route through the chrome-band seam
-- narrowing scan no longer shows shell/UI chrome-band composition as the loudest
-  remaining pressure
-- remaining direct draw hits are separate semantics:
-  editor row/overlay composition, common tooltip overlay, terminal progress /
-  scrollbar / content-edge visuals, and close-confirm modal overlay
+- `RB-B3.f` shell/UI chrome-band composition is met
+- `RB-B3.g` terminal overlay/progress composition is met
+- `RB-B3.h` editor row/overlay composition is met
+- `RB-B3.i` sample/diagnostic section composition check is met
+- `AR-B4.g` IME-aware shared Android GLES viewport sizing is met
+- the strongest remaining renderer pressure is now narrower than those landed
+  slices:
+  fills and their dependent text/icon work still do not share one
+  backend-neutral phase boundary consistently enough that a new backend would
+  feel routine
 
 Next renderer move:
 
-- `RB-B3.g` terminal overlay/progress composition is now the active narrow
-  follow-up
-- owner: `app_architecture/ui/TERMINAL_COMPOSITION_PHASE_PLAN.md`
-
-Current `RB-B3.g` checkpoint:
-
-- `terminal_composition_host.zig` defines a terminal-owned composition seam
-- close-confirm modal fills, outlines, and text now route through that seam
-- active-tab progress bar, terminal scrollbar thumb, and terminal separator now
-  route through that seam
-- remaining direct draw pressure is now mainly editor row/overlay composition,
-  common tooltip overlay composition, and terminal cell/content internals
-
-Next renderer move:
-
-- `RB-B3.h` editor row/overlay composition is now the active narrow follow-up
-- owner: `app_architecture/ui/EDITOR_COMPOSITION_PHASE_PLAN.md`
-
-Current `RB-B3.h` checkpoint:
-
-- `segment_paint.zig` no longer imports renderer surface/text hosts directly
-- immediate editor pane/row/search helpers route through
-  `editor_widget_draw_overlay.zig`, the existing editor overlay/row-band owner
-- text-decoration rects, composing underline, and explicit editor surface-flush
-  handoffs also route through that owner
-- remaining direct draw pressure is now mostly inside the editor overlay owner
-  itself plus common tooltip overlay composition
-- generic tooltip overlay composition now terminates in
-  `renderer_tooltip_host.zig` instead of mixing fill/outline/text calls inside
-  widget common code
-- remaining direct draw pressure is now mostly inside explicit owner modules:
-  editor overlay owner and lower-level renderer/text hosts
-
-Next renderer move:
-
-- `RB-B3.i` sample/diagnostic section composition check, then Android GLES
-  readiness re-rank
-- do not continue broad direct-draw cleanup unless this check finds a real
-  Android-blocking ownership leak
-- `RB-B3.i` result:
-  sample/diagnostic section chrome now routes through
-  `font_sample_section_host.Section`
-- next active Android-facing move is `AR-B4`:
-  first controlled Android GLES backend planning cut
+- audit and name the first remaining concrete text/surface phase-boundary leak
+- define that leak as the next narrow renderer ticket instead of reviving
+  already-met `RB-B3.*` slices
+- do not reopen Android backend work unless that audit proves a new concrete
+  renderer-owned Android blocker
 
 Gate-4 closure note:
 

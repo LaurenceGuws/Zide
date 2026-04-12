@@ -21,15 +21,19 @@ statement. The short version:
 Android package/userland work is now strong enough on-device that it should
 stop outranking the active renderer blocker.
 
-- Active ticket: `AR-B3` / `RB-B3.f`
-  - band composition phase boundary for fill + dependent text/icon work
-  - owner: `docs/todo/ui/renderer.md`
+- Active ticket: text/surface phase-boundary follow-up
+  - owner:
+    `docs/todo/ui/renderer.md`
+    `app_architecture/ui/BAND_COMPOSITION_PHASE_PLAN.md`
+    `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md`
   - current state:
     Android now has a real terminal-host package/userland foundation: in-app
     artifact install/update, explicit staged-state reporting, staged `zide-pm`,
     one app-owned package action, and clean Bash startup. That means Android
     product work should return to the shared renderer blocker instead of
-    extending AU-A2 further without a concrete regression.
+    extending AU-A2 further without a concrete regression. The strongest
+    remaining renderer pressure is the shared text/surface phase-boundary
+    problem already called out in renderer authority.
 - `RB-B3.d` is already met:
   - widget/runtime no longer calls `usesDirectTerminalPresentation(...)`
   - those path decisions now terminate in the presentable host seam
