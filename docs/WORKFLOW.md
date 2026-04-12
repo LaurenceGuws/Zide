@@ -97,6 +97,30 @@ Examples of shared-contract scope:
 - present/invalidation policy
 - layout/resize work on live draw paths
 
+## Debug / Telemetry Exit Rule
+
+Bug and performance investigations may add probes, logs, counters, capture
+state, and temporary switches, but those artifacts do not get to remain by
+default.
+
+Before closing a task, classify each investigation artifact:
+
+- **Correctness contract**: required for product behavior. Keep it always-on
+  only if the cost is defensible, name it as product state, and document the
+  owner.
+- **Operator telemetry**: useful during normal support/development. Gate it
+  behind config, log level, or build mode, and make the disabled cost close to
+  zero.
+- **Probe/debug capture**: investigation-only. It must be explicitly armed and
+  must not run in ordinary product execution.
+
+Delete anything that does not fit one of those categories.
+
+Do not allow stale logs, debug structs, counters, env toggles, screenshots,
+capture hooks, or fallback/probe paths to survive only because they helped solve
+the last bug. If a field affects correctness, it must stop being called debug,
+trace, or probe.
+
 ## Ticket Execution Rules
 
 Every active task should have these five answers before code starts:

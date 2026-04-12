@@ -118,3 +118,23 @@ Current default priority rule:
 - The agent must proactively add/remove log tags per issue and keep log noise low while preserving required diagnostics.
 - The agent must not ask the user to manually set `ZIDE_LOG` env vars or tune logging unless explicitly requested by the user.
 - After debugging, the agent should leave `./.zide.lua` in a sensible default state (or clearly state the temporary logging changes made).
+
+## Debug / telemetry cleanup policy
+
+- Investigation code is temporary by default.
+- After any bug fix, profiling pass, or device probe, classify every added log,
+  counter, sample struct, debug field, env flag, probe path, and capture hook as
+  one of:
+  - **correctness contract**: required for product behavior; rename it as
+    product state, document the owner, and keep it minimal
+  - **operator telemetry**: useful for normal support/development; gate it
+    behind config/log level/build mode with near-zero disabled cost
+  - **probe/debug capture**: investigation-only; explicitly arm it, document how
+    to remove or reuse it, and keep it off ordinary product paths
+- Delete anything that does not fit one of those categories before marking the
+  task done.
+- Do not leave "just in case" logging, stale debug structs, profiling counters,
+  compatibility probe paths, or one-off environment switches in hot/product
+  paths after the issue is closed.
+- Do not name correctness state as trace/debug/probe. If product behavior
+  depends on it, its naming and module ownership must say so.

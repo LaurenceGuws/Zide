@@ -23,6 +23,9 @@ most competitive version of Zide achievable on its platform:
 - No fallbacks in core for platform weaknesses — those belong in the native
   layer or do not exist
 - No stale code blocks tolerated at any layer
+- No investigation leftovers in product paths: debugging/profiling artifacts
+  must either become named correctness contracts, gated operator telemetry, or
+  explicitly armed probes; otherwise delete them
 - No reinventing what the platform already provides cleanly
 - The renderer backend abstraction is intentionally open-ended — it adapts to
   proved real-world truth, not speculation
