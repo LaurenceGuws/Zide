@@ -959,10 +959,6 @@ public final class ZideTerminalActivity extends Activity
         }
 
         appendEvent("manual.imeOpen begin focus=" + shellInputView.hasFocus());
-        if (nativeLoaded) {
-            nativeFollowShellLiveBottomBridge();
-            refreshProductScrollOverlay();
-        }
         shellInputView.requestFocusFromTouch();
         if (!shellInputView.hasFocus()) {
             shellInputView.requestFocus();
@@ -1137,10 +1133,6 @@ public final class ZideTerminalActivity extends Activity
         notifiedViewportWidth = width;
         notifiedViewportHeight = height;
         notifiedViewportImeVisible = viewportImeVisible;
-        if (imeVisibilityChanged && nativeLoaded) {
-            nativeFollowShellLiveBottomBridge();
-            refreshProductScrollOverlay();
-        }
         appendEvent("viewport.changed reason=" + reason + " size=" + width + "x" + height + " imeVisible=" + viewportImeVisible);
         final long seq = nativeLoaded ? nativeOnVisibleViewportBridge(width, height, viewportImeVisible) : -1;
         callNativeWithSurfaceState("native.viewportChanged", seq, currentSurfaceStateSnapshot());
