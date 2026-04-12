@@ -550,9 +550,10 @@ pub fn addTerminalGlyphQuad(
     src: types.Rect,
     dest: types.Rect,
     color: types.Rgba,
+    bg_rgba: types.Rgba,
     kind: types.TextureKind,
 ) void {
-    renderer.terminal_text.glyph_cache.addQuad(texture, src, dest, color, renderer.text_render.bg_rgba, kind);
+    renderer.terminal_text.glyph_cache.addQuad(texture, src, dest, color, bg_rgba, kind);
 }
 
 pub fn createPersistentImageFromRgba(_: anytype, width: i32, height: i32, data: []const u8) ?surface_draw.GpuImageRef {

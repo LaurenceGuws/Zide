@@ -1301,7 +1301,7 @@ pub const Renderer = struct {
 
     fn drawTextureGlyphCacheThunk(ctx: *anyopaque, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
         const renderer: *Renderer = @ptrCast(@alignCast(ctx));
-        renderer.backend.addTerminalGlyphQuad(renderer, texture, src, dest, color, kind);
+        renderer.backend.addTerminalGlyphQuad(renderer, texture, src, dest, color, renderer.text_render.bg_rgba, kind);
     }
 
     fn addTerminalGlyphRectThunk(ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void {

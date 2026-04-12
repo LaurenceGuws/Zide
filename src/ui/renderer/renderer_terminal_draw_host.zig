@@ -23,6 +23,6 @@ pub fn addTerminalGlyphRect(renderer: anytype, x: i32, y: i32, w: i32, h: i32, c
     renderer.backend.addTerminalGlyphRect(renderer, x, y, w, h, color.toRgba());
 }
 
-pub fn addTerminalGlyphQuad(renderer: anytype, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
-    renderer.backend.addTerminalGlyphQuad(renderer, texture, src, dest, color, kind);
+pub fn addTerminalGlyphQuad(renderer: anytype, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, bg_rgba: types.Rgba, kind: types.TextureKind) void {
+    renderer.backend.addTerminalGlyphQuad(renderer, texture, src, dest, color, bg_rgba, kind);
 }

@@ -164,9 +164,10 @@ pub fn Host(
             src: anytype,
             dest: anytype,
             color: anytype,
+            bg_rgba: anytype,
             kind: anytype,
         ) void {
-            self.ops.terminal_draw.addTerminalGlyphQuad(renderer, texture, src, dest, color, kind);
+            self.ops.terminal_draw.addTerminalGlyphQuad(renderer, texture, src, dest, color, bg_rgba, kind);
         }
 
         pub fn createPersistentImageFromRgba(self: @This(), renderer: *RendererType, width: i32, height: i32, data: []const u8) ?surface_draw.GpuImageRef {

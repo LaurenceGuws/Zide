@@ -73,7 +73,7 @@ pub fn BackendOps(
     const TerminalDrawOps = struct {
         addTerminalRect: *const fn (*RendererType, i32, i32, i32, i32, types.Rgba) void,
         addTerminalGlyphRect: *const fn (*RendererType, i32, i32, i32, i32, types.Rgba) void,
-        addTerminalGlyphQuad: *const fn (*RendererType, types.Texture, types.Rect, types.Rect, types.Rgba, types.TextureKind) void,
+        addTerminalGlyphQuad: *const fn (*RendererType, types.Texture, types.Rect, types.Rect, types.Rgba, types.Rgba, types.TextureKind) void,
     };
 
     const ImageDrawOps = struct {
@@ -440,7 +440,7 @@ fn UnavailableDesktopDispatch(
         fn applyClipRect(_: *RendererType, _: ?types.Rect) void {}
         fn addTerminalRect(_: *RendererType, _: i32, _: i32, _: i32, _: i32, _: types.Rgba) void {}
         fn addTerminalGlyphRect(_: *RendererType, _: i32, _: i32, _: i32, _: i32, _: types.Rgba) void {}
-        fn addTerminalGlyphQuad(_: *RendererType, _: types.Texture, _: types.Rect, _: types.Rect, _: types.Rgba, _: types.TextureKind) void {}
+        fn addTerminalGlyphQuad(_: *RendererType, _: types.Texture, _: types.Rect, _: types.Rect, _: types.Rgba, _: types.Rgba, _: types.TextureKind) void {}
         fn createPersistentImageFromRgba(_: *RendererType, _: i32, _: i32, _: []const u8) ?GpuImageRef {
             return null;
         }
@@ -537,8 +537,8 @@ fn OpenGlDispatch(
         fn addTerminalGlyphRect(renderer: *RendererType, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void {
             gl_backend.addTerminalGlyphRect(renderer, x, y, w, h, color);
         }
-        fn addTerminalGlyphQuad(renderer: *RendererType, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
-            gl_backend.addTerminalGlyphQuad(renderer, texture, src, dest, color, kind);
+        fn addTerminalGlyphQuad(renderer: *RendererType, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, bg_rgba: types.Rgba, kind: types.TextureKind) void {
+            gl_backend.addTerminalGlyphQuad(renderer, texture, src, dest, color, bg_rgba, kind);
         }
         fn createPersistentImageFromRgba(renderer: *RendererType, width: i32, height: i32, data: []const u8) ?GpuImageRef {
             return gl_backend.createPersistentImageFromRgba(renderer, width, height, data);
@@ -643,8 +643,8 @@ fn MetalDispatch(
         fn addTerminalGlyphRect(renderer: *RendererType, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void {
             metal_backend.addTerminalGlyphRect(renderer, x, y, w, h, color);
         }
-        fn addTerminalGlyphQuad(renderer: *RendererType, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
-            metal_backend.addTerminalGlyphQuad(renderer, texture, src, dest, color, kind);
+        fn addTerminalGlyphQuad(renderer: *RendererType, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, bg_rgba: types.Rgba, kind: types.TextureKind) void {
+            metal_backend.addTerminalGlyphQuad(renderer, texture, src, dest, color, bg_rgba, kind);
         }
         fn createPersistentImageFromRgba(renderer: *RendererType, width: i32, height: i32, data: []const u8) ?GpuImageRef {
             return metal_backend.createPersistentImageFromRgba(renderer, width, height, data);
@@ -749,8 +749,8 @@ fn AndroidGlesDispatch(
         fn addTerminalGlyphRect(renderer: *RendererType, x: i32, y: i32, w: i32, h: i32, color: types.Rgba) void {
             android_gles_backend.addTerminalGlyphRect(renderer, x, y, w, h, color);
         }
-        fn addTerminalGlyphQuad(renderer: *RendererType, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, kind: types.TextureKind) void {
-            android_gles_backend.addTerminalGlyphQuad(renderer, texture, src, dest, color, kind);
+        fn addTerminalGlyphQuad(renderer: *RendererType, texture: types.Texture, src: types.Rect, dest: types.Rect, color: types.Rgba, bg_rgba: types.Rgba, kind: types.TextureKind) void {
+            android_gles_backend.addTerminalGlyphQuad(renderer, texture, src, dest, color, bg_rgba, kind);
         }
         fn createPersistentImageFromRgba(renderer: *RendererType, width: i32, height: i32, data: []const u8) ?GpuImageRef {
             return android_gles_backend.createPersistentImageFromRgba(renderer, width, height, data);

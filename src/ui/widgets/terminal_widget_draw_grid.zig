@@ -652,14 +652,19 @@ fn cellWithColors(codepoint: u32, fg: Color, bg: Color, reverse: bool) Cell {
 }
 
 fn drawTextureGlyphCache(ctx: *anyopaque, texture: terminal_font_mod.Texture, src: terminal_font_mod.Rect, dest: terminal_font_mod.Rect, color: terminal_font_mod.Rgba, kind: terminal_font_mod.TextureKind) void {
-    const rr: *Renderer = @ptrCast(@alignCast(ctx));
-    renderer_terminal_draw_host.addTerminalGlyphQuad(rr, texture, src, dest, color, kind);
+    const draw_ctx: *TerminalGlyphDrawContext = @ptrCast(@alignCast(ctx));
+    renderer_terminal_draw_host.addTerminalGlyphQuad(draw_ctx.renderer, texture, src, dest, color, draw_ctx.bg_rgba, kind);
 }
 
 fn addTerminalGlyphRect(ctx: *anyopaque, x: i32, y: i32, w: i32, h: i32, color: Color) void {
     const rr: *Renderer = @ptrCast(@alignCast(ctx));
     renderer_terminal_draw_host.addTerminalGlyphRect(rr, x, y, w, h, color);
 }
+
+const TerminalGlyphDrawContext = struct {
+    renderer: *Renderer,
+    bg_rgba: Rgba,
+};
 
 fn isTerminalBoxGlyph(codepoint: u32) bool {
     return terminal_glyphs.hasAnalyticBoxGlyphCoverage(codepoint);
@@ -1009,6 +1014,7 @@ fn drawAlignedSpecialGlyphSprite(
             sp.rect,
             .{ .x = dest_x, .y = y0, .width = dest_w, .height = snapped_h },
             fg_draw.toRgba(),
+            .{ .r = 0, .g = 0, .b = 0, .a = 0 },
             .font_coverage);
         if (capture_sample) |sample| {
             captureTextPaintSample(
@@ -1174,7 +1180,11 @@ pub fn drawRowGlyphs(
         return;
     }
 
-    const draw_ctx = DrawContext{ .ctx = rr, .drawTexture = drawTextureGlyphCache };
+    var draw_ctx = TerminalGlyphDrawContext{
+        .renderer = rr,
+        .bg_rgba = .{ .r = 0, .g = 0, .b = 0, .a = 0 },
+    };
+    const font_draw_ctx = DrawContext{ .ctx = @ptrCast(&draw_ctx), .drawTexture = drawTextureGlyphCache };
     const cursor_row_active = ligature_strategy == .cursor and draw_cursor_mode and row_idx == cursor_pos.row and cursor_pos.col < cols_count;
     const cursor_split_col: usize = if (cursor_row_active) blk: {
         const cursor_cell = row_cells[cursor_pos.col];
@@ -1282,7 +1292,7 @@ pub fn drawRowGlyphs(
                 // luminance-based background correction that can erase colored
                 // terminal glyphs on overridden cell backgrounds.
                 behind_rgba.a = 0;
-                rr.text_render.bg_rgba = behind_rgba;
+                draw_ctx.bg_rgba = behind_rgba;
 
                 const direct_choice_start = app_shell.getTime();
                 const choice = if (rr.terminal_font.directFastGlyphForCodepoint(cell.codepoint)) |fast|
@@ -1308,7 +1318,7 @@ pub fn drawRowGlyphs(
                 drawDirectGlyphById(
                     rr,
                     &rr.terminal_font,
-                    draw_ctx,
+                    font_draw_ctx,
                     choice.face,
                     choice.want_color,
                     cell.codepoint,
@@ -1350,7 +1360,7 @@ pub fn drawRowGlyphs(
                 // Special terminal glyphs share the same coverage path and
                 // must avoid bg-aware luminance correction for colored cells.
                 behind_rgba.a = 0;
-                rr.text_render.bg_rgba = behind_rgba;
+                draw_ctx.bg_rgba = behind_rgba;
                 const box_x = base_x_local + @as(f32, @floatFromInt(@as(i32, @intCast(special_col)))) * cell_w;
                 const box_y = base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h;
                 const box_w = cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(style.width_units))));
@@ -1548,7 +1558,7 @@ pub fn drawRowGlyphs(
             // direct glyphs; keep bg alpha clear so cell-local bg overrides do
             // not suppress low-luminance colored foreground text.
             behind_rgba.a = 0;
-            rr.text_render.bg_rgba = behind_rgba;
+            draw_ctx.bg_rgba = behind_rgba;
 
             if (cell.codepoint == 0 or cell.codepoint == kitty_unicode_placeholder) continue;
             if (cell.codepoint == ' ' and cell.combining_len == 0) {
@@ -1578,7 +1588,7 @@ pub fn drawRowGlyphs(
             drawShapedGlyph(
                 rr,
                 &rr.terminal_font,
-                draw_ctx,
+                font_draw_ctx,
                 span_choice.face,
                 span_choice.want_color,
                 cell.codepoint,

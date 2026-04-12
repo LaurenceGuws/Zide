@@ -781,10 +781,19 @@ That split is now sharper from code inspection too:
   `renderer.text_render.bg_rgba` state before drawing. Ordinary UI/editor text
   now carries its background through a tiny local text draw context into the
   texture draw thunk instead.
-- that means the surviving `bg_rgba` mutation story is now narrower and more
-  honest:
-  terminal-grid / batched terminal glyph paths still use renderer-owned
-  background state, but ordinary UI/editor text no longer does
+- second cut is now in too:
+  terminal-grid and terminal batched glyph submission no longer mutate
+  `renderer.text_render.bg_rgba` either. Terminal glyph quad submission now
+  carries cell background explicitly through the terminal draw host/backend
+  seam.
+- that means the old blocker is now closed at the mutation level:
+  no live draw path still writes ambient `renderer.text_render.bg_rgba`
+  during frame assembly; only frame reset still initializes that field
+- the surviving pressure is narrower again:
+  a few legacy renderer thunks and GL surface-phase atlas/raw-image replay
+  still read `renderer.text_render.bg_rgba` instead of carrying background as
+  explicit draw data, so the next blocker is now "ambient bg reads" rather
+  than "ambient bg mutation"
 - sample pressure is specifically section-fill plus bg-aware text preview work
   in `font_sample_view.zig` / `font_sample_section_host.zig`, including the
   custom-font sample path that still terminates through direct texture draws

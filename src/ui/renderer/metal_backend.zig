@@ -1552,9 +1552,11 @@ pub fn addTerminalGlyphQuad(
     src: types.Rect,
     dest: types.Rect,
     color: types.Rgba,
+    bg_rgba: types.Rgba,
     kind: types.TextureKind,
 ) void {
     _ = texture;
+    _ = bg_rgba;
     const clip_rect = if (renderer.currentClipRect()) |clip|
         metal_text_sample_runtime.pixelClipRect(renderer, clip)
     else

@@ -239,8 +239,13 @@ Next renderer move:
   non-terminal text paths in `text_runtime.zig` no longer mutate ambient
   `renderer.text_render.bg_rgba` before drawing; they carry background through
   a local text draw context into the texture draw thunk instead.
-  Remaining `bg_rgba` mutation is now narrowed to terminal-grid / terminal
-  glyph batching paths.
+  second cut is now in too:
+  terminal-grid / terminal glyph batching no longer mutates ambient
+  `renderer.text_render.bg_rgba`; terminal glyph quad submission now carries
+  cell background explicitly through the terminal draw host/backend seam.
+  Remaining pressure is no longer ambient bg mutation; it is the smaller set
+  of legacy renderer thunks and GL surface-phase replay paths that still read
+  ambient bg instead of taking explicit background data.
 - do not reopen Android backend work unless that audit proves a new concrete
   renderer-owned Android blocker
 
