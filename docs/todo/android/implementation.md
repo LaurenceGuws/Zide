@@ -491,6 +491,8 @@ Status:
   - OpenGL ordinary pre-present replay/resolve now routes through one explicit
     helper instead of spelling replay plus offscreen-scene resolve inline
     inside `submitFrame(...)`
+  - Android GLES steady-state target setup plus clear now routes through one
+    explicit helper instead of staying inline inside `beginFrame(...)`
   - terminal presentation execution update planning now happens once in
     `runPresentation(...)` instead of being rebuilt separately inside both
     execution hooks

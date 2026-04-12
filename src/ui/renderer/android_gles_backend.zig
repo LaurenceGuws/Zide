@@ -273,7 +273,14 @@ pub fn beginFrame(renderer: anytype) void {
         return;
     }
     syncTextRenderConfig(renderer);
+    prepareSteadyStateFrameSurface(renderer);
+    renderer_frame_host.noteFrameReady(renderer);
+}
 
+/// Android GLES steady-state frame-entry setup. Surface/context acquire stays
+/// in the explicit acquire seam; this helper keeps the remaining beginFrame
+/// work auditable as target setup plus clear.
+fn prepareSteadyStateFrameSurface(renderer: anytype) void {
     renderer.present.main_composition_target = .default_target;
     renderer.text_render.dst_linear_active = false;
     renderer.target_pixel_width = renderer.render_width;
@@ -293,7 +300,6 @@ pub fn beginFrame(renderer: anytype) void {
         );
         gl.glClear(GL_COLOR_BUFFER_BIT);
     }
-    renderer_frame_host.noteFrameReady(renderer);
 }
 
 /// Frame-entry scrutiny: backend beginFrame must not lazily initialize GL

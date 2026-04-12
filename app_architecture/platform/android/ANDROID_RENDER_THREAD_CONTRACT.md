@@ -852,6 +852,11 @@ Current progress:
     helper shared by preframe warmup and steady-state `beginFrame(...)`
   - steady-state frame entry now reads more honestly as surface/context acquire,
     then clear/setup, instead of duplicating acquire mechanics across seams
+- fourth frame-entry cut landed:
+  - Android GLES steady-state target setup plus clear now routes through one
+    explicit helper instead of remaining inline inside `beginFrame(...)`
+  - behavior is unchanged; this keeps frame entry readable as acquire,
+    readiness check, setup/clear, then ready
 - second submit-path classification cut landed:
   - Metal ordinary pre-present replay now routes through one explicit helper
     instead of spelling surface replay, snapshot-cache refresh, and presentable
