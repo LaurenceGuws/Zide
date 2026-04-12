@@ -22,25 +22,6 @@
                 android:layout_height="match_parent"
                 android:background="#162028" />
 
-            <ScrollView
-                android:id="@+id/shell_output_scroll"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="@android:color/transparent"
-                android:fillViewport="true">
-
-                <TextView
-                    android:id="@+id/shell_output_text"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:background="@android:color/transparent"
-                    android:fontFamily="monospace"
-                    android:padding="6dp"
-                    android:textColor="#f5f7fa"
-                    android:textSize="13sp"
-                    android:typeface="monospace" />
-            </ScrollView>
-
             <LinearLayout
                 android:id="@+id/product_bootstrap_blocker"
                 android:layout_width="match_parent"

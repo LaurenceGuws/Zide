@@ -98,7 +98,8 @@ active product goal again.
   - Current AU-A1 device truth:
     - staged Bash 5.3.9 runs under `run-as`
     - staged Bash is also the live product shell on the SDK 28 terminal-host
-      path; transcript proof shows `bash-5.3$`, `pwd`, and `/`
+      path; device proof shows the shared-renderer shell prompt and `pwd`
+      running under Bash from the staged prefix
     - `apt-get update` refreshes package metadata with relocation overrides
     - `zide-pm-admin` publishes the current Android dev snapshot prerelease in
       `../zide-mobile-pm`;
@@ -137,8 +138,8 @@ active product goal again.
   - visible shared clear/swap in terminal-host product view
   - `SurfaceDraw.solid` replay on-device
   - minimal terminal rect/glyph-rect replay on-device
-  - live shared-renderer shell ownership in product view without the Java
-    transcript overlay
+  - live shared-renderer shell ownership in product view without any Java
+    transcript fallback
   - readable live shell text/prompt replay through atlas glyph rendering on
     the shared Android GLES path
   - product-fit live shell sizing from the real renderer surface instead of a

@@ -25,8 +25,6 @@ final class ShellInputView extends View {
 
         void sendDirectCodepoint(int codepoint);
 
-        void refreshShellState();
-
         void onInputFocusChanged(boolean hasFocus);
 
         void onModifierLatchChanged(ModifierLatchState state);
@@ -135,7 +133,6 @@ final class ShellInputView extends View {
                 }
 
                 resetEditorState();
-                host.refreshShellState();
                 return true;
             }
 
@@ -143,11 +140,9 @@ final class ShellInputView extends View {
             public boolean setComposingText(CharSequence text, int newCursorPosition) {
                 final String s = text.toString();
                 if (consumeLatchedImeText(s)) {
-                    host.refreshShellState();
                     return true;
                 }
                 replaceComposition(s);
-                host.refreshShellState();
                 return true;
             }
 
@@ -166,7 +161,6 @@ final class ShellInputView extends View {
                     return true;
                 }
                 if (consumeLatchedImeText(s)) {
-                    host.refreshShellState();
                     return true;
                 }
                 final String previous = currentCompositionText();
@@ -183,7 +177,6 @@ final class ShellInputView extends View {
                     editorComposingStart = -1;
                     editorComposingEnd = -1;
                 }
-                host.refreshShellState();
                 return true;
             }
 
@@ -202,7 +195,6 @@ final class ShellInputView extends View {
                     final int delEnd = Math.min(editorBuffer.length(), editorCursor + afterLength);
                     editorBuffer.delete(editorCursor, delEnd);
                 }
-                host.refreshShellState();
                 return true;
             }
 
@@ -485,7 +477,6 @@ final class ShellInputView extends View {
             if (latchedModifiersConsumed) {
                 clearLatchedModifiers();
             }
-            host.refreshShellState();
             return true;
         }
         final String esc = mapKeyToEscape(event.getKeyCode());
@@ -497,7 +488,6 @@ final class ShellInputView extends View {
             if (latchedModifiersConsumed) {
                 clearLatchedModifiers();
             }
-            host.refreshShellState();
             return true;
         }
         switch (event.getKeyCode()) {
@@ -507,21 +497,17 @@ final class ShellInputView extends View {
                     editorBuffer.deleteCharAt(editorCursor - 1);
                     editorCursor--;
                 }
-                host.refreshShellState();
                 return true;
             case KeyEvent.KEYCODE_ENTER:
             case KeyEvent.KEYCODE_NUMPAD_ENTER:
                 host.sendDirectCodepoint('\n');
                 resetEditorState();
-                host.refreshShellState();
                 return true;
             case KeyEvent.KEYCODE_TAB:
                 host.sendDirectCodepoint('\t');
-                host.refreshShellState();
                 return true;
             case KeyEvent.KEYCODE_ESCAPE:
                 host.sendDirectCodepoint('\u001b');
-                host.refreshShellState();
                 return true;
             default:
                 final int unicode = event.getUnicodeChar();
@@ -547,7 +533,6 @@ final class ShellInputView extends View {
                 if (latchedModifiersConsumed) {
                     clearLatchedModifiers();
                 }
-                host.refreshShellState();
                 return true;
         }
     }

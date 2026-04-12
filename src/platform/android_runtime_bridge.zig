@@ -283,7 +283,7 @@ pub fn restartShellSession() i32 {
 }
 
 pub fn pollShellSession() i32 {
-    android_shell_session.pollAndRefresh() catch return @intFromEnum(android_shell_session.lastStartStatus());
+    android_shell_session.poll() catch return @intFromEnum(android_shell_session.lastStartStatus());
     if (bridge_state.render_host.hasSurface()) {
         bridge_state.last_renderer_status = drawSharedRendererSurfaceFrame();
     }

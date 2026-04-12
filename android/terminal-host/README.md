@@ -116,12 +116,13 @@ Repo-side support for that workflow now lives in Gradle:
 
 ## Current Product Shell
 
-Current product view is shell-first:
+Current product view is shared-renderer-only:
 
-- transcript owns the screen
+- the Zig shared renderer owns visible shell output
 - terminal tap opens the IME path
 - slim bottom assist strip provides phone keyboard helpers
 - restart/debug live in a hidden left drawer
+- no Java transcript fallback remains on the product path
 
 ## Current Neovim Check
 

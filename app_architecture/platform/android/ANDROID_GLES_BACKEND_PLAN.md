@@ -266,8 +266,8 @@ Current status:
 - submit-time replay uses GLES scissor + clear for solid rect fills
 - backend-smoke frame execution now records one shared solid rect through
   `renderer_surface_host.recordSolidSurfaceFromLogicalRect(...)`
-- terminal-host product view now hosts the renderer surface at real size with
-  the Java transcript overlaid temporarily for shell usability
+- terminal-host product view now hosts the renderer surface at real size as the
+  real product shell surface
 - device validation now proves:
   - shared surface size is real on-device (`surface.changed ... size=2759x1230`
     in landscape and `1440x2632` in portrait)
@@ -321,8 +321,8 @@ Stop marker:
 
 - the shared Android GLES backend can execute one minimal terminal
   rect/glyph-rect proof on-device without a backend-private immediate draw path
-- this still does **not** claim live terminal-widget product ownership,
-  glyph-atlas parity, or Java transcript retirement
+- this still does **not** claim live terminal-widget product ownership or
+  glyph-atlas parity
 
 Status:
 
@@ -334,22 +334,22 @@ Status:
 
 Purpose:
 
-- move the visible shell product surface from the temporary Java transcript
-  overlay onto the shared Android GLES renderer path
+- move the visible shell product surface fully onto the shared Android GLES
+  renderer path
 
 Required behavior:
 
 - draw live terminal cell backgrounds and glyph fallback from real terminal
   state through the shared renderer path
-- keep Java-side IME/input/overlay ownership, but stop using the Java
-  transcript as the visible shell product surface
+- keep Java-side IME/input/overlay ownership, but keep visible shell output on
+  the shared renderer path
 - keep the cut honest: no glyph-atlas parity, no presentable path, no editor
   claims
 
 Stop marker:
 
 - product view shows live shell content from the shared renderer path
-- the Java transcript overlay is no longer the product-owned shell display
+- no Java transcript fallback remains on the product-owned shell display path
 
 Current status:
 
@@ -361,8 +361,8 @@ Current status:
   bootstrap before a current Android surface exists
 - the Android bridge now reuses the existing live shell session handle to
   create a shared `TerminalWidget` against the real shell runtime
-- product view now hides the Java transcript when that shared shell renderer is
-  active, so product shell ownership is no longer Java-owned
+- product shell ownership is no longer Java-owned; the shared renderer is the
+  only visible shell display path
 - Android GLES now binds the shared atlas vertex-stream pipeline instead of a
   glyph-block fallback:
   - backend-owned GL shader/VBO/VAO resources now live under
@@ -374,8 +374,7 @@ Current status:
 - device validation now proves:
   - `native.surfaceAvailable ... gles=drawn` on the live shell path
   - the process stays alive after first frame
-  - product view hierarchy no longer contains the Java transcript scroll/text
-    nodes while the shared shell renderer is active
+  - product view hierarchy no longer contains Java transcript scroll/text nodes
   - screenshot capture now shows readable live shell text and prompt content
     through the shared Android GLES renderer path
 

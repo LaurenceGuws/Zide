@@ -14,12 +14,14 @@
     <string name="product_bootstrap_title_invalid">Userland Needs Restaging</string>
     <string name="product_bootstrap_title_shell_missing">Shell Payload Missing</string>
     <string name="product_bootstrap_title_upgrade">Userland Update Available</string>
+    <string name="product_bootstrap_title_renderer_missing">Renderer Not Ready</string>
     <string name="product_bootstrap_title_installing">Installing Userland</string>
     <string name="product_bootstrap_title_install_failed">Userland Install Failed</string>
     <string name="product_bootstrap_detail_missing">Stage the Android dev prefix before launching the product shell.</string>
     <string name="product_bootstrap_detail_invalid">The staged bootstrap metadata is invalid. Restage the Android dev prefix.</string>
     <string name="product_bootstrap_detail_shell_missing">The staged prefix does not currently provide a launchable Bash shell.</string>
     <string name="product_bootstrap_detail_upgrade">The staged userland is launchable but older than the current requested dev artifact.</string>
+    <string name="product_bootstrap_detail_renderer_missing">The shared terminal renderer is not active. Transcript fallback is retired, so this is a real product blocker.</string>
     <string name="product_bootstrap_detail_install_failed">Install failed: %1$s</string>
     <string name="product_bootstrap_install">Install</string>
     <string name="product_bootstrap_update">Update</string>

@@ -23,7 +23,6 @@ import android.view.KeyEvent;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.FrameLayout;
-import android.widget.ScrollView;
 import android.widget.TextView;
 import java.io.File;
 import java.io.BufferedReader;
@@ -37,13 +36,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 public final class ZideTerminalActivity extends Activity
-        implements SurfaceHolder.Callback2, ShellInputView.Host, ShellTranscriptController.Host, ProductGestureController.Host {
+        implements SurfaceHolder.Callback2, ShellInputView.Host, ProductGestureController.Host {
     private static final String TAG = "ZideAndroidTerminal";
     private static final int MAX_LOG_CHARS = 12000;
     private static final String EXTRA_DEBUG_RECREATE_SURFACE_ONCE = "debug_recreate_surface_once";
     private static final String EXTRA_DEBUG_RESIZE_SURFACE_ONCE = "debug_resize_surface_once";
     private static final String EXTRA_DEBUG_START_SHELL_ONCE = "debug_start_shell_once";
-    private static final String SHELL_TRANSCRIPT_PATH = "/data/data/dev.zide.terminal/files/zide_terminal_shell.log";
     private static final long SHELL_REFRESH_MS = 150L;
     private static final String[] RUNTIME_FONT_ASSETS = {
             "IosevkaTermNerdFont-Regular.ttf",
@@ -74,7 +72,6 @@ public final class ZideTerminalActivity extends Activity
     private final Handler handler = new Handler(Looper.getMainLooper());
     private TextView statusText;
     private TextView packageStatusText;
-    private TextView shellOutputText;
     private TextView eventLogText;
     private TextView productBootstrapTitle;
     private TextView productBootstrapDetail;
@@ -96,8 +93,6 @@ public final class ZideTerminalActivity extends Activity
     private boolean pinchZoomActive = false;
     private boolean pinchZoomFrameScheduled = false;
     private float pendingPinchScaleFactor = 1.0f;
-    private ScrollView shellOutputScroll;
-    private ShellTranscriptController shellTranscriptController;
     private ShellSessionController shellSessionController;
     private SurfaceView surfaceView;
     private boolean debugViewEnabled = false;
@@ -106,7 +101,6 @@ public final class ZideTerminalActivity extends Activity
     private boolean surfaceResizeScheduled = false;
     private boolean shellStartScheduled = false;
     private boolean shellRefreshActive = false;
-    private boolean shellRefreshQueued = false;
     private boolean sidebarOpen = false;
     private String lastAutoStartBlockedState = "";
     private UserlandRelease userlandRelease;
@@ -139,7 +133,6 @@ public final class ZideTerminalActivity extends Activity
 
         statusText = findViewById(R.id.status_text);
         packageStatusText = findViewById(R.id.package_status_text);
-        shellOutputText = findViewById(R.id.shell_output_text);
         eventLogText = findViewById(R.id.event_log);
         productBootstrapTitle = findViewById(R.id.product_bootstrap_title);
         productBootstrapDetail = findViewById(R.id.product_bootstrap_detail);
@@ -156,8 +149,6 @@ public final class ZideTerminalActivity extends Activity
         productSurfaceContainer = findViewById(R.id.product_surface_container);
         assistCtrlButton = findViewById(R.id.assist_ctrl_button);
         assistAltButton = findViewById(R.id.assist_alt_button);
-        shellOutputScroll = findViewById(R.id.shell_output_scroll);
-        shellTranscriptController = new ShellTranscriptController(shellOutputScroll, shellOutputText, this);
         userlandRelease = loadUserlandRelease();
         shellSessionController = new ShellSessionController(
                 new ShellSessionController.Bridge() {
@@ -176,7 +167,6 @@ public final class ZideTerminalActivity extends Activity
                         return nativeIsShellSessionAliveBridge();
                     }
                 },
-                SHELL_TRANSCRIPT_PATH,
                 UserlandPolicy.bootstrapStampPath(this),
                 UserlandPolicy.shellPath(this),
                 userlandRelease,
@@ -188,7 +178,6 @@ public final class ZideTerminalActivity extends Activity
         installShellInputView();
         installInsetsHandling();
         installViewportTracking();
-        shellTranscriptController.installScrollHandling();
         bindSidebarControls();
         bindViewModeToggle();
         bindProductBootstrapBlocker();
@@ -220,13 +209,11 @@ public final class ZideTerminalActivity extends Activity
             final Insets imeInsets = windowInsets.getInsets(WindowInsets.Type.ime());
             final int bottomInset = Math.max(navInsets.bottom, imeInsets.bottom);
             imeVisible = imeInsets.bottom > navInsets.bottom;
-            shellTranscriptController.setImeVisible(imeVisible);
             view.setPadding(
                     productViewBasePaddingLeft,
                     productViewBasePaddingTop,
                     productViewBasePaddingRight,
                     productViewBasePaddingBottom + bottomInset);
-            shellOutputScroll.post(() -> shellOutputScroll.fullScroll(View.FOCUS_DOWN));
             productSurfaceContainer.post(() -> notifyVisibleViewport("insets"));
             return windowInsets;
         });
@@ -396,7 +383,6 @@ public final class ZideTerminalActivity extends Activity
                     imm.hideSoftInputFromWindow(shellInputView.getWindowToken(), 0);
                 }
                 imeVisible = false;
-                shellTranscriptController.setImeVisible(false);
                 updateStatus("hardware-keyboard");
             }
             if (shellInputView.handleHardwareKeyEvent(event)) {
@@ -608,7 +594,6 @@ public final class ZideTerminalActivity extends Activity
         button.setOnClickListener(view -> {
             sendDirectText(text);
             appendEvent(eventName);
-            refreshShellState(false);
         });
     }
 
@@ -626,12 +611,6 @@ public final class ZideTerminalActivity extends Activity
         final FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(1, 1);
         lp.gravity = Gravity.BOTTOM | Gravity.START;
         root.addView(shellInputView, lp);
-    }
-
-    @Override
-    public void onTranscriptTap() {
-        appendEvent("input.tap transcript");
-        openIme();
     }
 
     @Override
@@ -786,7 +765,6 @@ public final class ZideTerminalActivity extends Activity
         imm.restartInput(shellInputView);
         final boolean shown = imm.showSoftInput(shellInputView, InputMethodManager.SHOW_IMPLICIT);
         imeVisible = shown || shellInputView.hasFocus();
-        shellTranscriptController.setImeVisible(imeVisible);
         appendEvent("manual.imeOpen shown=" + shown + " focus=" + shellInputView.hasFocus());
         updateStatus("ime-shown");
     }
@@ -828,28 +806,12 @@ public final class ZideTerminalActivity extends Activity
         handler.removeCallbacks(shellRefreshRunnable);
     }
 
-    @Override
-    public void refreshShellState() {
-        if (shellRefreshQueued) {
-            return;
-        }
-        shellRefreshQueued = true;
-        handler.post(() -> {
-            shellRefreshQueued = false;
-            refreshShellState(false);
-        });
-    }
-
-    private boolean shouldPollTranscriptOnUiThread() {
-        return debugViewEnabled || shellOutputScroll.getVisibility() == View.VISIBLE;
-    }
-
     private boolean shouldUpdateDebugStatus() {
         return debugViewEnabled;
     }
 
     private void reevaluateShellRefreshLoop() {
-        if (shouldPollTranscriptOnUiThread()) {
+        if (debugViewEnabled) {
             startShellRefresh();
         } else {
             stopShellRefresh();
@@ -857,8 +819,7 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void refreshShellState(boolean logEvent) {
-        final boolean includeTranscript = shouldPollTranscriptOnUiThread();
-        final ShellSessionController.PollResult pollResult = shellSessionController.poll(includeTranscript);
+        final ShellSessionController.PollResult pollResult = shellSessionController.poll();
         currentBootstrapState = pollResult.bootstrapState;
         if (pollResult.autoStarted) {
             appendEvent("auto.shellStart status=" + shellStartStatusLabel(pollResult.autoStartStatus));
@@ -875,9 +836,6 @@ public final class ZideTerminalActivity extends Activity
             lastAutoStartBlockedState = "";
         }
 
-        if (includeTranscript) {
-            shellTranscriptController.applyTranscript(pollResult.transcript);
-        }
         updateProductShellVisibility();
         reevaluateShellRefreshLoop();
         if (shouldUpdateDebugStatus()) {
@@ -919,7 +877,6 @@ public final class ZideTerminalActivity extends Activity
         }
         final boolean viewportImeVisible = currentImeVisible();
         imeVisible = viewportImeVisible;
-        shellTranscriptController.setImeVisible(imeVisible);
         final int width = Math.max(productContentFrame.getWidth(), 1);
         final int height = Math.max(productContentFrame.getHeight(), 1);
         visibleViewportWidth = width;
@@ -951,24 +908,26 @@ public final class ZideTerminalActivity extends Activity
     private void updateProductShellVisibility() {
         final boolean launchReady = currentBootstrapState.launchReady;
         final boolean sharedShellActive = launchReady && nativeLoaded && nativeSharedShellRendererActiveBridge();
-        shellOutputScroll.setVisibility(launchReady && !sharedShellActive ? View.VISIBLE : View.GONE);
-        final boolean showBlocker = currentInstallState.isInstalling() || currentInstallState.isFailed() || !launchReady || !currentBootstrapState.expectedCurrent;
+        final boolean showBlocker = currentInstallState.isInstalling() || currentInstallState.isFailed() || !launchReady || !currentBootstrapState.expectedCurrent || !sharedShellActive;
         productBootstrapBlocker.setVisibility(showBlocker ? View.VISIBLE : View.GONE);
         if (showBlocker) {
-            productBootstrapTitle.setText(productBootstrapTitle(currentBootstrapState, currentInstallState));
-            productBootstrapDetail.setText(productBootstrapDetail(currentBootstrapState, currentInstallState));
+            productBootstrapTitle.setText(productBootstrapTitle(currentBootstrapState, currentInstallState, sharedShellActive));
+            productBootstrapDetail.setText(productBootstrapDetail(currentBootstrapState, currentInstallState, sharedShellActive));
             productBootstrapRetryButton.setEnabled(!currentInstallState.isInstalling());
             productBootstrapRetryButton.setText(productBootstrapActionLabel(currentBootstrapState, currentInstallState));
         }
         reevaluateShellRefreshLoop();
     }
 
-    private int productBootstrapTitle(UserlandBootstrapState state, UserlandInstallState installState) {
+    private int productBootstrapTitle(UserlandBootstrapState state, UserlandInstallState installState, boolean sharedShellActive) {
         if (installState.isInstalling()) {
             return R.string.product_bootstrap_title_installing;
         }
         if (installState.isFailed()) {
             return R.string.product_bootstrap_title_install_failed;
+        }
+        if (state.launchReady && state.expectedCurrent && !sharedShellActive) {
+            return R.string.product_bootstrap_title_renderer_missing;
         }
         switch (state.state) {
             case UserlandBootstrapState.STATE_INVALID_STAMP:
@@ -984,12 +943,15 @@ public final class ZideTerminalActivity extends Activity
         }
     }
 
-    private CharSequence productBootstrapDetail(UserlandBootstrapState state, UserlandInstallState installState) {
+    private CharSequence productBootstrapDetail(UserlandBootstrapState state, UserlandInstallState installState, boolean sharedShellActive) {
         if (installState.isInstalling()) {
             return installState.detail;
         }
         if (installState.isFailed()) {
             return getString(R.string.product_bootstrap_detail_install_failed, installState.detail);
+        }
+        if (state.launchReady && state.expectedCurrent && !sharedShellActive) {
+            return getText(R.string.product_bootstrap_detail_renderer_missing);
         }
         switch (state.state) {
             case UserlandBootstrapState.STATE_INVALID_STAMP:

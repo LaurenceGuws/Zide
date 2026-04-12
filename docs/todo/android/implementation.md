@@ -152,7 +152,8 @@ Current checkpoint:
   - staged Bash runs on the Note10 via `run-as`
   - after the SDK 28 target cut, the live product shell launches staged Bash
     from the app process
-  - product transcript proof: `bash-5.3$`, `pwd`, `/`
+  - device proof: staged Bash is the live product shell and `pwd` runs from
+    that shared-renderer shell
   - staged `apt-get update` can be relocated far enough to refresh package
     metadata on-device
   - Linux-host package staging can now materialize selected Termux `.deb`
@@ -270,12 +271,42 @@ Status:
   `nvim test.txt` → insert text → `Esc` → `:wq`
 - current performance lane is explicit:
   - debug APK is no longer the only deploy path
-  - shared-renderer product mode no longer keeps the 150ms Java transcript poll
-    loop alive by default
+  - shared-renderer product mode no longer keeps the old Java shell poll loop
+    alive by default
   - next audit target is native renderer/font-scale cost, not more Android
     gesture guessing
 - Android render-thread scrutiny now has explicit authority:
   `app_architecture/platform/android/ANDROID_RENDER_THREAD_CONTRACT.md`
+- render-thread war prep is now in progress under the new audit-first workflow:
+  - subcategory map is explicit
+  - first audited subcategories are:
+    - live font/scale/atlas path
+    - render-entry submission path
+    - resize/grid-fit work in draw flow
+    - terminal widget presentation invalidation path
+    - backend frame begin/submit mechanics
+    - debug/observability contamination of product execution
+    - remaining Android host/UI-thread contamination
+  - next code cuts should come from that audited queue, not ad hoc tuning
+- first iteration cut landed from that queue:
+  - narrowed Android host/UI-thread contamination around stale transcript-era
+    ownership
+  - `ShellInputView` no longer triggers broad `refreshShellState()` on ordinary
+    input paths
+  - stale auto-follow behavior no longer forces bottom-follow just because IME
+    or insets changed
+  - this cut is aimed directly at the product scroll snap-back / host-thickness
+    issue, not at renderer internals yet
+  - validation:
+    - `./ops/android_terminal_host.py apk` passed
+    - repo-wide `zig build` is currently blocked by an unrelated existing
+      `font_manager.zig` doc-comment regression outside this Java cut
+- small Android userland polish cut in progress:
+  - Bash should start in `$HOME`
+  - history should persist in app-owned `~/.bash_history`
+  - local `~/.bashrc` / `~/.profile` / `~/.inputrc` should exist without
+    touching stale Termux global rc paths
+  - default prompt should stay lightweight and product-boring
 
 ### `AU-A1` Android Userland Bootstrap
 
@@ -302,7 +333,8 @@ Status:
   - staged Bash runs on-device under `run-as`
   - terminal-host now targets SDK 28 and launches staged Bash as the live
     product shell
-  - product transcript proof shows `bash-5.3$`; input smoke `pwd` returned `/`
+  - product shell proof shows Bash running on-device; input smoke `pwd`
+    returned `/`
   - `apt-get` reaches the network with relocation overrides after adding
     `android.permission.INTERNET`
   - `apt-get update` refreshes package metadata with staged certs and current
@@ -370,9 +402,8 @@ engine. Note10 proved repeatable shell I/O via terminal FFI.
 
 ### `AS-A2` Android Live-Shell Product View — met
 
-Product view is shell-first: transcript area, slim assist bar, restart/debug in
-a left drawer. IME uses window insets; tap transcript opens IME. Auto-follow
-with manual scroll detach.
+Product view is shell-first: shared renderer surface, slim assist bar,
+restart/debug in a left drawer. IME uses window insets; tap terminal opens IME.
 
 ### `AS-A3` Android Direct Shell Input — locally sufficient, parked
 
@@ -417,13 +448,11 @@ Current result:
 - Java ownership is now split into Android-owned components instead of one
   activity blob:
   - `ShellInputView`
-  - `ShellTranscriptController`
   - `ShellSessionController`
   - `AndroidDebugFormatter`
 - the product shell now also follows a more honest mobile layout:
   - main terminal area keeps the screen
-  - IME opens from transcript tap (ScrollView + `shell_output_text`) instead of
-    a permanent toggle
+  - IME opens from terminal tap instead of a permanent toggle
   - a slim bottom assist bar now exposes:
     - one-shot `Esc` and `Tab`
     - stateful `Ctrl` and `Alt` latches

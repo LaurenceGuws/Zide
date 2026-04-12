@@ -1,10 +1,5 @@
 package dev.zide.terminal;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-
 final class ShellSessionController {
     interface Bridge {
         int restart();
@@ -17,7 +12,6 @@ final class ShellSessionController {
     static final class PollResult {
         final int status;
         final boolean alive;
-        final String transcript;
         final boolean autoStarted;
         final int autoStartStatus;
         final boolean autoStartBlocked;
@@ -26,14 +20,12 @@ final class ShellSessionController {
         PollResult(
                 int status,
                 boolean alive,
-                String transcript,
                 boolean autoStarted,
                 int autoStartStatus,
                 boolean autoStartBlocked,
                 UserlandBootstrapState bootstrapState) {
             this.status = status;
             this.alive = alive;
-            this.transcript = transcript;
             this.autoStarted = autoStarted;
             this.autoStartStatus = autoStartStatus;
             this.autoStartBlocked = autoStartBlocked;
@@ -42,7 +34,6 @@ final class ShellSessionController {
     }
 
     private final Bridge bridge;
-    private final String transcriptPath;
     private final String bootstrapStampPath;
     private final String shellPath;
     private final UserlandRelease release;
@@ -51,20 +42,18 @@ final class ShellSessionController {
 
     ShellSessionController(
             Bridge bridge,
-            String transcriptPath,
             String bootstrapStampPath,
             String shellPath,
             UserlandRelease release,
             boolean nativeLoaded) {
         this.bridge = bridge;
-        this.transcriptPath = transcriptPath;
         this.bootstrapStampPath = bootstrapStampPath;
         this.shellPath = shellPath;
         this.release = release;
         this.nativeLoaded = nativeLoaded;
     }
 
-    PollResult poll(boolean includeTranscript) {
+    PollResult poll() {
         int status = nativeLoaded ? bridge.poll() : 0;
         boolean alive = nativeLoaded && bridge.isAlive();
         boolean autoStarted = false;
@@ -87,33 +76,9 @@ final class ShellSessionController {
         return new PollResult(
                 status,
                 alive,
-                includeTranscript ? readTextFile(transcriptPath) : "",
                 autoStarted,
                 autoStartStatus,
                 autoStartBlocked,
                 bootstrapState);
-    }
-
-    private static String readTextFile(String path) {
-        final File file = new File(path);
-        if (!file.exists()) {
-            return "";
-        }
-
-        final StringBuilder out = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            String line;
-            boolean first = true;
-            while ((line = reader.readLine()) != null) {
-                if (!first) {
-                    out.append('\n');
-                }
-                out.append(line);
-                first = false;
-            }
-        } catch (IOException err) {
-            return "read-error:" + err.getClass().getSimpleName();
-        }
-        return out.toString();
     }
 }

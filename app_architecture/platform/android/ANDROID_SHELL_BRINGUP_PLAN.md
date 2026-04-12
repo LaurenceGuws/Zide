@@ -34,7 +34,7 @@ The first Android shell cut should be:
 - terminal-host-owned
 - terminal-FFI-backed
 - PTY-backed through the real terminal engine
-- transcript-oriented, not renderer-oriented
+- terminal-engine-oriented, not Android-Java-renderer-oriented
 
 It should not be:
 
@@ -50,14 +50,14 @@ This lane must answer:
 1. Can the terminal host app start `/system/bin/sh` through the repo's real
    terminal FFI path on Android?
 2. Can the terminal host app send text/newline input into that shell?
-3. Can the terminal host app poll/snapshot the resulting terminal state and expose
-   visible output on device?
+3. Can the terminal host app drive the resulting terminal state into visible
+   output on device?
 4. Does that loop work honestly enough that later IME/prompt handling can be
    solved against a live terminal instead of a probe surface?
 
 ## Scope
 
-`AS-A1` first shell transcript loop
+`AS-A1` first shell loop
 
 Purpose:
 
@@ -70,11 +70,11 @@ Acceptance:
 - it resizes the session to a fixed terminal-host probe size
 - it starts `/system/bin/sh`
 - it supports sending plain text plus newline
-- it polls and snapshots terminal output into a plain transcript string
+- it polls the terminal runtime honestly enough to prove shell progress
 - the terminal host app can:
   - start or restart the shell
   - send one line of input
-  - display live transcript output
+  - expose visible shell progress on device
 - local validation stays green
 - device proof shows real shell I/O on the Note10
 
@@ -108,13 +108,12 @@ Current shape:
 - it creates one `ZideTerminalHandle`
 - it resizes to a fixed terminal-host probe terminal size
 - it starts `/system/bin/sh`
-- it consumes pending input from a terminal-host-owned input file
-- it snapshots terminal state back into a plain transcript file
+- it previously consumed pending input from a terminal-host-owned input file
+- that bring-up-era output materialization path is now retired
 - the terminal host app exposes:
   - product view:
-    - live shell transcript
-    - shell input/send
-    - IME toggle against the real shell input
+    - shared-renderer shell output
+    - shell input against the real shell runtime
   - debug view:
     - diagnostics only
 
@@ -124,9 +123,7 @@ Observed on the Note10:
   - `debug.shellStart status=started`
 - the first automated command injection logs:
   - `manual.shellInput bytes=28`
-- the resulting transcript shows real shell I/O:
-  - `:/ $ printf 'android-shell-ok\n'`
-  - `android-shell-ok`
+- the resulting shell loop showed real shell I/O on device
 
 This proves:
 
@@ -227,8 +224,7 @@ Current Java ownership is also cleaner:
 
 - `ZideTerminalActivity` is now orchestration only
 - `ShellInputView` owns the editor model and `InputConnection`
-- `ShellTranscriptController` owns transcript follow behavior
-- `ShellSessionController` owns shell polling/transcript file reads
+- `ShellSessionController` owns shell polling/bootstrap state
 - `AndroidDebugFormatter` owns debug formatting
 
 Current local-tooling support is also explicit:
@@ -242,11 +238,10 @@ Current local-tooling support is also explicit:
 - this is the sanctioned local Java-tooling path; do not reintroduce tracked
   `.classpath` / `.project` files as repo authority
 
-Current product-shell layout is also now moving toward a mobile-native shape:
+Current product-shell layout is also now mobile-native:
 
-- the terminal transcript owns the screen without outer padding
-- transcript tap opens the IME path directly (listeners on both the scroll host
-  and inner transcript `TextView`, because touches usually hit the child)
+- the shared renderer owns visible shell output without outer transcript chrome
+- terminal tap opens the IME path directly
 - when the shared renderer surface is active, `ProductGestureController` owns
   product terminal gestures:
   - single tap opens IME

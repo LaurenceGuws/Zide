@@ -127,8 +127,7 @@ Current measured truth is narrower and better than the first assumption:
 - product posture is now explicit: terminal-host targets SDK 28 until a
   modern-target userland execution model is proven
 - after the SDK 28 cut, live product-shell exec of staged Bash from the app
-  process is device-proven on the Note10:
-  `bash-5.3$`, `pwd`, and `/` appeared in the product transcript
+  process is device-proven on the Note10 through the shared-renderer shell path
 
 ## Product Boundary
 
@@ -317,7 +316,7 @@ Current checkpoint:
   after configuring `PREFIX`, `HOME`, `TMPDIR`, `PATH`, `SHELL`, cert,
   terminfo, XDG, `VIMRUNTIME`, and library paths
 - device validation also proves:
-  - product transcript prompt: `bash-5.3$`
+  - product shell prompt is Bash from the staged prefix
   - product input smoke: `pwd` returned `/`
   - `nvim --version`
   - `nvim --headless +qall`
@@ -409,6 +408,14 @@ Validated truth:
 - Bash startup no longer touches the stale
   `/data/data/com.termux/files/usr/etc/bash.bashrc` path; terminal-host now
   launches Bash with clean startup flags and environment-owned prompt hooks
+- terminal-host now also owns minimal first-run user shell defaults:
+  - launch cwd is `$HOME`, not `/`
+  - local `~/.bashrc`, `~/.profile`, `~/.inputrc`, and `~/.bash_history` are
+    app-owned and created only if missing
+  - Bash still starts with clean startup semantics, but now uses
+    `--rcfile ~/.bashrc` instead of a fully blank `--norc` path
+  - default prompt stays intentionally light: `zide`, cwd, and non-zero exit
+    status
 
 AU-A2 intentionally does not claim:
 
