@@ -170,16 +170,12 @@ Weak-agent rule:
 
 ## Branching
 
-- Do not implement directly on `main`.
-- `main` is merge-only and should stay clean between validated milestones.
-- Start active work on a feature branch from current `main`.
-- Weaker agents must never commit on `main`.
-- `main` should only be updated when the lead reviewer accepts a validated
-  chunk and merges or fast-forwards it intentionally.
-- If you create a branch, own it end-to-end: branch from current `main`, validate locally, merge back, and delete it after landing.
-- For large architecture campaigns, a temporary "war branch" is allowed when it
-  materially improves checkpoint discipline and keeps `main` clean between
-  milestones.
+- Work on `main` by default unless the user explicitly asks for a branch.
+- If a branch is explicitly requested, keep it reviewable and own it end-to-end:
+  branch from current `main`, validate locally, merge back, and delete it after
+  landing.
+- A temporary "war branch" is allowed only when the user explicitly asks for it
+  or explicitly approves it for a large architecture campaign.
 - War-branch rule:
   - branch from the current `main`
   - keep small coherent checkpoint commits on the branch
@@ -290,9 +286,9 @@ Default commit policy:
 For weaker agents:
 
 - do not save work for one giant end-of-chunk commit
-- make reviewable checkpoint commits on the feature branch
+- make reviewable checkpoint commits on the active branch
 - do not rewrite history unless explicitly asked
-- do not touch `main`
+- stay on `main` unless the user explicitly asks for a branch
 
 For reviewers/leads:
 

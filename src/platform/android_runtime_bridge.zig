@@ -373,6 +373,10 @@ pub fn currentShellVisibleRows() i32 {
     return @intCast(android_shell_session.currentScrollbackState().rows);
 }
 
+pub fn currentShellVisibleCols() i32 {
+    return @intCast(android_shell_session.currentVisibleCols());
+}
+
 pub fn currentShellScrollbackCount() i32 {
     return @intCast(android_shell_session.currentScrollbackState().count);
 }
@@ -394,6 +398,39 @@ pub fn followShellLiveBottom() i32 {
     return @intFromEnum(status);
 }
 
+pub fn beginShellWordSelectionAtVisibleCell(row: i32, col: i32) i32 {
+    if (row < 0 or col < 0) return @intFromEnum(android_shell_session.SelectionStatus.no_visible_cell);
+    const status = android_shell_session.beginWordSelectionAtVisibleCell(@intCast(row), @intCast(col));
+    if (status == .ok) refreshShellSurfaceAfterSelectionChange();
+    return @intFromEnum(status);
+}
+
+pub fn clearShellSelection() i32 {
+    const status = android_shell_session.clearSelection();
+    if (status == .ok) refreshShellSurfaceAfterSelectionChange();
+    return @intFromEnum(status);
+}
+
+pub fn currentShellSelectionActive() bool {
+    return android_shell_session.currentSelectionViewportRect().active;
+}
+
+pub fn currentShellSelectionRectLeft() i32 {
+    return android_shell_session.currentSelectionViewportRect().left_px;
+}
+
+pub fn currentShellSelectionRectTop() i32 {
+    return android_shell_session.currentSelectionViewportRect().top_px;
+}
+
+pub fn currentShellSelectionRectRight() i32 {
+    return android_shell_session.currentSelectionViewportRect().right_px;
+}
+
+pub fn currentShellSelectionRectBottom() i32 {
+    return android_shell_session.currentSelectionViewportRect().bottom_px;
+}
+
 /// Direct shell input must not depend on a separate Java refresh loop to become
 /// visible. When input reaches the PTY successfully, Android-owned shell
 /// hosting must poll terminal state immediately, invalidate widget
@@ -408,6 +445,13 @@ fn refreshShellSurfaceAfterInput() void {
 }
 
 fn refreshShellSurfaceAfterScrollbackChange() void {
+    if (bridge_state.terminal_widget) |*widget| {
+        widget.invalidatePresentationCache();
+    }
+    bridge_state.render_host.noteRedrawRequested();
+}
+
+fn refreshShellSurfaceAfterSelectionChange() void {
     if (bridge_state.terminal_widget) |*widget| {
         widget.invalidatePresentationCache();
     }

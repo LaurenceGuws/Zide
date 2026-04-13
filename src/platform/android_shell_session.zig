@@ -2,6 +2,9 @@ const std = @import("std");
 const builtin = @import("builtin");
 const c_api = @import("../terminal/ffi/c_api.zig");
 const ffi_shared = @import("../terminal/ffi/shared.zig");
+const terminal_selection = @import("../terminal/core/selection.zig");
+const terminal_publication = @import("../terminal/core/publication/terminal_publication.zig");
+const render_cache_mod = @import("../terminal/core/publication/render_cache.zig");
 const terminal_runtime = @import("../terminal/core/terminal_runtime.zig");
 
 const c = @cImport({
@@ -123,6 +126,20 @@ pub const ScrollbackState = struct {
     offset: u32 = 0,
 };
 
+pub const SelectionStatus = enum(i32) {
+    ok = 0,
+    no_session = 1,
+    no_visible_cell = 2,
+};
+
+pub const SelectionViewportRect = struct {
+    active: bool = false,
+    left_px: i32 = 0,
+    top_px: i32 = 0,
+    right_px: i32 = 0,
+    bottom_px: i32 = 0,
+};
+
 pub fn sendText(text: []const u8) SendStatus {
     const active = session orelse return .no_session;
     if (text.len == 0) return .ok;
@@ -155,6 +172,64 @@ pub fn currentScrollbackState() ScrollbackState {
         .rows = active.rows,
         .count = metadata.scrollback_count,
         .offset = metadata.scrollback_offset,
+    };
+}
+
+pub fn currentVisibleCols() u16 {
+    const active = session orelse return 0;
+    return active.cols;
+}
+
+pub fn beginWordSelectionAtVisibleCell(row: u16, col: u16) SelectionStatus {
+    _ = session orelse return .no_session;
+    const shell = activeRuntimeShell() orelse return .no_session;
+    shell.lock();
+    defer shell.unlock();
+
+    const cache = terminal_publication.renderCacheLocked(shell, "android_selection_begin");
+    if (cache.rows == 0 or cache.cols == 0) return .no_visible_cell;
+    if (row >= cache.rows or col >= cache.cols) return .no_visible_cell;
+
+    const total_lines = cache.history_len + cache.rows;
+    const start_line = if (total_lines > cache.rows + cache.scroll_offset)
+        total_lines - cache.rows - cache.scroll_offset
+    else
+        0;
+    const row_offset = @as(usize, row) * cache.cols;
+    const row_cells = cache.cells.items[row_offset .. row_offset + cache.cols];
+    _ = terminal_selection.beginClickSelectionLocked(
+        shell,
+        row_cells,
+        start_line + row,
+        col,
+        2,
+    );
+    return .ok;
+}
+
+pub fn clearSelection() SelectionStatus {
+    const shell = activeRuntimeShell() orelse return .no_session;
+    _ = terminal_selection.clearSelectionIfActive(shell);
+    return .ok;
+}
+
+pub fn currentSelectionViewportRect() SelectionViewportRect {
+    const active = session orelse return .{};
+    const shell = activeRuntimeShell() orelse return .{};
+    shell.lock();
+    defer shell.unlock();
+
+    const cache = terminal_publication.renderCacheLocked(shell, "android_selection_rect");
+    const bounds = render_cache_mod.selectionBounds(cache) orelse return .{};
+
+    const cell_width = @as(i32, @intCast(@max(active.cell_width, 1)));
+    const cell_height = @as(i32, @intCast(@max(active.cell_height, 1)));
+    return .{
+        .active = true,
+        .left_px = @as(i32, @intCast(bounds.start_col)) * cell_width,
+        .top_px = @as(i32, @intCast(bounds.start_row)) * cell_height,
+        .right_px = (@as(i32, @intCast(bounds.end_col)) + 1) * cell_width,
+        .bottom_px = (@as(i32, @intCast(bounds.end_row)) + 1) * cell_height,
     };
 }
 

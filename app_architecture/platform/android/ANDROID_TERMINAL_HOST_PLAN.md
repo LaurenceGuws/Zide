@@ -104,7 +104,9 @@ Current checkpoint:
     - sidebar swipe is owned by the dedicated edge-hotspot view
     - product-surface vertical drag is the Android-owned scrollback gesture
     - product-surface tap remains IME focus
-    - product-surface long press stays reserved for future selection
+    - product-surface long press is reserved for Android-native text
+      interaction owned by
+      `app_architecture/platform/android/ANDROID_TEXT_INTERACTION_PLAN.md`
 
 Do not do:
 

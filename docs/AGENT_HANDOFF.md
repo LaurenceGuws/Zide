@@ -203,10 +203,8 @@ blocker for Android terminal progress.
   relevant `app_architecture/` authority docs.
 - Do not let older renderer-campaign framing or finished input polish outrank
   the Android queue while Android terminal excellence is the active goal.
-- Do not work directly on `main`; treat it as merge-only and start active work
-  on a branch from current `main`.
-- Weaker agents must stay on feature branches and keep small reviewable
-  checkpoint commits; `main` should only move when the lead accepts a validated
-  chunk.
+- Work on `main` by default unless the user explicitly asks for a branch.
+- If a branch is explicitly requested, keep small reviewable checkpoint commits
+  and merge back to `main` only after a validated chunk.
 - `.zide.lua` logging is agent-owned and should stay minimal and bug-scoped.
 - No CI; validation is local build/test plus manual verification.

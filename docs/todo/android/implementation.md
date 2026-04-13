@@ -23,6 +23,7 @@ Do not use this queue for:
 - `app_architecture/platform/android/ANDROID_GLES_BACKEND_PLAN.md`
 - `app_architecture/platform/android/ANDROID_GLES_BINDING_PLAN.md`
 - `app_architecture/platform/android/ANDROID_USERLAND_BOOTSTRAP_PLAN.md`
+- `app_architecture/platform/android/ANDROID_TEXT_INTERACTION_PLAN.md`
 - `app_architecture/platform/android/SURFACE_IDENTITY_POLICY.md`
 - `app_architecture/platform/android/ANDROID_PTY_LIFETIME_PLAN.md`
 - `app_architecture/platform/android/ANDROID_PTY_SERVICE_SURVIVAL_PLAN.md`
@@ -381,6 +382,40 @@ Status:
     - finish scrollback default behavior first
     - then add long-press selection / copy / paste on top of the settled
       tap-scroll-pinch contract
+- Android-native text interaction plan is now explicit:
+  - owner:
+    `app_architecture/platform/android/ANDROID_TEXT_INTERACTION_PLAN.md`
+  - product boundary is fixed:
+    - shared terminal core owns selection truth, export text, and highlight
+    - Android owns gesture arbitration, floating toolbar lifecycle, and
+      clipboard integration
+    - Java must not invent a parallel text buffer or selection model
+  - implementation queue is explicit:
+    1. `AT-A1` floating-toolbar anchoring from terminal-owned selection
+       geometry
+    2. `AT-A2` Android clipboard copy from terminal-owned selected text
+    3. `AT-A3` drag expansion with native gesture policy
+    4. `AT-A4` Android paste routed through the existing input bridge
+  - start rule:
+    - do not wire copy/paste actions before `ActionMode.Callback2` anchoring
+      works against real selection geometry
+  - first implementation cut is now in progress:
+    - shared render-cache selection bounds are now exposed as a reusable shared
+      helper instead of Android-local selection geometry math
+    - Android bridge now exposes:
+      - visible terminal columns
+      - begin word selection at a visible cell
+      - clear selection
+      - current selection active state
+      - current selection viewport rect
+    - `ProductGestureController` now resolves long press as a first-class
+      product gesture instead of leaving long press unclaimed
+    - product long press now maps touch to terminal cell coordinates and starts
+      terminal-owned word selection
+  - current stop marker:
+    - selection highlight may change on long press, but no toolbar/copy action
+      should be claimed done until `ActionMode.Callback2` is anchored against
+      the native selection rect
 - current Android pinch/zoom result is accepted for this lane:
   - host-side gesture policy is explicit and stable
   - raw detector churn is quantized/coalesced host-side

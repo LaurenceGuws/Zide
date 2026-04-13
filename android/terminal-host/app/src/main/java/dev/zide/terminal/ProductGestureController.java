@@ -15,6 +15,7 @@ import android.view.VelocityTracker;
  * <ul>
  *   <li>single-tap for IME focus
  *   <li>resolved vertical drag for scrollback
+ *   <li>long press for Android-native text interaction
  *   <li>pinch-begin / quantized pinch-step / pinch-end for terminal zoom
  * </ul>
  *
@@ -42,6 +43,9 @@ final class ProductGestureController {
 
         /** Starts Android-owned momentum scrolling after a resolved vertical drag release. */
         void onProductScrollFling(float velocityY);
+
+        /** Starts Android-native text interaction from a resolved long press. */
+        void onProductLongPress(float x, float y);
 
         /** Marks the beginning of an interactive pinch session. */
         void onProductPinchBegin();
@@ -85,7 +89,19 @@ final class ProductGestureController {
     private boolean moved = false;
     private boolean pinchActive = false;
     private boolean scrollActive = false;
+    private boolean longPressTriggered = false;
     private VelocityTracker velocityTracker = null;
+    private final Runnable longPressRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (scrollActive || pinchActive || moved || longPressTriggered) {
+                return;
+            }
+            longPressTriggered = true;
+            moved = true;
+            host.onProductLongPress(downX, downY);
+        }
+    };
 
     /** Creates a gesture controller bound to the product interaction surface. */
     ProductGestureController(View target, Host host) {
@@ -100,6 +116,7 @@ final class ProductGestureController {
                 new ScaleGestureDetector.SimpleOnScaleGestureListener() {
                     @Override
                     public boolean onScaleBegin(ScaleGestureDetector detector) {
+                        cancelLongPress();
                         if (scrollActive) {
                             scrollActive = false;
                             host.onProductScrollEnd();
@@ -147,6 +164,8 @@ final class ProductGestureController {
                 lastY = downY;
                 moved = false;
                 scrollActive = false;
+                longPressTriggered = false;
+                scheduleLongPress();
                 break;
             case MotionEvent.ACTION_MOVE:
                 final float deltaX = event.getX() - downX;
@@ -154,6 +173,7 @@ final class ProductGestureController {
                 if (!scrollActive &&
                         Math.abs(deltaY) > touchSlop &&
                         Math.abs(deltaY) > Math.abs(deltaX)) {
+                    cancelLongPress();
                     scrollActive = true;
                     moved = true;
                     lastY = event.getY();
@@ -166,10 +186,12 @@ final class ProductGestureController {
                         host.onProductScrollBy(stepY);
                     }
                 } else if (Math.abs(deltaX) > touchSlop || Math.abs(deltaY) > touchSlop) {
+                    cancelLongPress();
                     moved = true;
                 }
                 break;
             case MotionEvent.ACTION_POINTER_DOWN:
+                cancelLongPress();
                 if (scrollActive) {
                     scrollActive = false;
                     host.onProductScrollEnd();
@@ -178,6 +200,7 @@ final class ProductGestureController {
                 moved = true;
                 break;
             case MotionEvent.ACTION_UP:
+                cancelLongPress();
                 if (scrollActive) {
                     velocityTracker.computeCurrentVelocity(1000, maximumFlingVelocity);
                     final float velocityY = velocityTracker.getYVelocity(event.getPointerId(0));
@@ -191,9 +214,11 @@ final class ProductGestureController {
                 }
                 pinchActive = false;
                 moved = false;
+                longPressTriggered = false;
                 releaseVelocityTracker();
                 break;
             case MotionEvent.ACTION_CANCEL:
+                cancelLongPress();
                 if (scrollActive) {
                     scrollActive = false;
                     host.onProductScrollEnd();
@@ -201,6 +226,7 @@ final class ProductGestureController {
                 pinchActive = false;
                 accumulatedPinchScaleFactor = 1.0f;
                 moved = false;
+                longPressTriggered = false;
                 releaseVelocityTracker();
                 break;
             default:
@@ -233,6 +259,15 @@ final class ProductGestureController {
         if (velocityTracker == null) {
             velocityTracker = VelocityTracker.obtain();
         }
+    }
+
+    private void scheduleLongPress() {
+        target.removeCallbacks(longPressRunnable);
+        target.postDelayed(longPressRunnable, ViewConfiguration.getLongPressTimeout());
+    }
+
+    private void cancelLongPress() {
+        target.removeCallbacks(longPressRunnable);
     }
 
     private void releaseVelocityTracker() {

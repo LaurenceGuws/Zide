@@ -132,6 +132,10 @@ fn currentShellVisibleRowsBridge() i32 {
     return android_runtime_bridge.currentShellVisibleRows();
 }
 
+fn currentShellVisibleColsBridge() i32 {
+    return android_runtime_bridge.currentShellVisibleCols();
+}
+
 fn currentShellScrollbackCountBridge() i32 {
     return android_runtime_bridge.currentShellScrollbackCount();
 }
@@ -146,6 +150,34 @@ fn setShellScrollbackOffsetBridge(offset_rows: i32) i32 {
 
 fn followShellLiveBottomBridge() i32 {
     return android_runtime_bridge.followShellLiveBottom();
+}
+
+fn beginShellWordSelectionAtVisibleCellBridge(row: i32, col: i32) i32 {
+    return android_runtime_bridge.beginShellWordSelectionAtVisibleCell(row, col);
+}
+
+fn clearShellSelectionBridge() i32 {
+    return android_runtime_bridge.clearShellSelection();
+}
+
+fn currentShellSelectionActiveBridge() bool {
+    return android_runtime_bridge.currentShellSelectionActive();
+}
+
+fn currentShellSelectionRectLeftBridge() i32 {
+    return android_runtime_bridge.currentShellSelectionRectLeft();
+}
+
+fn currentShellSelectionRectTopBridge() i32 {
+    return android_runtime_bridge.currentShellSelectionRectTop();
+}
+
+fn currentShellSelectionRectRightBridge() i32 {
+    return android_runtime_bridge.currentShellSelectionRectRight();
+}
+
+fn currentShellSelectionRectBottomBridge() i32 {
+    return android_runtime_bridge.currentShellSelectionRectBottom();
 }
 
 fn sharedShellRendererActiveBridge() bool {
@@ -393,6 +425,13 @@ export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentShellVisibleR
     return currentShellVisibleRowsBridge();
 }
 
+export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentShellVisibleColsBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+) callconv(.c) i32 {
+    return currentShellVisibleColsBridge();
+}
+
 export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentShellScrollbackCountBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
@@ -420,6 +459,57 @@ export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeFollowShellLiveBotto
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return followShellLiveBottomBridge();
+}
+
+export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeBeginShellWordSelectionAtVisibleCellBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+    row: i32,
+    col: i32,
+) callconv(.c) i32 {
+    return beginShellWordSelectionAtVisibleCellBridge(row, col);
+}
+
+export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeClearShellSelectionBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+) callconv(.c) i32 {
+    return clearShellSelectionBridge();
+}
+
+export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentShellSelectionActiveBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+) callconv(.c) bool {
+    return currentShellSelectionActiveBridge();
+}
+
+export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentShellSelectionRectLeftBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+) callconv(.c) i32 {
+    return currentShellSelectionRectLeftBridge();
+}
+
+export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentShellSelectionRectTopBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+) callconv(.c) i32 {
+    return currentShellSelectionRectTopBridge();
+}
+
+export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentShellSelectionRectRightBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+) callconv(.c) i32 {
+    return currentShellSelectionRectRightBridge();
+}
+
+export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentShellSelectionRectBottomBridge(
+    _: ?*anyopaque,
+    _: ?*anyopaque,
+) callconv(.c) i32 {
+    return currentShellSelectionRectBottomBridge();
 }
 
 export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeSharedShellRendererActiveBridge(

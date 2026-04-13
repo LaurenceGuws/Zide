@@ -131,6 +131,7 @@ public final class ZideTerminalActivity extends Activity
     private int notifiedViewportHeight = 0;
     private boolean notifiedViewportImeVisible = false;
     private int activeGestureVisibleRows = 0;
+    private int activeGestureVisibleCols = 0;
     private int activeGestureScrollbackCount = 0;
     private int activeGestureScrollbackOffset = 0;
     private float activeGestureScrollRemainderRows = 0.0f;
@@ -184,6 +185,16 @@ public final class ZideTerminalActivity extends Activity
             }
         }
     };
+
+    private static final class TerminalCellHit {
+        final int row;
+        final int col;
+
+        TerminalCellHit(int row, int col) {
+            this.row = row;
+            this.col = col;
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -669,6 +680,7 @@ public final class ZideTerminalActivity extends Activity
         }
         stopScrollbackFling();
         activeGestureVisibleRows = nativeCurrentShellVisibleRowsBridge();
+        activeGestureVisibleCols = nativeCurrentShellVisibleColsBridge();
         activeGestureScrollbackCount = nativeCurrentShellScrollbackCountBridge();
         activeGestureScrollbackOffset = nativeCurrentShellScrollbackOffsetBridge();
         activeGestureScrollRemainderRows = 0.0f;
@@ -682,6 +694,7 @@ public final class ZideTerminalActivity extends Activity
     @Override
     public void onProductScrollEnd() {
         activeGestureVisibleRows = 0;
+        activeGestureVisibleCols = 0;
         activeGestureScrollbackCount = 0;
         activeGestureScrollbackOffset = 0;
         activeGestureScrollRemainderRows = 0.0f;
@@ -694,6 +707,7 @@ public final class ZideTerminalActivity extends Activity
         }
         stopScrollbackFling();
         activeGestureVisibleRows = nativeCurrentShellVisibleRowsBridge();
+        activeGestureVisibleCols = nativeCurrentShellVisibleColsBridge();
         activeGestureScrollbackCount = nativeCurrentShellScrollbackCountBridge();
         activeGestureScrollbackOffset = nativeCurrentShellScrollbackOffsetBridge();
         activeGestureScrollRemainderRows = 0.0f;
@@ -708,6 +722,22 @@ public final class ZideTerminalActivity extends Activity
                 Integer.MIN_VALUE / 4,
                 Integer.MAX_VALUE / 4);
         scheduleScrollbackFlingFrame();
+    }
+
+    @Override
+    public void onProductLongPress(float x, float y) {
+        if (!nativeLoaded) {
+            return;
+        }
+        final TerminalCellHit hit = resolveProductTerminalCell(x, y);
+        if (hit == null) {
+            appendEvent("product.selection longPress=miss");
+            return;
+        }
+        stopScrollbackFling();
+        final int status = nativeBeginShellWordSelectionAtVisibleCellBridge(hit.row, hit.col);
+        appendEvent("product.selection word row=" + hit.row + " col=" + hit.col + " status=" + status);
+        reevaluateProductFrameLoop();
     }
 
     @Override
@@ -831,6 +861,24 @@ public final class ZideTerminalActivity extends Activity
         activeGestureScrollbackOffset = nextOffset;
         refreshProductScrollOverlay();
         reevaluateProductFrameLoop();
+    }
+
+    private TerminalCellHit resolveProductTerminalCell(float x, float y) {
+        final int visibleRows = nativeCurrentShellVisibleRowsBridge();
+        final int visibleCols = nativeCurrentShellVisibleColsBridge();
+        final int viewportWidth = productViewportWidthPx();
+        final int viewportHeight = productViewportHeightPx();
+        if (!nativeLoaded || visibleRows <= 0 || visibleCols <= 0 || viewportWidth <= 0 || viewportHeight <= 0) {
+            return null;
+        }
+        final float colWidthPx = (float) viewportWidth / (float) visibleCols;
+        final float rowHeightPx = (float) viewportHeight / (float) visibleRows;
+        if (!(colWidthPx > 0.0f) || !(rowHeightPx > 0.0f)) {
+            return null;
+        }
+        final int col = Math.max(0, Math.min(visibleCols - 1, (int) (x / colWidthPx)));
+        final int row = Math.max(0, Math.min(visibleRows - 1, (int) (y / rowHeightPx)));
+        return new TerminalCellHit(row, col);
     }
 
     /**
@@ -1667,6 +1715,8 @@ public final class ZideTerminalActivity extends Activity
 
     private static native int nativeCurrentShellVisibleRowsBridge();
 
+    private static native int nativeCurrentShellVisibleColsBridge();
+
     private static native int nativeCurrentShellScrollbackCountBridge();
 
     private static native int nativeCurrentShellScrollbackOffsetBridge();
@@ -1674,6 +1724,20 @@ public final class ZideTerminalActivity extends Activity
     private static native int nativeSetShellScrollbackOffsetBridge(int offsetRows);
 
     private static native int nativeFollowShellLiveBottomBridge();
+
+    private static native int nativeBeginShellWordSelectionAtVisibleCellBridge(int row, int col);
+
+    private static native int nativeClearShellSelectionBridge();
+
+    private static native boolean nativeCurrentShellSelectionActiveBridge();
+
+    private static native int nativeCurrentShellSelectionRectLeftBridge();
+
+    private static native int nativeCurrentShellSelectionRectTopBridge();
+
+    private static native int nativeCurrentShellSelectionRectRightBridge();
+
+    private static native int nativeCurrentShellSelectionRectBottomBridge();
 
     private static native boolean nativeSharedShellRendererActiveBridge();
 }

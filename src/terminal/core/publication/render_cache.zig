@@ -164,6 +164,54 @@ pub const RenderCache = struct {
     }
 };
 
+pub const SelectionBounds = struct {
+    start_row: usize,
+    end_row: usize,
+    start_col: usize,
+    end_col: usize,
+};
+
+pub fn selectionBounds(cache: *const RenderCache) ?SelectionBounds {
+    if (cache.selection_rows.items.len == 0 or
+        cache.selection_cols_start.items.len != cache.selection_rows.items.len or
+        cache.selection_cols_end.items.len != cache.selection_rows.items.len)
+    {
+        return null;
+    }
+
+    var found = false;
+    var min_row: usize = 0;
+    var max_row: usize = 0;
+    var min_col: usize = 0;
+    var max_col: usize = 0;
+
+    for (cache.selection_rows.items, 0..) |row_selected, row_idx| {
+        if (!row_selected) continue;
+        const row_start = @as(usize, cache.selection_cols_start.items[row_idx]);
+        const row_end = @as(usize, cache.selection_cols_end.items[row_idx]);
+        if (!found) {
+            found = true;
+            min_row = row_idx;
+            max_row = row_idx;
+            min_col = row_start;
+            max_col = row_end;
+            continue;
+        }
+        min_row = @min(min_row, row_idx);
+        max_row = @max(max_row, row_idx);
+        min_col = @min(min_col, row_start);
+        max_col = @max(max_col, row_end);
+    }
+
+    if (!found) return null;
+    return .{
+        .start_row = min_row,
+        .end_row = max_row,
+        .start_col = min_col,
+        .end_col = max_col,
+    };
+}
+
 pub fn copySnapshot(dst: *RenderCache, allocator: std.mem.Allocator, src: *const RenderCache) !void {
     try dst.cells.resize(allocator, src.cells.items.len);
     std.mem.copyForwards(Cell, dst.cells.items, src.cells.items);
@@ -225,4 +273,45 @@ pub fn copySnapshot(dst: *RenderCache, allocator: std.mem.Allocator, src: *const
     dst.clear_generation = src.clear_generation;
     dst.viewport_shift_rows = src.viewport_shift_rows;
     dst.viewport_shift_exposed_only = src.viewport_shift_exposed_only;
+}
+
+test "selectionBounds returns null when no visible selection exists" {
+    var cache = RenderCache.init();
+    defer cache.deinit(std.testing.allocator);
+
+    try cache.selection_rows.resize(std.testing.allocator, 2);
+    try cache.selection_cols_start.resize(std.testing.allocator, 2);
+    try cache.selection_cols_end.resize(std.testing.allocator, 2);
+    @memset(cache.selection_rows.items, false);
+    @memset(cache.selection_cols_start.items, 0);
+    @memset(cache.selection_cols_end.items, 0);
+
+    try std.testing.expect(selectionBounds(&cache) == null);
+}
+
+test "selectionBounds returns bounding box across selected rows" {
+    var cache = RenderCache.init();
+    defer cache.deinit(std.testing.allocator);
+
+    try cache.selection_rows.resize(std.testing.allocator, 3);
+    try cache.selection_cols_start.resize(std.testing.allocator, 3);
+    try cache.selection_cols_end.resize(std.testing.allocator, 3);
+
+    cache.selection_rows.items[0] = false;
+    cache.selection_rows.items[1] = true;
+    cache.selection_rows.items[2] = true;
+
+    cache.selection_cols_start.items[0] = 0;
+    cache.selection_cols_start.items[1] = 2;
+    cache.selection_cols_start.items[2] = 0;
+
+    cache.selection_cols_end.items[0] = 0;
+    cache.selection_cols_end.items[1] = 4;
+    cache.selection_cols_end.items[2] = 6;
+
+    const bounds = selectionBounds(&cache).?;
+    try std.testing.expectEqual(@as(usize, 1), bounds.start_row);
+    try std.testing.expectEqual(@as(usize, 2), bounds.end_row);
+    try std.testing.expectEqual(@as(usize, 0), bounds.start_col);
+    try std.testing.expectEqual(@as(usize, 6), bounds.end_col);
 }
