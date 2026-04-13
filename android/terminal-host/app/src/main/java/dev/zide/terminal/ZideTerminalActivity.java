@@ -47,6 +47,8 @@ import dev.zide.terminal.host.TerminalSurfaceHostFactory;
 import dev.zide.terminal.host.TerminalRuntimeHostFactory;
 import dev.zide.terminal.host.TerminalSessionHostFactory;
 import dev.zide.terminal.host.TerminalUiHostFactory;
+import dev.zide.terminal.host.TerminalSessionAssembly;
+import dev.zide.terminal.host.TerminalSessionAssemblyHostCallbacks;
 import dev.zide.terminal.host.TerminalProductShellStateHostCallbacks;
 import dev.zide.terminal.host.TerminalSurfaceWidgetHostCallbacks;
 import dev.zide.terminal.host.TerminalViewModeHostCallbacks;
@@ -565,43 +567,41 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void assembleSessionControllers() {
-        shellSessionController = TerminalSessionHostFactory.createShellSessionController(
-                UserlandPolicy.bootstrapStampPath(this),
-                UserlandPolicy.shellPath(this),
-                userlandRelease,
-                nativeLoaded,
-                TerminalNativeBridge::nativeRestartShellSessionBridge,
-                TerminalNativeBridge::nativePollShellSessionBridge,
-                TerminalNativeBridge::nativeIsShellSessionAliveBridge);
-        terminalUserlandSessionHostBridge = TerminalSessionHostFactory.createUserlandSessionHostBridge(
-                this::appendEvent,
-                TerminalNativeStatusLabels::shellStartStatusLabel,
-                bootstrapState -> currentBootstrapState = bootstrapState,
-                () -> {
-                    if (terminalProductRuntimeController != null) {
-                        terminalProductRuntimeController.refreshProductShellState();
-                    }
-                },
-                () -> {
-                    if (terminalProductRuntimeController != null) {
-                        terminalProductRuntimeController.refreshDebugStatusSurface();
-                    }
-                },
-                this::updateStatus);
-        userlandSessionCoordinator = new UserlandSessionCoordinator(
-                shellSessionController,
-                terminalUserlandSessionHostBridge);
-        productFrameLoopController = TerminalRuntimeHostFactory.createFrameLoopController(
-                handler,
-                () -> terminalProductRuntimeController != null
-                        && terminalProductRuntimeController.shouldRunProductFrameLoop(),
-                () -> {
-                    final int tick = nativeLoaded ? TerminalNativeBridge.nativeTickProductShellFrameBridge() : 0;
-                    if (terminalProductRuntimeController != null) {
-                        terminalProductRuntimeController.refreshProductScrollOverlay();
-                    }
-                    return tick;
-                });
+        final TerminalSessionAssembly.Result result = TerminalSessionAssembly.assemble(
+                new TerminalSessionAssemblyHostCallbacks(
+                        () -> this,
+                        () -> userlandRelease,
+                        () -> nativeLoaded,
+                        () -> handler,
+                        this::appendEvent,
+                        this::updateStatus,
+                        bootstrapState -> currentBootstrapState = bootstrapState,
+                        () -> {
+                            if (terminalProductRuntimeController != null) {
+                                terminalProductRuntimeController.refreshProductShellState();
+                            }
+                        },
+                        () -> {
+                            if (terminalProductRuntimeController != null) {
+                                terminalProductRuntimeController.refreshDebugStatusSurface();
+                            }
+                        },
+                        () -> terminalProductRuntimeController != null
+                                && terminalProductRuntimeController.shouldRunProductFrameLoop(),
+                        () -> {
+                            final int tick = nativeLoaded ? TerminalNativeBridge.nativeTickProductShellFrameBridge() : 0;
+                            if (terminalProductRuntimeController != null) {
+                                terminalProductRuntimeController.refreshProductScrollOverlay();
+                            }
+                            return tick;
+                        },
+                        TerminalNativeBridge::nativeRestartShellSessionBridge,
+                        TerminalNativeBridge::nativePollShellSessionBridge,
+                        TerminalNativeBridge::nativeIsShellSessionAliveBridge));
+        shellSessionController = result.shellSessionController;
+        terminalUserlandSessionHostBridge = result.userlandSessionHostBridge;
+        userlandSessionCoordinator = result.userlandSessionCoordinator;
+        productFrameLoopController = result.frameLoopController;
     }
 
     private void bindAndStartUiControllers() {

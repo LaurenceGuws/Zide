@@ -99,6 +99,8 @@ A cut is done only if all are true:
 - shell-session and userland-session host bridge construction now lives in
   `host/TerminalSessionHostFactory`
 - UI host construction now lives in `host/TerminalUiHostFactory`
+- session/runtime activity wiring now composes through
+  `host/TerminalSessionAssembly` + `TerminalSessionAssemblyHostCallbacks`
 - terminal surface widget seam is established in
   `host/TerminalSurfaceWidgetController` for future tabbed hosting
 - debug surface snapshot composition moved to
