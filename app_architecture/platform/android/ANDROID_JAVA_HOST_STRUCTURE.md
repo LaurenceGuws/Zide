@@ -48,9 +48,10 @@ For active priorities/workflow, use
 
 Current shape markers (for hygiene tracking, not hard limits):
 
-- `ZideTerminalActivity.java`: `725` lines
-- `host/TerminalHostAssembler.java`: `368` lines
+- `ZideTerminalActivity.java`: `726` lines
+- `host/TerminalHostAssembler.java`: `260` lines
 - `host/TerminalChromeHostFactory.java`: `69` lines
+- `host/TerminalInteractionHostFactory.java`: `131` lines
 - `selection/TerminalSelectionController.java`: monolithic by design for now
 
 | File | Contract Fit | Size/Shape | Next Pressure |
@@ -73,8 +74,9 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/TerminalProductRuntimeController.java` | Good | Owns product runtime policy: frame-loop readiness, shell-state/overlay refresh, install-state apply, and shell restart status flow. | Keep it runtime-orchestration only; native truth stays in bridge calls and terminal core. |
 | `host/TerminalProductRuntimeHostCallbacks.java` | Good | Functional callback adapter from activity state/native access into `TerminalProductRuntimeController`. | Keep adapter-only; runtime behavior stays in `TerminalProductRuntimeController`. |
 | `host/TerminalActivityViewBindings.java` | Good | Owns raw activity view lookup and typed binding capture for terminal host wiring. | Keep this as lookup-only data binding; no policy or runtime behavior. |
-| `host/TerminalHostAssembler.java` | Watch | Owns construction helpers for host bridges/controllers and callback-adapter assembly, including shared/runtime/surface/session/selection/gesture and now input-controller construction seams. | Keep this as assembly-only glue; if it grows further, split by domain (runtime/surface vs. input/selection/session) without moving behavior out of controllers. |
+| `host/TerminalHostAssembler.java` | Good | Owns shared host construction helpers for runtime/surface/session/input wiring after interaction/chrome factory extraction. | Keep this as assembly-only glue and avoid pulling interaction-specific constructors back in. |
 | `host/TerminalChromeHostFactory.java` | Good | Owns chrome-specific bridge/callback construction so chrome assembly does not inflate the generic host assembler. | Keep this construction-only; do not move chrome behavior out of `TerminalChromeController`. |
+| `host/TerminalInteractionHostFactory.java` | Good | Owns selection/gesture interaction controller construction so interaction seams stay out of the generic host assembler. | Keep this construction-only; interaction behavior remains in selection/gesture controllers. |
 | `host/TerminalViewModeController.java` | Good | Owns product/debug view-mode switching and its side effects (viewport notify, scroll-overlay refresh, debug-session refresh). | Keep this focused on mode transitions; do not move selection or shell/runtime truth here. |
 | `host/TerminalChromeHostBridge.java` | Good | Owns chrome callback adaptation, sidebar-open state, and assist-button/modifier-latch view presentation wiring for the chrome controller host contract. | Keep as adapter/state only; keep chrome behavior in `TerminalChromeController`. |
 | `host/TerminalChromeHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalChromeHostBridge`. | Keep adapter-only; chrome behavior remains in `TerminalChromeController`. |

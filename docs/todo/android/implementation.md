@@ -88,6 +88,9 @@ A cut is done only if all are true:
   now terminate in `host/` controllers and `TerminalHostAssembler` helpers
 - chrome bridge/callback construction now lives in
   `host/TerminalChromeHostFactory` to keep `TerminalHostAssembler` focused
+- selection/gesture controller construction now lives in
+  `host/TerminalInteractionHostFactory` to keep `TerminalHostAssembler`
+  focused on shared/runtime/surface/session/input seams
 - hardware-keyboard and IME-focus-recovery controller construction now lives in
   `TerminalHostAssembler` helpers instead of activity-local callback assembly
 - terminal surface widget seam is established in

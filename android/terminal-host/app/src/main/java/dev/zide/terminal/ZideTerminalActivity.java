@@ -42,6 +42,7 @@ import dev.zide.terminal.host.TerminalSurfaceHostCallbacks;
 import dev.zide.terminal.host.TerminalChromeHostFactory;
 import dev.zide.terminal.host.TerminalProductRuntimeHostCallbacks;
 import dev.zide.terminal.host.TerminalHostAssembler;
+import dev.zide.terminal.host.TerminalInteractionHostFactory;
 import dev.zide.terminal.host.TerminalProductShellStateHostCallbacks;
 import dev.zide.terminal.host.TerminalSurfaceWidgetHostCallbacks;
 import dev.zide.terminal.host.TerminalViewModeHostCallbacks;
@@ -143,7 +144,7 @@ public final class ZideTerminalActivity extends Activity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         initializeStatusAndViewControllers();
-        selectionController = TerminalHostAssembler.createSelectionController(
+        selectionController = TerminalInteractionHostFactory.createSelectionController(
                 this,
                 productSurfaceContainer,
                 this::productViewportWidthPx,
@@ -192,7 +193,7 @@ public final class ZideTerminalActivity extends Activity
                 TerminalNativeBridge::nativeSetShellScrollbackOffsetBridge,
                 TerminalNativeBridge::nativeFollowShellLiveBottomBridge);
         selectionController.install();
-        terminalGestureStateController = TerminalHostAssembler.createGestureStateController(
+        terminalGestureStateController = TerminalInteractionHostFactory.createGestureStateController(
                 this,
                 handler,
                 () -> nativeLoaded,
