@@ -1,5 +1,11 @@
 package dev.zide.terminal.debug;
 
+/**
+ * Formats debug-only Android host snapshots for logcat and the in-app debug surface.
+ *
+ * <p>This class must stay a pure formatter. It should not read Android state, call native code, or
+ * own product behavior.
+ */
 public final class AndroidDebugFormatter {
     public static final class SurfaceEventSnapshot {
         public final long seq;

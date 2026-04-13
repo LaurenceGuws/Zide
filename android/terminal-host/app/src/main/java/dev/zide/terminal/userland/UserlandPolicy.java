@@ -1,5 +1,11 @@
 package dev.zide.terminal.userland;
 
+/**
+ * Central path policy for the Android app-private userland.
+ *
+ * <p>Keep path construction here so installer, session, and command execution code agree on the
+ * same prefix, shell, and bootstrap stamp locations.
+ */
 public final class UserlandPolicy {
     public static final String PACKAGE_NAME = "dev.zide.terminal";
 

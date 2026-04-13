@@ -8,6 +8,12 @@ import java.nio.charset.StandardCharsets;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+/**
+ * Pinned userland release descriptor bundled with the APK.
+ *
+ * <p>This class only parses {@code assets/userland_release.json}. Release production and package
+ * selection live in the sibling package authority project, not in the terminal host.
+ */
 public final class UserlandRelease {
     private static final String ASSET_NAME = "userland_release.json";
 

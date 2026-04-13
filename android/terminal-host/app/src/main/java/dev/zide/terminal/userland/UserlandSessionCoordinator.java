@@ -2,7 +2,12 @@ package dev.zide.terminal.userland;
 
 import dev.zide.terminal.session.ShellSessionController;
 
-/** Owns bootstrap-state polling and shell auto-start telemetry policy. */
+/**
+ * Owns bootstrap-state refresh, shell polling, state application, and auto-start telemetry.
+ *
+ * <p>This is the one owner of the "read staged userland state, poll shell, apply product/debug
+ * state" pass. It should not perform install work or mutate Android views directly.
+ */
 public final class UserlandSessionCoordinator {
     /** Host callbacks used for event formatting/logging. */
     public interface Host {
@@ -77,7 +82,7 @@ public final class UserlandSessionCoordinator {
             lastAutoStartBlockedState = "";
         }
         if (logEvent) {
-            host.appendEvent("manual.shellRefresh alive=" + pollResult.alive + " status="
+            host.appendEvent("shell.sessionRefresh manual=true alive=" + pollResult.alive + " status="
                     + host.shellStartStatusLabel(pollResult.status));
         }
     }

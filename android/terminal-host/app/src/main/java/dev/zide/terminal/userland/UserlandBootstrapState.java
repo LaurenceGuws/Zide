@@ -7,6 +7,12 @@ import java.nio.file.Files;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+/**
+ * Immutable readiness snapshot for the app-private Android userland prefix.
+ *
+ * <p>This class classifies the installed prefix against the release expected by the APK. It should
+ * stay a small value/parser type and not perform install, UI, or shell-start work.
+ */
 public final class UserlandBootstrapState {
     public static final String STATE_MISSING_STAMP = "missing-stamp";
     public static final String STATE_INVALID_STAMP = "invalid-stamp";

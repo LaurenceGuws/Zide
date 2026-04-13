@@ -9,6 +9,12 @@ import android.view.inputmethod.ExtractedText;
 import android.view.inputmethod.ExtractedTextRequest;
 import android.view.inputmethod.InputConnection;
 
+/**
+ * Invisible Android text-editor surface that translates IME and hardware-key events to PTY input.
+ *
+ * <p>This view owns Android {@link InputConnection} state only. It does not own terminal focus
+ * policy, shell refresh, scrollback, or product text rendering.
+ */
 public final class ShellInputView extends View {
     public interface Host {
         final class ModifierLatchState {

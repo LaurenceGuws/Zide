@@ -1,5 +1,11 @@
 package dev.zide.terminal.userland;
 
+/**
+ * Parsed artifact contract from the mobile package authority manifest.
+ *
+ * <p>This package-private value object is used by {@link UserlandInstaller}; it should not grow
+ * install behavior or Android UI policy.
+ */
 final class UserlandArtifact {
     final String manifestSource;
     final String name;

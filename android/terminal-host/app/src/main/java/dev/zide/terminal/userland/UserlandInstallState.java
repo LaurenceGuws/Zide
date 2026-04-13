@@ -1,5 +1,11 @@
 package dev.zide.terminal.userland;
 
+/**
+ * Immutable UI-facing state for one in-app userland install/update operation.
+ *
+ * <p>This is presentation state only; install execution belongs to {@link UserlandWorkflowController}
+ * and archive extraction belongs to {@link UserlandInstaller}.
+ */
 public final class UserlandInstallState {
     public static final String STATUS_IDLE = "idle";
     public static final String STATUS_INSTALLING = "installing";

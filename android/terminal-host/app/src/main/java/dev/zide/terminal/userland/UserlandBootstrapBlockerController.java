@@ -1,0 +1,50 @@
+package dev.zide.terminal.userland;
+
+import android.widget.Button;
+
+/** Owns bootstrap-blocker button policy for retry/install and debug escalation. */
+public final class UserlandBootstrapBlockerController {
+    /** Host callbacks for state and side effects. */
+    public interface Host {
+        UserlandInstallState installState();
+
+        UserlandBootstrapState bootstrapState();
+
+        UserlandWorkflowController workflowController();
+
+        UserlandSessionCoordinator sessionCoordinator();
+
+        void showDebugView(String eventName, String statusLabel);
+
+        void appendEvent(String event);
+
+        void updateStatus(String statusLabel);
+    }
+
+    private final Button retryButton;
+    private final Button debugButton;
+    private final Host host;
+
+    public UserlandBootstrapBlockerController(Button retryButton, Button debugButton, Host host) {
+        this.retryButton = retryButton;
+        this.debugButton = debugButton;
+        this.host = host;
+    }
+
+    public void bind() {
+        retryButton.setOnClickListener(view -> {
+            if (host.installState().isInstalling()) {
+                host.appendEvent("product.install ignored=already-installing");
+                return;
+            }
+            if (UserlandBootstrapUiPolicy.shouldStartInstall(host.bootstrapState())) {
+                host.workflowController().startInstall();
+                return;
+            }
+            host.appendEvent("product.bootstrap retry");
+            host.sessionCoordinator().refreshAndApply(true);
+            host.updateStatus("product-bootstrap-retry");
+        });
+        debugButton.setOnClickListener(view -> host.showDebugView("product.bootstrap debug", "debug-view"));
+    }
+}
