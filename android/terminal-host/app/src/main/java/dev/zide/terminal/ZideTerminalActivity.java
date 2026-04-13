@@ -46,6 +46,7 @@ import dev.zide.terminal.host.TerminalInteractionHostFactory;
 import dev.zide.terminal.host.TerminalInputHostFactory;
 import dev.zide.terminal.host.TerminalSurfaceHostFactory;
 import dev.zide.terminal.host.TerminalRuntimeHostFactory;
+import dev.zide.terminal.host.TerminalSessionHostFactory;
 import dev.zide.terminal.host.TerminalProductShellStateHostCallbacks;
 import dev.zide.terminal.host.TerminalSurfaceWidgetHostCallbacks;
 import dev.zide.terminal.host.TerminalViewModeHostCallbacks;
@@ -564,7 +565,7 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void assembleSessionControllers() {
-        shellSessionController = TerminalHostAssembler.createShellSessionController(
+        shellSessionController = TerminalSessionHostFactory.createShellSessionController(
                 UserlandPolicy.bootstrapStampPath(this),
                 UserlandPolicy.shellPath(this),
                 userlandRelease,
@@ -572,7 +573,7 @@ public final class ZideTerminalActivity extends Activity
                 TerminalNativeBridge::nativeRestartShellSessionBridge,
                 TerminalNativeBridge::nativePollShellSessionBridge,
                 TerminalNativeBridge::nativeIsShellSessionAliveBridge);
-        terminalUserlandSessionHostBridge = TerminalHostAssembler.createUserlandSessionHostBridge(
+        terminalUserlandSessionHostBridge = TerminalSessionHostFactory.createUserlandSessionHostBridge(
                 this::appendEvent,
                 TerminalNativeStatusLabels::shellStartStatusLabel,
                 bootstrapState -> currentBootstrapState = bootstrapState,

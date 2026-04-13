@@ -97,6 +97,8 @@ A cut is done only if all are true:
   `host/TerminalSurfaceHostFactory` instead of generic host assembler helpers
 - product-runtime/frame-loop construction now lives in
   `host/TerminalRuntimeHostFactory` instead of generic host assembler helpers
+- shell-session and userland-session host bridge construction now lives in
+  `host/TerminalSessionHostFactory` instead of generic host assembler helpers
 - terminal surface widget seam is established in
   `host/TerminalSurfaceWidgetController` for future tabbed hosting
 - debug surface snapshot composition moved to
