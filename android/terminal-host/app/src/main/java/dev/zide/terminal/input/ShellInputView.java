@@ -1,4 +1,4 @@
-package dev.zide.terminal;
+package dev.zide.terminal.input;
 
 import android.content.Context;
 import android.view.KeyEvent;
@@ -9,11 +9,11 @@ import android.view.inputmethod.ExtractedText;
 import android.view.inputmethod.ExtractedTextRequest;
 import android.view.inputmethod.InputConnection;
 
-final class ShellInputView extends View {
-    interface Host {
+public final class ShellInputView extends View {
+    public interface Host {
         final class ModifierLatchState {
-            final boolean ctrlLatched;
-            final boolean altLatched;
+            public final boolean ctrlLatched;
+            public final boolean altLatched;
 
             ModifierLatchState(boolean ctrlLatched, boolean altLatched) {
                 this.ctrlLatched = ctrlLatched;
@@ -32,7 +32,7 @@ final class ShellInputView extends View {
 
     private static final String SENTINEL = "........";
 
-    enum ModifierLatch {
+    public enum ModifierLatch {
         CTRL,
         ALT,
     }
@@ -46,7 +46,7 @@ final class ShellInputView extends View {
     private boolean altLatched = false;
     private String suppressedCommitText = null;
 
-    ShellInputView(Context context, Host host) {
+    public ShellInputView(Context context, Host host) {
         super(context);
         this.host = host;
         setFocusable(true);
@@ -208,11 +208,11 @@ final class ShellInputView extends View {
         };
     }
 
-    boolean handleHardwareKeyEvent(KeyEvent event) {
+    public boolean handleHardwareKeyEvent(KeyEvent event) {
         return handleTerminalKeyEvent(event);
     }
 
-    void toggleModifierLatch(ModifierLatch modifier) {
+    public void toggleModifierLatch(ModifierLatch modifier) {
         switch (modifier) {
             case CTRL:
                 ctrlLatched = !ctrlLatched;
@@ -224,7 +224,7 @@ final class ShellInputView extends View {
         notifyModifierLatchChanged();
     }
 
-    Host.ModifierLatchState modifierLatchState() {
+    public Host.ModifierLatchState modifierLatchState() {
         return new Host.ModifierLatchState(ctrlLatched, altLatched);
     }
 

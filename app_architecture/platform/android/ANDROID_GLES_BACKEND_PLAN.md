@@ -349,7 +349,7 @@ Required behavior:
 Stop marker:
 
 - product view shows live shell content from the shared renderer path
-- no Java transcript fallback remains on the product-owned shell display path
+- no Java text fallback remains on the product-owned shell display path
 
 Current status:
 

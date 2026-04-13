@@ -22,7 +22,7 @@
                 android:layout_height="match_parent"
                 android:background="#162028" />
 
-            <dev.zide.terminal.TerminalScrollOverlayView
+            <dev.zide.terminal.scroll.TerminalScrollOverlayView
                 android:id="@+id/terminal_scroll_overlay"
                 android:layout_width="24dp"
                 android:layout_height="match_parent"

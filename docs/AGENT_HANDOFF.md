@@ -33,9 +33,18 @@ blocker for Android terminal progress.
     artifact install/update, explicit staged-state reporting, staged `zide-pm`,
     one app-owned package action, clean Bash startup, and a curated
     terminal-dev baseline. `AU-A2` and `AU-A3` are met for the current
-    foundation. The next Android product work is the Neovim baseline plus the
-    first Android-owned scrollback/selection interaction seam needed to make
-    terminal use feel native instead of desktop-pointer-shaped.
+    foundation. Android-native text interaction is now real too: floating text
+    toolbar, clipboard copy, drag expansion, autoscroll, and Android-owned
+    selection handles over the GPU terminal surface. The Java host is now
+    split across explicit controllers:
+    `dev.zide.terminal.selection.TerminalSelectionController`,
+    `dev.zide.terminal.debug.TerminalStatusController`,
+    `dev.zide.terminal.host.TerminalSurfaceHostController`,
+    `dev.zide.terminal.host.TerminalChromeController`,
+    `dev.zide.terminal.host.TerminalViewportController`, and the userland
+    workflow/session controllers. The next Android cleanup is further
+    reduction of `ZideTerminalActivity` breadth while continuing the
+    Neovim/mobile-terminal product baseline.
 - Accepted Android renderer checkpoint:
   - pinch / resize-pressure responsiveness is now accepted on the current
     release-build terminal-host path
@@ -157,8 +166,8 @@ blocker for Android terminal progress.
   - visible shared clear/swap in terminal-host product view
   - `SurfaceDraw.solid` replay on-device
   - minimal terminal rect/glyph-rect replay on-device
-  - live shared-renderer shell ownership in product view without any Java
-    transcript fallback
+  - live shared-renderer shell ownership in product view without a Java text
+    fallback
   - readable live shell text/prompt replay through atlas glyph rendering on
     the shared Android GLES path
   - product-fit live shell sizing from the real renderer surface instead of a

@@ -15,4 +15,26 @@ else
 end
 
 ---@type ZideConfig
-return zide.config({})
+return zide.config({
+  log = {
+    enable = {
+      "app.core",
+      "terminal.core",
+      "terminal.ui.lifecycle",
+      "terminal.ui.redraw",
+      "terminal.session.runtime.pty",
+    },
+  },
+  logs = {
+    file_level = "info",
+    console_level = "info",
+    file_levels = {
+      ["terminal.ui.lifecycle"] = "debug",
+      ["terminal.ui.redraw"] = "debug",
+      ["terminal.session.runtime.pty"] = "debug",
+    },
+  },
+  sdl = {
+    log_level = "warning",
+  },
+})

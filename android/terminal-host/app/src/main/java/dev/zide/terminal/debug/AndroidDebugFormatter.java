@@ -1,25 +1,25 @@
-package dev.zide.terminal;
+package dev.zide.terminal.debug;
 
-final class AndroidDebugFormatter {
-    static final class SurfaceEventSnapshot {
-        final long seq;
-        final long token;
-        final long epoch;
-        final String transition;
-        final String glesStatus;
-        final long glesSwapCount;
-        final long glesBoundEpoch;
-        final long glesContextCreateCount;
-        final long glesSurfaceCreateCount;
-        final long glesTextureCreateCount;
-        final boolean glesTextureAlive;
-        final long glesTextureUploadCount;
-        final long glesTextureUpdateCount;
-        final long glesTextureResizeCount;
-        final int glesTextureWidth;
-        final int glesTextureHeight;
+public final class AndroidDebugFormatter {
+    public static final class SurfaceEventSnapshot {
+        public final long seq;
+        public final long token;
+        public final long epoch;
+        public final String transition;
+        public final String glesStatus;
+        public final long glesSwapCount;
+        public final long glesBoundEpoch;
+        public final long glesContextCreateCount;
+        public final long glesSurfaceCreateCount;
+        public final long glesTextureCreateCount;
+        public final boolean glesTextureAlive;
+        public final long glesTextureUploadCount;
+        public final long glesTextureUpdateCount;
+        public final long glesTextureResizeCount;
+        public final int glesTextureWidth;
+        public final int glesTextureHeight;
 
-        SurfaceEventSnapshot(
+        public SurfaceEventSnapshot(
                 long seq,
                 long token,
                 long epoch,
@@ -55,39 +55,39 @@ final class AndroidDebugFormatter {
         }
     }
 
-    static final class StatusSnapshot {
-        final String state;
-        final boolean nativeLoaded;
-        final boolean windowFocused;
-        final boolean imeVisible;
-        final boolean surfaceValid;
-        final int surfaceWidth;
-        final int surfaceHeight;
-        final int viewportWidth;
-        final int viewportHeight;
-        final String installState;
-        final String installDetail;
-        final String userlandState;
-        final String userlandFormat;
-        final String userlandArtifact;
-        final String userlandVersion;
-        final String userlandProvider;
-        final boolean userlandLaunchReady;
-        final boolean userlandExpectedCurrent;
-        final String glesStatus;
-        final long glesSwapCount;
-        final long glesBoundEpoch;
-        final long glesContextCreateCount;
-        final long glesSurfaceCreateCount;
-        final long glesTextureCreateCount;
-        final boolean glesTextureAlive;
-        final long glesTextureUploadCount;
-        final long glesTextureUpdateCount;
-        final long glesTextureResizeCount;
-        final int glesTextureWidth;
-        final int glesTextureHeight;
+    public static final class StatusSnapshot {
+        public final String state;
+        public final boolean nativeLoaded;
+        public final boolean windowFocused;
+        public final boolean imeVisible;
+        public final boolean surfaceValid;
+        public final int surfaceWidth;
+        public final int surfaceHeight;
+        public final int viewportWidth;
+        public final int viewportHeight;
+        public final String installState;
+        public final String installDetail;
+        public final String userlandState;
+        public final String userlandFormat;
+        public final String userlandArtifact;
+        public final String userlandVersion;
+        public final String userlandProvider;
+        public final boolean userlandLaunchReady;
+        public final boolean userlandExpectedCurrent;
+        public final String glesStatus;
+        public final long glesSwapCount;
+        public final long glesBoundEpoch;
+        public final long glesContextCreateCount;
+        public final long glesSurfaceCreateCount;
+        public final long glesTextureCreateCount;
+        public final boolean glesTextureAlive;
+        public final long glesTextureUploadCount;
+        public final long glesTextureUpdateCount;
+        public final long glesTextureResizeCount;
+        public final int glesTextureWidth;
+        public final int glesTextureHeight;
 
-        StatusSnapshot(
+        public StatusSnapshot(
                 String state,
                 boolean nativeLoaded,
                 boolean windowFocused,
@@ -154,7 +154,7 @@ final class AndroidDebugFormatter {
     private AndroidDebugFormatter() {
     }
 
-    static String formatSurfaceEvent(String event, SurfaceEventSnapshot s) {
+    public static String formatSurfaceEvent(String event, SurfaceEventSnapshot s) {
         return event + " seq=" + s.seq +
                 " token=0x" + Long.toHexString(s.token) +
                 " epoch=" + s.epoch +
@@ -172,7 +172,7 @@ final class AndroidDebugFormatter {
                 " glesTextureSize=" + s.glesTextureWidth + "x" + s.glesTextureHeight;
     }
 
-    static String formatStatus(StatusSnapshot s) {
+    public static String formatStatus(StatusSnapshot s) {
         return "state=" + s.state +
                 " nativeLoaded=" + s.nativeLoaded +
                 " windowFocus=" + s.windowFocused +

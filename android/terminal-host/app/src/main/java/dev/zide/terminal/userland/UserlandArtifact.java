@@ -1,4 +1,4 @@
-package dev.zide.terminal;
+package dev.zide.terminal.userland;
 
 final class UserlandArtifact {
     final String manifestSource;

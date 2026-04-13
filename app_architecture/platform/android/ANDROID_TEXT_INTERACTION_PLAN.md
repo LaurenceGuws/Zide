@@ -179,7 +179,7 @@ Acceptance:
 
 ## Current Baseline
 
-`AT-A1` and `AT-A2` are now met.
+`AT-A1`, `AT-A2`, and the first `AT-A3` baseline are now met.
 
 What is proved:
 
@@ -193,13 +193,30 @@ What is proved:
 - `Copy` clears selection after the action completes
 - IME visibility is no longer owned by product-surface tap; the assist bar owns
   explicit IME open/close
+- drag expansion is live on device:
+  - long-press selection can extend by drag
+  - selection autoscroll now starts from the first/last visible row and ramps
+    with distance outside the viewport
+  - Android-owned handles now reuse that same shared selection/autoscroll path
 - tap policy is now selection-scoped:
   - tap inside active selection: preserve selection
   - tap outside active selection: clear selection
+- helper-chrome policy is now explicit:
+  - active selection change hides only the floating toolbar
+  - tap inside selection toggles the Android-owned helper chrome without
+    mutating the Zig-owned selection highlight
+- Java ownership is now explicit too:
+  - `dev.zide.terminal.selection.TerminalSelectionController` owns Android-native
+    selection mutation, handles, and autoscroll policy
+  - `dev.zide.terminal.host.TerminalSurfaceHostController` owns the native
+    SurfaceView host wiring
+  - `dev.zide.terminal.host.TerminalChromeController` owns the Android assist-bar / sidebar / IME chrome policy
+  - `ZideTerminalActivity` no longer owns duplicate selection state or
+    selection index mutation helpers
 
 What remains for the next cut:
 
-- `AT-A3` drag expansion
-- autoscroll/scrollback integration while expanding a selection beyond the
-  current viewport
-- exact tap/drag arbitration once selection expansion exists
+- finish `AT-A3` polish around large-range selection ergonomics and helper UX
+- `AT-A4` Android paste routed through the existing input bridge
+- exact handle theming/animation polish only after the interaction contract is
+  stable

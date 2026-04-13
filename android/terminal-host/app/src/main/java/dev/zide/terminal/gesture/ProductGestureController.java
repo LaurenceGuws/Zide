@@ -1,4 +1,4 @@
-package dev.zide.terminal;
+package dev.zide.terminal.gesture;
 
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
@@ -22,13 +22,13 @@ import android.view.VelocityTracker;
  * <p>Raw detector scale deltas are intentionally not forwarded one-for-one. They are accumulated
  * and quantized here so fast pinches do not explode into tiny renderer work bursts.
  */
-final class ProductGestureController {
+public final class ProductGestureController {
     /**
      * Host callbacks for product-surface gestures.
      *
      * <p>The host owns product actions; this controller owns gesture detection and quantization.
      */
-    interface Host {
+    public interface Host {
         /** Applies the resolved single-tap product-surface policy at the tap location. */
         void onProductSingleTap(float x, float y);
 
@@ -110,7 +110,7 @@ final class ProductGestureController {
     };
 
     /** Creates a gesture controller bound to the product interaction surface. */
-    ProductGestureController(View target, Host host) {
+    public ProductGestureController(View target, Host host) {
         this.target = target;
         this.host = host;
         final ViewConfiguration viewConfig = ViewConfiguration.get(target.getContext());
@@ -155,7 +155,7 @@ final class ProductGestureController {
     }
 
     /** Installs the gesture listener onto the bound target view. */
-    void install() {
+    public void install() {
         target.setOnTouchListener(this::onTouch);
     }
 

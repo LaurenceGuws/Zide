@@ -1,4 +1,4 @@
-package dev.zide.terminal;
+package dev.zide.terminal.userland;
 
 import android.content.Context;
 import java.io.ByteArrayOutputStream;
@@ -8,22 +8,22 @@ import java.nio.charset.StandardCharsets;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-final class UserlandRelease {
+public final class UserlandRelease {
     private static final String ASSET_NAME = "userland_release.json";
 
-    final String manifestUrl;
-    final String artifactName;
-    final String artifactVersion;
-    final String provider;
+    public final String manifestUrl;
+    public final String artifactName;
+    public final String artifactVersion;
+    public final String provider;
 
-    UserlandRelease(String manifestUrl, String artifactName, String artifactVersion, String provider) {
+    public UserlandRelease(String manifestUrl, String artifactName, String artifactVersion, String provider) {
         this.manifestUrl = manifestUrl;
         this.artifactName = artifactName;
         this.artifactVersion = artifactVersion;
         this.provider = provider;
     }
 
-    static UserlandRelease load(Context context) throws IOException {
+    public static UserlandRelease load(Context context) throws IOException {
         try (InputStream in = context.getAssets().open(ASSET_NAME); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             final byte[] buffer = new byte[4096];
             while (true) {

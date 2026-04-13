@@ -1,4 +1,4 @@
-package dev.zide.terminal;
+package dev.zide.terminal.userland;
 
 import java.io.File;
 import java.io.IOException;
@@ -7,23 +7,23 @@ import java.nio.file.Files;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-final class UserlandBootstrapState {
-    static final String STATE_MISSING_STAMP = "missing-stamp";
-    static final String STATE_INVALID_STAMP = "invalid-stamp";
-    static final String STATE_MISSING_SHELL = "missing-shell";
-    static final String STATE_STAMP_NO_BASH = "stamp-no-bash";
-    static final String STATE_READY_CURRENT = "ready-current";
-    static final String STATE_READY_UPGRADE_NEEDED = "ready-upgrade-needed";
+public final class UserlandBootstrapState {
+    public static final String STATE_MISSING_STAMP = "missing-stamp";
+    public static final String STATE_INVALID_STAMP = "invalid-stamp";
+    public static final String STATE_MISSING_SHELL = "missing-shell";
+    public static final String STATE_STAMP_NO_BASH = "stamp-no-bash";
+    public static final String STATE_READY_CURRENT = "ready-current";
+    public static final String STATE_READY_UPGRADE_NEEDED = "ready-upgrade-needed";
 
-    final String state;
-    final String format;
-    final String artifact;
-    final String version;
-    final String provider;
-    final boolean launchReady;
-    final boolean expectedCurrent;
+    public final String state;
+    public final String format;
+    public final String artifact;
+    public final String version;
+    public final String provider;
+    public final boolean launchReady;
+    public final boolean expectedCurrent;
 
-    UserlandBootstrapState(
+    public UserlandBootstrapState(
             String state,
             String format,
             String artifact,
@@ -40,7 +40,7 @@ final class UserlandBootstrapState {
         this.expectedCurrent = expectedCurrent;
     }
 
-    static UserlandBootstrapState load(String stampPath, String shellPath, UserlandRelease release) {
+    public static UserlandBootstrapState load(String stampPath, String shellPath, UserlandRelease release) {
         final File stampFile = new File(stampPath);
         if (!stampFile.isFile()) {
             return new UserlandBootstrapState(STATE_MISSING_STAMP, "", "", "", "", false, false);

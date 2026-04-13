@@ -1,4 +1,4 @@
-package dev.zide.terminal;
+package dev.zide.terminal.userland;
 
 import android.content.Context;
 import java.io.BufferedInputStream;
@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -20,16 +19,16 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-final class UserlandInstaller {
+public final class UserlandInstaller {
     private static final int BUFFER_SIZE = 64 * 1024;
     private static final int CONNECT_TIMEOUT_MS = 15000;
     private static final int READ_TIMEOUT_MS = 300000;
 
-    static final class Result {
-        final UserlandBootstrapState bootstrapState;
-        final String detail;
+    public static final class Result {
+        public final UserlandBootstrapState bootstrapState;
+        public final String detail;
 
-        Result(UserlandBootstrapState bootstrapState, String detail) {
+        public Result(UserlandBootstrapState bootstrapState, String detail) {
             this.bootstrapState = bootstrapState;
             this.detail = detail;
         }
@@ -38,7 +37,7 @@ final class UserlandInstaller {
     private UserlandInstaller() {
     }
 
-    static Result install(Context context, UserlandRelease release) throws IOException {
+    public static Result install(Context context, UserlandRelease release) throws IOException {
         final UserlandArtifact artifact = readArtifactManifest(context, release);
         final File archive = fetchArtifact(context, artifact);
         installArchive(context, archive, artifact);
@@ -228,7 +227,7 @@ final class UserlandInstaller {
     }
 
     private static void downloadToFile(String urlText, File destination) throws IOException {
-        final HttpURLConnection connection = (HttpURLConnection) new URL(urlText).openConnection();
+        final HttpURLConnection connection = (HttpURLConnection) URI.create(urlText).toURL().openConnection();
         connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
         connection.setReadTimeout(READ_TIMEOUT_MS);
         connection.setRequestProperty("User-Agent", "zide-android-terminal-host");
@@ -255,7 +254,7 @@ final class UserlandInstaller {
     }
 
     private static byte[] readUrlBytes(String urlText) throws IOException {
-        final HttpURLConnection connection = (HttpURLConnection) new URL(urlText).openConnection();
+        final HttpURLConnection connection = (HttpURLConnection) URI.create(urlText).toURL().openConnection();
         connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
         connection.setReadTimeout(READ_TIMEOUT_MS);
         connection.setRequestProperty("User-Agent", "zide-android-terminal-host");

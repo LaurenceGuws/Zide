@@ -1,4 +1,4 @@
-package dev.zide.terminal;
+package dev.zide.terminal.scroll;
 
 import android.animation.ValueAnimator;
 import android.content.Context;
@@ -17,7 +17,7 @@ import android.view.View;
  */
 public final class TerminalScrollOverlayView extends View {
     /** Host callbacks for scrollback control. */
-    interface Host {
+    public interface Host {
         void onScrollbackOffsetRequested(int offsetRows);
 
         void onFollowLiveBottomRequested();

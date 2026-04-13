@@ -41,7 +41,7 @@ The burden of proof is on the caller, not on reviewers.
 Forbidden categories on the render path:
 
 - file IO
-- stale transcript-era string rebuilding on the product path
+- product-path string rebuilding that is not required for the current frame
 - debug/status formatting
 - log-heavy observability work
 - broad cache destruction and full reinitialization
@@ -386,6 +386,12 @@ Findings:
     call sites
   - behavior is unchanged; this names the surviving direct-submit authority
     more honestly before any deeper pacing change
+- redraw-needed callback contract tightened:
+  - the Android surface-redraw callback must not re-enter itself through
+    native draw submission or callback fan-out
+  - the host/controller layer now guards that callback path so a single
+    lifecycle-critical redraw pass can complete without recursive surface
+    redraw reentry
 - surface lifecycle/redraw-needed paths still submit immediately because they
   are the current acquisition/readiness authority
 - direct input no longer owns a separate immediate-submit exception here; the
@@ -1067,14 +1073,16 @@ Scope:
 - `ZideTerminalActivity.java`
 - `ShellSessionController.java`
 - `ShellInputView.java`
-- Java-side gesture, lifecycle, status, and stale transcript-era flows on the
+- Java-side gesture, lifecycle, status, and product-state upkeep flows on the
   main thread
 
 Findings:
 
-- `ZideTerminalActivity` still owns a broad main-thread orchestration surface:
-  lifecycle, viewport/insets, status/debug text, sidebar, package/bootstrap
-  actions, IME ownership, gesture ownership, and JNI bridge calls
+- `ZideTerminalActivity` still owns the Android lifecycle entrypoint and the
+  remaining wiring surface for lifecycle dispatch, sidebar controls, IME
+  ownership, gesture intake, and JNI bridge calls
+- viewport/inset authority now lives in `dev.zide.terminal.host.TerminalViewportController`
+- debug/status presentation now lives in `dev.zide.terminal.debug.TerminalStatusController`
 - a 150ms `shellRefreshRunnable` still exists and may re-enter:
   - `refreshShellState(false)`
   - `ShellSessionController.poll(...)`
@@ -1082,9 +1090,8 @@ Findings:
 - `ShellSessionController.poll(...)` still performs:
   - synchronous native poll
   - bootstrap-state reload from disk
-- product shell correctness was recently distorted by stale transcript-era
-  follow/refresh assumptions even after the Java transcript surface was no
-  longer product truth
+- older transcript-era follow/refresh assumptions had to be removed before
+  the current host shape behaved as product truth
 - gesture/input paths still call into product refresh directly:
   - assist-bar actions call `refreshShellState(false)`
   - `ShellInputView` calls `host.refreshShellState()` in several input paths
@@ -1118,7 +1125,7 @@ What is forbidden here:
 
 - periodic reconstruction of product state on the UI thread when an event-driven
   or staged model can own it
-- stale transcript-era follow logic that overrides product scrolling semantics
+- follow logic that overrides product scrolling semantics
 - mixing debug/status text maintenance into ordinary product lifecycle/input
   flows
 
@@ -1134,7 +1141,8 @@ Current stop reading after the latest host cuts:
 - the remaining `ZideTerminalActivity` surface is still large, but most of it
   now reads as legitimate Android ownership:
   lifecycle dispatch, surface callbacks, IME/focus, gesture intake, sidebar
-  controls, and JNI handoff
+  controls, and JNI handoff, with debug/status presentation and
+  viewport/inset authority split into their own controllers
 - further Java extraction without a new concrete product bug would now risk
   cosmetic OO churn more than real contract tightening
 - the next honest pressure returns to the shared renderer-thread queue unless a
@@ -1147,7 +1155,7 @@ Initial fix queue:
    scrolling back to bottom
 3. reduce `ShellInputView` -> `refreshShellState()` coupling in ordinary input
    paths
-4. remove transcript-era product assumptions entirely now that shared renderer
+4. remove obsolete product assumptions entirely now that shared renderer
    shell output is the only product path
 5. split `ZideTerminalActivity` responsibilities further only after ownership
    boundaries are fixed, not as a cosmetic OO refactor
@@ -1263,8 +1271,8 @@ reduced:
 - explicit `profile` and `release` Android deploy paths exist
 - shared-renderer product mode no longer keeps the old Java shell poll loop
   alive by default
-- stale transcript-era file reads and debug status churn are reduced when the
-  shared renderer owns the product shell
+- file reads and debug/status churn are reduced when the shared renderer owns
+  the product shell
 
 Those cuts do not finish Android performance work. They only remove obvious
 non-render noise so render-thread scrutiny can proceed honestly.

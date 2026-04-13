@@ -1,7 +1,10 @@
-package dev.zide.terminal;
+package dev.zide.terminal.session;
 
-final class ShellSessionController {
-    interface Bridge {
+import dev.zide.terminal.userland.UserlandBootstrapState;
+import dev.zide.terminal.userland.UserlandRelease;
+
+public final class ShellSessionController {
+    public interface Bridge {
         int restart();
 
         int poll();
@@ -9,14 +12,14 @@ final class ShellSessionController {
         boolean isAlive();
     }
 
-    static final class PollResult {
-        final int status;
-        final boolean alive;
-        final boolean autoStarted;
-        final int autoStartStatus;
-        final boolean autoStartBlocked;
+    public static final class PollResult {
+        public final int status;
+        public final boolean alive;
+        public final boolean autoStarted;
+        public final int autoStartStatus;
+        public final boolean autoStartBlocked;
 
-        PollResult(
+        public PollResult(
                 int status,
                 boolean alive,
                 boolean autoStarted,
@@ -37,7 +40,7 @@ final class ShellSessionController {
     private final boolean nativeLoaded;
     private boolean autoStartAttempted = false;
 
-    ShellSessionController(
+    public ShellSessionController(
             Bridge bridge,
             String bootstrapStampPath,
             String shellPath,
@@ -50,11 +53,11 @@ final class ShellSessionController {
         this.nativeLoaded = nativeLoaded;
     }
 
-    UserlandBootstrapState loadBootstrapState() {
+    public UserlandBootstrapState loadBootstrapState() {
         return UserlandBootstrapState.load(bootstrapStampPath, shellPath, release);
     }
 
-    PollResult poll(UserlandBootstrapState bootstrapState) {
+    public PollResult poll(UserlandBootstrapState bootstrapState) {
         int status = nativeLoaded ? bridge.poll() : 0;
         boolean alive = nativeLoaded && bridge.isAlive();
         boolean autoStarted = false;

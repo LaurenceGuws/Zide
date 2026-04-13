@@ -223,9 +223,39 @@ Enter.
 Current Java ownership is also cleaner:
 
 - `ZideTerminalActivity` is now orchestration only
-- `ShellInputView` owns the editor model and `InputConnection`
-- `ShellSessionController` owns shell polling/bootstrap state
-- `AndroidDebugFormatter` owns debug formatting
+- `dev.zide.terminal.input.ShellInputView` owns the editor model and
+  `InputConnection`
+- `dev.zide.terminal.session.ShellSessionController` owns shell
+  polling/bootstrap state
+- `dev.zide.terminal.debug.AndroidDebugFormatter` owns debug formatting
+- `dev.zide.terminal.debug.TerminalStatusController` owns debug status/event-log presentation
+- `dev.zide.terminal.selection.TerminalSelectionController` owns Android-native
+  selection mutation/chrome/autoscroll policy
+- `dev.zide.terminal.userland.UserlandBootstrapUiPolicy` owns bootstrap blocker
+  title/detail/action policy
+- `dev.zide.terminal.userland.UserlandCommandRunner` owns `zide-pm` process/env
+  execution wiring
+- `dev.zide.terminal.userland.UserlandWorkflowController` owns async userland
+  install and package-doctor workflow execution
+- `dev.zide.terminal.userland.UserlandSessionCoordinator` owns bootstrap-state
+  reload/poll/apply/auto-start telemetry policy
+- `dev.zide.terminal.userland.ProductShellStatePresenter` owns product blocker
+  visibility and shell-state presentation
+- `dev.zide.terminal.host.TerminalSurfaceHostController` owns SurfaceView install/recreate/viewport host wiring
+- `dev.zide.terminal.host.TerminalChromeController` owns sidebar/view-mode/assist-bar/IME chrome policy
+- `dev.zide.terminal.host.TerminalRuntimeAssetsController` owns runtime font asset staging and userland release loading
+- `dev.zide.terminal.host.TerminalViewportController` owns visible viewport/inset authority
+- `dev.zide.terminal.debug.TerminalStatusController` owns debug status/event-log presentation
+- the terminal-host Java surface is split by responsibility; the current
+  ownership split is:
+  - `debug`
+  - `gesture`
+  - `input`
+  - `scroll`
+  - `selection`
+  - `session`
+  - `host`
+  - `userland`
 
 Current local-tooling support is also explicit:
 
@@ -241,12 +271,17 @@ Current local-tooling support is also explicit:
 Current product-shell layout is also now mobile-native:
 
 - the shared renderer owns visible shell output without outer transcript chrome
-- terminal tap opens the IME path directly
 - when the shared renderer surface is active, `ProductGestureController` owns
   product terminal gestures:
-  - single tap opens IME
+  - single tap is reserved for selection lifecycle policy
   - pinch adjusts shared renderer zoom / terminal font size
-  - long press is deliberately unclaimed for now
+  - long press starts Android-native text selection
+- the assist bar now owns explicit IME visibility
+- Android-native selection is now live:
+  - floating `ActionMode.TYPE_FLOATING`
+  - clipboard `Copy`
+  - drag expansion
+  - Android-owned selection handles over the terminal surface
 - the slim bottom assist strip now uses a cleaner split:
   - one-shot `Esc` and `Tab`
   - stateful `Ctrl` and `Alt` latches for the next IME/hardware key

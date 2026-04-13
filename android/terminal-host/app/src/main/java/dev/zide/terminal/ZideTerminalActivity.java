@@ -1,71 +1,65 @@
 package dev.zide.terminal;
 
+import dev.zide.terminal.debug.AndroidDebugFormatter;
+import dev.zide.terminal.gesture.ProductGestureController;
+import dev.zide.terminal.input.ShellInputView;
+import dev.zide.terminal.selection.TerminalSelectionController;
+import dev.zide.terminal.session.ShellSessionController;
+import dev.zide.terminal.scroll.TerminalScrollOverlayView;
+import dev.zide.terminal.userland.UserlandBootstrapState;
+import dev.zide.terminal.userland.UserlandInstallState;
+import dev.zide.terminal.userland.UserlandPolicy;
+import dev.zide.terminal.userland.UserlandRelease;
+import dev.zide.terminal.userland.UserlandBootstrapUiPolicy;
+import dev.zide.terminal.userland.UserlandWorkflowController;
+import dev.zide.terminal.userland.UserlandSessionCoordinator;
+import dev.zide.terminal.userland.ProductFrameLoopController;
+import dev.zide.terminal.userland.ProductShellStatePresenter;
+import dev.zide.terminal.host.TerminalSurfaceHostController;
+import dev.zide.terminal.host.TerminalChromeController;
+import dev.zide.terminal.host.TerminalRuntimeAssetsController;
+import dev.zide.terminal.host.TerminalViewportController;
+import dev.zide.terminal.debug.TerminalStatusController;
 import android.app.Activity;
-import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Intent;
-import android.graphics.Color;
-import android.graphics.PixelFormat;
-import android.graphics.Rect;
-import android.graphics.Insets;
-import android.graphics.drawable.GradientDrawable;
+import android.widget.OverScroller;
+import android.view.Surface;
+import android.view.Gravity;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.os.Looper;
 import android.util.Log;
 import android.view.Choreographer;
-import android.view.Gravity;
 import android.view.InputDevice;
-import android.view.ActionMode;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.MotionEvent;
-import android.widget.OverScroller;
-import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
-import android.view.ViewGroup;
-import android.view.WindowInsets;
 import android.view.KeyEvent;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.TextView;
-import java.io.File;
-import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.util.Map;
 
 public final class ZideTerminalActivity extends Activity
         implements SurfaceHolder.Callback2,
-                ShellInputView.Host,
-                ProductGestureController.Host,
-                TerminalScrollOverlayView.Host {
+        ShellInputView.Host,
+        ProductGestureController.Host,
+        TerminalScrollOverlayView.Host {
     private static final String TAG = "ZideAndroidTerminal";
-    private static final int MAX_LOG_CHARS = 12000;
     private static final String EXTRA_DEBUG_RECREATE_SURFACE_ONCE = "debug_recreate_surface_once";
     private static final String EXTRA_DEBUG_RESIZE_SURFACE_ONCE = "debug_resize_surface_once";
     private static final String EXTRA_DEBUG_START_SHELL_ONCE = "debug_start_shell_once";
     private static final float MIN_PENDING_PINCH_APPLY_DELTA = 0.008f;
-    private static final float SELECTION_AUTOSCROLL_BAND_DP = 120.0f;
-    private static final float SELECTION_AUTOSCROLL_MAX_ROWS_PER_SECOND = 28.0f;
-    private static final float SELECTION_AUTOSCROLL_MIN_ROWS_PER_SECOND = 4.0f;
-    private static final float SELECTION_AUTOSCROLL_IMMEDIATE_STEP_SECONDS = 1.0f / 60.0f;
-    private static final float SELECTION_HANDLE_SIZE_DP = 18.0f;
-    private static final float SELECTION_HANDLE_Y_OFFSET_DP = 6.0f;
     /**
      * Product pinch budget for native zoom work.
      *
-     * <p>Pinch is much more sensitive than shortcut zoom. The host therefore coalesces pinch intent
-     * and applies at most one native zoom update per interval instead of trying to honor every raw
+     * <p>
+     * Pinch is much more sensitive than shortcut zoom. The host therefore coalesces
+     * pinch intent
+     * and applies at most one native zoom update per interval instead of trying to
+     * honor every raw
      * detector burst synchronously.
      */
     private static final long MIN_PINCH_APPLY_INTERVAL_MS = 24L;
@@ -94,11 +88,8 @@ public final class ZideTerminalActivity extends Activity
         }
     }
 
-    private final StringBuilder eventLog = new StringBuilder();
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private TextView statusText;
     private TextView packageStatusText;
-    private TextView eventLogText;
     private TextView productBootstrapTitle;
     private TextView productBootstrapDetail;
     private Button productBootstrapRetryButton;
@@ -112,12 +103,11 @@ public final class ZideTerminalActivity extends Activity
     private View leftSidebar;
     private FrameLayout productSurfaceContainer;
     private TerminalScrollOverlayView terminalScrollOverlay;
-    private View selectionStartHandle;
-    private View selectionEndHandle;
     private Button assistCtrlButton;
     private Button assistAltButton;
     private ShellInputView shellInputView;
     private ProductGestureController productGestureController;
+    private TerminalSelectionController selectionController;
     private boolean pinchZoomActive = false;
     private boolean pinchZoomFrameScheduled = false;
     private boolean pinchZoomRetryScheduled = false;
@@ -130,17 +120,20 @@ public final class ZideTerminalActivity extends Activity
     private boolean surfaceRecreationScheduled = false;
     private boolean surfaceResizeScheduled = false;
     private boolean shellStartScheduled = false;
-    private boolean productFrameLoopActive = false;
     private boolean sidebarOpen = false;
-    private String lastAutoStartBlockedState = "";
     private UserlandRelease userlandRelease;
+    private UserlandWorkflowController userlandWorkflowController;
+    private UserlandSessionCoordinator userlandSessionCoordinator;
+    private ProductFrameLoopController productFrameLoopController;
+    private ProductShellStatePresenter productShellStatePresenter;
+    private TerminalSurfaceHostController surfaceHostController;
+    private TerminalChromeController terminalChromeController;
+    private TerminalRuntimeAssetsController terminalRuntimeAssetsController;
+    private TerminalViewportController terminalViewportController;
+    private TerminalStatusController terminalStatusController;
     private UserlandInstallState currentInstallState = UserlandInstallState.idle();
     private UserlandBootstrapState currentBootstrapState;
     private int surfaceHostGeneration = 0;
-    private int productViewBasePaddingLeft = 0;
-    private int productViewBasePaddingTop = 0;
-    private int productViewBasePaddingRight = 0;
-    private int productViewBasePaddingBottom = 0;
     private int visibleViewportWidth = 0;
     private int visibleViewportHeight = 0;
     private int notifiedViewportWidth = 0;
@@ -151,41 +144,24 @@ public final class ZideTerminalActivity extends Activity
     private int activeGestureScrollbackCount = 0;
     private int activeGestureScrollbackOffset = 0;
     private float activeGestureScrollRemainderRows = 0.0f;
-    private boolean selectionDragActive = false;
-    private boolean selectionAutoscrollScheduled = false;
-    private float selectionDragX = 0.0f;
-    private float selectionDragY = 0.0f;
-    private long selectionAutoscrollLastFrameNanos = 0L;
-    private SelectionDragMode selectionDragMode = SelectionDragMode.none;
     private int flingLastScrollY = 0;
     private boolean flingScrollScheduled = false;
     private OverScroller scrollbackFlingScroller;
-    private ActionMode terminalSelectionActionMode;
-    private boolean selectionHelpersVisible = true;
-    private boolean selectionToolbarVisible = true;
-    private boolean suppressSelectionClearOnActionModeDestroy = false;
     private final Runnable productFrameRunnable = new Runnable() {
         @Override
         public void run() {
-            if (!productFrameLoopActive) {
+            if (productFrameLoopController == null || !productFrameLoopController.isActive()) {
                 return;
             }
             final int tick = nativeLoaded ? nativeTickProductShellFrameBridge() : 0;
             refreshProductScrollOverlay();
             if (!shouldRunProductFrameLoop() || tick == 0) {
-                stopProductFrameLoop();
+                productFrameLoopController.stop();
                 return;
             }
             handler.postDelayed(this, tick == 2 ? 16L : 33L);
         }
     };
-
-    private enum SelectionDragMode {
-        none,
-        gesture,
-        startHandle,
-        endHandle,
-    }
     private final Runnable pinchZoomRetryRunnable = new Runnable() {
         @Override
         public void run() {
@@ -218,48 +194,66 @@ public final class ZideTerminalActivity extends Activity
             }
         }
     };
-    private final Choreographer.FrameCallback selectionAutoscrollFrameCallback = frameTimeNanos -> {
-        selectionAutoscrollScheduled = false;
-        if (!selectionDragActive || !nativeLoaded) {
-            selectionAutoscrollLastFrameNanos = 0L;
-            return;
-        }
-        final float rowsPerSecond = computeSelectionAutoscrollRowsPerSecond(selectionDragY);
-        if (rowsPerSecond == 0.0f) {
-            selectionAutoscrollLastFrameNanos = 0L;
-            return;
-        }
-        final long previousFrameNanos = selectionAutoscrollLastFrameNanos;
-        selectionAutoscrollLastFrameNanos = frameTimeNanos;
-        final float deltaSeconds = previousFrameNanos == 0L
-                ? (1.0f / 60.0f)
-                : Math.max(1.0e-3f, Math.min(0.05f, (frameTimeNanos - previousFrameNanos) / 1_000_000_000.0f));
-        applySelectionAutoscrollRows(rowsPerSecond * deltaSeconds);
-        if (selectionDragActive && computeSelectionAutoscrollRowsPerSecond(selectionDragY) != 0.0f) {
-            scheduleSelectionAutoscrollFrame();
-        } else {
-            selectionAutoscrollLastFrameNanos = 0L;
-        }
-    };
-
-    private static final class TerminalCellHit {
-        final int row;
-        final int col;
-
-        TerminalCellHit(int row, int col) {
-            this.row = row;
-            this.col = col;
-        }
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        statusText = findViewById(R.id.status_text);
+        final TextView statusText = findViewById(R.id.status_text);
         packageStatusText = findViewById(R.id.package_status_text);
-        eventLogText = findViewById(R.id.event_log);
+        final TextView eventLogText = findViewById(R.id.event_log);
+        terminalStatusController = new TerminalStatusController(statusText, eventLogText, new TerminalStatusController.Host() {
+            @Override
+            public boolean debugViewEnabled() {
+                return debugViewEnabled;
+            }
+
+            @Override
+            public boolean nativeLoaded() {
+                return nativeLoaded;
+            }
+
+            @Override
+            public boolean hasWindowFocus() {
+                return hasWindowFocus();
+            }
+
+            @Override
+            public boolean imeVisible() {
+                return imeVisible;
+            }
+
+            @Override
+            public SurfaceView surfaceView() {
+                return surfaceView;
+            }
+
+            @Override
+            public int visibleViewportWidth() {
+                return visibleViewportWidth;
+            }
+
+            @Override
+            public int visibleViewportHeight() {
+                return visibleViewportHeight;
+            }
+
+            @Override
+            public UserlandInstallState installState() {
+                return currentInstallState;
+            }
+
+            @Override
+            public UserlandBootstrapState bootstrapState() {
+                return currentBootstrapState;
+            }
+
+            @Override
+            public AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot() {
+                return ZideTerminalActivity.this.currentSurfaceStateSnapshot();
+            }
+        });
         productBootstrapTitle = findViewById(R.id.product_bootstrap_title);
         productBootstrapDetail = findViewById(R.id.product_bootstrap_detail);
         productBootstrapRetryButton = findViewById(R.id.product_bootstrap_retry_button);
@@ -273,12 +267,230 @@ public final class ZideTerminalActivity extends Activity
         leftSidebar = findViewById(R.id.left_sidebar);
         productSurfaceContainer = findViewById(R.id.product_surface_container);
         terminalScrollOverlay = findViewById(R.id.terminal_scroll_overlay);
-        installSelectionHandles();
+        terminalViewportController = new TerminalViewportController(new TerminalViewportController.Host() {
+            @Override
+            public View productView() {
+                return productView;
+            }
+
+            @Override
+            public FrameLayout productSurfaceContainer() {
+                return productSurfaceContainer;
+            }
+
+            @Override
+            public boolean imeVisible() {
+                return imeVisible;
+            }
+
+            @Override
+            public void setImeVisible(boolean imeVisible) {
+                ZideTerminalActivity.this.imeVisible = imeVisible;
+            }
+
+            @Override
+            public void notifyVisibleViewport(String reason) {
+                ZideTerminalActivity.this.notifyVisibleViewport(reason);
+            }
+        });
+        selectionController = new TerminalSelectionController(
+                new TerminalSelectionController.Host() {
+                    @Override
+                    public android.content.Context context() {
+                        return ZideTerminalActivity.this;
+                    }
+
+                    @Override
+                    public FrameLayout productSurfaceContainer() {
+                        return productSurfaceContainer;
+                    }
+
+                    @Override
+                    public int productViewportWidthPx() {
+                        return ZideTerminalActivity.this.productViewportWidthPx();
+                    }
+
+                    @Override
+                    public int productViewportHeightPx() {
+                        return ZideTerminalActivity.this.productViewportHeightPx();
+                    }
+
+                    @Override
+                    public void stopScrollbackFling() {
+                        ZideTerminalActivity.this.stopScrollbackFling();
+                    }
+
+                    @Override
+                    public void refreshProductScrollOverlay() {
+                        ZideTerminalActivity.this.refreshProductScrollOverlay();
+                    }
+
+                    @Override
+                    public void reevaluateProductFrameLoop() {
+                        if (productFrameLoopController != null) {
+                            productFrameLoopController.reevaluate();
+                        }
+                    }
+
+                    @Override
+                    public void appendEvent(String event) {
+                        ZideTerminalActivity.this.appendEvent(event);
+                    }
+                },
+                new TerminalSelectionController.Bridge() {
+                    @Override
+                    public boolean nativeLoaded() {
+                        return ZideTerminalActivity.nativeLoaded;
+                    }
+
+                    @Override
+                    public int beginWordSelectionAtVisibleCell(int row, int col) {
+                        return nativeBeginShellWordSelectionAtVisibleCellBridge(row, col);
+                    }
+
+                    @Override
+                    public int extendSelectionGestureToVisibleCell(int row, int col) {
+                        return nativeExtendShellSelectionGestureToVisibleCellBridge(row, col);
+                    }
+
+                    @Override
+                    public int finishSelectionGesture() {
+                        return nativeFinishShellSelectionGestureBridge();
+                    }
+
+                    @Override
+                    public int clearSelection() {
+                        return nativeClearShellSelectionBridge();
+                    }
+
+                    @Override
+                    public int updateSelectionStartAtVisibleCell(int row, int col) {
+                        return nativeUpdateShellSelectionStartAtVisibleCellBridge(row, col);
+                    }
+
+                    @Override
+                    public int updateSelectionEndAtVisibleCell(int row, int col) {
+                        return nativeUpdateShellSelectionEndAtVisibleCellBridge(row, col);
+                    }
+
+                    @Override
+                    public boolean currentSelectionActive() {
+                        return nativeCurrentShellSelectionActiveBridge();
+                    }
+
+                    @Override
+                    public int currentSelectionRectLeft() {
+                        return nativeCurrentShellSelectionRectLeftBridge();
+                    }
+
+                    @Override
+                    public int currentSelectionRectTop() {
+                        return nativeCurrentShellSelectionRectTopBridge();
+                    }
+
+                    @Override
+                    public int currentSelectionRectRight() {
+                        return nativeCurrentShellSelectionRectRightBridge();
+                    }
+
+                    @Override
+                    public int currentSelectionRectBottom() {
+                        return nativeCurrentShellSelectionRectBottomBridge();
+                    }
+
+                    @Override
+                    public int currentSelectionStartRectLeft() {
+                        return nativeCurrentShellSelectionStartRectLeftBridge();
+                    }
+
+                    @Override
+                    public int currentSelectionStartRectTop() {
+                        return nativeCurrentShellSelectionStartRectTopBridge();
+                    }
+
+                    @Override
+                    public int currentSelectionStartRectRight() {
+                        return nativeCurrentShellSelectionStartRectRightBridge();
+                    }
+
+                    @Override
+                    public int currentSelectionStartRectBottom() {
+                        return nativeCurrentShellSelectionStartRectBottomBridge();
+                    }
+
+                    @Override
+                    public int currentSelectionEndRectLeft() {
+                        return nativeCurrentShellSelectionEndRectLeftBridge();
+                    }
+
+                    @Override
+                    public int currentSelectionEndRectTop() {
+                        return nativeCurrentShellSelectionEndRectTopBridge();
+                    }
+
+                    @Override
+                    public int currentSelectionEndRectRight() {
+                        return nativeCurrentShellSelectionEndRectRightBridge();
+                    }
+
+                    @Override
+                    public int currentSelectionEndRectBottom() {
+                        return nativeCurrentShellSelectionEndRectBottomBridge();
+                    }
+
+                    @Override
+                    public byte[] currentSelectionTextBytes() {
+                        return nativeCurrentShellSelectionTextBytesBridge();
+                    }
+
+                    @Override
+                    public int currentVisibleRows() {
+                        return nativeCurrentShellVisibleRowsBridge();
+                    }
+
+                    @Override
+                    public int currentVisibleCols() {
+                        return nativeCurrentShellVisibleColsBridge();
+                    }
+
+                    @Override
+                    public int currentScrollbackCount() {
+                        return nativeCurrentShellScrollbackCountBridge();
+                    }
+
+                    @Override
+                    public int currentScrollbackOffset() {
+                        return nativeCurrentShellScrollbackOffsetBridge();
+                    }
+
+                    @Override
+                    public int setShellScrollbackOffset(int offsetRows) {
+                        return nativeSetShellScrollbackOffsetBridge(offsetRows);
+                    }
+
+                    @Override
+                    public int followShellLiveBottom() {
+                        return nativeFollowShellLiveBottomBridge();
+                    }
+                });
+        selectionController.install();
         assistCtrlButton = findViewById(R.id.assist_ctrl_button);
         assistAltButton = findViewById(R.id.assist_alt_button);
         terminalScrollOverlay.setHost(this);
         scrollbackFlingScroller = new OverScroller(this);
-        userlandRelease = loadUserlandRelease();
+        terminalRuntimeAssetsController = new TerminalRuntimeAssetsController(
+                new TerminalRuntimeAssetsController.Host() {
+                    @Override
+                    public android.content.Context context() {
+                        return ZideTerminalActivity.this;
+                    }
+
+                    @Override
+                    public void appendEvent(String event) {
+                        ZideTerminalActivity.this.appendEvent(event);
+                    }
+                });
+        userlandRelease = terminalRuntimeAssetsController.loadUserlandRelease();
         shellSessionController = new ShellSessionController(
                 new ShellSessionController.Bridge() {
                     @Override
@@ -300,19 +512,493 @@ public final class ZideTerminalActivity extends Activity
                 UserlandPolicy.shellPath(this),
                 userlandRelease,
                 nativeLoaded);
-        currentBootstrapState = shellSessionController.loadBootstrapState();
+        userlandSessionCoordinator = new UserlandSessionCoordinator(
+                shellSessionController,
+                new UserlandSessionCoordinator.Host() {
+                    @Override
+                    public void appendEvent(String event) {
+                        ZideTerminalActivity.this.appendEvent(event);
+                    }
+
+                    @Override
+                    public String shellStartStatusLabel(int status) {
+                        return ZideTerminalActivity.shellStartStatusLabel(status);
+                    }
+
+                    @Override
+                    public void applyBootstrapState(UserlandBootstrapState bootstrapState) {
+                        currentBootstrapState = bootstrapState;
+                    }
+
+                    @Override
+                    public void refreshProductShellState() {
+                        ZideTerminalActivity.this.refreshProductShellState();
+                    }
+
+                    @Override
+                    public void refreshDebugStatusSurface() {
+                        ZideTerminalActivity.this.refreshDebugStatusSurface();
+                    }
+
+                    @Override
+                    public void updateStatus(String statusLabel) {
+                        ZideTerminalActivity.this.updateStatus(statusLabel);
+                    }
+                });
+        productFrameLoopController = new ProductFrameLoopController(
+                handler,
+                productFrameRunnable,
+                new ProductFrameLoopController.Host() {
+                    @Override
+                    public boolean shouldRunProductFrameLoop() {
+                        return ZideTerminalActivity.this.shouldRunProductFrameLoop();
+                    }
+
+                    @Override
+                    public void refreshProductScrollOverlay() {
+                        ZideTerminalActivity.this.refreshProductScrollOverlay();
+                    }
+                });
+        userlandWorkflowController = new UserlandWorkflowController(
+                new UserlandWorkflowController.Host() {
+                    @Override
+                    public android.content.Context context() {
+                        return ZideTerminalActivity.this;
+                    }
+
+                    @Override
+                    public Handler handler() {
+                        return ZideTerminalActivity.this.handler;
+                    }
+
+                    @Override
+                    public UserlandRelease release() {
+                        return userlandRelease;
+                    }
+
+                    @Override
+                    public void appendEvent(String event) {
+                        ZideTerminalActivity.this.appendEvent(event);
+                    }
+
+                    @Override
+                    public void applyInstallState(UserlandInstallState installState, String statusLabel) {
+                        ZideTerminalActivity.this.applyInstallState(installState, statusLabel);
+                    }
+
+                    @Override
+                    public void setInstallState(UserlandInstallState installState) {
+                        currentInstallState = installState;
+                    }
+
+                    @Override
+                    public void setBootstrapState(UserlandBootstrapState bootstrapState) {
+                        currentBootstrapState = bootstrapState;
+                    }
+
+                    @Override
+                    public void restartShellSession(String eventName, String statusLabel, boolean logRefresh) {
+                        ZideTerminalActivity.this.restartShellSession(eventName, statusLabel, logRefresh);
+                    }
+
+                    @Override
+                    public void showDebugView(String eventName, String statusLabel) {
+                        ZideTerminalActivity.this.showDebugView(eventName, statusLabel);
+                    }
+
+                    @Override
+                    public void setPackageStatusText(String text) {
+                        packageStatusText.setText(text);
+                    }
+
+                    @Override
+                    public void updateStatus(String statusLabel) {
+                        ZideTerminalActivity.this.updateStatus(statusLabel);
+                    }
+                });
+        productShellStatePresenter = new ProductShellStatePresenter(
+                new ProductShellStatePresenter.Host() {
+                    @Override
+                    public boolean nativeLoaded() {
+                        return nativeLoaded;
+                    }
+
+                    @Override
+                    public boolean sharedShellRendererActive() {
+                        return nativeSharedShellRendererActiveBridge();
+                    }
+
+                    @Override
+                    public boolean installInstalling() {
+                        return currentInstallState.isInstalling();
+                    }
+
+                    @Override
+                    public boolean installFailed() {
+                        return currentInstallState.isFailed();
+                    }
+
+                    @Override
+                    public UserlandBootstrapState bootstrapState() {
+                        return currentBootstrapState;
+                    }
+
+                    @Override
+                    public UserlandInstallState installState() {
+                        return currentInstallState;
+                    }
+
+                    @Override
+                    public SurfaceView surfaceView() {
+                        return surfaceView;
+                    }
+
+                    @Override
+                    public View productBootstrapBlocker() {
+                        return productBootstrapBlocker;
+                    }
+
+                    @Override
+                    public TextView productBootstrapTitle() {
+                        return productBootstrapTitle;
+                    }
+
+                    @Override
+                    public TextView productBootstrapDetail() {
+                        return productBootstrapDetail;
+                    }
+
+                    @Override
+                    public Button productBootstrapRetryButton() {
+                        return productBootstrapRetryButton;
+                    }
+
+                    @Override
+                    public void showScrollOverlay(boolean visible) {
+                        terminalScrollOverlay.setVisibility(visible ? View.VISIBLE : View.GONE);
+                    }
+                });
+        terminalChromeController = new TerminalChromeController(
+                new TerminalChromeController.Host() {
+                    @Override
+                    public View debugViewModeButton() {
+                        return findViewById(R.id.debug_view_mode_button);
+                    }
+
+                    @Override
+                    public View drawerScrim() {
+                        return drawerScrim;
+                    }
+
+                    @Override
+                    public View drawerEdgeHotspot() {
+                        return drawerEdgeHotspot;
+                    }
+
+                    @Override
+                    public View leftSidebar() {
+                        return leftSidebar;
+                    }
+
+                    @Override
+                    public boolean sidebarOpen() {
+                        return sidebarOpen;
+                    }
+
+                    @Override
+                    public void setSidebarOpen(boolean open) {
+                        sidebarOpen = open;
+                    }
+
+                    @Override
+                    public boolean debugViewEnabled() {
+                        return debugViewEnabled;
+                    }
+
+                    @Override
+                    public void showProductView(String eventName, String statusLabel) {
+                        ZideTerminalActivity.this.showProductView(eventName, statusLabel);
+                    }
+
+                    @Override
+                    public void showDebugView(String eventName, String statusLabel) {
+                        ZideTerminalActivity.this.showDebugView(eventName, statusLabel);
+                    }
+
+                    @Override
+                    public void closeSidebar() {
+                        ZideTerminalActivity.this.closeSidebar();
+                    }
+
+                    @Override
+                    public void updateSidebarVisibility(boolean visible) {
+                        ZideTerminalActivity.this.updateSidebarVisibility(visible);
+                    }
+
+                    @Override
+                    public void runPackageDoctor() {
+                        ZideTerminalActivity.this.runPackageDoctor();
+                    }
+
+                    @Override
+                    public void appendEvent(String event) {
+                        ZideTerminalActivity.this.appendEvent(event);
+                    }
+
+                    @Override
+                    public void toggleIme() {
+                        ZideTerminalActivity.this.toggleIme();
+                    }
+
+                    @Override
+                    public void applyModifierLatchState(ShellInputView.Host.ModifierLatchState state) {
+                        ZideTerminalActivity.this.applyModifierLatchState(state);
+                    }
+
+                    @Override
+                    public ShellInputView shellInputView() {
+                        return shellInputView;
+                    }
+
+                    @Override
+                    public Button assistCtrlButton() {
+                        return assistCtrlButton;
+                    }
+
+                    @Override
+                    public Button assistAltButton() {
+                        return assistAltButton;
+                    }
+
+                    @Override
+                    public void sendDirectText(String text) {
+                        ZideTerminalActivity.this.sendDirectText(text);
+                    }
+
+                    @Override
+                    public void bindAssistButton(int id, String text, String eventName) {
+                        ZideTerminalActivity.this.bindAssistButton(id, text, eventName);
+                    }
+
+                    @Override
+                    public void bindModifierAssistButton(Button button, ShellInputView.ModifierLatch modifier, String eventName) {
+                        ZideTerminalActivity.this.bindModifierAssistButton(button, modifier, eventName);
+                    }
+
+                    @Override
+                    public void updateStatus(String statusLabel) {
+                        ZideTerminalActivity.this.updateStatus(statusLabel);
+                    }
+                });
+        surfaceHostController = new TerminalSurfaceHostController(
+                new TerminalSurfaceHostController.Host() {
+                    @Override
+                    public Handler handler() {
+                        return ZideTerminalActivity.this.handler;
+                    }
+
+                    @Override
+                    public boolean nativeLoaded() {
+                        return nativeLoaded;
+                    }
+
+                    @Override
+                    public boolean debugViewEnabled() {
+                        return debugViewEnabled;
+                    }
+
+                    @Override
+                    public FrameLayout productSurfaceContainer() {
+                        return productSurfaceContainer;
+                    }
+
+                    @Override
+                    public SurfaceView surfaceView() {
+                        return surfaceView;
+                    }
+
+                    @Override
+                    public void setSurfaceView(SurfaceView surfaceView) {
+                        ZideTerminalActivity.this.surfaceView = surfaceView;
+                    }
+
+                    @Override
+                    public int surfaceHostGeneration() {
+                        return surfaceHostGeneration;
+                    }
+
+                    @Override
+                    public void setSurfaceHostGeneration(int generation) {
+                        surfaceHostGeneration = generation;
+                    }
+
+                    @Override
+                    public boolean surfaceRecreationScheduled() {
+                        return surfaceRecreationScheduled;
+                    }
+
+                    @Override
+                    public void setSurfaceRecreationScheduled(boolean scheduled) {
+                        surfaceRecreationScheduled = scheduled;
+                    }
+
+                    @Override
+                    public boolean surfaceResizeScheduled() {
+                        return surfaceResizeScheduled;
+                    }
+
+                    @Override
+                    public void setSurfaceResizeScheduled(boolean scheduled) {
+                        surfaceResizeScheduled = scheduled;
+                    }
+
+                    @Override
+                    public boolean shellStartScheduled() {
+                        return shellStartScheduled;
+                    }
+
+                    @Override
+                    public void setShellStartScheduled(boolean scheduled) {
+                        shellStartScheduled = scheduled;
+                    }
+
+                    @Override
+                    public int visibleViewportWidth() {
+                        return visibleViewportWidth;
+                    }
+
+                    @Override
+                    public int visibleViewportHeight() {
+                        return visibleViewportHeight;
+                    }
+
+                    @Override
+                    public void setVisibleViewportSize(int width, int height) {
+                        visibleViewportWidth = width;
+                        visibleViewportHeight = height;
+                    }
+
+                    @Override
+                    public int notifiedViewportWidth() {
+                        return notifiedViewportWidth;
+                    }
+
+                    @Override
+                    public int notifiedViewportHeight() {
+                        return notifiedViewportHeight;
+                    }
+
+                    @Override
+                    public boolean notifiedViewportImeVisible() {
+                        return notifiedViewportImeVisible;
+                    }
+
+                    @Override
+                    public void setNotifiedViewportSize(int width, int height, boolean imeVisible) {
+                        notifiedViewportWidth = width;
+                        notifiedViewportHeight = height;
+                        notifiedViewportImeVisible = imeVisible;
+                    }
+
+                    @Override
+                    public boolean currentImeVisible() {
+                        return ZideTerminalActivity.this.currentImeVisible();
+                    }
+
+                    @Override
+                    public boolean shouldRunProductFrameLoop() {
+                        return ZideTerminalActivity.this.shouldRunProductFrameLoop();
+                    }
+
+                    @Override
+                    public void refreshProductScrollOverlay() {
+                        ZideTerminalActivity.this.refreshProductScrollOverlay();
+                    }
+
+                    @Override
+                    public void appendEvent(String event) {
+                        ZideTerminalActivity.this.appendEvent(event);
+                    }
+
+                    @Override
+                    public void updateStatus(String statusLabel) {
+                        ZideTerminalActivity.this.updateStatus(statusLabel);
+                    }
+
+                    @Override
+                    public void callNative(String event, long seq) {
+                        ZideTerminalActivity.this.callNative(event, seq);
+                    }
+
+                    @Override
+                    public void callNativeWithSurfaceState(String event, long seq,
+                            AndroidDebugFormatter.SurfaceEventSnapshot state) {
+                        ZideTerminalActivity.this.callNativeWithSurfaceState(event, seq, state);
+                    }
+
+                    @Override
+                    public long nativeOnSurfaceAvailableBridge(SurfaceHolder holder, int width, int height) {
+                        return ZideTerminalActivity.nativeOnSurfaceAvailableBridge(holder.getSurface(), width, height);
+                    }
+
+                    @Override
+                    public long nativeOnSurfaceDestroyedBridge() {
+                        return ZideTerminalActivity.nativeOnSurfaceDestroyedBridge();
+                    }
+
+                    @Override
+                    public long nativeOnSurfaceRedrawNeededBridge() {
+                        return ZideTerminalActivity.nativeOnSurfaceRedrawNeededBridge();
+                    }
+
+                    @Override
+                    public long nativeOnVisibleViewportBridge(int width, int height, boolean imeVisible) {
+                        return ZideTerminalActivity.nativeOnVisibleViewportBridge(width, height, imeVisible);
+                    }
+
+                    @Override
+                    public AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot() {
+                        return ZideTerminalActivity.this.currentSurfaceStateSnapshot();
+                    }
+
+                    @Override
+                    public void handleProductShellStateEvent(String statusLabel) {
+                        ZideTerminalActivity.this.handleProductShellStateEvent(statusLabel);
+                    }
+
+                    @Override
+                    public void installSurfaceGestureHost(SurfaceView nextSurfaceView) {
+                        productGestureController = new ProductGestureController(nextSurfaceView,
+                                ZideTerminalActivity.this);
+                        productGestureController.install();
+                    }
+
+                    @Override
+                    public void reinstallSurfaceCallback(SurfaceView nextSurfaceView,
+                            SurfaceHolder.Callback2 callback) {
+                        if (callback != null) {
+                            nextSurfaceView.getHolder().addCallback(callback);
+                        }
+                    }
+
+                    @Override
+                    public SurfaceHolder.Callback2 surfaceCallback() {
+                        return ZideTerminalActivity.this;
+                    }
+                });
+        currentBootstrapState = userlandSessionCoordinator.loadBootstrapState();
         installShellInputView();
         installInsetsHandling();
         installViewportTracking();
-        bindSidebarControls();
-        bindViewModeToggle();
+        terminalChromeController.bindSidebarControls();
+        terminalChromeController.bindViewModeToggle();
         bindProductBootstrapBlocker();
-        bindAssistBar();
-        prepareRuntimeAssets();
-        applyViewMode();
-        installSurfaceView("activity-create");
-        updateProductShellVisibility();
-        reevaluateProductFrameLoop();
+        terminalChromeController.bindAssistBar();
+        terminalRuntimeAssetsController.prepareRuntimeAssets();
+        terminalChromeController.applyViewMode(debugViewEnabled, productView, debugView, terminalScrollOverlay, productSurfaceContainer);
+        surfaceHostController.installSurfaceView("activity-create", this);
+        productShellStatePresenter.refresh();
+        productFrameLoopController.reevaluate();
         leftSidebar.post(() -> {
             leftSidebar.setTranslationX(-leftSidebar.getWidth());
             updateSidebarVisibility(false);
@@ -327,124 +1013,11 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void installInsetsHandling() {
-        productViewBasePaddingLeft = productView.getPaddingLeft();
-        productViewBasePaddingTop = productView.getPaddingTop();
-        productViewBasePaddingRight = productView.getPaddingRight();
-        productViewBasePaddingBottom = productView.getPaddingBottom();
-        productView.setOnApplyWindowInsetsListener((view, windowInsets) -> {
-            final Insets navInsets = windowInsets.getInsets(WindowInsets.Type.navigationBars());
-            final Insets imeInsets = windowInsets.getInsets(WindowInsets.Type.ime());
-            final int bottomInset = Math.max(navInsets.bottom, imeInsets.bottom);
-            imeVisible = imeInsets.bottom > navInsets.bottom;
-            view.setPadding(
-                    productViewBasePaddingLeft,
-                    productViewBasePaddingTop,
-                    productViewBasePaddingRight,
-                    productViewBasePaddingBottom + bottomInset);
-            productSurfaceContainer.post(() -> notifyVisibleViewport("insets"));
-            return windowInsets;
-        });
-        productView.requestApplyInsets();
+        terminalViewportController.installInsetsHandling();
     }
 
     private void installViewportTracking() {
-        productSurfaceContainer.addOnLayoutChangeListener((view, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
-            if (left == oldLeft && top == oldTop && right == oldRight && bottom == oldBottom) {
-                return;
-            }
-            notifyVisibleViewport("layout");
-        });
-    }
-
-    private void prepareRuntimeAssets() {
-        final File runtimeRoot = getFilesDir();
-        final File fontsDir = new File(new File(runtimeRoot, "assets"), "fonts");
-        if (!fontsDir.isDirectory() && !fontsDir.mkdirs()) {
-            appendEvent("runtime.assets mkdirFailed path=" + fontsDir.getAbsolutePath());
-            return;
-        }
-
-        final long assetStamp = currentPackageAssetStamp();
-        final File stampFile = new File(fontsDir, ".stamp");
-        final String expectedStamp = Long.toString(assetStamp);
-        final String currentStamp = readTextFile(stampFile);
-        if (!expectedStamp.equals(currentStamp)) {
-            for (String assetName : RUNTIME_FONT_ASSETS) {
-                try {
-                    copyAssetToFile(assetName, new File(fontsDir, assetName));
-                } catch (IOException err) {
-                    appendEvent("runtime.assets copyFailed asset=" + assetName + " err=" + err.getClass().getSimpleName());
-                    return;
-                }
-            }
-            writeTextFile(stampFile, expectedStamp);
-            appendEvent("runtime.assets refreshed stamp=" + expectedStamp);
-        } else {
-            appendEvent("runtime.assets reused stamp=" + expectedStamp);
-        }
-
-        appendEvent("runtime.assets ready path=" + fontsDir.getAbsolutePath());
-    }
-
-    private UserlandRelease loadUserlandRelease() {
-        try {
-            return UserlandRelease.load(this);
-        } catch (IOException err) {
-            appendEvent("userland.release loadFailed err=" + err.getClass().getSimpleName());
-            return new UserlandRelease("", "", "", "");
-        }
-    }
-
-    private long currentPackageAssetStamp() {
-        try {
-            return getPackageManager().getPackageInfo(getPackageName(), 0).lastUpdateTime;
-        } catch (Exception err) {
-            return 0L;
-        }
-    }
-
-    private static String readTextFile(File file) {
-        if (!file.isFile()) {
-            return "";
-        }
-        try (FileInputStream in = new FileInputStream(file)) {
-            final ByteArrayOutputStream out = new ByteArrayOutputStream();
-            final byte[] buffer = new byte[256];
-            while (true) {
-                final int read = in.read(buffer);
-                if (read < 0) {
-                    break;
-                }
-                out.write(buffer, 0, read);
-            }
-            return out.toString().trim();
-        } catch (IOException err) {
-            return "";
-        }
-    }
-
-    private void writeTextFile(File file, String text) {
-        try (FileOutputStream out = new FileOutputStream(file, false)) {
-            out.write(text.getBytes());
-            out.getFD().sync();
-        } catch (IOException err) {
-            appendEvent("runtime.assets stampWriteFailed err=" + err.getClass().getSimpleName());
-        }
-    }
-
-    private void copyAssetToFile(String assetName, File destination) throws IOException {
-        try (InputStream in = getAssets().open(assetName);
-                FileOutputStream out = new FileOutputStream(destination, false)) {
-            final byte[] buffer = new byte[8192];
-            while (true) {
-                final int read = in.read(buffer);
-                if (read < 0) {
-                    break;
-                }
-                out.write(buffer, 0, read);
-            }
-            out.getFD().sync();
-        }
+        terminalViewportController.installViewportTracking();
     }
 
     @Override
@@ -460,10 +1033,10 @@ public final class ZideTerminalActivity extends Activity
         super.onResume();
         appendEvent("activity.onResume");
         callNative("native.onResume", nativeLoaded ? nativeOnResumeBridge() : -1);
-        maybeScheduleSurfaceRecreation();
-        maybeScheduleSurfaceResize();
-        maybeScheduleShellStart();
-        handleProductShellStateEvent("resumed");
+        surfaceHostController.onResume(
+                getIntent().getBooleanExtra(EXTRA_DEBUG_RECREATE_SURFACE_ONCE, false),
+                getIntent().getBooleanExtra(EXTRA_DEBUG_RESIZE_SURFACE_ONCE, false),
+                getIntent().getBooleanExtra(EXTRA_DEBUG_START_SHELL_ONCE, false));
     }
 
     @Override
@@ -477,8 +1050,9 @@ public final class ZideTerminalActivity extends Activity
     protected void onPause() {
         appendEvent("activity.onPause");
         callNative("native.onPause", nativeLoaded ? nativeOnPauseBridge() : -1);
-        stopProductFrameLoop();
-        refreshDebugShellState(false);
+        productFrameLoopController.stop();
+        userlandSessionCoordinator.refreshAndApply(false);
+        surfaceHostController.onPause();
         updateStatus("paused");
         super.onPause();
     }
@@ -524,72 +1098,29 @@ public final class ZideTerminalActivity extends Activity
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
-        appendEvent("surface.created generation=" + surfaceHostGeneration + " valid=" + holder.getSurface().isValid());
-        updateStatus("surface-created");
+        surfaceHostController.onSurfaceCreated(holder);
     }
 
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-        appendEvent(
-                "surface.changed generation=" + surfaceHostGeneration +
-                        " format=" + format +
-                        " size=" + width + "x" + height);
-        final long seq = nativeLoaded ? nativeOnSurfaceAvailableBridge(holder.getSurface(), width, height) : -1;
-        callNativeWithSurfaceState(
-                "native.surfaceAvailable",
-                seq,
-                currentSurfaceStateSnapshot());
-        productSurfaceContainer.post(() -> notifyVisibleViewport("surface-changed"));
-        handleProductShellStateEvent("surface-changed");
+        surfaceHostController.onSurfaceChanged(holder, format, width, height);
     }
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
-        appendEvent("surface.destroyed generation=" + surfaceHostGeneration);
-        stopProductFrameLoop();
-        final long seq = nativeLoaded ? nativeOnSurfaceDestroyedBridge() : -1;
-        callNativeWithSurfaceState(
-                "native.surfaceDestroyed",
-                seq,
-                currentSurfaceStateSnapshot());
-        updateStatus("surface-destroyed");
+        surfaceHostController.onSurfaceDestroyed(holder);
     }
 
     @Override
     public void surfaceRedrawNeeded(SurfaceHolder holder) {
-        appendEvent(
-                "surface.redrawNeeded generation=" + surfaceHostGeneration + " valid=" + holder.getSurface().isValid());
-        final long seq = nativeLoaded ? nativeOnSurfaceRedrawNeededBridge() : -1;
-        final AndroidDebugFormatter.SurfaceEventSnapshot state = currentSurfaceStateSnapshot();
-        appendEvent(
-                "native.surfaceRedrawNeeded seq=" + seq +
-                        " gles=" + state.glesStatus +
-                        " glesSwaps=" + state.glesSwapCount +
-                        " glesBoundEpoch=" + state.glesBoundEpoch +
-                        " glesContextCreates=" + state.glesContextCreateCount +
-                        " glesSurfaceCreates=" + state.glesSurfaceCreateCount +
-                        " glesTextureCreates=" + state.glesTextureCreateCount +
-                        " glesTextureAlive=" + state.glesTextureAlive +
-                        " glesTextureUploads=" + state.glesTextureUploadCount +
-                        " glesTextureUpdates=" + state.glesTextureUpdateCount +
-                        " glesTextureResizes=" + state.glesTextureResizeCount +
-                        " glesTextureSize=" + state.glesTextureWidth + "x" + state.glesTextureHeight);
-        updateStatus("surface-redraw-needed");
+        surfaceHostController.onSurfaceRedrawNeeded(holder);
     }
 
     private void maybeScheduleSurfaceRecreation() {
         if (!getIntent().getBooleanExtra(EXTRA_DEBUG_RECREATE_SURFACE_ONCE, false)) {
             return;
         }
-        if (surfaceRecreationScheduled) {
-            return;
-        }
-        surfaceRecreationScheduled = true;
-        productSurfaceContainer.postDelayed(() -> {
-            appendEvent("debug.recreateSurfaceView");
-            installSurfaceView("debug-recreate");
-            updateStatus("debug-recreated-surface");
-        }, 700);
+        surfaceHostController.installSurfaceView("debug-recreate", this);
     }
 
     private void maybeScheduleSurfaceResize() {
@@ -598,30 +1129,7 @@ public final class ZideTerminalActivity extends Activity
         if (!resizeRequested) {
             return;
         }
-        if (surfaceResizeScheduled) {
-            return;
-        }
-        surfaceResizeScheduled = true;
-        handler.postDelayed(() -> {
-            final SurfaceHolder holder = surfaceView.getHolder();
-            final int originalWidth = Math.max(2, surfaceView.getWidth());
-            final int originalHeight = Math.max(2, surfaceView.getHeight());
-            final int shrunkHeight = Math.max(200, originalHeight / 2);
-            holder.setFixedSize(originalWidth, shrunkHeight);
-            appendEvent(
-                    "debug.resizeSurface fixedSize=" + originalWidth + "x" + shrunkHeight +
-                            " original=" + originalWidth + "x" + originalHeight +
-                            " target=surfaceHolder");
-            updateStatus("debug-resized-surface-shrink");
-
-            handler.postDelayed(() -> {
-                holder.setFixedSize(originalWidth, originalHeight);
-                appendEvent(
-                        "debug.resizeSurface restoreSize=" + originalWidth + "x" + originalHeight +
-                                " target=surfaceHolder");
-                updateStatus("debug-resized-surface-restore");
-            }, 900);
-        }, 900);
+        surfaceHostController.onResume(false, true, false);
     }
 
     private void maybeScheduleShellStart() {
@@ -671,11 +1179,14 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void bindAssistBar() {
-        final Button imeButton = findViewById(R.id.assist_ime_button);
-        imeButton.setOnClickListener(view -> {
-            toggleIme();
-            appendEvent("assist.ime");
-        });
+        final int imeButtonId = getResources().getIdentifier("assist_ime_button", "id", getPackageName());
+        final Button imeButton = imeButtonId != 0 ? findViewById(imeButtonId) : null;
+        if (imeButton != null) {
+            imeButton.setOnClickListener(view -> {
+                toggleIme();
+                appendEvent("assist.ime");
+            });
+        }
         bindAssistButton(R.id.assist_esc_button, "\u001b", "assist.esc");
         bindAssistButton(R.id.assist_tab_button, "\t", "assist.tab");
         bindModifierAssistButton(assistCtrlButton, ShellInputView.ModifierLatch.CTRL, "assist.ctrl");
@@ -695,12 +1206,12 @@ public final class ZideTerminalActivity extends Activity
                 appendEvent("product.install ignored=already-installing");
                 return;
             }
-            if (shouldStartInstall(currentBootstrapState)) {
-                startUserlandInstall();
+            if (UserlandBootstrapUiPolicy.shouldStartInstall(currentBootstrapState)) {
+                userlandWorkflowController.startInstall();
                 return;
             }
             appendEvent("product.bootstrap retry");
-            refreshDebugShellState(true);
+            userlandSessionCoordinator.refreshAndApply(true);
             updateStatus("product-bootstrap-retry");
         });
         productBootstrapDebugButton.setOnClickListener(view -> showDebugView("product.bootstrap debug", "debug-view"));
@@ -729,83 +1240,9 @@ public final class ZideTerminalActivity extends Activity
         root.addView(shellInputView, lp);
     }
 
-    private void installSelectionHandles() {
-        selectionStartHandle = createSelectionHandleView(SelectionDragMode.startHandle);
-        selectionEndHandle = createSelectionHandleView(SelectionDragMode.endHandle);
-        productSurfaceContainer.addView(selectionStartHandle);
-        productSurfaceContainer.addView(selectionEndHandle);
-        selectionStartHandle.setVisibility(View.GONE);
-        selectionEndHandle.setVisibility(View.GONE);
-    }
-
-    private View createSelectionHandleView(SelectionDragMode dragMode) {
-        final int sizePx = Math.max(1, Math.round(SELECTION_HANDLE_SIZE_DP * getResources().getDisplayMetrics().density));
-        final View handle = new View(this);
-        final GradientDrawable background = new GradientDrawable();
-        background.setShape(GradientDrawable.OVAL);
-        background.setColor(Color.parseColor("#d7ecff"));
-        background.setStroke(Math.max(1, sizePx / 12), Color.parseColor("#35566f"));
-        handle.setBackground(background);
-        handle.setAlpha(0.95f);
-        final FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(sizePx, sizePx);
-        params.gravity = Gravity.TOP | Gravity.START;
-        handle.setLayoutParams(params);
-        handle.setOnTouchListener((view, event) -> onSelectionHandleTouch(dragMode, view, event));
-        return handle;
-    }
-
-    private boolean onSelectionHandleTouch(SelectionDragMode dragMode, View handle, MotionEvent event) {
-        final float x = handle.getX() + event.getX();
-        final float y = handle.getY() + event.getY();
-        switch (event.getActionMasked()) {
-            case MotionEvent.ACTION_DOWN:
-                stopScrollbackFling();
-                beginSelectionDrag(dragMode, x, y);
-                if (updateSelectionFromActiveDrag() == 0) {
-                    applyImmediateSelectionAutoscrollStep();
-                    syncTerminalSelectionActionMode();
-                    reevaluateProductFrameLoop();
-                }
-                return true;
-            case MotionEvent.ACTION_MOVE:
-                updateSelectionDragPoint(x, y);
-                if (updateSelectionFromActiveDrag() == 0) {
-                    applyImmediateSelectionAutoscrollStep();
-                    syncTerminalSelectionActionMode();
-                    reevaluateProductFrameLoop();
-                }
-                return true;
-            case MotionEvent.ACTION_UP:
-            case MotionEvent.ACTION_CANCEL:
-                updateSelectionDragPoint(x, y);
-                if (updateSelectionFromActiveDrag() == 0) {
-                    syncTerminalSelectionActionMode();
-                }
-                endSelectionDrag();
-                showSelectionToolbar();
-                reevaluateProductFrameLoop();
-                return true;
-            default:
-                return false;
-        }
-    }
-
     @Override
     public void onProductSingleTap(float x, float y) {
-        if (!nativeLoaded || !nativeCurrentShellSelectionActiveBridge()) {
-            return;
-        }
-        if (tapHitsCurrentSelection(x, y)) {
-            toggleSelectionHelpers();
-            appendEvent("product.selection tap=inside");
-            return;
-        }
-        nativeClearShellSelectionBridge();
-        selectionHelpersVisible = true;
-        selectionToolbarVisible = true;
-        finishTerminalSelectionActionMode();
-        reevaluateProductFrameLoop();
-        appendEvent("product.selection cleared=tap-outside");
+        selectionController.onProductSingleTap(x, y);
     }
 
     @Override
@@ -861,54 +1298,17 @@ public final class ZideTerminalActivity extends Activity
 
     @Override
     public void onProductLongPress(float x, float y) {
-        if (!nativeLoaded) {
-            return;
-        }
-        final TerminalCellHit hit = resolveProductTerminalCell(x, y);
-        if (hit == null) {
-            appendEvent("product.selection longPress=miss");
-            return;
-        }
-        stopScrollbackFling();
-        final int status = nativeBeginShellWordSelectionAtVisibleCellBridge(hit.row, hit.col);
-        appendEvent("product.selection word row=" + hit.row + " col=" + hit.col + " status=" + status);
-        if (status == 0) {
-            beginSelectionDrag(SelectionDragMode.gesture, x, y);
-            hideSelectionToolbar();
-        }
-        reevaluateProductFrameLoop();
+        selectionController.onProductLongPress(x, y);
     }
 
     @Override
     public void onProductSelectionDrag(float x, float y) {
-        if (!nativeLoaded || !nativeCurrentShellSelectionActiveBridge()) {
-            return;
-        }
-        updateSelectionDragPoint(x, y);
-        final int status = updateSelectionFromActiveDrag();
-        if (status == 0) {
-            applyImmediateSelectionAutoscrollStep();
-            syncTerminalSelectionActionMode();
-            reevaluateProductFrameLoop();
-        }
+        selectionController.onProductSelectionDrag(x, y);
     }
 
     @Override
     public void onProductSelectionDragEnd(float x, float y) {
-        if (!nativeLoaded || !nativeCurrentShellSelectionActiveBridge()) {
-            return;
-        }
-        updateSelectionDragPoint(x, y);
-        final int status = updateSelectionFromActiveDrag();
-        if (status == 0) {
-            syncTerminalSelectionActionMode();
-        }
-        if (selectionDragMode == SelectionDragMode.gesture) {
-            nativeFinishShellSelectionGestureBridge();
-        }
-        endSelectionDrag();
-        showSelectionToolbar();
-        reevaluateProductFrameLoop();
+        selectionController.onProductSelectionDragEnd(x, y);
     }
 
     @Override
@@ -919,7 +1319,7 @@ public final class ZideTerminalActivity extends Activity
         final int status = nativeSetShellScrollbackOffsetBridge(offsetRows);
         appendEvent("product.scrollback offset=" + offsetRows + " status=" + status);
         refreshProductScrollOverlay();
-        reevaluateProductFrameLoop();
+        productFrameLoopController.reevaluate();
     }
 
     @Override
@@ -930,7 +1330,7 @@ public final class ZideTerminalActivity extends Activity
         final int status = nativeFollowShellLiveBottomBridge();
         appendEvent("product.scrollback followBottom status=" + status);
         refreshProductScrollOverlay();
-        reevaluateProductFrameLoop();
+        productFrameLoopController.reevaluate();
     }
 
     @Override
@@ -1020,7 +1420,8 @@ public final class ZideTerminalActivity extends Activity
             return;
         }
         activeGestureScrollRemainderRows -= wholeRows;
-        final int nextOffset = Math.max(0, Math.min(activeGestureScrollbackOffset + wholeRows, activeGestureScrollbackCount));
+        final int nextOffset = Math.max(0,
+                Math.min(activeGestureScrollbackOffset + wholeRows, activeGestureScrollbackCount));
         if (nextOffset == activeGestureScrollbackOffset) {
             return;
         }
@@ -1031,409 +1432,28 @@ public final class ZideTerminalActivity extends Activity
         }
         activeGestureScrollbackOffset = nextOffset;
         refreshProductScrollOverlay();
-        reevaluateProductFrameLoop();
-    }
-
-    private TerminalCellHit resolveProductTerminalCell(float x, float y) {
-        final int visibleRows = nativeCurrentShellVisibleRowsBridge();
-        final int visibleCols = nativeCurrentShellVisibleColsBridge();
-        final int viewportWidth = productViewportWidthPx();
-        final int viewportHeight = productViewportHeightPx();
-        if (!nativeLoaded || visibleRows <= 0 || visibleCols <= 0 || viewportWidth <= 0 || viewportHeight <= 0) {
-            return null;
+        if (productFrameLoopController != null) {
+            productFrameLoopController.reevaluate();
         }
-        final float colWidthPx = (float) viewportWidth / (float) visibleCols;
-        final float rowHeightPx = (float) viewportHeight / (float) visibleRows;
-        if (!(colWidthPx > 0.0f) || !(rowHeightPx > 0.0f)) {
-            return null;
-        }
-        final float clampedX = Math.max(0.0f, Math.min(x, viewportWidth - 1.0f));
-        final float clampedY = Math.max(0.0f, Math.min(y, viewportHeight - 1.0f));
-        final int col = Math.max(0, Math.min(visibleCols - 1, (int) (clampedX / colWidthPx)));
-        final int row = Math.max(0, Math.min(visibleRows - 1, (int) (clampedY / rowHeightPx)));
-        return new TerminalCellHit(row, col);
-    }
-
-    private void beginSelectionDrag(SelectionDragMode dragMode, float x, float y) {
-        selectionDragMode = dragMode;
-        selectionDragActive = true;
-        selectionAutoscrollLastFrameNanos = 0L;
-        updateSelectionDragPoint(x, y);
-        hideSelectionToolbar();
-    }
-
-    private void endSelectionDrag() {
-        selectionDragActive = false;
-        selectionAutoscrollLastFrameNanos = 0L;
-        selectionDragMode = SelectionDragMode.none;
-    }
-
-    private void updateSelectionDragPoint(float x, float y) {
-        selectionDragX = x;
-        selectionDragY = y;
-        if (!selectionDragActive) {
-            return;
-        }
-        if (computeSelectionAutoscrollRowsPerSecond(y) != 0.0f) {
-            scheduleSelectionAutoscrollFrame();
-        }
-    }
-
-    private int updateSelectionFromActiveDrag() {
-        if (!selectionDragActive || selectionDragMode == SelectionDragMode.none) {
-            return -1;
-        }
-        final TerminalCellHit hit = resolveProductTerminalCell(selectionDragX, selectionDragY);
-        if (hit == null) {
-            return -1;
-        }
-        switch (selectionDragMode) {
-            case gesture:
-                return nativeExtendShellSelectionGestureToVisibleCellBridge(hit.row, hit.col);
-            case startHandle:
-                return nativeUpdateShellSelectionStartAtVisibleCellBridge(hit.row, hit.col);
-            case endHandle:
-                return nativeUpdateShellSelectionEndAtVisibleCellBridge(hit.row, hit.col);
-            default:
-                return -1;
-        }
-    }
-
-    private void scheduleSelectionAutoscrollFrame() {
-        if (selectionAutoscrollScheduled) {
-            return;
-        }
-        selectionAutoscrollScheduled = true;
-        Choreographer.getInstance().postFrameCallback(selectionAutoscrollFrameCallback);
-    }
-
-    private float computeSelectionAutoscrollRowsPerSecond(float y) {
-        final int visibleRows = nativeCurrentShellVisibleRowsBridge();
-        final int viewportHeight = productViewportHeightPx();
-        if (viewportHeight <= 0 || visibleRows <= 0) {
-            return 0.0f;
-        }
-        final float rowHeightPx = (float) viewportHeight / (float) visibleRows;
-        final float bandPx = SELECTION_AUTOSCROLL_BAND_DP * getResources().getDisplayMetrics().density;
-        if (!(bandPx > 0.0f) || !(rowHeightPx > 0.0f)) {
-            return 0.0f;
-        }
-        final float topTriggerY = rowHeightPx;
-        final float bottomTriggerY = viewportHeight - rowHeightPx;
-        final float triggerRangePx = bandPx + rowHeightPx;
-        if (y <= topTriggerY) {
-            final float distance = Math.min((topTriggerY - y) + rowHeightPx, triggerRangePx);
-            final float normalized = distance / triggerRangePx;
-            return lerp(
-                    SELECTION_AUTOSCROLL_MIN_ROWS_PER_SECOND,
-                    SELECTION_AUTOSCROLL_MAX_ROWS_PER_SECOND,
-                    normalized * normalized);
-        }
-        if (y >= bottomTriggerY) {
-            final float distance = Math.min((y - bottomTriggerY) + rowHeightPx, triggerRangePx);
-            final float normalized = distance / triggerRangePx;
-            return -lerp(
-                    SELECTION_AUTOSCROLL_MIN_ROWS_PER_SECOND,
-                    SELECTION_AUTOSCROLL_MAX_ROWS_PER_SECOND,
-                    normalized * normalized);
-        }
-        return 0.0f;
-    }
-
-    private void applyImmediateSelectionAutoscrollStep() {
-        final float rowsPerSecond = computeSelectionAutoscrollRowsPerSecond(selectionDragY);
-        if (rowsPerSecond == 0.0f) {
-            return;
-        }
-        applySelectionAutoscrollRows(rowsPerSecond * SELECTION_AUTOSCROLL_IMMEDIATE_STEP_SECONDS);
-        if (selectionDragActive && computeSelectionAutoscrollRowsPerSecond(selectionDragY) != 0.0f) {
-            scheduleSelectionAutoscrollFrame();
-        }
-    }
-
-    private static float lerp(float start, float end, float t) {
-        return start + ((end - start) * t);
-    }
-
-    private void applySelectionAutoscrollRows(float rowDelta) {
-        if (!selectionDragActive || rowDelta == 0.0f) {
-            return;
-        }
-        activeGestureVisibleRows = nativeCurrentShellVisibleRowsBridge();
-        activeGestureVisibleCols = nativeCurrentShellVisibleColsBridge();
-        activeGestureScrollbackCount = nativeCurrentShellScrollbackCountBridge();
-        activeGestureScrollbackOffset = nativeCurrentShellScrollbackOffsetBridge();
-        activeGestureScrollRemainderRows += rowDelta;
-        final int wholeRows = (int) activeGestureScrollRemainderRows;
-        if (wholeRows == 0) {
-            return;
-        }
-        activeGestureScrollRemainderRows -= wholeRows;
-        final int nextOffset = Math.max(0, Math.min(activeGestureScrollbackOffset + wholeRows, activeGestureScrollbackCount));
-        if (nextOffset == activeGestureScrollbackOffset) {
-            return;
-        }
-        if (nextOffset == 0) {
-            nativeFollowShellLiveBottomBridge();
-        } else {
-            nativeSetShellScrollbackOffsetBridge(nextOffset);
-        }
-        activeGestureScrollbackOffset = nextOffset;
-        final int status = updateSelectionFromActiveDrag();
-        if (status == 0) {
-            syncTerminalSelectionActionMode();
-        }
-        refreshProductScrollOverlay();
-        reevaluateProductFrameLoop();
-    }
-
-    private boolean tapHitsCurrentSelection(float x, float y) {
-        final Rect rect = new Rect();
-        if (!populateTerminalSelectionContentRect(rect)) {
-            return false;
-        }
-        final int tapX = Math.round(x);
-        final int tapY = Math.round(y);
-        return rect.contains(tapX, tapY);
-    }
-
-    private void hideSelectionToolbar() {
-        selectionToolbarVisible = false;
-        syncTerminalSelectionActionMode();
-    }
-
-    private void showSelectionToolbar() {
-        selectionToolbarVisible = selectionHelpersVisible;
-        syncTerminalSelectionActionMode();
-    }
-
-    private void toggleSelectionHelpers() {
-        selectionHelpersVisible = !selectionHelpersVisible;
-        selectionToolbarVisible = selectionHelpersVisible && !selectionDragActive;
-        syncTerminalSelectionActionMode();
-    }
-
-    private void showTerminalSelectionActionMode() {
-        syncSelectionHandles();
-        if (!selectionToolbarVisible) {
-            return;
-        }
-        if (!nativeCurrentShellSelectionActiveBridge() || productSurfaceContainer == null) {
-            finishTerminalSelectionActionMode();
-            return;
-        }
-        if (terminalSelectionActionMode != null) {
-            terminalSelectionActionMode.invalidateContentRect();
-            terminalSelectionActionMode.invalidate();
-            return;
-        }
-        terminalSelectionActionMode = productSurfaceContainer.startActionMode(
-                new ActionMode.Callback2() {
-                    @Override
-                    public boolean onCreateActionMode(ActionMode mode, Menu menu) {
-                        menu.add(Menu.NONE, android.R.id.copy, Menu.NONE, android.R.string.copy)
-                                .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);
-                        return true;
-                    }
-
-                    @Override
-                    public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
-                        return false;
-                    }
-
-                    @Override
-                    public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
-                        if (item.getItemId() == android.R.id.copy) {
-                            copyCurrentShellSelectionToClipboard();
-                            mode.finish();
-                            return true;
-                        }
-                        return false;
-                    }
-
-                    @Override
-                    public void onDestroyActionMode(ActionMode mode) {
-                        if (terminalSelectionActionMode == mode) {
-                            terminalSelectionActionMode = null;
-                        }
-                        if (!suppressSelectionClearOnActionModeDestroy) {
-                            nativeClearShellSelectionBridge();
-                        }
-                        suppressSelectionClearOnActionModeDestroy = false;
-                        reevaluateProductFrameLoop();
-                    }
-
-                    @Override
-                    public void onGetContentRect(ActionMode mode, View view, Rect outRect) {
-                        if (!populateTerminalSelectionContentRect(outRect)) {
-                            outRect.set(0, 0, Math.max(view.getWidth(), 1), Math.max(view.getHeight(), 1));
-                        }
-                    }
-                },
-                ActionMode.TYPE_FLOATING);
-        if (terminalSelectionActionMode != null) {
-            terminalSelectionActionMode.invalidateContentRect();
-        }
-    }
-
-    private void finishTerminalSelectionActionMode() {
-        syncSelectionHandles();
-        if (terminalSelectionActionMode == null) {
-            return;
-        }
-        final ActionMode mode = terminalSelectionActionMode;
-        terminalSelectionActionMode = null;
-        suppressSelectionClearOnActionModeDestroy = true;
-        mode.finish();
-    }
-
-    private boolean populateTerminalSelectionContentRect(Rect outRect) {
-        if (!nativeLoaded || !nativeCurrentShellSelectionActiveBridge()) {
-            return false;
-        }
-        final int left = nativeCurrentShellSelectionRectLeftBridge();
-        final int top = nativeCurrentShellSelectionRectTopBridge();
-        final int right = nativeCurrentShellSelectionRectRightBridge();
-        final int bottom = nativeCurrentShellSelectionRectBottomBridge();
-        if (right <= left || bottom <= top) {
-            return false;
-        }
-        final int width = productViewportWidthPx();
-        final int height = productViewportHeightPx();
-        outRect.set(
-                Math.max(0, Math.min(left, width)),
-                Math.max(0, Math.min(top, height)),
-                Math.max(0, Math.min(right, width)),
-                Math.max(0, Math.min(bottom, height)));
-        return !outRect.isEmpty();
-    }
-
-    private void syncTerminalSelectionActionMode() {
-        syncSelectionHandles();
-        if (!selectionToolbarVisible) {
-            if (terminalSelectionActionMode != null) {
-                finishTerminalSelectionActionMode();
-            }
-            return;
-        }
-        if (terminalSelectionActionMode == null) {
-            if (nativeCurrentShellSelectionActiveBridge()) {
-                showTerminalSelectionActionMode();
-            }
-            return;
-        }
-        if (!nativeCurrentShellSelectionActiveBridge()) {
-            finishTerminalSelectionActionMode();
-            return;
-        }
-        terminalSelectionActionMode.invalidateContentRect();
-    }
-
-    private void syncSelectionHandles() {
-        if (selectionStartHandle == null || selectionEndHandle == null) {
-            return;
-        }
-        if (!nativeLoaded || !nativeCurrentShellSelectionActiveBridge()) {
-            hideSelectionHandle(selectionStartHandle);
-            hideSelectionHandle(selectionEndHandle);
-            return;
-        }
-        if (!selectionHelpersVisible && !selectionDragActive) {
-            hideSelectionHandle(selectionStartHandle);
-            hideSelectionHandle(selectionEndHandle);
-            return;
-        }
-        syncSelectionHandle(selectionStartHandle, true);
-        syncSelectionHandle(selectionEndHandle, false);
-    }
-
-    private void syncSelectionHandle(View handle, boolean startHandle) {
-        final Rect rect = populateSelectionEndpointRect(startHandle);
-        if (rect == null || rect.isEmpty()) {
-            hideSelectionHandle(handle);
-            return;
-        }
-        final float radius = handle.getLayoutParams().width / 2.0f;
-        final float offsetY = SELECTION_HANDLE_Y_OFFSET_DP * getResources().getDisplayMetrics().density;
-        final float anchorX = startHandle ? rect.left : rect.right;
-        handle.setX(anchorX - radius);
-        handle.setY((rect.bottom - radius) + offsetY);
-        showSelectionHandle(handle);
-    }
-
-    private void showSelectionHandle(View handle) {
-        handle.animate().cancel();
-        handle.setAlpha(0.95f);
-        handle.setVisibility(View.VISIBLE);
-    }
-
-    private void hideSelectionHandle(View handle) {
-        handle.animate().cancel();
-        handle.setAlpha(0.0f);
-        handle.setVisibility(View.GONE);
-    }
-
-    private Rect populateSelectionEndpointRect(boolean startHandle) {
-        final int left = startHandle
-                ? nativeCurrentShellSelectionStartRectLeftBridge()
-                : nativeCurrentShellSelectionEndRectLeftBridge();
-        final int top = startHandle
-                ? nativeCurrentShellSelectionStartRectTopBridge()
-                : nativeCurrentShellSelectionEndRectTopBridge();
-        final int right = startHandle
-                ? nativeCurrentShellSelectionStartRectRightBridge()
-                : nativeCurrentShellSelectionEndRectRightBridge();
-        final int bottom = startHandle
-                ? nativeCurrentShellSelectionStartRectBottomBridge()
-                : nativeCurrentShellSelectionEndRectBottomBridge();
-        if (right <= left || bottom <= top) {
-            return null;
-        }
-        final int width = productViewportWidthPx();
-        final int height = productViewportHeightPx();
-        final Rect rect = new Rect(
-                Math.max(0, Math.min(left, width)),
-                Math.max(0, Math.min(top, height)),
-                Math.max(0, Math.min(right, width)),
-                Math.max(0, Math.min(bottom, height)));
-        return rect.isEmpty() ? null : rect;
-    }
-
-    private void copyCurrentShellSelectionToClipboard() {
-        final byte[] bytes = nativeCurrentShellSelectionTextBytesBridge();
-        if (bytes == null) {
-            appendEvent("product.selection copy=no-bytes");
-            return;
-        }
-        final String text = new String(bytes, StandardCharsets.UTF_8);
-        final ClipboardManager clipboard = getSystemService(ClipboardManager.class);
-        if (clipboard == null) {
-            appendEvent("product.selection copy=no-clipboard");
-            return;
-        }
-        clipboard.setPrimaryClip(ClipData.newPlainText("Zide terminal selection", text));
-        appendEvent("product.selection copy len=" + text.length());
     }
 
     /**
      * Product terminal viewport authority.
      *
-     * <p>The SurfaceView, scroll overlay, gesture math, and native grid-fit path must all describe
-     * the same Android-owned rectangle. Do not use the broader content frame here; it can acquire
-     * non-terminal children and should not become the terminal size contract by accident.
+     * <p>
+     * The SurfaceView, scroll overlay, gesture math, and native grid-fit path must
+     * all describe
+     * the same Android-owned rectangle. Do not use the broader content frame here;
+     * it can acquire
+     * non-terminal children and should not become the terminal size contract by
+     * accident.
      */
     private int productViewportWidthPx() {
-        if (productSurfaceContainer == null) {
-            return 0;
-        }
-        return productSurfaceContainer.getWidth();
+        return terminalViewportController.productViewportWidthPx();
     }
 
     private int productViewportHeightPx() {
-        if (productSurfaceContainer == null) {
-            return 0;
-        }
-        return productSurfaceContainer.getHeight();
+        return terminalViewportController.productViewportHeightPx();
     }
 
     private void scheduleScrollbackFlingFrame() {
@@ -1533,7 +1553,7 @@ public final class ZideTerminalActivity extends Activity
             closeSidebar();
             terminalScrollOverlay.setVisibility(View.GONE);
         } else {
-            productSurfaceContainer.post(() -> notifyVisibleViewport("product-view"));
+            productSurfaceContainer.post(() -> surfaceHostController.notifyVisibleViewport("product-view"));
             productSurfaceContainer.post(this::refreshProductScrollOverlay);
         }
     }
@@ -1549,7 +1569,7 @@ public final class ZideTerminalActivity extends Activity
         debugViewEnabled = true;
         appendEvent(eventName);
         applyViewMode();
-        refreshDebugShellState(false);
+            userlandSessionCoordinator.refreshAndApply(false);
         updateStatus(statusLabel);
     }
 
@@ -1614,10 +1634,6 @@ public final class ZideTerminalActivity extends Activity
         drawerEdgeHotspot.setVisibility(visible ? View.GONE : View.VISIBLE);
     }
 
-    private boolean shouldUpdateDebugStatus() {
-        return debugViewEnabled;
-    }
-
     private boolean shouldRunProductFrameLoop() {
         return !debugViewEnabled
                 && nativeLoaded
@@ -1629,174 +1645,32 @@ public final class ZideTerminalActivity extends Activity
                 && surfaceView.getHolder().getSurface().isValid();
     }
 
-    private void startProductFrameLoop() {
-        if (productFrameLoopActive) {
-            return;
-        }
-        if (!shouldRunProductFrameLoop()) {
-            return;
-        }
-        productFrameLoopActive = true;
-        handler.post(productFrameRunnable);
-    }
-
-    private void stopProductFrameLoop() {
-        if (!productFrameLoopActive) {
-            return;
-        }
-        productFrameLoopActive = false;
-        handler.removeCallbacks(productFrameRunnable);
-    }
-
-    private void reevaluateProductFrameLoop() {
-        if (shouldRunProductFrameLoop()) {
-            startProductFrameLoop();
-        } else {
-            stopProductFrameLoop();
-        }
-    }
-
-    private void reloadBootstrapState() {
-        currentBootstrapState = shellSessionController.loadBootstrapState();
-    }
-
-    private ShellSessionController.PollResult pollShellSession() {
-        return shellSessionController.poll(currentBootstrapState);
-    }
-
-    private void applyShellPollTelemetry(ShellSessionController.PollResult pollResult, boolean logEvent) {
-        if (pollResult.autoStarted) {
-            appendEvent("auto.shellStart status=" + shellStartStatusLabel(pollResult.autoStartStatus));
-        }
-        if (pollResult.autoStartBlocked) {
-            if (!currentBootstrapState.state.equals(lastAutoStartBlockedState)) {
-                appendEvent(
-                        "auto.shellStart blocked=" + currentBootstrapState.state +
-                                " artifact=" + currentBootstrapState.artifact +
-                                " version=" + currentBootstrapState.version);
-                lastAutoStartBlockedState = currentBootstrapState.state;
-            }
-        } else {
-            lastAutoStartBlockedState = "";
-        }
-        if (logEvent) {
-            appendEvent("manual.shellRefresh alive=" + pollResult.alive + " status="
-                    + shellStartStatusLabel(pollResult.status));
-        }
-    }
-
     private void refreshProductShellState() {
-        updateProductShellVisibility();
+        productShellStatePresenter.refresh();
         refreshProductScrollOverlay();
-        reevaluateProductFrameLoop();
+        productFrameLoopController.reevaluate();
     }
 
     private void refreshDebugStatusSurface() {
-        if (!shouldUpdateDebugStatus()) {
-            return;
-        }
-        updateStatus("shell-state", currentBootstrapState);
-    }
-
-    private void refreshDebugShellState(boolean logEvent) {
-        reloadBootstrapState();
-        final ShellSessionController.PollResult pollResult = pollShellSession();
-        applyShellPollTelemetry(pollResult, logEvent);
-        refreshProductShellState();
-        refreshDebugStatusSurface();
+        terminalStatusController.refreshDebugStatusSurface();
     }
 
     private void handleProductShellStateEvent(String statusLabel) {
-        handler.post(() -> refreshDebugShellState(false));
-        reevaluateProductFrameLoop();
+        handler.post(() -> userlandSessionCoordinator.refreshAndApply(false));
+        productFrameLoopController.reevaluate();
         updateStatus(statusLabel);
     }
 
     private void installSurfaceView(String reason) {
-        if (surfaceView != null) {
-            surfaceView.getHolder().removeCallback(this);
-            productSurfaceContainer.removeView(surfaceView);
-            appendEvent("surface.hostRemoved reason=" + reason + " generation=" + surfaceHostGeneration);
-        }
-
-        surfaceHostGeneration += 1;
-        final SurfaceView nextSurfaceView = new SurfaceView(this);
-        final SurfaceHolder holder = nextSurfaceView.getHolder();
-        holder.setFormat(PixelFormat.RGBA_8888);
-        productGestureController = new ProductGestureController(nextSurfaceView, this);
-        productGestureController.install();
-        final FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                Gravity.CENTER);
-        productSurfaceContainer.addView(nextSurfaceView, params);
-        if (selectionStartHandle != null) {
-            selectionStartHandle.bringToFront();
-        }
-        if (selectionEndHandle != null) {
-            selectionEndHandle.bringToFront();
-        }
-        holder.addCallback(this);
-        surfaceView = nextSurfaceView;
-        appendEvent("surface.hostInstalled reason=" + reason + " generation=" + surfaceHostGeneration);
-        productSurfaceContainer.post(() -> notifyVisibleViewport("surface-install"));
+        surfaceHostController.installSurfaceView(reason, this);
     }
 
     private void notifyVisibleViewport(String reason) {
-        if (debugViewEnabled || productView.getVisibility() != View.VISIBLE) {
-            return;
-        }
-        final boolean viewportImeVisible = currentImeVisible();
-        imeVisible = viewportImeVisible;
-        final int width = Math.max(productViewportWidthPx(), 1);
-        final int height = Math.max(productViewportHeightPx(), 1);
-        visibleViewportWidth = width;
-        visibleViewportHeight = height;
-        if (width == notifiedViewportWidth &&
-                height == notifiedViewportHeight &&
-                viewportImeVisible == notifiedViewportImeVisible) {
-            return;
-        }
-        notifiedViewportWidth = width;
-        notifiedViewportHeight = height;
-        notifiedViewportImeVisible = viewportImeVisible;
-        appendEvent("viewport.changed reason=" + reason + " size=" + width + "x" + height + " imeVisible=" + viewportImeVisible);
-        final long seq = nativeLoaded ? nativeOnVisibleViewportBridge(width, height, viewportImeVisible) : -1;
-        callNativeWithSurfaceState("native.viewportChanged", seq, currentSurfaceStateSnapshot());
-        syncTerminalSelectionActionMode();
-        updateStatus("viewport-updated");
+        surfaceHostController.notifyVisibleViewport(reason);
     }
 
     private boolean currentImeVisible() {
-        final WindowInsets insets = productView.getRootWindowInsets();
-        if (insets == null) {
-            return imeVisible;
-        }
-        final Insets navInsets = insets.getInsets(WindowInsets.Type.navigationBars());
-        final Insets imeInsets = insets.getInsets(WindowInsets.Type.ime());
-        return imeInsets.bottom > navInsets.bottom;
-    }
-
-    private void updateProductShellVisibility() {
-        final boolean launchReady = currentBootstrapState.launchReady;
-        final boolean sharedShellActive = launchReady && nativeLoaded && nativeSharedShellRendererActiveBridge();
-        final boolean surfaceReady = surfaceView != null && surfaceView.getHolder().getSurface().isValid();
-        final boolean rendererMissing = launchReady && currentBootstrapState.expectedCurrent && surfaceReady && !sharedShellActive;
-        final boolean showBlocker = currentInstallState.isInstalling()
-                || currentInstallState.isFailed()
-                || !launchReady
-                || !currentBootstrapState.expectedCurrent
-                || rendererMissing;
-        productBootstrapBlocker.setVisibility(showBlocker ? View.VISIBLE : View.GONE);
-        if (showBlocker) {
-            terminalScrollOverlay.setVisibility(View.GONE);
-        }
-        if (showBlocker) {
-            productBootstrapTitle.setText(productBootstrapTitle(currentBootstrapState, currentInstallState, rendererMissing));
-            productBootstrapDetail.setText(productBootstrapDetail(currentBootstrapState, currentInstallState, rendererMissing));
-            productBootstrapRetryButton.setEnabled(!currentInstallState.isInstalling());
-            productBootstrapRetryButton.setText(productBootstrapActionLabel(currentBootstrapState, currentInstallState));
-        }
+        return terminalViewportController.currentImeVisible();
     }
 
     private void refreshProductScrollOverlay() {
@@ -1817,75 +1691,9 @@ public final class ZideTerminalActivity extends Activity
                 nativeCurrentShellVisibleRowsBridge(),
                 nativeCurrentShellScrollbackCountBridge(),
                 nativeCurrentShellScrollbackOffsetBridge());
-        syncTerminalSelectionActionMode();
-    }
-
-    private int productBootstrapTitle(UserlandBootstrapState state, UserlandInstallState installState, boolean rendererMissing) {
-        if (installState.isInstalling()) {
-            return R.string.product_bootstrap_title_installing;
+        if (selectionController != null) {
+            selectionController.syncChrome();
         }
-        if (installState.isFailed()) {
-            return R.string.product_bootstrap_title_install_failed;
-        }
-        if (rendererMissing) {
-            return R.string.product_bootstrap_title_renderer_missing;
-        }
-        switch (state.state) {
-            case UserlandBootstrapState.STATE_INVALID_STAMP:
-                return R.string.product_bootstrap_title_invalid;
-            case UserlandBootstrapState.STATE_READY_UPGRADE_NEEDED:
-                return R.string.product_bootstrap_title_upgrade;
-            case UserlandBootstrapState.STATE_MISSING_SHELL:
-            case UserlandBootstrapState.STATE_STAMP_NO_BASH:
-                return R.string.product_bootstrap_title_shell_missing;
-            case UserlandBootstrapState.STATE_MISSING_STAMP:
-            default:
-                return R.string.product_bootstrap_title_missing;
-        }
-    }
-
-    private CharSequence productBootstrapDetail(UserlandBootstrapState state, UserlandInstallState installState, boolean rendererMissing) {
-        if (installState.isInstalling()) {
-            return installState.detail;
-        }
-        if (installState.isFailed()) {
-            return getString(R.string.product_bootstrap_detail_install_failed, installState.detail);
-        }
-        if (rendererMissing) {
-            return getText(R.string.product_bootstrap_detail_renderer_missing);
-        }
-        switch (state.state) {
-            case UserlandBootstrapState.STATE_INVALID_STAMP:
-                return getText(R.string.product_bootstrap_detail_invalid);
-            case UserlandBootstrapState.STATE_READY_UPGRADE_NEEDED:
-                return getText(R.string.product_bootstrap_detail_upgrade);
-            case UserlandBootstrapState.STATE_MISSING_SHELL:
-            case UserlandBootstrapState.STATE_STAMP_NO_BASH:
-                return getText(R.string.product_bootstrap_detail_shell_missing);
-            case UserlandBootstrapState.STATE_MISSING_STAMP:
-            default:
-                return getText(R.string.product_bootstrap_detail_missing);
-        }
-    }
-
-    private int productBootstrapActionLabel(UserlandBootstrapState state, UserlandInstallState installState) {
-        if (installState.isInstalling()) {
-            return R.string.product_bootstrap_installing;
-        }
-        if (shouldStartInstall(state)) {
-            return UserlandBootstrapState.STATE_READY_UPGRADE_NEEDED.equals(state.state)
-                    ? R.string.product_bootstrap_update
-                    : R.string.product_bootstrap_install;
-        }
-        return R.string.product_bootstrap_retry;
-    }
-
-    private boolean shouldStartInstall(UserlandBootstrapState state) {
-        return UserlandBootstrapState.STATE_MISSING_STAMP.equals(state.state)
-                || UserlandBootstrapState.STATE_INVALID_STAMP.equals(state.state)
-                || UserlandBootstrapState.STATE_MISSING_SHELL.equals(state.state)
-                || UserlandBootstrapState.STATE_STAMP_NO_BASH.equals(state.state)
-                || UserlandBootstrapState.STATE_READY_UPGRADE_NEEDED.equals(state.state);
     }
 
     private void applyInstallState(UserlandInstallState installState, String statusLabel) {
@@ -1897,133 +1705,23 @@ public final class ZideTerminalActivity extends Activity
     private void restartShellSession(String eventName, String statusLabel, boolean logRefresh) {
         final int status = nativeLoaded ? nativeRestartShellSessionBridge() : 0;
         appendEvent(eventName + " status=" + shellStartStatusLabel(status));
-        refreshDebugShellState(logRefresh);
+        userlandSessionCoordinator.refreshAndApply(logRefresh);
         updateStatus(statusLabel);
     }
 
-    private void startUserlandInstall() {
-        applyInstallState(
-                UserlandInstallState.installing("Fetching and staging " + userlandRelease.artifactName + "..."),
-                "userland-install-started");
-        appendEvent("userland.install begin expected=" + userlandRelease.artifactVersion);
-        new Thread(() -> {
-            try {
-                final UserlandInstaller.Result result = UserlandInstaller.install(this, userlandRelease);
-                handler.post(() -> {
-                    final UserlandInstallState installState = UserlandInstallState.idle();
-                    currentInstallState = installState;
-                    currentBootstrapState = result.bootstrapState;
-                    appendEvent("userland.install success " + result.detail);
-                    restartShellSession("userland.install shellRestart", "userland-install-succeeded-restarted", true);
-                });
-            } catch (IOException err) {
-                handler.post(() -> {
-                    final UserlandInstallState installState = UserlandInstallState.failed(
-                            err.getMessage() == null ? "unknown install failure" : err.getMessage());
-                    appendEvent("userland.install failed err=" + err.getClass().getSimpleName() + " detail=" + installState.detail);
-                    applyInstallState(installState, "userland-install-failed");
-                });
-            }
-        }, "userland-install").start();
-    }
-
     private void runPackageDoctor() {
-        packageStatusText.setText("Running zide-pm...");
-        showDebugView("packages.doctor begin", "packages-doctor");
-        new Thread(() -> {
-            try {
-                final String doctor = runUserlandCommand("zide-pm-doctor", "doctor", "--prefix", UserlandPolicy.prefixPath(this));
-                final String available = runUserlandCommand("zide-pm-list", "list-available", "--prefix", UserlandPolicy.prefixPath(this));
-                final String combined = doctor.trim() + "\n---\n" + available.trim();
-                handler.post(() -> {
-                    packageStatusText.setText(combined);
-                    appendEvent("packages.doctor success");
-                    updateStatus("packages-doctor");
-                });
-            } catch (IOException err) {
-                handler.post(() -> {
-                    final String detail = err.getMessage() == null ? err.getClass().getSimpleName() : err.getMessage();
-                    packageStatusText.setText("zide-pm failed: " + detail);
-                    appendEvent("packages.doctor failed err=" + err.getClass().getSimpleName());
-                    updateStatus("packages-doctor-failed");
-                });
-            }
-        }, "packages-doctor").start();
-    }
-
-    private String runUserlandCommand(String processName, String... args) throws IOException {
-        final String binaryPath = UserlandPolicy.prefixPath(this) + "/bin/zide-pm";
-        final ProcessBuilder builder = new ProcessBuilder();
-        final java.util.ArrayList<String> command = new java.util.ArrayList<>();
-        command.add(binaryPath);
-        for (String arg : args) {
-            command.add(arg);
-        }
-        builder.command(command);
-        builder.directory(getFilesDir());
-        builder.redirectErrorStream(true);
-        final Map<String, String> env = builder.environment();
-        env.put("PREFIX", UserlandPolicy.prefixPath(this));
-        env.put("HOME", new File(getFilesDir(), "home").getAbsolutePath());
-        env.put("TMPDIR", new File(getFilesDir().getParentFile(), "tmp").getAbsolutePath());
-        env.put("PATH", UserlandPolicy.prefixPath(this) + "/bin:/system/bin");
-        env.put("SHELL", UserlandPolicy.shellPath(this));
-        env.put("LD_LIBRARY_PATH", UserlandPolicy.prefixPath(this) + "/lib");
-        final Process process = builder.start();
-        final String output;
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
-            final StringBuilder out = new StringBuilder();
-            String line;
-            boolean first = true;
-            while ((line = reader.readLine()) != null) {
-                if (!first) {
-                    out.append('\n');
-                }
-                out.append(line);
-                first = false;
-            }
-            output = out.toString();
-        }
-        final int exitCode;
-        try {
-            exitCode = process.waitFor();
-        } catch (InterruptedException err) {
-            Thread.currentThread().interrupt();
-            throw new IOException("interrupted while running " + processName, err);
-        }
-        if (exitCode != 0) {
-            throw new IOException(processName + " exit=" + exitCode + " output=" + output);
-        }
-        return output;
+        userlandWorkflowController.runPackageDoctor();
     }
 
     private void callNative(String event, long seq) {
-        appendEvent(event + " seq=" + seq);
+        terminalStatusController.callNative(event, seq);
     }
 
     private void callNativeWithSurfaceState(
             String event,
             long seq,
             AndroidDebugFormatter.SurfaceEventSnapshot state) {
-        appendEvent(AndroidDebugFormatter.formatSurfaceEvent(
-                event,
-                new AndroidDebugFormatter.SurfaceEventSnapshot(
-                        seq,
-                        state.token,
-                        state.epoch,
-                        state.transition,
-                        state.glesStatus,
-                        state.glesSwapCount,
-                        state.glesBoundEpoch,
-                        state.glesContextCreateCount,
-                        state.glesSurfaceCreateCount,
-                        state.glesTextureCreateCount,
-                        state.glesTextureAlive,
-                        state.glesTextureUploadCount,
-                        state.glesTextureUpdateCount,
-                        state.glesTextureResizeCount,
-                        state.glesTextureWidth,
-                        state.glesTextureHeight)));
+        terminalStatusController.callNativeWithSurfaceState(event, seq, state);
     }
 
     private AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot() {
@@ -2047,46 +1745,11 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void updateStatus(String state) {
-        updateStatus(state, currentBootstrapState);
+        terminalStatusController.updateStatus(state);
     }
 
     private void updateStatus(String state, UserlandBootstrapState bootstrapState) {
-        if (!shouldUpdateDebugStatus()) {
-            return;
-        }
-        final AndroidDebugFormatter.SurfaceEventSnapshot surfaceState = currentSurfaceStateSnapshot();
-        statusText.setText(AndroidDebugFormatter.formatStatus(
-                new AndroidDebugFormatter.StatusSnapshot(
-                        state,
-                        nativeLoaded,
-                        hasWindowFocus(),
-                        imeVisible,
-                        surfaceView.getHolder().getSurface().isValid(),
-                        surfaceView.getWidth(),
-                        surfaceView.getHeight(),
-                        visibleViewportWidth,
-                        visibleViewportHeight,
-                        currentInstallState.status,
-                        currentInstallState.detail,
-                        bootstrapState.state,
-                        bootstrapState.format,
-                        bootstrapState.artifact,
-                        bootstrapState.version,
-                        bootstrapState.provider,
-                        bootstrapState.launchReady,
-                        bootstrapState.expectedCurrent,
-                        surfaceState.glesStatus,
-                        surfaceState.glesSwapCount,
-                        surfaceState.glesBoundEpoch,
-                        surfaceState.glesContextCreateCount,
-                        surfaceState.glesSurfaceCreateCount,
-                        surfaceState.glesTextureCreateCount,
-                        surfaceState.glesTextureAlive,
-                        surfaceState.glesTextureUploadCount,
-                        surfaceState.glesTextureUpdateCount,
-                        surfaceState.glesTextureResizeCount,
-                        surfaceState.glesTextureWidth,
-                        surfaceState.glesTextureHeight)));
+        terminalStatusController.updateStatus(state, bootstrapState);
     }
 
     private static String surfaceTransitionLabel(int transition) {
@@ -2181,16 +1844,7 @@ public final class ZideTerminalActivity extends Activity
     }
 
     public void appendEvent(String message) {
-        final String line = String.format("[%08d] %s", SystemClock.uptimeMillis(), message);
-        Log.i(TAG, line);
-        if (eventLog.length() > 0) {
-            eventLog.append('\n');
-        }
-        eventLog.append(line);
-        if (eventLog.length() > MAX_LOG_CHARS) {
-            eventLog.delete(0, eventLog.length() - MAX_LOG_CHARS);
-        }
-        eventLogText.setText(eventLog.toString());
+        terminalStatusController.appendEvent(message);
     }
 
     private static boolean shouldHandleHardwareKeyboardEvent(KeyEvent event) {

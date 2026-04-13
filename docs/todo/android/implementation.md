@@ -96,8 +96,8 @@ Current blocker:
   stronger product gap
 - app-private Bash is now the live product shell on the SDK 28 terminal-host
   path
-- the next strongest Android product gap is package authority for the Zide
-  prefix
+- the next strongest Android product gap is proving interactive Neovim
+  behavior on the live terminal surface
 
 That means:
 
@@ -427,9 +427,41 @@ Status:
       - new long press replaces the prior selection
       - IME visibility is explicit on the assist bar, not on product-surface
         taps
+  - `AT-A3` first native expansion baseline is now met:
+    - drag expansion is live against shared terminal selection truth
+    - autoscroll/scrollback integration is live and starts from the visible
+      edge rows instead of only past the widget seam
+    - Android-owned selection handles now reuse the same bridge and
+      autoscroll path instead of inventing Java-local range logic
+    - helper visibility policy is explicit:
+      - active selection change hides only the floating toolbar
+      - tap inside selection toggles helper chrome without mutating the
+        terminal-owned highlight
+      - tap outside clears selection
+    - selection ownership is now isolated in
+      `dev.zide.terminal.selection.TerminalSelectionController`; the activity
+      no longer carries duplicate selection state/mutators
+    - userland/bootstrap UI and package-command seams are now extracted too:
+      - `dev.zide.terminal.userland.UserlandBootstrapUiPolicy`
+      - `dev.zide.terminal.userland.UserlandCommandRunner`
+      - `dev.zide.terminal.userland.UserlandWorkflowController`
+      - `dev.zide.terminal.userland.UserlandSessionCoordinator`
+      - `dev.zide.terminal.userland.ProductShellStatePresenter`
+      - `dev.zide.terminal.host.TerminalSurfaceHostController`
+      - `dev.zide.terminal.host.TerminalChromeController`
+      - `dev.zide.terminal.host.TerminalRuntimeAssetsController`
+    - the Android terminal-host Java package structure is now split by
+      responsibility rather than bringup residue:
+      - `debug`
+      - `gesture`
+      - `input`
+      - `scroll`
+      - `selection`
+      - `session`
+      - `userland`
   - next stop marker:
-    - move into `AT-A3` drag expansion with scroll/autoscroll integration
-      instead of more toolbar or IME polish
+    - finish Android paste and the next honest text-interaction polish instead
+      of reopening IME or toolbar speculation
 - current Android pinch/zoom result is accepted for this lane:
   - host-side gesture policy is explicit and stable
   - raw detector churn is quantized/coalesced host-side
@@ -451,8 +483,8 @@ Status:
   `nvim test.txt` → insert text → `Esc` → `:wq`
 - current performance lane is explicit:
   - debug APK is no longer the only deploy path
-  - shared-renderer product mode no longer keeps the old Java shell poll loop
-    alive by default
+  - shared-renderer product mode no longer keeps the old periodic Java shell
+    refresh loop alive by default
   - next audit target is native renderer/font-scale cost, not more Android
     gesture guessing
 - Android render-thread scrutiny now has explicit authority:
@@ -622,7 +654,7 @@ Status:
     - capture arm/reset/captured-path mutation now routes through
       `present_capture_host.zig`
 - first iteration cut landed from that queue:
-  - narrowed Android host/UI-thread contamination around stale transcript-era
+  - narrowed Android host/UI-thread contamination around obsolete product-state
     ownership
   - `ShellInputView` no longer triggers broad `refreshShellState()` on ordinary
     input paths
@@ -852,6 +884,8 @@ Current result:
   - `ShellInputView`
   - `ShellSessionController`
   - `AndroidDebugFormatter`
+  - `TerminalStatusController`
+  - `TerminalViewportController`
 - the product shell now also follows a more honest mobile layout:
   - main terminal area keeps the screen
   - IME opens from terminal tap instead of a permanent toggle
