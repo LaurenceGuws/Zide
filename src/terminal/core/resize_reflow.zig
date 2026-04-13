@@ -87,7 +87,7 @@ pub fn resizeCoreLocked(self: anytype, rows: u16, cols: u16) !@import("terminal_
     if (cols != old_cols and cols > 0 and old_cols > 0) {
         return try reflowResizePrimary(self, rows, cols, old_rows, old_cols, old_total_lines, old_scroll_offset, old_cursor, old_selection);
     } else {
-        try self.core.primary.resize(rows, cols);
+        const height_shrink = try resizePrimaryHeightOnlyLocked(self, rows, cols, old_rows, old_cols, old_scroll_offset);
         try self.core.alt.resize(rows, cols);
         if (cols != old_cols) {
             try self.core.history.resizePreserve(cols, self.core.primary.defaultCell());
@@ -103,13 +103,96 @@ pub fn resizeCoreLocked(self: anytype, rows: u16, cols: u16) !@import("terminal_
                 .scroll_offset = 0,
             };
         } else {
-            const scroll_offset = self.core.setHostScrollbackOffset(self.core.history.scrollback_offset);
+            const requested_offset = self.core.history.scrollback_offset + height_shrink.pinned_offset_delta;
+            const scroll_offset = self.core.setHostScrollbackOffset(requested_offset);
             return .{
                 .refresh_scroll_view = true,
                 .scroll_offset = scroll_offset,
             };
         }
     }
+}
+
+const HeightResizeEffect = struct {
+    pinned_offset_delta: usize = 0,
+};
+
+/// Applies height-only primary-screen resize semantics.
+///
+/// A narrower terminal has to reflow logical lines, so column changes use the
+/// full reflow path. A height-only shrink has a different contract: it must not
+/// erase the live prompt just because the host viewport became shorter. If the
+/// cursor would fall below the new bottom row, the required top rows retire
+/// into history and the remaining live rows shift up before the screen adopts
+/// the new height.
+///
+/// When a host has pinned scrollback away from live bottom, retiring live rows
+/// changes the distance-to-bottom coordinate. The returned delta lets the outer
+/// resize transaction preserve the same logical pinned viewport instead of
+/// silently moving it toward the new prompt.
+fn resizePrimaryHeightOnlyLocked(
+    self: anytype,
+    rows: u16,
+    cols: u16,
+    old_rows: u16,
+    old_cols: u16,
+    old_scroll_offset: usize,
+) !HeightResizeEffect {
+    if (self.core.active == .alt or cols == 0 or cols != old_cols or rows == 0 or rows >= old_rows) {
+        try self.core.primary.resize(rows, cols);
+        return .{};
+    }
+
+    const screen = &self.core.primary;
+    if (screen.cursor.row < @as(usize, rows)) {
+        try screen.resize(rows, cols);
+        return .{};
+    }
+
+    const drop_rows = @min(
+        @as(usize, old_rows - rows),
+        screen.cursor.row - @as(usize, rows - 1),
+    );
+    if (drop_rows == 0) {
+        try screen.resize(rows, cols);
+        return .{};
+    }
+
+    const cols_usize = @as(usize, cols);
+    const default_cell = screen.defaultCell();
+    var row: usize = 0;
+    while (row < drop_rows) : (row += 1) {
+        const start = row * cols_usize;
+        self.core.history.pushRow(screen.grid.cells.items[start .. start + cols_usize], screen.grid.rowWrapped(row), default_cell);
+    }
+
+    const keep_rows = @as(usize, old_rows) - drop_rows;
+    row = 0;
+    while (row < keep_rows) : (row += 1) {
+        const src_start = (drop_rows + row) * cols_usize;
+        const dst_start = row * cols_usize;
+        std.mem.copyForwards(
+            Cell,
+            screen.grid.cells.items[dst_start .. dst_start + cols_usize],
+            screen.grid.cells.items[src_start .. src_start + cols_usize],
+        );
+        screen.grid.setRowWrapped(row, screen.grid.rowWrapped(drop_rows + row));
+    }
+    if (screen.cursor.row >= drop_rows) {
+        screen.cursor.row -= drop_rows;
+    } else {
+        screen.cursor.row = 0;
+    }
+    if (screen.saved_cursor.active) {
+        if (screen.saved_cursor.cursor.row >= drop_rows) {
+            screen.saved_cursor.cursor.row -= drop_rows;
+        } else {
+            screen.saved_cursor.cursor.row = 0;
+        }
+    }
+
+    try screen.resize(rows, cols);
+    return .{ .pinned_offset_delta = if (old_scroll_offset > 0) drop_rows else 0 };
 }
 
 fn mapLogicalToGlobal(line_index: usize, col: usize, line_lengths: []const usize, line_row_starts: []const usize, cols: usize) ?struct { row: usize, col: usize } {

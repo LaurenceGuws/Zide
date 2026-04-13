@@ -96,7 +96,6 @@ public final class ZideTerminalActivity extends Activity
     private View drawerScrim;
     private View drawerEdgeHotspot;
     private View leftSidebar;
-    private FrameLayout productContentFrame;
     private FrameLayout productSurfaceContainer;
     private TerminalScrollOverlayView terminalScrollOverlay;
     private Button assistCtrlButton;
@@ -205,7 +204,6 @@ public final class ZideTerminalActivity extends Activity
         drawerScrim = findViewById(R.id.drawer_scrim);
         drawerEdgeHotspot = findViewById(R.id.left_edge_swipe_hotspot);
         leftSidebar = findViewById(R.id.left_sidebar);
-        productContentFrame = findViewById(R.id.product_content_frame);
         productSurfaceContainer = findViewById(R.id.product_surface_container);
         terminalScrollOverlay = findViewById(R.id.terminal_scroll_overlay);
         assistCtrlButton = findViewById(R.id.assist_ctrl_button);
@@ -691,7 +689,7 @@ public final class ZideTerminalActivity extends Activity
 
     @Override
     public void onProductScrollFling(float velocityY) {
-        if (!nativeLoaded || scrollbackFlingScroller == null || productContentFrame.getHeight() <= 0) {
+        if (!nativeLoaded || scrollbackFlingScroller == null || productViewportHeightPx() <= 0) {
             return;
         }
         stopScrollbackFling();
@@ -807,10 +805,11 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void applyProductScrollDelta(float deltaY) {
-        if (!nativeLoaded || activeGestureVisibleRows <= 0 || productContentFrame.getHeight() <= 0) {
+        final int viewportHeight = productViewportHeightPx();
+        if (!nativeLoaded || activeGestureVisibleRows <= 0 || viewportHeight <= 0) {
             return;
         }
-        final float rowHeightPx = (float) productContentFrame.getHeight() / (float) activeGestureVisibleRows;
+        final float rowHeightPx = (float) viewportHeight / (float) activeGestureVisibleRows;
         if (!(rowHeightPx > 0.0f)) {
             return;
         }
@@ -832,6 +831,27 @@ public final class ZideTerminalActivity extends Activity
         activeGestureScrollbackOffset = nextOffset;
         refreshProductScrollOverlay();
         reevaluateProductFrameLoop();
+    }
+
+    /**
+     * Product terminal viewport authority.
+     *
+     * <p>The SurfaceView, scroll overlay, gesture math, and native grid-fit path must all describe
+     * the same Android-owned rectangle. Do not use the broader content frame here; it can acquire
+     * non-terminal children and should not become the terminal size contract by accident.
+     */
+    private int productViewportWidthPx() {
+        if (productSurfaceContainer == null) {
+            return 0;
+        }
+        return productSurfaceContainer.getWidth();
+    }
+
+    private int productViewportHeightPx() {
+        if (productSurfaceContainer == null) {
+            return 0;
+        }
+        return productSurfaceContainer.getHeight();
     }
 
     private void scheduleScrollbackFlingFrame() {
@@ -1120,8 +1140,8 @@ public final class ZideTerminalActivity extends Activity
         }
         final boolean viewportImeVisible = currentImeVisible();
         imeVisible = viewportImeVisible;
-        final int width = Math.max(productContentFrame.getWidth(), 1);
-        final int height = Math.max(productContentFrame.getHeight(), 1);
+        final int width = Math.max(productViewportWidthPx(), 1);
+        final int height = Math.max(productViewportHeightPx(), 1);
         visibleViewportWidth = width;
         visibleViewportHeight = height;
         if (width == notifiedViewportWidth &&

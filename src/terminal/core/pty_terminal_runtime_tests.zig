@@ -377,6 +377,17 @@ test "carriage return plus erase line rewrites current row in place" {
     try expectSnapshotRow(terminal_publication.snapshot(session), 0, "step 2              ");
 }
 
+test "CSI REP repeats previous printable cell" {
+    const allocator = std.testing.allocator;
+
+    var session = try runtime_mod.init(allocator, 2, 16);
+    defer session.deinit();
+
+    terminal_core_feed.feedOutputBytes(session, "7[|\x1b[5b]");
+
+    try expectSnapshotRow(terminal_publication.snapshot(session), 0, "7[||||||]       ");
+}
+
 test "zig progress redraw pattern rewrites block instead of appending" {
     const allocator = std.testing.allocator;
 
@@ -1365,6 +1376,70 @@ test "resize reflow preserves pinned wrapped logical line anchor" {
     try std.testing.expectEqual(@as(usize, 2), resized_snapshot.scroll_offset);
     try expectSnapshotRow(resized_snapshot, 0, "GHI");
     try expectSnapshotRow(resized_snapshot, 1, "JKL");
+}
+
+test "height-only resize preserves pinned scrollback anchor" {
+    const allocator = std.testing.allocator;
+
+    var session = try runtime_mod.init(allocator, 4, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    var row = [_]Cell{ base, base, base, base };
+
+    fillRowText(&row, base, "AAAA");
+    session.history.pushRow(&row, false, base);
+    fillRowText(&row, base, "BBBB");
+    session.history.pushRow(&row, false, base);
+    fillRowText(&row, base, "CCCC");
+    session.history.pushRow(&row, false, base);
+    fillRowText(&row, base, "DDDD");
+    session.history.pushRow(&row, false, base);
+
+    fillRowText(session.primary.grid.cells.items[0..4], base, "EEEE");
+    fillRowText(session.primary.grid.cells.items[4..8], base, "FFFF");
+    fillRowText(session.primary.grid.cells.items[8..12], base, "GGGG");
+    fillRowText(session.primary.grid.cells.items[12..16], base, "PROM");
+    session.primary.cursor = .{ .row = 3, .col = 1 };
+
+    session.history.ensureViewCache(session.primary.grid.cols, base);
+    session.history.setScrollOffset(session.primary.grid.rows, 2);
+    _ = publication_flow.bumpAndPublishCurrentViewLocked(session, "test_publication");
+
+    const pinned_snapshot = terminal_publication.snapshot(session);
+    try std.testing.expectEqual(@as(usize, 2), pinned_snapshot.scroll_offset);
+    try expectSnapshotRow(pinned_snapshot, 0, "CCCC");
+    try expectSnapshotRow(pinned_snapshot, 1, "DDDD");
+    try expectSnapshotRow(pinned_snapshot, 2, "EEEE");
+    try expectSnapshotRow(pinned_snapshot, 3, "FFFF");
+
+    try session_runtime.resize(session, 2, 4);
+
+    const resized_snapshot = terminal_publication.snapshot(session);
+    try expectSnapshotRow(resized_snapshot, 0, "CCCC");
+    try expectSnapshotRow(resized_snapshot, 1, "DDDD");
+}
+
+test "height-only resize preserves live prompt when shrinking" {
+    const allocator = std.testing.allocator;
+
+    var session = try runtime_mod.init(allocator, 4, 4);
+    defer session.deinit();
+
+    const base = session.primary.defaultCell();
+    fillRowText(session.primary.grid.cells.items[0..4], base, "EEEE");
+    fillRowText(session.primary.grid.cells.items[4..8], base, "FFFF");
+    fillRowText(session.primary.grid.cells.items[8..12], base, "GGGG");
+    fillRowText(session.primary.grid.cells.items[12..16], base, "PROM");
+    session.primary.cursor = .{ .row = 3, .col = 1 };
+
+    try session_runtime.resize(session, 2, 4);
+
+    const resized_snapshot = terminal_publication.snapshot(session);
+    try expectSnapshotRow(resized_snapshot, 0, "GGGG");
+    try expectSnapshotRow(resized_snapshot, 1, "PROM");
+    try std.testing.expectEqual(@as(usize, 2), resized_snapshot.scrollback_count);
+    try std.testing.expectEqual(@as(usize, 0), resized_snapshot.scrollback_offset);
 }
 
 test "acknowledgePresentedGeneration does not retire newer scrollback view publication" {

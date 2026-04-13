@@ -1183,6 +1183,37 @@ Current progress:
 - fifth host ownership cut landed:
   - product bootstrap-blocker visibility no longer reevaluates the product
     frame loop as a hidden side effect
+- Android scrollback/IME size-pressure found one shared geometry contract
+  defect:
+  - Java-reported surface and visible viewport sizes match on device during
+    IME transitions, so the active issue is not a Java frame mismatch
+  - terminal grid fitting floors rows/cols correctly, but shared terminal view
+    geometry was centering the fitted grid inside the viewport
+  - terminal grids are now anchored at the viewport origin; remainder pixels
+    stay on the right/bottom like a normal terminal emulator
+  - a height-only shrink helper was rejected as a workaround because it mutated
+    history/grid/cursor outside the owning screen resize API
+  - height-only shrink is now a shared terminal resize policy:
+    - when the cursor would fall below the new bottom row, the resize
+      transaction retires only the required top live rows into history
+    - pinned scrollback offset is adjusted by that retired-row delta so the
+      selected logical viewport does not move toward the new prompt
+    - hosts remain responsible only for truthful size reporting
+  - Android now treats `product_surface_container` as the single product
+    terminal viewport authority for visible-viewport reporting and scroll
+    gesture row math; broader content-frame dimensions are not terminal-size
+    authority
+  - htop CPU-meter scattering is not currently classified as viewport
+    authority:
+    - `nvim` lays out inside the same Android viewport
+    - htop-style meter output exercises curses protocol features and terminal
+      UI glyph rendering
+    - shared terminal protocol now implements REP (`CSI Ps b`) so repeated bar
+      glyphs/spaces are not dropped
+    - Note10 release-build retest proved the htop CPU meter layout after this
+      protocol fix
+    - further htop defects should be audited as shared protocol or cell-glyph
+      compatibility before reopening Android size reporting
   - product frame-loop reevaluation is now an explicit activity operation with
     product ownership in its name
 - sixth host ownership cut landed:

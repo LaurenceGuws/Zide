@@ -1379,10 +1379,8 @@ pub const Renderer = struct {
             cols,
             rows,
         );
-        const remainder_x = @max(0.0, viewport.width - fit.width);
-        const remainder_y = @max(0.0, viewport.height - fit.height);
-        const origin_x = snapToDevicePixel(viewport.x + remainder_x * 0.5, self.scale.render_scale);
-        const origin_y = snapToDevicePixel(viewport.y + remainder_y * 0.5, self.scale.render_scale);
+        const origin_x = snapToDevicePixel(viewport.x, self.scale.render_scale);
+        const origin_y = snapToDevicePixel(viewport.y, self.scale.render_scale);
         return .{
             .viewport = viewport,
             .origin_x = origin_x,

@@ -307,6 +307,61 @@ Status:
   - scrollback changes invalidate terminal presentation and request redraw
     through the paced product frame loop, not an old Java refresh loop
   - selection/copy/paste remains intentionally deferred to the next checkpoint
+- scrollback/IME size-truth checkpoint is in progress:
+  - IME show/hide no longer forces bottom-follow by itself
+  - shared terminal geometry now anchors fitted terminal grids at the viewport
+    origin; leftover pixels belong on the right/bottom instead of being split
+    into hidden top/bottom padding
+  - a height-only shrink helper was rejected as a workaround because it mutated
+    history/grid/cursor outside the owning screen resize API
+  - height-only shrink is now handled as a shared terminal resize policy:
+    - if the cursor would be below the new bottom row, the resize transaction
+      retires only the required top live rows into history
+    - the live prompt remains in the shrunken primary screen
+    - pinned scrollback offset is adjusted by the retired-row delta so the same
+      logical scrollback anchor stays selected
+    - Android and Linux should both benefit because hosts only report truthful
+      size; they do not patch scrollback mutation locally
+  - audit subcategories for the current lane:
+    - Android viewport source:
+      `product_surface_container` is the product terminal rectangle; reporting
+      and gesture math must not use broader product-content parents
+    - native metric handoff:
+      Android surface metrics and visible viewport metrics flow through
+      `PlatformRenderHost`; no density/local logical-size hacks are allowed
+      without a proved platform scale contract
+    - grid-fit/draw geometry:
+      terminal grid rows/cols are derived from visible viewport and renderer
+      cell geometry; draw geometry must present the same fitted grid without
+      hidden centering or padding
+    - core resize semantics:
+      `Screen.resize(...)` / `TerminalCore.resizeLocked(...)` own screen,
+      cursor, margin, reflow, and history consequences; Android must not patch
+      those consequences directly
+    - scrollback mutation ownership:
+      Java may request offset/follow-bottom through bridge verbs, but only the
+      terminal core/history path may mutate scrollback state
+  - first audit cut:
+    - Java product viewport reporting and scroll gesture row math now use the
+      actual terminal surface container as the single size authority
+  - next validation target is the `ls -la ./../usr/bin` scrollback repro under
+    IME show/hide and landscape/portrait rotation
+- htop meter rendering is now classified as terminal protocol/rendering
+  compatibility, not Android viewport authority:
+  - `nvim` respecting the viewport is enough evidence that rows/cols are not
+    the first suspect for scattered CPU-meter bars
+  - curses TUIs may use REP (`CSI Ps b`) to compact repeated meter glyphs and
+    spaces
+  - shared terminal protocol now implements REP by repeating the preceding
+    printable cell, so htop-style `7[|\x1b[5b]` output produces a contiguous
+    meter run instead of silently dropping the repeat request
+  - Note10 release-build retest proved the htop CPU meter layout now behaves
+    correctly after the REP fix
+  - if htop still misaligns after this checkpoint, continue in shared
+    protocol/glyph-cell compatibility:
+    - capture the raw sequence around the broken htop meter
+    - check remaining CSI coverage before changing Android size reporting
+    - then check cell-width/rendering for block, box, and ACS glyphs
 - Android gesture contract for the next scrollback cut:
   - left-edge sidebar swipe remains owned by the dedicated edge-hotspot view,
     not by the product surface

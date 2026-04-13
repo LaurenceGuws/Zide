@@ -86,7 +86,7 @@ pub fn handleCsi(self: anytype, action: parser_csi.CsiAction) void {
         }
     }
     switch (action.final) {
-        'A', 'B', 'C', 'D', 'E', 'F', 'G', 'I', 'H', 'f', 'd', 'J', 'K', '@', 'P', 'X', 'L', 'M', 'S', 'T', 'Z', 'r' => {
+        'A', 'B', 'C', 'D', 'E', 'F', 'G', 'I', 'H', 'f', 'd', 'J', 'K', '@', 'P', 'X', 'L', 'M', 'S', 'T', 'b', 'Z', 'r' => {
             csi_exec.handleSimpleCsi(self, action, param_len, p);
         },
         's' => { // SCP / DECSLRM (when ?69 enabled)

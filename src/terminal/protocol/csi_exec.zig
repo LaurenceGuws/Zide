@@ -43,6 +43,7 @@ pub fn handleSimpleCsi(
             terminal_core_protocol.scrollRegionUpWithOrigin(self, count, "csi.S.scroll_region_up");
         },
         'T' => terminal_core_protocol.scrollRegionDown(self, @intCast(@max(1, get(params, 0, 1)))),
+        'b' => self.core.repeatPreviousGraphicLocked(@intCast(@max(1, get(params, 0, 1)))),
         'Z' => {
             var i: i32 = 0;
             const n = @max(1, get(params, 0, 1));

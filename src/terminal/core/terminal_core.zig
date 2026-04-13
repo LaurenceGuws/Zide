@@ -688,6 +688,47 @@ pub const TerminalCore = struct {
         }
     }
 
+    /// Repeats the preceding printable cell for CSI REP (`CSI Ps b`).
+    ///
+    /// Curses-style TUIs use REP to compact runs of meter glyphs and spaces.
+    /// Ignoring it leaves bars, brackets, and aligned fields visually detached
+    /// even when viewport rows/columns are correct.
+    pub fn repeatPreviousGraphicLocked(self: *TerminalCore, count: usize) void {
+        const cp = self.previousGraphicCodepoint() orelse return;
+        var i: usize = 0;
+        while (i < count) : (i += 1) {
+            self.writeCodepointLocked(cp);
+        }
+    }
+
+    fn previousGraphicCodepoint(self: *const TerminalCore) ?u32 {
+        const screen = self.activeScreenConst();
+        const rows = @as(usize, screen.grid.rows);
+        const cols = @as(usize, screen.grid.cols);
+        if (rows == 0 or cols == 0) return null;
+        if (screen.cursor.row >= rows) return null;
+
+        const row = screen.cursor.row;
+        var col: usize = if (screen.wrap_next) screen.cursor.col else blk: {
+            if (screen.cursor.col == 0) return null;
+            break :blk screen.cursor.col - 1;
+        };
+        if (col >= cols) col = cols - 1;
+
+        while (true) {
+            const idx = row * cols + col;
+            if (idx >= screen.grid.cells.items.len) return null;
+            const cell = screen.grid.cells.items[idx];
+            if (cell.width == 0 and cell.x > 0) {
+                if (col < cell.x) return null;
+                col -= cell.x;
+                continue;
+            }
+            if (cell.codepoint == 0 or cell.width == 0) return null;
+            return cell.codepoint;
+        }
+    }
+
     pub fn backspaceLocked(self: *TerminalCore) void {
         self.activeScreen().backspace();
     }
