@@ -51,6 +51,8 @@ import dev.zide.terminal.host.TerminalSessionAssembly;
 import dev.zide.terminal.host.TerminalSessionAssemblyHostCallbacks;
 import dev.zide.terminal.host.TerminalInputAssembly;
 import dev.zide.terminal.host.TerminalInputAssemblyHostCallbacks;
+import dev.zide.terminal.host.TerminalSurfaceWidgetAssembly;
+import dev.zide.terminal.host.TerminalSurfaceWidgetAssemblyHostCallbacks;
 import dev.zide.terminal.host.TerminalProductShellStateHostCallbacks;
 import dev.zide.terminal.host.TerminalSurfaceWidgetHostCallbacks;
 import dev.zide.terminal.host.TerminalViewModeHostCallbacks;
@@ -492,11 +494,13 @@ public final class ZideTerminalActivity extends Activity
                             }
                         },
                         () -> userlandSessionCoordinator.refreshAndApply(false)));
-        surfaceHostBridge = TerminalSurfaceHostFactory.createSurfaceHostBridge(
-                TerminalSurfaceHostFactory.createSurfaceHostCallbacks(
-                        handler,
-                        productSurfaceContainer,
-                        TerminalSurfaceHostFactory.createSurfaceHostLifecycleCallbacks(
+        final TerminalSurfaceWidgetAssembly.Result surfaceWidgetAssembly =
+                TerminalSurfaceWidgetAssembly.assemble(
+                        selectionController,
+                        terminalGestureStateController,
+                        new TerminalSurfaceWidgetAssemblyHostCallbacks(
+                                () -> handler,
+                                () -> productSurfaceContainer,
                                 () -> nativeLoaded,
                                 () -> debugViewEnabled,
                                 this::currentImeVisible,
@@ -535,28 +539,18 @@ public final class ZideTerminalActivity extends Activity
                                         nextSurfaceView.getHolder().addCallback(callback);
                                     }
                                 },
-                                () -> terminalSurfaceWidgetController)));
-        surfaceHostController = new TerminalSurfaceHostController(surfaceHostBridge);
-        terminalSurfaceWidgetController = TerminalUiHostFactory.createSurfaceWidgetController(
-                surfaceHostController,
-                selectionController,
-                terminalGestureStateController,
-                new TerminalSurfaceWidgetHostCallbacks(
-                        () -> nativeLoaded,
-                        TerminalNativeBridge::nativeSetShellScrollbackOffsetBridge,
-                        TerminalNativeBridge::nativeFollowShellLiveBottomBridge,
-                        this::productViewportHeightPx,
-                        this::appendEvent,
-                        () -> {
-                            if (terminalProductRuntimeController != null) {
-                                terminalProductRuntimeController.refreshProductScrollOverlay();
-                            }
-                        },
-                        () -> {
-                            if (productFrameLoopController != null) {
-                                productFrameLoopController.reevaluate();
-                            }
-                        }));
+                                () -> terminalSurfaceWidgetController,
+                                TerminalNativeBridge::nativeSetShellScrollbackOffsetBridge,
+                                TerminalNativeBridge::nativeFollowShellLiveBottomBridge,
+                                this::productViewportHeightPx,
+                                () -> {
+                                    if (productFrameLoopController != null) {
+                                        productFrameLoopController.reevaluate();
+                                    }
+                                }));
+        surfaceHostBridge = surfaceWidgetAssembly.surfaceHostBridge;
+        surfaceHostController = surfaceWidgetAssembly.surfaceHostController;
+        terminalSurfaceWidgetController = surfaceWidgetAssembly.surfaceWidgetController;
         terminalScrollOverlay.setHost(terminalSurfaceWidgetController);
     }
 

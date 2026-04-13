@@ -48,13 +48,15 @@ For active priorities/workflow, use
 
 Current shape markers (for hygiene tracking, not hard limits):
 
-- `ZideTerminalActivity.java`: `724` lines
+- `ZideTerminalActivity.java`: `718` lines
 - `host/TerminalChromeHostFactory.java`: `69` lines
 - `host/TerminalInteractionHostFactory.java`: `131` lines
 - `host/TerminalInputHostFactory.java`: `56` lines
 - `host/TerminalInputAssembly.java`: `93` lines
 - `host/TerminalInputAssemblyHostCallbacks.java`: `106` lines
 - `host/TerminalSurfaceHostFactory.java`: `67` lines
+- `host/TerminalSurfaceWidgetAssembly.java`: `127` lines
+- `host/TerminalSurfaceWidgetAssemblyHostCallbacks.java`: `212` lines
 - `host/TerminalRuntimeHostFactory.java`: `81` lines
 - `host/TerminalSessionHostFactory.java`: `52` lines
 - `host/TerminalSessionAssembly.java`: `102` lines
@@ -88,6 +90,8 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/TerminalInputAssembly.java` | Good | Owns input-view installation and input-controller assembly composition for the activity wiring layer. | Keep this assembly-only; input behavior remains in `input/` controllers. |
 | `host/TerminalInputAssemblyHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalInputAssembly`. | Keep adapter-only; avoid adding input behavior here. |
 | `host/TerminalSurfaceHostFactory.java` | Good | Owns surface host bridge/callback construction so surface lifecycle assembly stays out of generic host assembly. | Keep this construction-only; surface behavior remains in surface host controllers/bridges. |
+| `host/TerminalSurfaceWidgetAssembly.java` | Good | Owns surface/widget activity wiring assembly that composes surface and UI host factories for activity use. | Keep this assembly-only; surface/widget behavior remains in dedicated controllers. |
+| `host/TerminalSurfaceWidgetAssemblyHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalSurfaceWidgetAssembly`. | Keep adapter-only; avoid adding surface/widget behavior here. |
 | `host/TerminalRuntimeHostFactory.java` | Good | Owns product-runtime and frame-loop construction so runtime assembly stays out of generic host assembly. | Keep this construction-only; runtime behavior remains in runtime controllers. |
 | `host/TerminalSessionHostFactory.java` | Good | Owns shell-session and userland-session host bridge construction so session seams stay out of generic host assembly. | Keep this construction-only; session behavior remains in session/userland coordinators. |
 | `host/TerminalSessionAssembly.java` | Good | Owns session/runtime wiring assembly that composes session and runtime host factories for activity use. | Keep this assembly-only; business behavior stays in session/runtime controllers. |

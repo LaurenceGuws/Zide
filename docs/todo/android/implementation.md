@@ -103,6 +103,9 @@ A cut is done only if all are true:
   `host/TerminalSessionAssembly` + `TerminalSessionAssemblyHostCallbacks`
 - input-view install and input controller activity wiring now composes through
   `host/TerminalInputAssembly` + `TerminalInputAssemblyHostCallbacks`
+- surface/widget activity wiring now composes through
+  `host/TerminalSurfaceWidgetAssembly` +
+  `TerminalSurfaceWidgetAssemblyHostCallbacks`
 - terminal surface widget seam is established in
   `host/TerminalSurfaceWidgetController` for future tabbed hosting
 - debug surface snapshot composition moved to
