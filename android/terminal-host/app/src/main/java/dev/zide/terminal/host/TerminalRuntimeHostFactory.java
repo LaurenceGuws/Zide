@@ -1,0 +1,81 @@
+package dev.zide.terminal.host;
+
+import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
+import java.util.function.IntSupplier;
+import java.util.function.Supplier;
+
+import dev.zide.terminal.debug.TerminalStatusController;
+import dev.zide.terminal.gesture.TerminalGestureStateController;
+import dev.zide.terminal.scroll.TerminalScrollOverlayView;
+import dev.zide.terminal.selection.TerminalSelectionController;
+import dev.zide.terminal.userland.ProductShellStatePresenter;
+import dev.zide.terminal.userland.UserlandBootstrapState;
+import dev.zide.terminal.userland.UserlandInstallState;
+import dev.zide.terminal.userland.UserlandSessionCoordinator;
+
+/** Runtime host assembly helpers. */
+public final class TerminalRuntimeHostFactory {
+    private TerminalRuntimeHostFactory() {
+    }
+
+    public static TerminalProductRuntimeController createProductRuntimeController(
+            TerminalProductRuntimeController.Host host) {
+        return new TerminalProductRuntimeController(host);
+    }
+
+    public static TerminalProductRuntimeController.Host createProductRuntimeHostCallbacks(
+            BooleanSupplier debugViewEnabled,
+            BooleanSupplier nativeLoaded,
+            Supplier<UserlandInstallState> installState,
+            Consumer<UserlandInstallState> setInstallState,
+            Supplier<UserlandBootstrapState> bootstrapState,
+            Supplier<android.view.SurfaceView> surfaceView,
+            Supplier<android.view.View> productBootstrapBlocker,
+            Supplier<TerminalScrollOverlayView> terminalScrollOverlay,
+            Supplier<TerminalSelectionController> selectionController,
+            Supplier<ProductShellStatePresenter> productShellStatePresenter,
+            Supplier<TerminalFrameLoopController> frameLoopController,
+            Supplier<TerminalStatusController> terminalStatusController,
+            Supplier<UserlandSessionCoordinator> userlandSessionCoordinator,
+            Supplier<TerminalGestureStateController> terminalGestureStateController,
+            Consumer<String> appendEvent,
+            Consumer<String> updateStatus,
+            IntSupplier nativeCurrentShellVisibleRows,
+            IntSupplier nativeCurrentShellScrollbackCount,
+            IntSupplier nativeCurrentShellScrollbackOffset,
+            IntSupplier nativeRestartShellSession) {
+        return new TerminalProductRuntimeHostCallbacks(
+                debugViewEnabled,
+                nativeLoaded,
+                installState,
+                setInstallState,
+                bootstrapState,
+                surfaceView,
+                productBootstrapBlocker,
+                terminalScrollOverlay,
+                selectionController,
+                productShellStatePresenter,
+                frameLoopController,
+                terminalStatusController,
+                userlandSessionCoordinator,
+                terminalGestureStateController,
+                appendEvent,
+                updateStatus,
+                nativeCurrentShellVisibleRows,
+                nativeCurrentShellScrollbackCount,
+                nativeCurrentShellScrollbackOffset,
+                nativeRestartShellSession);
+    }
+
+    public static TerminalFrameLoopController createFrameLoopController(
+            android.os.Handler handler,
+            BooleanSupplier shouldRunProductFrameLoop,
+            IntSupplier tickProductFrame) {
+        return new TerminalFrameLoopController(
+                handler,
+                new TerminalFrameLoopHostBridge(new TerminalFrameLoopHostCallbacks(
+                        shouldRunProductFrameLoop,
+                        tickProductFrame)));
+    }
+}

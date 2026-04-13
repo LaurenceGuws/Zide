@@ -45,6 +45,7 @@ import dev.zide.terminal.host.TerminalHostAssembler;
 import dev.zide.terminal.host.TerminalInteractionHostFactory;
 import dev.zide.terminal.host.TerminalInputHostFactory;
 import dev.zide.terminal.host.TerminalSurfaceHostFactory;
+import dev.zide.terminal.host.TerminalRuntimeHostFactory;
 import dev.zide.terminal.host.TerminalProductShellStateHostCallbacks;
 import dev.zide.terminal.host.TerminalSurfaceWidgetHostCallbacks;
 import dev.zide.terminal.host.TerminalViewModeHostCallbacks;
@@ -250,8 +251,8 @@ public final class ZideTerminalActivity extends Activity
                         this::updateStatus));
         userlandWorkflowController = new UserlandWorkflowController(terminalUserlandWorkflowHostBridge);
         assembleWidgetHostControllers();
-        terminalProductRuntimeController = TerminalHostAssembler.createProductRuntimeController(
-                TerminalHostAssembler.createProductRuntimeHostCallbacks(
+        terminalProductRuntimeController = TerminalRuntimeHostFactory.createProductRuntimeController(
+                TerminalRuntimeHostFactory.createProductRuntimeHostCallbacks(
                         () -> debugViewEnabled,
                         () -> nativeLoaded,
                         () -> currentInstallState,
@@ -589,7 +590,7 @@ public final class ZideTerminalActivity extends Activity
         userlandSessionCoordinator = new UserlandSessionCoordinator(
                 shellSessionController,
                 terminalUserlandSessionHostBridge);
-        productFrameLoopController = TerminalHostAssembler.createFrameLoopController(
+        productFrameLoopController = TerminalRuntimeHostFactory.createFrameLoopController(
                 handler,
                 () -> terminalProductRuntimeController != null
                         && terminalProductRuntimeController.shouldRunProductFrameLoop(),

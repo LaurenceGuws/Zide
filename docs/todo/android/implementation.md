@@ -95,6 +95,8 @@ A cut is done only if all are true:
   `host/TerminalInputHostFactory` instead of activity-local callback assembly
 - surface host bridge/callback construction now lives in
   `host/TerminalSurfaceHostFactory` instead of generic host assembler helpers
+- product-runtime/frame-loop construction now lives in
+  `host/TerminalRuntimeHostFactory` instead of generic host assembler helpers
 - terminal surface widget seam is established in
   `host/TerminalSurfaceWidgetController` for future tabbed hosting
 - debug surface snapshot composition moved to
