@@ -1,6 +1,7 @@
 package dev.zide.terminal.host;
 
 import android.view.MotionEvent;
+import android.view.inputmethod.InputMethodManager;
 import android.view.View;
 import android.widget.Button;
 
@@ -9,6 +10,7 @@ import dev.zide.terminal.input.ShellInputView;
 /** Owns product chrome interactions: view-mode toggles, sidebar, assist bar, and IME policy. */
 public final class TerminalChromeController {
     public interface Host {
+        android.content.Context context();
         View debugViewModeButton();
         View drawerScrim();
         View drawerEdgeHotspot();
@@ -18,11 +20,10 @@ public final class TerminalChromeController {
         boolean debugViewEnabled();
         void showProductView(String eventName, String statusLabel);
         void showDebugView(String eventName, String statusLabel);
-        void closeSidebar();
-        void updateSidebarVisibility(boolean visible);
         void runPackageDoctor();
         void appendEvent(String event);
-        void toggleIme();
+        boolean currentImeVisible();
+        void setImeVisible(boolean visible);
         void applyModifierLatchState(ShellInputView.Host.ModifierLatchState state);
         ShellInputView shellInputView();
         Button assistCtrlButton();
@@ -50,20 +51,20 @@ public final class TerminalChromeController {
 
         restartButton.setOnClickListener(view -> {
             host.appendEvent("manual.shellRestart requested");
-            host.closeSidebar();
+            closeSidebar();
         });
 
         debugButton.setOnClickListener(view -> {
             host.showDebugView("view.mode debug=true", "debug-view");
-            host.closeSidebar();
+            closeSidebar();
         });
 
         packagesButton.setOnClickListener(view -> {
-            host.closeSidebar();
+            closeSidebar();
             host.runPackageDoctor();
         });
 
-        host.drawerScrim().setOnClickListener(view -> host.closeSidebar());
+        host.drawerScrim().setOnClickListener(view -> closeSidebar());
         host.drawerEdgeHotspot().setOnTouchListener(new EdgeSwipeListener(true));
         host.leftSidebar().setOnTouchListener(new EdgeSwipeListener(false));
     }
@@ -75,7 +76,7 @@ public final class TerminalChromeController {
         final Button imeButton = imeButtonId != 0 ? root.findViewById(imeButtonId) : null;
         if (imeButton != null) {
             imeButton.setOnClickListener(view -> {
-                host.toggleIme();
+                toggleIme();
                 host.appendEvent("assist.ime");
             });
         }
@@ -92,15 +93,76 @@ public final class TerminalChromeController {
         host.applyModifierLatchState(host.shellInputView().modifierLatchState());
     }
 
-    public void applyViewMode(boolean debugViewEnabled, View productView, View debugView, View terminalScrollOverlay, View productSurfaceContainer) {
-        productView.setVisibility(debugViewEnabled ? View.GONE : View.VISIBLE);
-        debugView.setVisibility(debugViewEnabled ? View.VISIBLE : View.GONE);
-        if (debugViewEnabled) {
-            host.closeSidebar();
-            terminalScrollOverlay.setVisibility(View.GONE);
-        } else {
-            productSurfaceContainer.post(() -> host.updateStatus("product-view"));
+    public void applyModifierLatchState(ShellInputView.Host.ModifierLatchState state) {
+        host.applyModifierLatchState(state);
+    }
+
+    public boolean currentImeVisible() {
+        return host.currentImeVisible();
+    }
+
+    public void openIme() {
+        final InputMethodManager imm = host.context().getSystemService(InputMethodManager.class);
+        if (imm == null) {
+            host.appendEvent("manual.ime unavailable=true");
+            return;
         }
+
+        final ShellInputView shellInputView = host.shellInputView();
+        host.appendEvent("manual.imeOpen begin focus=" + shellInputView.hasFocus());
+        shellInputView.requestFocusFromTouch();
+        if (!shellInputView.hasFocus()) {
+            shellInputView.requestFocus();
+        }
+        host.appendEvent("manual.imeOpen focusAfterRequest=" + shellInputView.hasFocus());
+        imm.restartInput(shellInputView);
+        final boolean shown = imm.showSoftInput(shellInputView, InputMethodManager.SHOW_IMPLICIT);
+        host.setImeVisible(shown || shellInputView.hasFocus());
+        host.appendEvent("manual.imeOpen shown=" + shown + " focus=" + shellInputView.hasFocus());
+        host.updateStatus("ime-shown");
+    }
+
+    public void closeIme() {
+        final InputMethodManager imm = host.context().getSystemService(InputMethodManager.class);
+        if (imm == null) {
+            host.appendEvent("manual.ime unavailable=true");
+            return;
+        }
+        final boolean hidden = imm.hideSoftInputFromWindow(host.shellInputView().getWindowToken(), 0);
+        host.setImeVisible(false);
+        host.appendEvent("manual.imeClose hidden=" + hidden);
+        host.updateStatus("ime-hidden");
+    }
+
+    public void toggleIme() {
+        if (currentImeVisible()) {
+            closeIme();
+            return;
+        }
+        openIme();
+    }
+
+    public void openSidebar() {
+        if (host.sidebarOpen() || host.debugViewEnabled()) {
+            return;
+        }
+        host.setSidebarOpen(true);
+        host.leftSidebar().animate().translationX(0).setDuration(180).start();
+        updateSidebarVisibility(true);
+    }
+
+    public void closeSidebar() {
+        if (!host.sidebarOpen()) {
+            return;
+        }
+        host.setSidebarOpen(false);
+        host.leftSidebar().animate().translationX(-host.leftSidebar().getWidth()).setDuration(180).start();
+        updateSidebarVisibility(false);
+    }
+
+    public void updateSidebarVisibility(boolean visible) {
+        host.drawerScrim().setVisibility(visible ? View.VISIBLE : View.GONE);
+        host.drawerEdgeHotspot().setVisibility(visible ? View.GONE : View.VISIBLE);
     }
 
     private final class EdgeSwipeListener implements View.OnTouchListener {
@@ -122,12 +184,12 @@ public final class TerminalChromeController {
                     if (openListener) {
                         if (delta > OPEN_THRESHOLD_PX) {
                             host.setSidebarOpen(true);
-                            host.updateSidebarVisibility(true);
+                            updateSidebarVisibility(true);
                             return true;
                         }
                     } else if (delta < -OPEN_THRESHOLD_PX) {
                         host.setSidebarOpen(false);
-                        host.updateSidebarVisibility(false);
+                        updateSidebarVisibility(false);
                         return true;
                     }
                     return openListener;
