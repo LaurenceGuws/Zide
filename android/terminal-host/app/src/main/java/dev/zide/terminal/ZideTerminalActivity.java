@@ -53,6 +53,8 @@ import dev.zide.terminal.host.TerminalInputAssembly;
 import dev.zide.terminal.host.TerminalInputAssemblyHostCallbacks;
 import dev.zide.terminal.host.TerminalSurfaceWidgetAssembly;
 import dev.zide.terminal.host.TerminalSurfaceWidgetAssemblyHostCallbacks;
+import dev.zide.terminal.host.TerminalUiStartupAssembly;
+import dev.zide.terminal.host.TerminalUiStartupHostCallbacks;
 import dev.zide.terminal.host.TerminalProductShellStateHostCallbacks;
 import dev.zide.terminal.host.TerminalSurfaceWidgetHostCallbacks;
 import dev.zide.terminal.host.TerminalViewModeHostCallbacks;
@@ -593,14 +595,12 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void bindAndStartUiControllers() {
-        terminalViewportController.installInsetsHandling();
-        terminalViewportController.installViewportTracking();
-        terminalChromeController.bindSidebarControls();
-        terminalChromeController.bindViewModeToggle();
-        userlandBootstrapBlockerController = new UserlandBootstrapBlockerController(
-                productBootstrapRetryButton,
-                productBootstrapDebugButton,
-                new TerminalUserlandBootstrapBlockerHostCallbacks(
+        final TerminalUiStartupAssembly.Result result = TerminalUiStartupAssembly.start(
+                new TerminalUiStartupHostCallbacks(
+                        () -> terminalViewportController,
+                        () -> terminalChromeController,
+                        () -> productBootstrapRetryButton,
+                        () -> productBootstrapDebugButton,
                         () -> currentInstallState,
                         () -> currentBootstrapState,
                         () -> userlandWorkflowController,
@@ -611,18 +611,15 @@ public final class ZideTerminalActivity extends Activity
                             }
                         },
                         this::appendEvent,
-                        this::updateStatus));
-        userlandBootstrapBlockerController.bind();
-        terminalChromeController.bindAssistBar();
-        terminalRuntimeAssetsController.prepareRuntimeAssets();
-        terminalViewModeController.applyCurrentViewMode();
-        surfaceHostController.installSurfaceView("activity-create", terminalSurfaceWidgetController);
-        productShellStatePresenter.refresh();
-        productFrameLoopController.reevaluate();
-        leftSidebar.post(() -> {
-            leftSidebar.setTranslationX(-leftSidebar.getWidth());
-            terminalChromeController.updateSidebarVisibility(false);
-        });
+                        this::updateStatus,
+                        () -> terminalRuntimeAssetsController,
+                        () -> terminalViewModeController,
+                        () -> surfaceHostController,
+                        () -> terminalSurfaceWidgetController,
+                        () -> productShellStatePresenter,
+                        () -> productFrameLoopController,
+                        () -> leftSidebar));
+        userlandBootstrapBlockerController = result.userlandBootstrapBlockerController;
     }
 
     private void finishOnCreateLifecycle() {
