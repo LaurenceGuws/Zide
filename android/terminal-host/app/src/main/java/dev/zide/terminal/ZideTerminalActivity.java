@@ -4,9 +4,11 @@ import android.app.Activity;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Intent;
+import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.graphics.Rect;
 import android.graphics.Insets;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.SystemClock;
@@ -53,6 +55,12 @@ public final class ZideTerminalActivity extends Activity
     private static final String EXTRA_DEBUG_RESIZE_SURFACE_ONCE = "debug_resize_surface_once";
     private static final String EXTRA_DEBUG_START_SHELL_ONCE = "debug_start_shell_once";
     private static final float MIN_PENDING_PINCH_APPLY_DELTA = 0.008f;
+    private static final float SELECTION_AUTOSCROLL_BAND_DP = 120.0f;
+    private static final float SELECTION_AUTOSCROLL_MAX_ROWS_PER_SECOND = 28.0f;
+    private static final float SELECTION_AUTOSCROLL_MIN_ROWS_PER_SECOND = 4.0f;
+    private static final float SELECTION_AUTOSCROLL_IMMEDIATE_STEP_SECONDS = 1.0f / 60.0f;
+    private static final float SELECTION_HANDLE_SIZE_DP = 18.0f;
+    private static final float SELECTION_HANDLE_Y_OFFSET_DP = 6.0f;
     /**
      * Product pinch budget for native zoom work.
      *
@@ -104,6 +112,8 @@ public final class ZideTerminalActivity extends Activity
     private View leftSidebar;
     private FrameLayout productSurfaceContainer;
     private TerminalScrollOverlayView terminalScrollOverlay;
+    private View selectionStartHandle;
+    private View selectionEndHandle;
     private Button assistCtrlButton;
     private Button assistAltButton;
     private ShellInputView shellInputView;
@@ -141,10 +151,19 @@ public final class ZideTerminalActivity extends Activity
     private int activeGestureScrollbackCount = 0;
     private int activeGestureScrollbackOffset = 0;
     private float activeGestureScrollRemainderRows = 0.0f;
+    private boolean selectionDragActive = false;
+    private boolean selectionAutoscrollScheduled = false;
+    private float selectionDragX = 0.0f;
+    private float selectionDragY = 0.0f;
+    private long selectionAutoscrollLastFrameNanos = 0L;
+    private SelectionDragMode selectionDragMode = SelectionDragMode.none;
     private int flingLastScrollY = 0;
     private boolean flingScrollScheduled = false;
     private OverScroller scrollbackFlingScroller;
     private ActionMode terminalSelectionActionMode;
+    private boolean selectionHelpersVisible = true;
+    private boolean selectionToolbarVisible = true;
+    private boolean suppressSelectionClearOnActionModeDestroy = false;
     private final Runnable productFrameRunnable = new Runnable() {
         @Override
         public void run() {
@@ -160,6 +179,13 @@ public final class ZideTerminalActivity extends Activity
             handler.postDelayed(this, tick == 2 ? 16L : 33L);
         }
     };
+
+    private enum SelectionDragMode {
+        none,
+        gesture,
+        startHandle,
+        endHandle,
+    }
     private final Runnable pinchZoomRetryRunnable = new Runnable() {
         @Override
         public void run() {
@@ -190,6 +216,29 @@ public final class ZideTerminalActivity extends Activity
             if (!scrollbackFlingScroller.isFinished()) {
                 scheduleScrollbackFlingFrame();
             }
+        }
+    };
+    private final Choreographer.FrameCallback selectionAutoscrollFrameCallback = frameTimeNanos -> {
+        selectionAutoscrollScheduled = false;
+        if (!selectionDragActive || !nativeLoaded) {
+            selectionAutoscrollLastFrameNanos = 0L;
+            return;
+        }
+        final float rowsPerSecond = computeSelectionAutoscrollRowsPerSecond(selectionDragY);
+        if (rowsPerSecond == 0.0f) {
+            selectionAutoscrollLastFrameNanos = 0L;
+            return;
+        }
+        final long previousFrameNanos = selectionAutoscrollLastFrameNanos;
+        selectionAutoscrollLastFrameNanos = frameTimeNanos;
+        final float deltaSeconds = previousFrameNanos == 0L
+                ? (1.0f / 60.0f)
+                : Math.max(1.0e-3f, Math.min(0.05f, (frameTimeNanos - previousFrameNanos) / 1_000_000_000.0f));
+        applySelectionAutoscrollRows(rowsPerSecond * deltaSeconds);
+        if (selectionDragActive && computeSelectionAutoscrollRowsPerSecond(selectionDragY) != 0.0f) {
+            scheduleSelectionAutoscrollFrame();
+        } else {
+            selectionAutoscrollLastFrameNanos = 0L;
         }
     };
 
@@ -224,6 +273,7 @@ public final class ZideTerminalActivity extends Activity
         leftSidebar = findViewById(R.id.left_sidebar);
         productSurfaceContainer = findViewById(R.id.product_surface_container);
         terminalScrollOverlay = findViewById(R.id.terminal_scroll_overlay);
+        installSelectionHandles();
         assistCtrlButton = findViewById(R.id.assist_ctrl_button);
         assistAltButton = findViewById(R.id.assist_alt_button);
         terminalScrollOverlay.setHost(this);
@@ -679,16 +729,80 @@ public final class ZideTerminalActivity extends Activity
         root.addView(shellInputView, lp);
     }
 
+    private void installSelectionHandles() {
+        selectionStartHandle = createSelectionHandleView(SelectionDragMode.startHandle);
+        selectionEndHandle = createSelectionHandleView(SelectionDragMode.endHandle);
+        productSurfaceContainer.addView(selectionStartHandle);
+        productSurfaceContainer.addView(selectionEndHandle);
+        selectionStartHandle.setVisibility(View.GONE);
+        selectionEndHandle.setVisibility(View.GONE);
+    }
+
+    private View createSelectionHandleView(SelectionDragMode dragMode) {
+        final int sizePx = Math.max(1, Math.round(SELECTION_HANDLE_SIZE_DP * getResources().getDisplayMetrics().density));
+        final View handle = new View(this);
+        final GradientDrawable background = new GradientDrawable();
+        background.setShape(GradientDrawable.OVAL);
+        background.setColor(Color.parseColor("#d7ecff"));
+        background.setStroke(Math.max(1, sizePx / 12), Color.parseColor("#35566f"));
+        handle.setBackground(background);
+        handle.setAlpha(0.95f);
+        final FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(sizePx, sizePx);
+        params.gravity = Gravity.TOP | Gravity.START;
+        handle.setLayoutParams(params);
+        handle.setOnTouchListener((view, event) -> onSelectionHandleTouch(dragMode, view, event));
+        return handle;
+    }
+
+    private boolean onSelectionHandleTouch(SelectionDragMode dragMode, View handle, MotionEvent event) {
+        final float x = handle.getX() + event.getX();
+        final float y = handle.getY() + event.getY();
+        switch (event.getActionMasked()) {
+            case MotionEvent.ACTION_DOWN:
+                stopScrollbackFling();
+                beginSelectionDrag(dragMode, x, y);
+                if (updateSelectionFromActiveDrag() == 0) {
+                    applyImmediateSelectionAutoscrollStep();
+                    syncTerminalSelectionActionMode();
+                    reevaluateProductFrameLoop();
+                }
+                return true;
+            case MotionEvent.ACTION_MOVE:
+                updateSelectionDragPoint(x, y);
+                if (updateSelectionFromActiveDrag() == 0) {
+                    applyImmediateSelectionAutoscrollStep();
+                    syncTerminalSelectionActionMode();
+                    reevaluateProductFrameLoop();
+                }
+                return true;
+            case MotionEvent.ACTION_UP:
+            case MotionEvent.ACTION_CANCEL:
+                updateSelectionDragPoint(x, y);
+                if (updateSelectionFromActiveDrag() == 0) {
+                    syncTerminalSelectionActionMode();
+                }
+                endSelectionDrag();
+                showSelectionToolbar();
+                reevaluateProductFrameLoop();
+                return true;
+            default:
+                return false;
+        }
+    }
+
     @Override
     public void onProductSingleTap(float x, float y) {
         if (!nativeLoaded || !nativeCurrentShellSelectionActiveBridge()) {
             return;
         }
         if (tapHitsCurrentSelection(x, y)) {
+            toggleSelectionHelpers();
             appendEvent("product.selection tap=inside");
             return;
         }
         nativeClearShellSelectionBridge();
+        selectionHelpersVisible = true;
+        selectionToolbarVisible = true;
         finishTerminalSelectionActionMode();
         reevaluateProductFrameLoop();
         appendEvent("product.selection cleared=tap-outside");
@@ -759,8 +873,41 @@ public final class ZideTerminalActivity extends Activity
         final int status = nativeBeginShellWordSelectionAtVisibleCellBridge(hit.row, hit.col);
         appendEvent("product.selection word row=" + hit.row + " col=" + hit.col + " status=" + status);
         if (status == 0) {
-            showTerminalSelectionActionMode();
+            beginSelectionDrag(SelectionDragMode.gesture, x, y);
+            hideSelectionToolbar();
         }
+        reevaluateProductFrameLoop();
+    }
+
+    @Override
+    public void onProductSelectionDrag(float x, float y) {
+        if (!nativeLoaded || !nativeCurrentShellSelectionActiveBridge()) {
+            return;
+        }
+        updateSelectionDragPoint(x, y);
+        final int status = updateSelectionFromActiveDrag();
+        if (status == 0) {
+            applyImmediateSelectionAutoscrollStep();
+            syncTerminalSelectionActionMode();
+            reevaluateProductFrameLoop();
+        }
+    }
+
+    @Override
+    public void onProductSelectionDragEnd(float x, float y) {
+        if (!nativeLoaded || !nativeCurrentShellSelectionActiveBridge()) {
+            return;
+        }
+        updateSelectionDragPoint(x, y);
+        final int status = updateSelectionFromActiveDrag();
+        if (status == 0) {
+            syncTerminalSelectionActionMode();
+        }
+        if (selectionDragMode == SelectionDragMode.gesture) {
+            nativeFinishShellSelectionGestureBridge();
+        }
+        endSelectionDrag();
+        showSelectionToolbar();
         reevaluateProductFrameLoop();
     }
 
@@ -900,9 +1047,144 @@ public final class ZideTerminalActivity extends Activity
         if (!(colWidthPx > 0.0f) || !(rowHeightPx > 0.0f)) {
             return null;
         }
-        final int col = Math.max(0, Math.min(visibleCols - 1, (int) (x / colWidthPx)));
-        final int row = Math.max(0, Math.min(visibleRows - 1, (int) (y / rowHeightPx)));
+        final float clampedX = Math.max(0.0f, Math.min(x, viewportWidth - 1.0f));
+        final float clampedY = Math.max(0.0f, Math.min(y, viewportHeight - 1.0f));
+        final int col = Math.max(0, Math.min(visibleCols - 1, (int) (clampedX / colWidthPx)));
+        final int row = Math.max(0, Math.min(visibleRows - 1, (int) (clampedY / rowHeightPx)));
         return new TerminalCellHit(row, col);
+    }
+
+    private void beginSelectionDrag(SelectionDragMode dragMode, float x, float y) {
+        selectionDragMode = dragMode;
+        selectionDragActive = true;
+        selectionAutoscrollLastFrameNanos = 0L;
+        updateSelectionDragPoint(x, y);
+        hideSelectionToolbar();
+    }
+
+    private void endSelectionDrag() {
+        selectionDragActive = false;
+        selectionAutoscrollLastFrameNanos = 0L;
+        selectionDragMode = SelectionDragMode.none;
+    }
+
+    private void updateSelectionDragPoint(float x, float y) {
+        selectionDragX = x;
+        selectionDragY = y;
+        if (!selectionDragActive) {
+            return;
+        }
+        if (computeSelectionAutoscrollRowsPerSecond(y) != 0.0f) {
+            scheduleSelectionAutoscrollFrame();
+        }
+    }
+
+    private int updateSelectionFromActiveDrag() {
+        if (!selectionDragActive || selectionDragMode == SelectionDragMode.none) {
+            return -1;
+        }
+        final TerminalCellHit hit = resolveProductTerminalCell(selectionDragX, selectionDragY);
+        if (hit == null) {
+            return -1;
+        }
+        switch (selectionDragMode) {
+            case gesture:
+                return nativeExtendShellSelectionGestureToVisibleCellBridge(hit.row, hit.col);
+            case startHandle:
+                return nativeUpdateShellSelectionStartAtVisibleCellBridge(hit.row, hit.col);
+            case endHandle:
+                return nativeUpdateShellSelectionEndAtVisibleCellBridge(hit.row, hit.col);
+            default:
+                return -1;
+        }
+    }
+
+    private void scheduleSelectionAutoscrollFrame() {
+        if (selectionAutoscrollScheduled) {
+            return;
+        }
+        selectionAutoscrollScheduled = true;
+        Choreographer.getInstance().postFrameCallback(selectionAutoscrollFrameCallback);
+    }
+
+    private float computeSelectionAutoscrollRowsPerSecond(float y) {
+        final int visibleRows = nativeCurrentShellVisibleRowsBridge();
+        final int viewportHeight = productViewportHeightPx();
+        if (viewportHeight <= 0 || visibleRows <= 0) {
+            return 0.0f;
+        }
+        final float rowHeightPx = (float) viewportHeight / (float) visibleRows;
+        final float bandPx = SELECTION_AUTOSCROLL_BAND_DP * getResources().getDisplayMetrics().density;
+        if (!(bandPx > 0.0f) || !(rowHeightPx > 0.0f)) {
+            return 0.0f;
+        }
+        final float topTriggerY = rowHeightPx;
+        final float bottomTriggerY = viewportHeight - rowHeightPx;
+        final float triggerRangePx = bandPx + rowHeightPx;
+        if (y <= topTriggerY) {
+            final float distance = Math.min((topTriggerY - y) + rowHeightPx, triggerRangePx);
+            final float normalized = distance / triggerRangePx;
+            return lerp(
+                    SELECTION_AUTOSCROLL_MIN_ROWS_PER_SECOND,
+                    SELECTION_AUTOSCROLL_MAX_ROWS_PER_SECOND,
+                    normalized * normalized);
+        }
+        if (y >= bottomTriggerY) {
+            final float distance = Math.min((y - bottomTriggerY) + rowHeightPx, triggerRangePx);
+            final float normalized = distance / triggerRangePx;
+            return -lerp(
+                    SELECTION_AUTOSCROLL_MIN_ROWS_PER_SECOND,
+                    SELECTION_AUTOSCROLL_MAX_ROWS_PER_SECOND,
+                    normalized * normalized);
+        }
+        return 0.0f;
+    }
+
+    private void applyImmediateSelectionAutoscrollStep() {
+        final float rowsPerSecond = computeSelectionAutoscrollRowsPerSecond(selectionDragY);
+        if (rowsPerSecond == 0.0f) {
+            return;
+        }
+        applySelectionAutoscrollRows(rowsPerSecond * SELECTION_AUTOSCROLL_IMMEDIATE_STEP_SECONDS);
+        if (selectionDragActive && computeSelectionAutoscrollRowsPerSecond(selectionDragY) != 0.0f) {
+            scheduleSelectionAutoscrollFrame();
+        }
+    }
+
+    private static float lerp(float start, float end, float t) {
+        return start + ((end - start) * t);
+    }
+
+    private void applySelectionAutoscrollRows(float rowDelta) {
+        if (!selectionDragActive || rowDelta == 0.0f) {
+            return;
+        }
+        activeGestureVisibleRows = nativeCurrentShellVisibleRowsBridge();
+        activeGestureVisibleCols = nativeCurrentShellVisibleColsBridge();
+        activeGestureScrollbackCount = nativeCurrentShellScrollbackCountBridge();
+        activeGestureScrollbackOffset = nativeCurrentShellScrollbackOffsetBridge();
+        activeGestureScrollRemainderRows += rowDelta;
+        final int wholeRows = (int) activeGestureScrollRemainderRows;
+        if (wholeRows == 0) {
+            return;
+        }
+        activeGestureScrollRemainderRows -= wholeRows;
+        final int nextOffset = Math.max(0, Math.min(activeGestureScrollbackOffset + wholeRows, activeGestureScrollbackCount));
+        if (nextOffset == activeGestureScrollbackOffset) {
+            return;
+        }
+        if (nextOffset == 0) {
+            nativeFollowShellLiveBottomBridge();
+        } else {
+            nativeSetShellScrollbackOffsetBridge(nextOffset);
+        }
+        activeGestureScrollbackOffset = nextOffset;
+        final int status = updateSelectionFromActiveDrag();
+        if (status == 0) {
+            syncTerminalSelectionActionMode();
+        }
+        refreshProductScrollOverlay();
+        reevaluateProductFrameLoop();
     }
 
     private boolean tapHitsCurrentSelection(float x, float y) {
@@ -915,7 +1197,27 @@ public final class ZideTerminalActivity extends Activity
         return rect.contains(tapX, tapY);
     }
 
+    private void hideSelectionToolbar() {
+        selectionToolbarVisible = false;
+        syncTerminalSelectionActionMode();
+    }
+
+    private void showSelectionToolbar() {
+        selectionToolbarVisible = selectionHelpersVisible;
+        syncTerminalSelectionActionMode();
+    }
+
+    private void toggleSelectionHelpers() {
+        selectionHelpersVisible = !selectionHelpersVisible;
+        selectionToolbarVisible = selectionHelpersVisible && !selectionDragActive;
+        syncTerminalSelectionActionMode();
+    }
+
     private void showTerminalSelectionActionMode() {
+        syncSelectionHandles();
+        if (!selectionToolbarVisible) {
+            return;
+        }
         if (!nativeCurrentShellSelectionActiveBridge() || productSurfaceContainer == null) {
             finishTerminalSelectionActionMode();
             return;
@@ -954,7 +1256,10 @@ public final class ZideTerminalActivity extends Activity
                         if (terminalSelectionActionMode == mode) {
                             terminalSelectionActionMode = null;
                         }
-                        nativeClearShellSelectionBridge();
+                        if (!suppressSelectionClearOnActionModeDestroy) {
+                            nativeClearShellSelectionBridge();
+                        }
+                        suppressSelectionClearOnActionModeDestroy = false;
                         reevaluateProductFrameLoop();
                     }
 
@@ -972,11 +1277,13 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void finishTerminalSelectionActionMode() {
+        syncSelectionHandles();
         if (terminalSelectionActionMode == null) {
             return;
         }
         final ActionMode mode = terminalSelectionActionMode;
         terminalSelectionActionMode = null;
+        suppressSelectionClearOnActionModeDestroy = true;
         mode.finish();
     }
 
@@ -1002,7 +1309,17 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void syncTerminalSelectionActionMode() {
+        syncSelectionHandles();
+        if (!selectionToolbarVisible) {
+            if (terminalSelectionActionMode != null) {
+                finishTerminalSelectionActionMode();
+            }
+            return;
+        }
         if (terminalSelectionActionMode == null) {
+            if (nativeCurrentShellSelectionActiveBridge()) {
+                showTerminalSelectionActionMode();
+            }
             return;
         }
         if (!nativeCurrentShellSelectionActiveBridge()) {
@@ -1010,6 +1327,76 @@ public final class ZideTerminalActivity extends Activity
             return;
         }
         terminalSelectionActionMode.invalidateContentRect();
+    }
+
+    private void syncSelectionHandles() {
+        if (selectionStartHandle == null || selectionEndHandle == null) {
+            return;
+        }
+        if (!nativeLoaded || !nativeCurrentShellSelectionActiveBridge()) {
+            hideSelectionHandle(selectionStartHandle);
+            hideSelectionHandle(selectionEndHandle);
+            return;
+        }
+        if (!selectionHelpersVisible && !selectionDragActive) {
+            hideSelectionHandle(selectionStartHandle);
+            hideSelectionHandle(selectionEndHandle);
+            return;
+        }
+        syncSelectionHandle(selectionStartHandle, true);
+        syncSelectionHandle(selectionEndHandle, false);
+    }
+
+    private void syncSelectionHandle(View handle, boolean startHandle) {
+        final Rect rect = populateSelectionEndpointRect(startHandle);
+        if (rect == null || rect.isEmpty()) {
+            hideSelectionHandle(handle);
+            return;
+        }
+        final float radius = handle.getLayoutParams().width / 2.0f;
+        final float offsetY = SELECTION_HANDLE_Y_OFFSET_DP * getResources().getDisplayMetrics().density;
+        final float anchorX = startHandle ? rect.left : rect.right;
+        handle.setX(anchorX - radius);
+        handle.setY((rect.bottom - radius) + offsetY);
+        showSelectionHandle(handle);
+    }
+
+    private void showSelectionHandle(View handle) {
+        handle.animate().cancel();
+        handle.setAlpha(0.95f);
+        handle.setVisibility(View.VISIBLE);
+    }
+
+    private void hideSelectionHandle(View handle) {
+        handle.animate().cancel();
+        handle.setAlpha(0.0f);
+        handle.setVisibility(View.GONE);
+    }
+
+    private Rect populateSelectionEndpointRect(boolean startHandle) {
+        final int left = startHandle
+                ? nativeCurrentShellSelectionStartRectLeftBridge()
+                : nativeCurrentShellSelectionEndRectLeftBridge();
+        final int top = startHandle
+                ? nativeCurrentShellSelectionStartRectTopBridge()
+                : nativeCurrentShellSelectionEndRectTopBridge();
+        final int right = startHandle
+                ? nativeCurrentShellSelectionStartRectRightBridge()
+                : nativeCurrentShellSelectionEndRectRightBridge();
+        final int bottom = startHandle
+                ? nativeCurrentShellSelectionStartRectBottomBridge()
+                : nativeCurrentShellSelectionEndRectBottomBridge();
+        if (right <= left || bottom <= top) {
+            return null;
+        }
+        final int width = productViewportWidthPx();
+        final int height = productViewportHeightPx();
+        final Rect rect = new Rect(
+                Math.max(0, Math.min(left, width)),
+                Math.max(0, Math.min(top, height)),
+                Math.max(0, Math.min(right, width)),
+                Math.max(0, Math.min(bottom, height)));
+        return rect.isEmpty() ? null : rect;
     }
 
     private void copyCurrentShellSelectionToClipboard() {
@@ -1343,6 +1730,12 @@ public final class ZideTerminalActivity extends Activity
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 Gravity.CENTER);
         productSurfaceContainer.addView(nextSurfaceView, params);
+        if (selectionStartHandle != null) {
+            selectionStartHandle.bringToFront();
+        }
+        if (selectionEndHandle != null) {
+            selectionEndHandle.bringToFront();
+        }
         holder.addCallback(this);
         surfaceView = nextSurfaceView;
         appendEvent("surface.hostInstalled reason=" + reason + " generation=" + surfaceHostGeneration);
@@ -1896,7 +2289,15 @@ public final class ZideTerminalActivity extends Activity
 
     private static native int nativeBeginShellWordSelectionAtVisibleCellBridge(int row, int col);
 
+    private static native int nativeExtendShellSelectionGestureToVisibleCellBridge(int row, int col);
+
+    private static native int nativeFinishShellSelectionGestureBridge();
+
     private static native int nativeClearShellSelectionBridge();
+
+    private static native int nativeUpdateShellSelectionStartAtVisibleCellBridge(int row, int col);
+
+    private static native int nativeUpdateShellSelectionEndAtVisibleCellBridge(int row, int col);
 
     private static native boolean nativeCurrentShellSelectionActiveBridge();
 
@@ -1907,6 +2308,22 @@ public final class ZideTerminalActivity extends Activity
     private static native int nativeCurrentShellSelectionRectRightBridge();
 
     private static native int nativeCurrentShellSelectionRectBottomBridge();
+
+    private static native int nativeCurrentShellSelectionStartRectLeftBridge();
+
+    private static native int nativeCurrentShellSelectionStartRectTopBridge();
+
+    private static native int nativeCurrentShellSelectionStartRectRightBridge();
+
+    private static native int nativeCurrentShellSelectionStartRectBottomBridge();
+
+    private static native int nativeCurrentShellSelectionEndRectLeftBridge();
+
+    private static native int nativeCurrentShellSelectionEndRectTopBridge();
+
+    private static native int nativeCurrentShellSelectionEndRectRightBridge();
+
+    private static native int nativeCurrentShellSelectionEndRectBottomBridge();
 
     private static native byte[] nativeCurrentShellSelectionTextBytesBridge();
 

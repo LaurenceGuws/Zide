@@ -47,6 +47,12 @@ final class ProductGestureController {
         /** Starts Android-native text interaction from a resolved long press. */
         void onProductLongPress(float x, float y);
 
+        /** Extends the active Android-native text selection drag. */
+        void onProductSelectionDrag(float x, float y);
+
+        /** Finishes the active Android-native text selection drag. */
+        void onProductSelectionDragEnd(float x, float y);
+
         /** Marks the beginning of an interactive pinch session. */
         void onProductPinchBegin();
 
@@ -171,6 +177,7 @@ final class ProductGestureController {
                 final float deltaX = event.getX() - downX;
                 final float deltaY = event.getY() - downY;
                 if (!scrollActive &&
+                        !longPressTriggered &&
                         Math.abs(deltaY) > touchSlop &&
                         Math.abs(deltaY) > Math.abs(deltaX)) {
                     cancelLongPress();
@@ -179,7 +186,9 @@ final class ProductGestureController {
                     lastY = event.getY();
                     host.onProductScrollBegin();
                 }
-                if (scrollActive) {
+                if (longPressTriggered) {
+                    host.onProductSelectionDrag(event.getX(), event.getY());
+                } else if (scrollActive) {
                     final float stepY = event.getY() - lastY;
                     lastY = event.getY();
                     if (stepY != 0.0f) {
@@ -192,6 +201,10 @@ final class ProductGestureController {
                 break;
             case MotionEvent.ACTION_POINTER_DOWN:
                 cancelLongPress();
+                if (longPressTriggered) {
+                    host.onProductSelectionDragEnd(event.getX(), event.getY());
+                    longPressTriggered = false;
+                }
                 if (scrollActive) {
                     scrollActive = false;
                     host.onProductScrollEnd();
@@ -209,6 +222,8 @@ final class ProductGestureController {
                     if (Math.abs(velocityY) >= minimumFlingVelocity) {
                         host.onProductScrollFling(velocityY);
                     }
+                } else if (longPressTriggered) {
+                    host.onProductSelectionDragEnd(event.getX(), event.getY());
                 } else if (!pinchActive && !moved && event.getPointerCount() == 1) {
                     host.onProductSingleTap(event.getX(), event.getY());
                 }
@@ -219,6 +234,9 @@ final class ProductGestureController {
                 break;
             case MotionEvent.ACTION_CANCEL:
                 cancelLongPress();
+                if (longPressTriggered) {
+                    host.onProductSelectionDragEnd(downX, downY);
+                }
                 if (scrollActive) {
                     scrollActive = false;
                     host.onProductScrollEnd();

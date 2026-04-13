@@ -405,8 +405,35 @@ pub fn beginShellWordSelectionAtVisibleCell(row: i32, col: i32) i32 {
     return @intFromEnum(status);
 }
 
+pub fn extendShellSelectionGestureToVisibleCell(row: i32, col: i32) i32 {
+    if (row < 0 or col < 0) return @intFromEnum(android_shell_session.SelectionStatus.no_visible_cell);
+    const status = android_shell_session.extendSelectionGestureToVisibleCell(@intCast(row), @intCast(col));
+    if (status == .ok) refreshShellSurfaceAfterSelectionChange();
+    return @intFromEnum(status);
+}
+
+pub fn finishShellSelectionGesture() i32 {
+    const status = android_shell_session.finishSelectionGesture();
+    if (status == .ok) refreshShellSurfaceAfterSelectionChange();
+    return @intFromEnum(status);
+}
+
 pub fn clearShellSelection() i32 {
     const status = android_shell_session.clearSelection();
+    if (status == .ok) refreshShellSurfaceAfterSelectionChange();
+    return @intFromEnum(status);
+}
+
+pub fn updateShellSelectionStartAtVisibleCell(row: i32, col: i32) i32 {
+    if (row < 0 or col < 0) return @intFromEnum(android_shell_session.SelectionStatus.no_visible_cell);
+    const status = android_shell_session.updateSelectionEndpointAtVisibleCell(.start, @intCast(row), @intCast(col));
+    if (status == .ok) refreshShellSurfaceAfterSelectionChange();
+    return @intFromEnum(status);
+}
+
+pub fn updateShellSelectionEndAtVisibleCell(row: i32, col: i32) i32 {
+    if (row < 0 or col < 0) return @intFromEnum(android_shell_session.SelectionStatus.no_visible_cell);
+    const status = android_shell_session.updateSelectionEndpointAtVisibleCell(.end, @intCast(row), @intCast(col));
     if (status == .ok) refreshShellSurfaceAfterSelectionChange();
     return @intFromEnum(status);
 }
@@ -429,6 +456,38 @@ pub fn currentShellSelectionRectRight() i32 {
 
 pub fn currentShellSelectionRectBottom() i32 {
     return android_shell_session.currentSelectionViewportRect().bottom_px;
+}
+
+pub fn currentShellSelectionStartRectLeft() i32 {
+    return android_shell_session.currentSelectionEndpointViewportRect(.start).left_px;
+}
+
+pub fn currentShellSelectionStartRectTop() i32 {
+    return android_shell_session.currentSelectionEndpointViewportRect(.start).top_px;
+}
+
+pub fn currentShellSelectionStartRectRight() i32 {
+    return android_shell_session.currentSelectionEndpointViewportRect(.start).right_px;
+}
+
+pub fn currentShellSelectionStartRectBottom() i32 {
+    return android_shell_session.currentSelectionEndpointViewportRect(.start).bottom_px;
+}
+
+pub fn currentShellSelectionEndRectLeft() i32 {
+    return android_shell_session.currentSelectionEndpointViewportRect(.end).left_px;
+}
+
+pub fn currentShellSelectionEndRectTop() i32 {
+    return android_shell_session.currentSelectionEndpointViewportRect(.end).top_px;
+}
+
+pub fn currentShellSelectionEndRectRight() i32 {
+    return android_shell_session.currentSelectionEndpointViewportRect(.end).right_px;
+}
+
+pub fn currentShellSelectionEndRectBottom() i32 {
+    return android_shell_session.currentSelectionEndpointViewportRect(.end).bottom_px;
 }
 
 pub fn copyShellSelectionTextAlloc(allocator: std.mem.Allocator) !?[]u8 {
