@@ -84,21 +84,21 @@ A cut is done only if all are true:
   `*HostLifecycleCallbacks`) instead of activity-owned anonymous blocks
 - assist modifier latch presentation now lives in chrome host wiring instead of
   the activity
-- product runtime, chrome, surface, session, selection, and gesture assembly
-  now terminate in `host/` controllers and `TerminalHostAssembler` helpers
+- product runtime, chrome, surface, session, selection, gesture, input, and UI
+  construction now terminate in dedicated `host/*Factory` classes
 - chrome bridge/callback construction now lives in
-  `host/TerminalChromeHostFactory` to keep `TerminalHostAssembler` focused
+  `host/TerminalChromeHostFactory`
 - selection/gesture controller construction now lives in
-  `host/TerminalInteractionHostFactory` to keep `TerminalHostAssembler`
-  focused on shared/runtime/surface/session/input seams
+  `host/TerminalInteractionHostFactory`
 - hardware-keyboard and IME-focus-recovery controller construction now lives in
-  `host/TerminalInputHostFactory` instead of activity-local callback assembly
+  `host/TerminalInputHostFactory`
 - surface host bridge/callback construction now lives in
-  `host/TerminalSurfaceHostFactory` instead of generic host assembler helpers
+  `host/TerminalSurfaceHostFactory`
 - product-runtime/frame-loop construction now lives in
-  `host/TerminalRuntimeHostFactory` instead of generic host assembler helpers
+  `host/TerminalRuntimeHostFactory`
 - shell-session and userland-session host bridge construction now lives in
-  `host/TerminalSessionHostFactory` instead of generic host assembler helpers
+  `host/TerminalSessionHostFactory`
+- UI host construction now lives in `host/TerminalUiHostFactory`
 - terminal surface widget seam is established in
   `host/TerminalSurfaceWidgetController` for future tabbed hosting
 - debug surface snapshot composition moved to

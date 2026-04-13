@@ -41,12 +41,12 @@ import dev.zide.terminal.host.TerminalActivityViewBindings;
 import dev.zide.terminal.host.TerminalSurfaceHostCallbacks;
 import dev.zide.terminal.host.TerminalChromeHostFactory;
 import dev.zide.terminal.host.TerminalProductRuntimeHostCallbacks;
-import dev.zide.terminal.host.TerminalHostAssembler;
 import dev.zide.terminal.host.TerminalInteractionHostFactory;
 import dev.zide.terminal.host.TerminalInputHostFactory;
 import dev.zide.terminal.host.TerminalSurfaceHostFactory;
 import dev.zide.terminal.host.TerminalRuntimeHostFactory;
 import dev.zide.terminal.host.TerminalSessionHostFactory;
+import dev.zide.terminal.host.TerminalUiHostFactory;
 import dev.zide.terminal.host.TerminalProductShellStateHostCallbacks;
 import dev.zide.terminal.host.TerminalSurfaceWidgetHostCallbacks;
 import dev.zide.terminal.host.TerminalViewModeHostCallbacks;
@@ -434,7 +434,7 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void assembleWidgetHostControllers() {
-        terminalProductShellStateHostBridge = TerminalHostAssembler.createProductShellStateHostBridge(
+        terminalProductShellStateHostBridge = TerminalUiHostFactory.createProductShellStateHostBridge(
                 productBootstrapBlocker,
                 terminalScrollOverlay,
                 productBootstrapTitle,
@@ -478,7 +478,7 @@ public final class ZideTerminalActivity extends Activity
                         this::sendDirectText,
                         this::updateStatus));
         terminalChromeController = new TerminalChromeController(chromeHostBridge);
-        terminalViewModeController = TerminalHostAssembler.createViewModeController(
+        terminalViewModeController = TerminalUiHostFactory.createViewModeController(
                 productView,
                 debugView,
                 terminalScrollOverlay,
@@ -541,7 +541,7 @@ public final class ZideTerminalActivity extends Activity
                                 },
                                 () -> terminalSurfaceWidgetController)));
         surfaceHostController = new TerminalSurfaceHostController(surfaceHostBridge);
-        terminalSurfaceWidgetController = TerminalHostAssembler.createSurfaceWidgetController(
+        terminalSurfaceWidgetController = TerminalUiHostFactory.createSurfaceWidgetController(
                 surfaceHostController,
                 selectionController,
                 terminalGestureStateController,

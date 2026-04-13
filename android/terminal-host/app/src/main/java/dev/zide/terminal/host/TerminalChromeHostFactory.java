@@ -14,8 +14,8 @@ import dev.zide.terminal.input.ShellInputView;
 /**
  * Chrome host assembly helpers.
  *
- * <p>Owns creation of chrome bridge/callback adapter instances so
- * {@link TerminalHostAssembler} does not accumulate domain-specific construction logic.
+ * <p>Owns creation of chrome bridge/callback adapter instances so generic
+ * host wiring does not accumulate domain-specific construction logic.
  */
 public final class TerminalChromeHostFactory {
     private TerminalChromeHostFactory() {

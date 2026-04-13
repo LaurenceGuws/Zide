@@ -7,9 +7,9 @@ import android.widget.TextView;
 import dev.zide.terminal.gesture.TerminalGestureStateController;
 import dev.zide.terminal.selection.TerminalSelectionController;
 
-/** Assembly helpers for Android terminal host controllers and bridges. */
-public final class TerminalHostAssembler {
-    private TerminalHostAssembler() {
+/** UI host assembly helpers. */
+public final class TerminalUiHostFactory {
+    private TerminalUiHostFactory() {
     }
 
     public static TerminalProductShellStateHostBridge createProductShellStateHostBridge(
@@ -53,5 +53,4 @@ public final class TerminalHostAssembler {
                 terminalGestureStateController,
                 host);
     }
-
 }
