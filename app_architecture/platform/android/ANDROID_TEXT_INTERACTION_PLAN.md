@@ -151,7 +151,7 @@ Acceptance:
 - selection can expand beyond the initial long-press word/range
 - toolbar anchor updates through `invalidateContentRect()`
 - gesture arbitration remains explicit against:
-  - tap-to-focus IME
+  - tap-based deselection
   - vertical scrollback drag/fling
   - pinch zoom
   - left-edge sidebar swipe
@@ -177,12 +177,29 @@ Acceptance:
 - no desktop mouse-selection emulation as the mobile product answer
 - no Android-local selection truth that can diverge from shared terminal state
 
-## Current First Cut
+## Current Baseline
 
-Start with `AT-A1`:
+`AT-A1` and `AT-A2` are now met.
 
-- expose minimal selection geometry and state from native
-- anchor the native floating toolbar correctly
-- only then wire `Copy`
+What is proved:
 
-Do not start with menu actions before geometry is real.
+- long press starts terminal-owned word selection from product-surface touch
+  coordinates
+- Java starts `ActionMode.TYPE_FLOATING` with `ActionMode.Callback2`
+- `onGetContentRect(...)` anchors the floating toolbar from terminal-owned
+  selection geometry
+- `Copy` reads selected text directly from Zig through JNI and writes it to
+  Android `ClipboardManager`
+- `Copy` clears selection after the action completes
+- IME visibility is no longer owned by product-surface tap; the assist bar owns
+  explicit IME open/close
+- tap policy is now selection-scoped:
+  - tap inside active selection: preserve selection
+  - tap outside active selection: clear selection
+
+What remains for the next cut:
+
+- `AT-A3` drag expansion
+- autoscroll/scrollback integration while expanding a selection beyond the
+  current viewport
+- exact tap/drag arbitration once selection expansion exists

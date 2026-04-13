@@ -28,6 +28,7 @@
     <string name="product_bootstrap_installing">Installing…</string>
     <string name="product_bootstrap_retry">Retry</string>
     <string name="product_bootstrap_debug">Open Debug</string>
+    <string name="assist_ime">IME</string>
     <string name="assist_esc">Esc</string>
     <string name="assist_tab">Tab</string>
     <string name="assist_ctrl">Ctrl</string>

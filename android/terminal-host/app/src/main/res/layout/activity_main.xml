@@ -101,6 +101,14 @@
                 android:paddingEnd="4dp">
 
                 <Button
+                    android:id="@+id/assist_ime_button"
+                    style="@android:style/Widget.Material.Button.Borderless"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:minWidth="56dp"
+                    android:text="@string/assist_ime" />
+
+                <Button
                     android:id="@+id/assist_esc_button"
                     style="@android:style/Widget.Material.Button.Borderless"
                     android:layout_width="wrap_content"

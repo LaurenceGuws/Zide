@@ -431,6 +431,10 @@ pub fn currentShellSelectionRectBottom() i32 {
     return android_shell_session.currentSelectionViewportRect().bottom_px;
 }
 
+pub fn copyShellSelectionTextAlloc(allocator: std.mem.Allocator) !?[]u8 {
+    return try android_shell_session.selectionTextAlloc(allocator);
+}
+
 /// Direct shell input must not depend on a separate Java refresh loop to become
 /// visible. When input reaches the PTY successfully, Android-owned shell
 /// hosting must poll terminal state immediately, invalidate widget

@@ -13,7 +13,7 @@ import android.view.VelocityTracker;
  * host normalizes touch/pinch behavior into a small product contract:
  *
  * <ul>
- *   <li>single-tap for IME focus
+ *   <li>single-tap for product surface policy
  *   <li>resolved vertical drag for scrollback
  *   <li>long press for Android-native text interaction
  *   <li>pinch-begin / quantized pinch-step / pinch-end for terminal zoom
@@ -29,8 +29,8 @@ final class ProductGestureController {
      * <p>The host owns product actions; this controller owns gesture detection and quantization.
      */
     interface Host {
-        /** Opens or focuses the product IME target after a resolved single tap. */
-        void onProductSingleTap();
+        /** Applies the resolved single-tap product-surface policy at the tap location. */
+        void onProductSingleTap(float x, float y);
 
         /** Marks the beginning of a resolved single-pointer vertical scrollback gesture. */
         void onProductScrollBegin();
@@ -210,7 +210,7 @@ final class ProductGestureController {
                         host.onProductScrollFling(velocityY);
                     }
                 } else if (!pinchActive && !moved && event.getPointerCount() == 1) {
-                    host.onProductSingleTap();
+                    host.onProductSingleTap(event.getX(), event.getY());
                 }
                 pinchActive = false;
                 moved = false;

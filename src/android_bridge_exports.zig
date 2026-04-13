@@ -1,4 +1,8 @@
 const android_runtime_bridge = @import("platform/android_runtime_bridge.zig");
+const std = @import("std");
+const jni = @cImport({
+    @cInclude("jni.h");
+});
 
 fn onCreateBridge() i64 {
     return @intCast(android_runtime_bridge.noteCreate());
@@ -182,6 +186,27 @@ fn currentShellSelectionRectBottomBridge() i32 {
 
 fn sharedShellRendererActiveBridge() bool {
     return android_runtime_bridge.sharedShellRendererActive();
+}
+
+fn currentShellSelectionTextBytesBridge(env: ?*anyopaque) ?*anyopaque {
+    const jenv_ptr: ?*jni.JNIEnv = @ptrCast(@alignCast(env));
+    const jenv = jenv_ptr orelse return null;
+    const fns = jenv.*.*;
+    const selection = android_runtime_bridge.copyShellSelectionTextAlloc(std.heap.c_allocator) catch return null;
+    const bytes = selection orelse return null;
+    defer std.heap.c_allocator.free(bytes);
+
+    const array = fns.NewByteArray.?(jenv, @intCast(bytes.len)) orelse return null;
+    if (bytes.len > 0) {
+        fns.SetByteArrayRegion.?(
+            jenv,
+            array,
+            0,
+            @intCast(bytes.len),
+            @ptrCast(bytes.ptr),
+        );
+    }
+    return array;
 }
 
 export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeOnCreateBridge(
@@ -510,6 +535,13 @@ export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentShellSelectio
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return currentShellSelectionRectBottomBridge();
+}
+
+export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentShellSelectionTextBytesBridge(
+    env: ?*anyopaque,
+    _: ?*anyopaque,
+) callconv(.c) ?*anyopaque {
+    return currentShellSelectionTextBytesBridge(env);
 }
 
 export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeSharedShellRendererActiveBridge(

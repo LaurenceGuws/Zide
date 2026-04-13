@@ -140,6 +140,23 @@ pub const SelectionViewportRect = struct {
     bottom_px: i32 = 0,
 };
 
+pub fn selectionTextAlloc(allocator: std.mem.Allocator) !?[]u8 {
+    const active = session orelse return null;
+    var buffer = std.mem.zeroes(c_api.ZideTerminalStringBuffer);
+    if (c_api.zide_terminal_selection_text(active.handle, &buffer) != 0) {
+        return error.SelectionTextUnavailable;
+    }
+    defer c_api.zide_terminal_string_free(&buffer);
+    const ptr = buffer.ptr orelse return null;
+    if (buffer.len == 0) {
+        const empty = try allocator.alloc(u8, 0);
+        return empty;
+    }
+    const out = try allocator.alloc(u8, buffer.len);
+    std.mem.copyForwards(u8, out, ptr[0..buffer.len]);
+    return out;
+}
+
 pub fn sendText(text: []const u8) SendStatus {
     const active = session orelse return .no_session;
     if (text.len == 0) return .ok;

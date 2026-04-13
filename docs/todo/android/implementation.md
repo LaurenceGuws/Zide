@@ -254,8 +254,8 @@ Acceptance:
 - verify `Esc`, `Ctrl`, and resize/IME viewport behavior are usable enough for
   editing a small file
 - verify pinch font zoom is usable while preserving keyboard defaults:
-  single tap opens IME; pinch changes shared renderer zoom; long press remains
-  unclaimed until a concrete product gesture owns it
+  assist-bar IME toggle owns keyboard visibility; pinch changes shared
+  renderer zoom; long press owns native text selection
 - record any terminal-rendering or input gaps as concrete tickets instead of
   reopening package/userland architecture
 
@@ -271,7 +271,8 @@ Status:
   - current ownership mismatch is explicit:
     - shared Zig terminal widget still owns scrollbar rendering, pointer-driven
       scrollback drag, and pointer-driven selection behavior
-    - Android host owns only single-tap IME focus and pinch zoom
+    - Android host currently owns IME visibility policy, pinch zoom, and
+      product-native selection entry
   - that does not match the intended mobile product model:
     - scrollbar should be Android-owned overlay rendering, not texture content
     - scrollback scrolling should be driven by Android gesture policy
@@ -367,17 +368,17 @@ Status:
   - left-edge sidebar swipe remains owned by the dedicated edge-hotspot view,
     not by the product surface
   - product surface single-pointer contract is:
-    - tap with no resolved drag: open/focus IME
+    - tap with no resolved drag: clear selection when active; otherwise no-op
     - resolved vertical drag: scrollback gesture
-    - long press: reserved for future selection, still unclaimed for now
+    - long press: start Android-native text selection
   - product surface multi-pointer contract is:
     - two-pointer gesture immediately steals ownership for pinch zoom
     - an active single-pointer scroll gesture must end before pinch begins
   - drag resolution rules:
     - vertical drag only resolves after touch-slop
     - horizontal drift must not steal ownership from terminal product gestures
-    - once scrollback drag is resolved, tap-to-focus must no longer fire for
-      that gesture
+    - once scrollback drag is resolved, tap-based deselection must no longer
+      fire for that gesture
   - sequencing rule:
     - finish scrollback default behavior first
     - then add long-press selection / copy / paste on top of the settled
@@ -399,7 +400,7 @@ Status:
   - start rule:
     - do not wire copy/paste actions before `ActionMode.Callback2` anchoring
       works against real selection geometry
-  - first implementation cut is now in progress:
+  - `AT-A1` / `AT-A2` baseline is now met:
     - shared render-cache selection bounds are now exposed as a reusable shared
       helper instead of Android-local selection geometry math
     - Android bridge now exposes:
@@ -408,14 +409,27 @@ Status:
       - clear selection
       - current selection active state
       - current selection viewport rect
+      - selected text as direct JNI bytes for clipboard copy
     - `ProductGestureController` now resolves long press as a first-class
-      product gesture instead of leaving long press unclaimed
+      product gesture and reports tap coordinates for location-aware selection
+      policy
     - product long press now maps touch to terminal cell coordinates and starts
       terminal-owned word selection
-  - current stop marker:
-    - selection highlight may change on long press, but no toolbar/copy action
-      should be claimed done until `ActionMode.Callback2` is anchored against
-      the native selection rect
+    - single tap no longer opens IME; assist-bar IME toggle now owns keyboard
+      visibility so surface taps are free for selection lifecycle policy
+    - Android now starts a real floating `ActionMode.Callback2` anchored from
+      the native selection rect; no custom top bar or permanent button remains
+    - Android `Copy` now updates clipboard content directly from terminal-owned
+      selected text and clears selection after completion
+    - current accepted tap/selection policy:
+      - tap inside active selection preserves it
+      - tap outside active selection clears it
+      - new long press replaces the prior selection
+      - IME visibility is explicit on the assist bar, not on product-surface
+        taps
+  - next stop marker:
+    - move into `AT-A3` drag expansion with scroll/autoscroll integration
+      instead of more toolbar or IME polish
 - current Android pinch/zoom result is accepted for this lane:
   - host-side gesture policy is explicit and stable
   - raw detector churn is quantized/coalesced host-side

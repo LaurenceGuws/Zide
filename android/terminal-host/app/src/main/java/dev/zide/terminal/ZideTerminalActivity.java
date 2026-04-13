@@ -1,8 +1,11 @@
 package dev.zide.terminal;
 
 import android.app.Activity;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Intent;
 import android.graphics.PixelFormat;
+import android.graphics.Rect;
 import android.graphics.Insets;
 import android.os.Bundle;
 import android.os.Handler;
@@ -12,6 +15,9 @@ import android.util.Log;
 import android.view.Choreographer;
 import android.view.Gravity;
 import android.view.InputDevice;
+import android.view.ActionMode;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.widget.OverScroller;
 import android.view.Surface;
@@ -138,6 +144,7 @@ public final class ZideTerminalActivity extends Activity
     private int flingLastScrollY = 0;
     private boolean flingScrollScheduled = false;
     private OverScroller scrollbackFlingScroller;
+    private ActionMode terminalSelectionActionMode;
     private final Runnable productFrameRunnable = new Runnable() {
         @Override
         public void run() {
@@ -614,6 +621,11 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void bindAssistBar() {
+        final Button imeButton = findViewById(R.id.assist_ime_button);
+        imeButton.setOnClickListener(view -> {
+            toggleIme();
+            appendEvent("assist.ime");
+        });
         bindAssistButton(R.id.assist_esc_button, "\u001b", "assist.esc");
         bindAssistButton(R.id.assist_tab_button, "\t", "assist.tab");
         bindModifierAssistButton(assistCtrlButton, ShellInputView.ModifierLatch.CTRL, "assist.ctrl");
@@ -656,7 +668,6 @@ public final class ZideTerminalActivity extends Activity
         button.setOnClickListener(view -> {
             shellInputView.toggleModifierLatch(modifier);
             appendEvent(eventName + " toggled");
-            openIme();
         });
     }
 
@@ -669,8 +680,18 @@ public final class ZideTerminalActivity extends Activity
     }
 
     @Override
-    public void onProductSingleTap() {
-        openIme();
+    public void onProductSingleTap(float x, float y) {
+        if (!nativeLoaded || !nativeCurrentShellSelectionActiveBridge()) {
+            return;
+        }
+        if (tapHitsCurrentSelection(x, y)) {
+            appendEvent("product.selection tap=inside");
+            return;
+        }
+        nativeClearShellSelectionBridge();
+        finishTerminalSelectionActionMode();
+        reevaluateProductFrameLoop();
+        appendEvent("product.selection cleared=tap-outside");
     }
 
     @Override
@@ -737,6 +758,9 @@ public final class ZideTerminalActivity extends Activity
         stopScrollbackFling();
         final int status = nativeBeginShellWordSelectionAtVisibleCellBridge(hit.row, hit.col);
         appendEvent("product.selection word row=" + hit.row + " col=" + hit.col + " status=" + status);
+        if (status == 0) {
+            showTerminalSelectionActionMode();
+        }
         reevaluateProductFrameLoop();
     }
 
@@ -879,6 +903,129 @@ public final class ZideTerminalActivity extends Activity
         final int col = Math.max(0, Math.min(visibleCols - 1, (int) (x / colWidthPx)));
         final int row = Math.max(0, Math.min(visibleRows - 1, (int) (y / rowHeightPx)));
         return new TerminalCellHit(row, col);
+    }
+
+    private boolean tapHitsCurrentSelection(float x, float y) {
+        final Rect rect = new Rect();
+        if (!populateTerminalSelectionContentRect(rect)) {
+            return false;
+        }
+        final int tapX = Math.round(x);
+        final int tapY = Math.round(y);
+        return rect.contains(tapX, tapY);
+    }
+
+    private void showTerminalSelectionActionMode() {
+        if (!nativeCurrentShellSelectionActiveBridge() || productSurfaceContainer == null) {
+            finishTerminalSelectionActionMode();
+            return;
+        }
+        if (terminalSelectionActionMode != null) {
+            terminalSelectionActionMode.invalidateContentRect();
+            terminalSelectionActionMode.invalidate();
+            return;
+        }
+        terminalSelectionActionMode = productSurfaceContainer.startActionMode(
+                new ActionMode.Callback2() {
+                    @Override
+                    public boolean onCreateActionMode(ActionMode mode, Menu menu) {
+                        menu.add(Menu.NONE, android.R.id.copy, Menu.NONE, android.R.string.copy)
+                                .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);
+                        return true;
+                    }
+
+                    @Override
+                    public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
+                        if (item.getItemId() == android.R.id.copy) {
+                            copyCurrentShellSelectionToClipboard();
+                            mode.finish();
+                            return true;
+                        }
+                        return false;
+                    }
+
+                    @Override
+                    public void onDestroyActionMode(ActionMode mode) {
+                        if (terminalSelectionActionMode == mode) {
+                            terminalSelectionActionMode = null;
+                        }
+                        nativeClearShellSelectionBridge();
+                        reevaluateProductFrameLoop();
+                    }
+
+                    @Override
+                    public void onGetContentRect(ActionMode mode, View view, Rect outRect) {
+                        if (!populateTerminalSelectionContentRect(outRect)) {
+                            outRect.set(0, 0, Math.max(view.getWidth(), 1), Math.max(view.getHeight(), 1));
+                        }
+                    }
+                },
+                ActionMode.TYPE_FLOATING);
+        if (terminalSelectionActionMode != null) {
+            terminalSelectionActionMode.invalidateContentRect();
+        }
+    }
+
+    private void finishTerminalSelectionActionMode() {
+        if (terminalSelectionActionMode == null) {
+            return;
+        }
+        final ActionMode mode = terminalSelectionActionMode;
+        terminalSelectionActionMode = null;
+        mode.finish();
+    }
+
+    private boolean populateTerminalSelectionContentRect(Rect outRect) {
+        if (!nativeLoaded || !nativeCurrentShellSelectionActiveBridge()) {
+            return false;
+        }
+        final int left = nativeCurrentShellSelectionRectLeftBridge();
+        final int top = nativeCurrentShellSelectionRectTopBridge();
+        final int right = nativeCurrentShellSelectionRectRightBridge();
+        final int bottom = nativeCurrentShellSelectionRectBottomBridge();
+        if (right <= left || bottom <= top) {
+            return false;
+        }
+        final int width = productViewportWidthPx();
+        final int height = productViewportHeightPx();
+        outRect.set(
+                Math.max(0, Math.min(left, width)),
+                Math.max(0, Math.min(top, height)),
+                Math.max(0, Math.min(right, width)),
+                Math.max(0, Math.min(bottom, height)));
+        return !outRect.isEmpty();
+    }
+
+    private void syncTerminalSelectionActionMode() {
+        if (terminalSelectionActionMode == null) {
+            return;
+        }
+        if (!nativeCurrentShellSelectionActiveBridge()) {
+            finishTerminalSelectionActionMode();
+            return;
+        }
+        terminalSelectionActionMode.invalidateContentRect();
+    }
+
+    private void copyCurrentShellSelectionToClipboard() {
+        final byte[] bytes = nativeCurrentShellSelectionTextBytesBridge();
+        if (bytes == null) {
+            appendEvent("product.selection copy=no-bytes");
+            return;
+        }
+        final String text = new String(bytes, StandardCharsets.UTF_8);
+        final ClipboardManager clipboard = getSystemService(ClipboardManager.class);
+        if (clipboard == null) {
+            appendEvent("product.selection copy=no-clipboard");
+            return;
+        }
+        clipboard.setPrimaryClip(ClipData.newPlainText("Zide terminal selection", text));
+        appendEvent("product.selection copy len=" + text.length());
     }
 
     /**
@@ -1037,6 +1184,26 @@ public final class ZideTerminalActivity extends Activity
         imeVisible = shown || shellInputView.hasFocus();
         appendEvent("manual.imeOpen shown=" + shown + " focus=" + shellInputView.hasFocus());
         updateStatus("ime-shown");
+    }
+
+    private void closeIme() {
+        final InputMethodManager imm = getSystemService(InputMethodManager.class);
+        if (imm == null) {
+            appendEvent("manual.ime unavailable=true");
+            return;
+        }
+        final boolean hidden = imm.hideSoftInputFromWindow(shellInputView.getWindowToken(), 0);
+        imeVisible = false;
+        appendEvent("manual.imeClose hidden=" + hidden);
+        updateStatus("ime-hidden");
+    }
+
+    private void toggleIme() {
+        if (currentImeVisible()) {
+            closeIme();
+            return;
+        }
+        openIme();
     }
 
     private void openSidebar() {
@@ -1203,6 +1370,7 @@ public final class ZideTerminalActivity extends Activity
         appendEvent("viewport.changed reason=" + reason + " size=" + width + "x" + height + " imeVisible=" + viewportImeVisible);
         final long seq = nativeLoaded ? nativeOnVisibleViewportBridge(width, height, viewportImeVisible) : -1;
         callNativeWithSurfaceState("native.viewportChanged", seq, currentSurfaceStateSnapshot());
+        syncTerminalSelectionActionMode();
         updateStatus("viewport-updated");
     }
 
@@ -1256,6 +1424,7 @@ public final class ZideTerminalActivity extends Activity
                 nativeCurrentShellVisibleRowsBridge(),
                 nativeCurrentShellScrollbackCountBridge(),
                 nativeCurrentShellScrollbackOffsetBridge());
+        syncTerminalSelectionActionMode();
     }
 
     private int productBootstrapTitle(UserlandBootstrapState state, UserlandInstallState installState, boolean rendererMissing) {
@@ -1738,6 +1907,8 @@ public final class ZideTerminalActivity extends Activity
     private static native int nativeCurrentShellSelectionRectRightBridge();
 
     private static native int nativeCurrentShellSelectionRectBottomBridge();
+
+    private static native byte[] nativeCurrentShellSelectionTextBytesBridge();
 
     private static native boolean nativeSharedShellRendererActiveBridge();
 }
