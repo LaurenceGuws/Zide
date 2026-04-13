@@ -752,6 +752,7 @@ public final class TerminalSelectionController {
         if (selectionDragMode == SelectionDragMode.startHandle || selectionDragMode == SelectionDragMode.endHandle) {
             return;
         }
+        bringToFront();
         syncSelectionHandle(selectionStartHandle, true);
         syncSelectionHandle(selectionEndHandle, false);
     }
@@ -794,6 +795,7 @@ public final class TerminalSelectionController {
 
     private void showSelectionHandle(View handle) {
         handle.animate().cancel();
+        handle.bringToFront();
         handle.setAlpha(0.95f);
         handle.setVisibility(View.VISIBLE);
     }

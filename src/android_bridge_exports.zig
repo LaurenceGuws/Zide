@@ -257,42 +257,42 @@ fn currentShellSelectionTextBytesBridge(env: ?*anyopaque) ?*anyopaque {
     return array;
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeOnCreateBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeOnCreateBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return onCreateBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeOnStartBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeOnStartBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return onStartBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeOnResumeBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeOnResumeBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return onResumeBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeOnPauseBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeOnPauseBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return onPauseBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeOnStopBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeOnStopBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return onStopBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeOnWindowFocusBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeOnWindowFocusBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
     focused: bool,
@@ -300,7 +300,7 @@ export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeOnWindowFocusBridge(
     return onWindowFocusBridge(focused);
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeOnSurfaceAvailableBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeOnSurfaceAvailableBridge(
     env: ?*anyopaque,
     _: ?*anyopaque,
     surface: ?*anyopaque,
@@ -310,21 +310,21 @@ export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeOnSurfaceAvailableBr
     return onSurfaceAvailableBridge(env, surface, width, height);
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeOnSurfaceDestroyedBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeOnSurfaceDestroyedBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return onSurfaceDestroyedBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeOnSurfaceRedrawNeededBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeOnSurfaceRedrawNeededBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return onSurfaceRedrawNeededBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeOnVisibleViewportBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeOnVisibleViewportBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
     width: i32,
@@ -334,7 +334,7 @@ export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeOnVisibleViewportBri
     return onVisibleViewportBridge(width, height, ime_visible);
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeApplyTerminalPinchZoomBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeApplyTerminalPinchZoomBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
     scale_factor: f32,
@@ -342,7 +342,7 @@ export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeApplyTerminalPinchZo
     return applyTerminalPinchZoomBridge(scale_factor);
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeSetTerminalPinchActiveBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeSetTerminalPinchActiveBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
     active: bool,
@@ -350,140 +350,140 @@ export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeSetTerminalPinchActi
     return setTerminalPinchActiveBridge(active);
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentWindowTokenBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeCurrentWindowTokenBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return currentWindowTokenBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentSurfaceEpochBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeCurrentSurfaceEpochBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return currentSurfaceEpochBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentSurfaceTransitionBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeCurrentSurfaceTransitionBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return currentSurfaceTransitionBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentRendererStatusBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeCurrentRendererStatusBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return currentRendererStatusBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentRendererSwapCountBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeCurrentRendererSwapCountBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return currentRendererSwapCountBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentRendererBoundEpochBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeCurrentRendererBoundEpochBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return currentRendererBoundEpochBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentRendererContextCreateCountBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeCurrentRendererContextCreateCountBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return currentRendererContextCreateCountBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentRendererSurfaceCreateCountBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeCurrentRendererSurfaceCreateCountBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return currentRendererSurfaceCreateCountBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentRendererTextureCreateCountBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeCurrentRendererTextureCreateCountBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return currentRendererTextureCreateCountBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentRendererTextureAliveBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeCurrentRendererTextureAliveBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) u8 {
     return currentRendererTextureAliveBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentRendererTextureUploadCountBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeCurrentRendererTextureUploadCountBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return currentRendererTextureUploadCountBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentRendererTextureUpdateCountBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeCurrentRendererTextureUpdateCountBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return currentRendererTextureUpdateCountBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentRendererTextureResizeCountBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeCurrentRendererTextureResizeCountBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return currentRendererTextureResizeCountBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentRendererTextureWidthBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeCurrentRendererTextureWidthBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return currentRendererTextureWidthBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentRendererTextureHeightBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeCurrentRendererTextureHeightBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return currentRendererTextureHeightBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeRestartShellSessionBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeRestartShellSessionBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return restartShellSessionBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativePollShellSessionBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativePollShellSessionBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return pollShellSessionBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeIsShellSessionAliveBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeIsShellSessionAliveBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) bool {
     return isShellSessionAliveBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeTickProductShellFrameBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeTickProductShellFrameBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return tickProductShellFrameBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeSendShellCodepointBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeSendShellCodepointBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
     codepoint: i32,
@@ -491,35 +491,35 @@ export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeSendShellCodepointBr
     return sendShellCodepointBridge(codepoint);
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentShellVisibleRowsBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeCurrentShellVisibleRowsBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return currentShellVisibleRowsBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentShellVisibleColsBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeCurrentShellVisibleColsBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return currentShellVisibleColsBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentShellScrollbackCountBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeCurrentShellScrollbackCountBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return currentShellScrollbackCountBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentShellScrollbackOffsetBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeCurrentShellScrollbackOffsetBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return currentShellScrollbackOffsetBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeSetShellScrollbackOffsetBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeSetShellScrollbackOffsetBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
     offset_rows: i32,
@@ -527,14 +527,14 @@ export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeSetShellScrollbackOf
     return setShellScrollbackOffsetBridge(offset_rows);
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeFollowShellLiveBottomBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeFollowShellLiveBottomBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return followShellLiveBottomBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeBeginShellWordSelectionAtVisibleCellBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeBeginShellWordSelectionAtVisibleCellBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
     row: i32,
@@ -543,7 +543,7 @@ export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeBeginShellWordSelect
     return beginShellWordSelectionAtVisibleCellBridge(row, col);
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeExtendShellSelectionGestureToVisibleCellBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeExtendShellSelectionGestureToVisibleCellBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
     row: i32,
@@ -552,21 +552,21 @@ export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeExtendShellSelection
     return extendShellSelectionGestureToVisibleCellBridge(row, col);
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeFinishShellSelectionGestureBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeFinishShellSelectionGestureBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return finishShellSelectionGestureBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeClearShellSelectionBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeClearShellSelectionBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return clearShellSelectionBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeUpdateShellSelectionStartAtVisibleCellBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeUpdateShellSelectionStartAtVisibleCellBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
     row: i32,
@@ -575,7 +575,7 @@ export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeUpdateShellSelection
     return updateShellSelectionStartAtVisibleCellBridge(row, col);
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeUpdateShellSelectionEndAtVisibleCellBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeUpdateShellSelectionEndAtVisibleCellBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
     row: i32,
@@ -584,105 +584,105 @@ export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeUpdateShellSelection
     return updateShellSelectionEndAtVisibleCellBridge(row, col);
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentShellSelectionActiveBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeCurrentShellSelectionActiveBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) bool {
     return currentShellSelectionActiveBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentShellSelectionRectLeftBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeCurrentShellSelectionRectLeftBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return currentShellSelectionRectLeftBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentShellSelectionRectTopBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeCurrentShellSelectionRectTopBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return currentShellSelectionRectTopBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentShellSelectionRectRightBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeCurrentShellSelectionRectRightBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return currentShellSelectionRectRightBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentShellSelectionRectBottomBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeCurrentShellSelectionRectBottomBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return currentShellSelectionRectBottomBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentShellSelectionStartRectLeftBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeCurrentShellSelectionStartRectLeftBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return currentShellSelectionStartRectLeftBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentShellSelectionStartRectTopBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeCurrentShellSelectionStartRectTopBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return currentShellSelectionStartRectTopBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentShellSelectionStartRectRightBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeCurrentShellSelectionStartRectRightBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return currentShellSelectionStartRectRightBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentShellSelectionStartRectBottomBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeCurrentShellSelectionStartRectBottomBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return currentShellSelectionStartRectBottomBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentShellSelectionEndRectLeftBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeCurrentShellSelectionEndRectLeftBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return currentShellSelectionEndRectLeftBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentShellSelectionEndRectTopBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeCurrentShellSelectionEndRectTopBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return currentShellSelectionEndRectTopBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentShellSelectionEndRectRightBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeCurrentShellSelectionEndRectRightBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return currentShellSelectionEndRectRightBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentShellSelectionEndRectBottomBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeCurrentShellSelectionEndRectBottomBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return currentShellSelectionEndRectBottomBridge();
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeCurrentShellSelectionTextBytesBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeCurrentShellSelectionTextBytesBridge(
     env: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) ?*anyopaque {
     return currentShellSelectionTextBytesBridge(env);
 }
 
-export fn Java_dev_zide_terminal_ZideTerminalActivity_nativeSharedShellRendererActiveBridge(
+export fn Java_dev_zide_terminal_TerminalNativeBridge_nativeSharedShellRendererActiveBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) bool {
