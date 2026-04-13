@@ -1119,7 +1119,6 @@ public final class ZideTerminalActivity extends Activity
             return;
         }
         final boolean viewportImeVisible = currentImeVisible();
-        final boolean imeVisibilityChanged = viewportImeVisible != notifiedViewportImeVisible;
         imeVisible = viewportImeVisible;
         final int width = Math.max(productContentFrame.getWidth(), 1);
         final int height = Math.max(productContentFrame.getHeight(), 1);
