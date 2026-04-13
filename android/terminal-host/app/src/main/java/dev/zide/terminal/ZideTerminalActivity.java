@@ -49,6 +49,8 @@ import dev.zide.terminal.host.TerminalSessionHostFactory;
 import dev.zide.terminal.host.TerminalUiHostFactory;
 import dev.zide.terminal.host.TerminalSessionAssembly;
 import dev.zide.terminal.host.TerminalSessionAssemblyHostCallbacks;
+import dev.zide.terminal.host.TerminalInputAssembly;
+import dev.zide.terminal.host.TerminalInputAssemblyHostCallbacks;
 import dev.zide.terminal.host.TerminalProductShellStateHostCallbacks;
 import dev.zide.terminal.host.TerminalSurfaceWidgetHostCallbacks;
 import dev.zide.terminal.host.TerminalViewModeHostCallbacks;
@@ -69,7 +71,6 @@ import dev.zide.terminal.debug.TerminalSurfaceStateSnapshotReader;
 import dev.zide.terminal.debug.TerminalSurfaceStateSnapshotHostCallbacks;
 import android.app.Activity;
 import android.content.Intent;
-import android.view.Gravity;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -344,14 +345,6 @@ public final class ZideTerminalActivity extends Activity
         return super.dispatchKeyEvent(event);
     }
 
-    private void installShellInputView() {
-        shellInputView = new ShellInputView(this, this);
-        final FrameLayout root = (FrameLayout) rootView;
-        final FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(1, 1);
-        lp.gravity = Gravity.BOTTOM | Gravity.START;
-        root.addView(shellInputView, lp);
-    }
-
     private void initializeStatusAndViewControllers() {
         final TerminalActivityViewBindings viewBindings = TerminalActivityViewBindings.from(this);
         packageStatusText = viewBindings.packageStatusText;
@@ -414,25 +407,26 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void installInputControllers() {
-        installShellInputView();
-        terminalHardwareKeyboardController = TerminalInputHostFactory.createHardwareKeyboardController(
-                () -> shellInputView,
-                () -> getSystemService(InputMethodManager.class),
-                () -> imeVisible,
-                visible -> imeVisible = visible,
-                () -> nativeLoaded,
-                TerminalNativeBridge::nativeFollowShellLiveBottomBridge,
-                () -> {
-                    if (terminalProductRuntimeController != null) {
-                        terminalProductRuntimeController.refreshProductScrollOverlay();
-                    }
-                },
-                this::updateStatus);
-        terminalImeFocusRecoveryController = TerminalInputHostFactory.createImeFocusRecoveryController(
-                () -> shellInputView,
-                () -> imeVisible,
-                this::appendEvent,
-                () -> getSystemService(InputMethodManager.class));
+        final TerminalInputAssembly.Result result = TerminalInputAssembly.assemble(
+                new TerminalInputAssemblyHostCallbacks(
+                        () -> this,
+                        () -> rootView,
+                        () -> this,
+                        () -> getSystemService(InputMethodManager.class),
+                        () -> imeVisible,
+                        visible -> imeVisible = visible,
+                        () -> nativeLoaded,
+                        TerminalNativeBridge::nativeFollowShellLiveBottomBridge,
+                        () -> {
+                            if (terminalProductRuntimeController != null) {
+                                terminalProductRuntimeController.refreshProductScrollOverlay();
+                            }
+                        },
+                        this::updateStatus,
+                        this::appendEvent));
+        shellInputView = result.shellInputView;
+        terminalHardwareKeyboardController = result.hardwareKeyboardController;
+        terminalImeFocusRecoveryController = result.imeFocusRecoveryController;
     }
 
     private void assembleWidgetHostControllers() {

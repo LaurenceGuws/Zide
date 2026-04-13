@@ -48,10 +48,12 @@ For active priorities/workflow, use
 
 Current shape markers (for hygiene tracking, not hard limits):
 
-- `ZideTerminalActivity.java`: `730` lines
+- `ZideTerminalActivity.java`: `724` lines
 - `host/TerminalChromeHostFactory.java`: `69` lines
 - `host/TerminalInteractionHostFactory.java`: `131` lines
 - `host/TerminalInputHostFactory.java`: `56` lines
+- `host/TerminalInputAssembly.java`: `93` lines
+- `host/TerminalInputAssemblyHostCallbacks.java`: `106` lines
 - `host/TerminalSurfaceHostFactory.java`: `67` lines
 - `host/TerminalRuntimeHostFactory.java`: `81` lines
 - `host/TerminalSessionHostFactory.java`: `52` lines
@@ -83,6 +85,8 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/TerminalChromeHostFactory.java` | Good | Owns chrome-specific bridge/callback construction so chrome assembly does not inflate the generic host assembler. | Keep this construction-only; do not move chrome behavior out of `TerminalChromeController`. |
 | `host/TerminalInteractionHostFactory.java` | Good | Owns selection/gesture interaction controller construction so interaction seams stay out of the generic host assembler. | Keep this construction-only; interaction behavior remains in selection/gesture controllers. |
 | `host/TerminalInputHostFactory.java` | Good | Owns hardware-keyboard and IME-focus-recovery controller construction so input seams stay out of generic host assembly. | Keep this construction-only; input behavior remains in `input/` controllers. |
+| `host/TerminalInputAssembly.java` | Good | Owns input-view installation and input-controller assembly composition for the activity wiring layer. | Keep this assembly-only; input behavior remains in `input/` controllers. |
+| `host/TerminalInputAssemblyHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalInputAssembly`. | Keep adapter-only; avoid adding input behavior here. |
 | `host/TerminalSurfaceHostFactory.java` | Good | Owns surface host bridge/callback construction so surface lifecycle assembly stays out of generic host assembly. | Keep this construction-only; surface behavior remains in surface host controllers/bridges. |
 | `host/TerminalRuntimeHostFactory.java` | Good | Owns product-runtime and frame-loop construction so runtime assembly stays out of generic host assembly. | Keep this construction-only; runtime behavior remains in runtime controllers. |
 | `host/TerminalSessionHostFactory.java` | Good | Owns shell-session and userland-session host bridge construction so session seams stay out of generic host assembly. | Keep this construction-only; session behavior remains in session/userland coordinators. |
