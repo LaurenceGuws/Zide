@@ -43,6 +43,7 @@ import dev.zide.terminal.host.TerminalChromeHostFactory;
 import dev.zide.terminal.host.TerminalProductRuntimeHostCallbacks;
 import dev.zide.terminal.host.TerminalHostAssembler;
 import dev.zide.terminal.host.TerminalInteractionHostFactory;
+import dev.zide.terminal.host.TerminalInputHostFactory;
 import dev.zide.terminal.host.TerminalProductShellStateHostCallbacks;
 import dev.zide.terminal.host.TerminalSurfaceWidgetHostCallbacks;
 import dev.zide.terminal.host.TerminalViewModeHostCallbacks;
@@ -409,7 +410,7 @@ public final class ZideTerminalActivity extends Activity
 
     private void installInputControllers() {
         installShellInputView();
-        terminalHardwareKeyboardController = TerminalHostAssembler.createHardwareKeyboardController(
+        terminalHardwareKeyboardController = TerminalInputHostFactory.createHardwareKeyboardController(
                 () -> shellInputView,
                 () -> getSystemService(InputMethodManager.class),
                 () -> imeVisible,
@@ -422,7 +423,7 @@ public final class ZideTerminalActivity extends Activity
                     }
                 },
                 this::updateStatus);
-        terminalImeFocusRecoveryController = TerminalHostAssembler.createImeFocusRecoveryController(
+        terminalImeFocusRecoveryController = TerminalInputHostFactory.createImeFocusRecoveryController(
                 () -> shellInputView,
                 () -> imeVisible,
                 this::appendEvent,

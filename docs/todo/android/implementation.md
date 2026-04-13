@@ -92,7 +92,7 @@ A cut is done only if all are true:
   `host/TerminalInteractionHostFactory` to keep `TerminalHostAssembler`
   focused on shared/runtime/surface/session/input seams
 - hardware-keyboard and IME-focus-recovery controller construction now lives in
-  `TerminalHostAssembler` helpers instead of activity-local callback assembly
+  `host/TerminalInputHostFactory` instead of activity-local callback assembly
 - terminal surface widget seam is established in
   `host/TerminalSurfaceWidgetController` for future tabbed hosting
 - debug surface snapshot composition moved to
