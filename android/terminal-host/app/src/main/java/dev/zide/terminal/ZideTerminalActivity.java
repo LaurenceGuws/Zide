@@ -44,6 +44,7 @@ import dev.zide.terminal.host.TerminalProductRuntimeHostCallbacks;
 import dev.zide.terminal.host.TerminalHostAssembler;
 import dev.zide.terminal.host.TerminalInteractionHostFactory;
 import dev.zide.terminal.host.TerminalInputHostFactory;
+import dev.zide.terminal.host.TerminalSurfaceHostFactory;
 import dev.zide.terminal.host.TerminalProductShellStateHostCallbacks;
 import dev.zide.terminal.host.TerminalSurfaceWidgetHostCallbacks;
 import dev.zide.terminal.host.TerminalViewModeHostCallbacks;
@@ -493,11 +494,11 @@ public final class ZideTerminalActivity extends Activity
                             }
                         },
                         () -> userlandSessionCoordinator.refreshAndApply(false)));
-        surfaceHostBridge = TerminalHostAssembler.createSurfaceHostBridge(
-                TerminalHostAssembler.createSurfaceHostCallbacks(
+        surfaceHostBridge = TerminalSurfaceHostFactory.createSurfaceHostBridge(
+                TerminalSurfaceHostFactory.createSurfaceHostCallbacks(
                         handler,
                         productSurfaceContainer,
-                        TerminalHostAssembler.createSurfaceHostLifecycleCallbacks(
+                        TerminalSurfaceHostFactory.createSurfaceHostLifecycleCallbacks(
                                 () -> nativeLoaded,
                                 () -> debugViewEnabled,
                                 this::currentImeVisible,
