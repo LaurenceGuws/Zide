@@ -171,7 +171,7 @@ public final class SurfaceController {
 
         host.setSurfaceHostGeneration(host.surfaceHostGeneration() + 1);
         final SurfaceView nextSurfaceView = createAndAttachSurfaceView();
-        final SurfaceHolder.Callback2 nextCallback = callback != null ? callback : host.surfaceCallback();
+        final SurfaceHolder.Callback2 nextCallback = resolveSurfaceCallback(callback);
         host.reinstallSurfaceCallback(nextSurfaceView, nextCallback);
         host.setSurfaceView(nextSurfaceView);
         host.appendEvent("surface.host.installed reason=" + reason + " generation=" + host.surfaceHostGeneration());
@@ -289,6 +289,10 @@ public final class SurfaceController {
                 Gravity.CENTER);
         host.productSurfaceContainer().addView(nextSurfaceView, params);
         return nextSurfaceView;
+    }
+
+    private SurfaceHolder.Callback2 resolveSurfaceCallback(SurfaceHolder.Callback2 callback) {
+        return callback != null ? callback : host.surfaceCallback();
     }
 
     private String surfaceChangedEvent(int format, int width, int height) {
