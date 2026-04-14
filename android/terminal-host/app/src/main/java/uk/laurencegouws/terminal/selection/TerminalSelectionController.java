@@ -150,6 +150,16 @@ public final class TerminalSelectionController {
         }
     }
 
+    private static final class AnchorPoint {
+        final float x;
+        final float y;
+
+        AnchorPoint(float x, float y) {
+            this.x = x;
+            this.y = y;
+        }
+    }
+
     private static final class ViewportGridMetrics {
         final int visibleRows;
         final int visibleCols;
@@ -316,12 +326,11 @@ public final class TerminalSelectionController {
                 return true;
             case MotionEvent.ACTION_MOVE:
                 positionDraggedHandle(handle, handle.getX() + event.getX(), handle.getY() + event.getY());
-                final float moveAnchorX = currentDraggedHandleAnchorX(handle);
-                final float moveAnchorY = currentDraggedHandleAnchorY(handle);
-                if (!commitSelectionDragIfNeeded(moveAnchorX, moveAnchorY)) {
+                final AnchorPoint moveAnchor = currentDraggedHandleAnchor(handle);
+                if (!commitSelectionDragIfNeeded(moveAnchor.x, moveAnchor.y)) {
                     return true;
                 }
-                if (updateSelectionFromPoint(moveAnchorX, moveAnchorY) == 0) {
+                if (updateSelectionFromPoint(moveAnchor.x, moveAnchor.y) == 0) {
                     onSelectionUpdateSuccessDuringDrag();
                 }
                 return true;
@@ -329,9 +338,8 @@ public final class TerminalSelectionController {
             case MotionEvent.ACTION_CANCEL:
                 if (selectionDragCommitted) {
                     positionDraggedHandle(handle, handle.getX() + event.getX(), handle.getY() + event.getY());
-                    final float releaseAnchorX = currentDraggedHandleAnchorX(handle);
-                    final float releaseAnchorY = currentDraggedHandleAnchorY(handle);
-                    if (updateSelectionFromPoint(releaseAnchorX, releaseAnchorY) == 0) {
+                    final AnchorPoint releaseAnchor = currentDraggedHandleAnchor(handle);
+                    if (updateSelectionFromPoint(releaseAnchor.x, releaseAnchor.y) == 0) {
                         onSelectionUpdateSuccess();
                     }
                 }
@@ -842,12 +850,8 @@ public final class TerminalSelectionController {
         return (handle.getY() + (handle.getHeight() / 2.0f)) - offsetY;
     }
 
-    private float currentDraggedHandleAnchorX(View handle) {
-        return selectionHandleAnchorX(handle);
-    }
-
-    private float currentDraggedHandleAnchorY(View handle) {
-        return selectionHandleAnchorY(handle);
+    private AnchorPoint currentDraggedHandleAnchor(View handle) {
+        return new AnchorPoint(selectionHandleAnchorX(handle), selectionHandleAnchorY(handle));
     }
 
     private void syncSelectionHandle(View handle, boolean startHandle) {
