@@ -188,6 +188,10 @@ Agent reporting contract (mandatory for cleanup campaign updates):
    - Completed: batch of four seams: `bindSidebarRestartNavButton`,
      `bindSidebarDebugNavButton`, `bindSidebarPackagesNavButton`, and
      `appendSurfaceHostInstalledTelemetry`.
+   - Completed: batch of four seams: `tryConsumeSidebarOpenEdgeSwipe`,
+     `tryConsumeSidebarCloseEdgeSwipe`,
+     `matchParentCenteredSurfaceHostLayoutParams`, and
+     `appendSurfaceHostRemovedTelemetry`.
    - Next: continue smallest ownership-clarity cuts in `ChromeController` or
      `SurfaceController` where watch-level pressure remains.
 3. Stabilize selection/scroll interaction behavior under manual device usage.
