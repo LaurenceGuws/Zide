@@ -242,7 +242,7 @@ public final class SurfaceController {
     }
 
     public void notifyVisibleViewport(String reason) {
-        if (host.debugViewEnabled() || host.productSurfaceContainer().getVisibility() != View.VISIBLE) {
+        if (shouldIgnoreVisibleViewportNotification()) {
             return;
         }
         final boolean viewportImeVisible = host.currentImeVisible();
@@ -254,6 +254,18 @@ public final class SurfaceController {
                 && viewportImeVisible == host.notifiedViewportImeVisible()) {
             return;
         }
+        publishVisibleViewportChange(reason, width, height, viewportImeVisible);
+    }
+
+    private boolean shouldIgnoreVisibleViewportNotification() {
+        return host.debugViewEnabled() || host.productSurfaceContainer().getVisibility() != View.VISIBLE;
+    }
+
+    private void publishVisibleViewportChange(
+            String reason,
+            int width,
+            int height,
+            boolean viewportImeVisible) {
         host.setNotifiedViewportSize(width, height, viewportImeVisible);
         host.appendEvent("viewport.size.changed reason=" + reason + " size=" + width + "x" + height + " imeVisible=" + viewportImeVisible);
         final long seq = host.nativeLoaded() ? host.nativeOnVisibleViewportBridge(width, height, viewportImeVisible) : -1;
