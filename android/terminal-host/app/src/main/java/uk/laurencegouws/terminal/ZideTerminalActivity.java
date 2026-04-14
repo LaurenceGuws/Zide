@@ -399,11 +399,12 @@ public final class ZideTerminalActivity extends Activity
                 this::hasWindowFocus,
                 () -> imeVisible,
                 visible -> imeVisible = visible,
-                () -> surfaceHostBridge,
-                () -> currentInstallState,
-                () -> currentReadinessState,
-                this::currentSurfaceStateSnapshot,
-                this::notifyVisibleViewportIfReady);
+                StatusViewCallbacks.StatusRuntimeBundle.of(
+                        () -> surfaceHostBridge,
+                        () -> currentInstallState,
+                        () -> currentReadinessState,
+                        this::currentSurfaceStateSnapshot,
+                        this::notifyVisibleViewportIfReady));
     }
 
     private LifecycleCallbacks createLifecycleCallbacks() {
