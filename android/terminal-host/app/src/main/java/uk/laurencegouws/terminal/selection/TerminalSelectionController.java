@@ -158,6 +158,10 @@ public final class TerminalSelectionController {
             this.x = x;
             this.y = y;
         }
+
+        static AnchorPoint of(float x, float y) {
+            return new AnchorPoint(x, y);
+        }
     }
 
     private static final class ViewportGridMetrics {
@@ -535,7 +539,7 @@ public final class TerminalSelectionController {
         if (!(colWidthPx > 0.0f) || !(rowHeightPx > 0.0f)) {
             return null;
         }
-        return new ViewportGridMetrics(
+        return viewportGridMetrics(
                 visibleRows,
                 visibleCols,
                 viewportWidth,
@@ -631,6 +635,22 @@ public final class TerminalSelectionController {
 
     private static int clampInt(int value, int min, int max) {
         return Math.max(min, Math.min(max, value));
+    }
+
+    private static ViewportGridMetrics viewportGridMetrics(
+            int visibleRows,
+            int visibleCols,
+            int viewportWidth,
+            int viewportHeight,
+            float colWidthPx,
+            float rowHeightPx) {
+        return new ViewportGridMetrics(
+                visibleRows,
+                visibleCols,
+                viewportWidth,
+                viewportHeight,
+                colWidthPx,
+                rowHeightPx);
     }
 
     private boolean isBridgeReady() {
@@ -851,7 +871,7 @@ public final class TerminalSelectionController {
     }
 
     private AnchorPoint currentDraggedHandleAnchor(View handle) {
-        return new AnchorPoint(selectionHandleAnchorX(handle), selectionHandleAnchorY(handle));
+        return AnchorPoint.of(selectionHandleAnchorX(handle), selectionHandleAnchorY(handle));
     }
 
     private void syncSelectionHandle(View handle, boolean startHandle) {
