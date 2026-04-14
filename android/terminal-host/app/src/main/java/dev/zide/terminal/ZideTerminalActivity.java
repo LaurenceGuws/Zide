@@ -122,7 +122,6 @@ public final class ZideTerminalActivity extends Activity
     private ShellInputView shellInputView;
     private TerminalHardwareKeyboardController terminalHardwareKeyboardController;
     private TerminalImeFocusRecoveryController terminalImeFocusRecoveryController;
-    private ProductGestureController productGestureController;
     private TerminalSelectionController selectionController;
     private TerminalGestureStateController terminalGestureStateController;
     private ShellSessionController shellSessionController;
@@ -511,7 +510,7 @@ public final class ZideTerminalActivity extends Activity
                                     }
                                 },
                                 nextSurfaceView -> {
-                                    productGestureController = new ProductGestureController(
+                                    final ProductGestureController productGestureController = new ProductGestureController(
                                             nextSurfaceView,
                                             terminalSurfaceWidgetController);
                                     productGestureController.install();
