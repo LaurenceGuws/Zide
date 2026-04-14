@@ -44,6 +44,8 @@ import dev.zide.terminal.host.TerminalProductRuntimeAssembly;
 import dev.zide.terminal.host.TerminalProductRuntimeAssemblyHostCallbacks;
 import dev.zide.terminal.host.TerminalUserlandWorkflowAssembly;
 import dev.zide.terminal.host.TerminalUserlandWorkflowAssemblyHostCallbacks;
+import dev.zide.terminal.host.TerminalActivityLifecycleController;
+import dev.zide.terminal.host.TerminalActivityLifecycleHostCallbacks;
 import dev.zide.terminal.debug.TerminalStatusController;
 import dev.zide.terminal.debug.TerminalSurfaceStateSnapshotReader;
 import android.app.Activity;
@@ -118,6 +120,7 @@ public final class ZideTerminalActivity extends Activity
     private TerminalSurfaceStateSnapshotReader terminalSurfaceStateSnapshotReader;
     private TerminalSurfaceWidgetController terminalSurfaceWidgetController;
     private TerminalProductRuntimeController terminalProductRuntimeController;
+    private TerminalActivityLifecycleController terminalActivityLifecycleController;
     private UserlandInstallState currentInstallState = UserlandInstallState.idle();
     private UserlandBootstrapState currentBootstrapState;
 
@@ -131,6 +134,7 @@ public final class ZideTerminalActivity extends Activity
         assembleUserlandWorkflowControllers();
         assembleWidgetHostControllers();
         assembleProductRuntimeController();
+        assembleActivityLifecycleController();
         currentBootstrapState = userlandSessionCoordinator.loadBootstrapState();
         installInputControllers();
         bindAndStartUiControllers();
@@ -140,17 +144,13 @@ public final class ZideTerminalActivity extends Activity
     @Override
     protected void onStart() {
         super.onStart();
-        appendEvent("activity.onStart");
-        callNative("native.onStart", nativeLoaded ? TerminalNativeBridge.nativeOnStartBridge() : -1);
-        updateStatus("started");
+        terminalActivityLifecycleController.onStart();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        appendEvent("activity.onResume");
-        callNative("native.onResume", nativeLoaded ? TerminalNativeBridge.nativeOnResumeBridge() : -1);
-        surfaceHostController.onResume(
+        terminalActivityLifecycleController.onResume(
                 getIntent().getBooleanExtra(EXTRA_DEBUG_RECREATE_SURFACE_ONCE, false),
                 getIntent().getBooleanExtra(EXTRA_DEBUG_RESIZE_SURFACE_ONCE, false),
                 getIntent().getBooleanExtra(EXTRA_DEBUG_START_SHELL_ONCE, false));
@@ -165,29 +165,20 @@ public final class ZideTerminalActivity extends Activity
 
     @Override
     protected void onPause() {
-        appendEvent("activity.onPause");
-        callNative("native.onPause", nativeLoaded ? TerminalNativeBridge.nativeOnPauseBridge() : -1);
-        productFrameLoopController.stop();
-        userlandSessionCoordinator.refreshAndApply(false);
-        surfaceHostController.onPause();
-        updateStatus("paused");
+        terminalActivityLifecycleController.onPause();
         super.onPause();
     }
 
     @Override
     protected void onStop() {
-        appendEvent("activity.onStop");
-        callNative("native.onStop", nativeLoaded ? TerminalNativeBridge.nativeOnStopBridge() : -1);
-        updateStatus("stopped");
+        terminalActivityLifecycleController.onStop();
         super.onStop();
     }
 
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
-        appendEvent("activity.onWindowFocusChanged focus=" + hasFocus);
-        callNative("native.onWindowFocus", nativeLoaded ? TerminalNativeBridge.nativeOnWindowFocusBridge(hasFocus) : -1);
-        updateStatus(hasFocus ? "window-focused" : "window-unfocused");
+        terminalActivityLifecycleController.onWindowFocusChanged(hasFocus);
     }
 
     @Override
@@ -461,6 +452,28 @@ public final class ZideTerminalActivity extends Activity
                         () -> terminalGestureStateController,
                         this::appendEvent,
                         this::updateStatus));
+    }
+
+    private void assembleActivityLifecycleController() {
+        terminalActivityLifecycleController = new TerminalActivityLifecycleController(
+                new TerminalActivityLifecycleHostCallbacks(
+                        () -> nativeLoaded,
+                        TerminalNativeBridge::nativeOnStartBridge,
+                        TerminalNativeBridge::nativeOnResumeBridge,
+                        TerminalNativeBridge::nativeOnPauseBridge,
+                        TerminalNativeBridge::nativeOnStopBridge,
+                        TerminalNativeBridge::nativeOnWindowFocusBridge,
+                        this::appendEvent,
+                        this::callNative,
+                        this::updateStatus,
+                        () -> productFrameLoopController.stop(),
+                        () -> userlandSessionCoordinator.refreshAndApply(false),
+                        () -> surfaceHostController.onPause(),
+                        (debugRecreateSurfaceOnce, debugResizeSurfaceOnce, debugStartShellOnce) -> surfaceHostController
+                                .onResume(
+                                        debugRecreateSurfaceOnce,
+                                        debugResizeSurfaceOnce,
+                                        debugStartShellOnce)));
     }
 
     private void bindAndStartUiControllers() {
