@@ -70,6 +70,8 @@ import dev.zide.terminal.host.TerminalStatusHostCallbacks;
 import dev.zide.terminal.host.TerminalViewportHostCallbacks;
 import dev.zide.terminal.host.TerminalSurfaceHostLifecycleCallbacks;
 import dev.zide.terminal.host.TerminalStatusViewAssemblyHostCallbacks;
+import dev.zide.terminal.host.TerminalWidgetHostAssembly;
+import dev.zide.terminal.host.TerminalWidgetHostAssemblyHostCallbacks;
 import dev.zide.terminal.debug.TerminalNativeStatusLabels;
 import dev.zide.terminal.debug.TerminalStatusController;
 import dev.zide.terminal.debug.TerminalSurfaceStateSnapshotReader;
@@ -413,126 +415,84 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void assembleWidgetHostControllers() {
-        terminalProductShellStateHostBridge = TerminalUiHostFactory.createProductShellStateHostBridge(
-                productBootstrapBlocker,
-                terminalScrollOverlay,
-                productBootstrapTitle,
-                productBootstrapDetail,
-                productBootstrapRetryButton,
-                new TerminalProductShellStateHostCallbacks(
+        final TerminalWidgetHostAssembly.Result result = TerminalWidgetHostAssembly.assemble(
+                new TerminalWidgetHostAssemblyHostCallbacks(
+                        () -> this,
+                        () -> handler,
                         () -> nativeLoaded,
-                        TerminalNativeBridge::nativeSharedShellRendererActiveBridge,
+                        () -> debugViewEnabled,
+                        enabled -> debugViewEnabled = enabled,
+                        () -> imeVisible,
+                        visible -> imeVisible = visible,
+                        () -> rootView,
+                        () -> productView,
+                        () -> debugView,
+                        () -> productBootstrapBlocker,
+                        () -> drawerScrim,
+                        () -> drawerEdgeHotspot,
+                        () -> leftSidebar,
+                        () -> productSurfaceContainer,
+                        () -> terminalScrollOverlay,
+                        () -> productBootstrapTitle,
+                        () -> productBootstrapDetail,
+                        () -> productBootstrapRetryButton,
+                        () -> assistCtrlButton,
+                        () -> assistAltButton,
+                        () -> shellInputView,
+                        () -> selectionController,
+                        () -> terminalGestureStateController,
+                        () -> surfaceHostBridge,
                         () -> currentInstallState.isInstalling(),
                         () -> currentInstallState.isFailed(),
                         () -> currentBootstrapState,
                         () -> currentInstallState,
-                        () -> surfaceHostBridge != null ? surfaceHostBridge.currentSurfaceView() : null));
-        productShellStatePresenter = new ProductShellStatePresenter(terminalProductShellStateHostBridge);
-        final var chromeHostBridge = TerminalChromeHostFactory.createChromeHostBridge(
-                this,
-                rootView,
-                findViewById(R.id.debug_view_mode_button),
-                drawerScrim,
-                drawerEdgeHotspot,
-                leftSidebar,
-                TerminalChromeHostFactory.createChromeHostCallbacks(
-                        () -> debugViewEnabled,
-                        (eventName, statusLabel) -> {
-                            if (terminalViewModeController != null) {
-                                terminalViewModeController.showProductView(eventName, statusLabel);
-                            }
-                        },
-                        (eventName, statusLabel) -> {
-                            if (terminalViewModeController != null) {
-                                terminalViewModeController.showDebugView(eventName, statusLabel);
-                            }
-                        },
-                        this::runPackageDoctor,
-                        this::appendEvent,
-                        () -> imeVisible,
-                        visible -> imeVisible = visible,
-                        () -> shellInputView,
-                        () -> assistCtrlButton,
-                        () -> assistAltButton,
-                        this::sendDirectText,
-                        this::updateStatus));
-        terminalChromeController = new TerminalChromeController(chromeHostBridge);
-        terminalViewModeController = TerminalUiHostFactory.createViewModeController(
-                productView,
-                debugView,
-                terminalScrollOverlay,
-                productSurfaceContainer,
-                new TerminalViewModeHostCallbacks(
-                        () -> debugViewEnabled,
-                        enabled -> debugViewEnabled = enabled,
-                        this::appendEvent,
-                        this::updateStatus,
-                        () -> terminalChromeController.closeSidebar(),
-                        reason -> surfaceHostController.notifyVisibleViewport(reason),
+                        () -> terminalProductRuntimeController != null
+                                && terminalProductRuntimeController.shouldRunProductFrameLoop(),
                         () -> {
                             if (terminalProductRuntimeController != null) {
                                 terminalProductRuntimeController.refreshProductScrollOverlay();
                             }
                         },
+                        this::appendEvent,
+                        this::updateStatus,
+                        this::callNative,
+                        this::callNativeWithSurfaceState,
+                        (holder, width, height) -> TerminalNativeBridge.nativeOnSurfaceAvailableBridge(
+                                holder.getSurface(),
+                                width,
+                                height),
+                        TerminalNativeBridge::nativeOnSurfaceDestroyedBridge,
+                        TerminalNativeBridge::nativeOnSurfaceRedrawNeededBridge,
+                        TerminalNativeBridge::nativeOnVisibleViewportBridge,
+                        this::currentSurfaceStateSnapshot,
+                        statusLabel -> {
+                            if (terminalProductRuntimeController != null) {
+                                terminalProductRuntimeController.handleProductShellStateEvent(statusLabel);
+                            }
+                        },
+                        TerminalNativeBridge::nativeSetShellScrollbackOffsetBridge,
+                        TerminalNativeBridge::nativeFollowShellLiveBottomBridge,
+                        this::productViewportHeightPx,
+                        () -> {
+                            if (productFrameLoopController != null) {
+                                productFrameLoopController.reevaluate();
+                            }
+                        },
+                        this::runPackageDoctor,
+                        this::sendDirectText,
+                        reason -> {
+                            if (surfaceHostController != null) {
+                                surfaceHostController.notifyVisibleViewport(reason);
+                            }
+                        },
                         () -> userlandSessionCoordinator.refreshAndApply(false)));
-        final TerminalSurfaceWidgetAssembly.Result surfaceWidgetAssembly =
-                TerminalSurfaceWidgetAssembly.assemble(
-                        selectionController,
-                        terminalGestureStateController,
-                        new TerminalSurfaceWidgetAssemblyHostCallbacks(
-                                () -> handler,
-                                () -> productSurfaceContainer,
-                                () -> nativeLoaded,
-                                () -> debugViewEnabled,
-                                this::currentImeVisible,
-                                () -> terminalProductRuntimeController != null
-                                        && terminalProductRuntimeController.shouldRunProductFrameLoop(),
-                                () -> {
-                                    if (terminalProductRuntimeController != null) {
-                                        terminalProductRuntimeController.refreshProductScrollOverlay();
-                                    }
-                                },
-                                this::appendEvent,
-                                this::updateStatus,
-                                this::callNative,
-                                this::callNativeWithSurfaceState,
-                                (holder, width, height) -> TerminalNativeBridge.nativeOnSurfaceAvailableBridge(
-                                        holder.getSurface(),
-                                        width,
-                                        height),
-                                TerminalNativeBridge::nativeOnSurfaceDestroyedBridge,
-                                TerminalNativeBridge::nativeOnSurfaceRedrawNeededBridge,
-                                TerminalNativeBridge::nativeOnVisibleViewportBridge,
-                                this::currentSurfaceStateSnapshot,
-                                statusLabel -> {
-                                    if (terminalProductRuntimeController != null) {
-                                        terminalProductRuntimeController.handleProductShellStateEvent(statusLabel);
-                                    }
-                                },
-                                nextSurfaceView -> {
-                                    final ProductGestureController productGestureController = new ProductGestureController(
-                                            nextSurfaceView,
-                                            terminalSurfaceWidgetController);
-                                    productGestureController.install();
-                                },
-                                (nextSurfaceView, callback) -> {
-                                    if (callback != null) {
-                                        nextSurfaceView.getHolder().addCallback(callback);
-                                    }
-                                },
-                                () -> terminalSurfaceWidgetController,
-                                TerminalNativeBridge::nativeSetShellScrollbackOffsetBridge,
-                                TerminalNativeBridge::nativeFollowShellLiveBottomBridge,
-                                this::productViewportHeightPx,
-                                () -> {
-                                    if (productFrameLoopController != null) {
-                                        productFrameLoopController.reevaluate();
-                                    }
-                                }));
-        surfaceHostBridge = surfaceWidgetAssembly.surfaceHostBridge;
-        surfaceHostController = surfaceWidgetAssembly.surfaceHostController;
-        terminalSurfaceWidgetController = surfaceWidgetAssembly.surfaceWidgetController;
-        terminalScrollOverlay.setHost(terminalSurfaceWidgetController);
+        terminalProductShellStateHostBridge = result.productShellStateHostBridge;
+        productShellStatePresenter = result.productShellStatePresenter;
+        terminalChromeController = result.terminalChromeController;
+        terminalViewModeController = result.terminalViewModeController;
+        surfaceHostBridge = result.surfaceHostBridge;
+        surfaceHostController = result.surfaceHostController;
+        terminalSurfaceWidgetController = result.terminalSurfaceWidgetController;
     }
 
     private void assembleSessionControllers() {
