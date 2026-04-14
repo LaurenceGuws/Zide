@@ -462,13 +462,14 @@ public final class ZideTerminalActivity extends Activity
                 this::showDebugViewIfReady,
                 this::appendEvent,
                 this::updateStatus,
-                () -> terminalRuntimeAssetsController,
-                () -> terminalViewModeController,
-                () -> surfaceHostController,
-                () -> terminalSurfaceWidgetController,
-                () -> productShellStatePresenter,
-                () -> productFrameLoopController,
-                () -> leftSidebar);
+                UiStartupCallbacks.UiRuntimeBundle.of(
+                        () -> terminalRuntimeAssetsController,
+                        () -> terminalViewModeController,
+                        () -> surfaceHostController,
+                        () -> terminalSurfaceWidgetController,
+                        () -> productShellStatePresenter,
+                        () -> productFrameLoopController,
+                        () -> leftSidebar));
     }
 
     private void stopScrollbackFlingIfReady() {

@@ -18,6 +18,51 @@ import uk.laurencegouws.terminal.userland.UserlandWorkflowController;
 
 /** Functional callback adapter for {@link UiStartupAssembly.Host}. */
 public final class UiStartupCallbacks implements UiStartupAssembly.Host {
+    public static final class UiRuntimeBundle {
+        final Supplier<RuntimeAssetsController> runtimeAssetsController;
+        final Supplier<ViewModeController> viewModeController;
+        final Supplier<SurfaceController> surfaceHostController;
+        final Supplier<SurfaceWidgetController> surfaceWidgetController;
+        final Supplier<ProductShellStatePresenter> productShellStatePresenter;
+        final Supplier<FrameLoopController> frameLoopController;
+        final Supplier<View> leftSidebar;
+
+        private UiRuntimeBundle(
+                Supplier<RuntimeAssetsController> runtimeAssetsController,
+                Supplier<ViewModeController> viewModeController,
+                Supplier<SurfaceController> surfaceHostController,
+                Supplier<SurfaceWidgetController> surfaceWidgetController,
+                Supplier<ProductShellStatePresenter> productShellStatePresenter,
+                Supplier<FrameLoopController> frameLoopController,
+                Supplier<View> leftSidebar) {
+            this.runtimeAssetsController = runtimeAssetsController;
+            this.viewModeController = viewModeController;
+            this.surfaceHostController = surfaceHostController;
+            this.surfaceWidgetController = surfaceWidgetController;
+            this.productShellStatePresenter = productShellStatePresenter;
+            this.frameLoopController = frameLoopController;
+            this.leftSidebar = leftSidebar;
+        }
+
+        public static UiRuntimeBundle of(
+                Supplier<RuntimeAssetsController> runtimeAssetsController,
+                Supplier<ViewModeController> viewModeController,
+                Supplier<SurfaceController> surfaceHostController,
+                Supplier<SurfaceWidgetController> surfaceWidgetController,
+                Supplier<ProductShellStatePresenter> productShellStatePresenter,
+                Supplier<FrameLoopController> frameLoopController,
+                Supplier<View> leftSidebar) {
+            return new UiRuntimeBundle(
+                    runtimeAssetsController,
+                    viewModeController,
+                    surfaceHostController,
+                    surfaceWidgetController,
+                    productShellStatePresenter,
+                    frameLoopController,
+                    leftSidebar);
+        }
+    }
+
     private final Supplier<ViewportController> viewportController;
     private final Supplier<ChromeController> chromeController;
     private final Supplier<Button> productBootstrapRetryButton;
@@ -29,13 +74,7 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
     private final UiStartupAssembly.ShowDebugView showDebugView;
     private final Consumer<String> appendEvent;
     private final Consumer<String> updateStatus;
-    private final Supplier<RuntimeAssetsController> runtimeAssetsController;
-    private final Supplier<ViewModeController> viewModeController;
-    private final Supplier<SurfaceController> surfaceHostController;
-    private final Supplier<SurfaceWidgetController> surfaceWidgetController;
-    private final Supplier<ProductShellStatePresenter> productShellStatePresenter;
-    private final Supplier<FrameLoopController> frameLoopController;
-    private final Supplier<View> leftSidebar;
+    private final UiRuntimeBundle uiRuntimeBundle;
 
     public UiStartupCallbacks(
             Supplier<ViewportController> viewportController,
@@ -49,13 +88,7 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
             UiStartupAssembly.ShowDebugView showDebugView,
             Consumer<String> appendEvent,
             Consumer<String> updateStatus,
-            Supplier<RuntimeAssetsController> runtimeAssetsController,
-            Supplier<ViewModeController> viewModeController,
-            Supplier<SurfaceController> surfaceHostController,
-            Supplier<SurfaceWidgetController> surfaceWidgetController,
-            Supplier<ProductShellStatePresenter> productShellStatePresenter,
-            Supplier<FrameLoopController> frameLoopController,
-            Supplier<View> leftSidebar) {
+            UiRuntimeBundle uiRuntimeBundle) {
         this.viewportController = viewportController;
         this.chromeController = chromeController;
         this.productBootstrapRetryButton = productBootstrapRetryButton;
@@ -67,13 +100,7 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
         this.showDebugView = showDebugView;
         this.appendEvent = appendEvent;
         this.updateStatus = updateStatus;
-        this.runtimeAssetsController = runtimeAssetsController;
-        this.viewModeController = viewModeController;
-        this.surfaceHostController = surfaceHostController;
-        this.surfaceWidgetController = surfaceWidgetController;
-        this.productShellStatePresenter = productShellStatePresenter;
-        this.frameLoopController = frameLoopController;
-        this.leftSidebar = leftSidebar;
+        this.uiRuntimeBundle = uiRuntimeBundle;
     }
 
     @Override
@@ -133,36 +160,36 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
 
     @Override
     public RuntimeAssetsController runtimeAssetsController() {
-        return runtimeAssetsController.get();
+        return uiRuntimeBundle.runtimeAssetsController.get();
     }
 
     @Override
     public ViewModeController viewModeController() {
-        return viewModeController.get();
+        return uiRuntimeBundle.viewModeController.get();
     }
 
     @Override
     public SurfaceController surfaceHostController() {
-        return surfaceHostController.get();
+        return uiRuntimeBundle.surfaceHostController.get();
     }
 
     @Override
     public SurfaceWidgetController surfaceWidgetController() {
-        return surfaceWidgetController.get();
+        return uiRuntimeBundle.surfaceWidgetController.get();
     }
 
     @Override
     public ProductShellStatePresenter productShellStatePresenter() {
-        return productShellStatePresenter.get();
+        return uiRuntimeBundle.productShellStatePresenter.get();
     }
 
     @Override
     public FrameLoopController frameLoopController() {
-        return frameLoopController.get();
+        return uiRuntimeBundle.frameLoopController.get();
     }
 
     @Override
     public View leftSidebar() {
-        return leftSidebar.get();
+        return uiRuntimeBundle.leftSidebar.get();
     }
 }
