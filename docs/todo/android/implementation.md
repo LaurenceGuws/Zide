@@ -70,6 +70,9 @@ Focus goals:
    - Completed: second `host/ui/ChromeController` ownership batch landed
      (sidebar state/animation and IME status update paths now route through
      named internal helpers; behavior unchanged).
+   - Completed: first `host/surface/SurfaceController` ownership batch landed
+     (native-sequence and surface-change event composition branches now route
+     through named helpers; behavior unchanged).
    - Next: continue smallest ownership-clarity cuts in `ChromeController` or
      `SurfaceController` where watch-level pressure remains.
 3. Stabilize selection/scroll interaction behavior under manual device usage.
