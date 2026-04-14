@@ -1,75 +1,75 @@
 const android_runtime_bridge = @import("../platform/android_runtime_bridge.zig");
 
-fn restartShellSession() i32 {
-    return android_runtime_bridge.restartShellSession();
+fn restartSession() i32 {
+    return android_runtime_bridge.restartSession();
 }
 
-fn pollShellSession() i32 {
-    return android_runtime_bridge.pollShellSession();
+fn pollSession() i32 {
+    return android_runtime_bridge.pollSession();
 }
 
-fn isShellSessionAlive() bool {
-    return android_runtime_bridge.isShellSessionAlive();
+fn sessionAlive() bool {
+    return android_runtime_bridge.sessionAlive();
 }
 
-fn tickProductShellFrame() i32 {
-    return android_runtime_bridge.tickProductShellFrame();
+fn tickFrame() i32 {
+    return android_runtime_bridge.tickFrame();
 }
 
-fn sendShellCodepoint(codepoint: i32) i32 {
-    return android_runtime_bridge.sendShellCodepoint(codepoint);
+fn sendCodepoint(codepoint: i32) i32 {
+    return android_runtime_bridge.sendCodepoint(codepoint);
 }
 
-fn currentShellVisibleRows() i32 {
-    return android_runtime_bridge.currentShellVisibleRows();
+fn visibleRows() i32 {
+    return android_runtime_bridge.visibleRows();
 }
 
-fn currentShellVisibleCols() i32 {
-    return android_runtime_bridge.currentShellVisibleCols();
+fn visibleCols() i32 {
+    return android_runtime_bridge.visibleCols();
 }
 
-fn currentShellScrollbackCount() i32 {
-    return android_runtime_bridge.currentShellScrollbackCount();
+fn scrollbackCount() i32 {
+    return android_runtime_bridge.scrollbackCount();
 }
 
-fn currentShellScrollbackOffset() i32 {
-    return android_runtime_bridge.currentShellScrollbackOffset();
+fn scrollbackOffset() i32 {
+    return android_runtime_bridge.scrollbackOffset();
 }
 
-fn setShellScrollbackOffset(offsetRows: i32) i32 {
-    return android_runtime_bridge.setShellScrollbackOffset(offsetRows);
+fn setScrollbackOffset(offsetRows: i32) i32 {
+    return android_runtime_bridge.setScrollbackOffset(offsetRows);
 }
 
-fn followShellLiveBottom() i32 {
-    return android_runtime_bridge.followShellLiveBottom();
+fn followLiveBottom() i32 {
+    return android_runtime_bridge.followLiveBottom();
 }
 
 export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeRestartShellSessionBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
-    return restartShellSession();
+    return restartSession();
 }
 
 export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativePollShellSessionBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
-    return pollShellSession();
+    return pollSession();
 }
 
 export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeIsShellSessionAliveBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) bool {
-    return isShellSessionAlive();
+    return sessionAlive();
 }
 
 export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeTickProductShellFrameBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
-    return tickProductShellFrame();
+    return tickFrame();
 }
 
 export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeSendShellCodepointBridge(
@@ -77,35 +77,35 @@ export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeSendShellCod
     _: ?*anyopaque,
     codepoint: i32,
 ) callconv(.c) i32 {
-    return sendShellCodepoint(codepoint);
+    return sendCodepoint(codepoint);
 }
 
 export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentShellVisibleRowsBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
-    return currentShellVisibleRows();
+    return visibleRows();
 }
 
 export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentShellVisibleColsBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
-    return currentShellVisibleCols();
+    return visibleCols();
 }
 
 export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentShellScrollbackCountBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
-    return currentShellScrollbackCount();
+    return scrollbackCount();
 }
 
 export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentShellScrollbackOffsetBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
-    return currentShellScrollbackOffset();
+    return scrollbackOffset();
 }
 
 export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeSetShellScrollbackOffsetBridge(
@@ -113,12 +113,12 @@ export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeSetShellScro
     _: ?*anyopaque,
     offsetRows: i32,
 ) callconv(.c) i32 {
-    return setShellScrollbackOffset(offsetRows);
+    return setScrollbackOffset(offsetRows);
 }
 
 export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeFollowShellLiveBottomBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
-    return followShellLiveBottom();
+    return followLiveBottom();
 }

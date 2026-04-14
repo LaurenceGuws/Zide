@@ -42,3 +42,5 @@ Session entrypoint only. Keep this file short, stable, and current.
   `src/platform/android_runtime_bridge.zig` to remove stale bridge terminology;
   JNI exports are now split into `src/android_bridge_exports/*.zig` ownership
   files
+- Session/selection bridge naming now uses concise runtime API names in
+  `src/platform/android_runtime_bridge.zig` with matching JNI helper updates

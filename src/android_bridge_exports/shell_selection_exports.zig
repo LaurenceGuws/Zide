@@ -5,86 +5,86 @@ const jni = @cImport({
 });
 
 fn beginWordSelectionAtVisibleCell(row: i32, col: i32) i32 {
-    return android_runtime_bridge.beginShellWordSelectionAtVisibleCell(row, col);
+    return android_runtime_bridge.beginWordSelectionAtCell(row, col);
 }
 
 fn extendSelectionGestureToVisibleCell(row: i32, col: i32) i32 {
-    return android_runtime_bridge.extendShellSelectionGestureToVisibleCell(row, col);
+    return android_runtime_bridge.extendSelectionGestureToCell(row, col);
 }
 
 fn finishSelectionGesture() i32 {
-    return android_runtime_bridge.finishShellSelectionGesture();
+    return android_runtime_bridge.finishSelectionGesture();
 }
 
 fn clearSelection() i32 {
-    return android_runtime_bridge.clearShellSelection();
+    return android_runtime_bridge.clearSelection();
 }
 
 fn updateSelectionStartAtVisibleCell(row: i32, col: i32) i32 {
-    return android_runtime_bridge.updateShellSelectionStartAtVisibleCell(row, col);
+    return android_runtime_bridge.updateSelectionStartAtCell(row, col);
 }
 
 fn updateSelectionEndAtVisibleCell(row: i32, col: i32) i32 {
-    return android_runtime_bridge.updateShellSelectionEndAtVisibleCell(row, col);
+    return android_runtime_bridge.updateSelectionEndAtCell(row, col);
 }
 
 fn selectionActive() bool {
-    return android_runtime_bridge.currentShellSelectionActive();
+    return android_runtime_bridge.selectionActive();
 }
 
 fn selectionRectLeft() i32 {
-    return android_runtime_bridge.currentShellSelectionRectLeft();
+    return android_runtime_bridge.selectionRectLeft();
 }
 
 fn selectionRectTop() i32 {
-    return android_runtime_bridge.currentShellSelectionRectTop();
+    return android_runtime_bridge.selectionRectTop();
 }
 
 fn selectionRectRight() i32 {
-    return android_runtime_bridge.currentShellSelectionRectRight();
+    return android_runtime_bridge.selectionRectRight();
 }
 
 fn selectionRectBottom() i32 {
-    return android_runtime_bridge.currentShellSelectionRectBottom();
+    return android_runtime_bridge.selectionRectBottom();
 }
 
 fn selectionStartRectLeft() i32 {
-    return android_runtime_bridge.currentShellSelectionStartRectLeft();
+    return android_runtime_bridge.selectionStartRectLeft();
 }
 
 fn selectionStartRectTop() i32 {
-    return android_runtime_bridge.currentShellSelectionStartRectTop();
+    return android_runtime_bridge.selectionStartRectTop();
 }
 
 fn selectionStartRectRight() i32 {
-    return android_runtime_bridge.currentShellSelectionStartRectRight();
+    return android_runtime_bridge.selectionStartRectRight();
 }
 
 fn selectionStartRectBottom() i32 {
-    return android_runtime_bridge.currentShellSelectionStartRectBottom();
+    return android_runtime_bridge.selectionStartRectBottom();
 }
 
 fn selectionEndRectLeft() i32 {
-    return android_runtime_bridge.currentShellSelectionEndRectLeft();
+    return android_runtime_bridge.selectionEndRectLeft();
 }
 
 fn selectionEndRectTop() i32 {
-    return android_runtime_bridge.currentShellSelectionEndRectTop();
+    return android_runtime_bridge.selectionEndRectTop();
 }
 
 fn selectionEndRectRight() i32 {
-    return android_runtime_bridge.currentShellSelectionEndRectRight();
+    return android_runtime_bridge.selectionEndRectRight();
 }
 
 fn selectionEndRectBottom() i32 {
-    return android_runtime_bridge.currentShellSelectionEndRectBottom();
+    return android_runtime_bridge.selectionEndRectBottom();
 }
 
 fn selectionTextBytes(env: ?*anyopaque) ?*anyopaque {
     const jenvPtr: ?*jni.JNIEnv = @ptrCast(@alignCast(env));
     const jenv = jenvPtr orelse return null;
     const fns = jenv.*.*;
-    const selection = android_runtime_bridge.copyShellSelectionTextAlloc(std.heap.c_allocator) catch return null;
+    const selection = android_runtime_bridge.selectionTextAlloc(std.heap.c_allocator) catch return null;
     const bytes = selection orelse return null;
     defer std.heap.c_allocator.free(bytes);
 

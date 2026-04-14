@@ -48,8 +48,8 @@ fn currentRendererTextureHeight() i32 {
     return android_runtime_bridge.currentRendererTextureHeight();
 }
 
-fn sharedShellRendererActive() bool {
-    return android_runtime_bridge.sharedShellRendererActive();
+fn rendererActive() bool {
+    return android_runtime_bridge.rendererActive();
 }
 
 export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentRendererStatusBridge(
@@ -140,5 +140,5 @@ export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeSharedShellR
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) bool {
-    return sharedShellRendererActive();
+    return rendererActive();
 }

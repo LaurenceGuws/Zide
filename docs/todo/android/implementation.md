@@ -136,6 +136,10 @@ A cut is done only if all are true:
   `src/android_bridge_exports/renderer_state_exports.zig`,
   `src/android_bridge_exports/shell_session_exports.zig`, and
   `src/android_bridge_exports/shell_selection_exports.zig`
+- Android Zig bridge API names in `android_runtime_bridge.zig` now use concise
+  session/selection terminology (`restartSession`, `pollSession`,
+  `selectionRect*`, `selectionTextAlloc`, `rendererActive`) rather than
+  long shell-prefixed helper names
 - selection controller remains monolithic by design until a real split seam
   exists
 - queue remains Android-product-first, not shell-readiness-baseline-first
