@@ -71,7 +71,7 @@ public final class LifecycleController {
     }
 
     public void onWindowFocusChanged(boolean hasFocus) {
-        host.appendEvent("activity.on.window_focus_changed focus=" + hasFocus);
+        host.appendEvent("activity.on.window.focus.changed focus=" + hasFocus);
         host.callNative("native.onWindowFocus", host.nativeLoaded() ? host.nativeOnWindowFocus(hasFocus) : -1);
         host.updateStatus(hasFocus ? "window.focused.state" : "window.unfocused.state");
     }

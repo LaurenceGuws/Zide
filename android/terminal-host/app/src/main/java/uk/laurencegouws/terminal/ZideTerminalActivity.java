@@ -156,7 +156,7 @@ public final class ZideTerminalActivity extends Activity
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
-        appendEvent("activity.on.new_intent");
+        appendEvent("activity.on.new.intent");
     }
 
     @Override
