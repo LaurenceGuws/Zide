@@ -167,20 +167,22 @@ public final class SurfaceController {
     }
 
     public void notifyVisibleViewport(String reason) {
-        if (viewportNotificationSuppressed()) {
+        if (host.debugViewEnabled() || host.productSurfaceContainer().getVisibility() != View.VISIBLE) {
             return;
         }
         final boolean viewportImeVisible = host.currentImeVisible();
         final int width = Math.max(host.productSurfaceContainer().getWidth(), 1);
         final int height = Math.max(host.productSurfaceContainer().getHeight(), 1);
         host.setVisibleViewportSize(width, height);
-        if (viewportNotificationUnchanged(width, height, viewportImeVisible)) {
+        if (width == host.notifiedViewportWidth()
+                && height == host.notifiedViewportHeight()
+                && viewportImeVisible == host.notifiedViewportImeVisible()) {
             return;
         }
         host.setNotifiedViewportSize(width, height, viewportImeVisible);
-        appendViewportChangedEvent(reason, width, height, viewportImeVisible);
+        host.appendEvent("viewport.size.changed reason=" + reason + " size=" + width + "x" + height + " imeVisible=" + viewportImeVisible);
         final long seq = nativeViewportChangedSeq(width, height, viewportImeVisible);
-        dispatchNativeViewportChanged(seq);
+        host.callNativeWithSurfaceState("native.viewportChanged", seq, host.currentSurfaceStateSnapshot());
         host.refreshProductScrollOverlay();
         host.updateStatus("viewport.state.updated");
     }
@@ -279,20 +281,6 @@ public final class SurfaceController {
         return host.nativeLoaded() ? host.nativeOnVisibleViewportBridge(width, height, imeVisible) : -1;
     }
 
-    private boolean viewportNotificationSuppressed() {
-        return host.debugViewEnabled() || host.productSurfaceContainer().getVisibility() != View.VISIBLE;
-    }
-
-    private boolean viewportNotificationUnchanged(int width, int height, boolean viewportImeVisible) {
-        return width == host.notifiedViewportWidth()
-                && height == host.notifiedViewportHeight()
-                && viewportImeVisible == host.notifiedViewportImeVisible();
-    }
-
-    private void appendViewportChangedEvent(String reason, int width, int height, boolean viewportImeVisible) {
-        host.appendEvent("viewport.size.changed reason=" + reason + " size=" + width + "x" + height + " imeVisible=" + viewportImeVisible);
-    }
-
     private void appendSurfaceRedrawReentrantSkippedEvent(SurfaceHolder holder) {
         host.appendEvent(
                 "surface.redrawNeeded reentrant-skipped generation=" + host.surfaceHostGeneration() +
@@ -323,10 +311,6 @@ public final class SurfaceController {
             final int shrunkHeight = Math.max(200, originalHeight / 2);
             applySurfaceResize(holder, originalWidth, originalHeight, shrunkHeight);
         }, 900);
-    }
-
-    private void dispatchNativeViewportChanged(long seq) {
-        host.callNativeWithSurfaceState("native.viewportChanged", seq, host.currentSurfaceStateSnapshot());
     }
 
 }
