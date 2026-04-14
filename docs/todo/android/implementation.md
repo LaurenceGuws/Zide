@@ -150,6 +150,10 @@ Agent reporting contract (mandatory for cleanup campaign updates):
    - Completed: `SurfaceController` net-smaller: removed ten pass-through helpers
      that only forwarded `Host` reads or `SurfaceHolder#getSurface()`; call
      sites use `host` and holders directly (behavior unchanged).
+   - Completed: `ChromeController` net-smaller: collapsed view-mode and sidebar
+     wiring, dropped host view/assist/IME one-line forwards, inlined IME
+     manager and soft-input steps, and removed unused `IBinder` import (behavior
+     unchanged).
    - Next: net simplification in `ChromeController` or `SurfaceController`:
      remove or merge pass-through helpers and redundant indirection so the
      touched class ends with fewer methods, fields, or dependencies; each of
