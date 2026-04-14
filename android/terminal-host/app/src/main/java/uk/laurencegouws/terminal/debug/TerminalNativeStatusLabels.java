@@ -18,24 +18,24 @@ public final class TerminalNativeStatusLabels {
         }
     }
 
-    public static String shellStartStatusLabel(int status) {
+    public static String sessionStartStatusLabel(int status) {
         switch (status) {
             case 1:
                 return "activity.started";
             case 2:
                 return "unsupported";
             case 3:
-                return "create-failed";
+                return "session.start.failed.create";
             case 4:
-                return "resize-failed";
+                return "session.start.failed.resize";
             case 5:
-                return "start-failed";
+                return "session.start.failed.launch";
             case 6:
-                return "send-failed";
+                return "session.start.failed.send";
             case 7:
-                return "poll-failed";
+                return "session.start.failed.poll";
             case 8:
-                return "snapshot-failed";
+                return "session.start.failed.snapshot";
             default:
                 return "none";
         }
@@ -50,13 +50,13 @@ public final class TerminalNativeStatusLabels {
             case 3:
                 return "surface.destroyed";
             case 4:
-                return "init-failed";
+                return "surface.init.failed";
             case 5:
-                return "surface-failed";
+                return "surface.bind.failed";
             case 6:
-                return "make-current-failed";
+                return "surface.make_current.failed";
             case 7:
-                return "swap-failed";
+                return "surface.swap.failed";
             default:
                 return "unavailable";
         }

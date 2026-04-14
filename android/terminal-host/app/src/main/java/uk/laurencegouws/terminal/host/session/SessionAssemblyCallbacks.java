@@ -26,7 +26,7 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
     private final IntSupplier tickProductFrame;
     private final IntSupplier nativeRestartSession;
     private final IntSupplier nativePollSession;
-    private final BooleanSupplier nativeIsShellSessionAlive;
+    private final BooleanSupplier nativeIsSessionAlive;
 
     public SessionAssemblyCallbacks(
             Supplier<Context> context,
@@ -42,7 +42,7 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
             IntSupplier tickProductFrame,
             IntSupplier nativeRestartSession,
             IntSupplier nativePollSession,
-            BooleanSupplier nativeIsShellSessionAlive) {
+            BooleanSupplier nativeIsSessionAlive) {
         this.context = context;
         this.userlandRelease = userlandRelease;
         this.nativeLoaded = nativeLoaded;
@@ -56,7 +56,7 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
         this.tickProductFrame = tickProductFrame;
         this.nativeRestartSession = nativeRestartSession;
         this.nativePollSession = nativePollSession;
-        this.nativeIsShellSessionAlive = nativeIsShellSessionAlive;
+        this.nativeIsSessionAlive = nativeIsSessionAlive;
     }
 
     @Override
@@ -125,7 +125,7 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
     }
 
     @Override
-    public boolean nativeIsShellSessionAlive() {
-        return nativeIsShellSessionAlive.getAsBoolean();
+    public boolean nativeIsSessionAlive() {
+        return nativeIsSessionAlive.getAsBoolean();
     }
 }

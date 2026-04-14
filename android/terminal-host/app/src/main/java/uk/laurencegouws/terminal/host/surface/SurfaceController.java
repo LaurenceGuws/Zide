@@ -270,7 +270,7 @@ public final class SurfaceController {
         }
         host.setShellStartScheduled(true);
         host.handler().postDelayed(() -> {
-            host.handleProductShellStateEvent("debug-shell-started");
+            host.handleProductShellStateEvent("debug-session-started");
         }, 900);
     }
 }

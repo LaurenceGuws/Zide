@@ -11,7 +11,7 @@ import org.json.JSONObject;
  * Immutable readiness snapshot for the app-private Android userland prefix.
  *
  * <p>This class classifies the installed prefix against the release expected by the APK. It should
- * stay a small value/parser type and not perform install, UI, or shell-start work.
+ * stay a small value/parser type and not perform install, UI, or session-start work.
  */
 public final class UserlandReadinessState {
     public static final String STATE_MISSING_STAMP = "missing-stamp";

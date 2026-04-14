@@ -153,7 +153,7 @@ public final class ProductRuntimeController {
 
     public void restartSession(String eventName, String statusLabel, boolean logRefresh) {
         final int status = host.nativeLoaded() ? host.nativeRestartSession() : 0;
-        host.appendEvent(eventName + " status=" + TerminalNativeStatusLabels.shellStartStatusLabel(status));
+        host.appendEvent(eventName + " status=" + TerminalNativeStatusLabels.sessionStartStatusLabel(status));
         final UserlandSessionCoordinator sessionCoordinator = host.userlandSessionCoordinator();
         if (sessionCoordinator != null) {
             sessionCoordinator.refreshAndApply(logRefresh);

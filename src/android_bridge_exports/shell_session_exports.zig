@@ -58,7 +58,7 @@ export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativePollSessionB
     return pollSession();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeIsShellSessionAliveBridge(
+export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeIsSessionAliveBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) bool {

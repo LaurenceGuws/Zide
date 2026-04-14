@@ -11,7 +11,7 @@ public final class SessionBridge implements UserlandSessionCoordinator.Host {
     public interface Callbacks {
         void appendEvent(String event);
 
-        String shellStartStatusLabel(int status);
+        String sessionStartStatusLabel(int status);
 
         void applyReadinessState(UserlandReadinessState readinessState);
 
@@ -34,8 +34,8 @@ public final class SessionBridge implements UserlandSessionCoordinator.Host {
     }
 
     @Override
-    public String shellStartStatusLabel(int status) {
-        return callbacks.shellStartStatusLabel(status);
+    public String sessionStartStatusLabel(int status) {
+        return callbacks.sessionStartStatusLabel(status);
     }
 
     @Override

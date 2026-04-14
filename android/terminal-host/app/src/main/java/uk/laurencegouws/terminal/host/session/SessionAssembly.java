@@ -44,7 +44,7 @@ public final class SessionAssembly {
 
         int nativePollSession();
 
-        boolean nativeIsShellSessionAlive();
+        boolean nativeIsSessionAlive();
     }
 
     /** Immutable assembled session/runtime construction result. */
@@ -78,11 +78,11 @@ public final class SessionAssembly {
                         host.nativeLoaded(),
                         host::nativeRestartSession,
                         host::nativePollSession,
-                        host::nativeIsShellSessionAlive);
+                        host::nativeIsSessionAlive);
         final SessionBridge userlandSessionHostBridge =
                 SessionFactory.createUserlandSessionHostBridge(
                         host::appendEvent,
-                        (Function<Integer, String>) TerminalNativeStatusLabels::shellStartStatusLabel,
+                        (Function<Integer, String>) TerminalNativeStatusLabels::sessionStartStatusLabel,
                         host::applyReadinessState,
                         host::refreshProductShellState,
                         host::refreshDebugStatusSurface,

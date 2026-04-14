@@ -60,6 +60,7 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
 - run local naming gates before commit:
   - `./ops/lint_android_java_events.py`
   - `./ops/lint_android_naming_all.py`
+  - `./ops/check_android_naming_gate.py`
 - compile after each slice with:
   `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac`
 - update this naming contract and the Java ownership contract in the same slice

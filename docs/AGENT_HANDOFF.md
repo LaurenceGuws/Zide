@@ -57,3 +57,5 @@ Session entrypoint only. Keep this file short, stable, and current.
 - local naming lint exists at `ops/lint_android_zig_naming.py`
 - local Java event-key lint exists at `ops/lint_android_java_events.py`
 - aggregate local naming gate exists at `ops/lint_android_naming_all.py`
+- pre-commit local Android naming+compile gate exists at
+  `ops/check_android_naming_gate.py`

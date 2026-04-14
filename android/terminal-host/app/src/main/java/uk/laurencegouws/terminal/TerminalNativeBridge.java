@@ -92,7 +92,7 @@ public final class TerminalNativeBridge {
 
     public static native int nativePollSessionBridge();
 
-    public static native boolean nativeIsShellSessionAliveBridge();
+    public static native boolean nativeIsSessionAliveBridge();
 
     public static native int nativeTickProductShellFrameBridge();
 

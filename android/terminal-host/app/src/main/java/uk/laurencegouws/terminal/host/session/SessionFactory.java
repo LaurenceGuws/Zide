@@ -37,7 +37,7 @@ public final class SessionFactory {
 
     public static SessionBridge createUserlandSessionHostBridge(
             Consumer<String> appendEvent,
-            Function<Integer, String> shellStartStatusLabel,
+            Function<Integer, String> sessionStartStatusLabel,
             Consumer<UserlandReadinessState> applyReadinessState,
             Runnable refreshProductShellState,
             Runnable refreshDebugStatusSurface,
@@ -45,7 +45,7 @@ public final class SessionFactory {
         return new SessionBridge(
                 new SessionCallbacks(
                         appendEvent,
-                        shellStartStatusLabel,
+                        sessionStartStatusLabel,
                         applyReadinessState,
                         refreshProductShellState,
                         refreshDebugStatusSurface,

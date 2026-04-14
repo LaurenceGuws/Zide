@@ -8,7 +8,7 @@ import uk.laurencegouws.terminal.userland.UserlandReadinessState;
 /** Functional callback adapter for {@link SessionBridge}. */
 public final class SessionCallbacks implements SessionBridge.Callbacks {
     private final Consumer<String> appendEvent;
-    private final Function<Integer, String> shellStartStatusLabel;
+    private final Function<Integer, String> sessionStartStatusLabel;
     private final Consumer<UserlandReadinessState> applyReadinessState;
     private final Runnable refreshProductShellState;
     private final Runnable refreshDebugStatusSurface;
@@ -16,13 +16,13 @@ public final class SessionCallbacks implements SessionBridge.Callbacks {
 
     public SessionCallbacks(
             Consumer<String> appendEvent,
-            Function<Integer, String> shellStartStatusLabel,
+            Function<Integer, String> sessionStartStatusLabel,
             Consumer<UserlandReadinessState> applyReadinessState,
             Runnable refreshProductShellState,
             Runnable refreshDebugStatusSurface,
             Consumer<String> updateStatus) {
         this.appendEvent = appendEvent;
-        this.shellStartStatusLabel = shellStartStatusLabel;
+        this.sessionStartStatusLabel = sessionStartStatusLabel;
         this.applyReadinessState = applyReadinessState;
         this.refreshProductShellState = refreshProductShellState;
         this.refreshDebugStatusSurface = refreshDebugStatusSurface;
@@ -35,8 +35,8 @@ public final class SessionCallbacks implements SessionBridge.Callbacks {
     }
 
     @Override
-    public String shellStartStatusLabel(int status) {
-        return shellStartStatusLabel.apply(status);
+    public String sessionStartStatusLabel(int status) {
+        return sessionStartStatusLabel.apply(status);
     }
 
     @Override

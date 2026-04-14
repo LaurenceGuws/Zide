@@ -13,7 +13,7 @@ public final class UserlandSessionCoordinator {
     public interface Host {
         void appendEvent(String event);
 
-        String shellStartStatusLabel(int status);
+        String sessionStartStatusLabel(int status);
 
         void applyReadinessState(UserlandReadinessState readinessState);
 
@@ -68,12 +68,12 @@ public final class UserlandSessionCoordinator {
             ShellSessionController.PollResult pollResult,
             boolean logEvent) {
         if (pollResult.autoStarted) {
-            host.appendEvent("auto.session.start status=" + host.shellStartStatusLabel(pollResult.autoStartStatus));
+            host.appendEvent("auto.session.start status=" + host.sessionStartStatusLabel(pollResult.autoStartStatus));
         }
         if (pollResult.autoStartBlocked) {
             if (!readinessState.state.equals(lastAutoStartBlockedState)) {
                 host.appendEvent(
-                        "auto.shellStart blocked=" + readinessState.state +
+                        "auto.session.start.blocked=" + readinessState.state +
                                 " artifact=" + readinessState.artifact +
                                 " version=" + readinessState.version);
                 lastAutoStartBlockedState = readinessState.state;
@@ -83,7 +83,7 @@ public final class UserlandSessionCoordinator {
         }
         if (logEvent) {
             host.appendEvent("shell.session.refresh manual=true alive=" + pollResult.alive + " status="
-                    + host.shellStartStatusLabel(pollResult.status));
+                    + host.sessionStartStatusLabel(pollResult.status));
         }
     }
 }

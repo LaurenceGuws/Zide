@@ -385,7 +385,7 @@ public final class ZideTerminalActivity extends Activity
                         },
                         TerminalNativeBridge::nativeRestartSessionBridge,
                         TerminalNativeBridge::nativePollSessionBridge,
-                        TerminalNativeBridge::nativeIsShellSessionAliveBridge));
+                        TerminalNativeBridge::nativeIsSessionAliveBridge));
         userlandSessionCoordinator = result.userlandSessionCoordinator;
         productFrameLoopController = result.frameLoopController;
     }
