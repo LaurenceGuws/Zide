@@ -360,8 +360,8 @@ public final class TerminalSelectionController {
         }
         final float clampedX = Math.max(0.0f, Math.min(x, grid.viewportWidth - 1.0f));
         final float clampedY = Math.max(0.0f, Math.min(y, grid.viewportHeight - 1.0f));
-        final int col = Math.max(0, Math.min(grid.visibleCols - 1, (int) (clampedX / grid.colWidthPx)));
-        final int row = Math.max(0, Math.min(grid.visibleRows - 1, (int) (clampedY / grid.rowHeightPx)));
+        final int col = clampInt((int) (clampedX / grid.colWidthPx), 0, grid.visibleCols - 1);
+        final int row = clampInt((int) (clampedY / grid.rowHeightPx), 0, grid.visibleRows - 1);
         return new TerminalCellHit(row, col);
     }
 
@@ -482,10 +482,10 @@ public final class TerminalSelectionController {
         if (grid == null) {
             return null;
         }
-        final int row = Math.max(0, Math.min(grid.visibleRows - 1, (int) (rect.top / grid.rowHeightPx)));
+        final int row = clampInt((int) (rect.top / grid.rowHeightPx), 0, grid.visibleRows - 1);
         final int col = startHandle
-                ? Math.max(0, Math.min(grid.visibleCols - 1, (int) (rect.left / grid.colWidthPx)))
-                : Math.max(0, Math.min(grid.visibleCols - 1, (int) ((Math.max(rect.right - 1, 0)) / grid.colWidthPx)));
+                ? clampInt((int) (rect.left / grid.colWidthPx), 0, grid.visibleCols - 1)
+                : clampInt((int) (Math.max(rect.right - 1, 0) / grid.colWidthPx), 0, grid.visibleCols - 1);
         return new TerminalCellHit(row, col);
     }
 
@@ -535,8 +535,8 @@ public final class TerminalSelectionController {
         if (totalCells <= 0) {
             return cell;
         }
-        final int index = Math.max(0, Math.min(totalCells - 1, (cell.row * visibleCols) + cell.col));
-        final int shifted = Math.max(0, Math.min(totalCells - 1, index + delta));
+        final int index = clampInt((cell.row * visibleCols) + cell.col, 0, totalCells - 1);
+        final int shifted = clampInt(index + delta, 0, totalCells - 1);
         return new TerminalCellHit(shifted / visibleCols, shifted % visibleCols);
     }
 
@@ -596,6 +596,10 @@ public final class TerminalSelectionController {
         return start + ((end - start) * t);
     }
 
+    private static int clampInt(int value, int min, int max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
     private void applySelectionAutoscrollRows(float rowDelta) {
         if (!selectionDragActive || rowDelta == 0.0f) {
             return;
@@ -608,7 +612,7 @@ public final class TerminalSelectionController {
             return;
         }
         activeGestureScrollRemainderRows -= wholeRows;
-        final int nextOffset = Math.max(0, Math.min(activeGestureScrollbackOffset + wholeRows, activeGestureScrollbackCount));
+        final int nextOffset = clampInt(activeGestureScrollbackOffset + wholeRows, 0, activeGestureScrollbackCount);
         if (nextOffset == activeGestureScrollbackOffset) {
             return;
         }
@@ -848,10 +852,10 @@ public final class TerminalSelectionController {
         final int width = host.productViewportWidthPx();
         final int height = host.productViewportHeightPx();
         outRect.set(
-                Math.max(0, Math.min(left, width)),
-                Math.max(0, Math.min(top, height)),
-                Math.max(0, Math.min(right, width)),
-                Math.max(0, Math.min(bottom, height)));
+                clampInt(left, 0, width),
+                clampInt(top, 0, height),
+                clampInt(right, 0, width),
+                clampInt(bottom, 0, height));
         return !outRect.isEmpty();
     }
 
