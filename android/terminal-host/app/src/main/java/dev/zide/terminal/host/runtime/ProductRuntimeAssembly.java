@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.runtime;
 
 import android.view.SurfaceView;
 import android.view.View;
@@ -6,6 +6,8 @@ import android.view.View;
 import dev.zide.terminal.TerminalNativeBridge;
 import dev.zide.terminal.debug.TerminalStatusController;
 import dev.zide.terminal.gesture.TerminalGestureStateController;
+import dev.zide.terminal.host.TerminalFrameLoopController;
+import dev.zide.terminal.host.TerminalRuntimeHostFactory;
 import dev.zide.terminal.scroll.TerminalScrollOverlayView;
 import dev.zide.terminal.selection.TerminalSelectionController;
 import dev.zide.terminal.userland.ProductShellStatePresenter;
@@ -14,7 +16,7 @@ import dev.zide.terminal.userland.UserlandInstallState;
 import dev.zide.terminal.userland.UserlandSessionCoordinator;
 
 /** Owns product-runtime controller assembly for activity wiring. */
-public final class TerminalProductRuntimeAssembly {
+public final class ProductRuntimeAssembly {
     /** Activity callbacks required for product-runtime assembly. */
     public interface Host {
         boolean debugViewEnabled();
@@ -50,10 +52,10 @@ public final class TerminalProductRuntimeAssembly {
         void updateStatus(String statusLabel);
     }
 
-    private TerminalProductRuntimeAssembly() {
+    private ProductRuntimeAssembly() {
     }
 
-    public static TerminalProductRuntimeController assemble(Host host) {
+    public static ProductRuntimeController assemble(Host host) {
         return TerminalRuntimeHostFactory.createProductRuntimeController(
                 TerminalRuntimeHostFactory.createProductRuntimeHostCallbacks(
                         host::debugViewEnabled,

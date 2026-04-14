@@ -65,8 +65,10 @@ Current shape markers (for hygiene tracking, not hard limits):
 - `host/TerminalSurfaceWidgetAssembly.java`: `127` lines
 - `host/TerminalSurfaceWidgetAssemblyHostCallbacks.java`: `212` lines
 - `host/TerminalRuntimeHostFactory.java`: `81` lines
-- `host/TerminalProductRuntimeAssembly.java`: `82` lines
-- `host/TerminalProductRuntimeAssemblyHostCallbacks.java`: `152` lines
+- `host/runtime/ProductRuntimeAssembly.java`: `82` lines
+- `host/runtime/ProductRuntimeAssemblyCallbacks.java`: `153` lines
+- `host/runtime/ProductRuntimeController.java`: `164` lines
+- `host/runtime/ProductRuntimeHostCallbacks.java`: `186` lines
 - `host/TerminalSessionHostFactory.java`: `52` lines
 - `host/TerminalSessionAssembly.java`: `102` lines
 - `host/TerminalSessionAssemblyHostCallbacks.java`: `131` lines
@@ -105,10 +107,10 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/TerminalFrameLoopHostBridge.java` | Good | Owns frame-loop host callback adaptation from activity into `TerminalFrameLoopController`. | Keep as callback adapter only; scheduling logic stays in `TerminalFrameLoopController`. |
 | `host/TerminalGestureStateFactoryHostCallbacks.java` | Good | Functional callback adapter from activity state/native access into `gesture/TerminalGestureStateControllerFactory`. | Keep adapter-only; gesture policy stays in `TerminalGestureStateController`. |
 | `host/TerminalGestureStateHostBridge.java` | Good | Owns gesture-state host callback adaptation from activity into `gesture/TerminalGestureStateController`. | Keep gesture policy in `TerminalGestureStateController`; keep this adapter callback-only. |
-| `host/TerminalProductRuntimeController.java` | Good | Owns product runtime policy: frame-loop readiness, shell-state/overlay refresh, install-state apply, and shell restart status flow. | Keep it runtime-orchestration only; native truth stays in bridge calls and terminal core. |
-| `host/TerminalProductRuntimeHostCallbacks.java` | Good | Functional callback adapter from activity state/native access into `TerminalProductRuntimeController`. | Keep adapter-only; runtime behavior stays in `TerminalProductRuntimeController`. |
-| `host/TerminalProductRuntimeAssembly.java` | Good | Owns product-runtime controller startup assembly so activity no longer inlines runtime callback construction. | Keep this assembly-only; runtime behavior stays in runtime controller + host callbacks. |
-| `host/TerminalProductRuntimeAssemblyHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalProductRuntimeAssembly`. | Keep adapter-only; avoid moving runtime behavior into this adapter. |
+| `host/runtime/ProductRuntimeController.java` | Good | Owns product runtime policy: frame-loop readiness, shell-state/overlay refresh, install-state apply, and shell restart status flow. | Keep it runtime-orchestration only; native truth stays in bridge calls and terminal core. |
+| `host/runtime/ProductRuntimeHostCallbacks.java` | Good | Functional callback adapter from activity state/native access into `host/runtime/ProductRuntimeController`. | Keep adapter-only; runtime behavior stays in `host/runtime/ProductRuntimeController`. |
+| `host/runtime/ProductRuntimeAssembly.java` | Good | Owns product-runtime controller startup assembly so activity no longer inlines runtime callback construction. | Keep this assembly-only; runtime behavior stays in runtime controller + host callbacks. |
+| `host/runtime/ProductRuntimeAssemblyCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/runtime/ProductRuntimeAssembly`. | Keep adapter-only; avoid moving runtime behavior into this adapter. |
 | `host/TerminalActivityViewBindings.java` | Good | Owns raw activity view lookup and typed binding capture for terminal host wiring. | Keep this as lookup-only data binding; no policy or runtime behavior. |
 | `host/TerminalChromeHostFactory.java` | Good | Owns chrome-specific bridge/callback construction so chrome assembly does not inflate the generic host assembler. | Keep this construction-only; do not move chrome behavior out of `TerminalChromeController`. |
 | `host/TerminalInteractionHostFactory.java` | Good | Owns selection/gesture interaction controller construction so interaction seams stay out of the generic host assembler. | Keep this construction-only; interaction behavior remains in selection/gesture controllers. |

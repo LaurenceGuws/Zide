@@ -23,9 +23,9 @@ import dev.zide.terminal.host.TerminalInputAssembly;
 import dev.zide.terminal.host.TerminalInputAssemblyHostCallbacks;
 import dev.zide.terminal.host.TerminalInteractionAssembly;
 import dev.zide.terminal.host.TerminalInteractionAssemblyHostCallbacks;
-import dev.zide.terminal.host.TerminalProductRuntimeAssembly;
-import dev.zide.terminal.host.TerminalProductRuntimeAssemblyHostCallbacks;
-import dev.zide.terminal.host.TerminalProductRuntimeController;
+import dev.zide.terminal.host.runtime.ProductRuntimeAssembly;
+import dev.zide.terminal.host.runtime.ProductRuntimeAssemblyCallbacks;
+import dev.zide.terminal.host.runtime.ProductRuntimeController;
 import dev.zide.terminal.host.runtime.RuntimeAssetsController;
 import dev.zide.terminal.host.TerminalSessionAssembly;
 import dev.zide.terminal.host.TerminalSessionAssemblyHostCallbacks;
@@ -111,7 +111,7 @@ public final class ZideTerminalActivity extends Activity
     private TerminalStatusController terminalStatusController;
     private TerminalSurfaceStateSnapshotReader terminalSurfaceStateSnapshotReader;
     private TerminalSurfaceWidgetController terminalSurfaceWidgetController;
-    private TerminalProductRuntimeController terminalProductRuntimeController;
+    private ProductRuntimeController terminalProductRuntimeController;
     private TerminalActivityLifecycleController terminalActivityLifecycleController;
     private UserlandInstallState currentInstallState = UserlandInstallState.idle();
     private UserlandReadinessState currentReadinessState;
@@ -423,8 +423,8 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void assembleProductRuntimeController() {
-        terminalProductRuntimeController = TerminalProductRuntimeAssembly.assemble(
-                new TerminalProductRuntimeAssemblyHostCallbacks(
+        terminalProductRuntimeController = ProductRuntimeAssembly.assemble(
+                new ProductRuntimeAssemblyCallbacks(
                         () -> debugViewEnabled,
                         () -> nativeLoaded,
                         () -> currentInstallState,

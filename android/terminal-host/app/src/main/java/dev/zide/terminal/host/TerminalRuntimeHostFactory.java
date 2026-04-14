@@ -7,6 +7,8 @@ import java.util.function.Supplier;
 
 import dev.zide.terminal.debug.TerminalStatusController;
 import dev.zide.terminal.gesture.TerminalGestureStateController;
+import dev.zide.terminal.host.runtime.ProductRuntimeController;
+import dev.zide.terminal.host.runtime.ProductRuntimeHostCallbacks;
 import dev.zide.terminal.scroll.TerminalScrollOverlayView;
 import dev.zide.terminal.selection.TerminalSelectionController;
 import dev.zide.terminal.userland.ProductShellStatePresenter;
@@ -19,12 +21,12 @@ public final class TerminalRuntimeHostFactory {
     private TerminalRuntimeHostFactory() {
     }
 
-    public static TerminalProductRuntimeController createProductRuntimeController(
-            TerminalProductRuntimeController.Host host) {
-        return new TerminalProductRuntimeController(host);
+    public static ProductRuntimeController createProductRuntimeController(
+            ProductRuntimeController.Host host) {
+        return new ProductRuntimeController(host);
     }
 
-    public static TerminalProductRuntimeController.Host createProductRuntimeHostCallbacks(
+    public static ProductRuntimeController.Host createProductRuntimeHostCallbacks(
             BooleanSupplier debugViewEnabled,
             BooleanSupplier nativeLoaded,
             Supplier<UserlandInstallState> installState,
@@ -45,7 +47,7 @@ public final class TerminalRuntimeHostFactory {
             IntSupplier nativeCurrentShellScrollbackCount,
             IntSupplier nativeCurrentShellScrollbackOffset,
             IntSupplier nativeRestartShellSession) {
-        return new TerminalProductRuntimeHostCallbacks(
+        return new ProductRuntimeHostCallbacks(
                 debugViewEnabled,
                 nativeLoaded,
                 installState,

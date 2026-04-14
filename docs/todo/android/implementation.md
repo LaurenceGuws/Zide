@@ -111,8 +111,7 @@ A cut is done only if all are true:
 - userland runtime-assets/workflow startup activity wiring now composes through
   `host/userland/WorkflowAssembly` + `WorkflowAssemblyCallbacks`
 - product-runtime controller startup activity wiring now composes through
-  `host/TerminalProductRuntimeAssembly` +
-  `TerminalProductRuntimeAssemblyHostCallbacks`
+  `host/runtime/ProductRuntimeAssembly` + `ProductRuntimeAssemblyCallbacks`
 - activity lifecycle native/status/session/surface wiring now composes through
   `host/TerminalActivityLifecycleController` +
   `TerminalActivityLifecycleHostCallbacks`

@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.runtime;
 
 import android.view.SurfaceView;
 import android.view.View;
@@ -6,6 +6,7 @@ import android.view.View;
 import dev.zide.terminal.debug.TerminalNativeStatusLabels;
 import dev.zide.terminal.debug.TerminalStatusController;
 import dev.zide.terminal.gesture.TerminalGestureStateController;
+import dev.zide.terminal.host.TerminalFrameLoopController;
 import dev.zide.terminal.scroll.TerminalScrollOverlayView;
 import dev.zide.terminal.selection.TerminalSelectionController;
 import dev.zide.terminal.userland.ProductShellStatePresenter;
@@ -14,7 +15,7 @@ import dev.zide.terminal.userland.UserlandInstallState;
 import dev.zide.terminal.userland.UserlandSessionCoordinator;
 
 /** Owns product runtime orchestration for frame-loop and shell-state refresh flow. */
-public final class TerminalProductRuntimeController {
+public final class ProductRuntimeController {
     /** Host callbacks for activity-owned state and native bridge interactions. */
     public interface Host {
         boolean debugViewEnabled();
@@ -60,7 +61,7 @@ public final class TerminalProductRuntimeController {
 
     private final Host host;
 
-    public TerminalProductRuntimeController(Host host) {
+    public ProductRuntimeController(Host host) {
         this.host = host;
     }
 

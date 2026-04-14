@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.runtime;
 
 import android.view.SurfaceView;
 import android.view.View;
@@ -9,6 +9,7 @@ import java.util.function.Supplier;
 
 import dev.zide.terminal.debug.TerminalStatusController;
 import dev.zide.terminal.gesture.TerminalGestureStateController;
+import dev.zide.terminal.host.TerminalFrameLoopController;
 import dev.zide.terminal.scroll.TerminalScrollOverlayView;
 import dev.zide.terminal.selection.TerminalSelectionController;
 import dev.zide.terminal.userland.ProductShellStatePresenter;
@@ -16,8 +17,8 @@ import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandInstallState;
 import dev.zide.terminal.userland.UserlandSessionCoordinator;
 
-/** Functional callback adapter for {@link TerminalProductRuntimeAssembly.Host}. */
-public final class TerminalProductRuntimeAssemblyHostCallbacks implements TerminalProductRuntimeAssembly.Host {
+/** Functional callback adapter for {@link ProductRuntimeAssembly.Host}. */
+public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAssembly.Host {
     private final BooleanSupplier debugViewEnabled;
     private final BooleanSupplier nativeLoaded;
     private final Supplier<UserlandInstallState> installState;
@@ -35,7 +36,7 @@ public final class TerminalProductRuntimeAssemblyHostCallbacks implements Termin
     private final Consumer<String> appendEvent;
     private final Consumer<String> updateStatus;
 
-    public TerminalProductRuntimeAssemblyHostCallbacks(
+    public ProductRuntimeAssemblyCallbacks(
             BooleanSupplier debugViewEnabled,
             BooleanSupplier nativeLoaded,
             Supplier<UserlandInstallState> installState,
