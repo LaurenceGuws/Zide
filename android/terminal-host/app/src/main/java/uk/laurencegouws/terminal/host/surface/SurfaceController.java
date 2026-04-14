@@ -116,8 +116,11 @@ public final class SurfaceController {
     public void onSurfaceChanged(SurfaceHolder holder, int format, int width, int height) {
         host.appendEvent(surfaceChangedEvent(format, width, height));
         final long seq = nativeSurfaceAvailableSeq(holder, width, height);
-        dispatchNativeSurfaceAvailable(seq);
-        postSurfaceChangedViewportNotification();
+        host.callNativeWithSurfaceState(
+                "native.surfaceAvailable",
+                seq,
+                host.currentSurfaceStateSnapshot());
+        host.productSurfaceContainer().post(() -> notifyVisibleViewport("surface-changed"));
         host.handleProductShellStateEvent("surface-changed");
     }
 
@@ -152,12 +155,12 @@ public final class SurfaceController {
     public void installSurfaceView(String reason, SurfaceHolder.Callback2 callback) {
         removeExistingSurfaceViewIfPresent(reason, callback);
 
-        incrementSurfaceHostGeneration();
+        host.setSurfaceHostGeneration(host.surfaceHostGeneration() + 1);
         final SurfaceView nextSurfaceView = createAndAttachSurfaceView();
         final SurfaceHolder.Callback2 nextCallback = resolveSurfaceCallback(callback);
         host.reinstallSurfaceCallback(nextSurfaceView, nextCallback);
         host.setSurfaceView(nextSurfaceView);
-        appendSurfaceHostInstalledEvent(reason);
+        host.appendEvent("surface.host.installed reason=" + reason + " generation=" + host.surfaceHostGeneration());
         host.productSurfaceContainer().post(() -> notifyVisibleViewport("surface-install"));
     }
 
@@ -326,25 +329,6 @@ public final class SurfaceController {
                         " glesTextureUpdates=" + state.glesTextureUpdateCount +
                         " glesTextureResizes=" + state.glesTextureResizeCount +
                         " glesTextureSize=" + state.glesTextureWidth + "x" + state.glesTextureHeight);
-    }
-
-    private void dispatchNativeSurfaceAvailable(long seq) {
-        host.callNativeWithSurfaceState(
-                "native.surfaceAvailable",
-                seq,
-                host.currentSurfaceStateSnapshot());
-    }
-
-    private void postSurfaceChangedViewportNotification() {
-        host.productSurfaceContainer().post(() -> notifyVisibleViewport("surface-changed"));
-    }
-
-    private void incrementSurfaceHostGeneration() {
-        host.setSurfaceHostGeneration(host.surfaceHostGeneration() + 1);
-    }
-
-    private void appendSurfaceHostInstalledEvent(String reason) {
-        host.appendEvent("surface.host.installed reason=" + reason + " generation=" + host.surfaceHostGeneration());
     }
 
     private boolean skipSurfaceRecreationSchedule(boolean recreateSurfaceOnce) {
