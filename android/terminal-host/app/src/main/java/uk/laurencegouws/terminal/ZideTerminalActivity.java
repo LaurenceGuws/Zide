@@ -392,21 +392,17 @@ public final class ZideTerminalActivity extends Activity
 
     private StatusViewCallbacks createStatusViewCallbacks() {
         return new StatusViewCallbacks(
-                StatusViewCallbacks.StatusHostCallbacks.of(
-                        this::activityHost,
-                        this::isDebugViewEnabled,
-                        this::isNativeLoaded,
-                        this::hasWindowFocus,
-                        this::isImeVisible,
-                        this::setImeVisible),
-                StatusViewCallbacks.StatusRuntimeCallbacks.of(
-                        StatusViewCallbacks.StatusSurfaceCallbacks.of(
-                                () -> surfaceHostBridge,
-                                this::currentSurfaceStateSnapshot,
-                                this::notifyVisibleViewportIfReady),
-                        StatusViewCallbacks.StatusUserlandCallbacks.of(
-                                this::currentInstallStateSnapshot,
-                                this::currentReadinessStateSnapshot)));
+                this::activityHost,
+                this::isDebugViewEnabled,
+                this::isNativeLoaded,
+                this::hasWindowFocus,
+                this::isImeVisible,
+                this::setImeVisible,
+                () -> surfaceHostBridge,
+                this::currentSurfaceStateSnapshot,
+                this::notifyVisibleViewportIfReady,
+                this::currentInstallStateSnapshot,
+                this::currentReadinessStateSnapshot);
     }
 
     private LifecycleCallbacks createLifecycleCallbacks() {
