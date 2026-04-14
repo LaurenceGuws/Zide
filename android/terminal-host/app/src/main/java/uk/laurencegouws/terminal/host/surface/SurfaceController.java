@@ -114,11 +114,8 @@ public final class SurfaceController {
     }
 
     public void onSurfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-        host.appendEvent(
-                "surface.changed generation=" + host.surfaceHostGeneration() +
-                        " format=" + format +
-                        " size=" + width + "x" + height);
-        final long seq = host.nativeLoaded() ? host.nativeOnSurfaceAvailableBridge(holder, width, height) : -1;
+        host.appendEvent(surfaceChangedEvent(format, width, height));
+        final long seq = nativeSurfaceAvailableSeq(holder, width, height);
         host.callNativeWithSurfaceState(
                 "native.surfaceAvailable",
                 seq,
@@ -129,7 +126,7 @@ public final class SurfaceController {
 
     public void onSurfaceDestroyed(SurfaceHolder holder) {
         host.appendEvent("surface.lifecycle.destroyed generation=" + host.surfaceHostGeneration());
-        final long seq = host.nativeLoaded() ? host.nativeOnSurfaceDestroyedBridge() : -1;
+        final long seq = nativeSurfaceDestroyedSeq();
         host.callNativeWithSurfaceState(
                 "native.surfaceDestroyed",
                 seq,
@@ -212,7 +209,7 @@ public final class SurfaceController {
         }
         host.setNotifiedViewportSize(width, height, viewportImeVisible);
         host.appendEvent("viewport.size.changed reason=" + reason + " size=" + width + "x" + height + " imeVisible=" + viewportImeVisible);
-        final long seq = host.nativeLoaded() ? host.nativeOnVisibleViewportBridge(width, height, viewportImeVisible) : -1;
+        final long seq = nativeViewportChangedSeq(width, height, viewportImeVisible);
         host.callNativeWithSurfaceState("native.viewportChanged", seq, host.currentSurfaceStateSnapshot());
         host.refreshProductScrollOverlay();
         host.updateStatus("viewport.state.updated");
@@ -272,5 +269,23 @@ public final class SurfaceController {
         host.handler().postDelayed(() -> {
             host.handleProductShellStateEvent("debug-session-started");
         }, 900);
+    }
+
+    private String surfaceChangedEvent(int format, int width, int height) {
+        return "surface.changed generation=" + host.surfaceHostGeneration()
+                + " format=" + format
+                + " size=" + width + "x" + height;
+    }
+
+    private long nativeSurfaceAvailableSeq(SurfaceHolder holder, int width, int height) {
+        return host.nativeLoaded() ? host.nativeOnSurfaceAvailableBridge(holder, width, height) : -1;
+    }
+
+    private long nativeSurfaceDestroyedSeq() {
+        return host.nativeLoaded() ? host.nativeOnSurfaceDestroyedBridge() : -1;
+    }
+
+    private long nativeViewportChangedSeq(int width, int height, boolean imeVisible) {
+        return host.nativeLoaded() ? host.nativeOnVisibleViewportBridge(width, height, imeVisible) : -1;
     }
 }
