@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.ui;
 
 import android.content.Context;
 import android.view.View;
@@ -8,9 +8,9 @@ import dev.zide.terminal.R;
 import dev.zide.terminal.input.ShellInputView;
 
 /**
- * Adapts activity-owned chrome callbacks and view references to {@link TerminalChromeController}.
+ * Adapts activity-owned chrome callbacks and view references to {@link ChromeController}.
  */
-public final class TerminalChromeHostBridge implements TerminalChromeController.Host {
+public final class ChromeBridge implements ChromeController.Host {
     /** Activity callbacks used by chrome actions. */
     public interface Callbacks {
         boolean debugViewEnabled();
@@ -47,7 +47,7 @@ public final class TerminalChromeHostBridge implements TerminalChromeController.
     private final Callbacks callbacks;
     private boolean sidebarOpen = false;
 
-    public TerminalChromeHostBridge(
+    public ChromeBridge(
             Context context,
             View rootView,
             View debugViewModeButton,

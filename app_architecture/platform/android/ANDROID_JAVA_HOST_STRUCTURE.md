@@ -54,22 +54,22 @@ Current shape markers (for hygiene tracking, not hard limits):
 - `ZideTerminalActivity.java`: `581` lines
 - `host/lifecycle/LifecycleController.java`: `78` lines
 - `host/lifecycle/LifecycleCallbacks.java`: `134` lines
-- `host/TerminalChromeHostFactory.java`: `69` lines
-- `host/TerminalInteractionHostFactory.java`: `131` lines
-- `host/TerminalInputHostFactory.java`: `56` lines
+- `host/ui/ChromeFactory.java`: `69` lines
+- `host/interaction/InteractionFactory.java`: `131` lines
+- `host/input/InputFactory.java`: `56` lines
 - `host/interaction/InteractionAssembly.java`: `109` lines
 - `host/interaction/InteractionCallbacks.java`: `97` lines
 - `host/input/InputAssembly.java`: `94` lines
 - `host/input/InputCallbacks.java`: `106` lines
-- `host/TerminalSurfaceHostFactory.java`: `67` lines
-- `host/TerminalSurfaceWidgetAssembly.java`: `127` lines
-- `host/TerminalSurfaceWidgetAssemblyHostCallbacks.java`: `212` lines
-- `host/TerminalRuntimeHostFactory.java`: `81` lines
+- `host/surface/SurfaceFactory.java`: `67` lines
+- `host/surface/SurfaceWidgetAssembly.java`: `127` lines
+- `host/surface/SurfaceWidgetAssemblyCallbacks.java`: `212` lines
+- `host/runtime/RuntimeFactory.java`: `81` lines
 - `host/runtime/ProductRuntimeAssembly.java`: `82` lines
 - `host/runtime/ProductRuntimeAssemblyCallbacks.java`: `153` lines
 - `host/runtime/ProductRuntimeController.java`: `164` lines
 - `host/runtime/ProductRuntimeHostCallbacks.java`: `186` lines
-- `host/TerminalSessionHostFactory.java`: `52` lines
+- `host/session/SessionFactory.java`: `52` lines
 - `host/session/SessionAssembly.java`: `104` lines
 - `host/session/SessionAssemblyCallbacks.java`: `131` lines
 - `host/status/StatusViewAssembly.java`: `182` lines
@@ -83,7 +83,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 - `host/userland/SessionBridge.java`: `60` lines
 - `host/userland/SessionCallbacks.java`: `61` lines
 - `host/userland/ReadinessBlockerCallbacks.java`: `74` lines
-- `host/TerminalUiHostFactory.java`: `56` lines
+- `host/ui/UiFactory.java`: `56` lines
 - `host/ui/UiStartupAssembly.java`: `111` lines
 - `host/ui/UiStartupCallbacks.java`: `171` lines
 - `selection/TerminalSelectionController.java`: monolithic by design for now
@@ -100,59 +100,59 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `gesture/ProductGestureController.java` | Good | Larger than a trivial detector, but justified by gesture arbitration and pinch quantization. | Do not add selection/scrollback mutation here; keep it as gesture resolution only. |
 | `gesture/TerminalGestureStateController.java` | Good | Owns pinch and scrollback budget/state that used to live in the activity. | Keep gesture detection in `ProductGestureController`; keep terminal truth in the native bridge. |
 | `gesture/TerminalGestureStateControllerFactory.java` | Good | Builds one gesture-state controller from widget-scoped host callbacks. | Keep as construction-only glue; no runtime policy in factory. |
-| `host/TerminalFrameLoopController.java` | Good | Small host scheduler; moved out of `userland` because it is not prefix policy. | Keep frame execution in native/product runnable, not in this controller. |
+| `host/runtime/FrameLoopController.java` | Good | Small host scheduler; moved out of `userland` because it is not prefix policy. | Keep frame execution in native/product runnable, not in this controller. |
 | `host/lifecycle/LifecycleController.java` | Good | Owns activity lifecycle wiring to native/status/session/surface hooks so lifecycle overrides stay delegation-only in the activity. | Keep this wiring-only; do not move product behavior or controller policy into it. |
 | `host/lifecycle/LifecycleCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/lifecycle/LifecycleController`. | Keep adapter-only; avoid moving lifecycle policy into this adapter. |
-| `host/TerminalFrameLoopHostCallbacks.java` | Good | Functional callback adapter from activity state/native access into `TerminalFrameLoopHostBridge`. | Keep adapter-only; frame-loop policy stays in `TerminalFrameLoopController`. |
-| `host/TerminalFrameLoopHostBridge.java` | Good | Owns frame-loop host callback adaptation from activity into `TerminalFrameLoopController`. | Keep as callback adapter only; scheduling logic stays in `TerminalFrameLoopController`. |
-| `host/TerminalGestureStateFactoryHostCallbacks.java` | Good | Functional callback adapter from activity state/native access into `gesture/TerminalGestureStateControllerFactory`. | Keep adapter-only; gesture policy stays in `TerminalGestureStateController`. |
-| `host/TerminalGestureStateHostBridge.java` | Good | Owns gesture-state host callback adaptation from activity into `gesture/TerminalGestureStateController`. | Keep gesture policy in `TerminalGestureStateController`; keep this adapter callback-only. |
+| `host/runtime/FrameLoopCallbacks.java` | Good | Functional callback adapter from activity state/native access into `host/runtime/FrameLoopBridge`. | Keep adapter-only; frame-loop policy stays in `host/runtime/FrameLoopController`. |
+| `host/runtime/FrameLoopBridge.java` | Good | Owns frame-loop host callback adaptation from activity into `host/runtime/FrameLoopController`. | Keep as callback adapter only; scheduling logic stays in `host/runtime/FrameLoopController`. |
+| `host/interaction/GestureStateCallbacks.java` | Good | Functional callback adapter from activity state/native access into `gesture/TerminalGestureStateControllerFactory`. | Keep adapter-only; gesture policy stays in `TerminalGestureStateController`. |
+| `host/interaction/GestureStateBridge.java` | Good | Owns gesture-state host callback adaptation from activity into `gesture/TerminalGestureStateController`. | Keep gesture policy in `TerminalGestureStateController`; keep this adapter callback-only. |
 | `host/runtime/ProductRuntimeController.java` | Good | Owns product runtime policy: frame-loop readiness, shell-state/overlay refresh, install-state apply, and shell restart status flow. | Keep it runtime-orchestration only; native truth stays in bridge calls and terminal core. |
 | `host/runtime/ProductRuntimeHostCallbacks.java` | Good | Functional callback adapter from activity state/native access into `host/runtime/ProductRuntimeController`. | Keep adapter-only; runtime behavior stays in `host/runtime/ProductRuntimeController`. |
 | `host/runtime/ProductRuntimeAssembly.java` | Good | Owns product-runtime controller startup assembly so activity no longer inlines runtime callback construction. | Keep this assembly-only; runtime behavior stays in runtime controller + host callbacks. |
 | `host/runtime/ProductRuntimeAssemblyCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/runtime/ProductRuntimeAssembly`. | Keep adapter-only; avoid moving runtime behavior into this adapter. |
-| `host/TerminalActivityViewBindings.java` | Good | Owns raw activity view lookup and typed binding capture for terminal host wiring. | Keep this as lookup-only data binding; no policy or runtime behavior. |
-| `host/TerminalChromeHostFactory.java` | Good | Owns chrome-specific bridge/callback construction so chrome assembly does not inflate the generic host assembler. | Keep this construction-only; do not move chrome behavior out of `TerminalChromeController`. |
-| `host/TerminalInteractionHostFactory.java` | Good | Owns selection/gesture interaction controller construction so interaction seams stay out of the generic host assembler. | Keep this construction-only; interaction behavior remains in selection/gesture controllers. |
+| `host/ui/ActivityViewBindings.java` | Good | Owns raw activity view lookup and typed binding capture for terminal host wiring. | Keep this as lookup-only data binding; no policy or runtime behavior. |
+| `host/ui/ChromeFactory.java` | Good | Owns chrome-specific bridge/callback construction so chrome assembly does not inflate the generic host assembler. | Keep this construction-only; do not move chrome behavior out of `host/ui/ChromeController`. |
+| `host/interaction/InteractionFactory.java` | Good | Owns selection/gesture interaction controller construction so interaction seams stay out of the generic host assembler. | Keep this construction-only; interaction behavior remains in selection/gesture controllers. |
 | `host/interaction/InteractionAssembly.java` | Good | Owns interaction controller assembly wiring (selection + gesture state) for activity startup. | Keep this assembly-only; behavior stays in interaction controllers. |
 | `host/interaction/InteractionCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/interaction/InteractionAssembly`. | Keep adapter-only; avoid moving interaction behavior into this adapter. |
-| `host/TerminalInputHostFactory.java` | Good | Owns hardware-keyboard and IME-focus-recovery controller construction so input seams stay out of generic host assembly. | Keep this construction-only; input behavior remains in `input/` controllers. |
+| `host/input/InputFactory.java` | Good | Owns hardware-keyboard and IME-focus-recovery controller construction so input seams stay out of generic host assembly. | Keep this construction-only; input behavior remains in `input/` controllers. |
 | `host/input/InputAssembly.java` | Good | Owns input-view installation and input-controller assembly composition for the activity wiring layer. | Keep this assembly-only; input behavior remains in `input/` controllers. |
 | `host/input/InputCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/input/InputAssembly`. | Keep adapter-only; avoid adding input behavior here. |
-| `host/TerminalSurfaceHostFactory.java` | Good | Owns surface host bridge/callback construction so surface lifecycle assembly stays out of generic host assembly. | Keep this construction-only; surface behavior remains in surface host controllers/bridges. |
-| `host/TerminalSurfaceWidgetAssembly.java` | Good | Owns surface/widget activity wiring assembly that composes surface and UI host factories for activity use. | Keep this assembly-only; surface/widget behavior remains in dedicated controllers. |
-| `host/TerminalSurfaceWidgetAssemblyHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalSurfaceWidgetAssembly`. | Keep adapter-only; avoid adding surface/widget behavior here. |
-| `host/TerminalRuntimeHostFactory.java` | Good | Owns product-runtime and frame-loop construction so runtime assembly stays out of generic host assembly. | Keep this construction-only; runtime behavior remains in runtime controllers. |
-| `host/TerminalSessionHostFactory.java` | Good | Owns shell-session and userland-session host bridge construction so session seams stay out of generic host assembly. | Keep this construction-only; session behavior remains in session/userland coordinators. |
+| `host/surface/SurfaceFactory.java` | Good | Owns surface host bridge/callback construction so surface lifecycle assembly stays out of generic host assembly. | Keep this construction-only; surface behavior remains in surface host controllers/bridges. |
+| `host/surface/SurfaceWidgetAssembly.java` | Good | Owns surface/widget activity wiring assembly that composes surface and UI host factories for activity use. | Keep this assembly-only; surface/widget behavior remains in dedicated controllers. |
+| `host/surface/SurfaceWidgetAssemblyCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/surface/SurfaceWidgetAssembly`. | Keep adapter-only; avoid adding surface/widget behavior here. |
+| `host/runtime/RuntimeFactory.java` | Good | Owns product-runtime and frame-loop construction so runtime assembly stays out of generic host assembly. | Keep this construction-only; runtime behavior remains in runtime controllers. |
+| `host/session/SessionFactory.java` | Good | Owns shell-session and userland-session host bridge construction so session seams stay out of generic host assembly. | Keep this construction-only; session behavior remains in session/userland coordinators. |
 | `host/session/SessionAssembly.java` | Good | Owns session/runtime wiring assembly that composes session and runtime host factories for activity use. | Keep this assembly-only; business behavior stays in session/runtime controllers. |
 | `host/session/SessionAssemblyCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/session/SessionAssembly`. | Keep adapter-only; avoid adding session/runtime behavior here. |
 | `host/status/StatusViewAssembly.java` | Good | Owns initial view binding plus debug-status/viewport host assembly for activity wiring. | Keep this assembly-only; status rendering and viewport policy remain in dedicated controllers. |
 | `host/status/StatusViewCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/status/StatusViewAssembly`. | Keep adapter-only; avoid moving status/viewport behavior into this adapter. |
 | `host/ui/WidgetAssembly.java` | Good | Owns product widget/chrome/view-mode/surface host assembly so activity wiring no longer inlines those construction seams. | Keep this assembly-only; behavior remains in dedicated controllers/bridges. |
 | `host/ui/WidgetCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/ui/WidgetAssembly`. | Keep adapter-only; avoid moving widget/chrome/view-mode behavior into this adapter. |
-| `host/TerminalUiHostFactory.java` | Good | Owns UI host construction for shell-state presenter bridge, view-mode controller, and surface-widget controller. | Keep this construction-only; UI behavior remains in dedicated host controllers. |
+| `host/ui/UiFactory.java` | Good | Owns UI host construction for shell-state presenter bridge, view-mode controller, and surface-widget controller. | Keep this construction-only; UI behavior remains in dedicated host controllers. |
 | `host/ui/UiStartupAssembly.java` | Good | Owns post-construction UI bind/start assembly for activity wiring. | Keep this assembly-only; UI behavior remains in dedicated controllers. |
 | `host/ui/UiStartupCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/ui/UiStartupAssembly`. | Keep adapter-only; avoid adding UI behavior here. |
-| `host/TerminalViewModeController.java` | Good | Owns product/debug view-mode switching and its side effects (viewport notify, scroll-overlay refresh, debug-session refresh). | Keep this focused on mode transitions; do not move selection or shell/runtime truth here. |
-| `host/TerminalChromeHostBridge.java` | Good | Owns chrome callback adaptation, sidebar-open state, and assist-button/modifier-latch view presentation wiring for the chrome controller host contract. | Keep as adapter/state only; keep chrome behavior in `TerminalChromeController`. |
-| `host/TerminalChromeHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalChromeHostBridge`. | Keep adapter-only; chrome behavior remains in `TerminalChromeController`. |
+| `host/ui/ViewModeController.java` | Good | Owns product/debug view-mode switching and its side effects (viewport notify, scroll-overlay refresh, debug-session refresh). | Keep this focused on mode transitions; do not move selection or shell/runtime truth here. |
+| `host/ui/ChromeBridge.java` | Good | Owns chrome callback adaptation, sidebar-open state, and assist-button/modifier-latch view presentation wiring for the chrome controller host contract. | Keep as adapter/state only; keep chrome behavior in `host/ui/ChromeController`. |
+| `host/ui/ChromeCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/ui/ChromeBridge`. | Keep adapter-only; chrome behavior remains in `host/ui/ChromeController`. |
 | `host/userland/ProductShellStateBridge.java` | Good | Owns product-shell-state presenter callback adaptation and blocker/overlay view binding. | Keep presentation behavior in `userland/ProductShellStatePresenter`; keep this adapter thin. |
 | `host/userland/ProductShellStateCallbacks.java` | Good | Functional callback adapter from activity state into `host/userland/ProductShellStateBridge`. | Keep adapter-only; shell-state presentation behavior remains in `ProductShellStatePresenter`. |
-| `host/TerminalChromeController.java` | Watch | Coherent today, but broad: sidebar, assist bar, view mode, and IME trigger policy. | Split assist-bar/sidebar only if either grows more behavior. |
+| `host/ui/ChromeController.java` | Watch | Coherent today, but broad: sidebar, assist bar, view mode, and IME trigger policy. | Split assist-bar/sidebar only if either grows more behavior. |
 | `host/runtime/RuntimeAssetsBridge.java` | Good | Owns runtime-assets host callback adaptation from activity into `host/runtime/RuntimeAssetsController`. | Keep asset staging behavior in `host/runtime/RuntimeAssetsController`; keep this adapter callback-only. |
 | `host/runtime/RuntimeAssetsCallbacks.java` | Good | Functional callback adapter from activity actions into `host/runtime/RuntimeAssetsBridge`. | Keep adapter-only; runtime-asset behavior stays in `host/runtime/RuntimeAssetsController`. |
 | `host/runtime/RuntimeAssetsController.java` | Good | Owns font asset staging and userland release loading. | Keep install/update and prefix extraction in `userland`. |
-| `host/TerminalSelectionInteractionHostBridge.java` | Good | Owns selection interaction host callback adaptation from activity into `selection/TerminalSelectionController.Host`. | Keep selection behavior in `TerminalSelectionController`; keep this adapter callback-only. |
-| `host/TerminalSelectionHostBridge.java` | Good | Owns selection-bridge callback adaptation from activity native calls into `TerminalSelectionController.Bridge`. | Keep as bridge-only adapter; selection behavior stays in `selection/TerminalSelectionController.java`. |
-| `host/TerminalSelectionFactoryHostCallbacks.java` | Good | Functional callback adapter from activity state/native access into `selection/TerminalSelectionControllerFactory`. | Keep adapter-only; selection behavior remains in `TerminalSelectionController`. |
+| `host/interaction/SelectionInteractionBridge.java` | Good | Owns selection interaction host callback adaptation from activity into `selection/TerminalSelectionController.Host`. | Keep selection behavior in `TerminalSelectionController`; keep this adapter callback-only. |
+| `host/interaction/SelectionBridge.java` | Good | Owns selection-bridge callback adaptation from activity native calls into `TerminalSelectionController.Bridge`. | Keep as bridge-only adapter; selection behavior stays in `selection/TerminalSelectionController.java`. |
+| `host/interaction/SelectionCallbacks.java` | Good | Functional callback adapter from activity state/native access into `selection/TerminalSelectionControllerFactory`. | Keep adapter-only; selection behavior remains in `TerminalSelectionController`. |
 | `host/status/StatusBridge.java` | Good | Owns debug status host callback adaptation from activity state/snapshots into `debug/TerminalStatusController`. | Keep status rendering logic in `TerminalStatusController`; keep this adapter callback-only. |
 | `host/status/StatusCallbacks.java` | Good | Functional callback adapter from activity state/snapshots into `host/status/StatusBridge`. | Keep adapter-only; status rendering behavior stays in `TerminalStatusController`. |
-| `host/TerminalSurfaceHostCallbacks.java` | Good | Owns callback adaptation from activity into `TerminalSurfaceHostBridge.Callbacks` while preserving bridge contracts. | Keep this adapter-only; do not move surface policy out of `TerminalSurfaceHostController`. |
-| `host/TerminalSurfaceHostLifecycleCallbacks.java` | Good | Functional callback adapter from activity state/actions/native hooks into `TerminalSurfaceHostCallbacks`. | Keep adapter-only; surface lifecycle behavior stays in `TerminalSurfaceHostController`. |
-| `host/TerminalSurfaceHostBridge.java` | Good | Owns mutable SurfaceView/viewport scheduling state and adapts activity callbacks into the surface host controller. | Keep this as state + callback adapter only; do not move lifecycle policy here. |
-| `host/TerminalSurfaceHostController.java` | Watch | Coherent surface owner, but broad because it also schedules debug surface operations and viewport notifications. | If more viewport policy appears, move it to `host/ui/ViewportController`. |
-| `host/TerminalSurfaceWidgetHostCallbacks.java` | Good | Functional callback adapter from activity state/native access into `TerminalSurfaceWidgetController`. | Keep adapter-only; widget interaction behavior stays in `TerminalSurfaceWidgetController`. |
-| `host/TerminalSurfaceWidgetController.java` | Good | Owns the terminal widget callback surface: surface lifecycle callbacks, product gestures, and scroll-overlay callbacks for one terminal instance. | Keep this widget-scoped; future tabs should compose multiple widget controllers, not fork activity logic. |
+| `host/surface/SurfaceCallbacks.java` | Good | Owns callback adaptation from activity into `host/surface/SurfaceBridge.Callbacks` while preserving bridge contracts. | Keep this adapter-only; do not move surface policy out of `host/surface/SurfaceController`. |
+| `host/surface/SurfaceLifecycleCallbacks.java` | Good | Functional callback adapter from activity state/actions/native hooks into `host/surface/SurfaceCallbacks`. | Keep adapter-only; surface lifecycle behavior stays in `host/surface/SurfaceController`. |
+| `host/surface/SurfaceBridge.java` | Good | Owns mutable SurfaceView/viewport scheduling state and adapts activity callbacks into the surface host controller. | Keep this as state + callback adapter only; do not move lifecycle policy here. |
+| `host/surface/SurfaceController.java` | Watch | Coherent surface owner, but broad because it also schedules debug surface operations and viewport notifications. | If more viewport policy appears, move it to `host/ui/ViewportController`. |
+| `host/surface/SurfaceWidgetCallbacks.java` | Good | Functional callback adapter from activity state/native access into `host/surface/SurfaceWidgetController`. | Keep adapter-only; widget interaction behavior stays in `host/surface/SurfaceWidgetController`. |
+| `host/surface/SurfaceWidgetController.java` | Good | Owns the terminal widget callback surface: surface lifecycle callbacks, product gestures, and scroll-overlay callbacks for one terminal instance. | Keep this widget-scoped; future tabs should compose multiple widget controllers, not fork activity logic. |
 | `host/session/ShellBridge.java` | Good | Owns shell-session native bridge callback adaptation from activity into `session/ShellSessionController.Bridge`. | Keep shell poll/restart policy in `ShellSessionController`; keep this adapter callback-only. |
 | `host/session/ShellCallbacks.java` | Good | Functional callback adapter from activity native access into `host/session/ShellBridge`. | Keep adapter-only; shell session policy stays in `ShellSessionController`. |
 | `host/userland/SessionBridge.java` | Good | Owns userland session refresh/poll telemetry callback adaptation from activity into `userland/UserlandSessionCoordinator`. | Keep poll/telemetry behavior in `UserlandSessionCoordinator`; keep this adapter callback-only. |
@@ -162,7 +162,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/userland/WorkflowCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/userland/WorkflowBridge`. | Keep adapter-only; workflow behavior stays in `UserlandWorkflowController`. |
 | `host/userland/WorkflowAssembly.java` | Good | Owns userland runtime-assets/workflow startup assembly so activity no longer inlines userland bridge/controller construction. | Keep this assembly-only; workflow behavior stays in workflow controller + bridge. |
 | `host/userland/WorkflowAssemblyCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/userland/WorkflowAssembly`. | Keep adapter-only; avoid moving userland workflow behavior into this adapter. |
-| `host/TerminalViewModeHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalViewModeController`. | Keep adapter-only; view-mode behavior stays in `TerminalViewModeController`. |
+| `host/ui/ViewModeCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/ui/ViewModeController`. | Keep adapter-only; view-mode behavior stays in `host/ui/ViewModeController`. |
 | `host/ui/ViewportBridge.java` | Good | Owns viewport host callback adaptation and bound product surface/view references for `host/ui/ViewportController`. | Keep viewport behavior in `host/ui/ViewportController`; keep this adapter callback/reference-only. |
 | `host/ui/ViewportCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/ui/ViewportBridge`. | Keep adapter-only; viewport behavior stays in `host/ui/ViewportController`. |
 | `host/ui/ViewportController.java` | Good | Small, focused owner of insets and visible viewport size. | Keep terminal grid/scrollback mutation out. |
@@ -192,5 +192,5 @@ Current shape markers (for hygiene tracking, not hard limits):
 
 1. Keep reducing `ZideTerminalActivity` only where methods still own policy.
 2. Keep `TerminalSelectionController` monolithic until a real seam appears.
-3. Split `TerminalChromeController` only if assist/sidebar policy expands.
+3. Split `host/ui/ChromeController` only if assist/sidebar policy expands.
 4. Split `UserlandInstaller` only if install modes or transport complexity grow.

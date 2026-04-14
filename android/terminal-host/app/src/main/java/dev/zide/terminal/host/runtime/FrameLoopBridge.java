@@ -1,9 +1,9 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.runtime;
 
 /**
- * Adapts activity-owned frame-loop callbacks to {@link TerminalFrameLoopController.Host}.
+ * Adapts activity-owned frame-loop callbacks to {@link FrameLoopController.Host}.
  */
-public final class TerminalFrameLoopHostBridge implements TerminalFrameLoopController.Host {
+public final class FrameLoopBridge implements FrameLoopController.Host {
     /** Activity callbacks used by frame-loop scheduling. */
     public interface Callbacks {
         boolean shouldRunProductFrameLoop();
@@ -13,7 +13,7 @@ public final class TerminalFrameLoopHostBridge implements TerminalFrameLoopContr
 
     private final Callbacks callbacks;
 
-    public TerminalFrameLoopHostBridge(Callbacks callbacks) {
+    public FrameLoopBridge(Callbacks callbacks) {
         this.callbacks = callbacks;
     }
 

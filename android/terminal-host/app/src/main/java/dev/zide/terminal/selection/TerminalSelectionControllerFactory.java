@@ -3,8 +3,8 @@ package dev.zide.terminal.selection;
 import android.content.Context;
 import android.widget.FrameLayout;
 
-import dev.zide.terminal.host.TerminalSelectionHostBridge;
-import dev.zide.terminal.host.TerminalSelectionInteractionHostBridge;
+import dev.zide.terminal.host.interaction.SelectionBridge;
+import dev.zide.terminal.host.interaction.SelectionInteractionBridge;
 
 /** Creates selection controllers for a terminal surface widget instance. */
 public final class TerminalSelectionControllerFactory {
@@ -82,10 +82,10 @@ public final class TerminalSelectionControllerFactory {
 
     public static TerminalSelectionController create(Context context, FrameLayout productSurfaceContainer, Host host) {
         return new TerminalSelectionController(
-                new TerminalSelectionInteractionHostBridge(
+                new SelectionInteractionBridge(
                         context,
                         productSurfaceContainer,
-                        new TerminalSelectionInteractionHostBridge.Callbacks() {
+                        new SelectionInteractionBridge.Callbacks() {
                             @Override
                             public int productViewportWidthPx() {
                                 return host.productViewportWidthPx();
@@ -116,7 +116,7 @@ public final class TerminalSelectionControllerFactory {
                                 host.appendEvent(event);
                             }
                         }),
-                new TerminalSelectionHostBridge(new TerminalSelectionHostBridge.Callbacks() {
+                new SelectionBridge(new SelectionBridge.Callbacks() {
                     @Override
                     public boolean nativeLoaded() {
                         return host.nativeLoaded();

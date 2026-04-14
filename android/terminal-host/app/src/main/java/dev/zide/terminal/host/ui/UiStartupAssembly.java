@@ -6,11 +6,11 @@ import android.widget.Button;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import dev.zide.terminal.host.TerminalChromeController;
-import dev.zide.terminal.host.TerminalFrameLoopController;
-import dev.zide.terminal.host.TerminalSurfaceHostController;
-import dev.zide.terminal.host.TerminalSurfaceWidgetController;
-import dev.zide.terminal.host.TerminalViewModeController;
+import dev.zide.terminal.host.ui.ChromeController;
+import dev.zide.terminal.host.runtime.FrameLoopController;
+import dev.zide.terminal.host.surface.SurfaceController;
+import dev.zide.terminal.host.surface.SurfaceWidgetController;
+import dev.zide.terminal.host.ui.ViewModeController;
 import dev.zide.terminal.host.runtime.RuntimeAssetsController;
 import dev.zide.terminal.host.userland.ReadinessBlockerCallbacks;
 import dev.zide.terminal.userland.UserlandReadinessBlockerController;
@@ -25,7 +25,7 @@ public final class UiStartupAssembly {
     public interface Host {
         ViewportController viewportController();
 
-        TerminalChromeController chromeController();
+        ChromeController chromeController();
 
         Button productBootstrapRetryButton();
 
@@ -47,15 +47,15 @@ public final class UiStartupAssembly {
 
         RuntimeAssetsController runtimeAssetsController();
 
-        TerminalViewModeController viewModeController();
+        ViewModeController viewModeController();
 
-        TerminalSurfaceHostController surfaceHostController();
+        SurfaceController surfaceHostController();
 
-        TerminalSurfaceWidgetController surfaceWidgetController();
+        SurfaceWidgetController surfaceWidgetController();
 
         dev.zide.terminal.userland.ProductShellStatePresenter productShellStatePresenter();
 
-        TerminalFrameLoopController frameLoopController();
+        FrameLoopController frameLoopController();
 
         View leftSidebar();
     }

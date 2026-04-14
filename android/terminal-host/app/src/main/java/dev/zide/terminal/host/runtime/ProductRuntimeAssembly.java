@@ -6,8 +6,8 @@ import android.view.View;
 import dev.zide.terminal.TerminalNativeBridge;
 import dev.zide.terminal.debug.TerminalStatusController;
 import dev.zide.terminal.gesture.TerminalGestureStateController;
-import dev.zide.terminal.host.TerminalFrameLoopController;
-import dev.zide.terminal.host.TerminalRuntimeHostFactory;
+import dev.zide.terminal.host.runtime.FrameLoopController;
+import dev.zide.terminal.host.runtime.RuntimeFactory;
 import dev.zide.terminal.scroll.TerminalScrollOverlayView;
 import dev.zide.terminal.selection.TerminalSelectionController;
 import dev.zide.terminal.userland.ProductShellStatePresenter;
@@ -39,7 +39,7 @@ public final class ProductRuntimeAssembly {
 
         ProductShellStatePresenter productShellStatePresenter();
 
-        TerminalFrameLoopController frameLoopController();
+        FrameLoopController frameLoopController();
 
         TerminalStatusController terminalStatusController();
 
@@ -56,8 +56,8 @@ public final class ProductRuntimeAssembly {
     }
 
     public static ProductRuntimeController assemble(Host host) {
-        return TerminalRuntimeHostFactory.createProductRuntimeController(
-                TerminalRuntimeHostFactory.createProductRuntimeHostCallbacks(
+        return RuntimeFactory.createProductRuntimeController(
+                RuntimeFactory.createProductRuntimeHostCallbacks(
                         host::debugViewEnabled,
                         host::nativeLoaded,
                         host::installState,

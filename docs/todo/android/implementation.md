@@ -88,18 +88,18 @@ A cut is done only if all are true:
 - product runtime, chrome, surface, session, selection, gesture, input, and UI
   construction now terminate in dedicated `host/*Factory` classes
 - chrome bridge/callback construction now lives in
-  `host/TerminalChromeHostFactory`
+  `host/ui/ChromeFactory`
 - selection/gesture controller construction now lives in
-  `host/TerminalInteractionHostFactory`
+  `host/interaction/InteractionFactory`
 - hardware-keyboard and IME-focus-recovery controller construction now lives in
-  `host/TerminalInputHostFactory`
+  `host/input/InputFactory`
 - surface host bridge/callback construction now lives in
-  `host/TerminalSurfaceHostFactory`
+  `host/surface/SurfaceFactory`
 - product-runtime/frame-loop construction now lives in
-  `host/TerminalRuntimeHostFactory`
+  `host/runtime/RuntimeFactory`
 - shell-session and userland-session host bridge construction now lives in
-  `host/TerminalSessionHostFactory`
-- UI host construction now lives in `host/TerminalUiHostFactory`
+  `host/session/SessionFactory`
+- UI host construction now lives in `host/ui/UiFactory`
 - session/runtime activity wiring now composes through
   `host/session/SessionAssembly` + `SessionAssemblyCallbacks`
 - initial status/view activity wiring now composes through
@@ -117,12 +117,12 @@ A cut is done only if all are true:
 - input-view install and input controller activity wiring now composes through
   `host/input/InputAssembly` + `InputCallbacks`
 - surface/widget activity wiring now composes through
-  `host/TerminalSurfaceWidgetAssembly` +
-  `TerminalSurfaceWidgetAssemblyHostCallbacks`
+  `host/surface/SurfaceWidgetAssembly` +
+  `SurfaceWidgetAssemblyCallbacks`
 - post-construction UI bind/start activity wiring now composes through
   `host/ui/UiStartupAssembly` + `UiStartupCallbacks`
 - terminal surface widget seam is established in
-  `host/TerminalSurfaceWidgetController` for future tabbed hosting
+  `host/surface/SurfaceWidgetController` for future tabbed hosting
 - debug surface snapshot composition moved to
   `debug/TerminalSurfaceStateSnapshotReader`
 - selection controller remains monolithic by design until a real split seam

@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.surface;
 
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -12,8 +12,8 @@ import java.util.function.Supplier;
 
 import dev.zide.terminal.debug.AndroidDebugFormatter;
 
-/** Functional callback adapter for {@link TerminalSurfaceWidgetAssembly.Host}. */
-public final class TerminalSurfaceWidgetAssemblyHostCallbacks implements TerminalSurfaceWidgetAssembly.Host {
+/** Functional callback adapter for {@link SurfaceWidgetAssembly.Host}. */
+public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssembly.Host {
     private final Supplier<android.os.Handler> handler;
     private final Supplier<FrameLayout> productSurfaceContainer;
     private final BooleanSupplier nativeLoaded;
@@ -23,23 +23,23 @@ public final class TerminalSurfaceWidgetAssemblyHostCallbacks implements Termina
     private final Runnable refreshProductScrollOverlay;
     private final Consumer<String> appendEvent;
     private final Consumer<String> updateStatus;
-    private final TerminalSurfaceHostLifecycleCallbacks.NativeEventCallback callNative;
-    private final TerminalSurfaceHostLifecycleCallbacks.NativeSurfaceEventCallback callNativeWithSurfaceState;
-    private final TerminalSurfaceHostLifecycleCallbacks.SurfaceAvailableCallback nativeOnSurfaceAvailableBridge;
-    private final TerminalSurfaceHostLifecycleCallbacks.LongSupplier nativeOnSurfaceDestroyedBridge;
-    private final TerminalSurfaceHostLifecycleCallbacks.LongSupplier nativeOnSurfaceRedrawNeededBridge;
-    private final TerminalSurfaceHostLifecycleCallbacks.VisibleViewportCallback nativeOnVisibleViewportBridge;
+    private final SurfaceLifecycleCallbacks.NativeEventCallback callNative;
+    private final SurfaceLifecycleCallbacks.NativeSurfaceEventCallback callNativeWithSurfaceState;
+    private final SurfaceLifecycleCallbacks.SurfaceAvailableCallback nativeOnSurfaceAvailableBridge;
+    private final SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceDestroyedBridge;
+    private final SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceRedrawNeededBridge;
+    private final SurfaceLifecycleCallbacks.VisibleViewportCallback nativeOnVisibleViewportBridge;
     private final Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot;
     private final Consumer<String> handleProductShellStateEvent;
     private final Consumer<SurfaceView> installSurfaceGestureHost;
-    private final TerminalSurfaceHostLifecycleCallbacks.ReinstallSurfaceCallback reinstallSurfaceCallback;
+    private final SurfaceLifecycleCallbacks.ReinstallSurfaceCallback reinstallSurfaceCallback;
     private final Supplier<SurfaceHolder.Callback2> surfaceCallback;
     private final IntUnaryOperator nativeSetShellScrollbackOffset;
     private final IntSupplier nativeFollowShellLiveBottom;
     private final IntSupplier productViewportHeightPx;
     private final Runnable reevaluateProductFrameLoop;
 
-    public TerminalSurfaceWidgetAssemblyHostCallbacks(
+    public SurfaceWidgetAssemblyCallbacks(
             Supplier<android.os.Handler> handler,
             Supplier<FrameLayout> productSurfaceContainer,
             BooleanSupplier nativeLoaded,
@@ -49,16 +49,16 @@ public final class TerminalSurfaceWidgetAssemblyHostCallbacks implements Termina
             Runnable refreshProductScrollOverlay,
             Consumer<String> appendEvent,
             Consumer<String> updateStatus,
-            TerminalSurfaceHostLifecycleCallbacks.NativeEventCallback callNative,
-            TerminalSurfaceHostLifecycleCallbacks.NativeSurfaceEventCallback callNativeWithSurfaceState,
-            TerminalSurfaceHostLifecycleCallbacks.SurfaceAvailableCallback nativeOnSurfaceAvailableBridge,
-            TerminalSurfaceHostLifecycleCallbacks.LongSupplier nativeOnSurfaceDestroyedBridge,
-            TerminalSurfaceHostLifecycleCallbacks.LongSupplier nativeOnSurfaceRedrawNeededBridge,
-            TerminalSurfaceHostLifecycleCallbacks.VisibleViewportCallback nativeOnVisibleViewportBridge,
+            SurfaceLifecycleCallbacks.NativeEventCallback callNative,
+            SurfaceLifecycleCallbacks.NativeSurfaceEventCallback callNativeWithSurfaceState,
+            SurfaceLifecycleCallbacks.SurfaceAvailableCallback nativeOnSurfaceAvailableBridge,
+            SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceDestroyedBridge,
+            SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceRedrawNeededBridge,
+            SurfaceLifecycleCallbacks.VisibleViewportCallback nativeOnVisibleViewportBridge,
             Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot,
             Consumer<String> handleProductShellStateEvent,
             Consumer<SurfaceView> installSurfaceGestureHost,
-            TerminalSurfaceHostLifecycleCallbacks.ReinstallSurfaceCallback reinstallSurfaceCallback,
+            SurfaceLifecycleCallbacks.ReinstallSurfaceCallback reinstallSurfaceCallback,
             Supplier<SurfaceHolder.Callback2> surfaceCallback,
             IntUnaryOperator nativeSetShellScrollbackOffset,
             IntSupplier nativeFollowShellLiveBottom,

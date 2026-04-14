@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.surface;
 
 import android.graphics.PixelFormat;
 import android.view.Gravity;
@@ -12,7 +12,7 @@ import android.os.Handler;
 import dev.zide.terminal.debug.AndroidDebugFormatter;
 
 /** Owns SurfaceView host lifecycle, viewport notifications, and debug surface scheduling. */
-public final class TerminalSurfaceHostController {
+public final class SurfaceController {
     /** Host callbacks for surface and viewport orchestration. */
     public interface Host {
         Handler handler();
@@ -93,7 +93,7 @@ public final class TerminalSurfaceHostController {
     private final Host host;
     private boolean surfaceRedrawNeededDispatching;
 
-    public TerminalSurfaceHostController(Host host) {
+    public SurfaceController(Host host) {
         this.host = host;
     }
 

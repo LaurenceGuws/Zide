@@ -7,7 +7,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import dev.zide.terminal.debug.AndroidDebugFormatter;
-import dev.zide.terminal.host.TerminalSurfaceHostBridge;
+import dev.zide.terminal.host.surface.SurfaceBridge;
 import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandInstallState;
 
@@ -19,7 +19,7 @@ public final class StatusViewCallbacks implements StatusViewAssembly.Host {
     private final BooleanSupplier hasWindowFocusNow;
     private final BooleanSupplier imeVisible;
     private final Consumer<Boolean> setImeVisible;
-    private final Supplier<TerminalSurfaceHostBridge> surfaceHostBridge;
+    private final Supplier<SurfaceBridge> surfaceHostBridge;
     private final Supplier<UserlandInstallState> currentInstallState;
     private final Supplier<UserlandReadinessState> currentReadinessState;
     private final Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot;
@@ -32,7 +32,7 @@ public final class StatusViewCallbacks implements StatusViewAssembly.Host {
             BooleanSupplier hasWindowFocusNow,
             BooleanSupplier imeVisible,
             Consumer<Boolean> setImeVisible,
-            Supplier<TerminalSurfaceHostBridge> surfaceHostBridge,
+            Supplier<SurfaceBridge> surfaceHostBridge,
             Supplier<UserlandInstallState> currentInstallState,
             Supplier<UserlandReadinessState> currentReadinessState,
             Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot,
@@ -81,7 +81,7 @@ public final class StatusViewCallbacks implements StatusViewAssembly.Host {
     }
 
     @Override
-    public TerminalSurfaceHostBridge surfaceHostBridge() {
+    public SurfaceBridge surfaceHostBridge() {
         return surfaceHostBridge.get();
     }
 

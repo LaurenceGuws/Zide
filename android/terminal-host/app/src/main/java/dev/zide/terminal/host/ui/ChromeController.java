@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.ui;
 
 import android.view.MotionEvent;
 import android.view.inputmethod.InputMethodManager;
@@ -8,7 +8,7 @@ import android.widget.Button;
 import dev.zide.terminal.input.ShellInputView;
 
 /** Owns product chrome interactions: view-mode toggles, sidebar, assist bar, and IME policy. */
-public final class TerminalChromeController {
+public final class ChromeController {
     public interface Host {
         android.content.Context context();
         View debugViewModeButton();
@@ -36,7 +36,7 @@ public final class TerminalChromeController {
 
     private final Host host;
 
-    public TerminalChromeController(Host host) {
+    public ChromeController(Host host) {
         this.host = host;
     }
 

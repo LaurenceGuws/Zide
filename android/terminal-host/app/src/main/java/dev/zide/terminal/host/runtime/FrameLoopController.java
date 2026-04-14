@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.runtime;
 
 import android.os.Handler;
 
@@ -8,7 +8,7 @@ import android.os.Handler;
  * <p>This is host infrastructure, not userland policy: it decides whether the product frame
  * runnable should be active and removes pending callbacks when the product surface is not ready.
  */
-public final class TerminalFrameLoopController {
+public final class FrameLoopController {
     /** Host callback for the frame-loop readiness gate. */
     public interface Host {
         boolean shouldRunProductFrameLoop();
@@ -34,7 +34,7 @@ public final class TerminalFrameLoopController {
         }
     };
 
-    public TerminalFrameLoopController(Handler handler, Host host) {
+    public FrameLoopController(Handler handler, Host host) {
         this.handler = handler;
         this.host = host;
     }

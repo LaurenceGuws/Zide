@@ -1,16 +1,18 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.ui;
 
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
 import dev.zide.terminal.gesture.TerminalGestureStateController;
+import dev.zide.terminal.host.surface.SurfaceController;
+import dev.zide.terminal.host.surface.SurfaceWidgetController;
 import dev.zide.terminal.host.userland.ProductShellStateBridge;
 import dev.zide.terminal.selection.TerminalSelectionController;
 
 /** UI host assembly helpers. */
-public final class TerminalUiHostFactory {
-    private TerminalUiHostFactory() {
+public final class UiFactory {
+    private UiFactory() {
     }
 
     public static ProductShellStateBridge createProductShellStateHostBridge(
@@ -29,13 +31,13 @@ public final class TerminalUiHostFactory {
                 callbacks);
     }
 
-    public static TerminalViewModeController createViewModeController(
+    public static ViewModeController createViewModeController(
             View productView,
             View debugView,
             View terminalScrollOverlay,
             FrameLayout productSurfaceContainer,
-            TerminalViewModeController.Host host) {
-        return new TerminalViewModeController(
+            ViewModeController.Host host) {
+        return new ViewModeController(
                 productView,
                 debugView,
                 terminalScrollOverlay,
@@ -43,12 +45,12 @@ public final class TerminalUiHostFactory {
                 host);
     }
 
-    public static TerminalSurfaceWidgetController createSurfaceWidgetController(
-            TerminalSurfaceHostController surfaceHostController,
+    public static SurfaceWidgetController createSurfaceWidgetController(
+            SurfaceController surfaceHostController,
             TerminalSelectionController selectionController,
             TerminalGestureStateController terminalGestureStateController,
-            TerminalSurfaceWidgetController.Host host) {
-        return new TerminalSurfaceWidgetController(
+            SurfaceWidgetController.Host host) {
+        return new SurfaceWidgetController(
                 surfaceHostController,
                 selectionController,
                 terminalGestureStateController,

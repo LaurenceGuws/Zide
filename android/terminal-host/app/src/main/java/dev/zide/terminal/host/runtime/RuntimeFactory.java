@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.runtime;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
@@ -17,8 +17,8 @@ import dev.zide.terminal.userland.UserlandInstallState;
 import dev.zide.terminal.userland.UserlandSessionCoordinator;
 
 /** Runtime host assembly helpers. */
-public final class TerminalRuntimeHostFactory {
-    private TerminalRuntimeHostFactory() {
+public final class RuntimeFactory {
+    private RuntimeFactory() {
     }
 
     public static ProductRuntimeController createProductRuntimeController(
@@ -37,7 +37,7 @@ public final class TerminalRuntimeHostFactory {
             Supplier<TerminalScrollOverlayView> terminalScrollOverlay,
             Supplier<TerminalSelectionController> selectionController,
             Supplier<ProductShellStatePresenter> productShellStatePresenter,
-            Supplier<TerminalFrameLoopController> frameLoopController,
+            Supplier<FrameLoopController> frameLoopController,
             Supplier<TerminalStatusController> terminalStatusController,
             Supplier<UserlandSessionCoordinator> userlandSessionCoordinator,
             Supplier<TerminalGestureStateController> terminalGestureStateController,
@@ -70,13 +70,13 @@ public final class TerminalRuntimeHostFactory {
                 nativeRestartShellSession);
     }
 
-    public static TerminalFrameLoopController createFrameLoopController(
+    public static FrameLoopController createFrameLoopController(
             android.os.Handler handler,
             BooleanSupplier shouldRunProductFrameLoop,
             IntSupplier tickProductFrame) {
-        return new TerminalFrameLoopController(
+        return new FrameLoopController(
                 handler,
-                new TerminalFrameLoopHostBridge(new TerminalFrameLoopHostCallbacks(
+                new FrameLoopBridge(new FrameLoopCallbacks(
                         shouldRunProductFrameLoop,
                         tickProductFrame)));
     }

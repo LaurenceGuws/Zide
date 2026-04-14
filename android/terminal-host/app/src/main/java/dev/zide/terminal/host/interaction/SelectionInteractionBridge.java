@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.interaction;
 
 import android.content.Context;
 import android.widget.FrameLayout;
@@ -8,7 +8,7 @@ import dev.zide.terminal.selection.TerminalSelectionController;
 /**
  * Adapts activity-owned callbacks to {@link TerminalSelectionController.Host}.
  */
-public final class TerminalSelectionInteractionHostBridge implements TerminalSelectionController.Host {
+public final class SelectionInteractionBridge implements TerminalSelectionController.Host {
     /** Activity callbacks required for selection interaction. */
     public interface Callbacks {
         int productViewportWidthPx();
@@ -28,7 +28,7 @@ public final class TerminalSelectionInteractionHostBridge implements TerminalSel
     private final FrameLayout productSurfaceContainer;
     private final Callbacks callbacks;
 
-    public TerminalSelectionInteractionHostBridge(
+    public SelectionInteractionBridge(
             Context context,
             FrameLayout productSurfaceContainer,
             Callbacks callbacks) {

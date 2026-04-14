@@ -1,12 +1,13 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.surface;
 
 import android.view.SurfaceHolder;
 
 import dev.zide.terminal.gesture.TerminalGestureStateController;
+import dev.zide.terminal.host.ui.UiFactory;
 import dev.zide.terminal.selection.TerminalSelectionController;
 
 /** Owns surface + widget controller assembly for the activity wiring layer. */
-public final class TerminalSurfaceWidgetAssembly {
+public final class SurfaceWidgetAssembly {
     /** Activity callbacks required to assemble surface/widget host wiring. */
     public interface Host {
         android.os.Handler handler();
@@ -63,33 +64,33 @@ public final class TerminalSurfaceWidgetAssembly {
 
     /** Immutable assembled surface/widget construction result. */
     public static final class Result {
-        public final TerminalSurfaceHostBridge surfaceHostBridge;
-        public final TerminalSurfaceHostController surfaceHostController;
-        public final TerminalSurfaceWidgetController surfaceWidgetController;
+        public final SurfaceBridge surfaceHostBridge;
+        public final SurfaceController surfaceHostController;
+        public final SurfaceWidgetController surfaceWidgetController;
 
         private Result(
-                TerminalSurfaceHostBridge surfaceHostBridge,
-                TerminalSurfaceHostController surfaceHostController,
-                TerminalSurfaceWidgetController surfaceWidgetController) {
+                SurfaceBridge surfaceHostBridge,
+                SurfaceController surfaceHostController,
+                SurfaceWidgetController surfaceWidgetController) {
             this.surfaceHostBridge = surfaceHostBridge;
             this.surfaceHostController = surfaceHostController;
             this.surfaceWidgetController = surfaceWidgetController;
         }
     }
 
-    private TerminalSurfaceWidgetAssembly() {
+    private SurfaceWidgetAssembly() {
     }
 
     public static Result assemble(
             TerminalSelectionController selectionController,
             TerminalGestureStateController terminalGestureStateController,
             Host host) {
-        final TerminalSurfaceWidgetController[] widgetRef = new TerminalSurfaceWidgetController[1];
-        final TerminalSurfaceHostBridge surfaceHostBridge = TerminalSurfaceHostFactory.createSurfaceHostBridge(
-                TerminalSurfaceHostFactory.createSurfaceHostCallbacks(
+        final SurfaceWidgetController[] widgetRef = new SurfaceWidgetController[1];
+        final SurfaceBridge surfaceHostBridge = SurfaceFactory.createSurfaceHostBridge(
+                SurfaceFactory.createSurfaceHostCallbacks(
                         host.handler(),
                         host.productSurfaceContainer(),
-                        TerminalSurfaceHostFactory.createSurfaceHostLifecycleCallbacks(
+                        SurfaceFactory.createSurfaceHostLifecycleCallbacks(
                                 host::nativeLoaded,
                                 host::debugViewEnabled,
                                 host::currentImeVisible,
@@ -108,12 +109,12 @@ public final class TerminalSurfaceWidgetAssembly {
                                 host::installSurfaceGestureHost,
                                 host::reinstallSurfaceCallback,
                                 () -> widgetRef[0])));
-        final TerminalSurfaceHostController surfaceHostController = new TerminalSurfaceHostController(surfaceHostBridge);
-        final TerminalSurfaceWidgetController surfaceWidgetController = TerminalUiHostFactory.createSurfaceWidgetController(
+        final SurfaceController surfaceHostController = new SurfaceController(surfaceHostBridge);
+        final SurfaceWidgetController surfaceWidgetController = UiFactory.createSurfaceWidgetController(
                 surfaceHostController,
                 selectionController,
                 terminalGestureStateController,
-                new TerminalSurfaceWidgetHostCallbacks(
+                new SurfaceWidgetCallbacks(
                         host::nativeLoaded,
                         host::nativeSetShellScrollbackOffset,
                         host::nativeFollowShellLiveBottom,

@@ -6,7 +6,7 @@ import android.widget.FrameLayout;
 
 import dev.zide.terminal.TerminalNativeBridge;
 import dev.zide.terminal.gesture.TerminalGestureStateController;
-import dev.zide.terminal.host.TerminalInteractionHostFactory;
+import dev.zide.terminal.host.interaction.InteractionFactory;
 import dev.zide.terminal.selection.TerminalSelectionController;
 
 /** Owns selection + gesture interaction controller assembly for activity wiring. */
@@ -51,7 +51,7 @@ public final class InteractionAssembly {
     }
 
     public static Result assemble(Host host) {
-        final TerminalSelectionController selectionController = TerminalInteractionHostFactory.createSelectionController(
+        final TerminalSelectionController selectionController = InteractionFactory.createSelectionController(
                 host.activity(),
                 host.productSurfaceContainer(),
                 host::productViewportWidthPx,
@@ -90,7 +90,7 @@ public final class InteractionAssembly {
         selectionController.install();
 
         final TerminalGestureStateController terminalGestureStateController =
-                TerminalInteractionHostFactory.createGestureStateController(
+                InteractionFactory.createGestureStateController(
                         host.activity(),
                         host.handler(),
                         host::nativeLoaded,

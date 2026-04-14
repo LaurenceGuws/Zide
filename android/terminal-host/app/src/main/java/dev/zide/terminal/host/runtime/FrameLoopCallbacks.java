@@ -1,14 +1,14 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.runtime;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.IntSupplier;
 
-/** Functional callback adapter for {@link TerminalFrameLoopHostBridge}. */
-public final class TerminalFrameLoopHostCallbacks implements TerminalFrameLoopHostBridge.Callbacks {
+/** Functional callback adapter for {@link FrameLoopBridge}. */
+public final class FrameLoopCallbacks implements FrameLoopBridge.Callbacks {
     private final BooleanSupplier shouldRunProductFrameLoop;
     private final IntSupplier tickProductFrame;
 
-    public TerminalFrameLoopHostCallbacks(
+    public FrameLoopCallbacks(
             BooleanSupplier shouldRunProductFrameLoop,
             IntSupplier tickProductFrame) {
         this.shouldRunProductFrameLoop = shouldRunProductFrameLoop;

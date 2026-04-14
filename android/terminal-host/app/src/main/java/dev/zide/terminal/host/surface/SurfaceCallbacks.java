@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.surface;
 
 import android.os.Handler;
 import android.view.SurfaceHolder;
@@ -7,8 +7,8 @@ import android.widget.FrameLayout;
 
 import dev.zide.terminal.debug.AndroidDebugFormatter;
 
-/** Adapts activity-owned callbacks/state into {@link TerminalSurfaceHostBridge.Callbacks}. */
-public final class TerminalSurfaceHostCallbacks implements TerminalSurfaceHostBridge.Callbacks {
+/** Adapts activity-owned callbacks/state into {@link SurfaceBridge.Callbacks}. */
+public final class SurfaceCallbacks implements SurfaceBridge.Callbacks {
     /** Activity callbacks used by the surface host bridge. */
     public interface Callbacks {
         boolean nativeLoaded();
@@ -52,7 +52,7 @@ public final class TerminalSurfaceHostCallbacks implements TerminalSurfaceHostBr
     private final FrameLayout productSurfaceContainer;
     private final Callbacks callbacks;
 
-    public TerminalSurfaceHostCallbacks(
+    public SurfaceCallbacks(
             Handler handler,
             FrameLayout productSurfaceContainer,
             Callbacks callbacks) {

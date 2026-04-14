@@ -10,7 +10,7 @@ import java.util.function.Supplier;
 
 import dev.zide.terminal.debug.TerminalStatusController;
 import dev.zide.terminal.gesture.TerminalGestureStateController;
-import dev.zide.terminal.host.TerminalFrameLoopController;
+import dev.zide.terminal.host.runtime.FrameLoopController;
 import dev.zide.terminal.scroll.TerminalScrollOverlayView;
 import dev.zide.terminal.selection.TerminalSelectionController;
 import dev.zide.terminal.userland.ProductShellStatePresenter;
@@ -30,7 +30,7 @@ public final class ProductRuntimeHostCallbacks implements ProductRuntimeControll
     private final Supplier<TerminalScrollOverlayView> terminalScrollOverlay;
     private final Supplier<TerminalSelectionController> selectionController;
     private final Supplier<ProductShellStatePresenter> productShellStatePresenter;
-    private final Supplier<TerminalFrameLoopController> frameLoopController;
+    private final Supplier<FrameLoopController> frameLoopController;
     private final Supplier<TerminalStatusController> terminalStatusController;
     private final Supplier<UserlandSessionCoordinator> userlandSessionCoordinator;
     private final Supplier<TerminalGestureStateController> terminalGestureStateController;
@@ -52,7 +52,7 @@ public final class ProductRuntimeHostCallbacks implements ProductRuntimeControll
             Supplier<TerminalScrollOverlayView> terminalScrollOverlay,
             Supplier<TerminalSelectionController> selectionController,
             Supplier<ProductShellStatePresenter> productShellStatePresenter,
-            Supplier<TerminalFrameLoopController> frameLoopController,
+            Supplier<FrameLoopController> frameLoopController,
             Supplier<TerminalStatusController> terminalStatusController,
             Supplier<UserlandSessionCoordinator> userlandSessionCoordinator,
             Supplier<TerminalGestureStateController> terminalGestureStateController,
@@ -135,7 +135,7 @@ public final class ProductRuntimeHostCallbacks implements ProductRuntimeControll
     }
 
     @Override
-    public TerminalFrameLoopController frameLoopController() {
+    public FrameLoopController frameLoopController() {
         return frameLoopController.get();
     }
 

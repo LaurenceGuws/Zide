@@ -15,8 +15,8 @@ import java.util.function.Supplier;
 
 import dev.zide.terminal.debug.AndroidDebugFormatter;
 import dev.zide.terminal.gesture.TerminalGestureStateController;
-import dev.zide.terminal.host.TerminalSurfaceHostBridge;
-import dev.zide.terminal.host.TerminalSurfaceHostLifecycleCallbacks;
+import dev.zide.terminal.host.surface.SurfaceBridge;
+import dev.zide.terminal.host.surface.SurfaceLifecycleCallbacks;
 import dev.zide.terminal.input.ShellInputView;
 import dev.zide.terminal.scroll.TerminalScrollOverlayView;
 import dev.zide.terminal.selection.TerminalSelectionController;
@@ -49,7 +49,7 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
     private final Supplier<ShellInputView> shellInputView;
     private final Supplier<TerminalSelectionController> selectionController;
     private final Supplier<TerminalGestureStateController> terminalGestureStateController;
-    private final Supplier<TerminalSurfaceHostBridge> surfaceHostBridge;
+    private final Supplier<SurfaceBridge> surfaceHostBridge;
     private final BooleanSupplier currentInstallStateInstalling;
     private final BooleanSupplier currentInstallStateFailed;
     private final Supplier<UserlandReadinessState> currentReadinessState;
@@ -58,12 +58,12 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
     private final Runnable refreshProductScrollOverlay;
     private final Consumer<String> appendEvent;
     private final Consumer<String> updateStatus;
-    private final TerminalSurfaceHostLifecycleCallbacks.NativeEventCallback callNative;
-    private final TerminalSurfaceHostLifecycleCallbacks.NativeSurfaceEventCallback callNativeWithSurfaceState;
-    private final TerminalSurfaceHostLifecycleCallbacks.SurfaceAvailableCallback nativeOnSurfaceAvailableBridge;
-    private final TerminalSurfaceHostLifecycleCallbacks.LongSupplier nativeOnSurfaceDestroyedBridge;
-    private final TerminalSurfaceHostLifecycleCallbacks.LongSupplier nativeOnSurfaceRedrawNeededBridge;
-    private final TerminalSurfaceHostLifecycleCallbacks.VisibleViewportCallback nativeOnVisibleViewportBridge;
+    private final SurfaceLifecycleCallbacks.NativeEventCallback callNative;
+    private final SurfaceLifecycleCallbacks.NativeSurfaceEventCallback callNativeWithSurfaceState;
+    private final SurfaceLifecycleCallbacks.SurfaceAvailableCallback nativeOnSurfaceAvailableBridge;
+    private final SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceDestroyedBridge;
+    private final SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceRedrawNeededBridge;
+    private final SurfaceLifecycleCallbacks.VisibleViewportCallback nativeOnVisibleViewportBridge;
     private final Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot;
     private final Consumer<String> handleProductShellStateEvent;
     private final IntUnaryOperator nativeSetShellScrollbackOffset;
@@ -100,7 +100,7 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
             Supplier<ShellInputView> shellInputView,
             Supplier<TerminalSelectionController> selectionController,
             Supplier<TerminalGestureStateController> terminalGestureStateController,
-            Supplier<TerminalSurfaceHostBridge> surfaceHostBridge,
+            Supplier<SurfaceBridge> surfaceHostBridge,
             BooleanSupplier currentInstallStateInstalling,
             BooleanSupplier currentInstallStateFailed,
             Supplier<UserlandReadinessState> currentReadinessState,
@@ -109,12 +109,12 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
             Runnable refreshProductScrollOverlay,
             Consumer<String> appendEvent,
             Consumer<String> updateStatus,
-            TerminalSurfaceHostLifecycleCallbacks.NativeEventCallback callNative,
-            TerminalSurfaceHostLifecycleCallbacks.NativeSurfaceEventCallback callNativeWithSurfaceState,
-            TerminalSurfaceHostLifecycleCallbacks.SurfaceAvailableCallback nativeOnSurfaceAvailableBridge,
-            TerminalSurfaceHostLifecycleCallbacks.LongSupplier nativeOnSurfaceDestroyedBridge,
-            TerminalSurfaceHostLifecycleCallbacks.LongSupplier nativeOnSurfaceRedrawNeededBridge,
-            TerminalSurfaceHostLifecycleCallbacks.VisibleViewportCallback nativeOnVisibleViewportBridge,
+            SurfaceLifecycleCallbacks.NativeEventCallback callNative,
+            SurfaceLifecycleCallbacks.NativeSurfaceEventCallback callNativeWithSurfaceState,
+            SurfaceLifecycleCallbacks.SurfaceAvailableCallback nativeOnSurfaceAvailableBridge,
+            SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceDestroyedBridge,
+            SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceRedrawNeededBridge,
+            SurfaceLifecycleCallbacks.VisibleViewportCallback nativeOnVisibleViewportBridge,
             Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot,
             Consumer<String> handleProductShellStateEvent,
             IntUnaryOperator nativeSetShellScrollbackOffset,
@@ -297,7 +297,7 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
     }
 
     @Override
-    public TerminalSurfaceHostBridge surfaceHostBridge() {
+    public SurfaceBridge surfaceHostBridge() {
         return surfaceHostBridge.get();
     }
 

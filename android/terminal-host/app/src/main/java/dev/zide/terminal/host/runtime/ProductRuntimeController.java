@@ -6,7 +6,7 @@ import android.view.View;
 import dev.zide.terminal.debug.TerminalNativeStatusLabels;
 import dev.zide.terminal.debug.TerminalStatusController;
 import dev.zide.terminal.gesture.TerminalGestureStateController;
-import dev.zide.terminal.host.TerminalFrameLoopController;
+import dev.zide.terminal.host.runtime.FrameLoopController;
 import dev.zide.terminal.scroll.TerminalScrollOverlayView;
 import dev.zide.terminal.selection.TerminalSelectionController;
 import dev.zide.terminal.userland.ProductShellStatePresenter;
@@ -38,7 +38,7 @@ public final class ProductRuntimeController {
 
         ProductShellStatePresenter productShellStatePresenter();
 
-        TerminalFrameLoopController frameLoopController();
+        FrameLoopController frameLoopController();
 
         TerminalStatusController terminalStatusController();
 
@@ -86,7 +86,7 @@ public final class ProductRuntimeController {
             presenter.refresh();
         }
         refreshProductScrollOverlay();
-        final TerminalFrameLoopController frameLoopController = host.frameLoopController();
+        final FrameLoopController frameLoopController = host.frameLoopController();
         if (frameLoopController != null) {
             frameLoopController.reevaluate();
         }
@@ -104,7 +104,7 @@ public final class ProductRuntimeController {
         if (sessionCoordinator != null) {
             sessionCoordinator.refreshAndApply(false);
         }
-        final TerminalFrameLoopController frameLoopController = host.frameLoopController();
+        final FrameLoopController frameLoopController = host.frameLoopController();
         if (frameLoopController != null) {
             frameLoopController.reevaluate();
         }

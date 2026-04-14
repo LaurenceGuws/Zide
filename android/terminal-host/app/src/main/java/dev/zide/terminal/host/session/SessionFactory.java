@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.session;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
@@ -14,8 +14,8 @@ import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandRelease;
 
 /** Session host assembly helpers. */
-public final class TerminalSessionHostFactory {
-    private TerminalSessionHostFactory() {
+public final class SessionFactory {
+    private SessionFactory() {
     }
 
     public static ShellSessionController createShellSessionController(

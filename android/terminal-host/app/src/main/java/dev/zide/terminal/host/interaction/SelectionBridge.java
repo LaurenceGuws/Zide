@@ -1,11 +1,11 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.interaction;
 
 import dev.zide.terminal.selection.TerminalSelectionController;
 
 /**
  * Adapts activity native callbacks to the selection bridge contract.
  */
-public final class TerminalSelectionHostBridge implements TerminalSelectionController.Bridge {
+public final class SelectionBridge implements TerminalSelectionController.Bridge {
     /** Native callbacks required by selection interaction. */
     public interface Callbacks {
         boolean nativeLoaded();
@@ -65,7 +65,7 @@ public final class TerminalSelectionHostBridge implements TerminalSelectionContr
 
     private final Callbacks callbacks;
 
-    public TerminalSelectionHostBridge(Callbacks callbacks) {
+    public SelectionBridge(Callbacks callbacks) {
         this.callbacks = callbacks;
     }
 

@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.surface;
 
 import android.view.SurfaceHolder;
 
@@ -14,7 +14,7 @@ import dev.zide.terminal.selection.TerminalSelectionController;
  * hosting: surface callbacks, product gestures, and scroll-overlay callbacks all
  * terminate here instead of on the activity.
  */
-public final class TerminalSurfaceWidgetController
+public final class SurfaceWidgetController
         implements SurfaceHolder.Callback2, ProductGestureController.Host, TerminalScrollOverlayView.Host {
     /** Host callbacks for native bridge access and frame-loop side effects. */
     public interface Host {
@@ -33,13 +33,13 @@ public final class TerminalSurfaceWidgetController
         void reevaluateProductFrameLoop();
     }
 
-    private final TerminalSurfaceHostController surfaceHostController;
+    private final SurfaceController surfaceHostController;
     private final TerminalSelectionController selectionController;
     private final TerminalGestureStateController terminalGestureStateController;
     private final Host host;
 
-    public TerminalSurfaceWidgetController(
-            TerminalSurfaceHostController surfaceHostController,
+    public SurfaceWidgetController(
+            SurfaceController surfaceHostController,
             TerminalSelectionController selectionController,
             TerminalGestureStateController terminalGestureStateController,
             Host host) {

@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.surface;
 
 import android.widget.FrameLayout;
 
@@ -7,25 +7,25 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /** Surface host assembly helpers. */
-public final class TerminalSurfaceHostFactory {
-    private TerminalSurfaceHostFactory() {
+public final class SurfaceFactory {
+    private SurfaceFactory() {
     }
 
-    public static TerminalSurfaceHostBridge createSurfaceHostBridge(TerminalSurfaceHostBridge.Callbacks callbacks) {
-        return new TerminalSurfaceHostBridge(callbacks);
+    public static SurfaceBridge createSurfaceHostBridge(SurfaceBridge.Callbacks callbacks) {
+        return new SurfaceBridge(callbacks);
     }
 
-    public static TerminalSurfaceHostBridge.Callbacks createSurfaceHostCallbacks(
+    public static SurfaceBridge.Callbacks createSurfaceHostCallbacks(
             android.os.Handler handler,
             FrameLayout productSurfaceContainer,
-            TerminalSurfaceHostCallbacks.Callbacks callbacks) {
-        return new TerminalSurfaceHostCallbacks(
+            SurfaceCallbacks.Callbacks callbacks) {
+        return new SurfaceCallbacks(
                 handler,
                 productSurfaceContainer,
                 callbacks);
     }
 
-    public static TerminalSurfaceHostCallbacks.Callbacks createSurfaceHostLifecycleCallbacks(
+    public static SurfaceCallbacks.Callbacks createSurfaceHostLifecycleCallbacks(
             BooleanSupplier nativeLoaded,
             BooleanSupplier debugViewEnabled,
             BooleanSupplier currentImeVisible,
@@ -33,18 +33,18 @@ public final class TerminalSurfaceHostFactory {
             Runnable refreshProductScrollOverlay,
             Consumer<String> appendEvent,
             Consumer<String> updateStatus,
-            TerminalSurfaceHostLifecycleCallbacks.NativeEventCallback callNative,
-            TerminalSurfaceHostLifecycleCallbacks.NativeSurfaceEventCallback callNativeWithSurfaceState,
-            TerminalSurfaceHostLifecycleCallbacks.SurfaceAvailableCallback nativeOnSurfaceAvailableBridge,
-            TerminalSurfaceHostLifecycleCallbacks.LongSupplier nativeOnSurfaceDestroyedBridge,
-            TerminalSurfaceHostLifecycleCallbacks.LongSupplier nativeOnSurfaceRedrawNeededBridge,
-            TerminalSurfaceHostLifecycleCallbacks.VisibleViewportCallback nativeOnVisibleViewportBridge,
+            SurfaceLifecycleCallbacks.NativeEventCallback callNative,
+            SurfaceLifecycleCallbacks.NativeSurfaceEventCallback callNativeWithSurfaceState,
+            SurfaceLifecycleCallbacks.SurfaceAvailableCallback nativeOnSurfaceAvailableBridge,
+            SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceDestroyedBridge,
+            SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceRedrawNeededBridge,
+            SurfaceLifecycleCallbacks.VisibleViewportCallback nativeOnVisibleViewportBridge,
             Supplier<dev.zide.terminal.debug.AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot,
             Consumer<String> handleProductShellStateEvent,
             Consumer<android.view.SurfaceView> installSurfaceGestureHost,
-            TerminalSurfaceHostLifecycleCallbacks.ReinstallSurfaceCallback reinstallSurfaceCallback,
+            SurfaceLifecycleCallbacks.ReinstallSurfaceCallback reinstallSurfaceCallback,
             Supplier<android.view.SurfaceHolder.Callback2> surfaceCallback) {
-        return new TerminalSurfaceHostLifecycleCallbacks(
+        return new SurfaceLifecycleCallbacks(
                 nativeLoaded,
                 debugViewEnabled,
                 currentImeVisible,

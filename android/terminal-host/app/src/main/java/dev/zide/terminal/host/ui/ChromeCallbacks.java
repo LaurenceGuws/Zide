@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.ui;
 
 import android.widget.Button;
 
@@ -9,8 +9,8 @@ import java.util.function.Supplier;
 
 import dev.zide.terminal.input.ShellInputView;
 
-/** Functional callback adapter for {@link TerminalChromeHostBridge}. */
-public final class TerminalChromeHostCallbacks implements TerminalChromeHostBridge.Callbacks {
+/** Functional callback adapter for {@link ChromeBridge}. */
+public final class ChromeCallbacks implements ChromeBridge.Callbacks {
     private final BooleanSupplier debugViewEnabled;
     private final BiConsumer<String, String> showProductView;
     private final BiConsumer<String, String> showDebugView;
@@ -24,7 +24,7 @@ public final class TerminalChromeHostCallbacks implements TerminalChromeHostBrid
     private final Consumer<String> sendDirectText;
     private final Consumer<String> updateStatus;
 
-    public TerminalChromeHostCallbacks(
+    public ChromeCallbacks(
             BooleanSupplier debugViewEnabled,
             BiConsumer<String, String> showProductView,
             BiConsumer<String, String> showDebugView,

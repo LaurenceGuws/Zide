@@ -4,7 +4,7 @@ import android.content.Context;
 import android.os.Handler;
 import android.widget.OverScroller;
 
-import dev.zide.terminal.host.TerminalGestureStateHostBridge;
+import dev.zide.terminal.host.interaction.GestureStateBridge;
 
 /** Creates gesture-state controllers for a terminal surface widget instance. */
 public final class TerminalGestureStateControllerFactory {
@@ -39,7 +39,7 @@ public final class TerminalGestureStateControllerFactory {
     public static TerminalGestureStateController create(Context context, Handler handler, Host host) {
         final TerminalGestureStateController controller = new TerminalGestureStateController(
                 handler,
-                new TerminalGestureStateHostBridge(new TerminalGestureStateHostBridge.Callbacks() {
+                new GestureStateBridge(new GestureStateBridge.Callbacks() {
                     @Override
                     public boolean nativeLoaded() {
                         return host.nativeLoaded();

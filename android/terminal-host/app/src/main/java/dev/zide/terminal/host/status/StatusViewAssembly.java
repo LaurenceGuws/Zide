@@ -9,8 +9,8 @@ import android.widget.TextView;
 import dev.zide.terminal.debug.TerminalSurfaceStateSnapshotReader;
 import dev.zide.terminal.debug.TerminalSurfaceStateSnapshotHostCallbacks;
 import dev.zide.terminal.debug.TerminalStatusController;
-import dev.zide.terminal.host.TerminalActivityViewBindings;
-import dev.zide.terminal.host.TerminalSurfaceHostBridge;
+import dev.zide.terminal.host.ui.ActivityViewBindings;
+import dev.zide.terminal.host.surface.SurfaceBridge;
 import dev.zide.terminal.host.ui.ViewportController;
 import dev.zide.terminal.host.ui.ViewportBridge;
 import dev.zide.terminal.host.ui.ViewportCallbacks;
@@ -33,7 +33,7 @@ public final class StatusViewAssembly {
 
         void setImeVisible(boolean visible);
 
-        TerminalSurfaceHostBridge surfaceHostBridge();
+        SurfaceBridge surfaceHostBridge();
 
         UserlandInstallState currentInstallState();
 
@@ -115,7 +115,7 @@ public final class StatusViewAssembly {
     }
 
     public static Result assemble(Host host) {
-        final TerminalActivityViewBindings viewBindings = TerminalActivityViewBindings.from(host.activity());
+        final ActivityViewBindings viewBindings = ActivityViewBindings.from(host.activity());
         final TerminalSurfaceStateSnapshotReader terminalSurfaceStateSnapshotReader = new TerminalSurfaceStateSnapshotReader(
                 new TerminalSurfaceStateSnapshotHostCallbacks(
                         host::nativeLoaded,

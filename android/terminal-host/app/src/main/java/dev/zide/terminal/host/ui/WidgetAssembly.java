@@ -12,16 +12,16 @@ import dev.zide.terminal.TerminalNativeBridge;
 import dev.zide.terminal.debug.AndroidDebugFormatter;
 import dev.zide.terminal.gesture.ProductGestureController;
 import dev.zide.terminal.gesture.TerminalGestureStateController;
-import dev.zide.terminal.host.TerminalChromeController;
-import dev.zide.terminal.host.TerminalChromeHostFactory;
-import dev.zide.terminal.host.TerminalSurfaceHostBridge;
-import dev.zide.terminal.host.TerminalSurfaceHostController;
-import dev.zide.terminal.host.TerminalSurfaceWidgetAssembly;
-import dev.zide.terminal.host.TerminalSurfaceWidgetAssemblyHostCallbacks;
-import dev.zide.terminal.host.TerminalSurfaceWidgetController;
-import dev.zide.terminal.host.TerminalUiHostFactory;
-import dev.zide.terminal.host.TerminalViewModeController;
-import dev.zide.terminal.host.TerminalViewModeHostCallbacks;
+import dev.zide.terminal.host.ui.ChromeController;
+import dev.zide.terminal.host.ui.ChromeFactory;
+import dev.zide.terminal.host.surface.SurfaceBridge;
+import dev.zide.terminal.host.surface.SurfaceController;
+import dev.zide.terminal.host.surface.SurfaceWidgetAssembly;
+import dev.zide.terminal.host.surface.SurfaceWidgetAssemblyCallbacks;
+import dev.zide.terminal.host.surface.SurfaceWidgetController;
+import dev.zide.terminal.host.ui.UiFactory;
+import dev.zide.terminal.host.ui.ViewModeController;
+import dev.zide.terminal.host.ui.ViewModeCallbacks;
 import dev.zide.terminal.host.userland.ProductShellStateBridge;
 import dev.zide.terminal.host.userland.ProductShellStateCallbacks;
 import dev.zide.terminal.input.ShellInputView;
@@ -83,7 +83,7 @@ public final class WidgetAssembly {
 
         TerminalGestureStateController terminalGestureStateController();
 
-        TerminalSurfaceHostBridge surfaceHostBridge();
+        SurfaceBridge surfaceHostBridge();
 
         boolean currentInstallStateInstalling();
 
@@ -138,20 +138,20 @@ public final class WidgetAssembly {
     public static final class Result {
         public final ProductShellStateBridge productShellStateHostBridge;
         public final ProductShellStatePresenter productShellStatePresenter;
-        public final TerminalChromeController terminalChromeController;
-        public final TerminalViewModeController terminalViewModeController;
-        public final TerminalSurfaceHostBridge surfaceHostBridge;
-        public final TerminalSurfaceHostController surfaceHostController;
-        public final TerminalSurfaceWidgetController terminalSurfaceWidgetController;
+        public final ChromeController terminalChromeController;
+        public final ViewModeController terminalViewModeController;
+        public final SurfaceBridge surfaceHostBridge;
+        public final SurfaceController surfaceHostController;
+        public final SurfaceWidgetController terminalSurfaceWidgetController;
 
         private Result(
                 ProductShellStateBridge productShellStateHostBridge,
                 ProductShellStatePresenter productShellStatePresenter,
-                TerminalChromeController terminalChromeController,
-                TerminalViewModeController terminalViewModeController,
-                TerminalSurfaceHostBridge surfaceHostBridge,
-                TerminalSurfaceHostController surfaceHostController,
-                TerminalSurfaceWidgetController terminalSurfaceWidgetController) {
+                ChromeController terminalChromeController,
+                ViewModeController terminalViewModeController,
+                SurfaceBridge surfaceHostBridge,
+                SurfaceController surfaceHostController,
+                SurfaceWidgetController terminalSurfaceWidgetController) {
             this.productShellStateHostBridge = productShellStateHostBridge;
             this.productShellStatePresenter = productShellStatePresenter;
             this.terminalChromeController = terminalChromeController;
@@ -167,7 +167,7 @@ public final class WidgetAssembly {
 
     public static Result assemble(Host host) {
         final ProductShellStateBridge productShellStateHostBridge =
-                TerminalUiHostFactory.createProductShellStateHostBridge(
+                UiFactory.createProductShellStateHostBridge(
                         host.productBootstrapBlocker(),
                         host.terminalScrollOverlay(),
                         host.productBootstrapTitle(),
@@ -184,17 +184,17 @@ public final class WidgetAssembly {
         final ProductShellStatePresenter productShellStatePresenter =
                 new ProductShellStatePresenter(productShellStateHostBridge);
 
-        final TerminalViewModeController[] terminalViewModeControllerRef = new TerminalViewModeController[1];
-        final TerminalSurfaceWidgetController[] surfaceWidgetControllerRef = new TerminalSurfaceWidgetController[1];
-        final TerminalChromeController terminalChromeController = new TerminalChromeController(
-                TerminalChromeHostFactory.createChromeHostBridge(
+        final ViewModeController[] terminalViewModeControllerRef = new ViewModeController[1];
+        final SurfaceWidgetController[] surfaceWidgetControllerRef = new SurfaceWidgetController[1];
+        final ChromeController terminalChromeController = new ChromeController(
+                ChromeFactory.createChromeHostBridge(
                         host.activity(),
                         host.rootView(),
                         host.activity().findViewById(dev.zide.terminal.R.id.debug_view_mode_button),
                         host.drawerScrim(),
                         host.drawerEdgeHotspot(),
                         host.leftSidebar(),
-                        TerminalChromeHostFactory.createChromeHostCallbacks(
+                        ChromeFactory.createChromeHostCallbacks(
                                 host::debugViewEnabled,
                                 (eventName, statusLabel) -> {
                                     if (terminalViewModeControllerRef[0] != null) {
@@ -216,12 +216,12 @@ public final class WidgetAssembly {
                                 host::sendDirectText,
                                 host::updateStatus)));
 
-        final TerminalViewModeController terminalViewModeController = TerminalUiHostFactory.createViewModeController(
+        final ViewModeController terminalViewModeController = UiFactory.createViewModeController(
                 host.productView(),
                 host.debugView(),
                 host.terminalScrollOverlay(),
                 host.productSurfaceContainer(),
-                new TerminalViewModeHostCallbacks(
+                new ViewModeCallbacks(
                         host::debugViewEnabled,
                         host::setDebugViewEnabled,
                         host::appendEvent,
@@ -232,10 +232,10 @@ public final class WidgetAssembly {
                         host::refreshUserlandSession));
         terminalViewModeControllerRef[0] = terminalViewModeController;
 
-        final TerminalSurfaceWidgetAssembly.Result surfaceWidgetAssembly = TerminalSurfaceWidgetAssembly.assemble(
+        final SurfaceWidgetAssembly.Result surfaceWidgetAssembly = SurfaceWidgetAssembly.assemble(
                 host.selectionController(),
                 host.terminalGestureStateController(),
-                new TerminalSurfaceWidgetAssemblyHostCallbacks(
+                new SurfaceWidgetAssemblyCallbacks(
                         host::handler,
                         host::productSurfaceContainer,
                         host::nativeLoaded,
@@ -279,7 +279,7 @@ public final class WidgetAssembly {
 
     private static void installSurfaceGestureHost(
             SurfaceView surfaceView,
-            TerminalSurfaceWidgetController[] surfaceWidgetControllerRef) {
+            SurfaceWidgetController[] surfaceWidgetControllerRef) {
         if (surfaceWidgetControllerRef[0] == null) {
             return;
         }

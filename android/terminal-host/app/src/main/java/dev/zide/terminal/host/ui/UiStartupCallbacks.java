@@ -6,11 +6,11 @@ import android.widget.Button;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import dev.zide.terminal.host.TerminalChromeController;
-import dev.zide.terminal.host.TerminalFrameLoopController;
-import dev.zide.terminal.host.TerminalSurfaceHostController;
-import dev.zide.terminal.host.TerminalSurfaceWidgetController;
-import dev.zide.terminal.host.TerminalViewModeController;
+import dev.zide.terminal.host.ui.ChromeController;
+import dev.zide.terminal.host.runtime.FrameLoopController;
+import dev.zide.terminal.host.surface.SurfaceController;
+import dev.zide.terminal.host.surface.SurfaceWidgetController;
+import dev.zide.terminal.host.ui.ViewModeController;
 import dev.zide.terminal.host.runtime.RuntimeAssetsController;
 import dev.zide.terminal.userland.ProductShellStatePresenter;
 import dev.zide.terminal.userland.UserlandReadinessState;
@@ -21,7 +21,7 @@ import dev.zide.terminal.userland.UserlandWorkflowController;
 /** Functional callback adapter for {@link UiStartupAssembly.Host}. */
 public final class UiStartupCallbacks implements UiStartupAssembly.Host {
     private final Supplier<ViewportController> viewportController;
-    private final Supplier<TerminalChromeController> chromeController;
+    private final Supplier<ChromeController> chromeController;
     private final Supplier<Button> productBootstrapRetryButton;
     private final Supplier<Button> productBootstrapDebugButton;
     private final Supplier<UserlandInstallState> currentInstallState;
@@ -32,16 +32,16 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
     private final Consumer<String> appendEvent;
     private final Consumer<String> updateStatus;
     private final Supplier<RuntimeAssetsController> runtimeAssetsController;
-    private final Supplier<TerminalViewModeController> viewModeController;
-    private final Supplier<TerminalSurfaceHostController> surfaceHostController;
-    private final Supplier<TerminalSurfaceWidgetController> surfaceWidgetController;
+    private final Supplier<ViewModeController> viewModeController;
+    private final Supplier<SurfaceController> surfaceHostController;
+    private final Supplier<SurfaceWidgetController> surfaceWidgetController;
     private final Supplier<ProductShellStatePresenter> productShellStatePresenter;
-    private final Supplier<TerminalFrameLoopController> frameLoopController;
+    private final Supplier<FrameLoopController> frameLoopController;
     private final Supplier<View> leftSidebar;
 
     public UiStartupCallbacks(
             Supplier<ViewportController> viewportController,
-            Supplier<TerminalChromeController> chromeController,
+            Supplier<ChromeController> chromeController,
             Supplier<Button> productBootstrapRetryButton,
             Supplier<Button> productBootstrapDebugButton,
             Supplier<UserlandInstallState> currentInstallState,
@@ -52,11 +52,11 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
             Consumer<String> appendEvent,
             Consumer<String> updateStatus,
             Supplier<RuntimeAssetsController> runtimeAssetsController,
-            Supplier<TerminalViewModeController> viewModeController,
-            Supplier<TerminalSurfaceHostController> surfaceHostController,
-            Supplier<TerminalSurfaceWidgetController> surfaceWidgetController,
+            Supplier<ViewModeController> viewModeController,
+            Supplier<SurfaceController> surfaceHostController,
+            Supplier<SurfaceWidgetController> surfaceWidgetController,
             Supplier<ProductShellStatePresenter> productShellStatePresenter,
-            Supplier<TerminalFrameLoopController> frameLoopController,
+            Supplier<FrameLoopController> frameLoopController,
             Supplier<View> leftSidebar) {
         this.viewportController = viewportController;
         this.chromeController = chromeController;
@@ -84,7 +84,7 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
     }
 
     @Override
-    public TerminalChromeController chromeController() {
+    public ChromeController chromeController() {
         return chromeController.get();
     }
 
@@ -139,17 +139,17 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
     }
 
     @Override
-    public TerminalViewModeController viewModeController() {
+    public ViewModeController viewModeController() {
         return viewModeController.get();
     }
 
     @Override
-    public TerminalSurfaceHostController surfaceHostController() {
+    public SurfaceController surfaceHostController() {
         return surfaceHostController.get();
     }
 
     @Override
-    public TerminalSurfaceWidgetController surfaceWidgetController() {
+    public SurfaceWidgetController surfaceWidgetController() {
         return surfaceWidgetController.get();
     }
 
@@ -159,7 +159,7 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
     }
 
     @Override
-    public TerminalFrameLoopController frameLoopController() {
+    public FrameLoopController frameLoopController() {
         return frameLoopController.get();
     }
 

@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.interaction;
 
 import android.content.Context;
 import android.widget.FrameLayout;
@@ -19,8 +19,8 @@ import dev.zide.terminal.selection.TerminalSelectionControllerFactory;
  * <p>Owns interaction-specific controller construction so generic host assembly
  * remains focused on lifecycle/runtime/surface wiring.
  */
-public final class TerminalInteractionHostFactory {
-    private TerminalInteractionHostFactory() {
+public final class InteractionFactory {
+    private InteractionFactory() {
     }
 
     public static TerminalSelectionController createSelectionController(
@@ -62,7 +62,7 @@ public final class TerminalInteractionHostFactory {
         return TerminalSelectionControllerFactory.create(
                 context,
                 productSurfaceContainer,
-                new TerminalSelectionFactoryHostCallbacks(
+                new SelectionCallbacks(
                         productViewportWidthPx,
                         productViewportHeightPx,
                         stopScrollbackFling,
@@ -108,14 +108,14 @@ public final class TerminalInteractionHostFactory {
             IntSupplier scrollbackOffset,
             java.util.function.IntUnaryOperator setScrollbackOffset,
             IntSupplier followLiveBottom,
-            TerminalGestureStateFactoryHostCallbacks.FloatToIntFunction applyTerminalPinchZoom,
-            TerminalGestureStateFactoryHostCallbacks.BooleanToIntFunction setTerminalPinchActive,
+            GestureStateCallbacks.FloatToIntFunction applyTerminalPinchZoom,
+            GestureStateCallbacks.BooleanToIntFunction setTerminalPinchActive,
             Runnable refreshProductScrollOverlay,
             Runnable reevaluateProductFrameLoop) {
         return TerminalGestureStateControllerFactory.create(
                 context,
                 handler,
-                new TerminalGestureStateFactoryHostCallbacks(
+                new GestureStateCallbacks(
                         nativeLoaded,
                         visibleRows,
                         viewportHeightPx,

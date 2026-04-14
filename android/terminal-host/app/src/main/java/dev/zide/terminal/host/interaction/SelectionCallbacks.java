@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.interaction;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
@@ -10,7 +10,7 @@ import java.util.function.Supplier;
 import dev.zide.terminal.selection.TerminalSelectionControllerFactory;
 
 /** Functional callback adapter for {@link TerminalSelectionControllerFactory}. */
-public final class TerminalSelectionFactoryHostCallbacks implements TerminalSelectionControllerFactory.Host {
+public final class SelectionCallbacks implements TerminalSelectionControllerFactory.Host {
     private final IntSupplier productViewportWidthPx;
     private final IntSupplier productViewportHeightPx;
     private final Runnable stopScrollbackFling;
@@ -45,7 +45,7 @@ public final class TerminalSelectionFactoryHostCallbacks implements TerminalSele
     private final IntUnaryOperator setShellScrollbackOffset;
     private final IntSupplier followShellLiveBottom;
 
-    public TerminalSelectionFactoryHostCallbacks(
+    public SelectionCallbacks(
             IntSupplier productViewportWidthPx,
             IntSupplier productViewportHeightPx,
             Runnable stopScrollbackFling,

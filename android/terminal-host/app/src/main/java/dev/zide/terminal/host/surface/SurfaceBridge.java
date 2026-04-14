@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.surface;
 
 import android.os.Handler;
 import android.view.SurfaceHolder;
@@ -8,9 +8,9 @@ import android.widget.FrameLayout;
 import dev.zide.terminal.debug.AndroidDebugFormatter;
 
 /**
- * Owns mutable surface-host state and adapts activity callbacks to {@link TerminalSurfaceHostController}.
+ * Owns mutable surface-host state and adapts activity callbacks to {@link SurfaceController}.
  */
-public final class TerminalSurfaceHostBridge implements TerminalSurfaceHostController.Host {
+public final class SurfaceBridge implements SurfaceController.Host {
     /** Callbacks owned by the activity/controller assembly. */
     public interface Callbacks {
         Handler handler();
@@ -66,7 +66,7 @@ public final class TerminalSurfaceHostBridge implements TerminalSurfaceHostContr
     private int notifiedViewportHeight = 0;
     private boolean notifiedViewportImeVisible = false;
 
-    public TerminalSurfaceHostBridge(Callbacks callbacks) {
+    public SurfaceBridge(Callbacks callbacks) {
         this.callbacks = callbacks;
     }
 

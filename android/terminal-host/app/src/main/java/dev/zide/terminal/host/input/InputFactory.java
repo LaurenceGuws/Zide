@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.input;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
@@ -16,8 +16,8 @@ import dev.zide.terminal.input.TerminalImeFocusRecoveryHostCallbacks;
  * <p>Owns input-specific controller construction so generic host assembly stays
  * focused on lifecycle/runtime/surface/session wiring.
  */
-public final class TerminalInputHostFactory {
-    private TerminalInputHostFactory() {
+public final class InputFactory {
+    private InputFactory() {
     }
 
     public static TerminalHardwareKeyboardController createHardwareKeyboardController(

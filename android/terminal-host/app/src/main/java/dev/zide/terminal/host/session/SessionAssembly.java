@@ -6,9 +6,9 @@ import android.os.Handler;
 import java.util.function.Function;
 
 import dev.zide.terminal.debug.TerminalNativeStatusLabels;
-import dev.zide.terminal.host.TerminalFrameLoopController;
-import dev.zide.terminal.host.TerminalRuntimeHostFactory;
-import dev.zide.terminal.host.TerminalSessionHostFactory;
+import dev.zide.terminal.host.runtime.FrameLoopController;
+import dev.zide.terminal.host.runtime.RuntimeFactory;
+import dev.zide.terminal.host.session.SessionFactory;
 import dev.zide.terminal.host.userland.SessionBridge;
 import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandPolicy;
@@ -53,13 +53,13 @@ public final class SessionAssembly {
         public final dev.zide.terminal.session.ShellSessionController shellSessionController;
         public final SessionBridge userlandSessionHostBridge;
         public final UserlandSessionCoordinator userlandSessionCoordinator;
-        public final TerminalFrameLoopController frameLoopController;
+        public final FrameLoopController frameLoopController;
 
         private Result(
                 dev.zide.terminal.session.ShellSessionController shellSessionController,
                 SessionBridge userlandSessionHostBridge,
                 UserlandSessionCoordinator userlandSessionCoordinator,
-                TerminalFrameLoopController frameLoopController) {
+                FrameLoopController frameLoopController) {
             this.shellSessionController = shellSessionController;
             this.userlandSessionHostBridge = userlandSessionHostBridge;
             this.userlandSessionCoordinator = userlandSessionCoordinator;
@@ -72,7 +72,7 @@ public final class SessionAssembly {
 
     public static Result assemble(Host host) {
         final dev.zide.terminal.session.ShellSessionController shellSessionController =
-                TerminalSessionHostFactory.createShellSessionController(
+                SessionFactory.createShellSessionController(
                         UserlandPolicy.readinessStampPath(host.context()),
                         UserlandPolicy.shellPath(host.context()),
                         host.userlandRelease(),
@@ -81,7 +81,7 @@ public final class SessionAssembly {
                         host::nativePollShellSession,
                         host::nativeIsShellSessionAlive);
         final SessionBridge userlandSessionHostBridge =
-                TerminalSessionHostFactory.createUserlandSessionHostBridge(
+                SessionFactory.createUserlandSessionHostBridge(
                         host::appendEvent,
                         (Function<Integer, String>) TerminalNativeStatusLabels::shellStartStatusLabel,
                         host::applyReadinessState,
@@ -90,8 +90,8 @@ public final class SessionAssembly {
                         host::updateStatus);
         final UserlandSessionCoordinator userlandSessionCoordinator =
                 new UserlandSessionCoordinator(shellSessionController, userlandSessionHostBridge);
-        final TerminalFrameLoopController frameLoopController =
-                TerminalRuntimeHostFactory.createFrameLoopController(
+        final FrameLoopController frameLoopController =
+                RuntimeFactory.createFrameLoopController(
                         host.handler(),
                         host::shouldRunProductFrameLoop,
                         host::tickProductFrame);

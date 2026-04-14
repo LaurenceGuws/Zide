@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.surface;
 
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -9,8 +9,8 @@ import java.util.function.Supplier;
 
 import dev.zide.terminal.debug.AndroidDebugFormatter;
 
-/** Functional callback adapter for {@link TerminalSurfaceHostCallbacks.Callbacks}. */
-public final class TerminalSurfaceHostLifecycleCallbacks implements TerminalSurfaceHostCallbacks.Callbacks {
+/** Functional callback adapter for {@link SurfaceCallbacks.Callbacks}. */
+public final class SurfaceLifecycleCallbacks implements SurfaceCallbacks.Callbacks {
     /** Callback for native surface-available notifications. */
     public interface SurfaceAvailableCallback {
         long call(SurfaceHolder holder, int width, int height);
@@ -60,7 +60,7 @@ public final class TerminalSurfaceHostLifecycleCallbacks implements TerminalSurf
         void call(SurfaceView nextSurfaceView, SurfaceHolder.Callback2 callback);
     }
 
-    public TerminalSurfaceHostLifecycleCallbacks(
+    public SurfaceLifecycleCallbacks(
             BooleanSupplier nativeLoaded,
             BooleanSupplier debugViewEnabled,
             BooleanSupplier currentImeVisible,

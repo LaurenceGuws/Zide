@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.interaction;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.IntSupplier;
@@ -7,7 +7,7 @@ import java.util.function.IntUnaryOperator;
 import dev.zide.terminal.gesture.TerminalGestureStateControllerFactory;
 
 /** Functional callback adapter for {@link TerminalGestureStateControllerFactory}. */
-public final class TerminalGestureStateFactoryHostCallbacks implements TerminalGestureStateControllerFactory.Host {
+public final class GestureStateCallbacks implements TerminalGestureStateControllerFactory.Host {
     private final BooleanSupplier nativeLoaded;
     private final IntSupplier visibleRows;
     private final IntSupplier viewportHeightPx;
@@ -30,7 +30,7 @@ public final class TerminalGestureStateFactoryHostCallbacks implements TerminalG
         int apply(boolean value);
     }
 
-    public TerminalGestureStateFactoryHostCallbacks(
+    public GestureStateCallbacks(
             BooleanSupplier nativeLoaded,
             IntSupplier visibleRows,
             IntSupplier viewportHeightPx,

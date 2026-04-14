@@ -1,10 +1,10 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.ui;
 
 import android.view.View;
 import android.widget.FrameLayout;
 
 /** Owns Android product/debug view-mode switching policy. */
-public final class TerminalViewModeController {
+public final class ViewModeController {
     /** Host callbacks for side effects that occur when view mode changes. */
     public interface Host {
         boolean debugViewEnabled();
@@ -30,7 +30,7 @@ public final class TerminalViewModeController {
     private final FrameLayout productSurfaceContainer;
     private final Host host;
 
-    public TerminalViewModeController(
+    public ViewModeController(
             View productView,
             View debugView,
             View terminalScrollOverlay,

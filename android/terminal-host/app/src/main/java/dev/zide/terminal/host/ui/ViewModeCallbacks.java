@@ -1,10 +1,10 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.ui;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
-/** Functional callback adapter for {@link TerminalViewModeController}. */
-public final class TerminalViewModeHostCallbacks implements TerminalViewModeController.Host {
+/** Functional callback adapter for {@link ViewModeController}. */
+public final class ViewModeCallbacks implements ViewModeController.Host {
     private final BooleanSupplier debugViewEnabled;
     private final Consumer<Boolean> setDebugViewEnabled;
     private final Consumer<String> appendEvent;
@@ -14,7 +14,7 @@ public final class TerminalViewModeHostCallbacks implements TerminalViewModeCont
     private final Runnable refreshProductScrollOverlay;
     private final Runnable refreshShellStateForDebugView;
 
-    public TerminalViewModeHostCallbacks(
+    public ViewModeCallbacks(
             BooleanSupplier debugViewEnabled,
             Consumer<Boolean> setDebugViewEnabled,
             Consumer<String> appendEvent,

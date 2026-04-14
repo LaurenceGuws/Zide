@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.ui;
 
 import android.app.Activity;
 import android.view.View;
@@ -10,7 +10,7 @@ import dev.zide.terminal.R;
 import dev.zide.terminal.scroll.TerminalScrollOverlayView;
 
 /** Captures activity-owned view references for terminal host wiring. */
-public final class TerminalActivityViewBindings {
+public final class ActivityViewBindings {
     public final TextView statusText;
     public final TextView packageStatusText;
     public final TextView eventLogText;
@@ -30,7 +30,7 @@ public final class TerminalActivityViewBindings {
     public final Button assistCtrlButton;
     public final Button assistAltButton;
 
-    private TerminalActivityViewBindings(
+    private ActivityViewBindings(
             TextView statusText,
             TextView packageStatusText,
             TextView eventLogText,
@@ -69,8 +69,8 @@ public final class TerminalActivityViewBindings {
         this.assistAltButton = assistAltButton;
     }
 
-    public static TerminalActivityViewBindings from(Activity activity) {
-        return new TerminalActivityViewBindings(
+    public static ActivityViewBindings from(Activity activity) {
+        return new ActivityViewBindings(
                 activity.findViewById(R.id.status_text),
                 activity.findViewById(R.id.package_status_text),
                 activity.findViewById(R.id.event_log),

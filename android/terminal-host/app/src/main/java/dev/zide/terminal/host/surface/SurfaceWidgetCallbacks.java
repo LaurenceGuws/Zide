@@ -1,12 +1,12 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.surface;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
 import java.util.function.IntUnaryOperator;
 
-/** Functional callback adapter for {@link TerminalSurfaceWidgetController}. */
-public final class TerminalSurfaceWidgetHostCallbacks implements TerminalSurfaceWidgetController.Host {
+/** Functional callback adapter for {@link SurfaceWidgetController}. */
+public final class SurfaceWidgetCallbacks implements SurfaceWidgetController.Host {
     private final BooleanSupplier nativeLoaded;
     private final IntUnaryOperator setShellScrollbackOffset;
     private final IntSupplier followShellLiveBottom;
@@ -15,7 +15,7 @@ public final class TerminalSurfaceWidgetHostCallbacks implements TerminalSurface
     private final Runnable refreshProductScrollOverlay;
     private final Runnable reevaluateProductFrameLoop;
 
-    public TerminalSurfaceWidgetHostCallbacks(
+    public SurfaceWidgetCallbacks(
             BooleanSupplier nativeLoaded,
             IntUnaryOperator setShellScrollbackOffset,
             IntSupplier followShellLiveBottom,

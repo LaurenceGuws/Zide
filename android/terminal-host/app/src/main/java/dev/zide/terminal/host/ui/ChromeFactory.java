@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.ui;
 
 import android.content.Context;
 import android.view.View;
@@ -17,19 +17,19 @@ import dev.zide.terminal.input.ShellInputView;
  * <p>Owns creation of chrome bridge/callback adapter instances so generic
  * host wiring does not accumulate domain-specific construction logic.
  */
-public final class TerminalChromeHostFactory {
-    private TerminalChromeHostFactory() {
+public final class ChromeFactory {
+    private ChromeFactory() {
     }
 
-    public static TerminalChromeHostBridge createChromeHostBridge(
+    public static ChromeBridge createChromeHostBridge(
             Context context,
             View rootView,
             View debugViewModeButton,
             View drawerScrim,
             View drawerEdgeHotspot,
             View leftSidebar,
-            TerminalChromeHostBridge.Callbacks callbacks) {
-        return new TerminalChromeHostBridge(
+            ChromeBridge.Callbacks callbacks) {
+        return new ChromeBridge(
                 context,
                 rootView,
                 debugViewModeButton,
@@ -39,7 +39,7 @@ public final class TerminalChromeHostFactory {
                 callbacks);
     }
 
-    public static TerminalChromeHostBridge.Callbacks createChromeHostCallbacks(
+    public static ChromeBridge.Callbacks createChromeHostCallbacks(
             BooleanSupplier debugViewEnabled,
             BiConsumer<String, String> showProductView,
             BiConsumer<String, String> showDebugView,
@@ -52,7 +52,7 @@ public final class TerminalChromeHostFactory {
             Supplier<Button> assistAltButton,
             Consumer<String> sendDirectText,
             Consumer<String> updateStatus) {
-        return new TerminalChromeHostCallbacks(
+        return new ChromeCallbacks(
                 debugViewEnabled,
                 showProductView,
                 showDebugView,

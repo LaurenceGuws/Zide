@@ -1,11 +1,11 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.interaction;
 
 import dev.zide.terminal.gesture.TerminalGestureStateController;
 
 /**
  * Adapts activity-owned callbacks to {@link TerminalGestureStateController.Host}.
  */
-public final class TerminalGestureStateHostBridge implements TerminalGestureStateController.Host {
+public final class GestureStateBridge implements TerminalGestureStateController.Host {
     /** Activity callbacks required by gesture-state policy. */
     public interface Callbacks {
         boolean nativeLoaded();
@@ -33,7 +33,7 @@ public final class TerminalGestureStateHostBridge implements TerminalGestureStat
 
     private final Callbacks callbacks;
 
-    public TerminalGestureStateHostBridge(Callbacks callbacks) {
+    public GestureStateBridge(Callbacks callbacks) {
         this.callbacks = callbacks;
     }
 

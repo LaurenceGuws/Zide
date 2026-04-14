@@ -4,7 +4,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
 
-import dev.zide.terminal.host.TerminalSurfaceHostLifecycleCallbacks;
+import dev.zide.terminal.host.surface.SurfaceLifecycleCallbacks;
 
 /** Functional callback adapter for {@link LifecycleController.Host}. */
 public final class LifecycleCallbacks implements LifecycleController.Host {
@@ -25,7 +25,7 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
     private final LongSupplier nativeOnStop;
     private final NativeBooleanCall nativeOnWindowFocus;
     private final Consumer<String> appendEvent;
-    private final TerminalSurfaceHostLifecycleCallbacks.NativeEventCallback callNative;
+    private final SurfaceLifecycleCallbacks.NativeEventCallback callNative;
     private final Consumer<String> updateStatus;
     private final Runnable stopProductFrameLoop;
     private final Runnable refreshUserlandSessionOnPause;
@@ -40,7 +40,7 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
             LongSupplier nativeOnStop,
             NativeBooleanCall nativeOnWindowFocus,
             Consumer<String> appendEvent,
-            TerminalSurfaceHostLifecycleCallbacks.NativeEventCallback callNative,
+            SurfaceLifecycleCallbacks.NativeEventCallback callNative,
             Consumer<String> updateStatus,
             Runnable stopProductFrameLoop,
             Runnable refreshUserlandSessionOnPause,
