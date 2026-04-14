@@ -410,13 +410,14 @@ public final class ZideTerminalActivity extends Activity
     private LifecycleCallbacks createLifecycleCallbacks() {
         return new LifecycleCallbacks(
                 () -> nativeLoaded,
-                TerminalNativeBridge::nativeOnStartBridge,
-                TerminalNativeBridge::nativeOnResumeBridge,
-                TerminalNativeBridge::nativeOnPauseBridge,
-                TerminalNativeBridge::nativeOnStopBridge,
-                TerminalNativeBridge::nativeOnWindowFocusBridge,
+                LifecycleCallbacks.NativeLifecycleBundle.of(
+                        TerminalNativeBridge::nativeOnStartBridge,
+                        TerminalNativeBridge::nativeOnResumeBridge,
+                        TerminalNativeBridge::nativeOnPauseBridge,
+                        TerminalNativeBridge::nativeOnStopBridge,
+                        TerminalNativeBridge::nativeOnWindowFocusBridge,
+                        this::callNative),
                 this::appendEvent,
-                this::callNative,
                 this::updateStatus,
                 this::stopProductFrameLoopIfReady,
                 this::refreshUserlandSessionIfReady,

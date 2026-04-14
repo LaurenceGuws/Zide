@@ -18,14 +18,49 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
         void call(boolean debugRecreateSurfaceOnce, boolean debugResizeSurfaceOnce, boolean debugStartShellOnce);
     }
 
+    public static final class NativeLifecycleBundle {
+        final LongSupplier nativeOnStart;
+        final LongSupplier nativeOnResume;
+        final LongSupplier nativeOnPause;
+        final LongSupplier nativeOnStop;
+        final NativeBooleanCall nativeOnWindowFocus;
+        final SurfaceLifecycleCallbacks.NativeEventCallback callNative;
+
+        private NativeLifecycleBundle(
+                LongSupplier nativeOnStart,
+                LongSupplier nativeOnResume,
+                LongSupplier nativeOnPause,
+                LongSupplier nativeOnStop,
+                NativeBooleanCall nativeOnWindowFocus,
+                SurfaceLifecycleCallbacks.NativeEventCallback callNative) {
+            this.nativeOnStart = nativeOnStart;
+            this.nativeOnResume = nativeOnResume;
+            this.nativeOnPause = nativeOnPause;
+            this.nativeOnStop = nativeOnStop;
+            this.nativeOnWindowFocus = nativeOnWindowFocus;
+            this.callNative = callNative;
+        }
+
+        public static NativeLifecycleBundle of(
+                LongSupplier nativeOnStart,
+                LongSupplier nativeOnResume,
+                LongSupplier nativeOnPause,
+                LongSupplier nativeOnStop,
+                NativeBooleanCall nativeOnWindowFocus,
+                SurfaceLifecycleCallbacks.NativeEventCallback callNative) {
+            return new NativeLifecycleBundle(
+                    nativeOnStart,
+                    nativeOnResume,
+                    nativeOnPause,
+                    nativeOnStop,
+                    nativeOnWindowFocus,
+                    callNative);
+        }
+    }
+
     private final BooleanSupplier nativeLoaded;
-    private final LongSupplier nativeOnStart;
-    private final LongSupplier nativeOnResume;
-    private final LongSupplier nativeOnPause;
-    private final LongSupplier nativeOnStop;
-    private final NativeBooleanCall nativeOnWindowFocus;
+    private final NativeLifecycleBundle nativeLifecycleBundle;
     private final Consumer<String> appendEvent;
-    private final SurfaceLifecycleCallbacks.NativeEventCallback callNative;
     private final Consumer<String> updateStatus;
     private final Runnable stopProductFrameLoop;
     private final Runnable refreshUserlandSessionOnPause;
@@ -34,26 +69,16 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
 
     public LifecycleCallbacks(
             BooleanSupplier nativeLoaded,
-            LongSupplier nativeOnStart,
-            LongSupplier nativeOnResume,
-            LongSupplier nativeOnPause,
-            LongSupplier nativeOnStop,
-            NativeBooleanCall nativeOnWindowFocus,
+            NativeLifecycleBundle nativeLifecycleBundle,
             Consumer<String> appendEvent,
-            SurfaceLifecycleCallbacks.NativeEventCallback callNative,
             Consumer<String> updateStatus,
             Runnable stopProductFrameLoop,
             Runnable refreshUserlandSessionOnPause,
             Runnable notifySurfacePause,
             SurfaceResumeCall notifySurfaceResume) {
         this.nativeLoaded = nativeLoaded;
-        this.nativeOnStart = nativeOnStart;
-        this.nativeOnResume = nativeOnResume;
-        this.nativeOnPause = nativeOnPause;
-        this.nativeOnStop = nativeOnStop;
-        this.nativeOnWindowFocus = nativeOnWindowFocus;
+        this.nativeLifecycleBundle = nativeLifecycleBundle;
         this.appendEvent = appendEvent;
-        this.callNative = callNative;
         this.updateStatus = updateStatus;
         this.stopProductFrameLoop = stopProductFrameLoop;
         this.refreshUserlandSessionOnPause = refreshUserlandSessionOnPause;
@@ -68,27 +93,27 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
 
     @Override
     public long nativeOnStart() {
-        return nativeOnStart.getAsLong();
+        return nativeLifecycleBundle.nativeOnStart.getAsLong();
     }
 
     @Override
     public long nativeOnResume() {
-        return nativeOnResume.getAsLong();
+        return nativeLifecycleBundle.nativeOnResume.getAsLong();
     }
 
     @Override
     public long nativeOnPause() {
-        return nativeOnPause.getAsLong();
+        return nativeLifecycleBundle.nativeOnPause.getAsLong();
     }
 
     @Override
     public long nativeOnStop() {
-        return nativeOnStop.getAsLong();
+        return nativeLifecycleBundle.nativeOnStop.getAsLong();
     }
 
     @Override
     public long nativeOnWindowFocus(boolean hasFocus) {
-        return nativeOnWindowFocus.call(hasFocus);
+        return nativeLifecycleBundle.nativeOnWindowFocus.call(hasFocus);
     }
 
     @Override
@@ -98,7 +123,7 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
 
     @Override
     public void callNative(String event, long seq) {
-        callNative.call(event, seq);
+        nativeLifecycleBundle.callNative.call(event, seq);
     }
 
     @Override
