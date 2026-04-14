@@ -11,14 +11,14 @@ import java.util.function.Supplier;
 
 /** Functional callback adapter for {@link InteractionAssembly.Host}. */
 public final class InteractionCallbacks implements InteractionAssembly.Host {
-    public static final class InteractionHostBundle {
+    public static final class InteractionHostCallbacks {
         final Supplier<Activity> activity;
         final Supplier<Handler> handler;
         final Supplier<FrameLayout> productSurfaceContainer;
         final IntSupplier productViewportWidthPx;
         final IntSupplier productViewportHeightPx;
 
-        private InteractionHostBundle(
+        private InteractionHostCallbacks(
                 Supplier<Activity> activity,
                 Supplier<Handler> handler,
                 Supplier<FrameLayout> productSurfaceContainer,
@@ -31,13 +31,13 @@ public final class InteractionCallbacks implements InteractionAssembly.Host {
             this.productViewportHeightPx = productViewportHeightPx;
         }
 
-        public static InteractionHostBundle of(
+        public static InteractionHostCallbacks of(
                 Supplier<Activity> activity,
                 Supplier<Handler> handler,
                 Supplier<FrameLayout> productSurfaceContainer,
                 IntSupplier productViewportWidthPx,
                 IntSupplier productViewportHeightPx) {
-            return new InteractionHostBundle(
+            return new InteractionHostCallbacks(
                     activity,
                     handler,
                     productSurfaceContainer,
@@ -46,14 +46,14 @@ public final class InteractionCallbacks implements InteractionAssembly.Host {
         }
     }
 
-    public static final class InteractionRuntimeBundle {
+    public static final class InteractionRuntimeCallbacks {
         final BooleanSupplier nativeLoaded;
         final Runnable stopScrollbackFling;
         final Runnable refreshProductScrollOverlay;
         final Runnable reevaluateProductFrameLoop;
         final Consumer<String> appendEvent;
 
-        private InteractionRuntimeBundle(
+        private InteractionRuntimeCallbacks(
                 BooleanSupplier nativeLoaded,
                 Runnable stopScrollbackFling,
                 Runnable refreshProductScrollOverlay,
@@ -66,13 +66,13 @@ public final class InteractionCallbacks implements InteractionAssembly.Host {
             this.appendEvent = appendEvent;
         }
 
-        public static InteractionRuntimeBundle of(
+        public static InteractionRuntimeCallbacks of(
                 BooleanSupplier nativeLoaded,
                 Runnable stopScrollbackFling,
                 Runnable refreshProductScrollOverlay,
                 Runnable reevaluateProductFrameLoop,
                 Consumer<String> appendEvent) {
-            return new InteractionRuntimeBundle(
+            return new InteractionRuntimeCallbacks(
                     nativeLoaded,
                     stopScrollbackFling,
                     refreshProductScrollOverlay,
@@ -81,63 +81,63 @@ public final class InteractionCallbacks implements InteractionAssembly.Host {
         }
     }
 
-    private final InteractionHostBundle interactionHostBundle;
-    private final InteractionRuntimeBundle interactionRuntimeBundle;
+    private final InteractionHostCallbacks interactionHostCallbacks;
+    private final InteractionRuntimeCallbacks interactionRuntimeCallbacks;
 
     public InteractionCallbacks(
-            InteractionHostBundle interactionHostBundle,
-            InteractionRuntimeBundle interactionRuntimeBundle) {
-        this.interactionHostBundle = interactionHostBundle;
-        this.interactionRuntimeBundle = interactionRuntimeBundle;
+            InteractionHostCallbacks interactionHostCallbacks,
+            InteractionRuntimeCallbacks interactionRuntimeCallbacks) {
+        this.interactionHostCallbacks = interactionHostCallbacks;
+        this.interactionRuntimeCallbacks = interactionRuntimeCallbacks;
     }
 
     @Override
     public Activity activity() {
-        return interactionHostBundle.activity.get();
+        return interactionHostCallbacks.activity.get();
     }
 
     @Override
     public Handler handler() {
-        return interactionHostBundle.handler.get();
+        return interactionHostCallbacks.handler.get();
     }
 
     @Override
     public FrameLayout productSurfaceContainer() {
-        return interactionHostBundle.productSurfaceContainer.get();
+        return interactionHostCallbacks.productSurfaceContainer.get();
     }
 
     @Override
     public int productViewportWidthPx() {
-        return interactionHostBundle.productViewportWidthPx.getAsInt();
+        return interactionHostCallbacks.productViewportWidthPx.getAsInt();
     }
 
     @Override
     public int productViewportHeightPx() {
-        return interactionHostBundle.productViewportHeightPx.getAsInt();
+        return interactionHostCallbacks.productViewportHeightPx.getAsInt();
     }
 
     @Override
     public boolean nativeLoaded() {
-        return interactionRuntimeBundle.nativeLoaded.getAsBoolean();
+        return interactionRuntimeCallbacks.nativeLoaded.getAsBoolean();
     }
 
     @Override
     public void stopScrollbackFling() {
-        interactionRuntimeBundle.stopScrollbackFling.run();
+        interactionRuntimeCallbacks.stopScrollbackFling.run();
     }
 
     @Override
     public void refreshProductScrollOverlay() {
-        interactionRuntimeBundle.refreshProductScrollOverlay.run();
+        interactionRuntimeCallbacks.refreshProductScrollOverlay.run();
     }
 
     @Override
     public void reevaluateProductFrameLoop() {
-        interactionRuntimeBundle.reevaluateProductFrameLoop.run();
+        interactionRuntimeCallbacks.reevaluateProductFrameLoop.run();
     }
 
     @Override
     public void appendEvent(String message) {
-        interactionRuntimeBundle.appendEvent.accept(message);
+        interactionRuntimeCallbacks.appendEvent.accept(message);
     }
 }

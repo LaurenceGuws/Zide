@@ -18,7 +18,7 @@ import uk.laurencegouws.terminal.userland.UserlandWorkflowController;
 
 /** Functional callback adapter for {@link UiStartupAssembly.Host}. */
 public final class UiStartupCallbacks implements UiStartupAssembly.Host {
-    public static final class UiHostBundle {
+    public static final class UiHostCallbacks {
         final Supplier<ViewportController> viewportController;
         final Supplier<ChromeController> chromeController;
         final Supplier<Button> productBootstrapRetryButton;
@@ -31,7 +31,7 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
         final Consumer<String> appendEvent;
         final Consumer<String> updateStatus;
 
-        private UiHostBundle(
+        private UiHostCallbacks(
                 Supplier<ViewportController> viewportController,
                 Supplier<ChromeController> chromeController,
                 Supplier<Button> productBootstrapRetryButton,
@@ -56,7 +56,7 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
             this.updateStatus = updateStatus;
         }
 
-        public static UiHostBundle of(
+        public static UiHostCallbacks of(
                 Supplier<ViewportController> viewportController,
                 Supplier<ChromeController> chromeController,
                 Supplier<Button> productBootstrapRetryButton,
@@ -68,7 +68,7 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
                 UiStartupAssembly.ShowDebugView showDebugView,
                 Consumer<String> appendEvent,
                 Consumer<String> updateStatus) {
-            return new UiHostBundle(
+            return new UiHostCallbacks(
                     viewportController,
                     chromeController,
                     productBootstrapRetryButton,
@@ -83,7 +83,7 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
         }
     }
 
-    public static final class UiRuntimeBundle {
+    public static final class UiRuntimeCallbacks {
         final Supplier<RuntimeAssetsController> runtimeAssetsController;
         final Supplier<ViewModeController> viewModeController;
         final Supplier<SurfaceController> surfaceHostController;
@@ -92,7 +92,7 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
         final Supplier<FrameLoopController> frameLoopController;
         final Supplier<View> leftSidebar;
 
-        private UiRuntimeBundle(
+        private UiRuntimeCallbacks(
                 Supplier<RuntimeAssetsController> runtimeAssetsController,
                 Supplier<ViewModeController> viewModeController,
                 Supplier<SurfaceController> surfaceHostController,
@@ -109,7 +109,7 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
             this.leftSidebar = leftSidebar;
         }
 
-        public static UiRuntimeBundle of(
+        public static UiRuntimeCallbacks of(
                 Supplier<RuntimeAssetsController> runtimeAssetsController,
                 Supplier<ViewModeController> viewModeController,
                 Supplier<SurfaceController> surfaceHostController,
@@ -117,7 +117,7 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
                 Supplier<ProductShellStatePresenter> productShellStatePresenter,
                 Supplier<FrameLoopController> frameLoopController,
                 Supplier<View> leftSidebar) {
-            return new UiRuntimeBundle(
+            return new UiRuntimeCallbacks(
                     runtimeAssetsController,
                     viewModeController,
                     surfaceHostController,
@@ -128,103 +128,103 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
         }
     }
 
-    private final UiHostBundle uiHostBundle;
-    private final UiRuntimeBundle uiRuntimeBundle;
+    private final UiHostCallbacks uiHostCallbacks;
+    private final UiRuntimeCallbacks uiRuntimeCallbacks;
 
     public UiStartupCallbacks(
-            UiHostBundle uiHostBundle,
-            UiRuntimeBundle uiRuntimeBundle) {
-        this.uiHostBundle = uiHostBundle;
-        this.uiRuntimeBundle = uiRuntimeBundle;
+            UiHostCallbacks uiHostCallbacks,
+            UiRuntimeCallbacks uiRuntimeCallbacks) {
+        this.uiHostCallbacks = uiHostCallbacks;
+        this.uiRuntimeCallbacks = uiRuntimeCallbacks;
     }
 
     @Override
     public ViewportController viewportController() {
-        return uiHostBundle.viewportController.get();
+        return uiHostCallbacks.viewportController.get();
     }
 
     @Override
     public ChromeController chromeController() {
-        return uiHostBundle.chromeController.get();
+        return uiHostCallbacks.chromeController.get();
     }
 
     @Override
     public Button productBootstrapRetryButton() {
-        return uiHostBundle.productBootstrapRetryButton.get();
+        return uiHostCallbacks.productBootstrapRetryButton.get();
     }
 
     @Override
     public Button productBootstrapDebugButton() {
-        return uiHostBundle.productBootstrapDebugButton.get();
+        return uiHostCallbacks.productBootstrapDebugButton.get();
     }
 
     @Override
     public Supplier<UserlandInstallState> currentInstallState() {
-        return uiHostBundle.currentInstallState;
+        return uiHostCallbacks.currentInstallState;
     }
 
     @Override
     public Supplier<UserlandReadinessState> currentReadinessState() {
-        return uiHostBundle.currentReadinessState;
+        return uiHostCallbacks.currentReadinessState;
     }
 
     @Override
     public Supplier<UserlandWorkflowController> userlandWorkflowController() {
-        return uiHostBundle.userlandWorkflowController;
+        return uiHostCallbacks.userlandWorkflowController;
     }
 
     @Override
     public Supplier<UserlandSessionCoordinator> userlandSessionCoordinator() {
-        return uiHostBundle.userlandSessionCoordinator;
+        return uiHostCallbacks.userlandSessionCoordinator;
     }
 
     @Override
     public UiStartupAssembly.ShowDebugView showDebugView() {
-        return uiHostBundle.showDebugView;
+        return uiHostCallbacks.showDebugView;
     }
 
     @Override
     public Consumer<String> appendEvent() {
-        return uiHostBundle.appendEvent;
+        return uiHostCallbacks.appendEvent;
     }
 
     @Override
     public Consumer<String> updateStatus() {
-        return uiHostBundle.updateStatus;
+        return uiHostCallbacks.updateStatus;
     }
 
     @Override
     public RuntimeAssetsController runtimeAssetsController() {
-        return uiRuntimeBundle.runtimeAssetsController.get();
+        return uiRuntimeCallbacks.runtimeAssetsController.get();
     }
 
     @Override
     public ViewModeController viewModeController() {
-        return uiRuntimeBundle.viewModeController.get();
+        return uiRuntimeCallbacks.viewModeController.get();
     }
 
     @Override
     public SurfaceController surfaceHostController() {
-        return uiRuntimeBundle.surfaceHostController.get();
+        return uiRuntimeCallbacks.surfaceHostController.get();
     }
 
     @Override
     public SurfaceWidgetController surfaceWidgetController() {
-        return uiRuntimeBundle.surfaceWidgetController.get();
+        return uiRuntimeCallbacks.surfaceWidgetController.get();
     }
 
     @Override
     public ProductShellStatePresenter productShellStatePresenter() {
-        return uiRuntimeBundle.productShellStatePresenter.get();
+        return uiRuntimeCallbacks.productShellStatePresenter.get();
     }
 
     @Override
     public FrameLoopController frameLoopController() {
-        return uiRuntimeBundle.frameLoopController.get();
+        return uiRuntimeCallbacks.frameLoopController.get();
     }
 
     @Override
     public View leftSidebar() {
-        return uiRuntimeBundle.leftSidebar.get();
+        return uiRuntimeCallbacks.leftSidebar.get();
     }
 }

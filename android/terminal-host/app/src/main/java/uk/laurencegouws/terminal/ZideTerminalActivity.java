@@ -227,13 +227,13 @@ public final class ZideTerminalActivity extends Activity
 
     private InteractionCallbacks createInteractionCallbacks() {
         return new InteractionCallbacks(
-                InteractionCallbacks.InteractionHostBundle.of(
+                InteractionCallbacks.InteractionHostCallbacks.of(
                         () -> this,
                         () -> handler,
                         () -> productSurfaceContainer,
                         this::productViewportWidthPx,
                         this::productViewportHeightPx),
-                InteractionCallbacks.InteractionRuntimeBundle.of(
+                InteractionCallbacks.InteractionRuntimeCallbacks.of(
                         () -> nativeLoaded,
                         this::stopScrollbackFlingIfReady,
                         this::refreshProductScrollOverlayIfReady,
@@ -469,7 +469,7 @@ public final class ZideTerminalActivity extends Activity
 
     private UiStartupCallbacks createUiStartupCallbacks() {
         return new UiStartupCallbacks(
-                UiStartupCallbacks.UiHostBundle.of(
+                UiStartupCallbacks.UiHostCallbacks.of(
                         () -> terminalViewportController,
                         () -> terminalChromeController,
                         () -> productBootstrapRetryButton,
@@ -481,7 +481,7 @@ public final class ZideTerminalActivity extends Activity
                         this::showDebugViewIfReady,
                         this::appendEvent,
                         this::updateStatus),
-                UiStartupCallbacks.UiRuntimeBundle.of(
+                UiStartupCallbacks.UiRuntimeCallbacks.of(
                         () -> terminalRuntimeAssetsController,
                         () -> terminalViewModeController,
                         () -> surfaceHostController,
