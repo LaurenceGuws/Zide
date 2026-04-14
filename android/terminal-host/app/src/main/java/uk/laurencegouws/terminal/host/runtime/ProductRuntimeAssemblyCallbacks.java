@@ -18,6 +18,51 @@ import uk.laurencegouws.terminal.userland.UserlandSessionCoordinator;
 
 /** Functional callback adapter for {@link ProductRuntimeAssembly.Host}. */
 public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAssembly.Host {
+    public static final class RuntimeHostBundle {
+        final BooleanSupplier debugViewEnabled;
+        final BooleanSupplier nativeLoaded;
+        final Supplier<UserlandInstallState> installState;
+        final Consumer<UserlandInstallState> setInstallState;
+        final Supplier<UserlandReadinessState> readinessState;
+        final Consumer<String> appendEvent;
+        final Consumer<String> updateStatus;
+
+        private RuntimeHostBundle(
+                BooleanSupplier debugViewEnabled,
+                BooleanSupplier nativeLoaded,
+                Supplier<UserlandInstallState> installState,
+                Consumer<UserlandInstallState> setInstallState,
+                Supplier<UserlandReadinessState> readinessState,
+                Consumer<String> appendEvent,
+                Consumer<String> updateStatus) {
+            this.debugViewEnabled = debugViewEnabled;
+            this.nativeLoaded = nativeLoaded;
+            this.installState = installState;
+            this.setInstallState = setInstallState;
+            this.readinessState = readinessState;
+            this.appendEvent = appendEvent;
+            this.updateStatus = updateStatus;
+        }
+
+        public static RuntimeHostBundle of(
+                BooleanSupplier debugViewEnabled,
+                BooleanSupplier nativeLoaded,
+                Supplier<UserlandInstallState> installState,
+                Consumer<UserlandInstallState> setInstallState,
+                Supplier<UserlandReadinessState> readinessState,
+                Consumer<String> appendEvent,
+                Consumer<String> updateStatus) {
+            return new RuntimeHostBundle(
+                    debugViewEnabled,
+                    nativeLoaded,
+                    installState,
+                    setInstallState,
+                    readinessState,
+                    appendEvent,
+                    updateStatus);
+        }
+    }
+
     public static final class RuntimeUiBundle {
         final Supplier<SurfaceView> surfaceView;
         final Supplier<View> productBootstrapBlocker;
@@ -73,57 +118,39 @@ public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAsse
         }
     }
 
-    private final BooleanSupplier debugViewEnabled;
-    private final BooleanSupplier nativeLoaded;
-    private final Supplier<UserlandInstallState> installState;
-    private final Consumer<UserlandInstallState> setInstallState;
-    private final Supplier<UserlandReadinessState> readinessState;
+    private final RuntimeHostBundle runtimeHostBundle;
     private final RuntimeUiBundle runtimeUiBundle;
-    private final Consumer<String> appendEvent;
-    private final Consumer<String> updateStatus;
 
     public ProductRuntimeAssemblyCallbacks(
-            BooleanSupplier debugViewEnabled,
-            BooleanSupplier nativeLoaded,
-            Supplier<UserlandInstallState> installState,
-            Consumer<UserlandInstallState> setInstallState,
-            Supplier<UserlandReadinessState> readinessState,
-            RuntimeUiBundle runtimeUiBundle,
-            Consumer<String> appendEvent,
-            Consumer<String> updateStatus) {
-        this.debugViewEnabled = debugViewEnabled;
-        this.nativeLoaded = nativeLoaded;
-        this.installState = installState;
-        this.setInstallState = setInstallState;
-        this.readinessState = readinessState;
+            RuntimeHostBundle runtimeHostBundle,
+            RuntimeUiBundle runtimeUiBundle) {
+        this.runtimeHostBundle = runtimeHostBundle;
         this.runtimeUiBundle = runtimeUiBundle;
-        this.appendEvent = appendEvent;
-        this.updateStatus = updateStatus;
     }
 
     @Override
     public boolean debugViewEnabled() {
-        return debugViewEnabled.getAsBoolean();
+        return runtimeHostBundle.debugViewEnabled.getAsBoolean();
     }
 
     @Override
     public boolean nativeLoaded() {
-        return nativeLoaded.getAsBoolean();
+        return runtimeHostBundle.nativeLoaded.getAsBoolean();
     }
 
     @Override
     public UserlandInstallState installState() {
-        return installState.get();
+        return runtimeHostBundle.installState.get();
     }
 
     @Override
     public void setInstallState(UserlandInstallState installState) {
-        setInstallState.accept(installState);
+        runtimeHostBundle.setInstallState.accept(installState);
     }
 
     @Override
     public UserlandReadinessState readinessState() {
-        return readinessState.get();
+        return runtimeHostBundle.readinessState.get();
     }
 
     @Override
@@ -173,11 +200,11 @@ public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAsse
 
     @Override
     public void appendEvent(String message) {
-        appendEvent.accept(message);
+        runtimeHostBundle.appendEvent.accept(message);
     }
 
     @Override
     public void updateStatus(String statusLabel) {
-        updateStatus.accept(statusLabel);
+        runtimeHostBundle.updateStatus.accept(statusLabel);
     }
 }
