@@ -56,7 +56,7 @@ eclipse {
         defaultOutputDir = file('bin/default')
         file {
             whenMerged { classpath ->
-                def declaredSourceDirs = [
+                def candidateSourceDirs = [
                     'src/main/java',
                     'src/debug/java',
                     'src/release/java',
@@ -67,6 +67,14 @@ eclipse {
                     'src/androidTestDebug/java',
                     'src/androidTestRelease/java',
                 ]
+                def declaredSourceDirs = candidateSourceDirs
+                        .findAll { dir -> file(dir).isDirectory() }
+                def managedSourceDirs = candidateSourceDirs as Set
+                classpath.entries.removeAll { entry ->
+                    entry.kind == 'src'
+                            && managedSourceDirs.contains(entry.path)
+                            && !declaredSourceDirs.contains(entry.path)
+                }
                 def existingSourceDirs = classpath.entries
                         .findAll { it.kind == 'src' }
                         .collect { it.path } as Set
