@@ -36,6 +36,10 @@ Use this when the Android lane is in cleanup/refactor/standardization mode.
   stop and report mismatch before editing code.
 - Do not add process/ceremony scripts, lint gates, or precommit tooling unless
   the user explicitly asks.
+- Chrome/Surface lane: `docs/todo/android/implementation.md` charter **Hard
+  rules** forbid new single-use accessor seams; the next ten commits touching
+  those classes must be net simplification (fewer methods/fields/deps), and
+  queue updates are outcome lines—not helper-name inventories.
 
 Required per-commit update format:
 

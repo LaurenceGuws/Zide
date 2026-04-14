@@ -64,6 +64,15 @@ Hard rules:
 - each commit must remain compileable and deployable
 - no lint/process-ceremony additions
 - no unrelated-lane changes
+- do not add new `ChromeController` / `SurfaceController` single-use accessor
+  seams; accept a helper only if it eliminates duplicated policy logic or
+  removes cross-domain coupling
+- the next ten commits that touch `ChromeController` or `SurfaceController`
+  must be net simplification: fewer methods, fields, or dependencies in the
+  touched class than before the change (merge duplicate policy, delete redundant
+  indirection), not rename-only ceremony
+- queue updates under this campaign describe outcomes (what got simpler or
+  what coupling dropped), not inventories of new helper or method names
 
 Commit and validation rules:
 
@@ -98,7 +107,9 @@ Agent reporting contract (mandatory for cleanup campaign updates):
 
 - `Commit:` `<hash> <subject>`
 - `Queue line (exact):` quote exact `Next:` line used for the cut
-- `Completed cut:` one concrete behavior-preserving change
+- `Completed cut:` one concrete outcome (behavior preserved and what
+  simplified—for example fewer methods on the touched class or duplicated
+  policy merged), not a list of new helper names
 - `Files touched:` concrete paths
 - `Validation:` exact command list + pass/fail
 - `Next work:` exact current `Next:` line after progress update
@@ -124,120 +135,23 @@ Agent reporting contract (mandatory for cleanup campaign updates):
    - Completed: activity lifecycle/input overrides now route through named
      helper seams; remaining inline logic is intentionally trivial or contract
      owned by downstream controllers.
-   - Next: move to TODO #2 ownership-boundary cleanup cuts.
+   - Next: primary cleanup for Java host ownership continues under item 2
+     below (`ChromeController` / `SurfaceController` net simplification).
 2. Keep Java ownership boundaries aligned with
    `ANDROID_JAVA_HOST_STRUCTURE.md`.
-   - Completed: first ownership-boundary cleanup batch landed in
-     `host/ui/ChromeController` (sidebar and IME branch helpers extracted,
-     behavior unchanged).
-   - Completed: second `host/ui/ChromeController` ownership batch landed
-     (sidebar state/animation and IME status update paths now route through
-     named internal helpers; behavior unchanged).
-   - Completed: first `host/surface/SurfaceController` ownership batch landed
-     (native-sequence and surface-change event composition branches now route
-     through named helpers; behavior unchanged).
-   - Completed: `host/lifecycle` ownership seams tightened:
-     - debug intent extras now parse through `LifecycleDebugIntentArgs`
-     - on-create lifecycle flow and new-intent lifecycle event logging now
-       route through `LifecycleController`
-   - Completed: callback pressure reduction cuts landed in two heavy adapters:
-     `UiStartupCallbacks` and `ProductRuntimeAssemblyCallbacks` wrapper layers
-     were flattened (pass-through wrapper classes removed).
-   - Completed: additional callback-heavy adapter wrapper deflations landed in
-     `StatusViewCallbacks`, `SessionAssemblyCallbacks`, and
-     `WorkflowAssemblyCallbacks` (nested wrapper callback classes removed;
-     direct callback fields wired).
-   - Completed: `SurfaceController` resume debug recreation scheduling is now
-     named `scheduleDebugSurfaceRecreationIfRequested` so `onResume` stays a
-     thin orchestration seam.
-   - Completed: `SurfaceController` resume debug resize and shell-start
-     scheduling now live in `scheduleDebugSurfaceResizeIfRequested` and
-     `scheduleDebugShellStartIfRequested`.
-   - Completed: `ChromeController` assist IME toggle wiring now lives in
-     `bindAssistImeToggleIfPresent` so `bindAssistBar` stays orchestration-only.
-   - Completed: `ChromeController` assist text and arrow keys now bind through
-     `bindAssistCharacterButtons`.
-   - Completed: batch of four ownership seams: `bindSidebarChromeInteractions`
-     (sidebar nav + scrim/edge drawer chrome), `bindAssistModifierLatchButtons`,
-     `appendNativeSurfaceRedrawNeededTelemetry`, and
-     `removeExistingSurfaceHostViewIfPresent` in `SurfaceController`.
-   - Completed: batch of four seams: `runManualImeOpenSequence`,
-     `animateSidebarTranslation`, `dispatchProductSurfaceChanged`, and
-     `dispatchNativeProductSurfaceDestroyed`.
-   - Completed: batch of four seams: `bindProductViewModeToggle`,
-     `runManualImeCloseSequence`, `shouldIgnoreVisibleViewportNotification`, and
-     `publishVisibleViewportChange`.
-   - Completed: batch of four seams: `bindSidebarNavActions`,
-     `bindSidebarDrawerGestures`, `recordProductSurfaceCreated`, and
-     `visibleViewportDimensionsMatchNotified`.
-   - Completed: batch of four seams: `applyAssistModifierLatchChromeAfterBindings`,
-     `bindAssistCharacterLiteralButtons`, `bindAssistCharacterNavigationButtons`,
-     and `dispatchNativeProductRedrawNeededTelemetryAndStatus`.
-   - Completed: batch of four seams: `shouldDeferSidebarOpen`,
-     `shouldDeferSidebarClose`, `appendSurfaceGeometryChangedTelemetry`, and
-     `appendSurfaceRedrawNeededDispatchTelemetry`.
-   - Completed: batch of four seams: `resolveAssistImeButton`,
-     `bindAssistImeToggleClick`, `appendSurfaceRedrawReentrantSkippedTelemetry`,
-     and `resolveSurfaceInstallCallback`.
-   - Completed: batch of four seams: `bindAssistRowInputChrome`,
-     `applySidebarOpenedChrome`, `applySidebarClosedChrome`, and
-     `appendSurfaceDestroyedLifecycleTelemetry`.
-   - Completed: batch of four seams: `assistBarRootView`,
-     `applyDrawerScrimAndHotspotVisibility`, `visibleProductSurfaceContainerWidth`,
-     and `visibleProductSurfaceContainerHeight`.
-   - Completed: batch of four seams: `bindSidebarRestartNavButton`,
-     `bindSidebarDebugNavButton`, `bindSidebarPackagesNavButton`, and
-     `appendSurfaceHostInstalledTelemetry`.
-   - Completed: batch of four seams: `tryConsumeSidebarOpenEdgeSwipe`,
-     `tryConsumeSidebarCloseEdgeSwipe`,
-     `matchParentCenteredSurfaceHostLayoutParams`, and
-     `appendSurfaceHostRemovedTelemetry`.
-   - Completed: batch of four seams: `activeShellInputView`,
-     `showSoftInputAfterRestartInput`, `appendViewportSizeChangedTelemetry`, and
-     `dispatchNativeViewportChangedAndRefreshOverlay`.
-   - Completed: batch of four seams: `leftSidebarChrome`,
-     `bindDrawerScrimDismissChrome`, `bindDrawerEdgeSwipeListenersChrome`, and
-     `createNextProductSurfaceHostView`.
-   - Completed: batch of four seams: `appendManualImeOpenBeginTrace`,
-     `requestInputFocusForManualImeOpen`, `prepareSurfaceHostHolderFormat`, and
-     `registerProductSurfaceHostView`.
-   - Completed: batch of four seams: `recordManualImeOpenSoftInputResult`,
-     `recordManualImeCloseSoftInputResult`, `productSurfaceHostContainer`, and
-     `scheduleNotifyVisibleViewport`.
-   - Completed: batch of four seams: `drawerScrimChrome`, `drawerEdgeHotspotChrome`,
-     `nativeSurfaceAvailableSeqOrNegative`, and `callNativeProductSurfaceAvailable`.
-   - Completed: batch of four seams: `debugViewModeToggleChrome`,
-     `hideSoftInputFromShellWindowToken`, `nativeSurfaceDestroyedSeqOrNegative`, and
-     `callNativeProductSurfaceDestroyed`.
-   - Completed: batch of four seams: `leftSidebarTranslationXForOpenState`,
-     `nativeSurfaceRedrawNeededSeqOrNegative`, `nativeVisibleViewportSeqOrNegative`, and
-     `callNativeProductViewportChanged`.
-   - Completed: batch of four seams: `restartInputForManualImeOpen`,
-     `showSoftInputImplicitForShell`, `currentSurfaceStateSnapshotForNative`, and
-     `incrementSurfaceHostGenerationForInstall`.
-   - Completed: batch of four seams: `appendManualImeInputManagerUnavailableEvent`,
-     `activeShellInputWindowToken`, `callNativeProductOnPause`, and
-     `refreshProductScrollOverlayAfterViewportNative`.
-   - Completed: batch of four seams: `inputMethodManagerFromHostContext`,
-     `activeShellModifierLatchStateChrome`, `drawerScrimVisibilityForSidebarChrome`, and
-     `drawerEdgeHotspotVisibilityForSidebarChrome`.
-   - Completed: batch of four seams: `currentImeVisibleForVisibleViewportNotify`,
-     `productSurfaceHostContainerIsVisibleForViewport`, `holderForProductSurfaceView`, and
-     `removeSurfaceHolderCallbackIfPresent`.
-   - Completed: batch of four seams: `sidebarRestartNavButtonChrome`,
-     `sidebarDebugNavButtonChrome`, `sidebarPackagesNavButtonChrome`, and
-     `edgeSwipeDeltaFromDownRawX`.
-   - Completed: batch of four seams: `surfaceFromHolderForProductLifecycle`,
-     `addProductSurfaceHostChild`, `removeProductSurfaceHostChild`, and
-     `hostSurfaceViewOrNull`.
-   - Completed: batch of four seams: `assistImeButtonResourceIdFromRoot`,
-     `assistCtrlButtonChrome`, `assistAltButtonChrome`, and
-     `sidebarOpenAnimationDurationMsChrome`.
-   - Completed: batch of four seams: `productSurfaceHostContextForNextView`,
-     `nativeLoadedForProductSurfaceBridge`, `surfaceHostGenerationForProductTelemetry`, and
-     `hostDebugViewEnabledForVisibleViewport`.
-   - Next: continue smallest ownership-clarity cuts in `ChromeController` or
-     `SurfaceController` where watch-level pressure remains.
+   - Completed: `ChromeController` and `SurfaceController` now own the bulk of
+     product chrome and surface/viewport/native-bridge orchestration; adapter
+     callback layers were deflated and lifecycle/surface scheduling was
+     tightened so `ZideTerminalActivity` stays composition-oriented. Granular
+     refactors live in git history; this queue no longer tracks helper-name
+     batches (see charter Hard rules).
+   - Completed: `host/lifecycle` tightened (debug intent args, lifecycle flow
+     and new-intent logging through `LifecycleController`).
+   - Next: net simplification in `ChromeController` or `SurfaceController`:
+     remove or merge pass-through helpers and redundant indirection so the
+     touched class ends with fewer methods, fields, or dependencies; each of
+     the next ten commits in this lane must satisfy the charter “net
+     simplification” rule (no accessor-only churn).
 3. Stabilize selection/scroll interaction behavior under manual device usage.
 4. Keep debug/profiling instrumentation behind explicit flags and remove stale
    probes after fixes land.
