@@ -88,9 +88,12 @@ public final class ChromeController {
     }
 
     public void bindAssistBar() {
-        final View root = host.shellInputView().getRootView();
-        bindAssistImeToggleIfPresent(root);
+        bindAssistImeToggleIfPresent(assistBarRootView());
         bindAssistRowInputChrome();
+    }
+
+    private View assistBarRootView() {
+        return host.shellInputView().getRootView();
     }
 
     private void bindAssistRowInputChrome() {
@@ -242,6 +245,10 @@ public final class ChromeController {
     }
 
     public void updateSidebarVisibility(boolean visible) {
+        applyDrawerScrimAndHotspotVisibility(visible);
+    }
+
+    private void applyDrawerScrimAndHotspotVisibility(boolean visible) {
         host.drawerScrim().setVisibility(visible ? View.VISIBLE : View.GONE);
         host.drawerEdgeHotspot().setVisibility(visible ? View.GONE : View.VISIBLE);
     }

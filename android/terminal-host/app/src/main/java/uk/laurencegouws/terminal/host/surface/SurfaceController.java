@@ -270,8 +270,8 @@ public final class SurfaceController {
             return;
         }
         final boolean viewportImeVisible = host.currentImeVisible();
-        final int width = Math.max(host.productSurfaceContainer().getWidth(), 1);
-        final int height = Math.max(host.productSurfaceContainer().getHeight(), 1);
+        final int width = visibleProductSurfaceContainerWidth();
+        final int height = visibleProductSurfaceContainerHeight();
         host.setVisibleViewportSize(width, height);
         if (visibleViewportDimensionsMatchNotified(width, height, viewportImeVisible)) {
             return;
@@ -286,6 +286,14 @@ public final class SurfaceController {
         return width == host.notifiedViewportWidth()
                 && height == host.notifiedViewportHeight()
                 && viewportImeVisible == host.notifiedViewportImeVisible();
+    }
+
+    private int visibleProductSurfaceContainerWidth() {
+        return Math.max(host.productSurfaceContainer().getWidth(), 1);
+    }
+
+    private int visibleProductSurfaceContainerHeight() {
+        return Math.max(host.productSurfaceContainer().getHeight(), 1);
     }
 
     private boolean shouldIgnoreVisibleViewportNotification() {
