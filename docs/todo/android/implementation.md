@@ -212,6 +212,9 @@ Agent reporting contract (mandatory for cleanup campaign updates):
    - Completed: batch of four seams: `leftSidebarTranslationXForOpenState`,
      `nativeSurfaceRedrawNeededSeqOrNegative`, `nativeVisibleViewportSeqOrNegative`, and
      `callNativeProductViewportChanged`.
+   - Completed: batch of four seams: `restartInputForManualImeOpen`,
+     `showSoftInputImplicitForShell`, `currentSurfaceStateSnapshotForNative`, and
+     `incrementSurfaceHostGenerationForInstall`.
    - Next: continue smallest ownership-clarity cuts in `ChromeController` or
      `SurfaceController` where watch-level pressure remains.
 3. Stabilize selection/scroll interaction behavior under manual device usage.
