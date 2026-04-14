@@ -17,13 +17,13 @@ public final class WorkflowCallbacks implements WorkflowBridge.Callbacks {
     private final BiConsumer<UserlandInstallState, String> applyInstallState;
     private final Consumer<UserlandInstallState> setInstallState;
     private final Consumer<UserlandReadinessState> setReadinessState;
-    private final RestartShellSessionCallback restartShellSession;
+    private final RestartSessionCallback restartSession;
     private final BiConsumer<String, String> showDebugView;
     private final TextView packageStatusText;
     private final Consumer<String> updateStatus;
 
     /** Functional callback for shell restart requests. */
-    public interface RestartShellSessionCallback {
+    public interface RestartSessionCallback {
         void restart(String eventName, String statusLabel, boolean logRefresh);
     }
 
@@ -33,7 +33,7 @@ public final class WorkflowCallbacks implements WorkflowBridge.Callbacks {
             BiConsumer<UserlandInstallState, String> applyInstallState,
             Consumer<UserlandInstallState> setInstallState,
             Consumer<UserlandReadinessState> setReadinessState,
-            RestartShellSessionCallback restartShellSession,
+            RestartSessionCallback restartSession,
             BiConsumer<String, String> showDebugView,
             TextView packageStatusText,
             Consumer<String> updateStatus) {
@@ -42,7 +42,7 @@ public final class WorkflowCallbacks implements WorkflowBridge.Callbacks {
         this.applyInstallState = applyInstallState;
         this.setInstallState = setInstallState;
         this.setReadinessState = setReadinessState;
-        this.restartShellSession = restartShellSession;
+        this.restartSession = restartSession;
         this.showDebugView = showDebugView;
         this.packageStatusText = packageStatusText;
         this.updateStatus = updateStatus;
@@ -74,8 +74,8 @@ public final class WorkflowCallbacks implements WorkflowBridge.Callbacks {
     }
 
     @Override
-    public void restartShellSession(String eventName, String statusLabel, boolean logRefresh) {
-        restartShellSession.restart(eventName, statusLabel, logRefresh);
+    public void restartSession(String eventName, String statusLabel, boolean logRefresh) {
+        restartSession.restart(eventName, statusLabel, logRefresh);
     }
 
     @Override

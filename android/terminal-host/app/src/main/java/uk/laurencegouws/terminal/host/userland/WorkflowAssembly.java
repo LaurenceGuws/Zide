@@ -30,7 +30,7 @@ public final class WorkflowAssembly {
 
         void applyInstallState(UserlandInstallState installState, String statusLabel);
 
-        void restartShellSession(String eventName, String statusLabel, boolean logRefresh);
+        void restartSession(String eventName, String statusLabel, boolean logRefresh);
 
         void showDebugView(String eventName, String statusLabel);
 
@@ -75,7 +75,7 @@ public final class WorkflowAssembly {
                         host::applyInstallState,
                         host::setInstallState,
                         host::setReadinessState,
-                        host::restartShellSession,
+                        host::restartSession,
                         host::showDebugView,
                         host.packageStatusText(),
                         host::updateStatus));

@@ -24,7 +24,7 @@ public final class WorkflowBridge implements UserlandWorkflowController.Host {
 
         void setReadinessState(UserlandReadinessState readinessState);
 
-        void restartShellSession(String eventName, String statusLabel, boolean logRefresh);
+        void restartSession(String eventName, String statusLabel, boolean logRefresh);
 
         void showDebugView(String eventName, String statusLabel);
 
@@ -79,8 +79,8 @@ public final class WorkflowBridge implements UserlandWorkflowController.Host {
     }
 
     @Override
-    public void restartShellSession(String eventName, String statusLabel, boolean logRefresh) {
-        callbacks.restartShellSession(eventName, statusLabel, logRefresh);
+    public void restartSession(String eventName, String statusLabel, boolean logRefresh) {
+        callbacks.restartSession(eventName, statusLabel, logRefresh);
     }
 
     @Override

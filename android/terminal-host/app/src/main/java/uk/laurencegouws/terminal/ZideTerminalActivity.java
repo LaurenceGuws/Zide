@@ -406,7 +406,7 @@ public final class ZideTerminalActivity extends Activity
                         },
                         (eventName, statusLabel, logRefresh) -> {
                             if (terminalProductRuntimeController != null) {
-                                terminalProductRuntimeController.restartShellSession(eventName, statusLabel,
+                                terminalProductRuntimeController.restartSession(eventName, statusLabel,
                                         logRefresh);
                             }
                         },

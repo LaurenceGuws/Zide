@@ -54,3 +54,4 @@ Session entrypoint only. Keep this file short, stable, and current.
   `src/platform/android_gles_surface_status.zig`
 - Zig naming contract now includes an explicit forbidden-terms checklist for
   active Android bridge/runtime code
+- local naming lint exists at `ops/lint_android_zig_naming.py`

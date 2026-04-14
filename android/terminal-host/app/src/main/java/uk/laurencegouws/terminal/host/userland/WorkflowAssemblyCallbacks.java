@@ -21,7 +21,7 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
     private final Consumer<UserlandInstallState> setInstallState;
     private final Consumer<UserlandReadinessState> setReadinessState;
     private final BiConsumer<UserlandInstallState, String> applyInstallState;
-    private final WorkflowCallbacks.RestartShellSessionCallback restartShellSession;
+    private final WorkflowCallbacks.RestartSessionCallback restartSession;
     private final BiConsumer<String, String> showDebugView;
     private final Consumer<String> appendEvent;
     private final Consumer<String> updateStatus;
@@ -35,7 +35,7 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
             Consumer<UserlandInstallState> setInstallState,
             Consumer<UserlandReadinessState> setReadinessState,
             BiConsumer<UserlandInstallState, String> applyInstallState,
-            WorkflowCallbacks.RestartShellSessionCallback restartShellSession,
+            WorkflowCallbacks.RestartSessionCallback restartSession,
             BiConsumer<String, String> showDebugView,
             Consumer<String> appendEvent,
             Consumer<String> updateStatus,
@@ -47,7 +47,7 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
         this.setInstallState = setInstallState;
         this.setReadinessState = setReadinessState;
         this.applyInstallState = applyInstallState;
-        this.restartShellSession = restartShellSession;
+        this.restartSession = restartSession;
         this.showDebugView = showDebugView;
         this.appendEvent = appendEvent;
         this.updateStatus = updateStatus;
@@ -90,8 +90,8 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
     }
 
     @Override
-    public void restartShellSession(String eventName, String statusLabel, boolean logRefresh) {
-        restartShellSession.restart(eventName, statusLabel, logRefresh);
+    public void restartSession(String eventName, String statusLabel, boolean logRefresh) {
+        restartSession.restart(eventName, statusLabel, logRefresh);
     }
 
     @Override

@@ -153,6 +153,8 @@ A cut is done only if all are true:
   `restartShellSession`-style bridge helper names
 - Zig bridge naming authority now includes an explicit forbidden-terms checklist
   to block regressions in active Android runtime paths
+- local guard added: run `./ops/lint_android_zig_naming.py` before Android Zig
+  bridge naming commits
 - selection controller remains monolithic by design until a real split seam
   exists
 - queue remains Android-product-first, not shell-readiness-baseline-first

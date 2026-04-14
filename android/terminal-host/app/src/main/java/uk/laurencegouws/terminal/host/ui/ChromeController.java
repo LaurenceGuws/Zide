@@ -50,7 +50,7 @@ public final class ChromeController {
         final Button packagesButton = (Button) host.leftSidebar().findViewById(uk.laurencegouws.terminal.R.id.sidebar_packages_button);
 
         restartButton.setOnClickListener(view -> {
-            host.appendEvent("manual.sessionRestart requested");
+            host.appendEvent("manual.session.restart requested");
             closeSidebar();
         });
 
@@ -109,16 +109,16 @@ public final class ChromeController {
         }
 
         final ShellInputView shellInputView = host.shellInputView();
-        host.appendEvent("manual.imeOpen begin focus=" + shellInputView.hasFocus());
+        host.appendEvent("manual.ime.open begin focus=" + shellInputView.hasFocus());
         shellInputView.requestFocusFromTouch();
         if (!shellInputView.hasFocus()) {
             shellInputView.requestFocus();
         }
-        host.appendEvent("manual.imeOpen focusAfterRequest=" + shellInputView.hasFocus());
+        host.appendEvent("manual.ime.open focusAfterRequest=" + shellInputView.hasFocus());
         imm.restartInput(shellInputView);
         final boolean shown = imm.showSoftInput(shellInputView, InputMethodManager.SHOW_IMPLICIT);
         host.setImeVisible(shown || shellInputView.hasFocus());
-        host.appendEvent("manual.imeOpen shown=" + shown + " focus=" + shellInputView.hasFocus());
+        host.appendEvent("manual.ime.open shown=" + shown + " focus=" + shellInputView.hasFocus());
         host.updateStatus("ime-shown");
     }
 
@@ -130,7 +130,7 @@ public final class ChromeController {
         }
         final boolean hidden = imm.hideSoftInputFromWindow(host.shellInputView().getWindowToken(), 0);
         host.setImeVisible(false);
-        host.appendEvent("manual.imeClose hidden=" + hidden);
+        host.appendEvent("manual.ime.close hidden=" + hidden);
         host.updateStatus("ime-hidden");
     }
 
