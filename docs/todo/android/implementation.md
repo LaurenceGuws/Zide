@@ -153,6 +153,8 @@ Agent reporting contract (mandatory for cleanup campaign updates):
    - Completed: `SurfaceController` resume debug resize and shell-start
      scheduling now live in `scheduleDebugSurfaceResizeIfRequested` and
      `scheduleDebugShellStartIfRequested`.
+   - Completed: `ChromeController` assist IME toggle wiring now lives in
+     `bindAssistImeToggleIfPresent` so `bindAssistBar` stays orchestration-only.
    - Next: continue smallest ownership-clarity cuts in `ChromeController` or
      `SurfaceController` where watch-level pressure remains.
 3. Stabilize selection/scroll interaction behavior under manual device usage.
