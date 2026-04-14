@@ -48,7 +48,7 @@ For active priorities/workflow, use
 
 Current shape markers (for hygiene tracking, not hard limits):
 
-- `ZideTerminalActivity.java`: `615` lines
+- `ZideTerminalActivity.java`: `582` lines
 - `host/TerminalChromeHostFactory.java`: `69` lines
 - `host/TerminalInteractionHostFactory.java`: `131` lines
 - `host/TerminalInputHostFactory.java`: `56` lines
