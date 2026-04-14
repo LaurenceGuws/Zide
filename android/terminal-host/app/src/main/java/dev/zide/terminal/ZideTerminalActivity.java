@@ -44,6 +44,10 @@ import dev.zide.terminal.host.TerminalWidgetHostAssembly;
 import dev.zide.terminal.host.TerminalWidgetHostAssemblyHostCallbacks;
 import dev.zide.terminal.host.TerminalInteractionAssembly;
 import dev.zide.terminal.host.TerminalInteractionAssemblyHostCallbacks;
+import dev.zide.terminal.host.TerminalProductRuntimeAssembly;
+import dev.zide.terminal.host.TerminalProductRuntimeAssemblyHostCallbacks;
+import dev.zide.terminal.host.TerminalUserlandWorkflowAssembly;
+import dev.zide.terminal.host.TerminalUserlandWorkflowAssemblyHostCallbacks;
 import dev.zide.terminal.debug.TerminalStatusController;
 import dev.zide.terminal.debug.TerminalSurfaceStateSnapshotReader;
 import android.app.Activity;
@@ -411,24 +415,19 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void assembleUserlandWorkflowControllers() {
-        terminalRuntimeAssetsController = new TerminalRuntimeAssetsController(
-                new TerminalRuntimeAssetsHostBridge(
-                        this,
-                        new TerminalRuntimeAssetsHostCallbacks(this::appendEvent)));
-        userlandRelease = terminalRuntimeAssetsController.loadUserlandRelease();
-        terminalUserlandWorkflowHostBridge = new TerminalUserlandWorkflowHostBridge(
-                this,
-                handler,
-                new TerminalUserlandWorkflowHostCallbacks(
+        final TerminalUserlandWorkflowAssembly.Result result = TerminalUserlandWorkflowAssembly.assemble(
+                new TerminalUserlandWorkflowAssemblyHostCallbacks(
+                        () -> this,
+                        () -> handler,
                         () -> userlandRelease,
-                        this::appendEvent,
+                        release -> userlandRelease = release,
+                        installState -> currentInstallState = installState,
+                        bootstrapState -> currentBootstrapState = bootstrapState,
                         (installState, statusLabel) -> {
                             if (terminalProductRuntimeController != null) {
                                 terminalProductRuntimeController.applyInstallState(installState, statusLabel);
                             }
                         },
-                        installState -> currentInstallState = installState,
-                        bootstrapState -> currentBootstrapState = bootstrapState,
                         (eventName, statusLabel, logRefresh) -> {
                             if (terminalProductRuntimeController != null) {
                                 terminalProductRuntimeController.restartShellSession(eventName, statusLabel, logRefresh);
@@ -439,14 +438,17 @@ public final class ZideTerminalActivity extends Activity
                                 terminalViewModeController.showDebugView(eventName, statusLabel);
                             }
                         },
-                        packageStatusText,
-                        this::updateStatus));
-        userlandWorkflowController = new UserlandWorkflowController(terminalUserlandWorkflowHostBridge);
+                        this::appendEvent,
+                        this::updateStatus,
+                        () -> packageStatusText));
+        terminalRuntimeAssetsController = result.runtimeAssetsController;
+        terminalUserlandWorkflowHostBridge = result.userlandWorkflowHostBridge;
+        userlandWorkflowController = result.userlandWorkflowController;
     }
 
     private void assembleProductRuntimeController() {
-        terminalProductRuntimeController = TerminalRuntimeHostFactory.createProductRuntimeController(
-                TerminalRuntimeHostFactory.createProductRuntimeHostCallbacks(
+        terminalProductRuntimeController = TerminalProductRuntimeAssembly.assemble(
+                new TerminalProductRuntimeAssemblyHostCallbacks(
                         () -> debugViewEnabled,
                         () -> nativeLoaded,
                         () -> currentInstallState,
@@ -462,11 +464,7 @@ public final class ZideTerminalActivity extends Activity
                         () -> userlandSessionCoordinator,
                         () -> terminalGestureStateController,
                         this::appendEvent,
-                        this::updateStatus,
-                        TerminalNativeBridge::nativeCurrentShellVisibleRowsBridge,
-                        TerminalNativeBridge::nativeCurrentShellScrollbackCountBridge,
-                        TerminalNativeBridge::nativeCurrentShellScrollbackOffsetBridge,
-                        TerminalNativeBridge::nativeRestartShellSessionBridge));
+                        this::updateStatus));
     }
 
     private void bindAndStartUiControllers() {

@@ -48,7 +48,7 @@ For active priorities/workflow, use
 
 Current shape markers (for hygiene tracking, not hard limits):
 
-- `ZideTerminalActivity.java`: `590` lines
+- `ZideTerminalActivity.java`: `588` lines
 - `host/TerminalChromeHostFactory.java`: `69` lines
 - `host/TerminalInteractionHostFactory.java`: `131` lines
 - `host/TerminalInputHostFactory.java`: `56` lines
@@ -60,6 +60,8 @@ Current shape markers (for hygiene tracking, not hard limits):
 - `host/TerminalSurfaceWidgetAssembly.java`: `127` lines
 - `host/TerminalSurfaceWidgetAssemblyHostCallbacks.java`: `212` lines
 - `host/TerminalRuntimeHostFactory.java`: `81` lines
+- `host/TerminalProductRuntimeAssembly.java`: `82` lines
+- `host/TerminalProductRuntimeAssemblyHostCallbacks.java`: `152` lines
 - `host/TerminalSessionHostFactory.java`: `52` lines
 - `host/TerminalSessionAssembly.java`: `102` lines
 - `host/TerminalSessionAssemblyHostCallbacks.java`: `131` lines
@@ -67,6 +69,8 @@ Current shape markers (for hygiene tracking, not hard limits):
 - `host/TerminalStatusViewAssemblyHostCallbacks.java`: `106` lines
 - `host/TerminalWidgetHostAssembly.java`: `278` lines
 - `host/TerminalWidgetHostAssemblyHostCallbacks.java`: `421` lines
+- `host/TerminalUserlandWorkflowAssembly.java`: `84` lines
+- `host/TerminalUserlandWorkflowAssemblyHostCallbacks.java`: `116` lines
 - `host/TerminalUiHostFactory.java`: `56` lines
 - `host/TerminalUiStartupAssembly.java`: `103` lines
 - `host/TerminalUiStartupHostCallbacks.java`: `164` lines
@@ -74,7 +78,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 
 | File | Contract Fit | Size/Shape | Next Pressure |
 | --- | --- | --- | --- |
-| `ZideTerminalActivity.java` | Partial | Thinner and wiring-oriented. JNI declarations remain out and status/view, interaction, and widget/chrome/view-mode/surface wiring now live in dedicated host assemblies. Remaining pressure is orchestration density rather than direct policy ownership. | Continue extracting only where orchestration density obscures ownership boundaries or increases coupling. |
+| `ZideTerminalActivity.java` | Partial | Thinner and wiring-oriented. JNI declarations remain out and status/view, interaction, widget/chrome/view-mode/surface, userland workflow, and product runtime startup wiring now live in dedicated assemblies. Remaining pressure is orchestration density rather than direct policy ownership. | Continue extracting only where orchestration density obscures ownership boundaries or increases coupling. |
 | `TerminalNativeBridge.java` | Good | Owns JNI library load state and native bridge declarations for the terminal host. | Keep this focused on JNI surface only; do not move Android policy or lifecycle behavior into it. |
 | `debug/AndroidDebugFormatter.java` | Good | Pure formatter plus snapshot values. Large constructor surface is acceptable for debug-only snapshots. | Split snapshot values only if formatter starts owning state or capture policy. |
 | `debug/TerminalNativeStatusLabels.java` | Good | Owns native status-enum label mapping for debug/operator text. | Keep as pure mapping; avoid embedding behavior/policy. |
@@ -91,6 +95,8 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/TerminalGestureStateHostBridge.java` | Good | Owns gesture-state host callback adaptation from activity into `gesture/TerminalGestureStateController`. | Keep gesture policy in `TerminalGestureStateController`; keep this adapter callback-only. |
 | `host/TerminalProductRuntimeController.java` | Good | Owns product runtime policy: frame-loop readiness, shell-state/overlay refresh, install-state apply, and shell restart status flow. | Keep it runtime-orchestration only; native truth stays in bridge calls and terminal core. |
 | `host/TerminalProductRuntimeHostCallbacks.java` | Good | Functional callback adapter from activity state/native access into `TerminalProductRuntimeController`. | Keep adapter-only; runtime behavior stays in `TerminalProductRuntimeController`. |
+| `host/TerminalProductRuntimeAssembly.java` | Good | Owns product-runtime controller startup assembly so activity no longer inlines runtime callback construction. | Keep this assembly-only; runtime behavior stays in runtime controller + host callbacks. |
+| `host/TerminalProductRuntimeAssemblyHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalProductRuntimeAssembly`. | Keep adapter-only; avoid moving runtime behavior into this adapter. |
 | `host/TerminalActivityViewBindings.java` | Good | Owns raw activity view lookup and typed binding capture for terminal host wiring. | Keep this as lookup-only data binding; no policy or runtime behavior. |
 | `host/TerminalChromeHostFactory.java` | Good | Owns chrome-specific bridge/callback construction so chrome assembly does not inflate the generic host assembler. | Keep this construction-only; do not move chrome behavior out of `TerminalChromeController`. |
 | `host/TerminalInteractionHostFactory.java` | Good | Owns selection/gesture interaction controller construction so interaction seams stay out of the generic host assembler. | Keep this construction-only; interaction behavior remains in selection/gesture controllers. |
@@ -140,6 +146,8 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/TerminalUserlandBootstrapBlockerHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `userland/UserlandBootstrapBlockerController`. | Keep adapter-only; bootstrap-blocker behavior stays in `UserlandBootstrapBlockerController`. |
 | `host/TerminalUserlandWorkflowHostBridge.java` | Good | Owns userland install/workflow host callback adaptation from activity state/actions into `userland/UserlandWorkflowController`. | Keep workflow behavior in `UserlandWorkflowController`; keep this adapter state-free except fixed context/handler references. |
 | `host/TerminalUserlandWorkflowHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalUserlandWorkflowHostBridge`. | Keep adapter-only; workflow behavior stays in `UserlandWorkflowController`. |
+| `host/TerminalUserlandWorkflowAssembly.java` | Good | Owns userland runtime-assets/workflow startup assembly so activity no longer inlines userland bridge/controller construction. | Keep this assembly-only; workflow behavior stays in workflow controller + bridge. |
+| `host/TerminalUserlandWorkflowAssemblyHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalUserlandWorkflowAssembly`. | Keep adapter-only; avoid moving userland workflow behavior into this adapter. |
 | `host/TerminalViewModeHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalViewModeController`. | Keep adapter-only; view-mode behavior stays in `TerminalViewModeController`. |
 | `host/TerminalViewportHostBridge.java` | Good | Owns viewport host callback adaptation and bound product surface/view references for `TerminalViewportController`. | Keep viewport behavior in `TerminalViewportController`; keep this adapter callback/reference-only. |
 | `host/TerminalViewportHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalViewportHostBridge`. | Keep adapter-only; viewport behavior stays in `TerminalViewportController`. |
