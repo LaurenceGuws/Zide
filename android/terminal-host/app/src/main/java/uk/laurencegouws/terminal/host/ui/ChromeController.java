@@ -144,7 +144,11 @@ public final class ChromeController {
     }
 
     private void applyAssistModifierLatchChromeAfterBindings() {
-        host.applyModifierLatchState(activeShellInputView().modifierLatchState());
+        host.applyModifierLatchState(activeShellModifierLatchStateChrome());
+    }
+
+    private ShellInputView.Host.ModifierLatchState activeShellModifierLatchStateChrome() {
+        return activeShellInputView().modifierLatchState();
     }
 
     private void bindAssistModifierLatchButtons() {
@@ -330,16 +334,28 @@ public final class ChromeController {
     }
 
     private void applyDrawerScrimAndHotspotVisibility(boolean visible) {
-        drawerScrimChrome().setVisibility(visible ? View.VISIBLE : View.GONE);
-        drawerEdgeHotspotChrome().setVisibility(visible ? View.GONE : View.VISIBLE);
+        drawerScrimChrome().setVisibility(drawerScrimVisibilityForSidebarChrome(visible));
+        drawerEdgeHotspotChrome().setVisibility(drawerEdgeHotspotVisibilityForSidebarChrome(visible));
+    }
+
+    private int drawerScrimVisibilityForSidebarChrome(boolean sidebarOpen) {
+        return sidebarOpen ? View.VISIBLE : View.GONE;
+    }
+
+    private int drawerEdgeHotspotVisibilityForSidebarChrome(boolean sidebarOpen) {
+        return sidebarOpen ? View.GONE : View.VISIBLE;
     }
 
     private InputMethodManager inputMethodManagerOrLogUnavailable() {
-        final InputMethodManager imm = host.context().getSystemService(InputMethodManager.class);
+        final InputMethodManager imm = inputMethodManagerFromHostContext();
         if (imm == null) {
             appendManualImeInputManagerUnavailableEvent();
         }
         return imm;
+    }
+
+    private InputMethodManager inputMethodManagerFromHostContext() {
+        return host.context().getSystemService(InputMethodManager.class);
     }
 
     private void appendManualImeInputManagerUnavailableEvent() {
