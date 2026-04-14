@@ -79,7 +79,7 @@ A cut is done only if all are true:
 
 - interactive shell + Neovim baseline is usable on-device
 - `ZideTerminalActivity` is now wiring/lifecycle/orchestration-oriented
-  (current size: `597` lines; JNI moved out to `TerminalNativeBridge`)
+  (current size: `581` lines; JNI moved out to `TerminalNativeBridge`)
 - host callback seams are adapter-backed (`*HostCallbacks` /
   `*HostLifecycleCallbacks`) instead of activity-owned anonymous blocks
 - assist modifier latch presentation now lives in chrome host wiring instead of

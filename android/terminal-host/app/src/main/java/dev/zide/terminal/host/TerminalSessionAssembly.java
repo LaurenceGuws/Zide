@@ -3,9 +3,7 @@ package dev.zide.terminal.host;
 import android.content.Context;
 import android.os.Handler;
 
-import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.IntSupplier;
 
 import dev.zide.terminal.debug.TerminalNativeStatusLabels;
 import dev.zide.terminal.userland.UserlandBootstrapState;

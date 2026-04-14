@@ -6,9 +6,6 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
-import java.util.function.BooleanSupplier;
-import java.util.function.Supplier;
-
 import dev.zide.terminal.debug.TerminalSurfaceStateSnapshotReader;
 import dev.zide.terminal.debug.TerminalSurfaceStateSnapshotHostCallbacks;
 import dev.zide.terminal.debug.TerminalStatusController;

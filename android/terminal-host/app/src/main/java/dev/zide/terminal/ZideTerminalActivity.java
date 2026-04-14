@@ -1,71 +1,69 @@
 package dev.zide.terminal;
 
-import dev.zide.terminal.debug.AndroidDebugFormatter;
-import dev.zide.terminal.gesture.TerminalGestureStateController;
-import dev.zide.terminal.input.ShellInputView;
-import dev.zide.terminal.input.TerminalHardwareKeyboardController;
-import dev.zide.terminal.input.TerminalImeFocusRecoveryController;
-import dev.zide.terminal.selection.TerminalSelectionController;
-import dev.zide.terminal.session.ShellSessionController;
-import dev.zide.terminal.scroll.TerminalScrollOverlayView;
-import dev.zide.terminal.userland.UserlandBootstrapState;
-import dev.zide.terminal.userland.UserlandInstallState;
-import dev.zide.terminal.userland.UserlandRelease;
-import dev.zide.terminal.userland.UserlandBootstrapBlockerController;
-import dev.zide.terminal.userland.UserlandWorkflowController;
-import dev.zide.terminal.userland.UserlandSessionCoordinator;
-import dev.zide.terminal.userland.ProductShellStatePresenter;
-import dev.zide.terminal.host.TerminalFrameLoopController;
-import dev.zide.terminal.host.TerminalSurfaceHostController;
-import dev.zide.terminal.host.TerminalSurfaceHostBridge;
-import dev.zide.terminal.host.TerminalChromeController;
-import dev.zide.terminal.host.TerminalViewModeController;
-import dev.zide.terminal.host.TerminalStatusHostBridge;
-import dev.zide.terminal.host.TerminalUserlandWorkflowHostBridge;
-import dev.zide.terminal.host.TerminalUserlandSessionHostBridge;
-import dev.zide.terminal.host.TerminalProductShellStateHostBridge;
-import dev.zide.terminal.host.TerminalRuntimeAssetsController;
-import dev.zide.terminal.host.TerminalViewportController;
-import dev.zide.terminal.host.TerminalSurfaceWidgetController;
-import dev.zide.terminal.host.TerminalProductRuntimeController;
-import dev.zide.terminal.host.TerminalStatusViewAssembly;
-import dev.zide.terminal.host.TerminalSessionAssembly;
-import dev.zide.terminal.host.TerminalSessionAssemblyHostCallbacks;
-import dev.zide.terminal.host.TerminalInputAssembly;
-import dev.zide.terminal.host.TerminalInputAssemblyHostCallbacks;
-import dev.zide.terminal.host.TerminalUiStartupAssembly;
-import dev.zide.terminal.host.TerminalUiStartupHostCallbacks;
-import dev.zide.terminal.host.TerminalStatusViewAssemblyHostCallbacks;
-import dev.zide.terminal.host.TerminalWidgetHostAssembly;
-import dev.zide.terminal.host.TerminalWidgetHostAssemblyHostCallbacks;
-import dev.zide.terminal.host.TerminalInteractionAssembly;
-import dev.zide.terminal.host.TerminalInteractionAssemblyHostCallbacks;
-import dev.zide.terminal.host.TerminalProductRuntimeAssembly;
-import dev.zide.terminal.host.TerminalProductRuntimeAssemblyHostCallbacks;
-import dev.zide.terminal.host.TerminalUserlandWorkflowAssembly;
-import dev.zide.terminal.host.TerminalUserlandWorkflowAssemblyHostCallbacks;
-import dev.zide.terminal.host.TerminalActivityLifecycleController;
-import dev.zide.terminal.host.TerminalActivityLifecycleHostCallbacks;
-import dev.zide.terminal.debug.TerminalStatusController;
-import dev.zide.terminal.debug.TerminalSurfaceStateSnapshotReader;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.view.View;
 import android.view.KeyEvent;
+import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.TextView;
+import dev.zide.terminal.debug.AndroidDebugFormatter;
+import dev.zide.terminal.debug.TerminalStatusController;
+import dev.zide.terminal.debug.TerminalSurfaceStateSnapshotReader;
+import dev.zide.terminal.gesture.TerminalGestureStateController;
+import dev.zide.terminal.host.TerminalActivityLifecycleController;
+import dev.zide.terminal.host.TerminalActivityLifecycleHostCallbacks;
+import dev.zide.terminal.host.TerminalChromeController;
+import dev.zide.terminal.host.TerminalFrameLoopController;
+import dev.zide.terminal.host.TerminalInputAssembly;
+import dev.zide.terminal.host.TerminalInputAssemblyHostCallbacks;
+import dev.zide.terminal.host.TerminalInteractionAssembly;
+import dev.zide.terminal.host.TerminalInteractionAssemblyHostCallbacks;
+import dev.zide.terminal.host.TerminalProductRuntimeAssembly;
+import dev.zide.terminal.host.TerminalProductRuntimeAssemblyHostCallbacks;
+import dev.zide.terminal.host.TerminalProductRuntimeController;
+import dev.zide.terminal.host.TerminalRuntimeAssetsController;
+import dev.zide.terminal.host.TerminalSessionAssembly;
+import dev.zide.terminal.host.TerminalSessionAssemblyHostCallbacks;
+import dev.zide.terminal.host.TerminalStatusViewAssembly;
+import dev.zide.terminal.host.TerminalStatusViewAssemblyHostCallbacks;
+import dev.zide.terminal.host.TerminalSurfaceHostBridge;
+import dev.zide.terminal.host.TerminalSurfaceHostController;
+import dev.zide.terminal.host.TerminalSurfaceWidgetController;
+import dev.zide.terminal.host.TerminalUiStartupAssembly;
+import dev.zide.terminal.host.TerminalUiStartupHostCallbacks;
+import dev.zide.terminal.host.TerminalUserlandWorkflowAssembly;
+import dev.zide.terminal.host.TerminalUserlandWorkflowAssemblyHostCallbacks;
+import dev.zide.terminal.host.TerminalViewModeController;
+import dev.zide.terminal.host.TerminalViewportController;
+import dev.zide.terminal.host.TerminalWidgetHostAssembly;
+import dev.zide.terminal.host.TerminalWidgetHostAssemblyHostCallbacks;
+import dev.zide.terminal.input.ShellInputView;
+import dev.zide.terminal.input.TerminalHardwareKeyboardController;
+import dev.zide.terminal.input.TerminalImeFocusRecoveryController;
+import dev.zide.terminal.scroll.TerminalScrollOverlayView;
+import dev.zide.terminal.selection.TerminalSelectionController;
+import dev.zide.terminal.userland.ProductShellStatePresenter;
+import dev.zide.terminal.userland.UserlandBootstrapState;
+import dev.zide.terminal.userland.UserlandInstallState;
+import dev.zide.terminal.userland.UserlandRelease;
+import dev.zide.terminal.userland.UserlandSessionCoordinator;
+import dev.zide.terminal.userland.UserlandWorkflowController;
 
 /**
  * Android activity entrypoint for the terminal-host product surface.
  *
- * <p>The activity should remain wiring-oriented: inflate views, construct controllers, forward
- * lifecycle/input/surface callbacks, and expose the JNI bridge. Terminal truth stays in Zig, while
- * Android-specific policy belongs in the package controllers below this activity.
+ * <p>
+ * The activity should remain wiring-oriented: inflate views, construct
+ * controllers, forward
+ * lifecycle/input/surface callbacks, and expose the JNI bridge. Terminal truth
+ * stays in Zig, while
+ * Android-specific policy belongs in the package controllers below this
+ * activity.
  */
 public final class ZideTerminalActivity extends Activity
         implements ShellInputView.Host {
@@ -97,26 +95,20 @@ public final class ZideTerminalActivity extends Activity
     private TerminalImeFocusRecoveryController terminalImeFocusRecoveryController;
     private TerminalSelectionController selectionController;
     private TerminalGestureStateController terminalGestureStateController;
-    private ShellSessionController shellSessionController;
     private boolean debugViewEnabled = false;
     private boolean imeVisible = false;
     private UserlandRelease userlandRelease;
-    private UserlandBootstrapBlockerController userlandBootstrapBlockerController;
     private UserlandWorkflowController userlandWorkflowController;
-    private TerminalUserlandWorkflowHostBridge terminalUserlandWorkflowHostBridge;
     private UserlandSessionCoordinator userlandSessionCoordinator;
-    private TerminalUserlandSessionHostBridge terminalUserlandSessionHostBridge;
     private TerminalFrameLoopController productFrameLoopController;
     private ProductShellStatePresenter productShellStatePresenter;
     private TerminalSurfaceHostController surfaceHostController;
     private TerminalSurfaceHostBridge surfaceHostBridge;
     private TerminalChromeController terminalChromeController;
     private TerminalViewModeController terminalViewModeController;
-    private TerminalProductShellStateHostBridge terminalProductShellStateHostBridge;
     private TerminalRuntimeAssetsController terminalRuntimeAssetsController;
     private TerminalViewportController terminalViewportController;
     private TerminalStatusController terminalStatusController;
-    private TerminalStatusHostBridge terminalStatusHostBridge;
     private TerminalSurfaceStateSnapshotReader terminalSurfaceStateSnapshotReader;
     private TerminalSurfaceWidgetController terminalSurfaceWidgetController;
     private TerminalProductRuntimeController terminalProductRuntimeController;
@@ -225,7 +217,6 @@ public final class ZideTerminalActivity extends Activity
         assistCtrlButton = result.assistCtrlButton;
         assistAltButton = result.assistAltButton;
         terminalSurfaceStateSnapshotReader = result.terminalSurfaceStateSnapshotReader;
-        terminalStatusHostBridge = result.terminalStatusHostBridge;
         terminalStatusController = result.terminalStatusController;
         terminalViewportController = result.terminalViewportController;
     }
@@ -354,7 +345,6 @@ public final class ZideTerminalActivity extends Activity
                             }
                         },
                         () -> userlandSessionCoordinator.refreshAndApply(false)));
-        terminalProductShellStateHostBridge = result.productShellStateHostBridge;
         productShellStatePresenter = result.productShellStatePresenter;
         terminalChromeController = result.terminalChromeController;
         terminalViewModeController = result.terminalViewModeController;
@@ -386,7 +376,8 @@ public final class ZideTerminalActivity extends Activity
                         () -> terminalProductRuntimeController != null
                                 && terminalProductRuntimeController.shouldRunProductFrameLoop(),
                         () -> {
-                            final int tick = nativeLoaded ? TerminalNativeBridge.nativeTickProductShellFrameBridge() : 0;
+                            final int tick = nativeLoaded ? TerminalNativeBridge.nativeTickProductShellFrameBridge()
+                                    : 0;
                             if (terminalProductRuntimeController != null) {
                                 terminalProductRuntimeController.refreshProductScrollOverlay();
                             }
@@ -395,8 +386,6 @@ public final class ZideTerminalActivity extends Activity
                         TerminalNativeBridge::nativeRestartShellSessionBridge,
                         TerminalNativeBridge::nativePollShellSessionBridge,
                         TerminalNativeBridge::nativeIsShellSessionAliveBridge));
-        shellSessionController = result.shellSessionController;
-        terminalUserlandSessionHostBridge = result.userlandSessionHostBridge;
         userlandSessionCoordinator = result.userlandSessionCoordinator;
         productFrameLoopController = result.frameLoopController;
     }
@@ -417,7 +406,8 @@ public final class ZideTerminalActivity extends Activity
                         },
                         (eventName, statusLabel, logRefresh) -> {
                             if (terminalProductRuntimeController != null) {
-                                terminalProductRuntimeController.restartShellSession(eventName, statusLabel, logRefresh);
+                                terminalProductRuntimeController.restartShellSession(eventName, statusLabel,
+                                        logRefresh);
                             }
                         },
                         (eventName, statusLabel) -> {
@@ -429,7 +419,6 @@ public final class ZideTerminalActivity extends Activity
                         this::updateStatus,
                         () -> packageStatusText));
         terminalRuntimeAssetsController = result.runtimeAssetsController;
-        terminalUserlandWorkflowHostBridge = result.userlandWorkflowHostBridge;
         userlandWorkflowController = result.userlandWorkflowController;
     }
 
@@ -477,7 +466,7 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void bindAndStartUiControllers() {
-        final TerminalUiStartupAssembly.Result result = TerminalUiStartupAssembly.start(
+        TerminalUiStartupAssembly.start(
                 new TerminalUiStartupHostCallbacks(
                         () -> terminalViewportController,
                         () -> terminalChromeController,
@@ -501,7 +490,6 @@ public final class ZideTerminalActivity extends Activity
                         () -> productShellStatePresenter,
                         () -> productFrameLoopController,
                         () -> leftSidebar));
-        userlandBootstrapBlockerController = result.userlandBootstrapBlockerController;
     }
 
     private void finishOnCreateLifecycle() {
@@ -562,10 +550,6 @@ public final class ZideTerminalActivity extends Activity
         if (terminalChromeController != null) {
             terminalChromeController.applyModifierLatchState(state);
         }
-    }
-
-    private boolean currentImeVisible() {
-        return terminalChromeController.currentImeVisible();
     }
 
     private void runPackageDoctor() {

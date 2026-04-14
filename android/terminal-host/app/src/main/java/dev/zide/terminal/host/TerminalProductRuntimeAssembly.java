@@ -3,8 +3,6 @@ package dev.zide.terminal.host;
 import android.view.SurfaceView;
 import android.view.View;
 
-import java.util.function.IntSupplier;
-
 import dev.zide.terminal.TerminalNativeBridge;
 import dev.zide.terminal.debug.TerminalStatusController;
 import dev.zide.terminal.gesture.TerminalGestureStateController;
