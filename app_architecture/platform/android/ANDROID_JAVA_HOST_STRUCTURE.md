@@ -51,7 +51,7 @@ For active priorities/workflow, use
 
 Current shape markers (for hygiene tracking, not hard limits):
 
-- `ZideTerminalActivity.java`: `581` lines
+- `ZideTerminalActivity.java`: `824` lines
 - `host/lifecycle/LifecycleController.java`: `78` lines
 - `host/lifecycle/LifecycleCallbacks.java`: `134` lines
 - `host/ui/ChromeFactory.java`: `69` lines
@@ -90,7 +90,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 
 | File | Contract Fit | Size/Shape | Next Pressure |
 | --- | --- | --- | --- |
-| `ZideTerminalActivity.java` | Partial | Thinner and wiring-oriented. JNI declarations remain out and status/view, interaction, widget/chrome/view-mode/surface, userland workflow, product runtime startup, and lifecycle wiring now live in dedicated seams. Remaining pressure is orchestration density rather than direct policy ownership. | Continue extracting only where orchestration density obscures ownership boundaries or increases coupling. |
+| `ZideTerminalActivity.java` | Good | Wiring-oriented Android entrypoint. JNI declarations remain out and status/view, interaction, widget/chrome/view-mode/surface, userland workflow, product runtime startup, lifecycle overrides, and direct-input override routing now compose through dedicated seams/helpers. Pressure is orchestration readability rather than ownership leakage. | Keep activity orchestration-only; route any new behavior into the owning host/controller seam instead of adding policy here. |
 | `TerminalNativeBridge.java` | Good | Owns JNI library load state and native bridge declarations for the terminal host. | Keep this focused on JNI surface only; do not move Android policy or lifecycle behavior into it. |
 | `debug/AndroidDebugFormatter.java` | Good | Pure formatter plus snapshot values. Large constructor surface is acceptable for debug-only snapshots. | Split snapshot values only if formatter starts owning state or capture policy. |
 | `debug/TerminalNativeStatusLabels.java` | Good | Owns native status-enum label mapping for debug/operator text. | Keep as pure mapping; avoid embedding behavior/policy. |
