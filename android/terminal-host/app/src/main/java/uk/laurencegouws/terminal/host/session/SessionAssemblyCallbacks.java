@@ -13,6 +13,41 @@ import uk.laurencegouws.terminal.userland.UserlandRelease;
 
 /** Functional callback adapter for {@link SessionAssembly.Host}. */
 public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
+    public static final class SessionHostBundle {
+        final Supplier<Context> context;
+        final Supplier<UserlandRelease> userlandRelease;
+        final Supplier<Handler> handler;
+        final Consumer<String> appendEvent;
+        final Consumer<String> updateStatus;
+
+        private SessionHostBundle(
+                Supplier<Context> context,
+                Supplier<UserlandRelease> userlandRelease,
+                Supplier<Handler> handler,
+                Consumer<String> appendEvent,
+                Consumer<String> updateStatus) {
+            this.context = context;
+            this.userlandRelease = userlandRelease;
+            this.handler = handler;
+            this.appendEvent = appendEvent;
+            this.updateStatus = updateStatus;
+        }
+
+        public static SessionHostBundle of(
+                Supplier<Context> context,
+                Supplier<UserlandRelease> userlandRelease,
+                Supplier<Handler> handler,
+                Consumer<String> appendEvent,
+                Consumer<String> updateStatus) {
+            return new SessionHostBundle(
+                    context,
+                    userlandRelease,
+                    handler,
+                    appendEvent,
+                    updateStatus);
+        }
+    }
+
     public static final class NativeSessionBundle {
         final IntSupplier nativeRestartSession;
         final IntSupplier nativePollSession;
@@ -38,113 +73,128 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
         }
     }
 
-    private final Supplier<Context> context;
-    private final Supplier<UserlandRelease> userlandRelease;
-    private final BooleanSupplier nativeLoaded;
-    private final Supplier<Handler> handler;
-    private final Consumer<String> appendEvent;
-    private final Consumer<String> updateStatus;
-    private final Consumer<UserlandReadinessState> applyReadinessState;
-    private final Runnable refreshProductShellState;
-    private final Runnable refreshDebugStatusSurface;
-    private final BooleanSupplier shouldRunProductFrameLoop;
-    private final IntSupplier tickProductFrame;
-    private final NativeSessionBundle nativeSessionBundle;
+    public static final class SessionRuntimeBundle {
+        final BooleanSupplier nativeLoaded;
+        final Consumer<UserlandReadinessState> applyReadinessState;
+        final Runnable refreshProductShellState;
+        final Runnable refreshDebugStatusSurface;
+        final BooleanSupplier shouldRunProductFrameLoop;
+        final IntSupplier tickProductFrame;
+        final NativeSessionBundle nativeSessionBundle;
+
+        private SessionRuntimeBundle(
+                BooleanSupplier nativeLoaded,
+                Consumer<UserlandReadinessState> applyReadinessState,
+                Runnable refreshProductShellState,
+                Runnable refreshDebugStatusSurface,
+                BooleanSupplier shouldRunProductFrameLoop,
+                IntSupplier tickProductFrame,
+                NativeSessionBundle nativeSessionBundle) {
+            this.nativeLoaded = nativeLoaded;
+            this.applyReadinessState = applyReadinessState;
+            this.refreshProductShellState = refreshProductShellState;
+            this.refreshDebugStatusSurface = refreshDebugStatusSurface;
+            this.shouldRunProductFrameLoop = shouldRunProductFrameLoop;
+            this.tickProductFrame = tickProductFrame;
+            this.nativeSessionBundle = nativeSessionBundle;
+        }
+
+        public static SessionRuntimeBundle of(
+                BooleanSupplier nativeLoaded,
+                Consumer<UserlandReadinessState> applyReadinessState,
+                Runnable refreshProductShellState,
+                Runnable refreshDebugStatusSurface,
+                BooleanSupplier shouldRunProductFrameLoop,
+                IntSupplier tickProductFrame,
+                NativeSessionBundle nativeSessionBundle) {
+            return new SessionRuntimeBundle(
+                    nativeLoaded,
+                    applyReadinessState,
+                    refreshProductShellState,
+                    refreshDebugStatusSurface,
+                    shouldRunProductFrameLoop,
+                    tickProductFrame,
+                    nativeSessionBundle);
+        }
+    }
+
+    private final SessionHostBundle sessionHostBundle;
+    private final SessionRuntimeBundle sessionRuntimeBundle;
 
     public SessionAssemblyCallbacks(
-            Supplier<Context> context,
-            Supplier<UserlandRelease> userlandRelease,
-            BooleanSupplier nativeLoaded,
-            Supplier<Handler> handler,
-            Consumer<String> appendEvent,
-            Consumer<String> updateStatus,
-            Consumer<UserlandReadinessState> applyReadinessState,
-            Runnable refreshProductShellState,
-            Runnable refreshDebugStatusSurface,
-            BooleanSupplier shouldRunProductFrameLoop,
-            IntSupplier tickProductFrame,
-            NativeSessionBundle nativeSessionBundle) {
-        this.context = context;
-        this.userlandRelease = userlandRelease;
-        this.nativeLoaded = nativeLoaded;
-        this.handler = handler;
-        this.appendEvent = appendEvent;
-        this.updateStatus = updateStatus;
-        this.applyReadinessState = applyReadinessState;
-        this.refreshProductShellState = refreshProductShellState;
-        this.refreshDebugStatusSurface = refreshDebugStatusSurface;
-        this.shouldRunProductFrameLoop = shouldRunProductFrameLoop;
-        this.tickProductFrame = tickProductFrame;
-        this.nativeSessionBundle = nativeSessionBundle;
+            SessionHostBundle sessionHostBundle,
+            SessionRuntimeBundle sessionRuntimeBundle) {
+        this.sessionHostBundle = sessionHostBundle;
+        this.sessionRuntimeBundle = sessionRuntimeBundle;
     }
 
     @Override
     public Context context() {
-        return context.get();
+        return sessionHostBundle.context.get();
     }
 
     @Override
     public UserlandRelease userlandRelease() {
-        return userlandRelease.get();
+        return sessionHostBundle.userlandRelease.get();
     }
 
     @Override
     public boolean nativeLoaded() {
-        return nativeLoaded.getAsBoolean();
+        return sessionRuntimeBundle.nativeLoaded.getAsBoolean();
     }
 
     @Override
     public Handler handler() {
-        return handler.get();
+        return sessionHostBundle.handler.get();
     }
 
     @Override
     public void appendEvent(String event) {
-        appendEvent.accept(event);
+        sessionHostBundle.appendEvent.accept(event);
     }
 
     @Override
     public void updateStatus(String statusLabel) {
-        updateStatus.accept(statusLabel);
+        sessionHostBundle.updateStatus.accept(statusLabel);
     }
 
     @Override
     public void applyReadinessState(UserlandReadinessState readinessState) {
-        applyReadinessState.accept(readinessState);
+        sessionRuntimeBundle.applyReadinessState.accept(readinessState);
     }
 
     @Override
     public void refreshProductShellState() {
-        refreshProductShellState.run();
+        sessionRuntimeBundle.refreshProductShellState.run();
     }
 
     @Override
     public void refreshDebugStatusSurface() {
-        refreshDebugStatusSurface.run();
+        sessionRuntimeBundle.refreshDebugStatusSurface.run();
     }
 
     @Override
     public boolean shouldRunProductFrameLoop() {
-        return shouldRunProductFrameLoop.getAsBoolean();
+        return sessionRuntimeBundle.shouldRunProductFrameLoop.getAsBoolean();
     }
 
     @Override
     public int tickProductFrame() {
-        return tickProductFrame.getAsInt();
+        return sessionRuntimeBundle.tickProductFrame.getAsInt();
     }
 
     @Override
     public int nativeRestartSession() {
-        return nativeSessionBundle.nativeRestartSession.getAsInt();
+        return sessionRuntimeBundle.nativeSessionBundle.nativeRestartSession.getAsInt();
     }
 
     @Override
     public int nativePollSession() {
-        return nativeSessionBundle.nativePollSession.getAsInt();
+        return sessionRuntimeBundle.nativeSessionBundle.nativePollSession.getAsInt();
     }
 
     @Override
     public boolean nativeIsSessionAlive() {
-        return nativeSessionBundle.nativeIsSessionAlive.getAsBoolean();
+        return sessionRuntimeBundle.nativeSessionBundle.nativeIsSessionAlive.getAsBoolean();
     }
 }

@@ -349,26 +349,28 @@ public final class ZideTerminalActivity extends Activity
 
     private SessionAssemblyCallbacks createSessionAssemblyCallbacks() {
         return new SessionAssemblyCallbacks(
-                () -> this,
-                () -> userlandRelease,
-                () -> nativeLoaded,
-                () -> handler,
-                this::appendEvent,
-                this::updateStatus,
-                readinessState -> currentReadinessState = readinessState,
-                this::refreshProductShellStateIfReady,
-                this::refreshDebugStatusSurfaceIfReady,
-                this::shouldRunProductFrameLoop,
-                () -> {
-                    final int tick = nativeLoaded ? TerminalNativeBridge.nativeTickProductFrameBridge()
-                            : 0;
-                    refreshProductScrollOverlayIfReady();
-                    return tick;
-                },
-                SessionAssemblyCallbacks.NativeSessionBundle.of(
-                        TerminalNativeBridge::nativeRestartSessionBridge,
-                        TerminalNativeBridge::nativePollSessionBridge,
-                        TerminalNativeBridge::nativeIsSessionAliveBridge));
+                SessionAssemblyCallbacks.SessionHostBundle.of(
+                        () -> this,
+                        () -> userlandRelease,
+                        () -> handler,
+                        this::appendEvent,
+                        this::updateStatus),
+                SessionAssemblyCallbacks.SessionRuntimeBundle.of(
+                        () -> nativeLoaded,
+                        readinessState -> currentReadinessState = readinessState,
+                        this::refreshProductShellStateIfReady,
+                        this::refreshDebugStatusSurfaceIfReady,
+                        this::shouldRunProductFrameLoop,
+                        () -> {
+                            final int tick = nativeLoaded ? TerminalNativeBridge.nativeTickProductFrameBridge()
+                                    : 0;
+                            refreshProductScrollOverlayIfReady();
+                            return tick;
+                        },
+                        SessionAssemblyCallbacks.NativeSessionBundle.of(
+                                TerminalNativeBridge::nativeRestartSessionBridge,
+                                TerminalNativeBridge::nativePollSessionBridge,
+                                TerminalNativeBridge::nativeIsSessionAliveBridge)));
     }
 
     private ProductRuntimeAssemblyCallbacks createProductRuntimeAssemblyCallbacks() {
