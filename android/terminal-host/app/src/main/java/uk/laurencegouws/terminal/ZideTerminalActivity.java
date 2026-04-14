@@ -18,6 +18,7 @@ import uk.laurencegouws.terminal.debug.TerminalSurfaceStateSnapshotReader;
 import uk.laurencegouws.terminal.gesture.TerminalGestureStateController;
 import uk.laurencegouws.terminal.host.lifecycle.LifecycleController;
 import uk.laurencegouws.terminal.host.lifecycle.LifecycleCallbacks;
+import uk.laurencegouws.terminal.host.lifecycle.LifecycleDebugIntentArgs;
 import uk.laurencegouws.terminal.host.ui.ChromeController;
 import uk.laurencegouws.terminal.host.runtime.FrameLoopController;
 import uk.laurencegouws.terminal.host.input.InputAssembly;
@@ -68,9 +69,6 @@ import uk.laurencegouws.terminal.userland.UserlandWorkflowController;
  */
 public final class ZideTerminalActivity extends Activity
         implements ShellInputView.Host {
-    private static final String EXTRA_DEBUG_RECREATE_SURFACE_ONCE = "debug_recreate_surface_once";
-    private static final String EXTRA_DEBUG_RESIZE_SURFACE_ONCE = "debug_resize_surface_once";
-    private static final String EXTRA_DEBUG_START_SHELL_ONCE = "debug_start_shell_once";
     private static final boolean nativeLoaded = TerminalNativeBridge.nativeLoaded();
     private static final String nativeLoadError = TerminalNativeBridge.nativeLoadError();
 
@@ -147,10 +145,11 @@ public final class ZideTerminalActivity extends Activity
     @Override
     protected void onResume() {
         super.onResume();
+        final LifecycleDebugIntentArgs debugArgs = LifecycleDebugIntentArgs.fromIntent(getIntent());
         notifyLifecycleResume(
-                shouldDebugRecreateSurfaceOnce(),
-                shouldDebugResizeSurfaceOnce(),
-                shouldDebugStartShellOnce());
+                debugArgs.recreateSurfaceOnce,
+                debugArgs.resizeSurfaceOnce,
+                debugArgs.startShellOnce);
     }
 
     @Override
@@ -524,18 +523,6 @@ public final class ZideTerminalActivity extends Activity
     private boolean handleHardwareDispatchKeyEventIfReady(KeyEvent event) {
         return terminalHardwareKeyboardController != null
                 && terminalHardwareKeyboardController.handleDispatchKeyEvent(event);
-    }
-
-    private boolean shouldDebugRecreateSurfaceOnce() {
-        return getIntent().getBooleanExtra(EXTRA_DEBUG_RECREATE_SURFACE_ONCE, false);
-    }
-
-    private boolean shouldDebugResizeSurfaceOnce() {
-        return getIntent().getBooleanExtra(EXTRA_DEBUG_RESIZE_SURFACE_ONCE, false);
-    }
-
-    private boolean shouldDebugStartShellOnce() {
-        return getIntent().getBooleanExtra(EXTRA_DEBUG_START_SHELL_ONCE, false);
     }
 
     private boolean isDebugViewEnabled() {
