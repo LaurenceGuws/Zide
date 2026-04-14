@@ -101,107 +101,84 @@ public final class SurfaceController {
         maybeScheduleSurfaceRecreation(recreateSurfaceOnce);
         maybeScheduleSurfaceResize(resizeSurfaceOnce);
         maybeScheduleShellStart(startShellOnce);
-        host.handleProductShellStateEvent("resumed");
+        notifyProductShellResumed();
     }
 
     public void onPause() {
-        host.callNative("native.onPause", -1);
+        dispatchNativePause();
     }
 
     public void onSurfaceCreated(SurfaceHolder holder) {
-        host.appendEvent("surface.lifecycle.created generation=" + host.surfaceHostGeneration() + " valid=" + holder.getSurface().isValid());
-        host.updateStatus("surface.state.created");
+        appendSurfaceCreatedEvent(holder);
+        updateSurfaceCreatedStatus();
     }
 
     public void onSurfaceChanged(SurfaceHolder holder, int format, int width, int height) {
         host.appendEvent(surfaceChangedEvent(format, width, height));
         final long seq = nativeSurfaceAvailableSeq(holder, width, height);
-        host.callNativeWithSurfaceState(
-                "native.surfaceAvailable",
-                seq,
-                host.currentSurfaceStateSnapshot());
-        host.productSurfaceContainer().post(() -> notifyVisibleViewport("surface-changed"));
+        dispatchNativeSurfaceAvailable(seq);
+        postSurfaceChangedViewportNotification();
         host.handleProductShellStateEvent("surface-changed");
     }
 
     public void onSurfaceDestroyed(SurfaceHolder holder) {
-        host.appendEvent("surface.lifecycle.destroyed generation=" + host.surfaceHostGeneration());
+        appendSurfaceDestroyedEvent();
         final long seq = nativeSurfaceDestroyedSeq();
-        host.callNativeWithSurfaceState(
-                "native.surfaceDestroyed",
-                seq,
-                host.currentSurfaceStateSnapshot());
-        host.updateStatus("surface.state.destroyed");
+        dispatchNativeSurfaceDestroyed(seq);
+        updateSurfaceDestroyedStatus();
     }
 
     public void onSurfaceRedrawNeeded(SurfaceHolder holder) {
         if (surfaceRedrawNeededDispatching) {
-            host.appendEvent(
-                    "surface.redrawNeeded reentrant-skipped generation=" + host.surfaceHostGeneration() +
-                            " valid=" + holder.getSurface().isValid());
+            appendSurfaceRedrawReentrantSkippedEvent(holder);
             return;
         }
         surfaceRedrawNeededDispatching = true;
-        host.appendEvent(
-                "surface.redrawNeeded generation=" + host.surfaceHostGeneration() + " valid=" + holder.getSurface().isValid());
+        appendSurfaceRedrawNeededEvent(holder);
         try {
-            final long seq = host.nativeLoaded() ? host.nativeOnSurfaceRedrawNeededBridge() : -1;
+            final long seq = nativeSurfaceRedrawNeededSeq();
             final AndroidDebugFormatter.SurfaceEventSnapshot state = host.currentSurfaceStateSnapshot();
-            host.appendEvent(
-                    "native.surfaceRedrawNeeded seq=" + seq +
-                            " gles=" + state.glesStatus +
-                            " glesSwaps=" + state.glesSwapCount +
-                            " glesBoundEpoch=" + state.glesBoundEpoch +
-                            " glesContextCreates=" + state.glesContextCreateCount +
-                            " glesSurfaceCreates=" + state.glesSurfaceCreateCount +
-                            " glesTextureCreates=" + state.glesTextureCreateCount +
-                            " glesTextureAlive=" + state.glesTextureAlive +
-                            " glesTextureUploads=" + state.glesTextureUploadCount +
-                            " glesTextureUpdates=" + state.glesTextureUpdateCount +
-                            " glesTextureResizes=" + state.glesTextureResizeCount +
-                            " glesTextureSize=" + state.glesTextureWidth + "x" + state.glesTextureHeight);
-            host.updateStatus("surface.state.redraw_needed");
+            appendNativeSurfaceRedrawNeededEvent(seq, state);
+            updateSurfaceRedrawNeededStatus();
         } finally {
-            surfaceRedrawNeededDispatching = false;
+            clearSurfaceRedrawNeededDispatching();
         }
     }
 
     public void installSurfaceView(String reason, SurfaceHolder.Callback2 callback) {
         removeExistingSurfaceViewIfPresent(reason, callback);
 
-        host.setSurfaceHostGeneration(host.surfaceHostGeneration() + 1);
+        incrementSurfaceHostGeneration();
         final SurfaceView nextSurfaceView = createAndAttachSurfaceView();
         final SurfaceHolder.Callback2 nextCallback = resolveSurfaceCallback(callback);
         host.reinstallSurfaceCallback(nextSurfaceView, nextCallback);
-        host.setSurfaceView(nextSurfaceView);
-        host.appendEvent("surface.host.installed reason=" + reason + " generation=" + host.surfaceHostGeneration());
-        host.productSurfaceContainer().post(() -> notifyVisibleViewport("surface-install"));
+        installCurrentSurfaceView(nextSurfaceView);
+        appendSurfaceHostInstalledEvent(reason);
+        postSurfaceInstallViewportNotification();
     }
 
     public void notifyVisibleViewport(String reason) {
-        if (host.debugViewEnabled() || host.productSurfaceContainer().getVisibility() != View.VISIBLE) {
+        if (viewportNotificationSuppressed()) {
             return;
         }
         final boolean viewportImeVisible = host.currentImeVisible();
         final int width = Math.max(host.productSurfaceContainer().getWidth(), 1);
         final int height = Math.max(host.productSurfaceContainer().getHeight(), 1);
-        host.setVisibleViewportSize(width, height);
-        if (width == host.notifiedViewportWidth() &&
-                height == host.notifiedViewportHeight() &&
-                viewportImeVisible == host.notifiedViewportImeVisible()) {
+        updateVisibleViewportSize(width, height);
+        if (viewportNotificationUnchanged(width, height, viewportImeVisible)) {
             return;
         }
-        host.setNotifiedViewportSize(width, height, viewportImeVisible);
-        host.appendEvent("viewport.size.changed reason=" + reason + " size=" + width + "x" + height + " imeVisible=" + viewportImeVisible);
+        recordNotifiedViewport(width, height, viewportImeVisible);
+        appendViewportChangedEvent(reason, width, height, viewportImeVisible);
         final long seq = nativeViewportChangedSeq(width, height, viewportImeVisible);
-        host.callNativeWithSurfaceState("native.viewportChanged", seq, host.currentSurfaceStateSnapshot());
-        host.refreshProductScrollOverlay();
-        host.updateStatus("viewport.state.updated");
+        dispatchNativeViewportChanged(seq);
+        refreshViewportScrollOverlay();
+        updateViewportUpdatedStatus();
     }
 
     private void maybeScheduleSurfaceRecreation(boolean recreateSurfaceOnce) {
         host.appendEvent("debug.surface.recreate requested=" + recreateSurfaceOnce + " scheduled=" + host.surfaceRecreationScheduled());
-        if (!recreateSurfaceOnce || host.surfaceRecreationScheduled()) {
+        if (skipSurfaceRecreationSchedule(recreateSurfaceOnce)) {
             return;
         }
         host.setSurfaceRecreationScheduled(true);
@@ -214,26 +191,20 @@ public final class SurfaceController {
 
     private void maybeScheduleSurfaceResize(boolean resizeSurfaceOnce) {
         host.appendEvent("debug.surface.resize requested=" + resizeSurfaceOnce + " scheduled=" + host.surfaceResizeScheduled());
-        if (!resizeSurfaceOnce || host.surfaceResizeScheduled()) {
+        if (skipSurfaceResizeSchedule(resizeSurfaceOnce)) {
             return;
         }
         final SurfaceView surfaceView = host.surfaceView();
-        if (surfaceView == null) {
+        if (missingSurfaceViewForResize(surfaceView)) {
             return;
         }
         host.setSurfaceResizeScheduled(true);
-        host.handler().postDelayed(() -> {
-            final SurfaceHolder holder = surfaceView.getHolder();
-            final int originalWidth = Math.max(2, surfaceView.getWidth());
-            final int originalHeight = Math.max(2, surfaceView.getHeight());
-            final int shrunkHeight = Math.max(200, originalHeight / 2);
-            applySurfaceResize(holder, originalWidth, originalHeight, shrunkHeight);
-        }, 900);
+        scheduleSurfaceResizeProbe(surfaceView);
     }
 
     private void maybeScheduleShellStart(boolean startShellOnce) {
         host.appendEvent("debug.session.start requested=" + startShellOnce + " scheduled=" + host.shellStartScheduled());
-        if (!startShellOnce || host.shellStartScheduled()) {
+        if (skipShellStartSchedule(startShellOnce)) {
             return;
         }
         host.setShellStartScheduled(true);
@@ -309,7 +280,164 @@ public final class SurfaceController {
         return host.nativeLoaded() ? host.nativeOnSurfaceDestroyedBridge() : -1;
     }
 
+    private long nativeSurfaceRedrawNeededSeq() {
+        return host.nativeLoaded() ? host.nativeOnSurfaceRedrawNeededBridge() : -1;
+    }
+
     private long nativeViewportChangedSeq(int width, int height, boolean imeVisible) {
         return host.nativeLoaded() ? host.nativeOnVisibleViewportBridge(width, height, imeVisible) : -1;
+    }
+
+    private boolean viewportNotificationSuppressed() {
+        return host.debugViewEnabled() || host.productSurfaceContainer().getVisibility() != View.VISIBLE;
+    }
+
+    private boolean viewportNotificationUnchanged(int width, int height, boolean viewportImeVisible) {
+        return width == host.notifiedViewportWidth()
+                && height == host.notifiedViewportHeight()
+                && viewportImeVisible == host.notifiedViewportImeVisible();
+    }
+
+    private void appendViewportChangedEvent(String reason, int width, int height, boolean viewportImeVisible) {
+        host.appendEvent("viewport.size.changed reason=" + reason + " size=" + width + "x" + height + " imeVisible=" + viewportImeVisible);
+    }
+
+    private void appendSurfaceCreatedEvent(SurfaceHolder holder) {
+        host.appendEvent("surface.lifecycle.created generation=" + host.surfaceHostGeneration() + " valid=" + holder.getSurface().isValid());
+    }
+
+    private void updateSurfaceCreatedStatus() {
+        host.updateStatus("surface.state.created");
+    }
+
+    private void appendSurfaceDestroyedEvent() {
+        host.appendEvent("surface.lifecycle.destroyed generation=" + host.surfaceHostGeneration());
+    }
+
+    private void appendSurfaceRedrawReentrantSkippedEvent(SurfaceHolder holder) {
+        host.appendEvent(
+                "surface.redrawNeeded reentrant-skipped generation=" + host.surfaceHostGeneration() +
+                        " valid=" + holder.getSurface().isValid());
+    }
+
+    private void appendSurfaceRedrawNeededEvent(SurfaceHolder holder) {
+        host.appendEvent(
+                "surface.redrawNeeded generation=" + host.surfaceHostGeneration() + " valid=" + holder.getSurface().isValid());
+    }
+
+    private void appendNativeSurfaceRedrawNeededEvent(long seq, AndroidDebugFormatter.SurfaceEventSnapshot state) {
+        host.appendEvent(
+                "native.surfaceRedrawNeeded seq=" + seq +
+                        " gles=" + state.glesStatus +
+                        " glesSwaps=" + state.glesSwapCount +
+                        " glesBoundEpoch=" + state.glesBoundEpoch +
+                        " glesContextCreates=" + state.glesContextCreateCount +
+                        " glesSurfaceCreates=" + state.glesSurfaceCreateCount +
+                        " glesTextureCreates=" + state.glesTextureCreateCount +
+                        " glesTextureAlive=" + state.glesTextureAlive +
+                        " glesTextureUploads=" + state.glesTextureUploadCount +
+                        " glesTextureUpdates=" + state.glesTextureUpdateCount +
+                        " glesTextureResizes=" + state.glesTextureResizeCount +
+                        " glesTextureSize=" + state.glesTextureWidth + "x" + state.glesTextureHeight);
+    }
+
+    private void updateSurfaceRedrawNeededStatus() {
+        host.updateStatus("surface.state.redraw_needed");
+    }
+
+    private void clearSurfaceRedrawNeededDispatching() {
+        surfaceRedrawNeededDispatching = false;
+    }
+
+    private void dispatchNativeSurfaceAvailable(long seq) {
+        host.callNativeWithSurfaceState(
+                "native.surfaceAvailable",
+                seq,
+                host.currentSurfaceStateSnapshot());
+    }
+
+    private void postSurfaceChangedViewportNotification() {
+        host.productSurfaceContainer().post(() -> notifyVisibleViewport("surface-changed"));
+    }
+
+    private void installCurrentSurfaceView(SurfaceView nextSurfaceView) {
+        host.setSurfaceView(nextSurfaceView);
+    }
+
+    private void postSurfaceInstallViewportNotification() {
+        host.productSurfaceContainer().post(() -> notifyVisibleViewport("surface-install"));
+    }
+
+    private void incrementSurfaceHostGeneration() {
+        host.setSurfaceHostGeneration(host.surfaceHostGeneration() + 1);
+    }
+
+    private void appendSurfaceHostInstalledEvent(String reason) {
+        host.appendEvent("surface.host.installed reason=" + reason + " generation=" + host.surfaceHostGeneration());
+    }
+
+    private boolean skipSurfaceRecreationSchedule(boolean recreateSurfaceOnce) {
+        return !recreateSurfaceOnce || host.surfaceRecreationScheduled();
+    }
+
+    private boolean skipShellStartSchedule(boolean startShellOnce) {
+        return !startShellOnce || host.shellStartScheduled();
+    }
+
+    private boolean skipSurfaceResizeSchedule(boolean resizeSurfaceOnce) {
+        return !resizeSurfaceOnce || host.surfaceResizeScheduled();
+    }
+
+    private boolean missingSurfaceViewForResize(SurfaceView surfaceView) {
+        return surfaceView == null;
+    }
+
+    private void scheduleSurfaceResizeProbe(SurfaceView surfaceView) {
+        host.handler().postDelayed(() -> {
+            final SurfaceHolder holder = surfaceView.getHolder();
+            final int originalWidth = Math.max(2, surfaceView.getWidth());
+            final int originalHeight = Math.max(2, surfaceView.getHeight());
+            final int shrunkHeight = Math.max(200, originalHeight / 2);
+            applySurfaceResize(holder, originalWidth, originalHeight, shrunkHeight);
+        }, 900);
+    }
+
+    private void notifyProductShellResumed() {
+        host.handleProductShellStateEvent("resumed");
+    }
+
+    private void dispatchNativePause() {
+        host.callNative("native.onPause", -1);
+    }
+
+    private void dispatchNativeSurfaceDestroyed(long seq) {
+        host.callNativeWithSurfaceState(
+                "native.surfaceDestroyed",
+                seq,
+                host.currentSurfaceStateSnapshot());
+    }
+
+    private void updateSurfaceDestroyedStatus() {
+        host.updateStatus("surface.state.destroyed");
+    }
+
+    private void dispatchNativeViewportChanged(long seq) {
+        host.callNativeWithSurfaceState("native.viewportChanged", seq, host.currentSurfaceStateSnapshot());
+    }
+
+    private void updateVisibleViewportSize(int width, int height) {
+        host.setVisibleViewportSize(width, height);
+    }
+
+    private void recordNotifiedViewport(int width, int height, boolean viewportImeVisible) {
+        host.setNotifiedViewportSize(width, height, viewportImeVisible);
+    }
+
+    private void refreshViewportScrollOverlay() {
+        host.refreshProductScrollOverlay();
+    }
+
+    private void updateViewportUpdatedStatus() {
+        host.updateStatus("viewport.state.updated");
     }
 }
