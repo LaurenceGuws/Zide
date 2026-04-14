@@ -109,8 +109,8 @@ public final class SurfaceController {
     }
 
     public void onSurfaceCreated(SurfaceHolder holder) {
-        appendSurfaceCreatedEvent(holder);
-        updateSurfaceCreatedStatus();
+        host.appendEvent("surface.lifecycle.created generation=" + host.surfaceHostGeneration() + " valid=" + holder.getSurface().isValid());
+        host.updateStatus("surface.state.created");
     }
 
     public void onSurfaceChanged(SurfaceHolder holder, int format, int width, int height) {
@@ -122,7 +122,7 @@ public final class SurfaceController {
     }
 
     public void onSurfaceDestroyed(SurfaceHolder holder) {
-        appendSurfaceDestroyedEvent();
+        host.appendEvent("surface.lifecycle.destroyed generation=" + host.surfaceHostGeneration());
         final long seq = nativeSurfaceDestroyedSeq();
         host.callNativeWithSurfaceState(
                 "native.surfaceDestroyed",
@@ -137,7 +137,8 @@ public final class SurfaceController {
             return;
         }
         surfaceRedrawNeededDispatching = true;
-        appendSurfaceRedrawNeededEvent(holder);
+        host.appendEvent(
+                "surface.redrawNeeded generation=" + host.surfaceHostGeneration() + " valid=" + holder.getSurface().isValid());
         try {
             final long seq = nativeSurfaceRedrawNeededSeq();
             final AndroidDebugFormatter.SurfaceEventSnapshot state = host.currentSurfaceStateSnapshot();
@@ -305,27 +306,10 @@ public final class SurfaceController {
         host.appendEvent("viewport.size.changed reason=" + reason + " size=" + width + "x" + height + " imeVisible=" + viewportImeVisible);
     }
 
-    private void appendSurfaceCreatedEvent(SurfaceHolder holder) {
-        host.appendEvent("surface.lifecycle.created generation=" + host.surfaceHostGeneration() + " valid=" + holder.getSurface().isValid());
-    }
-
-    private void updateSurfaceCreatedStatus() {
-        host.updateStatus("surface.state.created");
-    }
-
-    private void appendSurfaceDestroyedEvent() {
-        host.appendEvent("surface.lifecycle.destroyed generation=" + host.surfaceHostGeneration());
-    }
-
     private void appendSurfaceRedrawReentrantSkippedEvent(SurfaceHolder holder) {
         host.appendEvent(
                 "surface.redrawNeeded reentrant-skipped generation=" + host.surfaceHostGeneration() +
                         " valid=" + holder.getSurface().isValid());
-    }
-
-    private void appendSurfaceRedrawNeededEvent(SurfaceHolder holder) {
-        host.appendEvent(
-                "surface.redrawNeeded generation=" + host.surfaceHostGeneration() + " valid=" + holder.getSurface().isValid());
     }
 
     private void appendNativeSurfaceRedrawNeededEvent(long seq, AndroidDebugFormatter.SurfaceEventSnapshot state) {
