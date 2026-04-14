@@ -6,16 +6,21 @@ Session entrypoint only. Keep this file short, stable, and current.
 
 - Product lane: Android terminal excellence
 - Active ticket: `AN-A1` interactive Neovim terminal baseline
+- Current phase: cleanup, refactor, and standardization (no expansion work)
 - Execution rule: run Android queue first; reopen shared renderer work only
   when Android proves the next direct blocker
 
 ## Workflow Contract
 
 1. Read the active queue: `docs/todo/android/implementation.md`.
-2. Take the next smallest cut from `Current Focus`.
-3. Validate build + deploy + manual device behavior.
-4. Update docs in the same change.
-5. Commit small, cohesive units on `main` unless user says otherwise.
+2. Confirm the cut against the source-of-truth docs for that concern:
+   `ANDROID_JAVA_HOST_STRUCTURE.md` (ownership),
+   `ANDROID_JAVA_NAMING_CONTRACT.md` / `ANDROID_ZIG_BRIDGE_NAMING_CONTRACT.md`
+   (naming), and `ANDROID_TERMINAL_HOST_PLAN.md` (architecture boundaries).
+3. Take the next smallest cut from `Current Focus`.
+4. Validate build + deploy + manual device behavior.
+5. Update docs in the same change.
+6. Commit small, cohesive units on `main` unless user says otherwise.
 
 ## Source of Truth Map
 

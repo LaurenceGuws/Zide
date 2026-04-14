@@ -35,13 +35,14 @@ Out of scope:
 
 Focus goals:
 
+- prioritize cleanup, refactor, and standardization over expansion
 - keep interactive terminal behavior stable under real usage
 - keep `ZideTerminalActivity` as wiring, not policy
 - keep Android-native interaction ownership clear (gesture/chrome/selection)
 
 ## Active TODO
 
-1. Continue activity thinning only where methods still own policy.
+1. Continue cleanup/refactor cuts only where methods still own policy.
 2. Keep Java ownership boundaries aligned with
    `ANDROID_JAVA_HOST_STRUCTURE.md`.
 3. Stabilize selection/scroll interaction behavior under manual device usage.
@@ -53,14 +54,19 @@ Focus goals:
 Use this exact loop for every Android task:
 
 1. Pick one smallest actionable cut from `Active TODO`.
-2. Implement only that cut.
-3. Validate:
+2. Confirm the cut against owner docs before editing:
+   - ownership: `ANDROID_JAVA_HOST_STRUCTURE.md`
+   - naming: `ANDROID_JAVA_NAMING_CONTRACT.md` and
+     `ANDROID_ZIG_BRIDGE_NAMING_CONTRACT.md`
+   - architecture boundaries: `ANDROID_TERMINAL_HOST_PLAN.md`
+3. Implement only that cut.
+4. Validate:
    - Java compile: `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac`
    - Deploy when runtime behavior changed:
      `./ops/android_terminal_host.py --variant release deploy`
    - Manual device check for the exact behavior touched
-4. Update docs that own the changed contract.
-5. Commit a small cohesive change.
+5. Update docs that own the changed contract.
+6. Commit a small cohesive change.
 
 ## Done Criteria for a Cut
 
