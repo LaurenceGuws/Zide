@@ -84,8 +84,8 @@ Current shape markers (for hygiene tracking, not hard limits):
 - `host/userland/SessionCallbacks.java`: `61` lines
 - `host/userland/ReadinessBlockerCallbacks.java`: `74` lines
 - `host/TerminalUiHostFactory.java`: `56` lines
-- `host/TerminalUiStartupAssembly.java`: `103` lines
-- `host/TerminalUiStartupHostCallbacks.java`: `164` lines
+- `host/ui/UiStartupAssembly.java`: `111` lines
+- `host/ui/UiStartupCallbacks.java`: `171` lines
 - `selection/TerminalSelectionController.java`: monolithic by design for now
 
 | File | Contract Fit | Size/Shape | Next Pressure |
@@ -131,8 +131,8 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/TerminalWidgetHostAssembly.java` | Good | Owns product widget/chrome/view-mode/surface host assembly so activity wiring no longer inlines those construction seams. | Keep this assembly-only; behavior remains in dedicated controllers/bridges. |
 | `host/TerminalWidgetHostAssemblyHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalWidgetHostAssembly`. | Keep adapter-only; avoid moving widget/chrome/view-mode behavior into this adapter. |
 | `host/TerminalUiHostFactory.java` | Good | Owns UI host construction for shell-state presenter bridge, view-mode controller, and surface-widget controller. | Keep this construction-only; UI behavior remains in dedicated host controllers. |
-| `host/TerminalUiStartupAssembly.java` | Good | Owns post-construction UI bind/start assembly for activity wiring. | Keep this assembly-only; UI behavior remains in dedicated controllers. |
-| `host/TerminalUiStartupHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalUiStartupAssembly`. | Keep adapter-only; avoid adding UI behavior here. |
+| `host/ui/UiStartupAssembly.java` | Good | Owns post-construction UI bind/start assembly for activity wiring. | Keep this assembly-only; UI behavior remains in dedicated controllers. |
+| `host/ui/UiStartupCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/ui/UiStartupAssembly`. | Keep adapter-only; avoid adding UI behavior here. |
 | `host/TerminalViewModeController.java` | Good | Owns product/debug view-mode switching and its side effects (viewport notify, scroll-overlay refresh, debug-session refresh). | Keep this focused on mode transitions; do not move selection or shell/runtime truth here. |
 | `host/TerminalChromeHostBridge.java` | Good | Owns chrome callback adaptation, sidebar-open state, and assist-button/modifier-latch view presentation wiring for the chrome controller host contract. | Keep as adapter/state only; keep chrome behavior in `TerminalChromeController`. |
 | `host/TerminalChromeHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalChromeHostBridge`. | Keep adapter-only; chrome behavior remains in `TerminalChromeController`. |

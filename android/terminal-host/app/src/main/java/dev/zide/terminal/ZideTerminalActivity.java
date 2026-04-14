@@ -34,12 +34,12 @@ import dev.zide.terminal.host.TerminalStatusViewAssemblyHostCallbacks;
 import dev.zide.terminal.host.TerminalSurfaceHostBridge;
 import dev.zide.terminal.host.TerminalSurfaceHostController;
 import dev.zide.terminal.host.TerminalSurfaceWidgetController;
-import dev.zide.terminal.host.TerminalUiStartupAssembly;
-import dev.zide.terminal.host.TerminalUiStartupHostCallbacks;
 import dev.zide.terminal.host.TerminalViewModeController;
 import dev.zide.terminal.host.TerminalViewportController;
 import dev.zide.terminal.host.TerminalWidgetHostAssembly;
 import dev.zide.terminal.host.TerminalWidgetHostAssemblyHostCallbacks;
+import dev.zide.terminal.host.ui.UiStartupAssembly;
+import dev.zide.terminal.host.ui.UiStartupCallbacks;
 import dev.zide.terminal.host.userland.WorkflowAssembly;
 import dev.zide.terminal.host.userland.WorkflowAssemblyCallbacks;
 import dev.zide.terminal.input.ShellInputView;
@@ -466,8 +466,8 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void bindAndStartUiControllers() {
-        TerminalUiStartupAssembly.start(
-                new TerminalUiStartupHostCallbacks(
+        UiStartupAssembly.start(
+                new UiStartupCallbacks(
                         () -> terminalViewportController,
                         () -> terminalChromeController,
                         () -> productBootstrapRetryButton,

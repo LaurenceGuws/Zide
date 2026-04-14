@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.ui;
 
 import android.view.View;
 import android.widget.Button;
@@ -6,6 +6,12 @@ import android.widget.Button;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import dev.zide.terminal.host.TerminalChromeController;
+import dev.zide.terminal.host.TerminalFrameLoopController;
+import dev.zide.terminal.host.TerminalSurfaceHostController;
+import dev.zide.terminal.host.TerminalSurfaceWidgetController;
+import dev.zide.terminal.host.TerminalViewModeController;
+import dev.zide.terminal.host.TerminalViewportController;
 import dev.zide.terminal.host.runtime.RuntimeAssetsController;
 import dev.zide.terminal.host.userland.ReadinessBlockerCallbacks;
 import dev.zide.terminal.userland.UserlandReadinessBlockerController;
@@ -15,7 +21,7 @@ import dev.zide.terminal.userland.UserlandSessionCoordinator;
 import dev.zide.terminal.userland.UserlandWorkflowController;
 
 /** Owns post-construction UI bind/start wiring for the activity. */
-public final class TerminalUiStartupAssembly {
+public final class UiStartupAssembly {
     /** Activity callbacks required for UI startup wiring. */
     public interface Host {
         TerminalViewportController viewportController();
@@ -69,7 +75,7 @@ public final class TerminalUiStartupAssembly {
         }
     }
 
-    private TerminalUiStartupAssembly() {
+    private UiStartupAssembly() {
     }
 
     public static Result start(Host host) {

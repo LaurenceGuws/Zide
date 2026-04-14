@@ -121,7 +121,7 @@ A cut is done only if all are true:
   `host/TerminalSurfaceWidgetAssembly` +
   `TerminalSurfaceWidgetAssemblyHostCallbacks`
 - post-construction UI bind/start activity wiring now composes through
-  `host/TerminalUiStartupAssembly` + `TerminalUiStartupHostCallbacks`
+  `host/ui/UiStartupAssembly` + `UiStartupCallbacks`
 - terminal surface widget seam is established in
   `host/TerminalSurfaceWidgetController` for future tabbed hosting
 - debug surface snapshot composition moved to
