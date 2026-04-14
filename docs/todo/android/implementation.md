@@ -54,6 +54,8 @@ Focus goals:
    - Completed: lifecycle/dispatch/startup policy extractions landed in
      `ZideTerminalActivity` (`onResume` debug intent flags, dispatch-key guard,
      and initial readiness-state load now use named helpers).
+   - Completed: direct-input override routing cleanup landed
+     (`sendDirectText` now routes through a named codepoint iteration helper).
    - Next: move to the next smallest wiring-vs-policy cut in activity methods.
 2. Keep Java ownership boundaries aligned with
    `ANDROID_JAVA_HOST_STRUCTURE.md`.
