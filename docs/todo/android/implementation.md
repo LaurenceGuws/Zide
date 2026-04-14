@@ -64,6 +64,11 @@ Focus goals:
    - Next: move to TODO #2 ownership-boundary cleanup cuts.
 2. Keep Java ownership boundaries aligned with
    `ANDROID_JAVA_HOST_STRUCTURE.md`.
+   - Completed: first ownership-boundary cleanup batch landed in
+     `host/ui/ChromeController` (sidebar and IME branch helpers extracted,
+     behavior unchanged).
+   - Next: continue smallest ownership-clarity cuts in `ChromeController` or
+     `SurfaceController` where watch-level pressure remains.
 3. Stabilize selection/scroll interaction behavior under manual device usage.
 4. Keep debug/profiling instrumentation behind explicit flags and remove stale
    probes after fixes land.
