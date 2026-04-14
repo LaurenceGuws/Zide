@@ -157,6 +157,10 @@ Agent reporting contract (mandatory for cleanup campaign updates):
      `bindAssistImeToggleIfPresent` so `bindAssistBar` stays orchestration-only.
    - Completed: `ChromeController` assist text and arrow keys now bind through
      `bindAssistCharacterButtons`.
+   - Completed: batch of four ownership seams: `bindSidebarChromeInteractions`
+     (sidebar nav + scrim/edge drawer chrome), `bindAssistModifierLatchButtons`,
+     `appendNativeSurfaceRedrawNeededTelemetry`, and
+     `removeExistingSurfaceHostViewIfPresent` in `SurfaceController`.
    - Next: continue smallest ownership-clarity cuts in `ChromeController` or
      `SurfaceController` where watch-level pressure remains.
 3. Stabilize selection/scroll interaction behavior under manual device usage.
