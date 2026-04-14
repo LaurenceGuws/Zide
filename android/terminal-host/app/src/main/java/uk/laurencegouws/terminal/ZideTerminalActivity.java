@@ -229,21 +229,9 @@ public final class ZideTerminalActivity extends Activity
                 this::productViewportWidthPx,
                 this::productViewportHeightPx,
                 () -> nativeLoaded,
-                () -> {
-                    if (terminalProductRuntimeController != null) {
-                        terminalProductRuntimeController.stopScrollbackFling();
-                    }
-                },
-                () -> {
-                    if (terminalProductRuntimeController != null) {
-                        terminalProductRuntimeController.refreshProductScrollOverlay();
-                    }
-                },
-                () -> {
-                    if (productFrameLoopController != null) {
-                        productFrameLoopController.reevaluate();
-                    }
-                },
+                this::stopScrollbackFlingIfReady,
+                this::refreshProductScrollOverlayIfReady,
+                this::reevaluateProductFrameLoopIfReady,
                 this::appendEvent);
     }
 
@@ -257,11 +245,7 @@ public final class ZideTerminalActivity extends Activity
                 visible -> imeVisible = visible,
                 () -> nativeLoaded,
                 TerminalNativeBridge::nativeFollowSessionLiveBottomBridge,
-                () -> {
-                    if (terminalProductRuntimeController != null) {
-                        terminalProductRuntimeController.refreshProductScrollOverlay();
-                    }
-                },
+                this::refreshProductScrollOverlayIfReady,
                 this::updateStatus,
                 this::appendEvent);
     }
@@ -327,13 +311,8 @@ public final class ZideTerminalActivity extends Activity
                 () -> currentInstallState.isFailed(),
                 () -> currentReadinessState,
                 () -> currentInstallState,
-                () -> terminalProductRuntimeController != null
-                        && terminalProductRuntimeController.shouldRunProductFrameLoop(),
-                () -> {
-                    if (terminalProductRuntimeController != null) {
-                        terminalProductRuntimeController.refreshProductScrollOverlay();
-                    }
-                },
+                this::shouldRunProductFrameLoop,
+                this::refreshProductScrollOverlayIfReady,
                 this::appendEvent,
                 this::updateStatus,
                 this::callNative,
@@ -346,26 +325,14 @@ public final class ZideTerminalActivity extends Activity
                 TerminalNativeBridge::nativeOnSurfaceRedrawNeededBridge,
                 TerminalNativeBridge::nativeOnVisibleViewportBridge,
                 this::currentSurfaceStateSnapshot,
-                statusLabel -> {
-                    if (terminalProductRuntimeController != null) {
-                        terminalProductRuntimeController.handleProductShellStateEvent(statusLabel);
-                    }
-                },
+                this::handleProductShellStateEventIfReady,
                 TerminalNativeBridge::nativeSetSessionScrollbackOffsetBridge,
                 TerminalNativeBridge::nativeFollowSessionLiveBottomBridge,
                 this::productViewportHeightPx,
-                () -> {
-                    if (productFrameLoopController != null) {
-                        productFrameLoopController.reevaluate();
-                    }
-                },
+                this::reevaluateProductFrameLoopIfReady,
                 this::runPackageDoctor,
                 this::sendDirectText,
-                reason -> {
-                    if (surfaceHostController != null) {
-                        surfaceHostController.notifyVisibleViewport(reason);
-                    }
-                },
+                this::notifyVisibleViewportIfReady,
                 () -> userlandSessionCoordinator.refreshAndApply(false));
     }
 
@@ -378,24 +345,13 @@ public final class ZideTerminalActivity extends Activity
                 this::appendEvent,
                 this::updateStatus,
                 readinessState -> currentReadinessState = readinessState,
-                () -> {
-                    if (terminalProductRuntimeController != null) {
-                        terminalProductRuntimeController.refreshProductShellState();
-                    }
-                },
-                () -> {
-                    if (terminalProductRuntimeController != null) {
-                        terminalProductRuntimeController.refreshDebugStatusSurface();
-                    }
-                },
-                () -> terminalProductRuntimeController != null
-                        && terminalProductRuntimeController.shouldRunProductFrameLoop(),
+                this::refreshProductShellStateIfReady,
+                this::refreshDebugStatusSurfaceIfReady,
+                this::shouldRunProductFrameLoop,
                 () -> {
                     final int tick = nativeLoaded ? TerminalNativeBridge.nativeTickProductFrameBridge()
                             : 0;
-                    if (terminalProductRuntimeController != null) {
-                        terminalProductRuntimeController.refreshProductScrollOverlay();
-                    }
+                    refreshProductScrollOverlayIfReady();
                     return tick;
                 },
                 TerminalNativeBridge::nativeRestartSessionBridge,
@@ -440,11 +396,7 @@ public final class ZideTerminalActivity extends Activity
                 () -> currentInstallState,
                 () -> currentReadinessState,
                 this::currentSurfaceStateSnapshot,
-                reason -> {
-                    if (surfaceHostController != null) {
-                        surfaceHostController.notifyVisibleViewport(reason);
-                    }
-                });
+                this::notifyVisibleViewportIfReady);
     }
 
     private LifecycleCallbacks createLifecycleCallbacks() {
@@ -481,22 +433,9 @@ public final class ZideTerminalActivity extends Activity
                 release -> userlandRelease = release,
                 installState -> currentInstallState = installState,
                 readinessState -> currentReadinessState = readinessState,
-                (installState, statusLabel) -> {
-                    if (terminalProductRuntimeController != null) {
-                        terminalProductRuntimeController.applyInstallState(installState, statusLabel);
-                    }
-                },
-                (eventName, statusLabel, logRefresh) -> {
-                    if (terminalProductRuntimeController != null) {
-                        terminalProductRuntimeController.restartSession(eventName, statusLabel,
-                                logRefresh);
-                    }
-                },
-                (eventName, statusLabel) -> {
-                    if (terminalViewModeController != null) {
-                        terminalViewModeController.showDebugView(eventName, statusLabel);
-                    }
-                },
+                this::applyInstallStateIfReady,
+                this::restartSessionIfReady,
+                this::showDebugViewIfReady,
                 this::appendEvent,
                 this::updateStatus,
                 () -> packageStatusText);
@@ -512,11 +451,7 @@ public final class ZideTerminalActivity extends Activity
                 () -> currentReadinessState,
                 () -> userlandWorkflowController,
                 () -> userlandSessionCoordinator,
-                (eventName, statusLabel) -> {
-                    if (terminalViewModeController != null) {
-                        terminalViewModeController.showDebugView(eventName, statusLabel);
-                    }
-                },
+                this::showDebugViewIfReady,
                 this::appendEvent,
                 this::updateStatus,
                 () -> terminalRuntimeAssetsController,
@@ -526,6 +461,71 @@ public final class ZideTerminalActivity extends Activity
                 () -> productShellStatePresenter,
                 () -> productFrameLoopController,
                 () -> leftSidebar);
+    }
+
+    private void stopScrollbackFlingIfReady() {
+        if (terminalProductRuntimeController != null) {
+            terminalProductRuntimeController.stopScrollbackFling();
+        }
+    }
+
+    private void refreshProductScrollOverlayIfReady() {
+        if (terminalProductRuntimeController != null) {
+            terminalProductRuntimeController.refreshProductScrollOverlay();
+        }
+    }
+
+    private void reevaluateProductFrameLoopIfReady() {
+        if (productFrameLoopController != null) {
+            productFrameLoopController.reevaluate();
+        }
+    }
+
+    private boolean shouldRunProductFrameLoop() {
+        return terminalProductRuntimeController != null
+                && terminalProductRuntimeController.shouldRunProductFrameLoop();
+    }
+
+    private void handleProductShellStateEventIfReady(String statusLabel) {
+        if (terminalProductRuntimeController != null) {
+            terminalProductRuntimeController.handleProductShellStateEvent(statusLabel);
+        }
+    }
+
+    private void notifyVisibleViewportIfReady(String reason) {
+        if (surfaceHostController != null) {
+            surfaceHostController.notifyVisibleViewport(reason);
+        }
+    }
+
+    private void refreshProductShellStateIfReady() {
+        if (terminalProductRuntimeController != null) {
+            terminalProductRuntimeController.refreshProductShellState();
+        }
+    }
+
+    private void refreshDebugStatusSurfaceIfReady() {
+        if (terminalProductRuntimeController != null) {
+            terminalProductRuntimeController.refreshDebugStatusSurface();
+        }
+    }
+
+    private void applyInstallStateIfReady(UserlandInstallState installState, String statusLabel) {
+        if (terminalProductRuntimeController != null) {
+            terminalProductRuntimeController.applyInstallState(installState, statusLabel);
+        }
+    }
+
+    private void restartSessionIfReady(String eventName, String statusLabel, boolean logRefresh) {
+        if (terminalProductRuntimeController != null) {
+            terminalProductRuntimeController.restartSession(eventName, statusLabel, logRefresh);
+        }
+    }
+
+    private void showDebugViewIfReady(String eventName, String statusLabel) {
+        if (terminalViewModeController != null) {
+            terminalViewModeController.showDebugView(eventName, statusLabel);
+        }
     }
 
     private void finishOnCreateLifecycle() {
