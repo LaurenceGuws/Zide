@@ -14,6 +14,51 @@ import uk.laurencegouws.terminal.userland.UserlandRelease;
 
 /** Functional callback adapter for {@link WorkflowAssembly.Host}. */
 public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
+    public static final class WorkflowHostBundle {
+        final Supplier<Context> context;
+        final Supplier<Handler> handler;
+        final Supplier<UserlandRelease> userlandRelease;
+        final Consumer<UserlandRelease> setUserlandRelease;
+        final Consumer<String> appendEvent;
+        final Consumer<String> updateStatus;
+        final Supplier<TextView> packageStatusText;
+
+        private WorkflowHostBundle(
+                Supplier<Context> context,
+                Supplier<Handler> handler,
+                Supplier<UserlandRelease> userlandRelease,
+                Consumer<UserlandRelease> setUserlandRelease,
+                Consumer<String> appendEvent,
+                Consumer<String> updateStatus,
+                Supplier<TextView> packageStatusText) {
+            this.context = context;
+            this.handler = handler;
+            this.userlandRelease = userlandRelease;
+            this.setUserlandRelease = setUserlandRelease;
+            this.appendEvent = appendEvent;
+            this.updateStatus = updateStatus;
+            this.packageStatusText = packageStatusText;
+        }
+
+        public static WorkflowHostBundle of(
+                Supplier<Context> context,
+                Supplier<Handler> handler,
+                Supplier<UserlandRelease> userlandRelease,
+                Consumer<UserlandRelease> setUserlandRelease,
+                Consumer<String> appendEvent,
+                Consumer<String> updateStatus,
+                Supplier<TextView> packageStatusText) {
+            return new WorkflowHostBundle(
+                    context,
+                    handler,
+                    userlandRelease,
+                    setUserlandRelease,
+                    appendEvent,
+                    updateStatus,
+                    packageStatusText);
+        }
+    }
+
     public static final class WorkflowActionBundle {
         final BiConsumer<UserlandInstallState, String> applyInstallState;
         final WorkflowCallbacks.RestartSessionCallback restartSession;
@@ -39,97 +84,98 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
         }
     }
 
-    private final Supplier<Context> context;
-    private final Supplier<Handler> handler;
-    private final Supplier<UserlandRelease> userlandRelease;
-    private final Consumer<UserlandRelease> setUserlandRelease;
-    private final Consumer<UserlandInstallState> setInstallState;
-    private final Consumer<UserlandReadinessState> setReadinessState;
-    private final WorkflowActionBundle workflowActionBundle;
-    private final Consumer<String> appendEvent;
-    private final Consumer<String> updateStatus;
-    private final Supplier<TextView> packageStatusText;
+    public static final class WorkflowRuntimeBundle {
+        final Consumer<UserlandInstallState> setInstallState;
+        final Consumer<UserlandReadinessState> setReadinessState;
+        final WorkflowActionBundle workflowActionBundle;
+
+        private WorkflowRuntimeBundle(
+                Consumer<UserlandInstallState> setInstallState,
+                Consumer<UserlandReadinessState> setReadinessState,
+                WorkflowActionBundle workflowActionBundle) {
+            this.setInstallState = setInstallState;
+            this.setReadinessState = setReadinessState;
+            this.workflowActionBundle = workflowActionBundle;
+        }
+
+        public static WorkflowRuntimeBundle of(
+                Consumer<UserlandInstallState> setInstallState,
+                Consumer<UserlandReadinessState> setReadinessState,
+                WorkflowActionBundle workflowActionBundle) {
+            return new WorkflowRuntimeBundle(
+                    setInstallState,
+                    setReadinessState,
+                    workflowActionBundle);
+        }
+    }
+
+    private final WorkflowHostBundle workflowHostBundle;
+    private final WorkflowRuntimeBundle workflowRuntimeBundle;
 
     public WorkflowAssemblyCallbacks(
-            Supplier<Context> context,
-            Supplier<Handler> handler,
-            Supplier<UserlandRelease> userlandRelease,
-            Consumer<UserlandRelease> setUserlandRelease,
-            Consumer<UserlandInstallState> setInstallState,
-            Consumer<UserlandReadinessState> setReadinessState,
-            WorkflowActionBundle workflowActionBundle,
-            Consumer<String> appendEvent,
-            Consumer<String> updateStatus,
-            Supplier<TextView> packageStatusText) {
-        this.context = context;
-        this.handler = handler;
-        this.userlandRelease = userlandRelease;
-        this.setUserlandRelease = setUserlandRelease;
-        this.setInstallState = setInstallState;
-        this.setReadinessState = setReadinessState;
-        this.workflowActionBundle = workflowActionBundle;
-        this.appendEvent = appendEvent;
-        this.updateStatus = updateStatus;
-        this.packageStatusText = packageStatusText;
+            WorkflowHostBundle workflowHostBundle,
+            WorkflowRuntimeBundle workflowRuntimeBundle) {
+        this.workflowHostBundle = workflowHostBundle;
+        this.workflowRuntimeBundle = workflowRuntimeBundle;
     }
 
     @Override
     public Context context() {
-        return context.get();
+        return workflowHostBundle.context.get();
     }
 
     @Override
     public Handler handler() {
-        return handler.get();
+        return workflowHostBundle.handler.get();
     }
 
     @Override
     public UserlandRelease userlandRelease() {
-        return userlandRelease.get();
+        return workflowHostBundle.userlandRelease.get();
     }
 
     @Override
     public void setUserlandRelease(UserlandRelease userlandRelease) {
-        setUserlandRelease.accept(userlandRelease);
+        workflowHostBundle.setUserlandRelease.accept(userlandRelease);
     }
 
     @Override
     public void setInstallState(UserlandInstallState installState) {
-        setInstallState.accept(installState);
+        workflowRuntimeBundle.setInstallState.accept(installState);
     }
 
     @Override
     public void setReadinessState(UserlandReadinessState readinessState) {
-        setReadinessState.accept(readinessState);
+        workflowRuntimeBundle.setReadinessState.accept(readinessState);
     }
 
     @Override
     public void applyInstallState(UserlandInstallState installState, String statusLabel) {
-        workflowActionBundle.applyInstallState.accept(installState, statusLabel);
+        workflowRuntimeBundle.workflowActionBundle.applyInstallState.accept(installState, statusLabel);
     }
 
     @Override
     public void restartSession(String eventName, String statusLabel, boolean logRefresh) {
-        workflowActionBundle.restartSession.restart(eventName, statusLabel, logRefresh);
+        workflowRuntimeBundle.workflowActionBundle.restartSession.restart(eventName, statusLabel, logRefresh);
     }
 
     @Override
     public void showDebugView(String eventName, String statusLabel) {
-        workflowActionBundle.showDebugView.accept(eventName, statusLabel);
+        workflowRuntimeBundle.workflowActionBundle.showDebugView.accept(eventName, statusLabel);
     }
 
     @Override
     public void appendEvent(String message) {
-        appendEvent.accept(message);
+        workflowHostBundle.appendEvent.accept(message);
     }
 
     @Override
     public void updateStatus(String statusLabel) {
-        updateStatus.accept(statusLabel);
+        workflowHostBundle.updateStatus.accept(statusLabel);
     }
 
     @Override
     public TextView packageStatusText() {
-        return packageStatusText.get();
+        return workflowHostBundle.packageStatusText.get();
     }
 }
