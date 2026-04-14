@@ -25,51 +25,6 @@ import uk.laurencegouws.terminal.userland.UserlandInstallState;
 
 /** Functional callback adapter for {@link WidgetAssembly.Host}. */
 public final class WidgetCallbacks implements WidgetAssembly.Host {
-    public static final class WidgetHostCallbacks {
-        final Supplier<Activity> activity;
-        final Supplier<android.os.Handler> handler;
-        final BooleanSupplier nativeLoaded;
-        final BooleanSupplier debugViewEnabled;
-        final Consumer<Boolean> setDebugViewEnabled;
-        final BooleanSupplier imeVisible;
-        final Consumer<Boolean> setImeVisible;
-
-        private WidgetHostCallbacks(
-                Supplier<Activity> activity,
-                Supplier<android.os.Handler> handler,
-                BooleanSupplier nativeLoaded,
-                BooleanSupplier debugViewEnabled,
-                Consumer<Boolean> setDebugViewEnabled,
-                BooleanSupplier imeVisible,
-                Consumer<Boolean> setImeVisible) {
-            this.activity = activity;
-            this.handler = handler;
-            this.nativeLoaded = nativeLoaded;
-            this.debugViewEnabled = debugViewEnabled;
-            this.setDebugViewEnabled = setDebugViewEnabled;
-            this.imeVisible = imeVisible;
-            this.setImeVisible = setImeVisible;
-        }
-
-        public static WidgetHostCallbacks of(
-                Supplier<Activity> activity,
-                Supplier<android.os.Handler> handler,
-                BooleanSupplier nativeLoaded,
-                BooleanSupplier debugViewEnabled,
-                Consumer<Boolean> setDebugViewEnabled,
-                BooleanSupplier imeVisible,
-                Consumer<Boolean> setImeVisible) {
-            return new WidgetHostCallbacks(
-                    activity,
-                    handler,
-                    nativeLoaded,
-                    debugViewEnabled,
-                    setDebugViewEnabled,
-                    imeVisible,
-                    setImeVisible);
-        }
-    }
-
     public static final class WidgetViewCallbacks {
         final Supplier<View> rootView;
         final Supplier<View> productView;
@@ -260,7 +215,13 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
         }
     }
 
-    private final WidgetHostCallbacks widgetHostCallbacks;
+    private final Supplier<Activity> activity;
+    private final Supplier<android.os.Handler> handler;
+    private final BooleanSupplier nativeLoaded;
+    private final BooleanSupplier debugViewEnabled;
+    private final Consumer<Boolean> setDebugViewEnabled;
+    private final BooleanSupplier imeVisible;
+    private final Consumer<Boolean> setImeVisible;
     private final WidgetViewCallbacks widgetViewCallbacks;
     private final WidgetRuntimeCallbacks widgetRuntimeCallbacks;
     private final uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.NativeEventCallback callNative;
@@ -273,7 +234,13 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
     private final Consumer<String> handleProductShellStateEvent;
 
     public WidgetCallbacks(
-            WidgetHostCallbacks widgetHostCallbacks,
+            Supplier<Activity> activity,
+            Supplier<android.os.Handler> handler,
+            BooleanSupplier nativeLoaded,
+            BooleanSupplier debugViewEnabled,
+            Consumer<Boolean> setDebugViewEnabled,
+            BooleanSupplier imeVisible,
+            Consumer<Boolean> setImeVisible,
             WidgetViewCallbacks widgetViewCallbacks,
             WidgetRuntimeCallbacks widgetRuntimeCallbacks,
             uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.NativeEventCallback callNative,
@@ -284,7 +251,13 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
             uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.VisibleViewportCallback nativeOnVisibleViewportBridge,
             Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot,
             Consumer<String> handleProductShellStateEvent) {
-        this.widgetHostCallbacks = widgetHostCallbacks;
+        this.activity = activity;
+        this.handler = handler;
+        this.nativeLoaded = nativeLoaded;
+        this.debugViewEnabled = debugViewEnabled;
+        this.setDebugViewEnabled = setDebugViewEnabled;
+        this.imeVisible = imeVisible;
+        this.setImeVisible = setImeVisible;
         this.widgetViewCallbacks = widgetViewCallbacks;
         this.widgetRuntimeCallbacks = widgetRuntimeCallbacks;
         this.callNative = callNative;
@@ -299,37 +272,37 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
 
     @Override
     public Activity activity() {
-        return widgetHostCallbacks.activity.get();
+        return activity.get();
     }
 
     @Override
     public android.os.Handler handler() {
-        return widgetHostCallbacks.handler.get();
+        return handler.get();
     }
 
     @Override
     public boolean nativeLoaded() {
-        return widgetHostCallbacks.nativeLoaded.getAsBoolean();
+        return nativeLoaded.getAsBoolean();
     }
 
     @Override
     public boolean debugViewEnabled() {
-        return widgetHostCallbacks.debugViewEnabled.getAsBoolean();
+        return debugViewEnabled.getAsBoolean();
     }
 
     @Override
     public void setDebugViewEnabled(boolean enabled) {
-        widgetHostCallbacks.setDebugViewEnabled.accept(enabled);
+        setDebugViewEnabled.accept(enabled);
     }
 
     @Override
     public boolean imeVisible() {
-        return widgetHostCallbacks.imeVisible.getAsBoolean();
+        return imeVisible.getAsBoolean();
     }
 
     @Override
     public void setImeVisible(boolean visible) {
-        widgetHostCallbacks.setImeVisible.accept(visible);
+        setImeVisible.accept(visible);
     }
 
     @Override
