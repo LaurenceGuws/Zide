@@ -8,19 +8,13 @@ package uk.laurencegouws.terminal.userland;
  */
 public final class UserlandPolicy {
     public static final String PACKAGE_NAME = "uk.laurencegouws.zide";
-    public static final String LEGACY_PACKAGE_NAME = "uk.laurencegouws.terminal";
     public static final String READINESS_STAMP_FILE = ".zide-userland-readiness.json";
-    public static final String LEGACY_READINESS_STAMP_FILE = ".zide-userland-bootstrap.json";
 
     private UserlandPolicy() {
     }
 
     public static String readinessStampPath(android.content.Context context) {
         return new java.io.File(context.getFilesDir(), READINESS_STAMP_FILE).getAbsolutePath();
-    }
-
-    public static String legacyReadinessStampPath(android.content.Context context) {
-        return new java.io.File(context.getFilesDir(), LEGACY_READINESS_STAMP_FILE).getAbsolutePath();
     }
 
     public static String shellPath(android.content.Context context) {

@@ -23,7 +23,7 @@ Session entrypoint only. Keep this file short, stable, and current.
   `docs/todo/android/implementation.md`
 - Java ownership contract:
   `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`
-- Shell readiness baseline history/decision record (closed bring-up):
+- Shell readiness baseline history/decision record:
   `app_architecture/platform/android/ANDROID_SHELL_BRINGUP_PLAN.md`
 - Terminal-host architecture authority:
   `app_architecture/platform/android/ANDROID_TERMINAL_HOST_PLAN.md`
@@ -36,3 +36,5 @@ Session entrypoint only. Keep this file short, stable, and current.
 - `TerminalViewportController`: visible viewport/inset authority
 - `TerminalSelectionController`: selection mutation/chrome/autoscroll owner
 - `../zide-mobile-pm`: mobile package/artifact production
+- JNI export ownership: native bridge now exports only current package-owner
+  symbols with Java owner `uk.laurencegouws.terminal`

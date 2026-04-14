@@ -26,8 +26,7 @@ from typing import NoReturn
 ROOT = Path(__file__).resolve().parents[1]
 BRIDGE_DIR = ROOT / "android" / "terminal-host"
 PACKAGE_NAME = "uk.laurencegouws.zide"
-ACTIVITY_NAME = f"{PACKAGE_NAME}/dev.zide.terminal.ZideTerminalActivity"
-LEGACY_PACKAGE_NAMES = ("dev.zide.terminal", "dev.zide.androidbootstrap")
+ACTIVITY_NAME = f"{PACKAGE_NAME}/uk.laurencegouws.terminal.ZideTerminalActivity"
 NDK_VERSION = os.environ.get("ZIDE_ANDROID_NDK_VERSION", "27.1.12297006")
 ANDROID_API = "29"
 USERLAND_CACHE_DIR = ROOT / ".cache" / "android-userland"
@@ -42,7 +41,6 @@ TERMUX_MAIN_BASE_URL = "https://packages.termux.dev/apt/termux-main/"
 TERMUX_MAIN_PACKAGES_URL = TERMUX_MAIN_BASE_URL + "dists/stable/main/binary-aarch64/Packages"
 REMOTE_APP_FILES_DIR = f"/data/data/{PACKAGE_NAME}/files"
 REMOTE_APP_PACKAGE_DIR = f"/data/user/0/{PACKAGE_NAME}"
-LEGACY_REMOTE_APP_PACKAGE_DIRS = tuple(f"/data/user/0/{name}" for name in LEGACY_PACKAGE_NAMES)
 REMOTE_USERLAND_PREFIX = f"{REMOTE_APP_FILES_DIR}/usr"
 REMOTE_USERLAND_HOME = f"{REMOTE_APP_FILES_DIR}/home"
 REMOTE_USERLAND_TMP = f"/data/user/0/{PACKAGE_NAME}/tmp"
@@ -50,7 +48,6 @@ REMOTE_USERLAND_APT_CONF_PARTS = f"/data/user/0/{PACKAGE_NAME}/aptc"
 REMOTE_USERLAND_DPKG_ETC = f"/data/user/0/{PACKAGE_NAME}/dpkg"
 REMOTE_USERLAND_DPKG_DB = f"/data/user/0/{PACKAGE_NAME}/dpkgdb"
 REMOTE_USERLAND_STAMP = f"{REMOTE_APP_FILES_DIR}/.zide-userland-readiness.json"
-REMOTE_USERLAND_STAMP_LEGACY = f"{REMOTE_APP_FILES_DIR}/.zide-userland-bootstrap.json"
 REMOTE_STAGE_TAR = f"/data/local/tmp/{PACKAGE_NAME.replace('.', '_')}_userland_stage.tar"
 USERLAND_HARDCODED_TERMUX_PREFIX = b"/data/data/com.termux/files/usr"
 USERLAND_HARDCODED_TERMUX_PREFIX_TEXT = USERLAND_HARDCODED_TERMUX_PREFIX.decode("utf-8")
@@ -65,12 +62,12 @@ COMMAND_HELP: dict[str, str] = {
     "launch": "Launch the terminal host activity on the connected device.",
     "deploy": "Run native + apk + install + launch.",
     "clean": "Run Gradle clean for android/terminal-host.",
-    "reinstall": "Uninstall current + legacy package names, then install + launch.",
+    "reinstall": "Uninstall current package, then install + launch.",
     "logcat": "Print filtered Android logs for the terminal host lane.",
     "doctor": "Print resolved toolchain paths and run adb version.",
-    "userland-fetch-ref": "Download the latest upstream aarch64 bootstrap zip on Linux for inspection/staging.",
-    "userland-inspect": "Inspect a local bootstrap archive/tree, or the cached upstream reference if none is provided.",
-    "userland-stage": "Stage a bootstrap archive/tree into the Android app sandbox, defaulting to the cached upstream reference.",
+    "userland-fetch-ref": "Download the latest upstream aarch64 reference archive on Linux for inspection/staging.",
+    "userland-inspect": "Inspect a local reference archive/tree, or the cached upstream reference if none is provided.",
+    "userland-stage": "Stage a reference archive/tree into the Android app sandbox, defaulting to the cached upstream reference.",
     "userland-stage-artifact": "Stage a published Android prefix archive manifest into the app sandbox.",
     "userland-state": "Print the currently staged Android userland state from the device.",
     "userland-stage-packages": "Dev-provider path: stage relocated Termux packages into the app sandbox.",
@@ -382,10 +379,10 @@ def userland_release_metadata() -> tuple[str, str, int]:
             if not isinstance(tag_name, str):
                 die("unexpected GitHub release payload: missing tag_name")
             return tag_name, url, size
-    die(f"latest Termux bootstrap release does not include {USERLAND_ASSET_NAME}")
+    die(f"latest Termux release does not include {USERLAND_ASSET_NAME}")
 
 
-def fetch_reference_bootstrap(output_override: Path | None) -> Path:
+def fetch_reference_archive(output_override: Path | None) -> Path:
     tag_name, url, size = userland_release_metadata()
     target = output_override if output_override is not None else USERLAND_CACHE_DIR / f"{tag_name}-{USERLAND_ASSET_NAME}"
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -400,7 +397,7 @@ def fetch_reference_bootstrap(output_override: Path | None) -> Path:
                 break
             out_file.write(chunk)
     if target.stat().st_size != size:
-        die(f"downloaded bootstrap has wrong size: expected {size}, got {target.stat().st_size}")
+        die(f"downloaded reference archive has wrong size: expected {size}, got {target.stat().st_size}")
     print(f"downloaded {target}", flush=True)
     return target
 
@@ -582,9 +579,9 @@ def archive_from_args(archive_arg: Path | None) -> Path:
     if archive_arg is not None:
         path = archive_arg.expanduser()
         if not path.exists():
-            die(f"bootstrap archive/tree does not exist: {path}")
+            die(f"reference archive/tree does not exist: {path}")
         return path.resolve()
-    return fetch_reference_bootstrap(None)
+    return fetch_reference_archive(None)
 
 
 def safe_child_path(root: Path, relative_name: str) -> Path:
@@ -685,7 +682,7 @@ def extract_prefix_root(source: Path, work_dir: Path) -> tuple[Path, str]:
         extract_tar_archive(source, extracted_root)
         return normalize_prefix_root(extracted_root), "tar"
 
-    die(f"unsupported bootstrap archive format: {source}")
+    die(f"unsupported reference archive format: {source}")
 
 
 def file_contains_bytes(path: Path, needle: bytes) -> bool:
@@ -946,7 +943,7 @@ def userland_package_manager_prelude() -> str:
 
 
 def userland_fetch_ref(output_override: Path | None) -> None:
-    fetch_reference_bootstrap(output_override.expanduser().resolve() if output_override is not None else None)
+    fetch_reference_archive(output_override.expanduser().resolve() if output_override is not None else None)
 
 
 def userland_inspect(source_arg: Path | None) -> None:
@@ -958,7 +955,7 @@ def userland_inspect(source_arg: Path | None) -> None:
         print_inspection(inspection)
         if inspection.hardcoded_termux_hits:
             print(
-                "note=upstream bootstrap still contains com.termux-prefixed binaries; "
+                "note=upstream reference archive still contains com.termux-prefixed binaries; "
                 "bash has been validated manually under uk.laurencegouws.zide, but apt still "
                 "needs relocation config or a cleaner artifact",
                 flush=True,
@@ -974,7 +971,7 @@ def userland_stage(source_arg: Path | None) -> None:
         inspection = inspect_prefix_root(prefix_root, source, format_name)
         print_inspection(inspection)
         if not inspection.has_bash:
-            die("bootstrap artifact does not contain bin/bash")
+            die("reference artifact does not contain bin/bash")
         stage_prepared_userland(adb, prefix_root, inspection, work_dir)
 
 
@@ -989,7 +986,7 @@ def userland_stage_packages(source_arg: Path | None, packages: list[str]) -> Non
         base_inspection = inspect_prefix_root(prefix_root, source, format_name)
         print_inspection(base_inspection)
         if not base_inspection.has_bash:
-            die("bootstrap artifact does not contain bin/bash")
+            die("reference artifact does not contain bin/bash")
 
         extracted_files = 0
         for package in package_closure:
@@ -1105,11 +1102,6 @@ def parse_runtime_support_links(raw: object) -> tuple[tuple[str, str], ...]:
 def normalize_runtime_support_path(path: str) -> str | None:
     if path == REMOTE_APP_PACKAGE_DIR or path.startswith(REMOTE_APP_PACKAGE_DIR + "/"):
         return path
-    for legacy_root in LEGACY_REMOTE_APP_PACKAGE_DIRS:
-        if path == legacy_root:
-            return REMOTE_APP_PACKAGE_DIR
-        if path.startswith(legacy_root + "/"):
-            return REMOTE_APP_PACKAGE_DIR + path[len(legacy_root) :]
     return None
 
 
@@ -1130,13 +1122,7 @@ def remote_userland_state(adb: Path) -> InstalledUserlandState:
     stamp_result = run_remote_shell(
         adb,
         f"run-as {PACKAGE_NAME} sh -c "
-        + shlex.quote(
-            "if [ -f {stamp} ]; then cat {stamp}; "
-            "elif [ -f {legacy_stamp} ]; then cat {legacy_stamp}; fi".format(
-                stamp=REMOTE_USERLAND_STAMP,
-                legacy_stamp=REMOTE_USERLAND_STAMP_LEGACY,
-            )
-        ),
+        + shlex.quote("if [ -f {stamp} ]; then cat {stamp}; fi".format(stamp=REMOTE_USERLAND_STAMP)),
         capture_output=True,
         check=False,
     )
@@ -1287,7 +1273,7 @@ def stage_prepared_userland(
     print(f"binary_path_rewrites={binary_path_rewrites}", flush=True)
     if inspection.hardcoded_termux_hits:
         print(
-            "note=staged upstream bootstrap contains com.termux-prefixed binaries; "
+            "note=staged upstream reference archive contains com.termux-prefixed binaries; "
             "plain-text shebang/config paths were rewritten, but binary relocation "
             "and package-manager cleanup are still incomplete",
             flush=True,
@@ -1302,7 +1288,7 @@ def install_userland_stage_tar(adb: Path, stage_tar: Path, artifact: UserlandArt
             [
                 f"run-as {PACKAGE_NAME} sh -c",
                 shlex.quote(
-                    "rm -rf {prefix} {stamp} {legacy_stamp} && "
+                    "rm -rf {prefix} {stamp} && "
                     "mkdir -p {files} {home} {tmp} && "
                     "cd {files} && "
                     "toybox tar -xf {remote} && "
@@ -1322,7 +1308,6 @@ def install_userland_stage_tar(adb: Path, stage_tar: Path, artifact: UserlandArt
                     apt_conf_parts=REMOTE_USERLAND_APT_CONF_PARTS,
                     dpkg_etc=REMOTE_USERLAND_DPKG_ETC,
                     dpkg_db=REMOTE_USERLAND_DPKG_DB,
-                    legacy_stamp=REMOTE_USERLAND_STAMP_LEGACY,
                     runtime_links=runtime_support_link_command(artifact) if artifact else "",
                     runtime_link_separator=" && " if artifact and artifact.runtime_support_links else "",
                     remote=REMOTE_STAGE_TAR,
@@ -1496,7 +1481,6 @@ def launch() -> None:
 
 def reinstall() -> None:
     adb = adb_path(sdk_root())
-    uninstall_legacy_packages(adb)
     subprocess.run([str(adb), "uninstall", PACKAGE_NAME], check=False)
     install()
     launch()
@@ -1505,7 +1489,6 @@ def reinstall() -> None:
 def deploy() -> None:
     native()
     apk()
-    uninstall_legacy_packages(adb_path(sdk_root()))
     install()
     launch()
 
@@ -1513,19 +1496,6 @@ def deploy() -> None:
 def logcat() -> None:
     adb = adb_path(sdk_root())
     run([*adb_target_args(adb), "logcat", "-d", "-s", "ZideAndroidTerminal:I", "AndroidRuntime:E", "*:S"])
-
-
-def uninstall_legacy_packages(adb: Path) -> None:
-    adb_args = adb_target_args(adb)
-    for package_name in LEGACY_PACKAGE_NAMES:
-        listing = subprocess.run(
-            [*adb_args, "shell", "pm", "list", "packages", package_name],
-            check=False,
-            capture_output=True,
-            text=True,
-        )
-        if f"package:{package_name}" in listing.stdout:
-            subprocess.run([*adb_args, "uninstall", package_name], check=False)
 
 
 def doctor() -> None:
@@ -1573,7 +1543,7 @@ def main() -> None:
     parser.add_argument(
         "--archive",
         type=Path,
-        help="Bootstrap archive/tree for userland-inspect or userland-stage. Defaults to the cached latest upstream reference.",
+        help="Reference archive/tree for userland-inspect or userland-stage. Defaults to the cached latest upstream reference.",
     )
     parser.add_argument(
         "--manifest",

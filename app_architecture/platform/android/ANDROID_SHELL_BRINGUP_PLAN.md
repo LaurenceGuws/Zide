@@ -1,11 +1,11 @@
-# Android Shell Bring-Up Plan
+# Android Shell Readiness Baseline Plan
 
 Status: closed and met. This document is a historical decision record, not an
 active queue.
 
 ## Purpose
 
-Record the shell-readiness baseline decision (the closed bring-up lane) that
+Record the shell-readiness baseline decision (the closed initial lane) that
 moved Android from probe-only behavior to a real on-device shell loop through
 the repo terminal runtime.
 

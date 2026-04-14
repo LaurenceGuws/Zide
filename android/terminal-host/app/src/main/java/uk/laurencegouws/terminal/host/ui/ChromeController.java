@@ -183,13 +183,11 @@ public final class ChromeController {
                     final float delta = event.getRawX() - downX;
                     if (openListener) {
                         if (delta > OPEN_THRESHOLD_PX) {
-                            host.setSidebarOpen(true);
-                            updateSidebarVisibility(true);
+                            openSidebar();
                             return true;
                         }
                     } else if (delta < -OPEN_THRESHOLD_PX) {
-                        host.setSidebarOpen(false);
-                        updateSidebarVisibility(false);
+                        closeSidebar();
                         return true;
                     }
                     return openListener;

@@ -88,17 +88,6 @@ public final class UserlandReadinessState {
 
     private static File resolveStampFile(String stampPath) {
         final File primary = new File(stampPath);
-        if (primary.isFile()) {
-            return primary;
-        }
-        if (!stampPath.endsWith(UserlandPolicy.READINESS_STAMP_FILE)) {
-            return null;
-        }
-        final File parent = primary.getParentFile();
-        if (parent == null) {
-            return null;
-        }
-        final File legacy = new File(parent, UserlandPolicy.LEGACY_READINESS_STAMP_FILE);
-        return legacy.isFile() ? legacy : null;
+        return primary.isFile() ? primary : null;
     }
 }

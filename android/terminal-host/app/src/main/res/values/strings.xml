@@ -20,7 +20,7 @@
     <string name="product_readiness_detail_missing">Stage the Android dev prefix before launching the product shell.</string>
     <string name="product_readiness_detail_invalid">The staged readiness metadata is invalid. Restage the Android dev prefix.</string>
     <string name="product_readiness_detail_shell_missing">The staged prefix does not currently provide a launchable Bash shell.</string>
-    <string name="product_readiness_detail_upgrade">The staged userland is launchable but older than the current requested dev artifact.</string>
+    <string name="product_readiness_detail_upgrade">The staged userland is launchable but older than the currently requested userland release.</string>
     <string name="product_readiness_detail_renderer_missing">The shared terminal renderer is not active. Transcript fallback is retired, so this is a real product blocker.</string>
     <string name="product_readiness_detail_install_failed">Install failed: %1$s</string>
     <string name="product_readiness_install">Install</string>

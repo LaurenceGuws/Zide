@@ -128,7 +128,7 @@ scale changes.
 
 Status:
 
-- accepted temporarily for Android bring-up
+- accepted temporarily for Android readiness baseline
 - not acceptable as a product render-thread design
 
 Required direction:
@@ -979,7 +979,7 @@ Do not do:
 
 - do not disable all telemetry blindly; some of it may still be real renderer
   correctness state
-- do not keep debug writes in product flow just because they helped bring-up
+- do not keep debug writes in product flow just because they helped early validation
 - do not claim backend/frame timings are pure until this contamination is
   narrowed
 
@@ -1054,7 +1054,7 @@ Current progress:
 
 ### 7. Remaining Android host/UI-thread contamination
 
-`android/terminal-host/app/src/main/java/dev/zide/terminal/`
+`android/terminal-host/app/src/main/java/uk/laurencegouws/terminal/`
 
 Android is only the pressure source, but the host still has to meet a strict
 contract: feed the renderer the minimum required state and keep product input
@@ -1089,7 +1089,7 @@ Findings:
   - status updates
 - `ShellSessionController.poll(...)` still performs:
   - synchronous native poll
-  - bootstrap-state reload from disk
+  - readiness-state reload from disk
 - older transcript-era follow/refresh assumptions had to be removed before
   the current host shape behaved as product truth
 - gesture/input paths still call into product refresh directly:
@@ -1164,7 +1164,7 @@ Do not do:
 
 - do not treat Java file extraction by itself as a performance fix
 - do not keep the 150ms poll/state-refresh model just because it was good
-  enough for bring-up
+  enough for early baseline validation
 - do not solve scroll snap-back with another local conditional while the host
   still owns the wrong follow policy
 
@@ -1176,20 +1176,20 @@ Current progress:
   - stale follow behavior no longer forces bottom-follow from IME-visible state
     or inset application alone
 - second host ownership cut landed:
-  - bootstrap-state reload and shell-session poll are now explicit separate
+  - readiness-state reload and shell-session poll are now explicit separate
     operations in the activity/controller contract
   - the debug refresh loop now names itself as debug/operator upkeep instead of
     a generic product shell refresh entrypoint
 - third host ownership cut landed:
-  - ordinary status updates now use the activity's tracked bootstrap state
-    instead of reloading bootstrap stamp state from disk on every call
+  - ordinary status updates now use the activity's tracked readiness state
+    instead of reloading readiness stamp state from disk on every call
   - hidden operator-state I/O is reduced in broad UI status/update paths
 - fourth host ownership cut landed:
   - the 150ms debug shell refresh loop is removed
   - debug/operator upkeep now refreshes from explicit events instead of acting
     as a periodic main-thread coordinator
 - fifth host ownership cut landed:
-  - product bootstrap-blocker visibility no longer reevaluates the product
+  - product readiness-blocker visibility no longer reevaluates the product
     frame loop as a hidden side effect
 - Android scrollback/IME size-pressure found one shared geometry contract
   defect:

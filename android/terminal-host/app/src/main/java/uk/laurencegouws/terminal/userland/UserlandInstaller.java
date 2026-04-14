@@ -105,8 +105,7 @@ public final class UserlandInstaller {
             throw new IOException("android-prefix-archive missing metadata");
         }
         final String metadataPackageName = metadata.optString("package_name", "");
-        if (!UserlandPolicy.PACKAGE_NAME.equals(metadataPackageName)
-                && !UserlandPolicy.LEGACY_PACKAGE_NAME.equals(metadataPackageName)) {
+        if (!UserlandPolicy.PACKAGE_NAME.equals(metadataPackageName)) {
             throw new IOException("userland artifact package_name mismatch");
         }
         if (!matchesOwnedPrefix(metadata.optString("prefix", ""))) {
@@ -180,11 +179,9 @@ public final class UserlandInstaller {
         final File dpkgEtcLink = new File(packageRoot, "dpkg");
         final File dpkgDbLink = new File(packageRoot, "dpkgdb");
         final File stampFile = new File(filesDir, UserlandPolicy.READINESS_STAMP_FILE);
-        final File legacyStampFile = new File(filesDir, UserlandPolicy.LEGACY_READINESS_STAMP_FILE);
 
         final String command = "rm -rf " + shellQuote(prefixDir.getAbsolutePath()) +
                 " " + shellQuote(stampFile.getAbsolutePath()) +
-                " " + shellQuote(legacyStampFile.getAbsolutePath()) +
                 " && mkdir -p " + shellQuote(filesDir.getAbsolutePath()) +
                 " " + shellQuote(homeDir.getAbsolutePath()) +
                 " " + shellQuote(tmpDir.getAbsolutePath()) +
@@ -367,11 +364,6 @@ public final class UserlandInstaller {
             return "";
         }
         final String packagePath = packageRoot.getAbsolutePath();
-        final File packageParent = packageRoot.getParentFile();
-        if (packageParent == null) {
-            throw new IOException("missing package parent");
-        }
-        final String legacyPackagePath = new File(packageParent, UserlandPolicy.LEGACY_PACKAGE_NAME).getAbsolutePath();
         final StringBuilder command = new StringBuilder();
         final String[] entries = rawLinks.split(",");
         for (String entry : entries) {
@@ -384,8 +376,8 @@ public final class UserlandInstaller {
             }
             final String source = entry.substring(0, separator);
             final String target = entry.substring(separator + 2);
-            final String normalizedSource = normalizeRuntimeSupportPath(source, packagePath, legacyPackagePath);
-            final String normalizedTarget = normalizeRuntimeSupportPath(target, packagePath, legacyPackagePath);
+            final String normalizedSource = normalizeRuntimeSupportPath(source, packagePath);
+            final String normalizedTarget = normalizeRuntimeSupportPath(target, packagePath);
             if (normalizedSource == null || normalizedTarget == null) {
                 throw new IOException("runtime support link escapes package root");
             }
@@ -406,15 +398,9 @@ public final class UserlandInstaller {
         return command.toString();
     }
 
-    private static String normalizeRuntimeSupportPath(String path, String packagePath, String legacyPackagePath) {
+    private static String normalizeRuntimeSupportPath(String path, String packagePath) {
         if (path.equals(packagePath) || path.startsWith(packagePath + "/")) {
             return path;
-        }
-        if (path.equals(legacyPackagePath)) {
-            return packagePath;
-        }
-        if (path.startsWith(legacyPackagePath + "/")) {
-            return packagePath + path.substring(legacyPackagePath.length());
         }
         return null;
     }
@@ -430,8 +416,7 @@ public final class UserlandInstaller {
         if (prefix == null || prefix.isEmpty()) {
             return false;
         }
-        return prefix.endsWith("/" + UserlandPolicy.PACKAGE_NAME + "/files/usr")
-                || prefix.endsWith("/" + UserlandPolicy.LEGACY_PACKAGE_NAME + "/files/usr");
+        return prefix.endsWith("/" + UserlandPolicy.PACKAGE_NAME + "/files/usr");
     }
 
     private static String shellQuote(String text) {

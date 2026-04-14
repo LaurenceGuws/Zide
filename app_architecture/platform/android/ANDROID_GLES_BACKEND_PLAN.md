@@ -90,13 +90,13 @@ Current status:
     frame host path
   - explicit unavailable behavior for presentables, screenshots, images, and
     surface draw replay
-  - explicit bootstrap failure instead of a fake SDL bootstrap path
+  - explicit readiness failure instead of a fake SDL startup path
   - shared EGL/context/window-surface ownership extraction in
     `src/platform/android_gles_runtime.zig`; the probe now uses that owner
     instead of duplicating EGL lifetime logic locally
 - this does **not** yet meet the full stop marker:
   - terminal-host does not instantiate `Renderer` yet
-  - there is still no Android-side shared renderer bootstrap path that creates
+  - there is still no Android-side shared renderer startup path that creates
     a live `Renderer` instance in terminal-host
   - visible clear/swap is implemented in the backend, but not yet claimed on
     device through terminal-host

@@ -125,6 +125,9 @@ A cut is done only if all are true:
   `host/surface/SurfaceWidgetController` for future tabbed hosting
 - debug surface snapshot composition moved to
   `debug/TerminalSurfaceStateSnapshotReader`
+- JNI bridge exports now use only current `uk.laurencegouws.terminal` symbol
+  ownership
+- readiness evaluation now uses only `.zide-userland-readiness.json`
 - selection controller remains monolithic by design until a real split seam
   exists
 - queue remains Android-product-first, not shell-readiness-baseline-first
