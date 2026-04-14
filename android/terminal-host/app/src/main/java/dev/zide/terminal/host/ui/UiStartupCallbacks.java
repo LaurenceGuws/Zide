@@ -11,7 +11,6 @@ import dev.zide.terminal.host.TerminalFrameLoopController;
 import dev.zide.terminal.host.TerminalSurfaceHostController;
 import dev.zide.terminal.host.TerminalSurfaceWidgetController;
 import dev.zide.terminal.host.TerminalViewModeController;
-import dev.zide.terminal.host.TerminalViewportController;
 import dev.zide.terminal.host.runtime.RuntimeAssetsController;
 import dev.zide.terminal.userland.ProductShellStatePresenter;
 import dev.zide.terminal.userland.UserlandReadinessState;
@@ -21,7 +20,7 @@ import dev.zide.terminal.userland.UserlandWorkflowController;
 
 /** Functional callback adapter for {@link UiStartupAssembly.Host}. */
 public final class UiStartupCallbacks implements UiStartupAssembly.Host {
-    private final Supplier<TerminalViewportController> viewportController;
+    private final Supplier<ViewportController> viewportController;
     private final Supplier<TerminalChromeController> chromeController;
     private final Supplier<Button> productBootstrapRetryButton;
     private final Supplier<Button> productBootstrapDebugButton;
@@ -41,7 +40,7 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
     private final Supplier<View> leftSidebar;
 
     public UiStartupCallbacks(
-            Supplier<TerminalViewportController> viewportController,
+            Supplier<ViewportController> viewportController,
             Supplier<TerminalChromeController> chromeController,
             Supplier<Button> productBootstrapRetryButton,
             Supplier<Button> productBootstrapDebugButton,
@@ -80,7 +79,7 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
     }
 
     @Override
-    public TerminalViewportController viewportController() {
+    public ViewportController viewportController() {
         return viewportController.get();
     }
 

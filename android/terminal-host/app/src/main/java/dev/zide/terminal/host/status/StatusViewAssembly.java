@@ -11,9 +11,9 @@ import dev.zide.terminal.debug.TerminalSurfaceStateSnapshotHostCallbacks;
 import dev.zide.terminal.debug.TerminalStatusController;
 import dev.zide.terminal.host.TerminalActivityViewBindings;
 import dev.zide.terminal.host.TerminalSurfaceHostBridge;
-import dev.zide.terminal.host.TerminalViewportController;
-import dev.zide.terminal.host.TerminalViewportHostBridge;
-import dev.zide.terminal.host.TerminalViewportHostCallbacks;
+import dev.zide.terminal.host.ui.ViewportController;
+import dev.zide.terminal.host.ui.ViewportBridge;
+import dev.zide.terminal.host.ui.ViewportCallbacks;
 import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandInstallState;
 
@@ -65,7 +65,7 @@ public final class StatusViewAssembly {
         public final TerminalSurfaceStateSnapshotReader terminalSurfaceStateSnapshotReader;
         public final StatusBridge terminalStatusHostBridge;
         public final TerminalStatusController terminalStatusController;
-        public final TerminalViewportController terminalViewportController;
+        public final ViewportController terminalViewportController;
 
         private Result(
                 TextView packageStatusText,
@@ -87,7 +87,7 @@ public final class StatusViewAssembly {
                 TerminalSurfaceStateSnapshotReader terminalSurfaceStateSnapshotReader,
                 StatusBridge terminalStatusHostBridge,
                 TerminalStatusController terminalStatusController,
-                TerminalViewportController terminalViewportController) {
+                ViewportController terminalViewportController) {
             this.packageStatusText = packageStatusText;
             this.productBootstrapTitle = productBootstrapTitle;
             this.productBootstrapDetail = productBootstrapDetail;
@@ -149,11 +149,11 @@ public final class StatusViewAssembly {
                 viewBindings.statusText,
                 viewBindings.eventLogText,
                 terminalStatusHostBridge);
-        final TerminalViewportController terminalViewportController = new TerminalViewportController(
-                new TerminalViewportHostBridge(
+        final ViewportController terminalViewportController = new ViewportController(
+                new ViewportBridge(
                         viewBindings.productView,
                         viewBindings.productSurfaceContainer,
-                        new TerminalViewportHostCallbacks(
+                        new ViewportCallbacks(
                                 host::imeVisible,
                                 host::setImeVisible,
                                 host::notifyVisibleViewport)));

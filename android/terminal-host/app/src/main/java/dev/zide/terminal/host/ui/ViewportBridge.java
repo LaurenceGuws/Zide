@@ -1,12 +1,12 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.ui;
 
 import android.view.View;
 import android.widget.FrameLayout;
 
 /**
- * Adapts activity-owned viewport callbacks to {@link TerminalViewportController.Host}.
+ * Adapts activity-owned viewport callbacks to {@link ViewportController.Host}.
  */
-public final class TerminalViewportHostBridge implements TerminalViewportController.Host {
+public final class ViewportBridge implements ViewportController.Host {
     /** Callbacks used for mutable viewport/IME state and notifications. */
     public interface Callbacks {
         boolean imeVisible();
@@ -20,7 +20,7 @@ public final class TerminalViewportHostBridge implements TerminalViewportControl
     private final FrameLayout productSurfaceContainer;
     private final Callbacks callbacks;
 
-    public TerminalViewportHostBridge(View productView, FrameLayout productSurfaceContainer, Callbacks callbacks) {
+    public ViewportBridge(View productView, FrameLayout productSurfaceContainer, Callbacks callbacks) {
         this.productView = productView;
         this.productSurfaceContainer = productSurfaceContainer;
         this.callbacks = callbacks;

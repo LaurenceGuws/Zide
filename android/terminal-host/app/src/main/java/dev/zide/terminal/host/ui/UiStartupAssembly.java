@@ -11,7 +11,6 @@ import dev.zide.terminal.host.TerminalFrameLoopController;
 import dev.zide.terminal.host.TerminalSurfaceHostController;
 import dev.zide.terminal.host.TerminalSurfaceWidgetController;
 import dev.zide.terminal.host.TerminalViewModeController;
-import dev.zide.terminal.host.TerminalViewportController;
 import dev.zide.terminal.host.runtime.RuntimeAssetsController;
 import dev.zide.terminal.host.userland.ReadinessBlockerCallbacks;
 import dev.zide.terminal.userland.UserlandReadinessBlockerController;
@@ -24,7 +23,7 @@ import dev.zide.terminal.userland.UserlandWorkflowController;
 public final class UiStartupAssembly {
     /** Activity callbacks required for UI startup wiring. */
     public interface Host {
-        TerminalViewportController viewportController();
+        ViewportController viewportController();
 
         TerminalChromeController chromeController();
 

@@ -1,15 +1,15 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.ui;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
-/** Functional callback adapter for {@link TerminalViewportHostBridge}. */
-public final class TerminalViewportHostCallbacks implements TerminalViewportHostBridge.Callbacks {
+/** Functional callback adapter for {@link ViewportBridge}. */
+public final class ViewportCallbacks implements ViewportBridge.Callbacks {
     private final BooleanSupplier imeVisible;
     private final Consumer<Boolean> setImeVisible;
     private final Consumer<String> notifyVisibleViewport;
 
-    public TerminalViewportHostCallbacks(
+    public ViewportCallbacks(
             BooleanSupplier imeVisible,
             Consumer<Boolean> setImeVisible,
             Consumer<String> notifyVisibleViewport) {

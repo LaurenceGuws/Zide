@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.ui;
 
 import android.graphics.Insets;
 import android.view.View;
@@ -6,7 +6,7 @@ import android.view.WindowInsets;
 import android.widget.FrameLayout;
 
 /** Owns visible viewport insets handling and product viewport size authority. */
-public final class TerminalViewportController {
+public final class ViewportController {
     public interface Host {
         View productView();
 
@@ -25,7 +25,7 @@ public final class TerminalViewportController {
     private int productViewBasePaddingRight;
     private int productViewBasePaddingBottom;
 
-    public TerminalViewportController(Host host) {
+    public ViewportController(Host host) {
         this.host = host;
     }
 
