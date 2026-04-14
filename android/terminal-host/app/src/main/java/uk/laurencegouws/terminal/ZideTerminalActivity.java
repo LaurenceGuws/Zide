@@ -156,26 +156,26 @@ public final class ZideTerminalActivity extends Activity
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
-        setIntent(intent);
+        applyNewIntent(intent);
         logNewIntentEvent();
     }
 
     @Override
     protected void onPause() {
-        terminalActivityLifecycleController.onPause();
+        notifyLifecyclePause();
         super.onPause();
     }
 
     @Override
     protected void onStop() {
-        terminalActivityLifecycleController.onStop();
+        notifyLifecycleStop();
         super.onStop();
     }
 
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
-        terminalActivityLifecycleController.onWindowFocusChanged(hasFocus);
+        notifyLifecycleWindowFocusChanged(hasFocus);
     }
 
     @Override
@@ -748,6 +748,10 @@ public final class ZideTerminalActivity extends Activity
         return nativeLoaded;
     }
 
+    private void applyNewIntent(Intent intent) {
+        setIntent(intent);
+    }
+
     private void sendDirectCodepointToNative(int codepoint) {
         TerminalNativeBridge.nativeSendSessionCodepointBridge(codepoint);
     }
@@ -774,6 +778,18 @@ public final class ZideTerminalActivity extends Activity
 
     private void logNewIntentEvent() {
         appendEvent("activity.on.new.intent");
+    }
+
+    private void notifyLifecyclePause() {
+        terminalActivityLifecycleController.onPause();
+    }
+
+    private void notifyLifecycleStop() {
+        terminalActivityLifecycleController.onStop();
+    }
+
+    private void notifyLifecycleWindowFocusChanged(boolean hasFocus) {
+        terminalActivityLifecycleController.onWindowFocusChanged(hasFocus);
     }
 
     private AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot() {
