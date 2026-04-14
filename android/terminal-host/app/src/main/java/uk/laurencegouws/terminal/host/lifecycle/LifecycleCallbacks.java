@@ -18,7 +18,7 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
         void call(boolean debugRecreateSurfaceOnce, boolean debugResizeSurfaceOnce, boolean debugStartShellOnce);
     }
 
-    public static final class NativeLifecycleBundle {
+    public static final class NativeLifecycleCallbacks {
         final LongSupplier nativeOnStart;
         final LongSupplier nativeOnResume;
         final LongSupplier nativeOnPause;
@@ -26,7 +26,7 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
         final NativeBooleanCall nativeOnWindowFocus;
         final SurfaceLifecycleCallbacks.NativeEventCallback callNative;
 
-        private NativeLifecycleBundle(
+        private NativeLifecycleCallbacks(
                 LongSupplier nativeOnStart,
                 LongSupplier nativeOnResume,
                 LongSupplier nativeOnPause,
@@ -41,14 +41,14 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
             this.callNative = callNative;
         }
 
-        public static NativeLifecycleBundle of(
+        public static NativeLifecycleCallbacks of(
                 LongSupplier nativeOnStart,
                 LongSupplier nativeOnResume,
                 LongSupplier nativeOnPause,
                 LongSupplier nativeOnStop,
                 NativeBooleanCall nativeOnWindowFocus,
                 SurfaceLifecycleCallbacks.NativeEventCallback callNative) {
-            return new NativeLifecycleBundle(
+            return new NativeLifecycleCallbacks(
                     nativeOnStart,
                     nativeOnResume,
                     nativeOnPause,
@@ -58,7 +58,7 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
         }
     }
 
-    public static final class LifecycleHostBundle {
+    public static final class LifecycleHostCallbacks {
         final BooleanSupplier nativeLoaded;
         final Consumer<String> appendEvent;
         final Consumer<String> updateStatus;
@@ -67,7 +67,7 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
         final Runnable notifySurfacePause;
         final SurfaceResumeCall notifySurfaceResume;
 
-        private LifecycleHostBundle(
+        private LifecycleHostCallbacks(
                 BooleanSupplier nativeLoaded,
                 Consumer<String> appendEvent,
                 Consumer<String> updateStatus,
@@ -84,7 +84,7 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
             this.notifySurfaceResume = notifySurfaceResume;
         }
 
-        public static LifecycleHostBundle of(
+        public static LifecycleHostCallbacks of(
                 BooleanSupplier nativeLoaded,
                 Consumer<String> appendEvent,
                 Consumer<String> updateStatus,
@@ -92,7 +92,7 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
                 Runnable refreshUserlandSessionOnPause,
                 Runnable notifySurfacePause,
                 SurfaceResumeCall notifySurfaceResume) {
-            return new LifecycleHostBundle(
+            return new LifecycleHostCallbacks(
                     nativeLoaded,
                     appendEvent,
                     updateStatus,
@@ -103,74 +103,74 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
         }
     }
 
-    private final LifecycleHostBundle lifecycleHostBundle;
-    private final NativeLifecycleBundle nativeLifecycleBundle;
+    private final LifecycleHostCallbacks lifecycleHostCallbacks;
+    private final NativeLifecycleCallbacks nativeLifecycleCallbacks;
 
     public LifecycleCallbacks(
-            LifecycleHostBundle lifecycleHostBundle,
-            NativeLifecycleBundle nativeLifecycleBundle) {
-        this.lifecycleHostBundle = lifecycleHostBundle;
-        this.nativeLifecycleBundle = nativeLifecycleBundle;
+            LifecycleHostCallbacks lifecycleHostCallbacks,
+            NativeLifecycleCallbacks nativeLifecycleCallbacks) {
+        this.lifecycleHostCallbacks = lifecycleHostCallbacks;
+        this.nativeLifecycleCallbacks = nativeLifecycleCallbacks;
     }
 
     @Override
     public boolean nativeLoaded() {
-        return lifecycleHostBundle.nativeLoaded.getAsBoolean();
+        return lifecycleHostCallbacks.nativeLoaded.getAsBoolean();
     }
 
     @Override
     public long nativeOnStart() {
-        return nativeLifecycleBundle.nativeOnStart.getAsLong();
+        return nativeLifecycleCallbacks.nativeOnStart.getAsLong();
     }
 
     @Override
     public long nativeOnResume() {
-        return nativeLifecycleBundle.nativeOnResume.getAsLong();
+        return nativeLifecycleCallbacks.nativeOnResume.getAsLong();
     }
 
     @Override
     public long nativeOnPause() {
-        return nativeLifecycleBundle.nativeOnPause.getAsLong();
+        return nativeLifecycleCallbacks.nativeOnPause.getAsLong();
     }
 
     @Override
     public long nativeOnStop() {
-        return nativeLifecycleBundle.nativeOnStop.getAsLong();
+        return nativeLifecycleCallbacks.nativeOnStop.getAsLong();
     }
 
     @Override
     public long nativeOnWindowFocus(boolean hasFocus) {
-        return nativeLifecycleBundle.nativeOnWindowFocus.call(hasFocus);
+        return nativeLifecycleCallbacks.nativeOnWindowFocus.call(hasFocus);
     }
 
     @Override
     public void appendEvent(String event) {
-        lifecycleHostBundle.appendEvent.accept(event);
+        lifecycleHostCallbacks.appendEvent.accept(event);
     }
 
     @Override
     public void callNative(String event, long seq) {
-        nativeLifecycleBundle.callNative.call(event, seq);
+        nativeLifecycleCallbacks.callNative.call(event, seq);
     }
 
     @Override
     public void updateStatus(String statusLabel) {
-        lifecycleHostBundle.updateStatus.accept(statusLabel);
+        lifecycleHostCallbacks.updateStatus.accept(statusLabel);
     }
 
     @Override
     public void stopProductFrameLoop() {
-        lifecycleHostBundle.stopProductFrameLoop.run();
+        lifecycleHostCallbacks.stopProductFrameLoop.run();
     }
 
     @Override
     public void refreshUserlandSessionOnPause() {
-        lifecycleHostBundle.refreshUserlandSessionOnPause.run();
+        lifecycleHostCallbacks.refreshUserlandSessionOnPause.run();
     }
 
     @Override
     public void notifySurfacePause() {
-        lifecycleHostBundle.notifySurfacePause.run();
+        lifecycleHostCallbacks.notifySurfacePause.run();
     }
 
     @Override
@@ -178,7 +178,7 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
             boolean debugRecreateSurfaceOnce,
             boolean debugResizeSurfaceOnce,
             boolean debugStartShellOnce) {
-        lifecycleHostBundle.notifySurfaceResume.call(
+        lifecycleHostCallbacks.notifySurfaceResume.call(
                 debugRecreateSurfaceOnce,
                 debugResizeSurfaceOnce,
                 debugStartShellOnce);

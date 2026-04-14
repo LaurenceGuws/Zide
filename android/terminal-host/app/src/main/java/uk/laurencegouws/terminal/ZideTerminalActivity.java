@@ -422,7 +422,7 @@ public final class ZideTerminalActivity extends Activity
 
     private LifecycleCallbacks createLifecycleCallbacks() {
         return new LifecycleCallbacks(
-                LifecycleCallbacks.LifecycleHostBundle.of(
+                LifecycleCallbacks.LifecycleHostCallbacks.of(
                         () -> nativeLoaded,
                         this::appendEvent,
                         this::updateStatus,
@@ -434,7 +434,7 @@ public final class ZideTerminalActivity extends Activity
                                         debugRecreateSurfaceOnce,
                                         debugResizeSurfaceOnce,
                                         debugStartShellOnce)),
-                LifecycleCallbacks.NativeLifecycleBundle.of(
+                LifecycleCallbacks.NativeLifecycleCallbacks.of(
                         TerminalNativeBridge::nativeOnStartBridge,
                         TerminalNativeBridge::nativeOnResumeBridge,
                         TerminalNativeBridge::nativeOnPauseBridge,
