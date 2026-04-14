@@ -411,11 +411,13 @@ public final class ZideTerminalActivity extends Activity
                         () -> imeVisible,
                         visible -> imeVisible = visible),
                 StatusViewCallbacks.StatusRuntimeBundle.of(
-                        () -> surfaceHostBridge,
-                        () -> currentInstallState,
-                        () -> currentReadinessState,
-                        this::currentSurfaceStateSnapshot,
-                        this::notifyVisibleViewportIfReady));
+                        StatusViewCallbacks.StatusSurfaceBundle.of(
+                                () -> surfaceHostBridge,
+                                this::currentSurfaceStateSnapshot,
+                                this::notifyVisibleViewportIfReady),
+                        StatusViewCallbacks.StatusUserlandBundle.of(
+                                () -> currentInstallState,
+                                () -> currentReadinessState)));
     }
 
     private LifecycleCallbacks createLifecycleCallbacks() {

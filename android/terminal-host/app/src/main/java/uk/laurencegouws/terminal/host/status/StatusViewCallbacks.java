@@ -54,37 +54,67 @@ public final class StatusViewCallbacks implements StatusViewAssembly.Host {
     }
 
     public static final class StatusRuntimeBundle {
+        final StatusSurfaceBundle statusSurfaceBundle;
+        final StatusUserlandBundle statusUserlandBundle;
+
+        private StatusRuntimeBundle(
+                StatusSurfaceBundle statusSurfaceBundle,
+                StatusUserlandBundle statusUserlandBundle) {
+            this.statusSurfaceBundle = statusSurfaceBundle;
+            this.statusUserlandBundle = statusUserlandBundle;
+        }
+
+        public static StatusRuntimeBundle of(
+                StatusSurfaceBundle statusSurfaceBundle,
+                StatusUserlandBundle statusUserlandBundle) {
+            return new StatusRuntimeBundle(
+                    statusSurfaceBundle,
+                    statusUserlandBundle);
+        }
+    }
+
+    public static final class StatusSurfaceBundle {
         final Supplier<SurfaceBridge> surfaceHostBridge;
-        final Supplier<UserlandInstallState> currentInstallState;
-        final Supplier<UserlandReadinessState> currentReadinessState;
         final Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot;
         final Consumer<String> notifyVisibleViewport;
 
-        private StatusRuntimeBundle(
+        private StatusSurfaceBundle(
                 Supplier<SurfaceBridge> surfaceHostBridge,
-                Supplier<UserlandInstallState> currentInstallState,
-                Supplier<UserlandReadinessState> currentReadinessState,
                 Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot,
                 Consumer<String> notifyVisibleViewport) {
             this.surfaceHostBridge = surfaceHostBridge;
-            this.currentInstallState = currentInstallState;
-            this.currentReadinessState = currentReadinessState;
             this.currentSurfaceStateSnapshot = currentSurfaceStateSnapshot;
             this.notifyVisibleViewport = notifyVisibleViewport;
         }
 
-        public static StatusRuntimeBundle of(
+        public static StatusSurfaceBundle of(
                 Supplier<SurfaceBridge> surfaceHostBridge,
-                Supplier<UserlandInstallState> currentInstallState,
-                Supplier<UserlandReadinessState> currentReadinessState,
                 Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot,
                 Consumer<String> notifyVisibleViewport) {
-            return new StatusRuntimeBundle(
+            return new StatusSurfaceBundle(
                     surfaceHostBridge,
-                    currentInstallState,
-                    currentReadinessState,
                     currentSurfaceStateSnapshot,
                     notifyVisibleViewport);
+        }
+    }
+
+    public static final class StatusUserlandBundle {
+        final Supplier<UserlandInstallState> currentInstallState;
+        final Supplier<UserlandReadinessState> currentReadinessState;
+
+        private StatusUserlandBundle(
+                Supplier<UserlandInstallState> currentInstallState,
+                Supplier<UserlandReadinessState> currentReadinessState) {
+            this.currentInstallState = currentInstallState;
+            this.currentReadinessState = currentReadinessState;
+        }
+
+        public static StatusUserlandBundle of(
+                Supplier<UserlandInstallState> currentInstallState,
+                Supplier<UserlandReadinessState> currentReadinessState) {
+            return new StatusUserlandBundle(
+                    currentInstallState,
+                    currentReadinessState);
         }
     }
 
@@ -130,26 +160,26 @@ public final class StatusViewCallbacks implements StatusViewAssembly.Host {
 
     @Override
     public SurfaceBridge surfaceHostBridge() {
-        return statusRuntimeBundle.surfaceHostBridge.get();
+        return statusRuntimeBundle.statusSurfaceBundle.surfaceHostBridge.get();
     }
 
     @Override
     public UserlandInstallState currentInstallState() {
-        return statusRuntimeBundle.currentInstallState.get();
+        return statusRuntimeBundle.statusUserlandBundle.currentInstallState.get();
     }
 
     @Override
     public UserlandReadinessState currentReadinessState() {
-        return statusRuntimeBundle.currentReadinessState.get();
+        return statusRuntimeBundle.statusUserlandBundle.currentReadinessState.get();
     }
 
     @Override
     public AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot() {
-        return statusRuntimeBundle.currentSurfaceStateSnapshot.get();
+        return statusRuntimeBundle.statusSurfaceBundle.currentSurfaceStateSnapshot.get();
     }
 
     @Override
     public void notifyVisibleViewport(String reason) {
-        statusRuntimeBundle.notifyVisibleViewport.accept(reason);
+        statusRuntimeBundle.statusSurfaceBundle.notifyVisibleViewport.accept(reason);
     }
 }
