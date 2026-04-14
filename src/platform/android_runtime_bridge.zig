@@ -13,10 +13,10 @@ const renderer_terminal_draw_host = @import("../ui/renderer/renderer_terminal_dr
 const shared_types = @import("../types/mod.zig");
 const std = @import("std");
 const terminal_runtime = @import("../terminal/core/terminal_runtime.zig");
-const terminal_session_bootstrap = @import("../app/terminal/terminal_session_bootstrap.zig");
+const terminal_session_widget_factory = @import("../app/terminal/terminal_session_bootstrap.zig");
 const widgets = @import("../ui/widgets.zig");
 
-const android_terminal_runtime_font_path = "/data/data/uk.laurencegouws.zide/files/assets/fonts/JetBrainsMonoNerdFont-Regular.ttf";
+const android_runtime_font_path = "/data/data/uk.laurencegouws.zide/files/assets/fonts/JetBrainsMonoNerdFont-Regular.ttf";
 
 const RendererStatus = android_gles_probe.ProbeStatus;
 
@@ -40,11 +40,11 @@ const BridgeState = struct {
         .surface_metrics = .{},
         .native_handles = .{},
     },
-    pinch_zoom_active: bool = false,
-    product_fit_grid_dirty: bool = true,
+    pinchZoomActive: bool = false,
+    productGridFitDirty: bool = true,
 };
 
-const ProductFitGridCommitInputs = struct {
+const ProductGridFitCommitInputs = struct {
     renderer: *renderer_mod.Renderer,
     widget: *widgets.TerminalWidget,
 };
@@ -85,7 +85,7 @@ fn swapNativeWindow(window: ?*anyopaque) void {
     bridge_state.last_surface_transition = bridge_state.render_host.noteAndroidNativeWindow(window);
 }
 
-pub fn noteCreate() u64 {
+pub fn onCreate() u64 {
     app_logger.resetConfig();
     app_logger.setFilePathString("/data/user/0/uk.laurencegouws.zide/files/home/.local/state/zide/zide.log") catch {};
     app_logger.init() catch {};
@@ -96,32 +96,32 @@ pub fn noteCreate() u64 {
     return nextSequence();
 }
 
-pub fn noteStart() u64 {
+pub fn onStart() u64 {
     _ = android_host.noteWillEnterForeground(&bridge_state.app_host);
     return nextSequence();
 }
 
-pub fn noteResume() u64 {
+pub fn onResume() u64 {
     _ = android_host.noteDidEnterForeground(&bridge_state.app_host, &bridge_state.render_host);
     return nextSequence();
 }
 
-pub fn notePause() u64 {
+pub fn onPause() u64 {
     _ = android_host.noteWillEnterBackground(&bridge_state.app_host);
     return nextSequence();
 }
 
-pub fn noteStop() u64 {
+pub fn onStop() u64 {
     _ = android_host.noteDidEnterBackground(&bridge_state.app_host);
     return nextSequence();
 }
 
-pub fn noteWindowFocusChanged(focused: bool) u64 {
+pub fn onWindowFocusChanged(focused: bool) u64 {
     _ = android_host.noteSurfaceFocus(&bridge_state.app_host, focused);
     return nextSequence();
 }
 
-pub fn noteSurfaceAvailable(width: i32, height: i32) u64 {
+pub fn onSurfaceAvailable(width: i32, height: i32) u64 {
     _ = android_host.noteSurfaceMetrics(&bridge_state.app_host, &bridge_state.render_host, .{
         .logical_width = width,
         .logical_height = height,
@@ -130,12 +130,12 @@ pub fn noteSurfaceAvailable(width: i32, height: i32) u64 {
         .display_scale = 1.0,
         .pixel_density = 1.0,
     });
-    bridge_state.product_fit_grid_dirty = true;
+    bridge_state.productGridFitDirty = true;
     return nextSequence();
 }
 
-pub fn noteVisibleViewport(width: i32, height: i32, ime_visible: bool) u64 {
-    bridge_state.app_host.noteTextInputActive(ime_visible);
+pub fn onVisibleViewport(width: i32, height: i32, imeVisible: bool) u64 {
+    bridge_state.app_host.noteTextInputActive(imeVisible);
 
     const surface = bridge_state.render_host.surface_metrics;
     bridge_state.render_host.noteVisibleViewport(.{
@@ -146,7 +146,7 @@ pub fn noteVisibleViewport(width: i32, height: i32, ime_visible: bool) u64 {
         .display_scale = scaleOrDefault(surface.display_scale),
         .pixel_density = scaleOrDefault(surface.pixel_density),
     });
-    bridge_state.product_fit_grid_dirty = true;
+    bridge_state.productGridFitDirty = true;
     bridge_state.render_host.noteRedrawRequested();
     return nextSequence();
 }
@@ -157,7 +157,7 @@ pub fn applyTerminalPinchZoom(scale_factor: f32) i32 {
     const now = app_shell.getTime();
     const changed = renderer.applyPinchZoomForExternalHost(scale_factor, now) catch return 2;
     if (changed) {
-        bridge_state.product_fit_grid_dirty = true;
+        bridge_state.productGridFitDirty = true;
         if (bridge_state.terminal_widget) |*widget| {
             widget.invalidatePresentationGeometry();
         }
@@ -167,11 +167,11 @@ pub fn applyTerminalPinchZoom(scale_factor: f32) i32 {
 }
 
 pub fn setTerminalPinchActive(active: bool) i32 {
-    bridge_state.pinch_zoom_active = active;
+    bridge_state.pinchZoomActive = active;
     if (!active) {
         if (bridge_state.renderer) |renderer| {
             if (renderer.settleExternalHostTerminalFontScale()) {
-                bridge_state.product_fit_grid_dirty = true;
+                bridge_state.productGridFitDirty = true;
             }
         }
         if (bridge_state.terminal_widget) |*widget| {
@@ -182,24 +182,24 @@ pub fn setTerminalPinchActive(active: bool) i32 {
     return 0;
 }
 
-pub fn noteSurfaceAvailableFromJava(
+pub fn onSurfaceAvailableFromJava(
     env: ?*anyopaque,
     surface: ?*anyopaque,
     width: i32,
     height: i32,
 ) u64 {
-    const native_window = if (builtin.is_test)
+    const nativeWindow = if (builtin.is_test)
         surface
     else
         ANativeWindow_fromSurface(env, surface);
-    swapNativeWindow(native_window);
-    if (native_window == null) return noteSurfaceDestroyed();
-    const seq = noteSurfaceAvailable(width, height);
+    swapNativeWindow(nativeWindow);
+    if (nativeWindow == null) return onSurfaceDestroyed();
+    const seq = onSurfaceAvailable(width, height);
     submitLifecycleCriticalSurfaceFrame();
     return seq;
 }
 
-pub fn noteSurfaceDestroyed() u64 {
+pub fn onSurfaceDestroyed() u64 {
     swapNativeWindow(null);
     _ = android_host.noteSurfaceDestroyed(&bridge_state.app_host, &bridge_state.render_host);
     if (bridge_state.renderer) |renderer| {
@@ -209,7 +209,7 @@ pub fn noteSurfaceDestroyed() u64 {
     return nextSequence();
 }
 
-pub fn noteSurfaceRedrawNeeded() u64 {
+pub fn onSurfaceRedrawNeeded() u64 {
     submitLifecycleCriticalSurfaceFrame();
     return nextSequence();
 }
@@ -218,11 +218,11 @@ pub fn currentNativeWindowToken() usize {
     return @intFromPtr(bridge_state.render_host.androidNativeWindow() orelse return 0);
 }
 
-pub fn currentSurfaceIdentityEpoch() u64 {
+pub fn currentSurfaceEpoch() u64 {
     return bridge_state.render_host.surfaceIdentityEpoch();
 }
 
-pub fn currentSurfaceIdentityTransition() native_host.SurfaceIdentityTransition {
+pub fn currentSurfaceTransition() native_host.SurfaceIdentityTransition {
     return bridge_state.last_surface_transition;
 }
 
@@ -295,7 +295,7 @@ pub fn currentRendererTextureHeight() i32 {
 
 pub fn restartShellSession() i32 {
     destroyTerminalWidget();
-    bridge_state.product_fit_grid_dirty = true;
+    bridge_state.productGridFitDirty = true;
     android_shell_session.restart() catch return @intFromEnum(android_shell_session.lastStartStatus());
     return @intFromEnum(android_shell_session.lastStartStatus());
 }
@@ -314,14 +314,14 @@ pub fn tickProductShellFrame() i32 {
     android_shell_session.poll() catch return 0;
 
     var pending_zoom_changed = false;
-    if (!bridge_state.pinch_zoom_active) {
+    if (!bridge_state.pinchZoomActive) {
         if (bridge_state.renderer) |renderer| {
             pending_zoom_changed = renderer.applyPendingZoomForExternalHost(app_shell.getTime()) catch false;
             if (pending_zoom_changed) {
-                bridge_state.product_fit_grid_dirty = true;
+                bridge_state.productGridFitDirty = true;
             }
             if (renderer.settleExternalHostTerminalFontScale()) {
-                bridge_state.product_fit_grid_dirty = true;
+                bridge_state.productGridFitDirty = true;
                 if (bridge_state.terminal_widget) |*widget| {
                     widget.invalidatePresentationGeometry();
                 }
@@ -336,7 +336,7 @@ pub fn tickProductShellFrame() i32 {
         }
     }
 
-    if (bridge_state.product_fit_grid_dirty) {
+    if (bridge_state.productGridFitDirty) {
         flushDirtyProductFitGridBeforeFrame();
     }
 
@@ -349,7 +349,7 @@ pub fn tickProductShellFrame() i32 {
         bridge_state.render_host.hasSurface() and
         (android_shell_session.needsRedraw() or
             bridge_state.render_host.redraw_requested or
-            bridge_state.pinch_zoom_active or
+            bridge_state.pinchZoomActive or
             pending_zoom_changed or
             prep_result_ready);
     if (!should_draw) return 1;
@@ -521,7 +521,7 @@ fn refreshShellSurfaceAfterSelectionChange() void {
     bridge_state.render_host.noteRedrawRequested();
 }
 
-fn productFitGridCommitInputs() ?ProductFitGridCommitInputs {
+fn productFitGridCommitInputs() ?ProductGridFitCommitInputs {
     const renderer = bridge_state.renderer orelse return null;
     const widget = ensureTerminalWidget() orelse return null;
     return .{
@@ -530,13 +530,13 @@ fn productFitGridCommitInputs() ?ProductFitGridCommitInputs {
     };
 }
 
-fn commitDirtyProductFitTerminalGrid(inputs: ProductFitGridCommitInputs) !void {
+fn commitDirtyProductFitTerminalGrid(inputs: ProductGridFitCommitInputs) !void {
     try ensureProductFitTerminalGrid(inputs.renderer, inputs.widget);
-    bridge_state.product_fit_grid_dirty = false;
+    bridge_state.productGridFitDirty = false;
 }
 
 fn commitDirtyProductFitTerminalGridIfReady() void {
-    if (!bridge_state.product_fit_grid_dirty) return;
+    if (!bridge_state.productGridFitDirty) return;
     const inputs = productFitGridCommitInputs() orelse return;
     commitDirtyProductFitTerminalGrid(inputs) catch return;
 }
@@ -545,7 +545,7 @@ fn commitDirtyProductFitTerminalGridIfReady() void {
 /// the renderer if needed and flush the pending grid commit before any frame
 /// draw/submission path enters live widget rendering.
 fn flushDirtyProductFitGridBeforeFrame() void {
-    if (!bridge_state.product_fit_grid_dirty) return;
+    if (!bridge_state.productGridFitDirty) return;
     _ = ensureAndroidGlesRenderer() catch return;
     commitDirtyProductFitTerminalGridIfReady();
 }
@@ -571,9 +571,9 @@ pub fn ensureAndroidGlesRenderer() !bool {
         bridge_state.app_host,
         bridge_state.render_host,
         .{
-            .app_font_path = android_terminal_runtime_font_path,
-            .editor_font_path = android_terminal_runtime_font_path,
-            .terminal_font_path = android_terminal_runtime_font_path,
+            .app_font_path = android_runtime_font_path,
+            .editor_font_path = android_runtime_font_path,
+            .terminal_font_path = android_runtime_font_path,
             .renderer_backend = .android_gles,
             .runtime_profile = .backend_smoke,
         },
@@ -613,7 +613,7 @@ fn ensureTerminalWidget() ?*widgets.TerminalWidget {
     };
     if (bridge_state.terminal_widget_session != session) {
         destroyTerminalWidget();
-        var widget = terminal_session_bootstrap.initWidget(session, .kitty, false, false);
+        var widget = terminal_session_widget_factory.initWidget(session, .kitty, false, false);
         widget.setUiFocused(true);
         bridge_state.terminal_widget = widget;
         bridge_state.terminal_widget_session = session;
@@ -723,65 +723,65 @@ fn drawBackendSmokeFrame(renderer: *renderer_mod.Renderer) void {
 }
 
 test "bridge routes Android lifecycle and surface truth through shared host state" {
-    try std.testing.expectEqual(@as(u64, 1), noteCreate());
+    try std.testing.expectEqual(@as(u64, 1), onCreate());
     try std.testing.expectEqual(native_host.AppLifecycleState.started, bridge_state.app_host.lifecycle_state);
     try std.testing.expectEqual(native_host.RenderSurfaceAvailability.unavailable, bridge_state.render_host.surface_availability);
 
-    try std.testing.expectEqual(@as(u64, 2), noteStart());
+    try std.testing.expectEqual(@as(u64, 2), onStart());
     try std.testing.expectEqual(native_host.AppLifecycleState.started, bridge_state.app_host.lifecycle_state);
 
-    try std.testing.expectEqual(@as(u64, 3), noteResume());
+    try std.testing.expectEqual(@as(u64, 3), onResume());
     try std.testing.expectEqual(native_host.AppLifecycleState.resumed, bridge_state.app_host.lifecycle_state);
     try std.testing.expect(bridge_state.app_host.active);
     try std.testing.expect(bridge_state.render_host.redraw_requested);
 
     bridge_state.render_host.clearRedrawRequested();
-    try std.testing.expectEqual(@as(u64, 4), noteSurfaceAvailableFromJava(@ptrFromInt(1), @ptrFromInt(0x1000), 400, 200));
+    try std.testing.expectEqual(@as(u64, 4), onSurfaceAvailableFromJava(@ptrFromInt(1), @ptrFromInt(0x1000), 400, 200));
     try std.testing.expectEqual(native_host.RenderSurfaceAvailability.available, bridge_state.render_host.surface_availability);
     try std.testing.expectEqual(@as(i32, 400), bridge_state.render_host.surface_metrics.drawable_width);
     try std.testing.expect(bridge_state.render_host.redraw_requested);
     try std.testing.expectEqual(@as(usize, 0x1000), currentNativeWindowToken());
-    try std.testing.expectEqual(@as(u64, 1), currentSurfaceIdentityEpoch());
-    try std.testing.expectEqual(native_host.SurfaceIdentityTransition.acquired, currentSurfaceIdentityTransition());
+    try std.testing.expectEqual(@as(u64, 1), currentSurfaceEpoch());
+    try std.testing.expectEqual(native_host.SurfaceIdentityTransition.acquired, currentSurfaceTransition());
     try std.testing.expectEqual(RendererStatus.drawn, currentRendererStatus());
 
     bridge_state.render_host.clearRedrawRequested();
-    try std.testing.expectEqual(@as(u64, 5), noteSurfaceAvailableFromJava(@ptrFromInt(1), @ptrFromInt(0x1000), 420, 210));
+    try std.testing.expectEqual(@as(u64, 5), onSurfaceAvailableFromJava(@ptrFromInt(1), @ptrFromInt(0x1000), 420, 210));
     try std.testing.expectEqual(@as(i32, 420), bridge_state.render_host.surface_metrics.drawable_width);
     try std.testing.expectEqual(@as(usize, 0x1000), currentNativeWindowToken());
-    try std.testing.expectEqual(@as(u64, 1), currentSurfaceIdentityEpoch());
-    try std.testing.expectEqual(native_host.SurfaceIdentityTransition.unchanged, currentSurfaceIdentityTransition());
+    try std.testing.expectEqual(@as(u64, 1), currentSurfaceEpoch());
+    try std.testing.expectEqual(native_host.SurfaceIdentityTransition.unchanged, currentSurfaceTransition());
 
-    try std.testing.expectEqual(@as(u64, 6), noteWindowFocusChanged(true));
+    try std.testing.expectEqual(@as(u64, 6), onWindowFocusChanged(true));
     try std.testing.expect(bridge_state.app_host.surface_focused);
     try std.testing.expect(!bridge_state.app_host.text_input_active);
 
-    try std.testing.expectEqual(@as(u64, 7), notePause());
+    try std.testing.expectEqual(@as(u64, 7), onPause());
     try std.testing.expectEqual(native_host.AppLifecycleState.paused, bridge_state.app_host.lifecycle_state);
     try std.testing.expect(!bridge_state.app_host.active);
     try std.testing.expect(!bridge_state.app_host.surface_focused);
 
-    try std.testing.expectEqual(@as(u64, 8), noteSurfaceDestroyed());
+    try std.testing.expectEqual(@as(u64, 8), onSurfaceDestroyed());
     try std.testing.expectEqual(native_host.RenderSurfaceAvailability.unavailable, bridge_state.render_host.surface_availability);
     try std.testing.expectEqual(@as(usize, 0), currentNativeWindowToken());
-    try std.testing.expectEqual(@as(u64, 2), currentSurfaceIdentityEpoch());
-    try std.testing.expectEqual(native_host.SurfaceIdentityTransition.retired, currentSurfaceIdentityTransition());
+    try std.testing.expectEqual(@as(u64, 2), currentSurfaceEpoch());
+    try std.testing.expectEqual(native_host.SurfaceIdentityTransition.retired, currentSurfaceTransition());
     try std.testing.expectEqual(RendererStatus.surface_destroyed, currentRendererStatus());
 
-    try std.testing.expectEqual(@as(u64, 9), noteSurfaceAvailableFromJava(@ptrFromInt(1), @ptrFromInt(0x1000), 430, 220));
+    try std.testing.expectEqual(@as(u64, 9), onSurfaceAvailableFromJava(@ptrFromInt(1), @ptrFromInt(0x1000), 430, 220));
     try std.testing.expectEqual(native_host.RenderSurfaceAvailability.available, bridge_state.render_host.surface_availability);
     try std.testing.expectEqual(@as(usize, 0x1000), currentNativeWindowToken());
-    try std.testing.expectEqual(@as(u64, 3), currentSurfaceIdentityEpoch());
-    try std.testing.expectEqual(native_host.SurfaceIdentityTransition.acquired, currentSurfaceIdentityTransition());
+    try std.testing.expectEqual(@as(u64, 3), currentSurfaceEpoch());
+    try std.testing.expectEqual(native_host.SurfaceIdentityTransition.acquired, currentSurfaceTransition());
 
-    try std.testing.expectEqual(@as(u64, 10), noteStop());
+    try std.testing.expectEqual(@as(u64, 10), onStop());
     try std.testing.expectEqual(native_host.AppLifecycleState.stopped, bridge_state.app_host.lifecycle_state);
 }
 
 test "bridge can create and draw a shared android gles renderer for backend smoke" {
-    try std.testing.expectEqual(@as(u64, 1), noteCreate());
-    try std.testing.expectEqual(@as(u64, 2), noteResume());
-    try std.testing.expectEqual(@as(u64, 3), noteSurfaceAvailableFromJava(@ptrFromInt(1), @ptrFromInt(0x1000), 400, 200));
+    try std.testing.expectEqual(@as(u64, 1), onCreate());
+    try std.testing.expectEqual(@as(u64, 2), onResume());
+    try std.testing.expectEqual(@as(u64, 3), onSurfaceAvailableFromJava(@ptrFromInt(1), @ptrFromInt(0x1000), 400, 200));
 
     try std.testing.expect(try ensureAndroidGlesRenderer());
     try std.testing.expect(!try ensureAndroidGlesRenderer());
@@ -792,34 +792,34 @@ test "bridge can create and draw a shared android gles renderer for backend smok
 }
 
 test "bridge visible viewport updates text-input ownership and effective sizing" {
-    try std.testing.expectEqual(@as(u64, 1), noteCreate());
-    try std.testing.expectEqual(@as(u64, 2), noteResume());
-    try std.testing.expectEqual(@as(u64, 3), noteSurfaceAvailableFromJava(@ptrFromInt(1), @ptrFromInt(0x1000), 400, 200));
+    try std.testing.expectEqual(@as(u64, 1), onCreate());
+    try std.testing.expectEqual(@as(u64, 2), onResume());
+    try std.testing.expectEqual(@as(u64, 3), onSurfaceAvailableFromJava(@ptrFromInt(1), @ptrFromInt(0x1000), 400, 200));
     try std.testing.expect(!bridge_state.app_host.text_input_active);
     try std.testing.expectEqual(@as(i32, 200), bridge_state.render_host.effectiveViewportMetrics().logical_height);
 
-    try std.testing.expectEqual(@as(u64, 4), noteVisibleViewport(400, 120, true));
+    try std.testing.expectEqual(@as(u64, 4), onVisibleViewport(400, 120, true));
     try std.testing.expect(bridge_state.app_host.text_input_active);
     try std.testing.expectEqual(@as(i32, 120), bridge_state.render_host.effectiveViewportMetrics().logical_height);
     try std.testing.expectEqual(RendererStatus.drawn, currentRendererStatus());
 
-    try std.testing.expectEqual(@as(u64, 5), noteVisibleViewport(400, 200, false));
+    try std.testing.expectEqual(@as(u64, 5), onVisibleViewport(400, 200, false));
     try std.testing.expect(!bridge_state.app_host.text_input_active);
     try std.testing.expectEqual(@as(i32, 200), bridge_state.render_host.effectiveViewportMetrics().logical_height);
 }
 
 test "bridge reports replaced when a live Android surface identity changes without retirement" {
-    try std.testing.expectEqual(@as(u64, 1), noteCreate());
-    try std.testing.expectEqual(@as(u64, 2), noteResume());
+    try std.testing.expectEqual(@as(u64, 1), onCreate());
+    try std.testing.expectEqual(@as(u64, 2), onResume());
 
-    try std.testing.expectEqual(@as(u64, 3), noteSurfaceAvailableFromJava(@ptrFromInt(1), @ptrFromInt(0x1000), 400, 200));
+    try std.testing.expectEqual(@as(u64, 3), onSurfaceAvailableFromJava(@ptrFromInt(1), @ptrFromInt(0x1000), 400, 200));
     try std.testing.expectEqual(@as(usize, 0x1000), currentNativeWindowToken());
-    try std.testing.expectEqual(@as(u64, 1), currentSurfaceIdentityEpoch());
-    try std.testing.expectEqual(native_host.SurfaceIdentityTransition.acquired, currentSurfaceIdentityTransition());
+    try std.testing.expectEqual(@as(u64, 1), currentSurfaceEpoch());
+    try std.testing.expectEqual(native_host.SurfaceIdentityTransition.acquired, currentSurfaceTransition());
 
-    try std.testing.expectEqual(@as(u64, 4), noteSurfaceAvailableFromJava(@ptrFromInt(1), @ptrFromInt(0x2000), 410, 210));
+    try std.testing.expectEqual(@as(u64, 4), onSurfaceAvailableFromJava(@ptrFromInt(1), @ptrFromInt(0x2000), 410, 210));
     try std.testing.expectEqual(@as(usize, 0x2000), currentNativeWindowToken());
-    try std.testing.expectEqual(@as(u64, 2), currentSurfaceIdentityEpoch());
-    try std.testing.expectEqual(native_host.SurfaceIdentityTransition.replaced, currentSurfaceIdentityTransition());
+    try std.testing.expectEqual(@as(u64, 2), currentSurfaceEpoch());
+    try std.testing.expectEqual(native_host.SurfaceIdentityTransition.replaced, currentSurfaceTransition());
     try std.testing.expectEqual(native_host.RenderSurfaceAvailability.available, bridge_state.render_host.surface_availability);
 }

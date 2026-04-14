@@ -38,3 +38,7 @@ Session entrypoint only. Keep this file short, stable, and current.
 - `../zide-mobile-pm`: mobile package/artifact production
 - JNI export ownership: native bridge now exports only current package-owner
   symbols with Java owner `uk.laurencegouws.terminal`
+- Zig bridge API naming pass landed in `src/android_bridge_exports.zig` and
+  `src/platform/android_runtime_bridge.zig` to remove stale bridge terminology;
+  JNI exports are now split into `src/android_bridge_exports/*.zig` ownership
+  files

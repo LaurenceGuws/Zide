@@ -128,6 +128,14 @@ A cut is done only if all are true:
 - JNI bridge exports now use only current `uk.laurencegouws.terminal` symbol
   ownership
 - readiness evaluation now uses only `.zide-userland-readiness.json`
+- Zig bridge surface/event API names now use concise current lifecycle wording
+  (`onCreate/onStart/onResume/...`, `onSurface*`, `currentSurface*`) and
+  internal Android runtime alias naming no longer uses bootstrap terminology
+- JNI export surface is now split into ownership files:
+  `src/android_bridge_exports/lifecycle_surface_exports.zig`,
+  `src/android_bridge_exports/renderer_state_exports.zig`,
+  `src/android_bridge_exports/shell_session_exports.zig`, and
+  `src/android_bridge_exports/shell_selection_exports.zig`
 - selection controller remains monolithic by design until a real split seam
   exists
 - queue remains Android-product-first, not shell-readiness-baseline-first
