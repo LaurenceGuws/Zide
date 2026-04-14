@@ -20,7 +20,7 @@ public final class UserlandWorkflowController {
 
         void setInstallState(UserlandInstallState installState);
 
-        void setBootstrapState(UserlandBootstrapState bootstrapState);
+        void setReadinessState(UserlandReadinessState readinessState);
 
         void restartShellSession(String eventName, String statusLabel, boolean logRefresh);
 
@@ -48,7 +48,7 @@ public final class UserlandWorkflowController {
                 final UserlandInstaller.Result result = UserlandInstaller.install(host.context(), release);
                 host.handler().post(() -> {
                     host.setInstallState(UserlandInstallState.idle());
-                    host.setBootstrapState(result.bootstrapState);
+                    host.setReadinessState(result.readinessState);
                     host.appendEvent("userland.install success " + result.detail);
                     host.restartShellSession("userland.install shellRestart", "userland-install-succeeded-restarted", true);
                 });

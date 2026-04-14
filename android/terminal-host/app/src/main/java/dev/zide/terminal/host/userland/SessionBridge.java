@@ -1,19 +1,19 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.userland;
 
-import dev.zide.terminal.userland.UserlandBootstrapState;
+import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandSessionCoordinator;
 
 /**
  * Adapts activity-owned callbacks to {@link UserlandSessionCoordinator.Host}.
  */
-public final class TerminalUserlandSessionHostBridge implements UserlandSessionCoordinator.Host {
+public final class SessionBridge implements UserlandSessionCoordinator.Host {
     /** Activity callbacks used by session refresh/apply telemetry flow. */
     public interface Callbacks {
         void appendEvent(String event);
 
         String shellStartStatusLabel(int status);
 
-        void applyBootstrapState(UserlandBootstrapState bootstrapState);
+        void applyReadinessState(UserlandReadinessState readinessState);
 
         void refreshProductShellState();
 
@@ -24,7 +24,7 @@ public final class TerminalUserlandSessionHostBridge implements UserlandSessionC
 
     private final Callbacks callbacks;
 
-    public TerminalUserlandSessionHostBridge(Callbacks callbacks) {
+    public SessionBridge(Callbacks callbacks) {
         this.callbacks = callbacks;
     }
 
@@ -39,8 +39,8 @@ public final class TerminalUserlandSessionHostBridge implements UserlandSessionC
     }
 
     @Override
-    public void applyBootstrapState(UserlandBootstrapState bootstrapState) {
-        callbacks.applyBootstrapState(bootstrapState);
+    public void applyReadinessState(UserlandReadinessState readinessState) {
+        callbacks.applyReadinessState(readinessState);
     }
 
     @Override

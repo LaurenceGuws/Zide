@@ -7,6 +7,7 @@ Android terminal work.
 
 - This file: active `focus`, `todo`, and `workflow`.
 - `ANDROID_JAVA_HOST_STRUCTURE.md`: Java ownership and structure contract.
+- `ANDROID_JAVA_NAMING_CONTRACT.md`: Java naming glossary and grammar.
 - `ANDROID_SHELL_BRINGUP_PLAN.md`: closed bring-up record and decisions.
 - `ANDROID_TERMINAL_HOST_PLAN.md`: long-lived architecture constraints.
 
@@ -108,8 +109,7 @@ A cut is done only if all are true:
 - widget/chrome/view-mode/surface activity wiring now composes through
   `host/TerminalWidgetHostAssembly` + `TerminalWidgetHostAssemblyHostCallbacks`
 - userland runtime-assets/workflow startup activity wiring now composes through
-  `host/TerminalUserlandWorkflowAssembly` +
-  `TerminalUserlandWorkflowAssemblyHostCallbacks`
+  `host/userland/WorkflowAssembly` + `WorkflowAssemblyCallbacks`
 - product-runtime controller startup activity wiring now composes through
   `host/TerminalProductRuntimeAssembly` +
   `TerminalProductRuntimeAssemblyHostCallbacks`

@@ -1,35 +1,35 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.userland;
 
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import dev.zide.terminal.userland.UserlandBootstrapBlockerController;
-import dev.zide.terminal.userland.UserlandBootstrapState;
+import dev.zide.terminal.userland.UserlandReadinessBlockerController;
+import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandInstallState;
 import dev.zide.terminal.userland.UserlandSessionCoordinator;
 import dev.zide.terminal.userland.UserlandWorkflowController;
 
-/** Functional callback adapter for {@link UserlandBootstrapBlockerController}. */
-public final class TerminalUserlandBootstrapBlockerHostCallbacks implements UserlandBootstrapBlockerController.Host {
+/** Functional callback adapter for {@link UserlandReadinessBlockerController}. */
+public final class ReadinessBlockerCallbacks implements UserlandReadinessBlockerController.Host {
     private final Supplier<UserlandInstallState> installState;
-    private final Supplier<UserlandBootstrapState> bootstrapState;
+    private final Supplier<UserlandReadinessState> readinessState;
     private final Supplier<UserlandWorkflowController> workflowController;
     private final Supplier<UserlandSessionCoordinator> sessionCoordinator;
     private final BiConsumer<String, String> showDebugView;
     private final Consumer<String> appendEvent;
     private final Consumer<String> updateStatus;
 
-    public TerminalUserlandBootstrapBlockerHostCallbacks(
+    public ReadinessBlockerCallbacks(
             Supplier<UserlandInstallState> installState,
-            Supplier<UserlandBootstrapState> bootstrapState,
+            Supplier<UserlandReadinessState> readinessState,
             Supplier<UserlandWorkflowController> workflowController,
             Supplier<UserlandSessionCoordinator> sessionCoordinator,
             BiConsumer<String, String> showDebugView,
             Consumer<String> appendEvent,
             Consumer<String> updateStatus) {
         this.installState = installState;
-        this.bootstrapState = bootstrapState;
+        this.readinessState = readinessState;
         this.workflowController = workflowController;
         this.sessionCoordinator = sessionCoordinator;
         this.showDebugView = showDebugView;
@@ -43,8 +43,8 @@ public final class TerminalUserlandBootstrapBlockerHostCallbacks implements User
     }
 
     @Override
-    public UserlandBootstrapState bootstrapState() {
-        return bootstrapState.get();
+    public UserlandReadinessState readinessState() {
+        return readinessState.get();
     }
 
     @Override

@@ -6,8 +6,9 @@ import android.widget.Button;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import dev.zide.terminal.userland.UserlandBootstrapBlockerController;
-import dev.zide.terminal.userland.UserlandBootstrapState;
+import dev.zide.terminal.host.userland.ReadinessBlockerCallbacks;
+import dev.zide.terminal.userland.UserlandReadinessBlockerController;
+import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandInstallState;
 import dev.zide.terminal.userland.UserlandSessionCoordinator;
 import dev.zide.terminal.userland.UserlandWorkflowController;
@@ -26,7 +27,7 @@ public final class TerminalUiStartupAssembly {
 
         Supplier<UserlandInstallState> currentInstallState();
 
-        Supplier<UserlandBootstrapState> currentBootstrapState();
+        Supplier<UserlandReadinessState> currentReadinessState();
 
         Supplier<UserlandWorkflowController> userlandWorkflowController();
 
@@ -60,10 +61,10 @@ public final class TerminalUiStartupAssembly {
 
     /** Immutable startup result values. */
     public static final class Result {
-        public final UserlandBootstrapBlockerController userlandBootstrapBlockerController;
+        public final UserlandReadinessBlockerController userlandReadinessBlockerController;
 
-        private Result(UserlandBootstrapBlockerController userlandBootstrapBlockerController) {
-            this.userlandBootstrapBlockerController = userlandBootstrapBlockerController;
+        private Result(UserlandReadinessBlockerController userlandReadinessBlockerController) {
+            this.userlandReadinessBlockerController = userlandReadinessBlockerController;
         }
     }
 
@@ -75,19 +76,19 @@ public final class TerminalUiStartupAssembly {
         host.viewportController().installViewportTracking();
         host.chromeController().bindSidebarControls();
         host.chromeController().bindViewModeToggle();
-        final UserlandBootstrapBlockerController userlandBootstrapBlockerController =
-                new UserlandBootstrapBlockerController(
+        final UserlandReadinessBlockerController userlandReadinessBlockerController =
+                new UserlandReadinessBlockerController(
                         host.productBootstrapRetryButton(),
                         host.productBootstrapDebugButton(),
-                        new TerminalUserlandBootstrapBlockerHostCallbacks(
+                        new ReadinessBlockerCallbacks(
                                 host.currentInstallState(),
-                                host.currentBootstrapState(),
+                                host.currentReadinessState(),
                                 host.userlandWorkflowController(),
                                 host.userlandSessionCoordinator(),
                                 host.showDebugView()::call,
                                 host.appendEvent(),
                                 host.updateStatus()));
-        userlandBootstrapBlockerController.bind();
+        userlandReadinessBlockerController.bind();
         host.chromeController().bindAssistBar();
         host.runtimeAssetsController().prepareRuntimeAssets();
         host.viewModeController().applyCurrentViewMode();
@@ -98,6 +99,6 @@ public final class TerminalUiStartupAssembly {
             host.leftSidebar().setTranslationX(-host.leftSidebar().getWidth());
             host.chromeController().updateSidebarVisibility(false);
         });
-        return new Result(userlandBootstrapBlockerController);
+        return new Result(userlandReadinessBlockerController);
     }
 }

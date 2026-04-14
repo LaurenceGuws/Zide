@@ -15,7 +15,7 @@ public final class UserlandSessionCoordinator {
 
         String shellStartStatusLabel(int status);
 
-        void applyBootstrapState(UserlandBootstrapState bootstrapState);
+        void applyReadinessState(UserlandReadinessState readinessState);
 
         void refreshProductShellState();
 
@@ -26,11 +26,11 @@ public final class UserlandSessionCoordinator {
 
     /** Result from one refresh pass. */
     public static final class RefreshResult {
-        public final UserlandBootstrapState bootstrapState;
+        public final UserlandReadinessState readinessState;
         public final ShellSessionController.PollResult pollResult;
 
-        public RefreshResult(UserlandBootstrapState bootstrapState, ShellSessionController.PollResult pollResult) {
-            this.bootstrapState = bootstrapState;
+        public RefreshResult(UserlandReadinessState readinessState, ShellSessionController.PollResult pollResult) {
+            this.readinessState = readinessState;
             this.pollResult = pollResult;
         }
     }
@@ -44,39 +44,39 @@ public final class UserlandSessionCoordinator {
         this.host = host;
     }
 
-    public UserlandBootstrapState loadBootstrapState() {
-        return shellSessionController.loadBootstrapState();
+    public UserlandReadinessState loadReadinessState() {
+        return shellSessionController.loadReadinessState();
     }
 
     public RefreshResult refresh(boolean logEvent) {
-        final UserlandBootstrapState bootstrapState = shellSessionController.loadBootstrapState();
-        final ShellSessionController.PollResult pollResult = shellSessionController.poll(bootstrapState);
-        applyPollTelemetry(bootstrapState, pollResult, logEvent);
-        return new RefreshResult(bootstrapState, pollResult);
+        final UserlandReadinessState readinessState = shellSessionController.loadReadinessState();
+        final ShellSessionController.PollResult pollResult = shellSessionController.poll(readinessState);
+        applyPollTelemetry(readinessState, pollResult, logEvent);
+        return new RefreshResult(readinessState, pollResult);
     }
 
     public RefreshResult refreshAndApply(boolean logEvent) {
         final RefreshResult refreshResult = refresh(logEvent);
-        host.applyBootstrapState(refreshResult.bootstrapState);
+        host.applyReadinessState(refreshResult.readinessState);
         host.refreshProductShellState();
         host.refreshDebugStatusSurface();
         return refreshResult;
     }
 
     private void applyPollTelemetry(
-            UserlandBootstrapState bootstrapState,
+            UserlandReadinessState readinessState,
             ShellSessionController.PollResult pollResult,
             boolean logEvent) {
         if (pollResult.autoStarted) {
             host.appendEvent("auto.shellStart status=" + host.shellStartStatusLabel(pollResult.autoStartStatus));
         }
         if (pollResult.autoStartBlocked) {
-            if (!bootstrapState.state.equals(lastAutoStartBlockedState)) {
+            if (!readinessState.state.equals(lastAutoStartBlockedState)) {
                 host.appendEvent(
-                        "auto.shellStart blocked=" + bootstrapState.state +
-                                " artifact=" + bootstrapState.artifact +
-                                " version=" + bootstrapState.version);
-                lastAutoStartBlockedState = bootstrapState.state;
+                        "auto.shellStart blocked=" + readinessState.state +
+                                " artifact=" + readinessState.artifact +
+                                " version=" + readinessState.version);
+                lastAutoStartBlockedState = readinessState.state;
             }
         } else {
             lastAutoStartBlockedState = "";

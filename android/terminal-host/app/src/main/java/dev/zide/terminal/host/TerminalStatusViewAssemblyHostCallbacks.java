@@ -7,7 +7,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import dev.zide.terminal.debug.AndroidDebugFormatter;
-import dev.zide.terminal.userland.UserlandBootstrapState;
+import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandInstallState;
 
 /** Functional callback adapter for {@link TerminalStatusViewAssembly.Host}. */
@@ -20,7 +20,7 @@ public final class TerminalStatusViewAssemblyHostCallbacks implements TerminalSt
     private final Consumer<Boolean> setImeVisible;
     private final Supplier<TerminalSurfaceHostBridge> surfaceHostBridge;
     private final Supplier<UserlandInstallState> currentInstallState;
-    private final Supplier<UserlandBootstrapState> currentBootstrapState;
+    private final Supplier<UserlandReadinessState> currentReadinessState;
     private final Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot;
     private final Consumer<String> notifyVisibleViewport;
 
@@ -33,7 +33,7 @@ public final class TerminalStatusViewAssemblyHostCallbacks implements TerminalSt
             Consumer<Boolean> setImeVisible,
             Supplier<TerminalSurfaceHostBridge> surfaceHostBridge,
             Supplier<UserlandInstallState> currentInstallState,
-            Supplier<UserlandBootstrapState> currentBootstrapState,
+            Supplier<UserlandReadinessState> currentReadinessState,
             Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot,
             Consumer<String> notifyVisibleViewport) {
         this.activity = activity;
@@ -44,7 +44,7 @@ public final class TerminalStatusViewAssemblyHostCallbacks implements TerminalSt
         this.setImeVisible = setImeVisible;
         this.surfaceHostBridge = surfaceHostBridge;
         this.currentInstallState = currentInstallState;
-        this.currentBootstrapState = currentBootstrapState;
+        this.currentReadinessState = currentReadinessState;
         this.currentSurfaceStateSnapshot = currentSurfaceStateSnapshot;
         this.notifyVisibleViewport = notifyVisibleViewport;
     }
@@ -90,8 +90,8 @@ public final class TerminalStatusViewAssemblyHostCallbacks implements TerminalSt
     }
 
     @Override
-    public UserlandBootstrapState currentBootstrapState() {
-        return currentBootstrapState.get();
+    public UserlandReadinessState currentReadinessState() {
+        return currentReadinessState.get();
     }
 
     @Override

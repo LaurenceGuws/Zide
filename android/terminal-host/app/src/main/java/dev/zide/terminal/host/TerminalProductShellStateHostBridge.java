@@ -6,7 +6,7 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import dev.zide.terminal.userland.ProductShellStatePresenter;
-import dev.zide.terminal.userland.UserlandBootstrapState;
+import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandInstallState;
 
 /**
@@ -23,7 +23,7 @@ public final class TerminalProductShellStateHostBridge implements ProductShellSt
 
         boolean installFailed();
 
-        UserlandBootstrapState bootstrapState();
+        UserlandReadinessState readinessState();
 
         UserlandInstallState installState();
 
@@ -73,8 +73,8 @@ public final class TerminalProductShellStateHostBridge implements ProductShellSt
     }
 
     @Override
-    public UserlandBootstrapState bootstrapState() {
-        return callbacks.bootstrapState();
+    public UserlandReadinessState readinessState() {
+        return callbacks.readinessState();
     }
 
     @Override

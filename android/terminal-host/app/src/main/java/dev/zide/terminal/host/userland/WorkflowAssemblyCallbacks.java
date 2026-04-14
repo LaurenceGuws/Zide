@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.userland;
 
 import android.content.Context;
 import android.os.Handler;
@@ -8,34 +8,34 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import dev.zide.terminal.userland.UserlandBootstrapState;
+import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandInstallState;
 import dev.zide.terminal.userland.UserlandRelease;
 
-/** Functional callback adapter for {@link TerminalUserlandWorkflowAssembly.Host}. */
-public final class TerminalUserlandWorkflowAssemblyHostCallbacks implements TerminalUserlandWorkflowAssembly.Host {
+/** Functional callback adapter for {@link WorkflowAssembly.Host}. */
+public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
     private final Supplier<Context> context;
     private final Supplier<Handler> handler;
     private final Supplier<UserlandRelease> userlandRelease;
     private final Consumer<UserlandRelease> setUserlandRelease;
     private final Consumer<UserlandInstallState> setInstallState;
-    private final Consumer<UserlandBootstrapState> setBootstrapState;
+    private final Consumer<UserlandReadinessState> setReadinessState;
     private final BiConsumer<UserlandInstallState, String> applyInstallState;
-    private final TerminalUserlandWorkflowHostCallbacks.RestartShellSessionCallback restartShellSession;
+    private final WorkflowCallbacks.RestartShellSessionCallback restartShellSession;
     private final BiConsumer<String, String> showDebugView;
     private final Consumer<String> appendEvent;
     private final Consumer<String> updateStatus;
     private final Supplier<TextView> packageStatusText;
 
-    public TerminalUserlandWorkflowAssemblyHostCallbacks(
+    public WorkflowAssemblyCallbacks(
             Supplier<Context> context,
             Supplier<Handler> handler,
             Supplier<UserlandRelease> userlandRelease,
             Consumer<UserlandRelease> setUserlandRelease,
             Consumer<UserlandInstallState> setInstallState,
-            Consumer<UserlandBootstrapState> setBootstrapState,
+            Consumer<UserlandReadinessState> setReadinessState,
             BiConsumer<UserlandInstallState, String> applyInstallState,
-            TerminalUserlandWorkflowHostCallbacks.RestartShellSessionCallback restartShellSession,
+            WorkflowCallbacks.RestartShellSessionCallback restartShellSession,
             BiConsumer<String, String> showDebugView,
             Consumer<String> appendEvent,
             Consumer<String> updateStatus,
@@ -45,7 +45,7 @@ public final class TerminalUserlandWorkflowAssemblyHostCallbacks implements Term
         this.userlandRelease = userlandRelease;
         this.setUserlandRelease = setUserlandRelease;
         this.setInstallState = setInstallState;
-        this.setBootstrapState = setBootstrapState;
+        this.setReadinessState = setReadinessState;
         this.applyInstallState = applyInstallState;
         this.restartShellSession = restartShellSession;
         this.showDebugView = showDebugView;
@@ -80,8 +80,8 @@ public final class TerminalUserlandWorkflowAssemblyHostCallbacks implements Term
     }
 
     @Override
-    public void setBootstrapState(UserlandBootstrapState bootstrapState) {
-        setBootstrapState.accept(bootstrapState);
+    public void setReadinessState(UserlandReadinessState readinessState) {
+        setReadinessState.accept(readinessState);
     }
 
     @Override

@@ -16,7 +16,7 @@ import dev.zide.terminal.input.ShellInputView;
 import dev.zide.terminal.scroll.TerminalScrollOverlayView;
 import dev.zide.terminal.selection.TerminalSelectionController;
 import dev.zide.terminal.userland.ProductShellStatePresenter;
-import dev.zide.terminal.userland.UserlandBootstrapState;
+import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandInstallState;
 
 /** Owns product widget/chrome/view-mode/surface host assembly for activity wiring. */
@@ -77,7 +77,7 @@ public final class TerminalWidgetHostAssembly {
 
         boolean currentInstallStateFailed();
 
-        UserlandBootstrapState currentBootstrapState();
+        UserlandReadinessState currentReadinessState();
 
         UserlandInstallState currentInstallState();
 
@@ -166,7 +166,7 @@ public final class TerminalWidgetHostAssembly {
                                 TerminalNativeBridge::nativeSharedShellRendererActiveBridge,
                                 host::currentInstallStateInstalling,
                                 host::currentInstallStateFailed,
-                                host::currentBootstrapState,
+                                host::currentReadinessState,
                                 host::currentInstallState,
                                 () -> host.surfaceHostBridge() != null ? host.surfaceHostBridge().currentSurfaceView() : null));
         final ProductShellStatePresenter productShellStatePresenter =

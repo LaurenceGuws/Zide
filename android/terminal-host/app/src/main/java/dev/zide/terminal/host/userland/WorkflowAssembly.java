@@ -1,16 +1,19 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.userland;
 
 import android.content.Context;
 import android.os.Handler;
 import android.widget.TextView;
 
-import dev.zide.terminal.userland.UserlandBootstrapState;
+import dev.zide.terminal.host.TerminalRuntimeAssetsController;
+import dev.zide.terminal.host.TerminalRuntimeAssetsHostBridge;
+import dev.zide.terminal.host.TerminalRuntimeAssetsHostCallbacks;
+import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandInstallState;
 import dev.zide.terminal.userland.UserlandRelease;
 import dev.zide.terminal.userland.UserlandWorkflowController;
 
 /** Owns userland runtime-assets/workflow host assembly for activity wiring. */
-public final class TerminalUserlandWorkflowAssembly {
+public final class WorkflowAssembly {
     /** Activity callbacks required for userland workflow assembly. */
     public interface Host {
         Context context();
@@ -23,7 +26,7 @@ public final class TerminalUserlandWorkflowAssembly {
 
         void setInstallState(UserlandInstallState installState);
 
-        void setBootstrapState(UserlandBootstrapState bootstrapState);
+        void setReadinessState(UserlandReadinessState readinessState);
 
         void applyInstallState(UserlandInstallState installState, String statusLabel);
 
@@ -41,12 +44,12 @@ public final class TerminalUserlandWorkflowAssembly {
     /** Immutable assembled userland workflow result. */
     public static final class Result {
         public final TerminalRuntimeAssetsController runtimeAssetsController;
-        public final TerminalUserlandWorkflowHostBridge userlandWorkflowHostBridge;
+        public final WorkflowBridge userlandWorkflowHostBridge;
         public final UserlandWorkflowController userlandWorkflowController;
 
         private Result(
                 TerminalRuntimeAssetsController runtimeAssetsController,
-                TerminalUserlandWorkflowHostBridge userlandWorkflowHostBridge,
+                WorkflowBridge userlandWorkflowHostBridge,
                 UserlandWorkflowController userlandWorkflowController) {
             this.runtimeAssetsController = runtimeAssetsController;
             this.userlandWorkflowHostBridge = userlandWorkflowHostBridge;
@@ -54,7 +57,7 @@ public final class TerminalUserlandWorkflowAssembly {
         }
     }
 
-    private TerminalUserlandWorkflowAssembly() {
+    private WorkflowAssembly() {
     }
 
     public static Result assemble(Host host) {
@@ -63,15 +66,15 @@ public final class TerminalUserlandWorkflowAssembly {
                         host.context(),
                         new TerminalRuntimeAssetsHostCallbacks(host::appendEvent)));
         host.setUserlandRelease(runtimeAssetsController.loadUserlandRelease());
-        final TerminalUserlandWorkflowHostBridge userlandWorkflowHostBridge = new TerminalUserlandWorkflowHostBridge(
+        final WorkflowBridge userlandWorkflowHostBridge = new WorkflowBridge(
                 host.context(),
                 host.handler(),
-                new TerminalUserlandWorkflowHostCallbacks(
+                new WorkflowCallbacks(
                         host::userlandRelease,
                         host::appendEvent,
                         host::applyInstallState,
                         host::setInstallState,
-                        host::setBootstrapState,
+                        host::setReadinessState,
                         host::restartShellSession,
                         host::showDebugView,
                         host.packageStatusText(),

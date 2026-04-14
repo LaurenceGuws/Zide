@@ -18,7 +18,7 @@ import dev.zide.terminal.gesture.TerminalGestureStateController;
 import dev.zide.terminal.input.ShellInputView;
 import dev.zide.terminal.scroll.TerminalScrollOverlayView;
 import dev.zide.terminal.selection.TerminalSelectionController;
-import dev.zide.terminal.userland.UserlandBootstrapState;
+import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandInstallState;
 
 /** Functional callback adapter for {@link TerminalWidgetHostAssembly.Host}. */
@@ -50,7 +50,7 @@ public final class TerminalWidgetHostAssemblyHostCallbacks implements TerminalWi
     private final Supplier<TerminalSurfaceHostBridge> surfaceHostBridge;
     private final BooleanSupplier currentInstallStateInstalling;
     private final BooleanSupplier currentInstallStateFailed;
-    private final Supplier<UserlandBootstrapState> currentBootstrapState;
+    private final Supplier<UserlandReadinessState> currentReadinessState;
     private final Supplier<UserlandInstallState> currentInstallState;
     private final BooleanSupplier shouldRunProductFrameLoop;
     private final Runnable refreshProductScrollOverlay;
@@ -101,7 +101,7 @@ public final class TerminalWidgetHostAssemblyHostCallbacks implements TerminalWi
             Supplier<TerminalSurfaceHostBridge> surfaceHostBridge,
             BooleanSupplier currentInstallStateInstalling,
             BooleanSupplier currentInstallStateFailed,
-            Supplier<UserlandBootstrapState> currentBootstrapState,
+            Supplier<UserlandReadinessState> currentReadinessState,
             Supplier<UserlandInstallState> currentInstallState,
             BooleanSupplier shouldRunProductFrameLoop,
             Runnable refreshProductScrollOverlay,
@@ -150,7 +150,7 @@ public final class TerminalWidgetHostAssemblyHostCallbacks implements TerminalWi
         this.surfaceHostBridge = surfaceHostBridge;
         this.currentInstallStateInstalling = currentInstallStateInstalling;
         this.currentInstallStateFailed = currentInstallStateFailed;
-        this.currentBootstrapState = currentBootstrapState;
+        this.currentReadinessState = currentReadinessState;
         this.currentInstallState = currentInstallState;
         this.shouldRunProductFrameLoop = shouldRunProductFrameLoop;
         this.refreshProductScrollOverlay = refreshProductScrollOverlay;
@@ -310,8 +310,8 @@ public final class TerminalWidgetHostAssemblyHostCallbacks implements TerminalWi
     }
 
     @Override
-    public UserlandBootstrapState currentBootstrapState() {
-        return currentBootstrapState.get();
+    public UserlandReadinessState currentReadinessState() {
+        return currentReadinessState.get();
     }
 
     @Override

@@ -1,9 +1,9 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.userland;
 
 import android.content.Context;
 import android.os.Handler;
 
-import dev.zide.terminal.userland.UserlandBootstrapState;
+import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandInstallState;
 import dev.zide.terminal.userland.UserlandRelease;
 import dev.zide.terminal.userland.UserlandWorkflowController;
@@ -11,7 +11,7 @@ import dev.zide.terminal.userland.UserlandWorkflowController;
 /**
  * Adapts activity-owned callbacks to {@link UserlandWorkflowController.Host}.
  */
-public final class TerminalUserlandWorkflowHostBridge implements UserlandWorkflowController.Host {
+public final class WorkflowBridge implements UserlandWorkflowController.Host {
     /** Activity callbacks used by userland install and package workflows. */
     public interface Callbacks {
         UserlandRelease release();
@@ -22,7 +22,7 @@ public final class TerminalUserlandWorkflowHostBridge implements UserlandWorkflo
 
         void setInstallState(UserlandInstallState installState);
 
-        void setBootstrapState(UserlandBootstrapState bootstrapState);
+        void setReadinessState(UserlandReadinessState readinessState);
 
         void restartShellSession(String eventName, String statusLabel, boolean logRefresh);
 
@@ -37,7 +37,7 @@ public final class TerminalUserlandWorkflowHostBridge implements UserlandWorkflo
     private final Handler handler;
     private final Callbacks callbacks;
 
-    public TerminalUserlandWorkflowHostBridge(Context context, Handler handler, Callbacks callbacks) {
+    public WorkflowBridge(Context context, Handler handler, Callbacks callbacks) {
         this.context = context;
         this.handler = handler;
         this.callbacks = callbacks;
@@ -74,8 +74,8 @@ public final class TerminalUserlandWorkflowHostBridge implements UserlandWorkflo
     }
 
     @Override
-    public void setBootstrapState(UserlandBootstrapState bootstrapState) {
-        callbacks.setBootstrapState(bootstrapState);
+    public void setReadinessState(UserlandReadinessState readinessState) {
+        callbacks.setReadinessState(readinessState);
     }
 
     @Override

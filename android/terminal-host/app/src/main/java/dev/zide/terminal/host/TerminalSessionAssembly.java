@@ -6,7 +6,8 @@ import android.os.Handler;
 import java.util.function.Function;
 
 import dev.zide.terminal.debug.TerminalNativeStatusLabels;
-import dev.zide.terminal.userland.UserlandBootstrapState;
+import dev.zide.terminal.host.userland.SessionBridge;
+import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandPolicy;
 import dev.zide.terminal.userland.UserlandRelease;
 import dev.zide.terminal.userland.UserlandSessionCoordinator;
@@ -27,7 +28,7 @@ public final class TerminalSessionAssembly {
 
         void updateStatus(String statusLabel);
 
-        void applyBootstrapState(UserlandBootstrapState bootstrapState);
+        void applyReadinessState(UserlandReadinessState readinessState);
 
         void refreshProductShellState();
 
@@ -47,13 +48,13 @@ public final class TerminalSessionAssembly {
     /** Immutable assembled session/runtime construction result. */
     public static final class Result {
         public final dev.zide.terminal.session.ShellSessionController shellSessionController;
-        public final TerminalUserlandSessionHostBridge userlandSessionHostBridge;
+        public final SessionBridge userlandSessionHostBridge;
         public final UserlandSessionCoordinator userlandSessionCoordinator;
         public final TerminalFrameLoopController frameLoopController;
 
         private Result(
                 dev.zide.terminal.session.ShellSessionController shellSessionController,
-                TerminalUserlandSessionHostBridge userlandSessionHostBridge,
+                SessionBridge userlandSessionHostBridge,
                 UserlandSessionCoordinator userlandSessionCoordinator,
                 TerminalFrameLoopController frameLoopController) {
             this.shellSessionController = shellSessionController;
@@ -69,18 +70,18 @@ public final class TerminalSessionAssembly {
     public static Result assemble(Host host) {
         final dev.zide.terminal.session.ShellSessionController shellSessionController =
                 TerminalSessionHostFactory.createShellSessionController(
-                        UserlandPolicy.bootstrapStampPath(host.context()),
+                        UserlandPolicy.readinessStampPath(host.context()),
                         UserlandPolicy.shellPath(host.context()),
                         host.userlandRelease(),
                         host.nativeLoaded(),
                         host::nativeRestartShellSession,
                         host::nativePollShellSession,
                         host::nativeIsShellSessionAlive);
-        final TerminalUserlandSessionHostBridge userlandSessionHostBridge =
+        final SessionBridge userlandSessionHostBridge =
                 TerminalSessionHostFactory.createUserlandSessionHostBridge(
                         host::appendEvent,
                         (Function<Integer, String>) TerminalNativeStatusLabels::shellStartStatusLabel,
-                        host::applyBootstrapState,
+                        host::applyReadinessState,
                         host::refreshProductShellState,
                         host::refreshDebugStatusSurface,
                         host::updateStatus);

@@ -1,29 +1,29 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.userland;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import dev.zide.terminal.userland.UserlandBootstrapState;
+import dev.zide.terminal.userland.UserlandReadinessState;
 
-/** Functional callback adapter for {@link TerminalUserlandSessionHostBridge}. */
-public final class TerminalUserlandSessionHostCallbacks implements TerminalUserlandSessionHostBridge.Callbacks {
+/** Functional callback adapter for {@link SessionBridge}. */
+public final class SessionCallbacks implements SessionBridge.Callbacks {
     private final Consumer<String> appendEvent;
     private final Function<Integer, String> shellStartStatusLabel;
-    private final Consumer<UserlandBootstrapState> applyBootstrapState;
+    private final Consumer<UserlandReadinessState> applyReadinessState;
     private final Runnable refreshProductShellState;
     private final Runnable refreshDebugStatusSurface;
     private final Consumer<String> updateStatus;
 
-    public TerminalUserlandSessionHostCallbacks(
+    public SessionCallbacks(
             Consumer<String> appendEvent,
             Function<Integer, String> shellStartStatusLabel,
-            Consumer<UserlandBootstrapState> applyBootstrapState,
+            Consumer<UserlandReadinessState> applyReadinessState,
             Runnable refreshProductShellState,
             Runnable refreshDebugStatusSurface,
             Consumer<String> updateStatus) {
         this.appendEvent = appendEvent;
         this.shellStartStatusLabel = shellStartStatusLabel;
-        this.applyBootstrapState = applyBootstrapState;
+        this.applyReadinessState = applyReadinessState;
         this.refreshProductShellState = refreshProductShellState;
         this.refreshDebugStatusSurface = refreshDebugStatusSurface;
         this.updateStatus = updateStatus;
@@ -40,8 +40,8 @@ public final class TerminalUserlandSessionHostCallbacks implements TerminalUserl
     }
 
     @Override
-    public void applyBootstrapState(UserlandBootstrapState bootstrapState) {
-        applyBootstrapState.accept(bootstrapState);
+    public void applyReadinessState(UserlandReadinessState readinessState) {
+        applyReadinessState.accept(readinessState);
     }
 
     @Override

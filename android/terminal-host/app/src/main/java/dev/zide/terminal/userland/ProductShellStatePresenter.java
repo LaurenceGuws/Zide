@@ -16,7 +16,7 @@ public final class ProductShellStatePresenter {
 
         boolean installFailed();
 
-        UserlandBootstrapState bootstrapState();
+        UserlandReadinessState readinessState();
 
         UserlandInstallState installState();
 
@@ -40,29 +40,29 @@ public final class ProductShellStatePresenter {
     }
 
     public void refresh() {
-        final UserlandBootstrapState bootstrapState = host.bootstrapState();
+        final UserlandReadinessState readinessState = host.readinessState();
         final UserlandInstallState installState = host.installState();
-        final boolean launchReady = bootstrapState.launchReady;
+        final boolean launchReady = readinessState.launchReady;
         final boolean sharedShellActive = launchReady && host.nativeLoaded() && host.sharedShellRendererActive();
         final SurfaceView surfaceView = host.surfaceView();
         final boolean surfaceReady = surfaceView != null && surfaceView.getHolder().getSurface().isValid();
-        final boolean rendererMissing = launchReady && bootstrapState.expectedCurrent && surfaceReady && !sharedShellActive;
+        final boolean rendererMissing = launchReady && readinessState.expectedCurrent && surfaceReady && !sharedShellActive;
         final boolean showBlocker = installState.isInstalling()
                 || installState.isFailed()
                 || !launchReady
-                || !bootstrapState.expectedCurrent
+                || !readinessState.expectedCurrent
                 || rendererMissing;
         host.productBootstrapBlocker().setVisibility(showBlocker ? View.VISIBLE : View.GONE);
         host.showScrollOverlay(!showBlocker);
         if (showBlocker) {
-            host.productBootstrapTitle().setText(UserlandBootstrapUiPolicy.title(bootstrapState, installState, rendererMissing));
-            host.productBootstrapDetail().setText(UserlandBootstrapUiPolicy.detail(
+            host.productBootstrapTitle().setText(UserlandReadinessUiPolicy.title(readinessState, installState, rendererMissing));
+            host.productBootstrapDetail().setText(UserlandReadinessUiPolicy.detail(
                     (android.content.Context) host.productBootstrapTitle().getContext(),
-                    bootstrapState,
+                    readinessState,
                     installState,
                     rendererMissing));
             host.productBootstrapRetryButton().setEnabled(!installState.isInstalling());
-            host.productBootstrapRetryButton().setText(UserlandBootstrapUiPolicy.actionLabel(bootstrapState, installState));
+            host.productBootstrapRetryButton().setText(UserlandReadinessUiPolicy.actionLabel(readinessState, installState));
         }
     }
 }

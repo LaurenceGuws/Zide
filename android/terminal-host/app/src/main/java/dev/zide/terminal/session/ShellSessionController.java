@@ -1,6 +1,6 @@
 package dev.zide.terminal.session;
 
-import dev.zide.terminal.userland.UserlandBootstrapState;
+import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandRelease;
 
 /**
@@ -40,7 +40,7 @@ public final class ShellSessionController {
     }
 
     private final Bridge bridge;
-    private final String bootstrapStampPath;
+    private final String readinessStampPath;
     private final String shellPath;
     private final UserlandRelease release;
     private final boolean nativeLoaded;
@@ -48,22 +48,22 @@ public final class ShellSessionController {
 
     public ShellSessionController(
             Bridge bridge,
-            String bootstrapStampPath,
+            String readinessStampPath,
             String shellPath,
             UserlandRelease release,
             boolean nativeLoaded) {
         this.bridge = bridge;
-        this.bootstrapStampPath = bootstrapStampPath;
+        this.readinessStampPath = readinessStampPath;
         this.shellPath = shellPath;
         this.release = release;
         this.nativeLoaded = nativeLoaded;
     }
 
-    public UserlandBootstrapState loadBootstrapState() {
-        return UserlandBootstrapState.load(bootstrapStampPath, shellPath, release);
+    public UserlandReadinessState loadReadinessState() {
+        return UserlandReadinessState.load(readinessStampPath, shellPath, release);
     }
 
-    public PollResult poll(UserlandBootstrapState bootstrapState) {
+    public PollResult poll(UserlandReadinessState readinessState) {
         int status = nativeLoaded ? bridge.poll() : 0;
         boolean alive = nativeLoaded && bridge.isAlive();
         boolean autoStarted = false;
@@ -71,7 +71,7 @@ public final class ShellSessionController {
         boolean autoStartBlocked = false;
 
         if (nativeLoaded && !alive && !autoStartAttempted) {
-            if (bootstrapState.launchReady) {
+            if (readinessState.launchReady) {
                 autoStartAttempted = true;
                 autoStartStatus = bridge.restart();
                 autoStarted = true;

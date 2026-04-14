@@ -9,7 +9,7 @@ import android.widget.TextView;
 import dev.zide.terminal.debug.TerminalSurfaceStateSnapshotReader;
 import dev.zide.terminal.debug.TerminalSurfaceStateSnapshotHostCallbacks;
 import dev.zide.terminal.debug.TerminalStatusController;
-import dev.zide.terminal.userland.UserlandBootstrapState;
+import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandInstallState;
 
 /** Owns activity view binding plus debug-status/viewport controller assembly. */
@@ -32,7 +32,7 @@ public final class TerminalStatusViewAssembly {
 
         UserlandInstallState currentInstallState();
 
-        UserlandBootstrapState currentBootstrapState();
+        UserlandReadinessState currentReadinessState();
 
         dev.zide.terminal.debug.AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot();
 
@@ -138,7 +138,7 @@ public final class TerminalStatusViewAssembly {
                 () -> host.surfaceHostBridge() != null ? host.surfaceHostBridge().currentVisibleViewportWidth() : 0,
                 () -> host.surfaceHostBridge() != null ? host.surfaceHostBridge().currentVisibleViewportHeight() : 0,
                 host::currentInstallState,
-                host::currentBootstrapState,
+                host::currentReadinessState,
                 host::currentSurfaceStateSnapshot));
         final TerminalStatusController terminalStatusController = new TerminalStatusController(
                 viewBindings.statusText,

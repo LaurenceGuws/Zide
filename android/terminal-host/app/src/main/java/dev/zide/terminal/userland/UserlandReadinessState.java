@@ -13,7 +13,7 @@ import org.json.JSONObject;
  * <p>This class classifies the installed prefix against the release expected by the APK. It should
  * stay a small value/parser type and not perform install, UI, or shell-start work.
  */
-public final class UserlandBootstrapState {
+public final class UserlandReadinessState {
     public static final String STATE_MISSING_STAMP = "missing-stamp";
     public static final String STATE_INVALID_STAMP = "invalid-stamp";
     public static final String STATE_MISSING_SHELL = "missing-shell";
@@ -29,7 +29,7 @@ public final class UserlandBootstrapState {
     public final boolean launchReady;
     public final boolean expectedCurrent;
 
-    public UserlandBootstrapState(
+    public UserlandReadinessState(
             String state,
             String format,
             String artifact,
@@ -46,17 +46,17 @@ public final class UserlandBootstrapState {
         this.expectedCurrent = expectedCurrent;
     }
 
-    public static UserlandBootstrapState load(String stampPath, String shellPath, UserlandRelease release) {
+    public static UserlandReadinessState load(String stampPath, String shellPath, UserlandRelease release) {
         final File stampFile = new File(stampPath);
         if (!stampFile.isFile()) {
-            return new UserlandBootstrapState(STATE_MISSING_STAMP, "", "", "", "", false, false);
+            return new UserlandReadinessState(STATE_MISSING_STAMP, "", "", "", "", false, false);
         }
 
         final JSONObject stamp;
         try {
             stamp = new JSONObject(new String(Files.readAllBytes(stampFile.toPath()), StandardCharsets.UTF_8));
         } catch (IOException | JSONException err) {
-            return new UserlandBootstrapState(STATE_INVALID_STAMP, "", "", "", "", false, false);
+            return new UserlandReadinessState(STATE_INVALID_STAMP, "", "", "", "", false, false);
         }
 
         final String format = stamp.optString("format", "");
@@ -71,12 +71,12 @@ public final class UserlandBootstrapState {
                         && release.provider.equals(provider);
 
         if (!hasBash) {
-            return new UserlandBootstrapState(STATE_STAMP_NO_BASH, format, artifact, version, provider, false, expectedCurrent);
+            return new UserlandReadinessState(STATE_STAMP_NO_BASH, format, artifact, version, provider, false, expectedCurrent);
         }
         if (!shellExists) {
-            return new UserlandBootstrapState(STATE_MISSING_SHELL, format, artifact, version, provider, false, expectedCurrent);
+            return new UserlandReadinessState(STATE_MISSING_SHELL, format, artifact, version, provider, false, expectedCurrent);
         }
-        return new UserlandBootstrapState(
+        return new UserlandReadinessState(
                 expectedCurrent ? STATE_READY_CURRENT : STATE_READY_UPGRADE_NEEDED,
                 format,
                 artifact,

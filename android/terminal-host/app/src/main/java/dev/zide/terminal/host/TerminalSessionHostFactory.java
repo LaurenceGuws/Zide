@@ -5,8 +5,10 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.IntSupplier;
 
+import dev.zide.terminal.host.userland.SessionBridge;
+import dev.zide.terminal.host.userland.SessionCallbacks;
 import dev.zide.terminal.session.ShellSessionController;
-import dev.zide.terminal.userland.UserlandBootstrapState;
+import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandRelease;
 
 /** Session host assembly helpers. */
@@ -15,7 +17,7 @@ public final class TerminalSessionHostFactory {
     }
 
     public static ShellSessionController createShellSessionController(
-            String bootstrapStampPath,
+            String readinessStampPath,
             String shellPath,
             UserlandRelease userlandRelease,
             boolean nativeLoaded,
@@ -27,24 +29,24 @@ public final class TerminalSessionHostFactory {
                         restart,
                         poll,
                         isAlive)),
-                bootstrapStampPath,
+                readinessStampPath,
                 shellPath,
                 userlandRelease,
                 nativeLoaded);
     }
 
-    public static TerminalUserlandSessionHostBridge createUserlandSessionHostBridge(
+    public static SessionBridge createUserlandSessionHostBridge(
             Consumer<String> appendEvent,
             Function<Integer, String> shellStartStatusLabel,
-            Consumer<UserlandBootstrapState> applyBootstrapState,
+            Consumer<UserlandReadinessState> applyReadinessState,
             Runnable refreshProductShellState,
             Runnable refreshDebugStatusSurface,
             Consumer<String> updateStatus) {
-        return new TerminalUserlandSessionHostBridge(
-                new TerminalUserlandSessionHostCallbacks(
+        return new SessionBridge(
+                new SessionCallbacks(
                         appendEvent,
                         shellStartStatusLabel,
-                        applyBootstrapState,
+                        applyReadinessState,
                         refreshProductShellState,
                         refreshDebugStatusSurface,
                         updateStatus));

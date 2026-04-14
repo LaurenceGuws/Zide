@@ -9,7 +9,7 @@ import dev.zide.terminal.gesture.TerminalGestureStateController;
 import dev.zide.terminal.scroll.TerminalScrollOverlayView;
 import dev.zide.terminal.selection.TerminalSelectionController;
 import dev.zide.terminal.userland.ProductShellStatePresenter;
-import dev.zide.terminal.userland.UserlandBootstrapState;
+import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandInstallState;
 import dev.zide.terminal.userland.UserlandSessionCoordinator;
 
@@ -25,7 +25,7 @@ public final class TerminalProductRuntimeAssembly {
 
         void setInstallState(UserlandInstallState installState);
 
-        UserlandBootstrapState bootstrapState();
+        UserlandReadinessState readinessState();
 
         SurfaceView surfaceView();
 
@@ -60,7 +60,7 @@ public final class TerminalProductRuntimeAssembly {
                         host::nativeLoaded,
                         host::installState,
                         host::setInstallState,
-                        host::bootstrapState,
+                        host::readinessState,
                         host::surfaceView,
                         host::productBootstrapBlocker,
                         host::terminalScrollOverlay,

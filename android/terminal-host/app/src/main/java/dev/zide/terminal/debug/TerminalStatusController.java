@@ -4,7 +4,7 @@ import android.util.Log;
 import android.view.SurfaceView;
 import android.widget.TextView;
 
-import dev.zide.terminal.userland.UserlandBootstrapState;
+import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandInstallState;
 
 /** Owns the debug status surface and event log presentation. */
@@ -26,7 +26,7 @@ public final class TerminalStatusController {
 
         UserlandInstallState installState();
 
-        UserlandBootstrapState bootstrapState();
+        UserlandReadinessState readinessState();
 
         AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot();
     }
@@ -91,14 +91,14 @@ public final class TerminalStatusController {
         if (!host.debugViewEnabled()) {
             return;
         }
-        updateStatus("shell-state", host.bootstrapState());
+        updateStatus("shell-state", host.readinessState());
     }
 
     public void updateStatus(String state) {
-        updateStatus(state, host.bootstrapState());
+        updateStatus(state, host.readinessState());
     }
 
-    public void updateStatus(String state, UserlandBootstrapState bootstrapState) {
+    public void updateStatus(String state, UserlandReadinessState readinessState) {
         if (!host.debugViewEnabled()) {
             return;
         }
@@ -120,13 +120,13 @@ public final class TerminalStatusController {
                         host.visibleViewportHeight(),
                         host.installState().status,
                         host.installState().detail,
-                        bootstrapState.state,
-                        bootstrapState.format,
-                        bootstrapState.artifact,
-                        bootstrapState.version,
-                        bootstrapState.provider,
-                        bootstrapState.launchReady,
-                        bootstrapState.expectedCurrent,
+                        readinessState.state,
+                        readinessState.format,
+                        readinessState.artifact,
+                        readinessState.version,
+                        readinessState.provider,
+                        readinessState.launchReady,
+                        readinessState.expectedCurrent,
                         surfaceState.glesStatus,
                         surfaceState.glesSwapCount,
                         surfaceState.glesBoundEpoch,

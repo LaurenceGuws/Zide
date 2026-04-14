@@ -9,7 +9,7 @@ import dev.zide.terminal.gesture.TerminalGestureStateController;
 import dev.zide.terminal.scroll.TerminalScrollOverlayView;
 import dev.zide.terminal.selection.TerminalSelectionController;
 import dev.zide.terminal.userland.ProductShellStatePresenter;
-import dev.zide.terminal.userland.UserlandBootstrapState;
+import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandInstallState;
 import dev.zide.terminal.userland.UserlandSessionCoordinator;
 
@@ -25,7 +25,7 @@ public final class TerminalProductRuntimeController {
 
         void setInstallState(UserlandInstallState installState);
 
-        UserlandBootstrapState bootstrapState();
+        UserlandReadinessState readinessState();
 
         SurfaceView surfaceView();
 
@@ -67,14 +67,14 @@ public final class TerminalProductRuntimeController {
     public boolean shouldRunProductFrameLoop() {
         final SurfaceView activeSurfaceView = host.surfaceView();
         final UserlandInstallState installState = host.installState();
-        final UserlandBootstrapState bootstrapState = host.bootstrapState();
+        final UserlandReadinessState readinessState = host.readinessState();
         return !host.debugViewEnabled()
                 && host.nativeLoaded()
                 && !installState.isInstalling()
                 && !installState.isFailed()
-                && bootstrapState != null
-                && bootstrapState.launchReady
-                && bootstrapState.expectedCurrent
+                && readinessState != null
+                && readinessState.launchReady
+                && readinessState.expectedCurrent
                 && activeSurfaceView != null
                 && activeSurfaceView.getHolder().getSurface().isValid();
     }
@@ -116,14 +116,14 @@ public final class TerminalProductRuntimeController {
             return;
         }
         final UserlandInstallState installState = host.installState();
-        final UserlandBootstrapState bootstrapState = host.bootstrapState();
+        final UserlandReadinessState readinessState = host.readinessState();
         if (host.debugViewEnabled()
                 || !host.nativeLoaded()
                 || installState.isInstalling()
                 || installState.isFailed()
-                || bootstrapState == null
-                || !bootstrapState.launchReady
-                || !bootstrapState.expectedCurrent
+                || readinessState == null
+                || !readinessState.launchReady
+                || !readinessState.expectedCurrent
                 || host.productBootstrapBlocker().getVisibility() == View.VISIBLE) {
             scrollOverlay.updateScrollMetrics(0, 0, 0);
             return;

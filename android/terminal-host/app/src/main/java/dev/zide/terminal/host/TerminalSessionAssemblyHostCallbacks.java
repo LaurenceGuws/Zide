@@ -8,7 +8,7 @@ import java.util.function.Consumer;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
-import dev.zide.terminal.userland.UserlandBootstrapState;
+import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandRelease;
 
 /** Functional callback adapter for {@link TerminalSessionAssembly.Host}. */
@@ -19,7 +19,7 @@ public final class TerminalSessionAssemblyHostCallbacks implements TerminalSessi
     private final Supplier<Handler> handler;
     private final Consumer<String> appendEvent;
     private final Consumer<String> updateStatus;
-    private final Consumer<UserlandBootstrapState> applyBootstrapState;
+    private final Consumer<UserlandReadinessState> applyReadinessState;
     private final Runnable refreshProductShellState;
     private final Runnable refreshDebugStatusSurface;
     private final BooleanSupplier shouldRunProductFrameLoop;
@@ -35,7 +35,7 @@ public final class TerminalSessionAssemblyHostCallbacks implements TerminalSessi
             Supplier<Handler> handler,
             Consumer<String> appendEvent,
             Consumer<String> updateStatus,
-            Consumer<UserlandBootstrapState> applyBootstrapState,
+            Consumer<UserlandReadinessState> applyReadinessState,
             Runnable refreshProductShellState,
             Runnable refreshDebugStatusSurface,
             BooleanSupplier shouldRunProductFrameLoop,
@@ -49,7 +49,7 @@ public final class TerminalSessionAssemblyHostCallbacks implements TerminalSessi
         this.handler = handler;
         this.appendEvent = appendEvent;
         this.updateStatus = updateStatus;
-        this.applyBootstrapState = applyBootstrapState;
+        this.applyReadinessState = applyReadinessState;
         this.refreshProductShellState = refreshProductShellState;
         this.refreshDebugStatusSurface = refreshDebugStatusSurface;
         this.shouldRunProductFrameLoop = shouldRunProductFrameLoop;
@@ -90,8 +90,8 @@ public final class TerminalSessionAssemblyHostCallbacks implements TerminalSessi
     }
 
     @Override
-    public void applyBootstrapState(UserlandBootstrapState bootstrapState) {
-        applyBootstrapState.accept(bootstrapState);
+    public void applyReadinessState(UserlandReadinessState readinessState) {
+        applyReadinessState.accept(readinessState);
     }
 
     @Override

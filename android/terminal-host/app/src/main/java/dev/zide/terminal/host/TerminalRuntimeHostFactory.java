@@ -10,7 +10,7 @@ import dev.zide.terminal.gesture.TerminalGestureStateController;
 import dev.zide.terminal.scroll.TerminalScrollOverlayView;
 import dev.zide.terminal.selection.TerminalSelectionController;
 import dev.zide.terminal.userland.ProductShellStatePresenter;
-import dev.zide.terminal.userland.UserlandBootstrapState;
+import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandInstallState;
 import dev.zide.terminal.userland.UserlandSessionCoordinator;
 
@@ -29,7 +29,7 @@ public final class TerminalRuntimeHostFactory {
             BooleanSupplier nativeLoaded,
             Supplier<UserlandInstallState> installState,
             Consumer<UserlandInstallState> setInstallState,
-            Supplier<UserlandBootstrapState> bootstrapState,
+            Supplier<UserlandReadinessState> readinessState,
             Supplier<android.view.SurfaceView> surfaceView,
             Supplier<android.view.View> productBootstrapBlocker,
             Supplier<TerminalScrollOverlayView> terminalScrollOverlay,
@@ -50,7 +50,7 @@ public final class TerminalRuntimeHostFactory {
                 nativeLoaded,
                 installState,
                 setInstallState,
-                bootstrapState,
+                readinessState,
                 surfaceView,
                 productBootstrapBlocker,
                 terminalScrollOverlay,

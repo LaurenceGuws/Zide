@@ -6,7 +6,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 import dev.zide.terminal.debug.AndroidDebugFormatter;
-import dev.zide.terminal.userland.UserlandBootstrapState;
+import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandInstallState;
 
 /** Functional callback adapter for {@link TerminalStatusHostBridge}. */
@@ -19,7 +19,7 @@ public final class TerminalStatusHostCallbacks implements TerminalStatusHostBrid
     private final IntSupplier visibleViewportWidth;
     private final IntSupplier visibleViewportHeight;
     private final Supplier<UserlandInstallState> installState;
-    private final Supplier<UserlandBootstrapState> bootstrapState;
+    private final Supplier<UserlandReadinessState> readinessState;
     private final Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot;
 
     /** Lightweight int supplier to avoid boxing in callback paths. */
@@ -36,7 +36,7 @@ public final class TerminalStatusHostCallbacks implements TerminalStatusHostBrid
             IntSupplier visibleViewportWidth,
             IntSupplier visibleViewportHeight,
             Supplier<UserlandInstallState> installState,
-            Supplier<UserlandBootstrapState> bootstrapState,
+            Supplier<UserlandReadinessState> readinessState,
             Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot) {
         this.debugViewEnabled = debugViewEnabled;
         this.nativeLoaded = nativeLoaded;
@@ -46,7 +46,7 @@ public final class TerminalStatusHostCallbacks implements TerminalStatusHostBrid
         this.visibleViewportWidth = visibleViewportWidth;
         this.visibleViewportHeight = visibleViewportHeight;
         this.installState = installState;
-        this.bootstrapState = bootstrapState;
+        this.readinessState = readinessState;
         this.currentSurfaceStateSnapshot = currentSurfaceStateSnapshot;
     }
 
@@ -91,8 +91,8 @@ public final class TerminalStatusHostCallbacks implements TerminalStatusHostBrid
     }
 
     @Override
-    public UserlandBootstrapState bootstrapState() {
-        return bootstrapState.get();
+    public UserlandReadinessState readinessState() {
+        return readinessState.get();
     }
 
     @Override

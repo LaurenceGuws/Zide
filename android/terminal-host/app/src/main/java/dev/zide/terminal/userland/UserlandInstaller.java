@@ -32,11 +32,11 @@ public final class UserlandInstaller {
     private static final int READ_TIMEOUT_MS = 300000;
 
     public static final class Result {
-        public final UserlandBootstrapState bootstrapState;
+        public final UserlandReadinessState readinessState;
         public final String detail;
 
-        public Result(UserlandBootstrapState bootstrapState, String detail) {
-            this.bootstrapState = bootstrapState;
+        public Result(UserlandReadinessState readinessState, String detail) {
+            this.readinessState = readinessState;
             this.detail = detail;
         }
     }
@@ -48,15 +48,15 @@ public final class UserlandInstaller {
         final UserlandArtifact artifact = readArtifactManifest(context, release);
         final File archive = fetchArtifact(context, artifact);
         installArchive(context, archive, artifact);
-        final UserlandBootstrapState bootstrapState = UserlandBootstrapState.load(
-                UserlandPolicy.bootstrapStampPath(context),
+        final UserlandReadinessState readinessState = UserlandReadinessState.load(
+                UserlandPolicy.readinessStampPath(context),
                 UserlandPolicy.shellPath(context),
                 release);
-        if (!bootstrapState.launchReady) {
+        if (!readinessState.launchReady) {
             throw new IOException("install finished without a launchable bash shell");
         }
         return new Result(
-                bootstrapState,
+                readinessState,
                 "artifact=" + artifact.name + " version=" + artifact.version + " provider=" + artifact.provider);
     }
 

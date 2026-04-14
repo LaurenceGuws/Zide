@@ -5,6 +5,9 @@ file contents match class-level responsibility contracts.
 
 This document is structure authority only. It is not the active todo queue.
 
+Naming authority for Java terms and class/package grammar lives in
+`app_architecture/platform/android/ANDROID_JAVA_NAMING_CONTRACT.md`.
+
 ## Boundaries
 
 Java code exists to integrate Android-native lifecycle, input, surfaces,
@@ -71,8 +74,13 @@ Current shape markers (for hygiene tracking, not hard limits):
 - `host/TerminalStatusViewAssemblyHostCallbacks.java`: `106` lines
 - `host/TerminalWidgetHostAssembly.java`: `278` lines
 - `host/TerminalWidgetHostAssemblyHostCallbacks.java`: `421` lines
-- `host/TerminalUserlandWorkflowAssembly.java`: `84` lines
-- `host/TerminalUserlandWorkflowAssemblyHostCallbacks.java`: `116` lines
+- `host/userland/WorkflowAssembly.java`: `87` lines
+- `host/userland/WorkflowAssemblyCallbacks.java`: `116` lines
+- `host/userland/WorkflowBridge.java`: `100` lines
+- `host/userland/WorkflowCallbacks.java`: `95` lines
+- `host/userland/SessionBridge.java`: `60` lines
+- `host/userland/SessionCallbacks.java`: `61` lines
+- `host/userland/ReadinessBlockerCallbacks.java`: `74` lines
 - `host/TerminalUiHostFactory.java`: `56` lines
 - `host/TerminalUiStartupAssembly.java`: `103` lines
 - `host/TerminalUiStartupHostCallbacks.java`: `164` lines
@@ -145,13 +153,13 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/TerminalSurfaceWidgetController.java` | Good | Owns the terminal widget callback surface: surface lifecycle callbacks, product gestures, and scroll-overlay callbacks for one terminal instance. | Keep this widget-scoped; future tabs should compose multiple widget controllers, not fork activity logic. |
 | `host/TerminalShellSessionBridge.java` | Good | Owns shell-session native bridge callback adaptation from activity into `session/ShellSessionController.Bridge`. | Keep shell poll/restart policy in `ShellSessionController`; keep this adapter callback-only. |
 | `host/TerminalShellSessionCallbacks.java` | Good | Functional callback adapter from activity native access into `TerminalShellSessionBridge`. | Keep adapter-only; shell session policy stays in `ShellSessionController`. |
-| `host/TerminalUserlandSessionHostBridge.java` | Good | Owns userland session refresh/poll telemetry callback adaptation from activity into `userland/UserlandSessionCoordinator`. | Keep poll/telemetry behavior in `UserlandSessionCoordinator`; keep this adapter callback-only. |
-| `host/TerminalUserlandSessionHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalUserlandSessionHostBridge`. | Keep adapter-only; userland session behavior stays in `UserlandSessionCoordinator`. |
-| `host/TerminalUserlandBootstrapBlockerHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `userland/UserlandBootstrapBlockerController`. | Keep adapter-only; bootstrap-blocker behavior stays in `UserlandBootstrapBlockerController`. |
-| `host/TerminalUserlandWorkflowHostBridge.java` | Good | Owns userland install/workflow host callback adaptation from activity state/actions into `userland/UserlandWorkflowController`. | Keep workflow behavior in `UserlandWorkflowController`; keep this adapter state-free except fixed context/handler references. |
-| `host/TerminalUserlandWorkflowHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalUserlandWorkflowHostBridge`. | Keep adapter-only; workflow behavior stays in `UserlandWorkflowController`. |
-| `host/TerminalUserlandWorkflowAssembly.java` | Good | Owns userland runtime-assets/workflow startup assembly so activity no longer inlines userland bridge/controller construction. | Keep this assembly-only; workflow behavior stays in workflow controller + bridge. |
-| `host/TerminalUserlandWorkflowAssemblyHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalUserlandWorkflowAssembly`. | Keep adapter-only; avoid moving userland workflow behavior into this adapter. |
+| `host/userland/SessionBridge.java` | Good | Owns userland session refresh/poll telemetry callback adaptation from activity into `userland/UserlandSessionCoordinator`. | Keep poll/telemetry behavior in `UserlandSessionCoordinator`; keep this adapter callback-only. |
+| `host/userland/SessionCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/userland/SessionBridge`. | Keep adapter-only; userland session behavior stays in `UserlandSessionCoordinator`. |
+| `host/userland/ReadinessBlockerCallbacks.java` | Good | Functional callback adapter from activity state/actions into `userland/UserlandReadinessBlockerController`. | Keep adapter-only; readiness-blocker behavior stays in `UserlandReadinessBlockerController`. |
+| `host/userland/WorkflowBridge.java` | Good | Owns userland install/workflow host callback adaptation from activity state/actions into `userland/UserlandWorkflowController`. | Keep workflow behavior in `UserlandWorkflowController`; keep this adapter state-free except fixed context/handler references. |
+| `host/userland/WorkflowCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/userland/WorkflowBridge`. | Keep adapter-only; workflow behavior stays in `UserlandWorkflowController`. |
+| `host/userland/WorkflowAssembly.java` | Good | Owns userland runtime-assets/workflow startup assembly so activity no longer inlines userland bridge/controller construction. | Keep this assembly-only; workflow behavior stays in workflow controller + bridge. |
+| `host/userland/WorkflowAssemblyCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/userland/WorkflowAssembly`. | Keep adapter-only; avoid moving userland workflow behavior into this adapter. |
 | `host/TerminalViewModeHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalViewModeController`. | Keep adapter-only; view-mode behavior stays in `TerminalViewModeController`. |
 | `host/TerminalViewportHostBridge.java` | Good | Owns viewport host callback adaptation and bound product surface/view references for `TerminalViewportController`. | Keep viewport behavior in `TerminalViewportController`; keep this adapter callback/reference-only. |
 | `host/TerminalViewportHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalViewportHostBridge`. | Keep adapter-only; viewport behavior stays in `TerminalViewportController`. |
@@ -164,18 +172,18 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `scroll/TerminalScrollOverlayView.java` | Good | Native Android view owns visual scroll affordance and drag interaction. | Keep scrollback truth in native bridge/session. |
 | `selection/TerminalSelectionController.java` | Partial | Too large, but currently one product concern: Android selection interaction. It owns word start, drag expansion, handles, toolbar, copy, and autoscroll. | Keep this monolithic until a cleaner seam exists; the attempted chrome split was reverted because it was not yet a real extraction. |
 | `selection/TerminalSelectionControllerFactory.java` | Good | Builds one selection controller from widget-scoped host callbacks and bridges. | Keep as construction-only glue; avoid moving selection behavior out of `TerminalSelectionController`. |
-| `session/ShellSessionController.java` | Good | Small owner of poll and first auto-start eligibility. | Keep bootstrap UI and install workflow out. |
+| `session/ShellSessionController.java` | Good | Small owner of poll and first auto-start eligibility. | Keep readiness UI and install workflow out. |
 | `userland/ProductShellStatePresenter.java` | Good | Presenter is userland-adjacent because blocker state depends on prefix readiness and install state. | Rename or move only if product shell presentation grows beyond userland readiness. |
 | `userland/UserlandArtifact.java` | Good | Package-private manifest value object. | Keep behavior in `UserlandInstaller`. |
-| `userland/UserlandBootstrapState.java` | Good | Value/parser for prefix readiness. | Keep installation and shell restart out. |
-| `userland/UserlandBootstrapUiPolicy.java` | Good | Pure copy/action policy for bootstrap blocker. | Keep async execution out. |
-| `userland/UserlandBootstrapBlockerController.java` | Good | Owns bootstrap-blocker retry/install and debug button policy. | Keep view visibility/layout policy in product-shell presenter/chrome, not here. |
+| `userland/UserlandReadinessState.java` | Good | Value/parser for prefix readiness. | Keep installation and shell restart out. |
+| `userland/UserlandReadinessUiPolicy.java` | Good | Pure copy/action policy for the readiness blocker. | Keep async execution out. |
+| `userland/UserlandReadinessBlockerController.java` | Good | Owns readiness-blocker retry/install and debug button policy. | Keep view visibility/layout policy in product-shell presenter/chrome, not here. |
 | `userland/UserlandCommandRunner.java` | Good | Runs `zide-pm` with app-private prefix environment. | Keep package selection authority in `../zide-mobile-pm`. |
 | `userland/UserlandInstaller.java` | Watch | Large but cohesive: manifest fetch, verification, extraction, links, stamp validation. | Split HTTP/archive helpers only if installer grows another product action. |
 | `userland/UserlandInstallState.java` | Good | Small immutable install state. | Keep as data. |
 | `userland/UserlandPolicy.java` | Good | Central prefix path policy. | Keep package/version decisions elsewhere. |
 | `userland/UserlandRelease.java` | Good | Parses the bundled release descriptor only. | Keep release production in `../zide-mobile-pm`. |
-| `userland/UserlandSessionCoordinator.java` | Good | Owns bootstrap refresh, shell poll, state application, and auto-start telemetry. | Keep install/update execution out. |
+| `userland/UserlandSessionCoordinator.java` | Good | Owns readiness refresh, shell poll, state application, and auto-start telemetry. | Keep install/update execution out. |
 | `userland/UserlandWorkflowController.java` | Good | Owns async install and package-doctor workflows. | Keep low-level archive extraction in `UserlandInstaller`. |
 
 ## Structure Pressure

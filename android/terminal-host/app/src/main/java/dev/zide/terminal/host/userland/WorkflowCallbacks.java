@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.userland;
 
 import android.widget.TextView;
 
@@ -6,17 +6,17 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import dev.zide.terminal.userland.UserlandBootstrapState;
+import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandInstallState;
 import dev.zide.terminal.userland.UserlandRelease;
 
-/** Functional callback adapter for {@link TerminalUserlandWorkflowHostBridge}. */
-public final class TerminalUserlandWorkflowHostCallbacks implements TerminalUserlandWorkflowHostBridge.Callbacks {
+/** Functional callback adapter for {@link WorkflowBridge}. */
+public final class WorkflowCallbacks implements WorkflowBridge.Callbacks {
     private final Supplier<UserlandRelease> release;
     private final Consumer<String> appendEvent;
     private final BiConsumer<UserlandInstallState, String> applyInstallState;
     private final Consumer<UserlandInstallState> setInstallState;
-    private final Consumer<UserlandBootstrapState> setBootstrapState;
+    private final Consumer<UserlandReadinessState> setReadinessState;
     private final RestartShellSessionCallback restartShellSession;
     private final BiConsumer<String, String> showDebugView;
     private final TextView packageStatusText;
@@ -27,12 +27,12 @@ public final class TerminalUserlandWorkflowHostCallbacks implements TerminalUser
         void restart(String eventName, String statusLabel, boolean logRefresh);
     }
 
-    public TerminalUserlandWorkflowHostCallbacks(
+    public WorkflowCallbacks(
             Supplier<UserlandRelease> release,
             Consumer<String> appendEvent,
             BiConsumer<UserlandInstallState, String> applyInstallState,
             Consumer<UserlandInstallState> setInstallState,
-            Consumer<UserlandBootstrapState> setBootstrapState,
+            Consumer<UserlandReadinessState> setReadinessState,
             RestartShellSessionCallback restartShellSession,
             BiConsumer<String, String> showDebugView,
             TextView packageStatusText,
@@ -41,7 +41,7 @@ public final class TerminalUserlandWorkflowHostCallbacks implements TerminalUser
         this.appendEvent = appendEvent;
         this.applyInstallState = applyInstallState;
         this.setInstallState = setInstallState;
-        this.setBootstrapState = setBootstrapState;
+        this.setReadinessState = setReadinessState;
         this.restartShellSession = restartShellSession;
         this.showDebugView = showDebugView;
         this.packageStatusText = packageStatusText;
@@ -69,8 +69,8 @@ public final class TerminalUserlandWorkflowHostCallbacks implements TerminalUser
     }
 
     @Override
-    public void setBootstrapState(UserlandBootstrapState bootstrapState) {
-        setBootstrapState.accept(bootstrapState);
+    public void setReadinessState(UserlandReadinessState readinessState) {
+        setReadinessState.accept(readinessState);
     }
 
     @Override

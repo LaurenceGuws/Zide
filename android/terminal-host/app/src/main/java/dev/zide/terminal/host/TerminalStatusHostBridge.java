@@ -4,7 +4,7 @@ import android.view.SurfaceView;
 
 import dev.zide.terminal.debug.AndroidDebugFormatter;
 import dev.zide.terminal.debug.TerminalStatusController;
-import dev.zide.terminal.userland.UserlandBootstrapState;
+import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandInstallState;
 
 /**
@@ -29,7 +29,7 @@ public final class TerminalStatusHostBridge implements TerminalStatusController.
 
         UserlandInstallState installState();
 
-        UserlandBootstrapState bootstrapState();
+        UserlandReadinessState readinessState();
 
         AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot();
     }
@@ -81,8 +81,8 @@ public final class TerminalStatusHostBridge implements TerminalStatusController.
     }
 
     @Override
-    public UserlandBootstrapState bootstrapState() {
-        return callbacks.bootstrapState();
+    public UserlandReadinessState readinessState() {
+        return callbacks.readinessState();
     }
 
     @Override

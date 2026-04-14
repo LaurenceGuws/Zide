@@ -12,7 +12,7 @@ public final class UserlandPolicy {
     private UserlandPolicy() {
     }
 
-    public static String bootstrapStampPath(android.content.Context context) {
+    public static String readinessStampPath(android.content.Context context) {
         return new java.io.File(context.getFilesDir(), ".zide-userland-bootstrap.json").getAbsolutePath();
     }
 

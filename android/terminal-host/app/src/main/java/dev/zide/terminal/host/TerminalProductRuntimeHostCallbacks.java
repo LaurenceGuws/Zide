@@ -13,7 +13,7 @@ import dev.zide.terminal.gesture.TerminalGestureStateController;
 import dev.zide.terminal.scroll.TerminalScrollOverlayView;
 import dev.zide.terminal.selection.TerminalSelectionController;
 import dev.zide.terminal.userland.ProductShellStatePresenter;
-import dev.zide.terminal.userland.UserlandBootstrapState;
+import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandInstallState;
 import dev.zide.terminal.userland.UserlandSessionCoordinator;
 
@@ -23,7 +23,7 @@ public final class TerminalProductRuntimeHostCallbacks implements TerminalProduc
     private final BooleanSupplier nativeLoaded;
     private final Supplier<UserlandInstallState> installState;
     private final Consumer<UserlandInstallState> setInstallState;
-    private final Supplier<UserlandBootstrapState> bootstrapState;
+    private final Supplier<UserlandReadinessState> readinessState;
     private final Supplier<SurfaceView> surfaceView;
     private final Supplier<View> productBootstrapBlocker;
     private final Supplier<TerminalScrollOverlayView> terminalScrollOverlay;
@@ -45,7 +45,7 @@ public final class TerminalProductRuntimeHostCallbacks implements TerminalProduc
             BooleanSupplier nativeLoaded,
             Supplier<UserlandInstallState> installState,
             Consumer<UserlandInstallState> setInstallState,
-            Supplier<UserlandBootstrapState> bootstrapState,
+            Supplier<UserlandReadinessState> readinessState,
             Supplier<SurfaceView> surfaceView,
             Supplier<View> productBootstrapBlocker,
             Supplier<TerminalScrollOverlayView> terminalScrollOverlay,
@@ -65,7 +65,7 @@ public final class TerminalProductRuntimeHostCallbacks implements TerminalProduc
         this.nativeLoaded = nativeLoaded;
         this.installState = installState;
         this.setInstallState = setInstallState;
-        this.bootstrapState = bootstrapState;
+        this.readinessState = readinessState;
         this.surfaceView = surfaceView;
         this.productBootstrapBlocker = productBootstrapBlocker;
         this.terminalScrollOverlay = terminalScrollOverlay;
@@ -104,8 +104,8 @@ public final class TerminalProductRuntimeHostCallbacks implements TerminalProduc
     }
 
     @Override
-    public UserlandBootstrapState bootstrapState() {
-        return bootstrapState.get();
+    public UserlandReadinessState readinessState() {
+        return readinessState.get();
     }
 
     @Override

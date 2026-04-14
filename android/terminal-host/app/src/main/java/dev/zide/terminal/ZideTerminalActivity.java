@@ -36,19 +36,19 @@ import dev.zide.terminal.host.TerminalSurfaceHostController;
 import dev.zide.terminal.host.TerminalSurfaceWidgetController;
 import dev.zide.terminal.host.TerminalUiStartupAssembly;
 import dev.zide.terminal.host.TerminalUiStartupHostCallbacks;
-import dev.zide.terminal.host.TerminalUserlandWorkflowAssembly;
-import dev.zide.terminal.host.TerminalUserlandWorkflowAssemblyHostCallbacks;
 import dev.zide.terminal.host.TerminalViewModeController;
 import dev.zide.terminal.host.TerminalViewportController;
 import dev.zide.terminal.host.TerminalWidgetHostAssembly;
 import dev.zide.terminal.host.TerminalWidgetHostAssemblyHostCallbacks;
+import dev.zide.terminal.host.userland.WorkflowAssembly;
+import dev.zide.terminal.host.userland.WorkflowAssemblyCallbacks;
 import dev.zide.terminal.input.ShellInputView;
 import dev.zide.terminal.input.TerminalHardwareKeyboardController;
 import dev.zide.terminal.input.TerminalImeFocusRecoveryController;
 import dev.zide.terminal.scroll.TerminalScrollOverlayView;
 import dev.zide.terminal.selection.TerminalSelectionController;
 import dev.zide.terminal.userland.ProductShellStatePresenter;
-import dev.zide.terminal.userland.UserlandBootstrapState;
+import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandInstallState;
 import dev.zide.terminal.userland.UserlandRelease;
 import dev.zide.terminal.userland.UserlandSessionCoordinator;
@@ -114,7 +114,7 @@ public final class ZideTerminalActivity extends Activity
     private TerminalProductRuntimeController terminalProductRuntimeController;
     private TerminalActivityLifecycleController terminalActivityLifecycleController;
     private UserlandInstallState currentInstallState = UserlandInstallState.idle();
-    private UserlandBootstrapState currentBootstrapState;
+    private UserlandReadinessState currentReadinessState;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -122,12 +122,12 @@ public final class ZideTerminalActivity extends Activity
         setContentView(R.layout.activity_main);
         initializeStatusAndViewControllers();
         assembleInteractionControllers();
-        assembleSessionControllers();
         assembleUserlandWorkflowControllers();
+        assembleSessionControllers();
         assembleWidgetHostControllers();
         assembleProductRuntimeController();
         assembleActivityLifecycleController();
-        currentBootstrapState = userlandSessionCoordinator.loadBootstrapState();
+        currentReadinessState = userlandSessionCoordinator.loadReadinessState();
         installInputControllers();
         bindAndStartUiControllers();
         finishOnCreateLifecycle();
@@ -193,7 +193,7 @@ public final class ZideTerminalActivity extends Activity
                         visible -> imeVisible = visible,
                         () -> surfaceHostBridge,
                         () -> currentInstallState,
-                        () -> currentBootstrapState,
+                        () -> currentReadinessState,
                         this::currentSurfaceStateSnapshot,
                         reason -> {
                             if (surfaceHostController != null) {
@@ -303,7 +303,7 @@ public final class ZideTerminalActivity extends Activity
                         () -> surfaceHostBridge,
                         () -> currentInstallState.isInstalling(),
                         () -> currentInstallState.isFailed(),
-                        () -> currentBootstrapState,
+                        () -> currentReadinessState,
                         () -> currentInstallState,
                         () -> terminalProductRuntimeController != null
                                 && terminalProductRuntimeController.shouldRunProductFrameLoop(),
@@ -362,7 +362,7 @@ public final class ZideTerminalActivity extends Activity
                         () -> handler,
                         this::appendEvent,
                         this::updateStatus,
-                        bootstrapState -> currentBootstrapState = bootstrapState,
+                        readinessState -> currentReadinessState = readinessState,
                         () -> {
                             if (terminalProductRuntimeController != null) {
                                 terminalProductRuntimeController.refreshProductShellState();
@@ -391,14 +391,14 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void assembleUserlandWorkflowControllers() {
-        final TerminalUserlandWorkflowAssembly.Result result = TerminalUserlandWorkflowAssembly.assemble(
-                new TerminalUserlandWorkflowAssemblyHostCallbacks(
+        final WorkflowAssembly.Result result = WorkflowAssembly.assemble(
+                new WorkflowAssemblyCallbacks(
                         () -> this,
                         () -> handler,
                         () -> userlandRelease,
                         release -> userlandRelease = release,
                         installState -> currentInstallState = installState,
-                        bootstrapState -> currentBootstrapState = bootstrapState,
+                        readinessState -> currentReadinessState = readinessState,
                         (installState, statusLabel) -> {
                             if (terminalProductRuntimeController != null) {
                                 terminalProductRuntimeController.applyInstallState(installState, statusLabel);
@@ -429,7 +429,7 @@ public final class ZideTerminalActivity extends Activity
                         () -> nativeLoaded,
                         () -> currentInstallState,
                         installState -> currentInstallState = installState,
-                        () -> currentBootstrapState,
+                        () -> currentReadinessState,
                         () -> surfaceHostBridge != null ? surfaceHostBridge.currentSurfaceView() : null,
                         () -> productBootstrapBlocker,
                         () -> terminalScrollOverlay,
@@ -473,7 +473,7 @@ public final class ZideTerminalActivity extends Activity
                         () -> productBootstrapRetryButton,
                         () -> productBootstrapDebugButton,
                         () -> currentInstallState,
-                        () -> currentBootstrapState,
+                        () -> currentReadinessState,
                         () -> userlandWorkflowController,
                         () -> userlandSessionCoordinator,
                         (eventName, statusLabel) -> {

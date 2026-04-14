@@ -5,7 +5,7 @@ import android.view.SurfaceView;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
-import dev.zide.terminal.userland.UserlandBootstrapState;
+import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandInstallState;
 
 /** Functional callback adapter for {@link TerminalProductShellStateHostBridge}. */
@@ -14,7 +14,7 @@ public final class TerminalProductShellStateHostCallbacks implements TerminalPro
     private final BooleanSupplier sharedShellRendererActive;
     private final BooleanSupplier installInstalling;
     private final BooleanSupplier installFailed;
-    private final Supplier<UserlandBootstrapState> bootstrapState;
+    private final Supplier<UserlandReadinessState> readinessState;
     private final Supplier<UserlandInstallState> installState;
     private final Supplier<SurfaceView> surfaceView;
 
@@ -23,14 +23,14 @@ public final class TerminalProductShellStateHostCallbacks implements TerminalPro
             BooleanSupplier sharedShellRendererActive,
             BooleanSupplier installInstalling,
             BooleanSupplier installFailed,
-            Supplier<UserlandBootstrapState> bootstrapState,
+            Supplier<UserlandReadinessState> readinessState,
             Supplier<UserlandInstallState> installState,
             Supplier<SurfaceView> surfaceView) {
         this.nativeLoaded = nativeLoaded;
         this.sharedShellRendererActive = sharedShellRendererActive;
         this.installInstalling = installInstalling;
         this.installFailed = installFailed;
-        this.bootstrapState = bootstrapState;
+        this.readinessState = readinessState;
         this.installState = installState;
         this.surfaceView = surfaceView;
     }
@@ -56,8 +56,8 @@ public final class TerminalProductShellStateHostCallbacks implements TerminalPro
     }
 
     @Override
-    public UserlandBootstrapState bootstrapState() {
-        return bootstrapState.get();
+    public UserlandReadinessState readinessState() {
+        return readinessState.get();
     }
 
     @Override

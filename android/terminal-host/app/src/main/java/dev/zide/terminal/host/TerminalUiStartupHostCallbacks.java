@@ -7,7 +7,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import dev.zide.terminal.userland.ProductShellStatePresenter;
-import dev.zide.terminal.userland.UserlandBootstrapState;
+import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandInstallState;
 import dev.zide.terminal.userland.UserlandSessionCoordinator;
 import dev.zide.terminal.userland.UserlandWorkflowController;
@@ -19,7 +19,7 @@ public final class TerminalUiStartupHostCallbacks implements TerminalUiStartupAs
     private final Supplier<Button> productBootstrapRetryButton;
     private final Supplier<Button> productBootstrapDebugButton;
     private final Supplier<UserlandInstallState> currentInstallState;
-    private final Supplier<UserlandBootstrapState> currentBootstrapState;
+    private final Supplier<UserlandReadinessState> currentReadinessState;
     private final Supplier<UserlandWorkflowController> userlandWorkflowController;
     private final Supplier<UserlandSessionCoordinator> userlandSessionCoordinator;
     private final TerminalUiStartupAssembly.ShowDebugView showDebugView;
@@ -39,7 +39,7 @@ public final class TerminalUiStartupHostCallbacks implements TerminalUiStartupAs
             Supplier<Button> productBootstrapRetryButton,
             Supplier<Button> productBootstrapDebugButton,
             Supplier<UserlandInstallState> currentInstallState,
-            Supplier<UserlandBootstrapState> currentBootstrapState,
+            Supplier<UserlandReadinessState> currentReadinessState,
             Supplier<UserlandWorkflowController> userlandWorkflowController,
             Supplier<UserlandSessionCoordinator> userlandSessionCoordinator,
             TerminalUiStartupAssembly.ShowDebugView showDebugView,
@@ -57,7 +57,7 @@ public final class TerminalUiStartupHostCallbacks implements TerminalUiStartupAs
         this.productBootstrapRetryButton = productBootstrapRetryButton;
         this.productBootstrapDebugButton = productBootstrapDebugButton;
         this.currentInstallState = currentInstallState;
-        this.currentBootstrapState = currentBootstrapState;
+        this.currentReadinessState = currentReadinessState;
         this.userlandWorkflowController = userlandWorkflowController;
         this.userlandSessionCoordinator = userlandSessionCoordinator;
         this.showDebugView = showDebugView;
@@ -98,8 +98,8 @@ public final class TerminalUiStartupHostCallbacks implements TerminalUiStartupAs
     }
 
     @Override
-    public Supplier<UserlandBootstrapState> currentBootstrapState() {
-        return currentBootstrapState;
+    public Supplier<UserlandReadinessState> currentReadinessState() {
+        return currentReadinessState;
     }
 
     @Override
