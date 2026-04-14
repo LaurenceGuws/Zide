@@ -316,10 +316,12 @@ public final class TerminalSelectionController {
                 return true;
             case MotionEvent.ACTION_MOVE:
                 positionDraggedHandle(handle, handle.getX() + event.getX(), handle.getY() + event.getY());
-                if (!commitSelectionDragIfNeeded(selectionHandleAnchorX(handle), selectionHandleAnchorY(handle))) {
+                final float moveAnchorX = currentDraggedHandleAnchorX(handle);
+                final float moveAnchorY = currentDraggedHandleAnchorY(handle);
+                if (!commitSelectionDragIfNeeded(moveAnchorX, moveAnchorY)) {
                     return true;
                 }
-                if (updateSelectionFromPoint(selectionHandleAnchorX(handle), selectionHandleAnchorY(handle)) == 0) {
+                if (updateSelectionFromPoint(moveAnchorX, moveAnchorY) == 0) {
                     onSelectionUpdateSuccessDuringDrag();
                 }
                 return true;
@@ -327,7 +329,9 @@ public final class TerminalSelectionController {
             case MotionEvent.ACTION_CANCEL:
                 if (selectionDragCommitted) {
                     positionDraggedHandle(handle, handle.getX() + event.getX(), handle.getY() + event.getY());
-                    if (updateSelectionFromPoint(selectionHandleAnchorX(handle), selectionHandleAnchorY(handle)) == 0) {
+                    final float releaseAnchorX = currentDraggedHandleAnchorX(handle);
+                    final float releaseAnchorY = currentDraggedHandleAnchorY(handle);
+                    if (updateSelectionFromPoint(releaseAnchorX, releaseAnchorY) == 0) {
                         onSelectionUpdateSuccess();
                     }
                 }
@@ -836,6 +840,14 @@ public final class TerminalSelectionController {
     private float selectionHandleAnchorY(View handle) {
         final float offsetY = SELECTION_HANDLE_Y_OFFSET_DP * host.context().getResources().getDisplayMetrics().density;
         return (handle.getY() + (handle.getHeight() / 2.0f)) - offsetY;
+    }
+
+    private float currentDraggedHandleAnchorX(View handle) {
+        return selectionHandleAnchorX(handle);
+    }
+
+    private float currentDraggedHandleAnchorY(View handle) {
+        return selectionHandleAnchorY(handle);
     }
 
     private void syncSelectionHandle(View handle, boolean startHandle) {
