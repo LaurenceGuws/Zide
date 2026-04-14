@@ -1,11 +1,11 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.session;
 
 import dev.zide.terminal.session.ShellSessionController;
 
 /**
  * Adapts native shell callbacks to {@link ShellSessionController.Bridge}.
  */
-public final class TerminalShellSessionBridge implements ShellSessionController.Bridge {
+public final class ShellBridge implements ShellSessionController.Bridge {
     /** Native callbacks used by shell session control. */
     public interface Callbacks {
         int restart();
@@ -17,7 +17,7 @@ public final class TerminalShellSessionBridge implements ShellSessionController.
 
     private final Callbacks callbacks;
 
-    public TerminalShellSessionBridge(Callbacks callbacks) {
+    public ShellBridge(Callbacks callbacks) {
         this.callbacks = callbacks;
     }
 

@@ -1,15 +1,15 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.session;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.IntSupplier;
 
-/** Functional callback adapter for {@link TerminalShellSessionBridge}. */
-public final class TerminalShellSessionCallbacks implements TerminalShellSessionBridge.Callbacks {
+/** Functional callback adapter for {@link ShellBridge}. */
+public final class ShellCallbacks implements ShellBridge.Callbacks {
     private final IntSupplier restart;
     private final IntSupplier poll;
     private final BooleanSupplier isAlive;
 
-    public TerminalShellSessionCallbacks(
+    public ShellCallbacks(
             IntSupplier restart,
             IntSupplier poll,
             BooleanSupplier isAlive) {
