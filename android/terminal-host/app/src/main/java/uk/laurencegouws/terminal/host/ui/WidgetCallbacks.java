@@ -125,96 +125,6 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
         }
     }
 
-    public static final class WidgetRuntimeCallbacks {
-        final BooleanSupplier currentInstallStateInstalling;
-        final BooleanSupplier currentInstallStateFailed;
-        final Supplier<UserlandReadinessState> currentReadinessState;
-        final Supplier<UserlandInstallState> currentInstallState;
-        final BooleanSupplier shouldRunProductFrameLoop;
-        final Runnable refreshProductScrollOverlay;
-        final Consumer<String> appendEvent;
-        final Consumer<String> updateStatus;
-        final IntUnaryOperator nativeSetSessionScrollbackOffset;
-        final IntSupplier nativeFollowSessionLiveBottom;
-        final IntSupplier productViewportHeightPx;
-        final Runnable reevaluateProductFrameLoop;
-        final Runnable runPackageDoctor;
-        final Consumer<String> sendDirectText;
-        final Consumer<String> notifyVisibleViewport;
-        final Runnable refreshUserlandSession;
-
-        private WidgetRuntimeCallbacks(
-                BooleanSupplier currentInstallStateInstalling,
-                BooleanSupplier currentInstallStateFailed,
-                Supplier<UserlandReadinessState> currentReadinessState,
-                Supplier<UserlandInstallState> currentInstallState,
-                BooleanSupplier shouldRunProductFrameLoop,
-                Runnable refreshProductScrollOverlay,
-                Consumer<String> appendEvent,
-                Consumer<String> updateStatus,
-                IntUnaryOperator nativeSetSessionScrollbackOffset,
-                IntSupplier nativeFollowSessionLiveBottom,
-                IntSupplier productViewportHeightPx,
-                Runnable reevaluateProductFrameLoop,
-                Runnable runPackageDoctor,
-                Consumer<String> sendDirectText,
-                Consumer<String> notifyVisibleViewport,
-                Runnable refreshUserlandSession) {
-            this.currentInstallStateInstalling = currentInstallStateInstalling;
-            this.currentInstallStateFailed = currentInstallStateFailed;
-            this.currentReadinessState = currentReadinessState;
-            this.currentInstallState = currentInstallState;
-            this.shouldRunProductFrameLoop = shouldRunProductFrameLoop;
-            this.refreshProductScrollOverlay = refreshProductScrollOverlay;
-            this.appendEvent = appendEvent;
-            this.updateStatus = updateStatus;
-            this.nativeSetSessionScrollbackOffset = nativeSetSessionScrollbackOffset;
-            this.nativeFollowSessionLiveBottom = nativeFollowSessionLiveBottom;
-            this.productViewportHeightPx = productViewportHeightPx;
-            this.reevaluateProductFrameLoop = reevaluateProductFrameLoop;
-            this.runPackageDoctor = runPackageDoctor;
-            this.sendDirectText = sendDirectText;
-            this.notifyVisibleViewport = notifyVisibleViewport;
-            this.refreshUserlandSession = refreshUserlandSession;
-        }
-
-        public static WidgetRuntimeCallbacks of(
-                BooleanSupplier currentInstallStateInstalling,
-                BooleanSupplier currentInstallStateFailed,
-                Supplier<UserlandReadinessState> currentReadinessState,
-                Supplier<UserlandInstallState> currentInstallState,
-                BooleanSupplier shouldRunProductFrameLoop,
-                Runnable refreshProductScrollOverlay,
-                Consumer<String> appendEvent,
-                Consumer<String> updateStatus,
-                IntUnaryOperator nativeSetSessionScrollbackOffset,
-                IntSupplier nativeFollowSessionLiveBottom,
-                IntSupplier productViewportHeightPx,
-                Runnable reevaluateProductFrameLoop,
-                Runnable runPackageDoctor,
-                Consumer<String> sendDirectText,
-                Consumer<String> notifyVisibleViewport,
-                Runnable refreshUserlandSession) {
-            return new WidgetRuntimeCallbacks(
-                    currentInstallStateInstalling,
-                    currentInstallStateFailed,
-                    currentReadinessState,
-                    currentInstallState,
-                    shouldRunProductFrameLoop,
-                    refreshProductScrollOverlay,
-                    appendEvent,
-                    updateStatus,
-                    nativeSetSessionScrollbackOffset,
-                    nativeFollowSessionLiveBottom,
-                    productViewportHeightPx,
-                    reevaluateProductFrameLoop,
-                    runPackageDoctor,
-                    sendDirectText,
-                    notifyVisibleViewport,
-                    refreshUserlandSession);
-        }
-    }
-
     private final Supplier<Activity> activity;
     private final Supplier<android.os.Handler> handler;
     private final BooleanSupplier nativeLoaded;
@@ -223,7 +133,22 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
     private final BooleanSupplier imeVisible;
     private final Consumer<Boolean> setImeVisible;
     private final WidgetViewCallbacks widgetViewCallbacks;
-    private final WidgetRuntimeCallbacks widgetRuntimeCallbacks;
+    private final BooleanSupplier currentInstallStateInstalling;
+    private final BooleanSupplier currentInstallStateFailed;
+    private final Supplier<UserlandReadinessState> currentReadinessState;
+    private final Supplier<UserlandInstallState> currentInstallState;
+    private final BooleanSupplier shouldRunProductFrameLoop;
+    private final Runnable refreshProductScrollOverlay;
+    private final Consumer<String> appendEvent;
+    private final Consumer<String> updateStatus;
+    private final IntUnaryOperator nativeSetSessionScrollbackOffset;
+    private final IntSupplier nativeFollowSessionLiveBottom;
+    private final IntSupplier productViewportHeightPx;
+    private final Runnable reevaluateProductFrameLoop;
+    private final Runnable runPackageDoctor;
+    private final Consumer<String> sendDirectText;
+    private final Consumer<String> notifyVisibleViewport;
+    private final Runnable refreshUserlandSession;
     private final uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.NativeEventCallback callNative;
     private final uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.NativeSurfaceEventCallback callNativeWithSurfaceState;
     private final uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.SurfaceAvailableCallback nativeOnSurfaceAvailableBridge;
@@ -242,7 +167,22 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
             BooleanSupplier imeVisible,
             Consumer<Boolean> setImeVisible,
             WidgetViewCallbacks widgetViewCallbacks,
-            WidgetRuntimeCallbacks widgetRuntimeCallbacks,
+            BooleanSupplier currentInstallStateInstalling,
+            BooleanSupplier currentInstallStateFailed,
+            Supplier<UserlandReadinessState> currentReadinessState,
+            Supplier<UserlandInstallState> currentInstallState,
+            BooleanSupplier shouldRunProductFrameLoop,
+            Runnable refreshProductScrollOverlay,
+            Consumer<String> appendEvent,
+            Consumer<String> updateStatus,
+            IntUnaryOperator nativeSetSessionScrollbackOffset,
+            IntSupplier nativeFollowSessionLiveBottom,
+            IntSupplier productViewportHeightPx,
+            Runnable reevaluateProductFrameLoop,
+            Runnable runPackageDoctor,
+            Consumer<String> sendDirectText,
+            Consumer<String> notifyVisibleViewport,
+            Runnable refreshUserlandSession,
             uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.NativeEventCallback callNative,
             uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.NativeSurfaceEventCallback callNativeWithSurfaceState,
             uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.SurfaceAvailableCallback nativeOnSurfaceAvailableBridge,
@@ -259,7 +199,22 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
         this.imeVisible = imeVisible;
         this.setImeVisible = setImeVisible;
         this.widgetViewCallbacks = widgetViewCallbacks;
-        this.widgetRuntimeCallbacks = widgetRuntimeCallbacks;
+        this.currentInstallStateInstalling = currentInstallStateInstalling;
+        this.currentInstallStateFailed = currentInstallStateFailed;
+        this.currentReadinessState = currentReadinessState;
+        this.currentInstallState = currentInstallState;
+        this.shouldRunProductFrameLoop = shouldRunProductFrameLoop;
+        this.refreshProductScrollOverlay = refreshProductScrollOverlay;
+        this.appendEvent = appendEvent;
+        this.updateStatus = updateStatus;
+        this.nativeSetSessionScrollbackOffset = nativeSetSessionScrollbackOffset;
+        this.nativeFollowSessionLiveBottom = nativeFollowSessionLiveBottom;
+        this.productViewportHeightPx = productViewportHeightPx;
+        this.reevaluateProductFrameLoop = reevaluateProductFrameLoop;
+        this.runPackageDoctor = runPackageDoctor;
+        this.sendDirectText = sendDirectText;
+        this.notifyVisibleViewport = notifyVisibleViewport;
+        this.refreshUserlandSession = refreshUserlandSession;
         this.callNative = callNative;
         this.callNativeWithSurfaceState = callNativeWithSurfaceState;
         this.nativeOnSurfaceAvailableBridge = nativeOnSurfaceAvailableBridge;
@@ -397,42 +352,42 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
 
     @Override
     public boolean currentInstallStateInstalling() {
-        return widgetRuntimeCallbacks.currentInstallStateInstalling.getAsBoolean();
+        return currentInstallStateInstalling.getAsBoolean();
     }
 
     @Override
     public boolean currentInstallStateFailed() {
-        return widgetRuntimeCallbacks.currentInstallStateFailed.getAsBoolean();
+        return currentInstallStateFailed.getAsBoolean();
     }
 
     @Override
     public UserlandReadinessState currentReadinessState() {
-        return widgetRuntimeCallbacks.currentReadinessState.get();
+        return currentReadinessState.get();
     }
 
     @Override
     public UserlandInstallState currentInstallState() {
-        return widgetRuntimeCallbacks.currentInstallState.get();
+        return currentInstallState.get();
     }
 
     @Override
     public boolean shouldRunProductFrameLoop() {
-        return widgetRuntimeCallbacks.shouldRunProductFrameLoop.getAsBoolean();
+        return shouldRunProductFrameLoop.getAsBoolean();
     }
 
     @Override
     public void refreshProductScrollOverlay() {
-        widgetRuntimeCallbacks.refreshProductScrollOverlay.run();
+        refreshProductScrollOverlay.run();
     }
 
     @Override
     public void appendEvent(String event) {
-        widgetRuntimeCallbacks.appendEvent.accept(event);
+        appendEvent.accept(event);
     }
 
     @Override
     public void updateStatus(String statusLabel) {
-        widgetRuntimeCallbacks.updateStatus.accept(statusLabel);
+        updateStatus.accept(statusLabel);
     }
 
     @Override
@@ -477,41 +432,41 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
 
     @Override
     public int nativeSetSessionScrollbackOffset(int offsetRows) {
-        return widgetRuntimeCallbacks.nativeSetSessionScrollbackOffset.applyAsInt(offsetRows);
+        return nativeSetSessionScrollbackOffset.applyAsInt(offsetRows);
     }
 
     @Override
     public int nativeFollowSessionLiveBottom() {
-        return widgetRuntimeCallbacks.nativeFollowSessionLiveBottom.getAsInt();
+        return nativeFollowSessionLiveBottom.getAsInt();
     }
 
     @Override
     public int productViewportHeightPx() {
-        return widgetRuntimeCallbacks.productViewportHeightPx.getAsInt();
+        return productViewportHeightPx.getAsInt();
     }
 
     @Override
     public void reevaluateProductFrameLoop() {
-        widgetRuntimeCallbacks.reevaluateProductFrameLoop.run();
+        reevaluateProductFrameLoop.run();
     }
 
     @Override
     public void runPackageDoctor() {
-        widgetRuntimeCallbacks.runPackageDoctor.run();
+        runPackageDoctor.run();
     }
 
     @Override
     public void sendDirectText(String text) {
-        widgetRuntimeCallbacks.sendDirectText.accept(text);
+        sendDirectText.accept(text);
     }
 
     @Override
     public void notifyVisibleViewport(String reason) {
-        widgetRuntimeCallbacks.notifyVisibleViewport.accept(reason);
+        notifyVisibleViewport.accept(reason);
     }
 
     @Override
     public void refreshUserlandSession() {
-        widgetRuntimeCallbacks.refreshUserlandSession.run();
+        refreshUserlandSession.run();
     }
 }
