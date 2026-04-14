@@ -112,9 +112,9 @@ public final class WidgetAssembly {
 
         void handleProductShellStateEvent(String statusLabel);
 
-        int nativeSetShellScrollbackOffset(int offsetRows);
+        int nativeSetSessionScrollbackOffset(int offsetRows);
 
-        int nativeFollowShellLiveBottom();
+        int nativeFollowSessionLiveBottom();
 
         int productViewportHeightPx();
 
@@ -255,8 +255,8 @@ public final class WidgetAssembly {
                             }
                         },
                         () -> surfaceWidgetControllerRef[0],
-                        host::nativeSetShellScrollbackOffset,
-                        host::nativeFollowShellLiveBottom,
+                        host::nativeSetSessionScrollbackOffset,
+                        host::nativeFollowSessionLiveBottom,
                         host::productViewportHeightPx,
                         host::reevaluateProductFrameLoop));
         surfaceWidgetControllerRef[0] = surfaceWidgetAssembly.surfaceWidgetController;

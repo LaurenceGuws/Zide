@@ -49,11 +49,11 @@ public final class ProductRuntimeController {
 
         void updateStatus(String statusLabel);
 
-        int nativeCurrentShellVisibleRows();
+        int nativeCurrentSessionVisibleRows();
 
-        int nativeCurrentShellScrollbackCount();
+        int nativeCurrentSessionScrollbackCount();
 
-        int nativeCurrentShellScrollbackOffset();
+        int nativeCurrentSessionScrollbackOffset();
 
         int nativeRestartSession();
     }
@@ -129,9 +129,9 @@ public final class ProductRuntimeController {
             return;
         }
         scrollOverlay.updateScrollMetrics(
-                host.nativeCurrentShellVisibleRows(),
-                host.nativeCurrentShellScrollbackCount(),
-                host.nativeCurrentShellScrollbackOffset());
+                host.nativeCurrentSessionVisibleRows(),
+                host.nativeCurrentSessionScrollbackCount(),
+                host.nativeCurrentSessionScrollbackOffset());
         final TerminalSelectionController selectionController = host.selectionController();
         if (selectionController != null) {
             selectionController.syncChrome();

@@ -119,7 +119,7 @@ public final class ChromeController {
         final boolean shown = imm.showSoftInput(shellInputView, InputMethodManager.SHOW_IMPLICIT);
         host.setImeVisible(shown || shellInputView.hasFocus());
         host.appendEvent("manual.ime.open shown=" + shown + " focus=" + shellInputView.hasFocus());
-        host.updateStatus("ime.shown");
+        host.updateStatus("ime.state.shown");
     }
 
     public void closeIme() {
@@ -131,7 +131,7 @@ public final class ChromeController {
         final boolean hidden = imm.hideSoftInputFromWindow(host.shellInputView().getWindowToken(), 0);
         host.setImeVisible(false);
         host.appendEvent("manual.ime.close hidden=" + hidden);
-        host.updateStatus("ime.hidden");
+        host.updateStatus("ime.state.hidden");
     }
 
     public void toggleIme() {

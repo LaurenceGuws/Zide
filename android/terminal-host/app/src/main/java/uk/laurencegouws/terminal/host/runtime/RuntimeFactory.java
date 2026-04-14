@@ -41,9 +41,9 @@ public final class RuntimeFactory {
             Supplier<TerminalGestureStateController> terminalGestureStateController,
             Consumer<String> appendEvent,
             Consumer<String> updateStatus,
-            IntSupplier nativeCurrentShellVisibleRows,
-            IntSupplier nativeCurrentShellScrollbackCount,
-            IntSupplier nativeCurrentShellScrollbackOffset,
+            IntSupplier nativeCurrentSessionVisibleRows,
+            IntSupplier nativeCurrentSessionScrollbackCount,
+            IntSupplier nativeCurrentSessionScrollbackOffset,
             IntSupplier nativeRestartSession) {
         return new ProductRuntimeHostCallbacks(
                 debugViewEnabled,
@@ -62,9 +62,9 @@ public final class RuntimeFactory {
                 terminalGestureStateController,
                 appendEvent,
                 updateStatus,
-                nativeCurrentShellVisibleRows,
-                nativeCurrentShellScrollbackCount,
-                nativeCurrentShellScrollbackOffset,
+                nativeCurrentSessionVisibleRows,
+                nativeCurrentSessionScrollbackCount,
+                nativeCurrentSessionScrollbackOffset,
                 nativeRestartSession);
     }
 

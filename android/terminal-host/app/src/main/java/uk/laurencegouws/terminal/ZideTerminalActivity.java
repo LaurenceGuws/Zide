@@ -260,7 +260,7 @@ public final class ZideTerminalActivity extends Activity
                         () -> imeVisible,
                         visible -> imeVisible = visible,
                         () -> nativeLoaded,
-                        TerminalNativeBridge::nativeFollowShellLiveBottomBridge,
+                        TerminalNativeBridge::nativeFollowSessionLiveBottomBridge,
                         () -> {
                             if (terminalProductRuntimeController != null) {
                                 terminalProductRuntimeController.refreshProductScrollOverlay();
@@ -329,8 +329,8 @@ public final class ZideTerminalActivity extends Activity
                                 terminalProductRuntimeController.handleProductShellStateEvent(statusLabel);
                             }
                         },
-                        TerminalNativeBridge::nativeSetShellScrollbackOffsetBridge,
-                        TerminalNativeBridge::nativeFollowShellLiveBottomBridge,
+                        TerminalNativeBridge::nativeSetSessionScrollbackOffsetBridge,
+                        TerminalNativeBridge::nativeFollowSessionLiveBottomBridge,
                         this::productViewportHeightPx,
                         () -> {
                             if (productFrameLoopController != null) {
@@ -498,7 +498,7 @@ public final class ZideTerminalActivity extends Activity
             appendEvent("native.load.error detail=" + nativeLoadError);
         }
         callNative("native.onCreate", nativeLoaded ? TerminalNativeBridge.nativeOnCreateBridge() : -1);
-        updateStatus("activity.created");
+        updateStatus("activity.state.created");
     }
 
     /**
@@ -524,7 +524,7 @@ public final class ZideTerminalActivity extends Activity
     public void sendDirectCodepoint(int codepoint) {
         if (!nativeLoaded)
             return;
-        TerminalNativeBridge.nativeSendShellCodepointBridge(codepoint);
+        TerminalNativeBridge.nativeSendSessionCodepointBridge(codepoint);
     }
 
     @Override
@@ -533,7 +533,7 @@ public final class ZideTerminalActivity extends Activity
             return;
         for (int i = 0; i < text.length();) {
             final int cp = text.codePointAt(i);
-            TerminalNativeBridge.nativeSendShellCodepointBridge(cp);
+            TerminalNativeBridge.nativeSendSessionCodepointBridge(cp);
             i += Character.charCount(cp);
         }
     }

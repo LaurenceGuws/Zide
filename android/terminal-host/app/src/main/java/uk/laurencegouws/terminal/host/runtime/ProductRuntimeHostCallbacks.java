@@ -35,9 +35,9 @@ public final class ProductRuntimeHostCallbacks implements ProductRuntimeControll
     private final Supplier<TerminalGestureStateController> terminalGestureStateController;
     private final Consumer<String> appendEvent;
     private final Consumer<String> updateStatus;
-    private final IntSupplier nativeCurrentShellVisibleRows;
-    private final IntSupplier nativeCurrentShellScrollbackCount;
-    private final IntSupplier nativeCurrentShellScrollbackOffset;
+    private final IntSupplier nativeCurrentSessionVisibleRows;
+    private final IntSupplier nativeCurrentSessionScrollbackCount;
+    private final IntSupplier nativeCurrentSessionScrollbackOffset;
     private final IntSupplier nativeRestartSession;
 
     public ProductRuntimeHostCallbacks(
@@ -57,9 +57,9 @@ public final class ProductRuntimeHostCallbacks implements ProductRuntimeControll
             Supplier<TerminalGestureStateController> terminalGestureStateController,
             Consumer<String> appendEvent,
             Consumer<String> updateStatus,
-            IntSupplier nativeCurrentShellVisibleRows,
-            IntSupplier nativeCurrentShellScrollbackCount,
-            IntSupplier nativeCurrentShellScrollbackOffset,
+            IntSupplier nativeCurrentSessionVisibleRows,
+            IntSupplier nativeCurrentSessionScrollbackCount,
+            IntSupplier nativeCurrentSessionScrollbackOffset,
             IntSupplier nativeRestartSession) {
         this.debugViewEnabled = debugViewEnabled;
         this.nativeLoaded = nativeLoaded;
@@ -77,9 +77,9 @@ public final class ProductRuntimeHostCallbacks implements ProductRuntimeControll
         this.terminalGestureStateController = terminalGestureStateController;
         this.appendEvent = appendEvent;
         this.updateStatus = updateStatus;
-        this.nativeCurrentShellVisibleRows = nativeCurrentShellVisibleRows;
-        this.nativeCurrentShellScrollbackCount = nativeCurrentShellScrollbackCount;
-        this.nativeCurrentShellScrollbackOffset = nativeCurrentShellScrollbackOffset;
+        this.nativeCurrentSessionVisibleRows = nativeCurrentSessionVisibleRows;
+        this.nativeCurrentSessionScrollbackCount = nativeCurrentSessionScrollbackCount;
+        this.nativeCurrentSessionScrollbackOffset = nativeCurrentSessionScrollbackOffset;
         this.nativeRestartSession = nativeRestartSession;
     }
 
@@ -164,18 +164,18 @@ public final class ProductRuntimeHostCallbacks implements ProductRuntimeControll
     }
 
     @Override
-    public int nativeCurrentShellVisibleRows() {
-        return nativeCurrentShellVisibleRows.getAsInt();
+    public int nativeCurrentSessionVisibleRows() {
+        return nativeCurrentSessionVisibleRows.getAsInt();
     }
 
     @Override
-    public int nativeCurrentShellScrollbackCount() {
-        return nativeCurrentShellScrollbackCount.getAsInt();
+    public int nativeCurrentSessionScrollbackCount() {
+        return nativeCurrentSessionScrollbackCount.getAsInt();
     }
 
     @Override
-    public int nativeCurrentShellScrollbackOffset() {
-        return nativeCurrentShellScrollbackOffset.getAsInt();
+    public int nativeCurrentSessionScrollbackOffset() {
+        return nativeCurrentSessionScrollbackOffset.getAsInt();
     }
 
     @Override

@@ -66,8 +66,8 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
     private final SurfaceLifecycleCallbacks.VisibleViewportCallback nativeOnVisibleViewportBridge;
     private final Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot;
     private final Consumer<String> handleProductShellStateEvent;
-    private final IntUnaryOperator nativeSetShellScrollbackOffset;
-    private final IntSupplier nativeFollowShellLiveBottom;
+    private final IntUnaryOperator nativeSetSessionScrollbackOffset;
+    private final IntSupplier nativeFollowSessionLiveBottom;
     private final IntSupplier productViewportHeightPx;
     private final Runnable reevaluateProductFrameLoop;
     private final Runnable runPackageDoctor;
@@ -117,8 +117,8 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
             SurfaceLifecycleCallbacks.VisibleViewportCallback nativeOnVisibleViewportBridge,
             Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot,
             Consumer<String> handleProductShellStateEvent,
-            IntUnaryOperator nativeSetShellScrollbackOffset,
-            IntSupplier nativeFollowShellLiveBottom,
+            IntUnaryOperator nativeSetSessionScrollbackOffset,
+            IntSupplier nativeFollowSessionLiveBottom,
             IntSupplier productViewportHeightPx,
             Runnable reevaluateProductFrameLoop,
             Runnable runPackageDoctor,
@@ -166,8 +166,8 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
         this.nativeOnVisibleViewportBridge = nativeOnVisibleViewportBridge;
         this.currentSurfaceStateSnapshot = currentSurfaceStateSnapshot;
         this.handleProductShellStateEvent = handleProductShellStateEvent;
-        this.nativeSetShellScrollbackOffset = nativeSetShellScrollbackOffset;
-        this.nativeFollowShellLiveBottom = nativeFollowShellLiveBottom;
+        this.nativeSetSessionScrollbackOffset = nativeSetSessionScrollbackOffset;
+        this.nativeFollowSessionLiveBottom = nativeFollowSessionLiveBottom;
         this.productViewportHeightPx = productViewportHeightPx;
         this.reevaluateProductFrameLoop = reevaluateProductFrameLoop;
         this.runPackageDoctor = runPackageDoctor;
@@ -382,13 +382,13 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
     }
 
     @Override
-    public int nativeSetShellScrollbackOffset(int offsetRows) {
-        return nativeSetShellScrollbackOffset.applyAsInt(offsetRows);
+    public int nativeSetSessionScrollbackOffset(int offsetRows) {
+        return nativeSetSessionScrollbackOffset.applyAsInt(offsetRows);
     }
 
     @Override
-    public int nativeFollowShellLiveBottom() {
-        return nativeFollowShellLiveBottom.getAsInt();
+    public int nativeFollowSessionLiveBottom() {
+        return nativeFollowSessionLiveBottom.getAsInt();
     }
 
     @Override

@@ -40,7 +40,7 @@ public final class LifecycleController {
     public void onStart() {
         host.appendEvent("activity.on.start");
         host.callNative("native.onStart", host.nativeLoaded() ? host.nativeOnStart() : -1);
-        host.updateStatus("activity.started");
+        host.updateStatus("activity.state.started");
     }
 
     public void onResume(
@@ -61,18 +61,18 @@ public final class LifecycleController {
         host.stopProductFrameLoop();
         host.refreshUserlandSessionOnPause();
         host.notifySurfacePause();
-        host.updateStatus("activity.paused");
+        host.updateStatus("activity.state.paused");
     }
 
     public void onStop() {
         host.appendEvent("activity.on.stop");
         host.callNative("native.onStop", host.nativeLoaded() ? host.nativeOnStop() : -1);
-        host.updateStatus("activity.stopped");
+        host.updateStatus("activity.state.stopped");
     }
 
     public void onWindowFocusChanged(boolean hasFocus) {
         host.appendEvent("activity.on.window_focus_changed focus=" + hasFocus);
         host.callNative("native.onWindowFocus", host.nativeLoaded() ? host.nativeOnWindowFocus(hasFocus) : -1);
-        host.updateStatus(hasFocus ? "window-focused" : "window-unfocused");
+        host.updateStatus(hasFocus ? "window.focused.state" : "window.unfocused.state");
     }
 }

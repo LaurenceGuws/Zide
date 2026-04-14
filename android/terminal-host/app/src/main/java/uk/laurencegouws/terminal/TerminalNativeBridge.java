@@ -96,59 +96,59 @@ public final class TerminalNativeBridge {
 
     public static native int nativeTickProductShellFrameBridge();
 
-    public static native int nativeSendShellCodepointBridge(int codepoint);
+    public static native int nativeSendSessionCodepointBridge(int codepoint);
 
-    public static native int nativeCurrentShellVisibleRowsBridge();
+    public static native int nativeCurrentSessionVisibleRowsBridge();
 
-    public static native int nativeCurrentShellVisibleColsBridge();
+    public static native int nativeCurrentSessionVisibleColsBridge();
 
-    public static native int nativeCurrentShellScrollbackCountBridge();
+    public static native int nativeCurrentSessionScrollbackCountBridge();
 
-    public static native int nativeCurrentShellScrollbackOffsetBridge();
+    public static native int nativeCurrentSessionScrollbackOffsetBridge();
 
-    public static native int nativeSetShellScrollbackOffsetBridge(int offsetRows);
+    public static native int nativeSetSessionScrollbackOffsetBridge(int offsetRows);
 
-    public static native int nativeFollowShellLiveBottomBridge();
+    public static native int nativeFollowSessionLiveBottomBridge();
 
-    public static native int nativeBeginShellWordSelectionAtVisibleCellBridge(int row, int col);
+    public static native int nativeBeginSelectionWordAtVisibleCellBridge(int row, int col);
 
-    public static native int nativeExtendShellSelectionGestureToVisibleCellBridge(int row, int col);
+    public static native int nativeExtendSelectionGestureToVisibleCellBridge(int row, int col);
 
-    public static native int nativeFinishShellSelectionGestureBridge();
+    public static native int nativeFinishSelectionGestureBridge();
 
-    public static native int nativeClearShellSelectionBridge();
+    public static native int nativeClearSelectionBridge();
 
-    public static native int nativeUpdateShellSelectionStartAtVisibleCellBridge(int row, int col);
+    public static native int nativeUpdateSelectionStartAtVisibleCellBridge(int row, int col);
 
-    public static native int nativeUpdateShellSelectionEndAtVisibleCellBridge(int row, int col);
+    public static native int nativeUpdateSelectionEndAtVisibleCellBridge(int row, int col);
 
-    public static native boolean nativeCurrentShellSelectionActiveBridge();
+    public static native boolean nativeCurrentSelectionActiveBridge();
 
-    public static native int nativeCurrentShellSelectionRectLeftBridge();
+    public static native int nativeCurrentSelectionRectLeftBridge();
 
-    public static native int nativeCurrentShellSelectionRectTopBridge();
+    public static native int nativeCurrentSelectionRectTopBridge();
 
-    public static native int nativeCurrentShellSelectionRectRightBridge();
+    public static native int nativeCurrentSelectionRectRightBridge();
 
-    public static native int nativeCurrentShellSelectionRectBottomBridge();
+    public static native int nativeCurrentSelectionRectBottomBridge();
 
-    public static native int nativeCurrentShellSelectionStartRectLeftBridge();
+    public static native int nativeCurrentSelectionStartRectLeftBridge();
 
-    public static native int nativeCurrentShellSelectionStartRectTopBridge();
+    public static native int nativeCurrentSelectionStartRectTopBridge();
 
-    public static native int nativeCurrentShellSelectionStartRectRightBridge();
+    public static native int nativeCurrentSelectionStartRectRightBridge();
 
-    public static native int nativeCurrentShellSelectionStartRectBottomBridge();
+    public static native int nativeCurrentSelectionStartRectBottomBridge();
 
-    public static native int nativeCurrentShellSelectionEndRectLeftBridge();
+    public static native int nativeCurrentSelectionEndRectLeftBridge();
 
-    public static native int nativeCurrentShellSelectionEndRectTopBridge();
+    public static native int nativeCurrentSelectionEndRectTopBridge();
 
-    public static native int nativeCurrentShellSelectionEndRectRightBridge();
+    public static native int nativeCurrentSelectionEndRectRightBridge();
 
-    public static native int nativeCurrentShellSelectionEndRectBottomBridge();
+    public static native int nativeCurrentSelectionEndRectBottomBridge();
 
-    public static native byte[] nativeCurrentShellSelectionTextBytesBridge();
+    public static native byte[] nativeCurrentSelectionTextBytesBridge();
 
     public static native boolean nativeSharedShellRendererActiveBridge();
 }

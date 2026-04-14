@@ -19,7 +19,7 @@ public final class InputCallbacks implements InputAssembly.Host {
     private final BooleanSupplier currentImeVisible;
     private final Consumer<Boolean> setImeVisible;
     private final BooleanSupplier nativeLoaded;
-    private final InputAssembly.IntSupplier nativeFollowShellLiveBottom;
+    private final InputAssembly.IntSupplier nativeFollowSessionLiveBottom;
     private final Runnable refreshProductScrollOverlay;
     private final Consumer<String> updateStatus;
     private final Consumer<String> appendEvent;
@@ -32,7 +32,7 @@ public final class InputCallbacks implements InputAssembly.Host {
             BooleanSupplier currentImeVisible,
             Consumer<Boolean> setImeVisible,
             BooleanSupplier nativeLoaded,
-            InputAssembly.IntSupplier nativeFollowShellLiveBottom,
+            InputAssembly.IntSupplier nativeFollowSessionLiveBottom,
             Runnable refreshProductScrollOverlay,
             Consumer<String> updateStatus,
             Consumer<String> appendEvent) {
@@ -43,7 +43,7 @@ public final class InputCallbacks implements InputAssembly.Host {
         this.currentImeVisible = currentImeVisible;
         this.setImeVisible = setImeVisible;
         this.nativeLoaded = nativeLoaded;
-        this.nativeFollowShellLiveBottom = nativeFollowShellLiveBottom;
+        this.nativeFollowSessionLiveBottom = nativeFollowSessionLiveBottom;
         this.refreshProductScrollOverlay = refreshProductScrollOverlay;
         this.updateStatus = updateStatus;
         this.appendEvent = appendEvent;
@@ -85,8 +85,8 @@ public final class InputCallbacks implements InputAssembly.Host {
     }
 
     @Override
-    public InputAssembly.IntSupplier nativeFollowShellLiveBottom() {
-        return nativeFollowShellLiveBottom;
+    public InputAssembly.IntSupplier nativeFollowSessionLiveBottom() {
+        return nativeFollowSessionLiveBottom;
     }
 
     @Override

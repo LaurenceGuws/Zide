@@ -11,6 +11,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 JAVA_ROOT = ROOT / "android" / "terminal-host" / "app" / "src" / "main" / "java" / "uk" / "laurencegouws" / "terminal"
 APPEND_EVENT_RE = re.compile(r'appendEvent\("([^"]+)"')
+UPDATE_STATUS_RE = re.compile(r'updateStatus\("([^"]+)"\)')
 KEY_RE = re.compile(r"[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*){2,}")
 
 
@@ -20,13 +21,19 @@ def main() -> int:
         lines = file_path.read_text(encoding="utf-8").splitlines()
         for line_no, line in enumerate(lines, start=1):
             match = APPEND_EVENT_RE.search(line)
-            if not match:
-                continue
-            event = match.group(1)
-            token = event.split(" ", 1)[0]
-            if not KEY_RE.fullmatch(token):
-                rel = file_path.relative_to(ROOT)
-                violations.append(f"{rel}:{line_no}: invalid event key '{token}'")
+            if match:
+                event = match.group(1)
+                token = event.split(" ", 1)[0]
+                if not KEY_RE.fullmatch(token):
+                    rel = file_path.relative_to(ROOT)
+                    violations.append(f"{rel}:{line_no}: invalid event key '{token}'")
+
+            update_match = UPDATE_STATUS_RE.search(line)
+            if update_match:
+                status_key = update_match.group(1)
+                if not KEY_RE.fullmatch(status_key):
+                    rel = file_path.relative_to(ROOT)
+                    violations.append(f"{rel}:{line_no}: invalid status key '{status_key}'")
 
     if violations:
         print("android-java-events-lint: invalid appendEvent keys found", file=sys.stderr)

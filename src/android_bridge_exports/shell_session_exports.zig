@@ -72,7 +72,7 @@ export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeTickProductS
     return tickFrame();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeSendShellCodepointBridge(
+export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeSendSessionCodepointBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
     codepoint: i32,
@@ -80,35 +80,35 @@ export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeSendShellCod
     return sendCodepoint(codepoint);
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentShellVisibleRowsBridge(
+export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentSessionVisibleRowsBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return visibleRows();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentShellVisibleColsBridge(
+export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentSessionVisibleColsBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return visibleCols();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentShellScrollbackCountBridge(
+export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentSessionScrollbackCountBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return scrollbackCount();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentShellScrollbackOffsetBridge(
+export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentSessionScrollbackOffsetBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return scrollbackOffset();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeSetShellScrollbackOffsetBridge(
+export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeSetSessionScrollbackOffsetBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
     offsetRows: i32,
@@ -116,7 +116,7 @@ export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeSetShellScro
     return setScrollbackOffset(offsetRows);
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeFollowShellLiveBottomBridge(
+export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeFollowSessionLiveBottomBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {

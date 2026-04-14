@@ -72,9 +72,9 @@ public final class ProductRuntimeAssembly {
                         host::terminalGestureStateController,
                         host::appendEvent,
                         host::updateStatus,
-                        TerminalNativeBridge::nativeCurrentShellVisibleRowsBridge,
-                        TerminalNativeBridge::nativeCurrentShellScrollbackCountBridge,
-                        TerminalNativeBridge::nativeCurrentShellScrollbackOffsetBridge,
+                        TerminalNativeBridge::nativeCurrentSessionVisibleRowsBridge,
+                        TerminalNativeBridge::nativeCurrentSessionScrollbackCountBridge,
+                        TerminalNativeBridge::nativeCurrentSessionScrollbackOffsetBridge,
                         TerminalNativeBridge::nativeRestartSessionBridge));
     }
 }

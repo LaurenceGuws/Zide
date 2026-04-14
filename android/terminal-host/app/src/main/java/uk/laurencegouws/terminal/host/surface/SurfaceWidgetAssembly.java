@@ -53,9 +53,9 @@ public final class SurfaceWidgetAssembly {
 
         SurfaceHolder.Callback2 surfaceCallback();
 
-        int nativeSetShellScrollbackOffset(int offsetRows);
+        int nativeSetSessionScrollbackOffset(int offsetRows);
 
-        int nativeFollowShellLiveBottom();
+        int nativeFollowSessionLiveBottom();
 
         int productViewportHeightPx();
 
@@ -116,8 +116,8 @@ public final class SurfaceWidgetAssembly {
                 terminalGestureStateController,
                 new SurfaceWidgetCallbacks(
                         host::nativeLoaded,
-                        host::nativeSetShellScrollbackOffset,
-                        host::nativeFollowShellLiveBottom,
+                        host::nativeSetSessionScrollbackOffset,
+                        host::nativeFollowSessionLiveBottom,
                         host::productViewportHeightPx,
                         host::appendEvent,
                         host::refreshProductScrollOverlay,

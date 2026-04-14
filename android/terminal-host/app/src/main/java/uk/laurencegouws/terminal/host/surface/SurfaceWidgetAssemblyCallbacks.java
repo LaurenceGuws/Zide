@@ -34,8 +34,8 @@ public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssemb
     private final Consumer<SurfaceView> installSurfaceGestureHost;
     private final SurfaceLifecycleCallbacks.ReinstallSurfaceCallback reinstallSurfaceCallback;
     private final Supplier<SurfaceHolder.Callback2> surfaceCallback;
-    private final IntUnaryOperator nativeSetShellScrollbackOffset;
-    private final IntSupplier nativeFollowShellLiveBottom;
+    private final IntUnaryOperator nativeSetSessionScrollbackOffset;
+    private final IntSupplier nativeFollowSessionLiveBottom;
     private final IntSupplier productViewportHeightPx;
     private final Runnable reevaluateProductFrameLoop;
 
@@ -60,8 +60,8 @@ public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssemb
             Consumer<SurfaceView> installSurfaceGestureHost,
             SurfaceLifecycleCallbacks.ReinstallSurfaceCallback reinstallSurfaceCallback,
             Supplier<SurfaceHolder.Callback2> surfaceCallback,
-            IntUnaryOperator nativeSetShellScrollbackOffset,
-            IntSupplier nativeFollowShellLiveBottom,
+            IntUnaryOperator nativeSetSessionScrollbackOffset,
+            IntSupplier nativeFollowSessionLiveBottom,
             IntSupplier productViewportHeightPx,
             Runnable reevaluateProductFrameLoop) {
         this.handler = handler;
@@ -84,8 +84,8 @@ public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssemb
         this.installSurfaceGestureHost = installSurfaceGestureHost;
         this.reinstallSurfaceCallback = reinstallSurfaceCallback;
         this.surfaceCallback = surfaceCallback;
-        this.nativeSetShellScrollbackOffset = nativeSetShellScrollbackOffset;
-        this.nativeFollowShellLiveBottom = nativeFollowShellLiveBottom;
+        this.nativeSetSessionScrollbackOffset = nativeSetSessionScrollbackOffset;
+        this.nativeFollowSessionLiveBottom = nativeFollowSessionLiveBottom;
         this.productViewportHeightPx = productViewportHeightPx;
         this.reevaluateProductFrameLoop = reevaluateProductFrameLoop;
     }
@@ -191,13 +191,13 @@ public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssemb
     }
 
     @Override
-    public int nativeSetShellScrollbackOffset(int offsetRows) {
-        return nativeSetShellScrollbackOffset.applyAsInt(offsetRows);
+    public int nativeSetSessionScrollbackOffset(int offsetRows) {
+        return nativeSetSessionScrollbackOffset.applyAsInt(offsetRows);
     }
 
     @Override
-    public int nativeFollowShellLiveBottom() {
-        return nativeFollowShellLiveBottom.getAsInt();
+    public int nativeFollowSessionLiveBottom() {
+        return nativeFollowSessionLiveBottom.getAsInt();
     }
 
     @Override

@@ -31,7 +31,7 @@ public final class InputAssembly {
 
         BooleanSupplier nativeLoaded();
 
-        IntSupplier nativeFollowShellLiveBottom();
+        IntSupplier nativeFollowSessionLiveBottom();
 
         Runnable refreshProductScrollOverlay();
 
@@ -79,7 +79,7 @@ public final class InputAssembly {
                         host.currentImeVisible(),
                         host.setImeVisible(),
                         host.nativeLoaded(),
-                        () -> host.nativeFollowShellLiveBottom().getAsInt(),
+                        () -> host.nativeFollowSessionLiveBottom().getAsInt(),
                         host.refreshProductScrollOverlay(),
                         host.updateStatus());
         final TerminalImeFocusRecoveryController imeFocusRecoveryController =
