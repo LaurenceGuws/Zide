@@ -105,7 +105,7 @@ A cut is done only if all are true:
 - initial status/view activity wiring now composes through
   `host/status/StatusViewAssembly` + `StatusViewCallbacks`
 - interaction activity wiring now composes through
-  `host/TerminalInteractionAssembly` + `TerminalInteractionAssemblyHostCallbacks`
+  `host/interaction/InteractionAssembly` + `InteractionCallbacks`
 - widget/chrome/view-mode/surface activity wiring now composes through
   `host/ui/WidgetAssembly` + `WidgetCallbacks`
 - userland runtime-assets/workflow startup activity wiring now composes through

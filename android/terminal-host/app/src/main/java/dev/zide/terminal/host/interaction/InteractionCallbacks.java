@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.interaction;
 
 import android.app.Activity;
 import android.os.Handler;
@@ -9,8 +9,8 @@ import java.util.function.Consumer;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
-/** Functional callback adapter for {@link TerminalInteractionAssembly.Host}. */
-public final class TerminalInteractionAssemblyHostCallbacks implements TerminalInteractionAssembly.Host {
+/** Functional callback adapter for {@link InteractionAssembly.Host}. */
+public final class InteractionCallbacks implements InteractionAssembly.Host {
     private final Supplier<Activity> activity;
     private final Supplier<Handler> handler;
     private final Supplier<FrameLayout> productSurfaceContainer;
@@ -22,7 +22,7 @@ public final class TerminalInteractionAssemblyHostCallbacks implements TerminalI
     private final Runnable reevaluateProductFrameLoop;
     private final Consumer<String> appendEvent;
 
-    public TerminalInteractionAssemblyHostCallbacks(
+    public InteractionCallbacks(
             Supplier<Activity> activity,
             Supplier<Handler> handler,
             Supplier<FrameLayout> productSurfaceContainer,

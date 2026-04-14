@@ -21,8 +21,8 @@ import dev.zide.terminal.host.TerminalChromeController;
 import dev.zide.terminal.host.TerminalFrameLoopController;
 import dev.zide.terminal.host.TerminalInputAssembly;
 import dev.zide.terminal.host.TerminalInputAssemblyHostCallbacks;
-import dev.zide.terminal.host.TerminalInteractionAssembly;
-import dev.zide.terminal.host.TerminalInteractionAssemblyHostCallbacks;
+import dev.zide.terminal.host.interaction.InteractionAssembly;
+import dev.zide.terminal.host.interaction.InteractionCallbacks;
 import dev.zide.terminal.host.runtime.ProductRuntimeAssembly;
 import dev.zide.terminal.host.runtime.ProductRuntimeAssemblyCallbacks;
 import dev.zide.terminal.host.runtime.ProductRuntimeController;
@@ -222,8 +222,8 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void assembleInteractionControllers() {
-        final TerminalInteractionAssembly.Result result = TerminalInteractionAssembly.assemble(
-                new TerminalInteractionAssemblyHostCallbacks(
+        final InteractionAssembly.Result result = InteractionAssembly.assemble(
+                new InteractionCallbacks(
                         () -> this,
                         () -> handler,
                         () -> productSurfaceContainer,

@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.interaction;
 
 import android.app.Activity;
 import android.os.Handler;
@@ -6,10 +6,11 @@ import android.widget.FrameLayout;
 
 import dev.zide.terminal.TerminalNativeBridge;
 import dev.zide.terminal.gesture.TerminalGestureStateController;
+import dev.zide.terminal.host.TerminalInteractionHostFactory;
 import dev.zide.terminal.selection.TerminalSelectionController;
 
 /** Owns selection + gesture interaction controller assembly for activity wiring. */
-public final class TerminalInteractionAssembly {
+public final class InteractionAssembly {
     /** Activity callbacks required for interaction assembly. */
     public interface Host {
         Activity activity();
@@ -46,7 +47,7 @@ public final class TerminalInteractionAssembly {
         }
     }
 
-    private TerminalInteractionAssembly() {
+    private InteractionAssembly() {
     }
 
     public static Result assemble(Host host) {
