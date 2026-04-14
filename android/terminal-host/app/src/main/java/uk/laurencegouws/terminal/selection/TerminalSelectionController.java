@@ -269,8 +269,7 @@ public final class TerminalSelectionController {
         }
         final int status = updateSelectionFromPoint(x, y);
         if (status == 0) {
-            applyImmediateSelectionAutoscrollStep();
-            syncSelectionAndReevaluateFrameLoop();
+            onSelectionUpdateSuccessDuringDrag();
         }
     }
 
@@ -280,7 +279,7 @@ public final class TerminalSelectionController {
         }
         final int status = updateSelectionFromPoint(x, y);
         if (status == 0) {
-            syncTerminalSelectionActionMode();
+            onSelectionUpdateSuccess();
         }
         if (selectionDragMode == SelectionDragMode.gesture) {
             bridge.finishSelectionGesture();
@@ -321,8 +320,7 @@ public final class TerminalSelectionController {
                     return true;
                 }
                 if (updateSelectionFromPoint(selectionHandleAnchorX(handle), selectionHandleAnchorY(handle)) == 0) {
-                    applyImmediateSelectionAutoscrollStep();
-                    syncSelectionAndReevaluateFrameLoop();
+                    onSelectionUpdateSuccessDuringDrag();
                 }
                 return true;
             case MotionEvent.ACTION_UP:
@@ -330,7 +328,7 @@ public final class TerminalSelectionController {
                 if (selectionDragCommitted) {
                     positionDraggedHandle(handle, handle.getX() + event.getX(), handle.getY() + event.getY());
                     if (updateSelectionFromPoint(selectionHandleAnchorX(handle), selectionHandleAnchorY(handle)) == 0) {
-                        syncTerminalSelectionActionMode();
+                        onSelectionUpdateSuccess();
                     }
                 }
                 completeSelectionDragInteraction();
@@ -389,6 +387,15 @@ public final class TerminalSelectionController {
     private void syncSelectionAndReevaluateFrameLoop() {
         syncTerminalSelectionActionMode();
         host.reevaluateProductFrameLoop();
+    }
+
+    private void onSelectionUpdateSuccess() {
+        syncTerminalSelectionActionMode();
+    }
+
+    private void onSelectionUpdateSuccessDuringDrag() {
+        applyImmediateSelectionAutoscrollStep();
+        syncSelectionAndReevaluateFrameLoop();
     }
 
     private boolean canHandleSelectionTap() {
@@ -642,7 +649,7 @@ public final class TerminalSelectionController {
         activeGestureScrollbackOffset = nextOffset;
         final int status = updateSelectionFromActiveDrag();
         if (status == 0) {
-            syncTerminalSelectionActionMode();
+            onSelectionUpdateSuccess();
         }
         host.refreshProductScrollOverlay();
         host.reevaluateProductFrameLoop();
