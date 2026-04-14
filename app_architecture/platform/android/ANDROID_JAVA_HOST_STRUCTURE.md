@@ -59,8 +59,8 @@ Current shape markers (for hygiene tracking, not hard limits):
 - `host/TerminalInputHostFactory.java`: `56` lines
 - `host/interaction/InteractionAssembly.java`: `109` lines
 - `host/interaction/InteractionCallbacks.java`: `97` lines
-- `host/TerminalInputAssembly.java`: `93` lines
-- `host/TerminalInputAssemblyHostCallbacks.java`: `106` lines
+- `host/input/InputAssembly.java`: `94` lines
+- `host/input/InputCallbacks.java`: `106` lines
 - `host/TerminalSurfaceHostFactory.java`: `67` lines
 - `host/TerminalSurfaceWidgetAssembly.java`: `127` lines
 - `host/TerminalSurfaceWidgetAssemblyHostCallbacks.java`: `212` lines
@@ -117,8 +117,8 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/interaction/InteractionAssembly.java` | Good | Owns interaction controller assembly wiring (selection + gesture state) for activity startup. | Keep this assembly-only; behavior stays in interaction controllers. |
 | `host/interaction/InteractionCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/interaction/InteractionAssembly`. | Keep adapter-only; avoid moving interaction behavior into this adapter. |
 | `host/TerminalInputHostFactory.java` | Good | Owns hardware-keyboard and IME-focus-recovery controller construction so input seams stay out of generic host assembly. | Keep this construction-only; input behavior remains in `input/` controllers. |
-| `host/TerminalInputAssembly.java` | Good | Owns input-view installation and input-controller assembly composition for the activity wiring layer. | Keep this assembly-only; input behavior remains in `input/` controllers. |
-| `host/TerminalInputAssemblyHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalInputAssembly`. | Keep adapter-only; avoid adding input behavior here. |
+| `host/input/InputAssembly.java` | Good | Owns input-view installation and input-controller assembly composition for the activity wiring layer. | Keep this assembly-only; input behavior remains in `input/` controllers. |
+| `host/input/InputCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/input/InputAssembly`. | Keep adapter-only; avoid adding input behavior here. |
 | `host/TerminalSurfaceHostFactory.java` | Good | Owns surface host bridge/callback construction so surface lifecycle assembly stays out of generic host assembly. | Keep this construction-only; surface behavior remains in surface host controllers/bridges. |
 | `host/TerminalSurfaceWidgetAssembly.java` | Good | Owns surface/widget activity wiring assembly that composes surface and UI host factories for activity use. | Keep this assembly-only; surface/widget behavior remains in dedicated controllers. |
 | `host/TerminalSurfaceWidgetAssemblyHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalSurfaceWidgetAssembly`. | Keep adapter-only; avoid adding surface/widget behavior here. |

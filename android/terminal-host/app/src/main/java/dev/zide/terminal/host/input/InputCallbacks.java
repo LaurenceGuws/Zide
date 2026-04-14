@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.input;
 
 import android.app.Activity;
 import android.view.View;
@@ -10,8 +10,8 @@ import java.util.function.Supplier;
 
 import dev.zide.terminal.input.ShellInputView;
 
-/** Functional callback adapter for {@link TerminalInputAssembly.Host}. */
-public final class TerminalInputAssemblyHostCallbacks implements TerminalInputAssembly.Host {
+/** Functional callback adapter for {@link InputAssembly.Host}. */
+public final class InputCallbacks implements InputAssembly.Host {
     private final Supplier<Activity> activity;
     private final Supplier<View> rootView;
     private final Supplier<ShellInputView.Host> shellInputHost;
@@ -19,12 +19,12 @@ public final class TerminalInputAssemblyHostCallbacks implements TerminalInputAs
     private final BooleanSupplier currentImeVisible;
     private final Consumer<Boolean> setImeVisible;
     private final BooleanSupplier nativeLoaded;
-    private final TerminalInputAssembly.IntSupplier nativeFollowShellLiveBottom;
+    private final InputAssembly.IntSupplier nativeFollowShellLiveBottom;
     private final Runnable refreshProductScrollOverlay;
     private final Consumer<String> updateStatus;
     private final Consumer<String> appendEvent;
 
-    public TerminalInputAssemblyHostCallbacks(
+    public InputCallbacks(
             Supplier<Activity> activity,
             Supplier<View> rootView,
             Supplier<ShellInputView.Host> shellInputHost,
@@ -32,7 +32,7 @@ public final class TerminalInputAssemblyHostCallbacks implements TerminalInputAs
             BooleanSupplier currentImeVisible,
             Consumer<Boolean> setImeVisible,
             BooleanSupplier nativeLoaded,
-            TerminalInputAssembly.IntSupplier nativeFollowShellLiveBottom,
+            InputAssembly.IntSupplier nativeFollowShellLiveBottom,
             Runnable refreshProductScrollOverlay,
             Consumer<String> updateStatus,
             Consumer<String> appendEvent) {
@@ -85,7 +85,7 @@ public final class TerminalInputAssemblyHostCallbacks implements TerminalInputAs
     }
 
     @Override
-    public TerminalInputAssembly.IntSupplier nativeFollowShellLiveBottom() {
+    public InputAssembly.IntSupplier nativeFollowShellLiveBottom() {
         return nativeFollowShellLiveBottom;
     }
 

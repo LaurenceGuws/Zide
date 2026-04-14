@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.input;
 
 import android.app.Activity;
 import android.view.Gravity;
@@ -9,12 +9,13 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import dev.zide.terminal.host.TerminalInputHostFactory;
 import dev.zide.terminal.input.ShellInputView;
 import dev.zide.terminal.input.TerminalHardwareKeyboardController;
 import dev.zide.terminal.input.TerminalImeFocusRecoveryController;
 
 /** Owns shell input installation and input controller wiring assembly. */
-public final class TerminalInputAssembly {
+public final class InputAssembly {
     /** Activity callbacks required to assemble input state. */
     public interface Host {
         Activity activity();
@@ -62,7 +63,7 @@ public final class TerminalInputAssembly {
         }
     }
 
-    private TerminalInputAssembly() {
+    private InputAssembly() {
     }
 
     public static Result assemble(Host host) {

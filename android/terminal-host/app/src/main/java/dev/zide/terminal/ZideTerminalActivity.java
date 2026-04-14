@@ -19,8 +19,8 @@ import dev.zide.terminal.host.TerminalActivityLifecycleController;
 import dev.zide.terminal.host.TerminalActivityLifecycleHostCallbacks;
 import dev.zide.terminal.host.TerminalChromeController;
 import dev.zide.terminal.host.TerminalFrameLoopController;
-import dev.zide.terminal.host.TerminalInputAssembly;
-import dev.zide.terminal.host.TerminalInputAssemblyHostCallbacks;
+import dev.zide.terminal.host.input.InputAssembly;
+import dev.zide.terminal.host.input.InputCallbacks;
 import dev.zide.terminal.host.interaction.InteractionAssembly;
 import dev.zide.terminal.host.interaction.InteractionCallbacks;
 import dev.zide.terminal.host.runtime.ProductRuntimeAssembly;
@@ -251,8 +251,8 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void installInputControllers() {
-        final TerminalInputAssembly.Result result = TerminalInputAssembly.assemble(
-                new TerminalInputAssemblyHostCallbacks(
+        final InputAssembly.Result result = InputAssembly.assemble(
+                new InputCallbacks(
                         () -> this,
                         () -> rootView,
                         () -> this,

@@ -116,7 +116,7 @@ A cut is done only if all are true:
   `host/TerminalActivityLifecycleController` +
   `TerminalActivityLifecycleHostCallbacks`
 - input-view install and input controller activity wiring now composes through
-  `host/TerminalInputAssembly` + `TerminalInputAssemblyHostCallbacks`
+  `host/input/InputAssembly` + `InputCallbacks`
 - surface/widget activity wiring now composes through
   `host/TerminalSurfaceWidgetAssembly` +
   `TerminalSurfaceWidgetAssemblyHostCallbacks`
