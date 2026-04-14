@@ -40,6 +40,47 @@ Focus goals:
 - keep `ZideTerminalActivity` as wiring, not policy
 - keep Android-native interaction ownership clear (gesture/chrome/selection)
 
+## Cleanup Campaign Charter (Authority)
+
+This section is the single source of truth for the active Android cleanup campaign.
+
+Goal:
+
+- aggressively reduce Android host complexity while preserving behavior
+- thin `ZideTerminalActivity` toward composition-root ownership
+- reduce callback-surface pressure without wrapper inflation
+
+Issue class execution order (strict):
+
+1. ownership seams (`ZideTerminalActivity` -> existing owners)
+2. callback pressure reduction (constructor/callback surface)
+3. naming continuation (Readiness/event vocabulary consistency)
+4. dead abstraction cleanup (delete relay-only indirection)
+5. lightweight doc checkpoints (every 5-10 refactor commits)
+
+Hard rules:
+
+- no new pass-through wrappers unless owner dependency count drops measurably
+- each commit must remain compileable and deployable
+- no lint/process-ceremony additions
+- no unrelated-lane changes
+
+Commit and validation rules:
+
+- one logical cut per commit, refactor-only unless explicitly scoped
+- default commit size: small (roughly 20-120 LOC), atomic larger for rename sweeps
+- commit prefixes: `refactor(android):` and `docs(android):`
+- validate every commit with:
+  `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac`
+- run deploy + launch + `AndroidRuntime:E` smoke every 5-10 commits or seam boundary cut
+
+Success metrics:
+
+- materially reduce `ZideTerminalActivity` size and direct responsibilities
+- reduce callback surface in at least two callback-heavy classes
+- keep compile/deploy green through the campaign
+- keep docs progress-based (no intent-only checkpoints)
+
 ## Active TODO
 
 1. Continue cleanup/refactor cuts only where methods still own policy.
