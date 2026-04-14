@@ -290,7 +290,7 @@ public final class ZideTerminalActivity extends Activity
 
     private WidgetCallbacks createWidgetCallbacks() {
         return new WidgetCallbacks(
-                WidgetCallbacks.WidgetHostBundle.of(
+                WidgetCallbacks.WidgetHostCallbacks.of(
                         () -> this,
                         () -> handler,
                         () -> nativeLoaded,
@@ -298,7 +298,7 @@ public final class ZideTerminalActivity extends Activity
                         enabled -> debugViewEnabled = enabled,
                         () -> imeVisible,
                         visible -> imeVisible = visible),
-                WidgetCallbacks.WidgetViewBundle.of(
+                WidgetCallbacks.WidgetViewCallbacks.of(
                         () -> rootView,
                         () -> productView,
                         () -> debugView,
@@ -317,7 +317,7 @@ public final class ZideTerminalActivity extends Activity
                         () -> selectionController,
                         () -> terminalGestureStateController,
                         () -> surfaceHostBridge),
-                WidgetCallbacks.WidgetRuntimeBundle.of(
+                WidgetCallbacks.WidgetRuntimeCallbacks.of(
                         () -> currentInstallState.isInstalling(),
                         () -> currentInstallState.isFailed(),
                         () -> currentReadinessState,
@@ -334,7 +334,7 @@ public final class ZideTerminalActivity extends Activity
                         this::sendDirectText,
                         this::notifyVisibleViewportIfReady,
                         this::refreshUserlandSessionIfReady),
-                WidgetCallbacks.SurfaceLifecycleBundle.of(
+                WidgetCallbacks.WidgetSurfaceLifecycleCallbacks.of(
                         this::callNative,
                         this::callNativeWithSurfaceState,
                         (holder, width, height) -> TerminalNativeBridge.nativeOnSurfaceAvailableBridge(

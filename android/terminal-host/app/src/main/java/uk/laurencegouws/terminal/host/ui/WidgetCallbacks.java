@@ -25,7 +25,7 @@ import uk.laurencegouws.terminal.userland.UserlandInstallState;
 
 /** Functional callback adapter for {@link WidgetAssembly.Host}. */
 public final class WidgetCallbacks implements WidgetAssembly.Host {
-    public static final class WidgetHostBundle {
+    public static final class WidgetHostCallbacks {
         final Supplier<Activity> activity;
         final Supplier<android.os.Handler> handler;
         final BooleanSupplier nativeLoaded;
@@ -34,7 +34,7 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
         final BooleanSupplier imeVisible;
         final Consumer<Boolean> setImeVisible;
 
-        private WidgetHostBundle(
+        private WidgetHostCallbacks(
                 Supplier<Activity> activity,
                 Supplier<android.os.Handler> handler,
                 BooleanSupplier nativeLoaded,
@@ -51,7 +51,7 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
             this.setImeVisible = setImeVisible;
         }
 
-        public static WidgetHostBundle of(
+        public static WidgetHostCallbacks of(
                 Supplier<Activity> activity,
                 Supplier<android.os.Handler> handler,
                 BooleanSupplier nativeLoaded,
@@ -59,7 +59,7 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
                 Consumer<Boolean> setDebugViewEnabled,
                 BooleanSupplier imeVisible,
                 Consumer<Boolean> setImeVisible) {
-            return new WidgetHostBundle(
+            return new WidgetHostCallbacks(
                     activity,
                     handler,
                     nativeLoaded,
@@ -70,7 +70,7 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
         }
     }
 
-    public static final class WidgetViewBundle {
+    public static final class WidgetViewCallbacks {
         final Supplier<View> rootView;
         final Supplier<View> productView;
         final Supplier<View> debugView;
@@ -90,7 +90,7 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
         final Supplier<TerminalGestureStateController> terminalGestureStateController;
         final Supplier<SurfaceBridge> surfaceHostBridge;
 
-        private WidgetViewBundle(
+        private WidgetViewCallbacks(
                 Supplier<View> rootView,
                 Supplier<View> productView,
                 Supplier<View> debugView,
@@ -129,7 +129,7 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
             this.surfaceHostBridge = surfaceHostBridge;
         }
 
-        public static WidgetViewBundle of(
+        public static WidgetViewCallbacks of(
                 Supplier<View> rootView,
                 Supplier<View> productView,
                 Supplier<View> debugView,
@@ -148,7 +148,7 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
                 Supplier<TerminalSelectionController> selectionController,
                 Supplier<TerminalGestureStateController> terminalGestureStateController,
                 Supplier<SurfaceBridge> surfaceHostBridge) {
-            return new WidgetViewBundle(
+            return new WidgetViewCallbacks(
                     rootView,
                     productView,
                     debugView,
@@ -170,7 +170,7 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
         }
     }
 
-    public static final class WidgetRuntimeBundle {
+    public static final class WidgetRuntimeCallbacks {
         final BooleanSupplier currentInstallStateInstalling;
         final BooleanSupplier currentInstallStateFailed;
         final Supplier<UserlandReadinessState> currentReadinessState;
@@ -188,7 +188,7 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
         final Consumer<String> notifyVisibleViewport;
         final Runnable refreshUserlandSession;
 
-        private WidgetRuntimeBundle(
+        private WidgetRuntimeCallbacks(
                 BooleanSupplier currentInstallStateInstalling,
                 BooleanSupplier currentInstallStateFailed,
                 Supplier<UserlandReadinessState> currentReadinessState,
@@ -223,7 +223,7 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
             this.refreshUserlandSession = refreshUserlandSession;
         }
 
-        public static WidgetRuntimeBundle of(
+        public static WidgetRuntimeCallbacks of(
                 BooleanSupplier currentInstallStateInstalling,
                 BooleanSupplier currentInstallStateFailed,
                 Supplier<UserlandReadinessState> currentReadinessState,
@@ -240,7 +240,7 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
                 Consumer<String> sendDirectText,
                 Consumer<String> notifyVisibleViewport,
                 Runnable refreshUserlandSession) {
-            return new WidgetRuntimeBundle(
+            return new WidgetRuntimeCallbacks(
                     currentInstallStateInstalling,
                     currentInstallStateFailed,
                     currentReadinessState,
@@ -260,23 +260,23 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
         }
     }
 
-    public static final class SurfaceLifecycleBundle {
-        final SurfaceLifecycleCallbacks.NativeEventCallback callNative;
-        final SurfaceLifecycleCallbacks.NativeSurfaceEventCallback callNativeWithSurfaceState;
-        final SurfaceLifecycleCallbacks.SurfaceAvailableCallback nativeOnSurfaceAvailableBridge;
-        final SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceDestroyedBridge;
-        final SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceRedrawNeededBridge;
-        final SurfaceLifecycleCallbacks.VisibleViewportCallback nativeOnVisibleViewportBridge;
+    public static final class WidgetSurfaceLifecycleCallbacks {
+        final uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.NativeEventCallback callNative;
+        final uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.NativeSurfaceEventCallback callNativeWithSurfaceState;
+        final uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.SurfaceAvailableCallback nativeOnSurfaceAvailableBridge;
+        final uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceDestroyedBridge;
+        final uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceRedrawNeededBridge;
+        final uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.VisibleViewportCallback nativeOnVisibleViewportBridge;
         final Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot;
         final Consumer<String> handleProductShellStateEvent;
 
-        private SurfaceLifecycleBundle(
-                SurfaceLifecycleCallbacks.NativeEventCallback callNative,
-                SurfaceLifecycleCallbacks.NativeSurfaceEventCallback callNativeWithSurfaceState,
-                SurfaceLifecycleCallbacks.SurfaceAvailableCallback nativeOnSurfaceAvailableBridge,
-                SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceDestroyedBridge,
-                SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceRedrawNeededBridge,
-                SurfaceLifecycleCallbacks.VisibleViewportCallback nativeOnVisibleViewportBridge,
+        private WidgetSurfaceLifecycleCallbacks(
+                uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.NativeEventCallback callNative,
+                uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.NativeSurfaceEventCallback callNativeWithSurfaceState,
+                uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.SurfaceAvailableCallback nativeOnSurfaceAvailableBridge,
+                uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceDestroyedBridge,
+                uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceRedrawNeededBridge,
+                uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.VisibleViewportCallback nativeOnVisibleViewportBridge,
                 Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot,
                 Consumer<String> handleProductShellStateEvent) {
             this.callNative = callNative;
@@ -289,16 +289,16 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
             this.handleProductShellStateEvent = handleProductShellStateEvent;
         }
 
-        public static SurfaceLifecycleBundle of(
-                SurfaceLifecycleCallbacks.NativeEventCallback callNative,
-                SurfaceLifecycleCallbacks.NativeSurfaceEventCallback callNativeWithSurfaceState,
-                SurfaceLifecycleCallbacks.SurfaceAvailableCallback nativeOnSurfaceAvailableBridge,
-                SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceDestroyedBridge,
-                SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceRedrawNeededBridge,
-                SurfaceLifecycleCallbacks.VisibleViewportCallback nativeOnVisibleViewportBridge,
+        public static WidgetSurfaceLifecycleCallbacks of(
+                uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.NativeEventCallback callNative,
+                uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.NativeSurfaceEventCallback callNativeWithSurfaceState,
+                uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.SurfaceAvailableCallback nativeOnSurfaceAvailableBridge,
+                uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceDestroyedBridge,
+                uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceRedrawNeededBridge,
+                uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.VisibleViewportCallback nativeOnVisibleViewportBridge,
                 Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot,
                 Consumer<String> handleProductShellStateEvent) {
-            return new SurfaceLifecycleBundle(
+            return new WidgetSurfaceLifecycleCallbacks(
                     callNative,
                     callNativeWithSurfaceState,
                     nativeOnSurfaceAvailableBridge,
@@ -310,264 +310,264 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
         }
     }
 
-    private final WidgetHostBundle widgetHostBundle;
-    private final WidgetViewBundle widgetViewBundle;
-    private final WidgetRuntimeBundle widgetRuntimeBundle;
-    private final SurfaceLifecycleBundle surfaceLifecycleBundle;
+    private final WidgetHostCallbacks widgetHostCallbacks;
+    private final WidgetViewCallbacks widgetViewCallbacks;
+    private final WidgetRuntimeCallbacks widgetRuntimeCallbacks;
+    private final WidgetSurfaceLifecycleCallbacks surfaceLifecycleCallbacks;
 
     public WidgetCallbacks(
-            WidgetHostBundle widgetHostBundle,
-            WidgetViewBundle widgetViewBundle,
-            WidgetRuntimeBundle widgetRuntimeBundle,
-            SurfaceLifecycleBundle surfaceLifecycleBundle) {
-        this.widgetHostBundle = widgetHostBundle;
-        this.widgetViewBundle = widgetViewBundle;
-        this.widgetRuntimeBundle = widgetRuntimeBundle;
-        this.surfaceLifecycleBundle = surfaceLifecycleBundle;
+            WidgetHostCallbacks widgetHostCallbacks,
+            WidgetViewCallbacks widgetViewCallbacks,
+            WidgetRuntimeCallbacks widgetRuntimeCallbacks,
+            WidgetSurfaceLifecycleCallbacks surfaceLifecycleCallbacks) {
+        this.widgetHostCallbacks = widgetHostCallbacks;
+        this.widgetViewCallbacks = widgetViewCallbacks;
+        this.widgetRuntimeCallbacks = widgetRuntimeCallbacks;
+        this.surfaceLifecycleCallbacks = surfaceLifecycleCallbacks;
     }
 
     @Override
     public Activity activity() {
-        return widgetHostBundle.activity.get();
+        return widgetHostCallbacks.activity.get();
     }
 
     @Override
     public android.os.Handler handler() {
-        return widgetHostBundle.handler.get();
+        return widgetHostCallbacks.handler.get();
     }
 
     @Override
     public boolean nativeLoaded() {
-        return widgetHostBundle.nativeLoaded.getAsBoolean();
+        return widgetHostCallbacks.nativeLoaded.getAsBoolean();
     }
 
     @Override
     public boolean debugViewEnabled() {
-        return widgetHostBundle.debugViewEnabled.getAsBoolean();
+        return widgetHostCallbacks.debugViewEnabled.getAsBoolean();
     }
 
     @Override
     public void setDebugViewEnabled(boolean enabled) {
-        widgetHostBundle.setDebugViewEnabled.accept(enabled);
+        widgetHostCallbacks.setDebugViewEnabled.accept(enabled);
     }
 
     @Override
     public boolean imeVisible() {
-        return widgetHostBundle.imeVisible.getAsBoolean();
+        return widgetHostCallbacks.imeVisible.getAsBoolean();
     }
 
     @Override
     public void setImeVisible(boolean visible) {
-        widgetHostBundle.setImeVisible.accept(visible);
+        widgetHostCallbacks.setImeVisible.accept(visible);
     }
 
     @Override
     public View rootView() {
-        return widgetViewBundle.rootView.get();
+        return widgetViewCallbacks.rootView.get();
     }
 
     @Override
     public View productView() {
-        return widgetViewBundle.productView.get();
+        return widgetViewCallbacks.productView.get();
     }
 
     @Override
     public View debugView() {
-        return widgetViewBundle.debugView.get();
+        return widgetViewCallbacks.debugView.get();
     }
 
     @Override
     public View productBootstrapBlocker() {
-        return widgetViewBundle.productBootstrapBlocker.get();
+        return widgetViewCallbacks.productBootstrapBlocker.get();
     }
 
     @Override
     public View drawerScrim() {
-        return widgetViewBundle.drawerScrim.get();
+        return widgetViewCallbacks.drawerScrim.get();
     }
 
     @Override
     public View drawerEdgeHotspot() {
-        return widgetViewBundle.drawerEdgeHotspot.get();
+        return widgetViewCallbacks.drawerEdgeHotspot.get();
     }
 
     @Override
     public View leftSidebar() {
-        return widgetViewBundle.leftSidebar.get();
+        return widgetViewCallbacks.leftSidebar.get();
     }
 
     @Override
     public FrameLayout productSurfaceContainer() {
-        return widgetViewBundle.productSurfaceContainer.get();
+        return widgetViewCallbacks.productSurfaceContainer.get();
     }
 
     @Override
     public TerminalScrollOverlayView terminalScrollOverlay() {
-        return widgetViewBundle.terminalScrollOverlay.get();
+        return widgetViewCallbacks.terminalScrollOverlay.get();
     }
 
     @Override
     public TextView productBootstrapTitle() {
-        return widgetViewBundle.productBootstrapTitle.get();
+        return widgetViewCallbacks.productBootstrapTitle.get();
     }
 
     @Override
     public TextView productBootstrapDetail() {
-        return widgetViewBundle.productBootstrapDetail.get();
+        return widgetViewCallbacks.productBootstrapDetail.get();
     }
 
     @Override
     public Button productBootstrapRetryButton() {
-        return widgetViewBundle.productBootstrapRetryButton.get();
+        return widgetViewCallbacks.productBootstrapRetryButton.get();
     }
 
     @Override
     public Button assistCtrlButton() {
-        return widgetViewBundle.assistCtrlButton.get();
+        return widgetViewCallbacks.assistCtrlButton.get();
     }
 
     @Override
     public Button assistAltButton() {
-        return widgetViewBundle.assistAltButton.get();
+        return widgetViewCallbacks.assistAltButton.get();
     }
 
     @Override
     public ShellInputView shellInputView() {
-        return widgetViewBundle.shellInputView.get();
+        return widgetViewCallbacks.shellInputView.get();
     }
 
     @Override
     public TerminalSelectionController selectionController() {
-        return widgetViewBundle.selectionController.get();
+        return widgetViewCallbacks.selectionController.get();
     }
 
     @Override
     public TerminalGestureStateController terminalGestureStateController() {
-        return widgetViewBundle.terminalGestureStateController.get();
+        return widgetViewCallbacks.terminalGestureStateController.get();
     }
 
     @Override
     public SurfaceBridge surfaceHostBridge() {
-        return widgetViewBundle.surfaceHostBridge.get();
+        return widgetViewCallbacks.surfaceHostBridge.get();
     }
 
     @Override
     public boolean currentInstallStateInstalling() {
-        return widgetRuntimeBundle.currentInstallStateInstalling.getAsBoolean();
+        return widgetRuntimeCallbacks.currentInstallStateInstalling.getAsBoolean();
     }
 
     @Override
     public boolean currentInstallStateFailed() {
-        return widgetRuntimeBundle.currentInstallStateFailed.getAsBoolean();
+        return widgetRuntimeCallbacks.currentInstallStateFailed.getAsBoolean();
     }
 
     @Override
     public UserlandReadinessState currentReadinessState() {
-        return widgetRuntimeBundle.currentReadinessState.get();
+        return widgetRuntimeCallbacks.currentReadinessState.get();
     }
 
     @Override
     public UserlandInstallState currentInstallState() {
-        return widgetRuntimeBundle.currentInstallState.get();
+        return widgetRuntimeCallbacks.currentInstallState.get();
     }
 
     @Override
     public boolean shouldRunProductFrameLoop() {
-        return widgetRuntimeBundle.shouldRunProductFrameLoop.getAsBoolean();
+        return widgetRuntimeCallbacks.shouldRunProductFrameLoop.getAsBoolean();
     }
 
     @Override
     public void refreshProductScrollOverlay() {
-        widgetRuntimeBundle.refreshProductScrollOverlay.run();
+        widgetRuntimeCallbacks.refreshProductScrollOverlay.run();
     }
 
     @Override
     public void appendEvent(String event) {
-        widgetRuntimeBundle.appendEvent.accept(event);
+        widgetRuntimeCallbacks.appendEvent.accept(event);
     }
 
     @Override
     public void updateStatus(String statusLabel) {
-        widgetRuntimeBundle.updateStatus.accept(statusLabel);
+        widgetRuntimeCallbacks.updateStatus.accept(statusLabel);
     }
 
     @Override
     public void callNative(String event, long seq) {
-        surfaceLifecycleBundle.callNative.call(event, seq);
+        surfaceLifecycleCallbacks.callNative.call(event, seq);
     }
 
     @Override
     public void callNativeWithSurfaceState(String event, long seq, AndroidDebugFormatter.SurfaceEventSnapshot state) {
-        surfaceLifecycleBundle.callNativeWithSurfaceState.call(event, seq, state);
+        surfaceLifecycleCallbacks.callNativeWithSurfaceState.call(event, seq, state);
     }
 
     @Override
     public long nativeOnSurfaceAvailableBridge(SurfaceHolder holder, int width, int height) {
-        return surfaceLifecycleBundle.nativeOnSurfaceAvailableBridge.call(holder, width, height);
+        return surfaceLifecycleCallbacks.nativeOnSurfaceAvailableBridge.call(holder, width, height);
     }
 
     @Override
     public long nativeOnSurfaceDestroyedBridge() {
-        return surfaceLifecycleBundle.nativeOnSurfaceDestroyedBridge.getAsLong();
+        return surfaceLifecycleCallbacks.nativeOnSurfaceDestroyedBridge.getAsLong();
     }
 
     @Override
     public long nativeOnSurfaceRedrawNeededBridge() {
-        return surfaceLifecycleBundle.nativeOnSurfaceRedrawNeededBridge.getAsLong();
+        return surfaceLifecycleCallbacks.nativeOnSurfaceRedrawNeededBridge.getAsLong();
     }
 
     @Override
     public long nativeOnVisibleViewportBridge(int width, int height, boolean imeVisible) {
-        return surfaceLifecycleBundle.nativeOnVisibleViewportBridge.call(width, height, imeVisible);
+        return surfaceLifecycleCallbacks.nativeOnVisibleViewportBridge.call(width, height, imeVisible);
     }
 
     @Override
     public AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot() {
-        return surfaceLifecycleBundle.currentSurfaceStateSnapshot.get();
+        return surfaceLifecycleCallbacks.currentSurfaceStateSnapshot.get();
     }
 
     @Override
     public void handleProductShellStateEvent(String statusLabel) {
-        surfaceLifecycleBundle.handleProductShellStateEvent.accept(statusLabel);
+        surfaceLifecycleCallbacks.handleProductShellStateEvent.accept(statusLabel);
     }
 
     @Override
     public int nativeSetSessionScrollbackOffset(int offsetRows) {
-        return widgetRuntimeBundle.nativeSetSessionScrollbackOffset.applyAsInt(offsetRows);
+        return widgetRuntimeCallbacks.nativeSetSessionScrollbackOffset.applyAsInt(offsetRows);
     }
 
     @Override
     public int nativeFollowSessionLiveBottom() {
-        return widgetRuntimeBundle.nativeFollowSessionLiveBottom.getAsInt();
+        return widgetRuntimeCallbacks.nativeFollowSessionLiveBottom.getAsInt();
     }
 
     @Override
     public int productViewportHeightPx() {
-        return widgetRuntimeBundle.productViewportHeightPx.getAsInt();
+        return widgetRuntimeCallbacks.productViewportHeightPx.getAsInt();
     }
 
     @Override
     public void reevaluateProductFrameLoop() {
-        widgetRuntimeBundle.reevaluateProductFrameLoop.run();
+        widgetRuntimeCallbacks.reevaluateProductFrameLoop.run();
     }
 
     @Override
     public void runPackageDoctor() {
-        widgetRuntimeBundle.runPackageDoctor.run();
+        widgetRuntimeCallbacks.runPackageDoctor.run();
     }
 
     @Override
     public void sendDirectText(String text) {
-        widgetRuntimeBundle.sendDirectText.accept(text);
+        widgetRuntimeCallbacks.sendDirectText.accept(text);
     }
 
     @Override
     public void notifyVisibleViewport(String reason) {
-        widgetRuntimeBundle.notifyVisibleViewport.accept(reason);
+        widgetRuntimeCallbacks.notifyVisibleViewport.accept(reason);
     }
 
     @Override
     public void refreshUserlandSession() {
-        widgetRuntimeBundle.refreshUserlandSession.run();
+        widgetRuntimeCallbacks.refreshUserlandSession.run();
     }
 }
