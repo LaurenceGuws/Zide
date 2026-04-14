@@ -138,7 +138,9 @@ public final class SurfaceController {
 
     public void onSurfaceRedrawNeeded(SurfaceHolder holder) {
         if (surfaceRedrawNeededDispatching) {
-            appendSurfaceRedrawReentrantSkippedEvent(holder);
+            host.appendEvent(
+                    "surface.redrawNeeded reentrant-skipped generation=" + host.surfaceHostGeneration() +
+                            " valid=" + holder.getSurface().isValid());
             return;
         }
         surfaceRedrawNeededDispatching = true;
@@ -159,7 +161,7 @@ public final class SurfaceController {
 
         host.setSurfaceHostGeneration(host.surfaceHostGeneration() + 1);
         final SurfaceView nextSurfaceView = createAndAttachSurfaceView();
-        final SurfaceHolder.Callback2 nextCallback = resolveSurfaceCallback(callback);
+        final SurfaceHolder.Callback2 nextCallback = callback != null ? callback : host.surfaceCallback();
         host.reinstallSurfaceCallback(nextSurfaceView, nextCallback);
         host.setSurfaceView(nextSurfaceView);
         host.appendEvent("surface.host.installed reason=" + reason + " generation=" + host.surfaceHostGeneration());
@@ -252,7 +254,8 @@ public final class SurfaceController {
         if (existing == null) {
             return;
         }
-        final SurfaceHolder.Callback2 previousCallback = callback != null ? callback : host.surfaceCallback();
+        final SurfaceHolder.Callback2 previousCallback =
+                callback != null ? callback : host.surfaceCallback();
         if (previousCallback != null) {
             existing.getHolder().removeCallback(previousCallback);
         }
@@ -273,18 +276,8 @@ public final class SurfaceController {
         return nextSurfaceView;
     }
 
-    private SurfaceHolder.Callback2 resolveSurfaceCallback(SurfaceHolder.Callback2 callback) {
-        return callback != null ? callback : host.surfaceCallback();
-    }
-
     private long nativeViewportChangedSeq(int width, int height, boolean imeVisible) {
         return host.nativeLoaded() ? host.nativeOnVisibleViewportBridge(width, height, imeVisible) : -1;
-    }
-
-    private void appendSurfaceRedrawReentrantSkippedEvent(SurfaceHolder holder) {
-        host.appendEvent(
-                "surface.redrawNeeded reentrant-skipped generation=" + host.surfaceHostGeneration() +
-                        " valid=" + holder.getSurface().isValid());
     }
 
     private void appendNativeSurfaceRedrawNeededEvent(long seq, AndroidDebugFormatter.SurfaceEventSnapshot state) {
