@@ -246,7 +246,20 @@ public final class SurfaceController {
             final int originalWidth = Math.max(2, surfaceView.getWidth());
             final int originalHeight = Math.max(2, surfaceView.getHeight());
             final int shrunkHeight = Math.max(200, originalHeight / 2);
-            applySurfaceResize(holder, originalWidth, originalHeight, shrunkHeight);
+            holder.setFixedSize(originalWidth, shrunkHeight);
+            host.appendEvent(
+                    "debug.surface.resize fixedSize=" + originalWidth + "x" + shrunkHeight
+                            + " original=" + originalWidth + "x" + originalHeight
+                            + " target=surfaceHolder");
+            host.updateStatus("debug.surface.resized_shrink");
+
+            host.handler().postDelayed(() -> {
+                holder.setFixedSize(originalWidth, originalHeight);
+                host.appendEvent(
+                        "debug.surface.resize restoreSize=" + originalWidth + "x" + originalHeight
+                                + " target=surfaceHolder");
+                host.updateStatus("debug.surface.resized_restore");
+            }, 900);
         }, 900);
     }
 
@@ -259,29 +272,6 @@ public final class SurfaceController {
         host.handler().postDelayed(() -> {
             host.handleProductShellStateEvent("debug-session-started");
         }, 900);
-    }
-
-    private void applySurfaceResize(
-            SurfaceHolder holder,
-            int originalWidth,
-            int originalHeight,
-            int shrunkHeight) {
-        holder.setFixedSize(originalWidth, shrunkHeight);
-        host.appendEvent(
-                "debug.surface.resize fixedSize=" + originalWidth + "x" + shrunkHeight
-                        + " original=" + originalWidth + "x" + originalHeight
-                        + " target=surfaceHolder");
-        host.updateStatus("debug.surface.resized_shrink");
-
-        host.handler().postDelayed(() -> restoreSurfaceSize(holder, originalWidth, originalHeight), 900);
-    }
-
-    private void restoreSurfaceSize(SurfaceHolder holder, int originalWidth, int originalHeight) {
-        holder.setFixedSize(originalWidth, originalHeight);
-        host.appendEvent(
-                "debug.surface.resize restoreSize=" + originalWidth + "x" + originalHeight
-                        + " target=surfaceHolder");
-        host.updateStatus("debug.surface.resized_restore");
     }
 
 }
