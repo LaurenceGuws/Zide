@@ -223,54 +223,62 @@ public final class ZideTerminalActivity extends Activity
 
     private void assembleInteractionControllers() {
         final InteractionAssembly.Result result = InteractionAssembly.assemble(
-                new InteractionCallbacks(
-                        () -> this,
-                        () -> handler,
-                        () -> productSurfaceContainer,
-                        this::productViewportWidthPx,
-                        this::productViewportHeightPx,
-                        () -> nativeLoaded,
-                        () -> {
-                            if (terminalProductRuntimeController != null) {
-                                terminalProductRuntimeController.stopScrollbackFling();
-                            }
-                        },
-                        () -> {
-                            if (terminalProductRuntimeController != null) {
-                                terminalProductRuntimeController.refreshProductScrollOverlay();
-                            }
-                        },
-                        () -> {
-                            if (productFrameLoopController != null) {
-                                productFrameLoopController.reevaluate();
-                            }
-                        },
-                        this::appendEvent));
+                createInteractionCallbacks());
         selectionController = result.selectionController;
         terminalGestureStateController = result.terminalGestureStateController;
     }
 
     private void installInputControllers() {
         final InputAssembly.Result result = InputAssembly.assemble(
-                new InputCallbacks(
-                        () -> this,
-                        () -> rootView,
-                        () -> this,
-                        () -> getSystemService(InputMethodManager.class),
-                        () -> imeVisible,
-                        visible -> imeVisible = visible,
-                        () -> nativeLoaded,
-                        TerminalNativeBridge::nativeFollowSessionLiveBottomBridge,
-                        () -> {
-                            if (terminalProductRuntimeController != null) {
-                                terminalProductRuntimeController.refreshProductScrollOverlay();
-                            }
-                        },
-                        this::updateStatus,
-                        this::appendEvent));
+                createInputCallbacks());
         shellInputView = result.shellInputView;
         terminalHardwareKeyboardController = result.hardwareKeyboardController;
         terminalImeFocusRecoveryController = result.imeFocusRecoveryController;
+    }
+
+    private InteractionCallbacks createInteractionCallbacks() {
+        return new InteractionCallbacks(
+                () -> this,
+                () -> handler,
+                () -> productSurfaceContainer,
+                this::productViewportWidthPx,
+                this::productViewportHeightPx,
+                () -> nativeLoaded,
+                () -> {
+                    if (terminalProductRuntimeController != null) {
+                        terminalProductRuntimeController.stopScrollbackFling();
+                    }
+                },
+                () -> {
+                    if (terminalProductRuntimeController != null) {
+                        terminalProductRuntimeController.refreshProductScrollOverlay();
+                    }
+                },
+                () -> {
+                    if (productFrameLoopController != null) {
+                        productFrameLoopController.reevaluate();
+                    }
+                },
+                this::appendEvent);
+    }
+
+    private InputCallbacks createInputCallbacks() {
+        return new InputCallbacks(
+                () -> this,
+                () -> rootView,
+                () -> this,
+                () -> getSystemService(InputMethodManager.class),
+                () -> imeVisible,
+                visible -> imeVisible = visible,
+                () -> nativeLoaded,
+                TerminalNativeBridge::nativeFollowSessionLiveBottomBridge,
+                () -> {
+                    if (terminalProductRuntimeController != null) {
+                        terminalProductRuntimeController.refreshProductScrollOverlay();
+                    }
+                },
+                this::updateStatus,
+                this::appendEvent);
     }
 
     private void assembleWidgetHostControllers() {
