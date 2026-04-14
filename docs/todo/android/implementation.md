@@ -150,6 +150,9 @@ Agent reporting contract (mandatory for cleanup campaign updates):
    - Completed: `SurfaceController` resume debug recreation scheduling is now
      named `scheduleDebugSurfaceRecreationIfRequested` so `onResume` stays a
      thin orchestration seam.
+   - Completed: `SurfaceController` resume debug resize and shell-start
+     scheduling now live in `scheduleDebugSurfaceResizeIfRequested` and
+     `scheduleDebugShellStartIfRequested`.
    - Next: continue smallest ownership-clarity cuts in `ChromeController` or
      `SurfaceController` where watch-level pressure remains.
 3. Stabilize selection/scroll interaction behavior under manual device usage.
