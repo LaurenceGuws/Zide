@@ -173,6 +173,11 @@ public final class SurfaceController {
         host.appendEvent("surface.changed generation=" + host.surfaceHostGeneration()
                 + " format=" + format
                 + " size=" + width + "x" + height);
+        dispatchProductSurfaceChanged(holder, width, height);
+    }
+
+    /** Notifies native of holder sizing, then schedules viewport + shell chrome follow-ups. */
+    private void dispatchProductSurfaceChanged(SurfaceHolder holder, int width, int height) {
         final long seq = host.nativeLoaded() ? host.nativeOnSurfaceAvailableBridge(holder, width, height) : -1;
         host.callNativeWithSurfaceState(
                 "native.surfaceAvailable",
@@ -184,6 +189,10 @@ public final class SurfaceController {
 
     public void onSurfaceDestroyed(SurfaceHolder holder) {
         host.appendEvent("surface.lifecycle.destroyed generation=" + host.surfaceHostGeneration());
+        dispatchNativeProductSurfaceDestroyed();
+    }
+
+    private void dispatchNativeProductSurfaceDestroyed() {
         final long seq = host.nativeLoaded() ? host.nativeOnSurfaceDestroyedBridge() : -1;
         host.callNativeWithSurfaceState(
                 "native.surfaceDestroyed",

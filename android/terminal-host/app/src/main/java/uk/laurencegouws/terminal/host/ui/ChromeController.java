@@ -127,8 +127,11 @@ public final class ChromeController {
         if (imm == null) {
             return;
         }
+        runManualImeOpenSequence(imm, host.shellInputView());
+    }
 
-        final ShellInputView shellInputView = host.shellInputView();
+    /** Focus, soft-input show, and IME visibility bookkeeping for a manual open. */
+    private void runManualImeOpenSequence(InputMethodManager imm, ShellInputView shellInputView) {
         host.appendEvent("manual.ime.open begin focus=" + shellInputView.hasFocus());
         requestInputFocus(shellInputView);
         host.appendEvent("manual.ime.open focusAfterRequest=" + shellInputView.hasFocus());
@@ -163,7 +166,7 @@ public final class ChromeController {
             return;
         }
         host.setSidebarOpen(true);
-        host.leftSidebar().animate().translationX(0).setDuration(180).start();
+        animateSidebarTranslation(true);
         updateSidebarVisibility(true);
     }
 
@@ -172,8 +175,13 @@ public final class ChromeController {
             return;
         }
         host.setSidebarOpen(false);
-        host.leftSidebar().animate().translationX(-host.leftSidebar().getWidth()).setDuration(180).start();
+        animateSidebarTranslation(false);
         updateSidebarVisibility(false);
+    }
+
+    private void animateSidebarTranslation(boolean open) {
+        final float targetX = open ? 0f : -host.leftSidebar().getWidth();
+        host.leftSidebar().animate().translationX(targetX).setDuration(180).start();
     }
 
     public void updateSidebarVisibility(boolean visible) {
