@@ -249,7 +249,7 @@ public final class SurfaceController {
         removeExistingSurfaceHostViewIfPresent(reason, callback);
 
         host.setSurfaceHostGeneration(host.surfaceHostGeneration() + 1);
-        final SurfaceView nextSurfaceView = new SurfaceView(host.productSurfaceContainer().getContext());
+        final SurfaceView nextSurfaceView = createNextProductSurfaceHostView();
         final SurfaceHolder holder = nextSurfaceView.getHolder();
         holder.setFormat(PixelFormat.RGBA_8888);
         host.installSurfaceGestureHost(nextSurfaceView);
@@ -264,6 +264,10 @@ public final class SurfaceController {
 
     private void appendSurfaceHostInstalledTelemetry(String reason) {
         host.appendEvent("surface.host.installed reason=" + reason + " generation=" + host.surfaceHostGeneration());
+    }
+
+    private SurfaceView createNextProductSurfaceHostView() {
+        return new SurfaceView(host.productSurfaceContainer().getContext());
     }
 
     public void notifyVisibleViewport(String reason) {

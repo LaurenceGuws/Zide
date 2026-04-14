@@ -61,11 +61,11 @@ public final class ChromeController {
 
     private void bindSidebarNavActions() {
         final Button restartButton =
-                (Button) host.leftSidebar().findViewById(uk.laurencegouws.terminal.R.id.sidebar_restart_button);
+                (Button) leftSidebarChrome().findViewById(uk.laurencegouws.terminal.R.id.sidebar_restart_button);
         final Button debugButton =
-                (Button) host.leftSidebar().findViewById(uk.laurencegouws.terminal.R.id.sidebar_debug_button);
+                (Button) leftSidebarChrome().findViewById(uk.laurencegouws.terminal.R.id.sidebar_debug_button);
         final Button packagesButton =
-                (Button) host.leftSidebar().findViewById(uk.laurencegouws.terminal.R.id.sidebar_packages_button);
+                (Button) leftSidebarChrome().findViewById(uk.laurencegouws.terminal.R.id.sidebar_packages_button);
 
         bindSidebarRestartNavButton(restartButton);
         bindSidebarDebugNavButton(debugButton);
@@ -94,9 +94,21 @@ public final class ChromeController {
     }
 
     private void bindSidebarDrawerGestures() {
+        bindDrawerScrimDismissChrome();
+        bindDrawerEdgeSwipeListenersChrome();
+    }
+
+    private View leftSidebarChrome() {
+        return host.leftSidebar();
+    }
+
+    private void bindDrawerScrimDismissChrome() {
         host.drawerScrim().setOnClickListener(view -> closeSidebar());
+    }
+
+    private void bindDrawerEdgeSwipeListenersChrome() {
         host.drawerEdgeHotspot().setOnTouchListener(new EdgeSwipeListener(true));
-        host.leftSidebar().setOnTouchListener(new EdgeSwipeListener(false));
+        leftSidebarChrome().setOnTouchListener(new EdgeSwipeListener(false));
     }
 
     public void bindAssistBar() {
@@ -260,8 +272,8 @@ public final class ChromeController {
     }
 
     private void animateSidebarTranslation(boolean open) {
-        final float targetX = open ? 0f : -host.leftSidebar().getWidth();
-        host.leftSidebar().animate().translationX(targetX).setDuration(180).start();
+        final float targetX = open ? 0f : -leftSidebarChrome().getWidth();
+        leftSidebarChrome().animate().translationX(targetX).setDuration(180).start();
     }
 
     public void updateSidebarVisibility(boolean visible) {
