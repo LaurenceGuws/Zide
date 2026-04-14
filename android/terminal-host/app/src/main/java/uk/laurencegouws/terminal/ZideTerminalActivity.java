@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.KeyEvent;
+import android.view.SurfaceHolder;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
@@ -337,10 +338,7 @@ public final class ZideTerminalActivity extends Activity
                 WidgetCallbacks.WidgetSurfaceLifecycleCallbacks.of(
                         this::callNative,
                         this::callNativeWithSurfaceState,
-                        (holder, width, height) -> TerminalNativeBridge.nativeOnSurfaceAvailableBridge(
-                                holder.getSurface(),
-                                width,
-                                height),
+                        this::nativeOnSurfaceAvailable,
                         TerminalNativeBridge::nativeOnSurfaceDestroyedBridge,
                         TerminalNativeBridge::nativeOnSurfaceRedrawNeededBridge,
                         TerminalNativeBridge::nativeOnVisibleViewportBridge,
@@ -716,6 +714,10 @@ public final class ZideTerminalActivity extends Activity
             long seq,
             AndroidDebugFormatter.SurfaceEventSnapshot state) {
         terminalStatusController.callNativeWithSurfaceState(event, seq, state);
+    }
+
+    private long nativeOnSurfaceAvailable(SurfaceHolder holder, int width, int height) {
+        return TerminalNativeBridge.nativeOnSurfaceAvailableBridge(holder.getSurface(), width, height);
     }
 
     private AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot() {
