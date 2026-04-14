@@ -263,10 +263,14 @@ public final class SurfaceController {
     }
 
     private void dispatchNativeProductRedrawNeededTelemetryAndStatus() {
-        final long seq = host.nativeLoaded() ? host.nativeOnSurfaceRedrawNeededBridge() : -1;
+        final long seq = nativeSurfaceRedrawNeededSeqOrNegative();
         final AndroidDebugFormatter.SurfaceEventSnapshot state = host.currentSurfaceStateSnapshot();
         appendNativeSurfaceRedrawNeededTelemetry(seq, state);
         host.updateStatus("surface.state.redraw_needed");
+    }
+
+    private long nativeSurfaceRedrawNeededSeqOrNegative() {
+        return host.nativeLoaded() ? host.nativeOnSurfaceRedrawNeededBridge() : -1;
     }
 
     public void installSurfaceView(String reason, SurfaceHolder.Callback2 callback) {
@@ -359,9 +363,17 @@ public final class SurfaceController {
             int width,
             int height,
             boolean viewportImeVisible) {
-        final long seq = host.nativeLoaded() ? host.nativeOnVisibleViewportBridge(width, height, viewportImeVisible) : -1;
-        host.callNativeWithSurfaceState("native.viewportChanged", seq, host.currentSurfaceStateSnapshot());
+        final long seq = nativeVisibleViewportSeqOrNegative(width, height, viewportImeVisible);
+        callNativeProductViewportChanged(seq);
         host.refreshProductScrollOverlay();
+    }
+
+    private long nativeVisibleViewportSeqOrNegative(int width, int height, boolean viewportImeVisible) {
+        return host.nativeLoaded() ? host.nativeOnVisibleViewportBridge(width, height, viewportImeVisible) : -1;
+    }
+
+    private void callNativeProductViewportChanged(long seq) {
+        host.callNativeWithSurfaceState("native.viewportChanged", seq, host.currentSurfaceStateSnapshot());
     }
 
     private void appendNativeSurfaceRedrawNeededTelemetry(

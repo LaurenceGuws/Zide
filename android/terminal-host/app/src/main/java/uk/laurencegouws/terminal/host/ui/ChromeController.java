@@ -304,8 +304,12 @@ public final class ChromeController {
     }
 
     private void animateSidebarTranslation(boolean open) {
-        final float targetX = open ? 0f : -leftSidebarChrome().getWidth();
+        final float targetX = leftSidebarTranslationXForOpenState(open);
         leftSidebarChrome().animate().translationX(targetX).setDuration(180).start();
+    }
+
+    private float leftSidebarTranslationXForOpenState(boolean open) {
+        return open ? 0f : -leftSidebarChrome().getWidth();
     }
 
     public void updateSidebarVisibility(boolean visible) {
