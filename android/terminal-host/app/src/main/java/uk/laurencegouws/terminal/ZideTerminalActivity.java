@@ -359,9 +359,10 @@ public final class ZideTerminalActivity extends Activity
                     refreshProductScrollOverlayIfReady();
                     return tick;
                 },
-                TerminalNativeBridge::nativeRestartSessionBridge,
-                TerminalNativeBridge::nativePollSessionBridge,
-                TerminalNativeBridge::nativeIsSessionAliveBridge);
+                SessionAssemblyCallbacks.NativeSessionBundle.of(
+                        TerminalNativeBridge::nativeRestartSessionBridge,
+                        TerminalNativeBridge::nativePollSessionBridge,
+                        TerminalNativeBridge::nativeIsSessionAliveBridge));
     }
 
     private ProductRuntimeAssemblyCallbacks createProductRuntimeAssemblyCallbacks() {

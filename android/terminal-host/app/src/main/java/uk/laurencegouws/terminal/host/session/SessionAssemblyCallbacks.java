@@ -13,6 +13,31 @@ import uk.laurencegouws.terminal.userland.UserlandRelease;
 
 /** Functional callback adapter for {@link SessionAssembly.Host}. */
 public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
+    public static final class NativeSessionBundle {
+        final IntSupplier nativeRestartSession;
+        final IntSupplier nativePollSession;
+        final BooleanSupplier nativeIsSessionAlive;
+
+        private NativeSessionBundle(
+                IntSupplier nativeRestartSession,
+                IntSupplier nativePollSession,
+                BooleanSupplier nativeIsSessionAlive) {
+            this.nativeRestartSession = nativeRestartSession;
+            this.nativePollSession = nativePollSession;
+            this.nativeIsSessionAlive = nativeIsSessionAlive;
+        }
+
+        public static NativeSessionBundle of(
+                IntSupplier nativeRestartSession,
+                IntSupplier nativePollSession,
+                BooleanSupplier nativeIsSessionAlive) {
+            return new NativeSessionBundle(
+                    nativeRestartSession,
+                    nativePollSession,
+                    nativeIsSessionAlive);
+        }
+    }
+
     private final Supplier<Context> context;
     private final Supplier<UserlandRelease> userlandRelease;
     private final BooleanSupplier nativeLoaded;
@@ -24,9 +49,7 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
     private final Runnable refreshDebugStatusSurface;
     private final BooleanSupplier shouldRunProductFrameLoop;
     private final IntSupplier tickProductFrame;
-    private final IntSupplier nativeRestartSession;
-    private final IntSupplier nativePollSession;
-    private final BooleanSupplier nativeIsSessionAlive;
+    private final NativeSessionBundle nativeSessionBundle;
 
     public SessionAssemblyCallbacks(
             Supplier<Context> context,
@@ -40,9 +63,7 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
             Runnable refreshDebugStatusSurface,
             BooleanSupplier shouldRunProductFrameLoop,
             IntSupplier tickProductFrame,
-            IntSupplier nativeRestartSession,
-            IntSupplier nativePollSession,
-            BooleanSupplier nativeIsSessionAlive) {
+            NativeSessionBundle nativeSessionBundle) {
         this.context = context;
         this.userlandRelease = userlandRelease;
         this.nativeLoaded = nativeLoaded;
@@ -54,9 +75,7 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
         this.refreshDebugStatusSurface = refreshDebugStatusSurface;
         this.shouldRunProductFrameLoop = shouldRunProductFrameLoop;
         this.tickProductFrame = tickProductFrame;
-        this.nativeRestartSession = nativeRestartSession;
-        this.nativePollSession = nativePollSession;
-        this.nativeIsSessionAlive = nativeIsSessionAlive;
+        this.nativeSessionBundle = nativeSessionBundle;
     }
 
     @Override
@@ -116,16 +135,16 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
 
     @Override
     public int nativeRestartSession() {
-        return nativeRestartSession.getAsInt();
+        return nativeSessionBundle.nativeRestartSession.getAsInt();
     }
 
     @Override
     public int nativePollSession() {
-        return nativePollSession.getAsInt();
+        return nativeSessionBundle.nativePollSession.getAsInt();
     }
 
     @Override
     public boolean nativeIsSessionAlive() {
-        return nativeIsSessionAlive.getAsBoolean();
+        return nativeSessionBundle.nativeIsSessionAlive.getAsBoolean();
     }
 }
