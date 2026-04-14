@@ -169,10 +169,27 @@ public final class SurfaceController {
     }
 
     public void installSurfaceView(String reason, SurfaceHolder.Callback2 callback) {
-        removeExistingSurfaceViewIfPresent(reason, callback);
+        final SurfaceView existing = host.surfaceView();
+        if (existing != null) {
+            final SurfaceHolder.Callback2 previousCallback =
+                    callback != null ? callback : host.surfaceCallback();
+            if (previousCallback != null) {
+                existing.getHolder().removeCallback(previousCallback);
+            }
+            host.productSurfaceContainer().removeView(existing);
+            host.appendEvent("surface.host.removed reason=" + reason + " generation=" + host.surfaceHostGeneration());
+        }
 
         host.setSurfaceHostGeneration(host.surfaceHostGeneration() + 1);
-        final SurfaceView nextSurfaceView = createAndAttachSurfaceView();
+        final SurfaceView nextSurfaceView = new SurfaceView(host.productSurfaceContainer().getContext());
+        final SurfaceHolder holder = nextSurfaceView.getHolder();
+        holder.setFormat(PixelFormat.RGBA_8888);
+        host.installSurfaceGestureHost(nextSurfaceView);
+        final FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                Gravity.CENTER);
+        host.productSurfaceContainer().addView(nextSurfaceView, params);
         final SurfaceHolder.Callback2 nextCallback = callback != null ? callback : host.surfaceCallback();
         host.reinstallSurfaceCallback(nextSurfaceView, nextCallback);
         host.setSurfaceView(nextSurfaceView);
@@ -265,33 +282,6 @@ public final class SurfaceController {
                 "debug.surface.resize restoreSize=" + originalWidth + "x" + originalHeight
                         + " target=surfaceHolder");
         host.updateStatus("debug.surface.resized_restore");
-    }
-
-    private void removeExistingSurfaceViewIfPresent(String reason, SurfaceHolder.Callback2 callback) {
-        final SurfaceView existing = host.surfaceView();
-        if (existing == null) {
-            return;
-        }
-        final SurfaceHolder.Callback2 previousCallback =
-                callback != null ? callback : host.surfaceCallback();
-        if (previousCallback != null) {
-            existing.getHolder().removeCallback(previousCallback);
-        }
-        host.productSurfaceContainer().removeView(existing);
-        host.appendEvent("surface.host.removed reason=" + reason + " generation=" + host.surfaceHostGeneration());
-    }
-
-    private SurfaceView createAndAttachSurfaceView() {
-        final SurfaceView nextSurfaceView = new SurfaceView(host.productSurfaceContainer().getContext());
-        final SurfaceHolder holder = nextSurfaceView.getHolder();
-        holder.setFormat(PixelFormat.RGBA_8888);
-        host.installSurfaceGestureHost(nextSurfaceView);
-        final FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                Gravity.CENTER);
-        host.productSurfaceContainer().addView(nextSurfaceView, params);
-        return nextSurfaceView;
     }
 
 }
