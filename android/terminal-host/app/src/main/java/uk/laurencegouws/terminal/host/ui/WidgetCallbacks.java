@@ -25,106 +25,6 @@ import uk.laurencegouws.terminal.userland.UserlandInstallState;
 
 /** Functional callback adapter for {@link WidgetAssembly.Host}. */
 public final class WidgetCallbacks implements WidgetAssembly.Host {
-    public static final class WidgetViewCallbacks {
-        final Supplier<View> rootView;
-        final Supplier<View> productView;
-        final Supplier<View> debugView;
-        final Supplier<View> productReadinessBlocker;
-        final Supplier<View> drawerScrim;
-        final Supplier<View> drawerEdgeHotspot;
-        final Supplier<View> leftSidebar;
-        final Supplier<FrameLayout> productSurfaceContainer;
-        final Supplier<TerminalScrollOverlayView> terminalScrollOverlay;
-        final Supplier<TextView> productReadinessTitle;
-        final Supplier<TextView> productReadinessDetail;
-        final Supplier<Button> productReadinessRetryButton;
-        final Supplier<Button> assistCtrlButton;
-        final Supplier<Button> assistAltButton;
-        final Supplier<ShellInputView> shellInputView;
-        final Supplier<TerminalSelectionController> selectionController;
-        final Supplier<TerminalGestureStateController> terminalGestureStateController;
-        final Supplier<SurfaceBridge> surfaceHostBridge;
-
-        private WidgetViewCallbacks(
-                Supplier<View> rootView,
-                Supplier<View> productView,
-                Supplier<View> debugView,
-                Supplier<View> productReadinessBlocker,
-                Supplier<View> drawerScrim,
-                Supplier<View> drawerEdgeHotspot,
-                Supplier<View> leftSidebar,
-                Supplier<FrameLayout> productSurfaceContainer,
-                Supplier<TerminalScrollOverlayView> terminalScrollOverlay,
-                Supplier<TextView> productReadinessTitle,
-                Supplier<TextView> productReadinessDetail,
-                Supplier<Button> productReadinessRetryButton,
-                Supplier<Button> assistCtrlButton,
-                Supplier<Button> assistAltButton,
-                Supplier<ShellInputView> shellInputView,
-                Supplier<TerminalSelectionController> selectionController,
-                Supplier<TerminalGestureStateController> terminalGestureStateController,
-                Supplier<SurfaceBridge> surfaceHostBridge) {
-            this.rootView = rootView;
-            this.productView = productView;
-            this.debugView = debugView;
-            this.productReadinessBlocker = productReadinessBlocker;
-            this.drawerScrim = drawerScrim;
-            this.drawerEdgeHotspot = drawerEdgeHotspot;
-            this.leftSidebar = leftSidebar;
-            this.productSurfaceContainer = productSurfaceContainer;
-            this.terminalScrollOverlay = terminalScrollOverlay;
-            this.productReadinessTitle = productReadinessTitle;
-            this.productReadinessDetail = productReadinessDetail;
-            this.productReadinessRetryButton = productReadinessRetryButton;
-            this.assistCtrlButton = assistCtrlButton;
-            this.assistAltButton = assistAltButton;
-            this.shellInputView = shellInputView;
-            this.selectionController = selectionController;
-            this.terminalGestureStateController = terminalGestureStateController;
-            this.surfaceHostBridge = surfaceHostBridge;
-        }
-
-        public static WidgetViewCallbacks of(
-                Supplier<View> rootView,
-                Supplier<View> productView,
-                Supplier<View> debugView,
-                Supplier<View> productReadinessBlocker,
-                Supplier<View> drawerScrim,
-                Supplier<View> drawerEdgeHotspot,
-                Supplier<View> leftSidebar,
-                Supplier<FrameLayout> productSurfaceContainer,
-                Supplier<TerminalScrollOverlayView> terminalScrollOverlay,
-                Supplier<TextView> productReadinessTitle,
-                Supplier<TextView> productReadinessDetail,
-                Supplier<Button> productReadinessRetryButton,
-                Supplier<Button> assistCtrlButton,
-                Supplier<Button> assistAltButton,
-                Supplier<ShellInputView> shellInputView,
-                Supplier<TerminalSelectionController> selectionController,
-                Supplier<TerminalGestureStateController> terminalGestureStateController,
-                Supplier<SurfaceBridge> surfaceHostBridge) {
-            return new WidgetViewCallbacks(
-                    rootView,
-                    productView,
-                    debugView,
-                    productReadinessBlocker,
-                    drawerScrim,
-                    drawerEdgeHotspot,
-                    leftSidebar,
-                    productSurfaceContainer,
-                    terminalScrollOverlay,
-                    productReadinessTitle,
-                    productReadinessDetail,
-                    productReadinessRetryButton,
-                    assistCtrlButton,
-                    assistAltButton,
-                    shellInputView,
-                    selectionController,
-                    terminalGestureStateController,
-                    surfaceHostBridge);
-        }
-    }
-
     private final Supplier<Activity> activity;
     private final Supplier<android.os.Handler> handler;
     private final BooleanSupplier nativeLoaded;
@@ -132,7 +32,24 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
     private final Consumer<Boolean> setDebugViewEnabled;
     private final BooleanSupplier imeVisible;
     private final Consumer<Boolean> setImeVisible;
-    private final WidgetViewCallbacks widgetViewCallbacks;
+    private final Supplier<View> rootView;
+    private final Supplier<View> productView;
+    private final Supplier<View> debugView;
+    private final Supplier<View> productReadinessBlocker;
+    private final Supplier<View> drawerScrim;
+    private final Supplier<View> drawerEdgeHotspot;
+    private final Supplier<View> leftSidebar;
+    private final Supplier<FrameLayout> productSurfaceContainer;
+    private final Supplier<TerminalScrollOverlayView> terminalScrollOverlay;
+    private final Supplier<TextView> productReadinessTitle;
+    private final Supplier<TextView> productReadinessDetail;
+    private final Supplier<Button> productReadinessRetryButton;
+    private final Supplier<Button> assistCtrlButton;
+    private final Supplier<Button> assistAltButton;
+    private final Supplier<ShellInputView> shellInputView;
+    private final Supplier<TerminalSelectionController> selectionController;
+    private final Supplier<TerminalGestureStateController> terminalGestureStateController;
+    private final Supplier<SurfaceBridge> surfaceHostBridge;
     private final BooleanSupplier currentInstallStateInstalling;
     private final BooleanSupplier currentInstallStateFailed;
     private final Supplier<UserlandReadinessState> currentReadinessState;
@@ -166,7 +83,24 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
             Consumer<Boolean> setDebugViewEnabled,
             BooleanSupplier imeVisible,
             Consumer<Boolean> setImeVisible,
-            WidgetViewCallbacks widgetViewCallbacks,
+            Supplier<View> rootView,
+            Supplier<View> productView,
+            Supplier<View> debugView,
+            Supplier<View> productReadinessBlocker,
+            Supplier<View> drawerScrim,
+            Supplier<View> drawerEdgeHotspot,
+            Supplier<View> leftSidebar,
+            Supplier<FrameLayout> productSurfaceContainer,
+            Supplier<TerminalScrollOverlayView> terminalScrollOverlay,
+            Supplier<TextView> productReadinessTitle,
+            Supplier<TextView> productReadinessDetail,
+            Supplier<Button> productReadinessRetryButton,
+            Supplier<Button> assistCtrlButton,
+            Supplier<Button> assistAltButton,
+            Supplier<ShellInputView> shellInputView,
+            Supplier<TerminalSelectionController> selectionController,
+            Supplier<TerminalGestureStateController> terminalGestureStateController,
+            Supplier<SurfaceBridge> surfaceHostBridge,
             BooleanSupplier currentInstallStateInstalling,
             BooleanSupplier currentInstallStateFailed,
             Supplier<UserlandReadinessState> currentReadinessState,
@@ -198,7 +132,24 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
         this.setDebugViewEnabled = setDebugViewEnabled;
         this.imeVisible = imeVisible;
         this.setImeVisible = setImeVisible;
-        this.widgetViewCallbacks = widgetViewCallbacks;
+        this.rootView = rootView;
+        this.productView = productView;
+        this.debugView = debugView;
+        this.productReadinessBlocker = productReadinessBlocker;
+        this.drawerScrim = drawerScrim;
+        this.drawerEdgeHotspot = drawerEdgeHotspot;
+        this.leftSidebar = leftSidebar;
+        this.productSurfaceContainer = productSurfaceContainer;
+        this.terminalScrollOverlay = terminalScrollOverlay;
+        this.productReadinessTitle = productReadinessTitle;
+        this.productReadinessDetail = productReadinessDetail;
+        this.productReadinessRetryButton = productReadinessRetryButton;
+        this.assistCtrlButton = assistCtrlButton;
+        this.assistAltButton = assistAltButton;
+        this.shellInputView = shellInputView;
+        this.selectionController = selectionController;
+        this.terminalGestureStateController = terminalGestureStateController;
+        this.surfaceHostBridge = surfaceHostBridge;
         this.currentInstallStateInstalling = currentInstallStateInstalling;
         this.currentInstallStateFailed = currentInstallStateFailed;
         this.currentReadinessState = currentReadinessState;
@@ -262,92 +213,92 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
 
     @Override
     public View rootView() {
-        return widgetViewCallbacks.rootView.get();
+        return rootView.get();
     }
 
     @Override
     public View productView() {
-        return widgetViewCallbacks.productView.get();
+        return productView.get();
     }
 
     @Override
     public View debugView() {
-        return widgetViewCallbacks.debugView.get();
+        return debugView.get();
     }
 
     @Override
     public View productReadinessBlocker() {
-        return widgetViewCallbacks.productReadinessBlocker.get();
+        return productReadinessBlocker.get();
     }
 
     @Override
     public View drawerScrim() {
-        return widgetViewCallbacks.drawerScrim.get();
+        return drawerScrim.get();
     }
 
     @Override
     public View drawerEdgeHotspot() {
-        return widgetViewCallbacks.drawerEdgeHotspot.get();
+        return drawerEdgeHotspot.get();
     }
 
     @Override
     public View leftSidebar() {
-        return widgetViewCallbacks.leftSidebar.get();
+        return leftSidebar.get();
     }
 
     @Override
     public FrameLayout productSurfaceContainer() {
-        return widgetViewCallbacks.productSurfaceContainer.get();
+        return productSurfaceContainer.get();
     }
 
     @Override
     public TerminalScrollOverlayView terminalScrollOverlay() {
-        return widgetViewCallbacks.terminalScrollOverlay.get();
+        return terminalScrollOverlay.get();
     }
 
     @Override
     public TextView productReadinessTitle() {
-        return widgetViewCallbacks.productReadinessTitle.get();
+        return productReadinessTitle.get();
     }
 
     @Override
     public TextView productReadinessDetail() {
-        return widgetViewCallbacks.productReadinessDetail.get();
+        return productReadinessDetail.get();
     }
 
     @Override
     public Button productReadinessRetryButton() {
-        return widgetViewCallbacks.productReadinessRetryButton.get();
+        return productReadinessRetryButton.get();
     }
 
     @Override
     public Button assistCtrlButton() {
-        return widgetViewCallbacks.assistCtrlButton.get();
+        return assistCtrlButton.get();
     }
 
     @Override
     public Button assistAltButton() {
-        return widgetViewCallbacks.assistAltButton.get();
+        return assistAltButton.get();
     }
 
     @Override
     public ShellInputView shellInputView() {
-        return widgetViewCallbacks.shellInputView.get();
+        return shellInputView.get();
     }
 
     @Override
     public TerminalSelectionController selectionController() {
-        return widgetViewCallbacks.selectionController.get();
+        return selectionController.get();
     }
 
     @Override
     public TerminalGestureStateController terminalGestureStateController() {
-        return widgetViewCallbacks.terminalGestureStateController.get();
+        return terminalGestureStateController.get();
     }
 
     @Override
     public SurfaceBridge surfaceHostBridge() {
-        return widgetViewCallbacks.surfaceHostBridge.get();
+        return surfaceHostBridge.get();
     }
 
     @Override
