@@ -37,7 +37,7 @@ import dev.zide.terminal.host.TerminalFrameLoopHostBridge;
 import dev.zide.terminal.host.TerminalViewportController;
 import dev.zide.terminal.host.TerminalSurfaceWidgetController;
 import dev.zide.terminal.host.TerminalProductRuntimeController;
-import dev.zide.terminal.host.TerminalActivityViewBindings;
+import dev.zide.terminal.host.TerminalStatusViewAssembly;
 import dev.zide.terminal.host.TerminalSurfaceHostCallbacks;
 import dev.zide.terminal.host.TerminalChromeHostFactory;
 import dev.zide.terminal.host.TerminalProductRuntimeHostCallbacks;
@@ -69,6 +69,7 @@ import dev.zide.terminal.host.TerminalRuntimeAssetsHostCallbacks;
 import dev.zide.terminal.host.TerminalStatusHostCallbacks;
 import dev.zide.terminal.host.TerminalViewportHostCallbacks;
 import dev.zide.terminal.host.TerminalSurfaceHostLifecycleCallbacks;
+import dev.zide.terminal.host.TerminalStatusViewAssemblyHostCallbacks;
 import dev.zide.terminal.debug.TerminalNativeStatusLabels;
 import dev.zide.terminal.debug.TerminalStatusController;
 import dev.zide.terminal.debug.TerminalSurfaceStateSnapshotReader;
@@ -350,64 +351,43 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void initializeStatusAndViewControllers() {
-        final TerminalActivityViewBindings viewBindings = TerminalActivityViewBindings.from(this);
-        packageStatusText = viewBindings.packageStatusText;
-        productBootstrapTitle = viewBindings.productBootstrapTitle;
-        productBootstrapDetail = viewBindings.productBootstrapDetail;
-        productBootstrapRetryButton = viewBindings.productBootstrapRetryButton;
-        productBootstrapDebugButton = viewBindings.productBootstrapDebugButton;
-        rootView = viewBindings.rootView;
-        productView = viewBindings.productView;
-        debugView = viewBindings.debugView;
-        productBootstrapBlocker = viewBindings.productBootstrapBlocker;
-        drawerScrim = viewBindings.drawerScrim;
-        drawerEdgeHotspot = viewBindings.drawerEdgeHotspot;
-        leftSidebar = viewBindings.leftSidebar;
-        productSurfaceContainer = viewBindings.productSurfaceContainer;
-        terminalScrollOverlay = viewBindings.terminalScrollOverlay;
-        assistCtrlButton = viewBindings.assistCtrlButton;
-        assistAltButton = viewBindings.assistAltButton;
-        terminalSurfaceStateSnapshotReader = new TerminalSurfaceStateSnapshotReader(
-                new TerminalSurfaceStateSnapshotHostCallbacks(
+        final TerminalStatusViewAssembly.Result result = TerminalStatusViewAssembly.assemble(
+                new TerminalStatusViewAssemblyHostCallbacks(
+                        () -> this,
+                        () -> debugViewEnabled,
                         () -> nativeLoaded,
-                        TerminalNativeBridge::nativeCurrentWindowTokenBridge,
-                        TerminalNativeBridge::nativeCurrentSurfaceEpochBridge,
-                        TerminalNativeBridge::nativeCurrentSurfaceTransitionBridge,
-                        TerminalNativeBridge::nativeCurrentRendererStatusBridge,
-                        TerminalNativeBridge::nativeCurrentRendererSwapCountBridge,
-                        TerminalNativeBridge::nativeCurrentRendererBoundEpochBridge,
-                        TerminalNativeBridge::nativeCurrentRendererContextCreateCountBridge,
-                        TerminalNativeBridge::nativeCurrentRendererSurfaceCreateCountBridge,
-                        TerminalNativeBridge::nativeCurrentRendererTextureCreateCountBridge,
-                        TerminalNativeBridge::nativeCurrentRendererTextureAliveBridge,
-                        TerminalNativeBridge::nativeCurrentRendererTextureUploadCountBridge,
-                        TerminalNativeBridge::nativeCurrentRendererTextureUpdateCountBridge,
-                        TerminalNativeBridge::nativeCurrentRendererTextureResizeCountBridge,
-                        TerminalNativeBridge::nativeCurrentRendererTextureWidthBridge,
-                        TerminalNativeBridge::nativeCurrentRendererTextureHeightBridge));
-        terminalStatusHostBridge = new TerminalStatusHostBridge(new TerminalStatusHostCallbacks(
-                () -> debugViewEnabled,
-                () -> nativeLoaded,
-                this::hasWindowFocus,
-                () -> imeVisible,
-                () -> surfaceHostBridge != null ? surfaceHostBridge.currentSurfaceView() : null,
-                () -> surfaceHostBridge != null ? surfaceHostBridge.currentVisibleViewportWidth() : 0,
-                () -> surfaceHostBridge != null ? surfaceHostBridge.currentVisibleViewportHeight() : 0,
-                () -> currentInstallState,
-                () -> currentBootstrapState,
-                this::currentSurfaceStateSnapshot));
-        terminalStatusController = new TerminalStatusController(
-                viewBindings.statusText,
-                viewBindings.eventLogText,
-                terminalStatusHostBridge);
-        terminalViewportController = new TerminalViewportController(
-                new TerminalViewportHostBridge(
-                        productView,
-                        productSurfaceContainer,
-                        new TerminalViewportHostCallbacks(
-                                () -> imeVisible,
-                                visible -> ZideTerminalActivity.this.imeVisible = visible,
-                                reason -> surfaceHostController.notifyVisibleViewport(reason))));
+                        this::hasWindowFocus,
+                        () -> imeVisible,
+                        visible -> imeVisible = visible,
+                        () -> surfaceHostBridge,
+                        () -> currentInstallState,
+                        () -> currentBootstrapState,
+                        this::currentSurfaceStateSnapshot,
+                        reason -> {
+                            if (surfaceHostController != null) {
+                                surfaceHostController.notifyVisibleViewport(reason);
+                            }
+                        }));
+        packageStatusText = result.packageStatusText;
+        productBootstrapTitle = result.productBootstrapTitle;
+        productBootstrapDetail = result.productBootstrapDetail;
+        productBootstrapRetryButton = result.productBootstrapRetryButton;
+        productBootstrapDebugButton = result.productBootstrapDebugButton;
+        rootView = result.rootView;
+        productView = result.productView;
+        debugView = result.debugView;
+        productBootstrapBlocker = result.productBootstrapBlocker;
+        drawerScrim = result.drawerScrim;
+        drawerEdgeHotspot = result.drawerEdgeHotspot;
+        leftSidebar = result.leftSidebar;
+        productSurfaceContainer = result.productSurfaceContainer;
+        terminalScrollOverlay = result.terminalScrollOverlay;
+        assistCtrlButton = result.assistCtrlButton;
+        assistAltButton = result.assistAltButton;
+        terminalSurfaceStateSnapshotReader = result.terminalSurfaceStateSnapshotReader;
+        terminalStatusHostBridge = result.terminalStatusHostBridge;
+        terminalStatusController = result.terminalStatusController;
+        terminalViewportController = result.terminalViewportController;
     }
 
     private void installInputControllers() {

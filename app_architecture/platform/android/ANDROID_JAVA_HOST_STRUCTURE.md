@@ -48,7 +48,7 @@ For active priorities/workflow, use
 
 Current shape markers (for hygiene tracking, not hard limits):
 
-- `ZideTerminalActivity.java`: `715` lines
+- `ZideTerminalActivity.java`: `695` lines
 - `host/TerminalChromeHostFactory.java`: `69` lines
 - `host/TerminalInteractionHostFactory.java`: `131` lines
 - `host/TerminalInputHostFactory.java`: `56` lines
@@ -61,6 +61,8 @@ Current shape markers (for hygiene tracking, not hard limits):
 - `host/TerminalSessionHostFactory.java`: `52` lines
 - `host/TerminalSessionAssembly.java`: `102` lines
 - `host/TerminalSessionAssemblyHostCallbacks.java`: `131` lines
+- `host/TerminalStatusViewAssembly.java`: `180` lines
+- `host/TerminalStatusViewAssemblyHostCallbacks.java`: `106` lines
 - `host/TerminalUiHostFactory.java`: `56` lines
 - `host/TerminalUiStartupAssembly.java`: `103` lines
 - `host/TerminalUiStartupHostCallbacks.java`: `164` lines
@@ -68,7 +70,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 
 | File | Contract Fit | Size/Shape | Next Pressure |
 | --- | --- | --- | --- |
-| `ZideTerminalActivity.java` | Partial | Substantially thinner and now mostly wiring/lifecycle/orchestration. JNI declarations were moved out. Remaining pressure is constructor-wiring density rather than policy ownership. | Continue extracting only where remaining wiring density obscures ownership boundaries or adds coupling. |
+| `ZideTerminalActivity.java` | Partial | Thinner and wiring-oriented. JNI declarations remain out and status/view assembly wiring moved into a dedicated host assembly. Remaining pressure is orchestration density rather than direct policy ownership. | Continue extracting only where orchestration density obscures ownership boundaries or increases coupling. |
 | `TerminalNativeBridge.java` | Good | Owns JNI library load state and native bridge declarations for the terminal host. | Keep this focused on JNI surface only; do not move Android policy or lifecycle behavior into it. |
 | `debug/AndroidDebugFormatter.java` | Good | Pure formatter plus snapshot values. Large constructor surface is acceptable for debug-only snapshots. | Split snapshot values only if formatter starts owning state or capture policy. |
 | `debug/TerminalNativeStatusLabels.java` | Good | Owns native status-enum label mapping for debug/operator text. | Keep as pure mapping; avoid embedding behavior/policy. |
@@ -98,6 +100,8 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/TerminalSessionHostFactory.java` | Good | Owns shell-session and userland-session host bridge construction so session seams stay out of generic host assembly. | Keep this construction-only; session behavior remains in session/userland coordinators. |
 | `host/TerminalSessionAssembly.java` | Good | Owns session/runtime wiring assembly that composes session and runtime host factories for activity use. | Keep this assembly-only; business behavior stays in session/runtime controllers. |
 | `host/TerminalSessionAssemblyHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalSessionAssembly`. | Keep adapter-only; avoid adding session/runtime behavior here. |
+| `host/TerminalStatusViewAssembly.java` | Good | Owns initial view binding plus debug-status/viewport host assembly for activity wiring. | Keep this assembly-only; status rendering and viewport policy remain in dedicated controllers. |
+| `host/TerminalStatusViewAssemblyHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalStatusViewAssembly`. | Keep adapter-only; avoid moving status/viewport behavior into this adapter. |
 | `host/TerminalUiHostFactory.java` | Good | Owns UI host construction for shell-state presenter bridge, view-mode controller, and surface-widget controller. | Keep this construction-only; UI behavior remains in dedicated host controllers. |
 | `host/TerminalUiStartupAssembly.java` | Good | Owns post-construction UI bind/start assembly for activity wiring. | Keep this assembly-only; UI behavior remains in dedicated controllers. |
 | `host/TerminalUiStartupHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalUiStartupAssembly`. | Keep adapter-only; avoid adding UI behavior here. |
