@@ -216,13 +216,17 @@ public final class SurfaceController {
         host.appendEvent(
                 "surface.redrawNeeded generation=" + host.surfaceHostGeneration() + " valid=" + holder.getSurface().isValid());
         try {
-            final long seq = host.nativeLoaded() ? host.nativeOnSurfaceRedrawNeededBridge() : -1;
-            final AndroidDebugFormatter.SurfaceEventSnapshot state = host.currentSurfaceStateSnapshot();
-            appendNativeSurfaceRedrawNeededTelemetry(seq, state);
-            host.updateStatus("surface.state.redraw_needed");
+            dispatchNativeProductRedrawNeededTelemetryAndStatus();
         } finally {
             surfaceRedrawNeededDispatching = false;
         }
+    }
+
+    private void dispatchNativeProductRedrawNeededTelemetryAndStatus() {
+        final long seq = host.nativeLoaded() ? host.nativeOnSurfaceRedrawNeededBridge() : -1;
+        final AndroidDebugFormatter.SurfaceEventSnapshot state = host.currentSurfaceStateSnapshot();
+        appendNativeSurfaceRedrawNeededTelemetry(seq, state);
+        host.updateStatus("surface.state.redraw_needed");
     }
 
     public void installSurfaceView(String reason, SurfaceHolder.Callback2 callback) {
