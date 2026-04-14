@@ -232,11 +232,12 @@ public final class ZideTerminalActivity extends Activity
                 () -> productSurfaceContainer,
                 this::productViewportWidthPx,
                 this::productViewportHeightPx,
-                () -> nativeLoaded,
-                this::stopScrollbackFlingIfReady,
-                this::refreshProductScrollOverlayIfReady,
-                this::reevaluateProductFrameLoopIfReady,
-                this::appendEvent);
+                InteractionCallbacks.InteractionRuntimeBundle.of(
+                        () -> nativeLoaded,
+                        this::stopScrollbackFlingIfReady,
+                        this::refreshProductScrollOverlayIfReady,
+                        this::reevaluateProductFrameLoopIfReady,
+                        this::appendEvent));
     }
 
     private InputCallbacks createInputCallbacks() {
