@@ -242,10 +242,11 @@ public final class ZideTerminalActivity extends Activity
 
     private InputCallbacks createInputCallbacks() {
         return new InputCallbacks(
-                () -> this,
-                () -> rootView,
-                () -> this,
-                () -> getSystemService(InputMethodManager.class),
+                InputCallbacks.InputHostBundle.of(
+                        () -> this,
+                        () -> rootView,
+                        () -> this,
+                        () -> getSystemService(InputMethodManager.class)),
                 InputCallbacks.InputRuntimeBundle.of(
                         () -> imeVisible,
                         visible -> imeVisible = visible,

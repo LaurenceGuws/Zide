@@ -12,6 +12,36 @@ import uk.laurencegouws.terminal.input.ShellInputView;
 
 /** Functional callback adapter for {@link InputAssembly.Host}. */
 public final class InputCallbacks implements InputAssembly.Host {
+    public static final class InputHostBundle {
+        final Supplier<Activity> activity;
+        final Supplier<View> rootView;
+        final Supplier<ShellInputView.Host> shellInputHost;
+        final Supplier<InputMethodManager> inputMethodManager;
+
+        private InputHostBundle(
+                Supplier<Activity> activity,
+                Supplier<View> rootView,
+                Supplier<ShellInputView.Host> shellInputHost,
+                Supplier<InputMethodManager> inputMethodManager) {
+            this.activity = activity;
+            this.rootView = rootView;
+            this.shellInputHost = shellInputHost;
+            this.inputMethodManager = inputMethodManager;
+        }
+
+        public static InputHostBundle of(
+                Supplier<Activity> activity,
+                Supplier<View> rootView,
+                Supplier<ShellInputView.Host> shellInputHost,
+                Supplier<InputMethodManager> inputMethodManager) {
+            return new InputHostBundle(
+                    activity,
+                    rootView,
+                    shellInputHost,
+                    inputMethodManager);
+        }
+    }
+
     public static final class InputRuntimeBundle {
         final BooleanSupplier currentImeVisible;
         final Consumer<Boolean> setImeVisible;
@@ -57,43 +87,34 @@ public final class InputCallbacks implements InputAssembly.Host {
         }
     }
 
-    private final Supplier<Activity> activity;
-    private final Supplier<View> rootView;
-    private final Supplier<ShellInputView.Host> shellInputHost;
-    private final Supplier<InputMethodManager> inputMethodManager;
+    private final InputHostBundle inputHostBundle;
     private final InputRuntimeBundle inputRuntimeBundle;
 
     public InputCallbacks(
-            Supplier<Activity> activity,
-            Supplier<View> rootView,
-            Supplier<ShellInputView.Host> shellInputHost,
-            Supplier<InputMethodManager> inputMethodManager,
+            InputHostBundle inputHostBundle,
             InputRuntimeBundle inputRuntimeBundle) {
-        this.activity = activity;
-        this.rootView = rootView;
-        this.shellInputHost = shellInputHost;
-        this.inputMethodManager = inputMethodManager;
+        this.inputHostBundle = inputHostBundle;
         this.inputRuntimeBundle = inputRuntimeBundle;
     }
 
     @Override
     public Activity activity() {
-        return activity.get();
+        return inputHostBundle.activity.get();
     }
 
     @Override
     public View rootView() {
-        return rootView.get();
+        return inputHostBundle.rootView.get();
     }
 
     @Override
     public ShellInputView.Host shellInputHost() {
-        return shellInputHost.get();
+        return inputHostBundle.shellInputHost.get();
     }
 
     @Override
     public Supplier<InputMethodManager> inputMethodManager() {
-        return inputMethodManager;
+        return inputHostBundle.inputMethodManager;
     }
 
     @Override
