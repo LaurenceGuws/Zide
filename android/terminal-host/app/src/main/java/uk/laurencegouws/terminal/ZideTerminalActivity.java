@@ -430,21 +430,18 @@ public final class ZideTerminalActivity extends Activity
 
     private WorkflowAssemblyCallbacks createWorkflowAssemblyCallbacks() {
         return new WorkflowAssemblyCallbacks(
-                WorkflowAssemblyCallbacks.WorkflowHostCallbacks.of(
-                        this::activityHost,
-                        this::mainHandler,
-                        this::currentUserlandRelease,
-                        this::setUserlandRelease,
-                        this::appendEvent,
-                        this::updateStatus,
-                        this::packageStatusTextView),
-                WorkflowAssemblyCallbacks.WorkflowRuntimeCallbacks.of(
-                        this::setCurrentInstallState,
-                        this::setCurrentReadinessState,
-                        WorkflowAssemblyCallbacks.WorkflowActionCallbacks.of(
-                                this::applyInstallStateIfReady,
-                                this::restartSessionIfReady,
-                                this::showDebugViewIfReady)));
+                this::activityHost,
+                this::mainHandler,
+                this::currentUserlandRelease,
+                this::setUserlandRelease,
+                this::appendEvent,
+                this::updateStatus,
+                this::packageStatusTextView,
+                this::setCurrentInstallState,
+                this::setCurrentReadinessState,
+                this::applyInstallStateIfReady,
+                this::restartSessionIfReady,
+                this::showDebugViewIfReady);
     }
 
     private UiStartupCallbacks createUiStartupCallbacks() {

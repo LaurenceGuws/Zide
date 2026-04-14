@@ -14,168 +14,103 @@ import uk.laurencegouws.terminal.userland.UserlandRelease;
 
 /** Functional callback adapter for {@link WorkflowAssembly.Host}. */
 public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
-    public static final class WorkflowHostCallbacks {
-        final Supplier<Context> context;
-        final Supplier<Handler> handler;
-        final Supplier<UserlandRelease> userlandRelease;
-        final Consumer<UserlandRelease> setUserlandRelease;
-        final Consumer<String> appendEvent;
-        final Consumer<String> updateStatus;
-        final Supplier<TextView> packageStatusText;
-
-        private WorkflowHostCallbacks(
-                Supplier<Context> context,
-                Supplier<Handler> handler,
-                Supplier<UserlandRelease> userlandRelease,
-                Consumer<UserlandRelease> setUserlandRelease,
-                Consumer<String> appendEvent,
-                Consumer<String> updateStatus,
-                Supplier<TextView> packageStatusText) {
-            this.context = context;
-            this.handler = handler;
-            this.userlandRelease = userlandRelease;
-            this.setUserlandRelease = setUserlandRelease;
-            this.appendEvent = appendEvent;
-            this.updateStatus = updateStatus;
-            this.packageStatusText = packageStatusText;
-        }
-
-        public static WorkflowHostCallbacks of(
-                Supplier<Context> context,
-                Supplier<Handler> handler,
-                Supplier<UserlandRelease> userlandRelease,
-                Consumer<UserlandRelease> setUserlandRelease,
-                Consumer<String> appendEvent,
-                Consumer<String> updateStatus,
-                Supplier<TextView> packageStatusText) {
-            return new WorkflowHostCallbacks(
-                    context,
-                    handler,
-                    userlandRelease,
-                    setUserlandRelease,
-                    appendEvent,
-                    updateStatus,
-                    packageStatusText);
-        }
-    }
-
-    public static final class WorkflowActionCallbacks {
-        final BiConsumer<UserlandInstallState, String> applyInstallState;
-        final WorkflowCallbacks.RestartSessionCallback restartSession;
-        final BiConsumer<String, String> showDebugView;
-
-        private WorkflowActionCallbacks(
-                BiConsumer<UserlandInstallState, String> applyInstallState,
-                WorkflowCallbacks.RestartSessionCallback restartSession,
-                BiConsumer<String, String> showDebugView) {
-            this.applyInstallState = applyInstallState;
-            this.restartSession = restartSession;
-            this.showDebugView = showDebugView;
-        }
-
-        public static WorkflowActionCallbacks of(
-                BiConsumer<UserlandInstallState, String> applyInstallState,
-                WorkflowCallbacks.RestartSessionCallback restartSession,
-                BiConsumer<String, String> showDebugView) {
-            return new WorkflowActionCallbacks(
-                    applyInstallState,
-                    restartSession,
-                    showDebugView);
-        }
-    }
-
-    public static final class WorkflowRuntimeCallbacks {
-        final Consumer<UserlandInstallState> setInstallState;
-        final Consumer<UserlandReadinessState> setReadinessState;
-        final WorkflowActionCallbacks workflowActionCallbacks;
-
-        private WorkflowRuntimeCallbacks(
-                Consumer<UserlandInstallState> setInstallState,
-                Consumer<UserlandReadinessState> setReadinessState,
-                WorkflowActionCallbacks workflowActionCallbacks) {
-            this.setInstallState = setInstallState;
-            this.setReadinessState = setReadinessState;
-            this.workflowActionCallbacks = workflowActionCallbacks;
-        }
-
-        public static WorkflowRuntimeCallbacks of(
-                Consumer<UserlandInstallState> setInstallState,
-                Consumer<UserlandReadinessState> setReadinessState,
-                WorkflowActionCallbacks workflowActionCallbacks) {
-            return new WorkflowRuntimeCallbacks(
-                    setInstallState,
-                    setReadinessState,
-                    workflowActionCallbacks);
-        }
-    }
-
-    private final WorkflowHostCallbacks workflowHostCallbacks;
-    private final WorkflowRuntimeCallbacks workflowRuntimeCallbacks;
+    private final Supplier<Context> context;
+    private final Supplier<Handler> handler;
+    private final Supplier<UserlandRelease> userlandRelease;
+    private final Consumer<UserlandRelease> setUserlandRelease;
+    private final Consumer<String> appendEvent;
+    private final Consumer<String> updateStatus;
+    private final Supplier<TextView> packageStatusText;
+    private final Consumer<UserlandInstallState> setInstallState;
+    private final Consumer<UserlandReadinessState> setReadinessState;
+    private final BiConsumer<UserlandInstallState, String> applyInstallState;
+    private final WorkflowCallbacks.RestartSessionCallback restartSession;
+    private final BiConsumer<String, String> showDebugView;
 
     public WorkflowAssemblyCallbacks(
-            WorkflowHostCallbacks workflowHostCallbacks,
-            WorkflowRuntimeCallbacks workflowRuntimeCallbacks) {
-        this.workflowHostCallbacks = workflowHostCallbacks;
-        this.workflowRuntimeCallbacks = workflowRuntimeCallbacks;
+            Supplier<Context> context,
+            Supplier<Handler> handler,
+            Supplier<UserlandRelease> userlandRelease,
+            Consumer<UserlandRelease> setUserlandRelease,
+            Consumer<String> appendEvent,
+            Consumer<String> updateStatus,
+            Supplier<TextView> packageStatusText,
+            Consumer<UserlandInstallState> setInstallState,
+            Consumer<UserlandReadinessState> setReadinessState,
+            BiConsumer<UserlandInstallState, String> applyInstallState,
+            WorkflowCallbacks.RestartSessionCallback restartSession,
+            BiConsumer<String, String> showDebugView) {
+        this.context = context;
+        this.handler = handler;
+        this.userlandRelease = userlandRelease;
+        this.setUserlandRelease = setUserlandRelease;
+        this.appendEvent = appendEvent;
+        this.updateStatus = updateStatus;
+        this.packageStatusText = packageStatusText;
+        this.setInstallState = setInstallState;
+        this.setReadinessState = setReadinessState;
+        this.applyInstallState = applyInstallState;
+        this.restartSession = restartSession;
+        this.showDebugView = showDebugView;
     }
 
     @Override
     public Context context() {
-        return workflowHostCallbacks.context.get();
+        return context.get();
     }
 
     @Override
     public Handler handler() {
-        return workflowHostCallbacks.handler.get();
+        return handler.get();
     }
 
     @Override
     public UserlandRelease userlandRelease() {
-        return workflowHostCallbacks.userlandRelease.get();
+        return userlandRelease.get();
     }
 
     @Override
     public void setUserlandRelease(UserlandRelease userlandRelease) {
-        workflowHostCallbacks.setUserlandRelease.accept(userlandRelease);
+        setUserlandRelease.accept(userlandRelease);
     }
 
     @Override
     public void setInstallState(UserlandInstallState installState) {
-        workflowRuntimeCallbacks.setInstallState.accept(installState);
+        setInstallState.accept(installState);
     }
 
     @Override
     public void setReadinessState(UserlandReadinessState readinessState) {
-        workflowRuntimeCallbacks.setReadinessState.accept(readinessState);
+        setReadinessState.accept(readinessState);
     }
 
     @Override
     public void applyInstallState(UserlandInstallState installState, String statusLabel) {
-        workflowRuntimeCallbacks.workflowActionCallbacks.applyInstallState.accept(installState, statusLabel);
+        applyInstallState.accept(installState, statusLabel);
     }
 
     @Override
     public void restartSession(String eventName, String statusLabel, boolean logRefresh) {
-        workflowRuntimeCallbacks.workflowActionCallbacks.restartSession.restart(eventName, statusLabel, logRefresh);
+        restartSession.restart(eventName, statusLabel, logRefresh);
     }
 
     @Override
     public void showDebugView(String eventName, String statusLabel) {
-        workflowRuntimeCallbacks.workflowActionCallbacks.showDebugView.accept(eventName, statusLabel);
+        showDebugView.accept(eventName, statusLabel);
     }
 
     @Override
     public void appendEvent(String message) {
-        workflowHostCallbacks.appendEvent.accept(message);
+        appendEvent.accept(message);
     }
 
     @Override
     public void updateStatus(String statusLabel) {
-        workflowHostCallbacks.updateStatus.accept(statusLabel);
+        updateStatus.accept(statusLabel);
     }
 
     @Override
     public TextView packageStatusText() {
-        return workflowHostCallbacks.packageStatusText.get();
+        return packageStatusText.get();
     }
 }
