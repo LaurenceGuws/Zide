@@ -346,23 +346,20 @@ public final class ZideTerminalActivity extends Activity
 
     private SessionAssemblyCallbacks createSessionAssemblyCallbacks() {
         return new SessionAssemblyCallbacks(
-                SessionAssemblyCallbacks.SessionHostCallbacks.of(
-                        this::activityHost,
-                        this::currentUserlandRelease,
-                        this::mainHandler,
-                        this::appendEvent,
-                        this::updateStatus),
-                SessionAssemblyCallbacks.SessionRuntimeCallbacks.of(
-                        this::isNativeLoaded,
-                        this::setCurrentReadinessState,
-                        this::refreshProductShellStateIfReady,
-                        this::refreshDebugStatusSurfaceIfReady,
-                        this::shouldRunProductFrameLoop,
-                        this::tickProductFrameAndRefreshScrollOverlay,
-                        SessionAssemblyCallbacks.NativeSessionCallbacks.of(
-                                TerminalNativeBridge::nativeRestartSessionBridge,
-                                TerminalNativeBridge::nativePollSessionBridge,
-                                TerminalNativeBridge::nativeIsSessionAliveBridge)));
+                this::activityHost,
+                this::currentUserlandRelease,
+                this::mainHandler,
+                this::appendEvent,
+                this::updateStatus,
+                this::isNativeLoaded,
+                this::setCurrentReadinessState,
+                this::refreshProductShellStateIfReady,
+                this::refreshDebugStatusSurfaceIfReady,
+                this::shouldRunProductFrameLoop,
+                this::tickProductFrameAndRefreshScrollOverlay,
+                TerminalNativeBridge::nativeRestartSessionBridge,
+                TerminalNativeBridge::nativePollSessionBridge,
+                TerminalNativeBridge::nativeIsSessionAliveBridge);
     }
 
     private ProductRuntimeAssemblyCallbacks createProductRuntimeAssemblyCallbacks() {
