@@ -250,7 +250,7 @@ public final class ZideTerminalActivity extends Activity
                         () -> getSystemService(InputMethodManager.class)),
                 InputCallbacks.InputRuntimeCallbacks.of(
                         () -> imeVisible,
-                        visible -> imeVisible = visible,
+                        this::setImeVisible,
                         () -> nativeLoaded,
                         TerminalNativeBridge::nativeFollowSessionLiveBottomBridge,
                         this::refreshProductScrollOverlayIfReady,
@@ -295,9 +295,9 @@ public final class ZideTerminalActivity extends Activity
                         () -> handler,
                         () -> nativeLoaded,
                         () -> debugViewEnabled,
-                        enabled -> debugViewEnabled = enabled,
+                        this::setDebugViewEnabled,
                         () -> imeVisible,
-                        visible -> imeVisible = visible),
+                        this::setImeVisible),
                 WidgetCallbacks.WidgetViewCallbacks.of(
                         () -> rootView,
                         () -> productView,
@@ -358,7 +358,7 @@ public final class ZideTerminalActivity extends Activity
                         this::updateStatus),
                 SessionAssemblyCallbacks.SessionRuntimeCallbacks.of(
                         () -> nativeLoaded,
-                        readinessState -> currentReadinessState = readinessState,
+                        this::setCurrentReadinessState,
                         this::refreshProductShellStateIfReady,
                         this::refreshDebugStatusSurfaceIfReady,
                         this::shouldRunProductFrameLoop,
@@ -375,7 +375,7 @@ public final class ZideTerminalActivity extends Activity
                         () -> debugViewEnabled,
                         () -> nativeLoaded,
                         () -> currentInstallState,
-                        installState -> currentInstallState = installState,
+                        this::setCurrentInstallState,
                         () -> currentReadinessState,
                         this::appendEvent,
                         this::updateStatus),
@@ -404,7 +404,7 @@ public final class ZideTerminalActivity extends Activity
                         () -> nativeLoaded,
                         this::hasWindowFocus,
                         () -> imeVisible,
-                        visible -> imeVisible = visible),
+                        this::setImeVisible),
                 StatusViewCallbacks.StatusRuntimeCallbacks.of(
                         StatusViewCallbacks.StatusSurfaceCallbacks.of(
                                 () -> surfaceHostBridge,
@@ -445,13 +445,13 @@ public final class ZideTerminalActivity extends Activity
                         () -> this,
                         () -> handler,
                         () -> userlandRelease,
-                        release -> userlandRelease = release,
+                        this::setUserlandRelease,
                         this::appendEvent,
                         this::updateStatus,
                         () -> packageStatusText),
                 WorkflowAssemblyCallbacks.WorkflowRuntimeCallbacks.of(
-                        installState -> currentInstallState = installState,
-                        readinessState -> currentReadinessState = readinessState,
+                        this::setCurrentInstallState,
+                        this::setCurrentReadinessState,
                         WorkflowAssemblyCallbacks.WorkflowActionCallbacks.of(
                                 this::applyInstallStateIfReady,
                                 this::restartSessionIfReady,
@@ -545,6 +545,26 @@ public final class ZideTerminalActivity extends Activity
         if (terminalViewModeController != null) {
             terminalViewModeController.showDebugView(eventName, statusLabel);
         }
+    }
+
+    private void setImeVisible(boolean visible) {
+        imeVisible = visible;
+    }
+
+    private void setDebugViewEnabled(boolean enabled) {
+        debugViewEnabled = enabled;
+    }
+
+    private void setCurrentInstallState(UserlandInstallState installState) {
+        currentInstallState = installState;
+    }
+
+    private void setCurrentReadinessState(UserlandReadinessState readinessState) {
+        currentReadinessState = readinessState;
+    }
+
+    private void setUserlandRelease(UserlandRelease release) {
+        userlandRelease = release;
     }
 
     private android.view.SurfaceView currentSurfaceViewIfReady() {
