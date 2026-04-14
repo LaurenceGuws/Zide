@@ -313,14 +313,23 @@ public final class ZideTerminalActivity extends Activity
                 () -> selectionController,
                 () -> terminalGestureStateController,
                 () -> surfaceHostBridge,
-                () -> currentInstallState.isInstalling(),
-                () -> currentInstallState.isFailed(),
-                () -> currentReadinessState,
-                () -> currentInstallState,
-                this::shouldRunProductFrameLoop,
-                this::refreshProductScrollOverlayIfReady,
-                this::appendEvent,
-                this::updateStatus,
+                WidgetCallbacks.WidgetRuntimeBundle.of(
+                        () -> currentInstallState.isInstalling(),
+                        () -> currentInstallState.isFailed(),
+                        () -> currentReadinessState,
+                        () -> currentInstallState,
+                        this::shouldRunProductFrameLoop,
+                        this::refreshProductScrollOverlayIfReady,
+                        this::appendEvent,
+                        this::updateStatus,
+                        TerminalNativeBridge::nativeSetSessionScrollbackOffsetBridge,
+                        TerminalNativeBridge::nativeFollowSessionLiveBottomBridge,
+                        this::productViewportHeightPx,
+                        this::reevaluateProductFrameLoopIfReady,
+                        this::runPackageDoctor,
+                        this::sendDirectText,
+                        this::notifyVisibleViewportIfReady,
+                        this::refreshUserlandSessionIfReady),
                 WidgetCallbacks.SurfaceLifecycleBundle.of(
                         this::callNative,
                         this::callNativeWithSurfaceState,
@@ -332,15 +341,7 @@ public final class ZideTerminalActivity extends Activity
                         TerminalNativeBridge::nativeOnSurfaceRedrawNeededBridge,
                         TerminalNativeBridge::nativeOnVisibleViewportBridge,
                         this::currentSurfaceStateSnapshot,
-                        this::handleProductShellStateEventIfReady),
-                TerminalNativeBridge::nativeSetSessionScrollbackOffsetBridge,
-                TerminalNativeBridge::nativeFollowSessionLiveBottomBridge,
-                this::productViewportHeightPx,
-                this::reevaluateProductFrameLoopIfReady,
-                this::runPackageDoctor,
-                this::sendDirectText,
-                this::notifyVisibleViewportIfReady,
-                this::refreshUserlandSessionIfReady);
+                        this::handleProductShellStateEventIfReady));
     }
 
     private SessionAssemblyCallbacks createSessionAssemblyCallbacks() {
