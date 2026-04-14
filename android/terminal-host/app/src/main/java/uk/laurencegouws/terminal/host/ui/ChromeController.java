@@ -45,24 +45,13 @@ public final class ChromeController {
     }
 
     public void bindSidebarControls() {
-        final Button restartButton = (Button) host.leftSidebar().findViewById(uk.laurencegouws.terminal.R.id.sidebar_restart_button);
-        final Button debugButton = (Button) host.leftSidebar().findViewById(uk.laurencegouws.terminal.R.id.sidebar_debug_button);
-        final Button packagesButton = (Button) host.leftSidebar().findViewById(uk.laurencegouws.terminal.R.id.sidebar_packages_button);
+        final Button restartButton = sidebarButton(uk.laurencegouws.terminal.R.id.sidebar_restart_button);
+        final Button debugButton = sidebarButton(uk.laurencegouws.terminal.R.id.sidebar_debug_button);
+        final Button packagesButton = sidebarButton(uk.laurencegouws.terminal.R.id.sidebar_packages_button);
 
-        restartButton.setOnClickListener(view -> {
-            host.appendEvent("manual.session.restart requested");
-            closeSidebar();
-        });
-
-        debugButton.setOnClickListener(view -> {
-            host.showDebugView("view.mode debug=true", "debug-view");
-            closeSidebar();
-        });
-
-        packagesButton.setOnClickListener(view -> {
-            closeSidebar();
-            host.runPackageDoctor();
-        });
+        restartButton.setOnClickListener(view -> onSidebarRestartRequested());
+        debugButton.setOnClickListener(view -> onSidebarDebugRequested());
+        packagesButton.setOnClickListener(view -> onSidebarPackagesRequested());
 
         host.drawerScrim().setOnClickListener(view -> closeSidebar());
         host.drawerEdgeHotspot().setOnTouchListener(new EdgeSwipeListener(true));
@@ -102,18 +91,14 @@ public final class ChromeController {
     }
 
     public void openIme() {
-        final InputMethodManager imm = host.context().getSystemService(InputMethodManager.class);
+        final InputMethodManager imm = inputMethodManagerOrLogUnavailable();
         if (imm == null) {
-            host.appendEvent("manual.ime.unavailable state=true");
             return;
         }
 
         final ShellInputView shellInputView = host.shellInputView();
         host.appendEvent("manual.ime.open begin focus=" + shellInputView.hasFocus());
-        shellInputView.requestFocusFromTouch();
-        if (!shellInputView.hasFocus()) {
-            shellInputView.requestFocus();
-        }
+        requestInputFocus(shellInputView);
         host.appendEvent("manual.ime.open focusAfterRequest=" + shellInputView.hasFocus());
         imm.restartInput(shellInputView);
         final boolean shown = imm.showSoftInput(shellInputView, InputMethodManager.SHOW_IMPLICIT);
@@ -123,9 +108,8 @@ public final class ChromeController {
     }
 
     public void closeIme() {
-        final InputMethodManager imm = host.context().getSystemService(InputMethodManager.class);
+        final InputMethodManager imm = inputMethodManagerOrLogUnavailable();
         if (imm == null) {
-            host.appendEvent("manual.ime.unavailable state=true");
             return;
         }
         final boolean hidden = imm.hideSoftInputFromWindow(host.shellInputView().getWindowToken(), 0);
@@ -163,6 +147,40 @@ public final class ChromeController {
     public void updateSidebarVisibility(boolean visible) {
         host.drawerScrim().setVisibility(visible ? View.VISIBLE : View.GONE);
         host.drawerEdgeHotspot().setVisibility(visible ? View.GONE : View.VISIBLE);
+    }
+
+    private Button sidebarButton(int id) {
+        return (Button) host.leftSidebar().findViewById(id);
+    }
+
+    private void onSidebarRestartRequested() {
+        host.appendEvent("manual.session.restart requested");
+        closeSidebar();
+    }
+
+    private void onSidebarDebugRequested() {
+        host.showDebugView("view.mode debug=true", "debug-view");
+        closeSidebar();
+    }
+
+    private void onSidebarPackagesRequested() {
+        closeSidebar();
+        host.runPackageDoctor();
+    }
+
+    private InputMethodManager inputMethodManagerOrLogUnavailable() {
+        final InputMethodManager imm = host.context().getSystemService(InputMethodManager.class);
+        if (imm == null) {
+            host.appendEvent("manual.ime.unavailable state=true");
+        }
+        return imm;
+    }
+
+    private void requestInputFocus(ShellInputView shellInputView) {
+        shellInputView.requestFocusFromTouch();
+        if (!shellInputView.hasFocus()) {
+            shellInputView.requestFocus();
+        }
     }
 
     private final class EdgeSwipeListener implements View.OnTouchListener {
