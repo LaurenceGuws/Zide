@@ -227,11 +227,12 @@ public final class ZideTerminalActivity extends Activity
 
     private InteractionCallbacks createInteractionCallbacks() {
         return new InteractionCallbacks(
-                () -> this,
-                () -> handler,
-                () -> productSurfaceContainer,
-                this::productViewportWidthPx,
-                this::productViewportHeightPx,
+                InteractionCallbacks.InteractionHostBundle.of(
+                        () -> this,
+                        () -> handler,
+                        () -> productSurfaceContainer,
+                        this::productViewportWidthPx,
+                        this::productViewportHeightPx),
                 InteractionCallbacks.InteractionRuntimeBundle.of(
                         () -> nativeLoaded,
                         this::stopScrollbackFlingIfReady,

@@ -11,6 +11,41 @@ import java.util.function.Supplier;
 
 /** Functional callback adapter for {@link InteractionAssembly.Host}. */
 public final class InteractionCallbacks implements InteractionAssembly.Host {
+    public static final class InteractionHostBundle {
+        final Supplier<Activity> activity;
+        final Supplier<Handler> handler;
+        final Supplier<FrameLayout> productSurfaceContainer;
+        final IntSupplier productViewportWidthPx;
+        final IntSupplier productViewportHeightPx;
+
+        private InteractionHostBundle(
+                Supplier<Activity> activity,
+                Supplier<Handler> handler,
+                Supplier<FrameLayout> productSurfaceContainer,
+                IntSupplier productViewportWidthPx,
+                IntSupplier productViewportHeightPx) {
+            this.activity = activity;
+            this.handler = handler;
+            this.productSurfaceContainer = productSurfaceContainer;
+            this.productViewportWidthPx = productViewportWidthPx;
+            this.productViewportHeightPx = productViewportHeightPx;
+        }
+
+        public static InteractionHostBundle of(
+                Supplier<Activity> activity,
+                Supplier<Handler> handler,
+                Supplier<FrameLayout> productSurfaceContainer,
+                IntSupplier productViewportWidthPx,
+                IntSupplier productViewportHeightPx) {
+            return new InteractionHostBundle(
+                    activity,
+                    handler,
+                    productSurfaceContainer,
+                    productViewportWidthPx,
+                    productViewportHeightPx);
+        }
+    }
+
     public static final class InteractionRuntimeBundle {
         final BooleanSupplier nativeLoaded;
         final Runnable stopScrollbackFling;
@@ -46,51 +81,39 @@ public final class InteractionCallbacks implements InteractionAssembly.Host {
         }
     }
 
-    private final Supplier<Activity> activity;
-    private final Supplier<Handler> handler;
-    private final Supplier<FrameLayout> productSurfaceContainer;
-    private final IntSupplier productViewportWidthPx;
-    private final IntSupplier productViewportHeightPx;
+    private final InteractionHostBundle interactionHostBundle;
     private final InteractionRuntimeBundle interactionRuntimeBundle;
 
     public InteractionCallbacks(
-            Supplier<Activity> activity,
-            Supplier<Handler> handler,
-            Supplier<FrameLayout> productSurfaceContainer,
-            IntSupplier productViewportWidthPx,
-            IntSupplier productViewportHeightPx,
+            InteractionHostBundle interactionHostBundle,
             InteractionRuntimeBundle interactionRuntimeBundle) {
-        this.activity = activity;
-        this.handler = handler;
-        this.productSurfaceContainer = productSurfaceContainer;
-        this.productViewportWidthPx = productViewportWidthPx;
-        this.productViewportHeightPx = productViewportHeightPx;
+        this.interactionHostBundle = interactionHostBundle;
         this.interactionRuntimeBundle = interactionRuntimeBundle;
     }
 
     @Override
     public Activity activity() {
-        return activity.get();
+        return interactionHostBundle.activity.get();
     }
 
     @Override
     public Handler handler() {
-        return handler.get();
+        return interactionHostBundle.handler.get();
     }
 
     @Override
     public FrameLayout productSurfaceContainer() {
-        return productSurfaceContainer.get();
+        return interactionHostBundle.productSurfaceContainer.get();
     }
 
     @Override
     public int productViewportWidthPx() {
-        return productViewportWidthPx.getAsInt();
+        return interactionHostBundle.productViewportWidthPx.getAsInt();
     }
 
     @Override
     public int productViewportHeightPx() {
-        return productViewportHeightPx.getAsInt();
+        return interactionHostBundle.productViewportHeightPx.getAsInt();
     }
 
     @Override
