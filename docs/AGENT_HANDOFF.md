@@ -52,3 +52,5 @@ Session entrypoint only. Keep this file short, stable, and current.
   `ProbeStatus/ProbeState`
 - GLES surface status module path is now
   `src/platform/android_gles_surface_status.zig`
+- Zig naming contract now includes an explicit forbidden-terms checklist for
+  active Android bridge/runtime code

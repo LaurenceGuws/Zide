@@ -353,14 +353,14 @@ After that:
 
 ## Backend Handoff
 
-`AH-A5` through `AH-A7` are now probe-complete for the purpose of opening the
+`AH-A5` through `AH-A7` are now diagnostics-complete for the purpose of opening the
 first controlled backend planning cut.
 
 Handoff rule:
 
 - do not keep hardening `android_gles_surface_status.zig` by default
 - use its EGL/context/surface/texture evidence to inform `AR-B4.a`
-- once `AR-B4.a` validates, either collapse the probe behind the shared Android
+- once `AR-B4.a` validates, either collapse the surface-status diagnostics path behind the shared Android
   GLES runtime owner or delete it if fully superseded
 
 Next authority:

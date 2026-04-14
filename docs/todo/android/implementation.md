@@ -151,6 +151,8 @@ A cut is done only if all are true:
   `note*` Android host/probe entrypoint names, `ProbeStatus/ProbeState`,
   `android_gles_probe` filename, `terminal_session_bootstrap` filename, and long `currentShell*` /
   `restartShellSession`-style bridge helper names
+- Zig bridge naming authority now includes an explicit forbidden-terms checklist
+  to block regressions in active Android runtime paths
 - selection controller remains monolithic by design until a real split seam
   exists
 - queue remains Android-product-first, not shell-readiness-baseline-first

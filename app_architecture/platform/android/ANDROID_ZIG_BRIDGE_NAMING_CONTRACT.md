@@ -69,3 +69,15 @@ docs and reuses the same product glossary used in Java cleanup.
 - `terminal_session_bootstrap.zig` -> `terminal_session_runtime_factory.zig`
 - `restartShellSession` / `currentShell*` -> concise runtime names
   (`restartSession`, `visibleRows`, `selectionRect*`, etc.)
+
+## Forbidden Terms Checklist
+
+Do not introduce these in new Android Zig bridge/product-path code unless a
+doc explicitly marks historical context:
+
+- `note*` event entrypoint names on Android-owned seams
+- `ProbeStatus` / `ProbeState` type names for product runtime status
+- `android_gles_probe` module naming in active bridge/runtime paths
+- `terminal_session_bootstrap` module naming in runtime factory paths
+- long bridge helper chains like `restartShellSession` / `currentShell*` when
+  concise runtime names exist

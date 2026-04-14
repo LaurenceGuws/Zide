@@ -50,7 +50,7 @@ public final class ChromeController {
         final Button packagesButton = (Button) host.leftSidebar().findViewById(uk.laurencegouws.terminal.R.id.sidebar_packages_button);
 
         restartButton.setOnClickListener(view -> {
-            host.appendEvent("manual.shellRestart requested");
+            host.appendEvent("manual.sessionRestart requested");
             closeSidebar();
         });
 

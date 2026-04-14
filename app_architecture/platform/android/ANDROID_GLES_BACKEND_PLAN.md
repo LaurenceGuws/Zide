@@ -55,7 +55,7 @@ Allowed files:
 - new `src/ui/renderer/android_gles_backend.zig`
 - new `src/ui/renderer/android_gles_runtime_state.zig`
 - narrow reuse/extraction from `src/platform/android_gles_surface_status.zig` only if it
-  does not break the terminal-host probe
+  does not break the terminal-host surface-status diagnostics path
 - Android build/link files only if required to resolve EGL/GLES symbols for the
   shared renderer build
 - docs in this file, `docs/todo/android/implementation.md`, and
@@ -84,7 +84,7 @@ Current status:
   - backend dispatch wiring
   - honest minimal capabilities
   - backend runtime init/deinit now owns the shared EGL display/config/context
-    state instead of leaving that owner probe-only
+    state instead of leaving that owner diagnostics-only
   - frame begin/submit now binds Android native-window identity through
     surface epoch truth, clears one frame, and swaps buffers through the shared
     frame host path
@@ -92,7 +92,7 @@ Current status:
     surface draw replay
   - explicit readiness failure instead of a fake SDL startup path
   - shared EGL/context/window-surface ownership extraction in
-    `src/platform/android_gles_runtime.zig`; the probe now uses that owner
+    `src/platform/android_gles_runtime.zig`; the surface-status module now uses that owner
     instead of duplicating EGL lifetime logic locally
 - this does **not** yet meet the full stop marker:
   - terminal-host does not instantiate `Renderer` yet
@@ -128,19 +128,19 @@ Stopping point:
 - no screenshot implementation
 - no editor/sample/product rendering adoption
 - no Java-side product UI changes
-- no compatibility shim that keeps both a probe-owned and backend-owned draw
+- no compatibility shim that keeps both a diagnostics-owned and backend-owned draw
   path alive as equal product paths
 
-## Probe Migration Rule
+## Surface-Status Migration Rule
 
-`src/platform/android_gles_surface_status.zig` remains a terminal-host proof module until
+`src/platform/android_gles_surface_status.zig` remains a terminal-host diagnostics module until
 `AR-B4.a` is validated.
 
-After `AR-B4.a` is validated, the probe must either:
+After `AR-B4.a` is validated, the surface-status module must either:
 
 - become a thin diagnostic wrapper around the shared Android GLES runtime owner,
   or
-- be deleted if the shared backend path supersedes every probe responsibility
+- be deleted if the shared backend path supersedes every diagnostics responsibility
 
 It must not remain a parallel renderer by inertia.
 
