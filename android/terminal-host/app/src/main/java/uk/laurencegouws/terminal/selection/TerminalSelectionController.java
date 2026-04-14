@@ -245,7 +245,7 @@ public final class TerminalSelectionController {
     }
 
     public void onProductLongPress(float x, float y) {
-        if (!bridge.nativeLoaded()) {
+        if (!isBridgeReady()) {
             return;
         }
         final TerminalCellHit hit = resolveProductTerminalCell(x, y);
@@ -345,7 +345,7 @@ public final class TerminalSelectionController {
     }
 
     private TerminalCellHit resolveProductTerminalCell(float x, float y) {
-        if (!bridge.nativeLoaded()) {
+        if (!isBridgeReady()) {
             return null;
         }
         final ViewportGridMetrics grid = currentViewportGridMetrics();
@@ -396,11 +396,11 @@ public final class TerminalSelectionController {
     }
 
     private boolean canHandleSelectionTap() {
-        return bridge.nativeLoaded() && bridge.currentSelectionActive();
+        return isBridgeReady() && bridge.currentSelectionActive();
     }
 
     private boolean canHandleSelectionDrag() {
-        return bridge.nativeLoaded() && bridge.currentSelectionActive();
+        return isBridgeReady() && bridge.currentSelectionActive();
     }
 
     private boolean commitSelectionDragIfNeeded(float x, float y) {
@@ -613,6 +613,10 @@ public final class TerminalSelectionController {
         return Math.max(min, Math.min(max, value));
     }
 
+    private boolean isBridgeReady() {
+        return bridge.nativeLoaded();
+    }
+
     private void applySelectionAutoscrollRows(float rowDelta) {
         if (!selectionDragActive || rowDelta == 0.0f) {
             return;
@@ -744,7 +748,7 @@ public final class TerminalSelectionController {
     }
 
     private boolean populateTerminalSelectionContentRect(Rect outRect) {
-        if (!bridge.nativeLoaded() || !bridge.currentSelectionActive()) {
+        if (!canHandleSelectionDrag()) {
             return false;
         }
         final int left = bridge.currentSelectionRectLeft();
@@ -782,7 +786,7 @@ public final class TerminalSelectionController {
         if (selectionStartHandle == null || selectionEndHandle == null) {
             return;
         }
-        if (!bridge.nativeLoaded() || !bridge.currentSelectionActive()) {
+        if (!canHandleSelectionDrag()) {
             hideSelectionHandle(selectionStartHandle);
             hideSelectionHandle(selectionEndHandle);
             return;
