@@ -154,6 +154,10 @@ Agent reporting contract (mandatory for cleanup campaign updates):
      wiring, dropped host view/assist/IME one-line forwards, inlined IME
      manager and soft-input steps, and removed unused `IBinder` import (behavior
      unchanged).
+   - Completed: `SurfaceController` further net-smaller: removed install-time
+     and `callNativeWithSurfaceState` forwarding helpers, inlined container
+     add/remove and viewport `post`, and dropped holder/context one-liners
+     (behavior unchanged).
    - Next: net simplification in `ChromeController` or `SurfaceController`:
      remove or merge pass-through helpers and redundant indirection so the
      touched class ends with fewer methods, fields, or dependencies; each of
