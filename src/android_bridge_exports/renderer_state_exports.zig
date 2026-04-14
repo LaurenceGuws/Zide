@@ -136,7 +136,7 @@ export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentRende
     return currentRendererTextureHeight();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeSharedShellRendererActiveBridge(
+export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeSharedRendererActiveBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) bool {

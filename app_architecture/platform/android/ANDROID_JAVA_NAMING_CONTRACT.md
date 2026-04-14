@@ -22,6 +22,20 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
 - dynamic values belong in key/value suffixes after a space, not in key tokens
   (example: `product.selection.copy result=ok chars=12`)
 
+### Event Suffix Contract
+
+- stable key token first, then whitespace-separated `key=value` pairs
+- preferred suffix keys: `reason`, `status`, `result`, `detail`, `rows`,
+  `cols`, `size`, `focus`, `shown`, `hidden`, `manual`, `alive`, `chars`
+- do not encode dynamic values in event tokens (`foo.bar.value-123` is invalid)
+- keep status/result values lowercase and underscore-safe where possible
+
+### JNI Symbol Rule
+
+- do not introduce new `native*Shell*Bridge` symbols in
+  `TerminalNativeBridge.java`
+- use session/selection/surface/readiness vocabulary instead
+
 ## Glossary
 
 - `Readiness`: current product-operable state for Android userland

@@ -163,6 +163,8 @@ A cut is done only if all are true:
   to execute naming lints + release Java compile in one command
 - Android touch precommit helper added: run `./ops/precommit_android.sh`
   to execute naming gate + deploy smoke in one command
+- Java naming contract now includes event suffix key contract and explicit
+  `native*Shell*Bridge` forbidden-symbol rule for `TerminalNativeBridge.java`
 - selection controller remains monolithic by design until a real split seam
   exists
 - queue remains Android-product-first, not shell-readiness-baseline-first

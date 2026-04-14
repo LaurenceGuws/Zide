@@ -170,7 +170,7 @@ public final class WidgetAssembly {
                         host.productBootstrapRetryButton(),
                         new ProductShellStateCallbacks(
                                 host::nativeLoaded,
-                                TerminalNativeBridge::nativeSharedShellRendererActiveBridge,
+                                TerminalNativeBridge::nativeSharedRendererActiveBridge,
                                 host::currentInstallStateInstalling,
                                 host::currentInstallStateFailed,
                                 host::currentReadinessState,

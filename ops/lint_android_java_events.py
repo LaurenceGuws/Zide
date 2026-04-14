@@ -13,12 +13,21 @@ JAVA_ROOT = ROOT / "android" / "terminal-host" / "app" / "src" / "main" / "java"
 APPEND_EVENT_RE = re.compile(r'appendEvent\("([^"]+)"')
 UPDATE_STATUS_RE = re.compile(r'updateStatus\("([^"]+)"\)')
 KEY_RE = re.compile(r"[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*){2,}")
+FORBIDDEN_TERMINAL_NATIVE_SHELL = re.compile(r"\bnative[A-Za-z0-9_]*Shell[A-Za-z0-9_]*Bridge\b")
 
 
 def main() -> int:
     violations: list[str] = []
     for file_path in sorted(JAVA_ROOT.rglob("*.java")):
         lines = file_path.read_text(encoding="utf-8").splitlines()
+        if file_path.name == "TerminalNativeBridge.java":
+            for line_no, line in enumerate(lines, start=1):
+                match_forbidden = FORBIDDEN_TERMINAL_NATIVE_SHELL.search(line)
+                if match_forbidden:
+                    rel = file_path.relative_to(ROOT)
+                    violations.append(
+                        f"{rel}:{line_no}: forbidden JNI symbol token '{match_forbidden.group(0)}'"
+                    )
         for line_no, line in enumerate(lines, start=1):
             match = APPEND_EVENT_RE.search(line)
             if match:

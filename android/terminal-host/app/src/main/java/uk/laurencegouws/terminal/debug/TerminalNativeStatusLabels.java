@@ -8,22 +8,22 @@ public final class TerminalNativeStatusLabels {
     public static String surfaceTransitionLabel(int transition) {
         switch (transition) {
             case 1:
-                return "acquired";
+                return "surface.transition.acquired";
             case 2:
-                return "replaced";
+                return "surface.transition.replaced";
             case 3:
-                return "retired";
+                return "surface.transition.retired";
             default:
-                return "unchanged";
+                return "surface.transition.unchanged";
         }
     }
 
     public static String sessionStartStatusLabel(int status) {
         switch (status) {
             case 1:
-                return "activity.state.started";
+                return "session.start.started";
             case 2:
-                return "unsupported";
+                return "session.start.unsupported";
             case 3:
                 return "session.start.failed.create";
             case 4:
@@ -37,16 +37,16 @@ public final class TerminalNativeStatusLabels {
             case 8:
                 return "session.start.failed.snapshot";
             default:
-                return "none";
+                return "session.start.none";
         }
     }
 
     public static String glesRendererStatusLabel(int status) {
         switch (status) {
             case 1:
-                return "ready";
+                return "surface.state.ready";
             case 2:
-                return "drawn";
+                return "surface.state.drawn";
             case 3:
                 return "surface.state.destroyed";
             case 4:
@@ -58,7 +58,7 @@ public final class TerminalNativeStatusLabels {
             case 7:
                 return "surface.swap.failed";
             default:
-                return "unavailable";
+                return "surface.state.unavailable";
         }
     }
 }

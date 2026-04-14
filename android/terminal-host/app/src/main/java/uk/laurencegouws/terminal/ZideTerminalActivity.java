@@ -376,7 +376,7 @@ public final class ZideTerminalActivity extends Activity
                         () -> terminalProductRuntimeController != null
                                 && terminalProductRuntimeController.shouldRunProductFrameLoop(),
                         () -> {
-                            final int tick = nativeLoaded ? TerminalNativeBridge.nativeTickProductShellFrameBridge()
+                            final int tick = nativeLoaded ? TerminalNativeBridge.nativeTickProductFrameBridge()
                                     : 0;
                             if (terminalProductRuntimeController != null) {
                                 terminalProductRuntimeController.refreshProductScrollOverlay();

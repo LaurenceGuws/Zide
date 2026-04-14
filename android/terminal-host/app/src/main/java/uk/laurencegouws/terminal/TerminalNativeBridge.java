@@ -94,7 +94,7 @@ public final class TerminalNativeBridge {
 
     public static native boolean nativeIsSessionAliveBridge();
 
-    public static native int nativeTickProductShellFrameBridge();
+    public static native int nativeTickProductFrameBridge();
 
     public static native int nativeSendSessionCodepointBridge(int codepoint);
 
@@ -150,5 +150,5 @@ public final class TerminalNativeBridge {
 
     public static native byte[] nativeCurrentSelectionTextBytesBridge();
 
-    public static native boolean nativeSharedShellRendererActiveBridge();
+    public static native boolean nativeSharedRendererActiveBridge();
 }

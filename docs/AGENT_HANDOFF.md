@@ -60,3 +60,5 @@ Session entrypoint only. Keep this file short, stable, and current.
 - pre-commit local Android naming+compile gate exists at
   `ops/check_android_naming_gate.py`
 - Android touch precommit helper exists at `ops/precommit_android.sh`
+- Java naming authority now includes event suffix contract and forbidden
+  `native*Shell*Bridge` symbol rule in `ANDROID_JAVA_NAMING_CONTRACT.md`

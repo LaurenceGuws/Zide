@@ -65,7 +65,7 @@ export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeIsSessionAli
     return sessionAlive();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeTickProductShellFrameBridge(
+export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeTickProductFrameBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
