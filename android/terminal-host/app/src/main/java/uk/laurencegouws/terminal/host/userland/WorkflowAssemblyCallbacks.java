@@ -14,7 +14,7 @@ import uk.laurencegouws.terminal.userland.UserlandRelease;
 
 /** Functional callback adapter for {@link WorkflowAssembly.Host}. */
 public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
-    public static final class WorkflowHostBundle {
+    public static final class WorkflowHostCallbacks {
         final Supplier<Context> context;
         final Supplier<Handler> handler;
         final Supplier<UserlandRelease> userlandRelease;
@@ -23,7 +23,7 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
         final Consumer<String> updateStatus;
         final Supplier<TextView> packageStatusText;
 
-        private WorkflowHostBundle(
+        private WorkflowHostCallbacks(
                 Supplier<Context> context,
                 Supplier<Handler> handler,
                 Supplier<UserlandRelease> userlandRelease,
@@ -40,7 +40,7 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
             this.packageStatusText = packageStatusText;
         }
 
-        public static WorkflowHostBundle of(
+        public static WorkflowHostCallbacks of(
                 Supplier<Context> context,
                 Supplier<Handler> handler,
                 Supplier<UserlandRelease> userlandRelease,
@@ -48,7 +48,7 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
                 Consumer<String> appendEvent,
                 Consumer<String> updateStatus,
                 Supplier<TextView> packageStatusText) {
-            return new WorkflowHostBundle(
+            return new WorkflowHostCallbacks(
                     context,
                     handler,
                     userlandRelease,
@@ -59,12 +59,12 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
         }
     }
 
-    public static final class WorkflowActionBundle {
+    public static final class WorkflowActionCallbacks {
         final BiConsumer<UserlandInstallState, String> applyInstallState;
         final WorkflowCallbacks.RestartSessionCallback restartSession;
         final BiConsumer<String, String> showDebugView;
 
-        private WorkflowActionBundle(
+        private WorkflowActionCallbacks(
                 BiConsumer<UserlandInstallState, String> applyInstallState,
                 WorkflowCallbacks.RestartSessionCallback restartSession,
                 BiConsumer<String, String> showDebugView) {
@@ -73,109 +73,109 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
             this.showDebugView = showDebugView;
         }
 
-        public static WorkflowActionBundle of(
+        public static WorkflowActionCallbacks of(
                 BiConsumer<UserlandInstallState, String> applyInstallState,
                 WorkflowCallbacks.RestartSessionCallback restartSession,
                 BiConsumer<String, String> showDebugView) {
-            return new WorkflowActionBundle(
+            return new WorkflowActionCallbacks(
                     applyInstallState,
                     restartSession,
                     showDebugView);
         }
     }
 
-    public static final class WorkflowRuntimeBundle {
+    public static final class WorkflowRuntimeCallbacks {
         final Consumer<UserlandInstallState> setInstallState;
         final Consumer<UserlandReadinessState> setReadinessState;
-        final WorkflowActionBundle workflowActionBundle;
+        final WorkflowActionCallbacks workflowActionCallbacks;
 
-        private WorkflowRuntimeBundle(
+        private WorkflowRuntimeCallbacks(
                 Consumer<UserlandInstallState> setInstallState,
                 Consumer<UserlandReadinessState> setReadinessState,
-                WorkflowActionBundle workflowActionBundle) {
+                WorkflowActionCallbacks workflowActionCallbacks) {
             this.setInstallState = setInstallState;
             this.setReadinessState = setReadinessState;
-            this.workflowActionBundle = workflowActionBundle;
+            this.workflowActionCallbacks = workflowActionCallbacks;
         }
 
-        public static WorkflowRuntimeBundle of(
+        public static WorkflowRuntimeCallbacks of(
                 Consumer<UserlandInstallState> setInstallState,
                 Consumer<UserlandReadinessState> setReadinessState,
-                WorkflowActionBundle workflowActionBundle) {
-            return new WorkflowRuntimeBundle(
+                WorkflowActionCallbacks workflowActionCallbacks) {
+            return new WorkflowRuntimeCallbacks(
                     setInstallState,
                     setReadinessState,
-                    workflowActionBundle);
+                    workflowActionCallbacks);
         }
     }
 
-    private final WorkflowHostBundle workflowHostBundle;
-    private final WorkflowRuntimeBundle workflowRuntimeBundle;
+    private final WorkflowHostCallbacks workflowHostCallbacks;
+    private final WorkflowRuntimeCallbacks workflowRuntimeCallbacks;
 
     public WorkflowAssemblyCallbacks(
-            WorkflowHostBundle workflowHostBundle,
-            WorkflowRuntimeBundle workflowRuntimeBundle) {
-        this.workflowHostBundle = workflowHostBundle;
-        this.workflowRuntimeBundle = workflowRuntimeBundle;
+            WorkflowHostCallbacks workflowHostCallbacks,
+            WorkflowRuntimeCallbacks workflowRuntimeCallbacks) {
+        this.workflowHostCallbacks = workflowHostCallbacks;
+        this.workflowRuntimeCallbacks = workflowRuntimeCallbacks;
     }
 
     @Override
     public Context context() {
-        return workflowHostBundle.context.get();
+        return workflowHostCallbacks.context.get();
     }
 
     @Override
     public Handler handler() {
-        return workflowHostBundle.handler.get();
+        return workflowHostCallbacks.handler.get();
     }
 
     @Override
     public UserlandRelease userlandRelease() {
-        return workflowHostBundle.userlandRelease.get();
+        return workflowHostCallbacks.userlandRelease.get();
     }
 
     @Override
     public void setUserlandRelease(UserlandRelease userlandRelease) {
-        workflowHostBundle.setUserlandRelease.accept(userlandRelease);
+        workflowHostCallbacks.setUserlandRelease.accept(userlandRelease);
     }
 
     @Override
     public void setInstallState(UserlandInstallState installState) {
-        workflowRuntimeBundle.setInstallState.accept(installState);
+        workflowRuntimeCallbacks.setInstallState.accept(installState);
     }
 
     @Override
     public void setReadinessState(UserlandReadinessState readinessState) {
-        workflowRuntimeBundle.setReadinessState.accept(readinessState);
+        workflowRuntimeCallbacks.setReadinessState.accept(readinessState);
     }
 
     @Override
     public void applyInstallState(UserlandInstallState installState, String statusLabel) {
-        workflowRuntimeBundle.workflowActionBundle.applyInstallState.accept(installState, statusLabel);
+        workflowRuntimeCallbacks.workflowActionCallbacks.applyInstallState.accept(installState, statusLabel);
     }
 
     @Override
     public void restartSession(String eventName, String statusLabel, boolean logRefresh) {
-        workflowRuntimeBundle.workflowActionBundle.restartSession.restart(eventName, statusLabel, logRefresh);
+        workflowRuntimeCallbacks.workflowActionCallbacks.restartSession.restart(eventName, statusLabel, logRefresh);
     }
 
     @Override
     public void showDebugView(String eventName, String statusLabel) {
-        workflowRuntimeBundle.workflowActionBundle.showDebugView.accept(eventName, statusLabel);
+        workflowRuntimeCallbacks.workflowActionCallbacks.showDebugView.accept(eventName, statusLabel);
     }
 
     @Override
     public void appendEvent(String message) {
-        workflowHostBundle.appendEvent.accept(message);
+        workflowHostCallbacks.appendEvent.accept(message);
     }
 
     @Override
     public void updateStatus(String statusLabel) {
-        workflowHostBundle.updateStatus.accept(statusLabel);
+        workflowHostCallbacks.updateStatus.accept(statusLabel);
     }
 
     @Override
     public TextView packageStatusText() {
-        return workflowHostBundle.packageStatusText.get();
+        return workflowHostCallbacks.packageStatusText.get();
     }
 }

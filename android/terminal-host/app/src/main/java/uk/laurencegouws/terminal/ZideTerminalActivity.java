@@ -450,7 +450,7 @@ public final class ZideTerminalActivity extends Activity
 
     private WorkflowAssemblyCallbacks createWorkflowAssemblyCallbacks() {
         return new WorkflowAssemblyCallbacks(
-                WorkflowAssemblyCallbacks.WorkflowHostBundle.of(
+                WorkflowAssemblyCallbacks.WorkflowHostCallbacks.of(
                         () -> this,
                         () -> handler,
                         () -> userlandRelease,
@@ -458,10 +458,10 @@ public final class ZideTerminalActivity extends Activity
                         this::appendEvent,
                         this::updateStatus,
                         () -> packageStatusText),
-                WorkflowAssemblyCallbacks.WorkflowRuntimeBundle.of(
+                WorkflowAssemblyCallbacks.WorkflowRuntimeCallbacks.of(
                         installState -> currentInstallState = installState,
                         readinessState -> currentReadinessState = readinessState,
-                        WorkflowAssemblyCallbacks.WorkflowActionBundle.of(
+                        WorkflowAssemblyCallbacks.WorkflowActionCallbacks.of(
                                 this::applyInstallStateIfReady,
                                 this::restartSessionIfReady,
                                 this::showDebugViewIfReady)));
