@@ -214,7 +214,7 @@ public final class TerminalSelectionController {
 
     /** Keeps selection chrome aligned after viewport/scrollback changes. */
     public void syncChrome() {
-        syncTerminalSelectionActionMode();
+        syncSelectionChrome();
     }
 
     /** Keeps handles above the terminal surface when the surface host is recreated. */
@@ -311,7 +311,7 @@ public final class TerminalSelectionController {
                 selectionDraggedHandleTouchOffsetX = event.getX();
                 selectionDraggedHandleTouchOffsetY = event.getY();
                 beginSelectionDrag(dragMode, selectionHandleAnchorX(handle), selectionHandleAnchorY(handle));
-                syncTerminalSelectionActionMode();
+                syncSelectionChrome();
                 requestFrameLoopReevaluation();
                 return true;
             case MotionEvent.ACTION_MOVE:
@@ -385,12 +385,12 @@ public final class TerminalSelectionController {
     }
 
     private void syncSelectionAndReevaluateFrameLoop() {
-        syncTerminalSelectionActionMode();
+        syncSelectionChrome();
         requestFrameLoopReevaluation();
     }
 
     private void onSelectionUpdateSuccess() {
-        syncTerminalSelectionActionMode();
+        syncSelectionChrome();
     }
 
     private void onSelectionUpdateSuccessDuringDrag() {
@@ -667,17 +667,21 @@ public final class TerminalSelectionController {
 
     private void hideSelectionToolbar() {
         selectionToolbarVisible = false;
-        syncTerminalSelectionActionMode();
+        syncSelectionChrome();
     }
 
     private void showSelectionToolbar() {
         selectionToolbarVisible = selectionHelpersVisible;
-        syncTerminalSelectionActionMode();
+        syncSelectionChrome();
     }
 
     private void toggleSelectionHelpers() {
         selectionHelpersVisible = !selectionHelpersVisible;
         selectionToolbarVisible = selectionHelpersVisible && !selectionDragActive;
+        syncSelectionChrome();
+    }
+
+    private void syncSelectionChrome() {
         syncTerminalSelectionActionMode();
     }
 
