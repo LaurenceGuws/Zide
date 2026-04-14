@@ -45,13 +45,25 @@ public final class ChromeController {
     }
 
     public void bindSidebarControls() {
-        final Button restartButton = sidebarButton(uk.laurencegouws.terminal.R.id.sidebar_restart_button);
-        final Button debugButton = sidebarButton(uk.laurencegouws.terminal.R.id.sidebar_debug_button);
-        final Button packagesButton = sidebarButton(uk.laurencegouws.terminal.R.id.sidebar_packages_button);
+        final Button restartButton =
+                (Button) host.leftSidebar().findViewById(uk.laurencegouws.terminal.R.id.sidebar_restart_button);
+        final Button debugButton =
+                (Button) host.leftSidebar().findViewById(uk.laurencegouws.terminal.R.id.sidebar_debug_button);
+        final Button packagesButton =
+                (Button) host.leftSidebar().findViewById(uk.laurencegouws.terminal.R.id.sidebar_packages_button);
 
-        restartButton.setOnClickListener(view -> onSidebarRestartRequested());
-        debugButton.setOnClickListener(view -> onSidebarDebugRequested());
-        packagesButton.setOnClickListener(view -> onSidebarPackagesRequested());
+        restartButton.setOnClickListener(view -> {
+            host.appendEvent("manual.session.restart requested");
+            closeSidebar();
+        });
+        debugButton.setOnClickListener(view -> {
+            host.showDebugView("view.mode debug=true", "debug-view");
+            closeSidebar();
+        });
+        packagesButton.setOnClickListener(view -> {
+            closeSidebar();
+            host.runPackageDoctor();
+        });
 
         host.drawerScrim().setOnClickListener(view -> closeSidebar());
         host.drawerEdgeHotspot().setOnTouchListener(new EdgeSwipeListener(true));
@@ -110,18 +122,18 @@ public final class ChromeController {
 
     public void toggleIme() {
         if (currentImeVisible()) {
-            closeImeFromToggle();
+            closeIme();
             return;
         }
-        openImeFromToggle();
+        openIme();
     }
 
     public void openSidebar() {
         if (host.sidebarOpen() || host.debugViewEnabled()) {
             return;
         }
-        setSidebarOpen(true);
-        animateSidebarTranslation(0);
+        host.setSidebarOpen(true);
+        host.leftSidebar().animate().translationX(0).setDuration(180).start();
         updateSidebarVisibility(true);
     }
 
@@ -129,33 +141,14 @@ public final class ChromeController {
         if (!host.sidebarOpen()) {
             return;
         }
-        setSidebarOpen(false);
-        animateSidebarTranslation(-host.leftSidebar().getWidth());
+        host.setSidebarOpen(false);
+        host.leftSidebar().animate().translationX(-host.leftSidebar().getWidth()).setDuration(180).start();
         updateSidebarVisibility(false);
     }
 
     public void updateSidebarVisibility(boolean visible) {
         host.drawerScrim().setVisibility(visible ? View.VISIBLE : View.GONE);
         host.drawerEdgeHotspot().setVisibility(visible ? View.GONE : View.VISIBLE);
-    }
-
-    private Button sidebarButton(int id) {
-        return (Button) host.leftSidebar().findViewById(id);
-    }
-
-    private void onSidebarRestartRequested() {
-        host.appendEvent("manual.session.restart requested");
-        closeSidebar();
-    }
-
-    private void onSidebarDebugRequested() {
-        host.showDebugView("view.mode debug=true", "debug-view");
-        closeSidebar();
-    }
-
-    private void onSidebarPackagesRequested() {
-        closeSidebar();
-        host.runPackageDoctor();
     }
 
     private void bindAssistTextButtons() {
@@ -187,14 +180,6 @@ public final class ChromeController {
         }
     }
 
-    private void setSidebarOpen(boolean open) {
-        host.setSidebarOpen(open);
-    }
-
-    private void animateSidebarTranslation(float x) {
-        host.leftSidebar().animate().translationX(x).setDuration(180).start();
-    }
-
     private void recordImeOpenStatus(boolean shown, ShellInputView shellInputView) {
         host.setImeVisible(shown || shellInputView.hasFocus());
         host.appendEvent("manual.ime.open shown=" + shown + " focus=" + shellInputView.hasFocus());
@@ -205,14 +190,6 @@ public final class ChromeController {
         host.setImeVisible(false);
         host.appendEvent("manual.ime.close hidden=" + hidden);
         host.updateStatus("ime.state.hidden");
-    }
-
-    private void closeImeFromToggle() {
-        closeIme();
-    }
-
-    private void openImeFromToggle() {
-        openIme();
     }
 
     private final class EdgeSwipeListener implements View.OnTouchListener {
