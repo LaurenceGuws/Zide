@@ -58,7 +58,10 @@ Focus goals:
      (`sendDirectText` now routes through a named codepoint iteration helper).
    - Completed: direct-input native-ready guard is now shared via
      `canSendDirectInput()` across direct-input overrides.
-   - Next: move to the next smallest wiring-vs-policy cut in activity methods.
+   - Completed: activity lifecycle/input overrides now route through named
+     helper seams; remaining inline logic is intentionally trivial or contract
+     owned by downstream controllers.
+   - Next: move to TODO #2 ownership-boundary cleanup cuts.
 2. Keep Java ownership boundaries aligned with
    `ANDROID_JAVA_HOST_STRUCTURE.md`.
 3. Stabilize selection/scroll interaction behavior under manual device usage.
