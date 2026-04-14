@@ -350,13 +350,13 @@ public final class ZideTerminalActivity extends Activity
 
     private SessionAssemblyCallbacks createSessionAssemblyCallbacks() {
         return new SessionAssemblyCallbacks(
-                SessionAssemblyCallbacks.SessionHostBundle.of(
+                SessionAssemblyCallbacks.SessionHostCallbacks.of(
                         () -> this,
                         () -> userlandRelease,
                         () -> handler,
                         this::appendEvent,
                         this::updateStatus),
-                SessionAssemblyCallbacks.SessionRuntimeBundle.of(
+                SessionAssemblyCallbacks.SessionRuntimeCallbacks.of(
                         () -> nativeLoaded,
                         readinessState -> currentReadinessState = readinessState,
                         this::refreshProductShellStateIfReady,
@@ -368,7 +368,7 @@ public final class ZideTerminalActivity extends Activity
                             refreshProductScrollOverlayIfReady();
                             return tick;
                         },
-                        SessionAssemblyCallbacks.NativeSessionBundle.of(
+                        SessionAssemblyCallbacks.NativeSessionCallbacks.of(
                                 TerminalNativeBridge::nativeRestartSessionBridge,
                                 TerminalNativeBridge::nativePollSessionBridge,
                                 TerminalNativeBridge::nativeIsSessionAliveBridge)));
