@@ -101,11 +101,11 @@ public final class SurfaceController {
         maybeScheduleSurfaceRecreation(recreateSurfaceOnce);
         maybeScheduleSurfaceResize(resizeSurfaceOnce);
         maybeScheduleShellStart(startShellOnce);
-        notifyProductShellResumed();
+        host.handleProductShellStateEvent("resumed");
     }
 
     public void onPause() {
-        dispatchNativePause();
+        host.callNative("native.onPause", -1);
     }
 
     public void onSurfaceCreated(SurfaceHolder holder) {
@@ -124,8 +124,11 @@ public final class SurfaceController {
     public void onSurfaceDestroyed(SurfaceHolder holder) {
         appendSurfaceDestroyedEvent();
         final long seq = nativeSurfaceDestroyedSeq();
-        dispatchNativeSurfaceDestroyed(seq);
-        updateSurfaceDestroyedStatus();
+        host.callNativeWithSurfaceState(
+                "native.surfaceDestroyed",
+                seq,
+                host.currentSurfaceStateSnapshot());
+        host.updateStatus("surface.state.destroyed");
     }
 
     public void onSurfaceRedrawNeeded(SurfaceHolder holder) {
@@ -400,25 +403,6 @@ public final class SurfaceController {
             final int shrunkHeight = Math.max(200, originalHeight / 2);
             applySurfaceResize(holder, originalWidth, originalHeight, shrunkHeight);
         }, 900);
-    }
-
-    private void notifyProductShellResumed() {
-        host.handleProductShellStateEvent("resumed");
-    }
-
-    private void dispatchNativePause() {
-        host.callNative("native.onPause", -1);
-    }
-
-    private void dispatchNativeSurfaceDestroyed(long seq) {
-        host.callNativeWithSurfaceState(
-                "native.surfaceDestroyed",
-                seq,
-                host.currentSurfaceStateSnapshot());
-    }
-
-    private void updateSurfaceDestroyedStatus() {
-        host.updateStatus("surface.state.destroyed");
     }
 
     private void dispatchNativeViewportChanged(long seq) {
