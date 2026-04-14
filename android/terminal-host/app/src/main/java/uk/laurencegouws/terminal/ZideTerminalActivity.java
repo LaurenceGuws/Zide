@@ -498,6 +498,70 @@ public final class ZideTerminalActivity extends Activity
         }
     }
 
+    private ZideTerminalActivity activityHost() {
+        return this;
+    }
+
+    private Handler mainHandler() {
+        return handler;
+    }
+
+    private boolean isNativeLoaded() {
+        return nativeLoaded;
+    }
+
+    private boolean isDebugViewEnabled() {
+        return debugViewEnabled;
+    }
+
+    private boolean isImeVisible() {
+        return imeVisible;
+    }
+
+    private boolean isCurrentInstalling() {
+        return currentInstallState.isInstalling();
+    }
+
+    private boolean isCurrentInstallFailed() {
+        return currentInstallState.isFailed();
+    }
+
+    private UserlandInstallState currentInstallStateSnapshot() {
+        return currentInstallState;
+    }
+
+    private UserlandReadinessState currentReadinessStateSnapshot() {
+        return currentReadinessState;
+    }
+
+    private UserlandRelease currentUserlandRelease() {
+        return userlandRelease;
+    }
+
+    private android.view.SurfaceView currentSurfaceViewIfReady() {
+        return surfaceHostBridge != null ? surfaceHostBridge.currentSurfaceView() : null;
+    }
+
+    private void setImeVisible(boolean visible) {
+        imeVisible = visible;
+    }
+
+    private void setDebugViewEnabled(boolean enabled) {
+        debugViewEnabled = enabled;
+    }
+
+    private void setCurrentInstallState(UserlandInstallState installState) {
+        currentInstallState = installState;
+    }
+
+    private void setCurrentReadinessState(UserlandReadinessState readinessState) {
+        currentReadinessState = readinessState;
+    }
+
+    private void setUserlandRelease(UserlandRelease release) {
+        userlandRelease = release;
+    }
+
     private boolean shouldRunProductFrameLoop() {
         return terminalProductRuntimeController != null
                 && terminalProductRuntimeController.shouldRunProductFrameLoop();
@@ -543,70 +607,6 @@ public final class ZideTerminalActivity extends Activity
         if (terminalViewModeController != null) {
             terminalViewModeController.showDebugView(eventName, statusLabel);
         }
-    }
-
-    private ZideTerminalActivity activityHost() {
-        return this;
-    }
-
-    private Handler mainHandler() {
-        return handler;
-    }
-
-    private boolean isNativeLoaded() {
-        return nativeLoaded;
-    }
-
-    private boolean isDebugViewEnabled() {
-        return debugViewEnabled;
-    }
-
-    private boolean isImeVisible() {
-        return imeVisible;
-    }
-
-    private boolean isCurrentInstalling() {
-        return currentInstallState.isInstalling();
-    }
-
-    private boolean isCurrentInstallFailed() {
-        return currentInstallState.isFailed();
-    }
-
-    private UserlandInstallState currentInstallStateSnapshot() {
-        return currentInstallState;
-    }
-
-    private UserlandReadinessState currentReadinessStateSnapshot() {
-        return currentReadinessState;
-    }
-
-    private UserlandRelease currentUserlandRelease() {
-        return userlandRelease;
-    }
-
-    private void setImeVisible(boolean visible) {
-        imeVisible = visible;
-    }
-
-    private void setDebugViewEnabled(boolean enabled) {
-        debugViewEnabled = enabled;
-    }
-
-    private void setCurrentInstallState(UserlandInstallState installState) {
-        currentInstallState = installState;
-    }
-
-    private void setCurrentReadinessState(UserlandReadinessState readinessState) {
-        currentReadinessState = readinessState;
-    }
-
-    private void setUserlandRelease(UserlandRelease release) {
-        userlandRelease = release;
-    }
-
-    private android.view.SurfaceView currentSurfaceViewIfReady() {
-        return surfaceHostBridge != null ? surfaceHostBridge.currentSurfaceView() : null;
     }
 
     private void stopProductFrameLoopIfReady() {
