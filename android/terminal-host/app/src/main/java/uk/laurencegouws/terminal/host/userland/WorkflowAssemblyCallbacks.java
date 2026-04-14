@@ -14,15 +14,38 @@ import uk.laurencegouws.terminal.userland.UserlandRelease;
 
 /** Functional callback adapter for {@link WorkflowAssembly.Host}. */
 public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
+    public static final class WorkflowActionBundle {
+        final BiConsumer<UserlandInstallState, String> applyInstallState;
+        final WorkflowCallbacks.RestartSessionCallback restartSession;
+        final BiConsumer<String, String> showDebugView;
+
+        private WorkflowActionBundle(
+                BiConsumer<UserlandInstallState, String> applyInstallState,
+                WorkflowCallbacks.RestartSessionCallback restartSession,
+                BiConsumer<String, String> showDebugView) {
+            this.applyInstallState = applyInstallState;
+            this.restartSession = restartSession;
+            this.showDebugView = showDebugView;
+        }
+
+        public static WorkflowActionBundle of(
+                BiConsumer<UserlandInstallState, String> applyInstallState,
+                WorkflowCallbacks.RestartSessionCallback restartSession,
+                BiConsumer<String, String> showDebugView) {
+            return new WorkflowActionBundle(
+                    applyInstallState,
+                    restartSession,
+                    showDebugView);
+        }
+    }
+
     private final Supplier<Context> context;
     private final Supplier<Handler> handler;
     private final Supplier<UserlandRelease> userlandRelease;
     private final Consumer<UserlandRelease> setUserlandRelease;
     private final Consumer<UserlandInstallState> setInstallState;
     private final Consumer<UserlandReadinessState> setReadinessState;
-    private final BiConsumer<UserlandInstallState, String> applyInstallState;
-    private final WorkflowCallbacks.RestartSessionCallback restartSession;
-    private final BiConsumer<String, String> showDebugView;
+    private final WorkflowActionBundle workflowActionBundle;
     private final Consumer<String> appendEvent;
     private final Consumer<String> updateStatus;
     private final Supplier<TextView> packageStatusText;
@@ -34,9 +57,7 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
             Consumer<UserlandRelease> setUserlandRelease,
             Consumer<UserlandInstallState> setInstallState,
             Consumer<UserlandReadinessState> setReadinessState,
-            BiConsumer<UserlandInstallState, String> applyInstallState,
-            WorkflowCallbacks.RestartSessionCallback restartSession,
-            BiConsumer<String, String> showDebugView,
+            WorkflowActionBundle workflowActionBundle,
             Consumer<String> appendEvent,
             Consumer<String> updateStatus,
             Supplier<TextView> packageStatusText) {
@@ -46,9 +67,7 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
         this.setUserlandRelease = setUserlandRelease;
         this.setInstallState = setInstallState;
         this.setReadinessState = setReadinessState;
-        this.applyInstallState = applyInstallState;
-        this.restartSession = restartSession;
-        this.showDebugView = showDebugView;
+        this.workflowActionBundle = workflowActionBundle;
         this.appendEvent = appendEvent;
         this.updateStatus = updateStatus;
         this.packageStatusText = packageStatusText;
@@ -86,17 +105,17 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
 
     @Override
     public void applyInstallState(UserlandInstallState installState, String statusLabel) {
-        applyInstallState.accept(installState, statusLabel);
+        workflowActionBundle.applyInstallState.accept(installState, statusLabel);
     }
 
     @Override
     public void restartSession(String eventName, String statusLabel, boolean logRefresh) {
-        restartSession.restart(eventName, statusLabel, logRefresh);
+        workflowActionBundle.restartSession.restart(eventName, statusLabel, logRefresh);
     }
 
     @Override
     public void showDebugView(String eventName, String statusLabel) {
-        showDebugView.accept(eventName, statusLabel);
+        workflowActionBundle.showDebugView.accept(eventName, statusLabel);
     }
 
     @Override

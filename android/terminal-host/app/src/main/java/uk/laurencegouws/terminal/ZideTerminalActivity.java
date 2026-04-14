@@ -440,9 +440,10 @@ public final class ZideTerminalActivity extends Activity
                 release -> userlandRelease = release,
                 installState -> currentInstallState = installState,
                 readinessState -> currentReadinessState = readinessState,
-                this::applyInstallStateIfReady,
-                this::restartSessionIfReady,
-                this::showDebugViewIfReady,
+                WorkflowAssemblyCallbacks.WorkflowActionBundle.of(
+                        this::applyInstallStateIfReady,
+                        this::restartSessionIfReady,
+                        this::showDebugViewIfReady),
                 this::appendEvent,
                 this::updateStatus,
                 () -> packageStatusText);
