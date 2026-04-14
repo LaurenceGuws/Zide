@@ -206,6 +206,9 @@ Agent reporting contract (mandatory for cleanup campaign updates):
      `scheduleNotifyVisibleViewport`.
    - Completed: batch of four seams: `drawerScrimChrome`, `drawerEdgeHotspotChrome`,
      `nativeSurfaceAvailableSeqOrNegative`, and `callNativeProductSurfaceAvailable`.
+   - Completed: batch of four seams: `debugViewModeToggleChrome`,
+     `hideSoftInputFromShellWindowToken`, `nativeSurfaceDestroyedSeqOrNegative`, and
+     `callNativeProductSurfaceDestroyed`.
    - Next: continue smallest ownership-clarity cuts in `ChromeController` or
      `SurfaceController` where watch-level pressure remains.
 3. Stabilize selection/scroll interaction behavior under manual device usage.
