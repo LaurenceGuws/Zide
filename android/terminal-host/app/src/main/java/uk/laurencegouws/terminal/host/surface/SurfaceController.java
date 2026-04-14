@@ -97,10 +97,6 @@ public final class SurfaceController {
         this.host = host;
     }
 
-    private FrameLayout productSurfaceHostContainer() {
-        return host.productSurfaceContainer();
-    }
-
     public void onResume(boolean recreateSurfaceOnce, boolean resizeSurfaceOnce, boolean startShellOnce) {
         scheduleDebugSurfaceRecreationIfRequested(recreateSurfaceOnce);
         scheduleDebugSurfaceResizeIfRequested(resizeSurfaceOnce);
@@ -114,7 +110,7 @@ public final class SurfaceController {
         host.appendEvent("debug.surface.recreate requested=" + recreateSurfaceOnce + " scheduled=" + host.surfaceRecreationScheduled());
         if (recreateSurfaceOnce && !host.surfaceRecreationScheduled()) {
             host.setSurfaceRecreationScheduled(true);
-            productSurfaceHostContainer().postDelayed(() -> {
+            host.productSurfaceContainer().postDelayed(() -> {
                 host.appendEvent("debug.surface.recreate_view");
                 installSurfaceView("debug-recreate", null);
                 host.updateStatus("debug.surface.recreated");
@@ -169,51 +165,26 @@ public final class SurfaceController {
     }
 
     public void onSurfaceCreated(SurfaceHolder holder) {
-        recordProductSurfaceCreated(holder);
-    }
-
-    private void recordProductSurfaceCreated(SurfaceHolder holder) {
         host.appendEvent("surface.lifecycle.created generation=" + host.surfaceHostGeneration() + " valid=" + holder.getSurface().isValid());
         host.updateStatus("surface.state.created");
     }
 
     public void onSurfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-        appendSurfaceGeometryChangedTelemetry(format, width, height);
-        dispatchProductSurfaceChanged(holder, width, height);
-    }
-
-    private void appendSurfaceGeometryChangedTelemetry(int format, int width, int height) {
         host.appendEvent("surface.changed generation=" + host.surfaceHostGeneration()
                 + " format=" + format
                 + " size=" + width + "x" + height);
-    }
-
-    /** Notifies native of holder sizing, then schedules viewport + shell chrome follow-ups. */
-    private void dispatchProductSurfaceChanged(SurfaceHolder holder, int width, int height) {
-        final long seq = nativeSurfaceAvailableSeqOrNegative(holder, width, height);
+        final long seq = host.nativeLoaded() ? host.nativeOnSurfaceAvailableBridge(holder, width, height) : -1;
         host.callNativeWithSurfaceState(
                 "native.surfaceAvailable",
                 seq,
                 host.currentSurfaceStateSnapshot());
-        productSurfaceHostContainer().post(() -> notifyVisibleViewport("surface-changed"));
+        host.productSurfaceContainer().post(() -> notifyVisibleViewport("surface-changed"));
         host.handleProductShellStateEvent("surface-changed");
     }
 
-    private long nativeSurfaceAvailableSeqOrNegative(SurfaceHolder holder, int width, int height) {
-        return host.nativeLoaded() ? host.nativeOnSurfaceAvailableBridge(holder, width, height) : -1;
-    }
-
     public void onSurfaceDestroyed(SurfaceHolder holder) {
-        appendSurfaceDestroyedLifecycleTelemetry();
-        dispatchNativeProductSurfaceDestroyed();
-    }
-
-    private void appendSurfaceDestroyedLifecycleTelemetry() {
         host.appendEvent("surface.lifecycle.destroyed generation=" + host.surfaceHostGeneration());
-    }
-
-    private void dispatchNativeProductSurfaceDestroyed() {
-        final long seq = nativeSurfaceDestroyedSeqOrNegative();
+        final long seq = host.nativeLoaded() ? host.nativeOnSurfaceDestroyedBridge() : -1;
         host.callNativeWithSurfaceState(
                 "native.surfaceDestroyed",
                 seq,
@@ -221,83 +192,49 @@ public final class SurfaceController {
         host.updateStatus("surface.state.destroyed");
     }
 
-    private long nativeSurfaceDestroyedSeqOrNegative() {
-        return host.nativeLoaded() ? host.nativeOnSurfaceDestroyedBridge() : -1;
-    }
-
     public void onSurfaceRedrawNeeded(SurfaceHolder holder) {
         if (surfaceRedrawNeededDispatching) {
-            appendSurfaceRedrawReentrantSkippedTelemetry(holder);
+            host.appendEvent(
+                    "surface.redrawNeeded reentrant-skipped generation=" + host.surfaceHostGeneration() +
+                            " valid=" + holder.getSurface().isValid());
             return;
         }
         surfaceRedrawNeededDispatching = true;
-        appendSurfaceRedrawNeededDispatchTelemetry(holder);
+        host.appendEvent(
+                "surface.redrawNeeded generation=" + host.surfaceHostGeneration() + " valid=" + holder.getSurface().isValid());
         try {
-            dispatchNativeProductRedrawNeededTelemetryAndStatus();
+            final long seq = host.nativeLoaded() ? host.nativeOnSurfaceRedrawNeededBridge() : -1;
+            final AndroidDebugFormatter.SurfaceEventSnapshot state = host.currentSurfaceStateSnapshot();
+            appendNativeSurfaceRedrawNeededTelemetry(seq, state);
+            host.updateStatus("surface.state.redraw_needed");
         } finally {
             surfaceRedrawNeededDispatching = false;
         }
-    }
-
-    private void appendSurfaceRedrawReentrantSkippedTelemetry(SurfaceHolder holder) {
-        host.appendEvent(
-                "surface.redrawNeeded reentrant-skipped generation=" + host.surfaceHostGeneration() +
-                        " valid=" + holder.getSurface().isValid());
-    }
-
-    private void appendSurfaceRedrawNeededDispatchTelemetry(SurfaceHolder holder) {
-        host.appendEvent(
-                "surface.redrawNeeded generation=" + host.surfaceHostGeneration() + " valid=" + holder.getSurface().isValid());
-    }
-
-    private void dispatchNativeProductRedrawNeededTelemetryAndStatus() {
-        final long seq = nativeSurfaceRedrawNeededSeqOrNegative();
-        final AndroidDebugFormatter.SurfaceEventSnapshot state = host.currentSurfaceStateSnapshot();
-        appendNativeSurfaceRedrawNeededTelemetry(seq, state);
-        host.updateStatus("surface.state.redraw_needed");
-    }
-
-    private long nativeSurfaceRedrawNeededSeqOrNegative() {
-        return host.nativeLoaded() ? host.nativeOnSurfaceRedrawNeededBridge() : -1;
     }
 
     public void installSurfaceView(String reason, SurfaceHolder.Callback2 callback) {
         removeExistingSurfaceHostViewIfPresent(reason, callback);
 
         host.setSurfaceHostGeneration(host.surfaceHostGeneration() + 1);
-        final SurfaceView nextSurfaceView = new SurfaceView(productSurfaceHostContainer().getContext());
+        final SurfaceView nextSurfaceView = new SurfaceView(host.productSurfaceContainer().getContext());
         nextSurfaceView.getHolder().setFormat(PixelFormat.RGBA_8888);
         host.installSurfaceGestureHost(nextSurfaceView);
         final FrameLayout.LayoutParams params = matchParentCenteredSurfaceHostLayoutParams();
-        productSurfaceHostContainer().addView(nextSurfaceView, params);
+        host.productSurfaceContainer().addView(nextSurfaceView, params);
         final SurfaceHolder.Callback2 nextCallback = resolveSurfaceInstallCallback(callback);
-        registerProductSurfaceHostView(nextSurfaceView, nextCallback);
-        appendSurfaceHostInstalledTelemetry(reason);
-        productSurfaceHostContainer().post(() -> notifyVisibleViewport("surface-install"));
-    }
-
-    private void appendSurfaceHostInstalledTelemetry(String reason) {
+        host.reinstallSurfaceCallback(nextSurfaceView, nextCallback);
+        host.setSurfaceView(nextSurfaceView);
         host.appendEvent("surface.host.installed reason=" + reason + " generation=" + host.surfaceHostGeneration());
-    }
-
-    private void removeSurfaceHolderCallbackIfPresent(SurfaceView existing, SurfaceHolder.Callback2 previousCallback) {
-        if (previousCallback != null) {
-            existing.getHolder().removeCallback(previousCallback);
-        }
-    }
-
-    private void registerProductSurfaceHostView(SurfaceView surfaceView, SurfaceHolder.Callback2 callback) {
-        host.reinstallSurfaceCallback(surfaceView, callback);
-        host.setSurfaceView(surfaceView);
+        host.productSurfaceContainer().post(() -> notifyVisibleViewport("surface-install"));
     }
 
     public void notifyVisibleViewport(String reason) {
-        if (shouldIgnoreVisibleViewportNotification()) {
+        if (host.debugViewEnabled() || host.productSurfaceContainer().getVisibility() != View.VISIBLE) {
             return;
         }
         final boolean viewportImeVisible = host.currentImeVisible();
-        final int width = visibleProductSurfaceContainerWidth();
-        final int height = visibleProductSurfaceContainerHeight();
+        final int width = Math.max(host.productSurfaceContainer().getWidth(), 1);
+        final int height = Math.max(host.productSurfaceContainer().getHeight(), 1);
         host.setVisibleViewportSize(width, height);
         if (visibleViewportDimensionsMatchNotified(width, height, viewportImeVisible)) {
             return;
@@ -314,48 +251,17 @@ public final class SurfaceController {
                 && viewportImeVisible == host.notifiedViewportImeVisible();
     }
 
-    private int visibleProductSurfaceContainerWidth() {
-        return Math.max(productSurfaceHostContainer().getWidth(), 1);
-    }
-
-    private int visibleProductSurfaceContainerHeight() {
-        return Math.max(productSurfaceHostContainer().getHeight(), 1);
-    }
-
-    private boolean shouldIgnoreVisibleViewportNotification() {
-        return host.debugViewEnabled() || productSurfaceHostContainer().getVisibility() != View.VISIBLE;
-    }
-
     private void publishVisibleViewportChange(
             String reason,
             int width,
             int height,
             boolean viewportImeVisible) {
         host.setNotifiedViewportSize(width, height, viewportImeVisible);
-        appendViewportSizeChangedTelemetry(reason, width, height, viewportImeVisible);
-        dispatchNativeViewportChangedAndRefreshOverlay(width, height, viewportImeVisible);
-        host.updateStatus("viewport.state.updated");
-    }
-
-    private void appendViewportSizeChangedTelemetry(
-            String reason,
-            int width,
-            int height,
-            boolean viewportImeVisible) {
         host.appendEvent("viewport.size.changed reason=" + reason + " size=" + width + "x" + height + " imeVisible=" + viewportImeVisible);
-    }
-
-    private void dispatchNativeViewportChangedAndRefreshOverlay(
-            int width,
-            int height,
-            boolean viewportImeVisible) {
-        final long seq = nativeVisibleViewportSeqOrNegative(width, height, viewportImeVisible);
+        final long seq = host.nativeLoaded() ? host.nativeOnVisibleViewportBridge(width, height, viewportImeVisible) : -1;
         host.callNativeWithSurfaceState("native.viewportChanged", seq, host.currentSurfaceStateSnapshot());
         host.refreshProductScrollOverlay();
-    }
-
-    private long nativeVisibleViewportSeqOrNegative(int width, int height, boolean viewportImeVisible) {
-        return host.nativeLoaded() ? host.nativeOnVisibleViewportBridge(width, height, viewportImeVisible) : -1;
+        host.updateStatus("viewport.state.updated");
     }
 
     private void appendNativeSurfaceRedrawNeededTelemetry(
@@ -386,9 +292,11 @@ public final class SurfaceController {
             return;
         }
         final SurfaceHolder.Callback2 previousCallback = resolveSurfaceInstallCallback(callback);
-        removeSurfaceHolderCallbackIfPresent(existing, previousCallback);
-        productSurfaceHostContainer().removeView(existing);
-        appendSurfaceHostRemovedTelemetry(reason);
+        if (previousCallback != null) {
+            existing.getHolder().removeCallback(previousCallback);
+        }
+        host.productSurfaceContainer().removeView(existing);
+        host.appendEvent("surface.host.removed reason=" + reason + " generation=" + host.surfaceHostGeneration());
     }
 
     private FrameLayout.LayoutParams matchParentCenteredSurfaceHostLayoutParams() {
@@ -396,10 +304,6 @@ public final class SurfaceController {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 Gravity.CENTER);
-    }
-
-    private void appendSurfaceHostRemovedTelemetry(String reason) {
-        host.appendEvent("surface.host.removed reason=" + reason + " generation=" + host.surfaceHostGeneration());
     }
 
 }
