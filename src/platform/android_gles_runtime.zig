@@ -121,7 +121,7 @@ pub const State = struct {
     last_error: u32 = 0,
 };
 
-fn noteError(state: *State, status: RuntimeStatus) RuntimeStatus {
+fn setError(state: *State, status: RuntimeStatus) RuntimeStatus {
     state.last_error = if (!target_has_android_egl or builtin.is_test) 0 else egl.eglGetError();
     return status;
 }
@@ -136,9 +136,9 @@ pub fn ensureDisplayContext(state: *State) RuntimeStatus {
 
     if (state.display == null) {
         state.display = if (builtin.is_test) @ptrFromInt(0xE001) else egl.eglGetDisplay(null);
-        if (state.display == null) return noteError(state, .init_failed);
+        if (state.display == null) return setError(state, .init_failed);
         if (!builtin.is_test and egl.eglInitialize(state.display, null, null) == EGL_FALSE) {
-            return noteError(state, .init_failed);
+            return setError(state, .init_failed);
         }
     }
 
@@ -155,15 +155,15 @@ pub fn ensureDisplayContext(state: *State) RuntimeStatus {
             EGL_NONE,
         };
         if (!builtin.is_test and egl.eglChooseConfig(state.display, &config_attribs, @ptrCast(&config), 1, &config_count) == EGL_FALSE) {
-            return noteError(state, .init_failed);
+            return setError(state, .init_failed);
         }
-        if (!builtin.is_test and (config_count <= 0 or config == null)) return noteError(state, .init_failed);
+        if (!builtin.is_test and (config_count <= 0 or config == null)) return setError(state, .init_failed);
         state.config = if (builtin.is_test) @ptrFromInt(0xE002) else config;
     }
 
     if (state.context == null) {
         if (!builtin.is_test and egl.eglBindAPI(EGL_OPENGL_ES_API) == EGL_FALSE) {
-            return noteError(state, .init_failed);
+            return setError(state, .init_failed);
         }
         const context_attribs = [_]i32{
             EGL_CONTEXT_CLIENT_VERSION, 2,
@@ -173,7 +173,7 @@ pub fn ensureDisplayContext(state: *State) RuntimeStatus {
             @ptrFromInt(0xE003)
         else
             egl.eglCreateContext(state.display, state.config, null, &context_attribs);
-        if (state.context == null) return noteError(state, .init_failed);
+        if (state.context == null) return setError(state, .init_failed);
         state.context_create_count += 1;
     }
 
@@ -205,10 +205,10 @@ pub fn ensureWindowSurface(
         if (!builtin.is_test) {
             var visual_id: i32 = 0;
             if (egl.eglGetConfigAttrib(state.display, state.config, EGL_NATIVE_VISUAL_ID, &visual_id) == EGL_FALSE) {
-                return noteError(state, .surface_failed);
+                return setError(state, .surface_failed);
             }
             if (ANativeWindow_setBuffersGeometry(@ptrCast(window.?), 0, 0, visual_id) != 0) {
-                return noteError(state, .surface_failed);
+                return setError(state, .surface_failed);
             }
         }
         const surface_attribs = [_]i32{EGL_NONE};
@@ -216,7 +216,7 @@ pub fn ensureWindowSurface(
             @ptrFromInt(0xE004)
         else
             egl.eglCreateWindowSurface(state.display, state.config, window, &surface_attribs);
-        if (state.surface == null) return noteError(state, .surface_failed);
+        if (state.surface == null) return setError(state, .surface_failed);
         state.bound_epoch = epoch;
         state.surface_create_count += 1;
     }
@@ -229,7 +229,7 @@ pub fn makeCurrent(state: *State) RuntimeStatus {
         return .make_current_failed;
     }
     if (!builtin.is_test and egl.eglMakeCurrent(state.display, state.surface, state.surface, state.context) == EGL_FALSE) {
-        return noteError(state, .make_current_failed);
+        return setError(state, .make_current_failed);
     }
     return setReady(state);
 }
@@ -237,7 +237,7 @@ pub fn makeCurrent(state: *State) RuntimeStatus {
 pub fn swapBuffers(state: *State) RuntimeStatus {
     if (state.display == null or state.surface == null) return .swap_failed;
     if (!builtin.is_test and egl.eglSwapBuffers(state.display, state.surface) == EGL_FALSE) {
-        return noteError(state, .swap_failed);
+        return setError(state, .swap_failed);
     }
     state.swap_count += 1;
     return setReady(state);

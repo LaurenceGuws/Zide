@@ -121,7 +121,7 @@ Put here:
 - `terminal_resize.zig`
 - `terminal_runtime_intents.zig`
 - `terminal_scrollback_pager.zig`
-- `terminal_session_bootstrap.zig`
+- `terminal_session_runtime_factory.zig`
 - `terminal_shortcut_policy.zig`
 - `terminal_shortcut_runtime.zig`
 - `terminal_shortcut_suppress.zig`

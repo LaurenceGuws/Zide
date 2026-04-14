@@ -11,7 +11,7 @@ const app_terminal_tab_bar_sync_runtime = @import("../src/app/terminal/terminal_
 const app_terminal_tab_navigation_runtime = @import("../src/app/terminal/terminal_tab_navigation_runtime.zig");
 const app_terminal_close_confirm_decision_runtime = @import("../src/app/terminal/terminal_close_confirm_decision_runtime.zig");
 const app_terminal_runtime_intents = @import("../src/app/terminal/terminal_runtime_intents.zig");
-const app_terminal_session_bootstrap = @import("../src/app/terminal/terminal_session_bootstrap.zig");
+const app_terminal_session_runtime_factory = @import("../src/app/terminal/terminal_session_runtime_factory.zig");
 const app_theme_utils = @import("../src/app/theme_utils.zig");
 const editor_mod = @import("../src/editor/editor.zig");
 const grammar_manager_mod = @import("../src/editor/grammar_manager.zig");
@@ -580,9 +580,9 @@ test "terminal workspace reorder keeps widget session aligned with active tab" {
     const created_2 = try workspace.createTabWithSession(24, 80);
     const created_3 = try workspace.createTabWithSession(24, 80);
 
-    try app.terminal_widgets.append(allocator, app_terminal_session_bootstrap.initWidget(created_1.session, .kitty, true, false));
-    try app.terminal_widgets.append(allocator, app_terminal_session_bootstrap.initWidget(created_2.session, .kitty, true, false));
-    try app.terminal_widgets.append(allocator, app_terminal_session_bootstrap.initWidget(created_3.session, .kitty, true, false));
+    try app.terminal_widgets.append(allocator, app_terminal_session_runtime_factory.initWidget(created_1.session, .kitty, true, false));
+    try app.terminal_widgets.append(allocator, app_terminal_session_runtime_factory.initWidget(created_2.session, .kitty, true, false));
+    try app.terminal_widgets.append(allocator, app_terminal_session_runtime_factory.initWidget(created_3.session, .kitty, true, false));
 
     try app_terminal_tab_bar_sync_runtime.syncIfWorkspace(&app);
 

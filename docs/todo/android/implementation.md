@@ -144,6 +144,8 @@ A cut is done only if all are true:
   long shell-prefixed helper names
 - Android host/probe adapters now use event grammar (`on*`) instead of
   `note*` entrypoint names (`android_host.zig`, `android_gles_probe.zig`)
+- terminal session helper filename now uses runtime/factory ownership naming:
+  `src/app/terminal/terminal_session_runtime_factory.zig`
 - selection controller remains monolithic by design until a real split seam
   exists
 - queue remains Android-product-first, not shell-readiness-baseline-first

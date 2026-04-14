@@ -476,7 +476,7 @@ Current proving bug, 2026-04-06:
       - [post_preinput_hooks_runtime.zig](/home/home/personal/zide/src/app/post_preinput_hooks_runtime.zig)
         now share that same snapped logical sizing path
       - [terminal_resize.zig](/home/home/personal/zide/src/app/terminal/terminal_resize.zig)
-        and [terminal_session_bootstrap.zig](/home/home/personal/zide/src/app/terminal/terminal_session_bootstrap.zig)
+        and [terminal_session_runtime_factory.zig](/home/home/personal/zide/src/app/terminal/terminal_session_runtime_factory.zig)
         now send renderer-owned device-pixel cell metrics to VT/PTTY resize
         instead of the old rounded logical float getters
     - terminal sizing height now matches the actual drawn terminal inner rect

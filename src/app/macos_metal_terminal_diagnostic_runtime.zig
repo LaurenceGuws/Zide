@@ -4,7 +4,7 @@ const app_logger = @import("../app_logger.zig");
 const app_shell = @import("../app_shell.zig");
 const terminal_runtime = @import("../terminal/core/terminal_runtime.zig");
 const session_runtime = @import("../terminal/core/session/runtime.zig");
-const terminal_session_bootstrap = @import("terminal/terminal_session_bootstrap.zig");
+const terminal_session_runtime_factory = @import("terminal/terminal_session_runtime_factory.zig");
 const renderer_presentable_host = @import("../ui/renderer/renderer_presentable_host.zig");
 const terminal_widget_draw = @import("../ui/widgets/terminal_widget_draw.zig");
 const input_adapter_mod = @import("../ui/widgets/terminal_widget_input_adapter.zig");
@@ -89,7 +89,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
     }
     if (!disable_kitty) try seedDiagnosticKittyImages(session);
 
-    var widget = terminal_session_bootstrap.initWidget(session, .kitty, false, false);
+    var widget = terminal_session_runtime_factory.initWidget(session, .kitty, false, false);
     defer widget.deinit();
     widget.setUiFocused(true);
     const input_adapter = input_adapter_mod.TerminalInputAdapter.init(session);

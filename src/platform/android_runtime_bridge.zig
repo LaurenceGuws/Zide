@@ -13,7 +13,7 @@ const renderer_terminal_draw_host = @import("../ui/renderer/renderer_terminal_dr
 const shared_types = @import("../types/mod.zig");
 const std = @import("std");
 const terminal_runtime = @import("../terminal/core/terminal_runtime.zig");
-const terminal_session_widget_factory = @import("../app/terminal/terminal_session_bootstrap.zig");
+const terminal_session_runtime_factory = @import("../app/terminal/terminal_session_runtime_factory.zig");
 const widgets = @import("../ui/widgets.zig");
 
 const android_runtime_font_path = "/data/data/uk.laurencegouws.zide/files/assets/fonts/JetBrainsMonoNerdFont-Regular.ttf";
@@ -613,7 +613,7 @@ fn ensureTerminalWidget() ?*widgets.TerminalWidget {
     };
     if (bridge_state.terminal_widget_session != session) {
         destroyTerminalWidget();
-        var widget = terminal_session_widget_factory.initWidget(session, .kitty, false, false);
+        var widget = terminal_session_runtime_factory.initWidget(session, .kitty, false, false);
         widget.setUiFocused(true);
         bridge_state.terminal_widget = widget;
         bridge_state.terminal_widget_session = session;
