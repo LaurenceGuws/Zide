@@ -156,7 +156,7 @@ public final class ZideTerminalActivity extends Activity
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         applyNewIntent(intent);
-        logNewIntentEvent();
+        terminalActivityLifecycleController.onNewIntent();
     }
 
     @Override
@@ -750,10 +750,6 @@ public final class ZideTerminalActivity extends Activity
         if (terminalChromeController != null) {
             terminalChromeController.applyModifierLatchState(state);
         }
-    }
-
-    private void logNewIntentEvent() {
-        appendEvent("activity.on.new.intent");
     }
 
     private void notifyLifecycleStart() {

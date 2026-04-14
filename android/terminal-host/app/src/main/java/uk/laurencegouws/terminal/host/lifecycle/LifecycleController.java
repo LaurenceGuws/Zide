@@ -47,6 +47,10 @@ public final class LifecycleController {
         host.updateStatus("activity.state.started");
     }
 
+    public void onNewIntent() {
+        host.appendEvent("activity.on.new.intent");
+    }
+
     public void onCreate() {
         host.appendEvent("activity.on.create nativeLoaded=" + host.nativeLoaded());
         final String nativeLoadError = host.nativeLoadError();
