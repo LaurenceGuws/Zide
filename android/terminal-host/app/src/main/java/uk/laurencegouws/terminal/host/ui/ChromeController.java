@@ -65,16 +65,21 @@ public final class ChromeController {
     }
 
     private void bindSidebarNavActions() {
-        final Button restartButton =
-                (Button) leftSidebarChrome().findViewById(uk.laurencegouws.terminal.R.id.sidebar_restart_button);
-        final Button debugButton =
-                (Button) leftSidebarChrome().findViewById(uk.laurencegouws.terminal.R.id.sidebar_debug_button);
-        final Button packagesButton =
-                (Button) leftSidebarChrome().findViewById(uk.laurencegouws.terminal.R.id.sidebar_packages_button);
+        bindSidebarRestartNavButton(sidebarRestartNavButtonChrome());
+        bindSidebarDebugNavButton(sidebarDebugNavButtonChrome());
+        bindSidebarPackagesNavButton(sidebarPackagesNavButtonChrome());
+    }
 
-        bindSidebarRestartNavButton(restartButton);
-        bindSidebarDebugNavButton(debugButton);
-        bindSidebarPackagesNavButton(packagesButton);
+    private Button sidebarRestartNavButtonChrome() {
+        return (Button) leftSidebarChrome().findViewById(uk.laurencegouws.terminal.R.id.sidebar_restart_button);
+    }
+
+    private Button sidebarDebugNavButtonChrome() {
+        return (Button) leftSidebarChrome().findViewById(uk.laurencegouws.terminal.R.id.sidebar_debug_button);
+    }
+
+    private Button sidebarPackagesNavButtonChrome() {
+        return (Button) leftSidebarChrome().findViewById(uk.laurencegouws.terminal.R.id.sidebar_packages_button);
     }
 
     private void bindSidebarRestartNavButton(Button restartButton) {
@@ -387,6 +392,10 @@ public final class ChromeController {
         return false;
     }
 
+    private float edgeSwipeDeltaFromDownRawX(float rawX, float downRawX) {
+        return rawX - downRawX;
+    }
+
     private final class EdgeSwipeListener implements View.OnTouchListener {
         private final boolean openListener;
         private float downX;
@@ -401,7 +410,7 @@ public final class ChromeController {
                     return true;
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
-                    final float delta = event.getRawX() - downX;
+                    final float delta = edgeSwipeDeltaFromDownRawX(event.getRawX(), downX);
                     if (openListener) {
                         if (tryConsumeSidebarOpenEdgeSwipe(delta)) {
                             return true;
