@@ -127,38 +127,8 @@ public final class ZideTerminalActivity extends Activity
         setContentView(R.layout.activity_main);
         initializeStatusAndViewControllers();
         assembleInteractionControllers();
-        terminalRuntimeAssetsController = new TerminalRuntimeAssetsController(
-                new TerminalRuntimeAssetsHostBridge(
-                        this,
-                        new TerminalRuntimeAssetsHostCallbacks(this::appendEvent)));
-        userlandRelease = terminalRuntimeAssetsController.loadUserlandRelease();
         assembleSessionControllers();
-        terminalUserlandWorkflowHostBridge = new TerminalUserlandWorkflowHostBridge(
-                this,
-                handler,
-                new TerminalUserlandWorkflowHostCallbacks(
-                        () -> userlandRelease,
-                        this::appendEvent,
-                        (installState, statusLabel) -> {
-                            if (terminalProductRuntimeController != null) {
-                                terminalProductRuntimeController.applyInstallState(installState, statusLabel);
-                            }
-                        },
-                        installState -> currentInstallState = installState,
-                        bootstrapState -> currentBootstrapState = bootstrapState,
-                        (eventName, statusLabel, logRefresh) -> {
-                            if (terminalProductRuntimeController != null) {
-                                terminalProductRuntimeController.restartShellSession(eventName, statusLabel, logRefresh);
-                            }
-                        },
-                        (eventName, statusLabel) -> {
-                            if (terminalViewModeController != null) {
-                                terminalViewModeController.showDebugView(eventName, statusLabel);
-                            }
-                        },
-                        packageStatusText,
-                        this::updateStatus));
-        userlandWorkflowController = new UserlandWorkflowController(terminalUserlandWorkflowHostBridge);
+        assembleUserlandWorkflowControllers();
         assembleWidgetHostControllers();
         terminalProductRuntimeController = TerminalRuntimeHostFactory.createProductRuntimeController(
                 TerminalRuntimeHostFactory.createProductRuntimeHostCallbacks(
@@ -459,6 +429,40 @@ public final class ZideTerminalActivity extends Activity
         terminalUserlandSessionHostBridge = result.userlandSessionHostBridge;
         userlandSessionCoordinator = result.userlandSessionCoordinator;
         productFrameLoopController = result.frameLoopController;
+    }
+
+    private void assembleUserlandWorkflowControllers() {
+        terminalRuntimeAssetsController = new TerminalRuntimeAssetsController(
+                new TerminalRuntimeAssetsHostBridge(
+                        this,
+                        new TerminalRuntimeAssetsHostCallbacks(this::appendEvent)));
+        userlandRelease = terminalRuntimeAssetsController.loadUserlandRelease();
+        terminalUserlandWorkflowHostBridge = new TerminalUserlandWorkflowHostBridge(
+                this,
+                handler,
+                new TerminalUserlandWorkflowHostCallbacks(
+                        () -> userlandRelease,
+                        this::appendEvent,
+                        (installState, statusLabel) -> {
+                            if (terminalProductRuntimeController != null) {
+                                terminalProductRuntimeController.applyInstallState(installState, statusLabel);
+                            }
+                        },
+                        installState -> currentInstallState = installState,
+                        bootstrapState -> currentBootstrapState = bootstrapState,
+                        (eventName, statusLabel, logRefresh) -> {
+                            if (terminalProductRuntimeController != null) {
+                                terminalProductRuntimeController.restartShellSession(eventName, statusLabel, logRefresh);
+                            }
+                        },
+                        (eventName, statusLabel) -> {
+                            if (terminalViewModeController != null) {
+                                terminalViewModeController.showDebugView(eventName, statusLabel);
+                            }
+                        },
+                        packageStatusText,
+                        this::updateStatus));
+        userlandWorkflowController = new UserlandWorkflowController(terminalUserlandWorkflowHostBridge);
     }
 
     private void bindAndStartUiControllers() {
