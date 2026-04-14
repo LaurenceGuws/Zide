@@ -21,8 +21,8 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
     public static final class UiHostCallbacks {
         final Supplier<ViewportController> viewportController;
         final Supplier<ChromeController> chromeController;
-        final Supplier<Button> productBootstrapRetryButton;
-        final Supplier<Button> productBootstrapDebugButton;
+        final Supplier<Button> productReadinessRetryButton;
+        final Supplier<Button> productReadinessDebugButton;
         final Supplier<UserlandInstallState> currentInstallState;
         final Supplier<UserlandReadinessState> currentReadinessState;
         final Supplier<UserlandWorkflowController> userlandWorkflowController;
@@ -34,8 +34,8 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
         private UiHostCallbacks(
                 Supplier<ViewportController> viewportController,
                 Supplier<ChromeController> chromeController,
-                Supplier<Button> productBootstrapRetryButton,
-                Supplier<Button> productBootstrapDebugButton,
+                Supplier<Button> productReadinessRetryButton,
+                Supplier<Button> productReadinessDebugButton,
                 Supplier<UserlandInstallState> currentInstallState,
                 Supplier<UserlandReadinessState> currentReadinessState,
                 Supplier<UserlandWorkflowController> userlandWorkflowController,
@@ -45,8 +45,8 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
                 Consumer<String> updateStatus) {
             this.viewportController = viewportController;
             this.chromeController = chromeController;
-            this.productBootstrapRetryButton = productBootstrapRetryButton;
-            this.productBootstrapDebugButton = productBootstrapDebugButton;
+            this.productReadinessRetryButton = productReadinessRetryButton;
+            this.productReadinessDebugButton = productReadinessDebugButton;
             this.currentInstallState = currentInstallState;
             this.currentReadinessState = currentReadinessState;
             this.userlandWorkflowController = userlandWorkflowController;
@@ -59,8 +59,8 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
         public static UiHostCallbacks of(
                 Supplier<ViewportController> viewportController,
                 Supplier<ChromeController> chromeController,
-                Supplier<Button> productBootstrapRetryButton,
-                Supplier<Button> productBootstrapDebugButton,
+                Supplier<Button> productReadinessRetryButton,
+                Supplier<Button> productReadinessDebugButton,
                 Supplier<UserlandInstallState> currentInstallState,
                 Supplier<UserlandReadinessState> currentReadinessState,
                 Supplier<UserlandWorkflowController> userlandWorkflowController,
@@ -71,8 +71,8 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
             return new UiHostCallbacks(
                     viewportController,
                     chromeController,
-                    productBootstrapRetryButton,
-                    productBootstrapDebugButton,
+                    productReadinessRetryButton,
+                    productReadinessDebugButton,
                     currentInstallState,
                     currentReadinessState,
                     userlandWorkflowController,
@@ -149,13 +149,13 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
     }
 
     @Override
-    public Button productBootstrapRetryButton() {
-        return uiHostCallbacks.productBootstrapRetryButton.get();
+    public Button productReadinessRetryButton() {
+        return uiHostCallbacks.productReadinessRetryButton.get();
     }
 
     @Override
-    public Button productBootstrapDebugButton() {
-        return uiHostCallbacks.productBootstrapDebugButton.get();
+    public Button productReadinessDebugButton() {
+        return uiHostCallbacks.productReadinessDebugButton.get();
     }
 
     @Override

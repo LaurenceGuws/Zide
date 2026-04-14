@@ -76,14 +76,14 @@ public final class ZideTerminalActivity extends Activity
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private TextView packageStatusText;
-    private TextView productBootstrapTitle;
-    private TextView productBootstrapDetail;
-    private Button productBootstrapRetryButton;
-    private Button productBootstrapDebugButton;
+    private TextView productReadinessTitle;
+    private TextView productReadinessDetail;
+    private Button productReadinessRetryButton;
+    private Button productReadinessDebugButton;
     private View rootView;
     private View productView;
     private View debugView;
-    private View productBootstrapBlocker;
+    private View productReadinessBlocker;
     private View drawerScrim;
     private View drawerEdgeHotspot;
     private View leftSidebar;
@@ -190,14 +190,14 @@ public final class ZideTerminalActivity extends Activity
         final StatusViewAssembly.Result result = StatusViewAssembly.assemble(
                 createStatusViewCallbacks());
         packageStatusText = result.packageStatusText;
-        productBootstrapTitle = result.productBootstrapTitle;
-        productBootstrapDetail = result.productBootstrapDetail;
-        productBootstrapRetryButton = result.productBootstrapRetryButton;
-        productBootstrapDebugButton = result.productBootstrapDebugButton;
+        productReadinessTitle = result.productReadinessTitle;
+        productReadinessDetail = result.productReadinessDetail;
+        productReadinessRetryButton = result.productReadinessRetryButton;
+        productReadinessDebugButton = result.productReadinessDebugButton;
         rootView = result.rootView;
         productView = result.productView;
         debugView = result.debugView;
-        productBootstrapBlocker = result.productBootstrapBlocker;
+        productReadinessBlocker = result.productReadinessBlocker;
         drawerScrim = result.drawerScrim;
         drawerEdgeHotspot = result.drawerEdgeHotspot;
         leftSidebar = result.leftSidebar;
@@ -302,15 +302,15 @@ public final class ZideTerminalActivity extends Activity
                         () -> rootView,
                         () -> productView,
                         () -> debugView,
-                        () -> productBootstrapBlocker,
+                        () -> productReadinessBlocker,
                         () -> drawerScrim,
                         () -> drawerEdgeHotspot,
                         () -> leftSidebar,
                         () -> productSurfaceContainer,
                         () -> terminalScrollOverlay,
-                        () -> productBootstrapTitle,
-                        () -> productBootstrapDetail,
-                        () -> productBootstrapRetryButton,
+                        () -> productReadinessTitle,
+                        () -> productReadinessDetail,
+                        () -> productReadinessRetryButton,
                         () -> assistCtrlButton,
                         () -> assistAltButton,
                         () -> shellInputView,
@@ -378,7 +378,7 @@ public final class ZideTerminalActivity extends Activity
                         this::updateStatus),
                 ProductRuntimeAssemblyCallbacks.RuntimeUiCallbacks.of(
                         this::currentSurfaceViewIfReady,
-                        () -> productBootstrapBlocker,
+                        () -> productReadinessBlocker,
                         () -> terminalScrollOverlay,
                         () -> selectionController,
                         () -> productShellStatePresenter,
@@ -460,8 +460,8 @@ public final class ZideTerminalActivity extends Activity
                 UiStartupCallbacks.UiHostCallbacks.of(
                         () -> terminalViewportController,
                         () -> terminalChromeController,
-                        () -> productBootstrapRetryButton,
-                        () -> productBootstrapDebugButton,
+                        () -> productReadinessRetryButton,
+                        () -> productReadinessDebugButton,
                         this::currentInstallStateSnapshot,
                         this::currentReadinessStateSnapshot,
                         () -> userlandWorkflowController,

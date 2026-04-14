@@ -25,7 +25,7 @@ public final class ProductRuntimeHostCallbacks implements ProductRuntimeControll
     private final Consumer<UserlandInstallState> setInstallState;
     private final Supplier<UserlandReadinessState> readinessState;
     private final Supplier<SurfaceView> surfaceView;
-    private final Supplier<View> productBootstrapBlocker;
+    private final Supplier<View> productReadinessBlocker;
     private final Supplier<TerminalScrollOverlayView> terminalScrollOverlay;
     private final Supplier<TerminalSelectionController> selectionController;
     private final Supplier<ProductShellStatePresenter> productShellStatePresenter;
@@ -47,7 +47,7 @@ public final class ProductRuntimeHostCallbacks implements ProductRuntimeControll
             Consumer<UserlandInstallState> setInstallState,
             Supplier<UserlandReadinessState> readinessState,
             Supplier<SurfaceView> surfaceView,
-            Supplier<View> productBootstrapBlocker,
+            Supplier<View> productReadinessBlocker,
             Supplier<TerminalScrollOverlayView> terminalScrollOverlay,
             Supplier<TerminalSelectionController> selectionController,
             Supplier<ProductShellStatePresenter> productShellStatePresenter,
@@ -67,7 +67,7 @@ public final class ProductRuntimeHostCallbacks implements ProductRuntimeControll
         this.setInstallState = setInstallState;
         this.readinessState = readinessState;
         this.surfaceView = surfaceView;
-        this.productBootstrapBlocker = productBootstrapBlocker;
+        this.productReadinessBlocker = productReadinessBlocker;
         this.terminalScrollOverlay = terminalScrollOverlay;
         this.selectionController = selectionController;
         this.productShellStatePresenter = productShellStatePresenter;
@@ -114,8 +114,8 @@ public final class ProductRuntimeHostCallbacks implements ProductRuntimeControll
     }
 
     @Override
-    public View productBootstrapBlocker() {
-        return productBootstrapBlocker.get();
+    public View productReadinessBlocker() {
+        return productReadinessBlocker.get();
     }
 
     @Override

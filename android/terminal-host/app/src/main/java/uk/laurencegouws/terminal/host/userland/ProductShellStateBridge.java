@@ -30,25 +30,25 @@ public final class ProductShellStateBridge implements ProductShellStatePresenter
         SurfaceView surfaceView();
     }
 
-    private final View productBootstrapBlocker;
+    private final View productReadinessBlocker;
     private final View terminalScrollOverlay;
-    private final TextView productBootstrapTitle;
-    private final TextView productBootstrapDetail;
-    private final Button productBootstrapRetryButton;
+    private final TextView productReadinessTitle;
+    private final TextView productReadinessDetail;
+    private final Button productReadinessRetryButton;
     private final Callbacks callbacks;
 
     public ProductShellStateBridge(
-            View productBootstrapBlocker,
+            View productReadinessBlocker,
             View terminalScrollOverlay,
-            TextView productBootstrapTitle,
-            TextView productBootstrapDetail,
-            Button productBootstrapRetryButton,
+            TextView productReadinessTitle,
+            TextView productReadinessDetail,
+            Button productReadinessRetryButton,
             Callbacks callbacks) {
-        this.productBootstrapBlocker = productBootstrapBlocker;
+        this.productReadinessBlocker = productReadinessBlocker;
         this.terminalScrollOverlay = terminalScrollOverlay;
-        this.productBootstrapTitle = productBootstrapTitle;
-        this.productBootstrapDetail = productBootstrapDetail;
-        this.productBootstrapRetryButton = productBootstrapRetryButton;
+        this.productReadinessTitle = productReadinessTitle;
+        this.productReadinessDetail = productReadinessDetail;
+        this.productReadinessRetryButton = productReadinessRetryButton;
         this.callbacks = callbacks;
     }
 
@@ -88,23 +88,23 @@ public final class ProductShellStateBridge implements ProductShellStatePresenter
     }
 
     @Override
-    public View productBootstrapBlocker() {
-        return productBootstrapBlocker;
+    public View productReadinessBlocker() {
+        return productReadinessBlocker;
     }
 
     @Override
-    public TextView productBootstrapTitle() {
-        return productBootstrapTitle;
+    public TextView productReadinessTitle() {
+        return productReadinessTitle;
     }
 
     @Override
-    public TextView productBootstrapDetail() {
-        return productBootstrapDetail;
+    public TextView productReadinessDetail() {
+        return productReadinessDetail;
     }
 
     @Override
-    public Button productBootstrapRetryButton() {
-        return productBootstrapRetryButton;
+    public Button productReadinessRetryButton() {
+        return productReadinessRetryButton;
     }
 
     @Override

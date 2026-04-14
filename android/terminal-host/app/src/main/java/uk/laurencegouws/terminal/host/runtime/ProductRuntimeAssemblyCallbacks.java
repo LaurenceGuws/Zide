@@ -65,7 +65,7 @@ public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAsse
 
     public static final class RuntimeUiCallbacks {
         final Supplier<SurfaceView> surfaceView;
-        final Supplier<View> productBootstrapBlocker;
+        final Supplier<View> productReadinessBlocker;
         final Supplier<TerminalScrollOverlayView> terminalScrollOverlay;
         final Supplier<TerminalSelectionController> selectionController;
         final Supplier<ProductShellStatePresenter> productShellStatePresenter;
@@ -76,7 +76,7 @@ public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAsse
 
         private RuntimeUiCallbacks(
                 Supplier<SurfaceView> surfaceView,
-                Supplier<View> productBootstrapBlocker,
+                Supplier<View> productReadinessBlocker,
                 Supplier<TerminalScrollOverlayView> terminalScrollOverlay,
                 Supplier<TerminalSelectionController> selectionController,
                 Supplier<ProductShellStatePresenter> productShellStatePresenter,
@@ -85,7 +85,7 @@ public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAsse
                 Supplier<UserlandSessionCoordinator> userlandSessionCoordinator,
                 Supplier<TerminalGestureStateController> terminalGestureStateController) {
             this.surfaceView = surfaceView;
-            this.productBootstrapBlocker = productBootstrapBlocker;
+            this.productReadinessBlocker = productReadinessBlocker;
             this.terminalScrollOverlay = terminalScrollOverlay;
             this.selectionController = selectionController;
             this.productShellStatePresenter = productShellStatePresenter;
@@ -97,7 +97,7 @@ public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAsse
 
         public static RuntimeUiCallbacks of(
                 Supplier<SurfaceView> surfaceView,
-                Supplier<View> productBootstrapBlocker,
+                Supplier<View> productReadinessBlocker,
                 Supplier<TerminalScrollOverlayView> terminalScrollOverlay,
                 Supplier<TerminalSelectionController> selectionController,
                 Supplier<ProductShellStatePresenter> productShellStatePresenter,
@@ -107,7 +107,7 @@ public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAsse
                 Supplier<TerminalGestureStateController> terminalGestureStateController) {
             return new RuntimeUiCallbacks(
                     surfaceView,
-                    productBootstrapBlocker,
+                    productReadinessBlocker,
                     terminalScrollOverlay,
                     selectionController,
                     productShellStatePresenter,
@@ -159,8 +159,8 @@ public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAsse
     }
 
     @Override
-    public View productBootstrapBlocker() {
-        return runtimeUiCallbacks.productBootstrapBlocker.get();
+    public View productReadinessBlocker() {
+        return runtimeUiCallbacks.productReadinessBlocker.get();
     }
 
     @Override

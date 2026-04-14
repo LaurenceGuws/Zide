@@ -22,13 +22,13 @@ public final class ProductShellStatePresenter {
 
         SurfaceView surfaceView();
 
-        View productBootstrapBlocker();
+        View productReadinessBlocker();
 
-        TextView productBootstrapTitle();
+        TextView productReadinessTitle();
 
-        TextView productBootstrapDetail();
+        TextView productReadinessDetail();
 
-        Button productBootstrapRetryButton();
+        Button productReadinessRetryButton();
 
         void showScrollOverlay(boolean visible);
     }
@@ -52,17 +52,17 @@ public final class ProductShellStatePresenter {
                 || !launchReady
                 || !readinessState.expectedCurrent
                 || rendererMissing;
-        host.productBootstrapBlocker().setVisibility(showBlocker ? View.VISIBLE : View.GONE);
+        host.productReadinessBlocker().setVisibility(showBlocker ? View.VISIBLE : View.GONE);
         host.showScrollOverlay(!showBlocker);
         if (showBlocker) {
-            host.productBootstrapTitle().setText(UserlandReadinessUiPolicy.title(readinessState, installState, rendererMissing));
-            host.productBootstrapDetail().setText(UserlandReadinessUiPolicy.detail(
-                    (android.content.Context) host.productBootstrapTitle().getContext(),
+            host.productReadinessTitle().setText(UserlandReadinessUiPolicy.title(readinessState, installState, rendererMissing));
+            host.productReadinessDetail().setText(UserlandReadinessUiPolicy.detail(
+                    (android.content.Context) host.productReadinessTitle().getContext(),
                     readinessState,
                     installState,
                     rendererMissing));
-            host.productBootstrapRetryButton().setEnabled(!installState.isInstalling());
-            host.productBootstrapRetryButton().setText(UserlandReadinessUiPolicy.actionLabel(readinessState, installState));
+            host.productReadinessRetryButton().setEnabled(!installState.isInstalling());
+            host.productReadinessRetryButton().setText(UserlandReadinessUiPolicy.actionLabel(readinessState, installState));
         }
     }
 }

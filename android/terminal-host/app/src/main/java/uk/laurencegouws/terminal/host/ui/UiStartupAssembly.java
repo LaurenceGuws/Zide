@@ -25,9 +25,9 @@ public final class UiStartupAssembly {
 
         ChromeController chromeController();
 
-        Button productBootstrapRetryButton();
+        Button productReadinessRetryButton();
 
-        Button productBootstrapDebugButton();
+        Button productReadinessDebugButton();
 
         Supplier<UserlandInstallState> currentInstallState();
 
@@ -82,8 +82,8 @@ public final class UiStartupAssembly {
         host.chromeController().bindViewModeToggle();
         final UserlandReadinessBlockerController userlandReadinessBlockerController =
                 new UserlandReadinessBlockerController(
-                        host.productBootstrapRetryButton(),
-                        host.productBootstrapDebugButton(),
+                        host.productReadinessRetryButton(),
+                        host.productReadinessDebugButton(),
                         new ReadinessBlockerCallbacks(
                                 host.currentInstallState(),
                                 host.currentReadinessState(),

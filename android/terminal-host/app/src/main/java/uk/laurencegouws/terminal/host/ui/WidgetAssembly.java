@@ -50,7 +50,7 @@ public final class WidgetAssembly {
 
         View debugView();
 
-        View productBootstrapBlocker();
+        View productReadinessBlocker();
 
         View drawerScrim();
 
@@ -62,11 +62,11 @@ public final class WidgetAssembly {
 
         TerminalScrollOverlayView terminalScrollOverlay();
 
-        TextView productBootstrapTitle();
+        TextView productReadinessTitle();
 
-        TextView productBootstrapDetail();
+        TextView productReadinessDetail();
 
-        Button productBootstrapRetryButton();
+        Button productReadinessRetryButton();
 
         Button assistCtrlButton();
 
@@ -163,11 +163,11 @@ public final class WidgetAssembly {
     public static Result assemble(Host host) {
         final ProductShellStateBridge productShellStateHostBridge =
                 UiFactory.createProductShellStateHostBridge(
-                        host.productBootstrapBlocker(),
+                        host.productReadinessBlocker(),
                         host.terminalScrollOverlay(),
-                        host.productBootstrapTitle(),
-                        host.productBootstrapDetail(),
-                        host.productBootstrapRetryButton(),
+                        host.productReadinessTitle(),
+                        host.productReadinessDetail(),
+                        host.productReadinessRetryButton(),
                         new ProductShellStateCallbacks(
                                 host::nativeLoaded,
                                 TerminalNativeBridge::nativeSharedRendererActiveBridge,

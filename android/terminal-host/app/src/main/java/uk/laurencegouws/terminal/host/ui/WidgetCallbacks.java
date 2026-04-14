@@ -74,15 +74,15 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
         final Supplier<View> rootView;
         final Supplier<View> productView;
         final Supplier<View> debugView;
-        final Supplier<View> productBootstrapBlocker;
+        final Supplier<View> productReadinessBlocker;
         final Supplier<View> drawerScrim;
         final Supplier<View> drawerEdgeHotspot;
         final Supplier<View> leftSidebar;
         final Supplier<FrameLayout> productSurfaceContainer;
         final Supplier<TerminalScrollOverlayView> terminalScrollOverlay;
-        final Supplier<TextView> productBootstrapTitle;
-        final Supplier<TextView> productBootstrapDetail;
-        final Supplier<Button> productBootstrapRetryButton;
+        final Supplier<TextView> productReadinessTitle;
+        final Supplier<TextView> productReadinessDetail;
+        final Supplier<Button> productReadinessRetryButton;
         final Supplier<Button> assistCtrlButton;
         final Supplier<Button> assistAltButton;
         final Supplier<ShellInputView> shellInputView;
@@ -94,15 +94,15 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
                 Supplier<View> rootView,
                 Supplier<View> productView,
                 Supplier<View> debugView,
-                Supplier<View> productBootstrapBlocker,
+                Supplier<View> productReadinessBlocker,
                 Supplier<View> drawerScrim,
                 Supplier<View> drawerEdgeHotspot,
                 Supplier<View> leftSidebar,
                 Supplier<FrameLayout> productSurfaceContainer,
                 Supplier<TerminalScrollOverlayView> terminalScrollOverlay,
-                Supplier<TextView> productBootstrapTitle,
-                Supplier<TextView> productBootstrapDetail,
-                Supplier<Button> productBootstrapRetryButton,
+                Supplier<TextView> productReadinessTitle,
+                Supplier<TextView> productReadinessDetail,
+                Supplier<Button> productReadinessRetryButton,
                 Supplier<Button> assistCtrlButton,
                 Supplier<Button> assistAltButton,
                 Supplier<ShellInputView> shellInputView,
@@ -112,15 +112,15 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
             this.rootView = rootView;
             this.productView = productView;
             this.debugView = debugView;
-            this.productBootstrapBlocker = productBootstrapBlocker;
+            this.productReadinessBlocker = productReadinessBlocker;
             this.drawerScrim = drawerScrim;
             this.drawerEdgeHotspot = drawerEdgeHotspot;
             this.leftSidebar = leftSidebar;
             this.productSurfaceContainer = productSurfaceContainer;
             this.terminalScrollOverlay = terminalScrollOverlay;
-            this.productBootstrapTitle = productBootstrapTitle;
-            this.productBootstrapDetail = productBootstrapDetail;
-            this.productBootstrapRetryButton = productBootstrapRetryButton;
+            this.productReadinessTitle = productReadinessTitle;
+            this.productReadinessDetail = productReadinessDetail;
+            this.productReadinessRetryButton = productReadinessRetryButton;
             this.assistCtrlButton = assistCtrlButton;
             this.assistAltButton = assistAltButton;
             this.shellInputView = shellInputView;
@@ -133,15 +133,15 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
                 Supplier<View> rootView,
                 Supplier<View> productView,
                 Supplier<View> debugView,
-                Supplier<View> productBootstrapBlocker,
+                Supplier<View> productReadinessBlocker,
                 Supplier<View> drawerScrim,
                 Supplier<View> drawerEdgeHotspot,
                 Supplier<View> leftSidebar,
                 Supplier<FrameLayout> productSurfaceContainer,
                 Supplier<TerminalScrollOverlayView> terminalScrollOverlay,
-                Supplier<TextView> productBootstrapTitle,
-                Supplier<TextView> productBootstrapDetail,
-                Supplier<Button> productBootstrapRetryButton,
+                Supplier<TextView> productReadinessTitle,
+                Supplier<TextView> productReadinessDetail,
+                Supplier<Button> productReadinessRetryButton,
                 Supplier<Button> assistCtrlButton,
                 Supplier<Button> assistAltButton,
                 Supplier<ShellInputView> shellInputView,
@@ -152,15 +152,15 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
                     rootView,
                     productView,
                     debugView,
-                    productBootstrapBlocker,
+                    productReadinessBlocker,
                     drawerScrim,
                     drawerEdgeHotspot,
                     leftSidebar,
                     productSurfaceContainer,
                     terminalScrollOverlay,
-                    productBootstrapTitle,
-                    productBootstrapDetail,
-                    productBootstrapRetryButton,
+                    productReadinessTitle,
+                    productReadinessDetail,
+                    productReadinessRetryButton,
                     assistCtrlButton,
                     assistAltButton,
                     shellInputView,
@@ -377,8 +377,8 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
     }
 
     @Override
-    public View productBootstrapBlocker() {
-        return widgetViewCallbacks.productBootstrapBlocker.get();
+    public View productReadinessBlocker() {
+        return widgetViewCallbacks.productReadinessBlocker.get();
     }
 
     @Override
@@ -407,18 +407,18 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
     }
 
     @Override
-    public TextView productBootstrapTitle() {
-        return widgetViewCallbacks.productBootstrapTitle.get();
+    public TextView productReadinessTitle() {
+        return widgetViewCallbacks.productReadinessTitle.get();
     }
 
     @Override
-    public TextView productBootstrapDetail() {
-        return widgetViewCallbacks.productBootstrapDetail.get();
+    public TextView productReadinessDetail() {
+        return widgetViewCallbacks.productReadinessDetail.get();
     }
 
     @Override
-    public Button productBootstrapRetryButton() {
-        return widgetViewCallbacks.productBootstrapRetryButton.get();
+    public Button productReadinessRetryButton() {
+        return widgetViewCallbacks.productReadinessRetryButton.get();
     }
 
     @Override

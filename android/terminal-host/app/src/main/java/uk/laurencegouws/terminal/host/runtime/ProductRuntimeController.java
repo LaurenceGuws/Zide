@@ -29,7 +29,7 @@ public final class ProductRuntimeController {
 
         SurfaceView surfaceView();
 
-        View productBootstrapBlocker();
+        View productReadinessBlocker();
 
         TerminalScrollOverlayView terminalScrollOverlay();
 
@@ -124,7 +124,7 @@ public final class ProductRuntimeController {
                 || readinessState == null
                 || !readinessState.launchReady
                 || !readinessState.expectedCurrent
-                || host.productBootstrapBlocker().getVisibility() == View.VISIBLE) {
+                || host.productReadinessBlocker().getVisibility() == View.VISIBLE) {
             scrollOverlay.updateScrollMetrics(0, 0, 0);
             return;
         }

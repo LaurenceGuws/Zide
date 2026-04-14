@@ -29,7 +29,7 @@ public final class ProductRuntimeAssembly {
 
         SurfaceView surfaceView();
 
-        View productBootstrapBlocker();
+        View productReadinessBlocker();
 
         TerminalScrollOverlayView terminalScrollOverlay();
 
@@ -62,7 +62,7 @@ public final class ProductRuntimeAssembly {
                         host::setInstallState,
                         host::readinessState,
                         host::surfaceView,
-                        host::productBootstrapBlocker,
+                        host::productReadinessBlocker,
                         host::terminalScrollOverlay,
                         host::selectionController,
                         host::productShellStatePresenter,

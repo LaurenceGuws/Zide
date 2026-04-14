@@ -14,14 +14,14 @@ public final class ActivityViewBindings {
     public final TextView statusText;
     public final TextView packageStatusText;
     public final TextView eventLogText;
-    public final TextView productBootstrapTitle;
-    public final TextView productBootstrapDetail;
-    public final Button productBootstrapRetryButton;
-    public final Button productBootstrapDebugButton;
+    public final TextView productReadinessTitle;
+    public final TextView productReadinessDetail;
+    public final Button productReadinessRetryButton;
+    public final Button productReadinessDebugButton;
     public final View rootView;
     public final View productView;
     public final View debugView;
-    public final View productBootstrapBlocker;
+    public final View productReadinessBlocker;
     public final View drawerScrim;
     public final View drawerEdgeHotspot;
     public final View leftSidebar;
@@ -34,14 +34,14 @@ public final class ActivityViewBindings {
             TextView statusText,
             TextView packageStatusText,
             TextView eventLogText,
-            TextView productBootstrapTitle,
-            TextView productBootstrapDetail,
-            Button productBootstrapRetryButton,
-            Button productBootstrapDebugButton,
+            TextView productReadinessTitle,
+            TextView productReadinessDetail,
+            Button productReadinessRetryButton,
+            Button productReadinessDebugButton,
             View rootView,
             View productView,
             View debugView,
-            View productBootstrapBlocker,
+            View productReadinessBlocker,
             View drawerScrim,
             View drawerEdgeHotspot,
             View leftSidebar,
@@ -52,14 +52,14 @@ public final class ActivityViewBindings {
         this.statusText = statusText;
         this.packageStatusText = packageStatusText;
         this.eventLogText = eventLogText;
-        this.productBootstrapTitle = productBootstrapTitle;
-        this.productBootstrapDetail = productBootstrapDetail;
-        this.productBootstrapRetryButton = productBootstrapRetryButton;
-        this.productBootstrapDebugButton = productBootstrapDebugButton;
+        this.productReadinessTitle = productReadinessTitle;
+        this.productReadinessDetail = productReadinessDetail;
+        this.productReadinessRetryButton = productReadinessRetryButton;
+        this.productReadinessDebugButton = productReadinessDebugButton;
         this.rootView = rootView;
         this.productView = productView;
         this.debugView = debugView;
-        this.productBootstrapBlocker = productBootstrapBlocker;
+        this.productReadinessBlocker = productReadinessBlocker;
         this.drawerScrim = drawerScrim;
         this.drawerEdgeHotspot = drawerEdgeHotspot;
         this.leftSidebar = leftSidebar;

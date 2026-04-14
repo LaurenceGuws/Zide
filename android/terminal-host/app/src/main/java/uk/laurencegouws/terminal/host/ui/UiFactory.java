@@ -16,18 +16,18 @@ public final class UiFactory {
     }
 
     public static ProductShellStateBridge createProductShellStateHostBridge(
-            View productBootstrapBlocker,
+            View productReadinessBlocker,
             View terminalScrollOverlay,
-            TextView productBootstrapTitle,
-            TextView productBootstrapDetail,
-            android.widget.Button productBootstrapRetryButton,
+            TextView productReadinessTitle,
+            TextView productReadinessDetail,
+            android.widget.Button productReadinessRetryButton,
             ProductShellStateBridge.Callbacks callbacks) {
         return new ProductShellStateBridge(
-                productBootstrapBlocker,
+                productReadinessBlocker,
                 terminalScrollOverlay,
-                productBootstrapTitle,
-                productBootstrapDetail,
-                productBootstrapRetryButton,
+                productReadinessTitle,
+                productReadinessDetail,
+                productReadinessRetryButton,
                 callbacks);
     }
 
