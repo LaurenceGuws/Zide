@@ -737,14 +737,7 @@ public final class TerminalSelectionController {
         if (right <= left || bottom <= top) {
             return false;
         }
-        final int width = host.productViewportWidthPx();
-        final int height = host.productViewportHeightPx();
-        outRect.set(
-                Math.max(0, Math.min(left, width)),
-                Math.max(0, Math.min(top, height)),
-                Math.max(0, Math.min(right, width)),
-                Math.max(0, Math.min(bottom, height)));
-        return !outRect.isEmpty();
+        return clampRectToViewport(left, top, right, bottom, outRect);
     }
 
     private void syncTerminalSelectionActionMode() {
@@ -847,14 +840,19 @@ public final class TerminalSelectionController {
         if (right <= left || bottom <= top) {
             return null;
         }
+        final Rect rect = new Rect();
+        return clampRectToViewport(left, top, right, bottom, rect) ? rect : null;
+    }
+
+    private boolean clampRectToViewport(int left, int top, int right, int bottom, Rect outRect) {
         final int width = host.productViewportWidthPx();
         final int height = host.productViewportHeightPx();
-        final Rect rect = new Rect(
+        outRect.set(
                 Math.max(0, Math.min(left, width)),
                 Math.max(0, Math.min(top, height)),
                 Math.max(0, Math.min(right, width)),
                 Math.max(0, Math.min(bottom, height)));
-        return rect.isEmpty() ? null : rect;
+        return !outRect.isEmpty();
     }
 
     private void copyCurrentShellSelectionToClipboard() {
