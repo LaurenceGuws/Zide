@@ -147,6 +147,9 @@ Agent reporting contract (mandatory for cleanup campaign updates):
      `StatusViewCallbacks`, `SessionAssemblyCallbacks`, and
      `WorkflowAssemblyCallbacks` (nested wrapper callback classes removed;
      direct callback fields wired).
+   - Completed: `SurfaceController` resume debug recreation scheduling is now
+     named `scheduleDebugSurfaceRecreationIfRequested` so `onResume` stays a
+     thin orchestration seam.
    - Next: continue smallest ownership-clarity cuts in `ChromeController` or
      `SurfaceController` where watch-level pressure remains.
 3. Stabilize selection/scroll interaction behavior under manual device usage.
