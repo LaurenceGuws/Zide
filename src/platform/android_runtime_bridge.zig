@@ -97,32 +97,32 @@ pub fn onCreate() u64 {
 }
 
 pub fn onStart() u64 {
-    _ = android_host.noteWillEnterForeground(&bridge_state.app_host);
+    _ = android_host.onWillEnterForeground(&bridge_state.app_host);
     return nextSequence();
 }
 
 pub fn onResume() u64 {
-    _ = android_host.noteDidEnterForeground(&bridge_state.app_host, &bridge_state.render_host);
+    _ = android_host.onDidEnterForeground(&bridge_state.app_host, &bridge_state.render_host);
     return nextSequence();
 }
 
 pub fn onPause() u64 {
-    _ = android_host.noteWillEnterBackground(&bridge_state.app_host);
+    _ = android_host.onWillEnterBackground(&bridge_state.app_host);
     return nextSequence();
 }
 
 pub fn onStop() u64 {
-    _ = android_host.noteDidEnterBackground(&bridge_state.app_host);
+    _ = android_host.onDidEnterBackground(&bridge_state.app_host);
     return nextSequence();
 }
 
 pub fn onWindowFocusChanged(focused: bool) u64 {
-    _ = android_host.noteSurfaceFocus(&bridge_state.app_host, focused);
+    _ = android_host.onSurfaceFocus(&bridge_state.app_host, focused);
     return nextSequence();
 }
 
 pub fn onSurfaceAvailable(width: i32, height: i32) u64 {
-    _ = android_host.noteSurfaceMetrics(&bridge_state.app_host, &bridge_state.render_host, .{
+    _ = android_host.onSurfaceMetrics(&bridge_state.app_host, &bridge_state.render_host, .{
         .logical_width = width,
         .logical_height = height,
         .drawable_width = width,
@@ -201,7 +201,7 @@ pub fn onSurfaceAvailableFromJava(
 
 pub fn onSurfaceDestroyed() u64 {
     swapNativeWindow(null);
-    _ = android_host.noteSurfaceDestroyed(&bridge_state.app_host, &bridge_state.render_host);
+    _ = android_host.onSurfaceDestroyed(&bridge_state.app_host, &bridge_state.render_host);
     if (bridge_state.renderer) |renderer| {
         renderer.syncExternalHostState(bridge_state.app_host, bridge_state.render_host);
     }

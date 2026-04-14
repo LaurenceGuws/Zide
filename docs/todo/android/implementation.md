@@ -8,6 +8,8 @@ Android terminal work.
 - This file: active `focus`, `todo`, and `workflow`.
 - `ANDROID_JAVA_HOST_STRUCTURE.md`: Java ownership and structure contract.
 - `ANDROID_JAVA_NAMING_CONTRACT.md`: Java naming glossary and grammar.
+- `ANDROID_ZIG_BRIDGE_NAMING_CONTRACT.md`: Zig bridge naming grammar aligned
+  to the Java glossary.
 - `ANDROID_SHELL_BRINGUP_PLAN.md`: closed shell-readiness baseline record and decisions.
 - `ANDROID_TERMINAL_HOST_PLAN.md`: long-lived architecture constraints.
 
@@ -140,6 +142,8 @@ A cut is done only if all are true:
   session/selection terminology (`restartSession`, `pollSession`,
   `selectionRect*`, `selectionTextAlloc`, `rendererActive`) rather than
   long shell-prefixed helper names
+- Android host/probe adapters now use event grammar (`on*`) instead of
+  `note*` entrypoint names (`android_host.zig`, `android_gles_probe.zig`)
 - selection controller remains monolithic by design until a real split seam
   exists
 - queue remains Android-product-first, not shell-readiness-baseline-first

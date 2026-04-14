@@ -42,7 +42,7 @@ const ProbeState = struct {
 
 var probe_state = ProbeState{};
 
-fn noteError(status: ProbeStatus) ProbeStatus {
+fn setError(status: ProbeStatus) ProbeStatus {
     probe_state.last_status = status;
     return status;
 }
@@ -55,10 +55,10 @@ fn setStatus(status: ProbeStatus) ProbeStatus {
 fn ensureDisplayContext() ProbeStatus {
     return switch (android_gles_runtime.ensureDisplayContext(&probe_state.runtime)) {
         .ready => setStatus(.ready),
-        .init_failed => noteError(.init_failed),
-        .surface_failed => noteError(.init_failed),
-        .make_current_failed => noteError(.init_failed),
-        .swap_failed => noteError(.init_failed),
+        .init_failed => setError(.init_failed),
+        .surface_failed => setError(.init_failed),
+        .make_current_failed => setError(.init_failed),
+        .swap_failed => setError(.init_failed),
     };
 }
 
@@ -74,10 +74,10 @@ fn ensureWindowSurface(window: ?*anyopaque, epoch: u64, transition: native_host.
 
     return switch (android_gles_runtime.ensureWindowSurface(&probe_state.runtime, window, epoch, transition)) {
         .ready => setStatus(.ready),
-        .init_failed => noteError(.init_failed),
-        .surface_failed => noteError(.surface_failed),
-        .make_current_failed => noteError(.surface_failed),
-        .swap_failed => noteError(.surface_failed),
+        .init_failed => setError(.init_failed),
+        .surface_failed => setError(.surface_failed),
+        .make_current_failed => setError(.surface_failed),
+        .swap_failed => setError(.surface_failed),
     };
 }
 
@@ -88,8 +88,8 @@ fn drawCurrent(epoch: u64, width: i32, height: i32) ProbeStatus {
 
     switch (android_gles_runtime.makeCurrent(&probe_state.runtime)) {
         .ready => {},
-        .make_current_failed => return noteError(.make_current_failed),
-        .init_failed, .surface_failed, .swap_failed => return noteError(.make_current_failed),
+        .make_current_failed => return setError(.make_current_failed),
+        .init_failed, .surface_failed, .swap_failed => return setError(.make_current_failed),
     }
 
     ensureProbeTexture(width, height);
@@ -103,8 +103,8 @@ fn drawCurrent(epoch: u64, width: i32, height: i32) ProbeStatus {
         glClear(GL_COLOR_BUFFER_BIT);
         switch (android_gles_runtime.swapBuffers(&probe_state.runtime)) {
             .ready => {},
-            .swap_failed => return noteError(.swap_failed),
-            .init_failed, .surface_failed, .make_current_failed => return noteError(.swap_failed),
+            .swap_failed => return setError(.swap_failed),
+            .init_failed, .surface_failed, .make_current_failed => return setError(.swap_failed),
         }
     }
     probe_state.swap_count += 1;
@@ -179,7 +179,7 @@ pub fn reset() void {
     probe_state = .{};
 }
 
-pub fn noteSurfaceAvailable(
+pub fn onSurfaceAvailable(
     window: ?*anyopaque,
     epoch: u64,
     transition: native_host.SurfaceIdentityTransition,
@@ -191,11 +191,11 @@ pub fn noteSurfaceAvailable(
     return drawCurrent(epoch, width, height);
 }
 
-pub fn noteSurfaceRedrawNeeded() ProbeStatus {
-    return drawCurrent(probe_state.bound_epoch, probe_state.texture_width, probe_state.texture_height);
+pub fn onSurfaceRedrawNeeded() ProbeStatus {
+    return drawCurrent(probe_state.runtime.bound_epoch, probe_state.texture_width, probe_state.texture_height);
 }
 
-pub fn noteSurfaceDestroyed() ProbeStatus {
+pub fn onSurfaceDestroyed() ProbeStatus {
     destroySurface();
     return setStatus(.surface_destroyed);
 }
@@ -252,7 +252,7 @@ test "probe recreates the surface when identity epoch changes" {
     const std = @import("std");
 
     reset();
-    try std.testing.expectEqual(ProbeStatus.drawn, noteSurfaceAvailable(@ptrFromInt(0x1111), 1, .acquired, 400, 200));
+    try std.testing.expectEqual(ProbeStatus.drawn, onSurfaceAvailable(@ptrFromInt(0x1111), 1, .acquired, 400, 200));
     try std.testing.expectEqual(@as(u32, 1), currentSwapCount());
     try std.testing.expectEqual(@as(u32, 1), currentContextCreateCount());
     try std.testing.expectEqual(@as(u32, 1), currentSurfaceCreateCount());
@@ -264,7 +264,7 @@ test "probe recreates the surface when identity epoch changes" {
     try std.testing.expectEqual(@as(i32, 200), currentTextureHeight());
     try std.testing.expect(currentTextureAlive());
 
-    try std.testing.expectEqual(ProbeStatus.drawn, noteSurfaceAvailable(@ptrFromInt(0x1111), 1, .unchanged, 420, 210));
+    try std.testing.expectEqual(ProbeStatus.drawn, onSurfaceAvailable(@ptrFromInt(0x1111), 1, .unchanged, 420, 210));
     try std.testing.expectEqual(@as(u32, 2), currentSwapCount());
     try std.testing.expectEqual(@as(u32, 1), currentContextCreateCount());
     try std.testing.expectEqual(@as(u32, 1), currentSurfaceCreateCount());
@@ -276,7 +276,7 @@ test "probe recreates the surface when identity epoch changes" {
     try std.testing.expectEqual(@as(i32, 210), currentTextureHeight());
     try std.testing.expect(currentTextureAlive());
 
-    try std.testing.expectEqual(ProbeStatus.drawn, noteSurfaceAvailable(@ptrFromInt(0x2222), 2, .replaced, 430, 220));
+    try std.testing.expectEqual(ProbeStatus.drawn, onSurfaceAvailable(@ptrFromInt(0x2222), 2, .replaced, 430, 220));
     try std.testing.expectEqual(@as(u32, 3), currentSwapCount());
     try std.testing.expectEqual(@as(u32, 1), currentContextCreateCount());
     try std.testing.expectEqual(@as(u32, 2), currentSurfaceCreateCount());
@@ -288,6 +288,6 @@ test "probe recreates the surface when identity epoch changes" {
     try std.testing.expectEqual(@as(i32, 220), currentTextureHeight());
     try std.testing.expect(currentTextureAlive());
 
-    try std.testing.expectEqual(ProbeStatus.surface_destroyed, noteSurfaceDestroyed());
-    try std.testing.expectEqual(ProbeStatus.unavailable, noteSurfaceRedrawNeeded());
+    try std.testing.expectEqual(ProbeStatus.surface_destroyed, onSurfaceDestroyed());
+    try std.testing.expectEqual(ProbeStatus.unavailable, onSurfaceRedrawNeeded());
 }

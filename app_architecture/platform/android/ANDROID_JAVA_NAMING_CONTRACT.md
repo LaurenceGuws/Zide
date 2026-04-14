@@ -1,7 +1,7 @@
 # Android Java Naming Contract
 
 Purpose: define one naming grammar and glossary for
-`android/terminal-host/app/src/main/java/dev/zide/terminal/**` so names stay
+`android/terminal-host/app/src/main/java/uk/laurencegouws/terminal/**` so names stay
 short, unambiguous, and package-led.
 
 This document is naming authority only. It does not replace ownership contracts

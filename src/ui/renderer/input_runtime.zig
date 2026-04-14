@@ -77,19 +77,19 @@ fn handleEvent(
             domain.app_host.noteTerminationRequested();
         },
         sdl_api.EVENT_APP_WILL_ENTER_FOREGROUND => {
-            if (!android_host.noteWillEnterForeground(domain.app_host)) domain.app_host.noteStarted();
+            if (!android_host.onWillEnterForeground(domain.app_host)) domain.app_host.noteStarted();
         },
         sdl_api.EVENT_APP_DID_ENTER_FOREGROUND => {
-            if (!android_host.noteDidEnterForeground(domain.app_host, domain.render_host)) {
+            if (!android_host.onDidEnterForeground(domain.app_host, domain.render_host)) {
                 domain.app_host.noteResumed();
                 domain.render_host.noteRedrawRequested();
             }
         },
         sdl_api.EVENT_APP_WILL_ENTER_BACKGROUND => {
-            if (!android_host.noteWillEnterBackground(domain.app_host)) domain.app_host.notePaused();
+            if (!android_host.onWillEnterBackground(domain.app_host)) domain.app_host.notePaused();
         },
         sdl_api.EVENT_APP_DID_ENTER_BACKGROUND => {
-            if (!android_host.noteDidEnterBackground(domain.app_host)) domain.app_host.noteStopped();
+            if (!android_host.onDidEnterBackground(domain.app_host)) domain.app_host.noteStopped();
         },
         sdl_api.EVENT_APP_TERMINATING => {
             domain.should_close_flag.* = true;
@@ -274,13 +274,13 @@ fn applyWindowFocusState(
     if (focused) {
         sdl_api.startTextInput(domain.window);
         text_input.reapplyRect(domain.text_input_state, domain.window);
-        if (!android_host.noteSurfaceFocus(domain.app_host, true)) {
+        if (!android_host.onSurfaceFocus(domain.app_host, true)) {
             domain.app_host.noteSurfaceFocused(true);
             domain.app_host.noteTextInputActive(true);
         }
     } else {
         sdl_api.stopTextInput(domain.window);
-        if (!android_host.noteSurfaceFocus(domain.app_host, false)) {
+        if (!android_host.onSurfaceFocus(domain.app_host, false)) {
             domain.app_host.noteSurfaceFocused(false);
             domain.app_host.noteTextInputActive(false);
         }
@@ -394,10 +394,10 @@ test "ghost super quarantine suppresses super until release or normal keydown" {
 }
 
 test "keyboard state resets across focus transitions" {
-    var key_down = [_]bool{true, true, false};
-    var key_pressed = [_]bool{true, false, false};
-    var key_repeated = [_]bool{false, true, false};
-    var key_released = [_]bool{false, false, true};
+    var key_down = [_]bool{ true, true, false };
+    var key_pressed = [_]bool{ true, false, false };
+    var key_repeated = [_]bool{ false, true, false };
+    var key_released = [_]bool{ false, false, true };
     var key_queue = std.ArrayList(input_state.KeyPress).empty;
     defer key_queue.deinit(std.testing.allocator);
     try key_queue.append(std.testing.allocator, .{

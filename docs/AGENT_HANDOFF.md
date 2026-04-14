@@ -23,6 +23,8 @@ Session entrypoint only. Keep this file short, stable, and current.
   `docs/todo/android/implementation.md`
 - Java ownership contract:
   `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`
+- Zig bridge naming contract:
+  `app_architecture/platform/android/ANDROID_ZIG_BRIDGE_NAMING_CONTRACT.md`
 - Shell readiness baseline history/decision record:
   `app_architecture/platform/android/ANDROID_SHELL_BRINGUP_PLAN.md`
 - Terminal-host architecture authority:
