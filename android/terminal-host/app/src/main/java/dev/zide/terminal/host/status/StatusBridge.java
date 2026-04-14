@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.status;
 
 import android.view.SurfaceView;
 
@@ -10,7 +10,7 @@ import dev.zide.terminal.userland.UserlandInstallState;
 /**
  * Adapts activity-owned status callbacks to {@link TerminalStatusController.Host}.
  */
-public final class TerminalStatusHostBridge implements TerminalStatusController.Host {
+public final class StatusBridge implements TerminalStatusController.Host {
     /** Activity callbacks used by debug status presentation. */
     public interface Callbacks {
         boolean debugViewEnabled();
@@ -36,7 +36,7 @@ public final class TerminalStatusHostBridge implements TerminalStatusController.
 
     private final Callbacks callbacks;
 
-    public TerminalStatusHostBridge(Callbacks callbacks) {
+    public StatusBridge(Callbacks callbacks) {
         this.callbacks = callbacks;
     }
 

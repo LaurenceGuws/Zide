@@ -9,6 +9,8 @@ import android.widget.TextView;
 import dev.zide.terminal.debug.TerminalSurfaceStateSnapshotReader;
 import dev.zide.terminal.debug.TerminalSurfaceStateSnapshotHostCallbacks;
 import dev.zide.terminal.debug.TerminalStatusController;
+import dev.zide.terminal.host.status.StatusBridge;
+import dev.zide.terminal.host.status.StatusCallbacks;
 import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandInstallState;
 
@@ -58,7 +60,7 @@ public final class TerminalStatusViewAssembly {
         public final Button assistCtrlButton;
         public final Button assistAltButton;
         public final TerminalSurfaceStateSnapshotReader terminalSurfaceStateSnapshotReader;
-        public final TerminalStatusHostBridge terminalStatusHostBridge;
+        public final StatusBridge terminalStatusHostBridge;
         public final TerminalStatusController terminalStatusController;
         public final TerminalViewportController terminalViewportController;
 
@@ -80,7 +82,7 @@ public final class TerminalStatusViewAssembly {
                 Button assistCtrlButton,
                 Button assistAltButton,
                 TerminalSurfaceStateSnapshotReader terminalSurfaceStateSnapshotReader,
-                TerminalStatusHostBridge terminalStatusHostBridge,
+                StatusBridge terminalStatusHostBridge,
                 TerminalStatusController terminalStatusController,
                 TerminalViewportController terminalViewportController) {
             this.packageStatusText = packageStatusText;
@@ -129,7 +131,7 @@ public final class TerminalStatusViewAssembly {
                         dev.zide.terminal.TerminalNativeBridge::nativeCurrentRendererTextureResizeCountBridge,
                         dev.zide.terminal.TerminalNativeBridge::nativeCurrentRendererTextureWidthBridge,
                         dev.zide.terminal.TerminalNativeBridge::nativeCurrentRendererTextureHeightBridge));
-        final TerminalStatusHostBridge terminalStatusHostBridge = new TerminalStatusHostBridge(new TerminalStatusHostCallbacks(
+        final StatusBridge terminalStatusHostBridge = new StatusBridge(new StatusCallbacks(
                 host::debugViewEnabled,
                 host::nativeLoaded,
                 host::hasWindowFocusNow,

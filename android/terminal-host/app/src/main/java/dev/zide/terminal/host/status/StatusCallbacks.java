@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.status;
 
 import android.view.SurfaceView;
 
@@ -9,8 +9,8 @@ import dev.zide.terminal.debug.AndroidDebugFormatter;
 import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandInstallState;
 
-/** Functional callback adapter for {@link TerminalStatusHostBridge}. */
-public final class TerminalStatusHostCallbacks implements TerminalStatusHostBridge.Callbacks {
+/** Functional callback adapter for {@link StatusBridge}. */
+public final class StatusCallbacks implements StatusBridge.Callbacks {
     private final BooleanSupplier debugViewEnabled;
     private final BooleanSupplier nativeLoaded;
     private final BooleanSupplier hasWindowFocus;
@@ -27,7 +27,7 @@ public final class TerminalStatusHostCallbacks implements TerminalStatusHostBrid
         int getAsInt();
     }
 
-    public TerminalStatusHostCallbacks(
+    public StatusCallbacks(
             BooleanSupplier debugViewEnabled,
             BooleanSupplier nativeLoaded,
             BooleanSupplier hasWindowFocus,
