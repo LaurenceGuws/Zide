@@ -45,8 +45,12 @@ public final class ChromeController {
     }
 
     private void bindProductViewModeToggle() {
-        host.debugViewModeButton().setOnClickListener(
+        debugViewModeToggleChrome().setOnClickListener(
                 view -> host.showProductView("view.mode debug=false", "product-view"));
+    }
+
+    private View debugViewModeToggleChrome() {
+        return host.debugViewModeButton();
     }
 
     public void bindSidebarControls() {
@@ -243,8 +247,12 @@ public final class ChromeController {
 
     /** Hides soft input and records IME chrome state for a manual close. */
     private void runManualImeCloseSequence(InputMethodManager imm) {
-        final boolean hidden = imm.hideSoftInputFromWindow(activeShellInputView().getWindowToken(), 0);
+        final boolean hidden = hideSoftInputFromShellWindowToken(imm);
         recordManualImeCloseSoftInputResult(hidden);
+    }
+
+    private boolean hideSoftInputFromShellWindowToken(InputMethodManager imm) {
+        return imm.hideSoftInputFromWindow(activeShellInputView().getWindowToken(), 0);
     }
 
     private void recordManualImeCloseSoftInputResult(boolean hidden) {

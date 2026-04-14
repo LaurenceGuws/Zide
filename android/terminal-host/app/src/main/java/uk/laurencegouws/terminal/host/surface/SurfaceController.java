@@ -221,12 +221,20 @@ public final class SurfaceController {
     }
 
     private void dispatchNativeProductSurfaceDestroyed() {
-        final long seq = host.nativeLoaded() ? host.nativeOnSurfaceDestroyedBridge() : -1;
+        final long seq = nativeSurfaceDestroyedSeqOrNegative();
+        callNativeProductSurfaceDestroyed(seq);
+        host.updateStatus("surface.state.destroyed");
+    }
+
+    private long nativeSurfaceDestroyedSeqOrNegative() {
+        return host.nativeLoaded() ? host.nativeOnSurfaceDestroyedBridge() : -1;
+    }
+
+    private void callNativeProductSurfaceDestroyed(long seq) {
         host.callNativeWithSurfaceState(
                 "native.surfaceDestroyed",
                 seq,
                 host.currentSurfaceStateSnapshot());
-        host.updateStatus("surface.state.destroyed");
     }
 
     public void onSurfaceRedrawNeeded(SurfaceHolder holder) {
