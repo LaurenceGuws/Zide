@@ -18,20 +18,67 @@ import uk.laurencegouws.terminal.userland.UserlandSessionCoordinator;
 
 /** Functional callback adapter for {@link ProductRuntimeAssembly.Host}. */
 public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAssembly.Host {
+    public static final class RuntimeUiBundle {
+        final Supplier<SurfaceView> surfaceView;
+        final Supplier<View> productBootstrapBlocker;
+        final Supplier<TerminalScrollOverlayView> terminalScrollOverlay;
+        final Supplier<TerminalSelectionController> selectionController;
+        final Supplier<ProductShellStatePresenter> productShellStatePresenter;
+        final Supplier<FrameLoopController> frameLoopController;
+        final Supplier<TerminalStatusController> terminalStatusController;
+        final Supplier<UserlandSessionCoordinator> userlandSessionCoordinator;
+        final Supplier<TerminalGestureStateController> terminalGestureStateController;
+
+        private RuntimeUiBundle(
+                Supplier<SurfaceView> surfaceView,
+                Supplier<View> productBootstrapBlocker,
+                Supplier<TerminalScrollOverlayView> terminalScrollOverlay,
+                Supplier<TerminalSelectionController> selectionController,
+                Supplier<ProductShellStatePresenter> productShellStatePresenter,
+                Supplier<FrameLoopController> frameLoopController,
+                Supplier<TerminalStatusController> terminalStatusController,
+                Supplier<UserlandSessionCoordinator> userlandSessionCoordinator,
+                Supplier<TerminalGestureStateController> terminalGestureStateController) {
+            this.surfaceView = surfaceView;
+            this.productBootstrapBlocker = productBootstrapBlocker;
+            this.terminalScrollOverlay = terminalScrollOverlay;
+            this.selectionController = selectionController;
+            this.productShellStatePresenter = productShellStatePresenter;
+            this.frameLoopController = frameLoopController;
+            this.terminalStatusController = terminalStatusController;
+            this.userlandSessionCoordinator = userlandSessionCoordinator;
+            this.terminalGestureStateController = terminalGestureStateController;
+        }
+
+        public static RuntimeUiBundle of(
+                Supplier<SurfaceView> surfaceView,
+                Supplier<View> productBootstrapBlocker,
+                Supplier<TerminalScrollOverlayView> terminalScrollOverlay,
+                Supplier<TerminalSelectionController> selectionController,
+                Supplier<ProductShellStatePresenter> productShellStatePresenter,
+                Supplier<FrameLoopController> frameLoopController,
+                Supplier<TerminalStatusController> terminalStatusController,
+                Supplier<UserlandSessionCoordinator> userlandSessionCoordinator,
+                Supplier<TerminalGestureStateController> terminalGestureStateController) {
+            return new RuntimeUiBundle(
+                    surfaceView,
+                    productBootstrapBlocker,
+                    terminalScrollOverlay,
+                    selectionController,
+                    productShellStatePresenter,
+                    frameLoopController,
+                    terminalStatusController,
+                    userlandSessionCoordinator,
+                    terminalGestureStateController);
+        }
+    }
+
     private final BooleanSupplier debugViewEnabled;
     private final BooleanSupplier nativeLoaded;
     private final Supplier<UserlandInstallState> installState;
     private final Consumer<UserlandInstallState> setInstallState;
     private final Supplier<UserlandReadinessState> readinessState;
-    private final Supplier<SurfaceView> surfaceView;
-    private final Supplier<View> productBootstrapBlocker;
-    private final Supplier<TerminalScrollOverlayView> terminalScrollOverlay;
-    private final Supplier<TerminalSelectionController> selectionController;
-    private final Supplier<ProductShellStatePresenter> productShellStatePresenter;
-    private final Supplier<FrameLoopController> frameLoopController;
-    private final Supplier<TerminalStatusController> terminalStatusController;
-    private final Supplier<UserlandSessionCoordinator> userlandSessionCoordinator;
-    private final Supplier<TerminalGestureStateController> terminalGestureStateController;
+    private final RuntimeUiBundle runtimeUiBundle;
     private final Consumer<String> appendEvent;
     private final Consumer<String> updateStatus;
 
@@ -41,15 +88,7 @@ public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAsse
             Supplier<UserlandInstallState> installState,
             Consumer<UserlandInstallState> setInstallState,
             Supplier<UserlandReadinessState> readinessState,
-            Supplier<SurfaceView> surfaceView,
-            Supplier<View> productBootstrapBlocker,
-            Supplier<TerminalScrollOverlayView> terminalScrollOverlay,
-            Supplier<TerminalSelectionController> selectionController,
-            Supplier<ProductShellStatePresenter> productShellStatePresenter,
-            Supplier<FrameLoopController> frameLoopController,
-            Supplier<TerminalStatusController> terminalStatusController,
-            Supplier<UserlandSessionCoordinator> userlandSessionCoordinator,
-            Supplier<TerminalGestureStateController> terminalGestureStateController,
+            RuntimeUiBundle runtimeUiBundle,
             Consumer<String> appendEvent,
             Consumer<String> updateStatus) {
         this.debugViewEnabled = debugViewEnabled;
@@ -57,15 +96,7 @@ public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAsse
         this.installState = installState;
         this.setInstallState = setInstallState;
         this.readinessState = readinessState;
-        this.surfaceView = surfaceView;
-        this.productBootstrapBlocker = productBootstrapBlocker;
-        this.terminalScrollOverlay = terminalScrollOverlay;
-        this.selectionController = selectionController;
-        this.productShellStatePresenter = productShellStatePresenter;
-        this.frameLoopController = frameLoopController;
-        this.terminalStatusController = terminalStatusController;
-        this.userlandSessionCoordinator = userlandSessionCoordinator;
-        this.terminalGestureStateController = terminalGestureStateController;
+        this.runtimeUiBundle = runtimeUiBundle;
         this.appendEvent = appendEvent;
         this.updateStatus = updateStatus;
     }
@@ -97,47 +128,47 @@ public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAsse
 
     @Override
     public SurfaceView surfaceView() {
-        return surfaceView.get();
+        return runtimeUiBundle.surfaceView.get();
     }
 
     @Override
     public View productBootstrapBlocker() {
-        return productBootstrapBlocker.get();
+        return runtimeUiBundle.productBootstrapBlocker.get();
     }
 
     @Override
     public TerminalScrollOverlayView terminalScrollOverlay() {
-        return terminalScrollOverlay.get();
+        return runtimeUiBundle.terminalScrollOverlay.get();
     }
 
     @Override
     public TerminalSelectionController selectionController() {
-        return selectionController.get();
+        return runtimeUiBundle.selectionController.get();
     }
 
     @Override
     public ProductShellStatePresenter productShellStatePresenter() {
-        return productShellStatePresenter.get();
+        return runtimeUiBundle.productShellStatePresenter.get();
     }
 
     @Override
     public FrameLoopController frameLoopController() {
-        return frameLoopController.get();
+        return runtimeUiBundle.frameLoopController.get();
     }
 
     @Override
     public TerminalStatusController terminalStatusController() {
-        return terminalStatusController.get();
+        return runtimeUiBundle.terminalStatusController.get();
     }
 
     @Override
     public UserlandSessionCoordinator userlandSessionCoordinator() {
-        return userlandSessionCoordinator.get();
+        return runtimeUiBundle.userlandSessionCoordinator.get();
     }
 
     @Override
     public TerminalGestureStateController terminalGestureStateController() {
-        return terminalGestureStateController.get();
+        return runtimeUiBundle.terminalGestureStateController.get();
     }
 
     @Override
