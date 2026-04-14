@@ -165,6 +165,10 @@ public final class SurfaceController {
     }
 
     public void onSurfaceCreated(SurfaceHolder holder) {
+        recordProductSurfaceCreated(holder);
+    }
+
+    private void recordProductSurfaceCreated(SurfaceHolder holder) {
         host.appendEvent("surface.lifecycle.created generation=" + host.surfaceHostGeneration() + " valid=" + holder.getSurface().isValid());
         host.updateStatus("surface.state.created");
     }
@@ -249,12 +253,19 @@ public final class SurfaceController {
         final int width = Math.max(host.productSurfaceContainer().getWidth(), 1);
         final int height = Math.max(host.productSurfaceContainer().getHeight(), 1);
         host.setVisibleViewportSize(width, height);
-        if (width == host.notifiedViewportWidth()
-                && height == host.notifiedViewportHeight()
-                && viewportImeVisible == host.notifiedViewportImeVisible()) {
+        if (visibleViewportDimensionsMatchNotified(width, height, viewportImeVisible)) {
             return;
         }
         publishVisibleViewportChange(reason, width, height, viewportImeVisible);
+    }
+
+    private boolean visibleViewportDimensionsMatchNotified(
+            int width,
+            int height,
+            boolean viewportImeVisible) {
+        return width == host.notifiedViewportWidth()
+                && height == host.notifiedViewportHeight()
+                && viewportImeVisible == host.notifiedViewportImeVisible();
     }
 
     private boolean shouldIgnoreVisibleViewportNotification() {
