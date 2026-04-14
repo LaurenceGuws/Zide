@@ -43,6 +43,14 @@ Focus goals:
 ## Active TODO
 
 1. Continue cleanup/refactor cuts only where methods still own policy.
+   - Completed: callback wiring hygiene pass in `ZideTerminalActivity` now uses
+     named setter/getter/host helpers and removes non-trivial inline callback
+     lambdas in assembly factories.
+   - Next: keep helper ordering grouped by role
+     (`host accessors`, `state snapshots`, `state setters`, `runtime actions`)
+     so assembly-readability improvements remain scan-friendly.
+   - Next: only extract remaining callback suppliers where signal improves;
+     avoid no-value churn on trivial one-liners.
 2. Keep Java ownership boundaries aligned with
    `ANDROID_JAVA_HOST_STRUCTURE.md`.
 3. Stabilize selection/scroll interaction behavior under manual device usage.
@@ -88,7 +96,9 @@ A cut is done only if all are true:
 
 - interactive shell + Neovim baseline is usable on-device
 - `ZideTerminalActivity` is now wiring/lifecycle/orchestration-oriented
-  (current size: `581` lines; JNI moved out to `TerminalNativeBridge`)
+  (current size: `738` lines; JNI moved out to `TerminalNativeBridge`)
+- activity callback factory wiring now consistently favors named callback
+  references over inline state-assignment or non-trivial lifecycle lambdas
 - host callback seams are adapter-backed (`*HostCallbacks` /
   `*HostLifecycleCallbacks`) instead of activity-owned anonymous blocks
 - assist modifier latch presentation now lives in chrome host wiring instead of
