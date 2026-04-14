@@ -132,7 +132,7 @@ public final class ZideTerminalActivity extends Activity
         assembleWidgetHostControllers();
         assembleProductRuntimeController();
         assembleActivityLifecycleController();
-        currentReadinessState = userlandSessionCoordinator.loadReadinessState();
+        loadInitialReadinessState();
         installInputControllers();
         bindAndStartUiControllers();
         finishOnCreateLifecycle();
@@ -515,6 +515,10 @@ public final class ZideTerminalActivity extends Activity
 
     private boolean isNativeLoaded() {
         return nativeLoaded;
+    }
+
+    private void loadInitialReadinessState() {
+        currentReadinessState = userlandSessionCoordinator.loadReadinessState();
     }
 
     private boolean handleHardwareDispatchKeyEventIfReady(KeyEvent event) {
