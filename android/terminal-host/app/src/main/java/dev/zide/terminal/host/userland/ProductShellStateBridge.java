@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.userland;
 
 import android.view.SurfaceView;
 import android.view.View;
@@ -12,7 +12,7 @@ import dev.zide.terminal.userland.UserlandInstallState;
 /**
  * Adapts activity-owned callbacks and views to {@link ProductShellStatePresenter.Host}.
  */
-public final class TerminalProductShellStateHostBridge implements ProductShellStatePresenter.Host {
+public final class ProductShellStateBridge implements ProductShellStatePresenter.Host {
     /** Activity callbacks used by product shell blocker presentation. */
     public interface Callbacks {
         boolean nativeLoaded();
@@ -37,7 +37,7 @@ public final class TerminalProductShellStateHostBridge implements ProductShellSt
     private final Button productBootstrapRetryButton;
     private final Callbacks callbacks;
 
-    public TerminalProductShellStateHostBridge(
+    public ProductShellStateBridge(
             View productBootstrapBlocker,
             View terminalScrollOverlay,
             TextView productBootstrapTitle,

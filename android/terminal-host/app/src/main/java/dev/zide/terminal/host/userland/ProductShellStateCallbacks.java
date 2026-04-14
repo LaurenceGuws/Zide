@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.userland;
 
 import android.view.SurfaceView;
 
@@ -8,8 +8,8 @@ import java.util.function.Supplier;
 import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandInstallState;
 
-/** Functional callback adapter for {@link TerminalProductShellStateHostBridge}. */
-public final class TerminalProductShellStateHostCallbacks implements TerminalProductShellStateHostBridge.Callbacks {
+/** Functional callback adapter for {@link ProductShellStateBridge}. */
+public final class ProductShellStateCallbacks implements ProductShellStateBridge.Callbacks {
     private final BooleanSupplier nativeLoaded;
     private final BooleanSupplier sharedShellRendererActive;
     private final BooleanSupplier installInstalling;
@@ -18,7 +18,7 @@ public final class TerminalProductShellStateHostCallbacks implements TerminalPro
     private final Supplier<UserlandInstallState> installState;
     private final Supplier<SurfaceView> surfaceView;
 
-    public TerminalProductShellStateHostCallbacks(
+    public ProductShellStateCallbacks(
             BooleanSupplier nativeLoaded,
             BooleanSupplier sharedShellRendererActive,
             BooleanSupplier installInstalling,

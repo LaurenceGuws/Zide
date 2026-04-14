@@ -5,6 +5,7 @@ import android.widget.FrameLayout;
 import android.widget.TextView;
 
 import dev.zide.terminal.gesture.TerminalGestureStateController;
+import dev.zide.terminal.host.userland.ProductShellStateBridge;
 import dev.zide.terminal.selection.TerminalSelectionController;
 
 /** UI host assembly helpers. */
@@ -12,14 +13,14 @@ public final class TerminalUiHostFactory {
     private TerminalUiHostFactory() {
     }
 
-    public static TerminalProductShellStateHostBridge createProductShellStateHostBridge(
+    public static ProductShellStateBridge createProductShellStateHostBridge(
             View productBootstrapBlocker,
             View terminalScrollOverlay,
             TextView productBootstrapTitle,
             TextView productBootstrapDetail,
             android.widget.Button productBootstrapRetryButton,
-            TerminalProductShellStateHostBridge.Callbacks callbacks) {
-        return new TerminalProductShellStateHostBridge(
+            ProductShellStateBridge.Callbacks callbacks) {
+        return new ProductShellStateBridge(
                 productBootstrapBlocker,
                 terminalScrollOverlay,
                 productBootstrapTitle,

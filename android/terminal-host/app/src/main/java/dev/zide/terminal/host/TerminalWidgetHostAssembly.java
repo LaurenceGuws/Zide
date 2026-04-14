@@ -12,6 +12,8 @@ import dev.zide.terminal.TerminalNativeBridge;
 import dev.zide.terminal.debug.AndroidDebugFormatter;
 import dev.zide.terminal.gesture.ProductGestureController;
 import dev.zide.terminal.gesture.TerminalGestureStateController;
+import dev.zide.terminal.host.userland.ProductShellStateBridge;
+import dev.zide.terminal.host.userland.ProductShellStateCallbacks;
 import dev.zide.terminal.input.ShellInputView;
 import dev.zide.terminal.scroll.TerminalScrollOverlayView;
 import dev.zide.terminal.selection.TerminalSelectionController;
@@ -124,7 +126,7 @@ public final class TerminalWidgetHostAssembly {
 
     /** Immutable assembled widget host result. */
     public static final class Result {
-        public final TerminalProductShellStateHostBridge productShellStateHostBridge;
+        public final ProductShellStateBridge productShellStateHostBridge;
         public final ProductShellStatePresenter productShellStatePresenter;
         public final TerminalChromeController terminalChromeController;
         public final TerminalViewModeController terminalViewModeController;
@@ -133,7 +135,7 @@ public final class TerminalWidgetHostAssembly {
         public final TerminalSurfaceWidgetController terminalSurfaceWidgetController;
 
         private Result(
-                TerminalProductShellStateHostBridge productShellStateHostBridge,
+                ProductShellStateBridge productShellStateHostBridge,
                 ProductShellStatePresenter productShellStatePresenter,
                 TerminalChromeController terminalChromeController,
                 TerminalViewModeController terminalViewModeController,
@@ -154,14 +156,14 @@ public final class TerminalWidgetHostAssembly {
     }
 
     public static Result assemble(Host host) {
-        final TerminalProductShellStateHostBridge productShellStateHostBridge =
+        final ProductShellStateBridge productShellStateHostBridge =
                 TerminalUiHostFactory.createProductShellStateHostBridge(
                         host.productBootstrapBlocker(),
                         host.terminalScrollOverlay(),
                         host.productBootstrapTitle(),
                         host.productBootstrapDetail(),
                         host.productBootstrapRetryButton(),
-                        new TerminalProductShellStateHostCallbacks(
+                        new ProductShellStateCallbacks(
                                 host::nativeLoaded,
                                 TerminalNativeBridge::nativeSharedShellRendererActiveBridge,
                                 host::currentInstallStateInstalling,
