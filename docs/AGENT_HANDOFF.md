@@ -22,6 +22,30 @@ Session entrypoint only. Keep this file short, stable, and current.
 5. Update docs in the same change.
 6. Commit small, cohesive units on `main` unless user says otherwise.
 
+## Android Cleanup Execution Contract (No Ambiguity)
+
+Use this when the Android lane is in cleanup/refactor/standardization mode.
+
+- Priority order is strict:
+  1) explicit `Active TODO` next-line item in
+     `docs/todo/android/implementation.md`
+  2) ownership/naming/architecture authority docs
+  3) campaign charter guidance
+- Do not rephrase charter text as permission to reorder the queue.
+- If a proposed cut does not exactly match the current explicit next-line item,
+  stop and report mismatch before editing code.
+- Do not add process/ceremony scripts, lint gates, or precommit tooling unless
+  the user explicitly asks.
+
+Required per-commit update format:
+
+- `Commit:` `<hash> <subject>`
+- `Queue line (exact):` quote exact current next-line item before the cut
+- `Completed cut:` one concrete behavior-preserving change description
+- `Files touched:` concrete path list
+- `Validation:` exact commands run and result
+- `Next work:` exact next-line item after updating queue state
+
 ## Source of Truth Map
 
 - Active plan/todo/workflow:

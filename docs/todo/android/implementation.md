@@ -81,6 +81,28 @@ Success metrics:
 - keep compile/deploy green through the campaign
 - keep docs progress-based (no intent-only checkpoints)
 
+## Charter Direction (Interpretation Rule)
+
+This removes ambiguity between campaign guidance and queue execution.
+
+- The charter defines direction and quality constraints.
+- `Active TODO` defines execution order.
+- The explicit `Next:` line under the active TODO item is binding for the next
+  code cut.
+- Do not substitute a "charter direction" interpretation for the explicit
+  `Next:` line.
+- If the current work does not match the explicit `Next:` line, stop and
+  report a mismatch before code edits.
+
+Agent reporting contract (mandatory for cleanup campaign updates):
+
+- `Commit:` `<hash> <subject>`
+- `Queue line (exact):` quote exact `Next:` line used for the cut
+- `Completed cut:` one concrete behavior-preserving change
+- `Files touched:` concrete paths
+- `Validation:` exact command list + pass/fail
+- `Next work:` exact current `Next:` line after progress update
+
 ## Active TODO
 
 1. Continue cleanup/refactor cuts only where methods still own policy.
@@ -149,6 +171,11 @@ Use this exact loop for every Android task:
    - Manual device check for the exact behavior touched
 5. Update docs that own the changed contract.
 6. Commit a small cohesive change.
+
+Execution guard:
+
+- do not add lint/process/precommit ceremony in this lane unless explicitly
+  requested by the user
 
 ## Done Criteria for a Cut
 
