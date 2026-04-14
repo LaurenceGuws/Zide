@@ -11,133 +11,87 @@ import java.util.function.Supplier;
 
 /** Functional callback adapter for {@link InteractionAssembly.Host}. */
 public final class InteractionCallbacks implements InteractionAssembly.Host {
-    public static final class InteractionHostCallbacks {
-        final Supplier<Activity> activity;
-        final Supplier<Handler> handler;
-        final Supplier<FrameLayout> productSurfaceContainer;
-        final IntSupplier productViewportWidthPx;
-        final IntSupplier productViewportHeightPx;
-
-        private InteractionHostCallbacks(
-                Supplier<Activity> activity,
-                Supplier<Handler> handler,
-                Supplier<FrameLayout> productSurfaceContainer,
-                IntSupplier productViewportWidthPx,
-                IntSupplier productViewportHeightPx) {
-            this.activity = activity;
-            this.handler = handler;
-            this.productSurfaceContainer = productSurfaceContainer;
-            this.productViewportWidthPx = productViewportWidthPx;
-            this.productViewportHeightPx = productViewportHeightPx;
-        }
-
-        public static InteractionHostCallbacks of(
-                Supplier<Activity> activity,
-                Supplier<Handler> handler,
-                Supplier<FrameLayout> productSurfaceContainer,
-                IntSupplier productViewportWidthPx,
-                IntSupplier productViewportHeightPx) {
-            return new InteractionHostCallbacks(
-                    activity,
-                    handler,
-                    productSurfaceContainer,
-                    productViewportWidthPx,
-                    productViewportHeightPx);
-        }
-    }
-
-    public static final class InteractionRuntimeCallbacks {
-        final BooleanSupplier nativeLoaded;
-        final Runnable stopScrollbackFling;
-        final Runnable refreshProductScrollOverlay;
-        final Runnable reevaluateProductFrameLoop;
-        final Consumer<String> appendEvent;
-
-        private InteractionRuntimeCallbacks(
-                BooleanSupplier nativeLoaded,
-                Runnable stopScrollbackFling,
-                Runnable refreshProductScrollOverlay,
-                Runnable reevaluateProductFrameLoop,
-                Consumer<String> appendEvent) {
-            this.nativeLoaded = nativeLoaded;
-            this.stopScrollbackFling = stopScrollbackFling;
-            this.refreshProductScrollOverlay = refreshProductScrollOverlay;
-            this.reevaluateProductFrameLoop = reevaluateProductFrameLoop;
-            this.appendEvent = appendEvent;
-        }
-
-        public static InteractionRuntimeCallbacks of(
-                BooleanSupplier nativeLoaded,
-                Runnable stopScrollbackFling,
-                Runnable refreshProductScrollOverlay,
-                Runnable reevaluateProductFrameLoop,
-                Consumer<String> appendEvent) {
-            return new InteractionRuntimeCallbacks(
-                    nativeLoaded,
-                    stopScrollbackFling,
-                    refreshProductScrollOverlay,
-                    reevaluateProductFrameLoop,
-                    appendEvent);
-        }
-    }
-
-    private final InteractionHostCallbacks interactionHostCallbacks;
-    private final InteractionRuntimeCallbacks interactionRuntimeCallbacks;
+    private final Supplier<Activity> activity;
+    private final Supplier<Handler> handler;
+    private final Supplier<FrameLayout> productSurfaceContainer;
+    private final IntSupplier productViewportWidthPx;
+    private final IntSupplier productViewportHeightPx;
+    private final BooleanSupplier nativeLoaded;
+    private final Runnable stopScrollbackFling;
+    private final Runnable refreshProductScrollOverlay;
+    private final Runnable reevaluateProductFrameLoop;
+    private final Consumer<String> appendEvent;
 
     public InteractionCallbacks(
-            InteractionHostCallbacks interactionHostCallbacks,
-            InteractionRuntimeCallbacks interactionRuntimeCallbacks) {
-        this.interactionHostCallbacks = interactionHostCallbacks;
-        this.interactionRuntimeCallbacks = interactionRuntimeCallbacks;
+            Supplier<Activity> activity,
+            Supplier<Handler> handler,
+            Supplier<FrameLayout> productSurfaceContainer,
+            IntSupplier productViewportWidthPx,
+            IntSupplier productViewportHeightPx,
+            BooleanSupplier nativeLoaded,
+            Runnable stopScrollbackFling,
+            Runnable refreshProductScrollOverlay,
+            Runnable reevaluateProductFrameLoop,
+            Consumer<String> appendEvent) {
+        this.activity = activity;
+        this.handler = handler;
+        this.productSurfaceContainer = productSurfaceContainer;
+        this.productViewportWidthPx = productViewportWidthPx;
+        this.productViewportHeightPx = productViewportHeightPx;
+        this.nativeLoaded = nativeLoaded;
+        this.stopScrollbackFling = stopScrollbackFling;
+        this.refreshProductScrollOverlay = refreshProductScrollOverlay;
+        this.reevaluateProductFrameLoop = reevaluateProductFrameLoop;
+        this.appendEvent = appendEvent;
     }
 
     @Override
     public Activity activity() {
-        return interactionHostCallbacks.activity.get();
+        return activity.get();
     }
 
     @Override
     public Handler handler() {
-        return interactionHostCallbacks.handler.get();
+        return handler.get();
     }
 
     @Override
     public FrameLayout productSurfaceContainer() {
-        return interactionHostCallbacks.productSurfaceContainer.get();
+        return productSurfaceContainer.get();
     }
 
     @Override
     public int productViewportWidthPx() {
-        return interactionHostCallbacks.productViewportWidthPx.getAsInt();
+        return productViewportWidthPx.getAsInt();
     }
 
     @Override
     public int productViewportHeightPx() {
-        return interactionHostCallbacks.productViewportHeightPx.getAsInt();
+        return productViewportHeightPx.getAsInt();
     }
 
     @Override
     public boolean nativeLoaded() {
-        return interactionRuntimeCallbacks.nativeLoaded.getAsBoolean();
+        return nativeLoaded.getAsBoolean();
     }
 
     @Override
     public void stopScrollbackFling() {
-        interactionRuntimeCallbacks.stopScrollbackFling.run();
+        stopScrollbackFling.run();
     }
 
     @Override
     public void refreshProductScrollOverlay() {
-        interactionRuntimeCallbacks.refreshProductScrollOverlay.run();
+        refreshProductScrollOverlay.run();
     }
 
     @Override
     public void reevaluateProductFrameLoop() {
-        interactionRuntimeCallbacks.reevaluateProductFrameLoop.run();
+        reevaluateProductFrameLoop.run();
     }
 
     @Override
     public void appendEvent(String message) {
-        interactionRuntimeCallbacks.appendEvent.accept(message);
+        appendEvent.accept(message);
     }
 }

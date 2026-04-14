@@ -226,18 +226,16 @@ public final class ZideTerminalActivity extends Activity
 
     private InteractionCallbacks createInteractionCallbacks() {
         return new InteractionCallbacks(
-                InteractionCallbacks.InteractionHostCallbacks.of(
-                        this::activityHost,
-                        this::mainHandler,
-                        () -> productSurfaceContainer,
-                        this::productViewportWidthPx,
-                        this::productViewportHeightPx),
-                InteractionCallbacks.InteractionRuntimeCallbacks.of(
-                        this::isNativeLoaded,
-                        this::stopScrollbackFlingIfReady,
-                        this::refreshProductScrollOverlayIfReady,
-                        this::reevaluateProductFrameLoopIfReady,
-                        this::appendEvent));
+                this::activityHost,
+                this::mainHandler,
+                () -> productSurfaceContainer,
+                this::productViewportWidthPx,
+                this::productViewportHeightPx,
+                this::isNativeLoaded,
+                this::stopScrollbackFlingIfReady,
+                this::refreshProductScrollOverlayIfReady,
+                this::reevaluateProductFrameLoopIfReady,
+                this::appendEvent);
     }
 
     private InputCallbacks createInputCallbacks() {
