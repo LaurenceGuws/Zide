@@ -290,13 +290,14 @@ public final class ZideTerminalActivity extends Activity
 
     private WidgetCallbacks createWidgetCallbacks() {
         return new WidgetCallbacks(
-                () -> this,
-                () -> handler,
-                () -> nativeLoaded,
-                () -> debugViewEnabled,
-                enabled -> debugViewEnabled = enabled,
-                () -> imeVisible,
-                visible -> imeVisible = visible,
+                WidgetCallbacks.WidgetHostBundle.of(
+                        () -> this,
+                        () -> handler,
+                        () -> nativeLoaded,
+                        () -> debugViewEnabled,
+                        enabled -> debugViewEnabled = enabled,
+                        () -> imeVisible,
+                        visible -> imeVisible = visible),
                 WidgetCallbacks.WidgetViewBundle.of(
                         () -> rootView,
                         () -> productView,

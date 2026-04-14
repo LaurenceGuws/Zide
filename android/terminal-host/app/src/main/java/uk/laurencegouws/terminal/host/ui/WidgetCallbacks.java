@@ -25,6 +25,51 @@ import uk.laurencegouws.terminal.userland.UserlandInstallState;
 
 /** Functional callback adapter for {@link WidgetAssembly.Host}. */
 public final class WidgetCallbacks implements WidgetAssembly.Host {
+    public static final class WidgetHostBundle {
+        final Supplier<Activity> activity;
+        final Supplier<android.os.Handler> handler;
+        final BooleanSupplier nativeLoaded;
+        final BooleanSupplier debugViewEnabled;
+        final Consumer<Boolean> setDebugViewEnabled;
+        final BooleanSupplier imeVisible;
+        final Consumer<Boolean> setImeVisible;
+
+        private WidgetHostBundle(
+                Supplier<Activity> activity,
+                Supplier<android.os.Handler> handler,
+                BooleanSupplier nativeLoaded,
+                BooleanSupplier debugViewEnabled,
+                Consumer<Boolean> setDebugViewEnabled,
+                BooleanSupplier imeVisible,
+                Consumer<Boolean> setImeVisible) {
+            this.activity = activity;
+            this.handler = handler;
+            this.nativeLoaded = nativeLoaded;
+            this.debugViewEnabled = debugViewEnabled;
+            this.setDebugViewEnabled = setDebugViewEnabled;
+            this.imeVisible = imeVisible;
+            this.setImeVisible = setImeVisible;
+        }
+
+        public static WidgetHostBundle of(
+                Supplier<Activity> activity,
+                Supplier<android.os.Handler> handler,
+                BooleanSupplier nativeLoaded,
+                BooleanSupplier debugViewEnabled,
+                Consumer<Boolean> setDebugViewEnabled,
+                BooleanSupplier imeVisible,
+                Consumer<Boolean> setImeVisible) {
+            return new WidgetHostBundle(
+                    activity,
+                    handler,
+                    nativeLoaded,
+                    debugViewEnabled,
+                    setDebugViewEnabled,
+                    imeVisible,
+                    setImeVisible);
+        }
+    }
+
     public static final class WidgetViewBundle {
         final Supplier<View> rootView;
         final Supplier<View> productView;
@@ -265,35 +310,17 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
         }
     }
 
-    private final Supplier<Activity> activity;
-    private final Supplier<android.os.Handler> handler;
-    private final BooleanSupplier nativeLoaded;
-    private final BooleanSupplier debugViewEnabled;
-    private final Consumer<Boolean> setDebugViewEnabled;
-    private final BooleanSupplier imeVisible;
-    private final Consumer<Boolean> setImeVisible;
+    private final WidgetHostBundle widgetHostBundle;
     private final WidgetViewBundle widgetViewBundle;
     private final WidgetRuntimeBundle widgetRuntimeBundle;
     private final SurfaceLifecycleBundle surfaceLifecycleBundle;
 
     public WidgetCallbacks(
-            Supplier<Activity> activity,
-            Supplier<android.os.Handler> handler,
-            BooleanSupplier nativeLoaded,
-            BooleanSupplier debugViewEnabled,
-            Consumer<Boolean> setDebugViewEnabled,
-            BooleanSupplier imeVisible,
-            Consumer<Boolean> setImeVisible,
+            WidgetHostBundle widgetHostBundle,
             WidgetViewBundle widgetViewBundle,
             WidgetRuntimeBundle widgetRuntimeBundle,
             SurfaceLifecycleBundle surfaceLifecycleBundle) {
-        this.activity = activity;
-        this.handler = handler;
-        this.nativeLoaded = nativeLoaded;
-        this.debugViewEnabled = debugViewEnabled;
-        this.setDebugViewEnabled = setDebugViewEnabled;
-        this.imeVisible = imeVisible;
-        this.setImeVisible = setImeVisible;
+        this.widgetHostBundle = widgetHostBundle;
         this.widgetViewBundle = widgetViewBundle;
         this.widgetRuntimeBundle = widgetRuntimeBundle;
         this.surfaceLifecycleBundle = surfaceLifecycleBundle;
@@ -301,37 +328,37 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
 
     @Override
     public Activity activity() {
-        return activity.get();
+        return widgetHostBundle.activity.get();
     }
 
     @Override
     public android.os.Handler handler() {
-        return handler.get();
+        return widgetHostBundle.handler.get();
     }
 
     @Override
     public boolean nativeLoaded() {
-        return nativeLoaded.getAsBoolean();
+        return widgetHostBundle.nativeLoaded.getAsBoolean();
     }
 
     @Override
     public boolean debugViewEnabled() {
-        return debugViewEnabled.getAsBoolean();
+        return widgetHostBundle.debugViewEnabled.getAsBoolean();
     }
 
     @Override
     public void setDebugViewEnabled(boolean enabled) {
-        setDebugViewEnabled.accept(enabled);
+        widgetHostBundle.setDebugViewEnabled.accept(enabled);
     }
 
     @Override
     public boolean imeVisible() {
-        return imeVisible.getAsBoolean();
+        return widgetHostBundle.imeVisible.getAsBoolean();
     }
 
     @Override
     public void setImeVisible(boolean visible) {
-        setImeVisible.accept(visible);
+        widgetHostBundle.setImeVisible.accept(visible);
     }
 
     @Override
