@@ -134,7 +134,7 @@ public final class SurfaceController {
             if (surfaceView != null) {
                 host.setSurfaceResizeScheduled(true);
                 host.handler().postDelayed(() -> {
-                    final SurfaceHolder holder = surfaceView.getHolder();
+                    final SurfaceHolder holder = holderForProductSurfaceView(surfaceView);
                     final int originalWidth = Math.max(2, surfaceView.getWidth());
                     final int originalHeight = Math.max(2, surfaceView.getHeight());
                     final int shrunkHeight = Math.max(200, originalHeight / 2);
@@ -309,7 +309,17 @@ public final class SurfaceController {
     }
 
     private void prepareSurfaceHostHolderFormat(SurfaceView surfaceView) {
-        surfaceView.getHolder().setFormat(PixelFormat.RGBA_8888);
+        holderForProductSurfaceView(surfaceView).setFormat(PixelFormat.RGBA_8888);
+    }
+
+    private SurfaceHolder holderForProductSurfaceView(SurfaceView surfaceView) {
+        return surfaceView.getHolder();
+    }
+
+    private void removeSurfaceHolderCallbackIfPresent(SurfaceView existing, SurfaceHolder.Callback2 previousCallback) {
+        if (previousCallback != null) {
+            holderForProductSurfaceView(existing).removeCallback(previousCallback);
+        }
     }
 
     private void registerProductSurfaceHostView(SurfaceView surfaceView, SurfaceHolder.Callback2 callback) {
@@ -321,7 +331,7 @@ public final class SurfaceController {
         if (shouldIgnoreVisibleViewportNotification()) {
             return;
         }
-        final boolean viewportImeVisible = host.currentImeVisible();
+        final boolean viewportImeVisible = currentImeVisibleForVisibleViewportNotify();
         final int width = visibleProductSurfaceContainerWidth();
         final int height = visibleProductSurfaceContainerHeight();
         host.setVisibleViewportSize(width, height);
@@ -349,7 +359,15 @@ public final class SurfaceController {
     }
 
     private boolean shouldIgnoreVisibleViewportNotification() {
-        return host.debugViewEnabled() || productSurfaceHostContainer().getVisibility() != View.VISIBLE;
+        return host.debugViewEnabled() || !productSurfaceHostContainerIsVisibleForViewport();
+    }
+
+    private boolean currentImeVisibleForVisibleViewportNotify() {
+        return host.currentImeVisible();
+    }
+
+    private boolean productSurfaceHostContainerIsVisibleForViewport() {
+        return productSurfaceHostContainer().getVisibility() == View.VISIBLE;
     }
 
     private void publishVisibleViewportChange(
@@ -420,9 +438,7 @@ public final class SurfaceController {
             return;
         }
         final SurfaceHolder.Callback2 previousCallback = resolveSurfaceInstallCallback(callback);
-        if (previousCallback != null) {
-            existing.getHolder().removeCallback(previousCallback);
-        }
+        removeSurfaceHolderCallbackIfPresent(existing, previousCallback);
         productSurfaceHostContainer().removeView(existing);
         appendSurfaceHostRemovedTelemetry(reason);
     }
