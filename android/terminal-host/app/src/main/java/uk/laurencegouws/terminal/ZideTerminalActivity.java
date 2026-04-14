@@ -331,15 +331,14 @@ public final class ZideTerminalActivity extends Activity
                         this::sendDirectText,
                         this::notifyVisibleViewportIfReady,
                         this::refreshUserlandSessionIfReady),
-                WidgetCallbacks.WidgetSurfaceLifecycleCallbacks.of(
-                        this::callNative,
-                        this::callNativeWithSurfaceState,
-                        this::nativeOnSurfaceAvailable,
-                        TerminalNativeBridge::nativeOnSurfaceDestroyedBridge,
-                        TerminalNativeBridge::nativeOnSurfaceRedrawNeededBridge,
-                        TerminalNativeBridge::nativeOnVisibleViewportBridge,
-                        this::currentSurfaceStateSnapshot,
-                        this::handleProductShellStateEventIfReady));
+                this::callNative,
+                this::callNativeWithSurfaceState,
+                this::nativeOnSurfaceAvailable,
+                TerminalNativeBridge::nativeOnSurfaceDestroyedBridge,
+                TerminalNativeBridge::nativeOnSurfaceRedrawNeededBridge,
+                TerminalNativeBridge::nativeOnVisibleViewportBridge,
+                this::currentSurfaceStateSnapshot,
+                this::handleProductShellStateEventIfReady);
     }
 
     private SessionAssemblyCallbacks createSessionAssemblyCallbacks() {

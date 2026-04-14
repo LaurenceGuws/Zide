@@ -260,70 +260,41 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
         }
     }
 
-    public static final class WidgetSurfaceLifecycleCallbacks {
-        final uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.NativeEventCallback callNative;
-        final uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.NativeSurfaceEventCallback callNativeWithSurfaceState;
-        final uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.SurfaceAvailableCallback nativeOnSurfaceAvailableBridge;
-        final uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceDestroyedBridge;
-        final uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceRedrawNeededBridge;
-        final uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.VisibleViewportCallback nativeOnVisibleViewportBridge;
-        final Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot;
-        final Consumer<String> handleProductShellStateEvent;
-
-        private WidgetSurfaceLifecycleCallbacks(
-                uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.NativeEventCallback callNative,
-                uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.NativeSurfaceEventCallback callNativeWithSurfaceState,
-                uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.SurfaceAvailableCallback nativeOnSurfaceAvailableBridge,
-                uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceDestroyedBridge,
-                uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceRedrawNeededBridge,
-                uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.VisibleViewportCallback nativeOnVisibleViewportBridge,
-                Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot,
-                Consumer<String> handleProductShellStateEvent) {
-            this.callNative = callNative;
-            this.callNativeWithSurfaceState = callNativeWithSurfaceState;
-            this.nativeOnSurfaceAvailableBridge = nativeOnSurfaceAvailableBridge;
-            this.nativeOnSurfaceDestroyedBridge = nativeOnSurfaceDestroyedBridge;
-            this.nativeOnSurfaceRedrawNeededBridge = nativeOnSurfaceRedrawNeededBridge;
-            this.nativeOnVisibleViewportBridge = nativeOnVisibleViewportBridge;
-            this.currentSurfaceStateSnapshot = currentSurfaceStateSnapshot;
-            this.handleProductShellStateEvent = handleProductShellStateEvent;
-        }
-
-        public static WidgetSurfaceLifecycleCallbacks of(
-                uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.NativeEventCallback callNative,
-                uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.NativeSurfaceEventCallback callNativeWithSurfaceState,
-                uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.SurfaceAvailableCallback nativeOnSurfaceAvailableBridge,
-                uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceDestroyedBridge,
-                uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceRedrawNeededBridge,
-                uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.VisibleViewportCallback nativeOnVisibleViewportBridge,
-                Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot,
-                Consumer<String> handleProductShellStateEvent) {
-            return new WidgetSurfaceLifecycleCallbacks(
-                    callNative,
-                    callNativeWithSurfaceState,
-                    nativeOnSurfaceAvailableBridge,
-                    nativeOnSurfaceDestroyedBridge,
-                    nativeOnSurfaceRedrawNeededBridge,
-                    nativeOnVisibleViewportBridge,
-                    currentSurfaceStateSnapshot,
-                    handleProductShellStateEvent);
-        }
-    }
-
     private final WidgetHostCallbacks widgetHostCallbacks;
     private final WidgetViewCallbacks widgetViewCallbacks;
     private final WidgetRuntimeCallbacks widgetRuntimeCallbacks;
-    private final WidgetSurfaceLifecycleCallbacks surfaceLifecycleCallbacks;
+    private final uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.NativeEventCallback callNative;
+    private final uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.NativeSurfaceEventCallback callNativeWithSurfaceState;
+    private final uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.SurfaceAvailableCallback nativeOnSurfaceAvailableBridge;
+    private final uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceDestroyedBridge;
+    private final uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceRedrawNeededBridge;
+    private final uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.VisibleViewportCallback nativeOnVisibleViewportBridge;
+    private final Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot;
+    private final Consumer<String> handleProductShellStateEvent;
 
     public WidgetCallbacks(
             WidgetHostCallbacks widgetHostCallbacks,
             WidgetViewCallbacks widgetViewCallbacks,
             WidgetRuntimeCallbacks widgetRuntimeCallbacks,
-            WidgetSurfaceLifecycleCallbacks surfaceLifecycleCallbacks) {
+            uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.NativeEventCallback callNative,
+            uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.NativeSurfaceEventCallback callNativeWithSurfaceState,
+            uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.SurfaceAvailableCallback nativeOnSurfaceAvailableBridge,
+            uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceDestroyedBridge,
+            uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceRedrawNeededBridge,
+            uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.VisibleViewportCallback nativeOnVisibleViewportBridge,
+            Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot,
+            Consumer<String> handleProductShellStateEvent) {
         this.widgetHostCallbacks = widgetHostCallbacks;
         this.widgetViewCallbacks = widgetViewCallbacks;
         this.widgetRuntimeCallbacks = widgetRuntimeCallbacks;
-        this.surfaceLifecycleCallbacks = surfaceLifecycleCallbacks;
+        this.callNative = callNative;
+        this.callNativeWithSurfaceState = callNativeWithSurfaceState;
+        this.nativeOnSurfaceAvailableBridge = nativeOnSurfaceAvailableBridge;
+        this.nativeOnSurfaceDestroyedBridge = nativeOnSurfaceDestroyedBridge;
+        this.nativeOnSurfaceRedrawNeededBridge = nativeOnSurfaceRedrawNeededBridge;
+        this.nativeOnVisibleViewportBridge = nativeOnVisibleViewportBridge;
+        this.currentSurfaceStateSnapshot = currentSurfaceStateSnapshot;
+        this.handleProductShellStateEvent = handleProductShellStateEvent;
     }
 
     @Override
@@ -493,42 +464,42 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
 
     @Override
     public void callNative(String event, long seq) {
-        surfaceLifecycleCallbacks.callNative.call(event, seq);
+        callNative.call(event, seq);
     }
 
     @Override
     public void callNativeWithSurfaceState(String event, long seq, AndroidDebugFormatter.SurfaceEventSnapshot state) {
-        surfaceLifecycleCallbacks.callNativeWithSurfaceState.call(event, seq, state);
+        callNativeWithSurfaceState.call(event, seq, state);
     }
 
     @Override
     public long nativeOnSurfaceAvailableBridge(SurfaceHolder holder, int width, int height) {
-        return surfaceLifecycleCallbacks.nativeOnSurfaceAvailableBridge.call(holder, width, height);
+        return nativeOnSurfaceAvailableBridge.call(holder, width, height);
     }
 
     @Override
     public long nativeOnSurfaceDestroyedBridge() {
-        return surfaceLifecycleCallbacks.nativeOnSurfaceDestroyedBridge.getAsLong();
+        return nativeOnSurfaceDestroyedBridge.getAsLong();
     }
 
     @Override
     public long nativeOnSurfaceRedrawNeededBridge() {
-        return surfaceLifecycleCallbacks.nativeOnSurfaceRedrawNeededBridge.getAsLong();
+        return nativeOnSurfaceRedrawNeededBridge.getAsLong();
     }
 
     @Override
     public long nativeOnVisibleViewportBridge(int width, int height, boolean imeVisible) {
-        return surfaceLifecycleCallbacks.nativeOnVisibleViewportBridge.call(width, height, imeVisible);
+        return nativeOnVisibleViewportBridge.call(width, height, imeVisible);
     }
 
     @Override
     public AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot() {
-        return surfaceLifecycleCallbacks.currentSurfaceStateSnapshot.get();
+        return currentSurfaceStateSnapshot.get();
     }
 
     @Override
     public void handleProductShellStateEvent(String statusLabel) {
-        surfaceLifecycleCallbacks.handleProductShellStateEvent.accept(statusLabel);
+        handleProductShellStateEvent.accept(statusLabel);
     }
 
     @Override
