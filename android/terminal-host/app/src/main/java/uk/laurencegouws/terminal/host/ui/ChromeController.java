@@ -102,9 +102,7 @@ public final class ChromeController {
         host.appendEvent("manual.ime.open focusAfterRequest=" + shellInputView.hasFocus());
         imm.restartInput(shellInputView);
         final boolean shown = imm.showSoftInput(shellInputView, InputMethodManager.SHOW_IMPLICIT);
-        host.setImeVisible(shown || shellInputView.hasFocus());
-        host.appendEvent("manual.ime.open shown=" + shown + " focus=" + shellInputView.hasFocus());
-        host.updateStatus("ime.state.shown");
+        recordImeOpenStatus(shown, shellInputView);
     }
 
     public void closeIme() {
@@ -113,9 +111,7 @@ public final class ChromeController {
             return;
         }
         final boolean hidden = imm.hideSoftInputFromWindow(host.shellInputView().getWindowToken(), 0);
-        host.setImeVisible(false);
-        host.appendEvent("manual.ime.close hidden=" + hidden);
-        host.updateStatus("ime.state.hidden");
+        recordImeCloseStatus(hidden);
     }
 
     public void toggleIme() {
@@ -130,8 +126,8 @@ public final class ChromeController {
         if (host.sidebarOpen() || host.debugViewEnabled()) {
             return;
         }
-        host.setSidebarOpen(true);
-        host.leftSidebar().animate().translationX(0).setDuration(180).start();
+        setSidebarOpen(true);
+        animateSidebarTranslation(0);
         updateSidebarVisibility(true);
     }
 
@@ -139,8 +135,8 @@ public final class ChromeController {
         if (!host.sidebarOpen()) {
             return;
         }
-        host.setSidebarOpen(false);
-        host.leftSidebar().animate().translationX(-host.leftSidebar().getWidth()).setDuration(180).start();
+        setSidebarOpen(false);
+        animateSidebarTranslation(-host.leftSidebar().getWidth());
         updateSidebarVisibility(false);
     }
 
@@ -181,6 +177,26 @@ public final class ChromeController {
         if (!shellInputView.hasFocus()) {
             shellInputView.requestFocus();
         }
+    }
+
+    private void setSidebarOpen(boolean open) {
+        host.setSidebarOpen(open);
+    }
+
+    private void animateSidebarTranslation(float x) {
+        host.leftSidebar().animate().translationX(x).setDuration(180).start();
+    }
+
+    private void recordImeOpenStatus(boolean shown, ShellInputView shellInputView) {
+        host.setImeVisible(shown || shellInputView.hasFocus());
+        host.appendEvent("manual.ime.open shown=" + shown + " focus=" + shellInputView.hasFocus());
+        host.updateStatus("ime.state.shown");
+    }
+
+    private void recordImeCloseStatus(boolean hidden) {
+        host.setImeVisible(false);
+        host.appendEvent("manual.ime.close hidden=" + hidden);
+        host.updateStatus("ime.state.hidden");
     }
 
     private final class EdgeSwipeListener implements View.OnTouchListener {
