@@ -48,10 +48,12 @@ For active priorities/workflow, use
 
 Current shape markers (for hygiene tracking, not hard limits):
 
-- `ZideTerminalActivity.java`: `654` lines
+- `ZideTerminalActivity.java`: `615` lines
 - `host/TerminalChromeHostFactory.java`: `69` lines
 - `host/TerminalInteractionHostFactory.java`: `131` lines
 - `host/TerminalInputHostFactory.java`: `56` lines
+- `host/TerminalInteractionAssembly.java`: `108` lines
+- `host/TerminalInteractionAssemblyHostCallbacks.java`: `97` lines
 - `host/TerminalInputAssembly.java`: `93` lines
 - `host/TerminalInputAssemblyHostCallbacks.java`: `106` lines
 - `host/TerminalSurfaceHostFactory.java`: `67` lines
@@ -72,7 +74,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 
 | File | Contract Fit | Size/Shape | Next Pressure |
 | --- | --- | --- | --- |
-| `ZideTerminalActivity.java` | Partial | Thinner and wiring-oriented. JNI declarations remain out and both status/view wiring and widget/chrome/view-mode/surface assembly now live in dedicated host assemblies. Remaining pressure is orchestration density rather than direct policy ownership. | Continue extracting only where orchestration density obscures ownership boundaries or increases coupling. |
+| `ZideTerminalActivity.java` | Partial | Thinner and wiring-oriented. JNI declarations remain out and status/view, interaction, and widget/chrome/view-mode/surface wiring now live in dedicated host assemblies. Remaining pressure is orchestration density rather than direct policy ownership. | Continue extracting only where orchestration density obscures ownership boundaries or increases coupling. |
 | `TerminalNativeBridge.java` | Good | Owns JNI library load state and native bridge declarations for the terminal host. | Keep this focused on JNI surface only; do not move Android policy or lifecycle behavior into it. |
 | `debug/AndroidDebugFormatter.java` | Good | Pure formatter plus snapshot values. Large constructor surface is acceptable for debug-only snapshots. | Split snapshot values only if formatter starts owning state or capture policy. |
 | `debug/TerminalNativeStatusLabels.java` | Good | Owns native status-enum label mapping for debug/operator text. | Keep as pure mapping; avoid embedding behavior/policy. |
@@ -92,6 +94,8 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/TerminalActivityViewBindings.java` | Good | Owns raw activity view lookup and typed binding capture for terminal host wiring. | Keep this as lookup-only data binding; no policy or runtime behavior. |
 | `host/TerminalChromeHostFactory.java` | Good | Owns chrome-specific bridge/callback construction so chrome assembly does not inflate the generic host assembler. | Keep this construction-only; do not move chrome behavior out of `TerminalChromeController`. |
 | `host/TerminalInteractionHostFactory.java` | Good | Owns selection/gesture interaction controller construction so interaction seams stay out of the generic host assembler. | Keep this construction-only; interaction behavior remains in selection/gesture controllers. |
+| `host/TerminalInteractionAssembly.java` | Good | Owns interaction controller assembly wiring (selection + gesture state) for activity startup. | Keep this assembly-only; behavior stays in interaction controllers. |
+| `host/TerminalInteractionAssemblyHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalInteractionAssembly`. | Keep adapter-only; avoid moving interaction behavior into this adapter. |
 | `host/TerminalInputHostFactory.java` | Good | Owns hardware-keyboard and IME-focus-recovery controller construction so input seams stay out of generic host assembly. | Keep this construction-only; input behavior remains in `input/` controllers. |
 | `host/TerminalInputAssembly.java` | Good | Owns input-view installation and input-controller assembly composition for the activity wiring layer. | Keep this assembly-only; input behavior remains in `input/` controllers. |
 | `host/TerminalInputAssemblyHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalInputAssembly`. | Keep adapter-only; avoid adding input behavior here. |

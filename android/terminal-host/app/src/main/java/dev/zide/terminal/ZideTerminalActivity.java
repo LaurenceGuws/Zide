@@ -72,6 +72,8 @@ import dev.zide.terminal.host.TerminalSurfaceHostLifecycleCallbacks;
 import dev.zide.terminal.host.TerminalStatusViewAssemblyHostCallbacks;
 import dev.zide.terminal.host.TerminalWidgetHostAssembly;
 import dev.zide.terminal.host.TerminalWidgetHostAssemblyHostCallbacks;
+import dev.zide.terminal.host.TerminalInteractionAssembly;
+import dev.zide.terminal.host.TerminalInteractionAssemblyHostCallbacks;
 import dev.zide.terminal.debug.TerminalNativeStatusLabels;
 import dev.zide.terminal.debug.TerminalStatusController;
 import dev.zide.terminal.debug.TerminalSurfaceStateSnapshotReader;
@@ -157,77 +159,7 @@ public final class ZideTerminalActivity extends Activity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         initializeStatusAndViewControllers();
-        selectionController = TerminalInteractionHostFactory.createSelectionController(
-                this,
-                productSurfaceContainer,
-                this::productViewportWidthPx,
-                this::productViewportHeightPx,
-                () -> {
-                    if (terminalProductRuntimeController != null) {
-                        terminalProductRuntimeController.stopScrollbackFling();
-                    }
-                },
-                () -> {
-                    if (terminalProductRuntimeController != null) {
-                        terminalProductRuntimeController.refreshProductScrollOverlay();
-                    }
-                },
-                () -> {
-                    if (productFrameLoopController != null) {
-                        productFrameLoopController.reevaluate();
-                    }
-                },
-                this::appendEvent,
-                () -> nativeLoaded,
-                TerminalNativeBridge::nativeBeginShellWordSelectionAtVisibleCellBridge,
-                TerminalNativeBridge::nativeExtendShellSelectionGestureToVisibleCellBridge,
-                TerminalNativeBridge::nativeFinishShellSelectionGestureBridge,
-                TerminalNativeBridge::nativeClearShellSelectionBridge,
-                TerminalNativeBridge::nativeUpdateShellSelectionStartAtVisibleCellBridge,
-                TerminalNativeBridge::nativeUpdateShellSelectionEndAtVisibleCellBridge,
-                TerminalNativeBridge::nativeCurrentShellSelectionActiveBridge,
-                TerminalNativeBridge::nativeCurrentShellSelectionRectLeftBridge,
-                TerminalNativeBridge::nativeCurrentShellSelectionRectTopBridge,
-                TerminalNativeBridge::nativeCurrentShellSelectionRectRightBridge,
-                TerminalNativeBridge::nativeCurrentShellSelectionRectBottomBridge,
-                TerminalNativeBridge::nativeCurrentShellSelectionStartRectLeftBridge,
-                TerminalNativeBridge::nativeCurrentShellSelectionStartRectTopBridge,
-                TerminalNativeBridge::nativeCurrentShellSelectionStartRectRightBridge,
-                TerminalNativeBridge::nativeCurrentShellSelectionStartRectBottomBridge,
-                TerminalNativeBridge::nativeCurrentShellSelectionEndRectLeftBridge,
-                TerminalNativeBridge::nativeCurrentShellSelectionEndRectTopBridge,
-                TerminalNativeBridge::nativeCurrentShellSelectionEndRectRightBridge,
-                TerminalNativeBridge::nativeCurrentShellSelectionEndRectBottomBridge,
-                TerminalNativeBridge::nativeCurrentShellSelectionTextBytesBridge,
-                TerminalNativeBridge::nativeCurrentShellVisibleRowsBridge,
-                TerminalNativeBridge::nativeCurrentShellVisibleColsBridge,
-                TerminalNativeBridge::nativeCurrentShellScrollbackCountBridge,
-                TerminalNativeBridge::nativeCurrentShellScrollbackOffsetBridge,
-                TerminalNativeBridge::nativeSetShellScrollbackOffsetBridge,
-                TerminalNativeBridge::nativeFollowShellLiveBottomBridge);
-        selectionController.install();
-        terminalGestureStateController = TerminalInteractionHostFactory.createGestureStateController(
-                this,
-                handler,
-                () -> nativeLoaded,
-                TerminalNativeBridge::nativeCurrentShellVisibleRowsBridge,
-                this::productViewportHeightPx,
-                TerminalNativeBridge::nativeCurrentShellScrollbackCountBridge,
-                TerminalNativeBridge::nativeCurrentShellScrollbackOffsetBridge,
-                TerminalNativeBridge::nativeSetShellScrollbackOffsetBridge,
-                TerminalNativeBridge::nativeFollowShellLiveBottomBridge,
-                TerminalNativeBridge::nativeApplyTerminalPinchZoomBridge,
-                TerminalNativeBridge::nativeSetTerminalPinchActiveBridge,
-                () -> {
-                    if (terminalProductRuntimeController != null) {
-                        terminalProductRuntimeController.refreshProductScrollOverlay();
-                    }
-                },
-                () -> {
-                    if (productFrameLoopController != null) {
-                        productFrameLoopController.reevaluate();
-                    }
-                });
+        assembleInteractionControllers();
         terminalRuntimeAssetsController = new TerminalRuntimeAssetsController(
                 new TerminalRuntimeAssetsHostBridge(
                         this,
@@ -389,6 +321,35 @@ public final class ZideTerminalActivity extends Activity
         terminalStatusHostBridge = result.terminalStatusHostBridge;
         terminalStatusController = result.terminalStatusController;
         terminalViewportController = result.terminalViewportController;
+    }
+
+    private void assembleInteractionControllers() {
+        final TerminalInteractionAssembly.Result result = TerminalInteractionAssembly.assemble(
+                new TerminalInteractionAssemblyHostCallbacks(
+                        () -> this,
+                        () -> handler,
+                        () -> productSurfaceContainer,
+                        this::productViewportWidthPx,
+                        this::productViewportHeightPx,
+                        () -> nativeLoaded,
+                        () -> {
+                            if (terminalProductRuntimeController != null) {
+                                terminalProductRuntimeController.stopScrollbackFling();
+                            }
+                        },
+                        () -> {
+                            if (terminalProductRuntimeController != null) {
+                                terminalProductRuntimeController.refreshProductScrollOverlay();
+                            }
+                        },
+                        () -> {
+                            if (productFrameLoopController != null) {
+                                productFrameLoopController.reevaluate();
+                            }
+                        },
+                        this::appendEvent));
+        selectionController = result.selectionController;
+        terminalGestureStateController = result.terminalGestureStateController;
     }
 
     private void installInputControllers() {
