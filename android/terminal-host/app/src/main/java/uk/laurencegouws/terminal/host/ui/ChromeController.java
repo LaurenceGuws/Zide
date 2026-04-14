@@ -72,15 +72,7 @@ public final class ChromeController {
 
     public void bindAssistBar() {
         final View root = host.shellInputView().getRootView();
-        final int imeButtonId =
-                root.getResources().getIdentifier("assist_ime_button", "id", root.getContext().getPackageName());
-        final Button imeButton = imeButtonId != 0 ? root.findViewById(imeButtonId) : null;
-        if (imeButton != null) {
-            imeButton.setOnClickListener(view -> {
-                toggleIme();
-                host.appendEvent("assist.ime.toggle");
-            });
-        }
+        bindAssistImeToggleIfPresent(root);
         host.bindModifierAssistButton(host.assistCtrlButton(), ShellInputView.ModifierLatch.CTRL, "assist.ctrl");
         host.bindModifierAssistButton(host.assistAltButton(), ShellInputView.ModifierLatch.ALT, "assist.alt");
         host.bindAssistButton(uk.laurencegouws.terminal.R.id.assist_esc_button, "\u001b", "assist.esc");
@@ -92,6 +84,20 @@ public final class ChromeController {
         host.bindAssistButton(uk.laurencegouws.terminal.R.id.assist_left_button, "\u001b[D", "assist.left");
         host.bindAssistButton(uk.laurencegouws.terminal.R.id.assist_right_button, "\u001b[C", "assist.right");
         host.applyModifierLatchState(host.shellInputView().modifierLatchState());
+    }
+
+    /** Binds optional assist-row IME toggle when the view id exists in the assist layout. */
+    private void bindAssistImeToggleIfPresent(View root) {
+        final int imeButtonId =
+                root.getResources().getIdentifier("assist_ime_button", "id", root.getContext().getPackageName());
+        final Button imeButton = imeButtonId != 0 ? root.findViewById(imeButtonId) : null;
+        if (imeButton == null) {
+            return;
+        }
+        imeButton.setOnClickListener(view -> {
+            toggleIme();
+            host.appendEvent("assist.ime.toggle");
+        });
     }
 
     public void applyModifierLatchState(ShellInputView.Host.ModifierLatchState state) {
