@@ -114,8 +114,10 @@ public final class SurfaceController {
     }
 
     public void onSurfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-        host.appendEvent(surfaceChangedEvent(format, width, height));
-        final long seq = nativeSurfaceAvailableSeq(holder, width, height);
+        host.appendEvent("surface.changed generation=" + host.surfaceHostGeneration()
+                + " format=" + format
+                + " size=" + width + "x" + height);
+        final long seq = host.nativeLoaded() ? host.nativeOnSurfaceAvailableBridge(holder, width, height) : -1;
         host.callNativeWithSurfaceState(
                 "native.surfaceAvailable",
                 seq,
@@ -126,7 +128,7 @@ public final class SurfaceController {
 
     public void onSurfaceDestroyed(SurfaceHolder holder) {
         host.appendEvent("surface.lifecycle.destroyed generation=" + host.surfaceHostGeneration());
-        final long seq = nativeSurfaceDestroyedSeq();
+        final long seq = host.nativeLoaded() ? host.nativeOnSurfaceDestroyedBridge() : -1;
         host.callNativeWithSurfaceState(
                 "native.surfaceDestroyed",
                 seq,
@@ -143,7 +145,7 @@ public final class SurfaceController {
         host.appendEvent(
                 "surface.redrawNeeded generation=" + host.surfaceHostGeneration() + " valid=" + holder.getSurface().isValid());
         try {
-            final long seq = nativeSurfaceRedrawNeededSeq();
+            final long seq = host.nativeLoaded() ? host.nativeOnSurfaceRedrawNeededBridge() : -1;
             final AndroidDebugFormatter.SurfaceEventSnapshot state = host.currentSurfaceStateSnapshot();
             appendNativeSurfaceRedrawNeededEvent(seq, state);
             host.updateStatus("surface.state.redraw_needed");
@@ -271,24 +273,6 @@ public final class SurfaceController {
 
     private SurfaceHolder.Callback2 resolveSurfaceCallback(SurfaceHolder.Callback2 callback) {
         return callback != null ? callback : host.surfaceCallback();
-    }
-
-    private String surfaceChangedEvent(int format, int width, int height) {
-        return "surface.changed generation=" + host.surfaceHostGeneration()
-                + " format=" + format
-                + " size=" + width + "x" + height;
-    }
-
-    private long nativeSurfaceAvailableSeq(SurfaceHolder holder, int width, int height) {
-        return host.nativeLoaded() ? host.nativeOnSurfaceAvailableBridge(holder, width, height) : -1;
-    }
-
-    private long nativeSurfaceDestroyedSeq() {
-        return host.nativeLoaded() ? host.nativeOnSurfaceDestroyedBridge() : -1;
-    }
-
-    private long nativeSurfaceRedrawNeededSeq() {
-        return host.nativeLoaded() ? host.nativeOnSurfaceRedrawNeededBridge() : -1;
     }
 
     private long nativeViewportChangedSeq(int width, int height, boolean imeVisible) {
