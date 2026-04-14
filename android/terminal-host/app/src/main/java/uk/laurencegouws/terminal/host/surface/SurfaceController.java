@@ -98,9 +98,52 @@ public final class SurfaceController {
     }
 
     public void onResume(boolean recreateSurfaceOnce, boolean resizeSurfaceOnce, boolean startShellOnce) {
-        maybeScheduleSurfaceRecreation(recreateSurfaceOnce);
-        maybeScheduleSurfaceResize(resizeSurfaceOnce);
-        maybeScheduleShellStart(startShellOnce);
+        host.appendEvent("debug.surface.recreate requested=" + recreateSurfaceOnce + " scheduled=" + host.surfaceRecreationScheduled());
+        if (recreateSurfaceOnce && !host.surfaceRecreationScheduled()) {
+            host.setSurfaceRecreationScheduled(true);
+            host.productSurfaceContainer().postDelayed(() -> {
+                host.appendEvent("debug.surface.recreate_view");
+                installSurfaceView("debug-recreate", null);
+                host.updateStatus("debug.surface.recreated");
+            }, 700);
+        }
+
+        host.appendEvent("debug.surface.resize requested=" + resizeSurfaceOnce + " scheduled=" + host.surfaceResizeScheduled());
+        if (resizeSurfaceOnce && !host.surfaceResizeScheduled()) {
+            final SurfaceView surfaceView = host.surfaceView();
+            if (surfaceView != null) {
+                host.setSurfaceResizeScheduled(true);
+                host.handler().postDelayed(() -> {
+                    final SurfaceHolder holder = surfaceView.getHolder();
+                    final int originalWidth = Math.max(2, surfaceView.getWidth());
+                    final int originalHeight = Math.max(2, surfaceView.getHeight());
+                    final int shrunkHeight = Math.max(200, originalHeight / 2);
+                    holder.setFixedSize(originalWidth, shrunkHeight);
+                    host.appendEvent(
+                            "debug.surface.resize fixedSize=" + originalWidth + "x" + shrunkHeight
+                                    + " original=" + originalWidth + "x" + originalHeight
+                                    + " target=surfaceHolder");
+                    host.updateStatus("debug.surface.resized_shrink");
+
+                    host.handler().postDelayed(() -> {
+                        holder.setFixedSize(originalWidth, originalHeight);
+                        host.appendEvent(
+                                "debug.surface.resize restoreSize=" + originalWidth + "x" + originalHeight
+                                        + " target=surfaceHolder");
+                        host.updateStatus("debug.surface.resized_restore");
+                    }, 900);
+                }, 900);
+            }
+        }
+
+        host.appendEvent("debug.session.start requested=" + startShellOnce + " scheduled=" + host.shellStartScheduled());
+        if (startShellOnce && !host.shellStartScheduled()) {
+            host.setShellStartScheduled(true);
+            host.handler().postDelayed(() -> {
+                host.handleProductShellStateEvent("debug-session-started");
+            }, 900);
+        }
+
         host.handleProductShellStateEvent("resumed");
     }
 
@@ -216,62 +259,6 @@ public final class SurfaceController {
         host.callNativeWithSurfaceState("native.viewportChanged", seq, host.currentSurfaceStateSnapshot());
         host.refreshProductScrollOverlay();
         host.updateStatus("viewport.state.updated");
-    }
-
-    private void maybeScheduleSurfaceRecreation(boolean recreateSurfaceOnce) {
-        host.appendEvent("debug.surface.recreate requested=" + recreateSurfaceOnce + " scheduled=" + host.surfaceRecreationScheduled());
-        if (!recreateSurfaceOnce || host.surfaceRecreationScheduled()) {
-            return;
-        }
-        host.setSurfaceRecreationScheduled(true);
-        host.productSurfaceContainer().postDelayed(() -> {
-            host.appendEvent("debug.surface.recreate_view");
-            installSurfaceView("debug-recreate", null);
-            host.updateStatus("debug.surface.recreated");
-        }, 700);
-    }
-
-    private void maybeScheduleSurfaceResize(boolean resizeSurfaceOnce) {
-        host.appendEvent("debug.surface.resize requested=" + resizeSurfaceOnce + " scheduled=" + host.surfaceResizeScheduled());
-        if (!resizeSurfaceOnce || host.surfaceResizeScheduled()) {
-            return;
-        }
-        final SurfaceView surfaceView = host.surfaceView();
-        if (surfaceView == null) {
-            return;
-        }
-        host.setSurfaceResizeScheduled(true);
-        host.handler().postDelayed(() -> {
-            final SurfaceHolder holder = surfaceView.getHolder();
-            final int originalWidth = Math.max(2, surfaceView.getWidth());
-            final int originalHeight = Math.max(2, surfaceView.getHeight());
-            final int shrunkHeight = Math.max(200, originalHeight / 2);
-            holder.setFixedSize(originalWidth, shrunkHeight);
-            host.appendEvent(
-                    "debug.surface.resize fixedSize=" + originalWidth + "x" + shrunkHeight
-                            + " original=" + originalWidth + "x" + originalHeight
-                            + " target=surfaceHolder");
-            host.updateStatus("debug.surface.resized_shrink");
-
-            host.handler().postDelayed(() -> {
-                holder.setFixedSize(originalWidth, originalHeight);
-                host.appendEvent(
-                        "debug.surface.resize restoreSize=" + originalWidth + "x" + originalHeight
-                                + " target=surfaceHolder");
-                host.updateStatus("debug.surface.resized_restore");
-            }, 900);
-        }, 900);
-    }
-
-    private void maybeScheduleShellStart(boolean startShellOnce) {
-        host.appendEvent("debug.session.start requested=" + startShellOnce + " scheduled=" + host.shellStartScheduled());
-        if (!startShellOnce || host.shellStartScheduled()) {
-            return;
-        }
-        host.setShellStartScheduled(true);
-        host.handler().postDelayed(() -> {
-            host.handleProductShellStateEvent("debug-session-started");
-        }, 900);
     }
 
 }
