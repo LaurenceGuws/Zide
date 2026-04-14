@@ -107,7 +107,7 @@ A cut is done only if all are true:
 - interaction activity wiring now composes through
   `host/TerminalInteractionAssembly` + `TerminalInteractionAssemblyHostCallbacks`
 - widget/chrome/view-mode/surface activity wiring now composes through
-  `host/TerminalWidgetHostAssembly` + `TerminalWidgetHostAssemblyHostCallbacks`
+  `host/ui/WidgetAssembly` + `WidgetCallbacks`
 - userland runtime-assets/workflow startup activity wiring now composes through
   `host/userland/WorkflowAssembly` + `WorkflowAssemblyCallbacks`
 - product-runtime controller startup activity wiring now composes through

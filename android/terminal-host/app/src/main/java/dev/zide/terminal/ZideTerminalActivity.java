@@ -36,10 +36,10 @@ import dev.zide.terminal.host.TerminalSurfaceHostController;
 import dev.zide.terminal.host.TerminalSurfaceWidgetController;
 import dev.zide.terminal.host.TerminalViewModeController;
 import dev.zide.terminal.host.TerminalViewportController;
-import dev.zide.terminal.host.TerminalWidgetHostAssembly;
-import dev.zide.terminal.host.TerminalWidgetHostAssemblyHostCallbacks;
 import dev.zide.terminal.host.ui.UiStartupAssembly;
 import dev.zide.terminal.host.ui.UiStartupCallbacks;
+import dev.zide.terminal.host.ui.WidgetAssembly;
+import dev.zide.terminal.host.ui.WidgetCallbacks;
 import dev.zide.terminal.host.userland.WorkflowAssembly;
 import dev.zide.terminal.host.userland.WorkflowAssemblyCallbacks;
 import dev.zide.terminal.input.ShellInputView;
@@ -274,8 +274,8 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void assembleWidgetHostControllers() {
-        final TerminalWidgetHostAssembly.Result result = TerminalWidgetHostAssembly.assemble(
-                new TerminalWidgetHostAssemblyHostCallbacks(
+        final WidgetAssembly.Result result = WidgetAssembly.assemble(
+                new WidgetCallbacks(
                         () -> this,
                         () -> handler,
                         () -> nativeLoaded,

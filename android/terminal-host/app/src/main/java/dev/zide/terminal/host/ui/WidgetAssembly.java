@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.ui;
 
 import android.app.Activity;
 import android.view.SurfaceHolder;
@@ -12,6 +12,16 @@ import dev.zide.terminal.TerminalNativeBridge;
 import dev.zide.terminal.debug.AndroidDebugFormatter;
 import dev.zide.terminal.gesture.ProductGestureController;
 import dev.zide.terminal.gesture.TerminalGestureStateController;
+import dev.zide.terminal.host.TerminalChromeController;
+import dev.zide.terminal.host.TerminalChromeHostFactory;
+import dev.zide.terminal.host.TerminalSurfaceHostBridge;
+import dev.zide.terminal.host.TerminalSurfaceHostController;
+import dev.zide.terminal.host.TerminalSurfaceWidgetAssembly;
+import dev.zide.terminal.host.TerminalSurfaceWidgetAssemblyHostCallbacks;
+import dev.zide.terminal.host.TerminalSurfaceWidgetController;
+import dev.zide.terminal.host.TerminalUiHostFactory;
+import dev.zide.terminal.host.TerminalViewModeController;
+import dev.zide.terminal.host.TerminalViewModeHostCallbacks;
 import dev.zide.terminal.host.userland.ProductShellStateBridge;
 import dev.zide.terminal.host.userland.ProductShellStateCallbacks;
 import dev.zide.terminal.input.ShellInputView;
@@ -22,7 +32,7 @@ import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandInstallState;
 
 /** Owns product widget/chrome/view-mode/surface host assembly for activity wiring. */
-public final class TerminalWidgetHostAssembly {
+public final class WidgetAssembly {
     /** Activity callbacks required to assemble widget host controllers. */
     public interface Host {
         Activity activity();
@@ -152,7 +162,7 @@ public final class TerminalWidgetHostAssembly {
         }
     }
 
-    private TerminalWidgetHostAssembly() {
+    private WidgetAssembly() {
     }
 
     public static Result assemble(Host host) {

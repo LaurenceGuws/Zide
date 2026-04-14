@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.ui;
 
 import android.app.Activity;
 import android.view.SurfaceHolder;
@@ -15,14 +15,16 @@ import java.util.function.Supplier;
 
 import dev.zide.terminal.debug.AndroidDebugFormatter;
 import dev.zide.terminal.gesture.TerminalGestureStateController;
+import dev.zide.terminal.host.TerminalSurfaceHostBridge;
+import dev.zide.terminal.host.TerminalSurfaceHostLifecycleCallbacks;
 import dev.zide.terminal.input.ShellInputView;
 import dev.zide.terminal.scroll.TerminalScrollOverlayView;
 import dev.zide.terminal.selection.TerminalSelectionController;
 import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandInstallState;
 
-/** Functional callback adapter for {@link TerminalWidgetHostAssembly.Host}. */
-public final class TerminalWidgetHostAssemblyHostCallbacks implements TerminalWidgetHostAssembly.Host {
+/** Functional callback adapter for {@link WidgetAssembly.Host}. */
+public final class WidgetCallbacks implements WidgetAssembly.Host {
     private final Supplier<Activity> activity;
     private final Supplier<android.os.Handler> handler;
     private final BooleanSupplier nativeLoaded;
@@ -73,7 +75,7 @@ public final class TerminalWidgetHostAssemblyHostCallbacks implements TerminalWi
     private final Consumer<String> notifyVisibleViewport;
     private final Runnable refreshUserlandSession;
 
-    public TerminalWidgetHostAssemblyHostCallbacks(
+    public WidgetCallbacks(
             Supplier<Activity> activity,
             Supplier<android.os.Handler> handler,
             BooleanSupplier nativeLoaded,

@@ -74,8 +74,8 @@ Current shape markers (for hygiene tracking, not hard limits):
 - `host/session/SessionAssemblyCallbacks.java`: `131` lines
 - `host/status/StatusViewAssembly.java`: `182` lines
 - `host/status/StatusViewCallbacks.java`: `107` lines
-- `host/TerminalWidgetHostAssembly.java`: `278` lines
-- `host/TerminalWidgetHostAssemblyHostCallbacks.java`: `421` lines
+- `host/ui/WidgetAssembly.java`: `290` lines
+- `host/ui/WidgetCallbacks.java`: `423` lines
 - `host/userland/WorkflowAssembly.java`: `87` lines
 - `host/userland/WorkflowAssemblyCallbacks.java`: `116` lines
 - `host/userland/WorkflowBridge.java`: `100` lines
@@ -128,8 +128,8 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/session/SessionAssemblyCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/session/SessionAssembly`. | Keep adapter-only; avoid adding session/runtime behavior here. |
 | `host/status/StatusViewAssembly.java` | Good | Owns initial view binding plus debug-status/viewport host assembly for activity wiring. | Keep this assembly-only; status rendering and viewport policy remain in dedicated controllers. |
 | `host/status/StatusViewCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/status/StatusViewAssembly`. | Keep adapter-only; avoid moving status/viewport behavior into this adapter. |
-| `host/TerminalWidgetHostAssembly.java` | Good | Owns product widget/chrome/view-mode/surface host assembly so activity wiring no longer inlines those construction seams. | Keep this assembly-only; behavior remains in dedicated controllers/bridges. |
-| `host/TerminalWidgetHostAssemblyHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalWidgetHostAssembly`. | Keep adapter-only; avoid moving widget/chrome/view-mode behavior into this adapter. |
+| `host/ui/WidgetAssembly.java` | Good | Owns product widget/chrome/view-mode/surface host assembly so activity wiring no longer inlines those construction seams. | Keep this assembly-only; behavior remains in dedicated controllers/bridges. |
+| `host/ui/WidgetCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/ui/WidgetAssembly`. | Keep adapter-only; avoid moving widget/chrome/view-mode behavior into this adapter. |
 | `host/TerminalUiHostFactory.java` | Good | Owns UI host construction for shell-state presenter bridge, view-mode controller, and surface-widget controller. | Keep this construction-only; UI behavior remains in dedicated host controllers. |
 | `host/ui/UiStartupAssembly.java` | Good | Owns post-construction UI bind/start assembly for activity wiring. | Keep this assembly-only; UI behavior remains in dedicated controllers. |
 | `host/ui/UiStartupCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/ui/UiStartupAssembly`. | Keep adapter-only; avoid adding UI behavior here. |
