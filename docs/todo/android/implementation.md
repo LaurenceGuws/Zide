@@ -121,6 +121,10 @@ Success metrics:
    - Completed: callback pressure reduction cuts landed in two heavy adapters:
      `UiStartupCallbacks` and `ProductRuntimeAssemblyCallbacks` wrapper layers
      were flattened (pass-through wrapper classes removed).
+   - Completed: additional callback-heavy adapter wrapper deflations landed in
+     `StatusViewCallbacks`, `SessionAssemblyCallbacks`, and
+     `WorkflowAssemblyCallbacks` (nested wrapper callback classes removed;
+     direct callback fields wired).
    - Next: continue smallest ownership-clarity cuts in `ChromeController` or
      `SurfaceController` where watch-level pressure remains.
 3. Stabilize selection/scroll interaction behavior under manual device usage.
