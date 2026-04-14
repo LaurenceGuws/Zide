@@ -141,13 +141,13 @@ public final class ZideTerminalActivity extends Activity
     @Override
     protected void onStart() {
         super.onStart();
-        terminalActivityLifecycleController.onStart();
+        notifyLifecycleStart();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        terminalActivityLifecycleController.onResume(
+        notifyLifecycleResume(
                 shouldDebugRecreateSurfaceOnce(),
                 shouldDebugResizeSurfaceOnce(),
                 shouldDebugStartShellOnce());
@@ -183,7 +183,7 @@ public final class ZideTerminalActivity extends Activity
         if (handleHardwareDispatchKeyEventIfReady(event)) {
             return true;
         }
-        return super.dispatchKeyEvent(event);
+        return dispatchKeyEventToSuper(event);
     }
 
     private void initializeStatusAndViewControllers() {
@@ -759,7 +759,7 @@ public final class ZideTerminalActivity extends Activity
     private void sendDirectTextCodepoints(String text) {
         for (int i = 0; i < text.length();) {
             final int cp = text.codePointAt(i);
-            TerminalNativeBridge.nativeSendSessionCodepointBridge(cp);
+            sendDirectCodepointToNative(cp);
             i += Character.charCount(cp);
         }
     }
@@ -780,6 +780,10 @@ public final class ZideTerminalActivity extends Activity
         appendEvent("activity.on.new.intent");
     }
 
+    private void notifyLifecycleStart() {
+        terminalActivityLifecycleController.onStart();
+    }
+
     private void notifyLifecyclePause() {
         terminalActivityLifecycleController.onPause();
     }
@@ -790,6 +794,20 @@ public final class ZideTerminalActivity extends Activity
 
     private void notifyLifecycleWindowFocusChanged(boolean hasFocus) {
         terminalActivityLifecycleController.onWindowFocusChanged(hasFocus);
+    }
+
+    private void notifyLifecycleResume(
+            boolean debugRecreateSurfaceOnce,
+            boolean debugResizeSurfaceOnce,
+            boolean debugStartShellOnce) {
+        terminalActivityLifecycleController.onResume(
+                debugRecreateSurfaceOnce,
+                debugResizeSurfaceOnce,
+                debugStartShellOnce);
+    }
+
+    private boolean dispatchKeyEventToSuper(KeyEvent event) {
+        return super.dispatchKeyEvent(event);
     }
 
     private AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot() {
