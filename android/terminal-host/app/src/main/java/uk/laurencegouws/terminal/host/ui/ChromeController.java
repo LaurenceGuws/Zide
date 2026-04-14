@@ -199,10 +199,18 @@ public final class ChromeController {
 
     /** Focus, soft-input show, and IME visibility bookkeeping for a manual open. */
     private void runManualImeOpenSequence(InputMethodManager imm, ShellInputView shellInputView) {
+        appendManualImeOpenBeginTrace(shellInputView);
+        requestInputFocusForManualImeOpen(shellInputView);
+        showSoftInputAfterRestartInput(imm, shellInputView);
+    }
+
+    private void appendManualImeOpenBeginTrace(ShellInputView shellInputView) {
         host.appendEvent("manual.ime.open begin focus=" + shellInputView.hasFocus());
+    }
+
+    private void requestInputFocusForManualImeOpen(ShellInputView shellInputView) {
         requestInputFocus(shellInputView);
         host.appendEvent("manual.ime.open focusAfterRequest=" + shellInputView.hasFocus());
-        showSoftInputAfterRestartInput(imm, shellInputView);
     }
 
     private void showSoftInputAfterRestartInput(InputMethodManager imm, ShellInputView shellInputView) {

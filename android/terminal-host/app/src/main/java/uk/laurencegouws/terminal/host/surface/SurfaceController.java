@@ -250,14 +250,12 @@ public final class SurfaceController {
 
         host.setSurfaceHostGeneration(host.surfaceHostGeneration() + 1);
         final SurfaceView nextSurfaceView = createNextProductSurfaceHostView();
-        final SurfaceHolder holder = nextSurfaceView.getHolder();
-        holder.setFormat(PixelFormat.RGBA_8888);
+        prepareSurfaceHostHolderFormat(nextSurfaceView);
         host.installSurfaceGestureHost(nextSurfaceView);
         final FrameLayout.LayoutParams params = matchParentCenteredSurfaceHostLayoutParams();
         host.productSurfaceContainer().addView(nextSurfaceView, params);
         final SurfaceHolder.Callback2 nextCallback = resolveSurfaceInstallCallback(callback);
-        host.reinstallSurfaceCallback(nextSurfaceView, nextCallback);
-        host.setSurfaceView(nextSurfaceView);
+        registerProductSurfaceHostView(nextSurfaceView, nextCallback);
         appendSurfaceHostInstalledTelemetry(reason);
         host.productSurfaceContainer().post(() -> notifyVisibleViewport("surface-install"));
     }
@@ -268,6 +266,15 @@ public final class SurfaceController {
 
     private SurfaceView createNextProductSurfaceHostView() {
         return new SurfaceView(host.productSurfaceContainer().getContext());
+    }
+
+    private void prepareSurfaceHostHolderFormat(SurfaceView surfaceView) {
+        surfaceView.getHolder().setFormat(PixelFormat.RGBA_8888);
+    }
+
+    private void registerProductSurfaceHostView(SurfaceView surfaceView, SurfaceHolder.Callback2 callback) {
+        host.reinstallSurfaceCallback(surfaceView, callback);
+        host.setSurfaceView(surfaceView);
     }
 
     public void notifyVisibleViewport(String reason) {
