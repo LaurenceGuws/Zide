@@ -26,7 +26,7 @@ import dev.zide.terminal.host.TerminalInteractionAssemblyHostCallbacks;
 import dev.zide.terminal.host.TerminalProductRuntimeAssembly;
 import dev.zide.terminal.host.TerminalProductRuntimeAssemblyHostCallbacks;
 import dev.zide.terminal.host.TerminalProductRuntimeController;
-import dev.zide.terminal.host.TerminalRuntimeAssetsController;
+import dev.zide.terminal.host.runtime.RuntimeAssetsController;
 import dev.zide.terminal.host.TerminalSessionAssembly;
 import dev.zide.terminal.host.TerminalSessionAssemblyHostCallbacks;
 import dev.zide.terminal.host.TerminalStatusViewAssembly;
@@ -106,7 +106,7 @@ public final class ZideTerminalActivity extends Activity
     private TerminalSurfaceHostBridge surfaceHostBridge;
     private TerminalChromeController terminalChromeController;
     private TerminalViewModeController terminalViewModeController;
-    private TerminalRuntimeAssetsController terminalRuntimeAssetsController;
+    private RuntimeAssetsController terminalRuntimeAssetsController;
     private TerminalViewportController terminalViewportController;
     private TerminalStatusController terminalStatusController;
     private TerminalSurfaceStateSnapshotReader terminalSurfaceStateSnapshotReader;

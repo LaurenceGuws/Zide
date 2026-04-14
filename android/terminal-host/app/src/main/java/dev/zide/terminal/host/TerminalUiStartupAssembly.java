@@ -6,6 +6,7 @@ import android.widget.Button;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import dev.zide.terminal.host.runtime.RuntimeAssetsController;
 import dev.zide.terminal.host.userland.ReadinessBlockerCallbacks;
 import dev.zide.terminal.userland.UserlandReadinessBlockerController;
 import dev.zide.terminal.userland.UserlandReadinessState;
@@ -39,7 +40,7 @@ public final class TerminalUiStartupAssembly {
 
         Consumer<String> updateStatus();
 
-        TerminalRuntimeAssetsController runtimeAssetsController();
+        RuntimeAssetsController runtimeAssetsController();
 
         TerminalViewModeController viewModeController();
 

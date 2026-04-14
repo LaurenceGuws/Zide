@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.runtime;
 
 import android.content.Context;
 
@@ -12,7 +12,7 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /** Owns runtime asset staging and userland release loading for the Android host. */
-public final class TerminalRuntimeAssetsController {
+public final class RuntimeAssetsController {
     /** Host callbacks for staging and logging. */
     public interface Host {
         Context context();
@@ -34,7 +34,7 @@ public final class TerminalRuntimeAssetsController {
 
     private final Host host;
 
-    public TerminalRuntimeAssetsController(Host host) {
+    public RuntimeAssetsController(Host host) {
         this.host = host;
     }
 

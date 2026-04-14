@@ -6,6 +6,7 @@ import android.widget.Button;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import dev.zide.terminal.host.runtime.RuntimeAssetsController;
 import dev.zide.terminal.userland.ProductShellStatePresenter;
 import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandInstallState;
@@ -25,7 +26,7 @@ public final class TerminalUiStartupHostCallbacks implements TerminalUiStartupAs
     private final TerminalUiStartupAssembly.ShowDebugView showDebugView;
     private final Consumer<String> appendEvent;
     private final Consumer<String> updateStatus;
-    private final Supplier<TerminalRuntimeAssetsController> runtimeAssetsController;
+    private final Supplier<RuntimeAssetsController> runtimeAssetsController;
     private final Supplier<TerminalViewModeController> viewModeController;
     private final Supplier<TerminalSurfaceHostController> surfaceHostController;
     private final Supplier<TerminalSurfaceWidgetController> surfaceWidgetController;
@@ -45,7 +46,7 @@ public final class TerminalUiStartupHostCallbacks implements TerminalUiStartupAs
             TerminalUiStartupAssembly.ShowDebugView showDebugView,
             Consumer<String> appendEvent,
             Consumer<String> updateStatus,
-            Supplier<TerminalRuntimeAssetsController> runtimeAssetsController,
+            Supplier<RuntimeAssetsController> runtimeAssetsController,
             Supplier<TerminalViewModeController> viewModeController,
             Supplier<TerminalSurfaceHostController> surfaceHostController,
             Supplier<TerminalSurfaceWidgetController> surfaceWidgetController,
@@ -128,7 +129,7 @@ public final class TerminalUiStartupHostCallbacks implements TerminalUiStartupAs
     }
 
     @Override
-    public TerminalRuntimeAssetsController runtimeAssetsController() {
+    public RuntimeAssetsController runtimeAssetsController() {
         return runtimeAssetsController.get();
     }
 

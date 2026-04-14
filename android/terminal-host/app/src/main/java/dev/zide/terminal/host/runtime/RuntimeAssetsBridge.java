@@ -1,11 +1,11 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.runtime;
 
 import android.content.Context;
 
 /**
- * Adapts activity-owned runtime-asset callbacks to {@link TerminalRuntimeAssetsController.Host}.
+ * Adapts activity-owned runtime-asset callbacks to {@link RuntimeAssetsController.Host}.
  */
-public final class TerminalRuntimeAssetsHostBridge implements TerminalRuntimeAssetsController.Host {
+public final class RuntimeAssetsBridge implements RuntimeAssetsController.Host {
     /** Activity callback used by runtime-assets staging. */
     public interface Callbacks {
         void appendEvent(String event);
@@ -14,7 +14,7 @@ public final class TerminalRuntimeAssetsHostBridge implements TerminalRuntimeAss
     private final Context context;
     private final Callbacks callbacks;
 
-    public TerminalRuntimeAssetsHostBridge(Context context, Callbacks callbacks) {
+    public RuntimeAssetsBridge(Context context, Callbacks callbacks) {
         this.context = context;
         this.callbacks = callbacks;
     }

@@ -4,9 +4,9 @@ import android.content.Context;
 import android.os.Handler;
 import android.widget.TextView;
 
-import dev.zide.terminal.host.TerminalRuntimeAssetsController;
-import dev.zide.terminal.host.TerminalRuntimeAssetsHostBridge;
-import dev.zide.terminal.host.TerminalRuntimeAssetsHostCallbacks;
+import dev.zide.terminal.host.runtime.RuntimeAssetsController;
+import dev.zide.terminal.host.runtime.RuntimeAssetsBridge;
+import dev.zide.terminal.host.runtime.RuntimeAssetsCallbacks;
 import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandInstallState;
 import dev.zide.terminal.userland.UserlandRelease;
@@ -43,12 +43,12 @@ public final class WorkflowAssembly {
 
     /** Immutable assembled userland workflow result. */
     public static final class Result {
-        public final TerminalRuntimeAssetsController runtimeAssetsController;
+        public final RuntimeAssetsController runtimeAssetsController;
         public final WorkflowBridge userlandWorkflowHostBridge;
         public final UserlandWorkflowController userlandWorkflowController;
 
         private Result(
-                TerminalRuntimeAssetsController runtimeAssetsController,
+                RuntimeAssetsController runtimeAssetsController,
                 WorkflowBridge userlandWorkflowHostBridge,
                 UserlandWorkflowController userlandWorkflowController) {
             this.runtimeAssetsController = runtimeAssetsController;
@@ -61,10 +61,10 @@ public final class WorkflowAssembly {
     }
 
     public static Result assemble(Host host) {
-        final TerminalRuntimeAssetsController runtimeAssetsController = new TerminalRuntimeAssetsController(
-                new TerminalRuntimeAssetsHostBridge(
+        final RuntimeAssetsController runtimeAssetsController = new RuntimeAssetsController(
+                new RuntimeAssetsBridge(
                         host.context(),
-                        new TerminalRuntimeAssetsHostCallbacks(host::appendEvent)));
+                        new RuntimeAssetsCallbacks(host::appendEvent)));
         host.setUserlandRelease(runtimeAssetsController.loadUserlandRelease());
         final WorkflowBridge userlandWorkflowHostBridge = new WorkflowBridge(
                 host.context(),
