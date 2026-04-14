@@ -67,6 +67,9 @@ Focus goals:
    - Completed: first ownership-boundary cleanup batch landed in
      `host/ui/ChromeController` (sidebar and IME branch helpers extracted,
      behavior unchanged).
+   - Completed: second `host/ui/ChromeController` ownership batch landed
+     (sidebar state/animation and IME status update paths now route through
+     named internal helpers; behavior unchanged).
    - Next: continue smallest ownership-clarity cuts in `ChromeController` or
      `SurfaceController` where watch-level pressure remains.
 3. Stabilize selection/scroll interaction behavior under manual device usage.
