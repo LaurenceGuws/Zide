@@ -180,8 +180,7 @@ public final class ZideTerminalActivity extends Activity
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
-        if (terminalHardwareKeyboardController != null
-                && terminalHardwareKeyboardController.handleDispatchKeyEvent(event)) {
+        if (handleHardwareDispatchKeyEventIfReady(event)) {
             return true;
         }
         return super.dispatchKeyEvent(event);
@@ -516,6 +515,11 @@ public final class ZideTerminalActivity extends Activity
 
     private boolean isNativeLoaded() {
         return nativeLoaded;
+    }
+
+    private boolean handleHardwareDispatchKeyEventIfReady(KeyEvent event) {
+        return terminalHardwareKeyboardController != null
+                && terminalHardwareKeyboardController.handleDispatchKeyEvent(event);
     }
 
     private boolean shouldDebugRecreateSurfaceOnce() {
