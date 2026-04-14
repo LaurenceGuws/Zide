@@ -104,8 +104,12 @@ public final class ChromeController {
         bindAssistRowInputChrome();
     }
 
+    private ShellInputView activeShellInputView() {
+        return host.shellInputView();
+    }
+
     private View assistBarRootView() {
-        return host.shellInputView().getRootView();
+        return activeShellInputView().getRootView();
     }
 
     private void bindAssistRowInputChrome() {
@@ -115,7 +119,7 @@ public final class ChromeController {
     }
 
     private void applyAssistModifierLatchChromeAfterBindings() {
-        host.applyModifierLatchState(host.shellInputView().modifierLatchState());
+        host.applyModifierLatchState(activeShellInputView().modifierLatchState());
     }
 
     private void bindAssistModifierLatchButtons() {
@@ -178,7 +182,7 @@ public final class ChromeController {
         if (imm == null) {
             return;
         }
-        runManualImeOpenSequence(imm, host.shellInputView());
+        runManualImeOpenSequence(imm, activeShellInputView());
     }
 
     /** Focus, soft-input show, and IME visibility bookkeeping for a manual open. */
@@ -186,6 +190,10 @@ public final class ChromeController {
         host.appendEvent("manual.ime.open begin focus=" + shellInputView.hasFocus());
         requestInputFocus(shellInputView);
         host.appendEvent("manual.ime.open focusAfterRequest=" + shellInputView.hasFocus());
+        showSoftInputAfterRestartInput(imm, shellInputView);
+    }
+
+    private void showSoftInputAfterRestartInput(InputMethodManager imm, ShellInputView shellInputView) {
         imm.restartInput(shellInputView);
         final boolean shown = imm.showSoftInput(shellInputView, InputMethodManager.SHOW_IMPLICIT);
         host.setImeVisible(shown || shellInputView.hasFocus());
@@ -203,7 +211,7 @@ public final class ChromeController {
 
     /** Hides soft input and records IME chrome state for a manual close. */
     private void runManualImeCloseSequence(InputMethodManager imm) {
-        final boolean hidden = imm.hideSoftInputFromWindow(host.shellInputView().getWindowToken(), 0);
+        final boolean hidden = imm.hideSoftInputFromWindow(activeShellInputView().getWindowToken(), 0);
         host.setImeVisible(false);
         host.appendEvent("manual.ime.close hidden=" + hidden);
         host.updateStatus("ime.state.hidden");

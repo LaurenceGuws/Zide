@@ -307,11 +307,26 @@ public final class SurfaceController {
             int height,
             boolean viewportImeVisible) {
         host.setNotifiedViewportSize(width, height, viewportImeVisible);
+        appendViewportSizeChangedTelemetry(reason, width, height, viewportImeVisible);
+        dispatchNativeViewportChangedAndRefreshOverlay(width, height, viewportImeVisible);
+        host.updateStatus("viewport.state.updated");
+    }
+
+    private void appendViewportSizeChangedTelemetry(
+            String reason,
+            int width,
+            int height,
+            boolean viewportImeVisible) {
         host.appendEvent("viewport.size.changed reason=" + reason + " size=" + width + "x" + height + " imeVisible=" + viewportImeVisible);
+    }
+
+    private void dispatchNativeViewportChangedAndRefreshOverlay(
+            int width,
+            int height,
+            boolean viewportImeVisible) {
         final long seq = host.nativeLoaded() ? host.nativeOnVisibleViewportBridge(width, height, viewportImeVisible) : -1;
         host.callNativeWithSurfaceState("native.viewportChanged", seq, host.currentSurfaceStateSnapshot());
         host.refreshProductScrollOverlay();
-        host.updateStatus("viewport.state.updated");
     }
 
     private void appendNativeSurfaceRedrawNeededTelemetry(
