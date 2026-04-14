@@ -18,213 +18,151 @@ import uk.laurencegouws.terminal.userland.UserlandWorkflowController;
 
 /** Functional callback adapter for {@link UiStartupAssembly.Host}. */
 public final class UiStartupCallbacks implements UiStartupAssembly.Host {
-    public static final class UiHostCallbacks {
-        final Supplier<ViewportController> viewportController;
-        final Supplier<ChromeController> chromeController;
-        final Supplier<Button> productReadinessRetryButton;
-        final Supplier<Button> productReadinessDebugButton;
-        final Supplier<UserlandInstallState> currentInstallState;
-        final Supplier<UserlandReadinessState> currentReadinessState;
-        final Supplier<UserlandWorkflowController> userlandWorkflowController;
-        final Supplier<UserlandSessionCoordinator> userlandSessionCoordinator;
-        final UiStartupAssembly.ShowDebugView showDebugView;
-        final Consumer<String> appendEvent;
-        final Consumer<String> updateStatus;
-
-        private UiHostCallbacks(
-                Supplier<ViewportController> viewportController,
-                Supplier<ChromeController> chromeController,
-                Supplier<Button> productReadinessRetryButton,
-                Supplier<Button> productReadinessDebugButton,
-                Supplier<UserlandInstallState> currentInstallState,
-                Supplier<UserlandReadinessState> currentReadinessState,
-                Supplier<UserlandWorkflowController> userlandWorkflowController,
-                Supplier<UserlandSessionCoordinator> userlandSessionCoordinator,
-                UiStartupAssembly.ShowDebugView showDebugView,
-                Consumer<String> appendEvent,
-                Consumer<String> updateStatus) {
-            this.viewportController = viewportController;
-            this.chromeController = chromeController;
-            this.productReadinessRetryButton = productReadinessRetryButton;
-            this.productReadinessDebugButton = productReadinessDebugButton;
-            this.currentInstallState = currentInstallState;
-            this.currentReadinessState = currentReadinessState;
-            this.userlandWorkflowController = userlandWorkflowController;
-            this.userlandSessionCoordinator = userlandSessionCoordinator;
-            this.showDebugView = showDebugView;
-            this.appendEvent = appendEvent;
-            this.updateStatus = updateStatus;
-        }
-
-        public static UiHostCallbacks of(
-                Supplier<ViewportController> viewportController,
-                Supplier<ChromeController> chromeController,
-                Supplier<Button> productReadinessRetryButton,
-                Supplier<Button> productReadinessDebugButton,
-                Supplier<UserlandInstallState> currentInstallState,
-                Supplier<UserlandReadinessState> currentReadinessState,
-                Supplier<UserlandWorkflowController> userlandWorkflowController,
-                Supplier<UserlandSessionCoordinator> userlandSessionCoordinator,
-                UiStartupAssembly.ShowDebugView showDebugView,
-                Consumer<String> appendEvent,
-                Consumer<String> updateStatus) {
-            return new UiHostCallbacks(
-                    viewportController,
-                    chromeController,
-                    productReadinessRetryButton,
-                    productReadinessDebugButton,
-                    currentInstallState,
-                    currentReadinessState,
-                    userlandWorkflowController,
-                    userlandSessionCoordinator,
-                    showDebugView,
-                    appendEvent,
-                    updateStatus);
-        }
-    }
-
-    public static final class UiRuntimeCallbacks {
-        final Supplier<RuntimeAssetsController> runtimeAssetsController;
-        final Supplier<ViewModeController> viewModeController;
-        final Supplier<SurfaceController> surfaceHostController;
-        final Supplier<SurfaceWidgetController> surfaceWidgetController;
-        final Supplier<ProductShellStatePresenter> productShellStatePresenter;
-        final Supplier<FrameLoopController> frameLoopController;
-        final Supplier<View> leftSidebar;
-
-        private UiRuntimeCallbacks(
-                Supplier<RuntimeAssetsController> runtimeAssetsController,
-                Supplier<ViewModeController> viewModeController,
-                Supplier<SurfaceController> surfaceHostController,
-                Supplier<SurfaceWidgetController> surfaceWidgetController,
-                Supplier<ProductShellStatePresenter> productShellStatePresenter,
-                Supplier<FrameLoopController> frameLoopController,
-                Supplier<View> leftSidebar) {
-            this.runtimeAssetsController = runtimeAssetsController;
-            this.viewModeController = viewModeController;
-            this.surfaceHostController = surfaceHostController;
-            this.surfaceWidgetController = surfaceWidgetController;
-            this.productShellStatePresenter = productShellStatePresenter;
-            this.frameLoopController = frameLoopController;
-            this.leftSidebar = leftSidebar;
-        }
-
-        public static UiRuntimeCallbacks of(
-                Supplier<RuntimeAssetsController> runtimeAssetsController,
-                Supplier<ViewModeController> viewModeController,
-                Supplier<SurfaceController> surfaceHostController,
-                Supplier<SurfaceWidgetController> surfaceWidgetController,
-                Supplier<ProductShellStatePresenter> productShellStatePresenter,
-                Supplier<FrameLoopController> frameLoopController,
-                Supplier<View> leftSidebar) {
-            return new UiRuntimeCallbacks(
-                    runtimeAssetsController,
-                    viewModeController,
-                    surfaceHostController,
-                    surfaceWidgetController,
-                    productShellStatePresenter,
-                    frameLoopController,
-                    leftSidebar);
-        }
-    }
-
-    private final UiHostCallbacks uiHostCallbacks;
-    private final UiRuntimeCallbacks uiRuntimeCallbacks;
+    private final Supplier<ViewportController> viewportController;
+    private final Supplier<ChromeController> chromeController;
+    private final Supplier<Button> productReadinessRetryButton;
+    private final Supplier<Button> productReadinessDebugButton;
+    private final Supplier<UserlandInstallState> currentInstallState;
+    private final Supplier<UserlandReadinessState> currentReadinessState;
+    private final Supplier<UserlandWorkflowController> userlandWorkflowController;
+    private final Supplier<UserlandSessionCoordinator> userlandSessionCoordinator;
+    private final UiStartupAssembly.ShowDebugView showDebugView;
+    private final Consumer<String> appendEvent;
+    private final Consumer<String> updateStatus;
+    private final Supplier<RuntimeAssetsController> runtimeAssetsController;
+    private final Supplier<ViewModeController> viewModeController;
+    private final Supplier<SurfaceController> surfaceHostController;
+    private final Supplier<SurfaceWidgetController> surfaceWidgetController;
+    private final Supplier<ProductShellStatePresenter> productShellStatePresenter;
+    private final Supplier<FrameLoopController> frameLoopController;
+    private final Supplier<View> leftSidebar;
 
     public UiStartupCallbacks(
-            UiHostCallbacks uiHostCallbacks,
-            UiRuntimeCallbacks uiRuntimeCallbacks) {
-        this.uiHostCallbacks = uiHostCallbacks;
-        this.uiRuntimeCallbacks = uiRuntimeCallbacks;
+            Supplier<ViewportController> viewportController,
+            Supplier<ChromeController> chromeController,
+            Supplier<Button> productReadinessRetryButton,
+            Supplier<Button> productReadinessDebugButton,
+            Supplier<UserlandInstallState> currentInstallState,
+            Supplier<UserlandReadinessState> currentReadinessState,
+            Supplier<UserlandWorkflowController> userlandWorkflowController,
+            Supplier<UserlandSessionCoordinator> userlandSessionCoordinator,
+            UiStartupAssembly.ShowDebugView showDebugView,
+            Consumer<String> appendEvent,
+            Consumer<String> updateStatus,
+            Supplier<RuntimeAssetsController> runtimeAssetsController,
+            Supplier<ViewModeController> viewModeController,
+            Supplier<SurfaceController> surfaceHostController,
+            Supplier<SurfaceWidgetController> surfaceWidgetController,
+            Supplier<ProductShellStatePresenter> productShellStatePresenter,
+            Supplier<FrameLoopController> frameLoopController,
+            Supplier<View> leftSidebar) {
+        this.viewportController = viewportController;
+        this.chromeController = chromeController;
+        this.productReadinessRetryButton = productReadinessRetryButton;
+        this.productReadinessDebugButton = productReadinessDebugButton;
+        this.currentInstallState = currentInstallState;
+        this.currentReadinessState = currentReadinessState;
+        this.userlandWorkflowController = userlandWorkflowController;
+        this.userlandSessionCoordinator = userlandSessionCoordinator;
+        this.showDebugView = showDebugView;
+        this.appendEvent = appendEvent;
+        this.updateStatus = updateStatus;
+        this.runtimeAssetsController = runtimeAssetsController;
+        this.viewModeController = viewModeController;
+        this.surfaceHostController = surfaceHostController;
+        this.surfaceWidgetController = surfaceWidgetController;
+        this.productShellStatePresenter = productShellStatePresenter;
+        this.frameLoopController = frameLoopController;
+        this.leftSidebar = leftSidebar;
     }
 
     @Override
     public ViewportController viewportController() {
-        return uiHostCallbacks.viewportController.get();
+        return viewportController.get();
     }
 
     @Override
     public ChromeController chromeController() {
-        return uiHostCallbacks.chromeController.get();
+        return chromeController.get();
     }
 
     @Override
     public Button productReadinessRetryButton() {
-        return uiHostCallbacks.productReadinessRetryButton.get();
+        return productReadinessRetryButton.get();
     }
 
     @Override
     public Button productReadinessDebugButton() {
-        return uiHostCallbacks.productReadinessDebugButton.get();
+        return productReadinessDebugButton.get();
     }
 
     @Override
     public Supplier<UserlandInstallState> currentInstallState() {
-        return uiHostCallbacks.currentInstallState;
+        return currentInstallState;
     }
 
     @Override
     public Supplier<UserlandReadinessState> currentReadinessState() {
-        return uiHostCallbacks.currentReadinessState;
+        return currentReadinessState;
     }
 
     @Override
     public Supplier<UserlandWorkflowController> userlandWorkflowController() {
-        return uiHostCallbacks.userlandWorkflowController;
+        return userlandWorkflowController;
     }
 
     @Override
     public Supplier<UserlandSessionCoordinator> userlandSessionCoordinator() {
-        return uiHostCallbacks.userlandSessionCoordinator;
+        return userlandSessionCoordinator;
     }
 
     @Override
     public UiStartupAssembly.ShowDebugView showDebugView() {
-        return uiHostCallbacks.showDebugView;
+        return showDebugView;
     }
 
     @Override
     public Consumer<String> appendEvent() {
-        return uiHostCallbacks.appendEvent;
+        return appendEvent;
     }
 
     @Override
     public Consumer<String> updateStatus() {
-        return uiHostCallbacks.updateStatus;
+        return updateStatus;
     }
 
     @Override
     public RuntimeAssetsController runtimeAssetsController() {
-        return uiRuntimeCallbacks.runtimeAssetsController.get();
+        return runtimeAssetsController.get();
     }
 
     @Override
     public ViewModeController viewModeController() {
-        return uiRuntimeCallbacks.viewModeController.get();
+        return viewModeController.get();
     }
 
     @Override
     public SurfaceController surfaceHostController() {
-        return uiRuntimeCallbacks.surfaceHostController.get();
+        return surfaceHostController.get();
     }
 
     @Override
     public SurfaceWidgetController surfaceWidgetController() {
-        return uiRuntimeCallbacks.surfaceWidgetController.get();
+        return surfaceWidgetController.get();
     }
 
     @Override
     public ProductShellStatePresenter productShellStatePresenter() {
-        return uiRuntimeCallbacks.productShellStatePresenter.get();
+        return productShellStatePresenter.get();
     }
 
     @Override
     public FrameLoopController frameLoopController() {
-        return uiRuntimeCallbacks.frameLoopController.get();
+        return frameLoopController.get();
     }
 
     @Override
     public View leftSidebar() {
-        return uiRuntimeCallbacks.leftSidebar.get();
+        return leftSidebar.get();
     }
 }

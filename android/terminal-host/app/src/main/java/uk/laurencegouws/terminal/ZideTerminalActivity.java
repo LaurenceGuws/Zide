@@ -458,26 +458,24 @@ public final class ZideTerminalActivity extends Activity
 
     private UiStartupCallbacks createUiStartupCallbacks() {
         return new UiStartupCallbacks(
-                UiStartupCallbacks.UiHostCallbacks.of(
-                        () -> terminalViewportController,
-                        () -> terminalChromeController,
-                        () -> productReadinessRetryButton,
-                        () -> productReadinessDebugButton,
-                        this::currentInstallStateSnapshot,
-                        this::currentReadinessStateSnapshot,
-                        () -> userlandWorkflowController,
-                        () -> userlandSessionCoordinator,
-                        this::showDebugViewIfReady,
-                        this::appendEvent,
-                        this::updateStatus),
-                UiStartupCallbacks.UiRuntimeCallbacks.of(
-                        () -> terminalRuntimeAssetsController,
-                        () -> terminalViewModeController,
-                        () -> surfaceHostController,
-                        () -> terminalSurfaceWidgetController,
-                        () -> productShellStatePresenter,
-                        () -> productFrameLoopController,
-                        () -> leftSidebar));
+                () -> terminalViewportController,
+                () -> terminalChromeController,
+                () -> productReadinessRetryButton,
+                () -> productReadinessDebugButton,
+                this::currentInstallStateSnapshot,
+                this::currentReadinessStateSnapshot,
+                () -> userlandWorkflowController,
+                () -> userlandSessionCoordinator,
+                this::showDebugViewIfReady,
+                this::appendEvent,
+                this::updateStatus,
+                () -> terminalRuntimeAssetsController,
+                () -> terminalViewModeController,
+                () -> surfaceHostController,
+                () -> terminalSurfaceWidgetController,
+                () -> productShellStatePresenter,
+                () -> productFrameLoopController,
+                () -> leftSidebar);
     }
 
     private void stopScrollbackFlingIfReady() {
