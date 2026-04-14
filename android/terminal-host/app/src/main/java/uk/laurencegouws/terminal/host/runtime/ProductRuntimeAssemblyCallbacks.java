@@ -18,7 +18,7 @@ import uk.laurencegouws.terminal.userland.UserlandSessionCoordinator;
 
 /** Functional callback adapter for {@link ProductRuntimeAssembly.Host}. */
 public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAssembly.Host {
-    public static final class RuntimeHostBundle {
+    public static final class RuntimeHostCallbacks {
         final BooleanSupplier debugViewEnabled;
         final BooleanSupplier nativeLoaded;
         final Supplier<UserlandInstallState> installState;
@@ -27,7 +27,7 @@ public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAsse
         final Consumer<String> appendEvent;
         final Consumer<String> updateStatus;
 
-        private RuntimeHostBundle(
+        private RuntimeHostCallbacks(
                 BooleanSupplier debugViewEnabled,
                 BooleanSupplier nativeLoaded,
                 Supplier<UserlandInstallState> installState,
@@ -44,7 +44,7 @@ public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAsse
             this.updateStatus = updateStatus;
         }
 
-        public static RuntimeHostBundle of(
+        public static RuntimeHostCallbacks of(
                 BooleanSupplier debugViewEnabled,
                 BooleanSupplier nativeLoaded,
                 Supplier<UserlandInstallState> installState,
@@ -52,7 +52,7 @@ public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAsse
                 Supplier<UserlandReadinessState> readinessState,
                 Consumer<String> appendEvent,
                 Consumer<String> updateStatus) {
-            return new RuntimeHostBundle(
+            return new RuntimeHostCallbacks(
                     debugViewEnabled,
                     nativeLoaded,
                     installState,
@@ -63,7 +63,7 @@ public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAsse
         }
     }
 
-    public static final class RuntimeUiBundle {
+    public static final class RuntimeUiCallbacks {
         final Supplier<SurfaceView> surfaceView;
         final Supplier<View> productBootstrapBlocker;
         final Supplier<TerminalScrollOverlayView> terminalScrollOverlay;
@@ -74,7 +74,7 @@ public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAsse
         final Supplier<UserlandSessionCoordinator> userlandSessionCoordinator;
         final Supplier<TerminalGestureStateController> terminalGestureStateController;
 
-        private RuntimeUiBundle(
+        private RuntimeUiCallbacks(
                 Supplier<SurfaceView> surfaceView,
                 Supplier<View> productBootstrapBlocker,
                 Supplier<TerminalScrollOverlayView> terminalScrollOverlay,
@@ -95,7 +95,7 @@ public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAsse
             this.terminalGestureStateController = terminalGestureStateController;
         }
 
-        public static RuntimeUiBundle of(
+        public static RuntimeUiCallbacks of(
                 Supplier<SurfaceView> surfaceView,
                 Supplier<View> productBootstrapBlocker,
                 Supplier<TerminalScrollOverlayView> terminalScrollOverlay,
@@ -105,7 +105,7 @@ public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAsse
                 Supplier<TerminalStatusController> terminalStatusController,
                 Supplier<UserlandSessionCoordinator> userlandSessionCoordinator,
                 Supplier<TerminalGestureStateController> terminalGestureStateController) {
-            return new RuntimeUiBundle(
+            return new RuntimeUiCallbacks(
                     surfaceView,
                     productBootstrapBlocker,
                     terminalScrollOverlay,
@@ -118,93 +118,93 @@ public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAsse
         }
     }
 
-    private final RuntimeHostBundle runtimeHostBundle;
-    private final RuntimeUiBundle runtimeUiBundle;
+    private final RuntimeHostCallbacks runtimeHostCallbacks;
+    private final RuntimeUiCallbacks runtimeUiCallbacks;
 
     public ProductRuntimeAssemblyCallbacks(
-            RuntimeHostBundle runtimeHostBundle,
-            RuntimeUiBundle runtimeUiBundle) {
-        this.runtimeHostBundle = runtimeHostBundle;
-        this.runtimeUiBundle = runtimeUiBundle;
+            RuntimeHostCallbacks runtimeHostCallbacks,
+            RuntimeUiCallbacks runtimeUiCallbacks) {
+        this.runtimeHostCallbacks = runtimeHostCallbacks;
+        this.runtimeUiCallbacks = runtimeUiCallbacks;
     }
 
     @Override
     public boolean debugViewEnabled() {
-        return runtimeHostBundle.debugViewEnabled.getAsBoolean();
+        return runtimeHostCallbacks.debugViewEnabled.getAsBoolean();
     }
 
     @Override
     public boolean nativeLoaded() {
-        return runtimeHostBundle.nativeLoaded.getAsBoolean();
+        return runtimeHostCallbacks.nativeLoaded.getAsBoolean();
     }
 
     @Override
     public UserlandInstallState installState() {
-        return runtimeHostBundle.installState.get();
+        return runtimeHostCallbacks.installState.get();
     }
 
     @Override
     public void setInstallState(UserlandInstallState installState) {
-        runtimeHostBundle.setInstallState.accept(installState);
+        runtimeHostCallbacks.setInstallState.accept(installState);
     }
 
     @Override
     public UserlandReadinessState readinessState() {
-        return runtimeHostBundle.readinessState.get();
+        return runtimeHostCallbacks.readinessState.get();
     }
 
     @Override
     public SurfaceView surfaceView() {
-        return runtimeUiBundle.surfaceView.get();
+        return runtimeUiCallbacks.surfaceView.get();
     }
 
     @Override
     public View productBootstrapBlocker() {
-        return runtimeUiBundle.productBootstrapBlocker.get();
+        return runtimeUiCallbacks.productBootstrapBlocker.get();
     }
 
     @Override
     public TerminalScrollOverlayView terminalScrollOverlay() {
-        return runtimeUiBundle.terminalScrollOverlay.get();
+        return runtimeUiCallbacks.terminalScrollOverlay.get();
     }
 
     @Override
     public TerminalSelectionController selectionController() {
-        return runtimeUiBundle.selectionController.get();
+        return runtimeUiCallbacks.selectionController.get();
     }
 
     @Override
     public ProductShellStatePresenter productShellStatePresenter() {
-        return runtimeUiBundle.productShellStatePresenter.get();
+        return runtimeUiCallbacks.productShellStatePresenter.get();
     }
 
     @Override
     public FrameLoopController frameLoopController() {
-        return runtimeUiBundle.frameLoopController.get();
+        return runtimeUiCallbacks.frameLoopController.get();
     }
 
     @Override
     public TerminalStatusController terminalStatusController() {
-        return runtimeUiBundle.terminalStatusController.get();
+        return runtimeUiCallbacks.terminalStatusController.get();
     }
 
     @Override
     public UserlandSessionCoordinator userlandSessionCoordinator() {
-        return runtimeUiBundle.userlandSessionCoordinator.get();
+        return runtimeUiCallbacks.userlandSessionCoordinator.get();
     }
 
     @Override
     public TerminalGestureStateController terminalGestureStateController() {
-        return runtimeUiBundle.terminalGestureStateController.get();
+        return runtimeUiCallbacks.terminalGestureStateController.get();
     }
 
     @Override
     public void appendEvent(String message) {
-        runtimeHostBundle.appendEvent.accept(message);
+        runtimeHostCallbacks.appendEvent.accept(message);
     }
 
     @Override
     public void updateStatus(String statusLabel) {
-        runtimeHostBundle.updateStatus.accept(statusLabel);
+        runtimeHostCallbacks.updateStatus.accept(statusLabel);
     }
 }

@@ -376,7 +376,7 @@ public final class ZideTerminalActivity extends Activity
 
     private ProductRuntimeAssemblyCallbacks createProductRuntimeAssemblyCallbacks() {
         return new ProductRuntimeAssemblyCallbacks(
-                ProductRuntimeAssemblyCallbacks.RuntimeHostBundle.of(
+                ProductRuntimeAssemblyCallbacks.RuntimeHostCallbacks.of(
                         () -> debugViewEnabled,
                         () -> nativeLoaded,
                         () -> currentInstallState,
@@ -384,7 +384,7 @@ public final class ZideTerminalActivity extends Activity
                         () -> currentReadinessState,
                         this::appendEvent,
                         this::updateStatus),
-                ProductRuntimeAssemblyCallbacks.RuntimeUiBundle.of(
+                ProductRuntimeAssemblyCallbacks.RuntimeUiCallbacks.of(
                         this::currentSurfaceViewIfReady,
                         () -> productBootstrapBlocker,
                         () -> terminalScrollOverlay,
