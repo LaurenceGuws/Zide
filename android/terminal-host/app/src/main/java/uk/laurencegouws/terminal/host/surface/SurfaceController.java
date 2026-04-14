@@ -142,9 +142,9 @@ public final class SurfaceController {
             final long seq = nativeSurfaceRedrawNeededSeq();
             final AndroidDebugFormatter.SurfaceEventSnapshot state = host.currentSurfaceStateSnapshot();
             appendNativeSurfaceRedrawNeededEvent(seq, state);
-            updateSurfaceRedrawNeededStatus();
+            host.updateStatus("surface.state.redraw_needed");
         } finally {
-            clearSurfaceRedrawNeededDispatching();
+            surfaceRedrawNeededDispatching = false;
         }
     }
 
@@ -155,9 +155,9 @@ public final class SurfaceController {
         final SurfaceView nextSurfaceView = createAndAttachSurfaceView();
         final SurfaceHolder.Callback2 nextCallback = resolveSurfaceCallback(callback);
         host.reinstallSurfaceCallback(nextSurfaceView, nextCallback);
-        installCurrentSurfaceView(nextSurfaceView);
+        host.setSurfaceView(nextSurfaceView);
         appendSurfaceHostInstalledEvent(reason);
-        postSurfaceInstallViewportNotification();
+        host.productSurfaceContainer().post(() -> notifyVisibleViewport("surface-install"));
     }
 
     public void notifyVisibleViewport(String reason) {
@@ -344,14 +344,6 @@ public final class SurfaceController {
                         " glesTextureSize=" + state.glesTextureWidth + "x" + state.glesTextureHeight);
     }
 
-    private void updateSurfaceRedrawNeededStatus() {
-        host.updateStatus("surface.state.redraw_needed");
-    }
-
-    private void clearSurfaceRedrawNeededDispatching() {
-        surfaceRedrawNeededDispatching = false;
-    }
-
     private void dispatchNativeSurfaceAvailable(long seq) {
         host.callNativeWithSurfaceState(
                 "native.surfaceAvailable",
@@ -361,14 +353,6 @@ public final class SurfaceController {
 
     private void postSurfaceChangedViewportNotification() {
         host.productSurfaceContainer().post(() -> notifyVisibleViewport("surface-changed"));
-    }
-
-    private void installCurrentSurfaceView(SurfaceView nextSurfaceView) {
-        host.setSurfaceView(nextSurfaceView);
-    }
-
-    private void postSurfaceInstallViewportNotification() {
-        host.productSurfaceContainer().post(() -> notifyVisibleViewport("surface-install"));
     }
 
     private void incrementSurfaceHostGeneration() {
