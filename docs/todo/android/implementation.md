@@ -103,7 +103,7 @@ A cut is done only if all are true:
 - session/runtime activity wiring now composes through
   `host/session/SessionAssembly` + `SessionAssemblyCallbacks`
 - initial status/view activity wiring now composes through
-  `host/TerminalStatusViewAssembly` + `TerminalStatusViewAssemblyHostCallbacks`
+  `host/status/StatusViewAssembly` + `StatusViewCallbacks`
 - interaction activity wiring now composes through
   `host/TerminalInteractionAssembly` + `TerminalInteractionAssemblyHostCallbacks`
 - widget/chrome/view-mode/surface activity wiring now composes through

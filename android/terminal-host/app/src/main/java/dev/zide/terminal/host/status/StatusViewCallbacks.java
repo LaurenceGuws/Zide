@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.status;
 
 import android.app.Activity;
 
@@ -7,11 +7,12 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import dev.zide.terminal.debug.AndroidDebugFormatter;
+import dev.zide.terminal.host.TerminalSurfaceHostBridge;
 import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandInstallState;
 
-/** Functional callback adapter for {@link TerminalStatusViewAssembly.Host}. */
-public final class TerminalStatusViewAssemblyHostCallbacks implements TerminalStatusViewAssembly.Host {
+/** Functional callback adapter for {@link StatusViewAssembly.Host}. */
+public final class StatusViewCallbacks implements StatusViewAssembly.Host {
     private final Supplier<Activity> activity;
     private final BooleanSupplier debugViewEnabled;
     private final BooleanSupplier nativeLoaded;
@@ -24,7 +25,7 @@ public final class TerminalStatusViewAssemblyHostCallbacks implements TerminalSt
     private final Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot;
     private final Consumer<String> notifyVisibleViewport;
 
-    public TerminalStatusViewAssemblyHostCallbacks(
+    public StatusViewCallbacks(
             Supplier<Activity> activity,
             BooleanSupplier debugViewEnabled,
             BooleanSupplier nativeLoaded,

@@ -29,8 +29,8 @@ import dev.zide.terminal.host.runtime.ProductRuntimeController;
 import dev.zide.terminal.host.runtime.RuntimeAssetsController;
 import dev.zide.terminal.host.session.SessionAssembly;
 import dev.zide.terminal.host.session.SessionAssemblyCallbacks;
-import dev.zide.terminal.host.TerminalStatusViewAssembly;
-import dev.zide.terminal.host.TerminalStatusViewAssemblyHostCallbacks;
+import dev.zide.terminal.host.status.StatusViewAssembly;
+import dev.zide.terminal.host.status.StatusViewCallbacks;
 import dev.zide.terminal.host.TerminalSurfaceHostBridge;
 import dev.zide.terminal.host.TerminalSurfaceHostController;
 import dev.zide.terminal.host.TerminalSurfaceWidgetController;
@@ -183,8 +183,8 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void initializeStatusAndViewControllers() {
-        final TerminalStatusViewAssembly.Result result = TerminalStatusViewAssembly.assemble(
-                new TerminalStatusViewAssemblyHostCallbacks(
+        final StatusViewAssembly.Result result = StatusViewAssembly.assemble(
+                new StatusViewCallbacks(
                         () -> this,
                         () -> debugViewEnabled,
                         () -> nativeLoaded,
