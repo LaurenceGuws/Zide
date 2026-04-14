@@ -114,7 +114,9 @@ public final class ChromeController {
         host.appendEvent("manual.ime.open focusAfterRequest=" + shellInputView.hasFocus());
         imm.restartInput(shellInputView);
         final boolean shown = imm.showSoftInput(shellInputView, InputMethodManager.SHOW_IMPLICIT);
-        recordImeOpenStatus(shown, shellInputView);
+        host.setImeVisible(shown || shellInputView.hasFocus());
+        host.appendEvent("manual.ime.open shown=" + shown + " focus=" + shellInputView.hasFocus());
+        host.updateStatus("ime.state.shown");
     }
 
     public void closeIme() {
@@ -123,7 +125,9 @@ public final class ChromeController {
             return;
         }
         final boolean hidden = imm.hideSoftInputFromWindow(host.shellInputView().getWindowToken(), 0);
-        recordImeCloseStatus(hidden);
+        host.setImeVisible(false);
+        host.appendEvent("manual.ime.close hidden=" + hidden);
+        host.updateStatus("ime.state.hidden");
     }
 
     public void toggleIme() {
@@ -170,18 +174,6 @@ public final class ChromeController {
         if (!shellInputView.hasFocus()) {
             shellInputView.requestFocus();
         }
-    }
-
-    private void recordImeOpenStatus(boolean shown, ShellInputView shellInputView) {
-        host.setImeVisible(shown || shellInputView.hasFocus());
-        host.appendEvent("manual.ime.open shown=" + shown + " focus=" + shellInputView.hasFocus());
-        host.updateStatus("ime.state.shown");
-    }
-
-    private void recordImeCloseStatus(boolean hidden) {
-        host.setImeVisible(false);
-        host.appendEvent("manual.ime.close hidden=" + hidden);
-        host.updateStatus("ime.state.hidden");
     }
 
     private final class EdgeSwipeListener implements View.OnTouchListener {
