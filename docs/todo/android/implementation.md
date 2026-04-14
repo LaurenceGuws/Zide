@@ -147,6 +147,9 @@ Agent reporting contract (mandatory for cleanup campaign updates):
      batches (see charter Hard rules).
    - Completed: `host/lifecycle` tightened (debug intent args, lifecycle flow
      and new-intent logging through `LifecycleController`).
+   - Completed: `SurfaceController` net-smaller: removed ten pass-through helpers
+     that only forwarded `Host` reads or `SurfaceHolder#getSurface()`; call
+     sites use `host` and holders directly (behavior unchanged).
    - Next: net simplification in `ChromeController` or `SurfaceController`:
      remove or merge pass-through helpers and redundant indirection so the
      touched class ends with fewer methods, fields, or dependencies; each of
