@@ -148,9 +148,9 @@ public final class ZideTerminalActivity extends Activity
     protected void onResume() {
         super.onResume();
         terminalActivityLifecycleController.onResume(
-                getIntent().getBooleanExtra(EXTRA_DEBUG_RECREATE_SURFACE_ONCE, false),
-                getIntent().getBooleanExtra(EXTRA_DEBUG_RESIZE_SURFACE_ONCE, false),
-                getIntent().getBooleanExtra(EXTRA_DEBUG_START_SHELL_ONCE, false));
+                shouldDebugRecreateSurfaceOnce(),
+                shouldDebugResizeSurfaceOnce(),
+                shouldDebugStartShellOnce());
     }
 
     @Override
@@ -516,6 +516,18 @@ public final class ZideTerminalActivity extends Activity
 
     private boolean isNativeLoaded() {
         return nativeLoaded;
+    }
+
+    private boolean shouldDebugRecreateSurfaceOnce() {
+        return getIntent().getBooleanExtra(EXTRA_DEBUG_RECREATE_SURFACE_ONCE, false);
+    }
+
+    private boolean shouldDebugResizeSurfaceOnce() {
+        return getIntent().getBooleanExtra(EXTRA_DEBUG_RESIZE_SURFACE_ONCE, false);
+    }
+
+    private boolean shouldDebugStartShellOnce() {
+        return getIntent().getBooleanExtra(EXTRA_DEBUG_START_SHELL_ONCE, false);
     }
 
     private boolean isDebugViewEnabled() {
