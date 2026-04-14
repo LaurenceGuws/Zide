@@ -3,7 +3,7 @@ package dev.zide.terminal.userland;
 import dev.zide.terminal.session.ShellSessionController;
 
 /**
- * Owns bootstrap-state refresh, shell polling, state application, and auto-start telemetry.
+ * Owns readiness-state refresh, shell polling, state application, and auto-start telemetry.
  *
  * <p>This is the one owner of the "read staged userland state, poll shell, apply product/debug
  * state" pass. It should not perform install work or mutate Android views directly.

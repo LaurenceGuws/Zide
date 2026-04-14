@@ -4,7 +4,7 @@ package dev.zide.terminal.userland;
  * Central path policy for the Android app-private userland.
  *
  * <p>Keep path construction here so installer, session, and command execution code agree on the
- * same prefix, shell, and bootstrap stamp locations.
+ * same prefix, shell, and readiness stamp locations.
  */
 public final class UserlandPolicy {
     public static final String PACKAGE_NAME = "dev.zide.terminal";
@@ -13,6 +13,7 @@ public final class UserlandPolicy {
     }
 
     public static String readinessStampPath(android.content.Context context) {
+        // Keep the legacy filename for stamp compatibility.
         return new java.io.File(context.getFilesDir(), ".zide-userland-bootstrap.json").getAbsolutePath();
     }
 

@@ -2,7 +2,7 @@ package dev.zide.terminal.userland;
 
 import android.widget.Button;
 
-/** Owns bootstrap-blocker button policy for retry/install and debug escalation. */
+/** Owns readiness-blocker button policy for retry/install and debug escalation. */
 public final class UserlandReadinessBlockerController {
     /** Host callbacks for state and side effects. */
     public interface Host {
@@ -41,10 +41,10 @@ public final class UserlandReadinessBlockerController {
                 host.workflowController().startInstall();
                 return;
             }
-            host.appendEvent("product.bootstrap retry");
+            host.appendEvent("product.readiness retry");
             host.sessionCoordinator().refreshAndApply(true);
-            host.updateStatus("product-bootstrap-retry");
+            host.updateStatus("product-readiness-retry");
         });
-        debugButton.setOnClickListener(view -> host.showDebugView("product.bootstrap debug", "debug-view"));
+        debugButton.setOnClickListener(view -> host.showDebugView("product.readiness debug", "debug-view"));
     }
 }

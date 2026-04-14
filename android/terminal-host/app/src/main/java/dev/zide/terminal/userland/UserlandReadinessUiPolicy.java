@@ -3,7 +3,7 @@ package dev.zide.terminal.userland;
 import android.content.Context;
 import dev.zide.terminal.R;
 
-/** Userland bootstrap blocker copy and action policy for the Android host UI. */
+/** Userland readiness-blocker copy and action policy for the Android host UI. */
 public final class UserlandReadinessUiPolicy {
     private UserlandReadinessUiPolicy() {
     }

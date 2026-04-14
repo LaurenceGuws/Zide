@@ -23,7 +23,7 @@ import org.json.JSONObject;
  * Installs the pinned userland artifact into the app-private prefix.
  *
  * <p>This class owns manifest fetch, archive verification, extraction, runtime support links, and
- * bootstrap stamp validation. It deliberately has no Android view, lifecycle, or shell session
+ * readiness stamp validation. It deliberately has no Android view, lifecycle, or shell session
  * ownership.
  */
 public final class UserlandInstaller {

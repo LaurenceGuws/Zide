@@ -6,7 +6,7 @@ import dev.zide.terminal.userland.UserlandRelease;
 /**
  * Coordinates shell session polling and first auto-start eligibility.
  *
- * <p>This controller reads userland readiness through bootstrap state and calls the native shell
+ * <p>This controller reads userland readiness state and calls the native shell
  * bridge. It does not own product presentation, install workflow, or Android view state.
  */
 public final class ShellSessionController {
