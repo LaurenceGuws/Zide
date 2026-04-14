@@ -120,6 +120,10 @@ public final class ZideTerminalActivity extends Activity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        runOnCreateStartupSequence();
+    }
+
+    private void runOnCreateStartupSequence() {
         initializeStatusAndViewControllers();
         assembleInteractionControllers();
         assembleUserlandWorkflowControllers();
