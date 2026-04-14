@@ -174,10 +174,14 @@ public final class SurfaceController {
     }
 
     public void onSurfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+        appendSurfaceGeometryChangedTelemetry(format, width, height);
+        dispatchProductSurfaceChanged(holder, width, height);
+    }
+
+    private void appendSurfaceGeometryChangedTelemetry(int format, int width, int height) {
         host.appendEvent("surface.changed generation=" + host.surfaceHostGeneration()
                 + " format=" + format
                 + " size=" + width + "x" + height);
-        dispatchProductSurfaceChanged(holder, width, height);
     }
 
     /** Notifies native of holder sizing, then schedules viewport + shell chrome follow-ups. */
@@ -213,13 +217,17 @@ public final class SurfaceController {
             return;
         }
         surfaceRedrawNeededDispatching = true;
-        host.appendEvent(
-                "surface.redrawNeeded generation=" + host.surfaceHostGeneration() + " valid=" + holder.getSurface().isValid());
+        appendSurfaceRedrawNeededDispatchTelemetry(holder);
         try {
             dispatchNativeProductRedrawNeededTelemetryAndStatus();
         } finally {
             surfaceRedrawNeededDispatching = false;
         }
+    }
+
+    private void appendSurfaceRedrawNeededDispatchTelemetry(SurfaceHolder holder) {
+        host.appendEvent(
+                "surface.redrawNeeded generation=" + host.surfaceHostGeneration() + " valid=" + holder.getSurface().isValid());
     }
 
     private void dispatchNativeProductRedrawNeededTelemetryAndStatus() {

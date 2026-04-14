@@ -191,7 +191,7 @@ public final class ChromeController {
     }
 
     public void openSidebar() {
-        if (host.sidebarOpen() || host.debugViewEnabled()) {
+        if (shouldDeferSidebarOpen()) {
             return;
         }
         host.setSidebarOpen(true);
@@ -200,12 +200,20 @@ public final class ChromeController {
     }
 
     public void closeSidebar() {
-        if (!host.sidebarOpen()) {
+        if (shouldDeferSidebarClose()) {
             return;
         }
         host.setSidebarOpen(false);
         animateSidebarTranslation(false);
         updateSidebarVisibility(false);
+    }
+
+    private boolean shouldDeferSidebarOpen() {
+        return host.sidebarOpen() || host.debugViewEnabled();
+    }
+
+    private boolean shouldDeferSidebarClose() {
+        return !host.sidebarOpen();
     }
 
     private void animateSidebarTranslation(boolean open) {
