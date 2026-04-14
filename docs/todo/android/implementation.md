@@ -49,8 +49,9 @@ Focus goals:
    - Completed: helper ordering is grouped by role
      (`host accessors`, `state snapshots`, `state setters`, `runtime actions`)
      so assembly-readability improvements remain scan-friendly.
-   - Next: only extract remaining callback suppliers where signal improves;
-     avoid no-value churn on trivial one-liners.
+   - Completed: high-signal callback supplier extractions are complete; remaining
+     callback suppliers are intentionally trivial one-liners.
+   - Next: move to the next smallest wiring-vs-policy cut in activity methods.
 2. Keep Java ownership boundaries aligned with
    `ANDROID_JAVA_HOST_STRUCTURE.md`.
 3. Stabilize selection/scroll interaction behavior under manual device usage.
