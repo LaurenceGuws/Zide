@@ -13,6 +13,46 @@ import uk.laurencegouws.terminal.userland.UserlandInstallState;
 
 /** Functional callback adapter for {@link StatusViewAssembly.Host}. */
 public final class StatusViewCallbacks implements StatusViewAssembly.Host {
+    public static final class StatusHostBundle {
+        final Supplier<Activity> activity;
+        final BooleanSupplier debugViewEnabled;
+        final BooleanSupplier nativeLoaded;
+        final BooleanSupplier hasWindowFocusNow;
+        final BooleanSupplier imeVisible;
+        final Consumer<Boolean> setImeVisible;
+
+        private StatusHostBundle(
+                Supplier<Activity> activity,
+                BooleanSupplier debugViewEnabled,
+                BooleanSupplier nativeLoaded,
+                BooleanSupplier hasWindowFocusNow,
+                BooleanSupplier imeVisible,
+                Consumer<Boolean> setImeVisible) {
+            this.activity = activity;
+            this.debugViewEnabled = debugViewEnabled;
+            this.nativeLoaded = nativeLoaded;
+            this.hasWindowFocusNow = hasWindowFocusNow;
+            this.imeVisible = imeVisible;
+            this.setImeVisible = setImeVisible;
+        }
+
+        public static StatusHostBundle of(
+                Supplier<Activity> activity,
+                BooleanSupplier debugViewEnabled,
+                BooleanSupplier nativeLoaded,
+                BooleanSupplier hasWindowFocusNow,
+                BooleanSupplier imeVisible,
+                Consumer<Boolean> setImeVisible) {
+            return new StatusHostBundle(
+                    activity,
+                    debugViewEnabled,
+                    nativeLoaded,
+                    hasWindowFocusNow,
+                    imeVisible,
+                    setImeVisible);
+        }
+    }
+
     public static final class StatusRuntimeBundle {
         final Supplier<SurfaceBridge> surfaceHostBridge;
         final Supplier<UserlandInstallState> currentInstallState;
@@ -48,59 +88,44 @@ public final class StatusViewCallbacks implements StatusViewAssembly.Host {
         }
     }
 
-    private final Supplier<Activity> activity;
-    private final BooleanSupplier debugViewEnabled;
-    private final BooleanSupplier nativeLoaded;
-    private final BooleanSupplier hasWindowFocusNow;
-    private final BooleanSupplier imeVisible;
-    private final Consumer<Boolean> setImeVisible;
+    private final StatusHostBundle statusHostBundle;
     private final StatusRuntimeBundle statusRuntimeBundle;
 
     public StatusViewCallbacks(
-            Supplier<Activity> activity,
-            BooleanSupplier debugViewEnabled,
-            BooleanSupplier nativeLoaded,
-            BooleanSupplier hasWindowFocusNow,
-            BooleanSupplier imeVisible,
-            Consumer<Boolean> setImeVisible,
+            StatusHostBundle statusHostBundle,
             StatusRuntimeBundle statusRuntimeBundle) {
-        this.activity = activity;
-        this.debugViewEnabled = debugViewEnabled;
-        this.nativeLoaded = nativeLoaded;
-        this.hasWindowFocusNow = hasWindowFocusNow;
-        this.imeVisible = imeVisible;
-        this.setImeVisible = setImeVisible;
+        this.statusHostBundle = statusHostBundle;
         this.statusRuntimeBundle = statusRuntimeBundle;
     }
 
     @Override
     public Activity activity() {
-        return activity.get();
+        return statusHostBundle.activity.get();
     }
 
     @Override
     public boolean debugViewEnabled() {
-        return debugViewEnabled.getAsBoolean();
+        return statusHostBundle.debugViewEnabled.getAsBoolean();
     }
 
     @Override
     public boolean nativeLoaded() {
-        return nativeLoaded.getAsBoolean();
+        return statusHostBundle.nativeLoaded.getAsBoolean();
     }
 
     @Override
     public boolean hasWindowFocusNow() {
-        return hasWindowFocusNow.getAsBoolean();
+        return statusHostBundle.hasWindowFocusNow.getAsBoolean();
     }
 
     @Override
     public boolean imeVisible() {
-        return imeVisible.getAsBoolean();
+        return statusHostBundle.imeVisible.getAsBoolean();
     }
 
     @Override
     public void setImeVisible(boolean visible) {
-        setImeVisible.accept(visible);
+        statusHostBundle.setImeVisible.accept(visible);
     }
 
     @Override

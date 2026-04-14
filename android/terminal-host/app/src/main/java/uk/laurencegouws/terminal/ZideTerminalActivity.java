@@ -397,12 +397,13 @@ public final class ZideTerminalActivity extends Activity
 
     private StatusViewCallbacks createStatusViewCallbacks() {
         return new StatusViewCallbacks(
-                () -> this,
-                () -> debugViewEnabled,
-                () -> nativeLoaded,
-                this::hasWindowFocus,
-                () -> imeVisible,
-                visible -> imeVisible = visible,
+                StatusViewCallbacks.StatusHostBundle.of(
+                        () -> this,
+                        () -> debugViewEnabled,
+                        () -> nativeLoaded,
+                        this::hasWindowFocus,
+                        () -> imeVisible,
+                        visible -> imeVisible = visible),
                 StatusViewCallbacks.StatusRuntimeBundle.of(
                         () -> surfaceHostBridge,
                         () -> currentInstallState,
