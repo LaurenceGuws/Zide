@@ -261,8 +261,12 @@ public final class SurfaceController {
         final SurfaceHolder.Callback2 nextCallback = resolveSurfaceInstallCallback(callback);
         host.reinstallSurfaceCallback(nextSurfaceView, nextCallback);
         host.setSurfaceView(nextSurfaceView);
-        host.appendEvent("surface.host.installed reason=" + reason + " generation=" + host.surfaceHostGeneration());
+        appendSurfaceHostInstalledTelemetry(reason);
         host.productSurfaceContainer().post(() -> notifyVisibleViewport("surface-install"));
+    }
+
+    private void appendSurfaceHostInstalledTelemetry(String reason) {
+        host.appendEvent("surface.host.installed reason=" + reason + " generation=" + host.surfaceHostGeneration());
     }
 
     public void notifyVisibleViewport(String reason) {

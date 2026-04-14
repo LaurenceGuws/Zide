@@ -67,14 +67,26 @@ public final class ChromeController {
         final Button packagesButton =
                 (Button) host.leftSidebar().findViewById(uk.laurencegouws.terminal.R.id.sidebar_packages_button);
 
+        bindSidebarRestartNavButton(restartButton);
+        bindSidebarDebugNavButton(debugButton);
+        bindSidebarPackagesNavButton(packagesButton);
+    }
+
+    private void bindSidebarRestartNavButton(Button restartButton) {
         restartButton.setOnClickListener(view -> {
             host.appendEvent("manual.session.restart requested");
             closeSidebar();
         });
+    }
+
+    private void bindSidebarDebugNavButton(Button debugButton) {
         debugButton.setOnClickListener(view -> {
             host.showDebugView("view.mode debug=true", "debug-view");
             closeSidebar();
         });
+    }
+
+    private void bindSidebarPackagesNavButton(Button packagesButton) {
         packagesButton.setOnClickListener(view -> {
             closeSidebar();
             host.runPackageDoctor();
