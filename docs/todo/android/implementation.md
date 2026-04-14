@@ -157,6 +157,8 @@ A cut is done only if all are true:
   bridge naming commits
 - local guard added: run `./ops/lint_android_java_events.py` to enforce
   `domain.subject.action` event-key grammar for `appendEvent(...)`
+- aggregate local guard added: run `./ops/lint_android_naming_all.py`
+  to execute both naming lints in one command
 - selection controller remains monolithic by design until a real split seam
   exists
 - queue remains Android-product-first, not shell-readiness-baseline-first

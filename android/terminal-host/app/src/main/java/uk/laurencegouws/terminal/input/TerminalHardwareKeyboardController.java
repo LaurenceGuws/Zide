@@ -46,7 +46,7 @@ public final class TerminalHardwareKeyboardController {
                 imm.hideSoftInputFromWindow(host.shellInputView().getWindowToken(), 0);
             }
             host.setImeVisible(false);
-            host.updateStatus("hardware-keyboard");
+            host.updateStatus("input.hardware_keyboard");
         }
         return host.shellInputView().handleHardwareKeyEvent(event);
     }

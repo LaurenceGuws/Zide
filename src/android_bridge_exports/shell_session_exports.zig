@@ -51,7 +51,7 @@ export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeRestartSessi
     return restartSession();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativePollShellSessionBridge(
+export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativePollSessionBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {

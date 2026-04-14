@@ -90,7 +90,7 @@ public final class TerminalNativeBridge {
 
     public static native int nativeRestartSessionBridge();
 
-    public static native int nativePollShellSessionBridge();
+    public static native int nativePollSessionBridge();
 
     public static native boolean nativeIsShellSessionAliveBridge();
 

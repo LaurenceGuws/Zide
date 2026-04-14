@@ -21,7 +21,7 @@ public final class TerminalNativeStatusLabels {
     public static String shellStartStatusLabel(int status) {
         switch (status) {
             case 1:
-                return "started";
+                return "activity.started";
             case 2:
                 return "unsupported";
             case 3:
@@ -48,7 +48,7 @@ public final class TerminalNativeStatusLabels {
             case 2:
                 return "drawn";
             case 3:
-                return "surface-destroyed";
+                return "surface.destroyed";
             case 4:
                 return "init-failed";
             case 5:

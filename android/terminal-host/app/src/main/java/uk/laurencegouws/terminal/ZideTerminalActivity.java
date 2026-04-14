@@ -384,7 +384,7 @@ public final class ZideTerminalActivity extends Activity
                             return tick;
                         },
                         TerminalNativeBridge::nativeRestartSessionBridge,
-                        TerminalNativeBridge::nativePollShellSessionBridge,
+                        TerminalNativeBridge::nativePollSessionBridge,
                         TerminalNativeBridge::nativeIsShellSessionAliveBridge));
         userlandSessionCoordinator = result.userlandSessionCoordinator;
         productFrameLoopController = result.frameLoopController;
@@ -498,7 +498,7 @@ public final class ZideTerminalActivity extends Activity
             appendEvent("native.load.error detail=" + nativeLoadError);
         }
         callNative("native.onCreate", nativeLoaded ? TerminalNativeBridge.nativeOnCreateBridge() : -1);
-        updateStatus("created");
+        updateStatus("activity.created");
     }
 
     /**

@@ -66,7 +66,7 @@ public final class UserlandWorkflowController {
 
     public void runPackageDoctor() {
         host.setPackageStatusText("Running zide-pm...");
-        host.showDebugView("packages.doctor begin", "packages-doctor");
+        host.showDebugView("packages.doctor begin", "packages.doctor");
         new Thread(() -> {
             try {
                 final String prefixPath = UserlandPolicy.prefixPath(host.context());
@@ -78,16 +78,16 @@ public final class UserlandWorkflowController {
                 host.handler().post(() -> {
                     host.setPackageStatusText(combined);
                     host.appendEvent("packages.doctor.success");
-                    host.updateStatus("packages-doctor");
+                    host.updateStatus("packages.doctor");
                 });
             } catch (IOException err) {
                 host.handler().post(() -> {
                     final String detail = err.getMessage() == null ? err.getClass().getSimpleName() : err.getMessage();
                     host.setPackageStatusText("zide-pm failed: " + detail);
                     host.appendEvent("packages.doctor.failed err=" + err.getClass().getSimpleName());
-                    host.updateStatus("packages-doctor-failed");
+                    host.updateStatus("packages.doctor.failed");
                 });
             }
-        }, "packages-doctor").start();
+        }, "packages.doctor").start();
     }
 }

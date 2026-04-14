@@ -110,7 +110,7 @@ public final class SurfaceController {
 
     public void onSurfaceCreated(SurfaceHolder holder) {
         host.appendEvent("surface.lifecycle.created generation=" + host.surfaceHostGeneration() + " valid=" + holder.getSurface().isValid());
-        host.updateStatus("surface-created");
+        host.updateStatus("surface.created");
     }
 
     public void onSurfaceChanged(SurfaceHolder holder, int format, int width, int height) {
@@ -134,7 +134,7 @@ public final class SurfaceController {
                 "native.surfaceDestroyed",
                 seq,
                 host.currentSurfaceStateSnapshot());
-        host.updateStatus("surface-destroyed");
+        host.updateStatus("surface.destroyed");
     }
 
     public void onSurfaceRedrawNeeded(SurfaceHolder holder) {
@@ -163,7 +163,7 @@ public final class SurfaceController {
                             " glesTextureUpdates=" + state.glesTextureUpdateCount +
                             " glesTextureResizes=" + state.glesTextureResizeCount +
                             " glesTextureSize=" + state.glesTextureWidth + "x" + state.glesTextureHeight);
-            host.updateStatus("surface-redraw-needed");
+            host.updateStatus("surface.redraw_needed");
         } finally {
             surfaceRedrawNeededDispatching = false;
         }
@@ -215,7 +215,7 @@ public final class SurfaceController {
         final long seq = host.nativeLoaded() ? host.nativeOnVisibleViewportBridge(width, height, viewportImeVisible) : -1;
         host.callNativeWithSurfaceState("native.viewportChanged", seq, host.currentSurfaceStateSnapshot());
         host.refreshProductScrollOverlay();
-        host.updateStatus("viewport-updated");
+        host.updateStatus("viewport.updated");
     }
 
     private void maybeScheduleSurfaceRecreation(boolean recreateSurfaceOnce) {
@@ -227,7 +227,7 @@ public final class SurfaceController {
         host.productSurfaceContainer().postDelayed(() -> {
             host.appendEvent("debug.surface.recreate_view");
             installSurfaceView("debug-recreate", null);
-            host.updateStatus("debug-recreated-surface");
+            host.updateStatus("debug.surface.recreated");
         }, 700);
     }
 
@@ -251,14 +251,14 @@ public final class SurfaceController {
                     "debug.surface.resize fixedSize=" + originalWidth + "x" + shrunkHeight +
                             " original=" + originalWidth + "x" + originalHeight +
                             " target=surfaceHolder");
-            host.updateStatus("debug-resized-surface-shrink");
+            host.updateStatus("debug.surface.resized_shrink");
 
             host.handler().postDelayed(() -> {
                 holder.setFixedSize(originalWidth, originalHeight);
                 host.appendEvent(
                         "debug.surface.resize restoreSize=" + originalWidth + "x" + originalHeight +
                                 " target=surfaceHolder");
-                host.updateStatus("debug-resized-surface-restore");
+                host.updateStatus("debug.surface.resized_restore");
             }, 900);
         }, 900);
     }

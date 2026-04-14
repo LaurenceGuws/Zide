@@ -56,3 +56,4 @@ Session entrypoint only. Keep this file short, stable, and current.
   active Android bridge/runtime code
 - local naming lint exists at `ops/lint_android_zig_naming.py`
 - local Java event-key lint exists at `ops/lint_android_java_events.py`
+- aggregate local naming gate exists at `ops/lint_android_naming_all.py`

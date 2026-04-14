@@ -43,7 +43,7 @@ public final class UserlandReadinessBlockerController {
             }
             host.appendEvent("product.readiness.retry");
             host.sessionCoordinator().refreshAndApply(true);
-            host.updateStatus("product-readiness-retry");
+            host.updateStatus("product.readiness.retry");
         });
         debugButton.setOnClickListener(view -> host.showDebugView("product.readiness debug", "debug-view"));
     }

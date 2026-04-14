@@ -42,7 +42,7 @@ public final class SessionAssembly {
 
         int nativeRestartSession();
 
-        int nativePollShellSession();
+        int nativePollSession();
 
         boolean nativeIsShellSessionAlive();
     }
@@ -77,7 +77,7 @@ public final class SessionAssembly {
                         host.userlandRelease(),
                         host.nativeLoaded(),
                         host::nativeRestartSession,
-                        host::nativePollShellSession,
+                        host::nativePollSession,
                         host::nativeIsShellSessionAlive);
         final SessionBridge userlandSessionHostBridge =
                 SessionFactory.createUserlandSessionHostBridge(
