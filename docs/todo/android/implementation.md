@@ -46,7 +46,7 @@ Focus goals:
    - Completed: callback wiring hygiene pass in `ZideTerminalActivity` now uses
      named setter/getter/host helpers and removes non-trivial inline callback
      lambdas in assembly factories.
-   - Next: keep helper ordering grouped by role
+   - Completed: helper ordering is grouped by role
      (`host accessors`, `state snapshots`, `state setters`, `runtime actions`)
      so assembly-readability improvements remain scan-friendly.
    - Next: only extract remaining callback suppliers where signal improves;
