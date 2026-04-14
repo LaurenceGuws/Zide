@@ -211,9 +211,7 @@ public final class SurfaceController {
 
     public void onSurfaceRedrawNeeded(SurfaceHolder holder) {
         if (surfaceRedrawNeededDispatching) {
-            host.appendEvent(
-                    "surface.redrawNeeded reentrant-skipped generation=" + host.surfaceHostGeneration() +
-                            " valid=" + holder.getSurface().isValid());
+            appendSurfaceRedrawReentrantSkippedTelemetry(holder);
             return;
         }
         surfaceRedrawNeededDispatching = true;
@@ -223,6 +221,12 @@ public final class SurfaceController {
         } finally {
             surfaceRedrawNeededDispatching = false;
         }
+    }
+
+    private void appendSurfaceRedrawReentrantSkippedTelemetry(SurfaceHolder holder) {
+        host.appendEvent(
+                "surface.redrawNeeded reentrant-skipped generation=" + host.surfaceHostGeneration() +
+                        " valid=" + holder.getSurface().isValid());
     }
 
     private void appendSurfaceRedrawNeededDispatchTelemetry(SurfaceHolder holder) {
@@ -250,7 +254,7 @@ public final class SurfaceController {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 Gravity.CENTER);
         host.productSurfaceContainer().addView(nextSurfaceView, params);
-        final SurfaceHolder.Callback2 nextCallback = callback != null ? callback : host.surfaceCallback();
+        final SurfaceHolder.Callback2 nextCallback = resolveSurfaceInstallCallback(callback);
         host.reinstallSurfaceCallback(nextSurfaceView, nextCallback);
         host.setSurfaceView(nextSurfaceView);
         host.appendEvent("surface.host.installed reason=" + reason + " generation=" + host.surfaceHostGeneration());
@@ -315,13 +319,16 @@ public final class SurfaceController {
                         " glesTextureSize=" + state.glesTextureWidth + "x" + state.glesTextureHeight);
     }
 
+    private SurfaceHolder.Callback2 resolveSurfaceInstallCallback(SurfaceHolder.Callback2 callback) {
+        return callback != null ? callback : host.surfaceCallback();
+    }
+
     private void removeExistingSurfaceHostViewIfPresent(String reason, SurfaceHolder.Callback2 callback) {
         final SurfaceView existing = host.surfaceView();
         if (existing == null) {
             return;
         }
-        final SurfaceHolder.Callback2 previousCallback =
-                callback != null ? callback : host.surfaceCallback();
+        final SurfaceHolder.Callback2 previousCallback = resolveSurfaceInstallCallback(callback);
         if (previousCallback != null) {
             existing.getHolder().removeCallback(previousCallback);
         }

@@ -126,12 +126,20 @@ public final class ChromeController {
 
     /** Binds optional assist-row IME toggle when the view id exists in the assist layout. */
     private void bindAssistImeToggleIfPresent(View root) {
-        final int imeButtonId =
-                root.getResources().getIdentifier("assist_ime_button", "id", root.getContext().getPackageName());
-        final Button imeButton = imeButtonId != 0 ? root.findViewById(imeButtonId) : null;
+        final Button imeButton = resolveAssistImeButton(root);
         if (imeButton == null) {
             return;
         }
+        bindAssistImeToggleClick(imeButton);
+    }
+
+    private Button resolveAssistImeButton(View root) {
+        final int imeButtonId =
+                root.getResources().getIdentifier("assist_ime_button", "id", root.getContext().getPackageName());
+        return imeButtonId != 0 ? root.findViewById(imeButtonId) : null;
+    }
+
+    private void bindAssistImeToggleClick(Button imeButton) {
         imeButton.setOnClickListener(view -> {
             toggleIme();
             host.appendEvent("assist.ime.toggle");
