@@ -2,6 +2,7 @@ package uk.laurencegouws.terminal.host.surface;
 
 import android.graphics.PixelFormat;
 import android.view.Gravity;
+import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
@@ -130,7 +131,7 @@ public final class SurfaceController {
     private void scheduleDebugSurfaceResizeIfRequested(boolean resizeSurfaceOnce) {
         host.appendEvent("debug.surface.resize requested=" + resizeSurfaceOnce + " scheduled=" + host.surfaceResizeScheduled());
         if (resizeSurfaceOnce && !host.surfaceResizeScheduled()) {
-            final SurfaceView surfaceView = host.surfaceView();
+            final SurfaceView surfaceView = hostSurfaceViewOrNull();
             if (surfaceView != null) {
                 host.setSurfaceResizeScheduled(true);
                 host.handler().postDelayed(() -> {
@@ -181,8 +182,12 @@ public final class SurfaceController {
     }
 
     private void recordProductSurfaceCreated(SurfaceHolder holder) {
-        host.appendEvent("surface.lifecycle.created generation=" + host.surfaceHostGeneration() + " valid=" + holder.getSurface().isValid());
+        host.appendEvent("surface.lifecycle.created generation=" + host.surfaceHostGeneration() + " valid=" + surfaceFromHolderForProductLifecycle(holder).isValid());
         host.updateStatus("surface.state.created");
+    }
+
+    private Surface surfaceFromHolderForProductLifecycle(SurfaceHolder holder) {
+        return holder.getSurface();
     }
 
     public void onSurfaceChanged(SurfaceHolder holder, int format, int width, int height) {
@@ -262,12 +267,12 @@ public final class SurfaceController {
     private void appendSurfaceRedrawReentrantSkippedTelemetry(SurfaceHolder holder) {
         host.appendEvent(
                 "surface.redrawNeeded reentrant-skipped generation=" + host.surfaceHostGeneration() +
-                        " valid=" + holder.getSurface().isValid());
+                        " valid=" + surfaceFromHolderForProductLifecycle(holder).isValid());
     }
 
     private void appendSurfaceRedrawNeededDispatchTelemetry(SurfaceHolder holder) {
         host.appendEvent(
-                "surface.redrawNeeded generation=" + host.surfaceHostGeneration() + " valid=" + holder.getSurface().isValid());
+                "surface.redrawNeeded generation=" + host.surfaceHostGeneration() + " valid=" + surfaceFromHolderForProductLifecycle(holder).isValid());
     }
 
     private void dispatchNativeProductRedrawNeededTelemetryAndStatus() {
@@ -293,7 +298,7 @@ public final class SurfaceController {
         prepareSurfaceHostHolderFormat(nextSurfaceView);
         host.installSurfaceGestureHost(nextSurfaceView);
         final FrameLayout.LayoutParams params = matchParentCenteredSurfaceHostLayoutParams();
-        productSurfaceHostContainer().addView(nextSurfaceView, params);
+        addProductSurfaceHostChild(nextSurfaceView, params);
         final SurfaceHolder.Callback2 nextCallback = resolveSurfaceInstallCallback(callback);
         registerProductSurfaceHostView(nextSurfaceView, nextCallback);
         appendSurfaceHostInstalledTelemetry(reason);
@@ -320,6 +325,18 @@ public final class SurfaceController {
         if (previousCallback != null) {
             holderForProductSurfaceView(existing).removeCallback(previousCallback);
         }
+    }
+
+    private void addProductSurfaceHostChild(SurfaceView child, FrameLayout.LayoutParams params) {
+        productSurfaceHostContainer().addView(child, params);
+    }
+
+    private void removeProductSurfaceHostChild(SurfaceView child) {
+        productSurfaceHostContainer().removeView(child);
+    }
+
+    private SurfaceView hostSurfaceViewOrNull() {
+        return host.surfaceView();
     }
 
     private void registerProductSurfaceHostView(SurfaceView surfaceView, SurfaceHolder.Callback2 callback) {
@@ -433,13 +450,13 @@ public final class SurfaceController {
     }
 
     private void removeExistingSurfaceHostViewIfPresent(String reason, SurfaceHolder.Callback2 callback) {
-        final SurfaceView existing = host.surfaceView();
+        final SurfaceView existing = hostSurfaceViewOrNull();
         if (existing == null) {
             return;
         }
         final SurfaceHolder.Callback2 previousCallback = resolveSurfaceInstallCallback(callback);
         removeSurfaceHolderCallbackIfPresent(existing, previousCallback);
-        productSurfaceHostContainer().removeView(existing);
+        removeProductSurfaceHostChild(existing);
         appendSurfaceHostRemovedTelemetry(reason);
     }
 
