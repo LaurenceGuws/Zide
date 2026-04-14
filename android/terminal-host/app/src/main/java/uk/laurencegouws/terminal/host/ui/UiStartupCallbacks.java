@@ -18,6 +18,71 @@ import uk.laurencegouws.terminal.userland.UserlandWorkflowController;
 
 /** Functional callback adapter for {@link UiStartupAssembly.Host}. */
 public final class UiStartupCallbacks implements UiStartupAssembly.Host {
+    public static final class UiHostBundle {
+        final Supplier<ViewportController> viewportController;
+        final Supplier<ChromeController> chromeController;
+        final Supplier<Button> productBootstrapRetryButton;
+        final Supplier<Button> productBootstrapDebugButton;
+        final Supplier<UserlandInstallState> currentInstallState;
+        final Supplier<UserlandReadinessState> currentReadinessState;
+        final Supplier<UserlandWorkflowController> userlandWorkflowController;
+        final Supplier<UserlandSessionCoordinator> userlandSessionCoordinator;
+        final UiStartupAssembly.ShowDebugView showDebugView;
+        final Consumer<String> appendEvent;
+        final Consumer<String> updateStatus;
+
+        private UiHostBundle(
+                Supplier<ViewportController> viewportController,
+                Supplier<ChromeController> chromeController,
+                Supplier<Button> productBootstrapRetryButton,
+                Supplier<Button> productBootstrapDebugButton,
+                Supplier<UserlandInstallState> currentInstallState,
+                Supplier<UserlandReadinessState> currentReadinessState,
+                Supplier<UserlandWorkflowController> userlandWorkflowController,
+                Supplier<UserlandSessionCoordinator> userlandSessionCoordinator,
+                UiStartupAssembly.ShowDebugView showDebugView,
+                Consumer<String> appendEvent,
+                Consumer<String> updateStatus) {
+            this.viewportController = viewportController;
+            this.chromeController = chromeController;
+            this.productBootstrapRetryButton = productBootstrapRetryButton;
+            this.productBootstrapDebugButton = productBootstrapDebugButton;
+            this.currentInstallState = currentInstallState;
+            this.currentReadinessState = currentReadinessState;
+            this.userlandWorkflowController = userlandWorkflowController;
+            this.userlandSessionCoordinator = userlandSessionCoordinator;
+            this.showDebugView = showDebugView;
+            this.appendEvent = appendEvent;
+            this.updateStatus = updateStatus;
+        }
+
+        public static UiHostBundle of(
+                Supplier<ViewportController> viewportController,
+                Supplier<ChromeController> chromeController,
+                Supplier<Button> productBootstrapRetryButton,
+                Supplier<Button> productBootstrapDebugButton,
+                Supplier<UserlandInstallState> currentInstallState,
+                Supplier<UserlandReadinessState> currentReadinessState,
+                Supplier<UserlandWorkflowController> userlandWorkflowController,
+                Supplier<UserlandSessionCoordinator> userlandSessionCoordinator,
+                UiStartupAssembly.ShowDebugView showDebugView,
+                Consumer<String> appendEvent,
+                Consumer<String> updateStatus) {
+            return new UiHostBundle(
+                    viewportController,
+                    chromeController,
+                    productBootstrapRetryButton,
+                    productBootstrapDebugButton,
+                    currentInstallState,
+                    currentReadinessState,
+                    userlandWorkflowController,
+                    userlandSessionCoordinator,
+                    showDebugView,
+                    appendEvent,
+                    updateStatus);
+        }
+    }
+
     public static final class UiRuntimeBundle {
         final Supplier<RuntimeAssetsController> runtimeAssetsController;
         final Supplier<ViewModeController> viewModeController;
@@ -63,99 +128,69 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
         }
     }
 
-    private final Supplier<ViewportController> viewportController;
-    private final Supplier<ChromeController> chromeController;
-    private final Supplier<Button> productBootstrapRetryButton;
-    private final Supplier<Button> productBootstrapDebugButton;
-    private final Supplier<UserlandInstallState> currentInstallState;
-    private final Supplier<UserlandReadinessState> currentReadinessState;
-    private final Supplier<UserlandWorkflowController> userlandWorkflowController;
-    private final Supplier<UserlandSessionCoordinator> userlandSessionCoordinator;
-    private final UiStartupAssembly.ShowDebugView showDebugView;
-    private final Consumer<String> appendEvent;
-    private final Consumer<String> updateStatus;
+    private final UiHostBundle uiHostBundle;
     private final UiRuntimeBundle uiRuntimeBundle;
 
     public UiStartupCallbacks(
-            Supplier<ViewportController> viewportController,
-            Supplier<ChromeController> chromeController,
-            Supplier<Button> productBootstrapRetryButton,
-            Supplier<Button> productBootstrapDebugButton,
-            Supplier<UserlandInstallState> currentInstallState,
-            Supplier<UserlandReadinessState> currentReadinessState,
-            Supplier<UserlandWorkflowController> userlandWorkflowController,
-            Supplier<UserlandSessionCoordinator> userlandSessionCoordinator,
-            UiStartupAssembly.ShowDebugView showDebugView,
-            Consumer<String> appendEvent,
-            Consumer<String> updateStatus,
+            UiHostBundle uiHostBundle,
             UiRuntimeBundle uiRuntimeBundle) {
-        this.viewportController = viewportController;
-        this.chromeController = chromeController;
-        this.productBootstrapRetryButton = productBootstrapRetryButton;
-        this.productBootstrapDebugButton = productBootstrapDebugButton;
-        this.currentInstallState = currentInstallState;
-        this.currentReadinessState = currentReadinessState;
-        this.userlandWorkflowController = userlandWorkflowController;
-        this.userlandSessionCoordinator = userlandSessionCoordinator;
-        this.showDebugView = showDebugView;
-        this.appendEvent = appendEvent;
-        this.updateStatus = updateStatus;
+        this.uiHostBundle = uiHostBundle;
         this.uiRuntimeBundle = uiRuntimeBundle;
     }
 
     @Override
     public ViewportController viewportController() {
-        return viewportController.get();
+        return uiHostBundle.viewportController.get();
     }
 
     @Override
     public ChromeController chromeController() {
-        return chromeController.get();
+        return uiHostBundle.chromeController.get();
     }
 
     @Override
     public Button productBootstrapRetryButton() {
-        return productBootstrapRetryButton.get();
+        return uiHostBundle.productBootstrapRetryButton.get();
     }
 
     @Override
     public Button productBootstrapDebugButton() {
-        return productBootstrapDebugButton.get();
+        return uiHostBundle.productBootstrapDebugButton.get();
     }
 
     @Override
     public Supplier<UserlandInstallState> currentInstallState() {
-        return currentInstallState;
+        return uiHostBundle.currentInstallState;
     }
 
     @Override
     public Supplier<UserlandReadinessState> currentReadinessState() {
-        return currentReadinessState;
+        return uiHostBundle.currentReadinessState;
     }
 
     @Override
     public Supplier<UserlandWorkflowController> userlandWorkflowController() {
-        return userlandWorkflowController;
+        return uiHostBundle.userlandWorkflowController;
     }
 
     @Override
     public Supplier<UserlandSessionCoordinator> userlandSessionCoordinator() {
-        return userlandSessionCoordinator;
+        return uiHostBundle.userlandSessionCoordinator;
     }
 
     @Override
     public UiStartupAssembly.ShowDebugView showDebugView() {
-        return showDebugView;
+        return uiHostBundle.showDebugView;
     }
 
     @Override
     public Consumer<String> appendEvent() {
-        return appendEvent;
+        return uiHostBundle.appendEvent;
     }
 
     @Override
     public Consumer<String> updateStatus() {
-        return updateStatus;
+        return uiHostBundle.updateStatus;
     }
 
     @Override

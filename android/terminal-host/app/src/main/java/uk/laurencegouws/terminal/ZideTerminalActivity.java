@@ -466,17 +466,18 @@ public final class ZideTerminalActivity extends Activity
 
     private UiStartupCallbacks createUiStartupCallbacks() {
         return new UiStartupCallbacks(
-                () -> terminalViewportController,
-                () -> terminalChromeController,
-                () -> productBootstrapRetryButton,
-                () -> productBootstrapDebugButton,
-                () -> currentInstallState,
-                () -> currentReadinessState,
-                () -> userlandWorkflowController,
-                () -> userlandSessionCoordinator,
-                this::showDebugViewIfReady,
-                this::appendEvent,
-                this::updateStatus,
+                UiStartupCallbacks.UiHostBundle.of(
+                        () -> terminalViewportController,
+                        () -> terminalChromeController,
+                        () -> productBootstrapRetryButton,
+                        () -> productBootstrapDebugButton,
+                        () -> currentInstallState,
+                        () -> currentReadinessState,
+                        () -> userlandWorkflowController,
+                        () -> userlandSessionCoordinator,
+                        this::showDebugViewIfReady,
+                        this::appendEvent,
+                        this::updateStatus),
                 UiStartupCallbacks.UiRuntimeBundle.of(
                         () -> terminalRuntimeAssetsController,
                         () -> terminalViewModeController,
