@@ -271,8 +271,7 @@ public final class TerminalSelectionController {
         final int status = updateSelectionFromActiveDrag();
         if (status == 0) {
             applyImmediateSelectionAutoscrollStep();
-            syncTerminalSelectionActionMode();
-            host.reevaluateProductFrameLoop();
+            syncSelectionAndReevaluateFrameLoop();
         }
     }
 
@@ -288,9 +287,7 @@ public final class TerminalSelectionController {
         if (selectionDragMode == SelectionDragMode.gesture) {
             bridge.finishSelectionGesture();
         }
-        endSelectionDrag();
-        showSelectionToolbar();
-        host.reevaluateProductFrameLoop();
+        completeSelectionDragInteraction();
     }
 
     private View createSelectionHandleView(SelectionDragMode dragMode) {
@@ -328,8 +325,7 @@ public final class TerminalSelectionController {
                 updateSelectionDragPoint(selectionHandleAnchorX(handle), selectionHandleAnchorY(handle));
                 if (updateSelectionFromActiveDrag() == 0) {
                     applyImmediateSelectionAutoscrollStep();
-                    syncTerminalSelectionActionMode();
-                    host.reevaluateProductFrameLoop();
+                    syncSelectionAndReevaluateFrameLoop();
                 }
                 return true;
             case MotionEvent.ACTION_UP:
@@ -341,9 +337,7 @@ public final class TerminalSelectionController {
                         syncTerminalSelectionActionMode();
                     }
                 }
-                endSelectionDrag();
-                showSelectionToolbar();
-                host.reevaluateProductFrameLoop();
+                completeSelectionDragInteraction();
                 return true;
             default:
                 return false;
@@ -388,6 +382,17 @@ public final class TerminalSelectionController {
         selectionDraggedHandleView = null;
         selectionDraggedHandleTouchOffsetX = 0.0f;
         selectionDraggedHandleTouchOffsetY = 0.0f;
+    }
+
+    private void completeSelectionDragInteraction() {
+        endSelectionDrag();
+        showSelectionToolbar();
+        host.reevaluateProductFrameLoop();
+    }
+
+    private void syncSelectionAndReevaluateFrameLoop() {
+        syncTerminalSelectionActionMode();
+        host.reevaluateProductFrameLoop();
     }
 
     private boolean commitSelectionDragIfNeeded(float x, float y) {
