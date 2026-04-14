@@ -185,7 +185,7 @@ public final class SurfaceController {
 
     private void maybeScheduleSurfaceRecreation(boolean recreateSurfaceOnce) {
         host.appendEvent("debug.surface.recreate requested=" + recreateSurfaceOnce + " scheduled=" + host.surfaceRecreationScheduled());
-        if (skipSurfaceRecreationSchedule(recreateSurfaceOnce)) {
+        if (!recreateSurfaceOnce || host.surfaceRecreationScheduled()) {
             return;
         }
         host.setSurfaceRecreationScheduled(true);
@@ -198,11 +198,11 @@ public final class SurfaceController {
 
     private void maybeScheduleSurfaceResize(boolean resizeSurfaceOnce) {
         host.appendEvent("debug.surface.resize requested=" + resizeSurfaceOnce + " scheduled=" + host.surfaceResizeScheduled());
-        if (skipSurfaceResizeSchedule(resizeSurfaceOnce)) {
+        if (!resizeSurfaceOnce || host.surfaceResizeScheduled()) {
             return;
         }
         final SurfaceView surfaceView = host.surfaceView();
-        if (missingSurfaceViewForResize(surfaceView)) {
+        if (surfaceView == null) {
             return;
         }
         host.setSurfaceResizeScheduled(true);
@@ -211,7 +211,7 @@ public final class SurfaceController {
 
     private void maybeScheduleShellStart(boolean startShellOnce) {
         host.appendEvent("debug.session.start requested=" + startShellOnce + " scheduled=" + host.shellStartScheduled());
-        if (skipShellStartSchedule(startShellOnce)) {
+        if (!startShellOnce || host.shellStartScheduled()) {
             return;
         }
         host.setShellStartScheduled(true);
@@ -329,22 +329,6 @@ public final class SurfaceController {
                         " glesTextureUpdates=" + state.glesTextureUpdateCount +
                         " glesTextureResizes=" + state.glesTextureResizeCount +
                         " glesTextureSize=" + state.glesTextureWidth + "x" + state.glesTextureHeight);
-    }
-
-    private boolean skipSurfaceRecreationSchedule(boolean recreateSurfaceOnce) {
-        return !recreateSurfaceOnce || host.surfaceRecreationScheduled();
-    }
-
-    private boolean skipShellStartSchedule(boolean startShellOnce) {
-        return !startShellOnce || host.shellStartScheduled();
-    }
-
-    private boolean skipSurfaceResizeSchedule(boolean resizeSurfaceOnce) {
-        return !resizeSurfaceOnce || host.surfaceResizeScheduled();
-    }
-
-    private boolean missingSurfaceViewForResize(SurfaceView surfaceView) {
-        return surfaceView == null;
     }
 
     private void scheduleSurfaceResizeProbe(SurfaceView surfaceView) {
