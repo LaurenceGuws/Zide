@@ -114,6 +114,13 @@ Success metrics:
    - Completed: first `host/surface/SurfaceController` ownership batch landed
      (native-sequence and surface-change event composition branches now route
      through named helpers; behavior unchanged).
+   - Completed: `host/lifecycle` ownership seams tightened:
+     - debug intent extras now parse through `LifecycleDebugIntentArgs`
+     - on-create lifecycle flow and new-intent lifecycle event logging now
+       route through `LifecycleController`
+   - Completed: callback pressure reduction cuts landed in two heavy adapters:
+     `UiStartupCallbacks` and `ProductRuntimeAssemblyCallbacks` wrapper layers
+     were flattened (pass-through wrapper classes removed).
    - Next: continue smallest ownership-clarity cuts in `ChromeController` or
      `SurfaceController` where watch-level pressure remains.
 3. Stabilize selection/scroll interaction behavior under manual device usage.
