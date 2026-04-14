@@ -712,11 +712,7 @@ public final class ZideTerminalActivity extends Activity
     public void sendDirectText(String text) {
         if (!nativeLoaded)
             return;
-        for (int i = 0; i < text.length();) {
-            final int cp = text.codePointAt(i);
-            TerminalNativeBridge.nativeSendSessionCodepointBridge(cp);
-            i += Character.charCount(cp);
-        }
+        sendDirectTextCodepoints(text);
     }
 
     @Override
@@ -750,6 +746,14 @@ public final class ZideTerminalActivity extends Activity
 
     private long nativeOnSurfaceAvailable(SurfaceHolder holder, int width, int height) {
         return TerminalNativeBridge.nativeOnSurfaceAvailableBridge(holder.getSurface(), width, height);
+    }
+
+    private void sendDirectTextCodepoints(String text) {
+        for (int i = 0; i < text.length();) {
+            final int cp = text.codePointAt(i);
+            TerminalNativeBridge.nativeSendSessionCodepointBridge(cp);
+            i += Character.charCount(cp);
+        }
     }
 
     private AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot() {
