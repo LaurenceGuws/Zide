@@ -196,8 +196,12 @@ public final class SurfaceController {
     }
 
     public void onSurfaceDestroyed(SurfaceHolder holder) {
-        host.appendEvent("surface.lifecycle.destroyed generation=" + host.surfaceHostGeneration());
+        appendSurfaceDestroyedLifecycleTelemetry();
         dispatchNativeProductSurfaceDestroyed();
+    }
+
+    private void appendSurfaceDestroyedLifecycleTelemetry() {
+        host.appendEvent("surface.lifecycle.destroyed generation=" + host.surfaceHostGeneration());
     }
 
     private void dispatchNativeProductSurfaceDestroyed() {

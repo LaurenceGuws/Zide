@@ -90,6 +90,10 @@ public final class ChromeController {
     public void bindAssistBar() {
         final View root = host.shellInputView().getRootView();
         bindAssistImeToggleIfPresent(root);
+        bindAssistRowInputChrome();
+    }
+
+    private void bindAssistRowInputChrome() {
         bindAssistModifierLatchButtons();
         bindAssistCharacterButtons();
         applyAssistModifierLatchChromeAfterBindings();
@@ -202,15 +206,23 @@ public final class ChromeController {
         if (shouldDeferSidebarOpen()) {
             return;
         }
-        host.setSidebarOpen(true);
-        animateSidebarTranslation(true);
-        updateSidebarVisibility(true);
+        applySidebarOpenedChrome();
     }
 
     public void closeSidebar() {
         if (shouldDeferSidebarClose()) {
             return;
         }
+        applySidebarClosedChrome();
+    }
+
+    private void applySidebarOpenedChrome() {
+        host.setSidebarOpen(true);
+        animateSidebarTranslation(true);
+        updateSidebarVisibility(true);
+    }
+
+    private void applySidebarClosedChrome() {
         host.setSidebarOpen(false);
         animateSidebarTranslation(false);
         updateSidebarVisibility(false);
