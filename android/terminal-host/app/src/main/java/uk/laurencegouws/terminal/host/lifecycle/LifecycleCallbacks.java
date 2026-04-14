@@ -58,37 +58,64 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
         }
     }
 
-    private final BooleanSupplier nativeLoaded;
+    public static final class LifecycleHostBundle {
+        final BooleanSupplier nativeLoaded;
+        final Consumer<String> appendEvent;
+        final Consumer<String> updateStatus;
+        final Runnable stopProductFrameLoop;
+        final Runnable refreshUserlandSessionOnPause;
+        final Runnable notifySurfacePause;
+        final SurfaceResumeCall notifySurfaceResume;
+
+        private LifecycleHostBundle(
+                BooleanSupplier nativeLoaded,
+                Consumer<String> appendEvent,
+                Consumer<String> updateStatus,
+                Runnable stopProductFrameLoop,
+                Runnable refreshUserlandSessionOnPause,
+                Runnable notifySurfacePause,
+                SurfaceResumeCall notifySurfaceResume) {
+            this.nativeLoaded = nativeLoaded;
+            this.appendEvent = appendEvent;
+            this.updateStatus = updateStatus;
+            this.stopProductFrameLoop = stopProductFrameLoop;
+            this.refreshUserlandSessionOnPause = refreshUserlandSessionOnPause;
+            this.notifySurfacePause = notifySurfacePause;
+            this.notifySurfaceResume = notifySurfaceResume;
+        }
+
+        public static LifecycleHostBundle of(
+                BooleanSupplier nativeLoaded,
+                Consumer<String> appendEvent,
+                Consumer<String> updateStatus,
+                Runnable stopProductFrameLoop,
+                Runnable refreshUserlandSessionOnPause,
+                Runnable notifySurfacePause,
+                SurfaceResumeCall notifySurfaceResume) {
+            return new LifecycleHostBundle(
+                    nativeLoaded,
+                    appendEvent,
+                    updateStatus,
+                    stopProductFrameLoop,
+                    refreshUserlandSessionOnPause,
+                    notifySurfacePause,
+                    notifySurfaceResume);
+        }
+    }
+
+    private final LifecycleHostBundle lifecycleHostBundle;
     private final NativeLifecycleBundle nativeLifecycleBundle;
-    private final Consumer<String> appendEvent;
-    private final Consumer<String> updateStatus;
-    private final Runnable stopProductFrameLoop;
-    private final Runnable refreshUserlandSessionOnPause;
-    private final Runnable notifySurfacePause;
-    private final SurfaceResumeCall notifySurfaceResume;
 
     public LifecycleCallbacks(
-            BooleanSupplier nativeLoaded,
-            NativeLifecycleBundle nativeLifecycleBundle,
-            Consumer<String> appendEvent,
-            Consumer<String> updateStatus,
-            Runnable stopProductFrameLoop,
-            Runnable refreshUserlandSessionOnPause,
-            Runnable notifySurfacePause,
-            SurfaceResumeCall notifySurfaceResume) {
-        this.nativeLoaded = nativeLoaded;
+            LifecycleHostBundle lifecycleHostBundle,
+            NativeLifecycleBundle nativeLifecycleBundle) {
+        this.lifecycleHostBundle = lifecycleHostBundle;
         this.nativeLifecycleBundle = nativeLifecycleBundle;
-        this.appendEvent = appendEvent;
-        this.updateStatus = updateStatus;
-        this.stopProductFrameLoop = stopProductFrameLoop;
-        this.refreshUserlandSessionOnPause = refreshUserlandSessionOnPause;
-        this.notifySurfacePause = notifySurfacePause;
-        this.notifySurfaceResume = notifySurfaceResume;
     }
 
     @Override
     public boolean nativeLoaded() {
-        return nativeLoaded.getAsBoolean();
+        return lifecycleHostBundle.nativeLoaded.getAsBoolean();
     }
 
     @Override
@@ -118,7 +145,7 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
 
     @Override
     public void appendEvent(String event) {
-        appendEvent.accept(event);
+        lifecycleHostBundle.appendEvent.accept(event);
     }
 
     @Override
@@ -128,22 +155,22 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
 
     @Override
     public void updateStatus(String statusLabel) {
-        updateStatus.accept(statusLabel);
+        lifecycleHostBundle.updateStatus.accept(statusLabel);
     }
 
     @Override
     public void stopProductFrameLoop() {
-        stopProductFrameLoop.run();
+        lifecycleHostBundle.stopProductFrameLoop.run();
     }
 
     @Override
     public void refreshUserlandSessionOnPause() {
-        refreshUserlandSessionOnPause.run();
+        lifecycleHostBundle.refreshUserlandSessionOnPause.run();
     }
 
     @Override
     public void notifySurfacePause() {
-        notifySurfacePause.run();
+        lifecycleHostBundle.notifySurfacePause.run();
     }
 
     @Override
@@ -151,7 +178,7 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
             boolean debugRecreateSurfaceOnce,
             boolean debugResizeSurfaceOnce,
             boolean debugStartShellOnce) {
-        notifySurfaceResume.call(
+        lifecycleHostBundle.notifySurfaceResume.call(
                 debugRecreateSurfaceOnce,
                 debugResizeSurfaceOnce,
                 debugStartShellOnce);

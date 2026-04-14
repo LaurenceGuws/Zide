@@ -416,24 +416,25 @@ public final class ZideTerminalActivity extends Activity
 
     private LifecycleCallbacks createLifecycleCallbacks() {
         return new LifecycleCallbacks(
-                () -> nativeLoaded,
+                LifecycleCallbacks.LifecycleHostBundle.of(
+                        () -> nativeLoaded,
+                        this::appendEvent,
+                        this::updateStatus,
+                        this::stopProductFrameLoopIfReady,
+                        this::refreshUserlandSessionIfReady,
+                        this::pauseSurfaceIfReady,
+                        (debugRecreateSurfaceOnce, debugResizeSurfaceOnce, debugStartShellOnce) -> surfaceHostController
+                                .onResume(
+                                        debugRecreateSurfaceOnce,
+                                        debugResizeSurfaceOnce,
+                                        debugStartShellOnce)),
                 LifecycleCallbacks.NativeLifecycleBundle.of(
                         TerminalNativeBridge::nativeOnStartBridge,
                         TerminalNativeBridge::nativeOnResumeBridge,
                         TerminalNativeBridge::nativeOnPauseBridge,
                         TerminalNativeBridge::nativeOnStopBridge,
                         TerminalNativeBridge::nativeOnWindowFocusBridge,
-                        this::callNative),
-                this::appendEvent,
-                this::updateStatus,
-                this::stopProductFrameLoopIfReady,
-                this::refreshUserlandSessionIfReady,
-                this::pauseSurfaceIfReady,
-                (debugRecreateSurfaceOnce, debugResizeSurfaceOnce, debugStartShellOnce) -> surfaceHostController
-                        .onResume(
-                                debugRecreateSurfaceOnce,
-                                debugResizeSurfaceOnce,
-                                debugStartShellOnce));
+                        this::callNative));
     }
 
     private void bindAndStartUiControllers() {
