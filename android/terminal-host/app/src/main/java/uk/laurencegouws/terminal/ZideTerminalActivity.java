@@ -240,19 +240,17 @@ public final class ZideTerminalActivity extends Activity
 
     private InputCallbacks createInputCallbacks() {
         return new InputCallbacks(
-                InputCallbacks.InputHostCallbacks.of(
-                        this::activityHost,
-                        () -> rootView,
-                        this::activityHost,
-                        this::inputMethodManager),
-                InputCallbacks.InputRuntimeCallbacks.of(
-                        this::isImeVisible,
-                        this::setImeVisible,
-                        this::isNativeLoaded,
-                        TerminalNativeBridge::nativeFollowSessionLiveBottomBridge,
-                        this::refreshProductScrollOverlayIfReady,
-                        this::updateStatus,
-                        this::appendEvent));
+                this::activityHost,
+                () -> rootView,
+                this::activityHost,
+                this::inputMethodManager,
+                this::isImeVisible,
+                this::setImeVisible,
+                this::isNativeLoaded,
+                TerminalNativeBridge::nativeFollowSessionLiveBottomBridge,
+                this::refreshProductScrollOverlayIfReady,
+                this::updateStatus,
+                this::appendEvent);
     }
 
     private void assembleWidgetHostControllers() {
