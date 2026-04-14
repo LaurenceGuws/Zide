@@ -337,7 +337,7 @@ public final class ZideTerminalActivity extends Activity
                 this::runPackageDoctor,
                 this::sendDirectText,
                 this::notifyVisibleViewportIfReady,
-                () -> userlandSessionCoordinator.refreshAndApply(false));
+                this::refreshUserlandSessionIfReady);
     }
 
     private SessionAssemblyCallbacks createSessionAssemblyCallbacks() {
@@ -370,7 +370,7 @@ public final class ZideTerminalActivity extends Activity
                 () -> currentInstallState,
                 installState -> currentInstallState = installState,
                 () -> currentReadinessState,
-                () -> surfaceHostBridge != null ? surfaceHostBridge.currentSurfaceView() : null,
+                this::currentSurfaceViewIfReady,
                 () -> productBootstrapBlocker,
                 () -> terminalScrollOverlay,
                 () -> selectionController,
@@ -414,9 +414,9 @@ public final class ZideTerminalActivity extends Activity
                 this::appendEvent,
                 this::callNative,
                 this::updateStatus,
-                () -> productFrameLoopController.stop(),
-                () -> userlandSessionCoordinator.refreshAndApply(false),
-                () -> surfaceHostController.onPause(),
+                this::stopProductFrameLoopIfReady,
+                this::refreshUserlandSessionIfReady,
+                this::pauseSurfaceIfReady,
                 (debugRecreateSurfaceOnce, debugResizeSurfaceOnce, debugStartShellOnce) -> surfaceHostController
                         .onResume(
                                 debugRecreateSurfaceOnce,
@@ -529,6 +529,28 @@ public final class ZideTerminalActivity extends Activity
     private void showDebugViewIfReady(String eventName, String statusLabel) {
         if (terminalViewModeController != null) {
             terminalViewModeController.showDebugView(eventName, statusLabel);
+        }
+    }
+
+    private android.view.SurfaceView currentSurfaceViewIfReady() {
+        return surfaceHostBridge != null ? surfaceHostBridge.currentSurfaceView() : null;
+    }
+
+    private void stopProductFrameLoopIfReady() {
+        if (productFrameLoopController != null) {
+            productFrameLoopController.stop();
+        }
+    }
+
+    private void refreshUserlandSessionIfReady() {
+        if (userlandSessionCoordinator != null) {
+            userlandSessionCoordinator.refreshAndApply(false);
+        }
+    }
+
+    private void pauseSurfaceIfReady() {
+        if (surfaceHostController != null) {
+            surfaceHostController.onPause();
         }
     }
 
