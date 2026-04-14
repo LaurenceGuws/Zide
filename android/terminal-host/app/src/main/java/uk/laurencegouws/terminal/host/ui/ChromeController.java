@@ -110,10 +110,10 @@ public final class ChromeController {
 
     public void toggleIme() {
         if (currentImeVisible()) {
-            closeIme();
+            closeImeFromToggle();
             return;
         }
-        openIme();
+        openImeFromToggle();
     }
 
     public void openSidebar() {
@@ -205,6 +205,14 @@ public final class ChromeController {
         host.setImeVisible(false);
         host.appendEvent("manual.ime.close hidden=" + hidden);
         host.updateStatus("ime.state.hidden");
+    }
+
+    private void closeImeFromToggle() {
+        closeIme();
+    }
+
+    private void openImeFromToggle() {
+        openIme();
     }
 
     private final class EdgeSwipeListener implements View.OnTouchListener {
