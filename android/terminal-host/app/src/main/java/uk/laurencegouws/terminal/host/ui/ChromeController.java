@@ -157,8 +157,16 @@ public final class ChromeController {
     }
 
     private void bindAssistModifierLatchButtons() {
-        host.bindModifierAssistButton(host.assistCtrlButton(), ShellInputView.ModifierLatch.CTRL, "assist.ctrl");
-        host.bindModifierAssistButton(host.assistAltButton(), ShellInputView.ModifierLatch.ALT, "assist.alt");
+        host.bindModifierAssistButton(assistCtrlButtonChrome(), ShellInputView.ModifierLatch.CTRL, "assist.ctrl");
+        host.bindModifierAssistButton(assistAltButtonChrome(), ShellInputView.ModifierLatch.ALT, "assist.alt");
+    }
+
+    private Button assistCtrlButtonChrome() {
+        return host.assistCtrlButton();
+    }
+
+    private Button assistAltButtonChrome() {
+        return host.assistAltButton();
     }
 
     /** Wires assist-row text keys and arrow keys to host direct-send binding. */
@@ -191,9 +199,12 @@ public final class ChromeController {
     }
 
     private Button resolveAssistImeButton(View root) {
-        final int imeButtonId =
-                root.getResources().getIdentifier("assist_ime_button", "id", root.getContext().getPackageName());
+        final int imeButtonId = assistImeButtonResourceIdFromRoot(root);
         return imeButtonId != 0 ? root.findViewById(imeButtonId) : null;
+    }
+
+    private int assistImeButtonResourceIdFromRoot(View root) {
+        return root.getResources().getIdentifier("assist_ime_button", "id", root.getContext().getPackageName());
     }
 
     private void bindAssistImeToggleClick(Button imeButton) {
@@ -327,7 +338,11 @@ public final class ChromeController {
 
     private void animateSidebarTranslation(boolean open) {
         final float targetX = leftSidebarTranslationXForOpenState(open);
-        leftSidebarChrome().animate().translationX(targetX).setDuration(180).start();
+        leftSidebarChrome().animate().translationX(targetX).setDuration(sidebarOpenAnimationDurationMsChrome()).start();
+    }
+
+    private int sidebarOpenAnimationDurationMsChrome() {
+        return 180;
     }
 
     private float leftSidebarTranslationXForOpenState(boolean open) {
