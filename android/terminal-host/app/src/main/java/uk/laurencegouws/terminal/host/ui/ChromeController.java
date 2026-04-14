@@ -45,6 +45,11 @@ public final class ChromeController {
     }
 
     public void bindSidebarControls() {
+        bindSidebarChromeInteractions();
+    }
+
+    /** Sidebar nav actions, scrim dismiss, and edge swipe open/close chrome. */
+    private void bindSidebarChromeInteractions() {
         final Button restartButton =
                 (Button) host.leftSidebar().findViewById(uk.laurencegouws.terminal.R.id.sidebar_restart_button);
         final Button debugButton =
@@ -73,10 +78,14 @@ public final class ChromeController {
     public void bindAssistBar() {
         final View root = host.shellInputView().getRootView();
         bindAssistImeToggleIfPresent(root);
-        host.bindModifierAssistButton(host.assistCtrlButton(), ShellInputView.ModifierLatch.CTRL, "assist.ctrl");
-        host.bindModifierAssistButton(host.assistAltButton(), ShellInputView.ModifierLatch.ALT, "assist.alt");
+        bindAssistModifierLatchButtons();
         bindAssistCharacterButtons();
         host.applyModifierLatchState(host.shellInputView().modifierLatchState());
+    }
+
+    private void bindAssistModifierLatchButtons() {
+        host.bindModifierAssistButton(host.assistCtrlButton(), ShellInputView.ModifierLatch.CTRL, "assist.ctrl");
+        host.bindModifierAssistButton(host.assistAltButton(), ShellInputView.ModifierLatch.ALT, "assist.alt");
     }
 
     /** Wires assist-row text keys and arrow keys to host direct-send binding. */
