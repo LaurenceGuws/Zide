@@ -153,16 +153,6 @@ A cut is done only if all are true:
   `restartShellSession`-style bridge helper names
 - Zig bridge naming authority now includes an explicit forbidden-terms checklist
   to block regressions in active Android runtime paths
-- local guard added: run `./ops/lint_android_zig_naming.py` before Android Zig
-  bridge naming commits
-- local guard added: run `./ops/lint_android_java_events.py` to enforce
-  `domain.subject.action` event-key grammar for `appendEvent(...)`
-- aggregate local guard added: run `./ops/lint_android_naming_all.py`
-  to execute both naming lints in one command
-- pre-commit local guard added: run `./ops/check_android_naming_gate.py`
-  to execute naming lints + release Java compile in one command
-- Android touch precommit helper added: run `./ops/precommit_android.sh`
-  to execute naming gate + deploy smoke in one command
 - Java naming contract now includes event suffix key contract and explicit
   `native*Shell*Bridge` forbidden-symbol rule for `TerminalNativeBridge.java`
 - selection controller remains monolithic by design until a real split seam

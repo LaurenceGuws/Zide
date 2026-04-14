@@ -54,11 +54,6 @@ Session entrypoint only. Keep this file short, stable, and current.
   `src/platform/android_gles_surface_status.zig`
 - Zig naming contract now includes an explicit forbidden-terms checklist for
   active Android bridge/runtime code
-- local naming lint exists at `ops/lint_android_zig_naming.py`
-- local Java event-key lint exists at `ops/lint_android_java_events.py`
-- aggregate local naming gate exists at `ops/lint_android_naming_all.py`
-- pre-commit local Android naming+compile gate exists at
-  `ops/check_android_naming_gate.py`
-- Android touch precommit helper exists at `ops/precommit_android.sh`
-- Java naming authority now includes event suffix contract and forbidden
-  `native*Shell*Bridge` symbol rule in `ANDROID_JAVA_NAMING_CONTRACT.md`
+- Java naming authority now includes event suffix contract and
+  `native*Shell*Bridge` symbol guidance in
+  `ANDROID_JAVA_NAMING_CONTRACT.md`

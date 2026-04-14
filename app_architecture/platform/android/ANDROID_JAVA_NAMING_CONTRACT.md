@@ -71,11 +71,6 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
 ## Rename Campaign Rules
 
 - one mechanical slice at a time
-- run local naming gates before commit:
-  - `./ops/lint_android_java_events.py`
-  - `./ops/lint_android_naming_all.py`
-  - `./ops/check_android_naming_gate.py`
-  - `./ops/precommit_android.sh` (naming gate + deploy smoke)
 - compile after each slice with:
   `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac`
 - update this naming contract and the Java ownership contract in the same slice

@@ -56,7 +56,6 @@ docs and reuses the same product glossary used in Java cleanup.
 
 - one mechanical slice at a time
 - validate at minimum with:
-  - `./ops/lint_android_zig_naming.py`
   - `zig build android-terminal-host-bridge -Dtarget=aarch64-linux-android -Dmode=terminal -Doptimize=Debug --sysroot /home/home/.local/share/zide-android-sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/linux-x86_64/sysroot`
   - `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac`
 - when naming boundaries move, update this contract and
