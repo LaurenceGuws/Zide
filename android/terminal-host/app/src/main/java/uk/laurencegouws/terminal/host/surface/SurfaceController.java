@@ -149,7 +149,19 @@ public final class SurfaceController {
         try {
             final long seq = host.nativeLoaded() ? host.nativeOnSurfaceRedrawNeededBridge() : -1;
             final AndroidDebugFormatter.SurfaceEventSnapshot state = host.currentSurfaceStateSnapshot();
-            appendNativeSurfaceRedrawNeededEvent(seq, state);
+            host.appendEvent(
+                    "native.surfaceRedrawNeeded seq=" + seq +
+                            " gles=" + state.glesStatus +
+                            " glesSwaps=" + state.glesSwapCount +
+                            " glesBoundEpoch=" + state.glesBoundEpoch +
+                            " glesContextCreates=" + state.glesContextCreateCount +
+                            " glesSurfaceCreates=" + state.glesSurfaceCreateCount +
+                            " glesTextureCreates=" + state.glesTextureCreateCount +
+                            " glesTextureAlive=" + state.glesTextureAlive +
+                            " glesTextureUploads=" + state.glesTextureUploadCount +
+                            " glesTextureUpdates=" + state.glesTextureUpdateCount +
+                            " glesTextureResizes=" + state.glesTextureResizeCount +
+                            " glesTextureSize=" + state.glesTextureWidth + "x" + state.glesTextureHeight);
             host.updateStatus("surface.state.redraw_needed");
         } finally {
             surfaceRedrawNeededDispatching = false;
@@ -183,7 +195,7 @@ public final class SurfaceController {
         }
         host.setNotifiedViewportSize(width, height, viewportImeVisible);
         host.appendEvent("viewport.size.changed reason=" + reason + " size=" + width + "x" + height + " imeVisible=" + viewportImeVisible);
-        final long seq = nativeViewportChangedSeq(width, height, viewportImeVisible);
+        final long seq = host.nativeLoaded() ? host.nativeOnVisibleViewportBridge(width, height, viewportImeVisible) : -1;
         host.callNativeWithSurfaceState("native.viewportChanged", seq, host.currentSurfaceStateSnapshot());
         host.refreshProductScrollOverlay();
         host.updateStatus("viewport.state.updated");
@@ -212,7 +224,13 @@ public final class SurfaceController {
             return;
         }
         host.setSurfaceResizeScheduled(true);
-        scheduleSurfaceResizeProbe(surfaceView);
+        host.handler().postDelayed(() -> {
+            final SurfaceHolder holder = surfaceView.getHolder();
+            final int originalWidth = Math.max(2, surfaceView.getWidth());
+            final int originalHeight = Math.max(2, surfaceView.getHeight());
+            final int shrunkHeight = Math.max(200, originalHeight / 2);
+            applySurfaceResize(holder, originalWidth, originalHeight, shrunkHeight);
+        }, 900);
     }
 
     private void maybeScheduleShellStart(boolean startShellOnce) {
@@ -274,36 +292,6 @@ public final class SurfaceController {
                 Gravity.CENTER);
         host.productSurfaceContainer().addView(nextSurfaceView, params);
         return nextSurfaceView;
-    }
-
-    private long nativeViewportChangedSeq(int width, int height, boolean imeVisible) {
-        return host.nativeLoaded() ? host.nativeOnVisibleViewportBridge(width, height, imeVisible) : -1;
-    }
-
-    private void appendNativeSurfaceRedrawNeededEvent(long seq, AndroidDebugFormatter.SurfaceEventSnapshot state) {
-        host.appendEvent(
-                "native.surfaceRedrawNeeded seq=" + seq +
-                        " gles=" + state.glesStatus +
-                        " glesSwaps=" + state.glesSwapCount +
-                        " glesBoundEpoch=" + state.glesBoundEpoch +
-                        " glesContextCreates=" + state.glesContextCreateCount +
-                        " glesSurfaceCreates=" + state.glesSurfaceCreateCount +
-                        " glesTextureCreates=" + state.glesTextureCreateCount +
-                        " glesTextureAlive=" + state.glesTextureAlive +
-                        " glesTextureUploads=" + state.glesTextureUploadCount +
-                        " glesTextureUpdates=" + state.glesTextureUpdateCount +
-                        " glesTextureResizes=" + state.glesTextureResizeCount +
-                        " glesTextureSize=" + state.glesTextureWidth + "x" + state.glesTextureHeight);
-    }
-
-    private void scheduleSurfaceResizeProbe(SurfaceView surfaceView) {
-        host.handler().postDelayed(() -> {
-            final SurfaceHolder holder = surfaceView.getHolder();
-            final int originalWidth = Math.max(2, surfaceView.getWidth());
-            final int originalHeight = Math.max(2, surfaceView.getHeight());
-            final int shrunkHeight = Math.max(200, originalHeight / 2);
-            applySurfaceResize(holder, originalWidth, originalHeight, shrunkHeight);
-        }, 900);
     }
 
 }
