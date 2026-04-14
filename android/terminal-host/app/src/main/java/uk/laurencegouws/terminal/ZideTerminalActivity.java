@@ -275,76 +275,7 @@ public final class ZideTerminalActivity extends Activity
 
     private void assembleWidgetHostControllers() {
         final WidgetAssembly.Result result = WidgetAssembly.assemble(
-                new WidgetCallbacks(
-                        () -> this,
-                        () -> handler,
-                        () -> nativeLoaded,
-                        () -> debugViewEnabled,
-                        enabled -> debugViewEnabled = enabled,
-                        () -> imeVisible,
-                        visible -> imeVisible = visible,
-                        () -> rootView,
-                        () -> productView,
-                        () -> debugView,
-                        () -> productBootstrapBlocker,
-                        () -> drawerScrim,
-                        () -> drawerEdgeHotspot,
-                        () -> leftSidebar,
-                        () -> productSurfaceContainer,
-                        () -> terminalScrollOverlay,
-                        () -> productBootstrapTitle,
-                        () -> productBootstrapDetail,
-                        () -> productBootstrapRetryButton,
-                        () -> assistCtrlButton,
-                        () -> assistAltButton,
-                        () -> shellInputView,
-                        () -> selectionController,
-                        () -> terminalGestureStateController,
-                        () -> surfaceHostBridge,
-                        () -> currentInstallState.isInstalling(),
-                        () -> currentInstallState.isFailed(),
-                        () -> currentReadinessState,
-                        () -> currentInstallState,
-                        () -> terminalProductRuntimeController != null
-                                && terminalProductRuntimeController.shouldRunProductFrameLoop(),
-                        () -> {
-                            if (terminalProductRuntimeController != null) {
-                                terminalProductRuntimeController.refreshProductScrollOverlay();
-                            }
-                        },
-                        this::appendEvent,
-                        this::updateStatus,
-                        this::callNative,
-                        this::callNativeWithSurfaceState,
-                        (holder, width, height) -> TerminalNativeBridge.nativeOnSurfaceAvailableBridge(
-                                holder.getSurface(),
-                                width,
-                                height),
-                        TerminalNativeBridge::nativeOnSurfaceDestroyedBridge,
-                        TerminalNativeBridge::nativeOnSurfaceRedrawNeededBridge,
-                        TerminalNativeBridge::nativeOnVisibleViewportBridge,
-                        this::currentSurfaceStateSnapshot,
-                        statusLabel -> {
-                            if (terminalProductRuntimeController != null) {
-                                terminalProductRuntimeController.handleProductShellStateEvent(statusLabel);
-                            }
-                        },
-                        TerminalNativeBridge::nativeSetSessionScrollbackOffsetBridge,
-                        TerminalNativeBridge::nativeFollowSessionLiveBottomBridge,
-                        this::productViewportHeightPx,
-                        () -> {
-                            if (productFrameLoopController != null) {
-                                productFrameLoopController.reevaluate();
-                            }
-                        },
-                        this::runPackageDoctor,
-                        this::sendDirectText,
-                        reason -> {
-                            if (surfaceHostController != null) {
-                                surfaceHostController.notifyVisibleViewport(reason);
-                            }
-                        },
-                        () -> userlandSessionCoordinator.refreshAndApply(false)));
+                createWidgetCallbacks());
         productShellStatePresenter = result.productShellStatePresenter;
         terminalChromeController = result.terminalChromeController;
         terminalViewModeController = result.terminalViewModeController;
@@ -355,37 +286,7 @@ public final class ZideTerminalActivity extends Activity
 
     private void assembleSessionControllers() {
         final SessionAssembly.Result result = SessionAssembly.assemble(
-                new SessionAssemblyCallbacks(
-                        () -> this,
-                        () -> userlandRelease,
-                        () -> nativeLoaded,
-                        () -> handler,
-                        this::appendEvent,
-                        this::updateStatus,
-                        readinessState -> currentReadinessState = readinessState,
-                        () -> {
-                            if (terminalProductRuntimeController != null) {
-                                terminalProductRuntimeController.refreshProductShellState();
-                            }
-                        },
-                        () -> {
-                            if (terminalProductRuntimeController != null) {
-                                terminalProductRuntimeController.refreshDebugStatusSurface();
-                            }
-                        },
-                        () -> terminalProductRuntimeController != null
-                                && terminalProductRuntimeController.shouldRunProductFrameLoop(),
-                        () -> {
-                            final int tick = nativeLoaded ? TerminalNativeBridge.nativeTickProductFrameBridge()
-                                    : 0;
-                            if (terminalProductRuntimeController != null) {
-                                terminalProductRuntimeController.refreshProductScrollOverlay();
-                            }
-                            return tick;
-                        },
-                        TerminalNativeBridge::nativeRestartSessionBridge,
-                        TerminalNativeBridge::nativePollSessionBridge,
-                        TerminalNativeBridge::nativeIsSessionAliveBridge));
+                createSessionAssemblyCallbacks());
         userlandSessionCoordinator = result.userlandSessionCoordinator;
         productFrameLoopController = result.frameLoopController;
     }
@@ -424,23 +325,134 @@ public final class ZideTerminalActivity extends Activity
 
     private void assembleProductRuntimeController() {
         terminalProductRuntimeController = ProductRuntimeAssembly.assemble(
-                new ProductRuntimeAssemblyCallbacks(
-                        () -> debugViewEnabled,
-                        () -> nativeLoaded,
-                        () -> currentInstallState,
-                        installState -> currentInstallState = installState,
-                        () -> currentReadinessState,
-                        () -> surfaceHostBridge != null ? surfaceHostBridge.currentSurfaceView() : null,
-                        () -> productBootstrapBlocker,
-                        () -> terminalScrollOverlay,
-                        () -> selectionController,
-                        () -> productShellStatePresenter,
-                        () -> productFrameLoopController,
-                        () -> terminalStatusController,
-                        () -> userlandSessionCoordinator,
-                        () -> terminalGestureStateController,
-                        this::appendEvent,
-                        this::updateStatus));
+                createProductRuntimeAssemblyCallbacks());
+    }
+
+    private WidgetCallbacks createWidgetCallbacks() {
+        return new WidgetCallbacks(
+                () -> this,
+                () -> handler,
+                () -> nativeLoaded,
+                () -> debugViewEnabled,
+                enabled -> debugViewEnabled = enabled,
+                () -> imeVisible,
+                visible -> imeVisible = visible,
+                () -> rootView,
+                () -> productView,
+                () -> debugView,
+                () -> productBootstrapBlocker,
+                () -> drawerScrim,
+                () -> drawerEdgeHotspot,
+                () -> leftSidebar,
+                () -> productSurfaceContainer,
+                () -> terminalScrollOverlay,
+                () -> productBootstrapTitle,
+                () -> productBootstrapDetail,
+                () -> productBootstrapRetryButton,
+                () -> assistCtrlButton,
+                () -> assistAltButton,
+                () -> shellInputView,
+                () -> selectionController,
+                () -> terminalGestureStateController,
+                () -> surfaceHostBridge,
+                () -> currentInstallState.isInstalling(),
+                () -> currentInstallState.isFailed(),
+                () -> currentReadinessState,
+                () -> currentInstallState,
+                () -> terminalProductRuntimeController != null
+                        && terminalProductRuntimeController.shouldRunProductFrameLoop(),
+                () -> {
+                    if (terminalProductRuntimeController != null) {
+                        terminalProductRuntimeController.refreshProductScrollOverlay();
+                    }
+                },
+                this::appendEvent,
+                this::updateStatus,
+                this::callNative,
+                this::callNativeWithSurfaceState,
+                (holder, width, height) -> TerminalNativeBridge.nativeOnSurfaceAvailableBridge(
+                        holder.getSurface(),
+                        width,
+                        height),
+                TerminalNativeBridge::nativeOnSurfaceDestroyedBridge,
+                TerminalNativeBridge::nativeOnSurfaceRedrawNeededBridge,
+                TerminalNativeBridge::nativeOnVisibleViewportBridge,
+                this::currentSurfaceStateSnapshot,
+                statusLabel -> {
+                    if (terminalProductRuntimeController != null) {
+                        terminalProductRuntimeController.handleProductShellStateEvent(statusLabel);
+                    }
+                },
+                TerminalNativeBridge::nativeSetSessionScrollbackOffsetBridge,
+                TerminalNativeBridge::nativeFollowSessionLiveBottomBridge,
+                this::productViewportHeightPx,
+                () -> {
+                    if (productFrameLoopController != null) {
+                        productFrameLoopController.reevaluate();
+                    }
+                },
+                this::runPackageDoctor,
+                this::sendDirectText,
+                reason -> {
+                    if (surfaceHostController != null) {
+                        surfaceHostController.notifyVisibleViewport(reason);
+                    }
+                },
+                () -> userlandSessionCoordinator.refreshAndApply(false));
+    }
+
+    private SessionAssemblyCallbacks createSessionAssemblyCallbacks() {
+        return new SessionAssemblyCallbacks(
+                () -> this,
+                () -> userlandRelease,
+                () -> nativeLoaded,
+                () -> handler,
+                this::appendEvent,
+                this::updateStatus,
+                readinessState -> currentReadinessState = readinessState,
+                () -> {
+                    if (terminalProductRuntimeController != null) {
+                        terminalProductRuntimeController.refreshProductShellState();
+                    }
+                },
+                () -> {
+                    if (terminalProductRuntimeController != null) {
+                        terminalProductRuntimeController.refreshDebugStatusSurface();
+                    }
+                },
+                () -> terminalProductRuntimeController != null
+                        && terminalProductRuntimeController.shouldRunProductFrameLoop(),
+                () -> {
+                    final int tick = nativeLoaded ? TerminalNativeBridge.nativeTickProductFrameBridge()
+                            : 0;
+                    if (terminalProductRuntimeController != null) {
+                        terminalProductRuntimeController.refreshProductScrollOverlay();
+                    }
+                    return tick;
+                },
+                TerminalNativeBridge::nativeRestartSessionBridge,
+                TerminalNativeBridge::nativePollSessionBridge,
+                TerminalNativeBridge::nativeIsSessionAliveBridge);
+    }
+
+    private ProductRuntimeAssemblyCallbacks createProductRuntimeAssemblyCallbacks() {
+        return new ProductRuntimeAssemblyCallbacks(
+                () -> debugViewEnabled,
+                () -> nativeLoaded,
+                () -> currentInstallState,
+                installState -> currentInstallState = installState,
+                () -> currentReadinessState,
+                () -> surfaceHostBridge != null ? surfaceHostBridge.currentSurfaceView() : null,
+                () -> productBootstrapBlocker,
+                () -> terminalScrollOverlay,
+                () -> selectionController,
+                () -> productShellStatePresenter,
+                () -> productFrameLoopController,
+                () -> terminalStatusController,
+                () -> userlandSessionCoordinator,
+                () -> terminalGestureStateController,
+                this::appendEvent,
+                this::updateStatus);
     }
 
     private void assembleActivityLifecycleController() {
