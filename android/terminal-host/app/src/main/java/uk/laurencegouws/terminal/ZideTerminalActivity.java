@@ -157,7 +157,7 @@ public final class ZideTerminalActivity extends Activity
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
-        appendEvent("activity.on.new.intent");
+        logNewIntentEvent();
     }
 
     @Override
@@ -705,7 +705,7 @@ public final class ZideTerminalActivity extends Activity
     public void sendDirectCodepoint(int codepoint) {
         if (!canSendDirectInput())
             return;
-        TerminalNativeBridge.nativeSendSessionCodepointBridge(codepoint);
+        sendDirectCodepointToNative(codepoint);
     }
 
     @Override
@@ -717,16 +717,12 @@ public final class ZideTerminalActivity extends Activity
 
     @Override
     public void onInputFocusChanged(boolean hasFocus) {
-        if (terminalImeFocusRecoveryController != null) {
-            terminalImeFocusRecoveryController.onInputFocusChanged(hasFocus);
-        }
+        notifyInputFocusRecoveryIfReady(hasFocus);
     }
 
     @Override
     public void onModifierLatchChanged(ShellInputView.Host.ModifierLatchState state) {
-        if (terminalChromeController != null) {
-            terminalChromeController.applyModifierLatchState(state);
-        }
+        applyModifierLatchIfReady(state);
     }
 
     private void runPackageDoctor() {
@@ -752,12 +748,32 @@ public final class ZideTerminalActivity extends Activity
         return nativeLoaded;
     }
 
+    private void sendDirectCodepointToNative(int codepoint) {
+        TerminalNativeBridge.nativeSendSessionCodepointBridge(codepoint);
+    }
+
     private void sendDirectTextCodepoints(String text) {
         for (int i = 0; i < text.length();) {
             final int cp = text.codePointAt(i);
             TerminalNativeBridge.nativeSendSessionCodepointBridge(cp);
             i += Character.charCount(cp);
         }
+    }
+
+    private void notifyInputFocusRecoveryIfReady(boolean hasFocus) {
+        if (terminalImeFocusRecoveryController != null) {
+            terminalImeFocusRecoveryController.onInputFocusChanged(hasFocus);
+        }
+    }
+
+    private void applyModifierLatchIfReady(ShellInputView.Host.ModifierLatchState state) {
+        if (terminalChromeController != null) {
+            terminalChromeController.applyModifierLatchState(state);
+        }
+    }
+
+    private void logNewIntentEvent() {
+        appendEvent("activity.on.new.intent");
     }
 
     private AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot() {
