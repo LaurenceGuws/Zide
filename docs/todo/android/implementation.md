@@ -143,12 +143,13 @@ A cut is done only if all are true:
   `selectionRect*`, `selectionTextAlloc`, `rendererActive`) rather than
   long shell-prefixed helper names
 - Android host/probe adapters now use event grammar (`on*`) instead of
-  `note*` entrypoint names (`android_host.zig`, `android_gles_probe.zig`)
+  `note*` entrypoint names (`android_host.zig`,
+  `android_gles_surface_status.zig`)
 - terminal session helper filename now uses runtime/factory ownership naming:
   `src/app/terminal/terminal_session_runtime_factory.zig`
 - Zig naming migration retired terms checkpoint:
   `note*` Android host/probe entrypoint names, `ProbeStatus/ProbeState`,
-  `terminal_session_bootstrap` filename, and long `currentShell*` /
+  `android_gles_probe` filename, `terminal_session_bootstrap` filename, and long `currentShell*` /
   `restartShellSession`-style bridge helper names
 - selection controller remains monolithic by design until a real split seam
   exists

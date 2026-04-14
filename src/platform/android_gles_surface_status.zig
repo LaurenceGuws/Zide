@@ -248,7 +248,7 @@ pub fn currentTextureHeight() i32 {
     return renderer_state.texture_height;
 }
 
-test "probe recreates the surface when identity epoch changes" {
+test "surface status recreates the surface when identity epoch changes" {
     const std = @import("std");
 
     reset();

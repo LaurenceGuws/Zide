@@ -50,3 +50,5 @@ Session entrypoint only. Keep this file short, stable, and current.
   `src/app/terminal/terminal_session_runtime_factory.zig`
 - retired Zig bridge terms include `note*` host/probe entrypoints and
   `ProbeStatus/ProbeState`
+- GLES surface status module path is now
+  `src/platform/android_gles_surface_status.zig`

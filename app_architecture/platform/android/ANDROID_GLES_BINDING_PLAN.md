@@ -358,7 +358,7 @@ first controlled backend planning cut.
 
 Handoff rule:
 
-- do not keep hardening `android_gles_probe.zig` by default
+- do not keep hardening `android_gles_surface_status.zig` by default
 - use its EGL/context/surface/texture evidence to inform `AR-B4.a`
 - once `AR-B4.a` validates, either collapse the probe behind the shared Android
   GLES runtime owner or delete it if fully superseded

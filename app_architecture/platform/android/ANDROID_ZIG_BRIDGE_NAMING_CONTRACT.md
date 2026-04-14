@@ -8,7 +8,7 @@ Scope:
 - `src/android_bridge_exports/*.zig`
 - `src/platform/android_runtime_bridge.zig`
 - Android-owned bridge adapters such as `src/platform/android_host.zig` and
-  `src/platform/android_gles_probe.zig`
+  `src/platform/android_gles_surface_status.zig`
 
 This is naming authority only. It complements Android architecture/ownership
 docs and reuses the same product glossary used in Java cleanup.
@@ -60,3 +60,12 @@ docs and reuses the same product glossary used in Java cleanup.
   - `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac`
 - when naming boundaries move, update this contract and
   `docs/todo/android/implementation.md` in the same cut
+
+## Approved Term Map
+
+- `note*` event entrypoints -> `on*` event entrypoints
+- `ProbeStatus` / `ProbeState` -> `RendererStatus` / `RendererState`
+- `android_gles_probe.zig` -> `android_gles_surface_status.zig`
+- `terminal_session_bootstrap.zig` -> `terminal_session_runtime_factory.zig`
+- `restartShellSession` / `currentShell*` -> concise runtime names
+  (`restartSession`, `visibleRows`, `selectionRect*`, etc.)

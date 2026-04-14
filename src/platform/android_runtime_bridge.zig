@@ -1,5 +1,5 @@
 const builtin = @import("builtin");
-const android_gles_probe = @import("android_gles_probe.zig");
+const android_gles_surface_status = @import("android_gles_surface_status.zig");
 const android_host = @import("android_host.zig");
 const android_shell_session = @import("android_shell_session.zig");
 const app_logger = @import("../app_logger.zig");
@@ -18,7 +18,7 @@ const widgets = @import("../ui/widgets.zig");
 
 const android_runtime_font_path = "/data/data/uk.laurencegouws.zide/files/assets/fonts/JetBrainsMonoNerdFont-Regular.ttf";
 
-const RendererStatus = android_gles_probe.RendererStatus;
+const RendererStatus = android_gles_surface_status.RendererStatus;
 
 extern fn ANativeWindow_fromSurface(env: ?*anyopaque, surface: ?*anyopaque) ?*anyopaque;
 extern fn ANativeWindow_release(window: *anyopaque) void;
@@ -91,7 +91,7 @@ pub fn onCreate() u64 {
     app_logger.init() catch {};
     destroyRenderer();
     destroyTerminalWidget();
-    android_gles_probe.reset();
+    android_gles_surface_status.reset();
     bridge_state = .{};
     return nextSequence();
 }
@@ -234,63 +234,63 @@ pub fn currentRendererSwapCount() u32 {
     if (bridge_state.renderer) |renderer| {
         return renderer.backend.runtime.androidGlesState().runtime.swap_count;
     }
-    return android_gles_probe.currentSwapCount();
+    return android_gles_surface_status.currentSwapCount();
 }
 
 pub fn currentRendererBoundEpoch() u64 {
     if (bridge_state.renderer) |renderer| {
         return renderer.backend.runtime.androidGlesState().runtime.bound_epoch;
     }
-    return android_gles_probe.currentBoundEpoch();
+    return android_gles_surface_status.currentBoundEpoch();
 }
 
 pub fn currentRendererContextCreateCount() u32 {
     if (bridge_state.renderer) |renderer| {
         return renderer.backend.runtime.androidGlesState().runtime.context_create_count;
     }
-    return android_gles_probe.currentContextCreateCount();
+    return android_gles_surface_status.currentContextCreateCount();
 }
 
 pub fn currentRendererSurfaceCreateCount() u32 {
     if (bridge_state.renderer) |renderer| {
         return renderer.backend.runtime.androidGlesState().runtime.surface_create_count;
     }
-    return android_gles_probe.currentSurfaceCreateCount();
+    return android_gles_surface_status.currentSurfaceCreateCount();
 }
 
 pub fn currentRendererTextureCreateCount() u32 {
     if (bridge_state.renderer != null) return 0;
-    return android_gles_probe.currentTextureCreateCount();
+    return android_gles_surface_status.currentTextureCreateCount();
 }
 
 pub fn currentRendererTextureAlive() bool {
     if (bridge_state.renderer != null) return false;
-    return android_gles_probe.currentTextureAlive();
+    return android_gles_surface_status.currentTextureAlive();
 }
 
 pub fn currentRendererTextureUploadCount() u32 {
     if (bridge_state.renderer != null) return 0;
-    return android_gles_probe.currentTextureUploadCount();
+    return android_gles_surface_status.currentTextureUploadCount();
 }
 
 pub fn currentRendererTextureUpdateCount() u32 {
     if (bridge_state.renderer != null) return 0;
-    return android_gles_probe.currentTextureUpdateCount();
+    return android_gles_surface_status.currentTextureUpdateCount();
 }
 
 pub fn currentRendererTextureResizeCount() u32 {
     if (bridge_state.renderer != null) return 0;
-    return android_gles_probe.currentTextureResizeCount();
+    return android_gles_surface_status.currentTextureResizeCount();
 }
 
 pub fn currentRendererTextureWidth() i32 {
     if (bridge_state.renderer != null) return 0;
-    return android_gles_probe.currentTextureWidth();
+    return android_gles_surface_status.currentTextureWidth();
 }
 
 pub fn currentRendererTextureHeight() i32 {
     if (bridge_state.renderer != null) return 0;
-    return android_gles_probe.currentTextureHeight();
+    return android_gles_surface_status.currentTextureHeight();
 }
 
 pub fn restartSession() i32 {

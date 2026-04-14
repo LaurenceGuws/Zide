@@ -54,7 +54,7 @@ Allowed files:
 - `src/ui/renderer/backend_runtime_bundle.zig`
 - new `src/ui/renderer/android_gles_backend.zig`
 - new `src/ui/renderer/android_gles_runtime_state.zig`
-- narrow reuse/extraction from `src/platform/android_gles_probe.zig` only if it
+- narrow reuse/extraction from `src/platform/android_gles_surface_status.zig` only if it
   does not break the terminal-host probe
 - Android build/link files only if required to resolve EGL/GLES symbols for the
   shared renderer build
@@ -133,7 +133,7 @@ Stopping point:
 
 ## Probe Migration Rule
 
-`src/platform/android_gles_probe.zig` remains a terminal-host proof module until
+`src/platform/android_gles_surface_status.zig` remains a terminal-host proof module until
 `AR-B4.a` is validated.
 
 After `AR-B4.a` is validated, the probe must either:
