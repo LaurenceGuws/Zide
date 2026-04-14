@@ -6,6 +6,10 @@ public final class LifecycleController {
     public interface Host {
         boolean nativeLoaded();
 
+        String nativeLoadError();
+
+        long nativeOnCreate();
+
         long nativeOnStart();
 
         long nativeOnResume();
@@ -41,6 +45,16 @@ public final class LifecycleController {
         host.appendEvent("activity.on.start");
         host.callNative("native.onStart", host.nativeLoaded() ? host.nativeOnStart() : -1);
         host.updateStatus("activity.state.started");
+    }
+
+    public void onCreate() {
+        host.appendEvent("activity.on.create nativeLoaded=" + host.nativeLoaded());
+        final String nativeLoadError = host.nativeLoadError();
+        if (nativeLoadError != null) {
+            host.appendEvent("native.load.error detail=" + nativeLoadError);
+        }
+        host.callNative("native.onCreate", host.nativeLoaded() ? host.nativeOnCreate() : -1);
+        host.updateStatus("activity.state.created");
     }
 
     public void onResume(

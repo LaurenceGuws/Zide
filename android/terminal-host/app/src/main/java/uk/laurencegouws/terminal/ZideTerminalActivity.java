@@ -133,7 +133,7 @@ public final class ZideTerminalActivity extends Activity
         loadInitialReadinessState();
         installInputControllers();
         bindAndStartUiControllers();
-        finishOnCreateLifecycle();
+        terminalActivityLifecycleController.onCreate();
     }
 
     @Override
@@ -415,6 +415,7 @@ public final class ZideTerminalActivity extends Activity
         return new LifecycleCallbacks(
                 LifecycleCallbacks.LifecycleHostCallbacks.of(
                         this::isNativeLoaded,
+                        () -> nativeLoadError,
                         this::appendEvent,
                         this::updateStatus,
                         this::stopProductFrameLoopIfReady,
@@ -422,6 +423,7 @@ public final class ZideTerminalActivity extends Activity
                         this::pauseSurfaceIfReady,
                         this::resumeSurfaceIfReady),
                 LifecycleCallbacks.NativeLifecycleCallbacks.of(
+                        TerminalNativeBridge::nativeOnCreateBridge,
                         TerminalNativeBridge::nativeOnStartBridge,
                         TerminalNativeBridge::nativeOnResumeBridge,
                         TerminalNativeBridge::nativeOnPauseBridge,
@@ -658,15 +660,6 @@ public final class ZideTerminalActivity extends Activity
                     debugResizeSurfaceOnce,
                     debugStartShellOnce);
         }
-    }
-
-    private void finishOnCreateLifecycle() {
-        appendEvent("activity.on.create nativeLoaded=" + nativeLoaded);
-        if (nativeLoadError != null) {
-            appendEvent("native.load.error detail=" + nativeLoadError);
-        }
-        callNative("native.onCreate", nativeLoaded ? TerminalNativeBridge.nativeOnCreateBridge() : -1);
-        updateStatus("activity.state.created");
     }
 
     /**

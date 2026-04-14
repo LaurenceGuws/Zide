@@ -3,6 +3,7 @@ package uk.laurencegouws.terminal.host.lifecycle;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
+import java.util.function.Supplier;
 
 import uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks;
 
@@ -19,6 +20,7 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
     }
 
     public static final class NativeLifecycleCallbacks {
+        final LongSupplier nativeOnCreate;
         final LongSupplier nativeOnStart;
         final LongSupplier nativeOnResume;
         final LongSupplier nativeOnPause;
@@ -27,12 +29,14 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
         final SurfaceLifecycleCallbacks.NativeEventCallback callNative;
 
         private NativeLifecycleCallbacks(
+                LongSupplier nativeOnCreate,
                 LongSupplier nativeOnStart,
                 LongSupplier nativeOnResume,
                 LongSupplier nativeOnPause,
                 LongSupplier nativeOnStop,
                 NativeBooleanCall nativeOnWindowFocus,
                 SurfaceLifecycleCallbacks.NativeEventCallback callNative) {
+            this.nativeOnCreate = nativeOnCreate;
             this.nativeOnStart = nativeOnStart;
             this.nativeOnResume = nativeOnResume;
             this.nativeOnPause = nativeOnPause;
@@ -42,6 +46,7 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
         }
 
         public static NativeLifecycleCallbacks of(
+                LongSupplier nativeOnCreate,
                 LongSupplier nativeOnStart,
                 LongSupplier nativeOnResume,
                 LongSupplier nativeOnPause,
@@ -49,6 +54,7 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
                 NativeBooleanCall nativeOnWindowFocus,
                 SurfaceLifecycleCallbacks.NativeEventCallback callNative) {
             return new NativeLifecycleCallbacks(
+                    nativeOnCreate,
                     nativeOnStart,
                     nativeOnResume,
                     nativeOnPause,
@@ -60,6 +66,7 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
 
     public static final class LifecycleHostCallbacks {
         final BooleanSupplier nativeLoaded;
+        final Supplier<String> nativeLoadError;
         final Consumer<String> appendEvent;
         final Consumer<String> updateStatus;
         final Runnable stopProductFrameLoop;
@@ -69,6 +76,7 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
 
         private LifecycleHostCallbacks(
                 BooleanSupplier nativeLoaded,
+                Supplier<String> nativeLoadError,
                 Consumer<String> appendEvent,
                 Consumer<String> updateStatus,
                 Runnable stopProductFrameLoop,
@@ -76,6 +84,7 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
                 Runnable notifySurfacePause,
                 SurfaceResumeCall notifySurfaceResume) {
             this.nativeLoaded = nativeLoaded;
+            this.nativeLoadError = nativeLoadError;
             this.appendEvent = appendEvent;
             this.updateStatus = updateStatus;
             this.stopProductFrameLoop = stopProductFrameLoop;
@@ -86,6 +95,7 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
 
         public static LifecycleHostCallbacks of(
                 BooleanSupplier nativeLoaded,
+                Supplier<String> nativeLoadError,
                 Consumer<String> appendEvent,
                 Consumer<String> updateStatus,
                 Runnable stopProductFrameLoop,
@@ -94,6 +104,7 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
                 SurfaceResumeCall notifySurfaceResume) {
             return new LifecycleHostCallbacks(
                     nativeLoaded,
+                    nativeLoadError,
                     appendEvent,
                     updateStatus,
                     stopProductFrameLoop,
@@ -121,6 +132,16 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
     @Override
     public long nativeOnStart() {
         return nativeLifecycleCallbacks.nativeOnStart.getAsLong();
+    }
+
+    @Override
+    public String nativeLoadError() {
+        return lifecycleHostCallbacks.nativeLoadError.get();
+    }
+
+    @Override
+    public long nativeOnCreate() {
+        return nativeLifecycleCallbacks.nativeOnCreate.getAsLong();
     }
 
     @Override
