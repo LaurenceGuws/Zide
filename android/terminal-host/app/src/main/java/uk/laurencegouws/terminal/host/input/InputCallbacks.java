@@ -12,41 +12,68 @@ import uk.laurencegouws.terminal.input.ShellInputView;
 
 /** Functional callback adapter for {@link InputAssembly.Host}. */
 public final class InputCallbacks implements InputAssembly.Host {
+    public static final class InputRuntimeBundle {
+        final BooleanSupplier currentImeVisible;
+        final Consumer<Boolean> setImeVisible;
+        final BooleanSupplier nativeLoaded;
+        final InputAssembly.IntSupplier nativeFollowSessionLiveBottom;
+        final Runnable refreshProductScrollOverlay;
+        final Consumer<String> updateStatus;
+        final Consumer<String> appendEvent;
+
+        private InputRuntimeBundle(
+                BooleanSupplier currentImeVisible,
+                Consumer<Boolean> setImeVisible,
+                BooleanSupplier nativeLoaded,
+                InputAssembly.IntSupplier nativeFollowSessionLiveBottom,
+                Runnable refreshProductScrollOverlay,
+                Consumer<String> updateStatus,
+                Consumer<String> appendEvent) {
+            this.currentImeVisible = currentImeVisible;
+            this.setImeVisible = setImeVisible;
+            this.nativeLoaded = nativeLoaded;
+            this.nativeFollowSessionLiveBottom = nativeFollowSessionLiveBottom;
+            this.refreshProductScrollOverlay = refreshProductScrollOverlay;
+            this.updateStatus = updateStatus;
+            this.appendEvent = appendEvent;
+        }
+
+        public static InputRuntimeBundle of(
+                BooleanSupplier currentImeVisible,
+                Consumer<Boolean> setImeVisible,
+                BooleanSupplier nativeLoaded,
+                InputAssembly.IntSupplier nativeFollowSessionLiveBottom,
+                Runnable refreshProductScrollOverlay,
+                Consumer<String> updateStatus,
+                Consumer<String> appendEvent) {
+            return new InputRuntimeBundle(
+                    currentImeVisible,
+                    setImeVisible,
+                    nativeLoaded,
+                    nativeFollowSessionLiveBottom,
+                    refreshProductScrollOverlay,
+                    updateStatus,
+                    appendEvent);
+        }
+    }
+
     private final Supplier<Activity> activity;
     private final Supplier<View> rootView;
     private final Supplier<ShellInputView.Host> shellInputHost;
     private final Supplier<InputMethodManager> inputMethodManager;
-    private final BooleanSupplier currentImeVisible;
-    private final Consumer<Boolean> setImeVisible;
-    private final BooleanSupplier nativeLoaded;
-    private final InputAssembly.IntSupplier nativeFollowSessionLiveBottom;
-    private final Runnable refreshProductScrollOverlay;
-    private final Consumer<String> updateStatus;
-    private final Consumer<String> appendEvent;
+    private final InputRuntimeBundle inputRuntimeBundle;
 
     public InputCallbacks(
             Supplier<Activity> activity,
             Supplier<View> rootView,
             Supplier<ShellInputView.Host> shellInputHost,
             Supplier<InputMethodManager> inputMethodManager,
-            BooleanSupplier currentImeVisible,
-            Consumer<Boolean> setImeVisible,
-            BooleanSupplier nativeLoaded,
-            InputAssembly.IntSupplier nativeFollowSessionLiveBottom,
-            Runnable refreshProductScrollOverlay,
-            Consumer<String> updateStatus,
-            Consumer<String> appendEvent) {
+            InputRuntimeBundle inputRuntimeBundle) {
         this.activity = activity;
         this.rootView = rootView;
         this.shellInputHost = shellInputHost;
         this.inputMethodManager = inputMethodManager;
-        this.currentImeVisible = currentImeVisible;
-        this.setImeVisible = setImeVisible;
-        this.nativeLoaded = nativeLoaded;
-        this.nativeFollowSessionLiveBottom = nativeFollowSessionLiveBottom;
-        this.refreshProductScrollOverlay = refreshProductScrollOverlay;
-        this.updateStatus = updateStatus;
-        this.appendEvent = appendEvent;
+        this.inputRuntimeBundle = inputRuntimeBundle;
     }
 
     @Override
@@ -71,36 +98,36 @@ public final class InputCallbacks implements InputAssembly.Host {
 
     @Override
     public BooleanSupplier currentImeVisible() {
-        return currentImeVisible;
+        return inputRuntimeBundle.currentImeVisible;
     }
 
     @Override
     public Consumer<Boolean> setImeVisible() {
-        return setImeVisible;
+        return inputRuntimeBundle.setImeVisible;
     }
 
     @Override
     public BooleanSupplier nativeLoaded() {
-        return nativeLoaded;
+        return inputRuntimeBundle.nativeLoaded;
     }
 
     @Override
     public InputAssembly.IntSupplier nativeFollowSessionLiveBottom() {
-        return nativeFollowSessionLiveBottom;
+        return inputRuntimeBundle.nativeFollowSessionLiveBottom;
     }
 
     @Override
     public Runnable refreshProductScrollOverlay() {
-        return refreshProductScrollOverlay;
+        return inputRuntimeBundle.refreshProductScrollOverlay;
     }
 
     @Override
     public Consumer<String> updateStatus() {
-        return updateStatus;
+        return inputRuntimeBundle.updateStatus;
     }
 
     @Override
     public Consumer<String> appendEvent() {
-        return appendEvent;
+        return inputRuntimeBundle.appendEvent;
     }
 }

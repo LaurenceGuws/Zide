@@ -245,13 +245,14 @@ public final class ZideTerminalActivity extends Activity
                 () -> rootView,
                 () -> this,
                 () -> getSystemService(InputMethodManager.class),
-                () -> imeVisible,
-                visible -> imeVisible = visible,
-                () -> nativeLoaded,
-                TerminalNativeBridge::nativeFollowSessionLiveBottomBridge,
-                this::refreshProductScrollOverlayIfReady,
-                this::updateStatus,
-                this::appendEvent);
+                InputCallbacks.InputRuntimeBundle.of(
+                        () -> imeVisible,
+                        visible -> imeVisible = visible,
+                        () -> nativeLoaded,
+                        TerminalNativeBridge::nativeFollowSessionLiveBottomBridge,
+                        this::refreshProductScrollOverlayIfReady,
+                        this::updateStatus,
+                        this::appendEvent));
     }
 
     private void assembleWidgetHostControllers() {
