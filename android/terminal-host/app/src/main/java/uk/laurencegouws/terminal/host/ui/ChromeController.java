@@ -216,6 +216,10 @@ public final class ChromeController {
     private void showSoftInputAfterRestartInput(InputMethodManager imm, ShellInputView shellInputView) {
         imm.restartInput(shellInputView);
         final boolean shown = imm.showSoftInput(shellInputView, InputMethodManager.SHOW_IMPLICIT);
+        recordManualImeOpenSoftInputResult(shellInputView, shown);
+    }
+
+    private void recordManualImeOpenSoftInputResult(ShellInputView shellInputView, boolean shown) {
         host.setImeVisible(shown || shellInputView.hasFocus());
         host.appendEvent("manual.ime.open shown=" + shown + " focus=" + shellInputView.hasFocus());
         host.updateStatus("ime.state.shown");
@@ -232,6 +236,10 @@ public final class ChromeController {
     /** Hides soft input and records IME chrome state for a manual close. */
     private void runManualImeCloseSequence(InputMethodManager imm) {
         final boolean hidden = imm.hideSoftInputFromWindow(activeShellInputView().getWindowToken(), 0);
+        recordManualImeCloseSoftInputResult(hidden);
+    }
+
+    private void recordManualImeCloseSoftInputResult(boolean hidden) {
         host.setImeVisible(false);
         host.appendEvent("manual.ime.close hidden=" + hidden);
         host.updateStatus("ime.state.hidden");

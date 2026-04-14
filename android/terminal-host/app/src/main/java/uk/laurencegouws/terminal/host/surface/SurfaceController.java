@@ -97,6 +97,14 @@ public final class SurfaceController {
         this.host = host;
     }
 
+    private FrameLayout productSurfaceHostContainer() {
+        return host.productSurfaceContainer();
+    }
+
+    private void scheduleNotifyVisibleViewport(String reason) {
+        productSurfaceHostContainer().post(() -> notifyVisibleViewport(reason));
+    }
+
     public void onResume(boolean recreateSurfaceOnce, boolean resizeSurfaceOnce, boolean startShellOnce) {
         scheduleDebugSurfaceRecreationIfRequested(recreateSurfaceOnce);
         scheduleDebugSurfaceResizeIfRequested(resizeSurfaceOnce);
@@ -110,7 +118,7 @@ public final class SurfaceController {
         host.appendEvent("debug.surface.recreate requested=" + recreateSurfaceOnce + " scheduled=" + host.surfaceRecreationScheduled());
         if (recreateSurfaceOnce && !host.surfaceRecreationScheduled()) {
             host.setSurfaceRecreationScheduled(true);
-            host.productSurfaceContainer().postDelayed(() -> {
+            productSurfaceHostContainer().postDelayed(() -> {
                 host.appendEvent("debug.surface.recreate_view");
                 installSurfaceView("debug-recreate", null);
                 host.updateStatus("debug.surface.recreated");
@@ -191,7 +199,7 @@ public final class SurfaceController {
                 "native.surfaceAvailable",
                 seq,
                 host.currentSurfaceStateSnapshot());
-        host.productSurfaceContainer().post(() -> notifyVisibleViewport("surface-changed"));
+        scheduleNotifyVisibleViewport("surface-changed");
         host.handleProductShellStateEvent("surface-changed");
     }
 
@@ -253,11 +261,11 @@ public final class SurfaceController {
         prepareSurfaceHostHolderFormat(nextSurfaceView);
         host.installSurfaceGestureHost(nextSurfaceView);
         final FrameLayout.LayoutParams params = matchParentCenteredSurfaceHostLayoutParams();
-        host.productSurfaceContainer().addView(nextSurfaceView, params);
+        productSurfaceHostContainer().addView(nextSurfaceView, params);
         final SurfaceHolder.Callback2 nextCallback = resolveSurfaceInstallCallback(callback);
         registerProductSurfaceHostView(nextSurfaceView, nextCallback);
         appendSurfaceHostInstalledTelemetry(reason);
-        host.productSurfaceContainer().post(() -> notifyVisibleViewport("surface-install"));
+        scheduleNotifyVisibleViewport("surface-install");
     }
 
     private void appendSurfaceHostInstalledTelemetry(String reason) {
@@ -265,7 +273,7 @@ public final class SurfaceController {
     }
 
     private SurfaceView createNextProductSurfaceHostView() {
-        return new SurfaceView(host.productSurfaceContainer().getContext());
+        return new SurfaceView(productSurfaceHostContainer().getContext());
     }
 
     private void prepareSurfaceHostHolderFormat(SurfaceView surfaceView) {
@@ -301,15 +309,15 @@ public final class SurfaceController {
     }
 
     private int visibleProductSurfaceContainerWidth() {
-        return Math.max(host.productSurfaceContainer().getWidth(), 1);
+        return Math.max(productSurfaceHostContainer().getWidth(), 1);
     }
 
     private int visibleProductSurfaceContainerHeight() {
-        return Math.max(host.productSurfaceContainer().getHeight(), 1);
+        return Math.max(productSurfaceHostContainer().getHeight(), 1);
     }
 
     private boolean shouldIgnoreVisibleViewportNotification() {
-        return host.debugViewEnabled() || host.productSurfaceContainer().getVisibility() != View.VISIBLE;
+        return host.debugViewEnabled() || productSurfaceHostContainer().getVisibility() != View.VISIBLE;
     }
 
     private void publishVisibleViewportChange(
@@ -371,7 +379,7 @@ public final class SurfaceController {
         if (previousCallback != null) {
             existing.getHolder().removeCallback(previousCallback);
         }
-        host.productSurfaceContainer().removeView(existing);
+        productSurfaceHostContainer().removeView(existing);
         appendSurfaceHostRemovedTelemetry(reason);
     }
 
