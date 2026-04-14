@@ -240,7 +240,7 @@ public final class TerminalSelectionController {
         selectionHelpersVisible = true;
         selectionToolbarVisible = true;
         finishTerminalSelectionActionMode();
-        host.reevaluateProductFrameLoop();
+        requestFrameLoopReevaluation();
         host.appendEvent("product.selection.cleared reason=tap-outside");
     }
 
@@ -260,7 +260,7 @@ public final class TerminalSelectionController {
             beginSelectionDrag(SelectionDragMode.gesture, x, y);
             hideSelectionToolbar();
         }
-        host.reevaluateProductFrameLoop();
+        requestFrameLoopReevaluation();
     }
 
     public void onProductSelectionDrag(float x, float y) {
@@ -312,7 +312,7 @@ public final class TerminalSelectionController {
                 selectionDraggedHandleTouchOffsetY = event.getY();
                 beginSelectionDrag(dragMode, selectionHandleAnchorX(handle), selectionHandleAnchorY(handle));
                 syncTerminalSelectionActionMode();
-                host.reevaluateProductFrameLoop();
+                requestFrameLoopReevaluation();
                 return true;
             case MotionEvent.ACTION_MOVE:
                 positionDraggedHandle(handle, handle.getX() + event.getX(), handle.getY() + event.getY());
@@ -381,12 +381,12 @@ public final class TerminalSelectionController {
     private void completeSelectionDragInteraction() {
         endSelectionDrag();
         showSelectionToolbar();
-        host.reevaluateProductFrameLoop();
+        requestFrameLoopReevaluation();
     }
 
     private void syncSelectionAndReevaluateFrameLoop() {
         syncTerminalSelectionActionMode();
-        host.reevaluateProductFrameLoop();
+        requestFrameLoopReevaluation();
     }
 
     private void onSelectionUpdateSuccess() {
@@ -652,7 +652,7 @@ public final class TerminalSelectionController {
             onSelectionUpdateSuccess();
         }
         host.refreshProductScrollOverlay();
-        host.reevaluateProductFrameLoop();
+        requestFrameLoopReevaluation();
     }
 
     private boolean tapHitsCurrentSelection(float x, float y) {
@@ -728,7 +728,7 @@ public final class TerminalSelectionController {
                             bridge.clearSelection();
                         }
                         suppressSelectionClearOnActionModeDestroy = false;
-                        host.reevaluateProductFrameLoop();
+                        requestFrameLoopReevaluation();
                     }
 
                     @Override
@@ -882,6 +882,10 @@ public final class TerminalSelectionController {
                 clampInt(right, 0, width),
                 clampInt(bottom, 0, height));
         return !outRect.isEmpty();
+    }
+
+    private void requestFrameLoopReevaluation() {
+        host.reevaluateProductFrameLoop();
     }
 
     private void copyCurrentShellSelectionToClipboard() {
