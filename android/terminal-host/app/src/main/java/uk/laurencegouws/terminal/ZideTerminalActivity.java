@@ -362,12 +362,7 @@ public final class ZideTerminalActivity extends Activity
                         this::refreshProductShellStateIfReady,
                         this::refreshDebugStatusSurfaceIfReady,
                         this::shouldRunProductFrameLoop,
-                        () -> {
-                            final int tick = nativeLoaded ? TerminalNativeBridge.nativeTickProductFrameBridge()
-                                    : 0;
-                            refreshProductScrollOverlayIfReady();
-                            return tick;
-                        },
+                        this::tickProductFrameAndRefreshScrollOverlay,
                         SessionAssemblyCallbacks.NativeSessionCallbacks.of(
                                 TerminalNativeBridge::nativeRestartSessionBridge,
                                 TerminalNativeBridge::nativePollSessionBridge,
@@ -429,11 +424,7 @@ public final class ZideTerminalActivity extends Activity
                         this::stopProductFrameLoopIfReady,
                         this::refreshUserlandSessionIfReady,
                         this::pauseSurfaceIfReady,
-                        (debugRecreateSurfaceOnce, debugResizeSurfaceOnce, debugStartShellOnce) -> surfaceHostController
-                                .onResume(
-                                        debugRecreateSurfaceOnce,
-                                        debugResizeSurfaceOnce,
-                                        debugStartShellOnce)),
+                        this::resumeSurfaceIfReady),
                 LifecycleCallbacks.NativeLifecycleCallbacks.of(
                         TerminalNativeBridge::nativeOnStartBridge,
                         TerminalNativeBridge::nativeOnResumeBridge,
@@ -572,9 +563,27 @@ public final class ZideTerminalActivity extends Activity
         }
     }
 
+    private int tickProductFrameAndRefreshScrollOverlay() {
+        final int tick = nativeLoaded ? TerminalNativeBridge.nativeTickProductFrameBridge() : 0;
+        refreshProductScrollOverlayIfReady();
+        return tick;
+    }
+
     private void pauseSurfaceIfReady() {
         if (surfaceHostController != null) {
             surfaceHostController.onPause();
+        }
+    }
+
+    private void resumeSurfaceIfReady(
+            boolean debugRecreateSurfaceOnce,
+            boolean debugResizeSurfaceOnce,
+            boolean debugStartShellOnce) {
+        if (surfaceHostController != null) {
+            surfaceHostController.onResume(
+                    debugRecreateSurfaceOnce,
+                    debugResizeSurfaceOnce,
+                    debugStartShellOnce);
         }
     }
 
