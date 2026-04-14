@@ -1,5 +1,6 @@
 package uk.laurencegouws.terminal.host.ui;
 
+import android.os.IBinder;
 import android.view.MotionEvent;
 import android.view.inputmethod.InputMethodManager;
 import android.view.View;
@@ -260,7 +261,11 @@ public final class ChromeController {
     }
 
     private boolean hideSoftInputFromShellWindowToken(InputMethodManager imm) {
-        return imm.hideSoftInputFromWindow(activeShellInputView().getWindowToken(), 0);
+        return imm.hideSoftInputFromWindow(activeShellInputWindowToken(), 0);
+    }
+
+    private IBinder activeShellInputWindowToken() {
+        return activeShellInputView().getWindowToken();
     }
 
     private void recordManualImeCloseSoftInputResult(boolean hidden) {
@@ -332,9 +337,13 @@ public final class ChromeController {
     private InputMethodManager inputMethodManagerOrLogUnavailable() {
         final InputMethodManager imm = host.context().getSystemService(InputMethodManager.class);
         if (imm == null) {
-            host.appendEvent("manual.ime.unavailable state=true");
+            appendManualImeInputManagerUnavailableEvent();
         }
         return imm;
+    }
+
+    private void appendManualImeInputManagerUnavailableEvent() {
+        host.appendEvent("manual.ime.unavailable state=true");
     }
 
     private void requestInputFocus(ShellInputView shellInputView) {

@@ -169,6 +169,10 @@ public final class SurfaceController {
     }
 
     public void onPause() {
+        callNativeProductOnPause();
+    }
+
+    private void callNativeProductOnPause() {
         host.callNative("native.onPause", -1);
     }
 
@@ -373,6 +377,10 @@ public final class SurfaceController {
             boolean viewportImeVisible) {
         final long seq = nativeVisibleViewportSeqOrNegative(width, height, viewportImeVisible);
         callNativeProductViewportChanged(seq);
+        refreshProductScrollOverlayAfterViewportNative();
+    }
+
+    private void refreshProductScrollOverlayAfterViewportNative() {
         host.refreshProductScrollOverlay();
     }
 
