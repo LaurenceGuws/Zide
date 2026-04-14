@@ -228,7 +228,7 @@ public final class TerminalSelectionController {
     }
 
     public void onProductSingleTap(float x, float y) {
-        if (!bridge.nativeLoaded() || !bridge.currentSelectionActive()) {
+        if (!canHandleSelectionTap()) {
             return;
         }
         if (tapHitsCurrentSelection(x, y)) {
@@ -264,7 +264,7 @@ public final class TerminalSelectionController {
     }
 
     public void onProductSelectionDrag(float x, float y) {
-        if (!bridge.nativeLoaded() || !bridge.currentSelectionActive()) {
+        if (!canHandleSelectionDrag()) {
             return;
         }
         updateSelectionDragPoint(x, y);
@@ -276,7 +276,7 @@ public final class TerminalSelectionController {
     }
 
     public void onProductSelectionDragEnd(float x, float y) {
-        if (!bridge.nativeLoaded() || !bridge.currentSelectionActive()) {
+        if (!canHandleSelectionDrag()) {
             return;
         }
         updateSelectionDragPoint(x, y);
@@ -393,6 +393,14 @@ public final class TerminalSelectionController {
     private void syncSelectionAndReevaluateFrameLoop() {
         syncTerminalSelectionActionMode();
         host.reevaluateProductFrameLoop();
+    }
+
+    private boolean canHandleSelectionTap() {
+        return bridge.nativeLoaded() && bridge.currentSelectionActive();
+    }
+
+    private boolean canHandleSelectionDrag() {
+        return bridge.nativeLoaded() && bridge.currentSelectionActive();
     }
 
     private boolean commitSelectionDragIfNeeded(float x, float y) {
