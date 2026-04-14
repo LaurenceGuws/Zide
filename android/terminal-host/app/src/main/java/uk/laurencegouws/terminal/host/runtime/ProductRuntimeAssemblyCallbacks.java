@@ -18,193 +18,135 @@ import uk.laurencegouws.terminal.userland.UserlandSessionCoordinator;
 
 /** Functional callback adapter for {@link ProductRuntimeAssembly.Host}. */
 public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAssembly.Host {
-    public static final class RuntimeHostCallbacks {
-        final BooleanSupplier debugViewEnabled;
-        final BooleanSupplier nativeLoaded;
-        final Supplier<UserlandInstallState> installState;
-        final Consumer<UserlandInstallState> setInstallState;
-        final Supplier<UserlandReadinessState> readinessState;
-        final Consumer<String> appendEvent;
-        final Consumer<String> updateStatus;
-
-        private RuntimeHostCallbacks(
-                BooleanSupplier debugViewEnabled,
-                BooleanSupplier nativeLoaded,
-                Supplier<UserlandInstallState> installState,
-                Consumer<UserlandInstallState> setInstallState,
-                Supplier<UserlandReadinessState> readinessState,
-                Consumer<String> appendEvent,
-                Consumer<String> updateStatus) {
-            this.debugViewEnabled = debugViewEnabled;
-            this.nativeLoaded = nativeLoaded;
-            this.installState = installState;
-            this.setInstallState = setInstallState;
-            this.readinessState = readinessState;
-            this.appendEvent = appendEvent;
-            this.updateStatus = updateStatus;
-        }
-
-        public static RuntimeHostCallbacks of(
-                BooleanSupplier debugViewEnabled,
-                BooleanSupplier nativeLoaded,
-                Supplier<UserlandInstallState> installState,
-                Consumer<UserlandInstallState> setInstallState,
-                Supplier<UserlandReadinessState> readinessState,
-                Consumer<String> appendEvent,
-                Consumer<String> updateStatus) {
-            return new RuntimeHostCallbacks(
-                    debugViewEnabled,
-                    nativeLoaded,
-                    installState,
-                    setInstallState,
-                    readinessState,
-                    appendEvent,
-                    updateStatus);
-        }
-    }
-
-    public static final class RuntimeUiCallbacks {
-        final Supplier<SurfaceView> surfaceView;
-        final Supplier<View> productReadinessBlocker;
-        final Supplier<TerminalScrollOverlayView> terminalScrollOverlay;
-        final Supplier<TerminalSelectionController> selectionController;
-        final Supplier<ProductShellStatePresenter> productShellStatePresenter;
-        final Supplier<FrameLoopController> frameLoopController;
-        final Supplier<TerminalStatusController> terminalStatusController;
-        final Supplier<UserlandSessionCoordinator> userlandSessionCoordinator;
-        final Supplier<TerminalGestureStateController> terminalGestureStateController;
-
-        private RuntimeUiCallbacks(
-                Supplier<SurfaceView> surfaceView,
-                Supplier<View> productReadinessBlocker,
-                Supplier<TerminalScrollOverlayView> terminalScrollOverlay,
-                Supplier<TerminalSelectionController> selectionController,
-                Supplier<ProductShellStatePresenter> productShellStatePresenter,
-                Supplier<FrameLoopController> frameLoopController,
-                Supplier<TerminalStatusController> terminalStatusController,
-                Supplier<UserlandSessionCoordinator> userlandSessionCoordinator,
-                Supplier<TerminalGestureStateController> terminalGestureStateController) {
-            this.surfaceView = surfaceView;
-            this.productReadinessBlocker = productReadinessBlocker;
-            this.terminalScrollOverlay = terminalScrollOverlay;
-            this.selectionController = selectionController;
-            this.productShellStatePresenter = productShellStatePresenter;
-            this.frameLoopController = frameLoopController;
-            this.terminalStatusController = terminalStatusController;
-            this.userlandSessionCoordinator = userlandSessionCoordinator;
-            this.terminalGestureStateController = terminalGestureStateController;
-        }
-
-        public static RuntimeUiCallbacks of(
-                Supplier<SurfaceView> surfaceView,
-                Supplier<View> productReadinessBlocker,
-                Supplier<TerminalScrollOverlayView> terminalScrollOverlay,
-                Supplier<TerminalSelectionController> selectionController,
-                Supplier<ProductShellStatePresenter> productShellStatePresenter,
-                Supplier<FrameLoopController> frameLoopController,
-                Supplier<TerminalStatusController> terminalStatusController,
-                Supplier<UserlandSessionCoordinator> userlandSessionCoordinator,
-                Supplier<TerminalGestureStateController> terminalGestureStateController) {
-            return new RuntimeUiCallbacks(
-                    surfaceView,
-                    productReadinessBlocker,
-                    terminalScrollOverlay,
-                    selectionController,
-                    productShellStatePresenter,
-                    frameLoopController,
-                    terminalStatusController,
-                    userlandSessionCoordinator,
-                    terminalGestureStateController);
-        }
-    }
-
-    private final RuntimeHostCallbacks runtimeHostCallbacks;
-    private final RuntimeUiCallbacks runtimeUiCallbacks;
+    private final BooleanSupplier debugViewEnabled;
+    private final BooleanSupplier nativeLoaded;
+    private final Supplier<UserlandInstallState> installState;
+    private final Consumer<UserlandInstallState> setInstallState;
+    private final Supplier<UserlandReadinessState> readinessState;
+    private final Consumer<String> appendEvent;
+    private final Consumer<String> updateStatus;
+    private final Supplier<SurfaceView> surfaceView;
+    private final Supplier<View> productReadinessBlocker;
+    private final Supplier<TerminalScrollOverlayView> terminalScrollOverlay;
+    private final Supplier<TerminalSelectionController> selectionController;
+    private final Supplier<ProductShellStatePresenter> productShellStatePresenter;
+    private final Supplier<FrameLoopController> frameLoopController;
+    private final Supplier<TerminalStatusController> terminalStatusController;
+    private final Supplier<UserlandSessionCoordinator> userlandSessionCoordinator;
+    private final Supplier<TerminalGestureStateController> terminalGestureStateController;
 
     public ProductRuntimeAssemblyCallbacks(
-            RuntimeHostCallbacks runtimeHostCallbacks,
-            RuntimeUiCallbacks runtimeUiCallbacks) {
-        this.runtimeHostCallbacks = runtimeHostCallbacks;
-        this.runtimeUiCallbacks = runtimeUiCallbacks;
+            BooleanSupplier debugViewEnabled,
+            BooleanSupplier nativeLoaded,
+            Supplier<UserlandInstallState> installState,
+            Consumer<UserlandInstallState> setInstallState,
+            Supplier<UserlandReadinessState> readinessState,
+            Consumer<String> appendEvent,
+            Consumer<String> updateStatus,
+            Supplier<SurfaceView> surfaceView,
+            Supplier<View> productReadinessBlocker,
+            Supplier<TerminalScrollOverlayView> terminalScrollOverlay,
+            Supplier<TerminalSelectionController> selectionController,
+            Supplier<ProductShellStatePresenter> productShellStatePresenter,
+            Supplier<FrameLoopController> frameLoopController,
+            Supplier<TerminalStatusController> terminalStatusController,
+            Supplier<UserlandSessionCoordinator> userlandSessionCoordinator,
+            Supplier<TerminalGestureStateController> terminalGestureStateController) {
+        this.debugViewEnabled = debugViewEnabled;
+        this.nativeLoaded = nativeLoaded;
+        this.installState = installState;
+        this.setInstallState = setInstallState;
+        this.readinessState = readinessState;
+        this.appendEvent = appendEvent;
+        this.updateStatus = updateStatus;
+        this.surfaceView = surfaceView;
+        this.productReadinessBlocker = productReadinessBlocker;
+        this.terminalScrollOverlay = terminalScrollOverlay;
+        this.selectionController = selectionController;
+        this.productShellStatePresenter = productShellStatePresenter;
+        this.frameLoopController = frameLoopController;
+        this.terminalStatusController = terminalStatusController;
+        this.userlandSessionCoordinator = userlandSessionCoordinator;
+        this.terminalGestureStateController = terminalGestureStateController;
     }
 
     @Override
     public boolean debugViewEnabled() {
-        return runtimeHostCallbacks.debugViewEnabled.getAsBoolean();
+        return debugViewEnabled.getAsBoolean();
     }
 
     @Override
     public boolean nativeLoaded() {
-        return runtimeHostCallbacks.nativeLoaded.getAsBoolean();
+        return nativeLoaded.getAsBoolean();
     }
 
     @Override
     public UserlandInstallState installState() {
-        return runtimeHostCallbacks.installState.get();
+        return installState.get();
     }
 
     @Override
     public void setInstallState(UserlandInstallState installState) {
-        runtimeHostCallbacks.setInstallState.accept(installState);
+        setInstallState.accept(installState);
     }
 
     @Override
     public UserlandReadinessState readinessState() {
-        return runtimeHostCallbacks.readinessState.get();
+        return readinessState.get();
     }
 
     @Override
     public SurfaceView surfaceView() {
-        return runtimeUiCallbacks.surfaceView.get();
+        return surfaceView.get();
     }
 
     @Override
     public View productReadinessBlocker() {
-        return runtimeUiCallbacks.productReadinessBlocker.get();
+        return productReadinessBlocker.get();
     }
 
     @Override
     public TerminalScrollOverlayView terminalScrollOverlay() {
-        return runtimeUiCallbacks.terminalScrollOverlay.get();
+        return terminalScrollOverlay.get();
     }
 
     @Override
     public TerminalSelectionController selectionController() {
-        return runtimeUiCallbacks.selectionController.get();
+        return selectionController.get();
     }
 
     @Override
     public ProductShellStatePresenter productShellStatePresenter() {
-        return runtimeUiCallbacks.productShellStatePresenter.get();
+        return productShellStatePresenter.get();
     }
 
     @Override
     public FrameLoopController frameLoopController() {
-        return runtimeUiCallbacks.frameLoopController.get();
+        return frameLoopController.get();
     }
 
     @Override
     public TerminalStatusController terminalStatusController() {
-        return runtimeUiCallbacks.terminalStatusController.get();
+        return terminalStatusController.get();
     }
 
     @Override
     public UserlandSessionCoordinator userlandSessionCoordinator() {
-        return runtimeUiCallbacks.userlandSessionCoordinator.get();
+        return userlandSessionCoordinator.get();
     }
 
     @Override
     public TerminalGestureStateController terminalGestureStateController() {
-        return runtimeUiCallbacks.terminalGestureStateController.get();
+        return terminalGestureStateController.get();
     }
 
     @Override
     public void appendEvent(String message) {
-        runtimeHostCallbacks.appendEvent.accept(message);
+        appendEvent.accept(message);
     }
 
     @Override
     public void updateStatus(String statusLabel) {
-        runtimeHostCallbacks.updateStatus.accept(statusLabel);
+        updateStatus.accept(statusLabel);
     }
 }

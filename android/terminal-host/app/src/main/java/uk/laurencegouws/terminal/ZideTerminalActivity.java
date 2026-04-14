@@ -367,24 +367,22 @@ public final class ZideTerminalActivity extends Activity
 
     private ProductRuntimeAssemblyCallbacks createProductRuntimeAssemblyCallbacks() {
         return new ProductRuntimeAssemblyCallbacks(
-                ProductRuntimeAssemblyCallbacks.RuntimeHostCallbacks.of(
-                        this::isDebugViewEnabled,
-                        this::isNativeLoaded,
-                        this::currentInstallStateSnapshot,
-                        this::setCurrentInstallState,
-                        this::currentReadinessStateSnapshot,
-                        this::appendEvent,
-                        this::updateStatus),
-                ProductRuntimeAssemblyCallbacks.RuntimeUiCallbacks.of(
-                        this::currentSurfaceViewIfReady,
-                        () -> productReadinessBlocker,
-                        () -> terminalScrollOverlay,
-                        () -> selectionController,
-                        () -> productShellStatePresenter,
-                        () -> productFrameLoopController,
-                        () -> terminalStatusController,
-                        () -> userlandSessionCoordinator,
-                        () -> terminalGestureStateController));
+                this::isDebugViewEnabled,
+                this::isNativeLoaded,
+                this::currentInstallStateSnapshot,
+                this::setCurrentInstallState,
+                this::currentReadinessStateSnapshot,
+                this::appendEvent,
+                this::updateStatus,
+                this::currentSurfaceViewIfReady,
+                () -> productReadinessBlocker,
+                () -> terminalScrollOverlay,
+                () -> selectionController,
+                () -> productShellStatePresenter,
+                () -> productFrameLoopController,
+                () -> terminalStatusController,
+                () -> userlandSessionCoordinator,
+                () -> terminalGestureStateController);
     }
 
     private void assembleActivityLifecycleController() {
