@@ -1,11 +1,13 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.lifecycle;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
 
-/** Functional callback adapter for {@link TerminalActivityLifecycleController.Host}. */
-public final class TerminalActivityLifecycleHostCallbacks implements TerminalActivityLifecycleController.Host {
+import dev.zide.terminal.host.TerminalSurfaceHostLifecycleCallbacks;
+
+/** Functional callback adapter for {@link LifecycleController.Host}. */
+public final class LifecycleCallbacks implements LifecycleController.Host {
     /** Functional callback for boolean native bridge calls. */
     public interface NativeBooleanCall {
         long call(boolean value);
@@ -30,7 +32,7 @@ public final class TerminalActivityLifecycleHostCallbacks implements TerminalAct
     private final Runnable notifySurfacePause;
     private final SurfaceResumeCall notifySurfaceResume;
 
-    public TerminalActivityLifecycleHostCallbacks(
+    public LifecycleCallbacks(
             BooleanSupplier nativeLoaded,
             LongSupplier nativeOnStart,
             LongSupplier nativeOnResume,

@@ -113,8 +113,7 @@ A cut is done only if all are true:
 - product-runtime controller startup activity wiring now composes through
   `host/runtime/ProductRuntimeAssembly` + `ProductRuntimeAssemblyCallbacks`
 - activity lifecycle native/status/session/surface wiring now composes through
-  `host/TerminalActivityLifecycleController` +
-  `TerminalActivityLifecycleHostCallbacks`
+  `host/lifecycle/LifecycleController` + `LifecycleCallbacks`
 - input-view install and input controller activity wiring now composes through
   `host/input/InputAssembly` + `InputCallbacks`
 - surface/widget activity wiring now composes through

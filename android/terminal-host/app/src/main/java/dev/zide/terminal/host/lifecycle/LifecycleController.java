@@ -1,7 +1,7 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.lifecycle;
 
 /** Owns activity lifecycle wiring for native/status/session/surface hooks. */
-public final class TerminalActivityLifecycleController {
+public final class LifecycleController {
     /** Activity callbacks required for lifecycle wiring. */
     public interface Host {
         boolean nativeLoaded();
@@ -33,7 +33,7 @@ public final class TerminalActivityLifecycleController {
 
     private final Host host;
 
-    public TerminalActivityLifecycleController(Host host) {
+    public LifecycleController(Host host) {
         this.host = host;
     }
 

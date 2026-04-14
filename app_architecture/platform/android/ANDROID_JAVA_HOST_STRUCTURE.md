@@ -52,8 +52,8 @@ For active priorities/workflow, use
 Current shape markers (for hygiene tracking, not hard limits):
 
 - `ZideTerminalActivity.java`: `581` lines
-- `host/TerminalActivityLifecycleController.java`: `78` lines
-- `host/TerminalActivityLifecycleHostCallbacks.java`: `132` lines
+- `host/lifecycle/LifecycleController.java`: `78` lines
+- `host/lifecycle/LifecycleCallbacks.java`: `134` lines
 - `host/TerminalChromeHostFactory.java`: `69` lines
 - `host/TerminalInteractionHostFactory.java`: `131` lines
 - `host/TerminalInputHostFactory.java`: `56` lines
@@ -101,8 +101,8 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `gesture/TerminalGestureStateController.java` | Good | Owns pinch and scrollback budget/state that used to live in the activity. | Keep gesture detection in `ProductGestureController`; keep terminal truth in the native bridge. |
 | `gesture/TerminalGestureStateControllerFactory.java` | Good | Builds one gesture-state controller from widget-scoped host callbacks. | Keep as construction-only glue; no runtime policy in factory. |
 | `host/TerminalFrameLoopController.java` | Good | Small host scheduler; moved out of `userland` because it is not prefix policy. | Keep frame execution in native/product runnable, not in this controller. |
-| `host/TerminalActivityLifecycleController.java` | Good | Owns activity lifecycle wiring to native/status/session/surface hooks so lifecycle overrides stay delegation-only in the activity. | Keep this wiring-only; do not move product behavior or controller policy into it. |
-| `host/TerminalActivityLifecycleHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalActivityLifecycleController`. | Keep adapter-only; avoid moving lifecycle policy into this adapter. |
+| `host/lifecycle/LifecycleController.java` | Good | Owns activity lifecycle wiring to native/status/session/surface hooks so lifecycle overrides stay delegation-only in the activity. | Keep this wiring-only; do not move product behavior or controller policy into it. |
+| `host/lifecycle/LifecycleCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/lifecycle/LifecycleController`. | Keep adapter-only; avoid moving lifecycle policy into this adapter. |
 | `host/TerminalFrameLoopHostCallbacks.java` | Good | Functional callback adapter from activity state/native access into `TerminalFrameLoopHostBridge`. | Keep adapter-only; frame-loop policy stays in `TerminalFrameLoopController`. |
 | `host/TerminalFrameLoopHostBridge.java` | Good | Owns frame-loop host callback adaptation from activity into `TerminalFrameLoopController`. | Keep as callback adapter only; scheduling logic stays in `TerminalFrameLoopController`. |
 | `host/TerminalGestureStateFactoryHostCallbacks.java` | Good | Functional callback adapter from activity state/native access into `gesture/TerminalGestureStateControllerFactory`. | Keep adapter-only; gesture policy stays in `TerminalGestureStateController`. |

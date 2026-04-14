@@ -15,8 +15,8 @@ import dev.zide.terminal.debug.AndroidDebugFormatter;
 import dev.zide.terminal.debug.TerminalStatusController;
 import dev.zide.terminal.debug.TerminalSurfaceStateSnapshotReader;
 import dev.zide.terminal.gesture.TerminalGestureStateController;
-import dev.zide.terminal.host.TerminalActivityLifecycleController;
-import dev.zide.terminal.host.TerminalActivityLifecycleHostCallbacks;
+import dev.zide.terminal.host.lifecycle.LifecycleController;
+import dev.zide.terminal.host.lifecycle.LifecycleCallbacks;
 import dev.zide.terminal.host.TerminalChromeController;
 import dev.zide.terminal.host.TerminalFrameLoopController;
 import dev.zide.terminal.host.input.InputAssembly;
@@ -112,7 +112,7 @@ public final class ZideTerminalActivity extends Activity
     private TerminalSurfaceStateSnapshotReader terminalSurfaceStateSnapshotReader;
     private TerminalSurfaceWidgetController terminalSurfaceWidgetController;
     private ProductRuntimeController terminalProductRuntimeController;
-    private TerminalActivityLifecycleController terminalActivityLifecycleController;
+    private LifecycleController terminalActivityLifecycleController;
     private UserlandInstallState currentInstallState = UserlandInstallState.idle();
     private UserlandReadinessState currentReadinessState;
 
@@ -444,8 +444,8 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void assembleActivityLifecycleController() {
-        terminalActivityLifecycleController = new TerminalActivityLifecycleController(
-                new TerminalActivityLifecycleHostCallbacks(
+        terminalActivityLifecycleController = new LifecycleController(
+                new LifecycleCallbacks(
                         () -> nativeLoaded,
                         TerminalNativeBridge::nativeOnStartBridge,
                         TerminalNativeBridge::nativeOnResumeBridge,
