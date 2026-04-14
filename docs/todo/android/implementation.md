@@ -56,6 +56,8 @@ Focus goals:
      and initial readiness-state load now use named helpers).
    - Completed: direct-input override routing cleanup landed
      (`sendDirectText` now routes through a named codepoint iteration helper).
+   - Completed: direct-input native-ready guard is now shared via
+     `canSendDirectInput()` across direct-input overrides.
    - Next: move to the next smallest wiring-vs-policy cut in activity methods.
 2. Keep Java ownership boundaries aligned with
    `ANDROID_JAVA_HOST_STRUCTURE.md`.
