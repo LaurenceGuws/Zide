@@ -248,7 +248,7 @@ public final class ZideTerminalActivity extends Activity
                         this::activityHost,
                         () -> rootView,
                         this::activityHost,
-                        () -> getSystemService(InputMethodManager.class)),
+                        this::inputMethodManager),
                 InputCallbacks.InputRuntimeCallbacks.of(
                         this::isImeVisible,
                         this::setImeVisible,
@@ -446,7 +446,7 @@ public final class ZideTerminalActivity extends Activity
                         this::setUserlandRelease,
                         this::appendEvent,
                         this::updateStatus,
-                        () -> packageStatusText),
+                        this::packageStatusTextView),
                 WorkflowAssemblyCallbacks.WorkflowRuntimeCallbacks.of(
                         this::setCurrentInstallState,
                         this::setCurrentReadinessState,
@@ -504,6 +504,14 @@ public final class ZideTerminalActivity extends Activity
 
     private Handler mainHandler() {
         return handler;
+    }
+
+    private InputMethodManager inputMethodManager() {
+        return getSystemService(InputMethodManager.class);
+    }
+
+    private TextView packageStatusTextView() {
+        return packageStatusText;
     }
 
     private boolean isNativeLoaded() {
