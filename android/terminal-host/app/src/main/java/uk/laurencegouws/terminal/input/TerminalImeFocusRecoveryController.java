@@ -27,7 +27,7 @@ public final class TerminalImeFocusRecoveryController {
         }
         final ShellInputView shellInputView = host.shellInputView();
         shellInputView.post(() -> {
-            host.appendEvent("input.focus recoverAttempt");
+            host.appendEvent("input.focus.recover_attempt");
             shellInputView.requestFocusFromTouch();
             if (!shellInputView.hasFocus()) {
                 shellInputView.requestFocus();
@@ -36,7 +36,7 @@ public final class TerminalImeFocusRecoveryController {
             if (imm != null) {
                 imm.restartInput(shellInputView);
                 final boolean shown = imm.showSoftInput(shellInputView, InputMethodManager.SHOW_IMPLICIT);
-                host.appendEvent("input.focus recoverShown=" + shown + " focus=" + shellInputView.hasFocus());
+                host.appendEvent("input.focus.recover_shown shown=" + shown + " focus=" + shellInputView.hasFocus());
             }
         });
     }

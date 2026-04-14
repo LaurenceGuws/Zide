@@ -38,7 +38,7 @@ public final class LifecycleController {
     }
 
     public void onStart() {
-        host.appendEvent("activity.onStart");
+        host.appendEvent("activity.on.start");
         host.callNative("native.onStart", host.nativeLoaded() ? host.nativeOnStart() : -1);
         host.updateStatus("started");
     }
@@ -47,7 +47,7 @@ public final class LifecycleController {
             boolean debugRecreateSurfaceOnce,
             boolean debugResizeSurfaceOnce,
             boolean debugStartShellOnce) {
-        host.appendEvent("activity.onResume");
+        host.appendEvent("activity.on.resume");
         host.callNative("native.onResume", host.nativeLoaded() ? host.nativeOnResume() : -1);
         host.notifySurfaceResume(
                 debugRecreateSurfaceOnce,
@@ -56,7 +56,7 @@ public final class LifecycleController {
     }
 
     public void onPause() {
-        host.appendEvent("activity.onPause");
+        host.appendEvent("activity.on.pause");
         host.callNative("native.onPause", host.nativeLoaded() ? host.nativeOnPause() : -1);
         host.stopProductFrameLoop();
         host.refreshUserlandSessionOnPause();
@@ -65,13 +65,13 @@ public final class LifecycleController {
     }
 
     public void onStop() {
-        host.appendEvent("activity.onStop");
+        host.appendEvent("activity.on.stop");
         host.callNative("native.onStop", host.nativeLoaded() ? host.nativeOnStop() : -1);
         host.updateStatus("stopped");
     }
 
     public void onWindowFocusChanged(boolean hasFocus) {
-        host.appendEvent("activity.onWindowFocusChanged focus=" + hasFocus);
+        host.appendEvent("activity.on.window_focus_changed focus=" + hasFocus);
         host.callNative("native.onWindowFocus", host.nativeLoaded() ? host.nativeOnWindowFocus(hasFocus) : -1);
         host.updateStatus(hasFocus ? "window-focused" : "window-unfocused");
     }

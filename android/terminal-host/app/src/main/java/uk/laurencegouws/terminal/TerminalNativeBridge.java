@@ -88,7 +88,7 @@ public final class TerminalNativeBridge {
 
     public static native int nativeCurrentRendererTextureHeightBridge();
 
-    public static native int nativeRestartShellSessionBridge();
+    public static native int nativeRestartSessionBridge();
 
     public static native int nativePollShellSessionBridge();
 

@@ -15,6 +15,13 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
 - avoid stacked synonyms in one class name (`Host` + `Bridge` + `Callbacks`)
 - keep behavior-neutral mechanical renames separate from behavior changes
 
+## Event Key Grammar
+
+- `appendEvent(...)` keys must use `domain.subject.action`
+- each segment is lowercase and underscore-safe
+- dynamic values belong in key/value suffixes after a space, not in key tokens
+  (example: `product.selection.copy result=ok chars=12`)
+
 ## Glossary
 
 - `Readiness`: current product-operable state for Android userland

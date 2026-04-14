@@ -75,6 +75,6 @@ public final class ProductRuntimeAssembly {
                         TerminalNativeBridge::nativeCurrentShellVisibleRowsBridge,
                         TerminalNativeBridge::nativeCurrentShellScrollbackCountBridge,
                         TerminalNativeBridge::nativeCurrentShellScrollbackOffsetBridge,
-                        TerminalNativeBridge::nativeRestartShellSessionBridge));
+                        TerminalNativeBridge::nativeRestartSessionBridge));
     }
 }

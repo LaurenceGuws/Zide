@@ -77,7 +77,7 @@ public final class ChromeController {
         if (imeButton != null) {
             imeButton.setOnClickListener(view -> {
                 toggleIme();
-                host.appendEvent("assist.ime");
+                host.appendEvent("assist.ime.toggle");
             });
         }
         host.bindAssistButton(uk.laurencegouws.terminal.R.id.assist_esc_button, "\u001b", "assist.esc");
@@ -104,7 +104,7 @@ public final class ChromeController {
     public void openIme() {
         final InputMethodManager imm = host.context().getSystemService(InputMethodManager.class);
         if (imm == null) {
-            host.appendEvent("manual.ime unavailable=true");
+            host.appendEvent("manual.ime.unavailable state=true");
             return;
         }
 
@@ -125,7 +125,7 @@ public final class ChromeController {
     public void closeIme() {
         final InputMethodManager imm = host.context().getSystemService(InputMethodManager.class);
         if (imm == null) {
-            host.appendEvent("manual.ime unavailable=true");
+            host.appendEvent("manual.ime.unavailable state=true");
             return;
         }
         final boolean hidden = imm.hideSoftInputFromWindow(host.shellInputView().getWindowToken(), 0);

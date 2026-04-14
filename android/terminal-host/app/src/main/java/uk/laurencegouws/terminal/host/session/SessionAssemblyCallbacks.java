@@ -24,7 +24,7 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
     private final Runnable refreshDebugStatusSurface;
     private final BooleanSupplier shouldRunProductFrameLoop;
     private final IntSupplier tickProductFrame;
-    private final IntSupplier nativeRestartShellSession;
+    private final IntSupplier nativeRestartSession;
     private final IntSupplier nativePollShellSession;
     private final BooleanSupplier nativeIsShellSessionAlive;
 
@@ -40,7 +40,7 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
             Runnable refreshDebugStatusSurface,
             BooleanSupplier shouldRunProductFrameLoop,
             IntSupplier tickProductFrame,
-            IntSupplier nativeRestartShellSession,
+            IntSupplier nativeRestartSession,
             IntSupplier nativePollShellSession,
             BooleanSupplier nativeIsShellSessionAlive) {
         this.context = context;
@@ -54,7 +54,7 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
         this.refreshDebugStatusSurface = refreshDebugStatusSurface;
         this.shouldRunProductFrameLoop = shouldRunProductFrameLoop;
         this.tickProductFrame = tickProductFrame;
-        this.nativeRestartShellSession = nativeRestartShellSession;
+        this.nativeRestartSession = nativeRestartSession;
         this.nativePollShellSession = nativePollShellSession;
         this.nativeIsShellSessionAlive = nativeIsShellSessionAlive;
     }
@@ -115,8 +115,8 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
     }
 
     @Override
-    public int nativeRestartShellSession() {
-        return nativeRestartShellSession.getAsInt();
+    public int nativeRestartSession() {
+        return nativeRestartSession.getAsInt();
     }
 
     @Override

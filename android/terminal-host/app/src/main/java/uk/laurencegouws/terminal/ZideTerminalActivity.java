@@ -152,7 +152,7 @@ public final class ZideTerminalActivity extends Activity
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
-        appendEvent("activity.onNewIntent");
+        appendEvent("activity.on.new_intent");
     }
 
     @Override
@@ -383,7 +383,7 @@ public final class ZideTerminalActivity extends Activity
                             }
                             return tick;
                         },
-                        TerminalNativeBridge::nativeRestartShellSessionBridge,
+                        TerminalNativeBridge::nativeRestartSessionBridge,
                         TerminalNativeBridge::nativePollShellSessionBridge,
                         TerminalNativeBridge::nativeIsShellSessionAliveBridge));
         userlandSessionCoordinator = result.userlandSessionCoordinator;
@@ -493,9 +493,9 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void finishOnCreateLifecycle() {
-        appendEvent("activity.onCreate nativeLoaded=" + nativeLoaded);
+        appendEvent("activity.on.create nativeLoaded=" + nativeLoaded);
         if (nativeLoadError != null) {
-            appendEvent("native.load.error=" + nativeLoadError);
+            appendEvent("native.load.error detail=" + nativeLoadError);
         }
         callNative("native.onCreate", nativeLoaded ? TerminalNativeBridge.nativeOnCreateBridge() : -1);
         updateStatus("created");

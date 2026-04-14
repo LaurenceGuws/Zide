@@ -155,6 +155,8 @@ A cut is done only if all are true:
   to block regressions in active Android runtime paths
 - local guard added: run `./ops/lint_android_zig_naming.py` before Android Zig
   bridge naming commits
+- local guard added: run `./ops/lint_android_java_events.py` to enforce
+  `domain.subject.action` event-key grammar for `appendEvent(...)`
 - selection controller remains monolithic by design until a real split seam
   exists
 - queue remains Android-product-first, not shell-readiness-baseline-first

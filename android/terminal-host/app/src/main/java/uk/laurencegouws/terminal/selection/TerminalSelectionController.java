@@ -209,7 +209,7 @@ public final class TerminalSelectionController {
         }
         if (tapHitsCurrentSelection(x, y)) {
             toggleSelectionHelpers();
-            host.appendEvent("product.selection tap=inside");
+            host.appendEvent("product.selection.tap result=inside");
             return;
         }
         bridge.clearSelection();
@@ -217,7 +217,7 @@ public final class TerminalSelectionController {
         selectionToolbarVisible = true;
         finishTerminalSelectionActionMode();
         host.reevaluateProductFrameLoop();
-        host.appendEvent("product.selection cleared=tap-outside");
+        host.appendEvent("product.selection.cleared reason=tap-outside");
     }
 
     public void onProductLongPress(float x, float y) {
@@ -226,12 +226,12 @@ public final class TerminalSelectionController {
         }
         final TerminalCellHit hit = resolveProductTerminalCell(x, y);
         if (hit == null) {
-            host.appendEvent("product.selection longPress=miss");
+            host.appendEvent("product.selection.long_press result=miss");
             return;
         }
         host.stopScrollbackFling();
         final int status = bridge.beginWordSelectionAtVisibleCell(hit.row, hit.col);
-        host.appendEvent("product.selection word row=" + hit.row + " col=" + hit.col + " status=" + status);
+        host.appendEvent("product.selection.word row=" + hit.row + " col=" + hit.col + " status=" + status);
         if (status == 0) {
             beginSelectionDrag(SelectionDragMode.gesture, x, y);
             hideSelectionToolbar();
@@ -827,16 +827,16 @@ public final class TerminalSelectionController {
     private void copyCurrentShellSelectionToClipboard() {
         final byte[] bytes = bridge.currentSelectionTextBytes();
         if (bytes == null) {
-            host.appendEvent("product.selection copy=no-bytes");
+            host.appendEvent("product.selection.copy result=no-bytes");
             return;
         }
         final String text = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
         final ClipboardManager clipboard = host.context().getSystemService(ClipboardManager.class);
         if (clipboard == null) {
-            host.appendEvent("product.selection copy=no-clipboard");
+            host.appendEvent("product.selection.copy result=no-clipboard");
             return;
         }
         clipboard.setPrimaryClip(ClipData.newPlainText("terminal-selection", text));
-        host.appendEvent("product.selection copy=ok chars=" + text.length());
+        host.appendEvent("product.selection.copy result=ok chars=" + text.length());
     }
 }

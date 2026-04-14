@@ -44,7 +44,7 @@ fn followLiveBottom() i32 {
     return android_runtime_bridge.followLiveBottom();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeRestartShellSessionBridge(
+export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeRestartSessionBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {

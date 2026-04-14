@@ -38,7 +38,7 @@ public final class ProductRuntimeHostCallbacks implements ProductRuntimeControll
     private final IntSupplier nativeCurrentShellVisibleRows;
     private final IntSupplier nativeCurrentShellScrollbackCount;
     private final IntSupplier nativeCurrentShellScrollbackOffset;
-    private final IntSupplier nativeRestartShellSession;
+    private final IntSupplier nativeRestartSession;
 
     public ProductRuntimeHostCallbacks(
             BooleanSupplier debugViewEnabled,
@@ -60,7 +60,7 @@ public final class ProductRuntimeHostCallbacks implements ProductRuntimeControll
             IntSupplier nativeCurrentShellVisibleRows,
             IntSupplier nativeCurrentShellScrollbackCount,
             IntSupplier nativeCurrentShellScrollbackOffset,
-            IntSupplier nativeRestartShellSession) {
+            IntSupplier nativeRestartSession) {
         this.debugViewEnabled = debugViewEnabled;
         this.nativeLoaded = nativeLoaded;
         this.installState = installState;
@@ -80,7 +80,7 @@ public final class ProductRuntimeHostCallbacks implements ProductRuntimeControll
         this.nativeCurrentShellVisibleRows = nativeCurrentShellVisibleRows;
         this.nativeCurrentShellScrollbackCount = nativeCurrentShellScrollbackCount;
         this.nativeCurrentShellScrollbackOffset = nativeCurrentShellScrollbackOffset;
-        this.nativeRestartShellSession = nativeRestartShellSession;
+        this.nativeRestartSession = nativeRestartSession;
     }
 
     @Override
@@ -179,7 +179,7 @@ public final class ProductRuntimeHostCallbacks implements ProductRuntimeControll
     }
 
     @Override
-    public int nativeRestartShellSession() {
-        return nativeRestartShellSession.getAsInt();
+    public int nativeRestartSession() {
+        return nativeRestartSession.getAsInt();
     }
 }

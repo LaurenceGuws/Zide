@@ -55,3 +55,4 @@ Session entrypoint only. Keep this file short, stable, and current.
 - Zig naming contract now includes an explicit forbidden-terms checklist for
   active Android bridge/runtime code
 - local naming lint exists at `ops/lint_android_zig_naming.py`
+- local Java event-key lint exists at `ops/lint_android_java_events.py`

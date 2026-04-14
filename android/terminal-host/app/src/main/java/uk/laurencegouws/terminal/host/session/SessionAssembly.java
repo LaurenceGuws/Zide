@@ -40,7 +40,7 @@ public final class SessionAssembly {
 
         int tickProductFrame();
 
-        int nativeRestartShellSession();
+        int nativeRestartSession();
 
         int nativePollShellSession();
 
@@ -76,7 +76,7 @@ public final class SessionAssembly {
                         UserlandPolicy.shellPath(host.context()),
                         host.userlandRelease(),
                         host.nativeLoaded(),
-                        host::nativeRestartShellSession,
+                        host::nativeRestartSession,
                         host::nativePollShellSession,
                         host::nativeIsShellSessionAlive);
         final SessionBridge userlandSessionHostBridge =

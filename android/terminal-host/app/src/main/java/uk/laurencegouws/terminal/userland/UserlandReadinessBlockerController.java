@@ -34,14 +34,14 @@ public final class UserlandReadinessBlockerController {
     public void bind() {
         retryButton.setOnClickListener(view -> {
             if (host.installState().isInstalling()) {
-                host.appendEvent("product.install ignored=already-installing");
+                host.appendEvent("product.install.ignored reason=already-installing");
                 return;
             }
             if (UserlandReadinessUiPolicy.shouldStartInstall(host.readinessState())) {
                 host.workflowController().startInstall();
                 return;
             }
-            host.appendEvent("product.readiness retry");
+            host.appendEvent("product.readiness.retry");
             host.sessionCoordinator().refreshAndApply(true);
             host.updateStatus("product-readiness-retry");
         });

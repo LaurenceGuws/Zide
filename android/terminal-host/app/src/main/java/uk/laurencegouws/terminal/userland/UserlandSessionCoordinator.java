@@ -68,7 +68,7 @@ public final class UserlandSessionCoordinator {
             ShellSessionController.PollResult pollResult,
             boolean logEvent) {
         if (pollResult.autoStarted) {
-            host.appendEvent("auto.shellStart status=" + host.shellStartStatusLabel(pollResult.autoStartStatus));
+            host.appendEvent("auto.session.start status=" + host.shellStartStatusLabel(pollResult.autoStartStatus));
         }
         if (pollResult.autoStartBlocked) {
             if (!readinessState.state.equals(lastAutoStartBlockedState)) {
@@ -82,7 +82,7 @@ public final class UserlandSessionCoordinator {
             lastAutoStartBlockedState = "";
         }
         if (logEvent) {
-            host.appendEvent("shell.sessionRefresh manual=true alive=" + pollResult.alive + " status="
+            host.appendEvent("shell.session.refresh manual=true alive=" + pollResult.alive + " status="
                     + host.shellStartStatusLabel(pollResult.status));
         }
     }

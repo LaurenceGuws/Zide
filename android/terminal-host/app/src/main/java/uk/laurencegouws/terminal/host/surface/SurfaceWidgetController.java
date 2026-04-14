@@ -115,7 +115,7 @@ public final class SurfaceWidgetController
             return;
         }
         final int status = host.setShellScrollbackOffset(offsetRows);
-        host.appendEvent("product.scrollback offset=" + offsetRows + " status=" + status);
+        host.appendEvent("product.scrollback.offset rows=" + offsetRows + " status=" + status);
         host.refreshProductScrollOverlay();
         host.reevaluateProductFrameLoop();
     }
@@ -126,7 +126,7 @@ public final class SurfaceWidgetController
             return;
         }
         final int status = host.followShellLiveBottom();
-        host.appendEvent("product.scrollback followBottom status=" + status);
+        host.appendEvent("product.scrollback.follow_bottom status=" + status);
         host.refreshProductScrollOverlay();
         host.reevaluateProductFrameLoop();
     }

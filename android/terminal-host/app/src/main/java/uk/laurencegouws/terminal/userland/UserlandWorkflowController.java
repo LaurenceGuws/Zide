@@ -42,14 +42,14 @@ public final class UserlandWorkflowController {
         host.applyInstallState(
                 UserlandInstallState.installing("Fetching and staging " + release.artifactName + "..."),
                 "userland-install-started");
-        host.appendEvent("userland.install begin expected=" + release.artifactVersion);
+        host.appendEvent("userland.install.begin expected=" + release.artifactVersion);
         new Thread(() -> {
             try {
                 final UserlandInstaller.Result result = UserlandInstaller.install(host.context(), release);
                 host.handler().post(() -> {
                     host.setInstallState(UserlandInstallState.idle());
                     host.setReadinessState(result.readinessState);
-                    host.appendEvent("userland.install success " + result.detail);
+                    host.appendEvent("userland.install.success " + result.detail);
                     host.restartSession("userland.install session.restart", "userland-install-succeeded-restarted", true);
                 });
             } catch (IOException err) {
@@ -77,14 +77,14 @@ public final class UserlandWorkflowController {
                 final String combined = doctor.trim() + "\n---\n" + available.trim();
                 host.handler().post(() -> {
                     host.setPackageStatusText(combined);
-                    host.appendEvent("packages.doctor success");
+                    host.appendEvent("packages.doctor.success");
                     host.updateStatus("packages-doctor");
                 });
             } catch (IOException err) {
                 host.handler().post(() -> {
                     final String detail = err.getMessage() == null ? err.getClass().getSimpleName() : err.getMessage();
                     host.setPackageStatusText("zide-pm failed: " + detail);
-                    host.appendEvent("packages.doctor failed err=" + err.getClass().getSimpleName());
+                    host.appendEvent("packages.doctor.failed err=" + err.getClass().getSimpleName());
                     host.updateStatus("packages-doctor-failed");
                 });
             }

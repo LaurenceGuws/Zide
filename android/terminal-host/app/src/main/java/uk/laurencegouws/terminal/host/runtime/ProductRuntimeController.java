@@ -55,7 +55,7 @@ public final class ProductRuntimeController {
 
         int nativeCurrentShellScrollbackOffset();
 
-        int nativeRestartShellSession();
+        int nativeRestartSession();
     }
 
     private final Host host;
@@ -152,7 +152,7 @@ public final class ProductRuntimeController {
     }
 
     public void restartSession(String eventName, String statusLabel, boolean logRefresh) {
-        final int status = host.nativeLoaded() ? host.nativeRestartShellSession() : 0;
+        final int status = host.nativeLoaded() ? host.nativeRestartSession() : 0;
         host.appendEvent(eventName + " status=" + TerminalNativeStatusLabels.shellStartStatusLabel(status));
         final UserlandSessionCoordinator sessionCoordinator = host.userlandSessionCoordinator();
         if (sessionCoordinator != null) {

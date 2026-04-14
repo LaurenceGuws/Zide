@@ -109,7 +109,7 @@ public final class SurfaceController {
     }
 
     public void onSurfaceCreated(SurfaceHolder holder) {
-        host.appendEvent("surface.created generation=" + host.surfaceHostGeneration() + " valid=" + holder.getSurface().isValid());
+        host.appendEvent("surface.lifecycle.created generation=" + host.surfaceHostGeneration() + " valid=" + holder.getSurface().isValid());
         host.updateStatus("surface-created");
     }
 
@@ -128,7 +128,7 @@ public final class SurfaceController {
     }
 
     public void onSurfaceDestroyed(SurfaceHolder holder) {
-        host.appendEvent("surface.destroyed generation=" + host.surfaceHostGeneration());
+        host.appendEvent("surface.lifecycle.destroyed generation=" + host.surfaceHostGeneration());
         final long seq = host.nativeLoaded() ? host.nativeOnSurfaceDestroyedBridge() : -1;
         host.callNativeWithSurfaceState(
                 "native.surfaceDestroyed",
@@ -177,7 +177,7 @@ public final class SurfaceController {
                 existing.getHolder().removeCallback(previousCallback);
             }
             host.productSurfaceContainer().removeView(existing);
-            host.appendEvent("surface.hostRemoved reason=" + reason + " generation=" + host.surfaceHostGeneration());
+            host.appendEvent("surface.host.removed reason=" + reason + " generation=" + host.surfaceHostGeneration());
         }
 
         host.setSurfaceHostGeneration(host.surfaceHostGeneration() + 1);
@@ -193,7 +193,7 @@ public final class SurfaceController {
         final SurfaceHolder.Callback2 nextCallback = callback != null ? callback : host.surfaceCallback();
         host.reinstallSurfaceCallback(nextSurfaceView, nextCallback);
         host.setSurfaceView(nextSurfaceView);
-        host.appendEvent("surface.hostInstalled reason=" + reason + " generation=" + host.surfaceHostGeneration());
+        host.appendEvent("surface.host.installed reason=" + reason + " generation=" + host.surfaceHostGeneration());
         host.productSurfaceContainer().post(() -> notifyVisibleViewport("surface-install"));
     }
 
@@ -211,7 +211,7 @@ public final class SurfaceController {
             return;
         }
         host.setNotifiedViewportSize(width, height, viewportImeVisible);
-        host.appendEvent("viewport.changed reason=" + reason + " size=" + width + "x" + height + " imeVisible=" + viewportImeVisible);
+        host.appendEvent("viewport.size.changed reason=" + reason + " size=" + width + "x" + height + " imeVisible=" + viewportImeVisible);
         final long seq = host.nativeLoaded() ? host.nativeOnVisibleViewportBridge(width, height, viewportImeVisible) : -1;
         host.callNativeWithSurfaceState("native.viewportChanged", seq, host.currentSurfaceStateSnapshot());
         host.refreshProductScrollOverlay();
@@ -225,7 +225,7 @@ public final class SurfaceController {
         }
         host.setSurfaceRecreationScheduled(true);
         host.productSurfaceContainer().postDelayed(() -> {
-            host.appendEvent("debug.surface.recreateView");
+            host.appendEvent("debug.surface.recreate_view");
             installSurfaceView("debug-recreate", null);
             host.updateStatus("debug-recreated-surface");
         }, 700);

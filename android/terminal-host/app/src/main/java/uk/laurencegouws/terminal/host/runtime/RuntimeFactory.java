@@ -44,7 +44,7 @@ public final class RuntimeFactory {
             IntSupplier nativeCurrentShellVisibleRows,
             IntSupplier nativeCurrentShellScrollbackCount,
             IntSupplier nativeCurrentShellScrollbackOffset,
-            IntSupplier nativeRestartShellSession) {
+            IntSupplier nativeRestartSession) {
         return new ProductRuntimeHostCallbacks(
                 debugViewEnabled,
                 nativeLoaded,
@@ -65,7 +65,7 @@ public final class RuntimeFactory {
                 nativeCurrentShellVisibleRows,
                 nativeCurrentShellScrollbackCount,
                 nativeCurrentShellScrollbackOffset,
-                nativeRestartShellSession);
+                nativeRestartSession);
     }
 
     public static FrameLoopController createFrameLoopController(

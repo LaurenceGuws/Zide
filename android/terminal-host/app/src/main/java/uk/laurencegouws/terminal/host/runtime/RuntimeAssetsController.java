@@ -42,7 +42,7 @@ public final class RuntimeAssetsController {
         final File runtimeRoot = host.context().getFilesDir();
         final File fontsDir = new File(new File(runtimeRoot, "assets"), "fonts");
         if (!fontsDir.isDirectory() && !fontsDir.mkdirs()) {
-            host.appendEvent("runtime.assets mkdirFailed path=" + fontsDir.getAbsolutePath());
+            host.appendEvent("runtime.assets.mkdir_failed path=" + fontsDir.getAbsolutePath());
             return;
         }
 
@@ -55,24 +55,24 @@ public final class RuntimeAssetsController {
                 try {
                     copyAssetToFile(assetName, new File(fontsDir, assetName));
                 } catch (IOException err) {
-                    host.appendEvent("runtime.assets copyFailed asset=" + assetName + " err=" + err.getClass().getSimpleName());
+                    host.appendEvent("runtime.assets.copy_failed asset=" + assetName + " err=" + err.getClass().getSimpleName());
                     return;
                 }
             }
             writeTextFile(stampFile, expectedStamp);
-            host.appendEvent("runtime.assets refreshed stamp=" + expectedStamp);
+            host.appendEvent("runtime.assets.refreshed stamp=" + expectedStamp);
         } else {
-            host.appendEvent("runtime.assets reused stamp=" + expectedStamp);
+            host.appendEvent("runtime.assets.reused stamp=" + expectedStamp);
         }
 
-        host.appendEvent("runtime.assets ready path=" + fontsDir.getAbsolutePath());
+        host.appendEvent("runtime.assets.ready path=" + fontsDir.getAbsolutePath());
     }
 
     public UserlandRelease loadUserlandRelease() {
         try {
             return UserlandRelease.load(host.context());
         } catch (IOException err) {
-            host.appendEvent("userland.release loadFailed err=" + err.getClass().getSimpleName());
+            host.appendEvent("userland.release.load_failed err=" + err.getClass().getSimpleName());
             return new UserlandRelease("", "", "", "");
         }
     }
@@ -110,7 +110,7 @@ public final class RuntimeAssetsController {
             out.write(text.getBytes());
             out.getFD().sync();
         } catch (IOException err) {
-            host.appendEvent("runtime.assets stampWriteFailed err=" + err.getClass().getSimpleName());
+            host.appendEvent("runtime.assets.stamp_write_failed err=" + err.getClass().getSimpleName());
         }
     }
 
