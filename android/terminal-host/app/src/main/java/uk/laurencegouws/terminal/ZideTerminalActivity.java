@@ -184,22 +184,7 @@ public final class ZideTerminalActivity extends Activity
 
     private void initializeStatusAndViewControllers() {
         final StatusViewAssembly.Result result = StatusViewAssembly.assemble(
-                new StatusViewCallbacks(
-                        () -> this,
-                        () -> debugViewEnabled,
-                        () -> nativeLoaded,
-                        this::hasWindowFocus,
-                        () -> imeVisible,
-                        visible -> imeVisible = visible,
-                        () -> surfaceHostBridge,
-                        () -> currentInstallState,
-                        () -> currentReadinessState,
-                        this::currentSurfaceStateSnapshot,
-                        reason -> {
-                            if (surfaceHostController != null) {
-                                surfaceHostController.notifyVisibleViewport(reason);
-                            }
-                        }));
+                createStatusViewCallbacks());
         packageStatusText = result.packageStatusText;
         productBootstrapTitle = result.productBootstrapTitle;
         productBootstrapDetail = result.productBootstrapDetail;
@@ -440,24 +425,47 @@ public final class ZideTerminalActivity extends Activity
 
     private void assembleActivityLifecycleController() {
         terminalActivityLifecycleController = new LifecycleController(
-                new LifecycleCallbacks(
-                        () -> nativeLoaded,
-                        TerminalNativeBridge::nativeOnStartBridge,
-                        TerminalNativeBridge::nativeOnResumeBridge,
-                        TerminalNativeBridge::nativeOnPauseBridge,
-                        TerminalNativeBridge::nativeOnStopBridge,
-                        TerminalNativeBridge::nativeOnWindowFocusBridge,
-                        this::appendEvent,
-                        this::callNative,
-                        this::updateStatus,
-                        () -> productFrameLoopController.stop(),
-                        () -> userlandSessionCoordinator.refreshAndApply(false),
-                        () -> surfaceHostController.onPause(),
-                        (debugRecreateSurfaceOnce, debugResizeSurfaceOnce, debugStartShellOnce) -> surfaceHostController
-                                .onResume(
-                                        debugRecreateSurfaceOnce,
-                                        debugResizeSurfaceOnce,
-                                        debugStartShellOnce)));
+                createLifecycleCallbacks());
+    }
+
+    private StatusViewCallbacks createStatusViewCallbacks() {
+        return new StatusViewCallbacks(
+                () -> this,
+                () -> debugViewEnabled,
+                () -> nativeLoaded,
+                this::hasWindowFocus,
+                () -> imeVisible,
+                visible -> imeVisible = visible,
+                () -> surfaceHostBridge,
+                () -> currentInstallState,
+                () -> currentReadinessState,
+                this::currentSurfaceStateSnapshot,
+                reason -> {
+                    if (surfaceHostController != null) {
+                        surfaceHostController.notifyVisibleViewport(reason);
+                    }
+                });
+    }
+
+    private LifecycleCallbacks createLifecycleCallbacks() {
+        return new LifecycleCallbacks(
+                () -> nativeLoaded,
+                TerminalNativeBridge::nativeOnStartBridge,
+                TerminalNativeBridge::nativeOnResumeBridge,
+                TerminalNativeBridge::nativeOnPauseBridge,
+                TerminalNativeBridge::nativeOnStopBridge,
+                TerminalNativeBridge::nativeOnWindowFocusBridge,
+                this::appendEvent,
+                this::callNative,
+                this::updateStatus,
+                () -> productFrameLoopController.stop(),
+                () -> userlandSessionCoordinator.refreshAndApply(false),
+                () -> surfaceHostController.onPause(),
+                (debugRecreateSurfaceOnce, debugResizeSurfaceOnce, debugStartShellOnce) -> surfaceHostController
+                        .onResume(
+                                debugRecreateSurfaceOnce,
+                                debugResizeSurfaceOnce,
+                                debugStartShellOnce));
     }
 
     private void bindAndStartUiControllers() {
