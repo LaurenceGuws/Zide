@@ -293,32 +293,7 @@ public final class ZideTerminalActivity extends Activity
 
     private void assembleUserlandWorkflowControllers() {
         final WorkflowAssembly.Result result = WorkflowAssembly.assemble(
-                new WorkflowAssemblyCallbacks(
-                        () -> this,
-                        () -> handler,
-                        () -> userlandRelease,
-                        release -> userlandRelease = release,
-                        installState -> currentInstallState = installState,
-                        readinessState -> currentReadinessState = readinessState,
-                        (installState, statusLabel) -> {
-                            if (terminalProductRuntimeController != null) {
-                                terminalProductRuntimeController.applyInstallState(installState, statusLabel);
-                            }
-                        },
-                        (eventName, statusLabel, logRefresh) -> {
-                            if (terminalProductRuntimeController != null) {
-                                terminalProductRuntimeController.restartSession(eventName, statusLabel,
-                                        logRefresh);
-                            }
-                        },
-                        (eventName, statusLabel) -> {
-                            if (terminalViewModeController != null) {
-                                terminalViewModeController.showDebugView(eventName, statusLabel);
-                            }
-                        },
-                        this::appendEvent,
-                        this::updateStatus,
-                        () -> packageStatusText));
+                createWorkflowAssemblyCallbacks());
         terminalRuntimeAssetsController = result.runtimeAssetsController;
         userlandWorkflowController = result.userlandWorkflowController;
     }
@@ -479,29 +454,62 @@ public final class ZideTerminalActivity extends Activity
 
     private void bindAndStartUiControllers() {
         UiStartupAssembly.start(
-                new UiStartupCallbacks(
-                        () -> terminalViewportController,
-                        () -> terminalChromeController,
-                        () -> productBootstrapRetryButton,
-                        () -> productBootstrapDebugButton,
-                        () -> currentInstallState,
-                        () -> currentReadinessState,
-                        () -> userlandWorkflowController,
-                        () -> userlandSessionCoordinator,
-                        (eventName, statusLabel) -> {
-                            if (terminalViewModeController != null) {
-                                terminalViewModeController.showDebugView(eventName, statusLabel);
-                            }
-                        },
-                        this::appendEvent,
-                        this::updateStatus,
-                        () -> terminalRuntimeAssetsController,
-                        () -> terminalViewModeController,
-                        () -> surfaceHostController,
-                        () -> terminalSurfaceWidgetController,
-                        () -> productShellStatePresenter,
-                        () -> productFrameLoopController,
-                        () -> leftSidebar));
+                createUiStartupCallbacks());
+    }
+
+    private WorkflowAssemblyCallbacks createWorkflowAssemblyCallbacks() {
+        return new WorkflowAssemblyCallbacks(
+                () -> this,
+                () -> handler,
+                () -> userlandRelease,
+                release -> userlandRelease = release,
+                installState -> currentInstallState = installState,
+                readinessState -> currentReadinessState = readinessState,
+                (installState, statusLabel) -> {
+                    if (terminalProductRuntimeController != null) {
+                        terminalProductRuntimeController.applyInstallState(installState, statusLabel);
+                    }
+                },
+                (eventName, statusLabel, logRefresh) -> {
+                    if (terminalProductRuntimeController != null) {
+                        terminalProductRuntimeController.restartSession(eventName, statusLabel,
+                                logRefresh);
+                    }
+                },
+                (eventName, statusLabel) -> {
+                    if (terminalViewModeController != null) {
+                        terminalViewModeController.showDebugView(eventName, statusLabel);
+                    }
+                },
+                this::appendEvent,
+                this::updateStatus,
+                () -> packageStatusText);
+    }
+
+    private UiStartupCallbacks createUiStartupCallbacks() {
+        return new UiStartupCallbacks(
+                () -> terminalViewportController,
+                () -> terminalChromeController,
+                () -> productBootstrapRetryButton,
+                () -> productBootstrapDebugButton,
+                () -> currentInstallState,
+                () -> currentReadinessState,
+                () -> userlandWorkflowController,
+                () -> userlandSessionCoordinator,
+                (eventName, statusLabel) -> {
+                    if (terminalViewModeController != null) {
+                        terminalViewModeController.showDebugView(eventName, statusLabel);
+                    }
+                },
+                this::appendEvent,
+                this::updateStatus,
+                () -> terminalRuntimeAssetsController,
+                () -> terminalViewModeController,
+                () -> surfaceHostController,
+                () -> terminalSurfaceWidgetController,
+                () -> productShellStatePresenter,
+                () -> productFrameLoopController,
+                () -> leftSidebar);
     }
 
     private void finishOnCreateLifecycle() {
