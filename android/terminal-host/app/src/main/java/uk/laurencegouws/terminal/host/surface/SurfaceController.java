@@ -194,13 +194,21 @@ public final class SurfaceController {
 
     /** Notifies native of holder sizing, then schedules viewport + shell chrome follow-ups. */
     private void dispatchProductSurfaceChanged(SurfaceHolder holder, int width, int height) {
-        final long seq = host.nativeLoaded() ? host.nativeOnSurfaceAvailableBridge(holder, width, height) : -1;
+        final long seq = nativeSurfaceAvailableSeqOrNegative(holder, width, height);
+        callNativeProductSurfaceAvailable(seq);
+        scheduleNotifyVisibleViewport("surface-changed");
+        host.handleProductShellStateEvent("surface-changed");
+    }
+
+    private long nativeSurfaceAvailableSeqOrNegative(SurfaceHolder holder, int width, int height) {
+        return host.nativeLoaded() ? host.nativeOnSurfaceAvailableBridge(holder, width, height) : -1;
+    }
+
+    private void callNativeProductSurfaceAvailable(long seq) {
         host.callNativeWithSurfaceState(
                 "native.surfaceAvailable",
                 seq,
                 host.currentSurfaceStateSnapshot());
-        scheduleNotifyVisibleViewport("surface-changed");
-        host.handleProductShellStateEvent("surface-changed");
     }
 
     public void onSurfaceDestroyed(SurfaceHolder holder) {

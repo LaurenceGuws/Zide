@@ -102,12 +102,20 @@ public final class ChromeController {
         return host.leftSidebar();
     }
 
+    private View drawerScrimChrome() {
+        return host.drawerScrim();
+    }
+
+    private View drawerEdgeHotspotChrome() {
+        return host.drawerEdgeHotspot();
+    }
+
     private void bindDrawerScrimDismissChrome() {
-        host.drawerScrim().setOnClickListener(view -> closeSidebar());
+        drawerScrimChrome().setOnClickListener(view -> closeSidebar());
     }
 
     private void bindDrawerEdgeSwipeListenersChrome() {
-        host.drawerEdgeHotspot().setOnTouchListener(new EdgeSwipeListener(true));
+        drawerEdgeHotspotChrome().setOnTouchListener(new EdgeSwipeListener(true));
         leftSidebarChrome().setOnTouchListener(new EdgeSwipeListener(false));
     }
 
@@ -297,8 +305,8 @@ public final class ChromeController {
     }
 
     private void applyDrawerScrimAndHotspotVisibility(boolean visible) {
-        host.drawerScrim().setVisibility(visible ? View.VISIBLE : View.GONE);
-        host.drawerEdgeHotspot().setVisibility(visible ? View.GONE : View.VISIBLE);
+        drawerScrimChrome().setVisibility(visible ? View.VISIBLE : View.GONE);
+        drawerEdgeHotspotChrome().setVisibility(visible ? View.GONE : View.VISIBLE);
     }
 
     private InputMethodManager inputMethodManagerOrLogUnavailable() {
