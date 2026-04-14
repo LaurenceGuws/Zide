@@ -130,28 +130,7 @@ public final class ZideTerminalActivity extends Activity
         assembleSessionControllers();
         assembleUserlandWorkflowControllers();
         assembleWidgetHostControllers();
-        terminalProductRuntimeController = TerminalRuntimeHostFactory.createProductRuntimeController(
-                TerminalRuntimeHostFactory.createProductRuntimeHostCallbacks(
-                        () -> debugViewEnabled,
-                        () -> nativeLoaded,
-                        () -> currentInstallState,
-                        installState -> currentInstallState = installState,
-                        () -> currentBootstrapState,
-                        () -> surfaceHostBridge != null ? surfaceHostBridge.currentSurfaceView() : null,
-                        () -> productBootstrapBlocker,
-                        () -> terminalScrollOverlay,
-                        () -> selectionController,
-                        () -> productShellStatePresenter,
-                        () -> productFrameLoopController,
-                        () -> terminalStatusController,
-                        () -> userlandSessionCoordinator,
-                        () -> terminalGestureStateController,
-                        this::appendEvent,
-                        this::updateStatus,
-                        TerminalNativeBridge::nativeCurrentShellVisibleRowsBridge,
-                        TerminalNativeBridge::nativeCurrentShellScrollbackCountBridge,
-                        TerminalNativeBridge::nativeCurrentShellScrollbackOffsetBridge,
-                        TerminalNativeBridge::nativeRestartShellSessionBridge));
+        assembleProductRuntimeController();
         currentBootstrapState = userlandSessionCoordinator.loadBootstrapState();
         installInputControllers();
         bindAndStartUiControllers();
@@ -463,6 +442,31 @@ public final class ZideTerminalActivity extends Activity
                         packageStatusText,
                         this::updateStatus));
         userlandWorkflowController = new UserlandWorkflowController(terminalUserlandWorkflowHostBridge);
+    }
+
+    private void assembleProductRuntimeController() {
+        terminalProductRuntimeController = TerminalRuntimeHostFactory.createProductRuntimeController(
+                TerminalRuntimeHostFactory.createProductRuntimeHostCallbacks(
+                        () -> debugViewEnabled,
+                        () -> nativeLoaded,
+                        () -> currentInstallState,
+                        installState -> currentInstallState = installState,
+                        () -> currentBootstrapState,
+                        () -> surfaceHostBridge != null ? surfaceHostBridge.currentSurfaceView() : null,
+                        () -> productBootstrapBlocker,
+                        () -> terminalScrollOverlay,
+                        () -> selectionController,
+                        () -> productShellStatePresenter,
+                        () -> productFrameLoopController,
+                        () -> terminalStatusController,
+                        () -> userlandSessionCoordinator,
+                        () -> terminalGestureStateController,
+                        this::appendEvent,
+                        this::updateStatus,
+                        TerminalNativeBridge::nativeCurrentShellVisibleRowsBridge,
+                        TerminalNativeBridge::nativeCurrentShellScrollbackCountBridge,
+                        TerminalNativeBridge::nativeCurrentShellScrollbackOffsetBridge,
+                        TerminalNativeBridge::nativeRestartShellSessionBridge));
     }
 
     private void bindAndStartUiControllers() {
