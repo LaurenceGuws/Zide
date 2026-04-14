@@ -48,3 +48,5 @@ Session entrypoint only. Keep this file short, stable, and current.
   `src/platform/android_runtime_bridge.zig` with matching JNI helper updates
 - terminal session helper seam now lives in
   `src/app/terminal/terminal_session_runtime_factory.zig`
+- retired Zig bridge terms include `note*` host/probe entrypoints and
+  `ProbeStatus/ProbeState`

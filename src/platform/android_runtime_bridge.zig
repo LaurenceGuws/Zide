@@ -18,7 +18,7 @@ const widgets = @import("../ui/widgets.zig");
 
 const android_runtime_font_path = "/data/data/uk.laurencegouws.zide/files/assets/fonts/JetBrainsMonoNerdFont-Regular.ttf";
 
-const RendererStatus = android_gles_probe.ProbeStatus;
+const RendererStatus = android_gles_probe.RendererStatus;
 
 extern fn ANativeWindow_fromSurface(env: ?*anyopaque, surface: ?*anyopaque) ?*anyopaque;
 extern fn ANativeWindow_release(window: *anyopaque) void;
@@ -599,7 +599,7 @@ pub fn drawAndroidGlesRendererFrame() !bool {
 
 /// Render-path rule: callers must justify any work that reaches this entry.
 /// This path should stay limited to frame-critical surface sync, draw, and
-/// submission mechanics; debug/reporting, transcript churn, and broad staging
+/// submission mechanics; debug/reporting, UI churn, and broad staging
 /// work do not belong here.
 fn drawSharedRendererSurfaceFrame() RendererStatus {
     _ = ensureAndroidGlesRenderer() catch return .init_failed;

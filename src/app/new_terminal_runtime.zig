@@ -3,7 +3,7 @@ const app_modes = @import("modes/mod.zig");
 const app_terminal_active_widget = @import("terminal/terminal_active_widget.zig");
 const app_terminal_grid = @import("terminal/terminal_grid.zig");
 const app_terminal_refresh_sizing_runtime = @import("terminal/terminal_refresh_sizing_runtime.zig");
-const app_terminal_session_runtime_factory = @import("terminal/terminal_session_runtime_factory.zig");
+const terminal_session_runtime_factory = @import("terminal/terminal_session_runtime_factory.zig");
 const app_terminal_tab_bar_sync_runtime = @import("terminal/terminal_tab_bar_sync_runtime.zig");
 const app_terminal_theme_apply = @import("terminal/terminal_theme_apply.zig");
 const app_ui_layout_runtime = @import("ui_layout_runtime.zig");
@@ -196,9 +196,9 @@ fn createWorkspaceTerminalTab(state: anytype, workspace: *TerminalWorkspace, row
     const created = try workspace.createTabWithSession(rows, cols);
     const term = created.session;
     app_terminal_theme_apply.setSessionPalette(term, theme);
-    try app_terminal_session_runtime_factory.startSessionWithShellCellSize(term, shell, launch_cwd, state.terminal_shell_path);
+    try terminal_session_runtime_factory.startSessionWithShellCellSize(term, shell, launch_cwd, state.terminal_shell_path);
     try injectStartupFailureIfRequested(.workspace_after_start, term);
-    const widget = app_terminal_session_runtime_factory.initWidget(
+    const widget = terminal_session_runtime_factory.initWidget(
         term,
         state.terminal_blink_style,
         state.terminal_focus_report_window_events,
@@ -300,11 +300,11 @@ fn handleSingleLaunch(state: anytype, rows: u16, cols: u16) !void {
     app_terminal_theme_apply.setSessionPalette(term, theme);
     var launch_cwd = try fallbackDefaultStartLocation(state);
     defer launch_cwd.deinit(state.allocator);
-    try app_terminal_session_runtime_factory.startSessionWithShellCellSize(term, state.shell, launch_cwd.value, state.terminal_shell_path);
+    try terminal_session_runtime_factory.startSessionWithShellCellSize(term, state.shell, launch_cwd.value, state.terminal_shell_path);
     try injectStartupFailureIfRequested(.single_after_start, term);
     try state.terminals.append(state.allocator, term);
     unowned_term = null;
-    const widget = app_terminal_session_runtime_factory.initWidget(
+    const widget = terminal_session_runtime_factory.initWidget(
         term,
         state.terminal_blink_style,
         state.terminal_focus_report_window_events,
