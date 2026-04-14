@@ -267,8 +267,7 @@ public final class TerminalSelectionController {
         if (!canHandleSelectionDrag()) {
             return;
         }
-        updateSelectionDragPoint(x, y);
-        final int status = updateSelectionFromActiveDrag();
+        final int status = updateSelectionFromPoint(x, y);
         if (status == 0) {
             applyImmediateSelectionAutoscrollStep();
             syncSelectionAndReevaluateFrameLoop();
@@ -279,8 +278,7 @@ public final class TerminalSelectionController {
         if (!canHandleSelectionDrag()) {
             return;
         }
-        updateSelectionDragPoint(x, y);
-        final int status = updateSelectionFromActiveDrag();
+        final int status = updateSelectionFromPoint(x, y);
         if (status == 0) {
             syncTerminalSelectionActionMode();
         }
@@ -322,8 +320,7 @@ public final class TerminalSelectionController {
                 if (!commitSelectionDragIfNeeded(selectionHandleAnchorX(handle), selectionHandleAnchorY(handle))) {
                     return true;
                 }
-                updateSelectionDragPoint(selectionHandleAnchorX(handle), selectionHandleAnchorY(handle));
-                if (updateSelectionFromActiveDrag() == 0) {
+                if (updateSelectionFromPoint(selectionHandleAnchorX(handle), selectionHandleAnchorY(handle)) == 0) {
                     applyImmediateSelectionAutoscrollStep();
                     syncSelectionAndReevaluateFrameLoop();
                 }
@@ -332,8 +329,7 @@ public final class TerminalSelectionController {
             case MotionEvent.ACTION_CANCEL:
                 if (selectionDragCommitted) {
                     positionDraggedHandle(handle, handle.getX() + event.getX(), handle.getY() + event.getY());
-                    updateSelectionDragPoint(selectionHandleAnchorX(handle), selectionHandleAnchorY(handle));
-                    if (updateSelectionFromActiveDrag() == 0) {
+                    if (updateSelectionFromPoint(selectionHandleAnchorX(handle), selectionHandleAnchorY(handle)) == 0) {
                         syncTerminalSelectionActionMode();
                     }
                 }
@@ -427,6 +423,11 @@ public final class TerminalSelectionController {
         if (computeSelectionAutoscrollRowsPerSecond(y) != 0.0f) {
             scheduleSelectionAutoscrollFrame();
         }
+    }
+
+    private int updateSelectionFromPoint(float x, float y) {
+        updateSelectionDragPoint(x, y);
+        return updateSelectionFromActiveDrag();
     }
 
     private int updateSelectionFromActiveDrag() {
