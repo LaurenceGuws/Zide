@@ -400,7 +400,7 @@ public final class TerminalSelectionController {
         requestFrameLoopReevaluation();
     }
 
-    private void syncSelectionAndReevaluateFrameLoop() {
+    private void syncSelectionChromeAndReevaluateFrameLoop() {
         syncSelectionChrome();
         requestFrameLoopReevaluation();
     }
@@ -411,7 +411,7 @@ public final class TerminalSelectionController {
 
     private void onSelectionUpdateSuccessDuringDrag() {
         applyImmediateSelectionAutoscrollStep();
-        syncSelectionAndReevaluateFrameLoop();
+        syncSelectionChromeAndReevaluateFrameLoop();
     }
 
     private boolean canHandleSelectionTap() {
