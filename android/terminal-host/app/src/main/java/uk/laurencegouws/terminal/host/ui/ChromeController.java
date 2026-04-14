@@ -1,6 +1,5 @@
 package uk.laurencegouws.terminal.host.ui;
 
-import android.os.IBinder;
 import android.view.MotionEvent;
 import android.view.inputmethod.InputMethodManager;
 import android.view.View;
@@ -42,44 +41,20 @@ public final class ChromeController {
     }
 
     public void bindViewModeToggle() {
-        bindProductViewModeToggle();
-    }
-
-    private void bindProductViewModeToggle() {
-        debugViewModeToggleChrome().setOnClickListener(
+        host.debugViewModeButton().setOnClickListener(
                 view -> host.showProductView("view.mode debug=false", "product-view"));
     }
 
-    private View debugViewModeToggleChrome() {
-        return host.debugViewModeButton();
-    }
-
     public void bindSidebarControls() {
-        bindSidebarChromeInteractions();
-    }
-
-    /** Sidebar nav actions, scrim dismiss, and edge swipe open/close chrome. */
-    private void bindSidebarChromeInteractions() {
         bindSidebarNavActions();
         bindSidebarDrawerGestures();
     }
 
     private void bindSidebarNavActions() {
-        bindSidebarRestartNavButton(sidebarRestartNavButtonChrome());
-        bindSidebarDebugNavButton(sidebarDebugNavButtonChrome());
-        bindSidebarPackagesNavButton(sidebarPackagesNavButtonChrome());
-    }
-
-    private Button sidebarRestartNavButtonChrome() {
-        return (Button) leftSidebarChrome().findViewById(uk.laurencegouws.terminal.R.id.sidebar_restart_button);
-    }
-
-    private Button sidebarDebugNavButtonChrome() {
-        return (Button) leftSidebarChrome().findViewById(uk.laurencegouws.terminal.R.id.sidebar_debug_button);
-    }
-
-    private Button sidebarPackagesNavButtonChrome() {
-        return (Button) leftSidebarChrome().findViewById(uk.laurencegouws.terminal.R.id.sidebar_packages_button);
+        final View sidebar = host.leftSidebar();
+        bindSidebarRestartNavButton((Button) sidebar.findViewById(uk.laurencegouws.terminal.R.id.sidebar_restart_button));
+        bindSidebarDebugNavButton((Button) sidebar.findViewById(uk.laurencegouws.terminal.R.id.sidebar_debug_button));
+        bindSidebarPackagesNavButton((Button) sidebar.findViewById(uk.laurencegouws.terminal.R.id.sidebar_packages_button));
     }
 
     private void bindSidebarRestartNavButton(Button restartButton) {
@@ -108,38 +83,18 @@ public final class ChromeController {
         bindDrawerEdgeSwipeListenersChrome();
     }
 
-    private View leftSidebarChrome() {
-        return host.leftSidebar();
-    }
-
-    private View drawerScrimChrome() {
-        return host.drawerScrim();
-    }
-
-    private View drawerEdgeHotspotChrome() {
-        return host.drawerEdgeHotspot();
-    }
-
     private void bindDrawerScrimDismissChrome() {
-        drawerScrimChrome().setOnClickListener(view -> closeSidebar());
+        host.drawerScrim().setOnClickListener(view -> closeSidebar());
     }
 
     private void bindDrawerEdgeSwipeListenersChrome() {
-        drawerEdgeHotspotChrome().setOnTouchListener(new EdgeSwipeListener(true));
-        leftSidebarChrome().setOnTouchListener(new EdgeSwipeListener(false));
+        host.drawerEdgeHotspot().setOnTouchListener(new EdgeSwipeListener(true));
+        host.leftSidebar().setOnTouchListener(new EdgeSwipeListener(false));
     }
 
     public void bindAssistBar() {
-        bindAssistImeToggleIfPresent(assistBarRootView());
+        bindAssistImeToggleIfPresent(host.shellInputView().getRootView());
         bindAssistRowInputChrome();
-    }
-
-    private ShellInputView activeShellInputView() {
-        return host.shellInputView();
-    }
-
-    private View assistBarRootView() {
-        return activeShellInputView().getRootView();
     }
 
     private void bindAssistRowInputChrome() {
@@ -149,24 +104,12 @@ public final class ChromeController {
     }
 
     private void applyAssistModifierLatchChromeAfterBindings() {
-        host.applyModifierLatchState(activeShellModifierLatchStateChrome());
-    }
-
-    private ShellInputView.Host.ModifierLatchState activeShellModifierLatchStateChrome() {
-        return activeShellInputView().modifierLatchState();
+        host.applyModifierLatchState(host.shellInputView().modifierLatchState());
     }
 
     private void bindAssistModifierLatchButtons() {
-        host.bindModifierAssistButton(assistCtrlButtonChrome(), ShellInputView.ModifierLatch.CTRL, "assist.ctrl");
-        host.bindModifierAssistButton(assistAltButtonChrome(), ShellInputView.ModifierLatch.ALT, "assist.alt");
-    }
-
-    private Button assistCtrlButtonChrome() {
-        return host.assistCtrlButton();
-    }
-
-    private Button assistAltButtonChrome() {
-        return host.assistAltButton();
+        host.bindModifierAssistButton(host.assistCtrlButton(), ShellInputView.ModifierLatch.CTRL, "assist.ctrl");
+        host.bindModifierAssistButton(host.assistAltButton(), ShellInputView.ModifierLatch.ALT, "assist.alt");
     }
 
     /** Wires assist-row text keys and arrow keys to host direct-send binding. */
@@ -227,7 +170,7 @@ public final class ChromeController {
         if (imm == null) {
             return;
         }
-        runManualImeOpenSequence(imm, activeShellInputView());
+        runManualImeOpenSequence(imm, host.shellInputView());
     }
 
     /** Focus, soft-input show, and IME visibility bookkeeping for a manual open. */
@@ -247,17 +190,9 @@ public final class ChromeController {
     }
 
     private void showSoftInputAfterRestartInput(InputMethodManager imm, ShellInputView shellInputView) {
-        restartInputForManualImeOpen(imm, shellInputView);
-        final boolean shown = showSoftInputImplicitForShell(imm, shellInputView);
-        recordManualImeOpenSoftInputResult(shellInputView, shown);
-    }
-
-    private void restartInputForManualImeOpen(InputMethodManager imm, ShellInputView shellInputView) {
         imm.restartInput(shellInputView);
-    }
-
-    private boolean showSoftInputImplicitForShell(InputMethodManager imm, ShellInputView shellInputView) {
-        return imm.showSoftInput(shellInputView, InputMethodManager.SHOW_IMPLICIT);
+        final boolean shown = imm.showSoftInput(shellInputView, InputMethodManager.SHOW_IMPLICIT);
+        recordManualImeOpenSoftInputResult(shellInputView, shown);
     }
 
     private void recordManualImeOpenSoftInputResult(ShellInputView shellInputView, boolean shown) {
@@ -276,16 +211,8 @@ public final class ChromeController {
 
     /** Hides soft input and records IME chrome state for a manual close. */
     private void runManualImeCloseSequence(InputMethodManager imm) {
-        final boolean hidden = hideSoftInputFromShellWindowToken(imm);
+        final boolean hidden = imm.hideSoftInputFromWindow(host.shellInputView().getWindowToken(), 0);
         recordManualImeCloseSoftInputResult(hidden);
-    }
-
-    private boolean hideSoftInputFromShellWindowToken(InputMethodManager imm) {
-        return imm.hideSoftInputFromWindow(activeShellInputWindowToken(), 0);
-    }
-
-    private IBinder activeShellInputWindowToken() {
-        return activeShellInputView().getWindowToken();
     }
 
     private void recordManualImeCloseSoftInputResult(boolean hidden) {
@@ -338,15 +265,11 @@ public final class ChromeController {
 
     private void animateSidebarTranslation(boolean open) {
         final float targetX = leftSidebarTranslationXForOpenState(open);
-        leftSidebarChrome().animate().translationX(targetX).setDuration(sidebarOpenAnimationDurationMsChrome()).start();
-    }
-
-    private int sidebarOpenAnimationDurationMsChrome() {
-        return 180;
+        host.leftSidebar().animate().translationX(targetX).setDuration(180).start();
     }
 
     private float leftSidebarTranslationXForOpenState(boolean open) {
-        return open ? 0f : -leftSidebarChrome().getWidth();
+        return open ? 0f : -host.leftSidebar().getWidth();
     }
 
     public void updateSidebarVisibility(boolean visible) {
@@ -354,8 +277,8 @@ public final class ChromeController {
     }
 
     private void applyDrawerScrimAndHotspotVisibility(boolean visible) {
-        drawerScrimChrome().setVisibility(drawerScrimVisibilityForSidebarChrome(visible));
-        drawerEdgeHotspotChrome().setVisibility(drawerEdgeHotspotVisibilityForSidebarChrome(visible));
+        host.drawerScrim().setVisibility(drawerScrimVisibilityForSidebarChrome(visible));
+        host.drawerEdgeHotspot().setVisibility(drawerEdgeHotspotVisibilityForSidebarChrome(visible));
     }
 
     private int drawerScrimVisibilityForSidebarChrome(boolean sidebarOpen) {
@@ -367,19 +290,11 @@ public final class ChromeController {
     }
 
     private InputMethodManager inputMethodManagerOrLogUnavailable() {
-        final InputMethodManager imm = inputMethodManagerFromHostContext();
+        final InputMethodManager imm = host.context().getSystemService(InputMethodManager.class);
         if (imm == null) {
-            appendManualImeInputManagerUnavailableEvent();
+            host.appendEvent("manual.ime.unavailable state=true");
         }
         return imm;
-    }
-
-    private InputMethodManager inputMethodManagerFromHostContext() {
-        return host.context().getSystemService(InputMethodManager.class);
-    }
-
-    private void appendManualImeInputManagerUnavailableEvent() {
-        host.appendEvent("manual.ime.unavailable state=true");
     }
 
     private void requestInputFocus(ShellInputView shellInputView) {
@@ -407,10 +322,6 @@ public final class ChromeController {
         return false;
     }
 
-    private float edgeSwipeDeltaFromDownRawX(float rawX, float downRawX) {
-        return rawX - downRawX;
-    }
-
     private final class EdgeSwipeListener implements View.OnTouchListener {
         private final boolean openListener;
         private float downX;
@@ -425,7 +336,7 @@ public final class ChromeController {
                     return true;
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
-                    final float delta = edgeSwipeDeltaFromDownRawX(event.getRawX(), downX);
+                    final float delta = event.getRawX() - downX;
                     if (openListener) {
                         if (tryConsumeSidebarOpenEdgeSwipe(delta)) {
                             return true;
