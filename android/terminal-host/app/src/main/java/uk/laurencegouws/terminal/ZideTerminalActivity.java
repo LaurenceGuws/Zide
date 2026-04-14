@@ -703,14 +703,14 @@ public final class ZideTerminalActivity extends Activity
 
     @Override
     public void sendDirectCodepoint(int codepoint) {
-        if (!nativeLoaded)
+        if (!canSendDirectInput())
             return;
         TerminalNativeBridge.nativeSendSessionCodepointBridge(codepoint);
     }
 
     @Override
     public void sendDirectText(String text) {
-        if (!nativeLoaded)
+        if (!canSendDirectInput())
             return;
         sendDirectTextCodepoints(text);
     }
@@ -746,6 +746,10 @@ public final class ZideTerminalActivity extends Activity
 
     private long nativeOnSurfaceAvailable(SurfaceHolder holder, int width, int height) {
         return TerminalNativeBridge.nativeOnSurfaceAvailableBridge(holder.getSurface(), width, height);
+    }
+
+    private boolean canSendDirectInput() {
+        return nativeLoaded;
     }
 
     private void sendDirectTextCodepoints(String text) {
