@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.session;
 
 import android.content.Context;
 import android.os.Handler;
@@ -11,8 +11,8 @@ import java.util.function.Supplier;
 import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandRelease;
 
-/** Functional callback adapter for {@link TerminalSessionAssembly.Host}. */
-public final class TerminalSessionAssemblyHostCallbacks implements TerminalSessionAssembly.Host {
+/** Functional callback adapter for {@link SessionAssembly.Host}. */
+public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
     private final Supplier<Context> context;
     private final Supplier<UserlandRelease> userlandRelease;
     private final BooleanSupplier nativeLoaded;
@@ -28,7 +28,7 @@ public final class TerminalSessionAssemblyHostCallbacks implements TerminalSessi
     private final IntSupplier nativePollShellSession;
     private final BooleanSupplier nativeIsShellSessionAlive;
 
-    public TerminalSessionAssemblyHostCallbacks(
+    public SessionAssemblyCallbacks(
             Supplier<Context> context,
             Supplier<UserlandRelease> userlandRelease,
             BooleanSupplier nativeLoaded,

@@ -1,4 +1,4 @@
-package dev.zide.terminal.host;
+package dev.zide.terminal.host.session;
 
 import android.content.Context;
 import android.os.Handler;
@@ -6,6 +6,9 @@ import android.os.Handler;
 import java.util.function.Function;
 
 import dev.zide.terminal.debug.TerminalNativeStatusLabels;
+import dev.zide.terminal.host.TerminalFrameLoopController;
+import dev.zide.terminal.host.TerminalRuntimeHostFactory;
+import dev.zide.terminal.host.TerminalSessionHostFactory;
 import dev.zide.terminal.host.userland.SessionBridge;
 import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandPolicy;
@@ -13,7 +16,7 @@ import dev.zide.terminal.userland.UserlandRelease;
 import dev.zide.terminal.userland.UserlandSessionCoordinator;
 
 /** Owns session-related controller assembly for the activity wiring layer. */
-public final class TerminalSessionAssembly {
+public final class SessionAssembly {
     /** Activity callbacks required to assemble session-related controllers. */
     public interface Host {
         Context context();
@@ -64,7 +67,7 @@ public final class TerminalSessionAssembly {
         }
     }
 
-    private TerminalSessionAssembly() {
+    private SessionAssembly() {
     }
 
     public static Result assemble(Host host) {

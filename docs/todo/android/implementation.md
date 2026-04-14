@@ -101,7 +101,7 @@ A cut is done only if all are true:
   `host/TerminalSessionHostFactory`
 - UI host construction now lives in `host/TerminalUiHostFactory`
 - session/runtime activity wiring now composes through
-  `host/TerminalSessionAssembly` + `TerminalSessionAssemblyHostCallbacks`
+  `host/session/SessionAssembly` + `SessionAssemblyCallbacks`
 - initial status/view activity wiring now composes through
   `host/TerminalStatusViewAssembly` + `TerminalStatusViewAssemblyHostCallbacks`
 - interaction activity wiring now composes through

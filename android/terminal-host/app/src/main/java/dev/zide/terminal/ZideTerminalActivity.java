@@ -27,8 +27,8 @@ import dev.zide.terminal.host.runtime.ProductRuntimeAssembly;
 import dev.zide.terminal.host.runtime.ProductRuntimeAssemblyCallbacks;
 import dev.zide.terminal.host.runtime.ProductRuntimeController;
 import dev.zide.terminal.host.runtime.RuntimeAssetsController;
-import dev.zide.terminal.host.TerminalSessionAssembly;
-import dev.zide.terminal.host.TerminalSessionAssemblyHostCallbacks;
+import dev.zide.terminal.host.session.SessionAssembly;
+import dev.zide.terminal.host.session.SessionAssemblyCallbacks;
 import dev.zide.terminal.host.TerminalStatusViewAssembly;
 import dev.zide.terminal.host.TerminalStatusViewAssemblyHostCallbacks;
 import dev.zide.terminal.host.TerminalSurfaceHostBridge;
@@ -354,8 +354,8 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void assembleSessionControllers() {
-        final TerminalSessionAssembly.Result result = TerminalSessionAssembly.assemble(
-                new TerminalSessionAssemblyHostCallbacks(
+        final SessionAssembly.Result result = SessionAssembly.assemble(
+                new SessionAssemblyCallbacks(
                         () -> this,
                         () -> userlandRelease,
                         () -> nativeLoaded,

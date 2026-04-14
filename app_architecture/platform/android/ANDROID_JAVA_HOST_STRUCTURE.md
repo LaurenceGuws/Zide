@@ -70,8 +70,8 @@ Current shape markers (for hygiene tracking, not hard limits):
 - `host/runtime/ProductRuntimeController.java`: `164` lines
 - `host/runtime/ProductRuntimeHostCallbacks.java`: `186` lines
 - `host/TerminalSessionHostFactory.java`: `52` lines
-- `host/TerminalSessionAssembly.java`: `102` lines
-- `host/TerminalSessionAssemblyHostCallbacks.java`: `131` lines
+- `host/session/SessionAssembly.java`: `104` lines
+- `host/session/SessionAssemblyCallbacks.java`: `131` lines
 - `host/TerminalStatusViewAssembly.java`: `180` lines
 - `host/TerminalStatusViewAssemblyHostCallbacks.java`: `106` lines
 - `host/TerminalWidgetHostAssembly.java`: `278` lines
@@ -124,8 +124,8 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/TerminalSurfaceWidgetAssemblyHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalSurfaceWidgetAssembly`. | Keep adapter-only; avoid adding surface/widget behavior here. |
 | `host/TerminalRuntimeHostFactory.java` | Good | Owns product-runtime and frame-loop construction so runtime assembly stays out of generic host assembly. | Keep this construction-only; runtime behavior remains in runtime controllers. |
 | `host/TerminalSessionHostFactory.java` | Good | Owns shell-session and userland-session host bridge construction so session seams stay out of generic host assembly. | Keep this construction-only; session behavior remains in session/userland coordinators. |
-| `host/TerminalSessionAssembly.java` | Good | Owns session/runtime wiring assembly that composes session and runtime host factories for activity use. | Keep this assembly-only; business behavior stays in session/runtime controllers. |
-| `host/TerminalSessionAssemblyHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalSessionAssembly`. | Keep adapter-only; avoid adding session/runtime behavior here. |
+| `host/session/SessionAssembly.java` | Good | Owns session/runtime wiring assembly that composes session and runtime host factories for activity use. | Keep this assembly-only; business behavior stays in session/runtime controllers. |
+| `host/session/SessionAssemblyCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/session/SessionAssembly`. | Keep adapter-only; avoid adding session/runtime behavior here. |
 | `host/TerminalStatusViewAssembly.java` | Good | Owns initial view binding plus debug-status/viewport host assembly for activity wiring. | Keep this assembly-only; status rendering and viewport policy remain in dedicated controllers. |
 | `host/TerminalStatusViewAssemblyHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalStatusViewAssembly`. | Keep adapter-only; avoid moving status/viewport behavior into this adapter. |
 | `host/TerminalWidgetHostAssembly.java` | Good | Owns product widget/chrome/view-mode/surface host assembly so activity wiring no longer inlines those construction seams. | Keep this assembly-only; behavior remains in dedicated controllers/bridges. |
