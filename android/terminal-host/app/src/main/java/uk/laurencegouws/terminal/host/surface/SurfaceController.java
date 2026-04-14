@@ -98,15 +98,7 @@ public final class SurfaceController {
     }
 
     public void onResume(boolean recreateSurfaceOnce, boolean resizeSurfaceOnce, boolean startShellOnce) {
-        host.appendEvent("debug.surface.recreate requested=" + recreateSurfaceOnce + " scheduled=" + host.surfaceRecreationScheduled());
-        if (recreateSurfaceOnce && !host.surfaceRecreationScheduled()) {
-            host.setSurfaceRecreationScheduled(true);
-            host.productSurfaceContainer().postDelayed(() -> {
-                host.appendEvent("debug.surface.recreate_view");
-                installSurfaceView("debug-recreate", null);
-                host.updateStatus("debug.surface.recreated");
-            }, 700);
-        }
+        scheduleDebugSurfaceRecreationIfRequested(recreateSurfaceOnce);
 
         host.appendEvent("debug.surface.resize requested=" + resizeSurfaceOnce + " scheduled=" + host.surfaceResizeScheduled());
         if (resizeSurfaceOnce && !host.surfaceResizeScheduled()) {
@@ -145,6 +137,19 @@ public final class SurfaceController {
         }
 
         host.handleProductShellStateEvent("resumed");
+    }
+
+    /** Debug-only: optional one-shot surface view reinstall from lifecycle resume flags. */
+    private void scheduleDebugSurfaceRecreationIfRequested(boolean recreateSurfaceOnce) {
+        host.appendEvent("debug.surface.recreate requested=" + recreateSurfaceOnce + " scheduled=" + host.surfaceRecreationScheduled());
+        if (recreateSurfaceOnce && !host.surfaceRecreationScheduled()) {
+            host.setSurfaceRecreationScheduled(true);
+            host.productSurfaceContainer().postDelayed(() -> {
+                host.appendEvent("debug.surface.recreate_view");
+                installSurfaceView("debug-recreate", null);
+                host.updateStatus("debug.surface.recreated");
+            }, 700);
+        }
     }
 
     public void onPause() {
