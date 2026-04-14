@@ -8,7 +8,6 @@ import java.util.function.Function;
 import dev.zide.terminal.debug.TerminalNativeStatusLabels;
 import dev.zide.terminal.host.runtime.FrameLoopController;
 import dev.zide.terminal.host.runtime.RuntimeFactory;
-import dev.zide.terminal.host.session.SessionFactory;
 import dev.zide.terminal.host.userland.SessionBridge;
 import dev.zide.terminal.userland.UserlandReadinessState;
 import dev.zide.terminal.userland.UserlandPolicy;

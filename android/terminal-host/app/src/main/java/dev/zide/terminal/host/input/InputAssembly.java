@@ -9,7 +9,6 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import dev.zide.terminal.host.input.InputFactory;
 import dev.zide.terminal.input.ShellInputView;
 import dev.zide.terminal.input.TerminalHardwareKeyboardController;
 import dev.zide.terminal.input.TerminalImeFocusRecoveryController;

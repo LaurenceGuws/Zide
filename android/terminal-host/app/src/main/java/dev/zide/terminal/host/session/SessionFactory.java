@@ -5,8 +5,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.IntSupplier;
 
-import dev.zide.terminal.host.session.ShellBridge;
-import dev.zide.terminal.host.session.ShellCallbacks;
 import dev.zide.terminal.host.userland.SessionBridge;
 import dev.zide.terminal.host.userland.SessionCallbacks;
 import dev.zide.terminal.session.ShellSessionController;

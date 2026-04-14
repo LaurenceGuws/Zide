@@ -9,7 +9,6 @@ import java.util.function.Supplier;
 
 import dev.zide.terminal.debug.TerminalStatusController;
 import dev.zide.terminal.gesture.TerminalGestureStateController;
-import dev.zide.terminal.host.runtime.FrameLoopController;
 import dev.zide.terminal.scroll.TerminalScrollOverlayView;
 import dev.zide.terminal.selection.TerminalSelectionController;
 import dev.zide.terminal.userland.ProductShellStatePresenter;

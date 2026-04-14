@@ -6,7 +6,6 @@ import android.widget.FrameLayout;
 
 import dev.zide.terminal.TerminalNativeBridge;
 import dev.zide.terminal.gesture.TerminalGestureStateController;
-import dev.zide.terminal.host.interaction.InteractionFactory;
 import dev.zide.terminal.selection.TerminalSelectionController;
 
 /** Owns selection + gesture interaction controller assembly for activity wiring. */
