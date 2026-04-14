@@ -1,327 +1,46 @@
 # Android Shell Bring-Up Plan
 
-Purpose: define the first honest Android shell lane after terminal-host and
-PTY baseline proof, without pretending shared Android renderer work is open.
+Status: closed and met. This document is a historical decision record, not an
+active queue.
 
-Owner docs:
+## Purpose
 
-- `app_architecture/platform/android/RENDER_BACKEND.md`
-- `app_architecture/platform/android/ANDROID_PTY_LIFETIME_PLAN.md`
-- `app_architecture/platform/android/ANDROID_GLES_BINDING_PLAN.md`
-- `docs/todo/android/implementation.md`
-
-## Why This Is Next
-
-The current Android truth is already strong enough in the two prerequisite
-areas:
-
-- terminal-host/runtime truth is real on the Note10
-- disposable app-process-owned PTY lifetime is the current Android baseline
-
-That means the next highest-leverage Android step is no longer another probe.
-
-It is:
-
-- start a real shell process on device
-- route input into it
-- route output back through the repo's real terminal engine
-- prove that loop without waiting for shared Android renderer adoption
+Record the bring-up decision that moved Android from probe-only behavior to a
+real on-device shell loop through the repo terminal runtime.
 
 ## Decision
 
-The first Android shell cut should be:
+The first honest Android shell lane had to be:
 
-- terminal-host-owned
-- terminal-FFI-backed
-- PTY-backed through the real terminal engine
-- terminal-engine-oriented, not Android-Java-renderer-oriented
+- terminal-host owned
+- terminal-FFI backed
+- PTY backed through the real terminal engine
+- validated on real device behavior, not probes
 
-It should not be:
+It explicitly was not:
 
-- a partial Android renderer backend
-- terminal widget integration in `src/ui/renderer/`
-- IME/prompt-avoidance polish
-- a service-owned session architecture decision
+- shared renderer backend adoption work
+- Android UI polish work
+- service-survival architecture work
 
-## Required Questions
+## Result
 
-This lane must answer:
+Bring-up is met:
 
-1. Can the terminal host app start `/system/bin/sh` through the repo's real
-   terminal FFI path on Android?
-2. Can the terminal host app send text/newline input into that shell?
-3. Can the terminal host app drive the resulting terminal state into visible
-   output on device?
-4. Does that loop work honestly enough that later IME/prompt handling can be
-   solved against a live terminal instead of a probe surface?
+- Android terminal host runs a real shell loop through the terminal runtime.
+- Shell input/output is proven on-device and repeatable.
+- Bring-up is no longer the active blocker.
 
-## Scope
+## Aftermath
 
-`AS-A1` first shell loop
+Active work moved to product behavior and quality tickets in:
 
-Purpose:
+- `docs/todo/android/implementation.md`
 
-- prove the smallest real Android shell loop against the repo terminal engine
+Java ownership and cleanup pressure moved to:
 
-Acceptance:
+- `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`
 
-- one terminal-host-owned shell session manager exists under `src/platform/`
-- it creates one `ZideTerminalHandle`
-- it resizes the session to a fixed terminal-host probe size
-- it starts `/system/bin/sh`
-- it supports sending plain text plus newline
-- it polls the terminal runtime honestly enough to prove shell progress
-- the terminal host app can:
-  - start or restart the shell
-  - send one line of input
-  - expose visible shell progress on device
-- local validation stays green
-- device proof shows real shell I/O on the Note10
+Long-lived host architecture constraints remain in:
 
-Do not do:
-
-- no shared renderer integration
-- no terminal cell rendering on the GLES surface
-- no scrollback/selection polish
-- no IME avoidance/prompt visibility policy yet
-- no service-owned shell/session survival design
-
-## Stop Marker
-
-Stop `AS-A1` when:
-
-- a real shell is running on device through the repo terminal engine
-- shell input and output are both visible and repeatable
-- the Android queue can honestly say shell bring-up is no longer the blocker
-- the next Android lane can then become prompt/IME/viewport behavior against a
-  live shell, or renderer adoption if that is clearly the stronger blocker
-
-## Current Device Result
-
-The first `AS-A1` cut is now implemented through the Android terminal host app
-(`android/terminal-host/`).
-
-Current shape:
-
-- `src/platform/android_shell_session.zig` owns one terminal-host-scoped shell
-  session manager
-- it creates one `ZideTerminalHandle`
-- it resizes to a fixed terminal-host probe terminal size
-- it starts `/system/bin/sh`
-- it previously consumed pending input from a terminal-host-owned input file
-- that bring-up-era output materialization path is now retired
-- the terminal host app exposes:
-  - product view:
-    - shared-renderer shell output
-    - shell input against the real shell runtime
-  - debug view:
-    - diagnostics only
-
-Observed on the Note10:
-
-- the shell start path now logs:
-  - `debug.shellStart status=started`
-- the first automated command injection logs:
-  - `manual.shellInput bytes=28`
-- the resulting shell loop showed real shell I/O on device
-
-This proves:
-
-- Android shell bring-up is real through the repo terminal engine
-- Android input and output can now be exercised against a live shell instead
-  of a PTY heartbeat probe
-- the next Android product question should be prompt/viewport/IME behavior
-  against that live shell, not more terminal-host speculation
-
-## Current Cut
-
-`AS-A3` direct shell input — modifier-latch assist bar
-
-Purpose:
-
-- own the full Android terminal input surface with a mobile-first model, not a
-  Termux clone: modifier state is a first-class toggle, not a per-combo button
-
-## Previous Cut
-
-`AS-A2` is met. See `docs/todo/android/implementation.md` for the full record.
-
-## Current Product Result
-
-`AS-A3` first cut is now implemented in the Android terminal host app
-(`android/terminal-host/`).
-
-Current input shape:
-
-- each character typed in the IME composer is sent immediately to the PTY via a
-  direct JNI → Zig → `zide_terminal_send_text` path
-- the Java side now owns a real `InputConnection` surface with a minimal editor
-  model instead of relying on `TextWatcher` tricks
-- Enter sends `\n` directly
-- Backspace sends `\x7f` directly
-- Samsung text-editing arrows now work through the editor model and VT escape
-  output
-- stale file-indirection input has been removed from the active shell path
-- input latency is now bounded by JNI call overhead instead of the 150ms poll
-  interval
-
-Architecture:
-
-- `android_shell_session.zig` now exposes `sendText` and `sendCodepoint`
-  directly on the active session handle
-- `android_runtime_bridge.zig` exposes `sendShellCodepoint` for JNI
-- `android_bridge_exports.zig` exports `nativeSendShellCodepointBridge`
-- `ZideTerminalActivity` now exposes a dedicated IME surface with:
-  - `onCheckIsTextEditor()`
-  - `onCreateInputConnection(...)`
-  - composing/commit/selection handling
-
-What this proves:
-
-- Android shell input is no longer limited to "type a whole line then send"
-- the direct JNI path works for character-by-character terminal input
-- the live Android `InputConnection` path is now the active input surface
-- the minimal editor model is sufficient for current Samsung keyboard input and
-  navigation behavior on the Note10
-
-What this does not yet prove:
-
-- the full physical-keyboard story
-- special terminal keys beyond the currently proved editor-navigation subset
-- the full long-term mobile terminal input surface design
-
-Next likely follow-up:
-
-1. stop treating `/system/bin/sh` as a product shell baseline; the next Android
-   shell step is now app-private Bash userland bootstrap
-2. let real shell use on the Note10 drive which gaps are worth closing next;
-   do not extend input coverage speculatively beyond the latch model
-3. keep the `InputConnection` editor model stable while the userland lane
-   advances; only widen the input surface if a concrete device or use case
-   proves the current model materially broken
-
-## Current `AS-A3` Hardening
-
-The direct-input path now also accepts Ctrl-modified key events for `A` through
-`Z` and sends the corresponding control bytes directly to the PTY. That keeps
-the current Android input surface small while covering the first control-key
-subset needed for real shell use such as `Ctrl+C` and `Ctrl+D`.
-
-It now also covers the standard terminal-control punctuation subset:
-
-- `Ctrl+[`
-- `Ctrl+\`
-- `Ctrl+]`
-- `Ctrl+6`
-- `Ctrl+/`
-- `Ctrl+Space`
-- `Ctrl+2`
-
-And Android `KEYCODE_NUMPAD_ENTER` now routes to `\n` the same as normal
-Enter.
-
-Current Java ownership is also cleaner:
-
-- `ZideTerminalActivity` is now orchestration only
-- `dev.zide.terminal.input.ShellInputView` owns the editor model and
-  `InputConnection`
-- `dev.zide.terminal.session.ShellSessionController` owns shell
-  polling/bootstrap state
-- `dev.zide.terminal.debug.AndroidDebugFormatter` owns debug formatting
-- `dev.zide.terminal.debug.TerminalStatusController` owns debug status/event-log presentation
-- `dev.zide.terminal.selection.TerminalSelectionController` owns Android-native
-  selection mutation/chrome/autoscroll policy
-- `dev.zide.terminal.userland.UserlandBootstrapUiPolicy` owns bootstrap blocker
-  title/detail/action policy
-- `dev.zide.terminal.userland.UserlandCommandRunner` owns `zide-pm` process/env
-  execution wiring
-- `dev.zide.terminal.userland.UserlandWorkflowController` owns async userland
-  install and package-doctor workflow execution
-- `dev.zide.terminal.userland.UserlandSessionCoordinator` owns bootstrap-state
-  reload/poll/apply/auto-start telemetry policy
-- `dev.zide.terminal.userland.ProductShellStatePresenter` owns product blocker
-  visibility and shell-state presentation
-- `dev.zide.terminal.host.TerminalSurfaceHostController` owns SurfaceView install/recreate/viewport host wiring
-- `dev.zide.terminal.host.TerminalChromeController` owns sidebar/view-mode/assist-bar/IME chrome policy
-- `dev.zide.terminal.host.TerminalRuntimeAssetsController` owns runtime font asset staging and userland release loading
-- `dev.zide.terminal.host.TerminalViewportController` owns visible viewport/inset authority
-- `dev.zide.terminal.debug.TerminalStatusController` owns debug status/event-log presentation
-- the terminal-host Java surface is split by responsibility; the current
-  ownership split is:
-  - `debug`
-  - `gesture`
-  - `input`
-  - `scroll`
-  - `selection`
-  - `session`
-  - `host`
-  - `userland`
-
-Current local-tooling support is also explicit:
-
-- Neovim/JDTLS should import `android/terminal-host/` as the Java root
-- `app/build.gradle` now declares the Eclipse/Buildship classpath support JDTLS
-  was missing for this Android app module:
-  - `src/main/java`
-  - Android SDK `android.jar`
-  - generated debug `R.jar`
-- this is the sanctioned local Java-tooling path; do not reintroduce tracked
-  `.classpath` / `.project` files as repo authority
-
-Current product-shell layout is also now mobile-native:
-
-- the shared renderer owns visible shell output without outer transcript chrome
-- when the shared renderer surface is active, `ProductGestureController` owns
-  product terminal gestures:
-  - single tap is reserved for selection lifecycle policy
-  - pinch adjusts shared renderer zoom / terminal font size
-  - long press starts Android-native text selection
-- the assist bar now owns explicit IME visibility
-- Android-native selection is now live:
-  - floating `ActionMode.TYPE_FLOATING`
-  - clipboard `Copy`
-  - drag expansion
-  - Android-owned selection handles over the terminal surface
-- the slim bottom assist strip now uses a cleaner split:
-  - one-shot `Esc` and `Tab`
-  - stateful `Ctrl` and `Alt` latches for the next IME/hardware key
-  - direct punctuation/arrow helpers remain available for phone-first use
-- the old hardcoded `Ctrl+C` / `Ctrl+D` assist buttons are removed
-- `ShellInputView` now owns the modifier-latch state so the live
-  `InputConnection` path remains the single active input owner
-- restart/debug controls now live behind a hidden left drawer instead of taking
-  permanent vertical space
-
-Current validation truth for this cut:
-
-- `zig build`
-- `zig build test`
-- `./ops/android_terminal_host.py deploy`
-- on-device UI dump now proves:
-  - tapping `CTRL` changes the button text/state to `CTRL*`
-  - the next injected input clears it back to `CTRL`
-- an automated Note10 shell pass also now proves `Ctrl` latch behavior against
-  a live process:
-  - inject `sleep 99`
-  - arm `CTRL`
-  - inject `c`
-  - prompt returns, proving the IME path emitted `^C`
-- a second on-device byte-emission pass now proves `Alt` latch behavior too:
-  - arm `ALT`
-  - inject `a`
-  - the host send seam emits `ESC` followed by `a`
-  - the next UI dump shows `ALT` returned to idle
-- a fresh plain-text rerun also no longer reproduced the earlier duplicate-send
-  report on the current installed build
-- that proves the `Ctrl` one-shot latch lifecycle and shell delivery path, and
-  it proves the `Alt` emitted-byte contract on-device
-- it does **not** yet separately automate every shell-visible `Alt` semantic;
-  if a real shell-use gap appears there later, reopen that exact case instead
-  of widening input coverage speculatively
-
-Current boundary after this cut:
-
-- Android shell bring-up is no longer blocked on input surface basics
-- the stronger next product gap is the missing Bash/package-managed userland
-- that lane is now owned by
-  `app_architecture/platform/android/ANDROID_USERLAND_BOOTSTRAP_PLAN.md`
+- `app_architecture/platform/android/ANDROID_TERMINAL_HOST_PLAN.md`
