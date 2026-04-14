@@ -195,6 +195,9 @@ Agent reporting contract (mandatory for cleanup campaign updates):
    - Completed: batch of four seams: `activeShellInputView`,
      `showSoftInputAfterRestartInput`, `appendViewportSizeChangedTelemetry`, and
      `dispatchNativeViewportChangedAndRefreshOverlay`.
+   - Completed: batch of four seams: `leftSidebarChrome`,
+     `bindDrawerScrimDismissChrome`, `bindDrawerEdgeSwipeListenersChrome`, and
+     `createNextProductSurfaceHostView`.
    - Next: continue smallest ownership-clarity cuts in `ChromeController` or
      `SurfaceController` where watch-level pressure remains.
 3. Stabilize selection/scroll interaction behavior under manual device usage.
