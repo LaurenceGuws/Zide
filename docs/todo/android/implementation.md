@@ -51,6 +51,9 @@ Focus goals:
      so assembly-readability improvements remain scan-friendly.
    - Completed: high-signal callback supplier extractions are complete; remaining
      callback suppliers are intentionally trivial one-liners.
+   - Completed: lifecycle/dispatch/startup policy extractions landed in
+     `ZideTerminalActivity` (`onResume` debug intent flags, dispatch-key guard,
+     and initial readiness-state load now use named helpers).
    - Next: move to the next smallest wiring-vs-policy cut in activity methods.
 2. Keep Java ownership boundaries aligned with
    `ANDROID_JAVA_HOST_STRUCTURE.md`.
