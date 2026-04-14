@@ -8,7 +8,7 @@ Android terminal work.
 - This file: active `focus`, `todo`, and `workflow`.
 - `ANDROID_JAVA_HOST_STRUCTURE.md`: Java ownership and structure contract.
 - `ANDROID_JAVA_NAMING_CONTRACT.md`: Java naming glossary and grammar.
-- `ANDROID_SHELL_BRINGUP_PLAN.md`: closed bring-up record and decisions.
+- `ANDROID_SHELL_BRINGUP_PLAN.md`: closed shell-readiness baseline record and decisions.
 - `ANDROID_TERMINAL_HOST_PLAN.md`: long-lived architecture constraints.
 
 Do not duplicate active queue content into owner docs.
@@ -25,7 +25,7 @@ Out of scope:
 
 - speculative backend work without a current Android blocker
 - generic hygiene that does not unblock current Android work
-- rewriting closed bring-up history as active tasks
+- rewriting closed shell-readiness baseline history as active tasks
 
 ## Current Focus
 
@@ -127,4 +127,4 @@ A cut is done only if all are true:
   `debug/TerminalSurfaceStateSnapshotReader`
 - selection controller remains monolithic by design until a real split seam
   exists
-- queue remains Android-product-first, not bring-up-first
+- queue remains Android-product-first, not shell-readiness-baseline-first

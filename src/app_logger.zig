@@ -148,7 +148,7 @@ fn openWindowsFallbackLogFile() !std.fs.File {
 }
 
 fn defaultLogFilePath() []const u8 {
-    if (builtin.target.abi == .android) return "/data/user/0/dev.zide.terminal/files/home/.local/state/zide/zide.log";
+    if (builtin.target.abi == .android) return "/data/user/0/uk.laurencegouws.zide/files/home/.local/state/zide/zide.log";
     return "zide.log";
 }
 

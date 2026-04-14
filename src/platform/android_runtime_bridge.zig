@@ -16,7 +16,7 @@ const terminal_runtime = @import("../terminal/core/terminal_runtime.zig");
 const terminal_session_bootstrap = @import("../app/terminal/terminal_session_bootstrap.zig");
 const widgets = @import("../ui/widgets.zig");
 
-const android_terminal_runtime_font_path = "/data/data/dev.zide.terminal/files/assets/fonts/JetBrainsMonoNerdFont-Regular.ttf";
+const android_terminal_runtime_font_path = "/data/data/uk.laurencegouws.zide/files/assets/fonts/JetBrainsMonoNerdFont-Regular.ttf";
 
 const RendererStatus = android_gles_probe.ProbeStatus;
 
@@ -87,7 +87,7 @@ fn swapNativeWindow(window: ?*anyopaque) void {
 
 pub fn noteCreate() u64 {
     app_logger.resetConfig();
-    app_logger.setFilePathString("/data/user/0/dev.zide.terminal/files/home/.local/state/zide/zide.log") catch {};
+    app_logger.setFilePathString("/data/user/0/uk.laurencegouws.zide/files/home/.local/state/zide/zide.log") catch {};
     app_logger.init() catch {};
     destroyRenderer();
     destroyTerminalWidget();

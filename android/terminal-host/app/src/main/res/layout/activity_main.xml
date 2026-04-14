@@ -22,7 +22,7 @@
                 android:layout_height="match_parent"
                 android:background="#162028" />
 
-            <dev.zide.terminal.scroll.TerminalScrollOverlayView
+            <uk.laurencegouws.terminal.scroll.TerminalScrollOverlayView
                 android:id="@+id/terminal_scroll_overlay"
                 android:layout_width="24dp"
                 android:layout_height="match_parent"
@@ -32,7 +32,7 @@
                 android:visibility="gone" />
 
             <LinearLayout
-                android:id="@+id/product_bootstrap_blocker"
+                android:id="@+id/product_readiness_blocker"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:background="#cc10161d"
@@ -42,21 +42,21 @@
                 android:visibility="gone">
 
                 <TextView
-                    android:id="@+id/product_bootstrap_title"
+                    android:id="@+id/product_readiness_title"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:gravity="center"
-                    android:text="@string/product_bootstrap_title_missing"
+                    android:text="@string/product_readiness_title_missing"
                     android:textAppearance="@android:style/TextAppearance.Material.Large"
                     android:textColor="#f5f7fa" />
 
                 <TextView
-                    android:id="@+id/product_bootstrap_detail"
+                    android:id="@+id/product_readiness_detail"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
                     android:gravity="center"
-                    android:text="@string/product_bootstrap_detail_missing"
+                    android:text="@string/product_readiness_detail_missing"
                     android:textAppearance="@android:style/TextAppearance.Material.Small"
                     android:textColor="#c2ccd6" />
 
@@ -68,17 +68,17 @@
                     android:orientation="horizontal">
 
                     <Button
-                        android:id="@+id/product_bootstrap_retry_button"
+                        android:id="@+id/product_readiness_retry_button"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/product_bootstrap_retry" />
+                        android:text="@string/product_readiness_retry" />
 
                     <Button
-                        android:id="@+id/product_bootstrap_debug_button"
+                        android:id="@+id/product_readiness_debug_button"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="10dp"
-                        android:text="@string/product_bootstrap_debug" />
+                        android:text="@string/product_readiness_debug" />
                 </LinearLayout>
             </LinearLayout>
         </FrameLayout>

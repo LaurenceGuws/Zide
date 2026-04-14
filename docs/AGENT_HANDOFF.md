@@ -23,7 +23,7 @@ Session entrypoint only. Keep this file short, stable, and current.
   `docs/todo/android/implementation.md`
 - Java ownership contract:
   `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`
-- Shell bring-up history/decision record:
+- Shell readiness baseline history/decision record (closed bring-up):
   `app_architecture/platform/android/ANDROID_SHELL_BRINGUP_PLAN.md`
 - Terminal-host architecture authority:
   `app_architecture/platform/android/ANDROID_TERMINAL_HOST_PLAN.md`

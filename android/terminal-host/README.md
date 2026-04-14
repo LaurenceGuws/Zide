@@ -1,13 +1,13 @@
 # Zide Android Terminal Host
 
-This is the active Android app host for Zide shell bring-up and Android-native
-product work.
+This is the active Android app host for Zide shell-readiness baseline follow-on
+and Android-native product work.
 
 ## Naming Note
 
 - directory path is `android/terminal-host/`
 - active app identity is terminal-first:
-  - package/application id: `dev.zide.terminal`
+  - package/application id: `uk.laurencegouws.zide`
   - launcher activity: `ZideTerminalActivity`
 
 ## Default Workflow
@@ -29,7 +29,7 @@ That will:
 
 Variant policy:
 
-- `debug`: default bring-up lane
+- `debug`: default development lane
 - `profile`: local performance-testing build, `ReleaseFast` Zig optimize, Android
   `profile` build type, debug signing, debuggable true
 - `release`: local release-shape build, `ReleaseFast` Zig optimize, Android

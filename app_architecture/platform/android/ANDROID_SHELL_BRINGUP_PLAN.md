@@ -5,8 +5,9 @@ active queue.
 
 ## Purpose
 
-Record the bring-up decision that moved Android from probe-only behavior to a
-real on-device shell loop through the repo terminal runtime.
+Record the shell-readiness baseline decision (the closed bring-up lane) that
+moved Android from probe-only behavior to a real on-device shell loop through
+the repo terminal runtime.
 
 ## Decision
 
@@ -25,11 +26,11 @@ It explicitly was not:
 
 ## Result
 
-Bring-up is met:
+Shell readiness baseline is met:
 
 - Android terminal host runs a real shell loop through the terminal runtime.
 - Shell input/output is proven on-device and repeatable.
-- Bring-up is no longer the active blocker.
+- Shell readiness baseline is no longer the active blocker.
 
 ## Aftermath
 

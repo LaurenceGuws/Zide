@@ -25,9 +25,9 @@ from typing import NoReturn
 
 ROOT = Path(__file__).resolve().parents[1]
 BRIDGE_DIR = ROOT / "android" / "terminal-host"
-PACKAGE_NAME = "dev.zide.terminal"
-ACTIVITY_NAME = f"{PACKAGE_NAME}/.ZideTerminalActivity"
-LEGACY_PACKAGE_NAMES = ("dev.zide.androidbootstrap",)
+PACKAGE_NAME = "uk.laurencegouws.zide"
+ACTIVITY_NAME = f"{PACKAGE_NAME}/dev.zide.terminal.ZideTerminalActivity"
+LEGACY_PACKAGE_NAMES = ("dev.zide.terminal", "dev.zide.androidbootstrap")
 NDK_VERSION = os.environ.get("ZIDE_ANDROID_NDK_VERSION", "27.1.12297006")
 ANDROID_API = "29"
 USERLAND_CACHE_DIR = ROOT / ".cache" / "android-userland"
@@ -42,13 +42,15 @@ TERMUX_MAIN_BASE_URL = "https://packages.termux.dev/apt/termux-main/"
 TERMUX_MAIN_PACKAGES_URL = TERMUX_MAIN_BASE_URL + "dists/stable/main/binary-aarch64/Packages"
 REMOTE_APP_FILES_DIR = f"/data/data/{PACKAGE_NAME}/files"
 REMOTE_APP_PACKAGE_DIR = f"/data/user/0/{PACKAGE_NAME}"
+LEGACY_REMOTE_APP_PACKAGE_DIRS = tuple(f"/data/user/0/{name}" for name in LEGACY_PACKAGE_NAMES)
 REMOTE_USERLAND_PREFIX = f"{REMOTE_APP_FILES_DIR}/usr"
 REMOTE_USERLAND_HOME = f"{REMOTE_APP_FILES_DIR}/home"
 REMOTE_USERLAND_TMP = f"/data/user/0/{PACKAGE_NAME}/tmp"
 REMOTE_USERLAND_APT_CONF_PARTS = f"/data/user/0/{PACKAGE_NAME}/aptc"
 REMOTE_USERLAND_DPKG_ETC = f"/data/user/0/{PACKAGE_NAME}/dpkg"
 REMOTE_USERLAND_DPKG_DB = f"/data/user/0/{PACKAGE_NAME}/dpkgdb"
-REMOTE_USERLAND_STAMP = f"{REMOTE_APP_FILES_DIR}/.zide-userland-bootstrap.json"
+REMOTE_USERLAND_STAMP = f"{REMOTE_APP_FILES_DIR}/.zide-userland-readiness.json"
+REMOTE_USERLAND_STAMP_LEGACY = f"{REMOTE_APP_FILES_DIR}/.zide-userland-bootstrap.json"
 REMOTE_STAGE_TAR = f"/data/local/tmp/{PACKAGE_NAME.replace('.', '_')}_userland_stage.tar"
 USERLAND_HARDCODED_TERMUX_PREFIX = b"/data/data/com.termux/files/usr"
 USERLAND_HARDCODED_TERMUX_PREFIX_TEXT = USERLAND_HARDCODED_TERMUX_PREFIX.decode("utf-8")
@@ -820,7 +822,7 @@ def build_userland_stage_tar(prefix_root: Path, inspection: BootstrapInspection,
     staging_root = out_tar.parent / "staging"
     staging_root.mkdir(parents=True, exist_ok=True)
 
-    stamp_path = staging_root / ".zide-userland-bootstrap.json"
+    stamp_path = staging_root / ".zide-userland-readiness.json"
     stamp_payload = {
         "source": str(inspection.source),
         "format": inspection.format_name,
@@ -834,7 +836,7 @@ def build_userland_stage_tar(prefix_root: Path, inspection: BootstrapInspection,
 
     with tarfile.open(out_tar, "w") as bundle:
         bundle.add(prefix_root, arcname="usr", recursive=True)
-        bundle.add(stamp_path, arcname=".zide-userland-bootstrap.json")
+        bundle.add(stamp_path, arcname=".zide-userland-readiness.json")
 
 
 def build_userland_artifact_stage_tar(
@@ -846,7 +848,7 @@ def build_userland_artifact_stage_tar(
     staging_root = out_tar.parent / "artifact-staging"
     staging_root.mkdir(parents=True, exist_ok=True)
 
-    stamp_path = staging_root / ".zide-userland-bootstrap.json"
+    stamp_path = staging_root / ".zide-userland-readiness.json"
     stamp_payload = {
         "source": manifest_source,
         "format": "android-prefix-artifact",
@@ -864,7 +866,7 @@ def build_userland_artifact_stage_tar(
 
     with tarfile.open(out_tar, "w") as bundle:
         bundle.add(artifact_root / "usr", arcname="usr", recursive=True)
-        bundle.add(stamp_path, arcname=".zide-userland-bootstrap.json")
+        bundle.add(stamp_path, arcname=".zide-userland-readiness.json")
 
 
 def run_remote_shell(adb: Path, command: str, *, check: bool = True, capture_output: bool = False) -> subprocess.CompletedProcess[str]:
@@ -957,7 +959,7 @@ def userland_inspect(source_arg: Path | None) -> None:
         if inspection.hardcoded_termux_hits:
             print(
                 "note=upstream bootstrap still contains com.termux-prefixed binaries; "
-                "bash has been validated manually under dev.zide.terminal, but apt still "
+                "bash has been validated manually under uk.laurencegouws.zide, but apt still "
                 "needs relocation config or a cleaner artifact",
                 flush=True,
             )
@@ -1092,10 +1094,23 @@ def parse_runtime_support_links(raw: object) -> tuple[tuple[str, str], ...]:
         source, separator, target = entry.partition("=>")
         if separator != "=>":
             die(f"invalid runtime support link entry: {entry!r}")
-        if not source.startswith(REMOTE_APP_PACKAGE_DIR + "/") or not target.startswith(REMOTE_APP_PACKAGE_DIR + "/"):
+        source = normalize_runtime_support_path(source)
+        target = normalize_runtime_support_path(target)
+        if source is None or target is None:
             die(f"runtime support link escapes app package dir: {entry!r}")
         links.append((source, target))
     return tuple(links)
+
+
+def normalize_runtime_support_path(path: str) -> str | None:
+    if path == REMOTE_APP_PACKAGE_DIR or path.startswith(REMOTE_APP_PACKAGE_DIR + "/"):
+        return path
+    for legacy_root in LEGACY_REMOTE_APP_PACKAGE_DIRS:
+        if path == legacy_root:
+            return REMOTE_APP_PACKAGE_DIR
+        if path.startswith(legacy_root + "/"):
+            return REMOTE_APP_PACKAGE_DIR + path[len(legacy_root) :]
+    return None
 
 
 def runtime_support_link_command(artifact: UserlandArtifact) -> str:
@@ -1115,7 +1130,13 @@ def remote_userland_state(adb: Path) -> InstalledUserlandState:
     stamp_result = run_remote_shell(
         adb,
         f"run-as {PACKAGE_NAME} sh -c "
-        + shlex.quote(f"if [ -f {REMOTE_USERLAND_STAMP} ]; then cat {REMOTE_USERLAND_STAMP}; fi"),
+        + shlex.quote(
+            "if [ -f {stamp} ]; then cat {stamp}; "
+            "elif [ -f {legacy_stamp} ]; then cat {legacy_stamp}; fi".format(
+                stamp=REMOTE_USERLAND_STAMP,
+                legacy_stamp=REMOTE_USERLAND_STAMP_LEGACY,
+            )
+        ),
         capture_output=True,
         check=False,
     )
@@ -1281,7 +1302,7 @@ def install_userland_stage_tar(adb: Path, stage_tar: Path, artifact: UserlandArt
             [
                 f"run-as {PACKAGE_NAME} sh -c",
                 shlex.quote(
-                    "rm -rf {prefix} {stamp} && "
+                    "rm -rf {prefix} {stamp} {legacy_stamp} && "
                     "mkdir -p {files} {home} {tmp} && "
                     "cd {files} && "
                     "toybox tar -xf {remote} && "
@@ -1301,6 +1322,7 @@ def install_userland_stage_tar(adb: Path, stage_tar: Path, artifact: UserlandArt
                     apt_conf_parts=REMOTE_USERLAND_APT_CONF_PARTS,
                     dpkg_etc=REMOTE_USERLAND_DPKG_ETC,
                     dpkg_db=REMOTE_USERLAND_DPKG_DB,
+                    legacy_stamp=REMOTE_USERLAND_STAMP_LEGACY,
                     runtime_links=runtime_support_link_command(artifact) if artifact else "",
                     runtime_link_separator=" && " if artifact and artifact.runtime_support_links else "",
                     remote=REMOTE_STAGE_TAR,

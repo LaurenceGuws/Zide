@@ -1,0 +1,80 @@
+package uk.laurencegouws.terminal.host.runtime;
+
+import android.view.SurfaceView;
+import android.view.View;
+
+import uk.laurencegouws.terminal.TerminalNativeBridge;
+import uk.laurencegouws.terminal.debug.TerminalStatusController;
+import uk.laurencegouws.terminal.gesture.TerminalGestureStateController;
+import uk.laurencegouws.terminal.scroll.TerminalScrollOverlayView;
+import uk.laurencegouws.terminal.selection.TerminalSelectionController;
+import uk.laurencegouws.terminal.userland.ProductShellStatePresenter;
+import uk.laurencegouws.terminal.userland.UserlandReadinessState;
+import uk.laurencegouws.terminal.userland.UserlandInstallState;
+import uk.laurencegouws.terminal.userland.UserlandSessionCoordinator;
+
+/** Owns product-runtime controller assembly for activity wiring. */
+public final class ProductRuntimeAssembly {
+    /** Activity callbacks required for product-runtime assembly. */
+    public interface Host {
+        boolean debugViewEnabled();
+
+        boolean nativeLoaded();
+
+        UserlandInstallState installState();
+
+        void setInstallState(UserlandInstallState installState);
+
+        UserlandReadinessState readinessState();
+
+        SurfaceView surfaceView();
+
+        View productBootstrapBlocker();
+
+        TerminalScrollOverlayView terminalScrollOverlay();
+
+        TerminalSelectionController selectionController();
+
+        ProductShellStatePresenter productShellStatePresenter();
+
+        FrameLoopController frameLoopController();
+
+        TerminalStatusController terminalStatusController();
+
+        UserlandSessionCoordinator userlandSessionCoordinator();
+
+        TerminalGestureStateController terminalGestureStateController();
+
+        void appendEvent(String message);
+
+        void updateStatus(String statusLabel);
+    }
+
+    private ProductRuntimeAssembly() {
+    }
+
+    public static ProductRuntimeController assemble(Host host) {
+        return RuntimeFactory.createProductRuntimeController(
+                RuntimeFactory.createProductRuntimeHostCallbacks(
+                        host::debugViewEnabled,
+                        host::nativeLoaded,
+                        host::installState,
+                        host::setInstallState,
+                        host::readinessState,
+                        host::surfaceView,
+                        host::productBootstrapBlocker,
+                        host::terminalScrollOverlay,
+                        host::selectionController,
+                        host::productShellStatePresenter,
+                        host::frameLoopController,
+                        host::terminalStatusController,
+                        host::userlandSessionCoordinator,
+                        host::terminalGestureStateController,
+                        host::appendEvent,
+                        host::updateStatus,
+                        TerminalNativeBridge::nativeCurrentShellVisibleRowsBridge,
+                        TerminalNativeBridge::nativeCurrentShellScrollbackCountBridge,
+                        TerminalNativeBridge::nativeCurrentShellScrollbackOffsetBridge,
+                        TerminalNativeBridge::nativeRestartShellSessionBridge));
+    }
+}
