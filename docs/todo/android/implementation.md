@@ -158,6 +158,10 @@ Agent reporting contract (mandatory for cleanup campaign updates):
      and `callNativeWithSurfaceState` forwarding helpers, inlined container
      add/remove and viewport `post`, and dropped holder/context one-liners
      (behavior unchanged).
+   - Completed: `SurfaceController` net-smaller again: surface lifecycle,
+     install/uninstall, viewport publish, and visibility sizing now live in
+     fewer named methods by inlining telemetry/native/status steps that were
+     split across redundant helpers (behavior unchanged).
    - Next: net simplification in `ChromeController` or `SurfaceController`:
      remove or merge pass-through helpers and redundant indirection so the
      touched class ends with fewer methods, fields, or dependencies; each of
