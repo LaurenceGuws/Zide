@@ -150,6 +150,30 @@ public final class TerminalSelectionController {
         }
     }
 
+    private static final class ViewportGridMetrics {
+        final int visibleRows;
+        final int visibleCols;
+        final int viewportWidth;
+        final int viewportHeight;
+        final float colWidthPx;
+        final float rowHeightPx;
+
+        ViewportGridMetrics(
+                int visibleRows,
+                int visibleCols,
+                int viewportWidth,
+                int viewportHeight,
+                float colWidthPx,
+                float rowHeightPx) {
+            this.visibleRows = visibleRows;
+            this.visibleCols = visibleCols;
+            this.viewportWidth = viewportWidth;
+            this.viewportHeight = viewportHeight;
+            this.colWidthPx = colWidthPx;
+            this.rowHeightPx = rowHeightPx;
+        }
+    }
+
     public TerminalSelectionController(Host host, Bridge bridge) {
         this.host = host;
         this.bridge = bridge;
@@ -327,22 +351,17 @@ public final class TerminalSelectionController {
     }
 
     private TerminalCellHit resolveProductTerminalCell(float x, float y) {
-        final int visibleRows = bridge.currentVisibleRows();
-        final int visibleCols = bridge.currentVisibleCols();
-        final int viewportWidth = host.productViewportWidthPx();
-        final int viewportHeight = host.productViewportHeightPx();
-        if (!bridge.nativeLoaded() || visibleRows <= 0 || visibleCols <= 0 || viewportWidth <= 0 || viewportHeight <= 0) {
+        if (!bridge.nativeLoaded()) {
             return null;
         }
-        final float colWidthPx = (float) viewportWidth / (float) visibleCols;
-        final float rowHeightPx = (float) viewportHeight / (float) visibleRows;
-        if (!(colWidthPx > 0.0f) || !(rowHeightPx > 0.0f)) {
+        final ViewportGridMetrics grid = currentViewportGridMetrics();
+        if (grid == null) {
             return null;
         }
-        final float clampedX = Math.max(0.0f, Math.min(x, viewportWidth - 1.0f));
-        final float clampedY = Math.max(0.0f, Math.min(y, viewportHeight - 1.0f));
-        final int col = Math.max(0, Math.min(visibleCols - 1, (int) (clampedX / colWidthPx)));
-        final int row = Math.max(0, Math.min(visibleRows - 1, (int) (clampedY / rowHeightPx)));
+        final float clampedX = Math.max(0.0f, Math.min(x, grid.viewportWidth - 1.0f));
+        final float clampedY = Math.max(0.0f, Math.min(y, grid.viewportHeight - 1.0f));
+        final int col = Math.max(0, Math.min(grid.visibleCols - 1, (int) (clampedX / grid.colWidthPx)));
+        final int row = Math.max(0, Math.min(grid.visibleRows - 1, (int) (clampedY / grid.rowHeightPx)));
         return new TerminalCellHit(row, col);
     }
 
@@ -459,6 +478,18 @@ public final class TerminalSelectionController {
         if (rect == null || rect.isEmpty()) {
             return null;
         }
+        final ViewportGridMetrics grid = currentViewportGridMetrics();
+        if (grid == null) {
+            return null;
+        }
+        final int row = Math.max(0, Math.min(grid.visibleRows - 1, (int) (rect.top / grid.rowHeightPx)));
+        final int col = startHandle
+                ? Math.max(0, Math.min(grid.visibleCols - 1, (int) (rect.left / grid.colWidthPx)))
+                : Math.max(0, Math.min(grid.visibleCols - 1, (int) ((Math.max(rect.right - 1, 0)) / grid.colWidthPx)));
+        return new TerminalCellHit(row, col);
+    }
+
+    private ViewportGridMetrics currentViewportGridMetrics() {
         final int visibleRows = bridge.currentVisibleRows();
         final int visibleCols = bridge.currentVisibleCols();
         final int viewportWidth = host.productViewportWidthPx();
@@ -471,11 +502,13 @@ public final class TerminalSelectionController {
         if (!(colWidthPx > 0.0f) || !(rowHeightPx > 0.0f)) {
             return null;
         }
-        final int row = Math.max(0, Math.min(visibleRows - 1, (int) (rect.top / rowHeightPx)));
-        final int col = startHandle
-                ? Math.max(0, Math.min(visibleCols - 1, (int) (rect.left / colWidthPx)))
-                : Math.max(0, Math.min(visibleCols - 1, (int) ((Math.max(rect.right - 1, 0)) / colWidthPx)));
-        return new TerminalCellHit(row, col);
+        return new ViewportGridMetrics(
+                visibleRows,
+                visibleCols,
+                viewportWidth,
+                viewportHeight,
+                colWidthPx,
+                rowHeightPx);
     }
 
     private static boolean selectionCellBefore(TerminalCellHit a, TerminalCellHit b) {
