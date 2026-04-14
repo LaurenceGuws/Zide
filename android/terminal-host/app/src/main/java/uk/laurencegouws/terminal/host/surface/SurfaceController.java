@@ -253,10 +253,7 @@ public final class SurfaceController {
         final SurfaceHolder holder = nextSurfaceView.getHolder();
         holder.setFormat(PixelFormat.RGBA_8888);
         host.installSurfaceGestureHost(nextSurfaceView);
-        final FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                Gravity.CENTER);
+        final FrameLayout.LayoutParams params = matchParentCenteredSurfaceHostLayoutParams();
         host.productSurfaceContainer().addView(nextSurfaceView, params);
         final SurfaceHolder.Callback2 nextCallback = resolveSurfaceInstallCallback(callback);
         host.reinstallSurfaceCallback(nextSurfaceView, nextCallback);
@@ -349,6 +346,17 @@ public final class SurfaceController {
             existing.getHolder().removeCallback(previousCallback);
         }
         host.productSurfaceContainer().removeView(existing);
+        appendSurfaceHostRemovedTelemetry(reason);
+    }
+
+    private FrameLayout.LayoutParams matchParentCenteredSurfaceHostLayoutParams() {
+        return new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                Gravity.CENTER);
+    }
+
+    private void appendSurfaceHostRemovedTelemetry(String reason) {
         host.appendEvent("surface.host.removed reason=" + reason + " generation=" + host.surfaceHostGeneration());
     }
 
