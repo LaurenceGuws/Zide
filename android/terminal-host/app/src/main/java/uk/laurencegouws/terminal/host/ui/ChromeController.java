@@ -226,9 +226,17 @@ public final class ChromeController {
     }
 
     private void showSoftInputAfterRestartInput(InputMethodManager imm, ShellInputView shellInputView) {
-        imm.restartInput(shellInputView);
-        final boolean shown = imm.showSoftInput(shellInputView, InputMethodManager.SHOW_IMPLICIT);
+        restartInputForManualImeOpen(imm, shellInputView);
+        final boolean shown = showSoftInputImplicitForShell(imm, shellInputView);
         recordManualImeOpenSoftInputResult(shellInputView, shown);
+    }
+
+    private void restartInputForManualImeOpen(InputMethodManager imm, ShellInputView shellInputView) {
+        imm.restartInput(shellInputView);
+    }
+
+    private boolean showSoftInputImplicitForShell(InputMethodManager imm, ShellInputView shellInputView) {
+        return imm.showSoftInput(shellInputView, InputMethodManager.SHOW_IMPLICIT);
     }
 
     private void recordManualImeOpenSoftInputResult(ShellInputView shellInputView, boolean shown) {

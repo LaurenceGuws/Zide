@@ -208,7 +208,11 @@ public final class SurfaceController {
         host.callNativeWithSurfaceState(
                 "native.surfaceAvailable",
                 seq,
-                host.currentSurfaceStateSnapshot());
+                currentSurfaceStateSnapshotForNative());
+    }
+
+    private AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshotForNative() {
+        return host.currentSurfaceStateSnapshot();
     }
 
     public void onSurfaceDestroyed(SurfaceHolder holder) {
@@ -234,7 +238,7 @@ public final class SurfaceController {
         host.callNativeWithSurfaceState(
                 "native.surfaceDestroyed",
                 seq,
-                host.currentSurfaceStateSnapshot());
+                currentSurfaceStateSnapshotForNative());
     }
 
     public void onSurfaceRedrawNeeded(SurfaceHolder holder) {
@@ -264,7 +268,7 @@ public final class SurfaceController {
 
     private void dispatchNativeProductRedrawNeededTelemetryAndStatus() {
         final long seq = nativeSurfaceRedrawNeededSeqOrNegative();
-        final AndroidDebugFormatter.SurfaceEventSnapshot state = host.currentSurfaceStateSnapshot();
+        final AndroidDebugFormatter.SurfaceEventSnapshot state = currentSurfaceStateSnapshotForNative();
         appendNativeSurfaceRedrawNeededTelemetry(seq, state);
         host.updateStatus("surface.state.redraw_needed");
     }
@@ -273,10 +277,14 @@ public final class SurfaceController {
         return host.nativeLoaded() ? host.nativeOnSurfaceRedrawNeededBridge() : -1;
     }
 
+    private void incrementSurfaceHostGenerationForInstall() {
+        host.setSurfaceHostGeneration(host.surfaceHostGeneration() + 1);
+    }
+
     public void installSurfaceView(String reason, SurfaceHolder.Callback2 callback) {
         removeExistingSurfaceHostViewIfPresent(reason, callback);
 
-        host.setSurfaceHostGeneration(host.surfaceHostGeneration() + 1);
+        incrementSurfaceHostGenerationForInstall();
         final SurfaceView nextSurfaceView = createNextProductSurfaceHostView();
         prepareSurfaceHostHolderFormat(nextSurfaceView);
         host.installSurfaceGestureHost(nextSurfaceView);
@@ -373,7 +381,7 @@ public final class SurfaceController {
     }
 
     private void callNativeProductViewportChanged(long seq) {
-        host.callNativeWithSurfaceState("native.viewportChanged", seq, host.currentSurfaceStateSnapshot());
+        host.callNativeWithSurfaceState("native.viewportChanged", seq, currentSurfaceStateSnapshotForNative());
     }
 
     private void appendNativeSurfaceRedrawNeededTelemetry(
