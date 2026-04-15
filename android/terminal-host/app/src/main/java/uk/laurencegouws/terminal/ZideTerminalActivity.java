@@ -106,6 +106,15 @@ public final class ZideTerminalActivity extends Activity
     private ChromeController terminalChromeController;
     private ViewModeController terminalViewModeController;
     private RuntimeAssetsController terminalRuntimeAssetsController;
+    /**
+     * Product terminal viewport authority.
+     *
+     * <p>
+     * The SurfaceView, scroll overlay, gesture math, and native grid-fit path must
+     * all describe the same Android-owned rectangle. Do not use the broader content
+     * frame here; it can acquire non-terminal children and should not become the
+     * terminal size contract by accident.
+     */
     private ViewportController terminalViewportController;
     private TerminalStatusController terminalStatusController;
     private TerminalSurfaceStateSnapshotReader terminalSurfaceStateSnapshotReader;
@@ -229,8 +238,8 @@ public final class ZideTerminalActivity extends Activity
                 () -> this,
                 () -> handler,
                 () -> productSurfaceContainer,
-                this::productViewportWidthPx,
-                this::productViewportHeightPx,
+                () -> terminalViewportController.productViewportWidthPx(),
+                () -> terminalViewportController.productViewportHeightPx(),
                 () -> nativeLoaded,
                 this::stopScrollbackFlingIfReady,
                 this::refreshProductScrollOverlayIfReady,
@@ -320,7 +329,7 @@ public final class ZideTerminalActivity extends Activity
                 this::updateStatus,
                 TerminalNativeBridge::nativeSetSessionScrollbackOffsetBridge,
                 TerminalNativeBridge::nativeFollowSessionLiveBottomBridge,
-                this::productViewportHeightPx,
+                () -> terminalViewportController.productViewportHeightPx(),
                 this::reevaluateProductFrameLoopIfReady,
                 this::runPackageDoctor,
                 this::sendDirectText,
@@ -332,7 +341,7 @@ public final class ZideTerminalActivity extends Activity
                 TerminalNativeBridge::nativeOnSurfaceDestroyedBridge,
                 TerminalNativeBridge::nativeOnSurfaceRedrawNeededBridge,
                 TerminalNativeBridge::nativeOnVisibleViewportBridge,
-                this::currentSurfaceStateSnapshot,
+                () -> terminalSurfaceStateSnapshotReader.read(),
                 this::handleProductShellStateEventIfReady);
     }
 
@@ -388,7 +397,7 @@ public final class ZideTerminalActivity extends Activity
                 () -> imeVisible,
                 this::setImeVisible,
                 () -> surfaceHostBridge,
-                this::currentSurfaceStateSnapshot,
+                () -> terminalSurfaceStateSnapshotReader.read(),
                 this::notifyVisibleViewportIfReady,
                 () -> currentInstallState,
                 () -> currentReadinessState);
@@ -592,25 +601,6 @@ public final class ZideTerminalActivity extends Activity
         }
     }
 
-    /**
-     * Product terminal viewport authority.
-     *
-     * <p>
-     * The SurfaceView, scroll overlay, gesture math, and native grid-fit path must
-     * all describe
-     * the same Android-owned rectangle. Do not use the broader content frame here;
-     * it can acquire
-     * non-terminal children and should not become the terminal size contract by
-     * accident.
-     */
-    private int productViewportWidthPx() {
-        return terminalViewportController.productViewportWidthPx();
-    }
-
-    private int productViewportHeightPx() {
-        return terminalViewportController.productViewportHeightPx();
-    }
-
     @Override
     public void sendDirectCodepoint(int codepoint) {
         if (!canSendDirectInput())
@@ -714,10 +704,6 @@ public final class ZideTerminalActivity extends Activity
 
     private boolean dispatchKeyEventToSuper(KeyEvent event) {
         return super.dispatchKeyEvent(event);
-    }
-
-    private AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot() {
-        return terminalSurfaceStateSnapshotReader.read();
     }
 
     private void updateStatus(String state) {
