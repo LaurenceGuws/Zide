@@ -77,10 +77,6 @@ public final class WidgetAssembly {
 
         SurfaceBridge surfaceHostBridge();
 
-        boolean currentInstallStateInstalling();
-
-        boolean currentInstallStateFailed();
-
         UserlandReadinessState currentReadinessState();
 
         UserlandInstallState currentInstallState();
@@ -154,8 +150,6 @@ public final class WidgetAssembly {
                         host.productReadinessDetail(),
                         host.productReadinessRetryButton(),
                         new ProductShellStateCallbacks(
-                                host::currentInstallStateInstalling,
-                                host::currentInstallStateFailed,
                                 host::currentReadinessState,
                                 host::currentInstallState,
                                 () -> host.surfaceHostBridge() != null ? host.surfaceHostBridge().currentSurfaceView() : null));

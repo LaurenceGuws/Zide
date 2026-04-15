@@ -268,16 +268,6 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
     }
 
     @Override
-    public boolean currentInstallStateInstalling() {
-        return currentInstallState.get().isInstalling();
-    }
-
-    @Override
-    public boolean currentInstallStateFailed() {
-        return currentInstallState.get().isFailed();
-    }
-
-    @Override
     public UserlandReadinessState currentReadinessState() {
         return currentReadinessState.get();
     }
