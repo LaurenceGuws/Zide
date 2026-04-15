@@ -252,6 +252,9 @@ the existing per-commit validation rules.
        showing” refresh is its own branch; destroy detaches by `ActionMode`
        identity before teardown effects; clipboard applies primary clip + success
        telemetry in one place
+     - mini-wave: presence helper for the floating mode; first attach packages
+       start + invalidation; sync body split after handle sync; floating
+       `onCreate` routes through a named install path
    - Exit criteria:
      - compile pass per commit; deploy + `AndroidRuntime:E` smoke at seam
        boundary
