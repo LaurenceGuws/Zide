@@ -3,8 +3,6 @@ package uk.laurencegouws.terminal.host.session;
 import android.content.Context;
 import android.os.Handler;
 
-import java.util.function.Function;
-
 import uk.laurencegouws.terminal.TerminalNativeBridge;
 import uk.laurencegouws.terminal.debug.TerminalNativeStatusLabels;
 import uk.laurencegouws.terminal.host.runtime.FrameLoopController;
@@ -81,7 +79,7 @@ public final class SessionAssembly {
         final SessionBridge userlandSessionHostBridge =
                 SessionFactory.createUserlandSessionHostBridge(
                         host::appendEvent,
-                        (Function<Integer, String>) TerminalNativeStatusLabels::sessionStartStatusLabel,
+                        TerminalNativeStatusLabels::sessionStartStatusLabel,
                         host::applyReadinessState,
                         host::refreshProductShellState,
                         host::refreshDebugStatusSurface,

@@ -6,7 +6,6 @@ import android.os.Handler;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
-import java.util.function.Supplier;
 
 import uk.laurencegouws.terminal.TerminalNativeBridge;
 import uk.laurencegouws.terminal.userland.UserlandReadinessState;
@@ -15,7 +14,7 @@ import uk.laurencegouws.terminal.userland.UserlandRelease;
 /** Functional callback adapter for {@link SessionAssembly.Host}. */
 public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
     private final Context context;
-    private final Supplier<UserlandRelease> userlandRelease;
+    private final UserlandRelease userlandRelease;
     private final Handler handler;
     private final Consumer<String> appendEvent;
     private final Consumer<String> updateStatus;
@@ -27,7 +26,7 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
 
     public SessionAssemblyCallbacks(
             Context context,
-            Supplier<UserlandRelease> userlandRelease,
+            UserlandRelease userlandRelease,
             Handler handler,
             Consumer<String> appendEvent,
             Consumer<String> updateStatus,
@@ -55,7 +54,7 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
 
     @Override
     public UserlandRelease userlandRelease() {
-        return userlandRelease.get();
+        return userlandRelease;
     }
 
     @Override

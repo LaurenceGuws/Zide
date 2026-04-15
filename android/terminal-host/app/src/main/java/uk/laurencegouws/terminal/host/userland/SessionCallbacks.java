@@ -1,14 +1,14 @@
 package uk.laurencegouws.terminal.host.userland;
 
 import java.util.function.Consumer;
-import java.util.function.Function;
+import java.util.function.IntFunction;
 
 import uk.laurencegouws.terminal.userland.UserlandReadinessState;
 
 /** Functional callback adapter for {@link SessionBridge}. */
 public final class SessionCallbacks implements SessionBridge.Callbacks {
     private final Consumer<String> appendEvent;
-    private final Function<Integer, String> sessionStartStatusLabel;
+    private final IntFunction<String> sessionStartStatusLabel;
     private final Consumer<UserlandReadinessState> applyReadinessState;
     private final Runnable refreshProductShellState;
     private final Runnable refreshDebugStatusSurface;
@@ -16,7 +16,7 @@ public final class SessionCallbacks implements SessionBridge.Callbacks {
 
     public SessionCallbacks(
             Consumer<String> appendEvent,
-            Function<Integer, String> sessionStartStatusLabel,
+            IntFunction<String> sessionStartStatusLabel,
             Consumer<UserlandReadinessState> applyReadinessState,
             Runnable refreshProductShellState,
             Runnable refreshDebugStatusSurface,

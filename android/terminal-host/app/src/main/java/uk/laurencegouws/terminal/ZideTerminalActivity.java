@@ -332,7 +332,7 @@ public final class ZideTerminalActivity extends Activity
         final SessionAssembly.Result result = SessionAssembly.assemble(
                 new SessionAssemblyCallbacks(
                         this,
-                        () -> userlandRelease,
+                        userlandRelease,
                         handler,
                         this::appendEvent,
                         this::updateStatus,
