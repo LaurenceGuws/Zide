@@ -789,7 +789,7 @@ public final class TerminalSelectionController {
 
             @Override
             public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
-                if (item.getItemId() != android.R.id.copy) {
+                if (!isTerminalSelectionCopyMenuItem(item)) {
                     return false;
                 }
                 return completeTerminalSelectionCopyAction(mode);
@@ -810,6 +810,10 @@ public final class TerminalSelectionController {
     private void installTerminalSelectionCopyMenuItem(Menu menu) {
         menu.add(Menu.NONE, android.R.id.copy, Menu.NONE, android.R.string.copy)
                 .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);
+    }
+
+    private static boolean isTerminalSelectionCopyMenuItem(MenuItem item) {
+        return item.getItemId() == android.R.id.copy;
     }
 
     private boolean completeTerminalSelectionCopyAction(ActionMode mode) {
