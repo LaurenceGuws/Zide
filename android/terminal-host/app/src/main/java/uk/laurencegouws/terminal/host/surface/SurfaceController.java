@@ -212,7 +212,15 @@ public final class SurfaceController {
     }
 
     public void installSurfaceView(String reason, SurfaceHolder.Callback2 callback) {
-        removeExistingSurfaceHostViewIfPresent(reason, callback);
+        final SurfaceView existing = host.surfaceView();
+        if (existing != null) {
+            final SurfaceHolder.Callback2 previousCallback = callback != null ? callback : host.surfaceCallback();
+            if (previousCallback != null) {
+                existing.getHolder().removeCallback(previousCallback);
+            }
+            host.productSurfaceContainer().removeView(existing);
+            host.appendEvent("surface.host.removed reason=" + reason + " generation=" + host.surfaceHostGeneration());
+        }
 
         host.setSurfaceHostGeneration(host.surfaceHostGeneration() + 1);
         final SurfaceView nextSurfaceView = new SurfaceView(host.productSurfaceContainer().getContext());
@@ -249,19 +257,6 @@ public final class SurfaceController {
         host.callNativeWithSurfaceState("native.viewportChanged", seq, host.currentSurfaceStateSnapshot());
         host.refreshProductScrollOverlay();
         host.updateStatus("viewport.state.updated");
-    }
-
-    private void removeExistingSurfaceHostViewIfPresent(String reason, SurfaceHolder.Callback2 callback) {
-        final SurfaceView existing = host.surfaceView();
-        if (existing == null) {
-            return;
-        }
-        final SurfaceHolder.Callback2 previousCallback = callback != null ? callback : host.surfaceCallback();
-        if (previousCallback != null) {
-            existing.getHolder().removeCallback(previousCallback);
-        }
-        host.productSurfaceContainer().removeView(existing);
-        host.appendEvent("surface.host.removed reason=" + reason + " generation=" + host.surfaceHostGeneration());
     }
 
 }
