@@ -255,6 +255,9 @@ the existing per-commit validation rules.
      - mini-wave: presence helper for the floating mode; first attach packages
        start + invalidation; sync body split after handle sync; floating
        `onCreate` routes through a named install path
+     - mini-wave: floating `Callback2` delegates prepare/menu/content-rect;
+       toolbar copy runs through `executeTerminalSelectionToolbarCopy`; shell
+       bytes path reports empty selection and decodes UTF-8 in named helpers
    - Exit criteria:
      - compile pass per commit; deploy + `AndroidRuntime:E` smoke at seam
        boundary
