@@ -196,22 +196,6 @@ public final class ChromeController {
 
     private static final float EDGE_SWIPE_OPEN_PX = 48f;
 
-    private boolean tryConsumeSidebarOpenEdgeSwipe(float delta) {
-        if (delta > EDGE_SWIPE_OPEN_PX) {
-            openSidebar();
-            return true;
-        }
-        return false;
-    }
-
-    private boolean tryConsumeSidebarCloseEdgeSwipe(float delta) {
-        if (delta < -EDGE_SWIPE_OPEN_PX) {
-            closeSidebar();
-            return true;
-        }
-        return false;
-    }
-
     private final class EdgeSwipeListener implements View.OnTouchListener {
         private final boolean openListener;
         private float downX;
@@ -228,10 +212,12 @@ public final class ChromeController {
                 case MotionEvent.ACTION_CANCEL:
                     final float delta = event.getRawX() - downX;
                     if (openListener) {
-                        if (tryConsumeSidebarOpenEdgeSwipe(delta)) {
+                        if (delta > EDGE_SWIPE_OPEN_PX) {
+                            openSidebar();
                             return true;
                         }
-                    } else if (tryConsumeSidebarCloseEdgeSwipe(delta)) {
+                    } else if (delta < -EDGE_SWIPE_OPEN_PX) {
+                        closeSidebar();
                         return true;
                     }
                     return openListener;
