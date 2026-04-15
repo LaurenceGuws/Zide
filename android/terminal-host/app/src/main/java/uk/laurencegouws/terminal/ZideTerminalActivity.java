@@ -138,7 +138,23 @@ public final class ZideTerminalActivity extends Activity
         assembleUserlandWorkflowControllers();
         assembleSessionControllers();
         assembleWidgetHostControllers();
-        assembleProductRuntimeController();
+        terminalProductRuntimeController = ProductRuntimeAssembly.assemble(
+                new ProductRuntimeAssemblyCallbacks(
+                        () -> debugViewEnabled,
+                        () -> currentInstallState,
+                        installState -> currentInstallState = installState,
+                        () -> currentReadinessState,
+                        this::appendEvent,
+                        this::updateStatus,
+                        () -> surfaceHostBridge != null ? surfaceHostBridge.currentSurfaceView() : null,
+                        productReadinessBlocker,
+                        terminalScrollOverlay,
+                        selectionController,
+                        productShellStatePresenter,
+                        productFrameLoopController,
+                        terminalStatusController,
+                        userlandSessionCoordinator,
+                        terminalGestureStateController));
         assembleActivityLifecycleController();
         loadInitialReadinessState();
         installInputControllers();
@@ -346,26 +362,6 @@ public final class ZideTerminalActivity extends Activity
                         this::showDebugViewIfReady));
         terminalRuntimeAssetsController = result.runtimeAssetsController;
         userlandWorkflowController = result.userlandWorkflowController;
-    }
-
-    private void assembleProductRuntimeController() {
-        terminalProductRuntimeController = ProductRuntimeAssembly.assemble(
-                new ProductRuntimeAssemblyCallbacks(
-                        () -> debugViewEnabled,
-                        () -> currentInstallState,
-                        installState -> currentInstallState = installState,
-                        () -> currentReadinessState,
-                        this::appendEvent,
-                        this::updateStatus,
-                        () -> surfaceHostBridge != null ? surfaceHostBridge.currentSurfaceView() : null,
-                        productReadinessBlocker,
-                        terminalScrollOverlay,
-                        selectionController,
-                        productShellStatePresenter,
-                        productFrameLoopController,
-                        terminalStatusController,
-                        userlandSessionCoordinator,
-                        terminalGestureStateController));
     }
 
     private void assembleActivityLifecycleController() {
