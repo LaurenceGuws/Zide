@@ -203,6 +203,13 @@ Agent reporting contract (mandatory for cleanup campaign updates):
      IME/debug `Consumer<Boolean>` binders where factories repeat the same
      reference; ~685 → ~706 lines (readability/dedup trade; private method count
      unchanged). Validation: compile + deploy + `AndroidRuntime:E` clean.
+   - Completed: `ZideTerminalActivity` create*Callbacks: method-scoped
+     `Runnable` / `BooleanSupplier` / `IntSupplier` / `Supplier` (surface snapshot)
+     aliases and `LifecycleCallbacks.SurfaceResumeCall` for resume, so assembly
+     constructors read as named delegates instead of long `this::…IfReady` lists;
+     `notifyVisibleViewport` stays `Consumer<String>`. ~706 → ~731 lines (imports +
+     locals). Validation: `:app:compileReleaseJavaWithJavac` + deploy +
+     `AndroidRuntime:E` clean.
    - Next: net simplification in `ZideTerminalActivity` `create*Callbacks()`
      factories: collapse redundant one-line supplier glue and trivial `this::`
      forwards where the activity adds no policy (prefer direct field capture or
