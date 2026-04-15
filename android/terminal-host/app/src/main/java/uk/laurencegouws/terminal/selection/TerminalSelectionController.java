@@ -191,29 +191,7 @@ public final class TerminalSelectionController {
     public TerminalSelectionController(Host host, Bridge bridge) {
         this.host = host;
         this.bridge = bridge;
-        this.selectionAutoscrollFrameCallback = frameTimeNanos -> {
-            selectionAutoscrollScheduled = false;
-            if (!selectionDragActive || !this.bridge.nativeLoaded()) {
-                selectionAutoscrollLastFrameNanos = 0L;
-                return;
-            }
-            final float rowsPerSecond = computeSelectionAutoscrollRowsPerSecond(selectionDragY);
-            if (rowsPerSecond == 0.0f) {
-                selectionAutoscrollLastFrameNanos = 0L;
-                return;
-            }
-            final long previousFrameNanos = selectionAutoscrollLastFrameNanos;
-            selectionAutoscrollLastFrameNanos = frameTimeNanos;
-            final float deltaSeconds = previousFrameNanos == 0L
-                    ? (1.0f / 60.0f)
-                    : Math.max(1.0e-3f, Math.min(0.05f, (frameTimeNanos - previousFrameNanos) / 1_000_000_000.0f));
-            applySelectionAutoscrollRows(rowsPerSecond * deltaSeconds);
-            if (selectionDragActive && computeSelectionAutoscrollRowsPerSecond(selectionDragY) != 0.0f) {
-                scheduleSelectionAutoscrollFrame();
-            } else {
-                selectionAutoscrollLastFrameNanos = 0L;
-            }
-        };
+        this.selectionAutoscrollFrameCallback = this::onSelectionAutoscrollFrame;
     }
 
     /** Installs Android-owned selection handles into the product surface container. */
@@ -616,6 +594,39 @@ public final class TerminalSelectionController {
                     normalized * normalized);
         }
         return 0.0f;
+    }
+
+    private void onSelectionAutoscrollFrame(long frameTimeNanos) {
+        selectionAutoscrollScheduled = false;
+        if (!selectionDragActive || !bridge.nativeLoaded()) {
+            selectionAutoscrollLastFrameNanos = 0L;
+            return;
+        }
+        final float rowsPerSecond = currentSelectionAutoscrollRowsPerSecond();
+        if (rowsPerSecond == 0.0f) {
+            selectionAutoscrollLastFrameNanos = 0L;
+            return;
+        }
+        final float deltaSeconds = resolveSelectionAutoscrollDeltaSeconds(frameTimeNanos);
+        applySelectionAutoscrollRows(rowsPerSecond * deltaSeconds);
+        if (selectionDragActive && currentSelectionAutoscrollRowsPerSecond() != 0.0f) {
+            scheduleSelectionAutoscrollFrame();
+            return;
+        }
+        selectionAutoscrollLastFrameNanos = 0L;
+    }
+
+    private float currentSelectionAutoscrollRowsPerSecond() {
+        return computeSelectionAutoscrollRowsPerSecond(selectionDragY);
+    }
+
+    private float resolveSelectionAutoscrollDeltaSeconds(long frameTimeNanos) {
+        final long previousFrameNanos = selectionAutoscrollLastFrameNanos;
+        selectionAutoscrollLastFrameNanos = frameTimeNanos;
+        if (previousFrameNanos == 0L) {
+            return 1.0f / 60.0f;
+        }
+        return Math.max(1.0e-3f, Math.min(0.05f, (frameTimeNanos - previousFrameNanos) / 1_000_000_000.0f));
     }
 
     private void applyImmediateSelectionAutoscrollStep() {
