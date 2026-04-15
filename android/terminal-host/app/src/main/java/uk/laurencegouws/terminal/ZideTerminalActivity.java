@@ -226,8 +226,8 @@ public final class ZideTerminalActivity extends Activity
 
     private InteractionCallbacks createInteractionCallbacks() {
         return new InteractionCallbacks(
-                this::activityHost,
-                this::mainHandler,
+                () -> this,
+                () -> handler,
                 () -> productSurfaceContainer,
                 this::productViewportWidthPx,
                 this::productViewportHeightPx,
@@ -240,9 +240,9 @@ public final class ZideTerminalActivity extends Activity
 
     private InputCallbacks createInputCallbacks() {
         return new InputCallbacks(
-                this::activityHost,
+                () -> this,
                 () -> rootView,
-                this::activityHost,
+                () -> this,
                 this::inputMethodManager,
                 this::isImeVisible,
                 this::setImeVisible,
@@ -285,8 +285,8 @@ public final class ZideTerminalActivity extends Activity
 
     private WidgetCallbacks createWidgetCallbacks() {
         return new WidgetCallbacks(
-                this::activityHost,
-                this::mainHandler,
+                () -> this,
+                () -> handler,
                 this::isNativeLoaded,
                 this::isDebugViewEnabled,
                 this::setDebugViewEnabled,
@@ -338,9 +338,9 @@ public final class ZideTerminalActivity extends Activity
 
     private SessionAssemblyCallbacks createSessionAssemblyCallbacks() {
         return new SessionAssemblyCallbacks(
-                this::activityHost,
+                () -> this,
                 this::currentUserlandRelease,
-                this::mainHandler,
+                () -> handler,
                 this::appendEvent,
                 this::updateStatus,
                 this::isNativeLoaded,
@@ -381,7 +381,7 @@ public final class ZideTerminalActivity extends Activity
 
     private StatusViewCallbacks createStatusViewCallbacks() {
         return new StatusViewCallbacks(
-                this::activityHost,
+                () -> this,
                 this::isDebugViewEnabled,
                 this::isNativeLoaded,
                 this::hasWindowFocus,
@@ -422,8 +422,8 @@ public final class ZideTerminalActivity extends Activity
 
     private WorkflowAssemblyCallbacks createWorkflowAssemblyCallbacks() {
         return new WorkflowAssemblyCallbacks(
-                this::activityHost,
-                this::mainHandler,
+                () -> this,
+                () -> handler,
                 this::currentUserlandRelease,
                 this::setUserlandRelease,
                 this::appendEvent,
@@ -474,14 +474,6 @@ public final class ZideTerminalActivity extends Activity
         if (productFrameLoopController != null) {
             productFrameLoopController.reevaluate();
         }
-    }
-
-    private ZideTerminalActivity activityHost() {
-        return this;
-    }
-
-    private Handler mainHandler() {
-        return handler;
     }
 
     private InputMethodManager inputMethodManager() {
