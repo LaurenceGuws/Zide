@@ -139,7 +139,7 @@ Agent reporting contract (mandatory for cleanup campaign updates):
      helper seams; remaining inline logic is intentionally trivial or contract
      owned by downstream controllers.
    - Next: primary cleanup for Java host ownership continues under item 2
-     below (`ChromeController` / `SurfaceController` net simplification).
+     below (`ZideTerminalActivity` `create*Callbacks()` net simplification).
 2. Keep Java ownership boundaries aligned with
    `ANDROID_JAVA_HOST_STRUCTURE.md`.
    - Completed: `ChromeController` and `SurfaceController` now own the bulk of
@@ -190,11 +190,12 @@ Agent reporting contract (mandatory for cleanup campaign updates):
      `getSystemService(InputMethodManager.class)`) instead of private one-line
      suppliers; ~778 → ~730 lines, behavior unchanged. `SurfaceController` remains
      frozen; `ChromeController` unchanged this wave.
-   - Next: net simplification in `ChromeController` or `SurfaceController`:
-     remove or merge pass-through helpers and redundant indirection so the
-     touched class ends with fewer methods, fields, or dependencies; each of
-     the next ten commits in this lane must satisfy the charter “net
-     simplification” rule (no accessor-only churn).
+   - Next: net simplification in `ZideTerminalActivity` `create*Callbacks()`
+     factories: collapse redundant one-line supplier glue and trivial `this::`
+     forwards where the activity adds no policy (prefer direct field capture or
+     a single delegation site); keep assembly contracts and downstream ownership
+     unchanged. `ChromeController` / `SurfaceController` stay out of scope until this
+     `Next:` line is deliberately advanced.
 3. Stabilize selection/scroll interaction behavior under manual device usage.
 4. Keep debug/profiling instrumentation behind explicit flags and remove stale
    probes after fixes land.
