@@ -897,9 +897,12 @@ public final class TerminalSelectionController {
         invalidateTerminalSelectionActionMode(false);
     }
 
+    private boolean shouldKeepTerminalSelectionActionModeVisible() {
+        return selectionToolbarVisible && bridge.currentSelectionActive();
+    }
+
     private boolean shouldFinishTerminalSelectionActionMode() {
-        return terminalSelectionActionMode != null
-                && (!selectionToolbarVisible || !bridge.currentSelectionActive());
+        return terminalSelectionActionMode != null && !shouldKeepTerminalSelectionActionModeVisible();
     }
 
     private void syncSelectionHandles() {
