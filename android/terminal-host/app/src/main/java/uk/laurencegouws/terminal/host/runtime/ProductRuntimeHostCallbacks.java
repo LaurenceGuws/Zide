@@ -20,7 +20,6 @@ import uk.laurencegouws.terminal.userland.UserlandSessionCoordinator;
 /** Functional callback adapter for {@link ProductRuntimeController}. */
 public final class ProductRuntimeHostCallbacks implements ProductRuntimeController.Host {
     private final BooleanSupplier debugViewEnabled;
-    private final BooleanSupplier nativeLoaded;
     private final Supplier<UserlandInstallState> installState;
     private final Consumer<UserlandInstallState> setInstallState;
     private final Supplier<UserlandReadinessState> readinessState;
@@ -38,7 +37,6 @@ public final class ProductRuntimeHostCallbacks implements ProductRuntimeControll
 
     public ProductRuntimeHostCallbacks(
             BooleanSupplier debugViewEnabled,
-            BooleanSupplier nativeLoaded,
             Supplier<UserlandInstallState> installState,
             Consumer<UserlandInstallState> setInstallState,
             Supplier<UserlandReadinessState> readinessState,
@@ -54,7 +52,6 @@ public final class ProductRuntimeHostCallbacks implements ProductRuntimeControll
             Consumer<String> appendEvent,
             Consumer<String> updateStatus) {
         this.debugViewEnabled = debugViewEnabled;
-        this.nativeLoaded = nativeLoaded;
         this.installState = installState;
         this.setInstallState = setInstallState;
         this.readinessState = readinessState;
@@ -78,7 +75,7 @@ public final class ProductRuntimeHostCallbacks implements ProductRuntimeControll
 
     @Override
     public boolean nativeLoaded() {
-        return nativeLoaded.getAsBoolean();
+        return TerminalNativeBridge.nativeLoaded();
     }
 
     @Override

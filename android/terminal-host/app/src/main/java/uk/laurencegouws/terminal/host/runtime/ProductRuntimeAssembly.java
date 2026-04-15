@@ -55,7 +55,6 @@ public final class ProductRuntimeAssembly {
         return RuntimeFactory.createProductRuntimeController(
                 RuntimeFactory.createProductRuntimeHostCallbacks(
                         host::debugViewEnabled,
-                        TerminalNativeBridge::nativeLoaded,
                         host::installState,
                         host::setInstallState,
                         host::readinessState,
