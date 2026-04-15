@@ -210,6 +210,13 @@ Agent reporting contract (mandatory for cleanup campaign updates):
      `notifyVisibleViewport` stays `Consumer<String>`. ~706 → ~731 lines (imports +
      locals). Validation: `:app:compileReleaseJavaWithJavac` + deploy +
      `AndroidRuntime:E` clean.
+   - Completed (mini-wave): `ZideTerminalActivity` **`create*Callbacks()` only**
+     (activity factory wiring lane): removed **single-use delegate locals** that
+     only renamed a single callsite—assembly constructors now pass `this::…`,
+     field reads, or trivial lambdas directly. **731 → 686** lines in
+     `ZideTerminalActivity.java`; unused `java.util.function` imports dropped where
+     factories no longer needed them. `ChromeController` / `SurfaceController`
+     unchanged (still frozen per queue). **Validation:** `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac` after **each** of the three commits touching that file; `python3 ops/android_terminal_host.py deploy` plus `adb logcat -d -s AndroidRuntime:E` **twice** (after commit 2 and after commit 3 of the wave), both with empty `AndroidRuntime:E`.
    - Next: net simplification in `ZideTerminalActivity` `create*Callbacks()`
      factories: collapse redundant one-line supplier glue and trivial `this::`
      forwards where the activity adds no policy (prefer direct field capture or
