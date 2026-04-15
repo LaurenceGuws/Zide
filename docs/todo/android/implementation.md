@@ -165,6 +165,8 @@ Agent reporting contract (mandatory for cleanup campaign updates):
    - Completed: `ChromeController` net-smaller: inlined drawer gesture/scrim
      wiring, assist modifier latch apply, and scrim/hotspot visibility ternaries
      so six one-line *Chrome* / visibility helpers are gone (behavior unchanged).
+   - Completed: `ChromeController` net-smaller: sidebar nav buttons and assist
+     character rows no longer use per-button private wrappers (behavior unchanged).
    - Completed: `SurfaceController` net-smaller: viewport publish, layout params,
      redraw telemetry, and install callback resolution no longer sit behind
      separate private methods (behavior unchanged).
