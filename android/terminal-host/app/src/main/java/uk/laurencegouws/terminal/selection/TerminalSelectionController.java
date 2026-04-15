@@ -752,53 +752,65 @@ public final class TerminalSelectionController {
             terminalSelectionActionMode.invalidate();
             return;
         }
-        terminalSelectionActionMode = host.productSurfaceContainer().startActionMode(
-                new ActionMode.Callback2() {
-                    @Override
-                    public boolean onCreateActionMode(ActionMode mode, Menu menu) {
-                        menu.add(Menu.NONE, android.R.id.copy, Menu.NONE, android.R.string.copy)
-                                .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);
-                        return true;
-                    }
-
-                    @Override
-                    public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
-                        return false;
-                    }
-
-                    @Override
-                    public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
-                        if (item.getItemId() == android.R.id.copy) {
-                            copyCurrentShellSelectionToClipboard();
-                            mode.finish();
-                            return true;
-                        }
-                        return false;
-                    }
-
-                    @Override
-                    public void onDestroyActionMode(ActionMode mode) {
-                        if (terminalSelectionActionMode == mode) {
-                            terminalSelectionActionMode = null;
-                        }
-                        if (!suppressSelectionClearOnActionModeDestroy) {
-                            bridge.clearSelection();
-                        }
-                        suppressSelectionClearOnActionModeDestroy = false;
-                        requestFrameLoopReevaluation();
-                    }
-
-                    @Override
-                    public void onGetContentRect(ActionMode mode, View view, Rect outRect) {
-                        if (!populateTerminalSelectionContentRect(outRect)) {
-                            outRect.set(0, 0, Math.max(view.getWidth(), 1), Math.max(view.getHeight(), 1));
-                        }
-                    }
-                },
-                ActionMode.TYPE_FLOATING);
+        terminalSelectionActionMode = host.productSurfaceContainer()
+                .startActionMode(createTerminalSelectionActionModeCallback(), ActionMode.TYPE_FLOATING);
         if (terminalSelectionActionMode != null) {
             terminalSelectionActionMode.invalidateContentRect();
         }
+    }
+
+    private ActionMode.Callback2 createTerminalSelectionActionModeCallback() {
+        return new ActionMode.Callback2() {
+            @Override
+            public boolean onCreateActionMode(ActionMode mode, Menu menu) {
+                menu.add(Menu.NONE, android.R.id.copy, Menu.NONE, android.R.string.copy)
+                        .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);
+                return true;
+            }
+
+            @Override
+            public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
+                return false;
+            }
+
+            @Override
+            public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
+                if (item.getItemId() != android.R.id.copy) {
+                    return false;
+                }
+                copyCurrentShellSelectionToClipboard();
+                mode.finish();
+                return true;
+            }
+
+            @Override
+            public void onDestroyActionMode(ActionMode mode) {
+                onTerminalSelectionActionModeDestroyed(mode);
+            }
+
+            @Override
+            public void onGetContentRect(ActionMode mode, View view, Rect outRect) {
+                populateSelectionActionModeContentRect(view, outRect);
+            }
+        };
+    }
+
+    private void onTerminalSelectionActionModeDestroyed(ActionMode mode) {
+        if (terminalSelectionActionMode == mode) {
+            terminalSelectionActionMode = null;
+        }
+        if (!suppressSelectionClearOnActionModeDestroy) {
+            bridge.clearSelection();
+        }
+        suppressSelectionClearOnActionModeDestroy = false;
+        requestFrameLoopReevaluation();
+    }
+
+    private void populateSelectionActionModeContentRect(View view, Rect outRect) {
+        if (populateTerminalSelectionContentRect(outRect)) {
+            return;
+        }
+        outRect.set(0, 0, Math.max(view.getWidth(), 1), Math.max(view.getHeight(), 1));
     }
 
     private void finishTerminalSelectionActionMode() {
