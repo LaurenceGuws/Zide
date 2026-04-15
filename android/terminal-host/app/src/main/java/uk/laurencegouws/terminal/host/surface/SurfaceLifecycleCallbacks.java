@@ -70,10 +70,6 @@ public final class SurfaceLifecycleCallbacks implements SurfaceCallbacks.Callbac
         this.surfaceCallback = surfaceCallback;
     }
 
-    @Override
-    public boolean nativeLoaded() {
-        return TerminalNativeBridge.nativeLoaded();
-    }
 
     @Override
     public boolean debugViewEnabled() {

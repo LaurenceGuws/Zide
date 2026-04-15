@@ -5,14 +5,13 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.widget.FrameLayout;
 
+import uk.laurencegouws.terminal.TerminalNativeBridge;
 import uk.laurencegouws.terminal.debug.AndroidDebugFormatter;
 
 /** Adapts activity-owned callbacks/state into {@link SurfaceBridge.Callbacks}. */
 public final class SurfaceCallbacks implements SurfaceBridge.Callbacks {
     /** Activity callbacks used by the surface host bridge. */
     public interface Callbacks {
-        boolean nativeLoaded();
-
         boolean debugViewEnabled();
 
         boolean currentImeVisible();
@@ -68,7 +67,7 @@ public final class SurfaceCallbacks implements SurfaceBridge.Callbacks {
 
     @Override
     public boolean nativeLoaded() {
-        return callbacks.nativeLoaded();
+        return TerminalNativeBridge.nativeLoaded();
     }
 
     @Override
