@@ -269,12 +269,14 @@ Agent reporting contract (mandatory for cleanup campaign updates):
     trend without changing controller ownership.
     **Validation:** `:app:compileReleaseJavaWithJavac` each commit; deploy +
     `adb logcat -d -s AndroidRuntime:E` at seam cadence (empty).
-   - Next: net simplification in `ZideTerminalActivity` `create*Callbacks()`
-     factories: collapse redundant one-line supplier glue and trivial `this::`
-     forwards where the activity adds no policy (prefer direct field capture or
-     a single delegation site); keep assembly contracts and downstream ownership
-     unchanged. `ChromeController` / `SurfaceController` stay out of scope until this
-     `Next:` line is deliberately advanced.
+  - Next: complete Android host callback/assembly contract cleanup before
+    another activity-only pass: (1) finish `nativeLoaded` one-source collapse
+    across remaining host adapters/assemblies, (2) run constructor-pressure
+    reduction on top callback/assembly classes (remove redundant ctor
+    params/fields derivable from stable sources), then (3) normalize JNI static
+    read boundaries consistently across seams; after those stabilize, return to
+    `ZideTerminalActivity` `create*Callbacks()` thinning. `ChromeController` /
+    `SurfaceController` policy work remains frozen.
 3. Stabilize selection/scroll interaction behavior under manual device usage.
 4. Keep debug/profiling instrumentation behind explicit flags and remove stale
    probes after fixes land.
