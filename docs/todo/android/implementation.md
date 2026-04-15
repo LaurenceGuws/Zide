@@ -248,6 +248,10 @@ the existing per-commit validation rules.
        host container) is one named check; sync delegates the idle→show path
        through a single active-selection gate; copy toolbar clicks resolve the
        system copy action by id in one place
+     - mini-wave: explicit finish reads the current mode once; “already
+       showing” refresh is its own branch; destroy detaches by `ActionMode`
+       identity before teardown effects; clipboard applies primary clip + success
+       telemetry in one place
    - Exit criteria:
      - compile pass per commit; deploy + `AndroidRuntime:E` smoke at seam
        boundary
