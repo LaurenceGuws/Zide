@@ -987,7 +987,10 @@ public final class TerminalSelectionController {
             host.appendEvent("product.selection.copy result=no-bytes");
             return;
         }
-        final String text = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+        copyPlainTextSelectionToClipboard(new String(bytes, java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    private void copyPlainTextSelectionToClipboard(String text) {
         final ClipboardManager clipboard = host.context().getSystemService(ClipboardManager.class);
         if (clipboard == null) {
             host.appendEvent("product.selection.copy result=no-clipboard");
