@@ -389,7 +389,6 @@ public final class ZideTerminalActivity extends Activity
                         () -> currentReadinessState,
                         userlandWorkflowController,
                         userlandSessionCoordinator,
-                        this::showDebugViewIfReady,
                         this::appendEvent,
                         this::updateStatus,
                         terminalRuntimeAssetsController,

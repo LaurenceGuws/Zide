@@ -26,7 +26,6 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
     private final Supplier<UserlandReadinessState> currentReadinessState;
     private final UserlandWorkflowController userlandWorkflowController;
     private final UserlandSessionCoordinator userlandSessionCoordinator;
-    private final UiStartupAssembly.ShowDebugView showDebugView;
     private final Consumer<String> appendEvent;
     private final Consumer<String> updateStatus;
     private final RuntimeAssetsController runtimeAssetsController;
@@ -46,7 +45,6 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
             Supplier<UserlandReadinessState> currentReadinessState,
             UserlandWorkflowController userlandWorkflowController,
             UserlandSessionCoordinator userlandSessionCoordinator,
-            UiStartupAssembly.ShowDebugView showDebugView,
             Consumer<String> appendEvent,
             Consumer<String> updateStatus,
             RuntimeAssetsController runtimeAssetsController,
@@ -64,7 +62,6 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
         this.currentReadinessState = currentReadinessState;
         this.userlandWorkflowController = userlandWorkflowController;
         this.userlandSessionCoordinator = userlandSessionCoordinator;
-        this.showDebugView = showDebugView;
         this.appendEvent = appendEvent;
         this.updateStatus = updateStatus;
         this.runtimeAssetsController = runtimeAssetsController;
@@ -114,11 +111,6 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
     @Override
     public UserlandSessionCoordinator userlandSessionCoordinator() {
         return userlandSessionCoordinator;
-    }
-
-    @Override
-    public UiStartupAssembly.ShowDebugView showDebugView() {
-        return showDebugView;
     }
 
     @Override

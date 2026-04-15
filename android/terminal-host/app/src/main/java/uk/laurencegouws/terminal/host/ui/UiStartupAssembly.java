@@ -36,8 +36,6 @@ public final class UiStartupAssembly {
 
         UserlandSessionCoordinator userlandSessionCoordinator();
 
-        ShowDebugView showDebugView();
-
         Consumer<String> appendEvent();
 
         Consumer<String> updateStatus();
@@ -55,11 +53,6 @@ public final class UiStartupAssembly {
         FrameLoopController frameLoopController();
 
         View leftSidebar();
-    }
-
-    /** Functional callback for routing debug-view requests. */
-    public interface ShowDebugView {
-        void call(String eventName, String statusLabel);
     }
 
     /** Immutable startup result values. */
@@ -88,7 +81,7 @@ public final class UiStartupAssembly {
                                 host::currentReadinessState,
                                 host.userlandWorkflowController(),
                                 host.userlandSessionCoordinator(),
-                                host.showDebugView()::call,
+                                host.viewModeController()::showDebugView,
                                 host.appendEvent(),
                                 host.updateStatus()));
         userlandReadinessBlockerController.bind();
