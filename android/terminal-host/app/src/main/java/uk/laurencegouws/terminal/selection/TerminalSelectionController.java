@@ -607,7 +607,7 @@ public final class TerminalSelectionController {
         }
         final float deltaSeconds = resolveSelectionAutoscrollDeltaSeconds(frameTimeNanos);
         applySelectionAutoscrollRows(rowsPerSecond * deltaSeconds);
-        if (selectionDragActive && currentSelectionAutoscrollRowsPerSecond() != 0.0f) {
+        if (shouldContinueSelectionAutoscroll()) {
             scheduleSelectionAutoscrollFrame();
             return;
         }
@@ -622,7 +622,7 @@ public final class TerminalSelectionController {
         final long previousFrameNanos = selectionAutoscrollLastFrameNanos;
         selectionAutoscrollLastFrameNanos = frameTimeNanos;
         if (previousFrameNanos == 0L) {
-            return 1.0f / 60.0f;
+            return SELECTION_AUTOSCROLL_IMMEDIATE_STEP_SECONDS;
         }
         return Math.max(1.0e-3f, Math.min(0.05f, (frameTimeNanos - previousFrameNanos) / 1_000_000_000.0f));
     }
@@ -633,9 +633,13 @@ public final class TerminalSelectionController {
             return;
         }
         applySelectionAutoscrollRows(rowsPerSecond * SELECTION_AUTOSCROLL_IMMEDIATE_STEP_SECONDS);
-        if (selectionDragActive && computeSelectionAutoscrollRowsPerSecond(selectionDragY) != 0.0f) {
+        if (shouldContinueSelectionAutoscroll()) {
             scheduleSelectionAutoscrollFrame();
         }
+    }
+
+    private boolean shouldContinueSelectionAutoscroll() {
+        return selectionDragActive && currentSelectionAutoscrollRowsPerSecond() != 0.0f;
     }
 
     private static float lerp(float start, float end, float t) {
