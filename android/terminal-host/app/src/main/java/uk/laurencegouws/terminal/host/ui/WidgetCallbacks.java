@@ -25,7 +25,6 @@ import uk.laurencegouws.terminal.userland.UserlandInstallState;
 public final class WidgetCallbacks implements WidgetAssembly.Host {
     private final Supplier<Activity> activity;
     private final Supplier<android.os.Handler> handler;
-    private final BooleanSupplier nativeLoaded;
     private final BooleanSupplier debugViewEnabled;
     private final Consumer<Boolean> setDebugViewEnabled;
     private final BooleanSupplier imeVisible;
@@ -68,7 +67,6 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
     public WidgetCallbacks(
             Supplier<Activity> activity,
             Supplier<android.os.Handler> handler,
-            BooleanSupplier nativeLoaded,
             BooleanSupplier debugViewEnabled,
             Consumer<Boolean> setDebugViewEnabled,
             BooleanSupplier imeVisible,
@@ -109,7 +107,6 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
             Consumer<String> handleProductShellStateEvent) {
         this.activity = activity;
         this.handler = handler;
-        this.nativeLoaded = nativeLoaded;
         this.debugViewEnabled = debugViewEnabled;
         this.setDebugViewEnabled = setDebugViewEnabled;
         this.imeVisible = imeVisible;
@@ -158,11 +155,6 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
     @Override
     public android.os.Handler handler() {
         return handler.get();
-    }
-
-    @Override
-    public boolean nativeLoaded() {
-        return nativeLoaded.getAsBoolean();
     }
 
     @Override

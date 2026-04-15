@@ -33,8 +33,6 @@ public final class WidgetAssembly {
 
         android.os.Handler handler();
 
-        boolean nativeLoaded();
-
         boolean debugViewEnabled();
 
         void setDebugViewEnabled(boolean enabled);
@@ -156,7 +154,6 @@ public final class WidgetAssembly {
                         host.productReadinessDetail(),
                         host.productReadinessRetryButton(),
                         new ProductShellStateCallbacks(
-                                host::nativeLoaded,
                                 host::currentInstallStateInstalling,
                                 host::currentInstallStateFailed,
                                 host::currentReadinessState,

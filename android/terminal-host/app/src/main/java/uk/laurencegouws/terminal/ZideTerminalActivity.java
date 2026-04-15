@@ -293,7 +293,6 @@ public final class ZideTerminalActivity extends Activity
         return new WidgetCallbacks(
                 () -> this,
                 () -> handler,
-                () -> nativeLoaded,
                 () -> debugViewEnabled,
                 e -> debugViewEnabled = e,
                 () -> imeVisible,

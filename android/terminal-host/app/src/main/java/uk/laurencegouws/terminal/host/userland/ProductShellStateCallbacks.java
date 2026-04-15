@@ -11,7 +11,6 @@ import uk.laurencegouws.terminal.userland.UserlandInstallState;
 
 /** Functional callback adapter for {@link ProductShellStateBridge}. */
 public final class ProductShellStateCallbacks implements ProductShellStateBridge.Callbacks {
-    private final BooleanSupplier nativeLoaded;
     private final BooleanSupplier installInstalling;
     private final BooleanSupplier installFailed;
     private final Supplier<UserlandReadinessState> readinessState;
@@ -19,13 +18,11 @@ public final class ProductShellStateCallbacks implements ProductShellStateBridge
     private final Supplier<SurfaceView> surfaceView;
 
     public ProductShellStateCallbacks(
-            BooleanSupplier nativeLoaded,
             BooleanSupplier installInstalling,
             BooleanSupplier installFailed,
             Supplier<UserlandReadinessState> readinessState,
             Supplier<UserlandInstallState> installState,
             Supplier<SurfaceView> surfaceView) {
-        this.nativeLoaded = nativeLoaded;
         this.installInstalling = installInstalling;
         this.installFailed = installFailed;
         this.readinessState = readinessState;
@@ -35,7 +32,7 @@ public final class ProductShellStateCallbacks implements ProductShellStateBridge
 
     @Override
     public boolean nativeLoaded() {
-        return nativeLoaded.getAsBoolean();
+        return TerminalNativeBridge.nativeLoaded();
     }
 
     @Override
