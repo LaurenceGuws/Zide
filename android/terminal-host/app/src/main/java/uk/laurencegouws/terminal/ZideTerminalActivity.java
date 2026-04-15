@@ -339,7 +339,7 @@ public final class ZideTerminalActivity extends Activity
     private SessionAssemblyCallbacks createSessionAssemblyCallbacks() {
         return new SessionAssemblyCallbacks(
                 () -> this,
-                this::currentUserlandRelease,
+                () -> userlandRelease,
                 () -> handler,
                 this::appendEvent,
                 this::updateStatus,
@@ -424,11 +424,11 @@ public final class ZideTerminalActivity extends Activity
         return new WorkflowAssemblyCallbacks(
                 () -> this,
                 () -> handler,
-                this::currentUserlandRelease,
+                () -> userlandRelease,
                 this::setUserlandRelease,
                 this::appendEvent,
                 this::updateStatus,
-                this::packageStatusTextView,
+                () -> packageStatusText,
                 this::setCurrentInstallState,
                 this::setCurrentReadinessState,
                 this::applyInstallStateIfReady,
@@ -480,10 +480,6 @@ public final class ZideTerminalActivity extends Activity
         return getSystemService(InputMethodManager.class);
     }
 
-    private TextView packageStatusTextView() {
-        return packageStatusText;
-    }
-
     private boolean isNativeLoaded() {
         return nativeLoaded;
     }
@@ -519,10 +515,6 @@ public final class ZideTerminalActivity extends Activity
 
     private UserlandReadinessState currentReadinessStateSnapshot() {
         return currentReadinessState;
-    }
-
-    private UserlandRelease currentUserlandRelease() {
-        return userlandRelease;
     }
 
     private android.view.SurfaceView currentSurfaceViewIfReady() {
