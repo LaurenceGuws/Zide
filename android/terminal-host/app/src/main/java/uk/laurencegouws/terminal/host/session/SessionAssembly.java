@@ -5,6 +5,7 @@ import android.os.Handler;
 
 import java.util.function.Function;
 
+import uk.laurencegouws.terminal.TerminalNativeBridge;
 import uk.laurencegouws.terminal.debug.TerminalNativeStatusLabels;
 import uk.laurencegouws.terminal.host.runtime.FrameLoopController;
 import uk.laurencegouws.terminal.host.runtime.RuntimeFactory;
@@ -21,8 +22,6 @@ public final class SessionAssembly {
         Context context();
 
         UserlandRelease userlandRelease();
-
-        boolean nativeLoaded();
 
         Handler handler();
 
@@ -75,7 +74,7 @@ public final class SessionAssembly {
                         UserlandPolicy.readinessStampPath(host.context()),
                         UserlandPolicy.shellPath(host.context()),
                         host.userlandRelease(),
-                        host.nativeLoaded(),
+                        TerminalNativeBridge.nativeLoaded(),
                         host::nativeRestartSession,
                         host::nativePollSession,
                         host::nativeIsSessionAlive);

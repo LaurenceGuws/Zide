@@ -3,6 +3,7 @@ package uk.laurencegouws.terminal.host.runtime;
 import android.view.SurfaceView;
 import android.view.View;
 
+import uk.laurencegouws.terminal.TerminalNativeBridge;
 import uk.laurencegouws.terminal.debug.TerminalStatusController;
 import uk.laurencegouws.terminal.gesture.TerminalGestureStateController;
 import uk.laurencegouws.terminal.scroll.TerminalScrollOverlayView;
@@ -17,8 +18,6 @@ public final class ProductRuntimeAssembly {
     /** Activity callbacks required for product-runtime assembly. */
     public interface Host {
         boolean debugViewEnabled();
-
-        boolean nativeLoaded();
 
         UserlandInstallState installState();
 
@@ -56,7 +55,7 @@ public final class ProductRuntimeAssembly {
         return RuntimeFactory.createProductRuntimeController(
                 RuntimeFactory.createProductRuntimeHostCallbacks(
                         host::debugViewEnabled,
-                        host::nativeLoaded,
+                        TerminalNativeBridge::nativeLoaded,
                         host::installState,
                         host::setInstallState,
                         host::readinessState,

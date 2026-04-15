@@ -59,11 +59,6 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
     }
 
     @Override
-    public boolean nativeLoaded() {
-        return TerminalNativeBridge.nativeLoaded();
-    }
-
-    @Override
     public Handler handler() {
         return handler.get();
     }

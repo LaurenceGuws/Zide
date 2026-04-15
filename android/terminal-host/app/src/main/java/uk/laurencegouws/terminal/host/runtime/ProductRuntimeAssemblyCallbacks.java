@@ -7,7 +7,6 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import uk.laurencegouws.terminal.TerminalNativeBridge;
 import uk.laurencegouws.terminal.debug.TerminalStatusController;
 import uk.laurencegouws.terminal.gesture.TerminalGestureStateController;
 import uk.laurencegouws.terminal.scroll.TerminalScrollOverlayView;
@@ -71,11 +70,6 @@ public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAsse
     @Override
     public boolean debugViewEnabled() {
         return debugViewEnabled.getAsBoolean();
-    }
-
-    @Override
-    public boolean nativeLoaded() {
-        return TerminalNativeBridge.nativeLoaded();
     }
 
     @Override
