@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.os.Handler;
 import android.widget.FrameLayout;
 
-import uk.laurencegouws.terminal.TerminalNativeBridge;
 import uk.laurencegouws.terminal.gesture.TerminalGestureStateController;
 import uk.laurencegouws.terminal.selection.TerminalSelectionController;
 
@@ -59,33 +58,7 @@ public final class InteractionAssembly {
                 host::refreshProductScrollOverlay,
                 host::reevaluateProductFrameLoop,
                 host::appendEvent,
-                host::nativeLoaded,
-                TerminalNativeBridge::nativeBeginSelectionWordAtVisibleCellBridge,
-                TerminalNativeBridge::nativeExtendSelectionGestureToVisibleCellBridge,
-                TerminalNativeBridge::nativeFinishSelectionGestureBridge,
-                TerminalNativeBridge::nativeClearSelectionBridge,
-                TerminalNativeBridge::nativeUpdateSelectionStartAtVisibleCellBridge,
-                TerminalNativeBridge::nativeUpdateSelectionEndAtVisibleCellBridge,
-                TerminalNativeBridge::nativeCurrentSelectionActiveBridge,
-                TerminalNativeBridge::nativeCurrentSelectionRectLeftBridge,
-                TerminalNativeBridge::nativeCurrentSelectionRectTopBridge,
-                TerminalNativeBridge::nativeCurrentSelectionRectRightBridge,
-                TerminalNativeBridge::nativeCurrentSelectionRectBottomBridge,
-                TerminalNativeBridge::nativeCurrentSelectionStartRectLeftBridge,
-                TerminalNativeBridge::nativeCurrentSelectionStartRectTopBridge,
-                TerminalNativeBridge::nativeCurrentSelectionStartRectRightBridge,
-                TerminalNativeBridge::nativeCurrentSelectionStartRectBottomBridge,
-                TerminalNativeBridge::nativeCurrentSelectionEndRectLeftBridge,
-                TerminalNativeBridge::nativeCurrentSelectionEndRectTopBridge,
-                TerminalNativeBridge::nativeCurrentSelectionEndRectRightBridge,
-                TerminalNativeBridge::nativeCurrentSelectionEndRectBottomBridge,
-                TerminalNativeBridge::nativeCurrentSelectionTextBytesBridge,
-                TerminalNativeBridge::nativeCurrentSessionVisibleRowsBridge,
-                TerminalNativeBridge::nativeCurrentSessionVisibleColsBridge,
-                TerminalNativeBridge::nativeCurrentSessionScrollbackCountBridge,
-                TerminalNativeBridge::nativeCurrentSessionScrollbackOffsetBridge,
-                TerminalNativeBridge::nativeSetSessionScrollbackOffsetBridge,
-                TerminalNativeBridge::nativeFollowSessionLiveBottomBridge);
+                host::nativeLoaded);
         selectionController.install();
 
         final TerminalGestureStateController terminalGestureStateController =
@@ -93,14 +66,7 @@ public final class InteractionAssembly {
                         host.activity(),
                         host.handler(),
                         host::nativeLoaded,
-                        TerminalNativeBridge::nativeCurrentSessionVisibleRowsBridge,
                         host::productViewportHeightPx,
-                        TerminalNativeBridge::nativeCurrentSessionScrollbackCountBridge,
-                        TerminalNativeBridge::nativeCurrentSessionScrollbackOffsetBridge,
-                        TerminalNativeBridge::nativeSetSessionScrollbackOffsetBridge,
-                        TerminalNativeBridge::nativeFollowSessionLiveBottomBridge,
-                        TerminalNativeBridge::nativeApplyTerminalPinchZoomBridge,
-                        TerminalNativeBridge::nativeSetTerminalPinchActiveBridge,
                         host::refreshProductScrollOverlay,
                         host::reevaluateProductFrameLoop);
         return new Result(selectionController, terminalGestureStateController);

@@ -2,11 +2,9 @@ package uk.laurencegouws.terminal.host.interaction;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
-import java.util.function.IntBinaryOperator;
 import java.util.function.IntSupplier;
-import java.util.function.IntUnaryOperator;
-import java.util.function.Supplier;
 
+import uk.laurencegouws.terminal.TerminalNativeBridge;
 import uk.laurencegouws.terminal.selection.TerminalSelectionControllerFactory;
 
 /** Functional callback adapter for {@link TerminalSelectionControllerFactory}. */
@@ -18,32 +16,6 @@ public final class SelectionCallbacks implements TerminalSelectionControllerFact
     private final Runnable reevaluateProductFrameLoop;
     private final Consumer<String> appendEvent;
     private final BooleanSupplier nativeLoaded;
-    private final IntBinaryOperator beginWordSelectionAtVisibleCell;
-    private final IntBinaryOperator extendSelectionGestureToVisibleCell;
-    private final IntSupplier finishSelectionGesture;
-    private final IntSupplier clearSelection;
-    private final IntBinaryOperator updateSelectionStartAtVisibleCell;
-    private final IntBinaryOperator updateSelectionEndAtVisibleCell;
-    private final BooleanSupplier currentSelectionActive;
-    private final IntSupplier currentSelectionRectLeft;
-    private final IntSupplier currentSelectionRectTop;
-    private final IntSupplier currentSelectionRectRight;
-    private final IntSupplier currentSelectionRectBottom;
-    private final IntSupplier currentSelectionStartRectLeft;
-    private final IntSupplier currentSelectionStartRectTop;
-    private final IntSupplier currentSelectionStartRectRight;
-    private final IntSupplier currentSelectionStartRectBottom;
-    private final IntSupplier currentSelectionEndRectLeft;
-    private final IntSupplier currentSelectionEndRectTop;
-    private final IntSupplier currentSelectionEndRectRight;
-    private final IntSupplier currentSelectionEndRectBottom;
-    private final Supplier<byte[]> currentSelectionTextBytes;
-    private final IntSupplier currentVisibleRows;
-    private final IntSupplier currentVisibleCols;
-    private final IntSupplier currentScrollbackCount;
-    private final IntSupplier currentScrollbackOffset;
-    private final IntUnaryOperator setShellScrollbackOffset;
-    private final IntSupplier followShellLiveBottom;
 
     public SelectionCallbacks(
             IntSupplier productViewportWidthPx,
@@ -52,33 +24,7 @@ public final class SelectionCallbacks implements TerminalSelectionControllerFact
             Runnable refreshProductScrollOverlay,
             Runnable reevaluateProductFrameLoop,
             Consumer<String> appendEvent,
-            BooleanSupplier nativeLoaded,
-            IntBinaryOperator beginWordSelectionAtVisibleCell,
-            IntBinaryOperator extendSelectionGestureToVisibleCell,
-            IntSupplier finishSelectionGesture,
-            IntSupplier clearSelection,
-            IntBinaryOperator updateSelectionStartAtVisibleCell,
-            IntBinaryOperator updateSelectionEndAtVisibleCell,
-            BooleanSupplier currentSelectionActive,
-            IntSupplier currentSelectionRectLeft,
-            IntSupplier currentSelectionRectTop,
-            IntSupplier currentSelectionRectRight,
-            IntSupplier currentSelectionRectBottom,
-            IntSupplier currentSelectionStartRectLeft,
-            IntSupplier currentSelectionStartRectTop,
-            IntSupplier currentSelectionStartRectRight,
-            IntSupplier currentSelectionStartRectBottom,
-            IntSupplier currentSelectionEndRectLeft,
-            IntSupplier currentSelectionEndRectTop,
-            IntSupplier currentSelectionEndRectRight,
-            IntSupplier currentSelectionEndRectBottom,
-            Supplier<byte[]> currentSelectionTextBytes,
-            IntSupplier currentVisibleRows,
-            IntSupplier currentVisibleCols,
-            IntSupplier currentScrollbackCount,
-            IntSupplier currentScrollbackOffset,
-            IntUnaryOperator setShellScrollbackOffset,
-            IntSupplier followShellLiveBottom) {
+            BooleanSupplier nativeLoaded) {
         this.productViewportWidthPx = productViewportWidthPx;
         this.productViewportHeightPx = productViewportHeightPx;
         this.stopScrollbackFling = stopScrollbackFling;
@@ -86,32 +32,6 @@ public final class SelectionCallbacks implements TerminalSelectionControllerFact
         this.reevaluateProductFrameLoop = reevaluateProductFrameLoop;
         this.appendEvent = appendEvent;
         this.nativeLoaded = nativeLoaded;
-        this.beginWordSelectionAtVisibleCell = beginWordSelectionAtVisibleCell;
-        this.extendSelectionGestureToVisibleCell = extendSelectionGestureToVisibleCell;
-        this.finishSelectionGesture = finishSelectionGesture;
-        this.clearSelection = clearSelection;
-        this.updateSelectionStartAtVisibleCell = updateSelectionStartAtVisibleCell;
-        this.updateSelectionEndAtVisibleCell = updateSelectionEndAtVisibleCell;
-        this.currentSelectionActive = currentSelectionActive;
-        this.currentSelectionRectLeft = currentSelectionRectLeft;
-        this.currentSelectionRectTop = currentSelectionRectTop;
-        this.currentSelectionRectRight = currentSelectionRectRight;
-        this.currentSelectionRectBottom = currentSelectionRectBottom;
-        this.currentSelectionStartRectLeft = currentSelectionStartRectLeft;
-        this.currentSelectionStartRectTop = currentSelectionStartRectTop;
-        this.currentSelectionStartRectRight = currentSelectionStartRectRight;
-        this.currentSelectionStartRectBottom = currentSelectionStartRectBottom;
-        this.currentSelectionEndRectLeft = currentSelectionEndRectLeft;
-        this.currentSelectionEndRectTop = currentSelectionEndRectTop;
-        this.currentSelectionEndRectRight = currentSelectionEndRectRight;
-        this.currentSelectionEndRectBottom = currentSelectionEndRectBottom;
-        this.currentSelectionTextBytes = currentSelectionTextBytes;
-        this.currentVisibleRows = currentVisibleRows;
-        this.currentVisibleCols = currentVisibleCols;
-        this.currentScrollbackCount = currentScrollbackCount;
-        this.currentScrollbackOffset = currentScrollbackOffset;
-        this.setShellScrollbackOffset = setShellScrollbackOffset;
-        this.followShellLiveBottom = followShellLiveBottom;
     }
 
     @Override
@@ -151,131 +71,131 @@ public final class SelectionCallbacks implements TerminalSelectionControllerFact
 
     @Override
     public int beginWordSelectionAtVisibleCell(int row, int col) {
-        return beginWordSelectionAtVisibleCell.applyAsInt(row, col);
+        return TerminalNativeBridge.nativeBeginSelectionWordAtVisibleCellBridge(row, col);
     }
 
     @Override
     public int extendSelectionGestureToVisibleCell(int row, int col) {
-        return extendSelectionGestureToVisibleCell.applyAsInt(row, col);
+        return TerminalNativeBridge.nativeExtendSelectionGestureToVisibleCellBridge(row, col);
     }
 
     @Override
     public int finishSelectionGesture() {
-        return finishSelectionGesture.getAsInt();
+        return TerminalNativeBridge.nativeFinishSelectionGestureBridge();
     }
 
     @Override
     public int clearSelection() {
-        return clearSelection.getAsInt();
+        return TerminalNativeBridge.nativeClearSelectionBridge();
     }
 
     @Override
     public int updateSelectionStartAtVisibleCell(int row, int col) {
-        return updateSelectionStartAtVisibleCell.applyAsInt(row, col);
+        return TerminalNativeBridge.nativeUpdateSelectionStartAtVisibleCellBridge(row, col);
     }
 
     @Override
     public int updateSelectionEndAtVisibleCell(int row, int col) {
-        return updateSelectionEndAtVisibleCell.applyAsInt(row, col);
+        return TerminalNativeBridge.nativeUpdateSelectionEndAtVisibleCellBridge(row, col);
     }
 
     @Override
     public boolean currentSelectionActive() {
-        return currentSelectionActive.getAsBoolean();
+        return TerminalNativeBridge.nativeCurrentSelectionActiveBridge();
     }
 
     @Override
     public int currentSelectionRectLeft() {
-        return currentSelectionRectLeft.getAsInt();
+        return TerminalNativeBridge.nativeCurrentSelectionRectLeftBridge();
     }
 
     @Override
     public int currentSelectionRectTop() {
-        return currentSelectionRectTop.getAsInt();
+        return TerminalNativeBridge.nativeCurrentSelectionRectTopBridge();
     }
 
     @Override
     public int currentSelectionRectRight() {
-        return currentSelectionRectRight.getAsInt();
+        return TerminalNativeBridge.nativeCurrentSelectionRectRightBridge();
     }
 
     @Override
     public int currentSelectionRectBottom() {
-        return currentSelectionRectBottom.getAsInt();
+        return TerminalNativeBridge.nativeCurrentSelectionRectBottomBridge();
     }
 
     @Override
     public int currentSelectionStartRectLeft() {
-        return currentSelectionStartRectLeft.getAsInt();
+        return TerminalNativeBridge.nativeCurrentSelectionStartRectLeftBridge();
     }
 
     @Override
     public int currentSelectionStartRectTop() {
-        return currentSelectionStartRectTop.getAsInt();
+        return TerminalNativeBridge.nativeCurrentSelectionStartRectTopBridge();
     }
 
     @Override
     public int currentSelectionStartRectRight() {
-        return currentSelectionStartRectRight.getAsInt();
+        return TerminalNativeBridge.nativeCurrentSelectionStartRectRightBridge();
     }
 
     @Override
     public int currentSelectionStartRectBottom() {
-        return currentSelectionStartRectBottom.getAsInt();
+        return TerminalNativeBridge.nativeCurrentSelectionStartRectBottomBridge();
     }
 
     @Override
     public int currentSelectionEndRectLeft() {
-        return currentSelectionEndRectLeft.getAsInt();
+        return TerminalNativeBridge.nativeCurrentSelectionEndRectLeftBridge();
     }
 
     @Override
     public int currentSelectionEndRectTop() {
-        return currentSelectionEndRectTop.getAsInt();
+        return TerminalNativeBridge.nativeCurrentSelectionEndRectTopBridge();
     }
 
     @Override
     public int currentSelectionEndRectRight() {
-        return currentSelectionEndRectRight.getAsInt();
+        return TerminalNativeBridge.nativeCurrentSelectionEndRectRightBridge();
     }
 
     @Override
     public int currentSelectionEndRectBottom() {
-        return currentSelectionEndRectBottom.getAsInt();
+        return TerminalNativeBridge.nativeCurrentSelectionEndRectBottomBridge();
     }
 
     @Override
     public byte[] currentSelectionTextBytes() {
-        return currentSelectionTextBytes.get();
+        return TerminalNativeBridge.nativeCurrentSelectionTextBytesBridge();
     }
 
     @Override
     public int currentVisibleRows() {
-        return currentVisibleRows.getAsInt();
+        return TerminalNativeBridge.nativeCurrentSessionVisibleRowsBridge();
     }
 
     @Override
     public int currentVisibleCols() {
-        return currentVisibleCols.getAsInt();
+        return TerminalNativeBridge.nativeCurrentSessionVisibleColsBridge();
     }
 
     @Override
     public int currentScrollbackCount() {
-        return currentScrollbackCount.getAsInt();
+        return TerminalNativeBridge.nativeCurrentSessionScrollbackCountBridge();
     }
 
     @Override
     public int currentScrollbackOffset() {
-        return currentScrollbackOffset.getAsInt();
+        return TerminalNativeBridge.nativeCurrentSessionScrollbackOffsetBridge();
     }
 
     @Override
     public int setShellScrollbackOffset(int offsetRows) {
-        return setShellScrollbackOffset.applyAsInt(offsetRows);
+        return TerminalNativeBridge.nativeSetSessionScrollbackOffsetBridge(offsetRows);
     }
 
     @Override
     public int followShellLiveBottom() {
-        return followShellLiveBottom.getAsInt();
+        return TerminalNativeBridge.nativeFollowSessionLiveBottomBridge();
     }
 }
