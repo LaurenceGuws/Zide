@@ -52,27 +52,15 @@ public final class ChromeController {
 
     private void bindSidebarNavActions() {
         final View sidebar = host.leftSidebar();
-        bindSidebarRestartNavButton((Button) sidebar.findViewById(uk.laurencegouws.terminal.R.id.sidebar_restart_button));
-        bindSidebarDebugNavButton((Button) sidebar.findViewById(uk.laurencegouws.terminal.R.id.sidebar_debug_button));
-        bindSidebarPackagesNavButton((Button) sidebar.findViewById(uk.laurencegouws.terminal.R.id.sidebar_packages_button));
-    }
-
-    private void bindSidebarRestartNavButton(Button restartButton) {
-        restartButton.setOnClickListener(view -> {
+        ((Button) sidebar.findViewById(uk.laurencegouws.terminal.R.id.sidebar_restart_button)).setOnClickListener(view -> {
             host.appendEvent("manual.session.restart requested");
             closeSidebar();
         });
-    }
-
-    private void bindSidebarDebugNavButton(Button debugButton) {
-        debugButton.setOnClickListener(view -> {
+        ((Button) sidebar.findViewById(uk.laurencegouws.terminal.R.id.sidebar_debug_button)).setOnClickListener(view -> {
             host.showDebugView("view.mode debug=true", "debug-view");
             closeSidebar();
         });
-    }
-
-    private void bindSidebarPackagesNavButton(Button packagesButton) {
-        packagesButton.setOnClickListener(view -> {
+        ((Button) sidebar.findViewById(uk.laurencegouws.terminal.R.id.sidebar_packages_button)).setOnClickListener(view -> {
             closeSidebar();
             host.runPackageDoctor();
         });
@@ -102,18 +90,10 @@ public final class ChromeController {
 
     /** Wires assist-row text keys and arrow keys to host direct-send binding. */
     private void bindAssistCharacterButtons() {
-        bindAssistCharacterLiteralButtons();
-        bindAssistCharacterNavigationButtons();
-    }
-
-    private void bindAssistCharacterLiteralButtons() {
         host.bindAssistButton(uk.laurencegouws.terminal.R.id.assist_esc_button, "\u001b", "assist.esc");
         host.bindAssistButton(uk.laurencegouws.terminal.R.id.assist_tab_button, "\t", "assist.tab");
         host.bindAssistButton(uk.laurencegouws.terminal.R.id.assist_pipe_button, "|", "assist.pipe");
         host.bindAssistButton(uk.laurencegouws.terminal.R.id.assist_slash_button, "/", "assist.slash");
-    }
-
-    private void bindAssistCharacterNavigationButtons() {
         host.bindAssistButton(uk.laurencegouws.terminal.R.id.assist_up_button, "\u001b[A", "assist.up");
         host.bindAssistButton(uk.laurencegouws.terminal.R.id.assist_down_button, "\u001b[B", "assist.down");
         host.bindAssistButton(uk.laurencegouws.terminal.R.id.assist_left_button, "\u001b[D", "assist.left");
