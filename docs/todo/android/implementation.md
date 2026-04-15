@@ -82,6 +82,9 @@ Commit and validation rules:
 - validate every commit with:
   `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac`
 - run deploy + launch + `AndroidRuntime:E` smoke every 5-10 commits or seam boundary cut
+- campaign doc checkpoints: add or extend queue notes every 3-5 refactor commits
+  (one `docs(android):` batch per mini-wave), not after every refactor commit, unless
+  the `Next:` line intentionally advances
 
 Success metrics:
 
@@ -177,6 +180,11 @@ Agent reporting contract (mandatory for cleanup campaign updates):
      (behavior unchanged).
    - Completed: `SurfaceController` net-smaller: existing host view removal is
      inlined into `installSurfaceView` (behavior unchanged).
+   - Completed (mini-wave): `ChromeController` internal bind chains flattened
+     (sidebar, assist row, IME toggle lookup, edge swipe) and accessor-only IME
+     visibility forward removed; method count ~32 → ~18 with behavior preserved.
+     `SurfaceController` paused at nine methods—avoid further cuts there until a
+     new explicit queue decision.
    - Next: net simplification in `ChromeController` or `SurfaceController`:
      remove or merge pass-through helpers and redundant indirection so the
      touched class ends with fewer methods, fields, or dependencies; each of
