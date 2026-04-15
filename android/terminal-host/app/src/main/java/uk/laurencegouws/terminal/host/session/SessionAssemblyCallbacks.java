@@ -8,6 +8,7 @@ import java.util.function.Consumer;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
+import uk.laurencegouws.terminal.TerminalNativeBridge;
 import uk.laurencegouws.terminal.userland.UserlandReadinessState;
 import uk.laurencegouws.terminal.userland.UserlandRelease;
 
@@ -24,9 +25,6 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
     private final Runnable refreshDebugStatusSurface;
     private final BooleanSupplier shouldRunProductFrameLoop;
     private final IntSupplier tickProductFrame;
-    private final IntSupplier nativeRestartSession;
-    private final IntSupplier nativePollSession;
-    private final BooleanSupplier nativeIsSessionAlive;
 
     public SessionAssemblyCallbacks(
             Supplier<Context> context,
@@ -39,10 +37,7 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
             Runnable refreshProductShellState,
             Runnable refreshDebugStatusSurface,
             BooleanSupplier shouldRunProductFrameLoop,
-            IntSupplier tickProductFrame,
-            IntSupplier nativeRestartSession,
-            IntSupplier nativePollSession,
-            BooleanSupplier nativeIsSessionAlive) {
+            IntSupplier tickProductFrame) {
         this.context = context;
         this.userlandRelease = userlandRelease;
         this.handler = handler;
@@ -54,9 +49,6 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
         this.refreshDebugStatusSurface = refreshDebugStatusSurface;
         this.shouldRunProductFrameLoop = shouldRunProductFrameLoop;
         this.tickProductFrame = tickProductFrame;
-        this.nativeRestartSession = nativeRestartSession;
-        this.nativePollSession = nativePollSession;
-        this.nativeIsSessionAlive = nativeIsSessionAlive;
     }
 
     @Override
@@ -116,16 +108,16 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
 
     @Override
     public int nativeRestartSession() {
-        return nativeRestartSession.getAsInt();
+        return TerminalNativeBridge.nativeRestartSessionBridge();
     }
 
     @Override
     public int nativePollSession() {
-        return nativePollSession.getAsInt();
+        return TerminalNativeBridge.nativePollSessionBridge();
     }
 
     @Override
     public boolean nativeIsSessionAlive() {
-        return nativeIsSessionAlive.getAsBoolean();
+        return TerminalNativeBridge.nativeIsSessionAliveBridge();
     }
 }

@@ -349,10 +349,7 @@ public final class ZideTerminalActivity extends Activity
                 this::refreshProductShellStateIfReady,
                 this::refreshDebugStatusSurfaceIfReady,
                 this::shouldRunProductFrameLoop,
-                this::tickProductFrameAndRefreshScrollOverlay,
-                TerminalNativeBridge::nativeRestartSessionBridge,
-                TerminalNativeBridge::nativePollSessionBridge,
-                TerminalNativeBridge::nativeIsSessionAliveBridge);
+                this::tickProductFrameAndRefreshScrollOverlay);
     }
 
     private ProductRuntimeAssemblyCallbacks createProductRuntimeAssemblyCallbacks() {
