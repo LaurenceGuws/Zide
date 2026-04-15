@@ -4,7 +4,6 @@ import android.view.View;
 import android.widget.Button;
 
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 import uk.laurencegouws.terminal.host.runtime.FrameLoopController;
 import uk.laurencegouws.terminal.host.surface.SurfaceController;
@@ -29,13 +28,13 @@ public final class UiStartupAssembly {
 
         Button productReadinessDebugButton();
 
-        Supplier<UserlandInstallState> currentInstallState();
+        UserlandInstallState currentInstallState();
 
-        Supplier<UserlandReadinessState> currentReadinessState();
+        UserlandReadinessState currentReadinessState();
 
-        Supplier<UserlandWorkflowController> userlandWorkflowController();
+        UserlandWorkflowController userlandWorkflowController();
 
-        Supplier<UserlandSessionCoordinator> userlandSessionCoordinator();
+        UserlandSessionCoordinator userlandSessionCoordinator();
 
         ShowDebugView showDebugView();
 
@@ -85,10 +84,10 @@ public final class UiStartupAssembly {
                         host.productReadinessRetryButton(),
                         host.productReadinessDebugButton(),
                         new ReadinessBlockerCallbacks(
-                                host.currentInstallState(),
-                                host.currentReadinessState(),
-                                host.userlandWorkflowController(),
-                                host.userlandSessionCoordinator(),
+                                host::currentInstallState,
+                                host::currentReadinessState,
+                                host::userlandWorkflowController,
+                                host::userlandSessionCoordinator,
                                 host.showDebugView()::call,
                                 host.appendEvent(),
                                 host.updateStatus()));

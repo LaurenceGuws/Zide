@@ -97,23 +97,23 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
     }
 
     @Override
-    public Supplier<UserlandInstallState> currentInstallState() {
-        return currentInstallState;
+    public UserlandInstallState currentInstallState() {
+        return currentInstallState.get();
     }
 
     @Override
-    public Supplier<UserlandReadinessState> currentReadinessState() {
-        return currentReadinessState;
+    public UserlandReadinessState currentReadinessState() {
+        return currentReadinessState.get();
     }
 
     @Override
-    public Supplier<UserlandWorkflowController> userlandWorkflowController() {
-        return userlandWorkflowController;
+    public UserlandWorkflowController userlandWorkflowController() {
+        return userlandWorkflowController.get();
     }
 
     @Override
-    public Supplier<UserlandSessionCoordinator> userlandSessionCoordinator() {
-        return userlandSessionCoordinator;
+    public UserlandSessionCoordinator userlandSessionCoordinator() {
+        return userlandSessionCoordinator.get();
     }
 
     @Override
