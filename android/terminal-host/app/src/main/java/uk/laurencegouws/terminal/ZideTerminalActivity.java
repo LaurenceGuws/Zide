@@ -197,7 +197,17 @@ public final class ZideTerminalActivity extends Activity
 
     private void initializeStatusAndViewControllers() {
         final StatusViewAssembly.Result result = StatusViewAssembly.assemble(
-                createStatusViewCallbacks());
+                new StatusViewCallbacks(
+                        this,
+                        () -> debugViewEnabled,
+                        this::hasWindowFocus,
+                        () -> imeVisible,
+                        v -> imeVisible = v,
+                        () -> surfaceHostBridge,
+                        () -> terminalSurfaceStateSnapshotReader.read(),
+                        this::notifyVisibleViewportIfReady,
+                        () -> currentInstallState,
+                        () -> currentReadinessState));
         packageStatusText = result.packageStatusText;
         productReadinessTitle = result.productReadinessTitle;
         productReadinessDetail = result.productReadinessDetail;
@@ -221,42 +231,34 @@ public final class ZideTerminalActivity extends Activity
 
     private void assembleInteractionControllers() {
         final InteractionAssembly.Result result = InteractionAssembly.assemble(
-                createInteractionCallbacks());
+                new InteractionCallbacks(
+                        this,
+                        handler,
+                        productSurfaceContainer,
+                        () -> terminalViewportController.productViewportWidthPx(),
+                        () -> terminalViewportController.productViewportHeightPx(),
+                        this::stopScrollbackFlingIfReady,
+                        this::refreshProductScrollOverlayIfReady,
+                        this::reevaluateProductFrameLoopIfReady,
+                        this::appendEvent));
         selectionController = result.selectionController;
         terminalGestureStateController = result.terminalGestureStateController;
     }
 
     private void installInputControllers() {
         final InputAssembly.Result result = InputAssembly.assemble(
-                createInputCallbacks());
+                new InputCallbacks(
+                        this,
+                        rootView,
+                        () -> getSystemService(InputMethodManager.class),
+                        () -> imeVisible,
+                        visible -> imeVisible = visible,
+                        this::refreshProductScrollOverlayIfReady,
+                        this::updateStatus,
+                        this::appendEvent));
         shellInputView = result.shellInputView;
         terminalHardwareKeyboardController = result.hardwareKeyboardController;
         terminalImeFocusRecoveryController = result.imeFocusRecoveryController;
-    }
-
-    private InteractionCallbacks createInteractionCallbacks() {
-        return new InteractionCallbacks(
-                this,
-                handler,
-                productSurfaceContainer,
-                () -> terminalViewportController.productViewportWidthPx(),
-                () -> terminalViewportController.productViewportHeightPx(),
-                this::stopScrollbackFlingIfReady,
-                this::refreshProductScrollOverlayIfReady,
-                this::reevaluateProductFrameLoopIfReady,
-                this::appendEvent);
-    }
-
-    private InputCallbacks createInputCallbacks() {
-        return new InputCallbacks(
-                this,
-                rootView,
-                () -> getSystemService(InputMethodManager.class),
-                () -> imeVisible,
-                visible -> imeVisible = visible,
-                this::refreshProductScrollOverlayIfReady,
-                this::updateStatus,
-                this::appendEvent);
     }
 
     private void assembleWidgetHostControllers() {
@@ -372,34 +374,16 @@ public final class ZideTerminalActivity extends Activity
 
     private void assembleActivityLifecycleController() {
         terminalActivityLifecycleController = new LifecycleController(
-                createLifecycleCallbacks());
-    }
-
-    private StatusViewCallbacks createStatusViewCallbacks() {
-        return new StatusViewCallbacks(
-                this,
-                () -> debugViewEnabled,
-                this::hasWindowFocus,
-                () -> imeVisible,
-                v -> imeVisible = v,
-                () -> surfaceHostBridge,
-                () -> terminalSurfaceStateSnapshotReader.read(),
-                this::notifyVisibleViewportIfReady,
-                () -> currentInstallState,
-                () -> currentReadinessState);
-    }
-
-    private LifecycleCallbacks createLifecycleCallbacks() {
-        return new LifecycleCallbacks(
-                LifecycleCallbacks.LifecycleHostCallbacks.of(
-                        () -> nativeLoadError,
-                        this::appendEvent,
-                        this::updateStatus,
-                        this::stopProductFrameLoopIfReady,
-                        this::refreshUserlandSessionIfReady,
-                        this::pauseSurfaceIfReady,
-                        this::resumeSurfaceIfReady),
-                this::callNative);
+                new LifecycleCallbacks(
+                        LifecycleCallbacks.LifecycleHostCallbacks.of(
+                                () -> nativeLoadError,
+                                this::appendEvent,
+                                this::updateStatus,
+                                this::stopProductFrameLoopIfReady,
+                                this::refreshUserlandSessionIfReady,
+                                this::pauseSurfaceIfReady,
+                                this::resumeSurfaceIfReady),
+                        this::callNative));
     }
 
     private void bindAndStartUiControllers() {
