@@ -244,6 +244,10 @@ the existing per-commit validation rules.
        `setSelectionActionModeFallbackContentRect`)
      - bridge selection rect read/clamp isolated
        (`populateTerminalSelectionContentRectFromBridge`)
+     - floating selection action mode: attach precondition (active selection +
+       host container) is one named check; sync delegates the idle→show path
+       through a single active-selection gate; copy toolbar clicks resolve the
+       system copy action by id in one place
    - Exit criteria:
      - compile pass per commit; deploy + `AndroidRuntime:E` smoke at seam
        boundary
