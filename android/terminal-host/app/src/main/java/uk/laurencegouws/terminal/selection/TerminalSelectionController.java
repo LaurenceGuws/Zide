@@ -851,14 +851,8 @@ public final class TerminalSelectionController {
         if (selectionStartHandle == null || selectionEndHandle == null) {
             return;
         }
-        if (!canHandleSelectionDrag()) {
-            hideSelectionHandle(selectionStartHandle);
-            hideSelectionHandle(selectionEndHandle);
-            return;
-        }
-        if (!selectionHelpersVisible && !selectionDragActive) {
-            hideSelectionHandle(selectionStartHandle);
-            hideSelectionHandle(selectionEndHandle);
+        if (!shouldShowSelectionHandles()) {
+            hideSelectionHandles();
             return;
         }
         if (selectionDragMode == SelectionDragMode.startHandle || selectionDragMode == SelectionDragMode.endHandle) {
@@ -867,6 +861,15 @@ public final class TerminalSelectionController {
         bringToFront();
         syncSelectionHandle(selectionStartHandle, true);
         syncSelectionHandle(selectionEndHandle, false);
+    }
+
+    private boolean shouldShowSelectionHandles() {
+        return canHandleSelectionDrag() && (selectionHelpersVisible || selectionDragActive);
+    }
+
+    private void hideSelectionHandles() {
+        hideSelectionHandle(selectionStartHandle);
+        hideSelectionHandle(selectionEndHandle);
     }
 
     private void positionDraggedHandle(View handle, float absoluteX, float absoluteY) {
