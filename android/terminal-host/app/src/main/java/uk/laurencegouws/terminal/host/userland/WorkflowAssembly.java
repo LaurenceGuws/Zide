@@ -14,6 +14,11 @@ import uk.laurencegouws.terminal.userland.UserlandWorkflowController;
 
 /** Owns userland runtime-assets/workflow host assembly for activity wiring. */
 public final class WorkflowAssembly {
+    /** Functional callback for shell restart requests. */
+    public interface RestartSessionCallback {
+        void restart(String eventName, String statusLabel, boolean logRefresh);
+    }
+
     /** Activity callbacks required for userland workflow assembly. */
     public interface Host {
         Context context();

@@ -24,7 +24,7 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
     private final Consumer<UserlandInstallState> setInstallState;
     private final Consumer<UserlandReadinessState> setReadinessState;
     private final BiConsumer<UserlandInstallState, String> applyInstallState;
-    private final WorkflowCallbacks.RestartSessionCallback restartSession;
+    private final WorkflowAssembly.RestartSessionCallback restartSession;
     private final BiConsumer<String, String> showDebugView;
 
     public WorkflowAssemblyCallbacks(
@@ -38,7 +38,7 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
             Consumer<UserlandInstallState> setInstallState,
             Consumer<UserlandReadinessState> setReadinessState,
             BiConsumer<UserlandInstallState, String> applyInstallState,
-            WorkflowCallbacks.RestartSessionCallback restartSession,
+            WorkflowAssembly.RestartSessionCallback restartSession,
             BiConsumer<String, String> showDebugView) {
         this.context = context;
         this.handler = handler;

@@ -17,15 +17,10 @@ public final class WorkflowCallbacks implements WorkflowBridge.Callbacks {
     private final BiConsumer<UserlandInstallState, String> applyInstallState;
     private final Consumer<UserlandInstallState> setInstallState;
     private final Consumer<UserlandReadinessState> setReadinessState;
-    private final RestartSessionCallback restartSession;
+    private final WorkflowAssembly.RestartSessionCallback restartSession;
     private final BiConsumer<String, String> showDebugView;
     private final TextView packageStatusText;
     private final Consumer<String> updateStatus;
-
-    /** Functional callback for shell restart requests. */
-    public interface RestartSessionCallback {
-        void restart(String eventName, String statusLabel, boolean logRefresh);
-    }
 
     public WorkflowCallbacks(
             Supplier<UserlandRelease> release,
@@ -33,7 +28,7 @@ public final class WorkflowCallbacks implements WorkflowBridge.Callbacks {
             BiConsumer<UserlandInstallState, String> applyInstallState,
             Consumer<UserlandInstallState> setInstallState,
             Consumer<UserlandReadinessState> setReadinessState,
-            RestartSessionCallback restartSession,
+            WorkflowAssembly.RestartSessionCallback restartSession,
             BiConsumer<String, String> showDebugView,
             TextView packageStatusText,
             Consumer<String> updateStatus) {
