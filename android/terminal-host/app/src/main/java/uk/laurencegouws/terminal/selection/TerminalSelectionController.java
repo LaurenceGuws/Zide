@@ -901,8 +901,7 @@ public final class TerminalSelectionController {
     }
 
     private float selectionHandleAnchorY(View handle) {
-        final float offsetY = SELECTION_HANDLE_Y_OFFSET_DP * host.context().getResources().getDisplayMetrics().density;
-        return (handle.getY() + (handle.getHeight() / 2.0f)) - offsetY;
+        return (handle.getY() + (handle.getHeight() / 2.0f)) - selectionHandleYOffsetPx();
     }
 
     private AnchorPoint currentDraggedHandleAnchor(View handle) {
@@ -916,11 +915,15 @@ public final class TerminalSelectionController {
             return;
         }
         final float radius = handle.getLayoutParams().width / 2.0f;
-        final float offsetY = SELECTION_HANDLE_Y_OFFSET_DP * host.context().getResources().getDisplayMetrics().density;
+        final float offsetY = selectionHandleYOffsetPx();
         final float anchorX = startHandle ? rect.left : rect.right;
         handle.setX(anchorX - radius);
         handle.setY((rect.bottom - radius) + offsetY);
         showSelectionHandle(handle);
+    }
+
+    private float selectionHandleYOffsetPx() {
+        return SELECTION_HANDLE_Y_OFFSET_DP * host.context().getResources().getDisplayMetrics().density;
     }
 
     private void showSelectionHandle(View handle) {
