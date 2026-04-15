@@ -1,9 +1,7 @@
 package uk.laurencegouws.terminal.host.runtime;
 
-import android.view.SurfaceView;
 import android.view.View;
 
-import uk.laurencegouws.terminal.TerminalNativeBridge;
 import uk.laurencegouws.terminal.debug.TerminalStatusController;
 import uk.laurencegouws.terminal.gesture.TerminalGestureStateController;
 import uk.laurencegouws.terminal.scroll.TerminalScrollOverlayView;

@@ -13,7 +13,6 @@ import java.util.function.Supplier;
 
 import uk.laurencegouws.terminal.debug.AndroidDebugFormatter;
 import uk.laurencegouws.terminal.gesture.TerminalGestureStateController;
-import uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks;
 import uk.laurencegouws.terminal.input.ShellInputView;
 import uk.laurencegouws.terminal.scroll.TerminalScrollOverlayView;
 import uk.laurencegouws.terminal.selection.TerminalSelectionController;

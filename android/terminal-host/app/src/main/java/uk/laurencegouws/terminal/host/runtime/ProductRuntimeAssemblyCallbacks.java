@@ -1,6 +1,5 @@
 package uk.laurencegouws.terminal.host.runtime;
 
-import android.view.SurfaceView;
 import android.view.View;
 
 import java.util.function.BooleanSupplier;

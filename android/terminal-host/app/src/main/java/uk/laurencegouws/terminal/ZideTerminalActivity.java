@@ -6,7 +6,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.KeyEvent;
-import android.view.SurfaceHolder;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
