@@ -18,10 +18,10 @@ import uk.laurencegouws.terminal.userland.UserlandWorkflowController;
 
 /** Functional callback adapter for {@link UiStartupAssembly.Host}. */
 public final class UiStartupCallbacks implements UiStartupAssembly.Host {
-    private final Supplier<ViewportController> viewportController;
-    private final Supplier<ChromeController> chromeController;
-    private final Supplier<Button> productReadinessRetryButton;
-    private final Supplier<Button> productReadinessDebugButton;
+    private final ViewportController viewportController;
+    private final ChromeController chromeController;
+    private final Button productReadinessRetryButton;
+    private final Button productReadinessDebugButton;
     private final Supplier<UserlandInstallState> currentInstallState;
     private final Supplier<UserlandReadinessState> currentReadinessState;
     private final Supplier<UserlandWorkflowController> userlandWorkflowController;
@@ -29,19 +29,19 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
     private final UiStartupAssembly.ShowDebugView showDebugView;
     private final Consumer<String> appendEvent;
     private final Consumer<String> updateStatus;
-    private final Supplier<RuntimeAssetsController> runtimeAssetsController;
-    private final Supplier<ViewModeController> viewModeController;
-    private final Supplier<SurfaceController> surfaceHostController;
-    private final Supplier<SurfaceWidgetController> surfaceWidgetController;
-    private final Supplier<ProductShellStatePresenter> productShellStatePresenter;
-    private final Supplier<FrameLoopController> frameLoopController;
-    private final Supplier<View> leftSidebar;
+    private final RuntimeAssetsController runtimeAssetsController;
+    private final ViewModeController viewModeController;
+    private final SurfaceController surfaceHostController;
+    private final SurfaceWidgetController surfaceWidgetController;
+    private final ProductShellStatePresenter productShellStatePresenter;
+    private final FrameLoopController frameLoopController;
+    private final View leftSidebar;
 
     public UiStartupCallbacks(
-            Supplier<ViewportController> viewportController,
-            Supplier<ChromeController> chromeController,
-            Supplier<Button> productReadinessRetryButton,
-            Supplier<Button> productReadinessDebugButton,
+            ViewportController viewportController,
+            ChromeController chromeController,
+            Button productReadinessRetryButton,
+            Button productReadinessDebugButton,
             Supplier<UserlandInstallState> currentInstallState,
             Supplier<UserlandReadinessState> currentReadinessState,
             Supplier<UserlandWorkflowController> userlandWorkflowController,
@@ -49,13 +49,13 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
             UiStartupAssembly.ShowDebugView showDebugView,
             Consumer<String> appendEvent,
             Consumer<String> updateStatus,
-            Supplier<RuntimeAssetsController> runtimeAssetsController,
-            Supplier<ViewModeController> viewModeController,
-            Supplier<SurfaceController> surfaceHostController,
-            Supplier<SurfaceWidgetController> surfaceWidgetController,
-            Supplier<ProductShellStatePresenter> productShellStatePresenter,
-            Supplier<FrameLoopController> frameLoopController,
-            Supplier<View> leftSidebar) {
+            RuntimeAssetsController runtimeAssetsController,
+            ViewModeController viewModeController,
+            SurfaceController surfaceHostController,
+            SurfaceWidgetController surfaceWidgetController,
+            ProductShellStatePresenter productShellStatePresenter,
+            FrameLoopController frameLoopController,
+            View leftSidebar) {
         this.viewportController = viewportController;
         this.chromeController = chromeController;
         this.productReadinessRetryButton = productReadinessRetryButton;
@@ -78,22 +78,22 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
 
     @Override
     public ViewportController viewportController() {
-        return viewportController.get();
+        return viewportController;
     }
 
     @Override
     public ChromeController chromeController() {
-        return chromeController.get();
+        return chromeController;
     }
 
     @Override
     public Button productReadinessRetryButton() {
-        return productReadinessRetryButton.get();
+        return productReadinessRetryButton;
     }
 
     @Override
     public Button productReadinessDebugButton() {
-        return productReadinessDebugButton.get();
+        return productReadinessDebugButton;
     }
 
     @Override
@@ -133,36 +133,36 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
 
     @Override
     public RuntimeAssetsController runtimeAssetsController() {
-        return runtimeAssetsController.get();
+        return runtimeAssetsController;
     }
 
     @Override
     public ViewModeController viewModeController() {
-        return viewModeController.get();
+        return viewModeController;
     }
 
     @Override
     public SurfaceController surfaceHostController() {
-        return surfaceHostController.get();
+        return surfaceHostController;
     }
 
     @Override
     public SurfaceWidgetController surfaceWidgetController() {
-        return surfaceWidgetController.get();
+        return surfaceWidgetController;
     }
 
     @Override
     public ProductShellStatePresenter productShellStatePresenter() {
-        return productShellStatePresenter.get();
+        return productShellStatePresenter;
     }
 
     @Override
     public FrameLoopController frameLoopController() {
-        return frameLoopController.get();
+        return frameLoopController;
     }
 
     @Override
     public View leftSidebar() {
-        return leftSidebar.get();
+        return leftSidebar;
     }
 }
