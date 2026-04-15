@@ -138,32 +138,15 @@ public final class ChromeController {
         if (imm == null) {
             return;
         }
-        runManualImeOpenSequence(imm, host.shellInputView());
-    }
-
-    /** Focus, soft-input show, and IME visibility bookkeeping for a manual open. */
-    private void runManualImeOpenSequence(InputMethodManager imm, ShellInputView shellInputView) {
-        appendManualImeOpenBeginTrace(shellInputView);
-        requestInputFocusForManualImeOpen(shellInputView);
-        showSoftInputAfterRestartInput(imm, shellInputView);
-    }
-
-    private void appendManualImeOpenBeginTrace(ShellInputView shellInputView) {
+        final ShellInputView shellInputView = host.shellInputView();
         host.appendEvent("manual.ime.open begin focus=" + shellInputView.hasFocus());
-    }
-
-    private void requestInputFocusForManualImeOpen(ShellInputView shellInputView) {
-        requestInputFocus(shellInputView);
+        shellInputView.requestFocusFromTouch();
+        if (!shellInputView.hasFocus()) {
+            shellInputView.requestFocus();
+        }
         host.appendEvent("manual.ime.open focusAfterRequest=" + shellInputView.hasFocus());
-    }
-
-    private void showSoftInputAfterRestartInput(InputMethodManager imm, ShellInputView shellInputView) {
         imm.restartInput(shellInputView);
         final boolean shown = imm.showSoftInput(shellInputView, InputMethodManager.SHOW_IMPLICIT);
-        recordManualImeOpenSoftInputResult(shellInputView, shown);
-    }
-
-    private void recordManualImeOpenSoftInputResult(ShellInputView shellInputView, boolean shown) {
         host.setImeVisible(shown || shellInputView.hasFocus());
         host.appendEvent("manual.ime.open shown=" + shown + " focus=" + shellInputView.hasFocus());
         host.updateStatus("ime.state.shown");
@@ -174,16 +157,7 @@ public final class ChromeController {
         if (imm == null) {
             return;
         }
-        runManualImeCloseSequence(imm);
-    }
-
-    /** Hides soft input and records IME chrome state for a manual close. */
-    private void runManualImeCloseSequence(InputMethodManager imm) {
         final boolean hidden = imm.hideSoftInputFromWindow(host.shellInputView().getWindowToken(), 0);
-        recordManualImeCloseSoftInputResult(hidden);
-    }
-
-    private void recordManualImeCloseSoftInputResult(boolean hidden) {
         host.setImeVisible(false);
         host.appendEvent("manual.ime.close hidden=" + hidden);
         host.updateStatus("ime.state.hidden");
@@ -251,13 +225,6 @@ public final class ChromeController {
             host.appendEvent("manual.ime.unavailable state=true");
         }
         return imm;
-    }
-
-    private void requestInputFocus(ShellInputView shellInputView) {
-        shellInputView.requestFocusFromTouch();
-        if (!shellInputView.hasFocus()) {
-            shellInputView.requestFocus();
-        }
     }
 
     private static final float EDGE_SWIPE_OPEN_PX = 48f;
