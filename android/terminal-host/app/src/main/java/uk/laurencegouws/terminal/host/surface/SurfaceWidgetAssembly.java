@@ -2,6 +2,7 @@ package uk.laurencegouws.terminal.host.surface;
 
 import android.view.SurfaceHolder;
 
+import uk.laurencegouws.terminal.TerminalNativeBridge;
 import uk.laurencegouws.terminal.gesture.TerminalGestureStateController;
 import uk.laurencegouws.terminal.host.ui.UiFactory;
 import uk.laurencegouws.terminal.selection.TerminalSelectionController;
@@ -13,8 +14,6 @@ public final class SurfaceWidgetAssembly {
         android.os.Handler handler();
 
         android.widget.FrameLayout productSurfaceContainer();
-
-        boolean nativeLoaded();
 
         boolean debugViewEnabled();
 
@@ -79,7 +78,7 @@ public final class SurfaceWidgetAssembly {
                         host.handler(),
                         host.productSurfaceContainer(),
                         SurfaceFactory.createSurfaceHostLifecycleCallbacks(
-                                host::nativeLoaded,
+                                TerminalNativeBridge::nativeLoaded,
                                 host::debugViewEnabled,
                                 host::currentImeVisible,
                                 host::shouldRunProductFrameLoop,
@@ -99,7 +98,6 @@ public final class SurfaceWidgetAssembly {
                 selectionController,
                 terminalGestureStateController,
                 new SurfaceWidgetCallbacks(
-                        host::nativeLoaded,
                         host::productViewportHeightPx,
                         host::appendEvent,
                         host::refreshProductScrollOverlay,

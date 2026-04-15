@@ -1,6 +1,5 @@
 package uk.laurencegouws.terminal.host.surface;
 
-import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
 
@@ -8,19 +7,16 @@ import uk.laurencegouws.terminal.TerminalNativeBridge;
 
 /** Functional callback adapter for {@link SurfaceWidgetController}. */
 public final class SurfaceWidgetCallbacks implements SurfaceWidgetController.Host {
-    private final BooleanSupplier nativeLoaded;
     private final IntSupplier productViewportHeightPx;
     private final Consumer<String> appendEvent;
     private final Runnable refreshProductScrollOverlay;
     private final Runnable reevaluateProductFrameLoop;
 
     public SurfaceWidgetCallbacks(
-            BooleanSupplier nativeLoaded,
             IntSupplier productViewportHeightPx,
             Consumer<String> appendEvent,
             Runnable refreshProductScrollOverlay,
             Runnable reevaluateProductFrameLoop) {
-        this.nativeLoaded = nativeLoaded;
         this.productViewportHeightPx = productViewportHeightPx;
         this.appendEvent = appendEvent;
         this.refreshProductScrollOverlay = refreshProductScrollOverlay;
@@ -29,7 +25,7 @@ public final class SurfaceWidgetCallbacks implements SurfaceWidgetController.Hos
 
     @Override
     public boolean nativeLoaded() {
-        return nativeLoaded.getAsBoolean();
+        return TerminalNativeBridge.nativeLoaded();
     }
 
     @Override

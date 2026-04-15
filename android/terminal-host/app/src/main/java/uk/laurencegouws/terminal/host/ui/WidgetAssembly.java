@@ -219,7 +219,6 @@ public final class WidgetAssembly {
                 new SurfaceWidgetAssemblyCallbacks(
                         host::handler,
                         host::productSurfaceContainer,
-                        host::nativeLoaded,
                         host::debugViewEnabled,
                         host::imeVisible,
                         host::shouldRunProductFrameLoop,

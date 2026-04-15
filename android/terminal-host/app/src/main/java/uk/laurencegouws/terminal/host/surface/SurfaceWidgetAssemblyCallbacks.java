@@ -15,7 +15,6 @@ import uk.laurencegouws.terminal.debug.AndroidDebugFormatter;
 public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssembly.Host {
     private final Supplier<android.os.Handler> handler;
     private final Supplier<FrameLayout> productSurfaceContainer;
-    private final BooleanSupplier nativeLoaded;
     private final BooleanSupplier debugViewEnabled;
     private final BooleanSupplier currentImeVisible;
     private final BooleanSupplier shouldRunProductFrameLoop;
@@ -35,7 +34,6 @@ public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssemb
     public SurfaceWidgetAssemblyCallbacks(
             Supplier<android.os.Handler> handler,
             Supplier<FrameLayout> productSurfaceContainer,
-            BooleanSupplier nativeLoaded,
             BooleanSupplier debugViewEnabled,
             BooleanSupplier currentImeVisible,
             BooleanSupplier shouldRunProductFrameLoop,
@@ -53,7 +51,6 @@ public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssemb
             Runnable reevaluateProductFrameLoop) {
         this.handler = handler;
         this.productSurfaceContainer = productSurfaceContainer;
-        this.nativeLoaded = nativeLoaded;
         this.debugViewEnabled = debugViewEnabled;
         this.currentImeVisible = currentImeVisible;
         this.shouldRunProductFrameLoop = shouldRunProductFrameLoop;
@@ -79,11 +76,6 @@ public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssemb
     @Override
     public FrameLayout productSurfaceContainer() {
         return productSurfaceContainer.get();
-    }
-
-    @Override
-    public boolean nativeLoaded() {
-        return nativeLoaded.getAsBoolean();
     }
 
     @Override
