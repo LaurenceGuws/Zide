@@ -174,9 +174,9 @@ Agent reporting contract (mandatory for cleanup campaign updates):
     and (c) action-mode + clipboard flow. Audit conclusion remains
     contract-aligned: keep selection monolithic until one of those sub-seams is
     lifted in a behavior-preserving cut with replay/validation authority.
-   - Next: execute the first behavior-preserving
+   - Next: execute the second behavior-preserving
      `TerminalSelectionController` internal extraction from the locked audit
-     queue (drag/autoscroll loop first), preserving monolithic ownership and
+     queue (selection handle geometry/sync), preserving monolithic ownership and
      avoiding wrapper inflation; compile each commit and run deploy +
      `AndroidRuntime:E` smoke at seam cadence.
      `ChromeController` / `SurfaceController` remain frozen until this `Next:`
