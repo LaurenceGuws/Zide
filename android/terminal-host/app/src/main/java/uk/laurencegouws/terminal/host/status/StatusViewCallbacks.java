@@ -6,7 +6,6 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import uk.laurencegouws.terminal.debug.AndroidDebugFormatter;
 import uk.laurencegouws.terminal.host.surface.SurfaceBridge;
 import uk.laurencegouws.terminal.userland.UserlandReadinessState;
 import uk.laurencegouws.terminal.userland.UserlandInstallState;
@@ -19,7 +18,6 @@ public final class StatusViewCallbacks implements StatusViewAssembly.Host {
     private final BooleanSupplier imeVisible;
     private final Consumer<Boolean> setImeVisible;
     private final Supplier<SurfaceBridge> surfaceHostBridge;
-    private final Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot;
     private final Consumer<String> notifyVisibleViewport;
     private final Supplier<UserlandInstallState> currentInstallState;
     private final Supplier<UserlandReadinessState> currentReadinessState;
@@ -31,7 +29,6 @@ public final class StatusViewCallbacks implements StatusViewAssembly.Host {
             BooleanSupplier imeVisible,
             Consumer<Boolean> setImeVisible,
             Supplier<SurfaceBridge> surfaceHostBridge,
-            Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot,
             Consumer<String> notifyVisibleViewport,
             Supplier<UserlandInstallState> currentInstallState,
             Supplier<UserlandReadinessState> currentReadinessState) {
@@ -41,7 +38,6 @@ public final class StatusViewCallbacks implements StatusViewAssembly.Host {
         this.imeVisible = imeVisible;
         this.setImeVisible = setImeVisible;
         this.surfaceHostBridge = surfaceHostBridge;
-        this.currentSurfaceStateSnapshot = currentSurfaceStateSnapshot;
         this.notifyVisibleViewport = notifyVisibleViewport;
         this.currentInstallState = currentInstallState;
         this.currentReadinessState = currentReadinessState;
@@ -85,11 +81,6 @@ public final class StatusViewCallbacks implements StatusViewAssembly.Host {
     @Override
     public UserlandReadinessState currentReadinessState() {
         return currentReadinessState.get();
-    }
-
-    @Override
-    public AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot() {
-        return currentSurfaceStateSnapshot.get();
     }
 
     @Override

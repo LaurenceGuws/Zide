@@ -220,7 +220,6 @@ public final class ZideTerminalActivity extends Activity
                         () -> imeVisible,
                         v -> imeVisible = v,
                         () -> surfaceHostBridge,
-                        () -> terminalSurfaceStateSnapshotReader.read(),
                         this::notifyVisibleViewportIfReady,
                         () -> currentInstallState,
                         () -> currentReadinessState));

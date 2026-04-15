@@ -37,8 +37,6 @@ public final class StatusViewAssembly {
 
         UserlandReadinessState currentReadinessState();
 
-        uk.laurencegouws.terminal.debug.AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot();
-
         void notifyVisibleViewport(String reason);
     }
 
@@ -123,7 +121,7 @@ public final class StatusViewAssembly {
                 host::surfaceHostBridge,
                 host::currentInstallState,
                 host::currentReadinessState,
-                host::currentSurfaceStateSnapshot));
+                terminalSurfaceStateSnapshotReader::read));
         final TerminalStatusController terminalStatusController = new TerminalStatusController(
                 viewBindings.statusText,
                 viewBindings.eventLogText,
