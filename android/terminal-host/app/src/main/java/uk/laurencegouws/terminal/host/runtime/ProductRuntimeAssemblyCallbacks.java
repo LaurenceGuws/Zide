@@ -7,6 +7,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import uk.laurencegouws.terminal.TerminalNativeBridge;
 import uk.laurencegouws.terminal.debug.TerminalStatusController;
 import uk.laurencegouws.terminal.gesture.TerminalGestureStateController;
 import uk.laurencegouws.terminal.scroll.TerminalScrollOverlayView;
@@ -19,7 +20,6 @@ import uk.laurencegouws.terminal.userland.UserlandSessionCoordinator;
 /** Functional callback adapter for {@link ProductRuntimeAssembly.Host}. */
 public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAssembly.Host {
     private final BooleanSupplier debugViewEnabled;
-    private final BooleanSupplier nativeLoaded;
     private final Supplier<UserlandInstallState> installState;
     private final Consumer<UserlandInstallState> setInstallState;
     private final Supplier<UserlandReadinessState> readinessState;
@@ -37,7 +37,6 @@ public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAsse
 
     public ProductRuntimeAssemblyCallbacks(
             BooleanSupplier debugViewEnabled,
-            BooleanSupplier nativeLoaded,
             Supplier<UserlandInstallState> installState,
             Consumer<UserlandInstallState> setInstallState,
             Supplier<UserlandReadinessState> readinessState,
@@ -53,7 +52,6 @@ public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAsse
             Supplier<UserlandSessionCoordinator> userlandSessionCoordinator,
             Supplier<TerminalGestureStateController> terminalGestureStateController) {
         this.debugViewEnabled = debugViewEnabled;
-        this.nativeLoaded = nativeLoaded;
         this.installState = installState;
         this.setInstallState = setInstallState;
         this.readinessState = readinessState;
@@ -77,7 +75,7 @@ public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAsse
 
     @Override
     public boolean nativeLoaded() {
-        return nativeLoaded.getAsBoolean();
+        return TerminalNativeBridge.nativeLoaded();
     }
 
     @Override

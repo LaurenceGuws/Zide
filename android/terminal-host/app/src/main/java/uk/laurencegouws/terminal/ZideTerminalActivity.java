@@ -343,7 +343,6 @@ public final class ZideTerminalActivity extends Activity
                 () -> handler,
                 this::appendEvent,
                 this::updateStatus,
-                () -> nativeLoaded,
                 state -> currentReadinessState = state,
                 this::refreshProductShellStateIfReady,
                 this::refreshDebugStatusSurfaceIfReady,
@@ -354,7 +353,6 @@ public final class ZideTerminalActivity extends Activity
     private ProductRuntimeAssemblyCallbacks createProductRuntimeAssemblyCallbacks() {
         return new ProductRuntimeAssemblyCallbacks(
                 () -> debugViewEnabled,
-                () -> nativeLoaded,
                 () -> currentInstallState,
                 installState -> currentInstallState = installState,
                 () -> currentReadinessState,

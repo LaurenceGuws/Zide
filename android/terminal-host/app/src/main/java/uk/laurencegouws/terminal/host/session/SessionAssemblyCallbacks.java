@@ -19,7 +19,6 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
     private final Supplier<Handler> handler;
     private final Consumer<String> appendEvent;
     private final Consumer<String> updateStatus;
-    private final BooleanSupplier nativeLoaded;
     private final Consumer<UserlandReadinessState> applyReadinessState;
     private final Runnable refreshProductShellState;
     private final Runnable refreshDebugStatusSurface;
@@ -32,7 +31,6 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
             Supplier<Handler> handler,
             Consumer<String> appendEvent,
             Consumer<String> updateStatus,
-            BooleanSupplier nativeLoaded,
             Consumer<UserlandReadinessState> applyReadinessState,
             Runnable refreshProductShellState,
             Runnable refreshDebugStatusSurface,
@@ -43,7 +41,6 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
         this.handler = handler;
         this.appendEvent = appendEvent;
         this.updateStatus = updateStatus;
-        this.nativeLoaded = nativeLoaded;
         this.applyReadinessState = applyReadinessState;
         this.refreshProductShellState = refreshProductShellState;
         this.refreshDebugStatusSurface = refreshDebugStatusSurface;
@@ -63,7 +60,7 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
 
     @Override
     public boolean nativeLoaded() {
-        return nativeLoaded.getAsBoolean();
+        return TerminalNativeBridge.nativeLoaded();
     }
 
     @Override
