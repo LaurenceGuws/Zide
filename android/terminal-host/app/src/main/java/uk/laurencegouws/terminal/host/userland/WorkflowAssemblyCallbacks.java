@@ -14,13 +14,13 @@ import uk.laurencegouws.terminal.userland.UserlandRelease;
 
 /** Functional callback adapter for {@link WorkflowAssembly.Host}. */
 public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
-    private final Supplier<Context> context;
-    private final Supplier<Handler> handler;
+    private final Context context;
+    private final Handler handler;
     private final Supplier<UserlandRelease> userlandRelease;
     private final Consumer<UserlandRelease> setUserlandRelease;
     private final Consumer<String> appendEvent;
     private final Consumer<String> updateStatus;
-    private final Supplier<TextView> packageStatusText;
+    private final TextView packageStatusText;
     private final Consumer<UserlandInstallState> setInstallState;
     private final Consumer<UserlandReadinessState> setReadinessState;
     private final BiConsumer<UserlandInstallState, String> applyInstallState;
@@ -28,13 +28,13 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
     private final BiConsumer<String, String> showDebugView;
 
     public WorkflowAssemblyCallbacks(
-            Supplier<Context> context,
-            Supplier<Handler> handler,
+            Context context,
+            Handler handler,
             Supplier<UserlandRelease> userlandRelease,
             Consumer<UserlandRelease> setUserlandRelease,
             Consumer<String> appendEvent,
             Consumer<String> updateStatus,
-            Supplier<TextView> packageStatusText,
+            TextView packageStatusText,
             Consumer<UserlandInstallState> setInstallState,
             Consumer<UserlandReadinessState> setReadinessState,
             BiConsumer<UserlandInstallState, String> applyInstallState,
@@ -56,12 +56,12 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
 
     @Override
     public Context context() {
-        return context.get();
+        return context;
     }
 
     @Override
     public Handler handler() {
-        return handler.get();
+        return handler;
     }
 
     @Override
@@ -111,6 +111,6 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
 
     @Override
     public TextView packageStatusText() {
-        return packageStatusText.get();
+        return packageStatusText;
     }
 }

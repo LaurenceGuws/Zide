@@ -405,13 +405,13 @@ public final class ZideTerminalActivity extends Activity
 
     private WorkflowAssemblyCallbacks createWorkflowAssemblyCallbacks() {
         return new WorkflowAssemblyCallbacks(
-                () -> this,
-                () -> handler,
+                this,
+                handler,
                 () -> userlandRelease,
                 release -> userlandRelease = release,
                 this::appendEvent,
                 this::updateStatus,
-                () -> packageStatusText,
+                packageStatusText,
                 installState -> currentInstallState = installState,
                 readinessState -> currentReadinessState = readinessState,
                 this::applyInstallStateIfReady,
