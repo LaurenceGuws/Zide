@@ -356,14 +356,14 @@ public final class ZideTerminalActivity extends Activity
                 this::appendEvent,
                 this::updateStatus,
                 () -> surfaceHostBridge != null ? surfaceHostBridge.currentSurfaceView() : null,
-                () -> productReadinessBlocker,
-                () -> terminalScrollOverlay,
-                () -> selectionController,
-                () -> productShellStatePresenter,
-                () -> productFrameLoopController,
-                () -> terminalStatusController,
-                () -> userlandSessionCoordinator,
-                () -> terminalGestureStateController);
+                productReadinessBlocker,
+                terminalScrollOverlay,
+                selectionController,
+                productShellStatePresenter,
+                productFrameLoopController,
+                terminalStatusController,
+                userlandSessionCoordinator,
+                terminalGestureStateController);
     }
 
     private void assembleActivityLifecycleController() {

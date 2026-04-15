@@ -25,14 +25,14 @@ public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAsse
     private final Consumer<String> appendEvent;
     private final Consumer<String> updateStatus;
     private final Supplier<SurfaceView> surfaceView;
-    private final Supplier<View> productReadinessBlocker;
-    private final Supplier<TerminalScrollOverlayView> terminalScrollOverlay;
-    private final Supplier<TerminalSelectionController> selectionController;
-    private final Supplier<ProductShellStatePresenter> productShellStatePresenter;
-    private final Supplier<FrameLoopController> frameLoopController;
-    private final Supplier<TerminalStatusController> terminalStatusController;
-    private final Supplier<UserlandSessionCoordinator> userlandSessionCoordinator;
-    private final Supplier<TerminalGestureStateController> terminalGestureStateController;
+    private final View productReadinessBlocker;
+    private final TerminalScrollOverlayView terminalScrollOverlay;
+    private final TerminalSelectionController selectionController;
+    private final ProductShellStatePresenter productShellStatePresenter;
+    private final FrameLoopController frameLoopController;
+    private final TerminalStatusController terminalStatusController;
+    private final UserlandSessionCoordinator userlandSessionCoordinator;
+    private final TerminalGestureStateController terminalGestureStateController;
 
     public ProductRuntimeAssemblyCallbacks(
             BooleanSupplier debugViewEnabled,
@@ -42,14 +42,14 @@ public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAsse
             Consumer<String> appendEvent,
             Consumer<String> updateStatus,
             Supplier<SurfaceView> surfaceView,
-            Supplier<View> productReadinessBlocker,
-            Supplier<TerminalScrollOverlayView> terminalScrollOverlay,
-            Supplier<TerminalSelectionController> selectionController,
-            Supplier<ProductShellStatePresenter> productShellStatePresenter,
-            Supplier<FrameLoopController> frameLoopController,
-            Supplier<TerminalStatusController> terminalStatusController,
-            Supplier<UserlandSessionCoordinator> userlandSessionCoordinator,
-            Supplier<TerminalGestureStateController> terminalGestureStateController) {
+            View productReadinessBlocker,
+            TerminalScrollOverlayView terminalScrollOverlay,
+            TerminalSelectionController selectionController,
+            ProductShellStatePresenter productShellStatePresenter,
+            FrameLoopController frameLoopController,
+            TerminalStatusController terminalStatusController,
+            UserlandSessionCoordinator userlandSessionCoordinator,
+            TerminalGestureStateController terminalGestureStateController) {
         this.debugViewEnabled = debugViewEnabled;
         this.installState = installState;
         this.setInstallState = setInstallState;
@@ -94,42 +94,42 @@ public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAsse
 
     @Override
     public View productReadinessBlocker() {
-        return productReadinessBlocker.get();
+        return productReadinessBlocker;
     }
 
     @Override
     public TerminalScrollOverlayView terminalScrollOverlay() {
-        return terminalScrollOverlay.get();
+        return terminalScrollOverlay;
     }
 
     @Override
     public TerminalSelectionController selectionController() {
-        return selectionController.get();
+        return selectionController;
     }
 
     @Override
     public ProductShellStatePresenter productShellStatePresenter() {
-        return productShellStatePresenter.get();
+        return productShellStatePresenter;
     }
 
     @Override
     public FrameLoopController frameLoopController() {
-        return frameLoopController.get();
+        return frameLoopController;
     }
 
     @Override
     public TerminalStatusController terminalStatusController() {
-        return terminalStatusController.get();
+        return terminalStatusController;
     }
 
     @Override
     public UserlandSessionCoordinator userlandSessionCoordinator() {
-        return userlandSessionCoordinator.get();
+        return userlandSessionCoordinator;
     }
 
     @Override
     public TerminalGestureStateController terminalGestureStateController() {
-        return terminalGestureStateController.get();
+        return terminalGestureStateController;
     }
 
     @Override
