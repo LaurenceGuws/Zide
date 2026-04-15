@@ -98,15 +98,6 @@ public final class SurfaceController {
     }
 
     public void onResume(boolean recreateSurfaceOnce, boolean resizeSurfaceOnce, boolean startShellOnce) {
-        scheduleDebugSurfaceRecreationIfRequested(recreateSurfaceOnce);
-        scheduleDebugSurfaceResizeIfRequested(resizeSurfaceOnce);
-        scheduleDebugShellStartIfRequested(startShellOnce);
-
-        host.handleProductShellStateEvent("resumed");
-    }
-
-    /** Debug-only: optional one-shot surface view reinstall from lifecycle resume flags. */
-    private void scheduleDebugSurfaceRecreationIfRequested(boolean recreateSurfaceOnce) {
         host.appendEvent("debug.surface.recreate requested=" + recreateSurfaceOnce + " scheduled=" + host.surfaceRecreationScheduled());
         if (recreateSurfaceOnce && !host.surfaceRecreationScheduled()) {
             host.setSurfaceRecreationScheduled(true);
@@ -116,10 +107,7 @@ public final class SurfaceController {
                 host.updateStatus("debug.surface.recreated");
             }, 700);
         }
-    }
 
-    /** Debug-only: optional one-shot surface holder resize probe from lifecycle resume flags. */
-    private void scheduleDebugSurfaceResizeIfRequested(boolean resizeSurfaceOnce) {
         host.appendEvent("debug.surface.resize requested=" + resizeSurfaceOnce + " scheduled=" + host.surfaceResizeScheduled());
         if (resizeSurfaceOnce && !host.surfaceResizeScheduled()) {
             final SurfaceView surfaceView = host.surfaceView();
@@ -147,10 +135,7 @@ public final class SurfaceController {
                 }, 900);
             }
         }
-    }
 
-    /** Debug-only: optional one-shot shell start signal from lifecycle resume flags. */
-    private void scheduleDebugShellStartIfRequested(boolean startShellOnce) {
         host.appendEvent("debug.session.start requested=" + startShellOnce + " scheduled=" + host.shellStartScheduled());
         if (startShellOnce && !host.shellStartScheduled()) {
             host.setShellStartScheduled(true);
@@ -158,6 +143,8 @@ public final class SurfaceController {
                 host.handleProductShellStateEvent("debug-session-started");
             }, 900);
         }
+
+        host.handleProductShellStateEvent("resumed");
     }
 
     public void onPause() {
