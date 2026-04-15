@@ -190,6 +190,10 @@ Agent reporting contract (mandatory for cleanup campaign updates):
      `getSystemService(InputMethodManager.class)`) instead of private one-line
      suppliers; ~778 → ~730 lines, behavior unchanged. `SurfaceController` remains
      frozen; `ChromeController` unchanged this wave.
+   - Completed: `ZideTerminalActivity` create*Callbacks: viewport `IntSupplier`s and
+     surface snapshot reads bind `terminalViewportController` /
+     `terminalSurfaceStateSnapshotReader` directly (private viewport/snapshot
+     forwards removed; viewport contract doc moved to the field).
    - Next: net simplification in `ZideTerminalActivity` `create*Callbacks()`
      factories: collapse redundant one-line supplier glue and trivial `this::`
      forwards where the activity adds no policy (prefer direct field capture or
