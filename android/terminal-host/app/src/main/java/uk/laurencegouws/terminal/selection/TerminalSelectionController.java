@@ -748,14 +748,21 @@ public final class TerminalSelectionController {
             return;
         }
         if (terminalSelectionActionMode != null) {
-            terminalSelectionActionMode.invalidateContentRect();
-            terminalSelectionActionMode.invalidate();
+            invalidateTerminalSelectionActionMode(true);
             return;
         }
         terminalSelectionActionMode = host.productSurfaceContainer()
                 .startActionMode(createTerminalSelectionActionModeCallback(), ActionMode.TYPE_FLOATING);
-        if (terminalSelectionActionMode != null) {
-            terminalSelectionActionMode.invalidateContentRect();
+        invalidateTerminalSelectionActionMode(false);
+    }
+
+    private void invalidateTerminalSelectionActionMode(boolean invalidateView) {
+        if (terminalSelectionActionMode == null) {
+            return;
+        }
+        terminalSelectionActionMode.invalidateContentRect();
+        if (invalidateView) {
+            terminalSelectionActionMode.invalidate();
         }
     }
 
@@ -850,7 +857,7 @@ public final class TerminalSelectionController {
             }
             return;
         }
-        terminalSelectionActionMode.invalidateContentRect();
+        invalidateTerminalSelectionActionMode(false);
     }
 
     private boolean shouldFinishTerminalSelectionActionMode() {
