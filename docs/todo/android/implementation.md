@@ -240,6 +240,18 @@ Agent reporting contract (mandatory for cleanup campaign updates):
     **Validation:** `:app:compileReleaseJavaWithJavac`, deploy via
     `python3 ops/android_terminal_host.py deploy`, and
     `adb logcat -d -s AndroidRuntime:E` (empty).
+  - Completed (mini-wave, host contract pressure): interaction and status
+    assembly/callback paths removed additional `nativeLoaded` pass-through seams.
+    `InteractionAssembly` / `InteractionFactory` / selection+gesture adapters
+    now derive native-loaded truth at adapter level (`967af797`), and
+    `StatusViewAssembly` / `StatusCallbacks` / snapshot host callbacks similarly
+    bind static native-loaded truth without activity-owned host wiring
+    (`b3e23353`). `ZideTerminalActivity.java` wiring trimmed to remove redundant
+    factory args while behavior stayed unchanged.
+    **Validation:** per refactor commit `:app:compileReleaseJavaWithJavac`; after
+    the 2-commit seam boundary, deploy with
+    `python3 ops/android_terminal_host.py deploy` and confirm
+    `adb logcat -d -s AndroidRuntime:E` is empty.
    - Next: net simplification in `ZideTerminalActivity` `create*Callbacks()`
      factories: collapse redundant one-line supplier glue and trivial `this::`
      forwards where the activity adds no policy (prefer direct field capture or
