@@ -272,21 +272,58 @@ public final class ZideTerminalActivity extends Activity
 
     private void assembleSessionControllers() {
         final SessionAssembly.Result result = SessionAssembly.assemble(
-                createSessionAssemblyCallbacks());
+                new SessionAssemblyCallbacks(
+                        this,
+                        () -> userlandRelease,
+                        handler,
+                        this::appendEvent,
+                        this::updateStatus,
+                        state -> currentReadinessState = state,
+                        this::refreshProductShellStateIfReady,
+                        this::refreshDebugStatusSurfaceIfReady,
+                        this::shouldRunProductFrameLoop,
+                        this::tickProductFrameAndRefreshScrollOverlay));
         userlandSessionCoordinator = result.userlandSessionCoordinator;
         productFrameLoopController = result.frameLoopController;
     }
 
     private void assembleUserlandWorkflowControllers() {
         final WorkflowAssembly.Result result = WorkflowAssembly.assemble(
-                createWorkflowAssemblyCallbacks());
+                new WorkflowAssemblyCallbacks(
+                        this,
+                        handler,
+                        () -> userlandRelease,
+                        release -> userlandRelease = release,
+                        this::appendEvent,
+                        this::updateStatus,
+                        packageStatusText,
+                        installState -> currentInstallState = installState,
+                        readinessState -> currentReadinessState = readinessState,
+                        this::applyInstallStateIfReady,
+                        this::restartSessionIfReady,
+                        this::showDebugViewIfReady));
         terminalRuntimeAssetsController = result.runtimeAssetsController;
         userlandWorkflowController = result.userlandWorkflowController;
     }
 
     private void assembleProductRuntimeController() {
         terminalProductRuntimeController = ProductRuntimeAssembly.assemble(
-                createProductRuntimeAssemblyCallbacks());
+                new ProductRuntimeAssemblyCallbacks(
+                        () -> debugViewEnabled,
+                        () -> currentInstallState,
+                        installState -> currentInstallState = installState,
+                        () -> currentReadinessState,
+                        this::appendEvent,
+                        this::updateStatus,
+                        () -> surfaceHostBridge != null ? surfaceHostBridge.currentSurfaceView() : null,
+                        productReadinessBlocker,
+                        terminalScrollOverlay,
+                        selectionController,
+                        productShellStatePresenter,
+                        productFrameLoopController,
+                        terminalStatusController,
+                        userlandSessionCoordinator,
+                        terminalGestureStateController));
     }
 
     private WidgetCallbacks createWidgetCallbacks() {
@@ -333,39 +370,6 @@ public final class ZideTerminalActivity extends Activity
                 this::handleProductShellStateEventIfReady);
     }
 
-    private SessionAssemblyCallbacks createSessionAssemblyCallbacks() {
-        return new SessionAssemblyCallbacks(
-                this,
-                () -> userlandRelease,
-                handler,
-                this::appendEvent,
-                this::updateStatus,
-                state -> currentReadinessState = state,
-                this::refreshProductShellStateIfReady,
-                this::refreshDebugStatusSurfaceIfReady,
-                this::shouldRunProductFrameLoop,
-                this::tickProductFrameAndRefreshScrollOverlay);
-    }
-
-    private ProductRuntimeAssemblyCallbacks createProductRuntimeAssemblyCallbacks() {
-        return new ProductRuntimeAssemblyCallbacks(
-                () -> debugViewEnabled,
-                () -> currentInstallState,
-                installState -> currentInstallState = installState,
-                () -> currentReadinessState,
-                this::appendEvent,
-                this::updateStatus,
-                () -> surfaceHostBridge != null ? surfaceHostBridge.currentSurfaceView() : null,
-                productReadinessBlocker,
-                terminalScrollOverlay,
-                selectionController,
-                productShellStatePresenter,
-                productFrameLoopController,
-                terminalStatusController,
-                userlandSessionCoordinator,
-                terminalGestureStateController);
-    }
-
     private void assembleActivityLifecycleController() {
         terminalActivityLifecycleController = new LifecycleController(
                 createLifecycleCallbacks());
@@ -400,45 +404,25 @@ public final class ZideTerminalActivity extends Activity
 
     private void bindAndStartUiControllers() {
         UiStartupAssembly.start(
-                createUiStartupCallbacks());
-    }
-
-    private WorkflowAssemblyCallbacks createWorkflowAssemblyCallbacks() {
-        return new WorkflowAssemblyCallbacks(
-                this,
-                handler,
-                () -> userlandRelease,
-                release -> userlandRelease = release,
-                this::appendEvent,
-                this::updateStatus,
-                packageStatusText,
-                installState -> currentInstallState = installState,
-                readinessState -> currentReadinessState = readinessState,
-                this::applyInstallStateIfReady,
-                this::restartSessionIfReady,
-                this::showDebugViewIfReady);
-    }
-
-    private UiStartupCallbacks createUiStartupCallbacks() {
-        return new UiStartupCallbacks(
-                terminalViewportController,
-                terminalChromeController,
-                productReadinessRetryButton,
-                productReadinessDebugButton,
-                () -> currentInstallState,
-                () -> currentReadinessState,
-                () -> userlandWorkflowController,
-                () -> userlandSessionCoordinator,
-                this::showDebugViewIfReady,
-                this::appendEvent,
-                this::updateStatus,
-                terminalRuntimeAssetsController,
-                terminalViewModeController,
-                surfaceHostController,
-                terminalSurfaceWidgetController,
-                productShellStatePresenter,
-                productFrameLoopController,
-                leftSidebar);
+                new UiStartupCallbacks(
+                        terminalViewportController,
+                        terminalChromeController,
+                        productReadinessRetryButton,
+                        productReadinessDebugButton,
+                        () -> currentInstallState,
+                        () -> currentReadinessState,
+                        () -> userlandWorkflowController,
+                        () -> userlandSessionCoordinator,
+                        this::showDebugViewIfReady,
+                        this::appendEvent,
+                        this::updateStatus,
+                        terminalRuntimeAssetsController,
+                        terminalViewModeController,
+                        surfaceHostController,
+                        terminalSurfaceWidgetController,
+                        productShellStatePresenter,
+                        productFrameLoopController,
+                        leftSidebar));
     }
 
     private void stopScrollbackFlingIfReady() {
