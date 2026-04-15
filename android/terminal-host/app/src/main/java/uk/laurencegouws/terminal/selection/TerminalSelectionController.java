@@ -851,6 +851,10 @@ public final class TerminalSelectionController {
         if (!canHandleSelectionDrag()) {
             return false;
         }
+        return populateTerminalSelectionContentRectFromBridge(outRect);
+    }
+
+    private boolean populateTerminalSelectionContentRectFromBridge(Rect outRect) {
         final int left = bridge.currentSelectionRectLeft();
         final int top = bridge.currentSelectionRectTop();
         final int right = bridge.currentSelectionRectRight();
