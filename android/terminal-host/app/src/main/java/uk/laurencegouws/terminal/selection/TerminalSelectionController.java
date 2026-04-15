@@ -798,15 +798,12 @@ public final class TerminalSelectionController {
 
             @Override
             public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
-                return false;
+                return onTerminalSelectionFloatingActionModePrepare();
             }
 
             @Override
             public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
-                if (!isTerminalSelectionCopyMenuItem(item)) {
-                    return false;
-                }
-                return completeTerminalSelectionCopyAction(mode);
+                return handleTerminalSelectionFloatingToolbarMenuItem(mode, item);
             }
 
             @Override
@@ -816,9 +813,24 @@ public final class TerminalSelectionController {
 
             @Override
             public void onGetContentRect(ActionMode mode, View view, Rect outRect) {
-                populateSelectionActionModeContentRect(view, outRect);
+                supplyTerminalSelectionFloatingToolbarContentRect(view, outRect);
             }
         };
+    }
+
+    private boolean onTerminalSelectionFloatingActionModePrepare() {
+        return false;
+    }
+
+    private boolean handleTerminalSelectionFloatingToolbarMenuItem(ActionMode mode, MenuItem item) {
+        if (!isTerminalSelectionCopyMenuItem(item)) {
+            return false;
+        }
+        return completeTerminalSelectionCopyAction(mode);
+    }
+
+    private void supplyTerminalSelectionFloatingToolbarContentRect(View view, Rect outRect) {
+        populateSelectionActionModeContentRect(view, outRect);
     }
 
     private boolean onTerminalSelectionFloatingActionModeCreated(Menu menu) {
@@ -836,9 +848,13 @@ public final class TerminalSelectionController {
     }
 
     private boolean completeTerminalSelectionCopyAction(ActionMode mode) {
+        executeTerminalSelectionToolbarCopy(mode);
+        return true;
+    }
+
+    private void executeTerminalSelectionToolbarCopy(ActionMode mode) {
         copyCurrentShellSelectionToClipboard();
         mode.finish();
-        return true;
     }
 
     private void detachCurrentTerminalSelectionActionModeIfMatches(ActionMode mode) {
@@ -1058,10 +1074,18 @@ public final class TerminalSelectionController {
     private void copyCurrentShellSelectionToClipboard() {
         final byte[] bytes = bridge.currentSelectionTextBytes();
         if (bytes == null) {
-            host.appendEvent("product.selection.copy result=no-bytes");
+            reportTerminalSelectionCopyNoBytes();
             return;
         }
-        copyPlainTextSelectionToClipboard(new String(bytes, java.nio.charset.StandardCharsets.UTF_8));
+        copyPlainTextSelectionToClipboard(decodeTerminalSelectionUtf8(bytes));
+    }
+
+    private void reportTerminalSelectionCopyNoBytes() {
+        host.appendEvent("product.selection.copy result=no-bytes");
+    }
+
+    private static String decodeTerminalSelectionUtf8(byte[] bytes) {
+        return new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
     }
 
     private void copyPlainTextSelectionToClipboard(String text) {
