@@ -312,8 +312,8 @@ public final class ZideTerminalActivity extends Activity
                 () -> surfaceHostBridge,
                 this::isCurrentInstalling,
                 this::isCurrentInstallFailed,
-                this::currentReadinessStateSnapshot,
-                this::currentInstallStateSnapshot,
+                () -> currentReadinessState,
+                () -> currentInstallState,
                 this::shouldRunProductFrameLoop,
                 this::refreshProductScrollOverlayIfReady,
                 this::appendEvent,
@@ -358,9 +358,9 @@ public final class ZideTerminalActivity extends Activity
         return new ProductRuntimeAssemblyCallbacks(
                 this::isDebugViewEnabled,
                 this::isNativeLoaded,
-                this::currentInstallStateSnapshot,
+                () -> currentInstallState,
                 this::setCurrentInstallState,
-                this::currentReadinessStateSnapshot,
+                () -> currentReadinessState,
                 this::appendEvent,
                 this::updateStatus,
                 this::currentSurfaceViewIfReady,
@@ -390,8 +390,8 @@ public final class ZideTerminalActivity extends Activity
                 () -> surfaceHostBridge,
                 this::currentSurfaceStateSnapshot,
                 this::notifyVisibleViewportIfReady,
-                this::currentInstallStateSnapshot,
-                this::currentReadinessStateSnapshot);
+                () -> currentInstallState,
+                () -> currentReadinessState);
     }
 
     private LifecycleCallbacks createLifecycleCallbacks() {
@@ -442,8 +442,8 @@ public final class ZideTerminalActivity extends Activity
                 () -> terminalChromeController,
                 () -> productReadinessRetryButton,
                 () -> productReadinessDebugButton,
-                this::currentInstallStateSnapshot,
-                this::currentReadinessStateSnapshot,
+                () -> currentInstallState,
+                () -> currentReadinessState,
                 () -> userlandWorkflowController,
                 () -> userlandSessionCoordinator,
                 this::showDebugViewIfReady,
@@ -507,14 +507,6 @@ public final class ZideTerminalActivity extends Activity
 
     private boolean isCurrentInstallFailed() {
         return currentInstallState.isFailed();
-    }
-
-    private UserlandInstallState currentInstallStateSnapshot() {
-        return currentInstallState;
-    }
-
-    private UserlandReadinessState currentReadinessStateSnapshot() {
-        return currentReadinessState;
     }
 
     private android.view.SurfaceView currentSurfaceViewIfReady() {
