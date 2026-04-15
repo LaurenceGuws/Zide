@@ -129,10 +129,6 @@ public final class ChromeController {
         host.applyModifierLatchState(state);
     }
 
-    public boolean currentImeVisible() {
-        return host.currentImeVisible();
-    }
-
     public void openIme() {
         final InputMethodManager imm = inputMethodManagerOrLogUnavailable();
         if (imm == null) {
@@ -164,7 +160,7 @@ public final class ChromeController {
     }
 
     public void toggleIme() {
-        if (currentImeVisible()) {
+        if (host.currentImeVisible()) {
             closeIme();
             return;
         }
