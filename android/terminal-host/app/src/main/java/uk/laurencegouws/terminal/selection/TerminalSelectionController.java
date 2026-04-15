@@ -921,12 +921,20 @@ public final class TerminalSelectionController {
             hideSelectionHandle(handle);
             return;
         }
-        final float radius = handle.getLayoutParams().width / 2.0f;
+        layoutSelectionHandleFromEndpointRect(handle, rect, startHandle);
+    }
+
+    private void layoutSelectionHandleFromEndpointRect(View handle, Rect rect, boolean startHandle) {
+        final float radius = selectionHandleRadiusPx(handle);
         final float offsetY = selectionHandleYOffsetPx();
         final float anchorX = startHandle ? rect.left : rect.right;
         handle.setX(anchorX - radius);
         handle.setY((rect.bottom - radius) + offsetY);
         showSelectionHandle(handle);
+    }
+
+    private float selectionHandleRadiusPx(View handle) {
+        return handle.getLayoutParams().width / 2.0f;
     }
 
     private float selectionHandleYOffsetPx() {
