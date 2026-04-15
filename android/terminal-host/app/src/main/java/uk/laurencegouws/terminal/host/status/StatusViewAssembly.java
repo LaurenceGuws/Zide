@@ -117,23 +117,7 @@ public final class StatusViewAssembly {
     public static Result assemble(Host host) {
         final ActivityViewBindings viewBindings = ActivityViewBindings.from(host.activity());
         final TerminalSurfaceStateSnapshotReader terminalSurfaceStateSnapshotReader = new TerminalSurfaceStateSnapshotReader(
-                new TerminalSurfaceStateSnapshotHostCallbacks(
-                        host::nativeLoaded,
-                        uk.laurencegouws.terminal.TerminalNativeBridge::nativeCurrentWindowTokenBridge,
-                        uk.laurencegouws.terminal.TerminalNativeBridge::nativeCurrentSurfaceEpochBridge,
-                        uk.laurencegouws.terminal.TerminalNativeBridge::nativeCurrentSurfaceTransitionBridge,
-                        uk.laurencegouws.terminal.TerminalNativeBridge::nativeCurrentRendererStatusBridge,
-                        uk.laurencegouws.terminal.TerminalNativeBridge::nativeCurrentRendererSwapCountBridge,
-                        uk.laurencegouws.terminal.TerminalNativeBridge::nativeCurrentRendererBoundEpochBridge,
-                        uk.laurencegouws.terminal.TerminalNativeBridge::nativeCurrentRendererContextCreateCountBridge,
-                        uk.laurencegouws.terminal.TerminalNativeBridge::nativeCurrentRendererSurfaceCreateCountBridge,
-                        uk.laurencegouws.terminal.TerminalNativeBridge::nativeCurrentRendererTextureCreateCountBridge,
-                        uk.laurencegouws.terminal.TerminalNativeBridge::nativeCurrentRendererTextureAliveBridge,
-                        uk.laurencegouws.terminal.TerminalNativeBridge::nativeCurrentRendererTextureUploadCountBridge,
-                        uk.laurencegouws.terminal.TerminalNativeBridge::nativeCurrentRendererTextureUpdateCountBridge,
-                        uk.laurencegouws.terminal.TerminalNativeBridge::nativeCurrentRendererTextureResizeCountBridge,
-                        uk.laurencegouws.terminal.TerminalNativeBridge::nativeCurrentRendererTextureWidthBridge,
-                        uk.laurencegouws.terminal.TerminalNativeBridge::nativeCurrentRendererTextureHeightBridge));
+                new TerminalSurfaceStateSnapshotHostCallbacks(host::nativeLoaded));
         final StatusBridge terminalStatusHostBridge = new StatusBridge(new StatusCallbacks(
                 host::debugViewEnabled,
                 host::nativeLoaded,

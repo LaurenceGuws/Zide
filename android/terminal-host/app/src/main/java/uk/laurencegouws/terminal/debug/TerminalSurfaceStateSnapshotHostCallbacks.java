@@ -1,61 +1,15 @@
 package uk.laurencegouws.terminal.debug;
 
 import java.util.function.BooleanSupplier;
-import java.util.function.IntSupplier;
-import java.util.function.LongSupplier;
+
+import uk.laurencegouws.terminal.TerminalNativeBridge;
 
 /** Functional callback adapter for {@link TerminalSurfaceStateSnapshotReader}. */
 public final class TerminalSurfaceStateSnapshotHostCallbacks implements TerminalSurfaceStateSnapshotReader.Host {
     private final BooleanSupplier nativeLoaded;
-    private final LongSupplier currentWindowToken;
-    private final LongSupplier currentSurfaceEpoch;
-    private final IntSupplier currentSurfaceTransition;
-    private final IntSupplier currentRendererStatus;
-    private final LongSupplier currentRendererSwapCount;
-    private final LongSupplier currentRendererBoundEpoch;
-    private final LongSupplier currentRendererContextCreateCount;
-    private final LongSupplier currentRendererSurfaceCreateCount;
-    private final LongSupplier currentRendererTextureCreateCount;
-    private final BooleanSupplier currentRendererTextureAlive;
-    private final LongSupplier currentRendererTextureUploadCount;
-    private final LongSupplier currentRendererTextureUpdateCount;
-    private final LongSupplier currentRendererTextureResizeCount;
-    private final IntSupplier currentRendererTextureWidth;
-    private final IntSupplier currentRendererTextureHeight;
 
-    public TerminalSurfaceStateSnapshotHostCallbacks(
-            BooleanSupplier nativeLoaded,
-            LongSupplier currentWindowToken,
-            LongSupplier currentSurfaceEpoch,
-            IntSupplier currentSurfaceTransition,
-            IntSupplier currentRendererStatus,
-            LongSupplier currentRendererSwapCount,
-            LongSupplier currentRendererBoundEpoch,
-            LongSupplier currentRendererContextCreateCount,
-            LongSupplier currentRendererSurfaceCreateCount,
-            LongSupplier currentRendererTextureCreateCount,
-            BooleanSupplier currentRendererTextureAlive,
-            LongSupplier currentRendererTextureUploadCount,
-            LongSupplier currentRendererTextureUpdateCount,
-            LongSupplier currentRendererTextureResizeCount,
-            IntSupplier currentRendererTextureWidth,
-            IntSupplier currentRendererTextureHeight) {
+    public TerminalSurfaceStateSnapshotHostCallbacks(BooleanSupplier nativeLoaded) {
         this.nativeLoaded = nativeLoaded;
-        this.currentWindowToken = currentWindowToken;
-        this.currentSurfaceEpoch = currentSurfaceEpoch;
-        this.currentSurfaceTransition = currentSurfaceTransition;
-        this.currentRendererStatus = currentRendererStatus;
-        this.currentRendererSwapCount = currentRendererSwapCount;
-        this.currentRendererBoundEpoch = currentRendererBoundEpoch;
-        this.currentRendererContextCreateCount = currentRendererContextCreateCount;
-        this.currentRendererSurfaceCreateCount = currentRendererSurfaceCreateCount;
-        this.currentRendererTextureCreateCount = currentRendererTextureCreateCount;
-        this.currentRendererTextureAlive = currentRendererTextureAlive;
-        this.currentRendererTextureUploadCount = currentRendererTextureUploadCount;
-        this.currentRendererTextureUpdateCount = currentRendererTextureUpdateCount;
-        this.currentRendererTextureResizeCount = currentRendererTextureResizeCount;
-        this.currentRendererTextureWidth = currentRendererTextureWidth;
-        this.currentRendererTextureHeight = currentRendererTextureHeight;
     }
 
     @Override
@@ -65,76 +19,76 @@ public final class TerminalSurfaceStateSnapshotHostCallbacks implements Terminal
 
     @Override
     public long currentWindowToken() {
-        return currentWindowToken.getAsLong();
+        return TerminalNativeBridge.nativeCurrentWindowTokenBridge();
     }
 
     @Override
     public long currentSurfaceEpoch() {
-        return currentSurfaceEpoch.getAsLong();
+        return TerminalNativeBridge.nativeCurrentSurfaceEpochBridge();
     }
 
     @Override
     public int currentSurfaceTransition() {
-        return currentSurfaceTransition.getAsInt();
+        return TerminalNativeBridge.nativeCurrentSurfaceTransitionBridge();
     }
 
     @Override
     public int currentRendererStatus() {
-        return currentRendererStatus.getAsInt();
+        return TerminalNativeBridge.nativeCurrentRendererStatusBridge();
     }
 
     @Override
     public long currentRendererSwapCount() {
-        return currentRendererSwapCount.getAsLong();
+        return TerminalNativeBridge.nativeCurrentRendererSwapCountBridge();
     }
 
     @Override
     public long currentRendererBoundEpoch() {
-        return currentRendererBoundEpoch.getAsLong();
+        return TerminalNativeBridge.nativeCurrentRendererBoundEpochBridge();
     }
 
     @Override
     public long currentRendererContextCreateCount() {
-        return currentRendererContextCreateCount.getAsLong();
+        return TerminalNativeBridge.nativeCurrentRendererContextCreateCountBridge();
     }
 
     @Override
     public long currentRendererSurfaceCreateCount() {
-        return currentRendererSurfaceCreateCount.getAsLong();
+        return TerminalNativeBridge.nativeCurrentRendererSurfaceCreateCountBridge();
     }
 
     @Override
     public long currentRendererTextureCreateCount() {
-        return currentRendererTextureCreateCount.getAsLong();
+        return TerminalNativeBridge.nativeCurrentRendererTextureCreateCountBridge();
     }
 
     @Override
     public boolean currentRendererTextureAlive() {
-        return currentRendererTextureAlive.getAsBoolean();
+        return TerminalNativeBridge.nativeCurrentRendererTextureAliveBridge();
     }
 
     @Override
     public long currentRendererTextureUploadCount() {
-        return currentRendererTextureUploadCount.getAsLong();
+        return TerminalNativeBridge.nativeCurrentRendererTextureUploadCountBridge();
     }
 
     @Override
     public long currentRendererTextureUpdateCount() {
-        return currentRendererTextureUpdateCount.getAsLong();
+        return TerminalNativeBridge.nativeCurrentRendererTextureUpdateCountBridge();
     }
 
     @Override
     public long currentRendererTextureResizeCount() {
-        return currentRendererTextureResizeCount.getAsLong();
+        return TerminalNativeBridge.nativeCurrentRendererTextureResizeCountBridge();
     }
 
     @Override
     public int currentRendererTextureWidth() {
-        return currentRendererTextureWidth.getAsInt();
+        return TerminalNativeBridge.nativeCurrentRendererTextureWidthBridge();
     }
 
     @Override
     public int currentRendererTextureHeight() {
-        return currentRendererTextureHeight.getAsInt();
+        return TerminalNativeBridge.nativeCurrentRendererTextureHeightBridge();
     }
 }

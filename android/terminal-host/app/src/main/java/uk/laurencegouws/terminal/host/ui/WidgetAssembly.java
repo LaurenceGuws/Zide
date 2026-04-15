@@ -8,7 +8,6 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
-import uk.laurencegouws.terminal.TerminalNativeBridge;
 import uk.laurencegouws.terminal.debug.AndroidDebugFormatter;
 import uk.laurencegouws.terminal.gesture.ProductGestureController;
 import uk.laurencegouws.terminal.gesture.TerminalGestureStateController;
@@ -170,7 +169,6 @@ public final class WidgetAssembly {
                         host.productReadinessRetryButton(),
                         new ProductShellStateCallbacks(
                                 host::nativeLoaded,
-                                TerminalNativeBridge::nativeSharedRendererActiveBridge,
                                 host::currentInstallStateInstalling,
                                 host::currentInstallStateFailed,
                                 host::currentReadinessState,

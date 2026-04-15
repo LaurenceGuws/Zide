@@ -5,13 +5,13 @@ import android.view.SurfaceView;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
+import uk.laurencegouws.terminal.TerminalNativeBridge;
 import uk.laurencegouws.terminal.userland.UserlandReadinessState;
 import uk.laurencegouws.terminal.userland.UserlandInstallState;
 
 /** Functional callback adapter for {@link ProductShellStateBridge}. */
 public final class ProductShellStateCallbacks implements ProductShellStateBridge.Callbacks {
     private final BooleanSupplier nativeLoaded;
-    private final BooleanSupplier sharedShellRendererActive;
     private final BooleanSupplier installInstalling;
     private final BooleanSupplier installFailed;
     private final Supplier<UserlandReadinessState> readinessState;
@@ -20,14 +20,12 @@ public final class ProductShellStateCallbacks implements ProductShellStateBridge
 
     public ProductShellStateCallbacks(
             BooleanSupplier nativeLoaded,
-            BooleanSupplier sharedShellRendererActive,
             BooleanSupplier installInstalling,
             BooleanSupplier installFailed,
             Supplier<UserlandReadinessState> readinessState,
             Supplier<UserlandInstallState> installState,
             Supplier<SurfaceView> surfaceView) {
         this.nativeLoaded = nativeLoaded;
-        this.sharedShellRendererActive = sharedShellRendererActive;
         this.installInstalling = installInstalling;
         this.installFailed = installFailed;
         this.readinessState = readinessState;
@@ -42,7 +40,7 @@ public final class ProductShellStateCallbacks implements ProductShellStateBridge
 
     @Override
     public boolean sharedShellRendererActive() {
-        return sharedShellRendererActive.getAsBoolean();
+        return TerminalNativeBridge.nativeSharedRendererActiveBridge();
     }
 
     @Override
