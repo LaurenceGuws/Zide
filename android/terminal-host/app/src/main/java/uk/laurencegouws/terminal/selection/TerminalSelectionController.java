@@ -904,11 +904,11 @@ public final class TerminalSelectionController {
     }
 
     private float selectionHandleAnchorX(View handle) {
-        return handle.getX() + (handle.getWidth() / 2.0f);
+        return handle.getX() + selectionHandleRadiusPx(handle);
     }
 
     private float selectionHandleAnchorY(View handle) {
-        return (handle.getY() + (handle.getHeight() / 2.0f)) - selectionHandleYOffsetPx();
+        return (handle.getY() + selectionHandleRadiusPx(handle)) - selectionHandleYOffsetPx();
     }
 
     private AnchorPoint currentDraggedHandleAnchor(View handle) {
