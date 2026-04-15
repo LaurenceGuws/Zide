@@ -304,6 +304,18 @@ Agent reporting contract (mandatory for cleanup campaign updates):
     relaunch checks via `python3 ops/android_terminal_host.py deploy`,
     `adb logcat -c`, `adb shell am start ...`, and
     `adb logcat -d -s AndroidRuntime:E` (empty).
+  - Completed (mini-wave, final one-shot create callbacks + pivot trigger):
+    finished the remaining one-shot `create*Callbacks()` seam in
+    `ZideTerminalActivity` (`107b8415`) and a final single-use runtime assembly
+    wrapper (`61e35fed`). These two consecutive commits each landed small net
+    deletions (both `-4`), triggering the lane stop condition; then the lane
+    pivoted to callback-type normalization on a high-churn adapter seam by
+    normalizing `UiStartupAssembly.Host` return types while preserving lazy
+    reads at the blocker boundary (`e32acb73`). Activity line count is now
+    `626 -> 618` for this continuation segment.
+    **Validation:** `:app:compileReleaseJavaWithJavac` per refactor commit;
+    deploy + relaunch + `adb logcat -d -s AndroidRuntime:E` checks remained
+    clean before pivot.
   - Next: complete Android host callback/assembly contract cleanup before
     another activity-only pass: (1) finish `nativeLoaded` one-source collapse
     across remaining host adapters/assemblies, (2) run constructor-pressure
