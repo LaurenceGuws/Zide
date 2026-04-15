@@ -205,7 +205,19 @@ public final class SurfaceController {
         try {
             final long seq = host.nativeLoaded() ? host.nativeOnSurfaceRedrawNeededBridge() : -1;
             final AndroidDebugFormatter.SurfaceEventSnapshot state = host.currentSurfaceStateSnapshot();
-            appendNativeSurfaceRedrawNeededTelemetry(seq, state);
+            host.appendEvent(
+                    "native.surfaceRedrawNeeded seq=" + seq +
+                            " gles=" + state.glesStatus +
+                            " glesSwaps=" + state.glesSwapCount +
+                            " glesBoundEpoch=" + state.glesBoundEpoch +
+                            " glesContextCreates=" + state.glesContextCreateCount +
+                            " glesSurfaceCreates=" + state.glesSurfaceCreateCount +
+                            " glesTextureCreates=" + state.glesTextureCreateCount +
+                            " glesTextureAlive=" + state.glesTextureAlive +
+                            " glesTextureUploads=" + state.glesTextureUploadCount +
+                            " glesTextureUpdates=" + state.glesTextureUpdateCount +
+                            " glesTextureResizes=" + state.glesTextureResizeCount +
+                            " glesTextureSize=" + state.glesTextureWidth + "x" + state.glesTextureHeight);
             host.updateStatus("surface.state.redraw_needed");
         } finally {
             surfaceRedrawNeededDispatching = false;
@@ -219,9 +231,12 @@ public final class SurfaceController {
         final SurfaceView nextSurfaceView = new SurfaceView(host.productSurfaceContainer().getContext());
         nextSurfaceView.getHolder().setFormat(PixelFormat.RGBA_8888);
         host.installSurfaceGestureHost(nextSurfaceView);
-        final FrameLayout.LayoutParams params = matchParentCenteredSurfaceHostLayoutParams();
+        final FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                Gravity.CENTER);
         host.productSurfaceContainer().addView(nextSurfaceView, params);
-        final SurfaceHolder.Callback2 nextCallback = resolveSurfaceInstallCallback(callback);
+        final SurfaceHolder.Callback2 nextCallback = callback != null ? callback : host.surfaceCallback();
         host.reinstallSurfaceCallback(nextSurfaceView, nextCallback);
         host.setSurfaceView(nextSurfaceView);
         host.appendEvent("surface.host.installed reason=" + reason + " generation=" + host.surfaceHostGeneration());
@@ -236,26 +251,11 @@ public final class SurfaceController {
         final int width = Math.max(host.productSurfaceContainer().getWidth(), 1);
         final int height = Math.max(host.productSurfaceContainer().getHeight(), 1);
         host.setVisibleViewportSize(width, height);
-        if (visibleViewportDimensionsMatchNotified(width, height, viewportImeVisible)) {
+        if (width == host.notifiedViewportWidth()
+                && height == host.notifiedViewportHeight()
+                && viewportImeVisible == host.notifiedViewportImeVisible()) {
             return;
         }
-        publishVisibleViewportChange(reason, width, height, viewportImeVisible);
-    }
-
-    private boolean visibleViewportDimensionsMatchNotified(
-            int width,
-            int height,
-            boolean viewportImeVisible) {
-        return width == host.notifiedViewportWidth()
-                && height == host.notifiedViewportHeight()
-                && viewportImeVisible == host.notifiedViewportImeVisible();
-    }
-
-    private void publishVisibleViewportChange(
-            String reason,
-            int width,
-            int height,
-            boolean viewportImeVisible) {
         host.setNotifiedViewportSize(width, height, viewportImeVisible);
         host.appendEvent("viewport.size.changed reason=" + reason + " size=" + width + "x" + height + " imeVisible=" + viewportImeVisible);
         final long seq = host.nativeLoaded() ? host.nativeOnVisibleViewportBridge(width, height, viewportImeVisible) : -1;
@@ -264,46 +264,17 @@ public final class SurfaceController {
         host.updateStatus("viewport.state.updated");
     }
 
-    private void appendNativeSurfaceRedrawNeededTelemetry(
-            long seq,
-            AndroidDebugFormatter.SurfaceEventSnapshot state) {
-        host.appendEvent(
-                "native.surfaceRedrawNeeded seq=" + seq +
-                        " gles=" + state.glesStatus +
-                        " glesSwaps=" + state.glesSwapCount +
-                        " glesBoundEpoch=" + state.glesBoundEpoch +
-                        " glesContextCreates=" + state.glesContextCreateCount +
-                        " glesSurfaceCreates=" + state.glesSurfaceCreateCount +
-                        " glesTextureCreates=" + state.glesTextureCreateCount +
-                        " glesTextureAlive=" + state.glesTextureAlive +
-                        " glesTextureUploads=" + state.glesTextureUploadCount +
-                        " glesTextureUpdates=" + state.glesTextureUpdateCount +
-                        " glesTextureResizes=" + state.glesTextureResizeCount +
-                        " glesTextureSize=" + state.glesTextureWidth + "x" + state.glesTextureHeight);
-    }
-
-    private SurfaceHolder.Callback2 resolveSurfaceInstallCallback(SurfaceHolder.Callback2 callback) {
-        return callback != null ? callback : host.surfaceCallback();
-    }
-
     private void removeExistingSurfaceHostViewIfPresent(String reason, SurfaceHolder.Callback2 callback) {
         final SurfaceView existing = host.surfaceView();
         if (existing == null) {
             return;
         }
-        final SurfaceHolder.Callback2 previousCallback = resolveSurfaceInstallCallback(callback);
+        final SurfaceHolder.Callback2 previousCallback = callback != null ? callback : host.surfaceCallback();
         if (previousCallback != null) {
             existing.getHolder().removeCallback(previousCallback);
         }
         host.productSurfaceContainer().removeView(existing);
         host.appendEvent("surface.host.removed reason=" + reason + " generation=" + host.surfaceHostGeneration());
-    }
-
-    private FrameLayout.LayoutParams matchParentCenteredSurfaceHostLayoutParams() {
-        return new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                Gravity.CENTER);
     }
 
 }
