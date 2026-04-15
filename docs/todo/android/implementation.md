@@ -168,6 +168,12 @@ Agent reporting contract (mandatory for cleanup campaign updates):
     (`+16/-56` across three refactor commits) while preserving compile/deploy
     safety checks (compile each commit; deploy + clean `AndroidRuntime:E` smoke
     after the second commit in this wave).
+  - Completed: planning-only `TerminalSelectionController` seam audit
+    established the next extraction queue without behavior changes:
+    (a) selection-drag/autoscroll loop, (b) selection-handle geometry/sync,
+    and (c) action-mode + clipboard flow. Audit conclusion remains
+    contract-aligned: keep selection monolithic until one of those sub-seams is
+    lifted in a behavior-preserving cut with replay/validation authority.
    - Next: hotspot reassessment execution order is now:
      1) net-simplify `WidgetCallbacks` / `WidgetAssembly` constructor and field
         pressure (one-source dedupe, no new wrappers),
