@@ -261,6 +261,14 @@ Agent reporting contract (mandatory for cleanup campaign updates):
     **Validation:** `:app:compileReleaseJavaWithJavac` on each refactor commit,
     plus deploy + `adb logcat -d -s AndroidRuntime:E` at 2-commit cadence
     (empty each check).
+  - Completed (mini-wave, surface/runtime constructor pressure): further reduced
+    assembly/callback constructor pressure by removing runtime host
+    `nativeLoaded` ctor threading and inlining `SurfaceFactory` one-callsite
+    wrappers directly in `SurfaceWidgetAssembly` (`b082193a`, `d7a86cce`).
+    Outcome: fewer constructor arguments/method wrappers and a net deletion
+    trend without changing controller ownership.
+    **Validation:** `:app:compileReleaseJavaWithJavac` each commit; deploy +
+    `adb logcat -d -s AndroidRuntime:E` at seam cadence (empty).
    - Next: net simplification in `ZideTerminalActivity` `create*Callbacks()`
      factories: collapse redundant one-line supplier glue and trivial `this::`
      forwards where the activity adds no policy (prefer direct field capture or
