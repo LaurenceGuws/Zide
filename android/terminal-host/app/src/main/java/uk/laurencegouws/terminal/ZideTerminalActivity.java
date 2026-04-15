@@ -335,9 +335,9 @@ public final class ZideTerminalActivity extends Activity
 
     private SessionAssemblyCallbacks createSessionAssemblyCallbacks() {
         return new SessionAssemblyCallbacks(
-                () -> this,
+                this,
                 () -> userlandRelease,
-                () -> handler,
+                handler,
                 this::appendEvent,
                 this::updateStatus,
                 state -> currentReadinessState = state,

@@ -14,9 +14,9 @@ import uk.laurencegouws.terminal.userland.UserlandRelease;
 
 /** Functional callback adapter for {@link SessionAssembly.Host}. */
 public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
-    private final Supplier<Context> context;
+    private final Context context;
     private final Supplier<UserlandRelease> userlandRelease;
-    private final Supplier<Handler> handler;
+    private final Handler handler;
     private final Consumer<String> appendEvent;
     private final Consumer<String> updateStatus;
     private final Consumer<UserlandReadinessState> applyReadinessState;
@@ -26,9 +26,9 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
     private final IntSupplier tickProductFrame;
 
     public SessionAssemblyCallbacks(
-            Supplier<Context> context,
+            Context context,
             Supplier<UserlandRelease> userlandRelease,
-            Supplier<Handler> handler,
+            Handler handler,
             Consumer<String> appendEvent,
             Consumer<String> updateStatus,
             Consumer<UserlandReadinessState> applyReadinessState,
@@ -50,7 +50,7 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
 
     @Override
     public Context context() {
-        return context.get();
+        return context;
     }
 
     @Override
@@ -60,7 +60,7 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
 
     @Override
     public Handler handler() {
-        return handler.get();
+        return handler;
     }
 
     @Override
