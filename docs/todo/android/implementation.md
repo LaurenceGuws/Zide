@@ -198,6 +198,11 @@ Agent reporting contract (mandatory for cleanup campaign updates):
      setters and userland release use assignment lambdas; widget wiring inlines
      package doctor, surface-view supplier, and native surface-available bridge
      (eight private forwards removed).
+   - Completed: `ZideTerminalActivity` create*Callbacks: method-scoped
+     `Consumer<String>` aliases for `appendEvent` / `updateStatus` and shared
+     IME/debug `Consumer<Boolean>` binders where factories repeat the same
+     reference; ~685 → ~706 lines (readability/dedup trade; private method count
+     unchanged). Validation: compile + deploy + `AndroidRuntime:E` clean.
    - Next: net simplification in `ZideTerminalActivity` `create*Callbacks()`
      factories: collapse redundant one-line supplier glue and trivial `this::`
      forwards where the activity adds no policy (prefer direct field capture or
