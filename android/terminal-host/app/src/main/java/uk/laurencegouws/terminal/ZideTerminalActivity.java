@@ -243,7 +243,7 @@ public final class ZideTerminalActivity extends Activity
                 () -> this,
                 () -> rootView,
                 () -> this,
-                this::inputMethodManager,
+                () -> getSystemService(InputMethodManager.class),
                 () -> imeVisible,
                 this::setImeVisible,
                 () -> nativeLoaded,
@@ -474,10 +474,6 @@ public final class ZideTerminalActivity extends Activity
         if (productFrameLoopController != null) {
             productFrameLoopController.reevaluate();
         }
-    }
-
-    private InputMethodManager inputMethodManager() {
-        return getSystemService(InputMethodManager.class);
     }
 
     private void loadInitialReadinessState() {
