@@ -10,9 +10,9 @@ import android.widget.TextView;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
-import java.util.function.IntUnaryOperator;
 import java.util.function.Supplier;
 
+import uk.laurencegouws.terminal.TerminalNativeBridge;
 import uk.laurencegouws.terminal.debug.AndroidDebugFormatter;
 import uk.laurencegouws.terminal.gesture.TerminalGestureStateController;
 import uk.laurencegouws.terminal.host.surface.SurfaceBridge;
@@ -50,16 +50,12 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
     private final Supplier<TerminalSelectionController> selectionController;
     private final Supplier<TerminalGestureStateController> terminalGestureStateController;
     private final Supplier<SurfaceBridge> surfaceHostBridge;
-    private final BooleanSupplier currentInstallStateInstalling;
-    private final BooleanSupplier currentInstallStateFailed;
     private final Supplier<UserlandReadinessState> currentReadinessState;
     private final Supplier<UserlandInstallState> currentInstallState;
     private final BooleanSupplier shouldRunProductFrameLoop;
     private final Runnable refreshProductScrollOverlay;
     private final Consumer<String> appendEvent;
     private final Consumer<String> updateStatus;
-    private final IntUnaryOperator nativeSetSessionScrollbackOffset;
-    private final IntSupplier nativeFollowSessionLiveBottom;
     private final IntSupplier productViewportHeightPx;
     private final Runnable reevaluateProductFrameLoop;
     private final Runnable runPackageDoctor;
@@ -68,10 +64,6 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
     private final Runnable refreshUserlandSession;
     private final uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.NativeEventCallback callNative;
     private final uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.NativeSurfaceEventCallback callNativeWithSurfaceState;
-    private final uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.SurfaceAvailableCallback nativeOnSurfaceAvailableBridge;
-    private final uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceDestroyedBridge;
-    private final uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceRedrawNeededBridge;
-    private final uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.VisibleViewportCallback nativeOnVisibleViewportBridge;
     private final Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot;
     private final Consumer<String> handleProductShellStateEvent;
 
@@ -101,16 +93,12 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
             Supplier<TerminalSelectionController> selectionController,
             Supplier<TerminalGestureStateController> terminalGestureStateController,
             Supplier<SurfaceBridge> surfaceHostBridge,
-            BooleanSupplier currentInstallStateInstalling,
-            BooleanSupplier currentInstallStateFailed,
             Supplier<UserlandReadinessState> currentReadinessState,
             Supplier<UserlandInstallState> currentInstallState,
             BooleanSupplier shouldRunProductFrameLoop,
             Runnable refreshProductScrollOverlay,
             Consumer<String> appendEvent,
             Consumer<String> updateStatus,
-            IntUnaryOperator nativeSetSessionScrollbackOffset,
-            IntSupplier nativeFollowSessionLiveBottom,
             IntSupplier productViewportHeightPx,
             Runnable reevaluateProductFrameLoop,
             Runnable runPackageDoctor,
@@ -119,10 +107,6 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
             Runnable refreshUserlandSession,
             uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.NativeEventCallback callNative,
             uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.NativeSurfaceEventCallback callNativeWithSurfaceState,
-            uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.SurfaceAvailableCallback nativeOnSurfaceAvailableBridge,
-            uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceDestroyedBridge,
-            uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceRedrawNeededBridge,
-            uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.VisibleViewportCallback nativeOnVisibleViewportBridge,
             Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot,
             Consumer<String> handleProductShellStateEvent) {
         this.activity = activity;
@@ -150,16 +134,12 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
         this.selectionController = selectionController;
         this.terminalGestureStateController = terminalGestureStateController;
         this.surfaceHostBridge = surfaceHostBridge;
-        this.currentInstallStateInstalling = currentInstallStateInstalling;
-        this.currentInstallStateFailed = currentInstallStateFailed;
         this.currentReadinessState = currentReadinessState;
         this.currentInstallState = currentInstallState;
         this.shouldRunProductFrameLoop = shouldRunProductFrameLoop;
         this.refreshProductScrollOverlay = refreshProductScrollOverlay;
         this.appendEvent = appendEvent;
         this.updateStatus = updateStatus;
-        this.nativeSetSessionScrollbackOffset = nativeSetSessionScrollbackOffset;
-        this.nativeFollowSessionLiveBottom = nativeFollowSessionLiveBottom;
         this.productViewportHeightPx = productViewportHeightPx;
         this.reevaluateProductFrameLoop = reevaluateProductFrameLoop;
         this.runPackageDoctor = runPackageDoctor;
@@ -168,10 +148,6 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
         this.refreshUserlandSession = refreshUserlandSession;
         this.callNative = callNative;
         this.callNativeWithSurfaceState = callNativeWithSurfaceState;
-        this.nativeOnSurfaceAvailableBridge = nativeOnSurfaceAvailableBridge;
-        this.nativeOnSurfaceDestroyedBridge = nativeOnSurfaceDestroyedBridge;
-        this.nativeOnSurfaceRedrawNeededBridge = nativeOnSurfaceRedrawNeededBridge;
-        this.nativeOnVisibleViewportBridge = nativeOnVisibleViewportBridge;
         this.currentSurfaceStateSnapshot = currentSurfaceStateSnapshot;
         this.handleProductShellStateEvent = handleProductShellStateEvent;
     }
@@ -303,12 +279,12 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
 
     @Override
     public boolean currentInstallStateInstalling() {
-        return currentInstallStateInstalling.getAsBoolean();
+        return currentInstallState.get().isInstalling();
     }
 
     @Override
     public boolean currentInstallStateFailed() {
-        return currentInstallStateFailed.getAsBoolean();
+        return currentInstallState.get().isFailed();
     }
 
     @Override
@@ -353,22 +329,22 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
 
     @Override
     public long nativeOnSurfaceAvailableBridge(SurfaceHolder holder, int width, int height) {
-        return nativeOnSurfaceAvailableBridge.call(holder, width, height);
+        return TerminalNativeBridge.nativeOnSurfaceAvailableBridge(holder.getSurface(), width, height);
     }
 
     @Override
     public long nativeOnSurfaceDestroyedBridge() {
-        return nativeOnSurfaceDestroyedBridge.getAsLong();
+        return TerminalNativeBridge.nativeOnSurfaceDestroyedBridge();
     }
 
     @Override
     public long nativeOnSurfaceRedrawNeededBridge() {
-        return nativeOnSurfaceRedrawNeededBridge.getAsLong();
+        return TerminalNativeBridge.nativeOnSurfaceRedrawNeededBridge();
     }
 
     @Override
     public long nativeOnVisibleViewportBridge(int width, int height, boolean imeVisible) {
-        return nativeOnVisibleViewportBridge.call(width, height, imeVisible);
+        return TerminalNativeBridge.nativeOnVisibleViewportBridge(width, height, imeVisible);
     }
 
     @Override
@@ -383,12 +359,12 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
 
     @Override
     public int nativeSetSessionScrollbackOffset(int offsetRows) {
-        return nativeSetSessionScrollbackOffset.applyAsInt(offsetRows);
+        return TerminalNativeBridge.nativeSetSessionScrollbackOffsetBridge(offsetRows);
     }
 
     @Override
     public int nativeFollowSessionLiveBottom() {
-        return nativeFollowSessionLiveBottom.getAsInt();
+        return TerminalNativeBridge.nativeFollowSessionLiveBottomBridge();
     }
 
     @Override
