@@ -316,6 +316,19 @@ Agent reporting contract (mandatory for cleanup campaign updates):
     **Validation:** `:app:compileReleaseJavaWithJavac` per refactor commit;
     deploy + relaunch + `adb logcat -d -s AndroidRuntime:E` checks remained
     clean before pivot.
+  - Completed (mini-wave, callback-type normalization continuation): continued
+    adapter normalization beyond `UiStartup` with session/input/workflow seam
+    contract typing updates: session status-label callback switched to
+    `IntFunction<String>` and assembly release capture simplified (`a88e1a00`);
+    input host contract removed `InputMethodManager` supplier indirection
+    across assembly/factory/callback path (`90c33c87`); workflow restart-session
+    callback ownership moved to `WorkflowAssembly` to remove cross-adapter
+    callback-type coupling (`ad775828`). Tiny-delta guardrail stayed active and
+    triggered seam pivoting when consecutive commits became small.
+    **Validation:** `:app:compileReleaseJavaWithJavac` each refactor commit;
+    deploy + relaunch checks (`python3 ops/android_terminal_host.py deploy`,
+    `adb logcat -c`, `adb shell am start ...`,
+    `adb logcat -d -s AndroidRuntime:E`) stayed clean.
   - Next: complete Android host callback/assembly contract cleanup before
     another activity-only pass: (1) finish `nativeLoaded` one-source collapse
     across remaining host adapters/assemblies, (2) run constructor-pressure
