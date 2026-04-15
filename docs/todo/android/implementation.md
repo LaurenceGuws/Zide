@@ -194,6 +194,10 @@ Agent reporting contract (mandatory for cleanup campaign updates):
      surface snapshot reads bind `terminalViewportController` /
      `terminalSurfaceStateSnapshotReader` directly (private viewport/snapshot
      forwards removed; viewport contract doc moved to the field).
+   - Completed: `ZideTerminalActivity` create*Callbacks: IME/debug/install state
+     setters and userland release use assignment lambdas; widget wiring inlines
+     package doctor, surface-view supplier, and native surface-available bridge
+     (eight private forwards removed).
    - Next: net simplification in `ZideTerminalActivity` `create*Callbacks()`
      factories: collapse redundant one-line supplier glue and trivial `this::`
      forwards where the activity adds no policy (prefer direct field capture or
