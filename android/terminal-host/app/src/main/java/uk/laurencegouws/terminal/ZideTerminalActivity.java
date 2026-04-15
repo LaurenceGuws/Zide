@@ -12,6 +12,9 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.TextView;
+
+import java.util.function.Consumer;
+
 import uk.laurencegouws.terminal.debug.AndroidDebugFormatter;
 import uk.laurencegouws.terminal.debug.TerminalStatusController;
 import uk.laurencegouws.terminal.debug.TerminalSurfaceStateSnapshotReader;
@@ -234,6 +237,7 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private InteractionCallbacks createInteractionCallbacks() {
+        final Consumer<String> append = this::appendEvent;
         return new InteractionCallbacks(
                 () -> this,
                 () -> handler,
@@ -244,10 +248,12 @@ public final class ZideTerminalActivity extends Activity
                 this::stopScrollbackFlingIfReady,
                 this::refreshProductScrollOverlayIfReady,
                 this::reevaluateProductFrameLoopIfReady,
-                this::appendEvent);
+                append);
     }
 
     private InputCallbacks createInputCallbacks() {
+        final Consumer<String> append = this::appendEvent;
+        final Consumer<String> status = this::updateStatus;
         return new InputCallbacks(
                 () -> this,
                 () -> rootView,
@@ -258,8 +264,8 @@ public final class ZideTerminalActivity extends Activity
                 () -> nativeLoaded,
                 TerminalNativeBridge::nativeFollowSessionLiveBottomBridge,
                 this::refreshProductScrollOverlayIfReady,
-                this::updateStatus,
-                this::appendEvent);
+                status,
+                append);
     }
 
     private void assembleWidgetHostControllers() {
@@ -293,14 +299,18 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private WidgetCallbacks createWidgetCallbacks() {
+        final Consumer<String> append = this::appendEvent;
+        final Consumer<String> status = this::updateStatus;
+        final Consumer<Boolean> bindImeVisible = v -> imeVisible = v;
+        final Consumer<Boolean> bindDebugView = e -> debugViewEnabled = e;
         return new WidgetCallbacks(
                 () -> this,
                 () -> handler,
                 () -> nativeLoaded,
                 () -> debugViewEnabled,
-                enabled -> debugViewEnabled = enabled,
+                bindDebugView,
                 () -> imeVisible,
-                visible -> imeVisible = visible,
+                bindImeVisible,
                 () -> rootView,
                 () -> productView,
                 () -> debugView,
@@ -325,8 +335,8 @@ public final class ZideTerminalActivity extends Activity
                 () -> currentInstallState,
                 this::shouldRunProductFrameLoop,
                 this::refreshProductScrollOverlayIfReady,
-                this::appendEvent,
-                this::updateStatus,
+                append,
+                status,
                 TerminalNativeBridge::nativeSetSessionScrollbackOffsetBridge,
                 TerminalNativeBridge::nativeFollowSessionLiveBottomBridge,
                 () -> terminalViewportController.productViewportHeightPx(),
@@ -347,12 +357,14 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private SessionAssemblyCallbacks createSessionAssemblyCallbacks() {
+        final Consumer<String> append = this::appendEvent;
+        final Consumer<String> status = this::updateStatus;
         return new SessionAssemblyCallbacks(
                 () -> this,
                 () -> userlandRelease,
                 () -> handler,
-                this::appendEvent,
-                this::updateStatus,
+                append,
+                status,
                 () -> nativeLoaded,
                 state -> currentReadinessState = state,
                 this::refreshProductShellStateIfReady,
@@ -365,14 +377,16 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private ProductRuntimeAssemblyCallbacks createProductRuntimeAssemblyCallbacks() {
+        final Consumer<String> append = this::appendEvent;
+        final Consumer<String> status = this::updateStatus;
         return new ProductRuntimeAssemblyCallbacks(
                 () -> debugViewEnabled,
                 () -> nativeLoaded,
                 () -> currentInstallState,
                 installState -> currentInstallState = installState,
                 () -> currentReadinessState,
-                this::appendEvent,
-                this::updateStatus,
+                append,
+                status,
                 () -> surfaceHostBridge != null ? surfaceHostBridge.currentSurfaceView() : null,
                 () -> productReadinessBlocker,
                 () -> terminalScrollOverlay,
@@ -390,13 +404,14 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private StatusViewCallbacks createStatusViewCallbacks() {
+        final Consumer<Boolean> bindImeVisible = v -> imeVisible = v;
         return new StatusViewCallbacks(
                 () -> this,
                 () -> debugViewEnabled,
                 () -> nativeLoaded,
                 this::hasWindowFocus,
                 () -> imeVisible,
-                visible -> imeVisible = visible,
+                bindImeVisible,
                 () -> surfaceHostBridge,
                 () -> terminalSurfaceStateSnapshotReader.read(),
                 this::notifyVisibleViewportIfReady,
@@ -405,12 +420,14 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private LifecycleCallbacks createLifecycleCallbacks() {
+        final Consumer<String> append = this::appendEvent;
+        final Consumer<String> status = this::updateStatus;
         return new LifecycleCallbacks(
                 LifecycleCallbacks.LifecycleHostCallbacks.of(
                         () -> nativeLoaded,
                         () -> nativeLoadError,
-                        this::appendEvent,
-                        this::updateStatus,
+                        append,
+                        status,
                         this::stopProductFrameLoopIfReady,
                         this::refreshUserlandSessionIfReady,
                         this::pauseSurfaceIfReady,
@@ -431,13 +448,15 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private WorkflowAssemblyCallbacks createWorkflowAssemblyCallbacks() {
+        final Consumer<String> append = this::appendEvent;
+        final Consumer<String> status = this::updateStatus;
         return new WorkflowAssemblyCallbacks(
                 () -> this,
                 () -> handler,
                 () -> userlandRelease,
                 release -> userlandRelease = release,
-                this::appendEvent,
-                this::updateStatus,
+                append,
+                status,
                 () -> packageStatusText,
                 installState -> currentInstallState = installState,
                 readinessState -> currentReadinessState = readinessState,
@@ -447,6 +466,8 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private UiStartupCallbacks createUiStartupCallbacks() {
+        final Consumer<String> append = this::appendEvent;
+        final Consumer<String> status = this::updateStatus;
         return new UiStartupCallbacks(
                 () -> terminalViewportController,
                 () -> terminalChromeController,
@@ -457,8 +478,8 @@ public final class ZideTerminalActivity extends Activity
                 () -> userlandWorkflowController,
                 () -> userlandSessionCoordinator,
                 this::showDebugViewIfReady,
-                this::appendEvent,
-                this::updateStatus,
+                append,
+                status,
                 () -> terminalRuntimeAssetsController,
                 () -> terminalViewModeController,
                 () -> surfaceHostController,
