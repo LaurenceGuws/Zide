@@ -142,201 +142,30 @@ Agent reporting contract (mandatory for cleanup campaign updates):
      below (`ZideTerminalActivity` `create*Callbacks()` net simplification).
 2. Keep Java ownership boundaries aligned with
    `ANDROID_JAVA_HOST_STRUCTURE.md`.
-   - Completed: `ChromeController` and `SurfaceController` now own the bulk of
-     product chrome and surface/viewport/native-bridge orchestration; adapter
-     callback layers were deflated and lifecycle/surface scheduling was
-     tightened so `ZideTerminalActivity` stays composition-oriented. Granular
-     refactors live in git history; this queue no longer tracks helper-name
-     batches (see charter Hard rules).
-   - Completed: `host/lifecycle` tightened (debug intent args, lifecycle flow
-     and new-intent logging through `LifecycleController`).
-   - Completed: `SurfaceController` net-smaller: removed ten pass-through helpers
-     that only forwarded `Host` reads or `SurfaceHolder#getSurface()`; call
-     sites use `host` and holders directly (behavior unchanged).
-   - Completed: `ChromeController` net-smaller: collapsed view-mode and sidebar
-     wiring, dropped host view/assist/IME one-line forwards, inlined IME
-     manager and soft-input steps, and removed unused `IBinder` import (behavior
-     unchanged).
-   - Completed: `SurfaceController` further net-smaller: removed install-time
-     and `callNativeWithSurfaceState` forwarding helpers, inlined container
-     add/remove and viewport `post`, and dropped holder/context one-liners
-     (behavior unchanged).
-   - Completed: `SurfaceController` net-smaller again: surface lifecycle,
-     install/uninstall, viewport publish, and visibility sizing now live in
-     fewer named methods by inlining telemetry/native/status steps that were
-     split across redundant helpers (behavior unchanged).
-   - Completed: `ChromeController` net-smaller: inlined drawer gesture/scrim
-     wiring, assist modifier latch apply, and scrim/hotspot visibility ternaries
-     so six one-line *Chrome* / visibility helpers are gone (behavior unchanged).
-   - Completed: `ChromeController` net-smaller: sidebar nav buttons and assist
-     character rows no longer use per-button private wrappers (behavior unchanged).
-   - Completed: `ChromeController` net-smaller: manual IME open/close paths no
-     longer split across single-use trace/focus/record helpers (behavior unchanged).
-   - Completed: `SurfaceController` net-smaller: viewport publish, layout params,
-     redraw telemetry, and install callback resolution no longer sit behind
-     separate private methods (behavior unchanged).
-   - Completed: `SurfaceController` net-smaller: debug resume scheduling paths
-     are folded into `onResume` instead of three private schedule helpers
-     (behavior unchanged).
-   - Completed: `SurfaceController` net-smaller: existing host view removal is
-     inlined into `installSurfaceView` (behavior unchanged).
-   - Completed (mini-wave): `ChromeController` internal bind chains flattened
-     (sidebar, assist row, IME toggle lookup, edge swipe) and accessor-only IME
-     visibility forward removed; method count ~32 → ~18 with behavior preserved.
-     `SurfaceController` paused at nine methods—avoid further cuts there until a
-     new explicit queue decision.
-   - Completed (mini-wave): `ZideTerminalActivity` create*Callbacks wiring uses
-     direct captures (`() -> this`, `() -> handler`, field reads, `nativeLoaded`,
-     `getSystemService(InputMethodManager.class)`) instead of private one-line
-     suppliers; ~778 → ~730 lines, behavior unchanged. `SurfaceController` remains
-     frozen; `ChromeController` unchanged this wave.
-   - Completed: `ZideTerminalActivity` create*Callbacks: viewport `IntSupplier`s and
-     surface snapshot reads bind `terminalViewportController` /
-     `terminalSurfaceStateSnapshotReader` directly (private viewport/snapshot
-     forwards removed; viewport contract doc moved to the field).
-   - Completed: `ZideTerminalActivity` create*Callbacks: IME/debug/install state
-     setters and userland release use assignment lambdas; widget wiring inlines
-     package doctor, surface-view supplier, and native surface-available bridge
-     (eight private forwards removed).
-   - Completed: `ZideTerminalActivity` create*Callbacks: method-scoped
-     `Consumer<String>` aliases for `appendEvent` / `updateStatus` and shared
-     IME/debug `Consumer<Boolean>` binders where factories repeat the same
-     reference; ~685 → ~706 lines (readability/dedup trade; private method count
-     unchanged). Validation: compile + deploy + `AndroidRuntime:E` clean.
-   - Completed: `ZideTerminalActivity` create*Callbacks: method-scoped
-     `Runnable` / `BooleanSupplier` / `IntSupplier` / `Supplier` (surface snapshot)
-     aliases and `LifecycleCallbacks.SurfaceResumeCall` for resume, so assembly
-     constructors read as named delegates instead of long `this::…IfReady` lists;
-     `notifyVisibleViewport` stays `Consumer<String>`. ~706 → ~731 lines (imports +
-     locals). Validation: `:app:compileReleaseJavaWithJavac` + deploy +
-     `AndroidRuntime:E` clean.
-   - Completed (mini-wave): `ZideTerminalActivity` **`create*Callbacks()` only**
-     (activity factory wiring lane): removed **single-use delegate locals** that
-     only renamed a single callsite—assembly constructors now pass `this::…`,
-     field reads, or trivial lambdas directly. **731 → 686** lines in
-     `ZideTerminalActivity.java`; unused `java.util.function` imports dropped where
-     factories no longer needed them. `ChromeController` / `SurfaceController`
-     unchanged (still frozen per queue). **Validation:** `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac` after **each** of the three commits touching that file; `python3 ops/android_terminal_host.py deploy` plus `adb logcat -d -s AndroidRuntime:E` **twice** (after commit 2 and after commit 3 of the wave), both with empty `AndroidRuntime:E`.
-   - Completed (mini-wave, adapter JNI): extended the same adapter pattern as
-     `58c8de05` (`WidgetCallbacks` install dedupe + inlined static JNI).
-     **`SessionAssemblyCallbacks`** (`54930f5a`): inlined
-     `nativeRestartSessionBridge` / `nativePollSessionBridge` /
-     `nativeIsSessionAliveBridge`, dropping three supplier fields and matching
-     `createSessionAssemblyCallbacks()` args. **Product runtime:**
-     `ProductRuntimeAssemblyCallbacks` unchanged; **`ProductRuntimeHostCallbacks`**
-     (`190d3aea`) now calls `TerminalNativeBridge` for visible rows, scrollback
-     count/offset, and restart—`RuntimeFactory` + `ProductRuntimeAssembly.assemble`
-     no longer pass those bridges through. `ZideTerminalActivity.java` **676 → 673**
-     lines after session trim. **Validation:** `:app:compileReleaseJavaWithJavac`
-     per adapter commit; `zig build` after the wave. `ChromeController` /
-     `SurfaceController` still frozen.
-  - Completed (mini-wave, one-source native-loaded): `SessionAssemblyCallbacks`
-    + `ProductRuntimeAssemblyCallbacks` dropped duplicated `nativeLoaded`
-    supplier plumbing (`d40068aa`), then `SessionAssembly.Host` /
-    `ProductRuntimeAssembly.Host` dropped `nativeLoaded` as an activity-owned
-    contract and now bind `TerminalNativeBridge.nativeLoaded()` directly at
-    assembly sites (`76cb5f29`). Result: fewer callback ctor params/fields and
-    less host-surface contract pressure with behavior unchanged.
-    **Validation:** `:app:compileReleaseJavaWithJavac`, deploy via
-    `python3 ops/android_terminal_host.py deploy`, and
-    `adb logcat -d -s AndroidRuntime:E` (empty).
-  - Completed (mini-wave, host contract pressure): interaction and status
-    assembly/callback paths removed additional `nativeLoaded` pass-through seams.
-    `InteractionAssembly` / `InteractionFactory` / selection+gesture adapters
-    now derive native-loaded truth at adapter level (`967af797`), and
-    `StatusViewAssembly` / `StatusCallbacks` / snapshot host callbacks similarly
-    bind static native-loaded truth without activity-owned host wiring
-    (`b3e23353`). `ZideTerminalActivity.java` wiring trimmed to remove redundant
-    factory args while behavior stayed unchanged.
-    **Validation:** per refactor commit `:app:compileReleaseJavaWithJavac`; after
-    the 2-commit seam boundary, deploy with
-    `python3 ops/android_terminal_host.py deploy` and confirm
-    `adb logcat -d -s AndroidRuntime:E` is empty.
-  - Completed (mini-wave, input/lifecycle/surface-widget): removed more
-    `nativeLoaded` supplier chains where adapters can safely bind
-    `TerminalNativeBridge.nativeLoaded()` directly. Input, lifecycle, and
-    surface-widget assembly seams dropped redundant host/callback constructor
-    plumbing and corresponding factory arguments (`91c2c44f`, `58a8e2ca`,
-    `92b73075`) while preserving existing ownership boundaries.
-    **Validation:** `:app:compileReleaseJavaWithJavac` on each refactor commit,
-    plus deploy + `adb logcat -d -s AndroidRuntime:E` at 2-commit cadence
-    (empty each check).
-  - Completed (mini-wave, surface/runtime constructor pressure): further reduced
-    assembly/callback constructor pressure by removing runtime host
-    `nativeLoaded` ctor threading and inlining `SurfaceFactory` one-callsite
-    wrappers directly in `SurfaceWidgetAssembly` (`b082193a`, `d7a86cce`).
-    Outcome: fewer constructor arguments/method wrappers and a net deletion
-    trend without changing controller ownership.
-    **Validation:** `:app:compileReleaseJavaWithJavac` each commit; deploy +
-    `adb logcat -d -s AndroidRuntime:E` at seam cadence (empty).
-  - Completed (mini-wave, widget/startup contract pressure): reduced callback
-    and assembly host contract pressure around widget/startup seams by removing
-    widget/product-shell `nativeLoaded` pass-through (`7f0bc7c5`), inlining
-    stable surface assembly constructor inputs (`804a7ebe`), and deriving
-    product-shell install booleans from install-state source (`7df3c82a`).
-    Startup callback stable-value pass landed with behavior preserved
-    (`64375ab7`); an attempted aggressive widget supplier collapse was reverted
-    after runtime NPE (`7f6d6705`), keeping the lane behavior-safe while
-    retaining net deletions across the wave.
-    **Validation:** per-refactor `:app:compileReleaseJavaWithJavac`; deploy +
-    `adb logcat -d -s AndroidRuntime:E` cadence checks with current buffer
-    clear/recheck showing empty AndroidRuntime errors.
-  - Completed (mini-wave, stable callback input normalization): interaction,
-    input, session, workflow, and status callback adapters now accept stable
-    context/activity/handler/view references directly while leaving dynamic
-    state/snapshot suppliers in place (`568e09d5`, `ccd1d3e5`, `3c8c293b`,
-    `d0fbe4a5`, `7fb22095`). Also removed dead status callback helper surface
-    (`65abacfd`). This applies the seam convention of keeping static JNI reads
-    and dynamic state indirection in callback adapters while deleting redundant
-    supplier ceremony for stable dependencies.
-    **Validation:** `:app:compileReleaseJavaWithJavac` on each commit and
-    deploy/runtime checks via `python3 ops/android_terminal_host.py deploy`
-    with `adb logcat -d -s AndroidRuntime:E` after buffer clear (empty).
-  - Completed (mini-wave, runtime ctor deltas + activity thinning wave 2):
-    `ProductRuntimeAssemblyCallbacks` + `ProductRuntimeHostCallbacks` dropped
-    stable-value supplier ceremony (keeping dynamic install/readiness/surface
-    reads lazy), then `ZideTerminalActivity` removed additional one-shot
-    `create*Callbacks()` helper methods by inlining callback construction at
-    assembly callsites. Wave result for activity file: `658 -> 626` lines
-    (net `-32`) while preserving lifecycle guardrails by avoiding eager capture
-    of dynamic runtime/view state.
-    **Validation:** per refactor `:app:compileReleaseJavaWithJavac`; deploy +
-    relaunch checks via `python3 ops/android_terminal_host.py deploy`,
-    `adb logcat -c`, `adb shell am start ...`, and
-    `adb logcat -d -s AndroidRuntime:E` (empty).
-  - Completed (mini-wave, final one-shot create callbacks + pivot trigger):
-    finished the remaining one-shot `create*Callbacks()` seam in
-    `ZideTerminalActivity` (`107b8415`) and a final single-use runtime assembly
-    wrapper (`61e35fed`). These two consecutive commits each landed small net
-    deletions (both `-4`), triggering the lane stop condition; then the lane
-    pivoted to callback-type normalization on a high-churn adapter seam by
-    normalizing `UiStartupAssembly.Host` return types while preserving lazy
-    reads at the blocker boundary (`e32acb73`). Activity line count is now
-    `626 -> 618` for this continuation segment.
-    **Validation:** `:app:compileReleaseJavaWithJavac` per refactor commit;
-    deploy + relaunch + `adb logcat -d -s AndroidRuntime:E` checks remained
-    clean before pivot.
-  - Completed (mini-wave, callback-type normalization continuation): continued
-    adapter normalization beyond `UiStartup` with session/input/workflow seam
-    contract typing updates: session status-label callback switched to
-    `IntFunction<String>` and assembly release capture simplified (`a88e1a00`);
-    input host contract removed `InputMethodManager` supplier indirection
-    across assembly/factory/callback path (`90c33c87`); workflow restart-session
-    callback ownership moved to `WorkflowAssembly` to remove cross-adapter
-    callback-type coupling (`ad775828`). Tiny-delta guardrail stayed active and
-    triggered seam pivoting when consecutive commits became small.
-    **Validation:** `:app:compileReleaseJavaWithJavac` each refactor commit;
-    deploy + relaunch checks (`python3 ops/android_terminal_host.py deploy`,
-    `adb logcat -c`, `adb shell am start ...`,
-    `adb logcat -d -s AndroidRuntime:E`) stayed clean.
-  - Next: complete Android host callback/assembly contract cleanup before
-    another activity-only pass: (1) finish `nativeLoaded` one-source collapse
-    across remaining host adapters/assemblies, (2) run constructor-pressure
-    reduction on top callback/assembly classes (remove redundant ctor
-    params/fields derivable from stable sources), then (3) normalize JNI static
-    read boundaries consistently across seams; after those stabilize, return to
-    `ZideTerminalActivity` `create*Callbacks()` thinning. `ChromeController` /
-    `SurfaceController` policy work remains frozen.
+   - Completed: chrome/surface ownership cleanup wave is stabilized and frozen;
+     future changes there require an explicit queue re-open.
+   - Completed: activity wiring cleanup waves reduced
+     `ZideTerminalActivity.java` from ~778 to ~618 lines while keeping policy in
+     owning controllers and preserving runtime behavior.
+   - Completed: callback/assembly contract cleanup removed broad `nativeLoaded`
+     pass-through fan-out and reduced constructor pressure across interaction,
+     input, session, status, workflow, runtime, and widget seams.
+   - Completed: callback-type normalization moved stable callback inputs to
+     concrete references while preserving lazy suppliers for dynamic/lifecycle
+     state; one unsafe eager-capture attempt was reverted after runtime NPE and
+     validated clean.
+   - Completed: current adapter lane keeps net deletions and runtime validation
+     discipline (compile every refactor, deploy + `AndroidRuntime:E` cadence).
+   - Next: hotspot reassessment execution order is now:
+     1) net-simplify `WidgetCallbacks` / `WidgetAssembly` constructor and field
+        pressure (one-source dedupe, no new wrappers),
+     2) normalize remaining stable-vs-lazy callback contracts in
+        `ProductRuntimeHostCallbacks`, `UiStartupCallbacks`, and
+        `StatusViewCallbacks` (behavior-preserving),
+     3) once adapter pressure stabilizes, perform a planning-only
+        `TerminalSelectionController` seam audit (no behavior split yet).
+     `ChromeController` / `SurfaceController` remain frozen until this `Next:`
+     line is intentionally advanced.
 3. Stabilize selection/scroll interaction behavior under manual device usage.
 4. Keep debug/profiling instrumentation behind explicit flags and remove stale
    probes after fixes land.
@@ -385,7 +214,12 @@ A cut is done only if all are true:
 
 - interactive shell + Neovim baseline is usable on-device
 - `ZideTerminalActivity` is now wiring/lifecycle/orchestration-oriented
-  (current size: `738` lines; JNI moved out to `TerminalNativeBridge`)
+  (current size: `618` lines; JNI moved out to `TerminalNativeBridge`)
+- current Java hotspot ranking for hygiene focus:
+  - `selection/TerminalSelectionController.java` (~946 lines, monolithic by design)
+  - `ZideTerminalActivity.java` (~618 lines, orchestration pressure)
+  - `host/ui/WidgetCallbacks.java` (~349 lines, constructor/callback pressure)
+  - `userland/UserlandInstaller.java` (~425 lines, large but cohesive)
 - activity callback factory wiring now consistently favors named callback
   references over inline state-assignment or non-trivial lifecycle lambdas
 - host callback seams are adapter-backed (`*HostCallbacks` /

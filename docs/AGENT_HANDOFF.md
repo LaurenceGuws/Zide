@@ -36,10 +36,8 @@ Use this when the Android lane is in cleanup/refactor/standardization mode.
   stop and report mismatch before editing code.
 - Do not add process/ceremony scripts, lint gates, or precommit tooling unless
   the user explicitly asks.
-- Chrome/Surface lane: `docs/todo/android/implementation.md` charter **Hard
-  rules** forbid new single-use accessor seams; the next ten commits touching
-  those classes must be net simplification (fewer methods/fields/deps), and
-  queue updates are outcome lines—not helper-name inventories.
+- Queue updates must describe simplification outcomes, not helper-name
+  inventories.
 
 Required per-commit update format:
 
@@ -90,3 +88,16 @@ Required per-commit update format:
 - Java naming authority now includes event suffix contract and
   `native*Shell*Bridge` symbol guidance in
   `ANDROID_JAVA_NAMING_CONTRACT.md`
+
+## Java Hygiene Hotspots (Reassessed)
+
+- `selection/TerminalSelectionController.java` remains the largest Java owner
+  seam (~946 lines) and is still monolithic by design.
+- `ZideTerminalActivity.java` is materially thinner (~618 lines) but remains
+  the highest orchestration-pressure seam.
+- `host/ui/WidgetCallbacks.java` (~349 lines) is the highest callback-constructor
+  pressure seam after recent activity cleanup.
+- `userland/UserlandInstaller.java` (~425 lines) remains large but cohesive;
+  keep watch-only unless behavior complexity expands.
+- `host/surface/SurfaceController.java` and `host/ui/ChromeController.java`
+  are frozen unless the active queue explicitly reopens those lanes.

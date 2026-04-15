@@ -51,42 +51,18 @@ For active priorities/workflow, use
 
 Current shape markers (for hygiene tracking, not hard limits):
 
-- `ZideTerminalActivity.java`: `824` lines
-- `host/lifecycle/LifecycleController.java`: `78` lines
-- `host/lifecycle/LifecycleCallbacks.java`: `134` lines
-- `host/ui/ChromeFactory.java`: `69` lines
-- `host/interaction/InteractionFactory.java`: `131` lines
-- `host/input/InputFactory.java`: `56` lines
-- `host/interaction/InteractionAssembly.java`: `109` lines
-- `host/interaction/InteractionCallbacks.java`: `97` lines
-- `host/input/InputAssembly.java`: `94` lines
-- `host/input/InputCallbacks.java`: `106` lines
-- `host/surface/SurfaceFactory.java`: `67` lines
-- `host/surface/SurfaceWidgetAssembly.java`: `127` lines
-- `host/surface/SurfaceWidgetAssemblyCallbacks.java`: `212` lines
-- `host/runtime/RuntimeFactory.java`: `81` lines
-- `host/runtime/ProductRuntimeAssembly.java`: `82` lines
-- `host/runtime/ProductRuntimeAssemblyCallbacks.java`: `153` lines
-- `host/runtime/ProductRuntimeController.java`: `164` lines
-- `host/runtime/ProductRuntimeHostCallbacks.java`: `186` lines
-- `host/session/SessionFactory.java`: `52` lines
-- `host/session/SessionAssembly.java`: `104` lines
-- `host/session/SessionAssemblyCallbacks.java`: `131` lines
-- `host/status/StatusViewAssembly.java`: `182` lines
-- `host/status/StatusViewCallbacks.java`: `107` lines
-- `host/ui/WidgetAssembly.java`: `290` lines
-- `host/ui/WidgetCallbacks.java`: `423` lines
-- `host/userland/WorkflowAssembly.java`: `87` lines
-- `host/userland/WorkflowAssemblyCallbacks.java`: `116` lines
-- `host/userland/WorkflowBridge.java`: `100` lines
-- `host/userland/WorkflowCallbacks.java`: `95` lines
-- `host/userland/SessionBridge.java`: `60` lines
-- `host/userland/SessionCallbacks.java`: `61` lines
-- `host/userland/ReadinessBlockerCallbacks.java`: `74` lines
-- `host/ui/UiFactory.java`: `56` lines
-- `host/ui/UiStartupAssembly.java`: `111` lines
-- `host/ui/UiStartupCallbacks.java`: `171` lines
-- `selection/TerminalSelectionController.java`: monolithic by design for now
+- `selection/TerminalSelectionController.java`: `946` lines (monolithic by design for now)
+- `ZideTerminalActivity.java`: `618` lines
+- `input/ShellInputView.java`: `545` lines
+- `userland/UserlandInstaller.java`: `425` lines
+- `host/ui/WidgetCallbacks.java`: `349` lines
+- `host/surface/SurfaceBridge.java`: `272` lines
+- `host/surface/SurfaceController.java`: `262` lines
+- `host/ui/WidgetAssembly.java`: `255` lines
+- `host/ui/ChromeController.java`: `221` lines
+- `host/runtime/ProductRuntimeHostCallbacks.java`: `170` lines
+- `host/ui/UiStartupCallbacks.java`: `168` lines
+- `host/status/StatusViewAssembly.java`: `161` lines
 
 | File | Contract Fit | Size/Shape | Next Pressure |
 | --- | --- | --- | --- |
