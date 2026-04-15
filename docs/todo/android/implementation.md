@@ -117,6 +117,19 @@ Agent reporting contract (mandatory for cleanup campaign updates):
 - `Validation:` exact command list + pass/fail
 - `Next work:` exact current `Next:` line after progress update
 
+Milestone gate contract (mandatory when manager/architect lane is active):
+
+- work only inside the current milestone scope listed under `Milestone Queue`
+- do not start the next milestone until the current one is marked `review_required`
+  and the architect advances the queue
+- progress updates must include:
+  - `Milestone:` `<id> <status>`
+  - `Scope contract:` one line confirming the work stayed in milestone scope
+  - `Progress delta:` concrete simplification/result delta
+  - `Validation:` exact commands + pass/fail
+- when a milestone endpoint is reached, report this exact line:
+  `Milestone reached per docs, architect review required.`
+
 ## Active TODO
 
 1. Continue cleanup/refactor cuts only where methods still own policy.
@@ -174,13 +187,52 @@ Agent reporting contract (mandatory for cleanup campaign updates):
     and (c) action-mode + clipboard flow. Audit conclusion remains
     contract-aligned: keep selection monolithic until one of those sub-seams is
     lifted in a behavior-preserving cut with replay/validation authority.
-   - Next: execute the second behavior-preserving
-     `TerminalSelectionController` internal extraction from the locked audit
-     queue (selection handle geometry/sync), preserving monolithic ownership and
-     avoiding wrapper inflation; compile each commit and run deploy +
-     `AndroidRuntime:E` smoke at seam cadence.
-     `ChromeController` / `SurfaceController` remain frozen until this `Next:`
-     line is intentionally advanced.
+    - Next: execute the second behavior-preserving
+      `TerminalSelectionController` internal extraction from the locked audit
+      queue (selection handle geometry/sync), preserving monolithic ownership and
+      avoiding wrapper inflation; compile each commit and run deploy +
+      `AndroidRuntime:E` smoke at seam cadence.
+      `ChromeController` / `SurfaceController` remain frozen until this `Next:`
+      line is intentionally advanced.
+
+### Milestone Queue (Manager/Architect Control)
+
+Use this queue to keep the engineer on larger reviewable scopes while preserving
+the existing per-commit validation rules.
+
+1. `AN-A1-M2A` selection geometry/sync closure (`review_required`)
+   - Scope:
+     - `TerminalSelectionController` internal seam only
+     - complete geometry/sync extraction boundaries:
+       endpoint-rect read, handle geometry, handle position mutation
+     - no action-mode/clipboard edits
+   - Outcome:
+     - handle half-extent unified: anchors, endpoint layout, and sync now share
+       `selectionHandleRadiusPx` (square handles); Y offset and viewport clamp
+       split into dedicated internal helpers for drag vs endpoint sync paths
+     - milestone-boundary validation: compile on each change; deploy +
+       `AndroidRuntime:E` smoke clean at closure
+   - Exit criteria:
+     - no remaining duplicated handle-placement math branches in this seam
+     - compile pass per commit and at least one deploy + `AndroidRuntime:E`
+       smoke at seam boundary
+     - queue notes updated with outcome-based progress
+2. `AN-A1-M2B` docs checkpoint and queue advance (`pending`)
+   - Scope:
+     - docs-only checkpoint of completed seam outcomes
+     - refresh hotspot size markers to current code reality
+     - advance explicit `Next:` line only if M2A is complete and validated
+   - Exit criteria:
+     - `docs/todo/android/implementation.md`, `docs/AGENT_HANDOFF.md`, and
+       `ANDROID_JAVA_HOST_STRUCTURE.md` reflect current state
+3. `AN-A1-M2C` selection action-mode/clipboard wave (`pending`)
+   - Scope:
+     - action-mode lifecycle + clipboard flow simplification only
+     - preserve behavior and monolithic ownership
+   - Exit criteria:
+     - compile pass per commit; deploy + `AndroidRuntime:E` smoke at seam
+       boundary
+     - queue update records concrete simplification outcomes
 3. Stabilize selection/scroll interaction behavior under manual device usage.
 4. Keep debug/profiling instrumentation behind explicit flags and remove stale
    probes after fixes land.
@@ -190,6 +242,9 @@ Agent reporting contract (mandatory for cleanup campaign updates):
 Use this exact loop for every Android task:
 
 1. Pick one smallest actionable cut from `Active TODO`.
+   - When `Milestone Queue` is present, execute contiguous cuts inside the
+     current milestone until its exit criteria are met, then stop at that
+     boundary and request architect review.
 2. Confirm the cut against owner docs before editing:
    - ownership: `ANDROID_JAVA_HOST_STRUCTURE.md`
    - naming: `ANDROID_JAVA_NAMING_CONTRACT.md` and
