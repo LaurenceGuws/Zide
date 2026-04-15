@@ -44,8 +44,8 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
     private final Button assistCtrlButton;
     private final Button assistAltButton;
     private final Supplier<ShellInputView> shellInputView;
-    private final Supplier<TerminalSelectionController> selectionController;
-    private final Supplier<TerminalGestureStateController> terminalGestureStateController;
+    private final TerminalSelectionController selectionController;
+    private final TerminalGestureStateController terminalGestureStateController;
     private final Supplier<SurfaceBridge> surfaceHostBridge;
     private final Supplier<UserlandReadinessState> currentReadinessState;
     private final Supplier<UserlandInstallState> currentInstallState;
@@ -86,8 +86,8 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
             Button assistCtrlButton,
             Button assistAltButton,
             Supplier<ShellInputView> shellInputView,
-            Supplier<TerminalSelectionController> selectionController,
-            Supplier<TerminalGestureStateController> terminalGestureStateController,
+            TerminalSelectionController selectionController,
+            TerminalGestureStateController terminalGestureStateController,
             Supplier<SurfaceBridge> surfaceHostBridge,
             Supplier<UserlandReadinessState> currentReadinessState,
             Supplier<UserlandInstallState> currentInstallState,
@@ -254,12 +254,12 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
 
     @Override
     public TerminalSelectionController selectionController() {
-        return selectionController.get();
+        return selectionController;
     }
 
     @Override
     public TerminalGestureStateController terminalGestureStateController() {
-        return terminalGestureStateController.get();
+        return terminalGestureStateController;
     }
 
     @Override
