@@ -154,23 +154,15 @@ public final class ChromeController {
         if (shouldDeferSidebarOpen()) {
             return;
         }
-        applySidebarOpenedChrome();
+        host.setSidebarOpen(true);
+        animateSidebarTranslation(true);
+        updateSidebarVisibility(true);
     }
 
     public void closeSidebar() {
         if (shouldDeferSidebarClose()) {
             return;
         }
-        applySidebarClosedChrome();
-    }
-
-    private void applySidebarOpenedChrome() {
-        host.setSidebarOpen(true);
-        animateSidebarTranslation(true);
-        updateSidebarVisibility(true);
-    }
-
-    private void applySidebarClosedChrome() {
         host.setSidebarOpen(false);
         animateSidebarTranslation(false);
         updateSidebarVisibility(false);
@@ -185,12 +177,8 @@ public final class ChromeController {
     }
 
     private void animateSidebarTranslation(boolean open) {
-        final float targetX = leftSidebarTranslationXForOpenState(open);
+        final float targetX = open ? 0f : -host.leftSidebar().getWidth();
         host.leftSidebar().animate().translationX(targetX).setDuration(180).start();
-    }
-
-    private float leftSidebarTranslationXForOpenState(boolean open) {
-        return open ? 0f : -host.leftSidebar().getWidth();
     }
 
     public void updateSidebarVisibility(boolean visible) {
