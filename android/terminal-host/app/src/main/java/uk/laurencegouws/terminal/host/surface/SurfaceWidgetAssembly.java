@@ -73,10 +73,10 @@ public final class SurfaceWidgetAssembly {
             Host host) {
         final SurfaceWidgetController[] widgetRef = new SurfaceWidgetController[1];
         final SurfaceBridge surfaceHostBridge = SurfaceFactory.createSurfaceHostBridge(
-                SurfaceFactory.createSurfaceHostCallbacks(
+                new SurfaceCallbacks(
                         host.handler(),
                         host.productSurfaceContainer(),
-                        SurfaceFactory.createSurfaceHostLifecycleCallbacks(
+                        new SurfaceLifecycleCallbacks(
                                 host::debugViewEnabled,
                                 host::currentImeVisible,
                                 host::shouldRunProductFrameLoop,
