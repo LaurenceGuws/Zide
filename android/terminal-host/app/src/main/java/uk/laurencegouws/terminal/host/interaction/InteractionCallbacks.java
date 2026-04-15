@@ -6,13 +6,12 @@ import android.widget.FrameLayout;
 
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
-import java.util.function.Supplier;
 
 /** Functional callback adapter for {@link InteractionAssembly.Host}. */
 public final class InteractionCallbacks implements InteractionAssembly.Host {
-    private final Supplier<Activity> activity;
-    private final Supplier<Handler> handler;
-    private final Supplier<FrameLayout> productSurfaceContainer;
+    private final Activity activity;
+    private final Handler handler;
+    private final FrameLayout productSurfaceContainer;
     private final IntSupplier productViewportWidthPx;
     private final IntSupplier productViewportHeightPx;
     private final Runnable stopScrollbackFling;
@@ -21,9 +20,9 @@ public final class InteractionCallbacks implements InteractionAssembly.Host {
     private final Consumer<String> appendEvent;
 
     public InteractionCallbacks(
-            Supplier<Activity> activity,
-            Supplier<Handler> handler,
-            Supplier<FrameLayout> productSurfaceContainer,
+            Activity activity,
+            Handler handler,
+            FrameLayout productSurfaceContainer,
             IntSupplier productViewportWidthPx,
             IntSupplier productViewportHeightPx,
             Runnable stopScrollbackFling,
@@ -43,17 +42,17 @@ public final class InteractionCallbacks implements InteractionAssembly.Host {
 
     @Override
     public Activity activity() {
-        return activity.get();
+        return activity;
     }
 
     @Override
     public Handler handler() {
-        return handler.get();
+        return handler;
     }
 
     @Override
     public FrameLayout productSurfaceContainer() {
-        return productSurfaceContainer.get();
+        return productSurfaceContainer;
     }
 
     @Override
