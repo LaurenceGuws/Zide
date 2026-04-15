@@ -738,12 +738,16 @@ public final class TerminalSelectionController {
         syncTerminalSelectionActionMode();
     }
 
+    private boolean canPresentTerminalSelectionActionMode() {
+        return bridge.currentSelectionActive() && host.productSurfaceContainer() != null;
+    }
+
     private void showTerminalSelectionActionMode() {
         syncSelectionHandles();
         if (!selectionToolbarVisible) {
             return;
         }
-        if (!bridge.currentSelectionActive() || host.productSurfaceContainer() == null) {
+        if (!canPresentTerminalSelectionActionMode()) {
             finishTerminalSelectionActionMode();
             return;
         }
