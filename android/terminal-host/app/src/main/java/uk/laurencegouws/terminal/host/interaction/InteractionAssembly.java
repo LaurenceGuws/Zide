@@ -21,8 +21,6 @@ public final class InteractionAssembly {
 
         int productViewportHeightPx();
 
-        boolean nativeLoaded();
-
         void stopScrollbackFling();
 
         void refreshProductScrollOverlay();
@@ -57,15 +55,13 @@ public final class InteractionAssembly {
                 host::stopScrollbackFling,
                 host::refreshProductScrollOverlay,
                 host::reevaluateProductFrameLoop,
-                host::appendEvent,
-                host::nativeLoaded);
+                host::appendEvent);
         selectionController.install();
 
         final TerminalGestureStateController terminalGestureStateController =
                 InteractionFactory.createGestureStateController(
                         host.activity(),
                         host.handler(),
-                        host::nativeLoaded,
                         host::productViewportHeightPx,
                         host::refreshProductScrollOverlay,
                         host::reevaluateProductFrameLoop);

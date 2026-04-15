@@ -241,7 +241,6 @@ public final class ZideTerminalActivity extends Activity
                 () -> productSurfaceContainer,
                 () -> terminalViewportController.productViewportWidthPx(),
                 () -> terminalViewportController.productViewportHeightPx(),
-                () -> nativeLoaded,
                 this::stopScrollbackFlingIfReady,
                 this::refreshProductScrollOverlayIfReady,
                 this::reevaluateProductFrameLoopIfReady,

@@ -1,6 +1,5 @@
 package uk.laurencegouws.terminal.host.interaction;
 
-import java.util.function.BooleanSupplier;
 import java.util.function.IntSupplier;
 
 import uk.laurencegouws.terminal.TerminalNativeBridge;
@@ -8,17 +7,14 @@ import uk.laurencegouws.terminal.gesture.TerminalGestureStateControllerFactory;
 
 /** Functional callback adapter for {@link TerminalGestureStateControllerFactory}. */
 public final class GestureStateCallbacks implements TerminalGestureStateControllerFactory.Host {
-    private final BooleanSupplier nativeLoaded;
     private final IntSupplier viewportHeightPx;
     private final Runnable refreshProductScrollOverlay;
     private final Runnable reevaluateProductFrameLoop;
 
     public GestureStateCallbacks(
-            BooleanSupplier nativeLoaded,
             IntSupplier viewportHeightPx,
             Runnable refreshProductScrollOverlay,
             Runnable reevaluateProductFrameLoop) {
-        this.nativeLoaded = nativeLoaded;
         this.viewportHeightPx = viewportHeightPx;
         this.refreshProductScrollOverlay = refreshProductScrollOverlay;
         this.reevaluateProductFrameLoop = reevaluateProductFrameLoop;
@@ -26,7 +22,7 @@ public final class GestureStateCallbacks implements TerminalGestureStateControll
 
     @Override
     public boolean nativeLoaded() {
-        return nativeLoaded.getAsBoolean();
+        return TerminalNativeBridge.nativeLoaded();
     }
 
     @Override

@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.os.Handler;
 import android.widget.FrameLayout;
 
-import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
@@ -16,7 +15,6 @@ public final class InteractionCallbacks implements InteractionAssembly.Host {
     private final Supplier<FrameLayout> productSurfaceContainer;
     private final IntSupplier productViewportWidthPx;
     private final IntSupplier productViewportHeightPx;
-    private final BooleanSupplier nativeLoaded;
     private final Runnable stopScrollbackFling;
     private final Runnable refreshProductScrollOverlay;
     private final Runnable reevaluateProductFrameLoop;
@@ -28,7 +26,6 @@ public final class InteractionCallbacks implements InteractionAssembly.Host {
             Supplier<FrameLayout> productSurfaceContainer,
             IntSupplier productViewportWidthPx,
             IntSupplier productViewportHeightPx,
-            BooleanSupplier nativeLoaded,
             Runnable stopScrollbackFling,
             Runnable refreshProductScrollOverlay,
             Runnable reevaluateProductFrameLoop,
@@ -38,7 +35,6 @@ public final class InteractionCallbacks implements InteractionAssembly.Host {
         this.productSurfaceContainer = productSurfaceContainer;
         this.productViewportWidthPx = productViewportWidthPx;
         this.productViewportHeightPx = productViewportHeightPx;
-        this.nativeLoaded = nativeLoaded;
         this.stopScrollbackFling = stopScrollbackFling;
         this.refreshProductScrollOverlay = refreshProductScrollOverlay;
         this.reevaluateProductFrameLoop = reevaluateProductFrameLoop;
@@ -68,11 +64,6 @@ public final class InteractionCallbacks implements InteractionAssembly.Host {
     @Override
     public int productViewportHeightPx() {
         return productViewportHeightPx.getAsInt();
-    }
-
-    @Override
-    public boolean nativeLoaded() {
-        return nativeLoaded.getAsBoolean();
     }
 
     @Override

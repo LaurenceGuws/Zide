@@ -1,6 +1,5 @@
 package uk.laurencegouws.terminal.host.interaction;
 
-import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
 
@@ -15,7 +14,6 @@ public final class SelectionCallbacks implements TerminalSelectionControllerFact
     private final Runnable refreshProductScrollOverlay;
     private final Runnable reevaluateProductFrameLoop;
     private final Consumer<String> appendEvent;
-    private final BooleanSupplier nativeLoaded;
 
     public SelectionCallbacks(
             IntSupplier productViewportWidthPx,
@@ -23,15 +21,13 @@ public final class SelectionCallbacks implements TerminalSelectionControllerFact
             Runnable stopScrollbackFling,
             Runnable refreshProductScrollOverlay,
             Runnable reevaluateProductFrameLoop,
-            Consumer<String> appendEvent,
-            BooleanSupplier nativeLoaded) {
+            Consumer<String> appendEvent) {
         this.productViewportWidthPx = productViewportWidthPx;
         this.productViewportHeightPx = productViewportHeightPx;
         this.stopScrollbackFling = stopScrollbackFling;
         this.refreshProductScrollOverlay = refreshProductScrollOverlay;
         this.reevaluateProductFrameLoop = reevaluateProductFrameLoop;
         this.appendEvent = appendEvent;
-        this.nativeLoaded = nativeLoaded;
     }
 
     @Override
@@ -66,7 +62,7 @@ public final class SelectionCallbacks implements TerminalSelectionControllerFact
 
     @Override
     public boolean nativeLoaded() {
-        return nativeLoaded.getAsBoolean();
+        return TerminalNativeBridge.nativeLoaded();
     }
 
     @Override

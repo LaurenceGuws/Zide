@@ -3,7 +3,6 @@ package uk.laurencegouws.terminal.host.interaction;
 import android.content.Context;
 import android.widget.FrameLayout;
 
-import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
 
@@ -30,8 +29,7 @@ public final class InteractionFactory {
             Runnable stopScrollbackFling,
             Runnable refreshProductScrollOverlay,
             Runnable reevaluateProductFrameLoop,
-            Consumer<String> appendEvent,
-            BooleanSupplier nativeLoaded) {
+            Consumer<String> appendEvent) {
         return TerminalSelectionControllerFactory.create(
                 context,
                 productSurfaceContainer,
@@ -41,14 +39,12 @@ public final class InteractionFactory {
                         stopScrollbackFling,
                         refreshProductScrollOverlay,
                         reevaluateProductFrameLoop,
-                        appendEvent,
-                        nativeLoaded));
+                        appendEvent));
     }
 
     public static TerminalGestureStateController createGestureStateController(
             Context context,
             android.os.Handler handler,
-            BooleanSupplier nativeLoaded,
             IntSupplier viewportHeightPx,
             Runnable refreshProductScrollOverlay,
             Runnable reevaluateProductFrameLoop) {
@@ -56,7 +52,6 @@ public final class InteractionFactory {
                 context,
                 handler,
                 new GestureStateCallbacks(
-                        nativeLoaded,
                         viewportHeightPx,
                         refreshProductScrollOverlay,
                         reevaluateProductFrameLoop));
