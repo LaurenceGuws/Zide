@@ -23,30 +23,30 @@ import uk.laurencegouws.terminal.userland.UserlandInstallState;
 
 /** Functional callback adapter for {@link WidgetAssembly.Host}. */
 public final class WidgetCallbacks implements WidgetAssembly.Host {
-    private final Activity activity;
-    private final android.os.Handler handler;
+    private final Supplier<Activity> activity;
+    private final Supplier<android.os.Handler> handler;
     private final BooleanSupplier debugViewEnabled;
     private final Consumer<Boolean> setDebugViewEnabled;
     private final BooleanSupplier imeVisible;
     private final Consumer<Boolean> setImeVisible;
-    private final View rootView;
-    private final View productView;
-    private final View debugView;
-    private final View productReadinessBlocker;
-    private final View drawerScrim;
-    private final View drawerEdgeHotspot;
-    private final View leftSidebar;
-    private final FrameLayout productSurfaceContainer;
-    private final TerminalScrollOverlayView terminalScrollOverlay;
-    private final TextView productReadinessTitle;
-    private final TextView productReadinessDetail;
-    private final Button productReadinessRetryButton;
-    private final Button assistCtrlButton;
-    private final Button assistAltButton;
-    private final ShellInputView shellInputView;
-    private final TerminalSelectionController selectionController;
-    private final TerminalGestureStateController terminalGestureStateController;
-    private final SurfaceBridge surfaceHostBridge;
+    private final Supplier<View> rootView;
+    private final Supplier<View> productView;
+    private final Supplier<View> debugView;
+    private final Supplier<View> productReadinessBlocker;
+    private final Supplier<View> drawerScrim;
+    private final Supplier<View> drawerEdgeHotspot;
+    private final Supplier<View> leftSidebar;
+    private final Supplier<FrameLayout> productSurfaceContainer;
+    private final Supplier<TerminalScrollOverlayView> terminalScrollOverlay;
+    private final Supplier<TextView> productReadinessTitle;
+    private final Supplier<TextView> productReadinessDetail;
+    private final Supplier<Button> productReadinessRetryButton;
+    private final Supplier<Button> assistCtrlButton;
+    private final Supplier<Button> assistAltButton;
+    private final Supplier<ShellInputView> shellInputView;
+    private final Supplier<TerminalSelectionController> selectionController;
+    private final Supplier<TerminalGestureStateController> terminalGestureStateController;
+    private final Supplier<SurfaceBridge> surfaceHostBridge;
     private final Supplier<UserlandReadinessState> currentReadinessState;
     private final Supplier<UserlandInstallState> currentInstallState;
     private final BooleanSupplier shouldRunProductFrameLoop;
@@ -65,30 +65,30 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
     private final Consumer<String> handleProductShellStateEvent;
 
     public WidgetCallbacks(
-            Activity activity,
-            android.os.Handler handler,
+            Supplier<Activity> activity,
+            Supplier<android.os.Handler> handler,
             BooleanSupplier debugViewEnabled,
             Consumer<Boolean> setDebugViewEnabled,
             BooleanSupplier imeVisible,
             Consumer<Boolean> setImeVisible,
-            View rootView,
-            View productView,
-            View debugView,
-            View productReadinessBlocker,
-            View drawerScrim,
-            View drawerEdgeHotspot,
-            View leftSidebar,
-            FrameLayout productSurfaceContainer,
-            TerminalScrollOverlayView terminalScrollOverlay,
-            TextView productReadinessTitle,
-            TextView productReadinessDetail,
-            Button productReadinessRetryButton,
-            Button assistCtrlButton,
-            Button assistAltButton,
-            ShellInputView shellInputView,
-            TerminalSelectionController selectionController,
-            TerminalGestureStateController terminalGestureStateController,
-            SurfaceBridge surfaceHostBridge,
+            Supplier<View> rootView,
+            Supplier<View> productView,
+            Supplier<View> debugView,
+            Supplier<View> productReadinessBlocker,
+            Supplier<View> drawerScrim,
+            Supplier<View> drawerEdgeHotspot,
+            Supplier<View> leftSidebar,
+            Supplier<FrameLayout> productSurfaceContainer,
+            Supplier<TerminalScrollOverlayView> terminalScrollOverlay,
+            Supplier<TextView> productReadinessTitle,
+            Supplier<TextView> productReadinessDetail,
+            Supplier<Button> productReadinessRetryButton,
+            Supplier<Button> assistCtrlButton,
+            Supplier<Button> assistAltButton,
+            Supplier<ShellInputView> shellInputView,
+            Supplier<TerminalSelectionController> selectionController,
+            Supplier<TerminalGestureStateController> terminalGestureStateController,
+            Supplier<SurfaceBridge> surfaceHostBridge,
             Supplier<UserlandReadinessState> currentReadinessState,
             Supplier<UserlandInstallState> currentInstallState,
             BooleanSupplier shouldRunProductFrameLoop,
@@ -149,12 +149,12 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
 
     @Override
     public Activity activity() {
-        return activity;
+        return activity.get();
     }
 
     @Override
     public android.os.Handler handler() {
-        return handler;
+        return handler.get();
     }
 
     @Override
@@ -179,92 +179,92 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
 
     @Override
     public View rootView() {
-        return rootView;
+        return rootView.get();
     }
 
     @Override
     public View productView() {
-        return productView;
+        return productView.get();
     }
 
     @Override
     public View debugView() {
-        return debugView;
+        return debugView.get();
     }
 
     @Override
     public View productReadinessBlocker() {
-        return productReadinessBlocker;
+        return productReadinessBlocker.get();
     }
 
     @Override
     public View drawerScrim() {
-        return drawerScrim;
+        return drawerScrim.get();
     }
 
     @Override
     public View drawerEdgeHotspot() {
-        return drawerEdgeHotspot;
+        return drawerEdgeHotspot.get();
     }
 
     @Override
     public View leftSidebar() {
-        return leftSidebar;
+        return leftSidebar.get();
     }
 
     @Override
     public FrameLayout productSurfaceContainer() {
-        return productSurfaceContainer;
+        return productSurfaceContainer.get();
     }
 
     @Override
     public TerminalScrollOverlayView terminalScrollOverlay() {
-        return terminalScrollOverlay;
+        return terminalScrollOverlay.get();
     }
 
     @Override
     public TextView productReadinessTitle() {
-        return productReadinessTitle;
+        return productReadinessTitle.get();
     }
 
     @Override
     public TextView productReadinessDetail() {
-        return productReadinessDetail;
+        return productReadinessDetail.get();
     }
 
     @Override
     public Button productReadinessRetryButton() {
-        return productReadinessRetryButton;
+        return productReadinessRetryButton.get();
     }
 
     @Override
     public Button assistCtrlButton() {
-        return assistCtrlButton;
+        return assistCtrlButton.get();
     }
 
     @Override
     public Button assistAltButton() {
-        return assistAltButton;
+        return assistAltButton.get();
     }
 
     @Override
     public ShellInputView shellInputView() {
-        return shellInputView;
+        return shellInputView.get();
     }
 
     @Override
     public TerminalSelectionController selectionController() {
-        return selectionController;
+        return selectionController.get();
     }
 
     @Override
     public TerminalGestureStateController terminalGestureStateController() {
-        return terminalGestureStateController;
+        return terminalGestureStateController.get();
     }
 
     @Override
     public SurfaceBridge surfaceHostBridge() {
-        return surfaceHostBridge;
+        return surfaceHostBridge.get();
     }
 
     @Override
