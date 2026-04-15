@@ -742,12 +742,21 @@ public final class TerminalSelectionController {
         return bridge.currentSelectionActive() && host.productSurfaceContainer() != null;
     }
 
+    private boolean hasTerminalSelectionActionMode() {
+        return terminalSelectionActionMode != null;
+    }
+
     private boolean refreshExistingTerminalSelectionActionModeIfPresent() {
-        if (terminalSelectionActionMode == null) {
+        if (!hasTerminalSelectionActionMode()) {
             return false;
         }
         invalidateTerminalSelectionActionMode(true);
         return true;
+    }
+
+    private void attachNewFloatingTerminalSelectionActionMode() {
+        terminalSelectionActionMode = startFloatingTerminalSelectionActionMode();
+        invalidateTerminalSelectionActionMode(false);
     }
 
     private void showTerminalSelectionActionMode() {
@@ -762,8 +771,7 @@ public final class TerminalSelectionController {
         if (refreshExistingTerminalSelectionActionModeIfPresent()) {
             return;
         }
-        terminalSelectionActionMode = startFloatingTerminalSelectionActionMode();
-        invalidateTerminalSelectionActionMode(false);
+        attachNewFloatingTerminalSelectionActionMode();
     }
 
     private ActionMode startFloatingTerminalSelectionActionMode() {
@@ -772,7 +780,7 @@ public final class TerminalSelectionController {
     }
 
     private void invalidateTerminalSelectionActionMode(boolean invalidateView) {
-        if (terminalSelectionActionMode == null) {
+        if (!hasTerminalSelectionActionMode()) {
             return;
         }
         terminalSelectionActionMode.invalidateContentRect();
@@ -785,8 +793,7 @@ public final class TerminalSelectionController {
         return new ActionMode.Callback2() {
             @Override
             public boolean onCreateActionMode(ActionMode mode, Menu menu) {
-                installTerminalSelectionCopyMenuItem(menu);
-                return true;
+                return onTerminalSelectionFloatingActionModeCreated(menu);
             }
 
             @Override
@@ -812,6 +819,11 @@ public final class TerminalSelectionController {
                 populateSelectionActionModeContentRect(view, outRect);
             }
         };
+    }
+
+    private boolean onTerminalSelectionFloatingActionModeCreated(Menu menu) {
+        installTerminalSelectionCopyMenuItem(menu);
+        return true;
     }
 
     private void installTerminalSelectionCopyMenuItem(Menu menu) {
@@ -897,11 +909,15 @@ public final class TerminalSelectionController {
 
     private void syncTerminalSelectionActionMode() {
         syncSelectionHandles();
+        applyTerminalSelectionActionModeSync();
+    }
+
+    private void applyTerminalSelectionActionModeSync() {
         if (shouldFinishTerminalSelectionActionMode()) {
             finishTerminalSelectionActionMode();
             return;
         }
-        if (terminalSelectionActionMode == null) {
+        if (!hasTerminalSelectionActionMode()) {
             maybeShowTerminalSelectionActionMode();
             return;
         }
@@ -913,7 +929,7 @@ public final class TerminalSelectionController {
     }
 
     private boolean shouldFinishTerminalSelectionActionMode() {
-        return terminalSelectionActionMode != null && !shouldKeepTerminalSelectionActionModeVisible();
+        return hasTerminalSelectionActionMode() && !shouldKeepTerminalSelectionActionModeVisible();
     }
 
     private void syncSelectionHandles() {
