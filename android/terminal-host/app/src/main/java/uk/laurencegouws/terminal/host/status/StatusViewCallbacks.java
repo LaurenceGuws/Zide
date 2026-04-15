@@ -13,7 +13,7 @@ import uk.laurencegouws.terminal.userland.UserlandInstallState;
 
 /** Functional callback adapter for {@link StatusViewAssembly.Host}. */
 public final class StatusViewCallbacks implements StatusViewAssembly.Host {
-    private final Supplier<Activity> activity;
+    private final Activity activity;
     private final BooleanSupplier debugViewEnabled;
     private final BooleanSupplier hasWindowFocusNow;
     private final BooleanSupplier imeVisible;
@@ -25,7 +25,7 @@ public final class StatusViewCallbacks implements StatusViewAssembly.Host {
     private final Supplier<UserlandReadinessState> currentReadinessState;
 
     public StatusViewCallbacks(
-            Supplier<Activity> activity,
+            Activity activity,
             BooleanSupplier debugViewEnabled,
             BooleanSupplier hasWindowFocusNow,
             BooleanSupplier imeVisible,
@@ -49,7 +49,7 @@ public final class StatusViewCallbacks implements StatusViewAssembly.Host {
 
     @Override
     public Activity activity() {
-        return activity.get();
+        return activity;
     }
 
     @Override
