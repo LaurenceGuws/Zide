@@ -72,7 +72,7 @@ public final class SurfaceWidgetAssembly {
             TerminalGestureStateController terminalGestureStateController,
             Host host) {
         final SurfaceWidgetController[] widgetRef = new SurfaceWidgetController[1];
-        final SurfaceBridge surfaceHostBridge = SurfaceFactory.createSurfaceHostBridge(
+        final SurfaceBridge surfaceHostBridge = new SurfaceBridge(
                 new SurfaceCallbacks(
                         host.handler(),
                         host.productSurfaceContainer(),
