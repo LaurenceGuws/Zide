@@ -869,6 +869,13 @@ public final class TerminalSelectionController {
         return clampRectToViewport(left, top, right, bottom, outRect);
     }
 
+    private void maybeShowTerminalSelectionActionMode() {
+        if (!bridge.currentSelectionActive()) {
+            return;
+        }
+        showTerminalSelectionActionMode();
+    }
+
     private void syncTerminalSelectionActionMode() {
         syncSelectionHandles();
         if (shouldFinishTerminalSelectionActionMode()) {
@@ -876,9 +883,7 @@ public final class TerminalSelectionController {
             return;
         }
         if (terminalSelectionActionMode == null) {
-            if (bridge.currentSelectionActive()) {
-                showTerminalSelectionActionMode();
-            }
+            maybeShowTerminalSelectionActionMode();
             return;
         }
         invalidateTerminalSelectionActionMode(false);
