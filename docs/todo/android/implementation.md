@@ -187,11 +187,10 @@ Milestone gate contract (mandatory when manager/architect lane is active):
     and (c) action-mode + clipboard flow. Audit conclusion remains
     contract-aligned: keep selection monolithic until one of those sub-seams is
     lifted in a behavior-preserving cut with replay/validation authority.
-    - Next: execute the second behavior-preserving
-      `TerminalSelectionController` internal extraction from the locked audit
-      queue (selection handle geometry/sync), preserving monolithic ownership and
-      avoiding wrapper inflation; compile each commit and run deploy +
-      `AndroidRuntime:E` smoke at seam cadence.
+    - Next: execute `AN-A1-M2C` — behavior-preserving
+      `TerminalSelectionController` internal extraction for action-mode
+      lifecycle + clipboard flow (monolithic controller retained); compile each
+      commit and run deploy + `AndroidRuntime:E` smoke at seam cadence.
       `ChromeController` / `SurfaceController` remain frozen until this `Next:`
       line is intentionally advanced.
 
@@ -200,7 +199,7 @@ Milestone gate contract (mandatory when manager/architect lane is active):
 Use this queue to keep the engineer on larger reviewable scopes while preserving
 the existing per-commit validation rules.
 
-1. `AN-A1-M2A` selection geometry/sync closure (`review_required`)
+1. `AN-A1-M2A` selection geometry/sync closure (`completed`)
    - Scope:
      - `TerminalSelectionController` internal seam only
      - complete geometry/sync extraction boundaries:
@@ -217,15 +216,15 @@ the existing per-commit validation rules.
      - compile pass per commit and at least one deploy + `AndroidRuntime:E`
        smoke at seam boundary
      - queue notes updated with outcome-based progress
-2. `AN-A1-M2B` docs checkpoint and queue advance (`pending`)
+2. `AN-A1-M2B` docs checkpoint and queue advance (`completed`)
    - Scope:
      - docs-only checkpoint of completed seam outcomes
      - refresh hotspot size markers to current code reality
      - advance explicit `Next:` line only if M2A is complete and validated
-   - Exit criteria:
-     - `docs/todo/android/implementation.md`, `docs/AGENT_HANDOFF.md`, and
-       `ANDROID_JAVA_HOST_STRUCTURE.md` reflect current state
-3. `AN-A1-M2C` selection action-mode/clipboard wave (`pending`)
+   - Outcome:
+     - hotspot line counts refreshed in queue snapshot, handoff, and structure
+       authority; binding `Next:` advanced to `AN-A1-M2C` action-mode/clipboard
+3. `AN-A1-M2C` selection action-mode/clipboard wave (`in_progress`)
    - Scope:
      - action-mode lifecycle + clipboard flow simplification only
      - preserve behavior and monolithic ownership
@@ -233,8 +232,8 @@ the existing per-commit validation rules.
      - compile pass per commit; deploy + `AndroidRuntime:E` smoke at seam
        boundary
      - queue update records concrete simplification outcomes
-3. Stabilize selection/scroll interaction behavior under manual device usage.
-4. Keep debug/profiling instrumentation behind explicit flags and remove stale
+4. Stabilize selection/scroll interaction behavior under manual device usage.
+5. Keep debug/profiling instrumentation behind explicit flags and remove stale
    probes after fixes land.
 
 ## Workflow
@@ -284,11 +283,11 @@ A cut is done only if all are true:
 
 - interactive shell + Neovim baseline is usable on-device
 - `ZideTerminalActivity` is now wiring/lifecycle/orchestration-oriented
-  (current size: `618` lines; JNI moved out to `TerminalNativeBridge`)
+  (current size: `615` lines; JNI moved out to `TerminalNativeBridge`)
 - current Java hotspot ranking for hygiene focus:
-  - `selection/TerminalSelectionController.java` (~946 lines, monolithic by design)
-  - `ZideTerminalActivity.java` (~618 lines, orchestration pressure)
-  - `host/ui/WidgetCallbacks.java` (~349 lines, constructor/callback pressure)
+  - `selection/TerminalSelectionController.java` (~999 lines, monolithic by design)
+  - `ZideTerminalActivity.java` (~615 lines, orchestration pressure)
+  - `host/ui/WidgetCallbacks.java` (~340 lines, constructor/callback pressure)
   - `userland/UserlandInstaller.java` (~425 lines, large but cohesive)
 - activity callback factory wiring now consistently favors named callback
   references over inline state-assignment or non-trivial lifecycle lambdas

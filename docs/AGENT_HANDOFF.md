@@ -22,6 +22,15 @@ Session entrypoint only. Keep this file short, stable, and current.
 5. Update docs in the same change.
 6. Commit small, cohesive units on `main` unless user says otherwise.
 
+When `docs/todo/android/implementation.md` contains a `Milestone Queue`:
+
+- execute only the current milestone scope
+- keep commits small, but continue through the milestone until its exit criteria
+  are met
+- stop at milestone boundary and report:
+  `Milestone reached per docs, architect review required.`
+- do not self-advance to the next milestone
+
 ## Android Cleanup Execution Contract (No Ambiguity)
 
 Use this when the Android lane is in cleanup/refactor/standardization mode.
@@ -92,10 +101,10 @@ Required per-commit update format:
 ## Java Hygiene Hotspots (Reassessed)
 
 - `selection/TerminalSelectionController.java` remains the largest Java owner
-  seam (~946 lines) and is still monolithic by design.
-- `ZideTerminalActivity.java` is materially thinner (~618 lines) but remains
+  seam (~999 lines) and is still monolithic by design.
+- `ZideTerminalActivity.java` is materially thinner (~615 lines) but remains
   the highest orchestration-pressure seam.
-- `host/ui/WidgetCallbacks.java` (~349 lines) is the highest callback-constructor
+- `host/ui/WidgetCallbacks.java` (~340 lines) is the highest callback-constructor
   pressure seam after recent activity cleanup.
 - `userland/UserlandInstaller.java` (~425 lines) remains large but cohesive;
   keep watch-only unless behavior complexity expands.

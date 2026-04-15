@@ -51,11 +51,11 @@ For active priorities/workflow, use
 
 Current shape markers (for hygiene tracking, not hard limits):
 
-- `selection/TerminalSelectionController.java`: `946` lines (monolithic by design for now)
-- `ZideTerminalActivity.java`: `618` lines
+- `selection/TerminalSelectionController.java`: `999` lines (monolithic by design for now)
+- `ZideTerminalActivity.java`: `615` lines
 - `input/ShellInputView.java`: `545` lines
 - `userland/UserlandInstaller.java`: `425` lines
-- `host/ui/WidgetCallbacks.java`: `349` lines
+- `host/ui/WidgetCallbacks.java`: `340` lines
 - `host/surface/SurfaceBridge.java`: `272` lines
 - `host/surface/SurfaceController.java`: `262` lines
 - `host/ui/WidgetAssembly.java`: `255` lines
@@ -148,7 +148,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `input/TerminalImeFocusRecoveryHostCallbacks.java` | Good | Functional callback adapter from activity state/actions into `TerminalImeFocusRecoveryController`. | Keep adapter-only; IME focus-recovery behavior stays in `TerminalImeFocusRecoveryController`. |
 | `input/ShellInputView.java` | Watch | Correct owner for `InputConnection`; complexity is justified by IME composition and modifier translation. | Keep shell refresh, focus policy, and terminal rendering out. |
 | `scroll/TerminalScrollOverlayView.java` | Good | Native Android view owns visual scroll affordance and drag interaction. | Keep scrollback truth in native bridge/session. |
-| `selection/TerminalSelectionController.java` | Partial | Too large, but currently one product concern: Android selection interaction. It owns word start, drag expansion, handles, toolbar, copy, and autoscroll. | Keep monolithic until a real seam is extracted; current planning queue is explicit and behavior-preserving: (1) drag/autoscroll loop, (2) handle geometry + sync, (3) action-mode + clipboard flow. |
+| `selection/TerminalSelectionController.java` | Partial | Too large, but currently one product concern: Android selection interaction. It owns word start, drag expansion, handles, toolbar, copy, and autoscroll. | Keep monolithic until a real seam is extracted; internal extractions are behavior-preserving (drag/autoscroll, handle geometry/sync completed; action-mode/clipboard wave is the active milestone per queue). |
 | `selection/TerminalSelectionControllerFactory.java` | Good | Builds one selection controller from widget-scoped host callbacks and bridges. | Keep as construction-only glue; avoid moving selection behavior out of `TerminalSelectionController`. |
 | `session/ShellSessionController.java` | Good | Small owner of poll and first auto-start eligibility. | Keep readiness UI and install workflow out. |
 | `userland/ProductShellStatePresenter.java` | Good | Presenter is userland-adjacent because blocker state depends on prefix readiness and install state. | Rename or move only if product shell presentation grows beyond userland readiness. |
