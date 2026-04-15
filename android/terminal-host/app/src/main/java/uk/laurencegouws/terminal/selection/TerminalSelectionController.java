@@ -742,6 +742,14 @@ public final class TerminalSelectionController {
         return bridge.currentSelectionActive() && host.productSurfaceContainer() != null;
     }
 
+    private boolean refreshExistingTerminalSelectionActionModeIfPresent() {
+        if (terminalSelectionActionMode == null) {
+            return false;
+        }
+        invalidateTerminalSelectionActionMode(true);
+        return true;
+    }
+
     private void showTerminalSelectionActionMode() {
         syncSelectionHandles();
         if (!selectionToolbarVisible) {
@@ -751,8 +759,7 @@ public final class TerminalSelectionController {
             finishTerminalSelectionActionMode();
             return;
         }
-        if (terminalSelectionActionMode != null) {
-            invalidateTerminalSelectionActionMode(true);
+        if (refreshExistingTerminalSelectionActionModeIfPresent()) {
             return;
         }
         terminalSelectionActionMode = startFloatingTerminalSelectionActionMode();
@@ -822,10 +829,14 @@ public final class TerminalSelectionController {
         return true;
     }
 
-    private void onTerminalSelectionActionModeDestroyed(ActionMode mode) {
+    private void detachCurrentTerminalSelectionActionModeIfMatches(ActionMode mode) {
         if (terminalSelectionActionMode == mode) {
             terminalSelectionActionMode = null;
         }
+    }
+
+    private void onTerminalSelectionActionModeDestroyed(ActionMode mode) {
+        detachCurrentTerminalSelectionActionModeIfMatches(mode);
         applyTerminalSelectionActionModeDestroyEffects();
     }
 
@@ -850,10 +861,10 @@ public final class TerminalSelectionController {
 
     private void finishTerminalSelectionActionMode() {
         syncSelectionHandles();
-        if (terminalSelectionActionMode == null) {
+        final ActionMode mode = terminalSelectionActionMode;
+        if (mode == null) {
             return;
         }
-        final ActionMode mode = terminalSelectionActionMode;
         terminalSelectionActionMode = null;
         suppressSelectionClearOnActionModeDestroy = true;
         mode.finish();
@@ -1043,6 +1054,10 @@ public final class TerminalSelectionController {
             host.appendEvent("product.selection.copy result=no-clipboard");
             return;
         }
+        applyClipboardPrimaryClipForTerminalSelection(clipboard, text);
+    }
+
+    private void applyClipboardPrimaryClipForTerminalSelection(ClipboardManager clipboard, String text) {
         clipboard.setPrimaryClip(ClipData.newPlainText("terminal-selection", text));
         host.appendEvent("product.selection.copy result=ok chars=" + text.length());
     }
