@@ -751,9 +751,13 @@ public final class TerminalSelectionController {
             invalidateTerminalSelectionActionMode(true);
             return;
         }
-        terminalSelectionActionMode = host.productSurfaceContainer()
-                .startActionMode(createTerminalSelectionActionModeCallback(), ActionMode.TYPE_FLOATING);
+        terminalSelectionActionMode = startFloatingTerminalSelectionActionMode();
         invalidateTerminalSelectionActionMode(false);
+    }
+
+    private ActionMode startFloatingTerminalSelectionActionMode() {
+        return host.productSurfaceContainer().startActionMode(
+                createTerminalSelectionActionModeCallback(), ActionMode.TYPE_FLOATING);
     }
 
     private void invalidateTerminalSelectionActionMode(boolean invalidateView) {
@@ -785,9 +789,7 @@ public final class TerminalSelectionController {
                 if (item.getItemId() != android.R.id.copy) {
                     return false;
                 }
-                copyCurrentShellSelectionToClipboard();
-                mode.finish();
-                return true;
+                return completeTerminalSelectionCopyAction(mode);
             }
 
             @Override
@@ -800,6 +802,12 @@ public final class TerminalSelectionController {
                 populateSelectionActionModeContentRect(view, outRect);
             }
         };
+    }
+
+    private boolean completeTerminalSelectionCopyAction(ActionMode mode) {
+        copyCurrentShellSelectionToClipboard();
+        mode.finish();
+        return true;
     }
 
     private void onTerminalSelectionActionModeDestroyed(ActionMode mode) {
