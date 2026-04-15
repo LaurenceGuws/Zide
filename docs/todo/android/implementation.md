@@ -170,6 +170,9 @@ Agent reporting contract (mandatory for cleanup campaign updates):
    - Completed: `SurfaceController` net-smaller: viewport publish, layout params,
      redraw telemetry, and install callback resolution no longer sit behind
      separate private methods (behavior unchanged).
+   - Completed: `SurfaceController` net-smaller: debug resume scheduling paths
+     are folded into `onResume` instead of three private schedule helpers
+     (behavior unchanged).
    - Next: net simplification in `ChromeController` or `SurfaceController`:
      remove or merge pass-through helpers and redundant indirection so the
      touched class ends with fewer methods, fields, or dependencies; each of
