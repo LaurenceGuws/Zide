@@ -185,6 +185,11 @@ Agent reporting contract (mandatory for cleanup campaign updates):
      visibility forward removed; method count ~32 → ~18 with behavior preserved.
      `SurfaceController` paused at nine methods—avoid further cuts there until a
      new explicit queue decision.
+   - Completed (mini-wave): `ZideTerminalActivity` create*Callbacks wiring uses
+     direct captures (`() -> this`, `() -> handler`, field reads, `nativeLoaded`,
+     `getSystemService(InputMethodManager.class)`) instead of private one-line
+     suppliers; ~778 → ~730 lines, behavior unchanged. `SurfaceController` remains
+     frozen; `ChromeController` unchanged this wave.
    - Next: net simplification in `ChromeController` or `SurfaceController`:
      remove or merge pass-through helpers and redundant indirection so the
      touched class ends with fewer methods, fields, or dependencies; each of
