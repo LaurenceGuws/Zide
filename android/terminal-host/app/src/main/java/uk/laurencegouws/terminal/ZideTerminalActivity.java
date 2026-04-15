@@ -13,11 +13,6 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
-import java.util.function.BooleanSupplier;
-import java.util.function.Consumer;
-import java.util.function.IntSupplier;
-import java.util.function.Supplier;
-
 import uk.laurencegouws.terminal.debug.AndroidDebugFormatter;
 import uk.laurencegouws.terminal.debug.TerminalStatusController;
 import uk.laurencegouws.terminal.debug.TerminalSurfaceStateSnapshotReader;
@@ -353,24 +348,18 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private SessionAssemblyCallbacks createSessionAssemblyCallbacks() {
-        final Consumer<String> append = this::appendEvent;
-        final Consumer<String> status = this::updateStatus;
-        final Runnable refreshProductShellState = this::refreshProductShellStateIfReady;
-        final Runnable refreshDebugStatusSurface = this::refreshDebugStatusSurfaceIfReady;
-        final BooleanSupplier shouldRunProductFrameLoop = this::shouldRunProductFrameLoop;
-        final IntSupplier tickProductFrame = this::tickProductFrameAndRefreshScrollOverlay;
         return new SessionAssemblyCallbacks(
                 () -> this,
                 () -> userlandRelease,
                 () -> handler,
-                append,
-                status,
+                this::appendEvent,
+                this::updateStatus,
                 () -> nativeLoaded,
                 state -> currentReadinessState = state,
-                refreshProductShellState,
-                refreshDebugStatusSurface,
-                shouldRunProductFrameLoop,
-                tickProductFrame,
+                this::refreshProductShellStateIfReady,
+                this::refreshDebugStatusSurfaceIfReady,
+                this::shouldRunProductFrameLoop,
+                this::tickProductFrameAndRefreshScrollOverlay,
                 TerminalNativeBridge::nativeRestartSessionBridge,
                 TerminalNativeBridge::nativePollSessionBridge,
                 TerminalNativeBridge::nativeIsSessionAliveBridge);
@@ -402,41 +391,31 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private StatusViewCallbacks createStatusViewCallbacks() {
-        final Consumer<Boolean> bindImeVisible = v -> imeVisible = v;
-        final Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> readSurfaceSnapshot =
-                () -> terminalSurfaceStateSnapshotReader.read();
-        final Consumer<String> notifyVisibleViewport = this::notifyVisibleViewportIfReady;
         return new StatusViewCallbacks(
                 () -> this,
                 () -> debugViewEnabled,
                 () -> nativeLoaded,
                 this::hasWindowFocus,
                 () -> imeVisible,
-                bindImeVisible,
+                v -> imeVisible = v,
                 () -> surfaceHostBridge,
-                readSurfaceSnapshot,
-                notifyVisibleViewport,
+                () -> terminalSurfaceStateSnapshotReader.read(),
+                this::notifyVisibleViewportIfReady,
                 () -> currentInstallState,
                 () -> currentReadinessState);
     }
 
     private LifecycleCallbacks createLifecycleCallbacks() {
-        final Consumer<String> append = this::appendEvent;
-        final Consumer<String> status = this::updateStatus;
-        final Runnable stopProductFrameLoop = this::stopProductFrameLoopIfReady;
-        final Runnable refreshUserlandSession = this::refreshUserlandSessionIfReady;
-        final Runnable pauseSurface = this::pauseSurfaceIfReady;
-        final LifecycleCallbacks.SurfaceResumeCall resumeSurface = this::resumeSurfaceIfReady;
         return new LifecycleCallbacks(
                 LifecycleCallbacks.LifecycleHostCallbacks.of(
                         () -> nativeLoaded,
                         () -> nativeLoadError,
-                        append,
-                        status,
-                        stopProductFrameLoop,
-                        refreshUserlandSession,
-                        pauseSurface,
-                        resumeSurface),
+                        this::appendEvent,
+                        this::updateStatus,
+                        this::stopProductFrameLoopIfReady,
+                        this::refreshUserlandSessionIfReady,
+                        this::pauseSurfaceIfReady,
+                        this::resumeSurfaceIfReady),
                 LifecycleCallbacks.NativeLifecycleCallbacks.of(
                         TerminalNativeBridge::nativeOnCreateBridge,
                         TerminalNativeBridge::nativeOnStartBridge,
