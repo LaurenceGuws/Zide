@@ -230,6 +230,16 @@ Agent reporting contract (mandatory for cleanup campaign updates):
      lines after session trim. **Validation:** `:app:compileReleaseJavaWithJavac`
      per adapter commit; `zig build` after the wave. `ChromeController` /
      `SurfaceController` still frozen.
+  - Completed (mini-wave, one-source native-loaded): `SessionAssemblyCallbacks`
+    + `ProductRuntimeAssemblyCallbacks` dropped duplicated `nativeLoaded`
+    supplier plumbing (`d40068aa`), then `SessionAssembly.Host` /
+    `ProductRuntimeAssembly.Host` dropped `nativeLoaded` as an activity-owned
+    contract and now bind `TerminalNativeBridge.nativeLoaded()` directly at
+    assembly sites (`76cb5f29`). Result: fewer callback ctor params/fields and
+    less host-surface contract pressure with behavior unchanged.
+    **Validation:** `:app:compileReleaseJavaWithJavac`, deploy via
+    `python3 ops/android_terminal_host.py deploy`, and
+    `adb logcat -d -s AndroidRuntime:E` (empty).
    - Next: net simplification in `ZideTerminalActivity` `create*Callbacks()`
      factories: collapse redundant one-line supplier glue and trivial `this::`
      forwards where the activity adds no policy (prefer direct field capture or
