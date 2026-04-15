@@ -826,6 +826,10 @@ public final class TerminalSelectionController {
         if (terminalSelectionActionMode == mode) {
             terminalSelectionActionMode = null;
         }
+        applyTerminalSelectionActionModeDestroyEffects();
+    }
+
+    private void applyTerminalSelectionActionModeDestroyEffects() {
         if (!suppressSelectionClearOnActionModeDestroy) {
             bridge.clearSelection();
         }
