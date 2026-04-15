@@ -22,7 +22,6 @@ public final class SurfaceLifecycleCallbacks implements SurfaceCallbacks.Callbac
         void call(String event, long seq, AndroidDebugFormatter.SurfaceEventSnapshot state);
     }
 
-    private final BooleanSupplier nativeLoaded;
     private final BooleanSupplier debugViewEnabled;
     private final BooleanSupplier currentImeVisible;
     private final BooleanSupplier shouldRunProductFrameLoop;
@@ -43,7 +42,6 @@ public final class SurfaceLifecycleCallbacks implements SurfaceCallbacks.Callbac
     }
 
     public SurfaceLifecycleCallbacks(
-            BooleanSupplier nativeLoaded,
             BooleanSupplier debugViewEnabled,
             BooleanSupplier currentImeVisible,
             BooleanSupplier shouldRunProductFrameLoop,
@@ -57,7 +55,6 @@ public final class SurfaceLifecycleCallbacks implements SurfaceCallbacks.Callbac
             Consumer<SurfaceView> installSurfaceGestureHost,
             ReinstallSurfaceCallback reinstallSurfaceCallback,
             Supplier<SurfaceHolder.Callback2> surfaceCallback) {
-        this.nativeLoaded = nativeLoaded;
         this.debugViewEnabled = debugViewEnabled;
         this.currentImeVisible = currentImeVisible;
         this.shouldRunProductFrameLoop = shouldRunProductFrameLoop;
@@ -75,7 +72,7 @@ public final class SurfaceLifecycleCallbacks implements SurfaceCallbacks.Callbac
 
     @Override
     public boolean nativeLoaded() {
-        return nativeLoaded.getAsBoolean();
+        return TerminalNativeBridge.nativeLoaded();
     }
 
     @Override

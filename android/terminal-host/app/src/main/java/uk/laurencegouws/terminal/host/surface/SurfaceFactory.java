@@ -26,7 +26,6 @@ public final class SurfaceFactory {
     }
 
     public static SurfaceCallbacks.Callbacks createSurfaceHostLifecycleCallbacks(
-            BooleanSupplier nativeLoaded,
             BooleanSupplier debugViewEnabled,
             BooleanSupplier currentImeVisible,
             BooleanSupplier shouldRunProductFrameLoop,
@@ -41,7 +40,6 @@ public final class SurfaceFactory {
             SurfaceLifecycleCallbacks.ReinstallSurfaceCallback reinstallSurfaceCallback,
             Supplier<android.view.SurfaceHolder.Callback2> surfaceCallback) {
         return new SurfaceLifecycleCallbacks(
-                nativeLoaded,
                 debugViewEnabled,
                 currentImeVisible,
                 shouldRunProductFrameLoop,
