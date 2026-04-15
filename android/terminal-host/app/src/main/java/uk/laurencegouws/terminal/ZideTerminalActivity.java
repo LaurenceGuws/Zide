@@ -252,7 +252,6 @@ public final class ZideTerminalActivity extends Activity
         return new InputCallbacks(
                 () -> this,
                 () -> rootView,
-                () -> this,
                 () -> getSystemService(InputMethodManager.class),
                 () -> imeVisible,
                 visible -> imeVisible = visible,

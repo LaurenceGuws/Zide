@@ -10,11 +10,10 @@ import java.util.function.Supplier;
 
 import uk.laurencegouws.terminal.input.ShellInputView;
 
-/** Functional callback adapter for {@link InputAssembly.Host}. */
+/** Functional callback adapter for {@link InputAssembly.Host}; activity must implement {@link ShellInputView.Host}. */
 public final class InputCallbacks implements InputAssembly.Host {
     private final Supplier<Activity> activity;
     private final Supplier<View> rootView;
-    private final Supplier<ShellInputView.Host> shellInputHost;
     private final Supplier<InputMethodManager> inputMethodManager;
     private final BooleanSupplier currentImeVisible;
     private final Consumer<Boolean> setImeVisible;
@@ -27,7 +26,6 @@ public final class InputCallbacks implements InputAssembly.Host {
     public InputCallbacks(
             Supplier<Activity> activity,
             Supplier<View> rootView,
-            Supplier<ShellInputView.Host> shellInputHost,
             Supplier<InputMethodManager> inputMethodManager,
             BooleanSupplier currentImeVisible,
             Consumer<Boolean> setImeVisible,
@@ -38,7 +36,6 @@ public final class InputCallbacks implements InputAssembly.Host {
             Consumer<String> appendEvent) {
         this.activity = activity;
         this.rootView = rootView;
-        this.shellInputHost = shellInputHost;
         this.inputMethodManager = inputMethodManager;
         this.currentImeVisible = currentImeVisible;
         this.setImeVisible = setImeVisible;
@@ -61,7 +58,7 @@ public final class InputCallbacks implements InputAssembly.Host {
 
     @Override
     public ShellInputView.Host shellInputHost() {
-        return shellInputHost.get();
+        return (ShellInputView.Host) activity.get();
     }
 
     @Override
