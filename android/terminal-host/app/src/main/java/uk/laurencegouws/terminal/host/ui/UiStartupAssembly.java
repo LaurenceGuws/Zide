@@ -86,8 +86,8 @@ public final class UiStartupAssembly {
                         new ReadinessBlockerCallbacks(
                                 host::currentInstallState,
                                 host::currentReadinessState,
-                                host::userlandWorkflowController,
-                                host::userlandSessionCoordinator,
+                                host.userlandWorkflowController(),
+                                host.userlandSessionCoordinator(),
                                 host.showDebugView()::call,
                                 host.appendEvent(),
                                 host.updateStatus()));

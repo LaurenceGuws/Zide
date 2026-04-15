@@ -14,8 +14,8 @@ import uk.laurencegouws.terminal.userland.UserlandWorkflowController;
 public final class ReadinessBlockerCallbacks implements UserlandReadinessBlockerController.Host {
     private final Supplier<UserlandInstallState> installState;
     private final Supplier<UserlandReadinessState> readinessState;
-    private final Supplier<UserlandWorkflowController> workflowController;
-    private final Supplier<UserlandSessionCoordinator> sessionCoordinator;
+    private final UserlandWorkflowController workflowController;
+    private final UserlandSessionCoordinator sessionCoordinator;
     private final BiConsumer<String, String> showDebugView;
     private final Consumer<String> appendEvent;
     private final Consumer<String> updateStatus;
@@ -23,8 +23,8 @@ public final class ReadinessBlockerCallbacks implements UserlandReadinessBlocker
     public ReadinessBlockerCallbacks(
             Supplier<UserlandInstallState> installState,
             Supplier<UserlandReadinessState> readinessState,
-            Supplier<UserlandWorkflowController> workflowController,
-            Supplier<UserlandSessionCoordinator> sessionCoordinator,
+            UserlandWorkflowController workflowController,
+            UserlandSessionCoordinator sessionCoordinator,
             BiConsumer<String, String> showDebugView,
             Consumer<String> appendEvent,
             Consumer<String> updateStatus) {
@@ -49,12 +49,12 @@ public final class ReadinessBlockerCallbacks implements UserlandReadinessBlocker
 
     @Override
     public UserlandWorkflowController workflowController() {
-        return workflowController.get();
+        return workflowController;
     }
 
     @Override
     public UserlandSessionCoordinator sessionCoordinator() {
-        return sessionCoordinator.get();
+        return sessionCoordinator;
     }
 
     @Override

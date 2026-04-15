@@ -24,8 +24,8 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
     private final Button productReadinessDebugButton;
     private final Supplier<UserlandInstallState> currentInstallState;
     private final Supplier<UserlandReadinessState> currentReadinessState;
-    private final Supplier<UserlandWorkflowController> userlandWorkflowController;
-    private final Supplier<UserlandSessionCoordinator> userlandSessionCoordinator;
+    private final UserlandWorkflowController userlandWorkflowController;
+    private final UserlandSessionCoordinator userlandSessionCoordinator;
     private final UiStartupAssembly.ShowDebugView showDebugView;
     private final Consumer<String> appendEvent;
     private final Consumer<String> updateStatus;
@@ -44,8 +44,8 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
             Button productReadinessDebugButton,
             Supplier<UserlandInstallState> currentInstallState,
             Supplier<UserlandReadinessState> currentReadinessState,
-            Supplier<UserlandWorkflowController> userlandWorkflowController,
-            Supplier<UserlandSessionCoordinator> userlandSessionCoordinator,
+            UserlandWorkflowController userlandWorkflowController,
+            UserlandSessionCoordinator userlandSessionCoordinator,
             UiStartupAssembly.ShowDebugView showDebugView,
             Consumer<String> appendEvent,
             Consumer<String> updateStatus,
@@ -108,12 +108,12 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
 
     @Override
     public UserlandWorkflowController userlandWorkflowController() {
-        return userlandWorkflowController.get();
+        return userlandWorkflowController;
     }
 
     @Override
     public UserlandSessionCoordinator userlandSessionCoordinator() {
-        return userlandSessionCoordinator.get();
+        return userlandSessionCoordinator;
     }
 
     @Override
