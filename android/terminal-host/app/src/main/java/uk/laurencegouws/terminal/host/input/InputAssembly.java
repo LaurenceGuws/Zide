@@ -7,7 +7,6 @@ import android.widget.FrameLayout;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 import uk.laurencegouws.terminal.input.ShellInputView;
 import uk.laurencegouws.terminal.input.TerminalHardwareKeyboardController;
@@ -23,7 +22,7 @@ public final class InputAssembly {
 
         ShellInputView.Host shellInputHost();
 
-        Supplier<InputMethodManager> inputMethodManager();
+        InputMethodManager inputMethodManager();
 
         BooleanSupplier currentImeVisible();
 

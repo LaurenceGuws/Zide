@@ -266,7 +266,7 @@ public final class ZideTerminalActivity extends Activity
                 new InputCallbacks(
                         this,
                         rootView,
-                        () -> getSystemService(InputMethodManager.class),
+                        getSystemService(InputMethodManager.class),
                         () -> imeVisible,
                         visible -> imeVisible = visible,
                         this::refreshProductScrollOverlayIfReady,

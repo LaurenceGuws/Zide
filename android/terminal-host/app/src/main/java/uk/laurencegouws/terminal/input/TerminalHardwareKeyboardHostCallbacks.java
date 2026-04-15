@@ -11,7 +11,7 @@ import uk.laurencegouws.terminal.TerminalNativeBridge;
 /** Functional callback adapter for {@link TerminalHardwareKeyboardController}. */
 public final class TerminalHardwareKeyboardHostCallbacks implements TerminalHardwareKeyboardController.Host {
     private final Supplier<ShellInputView> shellInputView;
-    private final Supplier<InputMethodManager> inputMethodManager;
+    private final InputMethodManager inputMethodManager;
     private final BooleanSupplier currentImeVisible;
     private final Consumer<Boolean> setImeVisible;
     private final Runnable followShellLiveBottom;
@@ -20,7 +20,7 @@ public final class TerminalHardwareKeyboardHostCallbacks implements TerminalHard
 
     public TerminalHardwareKeyboardHostCallbacks(
             Supplier<ShellInputView> shellInputView,
-            Supplier<InputMethodManager> inputMethodManager,
+            InputMethodManager inputMethodManager,
             BooleanSupplier currentImeVisible,
             Consumer<Boolean> setImeVisible,
             Runnable followShellLiveBottom,
@@ -42,7 +42,7 @@ public final class TerminalHardwareKeyboardHostCallbacks implements TerminalHard
 
     @Override
     public InputMethodManager inputMethodManager() {
-        return inputMethodManager.get();
+        return inputMethodManager;
     }
 
     @Override

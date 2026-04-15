@@ -6,7 +6,6 @@ import android.view.inputmethod.InputMethodManager;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 import uk.laurencegouws.terminal.TerminalNativeBridge;
 import uk.laurencegouws.terminal.input.ShellInputView;
@@ -15,7 +14,7 @@ import uk.laurencegouws.terminal.input.ShellInputView;
 public final class InputCallbacks implements InputAssembly.Host {
     private final Activity activity;
     private final View rootView;
-    private final Supplier<InputMethodManager> inputMethodManager;
+    private final InputMethodManager inputMethodManager;
     private final BooleanSupplier currentImeVisible;
     private final Consumer<Boolean> setImeVisible;
     private final Runnable refreshProductScrollOverlay;
@@ -25,7 +24,7 @@ public final class InputCallbacks implements InputAssembly.Host {
     public InputCallbacks(
             Activity activity,
             View rootView,
-            Supplier<InputMethodManager> inputMethodManager,
+            InputMethodManager inputMethodManager,
             BooleanSupplier currentImeVisible,
             Consumer<Boolean> setImeVisible,
             Runnable refreshProductScrollOverlay,
@@ -57,7 +56,7 @@ public final class InputCallbacks implements InputAssembly.Host {
     }
 
     @Override
-    public Supplier<InputMethodManager> inputMethodManager() {
+    public InputMethodManager inputMethodManager() {
         return inputMethodManager;
     }
 

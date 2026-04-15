@@ -22,7 +22,7 @@ public final class InputFactory {
 
     public static TerminalHardwareKeyboardController createHardwareKeyboardController(
             Supplier<ShellInputView> shellInputView,
-            Supplier<android.view.inputmethod.InputMethodManager> inputMethodManager,
+            android.view.inputmethod.InputMethodManager inputMethodManager,
             BooleanSupplier currentImeVisible,
             Consumer<Boolean> setImeVisible,
             Runnable followShellLiveBottom,
@@ -43,7 +43,7 @@ public final class InputFactory {
             Supplier<ShellInputView> shellInputView,
             BooleanSupplier imeVisible,
             Consumer<String> appendEvent,
-            Supplier<android.view.inputmethod.InputMethodManager> inputMethodManager) {
+            android.view.inputmethod.InputMethodManager inputMethodManager) {
         return new TerminalImeFocusRecoveryController(
                 new TerminalImeFocusRecoveryHostCallbacks(
                         shellInputView,

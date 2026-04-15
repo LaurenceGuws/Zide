@@ -11,13 +11,13 @@ public final class TerminalImeFocusRecoveryHostCallbacks implements TerminalImeF
     private final Supplier<ShellInputView> shellInputView;
     private final BooleanSupplier imeVisible;
     private final Consumer<String> appendEvent;
-    private final Supplier<InputMethodManager> inputMethodManager;
+    private final InputMethodManager inputMethodManager;
 
     public TerminalImeFocusRecoveryHostCallbacks(
             Supplier<ShellInputView> shellInputView,
             BooleanSupplier imeVisible,
             Consumer<String> appendEvent,
-            Supplier<InputMethodManager> inputMethodManager) {
+            InputMethodManager inputMethodManager) {
         this.shellInputView = shellInputView;
         this.imeVisible = imeVisible;
         this.appendEvent = appendEvent;
@@ -41,6 +41,6 @@ public final class TerminalImeFocusRecoveryHostCallbacks implements TerminalImeF
 
     @Override
     public InputMethodManager inputMethodManager() {
-        return inputMethodManager.get();
+        return inputMethodManager;
     }
 }
