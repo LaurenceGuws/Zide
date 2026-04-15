@@ -116,6 +116,9 @@ Agent reporting contract (mandatory for cleanup campaign updates):
 - `Files touched:` concrete paths
 - `Validation:` exact command list + pass/fail
 - `Next work:` exact current `Next:` line after progress update
+- `Blocked by review needed:` `true` or `false` (set `true` only when milestone
+  exit criteria are satisfied, queue mismatch is found, or runtime uncertainty
+  requires architect decision)
 
 Milestone gate contract (mandatory when manager/architect lane is active):
 
@@ -127,6 +130,7 @@ Milestone gate contract (mandatory when manager/architect lane is active):
   - `Scope contract:` one line confirming the work stayed in milestone scope
   - `Progress delta:` concrete simplification/result delta
   - `Validation:` exact commands + pass/fail
+  - `Blocked by review needed:` `true` or `false`
 - when a milestone endpoint is reached, report this exact line:
   `Milestone reached per docs, architect review required.`
 
@@ -228,6 +232,18 @@ the existing per-commit validation rules.
    - Scope:
      - action-mode lifecycle + clipboard flow simplification only
      - preserve behavior and monolithic ownership
+   - Outcome:
+     - plain-text clipboard copy split from shell selection copy
+       (`copyPlainTextSelectionToClipboard`)
+     - unified action-mode invalidation (`invalidateTerminalSelectionActionMode`)
+     - floating action-mode start + copy action completion extracted
+       (`startFloatingTerminalSelectionActionMode`,
+       `completeTerminalSelectionCopyAction`)
+     - copy menu install + fallback toolbar rect centralized
+       (`installTerminalSelectionCopyMenuItem`,
+       `setSelectionActionModeFallbackContentRect`)
+     - bridge selection rect read/clamp isolated
+       (`populateTerminalSelectionContentRectFromBridge`)
    - Exit criteria:
      - compile pass per commit; deploy + `AndroidRuntime:E` smoke at seam
        boundary
