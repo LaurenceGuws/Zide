@@ -299,25 +299,14 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private WidgetCallbacks createWidgetCallbacks() {
-        final Consumer<String> append = this::appendEvent;
-        final Consumer<String> status = this::updateStatus;
-        final Consumer<Boolean> bindImeVisible = v -> imeVisible = v;
-        final Consumer<Boolean> bindDebugView = e -> debugViewEnabled = e;
-        final BooleanSupplier shouldRunProductFrameLoop = this::shouldRunProductFrameLoop;
-        final Runnable refreshScrollOverlay = this::refreshProductScrollOverlayIfReady;
-        final Runnable reevaluateFrameLoop = this::reevaluateProductFrameLoopIfReady;
-        final Consumer<String> notifyVisibleViewport = this::notifyVisibleViewportIfReady;
-        final Runnable refreshUserlandSession = this::refreshUserlandSessionIfReady;
-        final Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> readSurfaceSnapshot =
-                () -> terminalSurfaceStateSnapshotReader.read();
         return new WidgetCallbacks(
                 () -> this,
                 () -> handler,
                 () -> nativeLoaded,
                 () -> debugViewEnabled,
-                bindDebugView,
+                e -> debugViewEnabled = e,
                 () -> imeVisible,
-                bindImeVisible,
+                v -> imeVisible = v,
                 () -> rootView,
                 () -> productView,
                 () -> debugView,
@@ -340,18 +329,18 @@ public final class ZideTerminalActivity extends Activity
                 () -> currentInstallState.isFailed(),
                 () -> currentReadinessState,
                 () -> currentInstallState,
-                shouldRunProductFrameLoop,
-                refreshScrollOverlay,
-                append,
-                status,
+                this::shouldRunProductFrameLoop,
+                this::refreshProductScrollOverlayIfReady,
+                this::appendEvent,
+                this::updateStatus,
                 TerminalNativeBridge::nativeSetSessionScrollbackOffsetBridge,
                 TerminalNativeBridge::nativeFollowSessionLiveBottomBridge,
                 () -> terminalViewportController.productViewportHeightPx(),
-                reevaluateFrameLoop,
+                this::reevaluateProductFrameLoopIfReady,
                 () -> userlandWorkflowController.runPackageDoctor(),
                 this::sendDirectText,
-                notifyVisibleViewport,
-                refreshUserlandSession,
+                this::notifyVisibleViewportIfReady,
+                this::refreshUserlandSessionIfReady,
                 this::callNative,
                 this::callNativeWithSurfaceState,
                 (holder, width, height) ->
@@ -359,7 +348,7 @@ public final class ZideTerminalActivity extends Activity
                 TerminalNativeBridge::nativeOnSurfaceDestroyedBridge,
                 TerminalNativeBridge::nativeOnSurfaceRedrawNeededBridge,
                 TerminalNativeBridge::nativeOnVisibleViewportBridge,
-                readSurfaceSnapshot,
+                () -> terminalSurfaceStateSnapshotReader.read(),
                 this::handleProductShellStateEventIfReady);
     }
 
