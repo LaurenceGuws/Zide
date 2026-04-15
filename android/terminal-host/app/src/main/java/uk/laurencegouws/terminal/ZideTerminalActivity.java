@@ -231,7 +231,7 @@ public final class ZideTerminalActivity extends Activity
                 () -> productSurfaceContainer,
                 this::productViewportWidthPx,
                 this::productViewportHeightPx,
-                this::isNativeLoaded,
+                () -> nativeLoaded,
                 this::stopScrollbackFlingIfReady,
                 this::refreshProductScrollOverlayIfReady,
                 this::reevaluateProductFrameLoopIfReady,
@@ -244,9 +244,9 @@ public final class ZideTerminalActivity extends Activity
                 () -> rootView,
                 () -> this,
                 this::inputMethodManager,
-                this::isImeVisible,
+                () -> imeVisible,
                 this::setImeVisible,
-                this::isNativeLoaded,
+                () -> nativeLoaded,
                 TerminalNativeBridge::nativeFollowSessionLiveBottomBridge,
                 this::refreshProductScrollOverlayIfReady,
                 this::updateStatus,
@@ -287,10 +287,10 @@ public final class ZideTerminalActivity extends Activity
         return new WidgetCallbacks(
                 () -> this,
                 () -> handler,
-                this::isNativeLoaded,
-                this::isDebugViewEnabled,
+                () -> nativeLoaded,
+                () -> debugViewEnabled,
                 this::setDebugViewEnabled,
-                this::isImeVisible,
+                () -> imeVisible,
                 this::setImeVisible,
                 () -> rootView,
                 () -> productView,
@@ -310,8 +310,8 @@ public final class ZideTerminalActivity extends Activity
                 () -> selectionController,
                 () -> terminalGestureStateController,
                 () -> surfaceHostBridge,
-                this::isCurrentInstalling,
-                this::isCurrentInstallFailed,
+                () -> currentInstallState.isInstalling(),
+                () -> currentInstallState.isFailed(),
                 () -> currentReadinessState,
                 () -> currentInstallState,
                 this::shouldRunProductFrameLoop,
@@ -343,7 +343,7 @@ public final class ZideTerminalActivity extends Activity
                 () -> handler,
                 this::appendEvent,
                 this::updateStatus,
-                this::isNativeLoaded,
+                () -> nativeLoaded,
                 this::setCurrentReadinessState,
                 this::refreshProductShellStateIfReady,
                 this::refreshDebugStatusSurfaceIfReady,
@@ -356,8 +356,8 @@ public final class ZideTerminalActivity extends Activity
 
     private ProductRuntimeAssemblyCallbacks createProductRuntimeAssemblyCallbacks() {
         return new ProductRuntimeAssemblyCallbacks(
-                this::isDebugViewEnabled,
-                this::isNativeLoaded,
+                () -> debugViewEnabled,
+                () -> nativeLoaded,
                 () -> currentInstallState,
                 this::setCurrentInstallState,
                 () -> currentReadinessState,
@@ -382,10 +382,10 @@ public final class ZideTerminalActivity extends Activity
     private StatusViewCallbacks createStatusViewCallbacks() {
         return new StatusViewCallbacks(
                 () -> this,
-                this::isDebugViewEnabled,
-                this::isNativeLoaded,
+                () -> debugViewEnabled,
+                () -> nativeLoaded,
                 this::hasWindowFocus,
-                this::isImeVisible,
+                () -> imeVisible,
                 this::setImeVisible,
                 () -> surfaceHostBridge,
                 this::currentSurfaceStateSnapshot,
@@ -397,7 +397,7 @@ public final class ZideTerminalActivity extends Activity
     private LifecycleCallbacks createLifecycleCallbacks() {
         return new LifecycleCallbacks(
                 LifecycleCallbacks.LifecycleHostCallbacks.of(
-                        this::isNativeLoaded,
+                        () -> nativeLoaded,
                         () -> nativeLoadError,
                         this::appendEvent,
                         this::updateStatus,
@@ -480,10 +480,6 @@ public final class ZideTerminalActivity extends Activity
         return getSystemService(InputMethodManager.class);
     }
 
-    private boolean isNativeLoaded() {
-        return nativeLoaded;
-    }
-
     private void loadInitialReadinessState() {
         currentReadinessState = userlandSessionCoordinator.loadReadinessState();
     }
@@ -491,22 +487,6 @@ public final class ZideTerminalActivity extends Activity
     private boolean handleHardwareDispatchKeyEventIfReady(KeyEvent event) {
         return terminalHardwareKeyboardController != null
                 && terminalHardwareKeyboardController.handleDispatchKeyEvent(event);
-    }
-
-    private boolean isDebugViewEnabled() {
-        return debugViewEnabled;
-    }
-
-    private boolean isImeVisible() {
-        return imeVisible;
-    }
-
-    private boolean isCurrentInstalling() {
-        return currentInstallState.isInstalling();
-    }
-
-    private boolean isCurrentInstallFailed() {
-        return currentInstallState.isFailed();
     }
 
     private android.view.SurfaceView currentSurfaceViewIfReady() {
