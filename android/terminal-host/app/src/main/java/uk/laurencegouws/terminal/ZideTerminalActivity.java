@@ -389,7 +389,6 @@ public final class ZideTerminalActivity extends Activity
     private LifecycleCallbacks createLifecycleCallbacks() {
         return new LifecycleCallbacks(
                 LifecycleCallbacks.LifecycleHostCallbacks.of(
-                        () -> nativeLoaded,
                         () -> nativeLoadError,
                         this::appendEvent,
                         this::updateStatus,

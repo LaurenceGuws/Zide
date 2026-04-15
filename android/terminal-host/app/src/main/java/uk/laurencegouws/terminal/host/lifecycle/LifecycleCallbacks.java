@@ -1,6 +1,5 @@
 package uk.laurencegouws.terminal.host.lifecycle;
 
-import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -15,7 +14,6 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
     }
 
     public static final class LifecycleHostCallbacks {
-        final BooleanSupplier nativeLoaded;
         final Supplier<String> nativeLoadError;
         final Consumer<String> appendEvent;
         final Consumer<String> updateStatus;
@@ -25,7 +23,6 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
         final SurfaceResumeCall notifySurfaceResume;
 
         private LifecycleHostCallbacks(
-                BooleanSupplier nativeLoaded,
                 Supplier<String> nativeLoadError,
                 Consumer<String> appendEvent,
                 Consumer<String> updateStatus,
@@ -33,7 +30,6 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
                 Runnable refreshUserlandSessionOnPause,
                 Runnable notifySurfacePause,
                 SurfaceResumeCall notifySurfaceResume) {
-            this.nativeLoaded = nativeLoaded;
             this.nativeLoadError = nativeLoadError;
             this.appendEvent = appendEvent;
             this.updateStatus = updateStatus;
@@ -44,7 +40,6 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
         }
 
         public static LifecycleHostCallbacks of(
-                BooleanSupplier nativeLoaded,
                 Supplier<String> nativeLoadError,
                 Consumer<String> appendEvent,
                 Consumer<String> updateStatus,
@@ -53,7 +48,6 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
                 Runnable notifySurfacePause,
                 SurfaceResumeCall notifySurfaceResume) {
             return new LifecycleHostCallbacks(
-                    nativeLoaded,
                     nativeLoadError,
                     appendEvent,
                     updateStatus,
@@ -76,7 +70,7 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
 
     @Override
     public boolean nativeLoaded() {
-        return lifecycleHostCallbacks.nativeLoaded.getAsBoolean();
+        return TerminalNativeBridge.nativeLoaded();
     }
 
     @Override
