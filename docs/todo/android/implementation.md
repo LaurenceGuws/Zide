@@ -269,6 +269,18 @@ Agent reporting contract (mandatory for cleanup campaign updates):
     trend without changing controller ownership.
     **Validation:** `:app:compileReleaseJavaWithJavac` each commit; deploy +
     `adb logcat -d -s AndroidRuntime:E` at seam cadence (empty).
+  - Completed (mini-wave, widget/startup contract pressure): reduced callback
+    and assembly host contract pressure around widget/startup seams by removing
+    widget/product-shell `nativeLoaded` pass-through (`7f0bc7c5`), inlining
+    stable surface assembly constructor inputs (`804a7ebe`), and deriving
+    product-shell install booleans from install-state source (`7df3c82a`).
+    Startup callback stable-value pass landed with behavior preserved
+    (`64375ab7`); an attempted aggressive widget supplier collapse was reverted
+    after runtime NPE (`7f6d6705`), keeping the lane behavior-safe while
+    retaining net deletions across the wave.
+    **Validation:** per-refactor `:app:compileReleaseJavaWithJavac`; deploy +
+    `adb logcat -d -s AndroidRuntime:E` cadence checks with current buffer
+    clear/recheck showing empty AndroidRuntime errors.
   - Next: complete Android host callback/assembly contract cleanup before
     another activity-only pass: (1) finish `nativeLoaded` one-source collapse
     across remaining host adapters/assemblies, (2) run constructor-pressure
