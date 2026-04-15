@@ -79,15 +79,7 @@ public final class ChromeController {
     }
 
     private void bindSidebarDrawerGestures() {
-        bindDrawerScrimDismissChrome();
-        bindDrawerEdgeSwipeListenersChrome();
-    }
-
-    private void bindDrawerScrimDismissChrome() {
         host.drawerScrim().setOnClickListener(view -> closeSidebar());
-    }
-
-    private void bindDrawerEdgeSwipeListenersChrome() {
         host.drawerEdgeHotspot().setOnTouchListener(new EdgeSwipeListener(true));
         host.leftSidebar().setOnTouchListener(new EdgeSwipeListener(false));
     }
@@ -100,10 +92,6 @@ public final class ChromeController {
     private void bindAssistRowInputChrome() {
         bindAssistModifierLatchButtons();
         bindAssistCharacterButtons();
-        applyAssistModifierLatchChromeAfterBindings();
-    }
-
-    private void applyAssistModifierLatchChromeAfterBindings() {
         host.applyModifierLatchState(host.shellInputView().modifierLatchState());
     }
 
@@ -273,20 +261,8 @@ public final class ChromeController {
     }
 
     public void updateSidebarVisibility(boolean visible) {
-        applyDrawerScrimAndHotspotVisibility(visible);
-    }
-
-    private void applyDrawerScrimAndHotspotVisibility(boolean visible) {
-        host.drawerScrim().setVisibility(drawerScrimVisibilityForSidebarChrome(visible));
-        host.drawerEdgeHotspot().setVisibility(drawerEdgeHotspotVisibilityForSidebarChrome(visible));
-    }
-
-    private int drawerScrimVisibilityForSidebarChrome(boolean sidebarOpen) {
-        return sidebarOpen ? View.VISIBLE : View.GONE;
-    }
-
-    private int drawerEdgeHotspotVisibilityForSidebarChrome(boolean sidebarOpen) {
-        return sidebarOpen ? View.GONE : View.VISIBLE;
+        host.drawerScrim().setVisibility(visible ? View.VISIBLE : View.GONE);
+        host.drawerEdgeHotspot().setVisibility(visible ? View.GONE : View.VISIBLE);
     }
 
     private InputMethodManager inputMethodManagerOrLogUnavailable() {
