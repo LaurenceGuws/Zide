@@ -6,13 +6,14 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import uk.laurencegouws.terminal.TerminalNativeBridge;
+
 /** Functional callback adapter for {@link TerminalHardwareKeyboardController}. */
 public final class TerminalHardwareKeyboardHostCallbacks implements TerminalHardwareKeyboardController.Host {
     private final Supplier<ShellInputView> shellInputView;
     private final Supplier<InputMethodManager> inputMethodManager;
     private final BooleanSupplier currentImeVisible;
     private final Consumer<Boolean> setImeVisible;
-    private final BooleanSupplier nativeLoaded;
     private final Runnable followShellLiveBottom;
     private final Runnable refreshProductScrollOverlay;
     private final Consumer<String> updateStatus;
@@ -22,7 +23,6 @@ public final class TerminalHardwareKeyboardHostCallbacks implements TerminalHard
             Supplier<InputMethodManager> inputMethodManager,
             BooleanSupplier currentImeVisible,
             Consumer<Boolean> setImeVisible,
-            BooleanSupplier nativeLoaded,
             Runnable followShellLiveBottom,
             Runnable refreshProductScrollOverlay,
             Consumer<String> updateStatus) {
@@ -30,7 +30,6 @@ public final class TerminalHardwareKeyboardHostCallbacks implements TerminalHard
         this.inputMethodManager = inputMethodManager;
         this.currentImeVisible = currentImeVisible;
         this.setImeVisible = setImeVisible;
-        this.nativeLoaded = nativeLoaded;
         this.followShellLiveBottom = followShellLiveBottom;
         this.refreshProductScrollOverlay = refreshProductScrollOverlay;
         this.updateStatus = updateStatus;
@@ -58,7 +57,7 @@ public final class TerminalHardwareKeyboardHostCallbacks implements TerminalHard
 
     @Override
     public boolean nativeLoaded() {
-        return nativeLoaded.getAsBoolean();
+        return TerminalNativeBridge.nativeLoaded();
     }
 
     @Override

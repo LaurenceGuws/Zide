@@ -254,7 +254,6 @@ public final class ZideTerminalActivity extends Activity
                 () -> getSystemService(InputMethodManager.class),
                 () -> imeVisible,
                 visible -> imeVisible = visible,
-                () -> nativeLoaded,
                 this::refreshProductScrollOverlayIfReady,
                 this::updateStatus,
                 this::appendEvent);

@@ -29,8 +29,6 @@ public final class InputAssembly {
 
         Consumer<Boolean> setImeVisible();
 
-        BooleanSupplier nativeLoaded();
-
         IntSupplier nativeFollowSessionLiveBottom();
 
         Runnable refreshProductScrollOverlay();
@@ -78,7 +76,6 @@ public final class InputAssembly {
                         host.inputMethodManager(),
                         host.currentImeVisible(),
                         host.setImeVisible(),
-                        host.nativeLoaded(),
                         () -> host.nativeFollowSessionLiveBottom().getAsInt(),
                         host.refreshProductScrollOverlay(),
                         host.updateStatus());

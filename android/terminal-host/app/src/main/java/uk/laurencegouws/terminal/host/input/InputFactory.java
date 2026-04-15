@@ -25,7 +25,6 @@ public final class InputFactory {
             Supplier<android.view.inputmethod.InputMethodManager> inputMethodManager,
             BooleanSupplier currentImeVisible,
             Consumer<Boolean> setImeVisible,
-            BooleanSupplier nativeLoaded,
             Runnable followShellLiveBottom,
             Runnable refreshProductScrollOverlay,
             Consumer<String> updateStatus) {
@@ -35,7 +34,6 @@ public final class InputFactory {
                         inputMethodManager,
                         currentImeVisible,
                         setImeVisible,
-                        nativeLoaded,
                         followShellLiveBottom,
                         refreshProductScrollOverlay,
                         updateStatus));

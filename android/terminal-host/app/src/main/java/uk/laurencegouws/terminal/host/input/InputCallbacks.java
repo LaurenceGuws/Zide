@@ -18,7 +18,6 @@ public final class InputCallbacks implements InputAssembly.Host {
     private final Supplier<InputMethodManager> inputMethodManager;
     private final BooleanSupplier currentImeVisible;
     private final Consumer<Boolean> setImeVisible;
-    private final BooleanSupplier nativeLoaded;
     private final Runnable refreshProductScrollOverlay;
     private final Consumer<String> updateStatus;
     private final Consumer<String> appendEvent;
@@ -29,7 +28,6 @@ public final class InputCallbacks implements InputAssembly.Host {
             Supplier<InputMethodManager> inputMethodManager,
             BooleanSupplier currentImeVisible,
             Consumer<Boolean> setImeVisible,
-            BooleanSupplier nativeLoaded,
             Runnable refreshProductScrollOverlay,
             Consumer<String> updateStatus,
             Consumer<String> appendEvent) {
@@ -38,7 +36,6 @@ public final class InputCallbacks implements InputAssembly.Host {
         this.inputMethodManager = inputMethodManager;
         this.currentImeVisible = currentImeVisible;
         this.setImeVisible = setImeVisible;
-        this.nativeLoaded = nativeLoaded;
         this.refreshProductScrollOverlay = refreshProductScrollOverlay;
         this.updateStatus = updateStatus;
         this.appendEvent = appendEvent;
@@ -72,11 +69,6 @@ public final class InputCallbacks implements InputAssembly.Host {
     @Override
     public Consumer<Boolean> setImeVisible() {
         return setImeVisible;
-    }
-
-    @Override
-    public BooleanSupplier nativeLoaded() {
-        return nativeLoaded;
     }
 
     @Override
