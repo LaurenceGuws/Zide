@@ -67,22 +67,10 @@ public final class ChromeController {
 
     public void bindAssistBar() {
         bindAssistImeToggleIfPresent(host.shellInputView().getRootView());
-        bindAssistRowInputChrome();
-    }
 
-    private void bindAssistRowInputChrome() {
-        bindAssistModifierLatchButtons();
-        bindAssistCharacterButtons();
-        host.applyModifierLatchState(host.shellInputView().modifierLatchState());
-    }
-
-    private void bindAssistModifierLatchButtons() {
         host.bindModifierAssistButton(host.assistCtrlButton(), ShellInputView.ModifierLatch.CTRL, "assist.ctrl");
         host.bindModifierAssistButton(host.assistAltButton(), ShellInputView.ModifierLatch.ALT, "assist.alt");
-    }
 
-    /** Wires assist-row text keys and arrow keys to host direct-send binding. */
-    private void bindAssistCharacterButtons() {
         host.bindAssistButton(uk.laurencegouws.terminal.R.id.assist_esc_button, "\u001b", "assist.esc");
         host.bindAssistButton(uk.laurencegouws.terminal.R.id.assist_tab_button, "\t", "assist.tab");
         host.bindAssistButton(uk.laurencegouws.terminal.R.id.assist_pipe_button, "|", "assist.pipe");
@@ -91,6 +79,8 @@ public final class ChromeController {
         host.bindAssistButton(uk.laurencegouws.terminal.R.id.assist_down_button, "\u001b[B", "assist.down");
         host.bindAssistButton(uk.laurencegouws.terminal.R.id.assist_left_button, "\u001b[D", "assist.left");
         host.bindAssistButton(uk.laurencegouws.terminal.R.id.assist_right_button, "\u001b[C", "assist.right");
+
+        host.applyModifierLatchState(host.shellInputView().modifierLatchState());
     }
 
     /** Binds optional assist-row IME toggle when the view id exists in the assist layout. */
