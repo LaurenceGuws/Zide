@@ -123,9 +123,7 @@ public final class StatusViewAssembly {
                 host::nativeLoaded,
                 host::hasWindowFocusNow,
                 host::imeVisible,
-                () -> host.surfaceHostBridge() != null ? host.surfaceHostBridge().currentSurfaceView() : null,
-                () -> host.surfaceHostBridge() != null ? host.surfaceHostBridge().currentVisibleViewportWidth() : 0,
-                () -> host.surfaceHostBridge() != null ? host.surfaceHostBridge().currentVisibleViewportHeight() : 0,
+                host::surfaceHostBridge,
                 host::currentInstallState,
                 host::currentReadinessState,
                 host::currentSurfaceStateSnapshot));

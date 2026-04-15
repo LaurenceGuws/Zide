@@ -1,11 +1,10 @@
 package uk.laurencegouws.terminal.host.status;
 
-import android.view.SurfaceView;
-
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 import uk.laurencegouws.terminal.debug.AndroidDebugFormatter;
+import uk.laurencegouws.terminal.host.surface.SurfaceBridge;
 import uk.laurencegouws.terminal.userland.UserlandReadinessState;
 import uk.laurencegouws.terminal.userland.UserlandInstallState;
 
@@ -15,9 +14,7 @@ public final class StatusCallbacks implements StatusBridge.Callbacks {
     private final BooleanSupplier nativeLoaded;
     private final BooleanSupplier hasWindowFocus;
     private final BooleanSupplier imeVisible;
-    private final Supplier<SurfaceView> surfaceView;
-    private final IntSupplier visibleViewportWidth;
-    private final IntSupplier visibleViewportHeight;
+    private final Supplier<SurfaceBridge> surfaceHostBridge;
     private final Supplier<UserlandInstallState> installState;
     private final Supplier<UserlandReadinessState> readinessState;
     private final Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot;
@@ -32,9 +29,7 @@ public final class StatusCallbacks implements StatusBridge.Callbacks {
             BooleanSupplier nativeLoaded,
             BooleanSupplier hasWindowFocus,
             BooleanSupplier imeVisible,
-            Supplier<SurfaceView> surfaceView,
-            IntSupplier visibleViewportWidth,
-            IntSupplier visibleViewportHeight,
+            Supplier<SurfaceBridge> surfaceHostBridge,
             Supplier<UserlandInstallState> installState,
             Supplier<UserlandReadinessState> readinessState,
             Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot) {
@@ -42,9 +37,7 @@ public final class StatusCallbacks implements StatusBridge.Callbacks {
         this.nativeLoaded = nativeLoaded;
         this.hasWindowFocus = hasWindowFocus;
         this.imeVisible = imeVisible;
-        this.surfaceView = surfaceView;
-        this.visibleViewportWidth = visibleViewportWidth;
-        this.visibleViewportHeight = visibleViewportHeight;
+        this.surfaceHostBridge = surfaceHostBridge;
         this.installState = installState;
         this.readinessState = readinessState;
         this.currentSurfaceStateSnapshot = currentSurfaceStateSnapshot;
@@ -71,18 +64,21 @@ public final class StatusCallbacks implements StatusBridge.Callbacks {
     }
 
     @Override
-    public SurfaceView surfaceView() {
-        return surfaceView.get();
+    public android.view.SurfaceView surfaceView() {
+        final SurfaceBridge bridge = surfaceHostBridge.get();
+        return bridge != null ? bridge.currentSurfaceView() : null;
     }
 
     @Override
     public int visibleViewportWidth() {
-        return visibleViewportWidth.getAsInt();
+        final SurfaceBridge bridge = surfaceHostBridge.get();
+        return bridge != null ? bridge.currentVisibleViewportWidth() : 0;
     }
 
     @Override
     public int visibleViewportHeight() {
-        return visibleViewportHeight.getAsInt();
+        final SurfaceBridge bridge = surfaceHostBridge.get();
+        return bridge != null ? bridge.currentVisibleViewportHeight() : 0;
     }
 
     @Override
