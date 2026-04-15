@@ -19,11 +19,6 @@ public final class StatusCallbacks implements StatusBridge.Callbacks {
     private final Supplier<UserlandReadinessState> readinessState;
     private final Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot;
 
-    /** Lightweight int supplier to avoid boxing in callback paths. */
-    public interface IntSupplier {
-        int getAsInt();
-    }
-
     public StatusCallbacks(
             BooleanSupplier debugViewEnabled,
             BooleanSupplier hasWindowFocus,
