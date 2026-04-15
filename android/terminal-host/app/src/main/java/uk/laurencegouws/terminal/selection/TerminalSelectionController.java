@@ -840,10 +840,8 @@ public final class TerminalSelectionController {
 
     private void syncTerminalSelectionActionMode() {
         syncSelectionHandles();
-        if (!selectionToolbarVisible) {
-            if (terminalSelectionActionMode != null) {
-                finishTerminalSelectionActionMode();
-            }
+        if (shouldFinishTerminalSelectionActionMode()) {
+            finishTerminalSelectionActionMode();
             return;
         }
         if (terminalSelectionActionMode == null) {
@@ -852,11 +850,12 @@ public final class TerminalSelectionController {
             }
             return;
         }
-        if (!bridge.currentSelectionActive()) {
-            finishTerminalSelectionActionMode();
-            return;
-        }
         terminalSelectionActionMode.invalidateContentRect();
+    }
+
+    private boolean shouldFinishTerminalSelectionActionMode() {
+        return terminalSelectionActionMode != null
+                && (!selectionToolbarVisible || !bridge.currentSelectionActive());
     }
 
     private void syncSelectionHandles() {
