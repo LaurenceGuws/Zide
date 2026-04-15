@@ -5,9 +5,9 @@ import android.view.View;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
-import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
+import uk.laurencegouws.terminal.TerminalNativeBridge;
 import uk.laurencegouws.terminal.debug.TerminalStatusController;
 import uk.laurencegouws.terminal.gesture.TerminalGestureStateController;
 import uk.laurencegouws.terminal.scroll.TerminalScrollOverlayView;
@@ -35,10 +35,6 @@ public final class ProductRuntimeHostCallbacks implements ProductRuntimeControll
     private final Supplier<TerminalGestureStateController> terminalGestureStateController;
     private final Consumer<String> appendEvent;
     private final Consumer<String> updateStatus;
-    private final IntSupplier nativeCurrentSessionVisibleRows;
-    private final IntSupplier nativeCurrentSessionScrollbackCount;
-    private final IntSupplier nativeCurrentSessionScrollbackOffset;
-    private final IntSupplier nativeRestartSession;
 
     public ProductRuntimeHostCallbacks(
             BooleanSupplier debugViewEnabled,
@@ -56,11 +52,7 @@ public final class ProductRuntimeHostCallbacks implements ProductRuntimeControll
             Supplier<UserlandSessionCoordinator> userlandSessionCoordinator,
             Supplier<TerminalGestureStateController> terminalGestureStateController,
             Consumer<String> appendEvent,
-            Consumer<String> updateStatus,
-            IntSupplier nativeCurrentSessionVisibleRows,
-            IntSupplier nativeCurrentSessionScrollbackCount,
-            IntSupplier nativeCurrentSessionScrollbackOffset,
-            IntSupplier nativeRestartSession) {
+            Consumer<String> updateStatus) {
         this.debugViewEnabled = debugViewEnabled;
         this.nativeLoaded = nativeLoaded;
         this.installState = installState;
@@ -77,10 +69,6 @@ public final class ProductRuntimeHostCallbacks implements ProductRuntimeControll
         this.terminalGestureStateController = terminalGestureStateController;
         this.appendEvent = appendEvent;
         this.updateStatus = updateStatus;
-        this.nativeCurrentSessionVisibleRows = nativeCurrentSessionVisibleRows;
-        this.nativeCurrentSessionScrollbackCount = nativeCurrentSessionScrollbackCount;
-        this.nativeCurrentSessionScrollbackOffset = nativeCurrentSessionScrollbackOffset;
-        this.nativeRestartSession = nativeRestartSession;
     }
 
     @Override
@@ -165,21 +153,21 @@ public final class ProductRuntimeHostCallbacks implements ProductRuntimeControll
 
     @Override
     public int nativeCurrentSessionVisibleRows() {
-        return nativeCurrentSessionVisibleRows.getAsInt();
+        return TerminalNativeBridge.nativeCurrentSessionVisibleRowsBridge();
     }
 
     @Override
     public int nativeCurrentSessionScrollbackCount() {
-        return nativeCurrentSessionScrollbackCount.getAsInt();
+        return TerminalNativeBridge.nativeCurrentSessionScrollbackCountBridge();
     }
 
     @Override
     public int nativeCurrentSessionScrollbackOffset() {
-        return nativeCurrentSessionScrollbackOffset.getAsInt();
+        return TerminalNativeBridge.nativeCurrentSessionScrollbackOffsetBridge();
     }
 
     @Override
     public int nativeRestartSession() {
-        return nativeRestartSession.getAsInt();
+        return TerminalNativeBridge.nativeRestartSessionBridge();
     }
 }

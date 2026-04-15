@@ -40,11 +40,7 @@ public final class RuntimeFactory {
             Supplier<UserlandSessionCoordinator> userlandSessionCoordinator,
             Supplier<TerminalGestureStateController> terminalGestureStateController,
             Consumer<String> appendEvent,
-            Consumer<String> updateStatus,
-            IntSupplier nativeCurrentSessionVisibleRows,
-            IntSupplier nativeCurrentSessionScrollbackCount,
-            IntSupplier nativeCurrentSessionScrollbackOffset,
-            IntSupplier nativeRestartSession) {
+            Consumer<String> updateStatus) {
         return new ProductRuntimeHostCallbacks(
                 debugViewEnabled,
                 nativeLoaded,
@@ -61,11 +57,7 @@ public final class RuntimeFactory {
                 userlandSessionCoordinator,
                 terminalGestureStateController,
                 appendEvent,
-                updateStatus,
-                nativeCurrentSessionVisibleRows,
-                nativeCurrentSessionScrollbackCount,
-                nativeCurrentSessionScrollbackOffset,
-                nativeRestartSession);
+                updateStatus);
     }
 
     public static FrameLoopController createFrameLoopController(
