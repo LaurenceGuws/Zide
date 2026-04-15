@@ -217,6 +217,19 @@ Agent reporting contract (mandatory for cleanup campaign updates):
      `ZideTerminalActivity.java`; unused `java.util.function` imports dropped where
      factories no longer needed them. `ChromeController` / `SurfaceController`
      unchanged (still frozen per queue). **Validation:** `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac` after **each** of the three commits touching that file; `python3 ops/android_terminal_host.py deploy` plus `adb logcat -d -s AndroidRuntime:E` **twice** (after commit 2 and after commit 3 of the wave), both with empty `AndroidRuntime:E`.
+   - Completed (mini-wave, adapter JNI): extended the same adapter pattern as
+     `58c8de05` (`WidgetCallbacks` install dedupe + inlined static JNI).
+     **`SessionAssemblyCallbacks`** (`54930f5a`): inlined
+     `nativeRestartSessionBridge` / `nativePollSessionBridge` /
+     `nativeIsSessionAliveBridge`, dropping three supplier fields and matching
+     `createSessionAssemblyCallbacks()` args. **Product runtime:**
+     `ProductRuntimeAssemblyCallbacks` unchanged; **`ProductRuntimeHostCallbacks`**
+     (`190d3aea`) now calls `TerminalNativeBridge` for visible rows, scrollback
+     count/offset, and restart—`RuntimeFactory` + `ProductRuntimeAssembly.assemble`
+     no longer pass those bridges through. `ZideTerminalActivity.java` **676 → 673**
+     lines after session trim. **Validation:** `:app:compileReleaseJavaWithJavac`
+     per adapter commit; `zig build` after the wave. `ChromeController` /
+     `SurfaceController` still frozen.
    - Next: net simplification in `ZideTerminalActivity` `create*Callbacks()`
      factories: collapse redundant one-line supplier glue and trivial `this::`
      forwards where the activity adds no policy (prefer direct field capture or
