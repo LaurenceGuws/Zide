@@ -254,7 +254,7 @@ public final class ZideTerminalActivity extends Activity
                 () -> this,
                 () -> getSystemService(InputMethodManager.class),
                 () -> imeVisible,
-                this::setImeVisible,
+                visible -> imeVisible = visible,
                 () -> nativeLoaded,
                 TerminalNativeBridge::nativeFollowSessionLiveBottomBridge,
                 this::refreshProductScrollOverlayIfReady,
@@ -298,9 +298,9 @@ public final class ZideTerminalActivity extends Activity
                 () -> handler,
                 () -> nativeLoaded,
                 () -> debugViewEnabled,
-                this::setDebugViewEnabled,
+                enabled -> debugViewEnabled = enabled,
                 () -> imeVisible,
-                this::setImeVisible,
+                visible -> imeVisible = visible,
                 () -> rootView,
                 () -> productView,
                 () -> debugView,
@@ -331,13 +331,14 @@ public final class ZideTerminalActivity extends Activity
                 TerminalNativeBridge::nativeFollowSessionLiveBottomBridge,
                 () -> terminalViewportController.productViewportHeightPx(),
                 this::reevaluateProductFrameLoopIfReady,
-                this::runPackageDoctor,
+                () -> userlandWorkflowController.runPackageDoctor(),
                 this::sendDirectText,
                 this::notifyVisibleViewportIfReady,
                 this::refreshUserlandSessionIfReady,
                 this::callNative,
                 this::callNativeWithSurfaceState,
-                this::nativeOnSurfaceAvailable,
+                (holder, width, height) ->
+                        TerminalNativeBridge.nativeOnSurfaceAvailableBridge(holder.getSurface(), width, height),
                 TerminalNativeBridge::nativeOnSurfaceDestroyedBridge,
                 TerminalNativeBridge::nativeOnSurfaceRedrawNeededBridge,
                 TerminalNativeBridge::nativeOnVisibleViewportBridge,
@@ -353,7 +354,7 @@ public final class ZideTerminalActivity extends Activity
                 this::appendEvent,
                 this::updateStatus,
                 () -> nativeLoaded,
-                this::setCurrentReadinessState,
+                state -> currentReadinessState = state,
                 this::refreshProductShellStateIfReady,
                 this::refreshDebugStatusSurfaceIfReady,
                 this::shouldRunProductFrameLoop,
@@ -368,11 +369,11 @@ public final class ZideTerminalActivity extends Activity
                 () -> debugViewEnabled,
                 () -> nativeLoaded,
                 () -> currentInstallState,
-                this::setCurrentInstallState,
+                installState -> currentInstallState = installState,
                 () -> currentReadinessState,
                 this::appendEvent,
                 this::updateStatus,
-                this::currentSurfaceViewIfReady,
+                () -> surfaceHostBridge != null ? surfaceHostBridge.currentSurfaceView() : null,
                 () -> productReadinessBlocker,
                 () -> terminalScrollOverlay,
                 () -> selectionController,
@@ -395,7 +396,7 @@ public final class ZideTerminalActivity extends Activity
                 () -> nativeLoaded,
                 this::hasWindowFocus,
                 () -> imeVisible,
-                this::setImeVisible,
+                visible -> imeVisible = visible,
                 () -> surfaceHostBridge,
                 () -> terminalSurfaceStateSnapshotReader.read(),
                 this::notifyVisibleViewportIfReady,
@@ -434,12 +435,12 @@ public final class ZideTerminalActivity extends Activity
                 () -> this,
                 () -> handler,
                 () -> userlandRelease,
-                this::setUserlandRelease,
+                release -> userlandRelease = release,
                 this::appendEvent,
                 this::updateStatus,
                 () -> packageStatusText,
-                this::setCurrentInstallState,
-                this::setCurrentReadinessState,
+                installState -> currentInstallState = installState,
+                readinessState -> currentReadinessState = readinessState,
                 this::applyInstallStateIfReady,
                 this::restartSessionIfReady,
                 this::showDebugViewIfReady);
@@ -492,30 +493,6 @@ public final class ZideTerminalActivity extends Activity
     private boolean handleHardwareDispatchKeyEventIfReady(KeyEvent event) {
         return terminalHardwareKeyboardController != null
                 && terminalHardwareKeyboardController.handleDispatchKeyEvent(event);
-    }
-
-    private android.view.SurfaceView currentSurfaceViewIfReady() {
-        return surfaceHostBridge != null ? surfaceHostBridge.currentSurfaceView() : null;
-    }
-
-    private void setImeVisible(boolean visible) {
-        imeVisible = visible;
-    }
-
-    private void setDebugViewEnabled(boolean enabled) {
-        debugViewEnabled = enabled;
-    }
-
-    private void setCurrentInstallState(UserlandInstallState installState) {
-        currentInstallState = installState;
-    }
-
-    private void setCurrentReadinessState(UserlandReadinessState readinessState) {
-        currentReadinessState = readinessState;
-    }
-
-    private void setUserlandRelease(UserlandRelease release) {
-        userlandRelease = release;
     }
 
     private boolean shouldRunProductFrameLoop() {
@@ -625,10 +602,6 @@ public final class ZideTerminalActivity extends Activity
         applyModifierLatchIfReady(state);
     }
 
-    private void runPackageDoctor() {
-        userlandWorkflowController.runPackageDoctor();
-    }
-
     private void callNative(String event, long seq) {
         terminalStatusController.callNative(event, seq);
     }
@@ -638,10 +611,6 @@ public final class ZideTerminalActivity extends Activity
             long seq,
             AndroidDebugFormatter.SurfaceEventSnapshot state) {
         terminalStatusController.callNativeWithSurfaceState(event, seq, state);
-    }
-
-    private long nativeOnSurfaceAvailable(SurfaceHolder holder, int width, int height) {
-        return TerminalNativeBridge.nativeOnSurfaceAvailableBridge(holder.getSurface(), width, height);
     }
 
     private boolean canSendDirectInput() {
