@@ -2,66 +2,16 @@ package uk.laurencegouws.terminal.host.lifecycle;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
-import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
+import uk.laurencegouws.terminal.TerminalNativeBridge;
 import uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks;
 
 /** Functional callback adapter for {@link LifecycleController.Host}. */
 public final class LifecycleCallbacks implements LifecycleController.Host {
-    /** Functional callback for boolean native bridge calls. */
-    public interface NativeBooleanCall {
-        long call(boolean value);
-    }
-
     /** Functional callback for surface resume debug flags. */
     public interface SurfaceResumeCall {
         void call(boolean debugRecreateSurfaceOnce, boolean debugResizeSurfaceOnce, boolean debugStartShellOnce);
-    }
-
-    public static final class NativeLifecycleCallbacks {
-        final LongSupplier nativeOnCreate;
-        final LongSupplier nativeOnStart;
-        final LongSupplier nativeOnResume;
-        final LongSupplier nativeOnPause;
-        final LongSupplier nativeOnStop;
-        final NativeBooleanCall nativeOnWindowFocus;
-        final SurfaceLifecycleCallbacks.NativeEventCallback callNative;
-
-        private NativeLifecycleCallbacks(
-                LongSupplier nativeOnCreate,
-                LongSupplier nativeOnStart,
-                LongSupplier nativeOnResume,
-                LongSupplier nativeOnPause,
-                LongSupplier nativeOnStop,
-                NativeBooleanCall nativeOnWindowFocus,
-                SurfaceLifecycleCallbacks.NativeEventCallback callNative) {
-            this.nativeOnCreate = nativeOnCreate;
-            this.nativeOnStart = nativeOnStart;
-            this.nativeOnResume = nativeOnResume;
-            this.nativeOnPause = nativeOnPause;
-            this.nativeOnStop = nativeOnStop;
-            this.nativeOnWindowFocus = nativeOnWindowFocus;
-            this.callNative = callNative;
-        }
-
-        public static NativeLifecycleCallbacks of(
-                LongSupplier nativeOnCreate,
-                LongSupplier nativeOnStart,
-                LongSupplier nativeOnResume,
-                LongSupplier nativeOnPause,
-                LongSupplier nativeOnStop,
-                NativeBooleanCall nativeOnWindowFocus,
-                SurfaceLifecycleCallbacks.NativeEventCallback callNative) {
-            return new NativeLifecycleCallbacks(
-                    nativeOnCreate,
-                    nativeOnStart,
-                    nativeOnResume,
-                    nativeOnPause,
-                    nativeOnStop,
-                    nativeOnWindowFocus,
-                    callNative);
-        }
     }
 
     public static final class LifecycleHostCallbacks {
@@ -115,13 +65,13 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
     }
 
     private final LifecycleHostCallbacks lifecycleHostCallbacks;
-    private final NativeLifecycleCallbacks nativeLifecycleCallbacks;
+    private final SurfaceLifecycleCallbacks.NativeEventCallback callNative;
 
     public LifecycleCallbacks(
             LifecycleHostCallbacks lifecycleHostCallbacks,
-            NativeLifecycleCallbacks nativeLifecycleCallbacks) {
+            SurfaceLifecycleCallbacks.NativeEventCallback callNative) {
         this.lifecycleHostCallbacks = lifecycleHostCallbacks;
-        this.nativeLifecycleCallbacks = nativeLifecycleCallbacks;
+        this.callNative = callNative;
     }
 
     @Override
@@ -131,7 +81,7 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
 
     @Override
     public long nativeOnStart() {
-        return nativeLifecycleCallbacks.nativeOnStart.getAsLong();
+        return TerminalNativeBridge.nativeOnStartBridge();
     }
 
     @Override
@@ -141,27 +91,27 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
 
     @Override
     public long nativeOnCreate() {
-        return nativeLifecycleCallbacks.nativeOnCreate.getAsLong();
+        return TerminalNativeBridge.nativeOnCreateBridge();
     }
 
     @Override
     public long nativeOnResume() {
-        return nativeLifecycleCallbacks.nativeOnResume.getAsLong();
+        return TerminalNativeBridge.nativeOnResumeBridge();
     }
 
     @Override
     public long nativeOnPause() {
-        return nativeLifecycleCallbacks.nativeOnPause.getAsLong();
+        return TerminalNativeBridge.nativeOnPauseBridge();
     }
 
     @Override
     public long nativeOnStop() {
-        return nativeLifecycleCallbacks.nativeOnStop.getAsLong();
+        return TerminalNativeBridge.nativeOnStopBridge();
     }
 
     @Override
     public long nativeOnWindowFocus(boolean hasFocus) {
-        return nativeLifecycleCallbacks.nativeOnWindowFocus.call(hasFocus);
+        return TerminalNativeBridge.nativeOnWindowFocusBridge(hasFocus);
     }
 
     @Override
@@ -171,7 +121,7 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
 
     @Override
     public void callNative(String event, long seq) {
-        nativeLifecycleCallbacks.callNative.call(event, seq);
+        callNative.call(event, seq);
     }
 
     @Override

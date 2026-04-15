@@ -256,7 +256,6 @@ public final class ZideTerminalActivity extends Activity
                 () -> imeVisible,
                 visible -> imeVisible = visible,
                 () -> nativeLoaded,
-                TerminalNativeBridge::nativeFollowSessionLiveBottomBridge,
                 this::refreshProductScrollOverlayIfReady,
                 this::updateStatus,
                 this::appendEvent);
@@ -403,14 +402,7 @@ public final class ZideTerminalActivity extends Activity
                         this::refreshUserlandSessionIfReady,
                         this::pauseSurfaceIfReady,
                         this::resumeSurfaceIfReady),
-                LifecycleCallbacks.NativeLifecycleCallbacks.of(
-                        TerminalNativeBridge::nativeOnCreateBridge,
-                        TerminalNativeBridge::nativeOnStartBridge,
-                        TerminalNativeBridge::nativeOnResumeBridge,
-                        TerminalNativeBridge::nativeOnPauseBridge,
-                        TerminalNativeBridge::nativeOnStopBridge,
-                        TerminalNativeBridge::nativeOnWindowFocusBridge,
-                        this::callNative));
+                this::callNative);
     }
 
     private void bindAndStartUiControllers() {
