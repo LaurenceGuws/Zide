@@ -670,29 +670,38 @@ public final class TerminalSelectionController {
         if (!selectionDragActive || rowDelta == 0.0f) {
             return;
         }
-        final int scrollbackCount = bridge.currentScrollbackCount();
-        final int scrollbackOffset = bridge.currentScrollbackOffset();
         activeGestureScrollRemainderRows += rowDelta;
         final int wholeRows = (int) activeGestureScrollRemainderRows;
         if (wholeRows == 0) {
             return;
         }
         activeGestureScrollRemainderRows -= wholeRows;
-        final int nextOffset = clampInt(scrollbackOffset + wholeRows, 0, scrollbackCount);
-        if (nextOffset == scrollbackOffset) {
+        final int nextOffset = resolveSelectionAutoscrollOffset(wholeRows);
+        if (nextOffset < 0) {
             return;
         }
-        if (nextOffset == 0) {
-            bridge.followShellLiveBottom();
-        } else {
-            bridge.setShellScrollbackOffset(nextOffset);
-        }
+        applySelectionAutoscrollOffset(nextOffset);
         final int status = updateSelectionFromActiveDrag();
         if (status == 0) {
             onSelectionUpdateSuccess();
         }
         host.refreshProductScrollOverlay();
         requestFrameLoopReevaluation();
+    }
+
+    private int resolveSelectionAutoscrollOffset(int wholeRows) {
+        final int scrollbackCount = bridge.currentScrollbackCount();
+        final int scrollbackOffset = bridge.currentScrollbackOffset();
+        final int nextOffset = clampInt(scrollbackOffset + wholeRows, 0, scrollbackCount);
+        return nextOffset == scrollbackOffset ? -1 : nextOffset;
+    }
+
+    private void applySelectionAutoscrollOffset(int nextOffset) {
+        if (nextOffset == 0) {
+            bridge.followShellLiveBottom();
+            return;
+        }
+        bridge.setShellScrollbackOffset(nextOffset);
     }
 
     private boolean tapHitsCurrentSelection(float x, float y) {
