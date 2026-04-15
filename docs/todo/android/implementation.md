@@ -156,6 +156,18 @@ Agent reporting contract (mandatory for cleanup campaign updates):
      validated clean.
    - Completed: current adapter lane keeps net deletions and runtime validation
      discipline (compile every refactor, deploy + `AndroidRuntime:E` cadence).
+  - Completed: hotspot reassessment wave continued with behavior-preserving
+    constructor/callback pressure reduction across startup/status/widget seams:
+    `UiStartup` dropped a dedicated debug-view callback seam in favor of
+    `ViewModeController` ownership, `StatusView` now sources surface snapshots
+    from assembly-owned reader state (single source), and
+    `WidgetAssembly`/`WidgetCallbacks` removed duplicate surface-bridge callback
+    fan-out by deriving product-shell surface view from the assembled
+    surface-widget bridge.
+  - Completed: latest mini-wave net deletion trend is restored
+    (`+16/-56` across three refactor commits) while preserving compile/deploy
+    safety checks (compile each commit; deploy + clean `AndroidRuntime:E` smoke
+    after the second commit in this wave).
    - Next: hotspot reassessment execution order is now:
      1) net-simplify `WidgetCallbacks` / `WidgetAssembly` constructor and field
         pressure (one-source dedupe, no new wrappers),
