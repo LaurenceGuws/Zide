@@ -281,6 +281,17 @@ Agent reporting contract (mandatory for cleanup campaign updates):
     **Validation:** per-refactor `:app:compileReleaseJavaWithJavac`; deploy +
     `adb logcat -d -s AndroidRuntime:E` cadence checks with current buffer
     clear/recheck showing empty AndroidRuntime errors.
+  - Completed (mini-wave, stable callback input normalization): interaction,
+    input, session, workflow, and status callback adapters now accept stable
+    context/activity/handler/view references directly while leaving dynamic
+    state/snapshot suppliers in place (`568e09d5`, `ccd1d3e5`, `3c8c293b`,
+    `d0fbe4a5`, `7fb22095`). Also removed dead status callback helper surface
+    (`65abacfd`). This applies the seam convention of keeping static JNI reads
+    and dynamic state indirection in callback adapters while deleting redundant
+    supplier ceremony for stable dependencies.
+    **Validation:** `:app:compileReleaseJavaWithJavac` on each commit and
+    deploy/runtime checks via `python3 ops/android_terminal_host.py deploy`
+    with `adb logcat -d -s AndroidRuntime:E` after buffer clear (empty).
   - Next: complete Android host callback/assembly contract cleanup before
     another activity-only pass: (1) finish `nativeLoaded` one-source collapse
     across remaining host adapters/assemblies, (2) run constructor-pressure
