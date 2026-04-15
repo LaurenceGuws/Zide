@@ -128,8 +128,6 @@ public final class TerminalSelectionController {
     private View selectionDraggedHandleView;
     private float selectionDraggedHandleTouchOffsetX = 0.0f;
     private float selectionDraggedHandleTouchOffsetY = 0.0f;
-    private int activeGestureScrollbackCount = 0;
-    private int activeGestureScrollbackOffset = 0;
     private float activeGestureScrollRemainderRows = 0.0f;
     private final Choreographer.FrameCallback selectionAutoscrollFrameCallback;
 
@@ -672,16 +670,16 @@ public final class TerminalSelectionController {
         if (!selectionDragActive || rowDelta == 0.0f) {
             return;
         }
-        activeGestureScrollbackCount = bridge.currentScrollbackCount();
-        activeGestureScrollbackOffset = bridge.currentScrollbackOffset();
+        final int scrollbackCount = bridge.currentScrollbackCount();
+        final int scrollbackOffset = bridge.currentScrollbackOffset();
         activeGestureScrollRemainderRows += rowDelta;
         final int wholeRows = (int) activeGestureScrollRemainderRows;
         if (wholeRows == 0) {
             return;
         }
         activeGestureScrollRemainderRows -= wholeRows;
-        final int nextOffset = clampInt(activeGestureScrollbackOffset + wholeRows, 0, activeGestureScrollbackCount);
-        if (nextOffset == activeGestureScrollbackOffset) {
+        final int nextOffset = clampInt(scrollbackOffset + wholeRows, 0, scrollbackCount);
+        if (nextOffset == scrollbackOffset) {
             return;
         }
         if (nextOffset == 0) {
@@ -689,7 +687,6 @@ public final class TerminalSelectionController {
         } else {
             bridge.setShellScrollbackOffset(nextOffset);
         }
-        activeGestureScrollbackOffset = nextOffset;
         final int status = updateSelectionFromActiveDrag();
         if (status == 0) {
             onSelectionUpdateSuccess();
