@@ -174,14 +174,11 @@ Agent reporting contract (mandatory for cleanup campaign updates):
     and (c) action-mode + clipboard flow. Audit conclusion remains
     contract-aligned: keep selection monolithic until one of those sub-seams is
     lifted in a behavior-preserving cut with replay/validation authority.
-   - Next: hotspot reassessment execution order is now:
-     1) net-simplify `WidgetCallbacks` / `WidgetAssembly` constructor and field
-        pressure (one-source dedupe, no new wrappers),
-     2) normalize remaining stable-vs-lazy callback contracts in
-        `ProductRuntimeHostCallbacks`, `UiStartupCallbacks`, and
-        `StatusViewCallbacks` (behavior-preserving),
-     3) once adapter pressure stabilizes, perform a planning-only
-        `TerminalSelectionController` seam audit (no behavior split yet).
+   - Next: execute the first behavior-preserving
+     `TerminalSelectionController` internal extraction from the locked audit
+     queue (drag/autoscroll loop first), preserving monolithic ownership and
+     avoiding wrapper inflation; compile each commit and run deploy +
+     `AndroidRuntime:E` smoke at seam cadence.
      `ChromeController` / `SurfaceController` remain frozen until this `Next:`
      line is intentionally advanced.
 3. Stabilize selection/scroll interaction behavior under manual device usage.
