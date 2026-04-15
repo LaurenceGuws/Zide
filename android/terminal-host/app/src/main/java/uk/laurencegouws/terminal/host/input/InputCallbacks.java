@@ -13,8 +13,8 @@ import uk.laurencegouws.terminal.input.ShellInputView;
 
 /** Functional callback adapter for {@link InputAssembly.Host}; activity must implement {@link ShellInputView.Host}. */
 public final class InputCallbacks implements InputAssembly.Host {
-    private final Supplier<Activity> activity;
-    private final Supplier<View> rootView;
+    private final Activity activity;
+    private final View rootView;
     private final Supplier<InputMethodManager> inputMethodManager;
     private final BooleanSupplier currentImeVisible;
     private final Consumer<Boolean> setImeVisible;
@@ -23,8 +23,8 @@ public final class InputCallbacks implements InputAssembly.Host {
     private final Consumer<String> appendEvent;
 
     public InputCallbacks(
-            Supplier<Activity> activity,
-            Supplier<View> rootView,
+            Activity activity,
+            View rootView,
             Supplier<InputMethodManager> inputMethodManager,
             BooleanSupplier currentImeVisible,
             Consumer<Boolean> setImeVisible,
@@ -43,17 +43,17 @@ public final class InputCallbacks implements InputAssembly.Host {
 
     @Override
     public Activity activity() {
-        return activity.get();
+        return activity;
     }
 
     @Override
     public View rootView() {
-        return rootView.get();
+        return rootView;
     }
 
     @Override
     public ShellInputView.Host shellInputHost() {
-        return (ShellInputView.Host) activity.get();
+        return (ShellInputView.Host) activity;
     }
 
     @Override
