@@ -46,11 +46,6 @@ public final class ChromeController {
     }
 
     public void bindSidebarControls() {
-        bindSidebarNavActions();
-        bindSidebarDrawerGestures();
-    }
-
-    private void bindSidebarNavActions() {
         final View sidebar = host.leftSidebar();
         ((Button) sidebar.findViewById(uk.laurencegouws.terminal.R.id.sidebar_restart_button)).setOnClickListener(view -> {
             host.appendEvent("manual.session.restart requested");
@@ -64,9 +59,7 @@ public final class ChromeController {
             closeSidebar();
             host.runPackageDoctor();
         });
-    }
 
-    private void bindSidebarDrawerGestures() {
         host.drawerScrim().setOnClickListener(view -> closeSidebar());
         host.drawerEdgeHotspot().setOnTouchListener(new EdgeSwipeListener(true));
         host.leftSidebar().setOnTouchListener(new EdgeSwipeListener(false));
