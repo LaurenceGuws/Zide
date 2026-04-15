@@ -240,10 +240,6 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private InteractionCallbacks createInteractionCallbacks() {
-        final Consumer<String> append = this::appendEvent;
-        final Runnable stopScrollbackFling = this::stopScrollbackFlingIfReady;
-        final Runnable refreshScrollOverlay = this::refreshProductScrollOverlayIfReady;
-        final Runnable reevaluateFrameLoop = this::reevaluateProductFrameLoopIfReady;
         return new InteractionCallbacks(
                 () -> this,
                 () -> handler,
@@ -251,16 +247,13 @@ public final class ZideTerminalActivity extends Activity
                 () -> terminalViewportController.productViewportWidthPx(),
                 () -> terminalViewportController.productViewportHeightPx(),
                 () -> nativeLoaded,
-                stopScrollbackFling,
-                refreshScrollOverlay,
-                reevaluateFrameLoop,
-                append);
+                this::stopScrollbackFlingIfReady,
+                this::refreshProductScrollOverlayIfReady,
+                this::reevaluateProductFrameLoopIfReady,
+                this::appendEvent);
     }
 
     private InputCallbacks createInputCallbacks() {
-        final Consumer<String> append = this::appendEvent;
-        final Consumer<String> status = this::updateStatus;
-        final Runnable refreshScrollOverlay = this::refreshProductScrollOverlayIfReady;
         return new InputCallbacks(
                 () -> this,
                 () -> rootView,
@@ -270,9 +263,9 @@ public final class ZideTerminalActivity extends Activity
                 visible -> imeVisible = visible,
                 () -> nativeLoaded,
                 TerminalNativeBridge::nativeFollowSessionLiveBottomBridge,
-                refreshScrollOverlay,
-                status,
-                append);
+                this::refreshProductScrollOverlayIfReady,
+                this::updateStatus,
+                this::appendEvent);
     }
 
     private void assembleWidgetHostControllers() {
@@ -395,16 +388,14 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private ProductRuntimeAssemblyCallbacks createProductRuntimeAssemblyCallbacks() {
-        final Consumer<String> append = this::appendEvent;
-        final Consumer<String> status = this::updateStatus;
         return new ProductRuntimeAssemblyCallbacks(
                 () -> debugViewEnabled,
                 () -> nativeLoaded,
                 () -> currentInstallState,
                 installState -> currentInstallState = installState,
                 () -> currentReadinessState,
-                append,
-                status,
+                this::appendEvent,
+                this::updateStatus,
                 () -> surfaceHostBridge != null ? surfaceHostBridge.currentSurfaceView() : null,
                 () -> productReadinessBlocker,
                 () -> terminalScrollOverlay,
@@ -473,15 +464,13 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private WorkflowAssemblyCallbacks createWorkflowAssemblyCallbacks() {
-        final Consumer<String> append = this::appendEvent;
-        final Consumer<String> status = this::updateStatus;
         return new WorkflowAssemblyCallbacks(
                 () -> this,
                 () -> handler,
                 () -> userlandRelease,
                 release -> userlandRelease = release,
-                append,
-                status,
+                this::appendEvent,
+                this::updateStatus,
                 () -> packageStatusText,
                 installState -> currentInstallState = installState,
                 readinessState -> currentReadinessState = readinessState,
@@ -491,8 +480,6 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private UiStartupCallbacks createUiStartupCallbacks() {
-        final Consumer<String> append = this::appendEvent;
-        final Consumer<String> status = this::updateStatus;
         return new UiStartupCallbacks(
                 () -> terminalViewportController,
                 () -> terminalChromeController,
@@ -503,8 +490,8 @@ public final class ZideTerminalActivity extends Activity
                 () -> userlandWorkflowController,
                 () -> userlandSessionCoordinator,
                 this::showDebugViewIfReady,
-                append,
-                status,
+                this::appendEvent,
+                this::updateStatus,
                 () -> terminalRuntimeAssetsController,
                 () -> terminalViewModeController,
                 () -> surfaceHostController,
