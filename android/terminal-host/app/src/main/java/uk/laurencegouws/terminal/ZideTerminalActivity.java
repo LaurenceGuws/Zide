@@ -337,8 +337,7 @@ public final class ZideTerminalActivity extends Activity
                 this::refreshUserlandSessionIfReady,
                 this::callNative,
                 this::callNativeWithSurfaceState,
-                (holder, width, height) ->
-                        TerminalNativeBridge.nativeOnSurfaceAvailableBridge(holder.getSurface(), width, height),
+                (holder, width, height) -> TerminalNativeBridge.nativeOnSurfaceAvailableBridge(holder.getSurface(), width, height),
                 TerminalNativeBridge::nativeOnSurfaceDestroyedBridge,
                 TerminalNativeBridge::nativeOnSurfaceRedrawNeededBridge,
                 TerminalNativeBridge::nativeOnVisibleViewportBridge,
