@@ -11,6 +11,7 @@ import uk.laurencegouws.terminal.debug.TerminalStatusController;
 import uk.laurencegouws.terminal.gesture.TerminalGestureStateController;
 import uk.laurencegouws.terminal.scroll.TerminalScrollOverlayView;
 import uk.laurencegouws.terminal.selection.TerminalSelectionController;
+import uk.laurencegouws.terminal.host.surface.SurfaceBridge;
 import uk.laurencegouws.terminal.userland.ProductShellStatePresenter;
 import uk.laurencegouws.terminal.userland.UserlandReadinessState;
 import uk.laurencegouws.terminal.userland.UserlandInstallState;
@@ -24,7 +25,7 @@ public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAsse
     private final Supplier<UserlandReadinessState> readinessState;
     private final Consumer<String> appendEvent;
     private final Consumer<String> updateStatus;
-    private final Supplier<SurfaceView> surfaceView;
+    private final Supplier<SurfaceBridge> surfaceHostBridge;
     private final View productReadinessBlocker;
     private final TerminalScrollOverlayView terminalScrollOverlay;
     private final TerminalSelectionController selectionController;
@@ -41,7 +42,7 @@ public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAsse
             Supplier<UserlandReadinessState> readinessState,
             Consumer<String> appendEvent,
             Consumer<String> updateStatus,
-            Supplier<SurfaceView> surfaceView,
+            Supplier<SurfaceBridge> surfaceHostBridge,
             View productReadinessBlocker,
             TerminalScrollOverlayView terminalScrollOverlay,
             TerminalSelectionController selectionController,
@@ -56,7 +57,7 @@ public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAsse
         this.readinessState = readinessState;
         this.appendEvent = appendEvent;
         this.updateStatus = updateStatus;
-        this.surfaceView = surfaceView;
+        this.surfaceHostBridge = surfaceHostBridge;
         this.productReadinessBlocker = productReadinessBlocker;
         this.terminalScrollOverlay = terminalScrollOverlay;
         this.selectionController = selectionController;
@@ -88,8 +89,8 @@ public final class ProductRuntimeAssemblyCallbacks implements ProductRuntimeAsse
     }
 
     @Override
-    public SurfaceView surfaceView() {
-        return surfaceView.get();
+    public SurfaceBridge surfaceHostBridge() {
+        return surfaceHostBridge.get();
     }
 
     @Override

@@ -12,6 +12,7 @@ import uk.laurencegouws.terminal.debug.TerminalStatusController;
 import uk.laurencegouws.terminal.gesture.TerminalGestureStateController;
 import uk.laurencegouws.terminal.scroll.TerminalScrollOverlayView;
 import uk.laurencegouws.terminal.selection.TerminalSelectionController;
+import uk.laurencegouws.terminal.host.surface.SurfaceBridge;
 import uk.laurencegouws.terminal.userland.ProductShellStatePresenter;
 import uk.laurencegouws.terminal.userland.UserlandReadinessState;
 import uk.laurencegouws.terminal.userland.UserlandInstallState;
@@ -23,7 +24,7 @@ public final class ProductRuntimeHostCallbacks implements ProductRuntimeControll
     private final Supplier<UserlandInstallState> installState;
     private final Consumer<UserlandInstallState> setInstallState;
     private final Supplier<UserlandReadinessState> readinessState;
-    private final Supplier<SurfaceView> surfaceView;
+    private final Supplier<SurfaceBridge> surfaceHostBridge;
     private final View productReadinessBlocker;
     private final TerminalScrollOverlayView terminalScrollOverlay;
     private final TerminalSelectionController selectionController;
@@ -40,7 +41,7 @@ public final class ProductRuntimeHostCallbacks implements ProductRuntimeControll
             Supplier<UserlandInstallState> installState,
             Consumer<UserlandInstallState> setInstallState,
             Supplier<UserlandReadinessState> readinessState,
-            Supplier<SurfaceView> surfaceView,
+            Supplier<SurfaceBridge> surfaceHostBridge,
             View productReadinessBlocker,
             TerminalScrollOverlayView terminalScrollOverlay,
             TerminalSelectionController selectionController,
@@ -55,7 +56,7 @@ public final class ProductRuntimeHostCallbacks implements ProductRuntimeControll
         this.installState = installState;
         this.setInstallState = setInstallState;
         this.readinessState = readinessState;
-        this.surfaceView = surfaceView;
+        this.surfaceHostBridge = surfaceHostBridge;
         this.productReadinessBlocker = productReadinessBlocker;
         this.terminalScrollOverlay = terminalScrollOverlay;
         this.selectionController = selectionController;
@@ -95,7 +96,8 @@ public final class ProductRuntimeHostCallbacks implements ProductRuntimeControll
 
     @Override
     public SurfaceView surfaceView() {
-        return surfaceView.get();
+        final SurfaceBridge bridge = surfaceHostBridge.get();
+        return bridge != null ? bridge.currentSurfaceView() : null;
     }
 
     @Override

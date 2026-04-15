@@ -8,6 +8,7 @@ import uk.laurencegouws.terminal.debug.TerminalStatusController;
 import uk.laurencegouws.terminal.gesture.TerminalGestureStateController;
 import uk.laurencegouws.terminal.scroll.TerminalScrollOverlayView;
 import uk.laurencegouws.terminal.selection.TerminalSelectionController;
+import uk.laurencegouws.terminal.host.surface.SurfaceBridge;
 import uk.laurencegouws.terminal.userland.ProductShellStatePresenter;
 import uk.laurencegouws.terminal.userland.UserlandReadinessState;
 import uk.laurencegouws.terminal.userland.UserlandInstallState;
@@ -25,7 +26,7 @@ public final class ProductRuntimeAssembly {
 
         UserlandReadinessState readinessState();
 
-        SurfaceView surfaceView();
+        SurfaceBridge surfaceHostBridge();
 
         View productReadinessBlocker();
 
@@ -58,7 +59,7 @@ public final class ProductRuntimeAssembly {
                         host::installState,
                         host::setInstallState,
                         host::readinessState,
-                        host::surfaceView,
+                        host::surfaceHostBridge,
                         host.productReadinessBlocker(),
                         host.terminalScrollOverlay(),
                         host.selectionController(),

@@ -9,6 +9,7 @@ import uk.laurencegouws.terminal.debug.TerminalStatusController;
 import uk.laurencegouws.terminal.gesture.TerminalGestureStateController;
 import uk.laurencegouws.terminal.scroll.TerminalScrollOverlayView;
 import uk.laurencegouws.terminal.selection.TerminalSelectionController;
+import uk.laurencegouws.terminal.host.surface.SurfaceBridge;
 import uk.laurencegouws.terminal.userland.ProductShellStatePresenter;
 import uk.laurencegouws.terminal.userland.UserlandReadinessState;
 import uk.laurencegouws.terminal.userland.UserlandInstallState;
@@ -29,7 +30,7 @@ public final class RuntimeFactory {
             Supplier<UserlandInstallState> installState,
             Consumer<UserlandInstallState> setInstallState,
             Supplier<UserlandReadinessState> readinessState,
-            Supplier<android.view.SurfaceView> surfaceView,
+            Supplier<SurfaceBridge> surfaceHostBridge,
             android.view.View productReadinessBlocker,
             TerminalScrollOverlayView terminalScrollOverlay,
             TerminalSelectionController selectionController,
@@ -45,7 +46,7 @@ public final class RuntimeFactory {
                 installState,
                 setInstallState,
                 readinessState,
-                surfaceView,
+                surfaceHostBridge,
                 productReadinessBlocker,
                 terminalScrollOverlay,
                 selectionController,

@@ -146,7 +146,7 @@ public final class ZideTerminalActivity extends Activity
                         () -> currentReadinessState,
                         this::appendEvent,
                         this::updateStatus,
-                        () -> surfaceHostBridge != null ? surfaceHostBridge.currentSurfaceView() : null,
+                        () -> surfaceHostBridge,
                         productReadinessBlocker,
                         terminalScrollOverlay,
                         selectionController,
