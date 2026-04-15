@@ -252,6 +252,15 @@ Agent reporting contract (mandatory for cleanup campaign updates):
     the 2-commit seam boundary, deploy with
     `python3 ops/android_terminal_host.py deploy` and confirm
     `adb logcat -d -s AndroidRuntime:E` is empty.
+  - Completed (mini-wave, input/lifecycle/surface-widget): removed more
+    `nativeLoaded` supplier chains where adapters can safely bind
+    `TerminalNativeBridge.nativeLoaded()` directly. Input, lifecycle, and
+    surface-widget assembly seams dropped redundant host/callback constructor
+    plumbing and corresponding factory arguments (`91c2c44f`, `58a8e2ca`,
+    `92b73075`) while preserving existing ownership boundaries.
+    **Validation:** `:app:compileReleaseJavaWithJavac` on each refactor commit,
+    plus deploy + `adb logcat -d -s AndroidRuntime:E` at 2-commit cadence
+    (empty each check).
    - Next: net simplification in `ZideTerminalActivity` `create*Callbacks()`
      factories: collapse redundant one-line supplier glue and trivial `this::`
      forwards where the activity adds no policy (prefer direct field capture or
