@@ -99,21 +99,9 @@ public final class WidgetAssembly {
 
         void callNativeWithSurfaceState(String event, long seq, AndroidDebugFormatter.SurfaceEventSnapshot state);
 
-        long nativeOnSurfaceAvailableBridge(SurfaceHolder holder, int width, int height);
-
-        long nativeOnSurfaceDestroyedBridge();
-
-        long nativeOnSurfaceRedrawNeededBridge();
-
-        long nativeOnVisibleViewportBridge(int width, int height, boolean imeVisible);
-
         AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot();
 
         void handleProductShellStateEvent(String statusLabel);
-
-        int nativeSetSessionScrollbackOffset(int offsetRows);
-
-        int nativeFollowSessionLiveBottom();
 
         int productViewportHeightPx();
 
@@ -240,10 +228,6 @@ public final class WidgetAssembly {
                         host::updateStatus,
                         host::callNative,
                         host::callNativeWithSurfaceState,
-                        host::nativeOnSurfaceAvailableBridge,
-                        host::nativeOnSurfaceDestroyedBridge,
-                        host::nativeOnSurfaceRedrawNeededBridge,
-                        host::nativeOnVisibleViewportBridge,
                         host::currentSurfaceStateSnapshot,
                         host::handleProductShellStateEvent,
                         nextSurfaceView -> installSurfaceGestureHost(nextSurfaceView, surfaceWidgetControllerRef),
@@ -253,8 +237,6 @@ public final class WidgetAssembly {
                             }
                         },
                         () -> surfaceWidgetControllerRef[0],
-                        host::nativeSetSessionScrollbackOffset,
-                        host::nativeFollowSessionLiveBottom,
                         host::productViewportHeightPx,
                         host::reevaluateProductFrameLoop));
         surfaceWidgetControllerRef[0] = surfaceWidgetAssembly.surfaceWidgetController;

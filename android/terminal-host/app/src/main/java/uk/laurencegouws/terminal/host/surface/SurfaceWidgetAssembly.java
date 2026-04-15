@@ -35,14 +35,6 @@ public final class SurfaceWidgetAssembly {
                 long seq,
                 uk.laurencegouws.terminal.debug.AndroidDebugFormatter.SurfaceEventSnapshot state);
 
-        long nativeOnSurfaceAvailableBridge(SurfaceHolder holder, int width, int height);
-
-        long nativeOnSurfaceDestroyedBridge();
-
-        long nativeOnSurfaceRedrawNeededBridge();
-
-        long nativeOnVisibleViewportBridge(int width, int height, boolean imeVisible);
-
         uk.laurencegouws.terminal.debug.AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot();
 
         void handleProductShellStateEvent(String statusLabel);
@@ -52,10 +44,6 @@ public final class SurfaceWidgetAssembly {
         void reinstallSurfaceCallback(android.view.SurfaceView surfaceView, SurfaceHolder.Callback2 callback);
 
         SurfaceHolder.Callback2 surfaceCallback();
-
-        int nativeSetSessionScrollbackOffset(int offsetRows);
-
-        int nativeFollowSessionLiveBottom();
 
         int productViewportHeightPx();
 
@@ -100,10 +88,6 @@ public final class SurfaceWidgetAssembly {
                                 host::updateStatus,
                                 host::callNative,
                                 host::callNativeWithSurfaceState,
-                                host::nativeOnSurfaceAvailableBridge,
-                                host::nativeOnSurfaceDestroyedBridge,
-                                host::nativeOnSurfaceRedrawNeededBridge,
-                                host::nativeOnVisibleViewportBridge,
                                 host::currentSurfaceStateSnapshot,
                                 host::handleProductShellStateEvent,
                                 host::installSurfaceGestureHost,
@@ -116,8 +100,6 @@ public final class SurfaceWidgetAssembly {
                 terminalGestureStateController,
                 new SurfaceWidgetCallbacks(
                         host::nativeLoaded,
-                        host::nativeSetSessionScrollbackOffset,
-                        host::nativeFollowSessionLiveBottom,
                         host::productViewportHeightPx,
                         host::appendEvent,
                         host::refreshProductScrollOverlay,

@@ -7,20 +7,11 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import uk.laurencegouws.terminal.TerminalNativeBridge;
 import uk.laurencegouws.terminal.debug.AndroidDebugFormatter;
 
 /** Functional callback adapter for {@link SurfaceCallbacks.Callbacks}. */
 public final class SurfaceLifecycleCallbacks implements SurfaceCallbacks.Callbacks {
-    /** Callback for native surface-available notifications. */
-    public interface SurfaceAvailableCallback {
-        long call(SurfaceHolder holder, int width, int height);
-    }
-
-    /** Callback for native visible-viewport notifications. */
-    public interface VisibleViewportCallback {
-        long call(int width, int height, boolean imeVisible);
-    }
-
     /** Callback for native event notifications with sequence id. */
     public interface NativeEventCallback {
         void call(String event, long seq);
@@ -40,20 +31,11 @@ public final class SurfaceLifecycleCallbacks implements SurfaceCallbacks.Callbac
     private final Consumer<String> updateStatus;
     private final NativeEventCallback callNative;
     private final NativeSurfaceEventCallback callNativeWithSurfaceState;
-    private final SurfaceAvailableCallback nativeOnSurfaceAvailableBridge;
-    private final LongSupplier nativeOnSurfaceDestroyedBridge;
-    private final LongSupplier nativeOnSurfaceRedrawNeededBridge;
-    private final VisibleViewportCallback nativeOnVisibleViewportBridge;
     private final Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot;
     private final Consumer<String> handleProductShellStateEvent;
     private final Consumer<SurfaceView> installSurfaceGestureHost;
     private final ReinstallSurfaceCallback reinstallSurfaceCallback;
     private final Supplier<SurfaceHolder.Callback2> surfaceCallback;
-
-    /** Lightweight primitive long supplier to avoid boxing in callback paths. */
-    public interface LongSupplier {
-        long getAsLong();
-    }
 
     /** Callback for SurfaceView callback re-installation. */
     public interface ReinstallSurfaceCallback {
@@ -70,10 +52,6 @@ public final class SurfaceLifecycleCallbacks implements SurfaceCallbacks.Callbac
             Consumer<String> updateStatus,
             NativeEventCallback callNative,
             NativeSurfaceEventCallback callNativeWithSurfaceState,
-            SurfaceAvailableCallback nativeOnSurfaceAvailableBridge,
-            LongSupplier nativeOnSurfaceDestroyedBridge,
-            LongSupplier nativeOnSurfaceRedrawNeededBridge,
-            VisibleViewportCallback nativeOnVisibleViewportBridge,
             Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot,
             Consumer<String> handleProductShellStateEvent,
             Consumer<SurfaceView> installSurfaceGestureHost,
@@ -88,10 +66,6 @@ public final class SurfaceLifecycleCallbacks implements SurfaceCallbacks.Callbac
         this.updateStatus = updateStatus;
         this.callNative = callNative;
         this.callNativeWithSurfaceState = callNativeWithSurfaceState;
-        this.nativeOnSurfaceAvailableBridge = nativeOnSurfaceAvailableBridge;
-        this.nativeOnSurfaceDestroyedBridge = nativeOnSurfaceDestroyedBridge;
-        this.nativeOnSurfaceRedrawNeededBridge = nativeOnSurfaceRedrawNeededBridge;
-        this.nativeOnVisibleViewportBridge = nativeOnVisibleViewportBridge;
         this.currentSurfaceStateSnapshot = currentSurfaceStateSnapshot;
         this.handleProductShellStateEvent = handleProductShellStateEvent;
         this.installSurfaceGestureHost = installSurfaceGestureHost;
@@ -146,22 +120,22 @@ public final class SurfaceLifecycleCallbacks implements SurfaceCallbacks.Callbac
 
     @Override
     public long nativeOnSurfaceAvailableBridge(SurfaceHolder holder, int width, int height) {
-        return nativeOnSurfaceAvailableBridge.call(holder, width, height);
+        return TerminalNativeBridge.nativeOnSurfaceAvailableBridge(holder.getSurface(), width, height);
     }
 
     @Override
     public long nativeOnSurfaceDestroyedBridge() {
-        return nativeOnSurfaceDestroyedBridge.getAsLong();
+        return TerminalNativeBridge.nativeOnSurfaceDestroyedBridge();
     }
 
     @Override
     public long nativeOnSurfaceRedrawNeededBridge() {
-        return nativeOnSurfaceRedrawNeededBridge.getAsLong();
+        return TerminalNativeBridge.nativeOnSurfaceRedrawNeededBridge();
     }
 
     @Override
     public long nativeOnVisibleViewportBridge(int width, int height, boolean imeVisible) {
-        return nativeOnVisibleViewportBridge.call(width, height, imeVisible);
+        return TerminalNativeBridge.nativeOnVisibleViewportBridge(width, height, imeVisible);
     }
 
     @Override

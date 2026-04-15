@@ -3,13 +3,12 @@ package uk.laurencegouws.terminal.host.surface;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
-import java.util.function.IntUnaryOperator;
+
+import uk.laurencegouws.terminal.TerminalNativeBridge;
 
 /** Functional callback adapter for {@link SurfaceWidgetController}. */
 public final class SurfaceWidgetCallbacks implements SurfaceWidgetController.Host {
     private final BooleanSupplier nativeLoaded;
-    private final IntUnaryOperator setShellScrollbackOffset;
-    private final IntSupplier followShellLiveBottom;
     private final IntSupplier productViewportHeightPx;
     private final Consumer<String> appendEvent;
     private final Runnable refreshProductScrollOverlay;
@@ -17,15 +16,11 @@ public final class SurfaceWidgetCallbacks implements SurfaceWidgetController.Hos
 
     public SurfaceWidgetCallbacks(
             BooleanSupplier nativeLoaded,
-            IntUnaryOperator setShellScrollbackOffset,
-            IntSupplier followShellLiveBottom,
             IntSupplier productViewportHeightPx,
             Consumer<String> appendEvent,
             Runnable refreshProductScrollOverlay,
             Runnable reevaluateProductFrameLoop) {
         this.nativeLoaded = nativeLoaded;
-        this.setShellScrollbackOffset = setShellScrollbackOffset;
-        this.followShellLiveBottom = followShellLiveBottom;
         this.productViewportHeightPx = productViewportHeightPx;
         this.appendEvent = appendEvent;
         this.refreshProductScrollOverlay = refreshProductScrollOverlay;
@@ -39,12 +34,12 @@ public final class SurfaceWidgetCallbacks implements SurfaceWidgetController.Hos
 
     @Override
     public int setShellScrollbackOffset(int offsetRows) {
-        return setShellScrollbackOffset.applyAsInt(offsetRows);
+        return TerminalNativeBridge.nativeSetSessionScrollbackOffsetBridge(offsetRows);
     }
 
     @Override
     public int followShellLiveBottom() {
-        return followShellLiveBottom.getAsInt();
+        return TerminalNativeBridge.nativeFollowSessionLiveBottomBridge();
     }
 
     @Override

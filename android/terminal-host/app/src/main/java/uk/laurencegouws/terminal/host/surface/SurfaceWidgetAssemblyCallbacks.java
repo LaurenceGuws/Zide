@@ -7,7 +7,6 @@ import android.widget.FrameLayout;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
-import java.util.function.IntUnaryOperator;
 import java.util.function.Supplier;
 
 import uk.laurencegouws.terminal.debug.AndroidDebugFormatter;
@@ -25,17 +24,11 @@ public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssemb
     private final Consumer<String> updateStatus;
     private final SurfaceLifecycleCallbacks.NativeEventCallback callNative;
     private final SurfaceLifecycleCallbacks.NativeSurfaceEventCallback callNativeWithSurfaceState;
-    private final SurfaceLifecycleCallbacks.SurfaceAvailableCallback nativeOnSurfaceAvailableBridge;
-    private final SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceDestroyedBridge;
-    private final SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceRedrawNeededBridge;
-    private final SurfaceLifecycleCallbacks.VisibleViewportCallback nativeOnVisibleViewportBridge;
     private final Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot;
     private final Consumer<String> handleProductShellStateEvent;
     private final Consumer<SurfaceView> installSurfaceGestureHost;
     private final SurfaceLifecycleCallbacks.ReinstallSurfaceCallback reinstallSurfaceCallback;
     private final Supplier<SurfaceHolder.Callback2> surfaceCallback;
-    private final IntUnaryOperator nativeSetSessionScrollbackOffset;
-    private final IntSupplier nativeFollowSessionLiveBottom;
     private final IntSupplier productViewportHeightPx;
     private final Runnable reevaluateProductFrameLoop;
 
@@ -51,17 +44,11 @@ public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssemb
             Consumer<String> updateStatus,
             SurfaceLifecycleCallbacks.NativeEventCallback callNative,
             SurfaceLifecycleCallbacks.NativeSurfaceEventCallback callNativeWithSurfaceState,
-            SurfaceLifecycleCallbacks.SurfaceAvailableCallback nativeOnSurfaceAvailableBridge,
-            SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceDestroyedBridge,
-            SurfaceLifecycleCallbacks.LongSupplier nativeOnSurfaceRedrawNeededBridge,
-            SurfaceLifecycleCallbacks.VisibleViewportCallback nativeOnVisibleViewportBridge,
             Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot,
             Consumer<String> handleProductShellStateEvent,
             Consumer<SurfaceView> installSurfaceGestureHost,
             SurfaceLifecycleCallbacks.ReinstallSurfaceCallback reinstallSurfaceCallback,
             Supplier<SurfaceHolder.Callback2> surfaceCallback,
-            IntUnaryOperator nativeSetSessionScrollbackOffset,
-            IntSupplier nativeFollowSessionLiveBottom,
             IntSupplier productViewportHeightPx,
             Runnable reevaluateProductFrameLoop) {
         this.handler = handler;
@@ -75,17 +62,11 @@ public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssemb
         this.updateStatus = updateStatus;
         this.callNative = callNative;
         this.callNativeWithSurfaceState = callNativeWithSurfaceState;
-        this.nativeOnSurfaceAvailableBridge = nativeOnSurfaceAvailableBridge;
-        this.nativeOnSurfaceDestroyedBridge = nativeOnSurfaceDestroyedBridge;
-        this.nativeOnSurfaceRedrawNeededBridge = nativeOnSurfaceRedrawNeededBridge;
-        this.nativeOnVisibleViewportBridge = nativeOnVisibleViewportBridge;
         this.currentSurfaceStateSnapshot = currentSurfaceStateSnapshot;
         this.handleProductShellStateEvent = handleProductShellStateEvent;
         this.installSurfaceGestureHost = installSurfaceGestureHost;
         this.reinstallSurfaceCallback = reinstallSurfaceCallback;
         this.surfaceCallback = surfaceCallback;
-        this.nativeSetSessionScrollbackOffset = nativeSetSessionScrollbackOffset;
-        this.nativeFollowSessionLiveBottom = nativeFollowSessionLiveBottom;
         this.productViewportHeightPx = productViewportHeightPx;
         this.reevaluateProductFrameLoop = reevaluateProductFrameLoop;
     }
@@ -146,26 +127,6 @@ public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssemb
     }
 
     @Override
-    public long nativeOnSurfaceAvailableBridge(SurfaceHolder holder, int width, int height) {
-        return nativeOnSurfaceAvailableBridge.call(holder, width, height);
-    }
-
-    @Override
-    public long nativeOnSurfaceDestroyedBridge() {
-        return nativeOnSurfaceDestroyedBridge.getAsLong();
-    }
-
-    @Override
-    public long nativeOnSurfaceRedrawNeededBridge() {
-        return nativeOnSurfaceRedrawNeededBridge.getAsLong();
-    }
-
-    @Override
-    public long nativeOnVisibleViewportBridge(int width, int height, boolean imeVisible) {
-        return nativeOnVisibleViewportBridge.call(width, height, imeVisible);
-    }
-
-    @Override
     public AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot() {
         return currentSurfaceStateSnapshot.get();
     }
@@ -188,16 +149,6 @@ public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssemb
     @Override
     public SurfaceHolder.Callback2 surfaceCallback() {
         return surfaceCallback.get();
-    }
-
-    @Override
-    public int nativeSetSessionScrollbackOffset(int offsetRows) {
-        return nativeSetSessionScrollbackOffset.applyAsInt(offsetRows);
-    }
-
-    @Override
-    public int nativeFollowSessionLiveBottom() {
-        return nativeFollowSessionLiveBottom.getAsInt();
     }
 
     @Override

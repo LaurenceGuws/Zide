@@ -1,7 +1,6 @@
 package uk.laurencegouws.terminal.host.ui;
 
 import android.app.Activity;
-import android.view.SurfaceHolder;
 import android.view.View;
 import android.widget.Button;
 import android.widget.FrameLayout;
@@ -12,7 +11,6 @@ import java.util.function.Consumer;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
-import uk.laurencegouws.terminal.TerminalNativeBridge;
 import uk.laurencegouws.terminal.debug.AndroidDebugFormatter;
 import uk.laurencegouws.terminal.gesture.TerminalGestureStateController;
 import uk.laurencegouws.terminal.host.surface.SurfaceBridge;
@@ -328,26 +326,6 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
     }
 
     @Override
-    public long nativeOnSurfaceAvailableBridge(SurfaceHolder holder, int width, int height) {
-        return TerminalNativeBridge.nativeOnSurfaceAvailableBridge(holder.getSurface(), width, height);
-    }
-
-    @Override
-    public long nativeOnSurfaceDestroyedBridge() {
-        return TerminalNativeBridge.nativeOnSurfaceDestroyedBridge();
-    }
-
-    @Override
-    public long nativeOnSurfaceRedrawNeededBridge() {
-        return TerminalNativeBridge.nativeOnSurfaceRedrawNeededBridge();
-    }
-
-    @Override
-    public long nativeOnVisibleViewportBridge(int width, int height, boolean imeVisible) {
-        return TerminalNativeBridge.nativeOnVisibleViewportBridge(width, height, imeVisible);
-    }
-
-    @Override
     public AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot() {
         return currentSurfaceStateSnapshot.get();
     }
@@ -355,16 +333,6 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
     @Override
     public void handleProductShellStateEvent(String statusLabel) {
         handleProductShellStateEvent.accept(statusLabel);
-    }
-
-    @Override
-    public int nativeSetSessionScrollbackOffset(int offsetRows) {
-        return TerminalNativeBridge.nativeSetSessionScrollbackOffsetBridge(offsetRows);
-    }
-
-    @Override
-    public int nativeFollowSessionLiveBottom() {
-        return TerminalNativeBridge.nativeFollowSessionLiveBottomBridge();
     }
 
     @Override
