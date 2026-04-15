@@ -302,7 +302,6 @@ public final class ZideTerminalActivity extends Activity
                         () -> shellInputView,
                         selectionController,
                         terminalGestureStateController,
-                        () -> surfaceHostBridge,
                         () -> currentReadinessState,
                         () -> currentInstallState,
                         this::shouldRunProductFrameLoop,

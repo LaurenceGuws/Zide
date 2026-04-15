@@ -75,8 +75,6 @@ public final class WidgetAssembly {
 
         TerminalGestureStateController terminalGestureStateController();
 
-        SurfaceBridge surfaceHostBridge();
-
         UserlandReadinessState currentReadinessState();
 
         UserlandInstallState currentInstallState();
@@ -142,20 +140,6 @@ public final class WidgetAssembly {
     }
 
     public static Result assemble(Host host) {
-        final ProductShellStateBridge productShellStateHostBridge =
-                UiFactory.createProductShellStateHostBridge(
-                        host.productReadinessBlocker(),
-                        host.terminalScrollOverlay(),
-                        host.productReadinessTitle(),
-                        host.productReadinessDetail(),
-                        host.productReadinessRetryButton(),
-                        new ProductShellStateCallbacks(
-                                host::currentReadinessState,
-                                host::currentInstallState,
-                                () -> host.surfaceHostBridge() != null ? host.surfaceHostBridge().currentSurfaceView() : null));
-        final ProductShellStatePresenter productShellStatePresenter =
-                new ProductShellStatePresenter(productShellStateHostBridge);
-
         final ViewModeController[] terminalViewModeControllerRef = new ViewModeController[1];
         final SurfaceWidgetController[] surfaceWidgetControllerRef = new SurfaceWidgetController[1];
         final ChromeController terminalChromeController = new ChromeController(
@@ -231,6 +215,20 @@ public final class WidgetAssembly {
                         host::reevaluateProductFrameLoop));
         surfaceWidgetControllerRef[0] = surfaceWidgetAssembly.surfaceWidgetController;
         host.terminalScrollOverlay().setHost(surfaceWidgetAssembly.surfaceWidgetController);
+
+        final ProductShellStateBridge productShellStateHostBridge =
+                UiFactory.createProductShellStateHostBridge(
+                        host.productReadinessBlocker(),
+                        host.terminalScrollOverlay(),
+                        host.productReadinessTitle(),
+                        host.productReadinessDetail(),
+                        host.productReadinessRetryButton(),
+                        new ProductShellStateCallbacks(
+                                host::currentReadinessState,
+                                host::currentInstallState,
+                                surfaceWidgetAssembly.surfaceHostBridge::currentSurfaceView));
+        final ProductShellStatePresenter productShellStatePresenter =
+                new ProductShellStatePresenter(productShellStateHostBridge);
 
         return new Result(
                 productShellStateHostBridge,

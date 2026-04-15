@@ -13,7 +13,6 @@ import java.util.function.Supplier;
 
 import uk.laurencegouws.terminal.debug.AndroidDebugFormatter;
 import uk.laurencegouws.terminal.gesture.TerminalGestureStateController;
-import uk.laurencegouws.terminal.host.surface.SurfaceBridge;
 import uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks;
 import uk.laurencegouws.terminal.input.ShellInputView;
 import uk.laurencegouws.terminal.scroll.TerminalScrollOverlayView;
@@ -46,7 +45,6 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
     private final Supplier<ShellInputView> shellInputView;
     private final TerminalSelectionController selectionController;
     private final TerminalGestureStateController terminalGestureStateController;
-    private final Supplier<SurfaceBridge> surfaceHostBridge;
     private final Supplier<UserlandReadinessState> currentReadinessState;
     private final Supplier<UserlandInstallState> currentInstallState;
     private final BooleanSupplier shouldRunProductFrameLoop;
@@ -88,7 +86,6 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
             Supplier<ShellInputView> shellInputView,
             TerminalSelectionController selectionController,
             TerminalGestureStateController terminalGestureStateController,
-            Supplier<SurfaceBridge> surfaceHostBridge,
             Supplier<UserlandReadinessState> currentReadinessState,
             Supplier<UserlandInstallState> currentInstallState,
             BooleanSupplier shouldRunProductFrameLoop,
@@ -128,7 +125,6 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
         this.shellInputView = shellInputView;
         this.selectionController = selectionController;
         this.terminalGestureStateController = terminalGestureStateController;
-        this.surfaceHostBridge = surfaceHostBridge;
         this.currentReadinessState = currentReadinessState;
         this.currentInstallState = currentInstallState;
         this.shouldRunProductFrameLoop = shouldRunProductFrameLoop;
@@ -260,11 +256,6 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
     @Override
     public TerminalGestureStateController terminalGestureStateController() {
         return terminalGestureStateController;
-    }
-
-    @Override
-    public SurfaceBridge surfaceHostBridge() {
-        return surfaceHostBridge.get();
     }
 
     @Override
