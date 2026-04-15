@@ -774,8 +774,7 @@ public final class TerminalSelectionController {
         return new ActionMode.Callback2() {
             @Override
             public boolean onCreateActionMode(ActionMode mode, Menu menu) {
-                menu.add(Menu.NONE, android.R.id.copy, Menu.NONE, android.R.string.copy)
-                        .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);
+                installTerminalSelectionCopyMenuItem(menu);
                 return true;
             }
 
@@ -804,6 +803,11 @@ public final class TerminalSelectionController {
         };
     }
 
+    private void installTerminalSelectionCopyMenuItem(Menu menu) {
+        menu.add(Menu.NONE, android.R.id.copy, Menu.NONE, android.R.string.copy)
+                .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);
+    }
+
     private boolean completeTerminalSelectionCopyAction(ActionMode mode) {
         copyCurrentShellSelectionToClipboard();
         mode.finish();
@@ -825,6 +829,10 @@ public final class TerminalSelectionController {
         if (populateTerminalSelectionContentRect(outRect)) {
             return;
         }
+        setSelectionActionModeFallbackContentRect(view, outRect);
+    }
+
+    private void setSelectionActionModeFallbackContentRect(View view, Rect outRect) {
         outRect.set(0, 0, Math.max(view.getWidth(), 1), Math.max(view.getHeight(), 1));
     }
 
