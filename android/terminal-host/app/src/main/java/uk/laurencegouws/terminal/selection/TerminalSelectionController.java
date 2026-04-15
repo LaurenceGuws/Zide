@@ -887,13 +887,20 @@ public final class TerminalSelectionController {
         if (handle == null || handle != selectionDraggedHandleView) {
             return;
         }
+        clampHandlePositionToProductViewport(
+                handle,
+                absoluteX - selectionDraggedHandleTouchOffsetX,
+                absoluteY - selectionDraggedHandleTouchOffsetY);
+        showSelectionHandle(handle);
+    }
+
+    private void clampHandlePositionToProductViewport(View handle, float left, float top) {
         final int viewportWidth = host.productViewportWidthPx();
         final int viewportHeight = host.productViewportHeightPx();
         final float maxX = Math.max(0.0f, viewportWidth - handle.getWidth());
         final float maxY = Math.max(0.0f, viewportHeight - handle.getHeight());
-        handle.setX(Math.max(0.0f, Math.min(maxX, absoluteX - selectionDraggedHandleTouchOffsetX)));
-        handle.setY(Math.max(0.0f, Math.min(maxY, absoluteY - selectionDraggedHandleTouchOffsetY)));
-        showSelectionHandle(handle);
+        handle.setX(Math.max(0.0f, Math.min(maxX, left)));
+        handle.setY(Math.max(0.0f, Math.min(maxY, top)));
     }
 
     private float selectionHandleAnchorX(View handle) {
