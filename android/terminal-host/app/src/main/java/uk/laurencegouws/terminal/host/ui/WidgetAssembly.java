@@ -214,8 +214,8 @@ public final class WidgetAssembly {
                 host.selectionController(),
                 host.terminalGestureStateController(),
                 new SurfaceWidgetAssemblyCallbacks(
-                        host::handler,
-                        host::productSurfaceContainer,
+                        host.handler(),
+                        host.productSurfaceContainer(),
                         host::debugViewEnabled,
                         host::imeVisible,
                         host::shouldRunProductFrameLoop,

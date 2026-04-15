@@ -13,8 +13,8 @@ import uk.laurencegouws.terminal.debug.AndroidDebugFormatter;
 
 /** Functional callback adapter for {@link SurfaceWidgetAssembly.Host}. */
 public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssembly.Host {
-    private final Supplier<android.os.Handler> handler;
-    private final Supplier<FrameLayout> productSurfaceContainer;
+    private final android.os.Handler handler;
+    private final FrameLayout productSurfaceContainer;
     private final BooleanSupplier debugViewEnabled;
     private final BooleanSupplier currentImeVisible;
     private final BooleanSupplier shouldRunProductFrameLoop;
@@ -32,8 +32,8 @@ public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssemb
     private final Runnable reevaluateProductFrameLoop;
 
     public SurfaceWidgetAssemblyCallbacks(
-            Supplier<android.os.Handler> handler,
-            Supplier<FrameLayout> productSurfaceContainer,
+            android.os.Handler handler,
+            FrameLayout productSurfaceContainer,
             BooleanSupplier debugViewEnabled,
             BooleanSupplier currentImeVisible,
             BooleanSupplier shouldRunProductFrameLoop,
@@ -70,12 +70,12 @@ public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssemb
 
     @Override
     public android.os.Handler handler() {
-        return handler.get();
+        return handler;
     }
 
     @Override
     public FrameLayout productSurfaceContainer() {
-        return productSurfaceContainer.get();
+        return productSurfaceContainer;
     }
 
     @Override
