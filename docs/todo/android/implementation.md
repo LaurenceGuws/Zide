@@ -292,6 +292,18 @@ Agent reporting contract (mandatory for cleanup campaign updates):
     **Validation:** `:app:compileReleaseJavaWithJavac` on each commit and
     deploy/runtime checks via `python3 ops/android_terminal_host.py deploy`
     with `adb logcat -d -s AndroidRuntime:E` after buffer clear (empty).
+  - Completed (mini-wave, runtime ctor deltas + activity thinning wave 2):
+    `ProductRuntimeAssemblyCallbacks` + `ProductRuntimeHostCallbacks` dropped
+    stable-value supplier ceremony (keeping dynamic install/readiness/surface
+    reads lazy), then `ZideTerminalActivity` removed additional one-shot
+    `create*Callbacks()` helper methods by inlining callback construction at
+    assembly callsites. Wave result for activity file: `658 -> 626` lines
+    (net `-32`) while preserving lifecycle guardrails by avoiding eager capture
+    of dynamic runtime/view state.
+    **Validation:** per refactor `:app:compileReleaseJavaWithJavac`; deploy +
+    relaunch checks via `python3 ops/android_terminal_host.py deploy`,
+    `adb logcat -c`, `adb shell am start ...`, and
+    `adb logcat -d -s AndroidRuntime:E` (empty).
   - Next: complete Android host callback/assembly contract cleanup before
     another activity-only pass: (1) finish `nativeLoaded` one-source collapse
     across remaining host adapters/assemblies, (2) run constructor-pressure
