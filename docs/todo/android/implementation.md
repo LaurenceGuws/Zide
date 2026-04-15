@@ -167,6 +167,8 @@ Agent reporting contract (mandatory for cleanup campaign updates):
      so six one-line *Chrome* / visibility helpers are gone (behavior unchanged).
    - Completed: `ChromeController` net-smaller: sidebar nav buttons and assist
      character rows no longer use per-button private wrappers (behavior unchanged).
+   - Completed: `ChromeController` net-smaller: manual IME open/close paths no
+     longer split across single-use trace/focus/record helpers (behavior unchanged).
    - Completed: `SurfaceController` net-smaller: viewport publish, layout params,
      redraw telemetry, and install callback resolution no longer sit behind
      separate private methods (behavior unchanged).
