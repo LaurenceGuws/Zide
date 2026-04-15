@@ -25,8 +25,6 @@ public final class StatusViewAssembly {
 
         boolean debugViewEnabled();
 
-        boolean nativeLoaded();
-
         boolean hasWindowFocusNow();
 
         boolean imeVisible();
@@ -117,10 +115,9 @@ public final class StatusViewAssembly {
     public static Result assemble(Host host) {
         final ActivityViewBindings viewBindings = ActivityViewBindings.from(host.activity());
         final TerminalSurfaceStateSnapshotReader terminalSurfaceStateSnapshotReader = new TerminalSurfaceStateSnapshotReader(
-                new TerminalSurfaceStateSnapshotHostCallbacks(host::nativeLoaded));
+                new TerminalSurfaceStateSnapshotHostCallbacks());
         final StatusBridge terminalStatusHostBridge = new StatusBridge(new StatusCallbacks(
                 host::debugViewEnabled,
-                host::nativeLoaded,
                 host::hasWindowFocusNow,
                 host::imeVisible,
                 host::surfaceHostBridge,

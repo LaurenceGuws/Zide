@@ -1,20 +1,12 @@
 package uk.laurencegouws.terminal.debug;
 
-import java.util.function.BooleanSupplier;
-
 import uk.laurencegouws.terminal.TerminalNativeBridge;
 
 /** Functional callback adapter for {@link TerminalSurfaceStateSnapshotReader}. */
 public final class TerminalSurfaceStateSnapshotHostCallbacks implements TerminalSurfaceStateSnapshotReader.Host {
-    private final BooleanSupplier nativeLoaded;
-
-    public TerminalSurfaceStateSnapshotHostCallbacks(BooleanSupplier nativeLoaded) {
-        this.nativeLoaded = nativeLoaded;
-    }
-
     @Override
     public boolean nativeLoaded() {
-        return nativeLoaded.getAsBoolean();
+        return TerminalNativeBridge.nativeLoaded();
     }
 
     @Override

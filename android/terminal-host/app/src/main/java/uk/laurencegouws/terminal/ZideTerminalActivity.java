@@ -377,7 +377,6 @@ public final class ZideTerminalActivity extends Activity
         return new StatusViewCallbacks(
                 () -> this,
                 () -> debugViewEnabled,
-                () -> nativeLoaded,
                 this::hasWindowFocus,
                 () -> imeVisible,
                 v -> imeVisible = v,
