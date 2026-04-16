@@ -23,9 +23,9 @@ public final class InteractionAssembly {
 
         void stopScrollbackFling();
 
-        void refreshProductScrollOverlay();
+        void refreshScrollOverlay();
 
-        void reevaluateProductFrameLoop();
+        void reevaluateFrameLoop();
 
         void appendEvent(String message);
     }
@@ -53,8 +53,8 @@ public final class InteractionAssembly {
                 host::productViewportWidthPx,
                 host::productViewportHeightPx,
                 host::stopScrollbackFling,
-                host::refreshProductScrollOverlay,
-                host::reevaluateProductFrameLoop,
+                host::refreshScrollOverlay,
+                host::reevaluateFrameLoop,
                 host::appendEvent);
         selectionController.install();
 
@@ -63,8 +63,8 @@ public final class InteractionAssembly {
                         host.activity(),
                         host.handler(),
                         host::productViewportHeightPx,
-                        host::refreshProductScrollOverlay,
-                        host::reevaluateProductFrameLoop);
+                        host::refreshScrollOverlay,
+                        host::reevaluateFrameLoop);
         return new Result(selectionController, GestureStateController);
     }
 }

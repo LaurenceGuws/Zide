@@ -17,7 +17,7 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
         final Supplier<String> nativeLoadError;
         final Consumer<String> appendEvent;
         final Consumer<String> updateStatus;
-        final Runnable stopProductFrameLoop;
+        final Runnable stopFrameLoop;
         final Runnable refreshUserlandSessionOnPause;
         final Runnable notifySurfacePause;
         final SurfaceResumeCall notifySurfaceResume;
@@ -26,14 +26,14 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
                 Supplier<String> nativeLoadError,
                 Consumer<String> appendEvent,
                 Consumer<String> updateStatus,
-                Runnable stopProductFrameLoop,
+                Runnable stopFrameLoop,
                 Runnable refreshUserlandSessionOnPause,
                 Runnable notifySurfacePause,
                 SurfaceResumeCall notifySurfaceResume) {
             this.nativeLoadError = nativeLoadError;
             this.appendEvent = appendEvent;
             this.updateStatus = updateStatus;
-            this.stopProductFrameLoop = stopProductFrameLoop;
+            this.stopFrameLoop = stopFrameLoop;
             this.refreshUserlandSessionOnPause = refreshUserlandSessionOnPause;
             this.notifySurfacePause = notifySurfacePause;
             this.notifySurfaceResume = notifySurfaceResume;
@@ -43,7 +43,7 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
                 Supplier<String> nativeLoadError,
                 Consumer<String> appendEvent,
                 Consumer<String> updateStatus,
-                Runnable stopProductFrameLoop,
+                Runnable stopFrameLoop,
                 Runnable refreshUserlandSessionOnPause,
                 Runnable notifySurfacePause,
                 SurfaceResumeCall notifySurfaceResume) {
@@ -51,7 +51,7 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
                     nativeLoadError,
                     appendEvent,
                     updateStatus,
-                    stopProductFrameLoop,
+                    stopFrameLoop,
                     refreshUserlandSessionOnPause,
                     notifySurfacePause,
                     notifySurfaceResume);
@@ -124,8 +124,8 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
     }
 
     @Override
-    public void stopProductFrameLoop() {
-        lifecycleHostCallbacks.stopProductFrameLoop.run();
+    public void stopFrameLoop() {
+        lifecycleHostCallbacks.stopFrameLoop.run();
     }
 
     @Override

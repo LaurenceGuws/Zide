@@ -6,9 +6,9 @@ package uk.laurencegouws.terminal.host.runtime;
 public final class FrameLoopBridge implements FrameLoopController.Host {
     /** Activity callbacks used by frame-loop scheduling. */
     public interface Callbacks {
-        boolean shouldRunProductFrameLoop();
+        boolean shouldRunFrameLoop();
 
-        int tickProductFrame();
+        int tickFrame();
     }
 
     private final Callbacks callbacks;
@@ -18,12 +18,12 @@ public final class FrameLoopBridge implements FrameLoopController.Host {
     }
 
     @Override
-    public boolean shouldRunProductFrameLoop() {
-        return callbacks.shouldRunProductFrameLoop();
+    public boolean shouldRunFrameLoop() {
+        return callbacks.shouldRunFrameLoop();
     }
 
     @Override
-    public int tickProductFrame() {
-        return callbacks.tickProductFrame();
+    public int tickFrame() {
+        return callbacks.tickFrame();
     }
 }

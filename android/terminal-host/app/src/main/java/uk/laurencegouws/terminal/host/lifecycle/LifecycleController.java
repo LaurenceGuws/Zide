@@ -26,7 +26,7 @@ public final class LifecycleController {
 
         void updateStatus(String statusLabel);
 
-        void stopProductFrameLoop();
+        void stopFrameLoop();
 
         void refreshUserlandSessionOnPause();
 
@@ -76,7 +76,7 @@ public final class LifecycleController {
     public void onPause() {
         host.appendEvent("activity.on.pause");
         host.callNative("native.onPause", host.nativeLoaded() ? host.nativeOnPause() : -1);
-        host.stopProductFrameLoop();
+        host.stopFrameLoop();
         host.refreshUserlandSessionOnPause();
         host.notifySurfacePause();
         host.updateStatus("activity.state.paused");

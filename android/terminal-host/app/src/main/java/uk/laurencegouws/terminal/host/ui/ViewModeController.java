@@ -19,7 +19,7 @@ public final class ViewModeController {
 
         void notifyVisibleViewport(String reason);
 
-        void refreshProductScrollOverlay();
+        void refreshScrollOverlay();
 
         void refreshShellStateForDebugView();
     }
@@ -52,7 +52,7 @@ public final class ViewModeController {
             terminalScrollOverlay.setVisibility(View.GONE);
         } else {
             productSurfaceContainer.post(() -> host.notifyVisibleViewport("product-view"));
-            productSurfaceContainer.post(host::refreshProductScrollOverlay);
+            productSurfaceContainer.post(host::refreshScrollOverlay);
         }
     }
 

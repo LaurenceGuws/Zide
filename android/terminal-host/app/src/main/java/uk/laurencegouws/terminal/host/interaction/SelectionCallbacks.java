@@ -11,22 +11,22 @@ public final class SelectionCallbacks implements SelectionControllerFactory.Host
     private final IntSupplier productViewportWidthPx;
     private final IntSupplier productViewportHeightPx;
     private final Runnable stopScrollbackFling;
-    private final Runnable refreshProductScrollOverlay;
-    private final Runnable reevaluateProductFrameLoop;
+    private final Runnable refreshScrollOverlay;
+    private final Runnable reevaluateFrameLoop;
     private final Consumer<String> appendEvent;
 
     public SelectionCallbacks(
             IntSupplier productViewportWidthPx,
             IntSupplier productViewportHeightPx,
             Runnable stopScrollbackFling,
-            Runnable refreshProductScrollOverlay,
-            Runnable reevaluateProductFrameLoop,
+            Runnable refreshScrollOverlay,
+            Runnable reevaluateFrameLoop,
             Consumer<String> appendEvent) {
         this.productViewportWidthPx = productViewportWidthPx;
         this.productViewportHeightPx = productViewportHeightPx;
         this.stopScrollbackFling = stopScrollbackFling;
-        this.refreshProductScrollOverlay = refreshProductScrollOverlay;
-        this.reevaluateProductFrameLoop = reevaluateProductFrameLoop;
+        this.refreshScrollOverlay = refreshScrollOverlay;
+        this.reevaluateFrameLoop = reevaluateFrameLoop;
         this.appendEvent = appendEvent;
     }
 
@@ -46,13 +46,13 @@ public final class SelectionCallbacks implements SelectionControllerFactory.Host
     }
 
     @Override
-    public void refreshProductScrollOverlay() {
-        refreshProductScrollOverlay.run();
+    public void refreshScrollOverlay() {
+        refreshScrollOverlay.run();
     }
 
     @Override
-    public void reevaluateProductFrameLoop() {
-        reevaluateProductFrameLoop.run();
+    public void reevaluateFrameLoop() {
+        reevaluateFrameLoop.run();
     }
 
     @Override

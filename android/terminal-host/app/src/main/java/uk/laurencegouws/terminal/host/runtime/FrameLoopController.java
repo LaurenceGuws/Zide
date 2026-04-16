@@ -11,9 +11,9 @@ import android.os.Handler;
 public final class FrameLoopController {
     /** Host callback for the frame-loop readiness gate. */
     public interface Host {
-        boolean shouldRunProductFrameLoop();
+        boolean shouldRunFrameLoop();
 
-        int tickProductFrame();
+        int tickFrame();
     }
 
     private final Handler handler;
@@ -25,8 +25,8 @@ public final class FrameLoopController {
             if (!active) {
                 return;
             }
-            final int tick = host.tickProductFrame();
-            if (!host.shouldRunProductFrameLoop() || tick == 0) {
+            final int tick = host.tickFrame();
+            if (!host.shouldRunFrameLoop() || tick == 0) {
                 stop();
                 return;
             }
@@ -40,7 +40,7 @@ public final class FrameLoopController {
     }
 
     public void start() {
-        if (active || !host.shouldRunProductFrameLoop()) {
+        if (active || !host.shouldRunFrameLoop()) {
             return;
         }
         active = true;
@@ -56,7 +56,7 @@ public final class FrameLoopController {
     }
 
     public void reevaluate() {
-        if (host.shouldRunProductFrameLoop()) {
+        if (host.shouldRunFrameLoop()) {
             start();
         } else {
             stop();

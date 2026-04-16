@@ -36,9 +36,9 @@ public final class SelectionController {
 
         void stopScrollbackFling();
 
-        void refreshProductScrollOverlay();
+        void refreshScrollOverlay();
 
-        void reevaluateProductFrameLoop();
+        void reevaluateFrameLoop();
 
         void appendEvent(String event);
     }
@@ -220,7 +220,7 @@ public final class SelectionController {
 
     /** Keeps selection chrome aligned after viewport/scrollback changes. */
     public void syncChrome() {
-        syncTerminalSelectionActionMode();
+        syncSelectionActionMode();
     }
 
     /** Keeps handles above the terminal surface when the surface host is recreated. */
@@ -233,7 +233,7 @@ public final class SelectionController {
         }
     }
 
-    public void onProductSingleTap(float x, float y) {
+    public void onSingleTap(float x, float y) {
         if (!canHandleSelectionTap()) {
             return;
         }
@@ -245,16 +245,16 @@ public final class SelectionController {
         bridge.clearSelection();
         selectionHelpersVisible = true;
         selectionToolbarVisible = true;
-        finishTerminalSelectionActionMode();
+        finishSelectionActionMode();
         requestFrameLoopReevaluation();
         host.appendEvent("product.selection.cleared reason=tap-outside");
     }
 
-    public void onProductLongPress(float x, float y) {
+    public void onLongPress(float x, float y) {
         if (!isBridgeReady()) {
             return;
         }
-        final CellHit hit = resolveProductTerminalCell(x, y);
+        final CellHit hit = resolveTerminalCell(x, y);
         if (hit == null) {
             host.appendEvent("product.selection.long_press result=miss");
             return;
@@ -269,7 +269,7 @@ public final class SelectionController {
         requestFrameLoopReevaluation();
     }
 
-    public void onProductSelectionDrag(float x, float y) {
+    public void onSelectionDrag(float x, float y) {
         if (!canHandleSelectionDrag()) {
             return;
         }
@@ -279,7 +279,7 @@ public final class SelectionController {
         }
     }
 
-    public void onProductSelectionDragEnd(float x, float y) {
+    public void onSelectionDragEnd(float x, float y) {
         if (!canHandleSelectionDrag()) {
             return;
         }
@@ -317,7 +317,7 @@ public final class SelectionController {
                 selectionDraggedHandleTouchOffsetX = event.getX();
                 selectionDraggedHandleTouchOffsetY = event.getY();
                 beginSelectionDrag(dragMode, selectionHandleAnchorX(handle), selectionHandleAnchorY(handle));
-                syncTerminalSelectionActionMode();
+                syncSelectionActionMode();
                 requestFrameLoopReevaluation();
                 return true;
             case MotionEvent.ACTION_MOVE:
@@ -346,7 +346,7 @@ public final class SelectionController {
         }
     }
 
-    private CellHit resolveProductTerminalCell(float x, float y) {
+    private CellHit resolveTerminalCell(float x, float y) {
         if (!isBridgeReady()) {
             return null;
         }
@@ -393,12 +393,12 @@ public final class SelectionController {
     }
 
     private void onSelectionUpdateSuccess() {
-        syncTerminalSelectionActionMode();
+        syncSelectionActionMode();
     }
 
     private void onSelectionUpdateSuccessDuringDrag() {
         applyImmediateSelectionAutoscrollStep();
-        syncTerminalSelectionActionMode();
+        syncSelectionActionMode();
         requestFrameLoopReevaluation();
     }
 
@@ -449,7 +449,7 @@ public final class SelectionController {
         if (!selectionDragActive || selectionDragMode == SelectionDragMode.none) {
             return -1;
         }
-        final CellHit hit = resolveProductTerminalCell(selectionDragX, selectionDragY);
+        final CellHit hit = resolveTerminalCell(selectionDragX, selectionDragY);
         if (hit == null) {
             return -1;
         }
@@ -705,7 +705,7 @@ public final class SelectionController {
         if (status == 0) {
             onSelectionUpdateSuccess();
         }
-        host.refreshProductScrollOverlay();
+        host.refreshScrollOverlay();
         requestFrameLoopReevaluation();
     }
 
@@ -726,7 +726,7 @@ public final class SelectionController {
 
     private boolean tapHitsCurrentSelection(float x, float y) {
         final Rect rect = new Rect();
-        if (!populateTerminalSelectionContentRect(rect)) {
+        if (!populateSelectionContentRect(rect)) {
             return false;
         }
         final int tapX = Math.round(x);
@@ -736,26 +736,26 @@ public final class SelectionController {
 
     private void hideSelectionToolbar() {
         selectionToolbarVisible = false;
-        syncTerminalSelectionActionMode();
+        syncSelectionActionMode();
     }
 
     private void showSelectionToolbar() {
         selectionToolbarVisible = selectionHelpersVisible;
-        syncTerminalSelectionActionMode();
+        syncSelectionActionMode();
     }
 
     private void toggleSelectionHelpers() {
         selectionHelpersVisible = !selectionHelpersVisible;
         selectionToolbarVisible = selectionHelpersVisible && !selectionDragActive;
-        syncTerminalSelectionActionMode();
+        syncSelectionActionMode();
     }
 
-    private boolean hostHasProductSurfaceContainer() {
+    private boolean hostHasSurfaceContainer() {
         return host.productSurfaceContainer() != null;
     }
 
     private boolean canPresentTerminalSelectionActionMode() {
-        return bridgeHasActiveSelection() && hostHasProductSurfaceContainer();
+        return bridgeHasActiveSelection() && hostHasSurfaceContainer();
     }
 
     private boolean hasTerminalSelectionActionMode() {
@@ -764,13 +764,13 @@ public final class SelectionController {
 
     private boolean ensureTerminalSelectionActionModePresentationOrFinishIfUnavailable() {
         if (!canPresentTerminalSelectionActionMode()) {
-            finishTerminalSelectionActionMode();
+            finishSelectionActionMode();
             return false;
         }
         return true;
     }
 
-    private void showTerminalSelectionActionMode() {
+    private void showSelectionActionMode() {
         syncSelectionHandles();
         if (!selectionToolbarVisible) {
             return;
@@ -779,38 +779,38 @@ public final class SelectionController {
             return;
         }
         if (terminalSelectionActionMode != null) {
-            invalidateTerminalSelectionActionMode(true);
+            invalidateSelectionActionMode(true);
             return;
         }
-        final ActionMode mode = startFloatingTerminalSelectionActionMode();
+        final ActionMode mode = startFloatingSelectionActionMode();
         terminalSelectionActionMode = mode;
-        invalidateTerminalSelectionActionMode(false);
+        invalidateSelectionActionMode(false);
     }
 
-    private ActionMode startFloatingTerminalSelectionActionMode() {
-        return requestTerminalSelectionFloatingActionModeOnContainer(host.productSurfaceContainer());
+    private ActionMode startFloatingSelectionActionMode() {
+        return requestSelectionFloatingActionModeOnContainer(host.productSurfaceContainer());
     }
 
-    private ActionMode requestTerminalSelectionFloatingActionModeOnContainer(FrameLayout container) {
+    private ActionMode requestSelectionFloatingActionModeOnContainer(FrameLayout container) {
         return container.startActionMode(
-                buildTerminalSelectionFloatingActionModeCallbacks(), TERMINAL_SELECTION_FLOATING_ACTION_MODE_TYPE);
+                buildSelectionFloatingActionModeCallbacks(), TERMINAL_SELECTION_FLOATING_ACTION_MODE_TYPE);
     }
 
-    private void invalidateTerminalSelectionActionMode(boolean invalidateView) {
+    private void invalidateSelectionActionMode(boolean invalidateView) {
         if (!hasTerminalSelectionActionMode()) {
             return;
         }
-        invalidateTerminalSelectionActionModeContentAndView(invalidateView);
+        invalidateSelectionActionModeContentAndView(invalidateView);
     }
 
-    private void invalidateTerminalSelectionActionModeContentAndView(boolean invalidateView) {
+    private void invalidateSelectionActionModeContentAndView(boolean invalidateView) {
         terminalSelectionActionMode.invalidateContentRect();
         if (invalidateView) {
             terminalSelectionActionMode.invalidate();
         }
     }
 
-    private ActionMode.Callback2 buildTerminalSelectionFloatingActionModeCallbacks() {
+    private ActionMode.Callback2 buildSelectionFloatingActionModeCallbacks() {
         return new ActionMode.Callback2() {
             @Override
             public boolean onCreateActionMode(ActionMode mode, Menu menu) {
@@ -824,7 +824,7 @@ public final class SelectionController {
 
             @Override
             public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
-                return handleTerminalSelectionFloatingToolbarMenuItem(mode, item);
+                return handleSelectionFloatingToolbarMenuItem(mode, item);
             }
 
             @Override
@@ -839,20 +839,20 @@ public final class SelectionController {
         };
     }
 
-    private boolean handleTerminalSelectionFloatingToolbarMenuItem(ActionMode mode, MenuItem item) {
-        if (!isTerminalSelectionCopyMenuItem(item)) {
+    private boolean handleSelectionFloatingToolbarMenuItem(ActionMode mode, MenuItem item) {
+        if (!isSelectionCopyMenuItem(item)) {
             return false;
         }
-        executeTerminalSelectionToolbarCopy(mode);
+        executeSelectionToolbarCopy(mode);
         return true;
     }
 
     private boolean onTerminalSelectionFloatingActionModeCreated(Menu menu) {
-        installTerminalSelectionCopyMenuItem(menu);
+        installSelectionCopyMenuItem(menu);
         return true;
     }
 
-    private void installTerminalSelectionCopyMenuItem(Menu menu) {
+    private void installSelectionCopyMenuItem(Menu menu) {
         menu.add(
                         TERMINAL_SELECTION_COPY_MENU_NEUTRAL,
                         TERMINAL_SELECTION_COPY_MENU_ITEM_ID,
@@ -861,11 +861,11 @@ public final class SelectionController {
                 .setShowAsAction(TERMINAL_SELECTION_COPY_SHOW_AS_ACTION);
     }
 
-    private static boolean isTerminalSelectionCopyMenuItem(MenuItem item) {
+    private static boolean isSelectionCopyMenuItem(MenuItem item) {
         return item.getItemId() == TERMINAL_SELECTION_COPY_MENU_ITEM_ID;
     }
 
-    private void executeTerminalSelectionToolbarCopy(ActionMode mode) {
+    private void executeSelectionToolbarCopy(ActionMode mode) {
         copyCurrentShellSelectionToClipboard();
         mode.finish();
     }
@@ -902,7 +902,7 @@ public final class SelectionController {
     }
 
     private void fillSelectionActionModeContentRectFromBridgeOrUseViewBounds(View view, Rect outRect) {
-        if (populateTerminalSelectionContentRect(outRect)) {
+        if (populateSelectionContentRect(outRect)) {
             return;
         }
         setSelectionActionModeFallbackContentRect(view, outRect);
@@ -920,7 +920,7 @@ public final class SelectionController {
         return Math.max(extentPx, 1);
     }
 
-    private void finishTerminalSelectionActionMode() {
+    private void finishSelectionActionMode() {
         syncSelectionHandles();
         final ActionMode mode = terminalSelectionActionMode;
         if (mode == null) {
@@ -935,7 +935,7 @@ public final class SelectionController {
         mode.finish();
     }
 
-    private boolean populateTerminalSelectionContentRect(Rect outRect) {
+    private boolean populateSelectionContentRect(Rect outRect) {
         if (!canHandleSelectionDrag()) {
             return false;
         }
@@ -957,22 +957,22 @@ public final class SelectionController {
         return right <= left || bottom <= top;
     }
 
-    private void syncTerminalSelectionActionMode() {
+    private void syncSelectionActionMode() {
         syncSelectionHandles();
         applyTerminalSelectionActionModeSync();
     }
 
     private void applyTerminalSelectionActionModeSync() {
-        if (shouldFinishTerminalSelectionActionMode()) {
-            finishTerminalSelectionActionMode();
+        if (shouldfinishSelectionActionMode()) {
+            finishSelectionActionMode();
             return;
         }
         if (!hasTerminalSelectionActionMode()) {
             if (bridgeHasActiveSelection()) {
-                showTerminalSelectionActionMode();
+                showSelectionActionMode();
             }
         } else {
-            invalidateTerminalSelectionActionMode(false);
+            invalidateSelectionActionMode(false);
         }
     }
 
@@ -980,7 +980,7 @@ public final class SelectionController {
         return selectionToolbarVisible && bridgeHasActiveSelection();
     }
 
-    private boolean shouldFinishTerminalSelectionActionMode() {
+    private boolean shouldfinishSelectionActionMode() {
         return hasTerminalSelectionActionMode() && !shouldKeepTerminalSelectionActionModeVisible();
     }
 
@@ -1013,14 +1013,14 @@ public final class SelectionController {
         if (handle == null || handle != selectionDraggedHandleView) {
             return;
         }
-        clampHandlePositionToProductViewport(
+        clampHandlePositionToViewport(
                 handle,
                 absoluteX - selectionDraggedHandleTouchOffsetX,
                 absoluteY - selectionDraggedHandleTouchOffsetY);
         showSelectionHandle(handle);
     }
 
-    private void clampHandlePositionToProductViewport(View handle, float left, float top) {
+    private void clampHandlePositionToViewport(View handle, float left, float top) {
         final int viewportWidth = host.productViewportWidthPx();
         final int viewportHeight = host.productViewportHeightPx();
         final float maxX = Math.max(0.0f, viewportWidth - handle.getWidth());
@@ -1104,7 +1104,7 @@ public final class SelectionController {
     }
 
     private void requestFrameLoopReevaluation() {
-        host.reevaluateProductFrameLoop();
+        host.reevaluateFrameLoop();
     }
 
     private void copyCurrentShellSelectionToClipboard() {
@@ -1113,14 +1113,14 @@ public final class SelectionController {
             reportTerminalSelectionCopyNoBytes();
             return;
         }
-        applyTerminalSelectionPlainTextToSystemClipboard(decodeTerminalSelectionUtf8(bytes));
+        applyTerminalSelectionPlainTextToSystemClipboard(decodeSelectionUtf8(bytes));
     }
 
     private void reportTerminalSelectionCopyNoBytes() {
-        reportTerminalSelectionCopyBlocked("no-bytes");
+        reportSelectionCopyBlocked("no-bytes");
     }
 
-    private static String decodeTerminalSelectionUtf8(byte[] bytes) {
+    private static String decodeSelectionUtf8(byte[] bytes) {
         return new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
     }
 
@@ -1141,10 +1141,10 @@ public final class SelectionController {
     }
 
     private void reportTerminalSelectionCopyNoClipboard() {
-        reportTerminalSelectionCopyBlocked("no-clipboard");
+        reportSelectionCopyBlocked("no-clipboard");
     }
 
-    private void reportTerminalSelectionCopyBlocked(String reason) {
+    private void reportSelectionCopyBlocked(String reason) {
         host.appendEvent(PRODUCT_SELECTION_COPY_RESULT_PREFIX + reason);
     }
 

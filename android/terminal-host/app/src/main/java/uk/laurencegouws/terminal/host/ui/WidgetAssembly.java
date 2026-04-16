@@ -78,9 +78,9 @@ public final class WidgetAssembly {
 
         UserlandInstallState currentInstallState();
 
-        boolean shouldRunProductFrameLoop();
+        boolean shouldRunFrameLoop();
 
-        void refreshProductScrollOverlay();
+        void refreshScrollOverlay();
 
         void appendEvent(String event);
 
@@ -92,11 +92,11 @@ public final class WidgetAssembly {
 
         AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot();
 
-        void handleProductShellStateEvent(String statusLabel);
+        void handleShellStateEvent(String statusLabel);
 
         int productViewportHeightPx();
 
-        void reevaluateProductFrameLoop();
+        void reevaluateFrameLoop();
 
         void runPackageDoctor();
 
@@ -183,7 +183,7 @@ public final class WidgetAssembly {
                         host::updateStatus,
                         terminalChromeController::closeSidebar,
                         host::notifyVisibleViewport,
-                        host::refreshProductScrollOverlay,
+                        host::refreshScrollOverlay,
                         host::refreshUserlandSession));
         terminalViewModeControllerRef[0] = terminalViewModeController;
 
@@ -195,14 +195,14 @@ public final class WidgetAssembly {
                         host.productSurfaceContainer(),
                         host::debugViewEnabled,
                         host::imeVisible,
-                        host::shouldRunProductFrameLoop,
-                        host::refreshProductScrollOverlay,
+                        host::shouldRunFrameLoop,
+                        host::refreshScrollOverlay,
                         host::appendEvent,
                         host::updateStatus,
                         host::callNative,
                         host::callNativeWithSurfaceState,
                         host::currentSurfaceStateSnapshot,
-                        host::handleProductShellStateEvent,
+                        host::handleShellStateEvent,
                         nextSurfaceView -> installSurfaceGestureHost(nextSurfaceView, surfaceWidgetControllerRef),
                         (nextSurfaceView, callback) -> {
                             if (callback != null) {
@@ -211,12 +211,12 @@ public final class WidgetAssembly {
                         },
                         () -> surfaceWidgetControllerRef[0],
                         host::productViewportHeightPx,
-                        host::reevaluateProductFrameLoop));
+                        host::reevaluateFrameLoop));
         surfaceWidgetControllerRef[0] = surfaceWidgetAssembly.surfaceWidgetController;
         host.terminalScrollOverlay().setHost(surfaceWidgetAssembly.surfaceWidgetController);
 
         final ShellStateBridge productShellStateHostBridge =
-                UiFactory.createProductShellStateHostBridge(
+                UiFactory.createShellStateHostBridge(
                         host.productReadinessBlocker(),
                         host.terminalScrollOverlay(),
                         host.productReadinessTitle(),

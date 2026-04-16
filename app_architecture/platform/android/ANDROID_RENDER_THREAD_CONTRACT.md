@@ -330,7 +330,7 @@ References:
 
 `src/platform/android_runtime_bridge.zig`
 
-`applyTerminalPinchZoom(...)` and related Android interaction paths currently
+`applyPinchZoom(...)` and related Android interaction paths currently
 lead directly into:
 
 - renderer mutation
@@ -363,8 +363,8 @@ Caller classification:
   - `tickProductShellFrame(...)`
 - stageable through redraw intent/product frame loop:
   - `noteVisibleViewport(...)`
-  - `applyTerminalPinchZoom(...)`
-  - `setTerminalPinchActive(false)`
+  - `applyPinchZoom(...)`
+  - `setPinchActive(false)`
   - `refreshShellSurfaceAfterInput(...)`
 
 Findings:
@@ -557,7 +557,7 @@ Findings:
 - `invalidatePresentationCache()` is currently a single-bit reset:
   `terminal_presentable_ready = false`
 - Android bridge paths already call that broad invalidation directly:
-  - `applyTerminalPinchZoom(...)`
+  - `applyPinchZoom(...)`
   - `ensureProductFitTerminalGrid(...)` after resize
 - app/runtime paths also call it directly:
   - `post_preinput_hooks_runtime.zig`

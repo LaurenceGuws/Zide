@@ -28,9 +28,9 @@ public final class SurfaceWidgetController
 
         void appendEvent(String event);
 
-        void refreshProductScrollOverlay();
+        void refreshScrollOverlay();
 
-        void reevaluateProductFrameLoop();
+        void reevaluateFrameLoop();
     }
 
     private final SurfaceController surfaceHostController;
@@ -70,13 +70,13 @@ public final class SurfaceWidgetController
     }
 
     @Override
-    public void onProductTouchDown() {
+    public void onTouchDown() {
         GestureStateController.stopScrollbackFling();
     }
 
     @Override
-    public void onProductSingleTap(float x, float y) {
-        selectionController.onProductSingleTap(x, y);
+    public void onSingleTap(float x, float y) {
+        selectionController.onSingleTap(x, y);
     }
 
     @Override
@@ -85,33 +85,33 @@ public final class SurfaceWidgetController
     }
 
     @Override
-    public void onProductScrollBy(float deltaY) {
-        GestureStateController.onProductScrollBy(deltaY);
+    public void onScrollBy(float deltaY) {
+        GestureStateController.onScrollBy(deltaY);
     }
 
     @Override
-    public void onProductScrollEnd() {
-        GestureStateController.onProductScrollEnd();
+    public void onScrollEnd() {
+        GestureStateController.onScrollEnd();
     }
 
     @Override
-    public void onProductScrollFling(float velocityY) {
-        GestureStateController.onProductScrollFling(velocityY, host.productViewportHeightPx());
+    public void onScrollFling(float velocityY) {
+        GestureStateController.onScrollFling(velocityY, host.productViewportHeightPx());
     }
 
     @Override
-    public void onProductLongPress(float x, float y) {
-        selectionController.onProductLongPress(x, y);
+    public void onLongPress(float x, float y) {
+        selectionController.onLongPress(x, y);
     }
 
     @Override
-    public void onProductSelectionDrag(float x, float y) {
-        selectionController.onProductSelectionDrag(x, y);
+    public void onSelectionDrag(float x, float y) {
+        selectionController.onSelectionDrag(x, y);
     }
 
     @Override
-    public void onProductSelectionDragEnd(float x, float y) {
-        selectionController.onProductSelectionDragEnd(x, y);
+    public void onSelectionDragEnd(float x, float y) {
+        selectionController.onSelectionDragEnd(x, y);
     }
 
     @Override
@@ -122,8 +122,8 @@ public final class SurfaceWidgetController
         }
         final int status = host.setShellScrollbackOffset(offsetRows);
         host.appendEvent("product.scrollback.offset rows=" + offsetRows + " status=" + status);
-        host.refreshProductScrollOverlay();
-        host.reevaluateProductFrameLoop();
+        host.refreshScrollOverlay();
+        host.reevaluateFrameLoop();
     }
 
     @Override
@@ -134,22 +134,22 @@ public final class SurfaceWidgetController
         }
         final int status = host.followShellLiveBottom();
         host.appendEvent("product.scrollback.follow_bottom status=" + status);
-        host.refreshProductScrollOverlay();
-        host.reevaluateProductFrameLoop();
+        host.refreshScrollOverlay();
+        host.reevaluateFrameLoop();
     }
 
     @Override
-    public void onProductPinchBegin() {
-        GestureStateController.onProductPinchBegin();
+    public void onPinchBegin() {
+        GestureStateController.onPinchBegin();
     }
 
     @Override
-    public void onProductPinchZoom(float scaleFactor) {
-        GestureStateController.onProductPinchZoom(scaleFactor);
+    public void onPinchZoom(float scaleFactor) {
+        GestureStateController.onPinchZoom(scaleFactor);
     }
 
     @Override
-    public void onProductPinchEnd() {
-        GestureStateController.onProductPinchEnd();
+    public void onPinchEnd() {
+        GestureStateController.onPinchEnd();
     }
 }

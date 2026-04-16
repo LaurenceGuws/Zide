@@ -15,7 +15,7 @@ public final class UiFactory {
     private UiFactory() {
     }
 
-    public static ShellStateBridge createProductShellStateHostBridge(
+    public static ShellStateBridge createShellStateHostBridge(
             View productReadinessBlocker,
             View terminalScrollOverlay,
             TextView productReadinessTitle,

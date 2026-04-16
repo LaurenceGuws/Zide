@@ -54,9 +54,9 @@ public final class NativeBridge {
 
     public static native long nativeOnVisibleViewportBridge(int width, int height, boolean imeVisible);
 
-    public static native int nativeApplyTerminalPinchZoomBridge(float scaleFactor);
+    public static native int nativeApplyPinchZoomBridge(float scaleFactor);
 
-    public static native int nativeSetTerminalPinchActiveBridge(boolean active);
+    public static native int nativeSetPinchActiveBridge(boolean active);
 
     public static native long nativeCurrentWindowTokenBridge();
 
@@ -94,7 +94,7 @@ public final class NativeBridge {
 
     public static native boolean nativeIsSessionAliveBridge();
 
-    public static native int nativeTickProductFrameBridge();
+    public static native int nativeTickFrameBridge();
 
     public static native int nativeSendSessionCodepointBridge(int codepoint);
 

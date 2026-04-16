@@ -16,9 +16,9 @@ public final class SurfaceCallbacks implements SurfaceBridge.Callbacks {
 
         boolean currentImeVisible();
 
-        boolean shouldRunProductFrameLoop();
+        boolean shouldRunFrameLoop();
 
-        void refreshProductScrollOverlay();
+        void refreshScrollOverlay();
 
         void appendEvent(String event);
 
@@ -38,7 +38,7 @@ public final class SurfaceCallbacks implements SurfaceBridge.Callbacks {
 
         AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot();
 
-        void handleProductShellStateEvent(String statusLabel);
+        void handleShellStateEvent(String statusLabel);
 
         void installSurfaceGestureHost(SurfaceView nextSurfaceView);
 
@@ -86,13 +86,13 @@ public final class SurfaceCallbacks implements SurfaceBridge.Callbacks {
     }
 
     @Override
-    public boolean shouldRunProductFrameLoop() {
-        return callbacks.shouldRunProductFrameLoop();
+    public boolean shouldRunFrameLoop() {
+        return callbacks.shouldRunFrameLoop();
     }
 
     @Override
-    public void refreshProductScrollOverlay() {
-        callbacks.refreshProductScrollOverlay();
+    public void refreshScrollOverlay() {
+        callbacks.refreshScrollOverlay();
     }
 
     @Override
@@ -141,8 +141,8 @@ public final class SurfaceCallbacks implements SurfaceBridge.Callbacks {
     }
 
     @Override
-    public void handleProductShellStateEvent(String statusLabel) {
-        callbacks.handleProductShellStateEvent(statusLabel);
+    public void handleShellStateEvent(String statusLabel) {
+        callbacks.handleShellStateEvent(statusLabel);
     }
 
     @Override

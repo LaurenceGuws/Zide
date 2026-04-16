@@ -10,7 +10,7 @@ public final class SessionCallbacks implements SessionBridge.Callbacks {
     private final Consumer<String> appendEvent;
     private final IntFunction<String> sessionStartStatusLabel;
     private final Consumer<UserlandReadinessState> applyReadinessState;
-    private final Runnable refreshProductShellState;
+    private final Runnable refreshShellState;
     private final Runnable refreshDebugStatusSurface;
     private final Consumer<String> updateStatus;
 
@@ -18,13 +18,13 @@ public final class SessionCallbacks implements SessionBridge.Callbacks {
             Consumer<String> appendEvent,
             IntFunction<String> sessionStartStatusLabel,
             Consumer<UserlandReadinessState> applyReadinessState,
-            Runnable refreshProductShellState,
+            Runnable refreshShellState,
             Runnable refreshDebugStatusSurface,
             Consumer<String> updateStatus) {
         this.appendEvent = appendEvent;
         this.sessionStartStatusLabel = sessionStartStatusLabel;
         this.applyReadinessState = applyReadinessState;
-        this.refreshProductShellState = refreshProductShellState;
+        this.refreshShellState = refreshShellState;
         this.refreshDebugStatusSurface = refreshDebugStatusSurface;
         this.updateStatus = updateStatus;
     }
@@ -45,8 +45,8 @@ public final class SessionCallbacks implements SessionBridge.Callbacks {
     }
 
     @Override
-    public void refreshProductShellState() {
-        refreshProductShellState.run();
+    public void refreshShellState() {
+        refreshShellState.run();
     }
 
     @Override

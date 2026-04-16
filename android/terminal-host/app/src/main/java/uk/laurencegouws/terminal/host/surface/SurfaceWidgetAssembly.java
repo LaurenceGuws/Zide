@@ -18,9 +18,9 @@ public final class SurfaceWidgetAssembly {
 
         boolean currentImeVisible();
 
-        boolean shouldRunProductFrameLoop();
+        boolean shouldRunFrameLoop();
 
-        void refreshProductScrollOverlay();
+        void refreshScrollOverlay();
 
         void appendEvent(String event);
 
@@ -35,7 +35,7 @@ public final class SurfaceWidgetAssembly {
 
         uk.laurencegouws.terminal.debug.AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot();
 
-        void handleProductShellStateEvent(String statusLabel);
+        void handleShellStateEvent(String statusLabel);
 
         void installSurfaceGestureHost(android.view.SurfaceView surfaceView);
 
@@ -45,7 +45,7 @@ public final class SurfaceWidgetAssembly {
 
         int productViewportHeightPx();
 
-        void reevaluateProductFrameLoop();
+        void reevaluateFrameLoop();
     }
 
     /** Immutable assembled surface/widget construction result. */
@@ -79,14 +79,14 @@ public final class SurfaceWidgetAssembly {
                         new SurfaceLifecycleCallbacks(
                                 host::debugViewEnabled,
                                 host::currentImeVisible,
-                                host::shouldRunProductFrameLoop,
-                                host::refreshProductScrollOverlay,
+                                host::shouldRunFrameLoop,
+                                host::refreshScrollOverlay,
                                 host::appendEvent,
                                 host::updateStatus,
                                 host::callNative,
                                 host::callNativeWithSurfaceState,
                                 host::currentSurfaceStateSnapshot,
-                                host::handleProductShellStateEvent,
+                                host::handleShellStateEvent,
                                 host::installSurfaceGestureHost,
                                 host::reinstallSurfaceCallback,
                                 () -> widgetRef[0])));
@@ -98,8 +98,8 @@ public final class SurfaceWidgetAssembly {
                 new SurfaceWidgetCallbacks(
                         host::productViewportHeightPx,
                         host::appendEvent,
-                        host::refreshProductScrollOverlay,
-                        host::reevaluateProductFrameLoop));
+                        host::refreshScrollOverlay,
+                        host::reevaluateFrameLoop));
         widgetRef[0] = surfaceWidgetController;
         return new Result(surfaceHostBridge, surfaceHostController, surfaceWidgetController);
     }

@@ -24,13 +24,13 @@ public final class GestureStateControllerFactory {
 
         int followLiveBottom();
 
-        int applyTerminalPinchZoom(float scaleFactor);
+        int applyPinchZoom(float scaleFactor);
 
-        int setTerminalPinchActive(boolean active);
+        int setPinchActive(boolean active);
 
-        void refreshProductScrollOverlay();
+        void refreshScrollOverlay();
 
-        void reevaluateProductFrameLoop();
+        void reevaluateFrameLoop();
     }
 
     private GestureStateControllerFactory() {
@@ -76,23 +76,23 @@ public final class GestureStateControllerFactory {
                     }
 
                     @Override
-                    public int applyTerminalPinchZoom(float scaleFactor) {
-                        return host.applyTerminalPinchZoom(scaleFactor);
+                    public int applyPinchZoom(float scaleFactor) {
+                        return host.applyPinchZoom(scaleFactor);
                     }
 
                     @Override
-                    public int setTerminalPinchActive(boolean active) {
-                        return host.setTerminalPinchActive(active);
+                    public int setPinchActive(boolean active) {
+                        return host.setPinchActive(active);
                     }
 
                     @Override
-                    public void refreshProductScrollOverlay() {
-                        host.refreshProductScrollOverlay();
+                    public void refreshScrollOverlay() {
+                        host.refreshScrollOverlay();
                     }
 
                     @Override
-                    public void reevaluateProductFrameLoop() {
-                        host.reevaluateProductFrameLoop();
+                    public void reevaluateFrameLoop() {
+                        host.reevaluateFrameLoop();
                     }
                 }));
         controller.setScrollbackFlingScroller(new OverScroller(context));

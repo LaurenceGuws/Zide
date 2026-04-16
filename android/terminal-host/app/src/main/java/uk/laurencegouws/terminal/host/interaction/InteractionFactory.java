@@ -27,8 +27,8 @@ public final class InteractionFactory {
             IntSupplier productViewportWidthPx,
             IntSupplier productViewportHeightPx,
             Runnable stopScrollbackFling,
-            Runnable refreshProductScrollOverlay,
-            Runnable reevaluateProductFrameLoop,
+            Runnable refreshScrollOverlay,
+            Runnable reevaluateFrameLoop,
             Consumer<String> appendEvent) {
         return SelectionControllerFactory.create(
                 context,
@@ -37,8 +37,8 @@ public final class InteractionFactory {
                         productViewportWidthPx,
                         productViewportHeightPx,
                         stopScrollbackFling,
-                        refreshProductScrollOverlay,
-                        reevaluateProductFrameLoop,
+                        refreshScrollOverlay,
+                        reevaluateFrameLoop,
                         appendEvent));
     }
 
@@ -46,14 +46,14 @@ public final class InteractionFactory {
             Context context,
             android.os.Handler handler,
             IntSupplier viewportHeightPx,
-            Runnable refreshProductScrollOverlay,
-            Runnable reevaluateProductFrameLoop) {
+            Runnable refreshScrollOverlay,
+            Runnable reevaluateFrameLoop) {
         return GestureStateControllerFactory.create(
                 context,
                 handler,
                 new GestureStateCallbacks(
                         viewportHeightPx,
-                        refreshProductScrollOverlay,
-                        reevaluateProductFrameLoop));
+                        refreshScrollOverlay,
+                        reevaluateFrameLoop));
     }
 }

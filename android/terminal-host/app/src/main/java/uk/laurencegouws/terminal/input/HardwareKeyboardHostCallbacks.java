@@ -15,7 +15,7 @@ public final class HardwareKeyboardHostCallbacks implements HardwareKeyboardCont
     private final BooleanSupplier currentImeVisible;
     private final Consumer<Boolean> setImeVisible;
     private final Runnable followShellLiveBottom;
-    private final Runnable refreshProductScrollOverlay;
+    private final Runnable refreshScrollOverlay;
     private final Consumer<String> updateStatus;
 
     public HardwareKeyboardHostCallbacks(
@@ -24,14 +24,14 @@ public final class HardwareKeyboardHostCallbacks implements HardwareKeyboardCont
             BooleanSupplier currentImeVisible,
             Consumer<Boolean> setImeVisible,
             Runnable followShellLiveBottom,
-            Runnable refreshProductScrollOverlay,
+            Runnable refreshScrollOverlay,
             Consumer<String> updateStatus) {
         this.shellInputView = shellInputView;
         this.inputMethodManager = inputMethodManager;
         this.currentImeVisible = currentImeVisible;
         this.setImeVisible = setImeVisible;
         this.followShellLiveBottom = followShellLiveBottom;
-        this.refreshProductScrollOverlay = refreshProductScrollOverlay;
+        this.refreshScrollOverlay = refreshScrollOverlay;
         this.updateStatus = updateStatus;
     }
 
@@ -66,8 +66,8 @@ public final class HardwareKeyboardHostCallbacks implements HardwareKeyboardCont
     }
 
     @Override
-    public void refreshProductScrollOverlay() {
-        refreshProductScrollOverlay.run();
+    public void refreshScrollOverlay() {
+        refreshScrollOverlay.run();
     }
 
     @Override

@@ -9,18 +9,18 @@ import uk.laurencegouws.terminal.NativeBridge;
 public final class SurfaceWidgetCallbacks implements SurfaceWidgetController.Host {
     private final IntSupplier productViewportHeightPx;
     private final Consumer<String> appendEvent;
-    private final Runnable refreshProductScrollOverlay;
-    private final Runnable reevaluateProductFrameLoop;
+    private final Runnable refreshScrollOverlay;
+    private final Runnable reevaluateFrameLoop;
 
     public SurfaceWidgetCallbacks(
             IntSupplier productViewportHeightPx,
             Consumer<String> appendEvent,
-            Runnable refreshProductScrollOverlay,
-            Runnable reevaluateProductFrameLoop) {
+            Runnable refreshScrollOverlay,
+            Runnable reevaluateFrameLoop) {
         this.productViewportHeightPx = productViewportHeightPx;
         this.appendEvent = appendEvent;
-        this.refreshProductScrollOverlay = refreshProductScrollOverlay;
-        this.reevaluateProductFrameLoop = reevaluateProductFrameLoop;
+        this.refreshScrollOverlay = refreshScrollOverlay;
+        this.reevaluateFrameLoop = reevaluateFrameLoop;
     }
 
     @Override
@@ -49,12 +49,12 @@ public final class SurfaceWidgetCallbacks implements SurfaceWidgetController.Hos
     }
 
     @Override
-    public void refreshProductScrollOverlay() {
-        refreshProductScrollOverlay.run();
+    public void refreshScrollOverlay() {
+        refreshScrollOverlay.run();
     }
 
     @Override
-    public void reevaluateProductFrameLoop() {
-        reevaluateProductFrameLoop.run();
+    public void reevaluateFrameLoop() {
+        reevaluateFrameLoop.run();
     }
 }

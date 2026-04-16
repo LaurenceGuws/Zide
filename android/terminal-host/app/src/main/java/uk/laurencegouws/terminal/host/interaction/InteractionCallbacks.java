@@ -15,8 +15,8 @@ public final class InteractionCallbacks implements InteractionAssembly.Host {
     private final IntSupplier productViewportWidthPx;
     private final IntSupplier productViewportHeightPx;
     private final Runnable stopScrollbackFling;
-    private final Runnable refreshProductScrollOverlay;
-    private final Runnable reevaluateProductFrameLoop;
+    private final Runnable refreshScrollOverlay;
+    private final Runnable reevaluateFrameLoop;
     private final Consumer<String> appendEvent;
 
     public InteractionCallbacks(
@@ -26,8 +26,8 @@ public final class InteractionCallbacks implements InteractionAssembly.Host {
             IntSupplier productViewportWidthPx,
             IntSupplier productViewportHeightPx,
             Runnable stopScrollbackFling,
-            Runnable refreshProductScrollOverlay,
-            Runnable reevaluateProductFrameLoop,
+            Runnable refreshScrollOverlay,
+            Runnable reevaluateFrameLoop,
             Consumer<String> appendEvent) {
         this.activity = activity;
         this.handler = handler;
@@ -35,8 +35,8 @@ public final class InteractionCallbacks implements InteractionAssembly.Host {
         this.productViewportWidthPx = productViewportWidthPx;
         this.productViewportHeightPx = productViewportHeightPx;
         this.stopScrollbackFling = stopScrollbackFling;
-        this.refreshProductScrollOverlay = refreshProductScrollOverlay;
-        this.reevaluateProductFrameLoop = reevaluateProductFrameLoop;
+        this.refreshScrollOverlay = refreshScrollOverlay;
+        this.reevaluateFrameLoop = reevaluateFrameLoop;
         this.appendEvent = appendEvent;
     }
 
@@ -71,13 +71,13 @@ public final class InteractionCallbacks implements InteractionAssembly.Host {
     }
 
     @Override
-    public void refreshProductScrollOverlay() {
-        refreshProductScrollOverlay.run();
+    public void refreshScrollOverlay() {
+        refreshScrollOverlay.run();
     }
 
     @Override
-    public void reevaluateProductFrameLoop() {
-        reevaluateProductFrameLoop.run();
+    public void reevaluateFrameLoop() {
+        reevaluateFrameLoop.run();
     }
 
     @Override

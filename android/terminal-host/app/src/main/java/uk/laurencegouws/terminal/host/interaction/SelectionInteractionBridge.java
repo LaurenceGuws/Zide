@@ -17,9 +17,9 @@ public final class SelectionInteractionBridge implements SelectionController.Hos
 
         void stopScrollbackFling();
 
-        void refreshProductScrollOverlay();
+        void refreshScrollOverlay();
 
-        void reevaluateProductFrameLoop();
+        void reevaluateFrameLoop();
 
         void appendEvent(String event);
     }
@@ -63,13 +63,13 @@ public final class SelectionInteractionBridge implements SelectionController.Hos
     }
 
     @Override
-    public void refreshProductScrollOverlay() {
-        callbacks.refreshProductScrollOverlay();
+    public void refreshScrollOverlay() {
+        callbacks.refreshScrollOverlay();
     }
 
     @Override
-    public void reevaluateProductFrameLoop() {
-        callbacks.reevaluateProductFrameLoop();
+    public void reevaluateFrameLoop() {
+        callbacks.reevaluateFrameLoop();
     }
 
     @Override

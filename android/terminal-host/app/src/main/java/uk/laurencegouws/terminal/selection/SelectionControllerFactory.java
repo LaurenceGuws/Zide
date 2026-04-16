@@ -16,9 +16,9 @@ public final class SelectionControllerFactory {
 
         void stopScrollbackFling();
 
-        void refreshProductScrollOverlay();
+        void refreshScrollOverlay();
 
-        void reevaluateProductFrameLoop();
+        void reevaluateFrameLoop();
 
         void appendEvent(String event);
 
@@ -102,13 +102,13 @@ public final class SelectionControllerFactory {
                             }
 
                             @Override
-                            public void refreshProductScrollOverlay() {
-                                host.refreshProductScrollOverlay();
+                            public void refreshScrollOverlay() {
+                                host.refreshScrollOverlay();
                             }
 
                             @Override
-                            public void reevaluateProductFrameLoop() {
-                                host.reevaluateProductFrameLoop();
+                            public void reevaluateFrameLoop() {
+                                host.reevaluateFrameLoop();
                             }
 
                             @Override

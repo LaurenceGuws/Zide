@@ -257,8 +257,8 @@ public final class ZideActivity extends Activity
                 () -> terminalViewportController.productViewportWidthPx(),
                 () -> terminalViewportController.productViewportHeightPx(),
                 this::stopScrollbackFlingIfReady,
-                this::refreshProductScrollOverlayIfReady,
-                this::reevaluateProductFrameLoopIfReady,
+                this::refreshScrollOverlayIfReady,
+                this::reevaluateFrameLoopIfReady,
                 this::appendEvent);
     }
 
@@ -280,7 +280,7 @@ public final class ZideActivity extends Activity
                 getSystemService(InputMethodManager.class),
                 () -> imeVisible,
                 this::setImeVisible,
-                this::refreshProductScrollOverlayIfReady,
+                this::refreshScrollOverlayIfReady,
                 this::updateStatus,
                 this::appendEvent);
     }
@@ -326,12 +326,12 @@ public final class ZideActivity extends Activity
                 GestureStateController,
                 () -> currentReadinessState,
                 () -> currentInstallState,
-                this::shouldRunProductFrameLoop,
-                this::refreshProductScrollOverlayIfReady,
+                this::shouldRunFrameLoop,
+                this::refreshScrollOverlayIfReady,
                 this::appendEvent,
                 this::updateStatus,
                 () -> terminalViewportController.productViewportHeightPx(),
-                this::reevaluateProductFrameLoopIfReady,
+                this::reevaluateFrameLoopIfReady,
                 () -> userlandWorkflowController.runPackageDoctor(),
                 this::sendDirectText,
                 this::notifyVisibleViewportIfReady,
@@ -339,7 +339,7 @@ public final class ZideActivity extends Activity
                 this::callNative,
                 this::callNativeWithSurfaceState,
                 () -> SurfaceStateSnapshotReader.read(),
-                this::handleProductShellStateEventIfReady);
+                this::handleShellStateEventIfReady);
     }
 
     private RuntimeAssemblyCallbacks createRuntimeAssemblyCallbacks() {
@@ -379,10 +379,10 @@ public final class ZideActivity extends Activity
                 this::appendEvent,
                 this::updateStatus,
                 this::setCurrentReadinessState,
-                this::refreshProductShellStateIfReady,
+                this::refreshShellStateIfReady,
                 this::refreshDebugStatusSurfaceIfReady,
-                this::shouldRunProductFrameLoop,
-                this::tickProductFrameAndRefreshScrollOverlay);
+                this::shouldRunFrameLoop,
+                this::tickFrameAndRefreshScrollOverlay);
     }
 
     private void assembleUserlandWorkflowControllers() {
@@ -424,7 +424,7 @@ public final class ZideActivity extends Activity
                 () -> nativeLoadError,
                 this::appendEvent,
                 this::updateStatus,
-                this::stopProductFrameLoopIfReady,
+                this::stopFrameLoopIfReady,
                 this::refreshUserlandSessionIfReady,
                 this::pauseSurfaceIfReady,
                 this::resumeSurfaceIfReady);
@@ -465,13 +465,13 @@ public final class ZideActivity extends Activity
         }
     }
 
-    private void refreshProductScrollOverlayIfReady() {
+    private void refreshScrollOverlayIfReady() {
         if (terminalRuntimeController != null) {
-            terminalRuntimeController.refreshProductScrollOverlay();
+            terminalRuntimeController.refreshScrollOverlay();
         }
     }
 
-    private void reevaluateProductFrameLoopIfReady() {
+    private void reevaluateFrameLoopIfReady() {
         if (productFrameLoopController != null) {
             productFrameLoopController.reevaluate();
         }
@@ -502,14 +502,14 @@ public final class ZideActivity extends Activity
                 && HardwareKeyboardController.handleDispatchKeyEvent(event);
     }
 
-    private boolean shouldRunProductFrameLoop() {
+    private boolean shouldRunFrameLoop() {
         return terminalRuntimeController != null
-                && terminalRuntimeController.shouldRunProductFrameLoop();
+                && terminalRuntimeController.shouldRunFrameLoop();
     }
 
-    private void handleProductShellStateEventIfReady(String statusLabel) {
+    private void handleShellStateEventIfReady(String statusLabel) {
         if (terminalRuntimeController != null) {
-            terminalRuntimeController.handleProductShellStateEvent(statusLabel);
+            terminalRuntimeController.handleShellStateEvent(statusLabel);
         }
     }
 
@@ -519,9 +519,9 @@ public final class ZideActivity extends Activity
         }
     }
 
-    private void refreshProductShellStateIfReady() {
+    private void refreshShellStateIfReady() {
         if (terminalRuntimeController != null) {
-            terminalRuntimeController.refreshProductShellState();
+            terminalRuntimeController.refreshShellState();
         }
     }
 
@@ -549,7 +549,7 @@ public final class ZideActivity extends Activity
         }
     }
 
-    private void stopProductFrameLoopIfReady() {
+    private void stopFrameLoopIfReady() {
         if (productFrameLoopController != null) {
             productFrameLoopController.stop();
         }
@@ -561,9 +561,9 @@ public final class ZideActivity extends Activity
         }
     }
 
-    private int tickProductFrameAndRefreshScrollOverlay() {
-        final int tick = nativeLoaded ? NativeBridge.nativeTickProductFrameBridge() : 0;
-        refreshProductScrollOverlayIfReady();
+    private int tickFrameAndRefreshScrollOverlay() {
+        final int tick = nativeLoaded ? NativeBridge.nativeTickFrameBridge() : 0;
+        refreshScrollOverlayIfReady();
         return tick;
     }
 

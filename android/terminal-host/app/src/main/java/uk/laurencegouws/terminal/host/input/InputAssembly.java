@@ -30,7 +30,7 @@ public final class InputAssembly {
 
         IntSupplier nativeFollowSessionLiveBottom();
 
-        Runnable refreshProductScrollOverlay();
+        Runnable refreshScrollOverlay();
 
         Consumer<String> updateStatus();
 
@@ -76,7 +76,7 @@ public final class InputAssembly {
                         host.currentImeVisible(),
                         host.setImeVisible(),
                         () -> host.nativeFollowSessionLiveBottom().getAsInt(),
-                        host.refreshProductScrollOverlay(),
+                        host.refreshScrollOverlay(),
                         host.updateStatus());
         final ImeFocusRecoveryController imeFocusRecoveryController =
                 InputFactory.createImeFocusRecoveryController(

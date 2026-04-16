@@ -24,14 +24,14 @@ public final class SurfaceLifecycleCallbacks implements SurfaceCallbacks.Callbac
 
     private final BooleanSupplier debugViewEnabled;
     private final BooleanSupplier currentImeVisible;
-    private final BooleanSupplier shouldRunProductFrameLoop;
-    private final Runnable refreshProductScrollOverlay;
+    private final BooleanSupplier shouldRunFrameLoop;
+    private final Runnable refreshScrollOverlay;
     private final Consumer<String> appendEvent;
     private final Consumer<String> updateStatus;
     private final NativeEventCallback callNative;
     private final NativeSurfaceEventCallback callNativeWithSurfaceState;
     private final Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot;
-    private final Consumer<String> handleProductShellStateEvent;
+    private final Consumer<String> handleShellStateEvent;
     private final Consumer<SurfaceView> installSurfaceGestureHost;
     private final ReinstallSurfaceCallback reinstallSurfaceCallback;
     private final Supplier<SurfaceHolder.Callback2> surfaceCallback;
@@ -44,27 +44,27 @@ public final class SurfaceLifecycleCallbacks implements SurfaceCallbacks.Callbac
     public SurfaceLifecycleCallbacks(
             BooleanSupplier debugViewEnabled,
             BooleanSupplier currentImeVisible,
-            BooleanSupplier shouldRunProductFrameLoop,
-            Runnable refreshProductScrollOverlay,
+            BooleanSupplier shouldRunFrameLoop,
+            Runnable refreshScrollOverlay,
             Consumer<String> appendEvent,
             Consumer<String> updateStatus,
             NativeEventCallback callNative,
             NativeSurfaceEventCallback callNativeWithSurfaceState,
             Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot,
-            Consumer<String> handleProductShellStateEvent,
+            Consumer<String> handleShellStateEvent,
             Consumer<SurfaceView> installSurfaceGestureHost,
             ReinstallSurfaceCallback reinstallSurfaceCallback,
             Supplier<SurfaceHolder.Callback2> surfaceCallback) {
         this.debugViewEnabled = debugViewEnabled;
         this.currentImeVisible = currentImeVisible;
-        this.shouldRunProductFrameLoop = shouldRunProductFrameLoop;
-        this.refreshProductScrollOverlay = refreshProductScrollOverlay;
+        this.shouldRunFrameLoop = shouldRunFrameLoop;
+        this.refreshScrollOverlay = refreshScrollOverlay;
         this.appendEvent = appendEvent;
         this.updateStatus = updateStatus;
         this.callNative = callNative;
         this.callNativeWithSurfaceState = callNativeWithSurfaceState;
         this.currentSurfaceStateSnapshot = currentSurfaceStateSnapshot;
-        this.handleProductShellStateEvent = handleProductShellStateEvent;
+        this.handleShellStateEvent = handleShellStateEvent;
         this.installSurfaceGestureHost = installSurfaceGestureHost;
         this.reinstallSurfaceCallback = reinstallSurfaceCallback;
         this.surfaceCallback = surfaceCallback;
@@ -82,13 +82,13 @@ public final class SurfaceLifecycleCallbacks implements SurfaceCallbacks.Callbac
     }
 
     @Override
-    public boolean shouldRunProductFrameLoop() {
-        return shouldRunProductFrameLoop.getAsBoolean();
+    public boolean shouldRunFrameLoop() {
+        return shouldRunFrameLoop.getAsBoolean();
     }
 
     @Override
-    public void refreshProductScrollOverlay() {
-        refreshProductScrollOverlay.run();
+    public void refreshScrollOverlay() {
+        refreshScrollOverlay.run();
     }
 
     @Override
@@ -137,8 +137,8 @@ public final class SurfaceLifecycleCallbacks implements SurfaceCallbacks.Callbac
     }
 
     @Override
-    public void handleProductShellStateEvent(String statusLabel) {
-        handleProductShellStateEvent.accept(statusLabel);
+    public void handleShellStateEvent(String statusLabel) {
+        handleShellStateEvent.accept(statusLabel);
     }
 
     @Override

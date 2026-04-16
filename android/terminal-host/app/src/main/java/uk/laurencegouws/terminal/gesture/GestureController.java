@@ -36,34 +36,34 @@ public final class GestureController {
          * <p>Hosts use this to cancel momentum effects (for example scrollback fling) so a new
          * gesture cannot race inertial scrolling.
          */
-        void onProductTouchDown();
+        void onTouchDown();
 
         /** Applies the resolved single-tap product-surface policy at the tap location. */
-        void onProductSingleTap(float x, float y);
+        void onSingleTap(float x, float y);
 
         /** Marks the beginning of a resolved single-pointer vertical scrollback gesture. */
         void onProductScrollBegin();
 
         /** Applies one resolved vertical scroll delta for Android-owned scrollback. */
-        void onProductScrollBy(float deltaY);
+        void onScrollBy(float deltaY);
 
         /** Closes the active single-pointer vertical scrollback gesture. */
-        void onProductScrollEnd();
+        void onScrollEnd();
 
         /** Starts Android-owned momentum scrolling after a resolved vertical drag release. */
-        void onProductScrollFling(float velocityY);
+        void onScrollFling(float velocityY);
 
         /** Starts Android-native text interaction from a resolved long press. */
-        void onProductLongPress(float x, float y);
+        void onLongPress(float x, float y);
 
         /** Extends the active Android-native text selection drag. */
-        void onProductSelectionDrag(float x, float y);
+        void onSelectionDrag(float x, float y);
 
         /** Finishes the active Android-native text selection drag. */
-        void onProductSelectionDragEnd(float x, float y);
+        void onSelectionDragEnd(float x, float y);
 
         /** Marks the beginning of an interactive pinch session. */
-        void onProductPinchBegin();
+        void onPinchBegin();
 
         /**
          * Applies one quantized pinch step.
@@ -71,10 +71,10 @@ public final class GestureController {
          * <p>{@code scaleFactor} is an accumulated multiplicative zoom step, not a raw detector
          * sample.
          */
-        void onProductPinchZoom(float scaleFactor);
+        void onPinchZoom(float scaleFactor);
 
         /** Flushes any remaining pinch state and closes the active pinch session. */
-        void onProductPinchEnd();
+        void onPinchEnd();
     }
 
     private final View target;
@@ -114,7 +114,7 @@ public final class GestureController {
             }
             longPressTriggered = true;
             moved = true;
-            host.onProductLongPress(downX, downY);
+            host.onLongPress(downX, downY);
         }
     };
 
@@ -134,11 +134,11 @@ public final class GestureController {
                         cancelLongPress();
                         if (scrollActive) {
                             scrollActive = false;
-                            host.onProductScrollEnd();
+                            host.onScrollEnd();
                         }
                         pinchActive = true;
                         accumulatedPinchScaleFactor = 1.0f;
-                        host.onProductPinchBegin();
+                        host.onPinchBegin();
                         return true;
                     }
 
@@ -158,7 +158,7 @@ public final class GestureController {
                         pinchActive = false;
                         dispatchQuantizedPinchSteps(true);
                         accumulatedPinchScaleFactor = 1.0f;
-                        host.onProductPinchEnd();
+                        host.onPinchEnd();
                     }
                 });
     }
@@ -174,7 +174,7 @@ public final class GestureController {
         scaleDetector.onTouchEvent(event);
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
-                host.onProductTouchDown();
+                host.onTouchDown();
                 downX = event.getX();
                 downY = event.getY();
                 lastY = downY;
@@ -197,12 +197,12 @@ public final class GestureController {
                     host.onProductScrollBegin();
                 }
                 if (longPressTriggered) {
-                    host.onProductSelectionDrag(event.getX(), event.getY());
+                    host.onSelectionDrag(event.getX(), event.getY());
                 } else if (scrollActive) {
                     final float stepY = event.getY() - lastY;
                     lastY = event.getY();
                     if (stepY != 0.0f) {
-                        host.onProductScrollBy(stepY);
+                        host.onScrollBy(stepY);
                     }
                 } else if (Math.abs(deltaX) > touchSlop || Math.abs(deltaY) > touchSlop) {
                     cancelLongPress();
@@ -212,12 +212,12 @@ public final class GestureController {
             case MotionEvent.ACTION_POINTER_DOWN:
                 cancelLongPress();
                 if (longPressTriggered) {
-                    host.onProductSelectionDragEnd(event.getX(), event.getY());
+                    host.onSelectionDragEnd(event.getX(), event.getY());
                     longPressTriggered = false;
                 }
                 if (scrollActive) {
                     scrollActive = false;
-                    host.onProductScrollEnd();
+                    host.onScrollEnd();
                 }
                 pinchActive = true;
                 moved = true;
@@ -228,14 +228,14 @@ public final class GestureController {
                     velocityTracker.computeCurrentVelocity(1000, maximumFlingVelocity);
                     final float velocityY = velocityTracker.getYVelocity(event.getPointerId(0));
                     scrollActive = false;
-                    host.onProductScrollEnd();
+                    host.onScrollEnd();
                     if (Math.abs(velocityY) >= minimumFlingVelocity) {
-                        host.onProductScrollFling(velocityY);
+                        host.onScrollFling(velocityY);
                     }
                 } else if (longPressTriggered) {
-                    host.onProductSelectionDragEnd(event.getX(), event.getY());
+                    host.onSelectionDragEnd(event.getX(), event.getY());
                 } else if (!pinchActive && !moved && event.getPointerCount() == 1) {
-                    host.onProductSingleTap(event.getX(), event.getY());
+                    host.onSingleTap(event.getX(), event.getY());
                 }
                 pinchActive = false;
                 moved = false;
@@ -245,11 +245,11 @@ public final class GestureController {
             case MotionEvent.ACTION_CANCEL:
                 cancelLongPress();
                 if (longPressTriggered) {
-                    host.onProductSelectionDragEnd(downX, downY);
+                    host.onSelectionDragEnd(downX, downY);
                 }
                 if (scrollActive) {
                     scrollActive = false;
-                    host.onProductScrollEnd();
+                    host.onScrollEnd();
                 }
                 pinchActive = false;
                 accumulatedPinchScaleFactor = 1.0f;
@@ -273,12 +273,12 @@ public final class GestureController {
         final int wholeSteps = (int) (accumulatedLog / PINCH_LOG_STEP);
         if (wholeSteps != 0) {
             final float quantizedFactor = (float) Math.exp(wholeSteps * PINCH_LOG_STEP);
-            host.onProductPinchZoom(quantizedFactor);
+            host.onPinchZoom(quantizedFactor);
             accumulatedPinchScaleFactor /= quantizedFactor;
         }
 
         if (flushRemainder && Math.abs(accumulatedPinchScaleFactor - 1.0f) >= MIN_PINCH_DISPATCH_DELTA) {
-            host.onProductPinchZoom(accumulatedPinchScaleFactor);
+            host.onPinchZoom(accumulatedPinchScaleFactor);
             accumulatedPinchScaleFactor = 1.0f;
         }
     }

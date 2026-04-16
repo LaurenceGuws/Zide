@@ -26,7 +26,7 @@ public final class InputFactory {
             BooleanSupplier currentImeVisible,
             Consumer<Boolean> setImeVisible,
             Runnable followShellLiveBottom,
-            Runnable refreshProductScrollOverlay,
+            Runnable refreshScrollOverlay,
             Consumer<String> updateStatus) {
         return new HardwareKeyboardController(
                 new HardwareKeyboardHostCallbacks(
@@ -35,7 +35,7 @@ public final class InputFactory {
                         currentImeVisible,
                         setImeVisible,
                         followShellLiveBottom,
-                        refreshProductScrollOverlay,
+                        refreshScrollOverlay,
                         updateStatus));
     }
 

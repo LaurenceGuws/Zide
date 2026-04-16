@@ -206,7 +206,7 @@ public final class ShellInputView extends View {
 
             @Override
             public boolean sendKeyEvent(KeyEvent event) {
-                if (handleTerminalKeyEvent(event)) {
+                if (handleKeyEvent(event)) {
                     return true;
                 }
                 return super.sendKeyEvent(event);
@@ -215,7 +215,7 @@ public final class ShellInputView extends View {
     }
 
     public boolean handleHardwareKeyEvent(KeyEvent event) {
-        return handleTerminalKeyEvent(event);
+        return handleKeyEvent(event);
     }
 
     public void toggleModifierLatch(ModifierLatch modifier) {
@@ -467,7 +467,7 @@ public final class ShellInputView extends View {
         host.onModifierLatchChanged(modifierLatchState());
     }
 
-    private boolean handleTerminalKeyEvent(KeyEvent event) {
+    private boolean handleKeyEvent(KeyEvent event) {
         if (event.getAction() != KeyEvent.ACTION_DOWN) {
             return false;
         }

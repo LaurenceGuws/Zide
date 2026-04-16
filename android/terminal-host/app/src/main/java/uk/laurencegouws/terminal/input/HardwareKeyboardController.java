@@ -20,7 +20,7 @@ public final class HardwareKeyboardController {
 
         void followShellLiveBottom();
 
-        void refreshProductScrollOverlay();
+        void refreshScrollOverlay();
 
         void updateStatus(String statusLabel);
     }
@@ -39,7 +39,7 @@ public final class HardwareKeyboardController {
         if (host.currentImeVisible()) {
             if (host.nativeLoaded()) {
                 host.followShellLiveBottom();
-                host.refreshProductScrollOverlay();
+                host.refreshScrollOverlay();
             }
             final InputMethodManager imm = host.inputMethodManager();
             if (imm != null) {

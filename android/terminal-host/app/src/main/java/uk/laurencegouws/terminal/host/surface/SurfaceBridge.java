@@ -23,9 +23,9 @@ public final class SurfaceBridge implements SurfaceController.Host {
 
         boolean currentImeVisible();
 
-        boolean shouldRunProductFrameLoop();
+        boolean shouldRunFrameLoop();
 
-        void refreshProductScrollOverlay();
+        void refreshScrollOverlay();
 
         void appendEvent(String event);
 
@@ -45,7 +45,7 @@ public final class SurfaceBridge implements SurfaceController.Host {
 
         AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot();
 
-        void handleProductShellStateEvent(String statusLabel);
+        void handleShellStateEvent(String statusLabel);
 
         void installSurfaceGestureHost(SurfaceView nextSurfaceView);
 
@@ -196,13 +196,13 @@ public final class SurfaceBridge implements SurfaceController.Host {
     }
 
     @Override
-    public boolean shouldRunProductFrameLoop() {
-        return callbacks.shouldRunProductFrameLoop();
+    public boolean shouldRunFrameLoop() {
+        return callbacks.shouldRunFrameLoop();
     }
 
     @Override
-    public void refreshProductScrollOverlay() {
-        callbacks.refreshProductScrollOverlay();
+    public void refreshScrollOverlay() {
+        callbacks.refreshScrollOverlay();
     }
 
     @Override
@@ -251,8 +251,8 @@ public final class SurfaceBridge implements SurfaceController.Host {
     }
 
     @Override
-    public void handleProductShellStateEvent(String statusLabel) {
-        callbacks.handleProductShellStateEvent(statusLabel);
+    public void handleShellStateEvent(String statusLabel) {
+        callbacks.handleShellStateEvent(statusLabel);
     }
 
     @Override

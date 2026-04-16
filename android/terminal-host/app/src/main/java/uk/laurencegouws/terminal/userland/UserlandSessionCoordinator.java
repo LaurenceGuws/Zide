@@ -17,7 +17,7 @@ public final class UserlandSessionCoordinator {
 
         void applyReadinessState(UserlandReadinessState readinessState);
 
-        void refreshProductShellState();
+        void refreshShellState();
 
         void refreshDebugStatusSurface();
 
@@ -58,7 +58,7 @@ public final class UserlandSessionCoordinator {
     public RefreshResult refreshAndApply(boolean logEvent) {
         final RefreshResult refreshResult = refresh(logEvent);
         host.applyReadinessState(refreshResult.readinessState);
-        host.refreshProductShellState();
+        host.refreshShellState();
         host.refreshDebugStatusSurface();
         return refreshResult;
     }

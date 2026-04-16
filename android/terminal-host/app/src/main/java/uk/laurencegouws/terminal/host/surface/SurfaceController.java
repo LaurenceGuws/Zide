@@ -59,9 +59,9 @@ public final class SurfaceController {
 
         boolean currentImeVisible();
 
-        boolean shouldRunProductFrameLoop();
+        boolean shouldRunFrameLoop();
 
-        void refreshProductScrollOverlay();
+        void refreshScrollOverlay();
 
         void appendEvent(String event);
 
@@ -81,7 +81,7 @@ public final class SurfaceController {
 
         AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot();
 
-        void handleProductShellStateEvent(String statusLabel);
+        void handleShellStateEvent(String statusLabel);
 
         void installSurfaceGestureHost(SurfaceView surfaceView);
 
@@ -140,11 +140,11 @@ public final class SurfaceController {
         if (startShellOnce && !host.shellStartScheduled()) {
             host.setShellStartScheduled(true);
             host.handler().postDelayed(() -> {
-                host.handleProductShellStateEvent("debug-session-started");
+                host.handleShellStateEvent("debug-session-started");
             }, 900);
         }
 
-        host.handleProductShellStateEvent("resumed");
+        host.handleShellStateEvent("resumed");
     }
 
     public void onPause() {
@@ -166,7 +166,7 @@ public final class SurfaceController {
                 seq,
                 host.currentSurfaceStateSnapshot());
         host.productSurfaceContainer().post(() -> notifyVisibleViewport("surface-changed"));
-        host.handleProductShellStateEvent("surface-changed");
+        host.handleShellStateEvent("surface-changed");
     }
 
     public void onSurfaceDestroyed(SurfaceHolder holder) {
@@ -255,7 +255,7 @@ public final class SurfaceController {
         host.appendEvent("viewport.size.changed reason=" + reason + " size=" + width + "x" + height + " imeVisible=" + viewportImeVisible);
         final long seq = host.nativeLoaded() ? host.nativeOnVisibleViewportBridge(width, height, viewportImeVisible) : -1;
         host.callNativeWithSurfaceState("native.viewportChanged", seq, host.currentSurfaceStateSnapshot());
-        host.refreshProductScrollOverlay();
+        host.refreshScrollOverlay();
         host.updateStatus("viewport.state.updated");
     }
 

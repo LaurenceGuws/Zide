@@ -40,12 +40,12 @@ fn onVisibleViewport(width: i32, height: i32, imeVisible: bool) i64 {
     return @intCast(android_runtime_bridge.onVisibleViewport(width, height, imeVisible));
 }
 
-fn applyTerminalPinchZoom(scaleFactor: f32) i32 {
-    return android_runtime_bridge.applyTerminalPinchZoom(scaleFactor);
+fn applyPinchZoom(scaleFactor: f32) i32 {
+    return android_runtime_bridge.applyPinchZoom(scaleFactor);
 }
 
-fn setTerminalPinchActive(active: bool) i32 {
-    return android_runtime_bridge.setTerminalPinchActive(active);
+fn setPinchActive(active: bool) i32 {
+    return android_runtime_bridge.setPinchActive(active);
 }
 
 fn currentWindowToken() i64 {
@@ -137,20 +137,20 @@ export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeOnVisibleViewportBri
     return onVisibleViewport(width, height, imeVisible);
 }
 
-export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeApplyTerminalPinchZoomBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeApplyPinchZoomBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
     scaleFactor: f32,
 ) callconv(.c) i32 {
-    return applyTerminalPinchZoom(scaleFactor);
+    return applyPinchZoom(scaleFactor);
 }
 
-export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeSetTerminalPinchActiveBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeSetPinchActiveBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
     active: bool,
 ) callconv(.c) i32 {
-    return setTerminalPinchActive(active);
+    return setPinchActive(active);
 }
 
 export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentWindowTokenBridge(

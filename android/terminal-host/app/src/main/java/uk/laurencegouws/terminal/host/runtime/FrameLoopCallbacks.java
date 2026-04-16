@@ -5,23 +5,23 @@ import java.util.function.IntSupplier;
 
 /** Functional callback adapter for {@link FrameLoopBridge}. */
 public final class FrameLoopCallbacks implements FrameLoopBridge.Callbacks {
-    private final BooleanSupplier shouldRunProductFrameLoop;
-    private final IntSupplier tickProductFrame;
+    private final BooleanSupplier shouldRunFrameLoop;
+    private final IntSupplier tickFrame;
 
     public FrameLoopCallbacks(
-            BooleanSupplier shouldRunProductFrameLoop,
-            IntSupplier tickProductFrame) {
-        this.shouldRunProductFrameLoop = shouldRunProductFrameLoop;
-        this.tickProductFrame = tickProductFrame;
+            BooleanSupplier shouldRunFrameLoop,
+            IntSupplier tickFrame) {
+        this.shouldRunFrameLoop = shouldRunFrameLoop;
+        this.tickFrame = tickFrame;
     }
 
     @Override
-    public boolean shouldRunProductFrameLoop() {
-        return shouldRunProductFrameLoop.getAsBoolean();
+    public boolean shouldRunFrameLoop() {
+        return shouldRunFrameLoop.getAsBoolean();
     }
 
     @Override
-    public int tickProductFrame() {
-        return tickProductFrame.getAsInt();
+    public int tickFrame() {
+        return tickFrame.getAsInt();
     }
 }

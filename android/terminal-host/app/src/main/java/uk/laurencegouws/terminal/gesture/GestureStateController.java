@@ -28,13 +28,13 @@ public final class GestureStateController {
 
         int followLiveBottom();
 
-        int applyTerminalPinchZoom(float scaleFactor);
+        int applyPinchZoom(float scaleFactor);
 
-        int setTerminalPinchActive(boolean active);
+        int setPinchActive(boolean active);
 
-        void refreshProductScrollOverlay();
+        void refreshScrollOverlay();
 
-        void reevaluateProductFrameLoop();
+        void reevaluateFrameLoop();
     }
 
     private static final float MIN_PENDING_PINCH_APPLY_DELTA = 0.008f;
@@ -82,7 +82,7 @@ public final class GestureStateController {
             final int currentY = scrollbackFlingScroller.getCurrY();
             final float deltaY = currentY - flingLastScrollY;
             flingLastScrollY = currentY;
-            applyProductScrollDelta(deltaY, host.viewportHeightPx());
+            applyScrollDelta(deltaY, host.viewportHeightPx());
             if (!scrollbackFlingScroller.isFinished()) {
                 scheduleScrollbackFlingFrame();
             }
@@ -104,18 +104,18 @@ public final class GestureStateController {
         activeGestureScrollRemainderRows = 0.0f;
     }
 
-    public void onProductScrollBy(float deltaY) {
-        applyProductScrollDelta(deltaY, host.viewportHeightPx());
+    public void onScrollBy(float deltaY) {
+        applyScrollDelta(deltaY, host.viewportHeightPx());
     }
 
-    public void onProductScrollEnd() {
+    public void onScrollEnd() {
         activeGestureVisibleRows = 0;
         activeGestureScrollbackCount = 0;
         activeGestureScrollbackOffset = 0;
         activeGestureScrollRemainderRows = 0.0f;
     }
 
-    public void onProductScrollFling(float velocityY, int viewportHeightPx) {
+    public void onScrollFling(float velocityY, int viewportHeightPx) {
         if (!host.nativeLoaded() || scrollbackFlingScroller == null || viewportHeightPx <= 0) {
             return;
         }
@@ -137,7 +137,7 @@ public final class GestureStateController {
         scheduleScrollbackFlingFrame();
     }
 
-    public void onProductPinchBegin() {
+    public void onPinchBegin() {
         if (!host.nativeLoaded()) {
             return;
         }
@@ -145,10 +145,10 @@ public final class GestureStateController {
         pinchZoomActive = true;
         pinchZoomRetryScheduled = false;
         pendingPinchScaleFactor = 1.0f;
-        host.setTerminalPinchActive(true);
+        host.setPinchActive(true);
     }
 
-    public void onProductPinchZoom(float scaleFactor) {
+    public void onPinchZoom(float scaleFactor) {
         if (!host.nativeLoaded() || scaleFactor <= 0.0f) {
             return;
         }
@@ -159,30 +159,30 @@ public final class GestureStateController {
         schedulePinchZoomFrame();
     }
 
-    public void onProductPinchEnd() {
+    public void onPinchEnd() {
         if (!host.nativeLoaded()) {
             return;
         }
         final float finalScaleFactor = pendingPinchScaleFactor;
         if (Math.abs(finalScaleFactor - 1.0f) >= MIN_PENDING_PINCH_APPLY_DELTA) {
-            host.applyTerminalPinchZoom(finalScaleFactor);
+            host.applyPinchZoom(finalScaleFactor);
             lastPinchApplyUptimeMs = SystemClock.uptimeMillis();
         }
         pinchZoomActive = false;
         pinchZoomRetryScheduled = false;
         handler.removeCallbacks(pinchZoomRetryRunnable);
         pendingPinchScaleFactor = 1.0f;
-        host.setTerminalPinchActive(false);
+        host.setPinchActive(false);
     }
 
     public void reevaluate() {
         if (host.nativeLoaded() && !pinchZoomActive && !flingScrollScheduled) {
-            host.reevaluateProductFrameLoop();
+            host.reevaluateFrameLoop();
         }
     }
 
-    public void refreshProductScrollOverlay() {
-        host.refreshProductScrollOverlay();
+    public void refreshScrollOverlay() {
+        host.refreshScrollOverlay();
     }
 
     public void stopScrollbackFling() {
@@ -212,7 +212,7 @@ public final class GestureStateController {
                 schedulePinchZoomRetry(delayMs);
                 return;
             }
-            host.applyTerminalPinchZoom(scaleFactor);
+            host.applyPinchZoom(scaleFactor);
             lastPinchApplyUptimeMs = now;
             if (pinchZoomActive && Math.abs(pendingPinchScaleFactor - 1.0f) >= MIN_PENDING_PINCH_APPLY_DELTA) {
                 schedulePinchZoomFrame();
@@ -228,7 +228,7 @@ public final class GestureStateController {
         handler.postDelayed(pinchZoomRetryRunnable, Math.max(1L, delayMs));
     }
 
-    private void applyProductScrollDelta(float deltaY, int viewportHeightPx) {
+    private void applyScrollDelta(float deltaY, int viewportHeightPx) {
         if (!host.nativeLoaded() || activeGestureVisibleRows <= 0 || viewportHeightPx <= 0) {
             return;
         }
@@ -253,8 +253,8 @@ public final class GestureStateController {
             host.setScrollbackOffset(nextOffset);
         }
         activeGestureScrollbackOffset = nextOffset;
-        host.refreshProductScrollOverlay();
-        host.reevaluateProductFrameLoop();
+        host.refreshScrollOverlay();
+        host.reevaluateFrameLoop();
     }
 
     private void scheduleScrollbackFlingFrame() {

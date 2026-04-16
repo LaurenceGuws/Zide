@@ -22,13 +22,13 @@ public final class GestureStateBridge implements GestureStateController.Host {
 
         int followLiveBottom();
 
-        int applyTerminalPinchZoom(float scaleFactor);
+        int applyPinchZoom(float scaleFactor);
 
-        int setTerminalPinchActive(boolean active);
+        int setPinchActive(boolean active);
 
-        void refreshProductScrollOverlay();
+        void refreshScrollOverlay();
 
-        void reevaluateProductFrameLoop();
+        void reevaluateFrameLoop();
     }
 
     private final Callbacks callbacks;
@@ -73,22 +73,22 @@ public final class GestureStateBridge implements GestureStateController.Host {
     }
 
     @Override
-    public int applyTerminalPinchZoom(float scaleFactor) {
-        return callbacks.applyTerminalPinchZoom(scaleFactor);
+    public int applyPinchZoom(float scaleFactor) {
+        return callbacks.applyPinchZoom(scaleFactor);
     }
 
     @Override
-    public int setTerminalPinchActive(boolean active) {
-        return callbacks.setTerminalPinchActive(active);
+    public int setPinchActive(boolean active) {
+        return callbacks.setPinchActive(active);
     }
 
     @Override
-    public void refreshProductScrollOverlay() {
-        callbacks.refreshProductScrollOverlay();
+    public void refreshScrollOverlay() {
+        callbacks.refreshScrollOverlay();
     }
 
     @Override
-    public void reevaluateProductFrameLoop() {
-        callbacks.reevaluateProductFrameLoop();
+    public void reevaluateFrameLoop() {
+        callbacks.reevaluateFrameLoop();
     }
 }

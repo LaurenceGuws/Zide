@@ -46,12 +46,12 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
     private final GestureStateController GestureStateController;
     private final Supplier<UserlandReadinessState> currentReadinessState;
     private final Supplier<UserlandInstallState> currentInstallState;
-    private final BooleanSupplier shouldRunProductFrameLoop;
-    private final Runnable refreshProductScrollOverlay;
+    private final BooleanSupplier shouldRunFrameLoop;
+    private final Runnable refreshScrollOverlay;
     private final Consumer<String> appendEvent;
     private final Consumer<String> updateStatus;
     private final IntSupplier productViewportHeightPx;
-    private final Runnable reevaluateProductFrameLoop;
+    private final Runnable reevaluateFrameLoop;
     private final Runnable runPackageDoctor;
     private final Consumer<String> sendDirectText;
     private final Consumer<String> notifyVisibleViewport;
@@ -59,7 +59,7 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
     private final uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.NativeEventCallback callNative;
     private final uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.NativeSurfaceEventCallback callNativeWithSurfaceState;
     private final Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot;
-    private final Consumer<String> handleProductShellStateEvent;
+    private final Consumer<String> handleShellStateEvent;
 
     public WidgetCallbacks(
             Activity activity,
@@ -87,12 +87,12 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
             GestureStateController GestureStateController,
             Supplier<UserlandReadinessState> currentReadinessState,
             Supplier<UserlandInstallState> currentInstallState,
-            BooleanSupplier shouldRunProductFrameLoop,
-            Runnable refreshProductScrollOverlay,
+            BooleanSupplier shouldRunFrameLoop,
+            Runnable refreshScrollOverlay,
             Consumer<String> appendEvent,
             Consumer<String> updateStatus,
             IntSupplier productViewportHeightPx,
-            Runnable reevaluateProductFrameLoop,
+            Runnable reevaluateFrameLoop,
             Runnable runPackageDoctor,
             Consumer<String> sendDirectText,
             Consumer<String> notifyVisibleViewport,
@@ -100,7 +100,7 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
             uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.NativeEventCallback callNative,
             uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks.NativeSurfaceEventCallback callNativeWithSurfaceState,
             Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot,
-            Consumer<String> handleProductShellStateEvent) {
+            Consumer<String> handleShellStateEvent) {
         this.activity = activity;
         this.handler = handler;
         this.debugViewEnabled = debugViewEnabled;
@@ -126,12 +126,12 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
         this.GestureStateController = GestureStateController;
         this.currentReadinessState = currentReadinessState;
         this.currentInstallState = currentInstallState;
-        this.shouldRunProductFrameLoop = shouldRunProductFrameLoop;
-        this.refreshProductScrollOverlay = refreshProductScrollOverlay;
+        this.shouldRunFrameLoop = shouldRunFrameLoop;
+        this.refreshScrollOverlay = refreshScrollOverlay;
         this.appendEvent = appendEvent;
         this.updateStatus = updateStatus;
         this.productViewportHeightPx = productViewportHeightPx;
-        this.reevaluateProductFrameLoop = reevaluateProductFrameLoop;
+        this.reevaluateFrameLoop = reevaluateFrameLoop;
         this.runPackageDoctor = runPackageDoctor;
         this.sendDirectText = sendDirectText;
         this.notifyVisibleViewport = notifyVisibleViewport;
@@ -139,7 +139,7 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
         this.callNative = callNative;
         this.callNativeWithSurfaceState = callNativeWithSurfaceState;
         this.currentSurfaceStateSnapshot = currentSurfaceStateSnapshot;
-        this.handleProductShellStateEvent = handleProductShellStateEvent;
+        this.handleShellStateEvent = handleShellStateEvent;
     }
 
     @Override
@@ -268,13 +268,13 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
     }
 
     @Override
-    public boolean shouldRunProductFrameLoop() {
-        return shouldRunProductFrameLoop.getAsBoolean();
+    public boolean shouldRunFrameLoop() {
+        return shouldRunFrameLoop.getAsBoolean();
     }
 
     @Override
-    public void refreshProductScrollOverlay() {
-        refreshProductScrollOverlay.run();
+    public void refreshScrollOverlay() {
+        refreshScrollOverlay.run();
     }
 
     @Override
@@ -303,8 +303,8 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
     }
 
     @Override
-    public void handleProductShellStateEvent(String statusLabel) {
-        handleProductShellStateEvent.accept(statusLabel);
+    public void handleShellStateEvent(String statusLabel) {
+        handleShellStateEvent.accept(statusLabel);
     }
 
     @Override
@@ -313,8 +313,8 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
     }
 
     @Override
-    public void reevaluateProductFrameLoop() {
-        reevaluateProductFrameLoop.run();
+    public void reevaluateFrameLoop() {
+        reevaluateFrameLoop.run();
     }
 
     @Override

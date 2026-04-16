@@ -78,7 +78,7 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
 - allow `Product` only when contrasting product UI/runtime behavior against
   debug/operator behavior in the same owner
 - prefer naming by behavior (`showSelectionActionMode`, `syncHandles`) over
-  ownership echo (`showTerminalSelectionActionMode`, `syncTerminalSelectionHandles`)
+  ownership echo (`showSelectionActionMode`, `syncTerminalSelectionHandles`)
 - do not run broad rename sweeps inside behavior/refactor waves; stage naming
   normalization as mechanical slices once queue authority explicitly opens it
 

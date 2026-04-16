@@ -19,10 +19,10 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
     private final Consumer<String> appendEvent;
     private final Consumer<String> updateStatus;
     private final Consumer<UserlandReadinessState> applyReadinessState;
-    private final Runnable refreshProductShellState;
+    private final Runnable refreshShellState;
     private final Runnable refreshDebugStatusSurface;
-    private final BooleanSupplier shouldRunProductFrameLoop;
-    private final IntSupplier tickProductFrame;
+    private final BooleanSupplier shouldRunFrameLoop;
+    private final IntSupplier tickFrame;
 
     public SessionAssemblyCallbacks(
             Context context,
@@ -31,20 +31,20 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
             Consumer<String> appendEvent,
             Consumer<String> updateStatus,
             Consumer<UserlandReadinessState> applyReadinessState,
-            Runnable refreshProductShellState,
+            Runnable refreshShellState,
             Runnable refreshDebugStatusSurface,
-            BooleanSupplier shouldRunProductFrameLoop,
-            IntSupplier tickProductFrame) {
+            BooleanSupplier shouldRunFrameLoop,
+            IntSupplier tickFrame) {
         this.context = context;
         this.userlandRelease = userlandRelease;
         this.handler = handler;
         this.appendEvent = appendEvent;
         this.updateStatus = updateStatus;
         this.applyReadinessState = applyReadinessState;
-        this.refreshProductShellState = refreshProductShellState;
+        this.refreshShellState = refreshShellState;
         this.refreshDebugStatusSurface = refreshDebugStatusSurface;
-        this.shouldRunProductFrameLoop = shouldRunProductFrameLoop;
-        this.tickProductFrame = tickProductFrame;
+        this.shouldRunFrameLoop = shouldRunFrameLoop;
+        this.tickFrame = tickFrame;
     }
 
     @Override
@@ -78,8 +78,8 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
     }
 
     @Override
-    public void refreshProductShellState() {
-        refreshProductShellState.run();
+    public void refreshShellState() {
+        refreshShellState.run();
     }
 
     @Override
@@ -88,13 +88,13 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
     }
 
     @Override
-    public boolean shouldRunProductFrameLoop() {
-        return shouldRunProductFrameLoop.getAsBoolean();
+    public boolean shouldRunFrameLoop() {
+        return shouldRunFrameLoop.getAsBoolean();
     }
 
     @Override
-    public int tickProductFrame() {
-        return tickProductFrame.getAsInt();
+    public int tickFrame() {
+        return tickFrame.getAsInt();
     }
 
     @Override

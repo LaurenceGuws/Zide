@@ -151,7 +151,7 @@ pub fn onVisibleViewport(width: i32, height: i32, imeVisible: bool) u64 {
     return nextSequence();
 }
 
-pub fn applyTerminalPinchZoom(scale_factor: f32) i32 {
+pub fn applyPinchZoom(scale_factor: f32) i32 {
     if (!(scale_factor > 0.0) or std.math.isNan(scale_factor)) return 0;
     const renderer = bridge_state.renderer orelse return 1;
     const now = app_shell.getTime();
@@ -166,7 +166,7 @@ pub fn applyTerminalPinchZoom(scale_factor: f32) i32 {
     return 0;
 }
 
-pub fn setTerminalPinchActive(active: bool) i32 {
+pub fn setPinchActive(active: bool) i32 {
     bridge_state.pinchZoomActive = active;
     if (!active) {
         if (bridge_state.renderer) |renderer| {

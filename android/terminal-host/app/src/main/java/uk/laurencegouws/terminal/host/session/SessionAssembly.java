@@ -29,13 +29,13 @@ public final class SessionAssembly {
 
         void applyReadinessState(UserlandReadinessState readinessState);
 
-        void refreshProductShellState();
+        void refreshShellState();
 
         void refreshDebugStatusSurface();
 
-        boolean shouldRunProductFrameLoop();
+        boolean shouldRunFrameLoop();
 
-        int tickProductFrame();
+        int tickFrame();
 
         int nativeRestartSession();
 
@@ -81,7 +81,7 @@ public final class SessionAssembly {
                         host::appendEvent,
                         NativeStatusLabels::sessionStartStatusLabel,
                         host::applyReadinessState,
-                        host::refreshProductShellState,
+                        host::refreshShellState,
                         host::refreshDebugStatusSurface,
                         host::updateStatus);
         final UserlandSessionCoordinator userlandSessionCoordinator =
@@ -89,8 +89,8 @@ public final class SessionAssembly {
         final FrameLoopController frameLoopController =
                 RuntimeFactory.createFrameLoopController(
                         host.handler(),
-                        host::shouldRunProductFrameLoop,
-                        host::tickProductFrame);
+                        host::shouldRunFrameLoop,
+                        host::tickFrame);
         return new Result(
                 shellSessionController,
                 userlandSessionHostBridge,

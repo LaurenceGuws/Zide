@@ -15,7 +15,7 @@ public final class SessionBridge implements UserlandSessionCoordinator.Host {
 
         void applyReadinessState(UserlandReadinessState readinessState);
 
-        void refreshProductShellState();
+        void refreshShellState();
 
         void refreshDebugStatusSurface();
 
@@ -44,8 +44,8 @@ public final class SessionBridge implements UserlandSessionCoordinator.Host {
     }
 
     @Override
-    public void refreshProductShellState() {
-        callbacks.refreshProductShellState();
+    public void refreshShellState() {
+        callbacks.refreshShellState();
     }
 
     @Override

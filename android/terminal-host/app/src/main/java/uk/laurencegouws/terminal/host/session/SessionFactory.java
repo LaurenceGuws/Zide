@@ -39,7 +39,7 @@ public final class SessionFactory {
             Consumer<String> appendEvent,
             IntFunction<String> sessionStartStatusLabel,
             Consumer<UserlandReadinessState> applyReadinessState,
-            Runnable refreshProductShellState,
+            Runnable refreshShellState,
             Runnable refreshDebugStatusSurface,
             Consumer<String> updateStatus) {
         return new SessionBridge(
@@ -47,7 +47,7 @@ public final class SessionFactory {
                         appendEvent,
                         sessionStartStatusLabel,
                         applyReadinessState,
-                        refreshProductShellState,
+                        refreshShellState,
                         refreshDebugStatusSurface,
                         updateStatus));
     }

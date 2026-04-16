@@ -17,55 +17,55 @@ public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssemb
     private final FrameLayout productSurfaceContainer;
     private final BooleanSupplier debugViewEnabled;
     private final BooleanSupplier currentImeVisible;
-    private final BooleanSupplier shouldRunProductFrameLoop;
-    private final Runnable refreshProductScrollOverlay;
+    private final BooleanSupplier shouldRunFrameLoop;
+    private final Runnable refreshScrollOverlay;
     private final Consumer<String> appendEvent;
     private final Consumer<String> updateStatus;
     private final SurfaceLifecycleCallbacks.NativeEventCallback callNative;
     private final SurfaceLifecycleCallbacks.NativeSurfaceEventCallback callNativeWithSurfaceState;
     private final Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot;
-    private final Consumer<String> handleProductShellStateEvent;
+    private final Consumer<String> handleShellStateEvent;
     private final Consumer<SurfaceView> installSurfaceGestureHost;
     private final SurfaceLifecycleCallbacks.ReinstallSurfaceCallback reinstallSurfaceCallback;
     private final Supplier<SurfaceHolder.Callback2> surfaceCallback;
     private final IntSupplier productViewportHeightPx;
-    private final Runnable reevaluateProductFrameLoop;
+    private final Runnable reevaluateFrameLoop;
 
     public SurfaceWidgetAssemblyCallbacks(
             android.os.Handler handler,
             FrameLayout productSurfaceContainer,
             BooleanSupplier debugViewEnabled,
             BooleanSupplier currentImeVisible,
-            BooleanSupplier shouldRunProductFrameLoop,
-            Runnable refreshProductScrollOverlay,
+            BooleanSupplier shouldRunFrameLoop,
+            Runnable refreshScrollOverlay,
             Consumer<String> appendEvent,
             Consumer<String> updateStatus,
             SurfaceLifecycleCallbacks.NativeEventCallback callNative,
             SurfaceLifecycleCallbacks.NativeSurfaceEventCallback callNativeWithSurfaceState,
             Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot,
-            Consumer<String> handleProductShellStateEvent,
+            Consumer<String> handleShellStateEvent,
             Consumer<SurfaceView> installSurfaceGestureHost,
             SurfaceLifecycleCallbacks.ReinstallSurfaceCallback reinstallSurfaceCallback,
             Supplier<SurfaceHolder.Callback2> surfaceCallback,
             IntSupplier productViewportHeightPx,
-            Runnable reevaluateProductFrameLoop) {
+            Runnable reevaluateFrameLoop) {
         this.handler = handler;
         this.productSurfaceContainer = productSurfaceContainer;
         this.debugViewEnabled = debugViewEnabled;
         this.currentImeVisible = currentImeVisible;
-        this.shouldRunProductFrameLoop = shouldRunProductFrameLoop;
-        this.refreshProductScrollOverlay = refreshProductScrollOverlay;
+        this.shouldRunFrameLoop = shouldRunFrameLoop;
+        this.refreshScrollOverlay = refreshScrollOverlay;
         this.appendEvent = appendEvent;
         this.updateStatus = updateStatus;
         this.callNative = callNative;
         this.callNativeWithSurfaceState = callNativeWithSurfaceState;
         this.currentSurfaceStateSnapshot = currentSurfaceStateSnapshot;
-        this.handleProductShellStateEvent = handleProductShellStateEvent;
+        this.handleShellStateEvent = handleShellStateEvent;
         this.installSurfaceGestureHost = installSurfaceGestureHost;
         this.reinstallSurfaceCallback = reinstallSurfaceCallback;
         this.surfaceCallback = surfaceCallback;
         this.productViewportHeightPx = productViewportHeightPx;
-        this.reevaluateProductFrameLoop = reevaluateProductFrameLoop;
+        this.reevaluateFrameLoop = reevaluateFrameLoop;
     }
 
     @Override
@@ -89,13 +89,13 @@ public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssemb
     }
 
     @Override
-    public boolean shouldRunProductFrameLoop() {
-        return shouldRunProductFrameLoop.getAsBoolean();
+    public boolean shouldRunFrameLoop() {
+        return shouldRunFrameLoop.getAsBoolean();
     }
 
     @Override
-    public void refreshProductScrollOverlay() {
-        refreshProductScrollOverlay.run();
+    public void refreshScrollOverlay() {
+        refreshScrollOverlay.run();
     }
 
     @Override
@@ -124,8 +124,8 @@ public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssemb
     }
 
     @Override
-    public void handleProductShellStateEvent(String statusLabel) {
-        handleProductShellStateEvent.accept(statusLabel);
+    public void handleShellStateEvent(String statusLabel) {
+        handleShellStateEvent.accept(statusLabel);
     }
 
     @Override
@@ -149,7 +149,7 @@ public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssemb
     }
 
     @Override
-    public void reevaluateProductFrameLoop() {
-        reevaluateProductFrameLoop.run();
+    public void reevaluateFrameLoop() {
+        reevaluateFrameLoop.run();
     }
 }

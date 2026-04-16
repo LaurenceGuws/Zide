@@ -64,7 +64,7 @@ public final class RuntimeController {
         this.host = host;
     }
 
-    public boolean shouldRunProductFrameLoop() {
+    public boolean shouldRunFrameLoop() {
         final SurfaceView activeSurfaceView = host.surfaceView();
         final UserlandInstallState installState = host.installState();
         final UserlandReadinessState readinessState = host.readinessState();
@@ -79,12 +79,12 @@ public final class RuntimeController {
                 && activeSurfaceView.getHolder().getSurface().isValid();
     }
 
-    public void refreshProductShellState() {
+    public void refreshShellState() {
         final ShellStatePresenter presenter = host.ShellStatePresenter();
         if (presenter != null) {
             presenter.refresh();
         }
-        refreshProductScrollOverlay();
+        refreshScrollOverlay();
         final FrameLoopController frameLoopController = host.frameLoopController();
         if (frameLoopController != null) {
             frameLoopController.reevaluate();
@@ -98,7 +98,7 @@ public final class RuntimeController {
         }
     }
 
-    public void handleProductShellStateEvent(String statusLabel) {
+    public void handleShellStateEvent(String statusLabel) {
         final UserlandSessionCoordinator sessionCoordinator = host.userlandSessionCoordinator();
         if (sessionCoordinator != null) {
             sessionCoordinator.refreshAndApply(false);
@@ -110,7 +110,7 @@ public final class RuntimeController {
         host.updateStatus(statusLabel);
     }
 
-    public void refreshProductScrollOverlay() {
+    public void refreshScrollOverlay() {
         final ScrollOverlayView scrollOverlay = host.terminalScrollOverlay();
         if (scrollOverlay == null) {
             return;
@@ -147,7 +147,7 @@ public final class RuntimeController {
 
     public void applyInstallState(UserlandInstallState installState, String statusLabel) {
         host.setInstallState(installState);
-        refreshProductShellState();
+        refreshShellState();
         host.updateStatus(statusLabel);
     }
 

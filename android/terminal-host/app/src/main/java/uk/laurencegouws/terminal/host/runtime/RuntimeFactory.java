@@ -61,12 +61,12 @@ public final class RuntimeFactory {
 
     public static FrameLoopController createFrameLoopController(
             android.os.Handler handler,
-            BooleanSupplier shouldRunProductFrameLoop,
-            IntSupplier tickProductFrame) {
+            BooleanSupplier shouldRunFrameLoop,
+            IntSupplier tickFrame) {
         return new FrameLoopController(
                 handler,
                 new FrameLoopBridge(new FrameLoopCallbacks(
-                        shouldRunProductFrameLoop,
-                        tickProductFrame)));
+                        shouldRunFrameLoop,
+                        tickFrame)));
     }
 }

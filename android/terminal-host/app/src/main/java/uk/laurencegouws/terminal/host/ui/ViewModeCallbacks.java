@@ -11,7 +11,7 @@ public final class ViewModeCallbacks implements ViewModeController.Host {
     private final Consumer<String> updateStatus;
     private final Runnable closeSidebar;
     private final Consumer<String> notifyVisibleViewport;
-    private final Runnable refreshProductScrollOverlay;
+    private final Runnable refreshScrollOverlay;
     private final Runnable refreshShellStateForDebugView;
 
     public ViewModeCallbacks(
@@ -21,7 +21,7 @@ public final class ViewModeCallbacks implements ViewModeController.Host {
             Consumer<String> updateStatus,
             Runnable closeSidebar,
             Consumer<String> notifyVisibleViewport,
-            Runnable refreshProductScrollOverlay,
+            Runnable refreshScrollOverlay,
             Runnable refreshShellStateForDebugView) {
         this.debugViewEnabled = debugViewEnabled;
         this.setDebugViewEnabled = setDebugViewEnabled;
@@ -29,7 +29,7 @@ public final class ViewModeCallbacks implements ViewModeController.Host {
         this.updateStatus = updateStatus;
         this.closeSidebar = closeSidebar;
         this.notifyVisibleViewport = notifyVisibleViewport;
-        this.refreshProductScrollOverlay = refreshProductScrollOverlay;
+        this.refreshScrollOverlay = refreshScrollOverlay;
         this.refreshShellStateForDebugView = refreshShellStateForDebugView;
     }
 
@@ -64,8 +64,8 @@ public final class ViewModeCallbacks implements ViewModeController.Host {
     }
 
     @Override
-    public void refreshProductScrollOverlay() {
-        refreshProductScrollOverlay.run();
+    public void refreshScrollOverlay() {
+        refreshScrollOverlay.run();
     }
 
     @Override
