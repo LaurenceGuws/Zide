@@ -350,10 +350,13 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void assembleSessionControllers() {
-        final SessionAssembly.Result result = SessionAssembly.assemble(
-                createSessionAssemblyCallbacks());
+        final SessionAssembly.Result result = assembleSessionControllerResult();
         userlandSessionCoordinator = result.userlandSessionCoordinator;
         productFrameLoopController = result.frameLoopController;
+    }
+
+    private SessionAssembly.Result assembleSessionControllerResult() {
+        return SessionAssembly.assemble(createSessionAssemblyCallbacks());
     }
 
     private SessionAssemblyCallbacks createSessionAssemblyCallbacks() {
