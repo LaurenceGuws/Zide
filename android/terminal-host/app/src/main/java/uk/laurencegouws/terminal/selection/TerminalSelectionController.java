@@ -765,7 +765,11 @@ public final class TerminalSelectionController {
     }
 
     private void attachNewFloatingTerminalSelectionActionMode() {
-        terminalSelectionActionMode = startFloatingTerminalSelectionActionMode();
+        registerTerminalSelectionFloatingActionMode(startFloatingTerminalSelectionActionMode());
+    }
+
+    private void registerTerminalSelectionFloatingActionMode(ActionMode mode) {
+        terminalSelectionActionMode = mode;
         invalidateTerminalSelectionActionMode(false);
     }
 
@@ -894,8 +898,12 @@ public final class TerminalSelectionController {
 
     private void applyTerminalSelectionActionModeDestroyEffects() {
         clearBridgeSelectionUnlessTerminalSelectionActionModeFinishSuppressed();
-        suppressSelectionClearOnActionModeDestroy = false;
+        clearTerminalSelectionActionModeDestroySuppress();
         requestFrameLoopReevaluation();
+    }
+
+    private void clearTerminalSelectionActionModeDestroySuppress() {
+        suppressSelectionClearOnActionModeDestroy = false;
     }
 
     private void clearBridgeSelectionUnlessTerminalSelectionActionModeFinishSuppressed() {
@@ -1151,14 +1159,22 @@ public final class TerminalSelectionController {
     private ClipboardManager resolveClipboardManagerForSelectionCopy() {
         final ClipboardManager clipboard = host.context().getSystemService(ClipboardManager.class);
         if (clipboard == null) {
-            host.appendEvent("product.selection.copy result=no-clipboard");
+            reportTerminalSelectionCopyNoClipboard();
         }
         return clipboard;
     }
 
+    private void reportTerminalSelectionCopyNoClipboard() {
+        host.appendEvent("product.selection.copy result=no-clipboard");
+    }
+
     private void applyClipboardPrimaryClipForTerminalSelection(ClipboardManager clipboard, String text) {
-        clipboard.setPrimaryClip(ClipData.newPlainText(TERMINAL_SELECTION_CLIP_LABEL, text));
+        clipboard.setPrimaryClip(newTerminalSelectionPlainTextClip(text));
         reportTerminalSelectionCopySucceeded(text.length());
+    }
+
+    private static ClipData newTerminalSelectionPlainTextClip(String text) {
+        return ClipData.newPlainText(TERMINAL_SELECTION_CLIP_LABEL, text);
     }
 
     private void reportTerminalSelectionCopySucceeded(int charCount) {
