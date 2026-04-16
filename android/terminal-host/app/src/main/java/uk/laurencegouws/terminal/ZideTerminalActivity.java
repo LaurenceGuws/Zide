@@ -396,15 +396,19 @@ public final class ZideTerminalActivity extends Activity
 
     private LifecycleCallbacks createLifecycleCallbacks() {
         return new LifecycleCallbacks(
-                LifecycleCallbacks.LifecycleHostCallbacks.of(
-                        () -> nativeLoadError,
-                        this::appendEvent,
-                        this::updateStatus,
-                        this::stopProductFrameLoopIfReady,
-                        this::refreshUserlandSessionIfReady,
-                        this::pauseSurfaceIfReady,
-                        this::resumeSurfaceIfReady),
+                createLifecycleHostCallbacks(),
                 this::callNative);
+    }
+
+    private LifecycleCallbacks.LifecycleHostCallbacks createLifecycleHostCallbacks() {
+        return LifecycleCallbacks.LifecycleHostCallbacks.of(
+                () -> nativeLoadError,
+                this::appendEvent,
+                this::updateStatus,
+                this::stopProductFrameLoopIfReady,
+                this::refreshUserlandSessionIfReady,
+                this::pauseSurfaceIfReady,
+                this::resumeSurfaceIfReady);
     }
 
     private void bindAndStartUiControllers() {
