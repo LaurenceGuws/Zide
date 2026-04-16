@@ -115,6 +115,8 @@ public final class TerminalSelectionController {
 
     private static final int TERMINAL_SELECTION_FLOATING_ACTION_MODE_TYPE = ActionMode.TYPE_FLOATING;
 
+    private static final int TERMINAL_SELECTION_COPY_MENU_ITEM_ID = android.R.id.copy;
+
     private final Host host;
     private final Bridge bridge;
     private View selectionStartHandle;
@@ -819,7 +821,7 @@ public final class TerminalSelectionController {
 
     private ActionMode requestTerminalSelectionFloatingActionModeOnContainer(FrameLayout container) {
         return container.startActionMode(
-                createTerminalSelectionActionModeCallback(), TERMINAL_SELECTION_FLOATING_ACTION_MODE_TYPE);
+                buildTerminalSelectionFloatingActionModeCallbacks(), TERMINAL_SELECTION_FLOATING_ACTION_MODE_TYPE);
     }
 
     private void invalidateTerminalSelectionActionMode(boolean invalidateView) {
@@ -836,7 +838,7 @@ public final class TerminalSelectionController {
         }
     }
 
-    private ActionMode.Callback2 createTerminalSelectionActionModeCallback() {
+    private ActionMode.Callback2 buildTerminalSelectionFloatingActionModeCallbacks() {
         return new ActionMode.Callback2() {
             @Override
             public boolean onCreateActionMode(ActionMode mode, Menu menu) {
@@ -886,12 +888,12 @@ public final class TerminalSelectionController {
     }
 
     private void installTerminalSelectionCopyMenuItem(Menu menu) {
-        menu.add(Menu.NONE, android.R.id.copy, Menu.NONE, android.R.string.copy)
+        menu.add(Menu.NONE, TERMINAL_SELECTION_COPY_MENU_ITEM_ID, Menu.NONE, android.R.string.copy)
                 .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);
     }
 
     private static boolean isTerminalSelectionCopyMenuItem(MenuItem item) {
-        return item.getItemId() == android.R.id.copy;
+        return item.getItemId() == TERMINAL_SELECTION_COPY_MENU_ITEM_ID;
     }
 
     private boolean completeTerminalSelectionCopyAction(ActionMode mode) {
@@ -917,12 +919,12 @@ public final class TerminalSelectionController {
 
     private void applyTerminalSelectionActionModeDestroyEffects() {
         clearBridgeSelectionUnlessTerminalSelectionActionModeFinishSuppressed();
-        clearTerminalSelectionActionModeDestroySuppress();
+        setSuppressSelectionClearOnTerminalSelectionActionModeDestroy(false);
         requestFrameLoopReevaluation();
     }
 
-    private void clearTerminalSelectionActionModeDestroySuppress() {
-        suppressSelectionClearOnActionModeDestroy = false;
+    private void setSuppressSelectionClearOnTerminalSelectionActionModeDestroy(boolean suppress) {
+        suppressSelectionClearOnActionModeDestroy = suppress;
     }
 
     private void clearBridgeSelectionUnlessTerminalSelectionActionModeFinishSuppressed() {
@@ -961,7 +963,7 @@ public final class TerminalSelectionController {
 
     private void detachTerminalSelectionActionModeForExplicitFinish(ActionMode mode) {
         terminalSelectionActionMode = null;
-        suppressSelectionClearOnActionModeDestroy = true;
+        setSuppressSelectionClearOnTerminalSelectionActionModeDestroy(true);
         mode.finish();
     }
 
@@ -1164,6 +1166,10 @@ public final class TerminalSelectionController {
     }
 
     private void copyPlainTextSelectionToClipboard(String text) {
+        applyTerminalSelectionPlainTextToSystemClipboard(text);
+    }
+
+    private void applyTerminalSelectionPlainTextToSystemClipboard(String text) {
         final ClipboardManager clipboard = resolveClipboardManagerForSelectionCopy();
         if (clipboard == null) {
             return;
