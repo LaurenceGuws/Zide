@@ -391,16 +391,20 @@ public final class ZideTerminalActivity extends Activity
 
     private void assembleActivityLifecycleController() {
         terminalActivityLifecycleController = new LifecycleController(
-                new LifecycleCallbacks(
-                        LifecycleCallbacks.LifecycleHostCallbacks.of(
-                                () -> nativeLoadError,
-                                this::appendEvent,
-                                this::updateStatus,
-                                this::stopProductFrameLoopIfReady,
-                                this::refreshUserlandSessionIfReady,
-                                this::pauseSurfaceIfReady,
-                                this::resumeSurfaceIfReady),
-                        this::callNative));
+                createLifecycleCallbacks());
+    }
+
+    private LifecycleCallbacks createLifecycleCallbacks() {
+        return new LifecycleCallbacks(
+                LifecycleCallbacks.LifecycleHostCallbacks.of(
+                        () -> nativeLoadError,
+                        this::appendEvent,
+                        this::updateStatus,
+                        this::stopProductFrameLoopIfReady,
+                        this::refreshUserlandSessionIfReady,
+                        this::pauseSurfaceIfReady,
+                        this::resumeSurfaceIfReady),
+                this::callNative);
     }
 
     private void bindAndStartUiControllers() {
