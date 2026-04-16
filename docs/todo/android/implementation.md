@@ -262,6 +262,10 @@ the existing per-commit validation rules.
        invalidation splits guard vs content/view work; bridge bounds fill the
        viewport rect via a dedicated helper; clipboard service resolve logs
        missing manager once
+     - mini-wave: action-mode sync uses if/else for idle vs showing; toolbar
+       content rect fills from bridge or view bounds in one helper; destroy path
+       clears bridge selection in a suppress-aware helper; clip label is a single
+       constant
    - Exit criteria:
      - compile pass per commit; deploy + `AndroidRuntime:E` smoke at seam
        boundary
