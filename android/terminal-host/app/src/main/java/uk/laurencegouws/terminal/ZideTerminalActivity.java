@@ -356,21 +356,25 @@ public final class ZideTerminalActivity extends Activity
 
     private void assembleUserlandWorkflowControllers() {
         final WorkflowAssembly.Result result = WorkflowAssembly.assemble(
-                new WorkflowAssemblyCallbacks(
-                        this,
-                        handler,
-                        () -> userlandRelease,
-                        release -> userlandRelease = release,
-                        this::appendEvent,
-                        this::updateStatus,
-                        packageStatusText,
-                        installState -> currentInstallState = installState,
-                        readinessState -> currentReadinessState = readinessState,
-                        this::applyInstallStateIfReady,
-                        this::restartSessionIfReady,
-                        this::showDebugViewIfReady));
+                createWorkflowAssemblyCallbacks());
         terminalRuntimeAssetsController = result.runtimeAssetsController;
         userlandWorkflowController = result.userlandWorkflowController;
+    }
+
+    private WorkflowAssemblyCallbacks createWorkflowAssemblyCallbacks() {
+        return new WorkflowAssemblyCallbacks(
+                this,
+                handler,
+                () -> userlandRelease,
+                release -> userlandRelease = release,
+                this::appendEvent,
+                this::updateStatus,
+                packageStatusText,
+                installState -> currentInstallState = installState,
+                readinessState -> currentReadinessState = readinessState,
+                this::applyInstallStateIfReady,
+                this::restartSessionIfReady,
+                this::showDebugViewIfReady);
     }
 
     private void assembleActivityLifecycleController() {
