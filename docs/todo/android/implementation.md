@@ -233,12 +233,10 @@ the existing per-commit validation rules.
      - action-mode lifecycle + clipboard flow simplification only
      - preserve behavior and monolithic ownership
    - Outcome:
-     - plain-text clipboard copy split from shell selection copy
-       (`copyPlainTextSelectionToClipboard`)
+     - plain-text clipboard apply is split from shell selection decode
      - unified action-mode invalidation (`invalidateTerminalSelectionActionMode`)
-     - floating action-mode start + copy action completion extracted
-       (`startFloatingTerminalSelectionActionMode`,
-       `completeTerminalSelectionCopyAction`)
+     - floating action-mode start and toolbar copy execution are dedicated call
+       paths (not inlined into sync or menu glue)
      - copy menu install + fallback toolbar rect centralized
        (`installTerminalSelectionCopyMenuItem`,
        `setSelectionActionModeFallbackContentRect`)
@@ -297,6 +295,9 @@ the existing per-commit validation rules.
        bridge-or-view helper directly; destroy-time bridge clear names the
        suppress predicate; shell copy reads selection bytes through one internal
        accessor
+     - mini-wave: floating toolbar copy path drops redundant forwarders (plain
+       text apply is reached directly after decode; copy menu click finishes the
+       mode in one place; prepare stays a constant false at the callback)
    - Exit criteria:
      - compile pass per commit; deploy + `AndroidRuntime:E` smoke at seam
        boundary

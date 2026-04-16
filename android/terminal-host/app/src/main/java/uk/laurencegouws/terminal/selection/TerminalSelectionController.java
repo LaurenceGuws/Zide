@@ -853,7 +853,7 @@ public final class TerminalSelectionController {
 
             @Override
             public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
-                return onTerminalSelectionFloatingActionModePrepare();
+                return false;
             }
 
             @Override
@@ -873,15 +873,12 @@ public final class TerminalSelectionController {
         };
     }
 
-    private boolean onTerminalSelectionFloatingActionModePrepare() {
-        return false;
-    }
-
     private boolean handleTerminalSelectionFloatingToolbarMenuItem(ActionMode mode, MenuItem item) {
         if (!isTerminalSelectionCopyMenuItem(item)) {
             return false;
         }
-        return completeTerminalSelectionCopyAction(mode);
+        executeTerminalSelectionToolbarCopy(mode);
+        return true;
     }
 
     private boolean onTerminalSelectionFloatingActionModeCreated(Menu menu) {
@@ -902,17 +899,8 @@ public final class TerminalSelectionController {
         return item.getItemId() == TERMINAL_SELECTION_COPY_MENU_ITEM_ID;
     }
 
-    private boolean completeTerminalSelectionCopyAction(ActionMode mode) {
-        executeTerminalSelectionToolbarCopy(mode);
-        return true;
-    }
-
     private void executeTerminalSelectionToolbarCopy(ActionMode mode) {
         copyCurrentShellSelectionToClipboard();
-        finishTerminalSelectionFloatingToolbarAfterCopy(mode);
-    }
-
-    private void finishTerminalSelectionFloatingToolbarAfterCopy(ActionMode mode) {
         mode.finish();
     }
 
@@ -1164,7 +1152,7 @@ public final class TerminalSelectionController {
             reportTerminalSelectionCopyNoBytes();
             return;
         }
-        copyPlainTextSelectionToClipboard(decodeTerminalSelectionUtf8(bytes));
+        applyTerminalSelectionPlainTextToSystemClipboard(decodeTerminalSelectionUtf8(bytes));
     }
 
     private byte[] readCurrentShellSelectionTextBytesOrNull() {
@@ -1177,10 +1165,6 @@ public final class TerminalSelectionController {
 
     private static String decodeTerminalSelectionUtf8(byte[] bytes) {
         return new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
-    }
-
-    private void copyPlainTextSelectionToClipboard(String text) {
-        applyTerminalSelectionPlainTextToSystemClipboard(text);
     }
 
     private void applyTerminalSelectionPlainTextToSystemClipboard(String text) {
