@@ -246,18 +246,22 @@ public final class ZideTerminalActivity extends Activity
 
     private void installInputControllers() {
         final InputAssembly.Result result = InputAssembly.assemble(
-                new InputCallbacks(
-                        this,
-                        rootView,
-                        getSystemService(InputMethodManager.class),
-                        () -> imeVisible,
-                        visible -> imeVisible = visible,
-                        this::refreshProductScrollOverlayIfReady,
-                        this::updateStatus,
-                        this::appendEvent));
+                createInputCallbacks());
         shellInputView = result.shellInputView;
         terminalHardwareKeyboardController = result.hardwareKeyboardController;
         terminalImeFocusRecoveryController = result.imeFocusRecoveryController;
+    }
+
+    private InputCallbacks createInputCallbacks() {
+        return new InputCallbacks(
+                this,
+                rootView,
+                getSystemService(InputMethodManager.class),
+                () -> imeVisible,
+                visible -> imeVisible = visible,
+                this::refreshProductScrollOverlayIfReady,
+                this::updateStatus,
+                this::appendEvent);
     }
 
     private void assembleWidgetHostControllers() {
