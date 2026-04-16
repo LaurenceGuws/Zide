@@ -226,6 +226,11 @@ Milestone gate contract (mandatory when manager/architect lane is active):
     `ZideTerminalActivity` reduced by extracting inline
     `new LifecycleCallbacks(...)` wiring into
     `createLifecycleCallbacks()` (behavior preserved).
+  - Completed: callback-surface noise in
+    `ZideTerminalActivity` session/workflow callback factories reduced by
+    replacing inline readiness/install state assignment lambdas with named
+    setters (`setCurrentReadinessState`, `setCurrentInstallState`) while
+    preserving behavior.
     - Next: resume primary Java cleanup under Active TODO item 1 by executing a
       behavior-preserving `ZideTerminalActivity` `create*Callbacks()` net
       simplification wave (remove relay-only callback wiring and reduce

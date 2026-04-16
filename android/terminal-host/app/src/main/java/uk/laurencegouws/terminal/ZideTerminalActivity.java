@@ -359,7 +359,7 @@ public final class ZideTerminalActivity extends Activity
                 handler,
                 this::appendEvent,
                 this::updateStatus,
-                state -> currentReadinessState = state,
+                this::setCurrentReadinessState,
                 this::refreshProductShellStateIfReady,
                 this::refreshDebugStatusSurfaceIfReady,
                 this::shouldRunProductFrameLoop,
@@ -382,8 +382,8 @@ public final class ZideTerminalActivity extends Activity
                 this::appendEvent,
                 this::updateStatus,
                 packageStatusText,
-                installState -> currentInstallState = installState,
-                readinessState -> currentReadinessState = readinessState,
+                this::setCurrentInstallState,
+                this::setCurrentReadinessState,
                 this::applyInstallStateIfReady,
                 this::restartSessionIfReady,
                 this::showDebugViewIfReady);
@@ -453,6 +453,14 @@ public final class ZideTerminalActivity extends Activity
 
     private void loadInitialReadinessState() {
         currentReadinessState = userlandSessionCoordinator.loadReadinessState();
+    }
+
+    private void setCurrentInstallState(UserlandInstallState installState) {
+        currentInstallState = installState;
+    }
+
+    private void setCurrentReadinessState(UserlandReadinessState readinessState) {
+        currentReadinessState = readinessState;
     }
 
     private boolean handleHardwareDispatchKeyEventIfReady(KeyEvent event) {
