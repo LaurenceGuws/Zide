@@ -109,6 +109,12 @@ public final class TerminalSelectionController {
 
     private static final String TERMINAL_SELECTION_CLIP_LABEL = "terminal-selection";
 
+    private static final String PRODUCT_SELECTION_COPY_RESULT_PREFIX = "product.selection.copy result=";
+
+    private static final String PRODUCT_SELECTION_COPY_OK_EVENT_PREFIX = "product.selection.copy result=ok chars=";
+
+    private static final int TERMINAL_SELECTION_FLOATING_ACTION_MODE_TYPE = ActionMode.TYPE_FLOATING;
+
     private final Host host;
     private final Bridge bridge;
     private View selectionStartHandle;
@@ -768,13 +774,17 @@ public final class TerminalSelectionController {
         invalidateTerminalSelectionActionMode(true);
     }
 
+    private void invalidateTerminalSelectionFloatingToolbarGeometryOnly() {
+        invalidateTerminalSelectionActionMode(false);
+    }
+
     private void attachNewFloatingTerminalSelectionActionMode() {
         registerTerminalSelectionFloatingActionMode(startFloatingTerminalSelectionActionMode());
     }
 
     private void registerTerminalSelectionFloatingActionMode(ActionMode mode) {
         terminalSelectionActionMode = mode;
-        invalidateTerminalSelectionActionMode(false);
+        invalidateTerminalSelectionFloatingToolbarGeometryOnly();
     }
 
     private boolean ensureTerminalSelectionActionModePresentationOrFinishIfUnavailable() {
@@ -808,7 +818,8 @@ public final class TerminalSelectionController {
     }
 
     private ActionMode requestTerminalSelectionFloatingActionModeOnContainer(FrameLayout container) {
-        return container.startActionMode(createTerminalSelectionActionModeCallback(), ActionMode.TYPE_FLOATING);
+        return container.startActionMode(
+                createTerminalSelectionActionModeCallback(), TERMINAL_SELECTION_FLOATING_ACTION_MODE_TYPE);
     }
 
     private void invalidateTerminalSelectionActionMode(boolean invalidateView) {
@@ -1000,7 +1011,7 @@ public final class TerminalSelectionController {
         if (!hasTerminalSelectionActionMode()) {
             maybeShowTerminalSelectionActionMode();
         } else {
-            invalidateTerminalSelectionActionMode(false);
+            invalidateTerminalSelectionFloatingToolbarGeometryOnly();
         }
     }
 
@@ -1173,7 +1184,7 @@ public final class TerminalSelectionController {
     }
 
     private void reportTerminalSelectionCopyBlocked(String reason) {
-        host.appendEvent("product.selection.copy result=" + reason);
+        host.appendEvent(PRODUCT_SELECTION_COPY_RESULT_PREFIX + reason);
     }
 
     private void applyClipboardPrimaryClipForTerminalSelection(ClipboardManager clipboard, String text) {
@@ -1186,6 +1197,6 @@ public final class TerminalSelectionController {
     }
 
     private void reportTerminalSelectionCopySucceeded(int charCount) {
-        host.appendEvent("product.selection.copy result=ok chars=" + charCount);
+        host.appendEvent(PRODUCT_SELECTION_COPY_OK_EVENT_PREFIX + charCount);
     }
 }
