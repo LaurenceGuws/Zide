@@ -107,6 +107,8 @@ public final class TerminalSelectionController {
     private static final float SELECTION_HANDLE_SIZE_DP = 18.0f;
     private static final float SELECTION_HANDLE_Y_OFFSET_DP = 6.0f;
 
+    private static final String TERMINAL_SELECTION_CLIP_LABEL = "terminal-selection";
+
     private final Host host;
     private final Bridge bridge;
     private View selectionStartHandle;
@@ -873,14 +875,22 @@ public final class TerminalSelectionController {
     }
 
     private void applyTerminalSelectionActionModeDestroyEffects() {
-        if (!suppressSelectionClearOnActionModeDestroy) {
-            bridge.clearSelection();
-        }
+        clearBridgeSelectionUnlessTerminalSelectionActionModeFinishSuppressed();
         suppressSelectionClearOnActionModeDestroy = false;
         requestFrameLoopReevaluation();
     }
 
+    private void clearBridgeSelectionUnlessTerminalSelectionActionModeFinishSuppressed() {
+        if (!suppressSelectionClearOnActionModeDestroy) {
+            bridge.clearSelection();
+        }
+    }
+
     private void populateSelectionActionModeContentRect(View view, Rect outRect) {
+        fillSelectionActionModeContentRectFromBridgeOrUseViewBounds(view, outRect);
+    }
+
+    private void fillSelectionActionModeContentRectFromBridgeOrUseViewBounds(View view, Rect outRect) {
         if (populateTerminalSelectionContentRect(outRect)) {
             return;
         }
@@ -947,9 +957,9 @@ public final class TerminalSelectionController {
         }
         if (!hasTerminalSelectionActionMode()) {
             maybeShowTerminalSelectionActionMode();
-            return;
+        } else {
+            invalidateTerminalSelectionActionMode(false);
         }
-        invalidateTerminalSelectionActionMode(false);
     }
 
     private boolean shouldKeepTerminalSelectionActionModeVisible() {
@@ -1117,7 +1127,7 @@ public final class TerminalSelectionController {
     }
 
     private void applyClipboardPrimaryClipForTerminalSelection(ClipboardManager clipboard, String text) {
-        clipboard.setPrimaryClip(ClipData.newPlainText("terminal-selection", text));
+        clipboard.setPrimaryClip(ClipData.newPlainText(TERMINAL_SELECTION_CLIP_LABEL, text));
         host.appendEvent("product.selection.copy result=ok chars=" + text.length());
     }
 }
