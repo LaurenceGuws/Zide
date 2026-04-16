@@ -191,10 +191,11 @@ Milestone gate contract (mandatory when manager/architect lane is active):
     and (c) action-mode + clipboard flow. Audit conclusion remains
     contract-aligned: keep selection monolithic until one of those sub-seams is
     lifted in a behavior-preserving cut with replay/validation authority.
-    - Next: architect review for closed milestone queue item 4 (selection/scroll
-      stabilization); after advance, next planned scope is queue item 5 (debug /
-      profiling hygiene). `ChromeController` / `SurfaceController` remain frozen
-      until the binding `Next:` line is intentionally advanced.
+    - Next: architect review for closed milestone queue item 5 (debug/profiling
+      hygiene); after advance, primary Java cleanup continues under Active TODO
+      item 1 (`ZideTerminalActivity` `create*Callbacks()` net simplification).
+      `ChromeController` / `SurfaceController` remain frozen until the binding
+      `Next:` line is intentionally advanced.
 
 ### Milestone Queue (Manager/Architect Control)
 
@@ -252,7 +253,7 @@ the existing per-commit validation rules.
        boundary
      - queue update records concrete simplification outcomes
 4. Stabilize selection/scroll interaction behavior under manual device usage.
-   (`review_required`)
+   (`completed`)
    - Scope:
      - selection + scrollback/overlay gesture arbitration only
      - preserve monolithic selection ownership; no `ChromeController` /
@@ -274,7 +275,27 @@ the existing per-commit validation rules.
      - manual device pass on selection vs scroll + overlay (documented in queue
        notes when satisfied) — satisfied via recorded pass above
 5. Keep debug/profiling instrumentation behind explicit flags and remove stale
-   probes after fixes land.
+   probes after fixes land. (`review_required`)
+   - Scope:
+     - Android terminal host debug/profiling/probe paths only
+     - classify each touched signal as correctness contract, operator telemetry,
+       or probe/debug capture
+     - no behavior expansion; no unrelated cleanup
+   - Outcome:
+     - **Removed from hot paths (debug overlay off):** unconditional event-line
+       formatting, ring-buffer append, `Log.i` per event, and `TextView` updates
+       in `TerminalStatusController.appendEvent` — classified as **operator
+       telemetry** and now gated on `Host.debugViewEnabled()` (near-zero cost
+       when disabled).
+     - **Retained when overlay on:** full timestamped in-app log + `Log.i` (same
+       operator-visible contract as before).
+     - **Correctness contract unchanged:** native bridge load failure logging in
+       `TerminalNativeBridge` left as product error signal (not event-log
+       telemetry).
+   - Exit criteria:
+     - stale probe-only paths removed from product hot paths
+     - retained telemetry is explicitly gated/configurable with low disabled cost
+     - queue notes record what was removed vs retained and why
 
 ## Workflow
 

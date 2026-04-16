@@ -45,7 +45,17 @@ public final class TerminalStatusController {
         this.host = host;
     }
 
+    /**
+     * Operator telemetry for the in-app debug event log and logcat.
+     *
+     * <p>When the debug overlay is off (normal product use), this returns immediately so hot paths
+     * do not format lines, append to the ring buffer, emit {@link Log} lines, or touch the event
+     * {@link TextView}. Enabling the debug overlay arms full recording (gated operator telemetry).
+     */
     public void appendEvent(String message) {
+        if (!host.debugViewEnabled()) {
+            return;
+        }
         final String line = String.format("[%08d] %s", android.os.SystemClock.uptimeMillis(), message);
         Log.i(TAG, line);
         if (eventLog.length() > 0) {
