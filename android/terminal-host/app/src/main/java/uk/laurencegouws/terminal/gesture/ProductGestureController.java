@@ -29,6 +29,15 @@ public final class ProductGestureController {
      * <p>The host owns product actions; this controller owns gesture detection and quantization.
      */
     public interface Host {
+        /**
+         * Notifies that a new primary touch sequence started on the product surface ({@link
+         * MotionEvent#ACTION_DOWN}).
+         *
+         * <p>Hosts use this to cancel momentum effects (for example scrollback fling) so a new
+         * gesture cannot race inertial scrolling.
+         */
+        void onProductTouchDown();
+
         /** Applies the resolved single-tap product-surface policy at the tap location. */
         void onProductSingleTap(float x, float y);
 
@@ -165,6 +174,7 @@ public final class ProductGestureController {
         scaleDetector.onTouchEvent(event);
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
+                host.onProductTouchDown();
                 downX = event.getX();
                 downY = event.getY();
                 lastY = downY;

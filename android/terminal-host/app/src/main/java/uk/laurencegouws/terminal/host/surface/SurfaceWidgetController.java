@@ -70,6 +70,11 @@ public final class SurfaceWidgetController
     }
 
     @Override
+    public void onProductTouchDown() {
+        terminalGestureStateController.stopScrollbackFling();
+    }
+
+    @Override
     public void onProductSingleTap(float x, float y) {
         selectionController.onProductSingleTap(x, y);
     }

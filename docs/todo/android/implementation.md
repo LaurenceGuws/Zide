@@ -262,6 +262,8 @@ the existing per-commit validation rules.
      - scroll-overlay thumb / follow-live requests now cancel in-flight
        scrollback fling before applying the requested offset so overlay control
        cannot race momentum scrolling
+     - new product-surface touch (`ACTION_DOWN`) cancels scrollback fling so
+       tap/scroll/selection cannot race a running fling from the prior gesture
    - Exit criteria:
      - compile per commit; deploy + clean `AndroidRuntime:E` at meaningful cuts
      - manual device pass on selection vs scroll + overlay (documented in queue
