@@ -284,6 +284,10 @@ the existing per-commit validation rules.
      - mini-wave: geometry-only toolbar invalidation is named and reused; copy
        telemetry prefixes are class constants; floating `ActionMode` type is a
        named constant at the `startActionMode` seam
+     - mini-wave: copy menu item id is a class constant; floating toolbar
+       `Callback2` builder is explicitly named; destroy/finish toggle the clear
+       suppress flag through one setter; plain-text clipboard apply is split from
+       the public copy entrypoint
    - Exit criteria:
      - compile pass per commit; deploy + `AndroidRuntime:E` smoke at seam
        boundary
