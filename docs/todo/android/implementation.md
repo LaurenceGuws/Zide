@@ -191,10 +191,11 @@ Milestone gate contract (mandatory when manager/architect lane is active):
     and (c) action-mode + clipboard flow. Audit conclusion remains
     contract-aligned: keep selection monolithic until one of those sub-seams is
     lifted in a behavior-preserving cut with replay/validation authority.
-    - Next: architect review for closed `AN-A1-M2C`; after advance, next
-      planned scope is milestone queue item 4 (selection/scroll stabilization
-      under manual device usage). `ChromeController` / `SurfaceController`
-      remain frozen until the binding `Next:` line is intentionally advanced.
+    - Next: continue milestone queue item 4 — selection/scroll interaction
+      stabilization on device; compile each commit and deploy +
+      `AndroidRuntime:E` smoke at seam cadence. `ChromeController` /
+      `SurfaceController` remain frozen until the binding `Next:` line is
+      intentionally advanced.
 
 ### Milestone Queue (Manager/Architect Control)
 
@@ -226,7 +227,7 @@ the existing per-commit validation rules.
    - Outcome:
      - hotspot line counts refreshed in queue snapshot, handoff, and structure
        authority; binding `Next:` advanced to `AN-A1-M2C` action-mode/clipboard
-3. `AN-A1-M2C` selection action-mode/clipboard wave (`review_required`)
+3. `AN-A1-M2C` selection action-mode/clipboard wave (`completed`)
    - Scope:
      - action-mode lifecycle + clipboard flow simplification only
      - preserve behavior and monolithic ownership
@@ -252,6 +253,19 @@ the existing per-commit validation rules.
        boundary
      - queue update records concrete simplification outcomes
 4. Stabilize selection/scroll interaction behavior under manual device usage.
+   (`in_progress`)
+   - Scope:
+     - selection + scrollback/overlay gesture arbitration only
+     - preserve monolithic selection ownership; no `ChromeController` /
+       `SurfaceController` edits unless queue re-opens those lanes
+   - Outcome (partial):
+     - scroll-overlay thumb / follow-live requests now cancel in-flight
+       scrollback fling before applying the requested offset so overlay control
+       cannot race momentum scrolling
+   - Exit criteria:
+     - compile per commit; deploy + clean `AndroidRuntime:E` at meaningful cuts
+     - manual device pass on selection vs scroll + overlay (documented in queue
+       notes when satisfied)
 5. Keep debug/profiling instrumentation behind explicit flags and remove stale
    probes after fixes land.
 

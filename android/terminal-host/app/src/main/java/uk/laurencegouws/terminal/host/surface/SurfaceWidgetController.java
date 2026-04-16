@@ -111,6 +111,7 @@ public final class SurfaceWidgetController
 
     @Override
     public void onScrollbackOffsetRequested(int offsetRows) {
+        terminalGestureStateController.stopScrollbackFling();
         if (!host.nativeLoaded()) {
             return;
         }
@@ -122,6 +123,7 @@ public final class SurfaceWidgetController
 
     @Override
     public void onFollowLiveBottomRequested() {
+        terminalGestureStateController.stopScrollbackFling();
         if (!host.nativeLoaded()) {
             return;
         }
