@@ -197,16 +197,7 @@ public final class ZideTerminalActivity extends Activity
 
     private void initializeStatusAndViewControllers() {
         final StatusViewAssembly.Result result = StatusViewAssembly.assemble(
-                new StatusViewCallbacks(
-                        this,
-                        () -> debugViewEnabled,
-                        this::hasWindowFocus,
-                        () -> imeVisible,
-                        v -> imeVisible = v,
-                        () -> surfaceHostBridge,
-                        this::notifyVisibleViewportIfReady,
-                        () -> currentInstallState,
-                        () -> currentReadinessState));
+                createStatusViewCallbacks());
         packageStatusText = result.packageStatusText;
         productReadinessTitle = result.productReadinessTitle;
         productReadinessDetail = result.productReadinessDetail;
@@ -226,6 +217,19 @@ public final class ZideTerminalActivity extends Activity
         terminalSurfaceStateSnapshotReader = result.terminalSurfaceStateSnapshotReader;
         terminalStatusController = result.terminalStatusController;
         terminalViewportController = result.terminalViewportController;
+    }
+
+    private StatusViewCallbacks createStatusViewCallbacks() {
+        return new StatusViewCallbacks(
+                this,
+                () -> debugViewEnabled,
+                this::hasWindowFocus,
+                () -> imeVisible,
+                visible -> imeVisible = visible,
+                () -> surfaceHostBridge,
+                this::notifyVisibleViewportIfReady,
+                () -> currentInstallState,
+                () -> currentReadinessState);
     }
 
     private void assembleInteractionControllers() {

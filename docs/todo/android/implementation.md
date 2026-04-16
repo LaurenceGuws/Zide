@@ -218,6 +218,10 @@ Milestone gate contract (mandatory when manager/architect lane is active):
     `ZideTerminalActivity` reduced by extracting inline
     `new InteractionCallbacks(...)` wiring into
     `createInteractionCallbacks()` (behavior preserved).
+  - Completed: status/view assembly callback-constructor pressure in
+    `ZideTerminalActivity` reduced by extracting inline
+    `new StatusViewCallbacks(...)` wiring into
+    `createStatusViewCallbacks()` (behavior preserved).
     - Next: resume primary Java cleanup under Active TODO item 1 by executing a
       behavior-preserving `ZideTerminalActivity` `create*Callbacks()` net
       simplification wave (remove relay-only callback wiring and reduce
