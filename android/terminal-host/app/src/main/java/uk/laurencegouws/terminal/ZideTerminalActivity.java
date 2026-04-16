@@ -393,24 +393,28 @@ public final class ZideTerminalActivity extends Activity
 
     private void bindAndStartUiControllers() {
         UiStartupAssembly.start(
-                new UiStartupCallbacks(
-                        terminalViewportController,
-                        terminalChromeController,
-                        productReadinessRetryButton,
-                        productReadinessDebugButton,
-                        () -> currentInstallState,
-                        () -> currentReadinessState,
-                        userlandWorkflowController,
-                        userlandSessionCoordinator,
-                        this::appendEvent,
-                        this::updateStatus,
-                        terminalRuntimeAssetsController,
-                        terminalViewModeController,
-                        surfaceHostController,
-                        terminalSurfaceWidgetController,
-                        productShellStatePresenter,
-                        productFrameLoopController,
-                        leftSidebar));
+                createUiStartupCallbacks());
+    }
+
+    private UiStartupCallbacks createUiStartupCallbacks() {
+        return new UiStartupCallbacks(
+                terminalViewportController,
+                terminalChromeController,
+                productReadinessRetryButton,
+                productReadinessDebugButton,
+                () -> currentInstallState,
+                () -> currentReadinessState,
+                userlandWorkflowController,
+                userlandSessionCoordinator,
+                this::appendEvent,
+                this::updateStatus,
+                terminalRuntimeAssetsController,
+                terminalViewModeController,
+                surfaceHostController,
+                terminalSurfaceWidgetController,
+                productShellStatePresenter,
+                productFrameLoopController,
+                leftSidebar);
     }
 
     private void stopScrollbackFlingIfReady() {
