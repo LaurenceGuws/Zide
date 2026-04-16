@@ -194,6 +194,10 @@ Milestone gate contract (mandatory when manager/architect lane is active):
   - Completed: `ZideTerminalActivity` callback-constructor pressure reduced for
     widget assembly by extracting the largest inline `new WidgetCallbacks(...)`
     block into a dedicated `createWidgetCallbacks()` seam (behavior preserved).
+  - Completed: runtime assembly callback-constructor pressure in
+    `ZideTerminalActivity` reduced by extracting inline
+    `new ProductRuntimeAssemblyCallbacks(...)` wiring into
+    `createProductRuntimeAssemblyCallbacks()` (behavior preserved).
     - Next: resume primary Java cleanup under Active TODO item 1 by executing a
       behavior-preserving `ZideTerminalActivity` `create*Callbacks()` net
       simplification wave (remove relay-only callback wiring and reduce

@@ -138,22 +138,7 @@ public final class ZideTerminalActivity extends Activity
         assembleSessionControllers();
         assembleWidgetHostControllers();
         terminalProductRuntimeController = ProductRuntimeAssembly.assemble(
-                new ProductRuntimeAssemblyCallbacks(
-                        () -> debugViewEnabled,
-                        () -> currentInstallState,
-                        installState -> currentInstallState = installState,
-                        () -> currentReadinessState,
-                        this::appendEvent,
-                        this::updateStatus,
-                        () -> surfaceHostBridge,
-                        productReadinessBlocker,
-                        terminalScrollOverlay,
-                        selectionController,
-                        productShellStatePresenter,
-                        productFrameLoopController,
-                        terminalStatusController,
-                        userlandSessionCoordinator,
-                        terminalGestureStateController));
+                createProductRuntimeAssemblyCallbacks());
         assembleActivityLifecycleController();
         loadInitialReadinessState();
         installInputControllers();
@@ -327,6 +312,25 @@ public final class ZideTerminalActivity extends Activity
                 this::callNativeWithSurfaceState,
                 () -> terminalSurfaceStateSnapshotReader.read(),
                 this::handleProductShellStateEventIfReady);
+    }
+
+    private ProductRuntimeAssemblyCallbacks createProductRuntimeAssemblyCallbacks() {
+        return new ProductRuntimeAssemblyCallbacks(
+                () -> debugViewEnabled,
+                () -> currentInstallState,
+                installState -> currentInstallState = installState,
+                () -> currentReadinessState,
+                this::appendEvent,
+                this::updateStatus,
+                () -> surfaceHostBridge,
+                productReadinessBlocker,
+                terminalScrollOverlay,
+                selectionController,
+                productShellStatePresenter,
+                productFrameLoopController,
+                terminalStatusController,
+                userlandSessionCoordinator,
+                terminalGestureStateController);
     }
 
     private void assembleSessionControllers() {
