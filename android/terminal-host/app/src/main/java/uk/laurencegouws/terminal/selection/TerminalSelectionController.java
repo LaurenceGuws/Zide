@@ -117,6 +117,10 @@ public final class TerminalSelectionController {
 
     private static final int TERMINAL_SELECTION_COPY_MENU_ITEM_ID = android.R.id.copy;
 
+    private static final int TERMINAL_SELECTION_COPY_MENU_TITLE_RES = android.R.string.copy;
+
+    private static final int TERMINAL_SELECTION_COPY_SHOW_AS_ACTION = MenuItem.SHOW_AS_ACTION_IF_ROOM;
+
     private final Host host;
     private final Bridge bridge;
     private View selectionStartHandle;
@@ -888,8 +892,8 @@ public final class TerminalSelectionController {
     }
 
     private void installTerminalSelectionCopyMenuItem(Menu menu) {
-        menu.add(Menu.NONE, TERMINAL_SELECTION_COPY_MENU_ITEM_ID, Menu.NONE, android.R.string.copy)
-                .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);
+        menu.add(Menu.NONE, TERMINAL_SELECTION_COPY_MENU_ITEM_ID, Menu.NONE, TERMINAL_SELECTION_COPY_MENU_TITLE_RES)
+                .setShowAsAction(TERMINAL_SELECTION_COPY_SHOW_AS_ACTION);
     }
 
     private static boolean isTerminalSelectionCopyMenuItem(MenuItem item) {
@@ -903,6 +907,10 @@ public final class TerminalSelectionController {
 
     private void executeTerminalSelectionToolbarCopy(ActionMode mode) {
         copyCurrentShellSelectionToClipboard();
+        finishTerminalSelectionFloatingToolbarAfterCopy(mode);
+    }
+
+    private void finishTerminalSelectionFloatingToolbarAfterCopy(ActionMode mode) {
         mode.finish();
     }
 
@@ -971,10 +979,6 @@ public final class TerminalSelectionController {
         if (!canHandleSelectionDrag()) {
             return false;
         }
-        return populateTerminalSelectionContentRectFromBridge(outRect);
-    }
-
-    private boolean populateTerminalSelectionContentRectFromBridge(Rect outRect) {
         return fillTerminalSelectionViewportRectFromBridgeBounds(outRect);
     }
 
@@ -1178,11 +1182,15 @@ public final class TerminalSelectionController {
     }
 
     private ClipboardManager resolveClipboardManagerForSelectionCopy() {
-        final ClipboardManager clipboard = host.context().getSystemService(ClipboardManager.class);
+        final ClipboardManager clipboard = clipboardManagerFromHostContext();
         if (clipboard == null) {
             reportTerminalSelectionCopyNoClipboard();
         }
         return clipboard;
+    }
+
+    private ClipboardManager clipboardManagerFromHostContext() {
+        return host.context().getSystemService(ClipboardManager.class);
     }
 
     private void reportTerminalSelectionCopyNoClipboard() {
