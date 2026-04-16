@@ -121,6 +121,8 @@ public final class TerminalSelectionController {
 
     private static final int TERMINAL_SELECTION_COPY_SHOW_AS_ACTION = MenuItem.SHOW_AS_ACTION_IF_ROOM;
 
+    private static final int TERMINAL_SELECTION_COPY_MENU_NEUTRAL = Menu.NONE;
+
     private final Host host;
     private final Bridge bridge;
     private View selectionStartHandle;
@@ -866,7 +868,7 @@ public final class TerminalSelectionController {
 
             @Override
             public void onGetContentRect(ActionMode mode, View view, Rect outRect) {
-                supplyTerminalSelectionFloatingToolbarContentRect(view, outRect);
+                fillSelectionActionModeContentRectFromBridgeOrUseViewBounds(view, outRect);
             }
         };
     }
@@ -882,17 +884,17 @@ public final class TerminalSelectionController {
         return completeTerminalSelectionCopyAction(mode);
     }
 
-    private void supplyTerminalSelectionFloatingToolbarContentRect(View view, Rect outRect) {
-        fillSelectionActionModeContentRectFromBridgeOrUseViewBounds(view, outRect);
-    }
-
     private boolean onTerminalSelectionFloatingActionModeCreated(Menu menu) {
         installTerminalSelectionCopyMenuItem(menu);
         return true;
     }
 
     private void installTerminalSelectionCopyMenuItem(Menu menu) {
-        menu.add(Menu.NONE, TERMINAL_SELECTION_COPY_MENU_ITEM_ID, Menu.NONE, TERMINAL_SELECTION_COPY_MENU_TITLE_RES)
+        menu.add(
+                        TERMINAL_SELECTION_COPY_MENU_NEUTRAL,
+                        TERMINAL_SELECTION_COPY_MENU_ITEM_ID,
+                        TERMINAL_SELECTION_COPY_MENU_NEUTRAL,
+                        TERMINAL_SELECTION_COPY_MENU_TITLE_RES)
                 .setShowAsAction(TERMINAL_SELECTION_COPY_SHOW_AS_ACTION);
     }
 
@@ -936,9 +938,13 @@ public final class TerminalSelectionController {
     }
 
     private void clearBridgeSelectionUnlessTerminalSelectionActionModeFinishSuppressed() {
-        if (!suppressSelectionClearOnActionModeDestroy) {
+        if (shouldClearBridgeWhenFloatingToolbarDestroyed()) {
             bridge.clearSelection();
         }
+    }
+
+    private boolean shouldClearBridgeWhenFloatingToolbarDestroyed() {
+        return !suppressSelectionClearOnActionModeDestroy;
     }
 
     private void fillSelectionActionModeContentRectFromBridgeOrUseViewBounds(View view, Rect outRect) {
@@ -1153,12 +1159,16 @@ public final class TerminalSelectionController {
     }
 
     private void copyCurrentShellSelectionToClipboard() {
-        final byte[] bytes = bridge.currentSelectionTextBytes();
+        final byte[] bytes = readCurrentShellSelectionTextBytesOrNull();
         if (bytes == null) {
             reportTerminalSelectionCopyNoBytes();
             return;
         }
         copyPlainTextSelectionToClipboard(decodeTerminalSelectionUtf8(bytes));
+    }
+
+    private byte[] readCurrentShellSelectionTextBytesOrNull() {
+        return bridge.currentSelectionTextBytes();
     }
 
     private void reportTerminalSelectionCopyNoBytes() {

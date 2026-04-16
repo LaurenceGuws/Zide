@@ -292,6 +292,11 @@ the existing per-commit validation rules.
        copy finishes the `ActionMode` through a dedicated helper; clipboard
        service lookup is a host-context helper; bridge aggregate rect fill drops
        a one-line pass-through
+     - mini-wave: copy menu group/order slots share a neutral constant with the
+       rest of the copy menu seam; floating toolbar content-rect calls the
+       bridge-or-view helper directly; destroy-time bridge clear names the
+       suppress predicate; shell copy reads selection bytes through one internal
+       accessor
    - Exit criteria:
      - compile pass per commit; deploy + `AndroidRuntime:E` smoke at seam
        boundary
