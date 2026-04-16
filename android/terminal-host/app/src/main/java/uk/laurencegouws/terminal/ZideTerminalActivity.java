@@ -200,8 +200,7 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void initializeStatusAndViewControllers() {
-        final StatusViewAssembly.Result result = StatusViewAssembly.assemble(
-                createStatusViewCallbacks());
+        final StatusViewAssembly.Result result = assembleStatusViewResult();
         packageStatusText = result.packageStatusText;
         productReadinessTitle = result.productReadinessTitle;
         productReadinessDetail = result.productReadinessDetail;
@@ -223,6 +222,10 @@ public final class ZideTerminalActivity extends Activity
         terminalViewportController = result.terminalViewportController;
     }
 
+    private StatusViewAssembly.Result assembleStatusViewResult() {
+        return StatusViewAssembly.assemble(createStatusViewCallbacks());
+    }
+
     private StatusViewCallbacks createStatusViewCallbacks() {
         return new StatusViewCallbacks(
                 this,
@@ -237,10 +240,13 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void assembleInteractionControllers() {
-        final InteractionAssembly.Result result = InteractionAssembly.assemble(
-                createInteractionCallbacks());
+        final InteractionAssembly.Result result = assembleInteractionControllerResult();
         selectionController = result.selectionController;
         terminalGestureStateController = result.terminalGestureStateController;
+    }
+
+    private InteractionAssembly.Result assembleInteractionControllerResult() {
+        return InteractionAssembly.assemble(createInteractionCallbacks());
     }
 
     private InteractionCallbacks createInteractionCallbacks() {
@@ -257,11 +263,14 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void installInputControllers() {
-        final InputAssembly.Result result = InputAssembly.assemble(
-                createInputCallbacks());
+        final InputAssembly.Result result = assembleInputControllerResult();
         shellInputView = result.shellInputView;
         terminalHardwareKeyboardController = result.hardwareKeyboardController;
         terminalImeFocusRecoveryController = result.imeFocusRecoveryController;
+    }
+
+    private InputAssembly.Result assembleInputControllerResult() {
+        return InputAssembly.assemble(createInputCallbacks());
     }
 
     private InputCallbacks createInputCallbacks() {
@@ -277,14 +286,17 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void assembleWidgetHostControllers() {
-        final WidgetAssembly.Result result = WidgetAssembly.assemble(
-                createWidgetCallbacks());
+        final WidgetAssembly.Result result = assembleWidgetHostControllerResult();
         productShellStatePresenter = result.productShellStatePresenter;
         terminalChromeController = result.terminalChromeController;
         terminalViewModeController = result.terminalViewModeController;
         surfaceHostBridge = result.surfaceHostBridge;
         surfaceHostController = result.surfaceHostController;
         terminalSurfaceWidgetController = result.terminalSurfaceWidgetController;
+    }
+
+    private WidgetAssembly.Result assembleWidgetHostControllerResult() {
+        return WidgetAssembly.assemble(createWidgetCallbacks());
     }
 
     private WidgetCallbacks createWidgetCallbacks() {

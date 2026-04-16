@@ -248,6 +248,11 @@ Milestone gate contract (mandatory when manager/architect lane is active):
   - Completed: session assembly invocation in `ZideTerminalActivity` now routes
     through a named `assembleSessionControllerResult()` helper so controller
     assembly no longer inlines the `SessionAssembly.assemble(...)` call.
+  - Completed: four more composition-root assembly invocations in
+    `ZideTerminalActivity` are now named instead of inline:
+    `assembleStatusViewResult()`, `assembleInteractionControllerResult()`,
+    `assembleInputControllerResult()`, and
+    `assembleWidgetHostControllerResult()` (behavior preserved).
     - Next: resume primary Java cleanup under Active TODO item 1 by executing a
       behavior-preserving `ZideTerminalActivity` `create*Callbacks()` net
       simplification wave (remove relay-only callback wiring and reduce
