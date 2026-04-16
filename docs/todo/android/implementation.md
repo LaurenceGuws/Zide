@@ -270,6 +270,10 @@ the existing per-commit validation rules.
        toolbar visibility, and presentation; show path names the can-present gate;
        bridge aggregate bounds use a degeneracy test; copy success telemetry is one
        helper
+     - mini-wave: host surface presence is named for can-present; floating mode
+       start is `FrameLayout`→`ActionMode` in one helper; toolbar fallback extents
+       use a shared minimum-size helper; endpoint rects reuse the same degeneracy
+       rule as aggregate bridge bounds
    - Exit criteria:
      - compile pass per commit; deploy + `AndroidRuntime:E` smoke at seam
        boundary
