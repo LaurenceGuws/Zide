@@ -225,7 +225,7 @@ public final class ZideTerminalActivity extends Activity
                 () -> debugViewEnabled,
                 this::hasWindowFocus,
                 () -> imeVisible,
-                visible -> imeVisible = visible,
+                this::setImeVisible,
                 () -> surfaceHostBridge,
                 this::notifyVisibleViewportIfReady,
                 () -> currentInstallState,
@@ -266,7 +266,7 @@ public final class ZideTerminalActivity extends Activity
                 rootView,
                 getSystemService(InputMethodManager.class),
                 () -> imeVisible,
-                visible -> imeVisible = visible,
+                this::setImeVisible,
                 this::refreshProductScrollOverlayIfReady,
                 this::updateStatus,
                 this::appendEvent);
@@ -288,9 +288,9 @@ public final class ZideTerminalActivity extends Activity
                 this,
                 handler,
                 () -> debugViewEnabled,
-                enabled -> debugViewEnabled = enabled,
+                this::setDebugViewEnabled,
                 () -> imeVisible,
-                visible -> imeVisible = visible,
+                this::setImeVisible,
                 rootView,
                 productView,
                 debugView,
@@ -330,7 +330,7 @@ public final class ZideTerminalActivity extends Activity
         return new ProductRuntimeAssemblyCallbacks(
                 () -> debugViewEnabled,
                 () -> currentInstallState,
-                installState -> currentInstallState = installState,
+                this::setCurrentInstallState,
                 () -> currentReadinessState,
                 this::appendEvent,
                 this::updateStatus,
@@ -461,6 +461,14 @@ public final class ZideTerminalActivity extends Activity
 
     private void setCurrentReadinessState(UserlandReadinessState readinessState) {
         currentReadinessState = readinessState;
+    }
+
+    private void setDebugViewEnabled(boolean enabled) {
+        debugViewEnabled = enabled;
+    }
+
+    private void setImeVisible(boolean visible) {
+        imeVisible = visible;
     }
 
     private boolean handleHardwareDispatchKeyEventIfReady(KeyEvent event) {

@@ -231,6 +231,10 @@ Milestone gate contract (mandatory when manager/architect lane is active):
     replacing inline readiness/install state assignment lambdas with named
     setters (`setCurrentReadinessState`, `setCurrentInstallState`) while
     preserving behavior.
+  - Completed: remaining inline activity-state assignment lambdas in
+    extracted callback factories (`debugViewEnabled`, `imeVisible`,
+    runtime install state) now route through named setters, further reducing
+    relay-only callback noise without changing ownership or behavior.
     - Next: resume primary Java cleanup under Active TODO item 1 by executing a
       behavior-preserving `ZideTerminalActivity` `create*Callbacks()` net
       simplification wave (remove relay-only callback wiring and reduce
