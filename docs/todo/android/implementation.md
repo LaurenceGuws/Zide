@@ -258,6 +258,10 @@ the existing per-commit validation rules.
      - mini-wave: floating `Callback2` delegates prepare/menu/content-rect;
        toolbar copy runs through `executeTerminalSelectionToolbarCopy`; shell
        bytes path reports empty selection and decodes UTF-8 in named helpers
+     - mini-wave: explicit finish detaches mode + suppress in one step; toolbar
+       invalidation splits guard vs content/view work; bridge bounds fill the
+       viewport rect via a dedicated helper; clipboard service resolve logs
+       missing manager once
    - Exit criteria:
      - compile pass per commit; deploy + `AndroidRuntime:E` smoke at seam
        boundary
