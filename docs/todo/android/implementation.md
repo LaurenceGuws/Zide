@@ -266,6 +266,10 @@ the existing per-commit validation rules.
        content rect fills from bridge or view bounds in one helper; destroy path
        clears bridge selection in a suppress-aware helper; clip label is a single
        constant
+     - mini-wave: bridge “selection active” is one predicate reused for tap/drag,
+       toolbar visibility, and presentation; show path names the can-present gate;
+       bridge aggregate bounds use a degeneracy test; copy success telemetry is one
+       helper
    - Exit criteria:
      - compile pass per commit; deploy + `AndroidRuntime:E` smoke at seam
        boundary
