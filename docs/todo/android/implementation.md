@@ -288,6 +288,10 @@ the existing per-commit validation rules.
        `Callback2` builder is explicitly named; destroy/finish toggle the clear
        suppress flag through one setter; plain-text clipboard apply is split from
        the public copy entrypoint
+     - mini-wave: copy menu title + `showAsAction` are class constants; toolbar
+       copy finishes the `ActionMode` through a dedicated helper; clipboard
+       service lookup is a host-context helper; bridge aggregate rect fill drops
+       a one-line pass-through
    - Exit criteria:
      - compile pass per commit; deploy + `AndroidRuntime:E` smoke at seam
        boundary
