@@ -42,7 +42,7 @@ public final class GestureController {
         void onSingleTap(float x, float y);
 
         /** Marks the beginning of a resolved single-pointer vertical scrollback gesture. */
-        void onProductScrollBegin();
+        void onScrollBegin();
 
         /** Applies one resolved vertical scroll delta for Android-owned scrollback. */
         void onScrollBy(float deltaY);
@@ -194,7 +194,7 @@ public final class GestureController {
                     scrollActive = true;
                     moved = true;
                     lastY = event.getY();
-                    host.onProductScrollBegin();
+                    host.onScrollBegin();
                 }
                 if (longPressTriggered) {
                     host.onSelectionDrag(event.getX(), event.getY());

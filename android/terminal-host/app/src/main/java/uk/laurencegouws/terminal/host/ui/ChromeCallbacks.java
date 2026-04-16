@@ -12,7 +12,7 @@ import uk.laurencegouws.terminal.input.ShellInputView;
 /** Functional callback adapter for {@link ChromeBridge}. */
 public final class ChromeCallbacks implements ChromeBridge.Callbacks {
     private final BooleanSupplier debugViewEnabled;
-    private final BiConsumer<String, String> showProductView;
+    private final BiConsumer<String, String> showView;
     private final BiConsumer<String, String> showDebugView;
     private final Runnable runPackageDoctor;
     private final Consumer<String> appendEvent;
@@ -26,7 +26,7 @@ public final class ChromeCallbacks implements ChromeBridge.Callbacks {
 
     public ChromeCallbacks(
             BooleanSupplier debugViewEnabled,
-            BiConsumer<String, String> showProductView,
+            BiConsumer<String, String> showView,
             BiConsumer<String, String> showDebugView,
             Runnable runPackageDoctor,
             Consumer<String> appendEvent,
@@ -38,7 +38,7 @@ public final class ChromeCallbacks implements ChromeBridge.Callbacks {
             Consumer<String> sendDirectText,
             Consumer<String> updateStatus) {
         this.debugViewEnabled = debugViewEnabled;
-        this.showProductView = showProductView;
+        this.showView = showView;
         this.showDebugView = showDebugView;
         this.runPackageDoctor = runPackageDoctor;
         this.appendEvent = appendEvent;
@@ -57,8 +57,8 @@ public final class ChromeCallbacks implements ChromeBridge.Callbacks {
     }
 
     @Override
-    public void showProductView(String eventName, String statusLabel) {
-        showProductView.accept(eventName, statusLabel);
+    public void showView(String eventName, String statusLabel) {
+        showView.accept(eventName, statusLabel);
     }
 
     @Override

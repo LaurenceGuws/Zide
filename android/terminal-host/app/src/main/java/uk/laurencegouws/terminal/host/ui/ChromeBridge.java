@@ -15,7 +15,7 @@ public final class ChromeBridge implements ChromeController.Host {
     public interface Callbacks {
         boolean debugViewEnabled();
 
-        void showProductView(String eventName, String statusLabel);
+        void showView(String eventName, String statusLabel);
 
         void showDebugView(String eventName, String statusLabel);
 
@@ -105,8 +105,8 @@ public final class ChromeBridge implements ChromeController.Host {
     }
 
     @Override
-    public void showProductView(String eventName, String statusLabel) {
-        callbacks.showProductView(eventName, statusLabel);
+    public void showView(String eventName, String statusLabel) {
+        callbacks.showView(eventName, statusLabel);
     }
 
     @Override

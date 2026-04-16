@@ -93,7 +93,7 @@ public final class GestureStateController {
         this.scrollbackFlingScroller = scrollbackFlingScroller;
     }
 
-    public void onProductScrollBegin() {
+    public void onScrollBegin() {
         if (!host.nativeLoaded()) {
             return;
         }

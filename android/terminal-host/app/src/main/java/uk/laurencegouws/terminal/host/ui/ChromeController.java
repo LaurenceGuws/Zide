@@ -18,7 +18,7 @@ public final class ChromeController {
         boolean sidebarOpen();
         void setSidebarOpen(boolean open);
         boolean debugViewEnabled();
-        void showProductView(String eventName, String statusLabel);
+        void showView(String eventName, String statusLabel);
         void showDebugView(String eventName, String statusLabel);
         void runPackageDoctor();
         void appendEvent(String event);
@@ -42,7 +42,7 @@ public final class ChromeController {
 
     public void bindViewModeToggle() {
         host.debugViewModeButton().setOnClickListener(
-                view -> host.showProductView("view.mode debug=false", "product-view"));
+                view -> host.showView("view.mode debug=false", "product-view"));
     }
 
     public void bindSidebarControls() {

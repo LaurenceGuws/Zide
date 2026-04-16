@@ -153,7 +153,7 @@ public final class WidgetAssembly {
                                 host::debugViewEnabled,
                                 (eventName, statusLabel) -> {
                                     if (terminalViewModeControllerRef[0] != null) {
-                                        terminalViewModeControllerRef[0].showProductView(eventName, statusLabel);
+                                        terminalViewModeControllerRef[0].showView(eventName, statusLabel);
                                     }
                                 },
                                 (eventName, statusLabel) -> {

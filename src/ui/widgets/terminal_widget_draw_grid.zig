@@ -258,7 +258,7 @@ fn terminalCellGlyphVisible(cell: Cell, blink_style_mode: anytype, blink_time_s:
     return phase < period;
 }
 
-fn resolveTerminalCellStyle(
+fn resolveCellStyle(
     cell: Cell,
     screen_reverse_mode: bool,
     hover_link: u32,
@@ -439,12 +439,7 @@ pub fn drawRowBackgrounds(
         const rect_y0 = rr.snapLogicalToDevicePixel(cell_y);
         const rect_x1 = rr.snapLogicalToDevicePixel(cell_x + cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(run_width_cols)))));
         const rect_y1 = rr.snapLogicalToDevicePixel(cell_y + cell_h);
-        renderer_terminal_draw_host.addTerminalRect(rr,
-            snapInt(rect_x0),
-            snapInt(rect_y0),
-            @max(1, snapInt(rect_x1 - rect_x0)),
-            @max(1, snapInt(rect_y1 - rect_y0)),
-            run_color);
+        renderer_terminal_draw_host.addTerminalRect(rr, snapInt(rect_x0), snapInt(rect_y0), @max(1, snapInt(rect_x1 - rect_x0)), @max(1, snapInt(rect_y1 - rect_y0)), run_color);
         col = run_end - 1;
     }
 
@@ -454,12 +449,7 @@ pub fn drawRowBackgrounds(
         const pad_y0 = rr.snapLogicalToDevicePixel(base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h);
         const pad_x1 = rr.snapLogicalToDevicePixel(base_x_local + @as(f32, @floatFromInt(@as(i32, @intCast(cols_count)))) * cell_w + padding_x);
         const pad_y1 = rr.snapLogicalToDevicePixel(base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h + cell_h);
-        renderer_terminal_draw_host.addTerminalRect(rr,
-            snapInt(pad_x0),
-            snapInt(pad_y0),
-            @max(1, snapInt(pad_x1 - pad_x0)),
-            @max(1, snapInt(pad_y1 - pad_y0)),
-            resolvedBackgroundColor(last_cell, screen_reverse_mode));
+        renderer_terminal_draw_host.addTerminalRect(rr, snapInt(pad_x0), snapInt(pad_y0), @max(1, snapInt(pad_x1 - pad_x0)), @max(1, snapInt(pad_y1 - pad_y0)), resolvedBackgroundColor(last_cell, screen_reverse_mode));
     }
 }
 
@@ -568,7 +558,7 @@ test "backgroundRunEnd respects reverse-resolved background color" {
     try std.testing.expectEqual(@as(usize, 2), backgroundRunEnd(&cells, cells.len, 0, cells.len - 1, false, fg));
 }
 
-test "resolveTerminalCellStyle applies block cursor colors and hover underline" {
+test "resolveCellStyle applies block cursor colors and hover underline" {
     const fg = Color{ .r = 200, .g = 201, .b = 202, .a = 255 };
     const bg = Color{ .r = 10, .g = 11, .b = 12, .a = 255 };
     const underline_color = Color{ .r = 50, .g = 51, .b = 52, .a = 255 };
@@ -579,7 +569,7 @@ test "resolveTerminalCellStyle applies block cursor colors and hover underline" 
         shape: enum { block, underline, bar } = .block,
     }{};
     const blink_style = enum { off, on }.off;
-    const style = resolveTerminalCellStyle(
+    const style = resolveCellStyle(
         cell,
         false,
         7,
@@ -600,14 +590,14 @@ test "resolveTerminalCellStyle applies block cursor colors and hover underline" 
     try std.testing.expectEqual(underline_color, style.underline_color);
 }
 
-test "resolveTerminalCellStyle hides blinked glyphs" {
+test "resolveCellStyle hides blinked glyphs" {
     var cell = cellWithColors('x', Color.white, Color.black, false);
     cell.attrs.blink = true;
     const cursor_style = struct {
         shape: enum { block, underline, bar } = .bar,
     }{};
     const blink_style = enum { off, on }.on;
-    const style = resolveTerminalCellStyle(
+    const style = resolveCellStyle(
         cell,
         false,
         0,
@@ -840,7 +830,7 @@ fn collectVisibleTerminalGlyphPrepEntriesForRow(
             while (direct_col < span_end_excl and direct_col < row_cells.len) : (direct_col += 1) {
                 const cell = row_cells[direct_col];
                 if (cell.x != 0 or cell.y != 0) continue;
-                const style = resolveTerminalCellStyle(cell, screen_reverse_mode, hover_link, blink_style_mode, blink_time_s, draw_cursor_mode, cursor_pos, cursor_style, row_idx, direct_col);
+                const style = resolveCellStyle(cell, screen_reverse_mode, hover_link, blink_style_mode, blink_time_s, draw_cursor_mode, cursor_pos, cursor_style, row_idx, direct_col);
                 if (!style.glyph_visible) continue;
                 if (cell.codepoint == 0 or cell.codepoint == ' ') continue;
 
@@ -919,7 +909,7 @@ fn collectVisibleTerminalGlyphPrepEntriesForRow(
             if (abs_col >= row_cells.len) continue;
             const cell = row_cells[abs_col];
             if (cell.x != 0 or cell.y != 0) continue;
-            const style = resolveTerminalCellStyle(cell, screen_reverse_mode, hover_link, blink_style_mode, blink_time_s, draw_cursor_mode, cursor_pos, cursor_style, row_idx, abs_col);
+            const style = resolveCellStyle(cell, screen_reverse_mode, hover_link, blink_style_mode, blink_time_s, draw_cursor_mode, cursor_pos, cursor_style, row_idx, abs_col);
             if (!style.glyph_visible) continue;
             if (cell.codepoint == 0 or cell.codepoint == kitty_unicode_placeholder) continue;
             if (cell.codepoint == ' ' and cell.combining_len == 0) continue;
@@ -1252,7 +1242,7 @@ fn drawAlignedSpecialGlyphSprite(
     const lookup_start = app_shell.getTime();
     const sprite_key = rr.terminal_font.specialGlyphSpriteKey(codepoint, raster_w_i, raster_h_i, variant);
     const sprite_fetch = if (row_sprite_cache) |cache|
-            if (cache.key) |cached_key|
+        if (cache.key) |cached_key|
             if (std.meta.eql(cached_key, sprite_key) and cache.sprite != null)
                 terminal_font_mod.SpecialGlyphSpriteFetch{ .sprite = &cache.sprite.?, .created = false }
             else
@@ -1301,13 +1291,7 @@ fn drawAlignedSpecialGlyphSprite(
                 }
             }
         }
-        renderer_terminal_draw_host.addTerminalGlyphQuad(rr,
-            rr.terminal_font.coverageTexture(),
-            sp.rect,
-            .{ .x = dest_x, .y = y0, .width = dest_w, .height = snapped_h },
-            fg_draw.toRgba(),
-            .{ .r = 0, .g = 0, .b = 0, .a = 0 },
-            .font_coverage);
+        renderer_terminal_draw_host.addTerminalGlyphQuad(rr, rr.terminal_font.coverageTexture(), sp.rect, .{ .x = dest_x, .y = y0, .width = dest_w, .height = snapped_h }, fg_draw.toRgba(), .{ .r = 0, .g = 0, .b = 0, .a = 0 }, .font_coverage);
         if (capture_sample) |sample| {
             captureTextPaintSample(
                 sample,
@@ -1409,7 +1393,7 @@ pub fn drawRowGlyphs(
                 fallback_col += 1;
                 continue;
             }
-            const style = resolveTerminalCellStyle(cell, screen_reverse_mode, hover_link, blink_style_mode, blink_time_s, draw_cursor_mode, cursor_pos, cursor_style, row_idx, fallback_col);
+            const style = resolveCellStyle(cell, screen_reverse_mode, hover_link, blink_style_mode, blink_time_s, draw_cursor_mode, cursor_pos, cursor_style, row_idx, fallback_col);
             if (!style.glyph_visible) {
                 fallback_col += style.width_units;
                 continue;
@@ -1576,7 +1560,7 @@ pub fn drawRowGlyphs(
             while (direct_col < span_end_excl and direct_col < row_cells.len) : (direct_col += 1) {
                 const cell = row_cells[direct_col];
                 if (cell.x != 0 or cell.y != 0) continue;
-                const style = resolveTerminalCellStyle(cell, screen_reverse_mode, hover_link, blink_style_mode, blink_time_s, draw_cursor_mode, cursor_pos, cursor_style, row_idx, direct_col);
+                const style = resolveCellStyle(cell, screen_reverse_mode, hover_link, blink_style_mode, blink_time_s, draw_cursor_mode, cursor_pos, cursor_style, row_idx, direct_col);
                 if (!style.glyph_visible) continue;
                 if (cell.codepoint == 0 or cell.codepoint == ' ') continue;
                 var behind_rgba = style.bg.toRgba();
@@ -1648,7 +1632,7 @@ pub fn drawRowGlyphs(
             while (special_col < span_end_excl and special_col < row_cells.len) : (special_col += 1) {
                 const cell = row_cells[special_col];
                 if (cell.x != 0 or cell.y != 0) continue;
-                const style = resolveTerminalCellStyle(cell, screen_reverse_mode, hover_link, blink_style_mode, blink_time_s, draw_cursor_mode, cursor_pos, cursor_style, row_idx, special_col);
+                const style = resolveCellStyle(cell, screen_reverse_mode, hover_link, blink_style_mode, blink_time_s, draw_cursor_mode, cursor_pos, cursor_style, row_idx, special_col);
                 if (!style.glyph_visible) continue;
                 var behind_rgba = style.bg.toRgba();
                 // Special terminal glyphs share the same coverage path and
@@ -1676,7 +1660,7 @@ pub fn drawRowGlyphs(
             var metal_col: usize = span_start_col;
             while (metal_col < span_end_excl and metal_col < cols_count and metal_col < row_cells.len) {
                 const cell = row_cells[metal_col];
-                const style = resolveTerminalCellStyle(cell, screen_reverse_mode, hover_link, blink_style_mode, blink_time_s, draw_cursor_mode, cursor_pos, cursor_style, row_idx, metal_col);
+                const style = resolveCellStyle(cell, screen_reverse_mode, hover_link, blink_style_mode, blink_time_s, draw_cursor_mode, cursor_pos, cursor_style, row_idx, metal_col);
                 if (cell.x != 0 or cell.y != 0) {
                     metal_col += 1;
                     continue;
@@ -1736,7 +1720,7 @@ pub fn drawRowGlyphs(
                 cc += 1;
                 continue;
             }
-            const style = resolveTerminalCellStyle(ccell, screen_reverse_mode, hover_link, blink_style_mode, blink_time_s, draw_cursor_mode, cursor_pos, cursor_style, row_idx, cc);
+            const style = resolveCellStyle(ccell, screen_reverse_mode, hover_link, blink_style_mode, blink_time_s, draw_cursor_mode, cursor_pos, cursor_style, row_idx, cc);
             const cell_x = base_x_local + @as(f32, @floatFromInt(@as(i32, @intCast(cc)))) * cell_w;
             const cell_y = base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h;
             if (!style.glyph_visible) {
@@ -1775,7 +1759,7 @@ pub fn drawRowGlyphs(
                     fb_col += 1;
                     continue;
                 }
-                const style = resolveTerminalCellStyle(cell, screen_reverse_mode, hover_link, blink_style_mode, blink_time_s, draw_cursor_mode, cursor_pos, cursor_style, row_idx, fb_col);
+                const style = resolveCellStyle(cell, screen_reverse_mode, hover_link, blink_style_mode, blink_time_s, draw_cursor_mode, cursor_pos, cursor_style, row_idx, fb_col);
                 const cell_x = base_x_local + @as(f32, @floatFromInt(@as(i32, @intCast(fb_col)))) * cell_w;
                 const cell_y = base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h;
                 if (!style.glyph_visible) {
@@ -1834,7 +1818,7 @@ pub fn drawRowGlyphs(
             if (abs_col >= row_cells.len) continue;
             const cell = row_cells[abs_col];
             if (cell.x != 0 or cell.y != 0) continue;
-            const style = resolveTerminalCellStyle(cell, screen_reverse_mode, hover_link, blink_style_mode, blink_time_s, draw_cursor_mode, cursor_pos, cursor_style, row_idx, abs_col);
+            const style = resolveCellStyle(cell, screen_reverse_mode, hover_link, blink_style_mode, blink_time_s, draw_cursor_mode, cursor_pos, cursor_style, row_idx, abs_col);
             const cell_x = base_x_local + @as(f32, @floatFromInt(@as(i32, @intCast(abs_col)))) * cell_w;
             const cell_y = base_y_local + @as(f32, @floatFromInt(@as(i32, @intCast(row_idx)))) * cell_h;
             const cell_w_span = cell_w * @as(f32, @floatFromInt(@as(i32, @intCast(style.width_units))));

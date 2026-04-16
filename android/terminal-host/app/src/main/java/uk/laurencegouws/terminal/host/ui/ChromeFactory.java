@@ -41,7 +41,7 @@ public final class ChromeFactory {
 
     public static ChromeBridge.Callbacks createChromeHostCallbacks(
             BooleanSupplier debugViewEnabled,
-            BiConsumer<String, String> showProductView,
+            BiConsumer<String, String> showView,
             BiConsumer<String, String> showDebugView,
             Runnable runPackageDoctor,
             Consumer<String> appendEvent,
@@ -54,7 +54,7 @@ public final class ChromeFactory {
             Consumer<String> updateStatus) {
         return new ChromeCallbacks(
                 debugViewEnabled,
-                showProductView,
+                showView,
                 showDebugView,
                 runPackageDoctor,
                 appendEvent,

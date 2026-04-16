@@ -56,7 +56,7 @@ public final class ViewModeController {
         }
     }
 
-    public void showProductView(String eventName, String statusLabel) {
+    public void showView(String eventName, String statusLabel) {
         host.setDebugViewEnabled(false);
         host.appendEvent(eventName);
         applyCurrentViewMode();

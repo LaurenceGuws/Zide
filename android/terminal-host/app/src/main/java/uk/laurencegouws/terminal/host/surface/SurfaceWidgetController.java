@@ -80,8 +80,8 @@ public final class SurfaceWidgetController
     }
 
     @Override
-    public void onProductScrollBegin() {
-        GestureStateController.onProductScrollBegin();
+    public void onScrollBegin() {
+        GestureStateController.onScrollBegin();
     }
 
     @Override
