@@ -760,8 +760,12 @@ public final class TerminalSelectionController {
         if (!hasTerminalSelectionActionMode()) {
             return false;
         }
-        invalidateTerminalSelectionActionMode(true);
+        invalidateTerminalSelectionFloatingToolbarFully();
         return true;
+    }
+
+    private void invalidateTerminalSelectionFloatingToolbarFully() {
+        invalidateTerminalSelectionActionMode(true);
     }
 
     private void attachNewFloatingTerminalSelectionActionMode() {
@@ -796,7 +800,11 @@ public final class TerminalSelectionController {
     }
 
     private ActionMode startFloatingTerminalSelectionActionMode() {
-        return requestTerminalSelectionFloatingActionModeOnContainer(host.productSurfaceContainer());
+        return requestTerminalSelectionFloatingActionModeOnContainer(productSurfaceContainerForTerminalSelectionChrome());
+    }
+
+    private FrameLayout productSurfaceContainerForTerminalSelectionChrome() {
+        return host.productSurfaceContainer();
     }
 
     private ActionMode requestTerminalSelectionFloatingActionModeOnContainer(FrameLayout container) {
@@ -858,7 +866,7 @@ public final class TerminalSelectionController {
     }
 
     private void supplyTerminalSelectionFloatingToolbarContentRect(View view, Rect outRect) {
-        populateSelectionActionModeContentRect(view, outRect);
+        fillSelectionActionModeContentRectFromBridgeOrUseViewBounds(view, outRect);
     }
 
     private boolean onTerminalSelectionFloatingActionModeCreated(Menu menu) {
@@ -910,10 +918,6 @@ public final class TerminalSelectionController {
         if (!suppressSelectionClearOnActionModeDestroy) {
             bridge.clearSelection();
         }
-    }
-
-    private void populateSelectionActionModeContentRect(View view, Rect outRect) {
-        fillSelectionActionModeContentRectFromBridgeOrUseViewBounds(view, outRect);
     }
 
     private void fillSelectionActionModeContentRectFromBridgeOrUseViewBounds(View view, Rect outRect) {
@@ -1141,7 +1145,7 @@ public final class TerminalSelectionController {
     }
 
     private void reportTerminalSelectionCopyNoBytes() {
-        host.appendEvent("product.selection.copy result=no-bytes");
+        reportTerminalSelectionCopyBlocked("no-bytes");
     }
 
     private static String decodeTerminalSelectionUtf8(byte[] bytes) {
@@ -1165,7 +1169,11 @@ public final class TerminalSelectionController {
     }
 
     private void reportTerminalSelectionCopyNoClipboard() {
-        host.appendEvent("product.selection.copy result=no-clipboard");
+        reportTerminalSelectionCopyBlocked("no-clipboard");
+    }
+
+    private void reportTerminalSelectionCopyBlocked(String reason) {
+        host.appendEvent("product.selection.copy result=" + reason);
     }
 
     private void applyClipboardPrimaryClipForTerminalSelection(ClipboardManager clipboard, String text) {
