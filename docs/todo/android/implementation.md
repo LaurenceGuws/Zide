@@ -191,9 +191,13 @@ Milestone gate contract (mandatory when manager/architect lane is active):
     and (c) action-mode + clipboard flow. Audit conclusion remains
     contract-aligned: keep selection monolithic until one of those sub-seams is
     lifted in a behavior-preserving cut with replay/validation authority.
-    - Next: architect review for closed milestone queue item 5 (debug/profiling
-      hygiene); after advance, primary Java cleanup continues under Active TODO
-      item 1 (`ZideTerminalActivity` `create*Callbacks()` net simplification).
+  - Completed: `ZideTerminalActivity` callback-constructor pressure reduced for
+    widget assembly by extracting the largest inline `new WidgetCallbacks(...)`
+    block into a dedicated `createWidgetCallbacks()` seam (behavior preserved).
+    - Next: resume primary Java cleanup under Active TODO item 1 by executing a
+      behavior-preserving `ZideTerminalActivity` `create*Callbacks()` net
+      simplification wave (remove relay-only callback wiring and reduce
+      constructor/callback pressure while preserving owner boundaries).
       `ChromeController` / `SurfaceController` remain frozen until the binding
       `Next:` line is intentionally advanced.
 
@@ -275,13 +279,13 @@ the existing per-commit validation rules.
      - manual device pass on selection vs scroll + overlay (documented in queue
        notes when satisfied) — satisfied via recorded pass above
 5. Keep debug/profiling instrumentation behind explicit flags and remove stale
-   probes after fixes land. (`review_required`)
+   probes after fixes land. (`completed`)
    - Scope:
      - Android terminal host debug/profiling/probe paths only
      - classify each touched signal as correctness contract, operator telemetry,
        or probe/debug capture
      - no behavior expansion; no unrelated cleanup
-   - Outcome:
+    - Outcome:
      - **Removed from hot paths (debug overlay off):** unconditional event-line
        formatting, ring-buffer append, `Log.i` per event, and `TextView` updates
        in `TerminalStatusController.appendEvent` — classified as **operator
@@ -289,9 +293,12 @@ the existing per-commit validation rules.
        when disabled).
      - **Retained when overlay on:** full timestamped in-app log + `Log.i` (same
        operator-visible contract as before).
-     - **Correctness contract unchanged:** native bridge load failure logging in
-       `TerminalNativeBridge` left as product error signal (not event-log
-       telemetry).
+      - **Correctness contract unchanged:** native bridge load failure logging in
+        `TerminalNativeBridge` left as product error signal (not event-log
+        telemetry).
+      - milestone closure: debug event telemetry now has near-zero disabled-path
+        cost in `TerminalStatusController.appendEvent` while preserving full
+        operator logging when debug overlay is enabled.
    - Exit criteria:
      - stale probe-only paths removed from product hot paths
      - retained telemetry is explicitly gated/configurable with low disabled cost

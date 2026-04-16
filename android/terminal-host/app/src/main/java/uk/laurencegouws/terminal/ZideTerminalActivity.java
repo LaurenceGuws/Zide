@@ -277,52 +277,56 @@ public final class ZideTerminalActivity extends Activity
 
     private void assembleWidgetHostControllers() {
         final WidgetAssembly.Result result = WidgetAssembly.assemble(
-                new WidgetCallbacks(
-                        this,
-                        handler,
-                        () -> debugViewEnabled,
-                        e -> debugViewEnabled = e,
-                        () -> imeVisible,
-                        v -> imeVisible = v,
-                        rootView,
-                        productView,
-                        debugView,
-                        productReadinessBlocker,
-                        drawerScrim,
-                        drawerEdgeHotspot,
-                        leftSidebar,
-                        productSurfaceContainer,
-                        terminalScrollOverlay,
-                        productReadinessTitle,
-                        productReadinessDetail,
-                        productReadinessRetryButton,
-                        assistCtrlButton,
-                        assistAltButton,
-                        () -> shellInputView,
-                        selectionController,
-                        terminalGestureStateController,
-                        () -> currentReadinessState,
-                        () -> currentInstallState,
-                        this::shouldRunProductFrameLoop,
-                        this::refreshProductScrollOverlayIfReady,
-                        this::appendEvent,
-                        this::updateStatus,
-                        () -> terminalViewportController.productViewportHeightPx(),
-                        this::reevaluateProductFrameLoopIfReady,
-                        () -> userlandWorkflowController.runPackageDoctor(),
-                        this::sendDirectText,
-                        this::notifyVisibleViewportIfReady,
-                        this::refreshUserlandSessionIfReady,
-                        this::callNative,
-                        this::callNativeWithSurfaceState,
-                        () -> terminalSurfaceStateSnapshotReader.read(),
-                        this::handleProductShellStateEventIfReady));
+                createWidgetCallbacks());
         productShellStatePresenter = result.productShellStatePresenter;
         terminalChromeController = result.terminalChromeController;
         terminalViewModeController = result.terminalViewModeController;
         surfaceHostBridge = result.surfaceHostBridge;
         surfaceHostController = result.surfaceHostController;
         terminalSurfaceWidgetController = result.terminalSurfaceWidgetController;
+    }
+
+    private WidgetCallbacks createWidgetCallbacks() {
+        return new WidgetCallbacks(
+                this,
+                handler,
+                () -> debugViewEnabled,
+                enabled -> debugViewEnabled = enabled,
+                () -> imeVisible,
+                visible -> imeVisible = visible,
+                rootView,
+                productView,
+                debugView,
+                productReadinessBlocker,
+                drawerScrim,
+                drawerEdgeHotspot,
+                leftSidebar,
+                productSurfaceContainer,
+                terminalScrollOverlay,
+                productReadinessTitle,
+                productReadinessDetail,
+                productReadinessRetryButton,
+                assistCtrlButton,
+                assistAltButton,
+                () -> shellInputView,
+                selectionController,
+                terminalGestureStateController,
+                () -> currentReadinessState,
+                () -> currentInstallState,
+                this::shouldRunProductFrameLoop,
+                this::refreshProductScrollOverlayIfReady,
+                this::appendEvent,
+                this::updateStatus,
+                () -> terminalViewportController.productViewportHeightPx(),
+                this::reevaluateProductFrameLoopIfReady,
+                () -> userlandWorkflowController.runPackageDoctor(),
+                this::sendDirectText,
+                this::notifyVisibleViewportIfReady,
+                this::refreshUserlandSessionIfReady,
+                this::callNative,
+                this::callNativeWithSurfaceState,
+                () -> terminalSurfaceStateSnapshotReader.read(),
+                this::handleProductShellStateEventIfReady);
     }
 
     private void assembleSessionControllers() {
