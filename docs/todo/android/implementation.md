@@ -278,6 +278,9 @@ the existing per-commit validation rules.
        step; destroy clears suppress via a dedicated helper; missing clipboard
        logs match the no-bytes pattern; primary clip construction is a static
        `ClipData` helper
+     - mini-wave: floating toolbar “full” invalidation is named; host container
+       for chrome start is explicit; content-rect supply skips a pass-through;
+       blocked copy outcomes share one `result=` formatter
    - Exit criteria:
      - compile pass per commit; deploy + `AndroidRuntime:E` smoke at seam
        boundary
