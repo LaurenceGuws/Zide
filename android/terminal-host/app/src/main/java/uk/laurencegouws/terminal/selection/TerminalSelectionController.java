@@ -220,7 +220,7 @@ public final class TerminalSelectionController {
 
     /** Keeps selection chrome aligned after viewport/scrollback changes. */
     public void syncChrome() {
-        syncSelectionChrome();
+        syncTerminalSelectionActionMode();
     }
 
     /** Keeps handles above the terminal surface when the surface host is recreated. */
@@ -317,7 +317,7 @@ public final class TerminalSelectionController {
                 selectionDraggedHandleTouchOffsetX = event.getX();
                 selectionDraggedHandleTouchOffsetY = event.getY();
                 beginSelectionDrag(dragMode, selectionHandleAnchorX(handle), selectionHandleAnchorY(handle));
-                syncSelectionChrome();
+                syncTerminalSelectionActionMode();
                 requestFrameLoopReevaluation();
                 return true;
             case MotionEvent.ACTION_MOVE:
@@ -392,18 +392,14 @@ public final class TerminalSelectionController {
         requestFrameLoopReevaluation();
     }
 
-    private void syncSelectionChromeAndReevaluateFrameLoop() {
-        syncSelectionChrome();
-        requestFrameLoopReevaluation();
-    }
-
     private void onSelectionUpdateSuccess() {
-        syncSelectionChrome();
+        syncTerminalSelectionActionMode();
     }
 
     private void onSelectionUpdateSuccessDuringDrag() {
         applyImmediateSelectionAutoscrollStep();
-        syncSelectionChromeAndReevaluateFrameLoop();
+        syncTerminalSelectionActionMode();
+        requestFrameLoopReevaluation();
     }
 
     private boolean bridgeHasActiveSelection() {
@@ -740,21 +736,17 @@ public final class TerminalSelectionController {
 
     private void hideSelectionToolbar() {
         selectionToolbarVisible = false;
-        syncSelectionChrome();
+        syncTerminalSelectionActionMode();
     }
 
     private void showSelectionToolbar() {
         selectionToolbarVisible = selectionHelpersVisible;
-        syncSelectionChrome();
+        syncTerminalSelectionActionMode();
     }
 
     private void toggleSelectionHelpers() {
         selectionHelpersVisible = !selectionHelpersVisible;
         selectionToolbarVisible = selectionHelpersVisible && !selectionDragActive;
-        syncSelectionChrome();
-    }
-
-    private void syncSelectionChrome() {
         syncTerminalSelectionActionMode();
     }
 
@@ -768,31 +760,6 @@ public final class TerminalSelectionController {
 
     private boolean hasTerminalSelectionActionMode() {
         return terminalSelectionActionMode != null;
-    }
-
-    private boolean refreshExistingTerminalSelectionActionModeIfPresent() {
-        if (!hasTerminalSelectionActionMode()) {
-            return false;
-        }
-        invalidateTerminalSelectionFloatingToolbarFully();
-        return true;
-    }
-
-    private void invalidateTerminalSelectionFloatingToolbarFully() {
-        invalidateTerminalSelectionActionMode(true);
-    }
-
-    private void invalidateTerminalSelectionFloatingToolbarGeometryOnly() {
-        invalidateTerminalSelectionActionMode(false);
-    }
-
-    private void attachNewFloatingTerminalSelectionActionMode() {
-        registerTerminalSelectionFloatingActionMode(startFloatingTerminalSelectionActionMode());
-    }
-
-    private void registerTerminalSelectionFloatingActionMode(ActionMode mode) {
-        terminalSelectionActionMode = mode;
-        invalidateTerminalSelectionFloatingToolbarGeometryOnly();
     }
 
     private boolean ensureTerminalSelectionActionModePresentationOrFinishIfUnavailable() {
@@ -811,18 +778,17 @@ public final class TerminalSelectionController {
         if (!ensureTerminalSelectionActionModePresentationOrFinishIfUnavailable()) {
             return;
         }
-        if (refreshExistingTerminalSelectionActionModeIfPresent()) {
+        if (terminalSelectionActionMode != null) {
+            invalidateTerminalSelectionActionMode(true);
             return;
         }
-        attachNewFloatingTerminalSelectionActionMode();
+        final ActionMode mode = startFloatingTerminalSelectionActionMode();
+        terminalSelectionActionMode = mode;
+        invalidateTerminalSelectionActionMode(false);
     }
 
     private ActionMode startFloatingTerminalSelectionActionMode() {
-        return requestTerminalSelectionFloatingActionModeOnContainer(productSurfaceContainerForTerminalSelectionChrome());
-    }
-
-    private FrameLayout productSurfaceContainerForTerminalSelectionChrome() {
-        return host.productSurfaceContainer();
+        return requestTerminalSelectionFloatingActionModeOnContainer(host.productSurfaceContainer());
     }
 
     private ActionMode requestTerminalSelectionFloatingActionModeOnContainer(FrameLayout container) {
@@ -991,13 +957,6 @@ public final class TerminalSelectionController {
         return right <= left || bottom <= top;
     }
 
-    private void maybeShowTerminalSelectionActionMode() {
-        if (!bridgeHasActiveSelection()) {
-            return;
-        }
-        showTerminalSelectionActionMode();
-    }
-
     private void syncTerminalSelectionActionMode() {
         syncSelectionHandles();
         applyTerminalSelectionActionModeSync();
@@ -1009,9 +968,11 @@ public final class TerminalSelectionController {
             return;
         }
         if (!hasTerminalSelectionActionMode()) {
-            maybeShowTerminalSelectionActionMode();
+            if (bridgeHasActiveSelection()) {
+                showTerminalSelectionActionMode();
+            }
         } else {
-            invalidateTerminalSelectionFloatingToolbarGeometryOnly();
+            invalidateTerminalSelectionActionMode(false);
         }
     }
 
@@ -1147,16 +1108,12 @@ public final class TerminalSelectionController {
     }
 
     private void copyCurrentShellSelectionToClipboard() {
-        final byte[] bytes = readCurrentShellSelectionTextBytesOrNull();
+        final byte[] bytes = bridge.currentSelectionTextBytes();
         if (bytes == null) {
             reportTerminalSelectionCopyNoBytes();
             return;
         }
         applyTerminalSelectionPlainTextToSystemClipboard(decodeTerminalSelectionUtf8(bytes));
-    }
-
-    private byte[] readCurrentShellSelectionTextBytesOrNull() {
-        return bridge.currentSelectionTextBytes();
     }
 
     private void reportTerminalSelectionCopyNoBytes() {
@@ -1176,15 +1133,11 @@ public final class TerminalSelectionController {
     }
 
     private ClipboardManager resolveClipboardManagerForSelectionCopy() {
-        final ClipboardManager clipboard = clipboardManagerFromHostContext();
+        final ClipboardManager clipboard = host.context().getSystemService(ClipboardManager.class);
         if (clipboard == null) {
             reportTerminalSelectionCopyNoClipboard();
         }
         return clipboard;
-    }
-
-    private ClipboardManager clipboardManagerFromHostContext() {
-        return host.context().getSystemService(ClipboardManager.class);
     }
 
     private void reportTerminalSelectionCopyNoClipboard() {

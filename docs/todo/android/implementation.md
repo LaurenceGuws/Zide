@@ -191,12 +191,10 @@ Milestone gate contract (mandatory when manager/architect lane is active):
     and (c) action-mode + clipboard flow. Audit conclusion remains
     contract-aligned: keep selection monolithic until one of those sub-seams is
     lifted in a behavior-preserving cut with replay/validation authority.
-    - Next: execute `AN-A1-M2C` — behavior-preserving
-      `TerminalSelectionController` internal extraction for action-mode
-      lifecycle + clipboard flow (monolithic controller retained); compile each
-      commit and run deploy + `AndroidRuntime:E` smoke at seam cadence.
-      `ChromeController` / `SurfaceController` remain frozen until this `Next:`
-      line is intentionally advanced.
+    - Next: architect review for closed `AN-A1-M2C`; after advance, next
+      planned scope is milestone queue item 4 (selection/scroll stabilization
+      under manual device usage). `ChromeController` / `SurfaceController`
+      remain frozen until the binding `Next:` line is intentionally advanced.
 
 ### Milestone Queue (Manager/Architect Control)
 
@@ -228,76 +226,27 @@ the existing per-commit validation rules.
    - Outcome:
      - hotspot line counts refreshed in queue snapshot, handoff, and structure
        authority; binding `Next:` advanced to `AN-A1-M2C` action-mode/clipboard
-3. `AN-A1-M2C` selection action-mode/clipboard wave (`in_progress`)
+3. `AN-A1-M2C` selection action-mode/clipboard wave (`review_required`)
    - Scope:
      - action-mode lifecycle + clipboard flow simplification only
      - preserve behavior and monolithic ownership
    - Outcome:
-     - plain-text clipboard apply is split from shell selection decode
-     - unified action-mode invalidation (`invalidateTerminalSelectionActionMode`)
-     - floating action-mode start and toolbar copy execution are dedicated call
-       paths (not inlined into sync or menu glue)
-     - copy menu install + fallback toolbar rect centralized
-       (`installTerminalSelectionCopyMenuItem`,
-       `setSelectionActionModeFallbackContentRect`)
-     - bridge selection rect read/clamp isolated
-       (`populateTerminalSelectionContentRectFromBridge`)
-     - floating selection action mode: attach precondition (active selection +
-       host container) is one named check; sync delegates the idle→show path
-       through a single active-selection gate; copy toolbar clicks resolve the
-       system copy action by id in one place
-     - mini-wave: explicit finish reads the current mode once; “already
-       showing” refresh is its own branch; destroy detaches by `ActionMode`
-       identity before teardown effects; clipboard applies primary clip + success
-       telemetry in one place
-     - mini-wave: presence helper for the floating mode; first attach packages
-       start + invalidation; sync body split after handle sync; floating
-       `onCreate` routes through a named install path
-     - mini-wave: floating `Callback2` delegates prepare/menu/content-rect;
-       toolbar copy runs through `executeTerminalSelectionToolbarCopy`; shell
-       bytes path reports empty selection and decodes UTF-8 in named helpers
-     - mini-wave: explicit finish detaches mode + suppress in one step; toolbar
-       invalidation splits guard vs content/view work; bridge bounds fill the
-       viewport rect via a dedicated helper; clipboard service resolve logs
-       missing manager once
-     - mini-wave: action-mode sync uses if/else for idle vs showing; toolbar
-       content rect fills from bridge or view bounds in one helper; destroy path
-       clears bridge selection in a suppress-aware helper; clip label is a single
-       constant
-     - mini-wave: bridge “selection active” is one predicate reused for tap/drag,
-       toolbar visibility, and presentation; show path names the can-present gate;
-       bridge aggregate bounds use a degeneracy test; copy success telemetry is one
-       helper
-     - mini-wave: host surface presence is named for can-present; floating mode
-       start is `FrameLayout`→`ActionMode` in one helper; toolbar fallback extents
-       use a shared minimum-size helper; endpoint rects reuse the same degeneracy
-       rule as aggregate bridge bounds
-     - mini-wave: first floating attach registers mode + invalidation in one
-       step; destroy clears suppress via a dedicated helper; missing clipboard
-       logs match the no-bytes pattern; primary clip construction is a static
-       `ClipData` helper
-     - mini-wave: floating toolbar “full” invalidation is named; host container
-       for chrome start is explicit; content-rect supply skips a pass-through;
-       blocked copy outcomes share one `result=` formatter
-     - mini-wave: geometry-only toolbar invalidation is named and reused; copy
-       telemetry prefixes are class constants; floating `ActionMode` type is a
-       named constant at the `startActionMode` seam
-     - mini-wave: copy menu item id is a class constant; floating toolbar
-       `Callback2` builder is explicitly named; destroy/finish toggle the clear
-       suppress flag through one setter; plain-text clipboard apply is split from
-       the public copy entrypoint
-     - mini-wave: copy menu title + `showAsAction` are class constants; toolbar
-       copy finishes the `ActionMode` through a dedicated helper; clipboard
-       service lookup is a host-context helper; bridge aggregate rect fill drops
-       a one-line pass-through
-     - mini-wave: copy menu group/order slots share a neutral constant with the
-       rest of the copy menu seam; floating toolbar content-rect calls the
-       bridge-or-view helper directly; destroy-time bridge clear names the
-       suppress predicate; shell copy reads selection bytes through one internal
-       accessor
-     - mini-wave: floating toolbar copy path drops redundant forwarders (plain
-       text apply is reached directly after decode; copy menu click finishes the
-       mode in one place; prepare stays a constant false at the callback)
+      - floating toolbar lifecycle is now branch-separated: attach/show, refresh,
+        and explicit finish/destroy are handled by distinct paths
+      - action-mode invalidation is centralized with explicit geometry-only vs
+        full invalidation intent
+      - copy menu handling resolves copy action id and completion in one place
+        (single handled path)
+      - clipboard flow is explicit and linear: selection bytes read -> UTF-8
+        decode -> clipboard apply -> success/blocked telemetry
+      - content-rect sourcing is centralized (bridge bounds first, bounded
+        fallback to view extents)
+      - bridge bounds degeneracy checks are shared across aggregate and endpoint
+        selection rect paths to keep geometry behavior consistent
+      - M2C closure: removed redundant one-hop sync and attach/register helpers;
+        show vs refresh vs new action mode is explicit in one method; clipboard
+        read and `ClipboardManager` resolve no longer delegate through pass-through
+        wrappers
    - Exit criteria:
      - compile pass per commit; deploy + `AndroidRuntime:E` smoke at seam
        boundary
@@ -355,7 +304,7 @@ A cut is done only if all are true:
 - `ZideTerminalActivity` is now wiring/lifecycle/orchestration-oriented
   (current size: `615` lines; JNI moved out to `TerminalNativeBridge`)
 - current Java hotspot ranking for hygiene focus:
-  - `selection/TerminalSelectionController.java` (~999 lines, monolithic by design)
+  - `selection/TerminalSelectionController.java` (~1163 lines, monolithic by design)
   - `ZideTerminalActivity.java` (~615 lines, orchestration pressure)
   - `host/ui/WidgetCallbacks.java` (~340 lines, constructor/callback pressure)
   - `userland/UserlandInstaller.java` (~425 lines, large but cohesive)
