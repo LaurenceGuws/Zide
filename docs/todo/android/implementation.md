@@ -238,6 +238,9 @@ Milestone gate contract (mandatory when manager/architect lane is active):
   - Completed: lifecycle callback wiring in `ZideTerminalActivity` is now
     fully named end-to-end; `LifecycleCallbacks.LifecycleHostCallbacks.of(...)`
     no longer appears inline inside `createLifecycleCallbacks()`.
+  - Completed: UI startup assembly invocation in `ZideTerminalActivity` now
+    routes through a named `startUiStartupAssembly()` helper so composition-root
+    startup no longer inlines the assembly start call.
     - Next: resume primary Java cleanup under Active TODO item 1 by executing a
       behavior-preserving `ZideTerminalActivity` `create*Callbacks()` net
       simplification wave (remove relay-only callback wiring and reduce

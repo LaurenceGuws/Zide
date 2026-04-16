@@ -412,8 +412,11 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void bindAndStartUiControllers() {
-        UiStartupAssembly.start(
-                createUiStartupCallbacks());
+        startUiStartupAssembly();
+    }
+
+    private void startUiStartupAssembly() {
+        UiStartupAssembly.start(createUiStartupCallbacks());
     }
 
     private UiStartupCallbacks createUiStartupCallbacks() {
