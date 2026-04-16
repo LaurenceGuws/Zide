@@ -230,18 +230,22 @@ public final class ZideTerminalActivity extends Activity
 
     private void assembleInteractionControllers() {
         final InteractionAssembly.Result result = InteractionAssembly.assemble(
-                new InteractionCallbacks(
-                        this,
-                        handler,
-                        productSurfaceContainer,
-                        () -> terminalViewportController.productViewportWidthPx(),
-                        () -> terminalViewportController.productViewportHeightPx(),
-                        this::stopScrollbackFlingIfReady,
-                        this::refreshProductScrollOverlayIfReady,
-                        this::reevaluateProductFrameLoopIfReady,
-                        this::appendEvent));
+                createInteractionCallbacks());
         selectionController = result.selectionController;
         terminalGestureStateController = result.terminalGestureStateController;
+    }
+
+    private InteractionCallbacks createInteractionCallbacks() {
+        return new InteractionCallbacks(
+                this,
+                handler,
+                productSurfaceContainer,
+                () -> terminalViewportController.productViewportWidthPx(),
+                () -> terminalViewportController.productViewportHeightPx(),
+                this::stopScrollbackFlingIfReady,
+                this::refreshProductScrollOverlayIfReady,
+                this::reevaluateProductFrameLoopIfReady,
+                this::appendEvent);
     }
 
     private void installInputControllers() {
