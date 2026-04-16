@@ -744,8 +744,12 @@ public final class TerminalSelectionController {
         syncTerminalSelectionActionMode();
     }
 
+    private boolean hostHasProductSurfaceContainer() {
+        return host.productSurfaceContainer() != null;
+    }
+
     private boolean canPresentTerminalSelectionActionMode() {
-        return bridgeHasActiveSelection() && host.productSurfaceContainer() != null;
+        return bridgeHasActiveSelection() && hostHasProductSurfaceContainer();
     }
 
     private boolean hasTerminalSelectionActionMode() {
@@ -788,8 +792,11 @@ public final class TerminalSelectionController {
     }
 
     private ActionMode startFloatingTerminalSelectionActionMode() {
-        return host.productSurfaceContainer().startActionMode(
-                createTerminalSelectionActionModeCallback(), ActionMode.TYPE_FLOATING);
+        return requestTerminalSelectionFloatingActionModeOnContainer(host.productSurfaceContainer());
+    }
+
+    private ActionMode requestTerminalSelectionFloatingActionModeOnContainer(FrameLayout container) {
+        return container.startActionMode(createTerminalSelectionActionModeCallback(), ActionMode.TYPE_FLOATING);
     }
 
     private void invalidateTerminalSelectionActionMode(boolean invalidateView) {
@@ -909,7 +916,15 @@ public final class TerminalSelectionController {
     }
 
     private void setSelectionActionModeFallbackContentRect(View view, Rect outRect) {
-        outRect.set(0, 0, Math.max(view.getWidth(), 1), Math.max(view.getHeight(), 1));
+        outRect.set(
+                0,
+                0,
+                selectionActionModeFallbackExtentPx(view.getWidth()),
+                selectionActionModeFallbackExtentPx(view.getHeight()));
+    }
+
+    private static int selectionActionModeFallbackExtentPx(int extentPx) {
+        return Math.max(extentPx, 1);
     }
 
     private void finishTerminalSelectionActionMode() {
@@ -1086,7 +1101,7 @@ public final class TerminalSelectionController {
         final int top = startHandle ? bridge.currentSelectionStartRectTop() : bridge.currentSelectionEndRectTop();
         final int right = startHandle ? bridge.currentSelectionStartRectRight() : bridge.currentSelectionEndRectRight();
         final int bottom = startHandle ? bridge.currentSelectionStartRectBottom() : bridge.currentSelectionEndRectBottom();
-        if (right <= left || bottom <= top) {
+        if (terminalSelectionBridgeBoundsAreInvalid(left, top, right, bottom)) {
             return null;
         }
         final Rect rect = new Rect();
