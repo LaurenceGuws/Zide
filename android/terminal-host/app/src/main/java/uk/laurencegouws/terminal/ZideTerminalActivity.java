@@ -335,19 +335,23 @@ public final class ZideTerminalActivity extends Activity
 
     private void assembleSessionControllers() {
         final SessionAssembly.Result result = SessionAssembly.assemble(
-                new SessionAssemblyCallbacks(
-                        this,
-                        userlandRelease,
-                        handler,
-                        this::appendEvent,
-                        this::updateStatus,
-                        state -> currentReadinessState = state,
-                        this::refreshProductShellStateIfReady,
-                        this::refreshDebugStatusSurfaceIfReady,
-                        this::shouldRunProductFrameLoop,
-                        this::tickProductFrameAndRefreshScrollOverlay));
+                createSessionAssemblyCallbacks());
         userlandSessionCoordinator = result.userlandSessionCoordinator;
         productFrameLoopController = result.frameLoopController;
+    }
+
+    private SessionAssemblyCallbacks createSessionAssemblyCallbacks() {
+        return new SessionAssemblyCallbacks(
+                this,
+                userlandRelease,
+                handler,
+                this::appendEvent,
+                this::updateStatus,
+                state -> currentReadinessState = state,
+                this::refreshProductShellStateIfReady,
+                this::refreshDebugStatusSurfaceIfReady,
+                this::shouldRunProductFrameLoop,
+                this::tickProductFrameAndRefreshScrollOverlay);
     }
 
     private void assembleUserlandWorkflowControllers() {
