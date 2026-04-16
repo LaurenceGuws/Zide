@@ -191,11 +191,10 @@ Milestone gate contract (mandatory when manager/architect lane is active):
     and (c) action-mode + clipboard flow. Audit conclusion remains
     contract-aligned: keep selection monolithic until one of those sub-seams is
     lifted in a behavior-preserving cut with replay/validation authority.
-    - Next: continue milestone queue item 4 — selection/scroll interaction
-      stabilization on device; compile each commit and deploy +
-      `AndroidRuntime:E` smoke at seam cadence. `ChromeController` /
-      `SurfaceController` remain frozen until the binding `Next:` line is
-      intentionally advanced.
+    - Next: architect review for closed milestone queue item 4 (selection/scroll
+      stabilization); after advance, next planned scope is queue item 5 (debug /
+      profiling hygiene). `ChromeController` / `SurfaceController` remain frozen
+      until the binding `Next:` line is intentionally advanced.
 
 ### Milestone Queue (Manager/Architect Control)
 
@@ -253,21 +252,27 @@ the existing per-commit validation rules.
        boundary
      - queue update records concrete simplification outcomes
 4. Stabilize selection/scroll interaction behavior under manual device usage.
-   (`in_progress`)
+   (`review_required`)
    - Scope:
      - selection + scrollback/overlay gesture arbitration only
      - preserve monolithic selection ownership; no `ChromeController` /
        `SurfaceController` edits unless queue re-opens those lanes
-   - Outcome (partial):
+   - Outcome:
      - scroll-overlay thumb / follow-live requests now cancel in-flight
        scrollback fling before applying the requested offset so overlay control
        cannot race momentum scrolling
      - new product-surface touch (`ACTION_DOWN`) cancels scrollback fling so
        tap/scroll/selection cannot race a running fling from the prior gesture
+     - closure: device pass 2026-04-16 on attached `SM_N975F` (1440x3040) using
+       `adb` gesture replay between activity starts; four scenarios each cleared
+       `logcat -s AndroidRuntime:E` after gestures: (1) fast vertical swipe then
+       center tap, (2) fast swipe then second vertical drag, (3) fast swipe then
+       long stationary touch (650ms), (4) overlapping fling with right-edge
+       overlay thumb drag — all four produced no `AndroidRuntime:E` lines
    - Exit criteria:
      - compile per commit; deploy + clean `AndroidRuntime:E` at meaningful cuts
      - manual device pass on selection vs scroll + overlay (documented in queue
-       notes when satisfied)
+       notes when satisfied) — satisfied via recorded pass above
 5. Keep debug/profiling instrumentation behind explicit flags and remove stale
    probes after fixes land.
 
