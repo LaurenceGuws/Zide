@@ -392,12 +392,16 @@ public final class TerminalSelectionController {
         syncSelectionChromeAndReevaluateFrameLoop();
     }
 
+    private boolean bridgeHasActiveSelection() {
+        return bridge.currentSelectionActive();
+    }
+
     private boolean canHandleSelectionTap() {
-        return isBridgeReady() && bridge.currentSelectionActive();
+        return isBridgeReady() && bridgeHasActiveSelection();
     }
 
     private boolean canHandleSelectionDrag() {
-        return isBridgeReady() && bridge.currentSelectionActive();
+        return isBridgeReady() && bridgeHasActiveSelection();
     }
 
     private boolean commitSelectionDragIfNeeded(float x, float y) {
@@ -741,7 +745,7 @@ public final class TerminalSelectionController {
     }
 
     private boolean canPresentTerminalSelectionActionMode() {
-        return bridge.currentSelectionActive() && host.productSurfaceContainer() != null;
+        return bridgeHasActiveSelection() && host.productSurfaceContainer() != null;
     }
 
     private boolean hasTerminalSelectionActionMode() {
@@ -761,13 +765,20 @@ public final class TerminalSelectionController {
         invalidateTerminalSelectionActionMode(false);
     }
 
+    private boolean ensureTerminalSelectionActionModePresentationOrFinishIfUnavailable() {
+        if (!canPresentTerminalSelectionActionMode()) {
+            finishTerminalSelectionActionMode();
+            return false;
+        }
+        return true;
+    }
+
     private void showTerminalSelectionActionMode() {
         syncSelectionHandles();
         if (!selectionToolbarVisible) {
             return;
         }
-        if (!canPresentTerminalSelectionActionMode()) {
-            finishTerminalSelectionActionMode();
+        if (!ensureTerminalSelectionActionModePresentationOrFinishIfUnavailable()) {
             return;
         }
         if (refreshExistingTerminalSelectionActionModeIfPresent()) {
@@ -932,14 +943,18 @@ public final class TerminalSelectionController {
         final int top = bridge.currentSelectionRectTop();
         final int right = bridge.currentSelectionRectRight();
         final int bottom = bridge.currentSelectionRectBottom();
-        if (right <= left || bottom <= top) {
+        if (terminalSelectionBridgeBoundsAreInvalid(left, top, right, bottom)) {
             return false;
         }
         return clampRectToViewport(left, top, right, bottom, outRect);
     }
 
+    private static boolean terminalSelectionBridgeBoundsAreInvalid(int left, int top, int right, int bottom) {
+        return right <= left || bottom <= top;
+    }
+
     private void maybeShowTerminalSelectionActionMode() {
-        if (!bridge.currentSelectionActive()) {
+        if (!bridgeHasActiveSelection()) {
             return;
         }
         showTerminalSelectionActionMode();
@@ -963,7 +978,7 @@ public final class TerminalSelectionController {
     }
 
     private boolean shouldKeepTerminalSelectionActionModeVisible() {
-        return selectionToolbarVisible && bridge.currentSelectionActive();
+        return selectionToolbarVisible && bridgeHasActiveSelection();
     }
 
     private boolean shouldFinishTerminalSelectionActionMode() {
@@ -1128,6 +1143,10 @@ public final class TerminalSelectionController {
 
     private void applyClipboardPrimaryClipForTerminalSelection(ClipboardManager clipboard, String text) {
         clipboard.setPrimaryClip(ClipData.newPlainText(TERMINAL_SELECTION_CLIP_LABEL, text));
-        host.appendEvent("product.selection.copy result=ok chars=" + text.length());
+        reportTerminalSelectionCopySucceeded(text.length());
+    }
+
+    private void reportTerminalSelectionCopySucceeded(int charCount) {
+        host.appendEvent("product.selection.copy result=ok chars=" + charCount);
     }
 }
