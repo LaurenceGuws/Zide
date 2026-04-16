@@ -274,6 +274,10 @@ the existing per-commit validation rules.
        start is `FrameLayout`→`ActionMode` in one helper; toolbar fallback extents
        use a shared minimum-size helper; endpoint rects reuse the same degeneracy
        rule as aggregate bridge bounds
+     - mini-wave: first floating attach registers mode + invalidation in one
+       step; destroy clears suppress via a dedicated helper; missing clipboard
+       logs match the no-bytes pattern; primary clip construction is a static
+       `ClipData` helper
    - Exit criteria:
      - compile pass per commit; deploy + `AndroidRuntime:E` smoke at seam
        boundary
