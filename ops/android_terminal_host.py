@@ -26,7 +26,7 @@ from typing import NoReturn
 ROOT = Path(__file__).resolve().parents[1]
 BRIDGE_DIR = ROOT / "android" / "terminal-host"
 PACKAGE_NAME = "uk.laurencegouws.zide"
-ACTIVITY_NAME = f"{PACKAGE_NAME}/uk.laurencegouws.terminal.ZideTerminalActivity"
+ACTIVITY_NAME = f"{PACKAGE_NAME}/uk.laurencegouws.terminal.ZideActivity"
 NDK_VERSION = os.environ.get("ZIDE_ANDROID_NDK_VERSION", "27.1.12297006")
 ANDROID_API = "29"
 USERLAND_CACHE_DIR = ROOT / ".cache" / "android-userland"

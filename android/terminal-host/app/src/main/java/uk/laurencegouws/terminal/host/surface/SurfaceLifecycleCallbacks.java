@@ -7,7 +7,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import uk.laurencegouws.terminal.TerminalNativeBridge;
+import uk.laurencegouws.terminal.NativeBridge;
 import uk.laurencegouws.terminal.debug.AndroidDebugFormatter;
 
 /** Functional callback adapter for {@link SurfaceCallbacks.Callbacks}. */
@@ -113,22 +113,22 @@ public final class SurfaceLifecycleCallbacks implements SurfaceCallbacks.Callbac
 
     @Override
     public long nativeOnSurfaceAvailableBridge(SurfaceHolder holder, int width, int height) {
-        return TerminalNativeBridge.nativeOnSurfaceAvailableBridge(holder.getSurface(), width, height);
+        return NativeBridge.nativeOnSurfaceAvailableBridge(holder.getSurface(), width, height);
     }
 
     @Override
     public long nativeOnSurfaceDestroyedBridge() {
-        return TerminalNativeBridge.nativeOnSurfaceDestroyedBridge();
+        return NativeBridge.nativeOnSurfaceDestroyedBridge();
     }
 
     @Override
     public long nativeOnSurfaceRedrawNeededBridge() {
-        return TerminalNativeBridge.nativeOnSurfaceRedrawNeededBridge();
+        return NativeBridge.nativeOnSurfaceRedrawNeededBridge();
     }
 
     @Override
     public long nativeOnVisibleViewportBridge(int width, int height, boolean imeVisible) {
-        return TerminalNativeBridge.nativeOnVisibleViewportBridge(width, height, imeVisible);
+        return NativeBridge.nativeOnVisibleViewportBridge(width, height, imeVisible);
     }
 
     @Override

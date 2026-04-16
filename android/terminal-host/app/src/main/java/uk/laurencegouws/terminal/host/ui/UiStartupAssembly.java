@@ -48,7 +48,7 @@ public final class UiStartupAssembly {
 
         SurfaceWidgetController surfaceWidgetController();
 
-        uk.laurencegouws.terminal.userland.ProductShellStatePresenter productShellStatePresenter();
+        uk.laurencegouws.terminal.userland.ShellStatePresenter ShellStatePresenter();
 
         FrameLoopController frameLoopController();
 
@@ -89,7 +89,7 @@ public final class UiStartupAssembly {
         host.runtimeAssetsController().prepareRuntimeAssets();
         host.viewModeController().applyCurrentViewMode();
         host.surfaceHostController().installSurfaceView("activity-create", host.surfaceWidgetController());
-        host.productShellStatePresenter().refresh();
+        host.ShellStatePresenter().refresh();
         host.frameLoopController().reevaluate();
         host.leftSidebar().post(() -> {
             host.leftSidebar().setTranslationX(-host.leftSidebar().getWidth());

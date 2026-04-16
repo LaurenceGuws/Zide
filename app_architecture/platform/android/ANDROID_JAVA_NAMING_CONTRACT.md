@@ -33,7 +33,7 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
 ### JNI Symbol Rule
 
 - do not introduce new `native*Shell*Bridge` symbols in
-  `TerminalNativeBridge.java`
+  `NativeBridge.java`
 - use session/selection/surface/readiness vocabulary instead
 
 ## Glossary
@@ -67,6 +67,20 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
 - reserve `Host` for boundary context where needed; do not repeat it when the
   package or role already encodes host ownership
 - keep JSON/wire/schema keys stable unless a migration is explicitly scoped
+
+### Redundancy Pressure Rule
+
+- package path is primary context (`.../terminal/<domain>/...`); method/class
+  names should be concise by default
+- avoid redundant pairs like `ProductTerminal*`, `Terminal...Controller` inside
+  terminal-scoped packages unless the extra term distinguishes a real competing
+  concept
+- allow `Product` only when contrasting product UI/runtime behavior against
+  debug/operator behavior in the same owner
+- prefer naming by behavior (`showSelectionActionMode`, `syncHandles`) over
+  ownership echo (`showTerminalSelectionActionMode`, `syncTerminalSelectionHandles`)
+- do not run broad rename sweeps inside behavior/refactor waves; stage naming
+  normalization as mechanical slices once queue authority explicitly opens it
 
 ## Rename Campaign Rules
 

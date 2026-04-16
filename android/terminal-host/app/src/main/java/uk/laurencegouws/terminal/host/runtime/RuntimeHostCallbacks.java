@@ -7,49 +7,49 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import uk.laurencegouws.terminal.TerminalNativeBridge;
-import uk.laurencegouws.terminal.debug.TerminalStatusController;
-import uk.laurencegouws.terminal.gesture.TerminalGestureStateController;
-import uk.laurencegouws.terminal.scroll.TerminalScrollOverlayView;
-import uk.laurencegouws.terminal.selection.TerminalSelectionController;
+import uk.laurencegouws.terminal.NativeBridge;
+import uk.laurencegouws.terminal.debug.StatusController;
+import uk.laurencegouws.terminal.gesture.GestureStateController;
+import uk.laurencegouws.terminal.scroll.ScrollOverlayView;
+import uk.laurencegouws.terminal.selection.SelectionController;
 import uk.laurencegouws.terminal.host.surface.SurfaceBridge;
-import uk.laurencegouws.terminal.userland.ProductShellStatePresenter;
+import uk.laurencegouws.terminal.userland.ShellStatePresenter;
 import uk.laurencegouws.terminal.userland.UserlandReadinessState;
 import uk.laurencegouws.terminal.userland.UserlandInstallState;
 import uk.laurencegouws.terminal.userland.UserlandSessionCoordinator;
 
-/** Functional callback adapter for {@link ProductRuntimeController}. */
-public final class ProductRuntimeHostCallbacks implements ProductRuntimeController.Host {
+/** Functional callback adapter for {@link RuntimeController}. */
+public final class RuntimeHostCallbacks implements RuntimeController.Host {
     private final BooleanSupplier debugViewEnabled;
     private final Supplier<UserlandInstallState> installState;
     private final Consumer<UserlandInstallState> setInstallState;
     private final Supplier<UserlandReadinessState> readinessState;
     private final Supplier<SurfaceBridge> surfaceHostBridge;
     private final View productReadinessBlocker;
-    private final TerminalScrollOverlayView terminalScrollOverlay;
-    private final TerminalSelectionController selectionController;
-    private final ProductShellStatePresenter productShellStatePresenter;
+    private final ScrollOverlayView terminalScrollOverlay;
+    private final SelectionController selectionController;
+    private final ShellStatePresenter ShellStatePresenter;
     private final FrameLoopController frameLoopController;
-    private final TerminalStatusController terminalStatusController;
+    private final StatusController StatusController;
     private final UserlandSessionCoordinator userlandSessionCoordinator;
-    private final TerminalGestureStateController terminalGestureStateController;
+    private final GestureStateController GestureStateController;
     private final Consumer<String> appendEvent;
     private final Consumer<String> updateStatus;
 
-    public ProductRuntimeHostCallbacks(
+    public RuntimeHostCallbacks(
             BooleanSupplier debugViewEnabled,
             Supplier<UserlandInstallState> installState,
             Consumer<UserlandInstallState> setInstallState,
             Supplier<UserlandReadinessState> readinessState,
             Supplier<SurfaceBridge> surfaceHostBridge,
             View productReadinessBlocker,
-            TerminalScrollOverlayView terminalScrollOverlay,
-            TerminalSelectionController selectionController,
-            ProductShellStatePresenter productShellStatePresenter,
+            ScrollOverlayView terminalScrollOverlay,
+            SelectionController selectionController,
+            ShellStatePresenter ShellStatePresenter,
             FrameLoopController frameLoopController,
-            TerminalStatusController terminalStatusController,
+            StatusController StatusController,
             UserlandSessionCoordinator userlandSessionCoordinator,
-            TerminalGestureStateController terminalGestureStateController,
+            GestureStateController GestureStateController,
             Consumer<String> appendEvent,
             Consumer<String> updateStatus) {
         this.debugViewEnabled = debugViewEnabled;
@@ -60,11 +60,11 @@ public final class ProductRuntimeHostCallbacks implements ProductRuntimeControll
         this.productReadinessBlocker = productReadinessBlocker;
         this.terminalScrollOverlay = terminalScrollOverlay;
         this.selectionController = selectionController;
-        this.productShellStatePresenter = productShellStatePresenter;
+        this.ShellStatePresenter = ShellStatePresenter;
         this.frameLoopController = frameLoopController;
-        this.terminalStatusController = terminalStatusController;
+        this.StatusController = StatusController;
         this.userlandSessionCoordinator = userlandSessionCoordinator;
-        this.terminalGestureStateController = terminalGestureStateController;
+        this.GestureStateController = GestureStateController;
         this.appendEvent = appendEvent;
         this.updateStatus = updateStatus;
     }
@@ -76,7 +76,7 @@ public final class ProductRuntimeHostCallbacks implements ProductRuntimeControll
 
     @Override
     public boolean nativeLoaded() {
-        return TerminalNativeBridge.nativeLoaded();
+        return NativeBridge.nativeLoaded();
     }
 
     @Override
@@ -106,18 +106,18 @@ public final class ProductRuntimeHostCallbacks implements ProductRuntimeControll
     }
 
     @Override
-    public TerminalScrollOverlayView terminalScrollOverlay() {
+    public ScrollOverlayView terminalScrollOverlay() {
         return terminalScrollOverlay;
     }
 
     @Override
-    public TerminalSelectionController selectionController() {
+    public SelectionController selectionController() {
         return selectionController;
     }
 
     @Override
-    public ProductShellStatePresenter productShellStatePresenter() {
-        return productShellStatePresenter;
+    public ShellStatePresenter ShellStatePresenter() {
+        return ShellStatePresenter;
     }
 
     @Override
@@ -126,8 +126,8 @@ public final class ProductRuntimeHostCallbacks implements ProductRuntimeControll
     }
 
     @Override
-    public TerminalStatusController terminalStatusController() {
-        return terminalStatusController;
+    public StatusController StatusController() {
+        return StatusController;
     }
 
     @Override
@@ -136,8 +136,8 @@ public final class ProductRuntimeHostCallbacks implements ProductRuntimeControll
     }
 
     @Override
-    public TerminalGestureStateController terminalGestureStateController() {
-        return terminalGestureStateController;
+    public GestureStateController GestureStateController() {
+        return GestureStateController;
     }
 
     @Override
@@ -152,21 +152,21 @@ public final class ProductRuntimeHostCallbacks implements ProductRuntimeControll
 
     @Override
     public int nativeCurrentSessionVisibleRows() {
-        return TerminalNativeBridge.nativeCurrentSessionVisibleRowsBridge();
+        return NativeBridge.nativeCurrentSessionVisibleRowsBridge();
     }
 
     @Override
     public int nativeCurrentSessionScrollbackCount() {
-        return TerminalNativeBridge.nativeCurrentSessionScrollbackCountBridge();
+        return NativeBridge.nativeCurrentSessionScrollbackCountBridge();
     }
 
     @Override
     public int nativeCurrentSessionScrollbackOffset() {
-        return TerminalNativeBridge.nativeCurrentSessionScrollbackOffsetBridge();
+        return NativeBridge.nativeCurrentSessionScrollbackOffsetBridge();
     }
 
     @Override
     public int nativeRestartSession() {
-        return TerminalNativeBridge.nativeRestartSessionBridge();
+        return NativeBridge.nativeRestartSessionBridge();
     }
 }

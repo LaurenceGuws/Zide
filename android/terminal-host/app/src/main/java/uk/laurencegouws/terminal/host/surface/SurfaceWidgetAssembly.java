@@ -2,9 +2,9 @@ package uk.laurencegouws.terminal.host.surface;
 
 import android.view.SurfaceHolder;
 
-import uk.laurencegouws.terminal.gesture.TerminalGestureStateController;
+import uk.laurencegouws.terminal.gesture.GestureStateController;
 import uk.laurencegouws.terminal.host.ui.UiFactory;
-import uk.laurencegouws.terminal.selection.TerminalSelectionController;
+import uk.laurencegouws.terminal.selection.SelectionController;
 
 /** Owns surface + widget controller assembly for the activity wiring layer. */
 public final class SurfaceWidgetAssembly {
@@ -68,8 +68,8 @@ public final class SurfaceWidgetAssembly {
     }
 
     public static Result assemble(
-            TerminalSelectionController selectionController,
-            TerminalGestureStateController terminalGestureStateController,
+            SelectionController selectionController,
+            GestureStateController GestureStateController,
             Host host) {
         final SurfaceWidgetController[] widgetRef = new SurfaceWidgetController[1];
         final SurfaceBridge surfaceHostBridge = new SurfaceBridge(
@@ -94,7 +94,7 @@ public final class SurfaceWidgetAssembly {
         final SurfaceWidgetController surfaceWidgetController = UiFactory.createSurfaceWidgetController(
                 surfaceHostController,
                 selectionController,
-                terminalGestureStateController,
+                GestureStateController,
                 new SurfaceWidgetCallbacks(
                         host::productViewportHeightPx,
                         host::appendEvent,

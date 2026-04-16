@@ -15,7 +15,7 @@ import android.view.View;
  * <p>This view exists so product scrollback affordances are rendered and interacted with as native
  * Android UI, not as part of the terminal texture.
  */
-public final class TerminalScrollOverlayView extends View {
+public final class ScrollOverlayView extends View {
     /** Host callbacks for scrollback control. */
     public interface Host {
         void onScrollbackOffsetRequested(int offsetRows);
@@ -42,7 +42,7 @@ public final class TerminalScrollOverlayView extends View {
     private float dragGrabOffsetPx = 0.0f;
     private float interactionProgress = 0.0f;
 
-    public TerminalScrollOverlayView(Context context, Host host) {
+    public ScrollOverlayView(Context context, Host host) {
         super(context);
         this.host = host;
         this.density = density(context);
@@ -63,7 +63,7 @@ public final class TerminalScrollOverlayView extends View {
         this.host = host;
     }
 
-    public TerminalScrollOverlayView(Context context, AttributeSet attrs) {
+    public ScrollOverlayView(Context context, AttributeSet attrs) {
         super(context, attrs);
         this.host = null;
         this.density = density(context);
@@ -79,7 +79,7 @@ public final class TerminalScrollOverlayView extends View {
         setClickable(true);
     }
 
-    public TerminalScrollOverlayView(Context context, AttributeSet attrs, int defStyleAttr) {
+    public ScrollOverlayView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         this.host = null;
         this.density = density(context);

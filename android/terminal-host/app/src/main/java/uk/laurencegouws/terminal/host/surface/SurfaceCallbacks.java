@@ -5,7 +5,7 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.widget.FrameLayout;
 
-import uk.laurencegouws.terminal.TerminalNativeBridge;
+import uk.laurencegouws.terminal.NativeBridge;
 import uk.laurencegouws.terminal.debug.AndroidDebugFormatter;
 
 /** Adapts activity-owned callbacks/state into {@link SurfaceBridge.Callbacks}. */
@@ -67,7 +67,7 @@ public final class SurfaceCallbacks implements SurfaceBridge.Callbacks {
 
     @Override
     public boolean nativeLoaded() {
-        return TerminalNativeBridge.nativeLoaded();
+        return NativeBridge.nativeLoaded();
     }
 
     @Override

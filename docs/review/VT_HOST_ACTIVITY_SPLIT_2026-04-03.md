@@ -39,7 +39,7 @@ Still lives on the cheap runtime getters:
 ### Activity acquire
 
 - `zide_terminal_activity_acquire(...)`
-- `ZideTerminalActivity`
+- `ZideActivity`
 
 Carries semantic activity only:
 

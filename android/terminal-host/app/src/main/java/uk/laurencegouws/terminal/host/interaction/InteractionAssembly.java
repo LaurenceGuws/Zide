@@ -4,8 +4,8 @@ import android.app.Activity;
 import android.os.Handler;
 import android.widget.FrameLayout;
 
-import uk.laurencegouws.terminal.gesture.TerminalGestureStateController;
-import uk.laurencegouws.terminal.selection.TerminalSelectionController;
+import uk.laurencegouws.terminal.gesture.GestureStateController;
+import uk.laurencegouws.terminal.selection.SelectionController;
 
 /** Owns selection + gesture interaction controller assembly for activity wiring. */
 public final class InteractionAssembly {
@@ -32,14 +32,14 @@ public final class InteractionAssembly {
 
     /** Immutable assembled interaction controller result. */
     public static final class Result {
-        public final TerminalSelectionController selectionController;
-        public final TerminalGestureStateController terminalGestureStateController;
+        public final SelectionController selectionController;
+        public final GestureStateController GestureStateController;
 
         private Result(
-                TerminalSelectionController selectionController,
-                TerminalGestureStateController terminalGestureStateController) {
+                SelectionController selectionController,
+                GestureStateController GestureStateController) {
             this.selectionController = selectionController;
-            this.terminalGestureStateController = terminalGestureStateController;
+            this.GestureStateController = GestureStateController;
         }
     }
 
@@ -47,7 +47,7 @@ public final class InteractionAssembly {
     }
 
     public static Result assemble(Host host) {
-        final TerminalSelectionController selectionController = InteractionFactory.createSelectionController(
+        final SelectionController selectionController = InteractionFactory.createSelectionController(
                 host.activity(),
                 host.productSurfaceContainer(),
                 host::productViewportWidthPx,
@@ -58,13 +58,13 @@ public final class InteractionAssembly {
                 host::appendEvent);
         selectionController.install();
 
-        final TerminalGestureStateController terminalGestureStateController =
+        final GestureStateController GestureStateController =
                 InteractionFactory.createGestureStateController(
                         host.activity(),
                         host.handler(),
                         host::productViewportHeightPx,
                         host::refreshProductScrollOverlay,
                         host::reevaluateProductFrameLoop);
-        return new Result(selectionController, terminalGestureStateController);
+        return new Result(selectionController, GestureStateController);
     }
 }

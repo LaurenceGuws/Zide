@@ -52,91 +52,91 @@ fn rendererActive() bool {
     return android_runtime_bridge.rendererActive();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentRendererStatusBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentRendererStatusBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return currentRendererStatus();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentRendererSwapCountBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentRendererSwapCountBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return currentRendererSwapCount();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentRendererBoundEpochBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentRendererBoundEpochBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return currentRendererBoundEpoch();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentRendererContextCreateCountBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentRendererContextCreateCountBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return currentRendererContextCreateCount();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentRendererSurfaceCreateCountBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentRendererSurfaceCreateCountBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return currentRendererSurfaceCreateCount();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentRendererTextureCreateCountBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentRendererTextureCreateCountBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return currentRendererTextureCreateCount();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentRendererTextureAliveBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentRendererTextureAliveBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) u8 {
     return currentRendererTextureAlive();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentRendererTextureUploadCountBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentRendererTextureUploadCountBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return currentRendererTextureUploadCount();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentRendererTextureUpdateCountBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentRendererTextureUpdateCountBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return currentRendererTextureUpdateCount();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentRendererTextureResizeCountBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentRendererTextureResizeCountBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return currentRendererTextureResizeCount();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentRendererTextureWidthBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentRendererTextureWidthBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return currentRendererTextureWidth();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentRendererTextureHeightBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentRendererTextureHeightBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return currentRendererTextureHeight();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeSharedRendererActiveBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeSharedRendererActiveBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) bool {

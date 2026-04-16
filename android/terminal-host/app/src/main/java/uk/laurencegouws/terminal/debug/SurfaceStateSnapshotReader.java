@@ -5,7 +5,7 @@ import java.util.function.IntSupplier;
 import java.util.function.LongSupplier;
 
 /** Reads one native-backed surface snapshot for debug status rendering. */
-public final class TerminalSurfaceStateSnapshotReader {
+public final class SurfaceStateSnapshotReader {
     /** Host callbacks that provide native-backed renderer/surface snapshot values. */
     public interface Host {
         boolean nativeLoaded();
@@ -58,7 +58,7 @@ public final class TerminalSurfaceStateSnapshotReader {
     private final IntSupplier currentRendererTextureWidth;
     private final IntSupplier currentRendererTextureHeight;
 
-    public TerminalSurfaceStateSnapshotReader(Host host) {
+    public SurfaceStateSnapshotReader(Host host) {
         this.nativeLoaded = host::nativeLoaded;
         this.currentWindowToken = host::currentWindowToken;
         this.currentSurfaceEpoch = host::currentSurfaceEpoch;
@@ -83,8 +83,8 @@ public final class TerminalSurfaceStateSnapshotReader {
                 0,
                 nativeLoaded ? currentWindowToken.getAsLong() : 0,
                 nativeLoaded ? currentSurfaceEpoch.getAsLong() : 0,
-                TerminalNativeStatusLabels.surfaceTransitionLabel(nativeLoaded ? currentSurfaceTransition.getAsInt() : 0),
-                TerminalNativeStatusLabels.glesRendererStatusLabel(nativeLoaded ? currentRendererStatus.getAsInt() : 0),
+                NativeStatusLabels.surfaceTransitionLabel(nativeLoaded ? currentSurfaceTransition.getAsInt() : 0),
+                NativeStatusLabels.glesRendererStatusLabel(nativeLoaded ? currentRendererStatus.getAsInt() : 0),
                 nativeLoaded ? currentRendererSwapCount.getAsLong() : 0,
                 nativeLoaded ? currentRendererBoundEpoch.getAsLong() : 0,
                 nativeLoaded ? currentRendererContextCreateCount.getAsLong() : 0,

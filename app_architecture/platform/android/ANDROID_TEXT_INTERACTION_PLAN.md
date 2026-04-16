@@ -206,12 +206,12 @@ What is proved:
   - tap inside selection toggles the Android-owned helper chrome without
     mutating the Zig-owned selection highlight
 - Java ownership is now explicit too:
-  - `dev.zide.terminal.selection.TerminalSelectionController` owns Android-native
+  - `dev.zide.terminal.selection.SelectionController` owns Android-native
     selection mutation, handles, and autoscroll policy
   - `dev.zide.terminal.host.TerminalSurfaceHostController` owns the native
     SurfaceView host wiring
   - `dev.zide.terminal.host.TerminalChromeController` owns the Android assist-bar / sidebar / IME chrome policy
-  - `ZideTerminalActivity` no longer owns duplicate selection state or
+  - `ZideActivity` no longer owns duplicate selection state or
     selection index mutation helpers
 
 What remains for the next cut:

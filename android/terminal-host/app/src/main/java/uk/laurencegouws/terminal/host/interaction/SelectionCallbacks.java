@@ -3,11 +3,11 @@ package uk.laurencegouws.terminal.host.interaction;
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
 
-import uk.laurencegouws.terminal.TerminalNativeBridge;
-import uk.laurencegouws.terminal.selection.TerminalSelectionControllerFactory;
+import uk.laurencegouws.terminal.NativeBridge;
+import uk.laurencegouws.terminal.selection.SelectionControllerFactory;
 
-/** Functional callback adapter for {@link TerminalSelectionControllerFactory}. */
-public final class SelectionCallbacks implements TerminalSelectionControllerFactory.Host {
+/** Functional callback adapter for {@link SelectionControllerFactory}. */
+public final class SelectionCallbacks implements SelectionControllerFactory.Host {
     private final IntSupplier productViewportWidthPx;
     private final IntSupplier productViewportHeightPx;
     private final Runnable stopScrollbackFling;
@@ -62,136 +62,136 @@ public final class SelectionCallbacks implements TerminalSelectionControllerFact
 
     @Override
     public boolean nativeLoaded() {
-        return TerminalNativeBridge.nativeLoaded();
+        return NativeBridge.nativeLoaded();
     }
 
     @Override
     public int beginWordSelectionAtVisibleCell(int row, int col) {
-        return TerminalNativeBridge.nativeBeginSelectionWordAtVisibleCellBridge(row, col);
+        return NativeBridge.nativeBeginSelectionWordAtVisibleCellBridge(row, col);
     }
 
     @Override
     public int extendSelectionGestureToVisibleCell(int row, int col) {
-        return TerminalNativeBridge.nativeExtendSelectionGestureToVisibleCellBridge(row, col);
+        return NativeBridge.nativeExtendSelectionGestureToVisibleCellBridge(row, col);
     }
 
     @Override
     public int finishSelectionGesture() {
-        return TerminalNativeBridge.nativeFinishSelectionGestureBridge();
+        return NativeBridge.nativeFinishSelectionGestureBridge();
     }
 
     @Override
     public int clearSelection() {
-        return TerminalNativeBridge.nativeClearSelectionBridge();
+        return NativeBridge.nativeClearSelectionBridge();
     }
 
     @Override
     public int updateSelectionStartAtVisibleCell(int row, int col) {
-        return TerminalNativeBridge.nativeUpdateSelectionStartAtVisibleCellBridge(row, col);
+        return NativeBridge.nativeUpdateSelectionStartAtVisibleCellBridge(row, col);
     }
 
     @Override
     public int updateSelectionEndAtVisibleCell(int row, int col) {
-        return TerminalNativeBridge.nativeUpdateSelectionEndAtVisibleCellBridge(row, col);
+        return NativeBridge.nativeUpdateSelectionEndAtVisibleCellBridge(row, col);
     }
 
     @Override
     public boolean currentSelectionActive() {
-        return TerminalNativeBridge.nativeCurrentSelectionActiveBridge();
+        return NativeBridge.nativeCurrentSelectionActiveBridge();
     }
 
     @Override
     public int currentSelectionRectLeft() {
-        return TerminalNativeBridge.nativeCurrentSelectionRectLeftBridge();
+        return NativeBridge.nativeCurrentSelectionRectLeftBridge();
     }
 
     @Override
     public int currentSelectionRectTop() {
-        return TerminalNativeBridge.nativeCurrentSelectionRectTopBridge();
+        return NativeBridge.nativeCurrentSelectionRectTopBridge();
     }
 
     @Override
     public int currentSelectionRectRight() {
-        return TerminalNativeBridge.nativeCurrentSelectionRectRightBridge();
+        return NativeBridge.nativeCurrentSelectionRectRightBridge();
     }
 
     @Override
     public int currentSelectionRectBottom() {
-        return TerminalNativeBridge.nativeCurrentSelectionRectBottomBridge();
+        return NativeBridge.nativeCurrentSelectionRectBottomBridge();
     }
 
     @Override
     public int currentSelectionStartRectLeft() {
-        return TerminalNativeBridge.nativeCurrentSelectionStartRectLeftBridge();
+        return NativeBridge.nativeCurrentSelectionStartRectLeftBridge();
     }
 
     @Override
     public int currentSelectionStartRectTop() {
-        return TerminalNativeBridge.nativeCurrentSelectionStartRectTopBridge();
+        return NativeBridge.nativeCurrentSelectionStartRectTopBridge();
     }
 
     @Override
     public int currentSelectionStartRectRight() {
-        return TerminalNativeBridge.nativeCurrentSelectionStartRectRightBridge();
+        return NativeBridge.nativeCurrentSelectionStartRectRightBridge();
     }
 
     @Override
     public int currentSelectionStartRectBottom() {
-        return TerminalNativeBridge.nativeCurrentSelectionStartRectBottomBridge();
+        return NativeBridge.nativeCurrentSelectionStartRectBottomBridge();
     }
 
     @Override
     public int currentSelectionEndRectLeft() {
-        return TerminalNativeBridge.nativeCurrentSelectionEndRectLeftBridge();
+        return NativeBridge.nativeCurrentSelectionEndRectLeftBridge();
     }
 
     @Override
     public int currentSelectionEndRectTop() {
-        return TerminalNativeBridge.nativeCurrentSelectionEndRectTopBridge();
+        return NativeBridge.nativeCurrentSelectionEndRectTopBridge();
     }
 
     @Override
     public int currentSelectionEndRectRight() {
-        return TerminalNativeBridge.nativeCurrentSelectionEndRectRightBridge();
+        return NativeBridge.nativeCurrentSelectionEndRectRightBridge();
     }
 
     @Override
     public int currentSelectionEndRectBottom() {
-        return TerminalNativeBridge.nativeCurrentSelectionEndRectBottomBridge();
+        return NativeBridge.nativeCurrentSelectionEndRectBottomBridge();
     }
 
     @Override
     public byte[] currentSelectionTextBytes() {
-        return TerminalNativeBridge.nativeCurrentSelectionTextBytesBridge();
+        return NativeBridge.nativeCurrentSelectionTextBytesBridge();
     }
 
     @Override
     public int currentVisibleRows() {
-        return TerminalNativeBridge.nativeCurrentSessionVisibleRowsBridge();
+        return NativeBridge.nativeCurrentSessionVisibleRowsBridge();
     }
 
     @Override
     public int currentVisibleCols() {
-        return TerminalNativeBridge.nativeCurrentSessionVisibleColsBridge();
+        return NativeBridge.nativeCurrentSessionVisibleColsBridge();
     }
 
     @Override
     public int currentScrollbackCount() {
-        return TerminalNativeBridge.nativeCurrentSessionScrollbackCountBridge();
+        return NativeBridge.nativeCurrentSessionScrollbackCountBridge();
     }
 
     @Override
     public int currentScrollbackOffset() {
-        return TerminalNativeBridge.nativeCurrentSessionScrollbackOffsetBridge();
+        return NativeBridge.nativeCurrentSessionScrollbackOffsetBridge();
     }
 
     @Override
     public int setShellScrollbackOffset(int offsetRows) {
-        return TerminalNativeBridge.nativeSetSessionScrollbackOffsetBridge(offsetRows);
+        return NativeBridge.nativeSetSessionScrollbackOffsetBridge(offsetRows);
     }
 
     @Override
     public int followShellLiveBottom() {
-        return TerminalNativeBridge.nativeFollowSessionLiveBottomBridge();
+        return NativeBridge.nativeFollowSessionLiveBottomBridge();
     }
 }

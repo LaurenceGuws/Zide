@@ -124,11 +124,11 @@ pub export fn zide_terminal_metadata_release(metadata: *c_api.ZideTerminalMetada
     c_api.zide_terminal_metadata_release(metadata);
 }
 
-pub export fn zide_terminal_activity_acquire(handle: ?*c_api.ZideTerminalHandle, request: ?*const c_api.ZideTerminalActivityRequest, out_activity: *c_api.ZideTerminalActivity) c_int {
+pub export fn zide_terminal_activity_acquire(handle: ?*c_api.ZideTerminalHandle, request: ?*const c_api.ZideActivityRequest, out_activity: *c_api.ZideActivity) c_int {
     return c_api.zide_terminal_activity_acquire(handle, request, out_activity);
 }
 
-pub export fn zide_terminal_activity_release(activity: *c_api.ZideTerminalActivity) void {
+pub export fn zide_terminal_activity_release(activity: *c_api.ZideActivity) void {
     c_api.zide_terminal_activity_release(activity);
 }
 

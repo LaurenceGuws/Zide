@@ -7,7 +7,7 @@ import android.widget.FrameLayout;
 import android.widget.TextView;
 
 import uk.laurencegouws.terminal.R;
-import uk.laurencegouws.terminal.scroll.TerminalScrollOverlayView;
+import uk.laurencegouws.terminal.scroll.ScrollOverlayView;
 
 /** Captures activity-owned view references for terminal host wiring. */
 public final class ActivityViewBindings {
@@ -26,7 +26,7 @@ public final class ActivityViewBindings {
     public final View drawerEdgeHotspot;
     public final View leftSidebar;
     public final FrameLayout productSurfaceContainer;
-    public final TerminalScrollOverlayView terminalScrollOverlay;
+    public final ScrollOverlayView terminalScrollOverlay;
     public final Button assistCtrlButton;
     public final Button assistAltButton;
 
@@ -46,7 +46,7 @@ public final class ActivityViewBindings {
             View drawerEdgeHotspot,
             View leftSidebar,
             FrameLayout productSurfaceContainer,
-            TerminalScrollOverlayView terminalScrollOverlay,
+            ScrollOverlayView terminalScrollOverlay,
             Button assistCtrlButton,
             Button assistAltButton) {
         this.statusText = statusText;

@@ -10,7 +10,7 @@ import uk.laurencegouws.terminal.host.runtime.FrameLoopController;
 import uk.laurencegouws.terminal.host.surface.SurfaceController;
 import uk.laurencegouws.terminal.host.surface.SurfaceWidgetController;
 import uk.laurencegouws.terminal.host.runtime.RuntimeAssetsController;
-import uk.laurencegouws.terminal.userland.ProductShellStatePresenter;
+import uk.laurencegouws.terminal.userland.ShellStatePresenter;
 import uk.laurencegouws.terminal.userland.UserlandReadinessState;
 import uk.laurencegouws.terminal.userland.UserlandInstallState;
 import uk.laurencegouws.terminal.userland.UserlandSessionCoordinator;
@@ -32,7 +32,7 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
     private final ViewModeController viewModeController;
     private final SurfaceController surfaceHostController;
     private final SurfaceWidgetController surfaceWidgetController;
-    private final ProductShellStatePresenter productShellStatePresenter;
+    private final ShellStatePresenter ShellStatePresenter;
     private final FrameLoopController frameLoopController;
     private final View leftSidebar;
 
@@ -51,7 +51,7 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
             ViewModeController viewModeController,
             SurfaceController surfaceHostController,
             SurfaceWidgetController surfaceWidgetController,
-            ProductShellStatePresenter productShellStatePresenter,
+            ShellStatePresenter ShellStatePresenter,
             FrameLoopController frameLoopController,
             View leftSidebar) {
         this.viewportController = viewportController;
@@ -68,7 +68,7 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
         this.viewModeController = viewModeController;
         this.surfaceHostController = surfaceHostController;
         this.surfaceWidgetController = surfaceWidgetController;
-        this.productShellStatePresenter = productShellStatePresenter;
+        this.ShellStatePresenter = ShellStatePresenter;
         this.frameLoopController = frameLoopController;
         this.leftSidebar = leftSidebar;
     }
@@ -144,8 +144,8 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
     }
 
     @Override
-    public ProductShellStatePresenter productShellStatePresenter() {
-        return productShellStatePresenter;
+    public ShellStatePresenter ShellStatePresenter() {
+        return ShellStatePresenter;
     }
 
     @Override

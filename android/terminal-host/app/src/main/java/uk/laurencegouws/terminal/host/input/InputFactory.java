@@ -5,10 +5,10 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import uk.laurencegouws.terminal.input.ShellInputView;
-import uk.laurencegouws.terminal.input.TerminalHardwareKeyboardController;
-import uk.laurencegouws.terminal.input.TerminalHardwareKeyboardHostCallbacks;
-import uk.laurencegouws.terminal.input.TerminalImeFocusRecoveryController;
-import uk.laurencegouws.terminal.input.TerminalImeFocusRecoveryHostCallbacks;
+import uk.laurencegouws.terminal.input.HardwareKeyboardController;
+import uk.laurencegouws.terminal.input.HardwareKeyboardHostCallbacks;
+import uk.laurencegouws.terminal.input.ImeFocusRecoveryController;
+import uk.laurencegouws.terminal.input.ImeFocusRecoveryHostCallbacks;
 
 /**
  * Input interaction assembly helpers.
@@ -20,7 +20,7 @@ public final class InputFactory {
     private InputFactory() {
     }
 
-    public static TerminalHardwareKeyboardController createHardwareKeyboardController(
+    public static HardwareKeyboardController createHardwareKeyboardController(
             Supplier<ShellInputView> shellInputView,
             android.view.inputmethod.InputMethodManager inputMethodManager,
             BooleanSupplier currentImeVisible,
@@ -28,8 +28,8 @@ public final class InputFactory {
             Runnable followShellLiveBottom,
             Runnable refreshProductScrollOverlay,
             Consumer<String> updateStatus) {
-        return new TerminalHardwareKeyboardController(
-                new TerminalHardwareKeyboardHostCallbacks(
+        return new HardwareKeyboardController(
+                new HardwareKeyboardHostCallbacks(
                         shellInputView,
                         inputMethodManager,
                         currentImeVisible,
@@ -39,13 +39,13 @@ public final class InputFactory {
                         updateStatus));
     }
 
-    public static TerminalImeFocusRecoveryController createImeFocusRecoveryController(
+    public static ImeFocusRecoveryController createImeFocusRecoveryController(
             Supplier<ShellInputView> shellInputView,
             BooleanSupplier imeVisible,
             Consumer<String> appendEvent,
             android.view.inputmethod.InputMethodManager inputMethodManager) {
-        return new TerminalImeFocusRecoveryController(
-                new TerminalImeFocusRecoveryHostCallbacks(
+        return new ImeFocusRecoveryController(
+                new ImeFocusRecoveryHostCallbacks(
                         shellInputView,
                         imeVisible,
                         appendEvent,

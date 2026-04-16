@@ -8,19 +8,19 @@ import android.widget.FrameLayout;
 import android.widget.TextView;
 
 import uk.laurencegouws.terminal.debug.AndroidDebugFormatter;
-import uk.laurencegouws.terminal.gesture.ProductGestureController;
-import uk.laurencegouws.terminal.gesture.TerminalGestureStateController;
+import uk.laurencegouws.terminal.gesture.GestureController;
+import uk.laurencegouws.terminal.gesture.GestureStateController;
 import uk.laurencegouws.terminal.host.surface.SurfaceBridge;
 import uk.laurencegouws.terminal.host.surface.SurfaceController;
 import uk.laurencegouws.terminal.host.surface.SurfaceWidgetAssembly;
 import uk.laurencegouws.terminal.host.surface.SurfaceWidgetAssemblyCallbacks;
 import uk.laurencegouws.terminal.host.surface.SurfaceWidgetController;
-import uk.laurencegouws.terminal.host.userland.ProductShellStateBridge;
-import uk.laurencegouws.terminal.host.userland.ProductShellStateCallbacks;
+import uk.laurencegouws.terminal.host.userland.ShellStateBridge;
+import uk.laurencegouws.terminal.host.userland.ShellStateCallbacks;
 import uk.laurencegouws.terminal.input.ShellInputView;
-import uk.laurencegouws.terminal.scroll.TerminalScrollOverlayView;
-import uk.laurencegouws.terminal.selection.TerminalSelectionController;
-import uk.laurencegouws.terminal.userland.ProductShellStatePresenter;
+import uk.laurencegouws.terminal.scroll.ScrollOverlayView;
+import uk.laurencegouws.terminal.selection.SelectionController;
+import uk.laurencegouws.terminal.userland.ShellStatePresenter;
 import uk.laurencegouws.terminal.userland.UserlandReadinessState;
 import uk.laurencegouws.terminal.userland.UserlandInstallState;
 
@@ -56,7 +56,7 @@ public final class WidgetAssembly {
 
         FrameLayout productSurfaceContainer();
 
-        TerminalScrollOverlayView terminalScrollOverlay();
+        ScrollOverlayView terminalScrollOverlay();
 
         TextView productReadinessTitle();
 
@@ -70,9 +70,9 @@ public final class WidgetAssembly {
 
         ShellInputView shellInputView();
 
-        TerminalSelectionController selectionController();
+        SelectionController selectionController();
 
-        TerminalGestureStateController terminalGestureStateController();
+        GestureStateController GestureStateController();
 
         UserlandReadinessState currentReadinessState();
 
@@ -109,8 +109,8 @@ public final class WidgetAssembly {
 
     /** Immutable assembled widget host result. */
     public static final class Result {
-        public final ProductShellStateBridge productShellStateHostBridge;
-        public final ProductShellStatePresenter productShellStatePresenter;
+        public final ShellStateBridge productShellStateHostBridge;
+        public final ShellStatePresenter ShellStatePresenter;
         public final ChromeController terminalChromeController;
         public final ViewModeController terminalViewModeController;
         public final SurfaceBridge surfaceHostBridge;
@@ -118,15 +118,15 @@ public final class WidgetAssembly {
         public final SurfaceWidgetController terminalSurfaceWidgetController;
 
         private Result(
-                ProductShellStateBridge productShellStateHostBridge,
-                ProductShellStatePresenter productShellStatePresenter,
+                ShellStateBridge productShellStateHostBridge,
+                ShellStatePresenter ShellStatePresenter,
                 ChromeController terminalChromeController,
                 ViewModeController terminalViewModeController,
                 SurfaceBridge surfaceHostBridge,
                 SurfaceController surfaceHostController,
                 SurfaceWidgetController terminalSurfaceWidgetController) {
             this.productShellStateHostBridge = productShellStateHostBridge;
-            this.productShellStatePresenter = productShellStatePresenter;
+            this.ShellStatePresenter = ShellStatePresenter;
             this.terminalChromeController = terminalChromeController;
             this.terminalViewModeController = terminalViewModeController;
             this.surfaceHostBridge = surfaceHostBridge;
@@ -189,7 +189,7 @@ public final class WidgetAssembly {
 
         final SurfaceWidgetAssembly.Result surfaceWidgetAssembly = SurfaceWidgetAssembly.assemble(
                 host.selectionController(),
-                host.terminalGestureStateController(),
+                host.GestureStateController(),
                 new SurfaceWidgetAssemblyCallbacks(
                         host.handler(),
                         host.productSurfaceContainer(),
@@ -215,23 +215,23 @@ public final class WidgetAssembly {
         surfaceWidgetControllerRef[0] = surfaceWidgetAssembly.surfaceWidgetController;
         host.terminalScrollOverlay().setHost(surfaceWidgetAssembly.surfaceWidgetController);
 
-        final ProductShellStateBridge productShellStateHostBridge =
+        final ShellStateBridge productShellStateHostBridge =
                 UiFactory.createProductShellStateHostBridge(
                         host.productReadinessBlocker(),
                         host.terminalScrollOverlay(),
                         host.productReadinessTitle(),
                         host.productReadinessDetail(),
                         host.productReadinessRetryButton(),
-                        new ProductShellStateCallbacks(
+                        new ShellStateCallbacks(
                                 host::currentReadinessState,
                                 host::currentInstallState,
                                 surfaceWidgetAssembly.surfaceHostBridge::currentSurfaceView));
-        final ProductShellStatePresenter productShellStatePresenter =
-                new ProductShellStatePresenter(productShellStateHostBridge);
+        final ShellStatePresenter ShellStatePresenter =
+                new ShellStatePresenter(productShellStateHostBridge);
 
         return new Result(
                 productShellStateHostBridge,
-                productShellStatePresenter,
+                ShellStatePresenter,
                 terminalChromeController,
                 terminalViewModeController,
                 surfaceWidgetAssembly.surfaceHostBridge,
@@ -245,8 +245,8 @@ public final class WidgetAssembly {
         if (surfaceWidgetControllerRef[0] == null) {
             return;
         }
-        final ProductGestureController productGestureController =
-                new ProductGestureController(surfaceView, surfaceWidgetControllerRef[0]);
+        final GestureController productGestureController =
+                new GestureController(surfaceView, surfaceWidgetControllerRef[0]);
         productGestureController.install();
     }
 }

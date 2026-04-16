@@ -3,7 +3,7 @@ package uk.laurencegouws.terminal.host.surface;
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
 
-import uk.laurencegouws.terminal.TerminalNativeBridge;
+import uk.laurencegouws.terminal.NativeBridge;
 
 /** Functional callback adapter for {@link SurfaceWidgetController}. */
 public final class SurfaceWidgetCallbacks implements SurfaceWidgetController.Host {
@@ -25,17 +25,17 @@ public final class SurfaceWidgetCallbacks implements SurfaceWidgetController.Hos
 
     @Override
     public boolean nativeLoaded() {
-        return TerminalNativeBridge.nativeLoaded();
+        return NativeBridge.nativeLoaded();
     }
 
     @Override
     public int setShellScrollbackOffset(int offsetRows) {
-        return TerminalNativeBridge.nativeSetSessionScrollbackOffsetBridge(offsetRows);
+        return NativeBridge.nativeSetSessionScrollbackOffsetBridge(offsetRows);
     }
 
     @Override
     public int followShellLiveBottom() {
-        return TerminalNativeBridge.nativeFollowSessionLiveBottomBridge();
+        return NativeBridge.nativeFollowSessionLiveBottomBridge();
     }
 
     @Override

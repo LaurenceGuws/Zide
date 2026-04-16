@@ -37,7 +37,7 @@ Focus goals:
 
 - prioritize cleanup, refactor, and standardization over expansion
 - keep interactive terminal behavior stable under real usage
-- keep `ZideTerminalActivity` as wiring, not policy
+- keep `ZideActivity` as wiring, not policy
 - keep Android-native interaction ownership clear (gesture/chrome/selection)
 
 ## Cleanup Campaign Charter (Authority)
@@ -47,12 +47,12 @@ This section is the single source of truth for the active Android cleanup campai
 Goal:
 
 - aggressively reduce Android host complexity while preserving behavior
-- thin `ZideTerminalActivity` toward composition-root ownership
+- thin `ZideActivity` toward composition-root ownership
 - reduce callback-surface pressure without wrapper inflation
 
 Issue class execution order (strict):
 
-1. ownership seams (`ZideTerminalActivity` -> existing owners)
+1. ownership seams (`ZideActivity` -> existing owners)
 2. callback pressure reduction (constructor/callback surface)
 3. naming continuation (Readiness/event vocabulary consistency)
 4. dead abstraction cleanup (delete relay-only indirection)
@@ -88,7 +88,7 @@ Commit and validation rules:
 
 Success metrics:
 
-- materially reduce `ZideTerminalActivity` size and direct responsibilities
+- materially reduce `ZideActivity` size and direct responsibilities
 - reduce callback surface in at least two callback-heavy classes
 - keep compile/deploy green through the campaign
 - keep docs progress-based (no intent-only checkpoints)
@@ -137,7 +137,7 @@ Milestone gate contract (mandatory when manager/architect lane is active):
 ## Active TODO
 
 1. Continue cleanup/refactor cuts only where methods still own policy.
-   - Completed: callback wiring hygiene pass in `ZideTerminalActivity` now uses
+   - Completed: callback wiring hygiene pass in `ZideActivity` now uses
      named setter/getter/host helpers and removes non-trivial inline callback
      lambdas in assembly factories.
    - Completed: helper ordering is grouped by role
@@ -146,7 +146,7 @@ Milestone gate contract (mandatory when manager/architect lane is active):
    - Completed: high-signal callback supplier extractions are complete; remaining
      callback suppliers are intentionally trivial one-liners.
    - Completed: lifecycle/dispatch/startup policy extractions landed in
-     `ZideTerminalActivity` (`onResume` debug intent flags, dispatch-key guard,
+     `ZideActivity` (`onResume` debug intent flags, dispatch-key guard,
      and initial readiness-state load now use named helpers).
    - Completed: direct-input override routing cleanup landed
      (`sendDirectText` now routes through a named codepoint iteration helper).
@@ -156,13 +156,13 @@ Milestone gate contract (mandatory when manager/architect lane is active):
      helper seams; remaining inline logic is intentionally trivial or contract
      owned by downstream controllers.
    - Next: primary cleanup for Java host ownership continues under item 2
-     below (`ZideTerminalActivity` `create*Callbacks()` net simplification).
+     below (`ZideActivity` `create*Callbacks()` net simplification).
 2. Keep Java ownership boundaries aligned with
    `ANDROID_JAVA_HOST_STRUCTURE.md`.
    - Completed: chrome/surface ownership cleanup wave is stabilized and frozen;
      future changes there require an explicit queue re-open.
    - Completed: activity wiring cleanup waves reduced
-     `ZideTerminalActivity.java` from ~778 to ~618 lines while keeping policy in
+     `ZideActivity.java` from ~778 to ~618 lines while keeping policy in
      owning controllers and preserving runtime behavior.
    - Completed: callback/assembly contract cleanup removed broad `nativeLoaded`
      pass-through fan-out and reduced constructor pressure across interaction,
@@ -185,49 +185,49 @@ Milestone gate contract (mandatory when manager/architect lane is active):
     (`+16/-56` across three refactor commits) while preserving compile/deploy
     safety checks (compile each commit; deploy + clean `AndroidRuntime:E` smoke
     after the second commit in this wave).
-  - Completed: planning-only `TerminalSelectionController` seam audit
+  - Completed: planning-only `SelectionController` seam audit
     established the next extraction queue without behavior changes:
     (a) selection-drag/autoscroll loop, (b) selection-handle geometry/sync,
     and (c) action-mode + clipboard flow. Audit conclusion remains
     contract-aligned: keep selection monolithic until one of those sub-seams is
     lifted in a behavior-preserving cut with replay/validation authority.
-  - Completed: `ZideTerminalActivity` callback-constructor pressure reduced for
+  - Completed: `ZideActivity` callback-constructor pressure reduced for
     widget assembly by extracting the largest inline `new WidgetCallbacks(...)`
     block into a dedicated `createWidgetCallbacks()` seam (behavior preserved).
   - Completed: runtime assembly callback-constructor pressure in
-    `ZideTerminalActivity` reduced by extracting inline
-    `new ProductRuntimeAssemblyCallbacks(...)` wiring into
-    `createProductRuntimeAssemblyCallbacks()` (behavior preserved).
+    `ZideActivity` reduced by extracting inline
+    `new RuntimeAssemblyCallbacks(...)` wiring into
+    `createRuntimeAssemblyCallbacks()` (behavior preserved).
   - Completed: session assembly callback-constructor pressure in
-    `ZideTerminalActivity` reduced by extracting inline
+    `ZideActivity` reduced by extracting inline
     `new SessionAssemblyCallbacks(...)` wiring into
     `createSessionAssemblyCallbacks()` (behavior preserved).
   - Completed: workflow assembly callback-constructor pressure in
-    `ZideTerminalActivity` reduced by extracting inline
+    `ZideActivity` reduced by extracting inline
     `new WorkflowAssemblyCallbacks(...)` wiring into
     `createWorkflowAssemblyCallbacks()` (behavior preserved).
   - Completed: UI startup callback-constructor pressure in
-    `ZideTerminalActivity` reduced by extracting inline
+    `ZideActivity` reduced by extracting inline
     `new UiStartupCallbacks(...)` wiring into
     `createUiStartupCallbacks()` (behavior preserved).
   - Completed: input assembly callback-constructor pressure in
-    `ZideTerminalActivity` reduced by extracting inline
+    `ZideActivity` reduced by extracting inline
     `new InputCallbacks(...)` wiring into `createInputCallbacks()`
     (behavior preserved).
   - Completed: interaction assembly callback-constructor pressure in
-    `ZideTerminalActivity` reduced by extracting inline
+    `ZideActivity` reduced by extracting inline
     `new InteractionCallbacks(...)` wiring into
     `createInteractionCallbacks()` (behavior preserved).
   - Completed: status/view assembly callback-constructor pressure in
-    `ZideTerminalActivity` reduced by extracting inline
+    `ZideActivity` reduced by extracting inline
     `new StatusViewCallbacks(...)` wiring into
     `createStatusViewCallbacks()` (behavior preserved).
   - Completed: lifecycle callback-constructor pressure in
-    `ZideTerminalActivity` reduced by extracting inline
+    `ZideActivity` reduced by extracting inline
     `new LifecycleCallbacks(...)` wiring into
     `createLifecycleCallbacks()` (behavior preserved).
   - Completed: callback-surface noise in
-    `ZideTerminalActivity` session/workflow callback factories reduced by
+    `ZideActivity` session/workflow callback factories reduced by
     replacing inline readiness/install state assignment lambdas with named
     setters (`setCurrentReadinessState`, `setCurrentInstallState`) while
     preserving behavior.
@@ -235,28 +235,34 @@ Milestone gate contract (mandatory when manager/architect lane is active):
     extracted callback factories (`debugViewEnabled`, `imeVisible`,
     runtime install state) now route through named setters, further reducing
     relay-only callback noise without changing ownership or behavior.
-  - Completed: lifecycle callback wiring in `ZideTerminalActivity` is now
+  - Completed: lifecycle callback wiring in `ZideActivity` is now
     fully named end-to-end; `LifecycleCallbacks.LifecycleHostCallbacks.of(...)`
     no longer appears inline inside `createLifecycleCallbacks()`.
-  - Completed: UI startup assembly invocation in `ZideTerminalActivity` now
+  - Completed: UI startup assembly invocation in `ZideActivity` now
     routes through a named `startUiStartupAssembly()` helper so composition-root
     startup no longer inlines the assembly start call.
   - Completed: product runtime assembly invocation in
-    `ZideTerminalActivity` now routes through a named
-    `assembleProductRuntimeController()` helper so startup sequencing no longer
+    `ZideActivity` now routes through a named
+    `assembleRuntimeController()` helper so startup sequencing no longer
     inlines that assembly call.
-  - Completed: session assembly invocation in `ZideTerminalActivity` now routes
+  - Completed: session assembly invocation in `ZideActivity` now routes
     through a named `assembleSessionControllerResult()` helper so controller
     assembly no longer inlines the `SessionAssembly.assemble(...)` call.
   - Completed: four more composition-root assembly invocations in
-    `ZideTerminalActivity` are now named instead of inline:
+    `ZideActivity` are now named instead of inline:
     `assembleStatusViewResult()`, `assembleInteractionControllerResult()`,
     `assembleInputControllerResult()`, and
     `assembleWidgetHostControllerResult()` (behavior preserved).
     - Next: resume primary Java cleanup under Active TODO item 1 by executing a
-      behavior-preserving `ZideTerminalActivity` `create*Callbacks()` net
+      behavior-preserving `ZideActivity` `create*Callbacks()` net
       simplification wave (remove relay-only callback wiring and reduce
       constructor/callback pressure while preserving owner boundaries).
+      For this wave, do not add naming-only assembly invocation wrappers; each
+      cut must remove callback relays/constructors or delete pass-through seams.
+      Naming pressure rule for this wave: when a touched method/class name can be
+      made package-led without losing meaning, prefer dropping redundant
+      `Terminal`/`Product` prefixes; keep those terms only where they disambiguate
+      real product-vs-debug or terminal-vs-nonterminal behavior.
       `ChromeController` / `SurfaceController` remain frozen until the binding
       `Next:` line is intentionally advanced.
 
@@ -267,7 +273,7 @@ the existing per-commit validation rules.
 
 1. `AN-A1-M2A` selection geometry/sync closure (`completed`)
    - Scope:
-     - `TerminalSelectionController` internal seam only
+     - `SelectionController` internal seam only
      - complete geometry/sync extraction boundaries:
        endpoint-rect read, handle geometry, handle position mutation
      - no action-mode/clipboard edits
@@ -347,16 +353,16 @@ the existing per-commit validation rules.
     - Outcome:
      - **Removed from hot paths (debug overlay off):** unconditional event-line
        formatting, ring-buffer append, `Log.i` per event, and `TextView` updates
-       in `TerminalStatusController.appendEvent` — classified as **operator
+       in `StatusController.appendEvent` — classified as **operator
        telemetry** and now gated on `Host.debugViewEnabled()` (near-zero cost
        when disabled).
      - **Retained when overlay on:** full timestamped in-app log + `Log.i` (same
        operator-visible contract as before).
       - **Correctness contract unchanged:** native bridge load failure logging in
-        `TerminalNativeBridge` left as product error signal (not event-log
+        `NativeBridge` left as product error signal (not event-log
         telemetry).
       - milestone closure: debug event telemetry now has near-zero disabled-path
-        cost in `TerminalStatusController.appendEvent` while preserving full
+        cost in `StatusController.appendEvent` while preserving full
         operator logging when debug overlay is enabled.
    - Exit criteria:
      - stale probe-only paths removed from product hot paths
@@ -409,11 +415,11 @@ A cut is done only if all are true:
 ## Current Status Snapshot
 
 - interactive shell + Neovim baseline is usable on-device
-- `ZideTerminalActivity` is now wiring/lifecycle/orchestration-oriented
-  (current size: `615` lines; JNI moved out to `TerminalNativeBridge`)
+- `ZideActivity` is now wiring/lifecycle/orchestration-oriented
+  (current size: `615` lines; JNI moved out to `NativeBridge`)
 - current Java hotspot ranking for hygiene focus:
-  - `selection/TerminalSelectionController.java` (~1163 lines, monolithic by design)
-  - `ZideTerminalActivity.java` (~615 lines, orchestration pressure)
+  - `selection/SelectionController.java` (~1163 lines, monolithic by design)
+  - `ZideActivity.java` (~615 lines, orchestration pressure)
   - `host/ui/WidgetCallbacks.java` (~340 lines, constructor/callback pressure)
   - `userland/UserlandInstaller.java` (~425 lines, large but cohesive)
 - activity callback factory wiring now consistently favors named callback
@@ -448,7 +454,7 @@ A cut is done only if all are true:
 - userland runtime-assets/workflow startup activity wiring now composes through
   `host/userland/WorkflowAssembly` + `WorkflowAssemblyCallbacks`
 - product-runtime controller startup activity wiring now composes through
-  `host/runtime/ProductRuntimeAssembly` + `ProductRuntimeAssemblyCallbacks`
+  `host/runtime/RuntimeAssembly` + `RuntimeAssemblyCallbacks`
 - activity lifecycle native/status/session/surface wiring now composes through
   `host/lifecycle/LifecycleController` + `LifecycleCallbacks`
 - input-view install and input controller activity wiring now composes through
@@ -461,7 +467,7 @@ A cut is done only if all are true:
 - terminal surface widget seam is established in
   `host/surface/SurfaceWidgetController` for future tabbed hosting
 - debug surface snapshot composition moved to
-  `debug/TerminalSurfaceStateSnapshotReader`
+  `debug/SurfaceStateSnapshotReader`
 - JNI bridge exports now use only current `uk.laurencegouws.terminal` symbol
   ownership
 - readiness evaluation now uses only `.zide-userland-readiness.json`
@@ -489,7 +495,7 @@ A cut is done only if all are true:
 - Zig bridge naming authority now includes an explicit forbidden-terms checklist
   to block regressions in active Android runtime paths
 - Java naming contract now includes event suffix key contract and explicit
-  `native*Shell*Bridge` forbidden-symbol rule for `TerminalNativeBridge.java`
+  `native*Shell*Bridge` forbidden-symbol rule for `NativeBridge.java`
 - selection controller remains monolithic by design until a real split seam
   exists
 - queue remains Android-product-first, not shell-readiness-baseline-first

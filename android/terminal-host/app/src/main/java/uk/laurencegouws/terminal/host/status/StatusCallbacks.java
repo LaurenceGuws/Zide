@@ -3,7 +3,7 @@ package uk.laurencegouws.terminal.host.status;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
-import uk.laurencegouws.terminal.TerminalNativeBridge;
+import uk.laurencegouws.terminal.NativeBridge;
 import uk.laurencegouws.terminal.debug.AndroidDebugFormatter;
 import uk.laurencegouws.terminal.host.surface.SurfaceBridge;
 import uk.laurencegouws.terminal.userland.UserlandReadinessState;
@@ -43,7 +43,7 @@ public final class StatusCallbacks implements StatusBridge.Callbacks {
 
     @Override
     public boolean nativeLoaded() {
-        return TerminalNativeBridge.nativeLoaded();
+        return NativeBridge.nativeLoaded();
     }
 
     @Override

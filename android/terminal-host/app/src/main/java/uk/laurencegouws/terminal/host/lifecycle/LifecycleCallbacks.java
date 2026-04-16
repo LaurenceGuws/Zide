@@ -3,7 +3,7 @@ package uk.laurencegouws.terminal.host.lifecycle;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import uk.laurencegouws.terminal.TerminalNativeBridge;
+import uk.laurencegouws.terminal.NativeBridge;
 import uk.laurencegouws.terminal.host.surface.SurfaceLifecycleCallbacks;
 
 /** Functional callback adapter for {@link LifecycleController.Host}. */
@@ -70,12 +70,12 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
 
     @Override
     public boolean nativeLoaded() {
-        return TerminalNativeBridge.nativeLoaded();
+        return NativeBridge.nativeLoaded();
     }
 
     @Override
     public long nativeOnStart() {
-        return TerminalNativeBridge.nativeOnStartBridge();
+        return NativeBridge.nativeOnStartBridge();
     }
 
     @Override
@@ -85,27 +85,27 @@ public final class LifecycleCallbacks implements LifecycleController.Host {
 
     @Override
     public long nativeOnCreate() {
-        return TerminalNativeBridge.nativeOnCreateBridge();
+        return NativeBridge.nativeOnCreateBridge();
     }
 
     @Override
     public long nativeOnResume() {
-        return TerminalNativeBridge.nativeOnResumeBridge();
+        return NativeBridge.nativeOnResumeBridge();
     }
 
     @Override
     public long nativeOnPause() {
-        return TerminalNativeBridge.nativeOnPauseBridge();
+        return NativeBridge.nativeOnPauseBridge();
     }
 
     @Override
     public long nativeOnStop() {
-        return TerminalNativeBridge.nativeOnStopBridge();
+        return NativeBridge.nativeOnStopBridge();
     }
 
     @Override
     public long nativeOnWindowFocus(boolean hasFocus) {
-        return TerminalNativeBridge.nativeOnWindowFocusBridge(hasFocus);
+        return NativeBridge.nativeOnWindowFocusBridge(hasFocus);
     }
 
     @Override

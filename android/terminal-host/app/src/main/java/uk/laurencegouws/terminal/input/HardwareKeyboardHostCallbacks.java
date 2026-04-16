@@ -6,10 +6,10 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import uk.laurencegouws.terminal.TerminalNativeBridge;
+import uk.laurencegouws.terminal.NativeBridge;
 
-/** Functional callback adapter for {@link TerminalHardwareKeyboardController}. */
-public final class TerminalHardwareKeyboardHostCallbacks implements TerminalHardwareKeyboardController.Host {
+/** Functional callback adapter for {@link HardwareKeyboardController}. */
+public final class HardwareKeyboardHostCallbacks implements HardwareKeyboardController.Host {
     private final Supplier<ShellInputView> shellInputView;
     private final InputMethodManager inputMethodManager;
     private final BooleanSupplier currentImeVisible;
@@ -18,7 +18,7 @@ public final class TerminalHardwareKeyboardHostCallbacks implements TerminalHard
     private final Runnable refreshProductScrollOverlay;
     private final Consumer<String> updateStatus;
 
-    public TerminalHardwareKeyboardHostCallbacks(
+    public HardwareKeyboardHostCallbacks(
             Supplier<ShellInputView> shellInputView,
             InputMethodManager inputMethodManager,
             BooleanSupplier currentImeVisible,
@@ -57,7 +57,7 @@ public final class TerminalHardwareKeyboardHostCallbacks implements TerminalHard
 
     @Override
     public boolean nativeLoaded() {
-        return TerminalNativeBridge.nativeLoaded();
+        return NativeBridge.nativeLoaded();
     }
 
     @Override

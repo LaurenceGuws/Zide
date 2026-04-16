@@ -7,7 +7,7 @@ import android.widget.OverScroller;
 import uk.laurencegouws.terminal.host.interaction.GestureStateBridge;
 
 /** Creates gesture-state controllers for a terminal surface widget instance. */
-public final class TerminalGestureStateControllerFactory {
+public final class GestureStateControllerFactory {
     /** Widget host callbacks required by gesture-state controller wiring. */
     public interface Host {
         boolean nativeLoaded();
@@ -33,11 +33,11 @@ public final class TerminalGestureStateControllerFactory {
         void reevaluateProductFrameLoop();
     }
 
-    private TerminalGestureStateControllerFactory() {
+    private GestureStateControllerFactory() {
     }
 
-    public static TerminalGestureStateController create(Context context, Handler handler, Host host) {
-        final TerminalGestureStateController controller = new TerminalGestureStateController(
+    public static GestureStateController create(Context context, Handler handler, Host host) {
+        final GestureStateController controller = new GestureStateController(
                 handler,
                 new GestureStateBridge(new GestureStateBridge.Callbacks() {
                     @Override

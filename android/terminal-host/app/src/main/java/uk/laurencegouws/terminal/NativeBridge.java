@@ -4,7 +4,7 @@ import android.util.Log;
 import android.view.Surface;
 
 /** JNI bridge surface for terminal-host native integration. */
-public final class TerminalNativeBridge {
+public final class NativeBridge {
     private static final String TAG = "ZideAndroidTerminal";
     private static final boolean NATIVE_LOADED;
     private static final String NATIVE_LOAD_ERROR;
@@ -23,7 +23,7 @@ public final class TerminalNativeBridge {
         NATIVE_LOAD_ERROR = loadError;
     }
 
-    private TerminalNativeBridge() {
+    private NativeBridge() {
     }
 
     public static boolean nativeLoaded() {

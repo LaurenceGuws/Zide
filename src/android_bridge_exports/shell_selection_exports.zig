@@ -101,7 +101,7 @@ fn selectionTextBytes(env: ?*anyopaque) ?*anyopaque {
     return array;
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeBeginSelectionWordAtVisibleCellBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeBeginSelectionWordAtVisibleCellBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
     row: i32,
@@ -110,7 +110,7 @@ export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeBeginSelecti
     return beginWordSelectionAtVisibleCell(row, col);
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeExtendSelectionGestureToVisibleCellBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeExtendSelectionGestureToVisibleCellBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
     row: i32,
@@ -119,21 +119,21 @@ export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeExtendSelect
     return extendSelectionGestureToVisibleCell(row, col);
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeFinishSelectionGestureBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeFinishSelectionGestureBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return finishSelectionGesture();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeClearSelectionBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeClearSelectionBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return clearSelection();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeUpdateSelectionStartAtVisibleCellBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeUpdateSelectionStartAtVisibleCellBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
     row: i32,
@@ -142,7 +142,7 @@ export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeUpdateSelect
     return updateSelectionStartAtVisibleCell(row, col);
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeUpdateSelectionEndAtVisibleCellBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeUpdateSelectionEndAtVisibleCellBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
     row: i32,
@@ -151,98 +151,98 @@ export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeUpdateSelect
     return updateSelectionEndAtVisibleCell(row, col);
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentSelectionActiveBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentSelectionActiveBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) bool {
     return selectionActive();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentSelectionRectLeftBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentSelectionRectLeftBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return selectionRectLeft();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentSelectionRectTopBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentSelectionRectTopBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return selectionRectTop();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentSelectionRectRightBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentSelectionRectRightBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return selectionRectRight();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentSelectionRectBottomBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentSelectionRectBottomBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return selectionRectBottom();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentSelectionStartRectLeftBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentSelectionStartRectLeftBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return selectionStartRectLeft();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentSelectionStartRectTopBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentSelectionStartRectTopBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return selectionStartRectTop();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentSelectionStartRectRightBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentSelectionStartRectRightBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return selectionStartRectRight();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentSelectionStartRectBottomBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentSelectionStartRectBottomBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return selectionStartRectBottom();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentSelectionEndRectLeftBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentSelectionEndRectLeftBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return selectionEndRectLeft();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentSelectionEndRectTopBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentSelectionEndRectTopBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return selectionEndRectTop();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentSelectionEndRectRightBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentSelectionEndRectRightBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return selectionEndRectRight();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentSelectionEndRectBottomBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentSelectionEndRectBottomBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return selectionEndRectBottom();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentSelectionTextBytesBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentSelectionTextBytesBridge(
     env: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) ?*anyopaque {

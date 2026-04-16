@@ -5,7 +5,7 @@ import android.view.KeyEvent;
 import android.view.inputmethod.InputMethodManager;
 
 /** Owns hardware-keyboard dispatch policy for terminal input on Android. */
-public final class TerminalHardwareKeyboardController {
+public final class HardwareKeyboardController {
     /** Host callbacks for shell focus, IME state, and native scrollback follow. */
     public interface Host {
         ShellInputView shellInputView();
@@ -27,7 +27,7 @@ public final class TerminalHardwareKeyboardController {
 
     private final Host host;
 
-    public TerminalHardwareKeyboardController(Host host) {
+    public HardwareKeyboardController(Host host) {
         this.host = host;
     }
 

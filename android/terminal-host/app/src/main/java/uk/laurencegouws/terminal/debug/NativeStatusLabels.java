@@ -1,8 +1,8 @@
 package uk.laurencegouws.terminal.debug;
 
 /** Maps native bridge status enums to stable debug/operator labels. */
-public final class TerminalNativeStatusLabels {
-    private TerminalNativeStatusLabels() {
+public final class NativeStatusLabels {
+    private NativeStatusLabels() {
     }
 
     public static String surfaceTransitionLabel(int transition) {

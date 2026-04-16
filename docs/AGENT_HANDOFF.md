@@ -30,6 +30,7 @@ When `docs/todo/android/implementation.md` contains a `Milestone Queue`:
 - stop at milestone boundary and report:
   `Milestone reached per docs, architect review required.`
 - do not self-advance to the next milestone
+- include `Blocked by review needed: true|false` in every progress update
 
 ## Android Cleanup Execution Contract (No Ambiguity)
 
@@ -72,11 +73,11 @@ Required per-commit update format:
 
 ## Current Ownership Snapshot
 
-- `TerminalGestureStateController`: pinch and scrollback budget/state
+- `GestureStateController`: pinch and scrollback budget/state
 - `TerminalChromeController`: IME/sidebar/assist-bar policy
 - `TerminalSurfaceHostController`: surface host wiring
 - `TerminalViewportController`: visible viewport/inset authority
-- `TerminalSelectionController`: selection mutation/chrome/autoscroll owner
+- `SelectionController`: selection mutation/chrome/autoscroll owner
 - `../zide-mobile-pm`: mobile package/artifact production
 - JNI export ownership: native bridge now exports only current package-owner
   symbols with Java owner `uk.laurencegouws.terminal`
@@ -100,9 +101,9 @@ Required per-commit update format:
 
 ## Java Hygiene Hotspots (Reassessed)
 
-- `selection/TerminalSelectionController.java` remains the largest Java owner
+- `selection/SelectionController.java` remains the largest Java owner
   seam (~999 lines) and is still monolithic by design.
-- `ZideTerminalActivity.java` is materially thinner (~615 lines) but remains
+- `ZideActivity.java` is materially thinner (~615 lines) but remains
   the highest orchestration-pressure seam.
 - `host/ui/WidgetCallbacks.java` (~340 lines) is the highest callback-constructor
   pressure seam after recent activity cleanup.

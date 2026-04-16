@@ -1070,7 +1070,7 @@ Required direction:
 
 Scope:
 
-- `ZideTerminalActivity.java`
+- `ZideActivity.java`
 - `ShellSessionController.java`
 - `ShellInputView.java`
 - Java-side gesture, lifecycle, status, and product-state upkeep flows on the
@@ -1078,11 +1078,11 @@ Scope:
 
 Findings:
 
-- `ZideTerminalActivity` still owns the Android lifecycle entrypoint and the
+- `ZideActivity` still owns the Android lifecycle entrypoint and the
   remaining wiring surface for lifecycle dispatch, sidebar controls, IME
   ownership, gesture intake, and JNI bridge calls
 - viewport/inset authority now lives in `dev.zide.terminal.host.TerminalViewportController`
-- debug/status presentation now lives in `dev.zide.terminal.debug.TerminalStatusController`
+- debug/status presentation now lives in `dev.zide.terminal.debug.StatusController`
 - a 150ms `shellRefreshRunnable` still exists and may re-enter:
   - `refreshShellState(false)`
   - `ShellSessionController.poll(...)`
@@ -1138,7 +1138,7 @@ Current stop marker for this subcategory:
 Current stop reading after the latest host cuts:
 
 - that stop marker is now materially met for the active Android terminal lane
-- the remaining `ZideTerminalActivity` surface is still large, but most of it
+- the remaining `ZideActivity` surface is still large, but most of it
   now reads as legitimate Android ownership:
   lifecycle dispatch, surface callbacks, IME/focus, gesture intake, sidebar
   controls, and JNI handoff, with debug/status presentation and
@@ -1157,7 +1157,7 @@ Initial fix queue:
    paths
 4. remove obsolete product assumptions entirely now that shared renderer
    shell output is the only product path
-5. split `ZideTerminalActivity` responsibilities further only after ownership
+5. split `ZideActivity` responsibilities further only after ownership
    boundaries are fixed, not as a cosmetic OO refactor
 
 Do not do:
@@ -1260,7 +1260,7 @@ Current progress:
   - reopen this subcategory only for a concrete host-side product blocker, not
     more generalized thinning
 - that does not finish this category:
-  - `ZideTerminalActivity` is still large, but the remaining breadth is not by
+  - `ZideActivity` is still large, but the remaining breadth is not by
     itself proof of wrong ownership
 
 ## Current Non-Render Cleanup Already Landed

@@ -13,9 +13,9 @@ import android.widget.FrameLayout;
 import android.widget.TextView;
 
 import uk.laurencegouws.terminal.debug.AndroidDebugFormatter;
-import uk.laurencegouws.terminal.debug.TerminalStatusController;
-import uk.laurencegouws.terminal.debug.TerminalSurfaceStateSnapshotReader;
-import uk.laurencegouws.terminal.gesture.TerminalGestureStateController;
+import uk.laurencegouws.terminal.debug.StatusController;
+import uk.laurencegouws.terminal.debug.SurfaceStateSnapshotReader;
+import uk.laurencegouws.terminal.gesture.GestureStateController;
 import uk.laurencegouws.terminal.host.lifecycle.LifecycleController;
 import uk.laurencegouws.terminal.host.lifecycle.LifecycleCallbacks;
 import uk.laurencegouws.terminal.host.lifecycle.LifecycleDebugIntentArgs;
@@ -25,9 +25,9 @@ import uk.laurencegouws.terminal.host.input.InputAssembly;
 import uk.laurencegouws.terminal.host.input.InputCallbacks;
 import uk.laurencegouws.terminal.host.interaction.InteractionAssembly;
 import uk.laurencegouws.terminal.host.interaction.InteractionCallbacks;
-import uk.laurencegouws.terminal.host.runtime.ProductRuntimeAssembly;
-import uk.laurencegouws.terminal.host.runtime.ProductRuntimeAssemblyCallbacks;
-import uk.laurencegouws.terminal.host.runtime.ProductRuntimeController;
+import uk.laurencegouws.terminal.host.runtime.RuntimeAssembly;
+import uk.laurencegouws.terminal.host.runtime.RuntimeAssemblyCallbacks;
+import uk.laurencegouws.terminal.host.runtime.RuntimeController;
 import uk.laurencegouws.terminal.host.runtime.RuntimeAssetsController;
 import uk.laurencegouws.terminal.host.session.SessionAssembly;
 import uk.laurencegouws.terminal.host.session.SessionAssemblyCallbacks;
@@ -45,11 +45,11 @@ import uk.laurencegouws.terminal.host.ui.WidgetCallbacks;
 import uk.laurencegouws.terminal.host.userland.WorkflowAssembly;
 import uk.laurencegouws.terminal.host.userland.WorkflowAssemblyCallbacks;
 import uk.laurencegouws.terminal.input.ShellInputView;
-import uk.laurencegouws.terminal.input.TerminalHardwareKeyboardController;
-import uk.laurencegouws.terminal.input.TerminalImeFocusRecoveryController;
-import uk.laurencegouws.terminal.scroll.TerminalScrollOverlayView;
-import uk.laurencegouws.terminal.selection.TerminalSelectionController;
-import uk.laurencegouws.terminal.userland.ProductShellStatePresenter;
+import uk.laurencegouws.terminal.input.HardwareKeyboardController;
+import uk.laurencegouws.terminal.input.ImeFocusRecoveryController;
+import uk.laurencegouws.terminal.scroll.ScrollOverlayView;
+import uk.laurencegouws.terminal.selection.SelectionController;
+import uk.laurencegouws.terminal.userland.ShellStatePresenter;
 import uk.laurencegouws.terminal.userland.UserlandReadinessState;
 import uk.laurencegouws.terminal.userland.UserlandInstallState;
 import uk.laurencegouws.terminal.userland.UserlandRelease;
@@ -67,10 +67,10 @@ import uk.laurencegouws.terminal.userland.UserlandWorkflowController;
  * Android-specific policy belongs in the package controllers below this
  * activity.
  */
-public final class ZideTerminalActivity extends Activity
+public final class ZideActivity extends Activity
         implements ShellInputView.Host {
-    private static final boolean nativeLoaded = TerminalNativeBridge.nativeLoaded();
-    private static final String nativeLoadError = TerminalNativeBridge.nativeLoadError();
+    private static final boolean nativeLoaded = NativeBridge.nativeLoaded();
+    private static final String nativeLoadError = NativeBridge.nativeLoadError();
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private TextView packageStatusText;
@@ -86,21 +86,21 @@ public final class ZideTerminalActivity extends Activity
     private View drawerEdgeHotspot;
     private View leftSidebar;
     private FrameLayout productSurfaceContainer;
-    private TerminalScrollOverlayView terminalScrollOverlay;
+    private ScrollOverlayView terminalScrollOverlay;
     private Button assistCtrlButton;
     private Button assistAltButton;
     private ShellInputView shellInputView;
-    private TerminalHardwareKeyboardController terminalHardwareKeyboardController;
-    private TerminalImeFocusRecoveryController terminalImeFocusRecoveryController;
-    private TerminalSelectionController selectionController;
-    private TerminalGestureStateController terminalGestureStateController;
+    private HardwareKeyboardController HardwareKeyboardController;
+    private ImeFocusRecoveryController ImeFocusRecoveryController;
+    private SelectionController selectionController;
+    private GestureStateController GestureStateController;
     private boolean debugViewEnabled = false;
     private boolean imeVisible = false;
     private UserlandRelease userlandRelease;
     private UserlandWorkflowController userlandWorkflowController;
     private UserlandSessionCoordinator userlandSessionCoordinator;
     private FrameLoopController productFrameLoopController;
-    private ProductShellStatePresenter productShellStatePresenter;
+    private ShellStatePresenter ShellStatePresenter;
     private SurfaceController surfaceHostController;
     private SurfaceBridge surfaceHostBridge;
     private ChromeController terminalChromeController;
@@ -116,10 +116,10 @@ public final class ZideTerminalActivity extends Activity
      * terminal size contract by accident.
      */
     private ViewportController terminalViewportController;
-    private TerminalStatusController terminalStatusController;
-    private TerminalSurfaceStateSnapshotReader terminalSurfaceStateSnapshotReader;
+    private StatusController StatusController;
+    private SurfaceStateSnapshotReader SurfaceStateSnapshotReader;
     private SurfaceWidgetController terminalSurfaceWidgetController;
-    private ProductRuntimeController terminalProductRuntimeController;
+    private RuntimeController terminalRuntimeController;
     private LifecycleController terminalActivityLifecycleController;
     private UserlandInstallState currentInstallState = UserlandInstallState.idle();
     private UserlandReadinessState currentReadinessState;
@@ -137,7 +137,7 @@ public final class ZideTerminalActivity extends Activity
         assembleUserlandWorkflowControllers();
         assembleSessionControllers();
         assembleWidgetHostControllers();
-        assembleProductRuntimeController();
+        assembleRuntimeController();
         assembleActivityLifecycleController();
         loadInitialReadinessState();
         installInputControllers();
@@ -145,9 +145,9 @@ public final class ZideTerminalActivity extends Activity
         terminalActivityLifecycleController.onCreate();
     }
 
-    private void assembleProductRuntimeController() {
-        terminalProductRuntimeController = ProductRuntimeAssembly.assemble(
-                createProductRuntimeAssemblyCallbacks());
+    private void assembleRuntimeController() {
+        terminalRuntimeController = RuntimeAssembly.assemble(
+                createRuntimeAssemblyCallbacks());
     }
 
     @Override
@@ -217,8 +217,8 @@ public final class ZideTerminalActivity extends Activity
         terminalScrollOverlay = result.terminalScrollOverlay;
         assistCtrlButton = result.assistCtrlButton;
         assistAltButton = result.assistAltButton;
-        terminalSurfaceStateSnapshotReader = result.terminalSurfaceStateSnapshotReader;
-        terminalStatusController = result.terminalStatusController;
+        SurfaceStateSnapshotReader = result.SurfaceStateSnapshotReader;
+        StatusController = result.StatusController;
         terminalViewportController = result.terminalViewportController;
     }
 
@@ -242,7 +242,7 @@ public final class ZideTerminalActivity extends Activity
     private void assembleInteractionControllers() {
         final InteractionAssembly.Result result = assembleInteractionControllerResult();
         selectionController = result.selectionController;
-        terminalGestureStateController = result.terminalGestureStateController;
+        GestureStateController = result.GestureStateController;
     }
 
     private InteractionAssembly.Result assembleInteractionControllerResult() {
@@ -265,8 +265,8 @@ public final class ZideTerminalActivity extends Activity
     private void installInputControllers() {
         final InputAssembly.Result result = assembleInputControllerResult();
         shellInputView = result.shellInputView;
-        terminalHardwareKeyboardController = result.hardwareKeyboardController;
-        terminalImeFocusRecoveryController = result.imeFocusRecoveryController;
+        HardwareKeyboardController = result.hardwareKeyboardController;
+        ImeFocusRecoveryController = result.imeFocusRecoveryController;
     }
 
     private InputAssembly.Result assembleInputControllerResult() {
@@ -287,7 +287,7 @@ public final class ZideTerminalActivity extends Activity
 
     private void assembleWidgetHostControllers() {
         final WidgetAssembly.Result result = assembleWidgetHostControllerResult();
-        productShellStatePresenter = result.productShellStatePresenter;
+        ShellStatePresenter = result.ShellStatePresenter;
         terminalChromeController = result.terminalChromeController;
         terminalViewModeController = result.terminalViewModeController;
         surfaceHostBridge = result.surfaceHostBridge;
@@ -323,7 +323,7 @@ public final class ZideTerminalActivity extends Activity
                 assistAltButton,
                 () -> shellInputView,
                 selectionController,
-                terminalGestureStateController,
+                GestureStateController,
                 () -> currentReadinessState,
                 () -> currentInstallState,
                 this::shouldRunProductFrameLoop,
@@ -338,12 +338,12 @@ public final class ZideTerminalActivity extends Activity
                 this::refreshUserlandSessionIfReady,
                 this::callNative,
                 this::callNativeWithSurfaceState,
-                () -> terminalSurfaceStateSnapshotReader.read(),
+                () -> SurfaceStateSnapshotReader.read(),
                 this::handleProductShellStateEventIfReady);
     }
 
-    private ProductRuntimeAssemblyCallbacks createProductRuntimeAssemblyCallbacks() {
-        return new ProductRuntimeAssemblyCallbacks(
+    private RuntimeAssemblyCallbacks createRuntimeAssemblyCallbacks() {
+        return new RuntimeAssemblyCallbacks(
                 () -> debugViewEnabled,
                 () -> currentInstallState,
                 this::setCurrentInstallState,
@@ -354,11 +354,11 @@ public final class ZideTerminalActivity extends Activity
                 productReadinessBlocker,
                 terminalScrollOverlay,
                 selectionController,
-                productShellStatePresenter,
+                ShellStatePresenter,
                 productFrameLoopController,
-                terminalStatusController,
+                StatusController,
                 userlandSessionCoordinator,
-                terminalGestureStateController);
+                GestureStateController);
     }
 
     private void assembleSessionControllers() {
@@ -454,20 +454,20 @@ public final class ZideTerminalActivity extends Activity
                 terminalViewModeController,
                 surfaceHostController,
                 terminalSurfaceWidgetController,
-                productShellStatePresenter,
+                ShellStatePresenter,
                 productFrameLoopController,
                 leftSidebar);
     }
 
     private void stopScrollbackFlingIfReady() {
-        if (terminalProductRuntimeController != null) {
-            terminalProductRuntimeController.stopScrollbackFling();
+        if (terminalRuntimeController != null) {
+            terminalRuntimeController.stopScrollbackFling();
         }
     }
 
     private void refreshProductScrollOverlayIfReady() {
-        if (terminalProductRuntimeController != null) {
-            terminalProductRuntimeController.refreshProductScrollOverlay();
+        if (terminalRuntimeController != null) {
+            terminalRuntimeController.refreshProductScrollOverlay();
         }
     }
 
@@ -498,18 +498,18 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private boolean handleHardwareDispatchKeyEventIfReady(KeyEvent event) {
-        return terminalHardwareKeyboardController != null
-                && terminalHardwareKeyboardController.handleDispatchKeyEvent(event);
+        return HardwareKeyboardController != null
+                && HardwareKeyboardController.handleDispatchKeyEvent(event);
     }
 
     private boolean shouldRunProductFrameLoop() {
-        return terminalProductRuntimeController != null
-                && terminalProductRuntimeController.shouldRunProductFrameLoop();
+        return terminalRuntimeController != null
+                && terminalRuntimeController.shouldRunProductFrameLoop();
     }
 
     private void handleProductShellStateEventIfReady(String statusLabel) {
-        if (terminalProductRuntimeController != null) {
-            terminalProductRuntimeController.handleProductShellStateEvent(statusLabel);
+        if (terminalRuntimeController != null) {
+            terminalRuntimeController.handleProductShellStateEvent(statusLabel);
         }
     }
 
@@ -520,26 +520,26 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void refreshProductShellStateIfReady() {
-        if (terminalProductRuntimeController != null) {
-            terminalProductRuntimeController.refreshProductShellState();
+        if (terminalRuntimeController != null) {
+            terminalRuntimeController.refreshProductShellState();
         }
     }
 
     private void refreshDebugStatusSurfaceIfReady() {
-        if (terminalProductRuntimeController != null) {
-            terminalProductRuntimeController.refreshDebugStatusSurface();
+        if (terminalRuntimeController != null) {
+            terminalRuntimeController.refreshDebugStatusSurface();
         }
     }
 
     private void applyInstallStateIfReady(UserlandInstallState installState, String statusLabel) {
-        if (terminalProductRuntimeController != null) {
-            terminalProductRuntimeController.applyInstallState(installState, statusLabel);
+        if (terminalRuntimeController != null) {
+            terminalRuntimeController.applyInstallState(installState, statusLabel);
         }
     }
 
     private void restartSessionIfReady(String eventName, String statusLabel, boolean logRefresh) {
-        if (terminalProductRuntimeController != null) {
-            terminalProductRuntimeController.restartSession(eventName, statusLabel, logRefresh);
+        if (terminalRuntimeController != null) {
+            terminalRuntimeController.restartSession(eventName, statusLabel, logRefresh);
         }
     }
 
@@ -562,7 +562,7 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private int tickProductFrameAndRefreshScrollOverlay() {
-        final int tick = nativeLoaded ? TerminalNativeBridge.nativeTickProductFrameBridge() : 0;
+        final int tick = nativeLoaded ? NativeBridge.nativeTickProductFrameBridge() : 0;
         refreshProductScrollOverlayIfReady();
         return tick;
     }
@@ -610,14 +610,14 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void callNative(String event, long seq) {
-        terminalStatusController.callNative(event, seq);
+        StatusController.callNative(event, seq);
     }
 
     private void callNativeWithSurfaceState(
             String event,
             long seq,
             AndroidDebugFormatter.SurfaceEventSnapshot state) {
-        terminalStatusController.callNativeWithSurfaceState(event, seq, state);
+        StatusController.callNativeWithSurfaceState(event, seq, state);
     }
 
     private boolean canSendDirectInput() {
@@ -629,7 +629,7 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void sendDirectCodepointToNative(int codepoint) {
-        TerminalNativeBridge.nativeSendSessionCodepointBridge(codepoint);
+        NativeBridge.nativeSendSessionCodepointBridge(codepoint);
     }
 
     private void sendDirectTextCodepoints(String text) {
@@ -641,8 +641,8 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void notifyInputFocusRecoveryIfReady(boolean hasFocus) {
-        if (terminalImeFocusRecoveryController != null) {
-            terminalImeFocusRecoveryController.onInputFocusChanged(hasFocus);
+        if (ImeFocusRecoveryController != null) {
+            ImeFocusRecoveryController.onInputFocusChanged(hasFocus);
         }
     }
 
@@ -683,10 +683,10 @@ public final class ZideTerminalActivity extends Activity
     }
 
     private void updateStatus(String state) {
-        terminalStatusController.updateStatus(state);
+        StatusController.updateStatus(state);
     }
 
     public void appendEvent(String message) {
-        terminalStatusController.appendEvent(message);
+        StatusController.appendEvent(message);
     }
 }

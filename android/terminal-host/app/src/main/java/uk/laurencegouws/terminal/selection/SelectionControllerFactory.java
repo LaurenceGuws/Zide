@@ -7,7 +7,7 @@ import uk.laurencegouws.terminal.host.interaction.SelectionBridge;
 import uk.laurencegouws.terminal.host.interaction.SelectionInteractionBridge;
 
 /** Creates selection controllers for a terminal surface widget instance. */
-public final class TerminalSelectionControllerFactory {
+public final class SelectionControllerFactory {
     /** Widget host callbacks required by selection controller wiring. */
     public interface Host {
         int productViewportWidthPx();
@@ -77,11 +77,11 @@ public final class TerminalSelectionControllerFactory {
         int followShellLiveBottom();
     }
 
-    private TerminalSelectionControllerFactory() {
+    private SelectionControllerFactory() {
     }
 
-    public static TerminalSelectionController create(Context context, FrameLayout productSurfaceContainer, Host host) {
-        return new TerminalSelectionController(
+    public static SelectionController create(Context context, FrameLayout productSurfaceContainer, Host host) {
+        return new SelectionController(
                 new SelectionInteractionBridge(
                         context,
                         productSurfaceContainer,

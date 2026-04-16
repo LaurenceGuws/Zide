@@ -8,7 +8,7 @@ and Android-native product work.
 - directory path is `android/terminal-host/`
 - active app identity is terminal-first:
   - package/application id: `uk.laurencegouws.zide`
-  - launcher activity: `ZideTerminalActivity`
+  - launcher activity: `ZideActivity`
 
 ## Default Workflow
 
@@ -25,7 +25,7 @@ That will:
 1. build the Zig native bridge
 2. build the Android debug APK with the Gradle wrapper
 3. install it on the connected device
-4. launch `ZideTerminalActivity`
+4. launch `ZideActivity`
 
 Variant policy:
 

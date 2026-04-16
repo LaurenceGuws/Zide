@@ -2,10 +2,10 @@ package uk.laurencegouws.terminal.host.surface;
 
 import android.view.SurfaceHolder;
 
-import uk.laurencegouws.terminal.gesture.ProductGestureController;
-import uk.laurencegouws.terminal.gesture.TerminalGestureStateController;
-import uk.laurencegouws.terminal.scroll.TerminalScrollOverlayView;
-import uk.laurencegouws.terminal.selection.TerminalSelectionController;
+import uk.laurencegouws.terminal.gesture.GestureController;
+import uk.laurencegouws.terminal.gesture.GestureStateController;
+import uk.laurencegouws.terminal.scroll.ScrollOverlayView;
+import uk.laurencegouws.terminal.selection.SelectionController;
 
 /**
  * Owns terminal-surface widget interactions for one Android terminal instance.
@@ -15,7 +15,7 @@ import uk.laurencegouws.terminal.selection.TerminalSelectionController;
  * terminate here instead of on the activity.
  */
 public final class SurfaceWidgetController
-        implements SurfaceHolder.Callback2, ProductGestureController.Host, TerminalScrollOverlayView.Host {
+        implements SurfaceHolder.Callback2, GestureController.Host, ScrollOverlayView.Host {
     /** Host callbacks for native bridge access and frame-loop side effects. */
     public interface Host {
         boolean nativeLoaded();
@@ -34,18 +34,18 @@ public final class SurfaceWidgetController
     }
 
     private final SurfaceController surfaceHostController;
-    private final TerminalSelectionController selectionController;
-    private final TerminalGestureStateController terminalGestureStateController;
+    private final SelectionController selectionController;
+    private final GestureStateController GestureStateController;
     private final Host host;
 
     public SurfaceWidgetController(
             SurfaceController surfaceHostController,
-            TerminalSelectionController selectionController,
-            TerminalGestureStateController terminalGestureStateController,
+            SelectionController selectionController,
+            GestureStateController GestureStateController,
             Host host) {
         this.surfaceHostController = surfaceHostController;
         this.selectionController = selectionController;
-        this.terminalGestureStateController = terminalGestureStateController;
+        this.GestureStateController = GestureStateController;
         this.host = host;
     }
 
@@ -71,7 +71,7 @@ public final class SurfaceWidgetController
 
     @Override
     public void onProductTouchDown() {
-        terminalGestureStateController.stopScrollbackFling();
+        GestureStateController.stopScrollbackFling();
     }
 
     @Override
@@ -81,22 +81,22 @@ public final class SurfaceWidgetController
 
     @Override
     public void onProductScrollBegin() {
-        terminalGestureStateController.onProductScrollBegin();
+        GestureStateController.onProductScrollBegin();
     }
 
     @Override
     public void onProductScrollBy(float deltaY) {
-        terminalGestureStateController.onProductScrollBy(deltaY);
+        GestureStateController.onProductScrollBy(deltaY);
     }
 
     @Override
     public void onProductScrollEnd() {
-        terminalGestureStateController.onProductScrollEnd();
+        GestureStateController.onProductScrollEnd();
     }
 
     @Override
     public void onProductScrollFling(float velocityY) {
-        terminalGestureStateController.onProductScrollFling(velocityY, host.productViewportHeightPx());
+        GestureStateController.onProductScrollFling(velocityY, host.productViewportHeightPx());
     }
 
     @Override
@@ -116,7 +116,7 @@ public final class SurfaceWidgetController
 
     @Override
     public void onScrollbackOffsetRequested(int offsetRows) {
-        terminalGestureStateController.stopScrollbackFling();
+        GestureStateController.stopScrollbackFling();
         if (!host.nativeLoaded()) {
             return;
         }
@@ -128,7 +128,7 @@ public final class SurfaceWidgetController
 
     @Override
     public void onFollowLiveBottomRequested() {
-        terminalGestureStateController.stopScrollbackFling();
+        GestureStateController.stopScrollbackFling();
         if (!host.nativeLoaded()) {
             return;
         }
@@ -140,16 +140,16 @@ public final class SurfaceWidgetController
 
     @Override
     public void onProductPinchBegin() {
-        terminalGestureStateController.onProductPinchBegin();
+        GestureStateController.onProductPinchBegin();
     }
 
     @Override
     public void onProductPinchZoom(float scaleFactor) {
-        terminalGestureStateController.onProductPinchZoom(scaleFactor);
+        GestureStateController.onProductPinchZoom(scaleFactor);
     }
 
     @Override
     public void onProductPinchEnd() {
-        terminalGestureStateController.onProductPinchEnd();
+        GestureStateController.onProductPinchEnd();
     }
 }

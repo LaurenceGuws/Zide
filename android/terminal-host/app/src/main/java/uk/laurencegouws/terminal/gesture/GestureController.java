@@ -22,7 +22,7 @@ import android.view.VelocityTracker;
  * <p>Raw detector scale deltas are intentionally not forwarded one-for-one. They are accumulated
  * and quantized here so fast pinches do not explode into tiny renderer work bursts.
  */
-public final class ProductGestureController {
+public final class GestureController {
     /**
      * Host callbacks for product-surface gestures.
      *
@@ -119,7 +119,7 @@ public final class ProductGestureController {
     };
 
     /** Creates a gesture controller bound to the product interaction surface. */
-    public ProductGestureController(View target, Host host) {
+    public GestureController(View target, Host host) {
         this.target = target;
         this.host = host;
         final ViewConfiguration viewConfig = ViewConfiguration.get(target.getContext());

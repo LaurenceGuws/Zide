@@ -2,18 +2,18 @@ package uk.laurencegouws.terminal.host.runtime;
 
 import android.view.View;
 
-import uk.laurencegouws.terminal.debug.TerminalStatusController;
-import uk.laurencegouws.terminal.gesture.TerminalGestureStateController;
-import uk.laurencegouws.terminal.scroll.TerminalScrollOverlayView;
-import uk.laurencegouws.terminal.selection.TerminalSelectionController;
+import uk.laurencegouws.terminal.debug.StatusController;
+import uk.laurencegouws.terminal.gesture.GestureStateController;
+import uk.laurencegouws.terminal.scroll.ScrollOverlayView;
+import uk.laurencegouws.terminal.selection.SelectionController;
 import uk.laurencegouws.terminal.host.surface.SurfaceBridge;
-import uk.laurencegouws.terminal.userland.ProductShellStatePresenter;
+import uk.laurencegouws.terminal.userland.ShellStatePresenter;
 import uk.laurencegouws.terminal.userland.UserlandReadinessState;
 import uk.laurencegouws.terminal.userland.UserlandInstallState;
 import uk.laurencegouws.terminal.userland.UserlandSessionCoordinator;
 
 /** Owns product-runtime controller assembly for activity wiring. */
-public final class ProductRuntimeAssembly {
+public final class RuntimeAssembly {
     /** Activity callbacks required for product-runtime assembly. */
     public interface Host {
         boolean debugViewEnabled();
@@ -28,31 +28,31 @@ public final class ProductRuntimeAssembly {
 
         View productReadinessBlocker();
 
-        TerminalScrollOverlayView terminalScrollOverlay();
+        ScrollOverlayView terminalScrollOverlay();
 
-        TerminalSelectionController selectionController();
+        SelectionController selectionController();
 
-        ProductShellStatePresenter productShellStatePresenter();
+        ShellStatePresenter ShellStatePresenter();
 
         FrameLoopController frameLoopController();
 
-        TerminalStatusController terminalStatusController();
+        StatusController StatusController();
 
         UserlandSessionCoordinator userlandSessionCoordinator();
 
-        TerminalGestureStateController terminalGestureStateController();
+        GestureStateController GestureStateController();
 
         void appendEvent(String message);
 
         void updateStatus(String statusLabel);
     }
 
-    private ProductRuntimeAssembly() {
+    private RuntimeAssembly() {
     }
 
-    public static ProductRuntimeController assemble(Host host) {
-        return RuntimeFactory.createProductRuntimeController(
-                RuntimeFactory.createProductRuntimeHostCallbacks(
+    public static RuntimeController assemble(Host host) {
+        return RuntimeFactory.createRuntimeController(
+                RuntimeFactory.createRuntimeHostCallbacks(
                         host::debugViewEnabled,
                         host::installState,
                         host::setInstallState,
@@ -61,11 +61,11 @@ public final class ProductRuntimeAssembly {
                         host.productReadinessBlocker(),
                         host.terminalScrollOverlay(),
                         host.selectionController(),
-                        host.productShellStatePresenter(),
+                        host.ShellStatePresenter(),
                         host.frameLoopController(),
-                        host.terminalStatusController(),
+                        host.StatusController(),
                         host.userlandSessionCoordinator(),
-                        host.terminalGestureStateController(),
+                        host.GestureStateController(),
                         host::appendEvent,
                         host::updateStatus));
     }

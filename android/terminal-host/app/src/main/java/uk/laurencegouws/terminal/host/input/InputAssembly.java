@@ -9,8 +9,8 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
 import uk.laurencegouws.terminal.input.ShellInputView;
-import uk.laurencegouws.terminal.input.TerminalHardwareKeyboardController;
-import uk.laurencegouws.terminal.input.TerminalImeFocusRecoveryController;
+import uk.laurencegouws.terminal.input.HardwareKeyboardController;
+import uk.laurencegouws.terminal.input.ImeFocusRecoveryController;
 
 /** Owns shell input installation and input controller wiring assembly. */
 public final class InputAssembly {
@@ -46,13 +46,13 @@ public final class InputAssembly {
     /** Immutable assembled input result. */
     public static final class Result {
         public final ShellInputView shellInputView;
-        public final TerminalHardwareKeyboardController hardwareKeyboardController;
-        public final TerminalImeFocusRecoveryController imeFocusRecoveryController;
+        public final HardwareKeyboardController hardwareKeyboardController;
+        public final ImeFocusRecoveryController imeFocusRecoveryController;
 
         private Result(
                 ShellInputView shellInputView,
-                TerminalHardwareKeyboardController hardwareKeyboardController,
-                TerminalImeFocusRecoveryController imeFocusRecoveryController) {
+                HardwareKeyboardController hardwareKeyboardController,
+                ImeFocusRecoveryController imeFocusRecoveryController) {
             this.shellInputView = shellInputView;
             this.hardwareKeyboardController = hardwareKeyboardController;
             this.imeFocusRecoveryController = imeFocusRecoveryController;
@@ -69,7 +69,7 @@ public final class InputAssembly {
         lp.gravity = Gravity.BOTTOM | Gravity.START;
         root.addView(shellInputView, lp);
 
-        final TerminalHardwareKeyboardController hardwareKeyboardController =
+        final HardwareKeyboardController hardwareKeyboardController =
                 InputFactory.createHardwareKeyboardController(
                         () -> shellInputView,
                         host.inputMethodManager(),
@@ -78,7 +78,7 @@ public final class InputAssembly {
                         () -> host.nativeFollowSessionLiveBottom().getAsInt(),
                         host.refreshProductScrollOverlay(),
                         host.updateStatus());
-        final TerminalImeFocusRecoveryController imeFocusRecoveryController =
+        final ImeFocusRecoveryController imeFocusRecoveryController =
                 InputFactory.createImeFocusRecoveryController(
                         () -> shellInputView,
                         host.currentImeVisible(),

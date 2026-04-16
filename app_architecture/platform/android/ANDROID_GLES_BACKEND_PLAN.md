@@ -391,7 +391,7 @@ Current status:
 
 `AR-B4.g` is now met:
 
-- `ZideTerminalActivity` now opts into `ADJUST_RESIZE` instead of the previous
+- `ZideActivity` now opts into `ADJUST_RESIZE` instead of the previous
   default `ADJUST_PAN` host behavior
 - Java now reports the effective visible product viewport into native code
   through `nativeOnVisibleViewportBridge(...)`

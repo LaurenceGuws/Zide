@@ -60,42 +60,42 @@ fn currentSurfaceTransition() i32 {
     return @intFromEnum(android_runtime_bridge.currentSurfaceTransition());
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeOnCreateBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeOnCreateBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return onCreate();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeOnStartBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeOnStartBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return onStart();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeOnResumeBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeOnResumeBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return onResume();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeOnPauseBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeOnPauseBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return onPause();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeOnStopBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeOnStopBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return onStop();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeOnWindowFocusBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeOnWindowFocusBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
     focused: bool,
@@ -103,7 +103,7 @@ export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeOnWindowFocu
     return onWindowFocusChanged(focused);
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeOnSurfaceAvailableBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeOnSurfaceAvailableBridge(
     env: ?*anyopaque,
     _: ?*anyopaque,
     surface: ?*anyopaque,
@@ -113,21 +113,21 @@ export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeOnSurfaceAva
     return onSurfaceAvailable(env, surface, width, height);
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeOnSurfaceDestroyedBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeOnSurfaceDestroyedBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return onSurfaceDestroyed();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeOnSurfaceRedrawNeededBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeOnSurfaceRedrawNeededBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return onSurfaceRedrawNeeded();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeOnVisibleViewportBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeOnVisibleViewportBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
     width: i32,
@@ -137,7 +137,7 @@ export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeOnVisibleVie
     return onVisibleViewport(width, height, imeVisible);
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeApplyTerminalPinchZoomBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeApplyTerminalPinchZoomBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
     scaleFactor: f32,
@@ -145,7 +145,7 @@ export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeApplyTermina
     return applyTerminalPinchZoom(scaleFactor);
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeSetTerminalPinchActiveBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeSetTerminalPinchActiveBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
     active: bool,
@@ -153,21 +153,21 @@ export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeSetTerminalP
     return setTerminalPinchActive(active);
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentWindowTokenBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentWindowTokenBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return currentWindowToken();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentSurfaceEpochBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentSurfaceEpochBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i64 {
     return currentSurfaceEpoch();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentSurfaceTransitionBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentSurfaceTransitionBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {

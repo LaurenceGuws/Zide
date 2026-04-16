@@ -4,17 +4,17 @@ import android.view.SurfaceView;
 
 import java.util.function.Supplier;
 
-import uk.laurencegouws.terminal.TerminalNativeBridge;
+import uk.laurencegouws.terminal.NativeBridge;
 import uk.laurencegouws.terminal.userland.UserlandReadinessState;
 import uk.laurencegouws.terminal.userland.UserlandInstallState;
 
-/** Functional callback adapter for {@link ProductShellStateBridge}. */
-public final class ProductShellStateCallbacks implements ProductShellStateBridge.Callbacks {
+/** Functional callback adapter for {@link ShellStateBridge}. */
+public final class ShellStateCallbacks implements ShellStateBridge.Callbacks {
     private final Supplier<UserlandReadinessState> readinessState;
     private final Supplier<UserlandInstallState> installState;
     private final Supplier<SurfaceView> surfaceView;
 
-    public ProductShellStateCallbacks(
+    public ShellStateCallbacks(
             Supplier<UserlandReadinessState> readinessState,
             Supplier<UserlandInstallState> installState,
             Supplier<SurfaceView> surfaceView) {
@@ -25,12 +25,12 @@ public final class ProductShellStateCallbacks implements ProductShellStateBridge
 
     @Override
     public boolean nativeLoaded() {
-        return TerminalNativeBridge.nativeLoaded();
+        return NativeBridge.nativeLoaded();
     }
 
     @Override
     public boolean sharedShellRendererActive() {
-        return TerminalNativeBridge.nativeSharedRendererActiveBridge();
+        return NativeBridge.nativeSharedRendererActiveBridge();
     }
 
     @Override

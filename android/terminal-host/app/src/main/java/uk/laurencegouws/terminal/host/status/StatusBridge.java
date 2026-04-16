@@ -3,14 +3,14 @@ package uk.laurencegouws.terminal.host.status;
 import android.view.SurfaceView;
 
 import uk.laurencegouws.terminal.debug.AndroidDebugFormatter;
-import uk.laurencegouws.terminal.debug.TerminalStatusController;
+import uk.laurencegouws.terminal.debug.StatusController;
 import uk.laurencegouws.terminal.userland.UserlandReadinessState;
 import uk.laurencegouws.terminal.userland.UserlandInstallState;
 
 /**
- * Adapts activity-owned status callbacks to {@link TerminalStatusController.Host}.
+ * Adapts activity-owned status callbacks to {@link StatusController.Host}.
  */
-public final class StatusBridge implements TerminalStatusController.Host {
+public final class StatusBridge implements StatusController.Host {
     /** Activity callbacks used by debug status presentation. */
     public interface Callbacks {
         boolean debugViewEnabled();

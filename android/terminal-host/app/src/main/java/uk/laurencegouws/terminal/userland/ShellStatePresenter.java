@@ -6,7 +6,7 @@ import android.widget.Button;
 import android.widget.TextView;
 
 /** Owns product shell blocker copy and visibility policy. */
-public final class ProductShellStatePresenter {
+public final class ShellStatePresenter {
     public interface Host {
         boolean nativeLoaded();
 
@@ -35,7 +35,7 @@ public final class ProductShellStatePresenter {
 
     private final Host host;
 
-    public ProductShellStatePresenter(Host host) {
+    public ShellStatePresenter(Host host) {
         this.host = host;
     }
 

@@ -6,10 +6,10 @@ import android.widget.FrameLayout;
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
 
-import uk.laurencegouws.terminal.gesture.TerminalGestureStateController;
-import uk.laurencegouws.terminal.gesture.TerminalGestureStateControllerFactory;
-import uk.laurencegouws.terminal.selection.TerminalSelectionController;
-import uk.laurencegouws.terminal.selection.TerminalSelectionControllerFactory;
+import uk.laurencegouws.terminal.gesture.GestureStateController;
+import uk.laurencegouws.terminal.gesture.GestureStateControllerFactory;
+import uk.laurencegouws.terminal.selection.SelectionController;
+import uk.laurencegouws.terminal.selection.SelectionControllerFactory;
 
 /**
  * Selection and gesture interaction assembly helpers.
@@ -21,7 +21,7 @@ public final class InteractionFactory {
     private InteractionFactory() {
     }
 
-    public static TerminalSelectionController createSelectionController(
+    public static SelectionController createSelectionController(
             Context context,
             FrameLayout productSurfaceContainer,
             IntSupplier productViewportWidthPx,
@@ -30,7 +30,7 @@ public final class InteractionFactory {
             Runnable refreshProductScrollOverlay,
             Runnable reevaluateProductFrameLoop,
             Consumer<String> appendEvent) {
-        return TerminalSelectionControllerFactory.create(
+        return SelectionControllerFactory.create(
                 context,
                 productSurfaceContainer,
                 new SelectionCallbacks(
@@ -42,13 +42,13 @@ public final class InteractionFactory {
                         appendEvent));
     }
 
-    public static TerminalGestureStateController createGestureStateController(
+    public static GestureStateController createGestureStateController(
             Context context,
             android.os.Handler handler,
             IntSupplier viewportHeightPx,
             Runnable refreshProductScrollOverlay,
             Runnable reevaluateProductFrameLoop) {
-        return TerminalGestureStateControllerFactory.create(
+        return GestureStateControllerFactory.create(
                 context,
                 handler,
                 new GestureStateCallbacks(

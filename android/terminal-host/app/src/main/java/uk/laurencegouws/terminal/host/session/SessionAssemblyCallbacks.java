@@ -7,7 +7,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
 
-import uk.laurencegouws.terminal.TerminalNativeBridge;
+import uk.laurencegouws.terminal.NativeBridge;
 import uk.laurencegouws.terminal.userland.UserlandReadinessState;
 import uk.laurencegouws.terminal.userland.UserlandRelease;
 
@@ -99,16 +99,16 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
 
     @Override
     public int nativeRestartSession() {
-        return TerminalNativeBridge.nativeRestartSessionBridge();
+        return NativeBridge.nativeRestartSessionBridge();
     }
 
     @Override
     public int nativePollSession() {
-        return TerminalNativeBridge.nativePollSessionBridge();
+        return NativeBridge.nativePollSessionBridge();
     }
 
     @Override
     public boolean nativeIsSessionAlive() {
-        return TerminalNativeBridge.nativeIsSessionAliveBridge();
+        return NativeBridge.nativeIsSessionAliveBridge();
     }
 }

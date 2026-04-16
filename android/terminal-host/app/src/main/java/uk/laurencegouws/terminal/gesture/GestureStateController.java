@@ -11,7 +11,7 @@ import android.widget.OverScroller;
  * and pinch policy to the native terminal bridge, while the raw gesture detector remains a
  * separate concern.
  */
-public final class TerminalGestureStateController {
+public final class GestureStateController {
     /** Host callbacks needed to apply gesture policy without duplicating activity state. */
     public interface Host {
         boolean nativeLoaded();
@@ -58,7 +58,7 @@ public final class TerminalGestureStateController {
     private int flingLastScrollY = 0;
     private boolean flingScrollScheduled = false;
 
-    public TerminalGestureStateController(Handler handler, Host host) {
+    public GestureStateController(Handler handler, Host host) {
         this.handler = handler;
         this.host = host;
         this.pinchZoomRetryRunnable = () -> {

@@ -3,7 +3,7 @@ package uk.laurencegouws.terminal.input;
 import android.view.inputmethod.InputMethodManager;
 
 /** Owns IME focus-recovery behavior for the hidden ShellInputView. */
-public final class TerminalImeFocusRecoveryController {
+public final class ImeFocusRecoveryController {
     /** Host callbacks for focus state, diagnostics, and IME operations. */
     public interface Host {
         ShellInputView shellInputView();
@@ -17,7 +17,7 @@ public final class TerminalImeFocusRecoveryController {
 
     private final Host host;
 
-    public TerminalImeFocusRecoveryController(Host host) {
+    public ImeFocusRecoveryController(Host host) {
         this.host = host;
     }
 

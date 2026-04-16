@@ -29,8 +29,8 @@ pub const ZideTerminalSnapshotRequest = bridge.SnapshotRequest;
 pub const ZideTerminalScrollbackBuffer = bridge.ScrollbackBuffer;
 pub const ZideTerminalMetadataRequest = bridge.MetadataRequest;
 pub const ZideTerminalMetadata = bridge.Metadata;
-pub const ZideTerminalActivityRequest = bridge.ActivityRequest;
-pub const ZideTerminalActivity = bridge.Activity;
+pub const ZideActivityRequest = bridge.ActivityRequest;
+pub const ZideActivity = bridge.Activity;
 pub const ZideTerminalRedrawState = bridge.RedrawState;
 pub const ZideTerminalCloseConfirmSignals = bridge.CloseConfirmSignals;
 pub const ZideTerminalKeyEvent = bridge.KeyEvent;
@@ -173,11 +173,11 @@ pub fn zide_terminal_metadata_release(metadata: *ZideTerminalMetadata) void {
     bridge.metadataRelease(metadata);
 }
 
-pub fn zide_terminal_activity_acquire(handle: ?*ZideTerminalHandle, request: ?*const ZideTerminalActivityRequest, out_activity: *ZideTerminalActivity) c_int {
+pub fn zide_terminal_activity_acquire(handle: ?*ZideTerminalHandle, request: ?*const ZideActivityRequest, out_activity: *ZideActivity) c_int {
     return @intFromEnum(bridge.activityAcquire(handle, request, out_activity));
 }
 
-pub fn zide_terminal_activity_release(activity: *ZideTerminalActivity) void {
+pub fn zide_terminal_activity_release(activity: *ZideActivity) void {
     bridge.activityRelease(activity);
 }
 

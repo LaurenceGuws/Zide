@@ -1,11 +1,11 @@
 package uk.laurencegouws.terminal.host.interaction;
 
-import uk.laurencegouws.terminal.selection.TerminalSelectionController;
+import uk.laurencegouws.terminal.selection.SelectionController;
 
 /**
  * Adapts activity native callbacks to the selection bridge contract.
  */
-public final class SelectionBridge implements TerminalSelectionController.Bridge {
+public final class SelectionBridge implements SelectionController.Bridge {
     /** Native callbacks required by selection interaction. */
     public interface Callbacks {
         boolean nativeLoaded();

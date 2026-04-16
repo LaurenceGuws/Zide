@@ -44,35 +44,35 @@ fn followLiveBottom() i32 {
     return android_runtime_bridge.followLiveBottom();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeRestartSessionBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeRestartSessionBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return restartSession();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativePollSessionBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativePollSessionBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return pollSession();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeIsSessionAliveBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeIsSessionAliveBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) bool {
     return sessionAlive();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeTickProductFrameBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeTickProductFrameBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return tickFrame();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeSendSessionCodepointBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeSendSessionCodepointBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
     codepoint: i32,
@@ -80,35 +80,35 @@ export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeSendSessionC
     return sendCodepoint(codepoint);
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentSessionVisibleRowsBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentSessionVisibleRowsBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return visibleRows();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentSessionVisibleColsBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentSessionVisibleColsBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return visibleCols();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentSessionScrollbackCountBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentSessionScrollbackCountBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return scrollbackCount();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeCurrentSessionScrollbackOffsetBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeCurrentSessionScrollbackOffsetBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {
     return scrollbackOffset();
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeSetSessionScrollbackOffsetBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeSetSessionScrollbackOffsetBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
     offsetRows: i32,
@@ -116,7 +116,7 @@ export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeSetSessionSc
     return setScrollbackOffset(offsetRows);
 }
 
-export fn Java_uk_laurencegouws_terminal_TerminalNativeBridge_nativeFollowSessionLiveBottomBridge(
+export fn Java_uk_laurencegouws_terminal_NativeBridge_nativeFollowSessionLiveBottomBridge(
     _: ?*anyopaque,
     _: ?*anyopaque,
 ) callconv(.c) i32 {

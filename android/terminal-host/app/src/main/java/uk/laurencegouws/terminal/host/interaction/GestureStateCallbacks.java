@@ -2,11 +2,11 @@ package uk.laurencegouws.terminal.host.interaction;
 
 import java.util.function.IntSupplier;
 
-import uk.laurencegouws.terminal.TerminalNativeBridge;
-import uk.laurencegouws.terminal.gesture.TerminalGestureStateControllerFactory;
+import uk.laurencegouws.terminal.NativeBridge;
+import uk.laurencegouws.terminal.gesture.GestureStateControllerFactory;
 
-/** Functional callback adapter for {@link TerminalGestureStateControllerFactory}. */
-public final class GestureStateCallbacks implements TerminalGestureStateControllerFactory.Host {
+/** Functional callback adapter for {@link GestureStateControllerFactory}. */
+public final class GestureStateCallbacks implements GestureStateControllerFactory.Host {
     private final IntSupplier viewportHeightPx;
     private final Runnable refreshProductScrollOverlay;
     private final Runnable reevaluateProductFrameLoop;
@@ -22,12 +22,12 @@ public final class GestureStateCallbacks implements TerminalGestureStateControll
 
     @Override
     public boolean nativeLoaded() {
-        return TerminalNativeBridge.nativeLoaded();
+        return NativeBridge.nativeLoaded();
     }
 
     @Override
     public int visibleRows() {
-        return TerminalNativeBridge.nativeCurrentSessionVisibleRowsBridge();
+        return NativeBridge.nativeCurrentSessionVisibleRowsBridge();
     }
 
     @Override
@@ -37,32 +37,32 @@ public final class GestureStateCallbacks implements TerminalGestureStateControll
 
     @Override
     public int scrollbackCount() {
-        return TerminalNativeBridge.nativeCurrentSessionScrollbackCountBridge();
+        return NativeBridge.nativeCurrentSessionScrollbackCountBridge();
     }
 
     @Override
     public int scrollbackOffset() {
-        return TerminalNativeBridge.nativeCurrentSessionScrollbackOffsetBridge();
+        return NativeBridge.nativeCurrentSessionScrollbackOffsetBridge();
     }
 
     @Override
     public int setScrollbackOffset(int offsetRows) {
-        return TerminalNativeBridge.nativeSetSessionScrollbackOffsetBridge(offsetRows);
+        return NativeBridge.nativeSetSessionScrollbackOffsetBridge(offsetRows);
     }
 
     @Override
     public int followLiveBottom() {
-        return TerminalNativeBridge.nativeFollowSessionLiveBottomBridge();
+        return NativeBridge.nativeFollowSessionLiveBottomBridge();
     }
 
     @Override
     public int applyTerminalPinchZoom(float scaleFactor) {
-        return TerminalNativeBridge.nativeApplyTerminalPinchZoomBridge(scaleFactor);
+        return NativeBridge.nativeApplyTerminalPinchZoomBridge(scaleFactor);
     }
 
     @Override
     public int setTerminalPinchActive(boolean active) {
-        return TerminalNativeBridge.nativeSetTerminalPinchActiveBridge(active);
+        return NativeBridge.nativeSetTerminalPinchActiveBridge(active);
     }
 
     @Override

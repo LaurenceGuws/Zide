@@ -3,12 +3,12 @@ package uk.laurencegouws.terminal.host.interaction;
 import android.content.Context;
 import android.widget.FrameLayout;
 
-import uk.laurencegouws.terminal.selection.TerminalSelectionController;
+import uk.laurencegouws.terminal.selection.SelectionController;
 
 /**
- * Adapts activity-owned callbacks to {@link TerminalSelectionController.Host}.
+ * Adapts activity-owned callbacks to {@link SelectionController.Host}.
  */
-public final class SelectionInteractionBridge implements TerminalSelectionController.Host {
+public final class SelectionInteractionBridge implements SelectionController.Host {
     /** Activity callbacks required for selection interaction. */
     public interface Callbacks {
         int productViewportWidthPx();

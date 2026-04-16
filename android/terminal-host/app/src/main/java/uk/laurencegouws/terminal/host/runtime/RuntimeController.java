@@ -3,18 +3,18 @@ package uk.laurencegouws.terminal.host.runtime;
 import android.view.SurfaceView;
 import android.view.View;
 
-import uk.laurencegouws.terminal.debug.TerminalNativeStatusLabels;
-import uk.laurencegouws.terminal.debug.TerminalStatusController;
-import uk.laurencegouws.terminal.gesture.TerminalGestureStateController;
-import uk.laurencegouws.terminal.scroll.TerminalScrollOverlayView;
-import uk.laurencegouws.terminal.selection.TerminalSelectionController;
-import uk.laurencegouws.terminal.userland.ProductShellStatePresenter;
+import uk.laurencegouws.terminal.debug.NativeStatusLabels;
+import uk.laurencegouws.terminal.debug.StatusController;
+import uk.laurencegouws.terminal.gesture.GestureStateController;
+import uk.laurencegouws.terminal.scroll.ScrollOverlayView;
+import uk.laurencegouws.terminal.selection.SelectionController;
+import uk.laurencegouws.terminal.userland.ShellStatePresenter;
 import uk.laurencegouws.terminal.userland.UserlandReadinessState;
 import uk.laurencegouws.terminal.userland.UserlandInstallState;
 import uk.laurencegouws.terminal.userland.UserlandSessionCoordinator;
 
 /** Owns product runtime orchestration for frame-loop and shell-state refresh flow. */
-public final class ProductRuntimeController {
+public final class RuntimeController {
     /** Host callbacks for activity-owned state and native bridge interactions. */
     public interface Host {
         boolean debugViewEnabled();
@@ -31,19 +31,19 @@ public final class ProductRuntimeController {
 
         View productReadinessBlocker();
 
-        TerminalScrollOverlayView terminalScrollOverlay();
+        ScrollOverlayView terminalScrollOverlay();
 
-        TerminalSelectionController selectionController();
+        SelectionController selectionController();
 
-        ProductShellStatePresenter productShellStatePresenter();
+        ShellStatePresenter ShellStatePresenter();
 
         FrameLoopController frameLoopController();
 
-        TerminalStatusController terminalStatusController();
+        StatusController StatusController();
 
         UserlandSessionCoordinator userlandSessionCoordinator();
 
-        TerminalGestureStateController terminalGestureStateController();
+        GestureStateController GestureStateController();
 
         void appendEvent(String message);
 
@@ -60,7 +60,7 @@ public final class ProductRuntimeController {
 
     private final Host host;
 
-    public ProductRuntimeController(Host host) {
+    public RuntimeController(Host host) {
         this.host = host;
     }
 
@@ -80,7 +80,7 @@ public final class ProductRuntimeController {
     }
 
     public void refreshProductShellState() {
-        final ProductShellStatePresenter presenter = host.productShellStatePresenter();
+        final ShellStatePresenter presenter = host.ShellStatePresenter();
         if (presenter != null) {
             presenter.refresh();
         }
@@ -92,7 +92,7 @@ public final class ProductRuntimeController {
     }
 
     public void refreshDebugStatusSurface() {
-        final TerminalStatusController statusController = host.terminalStatusController();
+        final StatusController statusController = host.StatusController();
         if (statusController != null) {
             statusController.refreshDebugStatusSurface();
         }
@@ -111,7 +111,7 @@ public final class ProductRuntimeController {
     }
 
     public void refreshProductScrollOverlay() {
-        final TerminalScrollOverlayView scrollOverlay = host.terminalScrollOverlay();
+        final ScrollOverlayView scrollOverlay = host.terminalScrollOverlay();
         if (scrollOverlay == null) {
             return;
         }
@@ -132,14 +132,14 @@ public final class ProductRuntimeController {
                 host.nativeCurrentSessionVisibleRows(),
                 host.nativeCurrentSessionScrollbackCount(),
                 host.nativeCurrentSessionScrollbackOffset());
-        final TerminalSelectionController selectionController = host.selectionController();
+        final SelectionController selectionController = host.selectionController();
         if (selectionController != null) {
             selectionController.syncChrome();
         }
     }
 
     public void stopScrollbackFling() {
-        final TerminalGestureStateController gestureStateController = host.terminalGestureStateController();
+        final GestureStateController gestureStateController = host.GestureStateController();
         if (gestureStateController != null) {
             gestureStateController.stopScrollbackFling();
         }
@@ -153,7 +153,7 @@ public final class ProductRuntimeController {
 
     public void restartSession(String eventName, String statusLabel, boolean logRefresh) {
         final int status = host.nativeLoaded() ? host.nativeRestartSession() : 0;
-        host.appendEvent(eventName + " status=" + TerminalNativeStatusLabels.sessionStartStatusLabel(status));
+        host.appendEvent(eventName + " status=" + NativeStatusLabels.sessionStartStatusLabel(status));
         final UserlandSessionCoordinator sessionCoordinator = host.userlandSessionCoordinator();
         if (sessionCoordinator != null) {
             sessionCoordinator.refreshAndApply(logRefresh);

@@ -23,7 +23,7 @@ import android.widget.FrameLayout;
  * activity. The shared terminal core still owns selection truth; this controller only translates
  * Android-native interaction into that bridge.
  */
-public final class TerminalSelectionController {
+public final class SelectionController {
     /** Host-owned Android surfaces and product callbacks needed by selection interaction. */
     public interface Host {
         Context context();
@@ -140,7 +140,7 @@ public final class TerminalSelectionController {
     private float selectionDragDownY = 0.0f;
     private long selectionAutoscrollLastFrameNanos = 0L;
     private SelectionDragMode selectionDragMode = SelectionDragMode.none;
-    private TerminalCellHit selectionDragAnchorCell;
+    private CellHit selectionDragAnchorCell;
     private View selectionDraggedHandleView;
     private float selectionDraggedHandleTouchOffsetX = 0.0f;
     private float selectionDraggedHandleTouchOffsetY = 0.0f;
@@ -154,11 +154,11 @@ public final class TerminalSelectionController {
         endHandle,
     }
 
-    private static final class TerminalCellHit {
+    private static final class CellHit {
         final int row;
         final int col;
 
-        TerminalCellHit(int row, int col) {
+        CellHit(int row, int col) {
             this.row = row;
             this.col = col;
         }
@@ -202,7 +202,7 @@ public final class TerminalSelectionController {
         }
     }
 
-    public TerminalSelectionController(Host host, Bridge bridge) {
+    public SelectionController(Host host, Bridge bridge) {
         this.host = host;
         this.bridge = bridge;
         this.selectionAutoscrollFrameCallback = this::onSelectionAutoscrollFrame;
@@ -254,7 +254,7 @@ public final class TerminalSelectionController {
         if (!isBridgeReady()) {
             return;
         }
-        final TerminalCellHit hit = resolveProductTerminalCell(x, y);
+        final CellHit hit = resolveProductTerminalCell(x, y);
         if (hit == null) {
             host.appendEvent("product.selection.long_press result=miss");
             return;
@@ -346,7 +346,7 @@ public final class TerminalSelectionController {
         }
     }
 
-    private TerminalCellHit resolveProductTerminalCell(float x, float y) {
+    private CellHit resolveProductTerminalCell(float x, float y) {
         if (!isBridgeReady()) {
             return null;
         }
@@ -358,7 +358,7 @@ public final class TerminalSelectionController {
         final float clampedY = Math.max(0.0f, Math.min(y, grid.viewportHeight - 1.0f));
         final int col = clampInt((int) (clampedX / grid.colWidthPx), 0, grid.visibleCols - 1);
         final int row = clampInt((int) (clampedY / grid.rowHeightPx), 0, grid.visibleRows - 1);
-        return new TerminalCellHit(row, col);
+        return new CellHit(row, col);
     }
 
     private void beginSelectionDrag(SelectionDragMode dragMode, float x, float y) {
@@ -449,7 +449,7 @@ public final class TerminalSelectionController {
         if (!selectionDragActive || selectionDragMode == SelectionDragMode.none) {
             return -1;
         }
-        final TerminalCellHit hit = resolveProductTerminalCell(selectionDragX, selectionDragY);
+        final CellHit hit = resolveProductTerminalCell(selectionDragX, selectionDragY);
         if (hit == null) {
             return -1;
         }
@@ -464,13 +464,13 @@ public final class TerminalSelectionController {
         }
     }
 
-    private int updateSelectionPairFromHandleDrag(TerminalCellHit hit) {
-        final TerminalCellHit anchor = selectionDragAnchorCell;
+    private int updateSelectionPairFromHandleDrag(CellHit hit) {
+        final CellHit anchor = selectionDragAnchorCell;
         if (anchor == null) {
             return -1;
         }
-        final TerminalCellHit nextStart;
-        final TerminalCellHit nextEnd;
+        final CellHit nextStart;
+        final CellHit nextEnd;
         if (selectionDragMode == SelectionDragMode.startHandle) {
             if (selectionCellBefore(hit, anchor) || selectionCellEquals(hit, anchor)) {
                 nextStart = hit;
@@ -495,14 +495,14 @@ public final class TerminalSelectionController {
         return bridge.updateSelectionEndAtVisibleCell(nextEnd.row, nextEnd.col);
     }
 
-    private TerminalCellHit selectionDragAnchorCellForMode(SelectionDragMode dragMode) {
+    private CellHit selectionDragAnchorCellForMode(SelectionDragMode dragMode) {
         if (dragMode != SelectionDragMode.startHandle && dragMode != SelectionDragMode.endHandle) {
             return null;
         }
         return currentSelectionEndpointCell(dragMode == SelectionDragMode.endHandle);
     }
 
-    private TerminalCellHit currentSelectionEndpointCell(boolean startHandle) {
+    private CellHit currentSelectionEndpointCell(boolean startHandle) {
         final Rect rect = populateSelectionEndpointRectRaw(startHandle);
         if (rect == null || rect.isEmpty()) {
             return null;
@@ -515,7 +515,7 @@ public final class TerminalSelectionController {
         final int col = startHandle
                 ? clampInt((int) (rect.left / grid.colWidthPx), 0, grid.visibleCols - 1)
                 : clampInt((int) (Math.max(rect.right - 1, 0) / grid.colWidthPx), 0, grid.visibleCols - 1);
-        return new TerminalCellHit(row, col);
+        return new CellHit(row, col);
     }
 
     private ViewportGridMetrics currentViewportGridMetrics() {
@@ -540,7 +540,7 @@ public final class TerminalSelectionController {
                 rowHeightPx);
     }
 
-    private static boolean selectionCellBefore(TerminalCellHit a, TerminalCellHit b) {
+    private static boolean selectionCellBefore(CellHit a, CellHit b) {
         if (a.row < b.row) {
             return true;
         }
@@ -550,11 +550,11 @@ public final class TerminalSelectionController {
         return a.col < b.col;
     }
 
-    private static boolean selectionCellEquals(TerminalCellHit a, TerminalCellHit b) {
+    private static boolean selectionCellEquals(CellHit a, CellHit b) {
         return a.row == b.row && a.col == b.col;
     }
 
-    private TerminalCellHit offsetVisibleCell(TerminalCellHit cell, int delta) {
+    private CellHit offsetVisibleCell(CellHit cell, int delta) {
         final int visibleRows = bridge.currentVisibleRows();
         final int visibleCols = bridge.currentVisibleCols();
         if (cell == null || visibleRows <= 0 || visibleCols <= 0) {
@@ -566,7 +566,7 @@ public final class TerminalSelectionController {
         }
         final int index = clampInt((cell.row * visibleCols) + cell.col, 0, totalCells - 1);
         final int shifted = clampInt(index + delta, 0, totalCells - 1);
-        return new TerminalCellHit(shifted / visibleCols, shifted % visibleCols);
+        return new CellHit(shifted / visibleCols, shifted % visibleCols);
     }
 
     private void scheduleSelectionAutoscrollFrame() {

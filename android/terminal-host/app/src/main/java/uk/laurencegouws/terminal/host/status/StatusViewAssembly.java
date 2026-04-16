@@ -6,9 +6,9 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
-import uk.laurencegouws.terminal.debug.TerminalSurfaceStateSnapshotReader;
-import uk.laurencegouws.terminal.debug.TerminalSurfaceStateSnapshotHostCallbacks;
-import uk.laurencegouws.terminal.debug.TerminalStatusController;
+import uk.laurencegouws.terminal.debug.SurfaceStateSnapshotReader;
+import uk.laurencegouws.terminal.debug.SurfaceStateSnapshotHostCallbacks;
+import uk.laurencegouws.terminal.debug.StatusController;
 import uk.laurencegouws.terminal.host.ui.ActivityViewBindings;
 import uk.laurencegouws.terminal.host.surface.SurfaceBridge;
 import uk.laurencegouws.terminal.host.ui.ViewportController;
@@ -55,12 +55,12 @@ public final class StatusViewAssembly {
         public final View drawerEdgeHotspot;
         public final View leftSidebar;
         public final FrameLayout productSurfaceContainer;
-        public final uk.laurencegouws.terminal.scroll.TerminalScrollOverlayView terminalScrollOverlay;
+        public final uk.laurencegouws.terminal.scroll.ScrollOverlayView terminalScrollOverlay;
         public final Button assistCtrlButton;
         public final Button assistAltButton;
-        public final TerminalSurfaceStateSnapshotReader terminalSurfaceStateSnapshotReader;
+        public final SurfaceStateSnapshotReader SurfaceStateSnapshotReader;
         public final StatusBridge terminalStatusHostBridge;
-        public final TerminalStatusController terminalStatusController;
+        public final StatusController StatusController;
         public final ViewportController terminalViewportController;
 
         private Result(
@@ -77,12 +77,12 @@ public final class StatusViewAssembly {
                 View drawerEdgeHotspot,
                 View leftSidebar,
                 FrameLayout productSurfaceContainer,
-                uk.laurencegouws.terminal.scroll.TerminalScrollOverlayView terminalScrollOverlay,
+                uk.laurencegouws.terminal.scroll.ScrollOverlayView terminalScrollOverlay,
                 Button assistCtrlButton,
                 Button assistAltButton,
-                TerminalSurfaceStateSnapshotReader terminalSurfaceStateSnapshotReader,
+                SurfaceStateSnapshotReader SurfaceStateSnapshotReader,
                 StatusBridge terminalStatusHostBridge,
-                TerminalStatusController terminalStatusController,
+                StatusController StatusController,
                 ViewportController terminalViewportController) {
             this.packageStatusText = packageStatusText;
             this.productReadinessTitle = productReadinessTitle;
@@ -100,9 +100,9 @@ public final class StatusViewAssembly {
             this.terminalScrollOverlay = terminalScrollOverlay;
             this.assistCtrlButton = assistCtrlButton;
             this.assistAltButton = assistAltButton;
-            this.terminalSurfaceStateSnapshotReader = terminalSurfaceStateSnapshotReader;
+            this.SurfaceStateSnapshotReader = SurfaceStateSnapshotReader;
             this.terminalStatusHostBridge = terminalStatusHostBridge;
-            this.terminalStatusController = terminalStatusController;
+            this.StatusController = StatusController;
             this.terminalViewportController = terminalViewportController;
         }
     }
@@ -112,8 +112,8 @@ public final class StatusViewAssembly {
 
     public static Result assemble(Host host) {
         final ActivityViewBindings viewBindings = ActivityViewBindings.from(host.activity());
-        final TerminalSurfaceStateSnapshotReader terminalSurfaceStateSnapshotReader = new TerminalSurfaceStateSnapshotReader(
-                new TerminalSurfaceStateSnapshotHostCallbacks());
+        final SurfaceStateSnapshotReader SurfaceStateSnapshotReader = new SurfaceStateSnapshotReader(
+                new SurfaceStateSnapshotHostCallbacks());
         final StatusBridge terminalStatusHostBridge = new StatusBridge(new StatusCallbacks(
                 host::debugViewEnabled,
                 host::hasWindowFocusNow,
@@ -121,8 +121,8 @@ public final class StatusViewAssembly {
                 host::surfaceHostBridge,
                 host::currentInstallState,
                 host::currentReadinessState,
-                terminalSurfaceStateSnapshotReader::read));
-        final TerminalStatusController terminalStatusController = new TerminalStatusController(
+                SurfaceStateSnapshotReader::read));
+        final StatusController StatusController = new StatusController(
                 viewBindings.statusText,
                 viewBindings.eventLogText,
                 terminalStatusHostBridge);
@@ -151,9 +151,9 @@ public final class StatusViewAssembly {
                 viewBindings.terminalScrollOverlay,
                 viewBindings.assistCtrlButton,
                 viewBindings.assistAltButton,
-                terminalSurfaceStateSnapshotReader,
+                SurfaceStateSnapshotReader,
                 terminalStatusHostBridge,
-                terminalStatusController,
+                StatusController,
                 terminalViewportController);
     }
 }

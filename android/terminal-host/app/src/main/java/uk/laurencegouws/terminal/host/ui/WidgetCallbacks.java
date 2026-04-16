@@ -12,10 +12,10 @@ import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
 import uk.laurencegouws.terminal.debug.AndroidDebugFormatter;
-import uk.laurencegouws.terminal.gesture.TerminalGestureStateController;
+import uk.laurencegouws.terminal.gesture.GestureStateController;
 import uk.laurencegouws.terminal.input.ShellInputView;
-import uk.laurencegouws.terminal.scroll.TerminalScrollOverlayView;
-import uk.laurencegouws.terminal.selection.TerminalSelectionController;
+import uk.laurencegouws.terminal.scroll.ScrollOverlayView;
+import uk.laurencegouws.terminal.selection.SelectionController;
 import uk.laurencegouws.terminal.userland.UserlandReadinessState;
 import uk.laurencegouws.terminal.userland.UserlandInstallState;
 
@@ -35,15 +35,15 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
     private final View drawerEdgeHotspot;
     private final View leftSidebar;
     private final FrameLayout productSurfaceContainer;
-    private final TerminalScrollOverlayView terminalScrollOverlay;
+    private final ScrollOverlayView terminalScrollOverlay;
     private final TextView productReadinessTitle;
     private final TextView productReadinessDetail;
     private final Button productReadinessRetryButton;
     private final Button assistCtrlButton;
     private final Button assistAltButton;
     private final Supplier<ShellInputView> shellInputView;
-    private final TerminalSelectionController selectionController;
-    private final TerminalGestureStateController terminalGestureStateController;
+    private final SelectionController selectionController;
+    private final GestureStateController GestureStateController;
     private final Supplier<UserlandReadinessState> currentReadinessState;
     private final Supplier<UserlandInstallState> currentInstallState;
     private final BooleanSupplier shouldRunProductFrameLoop;
@@ -76,15 +76,15 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
             View drawerEdgeHotspot,
             View leftSidebar,
             FrameLayout productSurfaceContainer,
-            TerminalScrollOverlayView terminalScrollOverlay,
+            ScrollOverlayView terminalScrollOverlay,
             TextView productReadinessTitle,
             TextView productReadinessDetail,
             Button productReadinessRetryButton,
             Button assistCtrlButton,
             Button assistAltButton,
             Supplier<ShellInputView> shellInputView,
-            TerminalSelectionController selectionController,
-            TerminalGestureStateController terminalGestureStateController,
+            SelectionController selectionController,
+            GestureStateController GestureStateController,
             Supplier<UserlandReadinessState> currentReadinessState,
             Supplier<UserlandInstallState> currentInstallState,
             BooleanSupplier shouldRunProductFrameLoop,
@@ -123,7 +123,7 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
         this.assistAltButton = assistAltButton;
         this.shellInputView = shellInputView;
         this.selectionController = selectionController;
-        this.terminalGestureStateController = terminalGestureStateController;
+        this.GestureStateController = GestureStateController;
         this.currentReadinessState = currentReadinessState;
         this.currentInstallState = currentInstallState;
         this.shouldRunProductFrameLoop = shouldRunProductFrameLoop;
@@ -213,7 +213,7 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
     }
 
     @Override
-    public TerminalScrollOverlayView terminalScrollOverlay() {
+    public ScrollOverlayView terminalScrollOverlay() {
         return terminalScrollOverlay;
     }
 
@@ -248,13 +248,13 @@ public final class WidgetCallbacks implements WidgetAssembly.Host {
     }
 
     @Override
-    public TerminalSelectionController selectionController() {
+    public SelectionController selectionController() {
         return selectionController;
     }
 
     @Override
-    public TerminalGestureStateController terminalGestureStateController() {
-        return terminalGestureStateController;
+    public GestureStateController GestureStateController() {
+        return GestureStateController;
     }
 
     @Override

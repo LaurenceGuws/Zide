@@ -8,7 +8,7 @@ import uk.laurencegouws.terminal.userland.UserlandReadinessState;
 import uk.laurencegouws.terminal.userland.UserlandInstallState;
 
 /** Owns the debug status surface and event log presentation. */
-public final class TerminalStatusController {
+public final class StatusController {
     public interface Host {
         boolean debugViewEnabled();
 
@@ -39,7 +39,7 @@ public final class TerminalStatusController {
     private final Host host;
     private final StringBuilder eventLog = new StringBuilder();
 
-    public TerminalStatusController(TextView statusText, TextView eventLogText, Host host) {
+    public StatusController(TextView statusText, TextView eventLogText, Host host) {
         this.statusText = statusText;
         this.eventLogText = eventLogText;
         this.host = host;

@@ -5,14 +5,14 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
-import uk.laurencegouws.terminal.userland.ProductShellStatePresenter;
+import uk.laurencegouws.terminal.userland.ShellStatePresenter;
 import uk.laurencegouws.terminal.userland.UserlandReadinessState;
 import uk.laurencegouws.terminal.userland.UserlandInstallState;
 
 /**
- * Adapts activity-owned callbacks and views to {@link ProductShellStatePresenter.Host}.
+ * Adapts activity-owned callbacks and views to {@link ShellStatePresenter.Host}.
  */
-public final class ProductShellStateBridge implements ProductShellStatePresenter.Host {
+public final class ShellStateBridge implements ShellStatePresenter.Host {
     /** Activity callbacks used by product shell blocker presentation. */
     public interface Callbacks {
         boolean nativeLoaded();
@@ -37,7 +37,7 @@ public final class ProductShellStateBridge implements ProductShellStatePresenter
     private final Button productReadinessRetryButton;
     private final Callbacks callbacks;
 
-    public ProductShellStateBridge(
+    public ShellStateBridge(
             View productReadinessBlocker,
             View terminalScrollOverlay,
             TextView productReadinessTitle,

@@ -22,7 +22,7 @@
                 android:layout_height="match_parent"
                 android:background="#162028" />
 
-            <uk.laurencegouws.terminal.scroll.TerminalScrollOverlayView
+            <uk.laurencegouws.terminal.scroll.ScrollOverlayView
                 android:id="@+id/terminal_scroll_overlay"
                 android:layout_width="24dp"
                 android:layout_height="match_parent"

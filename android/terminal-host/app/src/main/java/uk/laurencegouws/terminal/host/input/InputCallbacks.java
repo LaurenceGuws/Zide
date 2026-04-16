@@ -7,7 +7,7 @@ import android.view.inputmethod.InputMethodManager;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
-import uk.laurencegouws.terminal.TerminalNativeBridge;
+import uk.laurencegouws.terminal.NativeBridge;
 import uk.laurencegouws.terminal.input.ShellInputView;
 
 /** Functional callback adapter for {@link InputAssembly.Host}; activity must implement {@link ShellInputView.Host}. */
@@ -72,7 +72,7 @@ public final class InputCallbacks implements InputAssembly.Host {
 
     @Override
     public InputAssembly.IntSupplier nativeFollowSessionLiveBottom() {
-        return TerminalNativeBridge::nativeFollowSessionLiveBottomBridge;
+        return NativeBridge::nativeFollowSessionLiveBottomBridge;
     }
 
     @Override

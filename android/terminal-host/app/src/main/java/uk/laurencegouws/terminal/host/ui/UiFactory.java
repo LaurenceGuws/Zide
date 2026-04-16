@@ -4,25 +4,25 @@ import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
-import uk.laurencegouws.terminal.gesture.TerminalGestureStateController;
+import uk.laurencegouws.terminal.gesture.GestureStateController;
 import uk.laurencegouws.terminal.host.surface.SurfaceController;
 import uk.laurencegouws.terminal.host.surface.SurfaceWidgetController;
-import uk.laurencegouws.terminal.host.userland.ProductShellStateBridge;
-import uk.laurencegouws.terminal.selection.TerminalSelectionController;
+import uk.laurencegouws.terminal.host.userland.ShellStateBridge;
+import uk.laurencegouws.terminal.selection.SelectionController;
 
 /** UI host assembly helpers. */
 public final class UiFactory {
     private UiFactory() {
     }
 
-    public static ProductShellStateBridge createProductShellStateHostBridge(
+    public static ShellStateBridge createProductShellStateHostBridge(
             View productReadinessBlocker,
             View terminalScrollOverlay,
             TextView productReadinessTitle,
             TextView productReadinessDetail,
             android.widget.Button productReadinessRetryButton,
-            ProductShellStateBridge.Callbacks callbacks) {
-        return new ProductShellStateBridge(
+            ShellStateBridge.Callbacks callbacks) {
+        return new ShellStateBridge(
                 productReadinessBlocker,
                 terminalScrollOverlay,
                 productReadinessTitle,
@@ -47,13 +47,13 @@ public final class UiFactory {
 
     public static SurfaceWidgetController createSurfaceWidgetController(
             SurfaceController surfaceHostController,
-            TerminalSelectionController selectionController,
-            TerminalGestureStateController terminalGestureStateController,
+            SelectionController selectionController,
+            GestureStateController GestureStateController,
             SurfaceWidgetController.Host host) {
         return new SurfaceWidgetController(
                 surfaceHostController,
                 selectionController,
-                terminalGestureStateController,
+                GestureStateController,
                 host);
     }
 }

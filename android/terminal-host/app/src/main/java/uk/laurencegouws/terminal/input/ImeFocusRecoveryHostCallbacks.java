@@ -6,14 +6,14 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-/** Functional callback adapter for {@link TerminalImeFocusRecoveryController}. */
-public final class TerminalImeFocusRecoveryHostCallbacks implements TerminalImeFocusRecoveryController.Host {
+/** Functional callback adapter for {@link ImeFocusRecoveryController}. */
+public final class ImeFocusRecoveryHostCallbacks implements ImeFocusRecoveryController.Host {
     private final Supplier<ShellInputView> shellInputView;
     private final BooleanSupplier imeVisible;
     private final Consumer<String> appendEvent;
     private final InputMethodManager inputMethodManager;
 
-    public TerminalImeFocusRecoveryHostCallbacks(
+    public ImeFocusRecoveryHostCallbacks(
             Supplier<ShellInputView> shellInputView,
             BooleanSupplier imeVisible,
             Consumer<String> appendEvent,

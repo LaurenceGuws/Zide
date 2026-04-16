@@ -1,11 +1,11 @@
 package uk.laurencegouws.terminal.host.interaction;
 
-import uk.laurencegouws.terminal.gesture.TerminalGestureStateController;
+import uk.laurencegouws.terminal.gesture.GestureStateController;
 
 /**
- * Adapts activity-owned callbacks to {@link TerminalGestureStateController.Host}.
+ * Adapts activity-owned callbacks to {@link GestureStateController.Host}.
  */
-public final class GestureStateBridge implements TerminalGestureStateController.Host {
+public final class GestureStateBridge implements GestureStateController.Host {
     /** Activity callbacks required by gesture-state policy. */
     public interface Callbacks {
         boolean nativeLoaded();
