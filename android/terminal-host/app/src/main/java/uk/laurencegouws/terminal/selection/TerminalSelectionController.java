@@ -783,6 +783,10 @@ public final class TerminalSelectionController {
         if (!hasTerminalSelectionActionMode()) {
             return;
         }
+        invalidateTerminalSelectionActionModeContentAndView(invalidateView);
+    }
+
+    private void invalidateTerminalSelectionActionModeContentAndView(boolean invalidateView) {
         terminalSelectionActionMode.invalidateContentRect();
         if (invalidateView) {
             terminalSelectionActionMode.invalidate();
@@ -893,6 +897,10 @@ public final class TerminalSelectionController {
         if (mode == null) {
             return;
         }
+        detachTerminalSelectionActionModeForExplicitFinish(mode);
+    }
+
+    private void detachTerminalSelectionActionModeForExplicitFinish(ActionMode mode) {
         terminalSelectionActionMode = null;
         suppressSelectionClearOnActionModeDestroy = true;
         mode.finish();
@@ -906,6 +914,10 @@ public final class TerminalSelectionController {
     }
 
     private boolean populateTerminalSelectionContentRectFromBridge(Rect outRect) {
+        return fillTerminalSelectionViewportRectFromBridgeBounds(outRect);
+    }
+
+    private boolean fillTerminalSelectionViewportRectFromBridgeBounds(Rect outRect) {
         final int left = bridge.currentSelectionRectLeft();
         final int top = bridge.currentSelectionRectTop();
         final int right = bridge.currentSelectionRectRight();
@@ -1089,12 +1101,19 @@ public final class TerminalSelectionController {
     }
 
     private void copyPlainTextSelectionToClipboard(String text) {
-        final ClipboardManager clipboard = host.context().getSystemService(ClipboardManager.class);
+        final ClipboardManager clipboard = resolveClipboardManagerForSelectionCopy();
         if (clipboard == null) {
-            host.appendEvent("product.selection.copy result=no-clipboard");
             return;
         }
         applyClipboardPrimaryClipForTerminalSelection(clipboard, text);
+    }
+
+    private ClipboardManager resolveClipboardManagerForSelectionCopy() {
+        final ClipboardManager clipboard = host.context().getSystemService(ClipboardManager.class);
+        if (clipboard == null) {
+            host.appendEvent("product.selection.copy result=no-clipboard");
+        }
+        return clipboard;
     }
 
     private void applyClipboardPrimaryClipForTerminalSelection(ClipboardManager clipboard, String text) {
