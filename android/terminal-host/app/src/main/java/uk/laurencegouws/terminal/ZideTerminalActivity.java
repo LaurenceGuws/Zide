@@ -137,13 +137,17 @@ public final class ZideTerminalActivity extends Activity
         assembleUserlandWorkflowControllers();
         assembleSessionControllers();
         assembleWidgetHostControllers();
-        terminalProductRuntimeController = ProductRuntimeAssembly.assemble(
-                createProductRuntimeAssemblyCallbacks());
+        assembleProductRuntimeController();
         assembleActivityLifecycleController();
         loadInitialReadinessState();
         installInputControllers();
         bindAndStartUiControllers();
         terminalActivityLifecycleController.onCreate();
+    }
+
+    private void assembleProductRuntimeController() {
+        terminalProductRuntimeController = ProductRuntimeAssembly.assemble(
+                createProductRuntimeAssemblyCallbacks());
     }
 
     @Override

@@ -241,6 +241,10 @@ Milestone gate contract (mandatory when manager/architect lane is active):
   - Completed: UI startup assembly invocation in `ZideTerminalActivity` now
     routes through a named `startUiStartupAssembly()` helper so composition-root
     startup no longer inlines the assembly start call.
+  - Completed: product runtime assembly invocation in
+    `ZideTerminalActivity` now routes through a named
+    `assembleProductRuntimeController()` helper so startup sequencing no longer
+    inlines that assembly call.
     - Next: resume primary Java cleanup under Active TODO item 1 by executing a
       behavior-preserving `ZideTerminalActivity` `create*Callbacks()` net
       simplification wave (remove relay-only callback wiring and reduce
