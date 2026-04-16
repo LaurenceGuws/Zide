@@ -281,6 +281,9 @@ the existing per-commit validation rules.
      - mini-wave: floating toolbar “full” invalidation is named; host container
        for chrome start is explicit; content-rect supply skips a pass-through;
        blocked copy outcomes share one `result=` formatter
+     - mini-wave: geometry-only toolbar invalidation is named and reused; copy
+       telemetry prefixes are class constants; floating `ActionMode` type is a
+       named constant at the `startActionMode` seam
    - Exit criteria:
      - compile pass per commit; deploy + `AndroidRuntime:E` smoke at seam
        boundary
