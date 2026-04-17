@@ -32,8 +32,12 @@ and decoupled.
 - Userland workflow callback shape is being converted to semantic harness
   actions.
 - Refocus campaign milestones `RF-M0` through `RF-M5` are complete.
-- Active execution focus is now correctness/perf hardening on input and
-  render/surface paths.
+- AX hardening milestones `AX-M1` through `AX-M4` and declaration `AX-M5` are
+  complete.
+- **Active campaign:** **Android stabilization follow-through** (`ASF`) — close
+  remaining operator-blocked RF_M5 matrix rows (IME/assist, touch gestures) with
+  reproducible on-device evidence, without breaking harness/widget ownership
+  boundaries.
 
 Iteration detail is intentionally not tracked here. Read code + git history for
 step-level implementation history.
@@ -76,6 +80,10 @@ Dual-mode batching override (architect directive):
 - Completed campaign close gate: `RF-M5`.
 - Completed batch: `AX-M1` + `AX-M2` (architect review at `AX-M2` super-gate).
 - Completed milestone: `AX-M3` (stabilization matrix refresh; manual validation + docs only).
+- Completed milestone: `AX-M4` (manual interactive matrix completion).
+- Completed milestone: `AX-M5` (next campaign declaration; docs published).
+- Active campaign: **Android stabilization follow-through** (`ASF`).
+- Active milestone: `ASF-M1` (operator matrix closure — IME + gesture rows).
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -419,6 +427,100 @@ Progress checkpoint:
 - `Blocked by Archtect review needed: true`
 
 `Milestone reached per docs, architect review required.`
+
+---
+
+### `AX-M4` Manual Interactive Matrix Completion (`completed`)
+
+Queue line (exact):
+
+- execute remaining device-interactive lifecycle/input/surface matrix rows and record exact outcomes
+
+Scope:
+
+- manual validation + docs only
+- no opportunistic code changes unless a verified regression is found
+
+Tasks:
+
+- [x] lifecycle rows: `onPause/onStop/onNewIntent` device checks
+- [x] input rows: IME show/hide, hardware keyboard, selection/gesture checks
+- [x] surface rows: resize/viewport and destroy/teardown checks
+- [x] update `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md` with exact pass/fail outcomes and dated notes
+
+Gate:
+
+- previously `not run` interactive rows are either executed or explicitly marked with blocker reason and owner
+- queue checkpoint includes exact device/command evidence
+- architect review required at gate
+
+Progress checkpoint:
+
+- `Milestone: AX-M4 completed`
+- `Queue line (exact): execute remaining device-interactive lifecycle/input/surface matrix rows and record exact outcomes`
+- `Scope contract: manual validation + docs only; no code changes (none required; no regression observed)`
+- `Progress delta: RF_M5_STABILIZATION_MATRIX.md updated with AX-M4 smoke baseline (exact stdout fragments), adb-backed lifecycle/surface rows, adb hardware key spot-check; IME assist + touch gesture rows marked not run with blocker owner operator`
+- `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E (pass); adb shell am force-stop uk.laurencegouws.zide && adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity (pass)`
+- `Blocked by Archtect review needed: true`
+
+`Milestone reached per docs, architect review required.`
+
+---
+
+### `AX-M5` Next Campaign Declaration (`completed`)
+
+Queue line (exact):
+
+- define and publish the next Android campaign after AX matrix completion
+
+Scope:
+
+- docs only (`docs/AGENT_HANDOFF.md` + `docs/todo/android/implementation.md` + any new owning authority doc)
+
+Tasks:
+
+- [x] declare next campaign name, goal, and first milestone
+- [x] provide engineer entrypoint prompt for first batch of next campaign
+
+Gate:
+
+- handoff and queue both point to the same next campaign + active milestone
+
+Progress checkpoint:
+
+- `Milestone: AX-M5 completed`
+- `Queue line (exact): define and publish the next Android campaign after AX matrix completion`
+- `Scope contract: docs-only declaration; no code changes`
+- `Progress delta: published campaign Android stabilization follow-through (ASF); first milestone ASF-M1; ENGINEER_ENTRYPOINT.md carries ASF-M1 dual-mode prompt; handoff + queue aligned`
+- `Validation: N/A (docs-only milestone)`
+- `Blocked by Archtect review needed: true`
+
+`Milestone reached per docs, architect review required.`
+
+---
+
+### `ASF-M1` Operator matrix closure — IME + gesture rows (`in_progress`)
+
+Queue line (exact):
+
+- publish operator runbook steps and dated matrix outcomes for IME/assist and touch gesture blocker rows, or record cannot-verify with reason
+
+Scope:
+
+- docs + matrix updates only unless a verified regression forces a minimal code fix
+- owning doc for procedures: `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md` (extend with operator section) unless architect splits a dedicated file later
+
+Tasks:
+
+- [ ] author reproducible on-device steps for IME show/hide + assist row (aligned with `ZideActivity` / chrome seams)
+- [ ] author reproducible on-device steps for selection overlay + at least one gesture path (e.g. scroll overlay / pinch) at operator discretion
+- [ ] update `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md` with dated pass/fail or blocked-with-reason rows
+- [ ] run standard Android smoke validation when any host Java changes occur (otherwise document smoke N/A for docs-only cuts)
+
+Gate:
+
+- matrix rows no longer list `not run — blocker` for IME and gesture without an explicit dated outcome or cannot-verify note
+- architect review at `ASF-M1` gate
 
 ## Guardrails
 
