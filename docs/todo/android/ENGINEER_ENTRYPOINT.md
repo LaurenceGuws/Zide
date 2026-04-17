@@ -6,69 +6,141 @@ Execution-only brief for the engineer session.
 
 - Mode: `dual`
 - Engineer: execution only
-- Architect: scope, gating, review
-- User: product direction and approval
+- Architect: scope, gating, review, and responsibility for the batch definition
+- User: messenger/product direction; do not make the user restate workflow rules
 
-Do not redefine scope or reorder tickets.
-Do not ask user to restate workflow rules already defined in these docs.
+Do not redefine scope or reorder tickets. Execute the active macro batch from
+`docs/todo/android/implementation.md`.
 
 ## Vision + Authority
 
-- Vision source: `refocus_android.txt` (read-only scratchpad context)
-- Execution authority:
-  1. `docs/todo/android/implementation.md`
-  2. `docs/AGENT_HANDOFF.md`
-  3. `app_architecture/platform/android/ANDROID_REFOCUS_CASE_STUDY.md`
-  4. `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`
-  5. `app_architecture/platform/android/ANDROID_JAVA_NAMING_CONTRACT.md`
-  6. `AGENTS.md`
-  7. `docs/WORKFLOW.md`
+Vision source:
+
+- `refocus_android.txt` (read-only scratchpad context; do not commit it)
+
+Execution authority, in order:
+
+1. `docs/todo/android/implementation.md`
+2. `docs/AGENT_HANDOFF.md`
+3. `app_architecture/platform/android/ANDROID_REFOCUS_CASE_STUDY.md`
+4. `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`
+5. `app_architecture/platform/android/ANDROID_JAVA_NAMING_CONTRACT.md`
+6. `app_architecture/platform/android/USERLAND_HOST_CONTRACT.md`
+7. `AGENTS.md`
+8. `docs/WORKFLOW.md`
+
+If these disagree on active work, `docs/todo/android/implementation.md` wins and
+you must report the mismatch.
 
 ## Current Target
 
-- Active milestone, queue line, and per-milestone tasks: **`docs/todo/android/implementation.md`** (authoritative).
-- Userland harness contract reference: `app_architecture/platform/android/USERLAND_HOST_CONTRACT.md`
-- Stabilization baseline reference: `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md`
+Active macro batch: **`AHW-B1` Harness backbone + widget portability macro batch**.
 
-## Ticket Plan
+Batch queue line:
 
-Follow the **active milestone** section in `docs/todo/android/implementation.md` sequentially. Older RF-M1 ticket allowlists in this file are historical; do not use stale file lists if they conflict with the current milestone in the queue.
+- remove remaining Android Activity/backbone pressure from terminal widget and userland seams while preserving runtime behavior
 
-Determinism rule:
+Internal milestones:
 
-- If this file, handoff, and queue disagree, the queue (`implementation.md`)
-  wins for active milestone/scope and the engineer must report the mismatch.
+1. `AHW-M1` Activity backbone pressure audit + first extractions
+2. `AHW-M2` Harness app-shell + userland ownership closure
+3. `AHW-M3` Terminal Widget host contract shrink
+4. `AHW-M4` Naming and structure contract enforcement slice
+5. `AHW-M5` Batch validation + handoff packet
 
-## Review Cadence (Macro, Mandatory)
+Continue through all five internal milestones. Do not stop for architect review
+between them.
 
-- Engineer runs larger chunks; do not stop at every milestone by default.
-- Current batch policy is whatever `docs/todo/android/implementation.md` marks active.
-- Current active milestone: **`ASF-M3`** (campaign closeout or escalation — see `docs/todo/android/implementation.md`).
-- Architect review point for current batch: at **`ASF-M3`** gate (or real blocker).
-- Intermediate milestone notes are allowed, but they are not stop points.
+Expected review size: **30-50 coherent commits** if code reality supports that.
+Small, validated commits are preferred; the Architect reviews the macro batch,
+not every internal milestone.
 
-## Engineer session prompt template (active milestone)
+## Core Boundary Rule
 
-When **`docs/todo/android/implementation.md`** names an active milestone, use the same dual-mode contract: execution-only; validation commands as in **Review Cadence → Typical wave**; `refocus_android.txt` scratchpad-only and not committed. Follow the queue line for **`ASF-M3`** (campaign closeout or escalation) when that milestone is active.
+The batch exists to enforce the Android refocus vision:
 
-Typical wave (when the queue specifies it):
+- Android Harness owns platform ceremony, app-shell layout/styling/theming,
+  navigation/view state, and userland orchestration.
+- Terminal Widget owns portable terminal surface/input/selection/gesture/FFI/GLES
+  seams.
+- Userland stays movable for future IDE/editor modes and must not depend on
+  widget/surface/controller internals.
+- `ZideActivity` should be Android entrypoint and wiring, not the backbone for
+  product behavior.
 
-1. Milestone state sync (`docs/todo/android/implementation.md`, `docs/AGENT_HANDOFF.md` as allowed).
-2. Code cuts per milestone scope in the queue (continue through batch milestones).
-3. Validation gate (exact commands from `implementation.md` or queue):
-   - `./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac`
-   - `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac`
-   - `python3 ops/android_terminal_host.py deploy`
-   - `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E`
-   - `adb shell am force-stop uk.laurencegouws.zide && adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity`
-4. Queue update; stop only at active milestone/batch super-gate boundary.
+## Allowed Work
+
+Allowed code roots:
+
+- `android/terminal-host/app/src/main/java/uk/laurencegouws/terminal/**`
+- `android/terminal-host/app/src/main/res/layout/activity_main.xml` only when
+  app-shell/widget wiring requires it
+- `android/terminal-host/app/src/main/res/values/colors.xml` only when theming
+  propagation requires it
+- `android/terminal-host/app/src/main/res/values/strings.xml` only when chrome
+  copy/action names require it
+
+Allowed docs:
+
+- `docs/todo/android/implementation.md`
+- `docs/todo/android/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+- `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`
+- `app_architecture/platform/android/ANDROID_JAVA_NAMING_CONTRACT.md`
+- `app_architecture/platform/android/USERLAND_HOST_CONTRACT.md`
+
+If a required change falls outside these paths, stop and report a blocker.
+
+## Non-Goals
+
+- No terminal-core behavior changes.
+- No shared renderer/backend refactor.
+- No debug-view UI resurrection.
+- No CI/pipeline/lint additions.
+- No broad rename campaign.
+- No ASF operator-evidence churn unless new evidence is provided.
+- No compatibility shim kept only to avoid a clean cut.
+- No behavior changes inside extraction-only commits.
+
+## Execution Loop
+
+For each coherent cut:
+
+1. Name the internal milestone and queue line you are executing.
+2. Read the directly relevant classes before editing.
+3. Make the smallest behavior-preserving change that removes ownership pressure.
+4. Run at least the Java compile gate after code cuts.
+5. Commit the validated cut with a precise message.
+6. Update queue/docs when a milestone checkpoint or ownership contract changes.
+7. Continue to the next cut without waiting for architect review unless a hard
+   stop condition is hit.
+
+Compile every code cut with at least:
+
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac`
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac`
+
+Run seam-boundary/device validation at meaningful boundaries and at the final
+super-gate:
+
+- `python3 ops/android_terminal_host.py deploy`
+- `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E`
+- `adb shell am force-stop uk.laurencegouws.zide && adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity`
+
+If no Android device is available, continue through compile-validated cuts and
+record device validation as blocked with exact command/output. Do not invent a
+pass.
 
 ## Commit Rules
 
-- Commit in small, coherent checkpoints.
-- No amend/squash unless explicitly requested.
-- Each commit must pass debug+release compile clean (warnings-as-errors).
-- Do not include `refocus_android.txt` in commits.
+This batch is architect-approved for autonomous Engineer commits after local
+validation.
+
+- Commit small, coherent checkpoints.
+- Do not amend or squash unless the Architect explicitly requests it later.
+- Keep doc-only updates separate from code when practical.
+- Each code commit must leave Java debug + release compile green.
+- Never commit `refocus_android.txt`.
 
 ## Hard Stop Conditions
 
@@ -78,14 +150,28 @@ Stop immediately and report:
 
 when:
 
-- a required change needs files outside current ticket allowlist
+- a required change needs files outside the allowed paths
 - architecture docs conflict with code reality in a way that changes scope
-- validation fails and cannot be fixed inside current ticket
-- a product decision is required to continue across the current batch boundary
+- validation fails and cannot be fixed inside the active internal milestone
+- a behavior change is required to proceed where the queue only allows extraction
+- terminal-core/shared-renderer work appears necessary
+- the `AHW-B1` super-gate is reached
 
 Otherwise continue autonomously with:
 
 `Blocked by Archtect review needed: false`
+
+## Super-Gate Review Packet
+
+At `AHW-B1` super-gate, report:
+
+- review chunk name: `AHW-B1`
+- internal milestones completed
+- commit list, oldest to newest
+- files changed grouped by Harness / Widget / Userland / Docs
+- validation commands and pass/fail
+- remaining risks
+- exact review questions for Architect
 
 ## Response Contract (Every Response)
 
