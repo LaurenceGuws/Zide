@@ -9,4 +9,6 @@
     <color name="app_shell_readiness_overlay_bg">#cc10161d</color>
     <color name="app_shell_text_primary">#f5f7fa</color>
     <color name="app_shell_text_secondary">#c2ccd6</color>
+    <!-- Invisible hit target for edge swipe; keep in palette for theming contract parity. -->
+    <color name="app_shell_hotspot_bg">#00000000</color>
 </resources>
