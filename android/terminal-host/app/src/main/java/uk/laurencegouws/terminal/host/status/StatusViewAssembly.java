@@ -25,7 +25,9 @@ public final class StatusViewAssembly {
 
         boolean debugViewEnabled();
 
-        boolean hasWindowFocusNow();
+        boolean nativeLoaded();
+
+        boolean hasWindowFocus();
 
         boolean imeVisible();
 
@@ -59,7 +61,7 @@ public final class StatusViewAssembly {
         public final Button assistCtrlButton;
         public final Button assistAltButton;
         public final SurfaceStateSnapshotReader SurfaceStateSnapshotReader;
-        public final StatusBridge terminalStatusHostBridge;
+        public final StatusController.Host terminalStatusHost;
         public final StatusController StatusController;
         public final ViewportController terminalViewportController;
 
@@ -81,7 +83,7 @@ public final class StatusViewAssembly {
                 Button assistCtrlButton,
                 Button assistAltButton,
                 SurfaceStateSnapshotReader SurfaceStateSnapshotReader,
-                StatusBridge terminalStatusHostBridge,
+                StatusController.Host terminalStatusHost,
                 StatusController StatusController,
                 ViewportController terminalViewportController) {
             this.packageStatusText = packageStatusText;
@@ -101,7 +103,7 @@ public final class StatusViewAssembly {
             this.assistCtrlButton = assistCtrlButton;
             this.assistAltButton = assistAltButton;
             this.SurfaceStateSnapshotReader = SurfaceStateSnapshotReader;
-            this.terminalStatusHostBridge = terminalStatusHostBridge;
+            this.terminalStatusHost = terminalStatusHost;
             this.StatusController = StatusController;
             this.terminalViewportController = terminalViewportController;
         }
@@ -114,18 +116,64 @@ public final class StatusViewAssembly {
         final ActivityViewBindings viewBindings = ActivityViewBindings.from(host.activity());
         final SurfaceStateSnapshotReader SurfaceStateSnapshotReader = new SurfaceStateSnapshotReader(
                 new SurfaceStateSnapshotHostCallbacks());
-        final StatusBridge terminalStatusHostBridge = new StatusBridge(new StatusCallbacks(
-                host::debugViewEnabled,
-                host::hasWindowFocusNow,
-                host::imeVisible,
-                host::surfaceHostBridge,
-                host::currentInstallState,
-                host::currentReadinessState,
-                SurfaceStateSnapshotReader::read));
+        final StatusController.Host terminalStatusHost = new StatusController.Host() {
+            @Override
+            public boolean debugViewEnabled() {
+                return host.debugViewEnabled();
+            }
+
+            @Override
+            public boolean nativeLoaded() {
+                return host.nativeLoaded();
+            }
+
+            @Override
+            public boolean hasWindowFocus() {
+                return host.hasWindowFocus();
+            }
+
+            @Override
+            public boolean imeVisible() {
+                return host.imeVisible();
+            }
+
+            @Override
+            public android.view.SurfaceView surfaceView() {
+                final SurfaceBridge bridge = host.surfaceHostBridge();
+                return bridge != null ? bridge.currentSurfaceView() : null;
+            }
+
+            @Override
+            public int visibleViewportWidth() {
+                final SurfaceBridge bridge = host.surfaceHostBridge();
+                return bridge != null ? bridge.currentVisibleViewportWidth() : 0;
+            }
+
+            @Override
+            public int visibleViewportHeight() {
+                final SurfaceBridge bridge = host.surfaceHostBridge();
+                return bridge != null ? bridge.currentVisibleViewportHeight() : 0;
+            }
+
+            @Override
+            public UserlandInstallState installState() {
+                return host.currentInstallState();
+            }
+
+            @Override
+            public UserlandReadinessState readinessState() {
+                return host.currentReadinessState();
+            }
+
+            @Override
+            public uk.laurencegouws.terminal.debug.AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot() {
+                return SurfaceStateSnapshotReader.read();
+            }
+        };
         final StatusController StatusController = new StatusController(
                 viewBindings.statusText,
                 viewBindings.eventLogText,
-                terminalStatusHostBridge);
+                terminalStatusHost);
         final ViewportController terminalViewportController = new ViewportController(
                 new ViewportBridge(
                         viewBindings.productView,
@@ -152,7 +200,7 @@ public final class StatusViewAssembly {
                 viewBindings.assistCtrlButton,
                 viewBindings.assistAltButton,
                 SurfaceStateSnapshotReader,
-                terminalStatusHostBridge,
+                terminalStatusHost,
                 StatusController,
                 terminalViewportController);
     }

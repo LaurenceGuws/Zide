@@ -6,6 +6,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import uk.laurencegouws.terminal.NativeBridge;
 import uk.laurencegouws.terminal.host.surface.SurfaceBridge;
 import uk.laurencegouws.terminal.userland.UserlandReadinessState;
 import uk.laurencegouws.terminal.userland.UserlandInstallState;
@@ -14,7 +15,7 @@ import uk.laurencegouws.terminal.userland.UserlandInstallState;
 public final class StatusViewCallbacks implements StatusViewAssembly.Host {
     private final Activity activity;
     private final BooleanSupplier debugViewEnabled;
-    private final BooleanSupplier hasWindowFocusNow;
+    private final BooleanSupplier hasWindowFocus;
     private final BooleanSupplier imeVisible;
     private final Consumer<Boolean> setImeVisible;
     private final Supplier<SurfaceBridge> surfaceHostBridge;
@@ -25,7 +26,7 @@ public final class StatusViewCallbacks implements StatusViewAssembly.Host {
     public StatusViewCallbacks(
             Activity activity,
             BooleanSupplier debugViewEnabled,
-            BooleanSupplier hasWindowFocusNow,
+            BooleanSupplier hasWindowFocus,
             BooleanSupplier imeVisible,
             Consumer<Boolean> setImeVisible,
             Supplier<SurfaceBridge> surfaceHostBridge,
@@ -34,7 +35,7 @@ public final class StatusViewCallbacks implements StatusViewAssembly.Host {
             Supplier<UserlandReadinessState> currentReadinessState) {
         this.activity = activity;
         this.debugViewEnabled = debugViewEnabled;
-        this.hasWindowFocusNow = hasWindowFocusNow;
+        this.hasWindowFocus = hasWindowFocus;
         this.imeVisible = imeVisible;
         this.setImeVisible = setImeVisible;
         this.surfaceHostBridge = surfaceHostBridge;
@@ -54,8 +55,13 @@ public final class StatusViewCallbacks implements StatusViewAssembly.Host {
     }
 
     @Override
-    public boolean hasWindowFocusNow() {
-        return hasWindowFocusNow.getAsBoolean();
+    public boolean nativeLoaded() {
+        return NativeBridge.nativeLoaded();
+    }
+
+    @Override
+    public boolean hasWindowFocus() {
+        return hasWindowFocus.getAsBoolean();
     }
 
     @Override

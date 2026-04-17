@@ -359,6 +359,10 @@ Audit decision:
     `host/interaction/SelectionInteractionBridge.java`; `SelectionControllerFactory`
     now composes `SelectionController` directly from one host contract that
     satisfies both `SelectionController.Host` and `SelectionController.Bridge`.
+  - Completed: status adapter depth reduced by deleting
+    `host/status/StatusBridge.java` and `host/status/StatusCallbacks.java`;
+    `StatusViewAssembly` now composes `StatusController.Host` directly at
+    assembly time while reusing existing host/readiness/surface contracts.
     - Next: execute a behavior-preserving interaction adapter-depth reduction
       wave by collapsing redundant bridge/callback pass-through tiers in
       `host/interaction` (prioritize high-forwarding seams: selection + gesture),
