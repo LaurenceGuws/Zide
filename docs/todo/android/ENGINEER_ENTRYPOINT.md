@@ -34,23 +34,15 @@ you must report the mismatch.
 
 ## Current Target
 
-Active macro batch: **`AHW-B3` Terminal widget instance boundary + host package hygiene**.
+Engineer wave for **`AHW-B3`** is complete at the **super-gate**; Architect owns
+acceptance. Next macro batch is set only after Architect refocuses
+`docs/todo/android/implementation.md` and this entrypoint.
 
-Batch queue line:
+Batch queue line (completed wave):
 
 - make one terminal widget instance explicit in harness wiring and clean remaining host package ownership drift without changing terminal behavior
 
-Internal milestones:
-
-1. `AHW3-M1` Status telemetry package ownership cleanup
-2. `AHW3-M2` Terminal widget instance shape audit
-3. `AHW3-M3` Single terminal widget instance extraction
-4. `AHW3-M4` Interaction context naming symmetry only where material
-5. `AHW3-M5` B3 structure/naming authority update
-6. `AHW3-M6` Batch validation + review packet
-
-Continue through all six internal milestones. Do not stop for architect review
-between them.
+Internal milestones `AHW3-M1` through `AHW3-M6`: see `docs/todo/android/implementation.md` (`completed_in_batch`).
 
 Expected review size: **30-50 coherent commits** if code reality supports that.
 Small, validated commits are preferred; the Architect reviews the macro batch,
@@ -73,16 +65,9 @@ later for terminal tabs.
 
 ## Required Direction From Architect Review
 
-- `AHW-B2` is accepted.
-- `StatusTelemetryStartupForwards` should move under status ownership if touched;
-  package-doctor telemetry is status/operator telemetry, not debug UI.
-- `ProductHostStartupBundle` is acceptable as startup-only aggregation. Do not
-  collapse it further unless there is a concrete ownership gain.
-- `InteractionCallbacks` context naming should change only if the widget-instance
-  extraction makes the current contract materially misleading. Do not rename for
-  symmetry alone.
-- The main product push is the current single terminal widget instance boundary:
-  make it explicit without implementing tabs or changing terminal behavior.
+`AHW-B3` engineer wave addressed the `AHW-B2` follow-ups (status telemetry package,
+`TerminalWidgetInstance`, interaction naming evaluated). Architect owns gate on
+`AHW-B3`; see queue for verdict.
 
 ## Allowed Work
 

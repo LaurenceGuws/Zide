@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android harness/widget portability hardening** (`AHW`) — turns the refocus vision into enforceable code shape: Android Harness is the platform/app-shell canvas, Terminal Widget is the portable terminal consumer, and userland stays movable for future IDE/editor modes.
-- Current macro batch: `AHW-B3` (`in_progress`, target 30-50 coherent engineer commits before architect review unless a hard blocker is hit)
+- Current macro batch: `AHW-B3` (`review_required`; engineer wave complete at super-gate)
 - Active milestone sequence inside batch: `AHW3-M1` through `AHW3-M6` in `docs/todo/android/implementation.md`; engineer should continue across these milestones and stop only at the `AHW-B3` super-gate or a real blocker.
 - Prior closed/escalated: `AHW-B2` accepted; `AHW-B1` accepted; `ASF-M3` escalated remaining IME/assist and touch-gesture matrix rows to operator evidence; `ASF-M2`; `ASF-M1`; `AX-M5`; `AX-M4`
 - Active queue authority: `docs/todo/android/implementation.md`

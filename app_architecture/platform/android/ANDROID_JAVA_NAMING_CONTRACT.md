@@ -72,6 +72,8 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
   `WidgetAssembly.Host` so the host interface does not import userland value
   classes; `ShellInputView.Host` must be passed explicitly into input assembly
   callbacks, never cast from `Context`
+- use `TerminalWidgetInstance` for the harness-owned bundle of one terminal’s
+  surface + selection + gesture seams; do not use it as a generic service locator
 - do not include `Terminal` when package already scopes terminal host context
 - reserve `Product` only for user-facing product behavior distinctions
 - reserve `Host` for boundary context where needed; do not repeat it when the

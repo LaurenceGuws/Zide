@@ -68,12 +68,22 @@ Boundary rules:
 - Userland remains movable independent of widget ownership.
 - `zide-pm` integration stays tool-like with minimal Java ceremony.
 
+## Harness-held terminal widget instance
+
+Today the product hosts **one** terminal widget instance. Harness wiring groups
+its portable seams in `host/ui/TerminalWidgetInstance`: `SelectionController`,
+`GestureStateController`, `SurfaceBridge`, `SurfaceController`, and
+`SurfaceWidgetController`. App-shell chrome, viewport, runtime orchestration,
+and userland coordination stay **outside** that holder. Future multi-instance
+hosting should compose additional `TerminalWidgetInstance` values without moving
+app-shell state into the widget holder.
+
 ## File Audit
 
 Current shape markers (for hygiene tracking, not hard limits):
 
 - `selection/SelectionController.java`: `1066` lines (monolithic by design for now)
-- `ZideActivity.java`: `723` lines
+- `ZideActivity.java`: `717` lines
 - `input/ShellInputView.java`: `587` lines
 - `userland/UserlandInstaller.java`: `425` lines
 - `host/ui/WidgetAssembly.java`: `320` lines
@@ -86,7 +96,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 
 | File | Contract Fit | Size/Shape | Next Pressure |
 | --- | --- | --- | --- |
-| `ZideActivity.java` | Good | Wiring-oriented Android entrypoint. JNI declarations remain out; startup null-guards are aggregated in `ProductHostStartupBundle` (owner-aligned `*StartupForwards` classes, not a second backbone). `InputAssembly` takes explicit `ShellInputView.Host`; `WidgetAssembly.Host` uses `ShellPresentationHostInputs` instead of importing userland value types. | Keep activity orchestration-only; route any new behavior into the owning host/controller seam instead of adding policy here. |
+| `ZideActivity.java` | Good | Wiring-oriented Android entrypoint. JNI declarations remain out; startup null-guards are aggregated in `ProductHostStartupBundle`; the single terminal widget instance is grouped in `TerminalWidgetInstance` (`InteractionAssembly.Result` holds selection/gesture until widget assembly completes). | Keep activity orchestration-only; route any new behavior into the owning host/controller seam instead of adding policy here. |
 | `NativeBridge.java` | Good | Owns JNI library load state and native bridge declarations for the terminal host. | Keep this focused on JNI surface only; do not move Android policy or lifecycle behavior into it. |
 | `debug/AndroidDebugFormatter.java` | Good | Pure formatter plus snapshot values. Large constructor surface is acceptable for debug-only snapshots. | Split snapshot values only if formatter starts owning state or capture policy. |
 | `debug/NativeStatusLabels.java` | Good | Owns native status-enum label mapping for debug/operator text. | Keep as pure mapping; avoid embedding behavior/policy. |
@@ -107,14 +117,15 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/runtime/RuntimeHostCallbacks.java` | Good | Functional callback adapter from activity state/native access into `host/runtime/RuntimeController`. | Keep adapter-only; runtime behavior stays in `host/runtime/RuntimeController`. |
 | `host/runtime/RuntimeAssembly.java` | Good | Owns product-runtime controller startup assembly so activity no longer inlines runtime callback construction. | Keep this assembly-only; runtime behavior stays in runtime controller + host callbacks. |
 | `host/runtime/RuntimeAssemblyCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/runtime/RuntimeAssembly`. | Keep adapter-only; avoid moving runtime behavior into this adapter. |
-| `host/ui/ProductHostStartupBundle.java` | Good | Aggregates `RuntimeStartupForwards`, `FrameLoopStartupForwards`, `SurfaceStartupForwards`, `UserlandSessionStartupForwards`, `InputChromeStartupForwards`, `StatusTelemetryStartupForwards`, and `WorkflowInstallStartupGlue` for progressive `onCreate` wiring only. | Keep as startup-order aggregation; extend owner domains via their `*StartupForwards` types, not new methods on the activity. |
+| `host/ui/ProductHostStartupBundle.java` | Good | Aggregates `RuntimeStartupForwards`, `FrameLoopStartupForwards`, `SurfaceStartupForwards`, `UserlandSessionStartupForwards`, `InputChromeStartupForwards`, `host.status.StatusTelemetryStartupForwards`, and `WorkflowInstallStartupGlue` for progressive `onCreate` wiring only. | Keep as startup-order aggregation; extend owner domains via their `*StartupForwards` types, not new methods on the activity. |
 | `host/userland/ShellPresentationHostInputs.java` | Good | Harness seam bundling readiness/install suppliers for shell-blocker presentation without userland types on `WidgetAssembly.Host`. | Keep as thin supplier bundle; presentation truth remains in userland value objects. |
 | `host/runtime/RuntimeStartupForwards.java` | Good | Null-guard forwards into `RuntimeController`. | Delegation-only. |
 | `host/runtime/FrameLoopStartupForwards.java` | Good | Null-guard forwards into `FrameLoopController`. | Delegation-only. |
 | `host/surface/SurfaceStartupForwards.java` | Good | Null-guard forwards into `SurfaceController`. | Delegation-only. |
 | `host/userland/UserlandSessionStartupForwards.java` | Good | Null-guard forwards into `UserlandSessionCoordinator`. | Delegation-only. |
 | `host/input/InputChromeStartupForwards.java` | Good | Null-guard forwards for hardware keyboard, IME focus recovery, chrome modifier latch. | Delegation-only. |
-| `host/debug/StatusTelemetryStartupForwards.java` | Good | Null-guard forwards into `StatusController` for package-doctor telemetry. | Delegation-only. |
+| `host/status/StatusTelemetryStartupForwards.java` | Good | Null-guard forwards into `StatusController` for package-doctor / operator telemetry (status ownership, not debug UI). | Delegation-only. |
+| `host/ui/TerminalWidgetInstance.java` | Good | Immutable bundle of one terminal widget’s surface + selection + gesture controller refs for harness hosting. | Do not fold app-shell or userland orchestration into this type. |
 | `host/userland/WorkflowInstallStartupGlue.java` | Good | Install completion state transitions + runtime restart delegation. | Keep install orchestration thin; low-level extraction stays in `UserlandInstaller`. |
 | `host/ui/ActivityViewBindings.java` | Good | Owns raw activity view lookup and typed binding capture for terminal host wiring. | Keep this as lookup-only data binding; no policy or runtime behavior. |
 | `host/ui/ChromeFactory.java` | Good | Owns chrome-specific bridge/callback construction so chrome assembly does not inflate the generic host assembler. | Keep this construction-only; do not move chrome behavior out of `host/ui/ChromeController`. |

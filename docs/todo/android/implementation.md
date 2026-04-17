@@ -106,8 +106,8 @@ Dual-mode batching override (architect directive):
 - Active campaign: **Android harness/widget portability hardening** (`AHW`).
 - Completed macro batch: `AHW-B1` (accepted by Architect; follow-up seams queued in `AHW-B2`).
 - Completed macro batch: `AHW-B2` (accepted by Architect; package/status and widget-instance follow-ups queued in `AHW-B3`).
-- Active macro batch: `AHW-B3` (30-50 coherent engineer commits if code reality supports it; architect review only at batch super-gate or real blocker).
-- Active internal milestones: `AHW3-M1` through `AHW3-M6` (continue sequentially inside the batch).
+- Active macro batch: `AHW-B3` (`review_required`; engineer wave complete at super-gate).
+- Internal milestones `AHW3-M1` through `AHW3-M6`: `completed_in_batch`.
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -1179,7 +1179,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B3` Terminal widget instance boundary + host package hygiene (`in_progress`)
+### `AHW-B3` Terminal widget instance boundary + host package hygiene (`review_required`)
 
 Batch queue line (exact):
 
@@ -1236,166 +1236,81 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `AHW-B3` super-gate is reached.
 
-### `AHW3-M1` Status telemetry package ownership cleanup (`queued_in_batch`)
+### `AHW3-M1` Status telemetry package ownership cleanup (`completed_in_batch`)
 
 Queue line (exact):
 
 - move package-doctor/status startup telemetry forwarding under status ownership
 
-Scope:
+Progress checkpoint:
 
-- `host/debug/StatusTelemetryStartupForwards.java`
-- `host/status/**`
-- `host/ui/ProductHostStartupBundle.java`
-- `ZideActivity.java` only if imports/wiring require it
-- structure/naming docs
+- `Milestone: AHW3-M1 completed_in_batch`
+- `Progress delta: StatusTelemetryStartupForwards moved from host.debug to host.status; ProductHostStartupBundle import updated`
+- `Validation: compile debug + release (pass)`
+- `Blocked by Archtect review needed: false`
 
-Tasks:
-
-- [ ] move or rename `StatusTelemetryStartupForwards` so package ownership matches status telemetry, not debug UI
-- [ ] keep behavior unchanged
-- [ ] update `ANDROID_JAVA_HOST_STRUCTURE.md` and naming contract if package vocabulary changes
-- [ ] compile debug + release after the cut
-
-Acceptance:
-
-- package-doctor telemetry forwarder lives under status ownership or the exception is documented with reason
-- no debug-view concept is introduced
-- imports and docs agree
-
-### `AHW3-M2` Terminal widget instance shape audit (`queued_in_batch`)
+### `AHW3-M2` Terminal widget instance shape audit (`completed_in_batch`)
 
 Queue line (exact):
 
 - audit current single terminal widget fields and define the minimal instance boundary for future tabs
 
-Scope:
+Progress checkpoint:
 
-- `ZideActivity.java`
-- `host/ui/WidgetAssembly.java`
-- `host/surface/SurfaceWidgetAssembly.java`
-- directly connected docs
+- `Milestone: AHW3-M2 completed_in_batch`
+- `Instance boundary: selection + gesture (InteractionAssembly.Result) + surface bridge/controller + SurfaceWidgetController = one TerminalWidgetInstance; app-shell chrome, viewport, runtime, userland, input hardware path outside`
+- `Authority: ANDROID_JAVA_HOST_STRUCTURE.md § Harness-held terminal widget instance`
+- `Blocked by Archtect review needed: false`
 
-Tasks:
-
-- [ ] identify which fields in `ZideActivity` are one terminal widget instance state
-- [ ] identify which fields are harness/global app-shell state
-- [ ] document the intended instance boundary before code extraction if the seam is non-trivial
-- [ ] avoid moving files before the boundary is clear
-
-Acceptance:
-
-- queue/docs state the exact instance boundary being extracted
-- no code extraction starts from an ambiguous field list
-
-### `AHW3-M3` Single terminal widget instance extraction (`queued_in_batch`)
+### `AHW3-M3` Single terminal widget instance extraction (`completed_in_batch`)
 
 Queue line (exact):
 
 - group current terminal widget controllers/state into one harness-owned instance holder without behavior changes
 
-Scope:
+Progress checkpoint:
 
-- `ZideActivity.java`
-- `host/ui/WidgetAssembly.java`
-- new or existing `host/ui` instance/result type if needed
-- directly connected `host/surface`, `host/input`, and `host/interaction` wiring only
+- `Milestone: AHW3-M3 completed_in_batch`
+- `Progress delta: host/ui/TerminalWidgetInstance.java; ZideActivity holds interactionAssembly + terminalWidget; hostStartup surface suppliers use terminalWidget.surfaceController`
+- `Validation: compile debug + release (pass)`
+- `Blocked by Archtect review needed: false`
 
-Tasks:
-
-- [ ] introduce a small immutable/mutable holder only if it reduces Activity field scatter
-- [ ] move current single-widget fields behind that holder in behavior-preserving cuts
-- [ ] keep app-shell/global harness state outside the widget instance holder
-- [ ] compile debug + release after each coherent extraction
-
-Acceptance:
-
-- current terminal behavior is unchanged
-- the current single terminal widget can be reasoned about as one instance
-- future tab work has a concrete composition seam
-
-Drift:
-
-- implementing tabs
-- changing terminal selection/input/surface behavior
-- turning the holder into a generic service locator
-
-### `AHW3-M4` Interaction context naming symmetry only where material (`queued_in_batch`)
+### `AHW3-M4` Interaction context naming symmetry only where material (`completed_in_batch`)
 
 Queue line (exact):
 
 - normalize interaction context naming only if the widget instance extraction makes the current naming misleading
 
-Scope:
+Progress checkpoint:
 
-- `host/interaction/InteractionCallbacks.java`
-- `host/interaction/InteractionAssembly.java`
-- `ZideActivity.java`
-- naming docs if changed
+- `Milestone: AHW3-M4 completed_in_batch`
+- `Progress delta: no code change; InteractionAssembly.Host already exposes harnessContext(); widget-instance extraction did not make Activity-shaped naming materially misleading`
+- `Blocked by Archtect review needed: false`
 
-Tasks:
-
-- [ ] evaluate whether `InteractionCallbacks` needs the same explicit-host treatment as input, or only context naming
-- [ ] change naming only when it removes a real Activity/backbone assumption
-- [ ] do not rename for symmetry alone
-- [ ] compile debug + release after the cut
-
-Acceptance:
-
-- interaction assembly contract is no more Activity-shaped than required
-- no behavior changes are hidden inside naming work
-
-### `AHW3-M5` B3 structure/naming authority update (`queued_in_batch`)
+### `AHW3-M5` B3 structure/naming authority update (`completed_in_batch`)
 
 Queue line (exact):
 
 - update Android structure and naming authority for the widget instance and status package seams
 
-Scope:
+Progress checkpoint:
 
-- `ANDROID_JAVA_HOST_STRUCTURE.md`
-- `ANDROID_JAVA_NAMING_CONTRACT.md`
-- `USERLAND_HOST_CONTRACT.md` only if userland presentation seams move
-- Android queue/handoff/entrypoint docs
+- `Milestone: AHW3-M5 completed_in_batch`
+- `Progress delta: ANDROID_JAVA_HOST_STRUCTURE.md + ANDROID_JAVA_NAMING_CONTRACT.md updated for TerminalWidgetInstance and status telemetry package`
+- `Blocked by Archtect review needed: false`
 
-Tasks:
-
-- [ ] update file audit rows and pressure notes for changed classes
-- [ ] record the terminal widget instance boundary
-- [ ] keep customer-facing docs untouched
-- [ ] keep historical detail out of handoff
-
-Acceptance:
-
-- authority docs match code reality
-- next engineer session can resume without archaeology
-
-### `AHW3-M6` Batch validation + review packet (`queued_in_batch`)
+### `AHW3-M6` Batch validation + review packet (`completed_in_batch`)
 
 Queue line (exact):
 
 - validate AHW-B3 end-to-end and publish the architect review packet
 
-Scope:
+Progress checkpoint:
 
-- final docs checkpoint plus validation commands
-- no new behavior cuts after validation starts unless fixing validation failure
-
-Tasks:
-
-- [ ] run required validation commands
-- [ ] update this queue with completed internal milestone checkpoints
-- [ ] update handoff only if the batch is ready for Architect review or a hard blocker requires refocus
-- [ ] report final review packet with changed files, commits, validation, risks, and exact review questions
-
-Acceptance:
-
-- debug compile pass
-- release compile pass
-- deploy pass when device is available
-- `AndroidRuntime:E` smoke pass when device is available
-- cold start smoke pass when device is available
-- `Blocked by Archtect review needed: true` only at super-gate or real blocker
+- `Milestone: AHW3-M6 completed_in_batch`
+- `Progress delta: engineer review packet in session response`
+- `Validation: see engineer VALIDATION block`
+- `Blocked by Archtect review needed: true` (super-gate)
 
 ## Guardrails
 
