@@ -7,16 +7,39 @@ import java.util.Objects;
  * flag, active shell view identity, and per-view snapshots for multi-view hosting.
  *
  * <p>Chrome and startup code read this owner instead of scattering sidebar/view flags
- * across bridges. Initial {@link ShellViewId} must come from
- * {@link ProductTerminalSlotShellMapping} for product terminal slots so slot and
- * shell view vocabulary stay aligned.</p>
+ * across bridges. For product terminal wiring, construct via
+ * {@link #forProductTerminalSlot} so slot→{@link ShellViewId} resolution happens once
+ * via {@link ProductTerminalSlotShellMapping}.</p>
  */
 public final class AppShellNavigation {
     private boolean sidebarOpen;
+    /**
+     * Resolved shell view for this navigation instance’s product terminal slot (mapping
+     * runs once in {@link #forProductTerminalSlot}).
+     */
+    private final ShellViewId productTerminalShellViewId;
     private ShellViewId activeShellView;
 
-    public AppShellNavigation(ShellViewId initialActiveShellView) {
-        this.activeShellView = Objects.requireNonNull(initialActiveShellView, "initialActiveShellView");
+    /**
+     * Product harness wiring: resolves the slot once and seeds {@link #activeShellView}.
+     */
+    public static AppShellNavigation forProductTerminalSlot(TerminalWidgetSlotId slot) {
+        ShellViewId resolved = ProductTerminalSlotShellMapping.shellViewIdForTerminalSlot(slot);
+        return new AppShellNavigation(resolved);
+    }
+
+    private AppShellNavigation(ShellViewId productTerminalShellViewId) {
+        this.productTerminalShellViewId =
+                Objects.requireNonNull(productTerminalShellViewId, "productTerminalShellViewId");
+        this.activeShellView = this.productTerminalShellViewId;
+    }
+
+    /**
+     * Re-asserts the resolved product-terminal shell view as active without re-running
+     * slot mapping or {@link TerminalWidgetSlotId#checkActiveProductTerminalSlot}.
+     */
+    public void applyProductTerminalShellViewActive() {
+        setActiveShellView(productTerminalShellViewId);
     }
 
     public boolean isSidebarOpen() {

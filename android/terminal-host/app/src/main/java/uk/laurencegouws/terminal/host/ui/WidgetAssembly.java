@@ -154,9 +154,7 @@ public final class WidgetAssembly {
 
     public static Result assemble(Host host) {
         final AppShellNavigation appShellNavigation =
-                new AppShellNavigation(
-                        ProductTerminalSlotShellMapping.shellViewIdForTerminalSlot(
-                                host.terminalWidgetSlot()));
+                AppShellNavigation.forProductTerminalSlot(host.terminalWidgetSlot());
         final SurfaceWidgetControllerRef surfaceWidgetControllerRef = new SurfaceWidgetControllerRef();
         final ChromeController terminalChromeController = createChromeController(
                 host,
@@ -217,7 +215,6 @@ public final class WidgetAssembly {
                 host.productView(),
                 host.productSurfaceContainer(),
                 appShellNavigation,
-                host.terminalWidgetSlot(),
                 new ViewModeCallbacks(
                         host::appendEvent,
                         host::updateStatus,

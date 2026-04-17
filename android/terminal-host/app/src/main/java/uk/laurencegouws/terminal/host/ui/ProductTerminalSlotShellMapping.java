@@ -7,6 +7,11 @@ package uk.laurencegouws.terminal.host.ui;
  * <p>This is the single contract seam aligning terminal widget slot vocabulary with
  * shell view identity. It does not implement tab switching or multi-instance product
  * behavior — those require explicit policy and additional {@link ShellViewId} values.</p>
+ *
+ * <p>Product harness wiring resolves the slot once via
+ * {@link AppShellNavigation#forProductTerminalSlot}; steady-state re-assert of the
+ * product shell view uses {@link AppShellNavigation#applyProductTerminalShellViewActive}
+ * without calling this mapping again.</p>
  */
 public final class ProductTerminalSlotShellMapping {
     private ProductTerminalSlotShellMapping() {
