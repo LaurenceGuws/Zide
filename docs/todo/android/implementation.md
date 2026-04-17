@@ -135,7 +135,7 @@ Stop marker:
 
 ---
 
-### `RF-M1` Harness Boundary Lock (`review_required`)
+### `RF-M1` Harness Boundary Lock (`completed`)
 
 Queue line (exact):
 
@@ -170,7 +170,7 @@ Progress checkpoint:
 
 ---
 
-### `RF-M2` Widget Boundary Lock (`review_required`)
+### `RF-M2` Widget Boundary Lock (`completed`)
 
 Queue line (exact):
 
@@ -205,7 +205,7 @@ Progress checkpoint:
 
 ---
 
-### `RF-M3` Userland Mobility Lock (`pending`)
+### `RF-M3` Userland Mobility Lock (`review_required`)
 
 Queue line (exact):
 
@@ -217,14 +217,25 @@ Scope:
 
 Tasks:
 
-- [ ] isolate package-doctor/install/restart orchestration behind harness-owned entrypoints
-- [ ] remove any userland dependency on widget-specific runtime symbols
-- [ ] document stable userland contract for future IDE/editor modes
+- [x] isolate package-doctor/install/restart orchestration behind harness-owned entrypoints
+- [x] remove any userland dependency on widget-specific runtime symbols
+- [x] document stable userland contract for future IDE/editor modes
 
 Gate:
 
 - userland orchestration has no widget-only ownership assumptions
 - compile + deploy + runtime smoke clean
+
+Progress checkpoint:
+
+- `Milestone: RF-M3 review_required`
+- `Queue line (exact): make userland orchestration movable and widget-agnostic`
+- `Scope contract: host.userland + userland packages; readiness-blocker wiring moved to ReadinessBlockerStartup; UserlandReadinessBlockerController.Host uses harness entrypoints only (no workflow/session coordinator types on userland Host)`
+- `Progress delta: USERLAND_HOST_CONTRACT.md added; WorkflowBridge documents harness contract; install/session orchestration for readiness retry bound via host.userland startup; userland Host no longer exposes UserlandWorkflowController/UserlandSessionCoordinator to UserlandReadinessBlockerController`
+- `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E (pass)`
+- `Blocked by review needed: false`
+
+`Milestone reached per docs, architect review required.`
 
 ---
 
