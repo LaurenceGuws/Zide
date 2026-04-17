@@ -308,7 +308,7 @@ Progress checkpoint:
 - `Scope contract: manual validation + documentation; first commit: app_shell_hotspot_bg theming fix`
 - `Progress delta: transparent edge hotspot uses @color/app_shell_hotspot_bg; matrix tables + smoke commands recorded in RF_M5_STABILIZATION_MATRIX.md`
 - `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat smoke + cold start (pass)`
-- `Blocked by Archtect review needed: false`
+- `Blocked by Archtect review needed: true` (campaign review gate; refocus queue complete through RF-M5)
 
 `Milestone reached per docs, architect review required.`
 
