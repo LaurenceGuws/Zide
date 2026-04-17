@@ -10,8 +10,9 @@ import java.util.Objects;
  * not drive behavior until host policy defines them. Tab UI and session switching are
  * separate product concerns.</p>
  *
- * <p>Aligns with app-shell {@link ShellViewId#TERMINAL} routing for the primary
- * terminal surface.</p>
+ * <p>Canonical alignment with app-shell view identity is
+ * {@link ProductTerminalSlotShellMapping#shellViewIdForTerminalSlot} — today
+ * {@link #PRIMARY} maps to {@link ShellViewId#TERMINAL}.</p>
  */
 public enum TerminalWidgetSlotId {
     /**
