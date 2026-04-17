@@ -112,7 +112,7 @@ session switching.
 Current shape markers (for hygiene tracking, not hard limits):
 
 - `selection/SelectionController.java`: `1066` lines (monolithic by design for now)
-- `ZideActivity.java`: `691` lines
+- `ZideActivity.java`: `698` lines
 - `input/ShellInputView.java`: `587` lines
 - `userland/UserlandInstaller.java`: `425` lines
 - `host/ui/WidgetAssembly.java`: `320` lines
@@ -121,11 +121,11 @@ Current shape markers (for hygiene tracking, not hard limits):
 - `host/ui/ChromeController.java`: `221` lines
 - `host/runtime/RuntimeHostCallbacks.java`: `170` lines
 - `host/ui/UiStartupCallbacks.java`: `168` lines
-- `host/status/StatusViewAssembly.java`: `194` lines
+- `host/status/StatusViewAssembly.java`: `133` lines
 
 | File | Contract Fit | Size/Shape | Next Pressure |
 | --- | --- | --- | --- |
-| `ZideActivity.java` | Good | Wiring-oriented Android entrypoint. JNI declarations remain out; startup null-guards are aggregated in `ProductHostStartupBundle`; `ActivityViewBindings` comes from `StatusViewAssembly.Result.activityViewBindings` (single `findViewById` capture); `WidgetAssembly.Host` + `InteractionAssembly.Host` expose `TerminalWidgetSlotId`; terminal instance is `TerminalWidgetCompositionAssembly.compose(PRIMARY, …)` after `InteractionAssembly` + `WidgetAssembly` (order: interaction → userland/session → widget → compose + assign chrome from `WidgetAssembly.Result`). | Keep activity orchestration-only; route any new behavior into the owning host/controller seam instead of adding policy here. |
+| `ZideActivity.java` | Good | Wiring-oriented Android entrypoint. JNI declarations remain out; startup null-guards are aggregated in `ProductHostStartupBundle`; `ActivityViewBindings` comes from `StatusViewAssembly.Result.activityViewBindings` (single `findViewById` capture); product terminal slot is `ACTIVE_PRODUCT_TERMINAL_SLOT` (single source) for interaction/widget/composition seams; terminal instance is `TerminalWidgetCompositionAssembly.compose(ACTIVE_PRODUCT_TERMINAL_SLOT, …)` after `InteractionAssembly` + `WidgetAssembly` (order: interaction → userland/session → widget → compose + assign chrome from `WidgetAssembly.Result`). | Keep activity orchestration-only; route any new behavior into the owning host/controller seam instead of adding policy here. |
 | `NativeBridge.java` | Good | Owns JNI library load state and native bridge declarations for the terminal host. | Keep this focused on JNI surface only; do not move Android policy or lifecycle behavior into it. |
 | `debug/AndroidDebugFormatter.java` | Good | Pure formatter plus snapshot values. Large constructor surface is acceptable for debug-only snapshots. | Split snapshot values only if formatter starts owning state or capture policy. |
 | `debug/NativeStatusLabels.java` | Good | Owns native status-enum label mapping for debug/operator text. | Keep as pure mapping; avoid embedding behavior/policy. |
@@ -173,7 +173,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/session/SessionFactory.java` | Good | Owns shell-session and userland-session host bridge construction so session seams stay out of generic host assembly. | Keep this construction-only; session behavior remains in session/userland coordinators. |
 | `host/session/SessionAssembly.java` | Good | Owns session/runtime wiring assembly that composes session and runtime host factories for activity use. | Keep this assembly-only; business behavior stays in session/runtime controllers. |
 | `host/session/SessionAssemblyCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/session/SessionAssembly`. | Keep adapter-only; avoid adding session/runtime behavior here. |
-| `host/status/StatusViewAssembly.java` | Good | Owns initial view binding plus status/viewport host assembly for activity wiring; `Result.activityViewBindings` is the single capture reused by `ZideActivity`. | Keep this assembly-only; status logging and viewport policy remain in dedicated controllers. |
+| `host/status/StatusViewAssembly.java` | Good | Owns initial view binding plus status/viewport host assembly for activity wiring; `Result` is bindings-first (`activityViewBindings` + snapshot reader + `StatusController` + `ViewportController` only; no duplicate per-view fields). | Keep this assembly-only; status logging and viewport policy remain in dedicated controllers. |
 | `host/status/StatusViewCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/status/StatusViewAssembly`. | Keep adapter-only; avoid moving status/viewport behavior into this adapter. |
 | `host/ui/WidgetAssembly.java` | Good | Owns product widget/chrome/view-mode/surface host assembly so activity wiring no longer inlines those construction seams. | Keep this assembly-only; behavior remains in dedicated controllers/bridges. |
 | `host/ui/WidgetCallbacks.java` | Removed | Adapter seam was removed; `WidgetAssembly.Host` is now provided directly by `ZideActivity`. | Keep `WidgetAssembly` assembly-only; avoid recreating large pass-through adapters unless they remove measurable coupling. |

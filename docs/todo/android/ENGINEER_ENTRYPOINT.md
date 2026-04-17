@@ -34,17 +34,17 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B7` is `in_progress`: slot identity single-source wiring plus bindings-first
-StatusViewAssembly result slimming.
+`AHW-B7` is at **super-gate** pending Architect acceptance. Queue and validation
+live in `docs/todo/android/implementation.md` under `AHW-B7`.
 
-Batch queue line (exact):
-
-- make slot identity single-source in activity wiring and slim StatusViewAssembly.Result to a bindings-first shape without behavior change
+The Architect refocuses this entrypoint after acceptance; do not start the next
+macro batch until the queue marks one `in_progress`.
 
 ## Core Boundary Rule
 
-The batch exists to remove slot fan-out and finish status result shaping while
-preserving current single-slot behavior.
+Post-`AHW-B7` baseline (pending Architect): `ZideActivity` uses
+`ACTIVE_PRODUCT_TERMINAL_SLOT` as the single slot source; `StatusViewAssembly.Result`
+is bindings-first (views only via `activityViewBindings`).
 
 - Android Harness owns platform ceremony, app-shell layout/styling/theming,
   navigation/view state, userland orchestration, and widget instance hosting.
@@ -58,31 +58,16 @@ preserving current single-slot behavior.
 - `WidgetAssembly.Result` remains widget/chrome assembly output; it is not the
   terminal-instance factory by itself.
 
-## Required Direction From Architect Review (post-AHW-B7 acceptance baseline)
+## Required Direction From Architect Review (post-AHW-B7)
 
-- `AHW-B6` is accepted.
-- Keep slot identity explicit on host seams and explicit compose argument; do
-  not duplicate slot on `InteractionAssembly.Result` yet.
-- `WidgetAssembly.Host.terminalWidgetSlot()` is sufficient for now; defer
-  passing slot deeper into chrome construction until per-slot chrome policy exists.
-- Make slot selection single-source in activity wiring so affected seams consume
-  the same value without repeated literals.
-- Keep `StatusViewAssembly.Result.activityViewBindings` as the canonical binding
-  output and slim duplicate per-view result fields where consumers no longer need them.
-- Do not implement tabs, tab persistence, or multi-instance product behavior.
+- Slot identity: host seams + compose argument; not on `InteractionAssembly.Result` yet.
+- `WidgetAssembly.Host.terminalWidgetSlot()` sufficient until per-slot chrome policy exists.
+- No tab/multi-instance product behavior unless a new batch scopes it.
 
 ## Internal Milestones
 
-Execute in order and mark progress in `docs/todo/android/implementation.md`.
-
-- `AHW7-M1`: audit slot callsites and pick one authoritative slot source in
-  activity wiring.
-- `AHW7-M2`: implement slot single-source wiring across interaction/widget/compose callsites.
-- `AHW7-M3`: slim `StatusViewAssembly.Result` to bindings-first output where
-  duplicate fields are no longer required.
-- `AHW7-M4`: align structure/naming/userland host contracts with the final shape.
-- `AHW7-M5`: keep queue/handoff/entrypoint aligned to `AHW-B7` super-gate.
-- `AHW7-M6`: run validation and publish super-gate review packet.
+`AHW7-M1` through `AHW7-M6` are recorded in `docs/todo/android/implementation.md`
+under `AHW-B7`.
 
 ## Allowed Work
 

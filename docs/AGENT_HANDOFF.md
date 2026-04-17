@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android harness/widget portability hardening** (`AHW`) — turns the refocus vision into enforceable code shape: Android Harness is the platform/app-shell canvas, Terminal Widget is the portable terminal consumer, and userland stays movable for future IDE/editor modes.
-- Active macro batch: `AHW-B7` — slot identity single-source wiring + bindings-first status result slimming.
+- Completed macro batch (engineer): `AHW-B7` — single-source slot + bindings-first `StatusViewAssembly.Result`; **architect review pending** at super-gate (`docs/todo/android/implementation.md`).
 - Prior closed/escalated: `AHW-B6` accepted; `AHW-B5` accepted; `AHW-B4` accepted; `AHW-B3` accepted; `AHW-B2` accepted; `AHW-B1` accepted; `ASF-M3` escalated remaining IME/assist and touch-gesture matrix rows to operator evidence; `ASF-M2`; `ASF-M1`; `AX-M5`; `AX-M4`
 - Active queue authority: `docs/todo/android/implementation.md`
 - Engineer entrypoint (dual mode): `docs/todo/android/ENGINEER_ENTRYPOINT.md`
@@ -24,8 +24,8 @@ Engineer session seed:
 
 - Read `docs/todo/android/ENGINEER_ENTRYPOINT.md`, then
   `docs/todo/android/implementation.md`, then this handoff file.
-- Execute only the macro batch marked `in_progress`: `AHW-B7`.
-- Stop at the `AHW-B7` super-gate and report the review packet.
+- After Architect accepts `AHW-B7`, read the queue for the next `in_progress` macro batch only.
+- Engineer stops at `AHW-B7` super-gate until Architect refocuses the queue.
 
 ## First Read Order
 
@@ -48,14 +48,11 @@ Engineer session seed:
 - Architect updates use: `Blocked by humain review needed: true|false`.
 - Engineer updates use: `Blocked by Archtect review needed: true|false`.
 
-## AHW-B7 review findings from AHW-B6
+## AHW-B7 outcomes (engineer; Architect acceptance pending)
 
-- `AHW-B6` is accepted.
-- `TerminalWidgetSlotId` is correctly compile-visible on interaction/widget host seams and composition seam.
-- Keep slot identity explicit on host seams and explicit compose argument; do not duplicate slot on `InteractionAssembly.Result` yet.
-- `WidgetAssembly.Host.terminalWidgetSlot()` is sufficient for now; only push slot deeper into chrome construction when per-slot chrome policy appears.
-- `StatusViewAssembly.Result.activityViewBindings` removed duplicate capture pressure; this batch should complete bindings-first result shaping where behavior-neutral.
-- Do not implement tabs, tab persistence, or multi-instance product behavior in this batch.
+- `ZideActivity.ACTIVE_PRODUCT_TERMINAL_SLOT` is the single slot source for interaction, widget host, and `compose`.
+- `StatusViewAssembly.Result` is bindings-first (no duplicate per-view fields; `terminalStatusHost` no longer exposed on `Result`).
+- Tab/multi-instance product behavior remains unimplemented.
 
 ## Operator Evidence Escalation
 

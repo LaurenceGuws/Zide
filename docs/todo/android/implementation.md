@@ -110,7 +110,8 @@ Dual-mode batching override (architect directive):
 - Completed macro batch: `AHW-B4` (accepted by Architect; host API slimming follow-up queued in `AHW-B5`).
 - Completed macro batch: `AHW-B5` (accepted by Architect; slot-scoped host API follow-up queued in `AHW-B6`).
 - Completed macro batch: `AHW-B6` (accepted by Architect; slot single-source and status-result slimming follow-up queued in `AHW-B7`).
-- Active macro batch: `AHW-B7` (slot identity single-source + StatusViewAssembly result slimming).
+- Completed macro batch: `AHW-B7` (architect review at super-gate; single-source slot + bindings-first status result).
+- Active macro batch: set by Architect after `AHW-B7` acceptance.
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -1766,7 +1767,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B7` Slot single-source + status result slimming (`in_progress`)
+### `AHW-B7` Slot single-source + status result slimming (`completed_in_batch`)
 
 Batch queue line (exact):
 
@@ -1820,77 +1821,88 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `AHW-B7` super-gate is reached.
 
-### `AHW7-M1` Slot fan-out audit (`pending`)
+### `AHW7-M1` Slot fan-out audit (`completed_in_batch`)
 
 Queue line (exact):
 
 - audit all slot identity callsites and choose one authoritative source in activity wiring
 
-Acceptance:
+Progress checkpoint:
 
-- identify every `TerminalWidgetSlotId` callsite in interaction, widget, and composition wiring
-- define one source-of-truth slot selection point for current single-slot product behavior
-- no behavior change required in this audit slice
+- `Milestone: AHW7-M1 completed_in_batch`
+- `Findings: three PRIMARY literals in ZideActivity (InteractionCallbacks, compose, WidgetAssembly.Host); single static field is the fix`
+- `Validation: N/A (audit-first)`
+- `Blocked by Archtect review needed: false`
 
-### `AHW7-M2` Slot single-source wiring (`pending`)
+### `AHW7-M2` Slot single-source wiring (`completed_in_batch`)
 
 Queue line (exact):
 
 - implement single-source slot wiring across interaction callbacks, widget host callbacks, and composition callsites
 
-Acceptance:
+Progress checkpoint:
 
-- one authoritative slot selection point used by all affected seams
-- no drift in startup order or runtime ownership boundaries
-- compile debug + release Java after code changes
+- `Milestone: AHW7-M2 completed_in_batch`
+- `Progress delta: ZideActivity.ACTIVE_PRODUCT_TERMINAL_SLOT feeds InteractionCallbacks, compose, and terminalWidgetSlot()`
+- `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
+- `Blocked by Archtect review needed: false`
 
-### `AHW7-M3` StatusViewAssembly.Result slimming (`pending`)
+### `AHW7-M3` StatusViewAssembly.Result slimming (`completed_in_batch`)
 
 Queue line (exact):
 
 - reduce StatusViewAssembly.Result to bindings-first output and remove duplicated view fields where no consumer requires them
 
-Acceptance:
+Progress checkpoint:
 
-- `activityViewBindings` remains the canonical view capture
-- remove duplicated view fields from result when all consumers read bindings
-- preserve status, viewport, and snapshot assembly outputs
-- compile debug + release Java after code changes
+- `Milestone: AHW7-M3 completed_in_batch`
+- `Progress delta: Result holds activityViewBindings + SurfaceStateSnapshotReader + StatusController + ViewportController; removed duplicate per-view fields and public terminalStatusHost`
+- `Validation: same compile gates as AHW7-M2 (pass)`
+- `Blocked by Archtect review needed: false`
 
-### `AHW7-M4` Slot/doc contract alignment (`pending`)
+### `AHW7-M4` Slot/doc contract alignment (`completed_in_batch`)
 
 Queue line (exact):
 
 - align structure and naming contracts to single-source slot wiring and bindings-first status result shape
 
-Acceptance:
+Progress checkpoint:
 
-- structure/naming/userland docs match final code reality
-- no ambiguous guidance about slot ownership or status view outputs remains
+- `Milestone: AHW7-M4 completed_in_batch`
+- `Progress delta: ANDROID_JAVA_HOST_STRUCTURE + ANDROID_JAVA_NAMING_CONTRACT`
+- `Validation: docs-only; compile unchanged (pass)`
+- `Blocked by Archtect review needed: false`
 
-### `AHW7-M5` Queue/handoff/entrypoint sync (`pending`)
+### `AHW7-M5` Queue/handoff/entrypoint sync (`completed_in_batch`)
 
 Queue line (exact):
 
 - keep queue, handoff, and engineer entrypoint aligned to AHW-B7 execution and super-gate stop
 
-Acceptance:
+Progress checkpoint:
 
-- all three docs point to `AHW-B7` as active and `in_progress`
-- super-gate stop condition and review packet contract are explicit
+- `Milestone: AHW7-M5 completed_in_batch`
+- `Progress delta: ENGINEER_ENTRYPOINT + AGENT_HANDOFF at B7 super-gate`
+- `Validation: N/A`
+- `Blocked by Archtect review needed: false`
 
-### `AHW7-M6` Batch validation + review packet (`pending`)
+### `AHW7-M6` Batch validation + review packet (`completed_in_batch`)
 
 Queue line (exact):
 
 - validate AHW-B7 end-to-end and publish the architect review packet
 
-Acceptance:
+Progress checkpoint:
 
-- debug and release Java compile pass
-- deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
-- cold start smoke pass when a device is available
-- engineer reports the full super-gate packet and stops for Architect review
+- `Milestone: AHW7-M6 completed_in_batch`
+- `Progress delta: engineer review packet in session response`
+- `Validation: see engineer VALIDATION block`
+- `Blocked by Archtect review needed: true` (super-gate)
+
+Architect review verdict:
+
+- `Review chunk: AHW-B7`
+- `Verdict: pending`
 
 `Milestone reached per docs, architect review required.`
 

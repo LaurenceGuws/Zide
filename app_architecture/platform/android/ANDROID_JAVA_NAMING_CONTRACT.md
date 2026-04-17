@@ -84,6 +84,9 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
 - use `TerminalWidgetSlotId` on `InteractionAssembly.Host` and
   `WidgetAssembly.Host`; pass the same slot into `TerminalWidgetCompositionAssembly.compose`
   as the first parameter — today only `PRIMARY`
+- in `ZideActivity`, use one authoritative `static final` slot field (e.g.
+  `ACTIVE_PRODUCT_TERMINAL_SLOT`) for interaction/widget/composition wiring
+  instead of repeating `PRIMARY` literals
 - do not include `Terminal` when package already scopes terminal host context
 - reserve `Product` only for user-facing product behavior distinctions
 - reserve `Host` for boundary context where needed; do not repeat it when the
