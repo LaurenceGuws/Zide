@@ -113,7 +113,7 @@ Dual-mode batching override (architect directive):
 - Completed macro batch: `AHW-B7` (accepted by Architect; slot seam contract hardening follow-up queued in `AHW-B8`).
 - Completed macro batch: `AHW-B8` (accepted by Architect; slot/app-shell contract alignment follow-up queued in `AHW-B9`).
 - Completed macro batch: `AHW-B9` (accepted by Architect; app-shell state contract cleanup follow-up queued in `AHW-B10`).
-- Active macro batch: `AHW-B10` (app-shell state contract cleanup, slot mapping behavior unchanged).
+- Engineer delivery complete; Architect verdict pending: `AHW-B10` (app-shell state contract cleanup, slot mapping behavior unchanged). No macro batch is `in_progress` until Architect refocuses the queue.
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -2306,7 +2306,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B10` App-shell state contract cleanup (`in_progress`)
+### `AHW-B10` App-shell state contract cleanup (`verdict_pending`)
 
 Batch queue line (exact):
 
@@ -2383,7 +2383,7 @@ Progress delta (audit snapshot before consolidation):
   `ViewModeController` re-derived shell view from slot on every apply; roles overlapped with
   navigation owner.
 
-### `AHW10-M2` Mapping consumption consolidation (`pending`)
+### `AHW10-M2` Mapping consumption consolidation (`completed`)
 
 Queue line (exact):
 
@@ -2395,7 +2395,14 @@ Acceptance:
 - keep slot policy enforcement semantics unchanged
 - compile debug + release Java after code changes
 
-### `AHW10-M3` AppShellViewState contract trim (`pending`)
+Progress delta:
+
+- `AppShellNavigation.forProductTerminalSlot` resolves mapping once and stores
+  `productTerminalShellViewId`; `applyProductTerminalShellViewActive` reasserts without
+  re-running `checkActiveProductTerminalSlot`. `ViewModeController` delegates to
+  `applyProductTerminalShellViewActive`. `ProductTerminalSlotShellMapping` Javadoc updated.
+
+### `AHW10-M3` AppShellViewState contract trim (`completed`)
 
 Queue line (exact):
 
@@ -2407,7 +2414,11 @@ Acceptance:
 - keep state semantics stable (selected/contentReady defaults unchanged)
 - compile debug + release Java after code changes
 
-### `AHW10-M4` Doc and guardrail lock (`pending`)
+Progress delta:
+
+- Removed unused `AppShellViewState.productTerminalDefault(TerminalWidgetSlotId)`.
+
+### `AHW10-M4` Doc and guardrail lock (`completed`)
 
 Queue line (exact):
 
@@ -2418,7 +2429,13 @@ Acceptance:
 - docs clearly separate active behavior from reserved future slot behavior
 - chrome slot freeze and slot choke-point guidance remain intact
 
-### `AHW10-M5` Queue/handoff/entrypoint sync (`pending`)
+Progress delta:
+
+- `ANDROID_JAVA_HOST_STRUCTURE.md`, `ANDROID_JAVA_NAMING_CONTRACT.md`,
+  `USERLAND_HOST_CONTRACT.md` updated for navigation-owned resolved shell view and
+  steady-state reassert path.
+
+### `AHW10-M5` Queue/handoff/entrypoint sync (`completed`)
 
 Queue line (exact):
 
@@ -2426,10 +2443,15 @@ Queue line (exact):
 
 Acceptance:
 
-- all three docs point to `AHW-B10` as active and `in_progress`
+- queue, handoff, and engineer entrypoint stay coherent through B10 super-gate
 - super-gate stop condition and review packet contract are explicit
 
-### `AHW10-M6` Batch validation + review packet (`pending`)
+Progress delta:
+
+- This file, `ENGINEER_ENTRYPOINT.md`, and `AGENT_HANDOFF.md` updated for
+  `verdict_pending` and Architect refocus.
+
+### `AHW10-M6` Batch validation + review packet (`completed`)
 
 Queue line (exact):
 
@@ -2441,6 +2463,28 @@ Acceptance:
 - deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
 - cold start smoke pass when a device is available
 - engineer reports the full super-gate packet and stops for Architect review
+
+Progress delta:
+
+- Debug/release compile pass; deploy + cold start + `AndroidRuntime:E` filter (empty).
+
+Super-gate engineer packet:
+
+- `Milestone: AHW-B10 verdict_pending`
+- `Queue line (exact): clean app-shell state contract seams to consume slot→shell-view mapping consistently without behavior change`
+- `Scope contract: Java terminal host + allowed authority docs; slot/chrome freezes; no tabs`
+- `Progress delta: AppShellNavigation owns resolved shell view; ViewModeController avoids duplicate mapping; dead helper removed`
+- `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb cold start + AndroidRuntime:E (pass, empty)`
+- `Engineer updates: Blocked by Archtect review needed: true`
+
+Remaining risks:
+
+- None beyond prior note: mapping still runs per `AppShellNavigation` construction (one per widget assembly), as intended.
+
+Review questions for Architect:
+
+- Confirm `AppShellNavigation.forProductTerminalSlot` / `applyProductTerminalShellViewActive` split as the long-term app-shell contract.
+- Confirm next macro batch after verdict.
 
 `Milestone reached per docs, architect review required.`
 

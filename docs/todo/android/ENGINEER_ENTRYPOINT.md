@@ -34,10 +34,11 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B10` is `in_progress`: app-shell state contract cleanup while preserving
-slot/chrome freezes and single-slot behavior.
+`AHW-B10` engineer delivery is complete; **Architect verdict is pending**. There is
+no `in_progress` macro batch until `docs/todo/android/implementation.md` is
+refocused after Architect review.
 
-Batch queue line (exact):
+Last completed batch queue line (exact):
 
 - clean app-shell state contract seams to consume slot→shell-view mapping consistently without behavior change
 
@@ -71,6 +72,9 @@ mapping is explicit, without introducing product behavior changes.
 - No tab/multi-instance product behavior unless a new batch scopes it.
 
 ## Internal Milestones
+
+`AHW-B10` internal milestones `AHW10-M1`–`AHW10-M6` are **completed**; see
+`docs/todo/android/implementation.md` for the super-gate packet.
 
 Execute in order and mark progress in `docs/todo/android/implementation.md`.
 
