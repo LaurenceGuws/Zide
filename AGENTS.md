@@ -43,6 +43,9 @@ Flow:
    - behavior/contract impact
 7. Architect review bar must match VT-core rigor used in
    `src/terminal/core/**` review depth.
+8. After gate acceptance, Architect must immediately:
+   - refocus queue + handoff docs to the next milestone/batch
+   - produce a new engineer handoff prompt aligned to that refocus
 
 Mode discipline:
 

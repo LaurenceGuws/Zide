@@ -88,6 +88,14 @@ Dual Agent Mode loop:
    - approves and advances batch
    - rejects with explicit corrective ticket(s)
 
+Architect gate-closure rule (mandatory):
+
+- After accepting a gate, Architect must do all three before declaring the lane ready:
+  1. refocus owning queue docs to the next active milestone/batch
+  2. update `docs/AGENT_HANDOFF.md` to that next focus
+  3. issue a fresh engineer handoff prompt aligned to the refocused docs
+- Do not leave the lane in "accepted but idle" state when clear next work exists.
+
 Dual-mode cadence rule:
 
 - Prefer macro review chunks over per-milestone pauses.
