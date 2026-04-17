@@ -104,8 +104,9 @@ Dual-mode batching override (architect directive):
 - Completed milestone: `ASF-M2` (operator evidence ingest + matrix verdict closure).
 - Completed milestone: `ASF-M3` (campaign escalated to operator evidence; engineering lane refocused).
 - Active campaign: **Android harness/widget portability hardening** (`AHW`).
-- Active macro batch: `AHW-B1` (`review_required`; architect review at batch super-gate).
-- Internal milestones `AHW-M1` through `AHW-M5`: `completed_in_batch` (engineer wave landed; Architect owns gate).
+- Completed macro batch: `AHW-B1` (accepted by Architect; follow-up seams queued in `AHW-B2`).
+- Active macro batch: `AHW-B2` (`review_required`; engineer wave complete at super-gate).
+- Internal milestones `AHW2-M1` through `AHW2-M5`: `completed_in_batch`.
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -656,7 +657,7 @@ Architect intent:
 - if a cut cannot be split without a broken tree or compatibility shim, land it
   as one atomic validated commit
 
-### `AHW-B1` Harness backbone + widget portability macro batch (`review_required`)
+### `AHW-B1` Harness backbone + widget portability macro batch (`completed`)
 
 Batch queue line (exact):
 
@@ -918,6 +919,248 @@ Acceptance:
 - release compile pass
 - deploy pass
 - `AndroidRuntime:E` smoke pass
+- cold start smoke pass when device is available
+- `Blocked by Archtect review needed: true` only at super-gate or real blocker
+
+Architect review verdict:
+
+- `Review chunk: AHW-B1`
+- `Verdict: accepted`
+- `Commits reviewed: 59f9c20c, bc1f4b2c, 43fd6f1b, ab9e31bf`
+- `Validation spot-check: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
+- `Findings carried forward: InputCallbacks hides a ShellInputView.Host dependency behind a Context cast; WidgetAssembly.Host still imports userland state values for shell-state presentation; ProductHostDeferredActions is an acceptable temporary startup-forwarding seam but too broad for long-term ownership.`
+- `Gate decision: AHW-B1 satisfies the first backbone-pressure cut because behavior stayed stable and ZideActivity shed direct null-guard forwarding, but the next batch must convert the remaining cosmetic portability into real portable contracts.`
+
+`Milestone reached per docs, architect review accepted.`
+
+---
+
+### `AHW-B2` Portable widget contract closure + deferred-action split (`review_required`)
+
+Batch queue line (exact):
+
+- finish the portable widget contract by removing hidden Activity/userland assumptions and splitting broad deferred forwards into owned startup seams
+
+Batch scope:
+
+- Java Android terminal host only, plus authority docs needed to keep contract truth current
+- primary code root:
+  `android/terminal-host/app/src/main/java/uk/laurencegouws/terminal/**`
+- allowed docs:
+  `docs/todo/android/implementation.md`,
+  `docs/todo/android/ENGINEER_ENTRYPOINT.md`,
+  `docs/AGENT_HANDOFF.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_NAMING_CONTRACT.md`,
+  `app_architecture/platform/android/USERLAND_HOST_CONTRACT.md`
+
+Batch non-goals:
+
+- no terminal-core or shared-renderer changes
+- no behavior changes during extraction-only cuts
+- no app-shell UI redesign
+- no debug-view UI resurrection
+- no broad rename sweep
+- no ASF operator-evidence churn unless new evidence arrives
+
+Batch super-gate:
+
+- `InputCallbacks` does not cast `Context` to `ShellInputView.Host`; input host ownership is explicit
+- `WidgetAssembly.Host` no longer imports `UserlandReadinessState` or
+  `UserlandInstallState` directly unless Architect explicitly accepts a better
+  documented exception
+- `ProductHostStartupBundle` aggregates owner-aligned `*StartupForwards` (or
+  equivalent) as startup-order glue only, not a second activity backbone
+- `ZideActivity` remains wiring/entrypoint only after the split
+- docs reflect the final ownership shape
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass at final seam boundary
+
+Internal milestone cadence:
+
+- Engineer executes `AHW2-M1` through `AHW2-M5` sequentially.
+- Do not stop for architect review between internal milestones.
+- Mark each internal milestone complete in this file as it lands.
+- Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
+  the `AHW-B2` super-gate is reached.
+
+### `AHW2-M1` Explicit input host contract (`completed_in_batch`)
+
+Queue line (exact):
+
+- remove hidden ShellInputView.Host casts from input assembly callbacks
+
+Scope:
+
+- `host/input/InputCallbacks.java`
+- `host/input/InputAssembly.java`
+- `ZideActivity.java`
+- directly connected docs
+
+Tasks:
+
+- [x] pass `ShellInputView.Host` as an explicit constructor dependency instead of deriving it from `Context`
+- [x] keep `Context` limited to Android view construction/service access
+- [x] correct misleading comments that imply application context is valid where a shell input host is also required
+- [x] compile debug + release after the cut
+
+Progress checkpoint:
+
+- `Milestone: AHW2-M1 completed_in_batch`
+- `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
+- `Blocked by Archtect review needed: false`
+
+Acceptance:
+
+- no `(ShellInputView.Host) harnessContext` cast remains
+- another harness can provide context and shell-input host independently
+- behavior is unchanged for current `ZideActivity`
+
+Drift:
+
+- moving input behavior into `ZideActivity`
+- changing IME/keyboard semantics while fixing the contract shape
+
+### `AHW2-M2` Shell-state presentation snapshot boundary (`completed_in_batch`)
+
+Queue line (exact):
+
+- replace widget assembly userland value imports with a harness-owned shell-state snapshot seam
+
+Scope:
+
+- `host/ui/WidgetAssembly.java`
+- `host/userland/ShellStateBridge.java`
+- `host/userland/ShellStateCallbacks.java`
+- `userland/ShellStatePresenter.java` only if needed for the snapshot boundary
+- `USERLAND_HOST_CONTRACT.md`
+
+Tasks:
+
+- [x] define a small harness-owned snapshot/adapter type for shell-state presentation, or document why the existing userland values are the correct product state boundary
+- [x] remove direct `UserlandReadinessState` / `UserlandInstallState` imports from `WidgetAssembly.Host` if the snapshot path is viable
+- [x] keep userland package free of widget/surface/controller dependencies
+- [x] compile debug + release after the cut
+
+Progress checkpoint:
+
+- `Milestone: AHW2-M2 completed_in_batch`
+- `Progress delta: ShellPresentationHostInputs in host.userland bundles suppliers; WidgetAssembly.Host exposes shellPresentationHostInputs(); USERLAND_HOST_CONTRACT.md updated`
+- `Validation: same compile gates as AHW2-M1 (pass)`
+- `Blocked by Archtect review needed: false`
+
+Acceptance:
+
+- widget assembly no longer requires userland package types for presentation-only shell state, unless an explicit documented exception is accepted in the same wave
+- shell-state behavior and readiness blocker presentation remain unchanged
+
+Drift:
+
+- inventing duplicate readiness/install truth
+- moving userland install policy into widget/chrome code
+
+### `AHW2-M3` Deferred action ownership split (`completed_in_batch`)
+
+Queue line (exact):
+
+- split ProductHostDeferredActions into owner-aligned startup-forwarding seams or narrow its documented contract
+
+Scope:
+
+- `host/ui/ProductHostStartupBundle.java` (replaces `ProductHostDeferredActions.java`)
+- `ZideActivity.java`
+- affected `host/runtime`, `host/surface`, `host/session`, `host/input`, and
+  `host/userland` assembly callback construction
+- `ANDROID_JAVA_HOST_STRUCTURE.md`
+
+Tasks:
+
+- [x] classify each deferred forward by owner domain: runtime, frame loop, surface, session/userland, input, chrome/status
+- [x] split into smaller owner-aligned seams where the split reduces coupling without adding pass-through noise
+- [x] if a forward must remain centralized for startup-order reasons, document why it is startup-order glue rather than product policy
+- [x] compile debug + release after each coherent split
+
+Progress checkpoint:
+
+- `Milestone: AHW2-M3 completed_in_batch`
+- `Progress delta: RuntimeStartupForwards, FrameLoopStartupForwards, SurfaceStartupForwards, UserlandSessionStartupForwards, InputChromeStartupForwards, StatusTelemetryStartupForwards, WorkflowInstallStartupGlue; ProductHostStartupBundle aggregates; ProductHostDeferredActions removed`
+- `Validation: same compile gates as AHW2-M1 (pass)`
+- `Blocked by Archtect review needed: false`
+
+Acceptance:
+
+- no single broad helper becomes the new Activity backbone
+- startup null-guard behavior remains stable
+- docs identify the remaining seam owner and next pressure, if any
+
+Drift:
+
+- reintroducing null-guard methods directly on `ZideActivity`
+- creating one-method relay classes with no ownership gain
+- changing startup order unless explicitly required and validated
+
+### `AHW2-M4` Harness/widget naming cleanup for B2 seams (`completed_in_batch`)
+
+Queue line (exact):
+
+- normalize only naming and docs touched by AHW2-M1 through AHW2-M3
+
+Scope:
+
+- files touched by `AHW2-M1` through `AHW2-M3`
+- `ANDROID_JAVA_HOST_STRUCTURE.md`
+- `ANDROID_JAVA_NAMING_CONTRACT.md`
+
+Tasks:
+
+- [x] remove misleading `Activity or application context` wording where a narrower contract is required
+- [x] keep `harnessContext` reserved for context-only dependencies
+- [x] update file audit pressure rows for changed seams
+- [x] avoid broad mechanical renames outside touched paths
+
+Progress checkpoint:
+
+- `Milestone: AHW2-M4 completed_in_batch`
+- `Progress delta: structure + naming contracts updated for B2 seams; ENGINEER_ENTRYPOINT required-fixes section points to AHW-B2 resolution`
+- `Validation: docs-only slice; compile unchanged from M3 (pass)`
+- `Blocked by Archtect review needed: false`
+
+Acceptance:
+
+- code and docs use the same vocabulary for context, shell input host, shell-state snapshot, and deferred startup forwarding
+- no behavior changes are hidden in naming/doc commits
+
+### `AHW2-M5` Batch validation + review packet (`completed_in_batch`)
+
+Queue line (exact):
+
+- validate AHW-B2 end-to-end and publish the architect review packet
+
+Scope:
+
+- final docs checkpoint plus validation commands
+- no new behavior cuts after validation starts unless fixing validation failure
+
+Tasks:
+
+- [x] run required validation commands
+- [x] update this queue with completed internal milestone checkpoints
+- [x] update handoff only if the batch is ready for Architect review or a hard blocker requires refocus
+- [x] report final review packet with changed files, commits, validation, risks, and exact review questions
+
+Progress checkpoint:
+
+- `Milestone: AHW2-M5 completed_in_batch`
+- `Progress delta: AHW-B2 super-gate; engineer review packet in session response`
+- `Validation: see VALIDATION block in engineer response`
+- `Blocked by Archtect review needed: true` (super-gate)
+
+Acceptance:
+
+- debug compile pass
+- release compile pass
+- deploy pass when device is available
+- `AndroidRuntime:E` smoke pass when device is available
 - cold start smoke pass when device is available
 - `Blocked by Archtect review needed: true` only at super-gate or real blocker
 
