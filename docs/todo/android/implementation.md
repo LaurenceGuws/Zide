@@ -284,6 +284,10 @@ Milestone gate contract (mandatory when manager/architect lane is active):
     action-mode state, long constant prefixes, and finish-sync typo
     `shouldfinishSelectionActionMode` -> `shouldFinishSelectionActionMode`)
     without semantic changes.
+  - Completed: `SelectionController` action-mode lifecycle flow reduced one-hop
+    helper churn by inlining single-call wrappers for floating action-mode
+    start, create callback menu setup, invalidate path, and explicit finish
+    detach while preserving behavior.
     - Next: resume primary Java cleanup under Active TODO item 1 by executing a
       behavior-preserving `selection/SelectionController.java` pressure-reduction
       wave focused on action-mode lifecycle internals (reduce tiny one-hop

@@ -782,31 +782,21 @@ public final class SelectionController {
             invalidateSelectionActionMode(true);
             return;
         }
-        final ActionMode mode = startFloatingSelectionActionMode();
+        final ActionMode mode = host.productSurfaceContainer().startActionMode(
+                buildSelectionFloatingActionModeCallbacks(),
+                SELECTION_FLOATING_ACTION_MODE_TYPE);
         selectionActionMode = mode;
         invalidateSelectionActionMode(false);
     }
 
-    private ActionMode startFloatingSelectionActionMode() {
-        return requestSelectionFloatingActionModeOnContainer(host.productSurfaceContainer());
-    }
-
-    private ActionMode requestSelectionFloatingActionModeOnContainer(FrameLayout container) {
-        return container.startActionMode(
-                buildSelectionFloatingActionModeCallbacks(), SELECTION_FLOATING_ACTION_MODE_TYPE);
-    }
-
     private void invalidateSelectionActionMode(boolean invalidateView) {
-        if (!hasSelectionActionMode()) {
+        final ActionMode mode = selectionActionMode;
+        if (mode == null) {
             return;
         }
-        invalidateSelectionActionModeContentAndView(invalidateView);
-    }
-
-    private void invalidateSelectionActionModeContentAndView(boolean invalidateView) {
-        selectionActionMode.invalidateContentRect();
+        mode.invalidateContentRect();
         if (invalidateView) {
-            selectionActionMode.invalidate();
+            mode.invalidate();
         }
     }
 
@@ -814,7 +804,8 @@ public final class SelectionController {
         return new ActionMode.Callback2() {
             @Override
             public boolean onCreateActionMode(ActionMode mode, Menu menu) {
-                return onSelectionFloatingActionModeCreated(menu);
+                installSelectionCopyMenuItem(menu);
+                return true;
             }
 
             @Override
@@ -844,11 +835,6 @@ public final class SelectionController {
             return false;
         }
         executeSelectionToolbarCopy(mode);
-        return true;
-    }
-
-    private boolean onSelectionFloatingActionModeCreated(Menu menu) {
-        installSelectionCopyMenuItem(menu);
         return true;
     }
 
@@ -926,10 +912,6 @@ public final class SelectionController {
         if (mode == null) {
             return;
         }
-        detachSelectionActionModeForExplicitFinish(mode);
-    }
-
-    private void detachSelectionActionModeForExplicitFinish(ActionMode mode) {
         selectionActionMode = null;
         setSuppressSelectionClearOnActionModeDestroy(true);
         mode.finish();
