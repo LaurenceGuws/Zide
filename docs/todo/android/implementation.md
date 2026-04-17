@@ -2360,7 +2360,7 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `AHW-B10` super-gate is reached.
 
-### `AHW10-M1` App-shell state seam audit (`pending`)
+### `AHW10-M1` App-shell state seam audit (`completed`)
 
 Queue line (exact):
 
@@ -2371,6 +2371,17 @@ Acceptance:
 - list every mapping callsite and state owner (`AppShellNavigation`, `AppShellViewState`, `ViewModeController`)
 - identify dead/unused helpers and duplicated state projections
 - no behavior change required in this audit slice
+
+Progress delta (audit snapshot before consolidation):
+
+- **Mapping callsites:** `WidgetAssembly.assemble` →
+  `ProductTerminalSlotShellMapping.shellViewIdForTerminalSlot` for `AppShellNavigation`
+  construction; `ViewModeController.applyCurrentViewMode` → same mapping again (redundant
+  `checkActiveProductTerminalSlot`); `AppShellViewState.productTerminalDefault(TerminalWidgetSlotId)`
+  invoked mapping but had **no callers** (dead surface).
+- **Owners:** `AppShellNavigation` holds `activeShellView` + `activeViewState()`;
+  `ViewModeController` re-derived shell view from slot on every apply; roles overlapped with
+  navigation owner.
 
 ### `AHW10-M2` Mapping consumption consolidation (`pending`)
 
