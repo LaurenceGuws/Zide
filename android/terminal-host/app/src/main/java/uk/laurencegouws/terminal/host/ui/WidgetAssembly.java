@@ -142,7 +142,41 @@ public final class WidgetAssembly {
     public static Result assemble(Host host) {
         final ViewModeController[] terminalViewModeControllerRef = new ViewModeController[1];
         final SurfaceWidgetController[] surfaceWidgetControllerRef = new SurfaceWidgetController[1];
-        final ChromeController terminalChromeController = new ChromeController(
+        final ChromeController terminalChromeController = createChromeController(
+                host,
+                terminalViewModeControllerRef);
+
+        final ViewModeController terminalViewModeController = createViewModeController(
+                host,
+                terminalChromeController);
+        terminalViewModeControllerRef[0] = terminalViewModeController;
+
+        final SurfaceWidgetAssembly.Result surfaceWidgetAssembly = assembleSurfaceWidget(
+                host,
+                surfaceWidgetControllerRef);
+        surfaceWidgetControllerRef[0] = surfaceWidgetAssembly.surfaceWidgetController;
+        host.terminalScrollOverlay().setHost(surfaceWidgetAssembly.surfaceWidgetController);
+
+        final ShellStateBridge productShellStateHostBridge = createShellStateHostBridge(
+                host,
+                surfaceWidgetAssembly);
+        final ShellStatePresenter shellStatePresenter =
+                new ShellStatePresenter(productShellStateHostBridge);
+
+        return new Result(
+                productShellStateHostBridge,
+                shellStatePresenter,
+                terminalChromeController,
+                terminalViewModeController,
+                surfaceWidgetAssembly.surfaceHostBridge,
+                surfaceWidgetAssembly.surfaceHostController,
+                surfaceWidgetAssembly.surfaceWidgetController);
+    }
+
+    private static ChromeController createChromeController(
+            Host host,
+            ViewModeController[] terminalViewModeControllerRef) {
+        return new ChromeController(
                 ChromeFactory.createChromeHostBridge(
                         host.activity(),
                         host.rootView(),
@@ -169,8 +203,12 @@ public final class WidgetAssembly {
                                 host::assistAltButton,
                                 host::sendDirectText,
                                 host::updateStatus)));
+    }
 
-        final ViewModeController terminalViewModeController = UiFactory.createViewModeController(
+    private static ViewModeController createViewModeController(
+            Host host,
+            ChromeController terminalChromeController) {
+        return UiFactory.createViewModeController(
                 host.productView(),
                 host.debugView(),
                 host.terminalScrollOverlay(),
@@ -184,37 +222,30 @@ public final class WidgetAssembly {
                         host::notifyVisibleViewport,
                         host::refreshScrollOverlay,
                         host::refreshUserlandSession));
-        terminalViewModeControllerRef[0] = terminalViewModeController;
+    }
 
-        final SurfaceWidgetAssembly.Result surfaceWidgetAssembly = SurfaceWidgetAssembly.assemble(
+    private static SurfaceWidgetAssembly.Result assembleSurfaceWidget(
+            Host host,
+            SurfaceWidgetController[] surfaceWidgetControllerRef) {
+        return SurfaceWidgetAssembly.assemble(
                 host.selectionController(),
                 host.GestureStateController(),
                 createSurfaceWidgetAssemblyCallbacks(host, surfaceWidgetControllerRef));
-        surfaceWidgetControllerRef[0] = surfaceWidgetAssembly.surfaceWidgetController;
-        host.terminalScrollOverlay().setHost(surfaceWidgetAssembly.surfaceWidgetController);
+    }
 
-        final ShellStateBridge productShellStateHostBridge =
-                UiFactory.createShellStateHostBridge(
-                        host.productReadinessBlocker(),
-                        host.terminalScrollOverlay(),
-                        host.productReadinessTitle(),
-                        host.productReadinessDetail(),
-                        host.productReadinessRetryButton(),
-                        new ShellStateCallbacks(
-                                host::currentReadinessState,
-                                host::currentInstallState,
-                                surfaceWidgetAssembly.surfaceHostBridge::currentSurfaceView));
-        final ShellStatePresenter ShellStatePresenter =
-                new ShellStatePresenter(productShellStateHostBridge);
-
-        return new Result(
-                productShellStateHostBridge,
-                ShellStatePresenter,
-                terminalChromeController,
-                terminalViewModeController,
-                surfaceWidgetAssembly.surfaceHostBridge,
-                surfaceWidgetAssembly.surfaceHostController,
-                surfaceWidgetAssembly.surfaceWidgetController);
+    private static ShellStateBridge createShellStateHostBridge(
+            Host host,
+            SurfaceWidgetAssembly.Result surfaceWidgetAssembly) {
+        return UiFactory.createShellStateHostBridge(
+                host.productReadinessBlocker(),
+                host.terminalScrollOverlay(),
+                host.productReadinessTitle(),
+                host.productReadinessDetail(),
+                host.productReadinessRetryButton(),
+                new ShellStateCallbacks(
+                        host::currentReadinessState,
+                        host::currentInstallState,
+                        surfaceWidgetAssembly.surfaceHostBridge::currentSurfaceView));
     }
 
     private static void installSurfaceGestureHost(

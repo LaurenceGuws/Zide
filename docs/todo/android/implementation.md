@@ -267,6 +267,14 @@ Milestone gate contract (mandatory when manager/architect lane is active):
     (`showViewIfReady`, `showDebugViewIfReady`,
     `createSurfaceWidgetAssemblyCallbacks`,
     `addSurfaceHolderCallbackIfPresent`) while preserving behavior and ownership.
+  - Completed: `ZideActivity` callback-constructor lambdas now reuse named
+    guarded actions for runtime/session/surface flows
+    (`refreshShellStateIfReady`, `refreshDebugStatusSurfaceIfReady`,
+    `handleShellStateEventIfReady`, `applyInstallStateIfReady`,
+    `restartSessionIfReady`, `showDebugViewIfReady`,
+    `notifyVisibleViewportIfReady`, `refreshUserlandSessionIfReady`,
+    `stopFrameLoopIfReady`, `pauseSurfaceIfReady`, `resumeSurfaceIfReady`) to
+    reduce duplicated null-guard branches without changing ownership.
     - Next: resume primary Java cleanup under Active TODO item 1 by executing a
       behavior-preserving callback-constructor pressure reduction wave in
       `host/ui/WidgetAssembly.java` host wiring (remove relay-only callback

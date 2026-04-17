@@ -466,9 +466,7 @@ public final class ZideActivity extends Activity
 
             @Override
             public void handleShellStateEvent(String statusLabel) {
-                if (terminalRuntimeController != null) {
-                    terminalRuntimeController.handleShellStateEvent(statusLabel);
-                }
+                handleShellStateEventIfReady(statusLabel);
             }
 
             @Override
@@ -493,16 +491,12 @@ public final class ZideActivity extends Activity
 
             @Override
             public void notifyVisibleViewport(String reason) {
-                if (surfaceHostController != null) {
-                    surfaceHostController.notifyVisibleViewport(reason);
-                }
+                notifyVisibleViewportIfReady(reason);
             }
 
             @Override
             public void refreshUserlandSession() {
-                if (userlandSessionCoordinator != null) {
-                    userlandSessionCoordinator.refreshAndApply(false);
-                }
+                refreshUserlandSessionIfReady();
             }
         };
     }
@@ -544,16 +538,8 @@ public final class ZideActivity extends Activity
                 StatusController::appendEvent,
                 StatusController::updateStatus,
                 this::setCurrentReadinessState,
-                () -> {
-                    if (terminalRuntimeController != null) {
-                        terminalRuntimeController.refreshShellState();
-                    }
-                },
-                () -> {
-                    if (terminalRuntimeController != null) {
-                        terminalRuntimeController.refreshDebugStatusSurface();
-                    }
-                },
+                this::refreshShellStateIfReady,
+                this::refreshDebugStatusSurfaceIfReady,
                 this::shouldRunFrameLoop,
                 this::tickFrameAndRefreshScrollOverlay);
     }
@@ -576,21 +562,9 @@ public final class ZideActivity extends Activity
                 packageStatusText,
                 this::setCurrentInstallState,
                 this::setCurrentReadinessState,
-                (installState, statusLabel) -> {
-                    if (terminalRuntimeController != null) {
-                        terminalRuntimeController.applyInstallState(installState, statusLabel);
-                    }
-                },
-                (eventName, statusLabel, logRefresh) -> {
-                    if (terminalRuntimeController != null) {
-                        terminalRuntimeController.restartSession(eventName, statusLabel, logRefresh);
-                    }
-                },
-                (eventName, statusLabel) -> {
-                    if (terminalViewModeController != null) {
-                        terminalViewModeController.showDebugView(eventName, statusLabel);
-                    }
-                });
+                this::applyInstallStateIfReady,
+                this::restartSessionIfReady,
+                this::showDebugViewIfReady);
     }
 
     private void assembleActivityLifecycleController() {
@@ -609,29 +583,10 @@ public final class ZideActivity extends Activity
                 () -> nativeLoadError,
                 StatusController::appendEvent,
                 StatusController::updateStatus,
-                () -> {
-                    if (productFrameLoopController != null) {
-                        productFrameLoopController.stop();
-                    }
-                },
-                () -> {
-                    if (userlandSessionCoordinator != null) {
-                        userlandSessionCoordinator.refreshAndApply(false);
-                    }
-                },
-                () -> {
-                    if (surfaceHostController != null) {
-                        surfaceHostController.onPause();
-                    }
-                },
-                (debugRecreateSurfaceOnce, debugResizeSurfaceOnce, debugStartShellOnce) -> {
-                    if (surfaceHostController != null) {
-                        surfaceHostController.onResume(
-                                debugRecreateSurfaceOnce,
-                                debugResizeSurfaceOnce,
-                                debugStartShellOnce);
-                    }
-                });
+                this::stopFrameLoopIfReady,
+                this::refreshUserlandSessionIfReady,
+                this::pauseSurfaceIfReady,
+                this::resumeSurfaceIfReady);
     }
 
     private void bindAndStartUiControllers() {
@@ -678,6 +633,78 @@ public final class ZideActivity extends Activity
     private void reevaluateFrameLoopIfReady() {
         if (productFrameLoopController != null) {
             productFrameLoopController.reevaluate();
+        }
+    }
+
+    private void refreshShellStateIfReady() {
+        if (terminalRuntimeController != null) {
+            terminalRuntimeController.refreshShellState();
+        }
+    }
+
+    private void refreshDebugStatusSurfaceIfReady() {
+        if (terminalRuntimeController != null) {
+            terminalRuntimeController.refreshDebugStatusSurface();
+        }
+    }
+
+    private void handleShellStateEventIfReady(String statusLabel) {
+        if (terminalRuntimeController != null) {
+            terminalRuntimeController.handleShellStateEvent(statusLabel);
+        }
+    }
+
+    private void applyInstallStateIfReady(UserlandInstallState installState, String statusLabel) {
+        if (terminalRuntimeController != null) {
+            terminalRuntimeController.applyInstallState(installState, statusLabel);
+        }
+    }
+
+    private void restartSessionIfReady(String eventName, String statusLabel, boolean logRefresh) {
+        if (terminalRuntimeController != null) {
+            terminalRuntimeController.restartSession(eventName, statusLabel, logRefresh);
+        }
+    }
+
+    private void showDebugViewIfReady(String eventName, String statusLabel) {
+        if (terminalViewModeController != null) {
+            terminalViewModeController.showDebugView(eventName, statusLabel);
+        }
+    }
+
+    private void notifyVisibleViewportIfReady(String reason) {
+        if (surfaceHostController != null) {
+            surfaceHostController.notifyVisibleViewport(reason);
+        }
+    }
+
+    private void stopFrameLoopIfReady() {
+        if (productFrameLoopController != null) {
+            productFrameLoopController.stop();
+        }
+    }
+
+    private void refreshUserlandSessionIfReady() {
+        if (userlandSessionCoordinator != null) {
+            userlandSessionCoordinator.refreshAndApply(false);
+        }
+    }
+
+    private void pauseSurfaceIfReady() {
+        if (surfaceHostController != null) {
+            surfaceHostController.onPause();
+        }
+    }
+
+    private void resumeSurfaceIfReady(
+            boolean debugRecreateSurfaceOnce,
+            boolean debugResizeSurfaceOnce,
+            boolean debugStartShellOnce) {
+        if (surfaceHostController != null) {
+            surfaceHostController.onResume(
+                    debugRecreateSurfaceOnce,
+                    debugResizeSurfaceOnce,
+                    debugStartShellOnce);
         }
     }
 
