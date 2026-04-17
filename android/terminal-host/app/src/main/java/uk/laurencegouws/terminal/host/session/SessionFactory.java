@@ -5,11 +5,10 @@ import java.util.function.Consumer;
 import java.util.function.IntFunction;
 import java.util.function.IntSupplier;
 
-import uk.laurencegouws.terminal.host.userland.SessionBridge;
-import uk.laurencegouws.terminal.host.userland.SessionCallbacks;
 import uk.laurencegouws.terminal.session.ShellSessionController;
 import uk.laurencegouws.terminal.userland.UserlandReadinessState;
 import uk.laurencegouws.terminal.userland.UserlandRelease;
+import uk.laurencegouws.terminal.userland.UserlandSessionCoordinator;
 
 /** Session host assembly helpers. */
 public final class SessionFactory {
@@ -35,20 +34,43 @@ public final class SessionFactory {
                 nativeLoaded);
     }
 
-    public static SessionBridge createUserlandSessionHostBridge(
+    public static UserlandSessionCoordinator.Host createUserlandSessionHost(
             Consumer<String> appendEvent,
             IntFunction<String> sessionStartStatusLabel,
             Consumer<UserlandReadinessState> applyReadinessState,
             Runnable refreshShellState,
             Runnable refreshDebugStatusSurface,
             Consumer<String> updateStatus) {
-        return new SessionBridge(
-                new SessionCallbacks(
-                        appendEvent,
-                        sessionStartStatusLabel,
-                        applyReadinessState,
-                        refreshShellState,
-                        refreshDebugStatusSurface,
-                        updateStatus));
+        return new UserlandSessionCoordinator.Host() {
+            @Override
+            public void appendEvent(String event) {
+                appendEvent.accept(event);
+            }
+
+            @Override
+            public String sessionStartStatusLabel(int status) {
+                return sessionStartStatusLabel.apply(status);
+            }
+
+            @Override
+            public void applyReadinessState(UserlandReadinessState readinessState) {
+                applyReadinessState.accept(readinessState);
+            }
+
+            @Override
+            public void refreshShellState() {
+                refreshShellState.run();
+            }
+
+            @Override
+            public void refreshDebugStatusSurface() {
+                refreshDebugStatusSurface.run();
+            }
+
+            @Override
+            public void updateStatus(String statusLabel) {
+                updateStatus.accept(statusLabel);
+            }
+        };
     }
 }

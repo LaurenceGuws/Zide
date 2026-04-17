@@ -128,8 +128,11 @@ Required per-commit update format:
   directly from `ChromeFactory` without a relay adapter class.
 - latest cut removed `host/surface/SurfaceLifecycleCallbacks`; surface lifecycle
   callbacks now come directly from `SurfaceWidgetAssembly`.
+- latest cut removed `host/userland/SessionBridge` and
+  `host/userland/SessionCallbacks`; session host callbacks now come directly
+  from `SessionFactory` into `UserlandSessionCoordinator`.
 - adapter-depth checkpoint vs baseline `2a25e5ac`:
-  - `Callbacks`: `26 -> 21` files (`-601` lines, `-76` methods)
+  - `Callbacks`: `26 -> 19` files (`-857` lines, `-105` methods)
   - `Bridge`: `13 -> 9` files (`-471` lines, `-56` methods)
 - `userland/UserlandInstaller.java` (~425 lines) remains large but cohesive;
   keep watch-only unless behavior complexity expands.

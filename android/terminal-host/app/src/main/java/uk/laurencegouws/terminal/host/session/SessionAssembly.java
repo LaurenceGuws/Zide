@@ -7,7 +7,6 @@ import uk.laurencegouws.terminal.NativeBridge;
 import uk.laurencegouws.terminal.debug.NativeStatusLabels;
 import uk.laurencegouws.terminal.host.runtime.FrameLoopController;
 import uk.laurencegouws.terminal.host.runtime.RuntimeFactory;
-import uk.laurencegouws.terminal.host.userland.SessionBridge;
 import uk.laurencegouws.terminal.userland.UserlandReadinessState;
 import uk.laurencegouws.terminal.userland.UserlandPolicy;
 import uk.laurencegouws.terminal.userland.UserlandRelease;
@@ -47,17 +46,17 @@ public final class SessionAssembly {
     /** Immutable assembled session/runtime construction result. */
     public static final class Result {
         public final uk.laurencegouws.terminal.session.ShellSessionController shellSessionController;
-        public final SessionBridge userlandSessionHostBridge;
+        public final UserlandSessionCoordinator.Host userlandSessionHost;
         public final UserlandSessionCoordinator userlandSessionCoordinator;
         public final FrameLoopController frameLoopController;
 
         private Result(
                 uk.laurencegouws.terminal.session.ShellSessionController shellSessionController,
-                SessionBridge userlandSessionHostBridge,
+                UserlandSessionCoordinator.Host userlandSessionHost,
                 UserlandSessionCoordinator userlandSessionCoordinator,
                 FrameLoopController frameLoopController) {
             this.shellSessionController = shellSessionController;
-            this.userlandSessionHostBridge = userlandSessionHostBridge;
+            this.userlandSessionHost = userlandSessionHost;
             this.userlandSessionCoordinator = userlandSessionCoordinator;
             this.frameLoopController = frameLoopController;
         }
@@ -76,8 +75,8 @@ public final class SessionAssembly {
                         host::nativeRestartSession,
                         host::nativePollSession,
                         host::nativeIsSessionAlive);
-        final SessionBridge userlandSessionHostBridge =
-                SessionFactory.createUserlandSessionHostBridge(
+        final UserlandSessionCoordinator.Host userlandSessionHost =
+                SessionFactory.createUserlandSessionHost(
                         host::appendEvent,
                         NativeStatusLabels::sessionStartStatusLabel,
                         host::applyReadinessState,
@@ -85,7 +84,7 @@ public final class SessionAssembly {
                         host::refreshDebugStatusSurface,
                         host::updateStatus);
         final UserlandSessionCoordinator userlandSessionCoordinator =
-                new UserlandSessionCoordinator(shellSessionController, userlandSessionHostBridge);
+                new UserlandSessionCoordinator(shellSessionController, userlandSessionHost);
         final FrameLoopController frameLoopController =
                 RuntimeFactory.createFrameLoopController(
                         host.handler(),
@@ -93,7 +92,7 @@ public final class SessionAssembly {
                         host::tickFrame);
         return new Result(
                 shellSessionController,
-                userlandSessionHostBridge,
+                userlandSessionHost,
                 userlandSessionCoordinator,
                 frameLoopController);
     }

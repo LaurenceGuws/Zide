@@ -374,22 +374,25 @@ Audit decision:
     `host/surface/SurfaceLifecycleCallbacks.java`; `SurfaceWidgetAssembly` now
     provides `SurfaceCallbacks.Callbacks` directly at assembly time while
     preserving native surface lifecycle wiring and gesture/shell-state hooks.
+  - Completed: userland session adapter depth reduced by deleting
+    `host/userland/SessionBridge.java` and `host/userland/SessionCallbacks.java`;
+    `SessionFactory` now provides `UserlandSessionCoordinator.Host` directly,
+    preserving session poll/restart telemetry behavior.
   - Checkpoint (baseline `2a25e5ac` -> current): host adapter density dropped
     materially in callback/bridge tiers:
-    - `Callbacks`: files `26 -> 21` (`-5`), lines `2613 -> 2012` (`-601`),
-      methods `292 -> 216` (`-76`), forwarding methods `236 -> 161` (`-75`)
+    - `Callbacks`: files `26 -> 19` (`-7`), lines `2613 -> 1756` (`-857`),
+      methods `292 -> 187` (`-105`), forwarding methods `236 -> 132` (`-104`)
     - `Bridge`: files `13 -> 9` (`-4`), lines `1370 -> 899` (`-471`),
       methods `160 -> 104` (`-56`), forwarding methods `118 -> 64` (`-54`)
   - Completed: status adapter depth reduced by deleting
     `host/status/StatusBridge.java` and `host/status/StatusCallbacks.java`;
     `StatusViewAssembly` now composes `StatusController.Host` directly at
     assembly time while reusing existing host/readiness/surface contracts.
-    - Next: execute a behavior-preserving interaction adapter-depth reduction
-      wave by collapsing redundant bridge/callback pass-through tiers in
-      `host/interaction` (prioritize high-forwarding seams: selection + gesture),
-      with measurable net deletions and no owner-behavior migration.
-      For this wave, each cut must remove relay-only adapter surface while
-      preserving runtime behavior and keeping `SelectionController` monolithic.
+    - Next: architect checkpoint for the Android adapter-depth campaign using the
+      refreshed density delta and removed-tier list; after review, either
+      continue one final high-forwarding seam collapse or pivot to the next lane.
+      For this checkpoint, no new seam edits should start until the queue is
+      intentionally advanced.
       Naming pressure rule for this wave: when a touched method/class name can be
       made package-led without losing meaning, prefer dropping redundant
       `Terminal`/`Product` prefixes; keep those terms only where they disambiguate
