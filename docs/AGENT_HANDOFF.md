@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android harness/widget portability hardening** (`AHW`) — turns the refocus vision into enforceable code shape: Android Harness is the platform/app-shell canvas, Terminal Widget is the portable terminal consumer, and userland stays movable for future IDE/editor modes.
-- Active macro batch: `AHW-B5` — terminal widget host API slimming + tab-ready contract; no tab product behavior.
+- Completed macro batch (engineer): `AHW-B5` — host API slim + tab-ready contract docs; **architect review pending** at super-gate (`docs/todo/android/implementation.md`).
 - Prior closed/escalated: `AHW-B4` accepted; `AHW-B3` accepted; `AHW-B2` accepted; `AHW-B1` accepted; `ASF-M3` escalated remaining IME/assist and touch-gesture matrix rows to operator evidence; `ASF-M2`; `ASF-M1`; `AX-M5`; `AX-M4`
 - Active queue authority: `docs/todo/android/implementation.md`
 - Engineer entrypoint (dual mode): `docs/todo/android/ENGINEER_ENTRYPOINT.md`
@@ -24,8 +24,8 @@ Engineer session seed:
 
 - Read `docs/todo/android/ENGINEER_ENTRYPOINT.md`, then
   `docs/todo/android/implementation.md`, then this handoff file.
-- Execute only the macro batch marked `in_progress`: `AHW-B5`.
-- Stop at the `AHW-B5` super-gate and report the review packet.
+- After Architect accepts `AHW-B5`, read the queue for the next `in_progress` macro batch only.
+- Engineer stops at `AHW-B5` super-gate until Architect refocuses the queue.
 
 ## First Read Order
 
@@ -48,13 +48,12 @@ Engineer session seed:
 - Architect updates use: `Blocked by humain review needed: true|false`.
 - Engineer updates use: `Blocked by Archtect review needed: true|false`.
 
-## AHW-B5 Review Findings From AHW-B4
+## AHW-B5 outcomes (engineer; Architect acceptance pending)
 
-- `AHW-B4` is accepted: `TerminalWidgetCompositionAssembly` is the correct join owner for `InteractionAssembly.Result` + `WidgetAssembly.Result` into `TerminalWidgetInstance`.
-- `TerminalWidgetCompositionAssembly.Result` is acceptable as the current co-hosted harness surface because `ZideActivity` needs shell/chrome/view-mode refs plus the terminal widget instance. Do not expand it casually.
-- `WidgetAssembly.Result` must remain widget/chrome assembly output; it must not become the terminal-instance factory by itself.
-- `applyTerminalWidgetComposition` can stay on `ZideActivity` while it remains assignment-only wiring. Move it later only if policy appears or a smaller owner seam clearly reduces Activity pressure.
-- Next work is API slimming and contract definition only: do not implement tabs, tab persistence, or multi-instance product behavior.
+- `TerminalWidgetCompositionAssembly.compose` returns `TerminalWidgetInstance` only; `ZideActivity` assigns shell/chrome/view-mode from `WidgetAssembly.Result` next to compose (no duplicate composition `Result` type).
+- `ActivityViewBindings` centralizes app-shell view refs for `WidgetAssembly.Host` delegates.
+- Tab-ready multi-terminal **host** API is documented in `ANDROID_JAVA_HOST_STRUCTURE.md` (contract only); userland scope for multi-surface is noted in `USERLAND_HOST_CONTRACT.md`.
+- Do not implement tabs, tab persistence, or multi-instance product behavior without a new queue batch.
 
 ## Operator Evidence Escalation
 

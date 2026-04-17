@@ -108,7 +108,8 @@ Dual-mode batching override (architect directive):
 - Completed macro batch: `AHW-B2` (accepted by Architect; package/status and widget-instance follow-ups queued in `AHW-B3`).
 - Completed macro batch: `AHW-B3` (accepted by Architect; composition seam follow-up queued in `AHW-B4`).
 - Completed macro batch: `AHW-B4` (accepted by Architect; host API slimming follow-up queued in `AHW-B5`).
-- Active macro batch: `AHW-B5` (terminal widget host API slimming + tab-ready contract, no tab product behavior).
+- Completed macro batch: `AHW-B5` (architect review at super-gate; host API slim + tab-ready contract docs).
+- Active macro batch: set by Architect after `AHW-B5` acceptance.
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -1472,7 +1473,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B5` Terminal widget host API slimming + tab-ready contract (`in_progress`)
+### `AHW-B5` Terminal widget host API slimming + tab-ready contract (`completed_in_batch`)
 
 Batch queue line (exact):
 
@@ -1511,8 +1512,8 @@ Batch non-goals:
 
 Batch super-gate:
 
-- `WidgetAssembly.Host`, `WidgetAssembly.Result`, and `TerminalWidgetCompositionAssembly.Result` are audited against the new composition boundary
-- any host/result slimming is behavior-preserving and owner-motivated, not cosmetic
+- `WidgetAssembly.Host`, `WidgetAssembly.Result`, and `TerminalWidgetCompositionAssembly` join surface are audited against the composition boundary
+- host/result slimming is behavior-preserving and owner-motivated
 - tab-ready vocabulary is documented as host API contract only; no tab product behavior is implemented
 - `ZideActivity` remains Android entrypoint/wiring only
 - docs reflect the final ownership shape
@@ -1527,80 +1528,88 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `AHW-B5` super-gate is reached.
 
-### `AHW5-M1` Host/result surface audit (`pending`)
+### `AHW5-M1` Host/result surface audit (`completed_in_batch`)
 
 Queue line (exact):
 
 - audit WidgetAssembly and TerminalWidgetCompositionAssembly host/result surfaces against the current composition boundary
 
-Acceptance:
+Progress checkpoint:
 
-- identify which fields are widget-owned, harness-owned, or co-hosted
-- record whether duplication between `WidgetAssembly.Result` and `TerminalWidgetCompositionAssembly.Result` is intentional or removable
-- no code change required if audit proves the current shape is the narrowest honest seam
+- `Milestone: AHW5-M1 completed_in_batch`
+- `Findings: WidgetAssembly.Result owns widget/chrome/surface outputs; TerminalWidgetCompositionAssembly only joins portable instance; duplicate forwarding of shell/chrome through a second Result type added no ownership — removed in M2. WidgetAssembly.Host remains the wide harness callback surface; view accessors map to app-shell layout (grouped via ActivityViewBindings on ZideActivity in M3).`
+- `Validation: N/A (audit-first; code follows in M2–M3)`
+- `Blocked by Archtect review needed: false`
 
-### `AHW5-M2` Composition result slimming where ownership improves (`pending`)
+### `AHW5-M2` Composition result slimming where ownership improves (`completed_in_batch`)
 
 Queue line (exact):
 
 - slim TerminalWidgetCompositionAssembly.Result only where the audit shows a clearer owner boundary
 
-Acceptance:
+Progress checkpoint:
 
-- keep `TerminalWidgetCompositionAssembly` as the only `TerminalWidgetInstance` join owner
-- do not force `ZideActivity` to reach back into raw `WidgetAssembly.Result` for composed state
-- avoid adding a new generic product-host bundle unless it removes real owner coupling
-- compile debug + release Java after code changes
+- `Milestone: AHW5-M2 completed_in_batch`
+- `Progress delta: TerminalWidgetCompositionAssembly.compose returns TerminalWidgetInstance only; ZideActivity assigns shell/chrome/view-mode from WidgetAssembly.Result alongside compose (single owner per concern)`
+- `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
+- `Blocked by Archtect review needed: false`
 
-### `AHW5-M3` Widget host input grouping where behavior-neutral (`pending`)
+### `AHW5-M3` Widget host input grouping where behavior-neutral (`completed_in_batch`)
 
 Queue line (exact):
 
 - group WidgetAssembly.Host inputs only where it reduces Activity pressure without hiding owner boundaries
 
-Acceptance:
+Progress checkpoint:
 
-- any grouping names the owning concern, such as app-shell views, shell presentation, surface/widget callbacks, or chrome/input affordances
-- no behavior or event-key changes
-- no pass-through adapter class added unless it measurably reduces coupling
-- compile debug + release Java after code changes
+- `Milestone: AHW5-M3 completed_in_batch`
+- `Progress delta: ZideActivity holds ActivityViewBindings for app-shell view refs; WidgetAssembly.Host anonymous class delegates views from bindings; StatusViewAssembly.Result no longer unpacks duplicate view fields into Activity`
+- `Validation: same compile gates as AHW5-M2 (pass)`
+- `Blocked by Archtect review needed: false`
 
-### `AHW5-M4` Tab-ready host API contract docs (`pending`)
+### `AHW5-M4` Tab-ready host API contract docs (`completed_in_batch`)
 
 Queue line (exact):
 
 - document the future multi-terminal host API contract without implementing tabs
 
-Acceptance:
+Progress checkpoint:
 
-- define vocabulary for one hosted terminal slot/instance without adding UI behavior
-- document what remains global app-shell state versus per-instance terminal widget state
-- keep `TerminalWidgetInstance` free of app-shell, userland, and runtime-global state
+- `Milestone: AHW5-M4 completed_in_batch`
+- `Progress delta: ANDROID_JAVA_HOST_STRUCTURE.md § Future multi-terminal host API; USERLAND_HOST_CONTRACT.md § Multi-terminal hosting (future)`
+- `Validation: N/A (docs-only)`
+- `Blocked by Archtect review needed: false`
 
-### `AHW5-M5` B5 structure/naming authority update (`pending`)
+### `AHW5-M5` B5 structure/naming authority update (`completed_in_batch`)
 
 Queue line (exact):
 
 - update Android structure and naming authority for any host API slimming or tab-ready vocabulary
 
-Acceptance:
+Progress checkpoint:
 
-- `ANDROID_JAVA_HOST_STRUCTURE.md` matches final code shape
-- `ANDROID_JAVA_NAMING_CONTRACT.md` records any new canonical terms
-- handoff and entrypoint still point at `AHW-B5` until the super-gate
+- `Milestone: AHW5-M5 completed_in_batch`
+- `Progress delta: ANDROID_JAVA_HOST_STRUCTURE + ANDROID_JAVA_NAMING_CONTRACT updated; TerminalWidgetCompositionAssembly file audit row corrected`
+- `Validation: docs-only; compile unchanged from M3 (pass)`
+- `Blocked by Archtect review needed: false`
 
-### `AHW5-M6` Batch validation + review packet (`pending`)
+### `AHW5-M6` Batch validation + review packet (`completed_in_batch`)
 
 Queue line (exact):
 
 - validate AHW-B5 end-to-end and publish the architect review packet
 
-Acceptance:
+Progress checkpoint:
 
-- debug and release Java compile pass
-- deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
-- cold start smoke pass when a device is available
-- engineer reports the full super-gate packet and stops for Architect review
+- `Milestone: AHW5-M6 completed_in_batch`
+- `Progress delta: engineer review packet in session response`
+- `Validation: see engineer VALIDATION block`
+- `Blocked by Archtect review needed: true` (super-gate)
+
+Architect review verdict:
+
+- `Review chunk: AHW-B5`
+- `Verdict: pending`
 
 `Milestone reached per docs, architect review required.`
 

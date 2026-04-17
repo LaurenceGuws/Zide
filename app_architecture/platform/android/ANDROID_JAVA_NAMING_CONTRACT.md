@@ -74,10 +74,13 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
   callbacks, never cast from `Context`
 - use `TerminalWidgetInstance` for the harness-owned bundle of one terminal’s
   surface + selection + gesture seams; do not use it as a generic service locator
-- use `TerminalWidgetCompositionAssembly` to combine `InteractionAssembly.Result`
-  with `WidgetAssembly.Result` into `TerminalWidgetInstance`; keep
-  `WidgetAssembly.Result` as the widget/chrome assembly product — it is not the
-  terminal-instance factory by itself
+- use `TerminalWidgetCompositionAssembly.compose` to combine
+  `InteractionAssembly.Result` with `WidgetAssembly.Result` into
+  `TerminalWidgetInstance`; shell/chrome/view-mode outputs stay on
+  `WidgetAssembly.Result` — it is not the terminal-instance factory by itself
+- reserve **slot** / **per-instance** vocabulary for future multi-terminal
+  hosting described in `ANDROID_JAVA_HOST_STRUCTURE.md` (contract only; no tab
+  product behavior implied by the name alone)
 - do not include `Terminal` when package already scopes terminal host context
 - reserve `Product` only for user-facing product behavior distinctions
 - reserve `Host` for boundary context where needed; do not repeat it when the

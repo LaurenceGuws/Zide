@@ -20,3 +20,11 @@ Authority for how Java userland orchestration (`uk.laurencegouws.terminal.userla
 ## Future IDE/editor modes
 
 Alternate harnesses should implement the same callback shapes: supply `Context`/`Handler` where needed, map install/doctor/restart to host policy, and keep userland packages free of surface/widget/controller types.
+
+## Multi-terminal hosting (future)
+
+Per-terminal **tabs or split views** do not relocate userland orchestration into
+per-widget holders: readiness/install/session coordination remains a **single**
+harness concern unless a future milestone explicitly scopes userland per
+workspace. Widget-facing seams stay in `host` + `TerminalWidgetInstance`; this
+document does not change when the harness hosts multiple terminal surfaces.

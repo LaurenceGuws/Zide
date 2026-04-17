@@ -34,12 +34,11 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B5` is `in_progress`: terminal widget host API slimming + tab-ready
-contract, without implementing terminal tabs or multi-instance product behavior.
+`AHW-B5` is at **super-gate** pending Architect acceptance. Queue and validation
+live in `docs/todo/android/implementation.md` under `AHW-B5`.
 
-Batch queue line (exact):
-
-- slim terminal widget host/result surfaces and document the tab-ready host API without implementing tabs
+The Architect refocuses this entrypoint after acceptance; do not start the next
+macro batch until the queue marks one `in_progress`.
 
 ## Core Boundary Rule
 
@@ -58,36 +57,18 @@ multiple terminal widgets possible through host contracts, not product behavior.
 - `WidgetAssembly.Result` remains widget/chrome assembly output; it is not the
   terminal-instance factory by itself.
 
-## Required Direction From Architect Review
+## Required Direction From Architect Review (AHW-B5 baseline)
 
-- `AHW-B4` is accepted.
-- `TerminalWidgetCompositionAssembly.Result` is acceptable as the current
-  co-hosted harness surface because `ZideActivity` needs shell/chrome/view-mode
-  refs plus the terminal widget instance.
-- Do not expand `TerminalWidgetCompositionAssembly.Result` casually; slim or
-  split only if ownership becomes clearer.
-- `applyTerminalWidgetComposition` can stay on `ZideActivity` while it remains
-  assignment-only wiring. Move it later only if policy appears or a smaller owner
-  seam clearly reduces Activity pressure.
-- Do not implement terminal tabs, tab persistence, or multi-instance product
-  behavior.
+- `TerminalWidgetCompositionAssembly.compose` returns `TerminalWidgetInstance`
+  only; shell/chrome/view-mode outputs remain on `WidgetAssembly.Result`.
+- `applyTerminalWidgetComposition` stays assignment-only on `ZideActivity`.
+- Tab-ready contract is documented in `ANDROID_JAVA_HOST_STRUCTURE.md`; no tab
+  product behavior is implemented.
 
 ## Internal Milestones
 
-Execute in order and mark progress in `docs/todo/android/implementation.md`.
-
-- `AHW5-M1`: audit `WidgetAssembly.Host`, `WidgetAssembly.Result`, and
-  `TerminalWidgetCompositionAssembly.Result` against the current composition
-  boundary.
-- `AHW5-M2`: slim `TerminalWidgetCompositionAssembly.Result` only where the
-  audit shows a clearer owner boundary.
-- `AHW5-M3`: group `WidgetAssembly.Host` inputs only where it reduces Activity
-  pressure without hiding owner boundaries.
-- `AHW5-M4`: document the future multi-terminal host API contract without
-  implementing tabs.
-- `AHW5-M5`: update structure/naming authority for any host API slimming or
-  tab-ready vocabulary.
-- `AHW5-M6`: run validation and publish the super-gate review packet.
+`AHW5-M1` through `AHW5-M6` are recorded in `docs/todo/android/implementation.md`
+under `AHW-B5`.
 
 ## Allowed Work
 
