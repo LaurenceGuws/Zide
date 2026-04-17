@@ -13,6 +13,21 @@ import uk.laurencegouws.terminal.debug.AndroidDebugFormatter;
 
 /** Functional callback adapter for {@link SurfaceWidgetAssembly.Host}. */
 public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssembly.Host {
+    @FunctionalInterface
+    public interface NativeEventCallback {
+        void call(String event, long seq);
+    }
+
+    @FunctionalInterface
+    public interface NativeSurfaceEventCallback {
+        void call(String event, long seq, AndroidDebugFormatter.SurfaceEventSnapshot state);
+    }
+
+    @FunctionalInterface
+    public interface ReinstallSurfaceCallback {
+        void call(SurfaceView nextSurfaceView, SurfaceHolder.Callback2 callback);
+    }
+
     private final android.os.Handler handler;
     private final FrameLayout productSurfaceContainer;
     private final BooleanSupplier debugViewEnabled;
@@ -21,12 +36,12 @@ public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssemb
     private final Runnable refreshScrollOverlay;
     private final Consumer<String> appendEvent;
     private final Consumer<String> updateStatus;
-    private final SurfaceLifecycleCallbacks.NativeEventCallback callNative;
-    private final SurfaceLifecycleCallbacks.NativeSurfaceEventCallback callNativeWithSurfaceState;
+    private final NativeEventCallback callNative;
+    private final NativeSurfaceEventCallback callNativeWithSurfaceState;
     private final Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot;
     private final Consumer<String> handleShellStateEvent;
     private final Consumer<SurfaceView> installSurfaceGestureHost;
-    private final SurfaceLifecycleCallbacks.ReinstallSurfaceCallback reinstallSurfaceCallback;
+    private final ReinstallSurfaceCallback reinstallSurfaceCallback;
     private final Supplier<SurfaceHolder.Callback2> surfaceCallback;
     private final IntSupplier productViewportHeightPx;
     private final Runnable reevaluateFrameLoop;
@@ -40,12 +55,12 @@ public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssemb
             Runnable refreshScrollOverlay,
             Consumer<String> appendEvent,
             Consumer<String> updateStatus,
-            SurfaceLifecycleCallbacks.NativeEventCallback callNative,
-            SurfaceLifecycleCallbacks.NativeSurfaceEventCallback callNativeWithSurfaceState,
+            NativeEventCallback callNative,
+            NativeSurfaceEventCallback callNativeWithSurfaceState,
             Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot,
             Consumer<String> handleShellStateEvent,
             Consumer<SurfaceView> installSurfaceGestureHost,
-            SurfaceLifecycleCallbacks.ReinstallSurfaceCallback reinstallSurfaceCallback,
+            ReinstallSurfaceCallback reinstallSurfaceCallback,
             Supplier<SurfaceHolder.Callback2> surfaceCallback,
             IntSupplier productViewportHeightPx,
             Runnable reevaluateFrameLoop) {

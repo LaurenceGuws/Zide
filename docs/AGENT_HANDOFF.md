@@ -126,6 +126,8 @@ Required per-commit update format:
   contracts now flow directly from `ZideActivity` into `LifecycleController`.
 - latest cut removed `host/ui/ChromeCallbacks`; chrome callbacks now come
   directly from `ChromeFactory` without a relay adapter class.
+- latest cut removed `host/surface/SurfaceLifecycleCallbacks`; surface lifecycle
+  callbacks now come directly from `SurfaceWidgetAssembly`.
 - adapter-depth checkpoint vs baseline `2a25e5ac`:
   - `Callbacks`: `26 -> 21` files (`-601` lines, `-76` methods)
   - `Bridge`: `13 -> 9` files (`-471` lines, `-56` methods)

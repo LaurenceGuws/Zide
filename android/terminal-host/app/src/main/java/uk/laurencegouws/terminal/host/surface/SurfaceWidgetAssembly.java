@@ -2,6 +2,7 @@ package uk.laurencegouws.terminal.host.surface;
 
 import android.view.SurfaceHolder;
 
+import uk.laurencegouws.terminal.NativeBridge;
 import uk.laurencegouws.terminal.gesture.GestureStateController;
 import uk.laurencegouws.terminal.host.ui.UiFactory;
 import uk.laurencegouws.terminal.selection.SelectionController;
@@ -76,20 +77,7 @@ public final class SurfaceWidgetAssembly {
                 new SurfaceCallbacks(
                         host.handler(),
                         host.productSurfaceContainer(),
-                        new SurfaceLifecycleCallbacks(
-                                host::debugViewEnabled,
-                                host::currentImeVisible,
-                                host::shouldRunFrameLoop,
-                                host::refreshScrollOverlay,
-                                host::appendEvent,
-                                host::updateStatus,
-                                host::callNative,
-                                host::callNativeWithSurfaceState,
-                                host::currentSurfaceStateSnapshot,
-                                host::handleShellStateEvent,
-                                host::installSurfaceGestureHost,
-                                host::reinstallSurfaceCallback,
-                                () -> widgetRef[0])));
+                        createSurfaceCallbacks(host, widgetRef)));
         final SurfaceController surfaceHostController = new SurfaceController(surfaceHostBridge);
         final SurfaceWidgetController surfaceWidgetController = UiFactory.createSurfaceWidgetController(
                 surfaceHostController,
@@ -102,5 +90,99 @@ public final class SurfaceWidgetAssembly {
                         host::reevaluateFrameLoop));
         widgetRef[0] = surfaceWidgetController;
         return new Result(surfaceHostBridge, surfaceHostController, surfaceWidgetController);
+    }
+
+    private static SurfaceCallbacks.Callbacks createSurfaceCallbacks(
+            Host host,
+            SurfaceWidgetController[] widgetRef) {
+        return new SurfaceCallbacks.Callbacks() {
+            @Override
+            public boolean debugViewEnabled() {
+                return host.debugViewEnabled();
+            }
+
+            @Override
+            public boolean currentImeVisible() {
+                return host.currentImeVisible();
+            }
+
+            @Override
+            public boolean shouldRunFrameLoop() {
+                return host.shouldRunFrameLoop();
+            }
+
+            @Override
+            public void refreshScrollOverlay() {
+                host.refreshScrollOverlay();
+            }
+
+            @Override
+            public void appendEvent(String event) {
+                host.appendEvent(event);
+            }
+
+            @Override
+            public void updateStatus(String statusLabel) {
+                host.updateStatus(statusLabel);
+            }
+
+            @Override
+            public void callNative(String event, long seq) {
+                host.callNative(event, seq);
+            }
+
+            @Override
+            public void callNativeWithSurfaceState(
+                    String event,
+                    long seq,
+                    uk.laurencegouws.terminal.debug.AndroidDebugFormatter.SurfaceEventSnapshot state) {
+                host.callNativeWithSurfaceState(event, seq, state);
+            }
+
+            @Override
+            public long nativeOnSurfaceAvailableBridge(SurfaceHolder holder, int width, int height) {
+                return NativeBridge.nativeOnSurfaceAvailableBridge(holder.getSurface(), width, height);
+            }
+
+            @Override
+            public long nativeOnSurfaceDestroyedBridge() {
+                return NativeBridge.nativeOnSurfaceDestroyedBridge();
+            }
+
+            @Override
+            public long nativeOnSurfaceRedrawNeededBridge() {
+                return NativeBridge.nativeOnSurfaceRedrawNeededBridge();
+            }
+
+            @Override
+            public long nativeOnVisibleViewportBridge(int width, int height, boolean imeVisible) {
+                return NativeBridge.nativeOnVisibleViewportBridge(width, height, imeVisible);
+            }
+
+            @Override
+            public uk.laurencegouws.terminal.debug.AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot() {
+                return host.currentSurfaceStateSnapshot();
+            }
+
+            @Override
+            public void handleShellStateEvent(String statusLabel) {
+                host.handleShellStateEvent(statusLabel);
+            }
+
+            @Override
+            public void installSurfaceGestureHost(android.view.SurfaceView nextSurfaceView) {
+                host.installSurfaceGestureHost(nextSurfaceView);
+            }
+
+            @Override
+            public void reinstallSurfaceCallback(android.view.SurfaceView nextSurfaceView, SurfaceHolder.Callback2 callback) {
+                host.reinstallSurfaceCallback(nextSurfaceView, callback);
+            }
+
+            @Override
+            public SurfaceHolder.Callback2 surfaceCallback() {
+                return widgetRef[0];
+            }
+        };
     }
 }

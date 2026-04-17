@@ -370,6 +370,10 @@ Audit decision:
   - Completed: chrome adapter depth reduced by deleting
     `host/ui/ChromeCallbacks.java`; `ChromeFactory` now provides
     `ChromeBridge.Callbacks` directly, removing another relay callback class.
+  - Completed: surface lifecycle adapter depth reduced by deleting
+    `host/surface/SurfaceLifecycleCallbacks.java`; `SurfaceWidgetAssembly` now
+    provides `SurfaceCallbacks.Callbacks` directly at assembly time while
+    preserving native surface lifecycle wiring and gesture/shell-state hooks.
   - Checkpoint (baseline `2a25e5ac` -> current): host adapter density dropped
     materially in callback/bridge tiers:
     - `Callbacks`: files `26 -> 21` (`-5`), lines `2613 -> 2012` (`-601`),
