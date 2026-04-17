@@ -1,7 +1,6 @@
 package uk.laurencegouws.terminal.host.ui;
 
 import uk.laurencegouws.terminal.host.interaction.InteractionAssembly;
-import uk.laurencegouws.terminal.userland.ShellStatePresenter;
 
 /**
  * Harness-owned composition seam for one terminal widget product instance.
@@ -12,52 +11,27 @@ import uk.laurencegouws.terminal.userland.ShellStatePresenter;
  * portable instance holder without making {@code WidgetAssembly.Result} act as a terminal-instance
  * factory by itself.</p>
  *
- * <p>Future multi-view hosting would compose additional {@link TerminalWidgetInstance} values
- * through the same kind of seam; this class does not implement tab product behavior.</p>
+ * <p>Harness shell/chrome/view-mode controllers remain on {@link WidgetAssembly.Result}; the
+ * activity reads them from that result alongside {@link #compose} output. Future multi-view
+ * hosting would call {@code compose} once per terminal slot; this class does not implement tab
+ * product behavior.</p>
  */
 public final class TerminalWidgetCompositionAssembly {
     private TerminalWidgetCompositionAssembly() {
     }
 
     /**
-     * Harness controllers co-hosted with the portable {@link TerminalWidgetInstance} (shell
-     * presentation + app-shell chrome).
+     * Joins interaction and widget assembly results into the portable {@link TerminalWidgetInstance}.
+     * Co-hosted chrome/shell/view-mode refs stay on {@code widget}; do not duplicate them here.
      */
-    public static final class Result {
-        public final ShellStatePresenter ShellStatePresenter;
-        public final ChromeController terminalChromeController;
-        public final ViewModeController terminalViewModeController;
-        public final TerminalWidgetInstance terminalWidget;
-
-        Result(
-                ShellStatePresenter shellStatePresenter,
-                ChromeController terminalChromeController,
-                ViewModeController terminalViewModeController,
-                TerminalWidgetInstance terminalWidget) {
-            this.ShellStatePresenter = shellStatePresenter;
-            this.terminalChromeController = terminalChromeController;
-            this.terminalViewModeController = terminalViewModeController;
-            this.terminalWidget = terminalWidget;
-        }
-    }
-
-    /**
-     * Joins interaction and widget assembly results into one {@link TerminalWidgetInstance} and
-     * the co-hosted harness chrome/shell controllers.
-     */
-    public static Result compose(
+    public static TerminalWidgetInstance compose(
             InteractionAssembly.Result interaction,
             WidgetAssembly.Result widget) {
-        final TerminalWidgetInstance terminalWidget = new TerminalWidgetInstance(
+        return new TerminalWidgetInstance(
                 interaction.selectionController,
                 interaction.GestureStateController,
                 widget.surfaceHostBridge,
                 widget.surfaceHostController,
                 widget.terminalSurfaceWidgetController);
-        return new Result(
-                widget.ShellStatePresenter,
-                widget.terminalChromeController,
-                widget.terminalViewModeController,
-                terminalWidget);
     }
 }

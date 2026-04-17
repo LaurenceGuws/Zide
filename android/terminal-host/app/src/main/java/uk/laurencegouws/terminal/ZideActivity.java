@@ -12,6 +12,7 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
+import uk.laurencegouws.terminal.scroll.ScrollOverlayView;
 import uk.laurencegouws.terminal.debug.AndroidDebugFormatter;
 import uk.laurencegouws.terminal.debug.StatusController;
 import uk.laurencegouws.terminal.debug.SurfaceStateSnapshotReader;
@@ -32,6 +33,7 @@ import uk.laurencegouws.terminal.host.session.SessionAssembly;
 import uk.laurencegouws.terminal.host.session.SessionAssemblyCallbacks;
 import uk.laurencegouws.terminal.host.status.StatusViewAssembly;
 import uk.laurencegouws.terminal.host.status.StatusViewCallbacks;
+import uk.laurencegouws.terminal.host.ui.ActivityViewBindings;
 import uk.laurencegouws.terminal.host.ui.TerminalWidgetCompositionAssembly;
 import uk.laurencegouws.terminal.host.ui.TerminalWidgetInstance;
 import uk.laurencegouws.terminal.host.ui.ProductHostStartupBundle;
@@ -47,7 +49,6 @@ import uk.laurencegouws.terminal.host.userland.WorkflowAssemblyCallbacks;
 import uk.laurencegouws.terminal.input.ShellInputView;
 import uk.laurencegouws.terminal.input.HardwareKeyboardController;
 import uk.laurencegouws.terminal.input.ImeFocusRecoveryController;
-import uk.laurencegouws.terminal.scroll.ScrollOverlayView;
 import uk.laurencegouws.terminal.selection.SelectionController;
 import uk.laurencegouws.terminal.userland.ShellStatePresenter;
 import uk.laurencegouws.terminal.userland.UserlandReadinessState;
@@ -75,19 +76,8 @@ public final class ZideActivity extends android.app.Activity
     private static final String nativeLoadError = NativeBridge.nativeLoadError();
 
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private TextView productReadinessTitle;
-    private TextView productReadinessDetail;
-    private Button productReadinessRetryButton;
-    private View rootView;
-    private View productView;
-    private View productReadinessBlocker;
-    private View drawerScrim;
-    private View drawerEdgeHotspot;
-    private View leftSidebar;
-    private FrameLayout productSurfaceContainer;
-    private ScrollOverlayView terminalScrollOverlay;
-    private Button assistCtrlButton;
-    private Button assistAltButton;
+    /** Shared layout/chrome view handles for widget host and other harness wiring. */
+    private ActivityViewBindings activityViewBindings;
     private ShellInputView shellInputView;
     private HardwareKeyboardController HardwareKeyboardController;
     private ImeFocusRecoveryController ImeFocusRecoveryController;
@@ -207,20 +197,8 @@ public final class ZideActivity extends android.app.Activity
     }
 
     private void initializeStatusAndViewControllers() {
+        activityViewBindings = ActivityViewBindings.from(this);
         final StatusViewAssembly.Result result = assembleStatusViewResult();
-        productReadinessTitle = result.productReadinessTitle;
-        productReadinessDetail = result.productReadinessDetail;
-        productReadinessRetryButton = result.productReadinessRetryButton;
-        rootView = result.rootView;
-        productView = result.productView;
-        productReadinessBlocker = result.productReadinessBlocker;
-        drawerScrim = result.drawerScrim;
-        drawerEdgeHotspot = result.drawerEdgeHotspot;
-        leftSidebar = result.leftSidebar;
-        productSurfaceContainer = result.productSurfaceContainer;
-        terminalScrollOverlay = result.terminalScrollOverlay;
-        assistCtrlButton = result.assistCtrlButton;
-        assistAltButton = result.assistAltButton;
         SurfaceStateSnapshotReader = result.SurfaceStateSnapshotReader;
         StatusController = result.StatusController;
         terminalViewportController = result.terminalViewportController;
@@ -246,7 +224,7 @@ public final class ZideActivity extends android.app.Activity
         return new InteractionCallbacks(
                 this,
                 handler,
-                productSurfaceContainer,
+                activityViewBindings.productSurfaceContainer,
                 () -> terminalViewportController.productViewportWidthPx(),
                 () -> terminalViewportController.productViewportHeightPx(),
                 hostStartup.runtime::stopScrollbackFlingIfReady,
@@ -270,7 +248,7 @@ public final class ZideActivity extends android.app.Activity
         return new InputCallbacks(
                 this,
                 this,
-                rootView,
+                activityViewBindings.rootView,
                 getSystemService(InputMethodManager.class),
                 () -> imeVisible,
                 this::setImeVisible,
@@ -281,12 +259,10 @@ public final class ZideActivity extends android.app.Activity
 
     private void applyTerminalWidgetComposition(InteractionAssembly.Result interaction) {
         final WidgetAssembly.Result widgetResult = WidgetAssembly.assemble(createWidgetHost(interaction));
-        final TerminalWidgetCompositionAssembly.Result composed =
-                TerminalWidgetCompositionAssembly.compose(interaction, widgetResult);
-        ShellStatePresenter = composed.ShellStatePresenter;
-        terminalChromeController = composed.terminalChromeController;
-        terminalViewModeController = composed.terminalViewModeController;
-        terminalWidget = composed.terminalWidget;
+        ShellStatePresenter = widgetResult.ShellStatePresenter;
+        terminalChromeController = widgetResult.terminalChromeController;
+        terminalViewModeController = widgetResult.terminalViewModeController;
+        terminalWidget = TerminalWidgetCompositionAssembly.compose(interaction, widgetResult);
     }
 
     private WidgetAssembly.Host createWidgetHost(final InteractionAssembly.Result interaction) {
@@ -313,67 +289,67 @@ public final class ZideActivity extends android.app.Activity
 
             @Override
             public View rootView() {
-                return rootView;
+                return activityViewBindings.rootView;
             }
 
             @Override
             public View productView() {
-                return productView;
+                return activityViewBindings.productView;
             }
 
             @Override
             public View productReadinessBlocker() {
-                return productReadinessBlocker;
+                return activityViewBindings.productReadinessBlocker;
             }
 
             @Override
             public View drawerScrim() {
-                return drawerScrim;
+                return activityViewBindings.drawerScrim;
             }
 
             @Override
             public View drawerEdgeHotspot() {
-                return drawerEdgeHotspot;
+                return activityViewBindings.drawerEdgeHotspot;
             }
 
             @Override
             public View drawerSidebar() {
-                return leftSidebar;
+                return activityViewBindings.leftSidebar;
             }
 
             @Override
             public FrameLayout productSurfaceContainer() {
-                return productSurfaceContainer;
+                return activityViewBindings.productSurfaceContainer;
             }
 
             @Override
             public ScrollOverlayView terminalScrollOverlay() {
-                return terminalScrollOverlay;
+                return activityViewBindings.terminalScrollOverlay;
             }
 
             @Override
             public TextView productReadinessTitle() {
-                return productReadinessTitle;
+                return activityViewBindings.productReadinessTitle;
             }
 
             @Override
             public TextView productReadinessDetail() {
-                return productReadinessDetail;
+                return activityViewBindings.productReadinessDetail;
             }
 
             @Override
             public Button productReadinessRetryButton() {
-                return productReadinessRetryButton;
+                return activityViewBindings.productReadinessRetryButton;
             }
 
             @Override
             public Button assistCtrlButton() {
-                return assistCtrlButton;
+                return activityViewBindings.assistCtrlButton;
             }
 
             @Override
             public Button assistAltButton() {
-                return assistAltButton;
+                return activityViewBindings.assistAltButton;
             }
 
             @Override
@@ -473,8 +449,8 @@ public final class ZideActivity extends android.app.Activity
                 StatusController::appendEvent,
                 StatusController::updateStatus,
                 () -> terminalWidget.surfaceBridge,
-                productReadinessBlocker,
-                terminalScrollOverlay,
+                activityViewBindings.productReadinessBlocker,
+                activityViewBindings.terminalScrollOverlay,
                 terminalWidget.selectionController,
                 ShellStatePresenter,
                 productFrameLoopController,
@@ -622,7 +598,7 @@ public final class ZideActivity extends android.app.Activity
         UiStartupAssembly.start(
                 createUiStartupCallbacks(),
                 () -> ReadinessBlockerStartup.bind(
-                        productReadinessRetryButton,
+                        activityViewBindings.productReadinessRetryButton,
                         () -> currentInstallState,
                         () -> currentReadinessState,
                         userlandWorkflowController::startInstall,
@@ -641,7 +617,7 @@ public final class ZideActivity extends android.app.Activity
                 terminalWidget.surfaceWidgetController,
                 ShellStatePresenter,
                 productFrameLoopController,
-                leftSidebar);
+                activityViewBindings.leftSidebar);
     }
 
     private void loadInitialReadinessState() {

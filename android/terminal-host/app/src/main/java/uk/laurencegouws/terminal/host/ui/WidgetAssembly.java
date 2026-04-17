@@ -108,9 +108,9 @@ public final class WidgetAssembly {
 
     /**
      * Immutable assembled widget host result (chrome, shell presentation bridge, surface hosts).
-     * Harness joins this with {@link InteractionAssembly.Result} in
-     * {@link TerminalWidgetCompositionAssembly} to build {@link TerminalWidgetInstance}; this type
-     * is not the terminal-instance factory on its own.
+     * {@link TerminalWidgetCompositionAssembly#compose} reads surface fields from this result to
+     * build {@link TerminalWidgetInstance}; shell/chrome/view-mode refs remain here — this type is
+     * not the terminal-instance factory on its own.
      */
     public static final class Result {
         public final AppShellNavigation appShellNavigation;
