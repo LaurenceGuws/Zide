@@ -1,6 +1,7 @@
 package uk.laurencegouws.terminal.host.ui;
 
 import android.app.Activity;
+import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.widget.Button;
@@ -151,16 +152,14 @@ public final class WidgetAssembly {
                         host.leftSidebar(),
                         ChromeFactory.createChromeHostCallbacks(
                                 host::debugViewEnabled,
-                                (eventName, statusLabel) -> {
-                                    if (terminalViewModeControllerRef[0] != null) {
-                                        terminalViewModeControllerRef[0].showView(eventName, statusLabel);
-                                    }
-                                },
-                                (eventName, statusLabel) -> {
-                                    if (terminalViewModeControllerRef[0] != null) {
-                                        terminalViewModeControllerRef[0].showDebugView(eventName, statusLabel);
-                                    }
-                                },
+                                (eventName, statusLabel) -> showViewIfReady(
+                                        terminalViewModeControllerRef,
+                                        eventName,
+                                        statusLabel),
+                                (eventName, statusLabel) -> showDebugViewIfReady(
+                                        terminalViewModeControllerRef,
+                                        eventName,
+                                        statusLabel),
                                 host::runPackageDoctor,
                                 host::appendEvent,
                                 host::imeVisible,
@@ -190,28 +189,7 @@ public final class WidgetAssembly {
         final SurfaceWidgetAssembly.Result surfaceWidgetAssembly = SurfaceWidgetAssembly.assemble(
                 host.selectionController(),
                 host.GestureStateController(),
-                new SurfaceWidgetAssemblyCallbacks(
-                        host.handler(),
-                        host.productSurfaceContainer(),
-                        host::debugViewEnabled,
-                        host::imeVisible,
-                        host::shouldRunFrameLoop,
-                        host::refreshScrollOverlay,
-                        host::appendEvent,
-                        host::updateStatus,
-                        host::callNative,
-                        host::callNativeWithSurfaceState,
-                        host::currentSurfaceStateSnapshot,
-                        host::handleShellStateEvent,
-                        nextSurfaceView -> installSurfaceGestureHost(nextSurfaceView, surfaceWidgetControllerRef),
-                        (nextSurfaceView, callback) -> {
-                            if (callback != null) {
-                                nextSurfaceView.getHolder().addCallback(callback);
-                            }
-                        },
-                        () -> surfaceWidgetControllerRef[0],
-                        host::productViewportHeightPx,
-                        host::reevaluateFrameLoop));
+                createSurfaceWidgetAssemblyCallbacks(host, surfaceWidgetControllerRef));
         surfaceWidgetControllerRef[0] = surfaceWidgetAssembly.surfaceWidgetController;
         host.terminalScrollOverlay().setHost(surfaceWidgetAssembly.surfaceWidgetController);
 
@@ -248,5 +226,56 @@ public final class WidgetAssembly {
         final GestureController productGestureController =
                 new GestureController(surfaceView, surfaceWidgetControllerRef[0]);
         productGestureController.install();
+    }
+
+    private static void showViewIfReady(
+            ViewModeController[] terminalViewModeControllerRef,
+            String eventName,
+            String statusLabel) {
+        final ViewModeController viewModeController = terminalViewModeControllerRef[0];
+        if (viewModeController != null) {
+            viewModeController.showView(eventName, statusLabel);
+        }
+    }
+
+    private static void showDebugViewIfReady(
+            ViewModeController[] terminalViewModeControllerRef,
+            String eventName,
+            String statusLabel) {
+        final ViewModeController viewModeController = terminalViewModeControllerRef[0];
+        if (viewModeController != null) {
+            viewModeController.showDebugView(eventName, statusLabel);
+        }
+    }
+
+    private static SurfaceWidgetAssemblyCallbacks createSurfaceWidgetAssemblyCallbacks(
+            Host host,
+            SurfaceWidgetController[] surfaceWidgetControllerRef) {
+        return new SurfaceWidgetAssemblyCallbacks(
+                host.handler(),
+                host.productSurfaceContainer(),
+                host::debugViewEnabled,
+                host::imeVisible,
+                host::shouldRunFrameLoop,
+                host::refreshScrollOverlay,
+                host::appendEvent,
+                host::updateStatus,
+                host::callNative,
+                host::callNativeWithSurfaceState,
+                host::currentSurfaceStateSnapshot,
+                host::handleShellStateEvent,
+                nextSurfaceView -> installSurfaceGestureHost(nextSurfaceView, surfaceWidgetControllerRef),
+                WidgetAssembly::addSurfaceHolderCallbackIfPresent,
+                () -> surfaceWidgetControllerRef[0],
+                host::productViewportHeightPx,
+                host::reevaluateFrameLoop);
+    }
+
+    private static void addSurfaceHolderCallbackIfPresent(
+            SurfaceView nextSurfaceView,
+            SurfaceHolder.Callback2 callback) {
+        if (callback != null) {
+            nextSurfaceView.getHolder().addCallback(callback);
+        }
     }
 }

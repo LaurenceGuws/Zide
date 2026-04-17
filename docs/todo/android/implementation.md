@@ -262,6 +262,11 @@ Milestone gate contract (mandatory when manager/architect lane is active):
   - Completed: widget host callback-constructor pressure dropped further by
     removing `host/ui/WidgetCallbacks.java`; `WidgetAssembly.Host` is now built
     directly from `ZideActivity` without an extra relay adapter class.
+  - Completed: `WidgetAssembly` callback fan-out readability improved by
+    extracting repeated null-guarded callback branches into named local helpers
+    (`showViewIfReady`, `showDebugViewIfReady`,
+    `createSurfaceWidgetAssemblyCallbacks`,
+    `addSurfaceHolderCallbackIfPresent`) while preserving behavior and ownership.
     - Next: resume primary Java cleanup under Active TODO item 1 by executing a
       behavior-preserving callback-constructor pressure reduction wave in
       `host/ui/WidgetAssembly.java` host wiring (remove relay-only callback
