@@ -75,7 +75,7 @@ Dual-mode batching override (architect directive):
 - Completed batch: `RF-M3` + `RF-M4` (macro gate: `RF-M4` architect review).
 - Completed campaign close gate: `RF-M5`.
 - Completed batch: `AX-M1` + `AX-M2` (architect review at `AX-M2` super-gate).
-- Next batch: `AX-M3` (matrix refresh; manual validation + docs only).
+- Completed milestone: `AX-M3` (stabilization matrix refresh; manual validation + docs only).
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -390,7 +390,7 @@ Progress checkpoint:
 
 ---
 
-### `AX-M3` Post-Hardening Stabilization Matrix Refresh (`pending`)
+### `AX-M3` Post-Hardening Stabilization Matrix Refresh (`completed`)
 
 Queue line (exact):
 
@@ -402,12 +402,23 @@ Scope:
 
 Tasks:
 
-- [ ] refresh `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md` with AX batch outcomes
-- [ ] record any remaining manual interactive gaps as explicit follow-up rows
+- [x] refresh `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md` with AX batch outcomes
+- [x] record any remaining manual interactive gaps as explicit follow-up rows
 
 Gate:
 
 - matrix refreshed with dated results and follow-up deltas
+
+Progress checkpoint:
+
+- `Milestone: AX-M3 completed`
+- `Queue line (exact): rerun stabilization matrix for input/surface lifecycle after AX hardening batch`
+- `Scope contract: docs-only matrix refresh; smoke commands recorded in RF_M5_STABILIZATION_MATRIX.md`
+- `Progress delta: added AX-M3 smoke baseline + AX code deltas per lane; interactive matrix rows explicitly still not run (device/operator follow-ups unchanged)`
+- `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E (pass); adb shell am force-stop + am start -W cold start (pass)`
+- `Blocked by Archtect review needed: false`
+
+`Milestone reached per docs, architect review required.`
 
 ## Guardrails
 
