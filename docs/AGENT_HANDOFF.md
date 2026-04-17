@@ -110,6 +110,9 @@ Required per-commit update format:
   but the dedicated `WidgetCallbacks` adapter has been removed.
 - `input/ShellInputView.java` (~545 lines) is now a top practical risk seam
   because it combines dense IME/hardware-key behavior with long methods.
+- `host/interaction` adapter depth is now a primary simplification target:
+  fresh audit shows several bridge/callback classes are near-100% forwarding
+  and can be collapsed without changing owner behavior.
 - `userland/UserlandInstaller.java` (~425 lines) remains large but cohesive;
   keep watch-only unless behavior complexity expands.
 - `host/surface/SurfaceController.java` and `host/ui/ChromeController.java`

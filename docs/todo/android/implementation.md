@@ -341,13 +341,17 @@ Audit decision:
     explicit phase helpers (`emitCursorMoveEscapes`, shared prefix/diff send,
     bounded compose-range replacement), reducing branch/loop density in
     `setSelection(...)` and `replaceComposition(...)` without semantic changes.
-    - Next: execute a behavior-preserving `input/ShellInputView.java`
-      complexity-risk reduction wave focused on IME/hardware-key correctness
-      seams (`onCreateInputConnection`, key mapping, and key-event handling)
-      with measurable method-size and branch-pressure reduction; avoid naming-only
-      changes and avoid cross-lane edits.
-      For this wave, each cut must reduce input-path complexity while preserving
-      runtime behavior and direct-input correctness.
+  - Completed: adapter-depth reduction began in the interaction seam by
+    collapsing `SelectionControllerFactory` relay wrappers: host contracts now
+    directly satisfy `SelectionInteractionBridge.Callbacks` and
+    `SelectionBridge.Callbacks`, removing large anonymous pass-through blocks
+    without behavior change.
+    - Next: execute a behavior-preserving interaction adapter-depth reduction
+      wave by collapsing redundant bridge/callback pass-through tiers in
+      `host/interaction` (prioritize high-forwarding seams: selection + gesture),
+      with measurable net deletions and no owner-behavior migration.
+      For this wave, each cut must remove relay-only adapter surface while
+      preserving runtime behavior and keeping `SelectionController` monolithic.
       Naming pressure rule for this wave: when a touched method/class name can be
       made package-led without losing meaning, prefer dropping redundant
       `Terminal`/`Product` prefixes; keep those terms only where they disambiguate
