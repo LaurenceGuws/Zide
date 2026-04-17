@@ -93,6 +93,8 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
 - construct product `AppShellNavigation` with `forProductTerminalSlot`; use
   `applyProductTerminalShellViewActive` on view-mode apply instead of invoking
   `ProductTerminalSlotShellMapping` again on hot paths
+- `AppShellNavigation.setActiveShellView` and `AppShellViewState` construction reject
+  null `ShellViewId` at harness boundaries (contract checks, not product tabs)
 - in `ZideActivity`, use one authoritative `static final` slot field (e.g.
   `ACTIVE_PRODUCT_TERMINAL_SLOT`) for interaction/widget/composition wiring
   instead of repeating `PRIMARY` literals
