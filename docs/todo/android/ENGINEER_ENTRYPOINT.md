@@ -34,17 +34,17 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B7` is at **super-gate** pending Architect acceptance. Queue and validation
-live in `docs/todo/android/implementation.md` under `AHW-B7`.
+`AHW-B8` is `in_progress`: slot seam contract hardening plus explicit chrome
+slot freeze.
 
-The Architect refocuses this entrypoint after acceptance; do not start the next
-macro batch until the queue marks one `in_progress`.
+Batch queue line (exact):
+
+- harden slot seam contracts with explicit invariants and keep chrome slot-agnostic until real per-slot policy exists
 
 ## Core Boundary Rule
 
-Post-`AHW-B7` baseline (pending Architect): `ZideActivity` uses
-`ACTIVE_PRODUCT_TERMINAL_SLOT` as the single slot source; `StatusViewAssembly.Result`
-is bindings-first (views only via `activityViewBindings`).
+This batch exists to harden slot seam contracts and remove ambiguity between
+active slot behavior and reserved future slot seams.
 
 - Android Harness owns platform ceremony, app-shell layout/styling/theming,
   navigation/view state, userland orchestration, and widget instance hosting.
@@ -58,16 +58,28 @@ is bindings-first (views only via `activityViewBindings`).
 - `WidgetAssembly.Result` remains widget/chrome assembly output; it is not the
   terminal-instance factory by itself.
 
-## Required Direction From Architect Review (post-AHW-B7)
+## Required Direction From Architect Review (post-AHW-B8 baseline)
 
-- Slot identity: host seams + compose argument; not on `InteractionAssembly.Result` yet.
-- `WidgetAssembly.Host.terminalWidgetSlot()` sufficient until per-slot chrome policy exists.
+- `AHW-B7` is accepted.
+- Keep `ACTIVE_PRODUCT_TERMINAL_SLOT` as current single-source selector.
+- Keep slot identity on host seams + compose argument; do not add slot to
+  `InteractionAssembly.Result` yet.
+- Keep `StatusController.Host` assembly-internal in `StatusViewAssembly` unless
+  a concrete test/diagnostic seam requires exposing it.
+- Keep chrome slot-agnostic in this batch; do not thread slot into chrome
+  construction until per-slot chrome policy is scoped.
 - No tab/multi-instance product behavior unless a new batch scopes it.
 
 ## Internal Milestones
 
-`AHW7-M1` through `AHW7-M6` are recorded in `docs/todo/android/implementation.md`
-under `AHW-B7`.
+Execute in order and mark progress in `docs/todo/android/implementation.md`.
+
+- `AHW8-M1`: audit slot seam invariants and classify active vs reserved usage.
+- `AHW8-M2`: enforce slot invariants at relevant assembly/composition/wiring seams.
+- `AHW8-M3`: label reserved slot seams clearly in contracts/Javadocs.
+- `AHW8-M4`: lock chrome slot freeze decision in code/docs.
+- `AHW8-M5`: sync authority docs and workflow docs to B8 outcomes.
+- `AHW8-M6`: run validation and publish super-gate review packet.
 
 ## Allowed Work
 
@@ -155,7 +167,7 @@ when:
 - a behavior change is required where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
 - implementing terminal tabs/product behavior becomes necessary to proceed
-- the `AHW-B7` super-gate is reached
+- the `AHW-B8` super-gate is reached
 
 Otherwise continue autonomously with:
 
@@ -163,9 +175,9 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At `AHW-B7` super-gate, report:
+At `AHW-B8` super-gate, report:
 
-- review chunk name: `AHW-B7`
+- review chunk name: `AHW-B8`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs
