@@ -34,27 +34,11 @@ you must report the mismatch.
 
 ## Current Target
 
-Active macro batch: **`AHW-B4` Terminal widget composition assembly**.
+`AHW-B4` is at **super-gate** pending Architect acceptance. Implementation details
+and validation live in `docs/todo/android/implementation.md` under `AHW-B4`.
 
-Batch queue line:
-
-- move terminal widget instance composition out of ZideActivity into a harness-owned assembly seam without implementing tabs
-
-Internal milestones:
-
-1. `AHW4-M1` Composition boundary audit
-2. `AHW4-M2` Terminal widget composition assembly introduction
-3. `AHW4-M3` ZideActivity widget composition shrink
-4. `AHW4-M4` WidgetAssembly result/host pressure cleanup only where enabled by the composition seam
-5. `AHW4-M5` B4 structure/naming authority update
-6. `AHW4-M6` Batch validation + review packet
-
-Continue through all six internal milestones. Do not stop for architect review
-between them.
-
-Expected review size: **30-50 coherent commits** if code reality supports that.
-Small, validated commits are preferred; the Architect reviews the macro batch,
-not every internal milestone.
+The Architect refocuses this entrypoint and the queue after acceptance; do not
+start the next macro batch until the queue marks one `in_progress`.
 
 ## Core Boundary Rule
 

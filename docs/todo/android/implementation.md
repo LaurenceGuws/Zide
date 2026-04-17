@@ -107,8 +107,8 @@ Dual-mode batching override (architect directive):
 - Completed macro batch: `AHW-B1` (accepted by Architect; follow-up seams queued in `AHW-B2`).
 - Completed macro batch: `AHW-B2` (accepted by Architect; package/status and widget-instance follow-ups queued in `AHW-B3`).
 - Completed macro batch: `AHW-B3` (accepted by Architect; composition seam follow-up queued in `AHW-B4`).
-- Active macro batch: `AHW-B4` (30-50 coherent engineer commits if code reality supports it; architect review only at batch super-gate or real blocker).
-- Active internal milestones: `AHW4-M1` through `AHW4-M6` (continue sequentially inside the batch).
+- Completed macro batch: `AHW-B4` (architect review at super-gate).
+- Next macro batch: set by Architect after `AHW-B4` acceptance.
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -1327,7 +1327,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B4` Terminal widget composition assembly (`in_progress`)
+### `AHW-B4` Terminal widget composition assembly (`completed_in_batch`)
 
 Batch queue line (exact):
 
@@ -1380,156 +1380,93 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `AHW-B4` super-gate is reached.
 
-### `AHW4-M1` Composition boundary audit (`queued_in_batch`)
+### `AHW4-M1` Composition boundary audit (`completed_in_batch`)
 
 Queue line (exact):
 
 - define the minimal harness composition boundary that owns interaction assembly plus widget assembly for one terminal instance
 
-Scope:
+Progress checkpoint:
 
-- `ZideActivity.java`
-- `host/ui/TerminalWidgetInstance.java`
-- `host/ui/WidgetAssembly.java`
-- `host/interaction/InteractionAssembly.java`
-- directly connected docs
+- `Milestone: AHW4-M1 completed_in_batch`
+- `Boundary: inputs to InteractionAssembly.Host are viewport/status/runtime forwards + surface container; WidgetAssembly.Host adds app-shell views, chrome, shell presentation, and consumes InteractionAssembly.Result for selection/gesture during surface assembly; per-terminal join is InteractionAssembly.Result + WidgetAssembly.Result → TerminalWidgetInstance; global harness fields stay on ZideActivity`
+- `Composition owner: host/ui/TerminalWidgetCompositionAssembly`
+- `Validation: N/A (audit-only slice before code landed in same batch)`
+- `Blocked by Archtect review needed: false`
 
-Tasks:
-
-- [ ] list the inputs currently required by `assembleInteractionControllers()` and `assembleWidgetHostControllers()`
-- [ ] separate app-shell/global harness inputs from per-terminal instance inputs
-- [ ] decide the smallest new composition owner name/shape before moving code
-- [ ] record the boundary in the queue or structure authority before extraction
-
-Acceptance:
-
-- the extraction target is explicit before code movement
-- no product/tab behavior is introduced
-
-### `AHW4-M2` Terminal widget composition assembly introduction (`queued_in_batch`)
+### `AHW4-M2` Terminal widget composition assembly introduction (`completed_in_batch`)
 
 Queue line (exact):
 
 - introduce a harness-owned assembly seam that composes interaction and widget assembly for the current single terminal instance
 
-Scope:
+Progress checkpoint:
 
-- new or existing `host/ui/**` assembly/callback/result types
-- `host/interaction/**` only as needed for callback wiring
-- `host/surface/**` only as needed for compile-preserving result wiring
+- `Milestone: AHW4-M2 completed_in_batch`
+- `Progress delta: TerminalWidgetCompositionAssembly.compose(interaction, widget) returns Result with TerminalWidgetInstance + shell/chrome/view-mode harness fields`
+- `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
+- `Blocked by Archtect review needed: false`
 
-Tasks:
-
-- [ ] introduce the composition seam with clear Javadoc ownership
-- [ ] keep `TerminalWidgetInstance` as the instance holder, not a service locator
-- [ ] preserve current construction order
-- [ ] compile debug + release after the cut
-
-Acceptance:
-
-- composition seam can return the current `TerminalWidgetInstance`
-- behavior is unchanged
-- `ZideActivity` can still wire current app-shell controllers without new product behavior
-
-### `AHW4-M3` ZideActivity widget composition shrink (`queued_in_batch`)
+### `AHW4-M3` ZideActivity widget composition shrink (`completed_in_batch`)
 
 Queue line (exact):
 
 - move manual interaction/widget/instance stitching out of ZideActivity in behavior-preserving cuts
 
-Scope:
+Progress checkpoint:
 
-- `ZideActivity.java`
-- new composition seam from `AHW4-M2`
-- directly connected host callbacks
+- `Milestone: AHW4-M3 completed_in_batch`
+- `Progress delta: ZideActivity applies InteractionAssembly → Userland/Session → WidgetAssembly(createWidgetHost(interaction)) → TerminalWidgetCompositionAssembly.compose; removed InteractionAssembly.Result field; createWidgetHost closes over InteractionAssembly.Result`
+- `Validation: same compile gates as AHW4-M2 (pass)`
+- `Blocked by Archtect review needed: false`
 
-Tasks:
-
-- [ ] replace Activity-local manual stitching with the composition seam
-- [ ] keep lifecycle/runtime/UI startup order stable
-- [ ] keep app-shell/global fields outside `TerminalWidgetInstance`
-- [ ] compile debug + release after each coherent cut
-
-Acceptance:
-
-- `ZideActivity` no longer manually constructs `TerminalWidgetInstance` from interaction + widget results
-- current terminal behavior is unchanged
-
-### `AHW4-M4` WidgetAssembly result/host pressure cleanup only where enabled by composition (`queued_in_batch`)
+### `AHW4-M4` WidgetAssembly result/host pressure cleanup only where enabled by composition (`completed_in_batch`)
 
 Queue line (exact):
 
 - simplify WidgetAssembly result or host surface only when the new composition seam makes ownership clearer
 
-Scope:
+Progress checkpoint:
 
-- `host/ui/WidgetAssembly.java`
-- new composition seam
-- directly connected docs
+- `Milestone: AHW4-M4 completed_in_batch`
+- `Progress delta: WidgetAssembly.Result Javadoc documents that TerminalWidgetCompositionAssembly performs instance join; no Result shape change`
+- `Validation: same compile gates (pass)`
+- `Blocked by Archtect review needed: false`
 
-Tasks:
-
-- [ ] evaluate whether `WidgetAssembly.Result` fields should remain as-is, move into composition result, or stay documented
-- [ ] do not turn `WidgetAssembly.Result` alone into a terminal-instance factory
-- [ ] remove only coupling made obsolete by the composition seam
-- [ ] compile debug + release after the cut
-
-Acceptance:
-
-- result/host shape is no broader than before
-- any simplification has a concrete ownership reason
-
-### `AHW4-M5` B4 structure/naming authority update (`queued_in_batch`)
+### `AHW4-M5` B4 structure/naming authority update (`completed_in_batch`)
 
 Queue line (exact):
 
 - update Android structure and naming authority for the terminal widget composition seam
 
-Scope:
+Progress checkpoint:
 
-- `ANDROID_JAVA_HOST_STRUCTURE.md`
-- `ANDROID_JAVA_NAMING_CONTRACT.md`
-- Android queue/handoff/entrypoint docs
+- `Milestone: AHW4-M5 completed_in_batch`
+- `Progress delta: ANDROID_JAVA_HOST_STRUCTURE.md + ANDROID_JAVA_NAMING_CONTRACT.md + handoff/entrypoint aligned to composition seam`
+- `Validation: docs-only slice; compile unchanged (pass)`
+- `Blocked by Archtect review needed: false`
 
-Tasks:
-
-- [ ] update file audit rows and pressure notes for changed classes
-- [ ] record the composition seam and its relationship to `TerminalWidgetInstance`
-- [ ] keep customer-facing docs untouched
-- [ ] keep historical detail out of handoff
-
-Acceptance:
-
-- authority docs match code reality
-- next engineer session can resume without archaeology
-
-### `AHW4-M6` Batch validation + review packet (`queued_in_batch`)
+### `AHW4-M6` Batch validation + review packet (`completed_in_batch`)
 
 Queue line (exact):
 
 - validate AHW-B4 end-to-end and publish the architect review packet
 
-Scope:
+Progress checkpoint:
 
-- final docs checkpoint plus validation commands
-- no new behavior cuts after validation starts unless fixing validation failure
+- `Milestone: AHW4-M6 completed_in_batch`
+- `Progress delta: engineer review packet in session response`
+- `Validation: see engineer VALIDATION block`
+- `Blocked by Archtect review needed: true` (super-gate)
 
-Tasks:
+Architect review verdict:
 
-- [ ] run required validation commands
-- [ ] update this queue with completed internal milestone checkpoints
-- [ ] update handoff only if the batch is ready for Architect review or a hard blocker requires refocus
-- [ ] report final review packet with changed files, commits, validation, risks, and exact review questions
+- `Review chunk: AHW-B4`
+- `Verdict: pending`
 
-Acceptance:
+`Milestone reached per docs, architect review required.`
 
-- debug compile pass
-- release compile pass
-- deploy pass when device is available
-- `AndroidRuntime:E` smoke pass when device is available
-- cold start smoke pass when device is available
-- `Blocked by Archtect review needed: true` only at super-gate or real blocker
-
+---
 
 ## Guardrails
 

@@ -6,8 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android harness/widget portability hardening** (`AHW`) — turns the refocus vision into enforceable code shape: Android Harness is the platform/app-shell canvas, Terminal Widget is the portable terminal consumer, and userland stays movable for future IDE/editor modes.
-- Current macro batch: `AHW-B4` (`in_progress`, target 30-50 coherent engineer commits before architect review unless a hard blocker is hit)
-- Active milestone sequence inside batch: `AHW4-M1` through `AHW4-M6` in `docs/todo/android/implementation.md`; engineer should continue across these milestones and stop only at the `AHW-B4` super-gate or a real blocker.
+- Completed macro batch (engineer): `AHW-B4` — terminal widget composition seam; **architect review pending** at super-gate (`docs/todo/android/implementation.md`).
 - Prior closed/escalated: `AHW-B3` accepted; `AHW-B2` accepted; `AHW-B1` accepted; `ASF-M3` escalated remaining IME/assist and touch-gesture matrix rows to operator evidence; `ASF-M2`; `ASF-M1`; `AX-M5`; `AX-M4`
 - Active queue authority: `docs/todo/android/implementation.md`
 - Engineer entrypoint (dual mode): `docs/todo/android/ENGINEER_ENTRYPOINT.md`
@@ -25,9 +24,8 @@ Engineer session seed:
 
 - Read `docs/todo/android/ENGINEER_ENTRYPOINT.md`, then
   `docs/todo/android/implementation.md`, then this handoff file.
-- Execute the active macro batch `AHW-B4` only.
-- Continue autonomously across `AHW4-M1` through `AHW4-M6`; do not stop at internal milestone boundaries.
-- Stop only on blocker or `AHW-B4` super-gate; report using required headers.
+- After Architect accepts `AHW-B4`, read the queue for the next `in_progress` macro batch only.
+- Engineer stops at `AHW-B4` super-gate until Architect refocuses the queue.
 
 ## First Read Order
 

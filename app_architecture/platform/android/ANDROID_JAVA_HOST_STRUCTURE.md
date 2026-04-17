@@ -73,17 +73,20 @@ Boundary rules:
 Today the product hosts **one** terminal widget instance. Harness wiring groups
 its portable seams in `host/ui/TerminalWidgetInstance`: `SelectionController`,
 `GestureStateController`, `SurfaceBridge`, `SurfaceController`, and
-`SurfaceWidgetController`. App-shell chrome, viewport, runtime orchestration,
-and userland coordination stay **outside** that holder. Future multi-instance
-hosting should compose additional `TerminalWidgetInstance` values without moving
-app-shell state into the widget holder.
+`SurfaceWidgetController`. `host/ui/TerminalWidgetCompositionAssembly` joins
+`InteractionAssembly.Result` with `WidgetAssembly.Result` into that holder (and
+returns co-hosted shell/chrome/view-mode harness refs); `ZideActivity` does not
+construct the holder directly. App-shell chrome, viewport, runtime
+orchestration, and userland coordination stay **outside** that holder. Future
+multi-instance hosting should compose additional `TerminalWidgetInstance` values
+without moving app-shell state into the widget holder.
 
 ## File Audit
 
 Current shape markers (for hygiene tracking, not hard limits):
 
 - `selection/SelectionController.java`: `1066` lines (monolithic by design for now)
-- `ZideActivity.java`: `717` lines
+- `ZideActivity.java`: `705` lines
 - `input/ShellInputView.java`: `587` lines
 - `userland/UserlandInstaller.java`: `425` lines
 - `host/ui/WidgetAssembly.java`: `320` lines
@@ -96,7 +99,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 
 | File | Contract Fit | Size/Shape | Next Pressure |
 | --- | --- | --- | --- |
-| `ZideActivity.java` | Good | Wiring-oriented Android entrypoint. JNI declarations remain out; startup null-guards are aggregated in `ProductHostStartupBundle`; the single terminal widget instance is grouped in `TerminalWidgetInstance` (`InteractionAssembly.Result` holds selection/gesture until widget assembly completes). | Keep activity orchestration-only; route any new behavior into the owning host/controller seam instead of adding policy here. |
+| `ZideActivity.java` | Good | Wiring-oriented Android entrypoint. JNI declarations remain out; startup null-guards are aggregated in `ProductHostStartupBundle`; terminal instance construction is delegated to `TerminalWidgetCompositionAssembly` after `InteractionAssembly` + `WidgetAssembly` (startup order preserved: interaction → userland/session → widget → compose). | Keep activity orchestration-only; route any new behavior into the owning host/controller seam instead of adding policy here. |
 | `NativeBridge.java` | Good | Owns JNI library load state and native bridge declarations for the terminal host. | Keep this focused on JNI surface only; do not move Android policy or lifecycle behavior into it. |
 | `debug/AndroidDebugFormatter.java` | Good | Pure formatter plus snapshot values. Large constructor surface is acceptable for debug-only snapshots. | Split snapshot values only if formatter starts owning state or capture policy. |
 | `debug/NativeStatusLabels.java` | Good | Owns native status-enum label mapping for debug/operator text. | Keep as pure mapping; avoid embedding behavior/policy. |
@@ -126,6 +129,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/input/InputChromeStartupForwards.java` | Good | Null-guard forwards for hardware keyboard, IME focus recovery, chrome modifier latch. | Delegation-only. |
 | `host/status/StatusTelemetryStartupForwards.java` | Good | Null-guard forwards into `StatusController` for package-doctor / operator telemetry (status ownership, not debug UI). | Delegation-only. |
 | `host/ui/TerminalWidgetInstance.java` | Good | Immutable bundle of one terminal widget’s surface + selection + gesture controller refs for harness hosting. | Do not fold app-shell or userland orchestration into this type. |
+| `host/ui/TerminalWidgetCompositionAssembly.java` | Good | Harness-owned join of `InteractionAssembly.Result` + `WidgetAssembly.Result` into `TerminalWidgetInstance` plus shell/chrome/view-mode harness fields; not tab/multi-instance policy. | Keep `WidgetAssembly.Result` as widget/chrome output; instance join stays here, not on `WidgetAssembly.Result` alone. |
 | `host/userland/WorkflowInstallStartupGlue.java` | Good | Install completion state transitions + runtime restart delegation. | Keep install orchestration thin; low-level extraction stays in `UserlandInstaller`. |
 | `host/ui/ActivityViewBindings.java` | Good | Owns raw activity view lookup and typed binding capture for terminal host wiring. | Keep this as lookup-only data binding; no policy or runtime behavior. |
 | `host/ui/ChromeFactory.java` | Good | Owns chrome-specific bridge/callback construction so chrome assembly does not inflate the generic host assembler. | Keep this construction-only; do not move chrome behavior out of `host/ui/ChromeController`. |
