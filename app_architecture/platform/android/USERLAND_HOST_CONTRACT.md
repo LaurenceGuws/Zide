@@ -1,0 +1,21 @@
+# Userland host contract (terminal-host)
+
+Authority for how Java userland orchestration (`uk.laurencegouws.terminal.userland`) integrates with the Android harness (`host.userland`, activity wiring).
+
+## Principles
+
+- **Userland** owns staged artifacts, readiness stamps, install/doctor command execution, and presentation policy types (`UserlandInstallState`, `UserlandReadinessState`). It does **not** reference widget (`host.ui` surface assembly), frame loop, or JNI bridge types.
+- **Harness** (`WorkflowBridge` / `WorkflowAssembly`, `ReadinessBlockerStartup`, `RuntimeController` wiring via activity) owns threading back to the main `Handler`, telemetry (`StatusController`), native session restart after install, and view wiring for product readiness UI.
+
+## Stable entry surfaces
+
+| Seam | Role |
+|------|------|
+| `WorkflowBridge.Callbacks` | Install flow (`completeInstall`, `failInstall`, `applyInstallState`), `restartSessionAfterInstall`, package-doctor completion (`markPackageDoctorComplete`), release and event append. |
+| `UserlandWorkflowController` | Async install and `zide-pm` doctor; calls only `Host` (implemented by `WorkflowBridge`). |
+| `UserlandReadinessBlockerController.Host` | Readiness retry button: `startInstall`, `refreshSessionAfterReadinessRetry` — harness implements via `ReadinessBlockerStartup` + `ReadinessBlockerCallbacks`. |
+| `UserlandSessionCoordinator.Host` | Session poll/refresh side effects (readiness apply, shell refresh, telemetry); wired from `SessionAssembly` / activity. |
+
+## Future IDE/editor modes
+
+Alternate harnesses should implement the same callback shapes: supply `Context`/`Handler` where needed, map install/doctor/restart to host policy, and keep userland packages free of surface/widget/controller types.
