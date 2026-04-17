@@ -34,10 +34,11 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B11` is `in_progress`: app-shell state surface hardening with behavior kept
-unchanged.
+`AHW-B11` engineer delivery is complete; **Architect verdict is pending**. There is
+no `in_progress` macro batch until `docs/todo/android/implementation.md` is
+refocused after Architect review.
 
-Batch queue line (exact):
+Last completed batch queue line (exact):
 
 - harden app-shell state surfaces and invariants while preserving slot mapping and chrome freeze behavior
 
@@ -73,6 +74,9 @@ slot→shell mapping and navigation ownership are explicit.
 - No tab/multi-instance product behavior unless a new batch scopes it.
 
 ## Internal Milestones
+
+`AHW-B11` internal milestones `AHW11-M1`–`AHW11-M6` are **completed**; see
+`docs/todo/android/implementation.md` for the super-gate packet.
 
 Execute in order and mark progress in `docs/todo/android/implementation.md`.
 

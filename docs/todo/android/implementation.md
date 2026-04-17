@@ -114,7 +114,7 @@ Dual-mode batching override (architect directive):
 - Completed macro batch: `AHW-B8` (accepted by Architect; slot/app-shell contract alignment follow-up queued in `AHW-B9`).
 - Completed macro batch: `AHW-B9` (accepted by Architect; app-shell state contract cleanup follow-up queued in `AHW-B10`).
 - Completed macro batch: `AHW-B10` (accepted by Architect; app-shell state surface hardening follow-up queued in `AHW-B11`).
-- Active macro batch: `AHW-B11` (app-shell state surface hardening, behavior-neutral).
+- Engineer delivery complete; Architect verdict pending: `AHW-B11` (app-shell state surface hardening, behavior-neutral). No macro batch is `in_progress` until Architect refocuses the queue.
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -2500,7 +2500,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B11` App-shell state surface hardening (`in_progress`)
+### `AHW-B11` App-shell state surface hardening (`verdict_pending`)
 
 Batch queue line (exact):
 
@@ -2581,7 +2581,7 @@ Progress delta (audit snapshot):
   `setActiveShellView` were misused; implicit invariant “active view is non-null” should be
   enforced at owner boundary.
 
-### `AHW11-M2` Navigation invariant hardening (`pending`)
+### `AHW11-M2` Navigation invariant hardening (`completed`)
 
 Queue line (exact):
 
@@ -2593,7 +2593,12 @@ Acceptance:
 - keep current startup/order behavior unchanged
 - compile debug + release Java after code changes
 
-### `AHW11-M3` View state contract tightening (`pending`)
+Progress delta:
+
+- Class-level invariant Javadoc; `setActiveShellView` uses `Objects.requireNonNull`;
+  `activeViewState()` Javadoc for default row semantics.
+
+### `AHW11-M3` View state contract tightening (`completed`)
 
 Queue line (exact):
 
@@ -2605,7 +2610,12 @@ Acceptance:
 - avoid introducing new state responsibilities
 - compile debug + release Java after code changes
 
-### `AHW11-M4` Mapping/guardrail consistency lock (`pending`)
+Progress delta:
+
+- `AppShellViewState` requires non-null `id`; invariant Javadoc and pointer to
+  `AppShellNavigation.activeViewState()`.
+
+### `AHW11-M4` Mapping/guardrail consistency lock (`completed`)
 
 Queue line (exact):
 
@@ -2616,7 +2626,12 @@ Acceptance:
 - slot mapping seam and slot choke point remain unchanged
 - chrome slot-freeze guidance remains explicit and unchanged
 
-### `AHW11-M5` Queue/handoff/entrypoint sync (`pending`)
+Progress delta:
+
+- Structure “App-shell state invariants” subsection; naming + userland bullets; table
+  rows updated. No changes to `ProductTerminalSlotShellMapping` or chrome factory slot policy.
+
+### `AHW11-M5` Queue/handoff/entrypoint sync (`completed`)
 
 Queue line (exact):
 
@@ -2624,10 +2639,15 @@ Queue line (exact):
 
 Acceptance:
 
-- all three docs point to `AHW-B11` as active and `in_progress`
+- queue, handoff, and engineer entrypoint stay coherent through B11 super-gate
 - super-gate stop condition and review packet contract are explicit
 
-### `AHW11-M6` Batch validation + review packet (`pending`)
+Progress delta:
+
+- This file, `ENGINEER_ENTRYPOINT.md`, and `AGENT_HANDOFF.md` updated for
+  `verdict_pending` and Architect refocus.
+
+### `AHW11-M6` Batch validation + review packet (`completed`)
 
 Queue line (exact):
 
@@ -2639,6 +2659,28 @@ Acceptance:
 - deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
 - cold start smoke pass when a device is available
 - engineer reports the full super-gate packet and stops for Architect review
+
+Progress delta:
+
+- Debug/release compile pass; deploy + cold start + `AndroidRuntime:E` filter (empty).
+
+Super-gate engineer packet:
+
+- `Milestone: AHW-B11 verdict_pending`
+- `Queue line (exact): harden app-shell state surfaces and invariants while preserving slot mapping and chrome freeze behavior`
+- `Scope contract: Java terminal host + allowed authority docs; behavior-neutral; no tabs`
+- `Progress delta: null guards on AppShellNavigation/AppShellViewState; docs lock invariants with slot/chrome guardrails`
+- `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb cold start + AndroidRuntime:E (pass, empty)`
+- `Engineer updates: Blocked by Archtect review needed: true`
+
+Remaining risks:
+
+- None material; null rejects surface as fail-fast if future callsites misuse public setters.
+
+Review questions for Architect:
+
+- Confirm null-reject semantics remain the long-term harness boundary for shell view ids.
+- Confirm next macro batch after verdict.
 
 `Milestone reached per docs, architect review required.`
 
