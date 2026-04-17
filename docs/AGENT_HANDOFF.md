@@ -124,6 +124,11 @@ Required per-commit update format:
   contracts now flow directly into `GestureStateController`.
 - latest cut removed `host/lifecycle/LifecycleCallbacks`; lifecycle host
   contracts now flow directly from `ZideActivity` into `LifecycleController`.
+- latest cut removed `host/ui/ChromeCallbacks`; chrome callbacks now come
+  directly from `ChromeFactory` without a relay adapter class.
+- adapter-depth checkpoint vs baseline `2a25e5ac`:
+  - `Callbacks`: `26 -> 21` files (`-601` lines, `-76` methods)
+  - `Bridge`: `13 -> 9` files (`-471` lines, `-56` methods)
 - `userland/UserlandInstaller.java` (~425 lines) remains large but cohesive;
   keep watch-only unless behavior complexity expands.
 - `host/surface/SurfaceController.java` and `host/ui/ChromeController.java`

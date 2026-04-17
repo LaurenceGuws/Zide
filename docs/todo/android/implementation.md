@@ -367,6 +367,15 @@ Audit decision:
     `host/lifecycle/LifecycleCallbacks.java`; `ZideActivity` now provides a
     direct `LifecycleController.Host` contract at assembly time, removing one
     relay callback tier without changing lifecycle behavior.
+  - Completed: chrome adapter depth reduced by deleting
+    `host/ui/ChromeCallbacks.java`; `ChromeFactory` now provides
+    `ChromeBridge.Callbacks` directly, removing another relay callback class.
+  - Checkpoint (baseline `2a25e5ac` -> current): host adapter density dropped
+    materially in callback/bridge tiers:
+    - `Callbacks`: files `26 -> 21` (`-5`), lines `2613 -> 2012` (`-601`),
+      methods `292 -> 216` (`-76`), forwarding methods `236 -> 161` (`-75`)
+    - `Bridge`: files `13 -> 9` (`-4`), lines `1370 -> 899` (`-471`),
+      methods `160 -> 104` (`-56`), forwarding methods `118 -> 64` (`-54`)
   - Completed: status adapter depth reduced by deleting
     `host/status/StatusBridge.java` and `host/status/StatusCallbacks.java`;
     `StatusViewAssembly` now composes `StatusController.Host` directly at

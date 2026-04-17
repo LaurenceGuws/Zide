@@ -52,18 +52,66 @@ public final class ChromeFactory {
             Supplier<Button> assistAltButton,
             Consumer<String> sendDirectText,
             Consumer<String> updateStatus) {
-        return new ChromeCallbacks(
-                debugViewEnabled,
-                showView,
-                showDebugView,
-                runPackageDoctor,
-                appendEvent,
-                currentImeVisible,
-                setImeVisible,
-                shellInputView,
-                assistCtrlButton,
-                assistAltButton,
-                sendDirectText,
-                updateStatus);
+        return new ChromeBridge.Callbacks() {
+            @Override
+            public boolean debugViewEnabled() {
+                return debugViewEnabled.getAsBoolean();
+            }
+
+            @Override
+            public void showView(String eventName, String statusLabel) {
+                showView.accept(eventName, statusLabel);
+            }
+
+            @Override
+            public void showDebugView(String eventName, String statusLabel) {
+                showDebugView.accept(eventName, statusLabel);
+            }
+
+            @Override
+            public void runPackageDoctor() {
+                runPackageDoctor.run();
+            }
+
+            @Override
+            public void appendEvent(String event) {
+                appendEvent.accept(event);
+            }
+
+            @Override
+            public boolean currentImeVisible() {
+                return currentImeVisible.getAsBoolean();
+            }
+
+            @Override
+            public void setImeVisible(boolean visible) {
+                setImeVisible.accept(visible);
+            }
+
+            @Override
+            public ShellInputView shellInputView() {
+                return shellInputView.get();
+            }
+
+            @Override
+            public Button assistCtrlButton() {
+                return assistCtrlButton.get();
+            }
+
+            @Override
+            public Button assistAltButton() {
+                return assistAltButton.get();
+            }
+
+            @Override
+            public void sendDirectText(String text) {
+                sendDirectText.accept(text);
+            }
+
+            @Override
+            public void updateStatus(String statusLabel) {
+                updateStatus.accept(statusLabel);
+            }
+        };
     }
 }
