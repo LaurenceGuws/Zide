@@ -12,7 +12,7 @@ import uk.laurencegouws.terminal.selection.SelectionController;
  * seam for this instance.
  *
  * <p>The Android Harness may host multiple instances later (e.g. terminal tabs);
- * today there is exactly one, wired from {@code ZideActivity} startup.
+ * today there is exactly one, produced by {@link TerminalWidgetCompositionAssembly}.
  */
 public final class TerminalWidgetInstance {
     public final SelectionController selectionController;

@@ -32,6 +32,7 @@ import uk.laurencegouws.terminal.host.session.SessionAssembly;
 import uk.laurencegouws.terminal.host.session.SessionAssemblyCallbacks;
 import uk.laurencegouws.terminal.host.status.StatusViewAssembly;
 import uk.laurencegouws.terminal.host.status.StatusViewCallbacks;
+import uk.laurencegouws.terminal.host.ui.TerminalWidgetCompositionAssembly;
 import uk.laurencegouws.terminal.host.ui.TerminalWidgetInstance;
 import uk.laurencegouws.terminal.host.ui.ProductHostStartupBundle;
 import uk.laurencegouws.terminal.host.ui.ViewModeController;
@@ -60,11 +61,13 @@ import uk.laurencegouws.terminal.userland.UserlandWorkflowController;
  *
  * <p>
  * The activity should remain wiring-oriented: inflate views, construct
- * controllers, forward
- * lifecycle/input/surface callbacks, and expose the JNI bridge. Terminal truth
- * stays in Zig, while
- * Android-specific policy belongs in the package controllers below this
- * activity.
+ * controllers, forward lifecycle/input/surface callbacks, and expose the JNI
+ * bridge. The single terminal widget instance is composed via
+ * {@link uk.laurencegouws.terminal.host.ui.TerminalWidgetCompositionAssembly}
+ * rather than manual {@link InteractionAssembly} + {@link WidgetAssembly} +
+ * {@link uk.laurencegouws.terminal.host.ui.TerminalWidgetInstance} stitching here.
+ * Terminal truth stays in Zig, while Android-specific policy belongs in the
+ * package controllers below this activity.
  */
 public final class ZideActivity extends android.app.Activity
         implements ShellInputView.Host {
@@ -88,8 +91,6 @@ public final class ZideActivity extends android.app.Activity
     private ShellInputView shellInputView;
     private HardwareKeyboardController HardwareKeyboardController;
     private ImeFocusRecoveryController ImeFocusRecoveryController;
-    /** Interaction assembly for the single terminal widget instance (selection + gesture). */
-    private InteractionAssembly.Result interactionAssembly;
     private boolean imeVisible = false;
     private UserlandRelease userlandRelease;
     private UserlandWorkflowController userlandWorkflowController;
@@ -139,10 +140,10 @@ public final class ZideActivity extends android.app.Activity
 
     private void runOnCreateStartupSequence() {
         initializeStatusAndViewControllers();
-        assembleInteractionControllers();
+        final InteractionAssembly.Result interaction = InteractionAssembly.assemble(createInteractionCallbacks());
         assembleUserlandWorkflowControllers();
         assembleSessionControllers();
-        assembleWidgetHostControllers();
+        applyTerminalWidgetComposition(interaction);
         assembleRuntimeController();
         assembleActivityLifecycleController();
         loadInitialReadinessState();
@@ -241,10 +242,6 @@ public final class ZideActivity extends android.app.Activity
                 () -> currentReadinessState);
     }
 
-    private void assembleInteractionControllers() {
-        interactionAssembly = InteractionAssembly.assemble(createInteractionCallbacks());
-    }
-
     private InteractionCallbacks createInteractionCallbacks() {
         return new InteractionCallbacks(
                 this,
@@ -282,24 +279,17 @@ public final class ZideActivity extends android.app.Activity
                 StatusController::appendEvent);
     }
 
-    private void assembleWidgetHostControllers() {
-        final WidgetAssembly.Result result = assembleWidgetHostControllerResult();
-        ShellStatePresenter = result.ShellStatePresenter;
-        terminalChromeController = result.terminalChromeController;
-        terminalViewModeController = result.terminalViewModeController;
-        terminalWidget = new TerminalWidgetInstance(
-                interactionAssembly.selectionController,
-                interactionAssembly.GestureStateController,
-                result.surfaceHostBridge,
-                result.surfaceHostController,
-                result.terminalSurfaceWidgetController);
+    private void applyTerminalWidgetComposition(InteractionAssembly.Result interaction) {
+        final WidgetAssembly.Result widgetResult = WidgetAssembly.assemble(createWidgetHost(interaction));
+        final TerminalWidgetCompositionAssembly.Result composed =
+                TerminalWidgetCompositionAssembly.compose(interaction, widgetResult);
+        ShellStatePresenter = composed.ShellStatePresenter;
+        terminalChromeController = composed.terminalChromeController;
+        terminalViewModeController = composed.terminalViewModeController;
+        terminalWidget = composed.terminalWidget;
     }
 
-    private WidgetAssembly.Result assembleWidgetHostControllerResult() {
-        return WidgetAssembly.assemble(createWidgetHost());
-    }
-
-    private WidgetAssembly.Host createWidgetHost() {
+    private WidgetAssembly.Host createWidgetHost(final InteractionAssembly.Result interaction) {
         return new WidgetAssembly.Host() {
             @Override
             public Context harnessContext() {
@@ -393,12 +383,12 @@ public final class ZideActivity extends android.app.Activity
 
             @Override
             public SelectionController selectionController() {
-                return interactionAssembly.selectionController;
+                return interaction.selectionController;
             }
 
             @Override
             public GestureStateController GestureStateController() {
-                return interactionAssembly.GestureStateController;
+                return interaction.GestureStateController;
             }
 
             @Override

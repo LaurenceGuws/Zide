@@ -106,7 +106,12 @@ public final class WidgetAssembly {
         void notifyVisibleViewport(String reason);
     }
 
-    /** Immutable assembled widget host result. */
+    /**
+     * Immutable assembled widget host result (chrome, shell presentation bridge, surface hosts).
+     * Harness joins this with {@link InteractionAssembly.Result} in
+     * {@link TerminalWidgetCompositionAssembly} to build {@link TerminalWidgetInstance}; this type
+     * is not the terminal-instance factory on its own.
+     */
     public static final class Result {
         public final AppShellNavigation appShellNavigation;
         public final ShellStateBridge productShellStateHostBridge;
