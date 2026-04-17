@@ -273,7 +273,7 @@ Progress checkpoint:
 - `Scope contract: harness app-shell only; navigation + per-view seam + resource-level theming`
 - `Progress delta: AppShellNavigation owns drawer + active ShellViewId; AppShellViewState + ShellViewId provide tab-ready seam; ViewModeController records PRODUCT_TERMINAL on apply; app-shell colors centralized in values/colors.xml and referenced from activity_main`
 - `Validation: (see engineer VALIDATION block)`
-- `Blocked by Archtect review needed: false`
+- `Blocked by Archtect review needed: true` (macro batch gate; next queue chunk is `RF-M5` after architect review)
 
 `Milestone reached per docs, architect review required.`
 
