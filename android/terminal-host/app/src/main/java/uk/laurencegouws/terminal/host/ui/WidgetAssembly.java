@@ -140,8 +140,8 @@ public final class WidgetAssembly {
     }
 
     public static Result assemble(Host host) {
-        final ViewModeController[] terminalViewModeControllerRef = new ViewModeController[1];
-        final SurfaceWidgetController[] surfaceWidgetControllerRef = new SurfaceWidgetController[1];
+        final ViewModeControllerRef terminalViewModeControllerRef = new ViewModeControllerRef();
+        final SurfaceWidgetControllerRef surfaceWidgetControllerRef = new SurfaceWidgetControllerRef();
         final ChromeController terminalChromeController = createChromeController(
                 host,
                 terminalViewModeControllerRef);
@@ -149,12 +149,12 @@ public final class WidgetAssembly {
         final ViewModeController terminalViewModeController = createViewModeController(
                 host,
                 terminalChromeController);
-        terminalViewModeControllerRef[0] = terminalViewModeController;
+        terminalViewModeControllerRef.value = terminalViewModeController;
 
         final SurfaceWidgetAssembly.Result surfaceWidgetAssembly = assembleSurfaceWidget(
                 host,
                 surfaceWidgetControllerRef);
-        surfaceWidgetControllerRef[0] = surfaceWidgetAssembly.surfaceWidgetController;
+        surfaceWidgetControllerRef.value = surfaceWidgetAssembly.surfaceWidgetController;
         host.terminalScrollOverlay().setHost(surfaceWidgetAssembly.surfaceWidgetController);
 
         final ShellStateBridge productShellStateHostBridge = createShellStateHostBridge(
@@ -175,7 +175,7 @@ public final class WidgetAssembly {
 
     private static ChromeController createChromeController(
             Host host,
-            ViewModeController[] terminalViewModeControllerRef) {
+            ViewModeControllerRef terminalViewModeControllerRef) {
         return new ChromeController(
                 ChromeFactory.createChromeHostBridge(
                         host.activity(),
@@ -226,7 +226,7 @@ public final class WidgetAssembly {
 
     private static SurfaceWidgetAssembly.Result assembleSurfaceWidget(
             Host host,
-            SurfaceWidgetController[] surfaceWidgetControllerRef) {
+            SurfaceWidgetControllerRef surfaceWidgetControllerRef) {
         return SurfaceWidgetAssembly.assemble(
                 host.selectionController(),
                 host.GestureStateController(),
@@ -250,30 +250,30 @@ public final class WidgetAssembly {
 
     private static void installSurfaceGestureHost(
             SurfaceView surfaceView,
-            SurfaceWidgetController[] surfaceWidgetControllerRef) {
-        if (surfaceWidgetControllerRef[0] == null) {
+            SurfaceWidgetControllerRef surfaceWidgetControllerRef) {
+        if (surfaceWidgetControllerRef.value == null) {
             return;
         }
         final GestureController productGestureController =
-                new GestureController(surfaceView, surfaceWidgetControllerRef[0]);
+                new GestureController(surfaceView, surfaceWidgetControllerRef.value);
         productGestureController.install();
     }
 
     private static void showViewIfReady(
-            ViewModeController[] terminalViewModeControllerRef,
+            ViewModeControllerRef terminalViewModeControllerRef,
             String eventName,
             String statusLabel) {
-        final ViewModeController viewModeController = terminalViewModeControllerRef[0];
+        final ViewModeController viewModeController = terminalViewModeControllerRef.value;
         if (viewModeController != null) {
             viewModeController.showView(eventName, statusLabel);
         }
     }
 
     private static void showDebugViewIfReady(
-            ViewModeController[] terminalViewModeControllerRef,
+            ViewModeControllerRef terminalViewModeControllerRef,
             String eventName,
             String statusLabel) {
-        final ViewModeController viewModeController = terminalViewModeControllerRef[0];
+        final ViewModeController viewModeController = terminalViewModeControllerRef.value;
         if (viewModeController != null) {
             viewModeController.showDebugView(eventName, statusLabel);
         }
@@ -281,7 +281,7 @@ public final class WidgetAssembly {
 
     private static SurfaceWidgetAssemblyCallbacks createSurfaceWidgetAssemblyCallbacks(
             Host host,
-            SurfaceWidgetController[] surfaceWidgetControllerRef) {
+            SurfaceWidgetControllerRef surfaceWidgetControllerRef) {
         return new SurfaceWidgetAssemblyCallbacks(
                 host.handler(),
                 host.productSurfaceContainer(),
@@ -297,7 +297,7 @@ public final class WidgetAssembly {
                 host::handleShellStateEvent,
                 nextSurfaceView -> installSurfaceGestureHost(nextSurfaceView, surfaceWidgetControllerRef),
                 WidgetAssembly::addSurfaceHolderCallbackIfPresent,
-                () -> surfaceWidgetControllerRef[0],
+                () -> surfaceWidgetControllerRef.value,
                 host::productViewportHeightPx,
                 host::reevaluateFrameLoop);
     }
@@ -308,5 +308,13 @@ public final class WidgetAssembly {
         if (callback != null) {
             nextSurfaceView.getHolder().addCallback(callback);
         }
+    }
+
+    private static final class ViewModeControllerRef {
+        private ViewModeController value;
+    }
+
+    private static final class SurfaceWidgetControllerRef {
+        private SurfaceWidgetController value;
     }
 }

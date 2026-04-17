@@ -275,10 +275,15 @@ Milestone gate contract (mandatory when manager/architect lane is active):
     `notifyVisibleViewportIfReady`, `refreshUserlandSessionIfReady`,
     `stopFrameLoopIfReady`, `pauseSurfaceIfReady`, `resumeSurfaceIfReady`) to
     reduce duplicated null-guard branches without changing ownership.
+  - Completed: `WidgetAssembly` now uses typed controller refs instead of
+    one-element arrays for staged controller wiring (`ViewModeControllerRef`,
+    `SurfaceWidgetControllerRef`), reducing callback plumbing indirection while
+    preserving assembly behavior.
     - Next: resume primary Java cleanup under Active TODO item 1 by executing a
-      behavior-preserving callback-constructor pressure reduction wave in
-      `host/ui/WidgetAssembly.java` host wiring (remove relay-only callback
-      adapters and simplify callback fan-out without changing ownership).
+      behavior-preserving naming/noise cleanup wave in
+      `selection/SelectionController.java` action-mode + clipboard helper names
+      (reduce redundant ownership prefixes and maintain package-led naming
+      clarity without semantic change).
       For this wave, do not add naming-only wrappers; each cut must reduce
       callback or constructor pressure with measurable net simplification.
       Naming pressure rule for this wave: when a touched method/class name can be
