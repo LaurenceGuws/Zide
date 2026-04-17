@@ -9,7 +9,7 @@ package uk.laurencegouws.terminal.host.ui;
  */
 public final class AppShellNavigation {
     private boolean sidebarOpen;
-    private ShellViewId activeShellView = ShellViewId.PRODUCT_TERMINAL;
+    private ShellViewId activeShellView = ShellViewId.TERMINAL;
 
     public boolean isSidebarOpen() {
         return sidebarOpen;

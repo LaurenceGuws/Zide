@@ -57,7 +57,7 @@ public final class ShellStatePresenter {
         if (showBlocker) {
             host.productReadinessTitle().setText(UserlandReadinessUiPolicy.title(readinessState, installState, rendererMissing));
             host.productReadinessDetail().setText(UserlandReadinessUiPolicy.detail(
-                    (android.content.Context) host.productReadinessTitle().getContext(),
+                    host.productReadinessTitle().getContext(),
                     readinessState,
                     installState,
                     rendererMissing));

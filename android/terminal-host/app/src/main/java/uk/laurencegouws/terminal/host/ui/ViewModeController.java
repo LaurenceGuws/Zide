@@ -17,26 +17,23 @@ public final class ViewModeController {
     }
 
     private final View productView;
-    private final View terminalScrollOverlay;
     private final FrameLayout productSurfaceContainer;
     private final AppShellNavigation appShellNavigation;
     private final Host host;
 
     public ViewModeController(
             View productView,
-            View terminalScrollOverlay,
             FrameLayout productSurfaceContainer,
             AppShellNavigation appShellNavigation,
             Host host) {
         this.productView = productView;
-        this.terminalScrollOverlay = terminalScrollOverlay;
         this.productSurfaceContainer = productSurfaceContainer;
         this.appShellNavigation = appShellNavigation;
         this.host = host;
     }
 
     public void applyCurrentViewMode() {
-        appShellNavigation.setActiveShellView(ShellViewId.PRODUCT_TERMINAL);
+        appShellNavigation.setActiveShellView(ShellViewId.TERMINAL);
         productView.setVisibility(View.VISIBLE);
         productSurfaceContainer.post(() -> host.notifyVisibleViewport("product-view"));
         productSurfaceContainer.post(host::refreshScrollOverlay);

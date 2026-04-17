@@ -48,6 +48,11 @@ android {
     }
 }
 
+tasks.withType(JavaCompile).configureEach {
+    options.warnings = true
+    options.compilerArgs += ['-Xlint:all', '-Werror']
+}
+
 // Buildship/JDTLS does not infer Android app Java roots reliably on its own.
 // Keep the source root declaration in Gradle so local Java tooling can import
 // the app module without checked-in Eclipse metadata.

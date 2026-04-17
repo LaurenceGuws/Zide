@@ -140,16 +140,13 @@ public final class WidgetAssembly {
 
     public static Result assemble(Host host) {
         final AppShellNavigation appShellNavigation = new AppShellNavigation();
-        final ViewModeControllerRef terminalViewModeControllerRef = new ViewModeControllerRef();
         final SurfaceWidgetControllerRef surfaceWidgetControllerRef = new SurfaceWidgetControllerRef();
         final ChromeController terminalChromeController = createChromeController(
                 host,
-                appShellNavigation,
-                terminalViewModeControllerRef);
+                appShellNavigation);
 
         final ViewModeController terminalViewModeController =
                 createViewModeController(host, appShellNavigation);
-        terminalViewModeControllerRef.value = terminalViewModeController;
 
         final SurfaceWidgetAssembly.Result surfaceWidgetAssembly = assembleSurfaceWidget(
                 host,
@@ -176,8 +173,7 @@ public final class WidgetAssembly {
 
     private static ChromeController createChromeController(
             Host host,
-            AppShellNavigation appShellNavigation,
-            ViewModeControllerRef terminalViewModeControllerRef) {
+            AppShellNavigation appShellNavigation) {
         return new ChromeController(
                 ChromeFactory.createChromeHostBridge(
                         host.activity(),
@@ -202,7 +198,6 @@ public final class WidgetAssembly {
             Host host, AppShellNavigation appShellNavigation) {
         return UiFactory.createViewModeController(
                 host.productView(),
-                host.terminalScrollOverlay(),
                 host.productSurfaceContainer(),
                 appShellNavigation,
                 new ViewModeCallbacks(
@@ -275,10 +270,6 @@ public final class WidgetAssembly {
         if (callback != null) {
             nextSurfaceView.getHolder().addCallback(callback);
         }
-    }
-
-    private static final class ViewModeControllerRef {
-        private ViewModeController value;
     }
 
     private static final class SurfaceWidgetControllerRef {

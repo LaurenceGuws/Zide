@@ -31,6 +31,9 @@ and decoupled.
   seams.
 - Userland workflow callback shape is being converted to semantic harness
   actions.
+- Refocus campaign milestones `RF-M0` through `RF-M5` are complete.
+- Active execution focus is now correctness/perf hardening on input and
+  render/surface paths.
 
 Iteration detail is intentionally not tracked here. Read code + git history for
 step-level implementation history.
@@ -59,6 +62,7 @@ Milestone boundary line:
 
 Validation commands:
 
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac`
 - `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac`
 - `python3 ops/android_terminal_host.py deploy`
 - `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E`
@@ -69,7 +73,8 @@ Dual-mode batching override (architect directive):
 
 - Use macro review chunks instead of per-milestone pauses.
 - Completed batch: `RF-M3` + `RF-M4` (macro gate: `RF-M4` architect review).
-- Next execution chunk: `RF-M5` stabilization matrix (per queue).
+- Completed campaign close gate: `RF-M5`.
+- Active batch: `AX-M1` + `AX-M2` (single architect review at `AX-M2`).
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -279,7 +284,7 @@ Progress checkpoint:
 
 ---
 
-### `RF-M5` Stabilization Matrix (`review_required`)
+### `RF-M5` Stabilization Matrix (`completed`)
 
 Queue line (exact):
 
@@ -299,18 +304,91 @@ Tasks:
 Gate:
 
 - matrix recorded with pass/fail and follow-up deltas — see `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md`
-- milestone marked `review_required`
+- milestone marked `completed`
 
 Progress checkpoint:
 
-- `Milestone: RF-M5 review_required`
+- `Milestone: RF-M5 completed`
 - `Queue line (exact): execute stability matrix and close refocus campaign with review gate`
 - `Scope contract: manual validation + documentation; first commit: app_shell_hotspot_bg theming fix`
 - `Progress delta: transparent edge hotspot uses @color/app_shell_hotspot_bg; matrix tables + smoke commands recorded in RF_M5_STABILIZATION_MATRIX.md`
 - `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat smoke + cold start (pass)`
-- `Blocked by Archtect review needed: true` (campaign review gate; refocus queue complete through RF-M5)
+- `Blocked by Archtect review needed: false` (campaign close complete; next batch is AX-M1 + AX-M2)
 
 `Milestone reached per docs, architect review required.`
+
+---
+
+### `AX-M1` Input Path Correctness + Perf Hardening (`in_progress`)
+
+Queue line (exact):
+
+- harden Android input path correctness under strict compile gates without adding compatibility seams
+
+Scope:
+
+- `input/*`, `host/input/*`, `host/ui/ViewModeController`, `host/ui/WidgetAssembly`,
+  and directly connected activity wiring only
+- no userland/install orchestration expansion
+
+Tasks:
+
+- [ ] validate and tighten IME commit/delete/composition/cursor flow behavior in `ShellInputView` seam
+- [ ] validate hardware keyboard path and modifier handling against current runtime contracts
+- [ ] remove input-lane warning debt surfaced by strict `javac -Xlint:all -Werror`
+
+Gate:
+
+- no input-lane warning regressions under strict compile
+- debug + release compile, deploy, runtime smoke, and cold start clean
+
+---
+
+### `AX-M2` Surface/Render Correctness + Perf Hardening (`pending`)
+
+Queue line (exact):
+
+- harden surface/render handoff correctness and remove avoidable redraw/viewport churn in Android host seams
+
+Scope:
+
+- `host/surface/*`, `host/ui/Viewport*`, `host/runtime/FrameLoop*`, and wiring points only
+- no terminal-core behavior migration
+
+Tasks:
+
+- [ ] verify surface lifecycle transitions (create/change/destroy/resume/pause) for correctness invariants
+- [ ] reduce avoidable redraw/viewport churn in host-side handoff where measurable
+- [ ] keep contracts harness-owned with no compatibility relays
+
+Gate:
+
+- compile + deploy + runtime smoke + cold start clean
+- batch summary includes before/after measurable signal for churn reduction
+- architect review required at this gate (macro batch super-gate)
+
+`Milestone reached per docs, architect review required.`
+
+---
+
+### `AX-M3` Post-Hardening Stabilization Matrix Refresh (`pending`)
+
+Queue line (exact):
+
+- rerun stabilization matrix for input/surface lifecycle after AX hardening batch
+
+Scope:
+
+- manual validation + docs refresh only
+
+Tasks:
+
+- [ ] refresh `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md` with AX batch outcomes
+- [ ] record any remaining manual interactive gaps as explicit follow-up rows
+
+Gate:
+
+- matrix refreshed with dated results and follow-up deltas
 
 ## Guardrails
 

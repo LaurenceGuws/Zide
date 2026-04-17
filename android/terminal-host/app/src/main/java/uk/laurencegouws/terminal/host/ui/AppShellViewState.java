@@ -20,6 +20,6 @@ public final class AppShellViewState {
     }
 
     public static AppShellViewState productTerminalDefault() {
-        return new AppShellViewState(ShellViewId.PRODUCT_TERMINAL, true, false);
+        return new AppShellViewState(ShellViewId.TERMINAL, true, false);
     }
 }

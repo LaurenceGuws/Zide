@@ -27,6 +27,7 @@ Do not redefine scope or reorder tickets.
 
 - Active milestone, queue line, and per-milestone tasks: **`docs/todo/android/implementation.md`** (authoritative).
 - Userland harness contract reference: `app_architecture/platform/android/USERLAND_HOST_CONTRACT.md`
+- Stabilization baseline reference: `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md`
 
 ## Ticket Plan
 
@@ -35,8 +36,8 @@ Follow the **active milestone** section in `docs/todo/android/implementation.md`
 ## Review Cadence (Macro, Mandatory)
 
 - Engineer runs larger chunks; do not stop at every milestone by default.
-- Current batch policy: execute `RF-M3` and `RF-M4` as one continuous batch.
-- Architect review point for this batch: only at `RF-M4` gate (or real blocker).
+- Current batch policy: execute `AX-M1` and `AX-M2` as one continuous batch.
+- Architect review point for this batch: only at `AX-M2` gate (or real blocker).
 - Intermediate milestone notes are allowed, but they are not stop points.
 
 Typical wave (when the queue specifies it):
@@ -44,16 +45,18 @@ Typical wave (when the queue specifies it):
 1. Milestone state sync (`docs/todo/android/implementation.md`, `docs/AGENT_HANDOFF.md` as allowed).
 2. Code cuts per milestone scope in the queue (continue through batch milestones).
 3. Validation gate (exact commands from `implementation.md` or queue):
+   - `./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac`
    - `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac`
    - `python3 ops/android_terminal_host.py deploy`
    - `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E`
+   - `adb shell am force-stop uk.laurencegouws.zide && adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity`
 4. Queue update; stop only at batch super-gate boundary.
 
 ## Commit Rules
 
 - Commit in small, coherent checkpoints.
 - No amend/squash unless explicitly requested.
-- Each commit must compile clean.
+- Each commit must pass debug+release compile clean (warnings-as-errors).
 - Do not include `refocus_android.txt` in commits.
 
 ## Hard Stop Conditions
