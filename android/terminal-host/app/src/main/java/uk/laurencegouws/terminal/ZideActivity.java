@@ -341,7 +341,7 @@ public final class ZideActivity extends Activity
             }
 
             @Override
-            public View leftSidebar() {
+            public View drawerSidebar() {
                 return leftSidebar;
             }
 
@@ -396,12 +396,12 @@ public final class ZideActivity extends Activity
             }
 
             @Override
-            public UserlandReadinessState currentReadinessState() {
+            public UserlandReadinessState sessionReadinessState() {
                 return currentReadinessState;
             }
 
             @Override
-            public UserlandInstallState currentInstallState() {
+            public UserlandInstallState sessionInstallState() {
                 return currentInstallState;
             }
 
@@ -456,7 +456,7 @@ public final class ZideActivity extends Activity
             }
 
             @Override
-            public void runPackageDoctor() {
+            public void requestPackageDiagnostics() {
                 userlandWorkflowController.runPackageDoctor();
             }
 

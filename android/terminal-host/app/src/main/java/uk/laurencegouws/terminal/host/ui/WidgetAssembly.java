@@ -47,7 +47,8 @@ public final class WidgetAssembly {
 
         View drawerEdgeHotspot();
 
-        View leftSidebar();
+        /** Chrome drawer panel; host-owned, not widget policy. */
+        View drawerSidebar();
 
         FrameLayout productSurfaceContainer();
 
@@ -69,9 +70,11 @@ public final class WidgetAssembly {
 
         GestureStateController GestureStateController();
 
-        UserlandReadinessState currentReadinessState();
+        /** Product session readiness snapshot for shell-state presentation only. */
+        UserlandReadinessState sessionReadinessState();
 
-        UserlandInstallState currentInstallState();
+        /** Product session install snapshot for shell-state presentation only. */
+        UserlandInstallState sessionInstallState();
 
         boolean shouldRunFrameLoop();
 
@@ -93,7 +96,8 @@ public final class WidgetAssembly {
 
         void reevaluateFrameLoop();
 
-        void runPackageDoctor();
+        /** Host routes diagnostics; widget assembly does not own package policy. */
+        void requestPackageDiagnostics();
 
         void sendDirectText(String text);
 
@@ -173,9 +177,9 @@ public final class WidgetAssembly {
                         host.rootView(),
                         host.drawerScrim(),
                         host.drawerEdgeHotspot(),
-                        host.leftSidebar(),
+                        host.drawerSidebar(),
                         ChromeFactory.createChromeHostCallbacks(
-                                host::runPackageDoctor,
+                                host::requestPackageDiagnostics,
                                 host::appendEvent,
                                 host::imeVisible,
                                 host::setImeVisible,
@@ -218,8 +222,8 @@ public final class WidgetAssembly {
                 host.productReadinessDetail(),
                 host.productReadinessRetryButton(),
                 new ShellStateCallbacks(
-                        host::currentReadinessState,
-                        host::currentInstallState,
+                        host::sessionReadinessState,
+                        host::sessionInstallState,
                         surfaceWidgetAssembly.surfaceHostBridge::currentSurfaceView));
     }
 
