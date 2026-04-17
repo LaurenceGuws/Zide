@@ -13,7 +13,7 @@ import uk.laurencegouws.terminal.userland.UserlandInstallState;
  * Adapts activity-owned callbacks and views to {@link ShellStatePresenter.Host}.
  */
 public final class ShellStateBridge implements ShellStatePresenter.Host {
-    /** Activity callbacks used by product shell blocker presentation. */
+    /** Harness callbacks used by product shell blocker presentation. */
     public interface Callbacks {
         boolean nativeLoaded();
 

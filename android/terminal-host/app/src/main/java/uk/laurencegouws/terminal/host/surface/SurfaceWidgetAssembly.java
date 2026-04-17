@@ -9,7 +9,7 @@ import uk.laurencegouws.terminal.selection.SelectionController;
 
 /** Owns surface + widget controller assembly for the activity wiring layer. */
 public final class SurfaceWidgetAssembly {
-    /** Activity callbacks required to assemble surface/widget host wiring. */
+    /** Harness callbacks required to assemble surface/widget host wiring. */
     public interface Host {
         android.os.Handler handler();
 

@@ -1,6 +1,6 @@
 package uk.laurencegouws.terminal.host.input;
 
-import android.app.Activity;
+import android.content.Context;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 
@@ -12,7 +12,7 @@ import uk.laurencegouws.terminal.input.ShellInputView;
 
 /** Functional callback adapter for {@link InputAssembly.Host}; activity must implement {@link ShellInputView.Host}. */
 public final class InputCallbacks implements InputAssembly.Host {
-    private final Activity activity;
+    private final Context harnessContext;
     private final View rootView;
     private final InputMethodManager inputMethodManager;
     private final BooleanSupplier currentImeVisible;
@@ -22,7 +22,7 @@ public final class InputCallbacks implements InputAssembly.Host {
     private final Consumer<String> appendEvent;
 
     public InputCallbacks(
-            Activity activity,
+            Context harnessContext,
             View rootView,
             InputMethodManager inputMethodManager,
             BooleanSupplier currentImeVisible,
@@ -30,7 +30,7 @@ public final class InputCallbacks implements InputAssembly.Host {
             Runnable refreshScrollOverlay,
             Consumer<String> updateStatus,
             Consumer<String> appendEvent) {
-        this.activity = activity;
+        this.harnessContext = harnessContext;
         this.rootView = rootView;
         this.inputMethodManager = inputMethodManager;
         this.currentImeVisible = currentImeVisible;
@@ -41,8 +41,8 @@ public final class InputCallbacks implements InputAssembly.Host {
     }
 
     @Override
-    public Activity activity() {
-        return activity;
+    public Context harnessContext() {
+        return harnessContext;
     }
 
     @Override
@@ -52,7 +52,7 @@ public final class InputCallbacks implements InputAssembly.Host {
 
     @Override
     public ShellInputView.Host shellInputHost() {
-        return (ShellInputView.Host) activity;
+        return (ShellInputView.Host) harnessContext;
     }
 
     @Override

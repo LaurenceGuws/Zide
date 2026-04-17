@@ -15,7 +15,7 @@ import uk.laurencegouws.terminal.userland.UserlandWorkflowController;
  * {@code app_architecture/platform/android/USERLAND_HOST_CONTRACT.md}.
  */
 public final class WorkflowBridge implements UserlandWorkflowController.Host {
-    /** Activity callbacks used by userland install and package workflows. */
+    /** Harness callbacks used by userland install and package workflows. */
     public interface Callbacks {
         UserlandRelease release();
 

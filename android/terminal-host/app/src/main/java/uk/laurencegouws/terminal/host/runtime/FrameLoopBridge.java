@@ -4,7 +4,7 @@ package uk.laurencegouws.terminal.host.runtime;
  * Adapts activity-owned frame-loop callbacks to {@link FrameLoopController.Host}.
  */
 public final class FrameLoopBridge implements FrameLoopController.Host {
-    /** Activity callbacks used by frame-loop scheduling. */
+    /** Harness callbacks used by frame-loop scheduling. */
     public interface Callbacks {
         boolean shouldRunFrameLoop();
 

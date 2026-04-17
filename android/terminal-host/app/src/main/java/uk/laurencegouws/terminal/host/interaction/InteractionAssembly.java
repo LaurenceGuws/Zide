@@ -1,6 +1,6 @@
 package uk.laurencegouws.terminal.host.interaction;
 
-import android.app.Activity;
+import android.content.Context;
 import android.os.Handler;
 import android.widget.FrameLayout;
 
@@ -9,9 +9,9 @@ import uk.laurencegouws.terminal.selection.SelectionController;
 
 /** Owns selection + gesture interaction controller assembly for activity wiring. */
 public final class InteractionAssembly {
-    /** Activity callbacks required for interaction assembly. */
+    /** Harness callbacks required for interaction assembly. */
     public interface Host {
-        Activity activity();
+        Context harnessContext();
 
         Handler handler();
 
@@ -48,7 +48,7 @@ public final class InteractionAssembly {
 
     public static Result assemble(Host host) {
         final SelectionController selectionController = InteractionFactory.createSelectionController(
-                host.activity(),
+                host.harnessContext(),
                 host.productSurfaceContainer(),
                 host::productViewportWidthPx,
                 host::productViewportHeightPx,
@@ -60,7 +60,7 @@ public final class InteractionAssembly {
 
         final GestureStateController GestureStateController =
                 InteractionFactory.createGestureStateController(
-                        host.activity(),
+                        host.harnessContext(),
                         host.handler(),
                         host::productViewportHeightPx,
                         host::refreshScrollOverlay,

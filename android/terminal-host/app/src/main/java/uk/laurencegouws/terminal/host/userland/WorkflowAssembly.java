@@ -21,7 +21,7 @@ public final class WorkflowAssembly {
         void markComplete(boolean success);
     }
 
-    /** Activity callbacks required for userland workflow assembly. */
+    /** Harness callbacks required for userland workflow assembly. */
     public interface Host extends WorkflowBridge.Callbacks {
         Context context();
 

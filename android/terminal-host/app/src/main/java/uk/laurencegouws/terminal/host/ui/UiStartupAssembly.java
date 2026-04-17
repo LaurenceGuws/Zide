@@ -8,7 +8,7 @@ import uk.laurencegouws.terminal.host.runtime.RuntimeAssetsController;
 
 /** Owns post-construction UI bind/start wiring for the activity. */
 public final class UiStartupAssembly {
-    /** Activity callbacks required for UI startup wiring. */
+    /** Harness callbacks required for UI startup wiring. */
     public interface Host {
         ViewportController viewportController();
 

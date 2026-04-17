@@ -19,7 +19,7 @@ import uk.laurencegouws.terminal.userland.UserlandInstallState;
 
 /** Owns activity view binding plus debug-status/viewport controller assembly. */
 public final class StatusViewAssembly {
-    /** Activity callbacks required for status/view assembly. */
+    /** Harness callbacks required for status/view assembly (Activity for content binding). */
     public interface Host {
         Activity activity();
 

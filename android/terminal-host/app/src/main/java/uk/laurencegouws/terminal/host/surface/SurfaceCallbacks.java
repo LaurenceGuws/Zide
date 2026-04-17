@@ -10,7 +10,7 @@ import uk.laurencegouws.terminal.debug.AndroidDebugFormatter;
 
 /** Adapts activity-owned callbacks/state into {@link SurfaceBridge.Callbacks}. */
 public final class SurfaceCallbacks implements SurfaceBridge.Callbacks {
-    /** Activity callbacks used by the surface host bridge. */
+    /** Harness callbacks used by the surface host bridge. */
     public interface Callbacks {
         boolean currentImeVisible();
 

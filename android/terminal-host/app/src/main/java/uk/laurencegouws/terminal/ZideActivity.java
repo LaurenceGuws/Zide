@@ -1,6 +1,6 @@
 package uk.laurencegouws.terminal;
 
-import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
@@ -35,6 +35,7 @@ import uk.laurencegouws.terminal.host.status.StatusViewCallbacks;
 import uk.laurencegouws.terminal.host.surface.SurfaceBridge;
 import uk.laurencegouws.terminal.host.surface.SurfaceController;
 import uk.laurencegouws.terminal.host.surface.SurfaceWidgetController;
+import uk.laurencegouws.terminal.host.ui.ProductHostDeferredActions;
 import uk.laurencegouws.terminal.host.ui.ViewModeController;
 import uk.laurencegouws.terminal.host.ui.UiStartupAssembly;
 import uk.laurencegouws.terminal.host.ui.UiStartupCallbacks;
@@ -66,7 +67,7 @@ import uk.laurencegouws.terminal.userland.UserlandWorkflowController;
  * Android-specific policy belongs in the package controllers below this
  * activity.
  */
-public final class ZideActivity extends Activity
+public final class ZideActivity extends android.app.Activity
         implements ShellInputView.Host {
     private static final boolean nativeLoaded = NativeBridge.nativeLoaded();
     private static final String nativeLoadError = NativeBridge.nativeLoadError();
@@ -118,6 +119,19 @@ public final class ZideActivity extends Activity
     private LifecycleController terminalActivityLifecycleController;
     private UserlandInstallState currentInstallState = UserlandInstallState.idle();
     private UserlandReadinessState currentReadinessState;
+
+    private final ProductHostDeferredActions productHostDeferredActions =
+            new ProductHostDeferredActions(
+                    () -> terminalRuntimeController,
+                    () -> productFrameLoopController,
+                    () -> surfaceHostController,
+                    () -> userlandSessionCoordinator,
+                    () -> HardwareKeyboardController,
+                    () -> ImeFocusRecoveryController,
+                    () -> terminalChromeController,
+                    () -> StatusController,
+                    this::setCurrentInstallState,
+                    this::setCurrentReadinessState);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -188,7 +202,7 @@ public final class ZideActivity extends Activity
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
-        if (handleHardwareDispatchKeyEventIfReady(event)) {
+        if (productHostDeferredActions.handleHardwareDispatchKeyEventIfReady(event)) {
             return true;
         }
         return super.dispatchKeyEvent(event);
@@ -225,11 +239,7 @@ public final class ZideActivity extends Activity
                 () -> imeVisible,
                 this::setImeVisible,
                 () -> surfaceHostBridge,
-                reason -> {
-                    if (surfaceHostController != null) {
-                        surfaceHostController.notifyVisibleViewport(reason);
-                    }
-                },
+                productHostDeferredActions::notifyVisibleViewportIfReady,
                 () -> currentInstallState,
                 () -> currentReadinessState);
     }
@@ -251,9 +261,9 @@ public final class ZideActivity extends Activity
                 productSurfaceContainer,
                 () -> terminalViewportController.productViewportWidthPx(),
                 () -> terminalViewportController.productViewportHeightPx(),
-                this::stopScrollbackFlingIfReady,
-                this::refreshScrollOverlayIfReady,
-                this::reevaluateFrameLoopIfReady,
+                productHostDeferredActions::stopScrollbackFlingIfReady,
+                productHostDeferredActions::refreshScrollOverlayIfReady,
+                productHostDeferredActions::reevaluateFrameLoopIfReady,
                 StatusController::appendEvent);
     }
 
@@ -275,7 +285,7 @@ public final class ZideActivity extends Activity
                 getSystemService(InputMethodManager.class),
                 () -> imeVisible,
                 this::setImeVisible,
-                this::refreshScrollOverlayIfReady,
+                productHostDeferredActions::refreshScrollOverlayIfReady,
                 StatusController::updateStatus,
                 StatusController::appendEvent);
     }
@@ -297,7 +307,7 @@ public final class ZideActivity extends Activity
     private WidgetAssembly.Host createWidgetHost() {
         return new WidgetAssembly.Host() {
             @Override
-            public Activity activity() {
+            public Context harnessContext() {
                 return ZideActivity.this;
             }
 
@@ -408,12 +418,12 @@ public final class ZideActivity extends Activity
 
             @Override
             public boolean shouldRunFrameLoop() {
-                return ZideActivity.this.shouldRunFrameLoop();
+                return productHostDeferredActions.shouldRunFrameLoop();
             }
 
             @Override
             public void refreshScrollOverlay() {
-                refreshScrollOverlayIfReady();
+                productHostDeferredActions.refreshScrollOverlayIfReady();
             }
 
             @Override
@@ -443,7 +453,7 @@ public final class ZideActivity extends Activity
 
             @Override
             public void handleShellStateEvent() {
-                handleShellStateEventIfReady();
+                productHostDeferredActions.handleShellStateEventIfReady();
             }
 
             @Override
@@ -453,7 +463,7 @@ public final class ZideActivity extends Activity
 
             @Override
             public void reevaluateFrameLoop() {
-                reevaluateFrameLoopIfReady();
+                productHostDeferredActions.reevaluateFrameLoopIfReady();
             }
 
             @Override
@@ -468,7 +478,7 @@ public final class ZideActivity extends Activity
 
             @Override
             public void notifyVisibleViewport(String reason) {
-                notifyVisibleViewportIfReady(reason);
+                productHostDeferredActions.notifyVisibleViewportIfReady(reason);
             }
         };
     }
@@ -509,10 +519,10 @@ public final class ZideActivity extends Activity
                 StatusController::appendEvent,
                 StatusController::updateStatus,
                 this::setCurrentReadinessState,
-                this::refreshShellStateIfReady,
-                this::refreshStatusTelemetryIfReady,
-                this::shouldRunFrameLoop,
-                this::tickFrameAndRefreshScrollOverlay);
+                productHostDeferredActions::refreshShellStateIfReady,
+                productHostDeferredActions::refreshStatusTelemetryIfReady,
+                productHostDeferredActions::shouldRunFrameLoop,
+                () -> productHostDeferredActions.tickFrameAndRefreshScrollOverlay(nativeLoaded));
     }
 
     private void assembleUserlandWorkflowControllers() {
@@ -529,11 +539,11 @@ public final class ZideActivity extends Activity
                 () -> userlandRelease,
                 release -> userlandRelease = release,
                 StatusController::appendEvent,
-                this::applyInstallStateIfReady,
-                this::completeInstallIfReady,
-                this::failInstallIfReady,
-                this::restartSessionAfterInstallIfReady,
-                this::markPackageDoctorComplete);
+                productHostDeferredActions::applyInstallStateIfReady,
+                productHostDeferredActions::completeInstallIfReady,
+                productHostDeferredActions::failInstallIfReady,
+                productHostDeferredActions::restartSessionAfterInstallIfReady,
+                productHostDeferredActions::markPackageDoctorCompleteIfReady);
     }
 
     private void assembleActivityLifecycleController() {
@@ -600,17 +610,17 @@ public final class ZideActivity extends Activity
 
             @Override
             public void stopFrameLoop() {
-                stopFrameLoopIfReady();
+                productHostDeferredActions.stopFrameLoopIfReady();
             }
 
             @Override
             public void refreshUserlandSessionOnPause() {
-                refreshUserlandSessionIfReady();
+                productHostDeferredActions.refreshUserlandSessionIfReady();
             }
 
             @Override
             public void notifySurfacePause() {
-                pauseSurfaceIfReady();
+                productHostDeferredActions.pauseSurfaceIfReady();
             }
 
             @Override
@@ -618,7 +628,7 @@ public final class ZideActivity extends Activity
                     boolean debugRecreateSurfaceOnce,
                     boolean debugResizeSurfaceOnce,
                     boolean debugStartShellOnce) {
-                resumeSurfaceIfReady(
+                productHostDeferredActions.resumeSurfaceIfReady(
                         debugRecreateSurfaceOnce,
                         debugResizeSurfaceOnce,
                         debugStartShellOnce);
@@ -652,104 +662,6 @@ public final class ZideActivity extends Activity
                 leftSidebar);
     }
 
-    private void stopScrollbackFlingIfReady() {
-        if (terminalRuntimeController != null) {
-            terminalRuntimeController.stopScrollbackFling();
-        }
-    }
-
-    private void refreshScrollOverlayIfReady() {
-        if (terminalRuntimeController != null) {
-            terminalRuntimeController.refreshScrollOverlay();
-        }
-    }
-
-    private void reevaluateFrameLoopIfReady() {
-        if (productFrameLoopController != null) {
-            productFrameLoopController.reevaluate();
-        }
-    }
-
-    private void refreshShellStateIfReady() {
-        if (terminalRuntimeController != null) {
-            terminalRuntimeController.refreshShellState();
-        }
-    }
-
-    private void refreshStatusTelemetryIfReady() {
-        if (terminalRuntimeController != null) {
-            terminalRuntimeController.refreshStatusTelemetry();
-        }
-    }
-
-    private void handleShellStateEventIfReady() {
-        if (terminalRuntimeController != null) {
-            terminalRuntimeController.handleShellStateEvent();
-        }
-    }
-
-    private void applyInstallStateIfReady(UserlandInstallState installState) {
-        if (terminalRuntimeController != null) {
-            terminalRuntimeController.applyInstallState(installState);
-        }
-    }
-
-    private void completeInstallIfReady(UserlandReadinessState readinessState) {
-        setCurrentInstallState(UserlandInstallState.idle());
-        setCurrentReadinessState(readinessState);
-        restartSessionAfterInstallIfReady(true);
-    }
-
-    private void failInstallIfReady(UserlandInstallState installState) {
-        applyInstallStateIfReady(installState);
-    }
-
-    private void restartSessionAfterInstallIfReady(boolean logRefresh) {
-        if (terminalRuntimeController != null) {
-            terminalRuntimeController.restartSessionAfterInstall(logRefresh);
-        }
-    }
-
-    private void markPackageDoctorComplete(boolean success) {
-        StatusController.recordPackageDoctorOutcome(success);
-    }
-
-    private void notifyVisibleViewportIfReady(String reason) {
-        if (surfaceHostController != null) {
-            surfaceHostController.notifyVisibleViewport(reason);
-        }
-    }
-
-    private void stopFrameLoopIfReady() {
-        if (productFrameLoopController != null) {
-            productFrameLoopController.stop();
-        }
-    }
-
-    private void refreshUserlandSessionIfReady() {
-        if (userlandSessionCoordinator != null) {
-            userlandSessionCoordinator.refreshAndApply(false);
-        }
-    }
-
-    private void pauseSurfaceIfReady() {
-        if (surfaceHostController != null) {
-            surfaceHostController.onPause();
-        }
-    }
-
-    private void resumeSurfaceIfReady(
-            boolean debugRecreateSurfaceOnce,
-            boolean debugResizeSurfaceOnce,
-            boolean debugStartShellOnce) {
-        if (surfaceHostController != null) {
-            surfaceHostController.onResume(
-                    debugRecreateSurfaceOnce,
-                    debugResizeSurfaceOnce,
-                    debugStartShellOnce);
-        }
-    }
-
     private void loadInitialReadinessState() {
         currentReadinessState = userlandSessionCoordinator.loadReadinessState();
     }
@@ -764,22 +676,6 @@ public final class ZideActivity extends Activity
 
     private void setImeVisible(boolean visible) {
         imeVisible = visible;
-    }
-
-    private boolean handleHardwareDispatchKeyEventIfReady(KeyEvent event) {
-        return HardwareKeyboardController != null
-                && HardwareKeyboardController.handleDispatchKeyEvent(event);
-    }
-
-    private boolean shouldRunFrameLoop() {
-        return terminalRuntimeController != null
-                && terminalRuntimeController.shouldRunFrameLoop();
-    }
-
-    private int tickFrameAndRefreshScrollOverlay() {
-        final int tick = nativeLoaded ? NativeBridge.nativeTickFrameBridge() : 0;
-        refreshScrollOverlayIfReady();
-        return tick;
     }
 
     @Override
@@ -798,12 +694,12 @@ public final class ZideActivity extends Activity
 
     @Override
     public void onInputFocusChanged(boolean hasFocus) {
-        notifyInputFocusRecoveryIfReady(hasFocus);
+        productHostDeferredActions.notifyInputFocusRecoveryIfReady(hasFocus);
     }
 
     @Override
     public void onModifierLatchChanged(ShellInputView.Host.ModifierLatchState state) {
-        applyModifierLatchIfReady(state);
+        productHostDeferredActions.applyModifierLatchIfReady(state);
     }
 
     private boolean canSendDirectInput() {
@@ -823,18 +719,6 @@ public final class ZideActivity extends Activity
             final int cp = text.codePointAt(i);
             sendDirectCodepointToNative(cp);
             i += Character.charCount(cp);
-        }
-    }
-
-    private void notifyInputFocusRecoveryIfReady(boolean hasFocus) {
-        if (ImeFocusRecoveryController != null) {
-            ImeFocusRecoveryController.onInputFocusChanged(hasFocus);
-        }
-    }
-
-    private void applyModifierLatchIfReady(ShellInputView.Host.ModifierLatchState state) {
-        if (terminalChromeController != null) {
-            terminalChromeController.applyModifierLatchState(state);
         }
     }
 

@@ -2,7 +2,7 @@ package uk.laurencegouws.terminal.host.lifecycle;
 
 /** Owns activity lifecycle wiring for native/status/session/surface hooks. */
 public final class LifecycleController {
-    /** Activity callbacks required for lifecycle wiring. */
+    /** Harness callbacks required for lifecycle wiring. */
     public interface Host {
         boolean nativeLoaded();
 

@@ -6,7 +6,7 @@ import android.content.Context;
  * Adapts activity-owned runtime-asset callbacks to {@link RuntimeAssetsController.Host}.
  */
 public final class RuntimeAssetsBridge implements RuntimeAssetsController.Host {
-    /** Activity callback used by runtime-assets staging. */
+    /** Harness callback used by runtime-assets staging. */
     public interface Callbacks {
         void appendEvent(String event);
     }

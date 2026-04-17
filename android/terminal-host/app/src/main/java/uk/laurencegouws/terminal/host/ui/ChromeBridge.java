@@ -11,7 +11,7 @@ import uk.laurencegouws.terminal.input.ShellInputView;
  * Adapts activity-owned chrome callbacks and view references to {@link ChromeController}.
  */
 public final class ChromeBridge implements ChromeController.Host {
-    /** Activity callbacks used by chrome actions. */
+    /** Harness callbacks used by chrome actions. */
     public interface Callbacks {
         void runPackageDoctor();
 

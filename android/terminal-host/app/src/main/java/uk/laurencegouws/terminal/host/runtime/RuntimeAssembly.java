@@ -14,7 +14,7 @@ import uk.laurencegouws.terminal.userland.UserlandSessionCoordinator;
 
 /** Owns product-runtime controller assembly for activity wiring. */
 public final class RuntimeAssembly {
-    /** Activity callbacks required for product-runtime assembly. */
+    /** Harness callbacks required for product-runtime assembly. */
     public interface Host {
         UserlandInstallState installState();
 

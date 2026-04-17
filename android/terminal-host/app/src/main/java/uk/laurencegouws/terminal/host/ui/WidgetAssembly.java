@@ -1,6 +1,6 @@
 package uk.laurencegouws.terminal.host.ui;
 
-import android.app.Activity;
+import android.content.Context;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
@@ -27,9 +27,10 @@ import uk.laurencegouws.terminal.userland.UserlandInstallState;
 
 /** Owns product widget/chrome/view-mode/surface host assembly for activity wiring. */
 public final class WidgetAssembly {
-    /** Activity callbacks required to assemble widget host controllers. */
+    /** Harness callbacks required to assemble widget host controllers. */
     public interface Host {
-        Activity activity();
+        /** Activity or application context for chrome and view construction. */
+        Context harnessContext();
 
         android.os.Handler handler();
 
@@ -176,7 +177,7 @@ public final class WidgetAssembly {
             AppShellNavigation appShellNavigation) {
         return new ChromeController(
                 ChromeFactory.createChromeHostBridge(
-                        host.activity(),
+                        host.harnessContext(),
                         host.rootView(),
                         host.drawerScrim(),
                         host.drawerEdgeHotspot(),

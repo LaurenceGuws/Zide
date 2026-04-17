@@ -1,6 +1,6 @@
 package uk.laurencegouws.terminal.host.input;
 
-import android.app.Activity;
+import android.content.Context;
 import android.view.Gravity;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.FrameLayout;
@@ -14,9 +14,9 @@ import uk.laurencegouws.terminal.input.ImeFocusRecoveryController;
 
 /** Owns shell input installation and input controller wiring assembly. */
 public final class InputAssembly {
-    /** Activity callbacks required to assemble input state. */
+    /** Harness callbacks required to assemble input state. */
     public interface Host {
-        Activity activity();
+        Context harnessContext();
 
         android.view.View rootView();
 
@@ -63,7 +63,7 @@ public final class InputAssembly {
     }
 
     public static Result assemble(Host host) {
-        final ShellInputView shellInputView = new ShellInputView(host.activity(), host.shellInputHost());
+        final ShellInputView shellInputView = new ShellInputView(host.harnessContext(), host.shellInputHost());
         final FrameLayout root = (FrameLayout) host.rootView();
         final FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(1, 1);
         lp.gravity = Gravity.BOTTOM | Gravity.START;

@@ -1,6 +1,6 @@
 package uk.laurencegouws.terminal.host.interaction;
 
-import android.app.Activity;
+import android.content.Context;
 import android.os.Handler;
 import android.widget.FrameLayout;
 
@@ -9,7 +9,7 @@ import java.util.function.IntSupplier;
 
 /** Functional callback adapter for {@link InteractionAssembly.Host}. */
 public final class InteractionCallbacks implements InteractionAssembly.Host {
-    private final Activity activity;
+    private final Context harnessContext;
     private final Handler handler;
     private final FrameLayout productSurfaceContainer;
     private final IntSupplier productViewportWidthPx;
@@ -20,7 +20,7 @@ public final class InteractionCallbacks implements InteractionAssembly.Host {
     private final Consumer<String> appendEvent;
 
     public InteractionCallbacks(
-            Activity activity,
+            Context harnessContext,
             Handler handler,
             FrameLayout productSurfaceContainer,
             IntSupplier productViewportWidthPx,
@@ -29,7 +29,7 @@ public final class InteractionCallbacks implements InteractionAssembly.Host {
             Runnable refreshScrollOverlay,
             Runnable reevaluateFrameLoop,
             Consumer<String> appendEvent) {
-        this.activity = activity;
+        this.harnessContext = harnessContext;
         this.handler = handler;
         this.productSurfaceContainer = productSurfaceContainer;
         this.productViewportWidthPx = productViewportWidthPx;
@@ -41,8 +41,8 @@ public final class InteractionCallbacks implements InteractionAssembly.Host {
     }
 
     @Override
-    public Activity activity() {
-        return activity;
+    public Context harnessContext() {
+        return harnessContext;
     }
 
     @Override

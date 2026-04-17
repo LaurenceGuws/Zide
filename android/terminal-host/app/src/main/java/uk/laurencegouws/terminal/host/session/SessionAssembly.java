@@ -14,7 +14,7 @@ import uk.laurencegouws.terminal.userland.UserlandSessionCoordinator;
 
 /** Owns session-related controller assembly for the activity wiring layer. */
 public final class SessionAssembly {
-    /** Activity callbacks required to assemble session-related controllers. */
+    /** Harness callbacks required to assemble session-related controllers. */
     public interface Host {
         Context context();
 
