@@ -51,14 +51,13 @@ For active priorities/workflow, use
 
 Current shape markers (for hygiene tracking, not hard limits):
 
-- `selection/SelectionController.java`: `999` lines (monolithic by design for now)
-- `ZideActivity.java`: `615` lines
+- `selection/SelectionController.java`: `1101` lines (monolithic by design for now)
+- `ZideActivity.java`: `803` lines
 - `input/ShellInputView.java`: `545` lines
 - `userland/UserlandInstaller.java`: `425` lines
-- `host/ui/WidgetCallbacks.java`: `340` lines
+- `host/ui/WidgetAssembly.java`: `320` lines
 - `host/surface/SurfaceBridge.java`: `272` lines
 - `host/surface/SurfaceController.java`: `262` lines
-- `host/ui/WidgetAssembly.java`: `255` lines
 - `host/ui/ChromeController.java`: `221` lines
 - `host/runtime/RuntimeHostCallbacks.java`: `170` lines
 - `host/ui/UiStartupCallbacks.java`: `168` lines
@@ -105,7 +104,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/status/StatusViewAssembly.java` | Good | Owns initial view binding plus debug-status/viewport host assembly for activity wiring. | Keep this assembly-only; status rendering and viewport policy remain in dedicated controllers. |
 | `host/status/StatusViewCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/status/StatusViewAssembly`. | Keep adapter-only; avoid moving status/viewport behavior into this adapter. |
 | `host/ui/WidgetAssembly.java` | Good | Owns product widget/chrome/view-mode/surface host assembly so activity wiring no longer inlines those construction seams. | Keep this assembly-only; behavior remains in dedicated controllers/bridges. |
-| `host/ui/WidgetCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/ui/WidgetAssembly`. | Keep adapter-only; avoid moving widget/chrome/view-mode behavior into this adapter. |
+| `host/ui/WidgetCallbacks.java` | Removed | Adapter seam was removed; `WidgetAssembly.Host` is now provided directly by `ZideActivity`. | Keep `WidgetAssembly` assembly-only; avoid recreating large pass-through adapters unless they remove measurable coupling. |
 | `host/ui/UiFactory.java` | Good | Owns UI host construction for shell-state presenter bridge, view-mode controller, and surface-widget controller. | Keep this construction-only; UI behavior remains in dedicated host controllers. |
 | `host/ui/UiStartupAssembly.java` | Good | Owns post-construction UI bind/start assembly for activity wiring. | Keep this assembly-only; UI behavior remains in dedicated controllers. |
 | `host/ui/UiStartupCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/ui/UiStartupAssembly`. | Keep adapter-only; avoid adding UI behavior here. |

@@ -102,12 +102,16 @@ Required per-commit update format:
 ## Java Hygiene Hotspots (Reassessed)
 
 - `selection/SelectionController.java` remains the largest Java owner
-  seam (~999 lines) and is still monolithic by design.
+  seam (~1101 lines) and is still monolithic by design.
 - `ZideActivity.java` is materially thinner (~615 lines) but remains
-  the highest orchestration-pressure seam.
-- `host/ui/WidgetAssembly.java` (~250 lines) is now the highest
-  callback-fan-out seam after removing `WidgetCallbacks`.
+  the highest orchestration-pressure seam (~803 lines current after
+  callback-host inlining).
+- `host/ui/WidgetAssembly.java` (~320 lines) remains callback-fan-out heavy,
+  but the dedicated `WidgetCallbacks` adapter has been removed.
+- `input/ShellInputView.java` (~545 lines) is now a top practical risk seam
+  because it combines dense IME/hardware-key behavior with long methods.
 - `userland/UserlandInstaller.java` (~425 lines) remains large but cohesive;
   keep watch-only unless behavior complexity expands.
 - `host/surface/SurfaceController.java` and `host/ui/ChromeController.java`
-  are frozen unless the active queue explicitly reopens those lanes.
+  have very high recent churn; keep frozen unless the queue explicitly reopens
+  those lanes for a concrete behavior bug.

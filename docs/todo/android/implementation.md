@@ -136,6 +136,27 @@ Milestone gate contract (mandatory when manager/architect lane is active):
 
 ## Active TODO
 
+### Reassessment 2026-04-17 (Assumption Reset)
+
+Fresh code audit replaced stale assumptions with current metrics:
+
+- `SelectionController.java`: ~1101 lines, still largest owner seam; recent
+  action-mode cleanup reduced helper churn, so remaining work should target
+  larger behavior seams (not micro wrapper trimming).
+- `ZideActivity.java`: ~803 lines with a single ~198-line `createWidgetHost()`
+  method now dominating orchestration readability pressure.
+- `ShellInputView.java`: ~545 lines with long high-risk methods
+  (`onCreateInputConnection`, `mapKeyToControlCodepoint`, `handleKeyEvent`)
+  affecting daily input correctness.
+- `SurfaceController.java` and `ChromeController.java` show very high recent
+  churn and stay frozen unless a concrete runtime bug requires reopening.
+
+Audit decision:
+
+- stop micro-cuts that only trim one-hop selection helpers
+- prioritize high-impact Android seams with direct user-facing correctness risk
+  (`ShellInputView` input path first)
+
 1. Continue cleanup/refactor cuts only where methods still own policy.
    - Completed: callback wiring hygiene pass in `ZideActivity` now uses
      named setter/getter/host helpers and removes non-trivial inline callback
@@ -302,13 +323,13 @@ Milestone gate contract (mandatory when manager/architect lane is active):
     (`onActionItemClicked`) and collapsing no-bytes/no-clipboard reporting and
     clipboard apply flow into direct callback/clipboard paths with unchanged
     telemetry semantics.
-    - Next: resume primary Java cleanup under Active TODO item 1 by executing a
-      behavior-preserving `selection/SelectionController.java` pressure-reduction
-      wave focused on action-mode lifecycle internals (reduce tiny one-hop
-      helper churn and keep attach/show/invalidate/finish/destroy flow explicit
-      with fewer method hops).
-      For this wave, do not add naming-only wrappers; each cut must reduce
-      callback or constructor pressure with measurable net simplification.
+    - Next: execute a behavior-preserving `input/ShellInputView.java`
+      complexity-risk reduction wave focused on IME/hardware-key correctness
+      seams (`onCreateInputConnection`, key mapping, and key-event handling)
+      with measurable method-size and branch-pressure reduction; avoid naming-only
+      changes and avoid cross-lane edits.
+      For this wave, each cut must reduce input-path complexity while preserving
+      runtime behavior and direct-input correctness.
       Naming pressure rule for this wave: when a touched method/class name can be
       made package-led without losing meaning, prefer dropping redundant
       `Terminal`/`Product` prefixes; keep those terms only where they disambiguate
