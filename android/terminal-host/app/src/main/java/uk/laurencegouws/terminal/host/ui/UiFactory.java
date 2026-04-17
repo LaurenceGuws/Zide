@@ -33,13 +33,11 @@ public final class UiFactory {
 
     public static ViewModeController createViewModeController(
             View productView,
-            View debugView,
             View terminalScrollOverlay,
             FrameLayout productSurfaceContainer,
             ViewModeController.Host host) {
         return new ViewModeController(
                 productView,
-                debugView,
                 terminalScrollOverlay,
                 productSurfaceContainer,
                 host);

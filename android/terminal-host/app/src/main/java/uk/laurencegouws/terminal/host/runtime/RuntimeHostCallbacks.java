@@ -3,7 +3,6 @@ package uk.laurencegouws.terminal.host.runtime;
 import android.view.SurfaceView;
 import android.view.View;
 
-import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -20,7 +19,6 @@ import uk.laurencegouws.terminal.userland.UserlandSessionCoordinator;
 
 /** Functional callback adapter for {@link RuntimeController}. */
 public final class RuntimeHostCallbacks implements RuntimeController.Host {
-    private final BooleanSupplier debugViewEnabled;
     private final Supplier<UserlandInstallState> installState;
     private final Consumer<UserlandInstallState> setInstallState;
     private final Supplier<UserlandReadinessState> readinessState;
@@ -37,7 +35,6 @@ public final class RuntimeHostCallbacks implements RuntimeController.Host {
     private final Consumer<String> updateStatus;
 
     public RuntimeHostCallbacks(
-            BooleanSupplier debugViewEnabled,
             Supplier<UserlandInstallState> installState,
             Consumer<UserlandInstallState> setInstallState,
             Supplier<UserlandReadinessState> readinessState,
@@ -52,7 +49,6 @@ public final class RuntimeHostCallbacks implements RuntimeController.Host {
             GestureStateController GestureStateController,
             Consumer<String> appendEvent,
             Consumer<String> updateStatus) {
-        this.debugViewEnabled = debugViewEnabled;
         this.installState = installState;
         this.setInstallState = setInstallState;
         this.readinessState = readinessState;
@@ -69,12 +65,6 @@ public final class RuntimeHostCallbacks implements RuntimeController.Host {
         this.updateStatus = updateStatus;
     }
 
-    @Override
-    public boolean debugViewEnabled() {
-        return debugViewEnabled.getAsBoolean();
-    }
-
-    @Override
     public boolean nativeLoaded() {
         return NativeBridge.nativeLoaded();
     }

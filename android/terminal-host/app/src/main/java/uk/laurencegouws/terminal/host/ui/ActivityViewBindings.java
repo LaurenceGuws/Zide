@@ -11,16 +11,11 @@ import uk.laurencegouws.terminal.scroll.ScrollOverlayView;
 
 /** Captures activity-owned view references for terminal host wiring. */
 public final class ActivityViewBindings {
-    public final TextView statusText;
-    public final TextView packageStatusText;
-    public final TextView eventLogText;
     public final TextView productReadinessTitle;
     public final TextView productReadinessDetail;
     public final Button productReadinessRetryButton;
-    public final Button productReadinessDebugButton;
     public final View rootView;
     public final View productView;
-    public final View debugView;
     public final View productReadinessBlocker;
     public final View drawerScrim;
     public final View drawerEdgeHotspot;
@@ -31,16 +26,11 @@ public final class ActivityViewBindings {
     public final Button assistAltButton;
 
     private ActivityViewBindings(
-            TextView statusText,
-            TextView packageStatusText,
-            TextView eventLogText,
             TextView productReadinessTitle,
             TextView productReadinessDetail,
             Button productReadinessRetryButton,
-            Button productReadinessDebugButton,
             View rootView,
             View productView,
-            View debugView,
             View productReadinessBlocker,
             View drawerScrim,
             View drawerEdgeHotspot,
@@ -49,16 +39,11 @@ public final class ActivityViewBindings {
             ScrollOverlayView terminalScrollOverlay,
             Button assistCtrlButton,
             Button assistAltButton) {
-        this.statusText = statusText;
-        this.packageStatusText = packageStatusText;
-        this.eventLogText = eventLogText;
         this.productReadinessTitle = productReadinessTitle;
         this.productReadinessDetail = productReadinessDetail;
         this.productReadinessRetryButton = productReadinessRetryButton;
-        this.productReadinessDebugButton = productReadinessDebugButton;
         this.rootView = rootView;
         this.productView = productView;
-        this.debugView = debugView;
         this.productReadinessBlocker = productReadinessBlocker;
         this.drawerScrim = drawerScrim;
         this.drawerEdgeHotspot = drawerEdgeHotspot;
@@ -71,16 +56,11 @@ public final class ActivityViewBindings {
 
     public static ActivityViewBindings from(Activity activity) {
         return new ActivityViewBindings(
-                activity.findViewById(R.id.status_text),
-                activity.findViewById(R.id.package_status_text),
-                activity.findViewById(R.id.event_log),
                 activity.findViewById(R.id.product_readiness_title),
                 activity.findViewById(R.id.product_readiness_detail),
                 activity.findViewById(R.id.product_readiness_retry_button),
-                activity.findViewById(R.id.product_readiness_debug_button),
                 activity.findViewById(R.id.root_view),
                 activity.findViewById(R.id.product_view),
-                activity.findViewById(R.id.debug_view),
                 activity.findViewById(R.id.product_readiness_blocker),
                 activity.findViewById(R.id.drawer_scrim),
                 activity.findViewById(R.id.left_edge_swipe_hotspot),

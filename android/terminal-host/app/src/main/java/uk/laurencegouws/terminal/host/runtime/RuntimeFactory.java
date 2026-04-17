@@ -26,7 +26,6 @@ public final class RuntimeFactory {
     }
 
     public static RuntimeController.Host createRuntimeHostCallbacks(
-            BooleanSupplier debugViewEnabled,
             Supplier<UserlandInstallState> installState,
             Consumer<UserlandInstallState> setInstallState,
             Supplier<UserlandReadinessState> readinessState,
@@ -42,7 +41,6 @@ public final class RuntimeFactory {
             Consumer<String> appendEvent,
             Consumer<String> updateStatus) {
         return new RuntimeHostCallbacks(
-                debugViewEnabled,
                 installState,
                 setInstallState,
                 readinessState,

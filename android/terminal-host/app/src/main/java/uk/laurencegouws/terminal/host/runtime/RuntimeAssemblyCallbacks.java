@@ -2,7 +2,6 @@ package uk.laurencegouws.terminal.host.runtime;
 
 import android.view.View;
 
-import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -18,7 +17,6 @@ import uk.laurencegouws.terminal.userland.UserlandSessionCoordinator;
 
 /** Functional callback adapter for {@link RuntimeAssembly.Host}. */
 public final class RuntimeAssemblyCallbacks implements RuntimeAssembly.Host {
-    private final BooleanSupplier debugViewEnabled;
     private final Supplier<UserlandInstallState> installState;
     private final Consumer<UserlandInstallState> setInstallState;
     private final Supplier<UserlandReadinessState> readinessState;
@@ -35,7 +33,6 @@ public final class RuntimeAssemblyCallbacks implements RuntimeAssembly.Host {
     private final GestureStateController GestureStateController;
 
     public RuntimeAssemblyCallbacks(
-            BooleanSupplier debugViewEnabled,
             Supplier<UserlandInstallState> installState,
             Consumer<UserlandInstallState> setInstallState,
             Supplier<UserlandReadinessState> readinessState,
@@ -50,7 +47,6 @@ public final class RuntimeAssemblyCallbacks implements RuntimeAssembly.Host {
             StatusController StatusController,
             UserlandSessionCoordinator userlandSessionCoordinator,
             GestureStateController GestureStateController) {
-        this.debugViewEnabled = debugViewEnabled;
         this.installState = installState;
         this.setInstallState = setInstallState;
         this.readinessState = readinessState;
@@ -67,12 +63,6 @@ public final class RuntimeAssemblyCallbacks implements RuntimeAssembly.Host {
         this.GestureStateController = GestureStateController;
     }
 
-    @Override
-    public boolean debugViewEnabled() {
-        return debugViewEnabled.getAsBoolean();
-    }
-
-    @Override
     public UserlandInstallState installState() {
         return installState.get();
     }

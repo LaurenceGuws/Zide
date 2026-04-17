@@ -19,8 +19,6 @@ public final class SurfaceController {
 
         boolean nativeLoaded();
 
-        boolean debugViewEnabled();
-
         FrameLayout productSurfaceContainer();
 
         SurfaceView surfaceView();
@@ -239,7 +237,7 @@ public final class SurfaceController {
     }
 
     public void notifyVisibleViewport(String reason) {
-        if (host.debugViewEnabled() || host.productSurfaceContainer().getVisibility() != View.VISIBLE) {
+        if (host.productSurfaceContainer().getVisibility() != View.VISIBLE) {
             return;
         }
         final boolean viewportImeVisible = host.currentImeVisible();

@@ -13,12 +13,6 @@ import uk.laurencegouws.terminal.input.ShellInputView;
 public final class ChromeBridge implements ChromeController.Host {
     /** Activity callbacks used by chrome actions. */
     public interface Callbacks {
-        boolean debugViewEnabled();
-
-        void showView(String eventName, String statusLabel);
-
-        void showDebugView(String eventName, String statusLabel);
-
         void runPackageDoctor();
 
         void appendEvent(String event);
@@ -40,7 +34,6 @@ public final class ChromeBridge implements ChromeController.Host {
 
     private final Context context;
     private final View rootView;
-    private final View debugViewModeButton;
     private final View drawerScrim;
     private final View drawerEdgeHotspot;
     private final View leftSidebar;
@@ -50,14 +43,12 @@ public final class ChromeBridge implements ChromeController.Host {
     public ChromeBridge(
             Context context,
             View rootView,
-            View debugViewModeButton,
             View drawerScrim,
             View drawerEdgeHotspot,
             View leftSidebar,
             Callbacks callbacks) {
         this.context = context;
         this.rootView = rootView;
-        this.debugViewModeButton = debugViewModeButton;
         this.drawerScrim = drawerScrim;
         this.drawerEdgeHotspot = drawerEdgeHotspot;
         this.leftSidebar = leftSidebar;
@@ -67,11 +58,6 @@ public final class ChromeBridge implements ChromeController.Host {
     @Override
     public Context context() {
         return context;
-    }
-
-    @Override
-    public View debugViewModeButton() {
-        return debugViewModeButton;
     }
 
     @Override
@@ -99,22 +85,6 @@ public final class ChromeBridge implements ChromeController.Host {
         sidebarOpen = open;
     }
 
-    @Override
-    public boolean debugViewEnabled() {
-        return callbacks.debugViewEnabled();
-    }
-
-    @Override
-    public void showView(String eventName, String statusLabel) {
-        callbacks.showView(eventName, statusLabel);
-    }
-
-    @Override
-    public void showDebugView(String eventName, String statusLabel) {
-        callbacks.showDebugView(eventName, statusLabel);
-    }
-
-    @Override
     public void runPackageDoctor() {
         callbacks.runPackageDoctor();
     }

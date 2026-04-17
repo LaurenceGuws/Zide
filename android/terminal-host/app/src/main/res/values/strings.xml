@@ -1,13 +1,6 @@
 <resources>
     <string name="app_name">Zide Terminal</string>
-    <string name="status_booting">state=booting</string>
-    <string name="show_debug_short">Debug</string>
-    <string name="show_product_view">Show Product</string>
-    <string name="debug_view_title">Debug View</string>
     <string name="shell_restart_short">Restart</string>
-    <string name="event_log_label">Event Log</string>
-    <string name="package_status_label">Package Status</string>
-    <string name="package_status_idle">Not queried yet.</string>
     <string name="sidebar_title">Terminal Controls</string>
     <string name="sidebar_packages">Packages</string>
     <string name="product_readiness_title_missing">Userland Not Staged</string>
@@ -27,7 +20,6 @@
     <string name="product_readiness_update">Update</string>
     <string name="product_readiness_installing">Installing…</string>
     <string name="product_readiness_retry">Retry</string>
-    <string name="product_readiness_debug">Open Debug</string>
     <string name="assist_ime">IME</string>
     <string name="assist_esc">Esc</string>
     <string name="assist_tab">Tab</string>

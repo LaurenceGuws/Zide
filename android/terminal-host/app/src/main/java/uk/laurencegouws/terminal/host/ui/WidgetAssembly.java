@@ -33,10 +33,6 @@ public final class WidgetAssembly {
 
         android.os.Handler handler();
 
-        boolean debugViewEnabled();
-
-        void setDebugViewEnabled(boolean enabled);
-
         boolean imeVisible();
 
         void setImeVisible(boolean visible);
@@ -44,8 +40,6 @@ public final class WidgetAssembly {
         View rootView();
 
         View productView();
-
-        View debugView();
 
         View productReadinessBlocker();
 
@@ -147,8 +141,7 @@ public final class WidgetAssembly {
                 terminalViewModeControllerRef);
 
         final ViewModeController terminalViewModeController = createViewModeController(
-                host,
-                terminalChromeController);
+                host);
         terminalViewModeControllerRef.value = terminalViewModeController;
 
         final SurfaceWidgetAssembly.Result surfaceWidgetAssembly = assembleSurfaceWidget(
@@ -180,20 +173,10 @@ public final class WidgetAssembly {
                 ChromeFactory.createChromeHostBridge(
                         host.activity(),
                         host.rootView(),
-                        host.activity().findViewById(uk.laurencegouws.terminal.R.id.debug_view_mode_button),
                         host.drawerScrim(),
                         host.drawerEdgeHotspot(),
                         host.leftSidebar(),
                         ChromeFactory.createChromeHostCallbacks(
-                                host::debugViewEnabled,
-                                (eventName, statusLabel) -> showViewIfReady(
-                                        terminalViewModeControllerRef,
-                                        eventName,
-                                        statusLabel),
-                                (eventName, statusLabel) -> showDebugViewIfReady(
-                                        terminalViewModeControllerRef,
-                                        eventName,
-                                        statusLabel),
                                 host::runPackageDoctor,
                                 host::appendEvent,
                                 host::imeVisible,
@@ -206,22 +189,16 @@ public final class WidgetAssembly {
     }
 
     private static ViewModeController createViewModeController(
-            Host host,
-            ChromeController terminalChromeController) {
+            Host host) {
         return UiFactory.createViewModeController(
                 host.productView(),
-                host.debugView(),
                 host.terminalScrollOverlay(),
                 host.productSurfaceContainer(),
                 new ViewModeCallbacks(
-                        host::debugViewEnabled,
-                        host::setDebugViewEnabled,
                         host::appendEvent,
                         host::updateStatus,
-                        terminalChromeController::closeSidebar,
                         host::notifyVisibleViewport,
-                        host::refreshScrollOverlay,
-                        host::refreshUserlandSession));
+                        host::refreshScrollOverlay));
     }
 
     private static SurfaceWidgetAssembly.Result assembleSurfaceWidget(
@@ -259,33 +236,12 @@ public final class WidgetAssembly {
         productGestureController.install();
     }
 
-    private static void showViewIfReady(
-            ViewModeControllerRef terminalViewModeControllerRef,
-            String eventName,
-            String statusLabel) {
-        final ViewModeController viewModeController = terminalViewModeControllerRef.value;
-        if (viewModeController != null) {
-            viewModeController.showView(eventName, statusLabel);
-        }
-    }
-
-    private static void showDebugViewIfReady(
-            ViewModeControllerRef terminalViewModeControllerRef,
-            String eventName,
-            String statusLabel) {
-        final ViewModeController viewModeController = terminalViewModeControllerRef.value;
-        if (viewModeController != null) {
-            viewModeController.showDebugView(eventName, statusLabel);
-        }
-    }
-
     private static SurfaceWidgetAssemblyCallbacks createSurfaceWidgetAssemblyCallbacks(
             Host host,
             SurfaceWidgetControllerRef surfaceWidgetControllerRef) {
         return new SurfaceWidgetAssemblyCallbacks(
                 host.handler(),
                 host.productSurfaceContainer(),
-                host::debugViewEnabled,
                 host::imeVisible,
                 host::shouldRunFrameLoop,
                 host::refreshScrollOverlay,

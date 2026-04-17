@@ -2,16 +2,13 @@ package uk.laurencegouws.terminal.debug;
 
 import android.util.Log;
 import android.view.SurfaceView;
-import android.widget.TextView;
 
 import uk.laurencegouws.terminal.userland.UserlandReadinessState;
 import uk.laurencegouws.terminal.userland.UserlandInstallState;
 
-/** Owns the debug status surface and event log presentation. */
+/** Owns Android runtime status and event logging. */
 public final class StatusController {
     public interface Host {
-        boolean debugViewEnabled();
-
         boolean nativeLoaded();
 
         boolean hasWindowFocus();
@@ -32,40 +29,17 @@ public final class StatusController {
     }
 
     private static final String TAG = "ZideAndroidTerminal";
-    private static final int MAX_LOG_CHARS = 12000;
 
-    private final TextView statusText;
-    private final TextView eventLogText;
     private final Host host;
-    private final StringBuilder eventLog = new StringBuilder();
 
-    public StatusController(TextView statusText, TextView eventLogText, Host host) {
-        this.statusText = statusText;
-        this.eventLogText = eventLogText;
+    public StatusController(Host host) {
         this.host = host;
     }
 
-    /**
-     * Operator telemetry for the in-app debug event log and logcat.
-     *
-     * <p>When the debug overlay is off (normal product use), this returns immediately so hot paths
-     * do not format lines, append to the ring buffer, emit {@link Log} lines, or touch the event
-     * {@link TextView}. Enabling the debug overlay arms full recording (gated operator telemetry).
-     */
+    /** Operator telemetry for runtime events. */
     public void appendEvent(String message) {
-        if (!host.debugViewEnabled()) {
-            return;
-        }
         final String line = String.format("[%08d] %s", android.os.SystemClock.uptimeMillis(), message);
         Log.i(TAG, line);
-        if (eventLog.length() > 0) {
-            eventLog.append('\n');
-        }
-        eventLog.append(line);
-        if (eventLog.length() > MAX_LOG_CHARS) {
-            eventLog.delete(0, eventLog.length() - MAX_LOG_CHARS);
-        }
-        eventLogText.setText(eventLog.toString());
     }
 
     public void callNative(String event, long seq) {
@@ -97,10 +71,7 @@ public final class StatusController {
                         state.glesTextureHeight)));
     }
 
-    public void refreshDebugStatusSurface() {
-        if (!host.debugViewEnabled()) {
-            return;
-        }
+    public void refreshStatusTelemetry() {
         updateStatus("shell-state", host.readinessState());
     }
 
@@ -109,15 +80,12 @@ public final class StatusController {
     }
 
     public void updateStatus(String state, UserlandReadinessState readinessState) {
-        if (!host.debugViewEnabled()) {
-            return;
-        }
         final SurfaceView surfaceView = host.surfaceView();
         if (surfaceView == null) {
             return;
         }
         final AndroidDebugFormatter.SurfaceEventSnapshot surfaceState = host.currentSurfaceStateSnapshot();
-        statusText.setText(AndroidDebugFormatter.formatStatus(
+        appendEvent(AndroidDebugFormatter.formatStatus(
                 new AndroidDebugFormatter.StatusSnapshot(
                         state,
                         host.nativeLoaded(),

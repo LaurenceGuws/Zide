@@ -5,7 +5,7 @@ import uk.laurencegouws.terminal.session.ShellSessionController;
 /**
  * Owns readiness-state refresh, shell polling, state application, and auto-start telemetry.
  *
- * <p>This is the one owner of the "read staged userland state, poll shell, apply product/debug
+ * <p>This is the one owner of the "read staged userland state, poll shell, apply runtime-facing
  * state" pass. It should not perform install work or mutate Android views directly.
  */
 public final class UserlandSessionCoordinator {
@@ -19,7 +19,7 @@ public final class UserlandSessionCoordinator {
 
         void refreshShellState();
 
-        void refreshDebugStatusSurface();
+        void refreshStatusTelemetry();
 
         void updateStatus(String statusLabel);
     }
@@ -59,7 +59,7 @@ public final class UserlandSessionCoordinator {
         final RefreshResult refreshResult = refresh(logEvent);
         host.applyReadinessState(refreshResult.readinessState);
         host.refreshShellState();
-        host.refreshDebugStatusSurface();
+        host.refreshStatusTelemetry();
         return refreshResult;
     }
 

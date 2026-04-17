@@ -2,7 +2,7 @@ package uk.laurencegouws.terminal.userland;
 
 import android.widget.Button;
 
-/** Owns readiness-blocker button policy for retry/install and debug escalation. */
+/** Owns readiness-blocker retry/install button policy. */
 public final class UserlandReadinessBlockerController {
     /** Host callbacks for state and side effects. */
     public interface Host {
@@ -14,20 +14,16 @@ public final class UserlandReadinessBlockerController {
 
         UserlandSessionCoordinator sessionCoordinator();
 
-        void showDebugView(String eventName, String statusLabel);
-
         void appendEvent(String event);
 
         void updateStatus(String statusLabel);
     }
 
     private final Button retryButton;
-    private final Button debugButton;
     private final Host host;
 
-    public UserlandReadinessBlockerController(Button retryButton, Button debugButton, Host host) {
+    public UserlandReadinessBlockerController(Button retryButton, Host host) {
         this.retryButton = retryButton;
-        this.debugButton = debugButton;
         this.host = host;
     }
 
@@ -45,6 +41,5 @@ public final class UserlandReadinessBlockerController {
             host.sessionCoordinator().refreshAndApply(true);
             host.updateStatus("product.readiness.retry");
         });
-        debugButton.setOnClickListener(view -> host.showDebugView("product.readiness debug", "debug-view"));
     }
 }

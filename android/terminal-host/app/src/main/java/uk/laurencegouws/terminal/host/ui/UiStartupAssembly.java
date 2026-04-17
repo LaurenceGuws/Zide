@@ -26,8 +26,6 @@ public final class UiStartupAssembly {
 
         Button productReadinessRetryButton();
 
-        Button productReadinessDebugButton();
-
         UserlandInstallState currentInstallState();
 
         UserlandReadinessState currentReadinessState();
@@ -71,17 +69,14 @@ public final class UiStartupAssembly {
         host.viewportController().installInsetsHandling();
         host.viewportController().installViewportTracking();
         host.chromeController().bindSidebarControls();
-        host.chromeController().bindViewModeToggle();
         final UserlandReadinessBlockerController userlandReadinessBlockerController =
                 new UserlandReadinessBlockerController(
                         host.productReadinessRetryButton(),
-                        host.productReadinessDebugButton(),
                         new ReadinessBlockerCallbacks(
                                 host::currentInstallState,
                                 host::currentReadinessState,
                                 host.userlandWorkflowController(),
                                 host.userlandSessionCoordinator(),
-                                host.viewModeController()::showDebugView,
                                 host.appendEvent(),
                                 host.updateStatus()));
         userlandReadinessBlockerController.bind();

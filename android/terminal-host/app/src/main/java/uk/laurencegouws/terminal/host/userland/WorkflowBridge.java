@@ -18,19 +18,15 @@ public final class WorkflowBridge implements UserlandWorkflowController.Host {
 
         void appendEvent(String event);
 
-        void applyInstallState(UserlandInstallState installState, String statusLabel);
+        void applyInstallState(UserlandInstallState installState);
 
         void setInstallState(UserlandInstallState installState);
 
         void setReadinessState(UserlandReadinessState readinessState);
 
-        void restartSession(String eventName, String statusLabel, boolean logRefresh);
+        void restartSessionAfterInstall(boolean logRefresh);
 
-        void showDebugView(String eventName, String statusLabel);
-
-        void setPackageStatusText(String text);
-
-        void updateStatus(String statusLabel);
+        void markPackageDoctorComplete(boolean success);
     }
 
     private final Context context;
@@ -64,8 +60,8 @@ public final class WorkflowBridge implements UserlandWorkflowController.Host {
     }
 
     @Override
-    public void applyInstallState(UserlandInstallState installState, String statusLabel) {
-        callbacks.applyInstallState(installState, statusLabel);
+    public void applyInstallState(UserlandInstallState installState) {
+        callbacks.applyInstallState(installState);
     }
 
     @Override
@@ -79,22 +75,12 @@ public final class WorkflowBridge implements UserlandWorkflowController.Host {
     }
 
     @Override
-    public void restartSession(String eventName, String statusLabel, boolean logRefresh) {
-        callbacks.restartSession(eventName, statusLabel, logRefresh);
+    public void restartSessionAfterInstall(boolean logRefresh) {
+        callbacks.restartSessionAfterInstall(logRefresh);
     }
 
     @Override
-    public void showDebugView(String eventName, String statusLabel) {
-        callbacks.showDebugView(eventName, statusLabel);
-    }
-
-    @Override
-    public void setPackageStatusText(String text) {
-        callbacks.setPackageStatusText(text);
-    }
-
-    @Override
-    public void updateStatus(String statusLabel) {
-        callbacks.updateStatus(statusLabel);
+    public void markPackageDoctorComplete(boolean success) {
+        callbacks.markPackageDoctorComplete(success);
     }
 }

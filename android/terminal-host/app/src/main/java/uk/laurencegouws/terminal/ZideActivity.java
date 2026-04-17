@@ -71,14 +71,11 @@ public final class ZideActivity extends Activity
     private static final String nativeLoadError = NativeBridge.nativeLoadError();
 
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private TextView packageStatusText;
     private TextView productReadinessTitle;
     private TextView productReadinessDetail;
     private Button productReadinessRetryButton;
-    private Button productReadinessDebugButton;
     private View rootView;
     private View productView;
-    private View debugView;
     private View productReadinessBlocker;
     private View drawerScrim;
     private View drawerEdgeHotspot;
@@ -92,7 +89,6 @@ public final class ZideActivity extends Activity
     private ImeFocusRecoveryController ImeFocusRecoveryController;
     private SelectionController selectionController;
     private GestureStateController GestureStateController;
-    private boolean debugViewEnabled = false;
     private boolean imeVisible = false;
     private UserlandRelease userlandRelease;
     private UserlandWorkflowController userlandWorkflowController;
@@ -199,14 +195,11 @@ public final class ZideActivity extends Activity
 
     private void initializeStatusAndViewControllers() {
         final StatusViewAssembly.Result result = assembleStatusViewResult();
-        packageStatusText = result.packageStatusText;
         productReadinessTitle = result.productReadinessTitle;
         productReadinessDetail = result.productReadinessDetail;
         productReadinessRetryButton = result.productReadinessRetryButton;
-        productReadinessDebugButton = result.productReadinessDebugButton;
         rootView = result.rootView;
         productView = result.productView;
-        debugView = result.debugView;
         productReadinessBlocker = result.productReadinessBlocker;
         drawerScrim = result.drawerScrim;
         drawerEdgeHotspot = result.drawerEdgeHotspot;
@@ -227,7 +220,6 @@ public final class ZideActivity extends Activity
     private StatusViewCallbacks createStatusViewCallbacks() {
         return new StatusViewCallbacks(
                 this,
-                () -> debugViewEnabled,
                 this::hasWindowFocus,
                 () -> imeVisible,
                 this::setImeVisible,
@@ -314,16 +306,6 @@ public final class ZideActivity extends Activity
             }
 
             @Override
-            public boolean debugViewEnabled() {
-                return debugViewEnabled;
-            }
-
-            @Override
-            public void setDebugViewEnabled(boolean enabled) {
-                ZideActivity.this.setDebugViewEnabled(enabled);
-            }
-
-            @Override
             public boolean imeVisible() {
                 return imeVisible;
             }
@@ -341,11 +323,6 @@ public final class ZideActivity extends Activity
             @Override
             public View productView() {
                 return productView;
-            }
-
-            @Override
-            public View debugView() {
-                return debugView;
             }
 
             @Override
@@ -502,7 +479,6 @@ public final class ZideActivity extends Activity
 
     private RuntimeAssemblyCallbacks createRuntimeAssemblyCallbacks() {
         return new RuntimeAssemblyCallbacks(
-                () -> debugViewEnabled,
                 () -> currentInstallState,
                 this::setCurrentInstallState,
                 () -> currentReadinessState,
@@ -538,7 +514,7 @@ public final class ZideActivity extends Activity
                 StatusController::updateStatus,
                 this::setCurrentReadinessState,
                 this::refreshShellStateIfReady,
-                this::refreshDebugStatusSurfaceIfReady,
+                this::refreshStatusTelemetryIfReady,
                 this::shouldRunFrameLoop,
                 this::tickFrameAndRefreshScrollOverlay);
     }
@@ -557,13 +533,11 @@ public final class ZideActivity extends Activity
                 () -> userlandRelease,
                 release -> userlandRelease = release,
                 StatusController::appendEvent,
-                StatusController::updateStatus,
-                packageStatusText::setText,
                 this::setCurrentInstallState,
                 this::setCurrentReadinessState,
                 this::applyInstallStateIfReady,
-                this::restartSessionIfReady,
-                this::showDebugViewIfReady);
+                this::restartSessionAfterInstallIfReady,
+                this::markPackageDoctorComplete);
     }
 
     private void assembleActivityLifecycleController() {
@@ -669,7 +643,6 @@ public final class ZideActivity extends Activity
                 terminalViewportController,
                 terminalChromeController,
                 productReadinessRetryButton,
-                productReadinessDebugButton,
                 () -> currentInstallState,
                 () -> currentReadinessState,
                 userlandWorkflowController,
@@ -709,9 +682,9 @@ public final class ZideActivity extends Activity
         }
     }
 
-    private void refreshDebugStatusSurfaceIfReady() {
+    private void refreshStatusTelemetryIfReady() {
         if (terminalRuntimeController != null) {
-            terminalRuntimeController.refreshDebugStatusSurface();
+            terminalRuntimeController.refreshStatusTelemetry();
         }
     }
 
@@ -721,22 +694,20 @@ public final class ZideActivity extends Activity
         }
     }
 
-    private void applyInstallStateIfReady(UserlandInstallState installState, String statusLabel) {
+    private void applyInstallStateIfReady(UserlandInstallState installState) {
         if (terminalRuntimeController != null) {
-            terminalRuntimeController.applyInstallState(installState, statusLabel);
+            terminalRuntimeController.applyInstallState(installState);
         }
     }
 
-    private void restartSessionIfReady(String eventName, String statusLabel, boolean logRefresh) {
+    private void restartSessionAfterInstallIfReady(boolean logRefresh) {
         if (terminalRuntimeController != null) {
-            terminalRuntimeController.restartSession(eventName, statusLabel, logRefresh);
+            terminalRuntimeController.restartSessionAfterInstall(logRefresh);
         }
     }
 
-    private void showDebugViewIfReady(String eventName, String statusLabel) {
-        if (terminalViewModeController != null) {
-            terminalViewModeController.showDebugView(eventName, statusLabel);
-        }
+    private void markPackageDoctorComplete(boolean success) {
+        StatusController.updateStatus(success ? "packages.doctor.state" : "packages.doctor.failed_state");
     }
 
     private void notifyVisibleViewportIfReady(String reason) {
@@ -785,10 +756,6 @@ public final class ZideActivity extends Activity
 
     private void setCurrentReadinessState(UserlandReadinessState readinessState) {
         currentReadinessState = readinessState;
-    }
-
-    private void setDebugViewEnabled(boolean enabled) {
-        debugViewEnabled = enabled;
     }
 
     private void setImeVisible(boolean visible) {

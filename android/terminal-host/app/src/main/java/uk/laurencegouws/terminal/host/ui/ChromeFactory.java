@@ -4,7 +4,6 @@ import android.content.Context;
 import android.view.View;
 import android.widget.Button;
 
-import java.util.function.BiConsumer;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -24,7 +23,6 @@ public final class ChromeFactory {
     public static ChromeBridge createChromeHostBridge(
             Context context,
             View rootView,
-            View debugViewModeButton,
             View drawerScrim,
             View drawerEdgeHotspot,
             View leftSidebar,
@@ -32,7 +30,6 @@ public final class ChromeFactory {
         return new ChromeBridge(
                 context,
                 rootView,
-                debugViewModeButton,
                 drawerScrim,
                 drawerEdgeHotspot,
                 leftSidebar,
@@ -40,9 +37,6 @@ public final class ChromeFactory {
     }
 
     public static ChromeBridge.Callbacks createChromeHostCallbacks(
-            BooleanSupplier debugViewEnabled,
-            BiConsumer<String, String> showView,
-            BiConsumer<String, String> showDebugView,
             Runnable runPackageDoctor,
             Consumer<String> appendEvent,
             BooleanSupplier currentImeVisible,
@@ -53,21 +47,6 @@ public final class ChromeFactory {
             Consumer<String> sendDirectText,
             Consumer<String> updateStatus) {
         return new ChromeBridge.Callbacks() {
-            @Override
-            public boolean debugViewEnabled() {
-                return debugViewEnabled.getAsBoolean();
-            }
-
-            @Override
-            public void showView(String eventName, String statusLabel) {
-                showView.accept(eventName, statusLabel);
-            }
-
-            @Override
-            public void showDebugView(String eventName, String statusLabel) {
-                showDebugView.accept(eventName, statusLabel);
-            }
-
             @Override
             public void runPackageDoctor() {
                 runPackageDoctor.run();

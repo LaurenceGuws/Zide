@@ -3,7 +3,6 @@ package uk.laurencegouws.terminal.host.userland;
 import android.content.Context;
 import android.os.Handler;
 
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -18,13 +17,11 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
     private final Supplier<UserlandRelease> userlandRelease;
     private final Consumer<UserlandRelease> setUserlandRelease;
     private final Consumer<String> appendEvent;
-    private final Consumer<String> updateStatus;
-    private final Consumer<String> setPackageStatusText;
     private final Consumer<UserlandInstallState> setInstallState;
     private final Consumer<UserlandReadinessState> setReadinessState;
-    private final BiConsumer<UserlandInstallState, String> applyInstallState;
+    private final Consumer<UserlandInstallState> applyInstallState;
     private final WorkflowAssembly.RestartSessionCallback restartSession;
-    private final BiConsumer<String, String> showDebugView;
+    private final WorkflowAssembly.PackageDoctorStateCallback packageDoctorState;
 
     public WorkflowAssemblyCallbacks(
             Context context,
@@ -32,25 +29,21 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
             Supplier<UserlandRelease> userlandRelease,
             Consumer<UserlandRelease> setUserlandRelease,
             Consumer<String> appendEvent,
-            Consumer<String> updateStatus,
-            Consumer<String> setPackageStatusText,
             Consumer<UserlandInstallState> setInstallState,
             Consumer<UserlandReadinessState> setReadinessState,
-            BiConsumer<UserlandInstallState, String> applyInstallState,
+            Consumer<UserlandInstallState> applyInstallState,
             WorkflowAssembly.RestartSessionCallback restartSession,
-            BiConsumer<String, String> showDebugView) {
+            WorkflowAssembly.PackageDoctorStateCallback packageDoctorState) {
         this.context = context;
         this.handler = handler;
         this.userlandRelease = userlandRelease;
         this.setUserlandRelease = setUserlandRelease;
         this.appendEvent = appendEvent;
-        this.updateStatus = updateStatus;
-        this.setPackageStatusText = setPackageStatusText;
         this.setInstallState = setInstallState;
         this.setReadinessState = setReadinessState;
         this.applyInstallState = applyInstallState;
         this.restartSession = restartSession;
-        this.showDebugView = showDebugView;
+        this.packageDoctorState = packageDoctorState;
     }
 
     @Override
@@ -84,18 +77,13 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
     }
 
     @Override
-    public void applyInstallState(UserlandInstallState installState, String statusLabel) {
-        applyInstallState.accept(installState, statusLabel);
+    public void applyInstallState(UserlandInstallState installState) {
+        applyInstallState.accept(installState);
     }
 
     @Override
-    public void restartSession(String eventName, String statusLabel, boolean logRefresh) {
-        restartSession.restart(eventName, statusLabel, logRefresh);
-    }
-
-    @Override
-    public void showDebugView(String eventName, String statusLabel) {
-        showDebugView.accept(eventName, statusLabel);
+    public void restartSessionAfterInstall(boolean logRefresh) {
+        restartSession.restartAfterInstall(logRefresh);
     }
 
     @Override
@@ -104,12 +92,8 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
     }
 
     @Override
-    public void updateStatus(String statusLabel) {
-        updateStatus.accept(statusLabel);
+    public void markPackageDoctorComplete(boolean success) {
+        packageDoctorState.markComplete(success);
     }
 
-    @Override
-    public void setPackageStatusText(String text) {
-        setPackageStatusText.accept(text);
-    }
 }

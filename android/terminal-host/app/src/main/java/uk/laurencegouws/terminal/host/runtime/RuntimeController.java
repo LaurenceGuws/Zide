@@ -17,8 +17,6 @@ import uk.laurencegouws.terminal.userland.UserlandSessionCoordinator;
 public final class RuntimeController {
     /** Host callbacks for activity-owned state and native bridge interactions. */
     public interface Host {
-        boolean debugViewEnabled();
-
         boolean nativeLoaded();
 
         UserlandInstallState installState();
@@ -68,8 +66,7 @@ public final class RuntimeController {
         final SurfaceView activeSurfaceView = host.surfaceView();
         final UserlandInstallState installState = host.installState();
         final UserlandReadinessState readinessState = host.readinessState();
-        return !host.debugViewEnabled()
-                && host.nativeLoaded()
+        return host.nativeLoaded()
                 && !installState.isInstalling()
                 && !installState.isFailed()
                 && readinessState != null
@@ -91,10 +88,10 @@ public final class RuntimeController {
         }
     }
 
-    public void refreshDebugStatusSurface() {
+    public void refreshStatusTelemetry() {
         final StatusController statusController = host.StatusController();
         if (statusController != null) {
-            statusController.refreshDebugStatusSurface();
+            statusController.refreshStatusTelemetry();
         }
     }
 
@@ -117,8 +114,7 @@ public final class RuntimeController {
         }
         final UserlandInstallState installState = host.installState();
         final UserlandReadinessState readinessState = host.readinessState();
-        if (host.debugViewEnabled()
-                || !host.nativeLoaded()
+        if (!host.nativeLoaded()
                 || installState.isInstalling()
                 || installState.isFailed()
                 || readinessState == null
@@ -145,19 +141,29 @@ public final class RuntimeController {
         }
     }
 
-    public void applyInstallState(UserlandInstallState installState, String statusLabel) {
+    public void applyInstallState(UserlandInstallState installState) {
         host.setInstallState(installState);
         refreshShellState();
-        host.updateStatus(statusLabel);
+        host.updateStatus(installStatusLabel(installState));
     }
 
-    public void restartSession(String eventName, String statusLabel, boolean logRefresh) {
+    public void restartSessionAfterInstall(boolean logRefresh) {
         final int status = host.nativeLoaded() ? host.nativeRestartSession() : 0;
-        host.appendEvent(eventName + " status=" + NativeStatusLabels.sessionStartStatusLabel(status));
+        host.appendEvent("userland.install session.restart status=" + NativeStatusLabels.sessionStartStatusLabel(status));
         final UserlandSessionCoordinator sessionCoordinator = host.userlandSessionCoordinator();
         if (sessionCoordinator != null) {
             sessionCoordinator.refreshAndApply(logRefresh);
         }
-        host.updateStatus(statusLabel);
+        host.updateStatus("userland-install-succeeded-restarted");
+    }
+
+    private static String installStatusLabel(UserlandInstallState installState) {
+        if (installState.isInstalling()) {
+            return "userland-install-started";
+        }
+        if (installState.isFailed()) {
+            return "userland-install-failed";
+        }
+        return "userland-install-updated";
     }
 }

@@ -13,7 +13,12 @@ import uk.laurencegouws.terminal.userland.UserlandWorkflowController;
 public final class WorkflowAssembly {
     /** Functional callback for shell restart requests. */
     public interface RestartSessionCallback {
-        void restart(String eventName, String statusLabel, boolean logRefresh);
+        void restartAfterInstall(boolean logRefresh);
+    }
+
+    /** Functional callback for package-doctor completion state. */
+    public interface PackageDoctorStateCallback {
+        void markComplete(boolean success);
     }
 
     /** Activity callbacks required for userland workflow assembly. */

@@ -20,7 +20,7 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
     private final Consumer<String> updateStatus;
     private final Consumer<UserlandReadinessState> applyReadinessState;
     private final Runnable refreshShellState;
-    private final Runnable refreshDebugStatusSurface;
+    private final Runnable refreshStatusTelemetry;
     private final BooleanSupplier shouldRunFrameLoop;
     private final IntSupplier tickFrame;
 
@@ -32,7 +32,7 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
             Consumer<String> updateStatus,
             Consumer<UserlandReadinessState> applyReadinessState,
             Runnable refreshShellState,
-            Runnable refreshDebugStatusSurface,
+            Runnable refreshStatusTelemetry,
             BooleanSupplier shouldRunFrameLoop,
             IntSupplier tickFrame) {
         this.context = context;
@@ -42,7 +42,7 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
         this.updateStatus = updateStatus;
         this.applyReadinessState = applyReadinessState;
         this.refreshShellState = refreshShellState;
-        this.refreshDebugStatusSurface = refreshDebugStatusSurface;
+        this.refreshStatusTelemetry = refreshStatusTelemetry;
         this.shouldRunFrameLoop = shouldRunFrameLoop;
         this.tickFrame = tickFrame;
     }
@@ -83,8 +83,8 @@ public final class SessionAssemblyCallbacks implements SessionAssembly.Host {
     }
 
     @Override
-    public void refreshDebugStatusSurface() {
-        refreshDebugStatusSurface.run();
+    public void refreshStatusTelemetry() {
+        refreshStatusTelemetry.run();
     }
 
     @Override

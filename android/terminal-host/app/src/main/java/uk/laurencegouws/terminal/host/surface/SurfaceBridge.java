@@ -17,8 +17,6 @@ public final class SurfaceBridge implements SurfaceController.Host {
 
         boolean nativeLoaded();
 
-        boolean debugViewEnabled();
-
         FrameLayout productSurfaceContainer();
 
         boolean currentImeVisible();
@@ -90,11 +88,6 @@ public final class SurfaceBridge implements SurfaceController.Host {
     @Override
     public boolean nativeLoaded() {
         return callbacks.nativeLoaded();
-    }
-
-    @Override
-    public boolean debugViewEnabled() {
-        return callbacks.debugViewEnabled();
     }
 
     @Override

@@ -16,8 +16,6 @@ import uk.laurencegouws.terminal.userland.UserlandSessionCoordinator;
 public final class RuntimeAssembly {
     /** Activity callbacks required for product-runtime assembly. */
     public interface Host {
-        boolean debugViewEnabled();
-
         UserlandInstallState installState();
 
         void setInstallState(UserlandInstallState installState);
@@ -53,7 +51,6 @@ public final class RuntimeAssembly {
     public static RuntimeController assemble(Host host) {
         return RuntimeFactory.createRuntimeController(
                 RuntimeFactory.createRuntimeHostCallbacks(
-                        host::debugViewEnabled,
                         host::installState,
                         host::setInstallState,
                         host::readinessState,

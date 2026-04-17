@@ -21,7 +21,6 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
     private final ViewportController viewportController;
     private final ChromeController chromeController;
     private final Button productReadinessRetryButton;
-    private final Button productReadinessDebugButton;
     private final Supplier<UserlandInstallState> currentInstallState;
     private final Supplier<UserlandReadinessState> currentReadinessState;
     private final UserlandWorkflowController userlandWorkflowController;
@@ -40,7 +39,6 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
             ViewportController viewportController,
             ChromeController chromeController,
             Button productReadinessRetryButton,
-            Button productReadinessDebugButton,
             Supplier<UserlandInstallState> currentInstallState,
             Supplier<UserlandReadinessState> currentReadinessState,
             UserlandWorkflowController userlandWorkflowController,
@@ -57,7 +55,6 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
         this.viewportController = viewportController;
         this.chromeController = chromeController;
         this.productReadinessRetryButton = productReadinessRetryButton;
-        this.productReadinessDebugButton = productReadinessDebugButton;
         this.currentInstallState = currentInstallState;
         this.currentReadinessState = currentReadinessState;
         this.userlandWorkflowController = userlandWorkflowController;
@@ -86,11 +83,6 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
     @Override
     public Button productReadinessRetryButton() {
         return productReadinessRetryButton;
-    }
-
-    @Override
-    public Button productReadinessDebugButton() {
-        return productReadinessDebugButton;
     }
 
     @Override

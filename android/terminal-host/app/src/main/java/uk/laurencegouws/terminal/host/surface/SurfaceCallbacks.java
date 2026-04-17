@@ -12,8 +12,6 @@ import uk.laurencegouws.terminal.debug.AndroidDebugFormatter;
 public final class SurfaceCallbacks implements SurfaceBridge.Callbacks {
     /** Activity callbacks used by the surface host bridge. */
     public interface Callbacks {
-        boolean debugViewEnabled();
-
         boolean currentImeVisible();
 
         boolean shouldRunFrameLoop();
@@ -68,11 +66,6 @@ public final class SurfaceCallbacks implements SurfaceBridge.Callbacks {
     @Override
     public boolean nativeLoaded() {
         return NativeBridge.nativeLoaded();
-    }
-
-    @Override
-    public boolean debugViewEnabled() {
-        return callbacks.debugViewEnabled();
     }
 
     @Override

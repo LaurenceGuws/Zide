@@ -14,7 +14,6 @@ import uk.laurencegouws.terminal.userland.UserlandInstallState;
 /** Functional callback adapter for {@link StatusViewAssembly.Host}. */
 public final class StatusViewCallbacks implements StatusViewAssembly.Host {
     private final Activity activity;
-    private final BooleanSupplier debugViewEnabled;
     private final BooleanSupplier hasWindowFocus;
     private final BooleanSupplier imeVisible;
     private final Consumer<Boolean> setImeVisible;
@@ -25,7 +24,6 @@ public final class StatusViewCallbacks implements StatusViewAssembly.Host {
 
     public StatusViewCallbacks(
             Activity activity,
-            BooleanSupplier debugViewEnabled,
             BooleanSupplier hasWindowFocus,
             BooleanSupplier imeVisible,
             Consumer<Boolean> setImeVisible,
@@ -34,7 +32,6 @@ public final class StatusViewCallbacks implements StatusViewAssembly.Host {
             Supplier<UserlandInstallState> currentInstallState,
             Supplier<UserlandReadinessState> currentReadinessState) {
         this.activity = activity;
-        this.debugViewEnabled = debugViewEnabled;
         this.hasWindowFocus = hasWindowFocus;
         this.imeVisible = imeVisible;
         this.setImeVisible = setImeVisible;
@@ -49,12 +46,6 @@ public final class StatusViewCallbacks implements StatusViewAssembly.Host {
         return activity;
     }
 
-    @Override
-    public boolean debugViewEnabled() {
-        return debugViewEnabled.getAsBoolean();
-    }
-
-    @Override
     public boolean nativeLoaded() {
         return NativeBridge.nativeLoaded();
     }

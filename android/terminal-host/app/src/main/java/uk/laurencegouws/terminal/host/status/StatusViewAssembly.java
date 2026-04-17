@@ -23,8 +23,6 @@ public final class StatusViewAssembly {
     public interface Host {
         Activity activity();
 
-        boolean debugViewEnabled();
-
         boolean nativeLoaded();
 
         boolean hasWindowFocus();
@@ -44,14 +42,11 @@ public final class StatusViewAssembly {
 
     /** Immutable assembled status/view wiring result. */
     public static final class Result {
-        public final TextView packageStatusText;
         public final TextView productReadinessTitle;
         public final TextView productReadinessDetail;
         public final Button productReadinessRetryButton;
-        public final Button productReadinessDebugButton;
         public final View rootView;
         public final View productView;
-        public final View debugView;
         public final View productReadinessBlocker;
         public final View drawerScrim;
         public final View drawerEdgeHotspot;
@@ -66,14 +61,11 @@ public final class StatusViewAssembly {
         public final ViewportController terminalViewportController;
 
         private Result(
-                TextView packageStatusText,
                 TextView productReadinessTitle,
                 TextView productReadinessDetail,
                 Button productReadinessRetryButton,
-                Button productReadinessDebugButton,
                 View rootView,
                 View productView,
-                View debugView,
                 View productReadinessBlocker,
                 View drawerScrim,
                 View drawerEdgeHotspot,
@@ -86,14 +78,11 @@ public final class StatusViewAssembly {
                 StatusController.Host terminalStatusHost,
                 StatusController StatusController,
                 ViewportController terminalViewportController) {
-            this.packageStatusText = packageStatusText;
             this.productReadinessTitle = productReadinessTitle;
             this.productReadinessDetail = productReadinessDetail;
             this.productReadinessRetryButton = productReadinessRetryButton;
-            this.productReadinessDebugButton = productReadinessDebugButton;
             this.rootView = rootView;
             this.productView = productView;
-            this.debugView = debugView;
             this.productReadinessBlocker = productReadinessBlocker;
             this.drawerScrim = drawerScrim;
             this.drawerEdgeHotspot = drawerEdgeHotspot;
@@ -117,11 +106,6 @@ public final class StatusViewAssembly {
         final SurfaceStateSnapshotReader SurfaceStateSnapshotReader = new SurfaceStateSnapshotReader(
                 new SurfaceStateSnapshotHostCallbacks());
         final StatusController.Host terminalStatusHost = new StatusController.Host() {
-            @Override
-            public boolean debugViewEnabled() {
-                return host.debugViewEnabled();
-            }
-
             @Override
             public boolean nativeLoaded() {
                 return host.nativeLoaded();
@@ -170,10 +154,7 @@ public final class StatusViewAssembly {
                 return SurfaceStateSnapshotReader.read();
             }
         };
-        final StatusController StatusController = new StatusController(
-                viewBindings.statusText,
-                viewBindings.eventLogText,
-                terminalStatusHost);
+        final StatusController StatusController = new StatusController(terminalStatusHost);
         final ViewportController terminalViewportController = new ViewportController(
                 new ViewportBridge(
                         viewBindings.productView,
@@ -183,14 +164,11 @@ public final class StatusViewAssembly {
                                 host::setImeVisible,
                                 host::notifyVisibleViewport)));
         return new Result(
-                viewBindings.packageStatusText,
                 viewBindings.productReadinessTitle,
                 viewBindings.productReadinessDetail,
                 viewBindings.productReadinessRetryButton,
-                viewBindings.productReadinessDebugButton,
                 viewBindings.rootView,
                 viewBindings.productView,
-                viewBindings.debugView,
                 viewBindings.productReadinessBlocker,
                 viewBindings.drawerScrim,
                 viewBindings.drawerEdgeHotspot,

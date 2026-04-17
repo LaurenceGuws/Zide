@@ -30,7 +30,6 @@ public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssemb
 
     private final android.os.Handler handler;
     private final FrameLayout productSurfaceContainer;
-    private final BooleanSupplier debugViewEnabled;
     private final BooleanSupplier currentImeVisible;
     private final BooleanSupplier shouldRunFrameLoop;
     private final Runnable refreshScrollOverlay;
@@ -49,7 +48,6 @@ public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssemb
     public SurfaceWidgetAssemblyCallbacks(
             android.os.Handler handler,
             FrameLayout productSurfaceContainer,
-            BooleanSupplier debugViewEnabled,
             BooleanSupplier currentImeVisible,
             BooleanSupplier shouldRunFrameLoop,
             Runnable refreshScrollOverlay,
@@ -66,7 +64,6 @@ public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssemb
             Runnable reevaluateFrameLoop) {
         this.handler = handler;
         this.productSurfaceContainer = productSurfaceContainer;
-        this.debugViewEnabled = debugViewEnabled;
         this.currentImeVisible = currentImeVisible;
         this.shouldRunFrameLoop = shouldRunFrameLoop;
         this.refreshScrollOverlay = refreshScrollOverlay;
@@ -93,12 +90,6 @@ public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssemb
         return productSurfaceContainer;
     }
 
-    @Override
-    public boolean debugViewEnabled() {
-        return debugViewEnabled.getAsBoolean();
-    }
-
-    @Override
     public boolean currentImeVisible() {
         return currentImeVisible.getAsBoolean();
     }

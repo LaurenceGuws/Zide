@@ -11,15 +11,11 @@ import uk.laurencegouws.terminal.input.ShellInputView;
 public final class ChromeController {
     public interface Host {
         android.content.Context context();
-        View debugViewModeButton();
         View drawerScrim();
         View drawerEdgeHotspot();
         View leftSidebar();
         boolean sidebarOpen();
         void setSidebarOpen(boolean open);
-        boolean debugViewEnabled();
-        void showView(String eventName, String statusLabel);
-        void showDebugView(String eventName, String statusLabel);
         void runPackageDoctor();
         void appendEvent(String event);
         boolean currentImeVisible();
@@ -40,19 +36,10 @@ public final class ChromeController {
         this.host = host;
     }
 
-    public void bindViewModeToggle() {
-        host.debugViewModeButton().setOnClickListener(
-                view -> host.showView("view.mode debug=false", "product-view"));
-    }
-
     public void bindSidebarControls() {
         final View sidebar = host.leftSidebar();
         ((Button) sidebar.findViewById(uk.laurencegouws.terminal.R.id.sidebar_restart_button)).setOnClickListener(view -> {
             host.appendEvent("manual.session.restart requested");
-            closeSidebar();
-        });
-        ((Button) sidebar.findViewById(uk.laurencegouws.terminal.R.id.sidebar_debug_button)).setOnClickListener(view -> {
-            host.showDebugView("view.mode debug=true", "debug-view");
             closeSidebar();
         });
         ((Button) sidebar.findViewById(uk.laurencegouws.terminal.R.id.sidebar_packages_button)).setOnClickListener(view -> {
@@ -161,7 +148,7 @@ public final class ChromeController {
     }
 
     private boolean shouldDeferSidebarOpen() {
-        return host.sidebarOpen() || host.debugViewEnabled();
+        return host.sidebarOpen();
     }
 
     private boolean shouldDeferSidebarClose() {

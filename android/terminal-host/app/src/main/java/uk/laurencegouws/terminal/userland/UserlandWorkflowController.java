@@ -16,19 +16,15 @@ public final class UserlandWorkflowController {
 
         void appendEvent(String event);
 
-        void applyInstallState(UserlandInstallState installState, String statusLabel);
+        void applyInstallState(UserlandInstallState installState);
 
         void setInstallState(UserlandInstallState installState);
 
         void setReadinessState(UserlandReadinessState readinessState);
 
-        void restartSession(String eventName, String statusLabel, boolean logRefresh);
+        void restartSessionAfterInstall(boolean logRefresh);
 
-        void showDebugView(String eventName, String statusLabel);
-
-        void setPackageStatusText(String text);
-
-        void updateStatus(String statusLabel);
+        void markPackageDoctorComplete(boolean success);
     }
 
     private final Host host;
@@ -39,9 +35,7 @@ public final class UserlandWorkflowController {
 
     public void startInstall() {
         final UserlandRelease release = host.release();
-        host.applyInstallState(
-                UserlandInstallState.installing("Fetching and staging " + release.artifactName + "..."),
-                "userland-install-started");
+        host.applyInstallState(UserlandInstallState.installing("Fetching and staging " + release.artifactName + "..."));
         host.appendEvent("userland.install.begin expected=" + release.artifactVersion);
         new Thread(() -> {
             try {
@@ -50,7 +44,7 @@ public final class UserlandWorkflowController {
                     host.setInstallState(UserlandInstallState.idle());
                     host.setReadinessState(result.readinessState);
                     host.appendEvent("userland.install.success " + result.detail);
-                    host.restartSession("userland.install session.restart", "userland-install-succeeded-restarted", true);
+                    host.restartSessionAfterInstall(true);
                 });
             } catch (IOException err) {
                 host.handler().post(() -> {
@@ -58,15 +52,14 @@ public final class UserlandWorkflowController {
                             err.getMessage() == null ? "unknown install failure" : err.getMessage());
                     host.appendEvent(
                             "userland.install failed err=" + err.getClass().getSimpleName() + " detail=" + installState.detail);
-                    host.applyInstallState(installState, "userland-install-failed");
+                    host.applyInstallState(installState);
                 });
             }
         }, "userland-install").start();
     }
 
     public void runPackageDoctor() {
-        host.setPackageStatusText("Running zide-pm...");
-        host.showDebugView("packages.doctor begin", "packages.doctor.state");
+        host.appendEvent("packages.doctor.begin");
         new Thread(() -> {
             try {
                 final String prefixPath = UserlandPolicy.prefixPath(host.context());
@@ -76,18 +69,25 @@ public final class UserlandWorkflowController {
                         host.context(), "zide-pm-list", "list-available", "--prefix", prefixPath);
                 final String combined = doctor.trim() + "\n---\n" + available.trim();
                 host.handler().post(() -> {
-                    host.setPackageStatusText(combined);
+                    logPackageDoctorOutput(combined);
                     host.appendEvent("packages.doctor.success");
-                    host.updateStatus("packages.doctor.state");
+                    host.markPackageDoctorComplete(true);
                 });
             } catch (IOException err) {
                 host.handler().post(() -> {
                     final String detail = err.getMessage() == null ? err.getClass().getSimpleName() : err.getMessage();
-                    host.setPackageStatusText("zide-pm failed: " + detail);
+                    host.appendEvent("packages.doctor.output zide-pm failed: " + detail);
                     host.appendEvent("packages.doctor.failed err=" + err.getClass().getSimpleName());
-                    host.updateStatus("packages.doctor.failed_state");
+                    host.markPackageDoctorComplete(false);
                 });
             }
         }, "packages.doctor.state").start();
+    }
+
+    private void logPackageDoctorOutput(String combined) {
+        final String[] lines = combined.split("\\R");
+        for (int i = 0; i < lines.length; i++) {
+            host.appendEvent("packages.doctor.output line=" + (i + 1) + " " + lines[i]);
+        }
     }
 }

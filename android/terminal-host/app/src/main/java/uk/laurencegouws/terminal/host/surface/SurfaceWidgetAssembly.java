@@ -15,8 +15,6 @@ public final class SurfaceWidgetAssembly {
 
         android.widget.FrameLayout productSurfaceContainer();
 
-        boolean debugViewEnabled();
-
         boolean currentImeVisible();
 
         boolean shouldRunFrameLoop();
@@ -96,12 +94,6 @@ public final class SurfaceWidgetAssembly {
             Host host,
             SurfaceWidgetController[] widgetRef) {
         return new SurfaceCallbacks.Callbacks() {
-            @Override
-            public boolean debugViewEnabled() {
-                return host.debugViewEnabled();
-            }
-
-            @Override
             public boolean currentImeVisible() {
                 return host.currentImeVisible();
             }

@@ -39,7 +39,7 @@ public final class SessionFactory {
             IntFunction<String> sessionStartStatusLabel,
             Consumer<UserlandReadinessState> applyReadinessState,
             Runnable refreshShellState,
-            Runnable refreshDebugStatusSurface,
+            Runnable refreshStatusTelemetry,
             Consumer<String> updateStatus) {
         return new UserlandSessionCoordinator.Host() {
             @Override
@@ -63,8 +63,8 @@ public final class SessionFactory {
             }
 
             @Override
-            public void refreshDebugStatusSurface() {
-                refreshDebugStatusSurface.run();
+            public void refreshStatusTelemetry() {
+                refreshStatusTelemetry.run();
             }
 
             @Override

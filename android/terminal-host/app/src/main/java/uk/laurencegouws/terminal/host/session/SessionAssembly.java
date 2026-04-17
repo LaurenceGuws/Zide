@@ -30,7 +30,7 @@ public final class SessionAssembly {
 
         void refreshShellState();
 
-        void refreshDebugStatusSurface();
+        void refreshStatusTelemetry();
 
         boolean shouldRunFrameLoop();
 
@@ -81,7 +81,7 @@ public final class SessionAssembly {
                         NativeStatusLabels::sessionStartStatusLabel,
                         host::applyReadinessState,
                         host::refreshShellState,
-                        host::refreshDebugStatusSurface,
+                        host::refreshStatusTelemetry,
                         host::updateStatus);
         final UserlandSessionCoordinator userlandSessionCoordinator =
                 new UserlandSessionCoordinator(shellSessionController, userlandSessionHost);
