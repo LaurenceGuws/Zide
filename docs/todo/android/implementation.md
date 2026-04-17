@@ -2247,7 +2247,7 @@ Queue line (exact):
 
 Acceptance:
 
-- all three docs point to `AHW-B9` as active and `in_progress`
+- queue, handoff, and engineer entrypoint stay coherent through B9 super-gate
 - super-gate stop condition and review packet contract are explicit
 
 Progress delta:
