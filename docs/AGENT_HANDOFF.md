@@ -120,6 +120,8 @@ Required per-commit update format:
   `StatusViewAssembly`.
 - latest cut also removed `host/interaction/SelectionCallbacks`; selection host
   contracts are now provided directly at `InteractionFactory`.
+- latest cut removed `host/interaction/GestureStateBridge`; gesture host
+  contracts now flow directly into `GestureStateController`.
 - `userland/UserlandInstaller.java` (~425 lines) remains large but cohesive;
   keep watch-only unless behavior complexity expands.
 - `host/surface/SurfaceController.java` and `host/ui/ChromeController.java`

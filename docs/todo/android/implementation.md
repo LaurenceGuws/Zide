@@ -348,8 +348,9 @@ Audit decision:
   - Completed: adapter-depth reduction continued across interaction + userland
     seams by collapsing two additional relay tiers:
     `GestureStateControllerFactory` now accepts host contracts that directly
-    satisfy `GestureStateBridge.Callbacks` (removing wrapper blocks and deleting
-    `host/interaction/GestureStateCallbacks.java`), and `WorkflowAssembly` now
+    satisfy `GestureStateController.Host` (removing wrapper blocks and deleting
+    `host/interaction/GestureStateCallbacks.java` and
+    `host/interaction/GestureStateBridge.java`), and `WorkflowAssembly` now
     passes `WorkflowAssembly.Host` directly into `WorkflowBridge` (deleting
     `host/userland/WorkflowCallbacks.java` and removing `packageStatusText` relay
     wiring).
