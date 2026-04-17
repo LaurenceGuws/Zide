@@ -34,16 +34,17 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B4` is at **super-gate** pending Architect acceptance. Implementation details
-and validation live in `docs/todo/android/implementation.md` under `AHW-B4`.
+`AHW-B5` is `in_progress`: terminal widget host API slimming + tab-ready
+contract, without implementing terminal tabs or multi-instance product behavior.
 
-The Architect refocuses this entrypoint and the queue after acceptance; do not
-start the next macro batch until the queue marks one `in_progress`.
+Batch queue line (exact):
+
+- slim terminal widget host/result surfaces and document the tab-ready host API without implementing tabs
 
 ## Core Boundary Rule
 
-The batch exists to move terminal widget instance composition out of the Activity
-without adding tab behavior.
+The batch exists to keep the `AHW-B4` composition seam lean and make future
+multiple terminal widgets possible through host contracts, not product behavior.
 
 - Android Harness owns platform ceremony, app-shell layout/styling/theming,
   navigation/view state, userland orchestration, and widget instance hosting.
@@ -51,19 +52,42 @@ without adding tab behavior.
   seams.
 - Userland stays movable for future IDE/editor modes and must not depend on
   widget/surface/controller internals.
-- `ZideActivity` should call a composition seam, not manually stitch interaction
-  assembly + widget assembly + `TerminalWidgetInstance` construction.
+- `TerminalWidgetCompositionAssembly` remains the join owner for
+  `InteractionAssembly.Result` + `WidgetAssembly.Result` into
+  `TerminalWidgetInstance`.
+- `WidgetAssembly.Result` remains widget/chrome assembly output; it is not the
+  terminal-instance factory by itself.
 
 ## Required Direction From Architect Review
 
-- `AHW-B3` is accepted.
-- Keep `ProductHostStartupBundle` as startup-order aggregation unless a concrete
-  owner win appears.
-- Do not make `WidgetAssembly.Result` alone responsible for constructing a
-  terminal instance. Prefer a harness-owned composition layer that composes
-  interaction + widget pieces and returns `TerminalWidgetInstance` plus any
-  surrounding harness controllers needed by the current app.
-- Do not implement terminal tabs or multi-instance product behavior.
+- `AHW-B4` is accepted.
+- `TerminalWidgetCompositionAssembly.Result` is acceptable as the current
+  co-hosted harness surface because `ZideActivity` needs shell/chrome/view-mode
+  refs plus the terminal widget instance.
+- Do not expand `TerminalWidgetCompositionAssembly.Result` casually; slim or
+  split only if ownership becomes clearer.
+- `applyTerminalWidgetComposition` can stay on `ZideActivity` while it remains
+  assignment-only wiring. Move it later only if policy appears or a smaller owner
+  seam clearly reduces Activity pressure.
+- Do not implement terminal tabs, tab persistence, or multi-instance product
+  behavior.
+
+## Internal Milestones
+
+Execute in order and mark progress in `docs/todo/android/implementation.md`.
+
+- `AHW5-M1`: audit `WidgetAssembly.Host`, `WidgetAssembly.Result`, and
+  `TerminalWidgetCompositionAssembly.Result` against the current composition
+  boundary.
+- `AHW5-M2`: slim `TerminalWidgetCompositionAssembly.Result` only where the
+  audit shows a clearer owner boundary.
+- `AHW5-M3`: group `WidgetAssembly.Host` inputs only where it reduces Activity
+  pressure without hiding owner boundaries.
+- `AHW5-M4`: document the future multi-terminal host API contract without
+  implementing tabs.
+- `AHW5-M5`: update structure/naming authority for any host API slimming or
+  tab-ready vocabulary.
+- `AHW5-M6`: run validation and publish the super-gate review packet.
 
 ## Allowed Work
 
@@ -85,6 +109,7 @@ If a required change falls outside these paths, stop and report a blocker.
 ## Non-Goals
 
 - No terminal tabs UI/product behavior.
+- No tab persistence/session switching.
 - No terminal-core behavior changes.
 - No shared renderer/backend refactor.
 - No app-shell UI redesign.
@@ -150,7 +175,7 @@ when:
 - a behavior change is required where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
 - implementing terminal tabs/product behavior becomes necessary to proceed
-- the `AHW-B4` super-gate is reached
+- the `AHW-B5` super-gate is reached
 
 Otherwise continue autonomously with:
 
@@ -158,9 +183,9 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At `AHW-B4` super-gate, report:
+At `AHW-B5` super-gate, report:
 
-- review chunk name: `AHW-B4`
+- review chunk name: `AHW-B5`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs

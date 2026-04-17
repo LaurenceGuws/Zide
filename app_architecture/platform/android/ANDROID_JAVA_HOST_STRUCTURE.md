@@ -216,4 +216,5 @@ Current shape markers (for hygiene tracking, not hard limits):
 1. Keep reducing `ZideActivity` only where methods still own policy.
 2. Keep `SelectionController` monolithic until a real seam appears.
 3. Split `host/ui/ChromeController` only if assist/sidebar policy expands.
-4. Split `UserlandInstaller` only if install modes or transport complexity grow.
+4. Slim `WidgetAssembly` / `TerminalWidgetCompositionAssembly` host-result surfaces before adding tab behavior; future tabs should consume a documented host API, not Activity field scatter.
+5. Split `UserlandInstaller` only if install modes or transport complexity grow.
