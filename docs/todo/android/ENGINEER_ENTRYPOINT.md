@@ -34,10 +34,11 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B9` is `in_progress`: slot-aware app-shell contract alignment without tab
-product behavior.
+`AHW-B9` engineer delivery is complete; **Architect verdict is pending**. There is
+no `in_progress` macro batch until `docs/todo/android/implementation.md` is
+refocused after Architect review.
 
-Batch queue line (exact):
+Last completed batch queue line (exact):
 
 - align app-shell contract vocabulary with terminal slot seams without implementing tab behavior
 
@@ -72,6 +73,9 @@ explicit while preserving single-slot behavior.
 - No tab/multi-instance product behavior unless a new batch scopes it.
 
 ## Internal Milestones
+
+`AHW-B9` internal milestones `AHW9-M1`–`AHW9-M6` are **completed**; see
+`docs/todo/android/implementation.md` for the super-gate packet.
 
 Execute in order and mark progress in `docs/todo/android/implementation.md`.
 

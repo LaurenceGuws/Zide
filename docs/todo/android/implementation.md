@@ -112,7 +112,7 @@ Dual-mode batching override (architect directive):
 - Completed macro batch: `AHW-B6` (accepted by Architect; slot single-source and status-result slimming follow-up queued in `AHW-B7`).
 - Completed macro batch: `AHW-B7` (accepted by Architect; slot seam contract hardening follow-up queued in `AHW-B8`).
 - Completed macro batch: `AHW-B8` (accepted by Architect; slot/app-shell contract alignment follow-up queued in `AHW-B9`).
-- Active macro batch: `AHW-B9` (slot-aware app-shell contract alignment, no tab behavior).
+- Engineer delivery complete; Architect verdict pending: `AHW-B9` (slot-aware app-shell contract alignment, no tab behavior). No macro batch is `in_progress` until Architect refocuses the queue.
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -2102,7 +2102,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B9` Slot-aware app-shell contract alignment (`in_progress`)
+### `AHW-B9` Slot-aware app-shell contract alignment (`verdict_pending`)
 
 Batch queue line (exact):
 
@@ -2186,7 +2186,7 @@ Progress delta (audit notes):
 - **Reserved:** additional `ShellViewId` / `TerminalWidgetSlotId` enum values remain
   non–behavior-driving until policy scopes them (no tab behavior).
 
-### `AHW9-M2` Mapping seam introduction (`pending`)
+### `AHW9-M2` Mapping seam introduction (`completed`)
 
 Queue line (exact):
 
@@ -2198,7 +2198,13 @@ Acceptance:
 - no tabs/switching behavior introduced
 - compile debug + release Java after code changes
 
-### `AHW9-M3` Wiring contract cleanup (`pending`)
+Progress delta:
+
+- Added `ProductTerminalSlotShellMapping.shellViewIdForTerminalSlot`; `PRIMARY` →
+  `ShellViewId.TERMINAL` with `checkActiveProductTerminalSlot`. Linked from
+  `TerminalWidgetSlotId` and `ShellViewId` Javadoc.
+
+### `AHW9-M3` Wiring contract cleanup (`completed`)
 
 Queue line (exact):
 
@@ -2210,7 +2216,14 @@ Acceptance:
 - no behavior drift in startup order, runtime, surface, input, or session flow
 - compile debug + release Java after code changes
 
-### `AHW9-M4` Freeze/guardrail lock (`pending`)
+Progress delta:
+
+- `WidgetAssembly` constructs `AppShellNavigation` from mapped `ShellViewId`;
+  `AppShellNavigation` requires explicit initial view. `ViewModeController` takes
+  `TerminalWidgetSlotId` and applies active shell view via mapping.
+  `AppShellViewState.productTerminalDefault(TerminalWidgetSlotId)` uses mapping.
+
+### `AHW9-M4` Freeze/guardrail lock (`completed`)
 
 Queue line (exact):
 
@@ -2221,7 +2234,12 @@ Acceptance:
 - docs explicitly state what is active today and what remains reserved
 - chrome slot freeze remains explicit and unchanged
 
-### `AHW9-M5` Queue/handoff/entrypoint sync (`pending`)
+Progress delta:
+
+- Structure “slot → app-shell view mapping” + naming + userland; `ZideActivity`
+  javadoc ties `ACTIVE_PRODUCT_TERMINAL_SLOT` to `ProductTerminalSlotShellMapping`.
+
+### `AHW9-M5` Queue/handoff/entrypoint sync (`completed`)
 
 Queue line (exact):
 
@@ -2232,7 +2250,12 @@ Acceptance:
 - all three docs point to `AHW-B9` as active and `in_progress`
 - super-gate stop condition and review packet contract are explicit
 
-### `AHW9-M6` Batch validation + review packet (`pending`)
+Progress delta:
+
+- This file, `ENGINEER_ENTRYPOINT.md`, and `AGENT_HANDOFF.md` updated for
+  `verdict_pending` and Architect refocus at B9 super-gate.
+
+### `AHW9-M6` Batch validation + review packet (`completed`)
 
 Queue line (exact):
 
@@ -2244,6 +2267,30 @@ Acceptance:
 - deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
 - cold start smoke pass when a device is available
 - engineer reports the full super-gate packet and stops for Architect review
+
+Progress delta:
+
+- Debug/release compile pass; deploy + cold start + `AndroidRuntime:E` filter (empty).
+
+Super-gate engineer packet:
+
+- `Milestone: AHW-B9 verdict_pending`
+- `Queue line (exact): align app-shell contract vocabulary with terminal slot seams without implementing tab behavior`
+- `Scope contract: Java terminal host + allowed authority docs; no tabs/multi-instance product behavior`
+- `Progress delta: ProductTerminalSlotShellMapping canonical slot→ShellViewId; wiring consumes seam; guardrails documented`
+- `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb cold start + AndroidRuntime:E (pass, empty)`
+- `Engineer updates: Blocked by Archtect review needed: true`
+
+Remaining risks:
+
+- `ProductTerminalSlotShellMapping.shellViewIdForTerminalSlot` may be invoked multiple
+  times per activation path (idempotent checks); acceptable until second-slot policy
+  scopes deduplication.
+
+Review questions for Architect:
+
+- Confirm mapping class name and package placement for the long-term multi-`ShellViewId` story.
+- Confirm next macro batch after verdict.
 
 `Milestone reached per docs, architect review required.`
 

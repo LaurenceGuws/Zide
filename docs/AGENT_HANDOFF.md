@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android harness/widget portability hardening** (`AHW`) — turns the refocus vision into enforceable code shape: Android Harness is the platform/app-shell canvas, Terminal Widget is the portable terminal consumer, and userland stays movable for future IDE/editor modes.
-- Active macro batch: `AHW-B9` — slot-aware app-shell contract alignment (no tab behavior).
+- Engineer-complete macro batch (Architect verdict pending): `AHW-B9` — slot-aware app-shell contract alignment (no tab behavior).
 - Prior closed/escalated: `AHW-B8` accepted; `AHW-B7` accepted; `AHW-B6` accepted; `AHW-B5` accepted; `AHW-B4` accepted; `AHW-B3` accepted; `AHW-B2` accepted; `AHW-B1` accepted; `ASF-M3` escalated remaining IME/assist and touch-gesture matrix rows to operator evidence; `ASF-M2`; `ASF-M1`; `AX-M5`; `AX-M4`
 - Active queue authority: `docs/todo/android/implementation.md`
 - Engineer entrypoint (dual mode): `docs/todo/android/ENGINEER_ENTRYPOINT.md`
@@ -24,8 +24,9 @@ Engineer session seed:
 
 - Read `docs/todo/android/ENGINEER_ENTRYPOINT.md`, then
   `docs/todo/android/implementation.md`, then this handoff file.
-- Execute only the macro batch marked `in_progress`: `AHW-B9`.
-- Stop at the `AHW-B9` super-gate and report the review packet.
+- If a macro batch is `in_progress`, execute only that batch. `AHW-B9` engineer
+  work is complete; next engineer session starts from Architect refocus.
+- Architect: review the `AHW-B9` super-gate packet in `docs/todo/android/implementation.md` and refocus the queue.
 
 ## First Read Order
 
