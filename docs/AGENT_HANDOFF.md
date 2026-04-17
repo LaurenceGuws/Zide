@@ -6,8 +6,8 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android harness/widget portability hardening** (`AHW`) — turns the refocus vision into enforceable code shape: Android Harness is the platform/app-shell canvas, Terminal Widget is the portable terminal consumer, and userland stays movable for future IDE/editor modes.
-- Engineer-complete macro batch (Architect verdict pending): `AHW-B10` — app-shell state contract cleanup with slot/chrome freezes preserved.
-- Prior closed/escalated: `AHW-B9` accepted; `AHW-B8` accepted; `AHW-B7` accepted; `AHW-B6` accepted; `AHW-B5` accepted; `AHW-B4` accepted; `AHW-B3` accepted; `AHW-B2` accepted; `AHW-B1` accepted; `ASF-M3` escalated remaining IME/assist and touch-gesture matrix rows to operator evidence; `ASF-M2`; `ASF-M1`; `AX-M5`; `AX-M4`
+- Active macro batch: `AHW-B11` — app-shell state surface hardening, behavior-neutral.
+- Prior closed/escalated: `AHW-B10` accepted; `AHW-B9` accepted; `AHW-B8` accepted; `AHW-B7` accepted; `AHW-B6` accepted; `AHW-B5` accepted; `AHW-B4` accepted; `AHW-B3` accepted; `AHW-B2` accepted; `AHW-B1` accepted; `ASF-M3` escalated remaining IME/assist and touch-gesture matrix rows to operator evidence; `ASF-M2`; `ASF-M1`; `AX-M5`; `AX-M4`
 - Active queue authority: `docs/todo/android/implementation.md`
 - Engineer entrypoint (dual mode): `docs/todo/android/ENGINEER_ENTRYPOINT.md`
 
@@ -24,9 +24,8 @@ Engineer session seed:
 
 - Read `docs/todo/android/ENGINEER_ENTRYPOINT.md`, then
   `docs/todo/android/implementation.md`, then this handoff file.
-- If a macro batch is `in_progress`, execute only that batch. `AHW-B10` engineer
-  work is complete; next engineer session starts from Architect refocus.
-- Architect: review the `AHW-B10` super-gate packet in `docs/todo/android/implementation.md` and refocus the queue.
+- Execute only the macro batch marked `in_progress`: `AHW-B11`.
+- Stop at the `AHW-B11` super-gate and report the review packet.
 
 ## First Read Order
 
@@ -49,17 +48,18 @@ Engineer session seed:
 - Architect updates use: `Blocked by humain review needed: true|false`.
 - Engineer updates use: `Blocked by Archtect review needed: true|false`.
 
-## AHW-B10 review findings from AHW-B9
+## AHW-B11 review findings from AHW-B10
 
-- `AHW-B9` is accepted.
-- `ProductTerminalSlotShellMapping` is the canonical host/ui slot→shell-view seam and should stay there.
-- Keep `checkActiveProductTerminalSlot` as the active-slot choke point.
+- `AHW-B10` is accepted.
+- Keep `AppShellNavigation.forProductTerminalSlot` / `applyProductTerminalShellViewActive` split as the app-shell contract baseline.
+- Keep `ProductTerminalSlotShellMapping` as canonical host/ui slot→shell-view seam.
+- Keep `checkActiveProductTerminalSlot` as active-slot choke point.
 - Keep slot off `InteractionAssembly.Result`; host seams + compose argument remain sufficient.
 - Keep chrome slot-agnostic unless per-slot chrome behavior is explicitly opened as a scoped batch.
 
 ## Operator Evidence Escalation
 
-ASF did not prove IME/assist or touch gestures because no operator packets were delivered. Those rows remain parked in `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md` with owner `operator`; they do not block `AHW-B10` unless new evidence reports a regression inside the active code scope.
+ASF did not prove IME/assist or touch gestures because no operator packets were delivered. Those rows remain parked in `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md` with owner `operator`; they do not block `AHW-B11` unless new evidence reports a regression inside the active code scope.
 
 ## Historical Notes
 

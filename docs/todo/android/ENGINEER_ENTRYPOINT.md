@@ -34,18 +34,17 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B10` engineer delivery is complete; **Architect verdict is pending**. There is
-no `in_progress` macro batch until `docs/todo/android/implementation.md` is
-refocused after Architect review.
+`AHW-B11` is `in_progress`: app-shell state surface hardening with behavior kept
+unchanged.
 
-Last completed batch queue line (exact):
+Batch queue line (exact):
 
-- clean app-shell state contract seams to consume slot→shell-view mapping consistently without behavior change
+- harden app-shell state surfaces and invariants while preserving slot mapping and chrome freeze behavior
 
 ## Core Boundary Rule
 
-This batch exists to clean app-shell state contract shape now that slot→shell
-mapping is explicit, without introducing product behavior changes.
+This batch exists to harden app-shell state surfaces and invariants now that
+slot→shell mapping and navigation ownership are explicit.
 
 - Android Harness owns platform ceremony, app-shell layout/styling/theming,
   navigation/view state, userland orchestration, and widget instance hosting.
@@ -59,9 +58,11 @@ mapping is explicit, without introducing product behavior changes.
 - `WidgetAssembly.Result` remains widget/chrome assembly output; it is not the
   terminal-instance factory by itself.
 
-## Required Direction From Architect Review (post-AHW-B10 baseline)
+## Required Direction From Architect Review (post-AHW-B11 baseline)
 
-- `AHW-B9` is accepted.
+- `AHW-B10` is accepted.
+- Keep `AppShellNavigation.forProductTerminalSlot` / `applyProductTerminalShellViewActive`
+  split as app-shell contract baseline.
 - Keep `ProductTerminalSlotShellMapping` as canonical slot→shell-view seam.
 - Keep `checkActiveProductTerminalSlot` as active-slot choke point until
   second-slot policy is explicitly scoped.
@@ -73,17 +74,14 @@ mapping is explicit, without introducing product behavior changes.
 
 ## Internal Milestones
 
-`AHW-B10` internal milestones `AHW10-M1`–`AHW10-M6` are **completed**; see
-`docs/todo/android/implementation.md` for the super-gate packet.
-
 Execute in order and mark progress in `docs/todo/android/implementation.md`.
 
-- `AHW10-M1`: audit app-shell state owners and mapping callsites for redundant surfaces.
-- `AHW10-M2`: consolidate mapping consumption contract paths without behavior change.
-- `AHW10-M3`: trim/reshape AppShellViewState helpers to match real consumers.
-- `AHW10-M4`: update structure/naming/userland docs while preserving slot/chrome freezes.
-- `AHW10-M5`: keep queue/handoff/entrypoint aligned to B10 super-gate.
-- `AHW10-M6`: run validation and publish super-gate review packet.
+- `AHW11-M1`: audit AppShellNavigation/AppShellViewState mutation surfaces and invariant gaps.
+- `AHW11-M2`: harden AppShellNavigation mutation invariants and null-safety.
+- `AHW11-M3`: tighten AppShellViewState construction/usage invariants.
+- `AHW11-M4`: lock mapping/chrome guardrail consistency with final state contracts.
+- `AHW11-M5`: keep queue/handoff/entrypoint aligned to B11 super-gate.
+- `AHW11-M6`: run validation and publish super-gate review packet.
 
 ## Allowed Work
 
@@ -171,7 +169,7 @@ when:
 - a behavior change is required where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
 - implementing terminal tabs/product behavior becomes necessary to proceed
-- the `AHW-B10` super-gate is reached
+- the `AHW-B11` super-gate is reached
 
 Otherwise continue autonomously with:
 
@@ -179,9 +177,9 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At `AHW-B10` super-gate, report:
+At `AHW-B11` super-gate, report:
 
-- review chunk name: `AHW-B10`
+- review chunk name: `AHW-B11`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs
