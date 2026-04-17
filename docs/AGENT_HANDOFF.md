@@ -118,6 +118,8 @@ Required per-commit update format:
 - latest cut also collapsed status relay adapters (`StatusBridge`,
   `StatusCallbacks`) by composing `StatusController.Host` directly in
   `StatusViewAssembly`.
+- latest cut also removed `host/interaction/SelectionCallbacks`; selection host
+  contracts are now provided directly at `InteractionFactory`.
 - `userland/UserlandInstaller.java` (~425 lines) remains large but cohesive;
   keep watch-only unless behavior complexity expands.
 - `host/surface/SurfaceController.java` and `host/ui/ChromeController.java`

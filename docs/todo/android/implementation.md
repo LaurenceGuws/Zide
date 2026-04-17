@@ -343,9 +343,8 @@ Audit decision:
     `setSelection(...)` and `replaceComposition(...)` without semantic changes.
   - Completed: adapter-depth reduction began in the interaction seam by
     collapsing `SelectionControllerFactory` relay wrappers: host contracts now
-    directly satisfy `SelectionInteractionBridge.Callbacks` and
-    `SelectionBridge.Callbacks`, removing large anonymous pass-through blocks
-    without behavior change.
+    directly satisfy selection host/bridge interfaces without large anonymous
+    pass-through blocks, preserving behavior.
   - Completed: adapter-depth reduction continued across interaction + userland
     seams by collapsing two additional relay tiers:
     `GestureStateControllerFactory` now accepts host contracts that directly
@@ -359,6 +358,10 @@ Audit decision:
     `host/interaction/SelectionInteractionBridge.java`; `SelectionControllerFactory`
     now composes `SelectionController` directly from one host contract that
     satisfies both `SelectionController.Host` and `SelectionController.Bridge`.
+  - Completed: selection interaction adapter depth reduced again by deleting
+    `host/interaction/SelectionCallbacks.java`; `InteractionFactory` now
+    provides a direct `SelectionControllerFactory.Host` contract inline,
+    removing one more relay-only callback class.
   - Completed: status adapter depth reduced by deleting
     `host/status/StatusBridge.java` and `host/status/StatusCallbacks.java`;
     `StatusViewAssembly` now composes `StatusController.Host` directly at
