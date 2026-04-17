@@ -34,10 +34,11 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B8` is `in_progress`: slot seam contract hardening plus explicit chrome
-slot freeze.
+`AHW-B8` engineer delivery is complete; **Architect verdict is pending**. There is
+no `in_progress` macro batch until `docs/todo/android/implementation.md` is
+refocused after Architect review.
 
-Batch queue line (exact):
+Last completed batch queue line (exact):
 
 - harden slot seam contracts with explicit invariants and keep chrome slot-agnostic until real per-slot policy exists
 
@@ -71,6 +72,9 @@ active slot behavior and reserved future slot seams.
 - No tab/multi-instance product behavior unless a new batch scopes it.
 
 ## Internal Milestones
+
+`AHW-B8` internal milestones `AHW8-M1`–`AHW8-M6` are **completed**; see
+`docs/todo/android/implementation.md` for the super-gate packet.
 
 Execute in order and mark progress in `docs/todo/android/implementation.md`.
 

@@ -111,7 +111,7 @@ Dual-mode batching override (architect directive):
 - Completed macro batch: `AHW-B5` (accepted by Architect; slot-scoped host API follow-up queued in `AHW-B6`).
 - Completed macro batch: `AHW-B6` (accepted by Architect; slot single-source and status-result slimming follow-up queued in `AHW-B7`).
 - Completed macro batch: `AHW-B7` (accepted by Architect; slot seam contract hardening follow-up queued in `AHW-B8`).
-- Active macro batch: `AHW-B8` (slot seam contract hardening + chrome freeze).
+- Engineer delivery complete; Architect verdict pending: `AHW-B8` (slot seam contract hardening + chrome freeze). No macro batch is `in_progress` until Architect refocuses the queue.
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -1912,7 +1912,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B8` Slot seam contract hardening + chrome freeze (`in_progress`)
+### `AHW-B8` Slot seam contract hardening + chrome freeze (`verdict_pending`)
 
 Batch queue line (exact):
 
@@ -1967,7 +1967,7 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `AHW-B8` super-gate is reached.
 
-### `AHW8-M1` Slot seam invariant audit (`pending`)
+### `AHW8-M1` Slot seam invariant audit (`completed`)
 
 Queue line (exact):
 
@@ -1979,7 +1979,13 @@ Acceptance:
 - identify missing invariant checks and ownership ambiguity
 - no behavior change required in this audit slice
 
-### `AHW8-M2` Slot invariant enforcement (`pending`)
+Progress delta:
+
+- Classified: `ZideActivity.ACTIVE_PRODUCT_TERMINAL_SLOT` → interaction/widget hosts →
+  `TerminalWidgetCompositionAssembly.compose`; chrome has no slot seam; slot not on
+  `InteractionAssembly.Result`.
+
+### `AHW8-M2` Slot invariant enforcement (`completed`)
 
 Queue line (exact):
 
@@ -1991,7 +1997,12 @@ Acceptance:
 - ensure slot consistency at wiring join points where multiple slot seams meet
 - compile debug + release Java after code changes
 
-### `AHW8-M3` Reserved seam labeling (`pending`)
+Progress delta:
+
+- `TerminalWidgetSlotId.checkActiveProductTerminalSlot` at `InteractionAssembly.assemble`,
+  `WidgetAssembly.assemble`, and `TerminalWidgetCompositionAssembly.compose`.
+
+### `AHW8-M3` Reserved seam labeling (`completed`)
 
 Queue line (exact):
 
@@ -2003,7 +2014,12 @@ Acceptance:
 - avoid silent no-op slot parameters that appear behavior-driving
 - compile debug + release Java after code changes
 
-### `AHW8-M4` Chrome slot freeze decision lock (`pending`)
+Progress delta:
+
+- Host Javadocs + `TerminalWidgetSlotId` enum document active = `PRIMARY` vs reserved
+  enum values.
+
+### `AHW8-M4` Chrome slot freeze decision lock (`completed`)
 
 Queue line (exact):
 
@@ -2014,7 +2030,12 @@ Acceptance:
 - no slot argument added to chrome construction in this batch
 - docs explicitly record when to reopen this decision
 
-### `AHW8-M5` Authority + workflow sync (`pending`)
+Progress delta:
+
+- `ChromeFactory` / `ChromeController` class Javadocs; structure doc “Chrome and terminal
+  slot policy (freeze)” section.
+
+### `AHW8-M5` Authority + workflow sync (`completed`)
 
 Queue line (exact):
 
@@ -2025,7 +2046,12 @@ Acceptance:
 - structure/naming/userland docs match final code reality
 - queue, handoff, and engineer entrypoint remain aligned to active macro batch
 
-### `AHW8-M6` Batch validation + review packet (`pending`)
+Progress delta:
+
+- `ANDROID_JAVA_HOST_STRUCTURE.md`, `ANDROID_JAVA_NAMING_CONTRACT.md`,
+  `USERLAND_HOST_CONTRACT.md`, and queue/handoff/entrypoint updated for B8.
+
+### `AHW8-M6` Batch validation + review packet (`completed`)
 
 Queue line (exact):
 
@@ -2037,6 +2063,30 @@ Acceptance:
 - deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
 - cold start smoke pass when a device is available
 - engineer reports the full super-gate packet and stops for Architect review
+
+Progress delta:
+
+- Debug/release compile, deploy, cold start, and `AndroidRuntime:E` filter: no lines (pass).
+
+Super-gate engineer packet:
+
+- `Milestone: AHW-B8 verdict_pending`
+- `Queue line (exact): harden slot seam contracts with explicit invariants and keep chrome slot-agnostic until real per-slot policy exists`
+- `Scope contract: Java terminal host + allowed authority docs; no tabs/multi-instance product behavior`
+- `Progress delta: active slot enforced at assembly/composition; chrome freeze documented; authority synced`
+- `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb cold start + AndroidRuntime:E (pass, empty)`
+- `Engineer updates: Blocked by Archtect review needed: true`
+
+Remaining risks:
+
+- External code that constructed hosts with a non-`PRIMARY` slot would now fail fast at
+  assembly (intended).
+
+Review questions for Architect:
+
+- Confirm `checkActiveProductTerminalSlot` stays the single product choke point until a
+  second slot is policy-defined.
+- Confirm next macro batch scope after verdict.
 
 `Milestone reached per docs, architect review required.`
 
