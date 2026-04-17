@@ -2156,7 +2156,7 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `AHW-B9` super-gate is reached.
 
-### `AHW9-M1` Slot/app-shell contract audit (`pending`)
+### `AHW9-M1` Slot/app-shell contract audit (`completed`)
 
 Queue line (exact):
 
@@ -2167,6 +2167,24 @@ Acceptance:
 - enumerate every slot-typed and shell-view-typed seam in active wiring
 - identify mismatches and redundant mapping points
 - no behavior change required in this audit slice
+
+Progress delta (audit notes):
+
+- **Slot-typed seams (active wiring):** `ZideActivity.ACTIVE_PRODUCT_TERMINAL_SLOT` →
+  `InteractionAssembly.Host` / `WidgetAssembly.Host` `terminalWidgetSlot()`;
+  `InteractionAssembly.assemble` / `WidgetAssembly.assemble` /
+  `TerminalWidgetCompositionAssembly.compose` enforce
+  `checkActiveProductTerminalSlot`; `InteractionCallbacks` carries
+  `TerminalWidgetSlotId` for gesture/selection policy.
+- **Shell-view / app-shell navigation seams:** `ShellViewId` (only `TERMINAL` today);
+  `AppShellNavigation` default `activeShellView = TERMINAL`; `ViewModeController.applyCurrentViewMode`
+  sets `ShellViewId.TERMINAL` literally; `AppShellViewState.productTerminalDefault` duplicates
+  `TERMINAL` literal; `AppShellNavigation.activeViewState()` derives from `activeShellView`.
+- **Mismatch / redundancy:** contract alignment between `TerminalWidgetSlotId` and
+  `ShellViewId` exists only in Javadoc on `TerminalWidgetSlotId`, not in one code seam;
+  multiple `ShellViewId.TERMINAL` literals without a single mapping choke point.
+- **Reserved:** additional `ShellViewId` / `TerminalWidgetSlotId` enum values remain
+  non–behavior-driving until policy scopes them (no tab behavior).
 
 ### `AHW9-M2` Mapping seam introduction (`pending`)
 
