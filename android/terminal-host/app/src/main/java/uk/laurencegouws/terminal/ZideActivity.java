@@ -35,13 +35,14 @@ import uk.laurencegouws.terminal.host.status.StatusViewCallbacks;
 import uk.laurencegouws.terminal.host.surface.SurfaceBridge;
 import uk.laurencegouws.terminal.host.surface.SurfaceController;
 import uk.laurencegouws.terminal.host.surface.SurfaceWidgetController;
-import uk.laurencegouws.terminal.host.ui.ProductHostDeferredActions;
+import uk.laurencegouws.terminal.host.ui.ProductHostStartupBundle;
 import uk.laurencegouws.terminal.host.ui.ViewModeController;
 import uk.laurencegouws.terminal.host.ui.UiStartupAssembly;
 import uk.laurencegouws.terminal.host.ui.UiStartupCallbacks;
 import uk.laurencegouws.terminal.host.ui.ViewportController;
 import uk.laurencegouws.terminal.host.ui.WidgetAssembly;
 import uk.laurencegouws.terminal.host.userland.ReadinessBlockerStartup;
+import uk.laurencegouws.terminal.host.userland.ShellPresentationHostInputs;
 import uk.laurencegouws.terminal.host.userland.WorkflowAssembly;
 import uk.laurencegouws.terminal.host.userland.WorkflowAssemblyCallbacks;
 import uk.laurencegouws.terminal.input.ShellInputView;
@@ -120,18 +121,17 @@ public final class ZideActivity extends android.app.Activity
     private UserlandInstallState currentInstallState = UserlandInstallState.idle();
     private UserlandReadinessState currentReadinessState;
 
-    private final ProductHostDeferredActions productHostDeferredActions =
-            new ProductHostDeferredActions(
-                    () -> terminalRuntimeController,
-                    () -> productFrameLoopController,
-                    () -> surfaceHostController,
-                    () -> userlandSessionCoordinator,
-                    () -> HardwareKeyboardController,
-                    () -> ImeFocusRecoveryController,
-                    () -> terminalChromeController,
-                    () -> StatusController,
-                    this::setCurrentInstallState,
-                    this::setCurrentReadinessState);
+    private final ProductHostStartupBundle hostStartup = ProductHostStartupBundle.create(
+            () -> terminalRuntimeController,
+            () -> productFrameLoopController,
+            () -> surfaceHostController,
+            () -> userlandSessionCoordinator,
+            () -> HardwareKeyboardController,
+            () -> ImeFocusRecoveryController,
+            () -> terminalChromeController,
+            () -> StatusController,
+            this::setCurrentInstallState,
+            this::setCurrentReadinessState);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -202,7 +202,7 @@ public final class ZideActivity extends android.app.Activity
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
-        if (productHostDeferredActions.handleHardwareDispatchKeyEventIfReady(event)) {
+        if (hostStartup.inputChrome.handleHardwareDispatchKeyEventIfReady(event)) {
             return true;
         }
         return super.dispatchKeyEvent(event);
@@ -239,7 +239,7 @@ public final class ZideActivity extends android.app.Activity
                 () -> imeVisible,
                 this::setImeVisible,
                 () -> surfaceHostBridge,
-                productHostDeferredActions::notifyVisibleViewportIfReady,
+                hostStartup.surface::notifyVisibleViewportIfReady,
                 () -> currentInstallState,
                 () -> currentReadinessState);
     }
@@ -261,9 +261,9 @@ public final class ZideActivity extends android.app.Activity
                 productSurfaceContainer,
                 () -> terminalViewportController.productViewportWidthPx(),
                 () -> terminalViewportController.productViewportHeightPx(),
-                productHostDeferredActions::stopScrollbackFlingIfReady,
-                productHostDeferredActions::refreshScrollOverlayIfReady,
-                productHostDeferredActions::reevaluateFrameLoopIfReady,
+                hostStartup.runtime::stopScrollbackFlingIfReady,
+                hostStartup.runtime::refreshScrollOverlayIfReady,
+                hostStartup.frameLoop::reevaluateFrameLoopIfReady,
                 StatusController::appendEvent);
     }
 
@@ -281,11 +281,12 @@ public final class ZideActivity extends android.app.Activity
     private InputCallbacks createInputCallbacks() {
         return new InputCallbacks(
                 this,
+                this,
                 rootView,
                 getSystemService(InputMethodManager.class),
                 () -> imeVisible,
                 this::setImeVisible,
-                productHostDeferredActions::refreshScrollOverlayIfReady,
+                hostStartup.runtime::refreshScrollOverlayIfReady,
                 StatusController::updateStatus,
                 StatusController::appendEvent);
     }
@@ -407,23 +408,20 @@ public final class ZideActivity extends android.app.Activity
             }
 
             @Override
-            public UserlandReadinessState sessionReadinessState() {
-                return currentReadinessState;
-            }
-
-            @Override
-            public UserlandInstallState sessionInstallState() {
-                return currentInstallState;
+            public ShellPresentationHostInputs shellPresentationHostInputs() {
+                return new ShellPresentationHostInputs(
+                        () -> currentReadinessState,
+                        () -> currentInstallState);
             }
 
             @Override
             public boolean shouldRunFrameLoop() {
-                return productHostDeferredActions.shouldRunFrameLoop();
+                return hostStartup.runtime.shouldRunFrameLoop();
             }
 
             @Override
             public void refreshScrollOverlay() {
-                productHostDeferredActions.refreshScrollOverlayIfReady();
+                hostStartup.runtime.refreshScrollOverlayIfReady();
             }
 
             @Override
@@ -453,7 +451,7 @@ public final class ZideActivity extends android.app.Activity
 
             @Override
             public void handleShellStateEvent() {
-                productHostDeferredActions.handleShellStateEventIfReady();
+                hostStartup.runtime.handleShellStateEventIfReady();
             }
 
             @Override
@@ -463,7 +461,7 @@ public final class ZideActivity extends android.app.Activity
 
             @Override
             public void reevaluateFrameLoop() {
-                productHostDeferredActions.reevaluateFrameLoopIfReady();
+                hostStartup.frameLoop.reevaluateFrameLoopIfReady();
             }
 
             @Override
@@ -478,7 +476,7 @@ public final class ZideActivity extends android.app.Activity
 
             @Override
             public void notifyVisibleViewport(String reason) {
-                productHostDeferredActions.notifyVisibleViewportIfReady(reason);
+                hostStartup.surface.notifyVisibleViewportIfReady(reason);
             }
         };
     }
@@ -519,10 +517,10 @@ public final class ZideActivity extends android.app.Activity
                 StatusController::appendEvent,
                 StatusController::updateStatus,
                 this::setCurrentReadinessState,
-                productHostDeferredActions::refreshShellStateIfReady,
-                productHostDeferredActions::refreshStatusTelemetryIfReady,
-                productHostDeferredActions::shouldRunFrameLoop,
-                () -> productHostDeferredActions.tickFrameAndRefreshScrollOverlay(nativeLoaded));
+                hostStartup.runtime::refreshShellStateIfReady,
+                hostStartup.runtime::refreshStatusTelemetryIfReady,
+                hostStartup.runtime::shouldRunFrameLoop,
+                () -> hostStartup.runtime.tickFrameAndRefreshScrollOverlay(nativeLoaded));
     }
 
     private void assembleUserlandWorkflowControllers() {
@@ -539,11 +537,11 @@ public final class ZideActivity extends android.app.Activity
                 () -> userlandRelease,
                 release -> userlandRelease = release,
                 StatusController::appendEvent,
-                productHostDeferredActions::applyInstallStateIfReady,
-                productHostDeferredActions::completeInstallIfReady,
-                productHostDeferredActions::failInstallIfReady,
-                productHostDeferredActions::restartSessionAfterInstallIfReady,
-                productHostDeferredActions::markPackageDoctorCompleteIfReady);
+                hostStartup.runtime::applyInstallStateIfReady,
+                hostStartup.workflowInstall::completeInstallIfReady,
+                hostStartup.workflowInstall::failInstallIfReady,
+                hostStartup.runtime::restartSessionAfterInstallIfReady,
+                hostStartup.telemetry::markPackageDoctorCompleteIfReady);
     }
 
     private void assembleActivityLifecycleController() {
@@ -610,17 +608,17 @@ public final class ZideActivity extends android.app.Activity
 
             @Override
             public void stopFrameLoop() {
-                productHostDeferredActions.stopFrameLoopIfReady();
+                hostStartup.frameLoop.stopFrameLoopIfReady();
             }
 
             @Override
             public void refreshUserlandSessionOnPause() {
-                productHostDeferredActions.refreshUserlandSessionIfReady();
+                hostStartup.userlandSession.refreshUserlandSessionIfReady();
             }
 
             @Override
             public void notifySurfacePause() {
-                productHostDeferredActions.pauseSurfaceIfReady();
+                hostStartup.surface.pauseSurfaceIfReady();
             }
 
             @Override
@@ -628,7 +626,7 @@ public final class ZideActivity extends android.app.Activity
                     boolean debugRecreateSurfaceOnce,
                     boolean debugResizeSurfaceOnce,
                     boolean debugStartShellOnce) {
-                productHostDeferredActions.resumeSurfaceIfReady(
+                hostStartup.surface.resumeSurfaceIfReady(
                         debugRecreateSurfaceOnce,
                         debugResizeSurfaceOnce,
                         debugStartShellOnce);
@@ -694,12 +692,12 @@ public final class ZideActivity extends android.app.Activity
 
     @Override
     public void onInputFocusChanged(boolean hasFocus) {
-        productHostDeferredActions.notifyInputFocusRecoveryIfReady(hasFocus);
+        hostStartup.inputChrome.notifyInputFocusRecoveryIfReady(hasFocus);
     }
 
     @Override
     public void onModifierLatchChanged(ShellInputView.Host.ModifierLatchState state) {
-        productHostDeferredActions.applyModifierLatchIfReady(state);
+        hostStartup.inputChrome.applyModifierLatchIfReady(state);
     }
 
     private boolean canSendDirectInput() {

@@ -16,6 +16,11 @@ import uk.laurencegouws.terminal.input.ImeFocusRecoveryController;
 public final class InputAssembly {
     /** Harness callbacks required to assemble input state. */
     public interface Host {
+        /**
+         * Context for view construction and system services (e.g. {@code InputMethodManager}).
+         * Independent of {@link #shellInputHost()}; a harness may supply a base context while
+         * the shell input host is implemented elsewhere.
+         */
         Context harnessContext();
 
         android.view.View rootView();

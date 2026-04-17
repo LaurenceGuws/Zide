@@ -10,9 +10,10 @@ import java.util.function.Consumer;
 import uk.laurencegouws.terminal.NativeBridge;
 import uk.laurencegouws.terminal.input.ShellInputView;
 
-/** Functional callback adapter for {@link InputAssembly.Host}; activity must implement {@link ShellInputView.Host}. */
+/** Functional callback adapter for {@link InputAssembly.Host}. */
 public final class InputCallbacks implements InputAssembly.Host {
     private final Context harnessContext;
+    private final ShellInputView.Host shellInputHost;
     private final View rootView;
     private final InputMethodManager inputMethodManager;
     private final BooleanSupplier currentImeVisible;
@@ -23,6 +24,7 @@ public final class InputCallbacks implements InputAssembly.Host {
 
     public InputCallbacks(
             Context harnessContext,
+            ShellInputView.Host shellInputHost,
             View rootView,
             InputMethodManager inputMethodManager,
             BooleanSupplier currentImeVisible,
@@ -31,6 +33,7 @@ public final class InputCallbacks implements InputAssembly.Host {
             Consumer<String> updateStatus,
             Consumer<String> appendEvent) {
         this.harnessContext = harnessContext;
+        this.shellInputHost = shellInputHost;
         this.rootView = rootView;
         this.inputMethodManager = inputMethodManager;
         this.currentImeVisible = currentImeVisible;
@@ -52,7 +55,7 @@ public final class InputCallbacks implements InputAssembly.Host {
 
     @Override
     public ShellInputView.Host shellInputHost() {
-        return (ShellInputView.Host) harnessContext;
+        return shellInputHost;
     }
 
     @Override

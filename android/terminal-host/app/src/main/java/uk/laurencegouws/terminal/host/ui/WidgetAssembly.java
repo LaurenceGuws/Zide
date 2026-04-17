@@ -16,20 +16,21 @@ import uk.laurencegouws.terminal.host.surface.SurfaceController;
 import uk.laurencegouws.terminal.host.surface.SurfaceWidgetAssembly;
 import uk.laurencegouws.terminal.host.surface.SurfaceWidgetAssemblyCallbacks;
 import uk.laurencegouws.terminal.host.surface.SurfaceWidgetController;
+import uk.laurencegouws.terminal.host.userland.ShellPresentationHostInputs;
 import uk.laurencegouws.terminal.host.userland.ShellStateBridge;
 import uk.laurencegouws.terminal.host.userland.ShellStateCallbacks;
 import uk.laurencegouws.terminal.input.ShellInputView;
 import uk.laurencegouws.terminal.scroll.ScrollOverlayView;
 import uk.laurencegouws.terminal.selection.SelectionController;
 import uk.laurencegouws.terminal.userland.ShellStatePresenter;
-import uk.laurencegouws.terminal.userland.UserlandReadinessState;
-import uk.laurencegouws.terminal.userland.UserlandInstallState;
 
 /** Owns product widget/chrome/view-mode/surface host assembly for activity wiring. */
 public final class WidgetAssembly {
     /** Harness callbacks required to assemble widget host controllers. */
     public interface Host {
-        /** Activity or application context for chrome and view construction. */
+        /**
+         * Context for chrome and view construction (typically the hosting {@code Activity}).
+         */
         Context harnessContext();
 
         android.os.Handler handler();
@@ -71,11 +72,11 @@ public final class WidgetAssembly {
 
         GestureStateController GestureStateController();
 
-        /** Product session readiness snapshot for shell-state presentation only. */
-        UserlandReadinessState sessionReadinessState();
-
-        /** Product session install snapshot for shell-state presentation only. */
-        UserlandInstallState sessionInstallState();
+        /**
+         * Readiness/install suppliers for shell-blocker presentation; userland types stay behind
+         * {@link ShellPresentationHostInputs} so this Host seam does not import userland value classes.
+         */
+        ShellPresentationHostInputs shellPresentationHostInputs();
 
         boolean shouldRunFrameLoop();
 
@@ -227,8 +228,8 @@ public final class WidgetAssembly {
                 host.productReadinessDetail(),
                 host.productReadinessRetryButton(),
                 new ShellStateCallbacks(
-                        host::sessionReadinessState,
-                        host::sessionInstallState,
+                        host.shellPresentationHostInputs().readinessState(),
+                        host.shellPresentationHostInputs().installState(),
                         surfaceWidgetAssembly.surfaceHostBridge::currentSurfaceView));
     }
 
