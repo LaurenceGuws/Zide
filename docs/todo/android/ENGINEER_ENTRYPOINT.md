@@ -34,18 +34,17 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B9` engineer delivery is complete; **Architect verdict is pending**. There is
-no `in_progress` macro batch until `docs/todo/android/implementation.md` is
-refocused after Architect review.
+`AHW-B10` is `in_progress`: app-shell state contract cleanup while preserving
+slot/chrome freezes and single-slot behavior.
 
-Last completed batch queue line (exact):
+Batch queue line (exact):
 
-- align app-shell contract vocabulary with terminal slot seams without implementing tab behavior
+- clean app-shell state contract seams to consume slot→shell-view mapping consistently without behavior change
 
 ## Core Boundary Rule
 
-This batch exists to make slot and app-shell view vocabulary consistent and
-explicit while preserving single-slot behavior.
+This batch exists to clean app-shell state contract shape now that slot→shell
+mapping is explicit, without introducing product behavior changes.
 
 - Android Harness owns platform ceremony, app-shell layout/styling/theming,
   navigation/view state, userland orchestration, and widget instance hosting.
@@ -59,13 +58,12 @@ explicit while preserving single-slot behavior.
 - `WidgetAssembly.Result` remains widget/chrome assembly output; it is not the
   terminal-instance factory by itself.
 
-## Required Direction From Architect Review (post-AHW-B9 baseline)
+## Required Direction From Architect Review (post-AHW-B10 baseline)
 
-- `AHW-B8` is accepted.
-- Keep `checkActiveProductTerminalSlot` as the single active-slot choke point
-  until second-slot policy is explicitly scoped.
-- Keep `ACTIVE_PRODUCT_TERMINAL_SLOT` as activity wiring source; do not replace
-  with a larger context object yet.
+- `AHW-B9` is accepted.
+- Keep `ProductTerminalSlotShellMapping` as canonical slot→shell-view seam.
+- Keep `checkActiveProductTerminalSlot` as active-slot choke point until
+  second-slot policy is explicitly scoped.
 - Keep slot identity on host seams + compose argument; do not add slot to
   `InteractionAssembly.Result` yet.
 - Keep chrome slot-agnostic in this batch; do not thread slot into chrome
@@ -74,17 +72,14 @@ explicit while preserving single-slot behavior.
 
 ## Internal Milestones
 
-`AHW-B9` internal milestones `AHW9-M1`–`AHW9-M6` are **completed**; see
-`docs/todo/android/implementation.md` for the super-gate packet.
-
 Execute in order and mark progress in `docs/todo/android/implementation.md`.
 
-- `AHW9-M1`: audit slot/app-shell navigation vocabulary and map active vs reserved seams.
-- `AHW9-M2`: introduce one canonical mapping seam for active slot to shell view identity.
-- `AHW9-M3`: clean wiring contracts to consume canonical mapping seam and remove redundancy.
-- `AHW9-M4`: lock guardrails: slot/app-shell mapping scope + chrome slot freeze.
-- `AHW9-M5`: sync authority docs and workflow docs to B9 outcomes.
-- `AHW9-M6`: run validation and publish super-gate review packet.
+- `AHW10-M1`: audit app-shell state owners and mapping callsites for redundant surfaces.
+- `AHW10-M2`: consolidate mapping consumption contract paths without behavior change.
+- `AHW10-M3`: trim/reshape AppShellViewState helpers to match real consumers.
+- `AHW10-M4`: update structure/naming/userland docs while preserving slot/chrome freezes.
+- `AHW10-M5`: keep queue/handoff/entrypoint aligned to B10 super-gate.
+- `AHW10-M6`: run validation and publish super-gate review packet.
 
 ## Allowed Work
 
@@ -172,7 +167,7 @@ when:
 - a behavior change is required where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
 - implementing terminal tabs/product behavior becomes necessary to proceed
-- the `AHW-B9` super-gate is reached
+- the `AHW-B10` super-gate is reached
 
 Otherwise continue autonomously with:
 
@@ -180,9 +175,9 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At `AHW-B9` super-gate, report:
+At `AHW-B10` super-gate, report:
 
-- review chunk name: `AHW-B9`
+- review chunk name: `AHW-B10`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs

@@ -112,7 +112,8 @@ Dual-mode batching override (architect directive):
 - Completed macro batch: `AHW-B6` (accepted by Architect; slot single-source and status-result slimming follow-up queued in `AHW-B7`).
 - Completed macro batch: `AHW-B7` (accepted by Architect; slot seam contract hardening follow-up queued in `AHW-B8`).
 - Completed macro batch: `AHW-B8` (accepted by Architect; slot/app-shell contract alignment follow-up queued in `AHW-B9`).
-- Engineer delivery complete; Architect verdict pending: `AHW-B9` (slot-aware app-shell contract alignment, no tab behavior). No macro batch is `in_progress` until Architect refocuses the queue.
+- Completed macro batch: `AHW-B9` (accepted by Architect; app-shell state contract cleanup follow-up queued in `AHW-B10`).
+- Active macro batch: `AHW-B10` (app-shell state contract cleanup, slot mapping behavior unchanged).
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -2102,7 +2103,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B9` Slot-aware app-shell contract alignment (`verdict_pending`)
+### `AHW-B9` Slot-aware app-shell contract alignment (`completed`)
 
 Batch queue line (exact):
 
@@ -2291,6 +2292,144 @@ Review questions for Architect:
 
 - Confirm mapping class name and package placement for the long-term multi-`ShellViewId` story.
 - Confirm next macro batch after verdict.
+
+Architect review verdict:
+
+- `Review chunk: AHW-B9`
+- `Verdict: accepted`
+- `Commits reviewed: d11388a1, 2b27dd5d, 184a8f46, 3ca594d7, 3846d285, 241dddc0`
+- `Architect validation spot-check: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
+- `Engineer device validation accepted: deploy + AndroidRuntime:E smoke + cold start pass`
+- `Findings carried forward: ProductTerminalSlotShellMapping is the correct long-term host/ui seam for slot→shell-view mapping. Repeated mapping/check calls are acceptable now; next batch should clean app-shell state contract shape so mapping is consumed consistently without behavior change.`
+
+`Milestone reached per docs, architect review required.`
+
+---
+
+### `AHW-B10` App-shell state contract cleanup (`in_progress`)
+
+Batch queue line (exact):
+
+- clean app-shell state contract seams to consume slot→shell-view mapping consistently without behavior change
+
+Batch purpose:
+
+- reduce redundant mapping/check callsites across app-shell state owners
+- make app-shell state contract explicit and minimal (`AppShellNavigation`, `AppShellViewState`, `ViewModeController`)
+- preserve single-slot runtime behavior and slot/chrome freezes
+
+Batch scope:
+
+- Java Android terminal host only, plus authority docs needed to keep contract truth current
+- primary code root:
+  `android/terminal-host/app/src/main/java/uk/laurencegouws/terminal/**`
+- allowed docs:
+  `docs/todo/android/implementation.md`,
+  `docs/todo/android/ENGINEER_ENTRYPOINT.md`,
+  `docs/AGENT_HANDOFF.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_NAMING_CONTRACT.md`,
+  `app_architecture/platform/android/USERLAND_HOST_CONTRACT.md`
+
+Batch non-goals:
+
+- no terminal tabs UI/product behavior
+- no tab persistence/session switching
+- no terminal-core or shared-renderer changes
+- no selection/IME/gesture behavior changes except compile-preserving seam rewiring
+- no app-shell UI redesign
+- no debug-view UI resurrection
+- no broad rename sweep
+- no ASF operator-evidence churn unless new evidence arrives
+
+Batch super-gate:
+
+- app-shell state seams consume canonical slot→shell mapping without redundant contract surfaces
+- `AppShellNavigation` / `AppShellViewState` / `ViewModeController` roles are explicit and non-overlapping
+- slot choke point and chrome slot freeze remain unchanged
+- single-slot runtime behavior remains unchanged
+- docs reflect final ownership and naming shape
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass at final seam boundary
+
+Internal milestone cadence:
+
+- Engineer executes `AHW10-M1` through `AHW10-M6` sequentially.
+- Do not stop for architect review between internal milestones.
+- Mark each internal milestone complete in this file as it lands.
+- Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
+  the `AHW-B10` super-gate is reached.
+
+### `AHW10-M1` App-shell state seam audit (`pending`)
+
+Queue line (exact):
+
+- audit app-shell state owners and mapping callsites for redundant or unused contract surfaces
+
+Acceptance:
+
+- list every mapping callsite and state owner (`AppShellNavigation`, `AppShellViewState`, `ViewModeController`)
+- identify dead/unused helpers and duplicated state projections
+- no behavior change required in this audit slice
+
+### `AHW10-M2` Mapping consumption consolidation (`pending`)
+
+Queue line (exact):
+
+- consolidate mapping consumption so app-shell state owners use one consistent resolved shell-view contract path
+
+Acceptance:
+
+- reduce redundant mapping/check calls where possible without changing behavior
+- keep slot policy enforcement semantics unchanged
+- compile debug + release Java after code changes
+
+### `AHW10-M3` AppShellViewState contract trim (`pending`)
+
+Queue line (exact):
+
+- trim or reshape AppShellViewState helpers to match actual consumers and remove dead slot/view indirection
+
+Acceptance:
+
+- remove or refactor unused helper surfaces where no consumer exists
+- keep state semantics stable (selected/contentReady defaults unchanged)
+- compile debug + release Java after code changes
+
+### `AHW10-M4` Doc and guardrail lock (`pending`)
+
+Queue line (exact):
+
+- update structure/naming/userland docs for final app-shell state contract shape while preserving slot/chrome freezes
+
+Acceptance:
+
+- docs clearly separate active behavior from reserved future slot behavior
+- chrome slot freeze and slot choke-point guidance remain intact
+
+### `AHW10-M5` Queue/handoff/entrypoint sync (`pending`)
+
+Queue line (exact):
+
+- keep queue, handoff, and engineer entrypoint aligned to AHW-B10 execution and super-gate stop
+
+Acceptance:
+
+- all three docs point to `AHW-B10` as active and `in_progress`
+- super-gate stop condition and review packet contract are explicit
+
+### `AHW10-M6` Batch validation + review packet (`pending`)
+
+Queue line (exact):
+
+- validate AHW-B10 end-to-end and publish the architect review packet
+
+Acceptance:
+
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
+- cold start smoke pass when a device is available
+- engineer reports the full super-gate packet and stops for Architect review
 
 `Milestone reached per docs, architect review required.`
 
