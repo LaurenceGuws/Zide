@@ -37,7 +37,8 @@ and decoupled.
 - **Active campaign:** **Android stabilization follow-through** (`ASF`) — close
   remaining operator-blocked RF_M5 matrix rows (IME/assist, touch gestures) with
   reproducible on-device evidence, without breaking harness/widget ownership
-  boundaries.
+  boundaries. **`ASF-M1` runbook published;** operator pass/fill for
+  cannot-verify rows remains optional follow-up matrix edits.
 
 Iteration detail is intentionally not tracked here. Read code + git history for
 step-level implementation history.
@@ -83,7 +84,8 @@ Dual-mode batching override (architect directive):
 - Completed milestone: `AX-M4` (manual interactive matrix completion).
 - Completed milestone: `AX-M5` (next campaign declaration; docs published).
 - Active campaign: **Android stabilization follow-through** (`ASF`).
-- Active milestone: `ASF-M1` (operator matrix closure — IME + gesture rows).
+- Completed milestone: `ASF-M1` (operator matrix closure — IME + gesture rows).
+- Active milestone: *none — next milestone pending architect queue update.*
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -499,7 +501,7 @@ Progress checkpoint:
 
 ---
 
-### `ASF-M1` Operator matrix closure — IME + gesture rows (`in_progress`)
+### `ASF-M1` Operator matrix closure — IME + gesture rows (`completed`)
 
 Queue line (exact):
 
@@ -512,15 +514,26 @@ Scope:
 
 Tasks:
 
-- [ ] author reproducible on-device steps for IME show/hide + assist row (aligned with `ZideActivity` / chrome seams)
-- [ ] author reproducible on-device steps for selection overlay + at least one gesture path (e.g. scroll overlay / pinch) at operator discretion
-- [ ] update `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md` with dated pass/fail or blocked-with-reason rows
-- [ ] run standard Android smoke validation when any host Java changes occur (otherwise document smoke N/A for docs-only cuts)
+- [x] author reproducible on-device steps for IME show/hide + assist row (aligned with `ZideActivity` / chrome seams)
+- [x] author reproducible on-device steps for selection overlay + at least one gesture path (e.g. scroll overlay / pinch) at operator discretion
+- [x] update `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md` with dated pass/fail or blocked-with-reason rows
+- [x] run standard Android smoke validation when any host Java changes occur (otherwise document smoke N/A for docs-only cuts)
 
 Gate:
 
 - matrix rows no longer list `not run — blocker` for IME and gesture without an explicit dated outcome or cannot-verify note
 - architect review at `ASF-M1` gate
+
+Progress checkpoint:
+
+- `Milestone: ASF-M1 completed`
+- `Queue line (exact): publish operator runbook steps and dated matrix outcomes for IME/assist and touch gesture blocker rows, or record cannot-verify with reason`
+- `Scope contract: docs + RF_M5_STABILIZATION_MATRIX.md only; no code changes`
+- `Progress delta: added ASF-M1 operator runbook §A/§B; input matrix rows set to cannot-verify (2026-04-17) with owner operator + ASF-M1 smoke baseline; gate satisfied (no remaining not-run blocker rows for IME/gesture)`
+- `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E (pass); adb shell am force-stop uk.laurencegouws.zide && adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity (pass)`
+- `Blocked by Archtect review needed: true`
+
+`Milestone reached per docs, architect review required.`
 
 ## Guardrails
 

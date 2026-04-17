@@ -37,15 +37,13 @@ Follow the **active milestone** section in `docs/todo/android/implementation.md`
 
 - Engineer runs larger chunks; do not stop at every milestone by default.
 - Current batch policy is whatever `docs/todo/android/implementation.md` marks active.
-- Current active milestone: **`ASF-M1`** (see `docs/todo/android/implementation.md`).
-- Architect review point for current batch: at **`ASF-M1`** gate (or real blocker). *(Completed declaration milestone **`AX-M5`** was reviewed at the `AX-M5` gate.)*
+- Current active milestone: see **`docs/todo/android/implementation.md`** *(after `ASF-M1`: none until architect adds the next milestone)*.
+- Architect review point for current batch: at the **active milestone** gate in `docs/todo/android/implementation.md` *(completed: `ASF-M1`)*, or real blocker.
 - Intermediate milestone notes are allowed, but they are not stop points.
 
-## Next campaign — first batch engineer prompt (`ASF-M1`)
+## Engineer session prompt template (active milestone)
 
-Copy for a fresh dual-mode engineer session:
-
-> Mode: dual. Role: execution-only. Execute only milestone **`ASF-M1`** per `docs/todo/android/implementation.md` queue line and scope. Do not invent scope. Preserve behavior; no CI ceremony; `refocus_android.txt` is scratchpad-only and must not be committed. Update `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md` when recording operator outcomes. Validation at seam boundaries: `./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac`, `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac`, `python3 ops/android_terminal_host.py deploy`, `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E`, `adb shell am force-stop uk.laurencegouws.zide && adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity`. Response contract: `#DONE`, `#OUTSTANDING`, `COMMITS`, `VALIDATION`, `Blocked by Archtect review needed: true|false`.
+When **`docs/todo/android/implementation.md`** names an active milestone, use the same dual-mode contract: execution-only; validation commands as in **Review Cadence → Typical wave**; `refocus_android.txt` scratchpad-only and not committed. **`ASF-M1` is complete**; the next engineer prompt is whatever the architect queues next (see implementation file).
 
 Typical wave (when the queue specifies it):
 
