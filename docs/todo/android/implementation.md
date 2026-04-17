@@ -2554,7 +2554,7 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `AHW-B11` super-gate is reached.
 
-### `AHW11-M1` App-shell state API audit (`pending`)
+### `AHW11-M1` App-shell state API audit (`completed`)
 
 Queue line (exact):
 
@@ -2565,6 +2565,21 @@ Acceptance:
 - list all mutation entry points and current guard coverage
 - identify weak or implicit invariants that should be made explicit
 - no behavior change required in this audit slice
+
+Progress delta (audit snapshot):
+
+- **AppShellNavigation mutation:** `forProductTerminalSlot` → private ctor (guarded by
+  mapping); `setSidebarOpen(boolean)`; `setActiveShellView(ShellViewId)` **public, no
+  null check** (only caller today is `applyProductTerminalShellViewActive`); `applyProductTerminalShellViewActive`;
+  `activeShellView()` read; `activeViewState()` builds `AppShellViewState` from current
+  active id.
+- **AppShellViewState:** public ctor takes three fields; **no null check on `ShellViewId id`**;
+  only constructed from `AppShellNavigation.activeViewState()` in product wiring.
+- **Consumers:** `ChromeBridge` uses sidebar only; `ViewModeController` uses
+  `applyProductTerminalShellViewActive` only. No external `setActiveShellView` callsites yet.
+- **Gaps:** null `ShellViewId` could corrupt `activeShellView` / `AppShellViewState.id` if
+  `setActiveShellView` were misused; implicit invariant “active view is non-null” should be
+  enforced at owner boundary.
 
 ### `AHW11-M2` Navigation invariant hardening (`pending`)
 
