@@ -80,6 +80,31 @@ Recorded during engineer session `2026-04-17T22:30:14+02:00` (host clock). Docs/
 
 ---
 
+## ASF-M2 operator evidence ingest log
+
+Ingest for **matrix verdict closure** (queue `ASF-M2`). Submissions are append-only; engineer records what was received in-repo.
+
+| Runbook § | Received | Device | Android | Date (operator) | Verdict (pass / fail / notes) |
+| --- | --- | --- | --- | --- | --- |
+| **§A** IME + assist | **no** | — | — | — | *No §A packet delivered to engineering this session.* |
+| **§B** gestures + selection | **no** | — | — | — | *No §B packet delivered to engineering this session.* |
+
+**Ingest note (engineer session `2026-04-17T22:37:27+02:00`):** Without operator-submitted device model, API level, and pass/fail notes, **pass** and **fail** product verdicts cannot be asserted for §A/§B. Matrix rows below use explicit **blocked** verdicts (reason + owner + date) per `ASF-M2` gate.
+
+---
+
+## Smoke baseline (ASF-M2 verdict milestone, 2026-04-17)
+
+Docs/matrix-only; session `2026-04-17T22:37:27+02:00`.
+
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac` — pass — `BUILD SUCCESSFUL in 382ms`
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac` — pass — `BUILD SUCCESSFUL in 421ms`
+- `python3 ops/android_terminal_host.py deploy` — pass — `Performing Streamed Install` / `Success`; `Starting: Intent { cmp=uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity }`
+- `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E` — pass — `Warning: Activity not started, intent has been delivered to currently running top-most instance.`; empty `AndroidRuntime:E` buffer
+- `adb shell am force-stop uk.laurencegouws.zide && adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity` — pass — `Status: ok`, `LaunchState: COLD`, `TotalTime: 544`, `WaitTime: 548`, `Complete`
+
+---
+
 ## Lifecycle matrix
 
 | Check | Result | How verified |
@@ -97,13 +122,13 @@ Recorded during engineer session `2026-04-17T22:30:14+02:00` (host clock). Docs/
 
 | Check | Result | How verified |
 | --- | --- | --- |
-| IME show/hide / assist row | **cannot-verify** (2026-04-17) | **ASF-M1:** Reproducible operator steps in **ASF-M1 operator runbook § A** (IME button `assist_ime_button`, assist keys). Interactive pass/fail of soft keyboard + assist UX requires **on-device operator** execution; **owner: operator** for product sign-off. Supporting **host smoke:** ASF-M1 smoke baseline — no `AndroidRuntime:E`. |
+| IME show/hide / assist row | **blocked** (2026-04-17) | **ASF-M2:** No operator §A evidence ingested (see **ASF-M2 operator evidence ingest log**). **Reason:** awaiting runbook return with device model, Android version, dated pass/fail. **Owner:** operator. Host smoke (ASF-M2 baseline): no `AndroidRuntime:E`. |
 | Hardware keyboard | pass-smoke (adb) | **AX-M4:** `adb shell input keyevent 29` (A) and `66` (ENTER) with activity foreground; `adb logcat -d -s AndroidRuntime:E` empty |
-| Selection / gestures (pinch, scroll overlay, handles) | **cannot-verify** (2026-04-17) | **ASF-M1:** Reproducible operator steps in **§ B** (scroll overlay, pinch, selection handles). Touch paths require **on-device operator**; **owner: operator** for dated pass/fail. Supporting **host smoke:** ASF-M1 smoke baseline — no `AndroidRuntime:E`. |
+| Selection / gestures (pinch, scroll overlay, handles) | **blocked** (2026-04-17) | **ASF-M2:** No operator §B evidence ingested (see log). **Reason:** awaiting runbook return with device model, Android version, dated pass/fail per sub-step. **Owner:** operator. Host smoke (ASF-M2 baseline): no `AndroidRuntime:E`. |
 
 **AX batch code delta (AX-M1, pre matrix):** `ShellInputView` now fills `ExtractedText` partial range metadata for IME contract; hardware path handles legacy `ACTION_MULTIPLE` batched character delivery (narrow deprecation suppression for `-Werror`). **Does not replace** interactive IME/hardware/selection rows above.
 
-**Follow-up delta (ASF-M1):** Rows are no longer `not run — blocker`; outcomes are **cannot-verify** with dated runbook + owner until operators record pass/fail in a follow-up matrix edit.
+**Follow-up delta (ASF-M2):** Former **cannot-verify** rows now have explicit **blocked** verdicts with owner/date/reason until operator evidence is ingested and matrix edited to **pass** or **fail**.
 
 ---
 
@@ -147,3 +172,7 @@ Interactive rows executed where **host `adb`** can drive them; remaining gaps ar
 ## ASF-M1 checkpoint
 
 Operator runbook **§ ASF-M1 operator runbook** published in this doc. IME/assist and gesture matrix rows carry **cannot-verify (2026-04-17)** with **owner: operator** pending hands-on sign-off; host smoke (compile, deploy, `AndroidRuntime:E`, cold start) recorded under **Smoke baseline (ASF-M1 …)**. No Java changes in this milestone.
+
+## ASF-M2 checkpoint
+
+**ASF-M2 operator evidence ingest log** added; no §A/§B packets received this session. IME/assist and gesture rows closed to explicit **blocked (2026-04-17)** verdicts (**owner: operator**, reason: no evidence ingested). Hardware keyboard row unchanged. Next edit: replace **blocked** with **pass**/**fail** when operator returns runbook results.

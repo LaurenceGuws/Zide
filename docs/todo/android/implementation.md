@@ -85,7 +85,8 @@ Dual-mode batching override (architect directive):
 - Completed milestone: `AX-M5` (next campaign declaration; docs published).
 - Active campaign: **Android stabilization follow-through** (`ASF`).
 - Completed milestone: `ASF-M1` (operator matrix closure — IME + gesture rows).
-- Active milestone: *none — next milestone pending architect queue update.*
+- Completed milestone: `ASF-M2` (operator evidence ingest + matrix verdict closure).
+- Active milestone: `ASF-M3` (campaign closeout or escalation).
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -534,6 +535,63 @@ Progress checkpoint:
 - `Blocked by Archtect review needed: true`
 
 `Milestone reached per docs, architect review required.`
+
+---
+
+### `ASF-M2` Operator evidence ingest + matrix verdict closure (`completed`)
+
+Queue line (exact):
+
+- ingest operator-run results from ASF-M1 runbook and close IME/gesture matrix rows with explicit verdicts
+
+Scope:
+
+- docs + matrix updates only
+- no Java changes unless a verified product regression is reported with reproduction
+
+Tasks:
+
+- [x] collect operator evidence for runbook §A and §B (device, Android version, date, pass/fail notes)
+- [x] replace `cannot-verify` placeholders in IME/assist and gesture rows with explicit verdicts or blocked-with-reason + owner/date
+- [x] add short verdict summary in `docs/todo/android/implementation.md` checkpoint (what is now closed vs still blocked)
+
+Gate:
+
+- IME/assist and gesture rows are no longer unresolved placeholders
+- matrix records owner/date/verdict for each formerly cannot-verify row
+- architect review required at gate
+
+Progress checkpoint:
+
+- `Milestone: ASF-M2 completed`
+- `Queue line (exact): ingest operator-run results from ASF-M1 runbook and close IME/gesture matrix rows with explicit verdicts`
+- `Scope contract: docs + matrix only; no code`
+- `Verdict summary: No §A/§B operator packets ingested this session — IME/assist and gesture rows set to explicit blocked (2026-04-17), owner operator, reason documented in RF_M5_STABILIZATION_MATRIX.md ingest log. Hardware keyboard row remains pass-smoke (adb). Unblocked pass/fail awaits future operator evidence append.`
+- `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E (pass); adb shell am force-stop uk.laurencegouws.zide && adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity (pass)`
+- `Blocked by Archtect review needed: true`
+
+`Milestone reached per docs, architect review required.`
+
+---
+
+### `ASF-M3` Campaign closeout or escalation (`pending`)
+
+Queue line (exact):
+
+- decide ASF campaign closeout status and publish next campaign entrypoint
+
+Scope:
+
+- docs only (`docs/AGENT_HANDOFF.md`, `docs/todo/android/implementation.md`, and optional new authority doc)
+
+Tasks:
+
+- [ ] if ASF-M2 closes all critical rows, mark ASF complete and declare next campaign
+- [ ] if unresolved blockers remain, publish escalation milestone with owner and acceptance bar
+
+Gate:
+
+- handoff and queue explicitly agree on closed/ongoing status and next active milestone
 
 ## Guardrails
 

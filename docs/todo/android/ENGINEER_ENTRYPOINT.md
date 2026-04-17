@@ -37,13 +37,13 @@ Follow the **active milestone** section in `docs/todo/android/implementation.md`
 
 - Engineer runs larger chunks; do not stop at every milestone by default.
 - Current batch policy is whatever `docs/todo/android/implementation.md` marks active.
-- Current active milestone: see **`docs/todo/android/implementation.md`** *(after `ASF-M1`: none until architect adds the next milestone)*.
-- Architect review point for current batch: at the **active milestone** gate in `docs/todo/android/implementation.md` *(completed: `ASF-M1`)*, or real blocker.
+- Current active milestone: **`ASF-M3`** (campaign closeout or escalation — see `docs/todo/android/implementation.md`).
+- Architect review point for current batch: at **`ASF-M3`** gate (or real blocker).
 - Intermediate milestone notes are allowed, but they are not stop points.
 
 ## Engineer session prompt template (active milestone)
 
-When **`docs/todo/android/implementation.md`** names an active milestone, use the same dual-mode contract: execution-only; validation commands as in **Review Cadence → Typical wave**; `refocus_android.txt` scratchpad-only and not committed. **`ASF-M1` is complete**; the next engineer prompt is whatever the architect queues next (see implementation file).
+When **`docs/todo/android/implementation.md`** names an active milestone, use the same dual-mode contract: execution-only; validation commands as in **Review Cadence → Typical wave**; `refocus_android.txt` scratchpad-only and not committed. Follow the queue line for **`ASF-M3`** (campaign closeout or escalation) when that milestone is active.
 
 Typical wave (when the queue specifies it):
 

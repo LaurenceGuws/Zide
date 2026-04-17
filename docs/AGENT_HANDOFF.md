@@ -6,10 +6,10 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android stabilization follow-through** (`ASF`) — follows post-refocus / AX matrix work; targets operator-verified closure of remaining RF_M5 matrix gaps (IME/assist, touch gestures).
-- Current milestone: *none — next milestone pending architect queue update* (`ASF-M1` operator runbook + matrix outcomes **completed**)
-- Prior closed: `ASF-M1`; `AX-M5` next-campaign declaration; `AX-M4` interactive matrix completion
+- Current milestone: `ASF-M3` (`pending`, campaign closeout or escalation)
+- Prior closed: `ASF-M2` (matrix verdicts: IME/gesture **blocked** pending operator evidence); `ASF-M1`; `AX-M5`; `AX-M4`
 - Active queue authority: `docs/todo/android/implementation.md`
-- Engineer entrypoint (dual mode): `docs/todo/android/ENGINEER_ENTRYPOINT.md` (includes **ASF-M1** first-batch prompt)
+- Engineer entrypoint (dual mode): `docs/todo/android/ENGINEER_ENTRYPOINT.md`
 
 ## First Read Order
 
