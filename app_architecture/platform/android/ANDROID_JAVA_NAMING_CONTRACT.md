@@ -87,6 +87,9 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
 - `TerminalWidgetSlotId.checkActiveProductTerminalSlot` is the single choke point
   for “active slot” wiring today; assemblies call it at interaction assembly,
   widget assembly, and composition entry
+- map product terminal slot → `ShellViewId` only via
+  `ProductTerminalSlotShellMapping.shellViewIdForTerminalSlot` — do not sprinkle
+  `ShellViewId.TERMINAL` for active product shell routing outside that seam
 - in `ZideActivity`, use one authoritative `static final` slot field (e.g.
   `ACTIVE_PRODUCT_TERMINAL_SLOT`) for interaction/widget/composition wiring
   instead of repeating `PRIMARY` literals

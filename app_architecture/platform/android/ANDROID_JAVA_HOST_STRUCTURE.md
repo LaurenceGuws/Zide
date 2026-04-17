@@ -81,7 +81,11 @@ produces that holder from `InteractionAssembly.Result` + surface fields on
 `TerminalWidgetSlotId` makes the slot explicit at composition and host seams
 (today only `TerminalWidgetSlotId.PRIMARY`). `TerminalWidgetSlotId.checkActiveProductTerminalSlot`
 runs at interaction assembly, widget assembly, and composition entry points so
-active-slot wiring cannot silently diverge.
+active-slot wiring cannot silently diverge. `ProductTerminalSlotShellMapping`
+is the single code seam mapping an active product terminal slot to
+`ShellViewId` for `AppShellNavigation` and view-mode activation (today
+`PRIMARY` → `ShellViewId.TERMINAL`); do not scatter ad hoc `ShellViewId` literals
+for product shell routing.
 App-shell chrome, viewport, runtime orchestration, and userland coordination stay
 **outside** that holder. Future multi-instance hosting should compose additional
 `TerminalWidgetInstance` values without moving app-shell state into the widget
@@ -116,6 +120,12 @@ per-slot chrome policy is explicitly scoped. Do not add `TerminalWidgetSlotId` t
 chrome factory methods preemptively; terminal slot identity remains on
 interaction/widget hosts and `TerminalWidgetCompositionAssembly`.
 
+### Slot → app-shell view mapping (active vs reserved)
+
+`ProductTerminalSlotShellMapping` owns the contract from `TerminalWidgetSlotId`
+to `ShellViewId` for **product** wiring. Reserved enum values on either side do
+not imply tab or multi-instance behavior until a scoped batch defines policy.
+
 ## File Audit
 
 Current shape markers (for hygiene tracking, not hard limits):
@@ -124,7 +134,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 - `ZideActivity.java`: `698` lines
 - `input/ShellInputView.java`: `587` lines
 - `userland/UserlandInstaller.java`: `425` lines
-- `host/ui/WidgetAssembly.java`: `320` lines
+- `host/ui/WidgetAssembly.java`: `296` lines
 - `host/surface/SurfaceBridge.java`: `272` lines
 - `host/surface/SurfaceController.java`: `262` lines
 - `host/ui/ChromeController.java`: `213` lines
@@ -164,7 +174,8 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/input/InputChromeStartupForwards.java` | Good | Null-guard forwards for hardware keyboard, IME focus recovery, chrome modifier latch. | Delegation-only. |
 | `host/status/StatusTelemetryStartupForwards.java` | Good | Null-guard forwards into `StatusController` for package-doctor / operator telemetry (status ownership, not debug UI). | Delegation-only. |
 | `host/ui/TerminalWidgetInstance.java` | Good | Immutable bundle of one terminal widget’s surface + selection + gesture controller refs for harness hosting. | Do not fold app-shell or userland orchestration into this type. |
-| `host/ui/TerminalWidgetSlotId.java` | Good | Compile-visible slot identity; `checkActiveProductTerminalSlot` enforces active = `PRIMARY` at assembly/composition entry points today. | When new slots activate, update the check alongside host policy; do not use checks alone to ship tab behavior. |
+| `host/ui/TerminalWidgetSlotId.java` | Good | Compile-visible slot identity; `checkActiveProductTerminalSlot` enforces active = `PRIMARY` at assembly/composition entry points today; Javadoc points at `ProductTerminalSlotShellMapping` for shell view alignment. | When new slots activate, update the check alongside host policy; do not use checks alone to ship tab behavior. |
+| `host/ui/ProductTerminalSlotShellMapping.java` | Good | Single seam: active product `TerminalWidgetSlotId` → `ShellViewId` (today `PRIMARY` → `TERMINAL`); invokes `checkActiveProductTerminalSlot`. | Extend mapping when `ShellViewId` gains distinct product views; keep chrome factory slot-agnostic until policy scopes it. |
 | `host/ui/TerminalWidgetCompositionAssembly.java` | Good | Harness-owned join of `InteractionAssembly.Result` + `WidgetAssembly.Result` into `TerminalWidgetInstance` only; `compose` takes `TerminalWidgetSlotId` first; shell/chrome/view-mode refs stay on `WidgetAssembly.Result`. Not tab/multi-instance policy. | Keep `WidgetAssembly.Result` as widget/chrome output; instance join stays here, not on `WidgetAssembly.Result` alone. |
 | `host/userland/WorkflowInstallStartupGlue.java` | Good | Install completion state transitions + runtime restart delegation. | Keep install orchestration thin; low-level extraction stays in `UserlandInstaller`. |
 | `host/ui/ActivityViewBindings.java` | Good | Owns raw activity view lookup and typed binding capture for terminal host wiring; `StatusViewAssembly.Result` exposes the authoritative `activityViewBindings` for activity wiring. | Keep this as lookup-only data binding; no policy or runtime behavior. |
@@ -189,10 +200,10 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/ui/UiFactory.java` | Good | Owns UI host construction for shell-state presenter bridge, view-mode controller, and surface-widget controller. | Keep this construction-only; UI behavior remains in dedicated host controllers. |
 | `host/ui/UiStartupAssembly.java` | Good | Owns post-construction UI bind/start assembly for activity wiring. | Keep this assembly-only; UI behavior remains in dedicated controllers. |
 | `host/ui/UiStartupCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/ui/UiStartupAssembly`. | Keep adapter-only; avoid adding UI behavior here. |
-| `host/ui/ViewModeController.java` | Good | Owns product-view stabilization side effects (viewport notify + scroll-overlay refresh) and records active shell view on `AppShellNavigation` when product view applies. | Keep this focused on product-view activation only; do not grow terminal policy here. |
-| `host/ui/ShellViewId.java` | Good | Enum of harness shell content slots; tab-ready identity vocabulary. | Extend only when multi-view hosting lands; keep names product-neutral. |
+| `host/ui/ViewModeController.java` | Good | Owns product-view stabilization side effects (viewport notify + scroll-overlay refresh); sets active shell view via `ProductTerminalSlotShellMapping` using the widget slot (no bare `ShellViewId.TERMINAL` literal). | Keep this focused on product-view activation only; do not grow terminal policy here. |
+| `host/ui/ShellViewId.java` | Good | Enum of harness shell content slots; tab-ready identity vocabulary; product routing from slot uses `ProductTerminalSlotShellMapping`. | Extend only when multi-view hosting lands; keep names product-neutral. |
 | `host/ui/AppShellViewState.java` | Good | Per-shell-view state row (selection + reserved content-ready bit) for future multi-view chrome. | Keep immutable; do not embed widget types. |
-| `host/ui/AppShellNavigation.java` | Good | Owns app-shell drawer open/close state and active `ShellViewId`; central harness owner for navigation chrome. | Keep harness-only; chrome reads this instead of ad-hoc flags. |
+| `host/ui/AppShellNavigation.java` | Good | Owns app-shell drawer open/close state and active `ShellViewId`; constructed with initial view from `ProductTerminalSlotShellMapping` in product widget assembly. | Keep harness-only; chrome reads this instead of ad-hoc flags. |
 | `host/ui/ChromeBridge.java` | Good | Owns chrome callback adaptation and assist-button/modifier-latch view presentation wiring; sidebar open state is delegated to `AppShellNavigation`. | Keep as adapter-only for chrome behavior in `host/ui/ChromeController`. |
 | `host/ui/ChromeCallbacks.java` | Removed | Relay adapter was collapsed; `ChromeFactory` now provides `ChromeBridge.Callbacks` directly. | Keep chrome behavior in `host/ui/ChromeController`; avoid reintroducing callback pass-through classes without measurable coupling reduction. |
 | `host/userland/ShellStateBridge.java` | Good | Owns product-shell-state presenter callback adaptation and blocker/overlay view binding. | Keep presentation behavior in `userland/ShellStatePresenter`; keep this adapter thin. |
