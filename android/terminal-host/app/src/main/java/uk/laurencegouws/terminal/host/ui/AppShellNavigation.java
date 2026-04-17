@@ -10,6 +10,9 @@ import java.util.Objects;
  * across bridges. For product terminal wiring, construct via
  * {@link #forProductTerminalSlot} so slot→{@link ShellViewId} resolution happens once
  * via {@link ProductTerminalSlotShellMapping}.</p>
+ *
+ * <p><strong>Invariants:</strong> {@link #activeShellView()} is never {@code null}.
+ * {@link #setActiveShellView} rejects {@code null} at the harness boundary.</p>
  */
 public final class AppShellNavigation {
     private boolean sidebarOpen;
@@ -54,11 +57,19 @@ public final class AppShellNavigation {
         return activeShellView;
     }
 
+    /**
+     * Sets which shell content view is active. Must not be {@code null}; future
+     * multi-view hosting will pass additional {@link ShellViewId} values under explicit
+     * harness policy.
+     */
     public void setActiveShellView(ShellViewId id) {
-        this.activeShellView = id;
+        this.activeShellView = Objects.requireNonNull(id, "activeShellView");
     }
 
-    /** State row for the currently selected shell view. */
+    /**
+     * State row for the currently selected shell view ({@code selected=true},
+     * {@code contentReady=false} — reserved bit for future readiness wiring).
+     */
     public AppShellViewState activeViewState() {
         return new AppShellViewState(activeShellView, true, false);
     }
