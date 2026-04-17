@@ -32,6 +32,7 @@ document does not change when the harness hosts multiple terminal surfaces.
 `TerminalWidgetSlotId` and other harness slot vocabulary identify **terminal
 widget hosting** only; they do not fork userland types or workflows. Harness code
 maps an active product slot to app-shell `ShellViewId` via
-`ProductTerminalSlotShellMapping` (not userland). Chrome construction stays
+`ProductTerminalSlotShellMapping` (not userland); `AppShellNavigation` holds the
+resolved view for the assembly instance. Chrome construction stays
 slot-agnostic at the type level until a scoped harness decision threads slot
 into chrome policy.
