@@ -327,59 +327,11 @@ public final class ShellInputView extends View {
                 return mapped;
             }
         }
+        final Integer alphabeticControlCodepoint = mapAlphabeticControlCodepoint(event.getKeyCode());
+        if (alphabeticControlCodepoint != null) {
+            return alphabeticControlCodepoint;
+        }
         switch (event.getKeyCode()) {
-            case KeyEvent.KEYCODE_A:
-                return 0x01;
-            case KeyEvent.KEYCODE_B:
-                return 0x02;
-            case KeyEvent.KEYCODE_C:
-                return 0x03;
-            case KeyEvent.KEYCODE_D:
-                return 0x04;
-            case KeyEvent.KEYCODE_E:
-                return 0x05;
-            case KeyEvent.KEYCODE_F:
-                return 0x06;
-            case KeyEvent.KEYCODE_G:
-                return 0x07;
-            case KeyEvent.KEYCODE_H:
-                return 0x08;
-            case KeyEvent.KEYCODE_I:
-                return 0x09;
-            case KeyEvent.KEYCODE_J:
-                return 0x0a;
-            case KeyEvent.KEYCODE_K:
-                return 0x0b;
-            case KeyEvent.KEYCODE_L:
-                return 0x0c;
-            case KeyEvent.KEYCODE_M:
-                return 0x0d;
-            case KeyEvent.KEYCODE_N:
-                return 0x0e;
-            case KeyEvent.KEYCODE_O:
-                return 0x0f;
-            case KeyEvent.KEYCODE_P:
-                return 0x10;
-            case KeyEvent.KEYCODE_Q:
-                return 0x11;
-            case KeyEvent.KEYCODE_R:
-                return 0x12;
-            case KeyEvent.KEYCODE_S:
-                return 0x13;
-            case KeyEvent.KEYCODE_T:
-                return 0x14;
-            case KeyEvent.KEYCODE_U:
-                return 0x15;
-            case KeyEvent.KEYCODE_V:
-                return 0x16;
-            case KeyEvent.KEYCODE_W:
-                return 0x17;
-            case KeyEvent.KEYCODE_X:
-                return 0x18;
-            case KeyEvent.KEYCODE_Y:
-                return 0x19;
-            case KeyEvent.KEYCODE_Z:
-                return 0x1a;
             case KeyEvent.KEYCODE_LEFT_BRACKET:
                 return 0x1b;
             case KeyEvent.KEYCODE_BACKSLASH:
@@ -397,6 +349,13 @@ public final class ShellInputView extends View {
             default:
                 return null;
         }
+    }
+
+    private static Integer mapAlphabeticControlCodepoint(int keyCode) {
+        if (keyCode >= KeyEvent.KEYCODE_A && keyCode <= KeyEvent.KEYCODE_Z) {
+            return (keyCode - KeyEvent.KEYCODE_A) + 1;
+        }
+        return null;
     }
 
     private Integer mapCodepointToControlCodepoint(int codepoint) {
@@ -474,26 +433,7 @@ public final class ShellInputView extends View {
         final boolean ctrlActive = event.isCtrlPressed() || ctrlLatched;
         final boolean altActive = event.isAltPressed() || altLatched;
         final boolean latchedModifiersConsumed = ctrlLatched || altLatched;
-        final Integer controlCodepoint = mapKeyToControlCodepoint(event, ctrlActive);
-        if (controlCodepoint != null) {
-            if (altActive) {
-                host.sendDirectCodepoint('\u001b');
-            }
-            host.sendDirectCodepoint(controlCodepoint);
-            if (latchedModifiersConsumed) {
-                clearLatchedModifiers();
-            }
-            return true;
-        }
-        final String esc = mapKeyToEscape(event.getKeyCode());
-        if (esc != null) {
-            if (altActive) {
-                host.sendDirectCodepoint('\u001b');
-            }
-            host.sendDirectText(esc);
-            if (latchedModifiersConsumed) {
-                clearLatchedModifiers();
-            }
+        if (handleControlOrEscapeKey(event, ctrlActive, altActive, latchedModifiersConsumed)) {
             return true;
         }
         switch (event.getKeyCode()) {
@@ -516,30 +456,68 @@ public final class ShellInputView extends View {
                 host.sendDirectCodepoint('\u001b');
                 return true;
             default:
-                final int unicode = event.getUnicodeChar();
-                if (unicode == 0 || Character.isISOControl(unicode)) {
-                    return false;
-                }
-                final String text = new String(Character.toChars(unicode));
-                if (altActive) {
-                    host.sendDirectCodepoint('\u001b');
-                }
-                if (ctrlActive) {
-                    final Integer mapped = mapCodepointToControlCodepoint(unicode);
-                    if (mapped != null) {
-                        host.sendDirectCodepoint(mapped);
-                    } else {
-                        host.sendDirectText(text);
-                    }
-                } else {
-                    editorBuffer.insert(editorCursor, text);
-                    editorCursor += text.length();
-                    host.sendDirectText(text);
-                }
-                if (latchedModifiersConsumed) {
-                    clearLatchedModifiers();
-                }
-                return true;
+                return handlePrintableKey(event, ctrlActive, altActive, latchedModifiersConsumed);
+        }
+    }
+
+    private boolean handleControlOrEscapeKey(
+            KeyEvent event,
+            boolean ctrlActive,
+            boolean altActive,
+            boolean latchedModifiersConsumed) {
+        final Integer controlCodepoint = mapKeyToControlCodepoint(event, ctrlActive);
+        if (controlCodepoint != null) {
+            maybeSendAltPrefix(altActive);
+            host.sendDirectCodepoint(controlCodepoint);
+            maybeClearLatchedModifiers(latchedModifiersConsumed);
+            return true;
+        }
+        final String esc = mapKeyToEscape(event.getKeyCode());
+        if (esc == null) {
+            return false;
+        }
+        maybeSendAltPrefix(altActive);
+        host.sendDirectText(esc);
+        maybeClearLatchedModifiers(latchedModifiersConsumed);
+        return true;
+    }
+
+    private boolean handlePrintableKey(
+            KeyEvent event,
+            boolean ctrlActive,
+            boolean altActive,
+            boolean latchedModifiersConsumed) {
+        final int unicode = event.getUnicodeChar();
+        if (unicode == 0 || Character.isISOControl(unicode)) {
+            return false;
+        }
+        final String text = new String(Character.toChars(unicode));
+        maybeSendAltPrefix(altActive);
+        if (ctrlActive) {
+            final Integer mapped = mapCodepointToControlCodepoint(unicode);
+            if (mapped != null) {
+                host.sendDirectCodepoint(mapped);
+            } else {
+                host.sendDirectText(text);
+            }
+        } else {
+            editorBuffer.insert(editorCursor, text);
+            editorCursor += text.length();
+            host.sendDirectText(text);
+        }
+        maybeClearLatchedModifiers(latchedModifiersConsumed);
+        return true;
+    }
+
+    private void maybeSendAltPrefix(boolean altActive) {
+        if (altActive) {
+            host.sendDirectCodepoint('\u001b');
+        }
+    }
+
+    private void maybeClearLatchedModifiers(boolean consumed) {
+        if (consumed) {
+            clearLatchedModifiers();
         }
     }
 }

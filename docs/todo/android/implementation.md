@@ -323,6 +323,11 @@ Audit decision:
     (`onActionItemClicked`) and collapsing no-bytes/no-clipboard reporting and
     clipboard apply flow into direct callback/clipboard paths with unchanged
     telemetry semantics.
+  - Completed: `ShellInputView` input-path complexity reduction wave started by
+    flattening `handleKeyEvent(...)` into explicit control/escape and printable
+    handlers, extracting shared alt-prefix/latch-clear behavior, and reducing
+    `mapKeyToControlCodepoint(...)` branch surface with alphabetic key-range
+    mapping while preserving key semantics.
     - Next: execute a behavior-preserving `input/ShellInputView.java`
       complexity-risk reduction wave focused on IME/hardware-key correctness
       seams (`onCreateInputConnection`, key mapping, and key-event handling)
