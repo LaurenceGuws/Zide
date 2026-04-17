@@ -793,7 +793,12 @@ public final class SelectionController {
         return new ActionMode.Callback2() {
             @Override
             public boolean onCreateActionMode(ActionMode mode, Menu menu) {
-                installSelectionCopyMenuItem(menu);
+                menu.add(
+                                SELECTION_COPY_MENU_NEUTRAL,
+                                SELECTION_COPY_MENU_ITEM_ID,
+                                SELECTION_COPY_MENU_NEUTRAL,
+                                SELECTION_COPY_MENU_TITLE_RES)
+                        .setShowAsAction(SELECTION_COPY_SHOW_AS_ACTION);
                 return true;
             }
 
@@ -804,7 +809,12 @@ public final class SelectionController {
 
             @Override
             public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
-                return handleSelectionFloatingToolbarMenuItem(mode, item);
+                if (item.getItemId() != SELECTION_COPY_MENU_ITEM_ID) {
+                    return false;
+                }
+                copyCurrentShellSelectionToClipboard();
+                mode.finish();
+                return true;
             }
 
             @Override
@@ -819,32 +829,6 @@ public final class SelectionController {
                 }
             }
         };
-    }
-
-    private boolean handleSelectionFloatingToolbarMenuItem(ActionMode mode, MenuItem item) {
-        if (!isSelectionCopyMenuItem(item)) {
-            return false;
-        }
-        executeSelectionToolbarCopy(mode);
-        return true;
-    }
-
-    private void installSelectionCopyMenuItem(Menu menu) {
-        menu.add(
-                        SELECTION_COPY_MENU_NEUTRAL,
-                        SELECTION_COPY_MENU_ITEM_ID,
-                        SELECTION_COPY_MENU_NEUTRAL,
-                        SELECTION_COPY_MENU_TITLE_RES)
-                .setShowAsAction(SELECTION_COPY_SHOW_AS_ACTION);
-    }
-
-    private static boolean isSelectionCopyMenuItem(MenuItem item) {
-        return item.getItemId() == SELECTION_COPY_MENU_ITEM_ID;
-    }
-
-    private void executeSelectionToolbarCopy(ActionMode mode) {
-        copyCurrentShellSelectionToClipboard();
-        mode.finish();
     }
 
     private void onSelectionActionModeDestroyed(ActionMode mode) {
@@ -1048,14 +1032,10 @@ public final class SelectionController {
     private void copyCurrentShellSelectionToClipboard() {
         final byte[] bytes = bridge.currentSelectionTextBytes();
         if (bytes == null) {
-            reportSelectionCopyNoBytes();
+            reportSelectionCopyBlocked("no-bytes");
             return;
         }
         applySelectionPlainTextToSystemClipboard(decodeSelectionUtf8(bytes));
-    }
-
-    private void reportSelectionCopyNoBytes() {
-        reportSelectionCopyBlocked("no-bytes");
     }
 
     private static String decodeSelectionUtf8(byte[] bytes) {
@@ -1063,32 +1043,17 @@ public final class SelectionController {
     }
 
     private void applySelectionPlainTextToSystemClipboard(String text) {
-        final ClipboardManager clipboard = resolveClipboardManagerForSelectionCopy();
-        if (clipboard == null) {
-            return;
-        }
-        applyClipboardPrimaryClipForSelection(clipboard, text);
-    }
-
-    private ClipboardManager resolveClipboardManagerForSelectionCopy() {
         final ClipboardManager clipboard = host.context().getSystemService(ClipboardManager.class);
         if (clipboard == null) {
-            reportSelectionCopyNoClipboard();
+            reportSelectionCopyBlocked("no-clipboard");
+            return;
         }
-        return clipboard;
-    }
-
-    private void reportSelectionCopyNoClipboard() {
-        reportSelectionCopyBlocked("no-clipboard");
+        clipboard.setPrimaryClip(newSelectionPlainTextClip(text));
+        reportSelectionCopySucceeded(text.length());
     }
 
     private void reportSelectionCopyBlocked(String reason) {
         host.appendEvent(PRODUCT_SELECTION_COPY_RESULT_PREFIX + reason);
-    }
-
-    private void applyClipboardPrimaryClipForSelection(ClipboardManager clipboard, String text) {
-        clipboard.setPrimaryClip(newSelectionPlainTextClip(text));
-        reportSelectionCopySucceeded(text.length());
     }
 
     private static ClipData newSelectionPlainTextClip(String text) {

@@ -297,6 +297,11 @@ Milestone gate contract (mandatory when manager/architect lane is active):
     additional wrappers by inlining presentation guard/finish handling in
     `showSelectionActionMode()` and direct content-rect fallback logic inside
     floating toolbar callbacks (no semantic change).
+  - Completed: `SelectionController` floating toolbar callback + clipboard path
+    dropped additional one-hop helpers by inlining copy menu handling
+    (`onActionItemClicked`) and collapsing no-bytes/no-clipboard reporting and
+    clipboard apply flow into direct callback/clipboard paths with unchanged
+    telemetry semantics.
     - Next: resume primary Java cleanup under Active TODO item 1 by executing a
       behavior-preserving `selection/SelectionController.java` pressure-reduction
       wave focused on action-mode lifecycle internals (reduce tiny one-hop
