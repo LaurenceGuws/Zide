@@ -114,7 +114,8 @@ Dual-mode batching override (architect directive):
 - Completed macro batch: `AHW-B8` (accepted by Architect; slot/app-shell contract alignment follow-up queued in `AHW-B9`).
 - Completed macro batch: `AHW-B9` (accepted by Architect; app-shell state contract cleanup follow-up queued in `AHW-B10`).
 - Completed macro batch: `AHW-B10` (accepted by Architect; app-shell state surface hardening follow-up queued in `AHW-B11`).
-- Engineer delivery complete; Architect verdict pending: `AHW-B11` (app-shell state surface hardening, behavior-neutral). No macro batch is `in_progress` until Architect refocuses the queue.
+- Completed macro batch: `AHW-B11` (accepted by Architect; app-shell mutation-ownership narrowing follow-up queued in `AHW-B12`).
+- `AHW-B12` is `in_progress` (app-shell mutation ownership narrowing, behavior-neutral).
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -2500,7 +2501,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B11` App-shell state surface hardening (`verdict_pending`)
+### `AHW-B11` App-shell state surface hardening (`completed`)
 
 Batch queue line (exact):
 
@@ -2631,7 +2632,7 @@ Progress delta:
 - Structure “App-shell state invariants” subsection; naming + userland bullets; table
   rows updated. No changes to `ProductTerminalSlotShellMapping` or chrome factory slot policy.
 
-### `AHW11-M5` Queue/handoff/entrypoint sync (`completed`)
+### `AHW11-M5` Queue/handoff/entrypoint sync (`completed_in_batch`)
 
 Queue line (exact):
 
@@ -2647,7 +2648,7 @@ Progress delta:
 - This file, `ENGINEER_ENTRYPOINT.md`, and `AGENT_HANDOFF.md` updated for
   `verdict_pending` and Architect refocus.
 
-### `AHW11-M6` Batch validation + review packet (`completed`)
+### `AHW11-M6` Batch validation + review packet (`completed_in_batch`)
 
 Queue line (exact):
 
@@ -2677,14 +2678,144 @@ Remaining risks:
 
 - None material; null rejects surface as fail-fast if future callsites misuse public setters.
 
-Review questions for Architect:
+Architect review verdict:
 
-- Confirm null-reject semantics remain the long-term harness boundary for shell view ids.
-- Confirm next macro batch after verdict.
+- `Review chunk: AHW-B11`
+- `Verdict: accepted`
+- `Commits reviewed: aaf5d916, 067ffc14, 8e5949c9, 086f3054, b56fec84`
+- `Architect validation spot-check: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
+- `Engineer device validation accepted: deploy + AndroidRuntime:E smoke + cold start pass`
+- `Findings carried forward: keep null-reject semantics (`Objects.requireNonNull`) as the long-term harness boundary for shell-view ids. Next batch should narrow mutation entry points so app-shell state changes happen through explicit policy methods, not broad public setters.`
 
 `Milestone reached per docs, architect review required.`
 
 ---
+
+### `AHW-B12` App-shell mutation ownership narrowing (`in_progress`)
+
+Batch queue line (exact):
+
+- narrow app-shell mutation APIs to explicit policy methods while preserving single-slot behavior
+
+Batch purpose:
+
+- reduce broad mutation surfaces on app-shell state owners without changing behavior
+- keep slot mapping choke points and chrome slot freeze unchanged
+- make mutation ownership explicit for future multi-view work
+
+Batch scope:
+
+- Java Android terminal host only, plus authority docs needed to keep contract truth current
+- primary code root:
+  `android/terminal-host/app/src/main/java/uk/laurencegouws/terminal/**`
+- allowed docs:
+  `docs/todo/android/implementation.md`,
+  `docs/todo/android/ENGINEER_ENTRYPOINT.md`,
+  `docs/AGENT_HANDOFF.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_NAMING_CONTRACT.md`,
+  `app_architecture/platform/android/USERLAND_HOST_CONTRACT.md`
+
+Batch non-goals:
+
+- no terminal tabs UI/product behavior
+- no tab persistence/session switching
+- no terminal-core or shared-renderer changes
+- no selection/IME/gesture behavior changes except compile-preserving seam rewiring
+- no app-shell UI redesign
+- no debug-view UI resurrection
+- no broad rename sweep
+- no ASF operator-evidence churn unless new evidence arrives
+
+Batch super-gate:
+
+- `AppShellNavigation` exposes explicit policy mutation methods only
+- no ad-hoc public active-view mutation path remains in product wiring
+- slot mapping seam, slot choke point, and chrome slot freeze remain unchanged
+- single-slot runtime behavior remains unchanged
+- docs reflect final ownership and naming shape
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass at final seam boundary
+
+Internal milestone cadence:
+
+- Engineer executes `AHW12-M1` through `AHW12-M6` sequentially.
+- Do not stop for architect review between internal milestones.
+- Mark each internal milestone complete in this file as it lands.
+- Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
+  the `AHW-B12` super-gate is reached.
+
+### `AHW12-M1` Mutation owner/callsite audit (`pending`)
+
+Queue line (exact):
+
+- audit AppShellNavigation mutation callsites and classify policy-owned vs ad-hoc paths
+
+Acceptance:
+
+- enumerate all app-shell mutation entry points and current callsites
+- classify each mutation as policy-owned or ad-hoc
+- identify the minimum behavior-neutral API narrowing cut
+
+### `AHW12-M2` Navigation mutation API narrowing (`pending`)
+
+Queue line (exact):
+
+- narrow AppShellNavigation active-view mutation to explicit policy methods
+
+Acceptance:
+
+- replace broad active-view setter exposure with explicit policy API
+- keep `Objects.requireNonNull` invariants at owner boundaries
+- compile debug + release Java after code changes
+
+### `AHW12-M3` Consumer rewiring to policy API (`pending`)
+
+Queue line (exact):
+
+- rewire app-shell consumers to narrowed navigation policy API without behavior change
+
+Acceptance:
+
+- all in-tree consumers use explicit policy methods
+- no direct ad-hoc active-view mutation remains
+- compile debug + release Java after code changes
+
+### `AHW12-M4` Contract docs lock (`pending`)
+
+Queue line (exact):
+
+- lock naming/structure/userland docs to narrowed mutation ownership contract
+
+Acceptance:
+
+- host structure, naming contract, and userland contract match code shape
+- slot mapping/chrome freeze guidance remains explicit and unchanged
+
+### `AHW12-M5` Queue/handoff/entrypoint sync (`pending`)
+
+Queue line (exact):
+
+- keep queue, handoff, and engineer entrypoint aligned to AHW-B12 execution and super-gate stop
+
+Acceptance:
+
+- queue, handoff, and engineer entrypoint stay coherent through B12 super-gate
+- super-gate stop condition and review packet contract are explicit
+
+### `AHW12-M6` Batch validation + review packet (`pending`)
+
+Queue line (exact):
+
+- validate AHW-B12 end-to-end and publish the architect review packet
+
+Acceptance:
+
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
+- cold start smoke pass when a device is available
+- engineer reports the full super-gate packet and stops for Architect review
+
 
 ## Guardrails
 
