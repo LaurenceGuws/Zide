@@ -84,9 +84,14 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
 - use `TerminalWidgetSlotId` on `InteractionAssembly.Host` and
   `WidgetAssembly.Host`; pass the same slot into `TerminalWidgetCompositionAssembly.compose`
   as the first parameter — today only `PRIMARY`
+- `TerminalWidgetSlotId.checkActiveProductTerminalSlot` is the single choke point
+  for “active slot” wiring today; assemblies call it at interaction assembly,
+  widget assembly, and composition entry
 - in `ZideActivity`, use one authoritative `static final` slot field (e.g.
   `ACTIVE_PRODUCT_TERMINAL_SLOT`) for interaction/widget/composition wiring
   instead of repeating `PRIMARY` literals
+- do not add `TerminalWidgetSlotId` to `ChromeFactory` / `ChromeController`
+  construction until per-slot chrome policy is scoped (see structure doc freeze)
 - do not include `Terminal` when package already scopes terminal host context
 - reserve `Product` only for user-facing product behavior distinctions
 - reserve `Host` for boundary context where needed; do not repeat it when the

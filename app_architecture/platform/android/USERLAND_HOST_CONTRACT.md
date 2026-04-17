@@ -30,4 +30,6 @@ workspace. Widget-facing seams stay in `host` + `TerminalWidgetInstance`; this
 document does not change when the harness hosts multiple terminal surfaces.
 
 `TerminalWidgetSlotId` and other harness slot vocabulary identify **terminal
-widget hosting** only; they do not fork userland types or workflows.
+widget hosting** only; they do not fork userland types or workflows. Chrome
+construction stays slot-agnostic at the type level until a scoped harness
+decision threads slot into chrome policy.

@@ -79,7 +79,9 @@ produces that holder from `InteractionAssembly.Result` + surface fields on
 `WidgetAssembly.Result` and the activity assigns them next to
 `compose(slot, …)` — `ZideActivity` does not construct the holder directly.
 `TerminalWidgetSlotId` makes the slot explicit at composition and host seams
-(today only `TerminalWidgetSlotId.PRIMARY`).
+(today only `TerminalWidgetSlotId.PRIMARY`). `TerminalWidgetSlotId.checkActiveProductTerminalSlot`
+runs at interaction assembly, widget assembly, and composition entry points so
+active-slot wiring cannot silently diverge.
 App-shell chrome, viewport, runtime orchestration, and userland coordination stay
 **outside** that holder. Future multi-instance hosting should compose additional
 `TerminalWidgetInstance` values without moving app-shell state into the widget
@@ -107,6 +109,13 @@ plus interaction controllers — not userland install/readiness truth, which
 remains harness-orchestrated. This section does not implement tabs, tab UI, or
 session switching.
 
+### Chrome and terminal slot policy (freeze)
+
+`ChromeFactory` / `ChromeController` construction stays **slot-agnostic** until
+per-slot chrome policy is explicitly scoped. Do not add `TerminalWidgetSlotId` to
+chrome factory methods preemptively; terminal slot identity remains on
+interaction/widget hosts and `TerminalWidgetCompositionAssembly`.
+
 ## File Audit
 
 Current shape markers (for hygiene tracking, not hard limits):
@@ -118,7 +127,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 - `host/ui/WidgetAssembly.java`: `320` lines
 - `host/surface/SurfaceBridge.java`: `272` lines
 - `host/surface/SurfaceController.java`: `262` lines
-- `host/ui/ChromeController.java`: `221` lines
+- `host/ui/ChromeController.java`: `213` lines
 - `host/runtime/RuntimeHostCallbacks.java`: `170` lines
 - `host/ui/UiStartupCallbacks.java`: `168` lines
 - `host/status/StatusViewAssembly.java`: `133` lines
@@ -155,13 +164,13 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/input/InputChromeStartupForwards.java` | Good | Null-guard forwards for hardware keyboard, IME focus recovery, chrome modifier latch. | Delegation-only. |
 | `host/status/StatusTelemetryStartupForwards.java` | Good | Null-guard forwards into `StatusController` for package-doctor / operator telemetry (status ownership, not debug UI). | Delegation-only. |
 | `host/ui/TerminalWidgetInstance.java` | Good | Immutable bundle of one terminal widget’s surface + selection + gesture controller refs for harness hosting. | Do not fold app-shell or userland orchestration into this type. |
-| `host/ui/TerminalWidgetSlotId.java` | Good | Compile-visible terminal widget slot identity (`PRIMARY` only today). | Extend with new enum values when multi-slot hosting lands; tab product behavior stays out of this type. |
+| `host/ui/TerminalWidgetSlotId.java` | Good | Compile-visible slot identity; `checkActiveProductTerminalSlot` enforces active = `PRIMARY` at assembly/composition entry points today. | When new slots activate, update the check alongside host policy; do not use checks alone to ship tab behavior. |
 | `host/ui/TerminalWidgetCompositionAssembly.java` | Good | Harness-owned join of `InteractionAssembly.Result` + `WidgetAssembly.Result` into `TerminalWidgetInstance` only; `compose` takes `TerminalWidgetSlotId` first; shell/chrome/view-mode refs stay on `WidgetAssembly.Result`. Not tab/multi-instance policy. | Keep `WidgetAssembly.Result` as widget/chrome output; instance join stays here, not on `WidgetAssembly.Result` alone. |
 | `host/userland/WorkflowInstallStartupGlue.java` | Good | Install completion state transitions + runtime restart delegation. | Keep install orchestration thin; low-level extraction stays in `UserlandInstaller`. |
 | `host/ui/ActivityViewBindings.java` | Good | Owns raw activity view lookup and typed binding capture for terminal host wiring; `StatusViewAssembly.Result` exposes the authoritative `activityViewBindings` for activity wiring. | Keep this as lookup-only data binding; no policy or runtime behavior. |
-| `host/ui/ChromeFactory.java` | Good | Owns chrome-specific bridge/callback construction so chrome assembly does not inflate the generic host assembler. | Keep this construction-only; do not move chrome behavior out of `host/ui/ChromeController`. |
+| `host/ui/ChromeFactory.java` | Good | Owns chrome-specific bridge/callback construction; intentionally no `TerminalWidgetSlotId` (chrome slot-agnostic freeze). | Reopen slot parameters only with scoped per-slot chrome policy. |
 | `host/interaction/InteractionFactory.java` | Good | Owns selection/gesture interaction controller construction so interaction seams stay out of the generic host assembler. | Keep this construction-only; interaction behavior remains in selection/gesture controllers. |
-| `host/interaction/InteractionAssembly.java` | Good | Owns interaction controller assembly wiring (selection + gesture state) for activity startup; `Host` carries `TerminalWidgetSlotId`. | Keep this assembly-only; behavior stays in interaction controllers. |
+| `host/interaction/InteractionAssembly.java` | Good | Owns interaction assembly; `assemble` enforces `checkActiveProductTerminalSlot` on `Host`. | Keep this assembly-only; behavior stays in interaction controllers. |
 | `host/interaction/InteractionCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/interaction/InteractionAssembly`. | Keep adapter-only; avoid moving interaction behavior into this adapter. |
 | `host/input/InputFactory.java` | Good | Owns hardware-keyboard and IME-focus-recovery controller construction so input seams stay out of generic host assembly. | Keep this construction-only; input behavior remains in `input/` controllers. |
 | `host/input/InputAssembly.java` | Good | Owns input-view installation and input-controller assembly composition for the activity wiring layer. | Keep this assembly-only; input behavior remains in `input/` controllers. |
@@ -188,7 +197,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/ui/ChromeCallbacks.java` | Removed | Relay adapter was collapsed; `ChromeFactory` now provides `ChromeBridge.Callbacks` directly. | Keep chrome behavior in `host/ui/ChromeController`; avoid reintroducing callback pass-through classes without measurable coupling reduction. |
 | `host/userland/ShellStateBridge.java` | Good | Owns product-shell-state presenter callback adaptation and blocker/overlay view binding. | Keep presentation behavior in `userland/ShellStatePresenter`; keep this adapter thin. |
 | `host/userland/ShellStateCallbacks.java` | Good | Functional callback adapter from activity state into `host/userland/ShellStateBridge`. | Keep adapter-only; shell-state presentation behavior remains in `ShellStatePresenter`. |
-| `host/ui/ChromeController.java` | Watch | Coherent and improving; recent cleanup extracted repeated sidebar/IME action branches into named internal seams, but ownership remains broad across sidebar, assist bar, view mode, and IME trigger policy. | Keep watch status; split assist-bar/sidebar only if either grows more behavior. |
+| `host/ui/ChromeController.java` | Watch | Coherent and improving; chrome stays slot-agnostic at type level. Ownership remains broad across sidebar, assist bar, view mode, and IME trigger policy. | Keep watch status; split assist-bar/sidebar only if either grows more behavior. |
 | `host/runtime/RuntimeAssetsBridge.java` | Good | Owns runtime-assets host callback adaptation from activity into `host/runtime/RuntimeAssetsController`. | Keep asset staging behavior in `host/runtime/RuntimeAssetsController`; keep this adapter callback-only. |
 | `host/runtime/RuntimeAssetsCallbacks.java` | Good | Functional callback adapter from activity actions into `host/runtime/RuntimeAssetsBridge`. | Keep adapter-only; runtime-asset behavior stays in `host/runtime/RuntimeAssetsController`. |
 | `host/runtime/RuntimeAssetsController.java` | Good | Owns font asset staging and userland release loading. | Keep install/update and prefix extraction in `userland`. |
