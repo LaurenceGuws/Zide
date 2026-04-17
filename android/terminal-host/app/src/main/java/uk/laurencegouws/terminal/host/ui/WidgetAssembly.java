@@ -250,7 +250,7 @@ public final class WidgetAssembly {
                 host::callNative,
                 host::callNativeWithSurfaceState,
                 host::currentSurfaceStateSnapshot,
-                statusLabel -> host.handleShellStateEvent(),
+                host::handleShellStateEvent,
                 nextSurfaceView -> installSurfaceGestureHost(nextSurfaceView, surfaceWidgetControllerRef),
                 WidgetAssembly::addSurfaceHolderCallbackIfPresent,
                 () -> surfaceWidgetControllerRef.value,

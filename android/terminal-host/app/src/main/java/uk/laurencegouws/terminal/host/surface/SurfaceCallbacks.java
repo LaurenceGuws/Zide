@@ -36,7 +36,7 @@ public final class SurfaceCallbacks implements SurfaceBridge.Callbacks {
 
         AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot();
 
-        void handleShellStateEvent(String statusLabel);
+        void handleShellStateEvent();
 
         void installSurfaceGestureHost(SurfaceView nextSurfaceView);
 
@@ -134,8 +134,8 @@ public final class SurfaceCallbacks implements SurfaceBridge.Callbacks {
     }
 
     @Override
-    public void handleShellStateEvent(String statusLabel) {
-        callbacks.handleShellStateEvent(statusLabel);
+    public void handleShellStateEvent() {
+        callbacks.handleShellStateEvent();
     }
 
     @Override

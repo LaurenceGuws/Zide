@@ -43,7 +43,7 @@ public final class SurfaceBridge implements SurfaceController.Host {
 
         AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot();
 
-        void handleShellStateEvent(String statusLabel);
+        void handleShellStateEvent();
 
         void installSurfaceGestureHost(SurfaceView nextSurfaceView);
 
@@ -244,8 +244,8 @@ public final class SurfaceBridge implements SurfaceController.Host {
     }
 
     @Override
-    public void handleShellStateEvent(String statusLabel) {
-        callbacks.handleShellStateEvent(statusLabel);
+    public void handleShellStateEvent() {
+        callbacks.handleShellStateEvent();
     }
 
     @Override

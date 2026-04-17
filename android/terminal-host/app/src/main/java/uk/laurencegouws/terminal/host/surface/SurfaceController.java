@@ -79,7 +79,7 @@ public final class SurfaceController {
 
         AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot();
 
-        void handleShellStateEvent(String statusLabel);
+        void handleShellStateEvent();
 
         void installSurfaceGestureHost(SurfaceView surfaceView);
 
@@ -138,11 +138,11 @@ public final class SurfaceController {
         if (startShellOnce && !host.shellStartScheduled()) {
             host.setShellStartScheduled(true);
             host.handler().postDelayed(() -> {
-                host.handleShellStateEvent("debug-session-started");
+                host.handleShellStateEvent();
             }, 900);
         }
 
-        host.handleShellStateEvent("resumed");
+        host.handleShellStateEvent();
     }
 
     public void onPause() {
@@ -164,7 +164,7 @@ public final class SurfaceController {
                 seq,
                 host.currentSurfaceStateSnapshot());
         host.productSurfaceContainer().post(() -> notifyVisibleViewport("surface-changed"));
-        host.handleShellStateEvent("surface-changed");
+        host.handleShellStateEvent();
     }
 
     public void onSurfaceDestroyed(SurfaceHolder holder) {

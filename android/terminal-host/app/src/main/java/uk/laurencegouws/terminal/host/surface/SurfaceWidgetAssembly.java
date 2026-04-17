@@ -34,7 +34,7 @@ public final class SurfaceWidgetAssembly {
 
         uk.laurencegouws.terminal.debug.AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot();
 
-        void handleShellStateEvent(String statusLabel);
+        void handleShellStateEvent();
 
         void installSurfaceGestureHost(android.view.SurfaceView surfaceView);
 
@@ -157,8 +157,8 @@ public final class SurfaceWidgetAssembly {
             }
 
             @Override
-            public void handleShellStateEvent(String statusLabel) {
-                host.handleShellStateEvent(statusLabel);
+            public void handleShellStateEvent() {
+                host.handleShellStateEvent();
             }
 
             @Override

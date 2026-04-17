@@ -38,7 +38,7 @@ public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssemb
     private final NativeEventCallback callNative;
     private final NativeSurfaceEventCallback callNativeWithSurfaceState;
     private final Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot;
-    private final Consumer<String> handleShellStateEvent;
+    private final Runnable handleShellStateEvent;
     private final Consumer<SurfaceView> installSurfaceGestureHost;
     private final ReinstallSurfaceCallback reinstallSurfaceCallback;
     private final Supplier<SurfaceHolder.Callback2> surfaceCallback;
@@ -56,7 +56,7 @@ public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssemb
             NativeEventCallback callNative,
             NativeSurfaceEventCallback callNativeWithSurfaceState,
             Supplier<AndroidDebugFormatter.SurfaceEventSnapshot> currentSurfaceStateSnapshot,
-            Consumer<String> handleShellStateEvent,
+            Runnable handleShellStateEvent,
             Consumer<SurfaceView> installSurfaceGestureHost,
             ReinstallSurfaceCallback reinstallSurfaceCallback,
             Supplier<SurfaceHolder.Callback2> surfaceCallback,
@@ -130,8 +130,8 @@ public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssemb
     }
 
     @Override
-    public void handleShellStateEvent(String statusLabel) {
-        handleShellStateEvent.accept(statusLabel);
+    public void handleShellStateEvent() {
+        handleShellStateEvent.run();
     }
 
     @Override
