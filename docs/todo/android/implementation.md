@@ -170,7 +170,7 @@ Progress checkpoint:
 
 ---
 
-### `RF-M2` Widget Boundary Lock (`pending`)
+### `RF-M2` Widget Boundary Lock (`review_required`)
 
 Queue line (exact):
 
@@ -183,14 +183,25 @@ Scope:
 
 Tasks:
 
-- [ ] verify widget-facing contracts do not include harness navigation/userland state semantics
-- [ ] remove residual app-shell language from widget callback interfaces
-- [ ] confirm widget can be hosted by harness contract without hidden globals
+- [x] verify widget-facing contracts do not include harness navigation/userland state semantics
+- [x] remove residual app-shell language from widget callback interfaces
+- [x] confirm widget can be hosted by harness contract without hidden globals
 
 Gate:
 
 - widget contracts are harness-consumer-only
 - compile + deploy + runtime smoke clean
+
+Progress checkpoint:
+
+- `Milestone: RF-M2 review_required`
+- `Queue line (exact): ensure terminal widget owns input/selection/gesture/surface lifecycle without app-shell/userland assumptions`
+- `Scope contract: widget assembly + surface widget seams only; behavior-neutral contract renames and intent-only shell-state callbacks`
+- `Progress delta: surface shell-state callbacks no longer carry status-label payloads; WidgetAssembly.Host uses drawerSidebar/session install+readiness/requestPackageDiagnostics naming; removed unused refreshUserlandSession from widget host; assembly consumes only Host (no static widget globals)`
+- `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E (pass)`
+- `Blocked by review needed: false`
+
+`Milestone reached per docs, architect review required.`
 
 ---
 
