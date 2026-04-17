@@ -293,6 +293,10 @@ Milestone gate contract (mandatory when manager/architect lane is active):
     one method and simplifying sync visibility checks to direct state predicates
     (`selectionActionMode` + toolbar/selection visibility) with no behavior
     change.
+  - Completed: `SelectionController` action-mode show/content-rect path trimmed
+    additional wrappers by inlining presentation guard/finish handling in
+    `showSelectionActionMode()` and direct content-rect fallback logic inside
+    floating toolbar callbacks (no semantic change).
     - Next: resume primary Java cleanup under Active TODO item 1 by executing a
       behavior-preserving `selection/SelectionController.java` pressure-reduction
       wave focused on action-mode lifecycle internals (reduce tiny one-hop

@@ -758,20 +758,13 @@ public final class SelectionController {
         return bridgeHasActiveSelection() && hostHasSurfaceContainer();
     }
 
-    private boolean ensureSelectionActionModePresentationOrFinishIfUnavailable() {
-        if (!canPresentSelectionActionMode()) {
-            finishSelectionActionMode();
-            return false;
-        }
-        return true;
-    }
-
     private void showSelectionActionMode() {
         syncSelectionHandles();
         if (!selectionToolbarVisible) {
             return;
         }
-        if (!ensureSelectionActionModePresentationOrFinishIfUnavailable()) {
+        if (!canPresentSelectionActionMode()) {
+            finishSelectionActionMode();
             return;
         }
         if (selectionActionMode != null) {
@@ -821,7 +814,9 @@ public final class SelectionController {
 
             @Override
             public void onGetContentRect(ActionMode mode, View view, Rect outRect) {
-                fillSelectionActionModeContentRectFromBridgeOrUseViewBounds(view, outRect);
+                if (!populateSelectionContentRect(outRect)) {
+                    setSelectionActionModeFallbackContentRect(view, outRect);
+                }
             }
         };
     }
@@ -861,13 +856,6 @@ public final class SelectionController {
         }
         suppressSelectionClearOnActionModeDestroy = false;
         requestFrameLoopReevaluation();
-    }
-
-    private void fillSelectionActionModeContentRectFromBridgeOrUseViewBounds(View view, Rect outRect) {
-        if (populateSelectionContentRect(outRect)) {
-            return;
-        }
-        setSelectionActionModeFallbackContentRect(view, outRect);
     }
 
     private void setSelectionActionModeFallbackContentRect(View view, Rect outRect) {
