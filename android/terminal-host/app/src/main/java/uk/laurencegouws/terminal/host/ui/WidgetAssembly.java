@@ -98,8 +98,6 @@ public final class WidgetAssembly {
         void sendDirectText(String text);
 
         void notifyVisibleViewport(String reason);
-
-        void refreshUserlandSession();
     }
 
     /** Immutable assembled widget host result. */

@@ -469,11 +469,6 @@ public final class ZideActivity extends Activity
             public void notifyVisibleViewport(String reason) {
                 notifyVisibleViewportIfReady(reason);
             }
-
-            @Override
-            public void refreshUserlandSession() {
-                refreshUserlandSessionIfReady();
-            }
         };
     }
 
