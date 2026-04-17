@@ -35,11 +35,13 @@ public final class UiFactory {
             View productView,
             View terminalScrollOverlay,
             FrameLayout productSurfaceContainer,
+            AppShellNavigation appShellNavigation,
             ViewModeController.Host host) {
         return new ViewModeController(
                 productView,
                 terminalScrollOverlay,
                 productSurfaceContainer,
+                appShellNavigation,
                 host);
     }
 

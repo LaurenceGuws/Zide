@@ -106,6 +106,7 @@ public final class WidgetAssembly {
 
     /** Immutable assembled widget host result. */
     public static final class Result {
+        public final AppShellNavigation appShellNavigation;
         public final ShellStateBridge productShellStateHostBridge;
         public final ShellStatePresenter ShellStatePresenter;
         public final ChromeController terminalChromeController;
@@ -115,6 +116,7 @@ public final class WidgetAssembly {
         public final SurfaceWidgetController terminalSurfaceWidgetController;
 
         private Result(
+                AppShellNavigation appShellNavigation,
                 ShellStateBridge productShellStateHostBridge,
                 ShellStatePresenter ShellStatePresenter,
                 ChromeController terminalChromeController,
@@ -122,6 +124,7 @@ public final class WidgetAssembly {
                 SurfaceBridge surfaceHostBridge,
                 SurfaceController surfaceHostController,
                 SurfaceWidgetController terminalSurfaceWidgetController) {
+            this.appShellNavigation = appShellNavigation;
             this.productShellStateHostBridge = productShellStateHostBridge;
             this.ShellStatePresenter = ShellStatePresenter;
             this.terminalChromeController = terminalChromeController;
@@ -136,14 +139,16 @@ public final class WidgetAssembly {
     }
 
     public static Result assemble(Host host) {
+        final AppShellNavigation appShellNavigation = new AppShellNavigation();
         final ViewModeControllerRef terminalViewModeControllerRef = new ViewModeControllerRef();
         final SurfaceWidgetControllerRef surfaceWidgetControllerRef = new SurfaceWidgetControllerRef();
         final ChromeController terminalChromeController = createChromeController(
                 host,
+                appShellNavigation,
                 terminalViewModeControllerRef);
 
-        final ViewModeController terminalViewModeController = createViewModeController(
-                host);
+        final ViewModeController terminalViewModeController =
+                createViewModeController(host, appShellNavigation);
         terminalViewModeControllerRef.value = terminalViewModeController;
 
         final SurfaceWidgetAssembly.Result surfaceWidgetAssembly = assembleSurfaceWidget(
@@ -159,6 +164,7 @@ public final class WidgetAssembly {
                 new ShellStatePresenter(productShellStateHostBridge);
 
         return new Result(
+                appShellNavigation,
                 productShellStateHostBridge,
                 shellStatePresenter,
                 terminalChromeController,
@@ -170,6 +176,7 @@ public final class WidgetAssembly {
 
     private static ChromeController createChromeController(
             Host host,
+            AppShellNavigation appShellNavigation,
             ViewModeControllerRef terminalViewModeControllerRef) {
         return new ChromeController(
                 ChromeFactory.createChromeHostBridge(
@@ -178,6 +185,7 @@ public final class WidgetAssembly {
                         host.drawerScrim(),
                         host.drawerEdgeHotspot(),
                         host.drawerSidebar(),
+                        appShellNavigation,
                         ChromeFactory.createChromeHostCallbacks(
                                 host::requestPackageDiagnostics,
                                 host::appendEvent,
@@ -191,11 +199,12 @@ public final class WidgetAssembly {
     }
 
     private static ViewModeController createViewModeController(
-            Host host) {
+            Host host, AppShellNavigation appShellNavigation) {
         return UiFactory.createViewModeController(
                 host.productView(),
                 host.terminalScrollOverlay(),
                 host.productSurfaceContainer(),
+                appShellNavigation,
                 new ViewModeCallbacks(
                         host::appendEvent,
                         host::updateStatus,

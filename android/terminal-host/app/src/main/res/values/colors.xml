@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App shell: all product chrome surfaces must reference these (single propagation source). -->
+    <color name="app_shell_root_bg">#10161d</color>
+    <color name="app_shell_surface_bg">#162028</color>
+    <color name="app_shell_assist_bar_bg">#0d1319</color>
+    <color name="app_shell_sidebar_bg">#111820</color>
+    <color name="app_shell_scrim">#66000000</color>
+    <color name="app_shell_readiness_overlay_bg">#cc10161d</color>
+    <color name="app_shell_text_primary">#f5f7fa</color>
+    <color name="app_shell_text_secondary">#c2ccd6</color>
+</resources>

@@ -2,7 +2,7 @@
     android:id="@+id/root_view"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#10161d">
+    android:background="@color/app_shell_root_bg">
 
     <LinearLayout
         android:id="@+id/product_view"
@@ -20,7 +20,7 @@
                 android:id="@+id/product_surface_container"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:background="#162028" />
+                android:background="@color/app_shell_surface_bg" />
 
             <uk.laurencegouws.terminal.scroll.ScrollOverlayView
                 android:id="@+id/terminal_scroll_overlay"
@@ -35,7 +35,7 @@
                 android:id="@+id/product_readiness_blocker"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:background="#cc10161d"
+                android:background="@color/app_shell_readiness_overlay_bg"
                 android:gravity="center"
                 android:orientation="vertical"
                 android:padding="20dp"
@@ -48,7 +48,7 @@
                     android:gravity="center"
                     android:text="@string/product_readiness_title_missing"
                     android:textAppearance="@android:style/TextAppearance.Material.Large"
-                    android:textColor="#f5f7fa" />
+                    android:textColor="@color/app_shell_text_primary" />
 
                 <TextView
                     android:id="@+id/product_readiness_detail"
@@ -58,7 +58,7 @@
                     android:gravity="center"
                     android:text="@string/product_readiness_detail_missing"
                     android:textAppearance="@android:style/TextAppearance.Material.Small"
-                    android:textColor="#c2ccd6" />
+                    android:textColor="@color/app_shell_text_secondary" />
 
                 <LinearLayout
                     android:layout_width="wrap_content"
@@ -80,7 +80,7 @@
             android:id="@+id/input_assist_scroll"
             android:layout_width="match_parent"
             android:layout_height="36dp"
-            android:background="#0d1319"
+            android:background="@color/app_shell_assist_bar_bg"
             android:fillViewport="false"
             android:scrollbars="none">
 
@@ -189,7 +189,7 @@
         android:id="@+id/drawer_scrim"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#66000000"
+        android:background="@color/app_shell_scrim"
         android:visibility="gone" />
 
     <LinearLayout
@@ -197,7 +197,7 @@
         android:layout_width="220dp"
         android:layout_height="match_parent"
         android:layout_gravity="start"
-        android:background="#111820"
+        android:background="@color/app_shell_sidebar_bg"
         android:elevation="12dp"
         android:orientation="vertical"
         android:padding="12dp">
@@ -209,7 +209,7 @@
             android:paddingBottom="12dp"
             android:text="@string/sidebar_title"
             android:textAppearance="@android:style/TextAppearance.Material.Medium"
-            android:textColor="#f5f7fa" />
+            android:textColor="@color/app_shell_text_primary" />
 
         <Button
             android:id="@+id/sidebar_restart_button"

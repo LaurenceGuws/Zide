@@ -38,7 +38,7 @@ public final class ChromeBridge implements ChromeController.Host {
     private final View drawerEdgeHotspot;
     private final View leftSidebar;
     private final Callbacks callbacks;
-    private boolean sidebarOpen = false;
+    private final AppShellNavigation appShellNavigation;
 
     public ChromeBridge(
             Context context,
@@ -46,12 +46,14 @@ public final class ChromeBridge implements ChromeController.Host {
             View drawerScrim,
             View drawerEdgeHotspot,
             View leftSidebar,
+            AppShellNavigation appShellNavigation,
             Callbacks callbacks) {
         this.context = context;
         this.rootView = rootView;
         this.drawerScrim = drawerScrim;
         this.drawerEdgeHotspot = drawerEdgeHotspot;
         this.leftSidebar = leftSidebar;
+        this.appShellNavigation = appShellNavigation;
         this.callbacks = callbacks;
     }
 
@@ -77,12 +79,12 @@ public final class ChromeBridge implements ChromeController.Host {
 
     @Override
     public boolean sidebarOpen() {
-        return sidebarOpen;
+        return appShellNavigation.isSidebarOpen();
     }
 
     @Override
     public void setSidebarOpen(boolean open) {
-        sidebarOpen = open;
+        appShellNavigation.setSidebarOpen(open);
     }
 
     public void runPackageDoctor() {
