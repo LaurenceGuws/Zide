@@ -35,8 +35,10 @@ public final class ViewModeController {
     public void applyCurrentViewMode() {
         appShellNavigation.setActiveShellView(ShellViewId.TERMINAL);
         productView.setVisibility(View.VISIBLE);
-        productSurfaceContainer.post(() -> host.notifyVisibleViewport("product-view"));
-        productSurfaceContainer.post(host::refreshScrollOverlay);
+        productSurfaceContainer.post(() -> {
+            host.notifyVisibleViewport("product-view");
+            host.refreshScrollOverlay();
+        });
     }
 
     public void showView(String eventName, String statusLabel) {

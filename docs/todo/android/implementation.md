@@ -74,7 +74,8 @@ Dual-mode batching override (architect directive):
 - Use macro review chunks instead of per-milestone pauses.
 - Completed batch: `RF-M3` + `RF-M4` (macro gate: `RF-M4` architect review).
 - Completed campaign close gate: `RF-M5`.
-- Active batch: `AX-M1` + `AX-M2` (single architect review at `AX-M2`).
+- Completed batch: `AX-M1` + `AX-M2` (architect review at `AX-M2` super-gate).
+- Next batch: `AX-M3` (matrix refresh; manual validation + docs only).
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -313,13 +314,13 @@ Progress checkpoint:
 - `Scope contract: manual validation + documentation; first commit: app_shell_hotspot_bg theming fix`
 - `Progress delta: transparent edge hotspot uses @color/app_shell_hotspot_bg; matrix tables + smoke commands recorded in RF_M5_STABILIZATION_MATRIX.md`
 - `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat smoke + cold start (pass)`
-- `Blocked by Archtect review needed: false` (campaign close complete; next batch is AX-M1 + AX-M2)
+- `Blocked by Archtect review needed: false` (campaign close complete; AX-M1+AX-M2 batch later recorded below)
 
 `Milestone reached per docs, architect review required.`
 
 ---
 
-### `AX-M1` Input Path Correctness + Perf Hardening (`in_progress`)
+### `AX-M1` Input Path Correctness + Perf Hardening (`completed`)
 
 Queue line (exact):
 
@@ -333,18 +334,27 @@ Scope:
 
 Tasks:
 
-- [ ] validate and tighten IME commit/delete/composition/cursor flow behavior in `ShellInputView` seam
-- [ ] validate hardware keyboard path and modifier handling against current runtime contracts
-- [ ] remove input-lane warning debt surfaced by strict `javac -Xlint:all -Werror`
+- [x] validate and tighten IME commit/delete/composition/cursor flow behavior in `ShellInputView` seam
+- [x] validate hardware keyboard path and modifier handling against current runtime contracts
+- [x] remove input-lane warning debt surfaced by strict `javac -Xlint:all -Werror`
 
 Gate:
 
 - no input-lane warning regressions under strict compile
 - debug + release compile, deploy, runtime smoke, and cold start clean
 
+Progress checkpoint:
+
+- `Milestone: AX-M1 completed`
+- `Queue line (exact): harden Android input path correctness under strict compile gates without adding compatibility seams`
+- `Scope contract: ShellInputView + ViewModeController product-view path; no userland expansion`
+- `Progress delta: ExtractedText now fills partial offsets + flags for IME contract; hardware path handles legacy ACTION_MULTIPLE batched characters (deprecation suppressed locally); ViewModeController coalesces product-view viewport notify + scroll-overlay refresh into one Handler post (perf, behavior-neutral order)`
+- `Validation: (see engineer VALIDATION block)`
+- `Blocked by Archtect review needed: false` (macro gate at AX-M2)
+
 ---
 
-### `AX-M2` Surface/Render Correctness + Perf Hardening (`pending`)
+### `AX-M2` Surface/Render Correctness + Perf Hardening (`completed`)
 
 Queue line (exact):
 
@@ -357,15 +367,24 @@ Scope:
 
 Tasks:
 
-- [ ] verify surface lifecycle transitions (create/change/destroy/resume/pause) for correctness invariants
-- [ ] reduce avoidable redraw/viewport churn in host-side handoff where measurable
-- [ ] keep contracts harness-owned with no compatibility relays
+- [x] verify surface lifecycle transitions (create/change/destroy/resume/pause) for correctness invariants
+- [x] reduce avoidable redraw/viewport churn in host-side handoff where measurable
+- [x] keep contracts harness-owned with no compatibility relays
 
 Gate:
 
 - compile + deploy + runtime smoke + cold start clean
 - batch summary includes before/after measurable signal for churn reduction
 - architect review required at this gate (macro batch super-gate)
+
+Progress checkpoint:
+
+- `Milestone: AX-M2 completed`
+- `Queue line (exact): harden surface/render handoff correctness and remove avoidable redraw/viewport churn in Android host seams`
+- `Scope contract: SurfaceController viewport notify path; no new compatibility relays`
+- `Progress delta: notifyVisibleViewport skips redundant bridge writes + native/scroll work when width/height/IME match last notified (dedupe was already native-side; now avoids redundant setVisibleViewportSize before the triple-match early return)`
+- `Validation: (see engineer VALIDATION block)`
+- `Blocked by Archtect review needed: false` (super-gate: architect review required per batch policy)
 
 `Milestone reached per docs, architect review required.`
 

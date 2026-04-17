@@ -103,8 +103,11 @@ public final class ShellInputView extends View {
             final ExtractedText et = new ExtractedText();
             et.text = editorBuffer.toString();
             et.startOffset = 0;
+            et.partialStartOffset = 0;
+            et.partialEndOffset = et.text.length();
             et.selectionStart = editorCursor;
             et.selectionEnd = editorCursor;
+            et.flags = 0;
             return et;
         }
 
@@ -491,6 +494,9 @@ public final class ShellInputView extends View {
     }
 
     private boolean handleKeyEvent(KeyEvent event) {
+        if (isActionMultiple(event.getAction())) {
+            return handleActionMultipleKeyEvent(event);
+        }
         if (event.getAction() != KeyEvent.ACTION_DOWN) {
             return false;
         }
@@ -583,5 +589,27 @@ public final class ShellInputView extends View {
         if (consumed) {
             clearLatchedModifiers();
         }
+    }
+
+    /** Legacy batched key actions; constant is deprecated but still delivered on some devices. */
+    @SuppressWarnings("deprecation")
+    private static boolean isActionMultiple(int action) {
+        return action == KeyEvent.ACTION_MULTIPLE;
+    }
+
+    /**
+     * Delivers batched character input from some hardware keyboards (legacy {@link
+     * KeyEvent#ACTION_MULTIPLE}).
+     */
+    @SuppressWarnings("deprecation")
+    private boolean handleActionMultipleKeyEvent(KeyEvent event) {
+        final String chars = event.getCharacters();
+        if (chars == null || chars.isEmpty()) {
+            return false;
+        }
+        final boolean latchedModifiersConsumed = ctrlLatched || altLatched;
+        host.sendDirectText(chars);
+        maybeClearLatchedModifiers(latchedModifiersConsumed);
+        return true;
     }
 }

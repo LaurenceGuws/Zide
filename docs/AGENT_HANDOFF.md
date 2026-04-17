@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: Android post-refocus correctness/perf hardening
-- Current milestone: `AX-M1+AX-M2` (`in_progress`, macro batch review at `AX-M2`)
+- Current milestone: `AX-M3` (`pending`; `AX-M1`+`AX-M2` batch closed at super-gate `AX-M2`)
 - Active queue authority: `docs/todo/android/implementation.md`
 - Engineer entrypoint (dual mode): `docs/todo/android/ENGINEER_ENTRYPOINT.md`
 

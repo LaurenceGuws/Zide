@@ -243,12 +243,12 @@ public final class SurfaceController {
         final boolean viewportImeVisible = host.currentImeVisible();
         final int width = Math.max(host.productSurfaceContainer().getWidth(), 1);
         final int height = Math.max(host.productSurfaceContainer().getHeight(), 1);
-        host.setVisibleViewportSize(width, height);
         if (width == host.notifiedViewportWidth()
                 && height == host.notifiedViewportHeight()
                 && viewportImeVisible == host.notifiedViewportImeVisible()) {
             return;
         }
+        host.setVisibleViewportSize(width, height);
         host.setNotifiedViewportSize(width, height, viewportImeVisible);
         host.appendEvent("viewport.size.changed reason=" + reason + " size=" + width + "x" + height + " imeVisible=" + viewportImeVisible);
         final long seq = host.nativeLoaded() ? host.nativeOnVisibleViewportBridge(width, height, viewportImeVisible) : -1;
