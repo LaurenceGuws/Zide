@@ -106,8 +106,9 @@ Dual-mode batching override (architect directive):
 - Active campaign: **Android harness/widget portability hardening** (`AHW`).
 - Completed macro batch: `AHW-B1` (accepted by Architect; follow-up seams queued in `AHW-B2`).
 - Completed macro batch: `AHW-B2` (accepted by Architect; package/status and widget-instance follow-ups queued in `AHW-B3`).
-- Active macro batch: `AHW-B3` (`review_required`; engineer wave complete at super-gate).
-- Internal milestones `AHW3-M1` through `AHW3-M6`: `completed_in_batch`.
+- Completed macro batch: `AHW-B3` (accepted by Architect; composition seam follow-up queued in `AHW-B4`).
+- Active macro batch: `AHW-B4` (30-50 coherent engineer commits if code reality supports it; architect review only at batch super-gate or real blocker).
+- Active internal milestones: `AHW4-M1` through `AHW4-M6` (continue sequentially inside the batch).
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -1179,7 +1180,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B3` Terminal widget instance boundary + host package hygiene (`review_required`)
+### `AHW-B3` Terminal widget instance boundary + host package hygiene (`completed`)
 
 Batch queue line (exact):
 
@@ -1311,6 +1312,224 @@ Progress checkpoint:
 - `Progress delta: engineer review packet in session response`
 - `Validation: see engineer VALIDATION block`
 - `Blocked by Archtect review needed: true` (super-gate)
+
+Architect review verdict:
+
+- `Review chunk: AHW-B3`
+- `Verdict: accepted`
+- `Commits reviewed: 921c034e, a38494d0`
+- `Validation spot-check: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
+- `Engineer validation accepted: deploy, cold start, and AndroidRuntime:E smoke passed on connected device`
+- `Findings carried forward: ProductHostStartupBundle remains accepted as startup-only aggregation; WidgetAssembly.Result should not become a terminal-instance factory alone; the next seam should compose interaction + widget assembly outside ZideActivity so tabs can be added later without Activity field scatter.`
+- `Gate decision: AHW-B3 satisfies the status package and single-instance boundary bar. The next batch moves composition out of ZideActivity without implementing tabs.`
+
+`Milestone reached per docs, architect review accepted.`
+
+---
+
+### `AHW-B4` Terminal widget composition assembly (`in_progress`)
+
+Batch queue line (exact):
+
+- move terminal widget instance composition out of ZideActivity into a harness-owned assembly seam without implementing tabs
+
+Batch purpose:
+
+- keep the `TerminalWidgetInstance` seam from becoming another Activity-local holder
+- make the current single terminal widget instance composable by the Android Harness
+- prepare future terminal tabs through composition boundaries, not product behavior
+
+Batch scope:
+
+- Java Android terminal host only, plus authority docs needed to keep contract truth current
+- primary code root:
+  `android/terminal-host/app/src/main/java/uk/laurencegouws/terminal/**`
+- allowed docs:
+  `docs/todo/android/implementation.md`,
+  `docs/todo/android/ENGINEER_ENTRYPOINT.md`,
+  `docs/AGENT_HANDOFF.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_NAMING_CONTRACT.md`,
+  `app_architecture/platform/android/USERLAND_HOST_CONTRACT.md`
+
+Batch non-goals:
+
+- no terminal tabs UI/product behavior
+- no terminal-core or shared-renderer changes
+- no selection/IME/gesture behavior changes except compile-preserving seam rewiring
+- no app-shell UI redesign
+- no debug-view UI resurrection
+- no broad rename sweep
+- no ASF operator-evidence churn unless new evidence arrives
+
+Batch super-gate:
+
+- `ZideActivity` calls a harness-owned terminal widget composition seam instead of manually stitching `InteractionAssembly`, `WidgetAssembly`, and `TerminalWidgetInstance`
+- current single terminal behavior is unchanged
+- composition seam returns/owns `TerminalWidgetInstance` clearly enough for future additional instances
+- `WidgetAssembly.Result` is not overloaded into a broad factory without explicit ownership docs
+- docs reflect the final ownership shape
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass at final seam boundary
+
+Internal milestone cadence:
+
+- Engineer executes `AHW4-M1` through `AHW4-M6` sequentially.
+- Do not stop for architect review between internal milestones.
+- Mark each internal milestone complete in this file as it lands.
+- Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
+  the `AHW-B4` super-gate is reached.
+
+### `AHW4-M1` Composition boundary audit (`queued_in_batch`)
+
+Queue line (exact):
+
+- define the minimal harness composition boundary that owns interaction assembly plus widget assembly for one terminal instance
+
+Scope:
+
+- `ZideActivity.java`
+- `host/ui/TerminalWidgetInstance.java`
+- `host/ui/WidgetAssembly.java`
+- `host/interaction/InteractionAssembly.java`
+- directly connected docs
+
+Tasks:
+
+- [ ] list the inputs currently required by `assembleInteractionControllers()` and `assembleWidgetHostControllers()`
+- [ ] separate app-shell/global harness inputs from per-terminal instance inputs
+- [ ] decide the smallest new composition owner name/shape before moving code
+- [ ] record the boundary in the queue or structure authority before extraction
+
+Acceptance:
+
+- the extraction target is explicit before code movement
+- no product/tab behavior is introduced
+
+### `AHW4-M2` Terminal widget composition assembly introduction (`queued_in_batch`)
+
+Queue line (exact):
+
+- introduce a harness-owned assembly seam that composes interaction and widget assembly for the current single terminal instance
+
+Scope:
+
+- new or existing `host/ui/**` assembly/callback/result types
+- `host/interaction/**` only as needed for callback wiring
+- `host/surface/**` only as needed for compile-preserving result wiring
+
+Tasks:
+
+- [ ] introduce the composition seam with clear Javadoc ownership
+- [ ] keep `TerminalWidgetInstance` as the instance holder, not a service locator
+- [ ] preserve current construction order
+- [ ] compile debug + release after the cut
+
+Acceptance:
+
+- composition seam can return the current `TerminalWidgetInstance`
+- behavior is unchanged
+- `ZideActivity` can still wire current app-shell controllers without new product behavior
+
+### `AHW4-M3` ZideActivity widget composition shrink (`queued_in_batch`)
+
+Queue line (exact):
+
+- move manual interaction/widget/instance stitching out of ZideActivity in behavior-preserving cuts
+
+Scope:
+
+- `ZideActivity.java`
+- new composition seam from `AHW4-M2`
+- directly connected host callbacks
+
+Tasks:
+
+- [ ] replace Activity-local manual stitching with the composition seam
+- [ ] keep lifecycle/runtime/UI startup order stable
+- [ ] keep app-shell/global fields outside `TerminalWidgetInstance`
+- [ ] compile debug + release after each coherent cut
+
+Acceptance:
+
+- `ZideActivity` no longer manually constructs `TerminalWidgetInstance` from interaction + widget results
+- current terminal behavior is unchanged
+
+### `AHW4-M4` WidgetAssembly result/host pressure cleanup only where enabled by composition (`queued_in_batch`)
+
+Queue line (exact):
+
+- simplify WidgetAssembly result or host surface only when the new composition seam makes ownership clearer
+
+Scope:
+
+- `host/ui/WidgetAssembly.java`
+- new composition seam
+- directly connected docs
+
+Tasks:
+
+- [ ] evaluate whether `WidgetAssembly.Result` fields should remain as-is, move into composition result, or stay documented
+- [ ] do not turn `WidgetAssembly.Result` alone into a terminal-instance factory
+- [ ] remove only coupling made obsolete by the composition seam
+- [ ] compile debug + release after the cut
+
+Acceptance:
+
+- result/host shape is no broader than before
+- any simplification has a concrete ownership reason
+
+### `AHW4-M5` B4 structure/naming authority update (`queued_in_batch`)
+
+Queue line (exact):
+
+- update Android structure and naming authority for the terminal widget composition seam
+
+Scope:
+
+- `ANDROID_JAVA_HOST_STRUCTURE.md`
+- `ANDROID_JAVA_NAMING_CONTRACT.md`
+- Android queue/handoff/entrypoint docs
+
+Tasks:
+
+- [ ] update file audit rows and pressure notes for changed classes
+- [ ] record the composition seam and its relationship to `TerminalWidgetInstance`
+- [ ] keep customer-facing docs untouched
+- [ ] keep historical detail out of handoff
+
+Acceptance:
+
+- authority docs match code reality
+- next engineer session can resume without archaeology
+
+### `AHW4-M6` Batch validation + review packet (`queued_in_batch`)
+
+Queue line (exact):
+
+- validate AHW-B4 end-to-end and publish the architect review packet
+
+Scope:
+
+- final docs checkpoint plus validation commands
+- no new behavior cuts after validation starts unless fixing validation failure
+
+Tasks:
+
+- [ ] run required validation commands
+- [ ] update this queue with completed internal milestone checkpoints
+- [ ] update handoff only if the batch is ready for Architect review or a hard blocker requires refocus
+- [ ] report final review packet with changed files, commits, validation, risks, and exact review questions
+
+Acceptance:
+
+- debug compile pass
+- release compile pass
+- deploy pass when device is available
+- `AndroidRuntime:E` smoke pass when device is available
+- cold start smoke pass when device is available
+- `Blocked by Archtect review needed: true` only at super-gate or real blocker
+
 
 ## Guardrails
 

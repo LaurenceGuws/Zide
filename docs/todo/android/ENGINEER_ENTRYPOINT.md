@@ -34,15 +34,23 @@ you must report the mismatch.
 
 ## Current Target
 
-Engineer wave for **`AHW-B3`** is complete at the **super-gate**; Architect owns
-acceptance. Next macro batch is set only after Architect refocuses
-`docs/todo/android/implementation.md` and this entrypoint.
+Active macro batch: **`AHW-B4` Terminal widget composition assembly**.
 
-Batch queue line (completed wave):
+Batch queue line:
 
-- make one terminal widget instance explicit in harness wiring and clean remaining host package ownership drift without changing terminal behavior
+- move terminal widget instance composition out of ZideActivity into a harness-owned assembly seam without implementing tabs
 
-Internal milestones `AHW3-M1` through `AHW3-M6`: see `docs/todo/android/implementation.md` (`completed_in_batch`).
+Internal milestones:
+
+1. `AHW4-M1` Composition boundary audit
+2. `AHW4-M2` Terminal widget composition assembly introduction
+3. `AHW4-M3` ZideActivity widget composition shrink
+4. `AHW4-M4` WidgetAssembly result/host pressure cleanup only where enabled by the composition seam
+5. `AHW4-M5` B4 structure/naming authority update
+6. `AHW4-M6` Batch validation + review packet
+
+Continue through all six internal milestones. Do not stop for architect review
+between them.
 
 Expected review size: **30-50 coherent commits** if code reality supports that.
 Small, validated commits are preferred; the Architect reviews the macro batch,
@@ -50,9 +58,8 @@ not every internal milestone.
 
 ## Core Boundary Rule
 
-The batch exists to move from a cleaned-up Activity wiring surface toward an
-explicit terminal widget instance that the Android Harness can host repeatedly
-later for terminal tabs.
+The batch exists to move terminal widget instance composition out of the Activity
+without adding tab behavior.
 
 - Android Harness owns platform ceremony, app-shell layout/styling/theming,
   navigation/view state, userland orchestration, and widget instance hosting.
@@ -60,14 +67,19 @@ later for terminal tabs.
   seams.
 - Userland stays movable for future IDE/editor modes and must not depend on
   widget/surface/controller internals.
-- `ZideActivity` should be Android entrypoint and wiring, not the owner of a
-  scattered terminal instance.
+- `ZideActivity` should call a composition seam, not manually stitch interaction
+  assembly + widget assembly + `TerminalWidgetInstance` construction.
 
 ## Required Direction From Architect Review
 
-`AHW-B3` engineer wave addressed the `AHW-B2` follow-ups (status telemetry package,
-`TerminalWidgetInstance`, interaction naming evaluated). Architect owns gate on
-`AHW-B3`; see queue for verdict.
+- `AHW-B3` is accepted.
+- Keep `ProductHostStartupBundle` as startup-order aggregation unless a concrete
+  owner win appears.
+- Do not make `WidgetAssembly.Result` alone responsible for constructing a
+  terminal instance. Prefer a harness-owned composition layer that composes
+  interaction + widget pieces and returns `TerminalWidgetInstance` plus any
+  surrounding harness controllers needed by the current app.
+- Do not implement terminal tabs or multi-instance product behavior.
 
 ## Allowed Work
 
@@ -151,10 +163,10 @@ when:
 - a required change needs files outside the allowed paths
 - architecture docs conflict with code reality in a way that changes scope
 - validation fails and cannot be fixed inside the active internal milestone
-- a behavior change is required to proceed where the queue only allows extraction
+- a behavior change is required where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
 - implementing terminal tabs/product behavior becomes necessary to proceed
-- the `AHW-B3` super-gate is reached
+- the `AHW-B4` super-gate is reached
 
 Otherwise continue autonomously with:
 
@@ -162,9 +174,9 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At `AHW-B3` super-gate, report:
+At `AHW-B4` super-gate, report:
 
-- review chunk name: `AHW-B3`
+- review chunk name: `AHW-B4`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs
