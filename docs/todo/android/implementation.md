@@ -337,6 +337,10 @@ Audit decision:
     phases (`shouldSuppressCommitText`, `commitComposingOrInsertText`,
     bounded before/after cursor delete helpers), reducing nested branch pressure
     in input callbacks while preserving direct-text/direct-codepoint behavior.
+  - Completed: `ShellInputView` cursor-move and composition-diff paths now use
+    explicit phase helpers (`emitCursorMoveEscapes`, shared prefix/diff send,
+    bounded compose-range replacement), reducing branch/loop density in
+    `setSelection(...)` and `replaceComposition(...)` without semantic changes.
     - Next: execute a behavior-preserving `input/ShellInputView.java`
       complexity-risk reduction wave focused on IME/hardware-key correctness
       seams (`onCreateInputConnection`, key mapping, and key-event handling)

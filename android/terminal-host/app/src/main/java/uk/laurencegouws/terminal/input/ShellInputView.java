@@ -127,29 +127,7 @@ public final class ShellInputView extends View {
             if (newCursor == oldCursor) {
                 return true;
             }
-
-            final int from = Math.min(oldCursor, newCursor);
-            final int to = Math.max(oldCursor, newCursor);
-            int newlinesCrossed = 0;
-            for (int i = from; i < to; i++) {
-                if (editorBuffer.charAt(i) == '\n') {
-                    newlinesCrossed++;
-                }
-            }
-
-            if (newlinesCrossed > 0) {
-                final String esc = (newCursor < oldCursor) ? "\u001b[A" : "\u001b[B";
-                for (int i = 0; i < newlinesCrossed; i++) {
-                    host.sendDirectText(esc);
-                }
-            } else {
-                final int delta = newCursor - oldCursor;
-                final String esc = (delta < 0) ? "\u001b[D" : "\u001b[C";
-                final int count = Math.abs(delta);
-                for (int i = 0; i < count; i++) {
-                    host.sendDirectText(esc);
-                }
-            }
+            emitCursorMoveEscapes(oldCursor, newCursor);
 
             resetEditorState();
             return true;
@@ -236,6 +214,34 @@ public final class ShellInputView extends View {
         return i + 1;
     }
 
+    private void emitCursorMoveEscapes(int oldCursor, int newCursor) {
+        final int from = Math.min(oldCursor, newCursor);
+        final int to = Math.max(oldCursor, newCursor);
+        final int newlinesCrossed = countNewlinesBetween(from, to);
+        if (newlinesCrossed > 0) {
+            sendRepeatedEscape((newCursor < oldCursor) ? "\u001b[A" : "\u001b[B", newlinesCrossed);
+            return;
+        }
+        final int delta = newCursor - oldCursor;
+        sendRepeatedEscape((delta < 0) ? "\u001b[D" : "\u001b[C", Math.abs(delta));
+    }
+
+    private int countNewlinesBetween(int from, int to) {
+        int newlinesCrossed = 0;
+        for (int i = from; i < to; i++) {
+            if (editorBuffer.charAt(i) == '\n') {
+                newlinesCrossed++;
+            }
+        }
+        return newlinesCrossed;
+    }
+
+    private void sendRepeatedEscape(String esc, int count) {
+        for (int i = 0; i < count; i++) {
+            host.sendDirectText(esc);
+        }
+    }
+
     private String currentCompositionText() {
         if (editorComposingStart >= 0 && editorComposingEnd >= editorComposingStart) {
             return editorBuffer.substring(editorComposingStart, editorComposingEnd);
@@ -256,13 +262,9 @@ public final class ShellInputView extends View {
     }
 
     private void commitComposingOrInsertText(String text) {
-        final String previous = currentCompositionText();
         if (editorComposingStart >= 0) {
             replaceComposition(text);
             clearComposition();
-            if (previous.equals(text)) {
-                clearComposition();
-            }
             return;
         }
         editorBuffer.insert(editorCursor, text);
@@ -298,28 +300,14 @@ public final class ShellInputView extends View {
 
     private void replaceComposition(String next) {
         final String previous = currentCompositionText();
-        final int composeStart = editorComposingStart >= 0 ? editorComposingStart : editorCursor;
-        final int oldEnd = editorComposingEnd >= editorComposingStart && editorComposingStart >= 0 ? editorComposingEnd
-                : editorCursor;
+        final int composeStart = currentCompositionStart();
+        final int oldEnd = currentCompositionEnd();
+        final int commonPrefix = sharedPrefixLength(previous, next);
 
-        int commonPrefix = 0;
-        final int maxPrefix = Math.min(previous.length(), next.length());
-        while (commonPrefix < maxPrefix && previous.charAt(commonPrefix) == next.charAt(commonPrefix)) {
-            commonPrefix += 1;
-        }
+        sendBackspaceCount(previous.length() - commonPrefix);
+        sendAppendedCompositionText(next.substring(commonPrefix));
+        replaceComposingRange(composeStart, oldEnd, next);
 
-        final int removed = previous.length() - commonPrefix;
-        for (int i = 0; i < removed; i++) {
-            host.sendDirectCodepoint('\u007f');
-        }
-
-        final String appended = next.substring(commonPrefix);
-        if (!appended.isEmpty()) {
-            host.sendDirectText(appended);
-        }
-
-        editorBuffer.delete(composeStart, oldEnd);
-        editorBuffer.insert(composeStart, next);
         editorComposingStart = composeStart;
         editorComposingEnd = composeStart + next.length();
         editorCursor = editorComposingEnd;
@@ -327,6 +315,42 @@ public final class ShellInputView extends View {
             editorComposingStart = -1;
             editorComposingEnd = -1;
         }
+    }
+
+    private int currentCompositionStart() {
+        return editorComposingStart >= 0 ? editorComposingStart : editorCursor;
+    }
+
+    private int currentCompositionEnd() {
+        return editorComposingEnd >= editorComposingStart && editorComposingStart >= 0
+                ? editorComposingEnd
+                : editorCursor;
+    }
+
+    private static int sharedPrefixLength(String left, String right) {
+        int commonPrefix = 0;
+        final int maxPrefix = Math.min(left.length(), right.length());
+        while (commonPrefix < maxPrefix && left.charAt(commonPrefix) == right.charAt(commonPrefix)) {
+            commonPrefix += 1;
+        }
+        return commonPrefix;
+    }
+
+    private void sendBackspaceCount(int count) {
+        for (int i = 0; i < count; i++) {
+            host.sendDirectCodepoint('\u007f');
+        }
+    }
+
+    private void sendAppendedCompositionText(String appended) {
+        if (!appended.isEmpty()) {
+            host.sendDirectText(appended);
+        }
+    }
+
+    private void replaceComposingRange(int composeStart, int oldEnd, String next) {
+        editorBuffer.delete(composeStart, oldEnd);
+        editorBuffer.insert(composeStart, next);
     }
 
     private String mapKeyToEscape(int keyCode) {
