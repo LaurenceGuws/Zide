@@ -76,7 +76,7 @@ Exit gate:
 
 ---
 
-### `RF-M0.5` Dual-Mode Preflight Baseline (`in_progress`)
+### `RF-M0.5` Dual-Mode Preflight Baseline (`completed`)
 
 Queue line (exact):
 
@@ -123,13 +123,19 @@ Gate:
 - queue ownership is unambiguous for dual-mode day tickets
 - baseline ready for engineer execution loop (`#DONE/#OUTSTANDING/COMMITS`)
 
+Checkpoint notes:
+
+- docs checkpoint committed
+- Android realign code checkpoint committed
+- compile + deploy + runtime smoke validated
+
 Stop marker:
 
 `Milestone reached per docs, architect review required.`
 
 ---
 
-### `RF-M1` Harness Boundary Lock (`in_progress`)
+### `RF-M1` Harness Boundary Lock (`review_required`)
 
 Queue line (exact):
 
@@ -142,14 +148,25 @@ Scope:
 
 Tasks:
 
-- [ ] finalize harness callback surfaces to semantic actions (no status-label choreography)
-- [ ] remove remaining harness glue that leaks widget/runtime policy language
-- [ ] ensure package-doctor/install orchestration reports through harness telemetry seam
+- [x] finalize harness callback surfaces to semantic actions (no status-label choreography)
+- [x] remove remaining harness glue that leaks widget/runtime policy language
+- [x] ensure package-doctor/install orchestration reports through harness telemetry seam
 
 Gate:
 
 - harness seams express intent as typed semantic actions
 - compile + deploy + runtime smoke clean
+
+Progress checkpoint:
+
+- `Milestone: RF-M1 review_required`
+- `Queue line (exact): finish harness-side contract hardening so activity/app-shell/userland orchestration owns platform ceremony only`
+- `Scope contract: harness contract seams only; widget/runtime behavior unchanged`
+- `Progress delta: workflow/runtime/widget/session callback seams now encode semantic harness actions, removed status-label choreography relays, and package-doctor/install outcomes are emitted via harness telemetry seam without debug-view coupling`
+- `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E (pass)`
+- `Blocked by review needed: false`
+
+`Milestone reached per docs, architect review required.`
 
 ---
 

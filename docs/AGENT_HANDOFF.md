@@ -6,8 +6,9 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: Android refocus (Harness vs Widget)
-- Current milestone: `RF-M0.5` (`in_progress`, dual-mode preflight baseline)
+- Current milestone: `RF-M1` (`review_required`, harness boundary lock)
 - Active queue authority: `docs/todo/android/implementation.md`
+- Engineer entrypoint (dual mode): `docs/todo/android/ENGINEER_ENTRYPOINT.md`
 
 ## First Read Order
 
