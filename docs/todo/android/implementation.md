@@ -50,7 +50,8 @@ Required progress fields:
 - `Scope contract: <one-line scope confirmation>`
 - `Progress delta: <outcome-focused>`
 - `Validation: <exact commands + pass/fail>`
-- `Blocked by review needed: true|false`
+- Architect updates: `Blocked by humain review needed: true|false`
+- Engineer updates: `Blocked by Archtect review needed: true|false`
 
 Milestone boundary line:
 
@@ -63,6 +64,12 @@ Validation commands:
 - `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E`
 
 ## Milestone Plan (Sequential, Gated)
+
+Dual-mode batching override (architect directive):
+
+- Use macro review chunks instead of per-milestone pauses.
+- Completed batch: `RF-M3` + `RF-M4` (macro gate: `RF-M4` architect review).
+- Next execution chunk: `RF-M5` stabilization matrix (per queue).
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -164,7 +171,7 @@ Progress checkpoint:
 - `Scope contract: harness contract seams only; widget/runtime behavior unchanged`
 - `Progress delta: workflow/runtime/widget/session callback seams now encode semantic harness actions, removed status-label choreography relays, and package-doctor/install outcomes are emitted via harness telemetry seam without debug-view coupling`
 - `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E (pass)`
-- `Blocked by review needed: false`
+- `Blocked by Archtect review needed: false`
 
 `Milestone reached per docs, architect review required.`
 
@@ -199,13 +206,13 @@ Progress checkpoint:
 - `Scope contract: widget assembly + surface widget seams only; behavior-neutral contract renames and intent-only shell-state callbacks`
 - `Progress delta: surface shell-state callbacks no longer carry status-label payloads; WidgetAssembly.Host uses drawerSidebar/session install+readiness/requestPackageDiagnostics naming; removed unused refreshUserlandSession from widget host; assembly consumes only Host (no static widget globals)`
 - `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E (pass)`
-- `Blocked by review needed: false`
+- `Blocked by Archtect review needed: false`
 
 `Milestone reached per docs, architect review required.`
 
 ---
 
-### `RF-M3` Userland Mobility Lock (`review_required`)
+### `RF-M3` Userland Mobility Lock (`completed_in_batch`)
 
 Queue line (exact):
 
@@ -228,18 +235,17 @@ Gate:
 
 Progress checkpoint:
 
-- `Milestone: RF-M3 review_required`
+- `Milestone: RF-M3 completed_in_batch`
 - `Queue line (exact): make userland orchestration movable and widget-agnostic`
 - `Scope contract: host.userland + userland packages; readiness-blocker wiring moved to ReadinessBlockerStartup; UserlandReadinessBlockerController.Host uses harness entrypoints only (no workflow/session coordinator types on userland Host)`
 - `Progress delta: USERLAND_HOST_CONTRACT.md added; WorkflowBridge documents harness contract; install/session orchestration for readiness retry bound via host.userland startup; userland Host no longer exposes UserlandWorkflowController/UserlandSessionCoordinator to UserlandReadinessBlockerController`
 - `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E (pass)`
-- `Blocked by review needed: false`
-
-`Milestone reached per docs, architect review required.`
+- `Blocked by Archtect review needed: false`
+- `Batching note: RF-M3 is complete but review is deferred to RF-M4 macro gate.`
 
 ---
 
-### `RF-M4` AppShell Navigation + State Backbone (`pending`)
+### `RF-M4` AppShell Navigation + State Backbone (`review_required`)
 
 Queue line (exact):
 
@@ -251,14 +257,25 @@ Scope:
 
 Tasks:
 
-- [ ] define explicit app-shell view navigation state owner
-- [ ] define per-view state owner seam (tab-ready shape)
-- [ ] enforce theming propagation contract across app shell
+- [x] define explicit app-shell view navigation state owner
+- [x] define per-view state owner seam (tab-ready shape)
+- [x] enforce theming propagation contract across app shell
 
 Gate:
 
 - app-shell navigation/state ownership explicit and centralized
-- compile + deploy + runtime smoke clean
+- compile + deploy + runtime clean
+
+Progress checkpoint:
+
+- `Milestone: RF-M4 review_required`
+- `Queue line (exact): harden app-shell left sidebar/navigation/view-state ownership for multi-view and future terminal tabs`
+- `Scope contract: harness app-shell only; navigation + per-view seam + resource-level theming`
+- `Progress delta: AppShellNavigation owns drawer + active ShellViewId; AppShellViewState + ShellViewId provide tab-ready seam; ViewModeController records PRODUCT_TERMINAL on apply; app-shell colors centralized in values/colors.xml and referenced from activity_main`
+- `Validation: (see engineer VALIDATION block)`
+- `Blocked by Archtect review needed: false`
+
+`Milestone reached per docs, architect review required.`
 
 ---
 

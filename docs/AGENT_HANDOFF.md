@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: Android refocus (Harness vs Widget)
-- Current milestone: `RF-M3` (`review_required`, userland mobility lock)
+- Current milestone: `RF-M4` (`review_required`, next: `RF-M5` stabilization matrix)
 - Active queue authority: `docs/todo/android/implementation.md`
 - Engineer entrypoint (dual mode): `docs/todo/android/ENGINEER_ENTRYPOINT.md`
 
@@ -23,7 +23,8 @@ Session entrypoint only. Keep this file short and current.
 - Keep cuts scoped; compile every cut; run deploy + `AndroidRuntime:E` smoke at
   seam boundaries.
 - Update docs in the same wave.
-- Include `Blocked by review needed: true|false` in every progress update.
+- Architect updates use: `Blocked by humain review needed: true|false`.
+- Engineer updates use: `Blocked by Archtect review needed: true|false`.
 
 ## Historical Notes
 

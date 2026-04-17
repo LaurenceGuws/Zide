@@ -32,15 +32,22 @@ Do not redefine scope or reorder tickets.
 
 Follow the **active milestone** section in `docs/todo/android/implementation.md` sequentially. Older RF-M1 ticket allowlists in this file are historical; do not use stale file lists if they conflict with the current milestone in the queue.
 
+## Review Cadence (Macro, Mandatory)
+
+- Engineer runs larger chunks; do not stop at every milestone by default.
+- Current batch policy: execute `RF-M3` and `RF-M4` as one continuous batch.
+- Architect review point for this batch: only at `RF-M4` gate (or real blocker).
+- Intermediate milestone notes are allowed, but they are not stop points.
+
 Typical wave (when the queue specifies it):
 
 1. Milestone state sync (`docs/todo/android/implementation.md`, `docs/AGENT_HANDOFF.md` as allowed).
-2. Code cuts per milestone scope in the queue.
+2. Code cuts per milestone scope in the queue (continue through batch milestones).
 3. Validation gate (exact commands from `implementation.md` or queue):
    - `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac`
    - `python3 ops/android_terminal_host.py deploy`
    - `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E`
-4. Queue update + stop marker at milestone boundary.
+4. Queue update; stop only at batch super-gate boundary.
 
 ## Commit Rules
 
@@ -53,17 +60,18 @@ Typical wave (when the queue specifies it):
 
 Stop immediately and report:
 
-`Blocked by humain review needed: true`
+`Blocked by Archtect review needed: true`
 
 when:
 
 - a required change needs files outside current ticket allowlist
 - architecture docs conflict with code reality in a way that changes scope
 - validation fails and cannot be fixed inside current ticket
+- a product decision is required to continue across the current batch boundary
 
 Otherwise continue autonomously with:
 
-`Blocked by humain review needed: false`
+`Blocked by Archtect review needed: false`
 
 ## Response Contract (Every Response)
 
@@ -73,4 +81,4 @@ Use exact headers:
 - `#OUTSTANDING`
 - `COMMITS`
 - `VALIDATION`
-- `Blocked by humain review needed: true|false`
+- `Blocked by Archtect review needed: true|false`

@@ -88,6 +88,18 @@ Dual Agent Mode loop:
    - approves and advances batch
    - rejects with explicit corrective ticket(s)
 
+Dual-mode cadence rule:
+
+- Prefer macro review chunks over per-milestone pauses.
+- Engineer should continue through the full architect-defined batch unless:
+  - `Blocked by Archtect review needed: true`
+  - the explicit batch super-gate is reached
+
+Blocked-field naming by role:
+
+- Architect reports: `Blocked by humain review needed: true|false`
+- Engineer reports: `Blocked by Archtect review needed: true|false`
+
 ## War-Campaign Prep
 
 When the active lane is a "war" against a broad design problem, do not start
