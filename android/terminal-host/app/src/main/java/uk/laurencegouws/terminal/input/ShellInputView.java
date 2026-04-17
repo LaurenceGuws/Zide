@@ -78,6 +78,11 @@ public final class ShellInputView extends View {
 
     @Override
     public InputConnection onCreateInputConnection(EditorInfo outAttrs) {
+        configureEditorInfo(outAttrs);
+        return new ShellInputConnection();
+    }
+
+    private void configureEditorInfo(EditorInfo outAttrs) {
         outAttrs.inputType = EditorInfo.TYPE_CLASS_TEXT
                 | EditorInfo.TYPE_TEXT_FLAG_NO_SUGGESTIONS
                 | EditorInfo.TYPE_TEXT_FLAG_MULTI_LINE;
@@ -86,132 +91,139 @@ public final class ShellInputView extends View {
                 | EditorInfo.IME_ACTION_NONE;
         outAttrs.initialSelStart = editorCursor;
         outAttrs.initialSelEnd = editorCursor;
-        return new BaseInputConnection(this, false) {
-            @Override
-            public ExtractedText getExtractedText(ExtractedTextRequest request, int flags) {
-                final ExtractedText et = new ExtractedText();
-                et.text = editorBuffer.toString();
-                et.startOffset = 0;
-                et.selectionStart = editorCursor;
-                et.selectionEnd = editorCursor;
-                return et;
-            }
+    }
 
-            @Override
-            public CharSequence getTextBeforeCursor(int n, int flags) {
-                final int start = Math.max(0, editorCursor - n);
-                return editorBuffer.substring(start, editorCursor);
-            }
+    private final class ShellInputConnection extends BaseInputConnection {
+        ShellInputConnection() {
+            super(ShellInputView.this, false);
+        }
 
-            @Override
-            public CharSequence getTextAfterCursor(int n, int flags) {
-                final int end = Math.min(editorBuffer.length(), editorCursor + n);
-                return editorBuffer.substring(editorCursor, end);
-            }
+        @Override
+        public ExtractedText getExtractedText(ExtractedTextRequest request, int flags) {
+            final ExtractedText et = new ExtractedText();
+            et.text = editorBuffer.toString();
+            et.startOffset = 0;
+            et.selectionStart = editorCursor;
+            et.selectionEnd = editorCursor;
+            return et;
+        }
 
-            @Override
-            public boolean setSelection(int start, int end) {
-                final int oldCursor = editorCursor;
-                final int newCursor = Math.max(0, Math.min(start, editorBuffer.length()));
-                if (newCursor == oldCursor)
-                    return true;
+        @Override
+        public CharSequence getTextBeforeCursor(int n, int flags) {
+            final int start = Math.max(0, editorCursor - n);
+            return editorBuffer.substring(start, editorCursor);
+        }
 
-                final int from = Math.min(oldCursor, newCursor);
-                final int to = Math.max(oldCursor, newCursor);
-                int newlinesCrossed = 0;
-                for (int i = from; i < to; i++) {
-                    if (editorBuffer.charAt(i) == '\n')
-                        newlinesCrossed++;
-                }
+        @Override
+        public CharSequence getTextAfterCursor(int n, int flags) {
+            final int end = Math.min(editorBuffer.length(), editorCursor + n);
+            return editorBuffer.substring(editorCursor, end);
+        }
 
-                if (newlinesCrossed > 0) {
-                    final String esc = (newCursor < oldCursor) ? "\u001b[A" : "\u001b[B";
-                    for (int i = 0; i < newlinesCrossed; i++) {
-                        host.sendDirectText(esc);
-                    }
-                } else {
-                    final int delta = newCursor - oldCursor;
-                    final String esc = (delta < 0) ? "\u001b[D" : "\u001b[C";
-                    final int count = Math.abs(delta);
-                    for (int i = 0; i < count; i++) {
-                        host.sendDirectText(esc);
-                    }
-                }
-
-                resetEditorState();
+        @Override
+        public boolean setSelection(int start, int end) {
+            final int oldCursor = editorCursor;
+            final int newCursor = Math.max(0, Math.min(start, editorBuffer.length()));
+            if (newCursor == oldCursor) {
                 return true;
             }
 
-            @Override
-            public boolean setComposingText(CharSequence text, int newCursorPosition) {
-                final String s = text.toString();
-                if (consumeLatchedImeText(s)) {
-                    return true;
+            final int from = Math.min(oldCursor, newCursor);
+            final int to = Math.max(oldCursor, newCursor);
+            int newlinesCrossed = 0;
+            for (int i = from; i < to; i++) {
+                if (editorBuffer.charAt(i) == '\n') {
+                    newlinesCrossed++;
                 }
+            }
+
+            if (newlinesCrossed > 0) {
+                final String esc = (newCursor < oldCursor) ? "\u001b[A" : "\u001b[B";
+                for (int i = 0; i < newlinesCrossed; i++) {
+                    host.sendDirectText(esc);
+                }
+            } else {
+                final int delta = newCursor - oldCursor;
+                final String esc = (delta < 0) ? "\u001b[D" : "\u001b[C";
+                final int count = Math.abs(delta);
+                for (int i = 0; i < count; i++) {
+                    host.sendDirectText(esc);
+                }
+            }
+
+            resetEditorState();
+            return true;
+        }
+
+        @Override
+        public boolean setComposingText(CharSequence text, int newCursorPosition) {
+            final String s = text.toString();
+            if (consumeLatchedImeText(s)) {
+                return true;
+            }
+            replaceComposition(s);
+            return true;
+        }
+
+        @Override
+        public boolean finishComposingText() {
+            editorComposingStart = -1;
+            editorComposingEnd = -1;
+            return true;
+        }
+
+        @Override
+        public boolean commitText(CharSequence text, int newCursorPosition) {
+            final String s = text.toString();
+            if (suppressedCommitText != null && suppressedCommitText.equals(s)) {
+                suppressedCommitText = null;
+                return true;
+            }
+            if (consumeLatchedImeText(s)) {
+                return true;
+            }
+            final String previous = currentCompositionText();
+            if (editorComposingStart >= 0) {
                 replaceComposition(s);
-                return true;
-            }
-
-            @Override
-            public boolean finishComposingText() {
                 editorComposingStart = -1;
                 editorComposingEnd = -1;
+            } else {
+                editorBuffer.insert(editorCursor, s);
+                editorCursor += s.length();
+                host.sendDirectText(s);
+            }
+            if (previous.equals(s)) {
+                editorComposingStart = -1;
+                editorComposingEnd = -1;
+            }
+            return true;
+        }
+
+        @Override
+        public boolean deleteSurroundingText(int beforeLength, int afterLength) {
+            if (beforeLength > 0) {
+                final int delStart = Math.max(0, editorCursor - beforeLength);
+                final int count = editorCursor - delStart;
+                editorBuffer.delete(delStart, editorCursor);
+                editorCursor = delStart;
+                for (int i = 0; i < count; i++) {
+                    host.sendDirectCodepoint('\u007f');
+                }
+            }
+            if (afterLength > 0) {
+                final int delEnd = Math.min(editorBuffer.length(), editorCursor + afterLength);
+                editorBuffer.delete(editorCursor, delEnd);
+            }
+            return true;
+        }
+
+        @Override
+        public boolean sendKeyEvent(KeyEvent event) {
+            if (handleKeyEvent(event)) {
                 return true;
             }
-
-            @Override
-            public boolean commitText(CharSequence text, int newCursorPosition) {
-                final String s = text.toString();
-                if (suppressedCommitText != null && suppressedCommitText.equals(s)) {
-                    suppressedCommitText = null;
-                    return true;
-                }
-                if (consumeLatchedImeText(s)) {
-                    return true;
-                }
-                final String previous = currentCompositionText();
-                if (editorComposingStart >= 0) {
-                    replaceComposition(s);
-                    editorComposingStart = -1;
-                    editorComposingEnd = -1;
-                } else {
-                    editorBuffer.insert(editorCursor, s);
-                    editorCursor += s.length();
-                    host.sendDirectText(s);
-                }
-                if (previous.equals(s)) {
-                    editorComposingStart = -1;
-                    editorComposingEnd = -1;
-                }
-                return true;
-            }
-
-            @Override
-            public boolean deleteSurroundingText(int beforeLength, int afterLength) {
-                if (beforeLength > 0) {
-                    final int delStart = Math.max(0, editorCursor - beforeLength);
-                    final int count = editorCursor - delStart;
-                    editorBuffer.delete(delStart, editorCursor);
-                    editorCursor = delStart;
-                    for (int i = 0; i < count; i++) {
-                        host.sendDirectCodepoint('\u007f');
-                    }
-                }
-                if (afterLength > 0) {
-                    final int delEnd = Math.min(editorBuffer.length(), editorCursor + afterLength);
-                    editorBuffer.delete(editorCursor, delEnd);
-                }
-                return true;
-            }
-
-            @Override
-            public boolean sendKeyEvent(KeyEvent event) {
-                if (handleKeyEvent(event)) {
-                    return true;
-                }
-                return super.sendKeyEvent(event);
-            }
-        };
+            return super.sendKeyEvent(event);
+        }
     }
 
     public boolean handleHardwareKeyEvent(KeyEvent event) {

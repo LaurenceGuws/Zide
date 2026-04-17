@@ -328,6 +328,11 @@ Audit decision:
     handlers, extracting shared alt-prefix/latch-clear behavior, and reducing
     `mapKeyToControlCodepoint(...)` branch surface with alphabetic key-range
     mapping while preserving key semantics.
+  - Completed: `ShellInputView` `onCreateInputConnection(...)` no longer
+    inlines a large anonymous callback object; editor-info setup moved to
+    `configureEditorInfo(...)` and input callbacks now live in
+    `ShellInputConnection`, reducing top-level method complexity while preserving
+    IME/input behavior.
     - Next: execute a behavior-preserving `input/ShellInputView.java`
       complexity-risk reduction wave focused on IME/hardware-key correctness
       seams (`onCreateInputConnection`, key mapping, and key-event handling)
