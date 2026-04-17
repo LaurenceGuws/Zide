@@ -4,7 +4,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import uk.laurencegouws.terminal.debug.StatusController;
-import uk.laurencegouws.terminal.host.debug.StatusTelemetryStartupForwards;
+import uk.laurencegouws.terminal.host.status.StatusTelemetryStartupForwards;
 import uk.laurencegouws.terminal.host.input.InputChromeStartupForwards;
 import uk.laurencegouws.terminal.host.runtime.FrameLoopController;
 import uk.laurencegouws.terminal.host.runtime.FrameLoopStartupForwards;

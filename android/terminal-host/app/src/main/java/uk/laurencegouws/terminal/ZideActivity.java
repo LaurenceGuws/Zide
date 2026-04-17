@@ -32,9 +32,7 @@ import uk.laurencegouws.terminal.host.session.SessionAssembly;
 import uk.laurencegouws.terminal.host.session.SessionAssemblyCallbacks;
 import uk.laurencegouws.terminal.host.status.StatusViewAssembly;
 import uk.laurencegouws.terminal.host.status.StatusViewCallbacks;
-import uk.laurencegouws.terminal.host.surface.SurfaceBridge;
-import uk.laurencegouws.terminal.host.surface.SurfaceController;
-import uk.laurencegouws.terminal.host.surface.SurfaceWidgetController;
+import uk.laurencegouws.terminal.host.ui.TerminalWidgetInstance;
 import uk.laurencegouws.terminal.host.ui.ProductHostStartupBundle;
 import uk.laurencegouws.terminal.host.ui.ViewModeController;
 import uk.laurencegouws.terminal.host.ui.UiStartupAssembly;
@@ -90,16 +88,14 @@ public final class ZideActivity extends android.app.Activity
     private ShellInputView shellInputView;
     private HardwareKeyboardController HardwareKeyboardController;
     private ImeFocusRecoveryController ImeFocusRecoveryController;
-    private SelectionController selectionController;
-    private GestureStateController GestureStateController;
+    /** Interaction assembly for the single terminal widget instance (selection + gesture). */
+    private InteractionAssembly.Result interactionAssembly;
     private boolean imeVisible = false;
     private UserlandRelease userlandRelease;
     private UserlandWorkflowController userlandWorkflowController;
     private UserlandSessionCoordinator userlandSessionCoordinator;
     private FrameLoopController productFrameLoopController;
     private ShellStatePresenter ShellStatePresenter;
-    private SurfaceController surfaceHostController;
-    private SurfaceBridge surfaceHostBridge;
     private ChromeController terminalChromeController;
     private ViewModeController terminalViewModeController;
     private RuntimeAssetsController terminalRuntimeAssetsController;
@@ -115,7 +111,8 @@ public final class ZideActivity extends android.app.Activity
     private ViewportController terminalViewportController;
     private StatusController StatusController;
     private SurfaceStateSnapshotReader SurfaceStateSnapshotReader;
-    private SurfaceWidgetController terminalSurfaceWidgetController;
+    /** Single hosted terminal widget (surface + selection + gesture seams). */
+    private TerminalWidgetInstance terminalWidget;
     private RuntimeController terminalRuntimeController;
     private LifecycleController terminalActivityLifecycleController;
     private UserlandInstallState currentInstallState = UserlandInstallState.idle();
@@ -124,7 +121,7 @@ public final class ZideActivity extends android.app.Activity
     private final ProductHostStartupBundle hostStartup = ProductHostStartupBundle.create(
             () -> terminalRuntimeController,
             () -> productFrameLoopController,
-            () -> surfaceHostController,
+            () -> terminalWidget == null ? null : terminalWidget.surfaceController,
             () -> userlandSessionCoordinator,
             () -> HardwareKeyboardController,
             () -> ImeFocusRecoveryController,
@@ -238,20 +235,14 @@ public final class ZideActivity extends android.app.Activity
                 this::hasWindowFocus,
                 () -> imeVisible,
                 this::setImeVisible,
-                () -> surfaceHostBridge,
+                () -> terminalWidget == null ? null : terminalWidget.surfaceBridge,
                 hostStartup.surface::notifyVisibleViewportIfReady,
                 () -> currentInstallState,
                 () -> currentReadinessState);
     }
 
     private void assembleInteractionControllers() {
-        final InteractionAssembly.Result result = assembleInteractionControllerResult();
-        selectionController = result.selectionController;
-        GestureStateController = result.GestureStateController;
-    }
-
-    private InteractionAssembly.Result assembleInteractionControllerResult() {
-        return InteractionAssembly.assemble(createInteractionCallbacks());
+        interactionAssembly = InteractionAssembly.assemble(createInteractionCallbacks());
     }
 
     private InteractionCallbacks createInteractionCallbacks() {
@@ -296,9 +287,12 @@ public final class ZideActivity extends android.app.Activity
         ShellStatePresenter = result.ShellStatePresenter;
         terminalChromeController = result.terminalChromeController;
         terminalViewModeController = result.terminalViewModeController;
-        surfaceHostBridge = result.surfaceHostBridge;
-        surfaceHostController = result.surfaceHostController;
-        terminalSurfaceWidgetController = result.terminalSurfaceWidgetController;
+        terminalWidget = new TerminalWidgetInstance(
+                interactionAssembly.selectionController,
+                interactionAssembly.GestureStateController,
+                result.surfaceHostBridge,
+                result.surfaceHostController,
+                result.terminalSurfaceWidgetController);
     }
 
     private WidgetAssembly.Result assembleWidgetHostControllerResult() {
@@ -399,12 +393,12 @@ public final class ZideActivity extends android.app.Activity
 
             @Override
             public SelectionController selectionController() {
-                return selectionController;
+                return interactionAssembly.selectionController;
             }
 
             @Override
             public GestureStateController GestureStateController() {
-                return GestureStateController;
+                return interactionAssembly.GestureStateController;
             }
 
             @Override
@@ -488,15 +482,15 @@ public final class ZideActivity extends android.app.Activity
                 () -> currentReadinessState,
                 StatusController::appendEvent,
                 StatusController::updateStatus,
-                () -> surfaceHostBridge,
+                () -> terminalWidget.surfaceBridge,
                 productReadinessBlocker,
                 terminalScrollOverlay,
-                selectionController,
+                terminalWidget.selectionController,
                 ShellStatePresenter,
                 productFrameLoopController,
                 StatusController,
                 userlandSessionCoordinator,
-                GestureStateController);
+                terminalWidget.gestureStateController);
     }
 
     private void assembleSessionControllers() {
@@ -653,8 +647,8 @@ public final class ZideActivity extends android.app.Activity
                 terminalChromeController,
                 terminalRuntimeAssetsController,
                 terminalViewModeController,
-                surfaceHostController,
-                terminalSurfaceWidgetController,
+                terminalWidget.surfaceController,
+                terminalWidget.surfaceWidgetController,
                 ShellStatePresenter,
                 productFrameLoopController,
                 leftSidebar);
