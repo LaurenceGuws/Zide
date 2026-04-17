@@ -34,16 +34,17 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B6` is at **super-gate** pending Architect acceptance. Queue and validation
-live in `docs/todo/android/implementation.md` under `AHW-B6`.
+`AHW-B7` is `in_progress`: slot identity single-source wiring plus bindings-first
+StatusViewAssembly result slimming.
 
-The Architect refocuses this entrypoint after acceptance; do not start the next
-macro batch until the queue marks one `in_progress`.
+Batch queue line (exact):
+
+- make slot identity single-source in activity wiring and slim StatusViewAssembly.Result to a bindings-first shape without behavior change
 
 ## Core Boundary Rule
 
-The batch exists to make slot identity compile-visible in host seams while
-keeping current single-slot behavior unchanged.
+The batch exists to remove slot fan-out and finish status result shaping while
+preserving current single-slot behavior.
 
 - Android Harness owns platform ceremony, app-shell layout/styling/theming,
   navigation/view state, userland orchestration, and widget instance hosting.
@@ -57,19 +58,31 @@ keeping current single-slot behavior unchanged.
 - `WidgetAssembly.Result` remains widget/chrome assembly output; it is not the
   terminal-instance factory by itself.
 
-## Required Direction From Architect Review (post-AHW-B6)
+## Required Direction From Architect Review (post-AHW-B7 acceptance baseline)
 
-- `TerminalWidgetCompositionAssembly.compose(TerminalWidgetSlotId, …)` joins
-  instances; shell/chrome/view-mode stay on `WidgetAssembly.Result`.
-- `StatusViewAssembly.Result.activityViewBindings` is the authoritative binding
-  capture for activity wiring.
-- Slot identity uses `TerminalWidgetSlotId` on host seams; tab product behavior
-  is out of scope unless a new batch says otherwise.
+- `AHW-B6` is accepted.
+- Keep slot identity explicit on host seams and explicit compose argument; do
+  not duplicate slot on `InteractionAssembly.Result` yet.
+- `WidgetAssembly.Host.terminalWidgetSlot()` is sufficient for now; defer
+  passing slot deeper into chrome construction until per-slot chrome policy exists.
+- Make slot selection single-source in activity wiring so affected seams consume
+  the same value without repeated literals.
+- Keep `StatusViewAssembly.Result.activityViewBindings` as the canonical binding
+  output and slim duplicate per-view result fields where consumers no longer need them.
+- Do not implement tabs, tab persistence, or multi-instance product behavior.
 
 ## Internal Milestones
 
-`AHW6-M1` through `AHW6-M6` are recorded in `docs/todo/android/implementation.md`
-under `AHW-B6`.
+Execute in order and mark progress in `docs/todo/android/implementation.md`.
+
+- `AHW7-M1`: audit slot callsites and pick one authoritative slot source in
+  activity wiring.
+- `AHW7-M2`: implement slot single-source wiring across interaction/widget/compose callsites.
+- `AHW7-M3`: slim `StatusViewAssembly.Result` to bindings-first output where
+  duplicate fields are no longer required.
+- `AHW7-M4`: align structure/naming/userland host contracts with the final shape.
+- `AHW7-M5`: keep queue/handoff/entrypoint aligned to `AHW-B7` super-gate.
+- `AHW7-M6`: run validation and publish super-gate review packet.
 
 ## Allowed Work
 
@@ -157,7 +170,7 @@ when:
 - a behavior change is required where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
 - implementing terminal tabs/product behavior becomes necessary to proceed
-- the `AHW-B6` super-gate is reached
+- the `AHW-B7` super-gate is reached
 
 Otherwise continue autonomously with:
 
@@ -165,9 +178,9 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At `AHW-B6` super-gate, report:
+At `AHW-B7` super-gate, report:
 
-- review chunk name: `AHW-B6`
+- review chunk name: `AHW-B7`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs

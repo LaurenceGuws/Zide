@@ -109,8 +109,8 @@ Dual-mode batching override (architect directive):
 - Completed macro batch: `AHW-B3` (accepted by Architect; composition seam follow-up queued in `AHW-B4`).
 - Completed macro batch: `AHW-B4` (accepted by Architect; host API slimming follow-up queued in `AHW-B5`).
 - Completed macro batch: `AHW-B5` (accepted by Architect; slot-scoped host API follow-up queued in `AHW-B6`).
-- Completed macro batch: `AHW-B6` (architect review at super-gate; slot-scoped host APIs + binding dedupe).
-- Active macro batch: set by Architect after `AHW-B6` acceptance.
+- Completed macro batch: `AHW-B6` (accepted by Architect; slot single-source and status-result slimming follow-up queued in `AHW-B7`).
+- Active macro batch: `AHW-B7` (slot identity single-source + StatusViewAssembly result slimming).
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -1620,7 +1620,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B6` Slot-scoped host API foundation (`completed_in_batch`)
+### `AHW-B6` Slot-scoped host API foundation (`completed`)
 
 Batch queue line (exact):
 
@@ -1756,7 +1756,141 @@ Progress checkpoint:
 Architect review verdict:
 
 - `Review chunk: AHW-B6`
-- `Verdict: pending`
+- `Verdict: accepted`
+- `Commits reviewed: 10a9d8d3, bc811c5a`
+- `Architect validation spot-check: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
+- `Engineer device validation accepted: deploy + AndroidRuntime:E smoke + cold start pass`
+- `Findings carried forward: slot identity is now compile-visible but still fanned out through repeated PRIMARY literals across activity wiring seams; next batch should make slot selection single-source. StatusViewAssembly.Result now provides activityViewBindings and duplicated per-view fields; next batch should complete bindings-first slimming where behavior-neutral.`
+
+`Milestone reached per docs, architect review required.`
+
+---
+
+### `AHW-B7` Slot single-source + status result slimming (`in_progress`)
+
+Batch queue line (exact):
+
+- make slot identity single-source in activity wiring and slim StatusViewAssembly.Result to a bindings-first shape without behavior change
+
+Batch purpose:
+
+- remove slot fan-out pressure from repeated `PRIMARY` literals in activity wiring
+- keep slot identity explicit at host seams with one authoritative source
+- finish `StatusViewAssembly.Result` shaping now that bindings are authoritative
+- preserve current single-terminal runtime behavior
+
+Batch scope:
+
+- Java Android terminal host only, plus authority docs needed to keep contract truth current
+- primary code root:
+  `android/terminal-host/app/src/main/java/uk/laurencegouws/terminal/**`
+- allowed docs:
+  `docs/todo/android/implementation.md`,
+  `docs/todo/android/ENGINEER_ENTRYPOINT.md`,
+  `docs/AGENT_HANDOFF.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_NAMING_CONTRACT.md`,
+  `app_architecture/platform/android/USERLAND_HOST_CONTRACT.md`
+
+Batch non-goals:
+
+- no terminal tabs UI/product behavior
+- no tab persistence/session switching
+- no terminal-core or shared-renderer changes
+- no selection/IME/gesture behavior changes except compile-preserving seam rewiring
+- no app-shell UI redesign
+- no debug-view UI resurrection
+- no broad rename sweep
+- no ASF operator-evidence churn unless new evidence arrives
+
+Batch super-gate:
+
+- slot identity is sourced once in harness wiring and threaded consistently to interaction/widget/composition seams
+- single-slot runtime behavior remains unchanged
+- `StatusViewAssembly.Result` is bindings-first and no longer duplicates per-view fields unless a proven consumer still requires them
+- docs reflect final ownership and naming shape
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass at final seam boundary
+
+Internal milestone cadence:
+
+- Engineer executes `AHW7-M1` through `AHW7-M6` sequentially.
+- Do not stop for architect review between internal milestones.
+- Mark each internal milestone complete in this file as it lands.
+- Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
+  the `AHW-B7` super-gate is reached.
+
+### `AHW7-M1` Slot fan-out audit (`pending`)
+
+Queue line (exact):
+
+- audit all slot identity callsites and choose one authoritative source in activity wiring
+
+Acceptance:
+
+- identify every `TerminalWidgetSlotId` callsite in interaction, widget, and composition wiring
+- define one source-of-truth slot selection point for current single-slot product behavior
+- no behavior change required in this audit slice
+
+### `AHW7-M2` Slot single-source wiring (`pending`)
+
+Queue line (exact):
+
+- implement single-source slot wiring across interaction callbacks, widget host callbacks, and composition callsites
+
+Acceptance:
+
+- one authoritative slot selection point used by all affected seams
+- no drift in startup order or runtime ownership boundaries
+- compile debug + release Java after code changes
+
+### `AHW7-M3` StatusViewAssembly.Result slimming (`pending`)
+
+Queue line (exact):
+
+- reduce StatusViewAssembly.Result to bindings-first output and remove duplicated view fields where no consumer requires them
+
+Acceptance:
+
+- `activityViewBindings` remains the canonical view capture
+- remove duplicated view fields from result when all consumers read bindings
+- preserve status, viewport, and snapshot assembly outputs
+- compile debug + release Java after code changes
+
+### `AHW7-M4` Slot/doc contract alignment (`pending`)
+
+Queue line (exact):
+
+- align structure and naming contracts to single-source slot wiring and bindings-first status result shape
+
+Acceptance:
+
+- structure/naming/userland docs match final code reality
+- no ambiguous guidance about slot ownership or status view outputs remains
+
+### `AHW7-M5` Queue/handoff/entrypoint sync (`pending`)
+
+Queue line (exact):
+
+- keep queue, handoff, and engineer entrypoint aligned to AHW-B7 execution and super-gate stop
+
+Acceptance:
+
+- all three docs point to `AHW-B7` as active and `in_progress`
+- super-gate stop condition and review packet contract are explicit
+
+### `AHW7-M6` Batch validation + review packet (`pending`)
+
+Queue line (exact):
+
+- validate AHW-B7 end-to-end and publish the architect review packet
+
+Acceptance:
+
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
+- cold start smoke pass when a device is available
+- engineer reports the full super-gate packet and stops for Architect review
 
 `Milestone reached per docs, architect review required.`
 
