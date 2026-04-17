@@ -76,6 +76,13 @@ public final class ZideActivity extends android.app.Activity
     private static final boolean nativeLoaded = NativeBridge.nativeLoaded();
     private static final String nativeLoadError = NativeBridge.nativeLoadError();
 
+    /**
+     * Authoritative product terminal slot for this activity’s wiring (interaction,
+     * widget host, composition). Multi-slot hosting would vary selection; today only
+     * {@link TerminalWidgetSlotId#PRIMARY}.
+     */
+    private static final TerminalWidgetSlotId ACTIVE_PRODUCT_TERMINAL_SLOT = TerminalWidgetSlotId.PRIMARY;
+
     private final Handler handler = new Handler(Looper.getMainLooper());
     /** Shared layout/chrome view handles for widget host and other harness wiring. */
     private ActivityViewBindings activityViewBindings;
@@ -223,7 +230,7 @@ public final class ZideActivity extends android.app.Activity
 
     private InteractionCallbacks createInteractionCallbacks() {
         return new InteractionCallbacks(
-                TerminalWidgetSlotId.PRIMARY,
+                ACTIVE_PRODUCT_TERMINAL_SLOT,
                 this,
                 handler,
                 activityViewBindings.productSurfaceContainer,
@@ -265,14 +272,14 @@ public final class ZideActivity extends android.app.Activity
         terminalChromeController = widgetResult.terminalChromeController;
         terminalViewModeController = widgetResult.terminalViewModeController;
         terminalWidget = TerminalWidgetCompositionAssembly.compose(
-                TerminalWidgetSlotId.PRIMARY, interaction, widgetResult);
+                ACTIVE_PRODUCT_TERMINAL_SLOT, interaction, widgetResult);
     }
 
     private WidgetAssembly.Host createWidgetHost(final InteractionAssembly.Result interaction) {
         return new WidgetAssembly.Host() {
             @Override
             public TerminalWidgetSlotId terminalWidgetSlot() {
-                return TerminalWidgetSlotId.PRIMARY;
+                return ACTIVE_PRODUCT_TERMINAL_SLOT;
             }
 
             @Override

@@ -1,10 +1,6 @@
 package uk.laurencegouws.terminal.host.status;
 
 import android.app.Activity;
-import android.view.View;
-import android.widget.Button;
-import android.widget.FrameLayout;
-import android.widget.TextView;
 
 import uk.laurencegouws.terminal.debug.SurfaceStateSnapshotReader;
 import uk.laurencegouws.terminal.debug.SurfaceStateSnapshotHostCallbacks;
@@ -40,67 +36,24 @@ public final class StatusViewAssembly {
         void notifyVisibleViewport(String reason);
     }
 
-    /** Immutable assembled status/view wiring result. */
+    /**
+     * Immutable assembled status/view wiring result: canonical {@link ActivityViewBindings}
+     * plus status/viewport controllers. Per-view accessors live on {@code activityViewBindings}
+     * only (bindings-first shape).
+     */
     public static final class Result {
-        /**
-         * Authoritative view lookup for this assembly; same instance used during
-         * {@link #assemble} — avoids duplicate {@link ActivityViewBindings#from(android.app.Activity)}
-         * calls in activity wiring.
-         */
         public final ActivityViewBindings activityViewBindings;
-        public final TextView productReadinessTitle;
-        public final TextView productReadinessDetail;
-        public final Button productReadinessRetryButton;
-        public final View rootView;
-        public final View productView;
-        public final View productReadinessBlocker;
-        public final View drawerScrim;
-        public final View drawerEdgeHotspot;
-        public final View leftSidebar;
-        public final FrameLayout productSurfaceContainer;
-        public final uk.laurencegouws.terminal.scroll.ScrollOverlayView terminalScrollOverlay;
-        public final Button assistCtrlButton;
-        public final Button assistAltButton;
         public final SurfaceStateSnapshotReader SurfaceStateSnapshotReader;
-        public final StatusController.Host terminalStatusHost;
         public final StatusController StatusController;
         public final ViewportController terminalViewportController;
 
         private Result(
                 ActivityViewBindings activityViewBindings,
-                TextView productReadinessTitle,
-                TextView productReadinessDetail,
-                Button productReadinessRetryButton,
-                View rootView,
-                View productView,
-                View productReadinessBlocker,
-                View drawerScrim,
-                View drawerEdgeHotspot,
-                View leftSidebar,
-                FrameLayout productSurfaceContainer,
-                uk.laurencegouws.terminal.scroll.ScrollOverlayView terminalScrollOverlay,
-                Button assistCtrlButton,
-                Button assistAltButton,
                 SurfaceStateSnapshotReader SurfaceStateSnapshotReader,
-                StatusController.Host terminalStatusHost,
                 StatusController StatusController,
                 ViewportController terminalViewportController) {
             this.activityViewBindings = activityViewBindings;
-            this.productReadinessTitle = productReadinessTitle;
-            this.productReadinessDetail = productReadinessDetail;
-            this.productReadinessRetryButton = productReadinessRetryButton;
-            this.rootView = rootView;
-            this.productView = productView;
-            this.productReadinessBlocker = productReadinessBlocker;
-            this.drawerScrim = drawerScrim;
-            this.drawerEdgeHotspot = drawerEdgeHotspot;
-            this.leftSidebar = leftSidebar;
-            this.productSurfaceContainer = productSurfaceContainer;
-            this.terminalScrollOverlay = terminalScrollOverlay;
-            this.assistCtrlButton = assistCtrlButton;
-            this.assistAltButton = assistAltButton;
             this.SurfaceStateSnapshotReader = SurfaceStateSnapshotReader;
-            this.terminalStatusHost = terminalStatusHost;
             this.StatusController = StatusController;
             this.terminalViewportController = terminalViewportController;
         }
@@ -173,21 +126,7 @@ public final class StatusViewAssembly {
                                 host::notifyVisibleViewport)));
         return new Result(
                 viewBindings,
-                viewBindings.productReadinessTitle,
-                viewBindings.productReadinessDetail,
-                viewBindings.productReadinessRetryButton,
-                viewBindings.rootView,
-                viewBindings.productView,
-                viewBindings.productReadinessBlocker,
-                viewBindings.drawerScrim,
-                viewBindings.drawerEdgeHotspot,
-                viewBindings.leftSidebar,
-                viewBindings.productSurfaceContainer,
-                viewBindings.terminalScrollOverlay,
-                viewBindings.assistCtrlButton,
-                viewBindings.assistAltButton,
                 SurfaceStateSnapshotReader,
-                terminalStatusHost,
                 StatusController,
                 terminalViewportController);
     }
