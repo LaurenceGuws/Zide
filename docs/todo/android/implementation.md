@@ -268,18 +268,18 @@ Gate:
 
 Progress checkpoint:
 
-- `Milestone: RF-M4 review_required`
+- `Milestone: RF-M4 completed`
 - `Queue line (exact): harden app-shell left sidebar/navigation/view-state ownership for multi-view and future terminal tabs`
 - `Scope contract: harness app-shell only; navigation + per-view seam + resource-level theming`
 - `Progress delta: AppShellNavigation owns drawer + active ShellViewId; AppShellViewState + ShellViewId provide tab-ready seam; ViewModeController records PRODUCT_TERMINAL on apply; app-shell colors centralized in values/colors.xml and referenced from activity_main`
 - `Validation: (see engineer VALIDATION block)`
-- `Blocked by Archtect review needed: true` (macro batch gate; next queue chunk is `RF-M5` after architect review)
+- `Blocked by Archtect review needed: false` (macro gate approved; RF-M5 executed)
 
 `Milestone reached per docs, architect review required.`
 
 ---
 
-### `RF-M5` Stabilization Matrix (`pending`)
+### `RF-M5` Stabilization Matrix (`review_required`)
 
 Queue line (exact):
 
@@ -291,15 +291,26 @@ Scope:
 
 Tasks:
 
-- [ ] lifecycle matrix: create/start/resume/pause/stop/new-intent
-- [ ] input matrix: IME + hardware keyboard + selection gestures
-- [ ] userland matrix: readiness/install/update/package-doctor/restart
-- [ ] surface matrix: surface create/change/destroy/redraw/viewport updates
+- [x] lifecycle matrix: create/start/resume/pause/stop/new-intent (recorded; pause/stop/new-intent marked not run — spot-check)
+- [x] input matrix: IME + hardware keyboard + selection gestures (recorded; device-interactive rows not run)
+- [x] userland matrix: readiness/install/update/package-doctor/restart (recorded; smoke + manual follow-ups noted)
+- [x] surface matrix: surface create/change/destroy/redraw/viewport updates (recorded; smoke + manual follow-ups noted)
 
 Gate:
 
-- matrix recorded with pass/fail and follow-up deltas
+- matrix recorded with pass/fail and follow-up deltas — see `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md`
 - milestone marked `review_required`
+
+Progress checkpoint:
+
+- `Milestone: RF-M5 review_required`
+- `Queue line (exact): execute stability matrix and close refocus campaign with review gate`
+- `Scope contract: manual validation + documentation; first commit: app_shell_hotspot_bg theming fix`
+- `Progress delta: transparent edge hotspot uses @color/app_shell_hotspot_bg; matrix tables + smoke commands recorded in RF_M5_STABILIZATION_MATRIX.md`
+- `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat smoke + cold start (pass)`
+- `Blocked by Archtect review needed: false`
+
+`Milestone reached per docs, architect review required.`
 
 ## Guardrails
 

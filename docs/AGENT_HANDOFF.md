@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: Android refocus (Harness vs Widget)
-- Current milestone: `RF-M4` (`review_required`, next: `RF-M5` stabilization matrix)
+- Current milestone: `RF-M5` (`review_required`, Android refocus campaign matrix recorded)
 - Active queue authority: `docs/todo/android/implementation.md`
 - Engineer entrypoint (dual mode): `docs/todo/android/ENGINEER_ENTRYPOINT.md`
 
