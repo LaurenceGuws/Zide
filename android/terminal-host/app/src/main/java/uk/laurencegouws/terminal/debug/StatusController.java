@@ -118,4 +118,9 @@ public final class StatusController {
                         surfaceState.glesTextureWidth,
                         surfaceState.glesTextureHeight)));
     }
+
+    public void recordPackageDoctorOutcome(boolean success) {
+        appendEvent("packages.doctor.outcome success=" + success);
+        updateStatus(success ? "packages.doctor.state" : "packages.doctor.failed_state");
+    }
 }

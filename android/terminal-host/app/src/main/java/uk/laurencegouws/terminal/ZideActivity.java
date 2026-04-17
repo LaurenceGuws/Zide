@@ -441,8 +441,8 @@ public final class ZideActivity extends Activity
             }
 
             @Override
-            public void handleShellStateEvent(String statusLabel) {
-                handleShellStateEventIfReady(statusLabel);
+            public void handleShellStateEvent() {
+                handleShellStateEventIfReady();
             }
 
             @Override
@@ -533,9 +533,9 @@ public final class ZideActivity extends Activity
                 () -> userlandRelease,
                 release -> userlandRelease = release,
                 StatusController::appendEvent,
-                this::setCurrentInstallState,
-                this::setCurrentReadinessState,
                 this::applyInstallStateIfReady,
+                this::completeInstallIfReady,
+                this::failInstallIfReady,
                 this::restartSessionAfterInstallIfReady,
                 this::markPackageDoctorComplete);
     }
@@ -688,9 +688,9 @@ public final class ZideActivity extends Activity
         }
     }
 
-    private void handleShellStateEventIfReady(String statusLabel) {
+    private void handleShellStateEventIfReady() {
         if (terminalRuntimeController != null) {
-            terminalRuntimeController.handleShellStateEvent(statusLabel);
+            terminalRuntimeController.handleShellStateEvent();
         }
     }
 
@@ -700,6 +700,16 @@ public final class ZideActivity extends Activity
         }
     }
 
+    private void completeInstallIfReady(UserlandReadinessState readinessState) {
+        setCurrentInstallState(UserlandInstallState.idle());
+        setCurrentReadinessState(readinessState);
+        restartSessionAfterInstallIfReady(true);
+    }
+
+    private void failInstallIfReady(UserlandInstallState installState) {
+        applyInstallStateIfReady(installState);
+    }
+
     private void restartSessionAfterInstallIfReady(boolean logRefresh) {
         if (terminalRuntimeController != null) {
             terminalRuntimeController.restartSessionAfterInstall(logRefresh);
@@ -707,7 +717,7 @@ public final class ZideActivity extends Activity
     }
 
     private void markPackageDoctorComplete(boolean success) {
-        StatusController.updateStatus(success ? "packages.doctor.state" : "packages.doctor.failed_state");
+        StatusController.recordPackageDoctorOutcome(success);
     }
 
     private void notifyVisibleViewportIfReady(String reason) {

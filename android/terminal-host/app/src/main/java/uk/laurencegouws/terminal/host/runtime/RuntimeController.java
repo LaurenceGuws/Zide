@@ -45,7 +45,11 @@ public final class RuntimeController {
 
         void appendEvent(String message);
 
-        void updateStatus(String statusLabel);
+        void reportShellStateRefresh();
+
+        void reportInstallState(UserlandInstallState installState);
+
+        void reportSessionRestartAfterInstall();
 
         int nativeCurrentSessionVisibleRows();
 
@@ -95,7 +99,7 @@ public final class RuntimeController {
         }
     }
 
-    public void handleShellStateEvent(String statusLabel) {
+    public void handleShellStateEvent() {
         final UserlandSessionCoordinator sessionCoordinator = host.userlandSessionCoordinator();
         if (sessionCoordinator != null) {
             sessionCoordinator.refreshAndApply(false);
@@ -104,7 +108,7 @@ public final class RuntimeController {
         if (frameLoopController != null) {
             frameLoopController.reevaluate();
         }
-        host.updateStatus(statusLabel);
+        host.reportShellStateRefresh();
     }
 
     public void refreshScrollOverlay() {
@@ -144,7 +148,7 @@ public final class RuntimeController {
     public void applyInstallState(UserlandInstallState installState) {
         host.setInstallState(installState);
         refreshShellState();
-        host.updateStatus(installStatusLabel(installState));
+        host.reportInstallState(installState);
     }
 
     public void restartSessionAfterInstall(boolean logRefresh) {
@@ -154,16 +158,6 @@ public final class RuntimeController {
         if (sessionCoordinator != null) {
             sessionCoordinator.refreshAndApply(logRefresh);
         }
-        host.updateStatus("userland-install-succeeded-restarted");
-    }
-
-    private static String installStatusLabel(UserlandInstallState installState) {
-        if (installState.isInstalling()) {
-            return "userland-install-started";
-        }
-        if (installState.isFailed()) {
-            return "userland-install-failed";
-        }
-        return "userland-install-updated";
+        host.reportSessionRestartAfterInstall();
     }
 }

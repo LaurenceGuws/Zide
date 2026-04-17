@@ -136,8 +136,26 @@ public final class RuntimeHostCallbacks implements RuntimeController.Host {
     }
 
     @Override
-    public void updateStatus(String statusLabel) {
-        updateStatus.accept(statusLabel);
+    public void reportShellStateRefresh() {
+        updateStatus.accept("shell-state");
+    }
+
+    @Override
+    public void reportInstallState(UserlandInstallState installState) {
+        if (installState.isInstalling()) {
+            updateStatus.accept("userland-install-started");
+            return;
+        }
+        if (installState.isFailed()) {
+            updateStatus.accept("userland-install-failed");
+            return;
+        }
+        updateStatus.accept("userland-install-updated");
+    }
+
+    @Override
+    public void reportSessionRestartAfterInstall() {
+        updateStatus.accept("userland-install-succeeded-restarted");
     }
 
     @Override

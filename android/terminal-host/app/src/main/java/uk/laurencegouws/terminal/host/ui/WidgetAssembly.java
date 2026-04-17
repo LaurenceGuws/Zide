@@ -87,7 +87,7 @@ public final class WidgetAssembly {
 
         AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot();
 
-        void handleShellStateEvent(String statusLabel);
+        void handleShellStateEvent();
 
         int productViewportHeightPx();
 
@@ -250,7 +250,7 @@ public final class WidgetAssembly {
                 host::callNative,
                 host::callNativeWithSurfaceState,
                 host::currentSurfaceStateSnapshot,
-                host::handleShellStateEvent,
+                statusLabel -> host.handleShellStateEvent(),
                 nextSurfaceView -> installSurfaceGestureHost(nextSurfaceView, surfaceWidgetControllerRef),
                 WidgetAssembly::addSurfaceHolderCallbackIfPresent,
                 () -> surfaceWidgetControllerRef.value,

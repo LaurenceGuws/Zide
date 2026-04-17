@@ -20,9 +20,9 @@ public final class WorkflowBridge implements UserlandWorkflowController.Host {
 
         void applyInstallState(UserlandInstallState installState);
 
-        void setInstallState(UserlandInstallState installState);
+        void completeInstall(UserlandReadinessState readinessState);
 
-        void setReadinessState(UserlandReadinessState readinessState);
+        void failInstall(UserlandInstallState installState);
 
         void restartSessionAfterInstall(boolean logRefresh);
 
@@ -65,13 +65,13 @@ public final class WorkflowBridge implements UserlandWorkflowController.Host {
     }
 
     @Override
-    public void setInstallState(UserlandInstallState installState) {
-        callbacks.setInstallState(installState);
+    public void completeInstall(UserlandReadinessState readinessState) {
+        callbacks.completeInstall(readinessState);
     }
 
     @Override
-    public void setReadinessState(UserlandReadinessState readinessState) {
-        callbacks.setReadinessState(readinessState);
+    public void failInstall(UserlandInstallState installState) {
+        callbacks.failInstall(installState);
     }
 
     @Override

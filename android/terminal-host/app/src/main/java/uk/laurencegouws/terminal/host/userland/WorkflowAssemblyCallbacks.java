@@ -17,9 +17,9 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
     private final Supplier<UserlandRelease> userlandRelease;
     private final Consumer<UserlandRelease> setUserlandRelease;
     private final Consumer<String> appendEvent;
-    private final Consumer<UserlandInstallState> setInstallState;
-    private final Consumer<UserlandReadinessState> setReadinessState;
     private final Consumer<UserlandInstallState> applyInstallState;
+    private final Consumer<UserlandReadinessState> completeInstall;
+    private final Consumer<UserlandInstallState> failInstall;
     private final WorkflowAssembly.RestartSessionCallback restartSession;
     private final WorkflowAssembly.PackageDoctorStateCallback packageDoctorState;
 
@@ -29,9 +29,9 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
             Supplier<UserlandRelease> userlandRelease,
             Consumer<UserlandRelease> setUserlandRelease,
             Consumer<String> appendEvent,
-            Consumer<UserlandInstallState> setInstallState,
-            Consumer<UserlandReadinessState> setReadinessState,
             Consumer<UserlandInstallState> applyInstallState,
+            Consumer<UserlandReadinessState> completeInstall,
+            Consumer<UserlandInstallState> failInstall,
             WorkflowAssembly.RestartSessionCallback restartSession,
             WorkflowAssembly.PackageDoctorStateCallback packageDoctorState) {
         this.context = context;
@@ -39,9 +39,9 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
         this.userlandRelease = userlandRelease;
         this.setUserlandRelease = setUserlandRelease;
         this.appendEvent = appendEvent;
-        this.setInstallState = setInstallState;
-        this.setReadinessState = setReadinessState;
         this.applyInstallState = applyInstallState;
+        this.completeInstall = completeInstall;
+        this.failInstall = failInstall;
         this.restartSession = restartSession;
         this.packageDoctorState = packageDoctorState;
     }
@@ -67,13 +67,13 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
     }
 
     @Override
-    public void setInstallState(UserlandInstallState installState) {
-        setInstallState.accept(installState);
+    public void completeInstall(UserlandReadinessState readinessState) {
+        completeInstall.accept(readinessState);
     }
 
     @Override
-    public void setReadinessState(UserlandReadinessState readinessState) {
-        setReadinessState.accept(readinessState);
+    public void failInstall(UserlandInstallState installState) {
+        failInstall.accept(installState);
     }
 
     @Override

@@ -18,9 +18,9 @@ public final class UserlandWorkflowController {
 
         void applyInstallState(UserlandInstallState installState);
 
-        void setInstallState(UserlandInstallState installState);
+        void completeInstall(UserlandReadinessState readinessState);
 
-        void setReadinessState(UserlandReadinessState readinessState);
+        void failInstall(UserlandInstallState installState);
 
         void restartSessionAfterInstall(boolean logRefresh);
 
@@ -41,10 +41,8 @@ public final class UserlandWorkflowController {
             try {
                 final UserlandInstaller.Result result = UserlandInstaller.install(host.context(), release);
                 host.handler().post(() -> {
-                    host.setInstallState(UserlandInstallState.idle());
-                    host.setReadinessState(result.readinessState);
                     host.appendEvent("userland.install.success " + result.detail);
-                    host.restartSessionAfterInstall(true);
+                    host.completeInstall(result.readinessState);
                 });
             } catch (IOException err) {
                 host.handler().post(() -> {
@@ -52,7 +50,7 @@ public final class UserlandWorkflowController {
                             err.getMessage() == null ? "unknown install failure" : err.getMessage());
                     host.appendEvent(
                             "userland.install failed err=" + err.getClass().getSimpleName() + " detail=" + installState.detail);
-                    host.applyInstallState(installState);
+                    host.failInstall(installState);
                 });
             }
         }, "userland-install").start();
