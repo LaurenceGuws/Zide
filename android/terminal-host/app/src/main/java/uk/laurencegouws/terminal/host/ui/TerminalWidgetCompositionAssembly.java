@@ -1,7 +1,5 @@
 package uk.laurencegouws.terminal.host.ui;
 
-import java.util.Objects;
-
 import uk.laurencegouws.terminal.host.interaction.InteractionAssembly;
 
 /**
@@ -26,14 +24,14 @@ public final class TerminalWidgetCompositionAssembly {
      * Joins interaction and widget assembly results into the portable {@link TerminalWidgetInstance}.
      * Co-hosted chrome/shell/view-mode refs stay on {@code widget}; do not duplicate them here.
      *
-     * @param slot compile-visible slot identity for this join (single {@link TerminalWidgetSlotId#PRIMARY}
-     *             today; reserved for future per-slot policy at this seam)
+     * @param slot compile-visible slot identity for this join — must satisfy
+     *             {@link TerminalWidgetSlotId#checkActiveProductTerminalSlot} for current product wiring
      */
     public static TerminalWidgetInstance compose(
             TerminalWidgetSlotId slot,
             InteractionAssembly.Result interaction,
             WidgetAssembly.Result widget) {
-        Objects.requireNonNull(slot, "slot");
+        TerminalWidgetSlotId.checkActiveProductTerminalSlot(slot);
         return new TerminalWidgetInstance(
                 interaction.selectionController,
                 interaction.GestureStateController,

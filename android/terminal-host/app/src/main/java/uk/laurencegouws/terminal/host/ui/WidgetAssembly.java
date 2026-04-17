@@ -28,7 +28,11 @@ import uk.laurencegouws.terminal.userland.ShellStatePresenter;
 public final class WidgetAssembly {
     /** Harness callbacks required to assemble widget host controllers. */
     public interface Host {
-        /** Terminal widget slot this widget assembly instance belongs to. */
+        /**
+         * Terminal widget slot for this assembly (must be {@link TerminalWidgetSlotId#PRIMARY}
+         * for current product wiring). Chrome construction under this host remains
+         * slot-agnostic until per-slot chrome policy exists.
+         */
         TerminalWidgetSlotId terminalWidgetSlot();
 
         /**
@@ -149,6 +153,7 @@ public final class WidgetAssembly {
     }
 
     public static Result assemble(Host host) {
+        TerminalWidgetSlotId.checkActiveProductTerminalSlot(host.terminalWidgetSlot());
         final AppShellNavigation appShellNavigation = new AppShellNavigation();
         final SurfaceWidgetControllerRef surfaceWidgetControllerRef = new SurfaceWidgetControllerRef();
         final ChromeController terminalChromeController = createChromeController(

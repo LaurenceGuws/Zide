@@ -7,7 +7,12 @@ import android.widget.Button;
 
 import uk.laurencegouws.terminal.input.ShellInputView;
 
-/** Owns product chrome interactions: view-mode toggles, sidebar, assist bar, and IME policy. */
+/**
+ * Owns product chrome interactions: view-mode toggles, sidebar, assist bar, and IME policy.
+ *
+ * <p>Chrome remains slot-agnostic: it does not take {@link TerminalWidgetSlotId}; reopen only
+ * when per-slot chrome behavior is a scoped product decision.</p>
+ */
 public final class ChromeController {
     public interface Host {
         android.content.Context context();

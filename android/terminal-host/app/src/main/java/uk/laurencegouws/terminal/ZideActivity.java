@@ -79,7 +79,8 @@ public final class ZideActivity extends android.app.Activity
     /**
      * Authoritative product terminal slot for this activity’s wiring (interaction,
      * widget host, composition). Multi-slot hosting would vary selection; today only
-     * {@link TerminalWidgetSlotId#PRIMARY}.
+     * {@link TerminalWidgetSlotId#PRIMARY}. Assembly entry points enforce this via
+     * {@link TerminalWidgetSlotId#checkActiveProductTerminalSlot}.
      */
     private static final TerminalWidgetSlotId ACTIVE_PRODUCT_TERMINAL_SLOT = TerminalWidgetSlotId.PRIMARY;
 

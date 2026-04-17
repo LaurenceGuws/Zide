@@ -14,7 +14,12 @@ import uk.laurencegouws.terminal.input.ShellInputView;
  * Chrome host assembly helpers.
  *
  * <p>Owns creation of chrome bridge/callback adapter instances so generic
- * host wiring does not accumulate domain-specific construction logic.
+ * host wiring does not accumulate domain-specific construction logic.</p>
+ *
+ * <p><b>Slot policy (AHW-B8):</b> chrome construction is intentionally
+ * <em>slot-agnostic</em> — do not add {@link TerminalWidgetSlotId} parameters here
+ * until per-slot chrome policy is explicitly scoped. Terminal widget slot identity
+ * stays on interaction/widget host seams and {@link TerminalWidgetCompositionAssembly}.</p>
  */
 public final class ChromeFactory {
     private ChromeFactory() {

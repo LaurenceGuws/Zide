@@ -12,7 +12,11 @@ import uk.laurencegouws.terminal.selection.SelectionController;
 public final class InteractionAssembly {
     /** Harness callbacks required for interaction assembly. */
     public interface Host {
-        /** Terminal widget slot this interaction assembly instance belongs to. */
+        /**
+         * Terminal widget slot for this assembly (must be {@link TerminalWidgetSlotId#PRIMARY}
+         * for current product wiring; reserved enum values are not active until host policy
+         * defines them).
+         */
         TerminalWidgetSlotId terminalWidgetSlot();
 
         Context harnessContext();
@@ -51,6 +55,7 @@ public final class InteractionAssembly {
     }
 
     public static Result assemble(Host host) {
+        TerminalWidgetSlotId.checkActiveProductTerminalSlot(host.terminalWidgetSlot());
         final SelectionController selectionController = InteractionFactory.createSelectionController(
                 host.harnessContext(),
                 host.productSurfaceContainer(),
