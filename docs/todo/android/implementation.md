@@ -346,6 +346,14 @@ Audit decision:
     directly satisfy `SelectionInteractionBridge.Callbacks` and
     `SelectionBridge.Callbacks`, removing large anonymous pass-through blocks
     without behavior change.
+  - Completed: adapter-depth reduction continued across interaction + userland
+    seams by collapsing two additional relay tiers:
+    `GestureStateControllerFactory` now accepts host contracts that directly
+    satisfy `GestureStateBridge.Callbacks` (removing wrapper blocks and deleting
+    `host/interaction/GestureStateCallbacks.java`), and `WorkflowAssembly` now
+    passes `WorkflowAssembly.Host` directly into `WorkflowBridge` (deleting
+    `host/userland/WorkflowCallbacks.java` and removing `packageStatusText` relay
+    wiring).
     - Next: execute a behavior-preserving interaction adapter-depth reduction
       wave by collapsing redundant bridge/callback pass-through tiers in
       `host/interaction` (prioritize high-forwarding seams: selection + gesture),

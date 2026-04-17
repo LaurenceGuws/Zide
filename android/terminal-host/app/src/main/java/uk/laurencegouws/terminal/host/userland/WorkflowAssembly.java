@@ -2,13 +2,10 @@ package uk.laurencegouws.terminal.host.userland;
 
 import android.content.Context;
 import android.os.Handler;
-import android.widget.TextView;
 
 import uk.laurencegouws.terminal.host.runtime.RuntimeAssetsController;
 import uk.laurencegouws.terminal.host.runtime.RuntimeAssetsBridge;
 import uk.laurencegouws.terminal.host.runtime.RuntimeAssetsCallbacks;
-import uk.laurencegouws.terminal.userland.UserlandReadinessState;
-import uk.laurencegouws.terminal.userland.UserlandInstallState;
 import uk.laurencegouws.terminal.userland.UserlandRelease;
 import uk.laurencegouws.terminal.userland.UserlandWorkflowController;
 
@@ -20,30 +17,12 @@ public final class WorkflowAssembly {
     }
 
     /** Activity callbacks required for userland workflow assembly. */
-    public interface Host {
+    public interface Host extends WorkflowBridge.Callbacks {
         Context context();
 
         Handler handler();
 
-        UserlandRelease userlandRelease();
-
         void setUserlandRelease(UserlandRelease userlandRelease);
-
-        void setInstallState(UserlandInstallState installState);
-
-        void setReadinessState(UserlandReadinessState readinessState);
-
-        void applyInstallState(UserlandInstallState installState, String statusLabel);
-
-        void restartSession(String eventName, String statusLabel, boolean logRefresh);
-
-        void showDebugView(String eventName, String statusLabel);
-
-        void appendEvent(String message);
-
-        void updateStatus(String statusLabel);
-
-        TextView packageStatusText();
     }
 
     /** Immutable assembled userland workflow result. */
@@ -74,16 +53,7 @@ public final class WorkflowAssembly {
         final WorkflowBridge userlandWorkflowHostBridge = new WorkflowBridge(
                 host.context(),
                 host.handler(),
-                new WorkflowCallbacks(
-                        host::userlandRelease,
-                        host::appendEvent,
-                        host::applyInstallState,
-                        host::setInstallState,
-                        host::setReadinessState,
-                        host::restartSession,
-                        host::showDebugView,
-                        host.packageStatusText(),
-                        host::updateStatus));
+                host);
         return new Result(
                 runtimeAssetsController,
                 userlandWorkflowHostBridge,

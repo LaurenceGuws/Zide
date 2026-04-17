@@ -559,7 +559,7 @@ public final class ZideActivity extends Activity
                 release -> userlandRelease = release,
                 StatusController::appendEvent,
                 StatusController::updateStatus,
-                packageStatusText,
+                packageStatusText::setText,
                 this::setCurrentInstallState,
                 this::setCurrentReadinessState,
                 this::applyInstallStateIfReady,

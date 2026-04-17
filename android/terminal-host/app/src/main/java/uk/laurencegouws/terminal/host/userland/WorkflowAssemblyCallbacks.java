@@ -2,7 +2,6 @@ package uk.laurencegouws.terminal.host.userland;
 
 import android.content.Context;
 import android.os.Handler;
-import android.widget.TextView;
 
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -20,7 +19,7 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
     private final Consumer<UserlandRelease> setUserlandRelease;
     private final Consumer<String> appendEvent;
     private final Consumer<String> updateStatus;
-    private final TextView packageStatusText;
+    private final Consumer<String> setPackageStatusText;
     private final Consumer<UserlandInstallState> setInstallState;
     private final Consumer<UserlandReadinessState> setReadinessState;
     private final BiConsumer<UserlandInstallState, String> applyInstallState;
@@ -34,7 +33,7 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
             Consumer<UserlandRelease> setUserlandRelease,
             Consumer<String> appendEvent,
             Consumer<String> updateStatus,
-            TextView packageStatusText,
+            Consumer<String> setPackageStatusText,
             Consumer<UserlandInstallState> setInstallState,
             Consumer<UserlandReadinessState> setReadinessState,
             BiConsumer<UserlandInstallState, String> applyInstallState,
@@ -46,7 +45,7 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
         this.setUserlandRelease = setUserlandRelease;
         this.appendEvent = appendEvent;
         this.updateStatus = updateStatus;
-        this.packageStatusText = packageStatusText;
+        this.setPackageStatusText = setPackageStatusText;
         this.setInstallState = setInstallState;
         this.setReadinessState = setReadinessState;
         this.applyInstallState = applyInstallState;
@@ -65,7 +64,7 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
     }
 
     @Override
-    public UserlandRelease userlandRelease() {
+    public UserlandRelease release() {
         return userlandRelease.get();
     }
 
@@ -110,7 +109,7 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
     }
 
     @Override
-    public TextView packageStatusText() {
-        return packageStatusText;
+    public void setPackageStatusText(String text) {
+        setPackageStatusText.accept(text);
     }
 }
