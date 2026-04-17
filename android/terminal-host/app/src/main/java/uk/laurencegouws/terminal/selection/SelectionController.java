@@ -758,10 +758,6 @@ public final class SelectionController {
         return bridgeHasActiveSelection() && hostHasSurfaceContainer();
     }
 
-    private boolean hasSelectionActionMode() {
-        return selectionActionMode != null;
-    }
-
     private boolean ensureSelectionActionModePresentationOrFinishIfUnavailable() {
         if (!canPresentSelectionActionMode()) {
             finishSelectionActionMode();
@@ -856,35 +852,15 @@ public final class SelectionController {
         mode.finish();
     }
 
-    private void detachCurrentSelectionActionModeIfMatches(ActionMode mode) {
+    private void onSelectionActionModeDestroyed(ActionMode mode) {
         if (selectionActionMode == mode) {
             selectionActionMode = null;
         }
-    }
-
-    private void onSelectionActionModeDestroyed(ActionMode mode) {
-        detachCurrentSelectionActionModeIfMatches(mode);
-        applySelectionActionModeDestroyEffects();
-    }
-
-    private void applySelectionActionModeDestroyEffects() {
-        clearBridgeSelectionUnlessActionModeFinishSuppressed();
-        setSuppressSelectionClearOnActionModeDestroy(false);
-        requestFrameLoopReevaluation();
-    }
-
-    private void setSuppressSelectionClearOnActionModeDestroy(boolean suppress) {
-        suppressSelectionClearOnActionModeDestroy = suppress;
-    }
-
-    private void clearBridgeSelectionUnlessActionModeFinishSuppressed() {
-        if (shouldClearBridgeWhenFloatingToolbarDestroyed()) {
+        if (!suppressSelectionClearOnActionModeDestroy) {
             bridge.clearSelection();
         }
-    }
-
-    private boolean shouldClearBridgeWhenFloatingToolbarDestroyed() {
-        return !suppressSelectionClearOnActionModeDestroy;
+        suppressSelectionClearOnActionModeDestroy = false;
+        requestFrameLoopReevaluation();
     }
 
     private void fillSelectionActionModeContentRectFromBridgeOrUseViewBounds(View view, Rect outRect) {
@@ -913,7 +889,7 @@ public final class SelectionController {
             return;
         }
         selectionActionMode = null;
-        setSuppressSelectionClearOnActionModeDestroy(true);
+        suppressSelectionClearOnActionModeDestroy = true;
         mode.finish();
     }
 
@@ -945,25 +921,17 @@ public final class SelectionController {
     }
 
     private void applySelectionActionModeSync() {
-        if (shouldFinishSelectionActionMode()) {
+        if (selectionActionMode != null && (!selectionToolbarVisible || !bridgeHasActiveSelection())) {
             finishSelectionActionMode();
             return;
         }
-        if (!hasSelectionActionMode()) {
+        if (selectionActionMode == null) {
             if (bridgeHasActiveSelection()) {
                 showSelectionActionMode();
             }
         } else {
             invalidateSelectionActionMode(false);
         }
-    }
-
-    private boolean shouldKeepSelectionActionModeVisible() {
-        return selectionToolbarVisible && bridgeHasActiveSelection();
-    }
-
-    private boolean shouldFinishSelectionActionMode() {
-        return hasSelectionActionMode() && !shouldKeepSelectionActionModeVisible();
     }
 
     private void syncSelectionHandles() {

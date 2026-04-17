@@ -288,6 +288,11 @@ Milestone gate contract (mandatory when manager/architect lane is active):
     helper churn by inlining single-call wrappers for floating action-mode
     start, create callback menu setup, invalidate path, and explicit finish
     detach while preserving behavior.
+  - Completed: `SelectionController` action-mode destroy/sync path removed
+    additional one-hop helpers by collapsing destroy-time detach/clear/reset into
+    one method and simplifying sync visibility checks to direct state predicates
+    (`selectionActionMode` + toolbar/selection visibility) with no behavior
+    change.
     - Next: resume primary Java cleanup under Active TODO item 1 by executing a
       behavior-preserving `selection/SelectionController.java` pressure-reduction
       wave focused on action-mode lifecycle internals (reduce tiny one-hop
