@@ -12,6 +12,7 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
+import uk.laurencegouws.terminal.debug.AndroidDebugFormatter;
 import uk.laurencegouws.terminal.debug.StatusController;
 import uk.laurencegouws.terminal.debug.SurfaceStateSnapshotReader;
 import uk.laurencegouws.terminal.gesture.GestureStateController;
@@ -40,7 +41,6 @@ import uk.laurencegouws.terminal.host.ui.UiStartupAssembly;
 import uk.laurencegouws.terminal.host.ui.UiStartupCallbacks;
 import uk.laurencegouws.terminal.host.ui.ViewportController;
 import uk.laurencegouws.terminal.host.ui.WidgetAssembly;
-import uk.laurencegouws.terminal.host.ui.WidgetCallbacks;
 import uk.laurencegouws.terminal.host.userland.WorkflowAssembly;
 import uk.laurencegouws.terminal.host.userland.WorkflowAssemblyCallbacks;
 import uk.laurencegouws.terminal.input.ShellInputView;
@@ -299,62 +299,212 @@ public final class ZideActivity extends Activity
     }
 
     private WidgetAssembly.Result assembleWidgetHostControllerResult() {
-        return WidgetAssembly.assemble(createWidgetCallbacks());
+        return WidgetAssembly.assemble(createWidgetHost());
     }
 
-    private WidgetCallbacks createWidgetCallbacks() {
-        return new WidgetCallbacks(
-                this,
-                handler,
-                () -> debugViewEnabled,
-                this::setDebugViewEnabled,
-                () -> imeVisible,
-                this::setImeVisible,
-                rootView,
-                productView,
-                debugView,
-                productReadinessBlocker,
-                drawerScrim,
-                drawerEdgeHotspot,
-                leftSidebar,
-                productSurfaceContainer,
-                terminalScrollOverlay,
-                productReadinessTitle,
-                productReadinessDetail,
-                productReadinessRetryButton,
-                assistCtrlButton,
-                assistAltButton,
-                () -> shellInputView,
-                selectionController,
-                GestureStateController,
-                () -> currentReadinessState,
-                () -> currentInstallState,
-                this::shouldRunFrameLoop,
-                this::refreshScrollOverlayIfReady,
-                StatusController::appendEvent,
-                StatusController::updateStatus,
-                () -> terminalViewportController.productViewportHeightPx(),
-                this::reevaluateFrameLoopIfReady,
-                () -> userlandWorkflowController.runPackageDoctor(),
-                this::sendDirectText,
-                reason -> {
-                    if (surfaceHostController != null) {
-                        surfaceHostController.notifyVisibleViewport(reason);
-                    }
-                },
-                () -> {
-                    if (userlandSessionCoordinator != null) {
-                        userlandSessionCoordinator.refreshAndApply(false);
-                    }
-                },
-                StatusController::callNative,
-                StatusController::callNativeWithSurfaceState,
-                () -> SurfaceStateSnapshotReader.read(),
-                statusLabel -> {
-                    if (terminalRuntimeController != null) {
-                        terminalRuntimeController.handleShellStateEvent(statusLabel);
-                    }
-                });
+    private WidgetAssembly.Host createWidgetHost() {
+        return new WidgetAssembly.Host() {
+            @Override
+            public Activity activity() {
+                return ZideActivity.this;
+            }
+
+            @Override
+            public Handler handler() {
+                return handler;
+            }
+
+            @Override
+            public boolean debugViewEnabled() {
+                return debugViewEnabled;
+            }
+
+            @Override
+            public void setDebugViewEnabled(boolean enabled) {
+                ZideActivity.this.setDebugViewEnabled(enabled);
+            }
+
+            @Override
+            public boolean imeVisible() {
+                return imeVisible;
+            }
+
+            @Override
+            public void setImeVisible(boolean visible) {
+                ZideActivity.this.setImeVisible(visible);
+            }
+
+            @Override
+            public View rootView() {
+                return rootView;
+            }
+
+            @Override
+            public View productView() {
+                return productView;
+            }
+
+            @Override
+            public View debugView() {
+                return debugView;
+            }
+
+            @Override
+            public View productReadinessBlocker() {
+                return productReadinessBlocker;
+            }
+
+            @Override
+            public View drawerScrim() {
+                return drawerScrim;
+            }
+
+            @Override
+            public View drawerEdgeHotspot() {
+                return drawerEdgeHotspot;
+            }
+
+            @Override
+            public View leftSidebar() {
+                return leftSidebar;
+            }
+
+            @Override
+            public FrameLayout productSurfaceContainer() {
+                return productSurfaceContainer;
+            }
+
+            @Override
+            public ScrollOverlayView terminalScrollOverlay() {
+                return terminalScrollOverlay;
+            }
+
+            @Override
+            public TextView productReadinessTitle() {
+                return productReadinessTitle;
+            }
+
+            @Override
+            public TextView productReadinessDetail() {
+                return productReadinessDetail;
+            }
+
+            @Override
+            public Button productReadinessRetryButton() {
+                return productReadinessRetryButton;
+            }
+
+            @Override
+            public Button assistCtrlButton() {
+                return assistCtrlButton;
+            }
+
+            @Override
+            public Button assistAltButton() {
+                return assistAltButton;
+            }
+
+            @Override
+            public ShellInputView shellInputView() {
+                return shellInputView;
+            }
+
+            @Override
+            public SelectionController selectionController() {
+                return selectionController;
+            }
+
+            @Override
+            public GestureStateController GestureStateController() {
+                return GestureStateController;
+            }
+
+            @Override
+            public UserlandReadinessState currentReadinessState() {
+                return currentReadinessState;
+            }
+
+            @Override
+            public UserlandInstallState currentInstallState() {
+                return currentInstallState;
+            }
+
+            @Override
+            public boolean shouldRunFrameLoop() {
+                return ZideActivity.this.shouldRunFrameLoop();
+            }
+
+            @Override
+            public void refreshScrollOverlay() {
+                refreshScrollOverlayIfReady();
+            }
+
+            @Override
+            public void appendEvent(String event) {
+                StatusController.appendEvent(event);
+            }
+
+            @Override
+            public void updateStatus(String statusLabel) {
+                StatusController.updateStatus(statusLabel);
+            }
+
+            @Override
+            public void callNative(String event, long seq) {
+                StatusController.callNative(event, seq);
+            }
+
+            @Override
+            public void callNativeWithSurfaceState(String event, long seq, AndroidDebugFormatter.SurfaceEventSnapshot state) {
+                StatusController.callNativeWithSurfaceState(event, seq, state);
+            }
+
+            @Override
+            public AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot() {
+                return SurfaceStateSnapshotReader.read();
+            }
+
+            @Override
+            public void handleShellStateEvent(String statusLabel) {
+                if (terminalRuntimeController != null) {
+                    terminalRuntimeController.handleShellStateEvent(statusLabel);
+                }
+            }
+
+            @Override
+            public int productViewportHeightPx() {
+                return terminalViewportController.productViewportHeightPx();
+            }
+
+            @Override
+            public void reevaluateFrameLoop() {
+                reevaluateFrameLoopIfReady();
+            }
+
+            @Override
+            public void runPackageDoctor() {
+                userlandWorkflowController.runPackageDoctor();
+            }
+
+            @Override
+            public void sendDirectText(String text) {
+                ZideActivity.this.sendDirectText(text);
+            }
+
+            @Override
+            public void notifyVisibleViewport(String reason) {
+                if (surfaceHostController != null) {
+                    surfaceHostController.notifyVisibleViewport(reason);
+                }
+            }
+
+            @Override
+            public void refreshUserlandSession() {
+                if (userlandSessionCoordinator != null) {
+                    userlandSessionCoordinator.refreshAndApply(false);
+                }
+            }
+        };
     }
 
     private RuntimeAssemblyCallbacks createRuntimeAssemblyCallbacks() {

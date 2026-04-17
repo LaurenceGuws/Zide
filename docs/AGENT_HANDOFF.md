@@ -105,8 +105,8 @@ Required per-commit update format:
   seam (~999 lines) and is still monolithic by design.
 - `ZideActivity.java` is materially thinner (~615 lines) but remains
   the highest orchestration-pressure seam.
-- `host/ui/WidgetCallbacks.java` (~340 lines) is the highest callback-constructor
-  pressure seam after recent activity cleanup.
+- `host/ui/WidgetAssembly.java` (~250 lines) is now the highest
+  callback-fan-out seam after removing `WidgetCallbacks`.
 - `userland/UserlandInstaller.java` (~425 lines) remains large but cohesive;
   keep watch-only unless behavior complexity expands.
 - `host/surface/SurfaceController.java` and `host/ui/ChromeController.java`

@@ -259,10 +259,13 @@ Milestone gate contract (mandatory when manager/architect lane is active):
     callback constructors directly to owner methods or inline null-guarded
     lambdas; ownership remained with existing controllers and behavior was
     preserved.
+  - Completed: widget host callback-constructor pressure dropped further by
+    removing `host/ui/WidgetCallbacks.java`; `WidgetAssembly.Host` is now built
+    directly from `ZideActivity` without an extra relay adapter class.
     - Next: resume primary Java cleanup under Active TODO item 1 by executing a
       behavior-preserving callback-constructor pressure reduction wave in
-      `host/ui/WidgetCallbacks.java` (remove relay-only callback adapters and
-      simplify constructor/field fan-out without changing ownership).
+      `host/ui/WidgetAssembly.java` host wiring (remove relay-only callback
+      adapters and simplify callback fan-out without changing ownership).
       For this wave, do not add naming-only wrappers; each cut must reduce
       callback or constructor pressure with measurable net simplification.
       Naming pressure rule for this wave: when a touched method/class name can be
@@ -426,7 +429,7 @@ A cut is done only if all are true:
 - current Java hotspot ranking for hygiene focus:
   - `selection/SelectionController.java` (~1163 lines, monolithic by design)
   - `ZideActivity.java` (~615 lines, orchestration pressure)
-  - `host/ui/WidgetCallbacks.java` (~340 lines, constructor/callback pressure)
+  - `host/ui/WidgetAssembly.java` (~250 lines, callback fan-out pressure)
   - `userland/UserlandInstaller.java` (~425 lines, large but cohesive)
 - activity callback factory wiring now consistently favors named callback
   references over inline state-assignment or non-trivial lifecycle lambdas
@@ -456,7 +459,7 @@ A cut is done only if all are true:
 - interaction activity wiring now composes through
   `host/interaction/InteractionAssembly` + `InteractionCallbacks`
 - widget/chrome/view-mode/surface activity wiring now composes through
-  `host/ui/WidgetAssembly` + `WidgetCallbacks`
+  `host/ui/WidgetAssembly` + `WidgetAssembly.Host`
 - userland runtime-assets/workflow startup activity wiring now composes through
   `host/userland/WorkflowAssembly` + `WorkflowAssemblyCallbacks`
 - product-runtime controller startup activity wiring now composes through
