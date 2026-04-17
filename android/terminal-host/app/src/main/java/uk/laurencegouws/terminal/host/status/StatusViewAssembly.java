@@ -42,6 +42,12 @@ public final class StatusViewAssembly {
 
     /** Immutable assembled status/view wiring result. */
     public static final class Result {
+        /**
+         * Authoritative view lookup for this assembly; same instance used during
+         * {@link #assemble} — avoids duplicate {@link ActivityViewBindings#from(android.app.Activity)}
+         * calls in activity wiring.
+         */
+        public final ActivityViewBindings activityViewBindings;
         public final TextView productReadinessTitle;
         public final TextView productReadinessDetail;
         public final Button productReadinessRetryButton;
@@ -61,6 +67,7 @@ public final class StatusViewAssembly {
         public final ViewportController terminalViewportController;
 
         private Result(
+                ActivityViewBindings activityViewBindings,
                 TextView productReadinessTitle,
                 TextView productReadinessDetail,
                 Button productReadinessRetryButton,
@@ -78,6 +85,7 @@ public final class StatusViewAssembly {
                 StatusController.Host terminalStatusHost,
                 StatusController StatusController,
                 ViewportController terminalViewportController) {
+            this.activityViewBindings = activityViewBindings;
             this.productReadinessTitle = productReadinessTitle;
             this.productReadinessDetail = productReadinessDetail;
             this.productReadinessRetryButton = productReadinessRetryButton;
@@ -164,6 +172,7 @@ public final class StatusViewAssembly {
                                 host::setImeVisible,
                                 host::notifyVisibleViewport)));
         return new Result(
+                viewBindings,
                 viewBindings.productReadinessTitle,
                 viewBindings.productReadinessDetail,
                 viewBindings.productReadinessRetryButton,

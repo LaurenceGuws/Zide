@@ -5,12 +5,16 @@ import android.os.Handler;
 import android.widget.FrameLayout;
 
 import uk.laurencegouws.terminal.gesture.GestureStateController;
+import uk.laurencegouws.terminal.host.ui.TerminalWidgetSlotId;
 import uk.laurencegouws.terminal.selection.SelectionController;
 
 /** Owns selection + gesture interaction controller assembly for activity wiring. */
 public final class InteractionAssembly {
     /** Harness callbacks required for interaction assembly. */
     public interface Host {
+        /** Terminal widget slot this interaction assembly instance belongs to. */
+        TerminalWidgetSlotId terminalWidgetSlot();
+
         Context harnessContext();
 
         Handler handler();

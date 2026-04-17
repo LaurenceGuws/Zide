@@ -28,6 +28,9 @@ import uk.laurencegouws.terminal.userland.ShellStatePresenter;
 public final class WidgetAssembly {
     /** Harness callbacks required to assemble widget host controllers. */
     public interface Host {
+        /** Terminal widget slot this widget assembly instance belongs to. */
+        TerminalWidgetSlotId terminalWidgetSlot();
+
         /**
          * Context for chrome and view construction (typically the hosting {@code Activity}).
          */

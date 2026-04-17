@@ -36,6 +36,7 @@ import uk.laurencegouws.terminal.host.status.StatusViewCallbacks;
 import uk.laurencegouws.terminal.host.ui.ActivityViewBindings;
 import uk.laurencegouws.terminal.host.ui.TerminalWidgetCompositionAssembly;
 import uk.laurencegouws.terminal.host.ui.TerminalWidgetInstance;
+import uk.laurencegouws.terminal.host.ui.TerminalWidgetSlotId;
 import uk.laurencegouws.terminal.host.ui.ProductHostStartupBundle;
 import uk.laurencegouws.terminal.host.ui.ViewModeController;
 import uk.laurencegouws.terminal.host.ui.UiStartupAssembly;
@@ -197,8 +198,8 @@ public final class ZideActivity extends android.app.Activity
     }
 
     private void initializeStatusAndViewControllers() {
-        activityViewBindings = ActivityViewBindings.from(this);
         final StatusViewAssembly.Result result = assembleStatusViewResult();
+        activityViewBindings = result.activityViewBindings;
         SurfaceStateSnapshotReader = result.SurfaceStateSnapshotReader;
         StatusController = result.StatusController;
         terminalViewportController = result.terminalViewportController;
@@ -222,6 +223,7 @@ public final class ZideActivity extends android.app.Activity
 
     private InteractionCallbacks createInteractionCallbacks() {
         return new InteractionCallbacks(
+                TerminalWidgetSlotId.PRIMARY,
                 this,
                 handler,
                 activityViewBindings.productSurfaceContainer,
@@ -262,11 +264,17 @@ public final class ZideActivity extends android.app.Activity
         ShellStatePresenter = widgetResult.ShellStatePresenter;
         terminalChromeController = widgetResult.terminalChromeController;
         terminalViewModeController = widgetResult.terminalViewModeController;
-        terminalWidget = TerminalWidgetCompositionAssembly.compose(interaction, widgetResult);
+        terminalWidget = TerminalWidgetCompositionAssembly.compose(
+                TerminalWidgetSlotId.PRIMARY, interaction, widgetResult);
     }
 
     private WidgetAssembly.Host createWidgetHost(final InteractionAssembly.Result interaction) {
         return new WidgetAssembly.Host() {
+            @Override
+            public TerminalWidgetSlotId terminalWidgetSlot() {
+                return TerminalWidgetSlotId.PRIMARY;
+            }
+
             @Override
             public Context harnessContext() {
                 return ZideActivity.this;

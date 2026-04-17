@@ -7,8 +7,11 @@ import android.widget.FrameLayout;
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
 
+import uk.laurencegouws.terminal.host.ui.TerminalWidgetSlotId;
+
 /** Functional callback adapter for {@link InteractionAssembly.Host}. */
 public final class InteractionCallbacks implements InteractionAssembly.Host {
+    private final TerminalWidgetSlotId terminalWidgetSlot;
     private final Context harnessContext;
     private final Handler handler;
     private final FrameLayout productSurfaceContainer;
@@ -20,6 +23,7 @@ public final class InteractionCallbacks implements InteractionAssembly.Host {
     private final Consumer<String> appendEvent;
 
     public InteractionCallbacks(
+            TerminalWidgetSlotId terminalWidgetSlot,
             Context harnessContext,
             Handler handler,
             FrameLayout productSurfaceContainer,
@@ -29,6 +33,7 @@ public final class InteractionCallbacks implements InteractionAssembly.Host {
             Runnable refreshScrollOverlay,
             Runnable reevaluateFrameLoop,
             Consumer<String> appendEvent) {
+        this.terminalWidgetSlot = terminalWidgetSlot;
         this.harnessContext = harnessContext;
         this.handler = handler;
         this.productSurfaceContainer = productSurfaceContainer;
@@ -38,6 +43,11 @@ public final class InteractionCallbacks implements InteractionAssembly.Host {
         this.refreshScrollOverlay = refreshScrollOverlay;
         this.reevaluateFrameLoop = reevaluateFrameLoop;
         this.appendEvent = appendEvent;
+    }
+
+    @Override
+    public TerminalWidgetSlotId terminalWidgetSlot() {
+        return terminalWidgetSlot;
     }
 
     @Override
