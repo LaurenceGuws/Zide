@@ -36,7 +36,8 @@ For active priorities/workflow, use
 
 ## Package Map
 
-- `debug`: debug-only formatting and debug status/event-log presentation
+- `debug`: runtime status/snapshot formatting and log telemetry (no in-app
+  debug view ownership)
 - `gesture`: raw Android gesture detection and product gesture normalization
 - `host`: Android host infrastructure such as surface, viewport, chrome,
   runtime assets, and product frame-loop scheduling
@@ -47,13 +48,33 @@ For active priorities/workflow, use
 - `userland`: app-private prefix state, install/update, package commands, and
   userland blocker presentation
 
+## Subsystem Boundary Contract
+
+Java authority is split into two clean subsystems.
+
+- Android Harness
+  - owns Android app/activity ceremony, lifecycle wiring, app-shell layout,
+    theming propagation, slide-out/navigation/state, and userland orchestration
+  - should remain loosely coupled from Zig and from widget internals
+- Terminal Widget
+  - owns terminal surface/input interaction seams, ffi/gles lifecycle
+    init/deinit handoff, and widget-level UX quirks
+  - should be a harness consumer, not a harness backbone
+
+Boundary rules:
+
+- Harness does not own terminal interaction policy internals.
+- Widget does not own app-shell navigation/theming/userland orchestration.
+- Userland remains movable independent of widget ownership.
+- `zide-pm` integration stays tool-like with minimal Java ceremony.
+
 ## File Audit
 
 Current shape markers (for hygiene tracking, not hard limits):
 
-- `selection/SelectionController.java`: `1101` lines (monolithic by design for now)
-- `ZideActivity.java`: `803` lines
-- `input/ShellInputView.java`: `545` lines
+- `selection/SelectionController.java`: `1066` lines (monolithic by design for now)
+- `ZideActivity.java`: `870` lines
+- `input/ShellInputView.java`: `587` lines
 - `userland/UserlandInstaller.java`: `425` lines
 - `host/ui/WidgetAssembly.java`: `320` lines
 - `host/surface/SurfaceBridge.java`: `272` lines
@@ -71,7 +92,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `debug/NativeStatusLabels.java` | Good | Owns native status-enum label mapping for debug/operator text. | Keep as pure mapping; avoid embedding behavior/policy. |
 | `debug/SurfaceStateSnapshotReader.java` | Good | Owns native-backed surface snapshot composition for debug status rendering. | Keep it snapshot-only; avoid adding logging policy or UI behavior. |
 | `debug/SurfaceStateSnapshotHostCallbacks.java` | Good | Functional callback adapter from activity-native access into `SurfaceStateSnapshotReader`. | Keep adapter-only; snapshot composition stays in `SurfaceStateSnapshotReader`. |
-| `debug/StatusController.java` | Good | Owns debug event log and status text. | Keep product behavior out; it should remain debug/operator presentation. |
+| `debug/StatusController.java` | Good | Owns runtime event/status logging and surface-state telemetry formatting for operator diagnostics. | Keep this log-focused; do not reintroduce in-app debug view ownership here. |
 | `gesture/ProductGestureController.java` | Good | Larger than a trivial detector, but justified by gesture arbitration and pinch quantization. | Do not add selection/scrollback mutation here; keep it as gesture resolution only. |
 | `gesture/GestureStateController.java` | Good | Owns pinch and scrollback budget/state that used to live in the activity. | Keep gesture detection in `ProductGestureController`; keep terminal truth in the native bridge. |
 | `gesture/GestureStateControllerFactory.java` | Good | Builds one gesture-state controller from widget-scoped host callbacks. | Keep as construction-only glue; no runtime policy in factory. |
@@ -82,7 +103,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/runtime/FrameLoopBridge.java` | Good | Owns frame-loop host callback adaptation from activity into `host/runtime/FrameLoopController`. | Keep as callback adapter only; scheduling logic stays in `host/runtime/FrameLoopController`. |
 | `host/interaction/GestureStateCallbacks.java` | Removed | Relay adapter was collapsed; gesture host callbacks are now provided directly at `InteractionFactory` / `GestureStateControllerFactory` seam. | Keep `GestureStateControllerFactory` host contract direct; avoid reintroducing pass-through adapters without measurable coupling reduction. |
 | `host/interaction/GestureStateBridge.java` | Removed | Relay adapter was collapsed; `GestureStateControllerFactory` now accepts `GestureStateController.Host` directly. | Keep gesture policy in `GestureStateController`; avoid reintroducing bridge pass-through layers without measurable coupling reduction. |
-| `host/runtime/RuntimeController.java` | Good | Owns product runtime policy: frame-loop readiness, shell-state/overlay refresh, install-state apply, and shell restart status flow. | Keep it runtime-orchestration only; native truth stays in bridge calls and terminal core. |
+| `host/runtime/RuntimeController.java` | Good | Owns product runtime policy: frame-loop readiness, shell-state/overlay refresh, install-state apply, and install-triggered restart flow. | Keep it runtime-orchestration only; native truth stays in bridge calls and terminal core. |
 | `host/runtime/RuntimeHostCallbacks.java` | Good | Functional callback adapter from activity state/native access into `host/runtime/RuntimeController`. | Keep adapter-only; runtime behavior stays in `host/runtime/RuntimeController`. |
 | `host/runtime/RuntimeAssembly.java` | Good | Owns product-runtime controller startup assembly so activity no longer inlines runtime callback construction. | Keep this assembly-only; runtime behavior stays in runtime controller + host callbacks. |
 | `host/runtime/RuntimeAssemblyCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/runtime/RuntimeAssembly`. | Keep adapter-only; avoid moving runtime behavior into this adapter. |
@@ -101,14 +122,14 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/session/SessionFactory.java` | Good | Owns shell-session and userland-session host bridge construction so session seams stay out of generic host assembly. | Keep this construction-only; session behavior remains in session/userland coordinators. |
 | `host/session/SessionAssembly.java` | Good | Owns session/runtime wiring assembly that composes session and runtime host factories for activity use. | Keep this assembly-only; business behavior stays in session/runtime controllers. |
 | `host/session/SessionAssemblyCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/session/SessionAssembly`. | Keep adapter-only; avoid adding session/runtime behavior here. |
-| `host/status/StatusViewAssembly.java` | Good | Owns initial view binding plus debug-status/viewport host assembly for activity wiring. | Keep this assembly-only; status rendering and viewport policy remain in dedicated controllers. |
+| `host/status/StatusViewAssembly.java` | Good | Owns initial view binding plus status/viewport host assembly for activity wiring. | Keep this assembly-only; status logging and viewport policy remain in dedicated controllers. |
 | `host/status/StatusViewCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/status/StatusViewAssembly`. | Keep adapter-only; avoid moving status/viewport behavior into this adapter. |
 | `host/ui/WidgetAssembly.java` | Good | Owns product widget/chrome/view-mode/surface host assembly so activity wiring no longer inlines those construction seams. | Keep this assembly-only; behavior remains in dedicated controllers/bridges. |
 | `host/ui/WidgetCallbacks.java` | Removed | Adapter seam was removed; `WidgetAssembly.Host` is now provided directly by `ZideActivity`. | Keep `WidgetAssembly` assembly-only; avoid recreating large pass-through adapters unless they remove measurable coupling. |
 | `host/ui/UiFactory.java` | Good | Owns UI host construction for shell-state presenter bridge, view-mode controller, and surface-widget controller. | Keep this construction-only; UI behavior remains in dedicated host controllers. |
 | `host/ui/UiStartupAssembly.java` | Good | Owns post-construction UI bind/start assembly for activity wiring. | Keep this assembly-only; UI behavior remains in dedicated controllers. |
 | `host/ui/UiStartupCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/ui/UiStartupAssembly`. | Keep adapter-only; avoid adding UI behavior here. |
-| `host/ui/ViewModeController.java` | Good | Owns product/debug view-mode switching and its side effects (viewport notify, scroll-overlay refresh, debug-session refresh). | Keep this focused on mode transitions; do not move selection or shell/runtime truth here. |
+| `host/ui/ViewModeController.java` | Good | Owns product-view stabilization side effects (viewport notify + scroll-overlay refresh). | Keep this focused on product-view activation only; do not grow terminal policy here. |
 | `host/ui/ChromeBridge.java` | Good | Owns chrome callback adaptation, sidebar-open state, and assist-button/modifier-latch view presentation wiring for the chrome controller host contract. | Keep as adapter/state only; keep chrome behavior in `host/ui/ChromeController`. |
 | `host/ui/ChromeCallbacks.java` | Removed | Relay adapter was collapsed; `ChromeFactory` now provides `ChromeBridge.Callbacks` directly. | Keep chrome behavior in `host/ui/ChromeController`; avoid reintroducing callback pass-through classes without measurable coupling reduction. |
 | `host/userland/ShellStateBridge.java` | Good | Owns product-shell-state presenter callback adaptation and blocker/overlay view binding. | Keep presentation behavior in `userland/ShellStatePresenter`; keep this adapter thin. |
@@ -125,7 +146,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/surface/SurfaceCallbacks.java` | Good | Owns callback adaptation from activity into `host/surface/SurfaceBridge.Callbacks` while preserving bridge contracts. | Keep this adapter-only; do not move surface policy out of `host/surface/SurfaceController`. |
 | `host/surface/SurfaceLifecycleCallbacks.java` | Removed | Relay adapter was collapsed; `SurfaceWidgetAssembly` now provides `SurfaceCallbacks.Callbacks` directly. | Keep surface lifecycle behavior in `host/surface/SurfaceController`; avoid reintroducing callback relay classes without measurable coupling reduction. |
 | `host/surface/SurfaceBridge.java` | Good | Owns mutable SurfaceView/viewport scheduling state and adapts activity callbacks into the surface host controller. | Keep this as state + callback adapter only; do not move lifecycle policy here. |
-| `host/surface/SurfaceController.java` | Watch | Coherent surface owner and improving; recent cleanup extracted repeated native-seq/event composition branches, but it still spans debug surface scheduling plus viewport notification concerns. | Keep watch status; if viewport policy expands, move it to `host/ui/ViewportController`. |
+| `host/surface/SurfaceController.java` | Watch | Coherent surface owner and improving; recent cleanup extracted repeated native-seq/event composition branches, but it still spans one-shot debug lifecycle probes plus viewport notification concerns. | Keep watch status; if viewport policy expands, move it to `host/ui/ViewportController`. |
 | `host/surface/SurfaceWidgetCallbacks.java` | Good | Functional callback adapter from activity state/native access into `host/surface/SurfaceWidgetController`. | Keep adapter-only; widget interaction behavior stays in `host/surface/SurfaceWidgetController`. |
 | `host/surface/SurfaceWidgetController.java` | Good | Owns the terminal widget callback surface: surface lifecycle callbacks, product gestures, and scroll-overlay callbacks for one terminal instance. | Keep this widget-scoped; future tabs should compose multiple widget controllers, not fork activity logic. |
 | `host/session/ShellBridge.java` | Good | Owns shell-session native bridge callback adaptation from activity into `session/ShellSessionController.Bridge`. | Keep shell poll/restart policy in `ShellSessionController`; keep this adapter callback-only. |
@@ -133,7 +154,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/userland/SessionBridge.java` | Removed | Relay adapter was collapsed; session host callbacks are now provided directly from `SessionFactory` into `UserlandSessionCoordinator`. | Keep poll/telemetry behavior in `UserlandSessionCoordinator`; avoid reintroducing bridge pass-through classes without measurable coupling reduction. |
 | `host/userland/SessionCallbacks.java` | Removed | Relay adapter was collapsed with `SessionBridge`; callback mapping now stays local to `SessionFactory`. | Keep adaptation local to session assembly seams; avoid pass-through callback classes unless they reduce owner coupling. |
 | `host/userland/ReadinessBlockerCallbacks.java` | Good | Functional callback adapter from activity state/actions into `userland/UserlandReadinessBlockerController`. | Keep adapter-only; readiness-blocker behavior stays in `UserlandReadinessBlockerController`. |
-| `host/userland/WorkflowBridge.java` | Good | Owns userland install/workflow host callback adaptation from activity state/actions into `userland/UserlandWorkflowController`. | Keep workflow behavior in `UserlandWorkflowController`; keep this adapter state-free except fixed context/handler references. |
+| `host/userland/WorkflowBridge.java` | Good | Owns userland install/workflow host callback adaptation from activity state/actions into `userland/UserlandWorkflowController` using semantic harness actions (apply install state, restart after install, package-doctor completion). | Keep workflow behavior in `UserlandWorkflowController`; keep this adapter state-free except fixed context/handler references. |
 | `host/userland/WorkflowCallbacks.java` | Removed | Relay adapter was collapsed; `WorkflowAssembly.Host` now directly satisfies `WorkflowBridge.Callbacks`. | Keep workflow owner behavior in `UserlandWorkflowController`; avoid recreating pass-through callback wrappers without measurable gain. |
 | `host/userland/WorkflowAssembly.java` | Good | Owns userland runtime-assets/workflow startup assembly so activity no longer inlines userland bridge/controller construction. | Keep this assembly-only; workflow behavior stays in workflow controller + bridge. |
 | `host/userland/WorkflowAssemblyCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/userland/WorkflowAssembly`. | Keep adapter-only; avoid moving userland workflow behavior into this adapter. |
@@ -160,7 +181,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `userland/UserlandInstallState.java` | Good | Small immutable install state. | Keep as data. |
 | `userland/UserlandPolicy.java` | Good | Central prefix path policy. | Keep package/version decisions elsewhere. |
 | `userland/UserlandRelease.java` | Good | Parses the bundled release descriptor only. | Keep release production in `../zide-mobile-pm`. |
-| `userland/UserlandSessionCoordinator.java` | Good | Owns readiness refresh, shell poll, state application, and auto-start telemetry. | Keep install/update execution out. |
+| `userland/UserlandSessionCoordinator.java` | Good | Owns readiness refresh, shell poll, state application, and auto-start/status telemetry signaling. | Keep install/update execution out. |
 | `userland/UserlandWorkflowController.java` | Good | Owns async install and package-doctor workflows. | Keep low-level archive extraction in `UserlandInstaller`. |
 
 ## Structure Pressure

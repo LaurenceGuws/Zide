@@ -14,6 +14,9 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
 - use one canonical term per concept
 - avoid stacked synonyms in one class name (`Host` + `Bridge` + `Callbacks`)
 - keep behavior-neutral mechanical renames separate from behavior changes
+- keep subsystem ownership explicit where needed:
+  - use `Harness` for app/activity/app-shell concerns
+  - use `Widget` for portable terminal-surface consumer concerns
 
 ## Event Key Grammar
 
@@ -66,6 +69,8 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
 - reserve `Product` only for user-facing product behavior distinctions
 - reserve `Host` for boundary context where needed; do not repeat it when the
   package or role already encodes host ownership
+- avoid `Debug`-view-first naming for new app-shell seams; diagnostics should
+  default to logging/scripted flows unless an explicit debug UI milestone opens
 - keep JSON/wire/schema keys stable unless a migration is explicitly scoped
 
 ### Redundancy Pressure Rule

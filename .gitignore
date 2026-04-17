@@ -53,3 +53,6 @@ local.properties
 .settings/
 # JDT / Eclipse output under Android module (not Gradle out/)
 android/terminal-host/app/bin/
+
+# Local architect/user scratchpads
+refocus_android.txt

@@ -8,6 +8,49 @@ repository.
 - `README.md` and the docs explorer repo are customer-facing.
 - This file is contributor/operator/agent-facing.
 
+## Session Modes
+
+This repo supports two operating modes. Use one mode per session.
+
+### Single Operation Mode (default)
+
+- One agent executes end-to-end with user collaboration.
+- This is the existing repo workflow model.
+- All sections below apply directly to this mode unless marked otherwise.
+
+### Dual Agent Mode (Architect + Engineer)
+
+Use this mode when the user explicitly wants a split between planning/review and
+execution.
+
+Roles:
+
+- User: sets product direction and approves ticket priorities.
+- Architect agent: scopes, audits, ticket-plans, and reviews at architecture
+  quality bar.
+- Engineer agent: executes the ticket plan quickly with strict reporting.
+
+Dual-mode lifecycle:
+
+1. User and Architect agree goal and lane boundaries.
+2. Architect reads current implementation + authority docs + relevant
+   references and writes a ticketed day plan.
+3. User starts Engineer session and instructs Engineer to read the authority
+   docs and execute the ticket list.
+4. Engineer response contract (every response):
+   - `#DONE`: tickets completed in that response
+   - `#OUTSTANDING`: remaining tickets
+   - `COMMITS`: commits created in that response
+5. User returns to Architect for review when ticket batch is cleared.
+6. Architect reviews commits/notes/diffs/behavior with VT-core-level rigor
+   expected for `src/terminal/core/**`.
+
+Dual-mode doc ownership:
+
+- Architect owns planning/review authority updates.
+- Engineer owns execution progress against Architect ticket list.
+- Both must keep queue state synchronized in owning docs.
+
 ## Default Operating Model
 
 Treat the repo like one active campaign with ticket-style execution.
@@ -23,6 +66,8 @@ If you cannot name the active ticket, you are probably about to drift.
 
 ## Workflow
 
+Single Operation Mode loop:
+
 1. Read `docs/AGENT_HANDOFF.md` for current focus and constraints.
 2. Read the owning TODO doc in `docs/todo/`.
 3. Read only the design docs needed for that ticket.
@@ -33,6 +78,15 @@ If you cannot name the active ticket, you are probably about to drift.
 7. Update the owning docs.
 8. Validate locally.
 9. Commit only after approval, unless the user explicitly asks for a commit.
+
+Dual Agent Mode loop:
+
+1. Architect defines a bounded ticket batch with acceptance + non-goals.
+2. Engineer executes tickets sequentially and reports `#DONE/#OUTSTANDING/COMMITS`.
+3. Engineer updates owning queue docs after each meaningful checkpoint.
+4. Architect reviews at ticket-batch boundary and either:
+   - approves and advances batch
+   - rejects with explicit corrective ticket(s)
 
 ## War-Campaign Prep
 

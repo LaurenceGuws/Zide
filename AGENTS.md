@@ -6,7 +6,53 @@ Zide aims to implement an IDE fully in Zig to the furthest extent possible that 
 
 We design every piece with embedded-style resource constraints in mind. That means aggressive caching, smart lifecycle management for tooling (e.g., spin up LSPs, cache results, hot-reload only edited blocks/references, then shut them down), and a strong focus on raw responsiveness and performance.
 
-Follow this workflow for every feature/task:
+## Session Mode Orchestrator
+
+This repo supports two explicit session modes.
+
+### Mode A: Single Operation Mode (Current Default)
+
+- One agent executes end-to-end with direct user collaboration.
+- This is the existing workflow model and remains fully valid.
+- Use this mode unless the user explicitly requests dual-agent operation.
+
+### Mode B: Dual Agent Mode (Architect + Engineer)
+
+Roles:
+
+- User: sets direction, decides priorities, approves milestone boundaries.
+- Architect agent: plans, scopes, audits, reviews, and sets ticket quality bar.
+- Engineer agent: executes a day plan quickly and reports ticket/commit status.
+
+Flow:
+
+1. User and Architect define a focused goal.
+2. Architect reads implementation/docs/reference repos and writes a ticketed day
+   plan (Jira-like).
+3. User starts Engineer session with explicit instruction to read authority docs
+   and execute the ticket list.
+4. Engineer loops with user through the day plan and must report per response:
+   - `#DONE` tickets
+   - `#OUTSTANDING` tickets
+   - commits made in that response
+5. User returns to Architect when tickets are cleared for review.
+6. Architect performs deep review across:
+   - commits
+   - ticket progress notes
+   - code diffs
+   - behavior/contract impact
+7. Architect review bar must match VT-core rigor used in
+   `src/terminal/core/**` review depth.
+
+Mode discipline:
+
+- Do not mix mode rules implicitly.
+- Session must declare mode at start (`single` or `dual`).
+- If mode is not explicit, use Single Operation Mode.
+
+## Single Operation Mode (Indexed Existing Workflow)
+
+Follow this workflow for every feature/task in Single Operation Mode:
 
 1. Read `docs/AGENT_HANDOFF.md`.
 2. Use the handoff to confirm current focus and constraints.
