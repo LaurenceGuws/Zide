@@ -109,7 +109,8 @@ Dual-mode batching override (architect directive):
 - Completed macro batch: `AHW-B3` (accepted by Architect; composition seam follow-up queued in `AHW-B4`).
 - Completed macro batch: `AHW-B4` (accepted by Architect; host API slimming follow-up queued in `AHW-B5`).
 - Completed macro batch: `AHW-B5` (accepted by Architect; slot-scoped host API follow-up queued in `AHW-B6`).
-- Active macro batch: `AHW-B6` (slot-scoped host API foundation, single-slot behavior preserved).
+- Completed macro batch: `AHW-B6` (architect review at super-gate; slot-scoped host APIs + binding dedupe).
+- Active macro batch: set by Architect after `AHW-B6` acceptance.
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -1619,7 +1620,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B6` Slot-scoped host API foundation (`in_progress`)
+### `AHW-B6` Slot-scoped host API foundation (`completed_in_batch`)
 
 Batch queue line (exact):
 
@@ -1674,79 +1675,88 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `AHW-B6` super-gate is reached.
 
-### `AHW6-M1` Slot seam audit in code (`pending`)
+### `AHW6-M1` Slot seam audit in code (`completed_in_batch`)
 
 Queue line (exact):
 
 - map current single-slot assumptions across composition, widget host assembly, and activity wiring seams
 
-Acceptance:
+Progress checkpoint:
 
-- identify exact method/class seams that need slot identity
-- record which seams remain global harness state and which are per-slot
-- no behavior change required in this audit slice
+- `Milestone: AHW6-M1 completed_in_batch`
+- `Findings: slot identity belongs at InteractionAssembly.Host, WidgetAssembly.Host, and TerminalWidgetCompositionAssembly.compose; global harness (session, runtime, userland) stays outside TerminalWidgetInstance; ActivityViewBindings duplicate capture was StatusViewAssembly + ZideActivity`
+- `Validation: N/A (audit-first)`
+- `Blocked by Archtect review needed: false`
 
-### `AHW6-M2` Binding lookup dedupe (`pending`)
+### `AHW6-M2` Binding lookup dedupe (`completed_in_batch`)
 
 Queue line (exact):
 
 - remove duplicate ActivityViewBindings lookup while keeping StatusViewAssembly ownership clean
 
-Acceptance:
+Progress checkpoint:
 
-- one authoritative `ActivityViewBindings` capture per startup path
-- no additional `findViewById` fan-out from activity wiring code
-- compile debug + release Java after code changes
+- `Milestone: AHW6-M2 completed_in_batch`
+- `Progress delta: StatusViewAssembly.Result.activityViewBindings; ZideActivity assigns from result (no second ActivityViewBindings.from)`
+- `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
+- `Blocked by Archtect review needed: false`
 
-### `AHW6-M3` Slot-scoped type introduction (`pending`)
+### `AHW6-M3` Slot-scoped type introduction (`completed_in_batch`)
 
 Queue line (exact):
 
 - introduce a harness-owned slot identity type for terminal widget host APIs (single slot only for now)
 
-Acceptance:
+Progress checkpoint:
 
-- add a slot identity type and use it where composition/host seams benefit
-- keep single-slot runtime path and startup order unchanged
-- do not implement tab behavior, persistence, or switching
-- compile debug + release Java after code changes
+- `Milestone: AHW6-M3 completed_in_batch`
+- `Progress delta: host/ui/TerminalWidgetSlotId enum (PRIMARY only)`
+- `Validation: same compile gates as AHW6-M2 (pass)`
+- `Blocked by Archtect review needed: false`
 
-### `AHW6-M4` Apply slot identity to composition/wiring seams (`pending`)
+### `AHW6-M4` Apply slot identity to composition/wiring seams (`completed_in_batch`)
 
 Queue line (exact):
 
 - thread slot identity through composition and relevant host wiring seams without changing runtime behavior
 
-Acceptance:
+Progress checkpoint:
 
-- composition and wiring signatures become slot-aware where future multi-terminal hosting requires it
-- no behavior drift in selection, gesture, surface, input, session, or runtime flows
-- compile debug + release Java after code changes
+- `Milestone: AHW6-M4 completed_in_batch`
+- `Progress delta: InteractionAssembly.Host + WidgetAssembly.Host + InteractionCallbacks + compose(TerminalWidgetSlotId, …); ZideActivity uses PRIMARY throughout`
+- `Validation: same compile gates (pass)`
+- `Blocked by Archtect review needed: false`
 
-### `AHW6-M5` Authority docs refresh (`pending`)
+### `AHW6-M5` Authority docs refresh (`completed_in_batch`)
 
 Queue line (exact):
 
 - update structure, naming, and userland host authority for slot-scoped host APIs
 
-Acceptance:
+Progress checkpoint:
 
-- structure and naming docs reflect slot-scoped API ownership precisely
-- userland contract remains movable and slot-agnostic where required
-- handoff and entrypoint still point at `AHW-B6` until the super-gate
+- `Milestone: AHW6-M5 completed_in_batch`
+- `Progress delta: ANDROID_JAVA_HOST_STRUCTURE + ANDROID_JAVA_NAMING_CONTRACT + USERLAND_HOST_CONTRACT`
+- `Validation: docs-only; compile unchanged (pass)`
+- `Blocked by Archtect review needed: false`
 
-### `AHW6-M6` Batch validation + review packet (`pending`)
+### `AHW6-M6` Batch validation + review packet (`completed_in_batch`)
 
 Queue line (exact):
 
 - validate AHW-B6 end-to-end and publish the architect review packet
 
-Acceptance:
+Progress checkpoint:
 
-- debug and release Java compile pass
-- deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
-- cold start smoke pass when a device is available
-- engineer reports the full super-gate packet and stops for Architect review
+- `Milestone: AHW6-M6 completed_in_batch`
+- `Progress delta: engineer review packet in session response`
+- `Validation: see engineer VALIDATION block`
+- `Blocked by Archtect review needed: true` (super-gate)
+
+Architect review verdict:
+
+- `Review chunk: AHW-B6`
+- `Verdict: pending`
 
 `Milestone reached per docs, architect review required.`
 

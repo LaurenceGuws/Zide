@@ -34,12 +34,11 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B6` is `in_progress`: slot-scoped host API foundation while preserving
-single-slot runtime behavior.
+`AHW-B6` is at **super-gate** pending Architect acceptance. Queue and validation
+live in `docs/todo/android/implementation.md` under `AHW-B6`.
 
-Batch queue line (exact):
-
-- introduce slot-scoped host API seams for terminal widget composition while preserving single-slot runtime behavior
+The Architect refocuses this entrypoint after acceptance; do not start the next
+macro batch until the queue marks one `in_progress`.
 
 ## Core Boundary Rule
 
@@ -58,31 +57,19 @@ keeping current single-slot behavior unchanged.
 - `WidgetAssembly.Result` remains widget/chrome assembly output; it is not the
   terminal-instance factory by itself.
 
-## Required Direction From Architect Review (AHW-B6 baseline)
+## Required Direction From Architect Review (post-AHW-B6)
 
-- `AHW-B5` is accepted.
-- `TerminalWidgetCompositionAssembly.compose` remains `TerminalWidgetInstance`
-  only; shell/chrome/view-mode outputs stay on `WidgetAssembly.Result`.
-- `ZideActivity` reading widget shell/chrome/view-mode next to `compose` is
-  acceptable; do not introduce a second owner bundle without a clear win.
-- Remove duplicate `ActivityViewBindings.from(...)` lookup if ownership remains
-  clean.
-- Make slot identity explicit in host APIs where future multi-terminal hosting
-  needs it, but do not implement tab product behavior.
+- `TerminalWidgetCompositionAssembly.compose(TerminalWidgetSlotId, …)` joins
+  instances; shell/chrome/view-mode stay on `WidgetAssembly.Result`.
+- `StatusViewAssembly.Result.activityViewBindings` is the authoritative binding
+  capture for activity wiring.
+- Slot identity uses `TerminalWidgetSlotId` on host seams; tab product behavior
+  is out of scope unless a new batch says otherwise.
 
 ## Internal Milestones
 
-Execute in order and mark progress in `docs/todo/android/implementation.md`.
-
-- `AHW6-M1`: audit single-slot assumptions across composition, widget host, and
-  activity wiring seams.
-- `AHW6-M2`: remove duplicate `ActivityViewBindings` lookup while keeping
-  ownership clean.
-- `AHW6-M3`: introduce a harness-owned slot identity type for host APIs
-  (single slot only for now).
-- `AHW6-M4`: thread slot identity through composition/wiring seams where needed.
-- `AHW6-M5`: update structure/naming/userland host authority docs.
-- `AHW6-M6`: run validation and publish the super-gate review packet.
+`AHW6-M1` through `AHW6-M6` are recorded in `docs/todo/android/implementation.md`
+under `AHW-B6`.
 
 ## Allowed Work
 

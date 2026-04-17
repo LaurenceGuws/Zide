@@ -81,6 +81,9 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
 - reserve **slot** / **per-instance** vocabulary for future multi-terminal
   hosting described in `ANDROID_JAVA_HOST_STRUCTURE.md` (contract only; no tab
   product behavior implied by the name alone)
+- use `TerminalWidgetSlotId` on `InteractionAssembly.Host` and
+  `WidgetAssembly.Host`; pass the same slot into `TerminalWidgetCompositionAssembly.compose`
+  as the first parameter — today only `PRIMARY`
 - do not include `Terminal` when package already scopes terminal host context
 - reserve `Product` only for user-facing product behavior distinctions
 - reserve `Host` for boundary context where needed; do not repeat it when the

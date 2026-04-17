@@ -77,11 +77,13 @@ its portable seams in `host/ui/TerminalWidgetInstance`: `SelectionController`,
 produces that holder from `InteractionAssembly.Result` + surface fields on
 `WidgetAssembly.Result`; shell/chrome/view-mode controller refs remain on
 `WidgetAssembly.Result` and the activity assigns them next to
-`compose` — `ZideActivity` does not construct the holder directly. App-shell
-chrome, viewport, runtime
-orchestration, and userland coordination stay **outside** that holder. Future
-multi-instance hosting should compose additional `TerminalWidgetInstance` values
-without moving app-shell state into the widget holder.
+`compose(slot, …)` — `ZideActivity` does not construct the holder directly.
+`TerminalWidgetSlotId` makes the slot explicit at composition and host seams
+(today only `TerminalWidgetSlotId.PRIMARY`).
+App-shell chrome, viewport, runtime orchestration, and userland coordination stay
+**outside** that holder. Future multi-instance hosting should compose additional
+`TerminalWidgetInstance` values without moving app-shell state into the widget
+holder.
 
 ### Future multi-terminal host API (contract only; no tab product behavior)
 
@@ -92,9 +94,10 @@ expected to repeat the **same assembly pattern per slot**, not fork
 1. One `InteractionAssembly.Result` per terminal instance (selection + gesture
    scoped to that instance’s surface container and viewport inputs).
 2. One `WidgetAssembly.assemble(WidgetAssembly.Host)` per instance; each
-   `Host` closes over the correct `InteractionAssembly.Result` and **slot
-   views** (surface container, scroll overlay, chrome targets for that slot).
-3. One `TerminalWidgetCompositionAssembly.compose(interaction, widgetResult)` per
+   `Host` closes over the correct `InteractionAssembly.Result`, reports
+   `terminalWidgetSlot()` for that slot, and supplies **slot views** (surface
+   container, scroll overlay, chrome targets for that slot).
+3. One `TerminalWidgetCompositionAssembly.compose(TerminalWidgetSlotId, interaction, widgetResult)` per
    instance → `TerminalWidgetInstance`.
 
 **Global harness** (single app-shell drawer, one `UserlandSessionCoordinator`,
@@ -109,7 +112,7 @@ session switching.
 Current shape markers (for hygiene tracking, not hard limits):
 
 - `selection/SelectionController.java`: `1066` lines (monolithic by design for now)
-- `ZideActivity.java`: `683` lines
+- `ZideActivity.java`: `691` lines
 - `input/ShellInputView.java`: `587` lines
 - `userland/UserlandInstaller.java`: `425` lines
 - `host/ui/WidgetAssembly.java`: `320` lines
@@ -118,11 +121,11 @@ Current shape markers (for hygiene tracking, not hard limits):
 - `host/ui/ChromeController.java`: `221` lines
 - `host/runtime/RuntimeHostCallbacks.java`: `170` lines
 - `host/ui/UiStartupCallbacks.java`: `168` lines
-- `host/status/StatusViewAssembly.java`: `161` lines
+- `host/status/StatusViewAssembly.java`: `194` lines
 
 | File | Contract Fit | Size/Shape | Next Pressure |
 | --- | --- | --- | --- |
-| `ZideActivity.java` | Good | Wiring-oriented Android entrypoint. JNI declarations remain out; startup null-guards are aggregated in `ProductHostStartupBundle`; `ActivityViewBindings` supplies app-shell view refs to `WidgetAssembly.Host`; terminal instance is `TerminalWidgetCompositionAssembly.compose` after `InteractionAssembly` + `WidgetAssembly` (order: interaction → userland/session → widget → compose + assign chrome from `WidgetAssembly.Result`). | Keep activity orchestration-only; route any new behavior into the owning host/controller seam instead of adding policy here. |
+| `ZideActivity.java` | Good | Wiring-oriented Android entrypoint. JNI declarations remain out; startup null-guards are aggregated in `ProductHostStartupBundle`; `ActivityViewBindings` comes from `StatusViewAssembly.Result.activityViewBindings` (single `findViewById` capture); `WidgetAssembly.Host` + `InteractionAssembly.Host` expose `TerminalWidgetSlotId`; terminal instance is `TerminalWidgetCompositionAssembly.compose(PRIMARY, …)` after `InteractionAssembly` + `WidgetAssembly` (order: interaction → userland/session → widget → compose + assign chrome from `WidgetAssembly.Result`). | Keep activity orchestration-only; route any new behavior into the owning host/controller seam instead of adding policy here. |
 | `NativeBridge.java` | Good | Owns JNI library load state and native bridge declarations for the terminal host. | Keep this focused on JNI surface only; do not move Android policy or lifecycle behavior into it. |
 | `debug/AndroidDebugFormatter.java` | Good | Pure formatter plus snapshot values. Large constructor surface is acceptable for debug-only snapshots. | Split snapshot values only if formatter starts owning state or capture policy. |
 | `debug/NativeStatusLabels.java` | Good | Owns native status-enum label mapping for debug/operator text. | Keep as pure mapping; avoid embedding behavior/policy. |
@@ -152,12 +155,13 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/input/InputChromeStartupForwards.java` | Good | Null-guard forwards for hardware keyboard, IME focus recovery, chrome modifier latch. | Delegation-only. |
 | `host/status/StatusTelemetryStartupForwards.java` | Good | Null-guard forwards into `StatusController` for package-doctor / operator telemetry (status ownership, not debug UI). | Delegation-only. |
 | `host/ui/TerminalWidgetInstance.java` | Good | Immutable bundle of one terminal widget’s surface + selection + gesture controller refs for harness hosting. | Do not fold app-shell or userland orchestration into this type. |
-| `host/ui/TerminalWidgetCompositionAssembly.java` | Good | Harness-owned join of `InteractionAssembly.Result` + `WidgetAssembly.Result` into `TerminalWidgetInstance` only; shell/chrome/view-mode refs stay on `WidgetAssembly.Result`. Not tab/multi-instance policy. | Keep `WidgetAssembly.Result` as widget/chrome output; instance join stays here, not on `WidgetAssembly.Result` alone. |
+| `host/ui/TerminalWidgetSlotId.java` | Good | Compile-visible terminal widget slot identity (`PRIMARY` only today). | Extend with new enum values when multi-slot hosting lands; tab product behavior stays out of this type. |
+| `host/ui/TerminalWidgetCompositionAssembly.java` | Good | Harness-owned join of `InteractionAssembly.Result` + `WidgetAssembly.Result` into `TerminalWidgetInstance` only; `compose` takes `TerminalWidgetSlotId` first; shell/chrome/view-mode refs stay on `WidgetAssembly.Result`. Not tab/multi-instance policy. | Keep `WidgetAssembly.Result` as widget/chrome output; instance join stays here, not on `WidgetAssembly.Result` alone. |
 | `host/userland/WorkflowInstallStartupGlue.java` | Good | Install completion state transitions + runtime restart delegation. | Keep install orchestration thin; low-level extraction stays in `UserlandInstaller`. |
-| `host/ui/ActivityViewBindings.java` | Good | Owns raw activity view lookup and typed binding capture for terminal host wiring; `ZideActivity` holds one instance for `WidgetAssembly.Host` view delegates. | Keep this as lookup-only data binding; no policy or runtime behavior. |
+| `host/ui/ActivityViewBindings.java` | Good | Owns raw activity view lookup and typed binding capture for terminal host wiring; `StatusViewAssembly.Result` exposes the authoritative `activityViewBindings` for activity wiring. | Keep this as lookup-only data binding; no policy or runtime behavior. |
 | `host/ui/ChromeFactory.java` | Good | Owns chrome-specific bridge/callback construction so chrome assembly does not inflate the generic host assembler. | Keep this construction-only; do not move chrome behavior out of `host/ui/ChromeController`. |
 | `host/interaction/InteractionFactory.java` | Good | Owns selection/gesture interaction controller construction so interaction seams stay out of the generic host assembler. | Keep this construction-only; interaction behavior remains in selection/gesture controllers. |
-| `host/interaction/InteractionAssembly.java` | Good | Owns interaction controller assembly wiring (selection + gesture state) for activity startup. | Keep this assembly-only; behavior stays in interaction controllers. |
+| `host/interaction/InteractionAssembly.java` | Good | Owns interaction controller assembly wiring (selection + gesture state) for activity startup; `Host` carries `TerminalWidgetSlotId`. | Keep this assembly-only; behavior stays in interaction controllers. |
 | `host/interaction/InteractionCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/interaction/InteractionAssembly`. | Keep adapter-only; avoid moving interaction behavior into this adapter. |
 | `host/input/InputFactory.java` | Good | Owns hardware-keyboard and IME-focus-recovery controller construction so input seams stay out of generic host assembly. | Keep this construction-only; input behavior remains in `input/` controllers. |
 | `host/input/InputAssembly.java` | Good | Owns input-view installation and input-controller assembly composition for the activity wiring layer. | Keep this assembly-only; input behavior remains in `input/` controllers. |
@@ -169,7 +173,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/session/SessionFactory.java` | Good | Owns shell-session and userland-session host bridge construction so session seams stay out of generic host assembly. | Keep this construction-only; session behavior remains in session/userland coordinators. |
 | `host/session/SessionAssembly.java` | Good | Owns session/runtime wiring assembly that composes session and runtime host factories for activity use. | Keep this assembly-only; business behavior stays in session/runtime controllers. |
 | `host/session/SessionAssemblyCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/session/SessionAssembly`. | Keep adapter-only; avoid adding session/runtime behavior here. |
-| `host/status/StatusViewAssembly.java` | Good | Owns initial view binding plus status/viewport host assembly for activity wiring. | Keep this assembly-only; status logging and viewport policy remain in dedicated controllers. |
+| `host/status/StatusViewAssembly.java` | Good | Owns initial view binding plus status/viewport host assembly for activity wiring; `Result.activityViewBindings` is the single capture reused by `ZideActivity`. | Keep this assembly-only; status logging and viewport policy remain in dedicated controllers. |
 | `host/status/StatusViewCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/status/StatusViewAssembly`. | Keep adapter-only; avoid moving status/viewport behavior into this adapter. |
 | `host/ui/WidgetAssembly.java` | Good | Owns product widget/chrome/view-mode/surface host assembly so activity wiring no longer inlines those construction seams. | Keep this assembly-only; behavior remains in dedicated controllers/bridges. |
 | `host/ui/WidgetCallbacks.java` | Removed | Adapter seam was removed; `WidgetAssembly.Host` is now provided directly by `ZideActivity`. | Keep `WidgetAssembly` assembly-only; avoid recreating large pass-through adapters unless they remove measurable coupling. |
