@@ -46,6 +46,7 @@ Flow:
 8. After gate acceptance, Architect must immediately:
    - refocus queue + handoff docs to the next milestone/batch
    - produce a new engineer handoff prompt aligned to that refocus
+   - ensure queue, handoff, and engineer entrypoint all point to the same active milestone so users do not need to restate workflow mechanics
 
 Mode discipline:
 

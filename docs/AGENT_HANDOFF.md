@@ -6,10 +6,28 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android stabilization follow-through** (`ASF`) — follows post-refocus / AX matrix work; targets operator-verified closure of remaining RF_M5 matrix gaps (IME/assist, touch gestures).
-- Current milestone: `ASF-M3` (`pending`, campaign closeout or escalation)
+- Current milestone: `ASF-M3` (`in_progress`, campaign closeout or escalation)
 - Prior closed: `ASF-M2` (matrix verdicts: IME/gesture **blocked** pending operator evidence); `ASF-M1`; `AX-M5`; `AX-M4`
 - Active queue authority: `docs/todo/android/implementation.md`
 - Engineer entrypoint (dual mode): `docs/todo/android/ENGINEER_ENTRYPOINT.md`
+
+## Dual Session Startup (Copy/Paste)
+
+Architect session seed:
+
+- Read `docs/todo/android/implementation.md` first.
+- Confirm the milestone marked `in_progress`.
+- Define the next bounded engineer batch from that milestone only.
+- Publish an engineer prompt that uses the response contract and stop rules in
+  `docs/todo/android/ENGINEER_ENTRYPOINT.md`.
+
+Engineer session seed:
+
+- Read `docs/todo/android/ENGINEER_ENTRYPOINT.md`, then
+  `docs/todo/android/implementation.md`, then this handoff file.
+- Execute only the milestone marked `in_progress` in
+  `docs/todo/android/implementation.md`.
+- Stop only on blocker or milestone gate; report using required headers.
 
 ## First Read Order
 

@@ -96,6 +96,14 @@ Architect gate-closure rule (mandatory):
   3. issue a fresh engineer handoff prompt aligned to the refocused docs
 - Do not leave the lane in "accepted but idle" state when clear next work exists.
 
+Dual-session handover packet (mandatory after refocus):
+
+- Architect must publish three aligned artifacts:
+  1. active milestone in `docs/todo/**/implementation.md` marked `in_progress`
+  2. matching milestone line in `docs/AGENT_HANDOFF.md`
+  3. engineer execution contract in the lane entrypoint doc
+- Users should not need to restate workflow mechanics when these three are aligned.
+
 Dual-mode cadence rule:
 
 - Prefer macro review chunks over per-milestone pauses.

@@ -65,6 +65,15 @@ Milestone boundary line:
 
 `Milestone reached per docs, architect review required.`
 
+New dual-session handover contract:
+
+- After each accepted gate, Architect must immediately set the next active milestone here.
+- Engineer session start prompt must reference only:
+  - `docs/todo/android/implementation.md`
+  - `docs/AGENT_HANDOFF.md`
+  - `docs/todo/android/ENGINEER_ENTRYPOINT.md`
+- No milestone is considered active unless it is marked `in_progress` in this file.
+
 Validation commands:
 
 - `./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac`
@@ -551,7 +560,7 @@ Scope:
 
 Tasks:
 
-- [x] collect operator evidence for runbook §A and §B (device, Android version, date, pass/fail notes)
+- [x] attempt operator evidence ingest for runbook §A and §B and record received/not-received status with date/owner
 - [x] replace `cannot-verify` placeholders in IME/assist and gesture rows with explicit verdicts or blocked-with-reason + owner/date
 - [x] add short verdict summary in `docs/todo/android/implementation.md` checkpoint (what is now closed vs still blocked)
 
@@ -574,7 +583,7 @@ Progress checkpoint:
 
 ---
 
-### `ASF-M3` Campaign closeout or escalation (`pending`)
+### `ASF-M3` Campaign closeout or escalation (`in_progress`)
 
 Queue line (exact):
 
@@ -592,6 +601,11 @@ Tasks:
 Gate:
 
 - handoff and queue explicitly agree on closed/ongoing status and next active milestone
+
+Execution note:
+
+- This milestone is architect-owned docs work; engineer executes only explicitly
+  queued doc updates.
 
 ## Guardrails
 

@@ -10,6 +10,7 @@ Execution-only brief for the engineer session.
 - User: product direction and approval
 
 Do not redefine scope or reorder tickets.
+Do not ask user to restate workflow rules already defined in these docs.
 
 ## Vision + Authority
 
@@ -32,6 +33,11 @@ Do not redefine scope or reorder tickets.
 ## Ticket Plan
 
 Follow the **active milestone** section in `docs/todo/android/implementation.md` sequentially. Older RF-M1 ticket allowlists in this file are historical; do not use stale file lists if they conflict with the current milestone in the queue.
+
+Determinism rule:
+
+- If this file, handoff, and queue disagree, the queue (`implementation.md`)
+  wins for active milestone/scope and the engineer must report the mismatch.
 
 ## Review Cadence (Macro, Mandatory)
 
