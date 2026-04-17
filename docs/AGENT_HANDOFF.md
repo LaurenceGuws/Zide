@@ -6,8 +6,8 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android harness/widget portability hardening** (`AHW`) — turns the refocus vision into enforceable code shape: Android Harness is the platform/app-shell canvas, Terminal Widget is the portable terminal consumer, and userland stays movable for future IDE/editor modes.
-- Completed macro batch (engineer): `AHW-B5` — host API slim + tab-ready contract docs; **architect review pending** at super-gate (`docs/todo/android/implementation.md`).
-- Prior closed/escalated: `AHW-B4` accepted; `AHW-B3` accepted; `AHW-B2` accepted; `AHW-B1` accepted; `ASF-M3` escalated remaining IME/assist and touch-gesture matrix rows to operator evidence; `ASF-M2`; `ASF-M1`; `AX-M5`; `AX-M4`
+- Active macro batch: `AHW-B6` — slot-scoped host API foundation with single-slot behavior preserved.
+- Prior closed/escalated: `AHW-B5` accepted; `AHW-B4` accepted; `AHW-B3` accepted; `AHW-B2` accepted; `AHW-B1` accepted; `ASF-M3` escalated remaining IME/assist and touch-gesture matrix rows to operator evidence; `ASF-M2`; `ASF-M1`; `AX-M5`; `AX-M4`
 - Active queue authority: `docs/todo/android/implementation.md`
 - Engineer entrypoint (dual mode): `docs/todo/android/ENGINEER_ENTRYPOINT.md`
 
@@ -24,8 +24,8 @@ Engineer session seed:
 
 - Read `docs/todo/android/ENGINEER_ENTRYPOINT.md`, then
   `docs/todo/android/implementation.md`, then this handoff file.
-- After Architect accepts `AHW-B5`, read the queue for the next `in_progress` macro batch only.
-- Engineer stops at `AHW-B5` super-gate until Architect refocuses the queue.
+- Execute only the macro batch marked `in_progress`: `AHW-B6`.
+- Stop at the `AHW-B6` super-gate and report the review packet.
 
 ## First Read Order
 
@@ -48,16 +48,17 @@ Engineer session seed:
 - Architect updates use: `Blocked by humain review needed: true|false`.
 - Engineer updates use: `Blocked by Archtect review needed: true|false`.
 
-## AHW-B5 outcomes (engineer; Architect acceptance pending)
+## AHW-B6 review findings from AHW-B5
 
-- `TerminalWidgetCompositionAssembly.compose` returns `TerminalWidgetInstance` only; `ZideActivity` assigns shell/chrome/view-mode from `WidgetAssembly.Result` next to compose (no duplicate composition `Result` type).
-- `ActivityViewBindings` centralizes app-shell view refs for `WidgetAssembly.Host` delegates.
-- Tab-ready multi-terminal **host** API is documented in `ANDROID_JAVA_HOST_STRUCTURE.md` (contract only); userland scope for multi-surface is noted in `USERLAND_HOST_CONTRACT.md`.
-- Do not implement tabs, tab persistence, or multi-instance product behavior without a new queue batch.
+- `AHW-B5` is accepted.
+- `TerminalWidgetCompositionAssembly.compose` returning `TerminalWidgetInstance` only is the correct ownership shape.
+- Reading shell/chrome/view-mode from `WidgetAssembly.Result` in `ZideActivity` next to `compose` is acceptable and should remain unless a cleaner owner seam appears.
+- Duplicate `ActivityViewBindings.from(...)` lookup in startup flow is non-blocking but should be removed in this batch.
+- This batch should make slot identity compile-visible in host APIs without implementing tabs or multi-instance product behavior.
 
 ## Operator Evidence Escalation
 
-ASF did not prove IME/assist or touch gestures because no operator packets were delivered. Those rows remain parked in `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md` with owner `operator`; they do not block `AHW-B5` unless new evidence reports a regression inside the active code scope.
+ASF did not prove IME/assist or touch gestures because no operator packets were delivered. Those rows remain parked in `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md` with owner `operator`; they do not block `AHW-B6` unless new evidence reports a regression inside the active code scope.
 
 ## Historical Notes
 

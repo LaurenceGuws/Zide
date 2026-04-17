@@ -108,8 +108,8 @@ Dual-mode batching override (architect directive):
 - Completed macro batch: `AHW-B2` (accepted by Architect; package/status and widget-instance follow-ups queued in `AHW-B3`).
 - Completed macro batch: `AHW-B3` (accepted by Architect; composition seam follow-up queued in `AHW-B4`).
 - Completed macro batch: `AHW-B4` (accepted by Architect; host API slimming follow-up queued in `AHW-B5`).
-- Completed macro batch: `AHW-B5` (architect review at super-gate; host API slim + tab-ready contract docs).
-- Active macro batch: set by Architect after `AHW-B5` acceptance.
+- Completed macro batch: `AHW-B5` (accepted by Architect; slot-scoped host API follow-up queued in `AHW-B6`).
+- Active macro batch: `AHW-B6` (slot-scoped host API foundation, single-slot behavior preserved).
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -1473,7 +1473,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B5` Terminal widget host API slimming + tab-ready contract (`completed_in_batch`)
+### `AHW-B5` Terminal widget host API slimming + tab-ready contract (`completed`)
 
 Batch queue line (exact):
 
@@ -1609,7 +1609,144 @@ Progress checkpoint:
 Architect review verdict:
 
 - `Review chunk: AHW-B5`
-- `Verdict: pending`
+- `Verdict: accepted`
+- `Commits reviewed: 55234e05, bf783573`
+- `Architect validation spot-check: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
+- `Engineer device validation accepted: deploy + AndroidRuntime:E smoke + cold start pass`
+- `Findings carried forward: TerminalWidgetCompositionAssembly.compose returning TerminalWidgetInstance only is the correct ownership cut. ZideActivity reading shell/chrome/view-mode from WidgetAssembly.Result at the compose callsite is acceptable long-term. ActivityViewBindings duplicate lookup through StatusViewAssembly is non-blocking and should be cleaned up in B6 as wiring hygiene.`
+
+`Milestone reached per docs, architect review required.`
+
+---
+
+### `AHW-B6` Slot-scoped host API foundation (`in_progress`)
+
+Batch queue line (exact):
+
+- introduce slot-scoped host API seams for terminal widget composition while preserving single-slot runtime behavior
+
+Batch purpose:
+
+- convert tab-ready vocabulary from docs into compile-enforced host APIs
+- keep ownership clean: harness owns slot orchestration, widget owns per-slot terminal seams
+- reduce startup wiring duplication where it does not change behavior
+- preserve current single-terminal product behavior
+
+Batch scope:
+
+- Java Android terminal host only, plus authority docs needed to keep contract truth current
+- primary code root:
+  `android/terminal-host/app/src/main/java/uk/laurencegouws/terminal/**`
+- allowed docs:
+  `docs/todo/android/implementation.md`,
+  `docs/todo/android/ENGINEER_ENTRYPOINT.md`,
+  `docs/AGENT_HANDOFF.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_NAMING_CONTRACT.md`,
+  `app_architecture/platform/android/USERLAND_HOST_CONTRACT.md`
+
+Batch non-goals:
+
+- no terminal tabs UI/product behavior
+- no tab persistence/session switching
+- no terminal-core or shared-renderer changes
+- no selection/IME/gesture behavior changes except compile-preserving seam rewiring
+- no app-shell UI redesign
+- no debug-view UI resurrection
+- no broad rename sweep
+- no ASF operator-evidence churn unless new evidence arrives
+
+Batch super-gate:
+
+- slot identity is expressed in host-side API seams where future multi-terminal hosting needs it
+- single-slot runtime behavior stays unchanged
+- no duplicate owner fields are introduced for shell/chrome/view-mode/widget seams
+- `StatusViewAssembly` and `ZideActivity` avoid redundant view-binding lookup if ownership stays clear
+- docs reflect the final ownership and naming shape
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass at final seam boundary
+
+Internal milestone cadence:
+
+- Engineer executes `AHW6-M1` through `AHW6-M6` sequentially.
+- Do not stop for architect review between internal milestones.
+- Mark each internal milestone complete in this file as it lands.
+- Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
+  the `AHW-B6` super-gate is reached.
+
+### `AHW6-M1` Slot seam audit in code (`pending`)
+
+Queue line (exact):
+
+- map current single-slot assumptions across composition, widget host assembly, and activity wiring seams
+
+Acceptance:
+
+- identify exact method/class seams that need slot identity
+- record which seams remain global harness state and which are per-slot
+- no behavior change required in this audit slice
+
+### `AHW6-M2` Binding lookup dedupe (`pending`)
+
+Queue line (exact):
+
+- remove duplicate ActivityViewBindings lookup while keeping StatusViewAssembly ownership clean
+
+Acceptance:
+
+- one authoritative `ActivityViewBindings` capture per startup path
+- no additional `findViewById` fan-out from activity wiring code
+- compile debug + release Java after code changes
+
+### `AHW6-M3` Slot-scoped type introduction (`pending`)
+
+Queue line (exact):
+
+- introduce a harness-owned slot identity type for terminal widget host APIs (single slot only for now)
+
+Acceptance:
+
+- add a slot identity type and use it where composition/host seams benefit
+- keep single-slot runtime path and startup order unchanged
+- do not implement tab behavior, persistence, or switching
+- compile debug + release Java after code changes
+
+### `AHW6-M4` Apply slot identity to composition/wiring seams (`pending`)
+
+Queue line (exact):
+
+- thread slot identity through composition and relevant host wiring seams without changing runtime behavior
+
+Acceptance:
+
+- composition and wiring signatures become slot-aware where future multi-terminal hosting requires it
+- no behavior drift in selection, gesture, surface, input, session, or runtime flows
+- compile debug + release Java after code changes
+
+### `AHW6-M5` Authority docs refresh (`pending`)
+
+Queue line (exact):
+
+- update structure, naming, and userland host authority for slot-scoped host APIs
+
+Acceptance:
+
+- structure and naming docs reflect slot-scoped API ownership precisely
+- userland contract remains movable and slot-agnostic where required
+- handoff and entrypoint still point at `AHW-B6` until the super-gate
+
+### `AHW6-M6` Batch validation + review packet (`pending`)
+
+Queue line (exact):
+
+- validate AHW-B6 end-to-end and publish the architect review packet
+
+Acceptance:
+
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
+- cold start smoke pass when a device is available
+- engineer reports the full super-gate packet and stops for Architect review
 
 `Milestone reached per docs, architect review required.`
 

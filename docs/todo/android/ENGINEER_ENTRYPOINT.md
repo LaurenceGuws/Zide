@@ -34,16 +34,17 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B5` is at **super-gate** pending Architect acceptance. Queue and validation
-live in `docs/todo/android/implementation.md` under `AHW-B5`.
+`AHW-B6` is `in_progress`: slot-scoped host API foundation while preserving
+single-slot runtime behavior.
 
-The Architect refocuses this entrypoint after acceptance; do not start the next
-macro batch until the queue marks one `in_progress`.
+Batch queue line (exact):
+
+- introduce slot-scoped host API seams for terminal widget composition while preserving single-slot runtime behavior
 
 ## Core Boundary Rule
 
-The batch exists to keep the `AHW-B4` composition seam lean and make future
-multiple terminal widgets possible through host contracts, not product behavior.
+The batch exists to make slot identity compile-visible in host seams while
+keeping current single-slot behavior unchanged.
 
 - Android Harness owns platform ceremony, app-shell layout/styling/theming,
   navigation/view state, userland orchestration, and widget instance hosting.
@@ -57,18 +58,31 @@ multiple terminal widgets possible through host contracts, not product behavior.
 - `WidgetAssembly.Result` remains widget/chrome assembly output; it is not the
   terminal-instance factory by itself.
 
-## Required Direction From Architect Review (AHW-B5 baseline)
+## Required Direction From Architect Review (AHW-B6 baseline)
 
-- `TerminalWidgetCompositionAssembly.compose` returns `TerminalWidgetInstance`
-  only; shell/chrome/view-mode outputs remain on `WidgetAssembly.Result`.
-- `applyTerminalWidgetComposition` stays assignment-only on `ZideActivity`.
-- Tab-ready contract is documented in `ANDROID_JAVA_HOST_STRUCTURE.md`; no tab
-  product behavior is implemented.
+- `AHW-B5` is accepted.
+- `TerminalWidgetCompositionAssembly.compose` remains `TerminalWidgetInstance`
+  only; shell/chrome/view-mode outputs stay on `WidgetAssembly.Result`.
+- `ZideActivity` reading widget shell/chrome/view-mode next to `compose` is
+  acceptable; do not introduce a second owner bundle without a clear win.
+- Remove duplicate `ActivityViewBindings.from(...)` lookup if ownership remains
+  clean.
+- Make slot identity explicit in host APIs where future multi-terminal hosting
+  needs it, but do not implement tab product behavior.
 
 ## Internal Milestones
 
-`AHW5-M1` through `AHW5-M6` are recorded in `docs/todo/android/implementation.md`
-under `AHW-B5`.
+Execute in order and mark progress in `docs/todo/android/implementation.md`.
+
+- `AHW6-M1`: audit single-slot assumptions across composition, widget host, and
+  activity wiring seams.
+- `AHW6-M2`: remove duplicate `ActivityViewBindings` lookup while keeping
+  ownership clean.
+- `AHW6-M3`: introduce a harness-owned slot identity type for host APIs
+  (single slot only for now).
+- `AHW6-M4`: thread slot identity through composition/wiring seams where needed.
+- `AHW6-M5`: update structure/naming/userland host authority docs.
+- `AHW6-M6`: run validation and publish the super-gate review packet.
 
 ## Allowed Work
 
@@ -156,7 +170,7 @@ when:
 - a behavior change is required where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
 - implementing terminal tabs/product behavior becomes necessary to proceed
-- the `AHW-B5` super-gate is reached
+- the `AHW-B6` super-gate is reached
 
 Otherwise continue autonomously with:
 
@@ -164,9 +178,9 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At `AHW-B5` super-gate, report:
+At `AHW-B6` super-gate, report:
 
-- review chunk name: `AHW-B5`
+- review chunk name: `AHW-B6`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs
