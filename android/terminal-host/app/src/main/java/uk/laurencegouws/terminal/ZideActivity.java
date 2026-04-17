@@ -12,7 +12,6 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
-import uk.laurencegouws.terminal.debug.AndroidDebugFormatter;
 import uk.laurencegouws.terminal.debug.StatusController;
 import uk.laurencegouws.terminal.debug.SurfaceStateSnapshotReader;
 import uk.laurencegouws.terminal.gesture.GestureStateController;
@@ -153,14 +152,14 @@ public final class ZideActivity extends Activity
     @Override
     protected void onStart() {
         super.onStart();
-        notifyLifecycleStart();
+        terminalActivityLifecycleController.onStart();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         final LifecycleDebugIntentArgs debugArgs = LifecycleDebugIntentArgs.fromIntent(getIntent());
-        notifyLifecycleResume(
+        terminalActivityLifecycleController.onResume(
                 debugArgs.recreateSurfaceOnce,
                 debugArgs.resizeSurfaceOnce,
                 debugArgs.startShellOnce);
@@ -175,20 +174,20 @@ public final class ZideActivity extends Activity
 
     @Override
     protected void onPause() {
-        notifyLifecyclePause();
+        terminalActivityLifecycleController.onPause();
         super.onPause();
     }
 
     @Override
     protected void onStop() {
-        notifyLifecycleStop();
+        terminalActivityLifecycleController.onStop();
         super.onStop();
     }
 
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
-        notifyLifecycleWindowFocusChanged(hasFocus);
+        terminalActivityLifecycleController.onWindowFocusChanged(hasFocus);
     }
 
     @Override
@@ -196,7 +195,7 @@ public final class ZideActivity extends Activity
         if (handleHardwareDispatchKeyEventIfReady(event)) {
             return true;
         }
-        return dispatchKeyEventToSuper(event);
+        return super.dispatchKeyEvent(event);
     }
 
     private void initializeStatusAndViewControllers() {
@@ -234,7 +233,11 @@ public final class ZideActivity extends Activity
                 () -> imeVisible,
                 this::setImeVisible,
                 () -> surfaceHostBridge,
-                this::notifyVisibleViewportIfReady,
+                reason -> {
+                    if (surfaceHostController != null) {
+                        surfaceHostController.notifyVisibleViewport(reason);
+                    }
+                },
                 () -> currentInstallState,
                 () -> currentReadinessState);
     }
@@ -259,7 +262,7 @@ public final class ZideActivity extends Activity
                 this::stopScrollbackFlingIfReady,
                 this::refreshScrollOverlayIfReady,
                 this::reevaluateFrameLoopIfReady,
-                this::appendEvent);
+                StatusController::appendEvent);
     }
 
     private void installInputControllers() {
@@ -281,8 +284,8 @@ public final class ZideActivity extends Activity
                 () -> imeVisible,
                 this::setImeVisible,
                 this::refreshScrollOverlayIfReady,
-                this::updateStatus,
-                this::appendEvent);
+                StatusController::updateStatus,
+                StatusController::appendEvent);
     }
 
     private void assembleWidgetHostControllers() {
@@ -328,18 +331,30 @@ public final class ZideActivity extends Activity
                 () -> currentInstallState,
                 this::shouldRunFrameLoop,
                 this::refreshScrollOverlayIfReady,
-                this::appendEvent,
-                this::updateStatus,
+                StatusController::appendEvent,
+                StatusController::updateStatus,
                 () -> terminalViewportController.productViewportHeightPx(),
                 this::reevaluateFrameLoopIfReady,
                 () -> userlandWorkflowController.runPackageDoctor(),
                 this::sendDirectText,
-                this::notifyVisibleViewportIfReady,
-                this::refreshUserlandSessionIfReady,
-                this::callNative,
-                this::callNativeWithSurfaceState,
+                reason -> {
+                    if (surfaceHostController != null) {
+                        surfaceHostController.notifyVisibleViewport(reason);
+                    }
+                },
+                () -> {
+                    if (userlandSessionCoordinator != null) {
+                        userlandSessionCoordinator.refreshAndApply(false);
+                    }
+                },
+                StatusController::callNative,
+                StatusController::callNativeWithSurfaceState,
                 () -> SurfaceStateSnapshotReader.read(),
-                this::handleShellStateEventIfReady);
+                statusLabel -> {
+                    if (terminalRuntimeController != null) {
+                        terminalRuntimeController.handleShellStateEvent(statusLabel);
+                    }
+                });
     }
 
     private RuntimeAssemblyCallbacks createRuntimeAssemblyCallbacks() {
@@ -348,8 +363,8 @@ public final class ZideActivity extends Activity
                 () -> currentInstallState,
                 this::setCurrentInstallState,
                 () -> currentReadinessState,
-                this::appendEvent,
-                this::updateStatus,
+                StatusController::appendEvent,
+                StatusController::updateStatus,
                 () -> surfaceHostBridge,
                 productReadinessBlocker,
                 terminalScrollOverlay,
@@ -376,11 +391,19 @@ public final class ZideActivity extends Activity
                 this,
                 userlandRelease,
                 handler,
-                this::appendEvent,
-                this::updateStatus,
+                StatusController::appendEvent,
+                StatusController::updateStatus,
                 this::setCurrentReadinessState,
-                this::refreshShellStateIfReady,
-                this::refreshDebugStatusSurfaceIfReady,
+                () -> {
+                    if (terminalRuntimeController != null) {
+                        terminalRuntimeController.refreshShellState();
+                    }
+                },
+                () -> {
+                    if (terminalRuntimeController != null) {
+                        terminalRuntimeController.refreshDebugStatusSurface();
+                    }
+                },
                 this::shouldRunFrameLoop,
                 this::tickFrameAndRefreshScrollOverlay);
     }
@@ -398,14 +421,26 @@ public final class ZideActivity extends Activity
                 handler,
                 () -> userlandRelease,
                 release -> userlandRelease = release,
-                this::appendEvent,
-                this::updateStatus,
+                StatusController::appendEvent,
+                StatusController::updateStatus,
                 packageStatusText,
                 this::setCurrentInstallState,
                 this::setCurrentReadinessState,
-                this::applyInstallStateIfReady,
-                this::restartSessionIfReady,
-                this::showDebugViewIfReady);
+                (installState, statusLabel) -> {
+                    if (terminalRuntimeController != null) {
+                        terminalRuntimeController.applyInstallState(installState, statusLabel);
+                    }
+                },
+                (eventName, statusLabel, logRefresh) -> {
+                    if (terminalRuntimeController != null) {
+                        terminalRuntimeController.restartSession(eventName, statusLabel, logRefresh);
+                    }
+                },
+                (eventName, statusLabel) -> {
+                    if (terminalViewModeController != null) {
+                        terminalViewModeController.showDebugView(eventName, statusLabel);
+                    }
+                });
     }
 
     private void assembleActivityLifecycleController() {
@@ -416,18 +451,37 @@ public final class ZideActivity extends Activity
     private LifecycleCallbacks createLifecycleCallbacks() {
         return new LifecycleCallbacks(
                 createLifecycleHostCallbacks(),
-                this::callNative);
+                StatusController::callNative);
     }
 
     private LifecycleCallbacks.LifecycleHostCallbacks createLifecycleHostCallbacks() {
         return LifecycleCallbacks.LifecycleHostCallbacks.of(
                 () -> nativeLoadError,
-                this::appendEvent,
-                this::updateStatus,
-                this::stopFrameLoopIfReady,
-                this::refreshUserlandSessionIfReady,
-                this::pauseSurfaceIfReady,
-                this::resumeSurfaceIfReady);
+                StatusController::appendEvent,
+                StatusController::updateStatus,
+                () -> {
+                    if (productFrameLoopController != null) {
+                        productFrameLoopController.stop();
+                    }
+                },
+                () -> {
+                    if (userlandSessionCoordinator != null) {
+                        userlandSessionCoordinator.refreshAndApply(false);
+                    }
+                },
+                () -> {
+                    if (surfaceHostController != null) {
+                        surfaceHostController.onPause();
+                    }
+                },
+                (debugRecreateSurfaceOnce, debugResizeSurfaceOnce, debugStartShellOnce) -> {
+                    if (surfaceHostController != null) {
+                        surfaceHostController.onResume(
+                                debugRecreateSurfaceOnce,
+                                debugResizeSurfaceOnce,
+                                debugStartShellOnce);
+                    }
+                });
     }
 
     private void bindAndStartUiControllers() {
@@ -448,8 +502,8 @@ public final class ZideActivity extends Activity
                 () -> currentReadinessState,
                 userlandWorkflowController,
                 userlandSessionCoordinator,
-                this::appendEvent,
-                this::updateStatus,
+                StatusController::appendEvent,
+                StatusController::updateStatus,
                 terminalRuntimeAssetsController,
                 terminalViewModeController,
                 surfaceHostController,
@@ -507,82 +561,10 @@ public final class ZideActivity extends Activity
                 && terminalRuntimeController.shouldRunFrameLoop();
     }
 
-    private void handleShellStateEventIfReady(String statusLabel) {
-        if (terminalRuntimeController != null) {
-            terminalRuntimeController.handleShellStateEvent(statusLabel);
-        }
-    }
-
-    private void notifyVisibleViewportIfReady(String reason) {
-        if (surfaceHostController != null) {
-            surfaceHostController.notifyVisibleViewport(reason);
-        }
-    }
-
-    private void refreshShellStateIfReady() {
-        if (terminalRuntimeController != null) {
-            terminalRuntimeController.refreshShellState();
-        }
-    }
-
-    private void refreshDebugStatusSurfaceIfReady() {
-        if (terminalRuntimeController != null) {
-            terminalRuntimeController.refreshDebugStatusSurface();
-        }
-    }
-
-    private void applyInstallStateIfReady(UserlandInstallState installState, String statusLabel) {
-        if (terminalRuntimeController != null) {
-            terminalRuntimeController.applyInstallState(installState, statusLabel);
-        }
-    }
-
-    private void restartSessionIfReady(String eventName, String statusLabel, boolean logRefresh) {
-        if (terminalRuntimeController != null) {
-            terminalRuntimeController.restartSession(eventName, statusLabel, logRefresh);
-        }
-    }
-
-    private void showDebugViewIfReady(String eventName, String statusLabel) {
-        if (terminalViewModeController != null) {
-            terminalViewModeController.showDebugView(eventName, statusLabel);
-        }
-    }
-
-    private void stopFrameLoopIfReady() {
-        if (productFrameLoopController != null) {
-            productFrameLoopController.stop();
-        }
-    }
-
-    private void refreshUserlandSessionIfReady() {
-        if (userlandSessionCoordinator != null) {
-            userlandSessionCoordinator.refreshAndApply(false);
-        }
-    }
-
     private int tickFrameAndRefreshScrollOverlay() {
         final int tick = nativeLoaded ? NativeBridge.nativeTickFrameBridge() : 0;
         refreshScrollOverlayIfReady();
         return tick;
-    }
-
-    private void pauseSurfaceIfReady() {
-        if (surfaceHostController != null) {
-            surfaceHostController.onPause();
-        }
-    }
-
-    private void resumeSurfaceIfReady(
-            boolean debugRecreateSurfaceOnce,
-            boolean debugResizeSurfaceOnce,
-            boolean debugStartShellOnce) {
-        if (surfaceHostController != null) {
-            surfaceHostController.onResume(
-                    debugRecreateSurfaceOnce,
-                    debugResizeSurfaceOnce,
-                    debugStartShellOnce);
-        }
     }
 
     @Override
@@ -607,17 +589,6 @@ public final class ZideActivity extends Activity
     @Override
     public void onModifierLatchChanged(ShellInputView.Host.ModifierLatchState state) {
         applyModifierLatchIfReady(state);
-    }
-
-    private void callNative(String event, long seq) {
-        StatusController.callNative(event, seq);
-    }
-
-    private void callNativeWithSurfaceState(
-            String event,
-            long seq,
-            AndroidDebugFormatter.SurfaceEventSnapshot state) {
-        StatusController.callNativeWithSurfaceState(event, seq, state);
     }
 
     private boolean canSendDirectInput() {
@@ -652,41 +623,4 @@ public final class ZideActivity extends Activity
         }
     }
 
-    private void notifyLifecycleStart() {
-        terminalActivityLifecycleController.onStart();
-    }
-
-    private void notifyLifecyclePause() {
-        terminalActivityLifecycleController.onPause();
-    }
-
-    private void notifyLifecycleStop() {
-        terminalActivityLifecycleController.onStop();
-    }
-
-    private void notifyLifecycleWindowFocusChanged(boolean hasFocus) {
-        terminalActivityLifecycleController.onWindowFocusChanged(hasFocus);
-    }
-
-    private void notifyLifecycleResume(
-            boolean debugRecreateSurfaceOnce,
-            boolean debugResizeSurfaceOnce,
-            boolean debugStartShellOnce) {
-        terminalActivityLifecycleController.onResume(
-                debugRecreateSurfaceOnce,
-                debugResizeSurfaceOnce,
-                debugStartShellOnce);
-    }
-
-    private boolean dispatchKeyEventToSuper(KeyEvent event) {
-        return super.dispatchKeyEvent(event);
-    }
-
-    private void updateStatus(String state) {
-        StatusController.updateStatus(state);
-    }
-
-    public void appendEvent(String message) {
-        StatusController.appendEvent(message);
-    }
 }

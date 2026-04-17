@@ -253,12 +253,18 @@ Milestone gate contract (mandatory when manager/architect lane is active):
     `assembleStatusViewResult()`, `assembleInteractionControllerResult()`,
     `assembleInputControllerResult()`, and
     `assembleWidgetHostControllerResult()` (behavior preserved).
+  - Completed: `ZideActivity` callback/relay cleanup wave removed relay-only
+    passthrough methods (`appendEvent`/`updateStatus`/native call wrappers,
+    lifecycle forwarders, and several `*IfReady` adapters) by wiring
+    callback constructors directly to owner methods or inline null-guarded
+    lambdas; ownership remained with existing controllers and behavior was
+    preserved.
     - Next: resume primary Java cleanup under Active TODO item 1 by executing a
-      behavior-preserving `ZideActivity` `create*Callbacks()` net
-      simplification wave (remove relay-only callback wiring and reduce
-      constructor/callback pressure while preserving owner boundaries).
-      For this wave, do not add naming-only assembly invocation wrappers; each
-      cut must remove callback relays/constructors or delete pass-through seams.
+      behavior-preserving callback-constructor pressure reduction wave in
+      `host/ui/WidgetCallbacks.java` (remove relay-only callback adapters and
+      simplify constructor/field fan-out without changing ownership).
+      For this wave, do not add naming-only wrappers; each cut must reduce
+      callback or constructor pressure with measurable net simplification.
       Naming pressure rule for this wave: when a touched method/class name can be
       made package-led without losing meaning, prefer dropping redundant
       `Terminal`/`Product` prefixes; keep those terms only where they disambiguate
