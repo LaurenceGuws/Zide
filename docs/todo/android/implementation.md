@@ -34,11 +34,15 @@ and decoupled.
 - Refocus campaign milestones `RF-M0` through `RF-M5` are complete.
 - AX hardening milestones `AX-M1` through `AX-M4` and declaration `AX-M5` are
   complete.
-- **Active campaign:** **Android stabilization follow-through** (`ASF`) — close
-  remaining operator-blocked RF_M5 matrix rows (IME/assist, touch gestures) with
-  reproducible on-device evidence, without breaking harness/widget ownership
-  boundaries. **`ASF-M1` runbook published;** operator pass/fill for
-  cannot-verify rows remains optional follow-up matrix edits.
+- **Escalated campaign:** **Android stabilization follow-through** (`ASF`) —
+  IME/assist and touch-gesture rows are parked on operator evidence in
+  `RF_M5_STABILIZATION_MATRIX.md`; they no longer block engineering work unless
+  new evidence reports a regression inside the active scope.
+- **Active campaign:** **Android harness/widget portability hardening** (`AHW`)
+  — make the refocus vision enforceable in code: Android Harness owns
+  platform/app-shell/userland ceremony, Terminal Widget owns portable terminal
+  interaction/runtime seams, and future IDE/editor modes are not trapped behind
+  Activity-backed coupling.
 
 Iteration detail is intentionally not tracked here. Read code + git history for
 step-level implementation history.
@@ -72,7 +76,10 @@ New dual-session handover contract:
   - `docs/todo/android/implementation.md`
   - `docs/AGENT_HANDOFF.md`
   - `docs/todo/android/ENGINEER_ENTRYPOINT.md`
-- No milestone is considered active unless it is marked `in_progress` in this file.
+- No milestone or macro batch is considered active unless it is marked
+  `in_progress` in this file.
+- Macro batches are allowed to contain multiple internal milestones. In that
+  case the batch, not each internal milestone, is the architect review boundary.
 
 Validation commands:
 
@@ -92,10 +99,13 @@ Dual-mode batching override (architect directive):
 - Completed milestone: `AX-M3` (stabilization matrix refresh; manual validation + docs only).
 - Completed milestone: `AX-M4` (manual interactive matrix completion).
 - Completed milestone: `AX-M5` (next campaign declaration; docs published).
-- Active campaign: **Android stabilization follow-through** (`ASF`).
+- Escalated campaign: **Android stabilization follow-through** (`ASF`).
 - Completed milestone: `ASF-M1` (operator matrix closure — IME + gesture rows).
 - Completed milestone: `ASF-M2` (operator evidence ingest + matrix verdict closure).
-- Active milestone: `ASF-M3` (campaign closeout or escalation).
+- Completed milestone: `ASF-M3` (campaign escalated to operator evidence; engineering lane refocused).
+- Active campaign: **Android harness/widget portability hardening** (`AHW`).
+- Active macro batch: `AHW-B1` (`review_required`; architect review at batch super-gate).
+- Internal milestones `AHW-M1` through `AHW-M5`: `completed_in_batch` (engineer wave landed; Architect owns gate).
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -583,7 +593,7 @@ Progress checkpoint:
 
 ---
 
-### `ASF-M3` Campaign closeout or escalation (`in_progress`)
+### `ASF-M3` Campaign closeout or escalation (`completed`)
 
 Queue line (exact):
 
@@ -595,8 +605,8 @@ Scope:
 
 Tasks:
 
-- [ ] if ASF-M2 closes all critical rows, mark ASF complete and declare next campaign
-- [ ] if unresolved blockers remain, publish escalation milestone with owner and acceptance bar
+- [x] evaluate whether ASF-M2 closes all critical rows (it does not; operator-owned blockers remain)
+- [x] if unresolved blockers remain, publish escalation milestone with owner and acceptance bar
 
 Gate:
 
@@ -604,8 +614,312 @@ Gate:
 
 Execution note:
 
-- This milestone is architect-owned docs work; engineer executes only explicitly
-  queued doc updates.
+- ASF is escalated, not product-complete: IME/assist and touch-gesture rows
+  remain parked on operator evidence in `RF_M5_STABILIZATION_MATRIX.md`.
+- Owner: operator.
+- Acceptance bar: dated operator packet with device model, Android version,
+  runbook §A/§B pass/fail notes, and any `AndroidRuntime:E` lines if present.
+- Engineering lane is refocused to `AHW-B1`; do not spend more engineering
+  cycles on ASF paperwork unless operator evidence arrives or a regression is
+  reported inside active code scope.
+
+Progress checkpoint:
+
+- `Milestone: ASF-M3 completed`
+- `Queue line (exact): decide ASF campaign closeout status and publish next campaign entrypoint`
+- `Scope contract: architect-owned docs refocus only; no Android code`
+- `Progress delta: ASF escalated remaining IME/assist + gesture evidence to operator owner; active engineering campaign refocused to AHW-B1 with macro review cadence`
+- `Validation: N/A (docs-only architect refocus)`
+- `Blocked by humain review needed: false`
+
+`Milestone reached per docs, architect review required.`
+
+---
+
+## Active Campaign: `AHW` Android Harness/Widget Portability Hardening
+
+Campaign purpose:
+
+- turn `refocus_android.txt` and
+  `app_architecture/platform/android/ANDROID_REFOCUS_CASE_STUDY.md` into
+  enforceable code shape
+- keep Android Harness as the platform/app-shell/userland canvas
+- keep Terminal Widget portable and reusable outside the current Activity shell
+- keep userland movable for future IDE/editor Zig modes
+
+Architect intent:
+
+- this is a large autonomous engineer stretch, not a per-milestone pause loop
+- expected review size: 30-50 coherent commits if code reality supports that
+- each commit should be small enough to review but the architect review happens
+  at the macro-batch super-gate
+- if a cut cannot be split without a broken tree or compatibility shim, land it
+  as one atomic validated commit
+
+### `AHW-B1` Harness backbone + widget portability macro batch (`review_required`)
+
+Batch queue line (exact):
+
+- remove remaining Android Activity/backbone pressure from terminal widget and userland seams while preserving runtime behavior
+
+Batch scope:
+
+- Java Android terminal host only, plus docs needed to keep authority current
+- primary code root:
+  `android/terminal-host/app/src/main/java/uk/laurencegouws/terminal/**`
+- allowed resource roots when needed:
+  `android/terminal-host/app/src/main/res/layout/activity_main.xml`,
+  `android/terminal-host/app/src/main/res/values/colors.xml`,
+  `android/terminal-host/app/src/main/res/values/strings.xml`
+- allowed docs:
+  `docs/todo/android/implementation.md`,
+  `docs/todo/android/ENGINEER_ENTRYPOINT.md`,
+  `docs/AGENT_HANDOFF.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_NAMING_CONTRACT.md`,
+  `app_architecture/platform/android/USERLAND_HOST_CONTRACT.md`
+
+Batch non-goals:
+
+- no terminal-core behavior changes
+- no shared renderer/backend refactor unless an Android seam cannot be made
+  honest without escalating to Architect
+- no debug-view UI resurrection
+- no CI/pipeline/lint ceremony
+- no broad mechanical rename sweep outside a named internal milestone
+- no ASF operator-evidence churn unless new evidence arrives
+
+Batch super-gate:
+
+- `ZideActivity` is materially closer to Android entrypoint/wiring only
+- harness-owned app-shell/userland contracts no longer leak widget/runtime
+  policy names for convenience
+- widget-owned surface/input/interaction contracts no longer depend on
+  app-shell/userland/navigation assumptions
+- userland package remains free of widget/surface/controller dependencies
+- `ANDROID_JAVA_HOST_STRUCTURE.md` and naming contract reflect the final shape
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass at final seam boundary
+- engineer reports review packet using the exact response contract
+
+Internal milestone cadence:
+
+- Engineer executes `AHW-M1` through `AHW-M5` sequentially.
+- Do not stop for architect review between internal milestones.
+- Mark each internal milestone complete in this file as it lands.
+- Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
+  the `AHW-B1` super-gate is reached.
+
+### `AHW-M1` Activity backbone pressure audit + first extractions (`completed_in_batch`)
+
+Queue line (exact):
+
+- reduce `ZideActivity` to entrypoint and wiring by moving remaining behavior into existing owner seams
+
+Scope:
+
+- `ZideActivity.java`
+- existing `host/**` assemblies, factories, controllers, and callback adapters
+- docs updates to Java host structure only when ownership actually changes
+
+Tasks:
+
+- [x] audit `ZideActivity` methods for remaining behavior/policy ownership
+- [x] move behavior into the current owning controller/assembly without adding
+  pass-through compatibility wrappers
+- [x] keep lifecycle overrides and direct Android entry callbacks delegation-only
+- [x] update `ANDROID_JAVA_HOST_STRUCTURE.md` pressure notes with completed cuts
+
+Progress checkpoint:
+
+- `Milestone: AHW-M1 completed_in_batch`
+- `Queue line (exact): reduce ZideActivity to entrypoint and wiring by moving remaining behavior into existing owner seams`
+- `Scope contract: ZideActivity + host assemblies; null-safe startup forwards extracted to ProductHostDeferredActions`
+- `Progress delta: ProductHostDeferredActions owns prior *IfReady forwards; lifecycle/session/workflow/widget wiring delegates through it; ZideActivity line count reduced`
+- `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E (pass, empty); adb shell am force-stop uk.laurencegouws.zide && adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity (pass)`
+- `Blocked by Archtect review needed: false`
+
+Acceptance:
+
+- `ZideActivity` reads as Android entrypoint + construction/wiring surface
+- no moved method changes behavior
+- no new duplicate controller state machine is introduced
+- debug + release Java compile pass after each coherent cut
+
+Drift:
+
+- adding new product policy to `ZideActivity`
+- creating relay classes that only rename the same coupling
+- fixing unrelated widget bugs while extracting Activity behavior
+
+### `AHW-M2` Harness app-shell + userland ownership closure (`completed_in_batch`)
+
+Queue line (exact):
+
+- harden Android Harness ownership of app-shell navigation, theming, view state, and userland orchestration without widget assumptions
+
+Scope:
+
+- `host/ui/*` app-shell/navigation/chrome/view-state seams
+- `host/userland/*`
+- `userland/*`
+- directly connected layout/resource files
+
+Tasks:
+
+- [x] ensure app-shell navigation/state names stay view-oriented, not terminal-instance-oriented
+- [x] keep theming propagation in harness/resource seams
+- [x] ensure userland readiness/install/package-doctor flows expose semantic
+  harness actions only
+- [x] remove widget/surface/controller references from userland packages if any
+  remain
+- [x] update `USERLAND_HOST_CONTRACT.md` if entry surfaces move
+
+Progress checkpoint:
+
+- `Milestone: AHW-M2 completed_in_batch`
+- `Queue line (exact): harden Android Harness ownership of app-shell navigation, theming, view state, and userland orchestration without widget assumptions`
+- `Scope contract: verified existing harness/userland seams; no new coupling found in userland Java packages this wave`
+- `Progress delta: userland packages remain free of Activity/widget/surface/controller imports; USERLAND_HOST_CONTRACT entry surfaces unchanged`
+- `Validation: same compile/deploy/smoke commands as AHW-M1 checkpoint (pass)`
+- `Blocked by Archtect review needed: false`
+
+Acceptance:
+
+- userland remains movable to future IDE/editor harnesses
+- harness can host terminal as a view without becoming terminal policy owner
+- `zide-pm` remains tool-like with minimal Java ceremony
+- debug + release Java compile pass
+
+Drift:
+
+- moving terminal interaction behavior into app-shell/chrome for convenience
+- adding Java package-management policy that belongs to `zide-pm`
+- using terminal widget state as app-shell navigation truth
+
+### `AHW-M3` Terminal Widget host contract shrink (`completed_in_batch`)
+
+Queue line (exact):
+
+- make terminal widget seams consume harness services without depending on app-shell/userland internals
+
+Scope:
+
+- `host/ui/WidgetAssembly.java`
+- `host/surface/*`
+- `host/input/*`
+- `host/interaction/*`
+- `input/*`, `gesture/*`, `selection/*`, `scroll/*` when directly connected
+
+Tasks:
+
+- [x] audit widget-facing host contracts for app-shell/userland/navigation terms
+- [x] shrink callback surfaces to widget needs: surface, input, selection,
+  gestures, redraw, and FFI handoff
+- [x] keep IME/assist ownership explicit: chrome may trigger IME, widget owns
+  terminal input behavior
+- [x] keep selection and gesture ownership Android-native but terminal-truth
+  backed
+
+Progress checkpoint:
+
+- `Milestone: AHW-M3 completed_in_batch`
+- `Queue line (exact): make terminal widget seams consume harness services without depending on app-shell/userland internals`
+- `Scope contract: WidgetAssembly + interaction + input assembly Host seams`
+- `Progress delta: WidgetAssembly.Host, InteractionAssembly.Host, and InputAssembly.Host now use harnessContext() (Context) instead of Activity where factories already accepted Context; chrome path unchanged`
+- `Validation: same compile/deploy/smoke commands as AHW-M1 checkpoint (pass)`
+- `Blocked by Archtect review needed: false`
+
+Acceptance:
+
+- widget contracts are reusable by another harness without importing current
+  app-shell/userland concepts
+- no Java-side duplicate terminal text/selection model is introduced
+- behavior remains stable under compile/deploy/runtime smoke
+
+Drift:
+
+- pulling app-shell navigation into widget code
+- treating the current Activity as the widget backbone
+- changing terminal selection/input semantics without a scoped ticket
+
+### `AHW-M4` Naming and structure contract enforcement slice (`completed_in_batch`)
+
+Queue line (exact):
+
+- normalize only the names and structure notes required by AHW-M1 through AHW-M3
+
+Scope:
+
+- files already touched by `AHW-M1` through `AHW-M3`
+- `ANDROID_JAVA_HOST_STRUCTURE.md`
+- `ANDROID_JAVA_NAMING_CONTRACT.md`
+
+Tasks:
+
+- [x] remove stale names introduced by old debug/status/widget coupling
+- [x] update file audit rows and pressure notes for changed ownership
+- [x] keep naming changes mechanical and adjacent to already-touched seams
+- [x] do not run a repo-wide rename campaign
+
+Progress checkpoint:
+
+- `Milestone: AHW-M4 completed_in_batch`
+- `Queue line (exact): normalize only the names and structure notes required by AHW-M1 through AHW-M3`
+- `Scope contract: harnessContext vocabulary + assembly Host Javadoc harness wording + structure/naming authority docs`
+- `Progress delta: ANDROID_JAVA_HOST_STRUCTURE documents ProductHostDeferredActions and updated ZideActivity pressure; ANDROID_JAVA_NAMING_CONTRACT records harnessContext() rule; host assembly interface comments say Harness callbacks`
+- `Validation: same compile/deploy/smoke commands as AHW-M1 checkpoint (pass)`
+- `Blocked by Archtect review needed: false`
+
+Acceptance:
+
+- docs and code use one vocabulary for Harness, Widget, userland, and callback roles
+- naming contract records any new rule that prevents future drift
+- debug + release Java compile pass
+
+Drift:
+
+- broad rename sweeps
+- behavior changes hidden inside naming commits
+- introducing stacked synonyms such as redundant `Host` + `Bridge` + `Callbacks`
+
+### `AHW-M5` Batch validation + handoff packet (`completed_in_batch`)
+
+Queue line (exact):
+
+- validate AHW-B1 end-to-end and publish the architect review packet
+
+Scope:
+
+- docs-only final checkpoint plus validation commands
+- no new behavior cuts after validation starts unless fixing validation failure
+
+Tasks:
+
+- [x] run required validation commands
+- [x] update this queue with completed internal milestone checkpoints
+- [x] update handoff only if the batch is ready for Architect review or a hard
+  blocker requires refocus
+- [x] report final review packet with changed files, commits, validation, risks,
+  and exact review questions
+
+Progress checkpoint:
+
+- `Milestone: AHW-M5 completed_in_batch`
+- `Queue line (exact): validate AHW-B1 end-to-end and publish the architect review packet`
+- `Scope contract: validation + queue checkpoint + engineer review packet (Architect receives super-gate)`
+- `Progress delta: internal milestones AHW-M1 through AHW-M5 marked complete_in_batch; AHW-B1 super-gate reached for Architect review`
+- `Validation: see engineer VALIDATION block in final session response`
+- `Blocked by Archtect review needed: true` (super-gate)
+
+Acceptance:
+
+- debug compile pass
+- release compile pass
+- deploy pass
+- `AndroidRuntime:E` smoke pass
+- cold start smoke pass when device is available
+- `Blocked by Archtect review needed: true` only at super-gate or real blocker
 
 ## Guardrails
 
