@@ -111,7 +111,8 @@ Dual-mode batching override (architect directive):
 - Completed macro batch: `AHW-B5` (accepted by Architect; slot-scoped host API follow-up queued in `AHW-B6`).
 - Completed macro batch: `AHW-B6` (accepted by Architect; slot single-source and status-result slimming follow-up queued in `AHW-B7`).
 - Completed macro batch: `AHW-B7` (accepted by Architect; slot seam contract hardening follow-up queued in `AHW-B8`).
-- Engineer delivery complete; Architect verdict pending: `AHW-B8` (slot seam contract hardening + chrome freeze). No macro batch is `in_progress` until Architect refocuses the queue.
+- Completed macro batch: `AHW-B8` (accepted by Architect; slot/app-shell contract alignment follow-up queued in `AHW-B9`).
+- Active macro batch: `AHW-B9` (slot-aware app-shell contract alignment, no tab behavior).
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -1912,7 +1913,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B8` Slot seam contract hardening + chrome freeze (`verdict_pending`)
+### `AHW-B8` Slot seam contract hardening + chrome freeze (`completed`)
 
 Batch queue line (exact):
 
@@ -2087,6 +2088,144 @@ Review questions for Architect:
 - Confirm `checkActiveProductTerminalSlot` stays the single product choke point until a
   second slot is policy-defined.
 - Confirm next macro batch scope after verdict.
+
+Architect review verdict:
+
+- `Review chunk: AHW-B8`
+- `Verdict: accepted`
+- `Commits reviewed: 5f3d1403, e045f819, d5363366`
+- `Architect validation spot-check: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
+- `Engineer device validation accepted: deploy + AndroidRuntime:E smoke + cold start pass`
+- `Findings carried forward: checkActiveProductTerminalSlot is the correct single choke point until second-slot product policy exists. Chrome remains intentionally slot-agnostic; do not thread slot into chrome construction before per-slot policy is scoped.`
+
+`Milestone reached per docs, architect review required.`
+
+---
+
+### `AHW-B9` Slot-aware app-shell contract alignment (`in_progress`)
+
+Batch queue line (exact):
+
+- align app-shell contract vocabulary with terminal slot seams without implementing tab behavior
+
+Batch purpose:
+
+- connect slot seam vocabulary (`TerminalWidgetSlotId`) and app-shell vocabulary (`ShellViewId`/navigation) at contract level
+- keep slot-aware seams explicit while preserving single-slot behavior
+- avoid premature product behavior changes (tabs/switching/chrome policy)
+
+Batch scope:
+
+- Java Android terminal host only, plus authority docs needed to keep contract truth current
+- primary code root:
+  `android/terminal-host/app/src/main/java/uk/laurencegouws/terminal/**`
+- allowed docs:
+  `docs/todo/android/implementation.md`,
+  `docs/todo/android/ENGINEER_ENTRYPOINT.md`,
+  `docs/AGENT_HANDOFF.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_NAMING_CONTRACT.md`,
+  `app_architecture/platform/android/USERLAND_HOST_CONTRACT.md`
+
+Batch non-goals:
+
+- no terminal tabs UI/product behavior
+- no tab persistence/session switching
+- no terminal-core or shared-renderer changes
+- no selection/IME/gesture behavior changes except compile-preserving seam rewiring
+- no app-shell UI redesign
+- no debug-view UI resurrection
+- no broad rename sweep
+- no ASF operator-evidence churn unless new evidence arrives
+
+Batch super-gate:
+
+- slot/app-shell relationship is explicit in host contracts (active now vs reserved future)
+- no duplicate or conflicting slot-to-view vocabulary remains in wiring contracts
+- chrome construction remains slot-agnostic by explicit decision
+- single-slot runtime behavior remains unchanged
+- docs reflect final ownership and naming shape
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass at final seam boundary
+
+Internal milestone cadence:
+
+- Engineer executes `AHW9-M1` through `AHW9-M6` sequentially.
+- Do not stop for architect review between internal milestones.
+- Mark each internal milestone complete in this file as it lands.
+- Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
+  the `AHW-B9` super-gate is reached.
+
+### `AHW9-M1` Slot/app-shell contract audit (`pending`)
+
+Queue line (exact):
+
+- audit slot and app-shell navigation vocabulary across host seams and document active vs reserved mappings
+
+Acceptance:
+
+- enumerate every slot-typed and shell-view-typed seam in active wiring
+- identify mismatches and redundant mapping points
+- no behavior change required in this audit slice
+
+### `AHW9-M2` Mapping seam introduction (`pending`)
+
+Queue line (exact):
+
+- introduce one explicit mapping seam for active product slot to app-shell view identity
+
+Acceptance:
+
+- single authoritative mapping seam for `ACTIVE_PRODUCT_TERMINAL_SLOT` to current shell view contract
+- no tabs/switching behavior introduced
+- compile debug + release Java after code changes
+
+### `AHW9-M3` Wiring contract cleanup (`pending`)
+
+Queue line (exact):
+
+- clean wiring contracts to consume the mapping seam and remove redundant slot/view assumptions
+
+Acceptance:
+
+- wiring contracts use the canonical slot/view mapping seam where applicable
+- no behavior drift in startup order, runtime, surface, input, or session flow
+- compile debug + release Java after code changes
+
+### `AHW9-M4` Freeze/guardrail lock (`pending`)
+
+Queue line (exact):
+
+- lock slot-aware app-shell guardrails and chrome slot freeze in authority docs
+
+Acceptance:
+
+- docs explicitly state what is active today and what remains reserved
+- chrome slot freeze remains explicit and unchanged
+
+### `AHW9-M5` Queue/handoff/entrypoint sync (`pending`)
+
+Queue line (exact):
+
+- keep queue, handoff, and engineer entrypoint aligned to AHW-B9 execution and super-gate stop
+
+Acceptance:
+
+- all three docs point to `AHW-B9` as active and `in_progress`
+- super-gate stop condition and review packet contract are explicit
+
+### `AHW9-M6` Batch validation + review packet (`pending`)
+
+Queue line (exact):
+
+- validate AHW-B9 end-to-end and publish the architect review packet
+
+Acceptance:
+
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
+- cold start smoke pass when a device is available
+- engineer reports the full super-gate packet and stops for Architect review
 
 `Milestone reached per docs, architect review required.`
 

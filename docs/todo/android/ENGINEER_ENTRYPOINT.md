@@ -34,18 +34,17 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B8` engineer delivery is complete; **Architect verdict is pending**. There is
-no `in_progress` macro batch until `docs/todo/android/implementation.md` is
-refocused after Architect review.
+`AHW-B9` is `in_progress`: slot-aware app-shell contract alignment without tab
+product behavior.
 
-Last completed batch queue line (exact):
+Batch queue line (exact):
 
-- harden slot seam contracts with explicit invariants and keep chrome slot-agnostic until real per-slot policy exists
+- align app-shell contract vocabulary with terminal slot seams without implementing tab behavior
 
 ## Core Boundary Rule
 
-This batch exists to harden slot seam contracts and remove ambiguity between
-active slot behavior and reserved future slot seams.
+This batch exists to make slot and app-shell view vocabulary consistent and
+explicit while preserving single-slot behavior.
 
 - Android Harness owns platform ceremony, app-shell layout/styling/theming,
   navigation/view state, userland orchestration, and widget instance hosting.
@@ -59,31 +58,29 @@ active slot behavior and reserved future slot seams.
 - `WidgetAssembly.Result` remains widget/chrome assembly output; it is not the
   terminal-instance factory by itself.
 
-## Required Direction From Architect Review (post-AHW-B8 baseline)
+## Required Direction From Architect Review (post-AHW-B9 baseline)
 
-- `AHW-B7` is accepted.
-- Keep `ACTIVE_PRODUCT_TERMINAL_SLOT` as current single-source selector.
+- `AHW-B8` is accepted.
+- Keep `checkActiveProductTerminalSlot` as the single active-slot choke point
+  until second-slot policy is explicitly scoped.
+- Keep `ACTIVE_PRODUCT_TERMINAL_SLOT` as activity wiring source; do not replace
+  with a larger context object yet.
 - Keep slot identity on host seams + compose argument; do not add slot to
   `InteractionAssembly.Result` yet.
-- Keep `StatusController.Host` assembly-internal in `StatusViewAssembly` unless
-  a concrete test/diagnostic seam requires exposing it.
 - Keep chrome slot-agnostic in this batch; do not thread slot into chrome
   construction until per-slot chrome policy is scoped.
 - No tab/multi-instance product behavior unless a new batch scopes it.
 
 ## Internal Milestones
 
-`AHW-B8` internal milestones `AHW8-M1`–`AHW8-M6` are **completed**; see
-`docs/todo/android/implementation.md` for the super-gate packet.
-
 Execute in order and mark progress in `docs/todo/android/implementation.md`.
 
-- `AHW8-M1`: audit slot seam invariants and classify active vs reserved usage.
-- `AHW8-M2`: enforce slot invariants at relevant assembly/composition/wiring seams.
-- `AHW8-M3`: label reserved slot seams clearly in contracts/Javadocs.
-- `AHW8-M4`: lock chrome slot freeze decision in code/docs.
-- `AHW8-M5`: sync authority docs and workflow docs to B8 outcomes.
-- `AHW8-M6`: run validation and publish super-gate review packet.
+- `AHW9-M1`: audit slot/app-shell navigation vocabulary and map active vs reserved seams.
+- `AHW9-M2`: introduce one canonical mapping seam for active slot to shell view identity.
+- `AHW9-M3`: clean wiring contracts to consume canonical mapping seam and remove redundancy.
+- `AHW9-M4`: lock guardrails: slot/app-shell mapping scope + chrome slot freeze.
+- `AHW9-M5`: sync authority docs and workflow docs to B9 outcomes.
+- `AHW9-M6`: run validation and publish super-gate review packet.
 
 ## Allowed Work
 
@@ -171,7 +168,7 @@ when:
 - a behavior change is required where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
 - implementing terminal tabs/product behavior becomes necessary to proceed
-- the `AHW-B8` super-gate is reached
+- the `AHW-B9` super-gate is reached
 
 Otherwise continue autonomously with:
 
@@ -179,9 +176,9 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At `AHW-B8` super-gate, report:
+At `AHW-B9` super-gate, report:
 
-- review chunk name: `AHW-B8`
+- review chunk name: `AHW-B9`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs
