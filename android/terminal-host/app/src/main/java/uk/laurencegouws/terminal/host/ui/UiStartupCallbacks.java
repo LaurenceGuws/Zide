@@ -1,32 +1,17 @@
 package uk.laurencegouws.terminal.host.ui;
 
 import android.view.View;
-import android.widget.Button;
-
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 import uk.laurencegouws.terminal.host.runtime.FrameLoopController;
+import uk.laurencegouws.terminal.host.runtime.RuntimeAssetsController;
 import uk.laurencegouws.terminal.host.surface.SurfaceController;
 import uk.laurencegouws.terminal.host.surface.SurfaceWidgetController;
-import uk.laurencegouws.terminal.host.runtime.RuntimeAssetsController;
 import uk.laurencegouws.terminal.userland.ShellStatePresenter;
-import uk.laurencegouws.terminal.userland.UserlandReadinessState;
-import uk.laurencegouws.terminal.userland.UserlandInstallState;
-import uk.laurencegouws.terminal.userland.UserlandSessionCoordinator;
-import uk.laurencegouws.terminal.userland.UserlandWorkflowController;
 
 /** Functional callback adapter for {@link UiStartupAssembly.Host}. */
 public final class UiStartupCallbacks implements UiStartupAssembly.Host {
     private final ViewportController viewportController;
     private final ChromeController chromeController;
-    private final Button productReadinessRetryButton;
-    private final Supplier<UserlandInstallState> currentInstallState;
-    private final Supplier<UserlandReadinessState> currentReadinessState;
-    private final UserlandWorkflowController userlandWorkflowController;
-    private final UserlandSessionCoordinator userlandSessionCoordinator;
-    private final Consumer<String> appendEvent;
-    private final Consumer<String> updateStatus;
     private final RuntimeAssetsController runtimeAssetsController;
     private final ViewModeController viewModeController;
     private final SurfaceController surfaceHostController;
@@ -38,13 +23,6 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
     public UiStartupCallbacks(
             ViewportController viewportController,
             ChromeController chromeController,
-            Button productReadinessRetryButton,
-            Supplier<UserlandInstallState> currentInstallState,
-            Supplier<UserlandReadinessState> currentReadinessState,
-            UserlandWorkflowController userlandWorkflowController,
-            UserlandSessionCoordinator userlandSessionCoordinator,
-            Consumer<String> appendEvent,
-            Consumer<String> updateStatus,
             RuntimeAssetsController runtimeAssetsController,
             ViewModeController viewModeController,
             SurfaceController surfaceHostController,
@@ -54,13 +32,6 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
             View leftSidebar) {
         this.viewportController = viewportController;
         this.chromeController = chromeController;
-        this.productReadinessRetryButton = productReadinessRetryButton;
-        this.currentInstallState = currentInstallState;
-        this.currentReadinessState = currentReadinessState;
-        this.userlandWorkflowController = userlandWorkflowController;
-        this.userlandSessionCoordinator = userlandSessionCoordinator;
-        this.appendEvent = appendEvent;
-        this.updateStatus = updateStatus;
         this.runtimeAssetsController = runtimeAssetsController;
         this.viewModeController = viewModeController;
         this.surfaceHostController = surfaceHostController;
@@ -78,41 +49,6 @@ public final class UiStartupCallbacks implements UiStartupAssembly.Host {
     @Override
     public ChromeController chromeController() {
         return chromeController;
-    }
-
-    @Override
-    public Button productReadinessRetryButton() {
-        return productReadinessRetryButton;
-    }
-
-    @Override
-    public UserlandInstallState currentInstallState() {
-        return currentInstallState.get();
-    }
-
-    @Override
-    public UserlandReadinessState currentReadinessState() {
-        return currentReadinessState.get();
-    }
-
-    @Override
-    public UserlandWorkflowController userlandWorkflowController() {
-        return userlandWorkflowController;
-    }
-
-    @Override
-    public UserlandSessionCoordinator userlandSessionCoordinator() {
-        return userlandSessionCoordinator;
-    }
-
-    @Override
-    public Consumer<String> appendEvent() {
-        return appendEvent;
-    }
-
-    @Override
-    public Consumer<String> updateStatus() {
-        return updateStatus;
     }
 
     @Override

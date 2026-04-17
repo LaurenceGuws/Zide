@@ -40,6 +40,7 @@ import uk.laurencegouws.terminal.host.ui.UiStartupAssembly;
 import uk.laurencegouws.terminal.host.ui.UiStartupCallbacks;
 import uk.laurencegouws.terminal.host.ui.ViewportController;
 import uk.laurencegouws.terminal.host.ui.WidgetAssembly;
+import uk.laurencegouws.terminal.host.userland.ReadinessBlockerStartup;
 import uk.laurencegouws.terminal.host.userland.WorkflowAssembly;
 import uk.laurencegouws.terminal.host.userland.WorkflowAssemblyCallbacks;
 import uk.laurencegouws.terminal.input.ShellInputView;
@@ -626,24 +627,22 @@ public final class ZideActivity extends Activity
     }
 
     private void bindAndStartUiControllers() {
-        startUiStartupAssembly();
-    }
-
-    private void startUiStartupAssembly() {
-        UiStartupAssembly.start(createUiStartupCallbacks());
+        UiStartupAssembly.start(
+                createUiStartupCallbacks(),
+                () -> ReadinessBlockerStartup.bind(
+                        productReadinessRetryButton,
+                        () -> currentInstallState,
+                        () -> currentReadinessState,
+                        userlandWorkflowController::startInstall,
+                        () -> userlandSessionCoordinator.refreshAndApply(true),
+                        StatusController::appendEvent,
+                        StatusController::updateStatus));
     }
 
     private UiStartupCallbacks createUiStartupCallbacks() {
         return new UiStartupCallbacks(
                 terminalViewportController,
                 terminalChromeController,
-                productReadinessRetryButton,
-                () -> currentInstallState,
-                () -> currentReadinessState,
-                userlandWorkflowController,
-                userlandSessionCoordinator,
-                StatusController::appendEvent,
-                StatusController::updateStatus,
                 terminalRuntimeAssetsController,
                 terminalViewModeController,
                 surfaceHostController,

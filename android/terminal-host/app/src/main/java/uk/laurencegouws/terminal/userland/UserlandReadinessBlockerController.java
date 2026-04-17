@@ -4,15 +4,18 @@ import android.widget.Button;
 
 /** Owns readiness-blocker retry/install button policy. */
 public final class UserlandReadinessBlockerController {
-    /** Host callbacks for state and side effects. */
+    /**
+     * Harness-owned entrypoints for install vs session refresh; implementations live under
+     * {@code host.userland} and wire concrete orchestrators.
+     */
     public interface Host {
         UserlandInstallState installState();
 
         UserlandReadinessState readinessState();
 
-        UserlandWorkflowController workflowController();
+        void startInstall();
 
-        UserlandSessionCoordinator sessionCoordinator();
+        void refreshSessionAfterReadinessRetry();
 
         void appendEvent(String event);
 
@@ -34,11 +37,11 @@ public final class UserlandReadinessBlockerController {
                 return;
             }
             if (UserlandReadinessUiPolicy.shouldStartInstall(host.readinessState())) {
-                host.workflowController().startInstall();
+                host.startInstall();
                 return;
             }
             host.appendEvent("product.readiness.retry");
-            host.sessionCoordinator().refreshAndApply(true);
+            host.refreshSessionAfterReadinessRetry();
             host.updateStatus("product.readiness.retry");
         });
     }

@@ -10,6 +10,9 @@ import uk.laurencegouws.terminal.userland.UserlandWorkflowController;
 
 /**
  * Adapts activity-owned callbacks to {@link UserlandWorkflowController.Host}.
+ *
+ * <p>Stable harness contract for install, package-doctor, and post-install session restart: see
+ * {@code app_architecture/platform/android/USERLAND_HOST_CONTRACT.md}.
  */
 public final class WorkflowBridge implements UserlandWorkflowController.Host {
     /** Activity callbacks used by userland install and package workflows. */

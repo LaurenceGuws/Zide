@@ -6,29 +6,27 @@ import java.util.function.Supplier;
 import uk.laurencegouws.terminal.userland.UserlandReadinessBlockerController;
 import uk.laurencegouws.terminal.userland.UserlandReadinessState;
 import uk.laurencegouws.terminal.userland.UserlandInstallState;
-import uk.laurencegouws.terminal.userland.UserlandSessionCoordinator;
-import uk.laurencegouws.terminal.userland.UserlandWorkflowController;
 
 /** Functional callback adapter for {@link UserlandReadinessBlockerController}. */
 public final class ReadinessBlockerCallbacks implements UserlandReadinessBlockerController.Host {
     private final Supplier<UserlandInstallState> installState;
     private final Supplier<UserlandReadinessState> readinessState;
-    private final UserlandWorkflowController workflowController;
-    private final UserlandSessionCoordinator sessionCoordinator;
+    private final Runnable startInstallAction;
+    private final Runnable refreshSessionAfterReadinessRetryAction;
     private final Consumer<String> appendEvent;
     private final Consumer<String> updateStatus;
 
     public ReadinessBlockerCallbacks(
             Supplier<UserlandInstallState> installState,
             Supplier<UserlandReadinessState> readinessState,
-            UserlandWorkflowController workflowController,
-            UserlandSessionCoordinator sessionCoordinator,
+            Runnable startInstallAction,
+            Runnable refreshSessionAfterReadinessRetryAction,
             Consumer<String> appendEvent,
             Consumer<String> updateStatus) {
         this.installState = installState;
         this.readinessState = readinessState;
-        this.workflowController = workflowController;
-        this.sessionCoordinator = sessionCoordinator;
+        this.startInstallAction = startInstallAction;
+        this.refreshSessionAfterReadinessRetryAction = refreshSessionAfterReadinessRetryAction;
         this.appendEvent = appendEvent;
         this.updateStatus = updateStatus;
     }
@@ -44,15 +42,16 @@ public final class ReadinessBlockerCallbacks implements UserlandReadinessBlocker
     }
 
     @Override
-    public UserlandWorkflowController workflowController() {
-        return workflowController;
+    public void startInstall() {
+        startInstallAction.run();
     }
 
     @Override
-    public UserlandSessionCoordinator sessionCoordinator() {
-        return sessionCoordinator;
+    public void refreshSessionAfterReadinessRetry() {
+        refreshSessionAfterReadinessRetryAction.run();
     }
 
+    @Override
     public void appendEvent(String event) {
         appendEvent.accept(event);
     }
