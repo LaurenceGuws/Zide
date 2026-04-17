@@ -279,11 +279,16 @@ Milestone gate contract (mandatory when manager/architect lane is active):
     one-element arrays for staged controller wiring (`ViewModeControllerRef`,
     `SurfaceWidgetControllerRef`), reducing callback plumbing indirection while
     preserving assembly behavior.
+  - Completed: `SelectionController` action-mode/clipboard naming-noise pass
+    removed remaining redundant ownership-heavy identifiers (`terminal*`
+    action-mode state, long constant prefixes, and finish-sync typo
+    `shouldfinishSelectionActionMode` -> `shouldFinishSelectionActionMode`)
+    without semantic changes.
     - Next: resume primary Java cleanup under Active TODO item 1 by executing a
-      behavior-preserving naming/noise cleanup wave in
-      `selection/SelectionController.java` action-mode + clipboard helper names
-      (reduce redundant ownership prefixes and maintain package-led naming
-      clarity without semantic change).
+      behavior-preserving `selection/SelectionController.java` pressure-reduction
+      wave focused on action-mode lifecycle internals (reduce tiny one-hop
+      helper churn and keep attach/show/invalidate/finish/destroy flow explicit
+      with fewer method hops).
       For this wave, do not add naming-only wrappers; each cut must reduce
       callback or constructor pressure with measurable net simplification.
       Naming pressure rule for this wave: when a touched method/class name can be
