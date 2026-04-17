@@ -11,7 +11,7 @@ Later extended by queue milestone **AX-M3** (*rerun stabilization matrix for inp
 - `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac` — pass (2026-04-17)
 - `python3 ops/android_terminal_host.py deploy` — pass (2026-04-17)
 - `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E` — pass, no lines (2026-04-17)
-- Cold start: `adb shell am force-stop uk.laurencegouws.zide` then `adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity` — `LaunchState: COLD`, no `AndroidRuntime:E` (2026-04-17)
+- Cold start: `adb shell am force-stop uk.laurencegouws.zide && adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity` — `LaunchState: COLD`, no `AndroidRuntime:E` (2026-04-17)
 
 ## Smoke baseline (AX-M3 matrix refresh, 2026-04-17)
 
@@ -19,7 +19,7 @@ Later extended by queue milestone **AX-M3** (*rerun stabilization matrix for inp
 - `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac` — pass (2026-04-17)
 - `python3 ops/android_terminal_host.py deploy` — pass (2026-04-17)
 - `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E` — pass, no `AndroidRuntime:E` lines (2026-04-17)
-- Cold start: `adb shell am force-stop uk.laurencegouws.zide` then `adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity` — `Status: ok`, `Complete` (device reported `LaunchState: UNKNOWN (0)`; no `AndroidRuntime:E`) (2026-04-17)
+- Cold start: `adb shell am force-stop uk.laurencegouws.zide && adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity` — `Status: ok`, `Complete` (device reported `LaunchState: UNKNOWN (0)`; no `AndroidRuntime:E`) (2026-04-17)
 
 ---
 

@@ -415,8 +415,8 @@ Progress checkpoint:
 - `Queue line (exact): rerun stabilization matrix for input/surface lifecycle after AX hardening batch`
 - `Scope contract: docs-only matrix refresh; smoke commands recorded in RF_M5_STABILIZATION_MATRIX.md`
 - `Progress delta: added AX-M3 smoke baseline + AX code deltas per lane; interactive matrix rows explicitly still not run (device/operator follow-ups unchanged)`
-- `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E (pass); adb shell am force-stop + am start -W cold start (pass)`
-- `Blocked by Archtect review needed: false`
+- `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E (pass); adb shell am force-stop uk.laurencegouws.zide && adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity (pass)`
+- `Blocked by Archtect review needed: true`
 
 `Milestone reached per docs, architect review required.`
 
