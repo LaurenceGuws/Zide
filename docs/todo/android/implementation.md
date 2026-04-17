@@ -354,6 +354,11 @@ Audit decision:
     passes `WorkflowAssembly.Host` directly into `WorkflowBridge` (deleting
     `host/userland/WorkflowCallbacks.java` and removing `packageStatusText` relay
     wiring).
+  - Completed: selection interaction adapter depth reduced further by deleting
+    `host/interaction/SelectionBridge.java` and
+    `host/interaction/SelectionInteractionBridge.java`; `SelectionControllerFactory`
+    now composes `SelectionController` directly from one host contract that
+    satisfies both `SelectionController.Host` and `SelectionController.Bridge`.
     - Next: execute a behavior-preserving interaction adapter-depth reduction
       wave by collapsing redundant bridge/callback pass-through tiers in
       `host/interaction` (prioritize high-forwarding seams: selection + gesture),

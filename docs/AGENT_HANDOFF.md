@@ -113,6 +113,8 @@ Required per-commit update format:
 - `host/interaction` adapter depth is now a primary simplification target:
   fresh audit shows several bridge/callback classes are near-100% forwarding
   and can be collapsed without changing owner behavior.
+- latest waves collapsed relay-only selection/gesture/workflow adapters;
+  continue targeting high-forwarding seams with net file/method deletions.
 - `userland/UserlandInstaller.java` (~425 lines) remains large but cohesive;
   keep watch-only unless behavior complexity expands.
 - `host/surface/SurfaceController.java` and `host/ui/ChromeController.java`

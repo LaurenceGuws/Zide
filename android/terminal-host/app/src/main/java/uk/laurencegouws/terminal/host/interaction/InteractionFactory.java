@@ -32,9 +32,9 @@ public final class InteractionFactory {
             Runnable reevaluateFrameLoop,
             Consumer<String> appendEvent) {
         return SelectionControllerFactory.create(
-                context,
-                productSurfaceContainer,
                 new SelectionCallbacks(
+                        context,
+                        productSurfaceContainer,
                         productViewportWidthPx,
                         productViewportHeightPx,
                         stopScrollbackFling,

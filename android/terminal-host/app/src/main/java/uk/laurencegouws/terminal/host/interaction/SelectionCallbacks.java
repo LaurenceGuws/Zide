@@ -1,5 +1,8 @@
 package uk.laurencegouws.terminal.host.interaction;
 
+import android.content.Context;
+import android.widget.FrameLayout;
+
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
 
@@ -8,6 +11,8 @@ import uk.laurencegouws.terminal.selection.SelectionControllerFactory;
 
 /** Functional callback adapter for {@link SelectionControllerFactory}. */
 public final class SelectionCallbacks implements SelectionControllerFactory.Host {
+    private final Context context;
+    private final FrameLayout productSurfaceContainer;
     private final IntSupplier productViewportWidthPx;
     private final IntSupplier productViewportHeightPx;
     private final Runnable stopScrollbackFling;
@@ -16,18 +21,32 @@ public final class SelectionCallbacks implements SelectionControllerFactory.Host
     private final Consumer<String> appendEvent;
 
     public SelectionCallbacks(
+            Context context,
+            FrameLayout productSurfaceContainer,
             IntSupplier productViewportWidthPx,
             IntSupplier productViewportHeightPx,
             Runnable stopScrollbackFling,
             Runnable refreshScrollOverlay,
             Runnable reevaluateFrameLoop,
             Consumer<String> appendEvent) {
+        this.context = context;
+        this.productSurfaceContainer = productSurfaceContainer;
         this.productViewportWidthPx = productViewportWidthPx;
         this.productViewportHeightPx = productViewportHeightPx;
         this.stopScrollbackFling = stopScrollbackFling;
         this.refreshScrollOverlay = refreshScrollOverlay;
         this.reevaluateFrameLoop = reevaluateFrameLoop;
         this.appendEvent = appendEvent;
+    }
+
+    @Override
+    public Context context() {
+        return context;
+    }
+
+    @Override
+    public FrameLayout productSurfaceContainer() {
+        return productSurfaceContainer;
     }
 
     @Override
