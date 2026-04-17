@@ -88,6 +88,22 @@ eclipse {
                         classpath.entries.add(new org.gradle.plugins.ide.eclipse.model.SourceFolder(dir, null))
                     }
                 }
+                def java17ContainerPath =
+                        'org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-17/'
+                classpath.entries.removeAll { entry ->
+                    entry.kind == 'con'
+                            && entry.path.startsWith('org.eclipse.jdt.launching.JRE_CONTAINER')
+                            && entry.path != java17ContainerPath
+                }
+                def existingContainers = classpath.entries
+                        .findAll { it.kind == 'con' }
+                        .collect { it.path } as Set
+                if (!existingContainers.contains(java17ContainerPath)) {
+                    classpath.entries.add(
+                            0,
+                            new org.gradle.plugins.ide.eclipse.model.Container(java17ContainerPath)
+                    )
+                }
                 def localProperties = new Properties()
                 def localPropertiesFile = rootProject.file('local.properties')
                 if (localPropertiesFile.exists()) {

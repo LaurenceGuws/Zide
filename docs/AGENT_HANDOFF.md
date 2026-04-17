@@ -6,9 +6,9 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android harness/widget portability hardening** (`AHW`) — turns the refocus vision into enforceable code shape: Android Harness is the platform/app-shell canvas, Terminal Widget is the portable terminal consumer, and userland stays movable for future IDE/editor modes.
-- Current macro batch: `AHW-B2` (`review_required`; engineer wave complete, Architect review at super-gate)
-- Active milestone sequence inside batch: `AHW2-M1` through `AHW2-M5` in `docs/todo/android/implementation.md`; engineer should continue across these milestones and stop only at the `AHW-B2` super-gate or a real blocker.
-- Prior closed/escalated: `AHW-B1` accepted; `ASF-M3` escalated remaining IME/assist and touch-gesture matrix rows to operator evidence; `ASF-M2`; `ASF-M1`; `AX-M5`; `AX-M4`
+- Current macro batch: `AHW-B3` (`in_progress`, target 30-50 coherent engineer commits before architect review unless a hard blocker is hit)
+- Active milestone sequence inside batch: `AHW3-M1` through `AHW3-M6` in `docs/todo/android/implementation.md`; engineer should continue across these milestones and stop only at the `AHW-B3` super-gate or a real blocker.
+- Prior closed/escalated: `AHW-B2` accepted; `AHW-B1` accepted; `ASF-M3` escalated remaining IME/assist and touch-gesture matrix rows to operator evidence; `ASF-M2`; `ASF-M1`; `AX-M5`; `AX-M4`
 - Active queue authority: `docs/todo/android/implementation.md`
 - Engineer entrypoint (dual mode): `docs/todo/android/ENGINEER_ENTRYPOINT.md`
 
@@ -25,9 +25,9 @@ Engineer session seed:
 
 - Read `docs/todo/android/ENGINEER_ENTRYPOINT.md`, then
   `docs/todo/android/implementation.md`, then this handoff file.
-- Execute the active macro batch `AHW-B2` only.
-- Continue autonomously across `AHW2-M1` through `AHW2-M5`; do not stop at internal milestone boundaries.
-- Stop only on blocker or `AHW-B2` super-gate; report using required headers.
+- Execute the active macro batch `AHW-B3` only.
+- Continue autonomously across `AHW3-M1` through `AHW3-M6`; do not stop at internal milestone boundaries.
+- Stop only on blocker or `AHW-B3` super-gate; report using required headers.
 
 ## First Read Order
 
@@ -50,15 +50,16 @@ Engineer session seed:
 - Architect updates use: `Blocked by humain review needed: true|false`.
 - Engineer updates use: `Blocked by Archtect review needed: true|false`.
 
-## AHW-B2 engineer resolution (super-gate)
+## AHW-B3 Review Findings From AHW-B2
 
-AHW-B1 review findings are addressed in batch `AHW-B2`: explicit `ShellInputView.Host`,
-`ShellPresentationHostInputs`, and `ProductHostStartupBundle` owner-aligned startup forwards.
-Architect owns acceptance on `AHW-B2`.
+- `StatusTelemetryStartupForwards` should move under status ownership if touched; package-doctor telemetry is status/operator telemetry, not debug UI.
+- `ProductHostStartupBundle` is acceptable as startup-only aggregation; do not collapse it further without a concrete ownership gain.
+- `InteractionCallbacks` context naming should change only if the widget-instance extraction makes the current contract materially misleading.
+- The main product push is now making the current single terminal widget explicit as an instance/slot so future terminal tabs do not route through Activity field scatter.
 
 ## Operator Evidence Escalation
 
-ASF did not prove IME/assist or touch gestures because no operator packets were delivered. Those rows remain parked in `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md` with owner `operator`; they do not block `AHW-B2` unless new evidence reports a regression inside the active code scope.
+ASF did not prove IME/assist or touch gestures because no operator packets were delivered. Those rows remain parked in `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md` with owner `operator`; they do not block `AHW-B3` unless new evidence reports a regression inside the active code scope.
 
 ## Historical Notes
 

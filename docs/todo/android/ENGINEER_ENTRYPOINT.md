@@ -34,21 +34,22 @@ you must report the mismatch.
 
 ## Current Target
 
-Active macro batch: **`AHW-B2` Portable widget contract closure + deferred-action split**.
+Active macro batch: **`AHW-B3` Terminal widget instance boundary + host package hygiene**.
 
 Batch queue line:
 
-- finish the portable widget contract by removing hidden Activity/userland assumptions and splitting broad deferred forwards into owned startup seams
+- make one terminal widget instance explicit in harness wiring and clean remaining host package ownership drift without changing terminal behavior
 
 Internal milestones:
 
-1. `AHW2-M1` Explicit input host contract
-2. `AHW2-M2` Shell-state presentation snapshot boundary
-3. `AHW2-M3` Deferred action ownership split
-4. `AHW2-M4` Harness/widget naming cleanup for B2 seams
-5. `AHW2-M5` Batch validation + review packet
+1. `AHW3-M1` Status telemetry package ownership cleanup
+2. `AHW3-M2` Terminal widget instance shape audit
+3. `AHW3-M3` Single terminal widget instance extraction
+4. `AHW3-M4` Interaction context naming symmetry only where material
+5. `AHW3-M5` B3 structure/naming authority update
+6. `AHW3-M6` Batch validation + review packet
 
-Continue through all five internal milestones. Do not stop for architect review
+Continue through all six internal milestones. Do not stop for architect review
 between them.
 
 Expected review size: **30-50 coherent commits** if code reality supports that.
@@ -57,24 +58,31 @@ not every internal milestone.
 
 ## Core Boundary Rule
 
-The batch exists to convert AHW-B1's partial portability into enforceable
-contracts:
+The batch exists to move from a cleaned-up Activity wiring surface toward an
+explicit terminal widget instance that the Android Harness can host repeatedly
+later for terminal tabs.
 
 - Android Harness owns platform ceremony, app-shell layout/styling/theming,
-  navigation/view state, and userland orchestration.
+  navigation/view state, userland orchestration, and widget instance hosting.
 - Terminal Widget owns portable terminal surface/input/selection/gesture/FFI/GLES
   seams.
 - Userland stays movable for future IDE/editor modes and must not depend on
   widget/surface/controller internals.
-- `ZideActivity` should be Android entrypoint and wiring, not the backbone for
-  product behavior.
+- `ZideActivity` should be Android entrypoint and wiring, not the owner of a
+  scattered terminal instance.
 
-## Required Fixes From Architect Review
+## Required Direction From Architect Review
 
-Resolved in macro batch **`AHW-B2`** (see `docs/todo/android/implementation.md`):
-explicit `ShellInputView.Host`, `ShellPresentationHostInputs` on widget assembly,
-and owner-aligned `*StartupForwards` plus `ProductHostStartupBundle` (startup-order
-glue only, not a second activity backbone).
+- `AHW-B2` is accepted.
+- `StatusTelemetryStartupForwards` should move under status ownership if touched;
+  package-doctor telemetry is status/operator telemetry, not debug UI.
+- `ProductHostStartupBundle` is acceptable as startup-only aggregation. Do not
+  collapse it further unless there is a concrete ownership gain.
+- `InteractionCallbacks` context naming should change only if the widget-instance
+  extraction makes the current contract materially misleading. Do not rename for
+  symmetry alone.
+- The main product push is the current single terminal widget instance boundary:
+  make it explicit without implementing tabs or changing terminal behavior.
 
 ## Allowed Work
 
@@ -95,9 +103,11 @@ If a required change falls outside these paths, stop and report a blocker.
 
 ## Non-Goals
 
+- No terminal tabs UI/product behavior.
 - No terminal-core behavior changes.
 - No shared renderer/backend refactor.
 - No app-shell UI redesign.
+- No selection/IME/gesture behavior changes except compile-preserving seam rewiring.
 - No debug-view UI resurrection.
 - No CI/pipeline/lint additions.
 - No broad rename campaign.
@@ -158,7 +168,8 @@ when:
 - validation fails and cannot be fixed inside the active internal milestone
 - a behavior change is required to proceed where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
-- the `AHW-B2` super-gate is reached
+- implementing terminal tabs/product behavior becomes necessary to proceed
+- the `AHW-B3` super-gate is reached
 
 Otherwise continue autonomously with:
 
@@ -166,9 +177,9 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At `AHW-B2` super-gate, report:
+At `AHW-B3` super-gate, report:
 
-- review chunk name: `AHW-B2`
+- review chunk name: `AHW-B3`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs

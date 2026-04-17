@@ -100,6 +100,10 @@ Current JDTLS rule:
 
 - treat `android/terminal-host/` as the Java/Gradle root
 - do not point JDTLS at the repo root
+- run the JDTLS server itself on JDK 21 or newer
+- model the Android `app` project as Java 17 to match Gradle
+- ensure the generated Eclipse classpath includes a JavaSE-17 JRE container;
+  `android.jar` is not a JDK and cannot provide `java.lang.invoke.*`
 - if JDTLS gets stuck on stale Android metadata, clear the workspace and reopen:
 
 ```sh
@@ -111,6 +115,8 @@ Repo-side support for that workflow now lives in Gradle:
 - `app/build.gradle` declares Eclipse/Buildship source roots for JDTLS
 - it also adds the Android SDK `android.jar` and generated debug `R.jar` to the
   Eclipse classpath model
+- it adds the JavaSE-17 JRE container so JDT resolves JDK classes while keeping
+  the Android app compile level aligned with Gradle
 - this keeps Android Java resolution working in Neovim without tracked
   `.classpath` / `.project` files
 
