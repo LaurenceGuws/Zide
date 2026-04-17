@@ -73,7 +73,7 @@ Boundary rules:
 Current shape markers (for hygiene tracking, not hard limits):
 
 - `selection/SelectionController.java`: `1066` lines (monolithic by design for now)
-- `ZideActivity.java`: `870` lines
+- `ZideActivity.java`: `725` lines
 - `input/ShellInputView.java`: `587` lines
 - `userland/UserlandInstaller.java`: `425` lines
 - `host/ui/WidgetAssembly.java`: `320` lines
@@ -86,7 +86,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 
 | File | Contract Fit | Size/Shape | Next Pressure |
 | --- | --- | --- | --- |
-| `ZideActivity.java` | Good | Wiring-oriented Android entrypoint. JNI declarations remain out and status/view, interaction, widget/chrome/view-mode/surface, userland workflow, product runtime startup, lifecycle overrides, and direct-input override routing now compose through dedicated seams/helpers. Pressure is orchestration readability rather than ownership leakage. | Keep activity orchestration-only; route any new behavior into the owning host/controller seam instead of adding policy here. |
+| `ZideActivity.java` | Good | Wiring-oriented Android entrypoint. JNI declarations remain out; null-safe runtime forwards live in `ProductHostDeferredActions`; widget/interaction/input assembly Host seams expose `harnessContext()` instead of `Activity` where Context suffices. | Keep activity orchestration-only; route any new behavior into the owning host/controller seam instead of adding policy here. |
 | `NativeBridge.java` | Good | Owns JNI library load state and native bridge declarations for the terminal host. | Keep this focused on JNI surface only; do not move Android policy or lifecycle behavior into it. |
 | `debug/AndroidDebugFormatter.java` | Good | Pure formatter plus snapshot values. Large constructor surface is acceptable for debug-only snapshots. | Split snapshot values only if formatter starts owning state or capture policy. |
 | `debug/NativeStatusLabels.java` | Good | Owns native status-enum label mapping for debug/operator text. | Keep as pure mapping; avoid embedding behavior/policy. |
@@ -107,6 +107,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/runtime/RuntimeHostCallbacks.java` | Good | Functional callback adapter from activity state/native access into `host/runtime/RuntimeController`. | Keep adapter-only; runtime behavior stays in `host/runtime/RuntimeController`. |
 | `host/runtime/RuntimeAssembly.java` | Good | Owns product-runtime controller startup assembly so activity no longer inlines runtime callback construction. | Keep this assembly-only; runtime behavior stays in runtime controller + host callbacks. |
 | `host/runtime/RuntimeAssemblyCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/runtime/RuntimeAssembly`. | Keep adapter-only; avoid moving runtime behavior into this adapter. |
+| `host/ui/ProductHostDeferredActions.java` | Good | Owns null-safe forwards from early wiring callbacks into controllers that are constructed progressively during activity startup. | Keep this as delegation-only glue; do not add product policy beyond null-guarded controller forwards. |
 | `host/ui/ActivityViewBindings.java` | Good | Owns raw activity view lookup and typed binding capture for terminal host wiring. | Keep this as lookup-only data binding; no policy or runtime behavior. |
 | `host/ui/ChromeFactory.java` | Good | Owns chrome-specific bridge/callback construction so chrome assembly does not inflate the generic host assembler. | Keep this construction-only; do not move chrome behavior out of `host/ui/ChromeController`. |
 | `host/interaction/InteractionFactory.java` | Good | Owns selection/gesture interaction controller construction so interaction seams stay out of the generic host assembler. | Keep this construction-only; interaction behavior remains in selection/gesture controllers. |

@@ -65,6 +65,9 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
 
 ## Practical Conventions
 
+- assembly `Host` seams that only need a `Context` for view construction should
+  expose `harnessContext()` rather than `activity()` to avoid implying the
+  Activity is the widget backbone
 - do not include `Terminal` when package already scopes terminal host context
 - reserve `Product` only for user-facing product behavior distinctions
 - reserve `Host` for boundary context where needed; do not repeat it when the
