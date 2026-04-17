@@ -68,6 +68,10 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
 - assembly `Host` seams that only need a `Context` for view construction should
   expose `harnessContext()` rather than `activity()` to avoid implying the
   Activity is the widget backbone
+- shell-blocker presentation wiring uses `ShellPresentationHostInputs` on
+  `WidgetAssembly.Host` so the host interface does not import userland value
+  classes; `ShellInputView.Host` must be passed explicitly into input assembly
+  callbacks, never cast from `Context`
 - do not include `Terminal` when package already scopes terminal host context
 - reserve `Product` only for user-facing product behavior distinctions
 - reserve `Host` for boundary context where needed; do not repeat it when the

@@ -73,7 +73,7 @@ Boundary rules:
 Current shape markers (for hygiene tracking, not hard limits):
 
 - `selection/SelectionController.java`: `1066` lines (monolithic by design for now)
-- `ZideActivity.java`: `725` lines
+- `ZideActivity.java`: `723` lines
 - `input/ShellInputView.java`: `587` lines
 - `userland/UserlandInstaller.java`: `425` lines
 - `host/ui/WidgetAssembly.java`: `320` lines
@@ -86,7 +86,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 
 | File | Contract Fit | Size/Shape | Next Pressure |
 | --- | --- | --- | --- |
-| `ZideActivity.java` | Good | Wiring-oriented Android entrypoint. JNI declarations remain out; null-safe runtime forwards live in `ProductHostDeferredActions`; widget/interaction/input assembly Host seams expose `harnessContext()` instead of `Activity` where Context suffices. | Keep activity orchestration-only; route any new behavior into the owning host/controller seam instead of adding policy here. |
+| `ZideActivity.java` | Good | Wiring-oriented Android entrypoint. JNI declarations remain out; startup null-guards are aggregated in `ProductHostStartupBundle` (owner-aligned `*StartupForwards` classes, not a second backbone). `InputAssembly` takes explicit `ShellInputView.Host`; `WidgetAssembly.Host` uses `ShellPresentationHostInputs` instead of importing userland value types. | Keep activity orchestration-only; route any new behavior into the owning host/controller seam instead of adding policy here. |
 | `NativeBridge.java` | Good | Owns JNI library load state and native bridge declarations for the terminal host. | Keep this focused on JNI surface only; do not move Android policy or lifecycle behavior into it. |
 | `debug/AndroidDebugFormatter.java` | Good | Pure formatter plus snapshot values. Large constructor surface is acceptable for debug-only snapshots. | Split snapshot values only if formatter starts owning state or capture policy. |
 | `debug/NativeStatusLabels.java` | Good | Owns native status-enum label mapping for debug/operator text. | Keep as pure mapping; avoid embedding behavior/policy. |
@@ -107,7 +107,15 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/runtime/RuntimeHostCallbacks.java` | Good | Functional callback adapter from activity state/native access into `host/runtime/RuntimeController`. | Keep adapter-only; runtime behavior stays in `host/runtime/RuntimeController`. |
 | `host/runtime/RuntimeAssembly.java` | Good | Owns product-runtime controller startup assembly so activity no longer inlines runtime callback construction. | Keep this assembly-only; runtime behavior stays in runtime controller + host callbacks. |
 | `host/runtime/RuntimeAssemblyCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/runtime/RuntimeAssembly`. | Keep adapter-only; avoid moving runtime behavior into this adapter. |
-| `host/ui/ProductHostDeferredActions.java` | Good | Owns null-safe forwards from early wiring callbacks into controllers that are constructed progressively during activity startup. | Keep this as delegation-only glue; do not add product policy beyond null-guarded controller forwards. |
+| `host/ui/ProductHostStartupBundle.java` | Good | Aggregates `RuntimeStartupForwards`, `FrameLoopStartupForwards`, `SurfaceStartupForwards`, `UserlandSessionStartupForwards`, `InputChromeStartupForwards`, `StatusTelemetryStartupForwards`, and `WorkflowInstallStartupGlue` for progressive `onCreate` wiring only. | Keep as startup-order aggregation; extend owner domains via their `*StartupForwards` types, not new methods on the activity. |
+| `host/userland/ShellPresentationHostInputs.java` | Good | Harness seam bundling readiness/install suppliers for shell-blocker presentation without userland types on `WidgetAssembly.Host`. | Keep as thin supplier bundle; presentation truth remains in userland value objects. |
+| `host/runtime/RuntimeStartupForwards.java` | Good | Null-guard forwards into `RuntimeController`. | Delegation-only. |
+| `host/runtime/FrameLoopStartupForwards.java` | Good | Null-guard forwards into `FrameLoopController`. | Delegation-only. |
+| `host/surface/SurfaceStartupForwards.java` | Good | Null-guard forwards into `SurfaceController`. | Delegation-only. |
+| `host/userland/UserlandSessionStartupForwards.java` | Good | Null-guard forwards into `UserlandSessionCoordinator`. | Delegation-only. |
+| `host/input/InputChromeStartupForwards.java` | Good | Null-guard forwards for hardware keyboard, IME focus recovery, chrome modifier latch. | Delegation-only. |
+| `host/debug/StatusTelemetryStartupForwards.java` | Good | Null-guard forwards into `StatusController` for package-doctor telemetry. | Delegation-only. |
+| `host/userland/WorkflowInstallStartupGlue.java` | Good | Install completion state transitions + runtime restart delegation. | Keep install orchestration thin; low-level extraction stays in `UserlandInstaller`. |
 | `host/ui/ActivityViewBindings.java` | Good | Owns raw activity view lookup and typed binding capture for terminal host wiring. | Keep this as lookup-only data binding; no policy or runtime behavior. |
 | `host/ui/ChromeFactory.java` | Good | Owns chrome-specific bridge/callback construction so chrome assembly does not inflate the generic host assembler. | Keep this construction-only; do not move chrome behavior out of `host/ui/ChromeController`. |
 | `host/interaction/InteractionFactory.java` | Good | Owns selection/gesture interaction controller construction so interaction seams stay out of the generic host assembler. | Keep this construction-only; interaction behavior remains in selection/gesture controllers. |
@@ -115,7 +123,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/interaction/InteractionCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/interaction/InteractionAssembly`. | Keep adapter-only; avoid moving interaction behavior into this adapter. |
 | `host/input/InputFactory.java` | Good | Owns hardware-keyboard and IME-focus-recovery controller construction so input seams stay out of generic host assembly. | Keep this construction-only; input behavior remains in `input/` controllers. |
 | `host/input/InputAssembly.java` | Good | Owns input-view installation and input-controller assembly composition for the activity wiring layer. | Keep this assembly-only; input behavior remains in `input/` controllers. |
-| `host/input/InputCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/input/InputAssembly`. | Keep adapter-only; avoid adding input behavior here. |
+| `host/input/InputCallbacks.java` | Good | Functional callback adapter into `host/input/InputAssembly`; holds explicit `ShellInputView.Host` (no `Context` cast). | Keep adapter-only; avoid adding input behavior here. |
 | `host/surface/SurfaceFactory.java` | Good | Owns surface host bridge/callback construction so surface lifecycle assembly stays out of generic host assembly. | Keep this construction-only; surface behavior remains in surface host controllers/bridges. |
 | `host/surface/SurfaceWidgetAssembly.java` | Good | Owns surface/widget activity wiring assembly that composes surface and UI host factories for activity use. | Keep this assembly-only; surface/widget behavior remains in dedicated controllers. |
 | `host/surface/SurfaceWidgetAssemblyCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/surface/SurfaceWidgetAssembly`. | Keep adapter-only; avoid adding surface/widget behavior here. |

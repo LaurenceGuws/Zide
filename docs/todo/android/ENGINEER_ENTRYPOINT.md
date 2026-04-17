@@ -34,19 +34,19 @@ you must report the mismatch.
 
 ## Current Target
 
-Active macro batch: **`AHW-B1` Harness backbone + widget portability macro batch**.
+Active macro batch: **`AHW-B2` Portable widget contract closure + deferred-action split**.
 
 Batch queue line:
 
-- remove remaining Android Activity/backbone pressure from terminal widget and userland seams while preserving runtime behavior
+- finish the portable widget contract by removing hidden Activity/userland assumptions and splitting broad deferred forwards into owned startup seams
 
 Internal milestones:
 
-1. `AHW-M1` Activity backbone pressure audit + first extractions
-2. `AHW-M2` Harness app-shell + userland ownership closure
-3. `AHW-M3` Terminal Widget host contract shrink
-4. `AHW-M4` Naming and structure contract enforcement slice
-5. `AHW-M5` Batch validation + handoff packet
+1. `AHW2-M1` Explicit input host contract
+2. `AHW2-M2` Shell-state presentation snapshot boundary
+3. `AHW2-M3` Deferred action ownership split
+4. `AHW2-M4` Harness/widget naming cleanup for B2 seams
+5. `AHW2-M5` Batch validation + review packet
 
 Continue through all five internal milestones. Do not stop for architect review
 between them.
@@ -57,7 +57,8 @@ not every internal milestone.
 
 ## Core Boundary Rule
 
-The batch exists to enforce the Android refocus vision:
+The batch exists to convert AHW-B1's partial portability into enforceable
+contracts:
 
 - Android Harness owns platform ceremony, app-shell layout/styling/theming,
   navigation/view state, and userland orchestration.
@@ -68,17 +69,18 @@ The batch exists to enforce the Android refocus vision:
 - `ZideActivity` should be Android entrypoint and wiring, not the backbone for
   product behavior.
 
+## Required Fixes From Architect Review
+
+Resolved in macro batch **`AHW-B2`** (see `docs/todo/android/implementation.md`):
+explicit `ShellInputView.Host`, `ShellPresentationHostInputs` on widget assembly,
+and owner-aligned `*StartupForwards` plus `ProductHostStartupBundle` (startup-order
+glue only, not a second activity backbone).
+
 ## Allowed Work
 
 Allowed code roots:
 
 - `android/terminal-host/app/src/main/java/uk/laurencegouws/terminal/**`
-- `android/terminal-host/app/src/main/res/layout/activity_main.xml` only when
-  app-shell/widget wiring requires it
-- `android/terminal-host/app/src/main/res/values/colors.xml` only when theming
-  propagation requires it
-- `android/terminal-host/app/src/main/res/values/strings.xml` only when chrome
-  copy/action names require it
 
 Allowed docs:
 
@@ -95,6 +97,7 @@ If a required change falls outside these paths, stop and report a blocker.
 
 - No terminal-core behavior changes.
 - No shared renderer/backend refactor.
+- No app-shell UI redesign.
 - No debug-view UI resurrection.
 - No CI/pipeline/lint additions.
 - No broad rename campaign.
@@ -155,7 +158,7 @@ when:
 - validation fails and cannot be fixed inside the active internal milestone
 - a behavior change is required to proceed where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
-- the `AHW-B1` super-gate is reached
+- the `AHW-B2` super-gate is reached
 
 Otherwise continue autonomously with:
 
@@ -163,9 +166,9 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At `AHW-B1` super-gate, report:
+At `AHW-B2` super-gate, report:
 
-- review chunk name: `AHW-B1`
+- review chunk name: `AHW-B2`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs
