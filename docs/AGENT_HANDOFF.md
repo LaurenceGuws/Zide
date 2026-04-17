@@ -122,6 +122,8 @@ Required per-commit update format:
   contracts are now provided directly at `InteractionFactory`.
 - latest cut removed `host/interaction/GestureStateBridge`; gesture host
   contracts now flow directly into `GestureStateController`.
+- latest cut removed `host/lifecycle/LifecycleCallbacks`; lifecycle host
+  contracts now flow directly from `ZideActivity` into `LifecycleController`.
 - `userland/UserlandInstaller.java` (~425 lines) remains large but cohesive;
   keep watch-only unless behavior complexity expands.
 - `host/surface/SurfaceController.java` and `host/ui/ChromeController.java`

@@ -17,7 +17,6 @@ import uk.laurencegouws.terminal.debug.StatusController;
 import uk.laurencegouws.terminal.debug.SurfaceStateSnapshotReader;
 import uk.laurencegouws.terminal.gesture.GestureStateController;
 import uk.laurencegouws.terminal.host.lifecycle.LifecycleController;
-import uk.laurencegouws.terminal.host.lifecycle.LifecycleCallbacks;
 import uk.laurencegouws.terminal.host.lifecycle.LifecycleDebugIntentArgs;
 import uk.laurencegouws.terminal.host.ui.ChromeController;
 import uk.laurencegouws.terminal.host.runtime.FrameLoopController;
@@ -569,24 +568,92 @@ public final class ZideActivity extends Activity
 
     private void assembleActivityLifecycleController() {
         terminalActivityLifecycleController = new LifecycleController(
-                createLifecycleCallbacks());
+                createLifecycleHost());
     }
 
-    private LifecycleCallbacks createLifecycleCallbacks() {
-        return new LifecycleCallbacks(
-                createLifecycleHostCallbacks(),
-                StatusController::callNative);
-    }
+    private LifecycleController.Host createLifecycleHost() {
+        return new LifecycleController.Host() {
+            @Override
+            public boolean nativeLoaded() {
+                return NativeBridge.nativeLoaded();
+            }
 
-    private LifecycleCallbacks.LifecycleHostCallbacks createLifecycleHostCallbacks() {
-        return LifecycleCallbacks.LifecycleHostCallbacks.of(
-                () -> nativeLoadError,
-                StatusController::appendEvent,
-                StatusController::updateStatus,
-                this::stopFrameLoopIfReady,
-                this::refreshUserlandSessionIfReady,
-                this::pauseSurfaceIfReady,
-                this::resumeSurfaceIfReady);
+            @Override
+            public String nativeLoadError() {
+                return nativeLoadError;
+            }
+
+            @Override
+            public long nativeOnCreate() {
+                return NativeBridge.nativeOnCreateBridge();
+            }
+
+            @Override
+            public long nativeOnStart() {
+                return NativeBridge.nativeOnStartBridge();
+            }
+
+            @Override
+            public long nativeOnResume() {
+                return NativeBridge.nativeOnResumeBridge();
+            }
+
+            @Override
+            public long nativeOnPause() {
+                return NativeBridge.nativeOnPauseBridge();
+            }
+
+            @Override
+            public long nativeOnStop() {
+                return NativeBridge.nativeOnStopBridge();
+            }
+
+            @Override
+            public long nativeOnWindowFocus(boolean hasFocus) {
+                return NativeBridge.nativeOnWindowFocusBridge(hasFocus);
+            }
+
+            @Override
+            public void appendEvent(String event) {
+                StatusController.appendEvent(event);
+            }
+
+            @Override
+            public void callNative(String event, long seq) {
+                StatusController.callNative(event, seq);
+            }
+
+            @Override
+            public void updateStatus(String statusLabel) {
+                StatusController.updateStatus(statusLabel);
+            }
+
+            @Override
+            public void stopFrameLoop() {
+                stopFrameLoopIfReady();
+            }
+
+            @Override
+            public void refreshUserlandSessionOnPause() {
+                refreshUserlandSessionIfReady();
+            }
+
+            @Override
+            public void notifySurfacePause() {
+                pauseSurfaceIfReady();
+            }
+
+            @Override
+            public void notifySurfaceResume(
+                    boolean debugRecreateSurfaceOnce,
+                    boolean debugResizeSurfaceOnce,
+                    boolean debugStartShellOnce) {
+                resumeSurfaceIfReady(
+                        debugRecreateSurfaceOnce,
+                        debugResizeSurfaceOnce,
+                        debugStartShellOnce);
+            }
+        };
     }
 
     private void bindAndStartUiControllers() {

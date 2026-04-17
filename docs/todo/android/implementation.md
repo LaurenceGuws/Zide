@@ -363,6 +363,10 @@ Audit decision:
     `host/interaction/SelectionCallbacks.java`; `InteractionFactory` now
     provides a direct `SelectionControllerFactory.Host` contract inline,
     removing one more relay-only callback class.
+  - Completed: lifecycle adapter depth reduced by deleting
+    `host/lifecycle/LifecycleCallbacks.java`; `ZideActivity` now provides a
+    direct `LifecycleController.Host` contract at assembly time, removing one
+    relay callback tier without changing lifecycle behavior.
   - Completed: status adapter depth reduced by deleting
     `host/status/StatusBridge.java` and `host/status/StatusCallbacks.java`;
     `StatusViewAssembly` now composes `StatusController.Host` directly at
