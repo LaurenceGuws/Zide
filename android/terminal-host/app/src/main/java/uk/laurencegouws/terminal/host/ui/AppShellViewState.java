@@ -19,7 +19,12 @@ public final class AppShellViewState {
         this.contentReady = contentReady;
     }
 
-    public static AppShellViewState productTerminalDefault() {
-        return new AppShellViewState(ShellViewId.TERMINAL, true, false);
+    /**
+     * Default shell snapshot for the active product terminal slot (invokes
+     * {@link ProductTerminalSlotShellMapping#shellViewIdForTerminalSlot}).
+     */
+    public static AppShellViewState productTerminalDefault(TerminalWidgetSlotId slot) {
+        return new AppShellViewState(
+                ProductTerminalSlotShellMapping.shellViewIdForTerminalSlot(slot), true, false);
     }
 }
