@@ -333,6 +333,10 @@ Audit decision:
     `configureEditorInfo(...)` and input callbacks now live in
     `ShellInputConnection`, reducing top-level method complexity while preserving
     IME/input behavior.
+  - Completed: `ShellInputView` commit/delete IME paths now use explicit helper
+    phases (`shouldSuppressCommitText`, `commitComposingOrInsertText`,
+    bounded before/after cursor delete helpers), reducing nested branch pressure
+    in input callbacks while preserving direct-text/direct-codepoint behavior.
     - Next: execute a behavior-preserving `input/ShellInputView.java`
       complexity-risk reduction wave focused on IME/hardware-key correctness
       seams (`onCreateInputConnection`, key mapping, and key-event handling)

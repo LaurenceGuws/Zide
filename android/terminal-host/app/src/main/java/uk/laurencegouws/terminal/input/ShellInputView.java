@@ -175,45 +175,20 @@ public final class ShellInputView extends View {
         @Override
         public boolean commitText(CharSequence text, int newCursorPosition) {
             final String s = text.toString();
-            if (suppressedCommitText != null && suppressedCommitText.equals(s)) {
-                suppressedCommitText = null;
+            if (shouldSuppressCommitText(s)) {
                 return true;
             }
-            if (consumeLatchedImeText(s)) {
+            if (tryCommitLatchedImeText(s)) {
                 return true;
             }
-            final String previous = currentCompositionText();
-            if (editorComposingStart >= 0) {
-                replaceComposition(s);
-                editorComposingStart = -1;
-                editorComposingEnd = -1;
-            } else {
-                editorBuffer.insert(editorCursor, s);
-                editorCursor += s.length();
-                host.sendDirectText(s);
-            }
-            if (previous.equals(s)) {
-                editorComposingStart = -1;
-                editorComposingEnd = -1;
-            }
+            commitComposingOrInsertText(s);
             return true;
         }
 
         @Override
         public boolean deleteSurroundingText(int beforeLength, int afterLength) {
-            if (beforeLength > 0) {
-                final int delStart = Math.max(0, editorCursor - beforeLength);
-                final int count = editorCursor - delStart;
-                editorBuffer.delete(delStart, editorCursor);
-                editorCursor = delStart;
-                for (int i = 0; i < count; i++) {
-                    host.sendDirectCodepoint('\u007f');
-                }
-            }
-            if (afterLength > 0) {
-                final int delEnd = Math.min(editorBuffer.length(), editorCursor + afterLength);
-                editorBuffer.delete(editorCursor, delEnd);
-            }
+            deleteTextBeforeCursorAndSendBackspace(beforeLength);
+            deleteTextAfterCursor(afterLength);
             return true;
         }
 
@@ -266,6 +241,59 @@ public final class ShellInputView extends View {
             return editorBuffer.substring(editorComposingStart, editorComposingEnd);
         }
         return "";
+    }
+
+    private boolean shouldSuppressCommitText(String text) {
+        if (suppressedCommitText == null || !suppressedCommitText.equals(text)) {
+            return false;
+        }
+        suppressedCommitText = null;
+        return true;
+    }
+
+    private boolean tryCommitLatchedImeText(String text) {
+        return consumeLatchedImeText(text);
+    }
+
+    private void commitComposingOrInsertText(String text) {
+        final String previous = currentCompositionText();
+        if (editorComposingStart >= 0) {
+            replaceComposition(text);
+            clearComposition();
+            if (previous.equals(text)) {
+                clearComposition();
+            }
+            return;
+        }
+        editorBuffer.insert(editorCursor, text);
+        editorCursor += text.length();
+        host.sendDirectText(text);
+    }
+
+    private void clearComposition() {
+        editorComposingStart = -1;
+        editorComposingEnd = -1;
+    }
+
+    private void deleteTextBeforeCursorAndSendBackspace(int beforeLength) {
+        if (beforeLength <= 0) {
+            return;
+        }
+        final int delStart = Math.max(0, editorCursor - beforeLength);
+        final int count = editorCursor - delStart;
+        editorBuffer.delete(delStart, editorCursor);
+        editorCursor = delStart;
+        for (int i = 0; i < count; i++) {
+            host.sendDirectCodepoint('\u007f');
+        }
+    }
+
+    private void deleteTextAfterCursor(int afterLength) {
+        if (afterLength <= 0) {
+            return;
+        }
+        final int delEnd = Math.min(editorBuffer.length(), editorCursor + afterLength);
+        editorBuffer.delete(editorCursor, delEnd);
     }
 
     private void replaceComposition(String next) {
