@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android harness/widget portability hardening** (`AHW`) — turns the refocus vision into enforceable code shape: Android Harness is the platform/app-shell canvas, Terminal Widget is the portable terminal consumer, and userland stays movable for future IDE/editor modes.
-- Active macro batch (`in_progress`): `AHW-B26` — landing-gate closure audit and minimal remaining ownership-gap fixes required to close AHW.
+- Active macro batch (`awaiting_architect_review`): `AHW-B26` — landing-gate audit complete (five criteria pass); engineer recommends **close `AHW`**; doc-only authority updates; stopped at super-gate for architect verdict on campaign closure.
 - Prior closed/escalated: `AHW-B1` through `AHW-B25` accepted; `ASF-M3` escalated IME/assist/touch rows to operator evidence; `RF-M0` through `RF-M5` and `AX-M1` through `AX-M5` completed.
 - Active queue authority: `docs/todo/android/implementation.md`
 - Engineer entrypoint (dual mode): `docs/todo/android/ENGINEER_ENTRYPOINT.md`

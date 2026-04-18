@@ -34,7 +34,7 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B26` is `in_progress`.
+`AHW-B26` is at **super-gate** (engineer execution complete; awaiting architect verdict on campaign closure). Do not start the next campaign until the Architect accepts the gate and refocuses `docs/todo/android/implementation.md`.
 
 Active batch queue line (exact):
 
@@ -59,6 +59,7 @@ real remaining ownership gaps while preserving behavior.
 
 ## Required Direction From Architect Review (post-AHW-B25)
 
+- `AHW-B26` performs the **campaign landing-gate closure audit**; engineer recommendation after M1: **no Java ownership gaps** in scope — closure is doc-lock + architect acceptance of `AHW` complete.
 - `AHW-B25` is accepted.
 - Keep harness vs surface split (`WidgetAssembly.Result.harnessHost` + `surfaceJoin`) as the baseline.
 - Freeze additional keep-screen-on seam work beyond B20 unless explicitly re-opened by product direction.

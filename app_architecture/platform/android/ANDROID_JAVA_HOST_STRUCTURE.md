@@ -68,6 +68,19 @@ Boundary rules:
 - Userland remains movable independent of widget ownership.
 - `zide-pm` integration stays tool-like with minimal Java ceremony.
 
+## AHW campaign landing gate (closure reference)
+
+`docs/todo/android/implementation.md` records when the **Android harness/widget
+portability hardening** (`AHW`) campaign is considered landed. The five criteria are:
+
+1. **Harness canvas** — Harness owns platform/app-shell/userland orchestration; terminal mechanics stay in `selection`, `input`, `scroll`, `gesture`, and `host/surface`, composed through `host/ui` (`TerminalWidgetInstance`, `WidgetAssembly`, `TerminalWidgetCompositionAssembly`), not inlined as hidden product logic in the activity.
+2. **Portable widget consumer** — Those domains do not own app-shell navigation, chrome, or userland orchestration; those stay under `host/ui`, `host/userland`, and activity wiring.
+3. **Movable userland** — `uk.laurencegouws.terminal.userland` stays free of widget/surface/controller implementation types; see `USERLAND_HOST_CONTRACT.md`.
+4. **`ZideActivity` wiring edge** — Startup order is `ProductHostOnCreateStartupCoordinator`; callback assembly uses `ProductHostActivityStartupWiring` and named hosts; the activity assigns composed controllers rather than owning terminal policy.
+5. **Product expansion next** — Remaining Android roadmap work is scoped product features (for example multi-terminal view policy), not ownership rescue of the harness/widget split.
+
+Architect acceptance of `AHW-B26` in the queue closes `AHW`; subsequent work is **product expansion** unless a regression reopens seam ownership.
+
 ## Harness-held terminal widget instance
 
 Today the product hosts **one** terminal widget instance. Harness wiring groups

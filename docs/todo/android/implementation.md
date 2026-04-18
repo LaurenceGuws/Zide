@@ -98,7 +98,7 @@ Dual-mode batching override (architect directive):
 - `ASF-M3` escalated stabilization follow-through to operator evidence.
 - `AHW-B1` through `AHW-B25` accepted by architect.
 - Keep-screen-on seam work beyond `AHW-B20` is frozen by product direction.
-- `AHW-B26` is `in_progress`.
+- `AHW-B26` is at super-gate (awaiting architect verdict).
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -367,7 +367,7 @@ Acceptance:
 
 - **Activation mutation entry points:** (1) `AppShellNavigation` private constructor seeds `activeShellView` via `replaceActiveShellView(productTerminalShellViewId)` after `forProductTerminalSlot` → `ProductTerminalSlotShellMapping.shellViewIdForTerminalSlot`. (2) Steady-state re-assert: `ViewModeController.applyCurrentViewMode` (only callsite of terminal shell view activation besides ctor seeding) must invoke the product-terminal active view without re-running slot mapping.
 - **Policy owner vs adapter-only:** `AppShellNavigation` remains the owner of active `ShellViewId`, drawer sidebar flags, and `applyProductTerminalShellViewActive`. Chrome/input bridges are adapter-only over that navigation state. **New:** `AppShellTerminalViewPolicy` is the explicit harness **terminal-view activation policy** seam (delegates to `applyProductTerminalShellViewActive`); view-mode and `WidgetHarnessHostControllers` use it so future tab/shell policy extends one type.
-- **Invariants:** slot→`ShellViewId` resolution still exactly once per `AppShellNavigation.forProductTerminalSlot` in `WidgetAssembly.assemble`; chrome still receives the same `AppShellNavigation` instance via `AppShellTerminalViewPolicy.appShellNavigation()`. No new `ShellViewId` literals outside `ProductTerminalSlotShellMapping` for product routing.
+- **Invariants:** slot→`ShellViewId` resolution still exactly once per `AppShellNavigation.forProductTerminalSlot` in `WidgetAssembly.assemble`; chrome is wired through `AppShellTerminalViewPolicy` (B25 removed public `appShellNavigation()` on policy). No new `ShellViewId` literals outside `ProductTerminalSlotShellMapping` for product routing.
 - **Out of scope:** tab UI, multi-instance product behavior, slot on `InteractionAssembly.Result`, per-slot chrome threading, keep-screen-on, startup order, B14–B23 IME/widget contracts.
 
 ### `AHW24-M2` Policy seam introduction (`complete`)
@@ -606,7 +606,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B26` Refocus-Shape Landing Gate Closure (`in_progress`)
+### `AHW-B26` Refocus-Shape Landing Gate Closure (`awaiting_architect_review`)
 
 Batch queue line (exact):
 
@@ -658,7 +658,7 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `AHW-B26` super-gate is reached.
 
-### `AHW26-M1` Landing-gate audit (`pending`)
+### `AHW26-M1` Landing-gate audit (`complete`)
 
 Queue line (exact):
 
@@ -670,7 +670,23 @@ Acceptance:
 - identify only real gaps, not speculative future design wishes
 - record out-of-scope items explicitly
 
-### `AHW26-M2` Remaining-gap plan lock (`pending`)
+**M1 audit (authoritative for B26):**
+
+| Criterion | Verdict | Evidence |
+| --- | --- | --- |
+| (1) Harness is canvas; does not own terminal widget internals | **Pass** | Terminal interaction/surface code lives in `selection/`, `input/`, `gesture/`, `host/surface/`; harness composes via `WidgetAssembly`, `TerminalWidgetCompositionAssembly`, `TerminalWidgetInstance` — `ZideActivity` does not construct widget holder directly (see `ANDROID_JAVA_HOST_STRUCTURE.md` harness-held instance section). |
+| (2) Terminal widget is portable consumer; no app-shell/userland orchestration | **Pass** | No `selection/` or `gesture/` imports of `host.ui` chrome/app-shell orchestration; chrome/view-mode stay in `host/ui`. |
+| (3) Userland movable; free of widget/surface/controller ownership | **Pass** | `userland/` sources do not import `host.ui`, `host.surface`, `selection`, or `gesture` types; integration uses harness `ShellPresentationHostInputs` and callbacks per `USERLAND_HOST_CONTRACT.md`. `ShellStatePresenter.Host` exposes Android `SurfaceView`/`View` as presentation seams only — not widget controller types. |
+| (4) `ZideActivity` is wiring edge, not backbone | **Pass** | OnCreate choreography: `ProductHostOnCreateStartupCoordinator` + `ProductHostOnCreateStartupSteps`; wiring hosts: `ProductHostActivityStartupWiring`, `ProductTerminalWidgetAssemblyHost`, `ProductTerminalLifecycleHost`. |
+| (5) Remaining work is product expansion, not ownership rescue | **Pass** (doc stance) | No concrete ownership leak identified in M1 requiring a further AHW batch; next Android work is explicitly scoped features (tabs/view policy), not structural rescue. |
+
+**Gaps requiring Java changes in this batch:** none identified.
+
+**Doc hygiene:** `USERLAND_HOST_CONTRACT.md` still described shell policy primarily through raw `AppShellNavigation`; updated in M4 to include `AppShellTerminalViewPolicy` (B24–B25 reality).
+
+**Out of scope:** terminal tabs UI, `InteractionAssembly.Result` slot threading, per-slot chrome, keep-screen-on beyond B20, ASF operator-evidence rows.
+
+### `AHW26-M2` Remaining-gap plan lock (`complete`)
 
 Queue line (exact):
 
@@ -682,7 +698,9 @@ Acceptance:
 - no compatibility fallback paths added
 - compile debug + release Java after any code changes
 
-### `AHW26-M3` Gap resolution cuts (`pending`)
+**M2 outcome:** no M1 code gaps → **no-code closure path** for Java; authority doc updates only (M4).
+
+### `AHW26-M3` Gap resolution cuts (`complete`)
 
 Queue line (exact):
 
@@ -694,7 +712,9 @@ Acceptance:
 - runtime behavior remains unchanged
 - compile debug + release Java after code changes
 
-### `AHW26-M4` Authority lock (`pending`)
+**M3 outcome:** no ownership-fix commits (no leaks).
+
+### `AHW26-M4` Authority lock (`complete`)
 
 Queue line (exact):
 
@@ -705,7 +725,7 @@ Acceptance:
 - host structure and naming contract match code shape
 - userland contract remains unchanged unless ownership text requires update
 
-### `AHW26-M5` Queue/handoff/entrypoint sync (`pending`)
+### `AHW26-M5` Queue/handoff/entrypoint sync (`complete`)
 
 Queue line (exact):
 
@@ -716,7 +736,7 @@ Acceptance:
 - queue, handoff, and engineer entrypoint stay coherent through B26 super-gate
 - super-gate stop condition and review packet contract are explicit
 
-### `AHW26-M6` Batch validation + review packet (`pending`)
+### `AHW26-M6` Batch validation + review packet (`complete`)
 
 Queue line (exact):
 
@@ -728,6 +748,18 @@ Acceptance:
 - deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
 - cold start smoke pass when a device is available
 - engineer reports full super-gate packet and explicit recommendation: `AHW close` or `one final gap batch`
+
+**Engineer closure recommendation:** **`AHW close`** — landing-gate checklist satisfied; remaining Android lane work should be scheduled as **product expansion** (queue already describes post-`AHW` posture in campaign landing gate).
+
+**AHW-B26 engineer validation record (M6):**
+
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac` — pass
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac` — pass
+- `python3 ops/android_terminal_host.py deploy` — pass (streamed install, activity start)
+- `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E` — pass (no `AndroidRuntime:E` lines; benign duplicate-top warning when activity already foreground)
+- `adb shell am force-stop uk.laurencegouws.zide && adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity` — pass (`LaunchState: COLD`, `Status: ok`)
+
+`Milestone reached per docs, architect review required.`
 
 ## Guardrails
 
