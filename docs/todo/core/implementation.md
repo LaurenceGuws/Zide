@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B4` (`in_progress`).
+- Current active macro batch: `CZH-B5` (`in_progress`).
 
 ## Campaign Goals
 
@@ -338,7 +338,7 @@ Internal milestones (`CZH3-M1..M6`, execute sequentially in one batch):
   `zig build test-terminal-replay-all PASS`; `zig build test-editor` still fails
   with module-path imports and is tracked as a separate stability lane concern.
 
-### `CZH-B4` Stability Baseline Closure: `test-editor` Module Path Lane (`in_progress`)
+### `CZH-B4` Stability Baseline Closure: `test-editor` Module Path Lane (`accepted`)
 
 Queue line (exact):
 
@@ -372,6 +372,75 @@ Internal milestones (`CZH4-M1..M6`, execute sequentially in one batch):
 - stop only at super-gate or real hard blocker
 - target 5–10 validated commits
 - maintain behavior freeze and single-path contract
+
+#### `CZH-B4` engineer implementation summary (2026-04-19)
+
+- repo-root test entrypoints added for editor test bundles:
+  - `editor_tests_root.zig`
+  - `editor_highlight_smoke_root.zig`
+- build wiring updated so `zig build test-editor` / highlight smoke use repo-root
+  module roots instead of `tests/*.zig` as package root.
+- config parser abort fixed:
+  - `parseLogGroupsOwned` no longer invalidates Lua table iteration stack
+    during grouped log sink parsing.
+- scoped mechanical compile/test drift cleanup landed in editor/render/runtime
+  test seams; runtime behavior unchanged.
+- terminal glyph prep ownership fix landed in draw adoption path:
+  successful adopted rasters now free staging upload buffers.
+
+#### `CZH-B4` engineer commits reviewed
+
+- `23785c17` — config Lua log-group iterator fix + keybind fixture repair
+- `49e396cb` — repo-root editor test entrypoints + build/test wiring
+- `4207edcc` — editor/doc buffer ownership routing + matching tests
+- `d5a42c68` — compile-fallout test seam updates (editor/render/runtime)
+- `dbadae3e` — glyph prep ownership leak fix + presentation-plan tests
+
+#### `CZH-B4` architect validation spot-check
+
+- `zig build` — PASS
+- `zig build test` — PASS
+- `zig build -Dmode=terminal` — PASS
+- `zig build -Dmode=editor` — PASS
+- `zig build test-config` — PASS
+- `zig build test-editor` — PASS
+- `zig build test-terminal-replay-all` — PASS
+- Android guard — SKIP (lane paused; no Android seam touched)
+
+#### Architect gate result
+
+- `Review chunk: CZH-B4`
+- `Verdict: accepted`
+- `Residual risks:` editor test bundle remains intentionally narrower than full
+  integration scope; expand in a dedicated follow-up once Lua/config and
+  harness boundaries are explicitly scoped.
+
+### `CZH-B5` Probe/Debug Hygiene + Ownership Naming Sweep (`in_progress`)
+
+Queue line (exact):
+
+- remove stale investigation caller residue and normalize ownership naming in
+  touched core/editor seams while preserving frozen runtime behavior
+
+Acceptance:
+
+- no stale probe/debug caller residue remains in touched product paths
+- touched naming aligns with declared owner contracts
+- stress ladder remains green:
+  `zig build`, `zig build test`, `zig build -Dmode=terminal`,
+  `zig build -Dmode=editor`, `zig build test-config`,
+  `zig build test-editor`, `zig build test-terminal-replay-all`
+
+Internal milestones (`CZH5-M1..M6`, execute sequentially in one batch):
+
+| Id | Scope |
+| --- | --- |
+| `CZH5-M1` | audit touched core/editor seams for stale probe/debug callers with explicit file list |
+| `CZH5-M2` | remove stale investigation-only callers/checks in audited seams (no behavior change) |
+| `CZH5-M3` | ownership naming cleanup in audited seams only (no semantic change) |
+| `CZH5-M4` | re-run full stress ladder and capture results |
+| `CZH5-M5` | docs sync (queue/handoff/entrypoint + any touched authority docs) |
+| `CZH5-M6` | super-gate packet with residual-risk notes |
 
 ## Response Contract
 

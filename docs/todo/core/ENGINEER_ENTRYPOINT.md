@@ -16,8 +16,8 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B4` — **in_progress** (`test-editor` module-path/build-root stability
-  lane; keep runtime behavior frozen while closing the baseline test gap).
+- `CZH-B5` — **in_progress** (probe/debug hygiene + ownership naming cleanup
+  under behavior freeze).
 
 ## Hard Rules
 
@@ -30,7 +30,7 @@ Read in this exact order:
 
 - Target **5–10 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Execute `CZH4-M1..CZH4-M6` sequentially (defined in the queue).
+- Execute `CZH5-M1..CZH5-M6` sequentially (defined in the queue).
 
 ## Validation Ladder
 

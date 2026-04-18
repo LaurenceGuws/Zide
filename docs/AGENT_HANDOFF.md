@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: **Core Zig freeze + hygiene**
 - Campaign: **Core Zig Stability/Hygiene** (`CZH`)
-- Active macro batch (`in_progress`): `CZH-B4` in
+- Active macro batch (`in_progress`): `CZH-B5` in
   `docs/todo/core/implementation.md`
 - Android lane status: **paused by product direction** except critical
   regressions/blockers for current users.
@@ -26,11 +26,11 @@ Current top priorities:
 4. clean normalization of Android-driven FFI/rendering advances into shared
    product seams
 
-Current batch intent (`CZH-B4`):
+Current batch intent (`CZH-B5`):
 
-- close the known `test-editor` module-path baseline hole in the default local
-  invocation surface
-- keep runtime/product behavior frozen while build/test wiring is normalized
+- remove stale investigation/debug caller residue from touched core/editor seams
+- normalize ownership naming in touched seams under behavior freeze
+- keep the full core stress ladder green while hygiene cleanup lands
 
 ## First Read Order
 
