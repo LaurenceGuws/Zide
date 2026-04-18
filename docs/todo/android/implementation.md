@@ -1526,7 +1526,7 @@ Acceptance:
 - cold start smoke pass when a device is available
 - engineer reports full super-gate packet and explicit residual-risk note
 
-**Engineer commit cadence (this batch):** 6 commits — core value type + context + consumers + WidgetAssembly invariants; harness/catalog/assembly javadoc; selection policy `@see`; authority trio; queue/entrypoint/handoff (this commit).
+**Engineer commit cadence (this batch):** 7 commits — (1) core value type + context + ZideActivity + WidgetAssembly invariants; (2) catalog/harness/assembly javadoc; (3) selection policy `@see`; (4) authority docs trio; (5) implementation queue; (6) engineer entrypoint; (7) agent handoff.
 
 **APX-B5 engineer validation record (M6):**
 
