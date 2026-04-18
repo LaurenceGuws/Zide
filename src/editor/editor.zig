@@ -236,7 +236,7 @@ pub const Editor = struct {
     pub fn requestRuntimeWake(self: *const Editor) void {
         const wake_fn = self.runtime_wake_fn orelse return;
         if (self.tearing_down or app_lifecycle_runtime.shutdownStarted()) {
-            app_logger.logger("editor.lifecycle").logFields(.info, "runtime_wake_attempt", &.{
+            app_logger.logger("editor.lifecycle").logFields(.info, "lifecycle_runtime_wake", &.{
                 .{ .key = "tearing_down", .value = .{ .boolean = self.tearing_down } },
                 .{ .key = "shutdown_started", .value = .{ .boolean = app_lifecycle_runtime.shutdownStarted() } },
                 .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
@@ -683,7 +683,7 @@ pub const Editor = struct {
 
     pub fn applyPendingVisibleHighlightResult(self: *Editor, cache: anytype) bool {
         if (self.tearing_down or app_lifecycle_runtime.shutdownStarted()) {
-            app_logger.logger("editor.lifecycle").logFields(.info, "visible_highlight_apply_during_shutdown", &.{
+            app_logger.logger("editor.lifecycle").logFields(.info, "lifecycle_highlight_apply_during_shutdown", &.{
                 .{ .key = "tearing_down", .value = .{ .boolean = self.tearing_down } },
                 .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
             });
@@ -826,7 +826,7 @@ pub const Editor = struct {
     }
 
     fn beginVisibleHighlightWorkerStop(self: *Editor) void {
-        app_logger.logger("editor.lifecycle").logFields(.info, "visible_highlight_worker_stop_signal", &.{
+        app_logger.logger("editor.lifecycle").logFields(.info, "lifecycle_highlight_worker_stop", &.{
             .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
         });
         self.lockVisibleHighlightRuntime();
@@ -860,7 +860,7 @@ pub const Editor = struct {
             }
             if (!self.visible_highlight_runtime.worker_running) {
                 self.unlockVisibleHighlightRuntime();
-                app_logger.logger("editor.lifecycle").logFields(.info, "visible_highlight_worker_exit", &.{
+                app_logger.logger("editor.lifecycle").logFields(.info, "lifecycle_highlight_worker_exit", &.{
                     .{ .key = "reason", .value = .{ .string = "stopped_before_request" } },
                 });
                 return;
@@ -877,7 +877,7 @@ pub const Editor = struct {
             if (!self.visible_highlight_runtime.worker_running) {
                 self.unlockVisibleHighlightRuntime();
                 self.deinitVisibleHighlightResult(&result);
-                app_logger.logger("editor.lifecycle").logFields(.info, "visible_highlight_worker_exit", &.{
+                app_logger.logger("editor.lifecycle").logFields(.info, "lifecycle_highlight_worker_exit", &.{
                     .{ .key = "reason", .value = .{ .string = "stopped_after_compute" } },
                 });
                 return;
@@ -887,7 +887,7 @@ pub const Editor = struct {
                 self.deinitVisibleHighlightResult(&result);
                 continue;
             }
-            app_logger.logger("editor.lifecycle").logFields(.info, "visible_highlight_worker_publish_attempt", &.{
+            app_logger.logger("editor.lifecycle").logFields(.info, "lifecycle_highlight_worker_publish", &.{
                 .{ .key = "tearing_down", .value = .{ .boolean = self.tearing_down } },
                 .{ .key = "shutdown_started", .value = .{ .boolean = app_lifecycle_runtime.shutdownStarted() } },
                 .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
@@ -1050,7 +1050,7 @@ pub const Editor = struct {
     pub fn prepareForShutdown(self: *Editor) void {
         if (!self.tearing_down) {
             self.tearing_down = true;
-            app_logger.logger("editor.lifecycle").logFields(.info, "editor_deinit_enter", &.{
+            app_logger.logger("editor.lifecycle").logFields(.info, "lifecycle_editor_shutdown_begin", &.{
                 .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
             });
         }

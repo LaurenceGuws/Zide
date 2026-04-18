@@ -437,7 +437,7 @@ Internal milestones (`CZH5-M1..M6`, execute sequentially in one batch):
 | --- | --- |
 | `CZH5-M1` | audit touched core/editor seams for stale probe/debug callers with explicit file list |
 | `CZH5-M2` | remove stale investigation-only callers/checks in audited seams (no behavior change) — **done** (see `CZH5-M2` section) |
-| `CZH5-M3` | ownership naming cleanup in audited seams only (no semantic change) |
+| `CZH5-M3` | ownership naming cleanup in audited seams only (no semantic change) — **done** (see `CZH5-M3` section) |
 | `CZH5-M4` | re-run full stress ladder and capture results |
 | `CZH5-M5` | docs sync (queue/handoff/entrypoint + any touched authority docs) |
 | `CZH5-M6` | super-gate packet with residual-risk notes |
@@ -538,6 +538,41 @@ Internal milestones (`CZH5-M1..M6`, execute sequentially in one batch):
   - Lifecycle `logFields(.info, …)`: removed `editor_ptr` fields everywhere; removed `visible_highlight_worker_join_begin` / `visible_highlight_worker_join_end` events (they only carried the pointer); kept non-pointer fields on remaining lifecycle events.
 
 **Validation (M2 engineer run, 2026-04-18):**
+
+- `zig build` — **PASS**
+- `zig build test` — **PASS**
+- `zig build -Dmode=terminal` — **PASS**
+- `zig build -Dmode=editor` — **PASS**
+- `zig build test-config` — **PASS**
+- `zig build test-editor` — **PASS**
+- `zig build test-terminal-replay-all` — **PASS**
+
+#### `CZH5-M3` ownership naming cleanup (`done`, 2026-04-18)
+
+**Authority:** `#### CZH5-M1 stale probe/debug caller audit` → **Ownership naming drift**, plus `CZH5-M2` removals.
+
+**Resolved by removal (no code change this milestone):**
+
+- `debugWorkerDelayMs` / `ZIDE_EDITOR_DEBUG_VISIBLE_HIGHLIGHT_DELAY_MS` — removed in `CZH5-M2`; no resurrection or rename.
+
+**Applied in `src/editor/editor.zig` (lifecycle `logFields` event names only; logger tag `editor.lifecycle` unchanged):**
+
+| Previous event name | New event name |
+| --- | --- |
+| `runtime_wake_attempt` | `lifecycle_runtime_wake` |
+| `visible_highlight_apply_during_shutdown` | `lifecycle_highlight_apply_during_shutdown` |
+| `visible_highlight_worker_stop_signal` | `lifecycle_highlight_worker_stop` |
+| `visible_highlight_worker_exit` | `lifecycle_highlight_worker_exit` |
+| `visible_highlight_worker_publish_attempt` | `lifecycle_highlight_worker_publish` |
+| `editor_deinit_enter` | `lifecycle_editor_shutdown_begin` |
+
+Rationale: consistent `lifecycle_*` vocabulary for JSONL `message` values, drop probe-adjacent wording (`attempt`, `signal`, `publish_attempt`, `deinit_enter`), align with product lifecycle ownership (no pointer payloads — those were removed in M2).
+
+**Deferred (out of M3 file scope; `font_runtime.zig` not editable this milestone):**
+
+- M1 drift note on mixed `renderer.font` vs `ui.scale` in pinch/zoom — remains a future doc/owner clarification in `font_runtime.zig` or architecture note when that file is in scope.
+
+**Validation (M3 engineer run, 2026-04-18):**
 
 - `zig build` — **PASS**
 - `zig build test` — **PASS**
