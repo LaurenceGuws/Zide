@@ -28,7 +28,7 @@ public final class UserlandWorkflowController {
 
         void markAndroidEdgeTestBinaryInstallComplete(boolean success);
 
-        void markAndroidEdgeTestBinaryInstallNoCandidate();
+        void markAndroidEdgeTestBinaryInstallNoCandidate(String reasonCode);
     }
 
     private final Host host;
@@ -90,7 +90,11 @@ public final class UserlandWorkflowController {
         host.appendEvent("packages.edge_install.begin");
         new Thread(() -> {
             try {
-                final String out = UserlandAndroidTestBinaryInstallLifecycle.runEdgePackageInstall(host.context());
+                final String spec =
+                        UserlandAndroidTestBinaryInstallLifecycle.selectAndroidEdgeSpecOrThrow(host.context());
+                host.appendEvent("packages.edge_install.selected spec=" + spec);
+                final String out =
+                        UserlandAndroidTestBinaryInstallLifecycle.installPackageSpec(host.context(), spec);
                 host.handler().post(() -> {
                     logEdgeInstallOutput(out);
                     host.appendEvent("packages.edge_install.success");
@@ -99,8 +103,9 @@ public final class UserlandWorkflowController {
             } catch (UserlandAndroidTestBinaryInstallLifecycle.NoCandidateException err) {
                 host.handler().post(() -> {
                     final String detail = err.getMessage() == null ? err.getClass().getSimpleName() : err.getMessage();
-                    host.appendEvent("packages.edge_install.no_candidate detail=" + detail);
-                    host.markAndroidEdgeTestBinaryInstallNoCandidate();
+                    host.appendEvent(
+                            "packages.edge_install.no_candidate reason=" + err.reasonCode() + " detail=" + detail);
+                    host.markAndroidEdgeTestBinaryInstallNoCandidate(err.reasonCode());
                 });
             } catch (IOException err) {
                 host.handler().post(() -> {

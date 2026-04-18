@@ -9,24 +9,31 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 
 /**
- * Derives Android edge install candidates from {@code zide-pm list-available} stdout.
+ * Derives Android <strong>edge</strong> install candidates from {@code zide-pm list-available} stdout.
  *
  * <p><strong>Source of truth:</strong> CLI output lines only — no Java/Android manifest parsing.
- * Under {@code ZIDE_PM_HOST_PLATFORM=android}, {@code zide-pm} is expected to emit a stable,
- * line-oriented catalog; this type applies a conservative token grammar to each line.</p>
+ * Edge install considers only package ids with the {@link #ANDROID_EDGE_PREFIX} prefix (case-insensitive
+ * match on that literal) so generic catalog rows (for example {@code dev-baseline}, {@code jq}) are
+ * rejected for this flow.</p>
  *
- * <p><strong>Selection:</strong> parsed tokens are de-duplicated in first-seen order; the install
- * spec chosen for an explicit user-triggered install is the lexicographically smallest token for
- * deterministic behavior.</p>
+ * <p><strong>Selection:</strong> among eligible {@code zide-android-*} ids, the install spec is the
+ * lexicographically smallest token (deterministic).</p>
  */
 public final class UserlandZidePmListAvailableCandidates {
+    /** Prefix for Android edge test-binary rows emitted under {@code ZIDE_PM_HOST_PLATFORM=android}. */
+    public static final String ANDROID_EDGE_PREFIX = "zide-android-";
+
     /** Package id token: alnum first char, then alnum / dot / underscore / plus / hyphen. */
     private static final Pattern PACKAGE_TOKEN = Pattern.compile("^[a-zA-Z0-9][a-zA-Z0-9._+\\-]*$");
 
     private UserlandZidePmListAvailableCandidates() {
     }
 
-    public static List<String> parseCandidatePackageSpecs(String listAvailableStdout) {
+    /**
+     * First-column package tokens from {@code list-available} that pass the generic token grammar
+     * (includes non-edge ids such as baseline tools — for diagnostics vs edge filtering).
+     */
+    public static List<String> parseAllFirstColumnPackageTokens(String listAvailableStdout) {
         final LinkedHashSet<String> orderedUnique = new LinkedHashSet<>();
         if (listAvailableStdout == null) {
             return new ArrayList<>();
@@ -48,17 +55,36 @@ public final class UserlandZidePmListAvailableCandidates {
         return new ArrayList<>(orderedUnique);
     }
 
+    /** Android edge candidates only ({@code zide-android-*}). */
+    public static List<String> parseAndroidEdgeCandidatePackageSpecs(String listAvailableStdout) {
+        final List<String> out = new ArrayList<>();
+        for (String t : parseAllFirstColumnPackageTokens(listAvailableStdout)) {
+            if (isAndroidEdgePackageId(t)) {
+                out.add(t);
+            }
+        }
+        return out;
+    }
+
     /**
-     * Picks one install argument for {@code zide-pm install} from {@code list-available} output.
+     * Lexicographically first {@code zide-android-*} spec, if any.
      *
-     * @return empty when no line yields a valid package token
+     * @return empty when no line yields an Android edge id
      */
     public static Optional<String> selectLexicographicallyFirstInstallSpec(String listAvailableStdout) {
-        final List<String> candidates = parseCandidatePackageSpecs(listAvailableStdout);
+        final List<String> candidates = parseAndroidEdgeCandidatePackageSpecs(listAvailableStdout);
         if (candidates.isEmpty()) {
             return Optional.empty();
         }
         return candidates.stream().min(Comparator.naturalOrder());
+    }
+
+    static boolean isAndroidEdgePackageId(String token) {
+        if (token == null) {
+            return false;
+        }
+        return token.length() > ANDROID_EDGE_PREFIX.length()
+                && token.regionMatches(true, 0, ANDROID_EDGE_PREFIX, 0, ANDROID_EDGE_PREFIX.length());
     }
 
     private static String firstWhitespaceToken(String line) {
