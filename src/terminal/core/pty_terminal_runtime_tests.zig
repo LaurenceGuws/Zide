@@ -22,6 +22,7 @@ const types = @import("../model/types.zig");
 const runtime_mod = @import("terminal_runtime.zig");
 const terminal_transport = @import("runtime/terminal_transport.zig");
 const pty_mod = @import("../io/pty.zig");
+const terminal_debug = @import("session/debug_ops.zig");
 
 const TerminalRuntimeShell = runtime_mod.TerminalRuntimeShell;
 const Cell = types.Cell;
@@ -228,7 +229,7 @@ test "pty-backed session sendText writes through session writer boundary" {
     var session = try runtime_mod.init(allocator, 2, 8);
     defer session.deinit();
 
-    var pty = Pty.init(
+    const pty = Pty.init(
         allocator,
         .{
             .rows = 2,
@@ -270,7 +271,7 @@ test "pty-backed session sendKey enter writes through session writer boundary" {
     var session = try runtime_mod.init(allocator, 4, 16);
     defer session.deinit();
 
-    var pty = Pty.init(
+    const pty = Pty.init(
         allocator,
         .{
             .rows = 4,
@@ -394,7 +395,7 @@ test "zig progress redraw pattern rewrites block instead of appending" {
     var session = try runtime_mod.init(allocator, 6, 20);
     defer session.deinit();
 
-    debugSetCursor(&session, 4, 0);
+    terminal_debug.debugSetCursor(session, 4, 0);
 
     terminal_core_feed.feedOutputBytes(session, "\x1b[Jbuild one\nitem a\n\r\x1bM\x1bM");
     terminal_core_feed.feedOutputBytes(session, "\x1b[Jbuild two\nitem b\n\r\x1bM\x1bM");
@@ -411,7 +412,7 @@ test "zig progress redraw invalidates cleared tail rows" {
     var session = try runtime_mod.init(allocator, 6, 20);
     defer session.deinit();
 
-    debugSetCursor(&session, 4, 0);
+    terminal_debug.debugSetCursor(session, 4, 0);
     terminal_core_feed.feedOutputBytes(session, "\x1b[Jbuild one\nitem a\n\r\x1bM\x1bM");
 
     _ = publication_flow.bumpAndPublishCurrentViewLocked(session, "test_publication");
@@ -436,7 +437,7 @@ test "bottom-edge in-place redraw keeps blank separator rows dirty" {
     var session = try runtime_mod.init(allocator, 68, 24);
     defer session.deinit();
 
-    debugSetCursor(&session, 67, 0);
+    terminal_debug.debugSetCursor(session, 67, 0);
 
     terminal_core_feed.feedOutputBytes(session, "\x1b[?2026h");
     try std.testing.expect(sync_updates.active(session));
@@ -476,7 +477,7 @@ test "synchronized zig progress redraw does not retire intermediate scrollback" 
     var session = try runtime_mod.init(allocator, 68, 20);
     defer session.deinit();
 
-    debugSetCursor(&session, 67, 0);
+    terminal_debug.debugSetCursor(session, 67, 0);
 
     terminal_core_feed.feedOutputBytes(session, "\x1b[?2026h");
     try std.testing.expect(sync_updates.active(session));
@@ -539,7 +540,7 @@ test "single-chunk synchronized progress sequence keeps newline scroll inside sy
     var session = try runtime_mod.init(allocator, 68, 20);
     defer session.deinit();
 
-    debugSetCursor(&session, 67, 0);
+    terminal_debug.debugSetCursor(session, 67, 0);
     terminal_core_feed.feedOutputBytes(session, "\x1b[?2026h\x1b[Jbuild one\nitem a\r\x1bM\x1b[?2026l");
 
     try std.testing.expectEqual(@as(usize, 0), session.core.scrollbackInfo().total_rows);
@@ -557,7 +558,7 @@ test "reverse index moves cursor up inside scroll region" {
     var session = try runtime_mod.init(allocator, 6, 8);
     defer session.deinit();
 
-    debugSetCursor(&session, 4, 2);
+    terminal_debug.debugSetCursor(session, 4, 2);
     terminal_core_feed.feedOutputBytes(session, "\x1bM");
 
     const cursor = terminal_core_protocol.getCursorPos(session);
@@ -571,7 +572,7 @@ test "real zig redraw chunk rewrites in place at bottom edge" {
     var session = try runtime_mod.init(allocator, 68, 80);
     defer session.deinit();
 
-    debugSetCursor(&session, 67, 0);
+    terminal_debug.debugSetCursor(session, 67, 0);
     terminal_core_feed.feedOutputBytes(
         session,
         "\x1b[?2026h" ++

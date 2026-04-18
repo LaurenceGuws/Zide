@@ -174,9 +174,9 @@ test "integrated hit test uses resize borders before caption drag" {
         .resize_border_px = 8,
     };
 
-    try std.testing.expectEqual(sdl_api.c.SDL_HITTEST_RESIZE_TOPLEFT, hitTest(contract, 800, 600, false, 2, 2));
-    try std.testing.expectEqual(sdl_api.c.SDL_HITTEST_DRAGGABLE, hitTest(contract, 800, 600, false, 120, 10));
-    try std.testing.expectEqual(sdl_api.c.SDL_HITTEST_NORMAL, hitTest(contract, 800, 600, false, 250, 40));
+    try std.testing.expectEqual(@as(i32, sdl_api.c.SDL_HITTEST_RESIZE_TOPLEFT), @as(i32, @intCast(hitTest(contract, 800, 600, false, 2, 2))));
+    try std.testing.expectEqual(@as(i32, sdl_api.c.SDL_HITTEST_DRAGGABLE), @as(i32, @intCast(hitTest(contract, 800, 600, false, 120, 10))));
+    try std.testing.expectEqual(@as(i32, sdl_api.c.SDL_HITTEST_NORMAL), @as(i32, @intCast(hitTest(contract, 800, 600, false, 250, 40))));
 }
 
 test "maximized integrated hit test disables resize edges" {
@@ -186,5 +186,5 @@ test "maximized integrated hit test disables resize edges" {
         .resize_border_px = 8,
     };
 
-    try std.testing.expectEqual(sdl_api.c.SDL_HITTEST_DRAGGABLE, hitTest(contract, 800, 600, true, 10, 4));
+    try std.testing.expectEqual(@as(i32, sdl_api.c.SDL_HITTEST_DRAGGABLE), @as(i32, @intCast(hitTest(contract, 800, 600, true, 10, 4))));
 }

@@ -536,16 +536,20 @@ const FakeRenderer = struct {
     theme: FakeTheme = .{},
     char_width: f32 = 8,
     char_height: f32 = 16,
+    editor_char_width: f32 = 8,
+    editor_char_height: f32 = 16,
 
     fn uiScaleFactor(_: @This()) f32 {
         return 1.0;
     }
 };
 
-const FakeSearchEditor = struct {
-    matches: []const struct { start: usize, end: usize },
+const FakeSearchMatch = struct { start: usize, end: usize };
 
-    fn searchMatches(self: @This()) []const struct { start: usize, end: usize } {
+const FakeSearchEditor = struct {
+    matches: []const FakeSearchMatch,
+
+    fn searchMatches(self: @This()) []const FakeSearchMatch {
         return self.matches;
     }
 };
@@ -621,12 +625,12 @@ test "addSearchOverlayOps emits one rect per visible search match" {
     defer list.deinit();
     const renderer = FakeRenderer{};
     const editor = FakeSearchEditor{
-        .matches = &[_]struct { start: usize, end: usize }{
+        .matches = &[_]FakeSearchMatch{
             .{ .start = 1, .end = 3 },
             .{ .start = 5, .end = 7 },
         },
     };
-    const seg_band = struct { y_i: i32 = 0, h_i: i32 = 16, y_f: f32 = 0, h_f: f32 = 16 }{};
+    const seg_band = overlay_mod.rowBandForRow(0, 0, 16);
 
     try std.testing.expect(addSearchOverlayOps(&list, editor, renderer, 0, 0, 8, 0, "abcdefgh", seg_band, 20));
     try std.testing.expectEqual(@as(usize, 2), list.ops.items.len);
@@ -643,13 +647,13 @@ test "addSearchOverlayOps clips matches to the visible segment" {
     defer list.deinit();
     const renderer = FakeRenderer{};
     const editor = FakeSearchEditor{
-        .matches = &[_]struct { start: usize, end: usize }{
+        .matches = &[_]FakeSearchMatch{
             .{ .start = 0, .end = 3 },
             .{ .start = 3, .end = 9 },
             .{ .start = 9, .end = 12 },
         },
     };
-    const seg_band = struct { y_i: i32 = 0, h_i: i32 = 16, y_f: f32 = 0, h_f: f32 = 16 }{};
+    const seg_band = overlay_mod.rowBandForRow(0, 0, 16);
 
     try std.testing.expect(addSearchOverlayOps(&list, editor, renderer, 0, 2, 8, 2, "abcdefghijkl", seg_band, 10));
     try std.testing.expectEqual(@as(usize, 2), list.ops.items.len);
@@ -671,7 +675,7 @@ test "addSelectionOverlayOps emits selection rect for selected span" {
             },
         },
     };
-    const seg_band = struct { y_i: i32 = 0, h_i: i32 = 16, y_f: f32 = 0, h_f: f32 = 16 }{};
+    const seg_band = overlay_mod.rowBandForRow(0, 0, 16);
     const ranges = [_]SelectionRange{.{ .start_col = 1, .end_col = 3 }};
 
     try std.testing.expect(addSelectionOverlayOps(&list, widget, renderer, 0, 8, 8, 1, 0, 0, 8, seg_band, 20, &ranges));

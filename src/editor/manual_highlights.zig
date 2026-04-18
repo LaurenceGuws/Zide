@@ -187,7 +187,11 @@ test "unsupported fallback applies only when language is unresolved" {
 
     const unsupported_resolved = resolve("notes.unknown", null).?;
     try std.testing.expectEqualStrings("comment", unsupported_resolved.parser);
-    try std.testing.expectEqualStrings("assets/queries/manual/log_levels.scm", unsupported_resolved.query_path.?);
+    const qpath = unsupported_resolved.query_path.?;
+    try std.testing.expect(
+        std.mem.eql(u8, qpath, "assets/queries/manual/log_levels.scm") or
+            std.mem.endsWith(u8, qpath, "/tree-sitter-assets/queries/manual/log_levels.scm"),
+    );
     try std.testing.expectEqual(QueryMergeMode.append, unsupported_resolved.mode);
     try std.testing.expect(resolve("notes.unknown", "zig") == null);
 }

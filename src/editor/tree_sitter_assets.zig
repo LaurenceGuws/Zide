@@ -1,6 +1,10 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
+const c = @cImport({
+    @cInclude("stdlib.h");
+});
+
 pub fn resolveSharedAssetPath(allocator: std.mem.Allocator, rel_path: []const u8) !?[]u8 {
     if (std.c.getenv("ZIDE_TREE_SITTER_ASSET_ROOT")) |root_c| {
         const root = std.mem.sliceTo(root_c, 0);
@@ -62,12 +66,12 @@ test "resolveSharedAssetPath prefers user asset root over bundled assets" {
     var tmp = std.testing.tmpDir(.{});
     defer tmp.cleanup();
 
-    try tmp.dir.makePath("user/tree-sitter-assets/syntax");
+    try tmp.dir.makePath("user/zide/tree-sitter-assets/syntax");
     try tmp.dir.makePath("workspace/zide");
     try tmp.dir.makePath("workspace/zide/assets/syntax");
 
     try tmp.dir.writeFile(.{
-        .sub_path = "user/tree-sitter-assets/syntax/generated.lua",
+        .sub_path = "user/zide/tree-sitter-assets/syntax/generated.lua",
         .data = "user",
     });
     try tmp.dir.writeFile(.{
@@ -88,22 +92,32 @@ test "resolveSharedAssetPath prefers user asset root over bundled assets" {
     try std.posix.chdir(workspace_root);
     defer std.posix.chdir(previous_cwd) catch {};
 
-    const old_xdg = std.posix.getenv("XDG_CONFIG_HOME");
-    const old_home = std.posix.getenv("HOME");
-    try std.posix.setenvZ("XDG_CONFIG_HOME", user_root, true);
+    const old_xdg = std.c.getenv("XDG_CONFIG_HOME");
+    const old_home = std.c.getenv("HOME");
+
+    const user_root_z = try std.testing.allocator.dupeZ(u8, user_root);
+    defer std.testing.allocator.free(user_root_z);
+
+    _ = c.setenv("XDG_CONFIG_HOME", user_root_z.ptr, 1);
+    _ = c.setenv("HOME", user_root_z.ptr, 1);
     defer {
         if (old_xdg) |value| {
-            std.posix.setenvZ("XDG_CONFIG_HOME", std.mem.sliceTo(value, 0), true) catch {};
+            const slice = std.mem.sliceTo(value, 0);
+            const buf = std.testing.allocator.dupeZ(u8, slice) catch unreachable;
+            defer std.testing.allocator.free(buf);
+            _ = c.setenv("XDG_CONFIG_HOME", buf.ptr, 1);
         } else {
-            std.posix.unsetenvZ("XDG_CONFIG_HOME") catch {};
+            _ = c.unsetenv("XDG_CONFIG_HOME");
         }
         if (old_home) |value| {
-            std.posix.setenvZ("HOME", std.mem.sliceTo(value, 0), true) catch {};
+            const slice = std.mem.sliceTo(value, 0);
+            const buf = std.testing.allocator.dupeZ(u8, slice) catch unreachable;
+            defer std.testing.allocator.free(buf);
+            _ = c.setenv("HOME", buf.ptr, 1);
         } else {
-            std.posix.unsetenvZ("HOME") catch {};
+            _ = c.unsetenv("HOME");
         }
     }
-    try std.posix.setenvZ("HOME", user_root, true);
 
     const resolved = try resolveSharedAssetPath(std.testing.allocator, "syntax/generated.lua");
     try std.testing.expect(resolved != null);

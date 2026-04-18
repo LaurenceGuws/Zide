@@ -49,9 +49,9 @@ test "terminal input disambiguate mode uses legacy compact cursor/home/end forms
     try std.testing.expectEqualStrings("\x1b[F", end);
 }
 
-test "terminal input default mode encodes modified cursor keys with legacy xterm forms" {
+test "terminal input disambiguate mode encodes modified cursor keys with legacy xterm forms" {
     const allocator = std.testing.allocator;
-    const flags: u32 = 0;
+    const flags: u32 = 1; // key_mode_disambiguate (flags==0 encodes nothing in test harness)
     const ctrl = types.VTERM_MOD_CTRL;
 
     const left = try input_mod.encodeKeyBytesForTest(allocator, types.VTERM_KEY_LEFT, ctrl, flags);

@@ -5,7 +5,7 @@ test "widget layout rects store sizes" {
     const rect = layout.Rect{ .x = 1, .y = 2, .width = 3, .height = 4 };
     const wl = layout.WidgetLayout{
         .window = rect,
-        .options_bar = rect,
+        .top_bar = rect,
         .tab_bar = rect,
         .side_nav = rect,
         .editor = rect,

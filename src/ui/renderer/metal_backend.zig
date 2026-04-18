@@ -19,6 +19,7 @@ const terminal_font = @import("../terminal_font.zig");
 const types = @import("types.zig");
 const app_logger = @import("../../app_logger.zig");
 const backend_runtime_bundle = @import("backend_runtime_bundle.zig");
+const renderer_root = @import("../renderer.zig");
 
 const objc = if (builtin.target.os.tag == .macos) @cImport({
     @cInclude("objc/message.h");
@@ -1967,15 +1968,19 @@ test "non-metal renderer returns neutral metal runtime hooks" {
 
     const FakeRenderer = struct {
         backend: struct {
-            kind: enum { opengl, metal },
+            kind: renderer_root.Renderer.RendererBackend,
             runtime: backend_runtime_bundle.Bundle,
+
+            pub fn isKind(self: @This(), k: renderer_root.Renderer.RendererBackend) bool {
+                return self.kind == k;
+            }
         },
     };
 
     var renderer = FakeRenderer{
         .backend = .{
             .kind = .opengl,
-            .runtime = try backend_runtime_bundle.Bundle.init(allocator, enum { opengl, metal }.opengl),
+            .runtime = try backend_runtime_bundle.Bundle.init(allocator, enum { opengl, metal, android_gles }.opengl),
         },
     };
 
