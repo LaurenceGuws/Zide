@@ -96,9 +96,9 @@ Dual-mode batching override (architect directive):
 - `RF-M0` through `RF-M5` completed; refocus baseline is locked.
 - `AX-M1` through `AX-M5` completed.
 - `ASF-M3` escalated stabilization follow-through to operator evidence.
-- `AHW-B1` through `AHW-B23` accepted by architect.
+- `AHW-B1` through `AHW-B24` accepted by architect.
 - Keep-screen-on seam work beyond `AHW-B20` is frozen by product direction.
-- `AHW-B24` is at super-gate (awaiting architect verdict).
+- `AHW-B25` is `in_progress`.
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -126,14 +126,14 @@ Completed campaign summary:
 - Refocus campaign (`RF-M0` to `RF-M5`) completed.
 - AX hardening campaign (`AX-M1` to `AX-M5`) completed.
 - ASF stabilization follow-through escalated to operator evidence (`ASF-M3`).
-- AHW macro batches `AHW-B1` through `AHW-B23` accepted by architect.
+- AHW macro batches `AHW-B1` through `AHW-B24` accepted by architect.
 - Keep-screen-on follow-up beyond `AHW-B20` frozen by product direction.
 
 Last accepted architect gate:
 
-- `Review chunk: AHW-B23`
+- `Review chunk: AHW-B24`
 - `Verdict: accepted`
-- `Commits reviewed: 14861cbd, 366d05e3, b0d8fb5d`
+- `Commits reviewed: 023a3d86, 8def5013`
 - `Architect validation: compileDebug/compileRelease/deploy/cold-start/AndroidRuntime:E (pass)`
 
 `Milestone reached per docs, architect review required.`
@@ -298,7 +298,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B24` App-shell Terminal-View Policy Foundation (`awaiting_architect_review`)
+### `AHW-B24` App-shell Terminal-View Policy Foundation (`completed`)
 
 Batch queue line (exact):
 
@@ -438,6 +438,143 @@ Acceptance:
 - `adb shell am force-stop uk.laurencegouws.zide && adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity` — pass (`LaunchState: COLD`, `Status: ok`)
 
 `Milestone reached per docs, architect review required.`
+
+Architect review verdict:
+
+- `Review chunk: AHW-B24`
+- `Verdict: accepted`
+- `Commits reviewed: 023a3d86, 8def5013`
+- `Architect validation spot-check: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
+- `Architect runtime validation spot-check: python3 ops/android_terminal_host.py deploy (pass); adb cold start (pass, LaunchState: COLD); adb logcat -d -s AndroidRuntime:E (pass, empty)`
+- `Engineer device validation accepted: deploy + AndroidRuntime:E smoke + cold start pass`
+- `Review answers: yes, close AHW-B24 and advance queue. Future tab shell selection should extend AppShellTerminalViewPolicy with explicit methods first; split further only if policy responsibilities become materially divergent.`
+- `Findings carried forward: B24 is behavior-preserving and correctly centralizes activation path. Remaining pressure is raw navigation exposure through AppShellTerminalViewPolicy.appShellNavigation(); next batch should narrow that surface without changing behavior.`
+
+---
+
+### `AHW-B25` App-shell Policy Surface Narrowing (`in_progress`)
+
+Batch queue line (exact):
+
+- narrow app-shell terminal-view policy surface so consumers no longer depend on raw AppShellNavigation exposure while preserving single-terminal behavior
+
+Batch purpose:
+
+- keep AppShellTerminalViewPolicy as the explicit harness policy owner
+- reduce raw AppShellNavigation leakage from widget harness bundles
+- preserve refocus shape and current runtime behavior while preparing clean tab-policy extension seams
+
+Batch scope:
+
+- Java Android terminal host only, plus authority docs needed to keep contract truth current
+- primary code root:
+  `android/terminal-host/app/src/main/java/uk/laurencegouws/terminal/**`
+- allowed docs:
+  `docs/todo/android/implementation.md`,
+  `docs/todo/android/ENGINEER_ENTRYPOINT.md`,
+  `docs/AGENT_HANDOFF.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_NAMING_CONTRACT.md`,
+  `app_architecture/platform/android/USERLAND_HOST_CONTRACT.md`
+
+Batch non-goals:
+
+- no terminal tabs UI/product behavior
+- no tab persistence/session switching
+- no terminal-core or shared-renderer changes
+- no app-shell UI redesign
+- no keep-screen-on follow-up implementation unless explicitly re-opened
+- no debug-view UI resurrection
+- no broad rename sweep
+- no ASF operator-evidence churn unless new evidence arrives
+
+Batch super-gate:
+
+- raw AppShellNavigation exposure is reduced behind explicit policy methods where practical
+- single-terminal runtime behavior remains unchanged
+- no seam ownership regression against B14-B24 contracts
+- docs reflect final ownership/naming shape
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass at final seam boundary
+
+Internal milestone cadence:
+
+- Engineer executes `AHW25-M1` through `AHW25-M6` sequentially.
+- Do not stop for architect review between internal milestones.
+- Mark each internal milestone complete in this file as it lands.
+- Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
+  the `AHW-B25` super-gate is reached.
+
+### `AHW25-M1` Raw navigation exposure audit (`pending`)
+
+Queue line (exact):
+
+- audit AppShellTerminalViewPolicy.appShellNavigation() callsites and classify required reads/writes vs avoidable leakage
+
+Acceptance:
+
+- enumerate all consumers reaching raw navigation through policy
+- define minimal explicit policy methods needed for current behavior
+- record out-of-scope seams
+
+### `AHW25-M2` Policy API expansion (`pending`)
+
+Queue line (exact):
+
+- add explicit policy methods to cover current consumer needs without exposing raw navigation by default
+
+Acceptance:
+
+- introduce ownership-first policy method names
+- keep behavior unchanged and avoid compatibility fallback paths
+- compile debug + release Java after code changes
+
+### `AHW25-M3` Consumer rewiring (`pending`)
+
+Queue line (exact):
+
+- rewire consumers to the new AppShellTerminalViewPolicy methods and narrow raw navigation access
+
+Acceptance:
+
+- consumers stop depending on raw navigation where replacement methods exist
+- single-terminal runtime behavior remains unchanged
+- compile debug + release Java after code changes
+
+### `AHW25-M4` Contract docs lock (`pending`)
+
+Queue line (exact):
+
+- lock authority docs to narrowed app-shell policy surface
+
+Acceptance:
+
+- host structure and naming contract match code shape
+- userland contract remains unchanged unless ownership text requires update
+
+### `AHW25-M5` Queue/handoff/entrypoint sync (`pending`)
+
+Queue line (exact):
+
+- keep queue, handoff, and engineer entrypoint aligned to AHW-B25 execution and super-gate stop
+
+Acceptance:
+
+- queue, handoff, and engineer entrypoint stay coherent through B25 super-gate
+- super-gate stop condition and review packet contract are explicit
+
+### `AHW25-M6` Batch validation + review packet (`pending`)
+
+Queue line (exact):
+
+- validate AHW-B25 end-to-end and publish the architect review packet
+
+Acceptance:
+
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
+- cold start smoke pass when a device is available
+- engineer reports the full super-gate packet and stops for Architect review
 
 ## Guardrails
 

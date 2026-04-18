@@ -34,16 +34,16 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B24` is at **super-gate** (engineer execution complete; awaiting architect verdict on the review packet). Do not start the next macro batch until the Architect accepts the gate and refocuses `docs/todo/android/implementation.md`.
+`AHW-B25` is `in_progress`.
 
 Active batch queue line (exact):
 
-- establish explicit app-shell terminal-view policy seams for future tabs while preserving single-terminal product behavior
+- narrow app-shell terminal-view policy surface so consumers no longer depend on raw AppShellNavigation exposure while preserving single-terminal behavior
 
 ## Core Boundary Rule
 
-This batch exists to establish explicit app-shell terminal-view policy seams
-while preserving existing IME/slot/chrome/widget/startup-wiring contracts and behavior.
+This batch exists to narrow app-shell policy surface leakage while preserving
+existing IME/slot/chrome/widget/startup-wiring contracts and behavior.
 
 - Android Harness owns platform ceremony, app-shell layout/styling/theming,
   navigation/view state, userland orchestration, and widget instance hosting.
@@ -57,15 +57,15 @@ while preserving existing IME/slot/chrome/widget/startup-wiring contracts and be
 - `WidgetAssembly.Result` remains widget assembly output (`harnessHost` +
   `surfaceJoin`); it is not the terminal-instance factory by itself.
 
-## Required Direction From Architect Review (post-AHW-B23)
+## Required Direction From Architect Review (post-AHW-B24)
 
-- `AHW-B23` is accepted.
+- `AHW-B24` is accepted.
 - Keep harness vs surface split (`WidgetAssembly.Result.harnessHost` + `surfaceJoin`) as the baseline.
 - Freeze additional keep-screen-on seam work beyond B20 unless explicitly re-opened by product direction.
-- Execute `AHW-B24` as a non keep-screen-on batch.
+- Execute `AHW-B25` as a non keep-screen-on batch.
 - Keep `ProductHostActivityStartupWiring`, `ProductTerminalLifecycleHost`, and `ProductTerminalWidgetAssemblyHost` ownership from B22 unchanged.
 - Keep `ProductHostOnCreateStartupCoordinator` + `ProductHostOnCreateStartupSteps` as the startup choreography seam from B23.
-- Keep `AppShellTerminalViewPolicy` as the explicit app-shell terminal-view activation policy seam (B24); `ViewModeController` applies active terminal shell view through it; chrome still reads `AppShellNavigation` via `appShellNavigation()` on that policy.
+- Keep `AppShellTerminalViewPolicy` as the explicit app-shell terminal-view activation policy seam; B25 narrows raw `appShellNavigation()` exposure where practical without behavior changes.
 - Keep `ProductHostKeepScreenOnPolicy` as the long-term owner of terminal keep-screen-on default policy.
 - Keep `HostImeStateAccess` as the long-term host callback IME seam backed by `ProductHostImeState`.
 - Keep `ProductHostImeState` as the long-term activity IME carrier.
@@ -88,17 +88,17 @@ while preserving existing IME/slot/chrome/widget/startup-wiring contracts and be
 
 ## Internal Milestones
 
-Execute `AHW24-M1` through `AHW24-M6` sequentially; do not stop before the
-`AHW-B24` super-gate unless a hard stop condition is hit.
+Execute `AHW25-M1` through `AHW25-M6` sequentially; do not stop before the
+`AHW-B25` super-gate unless a hard stop condition is hit.
 
 Execute in order and mark progress in `docs/todo/android/implementation.md`.
 
-- `AHW24-M1`: audit app-shell terminal-view activation callsites and define explicit policy seam boundaries.
-- `AHW24-M2`: introduce explicit app-shell terminal-view policy seam(s) with ownership-first naming.
-- `AHW24-M3`: rewire consumers to the policy seam while preserving single-terminal behavior.
-- `AHW24-M4`: lock authority docs to terminal-view policy ownership.
-- `AHW24-M5`: keep queue/handoff/entrypoint aligned to B24 super-gate.
-- `AHW24-M6`: run validation and publish super-gate review packet.
+- `AHW25-M1`: audit raw `AppShellTerminalViewPolicy.appShellNavigation()` callsites and define narrowing boundaries.
+- `AHW25-M2`: add explicit policy methods covering current consumer needs.
+- `AHW25-M3`: rewire consumers to explicit policy methods and narrow raw navigation access.
+- `AHW25-M4`: lock authority docs to narrowed policy surface.
+- `AHW25-M5`: keep queue/handoff/entrypoint aligned to B25 super-gate.
+- `AHW25-M6`: run validation and publish super-gate review packet.
 
 ## Allowed Work
 
@@ -189,7 +189,7 @@ when:
 - a behavior change is required where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
 - implementing terminal tabs/product behavior becomes necessary to proceed
-- the `AHW-B24` super-gate is reached
+- the `AHW-B25` super-gate is reached
 
 Otherwise continue autonomously with:
 
@@ -197,9 +197,9 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At `AHW-B24` super-gate, report:
+At `AHW-B25` super-gate, report:
 
-- review chunk name: `AHW-B24`
+- review chunk name: `AHW-B25`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs
