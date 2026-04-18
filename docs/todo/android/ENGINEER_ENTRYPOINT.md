@@ -34,7 +34,7 @@ you must report the mismatch.
 
 ## Current Target
 
-`APX-B2` is `in_progress`.
+`APX-B2` is at **super-gate** (engineer execution complete; awaiting architect verdict). Do not start the next macro batch until the Architect accepts the gate and refocuses `docs/todo/android/implementation.md`.
 
 Active batch queue line (exact):
 
@@ -60,7 +60,7 @@ boundaries while preserving current single-terminal behavior.
 ## Required Direction From Architect Review (post-AHW-B26)
 
 - `APX-B1` is accepted: `AppShellTerminalSelectionPolicy` (selection) and `AppShellTerminalViewPolicy` (activation) are split; default remains single `PRIMARY` terminal path.
-- `APX-B2` introduces explicit declared-slot catalog seams and rewires selection through that catalog without changing runtime behavior.
+- `APX-B2` adds `DeclaredTerminalWidgetSlotCatalog` (PRIMARY-only declared set); `AppShellTerminalSelectionPolicy` requires catalog membership before `checkActiveProductTerminalSlot`; no multi-slot runtime.
 - `AHW-B26` is accepted and `AHW` is closed.
 - Keep harness vs surface split (`WidgetAssembly.Result.harnessHost` + `surfaceJoin`) as the baseline.
 - Freeze additional keep-screen-on seam work beyond B20 unless explicitly re-opened by product direction.

@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android product expansion** (`APX`) — build product capability on top of the closed harness/widget ownership shape.
-- Active macro batch (`in_progress`): `APX-B2` — declared terminal-slot catalog seams (PRIMARY default), routed through selection policy; no tabs UI or behavior change.
+- Active macro batch (`awaiting_architect_review`): `APX-B2` — `DeclaredTerminalWidgetSlotCatalog` + selection policy wiring; engineer stopped at super-gate for architect verdict.
 - Prior closed/escalated: `AHW-B1` through `AHW-B26` accepted and `AHW` closed; `ASF-M3` escalated IME/assist/touch rows to operator evidence; `RF-M0` through `RF-M5` and `AX-M1` through `AX-M5` completed.
 - Active queue authority: `docs/todo/android/implementation.md`
 - Engineer entrypoint (dual mode): `docs/todo/android/ENGINEER_ENTRYPOINT.md`
@@ -61,7 +61,7 @@ Engineer session seed:
 - `AHW-B25` is accepted: `AppShellTerminalViewPolicy` owns drawer sidebar policy forwarding and terminal-view activation; consumers do not take raw `AppShellNavigation` through the policy surface.
 - `AHW-B26` is accepted: landing-gate audit passed and AHW is closed.
 - `APX-B1` is accepted: selection (`AppShellTerminalSelectionPolicy`) and activation (`AppShellTerminalViewPolicy`) are split, and default single-terminal behavior is preserved.
-- `APX-B2` scope is non keep-screen-on: introduce declared-slot catalog seams and route selection through them without enabling multi-slot runtime behavior.
+- `APX-B2` scope is non keep-screen-on: `DeclaredTerminalWidgetSlotCatalog` holds PRIMARY-only declared slots; `AppShellTerminalSelectionPolicy` enforces catalog + active-slot checks; no multi-slot runtime.
 - Keep `ProductHostKeepScreenOnPolicy` as the long-term owner of terminal keep-screen-on default policy.
 - Keep `HostImeStateAccess` as the long-term host callback IME seam (backed by `ProductHostImeState`).
 - Keep `ProductHostImeState` as the long-term activity IME carrier.

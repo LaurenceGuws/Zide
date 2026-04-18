@@ -98,7 +98,7 @@ Dual-mode batching override (architect directive):
 - `AHW-B1` through `AHW-B26` accepted by architect.
 - Keep-screen-on seam work beyond `AHW-B20` is frozen by product direction.
 - `APX-B1` accepted by architect.
-- `APX-B2` is `in_progress`.
+- `APX-B2` is at super-gate (awaiting architect verdict).
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -934,7 +934,7 @@ Architect review verdict:
 - `Review answers: APX-B1 accepted; selection vs activation split is correct. Next batch should add declared-slot catalog seams only (PRIMARY default), still no tabs UI/product behavior.`
 - `Findings carried forward: no blocking behavior regressions; startup order and single-slot runtime behavior unchanged.`
 
-### `APX-B2` Declared slot catalog foundation (`in_progress`)
+### `APX-B2` Declared slot catalog foundation (`awaiting_architect_review`)
 
 Batch queue line (exact):
 
@@ -985,7 +985,7 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `APX-B2` super-gate is reached.
 
-### `APX2-M1` Declared-slot seam audit (`pending`)
+### `APX2-M1` Declared-slot seam audit (`complete`)
 
 Queue line (exact):
 
@@ -997,7 +997,13 @@ Acceptance:
 - define one catalog owner type under `host/ui`
 - record explicit out-of-scope items (tabs UI, second-slot runtime)
 
-### `APX2-M2` Catalog seam introduction (`pending`)
+**M1 audit:**
+
+- **Declared vs selected:** `TerminalWidgetSlotId` enum is the identity; **declared catalog** answers “which slots the harness product declares”; **selection policy** answers “which slot is selected for app-shell routing” (today same as sole declared + active). **Active** remains `checkActiveProductTerminalSlot` only.
+- **Callsites:** `ZideActivity` / `WidgetAssembly` already routed through `AppShellTerminalSelectionPolicy`; **target** is `DeclaredTerminalWidgetSlotCatalog` as catalog owner, consumed inside selection policy and `forDeclaredHostSlot`.
+- **Out of scope:** tabs UI, second active slot, new enum values, chrome slot threading.
+
+### `APX2-M2` Catalog seam introduction (`complete`)
 
 Queue line (exact):
 
@@ -1009,7 +1015,7 @@ Acceptance:
 - no compatibility/fallback paths
 - compile debug + release Java after code changes
 
-### `APX2-M3` Consumer rewiring (`pending`)
+### `APX2-M3` Consumer rewiring (`complete`)
 
 Queue line (exact):
 
@@ -1021,7 +1027,7 @@ Acceptance:
 - no ad hoc slot literals in rewired selection callsites
 - compile debug + release Java after code changes
 
-### `APX2-M4` Contract docs lock (`pending`)
+### `APX2-M4` Contract docs lock (`complete`)
 
 Queue line (exact):
 
@@ -1032,7 +1038,7 @@ Acceptance:
 - host structure and naming contract match code shape
 - userland contract updated only if ownership text requires it
 
-### `APX2-M5` Queue/handoff/entrypoint sync (`pending`)
+### `APX2-M5` Queue/handoff/entrypoint sync (`complete`)
 
 Queue line (exact):
 
@@ -1043,7 +1049,7 @@ Acceptance:
 - queue, handoff, and engineer entrypoint stay coherent through APX-B2 super-gate
 - super-gate stop condition and review packet contract are explicit
 
-### `APX2-M6` Batch validation + review packet (`pending`)
+### `APX2-M6` Batch validation + review packet (`complete`)
 
 Queue line (exact):
 
@@ -1055,6 +1061,18 @@ Acceptance:
 - deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
 - cold start smoke pass when a device is available
 - engineer reports full super-gate packet and explicit residual-risk note
+
+**APX-B2 engineer validation record (M6):**
+
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac` — pass
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac` — pass
+- `python3 ops/android_terminal_host.py deploy` — pass (streamed install, activity start)
+- `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E` — pass (no `AndroidRuntime:E` lines; benign duplicate-top warning when activity already foreground)
+- `adb shell am force-stop uk.laurencegouws.zide && adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity` — pass (`LaunchState: COLD`, `Status: ok`)
+
+**Residual risk:** Low — catalog is PRIMARY-only; `checkActiveProductTerminalSlot` unchanged; activation path untouched.
+
+`Milestone reached per docs, architect review required.`
 
 ## Guardrails
 
