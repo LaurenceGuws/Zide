@@ -2958,7 +2958,7 @@ Queue line (exact):
 
 - `Review chunk: APX-B17`
 - `Verdict: pending architect review`
-- `Commits reviewed: verify with git log for APX-B17 engineer push`
+- `Commits reviewed: 0e386521 (feature), 310cca80 (docs: ANDROID_JAVA_HOST_STRUCTURE + USERLAND_HOST_CONTRACT + queue/handoff/entrypoint)`
 - `Engineer validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat -d -s AndroidRuntime:E after am start (pass, empty); adb cold start am start -W (pass, LaunchState: COLD, Status: ok)`
 - `Contract notes: stamp stores runtime_support_links; materialize from stamp before first native restart; host + zide.embed path allowlist; apt/dpkg shim links remain install-local; APX-B16/B11/B10/B13 unchanged.`
 
