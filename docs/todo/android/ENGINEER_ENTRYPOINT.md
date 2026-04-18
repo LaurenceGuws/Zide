@@ -34,9 +34,9 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B17` is `in_progress` and is the only active macro batch.
+Engineer delivery for `AHW-B17` is complete; batch status is `verdict_pending` pending Architect review. No macro batch is `in_progress` until the Architect refocuses the queue after verdict.
 
-Active batch queue line (exact):
+Reference queue line (exact) for the completed batch:
 
 - consolidate activity IME state into an explicit harness carrier seam while preserving behavior
 
@@ -79,10 +79,9 @@ widget/chrome IME seam contracts and existing active-view/sidebar ownership.
 
 ## Internal Milestones
 
-Execute `AHW17-M1` through `AHW17-M6` sequentially; do not stop before the
-`AHW-B17` super-gate unless a hard stop condition is hit.
+`AHW17-M1` through `AHW17-M6` are complete; the `AHW-B17` super-gate has been reached. Progress is recorded in `docs/todo/android/implementation.md`.
 
-Execute in order and mark progress in `docs/todo/android/implementation.md`.
+Historical execution order (for the next engineer session after Architect refocus):
 
 - `AHW17-M1`: audit activity IME state reads/writes and define explicit carrier seam shape.
 - `AHW17-M2`: introduce explicit activity-owned IME state carrier seam in host/ui.

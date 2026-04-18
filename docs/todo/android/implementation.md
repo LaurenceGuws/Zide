@@ -120,7 +120,7 @@ Dual-mode batching override (architect directive):
 - Completed macro batch: `AHW-B14` (accepted by Architect; chrome IME policy input ownership follow-up queued in `AHW-B15`).
 - Completed macro batch: `AHW-B15` (accepted by Architect; widget-host IME primitive seam narrowing follow-up queued in `AHW-B16`).
 - Completed macro batch: `AHW-B16` (accepted by Architect; activity IME state carrier seam follow-up queued in `AHW-B17`).
-- `AHW-B17` is `in_progress` (activity IME state carrier seam consolidation, behavior-neutral).
+- Engineer delivery complete; Architect verdict pending: `AHW-B17` (activity IME state carrier seam consolidation, behavior-neutral). No macro batch is `in_progress` until Architect refocuses the queue.
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -3606,7 +3606,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B17` Activity IME state carrier seam consolidation (`in_progress`)
+### `AHW-B17` Activity IME state carrier seam consolidation (`verdict_pending`)
 
 Batch queue line (exact):
 
@@ -3719,7 +3719,7 @@ Progress delta:
 - **`ZideActivity`:** one `final ProductHostImeState`; status/input callbacks and widget host
   delegate to **`productHostImeState::…`**; removed activity field + **`setImeVisible`** helper.
 
-### `AHW17-M4` Contract docs lock (`pending`)
+### `AHW17-M4` Contract docs lock (`completed`)
 
 Queue line (exact):
 
@@ -3730,7 +3730,12 @@ Acceptance:
 - host structure, naming contract, and userland contract match code shape
 - B12-B16 ownership boundaries and chrome freeze guidance remain unchanged
 
-### `AHW17-M5` Queue/handoff/entrypoint sync (`pending`)
+Progress delta:
+
+- App-shell invariants + `ZideActivity` / `ProductHostImeState` table row; naming contract bullet.
+  `USERLAND_HOST_CONTRACT` unchanged.
+
+### `AHW17-M5` Queue/handoff/entrypoint sync (`completed`)
 
 Queue line (exact):
 
@@ -3741,7 +3746,11 @@ Acceptance:
 - queue, handoff, and engineer entrypoint stay coherent through B17 super-gate
 - super-gate stop condition and review packet contract are explicit
 
-### `AHW17-M6` Batch validation + review packet (`pending`)
+Progress delta:
+
+- This file, `ENGINEER_ENTRYPOINT.md`, and `AGENT_HANDOFF.md` updated for `verdict_pending`.
+
+### `AHW17-M6` Batch validation + review packet (`completed`)
 
 Queue line (exact):
 
@@ -3753,6 +3762,27 @@ Acceptance:
 - deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
 - cold start smoke pass when a device is available
 - engineer reports the full super-gate packet and stops for Architect review
+
+Progress delta:
+
+- Debug/release compile pass; deploy + activity start + `AndroidRuntime:E` (empty);
+  cold start `force-stop` + `am start -W` (LaunchState `COLD`, ok).
+
+Super-gate engineer packet:
+
+- `Milestone: AHW-B17 verdict_pending`
+- `Queue line (exact): consolidate activity IME state into an explicit harness carrier seam while preserving behavior`
+- `Scope contract: ProductHostImeState; B14/B15/B16 unchanged; slot/chrome freeze unchanged`
+- `Progress delta: one carrier; status/input/widget use productHostImeState::…; anonymous chrome policy moved into carrier`
+- `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb activity start + AndroidRuntime:E (pass, empty); adb cold start (pass)`
+- `Engineer updates: Blocked by Archtect review needed: true`
+
+Review questions for Architect:
+
+- Confirm `ProductHostImeState` as the long-term activity IME carrier.
+- Confirm next macro batch after verdict.
+
+`Milestone reached per docs, architect review required.`
 
 ## Guardrails
 
