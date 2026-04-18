@@ -235,6 +235,7 @@ fn adoptPreparedTerminalGlyphResult(renderer: anytype, result: *TerminalGlyphPre
             adopt_failed += 1;
             continue;
         };
+        if (glyph.raster.data.len > 0) renderer.allocator.free(glyph.raster.data);
         glyph.raster.data = &.{};
         adopted += 1;
     }
@@ -502,8 +503,6 @@ test "presentation update plan keeps partial redraws eligible while scrolled" {
         false,
         false,
         false,
-        false,
-        false,
         true,
     );
     try std.testing.expect(!plan.needs_full);
@@ -513,6 +512,7 @@ test "presentation update plan keeps partial redraws eligible while scrolled" {
 test "presentation update plan forces full redraw when presentable is not ready" {
     const plan = choosePresentationUpdatePlan(
         .partial,
+        false,
         false,
         false,
         false,
@@ -529,6 +529,8 @@ test "presentation update plan stays idle when dirty state is clean" {
         false,
         false,
         false,
+        false,
+        false,
         true,
     );
     try std.testing.expect(!plan.needs_full);
@@ -538,6 +540,8 @@ test "presentation update plan stays idle when dirty state is clean" {
 test "presentation update plan keeps partial redraw for normal partial damage" {
     const plan = choosePresentationUpdatePlan(
         .partial,
+        false,
+        false,
         false,
         false,
         false,
@@ -553,6 +557,7 @@ test "presentation update plan uses partial redraw for blink-only changes" {
         false,
         false,
         false,
+        false,
         true,
         true,
     );
@@ -561,11 +566,14 @@ test "presentation update plan uses partial redraw for blink-only changes" {
 }
 
 test "full-width partial plan marks every row" {
+    const max_spans = render_cache_mod.max_row_dirty_spans;
     var rows = [_]bool{ false, false, false };
+    var span_counts = [_]u8{ 0, 0, 0 };
+    var spans: [3][max_spans]render_cache_mod.RowDirtySpan = undefined;
     var cols_start = [_]u16{ 9, 9, 9 };
     var cols_end = [_]u16{ 0, 0, 0 };
 
-    markAllRowsFullWidthPartialPlan(&rows, &cols_start, &cols_end, 3, 5);
+    markAllRowsFullWidthPartialPlan(&rows, &span_counts, &spans, &cols_start, &cols_end, 3, 5);
 
     for (rows) |row_marked| {
         try std.testing.expect(row_marked);
