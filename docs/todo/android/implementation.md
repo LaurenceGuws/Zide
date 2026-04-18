@@ -106,7 +106,8 @@ Dual-mode batching override (architect directive):
 - `APX-B3` accepted by architect.
 - `APX-B4` accepted by architect.
 - `APX-B5` accepted by architect.
-- `APX-B6` is `awaiting_architect_review` (engineer super-gate complete).
+- `APX-B6` accepted by architect.
+- `APX-B7` is `in_progress`.
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -1552,7 +1553,7 @@ Architect review verdict:
 - `Review answers: immutable ProductHostDeclaredTerminalWidgetSlot seam is accepted; dual WidgetAssembly fail-fast checks are acceptable and should remain.`
 - `Findings carried forward: no blocking regressions; startup behavior and PRIMARY-only runtime unchanged.`
 
-### `APX-B6` Startup slot boundary object propagation (`awaiting_architect_review`)
+### `APX-B6` Startup slot boundary object propagation (`accepted`)
 
 Batch queue line (exact):
 
@@ -1683,7 +1684,7 @@ Acceptance:
 - cold start smoke pass when a device is available
 - engineer reports full super-gate packet and explicit residual-risk note
 
-**Engineer commit cadence (this batch):** 8 commits — (1) interaction wiring + `InteractionCallbacks`; (2) `WidgetHostAssemblyContext` + widget host + activity; (3) `TerminalWidgetCompositionAssembly.compose` + activity; (4) javadoc on interaction/widget seams; (5) authority docs (`ANDROID_JAVA_HOST_STRUCTURE`, `ANDROID_JAVA_NAMING_CONTRACT`, `USERLAND_HOST_CONTRACT`); (6) implementation queue; (7) engineer entrypoint + agent handoff; (8) `compose` null-guard + widget host javadoc alignment + queue cadence count fix.
+**Engineer commit cadence (this batch):** 7 commits — (1) interaction wiring + `InteractionCallbacks`; (2) `WidgetHostAssemblyContext` + widget host + activity; (3) `TerminalWidgetCompositionAssembly.compose` + activity; (4) javadoc on interaction/widget seams; (5) authority docs (`ANDROID_JAVA_HOST_STRUCTURE`, `ANDROID_JAVA_NAMING_CONTRACT`, `USERLAND_HOST_CONTRACT`); (6) implementation queue + engineer entrypoint + agent handoff; (7) `compose` `requireNonNull` + widget host javadoc alignment + cadence text fix in queue.
 
 **APX-B6 engineer validation record (M6):**
 
@@ -1696,6 +1697,142 @@ Acceptance:
 **Residual risk:** Low — PRIMARY-only; `WidgetAssembly` dual invariant unchanged; enum-only surfaces documented in naming contract.
 
 `Milestone reached per docs, architect review required.`
+
+Architect review verdict:
+
+- `Review chunk: APX-B6`
+- `Verdict: accepted`
+- `Commits reviewed: 97656216, 3afacf99, 287b9e29, 69a1c0e0, 3afb9fb7, fb66a397, abf0c292, 4c1e0538`
+- `Architect validation spot-check: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
+- `Architect runtime validation spot-check: python3 ops/android_terminal_host.py deploy (pass); adb warm start + AndroidRuntime:E (pass, empty); adb cold start (pass, LaunchState: COLD)`
+- `Engineer device validation accepted: compile + deploy + AndroidRuntime:E smoke + cold start pass`
+- `Review answers: declared-slot value propagation across interaction/widget/composition startup seams is accepted; enum-owner boundaries remaining in assembly/navigation contracts are acceptable for now.`
+- `Findings carried forward: no blocking regressions; startup behavior and PRIMARY-only runtime unchanged.`
+
+### `APX-B7` Slot enum-conversion choke point (`in_progress`)
+
+Batch queue line (exact):
+
+- centralize startup declared-slot enum conversion through one value-type choke point and reduce direct `.terminalWidgetSlot()` fan-out without behavior change
+
+Batch purpose:
+
+- keep APX-B6 value propagation while reducing scattered enum unwraps
+- make declared-slot value type the single conversion owner for startup seams
+- preserve PRIMARY-only runtime behavior and fail-fast invariants
+- run this as a longer engineer iteration: target **5–10 commits** before architect super-gate review
+
+Batch scope:
+
+- Java Android terminal host only, plus authority docs needed to keep contract truth current
+- primary code root:
+  `android/terminal-host/app/src/main/java/uk/laurencegouws/terminal/**`
+- allowed docs:
+  `docs/todo/android/implementation.md`,
+  `docs/todo/android/ENGINEER_ENTRYPOINT.md`,
+  `docs/AGENT_HANDOFF.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_NAMING_CONTRACT.md`,
+  `app_architecture/platform/android/USERLAND_HOST_CONTRACT.md`
+
+Batch non-goals:
+
+- no tabs UI rendering
+- no second active terminal slot behavior
+- no new `TerminalWidgetSlotId` enum values
+- no terminal-core or shared-renderer changes
+- no keep-screen-on follow-up implementation unless explicitly re-opened
+- no startup-order changes
+
+Batch super-gate:
+
+- one explicit enum-conversion choke point exists on the declared-slot value seam for startup APIs
+- direct startup `.terminalWidgetSlot()` call-site fan-out is reduced
+- behavior unchanged (`PRIMARY` only) and fail-fast invariants remain
+- docs reflect final ownership/naming shape
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass at final seam boundary
+
+Internal milestone cadence:
+
+- Engineer executes `APX7-M1` through `APX7-M6` sequentially.
+- Engineer should keep cutting coherent validated commits across those milestones
+  and target **5–10 commits total** before stopping at `APX-B7` super-gate.
+- Do not stop for architect review between internal milestones.
+- Mark each internal milestone complete in this file as it lands.
+- Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
+  the `APX-B7` super-gate is reached.
+
+### `APX7-M1` Conversion audit (`pending`)
+
+Queue line (exact):
+
+- audit startup `.terminalWidgetSlot()` conversions and define one bounded choke-point target on declared-slot value seam
+
+Acceptance:
+
+- enumerate startup conversion callsites where raw enum unwrap still happens
+- define one owner method/type boundary for conversion
+- record explicit out-of-scope items (tabs UI, second active slot behavior)
+
+### `APX7-M2` Choke-point seam introduction (`pending`)
+
+Queue line (exact):
+
+- introduce declared-slot value choke-point conversion API with ownership-first naming
+
+Acceptance:
+
+- conversion seam exists on declared-slot value path
+- no compatibility/fallback paths
+- compile debug + release Java after code changes
+
+### `APX7-M3` Consumer rewiring (`pending`)
+
+Queue line (exact):
+
+- rewire startup consumers through choke-point conversion API without behavior change
+
+Acceptance:
+
+- current behavior unchanged
+- reduced direct `.terminalWidgetSlot()` fan-out in startup callsites
+- compile debug + release Java after code changes
+
+### `APX7-M4` Contract docs lock (`pending`)
+
+Queue line (exact):
+
+- lock authority docs to APX-B7 conversion choke-point ownership shape
+
+Acceptance:
+
+- host structure and naming contract match code shape
+- userland contract updated only if ownership text requires it
+
+### `APX7-M5` Queue/handoff/entrypoint sync (`pending`)
+
+Queue line (exact):
+
+- keep queue, handoff, and engineer entrypoint aligned to APX-B7 execution and super-gate stop
+
+Acceptance:
+
+- queue, handoff, and engineer entrypoint stay coherent through APX-B7 super-gate
+- super-gate stop condition and review packet contract are explicit
+
+### `APX7-M6` Batch validation + review packet (`pending`)
+
+Queue line (exact):
+
+- validate APX-B7 end-to-end and publish the architect review packet
+
+Acceptance:
+
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
+- cold start smoke pass when a device is available
+- engineer reports full super-gate packet and explicit residual-risk note
 
 ## Guardrails
 
