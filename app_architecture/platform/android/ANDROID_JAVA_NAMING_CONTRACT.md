@@ -96,6 +96,9 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
 - `AppShellNavigation` does not expose a public active-shell-view setter; product
   paths use `applyProductTerminalShellViewActive`; `AppShellViewState` construction
   rejects null `ShellViewId` at harness boundaries (contract checks, not product tabs)
+- chrome drawer sidebar: use `applyChromeDrawerSidebarOpen` /
+  `applyChromeDrawerSidebarClosed` on `AppShellNavigation` (and matching
+  `ChromeController.Host` methods) — no generic boolean sidebar setter
 - in `ZideActivity`, use one authoritative `static final` slot field (e.g.
   `ACTIVE_PRODUCT_TERMINAL_SLOT`) for interaction/widget/composition wiring
   instead of repeating `PRIMARY` literals
