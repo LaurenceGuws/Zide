@@ -34,16 +34,16 @@ you must report the mismatch.
 
 ## Current Target
 
-No macro batch is currently `in_progress`. Keep-screen-on follow-up beyond
-`AHW-B20` is frozen by product direction until explicit re-open.
+`AHW-B21` is `in_progress` and is the only active macro batch.
 
-Most recent completed batch queue line (exact):
+Active batch queue line (exact):
 
-- remove raw Window dependency from keep-screen-on policy seam via explicit host window-flag access while preserving default behavior
+- slim WidgetAssembly/TerminalWidgetCompositionAssembly host-result surfaces for tab-ready host API without tab product behavior
 
 ## Core Boundary Rule
 
-Await Architect refocus to the next non keep-screen-on target batch.
+This batch exists to slim widget/composition host-result surfaces while preserving
+existing IME/slot/chrome contracts and behavior.
 
 - Android Harness owns platform ceremony, app-shell layout/styling/theming,
   navigation/view state, userland orchestration, and widget instance hosting.
@@ -61,6 +61,7 @@ Await Architect refocus to the next non keep-screen-on target batch.
 
 - `AHW-B20` is accepted.
 - Freeze additional keep-screen-on seam work beyond B20 unless explicitly re-opened by product direction.
+- Execute `AHW-B21` as a non keep-screen-on batch.
 - Keep `ProductHostKeepScreenOnPolicy` as the long-term owner of terminal keep-screen-on default policy.
 - Keep `HostImeStateAccess` as the long-term host callback IME seam backed by `ProductHostImeState`.
 - Keep `ProductHostImeState` as the long-term activity IME carrier.
@@ -83,17 +84,17 @@ Await Architect refocus to the next non keep-screen-on target batch.
 
 ## Internal Milestones
 
-Do not start a new implementation batch until Architect sets a new `in_progress`
-macro batch in `docs/todo/android/implementation.md`.
+Execute `AHW21-M1` through `AHW21-M6` sequentially; do not stop before the
+`AHW-B21` super-gate unless a hard stop condition is hit.
 
 Execute in order and mark progress in `docs/todo/android/implementation.md`.
 
-- `AHW20-M1`: audit keep-screen-on raw window dependency and define explicit host window-flag seam.
-- `AHW20-M2`: introduce explicit host seam type(s) for keep-screen-on flag mutation.
-- `AHW20-M3`: rewire ProductHostKeepScreenOnPolicy and ZideActivity to the explicit seam.
-- `AHW20-M4`: lock authority docs to keep-screen-on window-flag seam ownership.
-- `AHW20-M5`: keep queue/handoff/entrypoint aligned to B20 super-gate.
-- `AHW20-M6`: run validation and publish super-gate review packet.
+- `AHW21-M1`: audit WidgetAssembly/TerminalWidgetCompositionAssembly host-result overlap and ownership blur.
+- `AHW21-M2`: introduce slimmer host-result surface(s) with explicit ownership.
+- `AHW21-M3`: rewire ZideActivity to slimmer surfaces and remove obsolete pass-throughs.
+- `AHW21-M4`: lock authority docs to final host-result ownership/naming.
+- `AHW21-M5`: keep queue/handoff/entrypoint aligned to B21 super-gate.
+- `AHW21-M6`: run validation and publish super-gate review packet.
 
 ## Allowed Work
 
@@ -120,6 +121,7 @@ If a required change falls outside these paths, stop and report a blocker.
 - No shared renderer/backend refactor.
 - No app-shell UI redesign.
 - No keep-screen-on follow-up implementation unless explicitly re-opened by product direction.
+- No terminal tabs product behavior; this is host API shaping only.
 - No debug-view UI resurrection.
 - No CI/pipeline/lint additions.
 - No broad rename campaign.
@@ -182,7 +184,7 @@ when:
 - a behavior change is required where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
 - implementing terminal tabs/product behavior becomes necessary to proceed
-- no macro batch is `in_progress` in `implementation.md`
+- the `AHW-B21` super-gate is reached
 
 Otherwise continue autonomously with:
 
@@ -190,9 +192,9 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At the current super-gate (when a batch is active), report:
+At `AHW-B21` super-gate, report:
 
-- review chunk name: `<active macro batch id>`
+- review chunk name: `AHW-B21`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs

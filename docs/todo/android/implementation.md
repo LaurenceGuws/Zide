@@ -124,7 +124,8 @@ Dual-mode batching override (architect directive):
 - Completed macro batch: `AHW-B18` (accepted by Architect; keep-screen-on policy seam hardening follow-up queued in `AHW-B19`).
 - Completed macro batch: `AHW-B19` (accepted by Architect; keep-screen-on window-flag seam hardening follow-up queued in `AHW-B20`).
 - Completed macro batch: `AHW-B20` (accepted by Architect).
-- Keep-screen-on follow-up beyond `AHW-B20` is explicitly frozen by product direction; no macro batch is `in_progress` until Architect refocuses to a non keep-screen-on target.
+- Keep-screen-on follow-up beyond `AHW-B20` is explicitly frozen by product direction.
+- `AHW-B21` is `in_progress` (slim widget/composition host-result surfaces for tab-ready host API, no tab product behavior).
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -4335,21 +4336,17 @@ Architect review verdict:
 
 ---
 
-### `AHW-B21` Typed keep-screen-on host seam (`frozen_by_product_direction`)
+### `AHW-B21` Widget/Composition Host API Slimming (`in_progress`)
 
 Batch queue line (exact):
 
-- replace int window-flag seam with typed keep-screen-on host access while preserving default behavior
-
-Status note:
-
-- Frozen by product direction after `AHW-B20` acceptance. Do not execute unless explicitly re-opened.
+- slim WidgetAssembly/TerminalWidgetCompositionAssembly host-result surfaces for tab-ready host API without tab product behavior
 
 Batch purpose:
 
-- keep current product behavior: terminal host keeps screen on by default while activity is open
-- reduce policy coupling to integer window flag semantics
-- expose explicit typed keep-screen-on host seam for future settings work
+- reduce host-result overlap and ownership blur between `WidgetAssembly` and `TerminalWidgetCompositionAssembly`
+- keep `ZideActivity` orchestration-only with less field/result fan-out pressure
+- make the future multi-terminal host API easier to consume without implementing tabs now
 
 Batch scope:
 
@@ -4366,7 +4363,6 @@ Batch scope:
 
 Batch non-goals:
 
-- no settings UI/toggle behavior
 - no terminal tabs UI/product behavior
 - no tab persistence/session switching
 - no terminal-core or shared-renderer changes
@@ -4377,9 +4373,8 @@ Batch non-goals:
 
 Batch super-gate:
 
-- keep-screen-on policy seam no longer takes integer flag mutation access
-- typed host seam (e.g. `setKeepScreenOn(boolean)`) is used by keep-screen-on policy
-- behavior unchanged: default keep-screen-on remains active for terminal host
+- `WidgetAssembly.Result` and `TerminalWidgetCompositionAssembly` expose slimmer, non-overlapping ownership surfaces
+- no behavior change to startup order, shell/chrome/view-mode, or single-slot runtime behavior
 - B14-B20 IME, slot, and chrome contracts remain unchanged
 - docs reflect ownership and naming shape
 - debug and release Java compile pass
@@ -4393,47 +4388,47 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `AHW-B21` super-gate is reached.
 
-### `AHW21-M1` Keep-screen-on typed seam audit (`pending`)
+### `AHW21-M1` Host-result surface audit (`pending`)
 
 Queue line (exact):
 
-- audit integer flag seam usage and define typed keep-screen-on host seam
+- audit WidgetAssembly.Result and TerminalWidgetCompositionAssembly surfaces for overlap and ownership blur
 
 Acceptance:
 
-- enumerate current `HostWindowFlagAccess` callsites and usage constraints
-- define typed host seam and out-of-scope paths
-- record invariants (default-on behavior unchanged)
+- enumerate current result fields/callbacks consumed by `ZideActivity` and identify duplication or pass-through-only surfaces
+- define target slim surface and out-of-scope areas
+- record behavior invariants (startup order and runtime behavior unchanged)
 
-### `AHW21-M2` Typed keep-screen-on seam introduction (`pending`)
+### `AHW21-M2` Slim surface introduction (`pending`)
 
 Queue line (exact):
 
-- introduce typed keep-screen-on host seam and wire policy to it
+- introduce slim host-result seam(s) for widget/composition ownership
 
 Acceptance:
 
-- add typed seam type(s) with clear naming (e.g. `setKeepScreenOn(boolean)`)
-- keep `ProductHostKeepScreenOnPolicy` as policy owner
+- add/refine result types with explicit ownership naming
+- preserve current behavior and startup sequence
 - compile debug + release Java after code changes
 
-### `AHW21-M3` Activity rewiring and old seam removal (`pending`)
+### `AHW21-M3` Activity rewiring (`pending`)
 
 Queue line (exact):
 
-- rewire activity keep-screen-on wiring to typed seam and remove obsolete int-flag seam
+- rewire `ZideActivity` to consume slimmer host-result surfaces and remove obsolete pass-through fields
 
 Acceptance:
 
-- activity provides typed keep-screen-on host access
-- obsolete int-flag seam is removed where no longer needed
+- `ZideActivity` wiring is simpler and remains orchestration-only
+- removed surfaces are truly obsolete and not behavior-bearing
 - compile debug + release Java after code changes
 
 ### `AHW21-M4` Contract docs lock (`pending`)
 
 Queue line (exact):
 
-- lock authority docs to typed keep-screen-on seam ownership and naming
+- lock authority docs to slimmer widget/composition host API ownership and naming
 
 Acceptance:
 
