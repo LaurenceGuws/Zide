@@ -130,7 +130,8 @@ Dual-mode batching override (architect directive):
 - `APX-B9` accepted by architect.
 - `APX-B10` accepted by architect.
 - `APX-B11` accepted by architect.
-- `APX-B12` super-gate reached; architect review pending.
+- `APX-B12` accepted by architect.
+- `APX-B13` in progress.
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -2496,7 +2497,7 @@ Architect review verdict:
 - `Review answers: session controls in AppShell sidebar (not inline above assist) is accepted and now canonical.`
 - `Findings carried forward: no blocking regressions; APX-B10 doctor/install contract preserved; single-path code maintained.`
 
-### `APX-B12` List-Available Test-Binary Candidate Selection (`architect_review_pending`)
+### `APX-B12` List-Available Test-Binary Candidate Selection (`accepted`)
 
 Batch queue line (exact):
 
@@ -2567,7 +2568,73 @@ Engineer validation (this batch):
 Architect review verdict:
 
 - `Review chunk: APX-B12`
-- `Verdict: pending`
+- `Verdict: accepted`
+- `Commits reviewed: fd1a6f44, 06d51ca0, e32b9d57, a032008a`
+- `Architect validation spot-check: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
+- `Architect runtime validation spot-check: python3 ops/android_terminal_host.py deploy (pass); adb cold start (pass, LaunchState: COLD, Status: ok); adb logcat -d -s AndroidRuntime:E (pass, empty)`
+- `Engineer validation accepted: compile + deploy + AndroidRuntime:E smoke + cold start pass`
+- `Review answers: list-available-only candidate derivation is accepted; Java manifest parsing remains out-of-scope and disallowed for this lane.`
+- `Findings carried forward: no blocking regressions; APX-B10 doctor/read-only and APX-B11 sidebar/assist contracts remain intact.`
+
+### `APX-B13` Android-Only Edge Candidate Policy + Explicit Outcome UX (`in_progress`)
+
+Batch queue line (exact):
+
+- narrow edge test-binary install to Android candidate ids from `zide-pm list-available` and make selected/no-candidate outcome explicit without changing APX-B10/APX-B11 contracts
+
+Batch purpose:
+
+- keep list-driven candidate selection, but prevent accidental non-edge installs by requiring Android candidate id shape (`zide-android-...`)
+- keep deterministic selection (lexicographic pick) inside that narrowed set
+- make selected-candidate and no-candidate outcome explicit in status/event UX for operator clarity
+
+Batch super-gate:
+
+- `UserlandZidePmListAvailableCandidates` selects only Android edge candidates and rejects others
+- install path emits explicit selected candidate event before install attempt
+- no-candidate state remains explicit and user-visible via existing status/event pathways
+- compile/deploy/device smoke pass
+- docs/handoff/entrypoint aligned
+
+Internal milestone cadence:
+
+- Engineer executes `APX13-M1`–`APX13-M6`; target **5–10 validated commits** before super-gate.
+
+### `APX13-M1` Candidate-shape audit (`pending`)
+
+Queue line (exact):
+
+- audit current list parser against released `zide-pm list-available` output and define Android candidate-id rule + rejected-line examples
+
+### `APX13-M2` Parser narrowing (`pending`)
+
+Queue line (exact):
+
+- enforce Android candidate id parsing (`zide-android-...`) and keep deterministic lexicographic selection in narrowed set
+
+### `APX13-M3` Explicit selected/no-candidate events (`pending`)
+
+Queue line (exact):
+
+- emit explicit selected-candidate install event and explicit no-candidate reason through existing workflow/status callbacks
+
+### `APX13-M4` Device verification (`pending`)
+
+Queue line (exact):
+
+- verify install and no-candidate flows on device without changing APX-B11 sidebar/session behavior
+
+### `APX13-M5` Docs + handoff sync (`pending`)
+
+Queue line (exact):
+
+- sync authority docs and queue/handoff/entrypoint to APX-B13 super-gate wording
+
+### `APX13-M6` Validation + review packet (`pending`)
+
+Queue line (exact):
+
+- run validation ladder and publish APX-B13 super-gate packet for architect review
 
 ## Guardrails
 

@@ -34,15 +34,15 @@ you must report the mismatch.
 
 ## Current Target
 
-`APX-B12` is `architect_review_pending`.
+`APX-B13` is `in_progress`.
 
 Active batch queue line (exact):
 
-- replace hardcoded Android edge test-binary package id with manifest/list-driven candidate selection and explicit no-candidate UX while preserving APX-B10/APX-B11 contracts
+- narrow edge test-binary install to Android candidate ids from `zide-pm list-available` and make selected/no-candidate outcome explicit without changing APX-B10/APX-B11 contracts
 
 Parallel-lane note:
 
-- `../zide-mobile-pm` may progress in parallel under a separate engineer session; this Android engineer session stays focused on APX-B12 only.
+- `../zide-mobile-pm` may progress in parallel under a separate engineer session; this Android engineer session stays focused on APX-B13 only.
 
 ## Core Boundary Rule
 
@@ -75,12 +75,13 @@ boundaries while preserving current single-terminal behavior.
 - `APX-B9` is accepted: tab selection now drives native restart + userland refresh, and Packages flow proved Android-side `zide-pm install`.
 - `APX-B10` is accepted: doctor path is read-only and test-binary install mutation is explicit lifecycle-owned with dedicated sidebar trigger.
 - `APX-B11` is accepted: session/tab controls are AppShell sidebar navigation (not inline above assist); assist strip stays input-only; APX-B10 contracts preserved.
-- `APX-B12` is feature-first: remove hardcoded test-binary install package-id coupling; derive candidates from **`zide-pm list-available` CLI output** (line parser in Java) with explicit no-candidate UX — **no Java manifest parsing** in this batch.
-- `zide-mobile-pm` foundation work is allowed in parallel, but APX-B12 remains the primary in-repo execution lane here.
+- `APX-B12` is accepted: hardcoded package-id coupling removed; list-available parser + explicit no-candidate path are in place.
+- `APX-B13` is feature-first: narrow candidate eligibility to Android edge ids (`zide-android-*`), keep deterministic install pick, and emit explicit selected/no-candidate outcomes — **no Java manifest parsing** in this batch.
+- `zide-mobile-pm` foundation work is allowed in parallel, but APX-B13 remains the primary in-repo execution lane here.
 - `AHW-B26` is accepted and `AHW` is closed.
 - Keep harness vs surface split (`WidgetAssembly.Result.harnessHost` + `surfaceJoin`) as the baseline.
 - Freeze additional keep-screen-on seam work beyond B20 unless explicitly re-opened by product direction.
-- Execute `APX-B12` as a non keep-screen-on batch.
+- Execute `APX-B13` as a non keep-screen-on batch.
 - Keep `ProductHostActivityStartupWiring`, `ProductTerminalLifecycleHost`, and `ProductTerminalWidgetAssemblyHost` ownership from B22 unchanged.
 - Keep `ProductHostOnCreateStartupCoordinator` + `ProductHostOnCreateStartupSteps` as the startup choreography seam from B23.
 - Keep `AppShellTerminalViewPolicy` as explicit app-shell terminal-view policy seam; no public `appShellNavigation()` accessor on that type.
@@ -102,12 +103,12 @@ boundaries while preserving current single-terminal behavior.
   `InteractionAssembly.Result` yet.
 - Keep chrome slot-agnostic in this batch; do not thread slot into chrome
   construction until per-slot chrome policy is scoped.
-- `APX-B12` must preserve APX-B11 sidebar session-navigation and APX-B10 doctor/install split while implementing list-available candidate selection (no manifest parse in Java).
+- `APX-B13` must preserve APX-B11 sidebar session-navigation and APX-B10 doctor/install split while narrowing candidate parsing to Android edge ids (no manifest parse in Java).
 
 ## Internal Milestones
 
-Execute `APX12-M1` through `APX12-M6` sequentially; do not stop before the
-`APX-B12` super-gate unless a hard stop condition is hit.
+Execute `APX13-M1` through `APX13-M6` sequentially; do not stop before the
+`APX-B13` super-gate unless a hard stop condition is hit.
 
 Commit cadence expectation for this macro batch:
 
@@ -116,12 +117,12 @@ Commit cadence expectation for this macro batch:
 
 Execute in order and mark progress in `docs/todo/android/implementation.md`.
 
-- `APX12-M1`: audit `list-available` line contract; define parse + deterministic pick + no-candidate behavior.
-- `APX12-M2`: implement `UserlandZidePmListAvailableCandidates` + install lifecycle using `list-available` stdout.
-- `APX12-M3`: wire `NoCandidateException` to telemetry/status (`markNoCandidate`).
-- `APX12-M4`: device verify install and no-candidate paths against current prefix/`zide-pm` baseline.
-- `APX12-M5`: sync authority docs + queue + this entrypoint + `AGENT_HANDOFF`.
-- `APX12-M6`: validation ladder + architect review packet.
+- `APX13-M1`: audit real `list-available` output and define Android edge id candidate rule (`zide-android-*`) with rejected-line examples.
+- `APX13-M2`: narrow `UserlandZidePmListAvailableCandidates` to Android edge ids and keep deterministic lexicographic pick.
+- `APX13-M3`: emit explicit selected-candidate and explicit no-candidate reason events via existing workflow/status callbacks.
+- `APX13-M4`: device verify install and no-candidate flows against current prefix/`zide-pm` baseline.
+- `APX13-M5`: sync authority docs + queue + this entrypoint + `AGENT_HANDOFF`.
+- `APX13-M6`: validation ladder + architect review packet.
 
 ## Allowed Work
 
@@ -213,7 +214,7 @@ when:
 - a behavior change is required where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
 - implementing terminal tabs/product behavior becomes necessary to proceed
-- the `APX-B12` super-gate is reached
+- the `APX-B13` super-gate is reached
 
 Otherwise continue autonomously with:
 
@@ -221,9 +222,9 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At `APX-B12` super-gate, report:
+At `APX-B13` super-gate, report:
 
-- review chunk name: `APX-B12`
+- review chunk name: `APX-B13`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs
