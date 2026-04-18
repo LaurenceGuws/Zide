@@ -10,6 +10,6 @@ pub fn feedOutputBytes(self: anytype, bytes: []const u8) void {
     self.session.control.state_mutex.lock();
     defer self.session.control.state_mutex.unlock();
     const result = feedOutputBytesLocked(self, bytes);
-    var exec = @import("../session/protocol_execution.zig").ProtocolExecution.init(self, self.core);
+    var exec = @import("../session/protocol_execution.zig").ProtocolExecution.init(self, &self.core);
     exec.publishParsedOutput(result, "feed_output_bytes");
 }

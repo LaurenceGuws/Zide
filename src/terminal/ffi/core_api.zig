@@ -603,7 +603,7 @@ pub fn snapshotDiffAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const
     }
 
     var snapshot_state: SnapshotExportState = undefined;
-    const fallback = copyPublishedSnapshotExport(h, allocator, 0, &snapshot_state) catch |err| {
+    const fallback = copyPublishedSnapshotExport(h, allocator, &snapshot_state) catch |err| {
         log.logf(.warning, "snapshot diff fallback export failed err={s}", .{@errorName(err)});
         return shared.mapError(err);
     };

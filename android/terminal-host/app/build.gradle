@@ -15,8 +15,8 @@ android {
         // execution posture until the repo proves a modern-target userland
         // model that can run app-private Bash/nvim-class tools honestly.
         targetSdk 28
-        versionCode 1
-        versionName '0.1'
+        versionCode 7
+        versionName '0.1.0-beta.7'
     }
 
     buildTypes {

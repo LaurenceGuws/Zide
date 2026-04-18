@@ -29,7 +29,7 @@ The goal is to be the best terminal on every platform Zide runs on.
 | Linux | Active |
 | Windows | Active |
 | macOS | Active |
-| Android | Active — native rendering in progress |
+| Android | Beta — GLES + harness/product expansion active |
 
 These are the current targets. The architecture is designed to take on new
 native targets without core surgery. More platforms will follow.
@@ -61,7 +61,7 @@ layer.
 The renderer backend contract is intentionally open-ended — it adapts to proved
 real-world truth on each platform rather than locking in speculative
 abstractions. OpenGL and Metal are the current reference implementations.
-Android GLES is next.
+Android GLES is active in the current beta lane.
 
 ## Principles
 
