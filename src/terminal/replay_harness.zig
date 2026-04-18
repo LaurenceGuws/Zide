@@ -1,14 +1,14 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const terminal_runtime = @import("core/terminal_runtime.zig");
-const terminal_publication = @import("core/terminal_publication.zig");
+const terminal_publication = @import("core/publication/terminal_publication.zig");
 const terminal_debug = @import("core/session/debug_ops.zig");
 const session_input = @import("core/session/input.zig");
 const terminal_selection = @import("core/selection.zig");
 const session_runtime = @import("core/session/runtime.zig");
 const screen_mod = @import("model/screen.zig");
 const pty_mod = @import("io/pty.zig");
-const snapshot_mod = @import("core/snapshot.zig");
+const publication_snapshot = @import("core/publication/snapshot.zig");
 const input_mod = @import("input/input.zig");
 const alt_probe = @import("input/alternate_probe.zig");
 const types = @import("model/types.zig");
@@ -196,6 +196,8 @@ const ReplayPtyCapture = struct {
                 .cached_fg_pgrp = 0,
                 .cached_fg_name_len = 0,
                 .cached_fg_name = [_]u8{0} ** 128,
+                .cached_fg_command_len = 0,
+                .cached_fg_command = [_]u8{0} ** 256,
             },
         };
     }
@@ -386,7 +388,7 @@ pub fn runFixtureObservedWithOptions(
         return error.InvalidFixtureSize;
     }
 
-    var session = try terminal_runtime.init(allocator, fixture.meta.rows, fixture.meta.cols);
+    var session: *terminal_runtime.TerminalRuntimeShell = try terminal_runtime.init(allocator, fixture.meta.rows, fixture.meta.cols);
     defer session.deinit();
     var baseline_publication: BaselinePublication = .{};
 
@@ -461,7 +463,7 @@ pub fn runFixtureObservedWithOptions(
         if (!std.mem.eql(u8, actual, expected)) return error.ReplyAssertionMismatch;
     }
 
-    const output = try snapshot_mod.encodeSnapshot(allocator, session, snapshot, debug, terminal_debug.debugScrollbackRow);
+    const output = try publication_snapshot.encodeSnapshot(allocator, session, snapshot, debug, terminal_debug.debugScrollbackRow);
     return .{
         .output = output,
         .observed = try observedFixtureState(allocator, snapshot, debug, baseline_publication),

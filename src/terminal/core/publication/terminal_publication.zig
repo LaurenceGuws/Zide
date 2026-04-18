@@ -132,6 +132,7 @@ pub fn presentedGeneration(self: anytype) u64 {
 }
 
 pub const acknowledgePresentedGeneration = presentation_feedback.acknowledgePresentedGeneration;
+pub const notePresentedGeneration = presentation_feedback.notePresentedGeneration;
 
 pub const noteAltExitPending = presentation_feedback.noteAltExitPending;
 pub const completeSubmittedPresentationFeedback = presentation_feedback.completeSubmittedPresentationFeedback;
