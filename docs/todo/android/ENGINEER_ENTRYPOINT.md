@@ -34,7 +34,9 @@ you must report the mismatch.
 
 ## Current Target
 
-`APX-B18` is `in_progress` in `docs/todo/android/implementation.md`.
+`APX-B18` is **`blocked_cross_repo`** in `docs/todo/android/implementation.md`
+(M1 device catalog: no `zide-android-*` row in `zide-pm list-available` under the
+released dev prefix; unblock is `../zide-mobile-pm` catalog work, not this repo).
 
 Active batch queue line (exact):
 
@@ -81,7 +83,7 @@ boundaries while preserving current single-terminal behavior.
 - `APX-B15` is accepted: tab metadata is policy-owned through `ProductTerminalTabDescriptor`/`AppShellTerminalViewPolicy` and chrome consumes descriptors.
 - `APX-B16` is accepted: selected tab persists by stable descriptor id and restores to seed index via descriptor lookup.
 - `APX-B17` is accepted: Android consumes `runtime_support_links` metadata from staged prefix manifests and materializes declared links before runtime activation.
-- `APX-B18` is feature-first closure work: prove the released zide-pm Android test-binary path on-device through the explicit Android install lifecycle, then publish the Android refocus closure recommendation.
+- `APX-B18` is **blocked**: released Android userland + `zide-pm list-available` do not yet expose any `zide-android-*` candidate; install proof and full refocus closure recommendation (including “move primary focus to Zig hygiene”) wait on `zide-mobile-pm` catalog delivery. Harness/widget split and tab-state work from earlier APX batches remain accepted.
 - `zide-mobile-pm` foundation work is allowed in parallel, but APX-B18 remains the primary in-repo execution lane here.
 - `AHW-B26` is accepted and `AHW` is closed.
 - Keep harness vs surface split (`WidgetAssembly.Result.harnessHost` + `surfaceJoin`) as the baseline.

@@ -136,8 +136,10 @@ Dual-mode batching override (architect directive):
 - `APX-B15` accepted by architect.
 - `APX-B16` accepted by architect.
 - `APX-B17` accepted by architect.
-- `APX-B18` in progress: Android refocus closure proof for real zide-pm
-  Android test-binary pull/install on device.
+- `APX-B18` **blocked (cross-repo)**: released Android userland + `zide-pm
+  list-available` under `ZIDE_PM_HOST_PLATFORM=android` exposes **no**
+  `zide-android-*` row; `../zide-mobile-pm` must ship catalog candidates before
+  install proof can complete (this repo only documents the stop).
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -2968,7 +2970,7 @@ Queue line (exact):
 - `Architect validation spot-check: compileDebugJavaWithJavac (pass); compileReleaseJavaWithJavac (pass); deploy + cold start + AndroidRuntime:E (pass, empty).`
 - `Review answers: APX-B17 closes the MP-A7 Android consumer gap for runtime_support_links. Next batch should close Android refocus by proving the released zide-pm Android test-binary path on-device through the explicit install lifecycle, then publish a closure recommendation.`
 
-### `APX-B18` Android Refocus Closure: Real zide-pm Test-Binary Pull (`in_progress`)
+### `APX-B18` Android Refocus Closure: Real zide-pm Test-Binary Pull (`blocked_cross_repo`)
 
 Batch queue line (exact):
 
@@ -2990,11 +2992,26 @@ Batch super-gate:
 - docs/handoff/entrypoint include a refocus closure recommendation: close Android refocus now, continue only bug fixes on Android, then move primary focus to Zig-layer hygiene cleanup
 - compile/deploy/device smoke pass
 
+#### APX-B18 hard blocker packet (engineer → architect)
+
+- `Review chunk: APX-B18 (blocked before super-gate)`
+- `Verdict: blocked — cross-repo prerequisite missing`
+- Blocker: under the current released Android dev prefix (app asset `userland_release.json` → `android-dev-2026.04.14.102816` prefix manifest), on-device `zide-pm list-available` with `ZIDE_PM_HOST_PLATFORM=android` and `PREFIX=/data/user/0/uk.laurencegouws.zide/files/usr` returns only `dev-baseline` — zero first-column `zide-android-*` tokens. The prefix release manifest JSON lists the prefix archive artifact only; it does not enumerate per-package catalog rows (expected). Therefore the super-gate criterion “released dev manifest exposes at least one `zide-android-*` candidate” is not satisfied until `zide-mobile-pm` publishes an Android-mode catalog that surfaces such ids to `list-available`.
+- `Android repo scope: do not edit ../zide-mobile-pm from this lane; unblock is parallel foundation work.`
+- `M1–M6: stopped after M1 audit + device catalog probe; M2–M6 not executed.`
+- `Engineer partial validation (no code change): compileDebugJavaWithJavac (pass); compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat -d -s AndroidRuntime:E after warm start (pass, empty); adb cold start am start -W (pass, LaunchState: COLD, Status: ok).`
+
+**Interim refocus closure recommendation (maps to `refocus_android.txt`, pending M3–M6):**
+
+1. **Planned split (harness vs terminal widget):** treated as implemented and accepted through prior APX/AHW work; APX-B18 does not reopen ownership.
+2. **Planned tab-state expansion (stable ids, policy-owned descriptors, sidebar session navigation):** treated as cleanly implemented through APX-B14–B16 and B11; unchanged by this blocker.
+3. **zide-pm test-binary pull maturity:** **not yet proven** on the released catalog — without at least one `zide-android-*` row, the batch cannot recommend moving primary engineering focus to Zig hygiene. After `zide-mobile-pm` unblocks the catalog, re-run M3–M6 and publish the full closure verdict.
+
 Internal milestone cadence:
 
 - Engineer executes `APX18-M1` through `APX18-M6`; target **5-10 validated commits** before super-gate.
 
-### `APX18-M1` Candidate and install-proof audit (`pending`)
+### `APX18-M1` Candidate and install-proof audit (`done — blocker recorded`)
 
 Queue line (exact):
 
@@ -3006,7 +3023,9 @@ Acceptance:
 - document the exact file path and executable bit expectation after install
 - document any missing Android-side status/telemetry needed to verify selected/install success without manifest parsing in Java
 
-### `APX18-M2` Verification surface hardening (`pending`)
+**M1 outcome:** No `zide-android-*` id can be identified from the released dev prefix manifest or from on-device `list-available`; batch stops here as a **cross-repo blocker** per queue guardrails.
+
+### `APX18-M2` Verification surface hardening (`blocked — prerequisite`)
 
 Queue line (exact):
 
@@ -3019,7 +3038,7 @@ Acceptance:
 - selected candidate id and final install outcome are visible through existing status/telemetry flow
 - existing no-candidate paths keep their reason labels
 
-### `APX18-M3` Device install proof (`pending`)
+### `APX18-M3` Device install proof (`blocked — prerequisite`)
 
 Queue line (exact):
 
@@ -3030,7 +3049,7 @@ Acceptance:
 - device evidence includes selected `zide-android-*` id, install success, target file presence, and executable mode
 - failure paths remain explicit and do not masquerade as success
 
-### `APX18-M4` Runtime-link regression check (`pending`)
+### `APX18-M4` Runtime-link regression check (`blocked — prerequisite`)
 
 Queue line (exact):
 
@@ -3042,7 +3061,7 @@ Acceptance:
 - cold start still rematerializes declared links before native restart
 - no APX-B16 tab persistence or APX-B11 sidebar behavior regression
 
-### `APX18-M5` Refocus closure docs (`pending`)
+### `APX18-M5` Refocus closure docs (`blocked — prerequisite`)
 
 Queue line (exact):
 
@@ -3053,7 +3072,7 @@ Acceptance:
 - closure recommendation maps directly to `refocus_android.txt`: planned split, tab-state expansion, and zide-pm test-binary maturity
 - Android follow-ups are labeled bug/product follow-ups, not blockers to moving primary focus to Zig hygiene
 
-### `APX18-M6` Validation and super-gate (`pending`)
+### `APX18-M6` Validation and super-gate (`blocked — prerequisite`)
 
 Queue line (exact):
 
