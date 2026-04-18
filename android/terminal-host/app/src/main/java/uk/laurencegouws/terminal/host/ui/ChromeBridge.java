@@ -17,9 +17,11 @@ public final class ChromeBridge implements ChromeController.Host {
 
         void appendEvent(String event);
 
-        boolean currentImeVisible();
+        boolean chromeImeVisibilityPresent();
 
-        void setImeVisible(boolean visible);
+        void applyChromeImeVisibilityHidden();
+
+        void applyChromeImeVisibilityFromOpenAttempt(boolean softInputShown, boolean shellInputHasFocus);
 
         ShellInputView shellInputView();
 
@@ -102,13 +104,19 @@ public final class ChromeBridge implements ChromeController.Host {
     }
 
     @Override
-    public boolean currentImeVisible() {
-        return callbacks.currentImeVisible();
+    public boolean chromeImeVisibilityPresent() {
+        return callbacks.chromeImeVisibilityPresent();
     }
 
     @Override
-    public void setImeVisible(boolean visible) {
-        callbacks.setImeVisible(visible);
+    public void applyChromeImeVisibilityHidden() {
+        callbacks.applyChromeImeVisibilityHidden();
+    }
+
+    @Override
+    public void applyChromeImeVisibilityFromOpenAttempt(
+            boolean softInputShown, boolean shellInputHasFocus) {
+        callbacks.applyChromeImeVisibilityFromOpenAttempt(softInputShown, shellInputHasFocus);
     }
 
     @Override

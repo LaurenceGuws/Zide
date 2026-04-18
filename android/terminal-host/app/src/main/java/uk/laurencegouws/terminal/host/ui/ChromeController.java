@@ -12,6 +12,9 @@ import uk.laurencegouws.terminal.input.ShellInputView;
  *
  * <p>Chrome remains slot-agnostic: it does not take {@link TerminalWidgetSlotId}; reopen only
  * when per-slot chrome behavior is a scoped product decision.</p>
+ *
+ * <p>IME visibility on {@link Host} uses explicit policy methods — no generic boolean
+ * {@code setImeVisible(boolean)} on the chrome host seam.</p>
  */
 public final class ChromeController {
     public interface Host {
@@ -24,8 +27,14 @@ public final class ChromeController {
         void applyChromeDrawerSidebarClosed();
         void runPackageDoctor();
         void appendEvent(String event);
-        boolean currentImeVisible();
-        void setImeVisible(boolean visible);
+        /** Whether IME is considered visible for chrome policy (backed by activity state). */
+        boolean chromeImeVisibilityPresent();
+        /** Records IME hidden after chrome close-IME policy. */
+        void applyChromeImeVisibilityHidden();
+        /**
+         * Records IME visibility after a show-soft-input attempt: {@code softInputShown || shellInputHasFocus}.
+         */
+        void applyChromeImeVisibilityFromOpenAttempt(boolean softInputShown, boolean shellInputHasFocus);
         void applyModifierLatchState(ShellInputView.Host.ModifierLatchState state);
         ShellInputView shellInputView();
         Button assistCtrlButton();
@@ -111,7 +120,7 @@ public final class ChromeController {
         host.appendEvent("manual.ime.open focusAfterRequest=" + shellInputView.hasFocus());
         imm.restartInput(shellInputView);
         final boolean shown = imm.showSoftInput(shellInputView, InputMethodManager.SHOW_IMPLICIT);
-        host.setImeVisible(shown || shellInputView.hasFocus());
+        host.applyChromeImeVisibilityFromOpenAttempt(shown, shellInputView.hasFocus());
         host.appendEvent("manual.ime.open shown=" + shown + " focus=" + shellInputView.hasFocus());
         host.updateStatus("ime.state.shown");
     }
@@ -122,13 +131,13 @@ public final class ChromeController {
             return;
         }
         final boolean hidden = imm.hideSoftInputFromWindow(host.shellInputView().getWindowToken(), 0);
-        host.setImeVisible(false);
+        host.applyChromeImeVisibilityHidden();
         host.appendEvent("manual.ime.close hidden=" + hidden);
         host.updateStatus("ime.state.hidden");
     }
 
     public void toggleIme() {
-        if (host.currentImeVisible()) {
+        if (host.chromeImeVisibilityPresent()) {
             closeIme();
             return;
         }

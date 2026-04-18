@@ -65,13 +65,19 @@ public final class ChromeFactory {
             }
 
             @Override
-            public boolean currentImeVisible() {
+            public boolean chromeImeVisibilityPresent() {
                 return currentImeVisible.getAsBoolean();
             }
 
             @Override
-            public void setImeVisible(boolean visible) {
-                setImeVisible.accept(visible);
+            public void applyChromeImeVisibilityHidden() {
+                setImeVisible.accept(false);
+            }
+
+            @Override
+            public void applyChromeImeVisibilityFromOpenAttempt(
+                    boolean softInputShown, boolean shellInputHasFocus) {
+                setImeVisible.accept(softInputShown || shellInputHasFocus);
             }
 
             @Override
