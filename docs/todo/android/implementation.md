@@ -105,7 +105,8 @@ Dual-mode batching override (architect directive):
 - `APX-B2` accepted by architect.
 - `APX-B3` accepted by architect.
 - `APX-B4` accepted by architect.
-- `APX-B5` is `awaiting_architect_review` (engineer super-gate complete).
+- `APX-B5` accepted by architect.
+- `APX-B6` is `in_progress`.
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -1394,7 +1395,7 @@ Architect review verdict:
 - `Review answers: explicit host-declared slot source is accepted; removing `forSingleTerminalProductHarnessStartup` keeps single-path ownership clear.`
 - `Findings carried forward: no blocking regressions; startup behavior and invariants unchanged.`
 
-### `APX-B5` Declared-slot type hardening (`awaiting_architect_review`)
+### `APX-B5` Declared-slot type hardening (`accepted`)
 
 Batch queue line (exact):
 
@@ -1526,7 +1527,7 @@ Acceptance:
 - cold start smoke pass when a device is available
 - engineer reports full super-gate packet and explicit residual-risk note
 
-**Engineer commit cadence (this batch):** 7 commits — (1) core value type + context + ZideActivity + WidgetAssembly invariants; (2) catalog/harness/assembly javadoc; (3) selection policy `@see`; (4) authority docs trio; (5) implementation queue; (6) engineer entrypoint; (7) agent handoff.
+**Engineer commit cadence (this batch):** 7 commits — (1) core value type + context + ZideActivity + WidgetAssembly invariants; (2) catalog/harness/assembly javadoc; (3) selection policy `@see`; (4) authority docs trio; (5) implementation queue; (6) engineer entrypoint + handoff; (7) queue count fix.
 
 **APX-B5 engineer validation record (M6):**
 
@@ -1539,6 +1540,142 @@ Acceptance:
 **Residual risk:** Low — PRIMARY-only; dual fail-fast check in `WidgetAssembly` (host vs declared value, host vs selected).
 
 `Milestone reached per docs, architect review required.`
+
+Architect review verdict:
+
+- `Review chunk: APX-B5`
+- `Verdict: accepted`
+- `Commits reviewed: 29d28c4c, 5d7e3ce1, c516ab24, 7b1dbbf7, 41d265d1, 41f024f4, 53dd8f5e`
+- `Architect validation spot-check: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
+- `Architect runtime validation spot-check: python3 ops/android_terminal_host.py deploy (pass); adb warm start + AndroidRuntime:E (pass, empty); adb cold start (pass, LaunchState: COLD)`
+- `Engineer device validation accepted: compile + deploy + AndroidRuntime:E smoke + cold start pass`
+- `Review answers: immutable ProductHostDeclaredTerminalWidgetSlot seam is accepted; dual WidgetAssembly fail-fast checks are acceptable and should remain.`
+- `Findings carried forward: no blocking regressions; startup behavior and PRIMARY-only runtime unchanged.`
+
+### `APX-B6` Startup slot boundary object propagation (`in_progress`)
+
+Batch queue line (exact):
+
+- propagate ProductHostDeclaredTerminalWidgetSlot across startup boundary APIs and reduce raw slot enum fan-out without behavior change
+
+Batch purpose:
+
+- extend declared-slot value-type ownership through startup-facing seams
+- keep APX-B5 immutable value seam and fail-fast invariants
+- preserve PRIMARY-only runtime behavior
+- run this as a longer engineer iteration: target **5–10 commits** before architect super-gate review
+
+Batch scope:
+
+- Java Android terminal host only, plus authority docs needed to keep contract truth current
+- primary code root:
+  `android/terminal-host/app/src/main/java/uk/laurencegouws/terminal/**`
+- allowed docs:
+  `docs/todo/android/implementation.md`,
+  `docs/todo/android/ENGINEER_ENTRYPOINT.md`,
+  `docs/AGENT_HANDOFF.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_NAMING_CONTRACT.md`,
+  `app_architecture/platform/android/USERLAND_HOST_CONTRACT.md`
+
+Batch non-goals:
+
+- no tabs UI rendering
+- no second active terminal slot behavior
+- no new `TerminalWidgetSlotId` enum values
+- no terminal-core or shared-renderer changes
+- no keep-screen-on follow-up implementation unless explicitly re-opened
+- no startup-order changes
+
+Batch super-gate:
+
+- startup boundary APIs consume `ProductHostDeclaredTerminalWidgetSlot` where ownership is declared-slot specific
+- raw `TerminalWidgetSlotId` remains only at true enum-owner boundaries
+- behavior unchanged (`PRIMARY` only) and fail-fast invariants remain
+- docs reflect final ownership/naming shape
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass at final seam boundary
+
+Internal milestone cadence:
+
+- Engineer executes `APX6-M1` through `APX6-M6` sequentially.
+- Engineer should keep cutting coherent validated commits across those milestones
+  and target **5–10 commits total** before stopping at `APX-B6` super-gate.
+- Do not stop for architect review between internal milestones.
+- Mark each internal milestone complete in this file as it lands.
+- Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
+  the `APX-B6` super-gate is reached.
+
+### `APX6-M1` Startup boundary audit (`pending`)
+
+Queue line (exact):
+
+- audit startup boundary APIs for declared-slot value-type propagation targets
+
+Acceptance:
+
+- enumerate startup-facing APIs still taking raw `TerminalWidgetSlotId`
+- define bounded conversion boundaries where enum remains the right owner
+- record explicit out-of-scope items (tabs UI, second active slot behavior)
+
+### `APX6-M2` API seam introduction (`pending`)
+
+Queue line (exact):
+
+- introduce ProductHostDeclaredTerminalWidgetSlot startup boundary API changes with ownership-first naming
+
+Acceptance:
+
+- declared-slot startup seams expose value type where ownership applies
+- no compatibility/fallback paths
+- compile debug + release Java after code changes
+
+### `APX6-M3` Consumer rewiring (`pending`)
+
+Queue line (exact):
+
+- rewire startup consumers through updated declared-slot value-type APIs without behavior change
+
+Acceptance:
+
+- current behavior unchanged
+- reduced raw enum fan-out in startup boundary callsites
+- compile debug + release Java after code changes
+
+### `APX6-M4` Contract docs lock (`pending`)
+
+Queue line (exact):
+
+- lock authority docs to APX-B6 startup slot boundary ownership shape
+
+Acceptance:
+
+- host structure and naming contract match code shape
+- userland contract updated only if ownership text requires it
+
+### `APX6-M5` Queue/handoff/entrypoint sync (`pending`)
+
+Queue line (exact):
+
+- keep queue, handoff, and engineer entrypoint aligned to APX-B6 execution and super-gate stop
+
+Acceptance:
+
+- queue, handoff, and engineer entrypoint stay coherent through APX-B6 super-gate
+- super-gate stop condition and review packet contract are explicit
+
+### `APX6-M6` Batch validation + review packet (`pending`)
+
+Queue line (exact):
+
+- validate APX-B6 end-to-end and publish the architect review packet
+
+Acceptance:
+
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
+- cold start smoke pass when a device is available
+- engineer reports full super-gate packet and explicit residual-risk note
 
 ## Guardrails
 

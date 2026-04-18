@@ -34,11 +34,11 @@ you must report the mismatch.
 
 ## Current Target
 
-`APX-B5` is at **super-gate** (`awaiting_architect_review` in queue).
+`APX-B6` is `in_progress`.
 
 Active batch queue line (exact):
 
-- harden host-declared-slot source to a named value type and route startup context through that type (no behavior change)
+- propagate ProductHostDeclaredTerminalWidgetSlot across startup boundary APIs and reduce raw slot enum fan-out without behavior change
 
 ## Core Boundary Rule
 
@@ -64,11 +64,12 @@ boundaries while preserving current single-terminal behavior.
 - `APX-B3` is accepted: one `AppShellTerminalHostSelectionContext` per startup path with fail-fast host/context slot invariant.
 - `APX-B4` introduces explicit host-declared-slot source ownership and routes startup context construction through `forProductHostStartup`.
 - `APX-B4` is accepted: `ProductHostDeclaredTerminalWidgetSlot` is now the explicit source feeding startup context construction.
-- `APX-B5` hardens that seam into a named declared-slot value type at the startup boundary.
+- `APX-B5` is accepted: immutable declared-slot value type now owns startup source semantics.
+- `APX-B6` propagates declared-slot value type across startup boundary APIs to reduce raw enum fan-out.
 - `AHW-B26` is accepted and `AHW` is closed.
 - Keep harness vs surface split (`WidgetAssembly.Result.harnessHost` + `surfaceJoin`) as the baseline.
 - Freeze additional keep-screen-on seam work beyond B20 unless explicitly re-opened by product direction.
-- Execute `APX-B5` as a non keep-screen-on batch.
+- Execute `APX-B6` as a non keep-screen-on batch.
 - Keep `ProductHostActivityStartupWiring`, `ProductTerminalLifecycleHost`, and `ProductTerminalWidgetAssemblyHost` ownership from B22 unchanged.
 - Keep `ProductHostOnCreateStartupCoordinator` + `ProductHostOnCreateStartupSteps` as the startup choreography seam from B23.
 - Keep `AppShellTerminalViewPolicy` as explicit app-shell terminal-view policy seam; no public `appShellNavigation()` accessor on that type.
@@ -94,8 +95,8 @@ boundaries while preserving current single-terminal behavior.
 
 ## Internal Milestones
 
-Execute `APX5-M1` through `APX5-M6` sequentially; do not stop before the
-`APX-B5` super-gate unless a hard stop condition is hit.
+Execute `APX6-M1` through `APX6-M6` sequentially; do not stop before the
+`APX-B6` super-gate unless a hard stop condition is hit.
 
 Commit cadence expectation for this macro batch:
 
@@ -104,12 +105,12 @@ Commit cadence expectation for this macro batch:
 
 Execute in order and mark progress in `docs/todo/android/implementation.md`.
 
-- `APX5-M1`: audit raw declared-slot primitive flow and define bounded value-type seam target.
-- `APX5-M2`: introduce declared-slot value type and route source seam through it.
-- `APX5-M3`: rewire startup context construction/consumers through value type without behavior change.
-- `APX5-M4`: lock authority docs to APX-B5 declared-slot value-type ownership shape.
-- `APX5-M5`: keep queue/handoff/entrypoint aligned to APX-B5 super-gate.
-- `APX5-M6`: run validation and publish super-gate review packet.
+- `APX6-M1`: audit startup boundary APIs for declared-slot value-type propagation targets.
+- `APX6-M2`: introduce declared-slot startup API seam changes with ownership-first naming.
+- `APX6-M3`: rewire startup consumers through value-type APIs without behavior change.
+- `APX6-M4`: lock authority docs to APX-B6 startup slot boundary ownership shape.
+- `APX6-M5`: keep queue/handoff/entrypoint aligned to APX-B6 super-gate.
+- `APX6-M6`: run validation and publish super-gate review packet.
 
 ## Allowed Work
 
@@ -202,7 +203,7 @@ when:
 - a behavior change is required where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
 - implementing terminal tabs/product behavior becomes necessary to proceed
-- the `APX-B5` super-gate is reached
+- the `APX-B6` super-gate is reached
 
 Otherwise continue autonomously with:
 
@@ -210,9 +211,9 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At `APX-B5` super-gate, report:
+At `APX-B6` super-gate, report:
 
-- review chunk name: `APX-B5`
+- review chunk name: `APX-B6`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs

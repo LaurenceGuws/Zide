@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android product expansion** (`APX`) — build product capability on top of the closed harness/widget ownership shape.
-- Active macro batch: `APX-B5` — **awaiting architect review** at super-gate (immutable `ProductHostDeclaredTerminalWidgetSlot`; engineer validation complete).
+- Active macro batch (`in_progress`): `APX-B6` — propagate declared-slot value type across startup boundary APIs; no behavior change.
 - Prior closed/escalated: `AHW-B1` through `AHW-B26` accepted and `AHW` closed; `ASF-M3` escalated IME/assist/touch rows to operator evidence; `RF-M0` through `RF-M5` and `AX-M1` through `AX-M5` completed.
 - Active queue authority: `docs/todo/android/implementation.md`
 - Engineer entrypoint (dual mode): `docs/todo/android/ENGINEER_ENTRYPOINT.md`
@@ -27,8 +27,8 @@ Engineer session seed:
 - Read `docs/todo/android/ENGINEER_ENTRYPOINT.md`, then
   `docs/todo/android/implementation.md`, then this handoff file.
 - Execute only the macro batch marked `in_progress` in
-  `docs/todo/android/implementation.md` (`APX-B5`).
-- Stop at the `APX-B5` super-gate and return the review packet for Architect verdict.
+  `docs/todo/android/implementation.md` (`APX-B6`).
+- Stop at the `APX-B6` super-gate and return the review packet for Architect verdict.
 
 ## First Read Order
 
@@ -54,7 +54,7 @@ Engineer session seed:
 - Architect updates use: `Blocked by humain review needed: true|false`.
 - Engineer updates use: `Blocked by Archtect review needed: true|false`.
 
-## APX-B5 Baseline
+## APX-B6 Baseline
 
 - `AHW-B20` is accepted and already keeps the test device awake by default.
 - Additional keep-screen-on seam work is frozen by product direction.
@@ -68,7 +68,8 @@ Engineer session seed:
 - `APX-B2` is accepted: `DeclaredTerminalWidgetSlotCatalog` holds PRIMARY-only declared slots; `AppShellTerminalSelectionPolicy` enforces catalog + active-slot checks; no multi-slot runtime.
 - `APX-B3` is accepted: one `AppShellTerminalHostSelectionContext` per startup is the selected seam; host/context slot equality stays fail-fast.
 - `APX-B4` is accepted: explicit `ProductHostDeclaredTerminalWidgetSlot` source now feeds `AppShellTerminalHostSelectionContext.forProductHostStartup`.
-- `APX-B5` scope is non keep-screen-on: harden declared-slot source at startup boundary with a named value type, still PRIMARY-only behavior.
+- `APX-B5` is accepted: immutable `ProductHostDeclaredTerminalWidgetSlot` value type now owns declared-slot source semantics at startup boundary.
+- `APX-B6` scope is non keep-screen-on: propagate declared-slot value type across startup boundary APIs and reduce raw enum fan-out.
 - Keep `ProductHostKeepScreenOnPolicy` as the long-term owner of terminal keep-screen-on default policy.
 - Keep `HostImeStateAccess` as the long-term host callback IME seam (backed by `ProductHostImeState`).
 - Keep `ProductHostImeState` as the long-term activity IME carrier.
@@ -85,7 +86,7 @@ Engineer session seed:
 
 ## Operator Evidence Escalation
 
-ASF did not prove IME/assist or touch gestures because no operator packets were delivered. Those rows remain parked in `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md` with owner `operator`; they do not block `APX-B5` unless new evidence reports a regression inside the active code scope.
+ASF did not prove IME/assist or touch gestures because no operator packets were delivered. Those rows remain parked in `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md` with owner `operator`; they do not block `APX-B6` unless new evidence reports a regression inside the active code scope.
 
 ## Historical Notes
 
