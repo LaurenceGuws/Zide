@@ -34,9 +34,9 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B15` is `in_progress` and is the only active macro batch.
+Engineer delivery for `AHW-B15` is complete; batch status is `verdict_pending` pending Architect review. No macro batch is `in_progress` until the Architect refocuses the queue after verdict.
 
-Active batch queue line (exact):
+Reference queue line (exact) for the completed batch:
 
 - narrow chrome IME policy inputs to explicit harness-owned seams while preserving behavior
 
@@ -77,10 +77,9 @@ chrome host policy APIs and existing active-view/sidebar ownership.
 
 ## Internal Milestones
 
-Execute `AHW15-M1` through `AHW15-M6` sequentially; do not stop before the
-`AHW-B15` super-gate unless a hard stop condition is hit.
+`AHW15-M1` through `AHW15-M6` are complete; the `AHW-B15` super-gate has been reached. Progress is recorded in `docs/todo/android/implementation.md`.
 
-Execute in order and mark progress in `docs/todo/android/implementation.md`.
+Historical execution order (for the next engineer session after Architect refocus):
 
 - `AHW15-M1`: audit ChromeFactory IME policy input wiring and define explicit seam.
 - `AHW15-M2`: introduce explicit harness-owned IME policy input seam in host/ui.

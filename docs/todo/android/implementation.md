@@ -118,7 +118,7 @@ Dual-mode batching override (architect directive):
 - Completed macro batch: `AHW-B12` (accepted by Architect; app-shell sidebar policy narrowing follow-up queued in `AHW-B13`).
 - Completed macro batch: `AHW-B13` (accepted by Architect; chrome IME visibility policy narrowing follow-up queued in `AHW-B14`).
 - Completed macro batch: `AHW-B14` (accepted by Architect; chrome IME policy input ownership follow-up queued in `AHW-B15`).
-- `AHW-B15` is `in_progress` (chrome IME policy input ownership narrowing, behavior-neutral).
+- Engineer delivery complete; Architect verdict pending: `AHW-B15` (chrome IME policy input ownership narrowing, behavior-neutral). No macro batch is `in_progress` until Architect refocuses the queue.
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -3232,7 +3232,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B15` Chrome IME policy input ownership narrowing (`in_progress`)
+### `AHW-B15` Chrome IME policy input ownership narrowing (`verdict_pending`)
 
 Batch queue line (exact):
 
@@ -3313,7 +3313,7 @@ Progress delta:
 - **Owner:** harness (`WidgetAssembly.Host`); `ChromeController.Host` / `ChromeBridge.Callbacks`
   method names stay as in B14.
 
-### `AHW15-M2` Explicit IME policy input seam introduction (`pending`)
+### `AHW15-M2` Explicit IME policy input seam introduction (`completed`)
 
 Queue line (exact):
 
@@ -3325,7 +3325,12 @@ Acceptance:
 - remove raw boolean supplier/consumer wiring from the new path
 - compile debug + release Java after code changes
 
-### `AHW15-M3` Chrome assembly rewiring to explicit seam (`pending`)
+Progress delta:
+
+- Added `ChromeImePolicyInput`; `WidgetAssembly.Host.chromeImePolicyInput()` default
+  bridges `imeVisible` / `setImeVisible` to B14-named policy methods.
+
+### `AHW15-M3` Chrome assembly rewiring to explicit seam (`completed`)
 
 Queue line (exact):
 
@@ -3337,7 +3342,12 @@ Acceptance:
 - `ChromeController.Host` IME policy methods remain unchanged
 - compile debug + release Java after code changes
 
-### `AHW15-M4` Contract docs lock (`pending`)
+Progress delta:
+
+- `ChromeFactory.createChromeHostCallbacks` takes `ChromeImePolicyInput`; anonymous
+  callbacks delegate IME to it. `createChromeController` passes `host.chromeImePolicyInput()`.
+
+### `AHW15-M4` Contract docs lock (`completed`)
 
 Queue line (exact):
 
@@ -3348,7 +3358,12 @@ Acceptance:
 - host structure, naming contract, and userland contract match code shape
 - B12/B13/B14 ownership boundaries and chrome freeze guidance remain unchanged
 
-### `AHW15-M5` Queue/handoff/entrypoint sync (`pending`)
+Progress delta:
+
+- Structure invariants + `ChromeFactory` / `ChromeBridge` table rows; naming contract
+  bullet. `USERLAND_HOST_CONTRACT` unchanged.
+
+### `AHW15-M5` Queue/handoff/entrypoint sync (`completed`)
 
 Queue line (exact):
 
@@ -3359,7 +3374,11 @@ Acceptance:
 - queue, handoff, and engineer entrypoint stay coherent through B15 super-gate
 - super-gate stop condition and review packet contract are explicit
 
-### `AHW15-M6` Batch validation + review packet (`pending`)
+Progress delta:
+
+- This file, `ENGINEER_ENTRYPOINT.md`, and `AGENT_HANDOFF.md` updated for `verdict_pending`.
+
+### `AHW15-M6` Batch validation + review packet (`completed`)
 
 Queue line (exact):
 
@@ -3371,6 +3390,27 @@ Acceptance:
 - deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
 - cold start smoke pass when a device is available
 - engineer reports the full super-gate packet and stops for Architect review
+
+Progress delta:
+
+- Debug/release compile pass; deploy + activity start + `AndroidRuntime:E` (empty);
+  cold start `force-stop` + `am start -W` (LaunchState `COLD`, ok).
+
+Super-gate engineer packet:
+
+- `Milestone: AHW-B15 verdict_pending`
+- `Queue line (exact): narrow chrome IME policy inputs to explicit harness-owned seams while preserving behavior`
+- `Scope contract: ChromeImePolicyInput + Host default; B14 chrome host method names unchanged; B12/B13/slot/chrome freeze unchanged`
+- `Progress delta: ChromeFactory takes ChromeImePolicyInput; WidgetAssembly passes host.chromeImePolicyInput()`
+- `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb activity start + AndroidRuntime:E (pass, empty); adb cold start (pass)`
+- `Engineer updates: Blocked by Archtect review needed: true`
+
+Review questions for Architect:
+
+- Confirm `ChromeImePolicyInput` + `WidgetAssembly.Host.chromeImePolicyInput()` default as the long-term harness seam for chrome IME assembly inputs.
+- Confirm next macro batch after verdict.
+
+`Milestone reached per docs, architect review required.`
 
 ## Guardrails
 
