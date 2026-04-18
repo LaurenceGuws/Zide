@@ -22,6 +22,7 @@ import uk.laurencegouws.terminal.host.lifecycle.LifecycleController;
 import uk.laurencegouws.terminal.host.lifecycle.LifecycleDebugIntentArgs;
 import uk.laurencegouws.terminal.host.ui.ChromeController;
 import uk.laurencegouws.terminal.host.ui.ChromeImePolicyInput;
+import uk.laurencegouws.terminal.host.ui.ProductHostImeState;
 import uk.laurencegouws.terminal.host.ui.SurfaceWidgetHostImeVisibility;
 import uk.laurencegouws.terminal.host.runtime.FrameLoopController;
 import uk.laurencegouws.terminal.host.input.InputAssembly;
@@ -91,12 +92,13 @@ public final class ZideActivity extends android.app.Activity
     private static final TerminalWidgetSlotId ACTIVE_PRODUCT_TERMINAL_SLOT = TerminalWidgetSlotId.PRIMARY;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
+    /** Single IME visibility scratch for status/input/widget harness wiring. */
+    private final ProductHostImeState productHostImeState = new ProductHostImeState();
     /** Shared layout/chrome view handles for widget host and other harness wiring. */
     private ActivityViewBindings activityViewBindings;
     private ShellInputView shellInputView;
     private HardwareKeyboardController HardwareKeyboardController;
     private ImeFocusRecoveryController ImeFocusRecoveryController;
-    private boolean imeVisible = false;
     private UserlandRelease userlandRelease;
     private UserlandWorkflowController userlandWorkflowController;
     private UserlandSessionCoordinator userlandSessionCoordinator;
@@ -232,8 +234,8 @@ public final class ZideActivity extends android.app.Activity
         return new StatusViewCallbacks(
                 this,
                 this::hasWindowFocus,
-                () -> imeVisible,
-                this::setImeVisible,
+                productHostImeState::imeVisible,
+                productHostImeState::setImeVisible,
                 () -> terminalWidget == null ? null : terminalWidget.surfaceBridge,
                 hostStartup.surface::notifyVisibleViewportIfReady,
                 () -> currentInstallState,
@@ -271,8 +273,8 @@ public final class ZideActivity extends android.app.Activity
                 this,
                 activityViewBindings.rootView,
                 getSystemService(InputMethodManager.class),
-                () -> imeVisible,
-                this::setImeVisible,
+                productHostImeState::imeVisible,
+                productHostImeState::setImeVisible,
                 hostStartup.runtime::refreshScrollOverlayIfReady,
                 StatusController::updateStatus,
                 StatusController::appendEvent);
@@ -306,28 +308,12 @@ public final class ZideActivity extends android.app.Activity
 
             @Override
             public SurfaceWidgetHostImeVisibility surfaceWidgetHostImeVisibility() {
-                return () -> imeVisible;
+                return productHostImeState;
             }
 
             @Override
             public ChromeImePolicyInput chromeImePolicyInput() {
-                return new ChromeImePolicyInput() {
-                    @Override
-                    public boolean chromeImeVisibilityPresent() {
-                        return imeVisible;
-                    }
-
-                    @Override
-                    public void applyChromeImeVisibilityHidden() {
-                        ZideActivity.this.setImeVisible(false);
-                    }
-
-                    @Override
-                    public void applyChromeImeVisibilityFromOpenAttempt(
-                            boolean softInputShown, boolean shellInputHasFocus) {
-                        ZideActivity.this.setImeVisible(softInputShown || shellInputHasFocus);
-                    }
-                };
+                return productHostImeState.chromeImePolicyInput();
             }
 
             @Override
@@ -673,10 +659,6 @@ public final class ZideActivity extends android.app.Activity
 
     private void setCurrentReadinessState(UserlandReadinessState readinessState) {
         currentReadinessState = readinessState;
-    }
-
-    private void setImeVisible(boolean visible) {
-        imeVisible = visible;
     }
 
     @Override

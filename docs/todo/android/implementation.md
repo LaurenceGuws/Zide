@@ -3685,7 +3685,7 @@ Progress delta:
   activity keeps one `final` instance and passes `productHostImeState::…` into status/input and
   host methods.
 
-### `AHW17-M2` IME state carrier seam introduction (`pending`)
+### `AHW17-M2` IME state carrier seam introduction (`completed`)
 
 Queue line (exact):
 
@@ -3697,7 +3697,12 @@ Acceptance:
 - wire seam creation in activity without behavior change
 - compile debug + release Java after code changes
 
-### `AHW17-M3` Host rewiring to carrier seam (`pending`)
+Progress delta:
+
+- **`ProductHostImeState`** (`host/ui`): boolean + `imeVisible`/`setImeVisible`, implements
+  `SurfaceWidgetHostImeVisibility`, **`chromeImePolicyInput()`** for chrome factory.
+
+### `AHW17-M3` Host rewiring to carrier seam (`completed`)
 
 Queue line (exact):
 
@@ -3708,6 +3713,11 @@ Acceptance:
 - target callsites consume the carrier seam instead of duplicated raw closures
 - B14/B15/B16 seam interfaces and names remain unchanged
 - compile debug + release Java after code changes
+
+Progress delta:
+
+- **`ZideActivity`:** one `final ProductHostImeState`; status/input callbacks and widget host
+  delegate to **`productHostImeState::…`**; removed activity field + **`setImeVisible`** helper.
 
 ### `AHW17-M4` Contract docs lock (`pending`)
 
