@@ -177,6 +177,26 @@ public final class ChromeBridge implements ChromeController.Host {
         callbacks.updateStatus(statusLabel);
     }
 
+    @Override
+    public int selectedProductTerminalTabIndex() {
+        return appShellTerminalViewPolicy.selectedProductTerminalTabIndex();
+    }
+
+    @Override
+    public void applySelectProductTerminalTab(int tabIndex) {
+        appShellTerminalViewPolicy.applySelectProductTerminalTab(tabIndex);
+    }
+
+    @Override
+    public Button productTerminalTab0Button() {
+        return rootView.findViewById(R.id.product_terminal_tab_0);
+    }
+
+    @Override
+    public Button productTerminalTab1Button() {
+        return rootView.findViewById(R.id.product_terminal_tab_1);
+    }
+
     private void applyModifierButtonState(Button button, boolean latched, int idleLabelResId, int activeLabelResId) {
         if (button == null) {
             return;

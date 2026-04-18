@@ -33,4 +33,6 @@
     <string name="assist_down">Down</string>
     <string name="assist_left">Left</string>
     <string name="assist_right">Right</string>
+    <string name="product_terminal_tab_0">Session 1</string>
+    <string name="product_terminal_tab_1">Session 2</string>
 </resources>

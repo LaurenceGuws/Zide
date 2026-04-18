@@ -43,6 +43,15 @@ public final class ChromeController {
         void bindAssistButton(int id, String text, String eventName);
         void bindModifierAssistButton(Button button, ShellInputView.ModifierLatch modifier, String eventName);
         void updateStatus(String statusLabel);
+
+        /** @return selected product terminal tab index, or {@code 0} if tab strip is absent */
+        int selectedProductTerminalTabIndex();
+
+        void applySelectProductTerminalTab(int tabIndex);
+
+        Button productTerminalTab0Button();
+
+        Button productTerminalTab1Button();
     }
 
     private final Host host;
@@ -83,6 +92,40 @@ public final class ChromeController {
         host.bindAssistButton(uk.laurencegouws.terminal.R.id.assist_right_button, "\u001b[C", "assist.right");
 
         host.applyModifierLatchState(host.shellInputView().modifierLatchState());
+        bindProductTerminalTabStrip();
+    }
+
+    private void bindProductTerminalTabStrip() {
+        final Button t0 = host.productTerminalTab0Button();
+        final Button t1 = host.productTerminalTab1Button();
+        if (t0 == null || t1 == null) {
+            return;
+        }
+        t0.setOnClickListener(view -> selectProductTerminalTab(0));
+        t1.setOnClickListener(view -> selectProductTerminalTab(1));
+        syncProductTerminalTabChrome();
+    }
+
+    private void selectProductTerminalTab(final int tabIndex) {
+        host.applySelectProductTerminalTab(tabIndex);
+        host.appendEvent("app_shell.product_terminal_tab.select index=" + tabIndex);
+        syncProductTerminalTabChrome();
+    }
+
+    private void syncProductTerminalTabChrome() {
+        final Button t0 = host.productTerminalTab0Button();
+        final Button t1 = host.productTerminalTab1Button();
+        if (t0 == null || t1 == null) {
+            return;
+        }
+        final int sel = host.selectedProductTerminalTabIndex();
+        applyTabButtonSelected(t0, sel == 0);
+        applyTabButtonSelected(t1, sel == 1);
+    }
+
+    private static void applyTabButtonSelected(Button button, boolean selected) {
+        button.setSelected(selected);
+        button.setAlpha(selected ? 1.0f : 0.65f);
     }
 
     /** Binds optional assist-row IME toggle when the view id exists in the assist layout. */

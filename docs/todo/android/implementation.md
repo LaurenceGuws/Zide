@@ -1960,7 +1960,7 @@ Outcome:
 - **Blocker-only cleanup:** none identified beyond wiring required for the strip.
 - **zide-pm slice:** signal Android host platform to `zide-pm` via process environment from `UserlandCommandRunner` so catalog/list paths can target Android test binaries without a second CLI surface.
 
-### `APX8-M2` Tab-state model + policy cut (`pending`)
+### `APX8-M2` Tab-state model + policy cut (`completed`)
 
 Queue line (exact):
 
@@ -1971,7 +1971,12 @@ Acceptance:
 - feature-bearing code landed (not docs-only seam prep)
 - compile debug + release Java after code changes
 
-### `APX8-M3` Consumer wiring + device behavior (`pending`)
+Outcome:
+
+- `AppShellNavigation`: fixed `PRODUCT_TERMINAL_TAB_COUNT`, `selectedProductTerminalTabIndex`, `applySelectProductTerminalTab`
+- `AppShellTerminalViewPolicy`: forwards tab count / selection / apply
+
+### `APX8-M3` Consumer wiring + device behavior (`completed`)
 
 Queue line (exact):
 
@@ -1982,6 +1987,11 @@ Acceptance:
 - expected slice behavior observable on device
 - no `AndroidRuntime:E` regressions
 - compile debug + release Java after code changes
+
+Outcome:
+
+- `activity_main.xml`: product terminal tab strip (`Session 1` / `Session 2`) above assist bar
+- `ChromeController` + `ChromeBridge`: bind taps → `AppShellTerminalViewPolicy#applySelectProductTerminalTab`, selection styling + `app_shell.product_terminal_tab.select` telemetry
 
 ### `APX8-M4` zide-pm Android test-binary path cut (`pending`)
 

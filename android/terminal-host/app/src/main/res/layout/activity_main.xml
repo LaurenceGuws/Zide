@@ -76,6 +76,33 @@
             </LinearLayout>
         </FrameLayout>
 
+        <LinearLayout
+            android:id="@+id/product_terminal_tab_strip"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:background="@color/app_shell_assist_bar_bg"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp">
+
+            <Button
+                android:id="@+id/product_terminal_tab_0"
+                style="@android:style/Widget.Material.Button.Borderless"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="@string/product_terminal_tab_0" />
+
+            <Button
+                android:id="@+id/product_terminal_tab_1"
+                style="@android:style/Widget.Material.Button.Borderless"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="@string/product_terminal_tab_1" />
+        </LinearLayout>
+
         <HorizontalScrollView
             android:id="@+id/input_assist_scroll"
             android:layout_width="match_parent"
