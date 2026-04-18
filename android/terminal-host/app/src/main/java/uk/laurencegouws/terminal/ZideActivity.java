@@ -21,6 +21,8 @@ import uk.laurencegouws.terminal.gesture.GestureStateController;
 import uk.laurencegouws.terminal.host.lifecycle.LifecycleController;
 import uk.laurencegouws.terminal.host.lifecycle.LifecycleDebugIntentArgs;
 import uk.laurencegouws.terminal.host.ui.ChromeController;
+import uk.laurencegouws.terminal.host.ui.ChromeImePolicyInput;
+import uk.laurencegouws.terminal.host.ui.SurfaceWidgetHostImeVisibility;
 import uk.laurencegouws.terminal.host.runtime.FrameLoopController;
 import uk.laurencegouws.terminal.host.input.InputAssembly;
 import uk.laurencegouws.terminal.host.input.InputCallbacks;
@@ -303,13 +305,29 @@ public final class ZideActivity extends android.app.Activity
             }
 
             @Override
-            public boolean imeVisible() {
-                return imeVisible;
+            public SurfaceWidgetHostImeVisibility surfaceWidgetHostImeVisibility() {
+                return () -> imeVisible;
             }
 
             @Override
-            public void setImeVisible(boolean visible) {
-                ZideActivity.this.setImeVisible(visible);
+            public ChromeImePolicyInput chromeImePolicyInput() {
+                return new ChromeImePolicyInput() {
+                    @Override
+                    public boolean chromeImeVisibilityPresent() {
+                        return imeVisible;
+                    }
+
+                    @Override
+                    public void applyChromeImeVisibilityHidden() {
+                        ZideActivity.this.setImeVisible(false);
+                    }
+
+                    @Override
+                    public void applyChromeImeVisibilityFromOpenAttempt(
+                            boolean softInputShown, boolean shellInputHasFocus) {
+                        ZideActivity.this.setImeVisible(softInputShown || shellInputHasFocus);
+                    }
+                };
             }
 
             @Override

@@ -3499,7 +3499,7 @@ Progress delta:
 - **Out of scope (unchanged):** `StatusViewAssembly.Host`, `InputAssembly.Host`, `ViewportController`
   (status/viewport wiring), `InputCallbacks` — not `WidgetAssembly.Host`.
 
-### `AHW16-M2` Explicit non-chrome IME seam introduction (`pending`)
+### `AHW16-M2` Explicit non-chrome IME seam introduction (`completed`)
 
 Queue line (exact):
 
@@ -3511,7 +3511,12 @@ Acceptance:
 - keep chrome IME seams unchanged
 - compile debug + release Java after code changes
 
-### `AHW16-M3` Widget assembly rewiring off primitives (`pending`)
+Progress delta:
+
+- **`SurfaceWidgetHostImeVisibility`** (`currentImeVisible()` read-only) on `Host`.
+- **`chromeImePolicyInput()`** required on `Host` (default removed); B15/B14 types and names unchanged.
+
+### `AHW16-M3` Widget assembly rewiring off primitives (`completed`)
 
 Queue line (exact):
 
@@ -3522,6 +3527,11 @@ Acceptance:
 - no `WidgetAssembly.Host` primitive IME pair remains
 - surface/viewport related behavior remains unchanged
 - compile debug + release Java after code changes
+
+Progress delta:
+
+- **`SurfaceWidgetAssemblyCallbacks`** takes `SurfaceWidgetHostImeVisibility`; **`ZideActivity`**
+  widget host implements both seams from activity `imeVisible` / `setImeVisible` (private).
 
 ### `AHW16-M4` Contract docs lock (`pending`)
 

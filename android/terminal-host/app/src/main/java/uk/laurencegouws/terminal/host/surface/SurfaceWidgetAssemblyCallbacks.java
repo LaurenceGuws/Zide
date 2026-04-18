@@ -10,6 +10,7 @@ import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
 import uk.laurencegouws.terminal.debug.AndroidDebugFormatter;
+import uk.laurencegouws.terminal.host.ui.SurfaceWidgetHostImeVisibility;
 
 /** Functional callback adapter for {@link SurfaceWidgetAssembly.Host}. */
 public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssembly.Host {
@@ -30,7 +31,7 @@ public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssemb
 
     private final android.os.Handler handler;
     private final FrameLayout productSurfaceContainer;
-    private final BooleanSupplier currentImeVisible;
+    private final SurfaceWidgetHostImeVisibility surfaceWidgetHostImeVisibility;
     private final BooleanSupplier shouldRunFrameLoop;
     private final Runnable refreshScrollOverlay;
     private final Consumer<String> appendEvent;
@@ -48,7 +49,7 @@ public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssemb
     public SurfaceWidgetAssemblyCallbacks(
             android.os.Handler handler,
             FrameLayout productSurfaceContainer,
-            BooleanSupplier currentImeVisible,
+            SurfaceWidgetHostImeVisibility surfaceWidgetHostImeVisibility,
             BooleanSupplier shouldRunFrameLoop,
             Runnable refreshScrollOverlay,
             Consumer<String> appendEvent,
@@ -64,7 +65,7 @@ public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssemb
             Runnable reevaluateFrameLoop) {
         this.handler = handler;
         this.productSurfaceContainer = productSurfaceContainer;
-        this.currentImeVisible = currentImeVisible;
+        this.surfaceWidgetHostImeVisibility = surfaceWidgetHostImeVisibility;
         this.shouldRunFrameLoop = shouldRunFrameLoop;
         this.refreshScrollOverlay = refreshScrollOverlay;
         this.appendEvent = appendEvent;
@@ -91,7 +92,7 @@ public final class SurfaceWidgetAssemblyCallbacks implements SurfaceWidgetAssemb
     }
 
     public boolean currentImeVisible() {
-        return currentImeVisible.getAsBoolean();
+        return surfaceWidgetHostImeVisibility.currentImeVisible();
     }
 
     @Override

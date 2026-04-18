@@ -24,7 +24,13 @@ import uk.laurencegouws.terminal.scroll.ScrollOverlayView;
 import uk.laurencegouws.terminal.selection.SelectionController;
 import uk.laurencegouws.terminal.userland.ShellStatePresenter;
 
-/** Owns product widget/chrome/view-mode/surface host assembly for activity wiring. */
+/**
+ * Owns product widget/chrome/view-mode/surface host assembly for activity wiring.
+ *
+ * <p>IME on {@link Host} is not primitive getters/setters: use
+ * {@link Host#surfaceWidgetHostImeVisibility()} for surface reads and
+ * {@link Host#chromeImePolicyInput()} for chrome factory wiring.</p>
+ */
 public final class WidgetAssembly {
     /** Harness callbacks required to assemble widget host controllers. */
     public interface Host {
@@ -42,34 +48,14 @@ public final class WidgetAssembly {
 
         android.os.Handler handler();
 
-        boolean imeVisible();
-
-        void setImeVisible(boolean visible);
-
         /**
-         * Harness-owned chrome IME policy inputs for {@link ChromeFactory} (narrower than raw
-         * {@code BooleanSupplier}/{@code Consumer} on the factory). Default maps host IME
-         * visibility to the chrome policy method names from B14.
+         * IME visibility read for surface/native viewport assembly (non-chrome). Distinct from
+         * {@link #chromeImePolicyInput()}.
          */
-        default ChromeImePolicyInput chromeImePolicyInput() {
-            return new ChromeImePolicyInput() {
-                @Override
-                public boolean chromeImeVisibilityPresent() {
-                    return imeVisible();
-                }
+        SurfaceWidgetHostImeVisibility surfaceWidgetHostImeVisibility();
 
-                @Override
-                public void applyChromeImeVisibilityHidden() {
-                    setImeVisible(false);
-                }
-
-                @Override
-                public void applyChromeImeVisibilityFromOpenAttempt(
-                        boolean softInputShown, boolean shellInputHasFocus) {
-                    setImeVisible(softInputShown || shellInputHasFocus);
-                }
-            };
-        }
+        /** Harness-owned chrome IME policy input for {@link ChromeFactory} (B15 seam; B14 method names). */
+        ChromeImePolicyInput chromeImePolicyInput();
 
         View rootView();
 
@@ -287,7 +273,7 @@ public final class WidgetAssembly {
         return new SurfaceWidgetAssemblyCallbacks(
                 host.handler(),
                 host.productSurfaceContainer(),
-                host::imeVisible,
+                host.surfaceWidgetHostImeVisibility(),
                 host::shouldRunFrameLoop,
                 host::refreshScrollOverlay,
                 host::appendEvent,
