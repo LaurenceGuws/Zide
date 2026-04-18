@@ -2054,7 +2054,7 @@ Engineer validation (this batch):
 
 **Review chunk:** `APX-B8`
 
-**Commits (oldest → newest):** `2bf6ef19`, `a36ef22d`, `ef1d4e6e`, `9ed79459`, `TBD`, `TBD` (authority + handoff commits in this wave)
+**Commits (oldest → newest):** `2bf6ef19`, `a36ef22d`, `ef1d4e6e`, `9ed79459`, `cd2267f5`, `TBD` (handoff + queue packet commit follows)
 
 `Milestone reached per docs, architect review required.`
 
