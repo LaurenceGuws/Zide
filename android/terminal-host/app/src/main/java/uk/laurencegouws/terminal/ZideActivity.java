@@ -74,6 +74,9 @@ public final class ZideActivity extends android.app.Activity
         implements ShellInputView.Host {
     private static final boolean nativeLoaded = NativeBridge.nativeLoaded();
 
+    private static final String STATE_PRODUCT_TERMINAL_TAB_INDEX =
+            "product_host.product_terminal_tab_index";
+
     /**
      * App-shell terminal <strong>selection</strong> for this activity’s wiring (interaction,
      * widget host, composition). {@link ProductHostDeclaredTerminalWidgetSlot#forCurrentProductHarness}
@@ -126,6 +129,9 @@ public final class ZideActivity extends android.app.Activity
     private LifecycleController terminalActivityLifecycleController;
     private UserlandInstallState currentInstallState = UserlandInstallState.idle();
     private UserlandReadinessState currentReadinessState;
+
+    /** Seeded into {@link WidgetAssembly} on this create; restored from {@link #onSaveInstanceState}. */
+    private int initialProductTerminalTabIndexForStartup;
 
     private final ProductHostStartupBundle hostStartup = ProductHostStartupBundle.create(
             () -> terminalRuntimeController,
@@ -199,9 +205,26 @@ public final class ZideActivity extends android.app.Activity
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        initialProductTerminalTabIndexForStartup = readProductTerminalTabIndexFromSavedState(savedInstanceState);
         setContentView(R.layout.activity_main);
         applyDefaultTerminalKeepScreenOnPolicy();
         ProductHostOnCreateStartupCoordinator.run(onCreateStartupSteps);
+    }
+
+    private static int readProductTerminalTabIndexFromSavedState(final Bundle savedInstanceState) {
+        if (savedInstanceState == null) {
+            return 0;
+        }
+        return savedInstanceState.getInt(STATE_PRODUCT_TERMINAL_TAB_INDEX, 0);
+    }
+
+    @Override
+    protected void onSaveInstanceState(final Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if (terminalChromeController != null) {
+            outState.putInt(
+                    STATE_PRODUCT_TERMINAL_TAB_INDEX, terminalChromeController.selectedProductTerminalTabIndex());
+        }
     }
 
     private void applyDefaultTerminalKeepScreenOnPolicy() {
@@ -322,7 +345,10 @@ public final class ZideActivity extends android.app.Activity
 
     private void applyTerminalWidgetComposition(InteractionAssembly.Result interaction) {
         final WidgetAssembly.Result widgetResult =
-                WidgetAssembly.assemble(createWidgetHost(interaction), appShellTerminalSelectionContext);
+                WidgetAssembly.assemble(
+                        createWidgetHost(interaction),
+                        appShellTerminalSelectionContext,
+                        initialProductTerminalTabIndexForStartup);
         ShellStatePresenter = widgetResult.harnessHost.shellStatePresenter;
         terminalChromeController = widgetResult.harnessHost.terminalChromeController;
         terminalViewModeController = widgetResult.harnessHost.terminalViewModeController;

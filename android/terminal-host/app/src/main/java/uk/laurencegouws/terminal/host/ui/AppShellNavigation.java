@@ -50,18 +50,44 @@ public final class AppShellNavigation {
     private int selectedProductTerminalTabIndex;
 
     /**
-     * Product harness wiring: resolves the slot once and seeds {@link #activeShellView}.
+     * Product harness wiring: resolves the slot once and seeds {@link #activeShellView} with tab index
+     * {@code 0}.
+     *
+     * @see #forProductTerminalSlot(TerminalWidgetSlotId, int)
      */
     public static AppShellNavigation forProductTerminalSlot(TerminalWidgetSlotId slot) {
-        ShellViewId resolved = ProductTerminalSlotShellMapping.shellViewIdForTerminalSlot(slot);
-        return new AppShellNavigation(resolved);
+        return forProductTerminalSlot(slot, 0);
     }
 
-    private AppShellNavigation(ShellViewId productTerminalShellViewId) {
+    /**
+     * Product harness wiring: resolves the slot once, seeds {@link #activeShellView}, and sets the
+     * initial selected tab index with range clamping to {@code [0, PRODUCT_TERMINAL_TAB_COUNT)}.
+     *
+     * <p>This seeds {@link #selectedProductTerminalTabIndex} directly — it does not run
+     * {@link #applySelectProductTerminalTab}, so activity recreate / bundle restore does not emit a
+     * synthetic “tab changed” signal to chrome restart wiring.</p>
+     */
+    public static AppShellNavigation forProductTerminalSlot(
+            TerminalWidgetSlotId slot, int initialProductTerminalTabIndex) {
+        ShellViewId resolved = ProductTerminalSlotShellMapping.shellViewIdForTerminalSlot(slot);
+        return new AppShellNavigation(resolved, initialProductTerminalTabIndex);
+    }
+
+    private AppShellNavigation(ShellViewId productTerminalShellViewId, int initialProductTerminalTabIndex) {
         this.productTerminalShellViewId =
                 Objects.requireNonNull(productTerminalShellViewId, "productTerminalShellViewId");
         replaceActiveShellView(this.productTerminalShellViewId);
-        this.selectedProductTerminalTabIndex = 0;
+        this.selectedProductTerminalTabIndex = clampProductTerminalTabIndex(initialProductTerminalTabIndex);
+    }
+
+    private static int clampProductTerminalTabIndex(int index) {
+        if (index < 0) {
+            return 0;
+        }
+        if (index >= PRODUCT_TERMINAL_TAB_COUNT) {
+            return PRODUCT_TERMINAL_TAB_COUNT - 1;
+        }
+        return index;
     }
 
     /**
@@ -83,13 +109,15 @@ public final class AppShellNavigation {
     }
 
     /**
-     * Selects a product terminal tab in harness chrome. Re-asserts the active shell view
-     * for the resolved product slot (single {@link ShellViewId} today).
+     * User-driven tab selection in harness chrome: re-asserts the active shell view for the
+     * resolved product slot (single {@link ShellViewId} today). {@link ChromeController} uses the
+     * boolean return to trigger
+     * {@link uk.laurencegouws.terminal.host.ui.ProductTerminalWidgetAssemblyHost#onProductTerminalTabSessionActivated}
+     * (native restart). Bundle restore must seed via {@link #forProductTerminalSlot(TerminalWidgetSlotId, int)}
+     * instead so recreate does not take this path.
      *
-     * @throws IllegalArgumentException if {@code tabIndex} is out of range
-     */
-    /**
      * @return {@code true} if the selected tab index changed
+     * @throws IllegalArgumentException if {@code tabIndex} is out of range
      */
     public boolean applySelectProductTerminalTab(final int tabIndex) {
         if (tabIndex < 0 || tabIndex >= PRODUCT_TERMINAL_TAB_COUNT) {

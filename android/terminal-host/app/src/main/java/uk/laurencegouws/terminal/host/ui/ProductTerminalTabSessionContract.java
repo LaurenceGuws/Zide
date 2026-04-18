@@ -3,9 +3,15 @@ package uk.laurencegouws.terminal.host.ui;
 /**
  * Product terminal tab/session semantics for the current single-PTY native runtime.
  *
- * <p><strong>Single PTY:</strong> the host drives one native shell session at a time. Selecting a
- * different product terminal tab (distinct index after {@link AppShellNavigation} policy) triggers
- * a native shell restart and userland refresh. Prior tab transcript is not preserved.</p>
+ * <p><strong>Single PTY:</strong> the host drives one native shell session at a time. A
+ * <em>user-driven</em> switch to a different product terminal tab (distinct index via
+ * {@link AppShellNavigation#applySelectProductTerminalTab}) triggers a native shell restart and
+ * userland refresh. Prior tab transcript is not preserved.</p>
+ *
+ * <p><strong>Activity recreate:</strong> the selected tab index may be restored by seeding
+ * {@link AppShellNavigation} through {@link AppShellNavigation#forProductTerminalSlot(TerminalWidgetSlotId, int)}
+ * so the UI matches without calling {@code applySelectProductTerminalTab} — that avoids a synthetic
+ * restart on restore while preserving APX-B9 restart semantics for real tab clicks.</p>
  *
  * <p><strong>UX placement:</strong> session/tab controls are <em>AppShell navigation</em> — they
  * belong in the left slide-out sidebar alongside other harness actions, not inline above the

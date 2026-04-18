@@ -159,7 +159,15 @@ public final class WidgetAssembly {
      * {@link ProductHostDeclaredTerminalWidgetSlot#terminalWidgetSlotForProductHarness()} invariant vs host, catalog,
      * selected slot + policy) so selection is not re-resolved inside assembly.
      */
-    public static Result assemble(final Host host, final AppShellTerminalHostSelectionContext selectionContext) {
+    /**
+     * @param initialProductTerminalTabIndex seeded into {@link AppShellNavigation} at construction
+     * (clamped); use {@code 0} for default startup. Activity recreate should pass the bundle-restored
+     * index so chrome matches without a synthetic tab-select restart.
+     */
+    public static Result assemble(
+            final Host host,
+            final AppShellTerminalHostSelectionContext selectionContext,
+            final int initialProductTerminalTabIndex) {
         Objects.requireNonNull(host, "host");
         Objects.requireNonNull(selectionContext, "selectionContext");
         if (host.terminalWidgetSlot()
@@ -175,7 +183,8 @@ public final class WidgetAssembly {
                 selectionContext.appShellTerminalSelectionPolicy();
         final AppShellNavigation appShellNavigation =
                 AppShellNavigation.forProductTerminalSlot(
-                        selectionContext.selectedProductTerminalSlotForAppShell());
+                        selectionContext.selectedProductTerminalSlotForAppShell(),
+                        initialProductTerminalTabIndex);
         final AppShellTerminalViewPolicy appShellTerminalViewPolicy =
                 new AppShellTerminalViewPolicy(appShellNavigation);
         final SurfaceWidgetControllerRef surfaceWidgetControllerRef = new SurfaceWidgetControllerRef();

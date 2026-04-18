@@ -67,6 +67,11 @@ public final class ChromeController {
         this.host = host;
     }
 
+    /** Current product-terminal tab index for {@link android.app.Activity#onSaveInstanceState}. */
+    public int selectedProductTerminalTabIndex() {
+        return host.selectedProductTerminalTabIndex();
+    }
+
     public void bindSidebarControls() {
         final View sidebar = host.leftSidebar();
         ((Button) sidebar.findViewById(uk.laurencegouws.terminal.R.id.sidebar_restart_button)).setOnClickListener(view -> {
