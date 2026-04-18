@@ -34,11 +34,11 @@ you must report the mismatch.
 
 ## Current Target
 
-`APX-B3` is at **super-gate** (`awaiting_architect_review` in queue).
+`APX-B4` is `in_progress`.
 
 Active batch queue line (exact):
 
-- consolidate declared-slot and selected-slot resolution into one host selection context seam and consume it once per startup path
+- introduce one explicit host-declared-slot source seam and build startup selection context from it (no behavior change)
 
 ## Core Boundary Rule
 
@@ -61,11 +61,12 @@ boundaries while preserving current single-terminal behavior.
 
 - `APX-B1` is accepted: `AppShellTerminalSelectionPolicy` (selection) and `AppShellTerminalViewPolicy` (activation) are split; default remains single `PRIMARY` terminal path.
 - `APX-B2` adds `DeclaredTerminalWidgetSlotCatalog` (PRIMARY-only declared set); `AppShellTerminalSelectionPolicy` requires catalog membership before `checkActiveProductTerminalSlot`; no multi-slot runtime.
-- `APX-B3` introduces a startup selection-context seam that carries declared-slot + selected-slot values and removes repeated startup reads.
+- `APX-B3` is accepted: one `AppShellTerminalHostSelectionContext` per startup path with fail-fast host/context slot invariant.
+- `APX-B4` introduces explicit host-declared-slot source ownership and routes startup context construction through `forProductHostStartup`.
 - `AHW-B26` is accepted and `AHW` is closed.
 - Keep harness vs surface split (`WidgetAssembly.Result.harnessHost` + `surfaceJoin`) as the baseline.
 - Freeze additional keep-screen-on seam work beyond B20 unless explicitly re-opened by product direction.
-- Execute `APX-B3` as a non keep-screen-on batch.
+- Execute `APX-B4` as a non keep-screen-on batch.
 - Keep `ProductHostActivityStartupWiring`, `ProductTerminalLifecycleHost`, and `ProductTerminalWidgetAssemblyHost` ownership from B22 unchanged.
 - Keep `ProductHostOnCreateStartupCoordinator` + `ProductHostOnCreateStartupSteps` as the startup choreography seam from B23.
 - Keep `AppShellTerminalViewPolicy` as explicit app-shell terminal-view policy seam; no public `appShellNavigation()` accessor on that type.
@@ -91,17 +92,17 @@ boundaries while preserving current single-terminal behavior.
 
 ## Internal Milestones
 
-Execute `APX3-M1` through `APX3-M6` sequentially; do not stop before the
-`APX-B3` super-gate unless a hard stop condition is hit.
+Execute `APX4-M1` through `APX4-M6` sequentially; do not stop before the
+`APX-B4` super-gate unless a hard stop condition is hit.
 
 Execute in order and mark progress in `docs/todo/android/implementation.md`.
 
-- `APX3-M1`: audit declared-slot and selected-slot reads; define bounded selection-context seam target.
-- `APX3-M2`: introduce startup selection-context owner with ownership-first naming.
-- `APX3-M3`: rewire startup consumers to use context once per startup path without behavior change.
-- `APX3-M4`: lock authority docs to APX-B3 selection-context ownership shape.
-- `APX3-M5`: keep queue/handoff/entrypoint aligned to APX-B3 super-gate.
-- `APX3-M6`: run validation and publish super-gate review packet.
+- `APX4-M1`: audit declared-slot source callsites and define one bounded host-declared-slot owner seam.
+- `APX4-M2`: introduce explicit declared-slot source seam and route context construction through it.
+- `APX4-M3`: rewire startup consumers to use the declared-slot source without behavior change.
+- `APX4-M4`: lock authority docs to APX-B4 declared-slot source ownership shape.
+- `APX4-M5`: keep queue/handoff/entrypoint aligned to APX-B4 super-gate.
+- `APX4-M6`: run validation and publish super-gate review packet.
 
 ## Allowed Work
 
@@ -192,7 +193,7 @@ when:
 - a behavior change is required where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
 - implementing terminal tabs/product behavior becomes necessary to proceed
-- the `APX-B3` super-gate is reached
+- the `APX-B4` super-gate is reached
 
 Otherwise continue autonomously with:
 
@@ -200,9 +201,9 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At `APX-B3` super-gate, report:
+At `APX-B4` super-gate, report:
 
-- review chunk name: `APX-B3`
+- review chunk name: `APX-B4`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs
