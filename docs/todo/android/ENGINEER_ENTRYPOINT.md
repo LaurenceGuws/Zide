@@ -34,10 +34,11 @@ you must report the mismatch.
 
 ## Current Target
 
-`APX-B18` is `blocked_cross_repo` in `docs/todo/android/implementation.md`.
-Android stages PM release `android-dev-2026.04.18.173640` and passes its manifest
-URL explicitly to `zide-pm`, but in-prefix `zide-pm` cannot fetch GitHub on
-device (`lookup github.com on [::1]:53`).
+`APX-B18` is `architect_review_pending` in
+`docs/todo/android/implementation.md`.
+Android stages PM release `android-dev-2026.04.18.175422`; shipped in-prefix
+`zide-pm` lists and installs `zide-android-catalog-smoke` on device, and the
+batch is now waiting on Architect verdict.
 
 Active batch queue line (exact):
 
@@ -84,8 +85,8 @@ boundaries while preserving current single-terminal behavior.
 - `APX-B15` is accepted: tab metadata is policy-owned through `ProductTerminalTabDescriptor`/`AppShellTerminalViewPolicy` and chrome consumes descriptors.
 - `APX-B16` is accepted: selected tab persists by stable descriptor id and restores to seed index via descriptor lookup.
 - `APX-B17` is accepted: Android consumes `runtime_support_links` metadata from staged prefix manifests and materializes declared links before runtime activation.
-- `APX-B18` is blocked: current `../zide-mobile-pm` release `android-dev-2026.04.18.173640` stages and includes `zide-android-catalog-smoke`, but in-prefix `zide-pm` cannot fetch the remote manifest/artifact on device. Android has already removed stale-default ambiguity by passing `--manifest` explicitly.
-- `zide-mobile-pm` foundation work is allowed in parallel, but APX-B18 remains the primary in-repo execution lane here.
+- `APX-B18` is at super-gate: current `../zide-mobile-pm` release `android-dev-2026.04.18.175422` stages on device, shipped in-prefix `zide-pm` lists `zide-android-catalog-smoke`, and explicit install succeeds on device with executable proof.
+- `zide-mobile-pm` foundation work is allowed in parallel, but APX-B18 is no longer blocked by PM; future PM work is product follow-up unless Architect opens a new lane.
 - `AHW-B26` is accepted and `AHW` is closed.
 - Keep harness vs surface split (`WidgetAssembly.Result.harnessHost` + `surfaceJoin`) as the baseline.
 - Freeze additional keep-screen-on seam work beyond B20 unless explicitly re-opened by product direction.
@@ -164,7 +165,7 @@ If a required change falls outside these paths, stop and report a blocker.
 - No compatibility shim kept only to avoid a clean cut.
 - No external-fork compatibility work or framing; keep one clean in-repo path only.
 - No behavior changes inside extraction-only commits.
-- No edits in `../zide-mobile-pm` from this session. Resume only after PM publishes a release whose in-prefix `zide-pm` can fetch the manifest/artifact on device or provides an equivalent product-owned on-device catalog/install path.
+- No edits in `../zide-mobile-pm` from this session. The current Android batch is at architect review pending, not waiting on a PM prerequisite.
 
 ## Execution Loop
 

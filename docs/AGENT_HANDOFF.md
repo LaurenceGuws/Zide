@@ -6,8 +6,8 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android product expansion** (`APX`) — build product capability on top of the closed harness/widget ownership shape.
-- Active macro batch (`blocked_cross_repo`): `APX-B18` — Android now stages PM release `android-dev-2026.04.18.173640` with the app-owned `.z` bridge and passes the release manifest URL explicitly to `zide-pm`, but in-prefix `zide-pm` cannot fetch GitHub on device (`lookup github.com on [::1]:53`).
-- Parallel foundation lane (separate repo): `../zide-mobile-pm` must make Android-device manifest/artifact fetch work, or provide an equivalent on-device catalog/install path, before APX-B18 M3+ can resume.
+- Active macro batch (`architect_review_pending`): `APX-B18` — Android refocus closure proof is complete on device with PM release `android-dev-2026.04.18.175422`; shipped in-prefix `zide-pm` lists and installs `zide-android-catalog-smoke`.
+- Parallel foundation lane (separate repo): `../zide-mobile-pm` is no longer blocking APX-B18; future PM work is product follow-up unless Architect opens a new lane.
 - Prior closed/escalated: `AHW-B1` through `AHW-B26` accepted and `AHW` closed; `ASF-M3` escalated IME/assist/touch rows to operator evidence; `RF-M0` through `RF-M5` and `AX-M1` through `AX-M5` completed.
 - Active queue authority: `docs/todo/android/implementation.md`
 - Engineer entrypoint (dual mode): `docs/todo/android/ENGINEER_ENTRYPOINT.md`
@@ -83,7 +83,7 @@ Engineer session seed:
 - `APX-B14` is accepted: tab index is saved/restored through `ZideActivity` and seeded into `AppShellNavigation` on recreate with no synthetic selection restart side effects.
 - `APX-B15` is accepted: `AppShellTerminalViewPolicy` exposes `productTerminalTabDescriptors`; `WidgetAssembly` builds defaults via `ProductTerminalTabDescriptors`; chrome binds sidebar tabs from policy; APX-B14 index restore and APX-B9 user-select restart semantics preserved.
 - `APX-B16` is accepted: `ZideActivity` saves `selectedProductTerminalTabStableId`; restore resolves via default descriptor list then seeds navigation; legacy raw-index bundle key is still read for migration; APX-B14 seed path and APX-B9 distinct-user-select restart unchanged.
-- `APX-B17` is accepted: readiness stamp records `runtime_support_links`; `UserlandRuntimeSupportLinks` applies install fragment and re-applies from stamp before first native session restart; `zide.embed` sibling paths are allowed; APX-B16 tab persistence and APX-B10/B11/B13 flows unchanged.
+- `APX-B17` is accepted: readiness stamp records `runtime_support_links`; `UserlandRuntimeSupportLinks` applies install fragment and re-applies from stamp before first native session restart; app-owned runtime support roots are allowed; APX-B16 tab persistence and APX-B10/B11/B13 flows unchanged.
 - `APX-B18` is the Android refocus closure proof: real released zide-pm Android test-binary candidate selection/install/verification on device, then closure recommendation.
 - Cleanup-only changes are out of scope unless they directly unblock APX-B18 evidence.
 - APX remains primary until these are stable: harness/widget split stability, clean tab-state expansion, and zide-pm real Android test-binary pull maturity.

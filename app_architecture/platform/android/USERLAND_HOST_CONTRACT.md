@@ -19,7 +19,7 @@ Authority for how Java userland orchestration (`uk.laurencegouws.terminal.userla
 | `UserlandCommandRunner` | Runs `zide-pm` with prefix env; sets `ZIDE_PM_HOST_PLATFORM=android` for Android catalog / test-binary pull semantics inside `zide-pm`. |
 | `UserlandReadinessBlockerController.Host` | Readiness retry button: `startInstall`, `refreshSessionAfterReadinessRetry` — harness implements via `ReadinessBlockerStartup` + `ReadinessBlockerCallbacks`. |
 | `UserlandSessionCoordinator.Host` | Session poll/refresh side effects (readiness apply, shell refresh, telemetry); wired from `SessionAssembly` / activity. |
-| `UserlandRuntimeSupportLinks` | Contract-owned `runtime_support_links` shell materialization: install uses `installArchiveCommandFragment`; pre-activation re-applies links from the readiness stamp field `runtime_support_links` (staged manifest snapshot, no refetch) before the first native `restart()` in `ShellSessionController`. Paths may include the host package dir or sibling `zide.embed` (`UserlandPolicy#RUNTIME_SUPPORT_EMBED_PACKAGE`). |
+| `UserlandRuntimeSupportLinks` | Contract-owned `runtime_support_links` shell materialization: install uses `installArchiveCommandFragment`; pre-activation re-applies links from the readiness stamp field `runtime_support_links` (staged manifest snapshot, no refetch) before the first native `restart()` in `ShellSessionController`. Paths must stay inside app-owned package roots accepted by Android staging/materialization (`/data/user/0/...` and `/data/data/...` for the host package). |
 
 ## Future IDE/editor modes
 

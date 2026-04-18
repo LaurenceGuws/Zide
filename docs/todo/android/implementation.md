@@ -136,12 +136,9 @@ Dual-mode batching override (architect directive):
 - `APX-B15` accepted by architect.
 - `APX-B16` accepted by architect.
 - `APX-B17` accepted by architect.
-- `APX-B18` **blocked (cross-repo)**: current `../zide-mobile-pm` release
-  `android-dev-2026.04.18.173640` stages with the app-owned `.z` bridge and
-  exposes `zide-android-catalog-smoke` in catalog mode, but the in-prefix Go
-  `zide-pm` cannot fetch GitHub on device (`lookup github.com on [::1]:53`).
-  Android now passes the APK release manifest URL explicitly; PM must make
-  Android network fetch or an equivalent on-device catalog/install path work.
+- `APX-B18` architect review pending: Android refocus closure proof is complete
+  on device with PM release `android-dev-2026.04.18.175422`; shipped in-prefix
+  `zide-pm` lists and installs `zide-android-catalog-smoke`.
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -2898,12 +2895,12 @@ Queue line (exact):
 
 Batch queue line (exact):
 
-- materialize all `runtime_support_links` from the staged prefix manifest (including `zide.embed/files/usr` bridge) before runtime activation, preserving APX tab/session behavior
+- materialize all `runtime_support_links` from the staged prefix manifest inside app-owned package roots before runtime activation, preserving APX tab/session behavior
 
 Batch purpose:
 
 - complete MP-A7 consumer alignment in Android host: treat `runtime_support_links` as contract-owned runtime prep, not ad hoc link set
-- ensure new PM output (`/data/data/zide.embed/files/usr=>/data/data/uk.laurencegouws.zide/files/usr`) is applied alongside existing alias links
+- ensure PM-provided app-owned runtime support links are applied alongside existing alias links
 - keep APX tab/session and userland workflow behavior unchanged while strengthening install/runtime support prep
 
 Batch super-gate:
@@ -2926,7 +2923,7 @@ Queue line (exact):
 
 Findings (concise):
 
-- Install path already applied manifest `runtime_support_links` but path normalization rejected `zide.embed` roots.
+- Install path already applied manifest `runtime_support_links` but path normalization initially rejected one PM-provided app-owned root spelling.
 - Stamp did not carry links; cold start could not re-apply without manifest refetch.
 - **Owner:** `UserlandRuntimeSupportLinks` + readiness stamp field + `ShellSessionController` pre-`restart()` hook.
 
@@ -2966,13 +2963,13 @@ Queue line (exact):
 - `Verdict: pending architect review`
 - `Commits reviewed: 0e386521 (feature), 310cca80 (docs: ANDROID_JAVA_HOST_STRUCTURE + USERLAND_HOST_CONTRACT + queue/handoff/entrypoint)`
 - `Engineer validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat -d -s AndroidRuntime:E after am start (pass, empty); adb cold start am start -W (pass, LaunchState: COLD, Status: ok)`
-- `Contract notes: stamp stores runtime_support_links; materialize from stamp before first native restart; host + zide.embed path allowlist; apt/dpkg shim links remain install-local; APX-B16/B11/B10/B13 unchanged.`
+- `Contract notes: stamp stores runtime_support_links; materialize from stamp before first native restart; app-owned package-root allowlist; apt/dpkg shim links remain install-local; APX-B16/B11/B10/B13 unchanged.`
 - `Architect verdict: accepted.`
 - `Architect review findings: no blocking regressions found. Runtime support links now have a metadata-owned install path and a stamp-backed cold-start rematerialization path. The residual old-stamp skip is accepted because a reinstall refreshes the readiness stamp and there is no clean product reason to refetch manifests on every cold start.`
 - `Architect validation spot-check: compileDebugJavaWithJavac (pass); compileReleaseJavaWithJavac (pass); deploy + cold start + AndroidRuntime:E (pass, empty).`
 - `Review answers: APX-B17 closes the MP-A7 Android consumer gap for runtime_support_links. Next batch should close Android refocus by proving the released zide-pm Android test-binary path on-device through the explicit install lifecycle, then publish a closure recommendation.`
 
-### `APX-B18` Android Refocus Closure: Real zide-pm Test-Binary Pull (`blocked_cross_repo`)
+### `APX-B18` Android Refocus Closure: Real zide-pm Test-Binary Pull (`architect_review_pending`)
 
 Batch queue line (exact):
 
@@ -2994,28 +2991,28 @@ Batch super-gate:
 - docs/handoff/entrypoint include a refocus closure recommendation: close Android refocus now, continue only bug fixes on Android, then move primary focus to Zig-layer hygiene cleanup
 - compile/deploy/device smoke pass
 
-#### APX-B18 hard blocker packet (architect correction)
+#### APX-B18 super-gate packet (engineer → architect)
 
-- `Review chunk: APX-B18 (M1 blocker audit)`
-- `Verdict: blocked — cross-repo zide-pm Android network/catalog fetch is not working on device.`
-- Superseded finding: PM release `android-dev-2026.04.18.162659` exposed `zide-android-catalog-smoke`, but used unmaterializable `/data/data/zide.embed`. PM fixed that in `android-dev-2026.04.18.173640` with app-owned `.z`.
-- Current finding: Android stages `android-dev-2026.04.18.173640` successfully and materializes `/data/data/uk.laurencegouws.zide/.z=>files/usr`. Local PM list-available against the release manifest shows `dev-baseline` + `zide-android-catalog-smoke`. On device, in-prefix `zide-pm install zide-android-catalog-smoke --manifest https://github.com/.../android-dev-2026.04.18.173640/...` fails with `lookup github.com on [::1]:53`; `list-available` falls back to installed baseline output (`dev-baseline`) instead of surfacing the catalog row.
-- Android action taken: `userland_release.json` now points at `android-dev-2026.04.18.173640`; runtime support link validation accepts both `/data/user/0/uk.laurencegouws.zide` and `/data/data/uk.laurencegouws.zide`; the test-binary lifecycle passes `--manifest <APK release manifest URL>` explicitly to `zide-pm list-available` and `install`.
-- Architect action: hand PM a blocker to make Android-device `zide-pm` remote manifest/artifact fetch work, or provide an equivalent product-owned on-device catalog/install path that does not rely on the broken Go DNS behavior.
-- `Engineer partial validation before correction: compileDebugJavaWithJavac (pass); compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat -d -s AndroidRuntime:E after warm start (pass, empty); adb cold start am start -W (pass, LaunchState: COLD, Status: ok).`
-- `Architect validation: local PM list-available against android-dev-2026.04.18.173640 with ZIDE_PM_HOST_PLATFORM=android prints dev-baseline + zide-android-catalog-smoke; userland-stage-artifact --force against local release manifest succeeds; on-device zide-pm install against the GitHub manifest URL fails with DNS [::1]:53.`
+- `Review chunk: APX-B18`
+- `Verdict: pending architect review`
+- `Commits reviewed: d70597b5 (Android hardening + prior blocker isolation), release-pointer + closure-docs follow-up commit`
+- `Device proof: staged android-dev-2026.04.18.175422; shipped usr/bin/zide-pm list-available with ZIDE_PM_HOST_PLATFORM=android returned dev-baseline + zide-android-catalog-smoke; install zide-android-catalog-smoke exited 0; installed file /data/data/uk.laurencegouws.zide/files/usr/libexec/zide-pm/zide-android-catalog-smoke.sh is -rwxr-xr-x and prints zide-pm android-test-binary ok.`
+- `Runtime support proof: readiness state launch_ready=true, artifact=zide-android-dev-prefix, version=sha256-daf123532f01; app-owned .z bridge materialized at /data/data/uk.laurencegouws.zide/.z -> /data/data/uk.laurencegouws.zide/files/usr.`
+- `Validation: compileDebugJavaWithJavac (pass); compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat -d -s AndroidRuntime:E after warm start (pass, empty); adb cold start am start -W (pass, LaunchState: COLD, Status: ok).`
 
-**Interim refocus closure recommendation (maps to `refocus_android.txt`, pending M3–M6):**
+**Refocus closure recommendation (maps to `refocus_android.txt`):**
 
 1. **Planned split (harness vs terminal widget):** treated as implemented and accepted through prior APX/AHW work; APX-B18 does not reopen ownership.
-2. **Planned tab-state expansion (stable ids, policy-owned descriptors, sidebar session navigation):** treated as cleanly implemented through APX-B14–B16 and B11; unchanged by this blocker.
-3. **zide-pm test-binary pull maturity:** **not yet proven on device**; after PM fixes Android-device manifest/artifact fetch or provides an equivalent on-device catalog/install path, re-run APX18-M3–M6 and publish the full closure verdict.
+2. **Planned tab-state expansion (stable ids, policy-owned descriptors, sidebar session navigation):** treated as cleanly implemented through APX-B14–B16 and B11.
+3. **zide-pm test-binary pull maturity:** proven enough to close Android refocus. Android can stage the current PM dev prefix, materialize runtime support links, select a `zide-android-*` package through `zide-pm list-available`, install it through the explicit Android install lifecycle, and verify the executable payload on device.
+
+**Closure recommendation:** accept APX-B18, close the Android refocus campaign, keep Android to bug fixes/product follow-ups, and move primary architect focus to Zig-layer hygiene cleanup.
 
 Internal milestone cadence:
 
 - Engineer executes `APX18-M1` through `APX18-M6`; target **5-10 validated commits** before super-gate.
 
-### `APX18-M1` Candidate and install-proof audit (`done — PM device fetch blocker found`)
+### `APX18-M1` Candidate and install-proof audit (`done`)
 
 Queue line (exact):
 
@@ -3027,7 +3024,7 @@ Acceptance:
 - document the exact file path and executable bit expectation after install
 - document any missing Android-side status/telemetry needed to verify selected/install success without manifest parsing in Java
 
-**M1 outcome:** PM release `android-dev-2026.04.18.173640` contains expected candidate `zide-android-catalog-smoke` with install path `libexec/zide-pm/zide-android-catalog-smoke.sh`; Android can stage the release and materialize `.z`. Continue only after PM makes in-prefix `zide-pm` able to fetch the manifest/artifact on device or provides an equivalent install path.
+**M1 outcome:** PM release `android-dev-2026.04.18.175422` contains expected candidate `zide-android-catalog-smoke` with install path `libexec/zide-pm/zide-android-catalog-smoke.sh`; Android can stage the release and materialize `.z`.
 
 ### `APX18-M2` Verification surface hardening (`done — manifest URL and owned-root hardening`)
 
@@ -3044,7 +3041,7 @@ Acceptance:
 
 **M2 outcome:** Android now passes the APK release manifest URL explicitly to `zide-pm list-available` and `install`, so the flow no longer depends on the CLI binary's embedded default URL. Runtime support link validation now accepts both app-owned package root spellings used on Android: `/data/user/0/uk.laurencegouws.zide` and `/data/data/uk.laurencegouws.zide`.
 
-### `APX18-M3` Device install proof (`blocked — prerequisite`)
+### `APX18-M3` Device install proof (`done`)
 
 Queue line (exact):
 
@@ -3055,7 +3052,9 @@ Acceptance:
 - device evidence includes selected `zide-android-*` id, install success, target file presence, and executable mode
 - failure paths remain explicit and do not masquerade as success
 
-### `APX18-M4` Runtime-link regression check (`blocked — prerequisite`)
+**M3 outcome:** Shipped in-prefix `zide-pm` selected `zide-android-catalog-smoke` from the released manifest and installed it under `usr/libexec/zide-pm/zide-android-catalog-smoke.sh`; file mode is executable and script prints `zide-pm android-test-binary ok`.
+
+### `APX18-M4` Runtime-link regression check (`done`)
 
 Queue line (exact):
 
@@ -3067,7 +3066,9 @@ Acceptance:
 - cold start still rematerializes declared links before native restart
 - no APX-B16 tab persistence or APX-B11 sidebar behavior regression
 
-### `APX18-M5` Refocus closure docs (`blocked — prerequisite`)
+**M4 outcome:** Staged readiness state reports `launch_ready=true`, version `sha256-daf123532f01`; `.z` and legacy support links materialize inside app-owned roots. Deploy + warm/cold start smokes passed with no `AndroidRuntime:E` output.
+
+### `APX18-M5` Refocus closure docs (`done`)
 
 Queue line (exact):
 
@@ -3078,7 +3079,7 @@ Acceptance:
 - closure recommendation maps directly to `refocus_android.txt`: planned split, tab-state expansion, and zide-pm test-binary maturity
 - Android follow-ups are labeled bug/product follow-ups, not blockers to moving primary focus to Zig hygiene
 
-### `APX18-M6` Validation and super-gate (`blocked — prerequisite`)
+### `APX18-M6` Validation and super-gate (`done`)
 
 Queue line (exact):
 
