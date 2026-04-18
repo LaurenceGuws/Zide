@@ -155,12 +155,12 @@ forwards those policy methods through `AppShellTerminalViewPolicy` (which delega
 On `ChromeController.Host`, IME visibility uses `chromeImeVisibilityPresent`,
 `applyChromeImeVisibilityHidden`, and `applyChromeImeVisibilityFromOpenAttempt` — no
 generic boolean `setImeVisible` on the chrome host seam.
-**Product terminal tab strip (APX-B8 slice 1):** `AppShellNavigation` owns a fixed
+**Product terminal tab strip (APX-B8 slice 1, APX-B9 session hook):** `AppShellNavigation` owns a fixed
 `PRODUCT_TERMINAL_TAB_COUNT` and `selectedProductTerminalTabIndex` with
-`applySelectProductTerminalTab`; `AppShellTerminalViewPolicy` forwards tab APIs;
+`applySelectProductTerminalTab` (returns whether index changed); `AppShellTerminalViewPolicy` forwards tab APIs;
 `ChromeController` / `ChromeBridge` bind the tab buttons (layout above the assist bar).
-This is **chrome selection state only** — it does not add a second
-`TerminalWidgetSlotId` or terminal widget instance.
+On **distinct** tab change, `RuntimeController.restartShellSessionForProductTab` restarts the native shell and
+refreshes userland (single PTY — no second `TerminalWidgetSlotId` or `TerminalWidgetInstance`).
 `ChromeFactory` takes harness `ChromeImePolicyInput` from `WidgetAssembly.Host` (not raw
 `BooleanSupplier` / `Consumer<Boolean>`) for that policy slice.
 `WidgetAssembly.Host` does not expose primitive `imeVisible` / `setImeVisible`; surface
@@ -211,7 +211,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/runtime/FrameLoopBridge.java` | Good | Owns frame-loop host callback adaptation from activity into `host/runtime/FrameLoopController`. | Keep as callback adapter only; scheduling logic stays in `host/runtime/FrameLoopController`. |
 | `host/interaction/GestureStateCallbacks.java` | Removed | Relay adapter was collapsed; gesture host callbacks are now provided directly at `InteractionFactory` / `GestureStateControllerFactory` seam. | Keep `GestureStateControllerFactory` host contract direct; avoid reintroducing pass-through adapters without measurable coupling reduction. |
 | `host/interaction/GestureStateBridge.java` | Removed | Relay adapter was collapsed; `GestureStateControllerFactory` now accepts `GestureStateController.Host` directly. | Keep gesture policy in `GestureStateController`; avoid reintroducing bridge pass-through layers without measurable coupling reduction. |
-| `host/runtime/RuntimeController.java` | Good | Owns product runtime policy: frame-loop readiness, shell-state/overlay refresh, install-state apply, and install-triggered restart flow. | Keep it runtime-orchestration only; native truth stays in bridge calls and terminal core. |
+| `host/runtime/RuntimeController.java` | Good | Owns product runtime policy: frame-loop readiness, shell-state/overlay refresh, install-state apply, install-triggered restart flow, and **product-terminal tab** session restart (`restartShellSessionForProductTab`). | Keep it runtime-orchestration only; native truth stays in bridge calls and terminal core. |
 | `host/runtime/RuntimeHostCallbacks.java` | Good | Functional callback adapter from activity state/native access into `host/runtime/RuntimeController`. | Keep adapter-only; runtime behavior stays in `host/runtime/RuntimeController`. |
 | `host/runtime/RuntimeAssembly.java` | Good | Owns product-runtime controller startup assembly so activity no longer inlines runtime callback construction. | Keep this assembly-only; runtime behavior stays in runtime controller + host callbacks. |
 | `host/runtime/RuntimeAssemblyCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/runtime/RuntimeAssembly`. | Keep adapter-only; avoid moving runtime behavior into this adapter. |
@@ -272,7 +272,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/ui/ChromeCallbacks.java` | Removed | Relay adapter was collapsed; `ChromeFactory` now provides `ChromeBridge.Callbacks` directly. | Keep chrome behavior in `host/ui/ChromeController`; avoid reintroducing callback pass-through classes without measurable coupling reduction. |
 | `host/userland/ShellStateBridge.java` | Good | Owns product-shell-state presenter callback adaptation and blocker/overlay view binding. | Keep presentation behavior in `userland/ShellStatePresenter`; keep this adapter thin. |
 | `host/userland/ShellStateCallbacks.java` | Good | Functional callback adapter from activity state into `host/userland/ShellStateBridge`. | Keep adapter-only; shell-state presentation behavior remains in `ShellStatePresenter`. |
-| `host/ui/ChromeController.java` | Watch | Coherent and improving; chrome stays slot-agnostic at type level. Sidebar + IME visibility mutations go through explicit `Host` policy methods (`chromeDrawerSidebar*`, `chromeImeVisibility*`, `apply*`). Binds **product terminal tab strip** (slice 1) through `Host` tab policy methods. | Keep watch status; split assist-bar/sidebar only if either grows more behavior. |
+| `host/ui/ChromeController.java` | Watch | Coherent and improving; chrome stays slot-agnostic at type level. Sidebar + IME visibility mutations go through explicit `Host` policy methods (`chromeDrawerSidebar*`, `chromeImeVisibility*`, `apply*`). Binds **product terminal tab strip**; distinct tab change invokes `Host#onProductTerminalTabSessionActivated` → runtime session restart. | Keep watch status; split assist-bar/sidebar only if either grows more behavior. |
 | `host/runtime/RuntimeAssetsBridge.java` | Good | Owns runtime-assets host callback adaptation from activity into `host/runtime/RuntimeAssetsController`. | Keep asset staging behavior in `host/runtime/RuntimeAssetsController`; keep this adapter callback-only. |
 | `host/runtime/RuntimeAssetsCallbacks.java` | Good | Functional callback adapter from activity actions into `host/runtime/RuntimeAssetsBridge`. | Keep adapter-only; runtime-asset behavior stays in `host/runtime/RuntimeAssetsController`. |
 | `host/runtime/RuntimeAssetsController.java` | Good | Owns font asset staging and userland release loading. | Keep install/update and prefix extraction in `userland`. |
@@ -320,7 +320,8 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `userland/UserlandPolicy.java` | Good | Central prefix path policy. | Keep package/version decisions elsewhere. |
 | `userland/UserlandRelease.java` | Good | Parses the bundled release descriptor only. | Keep release production in `../zide-mobile-pm`. |
 | `userland/UserlandSessionCoordinator.java` | Good | Owns readiness refresh, shell poll, state application, and auto-start/status telemetry signaling. | Keep install/update execution out. |
-| `userland/UserlandWorkflowController.java` | Good | Owns async install and package-doctor workflows. | Keep low-level archive extraction in `UserlandInstaller`. |
+| `userland/UserlandWorkflowController.java` | Good | Owns async install and package-doctor workflows; doctor path runs `zide-pm install` for `UserlandAndroidTestBinaryPolicy` edge spec after list-available. | Keep low-level archive extraction in `UserlandInstaller`. |
+| `userland/UserlandAndroidTestBinaryPolicy.java` | Good | Product hook: edge package id for Android `zide-pm install` smoke beyond nvim/htop baseline. | Adjust spec when catalog names change; keep Java as one-liner policy. |
 
 ## Structure Pressure
 
