@@ -34,18 +34,16 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B12` engineer delivery is complete; **Architect verdict is pending**. There is
-no `in_progress` macro batch until `docs/todo/android/implementation.md` is
-refocused after Architect review.
+`AHW-B13` is `in_progress` and is the only active macro batch.
 
-Last completed batch queue line (exact):
+Active batch queue line (exact):
 
-- narrow app-shell mutation APIs to explicit policy methods while preserving single-slot behavior
+- narrow app-shell sidebar mutation APIs to explicit policy methods while preserving behavior
 
 ## Core Boundary Rule
 
-This batch exists to narrow app-shell mutation ownership while preserving the
-existing slot→shell mapping and navigation ownership model.
+This batch exists to narrow app-shell sidebar mutation ownership while
+preserving active-view ownership, slot mapping, and navigation model.
 
 - Android Harness owns platform ceremony, app-shell layout/styling/theming,
   navigation/view state, userland orchestration, and widget instance hosting.
@@ -59,9 +57,10 @@ existing slot→shell mapping and navigation ownership model.
 - `WidgetAssembly.Result` remains widget/chrome assembly output; it is not the
   terminal-instance factory by itself.
 
-## Required Direction From Architect Review (post-AHW-B11)
+## Required Direction From Architect Review (post-AHW-B12)
 
-- `AHW-B11` is accepted.
+- `AHW-B12` is accepted.
+- Keep no public arbitrary shell-view setter until multi-view policy is explicitly scoped.
 - Keep null-reject semantics as the harness boundary for shell-view ids.
 - Keep `AppShellNavigation.forProductTerminalSlot` / `applyProductTerminalShellViewActive`
   split as app-shell contract baseline.
@@ -76,20 +75,17 @@ existing slot→shell mapping and navigation ownership model.
 
 ## Internal Milestones
 
-`AHW-B12` internal milestones `AHW12-M1`–`AHW12-M6` are **completed**; see
-`docs/todo/android/implementation.md` for the super-gate packet.
-
-Execute `AHW12-M1` through `AHW12-M6` sequentially; do not stop before the
-`AHW-B12` super-gate unless a hard stop condition is hit.
+Execute `AHW13-M1` through `AHW13-M6` sequentially; do not stop before the
+`AHW-B13` super-gate unless a hard stop condition is hit.
 
 Execute in order and mark progress in `docs/todo/android/implementation.md`.
 
-- `AHW12-M1`: audit AppShellNavigation mutation callsites; classify policy-owned vs ad-hoc paths.
-- `AHW12-M2`: narrow AppShellNavigation active-view mutation to explicit policy APIs.
-- `AHW12-M3`: rewire consumers to policy APIs; remove direct ad-hoc active-view mutation.
-- `AHW12-M4`: lock authority docs to narrowed mutation ownership contract.
-- `AHW12-M5`: keep queue/handoff/entrypoint aligned to B12 super-gate.
-- `AHW12-M6`: run validation and publish super-gate review packet.
+- `AHW13-M1`: audit sidebar mutation entry points; classify policy-owned vs ad-hoc paths.
+- `AHW13-M2`: replace broad sidebar boolean setter with explicit policy methods.
+- `AHW13-M3`: rewire chrome/sidebar consumers to explicit sidebar policy APIs.
+- `AHW13-M4`: lock authority docs to sidebar mutation ownership contract.
+- `AHW13-M5`: keep queue/handoff/entrypoint aligned to B13 super-gate.
+- `AHW13-M6`: run validation and publish super-gate review packet.
 
 ## Allowed Work
 
@@ -177,7 +173,7 @@ when:
 - a behavior change is required where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
 - implementing terminal tabs/product behavior becomes necessary to proceed
-- the `AHW-B12` super-gate is reached
+- the `AHW-B13` super-gate is reached
 
 Otherwise continue autonomously with:
 
@@ -185,9 +181,9 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At `AHW-B12` super-gate, report:
+At `AHW-B13` super-gate, report:
 
-- review chunk name: `AHW-B12`
+- review chunk name: `AHW-B13`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs
