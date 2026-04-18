@@ -34,16 +34,16 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B23` is at **super-gate** (engineer execution complete; awaiting architect verdict on the review packet below). Do not start the next macro batch until the Architect accepts the gate and refocuses `docs/todo/android/implementation.md`.
+`AHW-B24` is `in_progress`.
 
 Active batch queue line (exact):
 
-- reduce ZideActivity startup-sequence method pressure by extracting a named onCreate startup coordinator while preserving behavior and startup order
+- establish explicit app-shell terminal-view policy seams for future tabs while preserving single-terminal product behavior
 
 ## Core Boundary Rule
 
-This batch exists to reduce ZideActivity startup-sequence method pressure while
-preserving existing IME/slot/chrome/widget/startup-wiring contracts and behavior.
+This batch exists to establish explicit app-shell terminal-view policy seams
+while preserving existing IME/slot/chrome/widget/startup-wiring contracts and behavior.
 
 - Android Harness owns platform ceremony, app-shell layout/styling/theming,
   navigation/view state, userland orchestration, and widget instance hosting.
@@ -57,13 +57,14 @@ preserving existing IME/slot/chrome/widget/startup-wiring contracts and behavior
 - `WidgetAssembly.Result` remains widget assembly output (`harnessHost` +
   `surfaceJoin`); it is not the terminal-instance factory by itself.
 
-## Required Direction From Architect Review (post-AHW-B22)
+## Required Direction From Architect Review (post-AHW-B23)
 
-- `AHW-B22` is accepted.
+- `AHW-B23` is accepted.
 - Keep harness vs surface split (`WidgetAssembly.Result.harnessHost` + `surfaceJoin`) as the baseline.
 - Freeze additional keep-screen-on seam work beyond B20 unless explicitly re-opened by product direction.
-- Execute `AHW-B23` as a non keep-screen-on batch.
+- Execute `AHW-B24` as a non keep-screen-on batch.
 - Keep `ProductHostActivityStartupWiring`, `ProductTerminalLifecycleHost`, and `ProductTerminalWidgetAssemblyHost` ownership from B22 unchanged.
+- Keep `ProductHostOnCreateStartupCoordinator` + `ProductHostOnCreateStartupSteps` as the startup choreography seam from B23.
 - Keep `ProductHostKeepScreenOnPolicy` as the long-term owner of terminal keep-screen-on default policy.
 - Keep `HostImeStateAccess` as the long-term host callback IME seam backed by `ProductHostImeState`.
 - Keep `ProductHostImeState` as the long-term activity IME carrier.
@@ -86,17 +87,17 @@ preserving existing IME/slot/chrome/widget/startup-wiring contracts and behavior
 
 ## Internal Milestones
 
-Execute `AHW23-M1` through `AHW23-M6` sequentially; do not stop before the
-`AHW-B23` super-gate unless a hard stop condition is hit.
+Execute `AHW24-M1` through `AHW24-M6` sequentially; do not stop before the
+`AHW-B24` super-gate unless a hard stop condition is hit.
 
 Execute in order and mark progress in `docs/todo/android/implementation.md`.
 
-- `AHW23-M1`: audit runOnCreateStartupSequence dependencies and define coordinator extraction boundaries.
-- `AHW23-M2`: introduce a named host/ui startup coordinator seam for onCreate sequence execution.
-- `AHW23-M3`: delegate runOnCreate startup sequence from ZideActivity to the extracted coordinator without order changes.
-- `AHW23-M4`: lock authority docs to coordinator-owned onCreate sequence orchestration shape.
-- `AHW23-M5`: keep queue/handoff/entrypoint aligned to B23 super-gate.
-- `AHW23-M6`: run validation and publish super-gate review packet.
+- `AHW24-M1`: audit app-shell terminal-view activation callsites and define explicit policy seam boundaries.
+- `AHW24-M2`: introduce explicit app-shell terminal-view policy seam(s) with ownership-first naming.
+- `AHW24-M3`: rewire consumers to the policy seam while preserving single-terminal behavior.
+- `AHW24-M4`: lock authority docs to terminal-view policy ownership.
+- `AHW24-M5`: keep queue/handoff/entrypoint aligned to B24 super-gate.
+- `AHW24-M6`: run validation and publish super-gate review packet.
 
 ## Allowed Work
 
@@ -187,7 +188,7 @@ when:
 - a behavior change is required where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
 - implementing terminal tabs/product behavior becomes necessary to proceed
-- the `AHW-B23` super-gate is reached
+- the `AHW-B24` super-gate is reached
 
 Otherwise continue autonomously with:
 
@@ -195,9 +196,9 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At `AHW-B23` super-gate, report:
+At `AHW-B24` super-gate, report:
 
-- review chunk name: `AHW-B23`
+- review chunk name: `AHW-B24`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs
