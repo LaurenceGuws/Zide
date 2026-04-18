@@ -3846,7 +3846,7 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `AHW-B18` super-gate is reached.
 
-### `AHW18-M1` Host IME callback fan-out audit (`pending`)
+### `AHW18-M1` Host IME callback fan-out audit (`completed`)
 
 Queue line (exact):
 
@@ -3857,6 +3857,16 @@ Acceptance:
 - enumerate remaining raw IME read/write callback pair callsites in host assembly paths
 - identify minimum explicit seam(s) to replace duplicated pairs
 - document owner boundaries and out-of-scope paths
+
+Progress delta:
+
+- **Raw pairs:** `StatusViewCallbacks` (`BooleanSupplier` + `Consumer<Boolean>`); `ViewportCallbacks`
+  (same); `InputCallbacks` + `InputAssembly.Host` (`currentImeVisible` / `setImeVisible` suppliers);
+  `InputFactory` → `HardwareKeyboardHostCallbacks` / `ImeFocusRecoveryHostCallbacks` (BooleanSupplier paths).
+- **Seam:** `HostImeStateAccess` (`imeVisible` / `setImeVisible`) implemented by `ProductHostImeState`;
+  status/input/viewport adapters and `InputFactory` take one reference; `StatusViewAssembly.Host`
+  exposes `hostImeStateAccess()` instead of primitive IME pair.
+- **Out of scope:** `SurfaceWidgetHostImeVisibility`, `ChromeImePolicyInput`, `ChromeController.Host` (unchanged).
 
 ### `AHW18-M2` Explicit IME state access seam introduction (`pending`)
 
