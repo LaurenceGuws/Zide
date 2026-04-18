@@ -34,9 +34,9 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B20` is `in_progress` and is the only active macro batch.
+Engineer delivery for `AHW-B20` is complete; batch status is `verdict_pending` pending Architect review. No macro batch is `in_progress` until the Architect refocuses the queue after verdict.
 
-Active batch queue line (exact):
+Reference queue line (exact) for the completed batch:
 
 - remove raw Window dependency from keep-screen-on policy seam via explicit host window-flag access while preserving default behavior
 
@@ -82,10 +82,9 @@ preserving existing IME/slot/chrome contracts and behavior.
 
 ## Internal Milestones
 
-Execute `AHW20-M1` through `AHW20-M6` sequentially; do not stop before the
-`AHW-B20` super-gate unless a hard stop condition is hit.
+`AHW20-M1` through `AHW20-M6` are complete; the `AHW-B20` super-gate has been reached. Progress is recorded in `docs/todo/android/implementation.md`.
 
-Execute in order and mark progress in `docs/todo/android/implementation.md`.
+Historical execution order (for the next engineer session after Architect refocus):
 
 - `AHW20-M1`: audit keep-screen-on raw window dependency and define explicit host window-flag seam.
 - `AHW20-M2`: introduce explicit host seam type(s) for keep-screen-on flag mutation.

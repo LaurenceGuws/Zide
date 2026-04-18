@@ -123,7 +123,7 @@ Dual-mode batching override (architect directive):
 - Completed macro batch: `AHW-B17` (accepted by Architect; host IME callback seam unification follow-up queued in `AHW-B18`).
 - Completed macro batch: `AHW-B18` (accepted by Architect; keep-screen-on policy seam hardening follow-up queued in `AHW-B19`).
 - Completed macro batch: `AHW-B19` (accepted by Architect; keep-screen-on window-flag seam hardening follow-up queued in `AHW-B20`).
-- `AHW-B20` is `in_progress` (remove raw Window dependency from keep-screen-on policy seam, behavior-preserving).
+- Engineer delivery complete; Architect verdict pending: `AHW-B20` (remove raw Window dependency from keep-screen-on policy seam, behavior-preserving). No macro batch is `in_progress` until Architect refocuses the queue.
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -4154,7 +4154,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B20` Keep-screen-on window-flag seam hardening (`in_progress`)
+### `AHW-B20` Keep-screen-on window-flag seam hardening (`verdict_pending`)
 
 Batch queue line (exact):
 
@@ -4261,7 +4261,7 @@ Progress delta:
 - **`ProductHostKeepScreenOnPolicy.applyDefaultTerminalHostPolicy(HostWindowFlagAccess)`**;
   **`ZideActivity`** passes **`getWindow()::addFlags`**.
 
-### `AHW20-M4` Contract docs lock (`pending`)
+### `AHW20-M4` Contract docs lock (`completed`)
 
 Queue line (exact):
 
@@ -4272,7 +4272,12 @@ Acceptance:
 - host structure and naming contract match code shape
 - userland contract remains unchanged unless ownership text requires an update
 
-### `AHW20-M5` Queue/handoff/entrypoint sync (`pending`)
+Progress delta:
+
+- App-shell invariants + `HostWindowFlagAccess` / `ProductHostKeepScreenOnPolicy` table rows; naming
+  contract bullet. `USERLAND_HOST_CONTRACT` unchanged.
+
+### `AHW20-M5` Queue/handoff/entrypoint sync (`completed`)
 
 Queue line (exact):
 
@@ -4283,7 +4288,11 @@ Acceptance:
 - queue, handoff, and engineer entrypoint stay coherent through B20 super-gate
 - super-gate stop condition and review packet contract are explicit
 
-### `AHW20-M6` Batch validation + review packet (`pending`)
+Progress delta:
+
+- This file, `ENGINEER_ENTRYPOINT.md`, and `AGENT_HANDOFF.md` updated for `verdict_pending`.
+
+### `AHW20-M6` Batch validation + review packet (`completed`)
 
 Queue line (exact):
 
@@ -4295,6 +4304,25 @@ Acceptance:
 - deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
 - cold start smoke pass when a device is available
 - engineer reports the full super-gate packet and stops for Architect review
+
+Progress delta:
+
+- Debug/release compile pass; deploy + `adb logcat -c` + activity start + `AndroidRuntime:E` (empty);
+  cold start `force-stop` + `am start -W` (LaunchState `COLD`, ok).
+
+Super-gate engineer packet:
+
+- `Milestone: AHW-B20 verdict_pending`
+- `Queue line (exact): remove raw Window dependency from keep-screen-on policy seam via explicit host window-flag access while preserving default behavior`
+- `Scope contract: HostWindowFlagAccess; ProductHostKeepScreenOnPolicy API unchanged in behavior; B14–B19 unchanged`
+- `Progress delta: policy takes HostWindowFlagAccess; activity wires getWindow()::addFlags`
+- `Validation: gradle compileDebug/Release (pass); deploy (pass); logcat -c + start + AndroidRuntime:E (pass, empty); cold start (pass)`
+- `Engineer updates: Blocked by Archtect review needed: false`
+
+Review questions for Architect:
+
+- Confirm `HostWindowFlagAccess` + `getWindow()::addFlags` as the long-term host wiring for keep-screen-on policy.
+- Confirm next macro batch after verdict.
 
 `Milestone reached per docs, architect review required.`
 
