@@ -28,9 +28,11 @@ import java.util.Objects;
  * <p><strong>Product terminal tab strip (slice 1):</strong> harness keeps a small fixed
  * tab count ({@link #productTerminalTabCount}) and the selected index
  * ({@link #selectedProductTerminalTabIndex} / {@link #applySelectProductTerminalTab}).
- * Distinct tab selections trigger a native shell restart from {@link uk.laurencegouws.terminal.host.ui.ChromeController}
+ * Distinct tab selections trigger a native shell restart from {@link ChromeController}
  * wiring (single PTY; prior tab transcript is not preserved). This does not add a second
  * {@link TerminalWidgetSlotId} or {@link TerminalWidgetInstance}.</p>
+ *
+ * @see ProductTerminalTabSessionContract
  */
 public final class AppShellNavigation {
     /** Fixed tab count for the first tab-state vertical slice (chrome only). */
