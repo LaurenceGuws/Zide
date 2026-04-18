@@ -34,15 +34,15 @@ you must report the mismatch.
 
 ## Current Target
 
-`APX-B17` is `architect_review_pending` (super-gate packet in `docs/todo/android/implementation.md`).
+`APX-B18` is `in_progress` in `docs/todo/android/implementation.md`.
 
 Active batch queue line (exact):
 
-- materialize all `runtime_support_links` from the staged prefix manifest (including `zide.embed/files/usr` bridge) before runtime activation, preserving APX tab/session behavior
+- prove the released zide-pm Android test-binary candidate can be selected, installed, and verified on-device through the explicit Android install lifecycle, then publish the Android refocus closure recommendation
 
 Parallel-lane note:
 
-- `../zide-mobile-pm` may progress in parallel under a separate engineer session; this Android engineer session stays focused on APX-B17 only.
+- `../zide-mobile-pm` may progress in parallel under a separate engineer session; this Android engineer session stays focused on APX-B18 only.
 
 ## Core Boundary Rule
 
@@ -80,12 +80,13 @@ boundaries while preserving current single-terminal behavior.
 - `APX-B14` is accepted: selected terminal tab index now persists across activity recreation via seeded navigation state.
 - `APX-B15` is accepted: tab metadata is policy-owned through `ProductTerminalTabDescriptor`/`AppShellTerminalViewPolicy` and chrome consumes descriptors.
 - `APX-B16` is accepted: selected tab persists by stable descriptor id and restores to seed index via descriptor lookup.
-- `APX-B17` is feature-first: consume `runtime_support_links` metadata from staged prefix manifest and materialize all declared links before runtime activation.
-- `zide-mobile-pm` foundation work is allowed in parallel, but APX-B17 remains the primary in-repo execution lane here.
+- `APX-B17` is accepted: Android consumes `runtime_support_links` metadata from staged prefix manifests and materializes declared links before runtime activation.
+- `APX-B18` is feature-first closure work: prove the released zide-pm Android test-binary path on-device through the explicit Android install lifecycle, then publish the Android refocus closure recommendation.
+- `zide-mobile-pm` foundation work is allowed in parallel, but APX-B18 remains the primary in-repo execution lane here.
 - `AHW-B26` is accepted and `AHW` is closed.
 - Keep harness vs surface split (`WidgetAssembly.Result.harnessHost` + `surfaceJoin`) as the baseline.
 - Freeze additional keep-screen-on seam work beyond B20 unless explicitly re-opened by product direction.
-- Execute `APX-B17` as a non keep-screen-on batch.
+- Execute `APX-B18` as a non keep-screen-on batch.
 - Keep `ProductHostActivityStartupWiring`, `ProductTerminalLifecycleHost`, and `ProductTerminalWidgetAssemblyHost` ownership from B22 unchanged.
 - Keep `ProductHostOnCreateStartupCoordinator` + `ProductHostOnCreateStartupSteps` as the startup choreography seam from B23.
 - Keep `AppShellTerminalViewPolicy` as explicit app-shell terminal-view policy seam; no public `appShellNavigation()` accessor on that type.
@@ -107,12 +108,12 @@ boundaries while preserving current single-terminal behavior.
   `InteractionAssembly.Result` yet.
 - Keep chrome slot-agnostic in this batch; do not thread slot into chrome
   construction until per-slot chrome policy is scoped.
-- `APX-B17` must preserve APX-B11 sidebar session-navigation, APX-B10 doctor/install split, APX-B13 edge-install list parsing, and APX-B16 stable-id persistence while adding manifest-driven runtime_support_links materialization only.
+- `APX-B18` must preserve APX-B17 runtime_support_links materialization, APX-B11 sidebar session-navigation, APX-B10 doctor/install split, APX-B13 edge-install list parsing, and APX-B16 stable-id persistence while proving the released Android test-binary install path.
 
 ## Internal Milestones
 
-Execute `APX17-M1` through `APX17-M6` sequentially; do not stop before the
-`APX-B17` super-gate unless a hard stop condition is hit.
+Execute `APX18-M1` through `APX18-M6` sequentially; do not stop before the
+`APX-B18` super-gate unless a hard stop condition is hit.
 
 Commit cadence expectation for this macro batch:
 
@@ -121,12 +122,12 @@ Commit cadence expectation for this macro batch:
 
 Execute in order and mark progress in `docs/todo/android/implementation.md`.
 
-- `APX17-M1`: audit current runtime support link materialization and define metadata-owned boundary.
-- `APX17-M2`: parse and validate `runtime_support_links` metadata from staged prefix manifest.
-- `APX17-M3`: apply parsed links deterministically during install/runtime prep with clear error reporting.
-- `APX17-M4`: remove stale hardcoded link assumptions now covered by metadata-driven path.
-- `APX17-M5`: sync authority docs + queue + this entrypoint + `AGENT_HANDOFF`.
-- `APX17-M6`: validation ladder + architect review packet.
+- `APX18-M1`: audit the current zide-pm released manifest, Android list-available parsing, install lifecycle telemetry, and device-verification surfaces for a real test-binary install proof.
+- `APX18-M2`: add or tighten the minimal Android-side install verification/status surface needed for the real test-binary proof.
+- `APX18-M3`: run the explicit Android install lifecycle on device against the current released zide-pm dev manifest and verify the installed test binary.
+- `APX18-M4`: verify APX-B17 runtime_support_links materialization still applies after the real test-binary install path.
+- `APX18-M5`: update authority docs, queue, handoff, and this entrypoint with Android refocus closure recommendation and remaining non-blocking follow-up list.
+- `APX18-M6`: validation ladder + architect review packet with closure recommendation.
 
 ## Allowed Work
 
@@ -160,7 +161,7 @@ If a required change falls outside these paths, stop and report a blocker.
 - No compatibility shim kept only to avoid a clean cut.
 - No external-fork compatibility work or framing; keep one clean in-repo path only.
 - No behavior changes inside extraction-only commits.
-- No edits in `../zide-mobile-pm` from this session; treat cross-repo changes as separate engineer lane.
+- No edits in `../zide-mobile-pm` from this session. If the released dev manifest is missing a valid `zide-android-*` candidate, stop and report it as a cross-repo blocker instead of patching PM from this Android session.
 
 ## Execution Loop
 
@@ -218,7 +219,7 @@ when:
 - a behavior change is required where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
 - implementing terminal tabs/product behavior becomes necessary to proceed
-- the `APX-B17` super-gate is reached
+- the `APX-B18` super-gate is reached
 
 Otherwise continue autonomously with:
 
@@ -226,13 +227,15 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At `APX-B17` super-gate, report:
+At `APX-B18` super-gate, report:
 
-- review chunk name: `APX-B17`
+- review chunk name: `APX-B18`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs
 - validation commands and pass/fail
+- device proof for selected `zide-android-*` package id, installed file path, and executable mode
+- Android refocus closure recommendation
 - remaining risks
 - exact review questions for Architect
 

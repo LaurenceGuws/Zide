@@ -135,7 +135,9 @@ Dual-mode batching override (architect directive):
 - `APX-B14` accepted by architect.
 - `APX-B15` accepted by architect.
 - `APX-B16` accepted by architect.
-- `APX-B17` architect review pending (super-gate packet below).
+- `APX-B17` accepted by architect.
+- `APX-B18` in progress: Android refocus closure proof for real zide-pm
+  Android test-binary pull/install on device.
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -2888,7 +2890,7 @@ Queue line (exact):
 - `Engineer validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat -d -s AndroidRuntime:E after am start (pass, empty); adb cold start am start -W (pass, LaunchState: COLD, Status: ok)`
 - `Contract notes: APX-B15 descriptor ownership unchanged; save uses stable id; restore resolves to seed index only; APX-B9 user distinct select still restarts; legacy index bundle read supported; single PTY.`
 
-### `APX-B17` Runtime Support Links Materialization from Prefix Manifest (`architect_review_pending`)
+### `APX-B17` Runtime Support Links Materialization from Prefix Manifest (`accepted`)
 
 Batch queue line (exact):
 
@@ -2961,6 +2963,108 @@ Queue line (exact):
 - `Commits reviewed: 0e386521 (feature), 310cca80 (docs: ANDROID_JAVA_HOST_STRUCTURE + USERLAND_HOST_CONTRACT + queue/handoff/entrypoint)`
 - `Engineer validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat -d -s AndroidRuntime:E after am start (pass, empty); adb cold start am start -W (pass, LaunchState: COLD, Status: ok)`
 - `Contract notes: stamp stores runtime_support_links; materialize from stamp before first native restart; host + zide.embed path allowlist; apt/dpkg shim links remain install-local; APX-B16/B11/B10/B13 unchanged.`
+- `Architect verdict: accepted.`
+- `Architect review findings: no blocking regressions found. Runtime support links now have a metadata-owned install path and a stamp-backed cold-start rematerialization path. The residual old-stamp skip is accepted because a reinstall refreshes the readiness stamp and there is no clean product reason to refetch manifests on every cold start.`
+- `Architect validation spot-check: compileDebugJavaWithJavac (pass); compileReleaseJavaWithJavac (pass); deploy + cold start + AndroidRuntime:E (pass, empty).`
+- `Review answers: APX-B17 closes the MP-A7 Android consumer gap for runtime_support_links. Next batch should close Android refocus by proving the released zide-pm Android test-binary path on-device through the explicit install lifecycle, then publish a closure recommendation.`
+
+### `APX-B18` Android Refocus Closure: Real zide-pm Test-Binary Pull (`in_progress`)
+
+Batch queue line (exact):
+
+- prove the released zide-pm Android test-binary candidate can be selected, installed, and verified on-device through the explicit Android install lifecycle, then publish the Android refocus closure recommendation
+
+Batch purpose:
+
+- finish APX objective 3 with product evidence, not another ownership cleanup pass
+- validate Android consumes the current zide-pm dev snapshot contract (`ZIDE_PM_HOST_PLATFORM=android`, `zide-android-*` candidate ids, `runtime_support_links`) end-to-end
+- keep APX-B11 sidebar placement, APX-B10 explicit install lifecycle, APX-B13 candidate narrowing, APX-B16 tab persistence, and APX-B17 runtime link materialization unchanged
+
+Batch super-gate:
+
+- current released zide-pm dev manifest exposes at least one `zide-android-*` test-binary candidate to Android mode
+- Android install lifecycle selects only that candidate class and records the selected package id before install
+- install success can be verified on device by file presence and executable mode under the staged prefix
+- no-candidate behavior remains explicit (`empty_catalog` / `no_android_edge`)
+- `runtime_support_links` are still materialized from metadata/stamp before runtime activation
+- docs/handoff/entrypoint include a refocus closure recommendation: close Android refocus now, continue only bug fixes on Android, then move primary focus to Zig-layer hygiene cleanup
+- compile/deploy/device smoke pass
+
+Internal milestone cadence:
+
+- Engineer executes `APX18-M1` through `APX18-M6`; target **5-10 validated commits** before super-gate.
+
+### `APX18-M1` Candidate and install-proof audit (`pending`)
+
+Queue line (exact):
+
+- audit the current zide-pm released manifest, Android list-available parsing, install lifecycle telemetry, and device-verification surfaces for a real test-binary install proof
+
+Acceptance:
+
+- identify the current expected `zide-android-*` package id from the released dev manifest/list output
+- document the exact file path and executable bit expectation after install
+- document any missing Android-side status/telemetry needed to verify selected/install success without manifest parsing in Java
+
+### `APX18-M2` Verification surface hardening (`pending`)
+
+Queue line (exact):
+
+- add or tighten the minimal Android-side install verification/status surface needed for the real test-binary proof
+
+Acceptance:
+
+- no hardcoded package fallback
+- no Java manifest parser
+- selected candidate id and final install outcome are visible through existing status/telemetry flow
+- existing no-candidate paths keep their reason labels
+
+### `APX18-M3` Device install proof (`pending`)
+
+Queue line (exact):
+
+- run the explicit Android install lifecycle on device against the current released zide-pm dev manifest and verify the installed test binary
+
+Acceptance:
+
+- device evidence includes selected `zide-android-*` id, install success, target file presence, and executable mode
+- failure paths remain explicit and do not masquerade as success
+
+### `APX18-M4` Runtime-link regression check (`pending`)
+
+Queue line (exact):
+
+- verify APX-B17 runtime_support_links materialization still applies after the real test-binary install path
+
+Acceptance:
+
+- readiness stamp contains runtime support link metadata after install refresh
+- cold start still rematerializes declared links before native restart
+- no APX-B16 tab persistence or APX-B11 sidebar behavior regression
+
+### `APX18-M5` Refocus closure docs (`pending`)
+
+Queue line (exact):
+
+- update authority docs, queue, handoff, and engineer entrypoint with Android refocus closure recommendation and remaining non-blocking follow-up list
+
+Acceptance:
+
+- closure recommendation maps directly to `refocus_android.txt`: planned split, tab-state expansion, and zide-pm test-binary maturity
+- Android follow-ups are labeled bug/product follow-ups, not blockers to moving primary focus to Zig hygiene
+
+### `APX18-M6` Validation and super-gate (`pending`)
+
+Queue line (exact):
+
+- run validation ladder and publish APX-B18 super-gate packet with closure recommendation
+
+Acceptance:
+
+- debug and release Java compile pass
+- deploy + warm `AndroidRuntime:E` smoke pass
+- cold `am start -W` pass
+- review packet includes commit list, device proof, residual risks, and explicit `Blocked by Archtect review needed: true`
 
 ## Guardrails
 
