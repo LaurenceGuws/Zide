@@ -32,6 +32,8 @@ import uk.laurencegouws.terminal.host.ui.TerminalWidgetCompositionAssembly;
 import uk.laurencegouws.terminal.host.ui.TerminalWidgetInstance;
 import uk.laurencegouws.terminal.host.ui.TerminalWidgetSlotId;
 import uk.laurencegouws.terminal.host.ui.ProductHostActivityStartupWiring;
+import uk.laurencegouws.terminal.host.ui.ProductHostOnCreateStartupCoordinator;
+import uk.laurencegouws.terminal.host.ui.ProductHostOnCreateStartupSteps;
 import uk.laurencegouws.terminal.host.ui.ProductHostStartupBundle;
 import uk.laurencegouws.terminal.host.ui.ProductTerminalLifecycleHost;
 import uk.laurencegouws.terminal.host.ui.ProductTerminalWidgetAssemblyHost;
@@ -131,30 +133,73 @@ public final class ZideActivity extends android.app.Activity
             this::setCurrentInstallState,
             this::setCurrentReadinessState);
 
+    private final ProductHostOnCreateStartupSteps onCreateStartupSteps = new ProductHostOnCreateStartupSteps() {
+        @Override
+        public void initializeStatusAndViewControllers() {
+            ZideActivity.this.initializeStatusAndViewControllers();
+        }
+
+        @Override
+        public InteractionAssembly.Result assembleInteraction() {
+            return InteractionAssembly.assemble(createInteractionCallbacks());
+        }
+
+        @Override
+        public void assembleUserlandWorkflowControllers() {
+            ZideActivity.this.assembleUserlandWorkflowControllers();
+        }
+
+        @Override
+        public void assembleSessionControllers() {
+            ZideActivity.this.assembleSessionControllers();
+        }
+
+        @Override
+        public void applyTerminalWidgetComposition(final InteractionAssembly.Result interaction) {
+            ZideActivity.this.applyTerminalWidgetComposition(interaction);
+        }
+
+        @Override
+        public void assembleRuntimeController() {
+            ZideActivity.this.assembleRuntimeController();
+        }
+
+        @Override
+        public void assembleActivityLifecycleController() {
+            ZideActivity.this.assembleActivityLifecycleController();
+        }
+
+        @Override
+        public void loadInitialReadinessState() {
+            ZideActivity.this.loadInitialReadinessState();
+        }
+
+        @Override
+        public void installInputControllers() {
+            ZideActivity.this.installInputControllers();
+        }
+
+        @Override
+        public void bindAndStartUiControllers() {
+            ZideActivity.this.bindAndStartUiControllers();
+        }
+
+        @Override
+        public void onTerminalLifecycleControllerCreate() {
+            terminalActivityLifecycleController.onCreate();
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         applyDefaultTerminalKeepScreenOnPolicy();
-        runOnCreateStartupSequence();
+        ProductHostOnCreateStartupCoordinator.run(onCreateStartupSteps);
     }
 
     private void applyDefaultTerminalKeepScreenOnPolicy() {
         productHostKeepScreenOnPolicy.applyDefaultTerminalHostPolicy(getWindow()::addFlags);
-    }
-
-    private void runOnCreateStartupSequence() {
-        initializeStatusAndViewControllers();
-        final InteractionAssembly.Result interaction = InteractionAssembly.assemble(createInteractionCallbacks());
-        assembleUserlandWorkflowControllers();
-        assembleSessionControllers();
-        applyTerminalWidgetComposition(interaction);
-        assembleRuntimeController();
-        assembleActivityLifecycleController();
-        loadInitialReadinessState();
-        installInputControllers();
-        bindAndStartUiControllers();
-        terminalActivityLifecycleController.onCreate();
     }
 
     private void assembleRuntimeController() {
