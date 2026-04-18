@@ -126,7 +126,8 @@ Dual-mode batching override (architect directive):
 - Completed macro batch: `AHW-B20` (accepted by Architect).
 - Keep-screen-on follow-up beyond `AHW-B20` is explicitly frozen by product direction.
 - Completed macro batch: `AHW-B21` (accepted by Architect; activity orchestration-pressure reduction follow-up queued in `AHW-B22`).
-- `AHW-B22` is `verdict_pending` (reduce ZideActivity orchestration pressure through startup wiring extraction, behavior-preserving; engineer super-gate packet delivered).
+- Completed macro batch: `AHW-B22` (accepted by Architect; startup-sequence extraction follow-up queued in `AHW-B23`).
+- `AHW-B23` is `in_progress` (reduce ZideActivity startup-sequence method pressure through coordinator extraction, behavior-preserving).
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -4522,7 +4523,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B22` ZideActivity Orchestration Pressure Reduction (`verdict_pending`)
+### `AHW-B22` ZideActivity Orchestration Pressure Reduction (`completed`)
 
 Batch queue line (exact):
 
@@ -4696,9 +4697,143 @@ Super-gate engineer packet:
 Architect review verdict:
 
 - `Review chunk: AHW-B22`
-- `Verdict: pending`
+- `Verdict: accepted`
+- `Commits reviewed: 311e0c41, 81f23781, 8eef1568, 70b42312`
+- `Architect validation spot-check: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
+- `Architect runtime validation spot-check: python3 ops/android_terminal_host.py deploy (pass); adb cold start (pass, LaunchState: COLD); adb logcat -d -s AndroidRuntime:E (pass, empty)`
+- `Engineer device validation accepted: deploy + AndroidRuntime:E smoke + cold start pass`
+- `Review answers: extraction ownership is accepted as-is. Keep ProductHostActivityStartupWiring as callback factory owner, ProductTerminalLifecycleHost as lifecycle seam owner, and ProductTerminalWidgetAssemblyHost + WidgetHostAssemblyContext as widget host owner.`
+- `Findings carried forward: startup order remained unchanged and activity pressure reduced, but runOnCreate still owns many step methods. Next batch should extract onCreate sequence coordination into a named host/ui owner without changing order or seam contracts.`
 
 `Milestone reached per docs, architect review required.`
+
+---
+
+### `AHW-B23` OnCreate Startup Sequence Coordinator Extraction (`in_progress`)
+
+Batch queue line (exact):
+
+- reduce ZideActivity startup-sequence method pressure by extracting a named onCreate startup coordinator while preserving behavior and startup order
+
+Batch purpose:
+
+- keep `ZideActivity` orchestration-edge only by removing step-order choreography from activity-local method blocks
+- introduce a named startup coordinator owner for the onCreate sequence contract
+- preserve current assembly seam ownership introduced in B14-B22
+
+Batch scope:
+
+- Java Android terminal host only, plus authority docs needed to keep contract truth current
+- primary code root:
+  `android/terminal-host/app/src/main/java/uk/laurencegouws/terminal/**`
+- allowed docs:
+  `docs/todo/android/implementation.md`,
+  `docs/todo/android/ENGINEER_ENTRYPOINT.md`,
+  `docs/AGENT_HANDOFF.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_NAMING_CONTRACT.md`,
+  `app_architecture/platform/android/USERLAND_HOST_CONTRACT.md`
+
+Batch non-goals:
+
+- no terminal tabs UI/product behavior
+- no tab persistence/session switching
+- no terminal-core or shared-renderer changes
+- no app-shell UI redesign
+- no keep-screen-on follow-up implementation unless explicitly re-opened
+- no debug-view UI resurrection
+- no broad rename sweep
+- no ASF operator-evidence churn unless new evidence arrives
+
+Batch super-gate:
+
+- `ZideActivity` delegates onCreate startup sequence orchestration to a named host/ui coordinator
+- startup order is unchanged:
+  `initializeStatusAndViewControllers → InteractionAssembly.assemble → assembleUserlandWorkflowControllers → assembleSessionControllers → applyTerminalWidgetComposition → assembleRuntimeController → assembleActivityLifecycleController → loadInitialReadinessState → installInputControllers → bindAndStartUiControllers → terminalActivityLifecycleController.onCreate`
+- no behavior change and no seam ownership regression
+- B14-B22 IME/slot/chrome/widget/startup-wiring contracts remain unchanged
+- docs reflect final ownership/naming shape
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass at final seam boundary
+
+Internal milestone cadence:
+
+- Engineer executes `AHW23-M1` through `AHW23-M6` sequentially.
+- Do not stop for architect review between internal milestones.
+- Mark each internal milestone complete in this file as it lands.
+- Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
+  the `AHW-B23` super-gate is reached.
+
+### `AHW23-M1` OnCreate sequence pressure audit (`pending`)
+
+Queue line (exact):
+
+- audit runOnCreateStartupSequence dependencies and define coordinator extraction boundaries
+
+Acceptance:
+
+- enumerate which step calls are pure sequence choreography vs ownership-bearing logic
+- define coordinator inputs/outputs and state handoff boundaries
+- record invariants with explicit ordered call list and out-of-scope seams
+
+### `AHW23-M2` Coordinator seam introduction (`pending`)
+
+Queue line (exact):
+
+- introduce a named host/ui startup coordinator seam for onCreate sequence execution
+
+Acceptance:
+
+- add coordinator type(s) with explicit ownership naming under `host/ui`
+- represent required mutable state via typed inputs rather than widening activity globals
+- compile debug + release Java after code changes
+
+### `AHW23-M3` Activity delegation rewiring (`pending`)
+
+Queue line (exact):
+
+- delegate runOnCreate startup sequence from ZideActivity to the extracted coordinator without order changes
+
+Acceptance:
+
+- activity no longer owns step-order choreography details
+- startup order and side-effect timing remain unchanged
+- compile debug + release Java after code changes
+
+### `AHW23-M4` Contract docs lock (`pending`)
+
+Queue line (exact):
+
+- lock authority docs to coordinator-owned onCreate sequence orchestration shape
+
+Acceptance:
+
+- host structure and naming contract match code shape
+- userland contract remains unchanged unless ownership text requires update
+
+### `AHW23-M5` Queue/handoff/entrypoint sync (`pending`)
+
+Queue line (exact):
+
+- keep queue, handoff, and engineer entrypoint aligned to AHW-B23 execution and super-gate stop
+
+Acceptance:
+
+- queue, handoff, and engineer entrypoint stay coherent through B23 super-gate
+- super-gate stop condition and review packet contract are explicit
+
+### `AHW23-M6` Batch validation + review packet (`pending`)
+
+Queue line (exact):
+
+- validate AHW-B23 end-to-end and publish the architect review packet
+
+Acceptance:
+
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
+- cold start smoke pass when a device is available
+- engineer reports the full super-gate packet and stops for Architect review
 
 ## Guardrails
 
