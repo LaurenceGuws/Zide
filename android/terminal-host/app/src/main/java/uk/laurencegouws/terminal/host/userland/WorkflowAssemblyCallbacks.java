@@ -22,6 +22,7 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
     private final Consumer<UserlandInstallState> failInstall;
     private final WorkflowAssembly.RestartSessionCallback restartSession;
     private final WorkflowAssembly.PackageDoctorStateCallback packageDoctorState;
+    private final WorkflowAssembly.EdgeTestBinaryInstallStateCallback edgeTestBinaryInstallState;
 
     public WorkflowAssemblyCallbacks(
             Context context,
@@ -33,7 +34,8 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
             Consumer<UserlandReadinessState> completeInstall,
             Consumer<UserlandInstallState> failInstall,
             WorkflowAssembly.RestartSessionCallback restartSession,
-            WorkflowAssembly.PackageDoctorStateCallback packageDoctorState) {
+            WorkflowAssembly.PackageDoctorStateCallback packageDoctorState,
+            WorkflowAssembly.EdgeTestBinaryInstallStateCallback edgeTestBinaryInstallState) {
         this.context = context;
         this.handler = handler;
         this.userlandRelease = userlandRelease;
@@ -44,6 +46,7 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
         this.failInstall = failInstall;
         this.restartSession = restartSession;
         this.packageDoctorState = packageDoctorState;
+        this.edgeTestBinaryInstallState = edgeTestBinaryInstallState;
     }
 
     @Override
@@ -94,6 +97,11 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
     @Override
     public void markPackageDoctorComplete(boolean success) {
         packageDoctorState.markComplete(success);
+    }
+
+    @Override
+    public void markAndroidEdgeTestBinaryInstallComplete(boolean success) {
+        edgeTestBinaryInstallState.markComplete(success);
     }
 
 }

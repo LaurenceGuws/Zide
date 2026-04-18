@@ -146,7 +146,8 @@ public final class ProductHostActivityStartupWiring {
                 hostStartup.workflowInstall::completeInstallIfReady,
                 hostStartup.workflowInstall::failInstallIfReady,
                 hostStartup.runtime::restartSessionAfterInstallIfReady,
-                hostStartup.telemetry::markPackageDoctorCompleteIfReady);
+                hostStartup.telemetry::markPackageDoctorCompleteIfReady,
+                hostStartup.telemetry::markAndroidEdgeTestBinaryInstallCompleteIfReady);
     }
 
     public static RuntimeAssemblyCallbacks runtime(

@@ -21,6 +21,11 @@ public final class WorkflowAssembly {
         void markComplete(boolean success);
     }
 
+    /** Functional callback for edge test-binary {@code zide-pm install} completion state. */
+    public interface EdgeTestBinaryInstallStateCallback {
+        void markComplete(boolean success);
+    }
+
     /** Harness callbacks required for userland workflow assembly. */
     public interface Host extends WorkflowBridge.Callbacks {
         Context context();
