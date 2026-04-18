@@ -283,11 +283,11 @@ public final class ZideActivity extends android.app.Activity
 
     private void applyTerminalWidgetComposition(InteractionAssembly.Result interaction) {
         final WidgetAssembly.Result widgetResult = WidgetAssembly.assemble(createWidgetHost(interaction));
-        ShellStatePresenter = widgetResult.ShellStatePresenter;
-        terminalChromeController = widgetResult.terminalChromeController;
-        terminalViewModeController = widgetResult.terminalViewModeController;
+        ShellStatePresenter = widgetResult.harnessHost.shellStatePresenter;
+        terminalChromeController = widgetResult.harnessHost.terminalChromeController;
+        terminalViewModeController = widgetResult.harnessHost.terminalViewModeController;
         terminalWidget = TerminalWidgetCompositionAssembly.compose(
-                ACTIVE_PRODUCT_TERMINAL_SLOT, interaction, widgetResult);
+                ACTIVE_PRODUCT_TERMINAL_SLOT, interaction, widgetResult.surfaceJoin);
     }
 
     private WidgetAssembly.Host createWidgetHost(final InteractionAssembly.Result interaction) {

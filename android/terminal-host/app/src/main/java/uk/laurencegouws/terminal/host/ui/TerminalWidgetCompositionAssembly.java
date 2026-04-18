@@ -5,24 +5,22 @@ import uk.laurencegouws.terminal.host.interaction.InteractionAssembly;
 /**
  * Harness-owned composition seam for one terminal widget product instance.
  *
- * <p>Combines {@link InteractionAssembly} (selection + gesture) with {@link WidgetAssembly}
- * surface/chrome results into a {@link TerminalWidgetInstance}. {@link WidgetAssembly.Result}
- * remains the widget/chrome assembly output; this type performs the harness-owned join into the
- * portable instance holder without making {@code WidgetAssembly.Result} act as a terminal-instance
- * factory by itself.</p>
+ * <p>Combines {@link InteractionAssembly} (selection + gesture) with {@link WidgetSurfaceHostJoin}
+ * into a {@link TerminalWidgetInstance}. Harness chrome/shell/view-mode controllers stay on
+ * {@link WidgetAssembly.Result#harnessHost}; this type only joins the surface slice — it does not
+ * make {@code WidgetAssembly.Result} act as a terminal-instance factory by itself.</p>
  *
- * <p>Harness shell/chrome/view-mode controllers remain on {@link WidgetAssembly.Result}; the
- * activity reads them from that result alongside {@link #compose} output. Future multi-view
- * hosting would call {@code compose} once per terminal slot; this class does not implement tab
- * product behavior.</p>
+ * <p>The activity reads harness controllers from {@link WidgetAssembly.Result} alongside
+ * {@link #compose} output. Future multi-slot hosting would pass one {@link WidgetSurfaceHostJoin} per
+ * slot; this class does not implement tab product behavior.</p>
  */
 public final class TerminalWidgetCompositionAssembly {
     private TerminalWidgetCompositionAssembly() {
     }
 
     /**
-     * Joins interaction and widget assembly results into the portable {@link TerminalWidgetInstance}.
-     * Co-hosted chrome/shell/view-mode refs stay on {@code widget}; do not duplicate them here.
+     * Joins interaction and surface host join into the portable {@link TerminalWidgetInstance}.
+     * Harness chrome/shell/view-mode refs are not part of this call.
      *
      * @param slot compile-visible slot identity for this join — must satisfy
      *             {@link TerminalWidgetSlotId#checkActiveProductTerminalSlot} for current product wiring
@@ -30,13 +28,13 @@ public final class TerminalWidgetCompositionAssembly {
     public static TerminalWidgetInstance compose(
             TerminalWidgetSlotId slot,
             InteractionAssembly.Result interaction,
-            WidgetAssembly.Result widget) {
+            WidgetSurfaceHostJoin surfaceJoin) {
         TerminalWidgetSlotId.checkActiveProductTerminalSlot(slot);
         return new TerminalWidgetInstance(
                 interaction.selectionController,
                 interaction.GestureStateController,
-                widget.surfaceHostBridge,
-                widget.surfaceHostController,
-                widget.terminalSurfaceWidgetController);
+                surfaceJoin.surfaceHostBridge,
+                surfaceJoin.surfaceHostController,
+                surfaceJoin.surfaceWidgetController);
     }
 }

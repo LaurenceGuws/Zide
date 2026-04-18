@@ -11,8 +11,6 @@ import android.widget.TextView;
 import uk.laurencegouws.terminal.debug.AndroidDebugFormatter;
 import uk.laurencegouws.terminal.gesture.GestureController;
 import uk.laurencegouws.terminal.gesture.GestureStateController;
-import uk.laurencegouws.terminal.host.surface.SurfaceBridge;
-import uk.laurencegouws.terminal.host.surface.SurfaceController;
 import uk.laurencegouws.terminal.host.surface.SurfaceWidgetAssembly;
 import uk.laurencegouws.terminal.host.surface.SurfaceWidgetAssemblyCallbacks;
 import uk.laurencegouws.terminal.host.surface.SurfaceWidgetController;
@@ -125,38 +123,18 @@ public final class WidgetAssembly {
     }
 
     /**
-     * Immutable assembled widget host result (chrome, shell presentation bridge, surface hosts).
-     * {@link TerminalWidgetCompositionAssembly#compose} reads surface fields from this result to
-     * build {@link TerminalWidgetInstance}; shell/chrome/view-mode refs remain here — this type is
-     * not the terminal-instance factory on its own.
+     * Immutable assembled widget host result: harness controllers vs surface join slice.
+     * {@link TerminalWidgetCompositionAssembly#compose} takes only {@link WidgetSurfaceHostJoin};
+     * shell/chrome/view-mode refs live on {@link #harnessHost} — this type is not the
+     * terminal-instance factory on its own.
      */
     public static final class Result {
-        public final AppShellNavigation appShellNavigation;
-        public final ShellStateBridge productShellStateHostBridge;
-        public final ShellStatePresenter ShellStatePresenter;
-        public final ChromeController terminalChromeController;
-        public final ViewModeController terminalViewModeController;
-        public final SurfaceBridge surfaceHostBridge;
-        public final SurfaceController surfaceHostController;
-        public final SurfaceWidgetController terminalSurfaceWidgetController;
+        public final WidgetHarnessHostControllers harnessHost;
+        public final WidgetSurfaceHostJoin surfaceJoin;
 
-        private Result(
-                AppShellNavigation appShellNavigation,
-                ShellStateBridge productShellStateHostBridge,
-                ShellStatePresenter ShellStatePresenter,
-                ChromeController terminalChromeController,
-                ViewModeController terminalViewModeController,
-                SurfaceBridge surfaceHostBridge,
-                SurfaceController surfaceHostController,
-                SurfaceWidgetController terminalSurfaceWidgetController) {
-            this.appShellNavigation = appShellNavigation;
-            this.productShellStateHostBridge = productShellStateHostBridge;
-            this.ShellStatePresenter = ShellStatePresenter;
-            this.terminalChromeController = terminalChromeController;
-            this.terminalViewModeController = terminalViewModeController;
-            this.surfaceHostBridge = surfaceHostBridge;
-            this.surfaceHostController = surfaceHostController;
-            this.terminalSurfaceWidgetController = terminalSurfaceWidgetController;
+        private Result(WidgetHarnessHostControllers harnessHost, WidgetSurfaceHostJoin surfaceJoin) {
+            this.harnessHost = harnessHost;
+            this.surfaceJoin = surfaceJoin;
         }
     }
 
@@ -187,14 +165,16 @@ public final class WidgetAssembly {
                 new ShellStatePresenter(productShellStateHostBridge);
 
         return new Result(
-                appShellNavigation,
-                productShellStateHostBridge,
-                shellStatePresenter,
-                terminalChromeController,
-                terminalViewModeController,
-                surfaceWidgetAssembly.surfaceHostBridge,
-                surfaceWidgetAssembly.surfaceHostController,
-                surfaceWidgetAssembly.surfaceWidgetController);
+                new WidgetHarnessHostControllers(
+                        appShellNavigation,
+                        productShellStateHostBridge,
+                        shellStatePresenter,
+                        terminalChromeController,
+                        terminalViewModeController),
+                new WidgetSurfaceHostJoin(
+                        surfaceWidgetAssembly.surfaceHostBridge,
+                        surfaceWidgetAssembly.surfaceHostController,
+                        surfaceWidgetAssembly.surfaceWidgetController));
     }
 
     private static ChromeController createChromeController(
