@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B1` (`architect_review_pending`).
+- Current active macro batch: `CZH-B2` (`in_progress`).
 
 ## Campaign Goals
 
@@ -39,7 +39,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 ## Macro Batches
 
-### `CZH-B1` Freeze + Stability Baseline (`architect_review_pending`)
+### `CZH-B1` Freeze + Stability Baseline (`accepted`)
 
 Queue line (exact):
 
@@ -136,16 +136,15 @@ Android guard (only if seam-touching this batch): compileDebug/ReleaseJavaWithJa
   `debug_ops.debugSnapshot`), fixing a stale reference to `debug.session` that
   did not exist on `DebugSnapshot`.
 
-#### CZH-B1 super-gate packet (engineer → architect)
+#### Architect gate result
 
-- `Review chunk: CZH-B1`  
-- `Verdict: architect_review_pending`  
-- `Commits: (see COMMITS in engineer update)`  
-- `Engineer validation: SL-0..SL-3 PASS on 2026-04-18; SL-ext compile FAIL recorded with cause; Android guard SKIP (no seam touch).`  
-- `Residual risk: extended replay harness not green; goldens not revalidated this batch.`  
-- `Blocked by Archtect review needed: true` (pending architect acceptance of freeze + baseline doc + snapshot fix scope).
+- `Review chunk: CZH-B1`
+- `Verdict: accepted`
+- `Engineer commits reviewed: f4c2e673, 18d556d2`
+- `Architect validation spot-check: SL-0..SL-3 PASS; SL-ext-1 FAIL (expected/documented import drift).`
+- `Residual risk carried forward: replay harness compile drift remains unresolved.`
 
-### `CZH-B2` Probe/Debug Caller Purge + Naming Hygiene (`planned`)
+### `CZH-B2` Probe/Debug Caller Purge + Naming Hygiene (`in_progress`)
 
 Queue line (exact):
 
@@ -157,6 +156,23 @@ Acceptance:
 - stale probe/debug callers are removed from active product paths
 - naming aligns with subsystem ownership contracts
 - no behavior regressions in baseline validation
+
+Internal milestones (`CZH2-M1..M6`, execute sequentially in one batch):
+
+| Id | Scope |
+| --- | --- |
+| `CZH2-M1` | replay-harness compile drift audit with explicit file list + watchlist update |
+| `CZH2-M2` | unblock `SL-ext-1` (`test-terminal-replay`) by fixing moved publication imports and immediate compile fallout |
+| `CZH2-M3` | run `SL-ext-2` (`test-terminal-replay-all`) and record baseline result |
+| `CZH2-M4` | scoped probe/debug caller purge in touched core seams (no behavior changes) |
+| `CZH2-M5` | scoped naming/ownership cleanup in touched seams aligned to subsystem authority docs |
+| `CZH2-M6` | super-gate packet + queue/handoff/entrypoint sync for architect review |
+
+`CZH-B2` stop conditions:
+
+- stop only at super-gate or real hard blocker
+- target 5–10 validated commits
+- maintain behavior freeze and single-path contract
 
 ### `CZH-B3` Android-Driven FFI/Render Normalization (`planned`)
 

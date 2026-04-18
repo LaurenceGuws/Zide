@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: **Core Zig freeze + hygiene**
 - Campaign: **Core Zig Stability/Hygiene** (`CZH`)
-- Active macro batch (`architect_review_pending`): `CZH-B1` in
+- Active macro batch (`in_progress`): `CZH-B2` in
   `docs/todo/core/implementation.md`
 - Android lane status: **paused by product direction** except critical
   regressions/blockers for current users.
@@ -25,6 +25,12 @@ Current top priorities:
 3. naming convention cleanup aligned to real ownership
 4. clean normalization of Android-driven FFI/rendering advances into shared
    product seams
+
+Current batch intent (`CZH-B2`):
+
+- unblock replay-harness compile drift and run stress extension baselines
+- execute scoped probe/debug caller purge and naming hygiene in touched seams
+- preserve frozen behavior and single-path ownership contracts
 
 ## First Read Order
 

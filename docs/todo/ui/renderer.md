@@ -17,13 +17,12 @@ Architect and enforce a reference-grade renderer backend abstraction API.
 Current priority note:
 
 - this queue is no longer the repo-wide identity by default
-- Android terminal excellence is the active product goal
-- execute renderer tickets from this queue when, and only when, they are the
-  next highest-leverage blocker for Android terminal progress
+- execute renderer tickets from this queue only when they are the
+  next highest-leverage blocker for the currently active handoff campaign
 - Android pinch / resize-pressure work is accepted and parked
 - do not reopen renderer work by drifting back into gesture-threshold polish
 - return to this queue only for the broader shared render-thread ownership cuts
-  that still constrain Android terminal quality
+  that still constrain product quality
 
 The standard is:
 

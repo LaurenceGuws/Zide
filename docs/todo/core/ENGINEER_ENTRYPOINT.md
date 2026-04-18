@@ -16,9 +16,8 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B1` — **architect_review_pending** (freeze/stability baseline + drift
-  watchlist + first recorded ladder run; see super-gate packet in
-  `docs/todo/core/implementation.md`).
+- `CZH-B2` — **in_progress** (replay-harness unblock, stress extension run,
+  then scoped probe/debug purge + naming cleanup under behavior freeze).
 
 ## Hard Rules
 
@@ -31,6 +30,7 @@ Read in this exact order:
 
 - Target **5–10 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
+- Execute `CZH2-M1..CZH2-M6` sequentially (defined in the queue).
 
 ## Validation Ladder
 

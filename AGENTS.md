@@ -135,9 +135,8 @@ Current default priority rule:
   focus outranks opportunistic repo reranks and side-war momentum
 - do not drift to another architecture lane unless the user explicitly directs
   it or the current focus is proven blocked by a stronger direct prerequisite
-- current repo focus is whatever `docs/AGENT_HANDOFF.md` declares; at present
-  this is Android terminal excellence with cleanup/refactor/standardization
-  priority over expansion work
+- current repo focus is whatever `docs/AGENT_HANDOFF.md` declares; do not
+  hardcode a stale lane in this policy block
 - treat that focus as one continuous scrutiny campaign; do not relabel each
   ranked front as a separate "war" unless the repo authority explicitly says
   the overall campaign itself has changed

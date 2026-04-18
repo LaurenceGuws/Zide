@@ -13,7 +13,7 @@ project landing page.
 Quick reading guide:
 
 - start with `docs/AGENT_HANDOFF.md` if you are joining an active work session
-- if you are doing active product work, default to the Android queue and
+- if you are doing active product work, default to the core queue and
   authority docs first
 - use `docs/todo/` for current execution queues
 - use `app_architecture/` for current technical authority
@@ -23,15 +23,16 @@ Quick reading guide:
 - `docs/AGENT_HANDOFF.md` — current focus, constraints, and entrypoints.
 - `AGENTS.md` — workflow rules and constraints.
 - `docs/WORKFLOW.md` — doc roles and update rules.
-- `docs/todo/android/implementation.md` — active Android execution queue; the
+- `docs/todo/core/implementation.md` — active core Zig stability/hygiene queue; the
   current default product board.
 - `app_architecture/platform/android/RENDER_BACKEND.md` — Android host/backend
-  authority for the current default product lane.
+  authority for the Android platform lane.
 - `app_architecture/ui/RENDER_BACKEND_CURRENT_STATE.md` — current-state audit
   for the same backend contract.
 
 ## Task tracking (source of truth)
 - `docs/todo/README.md` — active work-queue policy and ownership split.
+  - `docs/todo/core/implementation.md` — active core Zig stability/hygiene queue.
   - `docs/todo/android/implementation.md` — active Android terminal execution queue.
   - `docs/todo/linux/implementation.md` — temporary Linux-native catch-up queue after the Win11 integration sprint.
   - `docs/todo/macos/implementation.md` — first-class macOS implementation journey and milestone tracker.
