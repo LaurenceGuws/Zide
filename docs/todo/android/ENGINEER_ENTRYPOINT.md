@@ -34,11 +34,11 @@ you must report the mismatch.
 
 ## Current Target
 
-`APX-B2` is at **super-gate** (engineer execution complete; awaiting architect verdict). Do not start the next macro batch until the Architect accepts the gate and refocuses `docs/todo/android/implementation.md`.
+`APX-B3` is `in_progress`.
 
 Active batch queue line (exact):
 
-- introduce declared terminal-slot catalog seams and route selection policy through them without enabling multi-slot runtime behavior
+- consolidate declared-slot and selected-slot resolution into one host selection context seam and consume it once per startup path
 
 ## Core Boundary Rule
 
@@ -61,10 +61,11 @@ boundaries while preserving current single-terminal behavior.
 
 - `APX-B1` is accepted: `AppShellTerminalSelectionPolicy` (selection) and `AppShellTerminalViewPolicy` (activation) are split; default remains single `PRIMARY` terminal path.
 - `APX-B2` adds `DeclaredTerminalWidgetSlotCatalog` (PRIMARY-only declared set); `AppShellTerminalSelectionPolicy` requires catalog membership before `checkActiveProductTerminalSlot`; no multi-slot runtime.
+- `APX-B3` introduces a startup selection-context seam that carries declared-slot + selected-slot values and removes repeated startup reads.
 - `AHW-B26` is accepted and `AHW` is closed.
 - Keep harness vs surface split (`WidgetAssembly.Result.harnessHost` + `surfaceJoin`) as the baseline.
 - Freeze additional keep-screen-on seam work beyond B20 unless explicitly re-opened by product direction.
-- Execute `APX-B2` as a non keep-screen-on batch.
+- Execute `APX-B3` as a non keep-screen-on batch.
 - Keep `ProductHostActivityStartupWiring`, `ProductTerminalLifecycleHost`, and `ProductTerminalWidgetAssemblyHost` ownership from B22 unchanged.
 - Keep `ProductHostOnCreateStartupCoordinator` + `ProductHostOnCreateStartupSteps` as the startup choreography seam from B23.
 - Keep `AppShellTerminalViewPolicy` as explicit app-shell terminal-view policy seam; no public `appShellNavigation()` accessor on that type.
@@ -90,17 +91,17 @@ boundaries while preserving current single-terminal behavior.
 
 ## Internal Milestones
 
-Execute `APX2-M1` through `APX2-M6` sequentially; do not stop before the
-`APX-B2` super-gate unless a hard stop condition is hit.
+Execute `APX3-M1` through `APX3-M6` sequentially; do not stop before the
+`APX-B3` super-gate unless a hard stop condition is hit.
 
 Execute in order and mark progress in `docs/todo/android/implementation.md`.
 
-- `APX2-M1`: audit declared-slot vs selected-slot callsites and define bounded catalog seam targets.
-- `APX2-M2`: introduce declared terminal-slot catalog seam with ownership-first naming.
-- `APX2-M3`: rewire selection consumers through catalog defaults without behavior change.
-- `APX2-M4`: lock authority docs to APX-B2 declared-slot ownership shape.
-- `APX2-M5`: keep queue/handoff/entrypoint aligned to APX-B2 super-gate.
-- `APX2-M6`: run validation and publish super-gate review packet.
+- `APX3-M1`: audit declared-slot and selected-slot reads; define bounded selection-context seam target.
+- `APX3-M2`: introduce startup selection-context owner with ownership-first naming.
+- `APX3-M3`: rewire startup consumers to use context once per startup path without behavior change.
+- `APX3-M4`: lock authority docs to APX-B3 selection-context ownership shape.
+- `APX3-M5`: keep queue/handoff/entrypoint aligned to APX-B3 super-gate.
+- `APX3-M6`: run validation and publish super-gate review packet.
 
 ## Allowed Work
 
@@ -191,7 +192,7 @@ when:
 - a behavior change is required where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
 - implementing terminal tabs/product behavior becomes necessary to proceed
-- the `APX-B2` super-gate is reached
+- the `APX-B3` super-gate is reached
 
 Otherwise continue autonomously with:
 
@@ -199,9 +200,9 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At `APX-B2` super-gate, report:
+At `APX-B3` super-gate, report:
 
-- review chunk name: `APX-B2`
+- review chunk name: `APX-B3`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs

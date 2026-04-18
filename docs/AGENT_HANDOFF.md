@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android product expansion** (`APX`) — build product capability on top of the closed harness/widget ownership shape.
-- Active macro batch (`awaiting_architect_review`): `APX-B2` — `DeclaredTerminalWidgetSlotCatalog` + selection policy wiring; engineer stopped at super-gate for architect verdict.
+- Active macro batch (`in_progress`): `APX-B3` — consolidate declared-slot + selected-slot resolution into one startup selection context seam; no tabs UI or behavior change.
 - Prior closed/escalated: `AHW-B1` through `AHW-B26` accepted and `AHW` closed; `ASF-M3` escalated IME/assist/touch rows to operator evidence; `RF-M0` through `RF-M5` and `AX-M1` through `AX-M5` completed.
 - Active queue authority: `docs/todo/android/implementation.md`
 - Engineer entrypoint (dual mode): `docs/todo/android/ENGINEER_ENTRYPOINT.md`
@@ -25,8 +25,8 @@ Engineer session seed:
 - Read `docs/todo/android/ENGINEER_ENTRYPOINT.md`, then
   `docs/todo/android/implementation.md`, then this handoff file.
 - Execute only the macro batch marked `in_progress` in
-  `docs/todo/android/implementation.md` (`APX-B2`).
-- Stop at the `APX-B2` super-gate and return the review packet for Architect verdict.
+  `docs/todo/android/implementation.md` (`APX-B3`).
+- Stop at the `APX-B3` super-gate and return the review packet for Architect verdict.
 
 ## First Read Order
 
@@ -50,7 +50,7 @@ Engineer session seed:
 - Architect updates use: `Blocked by humain review needed: true|false`.
 - Engineer updates use: `Blocked by Archtect review needed: true|false`.
 
-## APX-B2 Baseline
+## APX-B3 Baseline
 
 - `AHW-B20` is accepted and already keeps the test device awake by default.
 - Additional keep-screen-on seam work is frozen by product direction.
@@ -61,7 +61,8 @@ Engineer session seed:
 - `AHW-B25` is accepted: `AppShellTerminalViewPolicy` owns drawer sidebar policy forwarding and terminal-view activation; consumers do not take raw `AppShellNavigation` through the policy surface.
 - `AHW-B26` is accepted: landing-gate audit passed and AHW is closed.
 - `APX-B1` is accepted: selection (`AppShellTerminalSelectionPolicy`) and activation (`AppShellTerminalViewPolicy`) are split, and default single-terminal behavior is preserved.
-- `APX-B2` scope is non keep-screen-on: `DeclaredTerminalWidgetSlotCatalog` holds PRIMARY-only declared slots; `AppShellTerminalSelectionPolicy` enforces catalog + active-slot checks; no multi-slot runtime.
+- `APX-B2` is accepted: `DeclaredTerminalWidgetSlotCatalog` holds PRIMARY-only declared slots; `AppShellTerminalSelectionPolicy` enforces catalog + active-slot checks; no multi-slot runtime.
+- `APX-B3` scope is non keep-screen-on: consolidate startup selection reads into one selection context seam while preserving APX-B1/B2 behavior.
 - Keep `ProductHostKeepScreenOnPolicy` as the long-term owner of terminal keep-screen-on default policy.
 - Keep `HostImeStateAccess` as the long-term host callback IME seam (backed by `ProductHostImeState`).
 - Keep `ProductHostImeState` as the long-term activity IME carrier.
@@ -78,7 +79,7 @@ Engineer session seed:
 
 ## Operator Evidence Escalation
 
-ASF did not prove IME/assist or touch gestures because no operator packets were delivered. Those rows remain parked in `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md` with owner `operator`; they do not block `APX-B2` unless new evidence reports a regression inside the active code scope.
+ASF did not prove IME/assist or touch gestures because no operator packets were delivered. Those rows remain parked in `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md` with owner `operator`; they do not block `APX-B3` unless new evidence reports a regression inside the active code scope.
 
 ## Historical Notes
 

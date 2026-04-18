@@ -98,7 +98,8 @@ Dual-mode batching override (architect directive):
 - `AHW-B1` through `AHW-B26` accepted by architect.
 - Keep-screen-on seam work beyond `AHW-B20` is frozen by product direction.
 - `APX-B1` accepted by architect.
-- `APX-B2` is at super-gate (awaiting architect verdict).
+- `APX-B2` accepted by architect.
+- `APX-B3` is `in_progress`.
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -934,7 +935,7 @@ Architect review verdict:
 - `Review answers: APX-B1 accepted; selection vs activation split is correct. Next batch should add declared-slot catalog seams only (PRIMARY default), still no tabs UI/product behavior.`
 - `Findings carried forward: no blocking behavior regressions; startup order and single-slot runtime behavior unchanged.`
 
-### `APX-B2` Declared slot catalog foundation (`awaiting_architect_review`)
+### `APX-B2` Declared slot catalog foundation (`accepted`)
 
 Batch queue line (exact):
 
@@ -1073,6 +1074,139 @@ Acceptance:
 **Residual risk:** Low — catalog is PRIMARY-only; `checkActiveProductTerminalSlot` unchanged; activation path untouched.
 
 `Milestone reached per docs, architect review required.`
+
+Architect review verdict:
+
+- `Review chunk: APX-B2`
+- `Verdict: accepted`
+- `Commits reviewed: a7534d68, bdbe18b0`
+- `Architect validation spot-check: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac :app:compileReleaseJavaWithJavac (pass)`
+- `Architect runtime validation spot-check: python3 ops/android_terminal_host.py deploy (pass); adb warm start + AndroidRuntime:E (pass, empty); adb cold start (pass, LaunchState: COLD)`
+- `Engineer device validation accepted: compile + deploy + AndroidRuntime:E smoke + cold start pass`
+- `Review answers: APX-B2 accepted; declared-slot catalog seam is the right owner and wiring remains behavior-preserving.`
+- `Findings carried forward: no blocking regressions; single-slot runtime unchanged while declared-slot ownership is now explicit.`
+
+### `APX-B3` Slot selection context consolidation (`in_progress`)
+
+Batch queue line (exact):
+
+- consolidate declared-slot and selected-slot resolution into one host selection context seam and consume it once per startup path
+
+Batch purpose:
+
+- remove repeated per-call selection lookups in activity wiring
+- make declared-slot + selected-slot relationship explicit as one startup-owned context
+- preserve APX-B1/APX-B2 behavior and ownership boundaries
+
+Batch scope:
+
+- Java Android terminal host only, plus authority docs needed to keep contract truth current
+- primary code root:
+  `android/terminal-host/app/src/main/java/uk/laurencegouws/terminal/**`
+- allowed docs:
+  `docs/todo/android/implementation.md`,
+  `docs/todo/android/ENGINEER_ENTRYPOINT.md`,
+  `docs/AGENT_HANDOFF.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_NAMING_CONTRACT.md`,
+  `app_architecture/platform/android/USERLAND_HOST_CONTRACT.md`
+
+Batch non-goals:
+
+- no tabs UI rendering
+- no second active terminal slot behavior
+- no new `TerminalWidgetSlotId` enum values
+- no terminal-core or shared-renderer changes
+- no keep-screen-on follow-up implementation unless explicitly re-opened
+- no startup-order changes
+
+Batch super-gate:
+
+- one explicit startup selection context seam owns declared-slot + selected-slot values
+- `ZideActivity` consumes that context once (no repeated ad hoc selection reads)
+- existing selection/activation behavior remains unchanged
+- docs reflect final ownership/naming shape
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass at final seam boundary
+
+Internal milestone cadence:
+
+- Engineer executes `APX3-M1` through `APX3-M6` sequentially.
+- Do not stop for architect review between internal milestones.
+- Mark each internal milestone complete in this file as it lands.
+- Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
+  the `APX-B3` super-gate is reached.
+
+### `APX3-M1` Selection context audit (`pending`)
+
+Queue line (exact):
+
+- audit declared-slot and selected-slot reads and define one bounded selection-context seam target
+
+Acceptance:
+
+- enumerate current reads in `ZideActivity`, `WidgetAssembly`, and selection policy callers
+- define one owner type under `host/ui` for startup selection context
+- record explicit out-of-scope items (tabs UI, second active slot behavior)
+
+### `APX3-M2` Selection context seam introduction (`pending`)
+
+Queue line (exact):
+
+- introduce a startup selection-context owner that carries declared-slot and selected-slot values
+
+Acceptance:
+
+- add selection-context owner surface under `host/ui`
+- no compatibility/fallback paths
+- compile debug + release Java after code changes
+
+### `APX3-M3` Consumer rewiring (`pending`)
+
+Queue line (exact):
+
+- rewire activity and assembly startup callsites to consume the selection context once per startup path
+
+Acceptance:
+
+- current behavior unchanged
+- no repeated ad hoc selected-slot reads in rewired startup callsites
+- compile debug + release Java after code changes
+
+### `APX3-M4` Contract docs lock (`pending`)
+
+Queue line (exact):
+
+- lock authority docs to APX-B3 selection-context ownership shape
+
+Acceptance:
+
+- host structure and naming contract match code shape
+- userland contract updated only if ownership text requires it
+
+### `APX3-M5` Queue/handoff/entrypoint sync (`pending`)
+
+Queue line (exact):
+
+- keep queue, handoff, and engineer entrypoint aligned to APX-B3 execution and super-gate stop
+
+Acceptance:
+
+- queue, handoff, and engineer entrypoint stay coherent through APX-B3 super-gate
+- super-gate stop condition and review packet contract are explicit
+
+### `APX3-M6` Batch validation + review packet (`pending`)
+
+Queue line (exact):
+
+- validate APX-B3 end-to-end and publish the architect review packet
+
+Acceptance:
+
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
+- cold start smoke pass when a device is available
+- engineer reports full super-gate packet and explicit residual-risk note
 
 ## Guardrails
 
