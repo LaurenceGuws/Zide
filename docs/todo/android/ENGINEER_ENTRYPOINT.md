@@ -34,16 +34,16 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B21` is `verdict_pending` (engineer super-gate packet delivered; Architect review next).
+`AHW-B22` is `in_progress` and is the only active macro batch.
 
 Active batch queue line (exact):
 
-- slim WidgetAssembly/TerminalWidgetCompositionAssembly host-result surfaces for tab-ready host API without tab product behavior
+- reduce ZideActivity orchestration pressure through startup wiring extraction while preserving behavior and startup order
 
 ## Core Boundary Rule
 
-This batch exists to slim widget/composition host-result surfaces while preserving
-existing IME/slot/chrome contracts and behavior.
+This batch exists to reduce ZideActivity orchestration pressure while preserving
+existing IME/slot/chrome/widget contracts and behavior.
 
 - Android Harness owns platform ceremony, app-shell layout/styling/theming,
   navigation/view state, userland orchestration, and widget instance hosting.
@@ -57,11 +57,12 @@ existing IME/slot/chrome contracts and behavior.
 - `WidgetAssembly.Result` remains widget assembly output (`harnessHost` +
   `surfaceJoin`); it is not the terminal-instance factory by itself.
 
-## Required Direction From Architect Review (post-AHW-B20)
+## Required Direction From Architect Review (post-AHW-B21)
 
-- `AHW-B20` is accepted.
+- `AHW-B21` is accepted.
+- Keep harness vs surface split (`WidgetAssembly.Result.harnessHost` + `surfaceJoin`) as the baseline.
 - Freeze additional keep-screen-on seam work beyond B20 unless explicitly re-opened by product direction.
-- Execute `AHW-B21` as a non keep-screen-on batch.
+- Execute `AHW-B22` as a non keep-screen-on batch.
 - Keep `ProductHostKeepScreenOnPolicy` as the long-term owner of terminal keep-screen-on default policy.
 - Keep `HostImeStateAccess` as the long-term host callback IME seam backed by `ProductHostImeState`.
 - Keep `ProductHostImeState` as the long-term activity IME carrier.
@@ -84,17 +85,17 @@ existing IME/slot/chrome contracts and behavior.
 
 ## Internal Milestones
 
-Execute `AHW21-M1` through `AHW21-M6` sequentially; do not stop before the
-`AHW-B21` super-gate unless a hard stop condition is hit.
+Execute `AHW22-M1` through `AHW22-M6` sequentially; do not stop before the
+`AHW-B22` super-gate unless a hard stop condition is hit.
 
 Execute in order and mark progress in `docs/todo/android/implementation.md`.
 
-- `AHW21-M1`: audit WidgetAssembly/TerminalWidgetCompositionAssembly host-result overlap and ownership blur.
-- `AHW21-M2`: introduce slimmer host-result surface(s) with explicit ownership.
-- `AHW21-M3`: rewire ZideActivity to slimmer surfaces and remove obsolete pass-throughs.
-- `AHW21-M4`: lock authority docs to final host-result ownership/naming.
-- `AHW21-M5`: keep queue/handoff/entrypoint aligned to B21 super-gate.
-- `AHW21-M6`: run validation and publish super-gate review packet.
+- `AHW22-M1`: audit activity startup/callback construction pressure and define extraction targets.
+- `AHW22-M2`: extract cohesive startup wiring helper(s) from ZideActivity.
+- `AHW22-M3`: slim callback construction fan-out via extracted helpers.
+- `AHW22-M4`: lock authority docs to updated activity/wiring ownership.
+- `AHW22-M5`: keep queue/handoff/entrypoint aligned to B22 super-gate.
+- `AHW22-M6`: run validation and publish super-gate review packet.
 
 ## Allowed Work
 
@@ -122,6 +123,7 @@ If a required change falls outside these paths, stop and report a blocker.
 - No app-shell UI redesign.
 - No keep-screen-on follow-up implementation unless explicitly re-opened by product direction.
 - No terminal tabs product behavior; this is host API shaping only.
+- No startup order change.
 - No debug-view UI resurrection.
 - No CI/pipeline/lint additions.
 - No broad rename campaign.
@@ -184,7 +186,7 @@ when:
 - a behavior change is required where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
 - implementing terminal tabs/product behavior becomes necessary to proceed
-- the `AHW-B21` super-gate is reached
+- the `AHW-B22` super-gate is reached
 
 Otherwise continue autonomously with:
 
@@ -192,9 +194,9 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At `AHW-B21` super-gate, report:
+At `AHW-B22` super-gate, report:
 
-- review chunk name: `AHW-B21`
+- review chunk name: `AHW-B22`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs

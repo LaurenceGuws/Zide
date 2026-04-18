@@ -125,7 +125,8 @@ Dual-mode batching override (architect directive):
 - Completed macro batch: `AHW-B19` (accepted by Architect; keep-screen-on window-flag seam hardening follow-up queued in `AHW-B20`).
 - Completed macro batch: `AHW-B20` (accepted by Architect).
 - Keep-screen-on follow-up beyond `AHW-B20` is explicitly frozen by product direction.
-- `AHW-B21` is `in_progress` (slim widget/composition host-result surfaces for tab-ready host API, no tab product behavior).
+- Completed macro batch: `AHW-B21` (accepted by Architect; activity orchestration-pressure reduction follow-up queued in `AHW-B22`).
+- `AHW-B22` is `in_progress` (reduce ZideActivity orchestration pressure through startup wiring extraction, behavior-preserving).
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -4508,9 +4509,142 @@ Super-gate engineer packet:
 Architect review verdict:
 
 - `Review chunk: AHW-B21`
-- `Verdict: pending`
+- `Verdict: accepted`
+- `Commits reviewed: 356c0df9, 0fe06f61, f78cb4c2, 70e18a34`
+- `Architect validation spot-check: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
+- `Architect runtime validation spot-check: python3 ops/android_terminal_host.py deploy (pass); adb cold start (pass); adb logcat -d -s AndroidRuntime:E (pass, empty)`
+- `Engineer device validation accepted: deploy + AndroidRuntime:E smoke + cold start pass`
+- `Review answers: naming split is accepted as-is for current shape; if/when multi-slot policy lands, add slot-typed wrappers rather than widening compose now. Historical queue lines mentioning flat Result fields are archival notes; no active doc drift requiring edits.`
+- `Findings carried forward: split is clean and behavior-preserving. Next batch should reduce ZideActivity orchestration pressure via startup wiring extraction while preserving startup order and seam ownership.`
+- `Process note reaffirmed: super-gate packets must report Blocked by Archtect review needed: true.`
 
 `Milestone reached per docs, architect review required.`
+
+---
+
+### `AHW-B22` ZideActivity Orchestration Pressure Reduction (`in_progress`)
+
+Batch queue line (exact):
+
+- reduce ZideActivity orchestration pressure through startup wiring extraction while preserving behavior and startup order
+
+Batch purpose:
+
+- keep `ZideActivity` orchestration-only while reducing setup fan-out and callback construction pressure
+- extract cohesive startup wiring bundles/helpers from activity methods where ownership is already clear
+- preserve existing seam boundaries (widget, interaction, runtime, status, userland)
+
+Batch scope:
+
+- Java Android terminal host only, plus authority docs needed to keep contract truth current
+- primary code root:
+  `android/terminal-host/app/src/main/java/uk/laurencegouws/terminal/**`
+- allowed docs:
+  `docs/todo/android/implementation.md`,
+  `docs/todo/android/ENGINEER_ENTRYPOINT.md`,
+  `docs/AGENT_HANDOFF.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_NAMING_CONTRACT.md`,
+  `app_architecture/platform/android/USERLAND_HOST_CONTRACT.md`
+
+Batch non-goals:
+
+- no terminal tabs UI/product behavior
+- no tab persistence/session switching
+- no terminal-core or shared-renderer changes
+- no app-shell UI redesign
+- no keep-screen-on follow-up implementation unless explicitly re-opened
+- no debug-view UI resurrection
+- no broad rename sweep
+- no ASF operator-evidence churn unless new evidence arrives
+
+Batch super-gate:
+
+- `ZideActivity` startup/callback wiring is slimmer with clear helper ownership boundaries
+- no startup order change and no behavior change
+- B14-B21 IME, slot, chrome, and widget/composition contracts remain unchanged
+- docs reflect final ownership/naming shape
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass at final seam boundary
+
+Internal milestone cadence:
+
+- Engineer executes `AHW22-M1` through `AHW22-M6` sequentially.
+- Do not stop for architect review between internal milestones.
+- Mark each internal milestone complete in this file as it lands.
+- Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
+  the `AHW-B22` super-gate is reached.
+
+### `AHW22-M1` Activity pressure audit (`pending`)
+
+Queue line (exact):
+
+- audit ZideActivity startup/callback construction pressure and define extraction targets
+
+Acceptance:
+
+- enumerate highest-pressure startup/callback construction clusters in `ZideActivity`
+- define extraction targets with explicit owners and out-of-scope areas
+- record invariants (startup order and behavior unchanged)
+
+### `AHW22-M2` Startup wiring helper extraction (`pending`)
+
+Queue line (exact):
+
+- extract cohesive startup wiring helper(s) from ZideActivity
+
+Acceptance:
+
+- add helper type(s)/method groups with explicit naming and ownership
+- preserve existing call order and data flow
+- compile debug + release Java after code changes
+
+### `AHW22-M3` Callback assembly slimming (`pending`)
+
+Queue line (exact):
+
+- slim callback construction fan-out in ZideActivity by reusing extracted wiring helpers
+
+Acceptance:
+
+- callback construction in activity is less scattered and easier to follow
+- no behavior-bearing logic moved across ownership boundaries
+- compile debug + release Java after code changes
+
+### `AHW22-M4` Contract docs lock (`pending`)
+
+Queue line (exact):
+
+- lock authority docs to updated activity/wiring ownership shape
+
+Acceptance:
+
+- host structure and naming contract match code shape
+- userland contract remains unchanged unless ownership text requires update
+
+### `AHW22-M5` Queue/handoff/entrypoint sync (`pending`)
+
+Queue line (exact):
+
+- keep queue, handoff, and engineer entrypoint aligned to AHW-B22 execution and super-gate stop
+
+Acceptance:
+
+- queue, handoff, and engineer entrypoint stay coherent through B22 super-gate
+- super-gate stop condition and review packet contract are explicit
+
+### `AHW22-M6` Batch validation + review packet (`pending`)
+
+Queue line (exact):
+
+- validate AHW-B22 end-to-end and publish the architect review packet
+
+Acceptance:
+
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
+- cold start smoke pass when a device is available
+- engineer reports the full super-gate packet and stops for Architect review
 
 ## Guardrails
 
