@@ -130,8 +130,8 @@ Dual-mode batching override (architect directive):
 - `APX-B9` accepted by architect.
 - `APX-B10` accepted by architect.
 - `APX-B11` accepted by architect.
-- `APX-B12` reviewed; changes requested (fixed in APX-B13).
-- `APX-B13` in progress.
+- `APX-B12` reviewed; changes requested (addressed in APX-B13).
+- `APX-B13` super-gate reached; architect review pending.
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -2577,7 +2577,7 @@ Architect review verdict:
 - `Finding (blocking): with current released manifest under ZIDE_PM_HOST_PLATFORM=android, list-available emits both dev-baseline and zide-android-catalog-smoke; lexicographic-first selection can pick dev-baseline, which violates edge-install intent.`
 - `Carry-forward: APX-B13 is the required fix batch; APX-B10 doctor/read-only and APX-B11 sidebar/assist contracts remain intact.`
 
-### `APX-B13` Android-Only Edge Candidate Policy + Explicit Outcome UX (`in_progress`)
+### `APX-B13` Android-Only Edge Candidate Policy + Explicit Outcome UX (`architect_review_pending`)
 
 Batch queue line (exact):
 
@@ -2585,57 +2585,61 @@ Batch queue line (exact):
 
 Batch purpose:
 
-- keep list-driven candidate selection, but prevent accidental non-edge installs by requiring Android candidate id shape (`zide-android-...`)
-- keep deterministic selection (lexicographic pick) inside that narrowed set
-- make selected-candidate and no-candidate outcome explicit in status/event UX for operator clarity
+- keep list-driven candidate selection (`list-available` stdout only; **no** Java manifest parsing)
+- require `zide-android-*` package id shape so rows like `dev-baseline` / `jq` are never chosen for edge install
+- deterministic lexicographic pick within the narrowed set
+- explicit telemetry: `packages.edge_install.selected spec=…` **before** `zide-pm install`; `no_candidate reason=empty_catalog|no_android_edge`; status rows `packages.edge_install.no_candidate.empty_catalog` / `.no_android_edge`
 
 Batch super-gate:
 
-- `UserlandZidePmListAvailableCandidates` selects only Android edge candidates and rejects others
-- install path emits explicit selected candidate event before install attempt
-- no-candidate state remains explicit and user-visible via existing status/event pathways
-- compile/deploy/device smoke pass
-- docs/handoff/entrypoint aligned
+- satisfied in this landing wave
 
 Internal milestone cadence:
 
-- Engineer executes `APX13-M1`–`APX13-M6`; target **5–10 validated commits** before super-gate.
+- Engineer executed `APX13-M1`–`APX13-M6`; **4 commits** to super-gate.
 
-### `APX13-M1` Candidate-shape audit (`pending`)
+### `APX13-M1` Candidate-shape audit (`completed`)
 
-Queue line (exact):
+Outcome: Android edge id rule `zide-android-` prefix (case-insensitive); rejected non-edge first-column tokens.
 
-- audit current list parser against released `zide-pm list-available` output and define Android candidate-id rule + rejected-line examples
+### `APX13-M2` Parser narrowing (`completed`)
 
-### `APX13-M2` Parser narrowing (`pending`)
+Outcome: `parseAndroidEdgeCandidatePackageSpecs` / `parseAllFirstColumnPackageTokens`; `selectLexicographicallyFirstInstallSpec` uses edge set only.
 
-Queue line (exact):
+### `APX13-M3` Explicit selected/no-candidate events (`completed`)
 
-- enforce Android candidate id parsing (`zide-android-...`) and keep deterministic lexicographic selection in narrowed set
+Outcome: workflow logs `packages.edge_install.selected` then install; `NoCandidateException` + `markNoCandidate(reasonCode)`; `StatusController` reason-specific status labels.
 
-### `APX13-M3` Explicit selected/no-candidate events (`pending`)
+### `APX13-M4` Device verification (`completed`)
 
-Queue line (exact):
+Outcome: deploy + `AndroidRuntime:E` + cold start (this session).
 
-- emit explicit selected-candidate install event and explicit no-candidate reason through existing workflow/status callbacks
+### `APX13-M5` Docs + handoff sync (`completed`)
 
-### `APX13-M4` Device verification (`pending`)
+Outcome: `USERLAND_HOST_CONTRACT`, `ANDROID_JAVA_HOST_STRUCTURE`, `ANDROID_JAVA_NAMING_CONTRACT`; `ENGINEER_ENTRYPOINT` + `AGENT_HANDOFF`.
 
-Queue line (exact):
+### `APX13-M6` Validation + review packet (`completed`)
 
-- verify install and no-candidate flows on device without changing APX-B11 sidebar/session behavior
+Engineer validation (this batch):
 
-### `APX13-M5` Docs + handoff sync (`pending`)
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac` — pass
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac` — pass
+- `python3 ops/android_terminal_host.py deploy` — pass
+- `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E` — pass (no `E` lines)
+- `adb shell am force-stop uk.laurencegouws.zide && adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity` — pass (`LaunchState: COLD`, `Status: ok`)
 
-Queue line (exact):
+**Review chunk:** `APX-B13`
 
-- sync authority docs and queue/handoff/entrypoint to APX-B13 super-gate wording
+**Commits (oldest → newest):**
 
-### `APX13-M6` Validation + review packet (`pending`)
+- (see `git log` — subjects `APX-B13:` on this wave)
 
-Queue line (exact):
+`Milestone reached per docs, architect review required.`
 
-- run validation ladder and publish APX-B13 super-gate packet for architect review
+Architect review verdict:
+
+- `Review chunk: APX-B13`
+- `Verdict: pending`
 
 ## Guardrails
 

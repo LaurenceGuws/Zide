@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android product expansion** (`APX`) — build product capability on top of the closed harness/widget ownership shape.
-- Active macro batch (`in_progress`): `APX-B13` — Android-only edge candidate narrowing (`zide-android-*`) from `zide-pm list-available` with explicit selected/no-candidate outcomes; APX-B10/B11 contracts preserved.
+- Active macro batch (`architect_review_pending`): `APX-B13` — Android-only edge candidate narrowing (`zide-android-*`) from `zide-pm list-available` with explicit selected/no-candidate outcomes; APX-B10/B11 contracts preserved.
 - Parallel foundation lane (separate repo): `../zide-mobile-pm` may run in parallel for Android test-binary pull/install contract groundwork; Android APX remains primary until APX objectives are stable.
 - Prior closed/escalated: `AHW-B1` through `AHW-B26` accepted and `AHW` closed; `ASF-M3` escalated IME/assist/touch rows to operator evidence; `RF-M0` through `RF-M5` and `AX-M1` through `AX-M5` completed.
 - Active queue authority: `docs/todo/android/implementation.md`
@@ -78,8 +78,8 @@ Engineer session seed:
 - `APX-B9` is accepted: distinct tab selection now restarts native shell + userland refresh; Packages flow proves Android-side `zide-pm install` path.
 - `APX-B10` is accepted: doctor is read-only and install mutation is explicit lifecycle-owned (`UserlandAndroidTestBinaryInstallLifecycle`) with dedicated sidebar trigger.
 - `APX-B11` is accepted: terminal session/tab controls are now AppShell sidebar navigation; assist row stays input-only; APX-B10 doctor/install split unchanged.
-- `APX-B12` is reviewed with changes requested: hardcoded package id was removed, but edge-install candidate narrowing is incomplete (current list-available output can select `dev-baseline`).
-- `APX-B13` is in progress: narrow install candidates to Android edge ids (`zide-android-*`) and emit explicit selected/no-candidate outcomes while preserving APX-B10/APX-B11 behavior.
+- `APX-B12` is reviewed with changes requested: addressed by `APX-B13` (edge install no longer lexicographs non-`zide-android-*` rows).
+- `APX-B13` scope is feature-first: edge install candidates must match `zide-android-*`; explicit `packages.edge_install.selected` + reasoned no-candidate (`empty_catalog` / `no_android_edge`); no Java manifest parsing; APX-B10/B11 unchanged.
 - Cleanup-only changes are out of scope unless they directly unblock APX-B13 feature delivery.
 - APX remains primary until these are stable: harness/widget split stability, clean tab-state expansion, and zide-pm real Android test-binary pull maturity.
 - After those three are stable, primary architect focus transitions to Zig-layer hygiene cleanup.

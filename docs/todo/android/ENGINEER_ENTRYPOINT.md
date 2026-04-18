@@ -34,7 +34,7 @@ you must report the mismatch.
 
 ## Current Target
 
-`APX-B13` is `in_progress`.
+`APX-B13` is `architect_review_pending`.
 
 Active batch queue line (exact):
 
