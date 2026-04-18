@@ -36,7 +36,7 @@ you must report the mismatch.
 
 `APX-B18` is `architect_review_pending` in
 `docs/todo/android/implementation.md`.
-Android stages PM release `android-dev-2026.04.18.175422`; shipped in-prefix
+Android stages PM release `android-dev-2026.04.18.182005`; shipped in-prefix
 `zide-pm` lists and installs `zide-android-catalog-smoke` on device, and the
 batch is now waiting on Architect verdict.
 
@@ -85,7 +85,7 @@ boundaries while preserving current single-terminal behavior.
 - `APX-B15` is accepted: tab metadata is policy-owned through `ProductTerminalTabDescriptor`/`AppShellTerminalViewPolicy` and chrome consumes descriptors.
 - `APX-B16` is accepted: selected tab persists by stable descriptor id and restores to seed index via descriptor lookup.
 - `APX-B17` is accepted: Android consumes `runtime_support_links` metadata from staged prefix manifests and materializes declared links before runtime activation.
-- `APX-B18` is at super-gate: current `../zide-mobile-pm` release `android-dev-2026.04.18.175422` stages on device, shipped in-prefix `zide-pm` lists `zide-android-catalog-smoke`, and explicit install succeeds on device with executable proof.
+- `APX-B18` is at super-gate: current `../zide-mobile-pm` release `android-dev-2026.04.18.182005` stages on device, shipped in-prefix `zide-pm` lists `zide-android-catalog-smoke`, and explicit install succeeds on device with executable proof.
 - `zide-mobile-pm` foundation work is allowed in parallel, but APX-B18 is no longer blocked by PM; future PM work is product follow-up unless Architect opens a new lane.
 - `AHW-B26` is accepted and `AHW` is closed.
 - Keep harness vs surface split (`WidgetAssembly.Result.harnessHost` + `surfaceJoin`) as the baseline.

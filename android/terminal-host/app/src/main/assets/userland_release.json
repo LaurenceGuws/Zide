@@ -1,6 +1,6 @@
 {
-  "manifest_url": "https://github.com/LaurenceGuws/zide-mobile-pm/releases/download/android-dev-2026.04.18.175422/android-dev-prefix.release.manifest.json",
+  "manifest_url": "https://github.com/LaurenceGuws/zide-mobile-pm/releases/download/android-dev-2026.04.18.182005/android-dev-prefix.release.manifest.json",
   "artifact_name": "zide-android-dev-prefix",
-  "artifact_version": "sha256-daf123532f01",
+  "artifact_version": "sha256-498690c42bd7",
   "provider": "termux-main"
 }

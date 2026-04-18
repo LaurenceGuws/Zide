@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android product expansion** (`APX`) — build product capability on top of the closed harness/widget ownership shape.
-- Active macro batch (`architect_review_pending`): `APX-B18` — Android refocus closure proof is complete on device with PM release `android-dev-2026.04.18.175422`; shipped in-prefix `zide-pm` lists and installs `zide-android-catalog-smoke`.
+- Active macro batch (`architect_review_pending`): `APX-B18` — Android refocus closure proof is complete on device with PM release `android-dev-2026.04.18.182005`; shipped in-prefix `zide-pm` lists and installs `zide-android-catalog-smoke`.
 - Parallel foundation lane (separate repo): `../zide-mobile-pm` is no longer blocking APX-B18; future PM work is product follow-up unless Architect opens a new lane.
 - Prior closed/escalated: `AHW-B1` through `AHW-B26` accepted and `AHW` closed; `ASF-M3` escalated IME/assist/touch rows to operator evidence; `RF-M0` through `RF-M5` and `AX-M1` through `AX-M5` completed.
 - Active queue authority: `docs/todo/android/implementation.md`
