@@ -4048,7 +4048,7 @@ Progress delta:
   instance and delegates `Window` mutation through it (future settings can gate inside the policy).
 - **Out of scope:** IME/slot/chrome seams; no settings UI; no flag clear paths in this batch.
 
-### `AHW19-M2` Explicit keep-screen-on seam introduction (`pending`)
+### `AHW19-M2` Explicit keep-screen-on seam introduction (`completed`)
 
 Queue line (exact):
 
@@ -4060,7 +4060,11 @@ Acceptance:
 - wire seam creation from the activity host without behavior changes
 - compile debug + release Java after code changes
 
-### `AHW19-M3` Activity startup rewiring (`pending`)
+Progress delta:
+
+- **`ProductHostKeepScreenOnPolicy`** with **`applyDefaultTerminalHostPolicy(Window)`**.
+
+### `AHW19-M3` Activity startup rewiring (`completed`)
 
 Queue line (exact):
 
@@ -4071,6 +4075,11 @@ Acceptance:
 - startup flow no longer performs ad-hoc keep-screen-on mutation directly
 - keep-screen-on behavior stays default-on for the terminal activity
 - compile debug + release Java after code changes
+
+Progress delta:
+
+- **`ZideActivity`** holds **`productHostKeepScreenOnPolicy`**; **`applyDefaultTerminalKeepScreenOnPolicy`**
+  delegates to the policy (no direct **`FLAG_KEEP_SCREEN_ON`** in activity body).
 
 ### `AHW19-M4` Contract docs lock (`pending`)
 

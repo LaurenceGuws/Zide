@@ -7,7 +7,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.view.KeyEvent;
 import android.view.View;
-import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.FrameLayout;
@@ -23,6 +22,7 @@ import uk.laurencegouws.terminal.host.lifecycle.LifecycleDebugIntentArgs;
 import uk.laurencegouws.terminal.host.ui.ChromeController;
 import uk.laurencegouws.terminal.host.ui.ChromeImePolicyInput;
 import uk.laurencegouws.terminal.host.ui.ProductHostImeState;
+import uk.laurencegouws.terminal.host.ui.ProductHostKeepScreenOnPolicy;
 import uk.laurencegouws.terminal.host.ui.SurfaceWidgetHostImeVisibility;
 import uk.laurencegouws.terminal.host.runtime.FrameLoopController;
 import uk.laurencegouws.terminal.host.input.InputAssembly;
@@ -94,6 +94,9 @@ public final class ZideActivity extends android.app.Activity
     private final Handler handler = new Handler(Looper.getMainLooper());
     /** Single IME visibility scratch for status/input/widget harness wiring. */
     private final ProductHostImeState productHostImeState = new ProductHostImeState();
+    /** Default keep-screen-on for terminal host; future settings can own toggles here. */
+    private final ProductHostKeepScreenOnPolicy productHostKeepScreenOnPolicy =
+            new ProductHostKeepScreenOnPolicy();
     /** Shared layout/chrome view handles for widget host and other harness wiring. */
     private ActivityViewBindings activityViewBindings;
     private ShellInputView shellInputView;
@@ -147,7 +150,7 @@ public final class ZideActivity extends android.app.Activity
     }
 
     private void applyDefaultTerminalKeepScreenOnPolicy() {
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        productHostKeepScreenOnPolicy.applyDefaultTerminalHostPolicy(getWindow());
     }
 
     private void runOnCreateStartupSequence() {
