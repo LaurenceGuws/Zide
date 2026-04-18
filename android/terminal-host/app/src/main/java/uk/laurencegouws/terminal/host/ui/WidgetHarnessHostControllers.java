@@ -10,8 +10,9 @@ import uk.laurencegouws.terminal.userland.ShellStatePresenter;
  * take a full widget result bag when it only joins the surface slice. Activity wiring reads this bundle for
  * shell/chrome/view-mode fields.</p>
  *
- * <p>App-shell navigation and terminal-view activation policy are exposed together via
- * {@link #appShellTerminalViewPolicy}; chrome readers use {@link AppShellTerminalViewPolicy#appShellNavigation()}.</p>
+ * <p>App-shell terminal-view policy (activation + chrome drawer sidebar reads/writes) is
+ * {@link #appShellTerminalViewPolicy}; chrome is wired through that policy without exposing raw
+ * {@link AppShellNavigation} on the harness bundle.</p>
  */
 public final class WidgetHarnessHostControllers {
     public final AppShellTerminalViewPolicy appShellTerminalViewPolicy;

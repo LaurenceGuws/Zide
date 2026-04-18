@@ -9,6 +9,8 @@ import uk.laurencegouws.terminal.input.ShellInputView;
 
 /**
  * Adapts activity-owned chrome callbacks and view references to {@link ChromeController}.
+ * Drawer sidebar policy reads/writes go through {@link AppShellTerminalViewPolicy}, not raw
+ * {@link AppShellNavigation}.
  */
 public final class ChromeBridge implements ChromeController.Host {
     /** Harness callbacks used by chrome actions. */
@@ -40,7 +42,7 @@ public final class ChromeBridge implements ChromeController.Host {
     private final View drawerEdgeHotspot;
     private final View leftSidebar;
     private final Callbacks callbacks;
-    private final AppShellNavigation appShellNavigation;
+    private final AppShellTerminalViewPolicy appShellTerminalViewPolicy;
 
     public ChromeBridge(
             Context context,
@@ -48,14 +50,14 @@ public final class ChromeBridge implements ChromeController.Host {
             View drawerScrim,
             View drawerEdgeHotspot,
             View leftSidebar,
-            AppShellNavigation appShellNavigation,
+            AppShellTerminalViewPolicy appShellTerminalViewPolicy,
             Callbacks callbacks) {
         this.context = context;
         this.rootView = rootView;
         this.drawerScrim = drawerScrim;
         this.drawerEdgeHotspot = drawerEdgeHotspot;
         this.leftSidebar = leftSidebar;
-        this.appShellNavigation = appShellNavigation;
+        this.appShellTerminalViewPolicy = appShellTerminalViewPolicy;
         this.callbacks = callbacks;
     }
 
@@ -81,17 +83,17 @@ public final class ChromeBridge implements ChromeController.Host {
 
     @Override
     public boolean chromeDrawerSidebarOpen() {
-        return appShellNavigation.chromeDrawerSidebarOpen();
+        return appShellTerminalViewPolicy.chromeDrawerSidebarOpen();
     }
 
     @Override
     public void applyChromeDrawerSidebarOpen() {
-        appShellNavigation.applyChromeDrawerSidebarOpen();
+        appShellTerminalViewPolicy.applyChromeDrawerSidebarOpen();
     }
 
     @Override
     public void applyChromeDrawerSidebarClosed() {
-        appShellNavigation.applyChromeDrawerSidebarClosed();
+        appShellTerminalViewPolicy.applyChromeDrawerSidebarClosed();
     }
 
     public void runPackageDoctor() {

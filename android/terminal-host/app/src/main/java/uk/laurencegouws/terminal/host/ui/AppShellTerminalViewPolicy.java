@@ -10,6 +10,10 @@ import java.util.Objects;
  * and future harness callers re-assert the active terminal shell view through this owner
  * rather than invoking {@link AppShellNavigation} activation ad hoc.</p>
  *
+ * <p>Chrome drawer sidebar policy ({@link #chromeDrawerSidebarOpen},
+ * {@link #applyChromeDrawerSidebarOpen}, {@link #applyChromeDrawerSidebarClosed}) is forwarded
+ * here so {@link ChromeBridge} does not take a raw {@link AppShellNavigation} reference.</p>
+ *
  * <p>Future multi-view / tab hosting extends this policy type with explicit methods; it does
  * not add tab UI or product behavior by itself.</p>
  */
@@ -20,16 +24,26 @@ public final class AppShellTerminalViewPolicy {
         this.appShellNavigation = Objects.requireNonNull(appShellNavigation, "appShellNavigation");
     }
 
-    /** Harness navigation state (drawer, active shell view); chrome and shell-state readers use this. */
-    public AppShellNavigation appShellNavigation() {
-        return appShellNavigation;
-    }
-
     /**
      * Re-asserts the resolved product-terminal shell view as the active app-shell view without
      * re-running slot mapping or {@link TerminalWidgetSlotId#checkActiveProductTerminalSlot}.
      */
     public void applyActiveProductTerminalShellView() {
         appShellNavigation.applyProductTerminalShellViewActive();
+    }
+
+    /** Whether the slide-out chrome drawer sidebar is open (visible). */
+    public boolean chromeDrawerSidebarOpen() {
+        return appShellNavigation.chromeDrawerSidebarOpen();
+    }
+
+    /** Records chrome policy: drawer sidebar should be open. */
+    public void applyChromeDrawerSidebarOpen() {
+        appShellNavigation.applyChromeDrawerSidebarOpen();
+    }
+
+    /** Records chrome policy: drawer sidebar should be closed. */
+    public void applyChromeDrawerSidebarClosed() {
+        appShellNavigation.applyChromeDrawerSidebarClosed();
     }
 }

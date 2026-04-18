@@ -149,7 +149,7 @@ public final class WidgetAssembly {
         final SurfaceWidgetControllerRef surfaceWidgetControllerRef = new SurfaceWidgetControllerRef();
         final ChromeController terminalChromeController = createChromeController(
                 host,
-                appShellNavigation);
+                appShellTerminalViewPolicy);
 
         final ViewModeController terminalViewModeController =
                 createViewModeController(host, appShellTerminalViewPolicy);
@@ -181,7 +181,7 @@ public final class WidgetAssembly {
 
     private static ChromeController createChromeController(
             Host host,
-            AppShellNavigation appShellNavigation) {
+            AppShellTerminalViewPolicy appShellTerminalViewPolicy) {
         return new ChromeController(
                 ChromeFactory.createChromeHostBridge(
                         host.harnessContext(),
@@ -189,7 +189,7 @@ public final class WidgetAssembly {
                         host.drawerScrim(),
                         host.drawerEdgeHotspot(),
                         host.drawerSidebar(),
-                        appShellNavigation,
+                        appShellTerminalViewPolicy,
                         ChromeFactory.createChromeHostCallbacks(
                                 host::requestPackageDiagnostics,
                                 host::appendEvent,

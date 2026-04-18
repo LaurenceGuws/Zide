@@ -30,7 +30,7 @@ public final class ChromeFactory {
             View drawerScrim,
             View drawerEdgeHotspot,
             View leftSidebar,
-            AppShellNavigation appShellNavigation,
+            AppShellTerminalViewPolicy appShellTerminalViewPolicy,
             ChromeBridge.Callbacks callbacks) {
         return new ChromeBridge(
                 context,
@@ -38,7 +38,7 @@ public final class ChromeFactory {
                 drawerScrim,
                 drawerEdgeHotspot,
                 leftSidebar,
-                appShellNavigation,
+                appShellTerminalViewPolicy,
                 callbacks);
     }
 

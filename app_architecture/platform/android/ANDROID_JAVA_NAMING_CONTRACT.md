@@ -99,8 +99,8 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
   paths use `applyProductTerminalShellViewActive`; `AppShellViewState` construction
   rejects null `ShellViewId` at harness boundaries (contract checks, not product tabs)
 - chrome drawer sidebar: use `applyChromeDrawerSidebarOpen` /
-  `applyChromeDrawerSidebarClosed` on `AppShellNavigation` (and matching
-  `ChromeController.Host` methods) — no generic boolean sidebar setter
+  `applyChromeDrawerSidebarClosed` on `AppShellTerminalViewPolicy` (delegates to
+  `AppShellNavigation`; matching `ChromeController.Host` methods) — no generic boolean sidebar setter
 - chrome IME visibility on `ChromeController.Host`: `chromeImeVisibilityPresent`,
   `applyChromeImeVisibilityHidden`, `applyChromeImeVisibilityFromOpenAttempt` — no
   generic boolean `setImeVisible` on that seam; `ChromeFactory` takes
