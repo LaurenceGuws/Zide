@@ -34,9 +34,9 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B14` is `in_progress` and is the only active macro batch.
+Engineer delivery for `AHW-B14` is complete; batch status is `verdict_pending` pending Architect review. No macro batch is `in_progress` until the Architect refocuses the queue after verdict.
 
-Active batch queue line (exact):
+Reference queue line (exact) for the completed batch:
 
 - narrow chrome IME visibility mutation APIs to explicit policy methods while preserving behavior
 
@@ -76,10 +76,9 @@ preserving active-view/sidebar ownership, slot mapping, and navigation model.
 
 ## Internal Milestones
 
-Execute `AHW14-M1` through `AHW14-M6` sequentially; do not stop before the
-`AHW-B14` super-gate unless a hard stop condition is hit.
+`AHW14-M1` through `AHW14-M6` are complete; the `AHW-B14` super-gate has been reached. Progress is recorded in `docs/todo/android/implementation.md`.
 
-Execute in order and mark progress in `docs/todo/android/implementation.md`.
+Historical execution order (for the next engineer session after Architect refocus):
 
 - `AHW14-M1`: audit IME visibility mutation entry points; classify policy-owned vs ad-hoc paths.
 - `AHW14-M2`: replace broad IME visibility boolean setter with explicit policy methods.

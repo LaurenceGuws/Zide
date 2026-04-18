@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android harness/widget portability hardening** (`AHW`) — turns the refocus vision into enforceable code shape: Android Harness is the platform/app-shell canvas, Terminal Widget is the portable terminal consumer, and userland stays movable for future IDE/editor modes.
-- Active macro batch (`in_progress`): `AHW-B14` — chrome IME visibility mutation policy narrowing, behavior-neutral.
+- Engineer delivery complete; Architect verdict pending: `AHW-B14` — chrome IME visibility mutation policy narrowing, behavior-neutral. No macro batch is `in_progress` until Architect refocus.
 - Prior closed/escalated: `AHW-B13` accepted; `AHW-B12` accepted; `AHW-B11` accepted; `AHW-B10` accepted; `AHW-B9` accepted; `AHW-B8` accepted; `AHW-B7` accepted; `AHW-B6` accepted; `AHW-B5` accepted; `AHW-B4` accepted; `AHW-B3` accepted; `AHW-B2` accepted; `AHW-B1` accepted; `ASF-M3` escalated remaining IME/assist and touch-gesture matrix rows to operator evidence; `ASF-M2`; `ASF-M1`; `AX-M5`; `AX-M4`
 - Active queue authority: `docs/todo/android/implementation.md`
 - Engineer entrypoint (dual mode): `docs/todo/android/ENGINEER_ENTRYPOINT.md`
@@ -16,7 +16,7 @@ Session entrypoint only. Keep this file short and current.
 Architect session seed:
 
 - Read `docs/todo/android/implementation.md` first.
-- Confirm the macro batch marked `in_progress`.
+- Confirm the macro batch marked `in_progress` (none until refocus after `AHW-B14` verdict).
 - Review the Engineer's completed batch only when they report the super-gate or a hard blocker.
 - After review acceptance, immediately refocus the queue, handoff, and engineer entrypoint to the next macro batch.
 
@@ -24,9 +24,9 @@ Engineer session seed:
 
 - Read `docs/todo/android/ENGINEER_ENTRYPOINT.md`, then
   `docs/todo/android/implementation.md`, then this handoff file.
-- Execute only the macro batch currently marked `in_progress` in
-  `docs/todo/android/implementation.md` (`AHW-B14`).
-- Stop at the `AHW-B14` super-gate and return the review packet for Architect verdict.
+- After Architect refocus, execute only the macro batch marked `in_progress` in
+  `docs/todo/android/implementation.md`.
+- The prior `AHW-B14` engineer run stopped at super-gate; await Architect verdict before new execution.
 
 ## First Read Order
 
