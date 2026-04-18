@@ -98,7 +98,7 @@ Dual-mode batching override (architect directive):
 - `ASF-M3` escalated stabilization follow-through to operator evidence.
 - `AHW-B1` through `AHW-B23` accepted by architect.
 - Keep-screen-on seam work beyond `AHW-B20` is frozen by product direction.
-- `AHW-B24` is `in_progress`.
+- `AHW-B24` is at super-gate (awaiting architect verdict).
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -298,7 +298,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B24` App-shell Terminal-View Policy Foundation (`in_progress`)
+### `AHW-B24` App-shell Terminal-View Policy Foundation (`awaiting_architect_review`)
 
 Batch queue line (exact):
 
@@ -351,7 +351,7 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `AHW-B24` super-gate is reached.
 
-### `AHW24-M1` Terminal-view policy seam audit (`pending`)
+### `AHW24-M1` Terminal-view policy seam audit (`complete`)
 
 Queue line (exact):
 
@@ -363,7 +363,14 @@ Acceptance:
 - define policy owner vs adapter-only surfaces
 - record invariants and out-of-scope seams
 
-### `AHW24-M2` Policy seam introduction (`pending`)
+**M1 audit (authoritative for B24):**
+
+- **Activation mutation entry points:** (1) `AppShellNavigation` private constructor seeds `activeShellView` via `replaceActiveShellView(productTerminalShellViewId)` after `forProductTerminalSlot` → `ProductTerminalSlotShellMapping.shellViewIdForTerminalSlot`. (2) Steady-state re-assert: `ViewModeController.applyCurrentViewMode` (only callsite of terminal shell view activation besides ctor seeding) must invoke the product-terminal active view without re-running slot mapping.
+- **Policy owner vs adapter-only:** `AppShellNavigation` remains the owner of active `ShellViewId`, drawer sidebar flags, and `applyProductTerminalShellViewActive`. Chrome/input bridges are adapter-only over that navigation state. **New:** `AppShellTerminalViewPolicy` is the explicit harness **terminal-view activation policy** seam (delegates to `applyProductTerminalShellViewActive`); view-mode and `WidgetHarnessHostControllers` use it so future tab/shell policy extends one type.
+- **Invariants:** slot→`ShellViewId` resolution still exactly once per `AppShellNavigation.forProductTerminalSlot` in `WidgetAssembly.assemble`; chrome still receives the same `AppShellNavigation` instance via `AppShellTerminalViewPolicy.appShellNavigation()`. No new `ShellViewId` literals outside `ProductTerminalSlotShellMapping` for product routing.
+- **Out of scope:** tab UI, multi-instance product behavior, slot on `InteractionAssembly.Result`, per-slot chrome threading, keep-screen-on, startup order, B14–B23 IME/widget contracts.
+
+### `AHW24-M2` Policy seam introduction (`complete`)
 
 Queue line (exact):
 
@@ -375,7 +382,7 @@ Acceptance:
 - avoid widening activity globals or adding fallback compatibility paths
 - compile debug + release Java after code changes
 
-### `AHW24-M3` Consumer rewiring (`pending`)
+### `AHW24-M3` Consumer rewiring (`complete`)
 
 Queue line (exact):
 
@@ -387,7 +394,7 @@ Acceptance:
 - single-terminal runtime behavior remains unchanged
 - compile debug + release Java after code changes
 
-### `AHW24-M4` Contract docs lock (`pending`)
+### `AHW24-M4` Contract docs lock (`complete`)
 
 Queue line (exact):
 
@@ -398,7 +405,7 @@ Acceptance:
 - host structure and naming contract match code shape
 - userland contract remains unchanged unless ownership text requires update
 
-### `AHW24-M5` Queue/handoff/entrypoint sync (`pending`)
+### `AHW24-M5` Queue/handoff/entrypoint sync (`complete`)
 
 Queue line (exact):
 
@@ -409,7 +416,7 @@ Acceptance:
 - queue, handoff, and engineer entrypoint stay coherent through B24 super-gate
 - super-gate stop condition and review packet contract are explicit
 
-### `AHW24-M6` Batch validation + review packet (`pending`)
+### `AHW24-M6` Batch validation + review packet (`complete`)
 
 Queue line (exact):
 
@@ -421,6 +428,16 @@ Acceptance:
 - deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
 - cold start smoke pass when a device is available
 - engineer reports the full super-gate packet and stops for Architect review
+
+**AHW-B24 engineer validation record (M6):**
+
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac` — pass
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac` — pass
+- `python3 ops/android_terminal_host.py deploy` — pass (streamed install, activity start)
+- `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E` — pass (no `AndroidRuntime:E` lines; benign duplicate-top warning when activity already foreground)
+- `adb shell am force-stop uk.laurencegouws.zide && adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity` — pass (`LaunchState: COLD`, `Status: ok`)
+
+`Milestone reached per docs, architect review required.`
 
 ## Guardrails
 

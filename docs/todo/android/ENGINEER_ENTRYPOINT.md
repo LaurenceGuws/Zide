@@ -34,7 +34,7 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B24` is `in_progress`.
+`AHW-B24` is at **super-gate** (engineer execution complete; awaiting architect verdict on the review packet). Do not start the next macro batch until the Architect accepts the gate and refocuses `docs/todo/android/implementation.md`.
 
 Active batch queue line (exact):
 
@@ -65,6 +65,7 @@ while preserving existing IME/slot/chrome/widget/startup-wiring contracts and be
 - Execute `AHW-B24` as a non keep-screen-on batch.
 - Keep `ProductHostActivityStartupWiring`, `ProductTerminalLifecycleHost`, and `ProductTerminalWidgetAssemblyHost` ownership from B22 unchanged.
 - Keep `ProductHostOnCreateStartupCoordinator` + `ProductHostOnCreateStartupSteps` as the startup choreography seam from B23.
+- Keep `AppShellTerminalViewPolicy` as the explicit app-shell terminal-view activation policy seam (B24); `ViewModeController` applies active terminal shell view through it; chrome still reads `AppShellNavigation` via `appShellNavigation()` on that policy.
 - Keep `ProductHostKeepScreenOnPolicy` as the long-term owner of terminal keep-screen-on default policy.
 - Keep `HostImeStateAccess` as the long-term host callback IME seam backed by `ProductHostImeState`.
 - Keep `ProductHostImeState` as the long-term activity IME carrier.
