@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android harness/widget portability hardening** (`AHW`) — turns the refocus vision into enforceable code shape: Android Harness is the platform/app-shell canvas, Terminal Widget is the portable terminal consumer, and userland stays movable for future IDE/editor modes.
-- Active macro batch (`in_progress`): `AHW-B25` — narrow app-shell policy surface so consumers stop depending on raw `AppShellNavigation` exposure while preserving single-terminal behavior.
+- Active macro batch (`awaiting_architect_review`): `AHW-B25` — removed public `AppShellNavigation` leak from `AppShellTerminalViewPolicy`; chrome drawer policy + `ChromeBridge` use explicit policy methods; engineer stopped at super-gate for architect verdict.
 - Prior closed/escalated: `AHW-B1` through `AHW-B24` accepted; `ASF-M3` escalated IME/assist/touch rows to operator evidence; `RF-M0` through `RF-M5` and `AX-M1` through `AX-M5` completed.
 - Active queue authority: `docs/todo/android/implementation.md`
 - Engineer entrypoint (dual mode): `docs/todo/android/ENGINEER_ENTRYPOINT.md`
@@ -58,7 +58,7 @@ Engineer session seed:
 - `AHW-B22` is accepted: startup callback assembly moved into named host/ui owners without behavior change.
 - `AHW-B23` is accepted: onCreate startup choreography is owned by `ProductHostOnCreateStartupCoordinator` + `ProductHostOnCreateStartupSteps`.
 - `AHW-B24` is accepted: explicit app-shell terminal-view activation policy is owned by `AppShellTerminalViewPolicy` (wraps `AppShellNavigation`).
-- `AHW-B25` scope is non keep-screen-on: narrow raw navigation exposure behind explicit `AppShellTerminalViewPolicy` methods while preserving single-terminal behavior.
+- `AHW-B25` scope is non keep-screen-on: `AppShellTerminalViewPolicy` owns drawer sidebar policy forwarding and terminal-view activation; consumers do not take raw `AppShellNavigation` through the policy surface.
 - Keep `ProductHostKeepScreenOnPolicy` as the long-term owner of terminal keep-screen-on default policy.
 - Keep `HostImeStateAccess` as the long-term host callback IME seam (backed by `ProductHostImeState`).
 - Keep `ProductHostImeState` as the long-term activity IME carrier.

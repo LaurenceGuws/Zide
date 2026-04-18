@@ -98,7 +98,7 @@ Dual-mode batching override (architect directive):
 - `ASF-M3` escalated stabilization follow-through to operator evidence.
 - `AHW-B1` through `AHW-B24` accepted by architect.
 - Keep-screen-on seam work beyond `AHW-B20` is frozen by product direction.
-- `AHW-B25` is `in_progress`.
+- `AHW-B25` is at super-gate (awaiting architect verdict).
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -452,7 +452,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B25` App-shell Policy Surface Narrowing (`in_progress`)
+### `AHW-B25` App-shell Policy Surface Narrowing (`awaiting_architect_review`)
 
 Batch queue line (exact):
 
@@ -505,7 +505,7 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `AHW-B25` super-gate is reached.
 
-### `AHW25-M1` Raw navigation exposure audit (`pending`)
+### `AHW25-M1` Raw navigation exposure audit (`complete`)
 
 Queue line (exact):
 
@@ -517,7 +517,14 @@ Acceptance:
 - define minimal explicit policy methods needed for current behavior
 - record out-of-scope seams
 
-### `AHW25-M2` Policy API expansion (`pending`)
+**M1 audit (authoritative for B25):**
+
+- **Consumers of `appShellNavigation()` (B24):** none outside `AppShellTerminalViewPolicy` itself; javadoc on `WidgetHarnessHostControllers` only referenced the accessor. **Avoidable leakage:** public `appShellNavigation()` invited harness consumers to depend on raw `AppShellNavigation`.
+- **Chrome path:** `ChromeBridge` held `AppShellNavigation` only for `chromeDrawerSidebarOpen` / `applyChromeDrawerSidebarOpen` / `applyChromeDrawerSidebarClosed` — three forwards, replaceable with explicit methods on `AppShellTerminalViewPolicy`.
+- **Minimal explicit methods:** terminal activation (existing `applyActiveProductTerminalShellView`) plus the three drawer sidebar methods mirroring `AppShellNavigation` names.
+- **Out of scope:** `AppShellNavigation` construction in `WidgetAssembly` (still `forProductTerminalSlot` once), `AppShellViewState` / `activeViewState()` (no harness consumer outside navigation internals), slot/chrome threading, IME seams, startup order.
+
+### `AHW25-M2` Policy API expansion (`complete`)
 
 Queue line (exact):
 
@@ -529,7 +536,7 @@ Acceptance:
 - keep behavior unchanged and avoid compatibility fallback paths
 - compile debug + release Java after code changes
 
-### `AHW25-M3` Consumer rewiring (`pending`)
+### `AHW25-M3` Consumer rewiring (`complete`)
 
 Queue line (exact):
 
@@ -541,7 +548,7 @@ Acceptance:
 - single-terminal runtime behavior remains unchanged
 - compile debug + release Java after code changes
 
-### `AHW25-M4` Contract docs lock (`pending`)
+### `AHW25-M4` Contract docs lock (`complete`)
 
 Queue line (exact):
 
@@ -552,7 +559,7 @@ Acceptance:
 - host structure and naming contract match code shape
 - userland contract remains unchanged unless ownership text requires update
 
-### `AHW25-M5` Queue/handoff/entrypoint sync (`pending`)
+### `AHW25-M5` Queue/handoff/entrypoint sync (`complete`)
 
 Queue line (exact):
 
@@ -563,7 +570,7 @@ Acceptance:
 - queue, handoff, and engineer entrypoint stay coherent through B25 super-gate
 - super-gate stop condition and review packet contract are explicit
 
-### `AHW25-M6` Batch validation + review packet (`pending`)
+### `AHW25-M6` Batch validation + review packet (`complete`)
 
 Queue line (exact):
 
@@ -575,6 +582,16 @@ Acceptance:
 - deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
 - cold start smoke pass when a device is available
 - engineer reports the full super-gate packet and stops for Architect review
+
+**AHW-B25 engineer validation record (M6):**
+
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac` — pass
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac` — pass
+- `python3 ops/android_terminal_host.py deploy` — pass (streamed install, activity start)
+- `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E` — pass (no `AndroidRuntime:E` lines; benign duplicate-top warning when activity already foreground)
+- `adb shell am force-stop uk.laurencegouws.zide && adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity` — pass (`LaunchState: COLD`, `Status: ok`)
+
+`Milestone reached per docs, architect review required.`
 
 ## Guardrails
 
