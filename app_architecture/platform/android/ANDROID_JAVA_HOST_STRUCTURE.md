@@ -138,6 +138,9 @@ product wiring uses `applyProductTerminalShellViewActive` and internal
 Chrome drawer sidebar open/close is recorded with `applyChromeDrawerSidebarOpen` /
 `applyChromeDrawerSidebarClosed` (no generic boolean sidebar setter). `ChromeBridge`
 forwards those policy methods to `AppShellNavigation` for `ChromeController`.
+On `ChromeController.Host`, IME visibility uses `chromeImeVisibilityPresent`,
+`applyChromeImeVisibilityHidden`, and `applyChromeImeVisibilityFromOpenAttempt` — no
+generic boolean `setImeVisible` on the chrome host seam.
 These are harness contract checks only — they do not add tab or multi-instance
 product behavior.
 
@@ -219,11 +222,11 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/ui/ShellViewId.java` | Good | Enum of harness shell content slots; tab-ready identity vocabulary; product routing from slot uses `ProductTerminalSlotShellMapping`. | Extend only when multi-view hosting lands; keep names product-neutral. |
 | `host/ui/AppShellViewState.java` | Good | Per-shell-view state row; `id` is non-null (`Objects.requireNonNull`); selection + reserved content-ready bit for future multi-view chrome. | Keep immutable; do not embed widget types. |
 | `host/ui/AppShellNavigation.java` | Good | Owns chrome drawer sidebar state + active `ShellViewId`; shell view: `applyProductTerminalShellViewActive` + private `replaceActiveShellView`; drawer sidebar: `applyChromeDrawerSidebarOpen` / `applyChromeDrawerSidebarClosed`; product wiring uses `forProductTerminalSlot`. | Keep harness-only; explicit policy methods only, not generic boolean setters. |
-| `host/ui/ChromeBridge.java` | Good | Owns chrome callback adaptation and assist-button/modifier-latch view presentation wiring; forwards drawer sidebar policy to `AppShellNavigation` (`chromeDrawerSidebarOpen`, apply open/closed). | Keep as adapter-only for chrome behavior in `host/ui/ChromeController`. |
+| `host/ui/ChromeBridge.java` | Good | Owns chrome callback adaptation and assist-button/modifier-latch view presentation wiring; forwards drawer sidebar policy to `AppShellNavigation`; IME visibility policy methods on `ChromeController.Host` delegate through `Callbacks` to activity-backed suppliers. | Keep as adapter-only for chrome behavior in `host/ui/ChromeController`. |
 | `host/ui/ChromeCallbacks.java` | Removed | Relay adapter was collapsed; `ChromeFactory` now provides `ChromeBridge.Callbacks` directly. | Keep chrome behavior in `host/ui/ChromeController`; avoid reintroducing callback pass-through classes without measurable coupling reduction. |
 | `host/userland/ShellStateBridge.java` | Good | Owns product-shell-state presenter callback adaptation and blocker/overlay view binding. | Keep presentation behavior in `userland/ShellStatePresenter`; keep this adapter thin. |
 | `host/userland/ShellStateCallbacks.java` | Good | Functional callback adapter from activity state into `host/userland/ShellStateBridge`. | Keep adapter-only; shell-state presentation behavior remains in `ShellStatePresenter`. |
-| `host/ui/ChromeController.java` | Watch | Coherent and improving; chrome stays slot-agnostic at type level. Ownership remains broad across sidebar, assist bar, view mode, and IME trigger policy. | Keep watch status; split assist-bar/sidebar only if either grows more behavior. |
+| `host/ui/ChromeController.java` | Watch | Coherent and improving; chrome stays slot-agnostic at type level. Sidebar + IME visibility mutations go through explicit `Host` policy methods (`chromeDrawerSidebar*`, `chromeImeVisibility*`, `apply*`). | Keep watch status; split assist-bar/sidebar only if either grows more behavior. |
 | `host/runtime/RuntimeAssetsBridge.java` | Good | Owns runtime-assets host callback adaptation from activity into `host/runtime/RuntimeAssetsController`. | Keep asset staging behavior in `host/runtime/RuntimeAssetsController`; keep this adapter callback-only. |
 | `host/runtime/RuntimeAssetsCallbacks.java` | Good | Functional callback adapter from activity actions into `host/runtime/RuntimeAssetsBridge`. | Keep adapter-only; runtime-asset behavior stays in `host/runtime/RuntimeAssetsController`. |
 | `host/runtime/RuntimeAssetsController.java` | Good | Owns font asset staging and userland release loading. | Keep install/update and prefix extraction in `userland`. |

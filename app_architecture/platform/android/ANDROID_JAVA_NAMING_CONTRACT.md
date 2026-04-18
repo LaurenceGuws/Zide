@@ -99,6 +99,10 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
 - chrome drawer sidebar: use `applyChromeDrawerSidebarOpen` /
   `applyChromeDrawerSidebarClosed` on `AppShellNavigation` (and matching
   `ChromeController.Host` methods) — no generic boolean sidebar setter
+- chrome IME visibility on `ChromeController.Host`: `chromeImeVisibilityPresent`,
+  `applyChromeImeVisibilityHidden`, `applyChromeImeVisibilityFromOpenAttempt` — no
+  generic boolean `setImeVisible` on that seam (activity wiring may still use narrow
+  suppliers behind `ChromeFactory`)
 - in `ZideActivity`, use one authoritative `static final` slot field (e.g.
   `ACTIVE_PRODUCT_TERMINAL_SLOT`) for interaction/widget/composition wiring
   instead of repeating `PRIMARY` literals
