@@ -1,5 +1,6 @@
 const kitty_mod = @import("../kitty/graphics.zig");
 const terminal_core_mod = @import("terminal_core.zig");
+const engine_core_face = @import("engine_core_face.zig");
 
 const ScrollAction = terminal_core_mod.TerminalCore.ScrollAction;
 
@@ -18,10 +19,7 @@ pub fn consumeScrollAction(self: anytype, action: ScrollAction) void {
 }
 
 pub fn scrollRegionUpWithOrigin(self: anytype, count: usize, origin: ?[]const u8) void {
-    const core = if (@hasField(@TypeOf(self.*), "active") and @hasField(@TypeOf(self.*), "history"))
-        self
-    else
-        self.core;
+    const core = engine_core_face.mutableTerminalCore(self);
     const screen = core.activeScreen();
     const cols = @as(usize, screen.grid.cols);
     if (cols == 0 or screen.grid.rows == 0) return;
@@ -46,10 +44,7 @@ pub fn scrollRegionUp(self: anytype, count: usize) void {
 }
 
 pub fn scrollRegionDown(self: anytype, count: usize) void {
-    const core = if (@hasField(@TypeOf(self.*), "active") and @hasField(@TypeOf(self.*), "history"))
-        self
-    else
-        self.core;
+    const core = engine_core_face.mutableTerminalCore(self);
     const screen = core.activeScreen();
     const cols = @as(usize, screen.grid.cols);
     if (cols == 0 or screen.grid.rows == 0) return;
@@ -61,10 +56,7 @@ pub fn scrollRegionDown(self: anytype, count: usize) void {
 }
 
 pub fn scrollUp(self: anytype) void {
-    const core = if (@hasField(@TypeOf(self.*), "active") and @hasField(@TypeOf(self.*), "history"))
-        self
-    else
-        self.core;
+    const core = engine_core_face.mutableTerminalCore(self);
     const screen = core.activeScreen();
     const cols = @as(usize, screen.grid.cols);
     const rows = @as(usize, screen.grid.rows);
@@ -82,18 +74,12 @@ pub fn scrollUp(self: anytype) void {
 }
 
 fn isFullScrollRegion(self: anytype) bool {
-    const core = if (@hasField(@TypeOf(self.*), "active") and @hasField(@TypeOf(self.*), "history"))
-        self
-    else
-        self.core;
+    const core = engine_core_face.mutableTerminalCore(self);
     return core.activeScreenConst().isFullScrollRegion();
 }
 
 fn isTopAnchoredFullWidthRegion(self: anytype) bool {
-    const core = if (@hasField(@TypeOf(self.*), "active") and @hasField(@TypeOf(self.*), "history"))
-        self
-    else
-        self.core;
+    const core = engine_core_face.mutableTerminalCore(self);
     const screen = core.activeScreenConst();
     if (core.active == .alt) return false;
     if (screen.scroll_top != 0) return false;
@@ -106,10 +92,7 @@ fn isTopAnchoredFullWidthRegion(self: anytype) bool {
 fn regionFeedsScrollback(self: anytype) bool {
     const full_region = isFullScrollRegion(self);
     const top_anchored = isTopAnchoredFullWidthRegion(self);
-    const core = if (@hasField(@TypeOf(self.*), "active") and @hasField(@TypeOf(self.*), "history"))
-        self
-    else
-        self.core;
+    const core = engine_core_face.mutableTerminalCore(self);
     if (core.sync_updates_active) {
         return top_anchored and !full_region;
     }
@@ -117,10 +100,7 @@ fn regionFeedsScrollback(self: anytype) bool {
 }
 
 fn pushScrollbackRow(self: anytype, row: usize) void {
-    const core = if (@hasField(@TypeOf(self.*), "active") and @hasField(@TypeOf(self.*), "history"))
-        self
-    else
-        self.core;
+    const core = engine_core_face.mutableTerminalCore(self);
     if (core.active == .alt) return;
     const screen = &core.primary;
     const cols = @as(usize, screen.grid.cols);
