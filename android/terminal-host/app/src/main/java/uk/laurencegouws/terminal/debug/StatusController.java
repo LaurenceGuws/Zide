@@ -128,4 +128,9 @@ public final class StatusController {
         appendEvent("packages.edge_install.outcome success=" + success);
         updateStatus(success ? "packages.edge_install.state" : "packages.edge_install.failed_state");
     }
+
+    public void recordAndroidEdgeTestBinaryInstallNoCandidate() {
+        appendEvent("packages.edge_install.outcome success=false reason=no_candidate");
+        updateStatus("packages.edge_install.no_candidate");
+    }
 }

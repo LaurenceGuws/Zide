@@ -104,4 +104,9 @@ public final class WorkflowAssemblyCallbacks implements WorkflowAssembly.Host {
         edgeTestBinaryInstallState.markComplete(success);
     }
 
+    @Override
+    public void markAndroidEdgeTestBinaryInstallNoCandidate() {
+        edgeTestBinaryInstallState.markNoCandidate();
+    }
+
 }

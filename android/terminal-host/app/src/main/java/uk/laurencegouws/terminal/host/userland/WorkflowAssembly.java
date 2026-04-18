@@ -24,6 +24,9 @@ public final class WorkflowAssembly {
     /** Functional callback for edge test-binary {@code zide-pm install} completion state. */
     public interface EdgeTestBinaryInstallStateCallback {
         void markComplete(boolean success);
+
+        /** Explicit no-candidate path after {@code list-available} parsing (not generic install failure). */
+        void markNoCandidate();
     }
 
     /** Harness callbacks required for userland workflow assembly. */

@@ -24,6 +24,7 @@ import uk.laurencegouws.terminal.host.status.StatusViewCallbacks;
 import uk.laurencegouws.terminal.host.surface.SurfaceBridge;
 import uk.laurencegouws.terminal.host.surface.SurfaceController;
 import uk.laurencegouws.terminal.host.surface.SurfaceWidgetController;
+import uk.laurencegouws.terminal.host.userland.WorkflowAssembly;
 import uk.laurencegouws.terminal.host.userland.WorkflowAssemblyCallbacks;
 import uk.laurencegouws.terminal.input.ShellInputView;
 import uk.laurencegouws.terminal.scroll.ScrollOverlayView;
@@ -147,7 +148,17 @@ public final class ProductHostActivityStartupWiring {
                 hostStartup.workflowInstall::failInstallIfReady,
                 hostStartup.runtime::restartSessionAfterInstallIfReady,
                 hostStartup.telemetry::markPackageDoctorCompleteIfReady,
-                hostStartup.telemetry::markAndroidEdgeTestBinaryInstallCompleteIfReady);
+                new WorkflowAssembly.EdgeTestBinaryInstallStateCallback() {
+                    @Override
+                    public void markComplete(boolean success) {
+                        hostStartup.telemetry.markAndroidEdgeTestBinaryInstallCompleteIfReady(success);
+                    }
+
+                    @Override
+                    public void markNoCandidate() {
+                        hostStartup.telemetry.markAndroidEdgeTestBinaryInstallNoCandidateIfReady();
+                    }
+                });
     }
 
     public static RuntimeAssemblyCallbacks runtime(
