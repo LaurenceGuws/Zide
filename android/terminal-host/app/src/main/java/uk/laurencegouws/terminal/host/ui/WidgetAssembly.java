@@ -46,6 +46,31 @@ public final class WidgetAssembly {
 
         void setImeVisible(boolean visible);
 
+        /**
+         * Harness-owned chrome IME policy inputs for {@link ChromeFactory} (narrower than raw
+         * {@code BooleanSupplier}/{@code Consumer} on the factory). Default maps host IME
+         * visibility to the chrome policy method names from B14.
+         */
+        default ChromeImePolicyInput chromeImePolicyInput() {
+            return new ChromeImePolicyInput() {
+                @Override
+                public boolean chromeImeVisibilityPresent() {
+                    return imeVisible();
+                }
+
+                @Override
+                public void applyChromeImeVisibilityHidden() {
+                    setImeVisible(false);
+                }
+
+                @Override
+                public void applyChromeImeVisibilityFromOpenAttempt(
+                        boolean softInputShown, boolean shellInputHasFocus) {
+                    setImeVisible(softInputShown || shellInputHasFocus);
+                }
+            };
+        }
+
         View rootView();
 
         View productView();
@@ -200,8 +225,7 @@ public final class WidgetAssembly {
                         ChromeFactory.createChromeHostCallbacks(
                                 host::requestPackageDiagnostics,
                                 host::appendEvent,
-                                host::imeVisible,
-                                host::setImeVisible,
+                                host.chromeImePolicyInput(),
                                 host::shellInputView,
                                 host::assistCtrlButton,
                                 host::assistAltButton,

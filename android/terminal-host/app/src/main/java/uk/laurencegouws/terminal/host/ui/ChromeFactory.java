@@ -4,7 +4,6 @@ import android.content.Context;
 import android.view.View;
 import android.widget.Button;
 
-import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -46,8 +45,7 @@ public final class ChromeFactory {
     public static ChromeBridge.Callbacks createChromeHostCallbacks(
             Runnable runPackageDoctor,
             Consumer<String> appendEvent,
-            BooleanSupplier currentImeVisible,
-            Consumer<Boolean> setImeVisible,
+            ChromeImePolicyInput chromeImePolicyInput,
             Supplier<ShellInputView> shellInputView,
             Supplier<Button> assistCtrlButton,
             Supplier<Button> assistAltButton,
@@ -66,18 +64,19 @@ public final class ChromeFactory {
 
             @Override
             public boolean chromeImeVisibilityPresent() {
-                return currentImeVisible.getAsBoolean();
+                return chromeImePolicyInput.chromeImeVisibilityPresent();
             }
 
             @Override
             public void applyChromeImeVisibilityHidden() {
-                setImeVisible.accept(false);
+                chromeImePolicyInput.applyChromeImeVisibilityHidden();
             }
 
             @Override
             public void applyChromeImeVisibilityFromOpenAttempt(
                     boolean softInputShown, boolean shellInputHasFocus) {
-                setImeVisible.accept(softInputShown || shellInputHasFocus);
+                chromeImePolicyInput.applyChromeImeVisibilityFromOpenAttempt(
+                        softInputShown, shellInputHasFocus);
             }
 
             @Override
