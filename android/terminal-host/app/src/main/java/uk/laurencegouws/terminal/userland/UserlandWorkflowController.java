@@ -25,6 +25,8 @@ public final class UserlandWorkflowController {
         void restartSessionAfterInstall(boolean logRefresh);
 
         void markPackageDoctorComplete(boolean success);
+
+        void markAndroidEdgeTestBinaryInstallComplete(boolean success);
     }
 
     private final Host host;
@@ -65,24 +67,7 @@ public final class UserlandWorkflowController {
                         host.context(), "zide-pm-doctor", "doctor", "--prefix", prefixPath);
                 final String available = UserlandCommandRunner.runZidePm(
                         host.context(), "zide-pm-list", "list-available", "--prefix", prefixPath);
-                String installReport;
-                try {
-                    final String edge = UserlandAndroidTestBinaryPolicy.edgeTestPackageSpec();
-                    final String installOut = UserlandCommandRunner.runZidePm(
-                            host.context(),
-                            "zide-pm-install-edge",
-                            "install",
-                            "--prefix",
-                            prefixPath,
-                            edge);
-                    installReport = "install " + edge + " ok\n" + installOut.trim();
-                } catch (IOException installErr) {
-                    final String detail =
-                            installErr.getMessage() == null ? installErr.getClass().getSimpleName() : installErr.getMessage();
-                    installReport = "install edge package skipped/failed: " + detail;
-                }
-                final String combined =
-                        doctor.trim() + "\n---\n" + available.trim() + "\n---\n" + installReport;
+                final String combined = doctor.trim() + "\n---\n" + available.trim();
                 host.handler().post(() -> {
                     logPackageDoctorOutput(combined);
                     host.appendEvent("packages.doctor.success");
@@ -99,10 +84,38 @@ public final class UserlandWorkflowController {
         }, "packages.doctor.state").start();
     }
 
+    public void installAndroidEdgeTestBinary() {
+        host.appendEvent("packages.edge_install.begin");
+        new Thread(() -> {
+            try {
+                final String out = UserlandAndroidTestBinaryInstallLifecycle.runEdgePackageInstall(host.context());
+                host.handler().post(() -> {
+                    logEdgeInstallOutput(out);
+                    host.appendEvent("packages.edge_install.success");
+                    host.markAndroidEdgeTestBinaryInstallComplete(true);
+                });
+            } catch (IOException err) {
+                host.handler().post(() -> {
+                    final String detail = err.getMessage() == null ? err.getClass().getSimpleName() : err.getMessage();
+                    host.appendEvent("packages.edge_install.output zide-pm failed: " + detail);
+                    host.appendEvent("packages.edge_install.failed err=" + err.getClass().getSimpleName());
+                    host.markAndroidEdgeTestBinaryInstallComplete(false);
+                });
+            }
+        }, "packages.edge_install.state").start();
+    }
+
     private void logPackageDoctorOutput(String combined) {
         final String[] lines = combined.split("\\R");
         for (int i = 0; i < lines.length; i++) {
             host.appendEvent("packages.doctor.output line=" + (i + 1) + " " + lines[i]);
+        }
+    }
+
+    private void logEdgeInstallOutput(String combined) {
+        final String[] lines = combined.split("\\R");
+        for (int i = 0; i < lines.length; i++) {
+            host.appendEvent("packages.edge_install.output line=" + (i + 1) + " " + lines[i]);
         }
     }
 }

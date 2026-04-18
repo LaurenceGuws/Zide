@@ -10,7 +10,7 @@ public final class UserlandAndroidTestBinaryPolicy {
     private UserlandAndroidTestBinaryPolicy() {
     }
 
-    /** Package spec passed to {@code zide-pm install} after doctor + list-available in Packages flow. */
+    /** Package spec passed to {@code zide-pm install} for edge test-binary installs. */
     public static String edgeTestPackageSpec() {
         return "jq";
     }
