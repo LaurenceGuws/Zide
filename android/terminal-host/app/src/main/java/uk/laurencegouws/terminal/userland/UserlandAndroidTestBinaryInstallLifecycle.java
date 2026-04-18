@@ -57,7 +57,7 @@ public final class UserlandAndroidTestBinaryInstallLifecycle {
         final List<String> any = UserlandZidePmListAvailableCandidates.parseAllFirstColumnPackageTokens(listOut);
         final Optional<String> spec =
                 UserlandZidePmListAvailableCandidates.selectLexicographicallyFirstInstallSpec(listOut);
-        if (spec.isEmpty()) {
+        if (!spec.isPresent()) {
             if (any.isEmpty()) {
                 throw new NoCandidateException(
                         NO_CANDIDATE_EMPTY_CATALOG,

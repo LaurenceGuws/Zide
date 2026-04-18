@@ -175,6 +175,9 @@ public final class ShellInputView extends View {
 
         @Override
         public boolean sendKeyEvent(KeyEvent event) {
+            if (shouldBypassImePrintableKeyEvent(event)) {
+                return false;
+            }
             if (handleKeyEvent(event)) {
                 return true;
             }
@@ -610,6 +613,20 @@ public final class ShellInputView extends View {
         final boolean latchedModifiersConsumed = ctrlLatched || altLatched;
         host.sendDirectText(chars);
         maybeClearLatchedModifiers(latchedModifiersConsumed);
+        return true;
+    }
+
+    private static boolean shouldBypassImePrintableKeyEvent(KeyEvent event) {
+        if (event.getAction() != KeyEvent.ACTION_DOWN) {
+            return false;
+        }
+        if (event.isCtrlPressed() || event.isAltPressed()) {
+            return false;
+        }
+        final int unicode = event.getUnicodeChar();
+        if (unicode == 0 || Character.isISOControl(unicode)) {
+            return false;
+        }
         return true;
     }
 }
