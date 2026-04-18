@@ -465,34 +465,13 @@ public final class SelectionController {
     }
 
     private int updateSelectionPairFromHandleDrag(CellHit hit) {
-        final CellHit anchor = selectionDragAnchorCell;
-        if (anchor == null) {
-            return -1;
-        }
-        final CellHit nextStart;
-        final CellHit nextEnd;
         if (selectionDragMode == SelectionDragMode.startHandle) {
-            if (selectionCellBefore(hit, anchor) || selectionCellEquals(hit, anchor)) {
-                nextStart = hit;
-                nextEnd = anchor;
-            } else {
-                nextStart = offsetVisibleCell(anchor, 1);
-                nextEnd = hit;
-            }
-        } else {
-            if (selectionCellBefore(anchor, hit) || selectionCellEquals(anchor, hit)) {
-                nextStart = anchor;
-                nextEnd = hit;
-            } else {
-                nextStart = hit;
-                nextEnd = offsetVisibleCell(anchor, -1);
-            }
+            return bridge.updateSelectionStartAtVisibleCell(hit.row, hit.col);
         }
-        final int startStatus = bridge.updateSelectionStartAtVisibleCell(nextStart.row, nextStart.col);
-        if (startStatus != 0) {
-            return startStatus;
+        if (selectionDragMode == SelectionDragMode.endHandle) {
+            return bridge.updateSelectionEndAtVisibleCell(hit.row, hit.col);
         }
-        return bridge.updateSelectionEndAtVisibleCell(nextEnd.row, nextEnd.col);
+        return -1;
     }
 
     private CellHit selectionDragAnchorCellForMode(SelectionDragMode dragMode) {
