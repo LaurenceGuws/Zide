@@ -24,7 +24,8 @@ public final class TerminalWidgetCompositionAssembly {
      * Joins interaction and surface host join into the portable {@link TerminalWidgetInstance}.
      * Harness chrome/shell/view-mode refs are not part of this call.
      *
-     * @param hostDeclaredTerminalWidgetSlot host-declared slot value for this join — unwrap must satisfy
+     * @param hostDeclaredTerminalWidgetSlot host-declared slot value for this join —
+     *             {@link ProductHostDeclaredTerminalWidgetSlot#terminalWidgetSlotForProductHarness()} must satisfy
      *             {@link TerminalWidgetSlotId#checkActiveProductTerminalSlot} for current product wiring
      */
     public static TerminalWidgetInstance compose(
