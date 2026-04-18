@@ -122,7 +122,8 @@ Dual-mode batching override (architect directive):
 - Completed macro batch: `AHW-B16` (accepted by Architect; activity IME state carrier seam follow-up queued in `AHW-B17`).
 - Completed macro batch: `AHW-B17` (accepted by Architect; host IME callback seam unification follow-up queued in `AHW-B18`).
 - Completed macro batch: `AHW-B18` (accepted by Architect; keep-screen-on policy seam hardening follow-up queued in `AHW-B19`).
-- Engineer delivery complete; Architect verdict pending: `AHW-B19` (terminal keep-screen-on policy seam hardening, behavior-preserving). No macro batch is `in_progress` until Architect refocuses the queue.
+- Completed macro batch: `AHW-B19` (accepted by Architect; keep-screen-on window-flag seam hardening follow-up queued in `AHW-B20`).
+- `AHW-B20` is `in_progress` (remove raw Window dependency from keep-screen-on policy seam, behavior-preserving).
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -3975,7 +3976,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B19` Terminal keep-screen-on policy seam hardening (`verdict_pending`)
+### `AHW-B19` Terminal keep-screen-on policy seam hardening (`completed`)
 
 Batch queue line (exact):
 
@@ -4097,7 +4098,7 @@ Progress delta:
 - `ANDROID_JAVA_HOST_STRUCTURE.md` app-shell invariants + table rows + `ZideActivity` row;
   `ANDROID_JAVA_NAMING_CONTRACT.md` bullet. `USERLAND_HOST_CONTRACT` unchanged.
 
-### `AHW19-M5` Queue/handoff/entrypoint sync (`completed`)
+### `AHW19-M5` Queue/handoff/entrypoint sync (`completed_in_batch`)
 
 Queue line (exact):
 
@@ -4112,7 +4113,7 @@ Progress delta:
 
 - This file, `ENGINEER_ENTRYPOINT.md`, and `AGENT_HANDOFF.md` updated for `verdict_pending`.
 
-### `AHW19-M6` Batch validation + review packet (`completed`)
+### `AHW19-M6` Batch validation + review packet (`completed_in_batch`)
 
 Queue line (exact):
 
@@ -4139,10 +4140,144 @@ Super-gate engineer packet:
 - `Validation: gradle compileDebug/Release (pass); deploy (pass); adb logcat -c + start + AndroidRuntime:E (pass, empty); cold start (pass)`
 - `Engineer updates: Blocked by Archtect review needed: true`
 
-Review questions for Architect:
+Architect review verdict:
 
-- Confirm `ProductHostKeepScreenOnPolicy` as the long-term harness seam for terminal keep-screen-on defaults.
-- Confirm next macro batch after verdict.
+- `Review chunk: AHW-B19`
+- `Verdict: accepted`
+- `Commits reviewed: f6fed432, 03f94666, a976012d, 2a8620e3`
+- `Architect validation spot-check: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
+- `Architect runtime validation spot-check: python3 ops/android_terminal_host.py deploy (pass); adb cold start (pass); adb logcat -d -s AndroidRuntime:E (pass, empty)`
+- `Engineer device validation accepted: deploy + AndroidRuntime:E smoke + cold start pass`
+- `Findings carried forward: accept ProductHostKeepScreenOnPolicy as the long-term seam owner for terminal keep-screen-on default policy. Next batch should remove raw Window dependency from this seam via explicit host window-flag access while preserving behavior.`
+
+`Milestone reached per docs, architect review required.`
+
+---
+
+### `AHW-B20` Keep-screen-on window-flag seam hardening (`in_progress`)
+
+Batch queue line (exact):
+
+- remove raw Window dependency from keep-screen-on policy seam via explicit host window-flag access while preserving default behavior
+
+Batch purpose:
+
+- keep current product behavior: terminal host keeps screen on by default while activity is open
+- keep `ProductHostKeepScreenOnPolicy` as owner of keep-screen-on policy decisions
+- replace raw `Window` parameter dependency with an explicit harness host seam
+
+Batch scope:
+
+- Java Android terminal host only, plus authority docs needed to keep contract truth current
+- primary code root:
+  `android/terminal-host/app/src/main/java/uk/laurencegouws/terminal/**`
+- allowed docs:
+  `docs/todo/android/implementation.md`,
+  `docs/todo/android/ENGINEER_ENTRYPOINT.md`,
+  `docs/AGENT_HANDOFF.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_NAMING_CONTRACT.md`,
+  `app_architecture/platform/android/USERLAND_HOST_CONTRACT.md`
+
+Batch non-goals:
+
+- no settings UI/toggle behavior
+- no terminal tabs UI/product behavior
+- no tab persistence/session switching
+- no terminal-core or shared-renderer changes
+- no app-shell UI redesign
+- no debug-view UI resurrection
+- no broad rename sweep
+- no ASF operator-evidence churn unless new evidence arrives
+
+Batch super-gate:
+
+- keep-screen-on policy seam no longer depends on raw `Window` in method signatures
+- explicit host seam owns window flag mutation for keep-screen-on
+- behavior unchanged: default keep-screen-on remains active for terminal host
+- B14-B19 IME, slot, and chrome contracts remain unchanged
+- docs reflect ownership and naming shape
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass at final seam boundary
+
+Internal milestone cadence:
+
+- Engineer executes `AHW20-M1` through `AHW20-M6` sequentially.
+- Do not stop for architect review between internal milestones.
+- Mark each internal milestone complete in this file as it lands.
+- Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
+  the `AHW-B20` super-gate is reached.
+
+### `AHW20-M1` Keep-screen-on window dependency audit (`pending`)
+
+Queue line (exact):
+
+- audit raw Window dependency and define explicit host window-flag seam
+
+Acceptance:
+
+- enumerate where keep-screen-on policy currently consumes `Window`
+- define minimum explicit host seam to remove raw window dependency
+- document invariants and out-of-scope paths
+
+### `AHW20-M2` Explicit host window-flag seam introduction (`pending`)
+
+Queue line (exact):
+
+- introduce explicit host seam type(s) for keep-screen-on window-flag mutation
+
+Acceptance:
+
+- add seam type(s) with clear naming for keep-screen-on flag application
+- keep `ProductHostKeepScreenOnPolicy` as policy owner
+- compile debug + release Java after code changes
+
+### `AHW20-M3` Policy and activity rewiring (`pending`)
+
+Queue line (exact):
+
+- rewire ProductHostKeepScreenOnPolicy and ZideActivity to consume explicit host seam
+
+Acceptance:
+
+- `ProductHostKeepScreenOnPolicy` no longer takes raw `Window` parameters
+- `ZideActivity` wires the explicit seam without behavior change
+- compile debug + release Java after code changes
+
+### `AHW20-M4` Contract docs lock (`pending`)
+
+Queue line (exact):
+
+- lock authority docs to explicit keep-screen-on window-flag seam ownership
+
+Acceptance:
+
+- host structure and naming contract match code shape
+- userland contract remains unchanged unless ownership text requires an update
+
+### `AHW20-M5` Queue/handoff/entrypoint sync (`pending`)
+
+Queue line (exact):
+
+- keep queue, handoff, and engineer entrypoint aligned to AHW-B20 execution and super-gate stop
+
+Acceptance:
+
+- queue, handoff, and engineer entrypoint stay coherent through B20 super-gate
+- super-gate stop condition and review packet contract are explicit
+
+### `AHW20-M6` Batch validation + review packet (`pending`)
+
+Queue line (exact):
+
+- validate AHW-B20 end-to-end and publish the architect review packet
+
+Acceptance:
+
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
+- cold start smoke pass when a device is available
+- engineer reports the full super-gate packet and stops for Architect review
 
 `Milestone reached per docs, architect review required.`
 
