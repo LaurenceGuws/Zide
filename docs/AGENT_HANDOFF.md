@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android product expansion** (`APX`) — build product capability on top of the closed harness/widget ownership shape.
-- Active macro batch (`architect_review_pending`): `APX-B14` — engineer delivered tab-index persistence + validation; architect verdict pending (super-gate packet in `docs/todo/android/implementation.md`).
+- Active macro batch (`in_progress`): `APX-B15` — expand tab-state into policy-owned descriptor metadata while preserving APX-B9 single-PTY restart semantics.
 - Parallel foundation lane (separate repo): `../zide-mobile-pm` may run in parallel for Android test-binary pull/install contract groundwork; Android APX remains primary until APX objectives are stable.
 - Prior closed/escalated: `AHW-B1` through `AHW-B26` accepted and `AHW` closed; `ASF-M3` escalated IME/assist/touch rows to operator evidence; `RF-M0` through `RF-M5` and `AX-M1` through `AX-M5` completed.
 - Active queue authority: `docs/todo/android/implementation.md`
@@ -57,7 +57,7 @@ Engineer session seed:
 - Architect updates use: `Blocked by humain review needed: true|false`.
 - Engineer updates use: `Blocked by Archtect review needed: true|false`.
 
-## APX-B14 Baseline
+## APX-B15 Baseline
 
 - `AHW-B20` is accepted and already keeps the test device awake by default.
 - Additional keep-screen-on seam work is frozen by product direction.
@@ -80,8 +80,9 @@ Engineer session seed:
 - `APX-B11` is accepted: terminal session/tab controls are now AppShell sidebar navigation; assist row stays input-only; APX-B10 doctor/install split unchanged.
 - `APX-B12` is reviewed with changes requested: addressed by `APX-B13` (edge install no longer lexicographs non-`zide-android-*` rows).
 - `APX-B13` is accepted: edge install candidates match `zide-android-*`; explicit `packages.edge_install.selected` and reasoned no-candidate (`empty_catalog` / `no_android_edge`) are in place.
-- `APX-B14` is at super-gate: tab index saved in `ZideActivity` `onSaveInstanceState` and seeded into `AppShellNavigation` on recreate (no synthetic `applySelectProductTerminalTab` on restore); user-driven distinct tab selection still drives APX-B9 restart.
-- Cleanup-only changes are out of scope unless they directly unblock architect acceptance of APX-B14.
+- `APX-B14` is accepted: tab index is saved/restored through `ZideActivity` and seeded into `AppShellNavigation` on recreate with no synthetic selection restart side effects.
+- `APX-B15` is in progress: tab-state metadata moves to a policy-owned descriptor surface (selected index + stable tab descriptors) while preserving current two-tab behavior and restart semantics.
+- Cleanup-only changes are out of scope unless they directly unblock APX-B15 feature delivery.
 - APX remains primary until these are stable: harness/widget split stability, clean tab-state expansion, and zide-pm real Android test-binary pull maturity.
 - After those three are stable, primary architect focus transitions to Zig-layer hygiene cleanup.
 - Keep `ProductHostKeepScreenOnPolicy` as the long-term owner of terminal keep-screen-on default policy.
@@ -100,7 +101,7 @@ Engineer session seed:
 
 ## Operator Evidence Escalation
 
-ASF did not prove IME/assist or touch gestures because no operator packets were delivered. Those rows remain parked in `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md` with owner `operator`; they do not block `APX-B14` unless new evidence reports a regression inside the active code scope.
+ASF did not prove IME/assist or touch gestures because no operator packets were delivered. Those rows remain parked in `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md` with owner `operator`; they do not block `APX-B15` unless new evidence reports a regression inside the active code scope.
 
 ## Historical Notes
 

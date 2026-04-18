@@ -34,15 +34,15 @@ you must report the mismatch.
 
 ## Current Target
 
-`APX-B14` is `architect_review_pending` (super-gate packet in `docs/todo/android/implementation.md`).
+`APX-B15` is `in_progress`.
 
 Active batch queue line (exact):
 
-- persist selected product terminal tab index across activity recreation without changing APX-B9 single-PTY restart semantics
+- expand product tab-state model into a policy-owned metadata surface (selected index + stable tab descriptors) while preserving APX-B9 single-PTY restart semantics
 
 Parallel-lane note:
 
-- `../zide-mobile-pm` may progress in parallel under a separate engineer session; this Android engineer session stays focused on APX-B14 only.
+- `../zide-mobile-pm` may progress in parallel under a separate engineer session; this Android engineer session stays focused on APX-B15 only.
 
 ## Core Boundary Rule
 
@@ -77,12 +77,13 @@ boundaries while preserving current single-terminal behavior.
 - `APX-B11` is accepted: session/tab controls are AppShell sidebar navigation (not inline above assist); assist strip stays input-only; APX-B10 contracts preserved.
 - `APX-B12` is reviewed with changes requested: hardcoded package-id coupling removed, but candidate narrowing is incomplete because list-available output can include non-edge ids.
 - `APX-B13` is accepted: edge install candidate narrowing (`zide-android-*`) and explicit selected/no-candidate status are in place.
-- `APX-B14` is feature-first: selected terminal tab index must persist across activity recreation via seeded navigation state, without synthetic startup tab-select restart.
-- `zide-mobile-pm` foundation work is allowed in parallel, but APX-B14 remains the primary in-repo execution lane here.
+- `APX-B14` is accepted: selected terminal tab index now persists across activity recreation via seeded navigation state.
+- `APX-B15` is feature-first: model tab-state metadata as a policy-owned descriptor surface while preserving two-tab behavior and APX-B9 restart semantics.
+- `zide-mobile-pm` foundation work is allowed in parallel, but APX-B15 remains the primary in-repo execution lane here.
 - `AHW-B26` is accepted and `AHW` is closed.
 - Keep harness vs surface split (`WidgetAssembly.Result.harnessHost` + `surfaceJoin`) as the baseline.
 - Freeze additional keep-screen-on seam work beyond B20 unless explicitly re-opened by product direction.
-- Execute `APX-B14` as a non keep-screen-on batch.
+- Execute `APX-B15` as a non keep-screen-on batch.
 - Keep `ProductHostActivityStartupWiring`, `ProductTerminalLifecycleHost`, and `ProductTerminalWidgetAssemblyHost` ownership from B22 unchanged.
 - Keep `ProductHostOnCreateStartupCoordinator` + `ProductHostOnCreateStartupSteps` as the startup choreography seam from B23.
 - Keep `AppShellTerminalViewPolicy` as explicit app-shell terminal-view policy seam; no public `appShellNavigation()` accessor on that type.
@@ -104,12 +105,12 @@ boundaries while preserving current single-terminal behavior.
   `InteractionAssembly.Result` yet.
 - Keep chrome slot-agnostic in this batch; do not thread slot into chrome
   construction until per-slot chrome policy is scoped.
-- `APX-B14` must preserve APX-B11 sidebar session-navigation, APX-B10 doctor/install split, and APX-B13 edge-install list parsing while adding tab-state persistence only.
+- `APX-B15` must preserve APX-B11 sidebar session-navigation, APX-B10 doctor/install split, APX-B13 edge-install list parsing, and APX-B14 restore seed behavior while adding tab-state descriptor modeling only.
 
 ## Internal Milestones
 
-Execute `APX14-M1` through `APX14-M6` sequentially; do not stop before the
-`APX-B14` super-gate unless a hard stop condition is hit.
+Execute `APX15-M1` through `APX15-M6` sequentially; do not stop before the
+`APX-B15` super-gate unless a hard stop condition is hit.
 
 Commit cadence expectation for this macro batch:
 
@@ -118,12 +119,12 @@ Commit cadence expectation for this macro batch:
 
 Execute in order and mark progress in `docs/todo/android/implementation.md`.
 
-- `APX14-M1`: audit tab-selection owners and define saved-instance-state restore boundary without synthetic selection events.
-- `APX14-M2`: add navigation construction path that accepts initial selected tab index with range guards.
-- `APX14-M3`: wire ZideActivity save/restore and pass seeded index into widget/navigation assembly.
-- `APX14-M4`: lock restart semantics: restore path should not trigger restart; distinct user tab selection still does.
-- `APX14-M5`: sync authority docs + queue + this entrypoint + `AGENT_HANDOFF`.
-- `APX14-M6`: validation ladder + architect review packet.
+- `APX15-M1`: audit current tab metadata assumptions across navigation/policy/chrome and define policy-owned descriptor surface.
+- `APX15-M2`: add tab descriptor model (stable id + label + index) on app-shell policy seam with selected-index ownership.
+- `APX15-M3`: rewire chrome/sidebar binding to consume policy descriptors without behavior changes.
+- `APX15-M4`: lock restore/restart semantics (restore seed side-effect free; distinct user select still restarts).
+- `APX15-M5`: sync authority docs + queue + this entrypoint + `AGENT_HANDOFF`.
+- `APX15-M6`: validation ladder + architect review packet.
 
 ## Allowed Work
 
@@ -215,7 +216,7 @@ when:
 - a behavior change is required where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
 - implementing terminal tabs/product behavior becomes necessary to proceed
-- the `APX-B14` super-gate is reached
+- the `APX-B15` super-gate is reached
 
 Otherwise continue autonomously with:
 
@@ -223,9 +224,9 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At `APX-B14` super-gate, report:
+At `APX-B15` super-gate, report:
 
-- review chunk name: `APX-B14`
+- review chunk name: `APX-B15`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs

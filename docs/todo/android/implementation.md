@@ -132,7 +132,8 @@ Dual-mode batching override (architect directive):
 - `APX-B11` accepted by architect.
 - `APX-B12` reviewed; changes requested (addressed in APX-B13).
 - `APX-B13` accepted by architect.
-- `APX-B14` architect review pending (super-gate packet below).
+- `APX-B14` accepted by architect.
+- `APX-B15` in progress.
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -2651,7 +2652,7 @@ Architect review verdict:
 - `Review answers: edge install must stay list-available stdout-driven and Android edge package-id narrowed (`zide-android-*`); Java manifest parsing remains out-of-scope.`
 - `Findings carried forward: no blocking regressions; APX-B10 doctor/read-only and APX-B11 sidebar/input-only assist contracts remain intact.`
 
-### `APX-B14` Product Terminal Tab-State Persistence (Activity Recreate) (`architect_review_pending`)
+### `APX-B14` Product Terminal Tab-State Persistence (Activity Recreate) (`accepted`)
 
 Batch queue line (exact):
 
@@ -2720,10 +2721,75 @@ Queue line (exact):
 #### APX-B14 super-gate packet (engineer → architect)
 
 - `Review chunk: APX-B14`
-- `Verdict: pending architect review`
-- `Commits reviewed: f717a9cb, 5d9c6645 (feature + ANDROID_JAVA_HOST_STRUCTURE); queue/handoff/entrypoint sync in the same engineer push`
+- `Verdict: accepted`
+- `Commits reviewed: f717a9cb, 5d9c6645, 82b7563d`
+- `Architect validation spot-check: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
+- `Architect runtime validation spot-check: python3 ops/android_terminal_host.py deploy (pass); adb cold start (pass, LaunchState: COLD, Status: ok); adb logcat -d -s AndroidRuntime:E (pass, empty)`
+- `Review answers: activity-recreate tab-state persistence is accepted; restore path remains a seed path with no synthetic tab-select restart side effect.`
 - `Engineer validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat -d -s AndroidRuntime:E after am start (pass, empty); adb cold start am start -W (pass, LaunchState: COLD, Status: ok)`
 - `Contract notes: restore seeds navigation only; user tab clicks still use applySelectProductTerminalTab and keep APX-B9 restart; APX-B10/B11/B13 surfaces untouched; no manifest parsing.`
+
+### `APX-B15` Tab-State Model Expansion (Policy-Owned Metadata, No PTY Change) (`in_progress`)
+
+Batch queue line (exact):
+
+- expand product tab-state model into a policy-owned metadata surface (selected index + stable tab descriptors) while preserving APX-B9 single-PTY restart semantics
+
+Batch purpose:
+
+- move fixed tab metadata ownership out of scattered UI assumptions into a dedicated app-shell policy model
+- keep selected-index persistence from APX-B14, but pair it with explicit descriptor state for future expansion
+- preserve current behavior: two tabs, sidebar controls, single PTY restart on distinct user selection only
+
+Batch super-gate:
+
+- app-shell exposes policy-owned tab descriptors and selected index through one coherent surface
+- chrome/sidebar binding consumes policy model (no hidden hardcoded assumptions outside the owner)
+- APX-B14 restore seed path remains side-effect free
+- APX-B9 restart semantics unchanged (only distinct user selection restarts)
+- APX-B10/APX-B11/APX-B13 contracts unchanged
+- compile/deploy/device smoke pass
+- docs/handoff/entrypoint aligned
+
+Internal milestone cadence:
+
+- Engineer executes `APX15-M1`–`APX15-M6`; target **5–10 validated commits** before super-gate.
+
+### `APX15-M1` Tab-state ownership audit (`pending`)
+
+Queue line (exact):
+
+- audit current tab metadata assumptions across navigation/policy/chrome and define the policy-owned descriptor surface
+
+### `APX15-M2` Policy descriptor model (`pending`)
+
+Queue line (exact):
+
+- add app-shell tab descriptor model (stable id + label + index) and keep selected-index ownership on the same policy seam
+
+### `APX15-M3` Chrome/sidebar consumption rewiring (`pending`)
+
+Queue line (exact):
+
+- rewire chrome/sidebar tab binding to consume policy descriptors without behavior changes
+
+### `APX15-M4` Restore + restart semantics lock (`pending`)
+
+Queue line (exact):
+
+- verify restore seeding is side-effect free and distinct user selection still drives APX-B9 restart path only
+
+### `APX15-M5` Docs + handoff sync (`pending`)
+
+Queue line (exact):
+
+- sync authority docs and queue/handoff/entrypoint to APX-B15 tab-state model contract wording
+
+### `APX15-M6` Validation + review packet (`pending`)
+
+Queue line (exact):
+
+- run validation ladder and publish APX-B15 super-gate packet for architect review
 
 ## Guardrails
 
