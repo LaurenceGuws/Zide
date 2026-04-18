@@ -116,6 +116,24 @@ Blocked-field naming by role:
 - Architect reports: `Blocked by humain review needed: true|false`
 - Engineer reports: `Blocked by Archtect review needed: true|false`
 
+End-of-run summary labels (mandatory):
+
+- Architect and Engineer summaries must include a `LABELS` block so humans can
+  scan planned vs confirmed state quickly.
+- Required label meanings:
+  - `Planned`: queued/in-progress scope not yet validated
+  - `Confirmed`: implemented and validated in this run
+  - `Deferred`: explicitly moved out of the current batch
+  - `Blocked`: cannot proceed without external decision/dependency
+  - `ReviewRequired`: super-gate reached, architect verdict pending
+  - `Accepted`: architect reviewed and approved
+  - `Rejected`: architect reviewed and not approved
+- Required gate tags:
+  - `in_progress`
+  - `super_gate`
+  - `architect_review_pending`
+  - `accepted`
+
 ## War-Campaign Prep
 
 When the active lane is a "war" against a broad design problem, do not start

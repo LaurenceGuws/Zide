@@ -53,6 +53,7 @@ Engineer session seed:
   `:app:compileReleaseJavaWithJavac` both must stay green under warnings-as-errors.
 - Update docs in the same wave.
 - Treat Android lane ownership as single-path in-repo code only: no external fork compatibility framing.
+- Human-readable progress labels are required in every architect/engineer update (`LABELS` block).
 - Architect updates use: `Blocked by humain review needed: true|false`.
 - Engineer updates use: `Blocked by Archtect review needed: true|false`.
 

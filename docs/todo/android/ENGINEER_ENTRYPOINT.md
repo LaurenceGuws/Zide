@@ -235,8 +235,17 @@ At `APX-B12` super-gate, report:
 
 Use exact headers:
 
+- `LABELS`
 - `#DONE`
 - `#OUTSTANDING`
 - `COMMITS`
 - `VALIDATION`
 - `Blocked by Archtect review needed: true|false`
+
+`LABELS` must include:
+
+- `Lane: android_apx`
+- `Batch: APX-Bxx`
+- `Gate: in_progress|super_gate`
+- `Focus: <one-line>`
+- `Blockers: none|<summary>`

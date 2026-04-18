@@ -68,6 +68,12 @@ step-level implementation history.
 
 Required progress fields:
 
+- `LABELS:`
+- `  - Lane: <android_apx>`
+- `  - Batch: <APX-Bxx>`
+- `  - Gate: <in_progress|super_gate>`
+- `  - Focus: <one-line feature focus>`
+- `  - Blockers: <none|summary>`
 - `Milestone: <id> <status>`
 - `Queue line (exact): <line from this file>`
 - `Scope contract: <one-line scope confirmation>`
@@ -2499,7 +2505,7 @@ Batch queue line (exact):
 Batch purpose:
 
 - remove hardcoded test-binary install coupling (`UserlandAndroidTestBinaryPolicy.edgeTestPackageSpec`)
-- select install candidate from `zide-pm list-available` output under Android host mode
+- select install candidate from `zide-pm list-available` output under Android host mode (**line-based CLI output contract; do not add Java manifest parsing in this batch**)
 - keep doctor path read-only and install mutation explicit/user-triggered
 - keep tab/session controls in AppShell sidebar and assist row input-only
 - continue APX objective (3): mature real Android test-binary pull/install behavior
