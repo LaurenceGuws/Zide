@@ -119,7 +119,7 @@ Dual-mode batching override (architect directive):
 - Completed macro batch: `AHW-B13` (accepted by Architect; chrome IME visibility policy narrowing follow-up queued in `AHW-B14`).
 - Completed macro batch: `AHW-B14` (accepted by Architect; chrome IME policy input ownership follow-up queued in `AHW-B15`).
 - Completed macro batch: `AHW-B15` (accepted by Architect; widget-host IME primitive seam narrowing follow-up queued in `AHW-B16`).
-- `AHW-B16` is `in_progress` (widget-host IME primitive seam narrowing, behavior-neutral).
+- Engineer delivery complete; Architect verdict pending: `AHW-B16` (widget-host IME primitive seam narrowing, behavior-neutral). No macro batch is `in_progress` until Architect refocuses the queue.
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -3420,7 +3420,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B16` Widget-host IME primitive seam narrowing (`in_progress`)
+### `AHW-B16` Widget-host IME primitive seam narrowing (`verdict_pending`)
 
 Batch queue line (exact):
 
@@ -3533,7 +3533,7 @@ Progress delta:
 - **`SurfaceWidgetAssemblyCallbacks`** takes `SurfaceWidgetHostImeVisibility`; **`ZideActivity`**
   widget host implements both seams from activity `imeVisible` / `setImeVisible` (private).
 
-### `AHW16-M4` Contract docs lock (`pending`)
+### `AHW16-M4` Contract docs lock (`completed`)
 
 Queue line (exact):
 
@@ -3544,7 +3544,12 @@ Acceptance:
 - host structure, naming contract, and userland contract match code shape
 - B12-B15 ownership boundaries and chrome freeze guidance remain unchanged
 
-### `AHW16-M5` Queue/handoff/entrypoint sync (`pending`)
+Progress delta:
+
+- `ANDROID_JAVA_HOST_STRUCTURE.md` app-shell invariants + table rows; `ANDROID_JAVA_NAMING_CONTRACT.md`
+  bullet. `USERLAND_HOST_CONTRACT` unchanged.
+
+### `AHW16-M5` Queue/handoff/entrypoint sync (`completed`)
 
 Queue line (exact):
 
@@ -3555,7 +3560,11 @@ Acceptance:
 - queue, handoff, and engineer entrypoint stay coherent through B16 super-gate
 - super-gate stop condition and review packet contract are explicit
 
-### `AHW16-M6` Batch validation + review packet (`pending`)
+Progress delta:
+
+- This file, `ENGINEER_ENTRYPOINT.md`, and `AGENT_HANDOFF.md` updated for `verdict_pending`.
+
+### `AHW16-M6` Batch validation + review packet (`completed`)
 
 Queue line (exact):
 
@@ -3567,6 +3576,27 @@ Acceptance:
 - deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
 - cold start smoke pass when a device is available
 - engineer reports the full super-gate packet and stops for Architect review
+
+Progress delta:
+
+- Debug/release compile pass; deploy + activity start + `AndroidRuntime:E` (empty);
+  cold start `force-stop` + `am start -W` (LaunchState `COLD`, ok).
+
+Super-gate engineer packet:
+
+- `Milestone: AHW-B16 verdict_pending`
+- `Queue line (exact): narrow WidgetAssembly.Host IME primitives to explicit non-chrome seams while preserving behavior`
+- `Scope contract: SurfaceWidgetHostImeVisibility + explicit chromeImePolicyInput on Host; B14/B15 chrome types unchanged; slot/chrome freeze unchanged`
+- `Progress delta: primitives removed from WidgetAssembly.Host; surface callbacks take named seam; ZideActivity implements both seams from private IME state`
+- `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb activity start + AndroidRuntime:E (pass, empty); adb cold start (pass)`
+- `Engineer updates: Blocked by Archtect review needed: true`
+
+Review questions for Architect:
+
+- Confirm `SurfaceWidgetHostImeVisibility` + required `chromeImePolicyInput()` on `WidgetAssembly.Host` as the long-term widget-host IME shape.
+- Confirm next macro batch after verdict.
+
+`Milestone reached per docs, architect review required.`
 
 ## Guardrails
 

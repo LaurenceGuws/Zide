@@ -34,9 +34,9 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B16` is `in_progress` and is the only active macro batch.
+Engineer delivery for `AHW-B16` is complete; batch status is `verdict_pending` pending Architect review. No macro batch is `in_progress` until the Architect refocuses the queue after verdict.
 
-Active batch queue line (exact):
+Reference queue line (exact) for the completed batch:
 
 - narrow WidgetAssembly.Host IME primitives to explicit non-chrome seams while preserving behavior
 
@@ -78,10 +78,9 @@ chrome policy seams and existing active-view/sidebar ownership.
 
 ## Internal Milestones
 
-Execute `AHW16-M1` through `AHW16-M6` sequentially; do not stop before the
-`AHW-B16` super-gate unless a hard stop condition is hit.
+`AHW16-M1` through `AHW16-M6` are complete; the `AHW-B16` super-gate has been reached. Progress is recorded in `docs/todo/android/implementation.md`.
 
-Execute in order and mark progress in `docs/todo/android/implementation.md`.
+Historical execution order (for the next engineer session after Architect refocus):
 
 - `AHW16-M1`: audit WidgetAssembly.Host IME primitive callsites and define explicit replacement seams.
 - `AHW16-M2`: introduce explicit non-chrome IME seam(s) on WidgetAssembly.Host.
