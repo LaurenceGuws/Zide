@@ -29,7 +29,7 @@ harness concern unless a future milestone explicitly scopes userland per
 workspace. App-shell **selection** of which terminal slot is routed for shell view
 is harness-owned (immutable `ProductHostDeclaredTerminalWidgetSlot` feeds
   `AppShellTerminalHostSelectionContext` carrying `DeclaredTerminalWidgetSlotCatalog` +
-  `AppShellTerminalSelectionPolicy` selection);
+  `AppShellTerminalSelectionPolicy` selection, and the same value crosses interaction/widget/composition startup APIs);
 userland does not branch on slot identity. Widget-facing seams stay in `host` + `TerminalWidgetInstance`; this
 document does not change when the harness hosts multiple terminal surfaces.
 

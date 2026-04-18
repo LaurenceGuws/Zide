@@ -81,9 +81,10 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
 - reserve **slot** / **per-instance** vocabulary for future multi-terminal
   hosting described in `ANDROID_JAVA_HOST_STRUCTURE.md` (contract only; no tab
   product behavior implied by the name alone)
-- use `TerminalWidgetSlotId` on `InteractionAssembly.Host` and
-  `WidgetAssembly.Host`; pass the same slot into `TerminalWidgetCompositionAssembly.compose`
-  as the first parameter — today only `PRIMARY`
+- at startup wiring, pass `ProductHostDeclaredTerminalWidgetSlot` into `ProductHostActivityStartupWiring.interaction`,
+  `WidgetHostAssemblyContext`, and `TerminalWidgetCompositionAssembly.compose`; `InteractionAssembly.Host` and
+  `WidgetAssembly.Host` still expose `TerminalWidgetSlotId terminalWidgetSlot()` — adapters unwrap the declared value;
+  `checkActiveProductTerminalSlot` runs on the enum at assembly/composition entry — today only `PRIMARY`
 - `TerminalWidgetSlotId.checkActiveProductTerminalSlot` is the single choke point
   for “active slot” wiring today; assemblies call it at interaction assembly,
   widget assembly, and composition entry
