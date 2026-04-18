@@ -34,16 +34,16 @@ you must report the mismatch.
 
 ## Current Target
 
-Engineer delivery for `AHW-B14` is complete; batch status is `verdict_pending` pending Architect review. No macro batch is `in_progress` until the Architect refocuses the queue after verdict.
+`AHW-B15` is `in_progress` and is the only active macro batch.
 
-Reference queue line (exact) for the completed batch:
+Active batch queue line (exact):
 
-- narrow chrome IME visibility mutation APIs to explicit policy methods while preserving behavior
+- narrow chrome IME policy inputs to explicit harness-owned seams while preserving behavior
 
 ## Core Boundary Rule
 
-This batch exists to narrow chrome IME visibility mutation ownership while
-preserving active-view/sidebar ownership, slot mapping, and navigation model.
+This batch exists to narrow chrome IME policy input ownership while preserving
+chrome host policy APIs and existing active-view/sidebar ownership.
 
 - Android Harness owns platform ceremony, app-shell layout/styling/theming,
   navigation/view state, userland orchestration, and widget instance hosting.
@@ -57,9 +57,10 @@ preserving active-view/sidebar ownership, slot mapping, and navigation model.
 - `WidgetAssembly.Result` remains widget/chrome assembly output; it is not the
   terminal-instance factory by itself.
 
-## Required Direction From Architect Review (post-AHW-B13)
+## Required Direction From Architect Review (post-AHW-B14)
 
-- `AHW-B13` is accepted.
+- `AHW-B14` is accepted.
+- Keep `chromeImeVisibility*` + `applyChromeImeVisibility*` naming as the long-term chrome host seam.
 - Keep chrome drawer sidebar policy naming (`chromeDrawerSidebar*` + `apply*`) as the long-term seam.
 - Keep no public arbitrary shell-view setter until multi-view policy is explicitly scoped.
 - Keep null-reject semantics as the harness boundary for shell-view ids.
@@ -76,16 +77,17 @@ preserving active-view/sidebar ownership, slot mapping, and navigation model.
 
 ## Internal Milestones
 
-`AHW14-M1` through `AHW14-M6` are complete; the `AHW-B14` super-gate has been reached. Progress is recorded in `docs/todo/android/implementation.md`.
+Execute `AHW15-M1` through `AHW15-M6` sequentially; do not stop before the
+`AHW-B15` super-gate unless a hard stop condition is hit.
 
-Historical execution order (for the next engineer session after Architect refocus):
+Execute in order and mark progress in `docs/todo/android/implementation.md`.
 
-- `AHW14-M1`: audit IME visibility mutation entry points; classify policy-owned vs ad-hoc paths.
-- `AHW14-M2`: replace broad IME visibility boolean setter with explicit policy methods.
-- `AHW14-M3`: rewire chrome/IME consumers to explicit IME policy APIs.
-- `AHW14-M4`: lock authority docs to IME visibility mutation ownership contract.
-- `AHW14-M5`: keep queue/handoff/entrypoint aligned to B14 super-gate.
-- `AHW14-M6`: run validation and publish super-gate review packet.
+- `AHW15-M1`: audit ChromeFactory IME policy input wiring and define explicit seam.
+- `AHW15-M2`: introduce explicit harness-owned IME policy input seam in host/ui.
+- `AHW15-M3`: rewire chrome assembly path to explicit IME policy input seam.
+- `AHW15-M4`: lock authority docs to explicit chrome IME policy input ownership.
+- `AHW15-M5`: keep queue/handoff/entrypoint aligned to B15 super-gate.
+- `AHW15-M6`: run validation and publish super-gate review packet.
 
 ## Allowed Work
 
@@ -174,7 +176,7 @@ when:
 - a behavior change is required where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
 - implementing terminal tabs/product behavior becomes necessary to proceed
-- the `AHW-B14` super-gate is reached
+- the `AHW-B15` super-gate is reached
 
 Otherwise continue autonomously with:
 
@@ -182,9 +184,9 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At `AHW-B14` super-gate, report:
+At `AHW-B15` super-gate, report:
 
-- review chunk name: `AHW-B14`
+- review chunk name: `AHW-B15`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs

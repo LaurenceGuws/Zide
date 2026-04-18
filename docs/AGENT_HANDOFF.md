@@ -6,8 +6,8 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android harness/widget portability hardening** (`AHW`) — turns the refocus vision into enforceable code shape: Android Harness is the platform/app-shell canvas, Terminal Widget is the portable terminal consumer, and userland stays movable for future IDE/editor modes.
-- Engineer delivery complete; Architect verdict pending: `AHW-B14` — chrome IME visibility mutation policy narrowing, behavior-neutral. No macro batch is `in_progress` until Architect refocus.
-- Prior closed/escalated: `AHW-B13` accepted; `AHW-B12` accepted; `AHW-B11` accepted; `AHW-B10` accepted; `AHW-B9` accepted; `AHW-B8` accepted; `AHW-B7` accepted; `AHW-B6` accepted; `AHW-B5` accepted; `AHW-B4` accepted; `AHW-B3` accepted; `AHW-B2` accepted; `AHW-B1` accepted; `ASF-M3` escalated remaining IME/assist and touch-gesture matrix rows to operator evidence; `ASF-M2`; `ASF-M1`; `AX-M5`; `AX-M4`
+- Active macro batch (`in_progress`): `AHW-B15` — chrome IME policy input ownership narrowing, behavior-neutral.
+- Prior closed/escalated: `AHW-B14` accepted; `AHW-B13` accepted; `AHW-B12` accepted; `AHW-B11` accepted; `AHW-B10` accepted; `AHW-B9` accepted; `AHW-B8` accepted; `AHW-B7` accepted; `AHW-B6` accepted; `AHW-B5` accepted; `AHW-B4` accepted; `AHW-B3` accepted; `AHW-B2` accepted; `AHW-B1` accepted; `ASF-M3` escalated remaining IME/assist and touch-gesture matrix rows to operator evidence; `ASF-M2`; `ASF-M1`; `AX-M5`; `AX-M4`
 - Active queue authority: `docs/todo/android/implementation.md`
 - Engineer entrypoint (dual mode): `docs/todo/android/ENGINEER_ENTRYPOINT.md`
 
@@ -16,7 +16,7 @@ Session entrypoint only. Keep this file short and current.
 Architect session seed:
 
 - Read `docs/todo/android/implementation.md` first.
-- Confirm the macro batch marked `in_progress` (none until refocus after `AHW-B14` verdict).
+- Confirm the macro batch marked `in_progress`.
 - Review the Engineer's completed batch only when they report the super-gate or a hard blocker.
 - After review acceptance, immediately refocus the queue, handoff, and engineer entrypoint to the next macro batch.
 
@@ -24,9 +24,9 @@ Engineer session seed:
 
 - Read `docs/todo/android/ENGINEER_ENTRYPOINT.md`, then
   `docs/todo/android/implementation.md`, then this handoff file.
-- After Architect refocus, execute only the macro batch marked `in_progress` in
-  `docs/todo/android/implementation.md`.
-- The prior `AHW-B14` engineer run stopped at super-gate; await Architect verdict before new execution.
+- Execute only the macro batch marked `in_progress` in
+  `docs/todo/android/implementation.md` (`AHW-B15`).
+- Stop at the `AHW-B15` super-gate and return the review packet for Architect verdict.
 
 ## First Read Order
 
@@ -50,9 +50,10 @@ Engineer session seed:
 - Architect updates use: `Blocked by humain review needed: true|false`.
 - Engineer updates use: `Blocked by Archtect review needed: true|false`.
 
-## AHW-B14 baseline from AHW-B13 review
+## AHW-B15 baseline from AHW-B14 review
 
-- `AHW-B13` is accepted.
+- `AHW-B14` is accepted.
+- Keep `chromeImeVisibility*` + `applyChromeImeVisibility*` naming as the long-term chrome host seam.
 - Keep chrome drawer sidebar policy naming (`chromeDrawerSidebar*` + `apply*`) as the long-term seam.
 - Keep no public arbitrary shell-view setter until multi-view policy is explicitly scoped.
 - Keep null-reject semantics as the harness boundary for shell-view ids.
@@ -63,7 +64,7 @@ Engineer session seed:
 
 ## Operator Evidence Escalation
 
-ASF did not prove IME/assist or touch gestures because no operator packets were delivered. Those rows remain parked in `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md` with owner `operator`; they do not block `AHW-B14` unless new evidence reports a regression inside the active code scope.
+ASF did not prove IME/assist or touch gestures because no operator packets were delivered. Those rows remain parked in `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md` with owner `operator`; they do not block `AHW-B15` unless new evidence reports a regression inside the active code scope.
 
 ## Historical Notes
 
