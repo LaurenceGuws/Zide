@@ -15,7 +15,7 @@ import uk.laurencegouws.terminal.selection.SelectionController;
 
 /**
  * {@link WidgetAssembly.Host} for the single product terminal slot. {@link WidgetHostAssemblyContext} carries
- * {@link ProductHostDeclaredTerminalWidgetSlot}; this host unwraps for {@link #terminalWidgetSlot()} so
+ * {@link ProductHostDeclaredTerminalWidgetSlot#terminalWidgetSlotForProductHarness()} for {@link #terminalWidgetSlot()} so
  * {@code ZideActivity} stays orchestration-only.
  */
 public final class ProductTerminalWidgetAssemblyHost implements WidgetAssembly.Host {
@@ -27,7 +27,7 @@ public final class ProductTerminalWidgetAssemblyHost implements WidgetAssembly.H
 
     @Override
     public TerminalWidgetSlotId terminalWidgetSlot() {
-        return c.hostDeclaredTerminalWidgetSlot.terminalWidgetSlot();
+        return c.hostDeclaredTerminalWidgetSlot.terminalWidgetSlotForProductHarness();
     }
 
     @Override

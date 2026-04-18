@@ -145,13 +145,15 @@ public final class WidgetAssembly {
 
     /**
      * Assembles widget harness + surface join using the activity’s single startup selection context
-     * ({@link AppShellTerminalHostSelectionContext#hostDeclaredTerminalWidgetSlot()} value + catalog + selected slot +
-     * policy) so selection is not re-resolved inside assembly.
+     * ({@link AppShellTerminalHostSelectionContext#hostDeclaredTerminalWidgetSlot()} +
+     * {@link ProductHostDeclaredTerminalWidgetSlot#terminalWidgetSlotForProductHarness()} invariant vs host, catalog,
+     * selected slot + policy) so selection is not re-resolved inside assembly.
      */
     public static Result assemble(final Host host, final AppShellTerminalHostSelectionContext selectionContext) {
         Objects.requireNonNull(host, "host");
         Objects.requireNonNull(selectionContext, "selectionContext");
-        if (host.terminalWidgetSlot() != selectionContext.hostDeclaredTerminalWidgetSlot().terminalWidgetSlot()) {
+        if (host.terminalWidgetSlot()
+                != selectionContext.hostDeclaredTerminalWidgetSlot().terminalWidgetSlotForProductHarness()) {
             throw new IllegalStateException(
                     "Widget host slot must match startup AppShellTerminalHostSelectionContext host-declared value");
         }

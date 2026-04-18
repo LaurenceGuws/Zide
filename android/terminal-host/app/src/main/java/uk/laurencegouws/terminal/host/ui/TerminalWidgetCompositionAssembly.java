@@ -32,7 +32,8 @@ public final class TerminalWidgetCompositionAssembly {
             InteractionAssembly.Result interaction,
             WidgetSurfaceHostJoin surfaceJoin) {
         Objects.requireNonNull(hostDeclaredTerminalWidgetSlot, "hostDeclaredTerminalWidgetSlot");
-        TerminalWidgetSlotId.checkActiveProductTerminalSlot(hostDeclaredTerminalWidgetSlot.terminalWidgetSlot());
+        TerminalWidgetSlotId.checkActiveProductTerminalSlot(
+                hostDeclaredTerminalWidgetSlot.terminalWidgetSlotForProductHarness());
         return new TerminalWidgetInstance(
                 interaction.selectionController,
                 interaction.GestureStateController,

@@ -13,8 +13,8 @@ import uk.laurencegouws.terminal.host.ui.TerminalWidgetSlotId;
 
 /**
  * Functional callback adapter for {@link InteractionAssembly.Host}; startup wiring passes
- * {@link uk.laurencegouws.terminal.host.ui.ProductHostDeclaredTerminalWidgetSlot} and unwraps only for
- * {@link #terminalWidgetSlot()}.
+ * {@link uk.laurencegouws.terminal.host.ui.ProductHostDeclaredTerminalWidgetSlot} and forwards
+ * {@link #terminalWidgetSlot()} via {@link uk.laurencegouws.terminal.host.ui.ProductHostDeclaredTerminalWidgetSlot#terminalWidgetSlotForProductHarness()}.
  */
 public final class InteractionCallbacks implements InteractionAssembly.Host {
     private final ProductHostDeclaredTerminalWidgetSlot hostDeclaredTerminalWidgetSlot;
@@ -54,7 +54,7 @@ public final class InteractionCallbacks implements InteractionAssembly.Host {
 
     @Override
     public TerminalWidgetSlotId terminalWidgetSlot() {
-        return hostDeclaredTerminalWidgetSlot.terminalWidgetSlot();
+        return hostDeclaredTerminalWidgetSlot.terminalWidgetSlotForProductHarness();
     }
 
     @Override

@@ -44,7 +44,8 @@ public final class AppShellTerminalHostSelectionContext {
             final ProductHostDeclaredTerminalWidgetSlot hostDeclaredTerminalWidgetSlot) {
         Objects.requireNonNull(hostDeclaredTerminalWidgetSlot, "hostDeclaredTerminalWidgetSlot");
         final AppShellTerminalSelectionPolicy policy =
-                AppShellTerminalSelectionPolicy.forDeclaredHostSlot(hostDeclaredTerminalWidgetSlot.terminalWidgetSlot());
+                AppShellTerminalSelectionPolicy.forDeclaredHostSlot(
+                        hostDeclaredTerminalWidgetSlot.terminalWidgetSlotForProductHarness());
         return new AppShellTerminalHostSelectionContext(
                 hostDeclaredTerminalWidgetSlot,
                 policy.declaredSlotCatalog(),
