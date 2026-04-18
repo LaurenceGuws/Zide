@@ -198,12 +198,12 @@ public final class ChromeBridge implements ChromeController.Host {
 
     @Override
     public Button productTerminalTab0Button() {
-        return rootView.findViewById(R.id.product_terminal_tab_0);
+        return leftSidebar.findViewById(R.id.product_terminal_tab_0);
     }
 
     @Override
     public Button productTerminalTab1Button() {
-        return rootView.findViewById(R.id.product_terminal_tab_1);
+        return leftSidebar.findViewById(R.id.product_terminal_tab_1);
     }
 
     @Override
