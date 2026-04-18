@@ -1,23 +1,54 @@
 package uk.laurencegouws.terminal.host.ui;
 
+import java.util.Objects;
+
 /**
- * Explicit harness seam for the terminal {@link TerminalWidgetSlotId} the product host declares for
- * widget hosting at startup.
+ * Immutable harness <strong>value</strong> for the terminal {@link TerminalWidgetSlotId} the product
+ * host declares for widget hosting at startup.
  *
- * <p>Startup wiring builds {@link AppShellTerminalHostSelectionContext} via
- * {@link AppShellTerminalHostSelectionContext#forProductHostStartup} from this value. Today it is the
- * sole default entry from {@link DeclaredTerminalWidgetSlotCatalog#currentProductHarness()} — no
- * multi-slot runtime or tab behavior.</p>
+ * <p>Startup wiring passes this type into {@link AppShellTerminalHostSelectionContext#forProductHostStartup};
+ * use {@link #terminalWidgetSlot()} where APIs still require the raw enum. Today the value is the catalog
+ * default only ({@code PRIMARY}); no multi-slot runtime or tab behavior.</p>
  *
  * @see DeclaredTerminalWidgetSlotCatalog
  * @see AppShellTerminalHostSelectionContext
  */
 public final class ProductHostDeclaredTerminalWidgetSlot {
-    private ProductHostDeclaredTerminalWidgetSlot() {
+    private final TerminalWidgetSlotId terminalWidgetSlot;
+
+    private ProductHostDeclaredTerminalWidgetSlot(final TerminalWidgetSlotId terminalWidgetSlot) {
+        this.terminalWidgetSlot = Objects.requireNonNull(terminalWidgetSlot, "terminalWidgetSlot");
     }
 
-    /** Host-declared terminal widget slot for the current product harness ({@code PRIMARY} today). */
-    public static TerminalWidgetSlotId forCurrentProductHarness() {
-        return DeclaredTerminalWidgetSlotCatalog.currentProductHarness().defaultSelectedTerminalSlotForAppShell();
+    /** Declared slot for the current product harness (catalog default today). */
+    public static ProductHostDeclaredTerminalWidgetSlot forCurrentProductHarness() {
+        return new ProductHostDeclaredTerminalWidgetSlot(
+                DeclaredTerminalWidgetSlotCatalog.currentProductHarness().defaultSelectedTerminalSlotForAppShell());
+    }
+
+    public TerminalWidgetSlotId terminalWidgetSlot() {
+        return terminalWidgetSlot;
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof ProductHostDeclaredTerminalWidgetSlot)) {
+            return false;
+        }
+        final ProductHostDeclaredTerminalWidgetSlot that = (ProductHostDeclaredTerminalWidgetSlot) o;
+        return terminalWidgetSlot == that.terminalWidgetSlot;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(terminalWidgetSlot);
+    }
+
+    @Override
+    public String toString() {
+        return "ProductHostDeclaredTerminalWidgetSlot{" + terminalWidgetSlot + "}";
     }
 }

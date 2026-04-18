@@ -150,6 +150,10 @@ public final class WidgetAssembly {
     public static Result assemble(final Host host, final AppShellTerminalHostSelectionContext selectionContext) {
         Objects.requireNonNull(host, "host");
         Objects.requireNonNull(selectionContext, "selectionContext");
+        if (host.terminalWidgetSlot() != selectionContext.hostDeclaredTerminalWidgetSlot().terminalWidgetSlot()) {
+            throw new IllegalStateException(
+                    "Widget host slot must match startup AppShellTerminalHostSelectionContext host-declared value");
+        }
         if (host.terminalWidgetSlot() != selectionContext.selectedProductTerminalSlotForAppShell()) {
             throw new IllegalStateException(
                     "Widget host declared slot must match startup AppShellTerminalHostSelectionContext selected slot");

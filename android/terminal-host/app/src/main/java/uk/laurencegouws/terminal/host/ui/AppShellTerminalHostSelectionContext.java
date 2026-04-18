@@ -17,14 +17,18 @@ import java.util.Objects;
  * @see ProductHostDeclaredTerminalWidgetSlot
  */
 public final class AppShellTerminalHostSelectionContext {
+    private final ProductHostDeclaredTerminalWidgetSlot hostDeclaredTerminalWidgetSlot;
     private final DeclaredTerminalWidgetSlotCatalog declaredSlotCatalog;
     private final TerminalWidgetSlotId selectedProductTerminalSlotForAppShell;
     private final AppShellTerminalSelectionPolicy appShellTerminalSelectionPolicy;
 
     private AppShellTerminalHostSelectionContext(
+            final ProductHostDeclaredTerminalWidgetSlot hostDeclaredTerminalWidgetSlot,
             final DeclaredTerminalWidgetSlotCatalog declaredSlotCatalog,
             final TerminalWidgetSlotId selectedProductTerminalSlotForAppShell,
             final AppShellTerminalSelectionPolicy appShellTerminalSelectionPolicy) {
+        this.hostDeclaredTerminalWidgetSlot =
+                Objects.requireNonNull(hostDeclaredTerminalWidgetSlot, "hostDeclaredTerminalWidgetSlot");
         this.declaredSlotCatalog = Objects.requireNonNull(declaredSlotCatalog, "declaredSlotCatalog");
         this.selectedProductTerminalSlotForAppShell =
                 Objects.requireNonNull(selectedProductTerminalSlotForAppShell, "selectedProductTerminalSlotForAppShell");
@@ -36,13 +40,21 @@ public final class AppShellTerminalHostSelectionContext {
      * Resolves catalog + {@link AppShellTerminalSelectionPolicy} for the harness-declared widget slot
      * (catalog membership and {@link TerminalWidgetSlotId#checkActiveProductTerminalSlot}).
      */
-    public static AppShellTerminalHostSelectionContext forProductHostStartup(final TerminalWidgetSlotId hostDeclaredSlot) {
+    public static AppShellTerminalHostSelectionContext forProductHostStartup(
+            final ProductHostDeclaredTerminalWidgetSlot hostDeclaredTerminalWidgetSlot) {
+        Objects.requireNonNull(hostDeclaredTerminalWidgetSlot, "hostDeclaredTerminalWidgetSlot");
         final AppShellTerminalSelectionPolicy policy =
-                AppShellTerminalSelectionPolicy.forDeclaredHostSlot(hostDeclaredSlot);
+                AppShellTerminalSelectionPolicy.forDeclaredHostSlot(hostDeclaredTerminalWidgetSlot.terminalWidgetSlot());
         return new AppShellTerminalHostSelectionContext(
+                hostDeclaredTerminalWidgetSlot,
                 policy.declaredSlotCatalog(),
                 policy.selectedProductTerminalSlotForAppShell(),
                 policy);
+    }
+
+    /** Host-declared terminal widget slot value this context was built from. */
+    public ProductHostDeclaredTerminalWidgetSlot hostDeclaredTerminalWidgetSlot() {
+        return hostDeclaredTerminalWidgetSlot;
     }
 
     public DeclaredTerminalWidgetSlotCatalog declaredSlotCatalog() {

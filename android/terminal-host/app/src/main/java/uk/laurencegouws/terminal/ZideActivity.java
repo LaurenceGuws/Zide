@@ -77,13 +77,13 @@ public final class ZideActivity extends android.app.Activity
     /**
      * App-shell terminal <strong>selection</strong> for this activity’s wiring (interaction,
      * widget host, composition). {@link ProductHostDeclaredTerminalWidgetSlot#forCurrentProductHarness}
-     * is the host-declared slot source; {@link AppShellTerminalHostSelectionContext#forProductHostStartup}
-     * builds the startup context from it. Multi-slot hosting would vary the declared source first.
+     * yields the immutable host-declared value; {@link AppShellTerminalHostSelectionContext#forProductHostStartup}
+     * builds the startup context from that value. Multi-slot hosting would vary the declared source first.
      * Assembly entry points enforce active-slot policy via
      * {@link TerminalWidgetSlotId#checkActiveProductTerminalSlot}. Shell view identity is resolved
      * through {@link uk.laurencegouws.terminal.host.ui.ProductTerminalSlotShellMapping#shellViewIdForTerminalSlot}.
      */
-    private final TerminalWidgetSlotId productHostDeclaredTerminalWidgetSlot =
+    private final ProductHostDeclaredTerminalWidgetSlot productHostDeclaredTerminalWidgetSlot =
             ProductHostDeclaredTerminalWidgetSlot.forCurrentProductHarness();
     private final AppShellTerminalHostSelectionContext appShellTerminalSelectionContext =
             AppShellTerminalHostSelectionContext.forProductHostStartup(productHostDeclaredTerminalWidgetSlot);
@@ -286,7 +286,7 @@ public final class ZideActivity extends android.app.Activity
 
     private InteractionCallbacks createInteractionCallbacks() {
         return ProductHostActivityStartupWiring.interaction(
-                productHostDeclaredTerminalWidgetSlot,
+                productHostDeclaredTerminalWidgetSlot.terminalWidgetSlot(),
                 this,
                 handler,
                 activityViewBindings.productSurfaceContainer,
@@ -326,13 +326,13 @@ public final class ZideActivity extends android.app.Activity
         terminalChromeController = widgetResult.harnessHost.terminalChromeController;
         terminalViewModeController = widgetResult.harnessHost.terminalViewModeController;
         terminalWidget = TerminalWidgetCompositionAssembly.compose(
-                productHostDeclaredTerminalWidgetSlot, interaction, widgetResult.surfaceJoin);
+                productHostDeclaredTerminalWidgetSlot.terminalWidgetSlot(), interaction, widgetResult.surfaceJoin);
     }
 
     private WidgetAssembly.Host createWidgetHost(final InteractionAssembly.Result interaction) {
         return new ProductTerminalWidgetAssemblyHost(
                 new WidgetHostAssemblyContext(
-                        productHostDeclaredTerminalWidgetSlot,
+                        productHostDeclaredTerminalWidgetSlot.terminalWidgetSlot(),
                         this,
                         handler,
                         productHostImeState,
