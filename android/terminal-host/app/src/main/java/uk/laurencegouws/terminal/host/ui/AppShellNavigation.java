@@ -25,17 +25,19 @@ import java.util.Objects;
  * {@link #applyChromeDrawerSidebarOpen} / {@link #applyChromeDrawerSidebarClosed} only
  * — no generic boolean sidebar setter.</p>
  *
- * <p><strong>Product terminal tab strip (slice 1):</strong> harness keeps a small fixed
+ * <p><strong>Product terminal session selection (slice 1):</strong> harness keeps a small fixed
  * tab count ({@link #productTerminalTabCount}) and the selected index
  * ({@link #selectedProductTerminalTabIndex} / {@link #applySelectProductTerminalTab}).
- * Distinct tab selections trigger a native shell restart from {@link ChromeController}
- * wiring (single PTY; prior tab transcript is not preserved). This does not add a second
- * {@link TerminalWidgetSlotId} or {@link TerminalWidgetInstance}.</p>
+ * Session controls live in the <em>app-shell drawer sidebar</em> (navigation), not in the terminal
+ * content row above the assist/input helper bar — the assist row stays input-only. Distinct
+ * selections trigger a native shell restart from {@link ChromeController} wiring (single PTY; prior
+ * tab transcript is not preserved). This does not add a second {@link TerminalWidgetSlotId} or
+ * {@link TerminalWidgetInstance}.</p>
  *
  * @see ProductTerminalTabSessionContract
  */
 public final class AppShellNavigation {
-    /** Fixed tab count for the first tab-state vertical slice (chrome only). */
+    /** Fixed tab count for the first tab-state vertical slice (app-shell session controls). */
     public static final int PRODUCT_TERMINAL_TAB_COUNT = 2;
 
     private boolean chromeDrawerSidebarOpen;

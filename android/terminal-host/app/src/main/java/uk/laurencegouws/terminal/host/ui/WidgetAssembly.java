@@ -124,7 +124,8 @@ public final class WidgetAssembly {
 
         /**
          * Product terminal tab changed to a distinct index after {@link AppShellNavigation} policy;
-         * host runs native session restart + userland refresh (single PTY today).
+         * host runs native session restart + userland refresh (single PTY today). Session selection
+         * UI is owned by the app-shell sidebar ({@link ChromeController}), not the assist/input row.
          */
         void onProductTerminalTabSessionActivated(int tabIndex);
 
