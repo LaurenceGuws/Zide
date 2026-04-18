@@ -2927,7 +2927,7 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `AHW-B13` super-gate is reached.
 
-### `AHW13-M1` Sidebar mutation owner/callsite audit (`pending`)
+### `AHW13-M1` Sidebar mutation owner/callsite audit (`completed`)
 
 Queue line (exact):
 
@@ -2938,6 +2938,12 @@ Acceptance:
 - enumerate sidebar mutation entry points and callsites
 - classify each mutation as policy-owned or ad-hoc
 - define minimum behavior-neutral API narrowing cut
+
+Progress delta:
+
+- **Owner:** `AppShellNavigation` holds `sidebarOpen`; **mutation** is `setSidebarOpen(boolean)` (generic boolean setter).
+- **Callsites:** `ChromeBridge.setSidebarOpen` → `AppShellNavigation.setSidebarOpen` only; `ChromeController` calls `host.setSidebarOpen(true|false)` from `openSidebar` / `closeSidebar`; reads via `host.sidebarOpen()`.
+- **Narrowing cut:** replace boolean setter with explicit `applyChromeDrawerSidebarOpen` / `applyChromeDrawerSidebarClosed`; align `ChromeController.Host` + `ChromeBridge`; query as `chromeDrawerSidebarOpen()` on `AppShellNavigation` and host.
 
 ### `AHW13-M2` Sidebar policy API narrowing (`pending`)
 
