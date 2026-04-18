@@ -134,7 +134,7 @@ Dual-mode batching override (architect directive):
 - `APX-B13` accepted by architect.
 - `APX-B14` accepted by architect.
 - `APX-B15` accepted by architect.
-- `APX-B16` in progress.
+- `APX-B16` architect review pending (super-gate packet below).
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -2809,7 +2809,7 @@ Queue line (exact):
 - `Engineer validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat -d -s AndroidRuntime:E after am start (pass, empty); adb cold start am start -W (pass, LaunchState: COLD, Status: ok)`
 - `Contract notes: descriptors are policy-owned; persistence remains index-only (APX-B14); user distinct tab select still restarts via applySelectProductTerminalTab → onProductTerminalTabSessionActivated; APX-B10/B11/B13 unchanged; single PTY.`
 
-### `APX-B16` Tab Selection Persistence by Stable Id (`in_progress`)
+### `APX-B16` Tab Selection Persistence by Stable Id (`architect_review_pending`)
 
 Batch queue line (exact):
 
@@ -2834,41 +2834,55 @@ Internal milestone cadence:
 
 - Engineer executes `APX16-M1`–`APX16-M6`; target **5–10 validated commits** before super-gate.
 
-### `APX16-M1` Stable-id persistence audit (`pending`)
+### `APX16-M1` Stable-id persistence audit (`done`)
 
 Queue line (exact):
 
 - audit save/restore callsites and define stable-id storage/resolution boundary
 
-### `APX16-M2` Policy lookup surface (`pending`)
+Findings (concise):
+
+- **Save:** `ChromeController` / policy expose `selectedProductTerminalTabStableId`; `ZideActivity` writes string key only (no new raw-index write).
+- **Restore:** before `WidgetAssembly`, resolve stable id → index via `ProductTerminalTabDescriptors.defaultsForProductHarness` + `tabIndexForStableIdOrDefault` (same table as policy). Legacy bundle: read old int key and clamp through the same helper with `stableId=null`.
+- **Seed:** unchanged `AppShellNavigation.forProductTerminalSlot(slot, resolvedIndex)` — no `applySelectProductTerminalTab` on recreate.
+
+### `APX16-M2` Policy lookup surface (`done`)
 
 Queue line (exact):
 
 - add policy lookup for descriptor by index and index by stable id with strict null/range guards
 
-### `APX16-M3` Activity save/restore rewiring (`pending`)
+### `APX16-M3` Activity save/restore rewiring (`done`)
 
 Queue line (exact):
 
 - replace index-only bundle persistence with stable-id save and descriptor-based restore seed resolution
 
-### `APX16-M4` Restart/restore semantics lock (`pending`)
+### `APX16-M4` Restart/restore semantics lock (`done`)
 
 Queue line (exact):
 
 - verify restore remains seed-only and distinct user selection remains the only restart trigger
 
-### `APX16-M5` Docs + handoff sync (`pending`)
+### `APX16-M5` Docs + handoff sync (`done`)
 
 Queue line (exact):
 
 - sync authority docs and queue/handoff/entrypoint to APX-B16 stable-id persistence contract
 
-### `APX16-M6` Validation + review packet (`pending`)
+### `APX16-M6` Validation + review packet (`done`)
 
 Queue line (exact):
 
 - run validation ladder and publish APX-B16 super-gate packet for architect review
+
+#### APX-B16 super-gate packet (engineer → architect)
+
+- `Review chunk: APX-B16`
+- `Verdict: pending architect review`
+- `Commits reviewed: see git log on branch for APX-B16 engineer push (feature + ANDROID_JAVA_HOST_STRUCTURE + queue/handoff/entrypoint)`
+- `Engineer validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat -d -s AndroidRuntime:E after am start (pass, empty); adb cold start am start -W (pass, LaunchState: COLD, Status: ok)`
+- `Contract notes: APX-B15 descriptor ownership unchanged; save uses stable id; restore resolves to seed index only; APX-B9 user distinct select still restarts; legacy index bundle read supported; single PTY.`
 
 ## Guardrails
 

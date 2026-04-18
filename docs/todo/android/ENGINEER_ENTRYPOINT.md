@@ -34,7 +34,7 @@ you must report the mismatch.
 
 ## Current Target
 
-`APX-B16` is `in_progress`.
+`APX-B16` is `architect_review_pending` (super-gate packet in `docs/todo/android/implementation.md`).
 
 Active batch queue line (exact):
 
