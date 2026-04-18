@@ -3661,7 +3661,7 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `AHW-B17` super-gate is reached.
 
-### `AHW17-M1` Activity IME wiring audit (`pending`)
+### `AHW17-M1` Activity IME wiring audit (`completed`)
 
 Queue line (exact):
 
@@ -3672,6 +3672,18 @@ Acceptance:
 - enumerate current `imeVisible` reads/writes and closure pass-through callsites
 - classify which callsites should consume one shared carrier seam
 - define minimal behavior-neutral carrier API
+
+Progress delta:
+
+- **Field + sink:** `ZideActivity` holds `private boolean imeVisible` and `private void setImeVisible`
+  (assign-only).
+- **Callsites (same carrier):** `createStatusViewCallbacks` (`() -> imeVisible`, `this::setImeVisible`);
+  `createInputCallbacks` (same); `WidgetAssembly.Host` (`() -> imeVisible`, anonymous
+  `ChromeImePolicyInput` calling `ZideActivity.this.setImeVisible`).
+- **Carrier shape:** `ProductHostImeState` in `host/ui` — holds boolean, `imeVisible()` /
+  `setImeVisible`, implements `SurfaceWidgetHostImeVisibility`, exposes `chromeImePolicyInput()`;
+  activity keeps one `final` instance and passes `productHostImeState::…` into status/input and
+  host methods.
 
 ### `AHW17-M2` IME state carrier seam introduction (`pending`)
 
