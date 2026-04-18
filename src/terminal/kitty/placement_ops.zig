@@ -20,10 +20,7 @@ pub const KittyPlacementOps = struct {
     }
 
     pub fn markPlacementDirty(self: anytype, placement: common.KittyPlacement, src: std.builtin.SourceLocation) void {
-        const core = if (@hasField(@TypeOf(self.*), "active") and @hasField(@TypeOf(self.*), "kitty_primary"))
-            self
-        else
-            self.core;
+        const core = common.kittyContextCorePtr(self);
         const screen = core.activeScreen();
         const kitty = common.kittyStateConst(self);
         const image = common.findKittyImageById(kitty.images.items, placement.image_id);
@@ -96,10 +93,7 @@ pub const KittyPlacementOps = struct {
 pub fn updateKittyPlacementsForScroll(self: anytype) void {
     const kitty = common.kittyState(self);
     if (kitty.placements.items.len == 0) return;
-    const core = if (@hasField(@TypeOf(self.*), "active") and @hasField(@TypeOf(self.*), "kitty_primary"))
-        self
-    else
-        self.core;
+    const core = common.kittyContextCorePtr(self);
     const screen = core.activeScreenConst();
     const rows = @as(u64, screen.grid.rows);
     const top = common.kittyVisibleTop(self);
@@ -194,10 +188,7 @@ pub fn shiftKittyPlacementsDown(self: anytype, top: usize, bottom: usize, count:
 pub fn placeKittyImage(self: anytype, image_id: u32, control: common.KittyControl) ?[]const u8 {
     const log = app_logger.logger("terminal.kitty");
     const kitty = common.kittyState(self);
-    const core = if (@hasField(@TypeOf(self.*), "active") and @hasField(@TypeOf(self.*), "kitty_primary"))
-        self
-    else
-        self.core;
+    const core = common.kittyContextCorePtr(self);
     const screen = core.activeScreen();
     if (screen.grid.rows == 0 or screen.grid.cols == 0) return "EINVAL";
     if (common.findKittyImageById(kitty.images.items, image_id) == null) return "ENOENT";

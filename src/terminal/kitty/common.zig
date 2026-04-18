@@ -1,5 +1,6 @@
 const std = @import("std");
 const snapshot_mod = @import("../core/publication/snapshot.zig");
+const engine_core_face = @import("../core/engine_core_face.zig");
 
 pub const KittyImageFormat = snapshot_mod.KittyImageFormat;
 pub const KittyImage = snapshot_mod.KittyImage;
@@ -84,19 +85,17 @@ pub const KittyState = struct {
     scrollback_total: u64,
 };
 
+pub fn kittyContextCorePtr(self: anytype) *engine_core_face.TerminalCore {
+    return engine_core_face.mutableTerminalCore(self);
+}
+
 pub fn kittyState(self: anytype) *KittyState {
-    const core = if (@hasField(@TypeOf(self.*), "active") and @hasField(@TypeOf(self.*), "kitty_primary"))
-        self
-    else
-        self.core;
+    const core = kittyContextCorePtr(self);
     return if (core.active == .alt) &core.kitty_alt else &core.kitty_primary;
 }
 
 pub fn kittyStateConst(self: anytype) *const KittyState {
-    const core = if (@hasField(@TypeOf(self.*), "active") and @hasField(@TypeOf(self.*), "kitty_primary"))
-        self
-    else
-        self.core;
+    const core = kittyContextCorePtr(self);
     return if (core.active == .alt) &core.kitty_alt else &core.kitty_primary;
 }
 
@@ -124,10 +123,7 @@ pub fn kittyImageHasPlacement(self: anytype, image_id: u32) bool {
 }
 
 pub fn kittyVisibleTop(self: anytype) u64 {
-    const core = if (@hasField(@TypeOf(self.*), "active") and @hasField(@TypeOf(self.*), "kitty_primary"))
-        self
-    else
-        self.core;
+    const core = kittyContextCorePtr(self);
     if (core.active == .alt) return 0;
     const kitty = kittyStateConst(self);
     const count = core.history.scrollbackCount();
