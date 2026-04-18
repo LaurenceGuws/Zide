@@ -32,10 +32,10 @@ public final class StatusTelemetryStartupForwards {
         }
     }
 
-    public void markAndroidEdgeTestBinaryInstallNoCandidateIfReady() {
+    public void markAndroidEdgeTestBinaryInstallNoCandidateIfReady(String reasonCode) {
         final StatusController s = statusController.get();
         if (s != null) {
-            s.recordAndroidEdgeTestBinaryInstallNoCandidate();
+            s.recordAndroidEdgeTestBinaryInstallNoCandidate(reasonCode);
         }
     }
 }

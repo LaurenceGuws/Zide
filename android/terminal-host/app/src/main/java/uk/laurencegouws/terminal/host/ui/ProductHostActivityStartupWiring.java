@@ -155,8 +155,8 @@ public final class ProductHostActivityStartupWiring {
                     }
 
                     @Override
-                    public void markNoCandidate() {
-                        hostStartup.telemetry.markAndroidEdgeTestBinaryInstallNoCandidateIfReady();
+                    public void markNoCandidate(String reasonCode) {
+                        hostStartup.telemetry.markAndroidEdgeTestBinaryInstallNoCandidateIfReady(reasonCode);
                     }
                 });
     }

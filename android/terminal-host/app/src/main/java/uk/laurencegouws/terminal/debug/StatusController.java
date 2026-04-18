@@ -3,6 +3,7 @@ package uk.laurencegouws.terminal.debug;
 import android.util.Log;
 import android.view.SurfaceView;
 
+import uk.laurencegouws.terminal.userland.UserlandAndroidTestBinaryInstallLifecycle;
 import uk.laurencegouws.terminal.userland.UserlandReadinessState;
 import uk.laurencegouws.terminal.userland.UserlandInstallState;
 
@@ -129,8 +130,14 @@ public final class StatusController {
         updateStatus(success ? "packages.edge_install.state" : "packages.edge_install.failed_state");
     }
 
-    public void recordAndroidEdgeTestBinaryInstallNoCandidate() {
-        appendEvent("packages.edge_install.outcome success=false reason=no_candidate");
-        updateStatus("packages.edge_install.no_candidate");
+    public void recordAndroidEdgeTestBinaryInstallNoCandidate(String reasonCode) {
+        appendEvent("packages.edge_install.outcome success=false reason=no_candidate detail=" + reasonCode);
+        if (UserlandAndroidTestBinaryInstallLifecycle.NO_CANDIDATE_NO_ANDROID_EDGE.equals(reasonCode)) {
+            updateStatus("packages.edge_install.no_candidate.no_android_edge");
+        } else if (UserlandAndroidTestBinaryInstallLifecycle.NO_CANDIDATE_EMPTY_CATALOG.equals(reasonCode)) {
+            updateStatus("packages.edge_install.no_candidate.empty_catalog");
+        } else {
+            updateStatus("packages.edge_install.no_candidate");
+        }
     }
 }

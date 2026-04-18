@@ -25,8 +25,12 @@ public final class WorkflowAssembly {
     public interface EdgeTestBinaryInstallStateCallback {
         void markComplete(boolean success);
 
-        /** Explicit no-candidate path after {@code list-available} parsing (not generic install failure). */
-        void markNoCandidate();
+        /**
+         * Explicit no-candidate path after {@code list-available} parsing (not generic install failure).
+         *
+         * @param reasonCode {@link uk.laurencegouws.terminal.userland.UserlandAndroidTestBinaryInstallLifecycle#NO_CANDIDATE_EMPTY_CATALOG} or {@link uk.laurencegouws.terminal.userland.UserlandAndroidTestBinaryInstallLifecycle#NO_CANDIDATE_NO_ANDROID_EDGE}
+         */
+        void markNoCandidate(String reasonCode);
     }
 
     /** Harness callbacks required for userland workflow assembly. */

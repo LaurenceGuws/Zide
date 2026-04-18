@@ -34,7 +34,7 @@ public final class WorkflowBridge implements UserlandWorkflowController.Host {
 
         void markAndroidEdgeTestBinaryInstallComplete(boolean success);
 
-        void markAndroidEdgeTestBinaryInstallNoCandidate();
+        void markAndroidEdgeTestBinaryInstallNoCandidate(String reasonCode);
     }
 
     private final Context context;
@@ -98,7 +98,7 @@ public final class WorkflowBridge implements UserlandWorkflowController.Host {
     }
 
     @Override
-    public void markAndroidEdgeTestBinaryInstallNoCandidate() {
-        callbacks.markAndroidEdgeTestBinaryInstallNoCandidate();
+    public void markAndroidEdgeTestBinaryInstallNoCandidate(String reasonCode) {
+        callbacks.markAndroidEdgeTestBinaryInstallNoCandidate(reasonCode);
     }
 }
