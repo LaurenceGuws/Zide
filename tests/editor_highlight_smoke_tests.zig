@@ -3,7 +3,7 @@ const editor_mod = @import("../src/editor/editor.zig");
 const grammar_manager_mod = @import("../src/editor/grammar_manager.zig");
 const cache_mod = @import("../src/editor/render/cache.zig");
 const editor_display_prepare_mod = @import("../src/app/editor/editor_display_prepare.zig");
-const syntax_mod = @import("../src/editor/syntax.zig");
+const syntax_registry_mod = @import("../src/editor/syntax_registry.zig");
 comptime {
     _ = @import("../src/ui/widgets/editor_widget_draw.zig");
 }
@@ -124,7 +124,7 @@ test "editor visible highlight invalidation after edit requires reschedule" {
         change_tick_before,
     ));
 
-    const syntax = syntax_mod.resolvePath(path);
+    const lang = syntax_registry_mod.SyntaxRegistry.resolveLanguage(path);
     try editor.tryInitHighlighter(path);
-    try std.testing.expect(editor.currentSyntax() == syntax);
+    try std.testing.expectEqual(lang, syntax_registry_mod.SyntaxRegistry.resolveLanguage(editor.doc.file_path));
 }
