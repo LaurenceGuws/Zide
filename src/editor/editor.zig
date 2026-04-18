@@ -1488,7 +1488,7 @@ pub const Editor = struct {
         SelectionState.extendPrimarySelectionToOffset(self, target_offset);
     }
 
-    fn byteIndexForVisualColumn(self: *Editor, line_text: []const u8, column: usize, clusters: ?[]const u32) usize {
+    pub fn byteIndexForVisualColumn(self: *Editor, line_text: []const u8, column: usize, clusters: ?[]const u32) usize {
         _ = self;
         return text_columns.byteIndexForVisualColumnWithClusters(line_text, column, clusters);
     }
@@ -1764,11 +1764,11 @@ pub const Editor = struct {
     // ─────────────────────────────────────────────────────────────────────────
 
     pub fn beginUndoGroup(self: *Editor) void {
-        self.buffer.beginUndoGroup();
+        self.doc.buffer.beginUndoGroup();
     }
 
     pub fn endUndoGroup(self: *Editor) !void {
-        try self.buffer.endUndoGroup();
+        try self.doc.buffer.endUndoGroup();
     }
 
     pub fn undo(self: *Editor) !bool {

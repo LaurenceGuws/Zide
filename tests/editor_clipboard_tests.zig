@@ -110,7 +110,7 @@ test "rectangular selection paste distributes clipboard lines per row" {
 
     try editor.insertText("XX\nYY\nZZ");
 
-    const text = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    const text = try editor.doc.buffer.readRangeAlloc(0, editor.doc.buffer.totalLen());
     defer allocator.free(text);
     try std.testing.expectEqualStrings("aXXd\neYYh\niZZl", text);
 }
@@ -127,7 +127,7 @@ test "rectangular selection paste repeats a single clipboard row across all line
 
     try editor.insertText("QQ");
 
-    const text = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    const text = try editor.doc.buffer.readRangeAlloc(0, editor.doc.buffer.totalLen());
     defer allocator.free(text);
     try std.testing.expectEqualStrings("aQQd\neQQh\niQQl", text);
 }
@@ -144,7 +144,7 @@ test "rectangular selection paste cycles clipboard rows when counts mismatch" {
 
     try editor.insertText("LM\nNO");
 
-    const text = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    const text = try editor.doc.buffer.readRangeAlloc(0, editor.doc.buffer.totalLen());
     defer allocator.free(text);
     try std.testing.expectEqualStrings("aLMd\neNOh\niLMl", text);
 }
@@ -161,7 +161,7 @@ test "rectangular selection paste trims crlf rows and preserves trailing empty r
 
     try editor.insertText("UV\r\n\r\nWX\r\n");
 
-    const text = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    const text = try editor.doc.buffer.readRangeAlloc(0, editor.doc.buffer.totalLen());
     defer allocator.free(text);
     try std.testing.expectEqualStrings("aUVd\neh\niWXl", text);
 }
@@ -178,7 +178,7 @@ test "visual rectangular selection with tabs pastes against visual columns" {
 
     try editor.insertText("XY");
 
-    const text = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    const text = try editor.doc.buffer.readRangeAlloc(0, editor.doc.buffer.totalLen());
     defer allocator.free(text);
     try std.testing.expectEqualStrings("\tXYc\n\tXYf", text);
 }
@@ -195,7 +195,7 @@ test "visual rectangular selection with combining and wide glyphs pastes by cell
 
     try editor.insertText("QQ");
 
-    const text = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    const text = try editor.doc.buffer.readRangeAlloc(0, editor.doc.buffer.totalLen());
     defer allocator.free(text);
     try std.testing.expectEqualStrings("e\u{0301}QQz\naQQbc", text);
 }
@@ -212,7 +212,7 @@ test "visual rectangular selection with combining and wide glyphs deletes by cel
 
     try editor.deleteSelection();
 
-    const text = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    const text = try editor.doc.buffer.readRangeAlloc(0, editor.doc.buffer.totalLen());
     defer allocator.free(text);
     try std.testing.expectEqualStrings("e\u{0301}z\nabc", text);
 }
@@ -244,7 +244,7 @@ test "cluster-provider rectangular selection replacement preserves grapheme-alig
     try editor.expandRectSelectionVisualWithClusters(0, 1, 1, 3, &provider);
     try editor.insertText("QQ");
 
-    const text = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    const text = try editor.doc.buffer.readRangeAlloc(0, editor.doc.buffer.totalLen());
     defer allocator.free(text);
     try std.testing.expectEqualStrings("e\u{0301}QQx\naQQbc", text);
 }
@@ -276,7 +276,7 @@ test "cluster-provider rectangular selection deletion preserves grapheme-aligned
     try editor.expandRectSelectionVisualWithClusters(0, 1, 1, 3, &provider);
     try editor.deleteSelection();
 
-    const text = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    const text = try editor.doc.buffer.readRangeAlloc(0, editor.doc.buffer.totalLen());
     defer allocator.free(text);
     try std.testing.expectEqualStrings("e\u{0301}x\nabc", text);
 }
@@ -300,7 +300,7 @@ test "plain multi-selection paste broadcasts the same text" {
 
     try editor.insertText("ZZ");
 
-    const text = try editor.buffer.readRangeAlloc(0, editor.buffer.totalLen());
+    const text = try editor.doc.buffer.readRangeAlloc(0, editor.doc.buffer.totalLen());
     defer allocator.free(text);
     try std.testing.expectEqualStrings("aZZbcZZdZZ", text);
 }

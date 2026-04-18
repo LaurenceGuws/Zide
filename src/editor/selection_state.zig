@@ -294,7 +294,7 @@ pub fn SelectionStateOps(comptime Editor: type) type {
             if (start_line > end_line) return;
             var line = start_line;
             while (line <= end_line) : (line += 1) {
-                const line_start = self.buffer.lineStart(line);
+                const line_start = self.doc.buffer.lineStart(line);
                 const line_text = try self.getLineAlloc(line);
                 defer self.allocator.free(line_text);
                 const clusters = if (provider) |cluster_provider| cluster_provider.getClusters(cluster_provider.ctx, line, line_text) else null;

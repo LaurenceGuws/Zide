@@ -93,7 +93,7 @@ pub fn NavigationOps(comptime Editor: type) type {
             if (self.cursor.line == 0) return;
             const target_col = self.cursor.col;
             self.cursor.line -= 1;
-            const line_len = self.buffer.lineLen(self.cursor.line);
+            const line_len = self.doc.buffer.lineLen(self.cursor.line);
             self.cursor.col = @min(target_col, line_len);
             self.updateCursorOffset();
             self.clearPreferredVisualCol();
@@ -121,11 +121,11 @@ pub fn NavigationOps(comptime Editor: type) type {
                 self.selection = null;
                 return;
             }
-            const line_count = self.buffer.lineCount();
+            const line_count = self.doc.buffer.lineCount();
             if (self.cursor.line + 1 >= line_count) return;
             const target_col = self.cursor.col;
             self.cursor.line += 1;
-            const line_len = self.buffer.lineLen(self.cursor.line);
+            const line_len = self.doc.buffer.lineLen(self.cursor.line);
             self.cursor.col = @min(target_col, line_len);
             self.updateCursorOffset();
             self.clearPreferredVisualCol();
