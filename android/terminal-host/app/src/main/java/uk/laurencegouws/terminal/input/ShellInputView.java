@@ -138,7 +138,7 @@ public final class ShellInputView extends View {
 
         @Override
         public boolean setComposingText(CharSequence text, int newCursorPosition) {
-            final String s = text.toString();
+            final String s = normalizeImeText(text.toString());
             if (consumeLatchedImeText(s)) {
                 return true;
             }
@@ -155,7 +155,7 @@ public final class ShellInputView extends View {
 
         @Override
         public boolean commitText(CharSequence text, int newCursorPosition) {
-            final String s = text.toString();
+            final String s = normalizeImeText(text.toString());
             if (shouldSuppressCommitText(s)) {
                 return true;
             }
@@ -176,7 +176,7 @@ public final class ShellInputView extends View {
         @Override
         public boolean sendKeyEvent(KeyEvent event) {
             if (shouldBypassImePrintableKeyEvent(event)) {
-                return false;
+                return true;
             }
             if (handleKeyEvent(event)) {
                 return true;
@@ -331,6 +331,29 @@ public final class ShellInputView extends View {
         return editorComposingEnd >= editorComposingStart && editorComposingStart >= 0
                 ? editorComposingEnd
                 : editorCursor;
+    }
+
+    private String normalizeImeText(String text) {
+        if (text.isEmpty()) {
+            return text;
+        }
+        final String committedLinePrefix = currentCommittedLinePrefix();
+        if (committedLinePrefix.isEmpty()) {
+            return text;
+        }
+        if (!text.startsWith(committedLinePrefix)) {
+            return text;
+        }
+        return text.substring(committedLinePrefix.length());
+    }
+
+    private String currentCommittedLinePrefix() {
+        final int lineStart = editorLineStart();
+        final int composeStart = currentCompositionStart();
+        if (composeStart <= lineStart) {
+            return "";
+        }
+        return editorBuffer.substring(lineStart, composeStart);
     }
 
     private static int sharedPrefixLength(String left, String right) {
