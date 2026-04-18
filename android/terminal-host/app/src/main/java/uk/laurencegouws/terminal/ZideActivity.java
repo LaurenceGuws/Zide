@@ -77,7 +77,8 @@ public final class ZideActivity extends android.app.Activity
     /**
      * App-shell terminal <strong>selection</strong> for this activity’s wiring (interaction,
      * widget host, composition). {@link ProductHostDeclaredTerminalWidgetSlot#forCurrentProductHarness}
-     * yields the immutable host-declared value; {@link AppShellTerminalHostSelectionContext#forProductHostStartup}
+     * yields the immutable host-declared value; enum conversion for harness wiring uses
+     * {@link ProductHostDeclaredTerminalWidgetSlot#terminalWidgetSlotForProductHarness}; {@link AppShellTerminalHostSelectionContext#forProductHostStartup}
      * builds the startup context from that value. Multi-slot hosting would vary the declared source first.
      * Assembly entry points enforce active-slot policy via
      * {@link TerminalWidgetSlotId#checkActiveProductTerminalSlot}. Shell view identity is resolved

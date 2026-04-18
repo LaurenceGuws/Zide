@@ -14,7 +14,8 @@ import java.util.Objects;
  * <p>Today the catalog is {@link TerminalWidgetSlotId#PRIMARY} only; this does not enable
  * multi-slot runtime behavior or tab UI.</p>
  *
- * @see ProductHostDeclaredTerminalWidgetSlot immutable host-declared value built from this catalog’s default
+ * @see ProductHostDeclaredTerminalWidgetSlot immutable host-declared value built from this catalog’s default;
+ *      {@link ProductHostDeclaredTerminalWidgetSlot#terminalWidgetSlotForProductHarness} converts to {@link TerminalWidgetSlotId} for harness wiring
  */
 public final class DeclaredTerminalWidgetSlotCatalog {
     private static final TerminalWidgetSlotId[] PRODUCT_HARNESS_DECLARED = {

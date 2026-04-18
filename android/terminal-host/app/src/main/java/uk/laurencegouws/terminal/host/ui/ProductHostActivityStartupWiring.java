@@ -60,7 +60,11 @@ public final class ProductHostActivityStartupWiring {
                 currentReadinessState);
     }
 
-    /** Interaction assembly callbacks; {@code hostDeclaredTerminalWidgetSlot} is the startup declared-slot value. */
+    /**
+     * Interaction assembly callbacks; {@code hostDeclaredTerminalWidgetSlot} is the startup declared-slot value.
+     * {@link ProductHostDeclaredTerminalWidgetSlot#terminalWidgetSlotForProductHarness} is used inside adapters when an
+     * enum is required at {@link uk.laurencegouws.terminal.host.interaction.InteractionAssembly.Host} boundaries.
+     */
     public static InteractionCallbacks interaction(
             ProductHostDeclaredTerminalWidgetSlot hostDeclaredTerminalWidgetSlot,
             Context harnessContext,

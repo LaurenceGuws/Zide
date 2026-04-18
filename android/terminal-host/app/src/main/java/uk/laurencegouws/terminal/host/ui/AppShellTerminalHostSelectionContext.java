@@ -8,7 +8,9 @@ import java.util.Objects;
  *
  * <p>Built once per activity startup; {@link uk.laurencegouws.terminal.ZideActivity} and
  * {@link WidgetAssembly} consume the same instance so catalog membership, active-slot checks, and
- * selected-slot reads are not repeated ad hoc across interaction wiring and widget assembly. Today
+ * selected-slot reads are not repeated ad hoc across interaction wiring and widget assembly.
+ * {@link ProductHostDeclaredTerminalWidgetSlot#terminalWidgetSlotForProductHarness} is the conversion
+ * choke point feeding {@link AppShellTerminalSelectionPolicy#forDeclaredHostSlot}. Today
  * this still resolves to a single {@link TerminalWidgetSlotId#PRIMARY} path; it does not enable
  * multi-slot runtime behavior.</p>
  *
