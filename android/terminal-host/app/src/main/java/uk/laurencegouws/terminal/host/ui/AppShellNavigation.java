@@ -11,8 +11,13 @@ import java.util.Objects;
  * {@link #forProductTerminalSlot} so slot→{@link ShellViewId} resolution happens once
  * via {@link ProductTerminalSlotShellMapping}.</p>
  *
- * <p><strong>Invariants:</strong> {@link #activeShellView()} is never {@code null}.
- * {@link #setActiveShellView} rejects {@code null} at the harness boundary.</p>
+ * <p><strong>Active-view mutation:</strong> product wiring uses
+ * {@link #applyProductTerminalShellViewActive} only — there is no public arbitrary
+ * shell-view setter. Future multi-view harness policy adds explicit public methods
+ * here rather than a generic setter.</p>
+ *
+ * <p><strong>Invariants:</strong> {@link #activeShellView()} is never {@code null};
+ * internal replacement uses {@link Objects#requireNonNull}.</p>
  */
 public final class AppShellNavigation {
     private boolean sidebarOpen;
@@ -34,7 +39,7 @@ public final class AppShellNavigation {
     private AppShellNavigation(ShellViewId productTerminalShellViewId) {
         this.productTerminalShellViewId =
                 Objects.requireNonNull(productTerminalShellViewId, "productTerminalShellViewId");
-        this.activeShellView = this.productTerminalShellViewId;
+        replaceActiveShellView(this.productTerminalShellViewId);
     }
 
     /**
@@ -42,7 +47,7 @@ public final class AppShellNavigation {
      * slot mapping or {@link TerminalWidgetSlotId#checkActiveProductTerminalSlot}.
      */
     public void applyProductTerminalShellViewActive() {
-        setActiveShellView(productTerminalShellViewId);
+        replaceActiveShellView(productTerminalShellViewId);
     }
 
     public boolean isSidebarOpen() {
@@ -57,12 +62,7 @@ public final class AppShellNavigation {
         return activeShellView;
     }
 
-    /**
-     * Sets which shell content view is active. Must not be {@code null}; future
-     * multi-view hosting will pass additional {@link ShellViewId} values under explicit
-     * harness policy.
-     */
-    public void setActiveShellView(ShellViewId id) {
+    private void replaceActiveShellView(ShellViewId id) {
         this.activeShellView = Objects.requireNonNull(id, "activeShellView");
     }
 
