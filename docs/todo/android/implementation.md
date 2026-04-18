@@ -122,7 +122,7 @@ Dual-mode batching override (architect directive):
 - `APX-B7` accepted by architect.
 - `APX-B8` accepted by architect.
 - `APX-B9` accepted by architect.
-- `APX-B10` is now `in_progress`.
+- `APX-B10` super-gate reached; architect review pending.
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -2225,7 +2225,7 @@ Architect review verdict:
 - `Review answers: APX-B9 shape is accepted as the minimum behavior-bearing tab slice under current single-PTY native constraints.`
 - `Findings carried forward: no blocking regressions; no startup-order drift; single-path code maintained.`
 
-### `APX-B10` Android Test-Binary Productization + Tab-State Clean Path (`in_progress`)
+### `APX-B10` Android Test-Binary Productization + Tab-State Clean Path (`architect_review_pending`)
 
 Batch queue line (exact):
 
@@ -2279,41 +2279,85 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `APX-B10` super-gate is reached.
 
-### `APX10-M1` Flow audit + mutation/read boundary definition (`pending`)
+### `APX10-M1` Flow audit + mutation/read boundary definition (`completed`)
 
 Queue line (exact):
 
 - audit APX-B9 package-doctor and test-binary install callsites; define explicit read-only doctor vs install mutation boundaries
 
-### `APX10-M2` Policy-owned install lifecycle cut (`pending`)
+Outcome:
+
+- **Read/report:** `UserlandWorkflowController.runPackageDoctor` → `zide-pm doctor` + `list-available` only; telemetry `packages.doctor.*`
+- **Mutation:** `UserlandWorkflowController.installAndroidEdgeTestBinary` → `UserlandAndroidTestBinaryInstallLifecycle.runEdgePackageInstall`; telemetry `packages.edge_install.*`; separate sidebar control
+
+### `APX10-M2` Policy-owned install lifecycle cut (`completed`)
 
 Queue line (exact):
 
 - move Android test-binary install invocation from ad-hoc doctor thread into explicit policy-owned lifecycle path
 
-### `APX10-M3` Consumer wiring + behavior verification (`pending`)
+Outcome:
+
+- `UserlandAndroidTestBinaryInstallLifecycle` owns the `zide-pm install` argv shape; `UserlandAndroidTestBinaryPolicy` remains package-id authority
+
+### `APX10-M3` Consumer wiring + behavior verification (`completed`)
 
 Queue line (exact):
 
 - wire userland/package consumers to the new lifecycle path and verify behavior on device
 
-### `APX10-M4` Tab-state coherence lock under single-PTY (`pending`)
+Outcome:
+
+- Chrome sidebar **Install test tools** + harness callbacks; `StatusController.recordAndroidEdgeTestBinaryInstallOutcome`
+
+### `APX10-M4` Tab-state coherence lock under single-PTY (`completed`)
 
 Queue line (exact):
 
 - document and enforce tab-session semantics so behavior remains explicit/coherent under current single-PTY runtime
 
-### `APX10-M5` Docs + handoff sync (`pending`)
+Outcome:
+
+- `ProductTerminalTabSessionContract` documents single-PTY + restart-on-distinct-tab; `@see` from `AppShellNavigation` / `RuntimeController`
+
+### `APX10-M5` Docs + handoff sync (`completed`)
 
 Queue line (exact):
 
 - update authority/queue/handoff/entrypoint to the implemented APX-B10 lifecycle and tab-state seam shape
 
-### `APX10-M6` Batch validation + review packet (`pending`)
+### `APX10-M6` Batch validation + review packet (`completed`)
 
 Queue line (exact):
 
 - validate APX-B10 end-to-end and publish architect super-gate packet with outcomes and blockers
+
+Engineer validation (this batch):
+
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac` — pass
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac` — pass
+- `python3 ops/android_terminal_host.py deploy` — pass
+- `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E` — pass (no `E` lines)
+- `adb shell am force-stop uk.laurencegouws.zide && adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity` — pass (`LaunchState: COLD`, `Status: ok`)
+
+**Review chunk:** `APX-B10`
+
+**Commits (oldest → newest):**
+
+- `88931d7c` — userland: read-only doctor + `UserlandAndroidTestBinaryInstallLifecycle` + `installAndroidEdgeTestBinary`
+- `d626b572` — workflow assembly + `markAndroidEdgeTestBinaryInstallComplete` forwarding
+- `21ff3250` — `StatusController` / `StatusTelemetryStartupForwards` for `packages.edge_install`
+- `2316d23a` — chrome sidebar **Install test tools** + `WidgetAssembly` host seam
+- `57b62d8c` — `ProductTerminalTabSessionContract` + `@see` on navigation/runtime
+
+**Docs / handoff packet:** `fab4e607` — `USERLAND_HOST_CONTRACT.md`, this queue section, `ENGINEER_ENTRYPOINT.md`, `AGENT_HANDOFF.md`.
+
+`Milestone reached per docs, architect review required.`
+
+Architect review verdict:
+
+- `Review chunk: APX-B10`
+- `Verdict: pending`
 
 ## Guardrails
 

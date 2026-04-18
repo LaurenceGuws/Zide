@@ -12,8 +12,9 @@ Authority for how Java userland orchestration (`uk.laurencegouws.terminal.userla
 | Seam | Role |
 |------|------|
 | `ShellPresentationHostInputs` | Harness-only bundle of suppliers for `UserlandReadinessState` / `UserlandInstallState` used to wire `ShellStateCallbacks` from `WidgetAssembly` without putting userland value types on `WidgetAssembly.Host`. Product truth remains the userland types. |
-| `WorkflowBridge.Callbacks` | Install flow (`completeInstall`, `failInstall`, `applyInstallState`), `restartSessionAfterInstall`, package-doctor completion (`markPackageDoctorComplete`), release and event append. |
-| `UserlandWorkflowController` | Async install and `zide-pm` doctor (doctor path includes `install` for `UserlandAndroidTestBinaryPolicy` edge spec); calls only `Host` (implemented by `WorkflowBridge`). |
+| `WorkflowBridge.Callbacks` | Install flow (`completeInstall`, `failInstall`, `applyInstallState`), `restartSessionAfterInstall`, package-doctor completion (`markPackageDoctorComplete`), edge test-binary install completion (`markAndroidEdgeTestBinaryInstallComplete`), release and event append. |
+| `UserlandWorkflowController` | Async install; read-only `zide-pm` doctor (`doctor` + `list-available`); separate `installAndroidEdgeTestBinary` via `UserlandAndroidTestBinaryInstallLifecycle`; calls only `Host` (implemented by `WorkflowBridge`). |
+| `UserlandAndroidTestBinaryInstallLifecycle` | Policy-owned argv/`zide-pm` invocation for edge test-binary `install` (telemetry and UX live in workflow/chrome). |
 | `UserlandAndroidTestBinaryPolicy` | Edge package id for proving `zide-pm install` on Android beyond baseline tools. |
 | `UserlandCommandRunner` | Runs `zide-pm` with prefix env; sets `ZIDE_PM_HOST_PLATFORM=android` for Android catalog / test-binary pull semantics inside `zide-pm`. |
 | `UserlandReadinessBlockerController.Host` | Readiness retry button: `startInstall`, `refreshSessionAfterReadinessRetry` — harness implements via `ReadinessBlockerStartup` + `ReadinessBlockerCallbacks`. |
