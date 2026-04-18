@@ -108,6 +108,16 @@ pub const RenderCache = struct {
         return self.history_len + self.rows;
     }
 
+    /// Absolute scrollback line index of the first visible grid row (publication truth).
+    /// Hosts that map pointer/selection through the visible grid use this with row/col.
+    pub fn visibleStartLineIndex(self: *const RenderCache) usize {
+        const total_lines = self.totalLines();
+        if (total_lines > self.rows + self.scroll_offset) {
+            return total_lines - self.rows - self.scroll_offset;
+        }
+        return 0;
+    }
+
     pub fn hasSelection(self: *const RenderCache) bool {
         for (self.selection_rows.items) |selected| {
             if (selected) return true;

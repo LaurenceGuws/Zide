@@ -151,14 +151,6 @@ pub const SelectionHandleEndpoint = enum {
 
 var active_selection_gesture: ?terminal_selection.SelectionGesture = null;
 
-fn visibleStartLine(cache: *const render_cache_mod.RenderCache) usize {
-    const total_lines = cache.history_len + cache.rows;
-    if (total_lines > cache.rows + cache.scroll_offset) {
-        return total_lines - cache.rows - cache.scroll_offset;
-    }
-    return 0;
-}
-
 fn orderedSelectionRange(selection: terminal_types.TerminalSelection) struct {
     start: terminal_types.SelectionPos,
     end: terminal_types.SelectionPos,
@@ -236,7 +228,7 @@ pub fn beginWordSelectionAtVisibleCell(row: u16, col: u16) SelectionStatus {
     if (cache.rows == 0 or cache.cols == 0) return .no_visible_cell;
     if (row >= cache.rows or col >= cache.cols) return .no_visible_cell;
 
-    const start_line = visibleStartLine(cache);
+    const start_line = cache.visibleStartLineIndex();
     const row_offset = @as(usize, row) * cache.cols;
     const row_cells = cache.cells.items[row_offset .. row_offset + cache.cols];
     const result = terminal_selection.beginClickSelectionLocked(
@@ -261,7 +253,7 @@ pub fn extendSelectionGestureToVisibleCell(row: u16, col: u16) SelectionStatus {
     if (cache.rows == 0 or cache.cols == 0) return .no_visible_cell;
     if (row >= cache.rows or col >= cache.cols) return .no_visible_cell;
 
-    const start_line = visibleStartLine(cache);
+    const start_line = cache.visibleStartLineIndex();
     const row_offset = @as(usize, row) * cache.cols;
     const row_cells = cache.cells.items[row_offset .. row_offset + cache.cols];
     _ = terminal_selection.extendGestureSelectionLocked(
@@ -323,7 +315,7 @@ pub fn currentSelectionEndpointViewportRect(endpoint: SelectionHandleEndpoint) S
         .start => ordered.start,
         .end => ordered.end,
     };
-    const start_line = visibleStartLine(cache);
+    const start_line = cache.visibleStartLineIndex();
     if (target.row < start_line or target.row >= start_line + cache.rows) return .{};
 
     const cell_width = @as(i32, @intCast(@max(active.cell_width, 1)));
@@ -352,7 +344,7 @@ pub fn updateSelectionEndpointAtVisibleCell(endpoint: SelectionHandleEndpoint, r
     const selection = terminal_selection.selectionState(shell) orelse return .no_active_selection;
     const ordered = orderedSelectionRange(selection);
     const target: terminal_types.SelectionPos = .{
-        .row = visibleStartLine(cache) + row,
+        .row = cache.visibleStartLineIndex() + row,
         .col = col,
     };
     var next_start = ordered.start;

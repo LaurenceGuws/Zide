@@ -10,6 +10,7 @@ const types = @import("../model/types.zig");
 const screen = @import("../model/screen.zig");
 const app_logger = @import("../../app_logger.zig");
 const shared = @import("shared.zig");
+const renderer_metadata_mod = @import("renderer_metadata.zig");
 
 const Handle = shared.Handle;
 const SnapshotOwner = shared.SnapshotOwner;
@@ -1029,14 +1030,7 @@ pub fn stringAbiVersion() u32 {
 }
 
 pub fn rendererMetadata(codepoint: u32, out_metadata: *shared.RendererMetadata) shared.Status {
-    out_metadata.* = .{
-        .abi_version = shared.renderer_metadata_abi_version,
-        .struct_size = @sizeOf(shared.RendererMetadata),
-        .codepoint = codepoint,
-        .glyph_class_flags = shared.classifyGlyphClassFlags(codepoint),
-        .damage_policy_flags = @intFromEnum(shared.DamagePolicyFlags.advisory_bounds) |
-            @intFromEnum(shared.DamagePolicyFlags.full_redraw_safe_default),
-    };
+    renderer_metadata_mod.fillRendererMetadata(out_metadata, codepoint);
     return .ok;
 }
 
