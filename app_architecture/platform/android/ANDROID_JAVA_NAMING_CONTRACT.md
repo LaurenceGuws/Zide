@@ -92,8 +92,8 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
   `ShellViewId.TERMINAL` for active product shell routing outside that seam
 - app-shell **selection** vs **activation**: `DeclaredTerminalWidgetSlotCatalog` owns the declared
   terminal-slot set for the harness (`PRIMARY` only today); `ProductHostDeclaredTerminalWidgetSlot`
-  is the explicit host-declared-slot source; `AppShellTerminalHostSelectionContext.forProductHostStartup`
-  resolves catalog + `AppShellTerminalSelectionPolicy` once per startup from that slot;
+  is the immutable host-declared-slot **value** (`forCurrentProductHarness`); `AppShellTerminalHostSelectionContext.forProductHostStartup`
+  takes that value and resolves catalog + `AppShellTerminalSelectionPolicy` once per startup;
   `AppShellTerminalViewPolicy` owns shell-view activation
   and chrome drawer policy for navigation built from that slot. `WidgetAssembly.assemble(Host, context)`
   uses the context’s selected slot for `AppShellNavigation.forProductTerminalSlot` and the context’s
