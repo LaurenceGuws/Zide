@@ -3475,7 +3475,7 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `AHW-B16` super-gate is reached.
 
-### `AHW16-M1` Widget-host IME primitive audit (`pending`)
+### `AHW16-M1` Widget-host IME primitive audit (`completed`)
 
 Queue line (exact):
 
@@ -3486,6 +3486,18 @@ Acceptance:
 - enumerate all `WidgetAssembly.Host` IME primitive callsites
 - classify chrome vs non-chrome ownership paths
 - define minimum behavior-neutral explicit seam(s) for non-chrome paths
+
+Progress delta:
+
+- **Primitives on `WidgetAssembly.Host`:** `imeVisible()` / `setImeVisible(boolean)`; default
+  `chromeImePolicyInput()` delegates to them.
+- **Callsite — chrome:** `ChromeFactory.createChromeHostCallbacks` via `host.chromeImePolicyInput()` —
+  keep **B15 `ChromeImePolicyInput`**; remove default and implement on activity host.
+- **Callsite — surface:** `SurfaceWidgetAssemblyCallbacks` took `BooleanSupplier` from
+  `host::imeVisible`; **SurfaceWidgetAssembly.Host** already names `currentImeVisible()`.
+  Replace with explicit **`SurfaceWidgetHostImeVisibility`** (`currentImeVisible()` read-only).
+- **Out of scope (unchanged):** `StatusViewAssembly.Host`, `InputAssembly.Host`, `ViewportController`
+  (status/viewport wiring), `InputCallbacks` — not `WidgetAssembly.Host`.
 
 ### `AHW16-M2` Explicit non-chrome IME seam introduction (`pending`)
 
