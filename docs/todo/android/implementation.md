@@ -2745,7 +2745,7 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `AHW-B12` super-gate is reached.
 
-### `AHW12-M1` Mutation owner/callsite audit (`pending`)
+### `AHW12-M1` Mutation owner/callsite audit (`completed`)
 
 Queue line (exact):
 
@@ -2756,6 +2756,12 @@ Acceptance:
 - enumerate all app-shell mutation entry points and current callsites
 - classify each mutation as policy-owned or ad-hoc
 - identify the minimum behavior-neutral API narrowing cut
+
+Progress delta:
+
+- **Mutation entry points:** `setSidebarOpen(boolean)` — policy (chrome drawer); `setActiveShellView(ShellViewId)` — **public ad-hoc** active-view setter (only called from `applyProductTerminalShellViewActive` in-tree); `applyProductTerminalShellViewActive()` — **explicit product policy**; constructor seeds `activeShellView` from resolved mapping.
+- **Callsites:** no external Java callsites for `setActiveShellView`; `ViewModeController` uses `applyProductTerminalShellViewActive` only.
+- **Narrowing cut:** remove public `setActiveShellView`; route through private `replaceActiveShellView` + public `applyProductTerminalShellViewActive` only for product reassert.
 
 ### `AHW12-M2` Navigation mutation API narrowing (`pending`)
 
