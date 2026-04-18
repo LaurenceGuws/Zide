@@ -12,10 +12,10 @@ Authority for how Java userland orchestration (`uk.laurencegouws.terminal.userla
 | Seam | Role |
 |------|------|
 | `ShellPresentationHostInputs` | Harness-only bundle of suppliers for `UserlandReadinessState` / `UserlandInstallState` used to wire `ShellStateCallbacks` from `WidgetAssembly` without putting userland value types on `WidgetAssembly.Host`. Product truth remains the userland types. |
-| `WorkflowBridge.Callbacks` | Install flow (`completeInstall`, `failInstall`, `applyInstallState`), `restartSessionAfterInstall`, package-doctor completion (`markPackageDoctorComplete`), edge test-binary install completion (`markAndroidEdgeTestBinaryInstallComplete`), release and event append. |
+| `WorkflowBridge.Callbacks` | Install flow (`completeInstall`, `failInstall`, `applyInstallState`), `restartSessionAfterInstall`, package-doctor completion (`markPackageDoctorComplete`), edge test-binary install completion (`markAndroidEdgeTestBinaryInstallComplete`), explicit no-candidate (`markAndroidEdgeTestBinaryInstallNoCandidate`), release and event append. |
 | `UserlandWorkflowController` | Async install; read-only `zide-pm` doctor (`doctor` + `list-available`); separate `installAndroidEdgeTestBinary` via `UserlandAndroidTestBinaryInstallLifecycle`; calls only `Host` (implemented by `WorkflowBridge`). |
-| `UserlandAndroidTestBinaryInstallLifecycle` | Policy-owned argv/`zide-pm` invocation for edge test-binary `install` (telemetry and UX live in workflow/chrome). |
-| `UserlandAndroidTestBinaryPolicy` | Edge package id for proving `zide-pm install` on Android beyond baseline tools. |
+| `UserlandAndroidTestBinaryInstallLifecycle` | Runs `list-available` then deterministic candidate pick + `zide-pm install` (no hardcoded package id); raises `NoCandidateException` when parsing yields no spec. |
+| `UserlandZidePmListAvailableCandidates` | Line-oriented parser for `zide-pm list-available` stdout (no Java manifest parsing); supplies lexicographically first install token. |
 | `UserlandCommandRunner` | Runs `zide-pm` with prefix env; sets `ZIDE_PM_HOST_PLATFORM=android` for Android catalog / test-binary pull semantics inside `zide-pm`. |
 | `UserlandReadinessBlockerController.Host` | Readiness retry button: `startInstall`, `refreshSessionAfterReadinessRetry` — harness implements via `ReadinessBlockerStartup` + `ReadinessBlockerCallbacks`. |
 | `UserlandSessionCoordinator.Host` | Session poll/refresh side effects (readiness apply, shell refresh, telemetry); wired from `SessionAssembly` / activity. |

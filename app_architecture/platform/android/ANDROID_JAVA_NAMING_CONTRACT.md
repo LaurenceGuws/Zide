@@ -45,9 +45,9 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
 - `Provisioning`: filesystem/prefix materialization and artifact staging
 - `BaselinePackages`: required package set needed for first-class use
 - `PackageManager`: user-facing package CLI integration (`zide-pm`)
-- **Product terminal tab strip (slice 1):** harness chrome state in `AppShellNavigation` / `AppShellTerminalViewPolicy` — not a `TerminalWidgetSlotId` value
+- **Product terminal session selection (slice 1):** harness state in `AppShellNavigation` / `AppShellTerminalViewPolicy`; controls live in app-shell sidebar (APX-B11) — not a `TerminalWidgetSlotId` value
 - **`ZIDE_PM_HOST_PLATFORM`:** environment variable set to `android` by `UserlandCommandRunner` for in-prefix `zide-pm` catalog targeting (no second Java CLI)
-- **`UserlandAndroidTestBinaryPolicy`:** edge `zide-pm install` package spec in Packages/doctor flow (`jq` today)
+- **`UserlandZidePmListAvailableCandidates`:** parses `zide-pm list-available` lines for edge install candidate selection (APX-B12; no hardcoded package id)
 
 - `Controller`: owns behavior/state transitions for one concern
 - `Assembly`: wires a construction graph and returns immutable assembled result

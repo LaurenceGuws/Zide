@@ -320,8 +320,9 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `userland/UserlandPolicy.java` | Good | Central prefix path policy. | Keep package/version decisions elsewhere. |
 | `userland/UserlandRelease.java` | Good | Parses the bundled release descriptor only. | Keep release production in `../zide-mobile-pm`. |
 | `userland/UserlandSessionCoordinator.java` | Good | Owns readiness refresh, shell poll, state application, and auto-start/status telemetry signaling. | Keep install/update execution out. |
-| `userland/UserlandWorkflowController.java` | Good | Owns async install and package-doctor workflows; doctor path runs `zide-pm install` for `UserlandAndroidTestBinaryPolicy` edge spec after list-available. | Keep low-level archive extraction in `UserlandInstaller`. |
-| `userland/UserlandAndroidTestBinaryPolicy.java` | Good | Product hook: edge package id for Android `zide-pm install` smoke beyond nvim/htop baseline. | Adjust spec when catalog names change; keep Java as one-liner policy. |
+| `userland/UserlandWorkflowController.java` | Good | Owns async install and package-doctor workflows; doctor path is read-only (`doctor` + `list-available`); edge install is explicit via `UserlandAndroidTestBinaryInstallLifecycle` using list-derived candidates. | Keep low-level archive extraction in `UserlandInstaller`. |
+| `userland/UserlandZidePmListAvailableCandidates.java` | Good | Line parser for `zide-pm list-available` stdout; deterministic install spec selection for edge test-binary flow (APX-B12). | Adjust heuristics only when `zide-pm` output contract changes; no Java manifest parsing. |
+| `userland/UserlandAndroidTestBinaryInstallLifecycle.java` | Good | Runs `list-available`, picks candidate, runs `zide-pm install`; `NoCandidateException` for empty/unparsable catalog. | Keep argv/env centralized here. |
 
 ## Structure Pressure
 
