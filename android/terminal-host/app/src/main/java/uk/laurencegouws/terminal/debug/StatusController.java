@@ -123,4 +123,9 @@ public final class StatusController {
         appendEvent("packages.doctor.outcome success=" + success);
         updateStatus(success ? "packages.doctor.state" : "packages.doctor.failed_state");
     }
+
+    public void recordAndroidEdgeTestBinaryInstallOutcome(boolean success) {
+        appendEvent("packages.edge_install.outcome success=" + success);
+        updateStatus(success ? "packages.edge_install.state" : "packages.edge_install.failed_state");
+    }
 }

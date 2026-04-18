@@ -24,4 +24,11 @@ public final class StatusTelemetryStartupForwards {
             s.recordPackageDoctorOutcome(success);
         }
     }
+
+    public void markAndroidEdgeTestBinaryInstallCompleteIfReady(boolean success) {
+        final StatusController s = statusController.get();
+        if (s != null) {
+            s.recordAndroidEdgeTestBinaryInstallOutcome(success);
+        }
+    }
 }
