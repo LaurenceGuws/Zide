@@ -14,7 +14,8 @@ import uk.laurencegouws.terminal.scroll.ScrollOverlayView;
 import uk.laurencegouws.terminal.selection.SelectionController;
 
 /**
- * {@link WidgetAssembly.Host} for the single product terminal slot — extracted from activity wiring
+ * {@link WidgetAssembly.Host} for the single product terminal slot — {@link WidgetHostAssemblyContext}
+ * carries {@link ProductHostDeclaredTerminalWidgetSlot}; this host unwraps for {@link #terminalWidgetSlot()}.
  * to keep {@code ZideActivity} orchestration-only.
  */
 public final class ProductTerminalWidgetAssemblyHost implements WidgetAssembly.Host {

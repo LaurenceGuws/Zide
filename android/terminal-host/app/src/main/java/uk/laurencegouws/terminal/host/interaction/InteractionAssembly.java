@@ -15,7 +15,8 @@ public final class InteractionAssembly {
         /**
          * Terminal widget slot for this assembly (must be {@link TerminalWidgetSlotId#PRIMARY}
          * for current product wiring; reserved enum values are not active until host policy
-         * defines them).
+         * defines them). Startup adapters may carry {@link uk.laurencegouws.terminal.host.ui.ProductHostDeclaredTerminalWidgetSlot}
+         * and return its {@link TerminalWidgetSlotId} here.
          */
         TerminalWidgetSlotId terminalWidgetSlot();
 

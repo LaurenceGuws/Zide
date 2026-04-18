@@ -60,6 +60,7 @@ public final class ProductHostActivityStartupWiring {
                 currentReadinessState);
     }
 
+    /** Interaction assembly callbacks; {@code hostDeclaredTerminalWidgetSlot} is the startup declared-slot value. */
     public static InteractionCallbacks interaction(
             ProductHostDeclaredTerminalWidgetSlot hostDeclaredTerminalWidgetSlot,
             Context harnessContext,

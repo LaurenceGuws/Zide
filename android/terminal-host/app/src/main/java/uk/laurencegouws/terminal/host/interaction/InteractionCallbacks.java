@@ -11,7 +11,11 @@ import java.util.function.IntSupplier;
 import uk.laurencegouws.terminal.host.ui.ProductHostDeclaredTerminalWidgetSlot;
 import uk.laurencegouws.terminal.host.ui.TerminalWidgetSlotId;
 
-/** Functional callback adapter for {@link InteractionAssembly.Host}. */
+/**
+ * Functional callback adapter for {@link InteractionAssembly.Host}; startup wiring passes
+ * {@link uk.laurencegouws.terminal.host.ui.ProductHostDeclaredTerminalWidgetSlot} and unwraps only for
+ * {@link #terminalWidgetSlot()}.
+ */
 public final class InteractionCallbacks implements InteractionAssembly.Host {
     private final ProductHostDeclaredTerminalWidgetSlot hostDeclaredTerminalWidgetSlot;
     private final Context harnessContext;

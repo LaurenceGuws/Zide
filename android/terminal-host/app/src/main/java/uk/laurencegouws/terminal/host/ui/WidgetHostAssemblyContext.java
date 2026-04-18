@@ -19,7 +19,8 @@ import uk.laurencegouws.terminal.userland.UserlandWorkflowController;
  * Immutable dependency bundle for {@link ProductTerminalWidgetAssemblyHost}.
  *
  * <p>Built by the activity during startup; preserves progressive field wiring (e.g. shell input)
- * via suppliers where the underlying field is assigned after earlier assembly steps.</p>
+ * via suppliers where the underlying field is assigned after earlier assembly steps.
+ * {@link #hostDeclaredTerminalWidgetSlot} is the same declared-slot value as interaction/composition startup.</p>
  */
 public final class WidgetHostAssemblyContext {
     public final ProductHostDeclaredTerminalWidgetSlot hostDeclaredTerminalWidgetSlot;
