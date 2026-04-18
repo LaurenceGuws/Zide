@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android product expansion** (`APX`) — build product capability on top of the closed harness/widget ownership shape.
-- Active macro batch (`in_progress`): `APX-B8` — tab-state expansion vertical slice 1 (feature-first), with cleanup only when required by feature delivery.
+- Active macro batch (`architect_review_pending`): `APX-B8` — tab-state vertical slice 1 + zide-pm Android host signal; engineer super-gate reached; Architect review next.
 - Prior closed/escalated: `AHW-B1` through `AHW-B26` accepted and `AHW` closed; `ASF-M3` escalated IME/assist/touch rows to operator evidence; `RF-M0` through `RF-M5` and `AX-M1` through `AX-M5` completed.
 - Active queue authority: `docs/todo/android/implementation.md`
 - Engineer entrypoint (dual mode): `docs/todo/android/ENGINEER_ENTRYPOINT.md`
@@ -26,9 +26,9 @@ Engineer session seed:
 
 - Read `docs/todo/android/ENGINEER_ENTRYPOINT.md`, then
   `docs/todo/android/implementation.md`, then this handoff file.
-- Execute only the macro batch marked `in_progress` in
-  `docs/todo/android/implementation.md` (`APX-B8`).
-- Stop at the `APX-B8` super-gate and return the review packet for Architect verdict.
+- When a batch is `in_progress`, execute only that macro batch in
+  `docs/todo/android/implementation.md`. When the active batch is `architect_review_pending`,
+  stop engineering work and return the review packet for Architect verdict (`APX-B8` is at this stop).
 
 ## First Read Order
 

@@ -34,7 +34,7 @@ you must report the mismatch.
 
 ## Current Target
 
-`APX-B8` is `in_progress`.
+`APX-B8` is `architect_review_pending` (engineer super-gate reached).
 
 Active batch queue line (exact):
 
@@ -93,7 +93,8 @@ boundaries while preserving current single-terminal behavior.
   `InteractionAssembly.Result` yet.
 - Keep chrome slot-agnostic in this batch; do not thread slot into chrome
   construction until per-slot chrome policy is scoped.
-- No tab/multi-instance product behavior unless a new batch scopes it.
+- `APX-B8` slice 1 adds **chrome-only** product terminal tab selection (not a second
+  `TerminalWidgetSlotId`); full multi-instance/tab product behavior remains future-scoped.
 
 ## Internal Milestones
 

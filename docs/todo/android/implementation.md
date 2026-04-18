@@ -112,7 +112,7 @@ Dual-mode batching override (architect directive):
 - `APX-B5` accepted by architect.
 - `APX-B6` accepted by architect.
 - `APX-B7` accepted by architect.
-- `APX-B8` is `in_progress`.
+- `APX-B8` super-gate reached; architect review pending.
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -1888,7 +1888,7 @@ Architect review verdict:
 - `Review answers: yes, split is right long-term boundary — value type choke (`terminalWidgetSlotForProductHarness`) + Host adapter enum surface is acceptable. No mandatory rename before acceptance.`
 - `Findings carried forward: no blocking regressions; startup behavior and PRIMARY-only runtime unchanged.`
 
-### `APX-B8` Tab-State Expansion Vertical Slice 1 (`in_progress`)
+### `APX-B8` Tab-State Expansion Vertical Slice 1 (`architect_review_pending`)
 
 Batch queue line (exact):
 
@@ -1956,7 +1956,7 @@ Outcome:
 
 - **Seams audited:** `AppShellNavigation` (active shell view + drawer), `AppShellTerminalViewPolicy` (activation + drawer forwarding), `AppShellViewState` (per-view row shape), `ProductTerminalSlotShellMapping` + `TerminalWidgetSlotId.checkActiveProductTerminalSlot` (still single active widget slot = `PRIMARY`), `WidgetAssembly` chrome construction, `ChromeBridge` / `ChromeController` (assist bar + sidebar), `ShellViewId` (single `TERMINAL` today).
 - **Slice 1 behavior (minimum vertical):** harness-owned **product terminal tab strip** with **two selectable tabs**; selection state lives in `AppShellNavigation` (indices `0..tabCount-1`); taps update selection + chrome styling + telemetry; **no second terminal widget instance** and **no new `TerminalWidgetSlotId` values** in this slice — multi-session hosting remains future work.
-- **Required code:** extend `AppShellNavigation` + policy for tab indices; add tab strip to `activity_main.xml`; wire `ChromeController` + `WidgetAssembly.Host` / `ActivityViewBindings` for buttons.
+- **Required code:** extend `AppShellNavigation` + policy for tab indices; add tab strip to `activity_main.xml`; wire `ChromeController` + `ChromeBridge` (tab buttons via `rootView` lookup).
 - **Blocker-only cleanup:** none identified beyond wiring required for the strip.
 - **zide-pm slice:** signal Android host platform to `zide-pm` via process environment from `UserlandCommandRunner` so catalog/list paths can target Android test binaries without a second CLI surface.
 
@@ -2008,7 +2008,7 @@ Outcome:
 
 - `UserlandCommandRunner.runZidePm`: sets `ZIDE_PM_HOST_PLATFORM=android` for every `zide-pm` process so catalog/list/install logic inside `zide-pm` can target Android test binaries without changing the Java call shape (`doctor` / `list-available` unchanged).
 
-### `APX8-M5` Docs + handoff sync (`pending`)
+### `APX8-M5` Docs + handoff sync (`completed`)
 
 Queue line (exact):
 
@@ -2019,7 +2019,12 @@ Acceptance:
 - queue, handoff, and engineer entrypoint coherent through APX-B8 super-gate
 - authority docs reflect real implemented feature shape
 
-### `APX8-M6` Batch validation + review packet (`pending`)
+Outcome:
+
+- `ANDROID_JAVA_HOST_STRUCTURE.md`, `ANDROID_JAVA_NAMING_CONTRACT.md`, `USERLAND_HOST_CONTRACT.md` updated for slice-1 tab state + `ZIDE_PM_HOST_PLATFORM`
+- `docs/AGENT_HANDOFF.md`, `docs/todo/android/ENGINEER_ENTRYPOINT.md` set to `architect_review_pending` stop for `APX-B8`
+
+### `APX8-M6` Batch validation + review packet (`completed`)
 
 Queue line (exact):
 
@@ -2031,6 +2036,32 @@ Acceptance:
 - deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
 - cold start smoke pass when a device is available
 - engineer reports full super-gate packet and explicit feature status vs APX completion objectives
+
+Engineer validation (this batch):
+
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac` — pass
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac` — pass
+- `python3 ops/android_terminal_host.py deploy` — pass
+- `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E` — pass (no `E` lines)
+- `adb shell am force-stop uk.laurencegouws.zide && adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity` — pass (`LaunchState: COLD`, `Status: ok`)
+
+**Feature status vs batch objectives:**
+
+- **Tab-state slice 1:** two-tab chrome strip (`Session 1` / `Session 2`) with harness-owned selection in `AppShellNavigation`, forwarded through `AppShellTerminalViewPolicy`, bound in `ChromeController` / `ChromeBridge`; telemetry `app_shell.product_terminal_tab.select`. Single `PRIMARY` widget instance and single `ShellViewId.TERMINAL` unchanged.
+- **zide-pm:** `UserlandCommandRunner` exports `ZIDE_PM_HOST_PLATFORM=android` for all `zide-pm` subprocesses.
+
+**Residual risk / follow-on:** Tab selection does not yet map to a second terminal instance or slot; `zide-pm` must honor `ZIDE_PM_HOST_PLATFORM` in-prefix for catalog filtering to take effect.
+
+**Review chunk:** `APX-B8`
+
+**Commits (oldest → newest):** `2bf6ef19`, `a36ef22d`, `ef1d4e6e`, `9ed79459`, `TBD`, `TBD` (authority + handoff commits in this wave)
+
+`Milestone reached per docs, architect review required.`
+
+Architect review verdict:
+
+- `Review chunk: APX-B8`
+- `Verdict: pending`
 
 ## Guardrails
 
