@@ -26,7 +26,7 @@ public final class ProductTerminalWidgetAssemblyHost implements WidgetAssembly.H
 
     @Override
     public TerminalWidgetSlotId terminalWidgetSlot() {
-        return c.slot;
+        return c.hostDeclaredTerminalWidgetSlot.terminalWidgetSlot();
     }
 
     @Override

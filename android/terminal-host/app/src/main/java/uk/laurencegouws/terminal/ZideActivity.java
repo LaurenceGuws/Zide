@@ -332,7 +332,7 @@ public final class ZideActivity extends android.app.Activity
     private WidgetAssembly.Host createWidgetHost(final InteractionAssembly.Result interaction) {
         return new ProductTerminalWidgetAssemblyHost(
                 new WidgetHostAssemblyContext(
-                        productHostDeclaredTerminalWidgetSlot.terminalWidgetSlot(),
+                        productHostDeclaredTerminalWidgetSlot,
                         this,
                         handler,
                         productHostImeState,

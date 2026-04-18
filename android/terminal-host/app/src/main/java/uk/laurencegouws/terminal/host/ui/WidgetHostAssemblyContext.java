@@ -3,6 +3,7 @@ package uk.laurencegouws.terminal.host.ui;
 import android.content.Context;
 import android.os.Handler;
 
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -21,7 +22,7 @@ import uk.laurencegouws.terminal.userland.UserlandWorkflowController;
  * via suppliers where the underlying field is assigned after earlier assembly steps.</p>
  */
 public final class WidgetHostAssemblyContext {
-    public final TerminalWidgetSlotId slot;
+    public final ProductHostDeclaredTerminalWidgetSlot hostDeclaredTerminalWidgetSlot;
     public final Context harnessContext;
     public final Handler handler;
     public final ProductHostImeState productHostImeState;
@@ -38,7 +39,7 @@ public final class WidgetHostAssemblyContext {
     public final Consumer<String> sendDirectText;
 
     public WidgetHostAssemblyContext(
-            TerminalWidgetSlotId slot,
+            ProductHostDeclaredTerminalWidgetSlot hostDeclaredTerminalWidgetSlot,
             Context harnessContext,
             Handler handler,
             ProductHostImeState productHostImeState,
@@ -53,7 +54,8 @@ public final class WidgetHostAssemblyContext {
             ViewportController terminalViewportController,
             UserlandWorkflowController userlandWorkflowController,
             Consumer<String> sendDirectText) {
-        this.slot = slot;
+        this.hostDeclaredTerminalWidgetSlot =
+                Objects.requireNonNull(hostDeclaredTerminalWidgetSlot, "hostDeclaredTerminalWidgetSlot");
         this.harnessContext = harnessContext;
         this.handler = handler;
         this.productHostImeState = productHostImeState;
