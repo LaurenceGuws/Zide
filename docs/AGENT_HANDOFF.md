@@ -46,6 +46,7 @@ Engineer session seed:
 - Compile gate is strict: `:app:compileDebugJavaWithJavac` and
   `:app:compileReleaseJavaWithJavac` both must stay green under warnings-as-errors.
 - Update docs in the same wave.
+- Treat Android lane ownership as single-path in-repo code only: no external fork compatibility framing.
 - Architect updates use: `Blocked by humain review needed: true|false`.
 - Engineer updates use: `Blocked by Archtect review needed: true|false`.
 

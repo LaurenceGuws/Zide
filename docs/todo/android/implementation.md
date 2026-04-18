@@ -2857,7 +2857,7 @@ Super-gate engineer packet:
 
 Remaining risks:
 
-- External forks that called `setActiveShellView` must migrate to future explicit policy APIs or `applyProductTerminalShellViewActive` for product reassert.
+- None material in repo scope.
 
 Architect review verdict:
 

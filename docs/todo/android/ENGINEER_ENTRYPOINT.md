@@ -117,6 +117,7 @@ If a required change falls outside these paths, stop and report a blocker.
 - No broad rename campaign.
 - No ASF operator-evidence churn unless new evidence is provided.
 - No compatibility shim kept only to avoid a clean cut.
+- No external-fork compatibility work or framing; keep one clean in-repo path only.
 - No behavior changes inside extraction-only commits.
 
 ## Execution Loop
