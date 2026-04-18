@@ -2132,11 +2132,17 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `APX-B9` super-gate is reached.
 
-### `APX9-M1` Behavior-first audit + slice definition (`pending`)
+### `APX9-M1` Behavior-first audit + slice definition (`completed`)
 
 Queue line (exact):
 
 - audit current APX-B8 tab/session and zide-pm paths, then define the minimum APX-B9 behavior slice that proves real session-backed tabs + real test-binary pull flow
+
+Outcome:
+
+- **APX-B8 baseline:** chrome tab strip + `AppShellNavigation` index; `ZIDE_PM_HOST_PLATFORM`; single native PTY/session in JNI bridge (no multi-session native API in-repo).
+- **B9 tab-session slice (Java harness):** on **distinct** tab selection, invoke **`nativeRestartSessionBridge` + `UserlandSessionCoordinator.refreshAndApply`** so the active tab drives a **fresh shell session** (prior tab’s native transcript is not retained — dual-PTY persistence is future native scope).
+- **B9 zide-pm slice:** after `doctor` + `list-available`, run **`zide-pm install --prefix … <edge package>`** from `UserlandWorkflowController` so Android proves pull/install beyond nvim/htop baseline; failures are logged into the doctor output without failing the whole Packages flow.
 
 ### `APX9-M2` Session-backed tab behavior cut (`pending`)
 
