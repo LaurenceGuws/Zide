@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android product expansion** (`APX`) — build product capability on top of the closed harness/widget ownership shape.
-- Active macro batch (`architect_review_pending`): `APX-B10` — Android test-binary productization + clean tab-state semantics under single-PTY constraints.
+- Active macro batch (`in_progress`): `APX-B11` — manifest-driven Android test-binary install UX and explicit no-candidate behavior.
 - Parallel foundation lane (separate repo): `../zide-mobile-pm` may run in parallel for Android test-binary pull/install contract groundwork; Android APX remains primary until APX objectives are stable.
 - Prior closed/escalated: `AHW-B1` through `AHW-B26` accepted and `AHW` closed; `ASF-M3` escalated IME/assist/touch rows to operator evidence; `RF-M0` through `RF-M5` and `AX-M1` through `AX-M5` completed.
 - Active queue authority: `docs/todo/android/implementation.md`
@@ -56,7 +56,7 @@ Engineer session seed:
 - Architect updates use: `Blocked by humain review needed: true|false`.
 - Engineer updates use: `Blocked by Archtect review needed: true|false`.
 
-## APX-B10 Baseline
+## APX-B11 Baseline
 
 - `AHW-B20` is accepted and already keeps the test device awake by default.
 - Additional keep-screen-on seam work is frozen by product direction.
@@ -75,8 +75,9 @@ Engineer session seed:
 - `APX-B7` is accepted: enum conversion is centralized at `terminalWidgetSlotForProductHarness()` with Host adapter enum boundaries preserved.
 - `APX-B8` is accepted: tab-state slice 1 (two-tab chrome strip and harness tab index state) and `ZIDE_PM_HOST_PLATFORM=android` export are in place.
 - `APX-B9` is accepted: distinct tab selection now restarts native shell + userland refresh; Packages flow proves Android-side `zide-pm install` path.
-- `APX-B10` scope is feature-first: move install mutation out of ad-hoc Packages doctor side effects into an explicit policy lifecycle while keeping tab semantics coherent under single-PTY.
-- Cleanup-only changes are out of scope unless they directly unblock APX-B10 feature delivery.
+- `APX-B10` is accepted: doctor is read-only and install mutation is explicit lifecycle-owned (`UserlandAndroidTestBinaryInstallLifecycle`) with dedicated sidebar trigger.
+- `APX-B11` scope is feature-first: replace hardcoded test-binary package id with manifest/list-driven candidate selection and explicit no-candidate UX.
+- Cleanup-only changes are out of scope unless they directly unblock APX-B11 feature delivery.
 - APX remains primary until these are stable: harness/widget split stability, clean tab-state expansion, and zide-pm real Android test-binary pull maturity.
 - After those three are stable, primary architect focus transitions to Zig-layer hygiene cleanup.
 - Keep `ProductHostKeepScreenOnPolicy` as the long-term owner of terminal keep-screen-on default policy.
@@ -95,7 +96,7 @@ Engineer session seed:
 
 ## Operator Evidence Escalation
 
-ASF did not prove IME/assist or touch gestures because no operator packets were delivered. Those rows remain parked in `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md` with owner `operator`; they do not block `APX-B10` unless new evidence reports a regression inside the active code scope.
+ASF did not prove IME/assist or touch gestures because no operator packets were delivered. Those rows remain parked in `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md` with owner `operator`; they do not block `APX-B11` unless new evidence reports a regression inside the active code scope.
 
 ## Historical Notes
 

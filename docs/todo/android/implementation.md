@@ -122,7 +122,8 @@ Dual-mode batching override (architect directive):
 - `APX-B7` accepted by architect.
 - `APX-B8` accepted by architect.
 - `APX-B9` accepted by architect.
-- `APX-B10` super-gate reached; architect review pending.
+- `APX-B10` accepted by architect.
+- `APX-B11` is now `in_progress`.
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -2225,7 +2226,7 @@ Architect review verdict:
 - `Review answers: APX-B9 shape is accepted as the minimum behavior-bearing tab slice under current single-PTY native constraints.`
 - `Findings carried forward: no blocking regressions; no startup-order drift; single-path code maintained.`
 
-### `APX-B10` Android Test-Binary Productization + Tab-State Clean Path (`architect_review_pending`)
+### `APX-B10` Android Test-Binary Productization + Tab-State Clean Path (`accepted`)
 
 Batch queue line (exact):
 
@@ -2350,14 +2351,111 @@ Engineer validation (this batch):
 - `2316d23a` — chrome sidebar **Install test tools** + `WidgetAssembly` host seam
 - `57b62d8c` — `ProductTerminalTabSessionContract` + `@see` on navigation/runtime
 
-**Docs / handoff packet:** `fab4e607` — `USERLAND_HOST_CONTRACT.md`, this queue section, `ENGINEER_ENTRYPOINT.md`, `AGENT_HANDOFF.md`.
+**Docs / handoff packet:** `USERLAND_HOST_CONTRACT.md`, this queue section, `ENGINEER_ENTRYPOINT.md`, `AGENT_HANDOFF.md` — commit subject `APX-B10: authority and handoff packet for install/tab seams` (parent `57b62d8c`).
 
 `Milestone reached per docs, architect review required.`
 
 Architect review verdict:
 
 - `Review chunk: APX-B10`
-- `Verdict: pending`
+- `Verdict: accepted`
+- `Commits reviewed: 88931d7c, d626b572, 21ff3250, 2316d23a, 57b62d8c, 6d51d5d4`
+- `Architect validation spot-check: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
+- `Architect runtime validation spot-check: python3 ops/android_terminal_host.py deploy (pass); adb cold start (pass, LaunchState: COLD, Status: ok); adb logcat -d -s AndroidRuntime:E (pass, empty)`
+- `Engineer validation accepted: compile + deploy + AndroidRuntime:E smoke + cold start pass`
+- `Review answers: install mutation split from doctor path is accepted; single-PTY tab contract wording is clear and preserved.`
+- `Findings carried forward: no blocking regressions; no startup-order drift; single-path code maintained.`
+
+### `APX-B11` Manifest-Driven Test-Binary Install UX (`in_progress`)
+
+Batch queue line (exact):
+
+- replace hardcoded edge test-binary install with manifest-driven Android test-binary selection flow and explicit no-candidate UX, using released dev manifest behavior as validation baseline
+
+Batch purpose:
+
+- remove hardcoded package-id coupling in Android host (`jq`) and use `zide-pm list-available` results as install candidates
+- keep doctor path read-only while making install path explicit, user-triggered, and status-visible
+- keep tab-session behavior unchanged and explicitly single-PTY
+- continue feature-first APX work toward stable objective (3): real Android test-binary pull/install maturity
+- run as a longer engineer iteration: target **5–10 commits** before architect super-gate review
+
+Batch scope:
+
+- Java Android terminal host/userland flow and minimal status/chrome wiring only
+- primary code roots:
+  `android/terminal-host/app/src/main/java/uk/laurencegouws/terminal/**`
+  `android/terminal-host/app/src/main/res/**` (only when required for user-facing status copy)
+- allowed docs:
+  `docs/todo/android/implementation.md`,
+  `docs/todo/android/ENGINEER_ENTRYPOINT.md`,
+  `docs/AGENT_HANDOFF.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_NAMING_CONTRACT.md`,
+  `app_architecture/platform/android/USERLAND_HOST_CONTRACT.md`
+
+Batch non-goals:
+
+- no terminal-core/shared-renderer refactor
+- no native multi-PTY/session implementation
+- no keep-screen-on follow-up work
+- no startup-order change
+- no edits in `../zide-mobile-pm` from this Android batch
+
+Batch super-gate:
+
+- install path no longer depends on hardcoded `UserlandAndroidTestBinaryPolicy.edgeTestPackageSpec()`
+- install candidate selection is derived from `zide-pm` availability output under Android host mode
+- no-candidate and install-failure states are explicit in status/event output (not silent failures)
+- debug and release Java compile pass
+- deploy + AndroidRuntime:E warm/cold checks pass
+- docs reflect APX-B11 seam shape and residual risk
+
+Internal milestone cadence:
+
+- Engineer executes `APX11-M1` through `APX11-M6` sequentially.
+- Engineer should keep cutting coherent validated commits across those milestones
+  and target **5–10 commits total** before stopping at `APX-B11` super-gate.
+- Do not stop for architect review between internal milestones.
+- Mark each internal milestone complete in this file as it lands.
+- Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
+  the `APX-B11` super-gate is reached.
+
+### `APX11-M1` Candidate-selection audit (`pending`)
+
+Queue line (exact):
+
+- audit current doctor/list/install outputs and define deterministic Android test-binary candidate selection and no-candidate behavior
+
+### `APX11-M2` Manifest-driven install candidate policy cut (`pending`)
+
+Queue line (exact):
+
+- replace hardcoded edge package id with manifest/list-driven candidate policy for install action
+
+### `APX11-M3` Consumer wiring + status behavior (`pending`)
+
+Queue line (exact):
+
+- wire install action and status telemetry to the new candidate policy, including explicit no-candidate path
+
+### `APX11-M4` Device verification on current dev release baseline (`pending`)
+
+Queue line (exact):
+
+- verify behavior against current released dev manifest flow and record expected outcomes when no android-test-binary rows exist
+
+### `APX11-M5` Docs + handoff sync (`pending`)
+
+Queue line (exact):
+
+- update authority/queue/handoff/entrypoint to APX-B11 install-candidate seam shape and residual risk
+
+### `APX11-M6` Batch validation + review packet (`pending`)
+
+Queue line (exact):
+
+- validate APX-B11 end-to-end and publish architect super-gate packet with outcomes and blockers
 
 ## Guardrails
 

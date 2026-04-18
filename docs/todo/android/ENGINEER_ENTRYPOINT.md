@@ -34,15 +34,15 @@ you must report the mismatch.
 
 ## Current Target
 
-`APX-B10` is `architect_review_pending`.
+`APX-B11` is `in_progress`.
 
 Active batch queue line (exact):
 
-- convert APX-B9 proof-of-path behavior into clean product flow: install Android test binaries via explicit policy lifecycle (not ad-hoc doctor side effects) while keeping tab-session behavior coherent under single-PTY constraints
+- replace hardcoded edge test-binary install with manifest-driven Android test-binary selection flow and explicit no-candidate UX, using released dev manifest behavior as validation baseline
 
 Parallel-lane note:
 
-- `../zide-mobile-pm` may progress in parallel under a separate engineer session; this Android engineer session stays focused on APX-B10 only.
+- `../zide-mobile-pm` may progress in parallel under a separate engineer session; this Android engineer session stays focused on APX-B11 only.
 
 ## Core Boundary Rule
 
@@ -73,12 +73,13 @@ boundaries while preserving current single-terminal behavior.
 - `APX-B7` is accepted: enum conversion choke point is centralized on declared-slot value seam.
 - `APX-B8` is accepted: tab-state slice 1 (chrome strip + tab index state) and `ZIDE_PM_HOST_PLATFORM=android` export are in place.
 - `APX-B9` is accepted: tab selection now drives native restart + userland refresh, and Packages flow proved Android-side `zide-pm install`.
-- `APX-B10` is feature-first: move install mutation out of ad-hoc Packages doctor side effects into explicit policy lifecycle while keeping tab semantics coherent under single-PTY constraints.
-- `zide-mobile-pm` foundation work is allowed in parallel, but APX-B10 remains the primary in-repo execution lane here.
+- `APX-B10` is accepted: doctor path is read-only and test-binary install mutation is explicit lifecycle-owned with dedicated sidebar trigger.
+- `APX-B11` is feature-first: replace hardcoded test-binary package id with manifest/list-driven candidate selection and explicit no-candidate behavior.
+- `zide-mobile-pm` foundation work is allowed in parallel, but APX-B11 remains the primary in-repo execution lane here.
 - `AHW-B26` is accepted and `AHW` is closed.
 - Keep harness vs surface split (`WidgetAssembly.Result.harnessHost` + `surfaceJoin`) as the baseline.
 - Freeze additional keep-screen-on seam work beyond B20 unless explicitly re-opened by product direction.
-- Execute `APX-B10` as a non keep-screen-on batch.
+- Execute `APX-B11` as a non keep-screen-on batch.
 - Keep `ProductHostActivityStartupWiring`, `ProductTerminalLifecycleHost`, and `ProductTerminalWidgetAssemblyHost` ownership from B22 unchanged.
 - Keep `ProductHostOnCreateStartupCoordinator` + `ProductHostOnCreateStartupSteps` as the startup choreography seam from B23.
 - Keep `AppShellTerminalViewPolicy` as explicit app-shell terminal-view policy seam; no public `appShellNavigation()` accessor on that type.
@@ -100,12 +101,12 @@ boundaries while preserving current single-terminal behavior.
   `InteractionAssembly.Result` yet.
 - Keep chrome slot-agnostic in this batch; do not thread slot into chrome
   construction until per-slot chrome policy is scoped.
-- `APX-B10` must separate read/report doctor behavior from install/mutation behavior and keep tab semantics explicit under current runtime constraints.
+- `APX-B11` must remove hardcoded install package-id coupling and keep explicit tab semantics under current runtime constraints.
 
 ## Internal Milestones
 
-Execute `APX10-M1` through `APX10-M6` sequentially; do not stop before the
-`APX-B10` super-gate unless a hard stop condition is hit.
+Execute `APX11-M1` through `APX11-M6` sequentially; do not stop before the
+`APX-B11` super-gate unless a hard stop condition is hit.
 
 Commit cadence expectation for this macro batch:
 
@@ -114,12 +115,12 @@ Commit cadence expectation for this macro batch:
 
 Execute in order and mark progress in `docs/todo/android/implementation.md`.
 
-- `APX10-M1`: audit APX-B9 doctor/install callsites and define explicit read-only doctor vs install mutation boundaries.
-- `APX10-M2`: implement policy-owned Android test-binary install lifecycle path.
-- `APX10-M3`: wire consumers and verify lifecycle behavior on device.
-- `APX10-M4`: lock tab-session semantics under single-PTY constraints (explicit, no persistence claims).
-- `APX10-M5`: lock docs/handoff/entrypoint to implemented APX-B10 seam shape.
-- `APX10-M6`: run validation and publish super-gate review packet.
+- `APX11-M1`: audit doctor/list/install outputs and define deterministic candidate selection + no-candidate behavior.
+- `APX11-M2`: implement manifest/list-driven Android test-binary candidate policy.
+- `APX11-M3`: wire install action + status telemetry through the new candidate policy.
+- `APX11-M4`: verify behavior against current released dev manifest baseline on device.
+- `APX11-M5`: lock docs/handoff/entrypoint to implemented APX-B11 seam shape.
+- `APX11-M6`: run validation and publish super-gate review packet.
 
 ## Allowed Work
 
@@ -211,7 +212,7 @@ when:
 - a behavior change is required where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
 - implementing terminal tabs/product behavior becomes necessary to proceed
-- the `APX-B10` super-gate is reached
+- the `APX-B11` super-gate is reached
 
 Otherwise continue autonomously with:
 
@@ -219,9 +220,9 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At `APX-B10` super-gate, report:
+At `APX-B11` super-gate, report:
 
-- review chunk name: `APX-B10`
+- review chunk name: `APX-B11`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs
