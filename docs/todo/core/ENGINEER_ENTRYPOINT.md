@@ -16,9 +16,9 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B3` — **in_progress** (normalize Android-proven FFI/render seams into
-  shared core contracts while preserving behavior freeze and platform-local
-  Android glue boundaries).
+- `CZH-B3` — **architect_review_pending** (FFI renderer metadata module +
+  `RenderCache.visibleStartLineIndex` for Android selection; see super-gate in
+  `docs/todo/core/implementation.md`).
 
 ## Hard Rules
 

@@ -329,3 +329,15 @@ For the current cleanup/restructure phase:
   remaining need
 - avoid `TerminalSession` cleanup that only shortens files without moving
   ownership or clarifying shared host semantics
+
+## FFI renderer metadata and visible viewport (shared core)
+
+- **Renderer metadata (glyph class + damage policy bits):** owned in
+  `src/terminal/ffi/renderer_metadata.zig`. All hosts (desktop JNI exports,
+  Android, tests) obtain `RendererMetadata` through `core_api.rendererMetadata`
+  only — no duplicate classification tables in platform glue.
+- **Visible scroll line origin:** `RenderCache.visibleStartLineIndex()` in
+  `src/terminal/core/publication/render_cache.zig` is the publication-truth index
+  for the first visible row in absolute scrollback coordinates. Android selection
+  helpers in `src/platform/android_shell_session.zig` use this API instead of
+  ad hoc math — keeps peer hosts aligned with publication layer semantics.

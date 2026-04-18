@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B3` (`in_progress`).
+- Current active macro batch: `CZH-B3` (`architect_review_pending`).
 
 ## Campaign Goals
 
@@ -135,7 +135,9 @@ Android guard (only if seam-touching this batch): compileDebug/ReleaseJavaWithJa
    logging policy; remove stale investigation callers.
 4. **Naming / ownership (`CZH-B2` scope):** align lingering names with
    `TERMINAL_SUBSYSTEM_LAYERS` + `VT_MATURITY_PURITY_CAMPAIGN` authority.
-5. **FFI/render normalization (`CZH-B3` scope):** per queue line when opened.
+5. **FFI/render normalization (`CZH-B3` scope):** **in progress / see `CZH-B3`
+   milestone notes below** — shared FFI metadata module + publication viewport
+   helper for Android selection.
 
 #### `CZH1-M5` code note (bug fix, not policy)
 
@@ -227,7 +229,7 @@ Internal milestones (`CZH2-M1..M6`, execute sequentially in one batch):
   `SL-ext-2 PASS`; `zig build test-editor` still fails with module-path imports
   and is tracked as a separate lane concern.
 
-### `CZH-B3` Android-Driven FFI/Render Normalization (`in_progress`)
+### `CZH-B3` Android-Driven FFI/Render Normalization (`architect_review_pending`)
 
 Queue line (exact):
 
@@ -256,6 +258,75 @@ Internal milestones (`CZH3-M1..M6`, execute sequentially in one batch):
 - stop only at super-gate or real hard blocker
 - target 5–10 validated commits
 - maintain behavior freeze and single-path contract
+
+#### `CZH3-M1` seam audit (explicit files + non-goals)
+
+**Shared terminal FFI / publication (canonical for native + tests):**
+
+- `src/terminal/ffi/shared.zig` — extern ABI structs and `Handle` bookkeeping
+- `src/terminal/ffi/bridge.zig`, `core_api.zig`, `host_api.zig`, `c_api.zig` — host API surface
+- `src/terminal_ffi_exports.zig` — exported C symbols
+
+**Android platform glue (stays local — JNI / Activity / GLES wiring):**
+
+- `src/platform/android_runtime_bridge.zig` — JNI entrypoints, `ANativeWindow`, lifecycle
+- `src/platform/android_shell_session.zig` — thin session + selection UX over `c_api` / core
+- `src/platform/android_host.zig`, `android_gles_surface_status.zig`
+- `src/ui/renderer/android_gles_backend.zig` — GLES backend (not shared contract debt for this batch)
+
+**Non-goals (explicit):**
+
+- No GLES/Vulkan/renderer-backend contract refactors — see `RENDER_BACKEND_CONTRACT.md` adoption gates.
+- No JNI signature or Java/Kotlin source changes.
+- No behavior or ABI version bumps beyond mechanical relocation of existing logic.
+
+#### `CZH3-M2` first bounded seam (done)
+
+- Added `src/terminal/ffi/renderer_metadata.zig`: `fillRendererMetadata` + glyph classification
+  (moved out of `shared.zig`). `core_api.rendererMetadata` is the single fill path.
+
+#### `CZH3-M3` second bounded seam (done)
+
+- `RenderCache.visibleStartLineIndex()` in `render_cache.zig` — publication-truth first visible
+  line in scrollback coordinates.
+- `android_shell_session` selection helpers use it (removed duplicate local math). Android glue
+  remains in `src/platform/`; semantics owned by publication layer.
+
+#### `CZH3-M4` probe hygiene (done)
+
+- No new logging in touched paths; no investigation probes added.
+
+#### `CZH3-M5` docs touched
+
+- This queue file; `docs/AGENT_HANDOFF.md`; `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md` — FFI metadata + viewport helper section
+
+#### `CZH-B3` engineer validation (2026-04-18)
+
+- **Date:** 2026-04-18  
+- **Host:** Linux (engineer session)  
+- **Git:** `main` at engineer close  
+- **SL-0** `zig build` — **PASS**  
+- **SL-1** `zig build test` — **PASS**  
+- **SL-2** `zig build -Dmode=terminal` — **PASS**  
+- **SL-3** `zig build -Dmode=editor` — **PASS**  
+- **SL-ext-1** `zig build test-terminal-replay` — **PASS**  
+- **SL-ext-2** `zig build test-terminal-replay-all` — **PASS**  
+- **`zig build test-editor`** — **FAIL** (module-path imports; separate lane; unchanged)  
+- **Android guard** — **SKIP** (lane paused; seam touches Zig-only `android_shell_session` — no Gradle run this session)
+
+#### `CZH-B3` super-gate packet (engineer → architect)
+
+- `Review chunk: CZH-B3`
+- `Verdict: architect_review_pending`
+- `Scope summary:` Shared `renderer_metadata.zig` owns FFI `RendererMetadata` fill + glyph
+  classification; `RenderCache.visibleStartLineIndex()` centralizes visible-line math for
+  Android selection; platform JNI/GLES files unchanged.
+- `Residual risks / follow-ups:` Full Android `compileDebugJavaWithJavac` not re-run (lane
+  paused); `test-editor` still broken; broader RENDER_BACKEND_CONTRACT Vulkan/Android rendering
+  gates remain future work.
+- `Architect validation request:` confirm layer ownership + optional Android compile spot-check
+  when lane reopens.
 
 ## Response Contract
 

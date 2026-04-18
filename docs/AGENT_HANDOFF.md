@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: **Core Zig freeze + hygiene**
 - Campaign: **Core Zig Stability/Hygiene** (`CZH`)
-- Active macro batch (`in_progress`): `CZH-B3` in
+- Active macro batch (`architect_review_pending`): `CZH-B3` in
   `docs/todo/core/implementation.md`
 - Android lane status: **paused by product direction** except critical
   regressions/blockers for current users.
@@ -28,10 +28,9 @@ Current top priorities:
 
 Current batch intent (`CZH-B3`):
 
-- normalize Android-proven FFI/render seam improvements into shared core
-  ownership surfaces without behavior change
-- keep Android-specific glue platform-local and maintain frozen behavior +
-  single-path ownership contracts
+- shared `terminal/ffi/renderer_metadata.zig` + publication `visibleStartLineIndex`
+  for host selection math; Android JNI/GLES files unchanged
+- keep Android-specific glue platform-local; behavior freeze + single-path contracts
 
 ## First Read Order
 
