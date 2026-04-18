@@ -34,7 +34,7 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B22` is `in_progress` and is the only active macro batch.
+`AHW-B22` is `verdict_pending` (engineer super-gate packet delivered; Architect review next).
 
 Active batch queue line (exact):
 

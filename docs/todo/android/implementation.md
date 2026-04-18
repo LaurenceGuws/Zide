@@ -126,7 +126,7 @@ Dual-mode batching override (architect directive):
 - Completed macro batch: `AHW-B20` (accepted by Architect).
 - Keep-screen-on follow-up beyond `AHW-B20` is explicitly frozen by product direction.
 - Completed macro batch: `AHW-B21` (accepted by Architect; activity orchestration-pressure reduction follow-up queued in `AHW-B22`).
-- `AHW-B22` is `in_progress` (reduce ZideActivity orchestration pressure through startup wiring extraction, behavior-preserving).
+- `AHW-B22` is `verdict_pending` (reduce ZideActivity orchestration pressure through startup wiring extraction, behavior-preserving; engineer super-gate packet delivered).
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -4522,7 +4522,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B22` ZideActivity Orchestration Pressure Reduction (`in_progress`)
+### `AHW-B22` ZideActivity Orchestration Pressure Reduction (`verdict_pending`)
 
 Batch queue line (exact):
 
@@ -4602,7 +4602,7 @@ Progress delta:
 - **Invariants:** `runOnCreateStartupSequence` call order and side-effect timing unchanged; no new
   assembly entry points.
 
-### `AHW22-M2` Startup wiring helper extraction (`pending`)
+### `AHW22-M2` Startup wiring helper extraction (`completed`)
 
 Queue line (exact):
 
@@ -4614,7 +4614,13 @@ Acceptance:
 - preserve existing call order and data flow
 - compile debug + release Java after code changes
 
-### `AHW22-M3` Callback assembly slimming (`pending`)
+Progress delta:
+
+- **`ProductHostActivityStartupWiring`**: static factories for status/interaction/input/session/workflow/runtime/UI startup callbacks.
+- **`ProductTerminalLifecycleHost`**: `LifecycleController.Host` implementation (native bridge + harness forwards).
+- **`WidgetHostAssemblyContext`** + **`ProductTerminalWidgetAssemblyHost`**: `WidgetAssembly.Host` extracted from activity.
+
+### `AHW22-M3` Callback assembly slimming (`completed`)
 
 Queue line (exact):
 
@@ -4626,7 +4632,11 @@ Acceptance:
 - no behavior-bearing logic moved across ownership boundaries
 - compile debug + release Java after code changes
 
-### `AHW22-M4` Contract docs lock (`pending`)
+Progress delta:
+
+- **`ZideActivity`** delegates callback construction to **`ProductHostActivityStartupWiring`**; widget/lifecycle hosts are named types; **`runOnCreateStartupSequence`** unchanged.
+
+### `AHW22-M4` Contract docs lock (`completed`)
 
 Queue line (exact):
 
@@ -4637,7 +4647,11 @@ Acceptance:
 - host structure and naming contract match code shape
 - userland contract remains unchanged unless ownership text requires update
 
-### `AHW22-M5` Queue/handoff/entrypoint sync (`pending`)
+Progress delta:
+
+- **`ANDROID_JAVA_HOST_STRUCTURE.md`**: `ZideActivity` line count + startup-wiring table rows; widget host note updated. **`ANDROID_JAVA_NAMING_CONTRACT`** unchanged. **`USERLAND_HOST_CONTRACT`** unchanged.
+
+### `AHW22-M5` Queue/handoff/entrypoint sync (`completed_in_batch`)
 
 Queue line (exact):
 
@@ -4648,7 +4662,11 @@ Acceptance:
 - queue, handoff, and engineer entrypoint stay coherent through B22 super-gate
 - super-gate stop condition and review packet contract are explicit
 
-### `AHW22-M6` Batch validation + review packet (`pending`)
+Progress delta:
+
+- This file, `ENGINEER_ENTRYPOINT.md`, and `AGENT_HANDOFF.md` updated for `verdict_pending`.
+
+### `AHW22-M6` Batch validation + review packet (`completed_in_batch`)
 
 Queue line (exact):
 
@@ -4660,6 +4678,27 @@ Acceptance:
 - deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
 - cold start smoke pass when a device is available
 - engineer reports the full super-gate packet and stops for Architect review
+
+Progress delta:
+
+- Debug/release compile pass; deploy + `adb logcat -c` + activity start + `AndroidRuntime:E` (empty);
+  cold start `force-stop` + `am start -W` (`LaunchState: COLD`, ok).
+
+Super-gate engineer packet:
+
+- `Milestone: AHW-B22 verdict_pending`
+- `Queue line (exact): reduce ZideActivity orchestration pressure through startup wiring extraction while preserving behavior and startup order`
+- `Commits (oldest→newest): 311e0c41 (M1), 81f23781 (M2/M3), 8eef1568 (M4); queue/handoff/packet: latest commit on branch tip`
+- `Scope contract: ProductHostActivityStartupWiring + ProductTerminalLifecycleHost + WidgetHostAssemblyContext/ProductTerminalWidgetAssemblyHost; runOnCreateStartupSequence order unchanged; B14–B21 seams unchanged`
+- `Validation: gradle compileDebug/Release (pass); deploy (pass); logcat + AndroidRuntime:E (pass, empty); cold start (pass)`
+- `Process: Blocked by Archtect review needed: true` (super-gate stop)
+
+Architect review verdict:
+
+- `Review chunk: AHW-B22`
+- `Verdict: pending`
+
+`Milestone reached per docs, architect review required.`
 
 ## Guardrails
 
