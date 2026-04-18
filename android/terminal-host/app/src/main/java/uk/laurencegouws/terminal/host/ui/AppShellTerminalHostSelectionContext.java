@@ -14,6 +14,7 @@ import java.util.Objects;
  *
  * @see AppShellTerminalSelectionPolicy
  * @see DeclaredTerminalWidgetSlotCatalog
+ * @see ProductHostDeclaredTerminalWidgetSlot
  */
 public final class AppShellTerminalHostSelectionContext {
     private final DeclaredTerminalWidgetSlotCatalog declaredSlotCatalog;
@@ -42,15 +43,6 @@ public final class AppShellTerminalHostSelectionContext {
                 policy.declaredSlotCatalog(),
                 policy.selectedProductTerminalSlotForAppShell(),
                 policy);
-    }
-
-    /**
-     * Single-terminal product harness: uses the sole default declared slot from
-     * {@link DeclaredTerminalWidgetSlotCatalog#currentProductHarness()}.
-     */
-    public static AppShellTerminalHostSelectionContext forSingleTerminalProductHarnessStartup() {
-        return forProductHostStartup(
-                DeclaredTerminalWidgetSlotCatalog.currentProductHarness().defaultSelectedTerminalSlotForAppShell());
     }
 
     public DeclaredTerminalWidgetSlotCatalog declaredSlotCatalog() {

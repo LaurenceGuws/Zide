@@ -13,6 +13,8 @@ import java.util.Objects;
  *
  * <p>Today the catalog is {@link TerminalWidgetSlotId#PRIMARY} only; this does not enable
  * multi-slot runtime behavior or tab UI.</p>
+ *
+ * @see ProductHostDeclaredTerminalWidgetSlot
  */
 public final class DeclaredTerminalWidgetSlotCatalog {
     private static final TerminalWidgetSlotId[] PRODUCT_HARNESS_DECLARED = {

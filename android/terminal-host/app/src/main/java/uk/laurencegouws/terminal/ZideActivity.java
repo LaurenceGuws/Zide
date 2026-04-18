@@ -31,6 +31,7 @@ import uk.laurencegouws.terminal.host.ui.ActivityViewBindings;
 import uk.laurencegouws.terminal.host.ui.TerminalWidgetCompositionAssembly;
 import uk.laurencegouws.terminal.host.ui.TerminalWidgetInstance;
 import uk.laurencegouws.terminal.host.ui.AppShellTerminalHostSelectionContext;
+import uk.laurencegouws.terminal.host.ui.ProductHostDeclaredTerminalWidgetSlot;
 import uk.laurencegouws.terminal.host.ui.TerminalWidgetSlotId;
 import uk.laurencegouws.terminal.host.ui.ProductHostActivityStartupWiring;
 import uk.laurencegouws.terminal.host.ui.ProductHostOnCreateStartupCoordinator;
@@ -75,16 +76,17 @@ public final class ZideActivity extends android.app.Activity
 
     /**
      * App-shell terminal <strong>selection</strong> for this activity’s wiring (interaction,
-     * widget host, composition). One {@link AppShellTerminalHostSelectionContext} per startup carries
-     * {@link uk.laurencegouws.terminal.host.ui.DeclaredTerminalWidgetSlotCatalog} membership and the
-     * selected routing slot; multi-slot hosting would vary that context. Today
-     * {@link AppShellTerminalHostSelectionContext#forSingleTerminalProductHarnessStartup}.
+     * widget host, composition). {@link ProductHostDeclaredTerminalWidgetSlot#forCurrentProductHarness}
+     * is the host-declared slot source; {@link AppShellTerminalHostSelectionContext#forProductHostStartup}
+     * builds the startup context from it. Multi-slot hosting would vary the declared source first.
      * Assembly entry points enforce active-slot policy via
      * {@link TerminalWidgetSlotId#checkActiveProductTerminalSlot}. Shell view identity is resolved
      * through {@link uk.laurencegouws.terminal.host.ui.ProductTerminalSlotShellMapping#shellViewIdForTerminalSlot}.
      */
+    private final TerminalWidgetSlotId productHostDeclaredTerminalWidgetSlot =
+            ProductHostDeclaredTerminalWidgetSlot.forCurrentProductHarness();
     private final AppShellTerminalHostSelectionContext appShellTerminalSelectionContext =
-            AppShellTerminalHostSelectionContext.forSingleTerminalProductHarnessStartup();
+            AppShellTerminalHostSelectionContext.forProductHostStartup(productHostDeclaredTerminalWidgetSlot);
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     /** Single IME visibility scratch for status/input/widget harness wiring. */
@@ -284,7 +286,7 @@ public final class ZideActivity extends android.app.Activity
 
     private InteractionCallbacks createInteractionCallbacks() {
         return ProductHostActivityStartupWiring.interaction(
-                appShellTerminalSelectionContext.selectedProductTerminalSlotForAppShell(),
+                productHostDeclaredTerminalWidgetSlot,
                 this,
                 handler,
                 activityViewBindings.productSurfaceContainer,
@@ -324,13 +326,13 @@ public final class ZideActivity extends android.app.Activity
         terminalChromeController = widgetResult.harnessHost.terminalChromeController;
         terminalViewModeController = widgetResult.harnessHost.terminalViewModeController;
         terminalWidget = TerminalWidgetCompositionAssembly.compose(
-                appShellTerminalSelectionContext.selectedProductTerminalSlotForAppShell(), interaction, widgetResult.surfaceJoin);
+                productHostDeclaredTerminalWidgetSlot, interaction, widgetResult.surfaceJoin);
     }
 
     private WidgetAssembly.Host createWidgetHost(final InteractionAssembly.Result interaction) {
         return new ProductTerminalWidgetAssemblyHost(
                 new WidgetHostAssemblyContext(
-                        appShellTerminalSelectionContext.selectedProductTerminalSlotForAppShell(),
+                        productHostDeclaredTerminalWidgetSlot,
                         this,
                         handler,
                         productHostImeState,
