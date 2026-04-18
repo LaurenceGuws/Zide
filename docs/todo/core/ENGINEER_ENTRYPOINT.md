@@ -16,9 +16,9 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B2` — **architect_review_pending** (SL-ext-2 green; `debugFeedBytes` publish
-  parity + explicit `mutableTerminalCore` owners; replay fixture authority refresh
-  — see super-gate packet in `docs/todo/core/implementation.md`).
+- `CZH-B3` — **in_progress** (normalize Android-proven FFI/render seams into
+  shared core contracts while preserving behavior freeze and platform-local
+  Android glue boundaries).
 
 ## Hard Rules
 
@@ -31,7 +31,7 @@ Read in this exact order:
 
 - Target **5–10 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Execute `CZH2-M1..CZH2-M6` sequentially (defined in the queue).
+- Execute `CZH3-M1..CZH3-M6` sequentially (defined in the queue).
 
 ## Validation Ladder
 

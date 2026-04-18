@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B2` (`architect_review_pending`).
+- Current active macro batch: `CZH-B3` (`in_progress`).
 
 ## Campaign Goals
 
@@ -152,7 +152,7 @@ Android guard (only if seam-touching this batch): compileDebug/ReleaseJavaWithJa
 - `Architect validation spot-check: SL-0..SL-3 PASS; SL-ext-1 FAIL (expected/documented import drift).`
 - `Residual risk carried forward: replay harness compile drift remains unresolved.`
 
-### `CZH-B2` Probe/Debug Caller Purge + Naming Hygiene (`architect_review_pending`)
+### `CZH-B2` Probe/Debug Caller Purge + Naming Hygiene (`accepted`)
 
 Queue line (exact):
 
@@ -217,7 +217,17 @@ Internal milestones (`CZH2-M1..M6`, execute sequentially in one batch):
 - `Architect validation request:` confirm batch closure vs `CZH-B3` handoff; spot-check
   seam commits + fixture diff scope.
 
-### `CZH-B3` Android-Driven FFI/Render Normalization (`planned`)
+#### Architect gate result
+
+- `Review chunk: CZH-B2`
+- `Verdict: accepted`
+- `Engineer commits reviewed:` `43702b5e`, `dcb92263`, `b2148299`, `c420d177`,
+  `eae70584`, `cede70dd`, `2d93997d`, `dfade0a8`
+- `Architect validation spot-check:` `SL-0..SL-3 PASS`, `SL-ext-1 PASS`,
+  `SL-ext-2 PASS`; `zig build test-editor` still fails with module-path imports
+  and is tracked as a separate lane concern.
+
+### `CZH-B3` Android-Driven FFI/Render Normalization (`in_progress`)
 
 Queue line (exact):
 
@@ -229,6 +239,23 @@ Acceptance:
 - shared seam contracts are explicit and platform-agnostic
 - Android-specific glue stays platform-owned
 - core runtime/ffi/render ownership is clearer than pre-batch baseline
+
+Internal milestones (`CZH3-M1..M6`, execute sequentially in one batch):
+
+| Id | Scope |
+| --- | --- |
+| `CZH3-M1` | Audit Android-proven FFI/render seam deltas that should move to shared core (explicit file list + non-goals) |
+| `CZH3-M2` | Normalize one bounded shared seam (owner/type/API clarity) with no behavior change |
+| `CZH3-M3` | Normalize second bounded shared seam (keep Android glue platform-local) |
+| `CZH3-M4` | Probe/debug caller hygiene in touched seams only |
+| `CZH3-M5` | Authority docs update (core queue + handoff + entrypoint + any touched architecture docs) |
+| `CZH3-M6` | Super-gate packet with validation ladder and residual-risk notes |
+
+`CZH-B3` stop conditions:
+
+- stop only at super-gate or real hard blocker
+- target 5–10 validated commits
+- maintain behavior freeze and single-path contract
 
 ## Response Contract
 
