@@ -104,6 +104,9 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
   generic boolean `setImeVisible` on that seam; `ChromeFactory` takes
   `ChromeImePolicyInput` from `WidgetAssembly.Host` (not raw `BooleanSupplier` /
   `Consumer<Boolean>` for IME assembly)
+- `WidgetAssembly.Host`: no primitive `imeVisible` / `setImeVisible`; use
+  `SurfaceWidgetHostImeVisibility` for surface reads and `ChromeImePolicyInput` for chrome
+  assembly (status/viewport/input hosts keep their own seams)
 - in `ZideActivity`, use one authoritative `static final` slot field (e.g.
   `ACTIVE_PRODUCT_TERMINAL_SLOT`) for interaction/widget/composition wiring
   instead of repeating `PRIMARY` literals

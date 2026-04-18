@@ -143,6 +143,9 @@ On `ChromeController.Host`, IME visibility uses `chromeImeVisibilityPresent`,
 generic boolean `setImeVisible` on the chrome host seam.
 `ChromeFactory` takes harness `ChromeImePolicyInput` from `WidgetAssembly.Host` (not raw
 `BooleanSupplier` / `Consumer<Boolean>`) for that policy slice.
+`WidgetAssembly.Host` does not expose primitive `imeVisible` / `setImeVisible`; surface
+assembly reads IME through `SurfaceWidgetHostImeVisibility` (`currentImeVisible`), and
+chrome assembly uses `ChromeImePolicyInput` as above.
 These are harness contract checks only — they do not add tab or multi-instance
 product behavior.
 
@@ -208,14 +211,14 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/input/InputCallbacks.java` | Good | Functional callback adapter into `host/input/InputAssembly`; holds explicit `ShellInputView.Host` (no `Context` cast). | Keep adapter-only; avoid adding input behavior here. |
 | `host/surface/SurfaceFactory.java` | Good | Owns surface host bridge/callback construction so surface lifecycle assembly stays out of generic host assembly. | Keep this construction-only; surface behavior remains in surface host controllers/bridges. |
 | `host/surface/SurfaceWidgetAssembly.java` | Good | Owns surface/widget activity wiring assembly that composes surface and UI host factories for activity use. | Keep this assembly-only; surface/widget behavior remains in dedicated controllers. |
-| `host/surface/SurfaceWidgetAssemblyCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/surface/SurfaceWidgetAssembly`. | Keep adapter-only; avoid adding surface/widget behavior here. |
+| `host/surface/SurfaceWidgetAssemblyCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/surface/SurfaceWidgetAssembly`; IME read uses `SurfaceWidgetHostImeVisibility` from `WidgetAssembly.Host`. | Keep adapter-only; avoid adding surface/widget behavior here. |
 | `host/runtime/RuntimeFactory.java` | Good | Owns product-runtime and frame-loop construction so runtime assembly stays out of generic host assembly. | Keep this construction-only; runtime behavior remains in runtime controllers. |
 | `host/session/SessionFactory.java` | Good | Owns shell-session and userland-session host bridge construction so session seams stay out of generic host assembly. | Keep this construction-only; session behavior remains in session/userland coordinators. |
 | `host/session/SessionAssembly.java` | Good | Owns session/runtime wiring assembly that composes session and runtime host factories for activity use. | Keep this assembly-only; business behavior stays in session/runtime controllers. |
 | `host/session/SessionAssemblyCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/session/SessionAssembly`. | Keep adapter-only; avoid adding session/runtime behavior here. |
 | `host/status/StatusViewAssembly.java` | Good | Owns initial view binding plus status/viewport host assembly for activity wiring; `Result` is bindings-first (`activityViewBindings` + snapshot reader + `StatusController` + `ViewportController` only; no duplicate per-view fields). | Keep this assembly-only; status logging and viewport policy remain in dedicated controllers. |
 | `host/status/StatusViewCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/status/StatusViewAssembly`. | Keep adapter-only; avoid moving status/viewport behavior into this adapter. |
-| `host/ui/WidgetAssembly.java` | Good | Owns product widget/chrome/view-mode/surface host assembly so activity wiring no longer inlines those construction seams. | Keep this assembly-only; behavior remains in dedicated controllers/bridges. |
+| `host/ui/WidgetAssembly.java` | Good | Owns product widget/chrome/view-mode/surface host assembly so activity wiring no longer inlines those construction seams; `Host` exposes `SurfaceWidgetHostImeVisibility` + `ChromeImePolicyInput` instead of primitive IME accessors. | Keep this assembly-only; behavior remains in dedicated controllers/bridges. |
 | `host/ui/WidgetCallbacks.java` | Removed | Adapter seam was removed; `WidgetAssembly.Host` is now provided directly by `ZideActivity`. | Keep `WidgetAssembly` assembly-only; avoid recreating large pass-through adapters unless they remove measurable coupling. |
 | `host/ui/UiFactory.java` | Good | Owns UI host construction for shell-state presenter bridge, view-mode controller, and surface-widget controller. | Keep this construction-only; UI behavior remains in dedicated host controllers. |
 | `host/ui/UiStartupAssembly.java` | Good | Owns post-construction UI bind/start assembly for activity wiring. | Keep this assembly-only; UI behavior remains in dedicated controllers. |
