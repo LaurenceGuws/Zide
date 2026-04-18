@@ -145,7 +145,8 @@ public final class WidgetAssembly {
 
     /**
      * Assembles widget harness + surface join using the activity’s single startup selection context
-     * (declared catalog + selected slot + policy) so selection is not re-resolved inside assembly.
+     * ({@link AppShellTerminalHostSelectionContext#hostDeclaredTerminalWidgetSlot()} value + catalog + selected slot +
+     * policy) so selection is not re-resolved inside assembly.
      */
     public static Result assemble(final Host host, final AppShellTerminalHostSelectionContext selectionContext) {
         Objects.requireNonNull(host, "host");
