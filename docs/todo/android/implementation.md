@@ -135,7 +135,7 @@ Dual-mode batching override (architect directive):
 - `APX-B14` accepted by architect.
 - `APX-B15` accepted by architect.
 - `APX-B16` accepted by architect.
-- `APX-B17` in progress.
+- `APX-B17` architect review pending (super-gate packet below).
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -2888,7 +2888,7 @@ Queue line (exact):
 - `Engineer validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat -d -s AndroidRuntime:E after am start (pass, empty); adb cold start am start -W (pass, LaunchState: COLD, Status: ok)`
 - `Contract notes: APX-B15 descriptor ownership unchanged; save uses stable id; restore resolves to seed index only; APX-B9 user distinct select still restarts; legacy index bundle read supported; single PTY.`
 
-### `APX-B17` Runtime Support Links Materialization from Prefix Manifest (`in_progress`)
+### `APX-B17` Runtime Support Links Materialization from Prefix Manifest (`architect_review_pending`)
 
 Batch queue line (exact):
 
@@ -2912,41 +2912,55 @@ Internal milestone cadence:
 
 - Engineer executes `APX17-M1`–`APX17-M6`; target **5–10 validated commits** before super-gate.
 
-### `APX17-M1` Runtime-link consumer audit (`pending`)
+### `APX17-M1` Runtime-link consumer audit (`done`)
 
 Queue line (exact):
 
 - audit current Android prefix/runtime support link materialization and define metadata-driven ownership boundary
 
-### `APX17-M2` Manifest metadata parser wiring (`pending`)
+Findings (concise):
+
+- Install path already applied manifest `runtime_support_links` but path normalization rejected `zide.embed` roots.
+- Stamp did not carry links; cold start could not re-apply without manifest refetch.
+- **Owner:** `UserlandRuntimeSupportLinks` + readiness stamp field + `ShellSessionController` pre-`restart()` hook.
+
+### `APX17-M2` Manifest metadata parser wiring (`done`)
 
 Queue line (exact):
 
 - parse `runtime_support_links` from staged prefix manifest metadata and validate link mapping format
 
-### `APX17-M3` Link materialization execution path (`pending`)
+### `APX17-M3` Link materialization execution path (`done`)
 
 Queue line (exact):
 
 - apply parsed runtime support links during install/runtime prep with deterministic ordering and clear error reporting
 
-### `APX17-M4` Fallback/compat cleanup (`pending`)
+### `APX17-M4` Fallback/compat cleanup (`done`)
 
 Queue line (exact):
 
 - remove stale hardcoded link assumptions where metadata-driven path is now authoritative
 
-### `APX17-M5` Docs + handoff sync (`pending`)
+### `APX17-M5` Docs + handoff sync (`done`)
 
 Queue line (exact):
 
 - sync authority docs and queue/handoff/entrypoint to APX-B17 runtime_support_links consumer contract
 
-### `APX17-M6` Validation + review packet (`pending`)
+### `APX17-M6` Validation + review packet (`done`)
 
 Queue line (exact):
 
 - run validation ladder and publish APX-B17 super-gate packet for architect review
+
+#### APX-B17 super-gate packet (engineer → architect)
+
+- `Review chunk: APX-B17`
+- `Verdict: pending architect review`
+- `Commits reviewed: verify with git log for APX-B17 engineer push`
+- `Engineer validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat -d -s AndroidRuntime:E after am start (pass, empty); adb cold start am start -W (pass, LaunchState: COLD, Status: ok)`
+- `Contract notes: stamp stores runtime_support_links; materialize from stamp before first native restart; host + zide.embed path allowlist; apt/dpkg shim links remain install-local; APX-B16/B11/B10/B13 unchanged.`
 
 ## Guardrails
 

@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android product expansion** (`APX`) — build product capability on top of the closed harness/widget ownership shape.
-- Active macro batch (`in_progress`): `APX-B17` — materialize `runtime_support_links` from staged prefix manifest metadata (including `zide.embed` bridge) before runtime activation.
+- Active macro batch (`architect_review_pending`): `APX-B17` — engineer delivered stamp-backed `runtime_support_links` materialization + embed path allowlist; architect verdict pending (super-gate packet in `docs/todo/android/implementation.md`).
 - Parallel foundation lane (separate repo): `../zide-mobile-pm` may run in parallel for Android test-binary pull/install contract groundwork; Android APX remains primary until APX objectives are stable.
 - Prior closed/escalated: `AHW-B1` through `AHW-B26` accepted and `AHW` closed; `ASF-M3` escalated IME/assist/touch rows to operator evidence; `RF-M0` through `RF-M5` and `AX-M1` through `AX-M5` completed.
 - Active queue authority: `docs/todo/android/implementation.md`
@@ -83,8 +83,8 @@ Engineer session seed:
 - `APX-B14` is accepted: tab index is saved/restored through `ZideActivity` and seeded into `AppShellNavigation` on recreate with no synthetic selection restart side effects.
 - `APX-B15` is accepted: `AppShellTerminalViewPolicy` exposes `productTerminalTabDescriptors`; `WidgetAssembly` builds defaults via `ProductTerminalTabDescriptors`; chrome binds sidebar tabs from policy; APX-B14 index restore and APX-B9 user-select restart semantics preserved.
 - `APX-B16` is accepted: `ZideActivity` saves `selectedProductTerminalTabStableId`; restore resolves via default descriptor list then seeds navigation; legacy raw-index bundle key is still read for migration; APX-B14 seed path and APX-B9 distinct-user-select restart unchanged.
-- `APX-B17` is in progress: Android host must materialize `runtime_support_links` from manifest metadata (including `/data/data/zide.embed/files/usr=>/data/data/uk.laurencegouws.zide/files/usr`) as a contract-owned runtime prep step.
-- Cleanup-only changes are out of scope unless they directly unblock APX-B17 feature delivery.
+- `APX-B17` is at super-gate: readiness stamp records `runtime_support_links`; `UserlandRuntimeSupportLinks` applies install fragment + re-applies from stamp before first native session restart; `zide.embed` sibling paths allowed; APX-B16 tab persistence and APX-B10/B11/B13 flows unchanged.
+- Cleanup-only changes are out of scope unless they directly unblock architect acceptance of APX-B17.
 - APX remains primary until these are stable: harness/widget split stability, clean tab-state expansion, and zide-pm real Android test-binary pull maturity.
 - After those three are stable, primary architect focus transitions to Zig-layer hygiene cleanup.
 - Keep `ProductHostKeepScreenOnPolicy` as the long-term owner of terminal keep-screen-on default policy.
