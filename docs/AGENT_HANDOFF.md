@@ -6,8 +6,8 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android harness/widget portability hardening** (`AHW`) — turns the refocus vision into enforceable code shape: Android Harness is the platform/app-shell canvas, Terminal Widget is the portable terminal consumer, and userland stays movable for future IDE/editor modes.
-- Engineer delivery complete; Architect verdict pending: `AHW-B20` — keep-screen-on window-flag seam hardening, behavior-preserving. No macro batch is `in_progress` until Architect refocus.
-- Prior closed/escalated: `AHW-B19` accepted; `AHW-B18` accepted; `AHW-B17` accepted; `AHW-B16` accepted; `AHW-B15` accepted; `AHW-B14` accepted; `AHW-B13` accepted; `AHW-B12` accepted; `AHW-B11` accepted; `AHW-B10` accepted; `AHW-B9` accepted; `AHW-B8` accepted; `AHW-B7` accepted; `AHW-B6` accepted; `AHW-B5` accepted; `AHW-B4` accepted; `AHW-B3` accepted; `AHW-B2` accepted; `AHW-B1` accepted; `ASF-M3` escalated remaining IME/assist and touch-gesture matrix rows to operator evidence; `ASF-M2`; `ASF-M1`; `AX-M5`; `AX-M4`
+- Active macro batch (`in_progress`): `AHW-B21` — typed keep-screen-on host seam, behavior-preserving.
+- Prior closed/escalated: `AHW-B20` accepted; `AHW-B19` accepted; `AHW-B18` accepted; `AHW-B17` accepted; `AHW-B16` accepted; `AHW-B15` accepted; `AHW-B14` accepted; `AHW-B13` accepted; `AHW-B12` accepted; `AHW-B11` accepted; `AHW-B10` accepted; `AHW-B9` accepted; `AHW-B8` accepted; `AHW-B7` accepted; `AHW-B6` accepted; `AHW-B5` accepted; `AHW-B4` accepted; `AHW-B3` accepted; `AHW-B2` accepted; `AHW-B1` accepted; `ASF-M3` escalated remaining IME/assist and touch-gesture matrix rows to operator evidence; `ASF-M2`; `ASF-M1`; `AX-M5`; `AX-M4`
 - Active queue authority: `docs/todo/android/implementation.md`
 - Engineer entrypoint (dual mode): `docs/todo/android/ENGINEER_ENTRYPOINT.md`
 
@@ -24,9 +24,9 @@ Engineer session seed:
 
 - Read `docs/todo/android/ENGINEER_ENTRYPOINT.md`, then
   `docs/todo/android/implementation.md`, then this handoff file.
-- After Architect refocus, execute only the macro batch marked `in_progress` in
-  `docs/todo/android/implementation.md`.
-- The prior `AHW-B20` engineer run stopped at super-gate; await Architect verdict before new execution.
+- Execute only the macro batch marked `in_progress` in
+  `docs/todo/android/implementation.md` (`AHW-B21`).
+- Stop at the `AHW-B21` super-gate and return the review packet for Architect verdict.
 
 ## First Read Order
 
@@ -50,9 +50,10 @@ Engineer session seed:
 - Architect updates use: `Blocked by humain review needed: true|false`.
 - Engineer updates use: `Blocked by Archtect review needed: true|false`.
 
-## AHW-B20 baseline from AHW-B19 review
+## AHW-B21 baseline from AHW-B20 review
 
-- `AHW-B19` is accepted.
+- `AHW-B20` is accepted.
+- Keep `HostWindowFlagAccess` seam boundary decision from B20, but replace it with typed keep-screen-on host access in B21 (no behavior change).
 - Keep `ProductHostKeepScreenOnPolicy` as the long-term owner of terminal keep-screen-on default policy.
 - Keep `HostImeStateAccess` as the long-term host callback IME seam (backed by `ProductHostImeState`).
 - Keep `ProductHostImeState` as the long-term activity IME carrier.
@@ -69,7 +70,7 @@ Engineer session seed:
 
 ## Operator Evidence Escalation
 
-ASF did not prove IME/assist or touch gestures because no operator packets were delivered. Those rows remain parked in `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md` with owner `operator`; they do not block `AHW-B20` unless new evidence reports a regression inside the active code scope.
+ASF did not prove IME/assist or touch gestures because no operator packets were delivered. Those rows remain parked in `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md` with owner `operator`; they do not block `AHW-B21` unless new evidence reports a regression inside the active code scope.
 
 ## Historical Notes
 

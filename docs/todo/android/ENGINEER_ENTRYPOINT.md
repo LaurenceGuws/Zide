@@ -34,15 +34,15 @@ you must report the mismatch.
 
 ## Current Target
 
-Engineer delivery for `AHW-B20` is complete; batch status is `verdict_pending` pending Architect review. No macro batch is `in_progress` until the Architect refocuses the queue after verdict.
+`AHW-B21` is `in_progress` and is the only active macro batch.
 
-Reference queue line (exact) for the completed batch:
+Active batch queue line (exact):
 
-- remove raw Window dependency from keep-screen-on policy seam via explicit host window-flag access while preserving default behavior
+- replace int window-flag seam with typed keep-screen-on host access while preserving default behavior
 
 ## Core Boundary Rule
 
-This batch exists to harden keep-screen-on window-flag seam ownership while
+This batch exists to harden keep-screen-on typed host seam ownership while
 preserving existing IME/slot/chrome contracts and behavior.
 
 - Android Harness owns platform ceremony, app-shell layout/styling/theming,
@@ -57,9 +57,10 @@ preserving existing IME/slot/chrome contracts and behavior.
 - `WidgetAssembly.Result` remains widget/chrome assembly output; it is not the
   terminal-instance factory by itself.
 
-## Required Direction From Architect Review (post-AHW-B19)
+## Required Direction From Architect Review (post-AHW-B20)
 
-- `AHW-B19` is accepted.
+- `AHW-B20` is accepted.
+- Keep B20’s behavior and ownership outcomes; replace int flag seam with typed keep-screen-on host access in B21.
 - Keep `ProductHostKeepScreenOnPolicy` as the long-term owner of terminal keep-screen-on default policy.
 - Keep `HostImeStateAccess` as the long-term host callback IME seam backed by `ProductHostImeState`.
 - Keep `ProductHostImeState` as the long-term activity IME carrier.
@@ -82,16 +83,17 @@ preserving existing IME/slot/chrome contracts and behavior.
 
 ## Internal Milestones
 
-`AHW20-M1` through `AHW20-M6` are complete; the `AHW-B20` super-gate has been reached. Progress is recorded in `docs/todo/android/implementation.md`.
+Execute `AHW21-M1` through `AHW21-M6` sequentially; do not stop before the
+`AHW-B21` super-gate unless a hard stop condition is hit.
 
-Historical execution order (for the next engineer session after Architect refocus):
+Execute in order and mark progress in `docs/todo/android/implementation.md`.
 
-- `AHW20-M1`: audit keep-screen-on raw window dependency and define explicit host window-flag seam.
-- `AHW20-M2`: introduce explicit host seam type(s) for keep-screen-on flag mutation.
-- `AHW20-M3`: rewire ProductHostKeepScreenOnPolicy and ZideActivity to the explicit seam.
-- `AHW20-M4`: lock authority docs to keep-screen-on window-flag seam ownership.
-- `AHW20-M5`: keep queue/handoff/entrypoint aligned to B20 super-gate.
-- `AHW20-M6`: run validation and publish super-gate review packet.
+- `AHW21-M1`: audit integer flag seam usage and define typed keep-screen-on host seam.
+- `AHW21-M2`: introduce typed keep-screen-on host seam and wire policy.
+- `AHW21-M3`: rewire activity and remove obsolete int-flag seam.
+- `AHW21-M4`: lock authority docs to typed keep-screen-on seam ownership.
+- `AHW21-M5`: keep queue/handoff/entrypoint aligned to B21 super-gate.
+- `AHW21-M6`: run validation and publish super-gate review packet.
 
 ## Allowed Work
 
@@ -117,7 +119,7 @@ If a required change falls outside these paths, stop and report a blocker.
 - No terminal-core behavior changes.
 - No shared renderer/backend refactor.
 - No app-shell UI redesign.
-- No keep-screen-on behavior change beyond seam rewiring (default remains on).
+- No keep-screen-on behavior change beyond typed seam rewiring (default remains on).
 - No debug-view UI resurrection.
 - No CI/pipeline/lint additions.
 - No broad rename campaign.
@@ -180,7 +182,7 @@ when:
 - a behavior change is required where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
 - implementing terminal tabs/product behavior becomes necessary to proceed
-- the `AHW-B20` super-gate is reached
+- the `AHW-B21` super-gate is reached
 
 Otherwise continue autonomously with:
 
@@ -188,9 +190,9 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At `AHW-B20` super-gate, report:
+At `AHW-B21` super-gate, report:
 
-- review chunk name: `AHW-B20`
+- review chunk name: `AHW-B21`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs
