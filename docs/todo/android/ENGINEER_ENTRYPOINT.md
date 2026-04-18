@@ -34,9 +34,9 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B18` is `in_progress` and is the only active macro batch.
+Engineer delivery for `AHW-B18` is complete; batch status is `verdict_pending` pending Architect review. No macro batch is `in_progress` until the Architect refocuses the queue after verdict.
 
-Active batch queue line (exact):
+Reference queue line (exact) for the completed batch:
 
 - unify host callback IME wiring to explicit carrier-backed seams while preserving behavior
 
@@ -80,10 +80,9 @@ activity/widget/chrome IME seam contracts and existing active-view/sidebar owner
 
 ## Internal Milestones
 
-Execute `AHW18-M1` through `AHW18-M6` sequentially; do not stop before the
-`AHW-B18` super-gate unless a hard stop condition is hit.
+`AHW18-M1` through `AHW18-M6` are complete; the `AHW-B18` super-gate has been reached. Progress is recorded in `docs/todo/android/implementation.md`.
 
-Execute in order and mark progress in `docs/todo/android/implementation.md`.
+Historical execution order (for the next engineer session after Architect refocus):
 
 - `AHW18-M1`: audit remaining host callback IME pairs and define explicit access seam target list.
 - `AHW18-M2`: introduce explicit IME state access seam type(s) for host callback wiring.
