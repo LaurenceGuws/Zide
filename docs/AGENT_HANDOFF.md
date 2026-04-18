@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android product expansion** (`APX`) — build product capability on top of the closed harness/widget ownership shape.
-- Active macro batch (`in_progress`): `APX-B15` — expand tab-state into policy-owned descriptor metadata while preserving APX-B9 single-PTY restart semantics.
+- Active macro batch (`architect_review_pending`): `APX-B15` — engineer delivered policy-owned tab descriptors + chrome consumption; architect verdict pending (super-gate packet in `docs/todo/android/implementation.md`).
 - Parallel foundation lane (separate repo): `../zide-mobile-pm` may run in parallel for Android test-binary pull/install contract groundwork; Android APX remains primary until APX objectives are stable.
 - Prior closed/escalated: `AHW-B1` through `AHW-B26` accepted and `AHW` closed; `ASF-M3` escalated IME/assist/touch rows to operator evidence; `RF-M0` through `RF-M5` and `AX-M1` through `AX-M5` completed.
 - Active queue authority: `docs/todo/android/implementation.md`
@@ -81,8 +81,8 @@ Engineer session seed:
 - `APX-B12` is reviewed with changes requested: addressed by `APX-B13` (edge install no longer lexicographs non-`zide-android-*` rows).
 - `APX-B13` is accepted: edge install candidates match `zide-android-*`; explicit `packages.edge_install.selected` and reasoned no-candidate (`empty_catalog` / `no_android_edge`) are in place.
 - `APX-B14` is accepted: tab index is saved/restored through `ZideActivity` and seeded into `AppShellNavigation` on recreate with no synthetic selection restart side effects.
-- `APX-B15` is in progress: tab-state metadata moves to a policy-owned descriptor surface (selected index + stable tab descriptors) while preserving current two-tab behavior and restart semantics.
-- Cleanup-only changes are out of scope unless they directly unblock APX-B15 feature delivery.
+- `APX-B15` is at super-gate: `AppShellTerminalViewPolicy` exposes `productTerminalTabDescriptors`; `WidgetAssembly` builds defaults via `ProductTerminalTabDescriptors`; chrome binds sidebar tabs from policy; APX-B14 index restore and APX-B9 user-select restart semantics preserved.
+- Cleanup-only changes are out of scope unless they directly unblock architect acceptance of APX-B15.
 - APX remains primary until these are stable: harness/widget split stability, clean tab-state expansion, and zide-pm real Android test-binary pull maturity.
 - After those three are stable, primary architect focus transitions to Zig-layer hygiene cleanup.
 - Keep `ProductHostKeepScreenOnPolicy` as the long-term owner of terminal keep-screen-on default policy.
