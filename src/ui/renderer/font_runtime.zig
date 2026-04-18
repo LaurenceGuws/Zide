@@ -324,7 +324,6 @@ fn computeTerminalGlyphPrepResult(
 
 fn terminalGlyphPrepWorkerMain(self: *renderer_root.Renderer) void {
     const log = app_logger.logger("renderer.font");
-    const log_enabled = log.enabled_file or log.enabled_console;
     while (true) {
         self.lockTerminalGlyphPrepRuntime();
         while (!self.terminal_glyph_prep.stop_requested and
@@ -350,14 +349,6 @@ fn terminalGlyphPrepWorkerMain(self: *renderer_root.Renderer) void {
             continue;
         };
         defer config.deinit(self.allocator);
-        if (log_enabled) {
-            log.logf(.info, "terminal_glyph_prep_worker_start generation={d} raster={d} scale_milli={d} entries={d}", .{
-                request.generation,
-                request.committed_raster_size_px,
-                request.render_scale_milli,
-                request.entries.len,
-            });
-        }
 
         const result = computeTerminalGlyphPrepResult(self.allocator, config, request) catch |err| blk: {
             log.logf(.warning, "terminal glyph prep compute failed generation={d} err={s}", .{ request.generation, @errorName(err) });
@@ -369,24 +360,8 @@ fn terminalGlyphPrepWorkerMain(self: *renderer_root.Renderer) void {
         self.terminal_glyph_prep.compute_in_flight = false;
         if (result) |prepared| {
             if (prepared.generation == self.terminal_glyph_prep.next_generation and !self.terminal_glyph_prep.stop_requested) {
-                if (log_enabled) {
-                    log.logf(.info, "terminal_glyph_prep_worker_publish generation={d} raster={d} scale_milli={d} glyphs={d}", .{
-                        prepared.generation,
-                        prepared.committed_raster_size_px,
-                        prepared.render_scale_milli,
-                        prepared.glyphs.len,
-                    });
-                }
                 self.publishTerminalGlyphPrepResult(prepared);
             } else {
-                if (log_enabled) {
-                    log.logf(.info, "terminal_glyph_prep_worker_stale generation={d} next_generation={d} stop={d} glyphs={d}", .{
-                        prepared.generation,
-                        self.terminal_glyph_prep.next_generation,
-                        @intFromBool(self.terminal_glyph_prep.stop_requested),
-                        prepared.glyphs.len,
-                    });
-                }
                 var stale = prepared;
                 stale.deinit(self.allocator);
             }
