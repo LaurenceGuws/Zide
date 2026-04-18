@@ -100,7 +100,8 @@ Dual-mode batching override (architect directive):
 - `APX-B1` accepted by architect.
 - `APX-B2` accepted by architect.
 - `APX-B3` accepted by architect.
-- `APX-B4` is `awaiting_architect_review` (engineer super-gate complete).
+- `APX-B4` accepted by architect.
+- `APX-B5` is `in_progress`.
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -1238,7 +1239,7 @@ Architect review verdict:
 - `Review answers: one AppShellTerminalHostSelectionContext per activity startup is accepted as the intended seam; host/context slot equality check is accepted as a harness invariant and should remain fail-fast.`
 - `Findings carried forward: no blocking regressions; startup order and single-slot behavior unchanged.`
 
-### `APX-B4` Host declared-slot source seam (`awaiting_architect_review`)
+### `APX-B4` Host declared-slot source seam (`accepted`)
 
 Batch queue line (exact):
 
@@ -1377,6 +1378,139 @@ Acceptance:
 **Residual risk:** Low — PRIMARY-only; host/context equality invariant unchanged.
 
 `Milestone reached per docs, architect review required.`
+
+Architect review verdict:
+
+- `Review chunk: APX-B4`
+- `Verdict: accepted`
+- `Commits reviewed: 06e6dfff, 762eda03`
+- `Architect validation spot-check: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
+- `Architect runtime validation spot-check: python3 ops/android_terminal_host.py deploy (pass); adb warm start + AndroidRuntime:E (pass, empty); adb cold start (pass, LaunchState: COLD)`
+- `Engineer device validation accepted: compile + deploy + AndroidRuntime:E smoke + cold start pass`
+- `Review answers: explicit host-declared slot source is accepted; removing `forSingleTerminalProductHarnessStartup` keeps single-path ownership clear.`
+- `Findings carried forward: no blocking regressions; startup behavior and invariants unchanged.`
+
+### `APX-B5` Declared-slot type hardening (`in_progress`)
+
+Batch queue line (exact):
+
+- harden host-declared-slot source to a named value type and route startup context through that type (no behavior change)
+
+Batch purpose:
+
+- reduce raw `TerminalWidgetSlotId` fan-out for declared-slot ownership
+- keep declared-slot source seam explicit while preserving APX-B4 startup flow
+- preserve PRIMARY-only runtime behavior and fail-fast invariants
+
+Batch scope:
+
+- Java Android terminal host only, plus authority docs needed to keep contract truth current
+- primary code root:
+  `android/terminal-host/app/src/main/java/uk/laurencegouws/terminal/**`
+- allowed docs:
+  `docs/todo/android/implementation.md`,
+  `docs/todo/android/ENGINEER_ENTRYPOINT.md`,
+  `docs/AGENT_HANDOFF.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_NAMING_CONTRACT.md`,
+  `app_architecture/platform/android/USERLAND_HOST_CONTRACT.md`
+
+Batch non-goals:
+
+- no tabs UI rendering
+- no second active terminal slot behavior
+- no new `TerminalWidgetSlotId` enum values
+- no terminal-core or shared-renderer changes
+- no keep-screen-on follow-up implementation unless explicitly re-opened
+- no startup-order changes
+
+Batch super-gate:
+
+- host-declared-slot seam uses one named value type instead of raw slot primitives at startup boundary
+- `AppShellTerminalHostSelectionContext` consumes declared-slot value type (or explicit accessor from it) in startup path
+- behavior unchanged (`PRIMARY` only) and fail-fast invariants remain
+- docs reflect final ownership/naming shape
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass at final seam boundary
+
+Internal milestone cadence:
+
+- Engineer executes `APX5-M1` through `APX5-M6` sequentially.
+- Do not stop for architect review between internal milestones.
+- Mark each internal milestone complete in this file as it lands.
+- Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
+  the `APX-B5` super-gate is reached.
+
+### `APX5-M1` Declared-slot type audit (`pending`)
+
+Queue line (exact):
+
+- audit raw declared-slot primitive flow and define bounded value-type seam target
+
+Acceptance:
+
+- enumerate raw `TerminalWidgetSlotId` flow from declared-slot source through startup callsites
+- define one named declared-slot value type owner under `host/ui`
+- record explicit out-of-scope items (tabs UI, second active slot behavior)
+
+### `APX5-M2` Value-type seam introduction (`pending`)
+
+Queue line (exact):
+
+- introduce declared-slot value type and route source seam through it
+
+Acceptance:
+
+- declared-slot source no longer exposes only raw slot primitive at startup boundary
+- no compatibility/fallback paths
+- compile debug + release Java after code changes
+
+### `APX5-M3` Consumer rewiring (`pending`)
+
+Queue line (exact):
+
+- rewire startup context construction and consumers through declared-slot value type without behavior change
+
+Acceptance:
+
+- current behavior unchanged
+- no ad hoc raw declared-slot primitive reads in rewired startup boundary
+- compile debug + release Java after code changes
+
+### `APX5-M4` Contract docs lock (`pending`)
+
+Queue line (exact):
+
+- lock authority docs to APX-B5 declared-slot value-type ownership shape
+
+Acceptance:
+
+- host structure and naming contract match code shape
+- userland contract updated only if ownership text requires it
+
+### `APX5-M5` Queue/handoff/entrypoint sync (`pending`)
+
+Queue line (exact):
+
+- keep queue, handoff, and engineer entrypoint aligned to APX-B5 execution and super-gate stop
+
+Acceptance:
+
+- queue, handoff, and engineer entrypoint stay coherent through APX-B5 super-gate
+- super-gate stop condition and review packet contract are explicit
+
+### `APX5-M6` Batch validation + review packet (`pending`)
+
+Queue line (exact):
+
+- validate APX-B5 end-to-end and publish the architect review packet
+
+Acceptance:
+
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
+- cold start smoke pass when a device is available
+- engineer reports full super-gate packet and explicit residual-risk note
 
 ## Guardrails
 
