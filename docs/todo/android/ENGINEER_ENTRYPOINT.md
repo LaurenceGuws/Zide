@@ -34,15 +34,15 @@ you must report the mismatch.
 
 ## Current Target
 
-`APX-B9` is `architect_review_pending` (engineer super-gate reached).
+`APX-B10` is `in_progress`.
 
 Active batch queue line (exact):
 
-- implement real tab-session behavior on Android harness and complete the Android-side zide-pm test-binary pull path so product testing can move beyond nvim/htop
+- convert APX-B9 proof-of-path behavior into clean product flow: install Android test binaries via explicit policy lifecycle (not ad-hoc doctor side effects) while keeping tab-session behavior coherent under single-PTY constraints
 
 Parallel-lane note:
 
-- `../zide-mobile-pm` may progress in parallel under a separate engineer session; this Android engineer session stays focused on APX-B9 only.
+- `../zide-mobile-pm` may progress in parallel under a separate engineer session; this Android engineer session stays focused on APX-B10 only.
 
 ## Core Boundary Rule
 
@@ -72,12 +72,13 @@ boundaries while preserving current single-terminal behavior.
 - `APX-B6` is accepted: declared-slot value is propagated across interaction/widget/composition startup seams.
 - `APX-B7` is accepted: enum conversion choke point is centralized on declared-slot value seam.
 - `APX-B8` is accepted: tab-state slice 1 (chrome strip + tab index state) and `ZIDE_PM_HOST_PLATFORM=android` export are in place.
-- `APX-B9` is feature-first: move from chrome-only tab selection to behavior-bearing session-backed tab flow, and mature Android-side zide-pm pull/install path.
-- `zide-mobile-pm` foundation work is allowed in parallel, but APX-B9 remains the primary in-repo execution lane here.
+- `APX-B9` is accepted: tab selection now drives native restart + userland refresh, and Packages flow proved Android-side `zide-pm install`.
+- `APX-B10` is feature-first: move install mutation out of ad-hoc Packages doctor side effects into explicit policy lifecycle while keeping tab semantics coherent under single-PTY constraints.
+- `zide-mobile-pm` foundation work is allowed in parallel, but APX-B10 remains the primary in-repo execution lane here.
 - `AHW-B26` is accepted and `AHW` is closed.
 - Keep harness vs surface split (`WidgetAssembly.Result.harnessHost` + `surfaceJoin`) as the baseline.
 - Freeze additional keep-screen-on seam work beyond B20 unless explicitly re-opened by product direction.
-- Execute `APX-B9` as a non keep-screen-on batch.
+- Execute `APX-B10` as a non keep-screen-on batch.
 - Keep `ProductHostActivityStartupWiring`, `ProductTerminalLifecycleHost`, and `ProductTerminalWidgetAssemblyHost` ownership from B22 unchanged.
 - Keep `ProductHostOnCreateStartupCoordinator` + `ProductHostOnCreateStartupSteps` as the startup choreography seam from B23.
 - Keep `AppShellTerminalViewPolicy` as explicit app-shell terminal-view policy seam; no public `appShellNavigation()` accessor on that type.
@@ -99,12 +100,12 @@ boundaries while preserving current single-terminal behavior.
   `InteractionAssembly.Result` yet.
 - Keep chrome slot-agnostic in this batch; do not thread slot into chrome
   construction until per-slot chrome policy is scoped.
-- `APX-B9` must deliver behavior-bearing tab-session flow, not chrome-only selection state.
+- `APX-B10` must separate read/report doctor behavior from install/mutation behavior and keep tab semantics explicit under current runtime constraints.
 
 ## Internal Milestones
 
-Execute `APX9-M1` through `APX9-M6` sequentially; do not stop before the
-`APX-B9` super-gate unless a hard stop condition is hit.
+Execute `APX10-M1` through `APX10-M6` sequentially; do not stop before the
+`APX-B10` super-gate unless a hard stop condition is hit.
 
 Commit cadence expectation for this macro batch:
 
@@ -113,12 +114,12 @@ Commit cadence expectation for this macro batch:
 
 Execute in order and mark progress in `docs/todo/android/implementation.md`.
 
-- `APX9-M1`: audit APX-B8 outputs and define minimum APX-B9 behavior slice for session-backed tabs + real test-binary pull/install flow.
-- `APX9-M2`: implement behavior-bearing tab-session model/wiring cut.
-- `APX9-M3`: wire consumers and verify tab-session behavior on device.
-- `APX9-M4`: land minimum Android-side zide-pm pull/install flow improvement for real test binaries.
-- `APX9-M5`: lock docs/handoff/entrypoint to implemented APX-B9 behavior slice.
-- `APX9-M6`: run validation and publish super-gate review packet.
+- `APX10-M1`: audit APX-B9 doctor/install callsites and define explicit read-only doctor vs install mutation boundaries.
+- `APX10-M2`: implement policy-owned Android test-binary install lifecycle path.
+- `APX10-M3`: wire consumers and verify lifecycle behavior on device.
+- `APX10-M4`: lock tab-session semantics under single-PTY constraints (explicit, no persistence claims).
+- `APX10-M5`: lock docs/handoff/entrypoint to implemented APX-B10 seam shape.
+- `APX10-M6`: run validation and publish super-gate review packet.
 
 ## Allowed Work
 
@@ -139,13 +140,11 @@ If a required change falls outside these paths, stop and report a blocker.
 
 ## Non-Goals
 
-- No terminal tabs UI/product behavior.
-- No tab persistence/session switching.
+- No dual-PTY/session-persistence implementation in this batch.
 - No terminal-core behavior changes.
 - No shared renderer/backend refactor.
 - No app-shell UI redesign.
 - No keep-screen-on follow-up implementation unless explicitly re-opened by product direction.
-- No terminal tabs product behavior; this is host API shaping only.
 - No startup order change.
 - No debug-view UI resurrection.
 - No CI/pipeline/lint additions.
@@ -212,7 +211,7 @@ when:
 - a behavior change is required where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
 - implementing terminal tabs/product behavior becomes necessary to proceed
-- the `APX-B9` super-gate is reached
+- the `APX-B10` super-gate is reached
 
 Otherwise continue autonomously with:
 
@@ -220,9 +219,9 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At `APX-B9` super-gate, report:
+At `APX-B10` super-gate, report:
 
-- review chunk name: `APX-B9`
+- review chunk name: `APX-B10`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs

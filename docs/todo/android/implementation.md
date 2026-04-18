@@ -121,7 +121,8 @@ Dual-mode batching override (architect directive):
 - `APX-B6` accepted by architect.
 - `APX-B7` accepted by architect.
 - `APX-B8` accepted by architect.
-- `APX-B9` super-gate reached; architect review pending.
+- `APX-B9` accepted by architect.
+- `APX-B10` is now `in_progress`.
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -2078,7 +2079,7 @@ Architect review verdict:
 - `Review answers: APX-B8 scope is accepted as the first feature slice; next batch should drive real tab-session behavior and zide-pm test-binary flow instead of more cleanup-only seam carving.`
 - `Findings carried forward: no blocking regressions; startup behavior stable; single clean in-repo path maintained.`
 
-### `APX-B9` Tab-State Expansion Slice 2 + zide-pm Test-Binary Pull (`architect_review_pending`)
+### `APX-B9` Tab-State Expansion Slice 2 + zide-pm Test-Binary Pull (`accepted`)
 
 Batch queue line (exact):
 
@@ -2209,14 +2210,110 @@ Engineer validation (this batch):
 
 **Review chunk:** `APX-B9`
 
-**Commits (oldest → newest):** `8e1cc538`, `f60569b9`, `0823baa3`, `c658a194`, `TBD`
+**Commits (oldest → newest):** `8e1cc538`, `f60569b9`, `0823baa3`, `c658a194`, `e134fc52`, `fd8eb3b1`
 
 `Milestone reached per docs, architect review required.`
 
 Architect review verdict:
 
 - `Review chunk: APX-B9`
-- `Verdict: pending`
+- `Verdict: accepted`
+- `Commits reviewed: 8e1cc538, f60569b9, 0823baa3, c658a194, e134fc52, fd8eb3b1`
+- `Architect validation spot-check: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
+- `Architect runtime validation spot-check: python3 ops/android_terminal_host.py deploy (pass); adb cold start (pass, LaunchState: COLD, Status: ok); adb logcat -d -s AndroidRuntime:E (pass, empty)`
+- `Engineer validation accepted: compile + deploy + AndroidRuntime:E smoke + cold start pass`
+- `Review answers: APX-B9 shape is accepted as the minimum behavior-bearing tab slice under current single-PTY native constraints.`
+- `Findings carried forward: no blocking regressions; no startup-order drift; single-path code maintained.`
+
+### `APX-B10` Android Test-Binary Productization + Tab-State Clean Path (`in_progress`)
+
+Batch queue line (exact):
+
+- convert APX-B9 proof-of-path behavior into clean product flow: install Android test binaries via explicit policy lifecycle (not ad-hoc doctor side effects) while keeping tab-session behavior coherent under single-PTY constraints
+
+Batch purpose:
+
+- move from proof-only `zide-pm install` trigger in Packages doctor to a clean, explicit lifecycle hook
+- keep tab-state behavior coherent and explicit without pretending dual-PTY persistence exists
+- reduce operator confusion by separating doctor/reporting from install/mutation behavior
+- continue feature-first delivery toward APX completion objective (3)
+- run as a longer engineer iteration: target **5–10 commits** before architect super-gate review
+
+Batch scope:
+
+- Java Android terminal host/userland flow changes only
+- primary code roots:
+  `android/terminal-host/app/src/main/java/uk/laurencegouws/terminal/**`
+  `android/terminal-host/app/src/main/res/**` (only if required for status UX)
+- allowed docs:
+  `docs/todo/android/implementation.md`,
+  `docs/todo/android/ENGINEER_ENTRYPOINT.md`,
+  `docs/AGENT_HANDOFF.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_NAMING_CONTRACT.md`,
+  `app_architecture/platform/android/USERLAND_HOST_CONTRACT.md`
+
+Batch non-goals:
+
+- no terminal-core/shared-renderer refactor
+- no native multi-PTY/session implementation in this batch
+- no keep-screen-on follow-up work
+- no startup-order change
+
+Batch super-gate:
+
+- Packages doctor path is read/report-focused; install mutation path is explicit and policy-owned
+- Android test-binary install path is still validated on device end-to-end
+- tab-session behavior remains coherent and documented under single-PTY constraints
+- debug and release Java compile pass
+- deploy + AndroidRuntime:E warm/cold checks pass
+- docs reflect final APX-B10 seams and residual risk
+
+Internal milestone cadence:
+
+- Engineer executes `APX10-M1` through `APX10-M6` sequentially.
+- Engineer should keep cutting coherent validated commits across those milestones
+  and target **5–10 commits total** before stopping at `APX-B10` super-gate.
+- Do not stop for architect review between internal milestones.
+- Mark each internal milestone complete in this file as it lands.
+- Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
+  the `APX-B10` super-gate is reached.
+
+### `APX10-M1` Flow audit + mutation/read boundary definition (`pending`)
+
+Queue line (exact):
+
+- audit APX-B9 package-doctor and test-binary install callsites; define explicit read-only doctor vs install mutation boundaries
+
+### `APX10-M2` Policy-owned install lifecycle cut (`pending`)
+
+Queue line (exact):
+
+- move Android test-binary install invocation from ad-hoc doctor thread into explicit policy-owned lifecycle path
+
+### `APX10-M3` Consumer wiring + behavior verification (`pending`)
+
+Queue line (exact):
+
+- wire userland/package consumers to the new lifecycle path and verify behavior on device
+
+### `APX10-M4` Tab-state coherence lock under single-PTY (`pending`)
+
+Queue line (exact):
+
+- document and enforce tab-session semantics so behavior remains explicit/coherent under current single-PTY runtime
+
+### `APX10-M5` Docs + handoff sync (`pending`)
+
+Queue line (exact):
+
+- update authority/queue/handoff/entrypoint to the implemented APX-B10 lifecycle and tab-state seam shape
+
+### `APX10-M6` Batch validation + review packet (`pending`)
+
+Queue line (exact):
+
+- validate APX-B10 end-to-end and publish architect super-gate packet with outcomes and blockers
 
 ## Guardrails
 
