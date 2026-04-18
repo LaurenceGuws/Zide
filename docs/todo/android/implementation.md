@@ -123,7 +123,8 @@ Dual-mode batching override (architect directive):
 - `APX-B8` accepted by architect.
 - `APX-B9` accepted by architect.
 - `APX-B10` accepted by architect.
-- `APX-B11` super-gate reached; architect review pending.
+- `APX-B11` accepted by architect.
+- `APX-B12` is now `in_progress`.
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -2366,7 +2367,7 @@ Architect review verdict:
 - `Review answers: install mutation split from doctor path is accepted; single-PTY tab contract wording is clear and preserved.`
 - `Findings carried forward: no blocking regressions; no startup-order drift; single-path code maintained.`
 
-### `APX-B11` App-Shell Session Navigation UX (`architect_review_pending`)
+### `APX-B11` App-Shell Session Navigation UX (`accepted`)
 
 Batch queue line (exact):
 
@@ -2473,14 +2474,112 @@ Engineer validation (this batch):
 - `8515d346` — Chrome: session binding in sidebar; assist row input-only
 - `d6126450` — javadoc: `AppShellNavigation`, `ProductTerminalTabSessionContract`, `WidgetAssembly`
 - `936d3c3d` — `ANDROID_JAVA_HOST_STRUCTURE.md` session/assist invariant
-- `0bb5ae33` — queue + handoff packet (`implementation`, `ENGINEER_ENTRYPOINT`, `AGENT_HANDOFF`) + APX-B8 historical note
+
+**Docs / handoff packet:** follow-on commit on this branch with subject `APX-B11: queue + handoff packet for sidebar session navigation UX` (updates `implementation.md`, `ENGINEER_ENTRYPOINT.md`, `AGENT_HANDOFF.md`).
 
 `Milestone reached per docs, architect review required.`
 
 Architect review verdict:
 
 - `Review chunk: APX-B11`
-- `Verdict: pending`
+- `Verdict: accepted`
+- `Commits reviewed: 447099c7, 8515d346, d6126450, 936d3c3d, a78cbd18`
+- `Architect validation spot-check: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
+- `Architect runtime validation spot-check: python3 ops/android_terminal_host.py deploy (pass); adb cold start (pass, LaunchState: COLD, Status: ok); adb logcat -d -s AndroidRuntime:E (pass, empty)`
+- `Engineer validation accepted: compile + deploy + AndroidRuntime:E smoke + cold start pass`
+- `Review answers: session controls in AppShell sidebar (not inline above assist) is accepted and now canonical.`
+- `Findings carried forward: no blocking regressions; APX-B10 doctor/install contract preserved; single-path code maintained.`
+
+### `APX-B12` Manifest-Driven Test-Binary Candidate Selection (`in_progress`)
+
+Batch queue line (exact):
+
+- replace hardcoded Android edge test-binary package id with manifest/list-driven candidate selection and explicit no-candidate UX while preserving APX-B10/APX-B11 contracts
+
+Batch purpose:
+
+- remove hardcoded test-binary install coupling (`UserlandAndroidTestBinaryPolicy.edgeTestPackageSpec`)
+- select install candidate from `zide-pm list-available` output under Android host mode
+- keep doctor path read-only and install mutation explicit/user-triggered
+- keep tab/session controls in AppShell sidebar and assist row input-only
+- continue APX objective (3): mature real Android test-binary pull/install behavior
+
+Batch scope:
+
+- Java Android terminal host/userland flow and minimal status/chrome wiring only
+- primary code roots:
+  `android/terminal-host/app/src/main/java/uk/laurencegouws/terminal/**`
+  `android/terminal-host/app/src/main/res/**` (only if required for no-candidate/failure copy)
+- allowed docs:
+  `docs/todo/android/implementation.md`,
+  `docs/todo/android/ENGINEER_ENTRYPOINT.md`,
+  `docs/AGENT_HANDOFF.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_NAMING_CONTRACT.md`,
+  `app_architecture/platform/android/USERLAND_HOST_CONTRACT.md`
+
+Batch non-goals:
+
+- no terminal-core/shared-renderer refactor
+- no native multi-PTY/session implementation
+- no keep-screen-on follow-up work
+- no startup-order change
+- no edits in `../zide-mobile-pm` from this Android batch
+
+Batch super-gate:
+
+- install path no longer depends on hardcoded edge package id
+- candidate selection comes from `zide-pm list-available` behavior under Android host mode
+- explicit no-candidate and install-failure state/reporting (no silent skips)
+- APX-B11 sidebar session-navigation rule remains unchanged
+- debug/release compile + deploy + AndroidRuntime:E warm/cold checks pass
+- docs/handoff/entrypoint aligned to APX-B12 outcomes
+
+Internal milestone cadence:
+
+- Engineer executes `APX12-M1` through `APX12-M6` sequentially.
+- Engineer should keep cutting coherent validated commits across those milestones
+  and target **5–10 commits total** before stopping at `APX-B12` super-gate.
+- Do not stop for architect review between internal milestones.
+- Mark each internal milestone complete in this file as it lands.
+- Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
+  the `APX-B12` super-gate is reached.
+
+### `APX12-M1` Candidate-selection audit (`pending`)
+
+Queue line (exact):
+
+- audit doctor/list/install outputs and define deterministic Android test-binary candidate selection plus no-candidate behavior
+
+### `APX12-M2` Manifest/list-driven candidate policy cut (`pending`)
+
+Queue line (exact):
+
+- replace hardcoded edge package id with list-derived candidate policy
+
+### `APX12-M3` Consumer/status wiring (`pending`)
+
+Queue line (exact):
+
+- wire install action and status telemetry to the new candidate policy including explicit no-candidate path
+
+### `APX12-M4` Device verification against current dev release (`pending`)
+
+Queue line (exact):
+
+- verify install/no-candidate behavior against the current released dev manifest baseline and record outcomes
+
+### `APX12-M5` Docs + handoff sync (`pending`)
+
+Queue line (exact):
+
+- update authority/queue/handoff/entrypoint to APX-B12 candidate-selection seam and residual risk
+
+### `APX12-M6` Batch validation + review packet (`pending`)
+
+Queue line (exact):
+
+- validate APX-B12 end-to-end and publish architect super-gate packet with outcomes and blockers
 
 ## Guardrails
 

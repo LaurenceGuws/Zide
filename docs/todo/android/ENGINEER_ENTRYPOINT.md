@@ -34,15 +34,15 @@ you must report the mismatch.
 
 ## Current Target
 
-`APX-B11` is `architect_review_pending`.
+`APX-B12` is `in_progress`.
 
 Active batch queue line (exact):
 
-- terminal tab/session controls must not be an inline bar above assist/keyboard helpers; session selection belongs in AppShell-level navigation (left slide-out sidebar); assist/helper row stays input-only; preserve APX-B10 doctor vs install split and single-PTY session semantics
+- replace hardcoded Android edge test-binary package id with manifest/list-driven candidate selection and explicit no-candidate UX while preserving APX-B10/APX-B11 contracts
 
 Parallel-lane note:
 
-- `../zide-mobile-pm` may progress in parallel under a separate engineer session; this Android engineer session stays focused on APX-B11 only.
+- `../zide-mobile-pm` may progress in parallel under a separate engineer session; this Android engineer session stays focused on APX-B12 only.
 
 ## Core Boundary Rule
 
@@ -74,12 +74,13 @@ boundaries while preserving current single-terminal behavior.
 - `APX-B8` is accepted: tab-state slice 1 (harness tab index state; session controls live in app-shell sidebar after APX-B11) and `ZIDE_PM_HOST_PLATFORM=android` export are in place.
 - `APX-B9` is accepted: tab selection now drives native restart + userland refresh, and Packages flow proved Android-side `zide-pm install`.
 - `APX-B10` is accepted: doctor path is read-only and test-binary install mutation is explicit lifecycle-owned with dedicated sidebar trigger.
-- `APX-B11` is feature-first: session/tab controls are **AppShell navigation** (drawer sidebar), not inline terminal chrome above the assist row; assist strip stays input-only; APX-B10 doctor/install split and single-PTY semantics preserved.
-- `zide-mobile-pm` foundation work is allowed in parallel, but APX-B11 remains the primary in-repo execution lane here.
+- `APX-B11` is accepted: session/tab controls are AppShell sidebar navigation (not inline above assist); assist strip stays input-only; APX-B10 contracts preserved.
+- `APX-B12` is feature-first: remove hardcoded test-binary install package-id coupling and use manifest/list-driven candidate selection with explicit no-candidate behavior.
+- `zide-mobile-pm` foundation work is allowed in parallel, but APX-B12 remains the primary in-repo execution lane here.
 - `AHW-B26` is accepted and `AHW` is closed.
 - Keep harness vs surface split (`WidgetAssembly.Result.harnessHost` + `surfaceJoin`) as the baseline.
 - Freeze additional keep-screen-on seam work beyond B20 unless explicitly re-opened by product direction.
-- Execute `APX-B11` as a non keep-screen-on batch.
+- Execute `APX-B12` as a non keep-screen-on batch.
 - Keep `ProductHostActivityStartupWiring`, `ProductTerminalLifecycleHost`, and `ProductTerminalWidgetAssemblyHost` ownership from B22 unchanged.
 - Keep `ProductHostOnCreateStartupCoordinator` + `ProductHostOnCreateStartupSteps` as the startup choreography seam from B23.
 - Keep `AppShellTerminalViewPolicy` as explicit app-shell terminal-view policy seam; no public `appShellNavigation()` accessor on that type.
@@ -101,12 +102,12 @@ boundaries while preserving current single-terminal behavior.
   `InteractionAssembly.Result` yet.
 - Keep chrome slot-agnostic in this batch; do not thread slot into chrome
   construction until per-slot chrome policy is scoped.
-- `APX-B11` must keep explicit single-PTY tab/session semantics; manifest/list-driven install candidate work is **out of scope** for this batch (re-queue separately if needed).
+- `APX-B12` must preserve APX-B11 sidebar session-navigation and APX-B10 doctor/install split while implementing candidate selection changes.
 
 ## Internal Milestones
 
-Execute `APX11-M1` through `APX11-M6` sequentially; do not stop before the
-`APX-B11` super-gate unless a hard stop condition is hit.
+Execute `APX12-M1` through `APX12-M6` sequentially; do not stop before the
+`APX-B12` super-gate unless a hard stop condition is hit.
 
 Commit cadence expectation for this macro batch:
 
@@ -115,12 +116,12 @@ Commit cadence expectation for this macro batch:
 
 Execute in order and mark progress in `docs/todo/android/implementation.md`.
 
-- `APX11-M1`: remove inline session strip from product layout; add sidebar session block.
-- `APX11-M2`: bind session selection in `ChromeController` sidebar wiring; assist bar input-only.
-- `APX11-M3`: document placement in `AppShellNavigation` / `ProductTerminalTabSessionContract` / `WidgetAssembly`.
-- `APX11-M4`: update `ANDROID_JAVA_HOST_STRUCTURE.md` chrome/session invariant.
-- `APX11-M5`: sync implementation queue + this entrypoint + `AGENT_HANDOFF`.
-- `APX11-M6`: compile/deploy/device validation + architect review packet.
+- `APX12-M1`: audit doctor/list/install outputs and define deterministic candidate selection + no-candidate behavior.
+- `APX12-M2`: implement manifest/list-driven Android test-binary candidate policy.
+- `APX12-M3`: wire install action + status telemetry through the candidate policy.
+- `APX12-M4`: verify behavior against current released dev manifest baseline on device.
+- `APX12-M5`: sync implementation queue + this entrypoint + `AGENT_HANDOFF`.
+- `APX12-M6`: compile/deploy/device validation + architect review packet.
 
 ## Allowed Work
 
@@ -212,7 +213,7 @@ when:
 - a behavior change is required where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
 - implementing terminal tabs/product behavior becomes necessary to proceed
-- the `APX-B11` super-gate is reached
+- the `APX-B12` super-gate is reached
 
 Otherwise continue autonomously with:
 
@@ -220,9 +221,9 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At `APX-B11` super-gate, report:
+At `APX-B12` super-gate, report:
 
-- review chunk name: `APX-B11`
+- review chunk name: `APX-B12`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs
