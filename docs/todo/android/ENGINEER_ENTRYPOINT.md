@@ -34,15 +34,15 @@ you must report the mismatch.
 
 ## Current Target
 
-`APX-B15` is `architect_review_pending` (super-gate packet in `docs/todo/android/implementation.md`).
+`APX-B16` is `in_progress`.
 
 Active batch queue line (exact):
 
-- expand product tab-state model into a policy-owned metadata surface (selected index + stable tab descriptors) while preserving APX-B9 single-PTY restart semantics
+- persist product terminal tab selection by stable id (not raw index) while preserving APX-B14 seed behavior and APX-B9 single-PTY restart semantics
 
 Parallel-lane note:
 
-- `../zide-mobile-pm` may progress in parallel under a separate engineer session; this Android engineer session stays focused on APX-B15 only.
+- `../zide-mobile-pm` may progress in parallel under a separate engineer session; this Android engineer session stays focused on APX-B16 only.
 
 ## Core Boundary Rule
 
@@ -78,12 +78,13 @@ boundaries while preserving current single-terminal behavior.
 - `APX-B12` is reviewed with changes requested: hardcoded package-id coupling removed, but candidate narrowing is incomplete because list-available output can include non-edge ids.
 - `APX-B13` is accepted: edge install candidate narrowing (`zide-android-*`) and explicit selected/no-candidate status are in place.
 - `APX-B14` is accepted: selected terminal tab index now persists across activity recreation via seeded navigation state.
-- `APX-B15` is feature-first: model tab-state metadata as a policy-owned descriptor surface while preserving two-tab behavior and APX-B9 restart semantics.
-- `zide-mobile-pm` foundation work is allowed in parallel, but APX-B15 remains the primary in-repo execution lane here.
+- `APX-B15` is accepted: tab metadata is policy-owned through `ProductTerminalTabDescriptor`/`AppShellTerminalViewPolicy` and chrome consumes descriptors.
+- `APX-B16` is feature-first: persist selected tab by stable descriptor id and resolve startup seed index via descriptor lookup, preserving APX-B14/APX-B9 semantics.
+- `zide-mobile-pm` foundation work is allowed in parallel, but APX-B16 remains the primary in-repo execution lane here.
 - `AHW-B26` is accepted and `AHW` is closed.
 - Keep harness vs surface split (`WidgetAssembly.Result.harnessHost` + `surfaceJoin`) as the baseline.
 - Freeze additional keep-screen-on seam work beyond B20 unless explicitly re-opened by product direction.
-- Execute `APX-B15` as a non keep-screen-on batch.
+- Execute `APX-B16` as a non keep-screen-on batch.
 - Keep `ProductHostActivityStartupWiring`, `ProductTerminalLifecycleHost`, and `ProductTerminalWidgetAssemblyHost` ownership from B22 unchanged.
 - Keep `ProductHostOnCreateStartupCoordinator` + `ProductHostOnCreateStartupSteps` as the startup choreography seam from B23.
 - Keep `AppShellTerminalViewPolicy` as explicit app-shell terminal-view policy seam; no public `appShellNavigation()` accessor on that type.
@@ -105,12 +106,12 @@ boundaries while preserving current single-terminal behavior.
   `InteractionAssembly.Result` yet.
 - Keep chrome slot-agnostic in this batch; do not thread slot into chrome
   construction until per-slot chrome policy is scoped.
-- `APX-B15` must preserve APX-B11 sidebar session-navigation, APX-B10 doctor/install split, APX-B13 edge-install list parsing, and APX-B14 restore seed behavior while adding tab-state descriptor modeling only.
+- `APX-B16` must preserve APX-B11 sidebar session-navigation, APX-B10 doctor/install split, APX-B13 edge-install list parsing, and APX-B15 descriptor ownership while adding stable-id persistence only.
 
 ## Internal Milestones
 
-Execute `APX15-M1` through `APX15-M6` sequentially; do not stop before the
-`APX-B15` super-gate unless a hard stop condition is hit.
+Execute `APX16-M1` through `APX16-M6` sequentially; do not stop before the
+`APX-B16` super-gate unless a hard stop condition is hit.
 
 Commit cadence expectation for this macro batch:
 
@@ -119,12 +120,12 @@ Commit cadence expectation for this macro batch:
 
 Execute in order and mark progress in `docs/todo/android/implementation.md`.
 
-- `APX15-M1`: audit current tab metadata assumptions across navigation/policy/chrome and define policy-owned descriptor surface.
-- `APX15-M2`: add tab descriptor model (stable id + label + index) on app-shell policy seam with selected-index ownership.
-- `APX15-M3`: rewire chrome/sidebar binding to consume policy descriptors without behavior changes.
-- `APX15-M4`: lock restore/restart semantics (restore seed side-effect free; distinct user select still restarts).
-- `APX15-M5`: sync authority docs + queue + this entrypoint + `AGENT_HANDOFF`.
-- `APX15-M6`: validation ladder + architect review packet.
+- `APX16-M1`: audit save/restore callsites and define stable-id storage + lookup boundary.
+- `APX16-M2`: add policy helpers for descriptor by index and index by stable id with strict guards.
+- `APX16-M3`: rewire activity persistence from index-only to stable-id save/restore seed resolution.
+- `APX16-M4`: lock semantics (restore seed side-effect free; restart only on distinct user selection).
+- `APX16-M5`: sync authority docs + queue + this entrypoint + `AGENT_HANDOFF`.
+- `APX16-M6`: validation ladder + architect review packet.
 
 ## Allowed Work
 
@@ -216,7 +217,7 @@ when:
 - a behavior change is required where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
 - implementing terminal tabs/product behavior becomes necessary to proceed
-- the `APX-B15` super-gate is reached
+- the `APX-B16` super-gate is reached
 
 Otherwise continue autonomously with:
 
@@ -224,9 +225,9 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At `APX-B15` super-gate, report:
+At `APX-B16` super-gate, report:
 
-- review chunk name: `APX-B15`
+- review chunk name: `APX-B16`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs

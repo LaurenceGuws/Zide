@@ -133,7 +133,8 @@ Dual-mode batching override (architect directive):
 - `APX-B12` reviewed; changes requested (addressed in APX-B13).
 - `APX-B13` accepted by architect.
 - `APX-B14` accepted by architect.
-- `APX-B15` architect review pending (super-gate packet below).
+- `APX-B15` accepted by architect.
+- `APX-B16` in progress.
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -2729,7 +2730,7 @@ Queue line (exact):
 - `Engineer validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat -d -s AndroidRuntime:E after am start (pass, empty); adb cold start am start -W (pass, LaunchState: COLD, Status: ok)`
 - `Contract notes: restore seeds navigation only; user tab clicks still use applySelectProductTerminalTab and keep APX-B9 restart; APX-B10/B11/B13 surfaces untouched; no manifest parsing.`
 
-### `APX-B15` Tab-State Model Expansion (Policy-Owned Metadata, No PTY Change) (`architect_review_pending`)
+### `APX-B15` Tab-State Model Expansion (Policy-Owned Metadata, No PTY Change) (`accepted`)
 
 Batch queue line (exact):
 
@@ -2800,10 +2801,74 @@ Queue line (exact):
 #### APX-B15 super-gate packet (engineer → architect)
 
 - `Review chunk: APX-B15`
-- `Verdict: pending architect review`
-- `Commits reviewed: d5689bbc (feature), 4bd24fe9 (ANDROID_JAVA_HOST_STRUCTURE); handoff/queue/entrypoint sync in the same engineer push (verify with git log)`
+- `Verdict: accepted`
+- `Commits reviewed: d5689bbc, 4bd24fe9, 66dd0840`
+- `Architect validation spot-check: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
+- `Architect runtime validation spot-check: python3 ops/android_terminal_host.py deploy (pass); adb cold start (pass, LaunchState: COLD, Status: ok); adb logcat -d -s AndroidRuntime:E (pass, empty)`
+- `Review answers: policy-owned descriptor model is accepted; APX-B14 seed-only restore and APX-B9 restart-on-distinct-user-select remain canonical.`
 - `Engineer validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat -d -s AndroidRuntime:E after am start (pass, empty); adb cold start am start -W (pass, LaunchState: COLD, Status: ok)`
 - `Contract notes: descriptors are policy-owned; persistence remains index-only (APX-B14); user distinct tab select still restarts via applySelectProductTerminalTab → onProductTerminalTabSessionActivated; APX-B10/B11/B13 unchanged; single PTY.`
+
+### `APX-B16` Tab Selection Persistence by Stable Id (`in_progress`)
+
+Batch queue line (exact):
+
+- persist product terminal tab selection by stable id (not raw index) while preserving APX-B14 seed behavior and APX-B9 single-PTY restart semantics
+
+Batch purpose:
+
+- make saved tab selection resilient to descriptor reorder/index shifts
+- keep restore deterministic by resolving saved stable id to a seeded initial index at startup
+- preserve current behavior: two descriptors, sidebar controls, restart only on distinct user selection
+
+Batch super-gate:
+
+- activity saves selected tab stable id and restores by stable-id lookup through policy descriptors
+- fallback path remains deterministic when saved id is missing/unknown
+- no synthetic restart during restore seed path
+- APX-B10/APX-B11/APX-B13/APX-B15 contracts unchanged
+- compile/deploy/device smoke pass
+- docs/handoff/entrypoint aligned
+
+Internal milestone cadence:
+
+- Engineer executes `APX16-M1`–`APX16-M6`; target **5–10 validated commits** before super-gate.
+
+### `APX16-M1` Stable-id persistence audit (`pending`)
+
+Queue line (exact):
+
+- audit save/restore callsites and define stable-id storage/resolution boundary
+
+### `APX16-M2` Policy lookup surface (`pending`)
+
+Queue line (exact):
+
+- add policy lookup for descriptor by index and index by stable id with strict null/range guards
+
+### `APX16-M3` Activity save/restore rewiring (`pending`)
+
+Queue line (exact):
+
+- replace index-only bundle persistence with stable-id save and descriptor-based restore seed resolution
+
+### `APX16-M4` Restart/restore semantics lock (`pending`)
+
+Queue line (exact):
+
+- verify restore remains seed-only and distinct user selection remains the only restart trigger
+
+### `APX16-M5` Docs + handoff sync (`pending`)
+
+Queue line (exact):
+
+- sync authority docs and queue/handoff/entrypoint to APX-B16 stable-id persistence contract
+
+### `APX16-M6` Validation + review packet (`pending`)
+
+Queue line (exact):
+
+- run validation ladder and publish APX-B16 super-gate packet for architect review
 
 ## Guardrails
 
