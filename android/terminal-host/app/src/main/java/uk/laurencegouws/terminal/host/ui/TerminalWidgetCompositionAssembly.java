@@ -22,14 +22,14 @@ public final class TerminalWidgetCompositionAssembly {
      * Joins interaction and surface host join into the portable {@link TerminalWidgetInstance}.
      * Harness chrome/shell/view-mode refs are not part of this call.
      *
-     * @param slot compile-visible slot identity for this join — must satisfy
+     * @param hostDeclaredTerminalWidgetSlot host-declared slot value for this join — unwrap must satisfy
      *             {@link TerminalWidgetSlotId#checkActiveProductTerminalSlot} for current product wiring
      */
     public static TerminalWidgetInstance compose(
-            TerminalWidgetSlotId slot,
+            ProductHostDeclaredTerminalWidgetSlot hostDeclaredTerminalWidgetSlot,
             InteractionAssembly.Result interaction,
             WidgetSurfaceHostJoin surfaceJoin) {
-        TerminalWidgetSlotId.checkActiveProductTerminalSlot(slot);
+        TerminalWidgetSlotId.checkActiveProductTerminalSlot(hostDeclaredTerminalWidgetSlot.terminalWidgetSlot());
         return new TerminalWidgetInstance(
                 interaction.selectionController,
                 interaction.GestureStateController,
