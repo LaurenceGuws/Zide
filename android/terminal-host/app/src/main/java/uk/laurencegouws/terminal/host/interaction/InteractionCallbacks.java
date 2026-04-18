@@ -4,14 +4,16 @@ import android.content.Context;
 import android.os.Handler;
 import android.widget.FrameLayout;
 
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
 
+import uk.laurencegouws.terminal.host.ui.ProductHostDeclaredTerminalWidgetSlot;
 import uk.laurencegouws.terminal.host.ui.TerminalWidgetSlotId;
 
 /** Functional callback adapter for {@link InteractionAssembly.Host}. */
 public final class InteractionCallbacks implements InteractionAssembly.Host {
-    private final TerminalWidgetSlotId terminalWidgetSlot;
+    private final ProductHostDeclaredTerminalWidgetSlot hostDeclaredTerminalWidgetSlot;
     private final Context harnessContext;
     private final Handler handler;
     private final FrameLayout productSurfaceContainer;
@@ -23,7 +25,7 @@ public final class InteractionCallbacks implements InteractionAssembly.Host {
     private final Consumer<String> appendEvent;
 
     public InteractionCallbacks(
-            TerminalWidgetSlotId terminalWidgetSlot,
+            ProductHostDeclaredTerminalWidgetSlot hostDeclaredTerminalWidgetSlot,
             Context harnessContext,
             Handler handler,
             FrameLayout productSurfaceContainer,
@@ -33,7 +35,8 @@ public final class InteractionCallbacks implements InteractionAssembly.Host {
             Runnable refreshScrollOverlay,
             Runnable reevaluateFrameLoop,
             Consumer<String> appendEvent) {
-        this.terminalWidgetSlot = terminalWidgetSlot;
+        this.hostDeclaredTerminalWidgetSlot =
+                Objects.requireNonNull(hostDeclaredTerminalWidgetSlot, "hostDeclaredTerminalWidgetSlot");
         this.harnessContext = harnessContext;
         this.handler = handler;
         this.productSurfaceContainer = productSurfaceContainer;
@@ -47,7 +50,7 @@ public final class InteractionCallbacks implements InteractionAssembly.Host {
 
     @Override
     public TerminalWidgetSlotId terminalWidgetSlot() {
-        return terminalWidgetSlot;
+        return hostDeclaredTerminalWidgetSlot.terminalWidgetSlot();
     }
 
     @Override

@@ -61,7 +61,7 @@ public final class ProductHostActivityStartupWiring {
     }
 
     public static InteractionCallbacks interaction(
-            TerminalWidgetSlotId terminalWidgetSlot,
+            ProductHostDeclaredTerminalWidgetSlot hostDeclaredTerminalWidgetSlot,
             Context harnessContext,
             Handler handler,
             FrameLayout productSurfaceContainer,
@@ -70,7 +70,7 @@ public final class ProductHostActivityStartupWiring {
             ProductHostStartupBundle hostStartup,
             Consumer<String> appendEvent) {
         return new InteractionCallbacks(
-                terminalWidgetSlot,
+                hostDeclaredTerminalWidgetSlot,
                 harnessContext,
                 handler,
                 productSurfaceContainer,

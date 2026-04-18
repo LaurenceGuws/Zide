@@ -286,7 +286,7 @@ public final class ZideActivity extends android.app.Activity
 
     private InteractionCallbacks createInteractionCallbacks() {
         return ProductHostActivityStartupWiring.interaction(
-                productHostDeclaredTerminalWidgetSlot.terminalWidgetSlot(),
+                productHostDeclaredTerminalWidgetSlot,
                 this,
                 handler,
                 activityViewBindings.productSurfaceContainer,
