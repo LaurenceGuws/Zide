@@ -4336,7 +4336,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B21` Widget/Composition Host API Slimming (`in_progress`)
+### `AHW-B21` Widget/Composition Host API Slimming (`verdict_pending`)
 
 Batch queue line (exact):
 
@@ -4409,7 +4409,7 @@ Progress delta:
   **`WidgetSurfaceHostJoin`** (surface bridge/controller/widget controller); **`Result`** holds those two;
   **`compose(slot, interaction, WidgetSurfaceHostJoin)`** — no tab product behavior.
 
-### `AHW21-M2` Slim surface introduction (`pending`)
+### `AHW21-M2` Slim surface introduction (`completed`)
 
 Queue line (exact):
 
@@ -4421,7 +4421,13 @@ Acceptance:
 - preserve current behavior and startup sequence
 - compile debug + release Java after code changes
 
-### `AHW21-M3` Activity rewiring (`pending`)
+Progress delta:
+
+- **`WidgetHarnessHostControllers`** and **`WidgetSurfaceHostJoin`** added under `host/ui`.
+- **`WidgetAssembly.Result`** is now **`harnessHost` + `surfaceJoin`** (replaces eight parallel fields).
+- **`TerminalWidgetCompositionAssembly.compose(TerminalWidgetSlotId, InteractionAssembly.Result, WidgetSurfaceHostJoin)`**.
+
+### `AHW21-M3` Activity rewiring (`completed`)
 
 Queue line (exact):
 
@@ -4433,7 +4439,12 @@ Acceptance:
 - removed surfaces are truly obsolete and not behavior-bearing
 - compile debug + release Java after code changes
 
-### `AHW21-M4` Contract docs lock (`pending`)
+Progress delta:
+
+- **`ZideActivity.applyTerminalWidgetComposition`**: shell/chrome/view-mode from **`widgetResult.harnessHost`**;
+  **`compose(..., widgetResult.surfaceJoin)`**.
+
+### `AHW21-M4` Contract docs lock (`completed`)
 
 Queue line (exact):
 
@@ -4444,7 +4455,12 @@ Acceptance:
 - host structure and naming contract match code shape
 - userland contract remains unchanged unless ownership text requires an update
 
-### `AHW21-M5` Queue/handoff/entrypoint sync (`pending`)
+Progress delta:
+
+- **`ANDROID_JAVA_HOST_STRUCTURE.md`** + **`ANDROID_JAVA_NAMING_CONTRACT.md`** updated for `WidgetSurfaceHostJoin`,
+  `harnessHost`, and compose signature. **`USERLAND_HOST_CONTRACT.md`** unchanged.
+
+### `AHW21-M5` Queue/handoff/entrypoint sync (`completed_in_batch`)
 
 Queue line (exact):
 
@@ -4455,7 +4471,11 @@ Acceptance:
 - queue, handoff, and engineer entrypoint stay coherent through B21 super-gate
 - super-gate stop condition and review packet contract are explicit
 
-### `AHW21-M6` Batch validation + review packet (`pending`)
+Progress delta:
+
+- This file, `ENGINEER_ENTRYPOINT.md`, and `AGENT_HANDOFF.md` updated for `verdict_pending`.
+
+### `AHW21-M6` Batch validation + review packet (`completed_in_batch`)
 
 Queue line (exact):
 
@@ -4467,6 +4487,28 @@ Acceptance:
 - deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
 - cold start smoke pass when a device is available
 - engineer reports the full super-gate packet and stops for Architect review
+
+Progress delta:
+
+- Debug/release compile pass; deploy + `adb logcat -c` + activity start + `AndroidRuntime:E` (empty);
+  cold start `force-stop` + `am start -W` (`LaunchState: COLD`, ok).
+
+Super-gate engineer packet:
+
+- `Milestone: AHW-B21 verdict_pending`
+- `Queue line (exact): slim WidgetAssembly/TerminalWidgetCompositionAssembly host-result surfaces for tab-ready host API without tab product behavior`
+- `Commits (oldest→newest): 356c0df9 (M1), 0fe06f61 (M2/M3), f78cb4c2 (M4), then M5/M6 queue/handoff/packet commit on branch tip`
+- `Files: host/ui WidgetHarnessHostControllers, WidgetSurfaceHostJoin; WidgetAssembly.Result; TerminalWidgetCompositionAssembly.compose; ZideActivity; ANDROID_JAVA_HOST_STRUCTURE, ANDROID_JAVA_NAMING_CONTRACT; implementation, ENGINEER_ENTRYPOINT, AGENT_HANDOFF`
+- `Scope contract: WidgetAssembly.Result → harnessHost + surfaceJoin; compose takes WidgetSurfaceHostJoin; startup order unchanged; B14–B20 IME/slot/chrome unchanged; no tab product behavior`
+- `Progress delta: WidgetHarnessHostControllers + WidgetSurfaceHostJoin; ZideActivity uses harnessHost + surfaceJoin; TerminalWidgetCompositionAssembly.compose surface-only third arg`
+- `Validation: gradle compileDebug/Release (pass); deploy (pass); logcat -c + start + AndroidRuntime:E (pass, empty); cold start (pass)`
+- `Review questions: confirm harness vs surface split naming for future per-slot joins; any doc drift in older queue history lines referencing flat Result fields`
+- `Engineer updates: Blocked by Archtect review needed: true`
+
+Architect review verdict:
+
+- `Review chunk: AHW-B21`
+- `Verdict: pending`
 
 `Milestone reached per docs, architect review required.`
 

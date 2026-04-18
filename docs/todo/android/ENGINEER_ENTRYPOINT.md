@@ -34,7 +34,7 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B21` is `in_progress` and is the only active macro batch.
+`AHW-B21` is `verdict_pending` (engineer super-gate packet delivered; Architect review next).
 
 Active batch queue line (exact):
 
@@ -52,10 +52,10 @@ existing IME/slot/chrome contracts and behavior.
 - Userland stays movable for future IDE/editor modes and must not depend on
   widget/surface/controller internals.
 - `TerminalWidgetCompositionAssembly` remains the join owner for
-  `InteractionAssembly.Result` + `WidgetAssembly.Result` into
+  `InteractionAssembly.Result` + `WidgetSurfaceHostJoin` into
   `TerminalWidgetInstance`.
-- `WidgetAssembly.Result` remains widget/chrome assembly output; it is not the
-  terminal-instance factory by itself.
+- `WidgetAssembly.Result` remains widget assembly output (`harnessHost` +
+  `surfaceJoin`); it is not the terminal-instance factory by itself.
 
 ## Required Direction From Architect Review (post-AHW-B20)
 
