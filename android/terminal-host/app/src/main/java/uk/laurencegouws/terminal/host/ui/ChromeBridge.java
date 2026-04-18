@@ -34,6 +34,8 @@ public final class ChromeBridge implements ChromeController.Host {
         void sendDirectText(String text);
 
         void updateStatus(String statusLabel);
+
+        void onProductTerminalTabSessionActivated(int tabIndex);
     }
 
     private final Context context;
@@ -183,8 +185,8 @@ public final class ChromeBridge implements ChromeController.Host {
     }
 
     @Override
-    public void applySelectProductTerminalTab(int tabIndex) {
-        appShellTerminalViewPolicy.applySelectProductTerminalTab(tabIndex);
+    public boolean applySelectProductTerminalTab(int tabIndex) {
+        return appShellTerminalViewPolicy.applySelectProductTerminalTab(tabIndex);
     }
 
     @Override
@@ -195,6 +197,11 @@ public final class ChromeBridge implements ChromeController.Host {
     @Override
     public Button productTerminalTab1Button() {
         return rootView.findViewById(R.id.product_terminal_tab_1);
+    }
+
+    @Override
+    public void onProductTerminalTabSessionActivated(int tabIndex) {
+        callbacks.onProductTerminalTabSessionActivated(tabIndex);
     }
 
     private void applyModifierButtonState(Button button, boolean latched, int idleLabelResId, int activeLabelResId) {

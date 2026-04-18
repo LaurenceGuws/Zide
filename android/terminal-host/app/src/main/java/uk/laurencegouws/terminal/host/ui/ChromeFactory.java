@@ -5,6 +5,7 @@ import android.view.View;
 import android.widget.Button;
 
 import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 import java.util.function.Supplier;
 
 import uk.laurencegouws.terminal.input.ShellInputView;
@@ -50,7 +51,8 @@ public final class ChromeFactory {
             Supplier<Button> assistCtrlButton,
             Supplier<Button> assistAltButton,
             Consumer<String> sendDirectText,
-            Consumer<String> updateStatus) {
+            Consumer<String> updateStatus,
+            IntConsumer onProductTerminalTabSessionActivated) {
         return new ChromeBridge.Callbacks() {
             @Override
             public void runPackageDoctor() {
@@ -102,6 +104,11 @@ public final class ChromeFactory {
             @Override
             public void updateStatus(String statusLabel) {
                 updateStatus.accept(statusLabel);
+            }
+
+            @Override
+            public void onProductTerminalTabSessionActivated(int tabIndex) {
+                onProductTerminalTabSessionActivated.accept(tabIndex);
             }
         };
     }

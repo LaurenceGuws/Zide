@@ -160,4 +160,23 @@ public final class RuntimeController {
         }
         host.reportSessionRestartAfterInstall();
     }
+
+    /**
+     * Restarts the native shell session when the user selects a different product terminal tab.
+     * One PTY today: each activation starts a new shell — prior tab transcript is not preserved.
+     */
+    public void restartShellSessionForProductTab(final int tabIndex, final boolean logRefresh) {
+        final int status = host.nativeLoaded() ? host.nativeRestartSession() : 0;
+        host.appendEvent(
+                "tab.session.restart index=" + tabIndex + " status=" + NativeStatusLabels.sessionStartStatusLabel(status));
+        final UserlandSessionCoordinator sessionCoordinator = host.userlandSessionCoordinator();
+        if (sessionCoordinator != null) {
+            sessionCoordinator.refreshAndApply(logRefresh);
+        }
+        refreshScrollOverlay();
+        final FrameLoopController frameLoopController = host.frameLoopController();
+        if (frameLoopController != null) {
+            frameLoopController.reevaluate();
+        }
+    }
 }

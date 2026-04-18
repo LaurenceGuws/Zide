@@ -47,11 +47,14 @@ public final class ChromeController {
         /** @return selected product terminal tab index, or {@code 0} if tab strip is absent */
         int selectedProductTerminalTabIndex();
 
-        void applySelectProductTerminalTab(int tabIndex);
+        /** @return {@code true} if selected tab index changed */
+        boolean applySelectProductTerminalTab(int tabIndex);
 
         Button productTerminalTab0Button();
 
         Button productTerminalTab1Button();
+
+        void onProductTerminalTabSessionActivated(int tabIndex);
     }
 
     private final Host host;
@@ -107,8 +110,11 @@ public final class ChromeController {
     }
 
     private void selectProductTerminalTab(final int tabIndex) {
-        host.applySelectProductTerminalTab(tabIndex);
+        final boolean changed = host.applySelectProductTerminalTab(tabIndex);
         host.appendEvent("app_shell.product_terminal_tab.select index=" + tabIndex);
+        if (changed) {
+            host.onProductTerminalTabSessionActivated(tabIndex);
+        }
         syncProductTerminalTabChrome();
     }
 

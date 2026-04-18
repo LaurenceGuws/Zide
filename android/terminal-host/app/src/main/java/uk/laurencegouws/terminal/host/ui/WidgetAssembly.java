@@ -119,6 +119,12 @@ public final class WidgetAssembly {
         /** Host routes diagnostics; widget assembly does not own package policy. */
         void requestPackageDiagnostics();
 
+        /**
+         * Product terminal tab changed to a distinct index after {@link AppShellNavigation} policy;
+         * host runs native session restart + userland refresh (single PTY today).
+         */
+        void onProductTerminalTabSessionActivated(int tabIndex);
+
         void sendDirectText(String text);
 
         void notifyVisibleViewport(String reason);
@@ -221,7 +227,8 @@ public final class WidgetAssembly {
                                 host::assistCtrlButton,
                                 host::assistAltButton,
                                 host::sendDirectText,
-                                host::updateStatus)));
+                                host::updateStatus,
+                                host::onProductTerminalTabSessionActivated)));
     }
 
     private static ViewModeController createViewModeController(

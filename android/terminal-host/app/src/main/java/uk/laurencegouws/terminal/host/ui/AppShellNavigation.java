@@ -28,8 +28,9 @@ import java.util.Objects;
  * <p><strong>Product terminal tab strip (slice 1):</strong> harness keeps a small fixed
  * tab count ({@link #productTerminalTabCount}) and the selected index
  * ({@link #selectedProductTerminalTabIndex} / {@link #applySelectProductTerminalTab}).
- * This models multi-session <em>chrome</em> selection only — it does not add a second
- * {@link TerminalWidgetSlotId} or terminal instance.</p>
+ * Distinct tab selections trigger a native shell restart from {@link uk.laurencegouws.terminal.host.ui.ChromeController}
+ * wiring (single PTY; prior tab transcript is not preserved). This does not add a second
+ * {@link TerminalWidgetSlotId} or {@link TerminalWidgetInstance}.</p>
  */
 public final class AppShellNavigation {
     /** Fixed tab count for the first tab-state vertical slice (chrome only). */
@@ -83,16 +84,20 @@ public final class AppShellNavigation {
      *
      * @throws IllegalArgumentException if {@code tabIndex} is out of range
      */
-    public void applySelectProductTerminalTab(final int tabIndex) {
+    /**
+     * @return {@code true} if the selected tab index changed
+     */
+    public boolean applySelectProductTerminalTab(final int tabIndex) {
         if (tabIndex < 0 || tabIndex >= PRODUCT_TERMINAL_TAB_COUNT) {
             throw new IllegalArgumentException(
                     "tabIndex must be in [0, " + PRODUCT_TERMINAL_TAB_COUNT + "), got " + tabIndex);
         }
         if (tabIndex == selectedProductTerminalTabIndex) {
-            return;
+            return false;
         }
         selectedProductTerminalTabIndex = tabIndex;
         applyProductTerminalShellViewActive();
+        return true;
     }
 
     /** Whether the slide-out chrome drawer sidebar is open (visible). */

@@ -64,6 +64,13 @@ public final class RuntimeStartupForwards {
         }
     }
 
+    public void restartShellSessionForProductTabIfReady(final int tabIndex, final boolean logRefresh) {
+        final RuntimeController c = runtimeController.get();
+        if (c != null) {
+            c.restartShellSessionForProductTab(tabIndex, logRefresh);
+        }
+    }
+
     public boolean shouldRunFrameLoop() {
         final RuntimeController c = runtimeController.get();
         return c != null && c.shouldRunFrameLoop();

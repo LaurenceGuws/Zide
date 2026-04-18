@@ -44,8 +44,8 @@ public final class AppShellTerminalViewPolicy {
     }
 
     /** @see AppShellNavigation#applySelectProductTerminalTab */
-    public void applySelectProductTerminalTab(final int tabIndex) {
-        appShellNavigation.applySelectProductTerminalTab(tabIndex);
+    public boolean applySelectProductTerminalTab(final int tabIndex) {
+        return appShellNavigation.applySelectProductTerminalTab(tabIndex);
     }
 
     /** Whether the slide-out chrome drawer sidebar is open (visible). */
