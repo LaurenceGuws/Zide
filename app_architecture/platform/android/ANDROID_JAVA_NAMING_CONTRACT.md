@@ -107,6 +107,8 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
 - `WidgetAssembly.Host`: no primitive `imeVisible` / `setImeVisible`; use
   `SurfaceWidgetHostImeVisibility` for surface reads and `ChromeImePolicyInput` for chrome
   assembly (status/viewport/input hosts keep their own seams)
+- activity IME scratch: `ProductHostImeState` on `ZideActivity` (one instance) — not repeated
+  `() -> imeVisible` / `this::setImeVisible` closures across status/input/widget assembly
 - in `ZideActivity`, use one authoritative `static final` slot field (e.g.
   `ACTIVE_PRODUCT_TERMINAL_SLOT`) for interaction/widget/composition wiring
   instead of repeating `PRIMARY` literals

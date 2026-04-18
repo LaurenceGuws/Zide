@@ -146,6 +146,8 @@ generic boolean `setImeVisible` on the chrome host seam.
 `WidgetAssembly.Host` does not expose primitive `imeVisible` / `setImeVisible`; surface
 assembly reads IME through `SurfaceWidgetHostImeVisibility` (`currentImeVisible`), and
 chrome assembly uses `ChromeImePolicyInput` as above.
+Activity-level IME scratch for status/input/widget wiring is owned by `ProductHostImeState`
+(one instance on `ZideActivity`), not duplicated `() -> imeVisible` / `this::setImeVisible` closures.
 These are harness contract checks only — they do not add tab or multi-instance
 product behavior.
 
@@ -167,7 +169,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 
 | File | Contract Fit | Size/Shape | Next Pressure |
 | --- | --- | --- | --- |
-| `ZideActivity.java` | Good | Wiring-oriented Android entrypoint. JNI declarations remain out; startup null-guards are aggregated in `ProductHostStartupBundle`; `ActivityViewBindings` comes from `StatusViewAssembly.Result.activityViewBindings` (single `findViewById` capture); product terminal slot is `ACTIVE_PRODUCT_TERMINAL_SLOT` (single source) for interaction/widget/composition seams; terminal instance is `TerminalWidgetCompositionAssembly.compose(ACTIVE_PRODUCT_TERMINAL_SLOT, …)` after `InteractionAssembly` + `WidgetAssembly` (order: interaction → userland/session → widget → compose + assign chrome from `WidgetAssembly.Result`). | Keep activity orchestration-only; route any new behavior into the owning host/controller seam instead of adding policy here. |
+| `ZideActivity.java` | Good | Wiring-oriented Android entrypoint. JNI declarations remain out; startup null-guards are aggregated in `ProductHostStartupBundle`; `ActivityViewBindings` comes from `StatusViewAssembly.Result.activityViewBindings` (single `findViewById` capture); product terminal slot is `ACTIVE_PRODUCT_TERMINAL_SLOT` (single source) for interaction/widget/composition seams; IME visibility scratch is `ProductHostImeState` (status/input/widget); terminal instance is `TerminalWidgetCompositionAssembly.compose(ACTIVE_PRODUCT_TERMINAL_SLOT, …)` after `InteractionAssembly` + `WidgetAssembly` (order: interaction → userland/session → widget → compose + assign chrome from `WidgetAssembly.Result`). | Keep activity orchestration-only; route any new behavior into the owning host/controller seam instead of adding policy here. |
 | `NativeBridge.java` | Good | Owns JNI library load state and native bridge declarations for the terminal host. | Keep this focused on JNI surface only; do not move Android policy or lifecycle behavior into it. |
 | `debug/AndroidDebugFormatter.java` | Good | Pure formatter plus snapshot values. Large constructor surface is acceptable for debug-only snapshots. | Split snapshot values only if formatter starts owning state or capture policy. |
 | `debug/NativeStatusLabels.java` | Good | Owns native status-enum label mapping for debug/operator text. | Keep as pure mapping; avoid embedding behavior/policy. |
@@ -203,6 +205,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/userland/WorkflowInstallStartupGlue.java` | Good | Install completion state transitions + runtime restart delegation. | Keep install orchestration thin; low-level extraction stays in `UserlandInstaller`. |
 | `host/ui/ActivityViewBindings.java` | Good | Owns raw activity view lookup and typed binding capture for terminal host wiring; `StatusViewAssembly.Result` exposes the authoritative `activityViewBindings` for activity wiring. | Keep this as lookup-only data binding; no policy or runtime behavior. |
 | `host/ui/ChromeFactory.java` | Good | Owns chrome-specific bridge/callback construction; IME policy input uses `ChromeImePolicyInput` from `WidgetAssembly.Host`; intentionally no `TerminalWidgetSlotId` (chrome slot-agnostic freeze). | Reopen slot parameters only with scoped per-slot chrome policy. |
+| `host/ui/ProductHostImeState.java` | Good | Activity-owned IME visibility scratch; implements `SurfaceWidgetHostImeVisibility` and supplies `ChromeImePolicyInput` for widget assembly; fans out to status/input/widget wiring from one instance. | Keep IME policy in B14/B15/B16 seams; extend only with scoped harness batches. |
 | `host/interaction/InteractionFactory.java` | Good | Owns selection/gesture interaction controller construction so interaction seams stay out of the generic host assembler. | Keep this construction-only; interaction behavior remains in selection/gesture controllers. |
 | `host/interaction/InteractionAssembly.java` | Good | Owns interaction assembly; `assemble` enforces `checkActiveProductTerminalSlot` on `Host`. | Keep this assembly-only; behavior stays in interaction controllers. |
 | `host/interaction/InteractionCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/interaction/InteractionAssembly`. | Keep adapter-only; avoid moving interaction behavior into this adapter. |
