@@ -43,6 +43,8 @@ import uk.laurencegouws.terminal.host.ui.ViewModeController;
 import uk.laurencegouws.terminal.host.ui.WidgetHostAssemblyContext;
 import uk.laurencegouws.terminal.host.ui.UiStartupAssembly;
 import uk.laurencegouws.terminal.host.ui.ViewportController;
+import uk.laurencegouws.terminal.host.ui.ProductTerminalTabDescriptor;
+import uk.laurencegouws.terminal.host.ui.ProductTerminalTabDescriptors;
 import uk.laurencegouws.terminal.host.ui.WidgetAssembly;
 import uk.laurencegouws.terminal.host.userland.ReadinessBlockerStartup;
 import uk.laurencegouws.terminal.host.userland.WorkflowAssembly;
@@ -56,6 +58,8 @@ import uk.laurencegouws.terminal.userland.UserlandInstallState;
 import uk.laurencegouws.terminal.userland.UserlandRelease;
 import uk.laurencegouws.terminal.userland.UserlandSessionCoordinator;
 import uk.laurencegouws.terminal.userland.UserlandWorkflowController;
+
+import java.util.List;
 
 /**
  * Android activity entrypoint for the terminal-host product surface.
@@ -74,8 +78,15 @@ public final class ZideActivity extends android.app.Activity
         implements ShellInputView.Host {
     private static final boolean nativeLoaded = NativeBridge.nativeLoaded();
 
+    /**
+     * Legacy instance-state key (APX-B14): raw tab index. Read for migration only; APX-B16+ saves
+     * {@link ZideActivity#STATE_PRODUCT_TERMINAL_TAB_STABLE_ID} only.
+     */
     private static final String STATE_PRODUCT_TERMINAL_TAB_INDEX =
             "product_host.product_terminal_tab_index";
+
+    private static final String STATE_PRODUCT_TERMINAL_TAB_STABLE_ID =
+            "product_host.product_terminal_tab_stable_id";
 
     /**
      * App-shell terminal <strong>selection</strong> for this activity’s wiring (interaction,
@@ -205,25 +216,40 @@ public final class ZideActivity extends android.app.Activity
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        initialProductTerminalTabIndexForStartup = readProductTerminalTabIndexFromSavedState(savedInstanceState);
+        initialProductTerminalTabIndexForStartup = readProductTerminalTabSeedIndexFromSavedState(savedInstanceState);
         setContentView(R.layout.activity_main);
         applyDefaultTerminalKeepScreenOnPolicy();
         ProductHostOnCreateStartupCoordinator.run(onCreateStartupSteps);
     }
 
-    private static int readProductTerminalTabIndexFromSavedState(final Bundle savedInstanceState) {
+    /**
+     * Resolves saved tab selection to a seed index for {@link WidgetAssembly}: stable id first
+     * (APX-B16), else legacy index (APX-B14), else default {@code 0}. Does not call
+     * {@code applySelectProductTerminalTab}.
+     */
+    private int readProductTerminalTabSeedIndexFromSavedState(final Bundle savedInstanceState) {
         if (savedInstanceState == null) {
             return 0;
         }
-        return savedInstanceState.getInt(STATE_PRODUCT_TERMINAL_TAB_INDEX, 0);
+        final List<ProductTerminalTabDescriptor> defaults =
+                ProductTerminalTabDescriptors.defaultsForProductHarness(getResources());
+        final String stableId = savedInstanceState.getString(STATE_PRODUCT_TERMINAL_TAB_STABLE_ID);
+        if (stableId != null) {
+            return ProductTerminalTabDescriptors.tabIndexForStableIdOrDefault(defaults, stableId, 0);
+        }
+        if (savedInstanceState.containsKey(STATE_PRODUCT_TERMINAL_TAB_INDEX)) {
+            final int legacyIndex = savedInstanceState.getInt(STATE_PRODUCT_TERMINAL_TAB_INDEX, 0);
+            return ProductTerminalTabDescriptors.tabIndexForStableIdOrDefault(defaults, null, legacyIndex);
+        }
+        return 0;
     }
 
     @Override
     protected void onSaveInstanceState(final Bundle outState) {
         super.onSaveInstanceState(outState);
         if (terminalChromeController != null) {
-            outState.putInt(
-                    STATE_PRODUCT_TERMINAL_TAB_INDEX, terminalChromeController.selectedProductTerminalTabIndex());
+            outState.putString(
+                    STATE_PRODUCT_TERMINAL_TAB_STABLE_ID, terminalChromeController.selectedProductTerminalTabStableId());
         }
     }
 

@@ -18,7 +18,8 @@ import java.util.Objects;
  *
  * <p>Product terminal tab metadata (APX-B15): {@link #productTerminalTabDescriptors()} is the
  * policy-owned surface for stable ids + labels paired with tab indices; selected index and
- * mutation still delegate to {@link AppShellNavigation}.</p>
+ * mutation still delegate to {@link AppShellNavigation}. APX-B16 adds stable-id lookup helpers for
+ * persistence and chrome read surfaces.</p>
  */
 public final class AppShellTerminalViewPolicy {
     private final AppShellNavigation appShellNavigation;
@@ -65,6 +66,37 @@ public final class AppShellTerminalViewPolicy {
      */
     public List<ProductTerminalTabDescriptor> productTerminalTabDescriptors() {
         return productTerminalTabDescriptors;
+    }
+
+    /** Descriptor for {@code tabIndex} in {@code [0, productTerminalTabCount())}. */
+    public ProductTerminalTabDescriptor productTerminalTabDescriptorAt(final int tabIndex) {
+        if (tabIndex < 0 || tabIndex >= productTerminalTabDescriptors.size()) {
+            throw new IllegalArgumentException(
+                    "tabIndex must be in [0, " + productTerminalTabDescriptors.size() + "), got " + tabIndex);
+        }
+        return productTerminalTabDescriptors.get(tabIndex);
+    }
+
+    /**
+     * Resolves a stable tab id to a tab index.
+     *
+     * @return matching index, or {@code -1} if {@code stableId} is {@code null} or unknown
+     */
+    public int productTerminalTabIndexForStableId(final String stableId) {
+        if (stableId == null) {
+            return -1;
+        }
+        for (ProductTerminalTabDescriptor d : productTerminalTabDescriptors) {
+            if (stableId.equals(d.stableId())) {
+                return d.tabIndex();
+            }
+        }
+        return -1;
+    }
+
+    /** Stable id for the currently selected tab (for {@link android.app.Activity#onSaveInstanceState}). */
+    public String selectedProductTerminalTabStableId() {
+        return productTerminalTabDescriptorAt(selectedProductTerminalTabIndex()).stableId();
     }
 
     /** @see AppShellNavigation#selectedProductTerminalTabIndex */

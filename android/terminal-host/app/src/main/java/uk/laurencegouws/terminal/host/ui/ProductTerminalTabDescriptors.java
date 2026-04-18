@@ -37,4 +37,38 @@ public final class ProductTerminalTabDescriptors {
                 new ProductTerminalTabDescriptor(
                         STABLE_ID_SESSION_SECONDARY, res.getString(R.string.product_terminal_tab_1), 1));
     }
+
+    /**
+     * Resolves {@code stableId} against an ordered descriptor list (typically policy defaults).
+     *
+     * @param defaultIndex used when {@code stableId} is {@code null} or not found; clamped to
+     * {@code [0, descriptors.size())}
+     */
+    public static int tabIndexForStableIdOrDefault(
+            final List<ProductTerminalTabDescriptor> descriptors,
+            final String stableId,
+            final int defaultIndex) {
+        Objects.requireNonNull(descriptors, "descriptors");
+        if (descriptors.isEmpty()) {
+            return 0;
+        }
+        if (stableId != null) {
+            for (ProductTerminalTabDescriptor d : descriptors) {
+                if (stableId.equals(d.stableId())) {
+                    return d.tabIndex();
+                }
+            }
+        }
+        return clampTabIndex(defaultIndex, descriptors.size());
+    }
+
+    private static int clampTabIndex(final int index, final int tabCount) {
+        if (index < 0) {
+            return 0;
+        }
+        if (index >= tabCount) {
+            return tabCount - 1;
+        }
+        return index;
+    }
 }

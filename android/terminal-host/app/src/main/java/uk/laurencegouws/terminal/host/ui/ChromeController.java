@@ -53,6 +53,9 @@ public final class ChromeController {
         /** @return selected product terminal tab index, or {@code 0} if tab strip is absent */
         int selectedProductTerminalTabIndex();
 
+        /** Stable id of the selected product terminal tab (for instance-state persistence). */
+        String selectedProductTerminalTabStableId();
+
         /** @return {@code true} if selected tab index changed */
         boolean applySelectProductTerminalTab(int tabIndex);
 
@@ -74,6 +77,11 @@ public final class ChromeController {
     /** Current product-terminal tab index for {@link android.app.Activity#onSaveInstanceState}. */
     public int selectedProductTerminalTabIndex() {
         return host.selectedProductTerminalTabIndex();
+    }
+
+    /** Current product-terminal tab stable id for {@link android.app.Activity#onSaveInstanceState}. */
+    public String selectedProductTerminalTabStableId() {
+        return host.selectedProductTerminalTabStableId();
     }
 
     public void bindSidebarControls() {

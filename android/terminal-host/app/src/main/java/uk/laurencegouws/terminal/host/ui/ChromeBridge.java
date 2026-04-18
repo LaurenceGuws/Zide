@@ -199,6 +199,11 @@ public final class ChromeBridge implements ChromeController.Host {
     }
 
     @Override
+    public String selectedProductTerminalTabStableId() {
+        return appShellTerminalViewPolicy.selectedProductTerminalTabStableId();
+    }
+
+    @Override
     public boolean applySelectProductTerminalTab(int tabIndex) {
         return appShellTerminalViewPolicy.applySelectProductTerminalTab(tabIndex);
     }
