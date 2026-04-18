@@ -34,11 +34,11 @@ you must report the mismatch.
 
 ## Current Target
 
-`APX-B1` is at **super-gate** (engineer execution complete; awaiting architect verdict). Do not start the next macro batch until the Architect accepts the gate and refocuses `docs/todo/android/implementation.md`.
+`APX-B2` is `in_progress`.
 
 Active batch queue line (exact):
 
-- define and implement explicit multi-terminal app-shell policy seams (selection and activation only) without shipping tabs UI
+- introduce declared terminal-slot catalog seams and route selection policy through them without enabling multi-slot runtime behavior
 
 ## Core Boundary Rule
 
@@ -59,11 +59,12 @@ boundaries while preserving current single-terminal behavior.
 
 ## Required Direction From Architect Review (post-AHW-B26)
 
-- `APX-B1` introduces `AppShellTerminalSelectionPolicy` (selection) alongside `AppShellTerminalViewPolicy` (activation); default remains single `PRIMARY` terminal path.
+- `APX-B1` is accepted: `AppShellTerminalSelectionPolicy` (selection) and `AppShellTerminalViewPolicy` (activation) are split; default remains single `PRIMARY` terminal path.
+- `APX-B2` introduces explicit declared-slot catalog seams and rewires selection through that catalog without changing runtime behavior.
 - `AHW-B26` is accepted and `AHW` is closed.
 - Keep harness vs surface split (`WidgetAssembly.Result.harnessHost` + `surfaceJoin`) as the baseline.
 - Freeze additional keep-screen-on seam work beyond B20 unless explicitly re-opened by product direction.
-- Execute `APX-B1` as a non keep-screen-on batch.
+- Execute `APX-B2` as a non keep-screen-on batch.
 - Keep `ProductHostActivityStartupWiring`, `ProductTerminalLifecycleHost`, and `ProductTerminalWidgetAssemblyHost` ownership from B22 unchanged.
 - Keep `ProductHostOnCreateStartupCoordinator` + `ProductHostOnCreateStartupSteps` as the startup choreography seam from B23.
 - Keep `AppShellTerminalViewPolicy` as explicit app-shell terminal-view policy seam; no public `appShellNavigation()` accessor on that type.
@@ -89,17 +90,17 @@ boundaries while preserving current single-terminal behavior.
 
 ## Internal Milestones
 
-Execute `APX1-M1` through `APX1-M6` sequentially; do not stop before the
-`APX-B1` super-gate unless a hard stop condition is hit.
+Execute `APX2-M1` through `APX2-M6` sequentially; do not stop before the
+`APX-B2` super-gate unless a hard stop condition is hit.
 
 Execute in order and mark progress in `docs/todo/android/implementation.md`.
 
-- `APX1-M1`: audit current terminal selection/activation callsites and define bounded multi-terminal policy seam targets.
-- `APX1-M2`: introduce explicit expansion policy seam(s) with ownership-first naming.
-- `APX1-M3`: rewire current consumers through expansion seam defaults without behavior change.
-- `APX1-M4`: lock authority docs to APX-B1 policy ownership shape.
-- `APX1-M5`: keep queue/handoff/entrypoint aligned to APX-B1 super-gate.
-- `APX1-M6`: run validation and publish super-gate review packet.
+- `APX2-M1`: audit declared-slot vs selected-slot callsites and define bounded catalog seam targets.
+- `APX2-M2`: introduce declared terminal-slot catalog seam with ownership-first naming.
+- `APX2-M3`: rewire selection consumers through catalog defaults without behavior change.
+- `APX2-M4`: lock authority docs to APX-B2 declared-slot ownership shape.
+- `APX2-M5`: keep queue/handoff/entrypoint aligned to APX-B2 super-gate.
+- `APX2-M6`: run validation and publish super-gate review packet.
 
 ## Allowed Work
 
@@ -190,7 +191,7 @@ when:
 - a behavior change is required where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
 - implementing terminal tabs/product behavior becomes necessary to proceed
-- the `APX-B1` super-gate is reached
+- the `APX-B2` super-gate is reached
 
 Otherwise continue autonomously with:
 
@@ -198,9 +199,9 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At `APX-B1` super-gate, report:
+At `APX-B2` super-gate, report:
 
-- review chunk name: `APX-B1`
+- review chunk name: `APX-B2`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs
