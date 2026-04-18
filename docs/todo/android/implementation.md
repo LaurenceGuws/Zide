@@ -115,7 +115,7 @@ Dual-mode batching override (architect directive):
 - Completed macro batch: `AHW-B9` (accepted by Architect; app-shell state contract cleanup follow-up queued in `AHW-B10`).
 - Completed macro batch: `AHW-B10` (accepted by Architect; app-shell state surface hardening follow-up queued in `AHW-B11`).
 - Completed macro batch: `AHW-B11` (accepted by Architect; app-shell mutation-ownership narrowing follow-up queued in `AHW-B12`).
-- `AHW-B12` is `in_progress` (app-shell mutation ownership narrowing, behavior-neutral).
+- Engineer delivery complete; Architect verdict pending: `AHW-B12` (app-shell mutation ownership narrowing, behavior-neutral). No macro batch is `in_progress` until Architect refocuses the queue.
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -2691,7 +2691,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B12` App-shell mutation ownership narrowing (`in_progress`)
+### `AHW-B12` App-shell mutation ownership narrowing (`verdict_pending`)
 
 Batch queue line (exact):
 
@@ -2763,7 +2763,7 @@ Progress delta:
 - **Callsites:** no external Java callsites for `setActiveShellView`; `ViewModeController` uses `applyProductTerminalShellViewActive` only.
 - **Narrowing cut:** remove public `setActiveShellView`; route through private `replaceActiveShellView` + public `applyProductTerminalShellViewActive` only for product reassert.
 
-### `AHW12-M2` Navigation mutation API narrowing (`pending`)
+### `AHW12-M2` Navigation mutation API narrowing (`completed`)
 
 Queue line (exact):
 
@@ -2775,7 +2775,12 @@ Acceptance:
 - keep `Objects.requireNonNull` invariants at owner boundaries
 - compile debug + release Java after code changes
 
-### `AHW12-M3` Consumer rewiring to policy API (`pending`)
+Progress delta:
+
+- Removed public `setActiveShellView`; added private `replaceActiveShellView`; class
+  Javadoc documents policy-only active-view mutation.
+
+### `AHW12-M3` Consumer rewiring to policy API (`completed`)
 
 Queue line (exact):
 
@@ -2787,7 +2792,12 @@ Acceptance:
 - no direct ad-hoc active-view mutation remains
 - compile debug + release Java after code changes
 
-### `AHW12-M4` Contract docs lock (`pending`)
+Progress delta:
+
+- No code rewiring required: `ViewModeController` already called
+  `applyProductTerminalShellViewActive` only; no `setActiveShellView` callsites.
+
+### `AHW12-M4` Contract docs lock (`completed`)
 
 Queue line (exact):
 
@@ -2798,7 +2808,11 @@ Acceptance:
 - host structure, naming contract, and userland contract match code shape
 - slot mapping/chrome freeze guidance remains explicit and unchanged
 
-### `AHW12-M5` Queue/handoff/entrypoint sync (`pending`)
+Progress delta:
+
+- Structure, naming, userland updated for policy-only active shell view mutation.
+
+### `AHW12-M5` Queue/handoff/entrypoint sync (`completed`)
 
 Queue line (exact):
 
@@ -2809,7 +2823,12 @@ Acceptance:
 - queue, handoff, and engineer entrypoint stay coherent through B12 super-gate
 - super-gate stop condition and review packet contract are explicit
 
-### `AHW12-M6` Batch validation + review packet (`pending`)
+Progress delta:
+
+- This file, `ENGINEER_ENTRYPOINT.md`, and `AGENT_HANDOFF.md` updated for
+  `verdict_pending` and Architect refocus.
+
+### `AHW12-M6` Batch validation + review packet (`completed`)
 
 Queue line (exact):
 
@@ -2822,6 +2841,29 @@ Acceptance:
 - cold start smoke pass when a device is available
 - engineer reports the full super-gate packet and stops for Architect review
 
+Progress delta:
+
+- Debug/release compile pass; deploy + cold start + `AndroidRuntime:E` filter (empty).
+
+Super-gate engineer packet:
+
+- `Milestone: AHW-B12 verdict_pending`
+- `Queue line (exact): narrow app-shell mutation APIs to explicit policy methods while preserving single-slot behavior`
+- `Scope contract: behavior-neutral mutation ownership; slot mapping + chrome freeze unchanged; no tabs`
+- `Progress delta: public setActiveShellView removed; private replaceActiveShellView; docs aligned`
+- `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb cold start + AndroidRuntime:E (pass, empty)`
+- `Engineer updates: Blocked by Archtect review needed: true`
+
+Remaining risks:
+
+- External forks that called `setActiveShellView` must migrate to future explicit policy APIs or `applyProductTerminalShellViewActive` for product reassert.
+
+Review questions for Architect:
+
+- Confirm no public shell-view setter until multi-view policy adds explicit methods.
+- Confirm next macro batch after verdict.
+
+`Milestone reached per docs, architect review required.`
 
 ## Guardrails
 
