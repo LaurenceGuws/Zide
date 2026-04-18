@@ -8,7 +8,12 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
-/** Runs userland package commands against the app-private prefix. */
+/**
+ * Runs userland package commands against the app-private prefix.
+ *
+ * <p>Sets {@code ZIDE_PM_HOST_PLATFORM=android} so in-prefix {@code zide-pm} can scope catalog
+ * and test-binary resolution to Android without a second Java CLI surface.</p>
+ */
 public final class UserlandCommandRunner {
     private UserlandCommandRunner() {
     }
@@ -31,6 +36,7 @@ public final class UserlandCommandRunner {
         env.put("PATH", UserlandPolicy.prefixPath(context) + "/bin:/system/bin");
         env.put("SHELL", UserlandPolicy.shellPath(context));
         env.put("LD_LIBRARY_PATH", UserlandPolicy.prefixPath(context) + "/lib");
+        env.put("ZIDE_PM_HOST_PLATFORM", "android");
         final Process process = builder.start();
         final String output;
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {

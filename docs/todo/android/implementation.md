@@ -1993,7 +1993,7 @@ Outcome:
 - `activity_main.xml`: product terminal tab strip (`Session 1` / `Session 2`) above assist bar
 - `ChromeController` + `ChromeBridge`: bind taps → `AppShellTerminalViewPolicy#applySelectProductTerminalTab`, selection styling + `app_shell.product_terminal_tab.select` telemetry
 
-### `APX8-M4` zide-pm Android test-binary path cut (`pending`)
+### `APX8-M4` zide-pm Android test-binary path cut (`completed`)
 
 Queue line (exact):
 
@@ -2003,6 +2003,10 @@ Acceptance:
 
 - concrete, runnable Android test-binary pull path improvement landed
 - scoped to feature need; no unrelated tooling cleanup
+
+Outcome:
+
+- `UserlandCommandRunner.runZidePm`: sets `ZIDE_PM_HOST_PLATFORM=android` for every `zide-pm` process so catalog/list/install logic inside `zide-pm` can target Android test binaries without changing the Java call shape (`doctor` / `list-available` unchanged).
 
 ### `APX8-M5` Docs + handoff sync (`pending`)
 
