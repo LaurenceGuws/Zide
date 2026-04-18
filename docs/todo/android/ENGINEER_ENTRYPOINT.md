@@ -34,9 +34,11 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B13` is `in_progress` and is the only active macro batch.
+`AHW-B13` engineer delivery is complete; **Architect verdict is pending**. There is
+no `in_progress` macro batch until `docs/todo/android/implementation.md` is
+refocused after Architect review.
 
-Active batch queue line (exact):
+Last completed batch queue line (exact):
 
 - narrow app-shell sidebar mutation APIs to explicit policy methods while preserving behavior
 
@@ -74,6 +76,9 @@ preserving active-view ownership, slot mapping, and navigation model.
 - No tab/multi-instance product behavior unless a new batch scopes it.
 
 ## Internal Milestones
+
+`AHW-B13` internal milestones `AHW13-M1`–`AHW13-M6` are **completed**; see
+`docs/todo/android/implementation.md` for the super-gate packet.
 
 Execute `AHW13-M1` through `AHW13-M6` sequentially; do not stop before the
 `AHW-B13` super-gate unless a hard stop condition is hit.

@@ -116,7 +116,7 @@ Dual-mode batching override (architect directive):
 - Completed macro batch: `AHW-B10` (accepted by Architect; app-shell state surface hardening follow-up queued in `AHW-B11`).
 - Completed macro batch: `AHW-B11` (accepted by Architect; app-shell mutation-ownership narrowing follow-up queued in `AHW-B12`).
 - Completed macro batch: `AHW-B12` (accepted by Architect; app-shell sidebar policy narrowing follow-up queued in `AHW-B13`).
-- `AHW-B13` is `in_progress` (app-shell sidebar mutation policy narrowing, behavior-neutral).
+- Engineer delivery complete; Architect verdict pending: `AHW-B13` (app-shell sidebar mutation policy narrowing, behavior-neutral). No macro batch is `in_progress` until Architect refocuses the queue.
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -2872,7 +2872,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B13` App-shell sidebar mutation policy narrowing (`in_progress`)
+### `AHW-B13` App-shell sidebar mutation policy narrowing (`verdict_pending`)
 
 Batch queue line (exact):
 
@@ -2945,7 +2945,7 @@ Progress delta:
 - **Callsites:** `ChromeBridge.setSidebarOpen` → `AppShellNavigation.setSidebarOpen` only; `ChromeController` calls `host.setSidebarOpen(true|false)` from `openSidebar` / `closeSidebar`; reads via `host.sidebarOpen()`.
 - **Narrowing cut:** replace boolean setter with explicit `applyChromeDrawerSidebarOpen` / `applyChromeDrawerSidebarClosed`; align `ChromeController.Host` + `ChromeBridge`; query as `chromeDrawerSidebarOpen()` on `AppShellNavigation` and host.
 
-### `AHW13-M2` Sidebar policy API narrowing (`pending`)
+### `AHW13-M2` Sidebar policy API narrowing (`completed`)
 
 Queue line (exact):
 
@@ -2957,7 +2957,11 @@ Acceptance:
 - owner invariants remain explicit and behavior-neutral
 - compile debug + release Java after code changes
 
-### `AHW13-M3` Consumer rewiring to sidebar policy API (`pending`)
+Progress delta:
+
+- `applyChromeDrawerSidebarOpen` / `applyChromeDrawerSidebarClosed`; query `chromeDrawerSidebarOpen()`; field renamed to `chromeDrawerSidebarOpen`.
+
+### `AHW13-M3` Consumer rewiring to sidebar policy API (`completed`)
 
 Queue line (exact):
 
@@ -2969,7 +2973,11 @@ Acceptance:
 - no direct generic sidebar mutation remains
 - compile debug + release Java after code changes
 
-### `AHW13-M4` Contract docs lock (`pending`)
+Progress delta:
+
+- `ChromeController.Host`, `ChromeController`, `ChromeBridge` rewired to policy methods.
+
+### `AHW13-M4` Contract docs lock (`completed`)
 
 Queue line (exact):
 
@@ -2980,7 +2988,11 @@ Acceptance:
 - host structure, naming contract, and userland contract match code shape
 - active-view ownership, slot mapping, and chrome freeze guidance remain unchanged
 
-### `AHW13-M5` Queue/handoff/entrypoint sync (`pending`)
+Progress delta:
+
+- Structure app-shell invariants + table rows; naming contract bullet. USERLAND unchanged (no sidebar seam there).
+
+### `AHW13-M5` Queue/handoff/entrypoint sync (`completed`)
 
 Queue line (exact):
 
@@ -2991,7 +3003,11 @@ Acceptance:
 - queue, handoff, and engineer entrypoint stay coherent through B13 super-gate
 - super-gate stop condition and review packet contract are explicit
 
-### `AHW13-M6` Batch validation + review packet (`pending`)
+Progress delta:
+
+- This file, `ENGINEER_ENTRYPOINT.md`, and `AGENT_HANDOFF.md` updated for `verdict_pending`.
+
+### `AHW13-M6` Batch validation + review packet (`completed`)
 
 Queue line (exact):
 
@@ -3003,6 +3019,26 @@ Acceptance:
 - deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
 - cold start smoke pass when a device is available
 - engineer reports the full super-gate packet and stops for Architect review
+
+Progress delta:
+
+- Debug/release compile pass; deploy + cold start + `AndroidRuntime:E` filter (empty).
+
+Super-gate engineer packet:
+
+- `Milestone: AHW-B13 verdict_pending`
+- `Queue line (exact): narrow app-shell sidebar mutation APIs to explicit policy methods while preserving behavior`
+- `Scope contract: behavior-neutral sidebar policy narrowing; B12 active-view ownership preserved; slot mapping + chrome freeze unchanged; no tabs`
+- `Progress delta: chrome drawer sidebar apply open/closed; ChromeController.Host + bridge aligned; authority docs`
+- `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb cold start + AndroidRuntime:E (pass, empty)`
+- `Engineer updates: Blocked by Archtect review needed: true`
+
+Review questions for Architect:
+
+- Confirm chrome drawer sidebar policy naming for long-term harness chrome seams.
+- Confirm next macro batch after verdict.
+
+`Milestone reached per docs, architect review required.`
 
 ## Guardrails
 
