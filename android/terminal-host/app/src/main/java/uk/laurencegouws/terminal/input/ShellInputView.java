@@ -138,12 +138,7 @@ public final class ShellInputView extends View {
 
         @Override
         public boolean setComposingText(CharSequence text, int newCursorPosition) {
-            final String s = normalizeImeText(text.toString());
-            if (consumeLatchedImeText(s)) {
-                return true;
-            }
-            replaceComposition(s);
-            return true;
+            return applyImeText(text.toString(), false);
         }
 
         @Override
@@ -155,15 +150,7 @@ public final class ShellInputView extends View {
 
         @Override
         public boolean commitText(CharSequence text, int newCursorPosition) {
-            final String s = normalizeImeText(text.toString());
-            if (shouldSuppressCommitText(s)) {
-                return true;
-            }
-            if (tryCommitLatchedImeText(s)) {
-                return true;
-            }
-            commitComposingOrInsertText(s);
-            return true;
+            return applyImeText(text.toString(), true);
         }
 
         @Override
@@ -263,24 +250,33 @@ public final class ShellInputView extends View {
         return true;
     }
 
-    private boolean tryCommitLatchedImeText(String text) {
-        return consumeLatchedImeText(text);
+    private void clearComposition() {
+        editorComposingStart = -1;
+        editorComposingEnd = -1;
     }
 
-    private void commitComposingOrInsertText(String text) {
-        if (editorComposingStart >= 0) {
+    private boolean applyImeText(String rawText, boolean commit) {
+        final String text = normalizeImeCompositionText(rawText);
+        if (commit && shouldSuppressCommitText(text)) {
+            return true;
+        }
+        if (consumeLatchedImeText(text)) {
+            return true;
+        }
+        if (editorComposingStart >= 0 || !commit) {
             replaceComposition(text);
-            clearComposition();
-            return;
+            if (commit) {
+                clearComposition();
+            }
+            return true;
+        }
+        if (text.isEmpty()) {
+            return true;
         }
         editorBuffer.insert(editorCursor, text);
         editorCursor += text.length();
         host.sendDirectText(text);
-    }
-
-    private void clearComposition() {
-        editorComposingStart = -1;
-        editorComposingEnd = -1;
+        return true;
     }
 
     private void deleteTextBeforeCursorAndSendBackspace(int beforeLength) {
@@ -333,7 +329,7 @@ public final class ShellInputView extends View {
                 : editorCursor;
     }
 
-    private String normalizeImeText(String text) {
+    private String normalizeImeCompositionText(String text) {
         if (text.isEmpty()) {
             return text;
         }
