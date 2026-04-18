@@ -132,7 +132,7 @@ Dual-mode batching override (architect directive):
 - `APX-B11` accepted by architect.
 - `APX-B12` reviewed; changes requested (addressed in APX-B13).
 - `APX-B13` accepted by architect.
-- `APX-B14` in progress.
+- `APX-B14` architect review pending (super-gate packet below).
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -2651,7 +2651,7 @@ Architect review verdict:
 - `Review answers: edge install must stay list-available stdout-driven and Android edge package-id narrowed (`zide-android-*`); Java manifest parsing remains out-of-scope.`
 - `Findings carried forward: no blocking regressions; APX-B10 doctor/read-only and APX-B11 sidebar/input-only assist contracts remain intact.`
 
-### `APX-B14` Product Terminal Tab-State Persistence (Activity Recreate) (`in_progress`)
+### `APX-B14` Product Terminal Tab-State Persistence (Activity Recreate) (`architect_review_pending`)
 
 Batch queue line (exact):
 
@@ -2676,41 +2676,54 @@ Internal milestone cadence:
 
 - Engineer executes `APX14-M1`–`APX14-M6`; target **5–10 validated commits** before super-gate.
 
-### `APX14-M1` Restore-path audit (`pending`)
+### `APX14-M1` Restore-path audit (`done`)
 
 Queue line (exact):
 
 - audit tab-selection state owners and define saved-instance-state restore boundary without synthetic selection events
 
-### `APX14-M2` Navigation seed API (`pending`)
+Findings (concise):
+
+- Tab index authority: `AppShellNavigation` field `selectedProductTerminalTabIndex`; user mutations go through `applySelectProductTerminalTab` → `ChromeController` → `onProductTerminalTabSessionActivated` when the index **changes** (APX-B9 restart).
+- Restore boundary: seed the index in `AppShellNavigation.forProductTerminalSlot(slot, index)` at construction (clamp `[0, PRODUCT_TERMINAL_TAB_COUNT)`), **not** via `applySelectProductTerminalTab`, so `ChromeController` never observes a synthetic “changed” selection on recreate.
+
+### `APX14-M2` Navigation seed API (`done`)
 
 Queue line (exact):
 
 - add app-shell navigation construction path that accepts initial selected tab index with strict range handling
 
-### `APX14-M3` Activity save/restore wiring (`pending`)
+### `APX14-M3` Activity save/restore wiring (`done`)
 
 Queue line (exact):
 
 - wire ZideActivity saved-instance-state for selected tab index and pass seeded value into widget/navigation assembly
 
-### `APX14-M4` Restart semantics lock (`pending`)
+### `APX14-M4` Restart semantics lock (`done`)
 
 Queue line (exact):
 
 - ensure restored initial tab does not trigger restart; only distinct user tab selections keep APX-B9 restart behavior
 
-### `APX14-M5` Docs + handoff sync (`pending`)
+### `APX14-M5` Docs + handoff sync (`done`)
 
 Queue line (exact):
 
 - sync authority docs and queue/handoff/entrypoint to APX-B14 persistence contract wording
 
-### `APX14-M6` Validation + review packet (`pending`)
+### `APX14-M6` Validation + review packet (`done`)
 
 Queue line (exact):
 
 - run validation ladder and publish APX-B14 super-gate packet for architect review
+
+#### APX-B14 super-gate packet (engineer → architect)
+
+- `Review chunk: APX-B14`
+- `Verdict: pending architect review`
+- `Commits reviewed: f717a9cb, 5d9c6645 (feature + ANDROID_JAVA_HOST_STRUCTURE); queue/handoff/entrypoint sync in the same engineer push`
+- `Engineer validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat -d -s AndroidRuntime:E after am start (pass, empty); adb cold start am start -W (pass, LaunchState: COLD, Status: ok)`
+- `Contract notes: restore seeds navigation only; user tab clicks still use applySelectProductTerminalTab and keep APX-B9 restart; APX-B10/B11/B13 surfaces untouched; no manifest parsing.`
 
 ## Guardrails
 

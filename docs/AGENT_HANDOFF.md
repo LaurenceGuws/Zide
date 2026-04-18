@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android product expansion** (`APX`) — build product capability on top of the closed harness/widget ownership shape.
-- Active macro batch (`in_progress`): `APX-B14` — persist selected terminal tab index across activity recreation via seeded app-shell navigation state; no startup synthetic tab-select restart.
+- Active macro batch (`architect_review_pending`): `APX-B14` — engineer delivered tab-index persistence + validation; architect verdict pending (super-gate packet in `docs/todo/android/implementation.md`).
 - Parallel foundation lane (separate repo): `../zide-mobile-pm` may run in parallel for Android test-binary pull/install contract groundwork; Android APX remains primary until APX objectives are stable.
 - Prior closed/escalated: `AHW-B1` through `AHW-B26` accepted and `AHW` closed; `ASF-M3` escalated IME/assist/touch rows to operator evidence; `RF-M0` through `RF-M5` and `AX-M1` through `AX-M5` completed.
 - Active queue authority: `docs/todo/android/implementation.md`
@@ -80,8 +80,8 @@ Engineer session seed:
 - `APX-B11` is accepted: terminal session/tab controls are now AppShell sidebar navigation; assist row stays input-only; APX-B10 doctor/install split unchanged.
 - `APX-B12` is reviewed with changes requested: addressed by `APX-B13` (edge install no longer lexicographs non-`zide-android-*` rows).
 - `APX-B13` is accepted: edge install candidates match `zide-android-*`; explicit `packages.edge_install.selected` and reasoned no-candidate (`empty_catalog` / `no_android_edge`) are in place.
-- `APX-B14` is in progress: persist selected terminal tab index across activity recreation through seeded app-shell navigation state; avoid startup synthetic tab-select restart.
-- Cleanup-only changes are out of scope unless they directly unblock APX-B14 feature delivery.
+- `APX-B14` is at super-gate: tab index saved in `ZideActivity` `onSaveInstanceState` and seeded into `AppShellNavigation` on recreate (no synthetic `applySelectProductTerminalTab` on restore); user-driven distinct tab selection still drives APX-B9 restart.
+- Cleanup-only changes are out of scope unless they directly unblock architect acceptance of APX-B14.
 - APX remains primary until these are stable: harness/widget split stability, clean tab-state expansion, and zide-pm real Android test-binary pull maturity.
 - After those three are stable, primary architect focus transitions to Zig-layer hygiene cleanup.
 - Keep `ProductHostKeepScreenOnPolicy` as the long-term owner of terminal keep-screen-on default policy.
