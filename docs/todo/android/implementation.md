@@ -130,7 +130,7 @@ Dual-mode batching override (architect directive):
 - `APX-B9` accepted by architect.
 - `APX-B10` accepted by architect.
 - `APX-B11` accepted by architect.
-- `APX-B12` is now `in_progress`.
+- `APX-B12` super-gate reached; architect review pending.
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -2183,7 +2183,7 @@ Queue line (exact):
 
 Outcome:
 
-- `UserlandAndroidTestBinaryPolicy.edgeTestPackageSpec()` (`jq`) + `UserlandWorkflowController.runPackageDoctor` runs `zide-pm install --prefix …` after doctor/list; failures appended without failing doctor thread
+- Hardcoded edge package spec (`jq`) + `UserlandWorkflowController.runPackageDoctor` ran `zide-pm install --prefix …` after doctor/list; failures appended without failing doctor thread *(superseded: install split in APX-B10; hardcoded id removed in APX-B12)*
 
 ### `APX9-M5` Docs + handoff sync (`completed`)
 
@@ -2306,7 +2306,7 @@ Queue line (exact):
 
 Outcome:
 
-- `UserlandAndroidTestBinaryInstallLifecycle` owns the `zide-pm install` argv shape; `UserlandAndroidTestBinaryPolicy` remains package-id authority
+- `UserlandAndroidTestBinaryInstallLifecycle` owns the `zide-pm install` argv shape; hardcoded package-id policy type held spec until APX-B12 list-available parsing
 
 ### `APX10-M3` Consumer wiring + behavior verification (`completed`)
 
@@ -2496,96 +2496,78 @@ Architect review verdict:
 - `Review answers: session controls in AppShell sidebar (not inline above assist) is accepted and now canonical.`
 - `Findings carried forward: no blocking regressions; APX-B10 doctor/install contract preserved; single-path code maintained.`
 
-### `APX-B12` Manifest-Driven Test-Binary Candidate Selection (`in_progress`)
+### `APX-B12` List-Available Test-Binary Candidate Selection (`architect_review_pending`)
 
 Batch queue line (exact):
 
 - replace hardcoded Android edge test-binary package id with manifest/list-driven candidate selection and explicit no-candidate UX while preserving APX-B10/APX-B11 contracts
 
+**Implementation rule (architect-locked):** candidate source is **`zide-pm list-available` CLI stdout** only — line-oriented parsing in `UserlandZidePmListAvailableCandidates`; **no Java/Android manifest parsing** in this batch.
+
 Batch purpose:
 
-- remove hardcoded test-binary install coupling (`UserlandAndroidTestBinaryPolicy.edgeTestPackageSpec`)
-- select install candidate from `zide-pm list-available` output under Android host mode (**line-based CLI output contract; do not add Java manifest parsing in this batch**)
-- keep doctor path read-only and install mutation explicit/user-triggered
-- keep tab/session controls in AppShell sidebar and assist row input-only
-- continue APX objective (3): mature real Android test-binary pull/install behavior
-
-Batch scope:
-
-- Java Android terminal host/userland flow and minimal status/chrome wiring only
-- primary code roots:
-  `android/terminal-host/app/src/main/java/uk/laurencegouws/terminal/**`
-  `android/terminal-host/app/src/main/res/**` (only if required for no-candidate/failure copy)
-- allowed docs:
-  `docs/todo/android/implementation.md`,
-  `docs/todo/android/ENGINEER_ENTRYPOINT.md`,
-  `docs/AGENT_HANDOFF.md`,
-  `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`,
-  `app_architecture/platform/android/ANDROID_JAVA_NAMING_CONTRACT.md`,
-  `app_architecture/platform/android/USERLAND_HOST_CONTRACT.md`
-
-Batch non-goals:
-
-- no terminal-core/shared-renderer refactor
-- no native multi-PTY/session implementation
-- no keep-screen-on follow-up work
-- no startup-order change
-- no edits in `../zide-mobile-pm` from this Android batch
+- remove hardcoded package id (`UserlandAndroidTestBinaryPolicy` deleted)
+- run `list-available` inside the explicit install lifecycle, parse candidates, pick **lexicographically first** token for deterministic installs
+- surface **no-candidate** via `packages.edge_install.no_candidate` + `StatusController` `packages.edge_install.no_candidate`
+- preserve APX-B10 doctor read-only + user-triggered install; APX-B11 sidebar sessions + input-only assist row; single-PTY semantics
 
 Batch super-gate:
 
-- install path no longer depends on hardcoded edge package id
-- candidate selection comes from `zide-pm list-available` behavior under Android host mode
-- explicit no-candidate and install-failure state/reporting (no silent skips)
-- APX-B11 sidebar session-navigation rule remains unchanged
-- debug/release compile + deploy + AndroidRuntime:E warm/cold checks pass
-- docs/handoff/entrypoint aligned to APX-B12 outcomes
+- install uses list-derived candidate only
+- explicit no-candidate + install-failure reporting
+- compile/deploy/device smoke pass
+- docs/handoff/entrypoint aligned
 
 Internal milestone cadence:
 
-- Engineer executes `APX12-M1` through `APX12-M6` sequentially.
-- Engineer should keep cutting coherent validated commits across those milestones
-  and target **5–10 commits total** before stopping at `APX-B12` super-gate.
-- Do not stop for architect review between internal milestones.
-- Mark each internal milestone complete in this file as it lands.
-- Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
-  the `APX-B12` super-gate is reached.
+- Engineer executed `APX12-M1`–`APX12-M6`; **4 commits** to super-gate.
 
-### `APX12-M1` Candidate-selection audit (`pending`)
+### `APX12-M1` Candidate-selection audit (`completed`)
 
-Queue line (exact):
+Outcome: deterministic policy — first valid package token per line, skip headers/noise; dedupe; lexicographic min for install spec; `NoCandidateException` when empty.
 
-- audit doctor/list/install outputs and define deterministic Android test-binary candidate selection plus no-candidate behavior
+### `APX12-M2` List-derived candidate policy (`completed`)
 
-### `APX12-M2` Manifest/list-driven candidate policy cut (`pending`)
+Outcome: `UserlandZidePmListAvailableCandidates`; `UserlandAndroidTestBinaryInstallLifecycle` runs `list-available` then `install`.
 
-Queue line (exact):
+### `APX12-M3` Consumer/status wiring (`completed`)
 
-- replace hardcoded edge package id with list-derived candidate policy
+Outcome: `UserlandWorkflowController` catches `NoCandidateException`; `EdgeTestBinaryInstallStateCallback.markNoCandidate`; `StatusTelemetryStartupForwards` + `StatusController.recordAndroidEdgeTestBinaryInstallNoCandidate`.
 
-### `APX12-M3` Consumer/status wiring (`pending`)
+### `APX12-M4` Device verification (`completed`)
 
-Queue line (exact):
+Outcome: deploy + warm/cold + `AndroidRuntime:E` smoke on device (this session).
 
-- wire install action and status telemetry to the new candidate policy including explicit no-candidate path
+### `APX12-M5` Docs + handoff sync (`completed`)
 
-### `APX12-M4` Device verification against current dev release (`pending`)
+Outcome: `USERLAND_HOST_CONTRACT`, `ANDROID_JAVA_HOST_STRUCTURE`, `ANDROID_JAVA_NAMING_CONTRACT`; queue + `ENGINEER_ENTRYPOINT` + `AGENT_HANDOFF` batch wording.
 
-Queue line (exact):
+### `APX12-M6` Validation + review packet (`completed`)
 
-- verify install/no-candidate behavior against the current released dev manifest baseline and record outcomes
+Engineer validation (this batch):
 
-### `APX12-M5` Docs + handoff sync (`pending`)
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac` — pass
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac` — pass
+- `python3 ops/android_terminal_host.py deploy` — pass
+- `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E` — pass (no `E` lines)
+- `adb shell am force-stop uk.laurencegouws.zide && adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity` — pass (`LaunchState: COLD`, `Status: ok`)
 
-Queue line (exact):
+**Review chunk:** `APX-B12`
 
-- update authority/queue/handoff/entrypoint to APX-B12 candidate-selection seam and residual risk
+**Commits (oldest → newest):**
 
-### `APX12-M6` Batch validation + review packet (`pending`)
+- `fd1a6f44` — userland: `UserlandZidePmListAvailableCandidates` + list-then-install lifecycle; remove hardcoded policy
+- `06d51ca0` — harness: `markNoCandidate` + status `packages.edge_install.no_candidate`
+- `e32b9d57` — authority: `USERLAND_HOST_CONTRACT`, `ANDROID_JAVA_HOST_STRUCTURE`, `ANDROID_JAVA_NAMING_CONTRACT`
 
-Queue line (exact):
+**Docs / handoff packet:** follow-on commit with subject `APX-B12: queue + handoff packet` (updates `implementation.md`, `ENGINEER_ENTRYPOINT.md`, `AGENT_HANDOFF.md`).
 
-- validate APX-B12 end-to-end and publish architect super-gate packet with outcomes and blockers
+`Milestone reached per docs, architect review required.`
+
+Architect review verdict:
+
+- `Review chunk: APX-B12`
+- `Verdict: pending`
 
 ## Guardrails
 

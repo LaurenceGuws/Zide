@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android product expansion** (`APX`) — build product capability on top of the closed harness/widget ownership shape.
-- Active macro batch (`in_progress`): `APX-B12` — manifest/list-driven Android test-binary candidate selection with explicit no-candidate UX.
+- Active macro batch (`architect_review_pending`): `APX-B12` — `zide-pm list-available`-driven edge install candidates (no Java manifest parse); explicit no-candidate UX; APX-B10/B11 contracts preserved.
 - Parallel foundation lane (separate repo): `../zide-mobile-pm` may run in parallel for Android test-binary pull/install contract groundwork; Android APX remains primary until APX objectives are stable.
 - Prior closed/escalated: `AHW-B1` through `AHW-B26` accepted and `AHW` closed; `ASF-M3` escalated IME/assist/touch rows to operator evidence; `RF-M0` through `RF-M5` and `AX-M1` through `AX-M5` completed.
 - Active queue authority: `docs/todo/android/implementation.md`
@@ -74,11 +74,11 @@ Engineer session seed:
 - `APX-B5` is accepted: immutable `ProductHostDeclaredTerminalWidgetSlot` value type now owns declared-slot source semantics at startup boundary.
 - `APX-B6` is accepted: declared-slot value is propagated across interaction/widget/composition startup seams.
 - `APX-B7` is accepted: enum conversion is centralized at `terminalWidgetSlotForProductHarness()` with Host adapter enum boundaries preserved.
-- `APX-B8` is accepted: tab-state slice 1 (two-tab chrome strip and harness tab index state) and `ZIDE_PM_HOST_PLATFORM=android` export are in place.
+- `APX-B8` is accepted: tab-state slice 1 (two-tab session selection + harness tab index state; sidebar placement finalized in APX-B11) and `ZIDE_PM_HOST_PLATFORM=android` export are in place.
 - `APX-B9` is accepted: distinct tab selection now restarts native shell + userland refresh; Packages flow proves Android-side `zide-pm install` path.
 - `APX-B10` is accepted: doctor is read-only and install mutation is explicit lifecycle-owned (`UserlandAndroidTestBinaryInstallLifecycle`) with dedicated sidebar trigger.
 - `APX-B11` is accepted: terminal session/tab controls are now AppShell sidebar navigation; assist row stays input-only; APX-B10 doctor/install split unchanged.
-- `APX-B12` scope is feature-first: replace hardcoded test-binary install package-id with manifest/list-driven candidate selection and explicit no-candidate behavior.
+- `APX-B12` scope is feature-first: replace hardcoded test-binary package id with **`zide-pm list-available` output parsing** (deterministic candidate pick + explicit no-candidate status); no Java manifest parsing; APX-B10 doctor/install split and APX-B11 sidebar/input-only assist preserved.
 - Cleanup-only changes are out of scope unless they directly unblock APX-B12 feature delivery.
 - APX remains primary until these are stable: harness/widget split stability, clean tab-state expansion, and zide-pm real Android test-binary pull maturity.
 - After those three are stable, primary architect focus transitions to Zig-layer hygiene cleanup.

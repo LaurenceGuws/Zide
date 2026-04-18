@@ -34,7 +34,7 @@ you must report the mismatch.
 
 ## Current Target
 
-`APX-B12` is `in_progress`.
+`APX-B12` is `architect_review_pending`.
 
 Active batch queue line (exact):
 
@@ -75,7 +75,7 @@ boundaries while preserving current single-terminal behavior.
 - `APX-B9` is accepted: tab selection now drives native restart + userland refresh, and Packages flow proved Android-side `zide-pm install`.
 - `APX-B10` is accepted: doctor path is read-only and test-binary install mutation is explicit lifecycle-owned with dedicated sidebar trigger.
 - `APX-B11` is accepted: session/tab controls are AppShell sidebar navigation (not inline above assist); assist strip stays input-only; APX-B10 contracts preserved.
-- `APX-B12` is feature-first: remove hardcoded test-binary install package-id coupling and use manifest/list-driven candidate selection with explicit no-candidate behavior.
+- `APX-B12` is feature-first: remove hardcoded test-binary install package-id coupling; derive candidates from **`zide-pm list-available` CLI output** (line parser in Java) with explicit no-candidate UX — **no Java manifest parsing** in this batch.
 - `zide-mobile-pm` foundation work is allowed in parallel, but APX-B12 remains the primary in-repo execution lane here.
 - `AHW-B26` is accepted and `AHW` is closed.
 - Keep harness vs surface split (`WidgetAssembly.Result.harnessHost` + `surfaceJoin`) as the baseline.
@@ -102,7 +102,7 @@ boundaries while preserving current single-terminal behavior.
   `InteractionAssembly.Result` yet.
 - Keep chrome slot-agnostic in this batch; do not thread slot into chrome
   construction until per-slot chrome policy is scoped.
-- `APX-B12` must preserve APX-B11 sidebar session-navigation and APX-B10 doctor/install split while implementing candidate selection changes.
+- `APX-B12` must preserve APX-B11 sidebar session-navigation and APX-B10 doctor/install split while implementing list-available candidate selection (no manifest parse in Java).
 
 ## Internal Milestones
 
@@ -116,12 +116,12 @@ Commit cadence expectation for this macro batch:
 
 Execute in order and mark progress in `docs/todo/android/implementation.md`.
 
-- `APX12-M1`: audit doctor/list/install outputs and define deterministic candidate selection + no-candidate behavior.
-- `APX12-M2`: implement manifest/list-driven Android test-binary candidate policy.
-- `APX12-M3`: wire install action + status telemetry through the candidate policy.
-- `APX12-M4`: verify behavior against current released dev manifest baseline on device.
-- `APX12-M5`: sync implementation queue + this entrypoint + `AGENT_HANDOFF`.
-- `APX12-M6`: compile/deploy/device validation + architect review packet.
+- `APX12-M1`: audit `list-available` line contract; define parse + deterministic pick + no-candidate behavior.
+- `APX12-M2`: implement `UserlandZidePmListAvailableCandidates` + install lifecycle using `list-available` stdout.
+- `APX12-M3`: wire `NoCandidateException` to telemetry/status (`markNoCandidate`).
+- `APX12-M4`: device verify install and no-candidate paths against current prefix/`zide-pm` baseline.
+- `APX12-M5`: sync authority docs + queue + this entrypoint + `AGENT_HANDOFF`.
+- `APX12-M6`: validation ladder + architect review packet.
 
 ## Allowed Work
 
