@@ -106,7 +106,7 @@ Dual-mode batching override (architect directive):
 - `APX-B3` accepted by architect.
 - `APX-B4` accepted by architect.
 - `APX-B5` accepted by architect.
-- `APX-B6` is `in_progress`.
+- `APX-B6` is `awaiting_architect_review` (engineer super-gate complete).
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -1552,7 +1552,7 @@ Architect review verdict:
 - `Review answers: immutable ProductHostDeclaredTerminalWidgetSlot seam is accepted; dual WidgetAssembly fail-fast checks are acceptable and should remain.`
 - `Findings carried forward: no blocking regressions; startup behavior and PRIMARY-only runtime unchanged.`
 
-### `APX-B6` Startup slot boundary object propagation (`in_progress`)
+### `APX-B6` Startup slot boundary object propagation (`awaiting_architect_review`)
 
 Batch queue line (exact):
 
@@ -1606,7 +1606,7 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `APX-B6` super-gate is reached.
 
-### `APX6-M1` Startup boundary audit (`pending`)
+### `APX6-M1` Startup boundary audit (`complete`)
 
 Queue line (exact):
 
@@ -1618,7 +1618,13 @@ Acceptance:
 - define bounded conversion boundaries where enum remains the right owner
 - record explicit out-of-scope items (tabs UI, second active slot behavior)
 
-### `APX6-M2` API seam introduction (`pending`)
+**M1 audit (authoritative for B6):**
+
+- **Targets:** `ProductHostActivityStartupWiring.interaction`, `WidgetHostAssemblyContext` (was `TerminalWidgetSlotId slot`), `TerminalWidgetCompositionAssembly.compose` first parameter; `ZideActivity` callsites peeled enum before B6.
+- **Enum stays:** `InteractionAssembly.Host` / `WidgetAssembly.Host` `terminalWidgetSlot()`, `AppShellTerminalSelectionPolicy.forDeclaredHostSlot`, `ProductTerminalSlotShellMapping`, `checkActiveProductTerminalSlot`, `AppShellNavigation.forProductTerminalSlot`.
+- **Out of scope:** tabs UI, chrome slot threading, `InteractionAssembly.Result` slot field.
+
+### `APX6-M2` API seam introduction (`complete`)
 
 Queue line (exact):
 
@@ -1630,7 +1636,7 @@ Acceptance:
 - no compatibility/fallback paths
 - compile debug + release Java after code changes
 
-### `APX6-M3` Consumer rewiring (`pending`)
+### `APX6-M3` Consumer rewiring (`complete`)
 
 Queue line (exact):
 
@@ -1642,7 +1648,7 @@ Acceptance:
 - reduced raw enum fan-out in startup boundary callsites
 - compile debug + release Java after code changes
 
-### `APX6-M4` Contract docs lock (`pending`)
+### `APX6-M4` Contract docs lock (`complete`)
 
 Queue line (exact):
 
@@ -1653,7 +1659,7 @@ Acceptance:
 - host structure and naming contract match code shape
 - userland contract updated only if ownership text requires it
 
-### `APX6-M5` Queue/handoff/entrypoint sync (`pending`)
+### `APX6-M5` Queue/handoff/entrypoint sync (`complete`)
 
 Queue line (exact):
 
@@ -1664,7 +1670,7 @@ Acceptance:
 - queue, handoff, and engineer entrypoint stay coherent through APX-B6 super-gate
 - super-gate stop condition and review packet contract are explicit
 
-### `APX6-M6` Batch validation + review packet (`pending`)
+### `APX6-M6` Batch validation + review packet (`complete`)
 
 Queue line (exact):
 
@@ -1676,6 +1682,20 @@ Acceptance:
 - deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
 - cold start smoke pass when a device is available
 - engineer reports full super-gate packet and explicit residual-risk note
+
+**Engineer commit cadence (this batch):** 6 commits — (1) interaction wiring + `InteractionCallbacks`; (2) `WidgetHostAssemblyContext` + widget host + activity; (3) `TerminalWidgetCompositionAssembly.compose` + activity; (4) javadoc on interaction/widget seams; (5) authority docs (`ANDROID_JAVA_HOST_STRUCTURE`, `ANDROID_JAVA_NAMING_CONTRACT`, `USERLAND_HOST_CONTRACT`); (6) queue + entrypoint + handoff.
+
+**APX-B6 engineer validation record (M6):**
+
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac` — pass (each code cut)
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac` — pass
+- `python3 ops/android_terminal_host.py deploy` — pass (streamed install, activity start)
+- `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E` — pass (no `AndroidRuntime:E` lines; benign duplicate-top warning when activity already foreground)
+- `adb shell am force-stop uk.laurencegouws.zide && adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity` — pass (`LaunchState: COLD`, `Status: ok`)
+
+**Residual risk:** Low — PRIMARY-only; `WidgetAssembly` dual invariant unchanged; enum-only surfaces documented in naming contract.
+
+`Milestone reached per docs, architect review required.`
 
 ## Guardrails
 
