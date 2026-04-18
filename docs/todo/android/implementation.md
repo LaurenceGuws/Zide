@@ -38,11 +38,10 @@ and decoupled.
   IME/assist and touch-gesture rows are parked on operator evidence in
   `RF_M5_STABILIZATION_MATRIX.md`; they no longer block engineering work unless
   new evidence reports a regression inside the active scope.
-- **Active campaign:** **Android harness/widget portability hardening** (`AHW`)
-  — make the refocus vision enforceable in code: Android Harness owns
-  platform/app-shell/userland ceremony, Terminal Widget owns portable terminal
-  interaction/runtime seams, and future IDE/editor modes are not trapped behind
-  Activity-backed coupling.
+- **Active campaign:** **Android product expansion** (`APX`) — ship product-facing
+  capability on the closed `AHW` harness/widget shape (see Post-AHW Campaign below).
+- **Prior closed campaign:** **Android harness/widget portability hardening** (`AHW`) —
+  ownership boundaries are enforced; formal closure via `AHW-B26`.
 
 Iteration detail is intentionally not tracked here. Read code + git history for
 step-level implementation history.
@@ -98,7 +97,7 @@ Dual-mode batching override (architect directive):
 - `ASF-M3` escalated stabilization follow-through to operator evidence.
 - `AHW-B1` through `AHW-B26` accepted by architect.
 - Keep-screen-on seam work beyond `AHW-B20` is frozen by product direction.
-- `APX-B1` is `in_progress` (post-AHW product expansion).
+- `APX-B1` is at super-gate (awaiting architect verdict).
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -781,7 +780,7 @@ Campaign: `APX` (Android Product Expansion)
 - Goal: ship product-facing terminal expansion capability on top of closed AHW ownership boundaries.
 - Rules: do not reopen ownership rescue unless a concrete regression appears.
 
-### `APX-B1` Multi-terminal app-shell policy foundation (`in_progress`)
+### `APX-B1` Multi-terminal app-shell policy foundation (`awaiting_architect_review`)
 
 Batch queue line (exact):
 
@@ -833,7 +832,7 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `APX-B1` super-gate is reached.
 
-### `APX1-M1` Expansion policy audit (`pending`)
+### `APX1-M1` Expansion policy audit (`complete`)
 
 Queue line (exact):
 
@@ -845,7 +844,14 @@ Acceptance:
 - specify minimal policy interfaces for expansion without behavior change
 - record out-of-scope items explicitly
 
-### `APX1-M2` Policy seam introduction (`pending`)
+**M1 audit (authoritative for APX-B1):**
+
+- **Selection (which slot is routed for app-shell / shell view mapping):** previously implicit via `TerminalWidgetSlotId.PRIMARY` literals and `host.terminalWidgetSlot()` feeding `AppShellNavigation.forProductTerminalSlot` directly. **Target seam:** `AppShellTerminalSelectionPolicy` (`singleTerminalProduct`, `forDeclaredHostSlot`, `selectedProductTerminalSlotForAppShell`).
+- **Activation (visible shell view + drawer chrome):** already `AppShellTerminalViewPolicy` on `WidgetHarnessHostControllers`; clarified as **activation** in type Javadoc (distinct from selection).
+- **Mutation points:** `ShellViewId` changes remain inside `AppShellNavigation` private state; no new ad hoc `ShellViewId` setters. View-mode re-assert still `applyActiveProductTerminalShellView`.
+- **Out of scope:** tabs UI, tab persistence, second active slot, chrome factory slot threading, IME/startup contract changes, terminal-core.
+
+### `APX1-M2` Policy seam introduction (`complete`)
 
 Queue line (exact):
 
@@ -857,7 +863,7 @@ Acceptance:
 - no fallback compatibility paths
 - compile debug + release Java after code changes
 
-### `APX1-M3` Consumer rewiring (`pending`)
+### `APX1-M3` Consumer rewiring (`complete`)
 
 Queue line (exact):
 
@@ -869,7 +875,7 @@ Acceptance:
 - no direct ad hoc shell-view mutations in rewired consumers
 - compile debug + release Java after code changes
 
-### `APX1-M4` Contract docs lock (`pending`)
+### `APX1-M4` Contract docs lock (`complete`)
 
 Queue line (exact):
 
@@ -880,7 +886,7 @@ Acceptance:
 - host structure and naming contract match code shape
 - userland contract remains unchanged unless ownership text requires update
 
-### `APX1-M5` Queue/handoff/entrypoint sync (`pending`)
+### `APX1-M5` Queue/handoff/entrypoint sync (`complete`)
 
 Queue line (exact):
 
@@ -891,7 +897,7 @@ Acceptance:
 - queue, handoff, and engineer entrypoint stay coherent through APX-B1 super-gate
 - super-gate stop condition and review packet contract are explicit
 
-### `APX1-M6` Batch validation + review packet (`pending`)
+### `APX1-M6` Batch validation + review packet (`complete`)
 
 Queue line (exact):
 
@@ -903,6 +909,18 @@ Acceptance:
 - deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
 - cold start smoke pass when a device is available
 - engineer reports full super-gate packet and explicit residual-risk note
+
+**APX-B1 engineer validation record (M6):**
+
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac` — pass
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac` — pass
+- `python3 ops/android_terminal_host.py deploy` — pass (streamed install, activity start)
+- `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E` — pass (no `AndroidRuntime:E` lines; benign duplicate-top warning when activity already foreground)
+- `adb shell am force-stop uk.laurencegouws.zide && adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity` — pass (`LaunchState: COLD`, `Status: ok`)
+
+**Residual risk:** Low — selection always `PRIMARY`; future multi-slot work extends `AppShellTerminalSelectionPolicy` and relaxes `checkActiveProductTerminalSlot` in a scoped batch.
+
+`Milestone reached per docs, architect review required.`
 
 ## Guardrails
 
