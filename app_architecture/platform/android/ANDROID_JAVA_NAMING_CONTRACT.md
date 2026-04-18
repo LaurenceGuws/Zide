@@ -82,8 +82,10 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
   hosting described in `ANDROID_JAVA_HOST_STRUCTURE.md` (contract only; no tab
   product behavior implied by the name alone)
 - at startup wiring, pass `ProductHostDeclaredTerminalWidgetSlot` into `ProductHostActivityStartupWiring.interaction`,
-  `WidgetHostAssemblyContext`, and `TerminalWidgetCompositionAssembly.compose`; `InteractionAssembly.Host` and
-  `WidgetAssembly.Host` still expose `TerminalWidgetSlotId terminalWidgetSlot()` — adapters unwrap the declared value;
+  `WidgetHostAssemblyContext`, and `TerminalWidgetCompositionAssembly.compose`; convert the declared value to
+  `TerminalWidgetSlotId` only through `ProductHostDeclaredTerminalWidgetSlot#terminalWidgetSlotForProductHarness()` at
+  harness boundaries; `InteractionAssembly.Host` and `WidgetAssembly.Host` still expose `TerminalWidgetSlotId terminalWidgetSlot()`
+  — adapters implement that by delegating to `terminalWidgetSlotForProductHarness()`;
   `checkActiveProductTerminalSlot` runs on the enum at assembly/composition entry — today only `PRIMARY`
 - `TerminalWidgetSlotId.checkActiveProductTerminalSlot` is the single choke point
   for “active slot” wiring today; assemblies call it at interaction assembly,
