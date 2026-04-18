@@ -79,6 +79,10 @@ New dual-session handover contract:
   `in_progress` in this file.
 - Macro batches are allowed to contain multiple internal milestones. In that
   case the batch, not each internal milestone, is the architect review boundary.
+- Engineer-side iteration length target per macro batch: **5–10 validated commits**
+  before super-gate review, unless a real hard stop is hit.
+- Architect should avoid re-gating every 1–2 commits when the active batch still
+  has clear in-scope runway.
 
 Validation commands:
 
@@ -1401,6 +1405,8 @@ Batch purpose:
 - reduce raw `TerminalWidgetSlotId` fan-out for declared-slot ownership
 - keep declared-slot source seam explicit while preserving APX-B4 startup flow
 - preserve PRIMARY-only runtime behavior and fail-fast invariants
+- run this as a longer engineer iteration: target **5–10 commits** before
+  architect super-gate review
 
 Batch scope:
 
@@ -1436,6 +1442,8 @@ Batch super-gate:
 Internal milestone cadence:
 
 - Engineer executes `APX5-M1` through `APX5-M6` sequentially.
+- Engineer should keep cutting coherent validated commits across those milestones
+  and target **5–10 commits total** before stopping at `APX-B5` super-gate.
 - Do not stop for architect review between internal milestones.
 - Mark each internal milestone complete in this file as it lands.
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or

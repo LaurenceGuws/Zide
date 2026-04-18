@@ -18,6 +18,8 @@ Architect session seed:
 - Read `docs/todo/android/implementation.md` first.
 - Confirm the macro batch marked `in_progress`.
 - Review the Engineer's completed batch only when they report the super-gate or a hard blocker.
+- Expect longer engineer runs: default target is **5–10 validated commits** per
+  macro batch before architect review.
 - After review acceptance, immediately refocus the queue, handoff, and engineer entrypoint to the next macro batch.
 
 Engineer session seed:
@@ -42,6 +44,8 @@ Engineer session seed:
 
 - Follow only the active macro batch and `Queue line (exact)` entries from the Android queue.
 - Keep cuts scoped and commit small validated checkpoints; this batch is architect-approved for autonomous engineer commits after local validation.
+- Engineer batching target: **5–10 commits per macro batch** before super-gate,
+  unless a real hard stop condition is hit.
 - Compile every code cut; run deploy + `AndroidRuntime:E` smoke at seam boundaries.
 - Compile gate is strict: `:app:compileDebugJavaWithJavac` and
   `:app:compileReleaseJavaWithJavac` both must stay green under warnings-as-errors.

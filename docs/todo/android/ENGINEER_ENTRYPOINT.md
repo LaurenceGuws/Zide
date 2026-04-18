@@ -97,6 +97,11 @@ boundaries while preserving current single-terminal behavior.
 Execute `APX5-M1` through `APX5-M6` sequentially; do not stop before the
 `APX-B5` super-gate unless a hard stop condition is hit.
 
+Commit cadence expectation for this macro batch:
+
+- target **5–10 coherent validated commits** before super-gate handoff
+- do not stop after 1–2 commits if the active batch still has clear in-scope work
+
 Execute in order and mark progress in `docs/todo/android/implementation.md`.
 
 - `APX5-M1`: audit raw declared-slot primitive flow and define bounded value-type seam target.
@@ -176,6 +181,8 @@ This batch is architect-approved for autonomous Engineer commits after local
 validation.
 
 - Commit small, coherent checkpoints.
+- Target 5–10 validated commits per macro batch before architect super-gate
+  unless blocked by a hard stop condition.
 - Do not amend or squash unless the Architect explicitly requests it later.
 - Keep doc-only updates separate from code when practical.
 - Each code commit must leave Java debug + release compile green.
