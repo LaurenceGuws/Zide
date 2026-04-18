@@ -141,6 +141,8 @@ forwards those policy methods to `AppShellNavigation` for `ChromeController`.
 On `ChromeController.Host`, IME visibility uses `chromeImeVisibilityPresent`,
 `applyChromeImeVisibilityHidden`, and `applyChromeImeVisibilityFromOpenAttempt` — no
 generic boolean `setImeVisible` on the chrome host seam.
+`ChromeFactory` takes harness `ChromeImePolicyInput` from `WidgetAssembly.Host` (not raw
+`BooleanSupplier` / `Consumer<Boolean>`) for that policy slice.
 These are harness contract checks only — they do not add tab or multi-instance
 product behavior.
 
@@ -197,7 +199,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/ui/TerminalWidgetCompositionAssembly.java` | Good | Harness-owned join of `InteractionAssembly.Result` + `WidgetAssembly.Result` into `TerminalWidgetInstance` only; `compose` takes `TerminalWidgetSlotId` first; shell/chrome/view-mode refs stay on `WidgetAssembly.Result`. Not tab/multi-instance policy. | Keep `WidgetAssembly.Result` as widget/chrome output; instance join stays here, not on `WidgetAssembly.Result` alone. |
 | `host/userland/WorkflowInstallStartupGlue.java` | Good | Install completion state transitions + runtime restart delegation. | Keep install orchestration thin; low-level extraction stays in `UserlandInstaller`. |
 | `host/ui/ActivityViewBindings.java` | Good | Owns raw activity view lookup and typed binding capture for terminal host wiring; `StatusViewAssembly.Result` exposes the authoritative `activityViewBindings` for activity wiring. | Keep this as lookup-only data binding; no policy or runtime behavior. |
-| `host/ui/ChromeFactory.java` | Good | Owns chrome-specific bridge/callback construction; intentionally no `TerminalWidgetSlotId` (chrome slot-agnostic freeze). | Reopen slot parameters only with scoped per-slot chrome policy. |
+| `host/ui/ChromeFactory.java` | Good | Owns chrome-specific bridge/callback construction; IME policy input uses `ChromeImePolicyInput` from `WidgetAssembly.Host`; intentionally no `TerminalWidgetSlotId` (chrome slot-agnostic freeze). | Reopen slot parameters only with scoped per-slot chrome policy. |
 | `host/interaction/InteractionFactory.java` | Good | Owns selection/gesture interaction controller construction so interaction seams stay out of the generic host assembler. | Keep this construction-only; interaction behavior remains in selection/gesture controllers. |
 | `host/interaction/InteractionAssembly.java` | Good | Owns interaction assembly; `assemble` enforces `checkActiveProductTerminalSlot` on `Host`. | Keep this assembly-only; behavior stays in interaction controllers. |
 | `host/interaction/InteractionCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/interaction/InteractionAssembly`. | Keep adapter-only; avoid moving interaction behavior into this adapter. |
@@ -222,7 +224,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/ui/ShellViewId.java` | Good | Enum of harness shell content slots; tab-ready identity vocabulary; product routing from slot uses `ProductTerminalSlotShellMapping`. | Extend only when multi-view hosting lands; keep names product-neutral. |
 | `host/ui/AppShellViewState.java` | Good | Per-shell-view state row; `id` is non-null (`Objects.requireNonNull`); selection + reserved content-ready bit for future multi-view chrome. | Keep immutable; do not embed widget types. |
 | `host/ui/AppShellNavigation.java` | Good | Owns chrome drawer sidebar state + active `ShellViewId`; shell view: `applyProductTerminalShellViewActive` + private `replaceActiveShellView`; drawer sidebar: `applyChromeDrawerSidebarOpen` / `applyChromeDrawerSidebarClosed`; product wiring uses `forProductTerminalSlot`. | Keep harness-only; explicit policy methods only, not generic boolean setters. |
-| `host/ui/ChromeBridge.java` | Good | Owns chrome callback adaptation and assist-button/modifier-latch view presentation wiring; forwards drawer sidebar policy to `AppShellNavigation`; IME visibility policy methods on `ChromeController.Host` delegate through `Callbacks` to activity-backed suppliers. | Keep as adapter-only for chrome behavior in `host/ui/ChromeController`. |
+| `host/ui/ChromeBridge.java` | Good | Owns chrome callback adaptation and assist-button/modifier-latch view presentation wiring; forwards drawer sidebar policy to `AppShellNavigation`; IME visibility policy methods on `ChromeController.Host` delegate through `Callbacks` to `ChromeImePolicyInput` from `WidgetAssembly.Host`. | Keep as adapter-only for chrome behavior in `host/ui/ChromeController`. |
 | `host/ui/ChromeCallbacks.java` | Removed | Relay adapter was collapsed; `ChromeFactory` now provides `ChromeBridge.Callbacks` directly. | Keep chrome behavior in `host/ui/ChromeController`; avoid reintroducing callback pass-through classes without measurable coupling reduction. |
 | `host/userland/ShellStateBridge.java` | Good | Owns product-shell-state presenter callback adaptation and blocker/overlay view binding. | Keep presentation behavior in `userland/ShellStatePresenter`; keep this adapter thin. |
 | `host/userland/ShellStateCallbacks.java` | Good | Functional callback adapter from activity state into `host/userland/ShellStateBridge`. | Keep adapter-only; shell-state presentation behavior remains in `ShellStatePresenter`. |

@@ -101,8 +101,9 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
   `ChromeController.Host` methods) — no generic boolean sidebar setter
 - chrome IME visibility on `ChromeController.Host`: `chromeImeVisibilityPresent`,
   `applyChromeImeVisibilityHidden`, `applyChromeImeVisibilityFromOpenAttempt` — no
-  generic boolean `setImeVisible` on that seam (activity wiring may still use narrow
-  suppliers behind `ChromeFactory`)
+  generic boolean `setImeVisible` on that seam; `ChromeFactory` takes
+  `ChromeImePolicyInput` from `WidgetAssembly.Host` (not raw `BooleanSupplier` /
+  `Consumer<Boolean>` for IME assembly)
 - in `ZideActivity`, use one authoritative `static final` slot field (e.g.
   `ACTIVE_PRODUCT_TERMINAL_SLOT`) for interaction/widget/composition wiring
   instead of repeating `PRIMARY` literals
