@@ -4575,7 +4575,7 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `AHW-B22` super-gate is reached.
 
-### `AHW22-M1` Activity pressure audit (`pending`)
+### `AHW22-M1` Activity pressure audit (`completed`)
 
 Queue line (exact):
 
@@ -4586,6 +4586,21 @@ Acceptance:
 - enumerate highest-pressure startup/callback construction clusters in `ZideActivity`
 - define extraction targets with explicit owners and out-of-scope areas
 - record invariants (startup order and behavior unchanged)
+
+Progress delta:
+
+- **Cluster A (callback fan-out):** `createStatusViewCallbacks`, `createInteractionCallbacks`,
+  `createInputCallbacks`, `createSessionAssemblyCallbacks`, `createWorkflowAssemblyCallbacks`,
+  `createRuntimeAssemblyCallbacks`, `createUiStartupCallbacks` — same assembly types as elsewhere,
+  but construction lives entirely in `ZideActivity` and repeats forwarder wiring.
+- **Cluster B (large anonymous hosts):** `WidgetAssembly.Host` (~180 LOC) and
+  `LifecycleController.Host` (~80 LOC) — clear ownership but heavy on activity surface area.
+- **Extraction target:** `host/ui` **startup wiring** helpers own static callback assembly + named
+  `WidgetAssembly.Host` / `LifecycleController.Host` implementations; activity keeps **`runOnCreateStartupSequence`**
+  order and field assignments only. **Out of scope:** `ProductHostStartupBundle` domain splits, JNI,
+  keep-screen-on, IME/slot/chrome contract edits.
+- **Invariants:** `runOnCreateStartupSequence` call order and side-effect timing unchanged; no new
+  assembly entry points.
 
 ### `AHW22-M2` Startup wiring helper extraction (`pending`)
 
