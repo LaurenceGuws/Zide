@@ -7,6 +7,8 @@ import android.widget.Button;
 
 import uk.laurencegouws.terminal.input.ShellInputView;
 
+import java.util.List;
+
 /**
  * Owns product chrome interactions: view-mode toggles, app-shell sidebar (navigation + terminal
  * session selection), assist/input helper bar, and IME policy.
@@ -54,9 +56,11 @@ public final class ChromeController {
         /** @return {@code true} if selected tab index changed */
         boolean applySelectProductTerminalTab(int tabIndex);
 
-        Button productTerminalTab0Button();
+        /** Ordered tab metadata from {@link AppShellTerminalViewPolicy}. */
+        List<ProductTerminalTabDescriptor> productTerminalTabDescriptors();
 
-        Button productTerminalTab1Button();
+        /** Sidebar button for {@code tabIndex}, or {@code null} if missing. */
+        Button productTerminalTabButton(int tabIndex);
 
         void onProductTerminalTabSessionActivated(int tabIndex);
     }
@@ -114,19 +118,28 @@ public final class ChromeController {
     }
 
     private void bindProductTerminalTabStrip() {
-        final Button t0 = host.productTerminalTab0Button();
-        final Button t1 = host.productTerminalTab1Button();
-        if (t0 == null || t1 == null) {
-            return;
+        for (ProductTerminalTabDescriptor d : host.productTerminalTabDescriptors()) {
+            final Button b = host.productTerminalTabButton(d.tabIndex());
+            if (b == null) {
+                continue;
+            }
+            b.setText(d.label());
+            final int idx = d.tabIndex();
+            b.setOnClickListener(view -> selectProductTerminalTab(idx));
         }
-        t0.setOnClickListener(view -> selectProductTerminalTab(0));
-        t1.setOnClickListener(view -> selectProductTerminalTab(1));
         syncProductTerminalTabChrome();
     }
 
     private void selectProductTerminalTab(final int tabIndex) {
         final boolean changed = host.applySelectProductTerminalTab(tabIndex);
-        host.appendEvent("app_shell.product_terminal_tab.select index=" + tabIndex);
+        String stableId = "?";
+        for (ProductTerminalTabDescriptor d : host.productTerminalTabDescriptors()) {
+            if (d.tabIndex() == tabIndex) {
+                stableId = d.stableId();
+                break;
+            }
+        }
+        host.appendEvent("app_shell.product_terminal_tab.select index=" + tabIndex + " stableId=" + stableId);
         if (changed) {
             host.onProductTerminalTabSessionActivated(tabIndex);
         }
@@ -134,14 +147,14 @@ public final class ChromeController {
     }
 
     private void syncProductTerminalTabChrome() {
-        final Button t0 = host.productTerminalTab0Button();
-        final Button t1 = host.productTerminalTab1Button();
-        if (t0 == null || t1 == null) {
-            return;
-        }
         final int sel = host.selectedProductTerminalTabIndex();
-        applyTabButtonSelected(t0, sel == 0);
-        applyTabButtonSelected(t1, sel == 1);
+        for (ProductTerminalTabDescriptor d : host.productTerminalTabDescriptors()) {
+            final Button b = host.productTerminalTabButton(d.tabIndex());
+            if (b == null) {
+                continue;
+            }
+            applyTabButtonSelected(b, sel == d.tabIndex());
+        }
     }
 
     private static void applyTabButtonSelected(Button button, boolean selected) {

@@ -7,12 +7,19 @@ import android.widget.Button;
 import uk.laurencegouws.terminal.R;
 import uk.laurencegouws.terminal.input.ShellInputView;
 
+import java.util.List;
+
 /**
  * Adapts activity-owned chrome callbacks and view references to {@link ChromeController}.
  * Drawer sidebar policy reads/writes go through {@link AppShellTerminalViewPolicy}, not raw
  * {@link AppShellNavigation}.
  */
 public final class ChromeBridge implements ChromeController.Host {
+    private static final int[] PRODUCT_TERMINAL_TAB_BUTTON_IDS = {
+        R.id.product_terminal_tab_0,
+        R.id.product_terminal_tab_1,
+    };
+
     /** Harness callbacks used by chrome actions. */
     public interface Callbacks {
         void runPackageDoctor();
@@ -197,13 +204,16 @@ public final class ChromeBridge implements ChromeController.Host {
     }
 
     @Override
-    public Button productTerminalTab0Button() {
-        return leftSidebar.findViewById(R.id.product_terminal_tab_0);
+    public List<ProductTerminalTabDescriptor> productTerminalTabDescriptors() {
+        return appShellTerminalViewPolicy.productTerminalTabDescriptors();
     }
 
     @Override
-    public Button productTerminalTab1Button() {
-        return leftSidebar.findViewById(R.id.product_terminal_tab_1);
+    public Button productTerminalTabButton(int tabIndex) {
+        if (tabIndex < 0 || tabIndex >= PRODUCT_TERMINAL_TAB_BUTTON_IDS.length) {
+            return null;
+        }
+        return leftSidebar.findViewById(PRODUCT_TERMINAL_TAB_BUTTON_IDS[tabIndex]);
     }
 
     @Override

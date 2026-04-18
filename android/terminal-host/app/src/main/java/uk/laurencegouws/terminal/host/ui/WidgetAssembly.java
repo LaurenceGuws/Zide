@@ -22,6 +22,7 @@ import uk.laurencegouws.terminal.scroll.ScrollOverlayView;
 import uk.laurencegouws.terminal.selection.SelectionController;
 import uk.laurencegouws.terminal.userland.ShellStatePresenter;
 
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -185,8 +186,10 @@ public final class WidgetAssembly {
                 AppShellNavigation.forProductTerminalSlot(
                         selectionContext.selectedProductTerminalSlotForAppShell(),
                         initialProductTerminalTabIndex);
+        final List<ProductTerminalTabDescriptor> productTerminalTabDescriptors =
+                ProductTerminalTabDescriptors.defaultsForProductHarness(host.harnessContext().getResources());
         final AppShellTerminalViewPolicy appShellTerminalViewPolicy =
-                new AppShellTerminalViewPolicy(appShellNavigation);
+                new AppShellTerminalViewPolicy(appShellNavigation, productTerminalTabDescriptors);
         final SurfaceWidgetControllerRef surfaceWidgetControllerRef = new SurfaceWidgetControllerRef();
         final ChromeController terminalChromeController = createChromeController(
                 host,

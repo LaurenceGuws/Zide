@@ -13,6 +13,10 @@ package uk.laurencegouws.terminal.host.ui;
  * so the UI matches without calling {@code applySelectProductTerminalTab} — that avoids a synthetic
  * restart on restore while preserving APX-B9 restart semantics for real tab clicks.</p>
  *
+ * <p><strong>Tab metadata (APX-B15):</strong> stable ids and display labels are owned by
+ * {@link AppShellTerminalViewPolicy#productTerminalTabDescriptors()} and consumed by chrome binding;
+ * persistence remains index-based (APX-B14).</p>
+ *
  * <p><strong>UX placement:</strong> session/tab controls are <em>AppShell navigation</em> — they
  * belong in the left slide-out sidebar alongside other harness actions, not inline above the
  * assist/input helper strip. The assist row remains dedicated to terminal input helpers (IME,
