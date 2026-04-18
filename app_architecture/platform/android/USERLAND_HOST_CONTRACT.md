@@ -14,6 +14,7 @@ Authority for how Java userland orchestration (`uk.laurencegouws.terminal.userla
 | `ShellPresentationHostInputs` | Harness-only bundle of suppliers for `UserlandReadinessState` / `UserlandInstallState` used to wire `ShellStateCallbacks` from `WidgetAssembly` without putting userland value types on `WidgetAssembly.Host`. Product truth remains the userland types. |
 | `WorkflowBridge.Callbacks` | Install flow (`completeInstall`, `failInstall`, `applyInstallState`), `restartSessionAfterInstall`, package-doctor completion (`markPackageDoctorComplete`), release and event append. |
 | `UserlandWorkflowController` | Async install and `zide-pm` doctor; calls only `Host` (implemented by `WorkflowBridge`). |
+| `UserlandCommandRunner` | Runs `zide-pm` with prefix env; sets `ZIDE_PM_HOST_PLATFORM=android` for Android catalog / test-binary pull semantics inside `zide-pm`. |
 | `UserlandReadinessBlockerController.Host` | Readiness retry button: `startInstall`, `refreshSessionAfterReadinessRetry` — harness implements via `ReadinessBlockerStartup` + `ReadinessBlockerCallbacks`. |
 | `UserlandSessionCoordinator.Host` | Session poll/refresh side effects (readiness apply, shell refresh, telemetry); wired from `SessionAssembly` / activity. |
 
