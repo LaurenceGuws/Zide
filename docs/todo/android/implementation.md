@@ -4208,7 +4208,7 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `AHW-B20` super-gate is reached.
 
-### `AHW20-M1` Keep-screen-on window dependency audit (`pending`)
+### `AHW20-M1` Keep-screen-on window dependency audit (`completed`)
 
 Queue line (exact):
 
@@ -4219,6 +4219,14 @@ Acceptance:
 - enumerate where keep-screen-on policy currently consumes `Window`
 - define minimum explicit host seam to remove raw window dependency
 - document invariants and out-of-scope paths
+
+Progress delta:
+
+- **Current:** `ProductHostKeepScreenOnPolicy.applyDefaultTerminalHostPolicy(Window)` — policy imports
+  `android.view.Window`.
+- **Seam:** `HostWindowFlagAccess` (`addFlags(int)`) supplied by activity as `getWindow()::addFlags`;
+  policy uses only `WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON` + seam (no `Window` type in policy API).
+- **Out of scope:** B14–B19 seams; no settings toggle.
 
 ### `AHW20-M2` Explicit host window-flag seam introduction (`pending`)
 
