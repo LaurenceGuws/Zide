@@ -27,6 +27,8 @@ public final class UserlandWorkflowController {
         void markPackageDoctorComplete(boolean success);
 
         void markAndroidEdgeTestBinaryInstallComplete(boolean success);
+
+        void markAndroidEdgeTestBinaryInstallNoCandidate();
     }
 
     private final Host host;
@@ -93,6 +95,12 @@ public final class UserlandWorkflowController {
                     logEdgeInstallOutput(out);
                     host.appendEvent("packages.edge_install.success");
                     host.markAndroidEdgeTestBinaryInstallComplete(true);
+                });
+            } catch (UserlandAndroidTestBinaryInstallLifecycle.NoCandidateException err) {
+                host.handler().post(() -> {
+                    final String detail = err.getMessage() == null ? err.getClass().getSimpleName() : err.getMessage();
+                    host.appendEvent("packages.edge_install.no_candidate detail=" + detail);
+                    host.markAndroidEdgeTestBinaryInstallNoCandidate();
                 });
             } catch (IOException err) {
                 host.handler().post(() -> {
