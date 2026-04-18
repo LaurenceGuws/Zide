@@ -75,8 +75,10 @@ public final class ZideActivity extends android.app.Activity
 
     /**
      * App-shell terminal <strong>selection</strong> for this activity’s wiring (interaction,
-     * widget host, composition). Multi-slot hosting would vary selection through
-     * {@link AppShellTerminalSelectionPolicy}; today {@link AppShellTerminalSelectionPolicy#singleTerminalProduct}.
+     * widget host, composition). Declared slots are cataloged in
+     * {@link uk.laurencegouws.terminal.host.ui.DeclaredTerminalWidgetSlotCatalog}; multi-slot hosting would vary
+     * selection through {@link AppShellTerminalSelectionPolicy}; today
+     * {@link AppShellTerminalSelectionPolicy#singleTerminalProduct}.
      * Assembly entry points enforce active-slot policy via
      * {@link TerminalWidgetSlotId#checkActiveProductTerminalSlot}. Shell view identity is resolved
      * through {@link uk.laurencegouws.terminal.host.ui.ProductTerminalSlotShellMapping#shellViewIdForTerminalSlot}.

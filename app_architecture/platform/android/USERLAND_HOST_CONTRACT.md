@@ -27,8 +27,8 @@ Per-terminal **tabs or split views** do not relocate userland orchestration into
 per-widget holders: readiness/install/session coordination remains a **single**
 harness concern unless a future milestone explicitly scopes userland per
 workspace. App-shell **selection** of which terminal slot is routed for shell view
-is harness-owned (`AppShellTerminalSelectionPolicy`); userland does not branch on
-slot identity. Widget-facing seams stay in `host` + `TerminalWidgetInstance`; this
+is harness-owned (`AppShellTerminalSelectionPolicy` over `DeclaredTerminalWidgetSlotCatalog`);
+userland does not branch on slot identity. Widget-facing seams stay in `host` + `TerminalWidgetInstance`; this
 document does not change when the harness hosts multiple terminal surfaces.
 
 `TerminalWidgetSlotId` and other harness slot vocabulary identify **terminal

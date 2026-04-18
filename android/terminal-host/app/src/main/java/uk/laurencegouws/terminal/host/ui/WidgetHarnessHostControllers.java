@@ -11,7 +11,8 @@ import uk.laurencegouws.terminal.userland.ShellStatePresenter;
  * shell/chrome/view-mode fields.</p>
  *
  * <p>App-shell <strong>selection</strong> (which product terminal slot is routed for shell view) is
- * {@link #appShellTerminalSelectionPolicy}. <strong>Activation</strong> (active shell view + drawer chrome)
+ * {@link #appShellTerminalSelectionPolicy} (backed by {@link DeclaredTerminalWidgetSlotCatalog} inside that policy).
+ * <strong>Activation</strong> (active shell view + drawer chrome)
  * is {@link #appShellTerminalViewPolicy}. Chrome is wired through the activation policy without exposing raw
  * {@link AppShellNavigation} on the harness bundle.</p>
  */
