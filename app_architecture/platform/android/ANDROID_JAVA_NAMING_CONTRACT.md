@@ -109,6 +109,9 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
   assembly (status/viewport/input hosts keep their own seams)
 - activity IME scratch: `ProductHostImeState` on `ZideActivity` (one instance) — not repeated
   `() -> imeVisible` / `this::setImeVisible` closures across status/input/widget assembly
+- host callback IME read/write: `HostImeStateAccess` (implemented by `ProductHostImeState`) on
+  `StatusViewAssembly.Host`, `ViewportCallbacks`, and `InputAssembly.Host` — not raw
+  `BooleanSupplier` / `Consumer<Boolean>` pairs on those adapters
 - in `ZideActivity`, use one authoritative `static final` slot field (e.g.
   `ACTIVE_PRODUCT_TERMINAL_SLOT`) for interaction/widget/composition wiring
   instead of repeating `PRIMARY` literals
