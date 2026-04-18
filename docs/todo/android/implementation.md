@@ -3206,7 +3206,8 @@ Acceptance:
 
 Progress delta:
 
-- Debug/release compile pass; deploy + activity start + `AndroidRuntime:E` filter (empty).
+- Debug/release compile pass; deploy + activity start + `AndroidRuntime:E` filter (empty);
+  cold start via `am force-stop` + `am start -W` (LaunchState `COLD`, ok).
 
 Super-gate engineer packet:
 
@@ -3214,7 +3215,7 @@ Super-gate engineer packet:
 - `Queue line (exact): narrow chrome IME visibility mutation APIs to explicit policy methods while preserving behavior`
 - `Scope contract: ChromeController.Host IME seam only; B12/B13 unchanged; slot/chrome freeze unchanged; no tabs`
 - `Progress delta: explicit chromeImeVisibility* + apply* on Host; bridge/factory aligned`
-- `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb activity start + AndroidRuntime:E (pass, empty)`
+- `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb activity start + AndroidRuntime:E (pass, empty); adb cold start (pass)`
 - `Engineer updates: Blocked by Archtect review needed: true`
 
 Review questions for Architect:
