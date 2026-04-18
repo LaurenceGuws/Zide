@@ -148,7 +148,6 @@ fn parseLogGroupsOwned(allocator: std.mem.Allocator, lua: *zlua.Lua, idx: i32) !
 
         if (!reader.state.isTable(-1)) continue;
         const group_reader = zlua_portable.reader.Reader.init(reader.state, allocator, -1);
-        defer group_reader.finish();
 
         const tags = if (group_reader.child("tags")) |tags_reader| blk: {
             defer tags_reader.finish();

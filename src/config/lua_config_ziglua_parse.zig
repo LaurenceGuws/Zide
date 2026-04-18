@@ -935,8 +935,8 @@ test "parseConfigFromLuaState parses keybind mods from string lists" {
         \\            {
         \\                key = "p",
         \\                mods = { "ctrl", "shift" },
-        \\                action = "palette_open",
-        \\                repeat = false,
+        \\                action = "copy",
+        \\                ["repeat"] = false,
         \\            },
         \\        },
         \\    },
