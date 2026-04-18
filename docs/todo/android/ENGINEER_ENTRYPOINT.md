@@ -34,11 +34,11 @@ you must report the mismatch.
 
 ## Current Target
 
-`APX-B11` is `in_progress`.
+`APX-B11` is `architect_review_pending`.
 
 Active batch queue line (exact):
 
-- replace hardcoded edge test-binary install with manifest-driven Android test-binary selection flow and explicit no-candidate UX, using released dev manifest behavior as validation baseline
+- terminal tab/session controls must not be an inline bar above assist/keyboard helpers; session selection belongs in AppShell-level navigation (left slide-out sidebar); assist/helper row stays input-only; preserve APX-B10 doctor vs install split and single-PTY session semantics
 
 Parallel-lane note:
 
@@ -71,10 +71,10 @@ boundaries while preserving current single-terminal behavior.
 - `APX-B5` is accepted: immutable declared-slot value type now owns startup source semantics.
 - `APX-B6` is accepted: declared-slot value is propagated across interaction/widget/composition startup seams.
 - `APX-B7` is accepted: enum conversion choke point is centralized on declared-slot value seam.
-- `APX-B8` is accepted: tab-state slice 1 (chrome strip + tab index state) and `ZIDE_PM_HOST_PLATFORM=android` export are in place.
+- `APX-B8` is accepted: tab-state slice 1 (harness tab index state; session controls live in app-shell sidebar after APX-B11) and `ZIDE_PM_HOST_PLATFORM=android` export are in place.
 - `APX-B9` is accepted: tab selection now drives native restart + userland refresh, and Packages flow proved Android-side `zide-pm install`.
 - `APX-B10` is accepted: doctor path is read-only and test-binary install mutation is explicit lifecycle-owned with dedicated sidebar trigger.
-- `APX-B11` is feature-first: replace hardcoded test-binary package id with manifest/list-driven candidate selection and explicit no-candidate behavior.
+- `APX-B11` is feature-first: session/tab controls are **AppShell navigation** (drawer sidebar), not inline terminal chrome above the assist row; assist strip stays input-only; APX-B10 doctor/install split and single-PTY semantics preserved.
 - `zide-mobile-pm` foundation work is allowed in parallel, but APX-B11 remains the primary in-repo execution lane here.
 - `AHW-B26` is accepted and `AHW` is closed.
 - Keep harness vs surface split (`WidgetAssembly.Result.harnessHost` + `surfaceJoin`) as the baseline.
@@ -101,7 +101,7 @@ boundaries while preserving current single-terminal behavior.
   `InteractionAssembly.Result` yet.
 - Keep chrome slot-agnostic in this batch; do not thread slot into chrome
   construction until per-slot chrome policy is scoped.
-- `APX-B11` must remove hardcoded install package-id coupling and keep explicit tab semantics under current runtime constraints.
+- `APX-B11` must keep explicit single-PTY tab/session semantics; manifest/list-driven install candidate work is **out of scope** for this batch (re-queue separately if needed).
 
 ## Internal Milestones
 
@@ -115,12 +115,12 @@ Commit cadence expectation for this macro batch:
 
 Execute in order and mark progress in `docs/todo/android/implementation.md`.
 
-- `APX11-M1`: audit doctor/list/install outputs and define deterministic candidate selection + no-candidate behavior.
-- `APX11-M2`: implement manifest/list-driven Android test-binary candidate policy.
-- `APX11-M3`: wire install action + status telemetry through the new candidate policy.
-- `APX11-M4`: verify behavior against current released dev manifest baseline on device.
-- `APX11-M5`: lock docs/handoff/entrypoint to implemented APX-B11 seam shape.
-- `APX11-M6`: run validation and publish super-gate review packet.
+- `APX11-M1`: remove inline session strip from product layout; add sidebar session block.
+- `APX11-M2`: bind session selection in `ChromeController` sidebar wiring; assist bar input-only.
+- `APX11-M3`: document placement in `AppShellNavigation` / `ProductTerminalTabSessionContract` / `WidgetAssembly`.
+- `APX11-M4`: update `ANDROID_JAVA_HOST_STRUCTURE.md` chrome/session invariant.
+- `APX11-M5`: sync implementation queue + this entrypoint + `AGENT_HANDOFF`.
+- `APX11-M6`: compile/deploy/device validation + architect review packet.
 
 ## Allowed Work
 

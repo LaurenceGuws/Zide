@@ -123,7 +123,7 @@ Dual-mode batching override (architect directive):
 - `APX-B8` accepted by architect.
 - `APX-B9` accepted by architect.
 - `APX-B10` accepted by architect.
-- `APX-B11` is now `in_progress`.
+- `APX-B11` super-gate reached; architect review pending.
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -2058,7 +2058,7 @@ Engineer validation (this batch):
 
 **Feature status vs batch objectives:**
 
-- **Tab-state slice 1:** two-tab chrome strip (`Session 1` / `Session 2`) with harness-owned selection in `AppShellNavigation`, forwarded through `AppShellTerminalViewPolicy`, bound in `ChromeController` / `ChromeBridge`; telemetry `app_shell.product_terminal_tab.select`. Single `PRIMARY` widget instance and single `ShellViewId.TERMINAL` unchanged.
+- **Tab-state slice 1:** two-tab session selection (`Session 1` / `Session 2`) with harness-owned selection in `AppShellNavigation`, forwarded through `AppShellTerminalViewPolicy`, bound in `ChromeController` / `ChromeBridge` (**AppShell sidebar** after `APX-B11`, not inline above assist); telemetry `app_shell.product_terminal_tab.select`. Single `PRIMARY` widget instance and single `ShellViewId.TERMINAL` unchanged.
 - **zide-pm:** `UserlandCommandRunner` exports `ZIDE_PM_HOST_PLATFORM=android` for all `zide-pm` subprocesses.
 
 **Residual risk / follow-on:** Tab selection does not yet map to a second terminal instance or slot; `zide-pm` must honor `ZIDE_PM_HOST_PLATFORM` in-prefix for catalog filtering to take effect.
@@ -2366,96 +2366,121 @@ Architect review verdict:
 - `Review answers: install mutation split from doctor path is accepted; single-PTY tab contract wording is clear and preserved.`
 - `Findings carried forward: no blocking regressions; no startup-order drift; single-path code maintained.`
 
-### `APX-B11` Manifest-Driven Test-Binary Install UX (`in_progress`)
+### `APX-B11` App-Shell Session Navigation UX (`architect_review_pending`)
 
 Batch queue line (exact):
 
-- replace hardcoded edge test-binary install with manifest-driven Android test-binary selection flow and explicit no-candidate UX, using released dev manifest behavior as validation baseline
+- terminal tab/session controls must not be an inline bar above assist/keyboard helpers; session selection belongs in AppShell-level navigation (left slide-out sidebar); assist/helper row stays input-only; preserve APX-B10 doctor vs install split and single-PTY session semantics
+
+**Note:** A prior queue draft described manifest-driven test-binary candidate selection for this batch id; that scope is **deferred** — architect must re-queue it under a new macro batch if still required.
 
 Batch purpose:
 
-- remove hardcoded package-id coupling in Android host (`jq`) and use `zide-pm list-available` results as install candidates
-- keep doctor path read-only while making install path explicit, user-triggered, and status-visible
-- keep tab-session behavior unchanged and explicitly single-PTY
-- continue feature-first APX work toward stable objective (3): real Android test-binary pull/install maturity
-- run as a longer engineer iteration: target **5–10 commits** before architect super-gate review
+- remove terminal session UI from the product content stack above the assist strip
+- place Session 1 / Session 2 (and future session controls) in the drawer sidebar with other harness navigation actions
+- keep `RuntimeController.restartShellSessionForProductTab` behavior and `AppShellNavigation` state unchanged
+- keep `UserlandWorkflowController` doctor read-only and edge install explicit (`UserlandAndroidTestBinaryInstallLifecycle` + sidebar **Install test tools**)
+- lock the UX rule in authority docs and handoff
 
 Batch scope:
 
-- Java Android terminal host/userland flow and minimal status/chrome wiring only
-- primary code roots:
-  `android/terminal-host/app/src/main/java/uk/laurencegouws/terminal/**`
-  `android/terminal-host/app/src/main/res/**` (only when required for user-facing status copy)
+- `android/terminal-host/app/src/main/java/uk/laurencegouws/terminal/**`
+- `android/terminal-host/app/src/main/res/**` (layout/strings for sidebar + removal of inline strip)
 - allowed docs:
   `docs/todo/android/implementation.md`,
   `docs/todo/android/ENGINEER_ENTRYPOINT.md`,
   `docs/AGENT_HANDOFF.md`,
-  `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`,
-  `app_architecture/platform/android/ANDROID_JAVA_NAMING_CONTRACT.md`,
-  `app_architecture/platform/android/USERLAND_HOST_CONTRACT.md`
+  `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`
 
 Batch non-goals:
 
-- no terminal-core/shared-renderer refactor
-- no native multi-PTY/session implementation
-- no keep-screen-on follow-up work
-- no startup-order change
-- no edits in `../zide-mobile-pm` from this Android batch
+- no manifest-driven / list-driven install candidate work in this batch
+- no keep-screen-on, startup-order, or dual-PTY persistence work
 
 Batch super-gate:
 
-- install path no longer depends on hardcoded `UserlandAndroidTestBinaryPolicy.edgeTestPackageSpec()`
-- install candidate selection is derived from `zide-pm` availability output under Android host mode
-- no-candidate and install-failure states are explicit in status/event output (not silent failures)
-- debug and release Java compile pass
-- deploy + AndroidRuntime:E warm/cold checks pass
-- docs reflect APX-B11 seam shape and residual risk
+- no session/tab strip in terminal content above assist row; assist row is input-only
+- session buttons live in `left_sidebar` layout; `ChromeController` binds them from sidebar wiring
+- debug + release Java compile pass; deploy + AndroidRuntime:E + cold start pass
+- docs + entrypoint + handoff match this batch definition
 
 Internal milestone cadence:
 
-- Engineer executes `APX11-M1` through `APX11-M6` sequentially.
-- Engineer should keep cutting coherent validated commits across those milestones
-  and target **5–10 commits total** before stopping at `APX-B11` super-gate.
-- Do not stop for architect review between internal milestones.
-- Mark each internal milestone complete in this file as it lands.
-- Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
-  the `APX-B11` super-gate is reached.
+- Engineer executed `APX11-M1` through `APX11-M6` sequentially; **5 commits** before super-gate.
 
-### `APX11-M1` Candidate-selection audit (`pending`)
+### `APX11-M1` Layout: remove inline session strip (`completed`)
 
 Queue line (exact):
 
-- audit current doctor/list/install outputs and define deterministic Android test-binary candidate selection and no-candidate behavior
+- remove inline tab strip from terminal content layout; add session block to app-shell sidebar
 
-### `APX11-M2` Manifest-driven install candidate policy cut (`pending`)
+Outcome:
 
-Queue line (exact):
+- `activity_main.xml`: deleted `product_terminal_tab_strip`; session label + `product_terminal_tab_0` / `product_terminal_tab_1` under `left_sidebar`; `strings.xml`: `sidebar_terminal_sessions`
 
-- replace hardcoded edge package id with manifest/list-driven candidate policy for install action
-
-### `APX11-M3` Consumer wiring + status behavior (`pending`)
+### `APX11-M2` Chrome: sidebar session binding (`completed`)
 
 Queue line (exact):
 
-- wire install action and status telemetry to the new candidate policy, including explicit no-candidate path
+- move tab/session selection binding to sidebar; keep assist bar input-only
 
-### `APX11-M4` Device verification on current dev release baseline (`pending`)
+Outcome:
 
-Queue line (exact):
+- `ChromeController.bindProductTerminalTabStrip` runs from `bindSidebarControls`; removed from `bindAssistBar`
+- `ChromeBridge` resolves session buttons via `leftSidebar` subtree
 
-- verify behavior against current released dev manifest flow and record expected outcomes when no android-test-binary rows exist
-
-### `APX11-M5` Docs + handoff sync (`pending`)
-
-Queue line (exact):
-
-- update authority/queue/handoff/entrypoint to APX-B11 install-candidate seam shape and residual risk
-
-### `APX11-M6` Batch validation + review packet (`pending`)
+### `APX11-M3` Contract cross-links (`completed`)
 
 Queue line (exact):
 
-- validate APX-B11 end-to-end and publish architect super-gate packet with outcomes and blockers
+- document sidebar vs assist placement in navigation and tab-session contract types
+
+Outcome:
+
+- `AppShellNavigation`, `ProductTerminalTabSessionContract`, `WidgetAssembly.Host` javadoc updated
+
+### `APX11-M4` Structure authority (`completed`)
+
+Queue line (exact):
+
+- update `ANDROID_JAVA_HOST_STRUCTURE.md` chrome/session invariant to match APX-B11
+
+### `APX11-M5` Queue + handoff sync (`completed`)
+
+Queue line (exact):
+
+- replace stale APX-B11 manifest draft with architect-locked UX batch; sync `ENGINEER_ENTRYPOINT` + `AGENT_HANDOFF`
+
+### `APX11-M6` Validation + review packet (`completed`)
+
+Queue line (exact):
+
+- run compile/deploy/device smoke and publish super-gate packet
+
+Engineer validation (this batch):
+
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac` — pass
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac` — pass
+- `python3 ops/android_terminal_host.py deploy` — pass
+- `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E` — pass (no `E` lines)
+- `adb shell am force-stop uk.laurencegouws.zide && adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity` — pass (`LaunchState: COLD`, `Status: ok`)
+
+**Review chunk:** `APX-B11`
+
+**Commits (oldest → newest):**
+
+- `447099c7` — layout: sidebar session block; remove inline strip above assist row
+- `8515d346` — Chrome: session binding in sidebar; assist row input-only
+- `d6126450` — javadoc: `AppShellNavigation`, `ProductTerminalTabSessionContract`, `WidgetAssembly`
+- `936d3c3d` — `ANDROID_JAVA_HOST_STRUCTURE.md` session/assist invariant
+- `0bb5ae33` — queue + handoff packet (`implementation`, `ENGINEER_ENTRYPOINT`, `AGENT_HANDOFF`) + APX-B8 historical note
+
+`Milestone reached per docs, architect review required.`
+
+Architect review verdict:
+
+- `Review chunk: APX-B11`
+- `Verdict: pending`
 
 ## Guardrails
 
