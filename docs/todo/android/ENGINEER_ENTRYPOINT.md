@@ -34,7 +34,7 @@ you must report the mismatch.
 
 ## Current Target
 
-`APX-B9` is `in_progress`.
+`APX-B9` is `architect_review_pending` (engineer super-gate reached).
 
 Active batch queue line (exact):
 

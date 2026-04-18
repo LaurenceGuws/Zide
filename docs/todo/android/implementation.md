@@ -121,7 +121,7 @@ Dual-mode batching override (architect directive):
 - `APX-B6` accepted by architect.
 - `APX-B7` accepted by architect.
 - `APX-B8` accepted by architect.
-- `APX-B9` is now `in_progress`.
+- `APX-B9` super-gate reached; architect review pending.
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -2078,7 +2078,7 @@ Architect review verdict:
 - `Review answers: APX-B8 scope is accepted as the first feature slice; next batch should drive real tab-session behavior and zide-pm test-binary flow instead of more cleanup-only seam carving.`
 - `Findings carried forward: no blocking regressions; startup behavior stable; single clean in-repo path maintained.`
 
-### `APX-B9` Tab-State Expansion Slice 2 + zide-pm Test-Binary Pull (`in_progress`)
+### `APX-B9` Tab-State Expansion Slice 2 + zide-pm Test-Binary Pull (`architect_review_pending`)
 
 Batch queue line (exact):
 
@@ -2144,35 +2144,79 @@ Outcome:
 - **B9 tab-session slice (Java harness):** on **distinct** tab selection, invoke **`nativeRestartSessionBridge` + `UserlandSessionCoordinator.refreshAndApply`** so the active tab drives a **fresh shell session** (prior tab’s native transcript is not retained — dual-PTY persistence is future native scope).
 - **B9 zide-pm slice:** after `doctor` + `list-available`, run **`zide-pm install --prefix … <edge package>`** from `UserlandWorkflowController` so Android proves pull/install beyond nvim/htop baseline; failures are logged into the doctor output without failing the whole Packages flow.
 
-### `APX9-M2` Session-backed tab behavior cut (`pending`)
+### `APX9-M2` Session-backed tab behavior cut (`completed`)
 
 Queue line (exact):
 
 - land the minimum behavior-bearing tab-session model/wiring cut required so selected tab is not chrome-only state
 
-### `APX9-M3` Consumer wiring + device behavior prove (`pending`)
+Outcome:
+
+- `RuntimeController.restartShellSessionForProductTab` + `RuntimeStartupForwards.restartShellSessionForProductTabIfReady`
+- `AppShellNavigation.applySelectProductTerminalTab` returns whether index changed; session restart runs only on change
+- `WidgetAssembly.Host#onProductTerminalTabSessionActivated` → chrome → `ProductTerminalWidgetAssemblyHost` → runtime forwarder
+
+### `APX9-M3` Consumer wiring + device behavior prove (`completed`)
 
 Queue line (exact):
 
 - wire consumers through chrome/app-shell/widget harness seams and prove expected tab behavior on device
 
-### `APX9-M4` zide-pm Android pull/install feature cut (`pending`)
+Outcome:
+
+- `ChromeController` / `ChromeBridge` / `ChromeFactory` plumb tab session activation; device smoke at super-gate
+
+### `APX9-M4` zide-pm Android pull/install feature cut (`completed`)
 
 Queue line (exact):
 
 - land the minimum Android-side zide-pm pull/install flow improvement required to run real test binaries beyond current baseline tools
 
-### `APX9-M5` Docs + handoff sync (`pending`)
+Outcome:
+
+- `UserlandAndroidTestBinaryPolicy.edgeTestPackageSpec()` (`jq`) + `UserlandWorkflowController.runPackageDoctor` runs `zide-pm install --prefix …` after doctor/list; failures appended without failing doctor thread
+
+### `APX9-M5` Docs + handoff sync (`completed`)
 
 Queue line (exact):
 
 - update authority/queue/handoff/entrypoint to the implemented APX-B9 behavior seams and residual risks
 
-### `APX9-M6` Batch validation + review packet (`pending`)
+Outcome:
+
+- Authority + handoff + engineer entrypoint aligned to `architect_review_pending` for `APX-B9`
+
+### `APX9-M6` Batch validation + review packet (`completed`)
 
 Queue line (exact):
 
 - validate APX-B9 end-to-end and publish architect super-gate packet with behavior outcomes and blockers
+
+Engineer validation (this batch):
+
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac` — pass
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac` — pass
+- `python3 ops/android_terminal_host.py deploy` — pass
+- `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E` — pass (no `E` lines; warm-start top-instance warning only)
+- `adb shell am force-stop uk.laurencegouws.zide && adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity` — pass (`LaunchState: COLD`, `Status: ok`)
+
+**Feature status:**
+
+- **Tab-session:** distinct tab selection restarts native shell + userland refresh (single PTY; no transcript retention across tabs).
+- **zide-pm:** Packages flow runs install for edge spec after list-available.
+
+**Residual risk:** Dual-PTY / transcript preservation requires future native scope; `jq` install depends on `zide-pm` catalog + CLI compatibility.
+
+**Review chunk:** `APX-B9`
+
+**Commits (oldest → newest):** `8e1cc538`, `f60569b9`, `0823baa3`, `TBD`, `TBD`, `TBD`
+
+`Milestone reached per docs, architect review required.`
+
+Architect review verdict:
+
+- `Review chunk: APX-B9`
+- `Verdict: pending`
 
 ## Guardrails
 

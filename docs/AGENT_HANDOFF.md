@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android product expansion** (`APX`) — build product capability on top of the closed harness/widget ownership shape.
-- Active macro batch (`in_progress`): `APX-B9` — tab-state expansion slice 2 + zide-pm test-binary pull maturity; feature-first long engineer batch.
+- Active macro batch (`architect_review_pending`): `APX-B9` — tab-session restart + zide-pm edge install in doctor flow; engineer super-gate reached; Architect review next.
 - Parallel foundation lane (separate repo): `../zide-mobile-pm` may run in parallel for Android test-binary pull/install contract groundwork; Android APX remains primary until APX objectives are stable.
 - Prior closed/escalated: `AHW-B1` through `AHW-B26` accepted and `AHW` closed; `ASF-M3` escalated IME/assist/touch rows to operator evidence; `RF-M0` through `RF-M5` and `AX-M1` through `AX-M5` completed.
 - Active queue authority: `docs/todo/android/implementation.md`
