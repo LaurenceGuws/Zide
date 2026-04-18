@@ -74,10 +74,10 @@ Today the product hosts **one** terminal widget instance. Harness wiring groups
 its portable seams in `host/ui/TerminalWidgetInstance`: `SelectionController`,
 `GestureStateController`, `SurfaceBridge`, `SurfaceController`, and
 `SurfaceWidgetController`. `host/ui/TerminalWidgetCompositionAssembly`
-produces that holder from `InteractionAssembly.Result` + surface fields on
-`WidgetAssembly.Result`; shell/chrome/view-mode controller refs remain on
-`WidgetAssembly.Result` and the activity assigns them next to
-`compose(slot, …)` — `ZideActivity` does not construct the holder directly.
+produces that holder from `InteractionAssembly.Result` + `WidgetSurfaceHostJoin`;
+shell/chrome/view-mode controller refs remain on `WidgetAssembly.Result#harnessHost`
+and the activity assigns them next to `compose(slot, …)` — `ZideActivity` does not
+construct the holder directly.
 `TerminalWidgetSlotId` makes the slot explicit at composition and host seams
 (today only `TerminalWidgetSlotId.PRIMARY`). `TerminalWidgetSlotId.checkActiveProductTerminalSlot`
 runs at interaction assembly, widget assembly, and composition entry points so
@@ -106,7 +106,7 @@ expected to repeat the **same assembly pattern per slot**, not fork
    `Host` closes over the correct `InteractionAssembly.Result`, reports
    `terminalWidgetSlot()` for that slot, and supplies **slot views** (surface
    container, scroll overlay, chrome targets for that slot).
-3. One `TerminalWidgetCompositionAssembly.compose(TerminalWidgetSlotId, interaction, widgetResult)` per
+3. One `TerminalWidgetCompositionAssembly.compose(TerminalWidgetSlotId, interaction, surfaceJoin)` per
    instance → `TerminalWidgetInstance`.
 
 **Global harness** (single app-shell drawer, one `UserlandSessionCoordinator`,
@@ -164,7 +164,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 - `ZideActivity.java`: `698` lines
 - `input/ShellInputView.java`: `587` lines
 - `userland/UserlandInstaller.java`: `425` lines
-- `host/ui/WidgetAssembly.java`: `293` lines
+- `host/ui/WidgetAssembly.java`: `283` lines
 - `host/surface/SurfaceBridge.java`: `272` lines
 - `host/surface/SurfaceController.java`: `262` lines
 - `host/ui/ChromeController.java`: `213` lines
@@ -174,7 +174,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 
 | File | Contract Fit | Size/Shape | Next Pressure |
 | --- | --- | --- | --- |
-| `ZideActivity.java` | Good | Wiring-oriented Android entrypoint. JNI declarations remain out; startup null-guards are aggregated in `ProductHostStartupBundle`; `ActivityViewBindings` comes from `StatusViewAssembly.Result.activityViewBindings` (single `findViewById` capture); product terminal slot is `ACTIVE_PRODUCT_TERMINAL_SLOT` (single source) for interaction/widget/composition seams; IME visibility scratch is `ProductHostImeState` (status/input/widget); keep-screen-on default is `ProductHostKeepScreenOnPolicy`; terminal instance is `TerminalWidgetCompositionAssembly.compose(ACTIVE_PRODUCT_TERMINAL_SLOT, …)` after `InteractionAssembly` + `WidgetAssembly` (order: interaction → userland/session → widget → compose + assign chrome from `WidgetAssembly.Result`). | Keep activity orchestration-only; route any new behavior into the owning host/controller seam instead of adding policy here. |
+| `ZideActivity.java` | Good | Wiring-oriented Android entrypoint. JNI declarations remain out; startup null-guards are aggregated in `ProductHostStartupBundle`; `ActivityViewBindings` comes from `StatusViewAssembly.Result.activityViewBindings` (single `findViewById` capture); product terminal slot is `ACTIVE_PRODUCT_TERMINAL_SLOT` (single source) for interaction/widget/composition seams; IME visibility scratch is `ProductHostImeState` (status/input/widget); keep-screen-on default is `ProductHostKeepScreenOnPolicy`; terminal instance is `TerminalWidgetCompositionAssembly.compose(ACTIVE_PRODUCT_TERMINAL_SLOT, …, widgetResult.surfaceJoin)` after `InteractionAssembly` + `WidgetAssembly` (order: interaction → userland/session → widget → compose + assign chrome from `widgetResult.harnessHost`). | Keep activity orchestration-only; route any new behavior into the owning host/controller seam instead of adding policy here. |
 | `NativeBridge.java` | Good | Owns JNI library load state and native bridge declarations for the terminal host. | Keep this focused on JNI surface only; do not move Android policy or lifecycle behavior into it. |
 | `debug/AndroidDebugFormatter.java` | Good | Pure formatter plus snapshot values. Large constructor surface is acceptable for debug-only snapshots. | Split snapshot values only if formatter starts owning state or capture policy. |
 | `debug/NativeStatusLabels.java` | Good | Owns native status-enum label mapping for debug/operator text. | Keep as pure mapping; avoid embedding behavior/policy. |
@@ -206,7 +206,7 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/ui/TerminalWidgetInstance.java` | Good | Immutable bundle of one terminal widget’s surface + selection + gesture controller refs for harness hosting. | Do not fold app-shell or userland orchestration into this type. |
 | `host/ui/TerminalWidgetSlotId.java` | Good | Compile-visible slot identity; `checkActiveProductTerminalSlot` enforces active = `PRIMARY` at assembly/composition entry points today; Javadoc points at `ProductTerminalSlotShellMapping` for shell view alignment. | When new slots activate, update the check alongside host policy; do not use checks alone to ship tab behavior. |
 | `host/ui/ProductTerminalSlotShellMapping.java` | Good | Single seam: active product `TerminalWidgetSlotId` → `ShellViewId` (today `PRIMARY` → `TERMINAL`); invokes `checkActiveProductTerminalSlot`. Steady-state shell view reassert uses `AppShellNavigation`, not repeated mapping calls. | Extend mapping when `ShellViewId` gains distinct product views; keep chrome factory slot-agnostic until policy scopes it. |
-| `host/ui/TerminalWidgetCompositionAssembly.java` | Good | Harness-owned join of `InteractionAssembly.Result` + `WidgetAssembly.Result` into `TerminalWidgetInstance` only; `compose` takes `TerminalWidgetSlotId` first; shell/chrome/view-mode refs stay on `WidgetAssembly.Result`. Not tab/multi-instance policy. | Keep `WidgetAssembly.Result` as widget/chrome output; instance join stays here, not on `WidgetAssembly.Result` alone. |
+| `host/ui/TerminalWidgetCompositionAssembly.java` | Good | Harness-owned join of `InteractionAssembly.Result` + `WidgetSurfaceHostJoin` into `TerminalWidgetInstance` only; `compose` takes `TerminalWidgetSlotId` first; harness shell/chrome/view-mode refs stay on `WidgetAssembly.Result#harnessHost`. Not tab/multi-instance policy. | Keep `WidgetAssembly.Result` as widget assembly output; instance join stays here, not on `WidgetAssembly.Result` alone. |
 | `host/userland/WorkflowInstallStartupGlue.java` | Good | Install completion state transitions + runtime restart delegation. | Keep install orchestration thin; low-level extraction stays in `UserlandInstaller`. |
 | `host/ui/ActivityViewBindings.java` | Good | Owns raw activity view lookup and typed binding capture for terminal host wiring; `StatusViewAssembly.Result` exposes the authoritative `activityViewBindings` for activity wiring. | Keep this as lookup-only data binding; no policy or runtime behavior. |
 | `host/ui/ChromeFactory.java` | Good | Owns chrome-specific bridge/callback construction; IME policy input uses `ChromeImePolicyInput` from `WidgetAssembly.Host`; intentionally no `TerminalWidgetSlotId` (chrome slot-agnostic freeze). | Reopen slot parameters only with scoped per-slot chrome policy. |

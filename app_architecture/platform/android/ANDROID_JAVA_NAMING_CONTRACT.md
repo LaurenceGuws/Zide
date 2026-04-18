@@ -75,9 +75,9 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
 - use `TerminalWidgetInstance` for the harness-owned bundle of one terminal’s
   surface + selection + gesture seams; do not use it as a generic service locator
 - use `TerminalWidgetCompositionAssembly.compose` to combine
-  `InteractionAssembly.Result` with `WidgetAssembly.Result` into
-  `TerminalWidgetInstance`; shell/chrome/view-mode outputs stay on
-  `WidgetAssembly.Result` — it is not the terminal-instance factory by itself
+  `InteractionAssembly.Result` with `WidgetSurfaceHostJoin` into
+  `TerminalWidgetInstance`; harness shell/chrome/view-mode outputs stay on
+  `WidgetAssembly.Result#harnessHost` — it is not the terminal-instance factory by itself
 - reserve **slot** / **per-instance** vocabulary for future multi-terminal
   hosting described in `ANDROID_JAVA_HOST_STRUCTURE.md` (contract only; no tab
   product behavior implied by the name alone)
