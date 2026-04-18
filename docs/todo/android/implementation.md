@@ -3287,7 +3287,7 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `AHW-B15` super-gate is reached.
 
-### `AHW15-M1` Chrome IME input seam audit (`pending`)
+### `AHW15-M1` Chrome IME input seam audit (`completed`)
 
 Queue line (exact):
 
@@ -3298,6 +3298,20 @@ Acceptance:
 - enumerate current IME policy inputs/callsites in chrome assembly path
 - identify minimum behavior-neutral explicit seam to replace raw closures
 - document owner boundaries for the new seam
+
+Progress delta:
+
+- **Callsites:** `ChromeFactory.createChromeHostCallbacks` is the only constructor;
+  single consumer `WidgetAssembly.createChromeController`, passing
+  `host::imeVisible` and `host::setImeVisible` into anonymous `ChromeBridge.Callbacks`.
+- **Surface path:** `SurfaceWidgetAssemblyCallbacks` still uses `host::imeVisible` on
+  `WidgetAssembly.Host` — unchanged this batch (B15 is chrome factory input only).
+- **Explicit seam:** introduce `ChromeImePolicyInput` in `host/ui` with the same three
+  operations as the chrome host IME policy slice; `WidgetAssembly.Host` exposes
+  `chromeImePolicyInput()` (default maps `imeVisible` / `setImeVisible`); `ChromeFactory`
+  takes `ChromeImePolicyInput` instead of `BooleanSupplier` + `Consumer<Boolean>`.
+- **Owner:** harness (`WidgetAssembly.Host`); `ChromeController.Host` / `ChromeBridge.Callbacks`
+  method names stay as in B14.
 
 ### `AHW15-M2` Explicit IME policy input seam introduction (`pending`)
 
