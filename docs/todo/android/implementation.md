@@ -107,7 +107,7 @@ Dual-mode batching override (architect directive):
 - `APX-B4` accepted by architect.
 - `APX-B5` accepted by architect.
 - `APX-B6` accepted by architect.
-- `APX-B7` is `in_progress`.
+- `APX-B7` super-gate reached; architect review pending.
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -1709,7 +1709,7 @@ Architect review verdict:
 - `Review answers: declared-slot value propagation across interaction/widget/composition startup seams is accepted; enum-owner boundaries remaining in assembly/navigation contracts are acceptable for now.`
 - `Findings carried forward: no blocking regressions; startup behavior and PRIMARY-only runtime unchanged.`
 
-### `APX-B7` Slot enum-conversion choke point (`in_progress`)
+### `APX-B7` Slot enum-conversion choke point (`architect_review_pending`)
 
 Batch queue line (exact):
 
@@ -1763,7 +1763,7 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `APX-B7` super-gate is reached.
 
-### `APX7-M1` Conversion audit (`pending`)
+### `APX7-M1` Conversion audit (`completed`)
 
 Queue line (exact):
 
@@ -1775,7 +1775,13 @@ Acceptance:
 - define one owner method/type boundary for conversion
 - record explicit out-of-scope items (tabs UI, second active slot behavior)
 
-### `APX7-M2` Choke-point seam introduction (`pending`)
+Outcome:
+
+- prior fan-out on `ProductHostDeclaredTerminalWidgetSlot` was direct enum exposure; choke target is `terminalWidgetSlotForProductHarness()` on that value type only
+- startup consumers identified: `AppShellTerminalHostSelectionContext.forProductHostStartup`, `InteractionCallbacks`, `ProductTerminalWidgetAssemblyHost`, `TerminalWidgetCompositionAssembly.compose`, `WidgetAssembly.assemble` invariants
+- out-of-scope unchanged: no tabs UI, no second active slot, no new enum values
+
+### `APX7-M2` Choke-point seam introduction (`completed`)
 
 Queue line (exact):
 
@@ -1787,7 +1793,11 @@ Acceptance:
 - no compatibility/fallback paths
 - compile debug + release Java after code changes
 
-### `APX7-M3` Consumer rewiring (`pending`)
+Outcome:
+
+- `ProductHostDeclaredTerminalWidgetSlot#terminalWidgetSlotForProductHarness()` is the sole public conversion to `TerminalWidgetSlotId` from the declared-slot value seam
+
+### `APX7-M3` Consumer rewiring (`completed`)
 
 Queue line (exact):
 
@@ -1799,7 +1809,11 @@ Acceptance:
 - reduced direct `.terminalWidgetSlot()` fan-out in startup callsites
 - compile debug + release Java after code changes
 
-### `APX7-M4` Contract docs lock (`pending`)
+Outcome:
+
+- startup paths call `terminalWidgetSlotForProductHarness()`; `InteractionAssembly.Host` / `WidgetAssembly.Host` still expose `terminalWidgetSlot()` implemented via that choke point
+
+### `APX7-M4` Contract docs lock (`completed`)
 
 Queue line (exact):
 
@@ -1810,7 +1824,11 @@ Acceptance:
 - host structure and naming contract match code shape
 - userland contract updated only if ownership text requires it
 
-### `APX7-M5` Queue/handoff/entrypoint sync (`pending`)
+Outcome:
+
+- `ANDROID_JAVA_HOST_STRUCTURE.md` and `ANDROID_JAVA_NAMING_CONTRACT.md` updated for `terminalWidgetSlotForProductHarness()` ownership; userland contract had no slot-conversion text to change
+
+### `APX7-M5` Queue/handoff/entrypoint sync (`completed`)
 
 Queue line (exact):
 
@@ -1821,7 +1839,11 @@ Acceptance:
 - queue, handoff, and engineer entrypoint stay coherent through APX-B7 super-gate
 - super-gate stop condition and review packet contract are explicit
 
-### `APX7-M6` Batch validation + review packet (`pending`)
+Outcome:
+
+- summary line, this batch header, and handoff/entrypoint files aligned to `architect_review_pending` and super-gate packet
+
+### `APX7-M6` Batch validation + review packet (`completed`)
 
 Queue line (exact):
 
@@ -1833,6 +1855,27 @@ Acceptance:
 - deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
 - cold start smoke pass when a device is available
 - engineer reports full super-gate packet and explicit residual-risk note
+
+Engineer validation (this batch):
+
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac` — pass
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac` — pass
+- `python3 ops/android_terminal_host.py deploy` — pass
+- `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E` — pass (no `E` lines)
+- `adb shell am force-stop uk.laurencegouws.zide && adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity` — pass (`LaunchState: COLD`, `Status: ok`)
+
+**Residual risk:** Low — PRIMARY-only; `WidgetAssembly` host vs context invariants unchanged; `Host#terminalWidgetSlot()` remains the adapter surface over the value-type choke.
+
+**Review chunk:** `APX-B7`
+
+**Commits (oldest → newest):** `c59a8a70`, `42b79b52`, `TBD` (fill after doc/javadoc commits land)
+
+`Milestone reached per docs, architect review required.`
+
+Architect review verdict:
+
+- `Review chunk: APX-B7`
+- `Verdict: pending`
 
 ## Guardrails
 
