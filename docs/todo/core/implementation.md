@@ -436,7 +436,7 @@ Internal milestones (`CZH5-M1..M6`, execute sequentially in one batch):
 | Id | Scope |
 | --- | --- |
 | `CZH5-M1` | audit touched core/editor seams for stale probe/debug callers with explicit file list |
-| `CZH5-M2` | remove stale investigation-only callers/checks in audited seams (no behavior change) |
+| `CZH5-M2` | remove stale investigation-only callers/checks in audited seams (no behavior change) — **done** (see `CZH5-M2` section) |
 | `CZH5-M3` | ownership naming cleanup in audited seams only (no semantic change) |
 | `CZH5-M4` | re-run full stress ladder and capture results |
 | `CZH5-M5` | docs sync (queue/handoff/entrypoint + any touched authority docs) |
@@ -518,6 +518,34 @@ Internal milestones (`CZH5-M1..M6`, execute sequentially in one batch):
 - `zig build test` — **PASS**
 - `zig build -Dmode=terminal` — **PASS**
 - `zig build -Dmode=editor` — **PASS**
+
+#### `CZH5-M2` probe residue removal (`done`, 2026-04-18)
+
+**Authority:** removal queue in `#### CZH5-M1 stale probe/debug caller audit` above.
+
+**Removed (mechanical, no naming refactors):**
+
+- `src/ui/renderer/font_runtime.zig`
+  - `applyPinchZoomScale`: deleted gated `.info` `ui_pinch_zoom` / `terminal_pinch_tick` blocks and locals only used for those logs; preserved zoom/font prep control flow.
+  - `refreshUiScaleFromDisplayMetrics`: deleted gated `.info` `ui_scale` block.
+  - `applyPendingZoom`: deleted gated `.info` `ui_zoom` / `ui_zoom_effective` blocks.
+- `src/editor/editor.zig`
+  - `visibleHighlightWorkerMain`: removed `ZIDE_EDITOR_DEBUG_VISIBLE_HIGHLIGHT_DELAY_MS` getenv + sleep path.
+  - Deleted `debugWorkerDelayMs` helper (was only used for that probe).
+  - Removed `editor.perf` `.info` spam from: `applyPendingVisibleHighlightResult`, `computeVisibleHighlightRequest`, `executePendingVisibleHighlightRequest`, `ensureVisibleHighlightWorker`, `finishVisibleHighlightWorkerStop`, `visibleHighlightWorkerMain` (including `lines_done` only used for perf).
+  - `openFile`: removed `editor.perf` startup `.info` line (bytes/deferrals/timing); kept `editor.core` `openFile path=` `.info`.
+  - `undo` / `redo`: removed unconditional `.info` “ok” lines on success.
+  - Lifecycle `logFields(.info, …)`: removed `editor_ptr` fields everywhere; removed `visible_highlight_worker_join_begin` / `visible_highlight_worker_join_end` events (they only carried the pointer); kept non-pointer fields on remaining lifecycle events.
+
+**Validation (M2 engineer run, 2026-04-18):**
+
+- `zig build` — **PASS**
+- `zig build test` — **PASS**
+- `zig build -Dmode=terminal` — **PASS**
+- `zig build -Dmode=editor` — **PASS**
+- `zig build test-config` — **PASS**
+- `zig build test-editor` — **PASS**
+- `zig build test-terminal-replay-all` — **PASS**
 
 ## Response Contract
 

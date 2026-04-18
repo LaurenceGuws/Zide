@@ -237,7 +237,6 @@ pub const Editor = struct {
         const wake_fn = self.runtime_wake_fn orelse return;
         if (self.tearing_down or app_lifecycle_runtime.shutdownStarted()) {
             app_logger.logger("editor.lifecycle").logFields(.info, "runtime_wake_attempt", &.{
-                .{ .key = "editor_ptr", .value = .{ .unsigned = @intFromPtr(self) } },
                 .{ .key = "tearing_down", .value = .{ .boolean = self.tearing_down } },
                 .{ .key = "shutdown_started", .value = .{ .boolean = app_lifecycle_runtime.shutdownStarted() } },
                 .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
@@ -685,7 +684,6 @@ pub const Editor = struct {
     pub fn applyPendingVisibleHighlightResult(self: *Editor, cache: anytype) bool {
         if (self.tearing_down or app_lifecycle_runtime.shutdownStarted()) {
             app_logger.logger("editor.lifecycle").logFields(.info, "visible_highlight_apply_during_shutdown", &.{
-                .{ .key = "editor_ptr", .value = .{ .unsigned = @intFromPtr(self) } },
                 .{ .key = "tearing_down", .value = .{ .boolean = self.tearing_down } },
                 .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
             });
@@ -712,23 +710,14 @@ pub const Editor = struct {
                 line.tokens,
             );
         }
-        const perf_log = app_logger.logger("editor.perf");
-        perf_log.logf(
-            .info,
-            "visible_highlight_publish lines={d} start_line={d} end_line={d}",
-            .{ result.lines.len, result.request.start_line, result.request.end_line },
-        );
         return result.lines.len > 0;
     }
 
     fn computeVisibleHighlightRequest(self: *Editor, request: VisibleHighlightWorkRequest) ?VisibleHighlightWorkResult {
-        const perf_log = app_logger.logger("editor.perf");
         const highlighter = self.doc.highlighter orelse {
-            perf_log.logf(.info, "visible_precompute_highlight lines=0 budget=0 time_us=0", .{});
             return null;
         };
 
-        const t_start = std.time.nanoTimestamp();
         const range_start = self.lineStart(request.start_line);
         const range_end = if (request.end_line < self.lineCount()) self.lineStart(request.end_line) else self.totalLen();
         var tokens = highlighter.highlightRange(range_start, range_end, self.allocator) catch |err| blk: {
@@ -746,7 +735,6 @@ pub const Editor = struct {
             }.lessThan);
         }
 
-        var lines_done: usize = 0;
         var line_results = std.ArrayList(VisibleHighlightLineResult).empty;
         defer line_results.deinit(self.allocator);
         var token_idx: usize = 0;
@@ -783,7 +771,6 @@ pub const Editor = struct {
                 log.logf(.warning, "visible highlight result append failed line={d} err={s}", .{ line_idx, @errorName(err) });
                 continue;
             };
-            lines_done += 1;
         }
         const owned_lines = line_results.toOwnedSlice(self.allocator) catch |err| {
             const log = app_logger.logger("editor.draw");
@@ -795,25 +782,16 @@ pub const Editor = struct {
             .request = request,
             .lines = owned_lines,
         };
-        const elapsed_us = @as(i64, @intCast(@divTrunc(std.time.nanoTimestamp() - t_start, 1000)));
-        perf_log.logf(.info, "visible_precompute_highlight lines={d} budget={d} time_us={d}", .{ lines_done, request.end_line - request.start_line, elapsed_us });
         return result;
     }
 
     pub fn executePendingVisibleHighlightRequest(self: *Editor) bool {
-        const perf_log = app_logger.logger("editor.perf");
         const request = self.takeVisibleHighlightRequest() orelse {
-            perf_log.logf(.info, "visible_precompute_highlight lines=0 budget=0 time_us=0", .{});
             return false;
         };
         self.lockVisibleHighlightRuntime();
         self.visible_highlight_runtime.compute_in_flight = true;
         self.unlockVisibleHighlightRuntime();
-        perf_log.logf(
-            .info,
-            "visible_highlight_execute_inline start_line={d} end_line={d}",
-            .{ request.start_line, request.end_line },
-        );
         const result = self.computeVisibleHighlightRequest(request) orelse {
             self.lockVisibleHighlightRuntime();
             self.visible_highlight_runtime.compute_in_flight = false;
@@ -845,13 +823,10 @@ pub const Editor = struct {
             return;
         };
         self.setVisibleHighlightWorker(worker);
-        const perf_log = app_logger.logger("editor.perf");
-        perf_log.logf(.info, "visible_highlight_worker started=true", .{});
     }
 
     fn beginVisibleHighlightWorkerStop(self: *Editor) void {
         app_logger.logger("editor.lifecycle").logFields(.info, "visible_highlight_worker_stop_signal", &.{
-            .{ .key = "editor_ptr", .value = .{ .unsigned = @intFromPtr(self) } },
             .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
         });
         self.lockVisibleHighlightRuntime();
@@ -864,20 +839,12 @@ pub const Editor = struct {
 
     fn finishVisibleHighlightWorkerStop(self: *Editor) void {
         if (self.takeVisibleHighlightWorker()) |thread| {
-            app_logger.logger("editor.lifecycle").logFields(.info, "visible_highlight_worker_join_begin", &.{
-                .{ .key = "editor_ptr", .value = .{ .unsigned = @intFromPtr(self) } },
-            });
             thread.join();
-            app_logger.logger("editor.lifecycle").logFields(.info, "visible_highlight_worker_join_end", &.{
-                .{ .key = "editor_ptr", .value = .{ .unsigned = @intFromPtr(self) } },
-            });
         }
 
         self.lockVisibleHighlightRuntime();
         self.clearVisibleHighlightResult();
         self.unlockVisibleHighlightRuntime();
-        const perf_log = app_logger.logger("editor.perf");
-        perf_log.logf(.info, "visible_highlight_worker started=false", .{});
     }
 
     fn stopVisibleHighlightWorker(self: *Editor) void {
@@ -894,7 +861,6 @@ pub const Editor = struct {
             if (!self.visible_highlight_runtime.worker_running) {
                 self.unlockVisibleHighlightRuntime();
                 app_logger.logger("editor.lifecycle").logFields(.info, "visible_highlight_worker_exit", &.{
-                    .{ .key = "editor_ptr", .value = .{ .unsigned = @intFromPtr(self) } },
                     .{ .key = "reason", .value = .{ .string = "stopped_before_request" } },
                 });
                 return;
@@ -903,16 +869,6 @@ pub const Editor = struct {
             self.visible_highlight_runtime.request = null;
             self.visible_highlight_runtime.compute_in_flight = true;
             self.unlockVisibleHighlightRuntime();
-            const perf_log = app_logger.logger("editor.perf");
-            perf_log.logf(
-                .info,
-                "visible_highlight_worker_compute start_line={d} end_line={d}",
-                .{ request.start_line, request.end_line },
-            );
-            const debug_delay_ms = debugWorkerDelayMs("ZIDE_EDITOR_DEBUG_VISIBLE_HIGHLIGHT_DELAY_MS");
-            if (debug_delay_ms > 0) {
-                std.Thread.sleep(debug_delay_ms * std.time.ns_per_ms);
-            }
 
             var result = self.computeVisibleHighlightRequest(request) orelse continue;
 
@@ -922,7 +878,6 @@ pub const Editor = struct {
                 self.unlockVisibleHighlightRuntime();
                 self.deinitVisibleHighlightResult(&result);
                 app_logger.logger("editor.lifecycle").logFields(.info, "visible_highlight_worker_exit", &.{
-                    .{ .key = "editor_ptr", .value = .{ .unsigned = @intFromPtr(self) } },
                     .{ .key = "reason", .value = .{ .string = "stopped_after_compute" } },
                 });
                 return;
@@ -932,13 +887,7 @@ pub const Editor = struct {
                 self.deinitVisibleHighlightResult(&result);
                 continue;
             }
-            perf_log.logf(
-                .info,
-                "visible_highlight_worker_ready lines={d} start_line={d} end_line={d}",
-                .{ result.lines.len, result.request.start_line, result.request.end_line },
-            );
             app_logger.logger("editor.lifecycle").logFields(.info, "visible_highlight_worker_publish_attempt", &.{
-                .{ .key = "editor_ptr", .value = .{ .unsigned = @intFromPtr(self) } },
                 .{ .key = "tearing_down", .value = .{ .boolean = self.tearing_down } },
                 .{ .key = "shutdown_started", .value = .{ .boolean = app_lifecycle_runtime.shutdownStarted() } },
                 .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
@@ -1102,7 +1051,6 @@ pub const Editor = struct {
         if (!self.tearing_down) {
             self.tearing_down = true;
             app_logger.logger("editor.lifecycle").logFields(.info, "editor_deinit_enter", &.{
-                .{ .key = "editor_ptr", .value = .{ .unsigned = @intFromPtr(self) } },
                 .{ .key = "shell_deinitialized", .value = .{ .boolean = app_lifecycle_runtime.shellDeinitialized() } },
             });
         }
@@ -1115,8 +1063,6 @@ pub const Editor = struct {
 
     pub fn openFile(self: *Editor, path: []const u8) !void {
         const log = app_logger.logger("editor.core");
-        const perf_log = app_logger.logger("editor.perf");
-        const t_start = std.time.nanoTimestamp();
         log.logf(.info, "openFile path=\"{s}\"", .{path});
         // Clean up old state
         self.clearHighlighter();
@@ -1144,21 +1090,6 @@ pub const Editor = struct {
         self.cluster_offsets_defer_frames = startup_deferrals.cluster_offset_frames;
         self.startup_defer_last_frame_id = 0;
         self.scheduleHighlighter(path);
-        const elapsed_us = @as(i64, @intCast(@divTrunc(std.time.nanoTimestamp() - t_start, 1000)));
-        perf_log.logf(
-            .info,
-            "startup openFile path=\"{s}\" bytes={d} lines={d} highlight_disabled={any} defer_highlight={d} defer_precompute={d} defer_clusters={d} time_us={d}",
-            .{
-                path,
-                self.doc.buffer.totalLen(),
-                self.doc.buffer.lineCount(),
-                self.doc.highlight_disabled_for_large_file,
-                self.highlight_defer_frames,
-                self.visible_cache_precompute_defer_frames,
-                self.cluster_offsets_defer_frames,
-                elapsed_us,
-            },
-        );
     }
 
     pub fn save(self: *Editor) !void {
@@ -1775,10 +1706,6 @@ pub const Editor = struct {
         self.clearPreferredVisualCol();
         const result = try self.doc.buffer.undoWithCursor();
         if (result.changed) {
-            const log = app_logger.logger("editor.core");
-            log.logf(.info, "undo ok", .{});
-        }
-        if (result.changed) {
             if (result.state) |state_id| {
                 if (!(try self.restoreUndoSelectionState(state_id)) and result.cursor != null) {
                     const clamped = @min(result.cursor.?, self.doc.buffer.totalLen());
@@ -1820,10 +1747,6 @@ pub const Editor = struct {
     pub fn redo(self: *Editor) !bool {
         self.clearPreferredVisualCol();
         const result = try self.doc.buffer.redoWithCursor();
-        if (result.changed) {
-            const log = app_logger.logger("editor.core");
-            log.logf(.info, "redo ok", .{});
-        }
         if (result.changed) {
             if (result.state) |state_id| {
                 if (!(try self.restoreUndoSelectionState(state_id)) and result.cursor != null) {
@@ -2110,12 +2033,6 @@ pub const Editor = struct {
             h *%= 1099511628211;
         }
         return h;
-    }
-
-    fn debugWorkerDelayMs(name: [:0]const u8) u64 {
-        const raw = std.c.getenv(name) orelse return 0;
-        const value = std.mem.sliceTo(raw, 0);
-        return std.fmt.parseUnsigned(u64, value, 10) catch 0;
     }
 
     fn hasNonAscii(text: []const u8) bool {
