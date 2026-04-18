@@ -6,8 +6,8 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android product expansion** (`APX`) — build product capability on top of the closed harness/widget ownership shape.
-- Active macro batch (`blocked_cross_repo`): `APX-B18` — **hard stop**: current released dev prefix + on-device `zide-pm list-available` (`ZIDE_PM_HOST_PLATFORM=android`) show **no** `zide-android-*` catalog row (only `dev-baseline` observed). Unblock requires `../zide-mobile-pm` to ship Android-mode catalog ids; this repo documents the blocker in `docs/todo/android/implementation.md` (APX-B18 hard blocker packet).
-- Parallel foundation lane (separate repo): `../zide-mobile-pm` must publish `zide-android-*` list-available rows before APX-B18 M2+ can resume; Android lane stays doc-synced until then.
+- Active macro batch (`blocked_cross_repo`): `APX-B18` — PM release `android-dev-2026.04.18.162659` exposes `zide-android-catalog-smoke`, but staging fails because `runtime_support_links` requires creating `/data/data/zide.embed`, a sibling root the app sandbox cannot create.
+- Parallel foundation lane (separate repo): `../zide-mobile-pm` must publish a materializable runtime support link strategy before APX-B18 M2+ can resume; Android remains pinned to the last stageable dev prefix.
 - Prior closed/escalated: `AHW-B1` through `AHW-B26` accepted and `AHW` closed; `ASF-M3` escalated IME/assist/touch rows to operator evidence; `RF-M0` through `RF-M5` and `AX-M1` through `AX-M5` completed.
 - Active queue authority: `docs/todo/android/implementation.md`
 - Engineer entrypoint (dual mode): `docs/todo/android/ENGINEER_ENTRYPOINT.md`
