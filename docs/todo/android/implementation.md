@@ -3102,7 +3102,7 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `AHW-B14` super-gate is reached.
 
-### `AHW14-M1` IME visibility mutation owner/callsite audit (`pending`)
+### `AHW14-M1` IME visibility mutation owner/callsite audit (`completed`)
 
 Queue line (exact):
 
@@ -3113,6 +3113,19 @@ Acceptance:
 - enumerate IME visibility mutation entry points and callsites
 - classify each mutation as policy-owned or ad-hoc
 - define minimum behavior-neutral API narrowing cut
+
+Progress delta:
+
+- **Chrome seam (in scope):** `ChromeController.Host` exposes `currentImeVisible()` and
+  `setImeVisible(boolean)` — generic boolean mutation. `ChromeController` calls
+  `setImeVisible(shown || hasFocus)` on open, `setImeVisible(false)` on close, reads
+  `currentImeVisible()` in toggle. `ChromeBridge` / `ChromeFactory` callbacks mirror this.
+- **Out of scope (unchanged this batch):** activity `ZideActivity` field + `setImeVisible`,
+  `WidgetAssembly.Host` `imeVisible`/`setImeVisible`, input/surface/viewport stacks — not
+  chrome host `ChromeController.Host` narrowing targets.
+- **Narrowing cut:** replace `setImeVisible(boolean)` / `currentImeVisible()` on
+  `ChromeController.Host` with `chromeImeVisibilityPresent()`,
+  `applyChromeImeVisibilityHidden()`, and `applyChromeImeVisibilityFromOpenAttempt(shown, hasFocus)`.
 
 ### `AHW14-M2` IME visibility policy API narrowing (`pending`)
 
