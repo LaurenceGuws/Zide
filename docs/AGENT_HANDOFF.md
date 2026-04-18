@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: **Core Zig freeze + hygiene**
 - Campaign: **Core Zig Stability/Hygiene** (`CZH`)
-- Active macro batch (`architect_review_pending`): `CZH-B3` in
+- Active macro batch (`in_progress`): `CZH-B4` in
   `docs/todo/core/implementation.md`
 - Android lane status: **paused by product direction** except critical
   regressions/blockers for current users.
@@ -26,11 +26,11 @@ Current top priorities:
 4. clean normalization of Android-driven FFI/rendering advances into shared
    product seams
 
-Current batch intent (`CZH-B3`):
+Current batch intent (`CZH-B4`):
 
-- shared `terminal/ffi/renderer_metadata.zig` + publication `visibleStartLineIndex`
-  for host selection math; Android JNI/GLES files unchanged
-- keep Android-specific glue platform-local; behavior freeze + single-path contracts
+- close the known `test-editor` module-path baseline hole in the default local
+  invocation surface
+- keep runtime/product behavior frozen while build/test wiring is normalized
 
 ## First Read Order
 

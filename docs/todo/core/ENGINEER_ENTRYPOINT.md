@@ -16,9 +16,8 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B3` — **architect_review_pending** (FFI renderer metadata module +
-  `RenderCache.visibleStartLineIndex` for Android selection; see super-gate in
-  `docs/todo/core/implementation.md`).
+- `CZH-B4` — **in_progress** (`test-editor` module-path/build-root stability
+  lane; keep runtime behavior frozen while closing the baseline test gap).
 
 ## Hard Rules
 
@@ -31,7 +30,7 @@ Read in this exact order:
 
 - Target **5–10 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Execute `CZH3-M1..CZH3-M6` sequentially (defined in the queue).
+- Execute `CZH4-M1..CZH4-M6` sequentially (defined in the queue).
 
 ## Validation Ladder
 

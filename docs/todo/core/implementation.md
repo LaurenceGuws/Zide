@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B3` (`architect_review_pending`).
+- Current active macro batch: `CZH-B4` (`in_progress`).
 
 ## Campaign Goals
 
@@ -229,7 +229,7 @@ Internal milestones (`CZH2-M1..M6`, execute sequentially in one batch):
   `SL-ext-2 PASS`; `zig build test-editor` still fails with module-path imports
   and is tracked as a separate lane concern.
 
-### `CZH-B3` Android-Driven FFI/Render Normalization (`architect_review_pending`)
+### `CZH-B3` Android-Driven FFI/Render Normalization (`accepted`)
 
 Queue line (exact):
 
@@ -327,6 +327,51 @@ Internal milestones (`CZH3-M1..M6`, execute sequentially in one batch):
   gates remain future work.
 - `Architect validation request:` confirm layer ownership + optional Android compile spot-check
   when lane reopens.
+
+#### Architect gate result
+
+- `Review chunk: CZH-B3`
+- `Verdict: accepted`
+- `Engineer commits reviewed:` `1951875b`, `f2b8246f`
+- `Architect validation spot-check:` `zig build PASS`, `zig build test PASS`,
+  `zig build -Dmode=terminal PASS`, `zig build -Dmode=editor PASS`,
+  `zig build test-terminal-replay-all PASS`; `zig build test-editor` still fails
+  with module-path imports and is tracked as a separate stability lane concern.
+
+### `CZH-B4` Stability Baseline Closure: `test-editor` Module Path Lane (`in_progress`)
+
+Queue line (exact):
+
+- isolate and resolve `zig build test-editor` module-path/import-root failures so
+  the core stress ladder has no known baseline hole
+
+Acceptance:
+
+- `zig build test-editor` passes in the default repo-local invocation surface, or
+  failure is explicitly narrowed to a documented external/toolchain precondition
+  with reproducible evidence and fallback invocation policy
+- no behavior changes in terminal/runtime product paths
+- full existing ladder remains green:
+  `zig build`, `zig build test`, `zig build -Dmode=terminal`,
+  `zig build -Dmode=editor`, `zig build test-terminal-replay`,
+  `zig build test-terminal-replay-all`
+
+Internal milestones (`CZH4-M1..M6`, execute sequentially in one batch):
+
+| Id | Scope |
+| --- | --- |
+| `CZH4-M1` | Audit `test-editor` build graph/module root wiring with explicit failing edge list |
+| `CZH4-M2` | Implement bounded build/test wiring fix (no product runtime semantics) |
+| `CZH4-M3` | Re-run `zig build test-editor`; if still failing, narrow to concrete external precondition with proof |
+| `CZH4-M4` | Probe/debug caller hygiene in touched build/test files only |
+| `CZH4-M5` | Docs sync (queue/handoff/entrypoint + any touched build/test authority docs) |
+| `CZH4-M6` | Super-gate packet with residual-risk notes |
+
+`CZH-B4` stop conditions:
+
+- stop only at super-gate or real hard blocker
+- target 5–10 validated commits
+- maintain behavior freeze and single-path contract
 
 ## Response Contract
 
