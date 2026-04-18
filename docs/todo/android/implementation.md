@@ -4028,7 +4028,7 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `AHW-B19` super-gate is reached.
 
-### `AHW19-M1` Keep-screen-on ownership audit (`pending`)
+### `AHW19-M1` Keep-screen-on ownership audit (`completed`)
 
 Queue line (exact):
 
@@ -4039,6 +4039,14 @@ Acceptance:
 - enumerate keep-screen-on mutation and lifecycle callsites in Android host startup
 - define explicit seam type/owner and out-of-scope paths
 - record behavior invariants (default always-on while activity is open)
+
+Progress delta:
+
+- **Single callsite:** `ZideActivity.onCreate` → `applyDefaultTerminalKeepScreenOnPolicy()` →
+  `getWindow().addFlags(FLAG_KEEP_SCREEN_ON)` only.
+- **Seam:** `ProductHostKeepScreenOnPolicy` in `host/ui` owns default application; activity holds one
+  instance and delegates `Window` mutation through it (future settings can gate inside the policy).
+- **Out of scope:** IME/slot/chrome seams; no settings UI; no flag clear paths in this batch.
 
 ### `AHW19-M2` Explicit keep-screen-on seam introduction (`pending`)
 
