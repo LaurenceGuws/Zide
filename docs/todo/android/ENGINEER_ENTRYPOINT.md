@@ -75,7 +75,7 @@ boundaries while preserving current single-terminal behavior.
 - `APX-B9` is accepted: tab selection now drives native restart + userland refresh, and Packages flow proved Android-side `zide-pm install`.
 - `APX-B10` is accepted: doctor path is read-only and test-binary install mutation is explicit lifecycle-owned with dedicated sidebar trigger.
 - `APX-B11` is accepted: session/tab controls are AppShell sidebar navigation (not inline above assist); assist strip stays input-only; APX-B10 contracts preserved.
-- `APX-B12` is accepted: hardcoded package-id coupling removed; list-available parser + explicit no-candidate path are in place.
+- `APX-B12` is reviewed with changes requested: hardcoded package-id coupling removed, but candidate narrowing is incomplete because list-available output can include non-edge ids.
 - `APX-B13` is feature-first: narrow candidate eligibility to Android edge ids (`zide-android-*`), keep deterministic install pick, and emit explicit selected/no-candidate outcomes — **no Java manifest parsing** in this batch.
 - `zide-mobile-pm` foundation work is allowed in parallel, but APX-B13 remains the primary in-repo execution lane here.
 - `AHW-B26` is accepted and `AHW` is closed.

@@ -78,7 +78,7 @@ Engineer session seed:
 - `APX-B9` is accepted: distinct tab selection now restarts native shell + userland refresh; Packages flow proves Android-side `zide-pm install` path.
 - `APX-B10` is accepted: doctor is read-only and install mutation is explicit lifecycle-owned (`UserlandAndroidTestBinaryInstallLifecycle`) with dedicated sidebar trigger.
 - `APX-B11` is accepted: terminal session/tab controls are now AppShell sidebar navigation; assist row stays input-only; APX-B10 doctor/install split unchanged.
-- `APX-B12` is accepted: hardcoded test-binary package id removed; install candidate is derived from `zide-pm list-available` with explicit no-candidate path; no Java manifest parsing.
+- `APX-B12` is reviewed with changes requested: hardcoded package id was removed, but edge-install candidate narrowing is incomplete (current list-available output can select `dev-baseline`).
 - `APX-B13` is in progress: narrow install candidates to Android edge ids (`zide-android-*`) and emit explicit selected/no-candidate outcomes while preserving APX-B10/APX-B11 behavior.
 - Cleanup-only changes are out of scope unless they directly unblock APX-B13 feature delivery.
 - APX remains primary until these are stable: harness/widget split stability, clean tab-state expansion, and zide-pm real Android test-binary pull maturity.

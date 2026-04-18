@@ -130,7 +130,7 @@ Dual-mode batching override (architect directive):
 - `APX-B9` accepted by architect.
 - `APX-B10` accepted by architect.
 - `APX-B11` accepted by architect.
-- `APX-B12` accepted by architect.
+- `APX-B12` reviewed; changes requested (fixed in APX-B13).
 - `APX-B13` in progress.
 
 ## Campaign Landing Gate (Refocus Shape)
@@ -2568,13 +2568,14 @@ Engineer validation (this batch):
 Architect review verdict:
 
 - `Review chunk: APX-B12`
-- `Verdict: accepted`
+- `Verdict: changes requested`
 - `Commits reviewed: fd1a6f44, 06d51ca0, e32b9d57, a032008a`
 - `Architect validation spot-check: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
 - `Architect runtime validation spot-check: python3 ops/android_terminal_host.py deploy (pass); adb cold start (pass, LaunchState: COLD, Status: ok); adb logcat -d -s AndroidRuntime:E (pass, empty)`
 - `Engineer validation accepted: compile + deploy + AndroidRuntime:E smoke + cold start pass`
-- `Review answers: list-available-only candidate derivation is accepted; Java manifest parsing remains out-of-scope and disallowed for this lane.`
-- `Findings carried forward: no blocking regressions; APX-B10 doctor/read-only and APX-B11 sidebar/assist contracts remain intact.`
+- `Review answers: Java manifest parsing remains out-of-scope and disallowed; list-available parser must not select non-edge package ids for edge-install UX.`
+- `Finding (blocking): with current released manifest under ZIDE_PM_HOST_PLATFORM=android, list-available emits both dev-baseline and zide-android-catalog-smoke; lexicographic-first selection can pick dev-baseline, which violates edge-install intent.`
+- `Carry-forward: APX-B13 is the required fix batch; APX-B10 doctor/read-only and APX-B11 sidebar/assist contracts remain intact.`
 
 ### `APX-B13` Android-Only Edge Candidate Policy + Explicit Outcome UX (`in_progress`)
 
