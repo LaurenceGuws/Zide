@@ -1,6 +1,7 @@
 package uk.laurencegouws.terminal.input;
 
 import android.view.InputDevice;
+import android.view.KeyCharacterMap;
 import android.view.KeyEvent;
 import android.view.inputmethod.InputMethodManager;
 
@@ -53,6 +54,13 @@ public final class HardwareKeyboardController {
 
     private static boolean shouldHandleHardwareKeyboardEvent(KeyEvent event) {
         if ((event.getSource() & InputDevice.SOURCE_KEYBOARD) == 0) {
+            return false;
+        }
+        if (event.getDeviceId() == KeyCharacterMap.VIRTUAL_KEYBOARD) {
+            return false;
+        }
+        final InputDevice device = event.getDevice();
+        if (device == null || device.isVirtual()) {
             return false;
         }
         switch (event.getKeyCode()) {
