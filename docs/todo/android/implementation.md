@@ -121,7 +121,8 @@ Dual-mode batching override (architect directive):
 - Completed macro batch: `AHW-B15` (accepted by Architect; widget-host IME primitive seam narrowing follow-up queued in `AHW-B16`).
 - Completed macro batch: `AHW-B16` (accepted by Architect; activity IME state carrier seam follow-up queued in `AHW-B17`).
 - Completed macro batch: `AHW-B17` (accepted by Architect; host IME callback seam unification follow-up queued in `AHW-B18`).
-- Engineer delivery complete; Architect verdict pending: `AHW-B18` (host IME callback seam unification, behavior-neutral). No macro batch is `in_progress` until Architect refocuses the queue.
+- Completed macro batch: `AHW-B18` (accepted by Architect; keep-screen-on policy seam hardening follow-up queued in `AHW-B19`).
+- `AHW-B19` is `in_progress` (terminal keep-screen-on policy seam hardening, behavior-preserving).
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -3792,7 +3793,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B18` Host IME callback seam unification (`verdict_pending`)
+### `AHW-B18` Host IME callback seam unification (`completed`)
 
 Batch queue line (exact):
 
@@ -3918,7 +3919,7 @@ Progress delta:
 
 - App-shell invariants + table rows; naming contract bullet. `USERLAND_HOST_CONTRACT` unchanged.
 
-### `AHW18-M5` Queue/handoff/entrypoint sync (`completed`)
+### `AHW18-M5` Queue/handoff/entrypoint sync (`completed_in_batch`)
 
 Queue line (exact):
 
@@ -3933,7 +3934,7 @@ Progress delta:
 
 - This file, `ENGINEER_ENTRYPOINT.md`, and `AGENT_HANDOFF.md` updated for `verdict_pending`.
 
-### `AHW18-M6` Batch validation + review packet (`completed`)
+### `AHW18-M6` Batch validation + review packet (`completed_in_batch`)
 
 Queue line (exact):
 
@@ -3960,10 +3961,143 @@ Super-gate engineer packet:
 - `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb activity start + AndroidRuntime:E (pass, empty); adb cold start (pass)`
 - `Engineer updates: Blocked by Archtect review needed: true`
 
-Review questions for Architect:
+Architect review verdict:
 
-- Confirm `HostImeStateAccess` as the long-term host callback IME access seam (backed by `ProductHostImeState`).
-- Confirm next macro batch after verdict.
+- `Review chunk: AHW-B18`
+- `Verdict: accepted`
+- `Commits reviewed: 9ee1dc0a, 4a590cc4, b9dae7c5, c00d3dfa`
+- `Architect validation spot-check: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
+- `Architect runtime validation spot-check: python3 ops/android_terminal_host.py deploy (pass); adb cold start (pass); adb logcat -d -s AndroidRuntime:E (pass, empty)`
+- `Engineer device validation accepted: deploy + AndroidRuntime:E smoke + cold start pass`
+- `Findings carried forward: accept HostImeStateAccess as the long-term host callback IME access seam backed by ProductHostImeState. Next batch should harden terminal keep-screen-on ownership behind an explicit harness seam while preserving current always-on default behavior.`
+
+`Milestone reached per docs, architect review required.`
+
+---
+
+### `AHW-B19` Terminal keep-screen-on policy seam hardening (`in_progress`)
+
+Batch queue line (exact):
+
+- isolate terminal keep-screen-on default policy behind an explicit harness seam for future settings control while preserving behavior
+
+Batch purpose:
+
+- keep current product behavior: terminal host keeps screen on by default while activity is open
+- move keep-screen-on mutation ownership out of ad-hoc activity calls into an explicit harness seam
+- prepare a clean single-path seam for future settings-toggle work without adding toggle behavior now
+
+Batch scope:
+
+- Java Android terminal host only, plus authority docs needed to keep contract truth current
+- primary code root:
+  `android/terminal-host/app/src/main/java/uk/laurencegouws/terminal/**`
+- allowed docs:
+  `docs/todo/android/implementation.md`,
+  `docs/todo/android/ENGINEER_ENTRYPOINT.md`,
+  `docs/AGENT_HANDOFF.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_NAMING_CONTRACT.md`,
+  `app_architecture/platform/android/USERLAND_HOST_CONTRACT.md`
+
+Batch non-goals:
+
+- no settings UI/toggle behavior
+- no terminal tabs UI/product behavior
+- no tab persistence/session switching
+- no terminal-core or shared-renderer changes
+- no app-shell UI redesign
+- no debug-view UI resurrection
+- no broad rename sweep
+- no ASF operator-evidence churn unless new evidence arrives
+
+Batch super-gate:
+
+- keep-screen-on ownership is explicit and named on a harness seam (no ad-hoc direct mutation in startup flow)
+- product behavior remains unchanged: keep-screen-on default active for terminal host
+- B14-B18 IME and slot/chrome contracts remain unchanged
+- docs reflect ownership and naming shape
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass at final seam boundary
+
+Internal milestone cadence:
+
+- Engineer executes `AHW19-M1` through `AHW19-M6` sequentially.
+- Do not stop for architect review between internal milestones.
+- Mark each internal milestone complete in this file as it lands.
+- Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
+  the `AHW-B19` super-gate is reached.
+
+### `AHW19-M1` Keep-screen-on ownership audit (`pending`)
+
+Queue line (exact):
+
+- audit keep-screen-on callsites and define explicit harness owner seam
+
+Acceptance:
+
+- enumerate keep-screen-on mutation and lifecycle callsites in Android host startup
+- define explicit seam type/owner and out-of-scope paths
+- record behavior invariants (default always-on while activity is open)
+
+### `AHW19-M2` Explicit keep-screen-on seam introduction (`pending`)
+
+Queue line (exact):
+
+- introduce explicit harness seam type(s) for terminal keep-screen-on policy ownership
+
+Acceptance:
+
+- add seam type(s) that own keep-screen-on mutation with clear naming
+- wire seam creation from the activity host without behavior changes
+- compile debug + release Java after code changes
+
+### `AHW19-M3` Activity startup rewiring (`pending`)
+
+Queue line (exact):
+
+- rewire activity startup to consume the explicit keep-screen-on seam
+
+Acceptance:
+
+- startup flow no longer performs ad-hoc keep-screen-on mutation directly
+- keep-screen-on behavior stays default-on for the terminal activity
+- compile debug + release Java after code changes
+
+### `AHW19-M4` Contract docs lock (`pending`)
+
+Queue line (exact):
+
+- lock naming/structure/userland docs to the explicit keep-screen-on seam ownership
+
+Acceptance:
+
+- host structure and naming contract match code shape
+- userland contract remains unchanged unless ownership text requires an update
+
+### `AHW19-M5` Queue/handoff/entrypoint sync (`pending`)
+
+Queue line (exact):
+
+- keep queue, handoff, and engineer entrypoint aligned to AHW-B19 execution and super-gate stop
+
+Acceptance:
+
+- queue, handoff, and engineer entrypoint stay coherent through B19 super-gate
+- super-gate stop condition and review packet contract are explicit
+
+### `AHW19-M6` Batch validation + review packet (`pending`)
+
+Queue line (exact):
+
+- validate AHW-B19 end-to-end and publish the architect review packet
+
+Acceptance:
+
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
+- cold start smoke pass when a device is available
+- engineer reports the full super-gate packet and stops for Architect review
 
 `Milestone reached per docs, architect review required.`
 
