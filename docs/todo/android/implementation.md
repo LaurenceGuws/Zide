@@ -120,7 +120,8 @@ Dual-mode batching override (architect directive):
 - Completed macro batch: `AHW-B14` (accepted by Architect; chrome IME policy input ownership follow-up queued in `AHW-B15`).
 - Completed macro batch: `AHW-B15` (accepted by Architect; widget-host IME primitive seam narrowing follow-up queued in `AHW-B16`).
 - Completed macro batch: `AHW-B16` (accepted by Architect; activity IME state carrier seam follow-up queued in `AHW-B17`).
-- Engineer delivery complete; Architect verdict pending: `AHW-B17` (activity IME state carrier seam consolidation, behavior-neutral). No macro batch is `in_progress` until Architect refocuses the queue.
+- Completed macro batch: `AHW-B17` (accepted by Architect; host IME callback seam unification follow-up queued in `AHW-B18`).
+- `AHW-B18` is `in_progress` (host IME callback seam unification, behavior-neutral).
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -3606,7 +3607,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B17` Activity IME state carrier seam consolidation (`verdict_pending`)
+### `AHW-B17` Activity IME state carrier seam consolidation (`completed`)
 
 Batch queue line (exact):
 
@@ -3735,7 +3736,7 @@ Progress delta:
 - App-shell invariants + `ZideActivity` / `ProductHostImeState` table row; naming contract bullet.
   `USERLAND_HOST_CONTRACT` unchanged.
 
-### `AHW17-M5` Queue/handoff/entrypoint sync (`completed`)
+### `AHW17-M5` Queue/handoff/entrypoint sync (`completed_in_batch`)
 
 Queue line (exact):
 
@@ -3750,7 +3751,7 @@ Progress delta:
 
 - This file, `ENGINEER_ENTRYPOINT.md`, and `AGENT_HANDOFF.md` updated for `verdict_pending`.
 
-### `AHW17-M6` Batch validation + review packet (`completed`)
+### `AHW17-M6` Batch validation + review packet (`completed_in_batch`)
 
 Queue line (exact):
 
@@ -3777,12 +3778,144 @@ Super-gate engineer packet:
 - `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb activity start + AndroidRuntime:E (pass, empty); adb cold start (pass)`
 - `Engineer updates: Blocked by Archtect review needed: true`
 
-Review questions for Architect:
+Architect review verdict:
 
-- Confirm `ProductHostImeState` as the long-term activity IME carrier.
-- Confirm next macro batch after verdict.
+- `Review chunk: AHW-B17`
+- `Verdict: accepted`
+- `Commits reviewed: b88b0649, 07756083, 748d5132, 49c594aa`
+- `Architect validation spot-check: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
+- `Architect runtime validation spot-check: python3 ops/android_terminal_host.py deploy (pass); adb cold start (pass); adb logcat -d -s AndroidRuntime:E (pass, empty)`
+- `Engineer device validation accepted: deploy + AndroidRuntime:E smoke + cold start pass`
+- `Findings carried forward: accept ProductHostImeState as the long-term activity IME carrier. Next batch should unify remaining host callback surfaces to consume an explicit IME state access seam instead of repeated BooleanSupplier/Consumer pairs.`
 
 `Milestone reached per docs, architect review required.`
+
+---
+
+### `AHW-B18` Host IME callback seam unification (`in_progress`)
+
+Batch queue line (exact):
+
+- unify host callback IME wiring to explicit carrier-backed seams while preserving behavior
+
+Batch purpose:
+
+- reduce remaining raw BooleanSupplier/Consumer IME callback fan-out in host assemblies
+- keep B14/B15/B16/B17 IME seams and naming unchanged
+- preserve existing behavior for input/status/viewport/surface callers
+
+Batch scope:
+
+- Java Android terminal host only, plus authority docs needed to keep contract truth current
+- primary code root:
+  `android/terminal-host/app/src/main/java/uk/laurencegouws/terminal/**`
+- allowed docs:
+  `docs/todo/android/implementation.md`,
+  `docs/todo/android/ENGINEER_ENTRYPOINT.md`,
+  `docs/AGENT_HANDOFF.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_NAMING_CONTRACT.md`,
+  `app_architecture/platform/android/USERLAND_HOST_CONTRACT.md`
+
+Batch non-goals:
+
+- no terminal tabs UI/product behavior
+- no tab persistence/session switching
+- no terminal-core or shared-renderer changes
+- no selection/IME/gesture behavior changes except compile-preserving seam rewiring
+- no app-shell UI redesign
+- no debug-view UI resurrection
+- no broad rename sweep
+- no ASF operator-evidence churn unless new evidence arrives
+
+Batch super-gate:
+
+- targeted host callback surfaces consume explicit IME state access seam(s), not repeated raw pairs
+- B14/B15/B16/B17 seams remain unchanged in name/behavior
+- active-view/sidebar ownership, slot mapping seam, slot choke point, and chrome slot freeze remain unchanged
+- single-slot runtime behavior remains unchanged
+- docs reflect final ownership and naming shape
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass at final seam boundary
+
+Internal milestone cadence:
+
+- Engineer executes `AHW18-M1` through `AHW18-M6` sequentially.
+- Do not stop for architect review between internal milestones.
+- Mark each internal milestone complete in this file as it lands.
+- Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
+  the `AHW-B18` super-gate is reached.
+
+### `AHW18-M1` Host IME callback fan-out audit (`pending`)
+
+Queue line (exact):
+
+- audit remaining host callback IME pairs and define explicit access seam target list
+
+Acceptance:
+
+- enumerate remaining raw IME read/write callback pair callsites in host assembly paths
+- identify minimum explicit seam(s) to replace duplicated pairs
+- document owner boundaries and out-of-scope paths
+
+### `AHW18-M2` Explicit IME state access seam introduction (`pending`)
+
+Queue line (exact):
+
+- introduce explicit IME state access seam type(s) for host callback wiring
+
+Acceptance:
+
+- add seam type(s) that represent IME presence read + visibility write where required
+- wire seam creation from ProductHostImeState without behavior changes
+- compile debug + release Java after code changes
+
+### `AHW18-M3` Host callback rewiring to explicit seam(s) (`pending`)
+
+Queue line (exact):
+
+- rewire targeted host callback constructors to consume explicit IME seam(s)
+
+Acceptance:
+
+- targeted callback paths no longer pass duplicated raw IME pairs
+- B14/B15/B16/B17 seam interfaces and names remain unchanged
+- compile debug + release Java after code changes
+
+### `AHW18-M4` Contract docs lock (`pending`)
+
+Queue line (exact):
+
+- lock naming/structure/userland docs to unified host IME callback seam ownership
+
+Acceptance:
+
+- host structure, naming contract, and userland contract match code shape
+- B12-B17 ownership boundaries and chrome freeze guidance remain unchanged
+
+### `AHW18-M5` Queue/handoff/entrypoint sync (`pending`)
+
+Queue line (exact):
+
+- keep queue, handoff, and engineer entrypoint aligned to AHW-B18 execution and super-gate stop
+
+Acceptance:
+
+- queue, handoff, and engineer entrypoint stay coherent through B18 super-gate
+- super-gate stop condition and review packet contract are explicit
+
+### `AHW18-M6` Batch validation + review packet (`pending`)
+
+Queue line (exact):
+
+- validate AHW-B18 end-to-end and publish the architect review packet
+
+Acceptance:
+
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
+- cold start smoke pass when a device is available
+- engineer reports the full super-gate packet and stops for Architect review
 
 ## Guardrails
 

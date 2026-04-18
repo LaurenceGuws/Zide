@@ -34,16 +34,16 @@ you must report the mismatch.
 
 ## Current Target
 
-Engineer delivery for `AHW-B17` is complete; batch status is `verdict_pending` pending Architect review. No macro batch is `in_progress` until the Architect refocuses the queue after verdict.
+`AHW-B18` is `in_progress` and is the only active macro batch.
 
-Reference queue line (exact) for the completed batch:
+Active batch queue line (exact):
 
-- consolidate activity IME state into an explicit harness carrier seam while preserving behavior
+- unify host callback IME wiring to explicit carrier-backed seams while preserving behavior
 
 ## Core Boundary Rule
 
-This batch exists to consolidate activity IME state wiring while preserving
-widget/chrome IME seam contracts and existing active-view/sidebar ownership.
+This batch exists to unify host callback IME wiring while preserving
+activity/widget/chrome IME seam contracts and existing active-view/sidebar ownership.
 
 - Android Harness owns platform ceremony, app-shell layout/styling/theming,
   navigation/view state, userland orchestration, and widget instance hosting.
@@ -57,9 +57,10 @@ widget/chrome IME seam contracts and existing active-view/sidebar ownership.
 - `WidgetAssembly.Result` remains widget/chrome assembly output; it is not the
   terminal-instance factory by itself.
 
-## Required Direction From Architect Review (post-AHW-B16)
+## Required Direction From Architect Review (post-AHW-B17)
 
-- `AHW-B16` is accepted.
+- `AHW-B17` is accepted.
+- Keep `ProductHostImeState` as the long-term activity IME carrier.
 - Keep `SurfaceWidgetHostImeVisibility` + required `chromeImePolicyInput()` as the long-term widget-host IME shape.
 - Keep `ChromeImePolicyInput` as the long-term chrome assembly input seam.
 - Keep `chromeImeVisibility*` + `applyChromeImeVisibility*` naming as the long-term chrome host seam.
@@ -79,16 +80,17 @@ widget/chrome IME seam contracts and existing active-view/sidebar ownership.
 
 ## Internal Milestones
 
-`AHW17-M1` through `AHW17-M6` are complete; the `AHW-B17` super-gate has been reached. Progress is recorded in `docs/todo/android/implementation.md`.
+Execute `AHW18-M1` through `AHW18-M6` sequentially; do not stop before the
+`AHW-B18` super-gate unless a hard stop condition is hit.
 
-Historical execution order (for the next engineer session after Architect refocus):
+Execute in order and mark progress in `docs/todo/android/implementation.md`.
 
-- `AHW17-M1`: audit activity IME state reads/writes and define explicit carrier seam shape.
-- `AHW17-M2`: introduce explicit activity-owned IME state carrier seam in host/ui.
-- `AHW17-M3`: rewire host assembly callsites to the IME state carrier seam.
-- `AHW17-M4`: lock authority docs to activity IME carrier ownership.
-- `AHW17-M5`: keep queue/handoff/entrypoint aligned to B17 super-gate.
-- `AHW17-M6`: run validation and publish super-gate review packet.
+- `AHW18-M1`: audit remaining host callback IME pairs and define explicit access seam target list.
+- `AHW18-M2`: introduce explicit IME state access seam type(s) for host callback wiring.
+- `AHW18-M3`: rewire targeted host callback constructors to explicit seam(s).
+- `AHW18-M4`: lock authority docs to unified host IME callback seam ownership.
+- `AHW18-M5`: keep queue/handoff/entrypoint aligned to B18 super-gate.
+- `AHW18-M6`: run validation and publish super-gate review packet.
 
 ## Allowed Work
 
@@ -177,7 +179,7 @@ when:
 - a behavior change is required where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
 - implementing terminal tabs/product behavior becomes necessary to proceed
-- the `AHW-B17` super-gate is reached
+- the `AHW-B18` super-gate is reached
 
 Otherwise continue autonomously with:
 
@@ -185,9 +187,9 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At `AHW-B17` super-gate, report:
+At `AHW-B18` super-gate, report:
 
-- review chunk name: `AHW-B17`
+- review chunk name: `AHW-B18`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs
