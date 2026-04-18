@@ -90,10 +90,12 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
 - map product terminal slot → `ShellViewId` only via
   `ProductTerminalSlotShellMapping.shellViewIdForTerminalSlot` — do not sprinkle
   `ShellViewId.TERMINAL` for active product shell routing outside that seam
-- construct product `AppShellNavigation` with `forProductTerminalSlot`; wrap it in
-  `AppShellTerminalViewPolicy` for harness bundle + view-mode activation; use
-  `applyActiveProductTerminalShellView` on view-mode apply (delegates to
-  `applyProductTerminalShellViewActive`) instead of invoking
+- app-shell **selection** vs **activation**: `AppShellTerminalSelectionPolicy` owns which
+  `TerminalWidgetSlotId` is selected for routing (`selectedProductTerminalSlotForAppShell`);
+  `AppShellTerminalViewPolicy` owns shell-view activation and chrome drawer policy for navigation
+  built from that slot. `WidgetAssembly` constructs selection from `forDeclaredHostSlot` then
+  `AppShellNavigation.forProductTerminalSlot(selected…)`; use `applyActiveProductTerminalShellView`
+  on view-mode apply (delegates to `applyProductTerminalShellViewActive`) instead of invoking
   `ProductTerminalSlotShellMapping` again on hot paths
 - `AppShellNavigation` does not expose a public active-shell-view setter; product
   paths use `applyProductTerminalShellViewActive`; `AppShellViewState` construction

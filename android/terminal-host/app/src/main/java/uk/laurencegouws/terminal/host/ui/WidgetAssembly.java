@@ -142,8 +142,11 @@ public final class WidgetAssembly {
     }
 
     public static Result assemble(Host host) {
+        final AppShellTerminalSelectionPolicy appShellTerminalSelectionPolicy =
+                AppShellTerminalSelectionPolicy.forDeclaredHostSlot(host.terminalWidgetSlot());
         final AppShellNavigation appShellNavigation =
-                AppShellNavigation.forProductTerminalSlot(host.terminalWidgetSlot());
+                AppShellNavigation.forProductTerminalSlot(
+                        appShellTerminalSelectionPolicy.selectedProductTerminalSlotForAppShell());
         final AppShellTerminalViewPolicy appShellTerminalViewPolicy =
                 new AppShellTerminalViewPolicy(appShellNavigation);
         final SurfaceWidgetControllerRef surfaceWidgetControllerRef = new SurfaceWidgetControllerRef();
@@ -168,6 +171,7 @@ public final class WidgetAssembly {
 
         return new Result(
                 new WidgetHarnessHostControllers(
+                        appShellTerminalSelectionPolicy,
                         appShellTerminalViewPolicy,
                         productShellStateHostBridge,
                         shellStatePresenter,

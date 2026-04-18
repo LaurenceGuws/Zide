@@ -3,7 +3,8 @@ package uk.laurencegouws.terminal.host.ui;
 import java.util.Objects;
 
 /**
- * App-shell policy for which shell view is active for the product terminal surface.
+ * App-shell <strong>activation</strong> policy: which shell view is active for the product terminal
+ * surface (re-assert product terminal shell view, chrome drawer sidebar reads/writes).
  *
  * <p>Today: single {@link TerminalWidgetSlotId#PRIMARY} harness maps to one resolved
  * {@link ShellViewId} via {@link AppShellNavigation#forProductTerminalSlot}; view-mode
