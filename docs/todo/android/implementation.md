@@ -1868,7 +1868,7 @@ Engineer validation (this batch):
 
 **Review chunk:** `APX-B7`
 
-**Commits (oldest → newest):** `c59a8a70`, `42b79b52`, `TBD` (fill after doc/javadoc commits land)
+**Commits (oldest → newest):** `c59a8a70`, `42b79b52`, `0c861bb2`, `1852ab84`, `dffe78c3`, `486ce1db`
 
 `Milestone reached per docs, architect review required.`
 
