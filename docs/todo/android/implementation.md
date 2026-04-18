@@ -123,8 +123,8 @@ Dual-mode batching override (architect directive):
 - Completed macro batch: `AHW-B17` (accepted by Architect; host IME callback seam unification follow-up queued in `AHW-B18`).
 - Completed macro batch: `AHW-B18` (accepted by Architect; keep-screen-on policy seam hardening follow-up queued in `AHW-B19`).
 - Completed macro batch: `AHW-B19` (accepted by Architect; keep-screen-on window-flag seam hardening follow-up queued in `AHW-B20`).
-- Completed macro batch: `AHW-B20` (accepted by Architect; typed keep-screen-on host access follow-up queued in `AHW-B21`).
-- `AHW-B21` is `in_progress` (replace int flag seam with typed keep-screen-on host access, behavior-preserving).
+- Completed macro batch: `AHW-B20` (accepted by Architect).
+- Keep-screen-on follow-up beyond `AHW-B20` is explicitly frozen by product direction; no macro batch is `in_progress` until Architect refocuses to a non keep-screen-on target.
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -4335,11 +4335,15 @@ Architect review verdict:
 
 ---
 
-### `AHW-B21` Typed keep-screen-on host seam (`in_progress`)
+### `AHW-B21` Typed keep-screen-on host seam (`frozen_by_product_direction`)
 
 Batch queue line (exact):
 
 - replace int window-flag seam with typed keep-screen-on host access while preserving default behavior
+
+Status note:
+
+- Frozen by product direction after `AHW-B20` acceptance. Do not execute unless explicitly re-opened.
 
 Batch purpose:
 

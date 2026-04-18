@@ -34,16 +34,16 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B21` is `in_progress` and is the only active macro batch.
+No macro batch is currently `in_progress`. Keep-screen-on follow-up beyond
+`AHW-B20` is frozen by product direction until explicit re-open.
 
-Active batch queue line (exact):
+Most recent completed batch queue line (exact):
 
-- replace int window-flag seam with typed keep-screen-on host access while preserving default behavior
+- remove raw Window dependency from keep-screen-on policy seam via explicit host window-flag access while preserving default behavior
 
 ## Core Boundary Rule
 
-This batch exists to harden keep-screen-on typed host seam ownership while
-preserving existing IME/slot/chrome contracts and behavior.
+Await Architect refocus to the next non keep-screen-on target batch.
 
 - Android Harness owns platform ceremony, app-shell layout/styling/theming,
   navigation/view state, userland orchestration, and widget instance hosting.
@@ -60,7 +60,7 @@ preserving existing IME/slot/chrome contracts and behavior.
 ## Required Direction From Architect Review (post-AHW-B20)
 
 - `AHW-B20` is accepted.
-- Keep B20’s behavior and ownership outcomes; replace int flag seam with typed keep-screen-on host access in B21.
+- Freeze additional keep-screen-on seam work beyond B20 unless explicitly re-opened by product direction.
 - Keep `ProductHostKeepScreenOnPolicy` as the long-term owner of terminal keep-screen-on default policy.
 - Keep `HostImeStateAccess` as the long-term host callback IME seam backed by `ProductHostImeState`.
 - Keep `ProductHostImeState` as the long-term activity IME carrier.
@@ -83,17 +83,17 @@ preserving existing IME/slot/chrome contracts and behavior.
 
 ## Internal Milestones
 
-Execute `AHW21-M1` through `AHW21-M6` sequentially; do not stop before the
-`AHW-B21` super-gate unless a hard stop condition is hit.
+Do not start a new implementation batch until Architect sets a new `in_progress`
+macro batch in `docs/todo/android/implementation.md`.
 
 Execute in order and mark progress in `docs/todo/android/implementation.md`.
 
-- `AHW21-M1`: audit integer flag seam usage and define typed keep-screen-on host seam.
-- `AHW21-M2`: introduce typed keep-screen-on host seam and wire policy.
-- `AHW21-M3`: rewire activity and remove obsolete int-flag seam.
-- `AHW21-M4`: lock authority docs to typed keep-screen-on seam ownership.
-- `AHW21-M5`: keep queue/handoff/entrypoint aligned to B21 super-gate.
-- `AHW21-M6`: run validation and publish super-gate review packet.
+- `AHW20-M1`: audit keep-screen-on raw window dependency and define explicit host window-flag seam.
+- `AHW20-M2`: introduce explicit host seam type(s) for keep-screen-on flag mutation.
+- `AHW20-M3`: rewire ProductHostKeepScreenOnPolicy and ZideActivity to the explicit seam.
+- `AHW20-M4`: lock authority docs to keep-screen-on window-flag seam ownership.
+- `AHW20-M5`: keep queue/handoff/entrypoint aligned to B20 super-gate.
+- `AHW20-M6`: run validation and publish super-gate review packet.
 
 ## Allowed Work
 
@@ -119,7 +119,7 @@ If a required change falls outside these paths, stop and report a blocker.
 - No terminal-core behavior changes.
 - No shared renderer/backend refactor.
 - No app-shell UI redesign.
-- No keep-screen-on behavior change beyond typed seam rewiring (default remains on).
+- No keep-screen-on follow-up implementation unless explicitly re-opened by product direction.
 - No debug-view UI resurrection.
 - No CI/pipeline/lint additions.
 - No broad rename campaign.
@@ -182,7 +182,7 @@ when:
 - a behavior change is required where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
 - implementing terminal tabs/product behavior becomes necessary to proceed
-- the `AHW-B21` super-gate is reached
+- no macro batch is `in_progress` in `implementation.md`
 
 Otherwise continue autonomously with:
 
@@ -190,9 +190,9 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At `AHW-B21` super-gate, report:
+At the current super-gate (when a batch is active), report:
 
-- review chunk name: `AHW-B21`
+- review chunk name: `<active macro batch id>`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs
