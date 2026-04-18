@@ -113,7 +113,8 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
   `StatusViewAssembly.Host`, `ViewportCallbacks`, and `InputAssembly.Host` — not raw
   `BooleanSupplier` / `Consumer<Boolean>` pairs on those adapters
 - terminal host keep-screen-on default: `ProductHostKeepScreenOnPolicy` applies
-  `FLAG_KEEP_SCREEN_ON` to the activity window — not ad-hoc flag mutations in `ZideActivity`
+  `FLAG_KEEP_SCREEN_ON` through `HostWindowFlagAccess` (e.g. `getWindow()::addFlags`) — not ad-hoc
+  flag mutations in `ZideActivity` and not a raw `Window` parameter on the policy method
 - in `ZideActivity`, use one authoritative `static final` slot field (e.g.
   `ACTIVE_PRODUCT_TERMINAL_SLOT`) for interaction/widget/composition wiring
   instead of repeating `PRIMARY` literals

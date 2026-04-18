@@ -151,7 +151,8 @@ Activity-level IME scratch for status/input/widget wiring is owned by `ProductHo
 callback adapters (`StatusViewAssembly.Host`, `ViewportCallbacks`, `InputAssembly.Host`) without
 duplicated `BooleanSupplier` / `Consumer<Boolean>` pairs.
 Default keep-screen-on for the terminal host activity is applied through `ProductHostKeepScreenOnPolicy`
-(not ad-hoc `Window` flag mutations in `ZideActivity` startup).
+via `HostWindowFlagAccess` (typically `getWindow()::addFlags`), not ad-hoc `Window` flag mutations in
+`ZideActivity` startup and not a raw `Window` parameter on the policy API.
 These are harness contract checks only — they do not add tab or multi-instance
 product behavior.
 
@@ -210,7 +211,8 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/ui/ActivityViewBindings.java` | Good | Owns raw activity view lookup and typed binding capture for terminal host wiring; `StatusViewAssembly.Result` exposes the authoritative `activityViewBindings` for activity wiring. | Keep this as lookup-only data binding; no policy or runtime behavior. |
 | `host/ui/ChromeFactory.java` | Good | Owns chrome-specific bridge/callback construction; IME policy input uses `ChromeImePolicyInput` from `WidgetAssembly.Host`; intentionally no `TerminalWidgetSlotId` (chrome slot-agnostic freeze). | Reopen slot parameters only with scoped per-slot chrome policy. |
 | `host/ui/ProductHostImeState.java` | Good | Activity-owned IME visibility scratch; implements `SurfaceWidgetHostImeVisibility`, `HostImeStateAccess`, and supplies `ChromeImePolicyInput` for widget assembly; fans out to status/input/widget wiring from one instance. | Keep IME policy in B14/B15/B16 seams; extend only with scoped harness batches. |
-| `host/ui/ProductHostKeepScreenOnPolicy.java` | Good | Harness-owned default `FLAG_KEEP_SCREEN_ON` application for the terminal host activity window; single seam for future settings gating. | Extend only with explicit settings/product batches; do not scatter window flag policy. |
+| `host/ui/HostWindowFlagAccess.java` | Good | Functional seam for `addFlags(int)` without policy types importing `Window`; keep-screen-on wiring uses this from the activity. | Keep minimal; extend window policy only via explicit harness batches. |
+| `host/ui/ProductHostKeepScreenOnPolicy.java` | Good | Harness-owned default `FLAG_KEEP_SCREEN_ON` application via `HostWindowFlagAccess`; policy API does not take raw `Window`. | Extend only with explicit settings/product batches; do not scatter window flag policy. |
 | `host/interaction/InteractionFactory.java` | Good | Owns selection/gesture interaction controller construction so interaction seams stay out of the generic host assembler. | Keep this construction-only; interaction behavior remains in selection/gesture controllers. |
 | `host/interaction/InteractionAssembly.java` | Good | Owns interaction assembly; `assemble` enforces `checkActiveProductTerminalSlot` on `Host`. | Keep this assembly-only; behavior stays in interaction controllers. |
 | `host/interaction/InteractionCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/interaction/InteractionAssembly`. | Keep adapter-only; avoid moving interaction behavior into this adapter. |
