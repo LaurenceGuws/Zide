@@ -112,7 +112,8 @@ Dual-mode batching override (architect directive):
 - `APX-B5` accepted by architect.
 - `APX-B6` accepted by architect.
 - `APX-B7` accepted by architect.
-- `APX-B8` super-gate reached; architect review pending.
+- `APX-B8` accepted by architect.
+- `APX-B9` is now `in_progress`.
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -1888,7 +1889,7 @@ Architect review verdict:
 - `Review answers: yes, split is right long-term boundary — value type choke (`terminalWidgetSlotForProductHarness`) + Host adapter enum surface is acceptable. No mandatory rename before acceptance.`
 - `Findings carried forward: no blocking regressions; startup behavior and PRIMARY-only runtime unchanged.`
 
-### `APX-B8` Tab-State Expansion Vertical Slice 1 (`architect_review_pending`)
+### `APX-B8` Tab-State Expansion Vertical Slice 1 (`accepted`)
 
 Batch queue line (exact):
 
@@ -2061,7 +2062,103 @@ Engineer validation (this batch):
 Architect review verdict:
 
 - `Review chunk: APX-B8`
-- `Verdict: pending`
+- `Verdict: accepted`
+- `Commits reviewed: 2bf6ef19, a36ef22d, ef1d4e6e, 9ed79459, cd2267f5, 9aa9cf89, f6658668, 169fdd21, cf5895c6`
+- `Architect validation spot-check: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
+- `Architect runtime validation spot-check: python3 ops/android_terminal_host.py deploy (pass); adb cold start (pass, LaunchState: COLD, Status: ok); adb logcat -d -s AndroidRuntime:E (pass, empty)`
+- `Engineer validation accepted: compile + deploy + AndroidRuntime:E smoke + cold start pass`
+- `Review answers: APX-B8 scope is accepted as the first feature slice; next batch should drive real tab-session behavior and zide-pm test-binary flow instead of more cleanup-only seam carving.`
+- `Findings carried forward: no blocking regressions; startup behavior stable; single clean in-repo path maintained.`
+
+### `APX-B9` Tab-State Expansion Slice 2 + zide-pm Test-Binary Pull (`in_progress`)
+
+Batch queue line (exact):
+
+- implement real tab-session behavior on Android harness and complete the Android-side zide-pm test-binary pull path so product testing can move beyond nvim/htop
+
+Batch purpose:
+
+- continue feature-first expansion using real behavior pressure, not prediction-only cleanup
+- turn APX tab strip from chrome-only selection into clean session-backed behavior
+- mature Android-side zide-pm pull/install flow for real test binaries
+- keep single-path code and preserve the harness/widget/userland split from AHW/APX baselines
+- run as a longer engineer iteration: target **5–10 commits** before architect super-gate review
+
+Batch scope:
+
+- Java Android terminal host behavior and minimal userland runner/wiring required for real test-binary pulls
+- primary code roots:
+  `android/terminal-host/app/src/main/java/uk/laurencegouws/terminal/**`
+  `android/terminal-host/app/src/main/res/**`
+- allowed docs:
+  `docs/todo/android/implementation.md`,
+  `docs/todo/android/ENGINEER_ENTRYPOINT.md`,
+  `docs/AGENT_HANDOFF.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_NAMING_CONTRACT.md`,
+  `app_architecture/platform/android/USERLAND_HOST_CONTRACT.md`
+
+Batch non-goals:
+
+- no broad cleanup-only refactor that is not required by APX-B9 behavior delivery
+- no terminal-core/shared-renderer refactor
+- no keep-screen-on follow-up work
+- no startup-order change
+
+Batch super-gate:
+
+- tab state expansion is behavior-bearing (not chrome-only): selected tab drives cleanly defined session state path
+- Android-side zide-pm test-binary pull flow is runnable and validated on device
+- no Android runtime regressions (`AndroidRuntime:E` clean on warm + cold checks)
+- docs reflect implemented behavior seams and residual risk
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass at final seam boundary
+
+Internal milestone cadence:
+
+- Engineer executes `APX9-M1` through `APX9-M6` sequentially.
+- Engineer should keep cutting coherent validated commits across those milestones
+  and target **5–10 commits total** before stopping at `APX-B9` super-gate.
+- Do not stop for architect review between internal milestones.
+- Mark each internal milestone complete in this file as it lands.
+- Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
+  the `APX-B9` super-gate is reached.
+
+### `APX9-M1` Behavior-first audit + slice definition (`pending`)
+
+Queue line (exact):
+
+- audit current APX-B8 tab/session and zide-pm paths, then define the minimum APX-B9 behavior slice that proves real session-backed tabs + real test-binary pull flow
+
+### `APX9-M2` Session-backed tab behavior cut (`pending`)
+
+Queue line (exact):
+
+- land the minimum behavior-bearing tab-session model/wiring cut required so selected tab is not chrome-only state
+
+### `APX9-M3` Consumer wiring + device behavior prove (`pending`)
+
+Queue line (exact):
+
+- wire consumers through chrome/app-shell/widget harness seams and prove expected tab behavior on device
+
+### `APX9-M4` zide-pm Android pull/install feature cut (`pending`)
+
+Queue line (exact):
+
+- land the minimum Android-side zide-pm pull/install flow improvement required to run real test binaries beyond current baseline tools
+
+### `APX9-M5` Docs + handoff sync (`pending`)
+
+Queue line (exact):
+
+- update authority/queue/handoff/entrypoint to the implemented APX-B9 behavior seams and residual risks
+
+### `APX9-M6` Batch validation + review packet (`pending`)
+
+Queue line (exact):
+
+- validate APX-B9 end-to-end and publish architect super-gate packet with behavior outcomes and blockers
 
 ## Guardrails
 

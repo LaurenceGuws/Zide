@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android product expansion** (`APX`) — build product capability on top of the closed harness/widget ownership shape.
-- Active macro batch (`architect_review_pending`): `APX-B8` — tab-state vertical slice 1 + zide-pm Android host signal; engineer super-gate reached; Architect review next.
+- Active macro batch (`in_progress`): `APX-B9` — tab-state expansion slice 2 + zide-pm test-binary pull maturity; feature-first long engineer batch.
 - Prior closed/escalated: `AHW-B1` through `AHW-B26` accepted and `AHW` closed; `ASF-M3` escalated IME/assist/touch rows to operator evidence; `RF-M0` through `RF-M5` and `AX-M1` through `AX-M5` completed.
 - Active queue authority: `docs/todo/android/implementation.md`
 - Engineer entrypoint (dual mode): `docs/todo/android/ENGINEER_ENTRYPOINT.md`
@@ -28,7 +28,7 @@ Engineer session seed:
   `docs/todo/android/implementation.md`, then this handoff file.
 - When a batch is `in_progress`, execute only that macro batch in
   `docs/todo/android/implementation.md`. When the active batch is `architect_review_pending`,
-  stop engineering work and return the review packet for Architect verdict (`APX-B8` is at this stop).
+  stop engineering work and return the review packet for Architect verdict.
 
 ## First Read Order
 
@@ -54,7 +54,7 @@ Engineer session seed:
 - Architect updates use: `Blocked by humain review needed: true|false`.
 - Engineer updates use: `Blocked by Archtect review needed: true|false`.
 
-## APX-B8 Baseline
+## APX-B9 Baseline
 
 - `AHW-B20` is accepted and already keeps the test device awake by default.
 - Additional keep-screen-on seam work is frozen by product direction.
@@ -71,8 +71,9 @@ Engineer session seed:
 - `APX-B5` is accepted: immutable `ProductHostDeclaredTerminalWidgetSlot` value type now owns declared-slot source semantics at startup boundary.
 - `APX-B6` is accepted: declared-slot value is propagated across interaction/widget/composition startup seams.
 - `APX-B7` is accepted: enum conversion is centralized at `terminalWidgetSlotForProductHarness()` with Host adapter enum boundaries preserved.
-- `APX-B8` scope is feature-first: implement first real tab-state expansion slice and required Android-side zide-pm test-binary pull path improvements.
-- Cleanup-only changes are out of scope unless they directly unblock APX-B8 feature delivery.
+- `APX-B8` is accepted: tab-state slice 1 (two-tab chrome strip and harness tab index state) and `ZIDE_PM_HOST_PLATFORM=android` export are in place.
+- `APX-B9` scope is feature-first: move from chrome-only selection to behavior-bearing tab-session flow and mature Android-side zide-pm test-binary pull/install path.
+- Cleanup-only changes are out of scope unless they directly unblock APX-B9 feature delivery.
 - Keep `ProductHostKeepScreenOnPolicy` as the long-term owner of terminal keep-screen-on default policy.
 - Keep `HostImeStateAccess` as the long-term host callback IME seam (backed by `ProductHostImeState`).
 - Keep `ProductHostImeState` as the long-term activity IME carrier.
@@ -89,7 +90,7 @@ Engineer session seed:
 
 ## Operator Evidence Escalation
 
-ASF did not prove IME/assist or touch gestures because no operator packets were delivered. Those rows remain parked in `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md` with owner `operator`; they do not block `APX-B8` unless new evidence reports a regression inside the active code scope.
+ASF did not prove IME/assist or touch gestures because no operator packets were delivered. Those rows remain parked in `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md` with owner `operator`; they do not block `APX-B9` unless new evidence reports a regression inside the active code scope.
 
 ## Historical Notes
 

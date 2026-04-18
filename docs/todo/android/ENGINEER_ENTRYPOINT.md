@@ -34,11 +34,11 @@ you must report the mismatch.
 
 ## Current Target
 
-`APX-B8` is `architect_review_pending` (engineer super-gate reached).
+`APX-B9` is `in_progress`.
 
 Active batch queue line (exact):
 
-- implement first real Android tab-state expansion slice through app-shell policy/state seams (feature-first), using cleanup only when directly required by feature delivery
+- implement real tab-session behavior on Android harness and complete the Android-side zide-pm test-binary pull path so product testing can move beyond nvim/htop
 
 ## Core Boundary Rule
 
@@ -67,11 +67,12 @@ boundaries while preserving current single-terminal behavior.
 - `APX-B5` is accepted: immutable declared-slot value type now owns startup source semantics.
 - `APX-B6` is accepted: declared-slot value is propagated across interaction/widget/composition startup seams.
 - `APX-B7` is accepted: enum conversion choke point is centralized on declared-slot value seam.
-- `APX-B8` is feature-first: deliver first tab-state expansion slice and scoped Android-side zide-pm test-binary pull path improvements.
+- `APX-B8` is accepted: tab-state slice 1 (chrome strip + tab index state) and `ZIDE_PM_HOST_PLATFORM=android` export are in place.
+- `APX-B9` is feature-first: move from chrome-only tab selection to behavior-bearing session-backed tab flow, and mature Android-side zide-pm pull/install path.
 - `AHW-B26` is accepted and `AHW` is closed.
 - Keep harness vs surface split (`WidgetAssembly.Result.harnessHost` + `surfaceJoin`) as the baseline.
 - Freeze additional keep-screen-on seam work beyond B20 unless explicitly re-opened by product direction.
-- Execute `APX-B8` as a non keep-screen-on batch.
+- Execute `APX-B9` as a non keep-screen-on batch.
 - Keep `ProductHostActivityStartupWiring`, `ProductTerminalLifecycleHost`, and `ProductTerminalWidgetAssemblyHost` ownership from B22 unchanged.
 - Keep `ProductHostOnCreateStartupCoordinator` + `ProductHostOnCreateStartupSteps` as the startup choreography seam from B23.
 - Keep `AppShellTerminalViewPolicy` as explicit app-shell terminal-view policy seam; no public `appShellNavigation()` accessor on that type.
@@ -93,13 +94,12 @@ boundaries while preserving current single-terminal behavior.
   `InteractionAssembly.Result` yet.
 - Keep chrome slot-agnostic in this batch; do not thread slot into chrome
   construction until per-slot chrome policy is scoped.
-- `APX-B8` slice 1 adds **chrome-only** product terminal tab selection (not a second
-  `TerminalWidgetSlotId`); full multi-instance/tab product behavior remains future-scoped.
+- `APX-B9` must deliver behavior-bearing tab-session flow, not chrome-only selection state.
 
 ## Internal Milestones
 
-Execute `APX8-M1` through `APX8-M6` sequentially; do not stop before the
-`APX-B8` super-gate unless a hard stop condition is hit.
+Execute `APX9-M1` through `APX9-M6` sequentially; do not stop before the
+`APX-B9` super-gate unless a hard stop condition is hit.
 
 Commit cadence expectation for this macro batch:
 
@@ -108,12 +108,12 @@ Commit cadence expectation for this macro batch:
 
 Execute in order and mark progress in `docs/todo/android/implementation.md`.
 
-- `APX8-M1`: audit app-shell tab-state seams and define minimum working vertical slice behavior.
-- `APX8-M2`: implement tab-state model/policy feature cut for slice 1.
-- `APX8-M3`: wire consumers and verify feature behavior on device.
-- `APX8-M4`: land scoped Android-side zide-pm test-binary pull path improvement required by slice.
-- `APX8-M5`: lock docs/handoff/entrypoint to implemented feature slice.
-- `APX8-M6`: run validation and publish super-gate review packet.
+- `APX9-M1`: audit APX-B8 outputs and define minimum APX-B9 behavior slice for session-backed tabs + real test-binary pull/install flow.
+- `APX9-M2`: implement behavior-bearing tab-session model/wiring cut.
+- `APX9-M3`: wire consumers and verify tab-session behavior on device.
+- `APX9-M4`: land minimum Android-side zide-pm pull/install flow improvement for real test binaries.
+- `APX9-M5`: lock docs/handoff/entrypoint to implemented APX-B9 behavior slice.
+- `APX9-M6`: run validation and publish super-gate review packet.
 
 ## Allowed Work
 
@@ -206,7 +206,7 @@ when:
 - a behavior change is required where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
 - implementing terminal tabs/product behavior becomes necessary to proceed
-- the `APX-B8` super-gate is reached
+- the `APX-B9` super-gate is reached
 
 Otherwise continue autonomously with:
 
@@ -214,9 +214,9 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At `APX-B8` super-gate, report:
+At `APX-B9` super-gate, report:
 
-- review chunk name: `APX-B8`
+- review chunk name: `APX-B9`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs
