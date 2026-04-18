@@ -112,6 +112,8 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
 - host callback IME read/write: `HostImeStateAccess` (implemented by `ProductHostImeState`) on
   `StatusViewAssembly.Host`, `ViewportCallbacks`, and `InputAssembly.Host` — not raw
   `BooleanSupplier` / `Consumer<Boolean>` pairs on those adapters
+- terminal host keep-screen-on default: `ProductHostKeepScreenOnPolicy` applies
+  `FLAG_KEEP_SCREEN_ON` to the activity window — not ad-hoc flag mutations in `ZideActivity`
 - in `ZideActivity`, use one authoritative `static final` slot field (e.g.
   `ACTIVE_PRODUCT_TERMINAL_SLOT`) for interaction/widget/composition wiring
   instead of repeating `PRIMARY` literals
