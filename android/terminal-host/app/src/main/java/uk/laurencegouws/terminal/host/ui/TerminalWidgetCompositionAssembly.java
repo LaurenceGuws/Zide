@@ -1,5 +1,7 @@
 package uk.laurencegouws.terminal.host.ui;
 
+import java.util.Objects;
+
 import uk.laurencegouws.terminal.host.interaction.InteractionAssembly;
 
 /**
@@ -29,6 +31,7 @@ public final class TerminalWidgetCompositionAssembly {
             ProductHostDeclaredTerminalWidgetSlot hostDeclaredTerminalWidgetSlot,
             InteractionAssembly.Result interaction,
             WidgetSurfaceHostJoin surfaceJoin) {
+        Objects.requireNonNull(hostDeclaredTerminalWidgetSlot, "hostDeclaredTerminalWidgetSlot");
         TerminalWidgetSlotId.checkActiveProductTerminalSlot(hostDeclaredTerminalWidgetSlot.terminalWidgetSlot());
         return new TerminalWidgetInstance(
                 interaction.selectionController,

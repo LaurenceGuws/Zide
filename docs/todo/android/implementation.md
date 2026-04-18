@@ -1683,7 +1683,7 @@ Acceptance:
 - cold start smoke pass when a device is available
 - engineer reports full super-gate packet and explicit residual-risk note
 
-**Engineer commit cadence (this batch):** 6 commits — (1) interaction wiring + `InteractionCallbacks`; (2) `WidgetHostAssemblyContext` + widget host + activity; (3) `TerminalWidgetCompositionAssembly.compose` + activity; (4) javadoc on interaction/widget seams; (5) authority docs (`ANDROID_JAVA_HOST_STRUCTURE`, `ANDROID_JAVA_NAMING_CONTRACT`, `USERLAND_HOST_CONTRACT`); (6) queue + entrypoint + handoff.
+**Engineer commit cadence (this batch):** 7 commits — (1) interaction wiring + `InteractionCallbacks`; (2) `WidgetHostAssemblyContext` + widget host + activity; (3) `TerminalWidgetCompositionAssembly.compose` + activity; (4) javadoc on interaction/widget seams; (5) authority docs (`ANDROID_JAVA_HOST_STRUCTURE`, `ANDROID_JAVA_NAMING_CONTRACT`, `USERLAND_HOST_CONTRACT`); (6) implementation queue; (7) engineer entrypoint + agent handoff.
 
 **APX-B6 engineer validation record (M6):**
 
