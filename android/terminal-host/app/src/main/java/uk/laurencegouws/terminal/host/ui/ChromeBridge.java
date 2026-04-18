@@ -17,6 +17,8 @@ public final class ChromeBridge implements ChromeController.Host {
     public interface Callbacks {
         void runPackageDoctor();
 
+        void installAndroidEdgeTestBinary();
+
         void appendEvent(String event);
 
         boolean chromeImeVisibilityPresent();
@@ -100,6 +102,11 @@ public final class ChromeBridge implements ChromeController.Host {
 
     public void runPackageDoctor() {
         callbacks.runPackageDoctor();
+    }
+
+    @Override
+    public void installAndroidEdgeTestBinary() {
+        callbacks.installAndroidEdgeTestBinary();
     }
 
     @Override

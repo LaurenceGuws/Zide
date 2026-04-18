@@ -196,6 +196,11 @@ public final class ProductTerminalWidgetAssemblyHost implements WidgetAssembly.H
     }
 
     @Override
+    public void requestAndroidEdgeTestBinaryInstall() {
+        c.userlandWorkflowController.installAndroidEdgeTestBinary();
+    }
+
+    @Override
     public void onProductTerminalTabSessionActivated(final int tabIndex) {
         c.hostStartup.runtime.restartShellSessionForProductTabIfReady(tabIndex, true);
     }

@@ -45,6 +45,7 @@ public final class ChromeFactory {
 
     public static ChromeBridge.Callbacks createChromeHostCallbacks(
             Runnable runPackageDoctor,
+            Runnable installAndroidEdgeTestBinary,
             Consumer<String> appendEvent,
             ChromeImePolicyInput chromeImePolicyInput,
             Supplier<ShellInputView> shellInputView,
@@ -57,6 +58,11 @@ public final class ChromeFactory {
             @Override
             public void runPackageDoctor() {
                 runPackageDoctor.run();
+            }
+
+            @Override
+            public void installAndroidEdgeTestBinary() {
+                installAndroidEdgeTestBinary.run();
             }
 
             @Override

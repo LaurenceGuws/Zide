@@ -3,6 +3,7 @@
     <string name="shell_restart_short">Restart</string>
     <string name="sidebar_title">Terminal Controls</string>
     <string name="sidebar_packages">Packages</string>
+    <string name="sidebar_install_test_tools">Install test tools</string>
     <string name="product_readiness_title_missing">Userland Not Staged</string>
     <string name="product_readiness_title_invalid">Userland Needs Restaging</string>
     <string name="product_readiness_title_shell_missing">Shell Payload Missing</string>

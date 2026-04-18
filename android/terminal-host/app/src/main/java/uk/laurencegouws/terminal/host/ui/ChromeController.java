@@ -26,6 +26,9 @@ public final class ChromeController {
         void applyChromeDrawerSidebarOpen();
         void applyChromeDrawerSidebarClosed();
         void runPackageDoctor();
+
+        void installAndroidEdgeTestBinary();
+
         void appendEvent(String event);
         /** Whether IME is considered visible for chrome policy (backed by activity state). */
         boolean chromeImeVisibilityPresent();
@@ -73,6 +76,11 @@ public final class ChromeController {
             closeSidebar();
             host.runPackageDoctor();
         });
+        ((Button) sidebar.findViewById(uk.laurencegouws.terminal.R.id.sidebar_install_test_tools_button))
+                .setOnClickListener(view -> {
+                    closeSidebar();
+                    host.installAndroidEdgeTestBinary();
+                });
 
         host.drawerScrim().setOnClickListener(view -> closeSidebar());
         host.drawerEdgeHotspot().setOnTouchListener(new EdgeSwipeListener(true));

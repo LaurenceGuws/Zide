@@ -119,6 +119,9 @@ public final class WidgetAssembly {
         /** Host routes diagnostics; widget assembly does not own package policy. */
         void requestPackageDiagnostics();
 
+        /** Host routes edge test-binary install; separate from read-only package diagnostics. */
+        void requestAndroidEdgeTestBinaryInstall();
+
         /**
          * Product terminal tab changed to a distinct index after {@link AppShellNavigation} policy;
          * host runs native session restart + userland refresh (single PTY today).
@@ -221,6 +224,7 @@ public final class WidgetAssembly {
                         appShellTerminalViewPolicy,
                         ChromeFactory.createChromeHostCallbacks(
                                 host::requestPackageDiagnostics,
+                                host::requestAndroidEdgeTestBinaryInstall,
                                 host::appendEvent,
                                 host.chromeImePolicyInput(),
                                 host::shellInputView,
