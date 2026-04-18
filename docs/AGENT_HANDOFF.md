@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: **Core Zig freeze + hygiene**
 - Campaign: **Core Zig Stability/Hygiene** (`CZH`)
-- Active macro batch (`in_progress`): `CZH-B2` in
+- Active macro batch (`architect_review_pending`): `CZH-B2` in
   `docs/todo/core/implementation.md`
 - Android lane status: **paused by product direction** except critical
   regressions/blockers for current users.

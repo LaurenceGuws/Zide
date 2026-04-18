@@ -16,8 +16,9 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B2` — **in_progress** (replay-harness unblock, stress extension run,
-  then scoped probe/debug purge + naming cleanup under behavior freeze).
+- `CZH-B2` — **architect_review_pending** (replay harness compiles; SL-ext-2
+  baseline recorded with `reply_hex` harness gap; probe trim + naming hygiene
+  landed — see super-gate packet in `docs/todo/core/implementation.md`).
 
 ## Hard Rules
 

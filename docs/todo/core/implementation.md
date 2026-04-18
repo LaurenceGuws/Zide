@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B2` (`in_progress`).
+- Current active macro batch: `CZH-B2` (`architect_review_pending`).
 
 ## Campaign Goals
 
@@ -110,19 +110,25 @@ Android guard (only if seam-touching this batch): compileDebug/ReleaseJavaWithJa
 - **SL-ext-2** — **not run** (blocked by `SL-ext-1`)  
 - **Android guard** — **SKIP** (no Android seam touched this batch; lane paused)
 
+#### `CZH2-M1` replay harness drift audit (explicit file list)
+
+- `src/terminal/replay_harness.zig` — stale imports (`core/snapshot.zig`,
+  `core/terminal_publication.zig`); canonical paths are
+  `core/publication/{snapshot,terminal_publication}.zig`. `ReplayPtyCapture` must
+  mirror `src/terminal/io/pty_unix.zig` `Pty` field layout when the stub pipe PTY
+  is constructed.
+
 #### Drift / cleanup watchlist (prioritized, `CZH-B2`+)
 
-1. **Terminal replay harness compile drift:** update `replay_harness` imports to
-   `core/publication/{snapshot,terminal_publication}.zig`; align `ReplayPtyCapture`
-   `Pty` literal with any new `Pty` fields; re-export or replace
-   `notePresentedGeneration` for baseline publication choreography if the
-   harness still needs the narrow atomic bump vs full `acknowledgePresentedGeneration`.
-2. **Generic `*const` core owners:** `scrolling` / kitty helpers that take
-   `anytype` and reach `self.core` can see `*const TerminalCore` from const
-   protocol faces — consolidate on a single `TerminalCore.ownerCorePtr`-style
-   resolver (or narrow debug-only APIs to `*TerminalRuntimeShell`) so
-   `terminal-replay` and protocol paths stay type-correct without duplicated
-   casts.
+1. **Terminal replay harness compile drift:** **cleared in `CZH-B2`** (imports,
+   `Pty` stub fields, `terminal_publication.notePresentedGeneration` re-export).
+   **Residual:** fixtures with `reply_hex` still emit `size: 0x0` snapshots vs
+   goldens under the PTY capture / `debugFeedBytes` path — needs a focused harness
+   lane (not a golden refresh under behavior freeze without root-cause proof).
+2. **Generic `*const` core owners:** **partially cleared in `CZH-B2`** via shared
+   `src/terminal/core/engine_core_face.zig` `mutableTerminalCore` (scroll + kitty
+   call sites). Optional future rename to a single authority-owned symbol per
+   `TERMINAL_SUBSYSTEM_LAYERS` remains queue-shaping only.
 3. **Probe/debug hygiene (`CZH-B2` scope):** audit hot paths per `AGENTS.md`
    logging policy; remove stale investigation callers.
 4. **Naming / ownership (`CZH-B2` scope):** align lingering names with
@@ -144,7 +150,7 @@ Android guard (only if seam-touching this batch): compileDebug/ReleaseJavaWithJa
 - `Architect validation spot-check: SL-0..SL-3 PASS; SL-ext-1 FAIL (expected/documented import drift).`
 - `Residual risk carried forward: replay harness compile drift remains unresolved.`
 
-### `CZH-B2` Probe/Debug Caller Purge + Naming Hygiene (`in_progress`)
+### `CZH-B2` Probe/Debug Caller Purge + Naming Hygiene (`architect_review_pending`)
 
 Queue line (exact):
 
@@ -173,6 +179,42 @@ Internal milestones (`CZH2-M1..M6`, execute sequentially in one batch):
 - stop only at super-gate or real hard blocker
 - target 5–10 validated commits
 - maintain behavior freeze and single-path contract
+
+#### `CZH-B2` engineer stress re-baseline (2026-04-18)
+
+- **Date:** 2026-04-18  
+- **Host:** Linux (engineer session)  
+- **Git:** `main` workspace at `CZH-B2` engineer close  
+- **SL-0** `zig build` — **PASS**  
+- **SL-1** `zig build test` — **PASS**  
+- **SL-2** `zig build -Dmode=terminal` — **PASS**  
+- **SL-3** `zig build -Dmode=editor` — **PASS**  
+- **SL-ext-1** `zig build test-terminal-replay` — **PASS** (default harness smoke exits 0)  
+- **SL-ext-2** `zig build test-terminal-replay-all` — **FAIL** (`GoldenMismatch`: first
+  lex-sorted `reply_hex` fixture compares `size: 0x0` observed snapshot vs `5x12`
+  golden; non-`reply_hex` fixtures such as `alt_screen_enter_exit` pass)  
+- **Android guard** — **SKIP** (lane paused; no Android seam touched)
+
+#### `CZH-B2` super-gate packet (engineer → architect)
+
+- `Review chunk: CZH-B2`
+- `Verdict: architect_review_pending`
+- `Scope summary:` replay publication import repair; `ReplayPtyCapture` `Pty` stub
+  field alignment; `terminal_publication` re-export of
+  `presentation_feedback.notePresentedGeneration`; shared
+  `engine_core_face.mutableTerminalCore` for scroll + kitty `anytype` core
+  resolution (avoids `*const` inference traps and stack-copy hazards on embedded
+  `core`); `presentation_feedback` alt-exit completion path dead-local trim;
+  replay harness `publication_snapshot` import alias.
+- `Residual risks / follow-ups:`
+  - `replay reply_hex fixtures:` PTY capture + `debugFeedBytes` path still yields
+    empty `TERM_SNAPSHOT` (`0x0`) vs goldens — treat as harness parity / capture
+    plumbing, not product golden drift, until proven otherwise.
+  - `zig build test-editor` failed in this session with `import of file outside module path`
+    errors against `tests/tests_main.zig` (likely toolchain / test-root mismatch;
+    not touched by this batch).
+- `Architect validation request:` rerun SL ladder + decide whether `reply_hex`
+  replay failures gate `CZH-B3` or warrant a `CZH-B2.1` harness sub-batch.
 
 ### `CZH-B3` Android-Driven FFI/Render Normalization (`planned`)
 
