@@ -1940,7 +1940,7 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `APX-B8` super-gate is reached.
 
-### `APX8-M1` Feature-slice audit (`pending`)
+### `APX8-M1` Feature-slice audit (`completed`)
 
 Queue line (exact):
 
@@ -1951,6 +1951,14 @@ Acceptance:
 - define concrete feature behavior for slice 1 (create/select/close semantics or explicit subset)
 - enumerate required seam changes vs optional cleanup
 - record cleanup items that are blocker-only for this slice
+
+Outcome:
+
+- **Seams audited:** `AppShellNavigation` (active shell view + drawer), `AppShellTerminalViewPolicy` (activation + drawer forwarding), `AppShellViewState` (per-view row shape), `ProductTerminalSlotShellMapping` + `TerminalWidgetSlotId.checkActiveProductTerminalSlot` (still single active widget slot = `PRIMARY`), `WidgetAssembly` chrome construction, `ChromeBridge` / `ChromeController` (assist bar + sidebar), `ShellViewId` (single `TERMINAL` today).
+- **Slice 1 behavior (minimum vertical):** harness-owned **product terminal tab strip** with **two selectable tabs**; selection state lives in `AppShellNavigation` (indices `0..tabCount-1`); taps update selection + chrome styling + telemetry; **no second terminal widget instance** and **no new `TerminalWidgetSlotId` values** in this slice — multi-session hosting remains future work.
+- **Required code:** extend `AppShellNavigation` + policy for tab indices; add tab strip to `activity_main.xml`; wire `ChromeController` + `WidgetAssembly.Host` / `ActivityViewBindings` for buttons.
+- **Blocker-only cleanup:** none identified beyond wiring required for the strip.
+- **zide-pm slice:** signal Android host platform to `zide-pm` via process environment from `UserlandCommandRunner` so catalog/list paths can target Android test binaries without a second CLI surface.
 
 ### `APX8-M2` Tab-state model + policy cut (`pending`)
 
