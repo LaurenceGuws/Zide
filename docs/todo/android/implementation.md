@@ -42,6 +42,10 @@ and decoupled.
   capability on the closed `AHW` harness/widget shape (see Post-AHW Campaign below).
 - **Prior closed campaign:** **Android harness/widget portability hardening** (`AHW`) —
   ownership boundaries are enforced; formal closure via `AHW-B26`.
+- **APX completion objectives (feature-first):**
+  1. planned harness/widget split implemented and stable
+  2. planned tab-state expansion implemented cleanly on Android
+  3. zide-pm mature enough to pull real Android test binaries beyond `nvim`/`htop`
 
 Iteration detail is intentionally not tracked here. Read code + git history for
 step-level implementation history.
@@ -107,7 +111,8 @@ Dual-mode batching override (architect directive):
 - `APX-B4` accepted by architect.
 - `APX-B5` accepted by architect.
 - `APX-B6` accepted by architect.
-- `APX-B7` super-gate reached; architect review pending.
+- `APX-B7` accepted by architect.
+- `APX-B8` is `in_progress`.
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -1709,7 +1714,7 @@ Architect review verdict:
 - `Review answers: declared-slot value propagation across interaction/widget/composition startup seams is accepted; enum-owner boundaries remaining in assembly/navigation contracts are acceptable for now.`
 - `Findings carried forward: no blocking regressions; startup behavior and PRIMARY-only runtime unchanged.`
 
-### `APX-B7` Slot enum-conversion choke point (`architect_review_pending`)
+### `APX-B7` Slot enum-conversion choke point (`accepted`)
 
 Batch queue line (exact):
 
@@ -1841,7 +1846,7 @@ Acceptance:
 
 Outcome:
 
-- summary line, this batch header, and handoff/entrypoint files aligned to `architect_review_pending` and super-gate packet
+- summary line, this batch header, and handoff/entrypoint files aligned to super-gate packet
 
 ### `APX7-M6` Batch validation + review packet (`completed`)
 
@@ -1868,14 +1873,142 @@ Engineer validation (this batch):
 
 **Review chunk:** `APX-B7`
 
-**Commits (oldest → newest):** `c59a8a70`, `42b79b52`, `0c861bb2`, `1852ab84`, `dffe78c3`, `486ce1db`
+**Commits (oldest → newest):** `c59a8a70`, `42b79b52`, `0c861bb2`, `1852ab84`, `dffe78c3`, `486ce1db`, `ed4cbf57`
 
 `Milestone reached per docs, architect review required.`
 
 Architect review verdict:
 
 - `Review chunk: APX-B7`
-- `Verdict: pending`
+- `Verdict: accepted`
+- `Commits reviewed: c59a8a70, 42b79b52, 0c861bb2, 1852ab84, dffe78c3, 486ce1db, ed4cbf57`
+- `Architect validation spot-check: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
+- `Architect runtime validation spot-check: python3 ops/android_terminal_host.py deploy (pass); adb warm start + AndroidRuntime:E (pass, empty); adb cold start (pass, LaunchState: COLD)`
+- `Engineer device validation accepted: compile + deploy + AndroidRuntime:E smoke + cold start pass`
+- `Review answers: yes, split is right long-term boundary — value type choke (`terminalWidgetSlotForProductHarness`) + Host adapter enum surface is acceptable. No mandatory rename before acceptance.`
+- `Findings carried forward: no blocking regressions; startup behavior and PRIMARY-only runtime unchanged.`
+
+### `APX-B8` Tab-State Expansion Vertical Slice 1 (`in_progress`)
+
+Batch queue line (exact):
+
+- implement first real Android tab-state expansion slice through app-shell policy/state seams (feature-first), using cleanup only when directly required by feature delivery
+
+Batch purpose:
+
+- move from seam prediction to real product pressure for tab-state expansion
+- deliver concrete multi-tab state behavior on Android harness path
+- surface real-world seam needs before further cleanup-only shaping
+- run this as a longer engineer iteration: target **5–10 commits** before architect super-gate review
+
+Batch scope:
+
+- Java Android terminal host plus minimal zide-pm integration touches needed for Android test-binary pull path
+- primary code roots:
+  `android/terminal-host/app/src/main/java/uk/laurencegouws/terminal/**`
+  `ops/**` (only if required for Android test-binary pull flow)
+- allowed docs:
+  `docs/todo/android/implementation.md`,
+  `docs/todo/android/ENGINEER_ENTRYPOINT.md`,
+  `docs/AGENT_HANDOFF.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_NAMING_CONTRACT.md`,
+  `app_architecture/platform/android/USERLAND_HOST_CONTRACT.md`
+
+Batch non-goals:
+
+- no broad cleanup-only refactor that is not required by tab-state feature flow
+- no terminal-core/shared-renderer refactor
+- no startup-order changes unless directly required by feature and explicitly documented
+
+Batch super-gate:
+
+- first tab-state expansion slice is working on Android app-shell seams (state + selection/activation path)
+- behavior is validated on device with no Android runtime errors
+- any cleanup done in this batch is directly tied to feature-blocker removal
+- docs reflect the implemented feature seam shape and residual risk
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass at final seam boundary
+
+Internal milestone cadence:
+
+- Engineer executes `APX8-M1` through `APX8-M6` sequentially.
+- Engineer should keep cutting coherent validated commits across those milestones
+  and target **5–10 commits total** before stopping at `APX-B8` super-gate.
+- Do not stop for architect review between internal milestones.
+- Mark each internal milestone complete in this file as it lands.
+- Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
+  the `APX-B8` super-gate is reached.
+
+### `APX8-M1` Feature-slice audit (`pending`)
+
+Queue line (exact):
+
+- audit current app-shell tab-related state/selection seams and define the minimum working vertical slice for tab-state expansion
+
+Acceptance:
+
+- define concrete feature behavior for slice 1 (create/select/close semantics or explicit subset)
+- enumerate required seam changes vs optional cleanup
+- record cleanup items that are blocker-only for this slice
+
+### `APX8-M2` Tab-state model + policy cut (`pending`)
+
+Queue line (exact):
+
+- implement minimum tab-state model/policy changes for slice 1 in app-shell seams
+
+Acceptance:
+
+- feature-bearing code landed (not docs-only seam prep)
+- compile debug + release Java after code changes
+
+### `APX8-M3` Consumer wiring + device behavior (`pending`)
+
+Queue line (exact):
+
+- wire tab-state slice through startup/interaction/chrome-app-shell consumers and verify behavior on device
+
+Acceptance:
+
+- expected slice behavior observable on device
+- no `AndroidRuntime:E` regressions
+- compile debug + release Java after code changes
+
+### `APX8-M4` zide-pm Android test-binary path cut (`pending`)
+
+Queue line (exact):
+
+- land the minimum zide-pm Android-side path needed to start pulling real test binaries beyond nvim/htop (scope-limited to this slice)
+
+Acceptance:
+
+- concrete, runnable Android test-binary pull path improvement landed
+- scoped to feature need; no unrelated tooling cleanup
+
+### `APX8-M5` Docs + handoff sync (`pending`)
+
+Queue line (exact):
+
+- update authority/queue/handoff/entrypoint to match implemented feature slice and residual blockers
+
+Acceptance:
+
+- queue, handoff, and engineer entrypoint coherent through APX-B8 super-gate
+- authority docs reflect real implemented feature shape
+
+### `APX8-M6` Batch validation + review packet (`pending`)
+
+Queue line (exact):
+
+- validate APX-B8 end-to-end and publish architect review packet with feature outcomes and remaining blockers
+
+Acceptance:
+
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
+- cold start smoke pass when a device is available
+- engineer reports full super-gate packet and explicit feature status vs APX completion objectives
 
 ## Guardrails
 

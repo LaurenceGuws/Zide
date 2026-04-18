@@ -34,11 +34,11 @@ you must report the mismatch.
 
 ## Current Target
 
-`APX-B7` is `architect_review_pending` (engineer super-gate reached).
+`APX-B8` is `in_progress`.
 
 Active batch queue line (exact):
 
-- centralize startup declared-slot enum conversion through one value-type choke point and reduce direct `.terminalWidgetSlot()` fan-out without behavior change
+- implement first real Android tab-state expansion slice through app-shell policy/state seams (feature-first), using cleanup only when directly required by feature delivery
 
 ## Core Boundary Rule
 
@@ -66,11 +66,12 @@ boundaries while preserving current single-terminal behavior.
 - `APX-B4` is accepted: `ProductHostDeclaredTerminalWidgetSlot` is now the explicit source feeding startup context construction.
 - `APX-B5` is accepted: immutable declared-slot value type now owns startup source semantics.
 - `APX-B6` is accepted: declared-slot value is propagated across interaction/widget/composition startup seams.
-- `APX-B7` centralizes enum conversion through one declared-slot value choke point for startup APIs.
+- `APX-B7` is accepted: enum conversion choke point is centralized on declared-slot value seam.
+- `APX-B8` is feature-first: deliver first tab-state expansion slice and scoped Android-side zide-pm test-binary pull path improvements.
 - `AHW-B26` is accepted and `AHW` is closed.
 - Keep harness vs surface split (`WidgetAssembly.Result.harnessHost` + `surfaceJoin`) as the baseline.
 - Freeze additional keep-screen-on seam work beyond B20 unless explicitly re-opened by product direction.
-- Execute `APX-B7` as a non keep-screen-on batch.
+- Execute `APX-B8` as a non keep-screen-on batch.
 - Keep `ProductHostActivityStartupWiring`, `ProductTerminalLifecycleHost`, and `ProductTerminalWidgetAssemblyHost` ownership from B22 unchanged.
 - Keep `ProductHostOnCreateStartupCoordinator` + `ProductHostOnCreateStartupSteps` as the startup choreography seam from B23.
 - Keep `AppShellTerminalViewPolicy` as explicit app-shell terminal-view policy seam; no public `appShellNavigation()` accessor on that type.
@@ -96,8 +97,8 @@ boundaries while preserving current single-terminal behavior.
 
 ## Internal Milestones
 
-Execute `APX7-M1` through `APX7-M6` sequentially; do not stop before the
-`APX-B7` super-gate unless a hard stop condition is hit.
+Execute `APX8-M1` through `APX8-M6` sequentially; do not stop before the
+`APX-B8` super-gate unless a hard stop condition is hit.
 
 Commit cadence expectation for this macro batch:
 
@@ -106,12 +107,12 @@ Commit cadence expectation for this macro batch:
 
 Execute in order and mark progress in `docs/todo/android/implementation.md`.
 
-- `APX7-M1`: audit startup `.terminalWidgetSlot()` conversions and define bounded choke-point target.
-- `APX7-M2`: introduce declared-slot value conversion choke-point seam with ownership-first naming.
-- `APX7-M3`: rewire startup consumers through choke-point conversion API without behavior change.
-- `APX7-M4`: lock authority docs to APX-B7 conversion choke-point ownership shape.
-- `APX7-M5`: keep queue/handoff/entrypoint aligned to APX-B7 super-gate.
-- `APX7-M6`: run validation and publish super-gate review packet.
+- `APX8-M1`: audit app-shell tab-state seams and define minimum working vertical slice behavior.
+- `APX8-M2`: implement tab-state model/policy feature cut for slice 1.
+- `APX8-M3`: wire consumers and verify feature behavior on device.
+- `APX8-M4`: land scoped Android-side zide-pm test-binary pull path improvement required by slice.
+- `APX8-M5`: lock docs/handoff/entrypoint to implemented feature slice.
+- `APX8-M6`: run validation and publish super-gate review packet.
 
 ## Allowed Work
 
@@ -204,7 +205,7 @@ when:
 - a behavior change is required where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
 - implementing terminal tabs/product behavior becomes necessary to proceed
-- the `APX-B7` super-gate is reached
+- the `APX-B8` super-gate is reached
 
 Otherwise continue autonomously with:
 
@@ -212,9 +213,9 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At `APX-B7` super-gate, report:
+At `APX-B8` super-gate, report:
 
-- review chunk name: `APX-B7`
+- review chunk name: `APX-B8`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs
