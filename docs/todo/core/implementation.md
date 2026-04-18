@@ -442,6 +442,83 @@ Internal milestones (`CZH5-M1..M6`, execute sequentially in one batch):
 | `CZH5-M5` | docs sync (queue/handoff/entrypoint + any touched authority docs) |
 | `CZH5-M6` | super-gate packet with residual-risk notes |
 
+#### `CZH5-M1` stale probe/debug caller audit (2026-04-18)
+
+**Seed commits (file union):** `15b790cf`, `dbadae3e`, `d5a42c68`, `4207edcc`, `49e396cb`, `23785c17`.
+
+**Candidate file list (22 files):**
+
+- `src/ui/renderer/font_runtime.zig`
+- `src/ui/widgets/terminal_widget_draw.zig`
+- `src/editor/manual_highlights.zig`
+- `src/editor/render/segment_paint.zig`
+- `src/editor/tree_sitter_assets.zig`
+- `src/terminal/core/pty_terminal_runtime_tests.zig`
+- `src/ui/renderer/metal_backend.zig`
+- `src/ui/renderer/window_chrome_runtime.zig`
+- `tests/layout_tests.zig`
+- `tests/terminal_input_encoding_tests.zig`
+- `src/editor/editor.zig`
+- `src/editor/navigation.zig`
+- `src/editor/selection_state.zig`
+- `tests/editor_clipboard_tests.zig`
+- `tests/editor_tests.zig`
+- `build_system/ide_extended_artifacts.zig`
+- `editor_highlight_smoke_root.zig`
+- `editor_tests_root.zig`
+- `tests/editor_highlight_smoke_tests.zig`
+- `tests/tests_main.zig`
+- `src/config/lua_config_log_parse.zig`
+- `src/config/lua_config_ziglua_parse.zig`
+
+**Adjacent ownership files added:** none. Imports checked for the touched hot paths (e.g. glyph prep → `renderer_font_backend_host.zig`) show no additional `app_logger` / probe surface; sub-draw modules were not part of the seed commit set and were excluded as speculative scope.
+
+**Per-file classification (summary):**
+
+| File | keep_correctness | keep_operator_telemetry | remove_probe_residue (see queue) |
+| --- | --- | --- | --- |
+| `font_runtime.zig` | — | glyph prep worker spawn/compute warnings; terminal glyph prep compute failure warning | gated `.info` pinch/UI-scale/zoom traces (`applyPinchZoomScale`, `refreshUiScaleFromDisplayMetrics`, `applyPendingZoom`) |
+| `terminal_widget_draw.zig` | — | adopt-path warning when committed font cache missing | — (glyph-prep `.info` spam removed in `15b790cf`) |
+| `editor.zig` | — | `editor.draw` warnings on highlight/IO failures; `openFile` path `.info` (core) | env-driven highlight worker delay + helper; high-frequency `editor.perf` `.info` on visible-highlight path; `openFile` startup perf line; `undo`/`redo` unconditional `.info` “ok” lines; structured lifecycle `.info` that embed raw `editor_ptr` (treat as investigation residue — see removal queue) |
+| `navigation.zig` | — | caret/selection restore warnings only | — |
+| `selection_state.zig` | `std.debug.assert` invariants | — | — |
+| `metal_backend.zig` | — | present capture warnings | — (test-local `FakeRenderer` is harness-only) |
+| `window_chrome_runtime.zig` | — | SDL border/hit-test warnings | — |
+| `pty_terminal_runtime_tests.zig` | test use of `debug_ops` / `debugFeedBytes` / grid helpers | — | — |
+| `lua_config_log_parse.zig` | level string parsing | — | — |
+| `lua_config_ziglua_parse.zig` | unit tests exercising logger config mapping | — | — |
+| `manual_highlights.zig`, `segment_paint.zig`, `tree_sitter_assets.zig` | — | — | no logging/probe patterns located |
+| `build_system/ide_extended_artifacts.zig`, `editor_*_root.zig`, `tests/tests_main.zig`, listed `tests/*.zig` | — | — | no probe/logging residue in reviewed paths |
+
+**Explicit removal queue (`remove_probe_residue` — execute in `CZH5-M2+`):**
+
+| File | Symbol / site | Why residue | Intended removal action | Risk |
+| --- | --- | --- | --- | --- |
+| `src/ui/renderer/font_runtime.zig` | `applyPinchZoomScale` | Gated `.info` `ui_pinch_zoom` / `terminal_pinch_tick` dumps mirror removed glyph-prep chatter; hot pinch path | Delete `ui_log_enabled` / `font_log_enabled` blocks and dependent locals | low |
+| `src/ui/renderer/font_runtime.zig` | `refreshUiScaleFromDisplayMetrics` | Gated `.info` `ui_scale` lines on DPI/display updates | Delete gated `.info` block | low |
+| `src/ui/renderer/font_runtime.zig` | `applyPendingZoom` | Gated `.info` `ui_zoom` + `ui_zoom_effective` on zoom apply | Delete gated `.info` blocks | low |
+| `src/editor/editor.zig` | `visibleHighlightWorkerMain` | `ZIDE_EDITOR_DEBUG_VISIBLE_HIGHLIGHT_DELAY_MS` sleep is investigation-only timing injection | Remove getenv + `Thread.sleep` branch | low |
+| `src/editor/editor.zig` | `debugWorkerDelayMs` | Helper exists only to support env delay probe | Delete function when call site removed | low |
+| `src/editor/editor.zig` | `applyPendingVisibleHighlightResult`, `computeVisibleHighlightRequest`, `executePendingVisibleHighlightRequest`, `ensureVisibleHighlightWorker`, `finishVisibleHighlightWorkerStop`, `visibleHighlightWorkerMain` | Ungated `editor.perf` `.info` on every publish/compute/worker transition — hot-path spam | Drop or relocate behind dedicated perf/trace policy (default off); remove duplicate “lines=0 budget=0” stubs | med |
+| `src/editor/editor.zig` | `openFile` | `editor.perf` `.info` startup line logs bytes/deferrals every open — investigation-style perf | Remove `perf_log` `.info` startup stanza (keep optional `editor.core` path log if still desired) | med |
+| `src/editor/editor.zig` | `undo`, `redo` | Unconditional `.info` on every successful undo/redo | Remove `log.logf(.info, …)` “ok” lines | med |
+| `src/editor/editor.zig` | `requestRuntimeWake`, `prepareForShutdown`, `applyPendingVisibleHighlightResult`, visible-highlight worker stop/join/publish sites | `logFields(.info, …)` includes `editor_ptr` raw addresses — investigation-oriented payload | Remove pointer fields or replace with non-address correlation id per lifecycle contract (`CZH5-M3` naming pass) | med |
+
+**Ownership naming drift (no edits this milestone):**
+
+| Current | Proposed owner-aligned | Why |
+| --- | --- | --- |
+| `debugWorkerDelayMs` | remove or `editor.highlight.probeDelayFromEnv` under explicit debug/test hook policy | Name hides that only visible-highlight worker uses it for env injection |
+| `editor.lifecycle` + `editor_ptr` field | `editor.lifecycle` without raw pointers, or `editor.support` + stable instance token | Raw addresses are not part of product logging contract; reads as leftover probe fields |
+| Mixed `renderer.font` vs `ui.scale` loggers in `font_runtime.zig` pinch path | Keep tags but split file-level doc/owner note: scale vs terminal font cache | Same file owns UI scale and terminal font; tags blur subsystem boundaries |
+
+**Validation (M1 audit run, 2026-04-18):**
+
+- `zig build` — **PASS**
+- `zig build test` — **PASS**
+- `zig build -Dmode=terminal` — **PASS**
+- `zig build -Dmode=editor` — **PASS**
+
 ## Response Contract
 
 Every batch update must include:
