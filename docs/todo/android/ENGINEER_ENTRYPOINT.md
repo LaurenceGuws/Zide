@@ -34,16 +34,16 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B26` is at **super-gate** (engineer execution complete; awaiting architect verdict on campaign closure). Do not start the next campaign until the Architect accepts the gate and refocuses `docs/todo/android/implementation.md`.
+`APX-B1` is `in_progress`.
 
 Active batch queue line (exact):
 
-- perform landing-gate closure audit and resolve only concrete remaining harness/widget/userland ownership gaps needed to close AHW
+- define and implement explicit multi-terminal app-shell policy seams (selection and activation only) without shipping tabs UI
 
 ## Core Boundary Rule
 
-This batch exists to close AHW by auditing landing-gate criteria and fixing only
-real remaining ownership gaps while preserving behavior.
+This batch exists to start product expansion on top of closed AHW ownership
+boundaries while preserving current single-terminal behavior.
 
 - Android Harness owns platform ceremony, app-shell layout/styling/theming,
   navigation/view state, userland orchestration, and widget instance hosting.
@@ -57,13 +57,12 @@ real remaining ownership gaps while preserving behavior.
 - `WidgetAssembly.Result` remains widget assembly output (`harnessHost` +
   `surfaceJoin`); it is not the terminal-instance factory by itself.
 
-## Required Direction From Architect Review (post-AHW-B25)
+## Required Direction From Architect Review (post-AHW-B26)
 
-- `AHW-B26` performs the **campaign landing-gate closure audit**; engineer recommendation after M1: **no Java ownership gaps** in scope — closure is doc-lock + architect acceptance of `AHW` complete.
-- `AHW-B25` is accepted.
+- `AHW-B26` is accepted and `AHW` is closed.
 - Keep harness vs surface split (`WidgetAssembly.Result.harnessHost` + `surfaceJoin`) as the baseline.
 - Freeze additional keep-screen-on seam work beyond B20 unless explicitly re-opened by product direction.
-- Execute `AHW-B26` as a non keep-screen-on batch.
+- Execute `APX-B1` as a non keep-screen-on batch.
 - Keep `ProductHostActivityStartupWiring`, `ProductTerminalLifecycleHost`, and `ProductTerminalWidgetAssemblyHost` ownership from B22 unchanged.
 - Keep `ProductHostOnCreateStartupCoordinator` + `ProductHostOnCreateStartupSteps` as the startup choreography seam from B23.
 - Keep `AppShellTerminalViewPolicy` as explicit app-shell terminal-view policy seam; no public `appShellNavigation()` accessor on that type.
@@ -89,17 +88,17 @@ real remaining ownership gaps while preserving behavior.
 
 ## Internal Milestones
 
-Execute `AHW26-M1` through `AHW26-M6` sequentially; do not stop before the
-`AHW-B26` super-gate unless a hard stop condition is hit.
+Execute `APX1-M1` through `APX1-M6` sequentially; do not stop before the
+`APX-B1` super-gate unless a hard stop condition is hit.
 
 Execute in order and mark progress in `docs/todo/android/implementation.md`.
 
-- `AHW26-M1`: audit the five landing-gate criteria against current code ownership and callsites.
-- `AHW26-M2`: convert real gaps into minimal cuts or explicit no-code closure path.
-- `AHW26-M3`: implement only minimal remaining ownership-gap fixes (if any).
-- `AHW26-M4`: lock authority docs to landing-gate post-gap reality.
-- `AHW26-M5`: keep queue/handoff/entrypoint aligned to B26 super-gate.
-- `AHW26-M6`: run validation and publish super-gate review packet with explicit closure recommendation.
+- `APX1-M1`: audit current terminal selection/activation callsites and define bounded multi-terminal policy seam targets.
+- `APX1-M2`: introduce explicit expansion policy seam(s) with ownership-first naming.
+- `APX1-M3`: rewire current consumers through expansion seam defaults without behavior change.
+- `APX1-M4`: lock authority docs to APX-B1 policy ownership shape.
+- `APX1-M5`: keep queue/handoff/entrypoint aligned to APX-B1 super-gate.
+- `APX1-M6`: run validation and publish super-gate review packet.
 
 ## Allowed Work
 
@@ -190,7 +189,7 @@ when:
 - a behavior change is required where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
 - implementing terminal tabs/product behavior becomes necessary to proceed
-- the `AHW-B26` super-gate is reached
+- the `APX-B1` super-gate is reached
 
 Otherwise continue autonomously with:
 
@@ -198,9 +197,9 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At `AHW-B26` super-gate, report:
+At `APX-B1` super-gate, report:
 
-- review chunk name: `AHW-B26`
+- review chunk name: `APX-B1`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs

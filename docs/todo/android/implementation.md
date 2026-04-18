@@ -96,9 +96,9 @@ Dual-mode batching override (architect directive):
 - `RF-M0` through `RF-M5` completed; refocus baseline is locked.
 - `AX-M1` through `AX-M5` completed.
 - `ASF-M3` escalated stabilization follow-through to operator evidence.
-- `AHW-B1` through `AHW-B25` accepted by architect.
+- `AHW-B1` through `AHW-B26` accepted by architect.
 - Keep-screen-on seam work beyond `AHW-B20` is frozen by product direction.
-- `AHW-B26` is at super-gate (awaiting architect verdict).
+- `APX-B1` is `in_progress` (post-AHW product expansion).
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -126,14 +126,14 @@ Completed campaign summary:
 - Refocus campaign (`RF-M0` to `RF-M5`) completed.
 - AX hardening campaign (`AX-M1` to `AX-M5`) completed.
 - ASF stabilization follow-through escalated to operator evidence (`ASF-M3`).
-- AHW macro batches `AHW-B1` through `AHW-B25` accepted by architect.
+- AHW macro batches `AHW-B1` through `AHW-B26` accepted by architect.
 - Keep-screen-on follow-up beyond `AHW-B20` frozen by product direction.
 
 Last accepted architect gate:
 
-- `Review chunk: AHW-B25`
+- `Review chunk: AHW-B26`
 - `Verdict: accepted`
-- `Commits reviewed: 203d976d, c8d560ee`
+- `Commits reviewed: 8ef4a4a1`
 - `Architect validation: compileDebug/compileRelease/deploy/cold-start/AndroidRuntime:E (pass)`
 
 `Milestone reached per docs, architect review required.`
@@ -606,7 +606,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B26` Refocus-Shape Landing Gate Closure (`awaiting_architect_review`)
+### `AHW-B26` Refocus-Shape Landing Gate Closure (`completed`)
 
 Batch queue line (exact):
 
@@ -760,6 +760,149 @@ Acceptance:
 - `adb shell am force-stop uk.laurencegouws.zide && adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity` — pass (`LaunchState: COLD`, `Status: ok`)
 
 `Milestone reached per docs, architect review required.`
+
+Architect review verdict:
+
+- `Review chunk: AHW-B26`
+- `Verdict: accepted`
+- `Commits reviewed: 8ef4a4a1`
+- `Architect validation spot-check: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
+- `Architect runtime validation spot-check: python3 ops/android_terminal_host.py deploy (pass); adb cold start (pass, LaunchState: COLD); adb logcat -d -s AndroidRuntime:E (pass, empty)`
+- `Engineer device validation accepted: deploy + AndroidRuntime:E smoke + cold start pass`
+- `Review answers: yes, AHW is formally closed. No dissent on criterion (5): remaining work is product expansion under explicit scoped batches.`
+- `Findings carried forward: AHW ownership rescue is complete. New lane is product expansion on top of stable harness/widget contracts.`
+
+---
+
+## Post-AHW Campaign
+
+Campaign: `APX` (Android Product Expansion)
+
+- Goal: ship product-facing terminal expansion capability on top of closed AHW ownership boundaries.
+- Rules: do not reopen ownership rescue unless a concrete regression appears.
+
+### `APX-B1` Multi-terminal app-shell policy foundation (`in_progress`)
+
+Batch queue line (exact):
+
+- define and implement explicit multi-terminal app-shell policy seams (selection and activation only) without shipping tabs UI
+
+Batch purpose:
+
+- begin product expansion by shaping policy seams for multi-terminal selection
+- preserve current single-terminal behavior by default
+- keep harness/widget/userland ownership boundaries unchanged from AHW closure
+
+Batch scope:
+
+- Java Android terminal host only, plus authority docs needed to keep contract truth current
+- primary code root:
+  `android/terminal-host/app/src/main/java/uk/laurencegouws/terminal/**`
+- allowed docs:
+  `docs/todo/android/implementation.md`,
+  `docs/todo/android/ENGINEER_ENTRYPOINT.md`,
+  `docs/AGENT_HANDOFF.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_NAMING_CONTRACT.md`,
+  `app_architecture/platform/android/USERLAND_HOST_CONTRACT.md`
+
+Batch non-goals:
+
+- no tabs UI rendering
+- no tab persistence/session switching
+- no terminal-core or shared-renderer changes
+- no app-shell visual redesign
+- no keep-screen-on follow-up implementation unless explicitly re-opened
+- no debug-view UI resurrection
+- no broad rename sweep
+
+Batch super-gate:
+
+- multi-terminal selection policy seam(s) exist with explicit ownership and no ad hoc `ShellViewId` mutations
+- default behavior remains current single-terminal product path
+- no seam ownership regression against AHW closure baseline
+- docs reflect final ownership/naming shape
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass at final seam boundary
+
+Internal milestone cadence:
+
+- Engineer executes `APX1-M1` through `APX1-M6` sequentially.
+- Do not stop for architect review between internal milestones.
+- Mark each internal milestone complete in this file as it lands.
+- Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
+  the `APX-B1` super-gate is reached.
+
+### `APX1-M1` Expansion policy audit (`pending`)
+
+Queue line (exact):
+
+- audit current app-shell terminal selection/activation callsites and define bounded multi-terminal policy seam targets
+
+Acceptance:
+
+- enumerate current activation/selection mutation points
+- specify minimal policy interfaces for expansion without behavior change
+- record out-of-scope items explicitly
+
+### `APX1-M2` Policy seam introduction (`pending`)
+
+Queue line (exact):
+
+- introduce explicit multi-terminal app-shell policy seam(s) with ownership-first naming
+
+Acceptance:
+
+- add policy owner surfaces under `host/ui`
+- no fallback compatibility paths
+- compile debug + release Java after code changes
+
+### `APX1-M3` Consumer rewiring (`pending`)
+
+Queue line (exact):
+
+- rewire current single-terminal consumers through expansion policy seam defaults
+
+Acceptance:
+
+- current behavior unchanged
+- no direct ad hoc shell-view mutations in rewired consumers
+- compile debug + release Java after code changes
+
+### `APX1-M4` Contract docs lock (`pending`)
+
+Queue line (exact):
+
+- lock authority docs to APX-B1 policy seam ownership
+
+Acceptance:
+
+- host structure and naming contract match code shape
+- userland contract remains unchanged unless ownership text requires update
+
+### `APX1-M5` Queue/handoff/entrypoint sync (`pending`)
+
+Queue line (exact):
+
+- keep queue, handoff, and engineer entrypoint aligned to APX-B1 execution and super-gate stop
+
+Acceptance:
+
+- queue, handoff, and engineer entrypoint stay coherent through APX-B1 super-gate
+- super-gate stop condition and review packet contract are explicit
+
+### `APX1-M6` Batch validation + review packet (`pending`)
+
+Queue line (exact):
+
+- validate APX-B1 end-to-end and publish the architect review packet
+
+Acceptance:
+
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
+- cold start smoke pass when a device is available
+- engineer reports full super-gate packet and explicit residual-risk note
 
 ## Guardrails
 

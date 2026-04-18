@@ -5,9 +5,9 @@ Session entrypoint only. Keep this file short and current.
 ## Active Focus
 
 - Product lane: Android terminal excellence
-- Campaign: **Android harness/widget portability hardening** (`AHW`) — turns the refocus vision into enforceable code shape: Android Harness is the platform/app-shell canvas, Terminal Widget is the portable terminal consumer, and userland stays movable for future IDE/editor modes.
-- Active macro batch (`awaiting_architect_review`): `AHW-B26` — landing-gate audit complete (five criteria pass); engineer recommends **close `AHW`**; doc-only authority updates; stopped at super-gate for architect verdict on campaign closure.
-- Prior closed/escalated: `AHW-B1` through `AHW-B25` accepted; `ASF-M3` escalated IME/assist/touch rows to operator evidence; `RF-M0` through `RF-M5` and `AX-M1` through `AX-M5` completed.
+- Campaign: **Android product expansion** (`APX`) — build product capability on top of the closed harness/widget ownership shape.
+- Active macro batch (`in_progress`): `APX-B1` — define multi-terminal app-shell policy seams (selection/activation) without shipping tabs UI.
+- Prior closed/escalated: `AHW-B1` through `AHW-B26` accepted and `AHW` closed; `ASF-M3` escalated IME/assist/touch rows to operator evidence; `RF-M0` through `RF-M5` and `AX-M1` through `AX-M5` completed.
 - Active queue authority: `docs/todo/android/implementation.md`
 - Engineer entrypoint (dual mode): `docs/todo/android/ENGINEER_ENTRYPOINT.md`
 
@@ -25,8 +25,8 @@ Engineer session seed:
 - Read `docs/todo/android/ENGINEER_ENTRYPOINT.md`, then
   `docs/todo/android/implementation.md`, then this handoff file.
 - Execute only the macro batch marked `in_progress` in
-  `docs/todo/android/implementation.md` (`AHW-B26`).
-- Stop at the `AHW-B26` super-gate and return the review packet for Architect verdict.
+  `docs/todo/android/implementation.md` (`APX-B1`).
+- Stop at the `APX-B1` super-gate and return the review packet for Architect verdict.
 
 ## First Read Order
 
@@ -50,7 +50,7 @@ Engineer session seed:
 - Architect updates use: `Blocked by humain review needed: true|false`.
 - Engineer updates use: `Blocked by Archtect review needed: true|false`.
 
-## AHW-B26 Baseline
+## APX-B1 Baseline
 
 - `AHW-B20` is accepted and already keeps the test device awake by default.
 - Additional keep-screen-on seam work is frozen by product direction.
@@ -59,7 +59,8 @@ Engineer session seed:
 - `AHW-B23` is accepted: onCreate startup choreography is owned by `ProductHostOnCreateStartupCoordinator` + `ProductHostOnCreateStartupSteps`.
 - `AHW-B24` is accepted: explicit app-shell terminal-view activation policy is owned by `AppShellTerminalViewPolicy` (wraps `AppShellNavigation`).
 - `AHW-B25` is accepted: `AppShellTerminalViewPolicy` owns drawer sidebar policy forwarding and terminal-view activation; consumers do not take raw `AppShellNavigation` through the policy surface.
-- `AHW-B26` scope is non keep-screen-on: landing-gate closure audit with only concrete remaining ownership-gap fixes.
+- `AHW-B26` is accepted: landing-gate audit passed and AHW is closed.
+- `APX-B1` scope is non keep-screen-on: establish explicit multi-terminal app-shell policy seams without changing current single-terminal behavior.
 - Keep `ProductHostKeepScreenOnPolicy` as the long-term owner of terminal keep-screen-on default policy.
 - Keep `HostImeStateAccess` as the long-term host callback IME seam (backed by `ProductHostImeState`).
 - Keep `ProductHostImeState` as the long-term activity IME carrier.
@@ -76,7 +77,7 @@ Engineer session seed:
 
 ## Operator Evidence Escalation
 
-ASF did not prove IME/assist or touch gestures because no operator packets were delivered. Those rows remain parked in `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md` with owner `operator`; they do not block `AHW-B26` unless new evidence reports a regression inside the active code scope.
+ASF did not prove IME/assist or touch gestures because no operator packets were delivered. Those rows remain parked in `docs/todo/android/RF_M5_STABILIZATION_MATRIX.md` with owner `operator`; they do not block `APX-B1` unless new evidence reports a regression inside the active code scope.
 
 ## Historical Notes
 
