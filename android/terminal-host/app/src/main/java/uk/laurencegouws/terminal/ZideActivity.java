@@ -150,7 +150,7 @@ public final class ZideActivity extends android.app.Activity
     }
 
     private void applyDefaultTerminalKeepScreenOnPolicy() {
-        productHostKeepScreenOnPolicy.applyDefaultTerminalHostPolicy(getWindow());
+        productHostKeepScreenOnPolicy.applyDefaultTerminalHostPolicy(getWindow()::addFlags);
     }
 
     private void runOnCreateStartupSequence() {

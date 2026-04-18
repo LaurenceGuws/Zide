@@ -4228,7 +4228,7 @@ Progress delta:
   policy uses only `WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON` + seam (no `Window` type in policy API).
 - **Out of scope:** B14–B19 seams; no settings toggle.
 
-### `AHW20-M2` Explicit host window-flag seam introduction (`pending`)
+### `AHW20-M2` Explicit host window-flag seam introduction (`completed`)
 
 Queue line (exact):
 
@@ -4240,7 +4240,11 @@ Acceptance:
 - keep `ProductHostKeepScreenOnPolicy` as policy owner
 - compile debug + release Java after code changes
 
-### `AHW20-M3` Policy and activity rewiring (`pending`)
+Progress delta:
+
+- **`HostWindowFlagAccess`** (`addFlags(int)`).
+
+### `AHW20-M3` Policy and activity rewiring (`completed`)
 
 Queue line (exact):
 
@@ -4251,6 +4255,11 @@ Acceptance:
 - `ProductHostKeepScreenOnPolicy` no longer takes raw `Window` parameters
 - `ZideActivity` wires the explicit seam without behavior change
 - compile debug + release Java after code changes
+
+Progress delta:
+
+- **`ProductHostKeepScreenOnPolicy.applyDefaultTerminalHostPolicy(HostWindowFlagAccess)`**;
+  **`ZideActivity`** passes **`getWindow()::addFlags`**.
 
 ### `AHW20-M4` Contract docs lock (`pending`)
 
