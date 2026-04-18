@@ -22,6 +22,8 @@ import uk.laurencegouws.terminal.scroll.ScrollOverlayView;
 import uk.laurencegouws.terminal.selection.SelectionController;
 import uk.laurencegouws.terminal.userland.ShellStatePresenter;
 
+import java.util.Objects;
+
 /**
  * Owns product widget/chrome/view-mode/surface host assembly for activity wiring.
  *
@@ -141,12 +143,22 @@ public final class WidgetAssembly {
     private WidgetAssembly() {
     }
 
-    public static Result assemble(Host host) {
+    /**
+     * Assembles widget harness + surface join using the activity’s single startup selection context
+     * (declared catalog + selected slot + policy) so selection is not re-resolved inside assembly.
+     */
+    public static Result assemble(final Host host, final AppShellTerminalHostSelectionContext selectionContext) {
+        Objects.requireNonNull(host, "host");
+        Objects.requireNonNull(selectionContext, "selectionContext");
+        if (host.terminalWidgetSlot() != selectionContext.selectedProductTerminalSlotForAppShell()) {
+            throw new IllegalStateException(
+                    "Widget host declared slot must match startup AppShellTerminalHostSelectionContext selected slot");
+        }
         final AppShellTerminalSelectionPolicy appShellTerminalSelectionPolicy =
-                AppShellTerminalSelectionPolicy.forDeclaredHostSlot(host.terminalWidgetSlot());
+                selectionContext.appShellTerminalSelectionPolicy();
         final AppShellNavigation appShellNavigation =
                 AppShellNavigation.forProductTerminalSlot(
-                        appShellTerminalSelectionPolicy.selectedProductTerminalSlotForAppShell());
+                        selectionContext.selectedProductTerminalSlotForAppShell());
         final AppShellTerminalViewPolicy appShellTerminalViewPolicy =
                 new AppShellTerminalViewPolicy(appShellNavigation);
         final SurfaceWidgetControllerRef surfaceWidgetControllerRef = new SurfaceWidgetControllerRef();

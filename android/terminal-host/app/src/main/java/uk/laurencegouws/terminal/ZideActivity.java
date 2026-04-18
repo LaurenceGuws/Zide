@@ -30,7 +30,7 @@ import uk.laurencegouws.terminal.host.status.StatusViewCallbacks;
 import uk.laurencegouws.terminal.host.ui.ActivityViewBindings;
 import uk.laurencegouws.terminal.host.ui.TerminalWidgetCompositionAssembly;
 import uk.laurencegouws.terminal.host.ui.TerminalWidgetInstance;
-import uk.laurencegouws.terminal.host.ui.AppShellTerminalSelectionPolicy;
+import uk.laurencegouws.terminal.host.ui.AppShellTerminalHostSelectionContext;
 import uk.laurencegouws.terminal.host.ui.TerminalWidgetSlotId;
 import uk.laurencegouws.terminal.host.ui.ProductHostActivityStartupWiring;
 import uk.laurencegouws.terminal.host.ui.ProductHostOnCreateStartupCoordinator;
@@ -75,16 +75,16 @@ public final class ZideActivity extends android.app.Activity
 
     /**
      * App-shell terminal <strong>selection</strong> for this activity’s wiring (interaction,
-     * widget host, composition). Declared slots are cataloged in
-     * {@link uk.laurencegouws.terminal.host.ui.DeclaredTerminalWidgetSlotCatalog}; multi-slot hosting would vary
-     * selection through {@link AppShellTerminalSelectionPolicy}; today
-     * {@link AppShellTerminalSelectionPolicy#singleTerminalProduct}.
+     * widget host, composition). One {@link AppShellTerminalHostSelectionContext} per startup carries
+     * {@link uk.laurencegouws.terminal.host.ui.DeclaredTerminalWidgetSlotCatalog} membership and the
+     * selected routing slot; multi-slot hosting would vary that context. Today
+     * {@link AppShellTerminalHostSelectionContext#forSingleTerminalProductHarnessStartup}.
      * Assembly entry points enforce active-slot policy via
      * {@link TerminalWidgetSlotId#checkActiveProductTerminalSlot}. Shell view identity is resolved
      * through {@link uk.laurencegouws.terminal.host.ui.ProductTerminalSlotShellMapping#shellViewIdForTerminalSlot}.
      */
-    private static final AppShellTerminalSelectionPolicy APP_SHELL_TERMINAL_SELECTION =
-            AppShellTerminalSelectionPolicy.singleTerminalProduct();
+    private final AppShellTerminalHostSelectionContext appShellTerminalSelectionContext =
+            AppShellTerminalHostSelectionContext.forSingleTerminalProductHarnessStartup();
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     /** Single IME visibility scratch for status/input/widget harness wiring. */
@@ -284,7 +284,7 @@ public final class ZideActivity extends android.app.Activity
 
     private InteractionCallbacks createInteractionCallbacks() {
         return ProductHostActivityStartupWiring.interaction(
-                APP_SHELL_TERMINAL_SELECTION.selectedProductTerminalSlotForAppShell(),
+                appShellTerminalSelectionContext.selectedProductTerminalSlotForAppShell(),
                 this,
                 handler,
                 activityViewBindings.productSurfaceContainer,
@@ -318,18 +318,19 @@ public final class ZideActivity extends android.app.Activity
     }
 
     private void applyTerminalWidgetComposition(InteractionAssembly.Result interaction) {
-        final WidgetAssembly.Result widgetResult = WidgetAssembly.assemble(createWidgetHost(interaction));
+        final WidgetAssembly.Result widgetResult =
+                WidgetAssembly.assemble(createWidgetHost(interaction), appShellTerminalSelectionContext);
         ShellStatePresenter = widgetResult.harnessHost.shellStatePresenter;
         terminalChromeController = widgetResult.harnessHost.terminalChromeController;
         terminalViewModeController = widgetResult.harnessHost.terminalViewModeController;
         terminalWidget = TerminalWidgetCompositionAssembly.compose(
-                APP_SHELL_TERMINAL_SELECTION.selectedProductTerminalSlotForAppShell(), interaction, widgetResult.surfaceJoin);
+                appShellTerminalSelectionContext.selectedProductTerminalSlotForAppShell(), interaction, widgetResult.surfaceJoin);
     }
 
     private WidgetAssembly.Host createWidgetHost(final InteractionAssembly.Result interaction) {
         return new ProductTerminalWidgetAssemblyHost(
                 new WidgetHostAssemblyContext(
-                        APP_SHELL_TERMINAL_SELECTION.selectedProductTerminalSlotForAppShell(),
+                        appShellTerminalSelectionContext.selectedProductTerminalSlotForAppShell(),
                         this,
                         handler,
                         productHostImeState,

@@ -16,6 +16,7 @@ import java.util.Objects;
  *
  * @see AppShellTerminalViewPolicy
  * @see DeclaredTerminalWidgetSlotCatalog
+ * @see AppShellTerminalHostSelectionContext
  * @see ProductTerminalSlotShellMapping
  */
 public final class AppShellTerminalSelectionPolicy {
@@ -26,6 +27,11 @@ public final class AppShellTerminalSelectionPolicy {
 
     private AppShellTerminalSelectionPolicy(final DeclaredTerminalWidgetSlotCatalog declaredSlotCatalog) {
         this.declaredSlotCatalog = Objects.requireNonNull(declaredSlotCatalog, "declaredSlotCatalog");
+    }
+
+    /** Declared terminal-slot catalog backing this selection policy instance. */
+    public DeclaredTerminalWidgetSlotCatalog declaredSlotCatalog() {
+        return declaredSlotCatalog;
     }
 
     /**
