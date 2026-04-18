@@ -2880,7 +2880,7 @@ Queue line (exact):
 
 - `Review chunk: APX-B16`
 - `Verdict: pending architect review`
-- `Commits reviewed: see git log on branch for APX-B16 engineer push (feature + ANDROID_JAVA_HOST_STRUCTURE + queue/handoff/entrypoint)`
+- `Commits reviewed: 804eb6e1 (feature), f1185e57 (ANDROID_JAVA_HOST_STRUCTURE), d405e36c (queue/handoff/entrypoint)`
 - `Engineer validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat -d -s AndroidRuntime:E after am start (pass, empty); adb cold start am start -W (pass, LaunchState: COLD, Status: ok)`
 - `Contract notes: APX-B15 descriptor ownership unchanged; save uses stable id; restore resolves to seed index only; APX-B9 user distinct select still restarts; legacy index bundle read supported; single PTY.`
 
