@@ -24,8 +24,17 @@ import java.util.Objects;
  * <p><strong>Chrome drawer sidebar:</strong> mutation uses
  * {@link #applyChromeDrawerSidebarOpen} / {@link #applyChromeDrawerSidebarClosed} only
  * — no generic boolean sidebar setter.</p>
+ *
+ * <p><strong>Product terminal tab strip (slice 1):</strong> harness keeps a small fixed
+ * tab count ({@link #productTerminalTabCount}) and the selected index
+ * ({@link #selectedProductTerminalTabIndex} / {@link #applySelectProductTerminalTab}).
+ * This models multi-session <em>chrome</em> selection only — it does not add a second
+ * {@link TerminalWidgetSlotId} or terminal instance.</p>
  */
 public final class AppShellNavigation {
+    /** Fixed tab count for the first tab-state vertical slice (chrome only). */
+    public static final int PRODUCT_TERMINAL_TAB_COUNT = 2;
+
     private boolean chromeDrawerSidebarOpen;
     /**
      * Resolved shell view for this navigation instance’s product terminal slot (mapping
@@ -33,6 +42,7 @@ public final class AppShellNavigation {
      */
     private final ShellViewId productTerminalShellViewId;
     private ShellViewId activeShellView;
+    private int selectedProductTerminalTabIndex;
 
     /**
      * Product harness wiring: resolves the slot once and seeds {@link #activeShellView}.
@@ -46,6 +56,7 @@ public final class AppShellNavigation {
         this.productTerminalShellViewId =
                 Objects.requireNonNull(productTerminalShellViewId, "productTerminalShellViewId");
         replaceActiveShellView(this.productTerminalShellViewId);
+        this.selectedProductTerminalTabIndex = 0;
     }
 
     /**
@@ -54,6 +65,34 @@ public final class AppShellNavigation {
      */
     public void applyProductTerminalShellViewActive() {
         replaceActiveShellView(productTerminalShellViewId);
+    }
+
+    /** Number of product terminal tabs in the app-shell chrome strip (slice 1). */
+    public int productTerminalTabCount() {
+        return PRODUCT_TERMINAL_TAB_COUNT;
+    }
+
+    /** Selected tab index {@code [0, productTerminalTabCount())}. */
+    public int selectedProductTerminalTabIndex() {
+        return selectedProductTerminalTabIndex;
+    }
+
+    /**
+     * Selects a product terminal tab in harness chrome. Re-asserts the active shell view
+     * for the resolved product slot (single {@link ShellViewId} today).
+     *
+     * @throws IllegalArgumentException if {@code tabIndex} is out of range
+     */
+    public void applySelectProductTerminalTab(final int tabIndex) {
+        if (tabIndex < 0 || tabIndex >= PRODUCT_TERMINAL_TAB_COUNT) {
+            throw new IllegalArgumentException(
+                    "tabIndex must be in [0, " + PRODUCT_TERMINAL_TAB_COUNT + "), got " + tabIndex);
+        }
+        if (tabIndex == selectedProductTerminalTabIndex) {
+            return;
+        }
+        selectedProductTerminalTabIndex = tabIndex;
+        applyProductTerminalShellViewActive();
     }
 
     /** Whether the slide-out chrome drawer sidebar is open (visible). */

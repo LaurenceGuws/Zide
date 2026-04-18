@@ -15,8 +15,8 @@ import java.util.Objects;
  * {@link #applyChromeDrawerSidebarOpen}, {@link #applyChromeDrawerSidebarClosed}) is forwarded
  * here so {@link ChromeBridge} does not take a raw {@link AppShellNavigation} reference.</p>
  *
- * <p>Future multi-view / tab hosting extends this policy type with explicit methods; it does
- * not add tab UI or product behavior by itself.</p>
+ * <p>Product terminal tab-strip selection (slice 1) is forwarded here so chrome wiring does not
+ * reach {@link AppShellNavigation} directly for tab indices.</p>
  */
 public final class AppShellTerminalViewPolicy {
     private final AppShellNavigation appShellNavigation;
@@ -31,6 +31,21 @@ public final class AppShellTerminalViewPolicy {
      */
     public void applyActiveProductTerminalShellView() {
         appShellNavigation.applyProductTerminalShellViewActive();
+    }
+
+    /** @see AppShellNavigation#productTerminalTabCount */
+    public int productTerminalTabCount() {
+        return appShellNavigation.productTerminalTabCount();
+    }
+
+    /** @see AppShellNavigation#selectedProductTerminalTabIndex */
+    public int selectedProductTerminalTabIndex() {
+        return appShellNavigation.selectedProductTerminalTabIndex();
+    }
+
+    /** @see AppShellNavigation#applySelectProductTerminalTab */
+    public void applySelectProductTerminalTab(final int tabIndex) {
+        appShellNavigation.applySelectProductTerminalTab(tabIndex);
     }
 
     /** Whether the slide-out chrome drawer sidebar is open (visible). */
