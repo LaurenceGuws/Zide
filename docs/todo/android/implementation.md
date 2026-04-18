@@ -96,9 +96,9 @@ Dual-mode batching override (architect directive):
 - `RF-M0` through `RF-M5` completed; refocus baseline is locked.
 - `AX-M1` through `AX-M5` completed.
 - `ASF-M3` escalated stabilization follow-through to operator evidence.
-- `AHW-B1` through `AHW-B24` accepted by architect.
+- `AHW-B1` through `AHW-B25` accepted by architect.
 - Keep-screen-on seam work beyond `AHW-B20` is frozen by product direction.
-- `AHW-B25` is at super-gate (awaiting architect verdict).
+- `AHW-B26` is `in_progress`.
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -126,14 +126,14 @@ Completed campaign summary:
 - Refocus campaign (`RF-M0` to `RF-M5`) completed.
 - AX hardening campaign (`AX-M1` to `AX-M5`) completed.
 - ASF stabilization follow-through escalated to operator evidence (`ASF-M3`).
-- AHW macro batches `AHW-B1` through `AHW-B24` accepted by architect.
+- AHW macro batches `AHW-B1` through `AHW-B25` accepted by architect.
 - Keep-screen-on follow-up beyond `AHW-B20` frozen by product direction.
 
 Last accepted architect gate:
 
-- `Review chunk: AHW-B24`
+- `Review chunk: AHW-B25`
 - `Verdict: accepted`
-- `Commits reviewed: 023a3d86, 8def5013`
+- `Commits reviewed: 203d976d, c8d560ee`
 - `Architect validation: compileDebug/compileRelease/deploy/cold-start/AndroidRuntime:E (pass)`
 
 `Milestone reached per docs, architect review required.`
@@ -452,7 +452,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B25` App-shell Policy Surface Narrowing (`awaiting_architect_review`)
+### `AHW-B25` App-shell Policy Surface Narrowing (`completed`)
 
 Batch queue line (exact):
 
@@ -592,6 +592,142 @@ Acceptance:
 - `adb shell am force-stop uk.laurencegouws.zide && adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity` — pass (`LaunchState: COLD`, `Status: ok`)
 
 `Milestone reached per docs, architect review required.`
+
+Architect review verdict:
+
+- `Review chunk: AHW-B25`
+- `Verdict: accepted`
+- `Commits reviewed: 203d976d, c8d560ee`
+- `Architect validation spot-check: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
+- `Architect runtime validation spot-check: python3 ops/android_terminal_host.py deploy (pass); adb cold start (pass, LaunchState: COLD); adb logcat -d -s AndroidRuntime:E (pass, empty)`
+- `Engineer device validation accepted: deploy + AndroidRuntime:E smoke + cold start pass`
+- `Review answers: yes, close AHW-B25. No immediate follow-up is required to expose activeViewState through policy; add only when a concrete non-chrome harness reader exists in scope.`
+- `Findings carried forward: behavior preserved and policy leakage reduced as intended. Next batch should perform campaign landing-gate closure audit and resolve only concrete remaining ownership gaps.`
+
+---
+
+### `AHW-B26` Refocus-Shape Landing Gate Closure (`in_progress`)
+
+Batch queue line (exact):
+
+- perform landing-gate closure audit and resolve only concrete remaining harness/widget/userland ownership gaps needed to close AHW
+
+Batch purpose:
+
+- validate `refocus_android.txt` shape directly against current Android host code
+- close any real remaining ownership leaks with minimal behavior-preserving cuts
+- prepare explicit AHW campaign closure if landing gate is satisfied
+
+Batch scope:
+
+- Java Android terminal host only, plus authority docs needed to keep contract truth current
+- primary code root:
+  `android/terminal-host/app/src/main/java/uk/laurencegouws/terminal/**`
+- allowed docs:
+  `docs/todo/android/implementation.md`,
+  `docs/todo/android/ENGINEER_ENTRYPOINT.md`,
+  `docs/AGENT_HANDOFF.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_NAMING_CONTRACT.md`,
+  `app_architecture/platform/android/USERLAND_HOST_CONTRACT.md`
+
+Batch non-goals:
+
+- no terminal tabs UI/product behavior
+- no tab persistence/session switching
+- no terminal-core or shared-renderer changes
+- no app-shell UI redesign
+- no keep-screen-on follow-up implementation unless explicitly re-opened
+- no debug-view UI resurrection
+- no broad rename sweep
+- no ASF operator-evidence churn unless new evidence arrives
+
+Batch super-gate:
+
+- campaign landing-gate checklist is audited against current code and docs
+- any identified remaining ownership leaks in active scope are fixed with behavior-preserving cuts
+- if no leaks remain, AHW closure recommendation is explicit and documented
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass at final seam boundary
+
+Internal milestone cadence:
+
+- Engineer executes `AHW26-M1` through `AHW26-M6` sequentially.
+- Do not stop for architect review between internal milestones.
+- Mark each internal milestone complete in this file as it lands.
+- Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
+  the `AHW-B26` super-gate is reached.
+
+### `AHW26-M1` Landing-gate audit (`pending`)
+
+Queue line (exact):
+
+- audit the five refocus landing-gate criteria against current code ownership and callsites
+
+Acceptance:
+
+- checklist each landing criterion as pass/gap with concrete file evidence
+- identify only real gaps, not speculative future design wishes
+- record out-of-scope items explicitly
+
+### `AHW26-M2` Remaining-gap plan lock (`pending`)
+
+Queue line (exact):
+
+- convert M1 gaps into minimal behavior-preserving cuts or explicitly mark no-code-needed closure path
+
+Acceptance:
+
+- each gap has a bounded code/doc action or explicit closure note
+- no compatibility fallback paths added
+- compile debug + release Java after any code changes
+
+### `AHW26-M3` Gap resolution cuts (`pending`)
+
+Queue line (exact):
+
+- implement only the minimal ownership fixes required by the audited landing-gate gaps
+
+Acceptance:
+
+- ownership leaks identified in M1 are resolved or explicitly deferred with rationale
+- runtime behavior remains unchanged
+- compile debug + release Java after code changes
+
+### `AHW26-M4` Authority lock (`pending`)
+
+Queue line (exact):
+
+- lock authority docs to post-gap ownership reality and landing-gate status
+
+Acceptance:
+
+- host structure and naming contract match code shape
+- userland contract remains unchanged unless ownership text requires update
+
+### `AHW26-M5` Queue/handoff/entrypoint sync (`pending`)
+
+Queue line (exact):
+
+- keep queue, handoff, and engineer entrypoint aligned to AHW-B26 execution and super-gate stop
+
+Acceptance:
+
+- queue, handoff, and engineer entrypoint stay coherent through B26 super-gate
+- super-gate stop condition and review packet contract are explicit
+
+### `AHW26-M6` Batch validation + review packet (`pending`)
+
+Queue line (exact):
+
+- validate AHW-B26 end-to-end and publish the architect review packet with closure recommendation
+
+Acceptance:
+
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
+- cold start smoke pass when a device is available
+- engineer reports full super-gate packet and explicit recommendation: `AHW close` or `one final gap batch`
 
 ## Guardrails
 
