@@ -1,5 +1,7 @@
 package uk.laurencegouws.terminal.host.session;
 
+import android.content.Context;
+
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.IntFunction;
@@ -16,6 +18,8 @@ public final class SessionFactory {
     }
 
     public static ShellSessionController createShellSessionController(
+            Context context,
+            Consumer<String> appendEvent,
             String readinessStampPath,
             String shellPath,
             UserlandRelease userlandRelease,
@@ -28,6 +32,8 @@ public final class SessionFactory {
                         restart,
                         poll,
                         isAlive)),
+                context,
+                appendEvent,
                 readinessStampPath,
                 shellPath,
                 userlandRelease,

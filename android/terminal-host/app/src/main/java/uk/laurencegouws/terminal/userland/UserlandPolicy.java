@@ -9,8 +9,27 @@ package uk.laurencegouws.terminal.userland;
 public final class UserlandPolicy {
     public static final String PACKAGE_NAME = "uk.laurencegouws.zide";
     public static final String READINESS_STAMP_FILE = ".zide-userland-readiness.json";
+    /**
+     * Sibling package used in {@code runtime_support_links} embed bridge paths
+     * (e.g. {@code /data/data/zide.embed/files/usr}).
+     */
+    public static final String RUNTIME_SUPPORT_EMBED_PACKAGE = "zide.embed";
 
     private UserlandPolicy() {
+    }
+
+    /** Absolute path of {@code /data/data/zide.embed} for runtime support link validation. */
+    public static String runtimeSupportEmbedPackageRoot(final android.content.Context context) {
+        final java.io.File filesDir = context.getFilesDir();
+        final java.io.File packageRoot = filesDir.getParentFile();
+        if (packageRoot == null) {
+            return "";
+        }
+        final java.io.File dataDir = packageRoot.getParentFile();
+        if (dataDir == null) {
+            return "";
+        }
+        return new java.io.File(dataDir, RUNTIME_SUPPORT_EMBED_PACKAGE).getAbsolutePath();
     }
 
     public static String readinessStampPath(android.content.Context context) {

@@ -22,9 +22,10 @@ import org.json.JSONObject;
 /**
  * Installs the pinned userland artifact into the app-private prefix.
  *
- * <p>This class owns manifest fetch, archive verification, extraction, runtime support links, and
- * readiness stamp validation. It deliberately has no Android view, lifecycle, or shell session
- * ownership.
+ * <p>This class owns manifest fetch, archive verification, extraction, runtime support links (via
+ * {@link UserlandRuntimeSupportLinks}), readiness stamp validation, and persists
+ * {@code runtime_support_links} on the stamp for pre-activation re-materialization. It deliberately
+ * has no Android view, lifecycle, or shell session ownership.
  */
 public final class UserlandInstaller {
     private static final int BUFFER_SIZE = 64 * 1024;
@@ -196,10 +197,10 @@ public final class UserlandInstaller {
                 " " + shellQuote(dpkgEtcLink.getAbsolutePath()) +
                 " && ln -s " + shellQuote(new File(prefixDir, "var/lib/dpkg").getAbsolutePath()) +
                 " " + shellQuote(dpkgDbLink.getAbsolutePath()) +
-                runtimeSupportLinkCommand(packageRoot, artifact.runtimeSupportLinks) +
+                UserlandRuntimeSupportLinks.installArchiveCommandFragment(context, packageRoot, artifact.runtimeSupportLinks) +
                 " && chmod 700 " + shellQuote(homeDir.getAbsolutePath()) +
                 " " + shellQuote(tmpDir.getAbsolutePath());
-        runShell(command);
+        executeShellCommand(command);
 
         final File bash = new File(prefixDir, "bin/bash");
         final File apt = new File(prefixDir, "bin/apt");
@@ -218,6 +219,7 @@ public final class UserlandInstaller {
             stamp.put("provider", artifact.provider);
             stamp.put("archive_root", artifact.archiveRoot);
             stamp.put("hardcoded_termux_policy", artifact.hardcodedTermuxPolicy);
+            stamp.put("runtime_support_links", artifact.runtimeSupportLinks);
             stamp.put("has_bash", bash.isFile());
             stamp.put("has_apt", apt.isFile());
             stamp.put("has_nvim", nvim.isFile());
@@ -331,7 +333,7 @@ public final class UserlandInstaller {
         }
     }
 
-    private static void runShell(String command) throws IOException {
+    static void executeShellCommand(String command) throws IOException {
         final Process process = new ProcessBuilder("/system/bin/sh", "-c", command)
                 .redirectErrorStream(true)
                 .start();
@@ -359,52 +361,6 @@ public final class UserlandInstaller {
         }
     }
 
-    private static String runtimeSupportLinkCommand(File packageRoot, String rawLinks) throws IOException {
-        if (rawLinks == null || rawLinks.isEmpty()) {
-            return "";
-        }
-        final String packagePath = packageRoot.getAbsolutePath();
-        final StringBuilder command = new StringBuilder();
-        final String[] entries = rawLinks.split(",");
-        for (String entry : entries) {
-            if (entry.isEmpty()) {
-                continue;
-            }
-            final int separator = entry.indexOf("=>");
-            if (separator <= 0 || separator + 2 >= entry.length()) {
-                throw new IOException("invalid runtime support link: " + entry);
-            }
-            final String source = entry.substring(0, separator);
-            final String target = entry.substring(separator + 2);
-            final String normalizedSource = normalizeRuntimeSupportPath(source, packagePath);
-            final String normalizedTarget = normalizeRuntimeSupportPath(target, packagePath);
-            if (normalizedSource == null || normalizedTarget == null) {
-                throw new IOException("runtime support link escapes package root");
-            }
-            final File sourceFile = new File(normalizedSource);
-            final File sourceParent = sourceFile.getParentFile();
-            if (sourceParent == null) {
-                throw new IOException("runtime support link has no parent");
-            }
-            command.append(" && mkdir -p ")
-                    .append(shellQuote(sourceParent.getAbsolutePath()))
-                    .append(" && rm -f ")
-                    .append(shellQuote(normalizedSource))
-                    .append(" && ln -s ")
-                    .append(shellQuote(normalizedTarget))
-                    .append(" ")
-                    .append(shellQuote(normalizedSource));
-        }
-        return command.toString();
-    }
-
-    private static String normalizeRuntimeSupportPath(String path, String packagePath) {
-        if (path.equals(packagePath) || path.startsWith(packagePath + "/")) {
-            return path;
-        }
-        return null;
-    }
-
     private static void writeFile(File file, String text) throws IOException {
         try (BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(file, false))) {
             out.write(text.getBytes(StandardCharsets.UTF_8));
@@ -419,7 +375,7 @@ public final class UserlandInstaller {
         return prefix.endsWith("/" + UserlandPolicy.PACKAGE_NAME + "/files/usr");
     }
 
-    private static String shellQuote(String text) {
+    static String shellQuote(String text) {
         return "'" + text.replace("'", "'\"'\"'") + "'";
     }
 }

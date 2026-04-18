@@ -1,7 +1,13 @@
 package uk.laurencegouws.terminal.session;
 
+import android.content.Context;
+
+import java.io.IOException;
+import java.util.function.Consumer;
+
 import uk.laurencegouws.terminal.userland.UserlandReadinessState;
 import uk.laurencegouws.terminal.userland.UserlandRelease;
+import uk.laurencegouws.terminal.userland.UserlandRuntimeSupportLinks;
 
 /**
  * Coordinates shell session polling and first auto-start eligibility.
@@ -40,6 +46,8 @@ public final class ShellSessionController {
     }
 
     private final Bridge bridge;
+    private final Context context;
+    private final Consumer<String> appendEvent;
     private final String readinessStampPath;
     private final String shellPath;
     private final UserlandRelease release;
@@ -48,11 +56,15 @@ public final class ShellSessionController {
 
     public ShellSessionController(
             Bridge bridge,
+            Context context,
+            Consumer<String> appendEvent,
             String readinessStampPath,
             String shellPath,
             UserlandRelease release,
             boolean nativeLoaded) {
         this.bridge = bridge;
+        this.context = context;
+        this.appendEvent = appendEvent;
         this.readinessStampPath = readinessStampPath;
         this.shellPath = shellPath;
         this.release = release;
@@ -73,6 +85,15 @@ public final class ShellSessionController {
         if (nativeLoaded && !alive && !autoStartAttempted) {
             if (readinessState.launchReady) {
                 autoStartAttempted = true;
+                try {
+                    UserlandRuntimeSupportLinks.materializeFromReadinessStamp(context, appendEvent);
+                } catch (IOException err) {
+                    appendEvent.accept(
+                            "userland.runtime_support_links.materialize failed err="
+                                    + err.getClass().getSimpleName()
+                                    + " detail="
+                                    + (err.getMessage() == null ? "" : err.getMessage()));
+                }
                 autoStartStatus = bridge.restart();
                 autoStarted = true;
                 status = bridge.poll();

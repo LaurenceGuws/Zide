@@ -68,6 +68,8 @@ public final class SessionAssembly {
     public static Result assemble(Host host) {
         final uk.laurencegouws.terminal.session.ShellSessionController shellSessionController =
                 SessionFactory.createShellSessionController(
+                        host.context(),
+                        host::appendEvent,
                         UserlandPolicy.readinessStampPath(host.context()),
                         UserlandPolicy.shellPath(host.context()),
                         host.userlandRelease(),
