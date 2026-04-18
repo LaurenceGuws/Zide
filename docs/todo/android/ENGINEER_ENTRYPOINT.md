@@ -34,18 +34,16 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B13` engineer delivery is complete; **Architect verdict is pending**. There is
-no `in_progress` macro batch until `docs/todo/android/implementation.md` is
-refocused after Architect review.
+`AHW-B14` is `in_progress` and is the only active macro batch.
 
-Last completed batch queue line (exact):
+Active batch queue line (exact):
 
-- narrow app-shell sidebar mutation APIs to explicit policy methods while preserving behavior
+- narrow chrome IME visibility mutation APIs to explicit policy methods while preserving behavior
 
 ## Core Boundary Rule
 
-This batch exists to narrow app-shell sidebar mutation ownership while
-preserving active-view ownership, slot mapping, and navigation model.
+This batch exists to narrow chrome IME visibility mutation ownership while
+preserving active-view/sidebar ownership, slot mapping, and navigation model.
 
 - Android Harness owns platform ceremony, app-shell layout/styling/theming,
   navigation/view state, userland orchestration, and widget instance hosting.
@@ -59,9 +57,10 @@ preserving active-view ownership, slot mapping, and navigation model.
 - `WidgetAssembly.Result` remains widget/chrome assembly output; it is not the
   terminal-instance factory by itself.
 
-## Required Direction From Architect Review (post-AHW-B12)
+## Required Direction From Architect Review (post-AHW-B13)
 
-- `AHW-B12` is accepted.
+- `AHW-B13` is accepted.
+- Keep chrome drawer sidebar policy naming (`chromeDrawerSidebar*` + `apply*`) as the long-term seam.
 - Keep no public arbitrary shell-view setter until multi-view policy is explicitly scoped.
 - Keep null-reject semantics as the harness boundary for shell-view ids.
 - Keep `AppShellNavigation.forProductTerminalSlot` / `applyProductTerminalShellViewActive`
@@ -77,20 +76,17 @@ preserving active-view ownership, slot mapping, and navigation model.
 
 ## Internal Milestones
 
-`AHW-B13` internal milestones `AHW13-M1`–`AHW13-M6` are **completed**; see
-`docs/todo/android/implementation.md` for the super-gate packet.
-
-Execute `AHW13-M1` through `AHW13-M6` sequentially; do not stop before the
-`AHW-B13` super-gate unless a hard stop condition is hit.
+Execute `AHW14-M1` through `AHW14-M6` sequentially; do not stop before the
+`AHW-B14` super-gate unless a hard stop condition is hit.
 
 Execute in order and mark progress in `docs/todo/android/implementation.md`.
 
-- `AHW13-M1`: audit sidebar mutation entry points; classify policy-owned vs ad-hoc paths.
-- `AHW13-M2`: replace broad sidebar boolean setter with explicit policy methods.
-- `AHW13-M3`: rewire chrome/sidebar consumers to explicit sidebar policy APIs.
-- `AHW13-M4`: lock authority docs to sidebar mutation ownership contract.
-- `AHW13-M5`: keep queue/handoff/entrypoint aligned to B13 super-gate.
-- `AHW13-M6`: run validation and publish super-gate review packet.
+- `AHW14-M1`: audit IME visibility mutation entry points; classify policy-owned vs ad-hoc paths.
+- `AHW14-M2`: replace broad IME visibility boolean setter with explicit policy methods.
+- `AHW14-M3`: rewire chrome/IME consumers to explicit IME policy APIs.
+- `AHW14-M4`: lock authority docs to IME visibility mutation ownership contract.
+- `AHW14-M5`: keep queue/handoff/entrypoint aligned to B14 super-gate.
+- `AHW14-M6`: run validation and publish super-gate review packet.
 
 ## Allowed Work
 
@@ -179,7 +175,7 @@ when:
 - a behavior change is required where the queue only allows extraction
 - terminal-core/shared-renderer work appears necessary
 - implementing terminal tabs/product behavior becomes necessary to proceed
-- the `AHW-B13` super-gate is reached
+- the `AHW-B14` super-gate is reached
 
 Otherwise continue autonomously with:
 
@@ -187,9 +183,9 @@ Otherwise continue autonomously with:
 
 ## Super-Gate Review Packet
 
-At `AHW-B13` super-gate, report:
+At `AHW-B14` super-gate, report:
 
-- review chunk name: `AHW-B13`
+- review chunk name: `AHW-B14`
 - internal milestones completed
 - commit list, oldest to newest
 - files changed grouped by Harness / Widget / Userland / Docs

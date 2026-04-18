@@ -116,7 +116,8 @@ Dual-mode batching override (architect directive):
 - Completed macro batch: `AHW-B10` (accepted by Architect; app-shell state surface hardening follow-up queued in `AHW-B11`).
 - Completed macro batch: `AHW-B11` (accepted by Architect; app-shell mutation-ownership narrowing follow-up queued in `AHW-B12`).
 - Completed macro batch: `AHW-B12` (accepted by Architect; app-shell sidebar policy narrowing follow-up queued in `AHW-B13`).
-- Engineer delivery complete; Architect verdict pending: `AHW-B13` (app-shell sidebar mutation policy narrowing, behavior-neutral). No macro batch is `in_progress` until Architect refocuses the queue.
+- Completed macro batch: `AHW-B13` (accepted by Architect; chrome IME visibility policy narrowing follow-up queued in `AHW-B14`).
+- `AHW-B14` is `in_progress` (chrome IME visibility mutation policy narrowing, behavior-neutral).
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -2872,7 +2873,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B13` App-shell sidebar mutation policy narrowing (`verdict_pending`)
+### `AHW-B13` App-shell sidebar mutation policy narrowing (`completed`)
 
 Batch queue line (exact):
 
@@ -2992,7 +2993,7 @@ Progress delta:
 
 - Structure app-shell invariants + table rows; naming contract bullet. USERLAND unchanged (no sidebar seam there).
 
-### `AHW13-M5` Queue/handoff/entrypoint sync (`completed`)
+### `AHW13-M5` Queue/handoff/entrypoint sync (`completed_in_batch`)
 
 Queue line (exact):
 
@@ -3007,7 +3008,7 @@ Progress delta:
 
 - This file, `ENGINEER_ENTRYPOINT.md`, and `AGENT_HANDOFF.md` updated for `verdict_pending`.
 
-### `AHW13-M6` Batch validation + review packet (`completed`)
+### `AHW13-M6` Batch validation + review packet (`completed_in_batch`)
 
 Queue line (exact):
 
@@ -3033,12 +3034,144 @@ Super-gate engineer packet:
 - `Validation: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb cold start + AndroidRuntime:E (pass, empty)`
 - `Engineer updates: Blocked by Archtect review needed: true`
 
-Review questions for Architect:
+Architect review verdict:
 
-- Confirm chrome drawer sidebar policy naming for long-term harness chrome seams.
-- Confirm next macro batch after verdict.
+- `Review chunk: AHW-B13`
+- `Verdict: accepted`
+- `Commits reviewed: 83a29e7c, 4097fc95, cca93059, 76f8a02f`
+- `Architect validation spot-check: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
+- `Engineer device validation accepted: deploy + AndroidRuntime:E smoke + activity start pass`
+- `Findings carried forward: chrome drawer sidebar naming and policy seams are correct long-term for current single-slot chrome ownership. Next batch narrows IME visibility mutation to explicit policy methods for symmetry with active-view and sidebar ownership.`
 
 `Milestone reached per docs, architect review required.`
+
+---
+
+### `AHW-B14` Chrome IME visibility mutation policy narrowing (`in_progress`)
+
+Batch queue line (exact):
+
+- narrow chrome IME visibility mutation APIs to explicit policy methods while preserving behavior
+
+Batch purpose:
+
+- remove broad boolean IME visibility mutation surfaces on chrome host seams
+- preserve active-view and sidebar policy narrowing from B12/B13
+- keep slot mapping/chrome freeze contracts unchanged
+
+Batch scope:
+
+- Java Android terminal host only, plus authority docs needed to keep contract truth current
+- primary code root:
+  `android/terminal-host/app/src/main/java/uk/laurencegouws/terminal/**`
+- allowed docs:
+  `docs/todo/android/implementation.md`,
+  `docs/todo/android/ENGINEER_ENTRYPOINT.md`,
+  `docs/AGENT_HANDOFF.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_HOST_STRUCTURE.md`,
+  `app_architecture/platform/android/ANDROID_JAVA_NAMING_CONTRACT.md`,
+  `app_architecture/platform/android/USERLAND_HOST_CONTRACT.md`
+
+Batch non-goals:
+
+- no terminal tabs UI/product behavior
+- no tab persistence/session switching
+- no terminal-core or shared-renderer changes
+- no selection/IME/gesture behavior changes except compile-preserving seam rewiring
+- no app-shell UI redesign
+- no debug-view UI resurrection
+- no broad rename sweep
+- no ASF operator-evidence churn unless new evidence arrives
+
+Batch super-gate:
+
+- chrome host seams expose explicit IME visibility policy methods (no broad boolean setter in product wiring)
+- in-tree chrome/IME consumers use explicit policy methods only
+- active-view ownership (B12) and sidebar ownership (B13) remain unchanged
+- slot mapping seam, slot choke point, and chrome slot freeze remain unchanged
+- single-slot runtime behavior remains unchanged
+- docs reflect final ownership and naming shape
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass at final seam boundary
+
+Internal milestone cadence:
+
+- Engineer executes `AHW14-M1` through `AHW14-M6` sequentially.
+- Do not stop for architect review between internal milestones.
+- Mark each internal milestone complete in this file as it lands.
+- Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
+  the `AHW-B14` super-gate is reached.
+
+### `AHW14-M1` IME visibility mutation owner/callsite audit (`pending`)
+
+Queue line (exact):
+
+- audit IME visibility mutation entry points and classify policy-owned vs ad-hoc paths
+
+Acceptance:
+
+- enumerate IME visibility mutation entry points and callsites
+- classify each mutation as policy-owned or ad-hoc
+- define minimum behavior-neutral API narrowing cut
+
+### `AHW14-M2` IME visibility policy API narrowing (`pending`)
+
+Queue line (exact):
+
+- replace broad IME visibility boolean setter with explicit policy methods
+
+Acceptance:
+
+- chrome host seam exposes explicit IME policy methods instead of generic boolean setter
+- owner invariants remain explicit and behavior-neutral
+- compile debug + release Java after code changes
+
+### `AHW14-M3` Consumer rewiring to IME policy API (`pending`)
+
+Queue line (exact):
+
+- rewire chrome/IME consumers to explicit IME policy APIs without behavior change
+
+Acceptance:
+
+- all in-tree IME visibility consumers use explicit policy methods
+- no direct generic IME visibility mutation remains
+- compile debug + release Java after code changes
+
+### `AHW14-M4` Contract docs lock (`pending`)
+
+Queue line (exact):
+
+- lock naming/structure/userland docs to IME visibility policy mutation ownership contract
+
+Acceptance:
+
+- host structure, naming contract, and userland contract match code shape
+- active-view/sidebar ownership, slot mapping, and chrome freeze guidance remain unchanged
+
+### `AHW14-M5` Queue/handoff/entrypoint sync (`pending`)
+
+Queue line (exact):
+
+- keep queue, handoff, and engineer entrypoint aligned to AHW-B14 execution and super-gate stop
+
+Acceptance:
+
+- queue, handoff, and engineer entrypoint stay coherent through B14 super-gate
+- super-gate stop condition and review packet contract are explicit
+
+### `AHW14-M6` Batch validation + review packet (`pending`)
+
+Queue line (exact):
+
+- validate AHW-B14 end-to-end and publish the architect review packet
+
+Acceptance:
+
+- debug and release Java compile pass
+- deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
+- cold start smoke pass when a device is available
+- engineer reports the full super-gate packet and stops for Architect review
 
 ## Guardrails
 
