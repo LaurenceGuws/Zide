@@ -4388,7 +4388,7 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `AHW-B21` super-gate is reached.
 
-### `AHW21-M1` Host-result surface audit (`pending`)
+### `AHW21-M1` Host-result surface audit (`completed`)
 
 Queue line (exact):
 
@@ -4399,6 +4399,15 @@ Acceptance:
 - enumerate current result fields/callbacks consumed by `ZideActivity` and identify duplication or pass-through-only surfaces
 - define target slim surface and out-of-scope areas
 - record behavior invariants (startup order and runtime behavior unchanged)
+
+Progress delta:
+
+- **`WidgetAssembly.Result`** had eight parallel fields; **`TerminalWidgetCompositionAssembly.compose`**
+  only consumed the three surface refs from the widget result (overlap with full result bag).
+- **`ZideActivity`** reads shell/chrome/view-mode from result; composition join is surface-only.
+- **Target:** **`WidgetHarnessHostControllers`** (app-shell + shell state + chrome + view mode) and
+  **`WidgetSurfaceHostJoin`** (surface bridge/controller/widget controller); **`Result`** holds those two;
+  **`compose(slot, interaction, WidgetSurfaceHostJoin)`** — no tab product behavior.
 
 ### `AHW21-M2` Slim surface introduction (`pending`)
 
