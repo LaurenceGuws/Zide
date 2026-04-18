@@ -5,6 +5,7 @@ const selection_mod = @import("../selection.zig");
 const types = @import("../../model/types.zig");
 const terminal_publication = @import("../publication/terminal_publication.zig");
 const publication_flow = @import("../publication/publication_flow.zig");
+const terminal_core_feed = @import("../protocol/terminal_core_feed.zig");
 const kitty_mod = @import("../../kitty/graphics.zig");
 
 pub fn debugSnapshot(self: anytype) @import("../publication/snapshot.zig").DebugSnapshot {
@@ -36,7 +37,7 @@ pub fn debugSetCursor(self: anytype, row: usize, col: usize) void {
 
 pub fn debugFeedBytes(self: anytype, bytes: []const u8) void {
     if (!debugAccessAllowed()) @panic("debugFeedBytes is test-only");
-    _ = self.core.feedOutputBytesLocked(self, bytes);
+    terminal_core_feed.feedOutputBytes(self, bytes);
 }
 
 pub fn debugScrollUp(self: anytype) void {

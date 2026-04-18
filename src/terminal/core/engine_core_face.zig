@@ -1,18 +1,22 @@
-//! Resolve a mutable `*TerminalCore` from scroll/kitty `anytype` faces (`*TerminalCore`,
-//! `*TerminalRuntimeShell`, or protocol wrappers with a `.core` field).
+//! Resolve a mutable `*TerminalCore` from scroll/kitty `anytype` faces.
+//! Only these owner shapes are supported; add an explicit branch when a new
+//! wrapper must participate (no structural duck-typing on `.core`).
 const terminal_core_mod = @import("terminal_core.zig");
+const protocol_execution_mod = @import("session/protocol_execution.zig");
+const terminal_runtime_shell_mod = @import("session/terminal_runtime_shell.zig");
 
 pub const TerminalCore = terminal_core_mod.TerminalCore;
 
+const ProtocolExecution = protocol_execution_mod.ProtocolExecution;
+const TerminalRuntimeShell = terminal_runtime_shell_mod.TerminalRuntimeShell;
+
 pub fn mutableTerminalCore(self: anytype) *TerminalCore {
-    if (@hasField(@TypeOf(self.*), "active") and @hasField(@TypeOf(self.*), "history")) {
-        return @constCast(@as(*const TerminalCore, self));
-    }
-    // Protocol faces store `core: *TerminalCore`; the runtime shell embeds `core` by value.
-    // Never bind `self.core` into a local `TerminalCore` value — that would point at a stack copy.
-    const core_addr = switch (@typeInfo(@TypeOf(self.core))) {
-        .pointer => self.core,
-        else => &self.core,
+    const T = @TypeOf(self);
+    return switch (T) {
+        *TerminalCore => self,
+        *const TerminalCore => @constCast(self),
+        *TerminalRuntimeShell => &self.core,
+        *ProtocolExecution => self.core,
+        else => @compileError("mutableTerminalCore: unsupported owner type " ++ @typeName(T)),
     };
-    return @constCast(@as(*const TerminalCore, core_addr));
 }
