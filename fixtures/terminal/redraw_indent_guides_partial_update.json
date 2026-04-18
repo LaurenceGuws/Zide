@@ -2,10 +2,16 @@
   "fixture_type": "vt",
   "rows": 4,
   "cols": 12,
-  "cursor": { "row": 0, "col": 0 },
+  "cursor": {
+    "row": 0,
+    "col": 0
+  },
   "line_ending": "lf",
   "baseline_input": "\u001b[H    one\u001b[2;1H    two\u001b[3;1H    tre\u001b[4;1H    for",
-  "assertions": ["grid", "damage"],
+  "assertions": [
+    "grid",
+    "damage"
+  ],
   "expected_dirty": "partial",
   "expected_damage": {
     "start_row": 0,

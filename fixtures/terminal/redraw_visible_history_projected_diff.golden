@@ -8,8 +8,8 @@ cwd: ""
 clipboard: ""
 selection: none
 grid:
-row0: . . . .
-row1: . . . .
+row0: "Z" "B" "C" "D"
+row1: "E" "F" "G" "H"
 attrs:
 row0: cols 0-3 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0
 row1: cols 0-3 fg=default bg=default bold=0 rev=0 ul=0 ulc=default link=0

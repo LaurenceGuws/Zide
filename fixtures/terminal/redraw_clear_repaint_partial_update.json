@@ -2,10 +2,16 @@
   "fixture_type": "vt",
   "rows": 3,
   "cols": 6,
-  "cursor": { "row": 0, "col": 0 },
+  "cursor": {
+    "row": 0,
+    "col": 0
+  },
   "line_ending": "lf",
   "baseline_input": "\u001b[HABCDEF\u001b[2;1HGHIJKL\u001b[3;1HMNOPQR",
-  "assertions": ["grid", "damage"],
+  "assertions": [
+    "grid",
+    "damage"
+  ],
   "expected_dirty": "partial",
   "expected_damage": {
     "start_row": 0,
