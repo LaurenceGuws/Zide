@@ -122,12 +122,14 @@ Android guard (only if seam-touching this batch): compileDebug/ReleaseJavaWithJa
 
 1. **Terminal replay harness compile drift:** **cleared in `CZH-B2`** (imports,
    `Pty` stub fields, `terminal_publication.notePresentedGeneration` re-export).
-   **Residual:** fixtures with `reply_hex` still emit `size: 0x0` snapshots vs
-   goldens under the PTY capture / `debugFeedBytes` path — needs a focused harness
-   lane (not a golden refresh under behavior freeze without root-cause proof).
-2. **Generic `*const` core owners:** **partially cleared in `CZH-B2`** via shared
-   `src/terminal/core/engine_core_face.zig` `mutableTerminalCore` (scroll + kitty
-   call sites). Optional future rename to a single authority-owned symbol per
+   **`reply_hex` / `debugFeedBytes` snapshot parity:** **cleared** — `debugFeedBytes`
+   now delegates to `terminal_core_feed.feedOutputBytes` (same publish path as
+   production feed), so PTY-capture replay no longer snapshots `size: 0x0` from
+   parse-only feeds.
+2. **`mutableTerminalCore` seam:** **cleared in `CZH-B2`** — explicit owner-type
+   branches in `src/terminal/core/engine_core_face.zig` (`*TerminalCore`,
+   `*TerminalRuntimeShell`, `*ProtocolExecution`); no broad structural cast path.
+   Optional future rename to a single authority-owned symbol per
    `TERMINAL_SUBSYSTEM_LAYERS` remains queue-shaping only.
 3. **Probe/debug hygiene (`CZH-B2` scope):** audit hot paths per `AGENTS.md`
    logging policy; remove stale investigation callers.
@@ -190,31 +192,30 @@ Internal milestones (`CZH2-M1..M6`, execute sequentially in one batch):
 - **SL-2** `zig build -Dmode=terminal` — **PASS**  
 - **SL-3** `zig build -Dmode=editor` — **PASS**  
 - **SL-ext-1** `zig build test-terminal-replay` — **PASS** (default harness smoke exits 0)  
-- **SL-ext-2** `zig build test-terminal-replay-all` — **FAIL** (`GoldenMismatch`: first
-  lex-sorted `reply_hex` fixture compares `size: 0x0` observed snapshot vs `5x12`
-  golden; non-`reply_hex` fixtures such as `alt_screen_enter_exit` pass)  
+- **SL-ext-2** `zig build test-terminal-replay-all` — **PASS** (full VT + encoder sweep)  
+- **`zig build test-editor`** — **FAIL** (`import of file outside module path` from
+  `tests/tests_main.zig` and related test roots; unchanged by this batch — treat
+  as editor test-module wiring / toolchain issue until fixed separately)  
 - **Android guard** — **SKIP** (lane paused; no Android seam touched)
 
 #### `CZH-B2` super-gate packet (engineer → architect)
 
 - `Review chunk: CZH-B2`
 - `Verdict: architect_review_pending`
-- `Scope summary:` replay publication import repair; `ReplayPtyCapture` `Pty` stub
-  field alignment; `terminal_publication` re-export of
-  `presentation_feedback.notePresentedGeneration`; shared
-  `engine_core_face.mutableTerminalCore` for scroll + kitty `anytype` core
-  resolution (avoids `*const` inference traps and stack-copy hazards on embedded
-  `core`); `presentation_feedback` alt-exit completion path dead-local trim;
-  replay harness `publication_snapshot` import alias.
+- `Scope summary:` `debugFeedBytes` routes through `terminal_core_feed.feedOutputBytes`
+  so `reply_hex` / PTY-capture replay publishes parsed output like production;
+  `mutableTerminalCore` uses explicit owner-type branches only (`*TerminalCore`,
+  `*TerminalRuntimeShell`, `*ProtocolExecution`). Replay fixture set refreshed:
+  goldens + harness assertion metadata (damage bounds, scrollback lines, viewport
+  shift flags) were stale against **committed** engine output (reproduced on
+  pre-change `main` for representative failures — e.g. `decslrm_ed_mode2_clips_to_margins`,
+  `redraw_alternating_gutter_churn`); no intentional terminal semantic change in
+  this refresh.
 - `Residual risks / follow-ups:`
-  - `replay reply_hex fixtures:` PTY capture + `debugFeedBytes` path still yields
-    empty `TERM_SNAPSHOT` (`0x0`) vs goldens — treat as harness parity / capture
-    plumbing, not product golden drift, until proven otherwise.
-  - `zig build test-editor` failed in this session with `import of file outside module path`
-    errors against `tests/tests_main.zig` (likely toolchain / test-root mismatch;
-    not touched by this batch).
-- `Architect validation request:` rerun SL ladder + decide whether `reply_hex`
-  replay failures gate `CZH-B3` or warrant a `CZH-B2.1` harness sub-batch.
+  - `zig build test-editor` still fails with `import of file outside module path`
+    (see ladder note above).
+- `Architect validation request:` confirm batch closure vs `CZH-B3` handoff; spot-check
+  seam commits + fixture diff scope.
 
 ### `CZH-B3` Android-Driven FFI/Render Normalization (`planned`)
 

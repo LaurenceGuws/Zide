@@ -16,9 +16,9 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B2` — **architect_review_pending** (replay harness compiles; SL-ext-2
-  baseline recorded with `reply_hex` harness gap; probe trim + naming hygiene
-  landed — see super-gate packet in `docs/todo/core/implementation.md`).
+- `CZH-B2` — **architect_review_pending** (SL-ext-2 green; `debugFeedBytes` publish
+  parity + explicit `mutableTerminalCore` owners; replay fixture authority refresh
+  — see super-gate packet in `docs/todo/core/implementation.md`).
 
 ## Hard Rules
 

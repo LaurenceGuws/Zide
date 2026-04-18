@@ -28,8 +28,8 @@ Current top priorities:
 
 Current batch intent (`CZH-B2`):
 
-- unblock replay-harness compile drift and run stress extension baselines
-- execute scoped probe/debug caller purge and naming hygiene in touched seams
+- replay harness: `reply_hex` path publishes like production feed; core pointer seam
+  tightened; full `SL-ext-2` sweep green (fixture/golden catch-up to committed engine)
 - preserve frozen behavior and single-path ownership contracts
 
 ## First Read Order
