@@ -131,7 +131,8 @@ Dual-mode batching override (architect directive):
 - `APX-B10` accepted by architect.
 - `APX-B11` accepted by architect.
 - `APX-B12` reviewed; changes requested (addressed in APX-B13).
-- `APX-B13` super-gate reached; architect review pending.
+- `APX-B13` accepted by architect.
+- `APX-B14` in progress.
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -2577,7 +2578,7 @@ Architect review verdict:
 - `Finding (blocking): with current released manifest under ZIDE_PM_HOST_PLATFORM=android, list-available emits both dev-baseline and zide-android-catalog-smoke; lexicographic-first selection can pick dev-baseline, which violates edge-install intent.`
 - `Carry-forward: APX-B13 is the required fix batch; APX-B10 doctor/read-only and APX-B11 sidebar/assist contracts remain intact.`
 
-### `APX-B13` Android-Only Edge Candidate Policy + Explicit Outcome UX (`architect_review_pending`)
+### `APX-B13` Android-Only Edge Candidate Policy + Explicit Outcome UX (`accepted`)
 
 Batch queue line (exact):
 
@@ -2632,14 +2633,84 @@ Engineer validation (this batch):
 
 **Commits (oldest → newest):**
 
-- (see `git log` — subjects `APX-B13:` on this wave)
+- `6169f4cf` — userland: `zide-android-*` narrowing + select/install split + reasoned `NoCandidateException`
+- `e61b1d36` — harness: `markNoCandidate(reasonCode)` + status labels for no-candidate variants
+- `a2d67e84` — authority: userland contract + Java structure + naming contract
+
+**Docs / handoff packet:** follow-on commit with subject containing `APX-B13` and `handoff` (updates `implementation.md`, `ENGINEER_ENTRYPOINT.md`, `AGENT_HANDOFF.md`).
 
 `Milestone reached per docs, architect review required.`
 
 Architect review verdict:
 
 - `Review chunk: APX-B13`
-- `Verdict: pending`
+- `Verdict: accepted`
+- `Commits reviewed: 6169f4cf, e61b1d36, a2d67e84, 00b9f75e`
+- `Architect validation spot-check: ./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac (pass); ./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac (pass)`
+- `Architect runtime validation spot-check: python3 ops/android_terminal_host.py deploy (pass); adb cold start (pass, LaunchState: COLD, Status: ok); adb logcat -d -s AndroidRuntime:E (pass, empty)`
+- `Review answers: edge install must stay list-available stdout-driven and Android edge package-id narrowed (`zide-android-*`); Java manifest parsing remains out-of-scope.`
+- `Findings carried forward: no blocking regressions; APX-B10 doctor/read-only and APX-B11 sidebar/input-only assist contracts remain intact.`
+
+### `APX-B14` Product Terminal Tab-State Persistence (Activity Recreate) (`in_progress`)
+
+Batch queue line (exact):
+
+- persist selected product terminal tab index across activity recreation without changing APX-B9 single-PTY restart semantics
+
+Batch purpose:
+
+- make tab-state behavior real product state (not reset-to-zero on recreation)
+- keep startup deterministic by seeding app-shell navigation selection at construction time (no synthetic tab-click replay)
+- preserve existing restart behavior: only user-driven distinct tab selection triggers restart
+
+Batch super-gate:
+
+- selected tab index survives activity recreation (`savedInstanceState`)
+- navigation/policy/widget assembly consume a seeded tab index with range guards
+- no extra restart introduced during initial restore path
+- APX-B10/APX-B11/APX-B13 contracts remain unchanged
+- compile/deploy/device smoke pass
+- docs/handoff/entrypoint aligned
+
+Internal milestone cadence:
+
+- Engineer executes `APX14-M1`–`APX14-M6`; target **5–10 validated commits** before super-gate.
+
+### `APX14-M1` Restore-path audit (`pending`)
+
+Queue line (exact):
+
+- audit tab-selection state owners and define saved-instance-state restore boundary without synthetic selection events
+
+### `APX14-M2` Navigation seed API (`pending`)
+
+Queue line (exact):
+
+- add app-shell navigation construction path that accepts initial selected tab index with strict range handling
+
+### `APX14-M3` Activity save/restore wiring (`pending`)
+
+Queue line (exact):
+
+- wire ZideActivity saved-instance-state for selected tab index and pass seeded value into widget/navigation assembly
+
+### `APX14-M4` Restart semantics lock (`pending`)
+
+Queue line (exact):
+
+- ensure restored initial tab does not trigger restart; only distinct user tab selections keep APX-B9 restart behavior
+
+### `APX14-M5` Docs + handoff sync (`pending`)
+
+Queue line (exact):
+
+- sync authority docs and queue/handoff/entrypoint to APX-B14 persistence contract wording
+
+### `APX14-M6` Validation + review packet (`pending`)
+
+Queue line (exact):
+
+- run validation ladder and publish APX-B14 super-gate packet for architect review
 
 ## Guardrails
 
