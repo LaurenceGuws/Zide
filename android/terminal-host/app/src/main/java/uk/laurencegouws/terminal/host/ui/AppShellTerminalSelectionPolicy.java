@@ -17,6 +17,7 @@ import java.util.Objects;
  * @see AppShellTerminalViewPolicy
  * @see DeclaredTerminalWidgetSlotCatalog
  * @see AppShellTerminalHostSelectionContext
+ * @see ProductHostDeclaredTerminalWidgetSlot
  * @see ProductTerminalSlotShellMapping
  */
 public final class AppShellTerminalSelectionPolicy {
