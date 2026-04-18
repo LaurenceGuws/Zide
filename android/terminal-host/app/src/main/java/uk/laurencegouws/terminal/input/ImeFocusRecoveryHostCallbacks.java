@@ -2,24 +2,25 @@ package uk.laurencegouws.terminal.input;
 
 import android.view.inputmethod.InputMethodManager;
 
-import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+
+import uk.laurencegouws.terminal.host.ui.HostImeStateAccess;
 
 /** Functional callback adapter for {@link ImeFocusRecoveryController}. */
 public final class ImeFocusRecoveryHostCallbacks implements ImeFocusRecoveryController.Host {
     private final Supplier<ShellInputView> shellInputView;
-    private final BooleanSupplier imeVisible;
+    private final HostImeStateAccess hostImeState;
     private final Consumer<String> appendEvent;
     private final InputMethodManager inputMethodManager;
 
     public ImeFocusRecoveryHostCallbacks(
             Supplier<ShellInputView> shellInputView,
-            BooleanSupplier imeVisible,
+            HostImeStateAccess hostImeState,
             Consumer<String> appendEvent,
             InputMethodManager inputMethodManager) {
         this.shellInputView = shellInputView;
-        this.imeVisible = imeVisible;
+        this.hostImeState = hostImeState;
         this.appendEvent = appendEvent;
         this.inputMethodManager = inputMethodManager;
     }
@@ -31,7 +32,7 @@ public final class ImeFocusRecoveryHostCallbacks implements ImeFocusRecoveryCont
 
     @Override
     public boolean imeVisible() {
-        return imeVisible.getAsBoolean();
+        return hostImeState.imeVisible();
     }
 
     @Override

@@ -6,11 +6,13 @@ package uk.laurencegouws.terminal.host.ui;
  * <p>Consolidates the boolean read/write pair that was previously duplicated as
  * {@code () -> imeVisible} / {@code this::setImeVisible} fan-out in {@code ZideActivity}.
  * Implements {@link SurfaceWidgetHostImeVisibility} for surface assembly; chrome policy uses
- * {@link #chromeImePolicyInput()} (B15/B14 seam names unchanged).</p>
+ * {@link #chromeImePolicyInput()} (B15/B14 seam names unchanged). Implements {@link HostImeStateAccess}
+ * for unified status/viewport/input callback wiring (B18).</p>
  */
-public final class ProductHostImeState implements SurfaceWidgetHostImeVisibility {
+public final class ProductHostImeState implements SurfaceWidgetHostImeVisibility, HostImeStateAccess {
     private boolean imeVisible;
 
+    @Override
     public boolean imeVisible() {
         return imeVisible;
     }
@@ -20,6 +22,7 @@ public final class ProductHostImeState implements SurfaceWidgetHostImeVisibility
         return imeVisible;
     }
 
+    @Override
     public void setImeVisible(boolean visible) {
         imeVisible = visible;
     }

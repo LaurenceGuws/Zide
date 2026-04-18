@@ -4,10 +4,10 @@ import android.content.Context;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 
-import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
 import uk.laurencegouws.terminal.NativeBridge;
+import uk.laurencegouws.terminal.host.ui.HostImeStateAccess;
 import uk.laurencegouws.terminal.input.ShellInputView;
 
 /** Functional callback adapter for {@link InputAssembly.Host}. */
@@ -16,8 +16,7 @@ public final class InputCallbacks implements InputAssembly.Host {
     private final ShellInputView.Host shellInputHost;
     private final View rootView;
     private final InputMethodManager inputMethodManager;
-    private final BooleanSupplier currentImeVisible;
-    private final Consumer<Boolean> setImeVisible;
+    private final HostImeStateAccess hostImeState;
     private final Runnable refreshScrollOverlay;
     private final Consumer<String> updateStatus;
     private final Consumer<String> appendEvent;
@@ -27,8 +26,7 @@ public final class InputCallbacks implements InputAssembly.Host {
             ShellInputView.Host shellInputHost,
             View rootView,
             InputMethodManager inputMethodManager,
-            BooleanSupplier currentImeVisible,
-            Consumer<Boolean> setImeVisible,
+            HostImeStateAccess hostImeState,
             Runnable refreshScrollOverlay,
             Consumer<String> updateStatus,
             Consumer<String> appendEvent) {
@@ -36,8 +34,7 @@ public final class InputCallbacks implements InputAssembly.Host {
         this.shellInputHost = shellInputHost;
         this.rootView = rootView;
         this.inputMethodManager = inputMethodManager;
-        this.currentImeVisible = currentImeVisible;
-        this.setImeVisible = setImeVisible;
+        this.hostImeState = hostImeState;
         this.refreshScrollOverlay = refreshScrollOverlay;
         this.updateStatus = updateStatus;
         this.appendEvent = appendEvent;
@@ -64,13 +61,8 @@ public final class InputCallbacks implements InputAssembly.Host {
     }
 
     @Override
-    public BooleanSupplier currentImeVisible() {
-        return currentImeVisible;
-    }
-
-    @Override
-    public Consumer<Boolean> setImeVisible() {
-        return setImeVisible;
+    public HostImeStateAccess hostImeStateAccess() {
+        return hostImeState;
     }
 
     @Override

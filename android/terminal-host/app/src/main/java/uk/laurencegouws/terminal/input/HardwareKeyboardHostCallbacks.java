@@ -2,18 +2,17 @@ package uk.laurencegouws.terminal.input;
 
 import android.view.inputmethod.InputMethodManager;
 
-import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import uk.laurencegouws.terminal.NativeBridge;
+import uk.laurencegouws.terminal.host.ui.HostImeStateAccess;
 
 /** Functional callback adapter for {@link HardwareKeyboardController}. */
 public final class HardwareKeyboardHostCallbacks implements HardwareKeyboardController.Host {
     private final Supplier<ShellInputView> shellInputView;
     private final InputMethodManager inputMethodManager;
-    private final BooleanSupplier currentImeVisible;
-    private final Consumer<Boolean> setImeVisible;
+    private final HostImeStateAccess hostImeState;
     private final Runnable followShellLiveBottom;
     private final Runnable refreshScrollOverlay;
     private final Consumer<String> updateStatus;
@@ -21,15 +20,13 @@ public final class HardwareKeyboardHostCallbacks implements HardwareKeyboardCont
     public HardwareKeyboardHostCallbacks(
             Supplier<ShellInputView> shellInputView,
             InputMethodManager inputMethodManager,
-            BooleanSupplier currentImeVisible,
-            Consumer<Boolean> setImeVisible,
+            HostImeStateAccess hostImeState,
             Runnable followShellLiveBottom,
             Runnable refreshScrollOverlay,
             Consumer<String> updateStatus) {
         this.shellInputView = shellInputView;
         this.inputMethodManager = inputMethodManager;
-        this.currentImeVisible = currentImeVisible;
-        this.setImeVisible = setImeVisible;
+        this.hostImeState = hostImeState;
         this.followShellLiveBottom = followShellLiveBottom;
         this.refreshScrollOverlay = refreshScrollOverlay;
         this.updateStatus = updateStatus;
@@ -47,12 +44,12 @@ public final class HardwareKeyboardHostCallbacks implements HardwareKeyboardCont
 
     @Override
     public boolean currentImeVisible() {
-        return currentImeVisible.getAsBoolean();
+        return hostImeState.imeVisible();
     }
 
     @Override
     public void setImeVisible(boolean visible) {
-        setImeVisible.accept(visible);
+        hostImeState.setImeVisible(visible);
     }
 
     @Override

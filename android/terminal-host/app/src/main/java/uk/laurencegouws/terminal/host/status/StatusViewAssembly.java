@@ -6,6 +6,7 @@ import uk.laurencegouws.terminal.debug.SurfaceStateSnapshotReader;
 import uk.laurencegouws.terminal.debug.SurfaceStateSnapshotHostCallbacks;
 import uk.laurencegouws.terminal.debug.StatusController;
 import uk.laurencegouws.terminal.host.ui.ActivityViewBindings;
+import uk.laurencegouws.terminal.host.ui.HostImeStateAccess;
 import uk.laurencegouws.terminal.host.surface.SurfaceBridge;
 import uk.laurencegouws.terminal.host.ui.ViewportController;
 import uk.laurencegouws.terminal.host.ui.ViewportBridge;
@@ -23,9 +24,7 @@ public final class StatusViewAssembly {
 
         boolean hasWindowFocus();
 
-        boolean imeVisible();
-
-        void setImeVisible(boolean visible);
+        HostImeStateAccess hostImeStateAccess();
 
         SurfaceBridge surfaceHostBridge();
 
@@ -79,7 +78,7 @@ public final class StatusViewAssembly {
 
             @Override
             public boolean imeVisible() {
-                return host.imeVisible();
+                return host.hostImeStateAccess().imeVisible();
             }
 
             @Override
@@ -121,8 +120,7 @@ public final class StatusViewAssembly {
                         viewBindings.productView,
                         viewBindings.productSurfaceContainer,
                         new ViewportCallbacks(
-                                host::imeVisible,
-                                host::setImeVisible,
+                                host.hostImeStateAccess(),
                                 host::notifyVisibleViewport)));
         return new Result(
                 viewBindings,

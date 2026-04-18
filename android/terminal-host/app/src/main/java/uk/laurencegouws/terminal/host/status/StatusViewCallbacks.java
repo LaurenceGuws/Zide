@@ -8,6 +8,7 @@ import java.util.function.Supplier;
 
 import uk.laurencegouws.terminal.NativeBridge;
 import uk.laurencegouws.terminal.host.surface.SurfaceBridge;
+import uk.laurencegouws.terminal.host.ui.HostImeStateAccess;
 import uk.laurencegouws.terminal.userland.UserlandReadinessState;
 import uk.laurencegouws.terminal.userland.UserlandInstallState;
 
@@ -15,8 +16,7 @@ import uk.laurencegouws.terminal.userland.UserlandInstallState;
 public final class StatusViewCallbacks implements StatusViewAssembly.Host {
     private final Activity activity;
     private final BooleanSupplier hasWindowFocus;
-    private final BooleanSupplier imeVisible;
-    private final Consumer<Boolean> setImeVisible;
+    private final HostImeStateAccess hostImeState;
     private final Supplier<SurfaceBridge> surfaceHostBridge;
     private final Consumer<String> notifyVisibleViewport;
     private final Supplier<UserlandInstallState> currentInstallState;
@@ -25,16 +25,14 @@ public final class StatusViewCallbacks implements StatusViewAssembly.Host {
     public StatusViewCallbacks(
             Activity activity,
             BooleanSupplier hasWindowFocus,
-            BooleanSupplier imeVisible,
-            Consumer<Boolean> setImeVisible,
+            HostImeStateAccess hostImeState,
             Supplier<SurfaceBridge> surfaceHostBridge,
             Consumer<String> notifyVisibleViewport,
             Supplier<UserlandInstallState> currentInstallState,
             Supplier<UserlandReadinessState> currentReadinessState) {
         this.activity = activity;
         this.hasWindowFocus = hasWindowFocus;
-        this.imeVisible = imeVisible;
-        this.setImeVisible = setImeVisible;
+        this.hostImeState = hostImeState;
         this.surfaceHostBridge = surfaceHostBridge;
         this.notifyVisibleViewport = notifyVisibleViewport;
         this.currentInstallState = currentInstallState;
@@ -56,13 +54,8 @@ public final class StatusViewCallbacks implements StatusViewAssembly.Host {
     }
 
     @Override
-    public boolean imeVisible() {
-        return imeVisible.getAsBoolean();
-    }
-
-    @Override
-    public void setImeVisible(boolean visible) {
-        setImeVisible.accept(visible);
+    public HostImeStateAccess hostImeStateAccess() {
+        return hostImeState;
     }
 
     @Override

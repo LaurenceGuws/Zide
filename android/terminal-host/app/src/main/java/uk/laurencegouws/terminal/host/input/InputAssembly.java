@@ -5,9 +5,9 @@ import android.view.Gravity;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.FrameLayout;
 
-import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
+import uk.laurencegouws.terminal.host.ui.HostImeStateAccess;
 import uk.laurencegouws.terminal.input.ShellInputView;
 import uk.laurencegouws.terminal.input.HardwareKeyboardController;
 import uk.laurencegouws.terminal.input.ImeFocusRecoveryController;
@@ -29,9 +29,7 @@ public final class InputAssembly {
 
         InputMethodManager inputMethodManager();
 
-        BooleanSupplier currentImeVisible();
-
-        Consumer<Boolean> setImeVisible();
+        HostImeStateAccess hostImeStateAccess();
 
         IntSupplier nativeFollowSessionLiveBottom();
 
@@ -78,15 +76,14 @@ public final class InputAssembly {
                 InputFactory.createHardwareKeyboardController(
                         () -> shellInputView,
                         host.inputMethodManager(),
-                        host.currentImeVisible(),
-                        host.setImeVisible(),
+                        host.hostImeStateAccess(),
                         () -> host.nativeFollowSessionLiveBottom().getAsInt(),
                         host.refreshScrollOverlay(),
                         host.updateStatus());
         final ImeFocusRecoveryController imeFocusRecoveryController =
                 InputFactory.createImeFocusRecoveryController(
                         () -> shellInputView,
-                        host.currentImeVisible(),
+                        host.hostImeStateAccess(),
                         host.appendEvent(),
                         host.inputMethodManager());
         return new Result(shellInputView, hardwareKeyboardController, imeFocusRecoveryController);

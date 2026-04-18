@@ -1,9 +1,9 @@
 package uk.laurencegouws.terminal.host.input;
 
-import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import uk.laurencegouws.terminal.host.ui.HostImeStateAccess;
 import uk.laurencegouws.terminal.input.ShellInputView;
 import uk.laurencegouws.terminal.input.HardwareKeyboardController;
 import uk.laurencegouws.terminal.input.HardwareKeyboardHostCallbacks;
@@ -23,8 +23,7 @@ public final class InputFactory {
     public static HardwareKeyboardController createHardwareKeyboardController(
             Supplier<ShellInputView> shellInputView,
             android.view.inputmethod.InputMethodManager inputMethodManager,
-            BooleanSupplier currentImeVisible,
-            Consumer<Boolean> setImeVisible,
+            HostImeStateAccess hostImeState,
             Runnable followShellLiveBottom,
             Runnable refreshScrollOverlay,
             Consumer<String> updateStatus) {
@@ -32,8 +31,7 @@ public final class InputFactory {
                 new HardwareKeyboardHostCallbacks(
                         shellInputView,
                         inputMethodManager,
-                        currentImeVisible,
-                        setImeVisible,
+                        hostImeState,
                         followShellLiveBottom,
                         refreshScrollOverlay,
                         updateStatus));
@@ -41,13 +39,13 @@ public final class InputFactory {
 
     public static ImeFocusRecoveryController createImeFocusRecoveryController(
             Supplier<ShellInputView> shellInputView,
-            BooleanSupplier imeVisible,
+            HostImeStateAccess hostImeState,
             Consumer<String> appendEvent,
             android.view.inputmethod.InputMethodManager inputMethodManager) {
         return new ImeFocusRecoveryController(
                 new ImeFocusRecoveryHostCallbacks(
                         shellInputView,
-                        imeVisible,
+                        hostImeState,
                         appendEvent,
                         inputMethodManager));
     }

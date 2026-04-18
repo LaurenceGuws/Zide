@@ -3868,7 +3868,7 @@ Progress delta:
   exposes `hostImeStateAccess()` instead of primitive IME pair.
 - **Out of scope:** `SurfaceWidgetHostImeVisibility`, `ChromeImePolicyInput`, `ChromeController.Host` (unchanged).
 
-### `AHW18-M2` Explicit IME state access seam introduction (`pending`)
+### `AHW18-M2` Explicit IME state access seam introduction (`completed`)
 
 Queue line (exact):
 
@@ -3880,7 +3880,11 @@ Acceptance:
 - wire seam creation from ProductHostImeState without behavior changes
 - compile debug + release Java after code changes
 
-### `AHW18-M3` Host callback rewiring to explicit seam(s) (`pending`)
+Progress delta:
+
+- **`HostImeStateAccess`** in `host/ui`; **`ProductHostImeState`** implements it.
+
+### `AHW18-M3` Host callback rewiring to explicit seam(s) (`completed`)
 
 Queue line (exact):
 
@@ -3891,6 +3895,13 @@ Acceptance:
 - targeted callback paths no longer pass duplicated raw IME pairs
 - B14/B15/B16/B17 seam interfaces and names remain unchanged
 - compile debug + release Java after code changes
+
+Progress delta:
+
+- **`StatusViewAssembly.Host`:** `hostImeStateAccess()` replaces primitive IME pair; **`StatusViewCallbacks`**,
+  **`ViewportCallbacks`** take **`HostImeStateAccess`**.
+- **`InputAssembly.Host`:** `hostImeStateAccess()`; **`InputCallbacks`**, **`InputFactory`**,
+  **`HardwareKeyboardHostCallbacks`**, **`ImeFocusRecoveryHostCallbacks`** unified.
 
 ### `AHW18-M4` Contract docs lock (`pending`)
 

@@ -234,8 +234,7 @@ public final class ZideActivity extends android.app.Activity
         return new StatusViewCallbacks(
                 this,
                 this::hasWindowFocus,
-                productHostImeState::imeVisible,
-                productHostImeState::setImeVisible,
+                productHostImeState,
                 () -> terminalWidget == null ? null : terminalWidget.surfaceBridge,
                 hostStartup.surface::notifyVisibleViewportIfReady,
                 () -> currentInstallState,
@@ -273,8 +272,7 @@ public final class ZideActivity extends android.app.Activity
                 this,
                 activityViewBindings.rootView,
                 getSystemService(InputMethodManager.class),
-                productHostImeState::imeVisible,
-                productHostImeState::setImeVisible,
+                productHostImeState,
                 hostStartup.runtime::refreshScrollOverlayIfReady,
                 StatusController::updateStatus,
                 StatusController::appendEvent);
