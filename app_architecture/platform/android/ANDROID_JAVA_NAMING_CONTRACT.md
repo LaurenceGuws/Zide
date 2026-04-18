@@ -91,11 +91,12 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
   `ProductTerminalSlotShellMapping.shellViewIdForTerminalSlot` — do not sprinkle
   `ShellViewId.TERMINAL` for active product shell routing outside that seam
 - app-shell **selection** vs **activation**: `DeclaredTerminalWidgetSlotCatalog` owns the declared
-  terminal-slot set for the harness (`PRIMARY` only today); `AppShellTerminalSelectionPolicy` routes
-  selection through that catalog plus `checkActiveProductTerminalSlot`
-  (`selectedProductTerminalSlotForAppShell`); `AppShellTerminalViewPolicy` owns shell-view activation
-  and chrome drawer policy for navigation built from that slot. `WidgetAssembly` constructs selection
-  from `forDeclaredHostSlot` then `AppShellNavigation.forProductTerminalSlot(selected…)`; use `applyActiveProductTerminalShellView`
+  terminal-slot set for the harness (`PRIMARY` only today); `AppShellTerminalHostSelectionContext`
+  resolves catalog + `AppShellTerminalSelectionPolicy` once per startup (`forProductHostStartup` /
+  `forSingleTerminalProductHarnessStartup`); `AppShellTerminalViewPolicy` owns shell-view activation
+  and chrome drawer policy for navigation built from that slot. `WidgetAssembly.assemble(Host, context)`
+  uses the context’s selected slot for `AppShellNavigation.forProductTerminalSlot` and the context’s
+  policy for `WidgetHarnessHostControllers`; use `applyActiveProductTerminalShellView`
   on view-mode apply (delegates to `applyProductTerminalShellViewActive`) instead of invoking
   `ProductTerminalSlotShellMapping` again on hot paths
 - `AppShellNavigation` does not expose a public active-shell-view setter; product

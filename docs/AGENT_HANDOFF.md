@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android product expansion** (`APX`) — build product capability on top of the closed harness/widget ownership shape.
-- Active macro batch (`in_progress`): `APX-B3` — consolidate declared-slot + selected-slot resolution into one startup selection context seam; no tabs UI or behavior change.
+- Active macro batch: `APX-B3` — **awaiting architect review** at super-gate (startup `AppShellTerminalHostSelectionContext` seam; engineer validation complete).
 - Prior closed/escalated: `AHW-B1` through `AHW-B26` accepted and `AHW` closed; `ASF-M3` escalated IME/assist/touch rows to operator evidence; `RF-M0` through `RF-M5` and `AX-M1` through `AX-M5` completed.
 - Active queue authority: `docs/todo/android/implementation.md`
 - Engineer entrypoint (dual mode): `docs/todo/android/ENGINEER_ENTRYPOINT.md`

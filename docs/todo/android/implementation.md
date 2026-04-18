@@ -99,7 +99,7 @@ Dual-mode batching override (architect directive):
 - Keep-screen-on seam work beyond `AHW-B20` is frozen by product direction.
 - `APX-B1` accepted by architect.
 - `APX-B2` accepted by architect.
-- `APX-B3` is `in_progress`.
+- `APX-B3` is `awaiting_architect_review` (engineer super-gate complete).
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -1086,7 +1086,7 @@ Architect review verdict:
 - `Review answers: APX-B2 accepted; declared-slot catalog seam is the right owner and wiring remains behavior-preserving.`
 - `Findings carried forward: no blocking regressions; single-slot runtime unchanged while declared-slot ownership is now explicit.`
 
-### `APX-B3` Slot selection context consolidation (`in_progress`)
+### `APX-B3` Slot selection context consolidation (`awaiting_architect_review`)
 
 Batch queue line (exact):
 
@@ -1137,7 +1137,7 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `APX-B3` super-gate is reached.
 
-### `APX3-M1` Selection context audit (`pending`)
+### `APX3-M1` Selection context audit (`complete`)
 
 Queue line (exact):
 
@@ -1149,7 +1149,13 @@ Acceptance:
 - define one owner type under `host/ui` for startup selection context
 - record explicit out-of-scope items (tabs UI, second active slot behavior)
 
-### `APX3-M2` Selection context seam introduction (`pending`)
+**M1 audit (authoritative for B3):**
+
+- **Reads before B3:** `ZideActivity` held `AppShellTerminalSelectionPolicy.singleTerminalProduct()` and called `selectedProductTerminalSlotForAppShell()` three times (interaction wiring, `TerminalWidgetCompositionAssembly.compose`, `WidgetHostAssemblyContext` slot). `WidgetAssembly.assemble` called `AppShellTerminalSelectionPolicy.forDeclaredHostSlot(host.terminalWidgetSlot())` then `selectedProductTerminalSlotForAppShell()` for `AppShellNavigation` — duplicate policy resolution vs activity.
+- **Target seam:** `AppShellTerminalHostSelectionContext` under `host/ui`: `forSingleTerminalProductHarnessStartup` / `forProductHostStartup` resolves catalog + policy once; exposes `declaredSlotCatalog()`, `selectedProductTerminalSlotForAppShell()`, `appShellTerminalSelectionPolicy()`.
+- **Out of scope:** tabs UI, second active slot runtime, startup order change, chrome/IME threading.
+
+### `APX3-M2` Selection context seam introduction (`complete`)
 
 Queue line (exact):
 
@@ -1161,7 +1167,7 @@ Acceptance:
 - no compatibility/fallback paths
 - compile debug + release Java after code changes
 
-### `APX3-M3` Consumer rewiring (`pending`)
+### `APX3-M3` Consumer rewiring (`complete`)
 
 Queue line (exact):
 
@@ -1173,7 +1179,7 @@ Acceptance:
 - no repeated ad hoc selected-slot reads in rewired startup callsites
 - compile debug + release Java after code changes
 
-### `APX3-M4` Contract docs lock (`pending`)
+### `APX3-M4` Contract docs lock (`complete`)
 
 Queue line (exact):
 
@@ -1184,7 +1190,7 @@ Acceptance:
 - host structure and naming contract match code shape
 - userland contract updated only if ownership text requires it
 
-### `APX3-M5` Queue/handoff/entrypoint sync (`pending`)
+### `APX3-M5` Queue/handoff/entrypoint sync (`complete`)
 
 Queue line (exact):
 
@@ -1195,7 +1201,7 @@ Acceptance:
 - queue, handoff, and engineer entrypoint stay coherent through APX-B3 super-gate
 - super-gate stop condition and review packet contract are explicit
 
-### `APX3-M6` Batch validation + review packet (`pending`)
+### `APX3-M6` Batch validation + review packet (`complete`)
 
 Queue line (exact):
 
@@ -1207,6 +1213,18 @@ Acceptance:
 - deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
 - cold start smoke pass when a device is available
 - engineer reports full super-gate packet and explicit residual-risk note
+
+**APX-B3 engineer validation record (M6):**
+
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac` — pass
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac` — pass
+- `python3 ops/android_terminal_host.py deploy` — pass (streamed install, activity start)
+- `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E` — pass (no `AndroidRuntime:E` lines; benign duplicate-top warning when activity already foreground)
+- `adb shell am force-stop uk.laurencegouws.zide && adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity` — pass (`LaunchState: COLD`, `Status: ok`)
+
+**Residual risk:** Low — single PRIMARY path unchanged; `WidgetAssembly` asserts host slot matches context selected slot (wiring invariant).
+
+`Milestone reached per docs, architect review required.`
 
 ## Guardrails
 
