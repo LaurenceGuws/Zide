@@ -40,6 +40,10 @@ Active batch queue line (exact):
 
 - implement real tab-session behavior on Android harness and complete the Android-side zide-pm test-binary pull path so product testing can move beyond nvim/htop
 
+Parallel-lane note:
+
+- `../zide-mobile-pm` may progress in parallel under a separate engineer session; this Android engineer session stays focused on APX-B9 only.
+
 ## Core Boundary Rule
 
 This batch exists to start product expansion on top of closed AHW ownership
@@ -69,6 +73,7 @@ boundaries while preserving current single-terminal behavior.
 - `APX-B7` is accepted: enum conversion choke point is centralized on declared-slot value seam.
 - `APX-B8` is accepted: tab-state slice 1 (chrome strip + tab index state) and `ZIDE_PM_HOST_PLATFORM=android` export are in place.
 - `APX-B9` is feature-first: move from chrome-only tab selection to behavior-bearing session-backed tab flow, and mature Android-side zide-pm pull/install path.
+- `zide-mobile-pm` foundation work is allowed in parallel, but APX-B9 remains the primary in-repo execution lane here.
 - `AHW-B26` is accepted and `AHW` is closed.
 - Keep harness vs surface split (`WidgetAssembly.Result.harnessHost` + `surfaceJoin`) as the baseline.
 - Freeze additional keep-screen-on seam work beyond B20 unless explicitly re-opened by product direction.
@@ -149,6 +154,7 @@ If a required change falls outside these paths, stop and report a blocker.
 - No compatibility shim kept only to avoid a clean cut.
 - No external-fork compatibility work or framing; keep one clean in-repo path only.
 - No behavior changes inside extraction-only commits.
+- No edits in `../zide-mobile-pm` from this session; treat cross-repo changes as separate engineer lane.
 
 ## Execution Loop
 

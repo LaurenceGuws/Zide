@@ -7,6 +7,7 @@ Session entrypoint only. Keep this file short and current.
 - Product lane: Android terminal excellence
 - Campaign: **Android product expansion** (`APX`) — build product capability on top of the closed harness/widget ownership shape.
 - Active macro batch (`in_progress`): `APX-B9` — tab-state expansion slice 2 + zide-pm test-binary pull maturity; feature-first long engineer batch.
+- Parallel foundation lane (separate repo): `../zide-mobile-pm` may run in parallel for Android test-binary pull/install contract groundwork; Android APX remains primary until APX objectives are stable.
 - Prior closed/escalated: `AHW-B1` through `AHW-B26` accepted and `AHW` closed; `ASF-M3` escalated IME/assist/touch rows to operator evidence; `RF-M0` through `RF-M5` and `AX-M1` through `AX-M5` completed.
 - Active queue authority: `docs/todo/android/implementation.md`
 - Engineer entrypoint (dual mode): `docs/todo/android/ENGINEER_ENTRYPOINT.md`
@@ -21,6 +22,7 @@ Architect session seed:
 - Expect longer engineer runs: default target is **5–10 validated commits** per
   macro batch before architect review.
 - After review acceptance, immediately refocus the queue, handoff, and engineer entrypoint to the next macro batch.
+- If parallel `zide-mobile-pm` work is active, keep it contract-aligned with APX and treat conflicts as architect blockers.
 
 Engineer session seed:
 
@@ -74,6 +76,8 @@ Engineer session seed:
 - `APX-B8` is accepted: tab-state slice 1 (two-tab chrome strip and harness tab index state) and `ZIDE_PM_HOST_PLATFORM=android` export are in place.
 - `APX-B9` scope is feature-first: move from chrome-only selection to behavior-bearing tab-session flow and mature Android-side zide-pm test-binary pull/install path.
 - Cleanup-only changes are out of scope unless they directly unblock APX-B9 feature delivery.
+- APX remains primary until these are stable: harness/widget split stability, clean tab-state expansion, and zide-pm real Android test-binary pull maturity.
+- After those three are stable, primary architect focus transitions to Zig-layer hygiene cleanup.
 - Keep `ProductHostKeepScreenOnPolicy` as the long-term owner of terminal keep-screen-on default policy.
 - Keep `HostImeStateAccess` as the long-term host callback IME seam (backed by `ProductHostImeState`).
 - Keep `ProductHostImeState` as the long-term activity IME carrier.

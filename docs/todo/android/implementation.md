@@ -46,6 +46,14 @@ and decoupled.
   1. planned harness/widget split implemented and stable
   2. planned tab-state expansion implemented cleanly on Android
   3. zide-pm mature enough to pull real Android test binaries beyond `nvim`/`htop`
+- **Cross-repo execution model (approved):**
+  - Android Java lane continues as primary until APX completion objectives are stable.
+  - In parallel, a dedicated `zide-mobile-pm` engineer lane may run foundation work in
+    `../zide-mobile-pm` (catalog/test-binary pull/install contract for Android host).
+  - Parallel `zide-mobile-pm` work must not block APX Java execution unless a hard
+    product contract conflict is found.
+  - After APX completion objectives are stable, primary architecture focus can shift
+    to Zig hygiene cleanup.
 
 Iteration detail is intentionally not tracked here. Read code + git history for
 step-level implementation history.
