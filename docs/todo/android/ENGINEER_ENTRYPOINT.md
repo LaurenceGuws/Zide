@@ -34,9 +34,9 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B19` is `in_progress` and is the only active macro batch.
+Engineer delivery for `AHW-B19` is complete; batch status is `verdict_pending` pending Architect review. No macro batch is `in_progress` until the Architect refocuses the queue after verdict.
 
-Active batch queue line (exact):
+Reference queue line (exact) for the completed batch:
 
 - isolate terminal keep-screen-on default policy behind an explicit harness seam for future settings control while preserving behavior
 
@@ -81,10 +81,9 @@ existing IME/slot/chrome contracts and behavior.
 
 ## Internal Milestones
 
-Execute `AHW19-M1` through `AHW19-M6` sequentially; do not stop before the
-`AHW-B19` super-gate unless a hard stop condition is hit.
+`AHW19-M1` through `AHW19-M6` are complete; the `AHW-B19` super-gate has been reached. Progress is recorded in `docs/todo/android/implementation.md`.
 
-Execute in order and mark progress in `docs/todo/android/implementation.md`.
+Historical execution order (for the next engineer session after Architect refocus):
 
 - `AHW19-M1`: audit keep-screen-on callsites and define explicit harness owner seam.
 - `AHW19-M2`: introduce explicit keep-screen-on seam type(s) for policy ownership.

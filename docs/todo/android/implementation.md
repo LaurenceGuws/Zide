@@ -122,7 +122,7 @@ Dual-mode batching override (architect directive):
 - Completed macro batch: `AHW-B16` (accepted by Architect; activity IME state carrier seam follow-up queued in `AHW-B17`).
 - Completed macro batch: `AHW-B17` (accepted by Architect; host IME callback seam unification follow-up queued in `AHW-B18`).
 - Completed macro batch: `AHW-B18` (accepted by Architect; keep-screen-on policy seam hardening follow-up queued in `AHW-B19`).
-- `AHW-B19` is `in_progress` (terminal keep-screen-on policy seam hardening, behavior-preserving).
+- Engineer delivery complete; Architect verdict pending: `AHW-B19` (terminal keep-screen-on policy seam hardening, behavior-preserving). No macro batch is `in_progress` until Architect refocuses the queue.
 
 ### `RF-M0` Doc Reset (`completed`)
 
@@ -3975,7 +3975,7 @@ Architect review verdict:
 
 ---
 
-### `AHW-B19` Terminal keep-screen-on policy seam hardening (`in_progress`)
+### `AHW-B19` Terminal keep-screen-on policy seam hardening (`verdict_pending`)
 
 Batch queue line (exact):
 
@@ -4081,7 +4081,7 @@ Progress delta:
 - **`ZideActivity`** holds **`productHostKeepScreenOnPolicy`**; **`applyDefaultTerminalKeepScreenOnPolicy`**
   delegates to the policy (no direct **`FLAG_KEEP_SCREEN_ON`** in activity body).
 
-### `AHW19-M4` Contract docs lock (`pending`)
+### `AHW19-M4` Contract docs lock (`completed`)
 
 Queue line (exact):
 
@@ -4092,7 +4092,12 @@ Acceptance:
 - host structure and naming contract match code shape
 - userland contract remains unchanged unless ownership text requires an update
 
-### `AHW19-M5` Queue/handoff/entrypoint sync (`pending`)
+Progress delta:
+
+- `ANDROID_JAVA_HOST_STRUCTURE.md` app-shell invariants + table rows + `ZideActivity` row;
+  `ANDROID_JAVA_NAMING_CONTRACT.md` bullet. `USERLAND_HOST_CONTRACT` unchanged.
+
+### `AHW19-M5` Queue/handoff/entrypoint sync (`completed`)
 
 Queue line (exact):
 
@@ -4103,7 +4108,11 @@ Acceptance:
 - queue, handoff, and engineer entrypoint stay coherent through B19 super-gate
 - super-gate stop condition and review packet contract are explicit
 
-### `AHW19-M6` Batch validation + review packet (`pending`)
+Progress delta:
+
+- This file, `ENGINEER_ENTRYPOINT.md`, and `AGENT_HANDOFF.md` updated for `verdict_pending`.
+
+### `AHW19-M6` Batch validation + review packet (`completed`)
 
 Queue line (exact):
 
@@ -4115,6 +4124,25 @@ Acceptance:
 - deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
 - cold start smoke pass when a device is available
 - engineer reports the full super-gate packet and stops for Architect review
+
+Progress delta:
+
+- Debug/release compile pass; deploy + activity start + `AndroidRuntime:E` (empty after logcat clear);
+  cold start `force-stop` + `am start -W` (LaunchState `COLD`, ok).
+
+Super-gate engineer packet:
+
+- `Milestone: AHW-B19 verdict_pending`
+- `Queue line (exact): isolate terminal keep-screen-on default policy behind an explicit harness seam for future settings control while preserving behavior`
+- `Scope contract: ProductHostKeepScreenOnPolicy; B14–B18 unchanged; slot/chrome freeze unchanged`
+- `Progress delta: activity delegates; policy owns FLAG_KEEP_SCREEN_ON application`
+- `Validation: gradle compileDebug/Release (pass); deploy (pass); adb logcat -c + start + AndroidRuntime:E (pass, empty); cold start (pass)`
+- `Engineer updates: Blocked by Archtect review needed: true`
+
+Review questions for Architect:
+
+- Confirm `ProductHostKeepScreenOnPolicy` as the long-term harness seam for terminal keep-screen-on defaults.
+- Confirm next macro batch after verdict.
 
 `Milestone reached per docs, architect review required.`
 
