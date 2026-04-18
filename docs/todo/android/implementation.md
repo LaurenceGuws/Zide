@@ -136,11 +136,12 @@ Dual-mode batching override (architect directive):
 - `APX-B15` accepted by architect.
 - `APX-B16` accepted by architect.
 - `APX-B17` accepted by architect.
-- `APX-B18` **blocked (cross-repo)**: current `../zide-mobile-pm` catalog-bearing
-  release exposes `zide-android-catalog-smoke`, but its prefix metadata includes
-  `/data/data/zide.embed/files/usr`, which the app sandbox cannot create. Android
-  remains pinned to the last stageable dev prefix until PM ships a materializable
-  runtime support link strategy.
+- `APX-B18` **blocked (cross-repo)**: current `../zide-mobile-pm` release
+  `android-dev-2026.04.18.173640` stages with the app-owned `.z` bridge and
+  exposes `zide-android-catalog-smoke` in catalog mode, but the in-prefix Go
+  `zide-pm` cannot fetch GitHub on device (`lookup github.com on [::1]:53`).
+  Android now passes the APK release manifest URL explicitly; PM must make
+  Android network fetch or an equivalent on-device catalog/install path work.
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -2996,23 +2997,25 @@ Batch super-gate:
 #### APX-B18 hard blocker packet (architect correction)
 
 - `Review chunk: APX-B18 (M1 blocker audit)`
-- `Verdict: blocked — cross-repo runtime support link contract is not materializable by the app sandbox.`
-- Finding: current `../zide-mobile-pm` release `android-dev-2026.04.18.162659` does expose `zide-android-catalog-smoke` under `ZIDE_PM_HOST_PLATFORM=android`, so the earlier “missing catalog row” diagnosis was incomplete. Staging that release fails because `runtime_support_links` contains `/data/data/zide.embed/files/usr=>/data/data/uk.laurencegouws.zide/files/usr`; `run-as uk.laurencegouws.zide` cannot create sibling root `/data/data/zide.embed` (`Permission denied`). Android cannot safely point `userland_release.json` at that release until PM publishes a stageable bridge.
-- Architect action: leave Android pinned to `android-dev-2026.04.14.102816`; hand PM a blocker to replace the `zide.embed` bridge with a materializable strategy, then republish and rerun APX18-M2–M6.
+- `Verdict: blocked — cross-repo zide-pm Android network/catalog fetch is not working on device.`
+- Superseded finding: PM release `android-dev-2026.04.18.162659` exposed `zide-android-catalog-smoke`, but used unmaterializable `/data/data/zide.embed`. PM fixed that in `android-dev-2026.04.18.173640` with app-owned `.z`.
+- Current finding: Android stages `android-dev-2026.04.18.173640` successfully and materializes `/data/data/uk.laurencegouws.zide/.z=>files/usr`. Local PM list-available against the release manifest shows `dev-baseline` + `zide-android-catalog-smoke`. On device, in-prefix `zide-pm install zide-android-catalog-smoke --manifest https://github.com/.../android-dev-2026.04.18.173640/...` fails with `lookup github.com on [::1]:53`; `list-available` falls back to installed baseline output (`dev-baseline`) instead of surfacing the catalog row.
+- Android action taken: `userland_release.json` now points at `android-dev-2026.04.18.173640`; runtime support link validation accepts both `/data/user/0/uk.laurencegouws.zide` and `/data/data/uk.laurencegouws.zide`; the test-binary lifecycle passes `--manifest <APK release manifest URL>` explicitly to `zide-pm list-available` and `install`.
+- Architect action: hand PM a blocker to make Android-device `zide-pm` remote manifest/artifact fetch work, or provide an equivalent product-owned on-device catalog/install path that does not rely on the broken Go DNS behavior.
 - `Engineer partial validation before correction: compileDebugJavaWithJavac (pass); compileReleaseJavaWithJavac (pass); python3 ops/android_terminal_host.py deploy (pass); adb logcat -d -s AndroidRuntime:E after warm start (pass, empty); adb cold start am start -W (pass, LaunchState: COLD, Status: ok).`
-- `Architect validation: local PM list-available against android-dev-2026.04.18.162659 with ZIDE_PM_HOST_PLATFORM=android prints dev-baseline + zide-android-catalog-smoke; userland-stage-artifact --force against that release fails at mkdir /data/data/zide.embed (Permission denied).`
+- `Architect validation: local PM list-available against android-dev-2026.04.18.173640 with ZIDE_PM_HOST_PLATFORM=android prints dev-baseline + zide-android-catalog-smoke; userland-stage-artifact --force against local release manifest succeeds; on-device zide-pm install against the GitHub manifest URL fails with DNS [::1]:53.`
 
 **Interim refocus closure recommendation (maps to `refocus_android.txt`, pending M3–M6):**
 
 1. **Planned split (harness vs terminal widget):** treated as implemented and accepted through prior APX/AHW work; APX-B18 does not reopen ownership.
 2. **Planned tab-state expansion (stable ids, policy-owned descriptors, sidebar session navigation):** treated as cleanly implemented through APX-B14–B16 and B11; unchanged by this blocker.
-3. **zide-pm test-binary pull maturity:** **not yet proven on device**; after PM publishes a release whose runtime support links are materializable by the app sandbox, re-run APX18-M2–M6 and publish the full closure verdict.
+3. **zide-pm test-binary pull maturity:** **not yet proven on device**; after PM fixes Android-device manifest/artifact fetch or provides an equivalent on-device catalog/install path, re-run APX18-M3–M6 and publish the full closure verdict.
 
 Internal milestone cadence:
 
 - Engineer executes `APX18-M1` through `APX18-M6`; target **5-10 validated commits** before super-gate.
 
-### `APX18-M1` Candidate and install-proof audit (`done — PM runtime link blocker found`)
+### `APX18-M1` Candidate and install-proof audit (`done — PM device fetch blocker found`)
 
 Queue line (exact):
 
@@ -3024,9 +3027,9 @@ Acceptance:
 - document the exact file path and executable bit expectation after install
 - document any missing Android-side status/telemetry needed to verify selected/install success without manifest parsing in Java
 
-**M1 outcome:** PM release `android-dev-2026.04.18.162659` contains expected candidate `zide-android-catalog-smoke` with install path `libexec/zide-pm/zide-android-catalog-smoke.sh`, but the same release cannot be staged by the app because its `runtime_support_links` require creating `/data/data/zide.embed`. Continue only after PM publishes a materializable runtime support link strategy.
+**M1 outcome:** PM release `android-dev-2026.04.18.173640` contains expected candidate `zide-android-catalog-smoke` with install path `libexec/zide-pm/zide-android-catalog-smoke.sh`; Android can stage the release and materialize `.z`. Continue only after PM makes in-prefix `zide-pm` able to fetch the manifest/artifact on device or provides an equivalent install path.
 
-### `APX18-M2` Verification surface hardening (`blocked — prerequisite`)
+### `APX18-M2` Verification surface hardening (`done — manifest URL and owned-root hardening`)
 
 Queue line (exact):
 
@@ -3038,6 +3041,8 @@ Acceptance:
 - no Java manifest parser
 - selected candidate id and final install outcome are visible through existing status/telemetry flow
 - existing no-candidate paths keep their reason labels
+
+**M2 outcome:** Android now passes the APK release manifest URL explicitly to `zide-pm list-available` and `install`, so the flow no longer depends on the CLI binary's embedded default URL. Runtime support link validation now accepts both app-owned package root spellings used on Android: `/data/user/0/uk.laurencegouws.zide` and `/data/data/uk.laurencegouws.zide`.
 
 ### `APX18-M3` Device install proof (`blocked — prerequisite`)
 

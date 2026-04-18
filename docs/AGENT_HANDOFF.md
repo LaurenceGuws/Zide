@@ -6,8 +6,8 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android product expansion** (`APX`) — build product capability on top of the closed harness/widget ownership shape.
-- Active macro batch (`blocked_cross_repo`): `APX-B18` — PM release `android-dev-2026.04.18.162659` exposes `zide-android-catalog-smoke`, but staging fails because `runtime_support_links` requires creating `/data/data/zide.embed`, a sibling root the app sandbox cannot create.
-- Parallel foundation lane (separate repo): `../zide-mobile-pm` must publish a materializable runtime support link strategy before APX-B18 M2+ can resume; Android remains pinned to the last stageable dev prefix.
+- Active macro batch (`blocked_cross_repo`): `APX-B18` — Android now stages PM release `android-dev-2026.04.18.173640` with the app-owned `.z` bridge and passes the release manifest URL explicitly to `zide-pm`, but in-prefix `zide-pm` cannot fetch GitHub on device (`lookup github.com on [::1]:53`).
+- Parallel foundation lane (separate repo): `../zide-mobile-pm` must make Android-device manifest/artifact fetch work, or provide an equivalent on-device catalog/install path, before APX-B18 M3+ can resume.
 - Prior closed/escalated: `AHW-B1` through `AHW-B26` accepted and `AHW` closed; `ASF-M3` escalated IME/assist/touch rows to operator evidence; `RF-M0` through `RF-M5` and `AX-M1` through `AX-M5` completed.
 - Active queue authority: `docs/todo/android/implementation.md`
 - Engineer entrypoint (dual mode): `docs/todo/android/ENGINEER_ENTRYPOINT.md`

@@ -75,6 +75,7 @@ public final class UserlandRuntimeSupportLinks {
             return "";
         }
         final String hostRoot = packageRoot.getAbsolutePath();
+        final String dataHostRoot = "/data/data/" + UserlandPolicy.PACKAGE_NAME;
         final String embedRoot = UserlandPolicy.runtimeSupportEmbedPackageRoot(context);
         final StringBuilder command = new StringBuilder();
         final String[] entries = rawLinks.split(",");
@@ -88,8 +89,8 @@ public final class UserlandRuntimeSupportLinks {
             }
             final String source = entry.substring(0, separator).trim();
             final String target = entry.substring(separator + 2).trim();
-            final String normalizedSource = normalizeRuntimeSupportPath(source, hostRoot, embedRoot);
-            final String normalizedTarget = normalizeRuntimeSupportPath(target, hostRoot, embedRoot);
+            final String normalizedSource = normalizeRuntimeSupportPath(source, hostRoot, dataHostRoot, embedRoot);
+            final String normalizedTarget = normalizeRuntimeSupportPath(target, hostRoot, dataHostRoot, embedRoot);
             if (normalizedSource == null || normalizedTarget == null) {
                 throw new IOException("runtime support link escapes allowed package roots: " + entry);
             }
@@ -111,15 +112,22 @@ public final class UserlandRuntimeSupportLinks {
     }
 
     private static String normalizeRuntimeSupportPath(
-            final String path, final String hostPackagePath, final String embedPackagePath) {
-        if (path.equals(hostPackagePath) || path.startsWith(hostPackagePath + "/")) {
+            final String path,
+            final String hostPackagePath,
+            final String dataHostPackagePath,
+            final String embedPackagePath) {
+        if (matchesPackageRoot(path, hostPackagePath) || matchesPackageRoot(path, dataHostPackagePath)) {
             return path;
         }
-        if (embedPackagePath != null
-                && !embedPackagePath.isEmpty()
-                && (path.equals(embedPackagePath) || path.startsWith(embedPackagePath + "/"))) {
+        if (matchesPackageRoot(path, embedPackagePath)) {
             return path;
         }
         return null;
+    }
+
+    private static boolean matchesPackageRoot(final String path, final String packageRoot) {
+        return packageRoot != null
+                && !packageRoot.isEmpty()
+                && (path.equals(packageRoot) || path.startsWith(packageRoot + "/"));
     }
 }

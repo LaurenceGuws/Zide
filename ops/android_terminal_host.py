@@ -41,6 +41,7 @@ TERMUX_MAIN_BASE_URL = "https://packages.termux.dev/apt/termux-main/"
 TERMUX_MAIN_PACKAGES_URL = TERMUX_MAIN_BASE_URL + "dists/stable/main/binary-aarch64/Packages"
 REMOTE_APP_FILES_DIR = f"/data/data/{PACKAGE_NAME}/files"
 REMOTE_APP_PACKAGE_DIR = f"/data/user/0/{PACKAGE_NAME}"
+REMOTE_DATA_APP_PACKAGE_DIR = f"/data/data/{PACKAGE_NAME}"
 REMOTE_USERLAND_PREFIX = f"{REMOTE_APP_FILES_DIR}/usr"
 REMOTE_USERLAND_HOME = f"{REMOTE_APP_FILES_DIR}/home"
 REMOTE_USERLAND_TMP = f"/data/user/0/{PACKAGE_NAME}/tmp"
@@ -1101,6 +1102,8 @@ def parse_runtime_support_links(raw: object) -> tuple[tuple[str, str], ...]:
 
 def normalize_runtime_support_path(path: str) -> str | None:
     if path == REMOTE_APP_PACKAGE_DIR or path.startswith(REMOTE_APP_PACKAGE_DIR + "/"):
+        return path
+    if path == REMOTE_DATA_APP_PACKAGE_DIR or path.startswith(REMOTE_DATA_APP_PACKAGE_DIR + "/"):
         return path
     return None
 

@@ -59,12 +59,13 @@ Hard boundary:
 - debug view UI path has been deleted; diagnostics are log/script based
 - dead debug-mode plumbing was removed from runtime/surface/session seams
 - userland workflow callbacks are being reshaped to semantic harness actions
-- **APX-B18 (2026-04-18):** refocus *closure* is blocked on a PM runtime-link
-  contract issue. The current catalog-bearing PM release exposes
-  `zide-android-catalog-smoke`, but its `runtime_support_links` require creating
-  `/data/data/zide.embed`, a sibling root the Android app sandbox cannot create.
+- **APX-B18 (2026-04-18):** refocus *closure* is blocked on PM Android-device
+  fetch behavior. The current catalog-bearing PM release stages with the
+  app-owned `.z` bridge and exposes `zide-android-catalog-smoke`, but in-prefix
+  `zide-pm` cannot fetch GitHub on device (`lookup github.com on [::1]:53`).
   Harness/widget split and tab-state milestones remain accepted; final closure
-  waits for a materializable PM release.
+  waits for PM to make manifest/artifact fetch work on device or provide an
+  equivalent product-owned install path.
 
 This case-study intentionally stays high-level. For implementation detail and
 iteration-level decisions, read code and commit history.

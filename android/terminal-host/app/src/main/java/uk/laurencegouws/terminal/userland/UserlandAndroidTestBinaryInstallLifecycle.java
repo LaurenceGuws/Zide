@@ -44,9 +44,16 @@ public final class UserlandAndroidTestBinaryInstallLifecycle {
      */
     public static String selectAndroidEdgeSpecOrThrow(Context context) throws IOException, NoCandidateException {
         final String prefixPath = UserlandPolicy.prefixPath(context);
+        final UserlandRelease release = UserlandRelease.load(context);
         final String listOut =
                 UserlandCommandRunner.runZidePm(
-                        context, "zide-pm-list", "list-available", "--prefix", prefixPath);
+                        context,
+                        "zide-pm-list",
+                        "list-available",
+                        "--manifest",
+                        release.manifestUrl,
+                        "--prefix",
+                        prefixPath);
         final List<String> any = UserlandZidePmListAvailableCandidates.parseAllFirstColumnPackageTokens(listOut);
         final Optional<String> spec =
                 UserlandZidePmListAvailableCandidates.selectLexicographicallyFirstInstallSpec(listOut);
@@ -66,7 +73,15 @@ public final class UserlandAndroidTestBinaryInstallLifecycle {
     /** Runs {@code zide-pm install} for an already-selected package spec (edge flow only). */
     public static String installPackageSpec(Context context, String packageSpec) throws IOException {
         final String prefixPath = UserlandPolicy.prefixPath(context);
+        final UserlandRelease release = UserlandRelease.load(context);
         return UserlandCommandRunner.runZidePm(
-                context, "zide-pm-install-edge", "install", "--prefix", prefixPath, packageSpec);
+                context,
+                "zide-pm-install-edge",
+                "install",
+                "--manifest",
+                release.manifestUrl,
+                "--prefix",
+                prefixPath,
+                packageSpec);
     }
 }
