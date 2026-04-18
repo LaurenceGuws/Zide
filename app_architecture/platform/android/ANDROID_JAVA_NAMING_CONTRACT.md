@@ -91,9 +91,10 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
   `ProductTerminalSlotShellMapping.shellViewIdForTerminalSlot` — do not sprinkle
   `ShellViewId.TERMINAL` for active product shell routing outside that seam
 - app-shell **selection** vs **activation**: `DeclaredTerminalWidgetSlotCatalog` owns the declared
-  terminal-slot set for the harness (`PRIMARY` only today); `AppShellTerminalHostSelectionContext`
-  resolves catalog + `AppShellTerminalSelectionPolicy` once per startup (`forProductHostStartup` /
-  `forSingleTerminalProductHarnessStartup`); `AppShellTerminalViewPolicy` owns shell-view activation
+  terminal-slot set for the harness (`PRIMARY` only today); `ProductHostDeclaredTerminalWidgetSlot`
+  is the explicit host-declared-slot source; `AppShellTerminalHostSelectionContext.forProductHostStartup`
+  resolves catalog + `AppShellTerminalSelectionPolicy` once per startup from that slot;
+  `AppShellTerminalViewPolicy` owns shell-view activation
   and chrome drawer policy for navigation built from that slot. `WidgetAssembly.assemble(Host, context)`
   uses the context’s selected slot for `AppShellNavigation.forProductTerminalSlot` and the context’s
   policy for `WidgetHarnessHostControllers`; use `applyActiveProductTerminalShellView`

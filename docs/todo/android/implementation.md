@@ -100,7 +100,7 @@ Dual-mode batching override (architect directive):
 - `APX-B1` accepted by architect.
 - `APX-B2` accepted by architect.
 - `APX-B3` accepted by architect.
-- `APX-B4` is `in_progress`.
+- `APX-B4` is `awaiting_architect_review` (engineer super-gate complete).
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -1153,7 +1153,7 @@ Acceptance:
 **M1 audit (authoritative for B3):**
 
 - **Reads before B3:** `ZideActivity` held `AppShellTerminalSelectionPolicy.singleTerminalProduct()` and called `selectedProductTerminalSlotForAppShell()` three times (interaction wiring, `TerminalWidgetCompositionAssembly.compose`, `WidgetHostAssemblyContext` slot). `WidgetAssembly.assemble` called `AppShellTerminalSelectionPolicy.forDeclaredHostSlot(host.terminalWidgetSlot())` then `selectedProductTerminalSlotForAppShell()` for `AppShellNavigation` — duplicate policy resolution vs activity.
-- **Target seam:** `AppShellTerminalHostSelectionContext` under `host/ui`: `forSingleTerminalProductHarnessStartup` / `forProductHostStartup` resolves catalog + policy once; exposes `declaredSlotCatalog()`, `selectedProductTerminalSlotForAppShell()`, `appShellTerminalSelectionPolicy()`.
+- **Target seam:** `AppShellTerminalHostSelectionContext` under `host/ui`: `forProductHostStartup` resolves catalog + policy once; exposes `declaredSlotCatalog()`, `selectedProductTerminalSlotForAppShell()`, `appShellTerminalSelectionPolicy()`. (APX-B4 adds `ProductHostDeclaredTerminalWidgetSlot` as the explicit host-declared-slot source feeding `forProductHostStartup`.)
 - **Out of scope:** tabs UI, second active slot runtime, startup order change, chrome/IME threading.
 
 ### `APX3-M2` Selection context seam introduction (`complete`)
@@ -1238,7 +1238,7 @@ Architect review verdict:
 - `Review answers: one AppShellTerminalHostSelectionContext per activity startup is accepted as the intended seam; host/context slot equality check is accepted as a harness invariant and should remain fail-fast.`
 - `Findings carried forward: no blocking regressions; startup order and single-slot behavior unchanged.`
 
-### `APX-B4` Host declared-slot source seam (`in_progress`)
+### `APX-B4` Host declared-slot source seam (`awaiting_architect_review`)
 
 Batch queue line (exact):
 
@@ -1289,7 +1289,7 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `APX-B4` super-gate is reached.
 
-### `APX4-M1` Declared-slot source audit (`pending`)
+### `APX4-M1` Declared-slot source audit (`complete`)
 
 Queue line (exact):
 
@@ -1301,7 +1301,13 @@ Acceptance:
 - define one owner type/field under `host/ui` or activity wiring edge
 - record explicit out-of-scope items (tabs UI, second active slot behavior)
 
-### `APX4-M2` Declared-slot source seam introduction (`pending`)
+**M1 audit (authoritative for B4):**
+
+- **Before B4:** `AppShellTerminalHostSelectionContext.forSingleTerminalProductHarnessStartup()` inlined `DeclaredTerminalWidgetSlotCatalog.currentProductHarness().defaultSelectedTerminalSlotForAppShell()` inside the context type; `ZideActivity` threaded `selectedProductTerminalSlotForAppShell()` from context into interaction / compose / `WidgetHostAssemblyContext` — correct but no named host-declared-slot owner.
+- **Target seam:** `ProductHostDeclaredTerminalWidgetSlot.forCurrentProductHarness()` under `host/ui`; `ZideActivity` holds `productHostDeclaredTerminalWidgetSlot` then `forProductHostStartup(productHostDeclaredTerminalWidgetSlot)`; startup consumers use the field for host-aligned slot identity; `forSingleTerminalProductHarnessStartup` removed (single path).
+- **Out of scope:** tabs UI, second active slot, startup order change.
+
+### `APX4-M2` Declared-slot source seam introduction (`complete`)
 
 Queue line (exact):
 
@@ -1313,7 +1319,7 @@ Acceptance:
 - no compatibility/fallback paths
 - compile debug + release Java after code changes
 
-### `APX4-M3` Consumer rewiring (`pending`)
+### `APX4-M3` Consumer rewiring (`complete`)
 
 Queue line (exact):
 
@@ -1325,7 +1331,7 @@ Acceptance:
 - no ad hoc declared-slot literals in rewired startup callsites
 - compile debug + release Java after code changes
 
-### `APX4-M4` Contract docs lock (`pending`)
+### `APX4-M4` Contract docs lock (`complete`)
 
 Queue line (exact):
 
@@ -1336,7 +1342,7 @@ Acceptance:
 - host structure and naming contract match code shape
 - userland contract updated only if ownership text requires it
 
-### `APX4-M5` Queue/handoff/entrypoint sync (`pending`)
+### `APX4-M5` Queue/handoff/entrypoint sync (`complete`)
 
 Queue line (exact):
 
@@ -1347,7 +1353,7 @@ Acceptance:
 - queue, handoff, and engineer entrypoint stay coherent through APX-B4 super-gate
 - super-gate stop condition and review packet contract are explicit
 
-### `APX4-M6` Batch validation + review packet (`pending`)
+### `APX4-M6` Batch validation + review packet (`complete`)
 
 Queue line (exact):
 
@@ -1359,6 +1365,18 @@ Acceptance:
 - deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
 - cold start smoke pass when a device is available
 - engineer reports full super-gate packet and explicit residual-risk note
+
+**APX-B4 engineer validation record (M6):**
+
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac` — pass
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac` — pass
+- `python3 ops/android_terminal_host.py deploy` — pass (streamed install, activity start)
+- `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E` — pass (no `AndroidRuntime:E` lines; benign duplicate-top warning when activity already foreground)
+- `adb shell am force-stop uk.laurencegouws.zide && adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity` — pass (`LaunchState: COLD`, `Status: ok`)
+
+**Residual risk:** Low — PRIMARY-only; host/context equality invariant unchanged.
+
+`Milestone reached per docs, architect review required.`
 
 ## Guardrails
 
