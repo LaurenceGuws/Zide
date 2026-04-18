@@ -18,22 +18,22 @@ public final class ViewModeController {
 
     private final View productView;
     private final FrameLayout productSurfaceContainer;
-    private final AppShellNavigation appShellNavigation;
+    private final AppShellTerminalViewPolicy appShellTerminalViewPolicy;
     private final Host host;
 
     public ViewModeController(
             View productView,
             FrameLayout productSurfaceContainer,
-            AppShellNavigation appShellNavigation,
+            AppShellTerminalViewPolicy appShellTerminalViewPolicy,
             Host host) {
         this.productView = productView;
         this.productSurfaceContainer = productSurfaceContainer;
-        this.appShellNavigation = appShellNavigation;
+        this.appShellTerminalViewPolicy = appShellTerminalViewPolicy;
         this.host = host;
     }
 
     public void applyCurrentViewMode() {
-        appShellNavigation.applyProductTerminalShellViewActive();
+        appShellTerminalViewPolicy.applyActiveProductTerminalShellView();
         productView.setVisibility(View.VISIBLE);
         productSurfaceContainer.post(() -> {
             host.notifyVisibleViewport("product-view");

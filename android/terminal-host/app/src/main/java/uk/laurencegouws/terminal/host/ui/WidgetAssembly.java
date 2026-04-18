@@ -144,13 +144,15 @@ public final class WidgetAssembly {
     public static Result assemble(Host host) {
         final AppShellNavigation appShellNavigation =
                 AppShellNavigation.forProductTerminalSlot(host.terminalWidgetSlot());
+        final AppShellTerminalViewPolicy appShellTerminalViewPolicy =
+                new AppShellTerminalViewPolicy(appShellNavigation);
         final SurfaceWidgetControllerRef surfaceWidgetControllerRef = new SurfaceWidgetControllerRef();
         final ChromeController terminalChromeController = createChromeController(
                 host,
                 appShellNavigation);
 
         final ViewModeController terminalViewModeController =
-                createViewModeController(host, appShellNavigation);
+                createViewModeController(host, appShellTerminalViewPolicy);
 
         final SurfaceWidgetAssembly.Result surfaceWidgetAssembly = assembleSurfaceWidget(
                 host,
@@ -166,7 +168,7 @@ public final class WidgetAssembly {
 
         return new Result(
                 new WidgetHarnessHostControllers(
-                        appShellNavigation,
+                        appShellTerminalViewPolicy,
                         productShellStateHostBridge,
                         shellStatePresenter,
                         terminalChromeController,
@@ -200,11 +202,11 @@ public final class WidgetAssembly {
     }
 
     private static ViewModeController createViewModeController(
-            Host host, AppShellNavigation appShellNavigation) {
+            Host host, AppShellTerminalViewPolicy appShellTerminalViewPolicy) {
         return UiFactory.createViewModeController(
                 host.productView(),
                 host.productSurfaceContainer(),
-                appShellNavigation,
+                appShellTerminalViewPolicy,
                 new ViewModeCallbacks(
                         host::appendEvent,
                         host::updateStatus,

@@ -34,12 +34,12 @@ public final class UiFactory {
     public static ViewModeController createViewModeController(
             View productView,
             FrameLayout productSurfaceContainer,
-            AppShellNavigation appShellNavigation,
+            AppShellTerminalViewPolicy appShellTerminalViewPolicy,
             ViewModeController.Host host) {
         return new ViewModeController(
                 productView,
                 productSurfaceContainer,
-                appShellNavigation,
+                appShellTerminalViewPolicy,
                 host);
     }
 

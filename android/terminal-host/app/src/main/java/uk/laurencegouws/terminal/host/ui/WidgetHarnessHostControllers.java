@@ -9,21 +9,24 @@ import uk.laurencegouws.terminal.userland.ShellStatePresenter;
  * <p>Kept distinct from {@link WidgetSurfaceHostJoin} so {@link TerminalWidgetCompositionAssembly} does not
  * take a full widget result bag when it only joins the surface slice. Activity wiring reads this bundle for
  * shell/chrome/view-mode fields.</p>
+ *
+ * <p>App-shell navigation and terminal-view activation policy are exposed together via
+ * {@link #appShellTerminalViewPolicy}; chrome readers use {@link AppShellTerminalViewPolicy#appShellNavigation()}.</p>
  */
 public final class WidgetHarnessHostControllers {
-    public final AppShellNavigation appShellNavigation;
+    public final AppShellTerminalViewPolicy appShellTerminalViewPolicy;
     public final ShellStateBridge productShellStateHostBridge;
     public final ShellStatePresenter shellStatePresenter;
     public final ChromeController terminalChromeController;
     public final ViewModeController terminalViewModeController;
 
     public WidgetHarnessHostControllers(
-            AppShellNavigation appShellNavigation,
+            AppShellTerminalViewPolicy appShellTerminalViewPolicy,
             ShellStateBridge productShellStateHostBridge,
             ShellStatePresenter shellStatePresenter,
             ChromeController terminalChromeController,
             ViewModeController terminalViewModeController) {
-        this.appShellNavigation = appShellNavigation;
+        this.appShellTerminalViewPolicy = appShellTerminalViewPolicy;
         this.productShellStateHostBridge = productShellStateHostBridge;
         this.shellStatePresenter = shellStatePresenter;
         this.terminalChromeController = terminalChromeController;

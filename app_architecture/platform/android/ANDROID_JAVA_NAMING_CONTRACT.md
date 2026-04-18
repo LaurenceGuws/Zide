@@ -90,8 +90,10 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
 - map product terminal slot → `ShellViewId` only via
   `ProductTerminalSlotShellMapping.shellViewIdForTerminalSlot` — do not sprinkle
   `ShellViewId.TERMINAL` for active product shell routing outside that seam
-- construct product `AppShellNavigation` with `forProductTerminalSlot`; use
-  `applyProductTerminalShellViewActive` on view-mode apply instead of invoking
+- construct product `AppShellNavigation` with `forProductTerminalSlot`; wrap it in
+  `AppShellTerminalViewPolicy` for harness bundle + view-mode activation; use
+  `applyActiveProductTerminalShellView` on view-mode apply (delegates to
+  `applyProductTerminalShellViewActive`) instead of invoking
   `ProductTerminalSlotShellMapping` again on hot paths
 - `AppShellNavigation` does not expose a public active-shell-view setter; product
   paths use `applyProductTerminalShellViewActive`; `AppShellViewState` construction

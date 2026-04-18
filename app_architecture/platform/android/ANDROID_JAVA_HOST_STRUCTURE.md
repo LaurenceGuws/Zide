@@ -86,7 +86,7 @@ is the single code seam mapping an active product terminal slot to
 `ShellViewId` (today `PRIMARY` → `ShellViewId.TERMINAL`). Construct
 `AppShellNavigation` via `AppShellNavigation.forProductTerminalSlot` so mapping
 and `checkActiveProductTerminalSlot` run once; `ViewModeController` reasserts the
-resolved view through `AppShellNavigation.applyProductTerminalShellViewActive`
+resolved view through `AppShellTerminalViewPolicy.applyActiveProductTerminalShellView`
 without re-invoking the mapping. Do not scatter ad hoc `ShellViewId` literals for
 product shell routing.
 App-shell chrome, viewport, runtime orchestration, and userland coordination stay
@@ -239,10 +239,11 @@ Current shape markers (for hygiene tracking, not hard limits):
 | `host/ui/UiFactory.java` | Good | Owns UI host construction for shell-state presenter bridge, view-mode controller, and surface-widget controller. | Keep this construction-only; UI behavior remains in dedicated host controllers. |
 | `host/ui/UiStartupAssembly.java` | Good | Owns post-construction UI bind/start assembly for activity wiring. | Keep this assembly-only; UI behavior remains in dedicated controllers. |
 | `host/ui/UiStartupCallbacks.java` | Good | Functional callback adapter from activity state/actions into `host/ui/UiStartupAssembly`. | Keep adapter-only; avoid adding UI behavior here. |
-| `host/ui/ViewModeController.java` | Good | Owns product-view stabilization side effects (viewport notify + scroll-overlay refresh); delegates active shell view to `AppShellNavigation.applyProductTerminalShellViewActive` (no second mapping call). | Keep this focused on product-view activation only; do not grow terminal policy here. |
+| `host/ui/ViewModeController.java` | Good | Owns product-view stabilization side effects (viewport notify + scroll-overlay refresh); delegates active terminal shell view to `AppShellTerminalViewPolicy.applyActiveProductTerminalShellView` (no second mapping call). | Keep this focused on product-view activation only; do not grow tab policy here — extend `AppShellTerminalViewPolicy` instead. |
 | `host/ui/ShellViewId.java` | Good | Enum of harness shell content slots; tab-ready identity vocabulary; product routing from slot uses `ProductTerminalSlotShellMapping`. | Extend only when multi-view hosting lands; keep names product-neutral. |
 | `host/ui/AppShellViewState.java` | Good | Per-shell-view state row; `id` is non-null (`Objects.requireNonNull`); selection + reserved content-ready bit for future multi-view chrome. | Keep immutable; do not embed widget types. |
 | `host/ui/AppShellNavigation.java` | Good | Owns chrome drawer sidebar state + active `ShellViewId`; shell view: `applyProductTerminalShellViewActive` + private `replaceActiveShellView`; drawer sidebar: `applyChromeDrawerSidebarOpen` / `applyChromeDrawerSidebarClosed`; product wiring uses `forProductTerminalSlot`. | Keep harness-only; explicit policy methods only, not generic boolean setters. |
+| `host/ui/AppShellTerminalViewPolicy.java` | Good | App-shell terminal-view activation policy for the product harness: wraps `AppShellNavigation` and owns `applyActiveProductTerminalShellView` (delegates to `applyProductTerminalShellViewActive`); exposes `appShellNavigation()` for chrome/drawer readers. `WidgetHarnessHostControllers` carries this policy object. | Extend here for future multi-view/tab shell selection policy; no tab UI in this type. |
 | `host/ui/ChromeBridge.java` | Good | Owns chrome callback adaptation and assist-button/modifier-latch view presentation wiring; forwards drawer sidebar policy to `AppShellNavigation`; IME visibility policy methods on `ChromeController.Host` delegate through `Callbacks` to `ChromeImePolicyInput` from `WidgetAssembly.Host`. | Keep as adapter-only for chrome behavior in `host/ui/ChromeController`. |
 | `host/ui/ChromeCallbacks.java` | Removed | Relay adapter was collapsed; `ChromeFactory` now provides `ChromeBridge.Callbacks` directly. | Keep chrome behavior in `host/ui/ChromeController`; avoid reintroducing callback pass-through classes without measurable coupling reduction. |
 | `host/userland/ShellStateBridge.java` | Good | Owns product-shell-state presenter callback adaptation and blocker/overlay view binding. | Keep presentation behavior in `userland/ShellStatePresenter`; keep this adapter thin. |

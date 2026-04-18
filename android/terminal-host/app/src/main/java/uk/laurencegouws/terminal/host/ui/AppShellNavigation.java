@@ -13,8 +13,10 @@ import java.util.Objects;
  *
  * <p><strong>Active-view mutation:</strong> product wiring uses
  * {@link #applyProductTerminalShellViewActive} only — there is no public arbitrary
- * shell-view setter. Future multi-view harness policy adds explicit public methods
- * here rather than a generic setter.</p>
+ * shell-view setter. Harness view-mode and bundle wiring reach this through
+ * {@link AppShellTerminalViewPolicy} so terminal-view activation policy stays explicit.
+ * Future multi-view harness policy extends that owner (and/or adds explicit methods
+ * here) rather than a generic setter.</p>
  *
  * <p><strong>Invariants:</strong> {@link #activeShellView()} is never {@code null};
  * internal replacement uses {@link Objects#requireNonNull}.</p>

@@ -10,8 +10,8 @@ package uk.laurencegouws.terminal.host.ui;
  *
  * <p>Product harness wiring resolves the slot once via
  * {@link AppShellNavigation#forProductTerminalSlot}; steady-state re-assert of the
- * product shell view uses {@link AppShellNavigation#applyProductTerminalShellViewActive}
- * without calling this mapping again.</p>
+ * product terminal shell view goes through {@link AppShellTerminalViewPolicy#applyActiveProductTerminalShellView}
+ * (delegating to {@link AppShellNavigation#applyProductTerminalShellViewActive}) without calling this mapping again.</p>
  */
 public final class ProductTerminalSlotShellMapping {
     private ProductTerminalSlotShellMapping() {
