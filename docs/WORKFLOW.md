@@ -224,6 +224,19 @@ Minimum ticket shape for execution:
 If the existing queue item does not provide those answers, improve the queue
 before or while doing the work.
 
+## Historical Flattening Rule
+
+- Keep active queue docs focused on: current target, acceptance, non-goals, and
+  active gate decisions.
+- Do not keep exhaustive per-iteration historical logs in active queue files
+  once a campaign segment is accepted.
+- Flatten historical detail into concise summaries and rely on:
+  - `docs/review/**` archives for narrative history
+  - `git log` for exact commit-level sequence
+  - architecture authority docs for lasting design truth
+- If an active queue file becomes long due to completed-history churn, the next
+  architect refocus pass should compact it before opening another batch.
+
 ## Blocked / Done / Escalation Rules
 
 Mark work done only when:
