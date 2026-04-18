@@ -78,13 +78,18 @@ public final class ChromeBridge implements ChromeController.Host {
     }
 
     @Override
-    public boolean sidebarOpen() {
-        return appShellNavigation.isSidebarOpen();
+    public boolean chromeDrawerSidebarOpen() {
+        return appShellNavigation.chromeDrawerSidebarOpen();
     }
 
     @Override
-    public void setSidebarOpen(boolean open) {
-        appShellNavigation.setSidebarOpen(open);
+    public void applyChromeDrawerSidebarOpen() {
+        appShellNavigation.applyChromeDrawerSidebarOpen();
+    }
+
+    @Override
+    public void applyChromeDrawerSidebarClosed() {
+        appShellNavigation.applyChromeDrawerSidebarClosed();
     }
 
     public void runPackageDoctor() {

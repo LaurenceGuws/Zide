@@ -19,8 +19,9 @@ public final class ChromeController {
         View drawerScrim();
         View drawerEdgeHotspot();
         View leftSidebar();
-        boolean sidebarOpen();
-        void setSidebarOpen(boolean open);
+        boolean chromeDrawerSidebarOpen();
+        void applyChromeDrawerSidebarOpen();
+        void applyChromeDrawerSidebarClosed();
         void runPackageDoctor();
         void appendEvent(String event);
         boolean currentImeVisible();
@@ -138,7 +139,7 @@ public final class ChromeController {
         if (shouldDeferSidebarOpen()) {
             return;
         }
-        host.setSidebarOpen(true);
+        host.applyChromeDrawerSidebarOpen();
         animateSidebarTranslation(true);
         updateSidebarVisibility(true);
     }
@@ -147,17 +148,17 @@ public final class ChromeController {
         if (shouldDeferSidebarClose()) {
             return;
         }
-        host.setSidebarOpen(false);
+        host.applyChromeDrawerSidebarClosed();
         animateSidebarTranslation(false);
         updateSidebarVisibility(false);
     }
 
     private boolean shouldDeferSidebarOpen() {
-        return host.sidebarOpen();
+        return host.chromeDrawerSidebarOpen();
     }
 
     private boolean shouldDeferSidebarClose() {
-        return !host.sidebarOpen();
+        return !host.chromeDrawerSidebarOpen();
     }
 
     private void animateSidebarTranslation(boolean open) {

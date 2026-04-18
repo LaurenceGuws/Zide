@@ -18,9 +18,13 @@ import java.util.Objects;
  *
  * <p><strong>Invariants:</strong> {@link #activeShellView()} is never {@code null};
  * internal replacement uses {@link Objects#requireNonNull}.</p>
+ *
+ * <p><strong>Chrome drawer sidebar:</strong> mutation uses
+ * {@link #applyChromeDrawerSidebarOpen} / {@link #applyChromeDrawerSidebarClosed} only
+ * — no generic boolean sidebar setter.</p>
  */
 public final class AppShellNavigation {
-    private boolean sidebarOpen;
+    private boolean chromeDrawerSidebarOpen;
     /**
      * Resolved shell view for this navigation instance’s product terminal slot (mapping
      * runs once in {@link #forProductTerminalSlot}).
@@ -50,12 +54,19 @@ public final class AppShellNavigation {
         replaceActiveShellView(productTerminalShellViewId);
     }
 
-    public boolean isSidebarOpen() {
-        return sidebarOpen;
+    /** Whether the slide-out chrome drawer sidebar is open (visible). */
+    public boolean chromeDrawerSidebarOpen() {
+        return chromeDrawerSidebarOpen;
     }
 
-    public void setSidebarOpen(boolean open) {
-        this.sidebarOpen = open;
+    /** Records chrome policy: drawer sidebar should be open. */
+    public void applyChromeDrawerSidebarOpen() {
+        this.chromeDrawerSidebarOpen = true;
+    }
+
+    /** Records chrome policy: drawer sidebar should be closed. */
+    public void applyChromeDrawerSidebarClosed() {
+        this.chromeDrawerSidebarOpen = false;
     }
 
     public ShellViewId activeShellView() {
