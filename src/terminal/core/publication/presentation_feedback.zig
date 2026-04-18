@@ -52,14 +52,8 @@ fn completePresentationFeedback(self: anytype, feedback: anytype, submission: an
             _ = acknowledgePresentedGeneration(self, presented.generation);
         }
     }
-    if (feedback.alt_exit_info) |info| {
-        const exit_time_ms = consumeAltExitTimeMs(self);
-        const exit_to_draw_ms: f64 = if (exit_time_ms >= 0)
-            @as(f64, @floatFromInt(std.time.milliTimestamp() - exit_time_ms))
-        else
-            -1.0;
-        _ = info;
-        _ = exit_to_draw_ms;
+    if (feedback.alt_exit_info) |_| {
+        _ = consumeAltExitTimeMs(self);
     }
 }
 
@@ -81,7 +75,7 @@ fn shouldClearScreenDirtyOnPresentationRetirement(self: anytype, generation: u64
     return !self.core.syncUpdatesActive();
 }
 
-fn notePresentedGeneration(self: anytype, generation: u64) void {
+pub fn notePresentedGeneration(self: anytype, generation: u64) void {
     var current = self.session.publication.presented_generation.load(.acquire);
     while (generation > current) {
         current = self.session.publication.presented_generation.cmpxchgWeak(current, generation, .acq_rel, .acquire) orelse return;
