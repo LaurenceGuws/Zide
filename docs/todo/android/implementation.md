@@ -279,9 +279,9 @@ Acceptance:
 
 - `./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac` — pass
 - `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac` — pass
-- `python3 ops/android_terminal_host.py deploy` — see engineer session `VALIDATION`
-- `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E` — see engineer session `VALIDATION`
-- `adb shell am force-stop uk.laurencegouws.zide && adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity` — see engineer session `VALIDATION`
+- `python3 ops/android_terminal_host.py deploy` — pass (streamed install, activity start)
+- `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E` — pass (no `AndroidRuntime:E` lines; benign duplicate-top warning when activity already foreground)
+- `adb shell am force-stop uk.laurencegouws.zide && adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity` — pass (`LaunchState: COLD`, `Status: ok`)
 
 `Milestone reached per docs, architect review required.`
 
