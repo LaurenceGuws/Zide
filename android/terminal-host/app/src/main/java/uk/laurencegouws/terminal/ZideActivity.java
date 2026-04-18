@@ -1,6 +1,5 @@
 package uk.laurencegouws.terminal;
 
-import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
@@ -8,22 +7,13 @@ import android.os.Looper;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.Button;
-import android.widget.FrameLayout;
-import android.widget.TextView;
-
-import uk.laurencegouws.terminal.scroll.ScrollOverlayView;
-import uk.laurencegouws.terminal.debug.AndroidDebugFormatter;
 import uk.laurencegouws.terminal.debug.StatusController;
 import uk.laurencegouws.terminal.debug.SurfaceStateSnapshotReader;
-import uk.laurencegouws.terminal.gesture.GestureStateController;
 import uk.laurencegouws.terminal.host.lifecycle.LifecycleController;
 import uk.laurencegouws.terminal.host.lifecycle.LifecycleDebugIntentArgs;
 import uk.laurencegouws.terminal.host.ui.ChromeController;
-import uk.laurencegouws.terminal.host.ui.ChromeImePolicyInput;
 import uk.laurencegouws.terminal.host.ui.ProductHostImeState;
 import uk.laurencegouws.terminal.host.ui.ProductHostKeepScreenOnPolicy;
-import uk.laurencegouws.terminal.host.ui.SurfaceWidgetHostImeVisibility;
 import uk.laurencegouws.terminal.host.runtime.FrameLoopController;
 import uk.laurencegouws.terminal.host.input.InputAssembly;
 import uk.laurencegouws.terminal.host.input.InputCallbacks;
@@ -41,20 +31,21 @@ import uk.laurencegouws.terminal.host.ui.ActivityViewBindings;
 import uk.laurencegouws.terminal.host.ui.TerminalWidgetCompositionAssembly;
 import uk.laurencegouws.terminal.host.ui.TerminalWidgetInstance;
 import uk.laurencegouws.terminal.host.ui.TerminalWidgetSlotId;
+import uk.laurencegouws.terminal.host.ui.ProductHostActivityStartupWiring;
 import uk.laurencegouws.terminal.host.ui.ProductHostStartupBundle;
+import uk.laurencegouws.terminal.host.ui.ProductTerminalLifecycleHost;
+import uk.laurencegouws.terminal.host.ui.ProductTerminalWidgetAssemblyHost;
 import uk.laurencegouws.terminal.host.ui.ViewModeController;
+import uk.laurencegouws.terminal.host.ui.WidgetHostAssemblyContext;
 import uk.laurencegouws.terminal.host.ui.UiStartupAssembly;
-import uk.laurencegouws.terminal.host.ui.UiStartupCallbacks;
 import uk.laurencegouws.terminal.host.ui.ViewportController;
 import uk.laurencegouws.terminal.host.ui.WidgetAssembly;
 import uk.laurencegouws.terminal.host.userland.ReadinessBlockerStartup;
-import uk.laurencegouws.terminal.host.userland.ShellPresentationHostInputs;
 import uk.laurencegouws.terminal.host.userland.WorkflowAssembly;
 import uk.laurencegouws.terminal.host.userland.WorkflowAssemblyCallbacks;
 import uk.laurencegouws.terminal.input.ShellInputView;
 import uk.laurencegouws.terminal.input.HardwareKeyboardController;
 import uk.laurencegouws.terminal.input.ImeFocusRecoveryController;
-import uk.laurencegouws.terminal.selection.SelectionController;
 import uk.laurencegouws.terminal.userland.ShellStatePresenter;
 import uk.laurencegouws.terminal.userland.UserlandReadinessState;
 import uk.laurencegouws.terminal.userland.UserlandInstallState;
@@ -78,7 +69,6 @@ import uk.laurencegouws.terminal.userland.UserlandWorkflowController;
 public final class ZideActivity extends android.app.Activity
         implements ShellInputView.Host {
     private static final boolean nativeLoaded = NativeBridge.nativeLoaded();
-    private static final String nativeLoadError = NativeBridge.nativeLoadError();
 
     /**
      * Authoritative product terminal slot for this activity’s wiring (interaction,
@@ -234,27 +224,25 @@ public final class ZideActivity extends android.app.Activity
     }
 
     private StatusViewCallbacks createStatusViewCallbacks() {
-        return new StatusViewCallbacks(
+        return ProductHostActivityStartupWiring.statusView(
                 this,
                 this::hasWindowFocus,
                 productHostImeState,
+                hostStartup,
                 () -> terminalWidget == null ? null : terminalWidget.surfaceBridge,
-                hostStartup.surface::notifyVisibleViewportIfReady,
                 () -> currentInstallState,
                 () -> currentReadinessState);
     }
 
     private InteractionCallbacks createInteractionCallbacks() {
-        return new InteractionCallbacks(
+        return ProductHostActivityStartupWiring.interaction(
                 ACTIVE_PRODUCT_TERMINAL_SLOT,
                 this,
                 handler,
                 activityViewBindings.productSurfaceContainer,
                 () -> terminalViewportController.productViewportWidthPx(),
                 () -> terminalViewportController.productViewportHeightPx(),
-                hostStartup.runtime::stopScrollbackFlingIfReady,
-                hostStartup.runtime::refreshScrollOverlayIfReady,
-                hostStartup.frameLoop::reevaluateFrameLoopIfReady,
+                hostStartup,
                 StatusController::appendEvent);
     }
 
@@ -270,13 +258,13 @@ public final class ZideActivity extends android.app.Activity
     }
 
     private InputCallbacks createInputCallbacks() {
-        return new InputCallbacks(
+        return ProductHostActivityStartupWiring.input(
                 this,
                 this,
                 activityViewBindings.rootView,
                 getSystemService(InputMethodManager.class),
                 productHostImeState,
-                hostStartup.runtime::refreshScrollOverlayIfReady,
+                hostStartup,
                 StatusController::updateStatus,
                 StatusController::appendEvent);
     }
@@ -291,188 +279,27 @@ public final class ZideActivity extends android.app.Activity
     }
 
     private WidgetAssembly.Host createWidgetHost(final InteractionAssembly.Result interaction) {
-        return new WidgetAssembly.Host() {
-            @Override
-            public TerminalWidgetSlotId terminalWidgetSlot() {
-                return ACTIVE_PRODUCT_TERMINAL_SLOT;
-            }
-
-            @Override
-            public Context harnessContext() {
-                return ZideActivity.this;
-            }
-
-            @Override
-            public Handler handler() {
-                return handler;
-            }
-
-            @Override
-            public SurfaceWidgetHostImeVisibility surfaceWidgetHostImeVisibility() {
-                return productHostImeState;
-            }
-
-            @Override
-            public ChromeImePolicyInput chromeImePolicyInput() {
-                return productHostImeState.chromeImePolicyInput();
-            }
-
-            @Override
-            public View rootView() {
-                return activityViewBindings.rootView;
-            }
-
-            @Override
-            public View productView() {
-                return activityViewBindings.productView;
-            }
-
-            @Override
-            public View productReadinessBlocker() {
-                return activityViewBindings.productReadinessBlocker;
-            }
-
-            @Override
-            public View drawerScrim() {
-                return activityViewBindings.drawerScrim;
-            }
-
-            @Override
-            public View drawerEdgeHotspot() {
-                return activityViewBindings.drawerEdgeHotspot;
-            }
-
-            @Override
-            public View drawerSidebar() {
-                return activityViewBindings.leftSidebar;
-            }
-
-            @Override
-            public FrameLayout productSurfaceContainer() {
-                return activityViewBindings.productSurfaceContainer;
-            }
-
-            @Override
-            public ScrollOverlayView terminalScrollOverlay() {
-                return activityViewBindings.terminalScrollOverlay;
-            }
-
-            @Override
-            public TextView productReadinessTitle() {
-                return activityViewBindings.productReadinessTitle;
-            }
-
-            @Override
-            public TextView productReadinessDetail() {
-                return activityViewBindings.productReadinessDetail;
-            }
-
-            @Override
-            public Button productReadinessRetryButton() {
-                return activityViewBindings.productReadinessRetryButton;
-            }
-
-            @Override
-            public Button assistCtrlButton() {
-                return activityViewBindings.assistCtrlButton;
-            }
-
-            @Override
-            public Button assistAltButton() {
-                return activityViewBindings.assistAltButton;
-            }
-
-            @Override
-            public ShellInputView shellInputView() {
-                return shellInputView;
-            }
-
-            @Override
-            public SelectionController selectionController() {
-                return interaction.selectionController;
-            }
-
-            @Override
-            public GestureStateController GestureStateController() {
-                return interaction.GestureStateController;
-            }
-
-            @Override
-            public ShellPresentationHostInputs shellPresentationHostInputs() {
-                return new ShellPresentationHostInputs(
+        return new ProductTerminalWidgetAssemblyHost(
+                new WidgetHostAssemblyContext(
+                        ACTIVE_PRODUCT_TERMINAL_SLOT,
+                        this,
+                        handler,
+                        productHostImeState,
+                        activityViewBindings,
+                        () -> shellInputView,
+                        interaction,
                         () -> currentReadinessState,
-                        () -> currentInstallState);
-            }
-
-            @Override
-            public boolean shouldRunFrameLoop() {
-                return hostStartup.runtime.shouldRunFrameLoop();
-            }
-
-            @Override
-            public void refreshScrollOverlay() {
-                hostStartup.runtime.refreshScrollOverlayIfReady();
-            }
-
-            @Override
-            public void appendEvent(String event) {
-                StatusController.appendEvent(event);
-            }
-
-            @Override
-            public void updateStatus(String statusLabel) {
-                StatusController.updateStatus(statusLabel);
-            }
-
-            @Override
-            public void callNative(String event, long seq) {
-                StatusController.callNative(event, seq);
-            }
-
-            @Override
-            public void callNativeWithSurfaceState(String event, long seq, AndroidDebugFormatter.SurfaceEventSnapshot state) {
-                StatusController.callNativeWithSurfaceState(event, seq, state);
-            }
-
-            @Override
-            public AndroidDebugFormatter.SurfaceEventSnapshot currentSurfaceStateSnapshot() {
-                return SurfaceStateSnapshotReader.read();
-            }
-
-            @Override
-            public void handleShellStateEvent() {
-                hostStartup.runtime.handleShellStateEventIfReady();
-            }
-
-            @Override
-            public int productViewportHeightPx() {
-                return terminalViewportController.productViewportHeightPx();
-            }
-
-            @Override
-            public void reevaluateFrameLoop() {
-                hostStartup.frameLoop.reevaluateFrameLoopIfReady();
-            }
-
-            @Override
-            public void requestPackageDiagnostics() {
-                userlandWorkflowController.runPackageDoctor();
-            }
-
-            @Override
-            public void sendDirectText(String text) {
-                ZideActivity.this.sendDirectText(text);
-            }
-
-            @Override
-            public void notifyVisibleViewport(String reason) {
-                hostStartup.surface.notifyVisibleViewportIfReady(reason);
-            }
-        };
+                        () -> currentInstallState,
+                        hostStartup,
+                        StatusController,
+                        SurfaceStateSnapshotReader,
+                        terminalViewportController,
+                        userlandWorkflowController,
+                        this::sendDirectText));
     }
 
     private RuntimeAssemblyCallbacks createRuntimeAssemblyCallbacks() {
-        return new RuntimeAssemblyCallbacks(
+        return ProductHostActivityStartupWiring.runtime(
                 () -> currentInstallState,
                 this::setCurrentInstallState,
                 () -> currentReadinessState,
@@ -500,17 +327,15 @@ public final class ZideActivity extends android.app.Activity
     }
 
     private SessionAssemblyCallbacks createSessionAssemblyCallbacks() {
-        return new SessionAssemblyCallbacks(
+        return ProductHostActivityStartupWiring.session(
                 this,
                 userlandRelease,
                 handler,
                 StatusController::appendEvent,
                 StatusController::updateStatus,
                 this::setCurrentReadinessState,
-                hostStartup.runtime::refreshShellStateIfReady,
-                hostStartup.runtime::refreshStatusTelemetryIfReady,
-                hostStartup.runtime::shouldRunFrameLoop,
-                () -> hostStartup.runtime.tickFrameAndRefreshScrollOverlay(nativeLoaded));
+                hostStartup,
+                nativeLoaded);
     }
 
     private void assembleUserlandWorkflowControllers() {
@@ -521,112 +346,32 @@ public final class ZideActivity extends android.app.Activity
     }
 
     private WorkflowAssemblyCallbacks createWorkflowAssemblyCallbacks() {
-        return new WorkflowAssemblyCallbacks(
+        return ProductHostActivityStartupWiring.workflow(
                 this,
                 handler,
                 () -> userlandRelease,
                 release -> userlandRelease = release,
                 StatusController::appendEvent,
-                hostStartup.runtime::applyInstallStateIfReady,
-                hostStartup.workflowInstall::completeInstallIfReady,
-                hostStartup.workflowInstall::failInstallIfReady,
-                hostStartup.runtime::restartSessionAfterInstallIfReady,
-                hostStartup.telemetry::markPackageDoctorCompleteIfReady);
+                hostStartup);
     }
 
     private void assembleActivityLifecycleController() {
         terminalActivityLifecycleController = new LifecycleController(
-                createLifecycleHost());
-    }
-
-    private LifecycleController.Host createLifecycleHost() {
-        return new LifecycleController.Host() {
-            @Override
-            public boolean nativeLoaded() {
-                return NativeBridge.nativeLoaded();
-            }
-
-            @Override
-            public String nativeLoadError() {
-                return nativeLoadError;
-            }
-
-            @Override
-            public long nativeOnCreate() {
-                return NativeBridge.nativeOnCreateBridge();
-            }
-
-            @Override
-            public long nativeOnStart() {
-                return NativeBridge.nativeOnStartBridge();
-            }
-
-            @Override
-            public long nativeOnResume() {
-                return NativeBridge.nativeOnResumeBridge();
-            }
-
-            @Override
-            public long nativeOnPause() {
-                return NativeBridge.nativeOnPauseBridge();
-            }
-
-            @Override
-            public long nativeOnStop() {
-                return NativeBridge.nativeOnStopBridge();
-            }
-
-            @Override
-            public long nativeOnWindowFocus(boolean hasFocus) {
-                return NativeBridge.nativeOnWindowFocusBridge(hasFocus);
-            }
-
-            @Override
-            public void appendEvent(String event) {
-                StatusController.appendEvent(event);
-            }
-
-            @Override
-            public void callNative(String event, long seq) {
-                StatusController.callNative(event, seq);
-            }
-
-            @Override
-            public void updateStatus(String statusLabel) {
-                StatusController.updateStatus(statusLabel);
-            }
-
-            @Override
-            public void stopFrameLoop() {
-                hostStartup.frameLoop.stopFrameLoopIfReady();
-            }
-
-            @Override
-            public void refreshUserlandSessionOnPause() {
-                hostStartup.userlandSession.refreshUserlandSessionIfReady();
-            }
-
-            @Override
-            public void notifySurfacePause() {
-                hostStartup.surface.pauseSurfaceIfReady();
-            }
-
-            @Override
-            public void notifySurfaceResume(
-                    boolean debugRecreateSurfaceOnce,
-                    boolean debugResizeSurfaceOnce,
-                    boolean debugStartShellOnce) {
-                hostStartup.surface.resumeSurfaceIfReady(
-                        debugRecreateSurfaceOnce,
-                        debugResizeSurfaceOnce,
-                        debugStartShellOnce);
-            }
-        };
+                new ProductTerminalLifecycleHost(hostStartup, StatusController));
     }
 
     private void bindAndStartUiControllers() {
         UiStartupAssembly.start(
-                createUiStartupCallbacks(),
+                ProductHostActivityStartupWiring.uiStartup(
+                        terminalViewportController,
+                        terminalChromeController,
+                        terminalRuntimeAssetsController,
+                        terminalViewModeController,
+                        terminalWidget.surfaceController,
+                        terminalWidget.surfaceWidgetController,
+                        ShellStatePresenter,
+                        productFrameLoopController,
+                        activityViewBindings.leftSidebar),
                 () -> ReadinessBlockerStartup.bind(
                         activityViewBindings.productReadinessRetryButton,
                         () -> currentInstallState,
@@ -635,19 +380,6 @@ public final class ZideActivity extends android.app.Activity
                         () -> userlandSessionCoordinator.refreshAndApply(true),
                         StatusController::appendEvent,
                         StatusController::updateStatus));
-    }
-
-    private UiStartupCallbacks createUiStartupCallbacks() {
-        return new UiStartupCallbacks(
-                terminalViewportController,
-                terminalChromeController,
-                terminalRuntimeAssetsController,
-                terminalViewModeController,
-                terminalWidget.surfaceController,
-                terminalWidget.surfaceWidgetController,
-                ShellStatePresenter,
-                productFrameLoopController,
-                activityViewBindings.leftSidebar);
     }
 
     private void loadInitialReadinessState() {
