@@ -34,7 +34,7 @@ you must report the mismatch.
 
 ## Current Target
 
-`AHW-B23` is `in_progress`.
+`AHW-B23` is at **super-gate** (engineer execution complete; awaiting architect verdict on the review packet below). Do not start the next macro batch until the Architect accepts the gate and refocuses `docs/todo/android/implementation.md`.
 
 Active batch queue line (exact):
 

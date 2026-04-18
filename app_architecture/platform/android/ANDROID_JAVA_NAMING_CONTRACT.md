@@ -118,6 +118,9 @@ in `ANDROID_JAVA_HOST_STRUCTURE.md`.
 - in `ZideActivity`, use one authoritative `static final` slot field (e.g.
   `ACTIVE_PRODUCT_TERMINAL_SLOT`) for interaction/widget/composition wiring
   instead of repeating `PRIMARY` literals
+- onCreate startup choreography (ordered calls only): `ProductHostOnCreateStartupCoordinator`
+  + `ProductHostOnCreateStartupSteps` — assembly bodies and policy stay on domain
+  assemblies and the activity wiring edge; the coordinator does not widen activity globals
 - do not add `TerminalWidgetSlotId` to `ChromeFactory` / `ChromeController`
   construction until per-slot chrome policy is scoped (see structure doc freeze)
 - do not include `Terminal` when package already scopes terminal host context

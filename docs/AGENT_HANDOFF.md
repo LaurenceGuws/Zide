@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: Android terminal excellence
 - Campaign: **Android harness/widget portability hardening** (`AHW`) — turns the refocus vision into enforceable code shape: Android Harness is the platform/app-shell canvas, Terminal Widget is the portable terminal consumer, and userland stays movable for future IDE/editor modes.
-- Active macro batch (`in_progress`): `AHW-B23` — reduce ZideActivity startup-sequence method pressure by extracting a named onCreate startup coordinator (behavior-preserving).
+- Active macro batch (`awaiting_architect_review`): `AHW-B23` — onCreate startup choreography extracted to `ProductHostOnCreateStartupCoordinator` + `ProductHostOnCreateStartupSteps` (behavior-preserving); engineer stopped at super-gate for architect verdict.
 - Prior closed/escalated: `AHW-B1` through `AHW-B22` accepted; `ASF-M3` escalated IME/assist/touch rows to operator evidence; `RF-M0` through `RF-M5` and `AX-M1` through `AX-M5` completed.
 - Active queue authority: `docs/todo/android/implementation.md`
 - Engineer entrypoint (dual mode): `docs/todo/android/ENGINEER_ENTRYPOINT.md`

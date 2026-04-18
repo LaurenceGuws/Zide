@@ -98,7 +98,7 @@ Dual-mode batching override (architect directive):
 - `ASF-M3` escalated stabilization follow-through to operator evidence.
 - `AHW-B1` through `AHW-B22` accepted by architect.
 - Keep-screen-on seam work beyond `AHW-B20` is frozen by product direction.
-- `AHW-B23` is `in_progress`.
+- `AHW-B23` is at super-gate (awaiting architect verdict).
 
 ## Campaign Landing Gate (Refocus Shape)
 
@@ -140,7 +140,7 @@ Last accepted architect gate:
 
 ---
 
-### `AHW-B23` Refocus-Shape Landing Prep: OnCreate Sequence Ownership (`in_progress`)
+### `AHW-B23` Refocus-Shape Landing Prep: OnCreate Sequence Ownership (`awaiting_architect_review`)
 
 Batch queue line (exact):
 
@@ -195,7 +195,7 @@ Internal milestone cadence:
 - Stop only if the hard stop conditions in `ENGINEER_ENTRYPOINT.md` are hit or
   the `AHW-B23` super-gate is reached.
 
-### `AHW23-M1` OnCreate sequence pressure audit (`pending`)
+### `AHW23-M1` OnCreate sequence pressure audit (`complete`)
 
 Queue line (exact):
 
@@ -207,7 +207,16 @@ Acceptance:
 - define coordinator inputs/outputs and state handoff boundaries
 - record invariants with explicit ordered call list and out-of-scope seams
 
-### `AHW23-M2` Coordinator seam introduction (`pending`)
+**M1 audit (authoritative for B23 extraction):**
+
+- **Pure sequence choreography (moves to coordinator):** the fixed call order and passing `InteractionAssembly.Result` from `assembleInteraction` into `applyTerminalWidgetComposition` only. No new branches, no reordering, no widening of activity fields.
+- **Ownership-bearing logic (stays on `ZideActivity` private methods / existing hosts):** `initializeStatusAndViewControllers`, `assembleUserlandWorkflowControllers`, `assembleSessionControllers`, `applyTerminalWidgetComposition`, `assembleRuntimeController`, `assembleActivityLifecycleController`, `loadInitialReadinessState`, `installInputControllers`, `bindAndStartUiControllers`, and `terminalActivityLifecycleController.onCreate()` — each remains the same body as before; only the *caller* of the ordered list changes to `ProductHostOnCreateStartupCoordinator`.
+- **Coordinator inputs/outputs:** input is a `ProductHostOnCreateStartupSteps` implementation (typed step surface: harness-owned assembly phases wired from the activity). Output is side effects only (field assignments on the activity and controller `onCreate`), identical to the pre-extraction call chain.
+- **State handoff boundaries:** `InteractionAssembly.Result` flows `assembleInteraction` → `applyTerminalWidgetComposition` inside the coordinator’s single ordered block (same as today). `ProductHostStartupBundle`, `ProductHostActivityStartupWiring`, `ProductTerminalWidgetAssemblyHost`, `ProductTerminalLifecycleHost`, IME/slot/chrome seams unchanged.
+- **Invariants (ordered call list, frozen):** `initializeStatusAndViewControllers` → `InteractionAssembly.assemble` (exposed as `assembleInteraction` on the step interface) → `assembleUserlandWorkflowControllers` → `assembleSessionControllers` → `applyTerminalWidgetComposition` → `assembleRuntimeController` → `assembleActivityLifecycleController` → `loadInitialReadinessState` → `installInputControllers` → `bindAndStartUiControllers` → `terminalActivityLifecycleController.onCreate()`.
+- **Out of scope for this batch:** keep-screen-on (`applyDefaultTerminalKeepScreenOnPolicy` stays directly under `onCreate` before the coordinator, as today), post-`onCreate` lifecycle overrides, terminal tabs/multi-instance product behavior, any change to B14–B22 callback or assembly contracts.
+
+### `AHW23-M2` Coordinator seam introduction (`complete`)
 
 Queue line (exact):
 
@@ -219,7 +228,7 @@ Acceptance:
 - represent required mutable state via typed inputs rather than widening activity globals
 - compile debug + release Java after code changes
 
-### `AHW23-M3` Activity delegation rewiring (`pending`)
+### `AHW23-M3` Activity delegation rewiring (`complete`)
 
 Queue line (exact):
 
@@ -231,7 +240,7 @@ Acceptance:
 - startup order and side-effect timing remain unchanged
 - compile debug + release Java after code changes
 
-### `AHW23-M4` Contract docs lock (`pending`)
+### `AHW23-M4` Contract docs lock (`complete`)
 
 Queue line (exact):
 
@@ -242,7 +251,7 @@ Acceptance:
 - host structure and naming contract match code shape
 - userland contract remains unchanged unless ownership text requires update
 
-### `AHW23-M5` Queue/handoff/entrypoint sync (`pending`)
+### `AHW23-M5` Queue/handoff/entrypoint sync (`complete`)
 
 Queue line (exact):
 
@@ -253,7 +262,7 @@ Acceptance:
 - queue, handoff, and engineer entrypoint stay coherent through B23 super-gate
 - super-gate stop condition and review packet contract are explicit
 
-### `AHW23-M6` Batch validation + review packet (`pending`)
+### `AHW23-M6` Batch validation + review packet (`complete`)
 
 Queue line (exact):
 
@@ -265,6 +274,16 @@ Acceptance:
 - deploy + `AndroidRuntime:E` smoke pass, or exact device-blocker output is recorded
 - cold start smoke pass when a device is available
 - engineer reports the full super-gate packet and stops for Architect review
+
+**AHW-B23 engineer validation record (M6):**
+
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileDebugJavaWithJavac` — pass
+- `./android/terminal-host/gradlew -p android/terminal-host :app:compileReleaseJavaWithJavac` — pass
+- `python3 ops/android_terminal_host.py deploy` — see engineer session `VALIDATION`
+- `adb logcat -c && adb shell am start -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity && adb logcat -d -s AndroidRuntime:E` — see engineer session `VALIDATION`
+- `adb shell am force-stop uk.laurencegouws.zide && adb shell am start -W -n uk.laurencegouws.zide/uk.laurencegouws.terminal.ZideActivity` — see engineer session `VALIDATION`
+
+`Milestone reached per docs, architect review required.`
 
 ## Guardrails
 
