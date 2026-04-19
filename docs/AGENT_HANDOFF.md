@@ -6,9 +6,9 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: **Core Zig freeze + hygiene**
 - Campaign: **Core Zig Stability/Hygiene** (`CZH`)
-- Active macro batch (`review_gate`, super-gate `CZH-GATE-95`): `CZH-B41` in
+- Active macro batch (`in_progress`, super-gate `CZH-GATE-96`): `CZH-B42` in
   `docs/todo/core/implementation.md`
-- Sprint checkpoint (review_gate): `docs/todo/core/CZH_S36_CHECKPOINT.md`
+- Accepted sprint checkpoint: `docs/todo/core/CZH_S36_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S34_CHECKPOINT.md`
 - Accepted sprint validation: `docs/todo/core/CZH_S33_VALIDATION.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S32_CHECKPOINT.md`
@@ -44,7 +44,7 @@ Session entrypoint only. Keep this file short and current.
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S20_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S21_CHECKPOINT.md`
 - Active sprint board: `docs/todo/core/JIRA_BOARD.md`
-- Completed ticket source: `docs/todo/core/CZH_S36_TICKETS.md` (all 10 tickets done)
+- Active ticket source: `docs/todo/core/CZH_S37_TICKETS.md`
 - Android lane status: **paused by product direction** except critical
   regressions/blockers for current users.
 - Connected Android device for this checkpoint: `RF8M74JDWEK`.
@@ -71,18 +71,18 @@ Current top priorities:
 6. keep source comments present-tense: ownership, invariants, and constraints
    only; ticket/progress history belongs in `docs/todo/`
 
-Current batch status (`CZH-B41`, in progress toward `CZH-GATE-95`):
+Current batch status (`CZH-B42`, in progress toward `CZH-GATE-96`):
 
-- target: tighten execution-hook ownership and keep widget as strict integration facade after `CZH-B40` acceptance
-- keep decision/folding responsibilities in terminal-owned seams with tests locking invariants
-- preserve behavior and host ABI while reducing callback surface ambiguity
+- target: reduce callback surface ambiguity while preserving terminal-owned decision/fold seams and widget facade role
+- keep boundary contracts explicit and test-locked at helper + integration levels
+- preserve behavior and host ABI while tightening runtime boundary contracts
 
 ## First Read Order
 
 1. `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 2. `docs/todo/core/implementation.md`
 3. `docs/todo/core/JIRA_BOARD.md`
-4. `docs/todo/core/CZH_S36_TICKETS.md`
+4. `docs/todo/core/CZH_S37_TICKETS.md`
 5. `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md`
 6. `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md`
 7. `app_architecture/terminal/TERMINAL_SURFACE_CONTRACT.md`
@@ -94,7 +94,7 @@ Current batch status (`CZH-B41`, in progress toward `CZH-GATE-95`):
 - Execute only the active macro batch marked in `docs/todo/core/implementation.md`
   (`in_progress` or `architect_review_pending` per batch state).
 - Engineer executes the current sprint tickets in `docs/todo/core/JIRA_BOARD.md`
-  and `docs/todo/core/CZH_S35_TICKETS.md` in listed order.
+  and `docs/todo/core/CZH_S37_TICKETS.md` in listed order.
 - Engineer batching target: **8–14 validated commits** per macro batch unless a
   real hard stop occurs.
 - Architect review cadence: avoid interim review loops; review once at the

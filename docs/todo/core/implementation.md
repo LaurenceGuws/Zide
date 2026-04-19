@@ -11,9 +11,10 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B41` (review_gate, super-gate `CZH-GATE-95`). Sprint `CZH-S36` complete.
+- Current active macro batch: `CZH-B42` (in_progress, super-gate `CZH-GATE-96`). Sprint `CZH-S37` in progress.
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
-- Completed sprint: `CZH-S36` (review_gate at `CZH-GATE-95`). Checkpoint: `docs/todo/core/CZH_S36_CHECKPOINT.md`.
+- Accepted sprint: `CZH-S36` (`CZH-B41`, `CZH-GATE-95`). Checkpoint: `docs/todo/core/CZH_S36_CHECKPOINT.md`.
+- Active sprint: `CZH-S37`. Ticket source: `docs/todo/core/CZH_S37_TICKETS.md`.
 - Accepted sprint: `CZH-S35` (`CZH-B40`, `CZH-GATE-94`). Checkpoint: `docs/todo/core/CZH_S35_CZH900_GATE_PACKET.md`.
 - Completed sprint: `CZH-S34` (accepted, with CZH-B39-corrective extraction). Checkpoint: `docs/todo/core/CZH_S34_CHECKPOINT.md` and `docs/todo/core/CZH_B39_CORRECTIVE_CHECKPOINT.md`.
 - Previous sprint: `CZH-S33` (accepted). Validation: `docs/todo/core/CZH_S33_VALIDATION.md`.
@@ -3556,7 +3557,7 @@ Owner docs:
 - Corrective extraction commit `5185d084` activated the terminal refresh orchestrator call path.
 - Validation stayed green on Linux and connected Android.
 
-### `CZH-B41` Execution-Hook Purity and Facade Tightening (`in_progress`)
+### `CZH-B41` Execution-Hook Purity and Facade Tightening (`accepted`)
 
 Queue line (exact):
 
@@ -3575,6 +3576,34 @@ Owner docs:
 
 - `docs/todo/core/JIRA_BOARD.md`
 - `docs/todo/core/CZH_S36_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+`Verdict: accepted`
+
+- Architect review confirmed refresh execution-hook purity (`refreshPresentState`) and facade ownership tightening landed as single-path behavior-preserving cuts.
+- Test/invariant coverage increased and remained green.
+- Linux ladder + bounded GUI smoke + Android deploy/log smoke stayed green.
+
+### `CZH-B42` Callback Surface Reduction and Runtime Boundary Hardening (`in_progress`)
+
+Queue line (exact):
+
+- reduce callback surface ambiguity and harden terminal/widget runtime boundary contracts with behavior-neutral reductions and invariant locks
+
+Acceptance:
+
+- terminal-owned orchestration hooks expose only minimal required integration inputs
+- widget runtime remains an integration facade with no decision/fold re-derivation
+- no compatibility/fallback paths are introduced
+- no host ABI/C export changes
+- source comments remain present-tense ownership/invariant statements only
+- Linux and connected Android validation stay green through `CZH-GATE-96`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S37_TICKETS.md`
 - `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 - `docs/AGENT_HANDOFF.md`
 
