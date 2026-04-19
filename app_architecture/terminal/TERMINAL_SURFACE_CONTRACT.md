@@ -131,6 +131,28 @@ getters for attachment visibility; **host export** uses `TerminalPresentResult` 
 outcomes — same field **names** where applicable, distinct **roles** (reporting snapshot vs aggregated
 result).
 
+## Presentation runtime ownership (`CZH-S33` authority)
+
+**Runtime orchestration layer:** Terminal layer owns the presentation runtime module
+(`src/terminal/presentation_runtime.zig`) that manages:
+- **Outcome classification:** Refresh cycle results → outcome state (pure semantic classification)
+- **Plan generation:** View model state + geometry → update plan (pure computation)
+- **Refresh orchestration:** Drive refresh cycle, fold results, manage generation tracking
+- **Attachment readiness computation:** Apply `TerminalPresentationBridge` to derive conjunction state
+
+Widget layer (`terminal_widget_presentation_runtime.zig`) becomes a thin facade that:
+- Gathers input/geometry/UI context
+- Calls terminal-owned runtime entrypoint
+- Interprets results in renderer/shell context (timing, callbacks, viewport clipping)
+- Keeps no semantic logic, only integration
+
+**Canonical entrypoint:** Terminal runtime module provides single orchestration entry point
+called by widget facade. No re-derivation of outcomes, refresh decisions, or generation logic
+in UI layer.
+
+**Outcome types:** Outcome structs and classification helpers are defined in terminal layer.
+Widget layer uses them, does not redefine or re-classify.
+
 ## Android mapping (example, not definition)
 
 On Android, code may obtain a native window or surface on the way to a GLES
