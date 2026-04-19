@@ -2195,3 +2195,16 @@ test "CZH-S21: reuse outcome aligns with present result attachment field names" 
     }
 }
 
+test "CZH-768: PresentationPresentState exposes leg field and conjunction field distinctly" {
+    comptime {
+        const fields = @typeInfo(PresentationPresentState).@"struct".fields;
+        var host: usize = 0;
+        var conj: usize = 0;
+        for (fields) |f| {
+            if (std.mem.eql(u8, f.name, "host_surface_target_available")) host += 1;
+            if (std.mem.eql(u8, f.name, "shared_surface_attachment_ready")) conj += 1;
+        }
+        std.debug.assert(host == 1 and conj == 1);
+    }
+}
+
