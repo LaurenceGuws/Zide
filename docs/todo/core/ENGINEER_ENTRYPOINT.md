@@ -4,7 +4,7 @@ Read in this exact order:
 
 1. `docs/todo/core/implementation.md`
 2. `docs/todo/core/JIRA_BOARD.md`
-3. `docs/todo/core/CZH_S18_TICKETS.md`
+3. `docs/todo/core/CZH_S19_TICKETS.md`
 4. `docs/AGENT_HANDOFF.md`
 5. `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md`
 6. `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md`
@@ -20,9 +20,9 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B23` — **`architect_review_pending`** toward **`CZH-GATE-77`** (sprint `CZH-S18`):
-  surface state-vocabulary lock for pipeline vs attachment vs generation terms
-  (`docs/todo/core/CZH_S18_TICKETS.md`).
+- `CZH-B24` — **`in_progress`** toward **`CZH-GATE-78`** (sprint `CZH-S19`):
+  surface observability vocabulary lock aligned to pipeline vs attachment vs generation terms
+  (`docs/todo/core/CZH_S19_TICKETS.md`).
 
 ## Hard Rules
 
@@ -38,8 +38,8 @@ Read in this exact order:
 
 - Target **8–14 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Sprint `CZH-S18` tickets `CZH-721`..`CZH-730` are active; run to
-  **`CZH-GATE-77`** unless blocked.
+- Sprint `CZH-S19` tickets `CZH-731`..`CZH-740` are active; run to
+  **`CZH-GATE-78`** unless blocked.
 - Keep one ticket per commit (historical sprint rule).
 
 ## Validation Ladder

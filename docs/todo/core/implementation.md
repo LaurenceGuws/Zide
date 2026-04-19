@@ -11,9 +11,9 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B23` (`architect_review_pending`, super-gate `CZH-GATE-77`).
+- Current active macro batch: `CZH-B24` (`in_progress`, super-gate `CZH-GATE-78`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_S18_TICKETS.md`
+- Active ticket source: `docs/todo/core/CZH_S19_TICKETS.md`
 
 ## Campaign Goals
 
@@ -2274,7 +2274,7 @@ Checkpoint packet: `docs/todo/core/CZH_S17_CHECKPOINT.md`.
   explicit and consistent in touched widget/presentation paths with no behavior
   or ABI drift.
 
-### `CZH-B23` Long-Loop Surface State Vocabulary Lock Pack (`architect_review_pending`)
+### `CZH-B23` Long-Loop Surface State Vocabulary Lock Pack (`accepted`)
 
 Queue line (exact):
 
@@ -2347,8 +2347,58 @@ Checkpoint packet: `docs/todo/core/CZH_S18_CHECKPOINT.md`.
 #### Architect gate result
 
 - `Review chunk: CZH-B23`
-- `Verdict: architect_review_pending`
-- `Engineer handoff:` `CZH-GATE-77` (see checkpoint packet)
+- `Verdict: accepted`
+- `Engineer commits reviewed:` `49ecd8b9`, `c0684e07`, `35431e56`, `c6684f1c`,
+  `268fb7ac`, `39fff8e9`, `20339def`, `9004cc7f`, `6a10c6f0`, `c3d6e371`
+- `Architect validation spot-check:` `zig build test-config PASS`,
+  `zig build test-editor PASS`, `zig build test-terminal-replay-all PASS`
+- `Acceptance judgment:` vocabulary lock for pipeline leg, host target leg,
+  full attachment, and generation terms is coherent across touched paths with
+  no behavior or ABI drift.
+
+### `CZH-B24` Long-Loop Surface Observability Vocabulary Lock (`in_progress`)
+
+Queue line (exact):
+
+- execute one longer engineering loop (10-ticket pack) to align selected
+  observability/log/telemetry vocabulary with the locked pipeline-vs-attachment-vs-generation
+  state model, plus targeted test/doc lock, without behavior or ABI changes
+
+Acceptance:
+
+- selected touched observability/log surfaces use the same explicit vocabulary
+  as core state helpers (pipeline leg, host target leg, full attachment, generation)
+- no behavior changes and no host ABI/C export changes
+- selected tests/docs enforce the observability vocabulary lock
+- scoped probe/doc hygiene is recorded for touched modules
+- full stress ladder remains green through `CZH-GATE-78`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S19_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+Execution source:
+
+- engineer executes `CZH-731`..`CZH-740` in order from
+  `docs/todo/core/CZH_S19_TICKETS.md`
+- one ticket per commit unless explicitly marked otherwise
+- stop only at `CZH-GATE-78` or a real hard blocker
+
+#### `CZH-731` observability vocabulary audit + cut plan (`CZH-S19`)
+
+- map selected observability/log touchpoints in:
+  `terminal_widget_presentation_runtime.zig`,
+  `terminal_widget.zig`,
+  `terminal_widget_draw.zig`,
+  `terminal_widget_surface_state.zig`,
+  `surface_contract.zig`,
+  `surface_attachment_contract.zig`
+- classify each touched signal as pipeline-leg, host-target-leg,
+  full-attachment, or generation-owned
+- record scoped hygiene targets for `CZH-739`
 
 ## Response Contract
 
