@@ -1590,7 +1590,11 @@ pub fn directPresent(
     const rows = terminal_view.rows;
     const cols = terminal_view.cols;
     const view_cells = terminal_view.cells;
-    if (!terminal_presentation_runtime.checkDirectPresentEligibility(rows, cols, view_cells.len)) return result;
+    if (!terminal_presentation_runtime.checkDirectPresentEligibility(.{
+        .rows = rows,
+        .cols = cols,
+        .view_cells_len = view_cells.len,
+    })) return result;
 
     const bg_color: Color = .{
         .r = terminal_view.base_colors.resolved_background.r,

@@ -501,12 +501,16 @@ pub fn checkReuseEligibility(
 
 /// **Direct present eligibility decision:** terminal-owned check for direct draw path.
 /// Validates view model has content to draw (rows, cols, cells).
-pub fn checkDirectPresentEligibility(
+pub const DirectPresentEligibilityInput = struct {
     rows: usize,
     cols: usize,
     view_cells_len: usize,
+};
+
+pub fn checkDirectPresentEligibility(
+    input: DirectPresentEligibilityInput,
 ) bool {
-    return rows > 0 and cols > 0 and view_cells_len > 0;
+    return input.rows > 0 and input.cols > 0 and input.view_cells_len > 0;
 }
 
 /// **Refresh orchestration flow:** terminal-owned sequence for refresh path.

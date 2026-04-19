@@ -290,30 +290,62 @@ test "Reuse eligibility rejects non-reuse intent" {
 }
 
 test "Direct present eligibility is pure and deterministic" {
-    const eligible_1 = presentation_runtime.checkDirectPresentEligibility(10, 80, 800);
-    const eligible_2 = presentation_runtime.checkDirectPresentEligibility(10, 80, 800);
+    const eligible_1 = presentation_runtime.checkDirectPresentEligibility(.{
+        .rows = 10,
+        .cols = 80,
+        .view_cells_len = 800,
+    });
+    const eligible_2 = presentation_runtime.checkDirectPresentEligibility(.{
+        .rows = 10,
+        .cols = 80,
+        .view_cells_len = 800,
+    });
     try std.testing.expect(eligible_1 == eligible_2);
 }
 
 test "Direct present eligibility requires rows > 0" {
-    const with_rows = presentation_runtime.checkDirectPresentEligibility(10, 80, 800);
-    const no_rows = presentation_runtime.checkDirectPresentEligibility(0, 80, 800);
+    const with_rows = presentation_runtime.checkDirectPresentEligibility(.{
+        .rows = 10,
+        .cols = 80,
+        .view_cells_len = 800,
+    });
+    const no_rows = presentation_runtime.checkDirectPresentEligibility(.{
+        .rows = 0,
+        .cols = 80,
+        .view_cells_len = 800,
+    });
 
     try std.testing.expect(with_rows == true);
     try std.testing.expect(no_rows == false);
 }
 
 test "Direct present eligibility requires cols > 0" {
-    const with_cols = presentation_runtime.checkDirectPresentEligibility(10, 80, 800);
-    const no_cols = presentation_runtime.checkDirectPresentEligibility(10, 0, 800);
+    const with_cols = presentation_runtime.checkDirectPresentEligibility(.{
+        .rows = 10,
+        .cols = 80,
+        .view_cells_len = 800,
+    });
+    const no_cols = presentation_runtime.checkDirectPresentEligibility(.{
+        .rows = 10,
+        .cols = 0,
+        .view_cells_len = 800,
+    });
 
     try std.testing.expect(with_cols == true);
     try std.testing.expect(no_cols == false);
 }
 
 test "Direct present eligibility requires view_cells_len > 0" {
-    const with_cells = presentation_runtime.checkDirectPresentEligibility(10, 80, 800);
-    const no_cells = presentation_runtime.checkDirectPresentEligibility(10, 80, 0);
+    const with_cells = presentation_runtime.checkDirectPresentEligibility(.{
+        .rows = 10,
+        .cols = 80,
+        .view_cells_len = 800,
+    });
+    const no_cells = presentation_runtime.checkDirectPresentEligibility(.{
+        .rows = 10,
+        .cols = 80,
+        .view_cells_len = 0,
+    });
 
     try std.testing.expect(with_cells == true);
     try std.testing.expect(no_cells == false);

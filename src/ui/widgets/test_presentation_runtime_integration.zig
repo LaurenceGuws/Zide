@@ -214,7 +214,11 @@ test "Callback contract: direct eligibility check integrates with GPU execution 
     const cells = 800;
 
     // Widget calls terminal eligibility check
-    const eligible = terminal_widget_presentation_runtime.checkDirectPresentEligibility(rows, cols, cells);
+    const eligible = terminal_widget_presentation_runtime.checkDirectPresentEligibility(.{
+        .rows = rows,
+        .cols = cols,
+        .view_cells_len = cells,
+    });
 
     // If eligible, widget executes GPU drawing and generates outcome
     const outcome = if (eligible)
