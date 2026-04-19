@@ -11,9 +11,9 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B18` (`architect_review_pending` at `CZH-GATE-72`).
+- Current active macro batch: `CZH-B19` (`in_progress`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_S13_TICKETS.md`
+- Active ticket source: `docs/todo/core/CZH_S14_TICKETS.md`
 
 ## Campaign Goals
 
@@ -1801,7 +1801,7 @@ Checkpoint packet: `docs/todo/core/CZH_S12_CHECKPOINT.md`.
   ownership center for present-plan reuse and `presentationUpdateDelta`; scoped
   probe/doc hygiene completed with no behavior or ABI drift.
 
-### `CZH-B18` Long-Loop FFI/Surface Consolidation Pack (`architect_review_pending`)
+### `CZH-B18` Long-Loop FFI/Surface Consolidation Pack (`accepted`)
 
 Queue line (exact):
 
@@ -1891,6 +1891,74 @@ to `CZH-GATE-72`.
 - **Android guard** — SKIP (lane paused)
 
 Checkpoint packet: `docs/todo/core/CZH_S13_CHECKPOINT.md`.
+
+#### Architect gate result
+
+- `Review chunk: CZH-B18`
+- `Verdict: accepted`
+- `Engineer commits reviewed:` `6106f474`, `6f7377e3`, `d3d8285e`, `f0589eef`,
+  `37f1a07d`, `addc96fd`, `c716a112`, `6e1563f3`, `e8bb08c9`, `ac07c395`
+- `Architect validation spot-check:` `zig build test-config PASS`,
+  `zig build test-editor PASS`, `zig build test-terminal-replay-all PASS`
+- `Acceptance judgment:` VT FFI redraw-state / needs-redraw / present-ack now
+  consume named `surface_contract` ffi wrappers with behavior/ABI preserved;
+  scoped probe/doc hygiene is aligned.
+
+### `CZH-B19` Long-Loop Surface/FFI Convergence Pack (`in_progress`)
+
+Queue line (exact):
+
+- execute a longer engineering loop (10-ticket pack) that converges remaining
+  mixed primitive/composite seam consumption to explicit `surface_contract`
+  ownership across widget + FFI touched paths, plus scoped hygiene/doc lock
+
+Acceptance:
+
+- selected widget + FFI seam consumers use one explicit ownership shape
+  (primitive or composite per contract) with no behavior drift
+- remaining drift in seam tests/docs is resolved in touched paths
+- scoped probe/doc hygiene sweep is recorded for touched modules
+- queue/handoff/entrypoint and authority docs remain aligned
+- full stress ladder remains green through `CZH-GATE-73`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S14_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+Execution source:
+
+- engineer executes `CZH-681`..`CZH-690` in order from
+  `docs/todo/core/CZH_S14_TICKETS.md`
+- one ticket per commit unless explicitly marked otherwise
+- stop only at `CZH-GATE-73` or a real hard blocker
+
+#### `CZH-681` convergence + hygiene audit (`CZH-S14`)
+
+**Selected target set:**
+
+- `src/terminal/surface_contract.zig`: primitive/composite/ffi helper layering
+  and doc ownership
+- `src/ui/widgets/terminal_widget_surface_state.zig`: composite vs primitive
+  seam test/consumer shape
+- `src/terminal/ffi/core_api.zig`: ffi wrapper ownership and seam-test drift
+
+**Plan (`CZH-682`..`CZH-686`):**
+
+- tighten helper-layer ownership naming without behavior changes
+- converge selected call sites/tests to one explicit seam shape per contract
+- keep ABI and runtime semantics unchanged
+
+**Plan (`CZH-687`..`CZH-689`):**
+
+- lock invariants in focused seam tests
+- run scoped probe/doc hygiene sweep in touched modules
+- align authority docs to landed terms only
+
+**`CZH-690`:** validation ladder + checkpoint packet + board/queue/handoff sync
+to `CZH-GATE-73`.
 
 ## Response Contract
 
