@@ -1131,11 +1131,6 @@ fn buildExecutionUpdatePlan(
     );
 }
 
-/// **Classify refresh outcome:** derive outcome state from refresh cycle result.
-/// Invariant: outcome == .unavailable only when followup_required; followup_reason non-.none only when required.
-/// *Hardening:* validates followup coupling to catch invalid state combinations early.
-// Classification functions moved to terminal layer
-
 pub fn runPresentation(
     self: anytype,
     shell: *app_shell.Shell,
