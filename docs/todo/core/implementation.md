@@ -11,9 +11,9 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B12` (`architect_review_pending` at `CZH-GATE-66`).
+- Current active macro batch: `CZH-B13` (`in_progress`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_S7_TICKETS.md`
+- Active ticket source: `docs/todo/core/CZH_S8_TICKETS.md`
 
 ## Campaign Goals
 
@@ -1277,7 +1277,7 @@ Checkpoint packet: `docs/todo/core/CZH_S5_CHECKPOINT.md`.
 
 Checkpoint packet: `docs/todo/core/CZH_S6_CHECKPOINT.md`.
 
-### `CZH-B12` Terminal Surface Contract Wiring Seed (`architect_review_pending`)
+### `CZH-B12` Terminal Surface Contract Wiring Seed (`accepted`)
 
 Queue line (exact):
 
@@ -1349,6 +1349,47 @@ FFI `present_ack` / `acknowledged_generation`.
 - **Android guard** — SKIP (lane paused)
 
 Checkpoint packet: `docs/todo/core/CZH_S7_CHECKPOINT.md`.
+
+#### Architect gate result
+
+- `Review chunk: CZH-B12`
+- `Verdict: accepted`
+- `Engineer commits reviewed:` `28711290`, `8c0e65ae`, `4d78a473`, `fdc33518`,
+  `518fea84`
+- `Architect validation spot-check:` `zig build test-config PASS`,
+  `zig build test-editor PASS`, `zig build test-terminal-replay-all PASS`
+- `Acceptance judgment:` explicit surface-contract seam (`surface_contract.zig`)
+  now exists in code and is wired through `core_api.redrawState` /
+  `core_api.needsRedraw` without behavior or ABI drift.
+
+### `CZH-B13` Surface Contract Wiring Expansion (`in_progress`)
+
+Queue line (exact):
+
+- expand terminal surface-contract seam usage to one additional bounded path so
+  ownership is encoded in live wiring rather than remaining helper-local
+
+Acceptance:
+
+- touchpoint audit identifies the next bounded surface ownership crossing
+- one additional behavior-neutral path adopts seam types/helpers
+- seam invariants are covered by test assertions for the expanded path
+- queue/handoff/entrypoint and authority docs remain aligned
+- full stress ladder remains green through `CZH-GATE-67`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S8_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+Execution source:
+
+- engineer executes `CZH-641`..`CZH-645` in order from
+  `docs/todo/core/CZH_S8_TICKETS.md`
+- one ticket per commit unless explicitly marked otherwise
+- stop only at `CZH-GATE-67` or a real hard blocker
 
 ## Response Contract
 
