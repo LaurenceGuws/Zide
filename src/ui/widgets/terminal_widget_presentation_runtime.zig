@@ -2237,3 +2237,26 @@ test "CZH-778: present-state and present-result share conjunction reporting fiel
     }
 }
 
+test "CZH-788: reuse outcome and present result expose paired leg and conjunction fields" {
+    comptime {
+        {
+            var host: usize = 0;
+            var conj: usize = 0;
+            for (@typeInfo(ReusePresentOutcomeState).@"struct".fields) |f| {
+                if (std.mem.eql(u8, f.name, "host_surface_target_available")) host += 1;
+                if (std.mem.eql(u8, f.name, "shared_surface_attachment_ready")) conj += 1;
+            }
+            std.debug.assert(host == 1 and conj == 1);
+        }
+        {
+            var host: usize = 0;
+            var conj: usize = 0;
+            for (@typeInfo(TerminalPresentResult).@"struct".fields) |f| {
+                if (std.mem.eql(u8, f.name, "host_surface_target_available")) host += 1;
+                if (std.mem.eql(u8, f.name, "shared_surface_attachment_ready")) conj += 1;
+            }
+            std.debug.assert(host == 1 and conj == 1);
+        }
+    }
+}
+
