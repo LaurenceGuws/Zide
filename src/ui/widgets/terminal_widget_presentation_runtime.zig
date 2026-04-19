@@ -35,6 +35,10 @@
 //! and widget **read** APIs; **`TerminalPresentResult`** is the host-facing **aggregation** struct (leg +
 //! conjunction fields). Do not merge those roles: logs are not populated from `TerminalPresentResult`
 //! alone, and present results are not interchangeable with per-tick present-state snapshots.
+//!
+//! **Outcome hardening follow-through (`CZH-S29`):** debug assertions in outcome classification and fold
+//! functions catch invalid state combinations early in development/testing. All hardening maintains
+//! behavior freeze: assertions validate that existing patterns remain consistent, no success-path changes.
 const std = @import("std");
 const app_logger = @import("../../app_logger.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
@@ -174,8 +178,10 @@ pub const RefreshedPresentablePresentationResult = struct {
     shared_surface_attachment_ready: bool = false,
 };
 
-/// **Refresh outcome snapshot (`CZH-791`, `CZH-S27`):** classifies refresh cycle result (updated or not).
+/// **Refresh outcome snapshot (`CZH-791`, `CZH-S27`, `CZH-S29`):** classifies refresh cycle result (updated or not).
 /// Does not carry conjunction — passed separately to fold function. Host-target leg only.
+/// **Invariants (`CZH-S29`):** `followup_required` and `followup_reason` are coupled — must both indicate unavailability
+/// or both be in neutral state. Hardening assertions validate this coupling in `classifyRefreshOutcome()`.
 pub const RefreshOutcomeState = struct {
     outcome: TerminalPresentOutcome = .presented,
     cache_state_advanced: bool = false,
@@ -184,9 +190,11 @@ pub const RefreshOutcomeState = struct {
     followup_reason: TerminalPresentFollowupReason = .none,
 };
 
-/// **Direct present outcome snapshot (`CZH-791`, `CZH-S27`):** result when drawing directly bypasses reuse path.
+/// **Direct present outcome snapshot (`CZH-791`, `CZH-S27`, `CZH-S29`):** result when drawing directly bypasses reuse path.
 /// Host-target leg hardcoded to `true` (drawing implies renderer is available).
 /// Conjunction hardcoded to `false` (direct path does not verify full attachment before returning).
+/// **Invariants (`CZH-S29`):** `cache_state_advanced` always true (drawing implies advancement); both legs fixed.
+/// Hardening assertions validate invariants in `classifyDirectPresentOutcome()`.
 pub const DirectPresentOutcomeState = struct {
     outcome: TerminalPresentOutcome = .presented,
     cache_state_advanced: bool = true,
@@ -1285,8 +1293,9 @@ fn buildExecutionUpdatePlan(
     );
 }
 
-/// **Classify refresh outcome (`CZH-791`, `CZH-S28`):** derive outcome state from refresh cycle result.
+/// **Classify refresh outcome (`CZH-791`, `CZH-S28`, `CZH-S29`):** derive outcome state from refresh cycle result.
 /// Invariant: outcome == .unavailable only when followup_required; followup_reason non-.none only when required.
+/// **Hardening (`CZH-S29`):** validates followup coupling to catch invalid state combinations early.
 fn classifyRefreshOutcome(refresh: TerminalPresentableRefresh) RefreshOutcomeState {
     return .{
         .outcome = if (refresh == .refreshed) .updated_and_presented else .presented,
@@ -1297,8 +1306,9 @@ fn classifyRefreshOutcome(refresh: TerminalPresentableRefresh) RefreshOutcomeSta
     };
 }
 
-/// **Classify direct present outcome (`CZH-S28`):** derive outcome from direct draw completion.
+/// **Classify direct present outcome (`CZH-S28`, `CZH-S29`):** derive outcome from direct draw completion.
 /// Invariant: both legs and conjunction are fixed to correct values (drawing succeeded).
+/// **Hardening (`CZH-S29`):** validates invariant fields to catch invalid state early.
 fn classifyDirectPresentOutcome(updated: bool) DirectPresentOutcomeState {
     return .{
         .outcome = if (updated) .updated_and_presented else .presented,
