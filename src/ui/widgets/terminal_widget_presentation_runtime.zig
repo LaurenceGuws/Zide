@@ -6,12 +6,12 @@
 //! `terminalPresentablePipelineReady()` (pipeline leg only), not the full attachment
 //! conjunction — intentional.
 //!
-//! **Observability (`CZH-B24`):** operator JSON on present failure (`logUnavailable`) names
-//! publication generation on the view model, view/update flags, the renderer presentable refresh
-//! cycle tag, the terminal presentable **pipeline** leg, the host drawable **target** leg, and
-//! viewport geometry — aligned with `surface_contract` / `surface_attachment_contract` vocabulary
-//! (full attachment is the conjunction of the pipeline and host-target legs, also surfaced as
-//! `shared_surface_attachment_ready` when logged).
+//! **Observability (`CZH-B24`, reporting carrier `CZH-S23`):** operator JSON on present failure
+//! (`logUnavailable`) names publication generation on the view model, view/update flags, the renderer
+//! presentable refresh cycle tag, the terminal presentable **pipeline** leg, the host drawable
+//! **target** leg, and viewport geometry — aligned with `surface_contract` /
+//! `surface_attachment_contract` vocabulary. Full attachment in that log is reported **only** from
+//! **`PresentationPresentState.shared_surface_attachment_ready`** (JSON key `shared_surface_attachment_ready`).
 //!
 //! **Present-result ownership (`CZH-B26`):** `ReusePresentOutcomeState` / `TerminalPresentResult`
 //! distinguish the host-target **leg** from the **full attachment** conjunction (`pipeline ∧ host
@@ -1559,6 +1559,7 @@ pub fn refreshPresentState(
     }
 
     state.host_surface_target_available = renderer_presentable_host.terminalPresentableInfo(renderer) != null;
+    // Dominant conjunction snapshot for this tick: `logUnavailable` reads `state.shared_surface_attachment_ready` only.
     const shared_surface_attachment_ready = surface_state.notePresentableAvailability(state.host_surface_target_available);
     state.shared_surface_attachment_ready = shared_surface_attachment_ready;
     state.present = state.shared_surface_attachment_ready and state.visible;
@@ -1568,11 +1569,11 @@ pub fn refreshPresentState(
 }
 
 /// Operator `renderer.terminal_present` JSON when present cannot proceed because the drawable
-/// shared-surface attachment is unavailable. Vocabulary: **generation** on the view model;
-/// view/update flags; renderer presentable **refresh cycle** enum; **pipeline** vs **host-target**
-/// legs per `surface_attachment_contract`; explicit **full attachment** readiness (same predicate as
-/// `readSharedSurfaceAttachmentReady`, reported here from `PresentationPresentState.shared_surface_attachment_ready`
-/// after the compute path); viewport geometry (`CZH-B24`).
+/// shared-surface attachment is unavailable. **Conjunction key (`CZH-S23`):** the full-attachment
+/// boolean is reported **only** from **`present_state.shared_surface_attachment_ready`** (same
+/// predicate family as `readSharedSurfaceAttachmentReady` when legs match). Other keys: **generation**
+/// on the view model; view/update flags; renderer presentable **refresh cycle** enum; **pipeline** vs
+/// **host-target** legs per `surface_attachment_contract`; viewport geometry (`CZH-B24`).
 pub fn logUnavailable(
     surface_state: anytype,
     terminal_view: view_state.TerminalViewModel,
@@ -1683,15 +1684,15 @@ pub fn tryFastPresentExisting(
     note_present: anytype,
 ) ReusePresentOutcomeState {
     if (plan.present_intent != .reuse) return .{};
-    const host_target_leg_reported: bool = renderer_presentable_host.terminalPresentableInfo(renderer) != null;
+    const host_surface_target_available = renderer_presentable_host.terminalPresentableInfo(renderer) != null;
     const shared_surface_attachment_ready = surface_state.notePresentableAvailability(
-        host_target_leg_reported,
+        host_surface_target_available,
     );
     if (!(view_cells_len > 0 and shared_surface_attachment_ready and
         (terminal_view.sync_updates_active or
             renderer_presentable_host.terminalSupportsReuseWithoutSyncUpdates(renderer)))) {
         return .{
-            .host_surface_target_available = host_target_leg_reported,
+            .host_surface_target_available = host_surface_target_available,
             .shared_surface_attachment_ready = shared_surface_attachment_ready,
         };
     }
