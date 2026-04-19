@@ -902,6 +902,34 @@ Execution source:
 - one ticket per commit unless explicitly marked otherwise
 - stop only at `CZH-GATE-62` or a real hard blocker
 
+#### `CZH-616` BYO-PTY packaging audit (touchpoint map)
+
+**Zig import graph (pre-extraction)**
+
+- **`bridge.zig`** — the only `@import("host_api.zig")` under
+  `src/terminal/ffi/**`; all session/transport forwards go through it.
+- **`core_api.zig`**, **`shared.zig`** — text references to `host_api.zig` in
+  module/`///` docs only (no imports).
+
+**Exported C surface**
+
+- **`c_api.zig`** / **`terminal_ffi_exports.zig`** — thin wrappers over
+  `bridge.zig` only; **no** dependency on the Zig filename of the BYO module.
+  **No C symbol churn** from a pure file rename.
+
+**Coupled core (unchanged by packaging rename)**
+
+- `src/terminal/core/session/runtime.zig`, `input.zig`, etc. — still the engine
+  owners; the BYO seam module calls into them.
+
+**Atomic move planned for `CZH-617`**
+
+- Rename `src/terminal/ffi/host_api.zig` →
+  `src/terminal/ffi/byo_pty_host.zig` (explicit BYO-PTY host seam).
+- Update **`bridge.zig`** import and call prefix to `byo_pty_host`.
+- Refresh doc cross-references in **`core_api.zig`**, **`shared.zig`**, then
+  authority docs in **`CZH-619`**.
+
 ## Response Contract
 
 Every batch update must include:
