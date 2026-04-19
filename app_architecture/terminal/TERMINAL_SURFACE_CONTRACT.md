@@ -56,22 +56,17 @@ Hosts observe redraw and generation pairing through **VT core FFI** symbols (e.g
 state. Raw GPU handles do not need to cross that boundary for the contract to
 hold.
 
-**Zig seam (logical bundle):** `src/terminal/surface_contract.zig` names the same
-published vs acknowledged pairing and fills the extern `RedrawState` bundle.
-`src/terminal/ffi/core_api.zig` routes `redraw_state` through
-`ffiRedrawStateFill`, `needs_redraw` through `ffiNeedsRedrawU8`, and `present_ack`
-admissibility through `ffiPresentAckGenerationAdmissible` (`CZH-S13`; primitives
-`fillRedrawState`, `needsRedrawFromPair`, `presentAckGenerationAdmissible` remain
-the underlying definitions).
+**Zig seam (logical bundle):** `src/terminal/surface_contract.zig` layers **FFI**
+(`ffiRedrawStateFill`, `ffiNeedsRedrawU8`, `ffiPresentAckGenerationAdmissible` for
+`core_api` exports), **widget composite** (`publicationClearPair*` for terminal
+widget publication/clear vs last surface draw), and **primitives** (`needsRedrawFromPair`,
+widget legs, bundle `fillRedrawState`) with one policy per layer (`CZH-S13`,
+`CZH-S14`).
 
-**Widget draw consumer:** Publication/clear vs last surface draw for widget reuse
-and invalidation is expressed through composite helpers
-`publicationClearPairMismatchesFromLastSurfaceRender` and
-`publicationClearPairMatchesLastSurfaceRender` (`terminal_widget_surface_state`
-/`terminal_widget_presentation_runtime`, `CZH-S12`). The primitive mismatch legs
-remain `publicationGenerationDiffersFromLastSurfaceRender` and
-`clearGenerationDiffersFromLastSurfaceRenderClear` inside those composites
-(`CZH-S9`–`CZH-S11`).
+**Widget draw consumer:** Terminal widget reuse/invalidation uses **only** the
+composite pair helpers (`publicationClearPairMismatchesFromLastSurfaceRender`,
+`publicationClearPairMatchesLastSurfaceRender`); primitives are decomposition
+inside `surface_contract`, not alternate call-site shapes (`CZH-S12`, `CZH-S14`).
 
 ## Android mapping (example, not definition)
 

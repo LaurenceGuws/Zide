@@ -1967,6 +1967,20 @@ explicit export shape; **primitives** remain building blocks and bundle fill
 decomposition. Hygiene scope `CZH-689`: `surface_contract.zig`,
 `terminal_widget_surface_state.zig`, `core_api.zig`, `TERMINAL_SURFACE_CONTRACT.md`.
 
+#### `CZH-689` probe/doc hygiene (`CZH-S14`)
+
+- **Reviewed:** `surface_contract.zig`, `terminal_widget_surface_state.zig`,
+  `core_api.zig` (probe residue).
+- **Removed:** nothing (no stale investigation-only probes in touched paths).
+- **Authority:** `TERMINAL_SURFACE_CONTRACT.md` updated to layered FFI vs widget
+  composite vs primitives (`CZH-S14`).
+
+#### Landed (`CZH-681`..`CZH-689`)
+
+- Layering docs in `surface_contract.zig`; redundant `CZH-S11` loop test removed
+- Widget + `core_api` tests converged to explicit composite / `ffi*` shapes
+- Convergence invariant tests (`CZH-687`, `CZH-688`); probe sweep note above
+
 ## Response Contract
 
 Every batch update must include:
