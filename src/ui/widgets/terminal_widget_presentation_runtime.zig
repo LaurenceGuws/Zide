@@ -1513,6 +1513,7 @@ pub fn runFastPresentIfAvailable(
     return presentResultFromReuseOutcomeState(outcome_state, .{});
 }
 
+/// **Direct presentation:** terminal-owned eligibility check, widget executes if eligible.
 pub fn directPresent(
     self: anytype,
     shell: *app_shell.Shell,
@@ -1538,7 +1539,7 @@ pub fn directPresent(
     const rows = terminal_view.rows;
     const cols = terminal_view.cols;
     const view_cells = terminal_view.cells;
-    if (rows == 0 or cols == 0 or view_cells.len == 0) return result;
+    if (!terminal_presentation_runtime.checkDirectPresentEligibility(rows, cols, view_cells.len)) return result;
 
     const bg_color: Color = .{
         .r = terminal_view.base_colors.resolved_background.r,

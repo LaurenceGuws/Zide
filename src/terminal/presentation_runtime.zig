@@ -503,6 +503,16 @@ pub fn checkReuseEligibility(
         (sync_updates_active or supports_reuse_without_sync);
 }
 
+/// **Direct present eligibility decision:** terminal-owned check for direct draw path.
+/// Validates view model has content to draw (rows, cols, cells).
+pub fn checkDirectPresentEligibility(
+    rows: usize,
+    cols: usize,
+    view_cells_len: usize,
+) bool {
+    return rows > 0 and cols > 0 and view_cells_len > 0;
+}
+
 /// **Refresh orchestration flow:** terminal-owned sequence for refresh path.
 /// Orchestrates: run refresh cycle → classify outcome → run presentation → fold result.
 /// Widget provides `runCycle` and `runPresentation` hooks for integration-only operations.
