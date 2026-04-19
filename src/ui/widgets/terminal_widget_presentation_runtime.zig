@@ -2215,3 +2215,17 @@ test "CZH-768: PresentationPresentState exposes leg field and conjunction field 
     }
 }
 
+test "CZH-778: present-state and present-result share conjunction reporting field name" {
+    comptime {
+        var present: usize = 0;
+        var result: usize = 0;
+        for (@typeInfo(PresentationPresentState).@"struct".fields) |f| {
+            if (std.mem.eql(u8, f.name, "shared_surface_attachment_ready")) present += 1;
+        }
+        for (@typeInfo(TerminalPresentResult).@"struct".fields) |f| {
+            if (std.mem.eql(u8, f.name, "shared_surface_attachment_ready")) result += 1;
+        }
+        std.debug.assert(present == 1 and result == 1);
+    }
+}
+
