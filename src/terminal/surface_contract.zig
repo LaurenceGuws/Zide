@@ -3,6 +3,11 @@
 //! VT core FFI continues to own the extern `RedrawState` ABI; this module names
 //! the frozen contract center and centralizes how that bundle is filled — one
 //! truth source for `needs_redraw` derivation.
+//!
+//! Widget surface state: `TerminalWidgetSurfaceState.presentationUpdateDelta` uses
+//! `publicationGenerationDiffersFromLastSurfaceRender` and
+//! `clearGenerationDiffersFromLastSurfaceRenderClear` for its publication and
+//! clear-generation mismatch limbs (`CZH-S11`).
 const std = @import("std");
 const shared = @import("ffi/shared.zig");
 
@@ -36,6 +41,8 @@ pub fn presentAckGenerationAdmissible(
 /// the shared presentable recorded for the terminal surface draw (`terminal_widget*`
 /// presentation runtime). Same predicate core as `needsRedrawFromPair` — explicit
 /// naming for the draw/presentation consumer (`TERMINAL_SURFACE_CONTRACT.md`).
+/// Also drives `PresentationUpdateDelta.generation_changed` in
+/// `terminal_widget_surface_state.zig` (`CZH-S11`).
 pub fn publicationGenerationDiffersFromLastSurfaceRender(
     publication_generation: u64,
     last_surface_render_generation: u64,
@@ -48,6 +55,8 @@ pub fn publicationGenerationDiffersFromLastSurfaceRender(
 /// draw. Same predicate core as `needsRedrawFromPair`; pairs with
 /// `publicationGenerationDiffersFromLastSurfaceRender` for present-plan reuse
 /// eligibility (`TERMINAL_SURFACE_CONTRACT.md`).
+/// Also drives `PresentationUpdateDelta.clear_generation_changed` in
+/// `terminal_widget_surface_state.zig` (`CZH-S11`).
 pub fn clearGenerationDiffersFromLastSurfaceRenderClear(
     publication_clear_generation: u64,
     last_surface_render_clear_generation: u64,
