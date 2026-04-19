@@ -17,9 +17,10 @@
 //! availability alone as full attachment when reading `TerminalPresentResult` / reuse outcomes.
 //! **Reporting carrier (`CZH-S23`):** draw does not emit `renderer.terminal_present`; conjunction in
 //! that log is owned by presentation runtime (`PresentationPresentState.shared_surface_attachment_ready`).
-//! **Draw vs runtime (`CZH-S24`):** this module **consumes** surface/presentation cache state for
-//! raster work; **`terminal_widget_presentation_runtime`** owns present-time leg updates, reporting
-//! snapshots, and **`TerminalPresentResult`** folds — draw does not re-derive aggregation fields.
+//! **Draw vs runtime (`CZH-S24`, **single-derivation-story enforcement CZH-S26**):** this module
+//! **consumes** surface/presentation cache state for raster work; **`terminal_widget_presentation_runtime`**
+//! owns present-time leg updates, reporting snapshots, and **`TerminalPresentResult`** folds — draw does
+//! not re-derive aggregation fields, re-compute conjunction, or parallel-derive outcome state.
 const std = @import("std");
 const surface_attachment_contract = @import("../../terminal/surface_attachment_contract.zig");
 const app_shell = @import("../../app_shell.zig");
