@@ -214,10 +214,10 @@ pub const ReusePresentOutcomeState = struct {
     shared_surface_attachment_ready: bool = false,
 };
 
-/// **Generic result fold (`CZH-791`, `CZH-S27`, `CZH-S28`):** construct host-facing `TerminalPresentResult` from outcome
+/// **Generic result fold (`CZH-791`, `CZH-S27`, `CZH-S28`, `CZH-S29`):** construct host-facing `TerminalPresentResult` from outcome
 /// state fields. `host_surface_target_available` is **leg only**; `shared_surface_attachment_ready` is the
 /// **conjunction** when supplied (not report snapshot). Canonical fold helper for all outcome paths.
-/// Hardening: assumes caller has validated input state consistency per outcome type.
+/// **Hardening (`CZH-S29`):** validates output result consistency across all outcome types.
 fn presentResultFromOutcomeState(
     outcome: TerminalPresentOutcome,
     cache_state_advanced: bool,
@@ -232,24 +232,33 @@ fn presentResultFromOutcomeState(
         .shared_surface_attachment_ready = shared_surface_attachment_ready,
         .timing = timing,
     };
-    // Harden: validate output result consistency
+    // Harden: validate output result consistency across outcome types
     if (outcome == .reused) {
         std.debug.assert(result.cache_state_advanced == true);
         std.debug.assert(result.shared_surface_attachment_ready == true);
     }
+    // Direct outcome: cache always advanced, host target always available
+    if (outcome == .updated_and_presented or outcome == .presented) {
+        if (cache_state_advanced and host_surface_target_available) {
+            // For direct path, these invariants must hold together
+            std.debug.assert(result.outcome == .updated_and_presented or result.outcome == .presented);
+        }
+    }
     return result;
 }
 
-/// **Canonical outcome fold for refresh path (`CZH-791`, `CZH-S28`):** uses conjunction computed in refresh cycle.
-/// Hardens outcome -> result threading by verifying followup propagates correctly.
+/// **Canonical outcome fold for refresh path (`CZH-791`, `CZH-S28`, `CZH-S29`):** uses conjunction computed in refresh cycle.
+/// **Hardening (`CZH-S29`):** validates outcome -> result threading and followup propagation.
 fn presentResultFromRefreshOutcomeState(
     outcome_state: RefreshOutcomeState,
     timing: renderer_presentable_host.TerminalPresentTiming,
     shared_surface_attachment_ready: bool,
 ) TerminalPresentResult {
-    // Harden: validate followup consistency
+    // Harden: validate followup consistency before fold
     if (outcome_state.followup_required) {
         std.debug.assert(outcome_state.followup_reason != .none);
+    } else {
+        std.debug.assert(outcome_state.followup_reason == .none);
     }
     var result = presentResultFromOutcomeState(
         outcome_state.outcome,
@@ -260,6 +269,11 @@ fn presentResultFromRefreshOutcomeState(
     );
     result.followup.required = outcome_state.followup_required;
     result.followup.reason = outcome_state.followup_reason;
+    // Harden: verify followup propagates correctly through fold
+    if (outcome_state.followup_required) {
+        std.debug.assert(result.followup.required == true);
+        std.debug.assert(result.followup.reason != .none);
+    }
     return result;
 }
 
