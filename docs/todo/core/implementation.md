@@ -11,9 +11,9 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B11` (`architect_review_pending` at `CZH-GATE-65`).
+- Current active macro batch: `CZH-B12` (`in_progress`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_S6_TICKETS.md`
+- Active ticket source: `docs/todo/core/CZH_S7_TICKETS.md`
 
 ## Campaign Goals
 
@@ -1125,7 +1125,7 @@ Checkpoint packet: `docs/todo/core/CZH_S5_CHECKPOINT.md`.
   `CZH-608` table state, and the touched source files describe the same
   ownership and contract shape.
 
-### `CZH-B11` Remove Residual FFI Debug Test Hook (`architect_review_pending`)
+### `CZH-B11` Remove Residual FFI Debug Test Hook (`accepted`)
 
 Queue line (exact):
 
@@ -1189,14 +1189,25 @@ removed from `core_api.destroy`; `tests/terminal_ffi_smoke_tests.zig` syncs via
 `shared.fromOpaque` + spin on `Handle.destroying`; queue (`CZH-606` / `CZH-608`)
 updated.
 
+#### Architect gate result
+
+- `Review chunk: CZH-B11`
+- `Verdict: accepted`
+- `Engineer commits reviewed:` `3c27f8f0`, `55aa37f8`, `430281f0`, `901e2c44`,
+  `13fd2057`
+- `Architect validation spot-check:` `zig build test-config PASS`,
+  `zig build test-editor PASS`, `zig build test-terminal-replay-all PASS`
+- `Acceptance judgment:` product FFI destroy no longer carries debug timing hooks;
+  teardown synchronization now lives in test-owned code only.
+
 #### `CZH-626` FFI/export doc drift audit (`CZH-S5`)
 
 **Stale history (fix in `CZH-629`):** the `CZH-608` module-doc table still lists
 `editor/ffi/bridge.zig` and `editor/ffi/c_api.zig` as missing `//!` — **false**
 as of current `main` (both carry module docs). The “Important function doc drift”
 rows that claim `core_api.destroy` has **no** `///` are also **false** (destroy
-has a `///` block; test-only timing is isolated under `builtin.is_test` per
-`CZH-611`).
+has a `///` block; the earlier test-timing note is historical and was removed in
+`CZH-S6`).
 
 **Truthful state today**
 
@@ -1265,6 +1276,35 @@ Checkpoint packet: `docs/todo/core/CZH_S5_CHECKPOINT.md`.
 - **Android guard** — SKIP (lane paused)
 
 Checkpoint packet: `docs/todo/core/CZH_S6_CHECKPOINT.md`.
+
+### `CZH-B12` Terminal Surface Contract Wiring Seed (`in_progress`)
+
+Queue line (exact):
+
+- begin wiring the accepted terminal surface contract into code with explicit
+  shared-surface ownership seams, while preserving current runtime behavior
+
+Acceptance:
+
+- current terminal surface ownership/wiring touchpoints are audited and mapped
+- first explicit shared-surface seam types/helpers land in code
+- one behavior-neutral wiring cut uses the new seam surface
+- queue/handoff/entrypoint and authority docs remain aligned
+- full stress ladder remains green through `CZH-GATE-66`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S7_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+Execution source:
+
+- engineer executes `CZH-636`..`CZH-640` in order from
+  `docs/todo/core/CZH_S7_TICKETS.md`
+- one ticket per commit unless explicitly marked otherwise
+- stop only at `CZH-GATE-66` or a real hard blocker
 
 ## Response Contract
 
