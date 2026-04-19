@@ -749,6 +749,38 @@ next sprint without a scoped behavior/replay ticket. The only follow-up is
 **naming hygiene** around snapshot-diff “fallback” vocabulary if engineers
 misread it as cruft.
 
+#### `CZH-608` hard-rule audit: module docs and important functions (layer set)
+
+Scope: same FFI/export inventory as `CZH-606` / `CZH-607`.
+
+**Module (`//!`) status**
+
+| File | Module doc present? | Note |
+| --- | --- | --- |
+| `terminal/ffi/renderer_metadata.zig` | **Yes** | Describes single fill path for hosts. |
+| `terminal/ffi/shared.zig` | **No** | Large ABI surface — **fix queue:** add `//!` describing opaque handle + shared helpers. |
+| `terminal/ffi/core_api.zig` | **No** | **Fix queue:** document as VT core publication/export API for handles. |
+| `terminal/ffi/host_api.zig` | **No** | **Fix queue:** document session/runtime FFI entrypoints. |
+| `terminal/ffi/bridge.zig` | **No** | **Fix queue:** one-line barrel doc. |
+| `terminal/ffi/c_api.zig` | **No** | **Fix queue:** C typedef + export forwarder layer. |
+| `terminal_ffi_exports.zig` | **No** | **Fix queue:** export root only. |
+| `editor/ffi/bridge.zig` | **No** | **Fix queue:** editor FFI Zig facade. |
+| `editor/ffi/c_api.zig` | **No** | **Fix queue:** C ABI surface. |
+
+**Important function doc drift (representative)**
+
+| Symbol | Issue | Recommendation |
+| --- | --- | --- |
+| `core_api.destroy` | No doc; embeds test sleep (`destroy_debug_pause_ms_for_tests`) | Document lifecycle + point to probe queue `CZH-606` |
+| `host_api.start` / `poll` | Public; no doc string | Add docs tying to `TerminalRuntimeShell` / BYO-PTY seam |
+| `bridge.create` (editor) | No doc | Document handle ownership vs native `Editor` |
+
+**Doc-alignment queue (for next implementation sprint)**
+
+1. Add `//!` headers to every file in the table with “No” above.
+2. Add brief `///` on exported `pub fn` entrypoints in `host_api` and `core_api`
+   that hosts call (at minimum: create/destroy/start/poll/snapshot/diff/redraw).
+
 ## Response Contract
 
 Every batch update must include:
