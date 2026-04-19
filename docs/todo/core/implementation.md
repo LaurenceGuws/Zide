@@ -1766,6 +1766,14 @@ only.
   surface-unavailable present; existing `debug` sample sinks unchanged (product
   instrumentation, not sprint probes).
 
+#### Landed (`CZH-662`..`CZH-669`)
+
+- Composite pair seam: `publicationClearPairMismatchesFromLastSurfaceRender`,
+  `publicationClearPairMatchesLastSurfaceRender` (`surface_contract.zig`)
+- Present-plan reuse and `presentationUpdateDelta` route through composite helpers
+- Seam invariant tests (`CZH-666`, `CZH-667`); probe sweep note (`CZH-668`)
+- `TERMINAL_SURFACE_CONTRACT.md` widget consumer updated to composite truth
+
 ## Response Contract
 
 Every batch update must include:

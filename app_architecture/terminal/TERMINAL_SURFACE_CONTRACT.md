@@ -63,13 +63,14 @@ that helper (`CZH-S7`). Host `present_ack` generation admissibility (vs publicat
 truth and last ack) uses the same module (`presentAckGenerationAdmissible`;
 `CZH-S8`).
 
-**Widget draw consumer:** `terminal_widget_presentation_runtime` present-plan
-generation reuse uses `publicationGenerationDiffersFromLastSurfaceRender` for the
-publication vs last surface-render generation limb (`CZH-S9`) and
-`clearGenerationDiffersFromLastSurfaceRenderClear` for the clear-generation vs
-last surface-render clear limb (`CZH-S10`). `TerminalWidgetSurfaceState.presentationUpdateDelta`
-uses the same two helpers for `generation_changed` and `clear_generation_changed`
-(`CZH-S11`).
+**Widget draw consumer:** Publication/clear vs last surface draw for widget reuse
+and invalidation is expressed through composite helpers
+`publicationClearPairMismatchesFromLastSurfaceRender` and
+`publicationClearPairMatchesLastSurfaceRender` (`terminal_widget_surface_state`
+/`terminal_widget_presentation_runtime`, `CZH-S12`). The primitive mismatch legs
+remain `publicationGenerationDiffersFromLastSurfaceRender` and
+`clearGenerationDiffersFromLastSurfaceRenderClear` inside those composites
+(`CZH-S9`–`CZH-S11`).
 
 ## Android mapping (example, not definition)
 
