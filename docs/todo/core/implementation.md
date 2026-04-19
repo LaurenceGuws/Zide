@@ -11,9 +11,9 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B9` (`architect_review_pending` at `CZH-GATE-63`).
+- Current active macro batch: `CZH-B10` (`in_progress`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_S4_TICKETS.md`
+- Active ticket source: `docs/todo/core/CZH_S5_TICKETS.md`
 
 ## Campaign Goals
 
@@ -914,7 +914,7 @@ Execution source:
   (`byo_pty_host.zig`) without behavior change or C export churn. The split is
   cleaner in code, not just in docs.
 
-### `CZH-B9` Extract BYO-PTY Out Of `terminal/ffi` Packaging (`architect_review_pending`)
+### `CZH-B9` Extract BYO-PTY Out Of `terminal/ffi` Packaging (`accepted`)
 
 Queue line (exact):
 
@@ -1042,6 +1042,57 @@ Checkpoint packet: `docs/todo/core/CZH_S3_CHECKPOINT.md`.
 - **Android guard** — SKIP (lane paused)
 
 Checkpoint packet: `docs/todo/core/CZH_S4_CHECKPOINT.md`.
+
+#### Architect gate result
+
+- `Review chunk: CZH-B9`
+- `Verdict: accepted`
+- `Engineer commits reviewed:` `088c075b`, `d9a60ca4`, `eafac101`, `e8ed828f`,
+  `03dc5fcc`
+- `Architect validation spot-check:` `zig build test-config PASS`,
+  `zig build test-editor PASS`, `zig build test-terminal-replay-all PASS`
+- `Acceptance judgment:` the optional BYO-PTY seam now lives under
+  `src/terminal/` instead of `src/terminal/ffi/`, so directory ownership is
+  finally aligned with the accepted split. Bridge behavior and exported C
+  symbols remained stable through the move.
+
+### `CZH-B10` FFI/Export Doc-Alignment Closure (`in_progress`)
+
+Queue line (exact):
+
+- close the remaining FFI/export doc-alignment drift so the queue audit,
+  authority docs, and current code all describe the same ownership reality
+
+Acceptance:
+
+- stale audit rows claiming missing editor FFI module docs are removed or
+  corrected
+- remaining important FFI/editor-FFI/export entrypoints have concise,
+  ownership-accurate `///` docs where still missing
+- queue and authority docs no longer lag accepted code state
+- full stress ladder remains green through `CZH-GATE-64`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S5_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+Execution source:
+
+- engineer executes `CZH-626`..`CZH-630` in order from
+  `docs/todo/core/CZH_S5_TICKETS.md`
+- one ticket per commit unless explicitly marked otherwise
+- stop only at `CZH-GATE-64` or a real hard blocker
+
+#### `CZH-B10` scope note
+
+This sprint is intentionally narrow. It does **not** reopen architecture shape
+or move files again. It closes the remaining doc/audit truthfulness gap that is
+still visible after `CZH-B7`..`CZH-B9`, especially the stale `CZH-608` table
+rows that still claim missing module docs for `src/editor/ffi/bridge.zig` and
+`src/editor/ffi/c_api.zig`.
 
 ## Response Contract
 

@@ -4,7 +4,7 @@ Read in this exact order:
 
 1. `docs/todo/core/implementation.md`
 2. `docs/todo/core/JIRA_BOARD.md`
-3. `docs/todo/core/CZH_S4_TICKETS.md`
+3. `docs/todo/core/CZH_S5_TICKETS.md`
 4. `docs/AGENT_HANDOFF.md`
 5. `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md`
 6. `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md`
@@ -20,10 +20,10 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B9` — **`architect_review_pending`** at **`CZH-GATE-63`** (sprint `CZH-S4`):
-  BYO-PTY seam lives at `src/terminal/byo_pty_host.zig` (outside `ffi/`); bridge
-  and C exports stable. **Stop:** await Architect gate; packet
-  `docs/todo/core/CZH_S4_CHECKPOINT.md`.
+- `CZH-B10` — **`in_progress`** (sprint `CZH-S5`): close the remaining
+  FFI/export doc-alignment drift so queue audits, authority docs, and current
+  code agree on ownership and documentation state. Execute tickets
+  `CZH-626`..`CZH-630`; stop only at `CZH-GATE-64` or a real hard blocker.
 
 ## Hard Rules
 
@@ -39,9 +39,7 @@ Read in this exact order:
 
 - Target **5–10 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Sprint `CZH-S4` tickets `CZH-621`..`CZH-625` are complete at **`CZH-GATE-63`**
-  (see `docs/todo/core/CZH_S4_CHECKPOINT.md`). Do not restart unless Architect
-  reopens scope.
+- Sprint `CZH-S5` tickets `CZH-626`..`CZH-630` are the active execution set.
 - Keep one ticket per commit (historical sprint rule).
 
 ## Validation Ladder

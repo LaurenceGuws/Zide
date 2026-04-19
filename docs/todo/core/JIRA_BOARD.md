@@ -20,26 +20,24 @@ This file is the canonical ticket board for active core execution.
 
 ## Current Sprint
 
-- Sprint ID: `CZH-S4`
-- Objective: move the optional BYO-PTY seam out of `src/terminal/ffi/` while
-  keeping bridge behavior and exported C symbols stable
+- Sprint ID: `CZH-S5`
+- Objective: close the remaining FFI/export doc-alignment drift so queue
+  audits, authority docs, and code all describe the same ownership reality
 - Commit budget before checkpoint: `5`
-- Super-gate: `CZH-GATE-63`
+- Super-gate: `CZH-GATE-64`
 
-## Ticket Order (`CZH-S4`)
+## Ticket Order (`CZH-S5`)
 
-1. `CZH-621`
-2. `CZH-622`
-3. `CZH-623`
-4. `CZH-624`
-5. `CZH-625`
+1. `CZH-626`
+2. `CZH-627`
+3. `CZH-628`
+4. `CZH-629`
+5. `CZH-630`
 
 ## Current State
 
-- `in_progress`: none
-- `todo`: none
+- `in_progress`: `CZH-626`
+- `todo`: `CZH-627`, `CZH-628`, `CZH-629`, `CZH-630`
 - `blocked`: none
-- `review_gate`: `CZH-GATE-63` — `CZH-S4` / `CZH-B9`; tickets `CZH-621`..`CZH-625`
-  submitted (`docs/todo/core/CZH_S4_CHECKPOINT.md`); **Architect** moves to `done`
-  on acceptance
-- `done`: `CZH-B1`, `CZH-B2`, `CZH-B3`, `CZH-B4`, `CZH-B5` (accepted as a narrow hygiene slice), `CZH-B6` (accepted), `CZH-B7` (accepted), `CZH-B8` (accepted), `CZH-601`, `CZH-602`, `CZH-603`, `CZH-604`, `CZH-605`, `CZH-606`, `CZH-607`, `CZH-608`, `CZH-609`, `CZH-610`, `CZH-611`, `CZH-612`, `CZH-613`, `CZH-614`, `CZH-615`, `CZH-616`, `CZH-617`, `CZH-618`, `CZH-619`, `CZH-620`
+- `review_gate`: none
+- `done`: `CZH-B1`, `CZH-B2`, `CZH-B3`, `CZH-B4`, `CZH-B5` (accepted as a narrow hygiene slice), `CZH-B6` (accepted), `CZH-B7` (accepted), `CZH-B8` (accepted), `CZH-B9` (accepted), `CZH-601`, `CZH-602`, `CZH-603`, `CZH-604`, `CZH-605`, `CZH-606`, `CZH-607`, `CZH-608`, `CZH-609`, `CZH-610`, `CZH-611`, `CZH-612`, `CZH-613`, `CZH-614`, `CZH-615`, `CZH-616`, `CZH-617`, `CZH-618`, `CZH-619`, `CZH-620`, `CZH-621`, `CZH-622`, `CZH-623`, `CZH-624`, `CZH-625`

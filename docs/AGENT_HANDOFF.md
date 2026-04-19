@@ -6,14 +6,14 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: **Core Zig freeze + hygiene**
 - Campaign: **Core Zig Stability/Hygiene** (`CZH`)
-- Active macro batch (`architect_review_pending` at `CZH-GATE-63`): `CZH-B9` in
+- Active macro batch (`in_progress`): `CZH-B10` in
   `docs/todo/core/implementation.md`
 - Accepted freeze checkpoint: `docs/todo/core/CZH_B6_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S2_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S3_CHECKPOINT.md`
-- Pending Architect review: `docs/todo/core/CZH_S4_CHECKPOINT.md` (`CZH-GATE-63`)
+- Accepted sprint checkpoint: `docs/todo/core/CZH_S4_CHECKPOINT.md`
 - Active sprint board: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_S4_TICKETS.md`
+- Active ticket source: `docs/todo/core/CZH_S5_TICKETS.md`
 - Android lane status: **paused by product direction** except critical
   regressions/blockers for current users.
 - Active queue authority: `docs/todo/core/implementation.md`
@@ -37,19 +37,21 @@ Current top priorities:
 5. scrutinize file/module doc strings and important function docs for alignment
    with actual ownership and behavior
 
-Current batch intent (`CZH-B9`, engineer work at `CZH-GATE-63`):
+Current batch intent (`CZH-B10`, engineer work in progress):
 
-- optional BYO-PTY seam is `src/terminal/byo_pty_host.zig` (not under `ffi/`)
-- VT core FFI vs BYO-PTY distinction matches directory ownership
-- behavior and exported C symbols preserved; stress ladder green at checkpoint
-- **Architect** accepts or requests changes via `CZH-GATE-63`
+- close remaining FFI/export doc-alignment drift after the accepted BYO-PTY
+  extraction
+- correct stale queue/audit rows that still contradict committed code state
+- add any still-missing concise ownership docs on important FFI/editor-FFI/export
+  entrypoints
+- keep behavior stable and the stress ladder green through `CZH-GATE-64`
 
 ## First Read Order
 
 1. `docs/todo/core/ENGINEER_ENTRYPOINT.md`
 2. `docs/todo/core/implementation.md`
 3. `docs/todo/core/JIRA_BOARD.md`
-4. `docs/todo/core/CZH_S4_TICKETS.md`
+4. `docs/todo/core/CZH_S5_TICKETS.md`
 5. `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md`
 6. `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md`
 7. `app_architecture/terminal/TERMINAL_SURFACE_CONTRACT.md`
@@ -61,7 +63,7 @@ Current batch intent (`CZH-B9`, engineer work at `CZH-GATE-63`):
 - Execute only the active macro batch marked in `docs/todo/core/implementation.md`
   (`in_progress` or `architect_review_pending` per batch state).
 - Engineer executes the current sprint tickets in `docs/todo/core/JIRA_BOARD.md`
-  and `docs/todo/core/CZH_S4_TICKETS.md` in listed order.
+  and `docs/todo/core/CZH_S5_TICKETS.md` in listed order.
 - Engineer batching target: **5–10 validated commits** per macro batch unless a
   real hard stop occurs.
 - Keep changes single-path and behavior-stable unless the batch explicitly
