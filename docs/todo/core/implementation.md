@@ -11,9 +11,9 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B20` (`architect_review_pending` at `CZH-GATE-74`).
+- Current active macro batch: `CZH-B21` (`in_progress`, super-gate `CZH-GATE-75`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_S14_TICKETS.md`
+- Active ticket source: `docs/todo/core/CZH_S16_TICKETS.md`
 
 ## Campaign Goals
 
@@ -2008,7 +2008,7 @@ Checkpoint packet: `docs/todo/core/CZH_S14_CHECKPOINT.md`.
   explicit and consistent in touched widget + FFI seam consumers; convergence
   tests are stronger and behavior-neutral.
 
-### `CZH-B20` Long-Loop Surface Attachment Contract Shaping (`architect_review_pending`)
+### `CZH-B20` Long-Loop Surface Attachment Contract Shaping (`accepted`)
 
 Queue line (exact):
 
@@ -2086,6 +2086,62 @@ Cross-link from `surface_contract.zig` / widget docs. Hygiene `CZH-699`:
 - **Android guard** — SKIP (lane paused)
 
 Checkpoint packet: `docs/todo/core/CZH_S15_CHECKPOINT.md`.
+
+#### Architect gate result
+
+- `Review chunk: CZH-B20`
+- `Verdict: accepted`
+- `Engineer commits reviewed:` `66f0c359`, `232c9da1`, `2383908c`, `a3b94513`,
+  `ed7dffa2`, `68001a0f`, `52f2fccf`, `8cbef312`, `140af167`, `19c774ac`
+- `Architect validation spot-check:` `zig build test-config PASS`,
+  `zig build test-editor PASS`, `zig build test-terminal-replay-all PASS`
+- `Acceptance judgment:` host shared-surface attachment seam is explicit,
+  behavior-neutral, and cleanly layered with generation/presentable ownership.
+
+### `CZH-B21` Long-Loop Surface Seams Convergence Pack (`in_progress`)
+
+Queue line (exact):
+
+- execute one longer engineering loop (10-ticket pack) to converge selected
+  widget/presentation call sites and tests onto explicit split ownership between
+  generation seam (`surface_contract`) and host attachment seam
+  (`surface_attachment_contract`), plus scoped hygiene/doc lock
+
+Acceptance:
+
+- selected call sites/tests use the correct seam by ownership:
+  generation pairing in `surface_contract`; host attachment pairing in
+  `surface_attachment_contract`
+- terminology drift (`presentable_ready` vs attachment-ready naming) is reduced
+  in touched paths without behavior changes
+- authority docs and test naming align to landed seam ownership
+- scoped probe/doc hygiene sweep is recorded for touched modules
+- full stress ladder remains green through `CZH-GATE-75`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S16_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+Execution source:
+
+- engineer executes `CZH-701`..`CZH-710` in order from
+  `docs/todo/core/CZH_S16_TICKETS.md`
+- one ticket per commit unless explicitly marked otherwise
+- stop only at `CZH-GATE-75` or a real hard blocker
+
+#### `CZH-701` seam ownership audit + cut plan (`CZH-S16`)
+
+- map selected generation-vs-attachment call sites and naming drift in:
+  `terminal_widget_presentation_runtime.zig`,
+  `terminal_widget_surface_state.zig`,
+  `terminal_widget_draw.zig`,
+  `surface_contract.zig`,
+  `surface_attachment_contract.zig`
+- classify each touched site as generation-owned or attachment-owned
+- record scoped hygiene targets for `CZH-709`
 
 ## Response Contract
 

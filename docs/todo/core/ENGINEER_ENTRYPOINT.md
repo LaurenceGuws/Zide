@@ -4,7 +4,7 @@ Read in this exact order:
 
 1. `docs/todo/core/implementation.md`
 2. `docs/todo/core/JIRA_BOARD.md`
-3. `docs/todo/core/CZH_S15_TICKETS.md`
+3. `docs/todo/core/CZH_S16_TICKETS.md`
 4. `docs/AGENT_HANDOFF.md`
 5. `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md`
 6. `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md`
@@ -20,8 +20,9 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B20` — **`architect_review_pending`** at **`CZH-GATE-74`** (sprint `CZH-S15`):
-  `surface_attachment_contract` landed. Packet: `docs/todo/core/CZH_S15_CHECKPOINT.md`.
+- `CZH-B21` — **`in_progress`** toward **`CZH-GATE-75`** (sprint `CZH-S16`):
+  generation-vs-attachment seam convergence long-loop
+  (`docs/todo/core/CZH_S16_TICKETS.md`).
 
 ## Hard Rules
 
@@ -37,8 +38,8 @@ Read in this exact order:
 
 - Target **8–14 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Sprint `CZH-S15` tickets `CZH-691`..`CZH-700` are complete at **`CZH-GATE-74`**
-  unless Architect reopens scope.
+- Sprint `CZH-S16` tickets `CZH-701`..`CZH-710` are active; run to
+  **`CZH-GATE-75`** unless blocked.
 - Keep one ticket per commit (historical sprint rule).
 
 ## Validation Ladder
