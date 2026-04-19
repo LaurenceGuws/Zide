@@ -145,7 +145,7 @@ fn copyGranularSnapshotDiffExport(
         return null;
     };
 
-    const should_fallback =
+    const granular_diff_ineligible =
         base_generation == 0 or
         base_generation != handle.last_acknowledged_generation or
         current.generation == base_generation or
@@ -157,7 +157,7 @@ fn copyGranularSnapshotDiffExport(
         current.viewport_shift_rows != 0 or
         current.dirty == .full;
 
-    if (should_fallback) {
+    if (granular_diff_ineligible) {
         out_state.* = .{
             .generation = current.generation,
             .base_generation = base_generation,
@@ -620,20 +620,20 @@ pub fn snapshotDiffAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const
     }
 
     var snapshot_state: SnapshotExportState = undefined;
-    const fallback = copyPublishedSnapshotExport(h, allocator, &snapshot_state) catch |err| {
-        log.logf(.warning, "snapshot diff fallback export failed err={s}", .{@errorName(err)});
+    const full_published_cells = copyPublishedSnapshotExport(h, allocator, &snapshot_state) catch |err| {
+        log.logf(.warning, "snapshot diff full published cells export failed err={s}", .{@errorName(err)});
         return shared.mapError(err);
     };
-    errdefer allocator.free(fallback.cells);
+    errdefer allocator.free(full_published_cells.cells);
     const empty_rows = allocator.alloc(shared.SnapshotDiffRow, 0) catch |err| {
         log.logf(.warning, "snapshot diff empty rows alloc failed err={s}", .{@errorName(err)});
-        allocator.free(fallback.cells);
+        allocator.free(full_published_cells.cells);
         return .out_of_memory;
     };
     errdefer allocator.free(empty_rows);
     const empty_spans = allocator.alloc(shared.SnapshotDiffSpan, 0) catch |err| {
         log.logf(.warning, "snapshot diff empty spans alloc failed err={s}", .{@errorName(err)});
-        allocator.free(fallback.cells);
+        allocator.free(full_published_cells.cells);
         allocator.free(empty_rows);
         return .out_of_memory;
     };
@@ -643,7 +643,7 @@ pub fn snapshotDiffAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const
         .allocator = allocator,
         .rows = empty_rows,
         .spans = empty_spans,
-        .cells = fallback.cells,
+        .cells = full_published_cells.cells,
     };
     out_diff.* = .{
         .abi_version = shared.snapshot_diff_abi_version,
@@ -675,8 +675,8 @@ pub fn snapshotDiffAcquire(handle: ?*shared.ZideTerminalHandle, request: ?*const
         .row_count = 0,
         .spans_ptr = null,
         .span_count = 0,
-        .cells_ptr = if (fallback.cells.len == 0) null else fallback.cells.ptr,
-        .cell_count = fallback.cells.len,
+        .cells_ptr = if (full_published_cells.cells.len == 0) null else full_published_cells.cells.ptr,
+        .cell_count = full_published_cells.cells.len,
         ._ctx = owner,
     };
     return .ok;
