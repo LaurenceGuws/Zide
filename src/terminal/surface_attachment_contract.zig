@@ -9,10 +9,10 @@
 //! **Generation** publication/clear state is exclusively `surface_contract`. The
 //! pipeline leg alone is **not** “attachment-ready” without the host-target leg.
 //!
-//! **`CZH-S16` / `CZH-S17`:** `presentationUpdateDelta.terminal_presentable_pipeline_ready`
-//! is the pipeline leg (`terminalPresentablePipelineReady()` after `CZH-725`), not the
-//! full `hostSharedSurfaceAttachmentReady` conjunction. Present-plan reuse uses the
-//! pipeline leg alone by design; full readiness uses `notePresentableAvailability` /
+//! **`CZH-S16` / `CZH-S17` / `CZH-S18`:** `presentationUpdateDelta.terminal_presentable_pipeline_ready`
+//! is the pipeline leg (`terminalPresentablePipelineReady()`), not the full
+//! `hostSharedSurfaceAttachmentReady` conjunction. Present-plan reuse uses the pipeline
+//! leg alone by design; full readiness uses `notePresentableAvailability` /
 //! `readSharedSurfaceAttachmentReady`.
 
 const std = @import("std");
