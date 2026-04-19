@@ -165,52 +165,6 @@ fn advancePresentationCache(
     );
 }
 
-pub fn runFastPresentIfAvailable(
-    surface_state: anytype,
-    renderer: anytype,
-    plan: TerminalPresentPlan,
-    terminal_view: view_state.TerminalViewModel,
-    view_cells_len: usize,
-    draw_cursor: bool,
-    cursor: CursorPos,
-    cursor_style: terminal_types.CursorStyle,
-    hover_link_id: u32,
-    composing_active: bool,
-    composing_hash: u64,
-    bg_color: Color,
-    x: f32,
-    y: f32,
-    width: f32,
-    height: f32,
-    view_geometry: TerminalViewGeometry,
-    note_present_ctx: anytype,
-    note_present: anytype,
-) TerminalPresentResult {
-    const outcome_state = tryFastPresentExisting(
-        surface_state,
-        renderer,
-        plan,
-        terminal_view,
-        view_cells_len,
-        draw_cursor,
-        cursor,
-        cursor_style,
-        hover_link_id,
-        composing_active,
-        composing_hash,
-        bg_color,
-        x,
-        y,
-        width,
-        height,
-        view_geometry,
-        note_present_ctx,
-        note_present,
-    );
-    if (!outcome_state.reused) return .{};
-    return presentResultFromReuseOutcomeState(outcome_state, .{});
-}
-
 pub const SurfacePresentResult = struct {
     early_return: bool = false,
     presentation_update_ms: f64 = 0.0,
@@ -1452,12 +1406,8 @@ pub fn logUnavailable(
     });
 }
 
-/// **Canonical compute route for reuse path:** computes conjunction via
-/// `notePresentableAvailability`; populates `ReusePresentOutcomeState` with conjunction result
-/// for folding into `TerminalPresentResult`.
-/// Reuse present path: attempt fast present of existing cached draw. **Canonical conjunction derivation
-/// ** compute host-target leg from renderer, pass to `notePresentableAvailability`,
-/// and store outcome conjunction on result state.
+/// **Reuse orchestration:** delegates to terminal eligibility check, executes if eligible.
+/// Terminal layer owns decision logic; widget owns execution (backdrop, presentDraw, cache advance).
 pub fn tryFastPresentExisting(
     surface_state: anytype,
     renderer: anytype,
@@ -1479,19 +1429,18 @@ pub fn tryFastPresentExisting(
     note_present_ctx: anytype,
     note_present: anytype,
 ) ReusePresentOutcomeState {
-    if (plan.present_intent != .reuse) return .{};
     const attachment_state = computeHostSurfaceAttachmentState(renderer, surface_state);
-    const host_surface_target_available = attachment_state.host_surface_target_available;
-    const shared_surface_attachment_ready = attachment_state.shared_surface_attachment_ready;
-    if (!(view_cells_len > 0 and shared_surface_attachment_ready and
-        (terminal_view.sync_updates_active or
-            renderer_presentable_host.terminalSupportsReuseWithoutSyncUpdates(renderer)))) {
-        return .{
-            .host_surface_target_available = host_surface_target_available,
-            .shared_surface_attachment_ready = shared_surface_attachment_ready,
-        };
-    }
-
+    const eligible = terminal_presentation_runtime.checkReuseEligibility(
+        plan,
+        view_cells_len,
+        attachment_state.shared_surface_attachment_ready,
+        terminal_view.sync_updates_active,
+        renderer_presentable_host.terminalSupportsReuseWithoutSyncUpdates(renderer),
+    );
+    if (!eligible) return .{
+        .host_surface_target_available = attachment_state.host_surface_target_available,
+        .shared_surface_attachment_ready = attachment_state.shared_surface_attachment_ready,
+    };
     renderer_presentable_host.drawTerminalPresentableBackdrop(renderer, x, y, width, height, bg_color.toRgba());
     terminal_presentation_runtime.presentDraw(
         renderer,
@@ -1516,6 +1465,52 @@ pub fn tryFastPresentExisting(
         composing_hash,
     );
     return reuseSuccessOutcome();
+}
+
+pub fn runFastPresentIfAvailable(
+    surface_state: anytype,
+    renderer: anytype,
+    plan: TerminalPresentPlan,
+    terminal_view: view_state.TerminalViewModel,
+    view_cells_len: usize,
+    draw_cursor: bool,
+    cursor: CursorPos,
+    cursor_style: terminal_types.CursorStyle,
+    hover_link_id: u32,
+    composing_active: bool,
+    composing_hash: u64,
+    bg_color: Color,
+    x: f32,
+    y: f32,
+    width: f32,
+    height: f32,
+    view_geometry: TerminalViewGeometry,
+    note_present_ctx: anytype,
+    note_present: anytype,
+) TerminalPresentResult {
+    const outcome_state = tryFastPresentExisting(
+        surface_state,
+        renderer,
+        plan,
+        terminal_view,
+        view_cells_len,
+        draw_cursor,
+        cursor,
+        cursor_style,
+        hover_link_id,
+        composing_active,
+        composing_hash,
+        bg_color,
+        x,
+        y,
+        width,
+        height,
+        view_geometry,
+        note_present_ctx,
+        note_present,
+    );
+    if (!outcome_state.reused) return .{};
+    return presentResultFromReuseOutcomeState(outcome_state, .{});
 }
 
 pub fn directPresent(

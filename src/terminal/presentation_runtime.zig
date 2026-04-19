@@ -489,6 +489,20 @@ pub fn presentDraw(
     );
 }
 
+/// **Reuse eligibility decision:** terminal-owned check for whether to attempt reuse path.
+/// Takes pre-computed attachment state (from widget-layer `computeHostSurfaceAttachmentState`).
+pub fn checkReuseEligibility(
+    plan: anytype,
+    view_cells_len: usize,
+    shared_surface_attachment_ready: bool,
+    sync_updates_active: bool,
+    supports_reuse_without_sync: bool,
+) bool {
+    if (plan.present_intent != .reuse) return false;
+    return view_cells_len > 0 and shared_surface_attachment_ready and
+        (sync_updates_active or supports_reuse_without_sync);
+}
+
 /// **Refresh orchestration flow:** terminal-owned sequence for refresh path.
 /// Orchestrates: run refresh cycle → classify outcome → run presentation → fold result.
 /// Widget provides `runCycle` and `runPresentation` hooks for integration-only operations.
