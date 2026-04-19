@@ -76,12 +76,15 @@ composite pair helpers (`publicationClearPairMismatchesFromLastSurfaceRender`,
 inside `surface_contract`, not alternate call-site shapes (`CZH-S12`, `CZH-S14`).
 
 **Host attachment seam:** `src/terminal/surface_attachment_contract.zig` names
-pipeline-ready ∧ host-target-available for the shared drawable attachment.
-`TerminalWidgetSurfaceState.notePresentableAvailability` routes through that seam;
-present-plan reuse eligibility still uses `terminalPresentablePipelineReady()` (pipeline leg only)
-by design (`CZH-S15`). `presentationUpdateDelta.terminal_presentable_pipeline_ready` is the same
-pipeline leg (`CZH-S16`); full readiness uses `readSharedSurfaceAttachmentReady` /
-`hostSharedSurfaceAttachmentReady`.
+the logical predicate pipeline-ready ∧ host-target-available for the shared drawable attachment.
+**Canonical compute route:** `TerminalPresentationBridge` (owned by terminal layer) computes
+and stores conjunction via `notePresentableAvailability` — this is the single compute path.
+**Canonical read route:** same bridge provides `readSharedSurfaceAttachmentReady` for
+read-only access to conjunction. Widget layer (`TerminalWidgetSurfaceState`) delegates to bridge
+and does not re-derive conjunction. Present-plan reuse eligibility uses
+`terminalPresentablePipelineReady()` (pipeline leg only) by design (`CZH-S15`).
+`presentationUpdateDelta.terminal_presentable_pipeline_ready` is the same pipeline leg (`CZH-S16`);
+full readiness comes from bridge conjunction paths only.
 
 ## Operator observability (structured logs)
 
@@ -102,17 +105,19 @@ for that tick (not from `readSharedSurfaceAttachmentReady()` at the log callsite
 
 ## Widget presentation storage (dominant field names, `CZH-B25`)
 
-`PresentationState` (`src/ui/widgets/terminal_widget_presentation_state.zig`) stores the two
-attachment legs as **`terminal_presentable_pipeline_ready`** (pipeline only) and
-**`host_surface_target_available`** (host drawable target). That matches
-`presentationUpdateDelta.terminal_presentable_pipeline_ready` for the pipeline leg and the
-`SharedSurfaceAttachmentPipelinePair` field names; full attachment remains the conjunction via
-`readSharedSurfaceAttachmentReady` / `hostSharedSurfaceAttachmentReady`.
+**Storage ownership:** `PresentationState` (`src/ui/widgets/terminal_widget_presentation_state.zig`)
+stores the two attachment legs as **`terminal_presentable_pipeline_ready`** (pipeline only) and
+**`host_surface_target_available`** (host drawable target). These names match the
+`SharedSurfaceAttachmentPipelinePair` contract; full attachment is never computed or stored locally.
+
+**Compute/read delegation:** Widget surface state delegates conjunction computation and reading to
+`TerminalPresentationBridge` (terminal-layer seam). Widget stores legs only; bridge owns canonical
+`notePresentableAvailability` (compute) and `readSharedSurfaceAttachmentReady` (read) routes.
 
 **Transient present gate (`PresentationPresentState`, `CZH-S22`):** the widget presentation runtime
 holds per-tick **`host_surface_target_available`** and **`shared_surface_attachment_ready`**
-(conjunction from `notePresentableAvailability`) before draw/present; operator `logUnavailable`
-reports the same conjunction field — not a re-derivation from unrelated state.
+(conjunction from bridge's `notePresentableAvailability`) before draw/present; operator
+`logUnavailable` reports the same conjunction field — not a re-derivation from unrelated state.
 
 ## Present aggregation (`TerminalPresentResult`, `CZH-B26`)
 
