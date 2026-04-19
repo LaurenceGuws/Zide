@@ -1080,7 +1080,7 @@ fn buildTerminalPresentPlan(
     const overlay_changed = self.surface.overlayPresentationChanged(hover_link_id, composing_active, composing_hash);
     const viewport_shifted = terminal_view.partial_capture.active_viewport_shift_rows != 0;
     const presentable_ready = self.surface.presentableReady();
-    const generation_matches_presented = surface_contract.publicationClearPairMatchesLastSurfaceRender(
+    const publication_clear_pair_matches_last_surface_render = surface_contract.publicationClearPairMatchesLastSurfaceRender(
         terminal_view.generation,
         terminal_view.clear_generation,
         self.surface.lastRenderGeneration(),
@@ -1101,7 +1101,7 @@ fn buildTerminalPresentPlan(
     const reuse_requested = reuse_allowed and
         !viewport_shifted and
         (terminal_view.sync_updates_active or
-            (!invalidation_blocks_reuse and generation_matches_presented));
+            (!invalidation_blocks_reuse and publication_clear_pair_matches_last_surface_render));
     return .{
         .update_intent = if (terminal_view.rows == 0 or terminal_view.cols == 0 or reuse_requested)
             .none
