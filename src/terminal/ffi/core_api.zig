@@ -1096,7 +1096,7 @@ test "CZH-S14: core_api redraw_state seam — ffiRedrawStateFill matches pair-de
     );
 }
 
-test "CZH-S13: core_api needsRedraw byte shape matches ffiNeedsRedrawU8" {
+test "CZH-S14: core_api needsRedraw export — ffiNeedsRedrawU8 matches needsRedrawFromPair" {
     try std.testing.expectEqual(
         surface_contract.ffiNeedsRedrawU8(2, 3),
         @as(u8, @intFromBool(surface_contract.needsRedrawFromPair(2, 3))),
