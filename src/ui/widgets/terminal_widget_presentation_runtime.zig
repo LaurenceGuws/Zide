@@ -184,12 +184,14 @@ pub const RefreshOutcomeState = struct {
     followup_reason: TerminalPresentFollowupReason = .none,
 };
 
-/// **Direct present outcome snapshot (`CZH-S27`):** result when drawing directly bypasses reuse path.
+/// **Direct present outcome snapshot (`CZH-791`, `CZH-S27`):** result when drawing directly bypasses reuse path.
 /// Host-target leg hardcoded to `true` (drawing implies renderer is available).
+/// Conjunction hardcoded to `false` (direct path does not verify full attachment before returning).
 pub const DirectPresentOutcomeState = struct {
     outcome: TerminalPresentOutcome = .presented,
     cache_state_advanced: bool = true,
     host_surface_target_available: bool = true,
+    shared_surface_attachment_ready: bool = false,
 };
 
 /// **Outcome snapshot from reuse path (`CZH-B26`, CZH-791):** carries result of the reuse attempt.
@@ -1455,7 +1457,7 @@ pub fn runPresentation(
                 outcome_state.cache_state_advanced,
                 outcome_state.host_surface_target_available,
                 direct.timing,
-                false,
+                outcome_state.shared_surface_attachment_ready,
             );
         }
 
