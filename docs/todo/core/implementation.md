@@ -11,7 +11,8 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B6` (`in_progress`).
+- Current active macro batch: `CZH-B6` (`architect_review_pending` at
+  `CZH-GATE-60`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Active ticket source: `docs/todo/core/CZH_B6_TICKETS.md`
 - Queued next implementation sprint: `docs/todo/core/CZH_S2_TICKETS.md` (`CZH-S2`,
@@ -601,7 +602,7 @@ Rationale: consistent `lifecycle_*` vocabulary for JSONL `message` values, drop 
   but it does **not** answer the larger ownership problem. Wider hygiene now
   continues only inside the explicit layer split defined by `CZH-B6`.
 
-### `CZH-B6` Layer Freeze: VT Core FFI / Optional PTY Host / Editor FFI / Terminal Surface (`in_progress`)
+### `CZH-B6` Layer Freeze: VT Core FFI / Optional PTY Host / Editor FFI / Terminal Surface (`architect_review_pending` — `CZH-GATE-60`)
 
 Queue line (exact):
 

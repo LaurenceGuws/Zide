@@ -6,8 +6,9 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: **Core Zig freeze + hygiene**
 - Campaign: **Core Zig Stability/Hygiene** (`CZH`)
-- Active macro batch (`in_progress`): `CZH-B6` in
+- Active macro batch (`architect_review_pending` at `CZH-GATE-60`): `CZH-B6` in
   `docs/todo/core/implementation.md`
+- Engineer checkpoint packet: `docs/todo/core/CZH_B6_CHECKPOINT.md`
 - Active sprint board: `docs/todo/core/JIRA_BOARD.md`
 - Active ticket source: `docs/todo/core/CZH_B6_TICKETS.md`
 - Android lane status: **paused by product direction** except critical
