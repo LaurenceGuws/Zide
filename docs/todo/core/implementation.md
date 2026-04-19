@@ -270,7 +270,7 @@ Internal milestones (`CZH3-M1..M6`, execute sequentially in one batch):
 **Shared terminal FFI / publication (canonical for native + tests):**
 
 - `src/terminal/ffi/shared.zig` — extern ABI structs and `Handle` bookkeeping
-- `src/terminal/ffi/bridge.zig`, `core_api.zig`, `host_api.zig`, `c_api.zig` — host API surface
+- `src/terminal/ffi/bridge.zig`, `core_api.zig`, `byo_pty_host.zig`, `c_api.zig` — host API surface
 - `src/terminal_ffi_exports.zig` — exported C symbols
 
 **Android platform glue (stays local — JNI / Activity / GLES wiring):**
@@ -619,9 +619,8 @@ Objective:
    runtime, or transport ownership.
 2. **optional bring-your-own-PTY host seam** — session / runtime / input /
    transport path when the host drives a local PTY-backed or equivalent loop.
-   **Target:** distinct from VT core FFI even though `host_api.zig` still lives
-   next to `core_api.zig` under `src/terminal/ffi/` (packaging, not the
-   contract).
+   **Target:** distinct from VT core FFI; BYO seam is now `byo_pty_host.zig`
+   alongside `core_api.zig` under `src/terminal/ffi/` (explicit filename).
 3. editor backend FFI
 4. terminal surface contract — host initializes/passes the **shared GPU
    texture/resource attachment** the backend needs; Zide owns dirty tracking,
@@ -677,11 +676,11 @@ Architect note:
 - **Authority:** `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md` →
   **Terminal FFI directory ownership (`CZH-B6` current-state map)**.
 - **Scope:** `src/terminal/ffi/**` and `src/terminal_ffi_exports.zig`, plus the
-  closely coupled session/runtime modules called from `host_api` / `core_api`.
+  closely coupled session/runtime modules called from `byo_pty_host` / `core_api`.
 - **Outcome:** file-by-file classification into **VT core FFI** (publication /
   query / events / metadata), **optional BYO-PTY host seam** (session/runtime /
-  transport — `host_api` + session modules), bridge/facade glue, and explicit
-  packaging notes (`host_api` under `ffi/` is not the target contract merger).
+  transport — `byo_pty_host` + session modules), bridge/facade glue, and explicit
+  packaging (`byo_pty_host.zig` names the seam).
 
 #### `CZH-603` editor backend FFI authority (recorded)
 
@@ -705,8 +704,8 @@ Architect note:
 
 | Layer | Canonical paths | Role |
 | --- | --- | --- |
-| VT core FFI | `src/terminal/ffi/shared.zig` (types/helpers), `core_api.zig`, `renderer_metadata.zig`, `bridge.zig`, `c_api.zig`, `src/terminal_ffi_exports.zig` | Publication / query / redraw / events / metadata + shared ABI; **not** `host_api` |
-| Optional BYO-PTY host seam | `src/terminal/ffi/host_api.zig`; `src/terminal/core/session/runtime.zig`, `input.zig`, `lifecycle.zig` | Session/runtime/input/transport; **physically under `ffi/` today — packaging smell vs target split** |
+| VT core FFI | `src/terminal/ffi/shared.zig` (types/helpers), `core_api.zig`, `renderer_metadata.zig`, `bridge.zig`, `c_api.zig`, `src/terminal_ffi_exports.zig` | Publication / query / redraw / events / metadata + shared ABI; **not** `byo_pty_host` |
+| Optional BYO-PTY host seam | `src/terminal/ffi/byo_pty_host.zig`; `src/terminal/core/session/runtime.zig`, `input.zig`, `lifecycle.zig` | Session/runtime/input/transport; **explicit module name** under `ffi/` |
 | Editor backend FFI | `src/editor/ffi/bridge.zig`, `src/editor/ffi/c_api.zig` | Foreign editor hosts; C ABI |
 | Terminal surface contract | `app_architecture/terminal/TERMINAL_SURFACE_CONTRACT.md`; `src/ui/widgets/terminal_widget*.zig` (presentation + publication coupling); `src/platform/android_shell_session.zig` (peer host example); GL/Metal backends under `src/ui/renderer/*_backend.zig` | Drawable surface + generations; host proves binding; Zide proves redraw truth |
 | Bridge / glue | `bridge.zig`, `c_api.zig`, `terminal_ffi_exports.zig`; `src/editor/ffi/c_api.zig` | Thin forwarders and symbol roots |
@@ -768,12 +767,12 @@ Scope: same FFI/export inventory as `CZH-606` / `CZH-607`.
 | File | Module doc present? | Note |
 | --- | --- | --- |
 | `terminal/ffi/renderer_metadata.zig` | **Yes** | Describes single fill path for hosts. |
-| `terminal/ffi/shared.zig` | **No** | Large ABI surface — **fix queue:** add `//!` describing opaque handle + shared helpers. |
-| `terminal/ffi/core_api.zig` | **No** | **Fix queue:** document as VT core publication/export API for handles. |
-| `terminal/ffi/host_api.zig` | **No** | **Fix queue:** document session/runtime FFI entrypoints. |
-| `terminal/ffi/bridge.zig` | **No** | **Fix queue:** one-line barrel doc. |
-| `terminal/ffi/c_api.zig` | **No** | **Fix queue:** C typedef + export forwarder layer. |
-| `terminal_ffi_exports.zig` | **No** | **Fix queue:** export root only. |
+| `terminal/ffi/shared.zig` | **Yes** | `//!` (`CZH-612`). |
+| `terminal/ffi/core_api.zig` | **Yes** | `//!` + key `///` (`CZH-612`/`CZH-613`). |
+| `terminal/ffi/byo_pty_host.zig` | **Yes** | `//!` + `///`; module was `host_api.zig` before `CZH-617`. |
+| `terminal/ffi/bridge.zig` | **Yes** | `//!` (`CZH-612`); ownership text (`CZH-618`). |
+| `terminal/ffi/c_api.zig` | **Yes** | `//!` (`CZH-612`); C edge (`CZH-618`). |
+| `terminal_ffi_exports.zig` | **Yes** | `//!` (`CZH-612`). |
 | `editor/ffi/bridge.zig` | **No** | **Fix queue:** editor FFI Zig facade. |
 | `editor/ffi/c_api.zig` | **No** | **Fix queue:** C ABI surface. |
 
@@ -782,13 +781,13 @@ Scope: same FFI/export inventory as `CZH-606` / `CZH-607`.
 | Symbol | Issue | Recommendation |
 | --- | --- | --- |
 | `core_api.destroy` | No doc; embeds test sleep (`destroy_debug_pause_ms_for_tests`) | Document lifecycle + point to probe queue `CZH-606` |
-| `host_api.start` / `poll` | Public; no doc string | Add docs tying to `TerminalRuntimeShell` / BYO-PTY seam |
+| `byo_pty_host.start` / `poll` | Documented (`CZH-613`) | BYO-PTY seam |
 | `bridge.create` (editor) | No doc | Document handle ownership vs native `Editor` |
 
 **Doc-alignment queue (for next implementation sprint)**
 
 1. Add `//!` headers to every file in the table with “No” above.
-2. Add brief `///` on exported `pub fn` entrypoints in `host_api` and `core_api`
+2. Add brief `///` on exported `pub fn` entrypoints in `byo_pty_host` and `core_api`
    that hosts call (at minimum: create/destroy/start/poll/snapshot/diff/redraw).
 
 #### `CZH-609` first implementation sprint shaped (recorded)
@@ -904,12 +903,12 @@ Execution source:
 
 #### `CZH-616` BYO-PTY packaging audit (touchpoint map)
 
-**Zig import graph (pre-extraction)**
+**Zig import graph (post-`CZH-617`)**
 
-- **`bridge.zig`** — the only `@import("host_api.zig")` under
-  `src/terminal/ffi/**`; all session/transport forwards go through it.
-- **`core_api.zig`**, **`shared.zig`** — text references to `host_api.zig` in
-  module/`///` docs only (no imports).
+- **`bridge.zig`** — `@import("byo_pty_host.zig")` for the BYO-PTY seam; session
+  / transport forwards use identifier `byo_pty_host`.
+- **`core_api.zig`**, **`shared.zig`** — doc cross-references to
+  `byo_pty_host.zig` only (no imports).
 
 **Exported C surface**
 
@@ -922,13 +921,11 @@ Execution source:
 - `src/terminal/core/session/runtime.zig`, `input.zig`, etc. — still the engine
   owners; the BYO seam module calls into them.
 
-**Atomic move planned for `CZH-617`**
+**Packaging cut (`CZH-617` — landed)**
 
-- Rename `src/terminal/ffi/host_api.zig` →
-  `src/terminal/ffi/byo_pty_host.zig` (explicit BYO-PTY host seam).
-- Update **`bridge.zig`** import and call prefix to `byo_pty_host`.
-- Refresh doc cross-references in **`core_api.zig`**, **`shared.zig`**, then
-  authority docs in **`CZH-619`**.
+- `src/terminal/ffi/byo_pty_host.zig` (renamed from `host_api.zig`).
+- **`bridge.zig`** imports `byo_pty_host.zig`; call sites use `byo_pty_host`.
+- Authority docs refreshed in **`CZH-619`**.
 
 ## Response Contract
 

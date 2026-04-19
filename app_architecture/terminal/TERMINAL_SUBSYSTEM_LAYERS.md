@@ -66,7 +66,7 @@ flowchart LR
 
     subgraph HostRuntime
         Shell["TerminalRuntimeShell / host wrapper"]
-        Bridge["FFI: core_api (VT truth) + host_api (session/transport)"]
+        Bridge["FFI: core_api (VT truth) + byo_pty_host (session/transport)"]
     end
 
     subgraph InputBoundary
@@ -352,21 +352,21 @@ authority wording just because some modules live in the same directory today.
 | `src/terminal/ffi/shared.zig` | VT core FFI (types + shared helpers) | ABI structs, version constants, opaque `ZideTerminalHandle`, status mapping — shared machinery **used by** both VT core exports and BYO-PTY entrypoints; the types are not themselves “the BYO seam.” |
 | `src/terminal/ffi/renderer_metadata.zig` | VT core FFI | `RendererMetadata` fill + glyph classification; the only supported fill path for FFI metadata. |
 | `src/terminal/ffi/core_api.zig` | VT core FFI | Snapshots/diffs, metadata/activity/redraw queries, event/publication-facing queries, present/generation bookkeeping, feed hooks that attach to engine truth — **publication and query surface** for hosts. |
-| `src/terminal/ffi/host_api.zig` | Optional BYO-PTY host seam | `start` / `poll` / `resize`, cell-size updates, encoded input (`sendBytes`, `sendText`, keys, mouse) — **session/runtime/transport** path. **Placement:** still physically under `src/terminal/ffi/`; that is **current packaging**, not the statement that this layer *is* VT core FFI. |
-| `src/terminal/ffi/bridge.zig` | bridge/facade glue | Zig-facing barrel that forwards to `core_api` (VT core) and `host_api` (BYO-PTY); keeps one import surface for hosts without collapsing the two contracts. |
+| `src/terminal/ffi/byo_pty_host.zig` | Optional BYO-PTY host seam | `start` / `poll` / `resize`, cell-size updates, encoded input (`sendBytes`, `sendText`, keys, mouse) — **session/runtime/transport** path. **Filename** matches the seam (replaces the old `host_api.zig` packaging). |
+| `src/terminal/ffi/bridge.zig` | bridge/facade glue | Zig-facing barrel that forwards to `core_api` (VT core) and `byo_pty_host` (BYO-PTY); keeps one import surface for hosts without collapsing the two contracts. |
 | `src/terminal/ffi/c_api.zig` | bridge/facade glue | C typedef aliases and thin wrappers for exported symbols; no extra semantics. |
 | `src/terminal_ffi_exports.zig` | bridge/facade glue | Root that re-exports `zide_terminal_*` C symbols; keeps export names out of individual modules. |
 
 **Closely coupled owners (not under `ffi/`, but required to interpret the map):**
 
-- `src/terminal/core/session/runtime.zig` — session loop invoked from `host_api` (`start`, `poll`, `resize`, …).
-- `src/terminal/core/session/input.zig` — host-fed byte/text/key/mouse path from `host_api`.
+- `src/terminal/core/session/runtime.zig` — session loop invoked from `byo_pty_host` (`start`, `poll`, `resize`, …).
+- `src/terminal/core/session/input.zig` — host-fed byte/text/key/mouse path from `byo_pty_host`.
 - `src/terminal/core/terminal_runtime.zig` — wiring between shell and core for the shared handle.
 
 **Smell / misalignment (documented; no behavior change in the freeze sprint):**
 
-- `core_api.zig` concentrates many publication and lifecycle concerns in one module; a later cut may narrow “pure VT core query” vs handle helpers — **without** folding `host_api` into that label.
-- **`host_api.zig` next to `core_api.zig` under `ffi/`** is easy to misread as one “terminal FFI blob.” It is **not** the target contract: BYO-PTY session/transport stays a **separate seam** from VT core publication/query truth, even while both remain in the same directory until an extraction moves optional transport packaging.
+- `core_api.zig` concentrates many publication and lifecycle concerns in one module; a later cut may narrow “pure VT core query” vs handle helpers — **without** folding `byo_pty_host` into that label.
+- **`byo_pty_host.zig` and `core_api.zig` under `ffi/`** are distinct modules: BYO-PTY session/transport vs VT core publication/query — the former is no longer named like generic “host API.”
 
 ## FFI renderer metadata and visible viewport (shared core)
 
