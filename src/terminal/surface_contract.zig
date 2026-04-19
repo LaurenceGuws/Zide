@@ -4,10 +4,10 @@
 //! the frozen contract center and centralizes how that bundle is filled — one
 //! truth source for `needs_redraw` derivation.
 //!
-//! Widget surface state: `TerminalWidgetSurfaceState.presentationUpdateDelta` uses
-//! `publicationGenerationDiffersFromLastSurfaceRender` and
-//! `clearGenerationDiffersFromLastSurfaceRenderClear` for its publication and
-//! clear-generation mismatch limbs (`CZH-S11`).
+//! Widget surface state: `TerminalWidgetSurfaceState.presentationUpdateDelta` and
+//! present-plan paths use publication/clear vs last-surface predicates (`CZH-S11` /
+//! `CZH-S12`). Composite pair helpers: `publicationClearPairMismatchesFromLastSurfaceRender`,
+//! `publicationClearPairMatchesLastSurfaceRender`.
 const std = @import("std");
 const shared = @import("ffi/shared.zig");
 
@@ -62,6 +62,51 @@ pub fn clearGenerationDiffersFromLastSurfaceRenderClear(
     last_surface_render_clear_generation: u64,
 ) bool {
     return needsRedrawFromPair(publication_clear_generation, last_surface_render_clear_generation);
+}
+
+/// Pairwise mismatch flags for publication generation and clear generation vs the
+/// last generations recorded for the terminal surface draw (`CZH-S12`).
+pub const PublicationClearPairMismatches = struct {
+    publication_mismatch: bool,
+    clear_mismatch: bool,
+};
+
+/// Widget draw: publication and clear generation together vs last surface-render
+/// pair. Decomposes to `publicationGenerationDiffersFromLastSurfaceRender` and
+/// `clearGenerationDiffersFromLastSurfaceRenderClear` with no extra policy.
+pub fn publicationClearPairMismatchesFromLastSurfaceRender(
+    publication_generation: u64,
+    clear_generation: u64,
+    last_surface_render_generation: u64,
+    last_surface_render_clear_generation: u64,
+) PublicationClearPairMismatches {
+    return .{
+        .publication_mismatch = publicationGenerationDiffersFromLastSurfaceRender(
+            publication_generation,
+            last_surface_render_generation,
+        ),
+        .clear_mismatch = clearGenerationDiffersFromLastSurfaceRenderClear(
+            clear_generation,
+            last_surface_render_clear_generation,
+        ),
+    };
+}
+
+/// Present-plan reuse: publication and clear generations both match what the
+/// surface last recorded for draw (conjunction of the two non-mismatch cases).
+pub fn publicationClearPairMatchesLastSurfaceRender(
+    publication_generation: u64,
+    clear_generation: u64,
+    last_surface_render_generation: u64,
+    last_surface_render_clear_generation: u64,
+) bool {
+    const m = publicationClearPairMismatchesFromLastSurfaceRender(
+        publication_generation,
+        clear_generation,
+        last_surface_render_generation,
+        last_surface_render_clear_generation,
+    );
+    return !m.publication_mismatch and !m.clear_mismatch;
 }
 
 /// Fills the VT FFI `RedrawState` from publication truth + last acknowledged generation.
