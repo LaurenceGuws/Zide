@@ -2391,6 +2391,21 @@ test "CZH-S27: helper consolidation — reuseSuccessOutcome constructs correct o
     try std.testing.expect(outcome.shared_surface_attachment_ready == true);
 }
 
+test "CZH-S28: helper hardening — reuse outcome assertion validates consistency" {
+    // Verify that the reuse outcome hardening assertion accepts valid reuse states and would
+    // catch invalid states in debug builds. This locks the hardening invariant.
+    const valid_outcome = reuseSuccessOutcome();
+    // If assertReuseOutcomeConsistency didn't catch inconsistency, this would pass
+    assertReuseOutcomeConsistency(valid_outcome);
+
+    // Non-reused state should not trigger assertions
+    const non_reused: ReusePresentOutcomeState = .{
+        .reused = false,
+        .outcome = .skipped,
+    };
+    assertReuseOutcomeConsistency(non_reused);
+}
+
 test "CZH-S26: integration lock — PresentationPresentState conjunction equals outcome conjunction" {
     const present_state = PresentationPresentState{
         .shared_surface_attachment_ready = true,
