@@ -1,4 +1,5 @@
 const std = @import("std");
+const surface_attachment_contract = @import("../../terminal/surface_attachment_contract.zig");
 const app_shell = @import("../../app_shell.zig");
 const publication_capture = @import("../../terminal/core/publication/publication_capture.zig");
 const terminal_publication = @import("../../terminal/core/publication/terminal_publication.zig");
@@ -514,4 +515,18 @@ test "useViewportShiftForPartialPlan ignores stale shift metadata on clean frame
     try std.testing.expect(!useViewportShiftForPartialPlan(.none, 1));
     try std.testing.expect(!useViewportShiftForPartialPlan(.full, 1));
     try std.testing.expect(useViewportShiftForPartialPlan(.partial, 1));
+}
+
+test "CZH-S15: presentation update plan full redraw when pipeline leg blocks partial" {
+    const plan = choosePresentationUpdatePlan(
+        .partial,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+    );
+    try std.testing.expect(plan.needs_full);
+    try std.testing.expect(!surface_attachment_contract.hostSharedSurfaceAttachmentReady(true, false));
 }
