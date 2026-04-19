@@ -1412,6 +1412,10 @@ change.
 `surface_contract.zig`; **`presentAck`** early-return uses it; **`CZH-644`** adds
 unit tests for predicate edges + doc pointer.
 
+**Landed (`CZH-642`..`CZH-644`):** `presentAckGenerationAdmissible` in
+`surface_contract.zig`; `core_api.presentAck` uses it; tests + authority seam
+paragraph updated.
+
 ## Response Contract
 
 Every batch update must include:

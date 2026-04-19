@@ -62,3 +62,10 @@ test "fillRedrawState sets logical triple" {
     const logical = LogicalSurfaceFrame{ .published_generation = 2, .acknowledged_generation = 1 };
     try std.testing.expect(logical.needsRedraw());
 }
+
+test "presentAckGenerationAdmissible matches monotonic window" {
+    try std.testing.expect(presentAckGenerationAdmissible(5, 10, 3));
+    try std.testing.expect(presentAckGenerationAdmissible(10, 10, 10));
+    try std.testing.expect(!presentAckGenerationAdmissible(11, 10, 3));
+    try std.testing.expect(!presentAckGenerationAdmissible(2, 10, 5));
+}

@@ -59,7 +59,9 @@ hold.
 **Zig seam (logical bundle):** `src/terminal/surface_contract.zig` names the same
 published vs acknowledged pairing and fills the extern `RedrawState` bundle;
 `src/terminal/ffi/core_api.zig` routes `redraw_state` / `needs_redraw` through
-that helper (`CZH-S7`).
+that helper (`CZH-S7`). Host `present_ack` generation admissibility (vs publication
+truth and last ack) uses the same module (`presentAckGenerationAdmissible`;
+`CZH-S8`).
 
 ## Android mapping (example, not definition)
 
