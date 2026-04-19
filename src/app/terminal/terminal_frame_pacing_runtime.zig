@@ -343,7 +343,7 @@ pub fn logFramePacing(state: anytype, now: f64, snapshot: Snapshot, drew: bool, 
     {
         handoff_log.logf(
             .info,
-            "stage=frame_state sid={x} drew={d} has_output_pressure={d} redraw_pending={d} parse_backlog={d} draw_ms={d:.2} sleep_ms={d:.2} gen={d}/{d}/{d}",
+            "stage=frame_state sid={x} drew={d} has_output_pressure={d} redraw_pending={d} parse_backlog={d} draw_ms={d:.2} sleep_ms={d:.2} presented_generation={d} published_generation={d} pending_generation={d}",
             .{
                 snapshot.session_ptr,
                 @intFromBool(drew),

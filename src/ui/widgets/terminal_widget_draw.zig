@@ -161,7 +161,7 @@ fn adoptPreparedTerminalGlyphResult(renderer: anytype, result: *TerminalGlyphPre
         result.committed_raster_size_px,
         render_scale,
     ) orelse {
-        log.logf(.warning, "terminal_glyph_prep_adopt_target_missing generation={d} raster={d} scale_milli={d} glyphs={d}", .{
+        log.logf(.warning, "terminal_glyph_prep_adopt_target_missing publication_generation={d} raster={d} scale_milli={d} glyphs={d}", .{
             result.generation,
             result.committed_raster_size_px,
             result.render_scale_milli,
