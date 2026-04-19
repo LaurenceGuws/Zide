@@ -1566,6 +1566,12 @@ helper only. **No** draw policy / present-plan branching changes.
 **`CZH-655`:** validation ladder + checkpoint packet + board/queue/handoff sync
 to `CZH-GATE-69`.
 
+**Engineer (CZH-651):** Confirmed in `buildTerminalPresentPlan`
+(`terminal_widget_presentation_runtime.zig`): the clear-generation consumer is
+the conjunct `terminal_view.clear_generation ==
+self.surface.lastRenderClearGeneration()` (paired with the publication-generation
+mismatch limb). No plan change from the `CZH-652`..`CZH-653` seam-cut above.
+
 ## Response Contract
 
 Every batch update must include:
