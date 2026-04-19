@@ -20,10 +20,9 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B17` — **`in_progress`** (sprint `CZH-S12`): long-loop seam pack
-  (two bounded surface-contract consumer consolidations + scoped hygiene
-  sweep), behavior-neutral. Ticket source:
-  `docs/todo/core/CZH_S12_TICKETS.md`.
+- `CZH-B17` — **`architect_review_pending`** at **`CZH-GATE-71`** (sprint `CZH-S12`):
+  composite publication/clear seam + hygiene sweep landed. Packet:
+  `docs/todo/core/CZH_S12_CHECKPOINT.md`.
 
 ## Hard Rules
 
@@ -39,9 +38,8 @@ Read in this exact order:
 
 - Target **8–14 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Sprint `CZH-S12` tickets `CZH-661`..`CZH-670` are active in order; do not
-  bounce early for architect review before **`CZH-GATE-71`** unless a real hard
-  blocker appears.
+- Sprint `CZH-S12` tickets `CZH-661`..`CZH-670` are complete at **`CZH-GATE-71`**
+  unless Architect reopens scope.
 - Keep one ticket per commit (historical sprint rule).
 
 ## Validation Ladder

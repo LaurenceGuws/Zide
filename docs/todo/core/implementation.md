@@ -11,7 +11,7 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B17` (`in_progress`).
+- Current active macro batch: `CZH-B17` (`architect_review_pending` at `CZH-GATE-71`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Active ticket source: `docs/todo/core/CZH_S12_TICKETS.md`
 
@@ -1693,7 +1693,7 @@ Checkpoint packet: `docs/todo/core/CZH_S11_CHECKPOINT.md`.
   mismatch fields now consume the explicit `surface_contract` seam in a
   behavior-neutral cut; host ABI unchanged.
 
-### `CZH-B17` Long-Loop Surface Contract Pack + Hygiene Sweep (`in_progress`)
+### `CZH-B17` Long-Loop Surface Contract Pack + Hygiene Sweep (`architect_review_pending`)
 
 Queue line (exact):
 
@@ -1773,6 +1773,21 @@ only.
 - Present-plan reuse and `presentationUpdateDelta` route through composite helpers
 - Seam invariant tests (`CZH-666`, `CZH-667`); probe sweep note (`CZH-668`)
 - `TERMINAL_SURFACE_CONTRACT.md` widget consumer updated to composite truth
+
+#### `CZH-S12` engineer validation (`CZH-670`)
+
+- **Date:** 2026-04-19  
+- **Tickets:** `CZH-661`..`CZH-670` (one commit each).  
+- **SL-0** `zig build` — PASS  
+- **SL-1** `zig build test` — PASS  
+- **SL-2** `zig build -Dmode=terminal` — PASS  
+- **SL-3** `zig build -Dmode=editor` — PASS  
+- **`zig build test-config`** — PASS  
+- **`zig build test-editor`** — PASS  
+- **`zig build test-terminal-replay-all`** — PASS  
+- **Android guard** — SKIP (lane paused)
+
+Checkpoint packet: `docs/todo/core/CZH_S12_CHECKPOINT.md`.
 
 ## Response Contract
 

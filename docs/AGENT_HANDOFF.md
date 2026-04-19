@@ -6,7 +6,7 @@ Session entrypoint only. Keep this file short and current.
 
 - Product lane: **Core Zig freeze + hygiene**
 - Campaign: **Core Zig Stability/Hygiene** (`CZH`)
-- Active macro batch (`in_progress`): `CZH-B17` in
+- Active macro batch (`architect_review_pending` at `CZH-GATE-71`): `CZH-B17` in
   `docs/todo/core/implementation.md`
 - Accepted freeze checkpoint: `docs/todo/core/CZH_B6_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S2_CHECKPOINT.md`
@@ -19,6 +19,7 @@ Session entrypoint only. Keep this file short and current.
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S9_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S10_CHECKPOINT.md`
 - Accepted sprint checkpoint: `docs/todo/core/CZH_S11_CHECKPOINT.md`
+- Pending sprint checkpoint (Architect): `docs/todo/core/CZH_S12_CHECKPOINT.md`
 - Active sprint board: `docs/todo/core/JIRA_BOARD.md`
 - Active ticket source: `docs/todo/core/CZH_S12_TICKETS.md`
 - Android lane status: **paused by product direction** except critical
@@ -44,11 +45,10 @@ Current top priorities:
 5. scrutinize file/module doc strings and important function docs for alignment
    with actual ownership and behavior
 
-Current batch intent (`CZH-B17`, active long-loop):
+Current batch intent (`CZH-B17`, submitted at `CZH-GATE-71`):
 
-- land two bounded `surface_contract` consumer consolidations
-- complete scoped probe/doc hygiene sweep in touched modules
-- keep one architect loop at `CZH-GATE-71` unless a real hard blocker appears
+- composite publication/clear pair seam for present-plan and surface-state delta
+- scoped probe sweep recorded; Architect review pending on checkpoint packet
 
 ## First Read Order
 
