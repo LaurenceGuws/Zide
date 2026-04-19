@@ -122,3 +122,38 @@ test "CZH-867: compute and read pairing - matching inputs yield same result" {
         try std.testing.expectEqual(computed, read);
     }
 }
+
+test "CZH-868: integration - widget delegation path maintains invariant across leg changes" {
+    // Simulate widget state flow: update legs -> compute conjunction -> read conjunction
+    // This verifies the delegation contract works end-to-end.
+
+    const widget_surface_state = @import("../ui/widgets/terminal_widget_surface_state.zig");
+    var state = widget_surface_state.TerminalWidgetSurfaceState.init(std.testing.allocator);
+    defer state.deinit(std.testing.allocator);
+
+    // Initial state: both legs false
+    const initial_read = state.readSharedSurfaceAttachmentReady();
+    try std.testing.expect(!initial_read); // false AND false = false
+
+    // Update pipeline leg via presentation update
+    state.presentation.terminal_presentable_pipeline_ready = true;
+    const after_pipeline = state.readSharedSurfaceAttachmentReady();
+    try std.testing.expect(!after_pipeline); // true AND false = false
+
+    // Compute with host available now
+    const computed = state.notePresentableAvailability(true);
+    try std.testing.expect(computed); // true AND true = true
+
+    // Verify read matches computed
+    const after_compute = state.readSharedSurfaceAttachmentReady();
+    try std.testing.expectEqual(computed, after_compute);
+
+    // Verify all reads go through presentation_bridge
+    try std.testing.expectEqual(
+        after_compute,
+        readSharedSurfaceAttachmentReady(
+            state.presentation.terminal_presentable_pipeline_ready,
+            state.presentation.host_surface_target_available,
+        ),
+    );
+}
