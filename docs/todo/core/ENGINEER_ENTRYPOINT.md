@@ -4,7 +4,7 @@ Read in this exact order:
 
 1. `docs/todo/core/implementation.md`
 2. `docs/todo/core/JIRA_BOARD.md`
-3. `docs/todo/core/CZH_S26_TICKETS.md`
+3. `docs/todo/core/CZH_S27_TICKETS.md`
 4. `docs/AGENT_HANDOFF.md`
 5. `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md`
 6. `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md`
@@ -20,9 +20,9 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B31` — **`architect_review_pending`** at **`CZH-GATE-85`** (sprint `CZH-S26`):
-  long-loop surface/result contraction follow-through to canonical helper routes
-  across selected runtime/widget seams (`docs/todo/core/CZH_S26_TICKETS.md`).
+- `CZH-B32` — **`in_progress`** toward **`CZH-GATE-86`** (sprint `CZH-S27`):
+  runtime/surface seam contraction implementation cut with concrete canonical
+  route edits across selected runtime/widget seams (`docs/todo/core/CZH_S27_TICKETS.md`).
 
 ## Hard Rules
 
@@ -38,8 +38,8 @@ Read in this exact order:
 
 - Target **8–14 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Sprint `CZH-S26` tickets `CZH-801`..`CZH-810` are active; run to
-  **`CZH-GATE-85`** unless blocked.
+- Sprint `CZH-S27` tickets `CZH-811`..`CZH-820` are active; run to
+  **`CZH-GATE-86`** unless blocked.
 - Keep one ticket per commit (historical sprint rule).
 
 ## Validation Ladder

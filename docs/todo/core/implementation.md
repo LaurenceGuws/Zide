@@ -11,9 +11,9 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B31` (`in_progress`, super-gate `CZH-GATE-85`).
+- Current active macro batch: `CZH-B32` (`in_progress`, super-gate `CZH-GATE-86`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
-- Active ticket source: `docs/todo/core/CZH_S26_TICKETS.md`
+- Active ticket source: `docs/todo/core/CZH_S27_TICKETS.md`
 
 ## Campaign Goals
 
@@ -2992,7 +2992,7 @@ Checkpoint packet: `docs/todo/core/CZH_S25_CHECKPOINT.md`.
 - `Acceptance judgment:` accepted because the correction is coherent, tested,
   and ABI-stable; future batches must declare any behavior fix explicitly.
 
-### `CZH-B31` Long-Loop Surface/Result Contraction Follow-Through (`in_progress`)
+### `CZH-B31` Long-Loop Surface/Result Contraction Follow-Through (`accepted`)
 
 Queue line (exact):
 
@@ -3033,6 +3033,79 @@ Execution source:
   `presentable_contract.zig`,
   `TERMINAL_SURFACE_CONTRACT.md`
 - record explicit behavior-freeze guardrails and the scope for `CZH-809`
+
+#### `CZH-S26` engineer validation (`CZH-810`)
+
+- **Date:** 2026-04-19
+- **Tickets:** `CZH-801`..`CZH-810` (plus board-state sync commit).
+- **SL-0** `zig build` — **PASS**
+- **SL-1** `zig build test` — **PASS**
+- **SL-2** `zig build -Dmode=terminal` — **PASS**
+- **SL-3** `zig build -Dmode=editor` — **PASS**
+- **`zig build test-config`** — **PASS**
+- **`zig build test-editor`** — **PASS**
+- **`zig build test-terminal-replay-all`** — **PASS**
+- **Android guard** — **SKIP** (lane paused)
+
+Checkpoint packet: `docs/todo/core/CZH_S26_CHECKPOINT.md`.
+
+#### Architect gate result
+
+- `Review chunk: CZH-B31`
+- `Verdict: accepted`
+- `Engineer commits reviewed:` `f44ca7aa`, `f174c91d`, `4243dc20`, `5ae79ccc`,
+  `4211655d`, `831c3b96`, `8a88985c`, `b6a2ac80`, `47cb3faf`, `34a74a5a`,
+  `0093906c`
+- `Architect validation spot-check:` `zig build test-config PASS`,
+  `zig build test-editor PASS`, `zig build test-terminal-replay-all PASS`
+- `Process finding:` `CZH-803`/`CZH-804`/`CZH-805` are empty “verified” commits.
+  Future batches must pre-label such tickets as `verification-only` or land
+  concrete code changes.
+- `Acceptance judgment:` seam state is stable and ABI-safe; tests/docs are
+  coherent. Accepted with stronger next-batch ticket-shape constraints.
+
+### `CZH-B32` Runtime/Surface Seam Contraction Implementation Cut (`in_progress`)
+
+Queue line (exact):
+
+- execute one longer engineering loop (10-ticket pack) to land concrete runtime
+  and surface derivation contractions (not verification-only placeholders), with
+  equivalence tests/doc lock and no ABI changes
+
+Acceptance:
+
+- selected touched paths have concrete contraction edits to canonical helper
+  routes (no parallel duplicate derivations in scope)
+- no host ABI/C export changes
+- helper and integration tests lock landed contractions
+- scoped probe/doc hygiene is recorded for touched modules
+- full stress ladder remains green through `CZH-GATE-86`
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_S27_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+
+Execution source:
+
+- engineer executes `CZH-811`..`CZH-820` in order from
+  `docs/todo/core/CZH_S27_TICKETS.md`
+- one ticket per commit unless explicitly marked otherwise
+- no empty commits unless ticket is explicitly `doc-only` or
+  `verification-only`
+- stop only at `CZH-GATE-86` or a real hard blocker
+
+#### `CZH-811` runtime/surface contraction audit + scope lock (`CZH-S27`)
+
+- map concrete contraction opportunities requiring code edits across:
+  `terminal_widget_presentation_runtime.zig`,
+  `terminal_widget_surface_state.zig`,
+  `surface_attachment_contract.zig`,
+  `presentable_contract.zig`,
+  `TERMINAL_SURFACE_CONTRACT.md`
+- lock exact edit targets and scope for `CZH-819`
 
 ## Response Contract
 
