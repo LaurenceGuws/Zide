@@ -100,6 +100,11 @@ attachment legs as **`terminal_presentable_pipeline_ready`** (pipeline only) and
 `SharedSurfaceAttachmentPipelinePair` field names; full attachment remains the conjunction via
 `readSharedSurfaceAttachmentReady` / `hostSharedSurfaceAttachmentReady`.
 
+**Transient present gate (`PresentationPresentState`, `CZH-S22`):** the widget presentation runtime
+holds per-tick **`host_surface_target_available`** and **`shared_surface_attachment_ready`**
+(conjunction from `notePresentableAvailability`) before draw/present; operator `logUnavailable`
+reports the same conjunction field — not a re-derivation from unrelated state.
+
 ## Present aggregation (`TerminalPresentResult`, `CZH-B26`)
 
 `TerminalPresentResult` (`src/ui/renderer/presentable_contract.zig`) carries **`host_surface_target_available`**
