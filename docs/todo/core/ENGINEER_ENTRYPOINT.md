@@ -20,7 +20,7 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B29` — **`in_progress`** toward **`CZH-GATE-83`** (sprint `CZH-S24`):
+- `CZH-B29` — **`architect_review_pending`** at **`CZH-GATE-83`** (sprint `CZH-S24`):
   long-loop reporting/result cohesion lock across selected runtime/widget seams
   (`docs/todo/core/CZH_S24_TICKETS.md`).
 
