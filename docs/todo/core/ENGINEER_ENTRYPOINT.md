@@ -3,10 +3,12 @@
 Read in this exact order:
 
 1. `docs/todo/core/implementation.md`
-2. `docs/AGENT_HANDOFF.md`
-3. `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md`
-4. `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md`
-5. `app_architecture/ui/RENDER_BACKEND_CONTRACT.md`
+2. `docs/todo/core/JIRA_BOARD.md`
+3. `docs/todo/core/CZH_B6_TICKETS.md`
+4. `docs/AGENT_HANDOFF.md`
+5. `app_architecture/terminal/VT_MATURITY_PURITY_CAMPAIGN.md`
+6. `app_architecture/terminal/TERMINAL_SUBSYSTEM_LAYERS.md`
+7. `app_architecture/ui/RENDER_BACKEND_CONTRACT.md`
 
 ## Active Batch Rule
 
@@ -16,21 +18,26 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B5` — **in_progress** (probe/debug hygiene + ownership naming cleanup
-  under behavior freeze).
+- `CZH-B6` — **in_progress** (layer freeze: VT core FFI / optional PTY host /
+  editor backend FFI / terminal surface contract).
 
 ## Hard Rules
 
 - Behavior freeze unless the batch explicitly permits behavior change.
 - No stale debug/probe caller residue in tracked product code.
 - Keep changes single-path (no fallback compatibility framing).
+- No compatibility shims, migration leftovers, or preservation-only fallbacks.
+- Audit file/module doc strings and important function doc strings in the
+  touched layer set; if they lie about ownership, record it explicitly.
 - Android lane is paused except blocker regressions.
 
 ## Engineer Cadence
 
 - Target **5–10 validated commits** inside the batch before super-gate.
 - Compile/test at each seam boundary; keep the tree buildable.
-- Execute `CZH5-M1..CZH5-M6` sequentially (defined in the queue).
+- Execute `CZH-601`..`CZH-610` sequentially from
+  `docs/todo/core/CZH_B6_TICKETS.md`.
+- Keep one ticket per commit.
 
 ## Validation Ladder
 

@@ -11,20 +11,26 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B5` (`in_progress`).
+- Current active macro batch: `CZH-B6` (`in_progress`).
+- Sprint authority: `docs/todo/core/JIRA_BOARD.md`
+- Active ticket source: `docs/todo/core/CZH_B6_TICKETS.md`
 
 ## Campaign Goals
 
-1. stability first: user stress tests run continuously while cleanup lands
-2. enforce probe/debug hygiene on main branch product paths
-3. naming/ownership cleanup
-4. normalize Android-driven FFI/rendering advancements into shared core seams
+1. freeze the shared host/core/editor/surface split before further cleanup
+2. keep stability first: user stress tests stay green while architecture work lands
+3. enforce probe/debug hygiene on main branch product paths
+4. remove compatibility/fallback/legacy preservation leftovers instead of carrying them forward
+5. scrutinize doc strings and locked-down function docs for alignment with real ownership and behavior
+6. normalize Android-driven FFI/rendering advancements into shared core seams only after the split is explicit
 
 ## Hard Contracts
 
 - Behavior freeze by default during hygiene cuts.
 - No compatibility sludge.
 - No stale debug/probe caller residue in tracked product code.
+- No compatibility shims, migration surfaces, or preservation-only fallbacks kept "just in case".
+- Every file in the touched layer set must have a doc string; important/locked-down functions must be audited for whether their doc strings help, hurt, or lie about current responsibility.
 - Batch closure requires doc updates + validation record.
 
 ## Validation Baseline
@@ -415,7 +421,7 @@ Internal milestones (`CZH4-M1..M6`, execute sequentially in one batch):
   integration scope; expand in a dedicated follow-up once Lua/config and
   harness boundaries are explicitly scoped.
 
-### `CZH-B5` Probe/Debug Hygiene + Ownership Naming Sweep (`in_progress`)
+### `CZH-B5` Probe/Debug Hygiene + Ownership Naming Sweep (`accepted`, narrow slice only)
 
 Queue line (exact):
 
@@ -581,6 +587,78 @@ Rationale: consistent `lifecycle_*` vocabulary for JSONL `message` values, drop 
 - `zig build test-config` — **PASS**
 - `zig build test-editor` — **PASS**
 - `zig build test-terminal-replay-all` — **PASS**
+
+#### Architect gate result
+
+- `Review chunk: CZH-B5`
+- `Verdict: accepted as a narrow hygiene slice, not campaign closure`
+- `Engineer commits reviewed:` `8b9aaacc`, `839b11ca`, `6e3e2ee4`
+- `Architect validation spot-check:` `zig build test-config PASS`,
+  `zig build test-editor PASS`
+- `Carry-forward judgment:` `CZH-B5` removed one audited slice of probe residue,
+  but it does **not** answer the larger ownership problem. Wider hygiene now
+  continues only inside the explicit layer split defined by `CZH-B6`.
+
+### `CZH-B6` Layer Freeze: VT Core FFI / Optional PTY Host / Editor FFI / Terminal Surface (`in_progress`)
+
+Queue line (exact):
+
+- flatten the Zig-side focus around one explicit host/core split: freeze the
+  VT core FFI, optional bring-your-own-PTY host seam, editor backend FFI, and
+  host-initialized terminal surface contract before more cleanup or extraction
+
+Objective:
+
+- turn the current broad "cleanup" lane into a small number of explicit layer
+  contracts that the engineer can execute against without drifting
+
+Acceptance:
+
+- authority docs explicitly define these four target layers:
+  1. VT core FFI
+  2. optional PTY/session host seam
+  3. editor backend FFI
+  4. terminal surface contract (host passes shared GPU resource/surface;
+     Zide owns dirty tracking/update logic; host owns binding/presentation)
+- current files are classified into those target layers with explicit keep/move
+  boundaries and non-goals
+- hard-rule audits exist for:
+  - probe/debug residue
+  - compatibility/fallback/legacy leftovers
+  - file/module doc strings and important function doc strings
+- the first post-freeze implementation sprint is ticketed for the engineer
+
+Owner docs:
+
+- `docs/todo/core/JIRA_BOARD.md`
+- `docs/todo/core/CZH_B6_TICKETS.md`
+- `docs/todo/core/ENGINEER_ENTRYPOINT.md`
+- `docs/AGENT_HANDOFF.md`
+- terminal/editor authority docs named by the tickets below
+
+Internal milestones (`CZH6-M1..M6`, executed through Jira tickets `CZH-601`..`CZH-610`):
+
+| Id | Scope |
+| --- | --- |
+| `CZH6-M1` | establish Jira/board/ticket authority and flatten the active focus |
+| `CZH6-M2` | audit current file ownership across terminal FFI, editor FFI, Android/native host glue, and renderer surface paths |
+| `CZH6-M3` | write/freeze the target split docs for VT core FFI, optional PTY host seam, editor backend FFI, and terminal surface contract |
+| `CZH6-M4` | run the three hard-rule audits (probe/debug, compat/fallback, doc strings) against the layer set |
+| `CZH6-M5` | shape the first implementation sprint from that authority |
+| `CZH6-M6` | checkpoint packet + review gate |
+
+Stop conditions:
+
+- engineer executes `CZH-601`..`CZH-610` in order from
+  `docs/todo/core/CZH_B6_TICKETS.md`
+- one ticket per commit unless a ticket is explicitly marked atomic
+- stop only at `CZH-GATE-60` or a real hard blocker
+
+Architect note:
+
+- `CZH-B6` intentionally replaces a vague hygiene lane with a focused
+  architecture freeze. Do not reopen broad cleanup-by-instinct until this split
+  is written down and accepted.
 
 ## Response Contract
 
