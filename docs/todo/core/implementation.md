@@ -1652,6 +1652,13 @@ or branching changes.
 **`CZH-660`:** validation ladder + checkpoint packet + board/queue/handoff sync
 to `CZH-GATE-70`.
 
+**Engineer (CZH-656):** Confirmed in `TerminalWidgetSurfaceState.presentationUpdateDelta`
+(`terminal_widget_surface_state.zig`): `generation_changed` and
+`clear_generation_changed` are the publication vs `last_render_generation` and
+clear vs `last_render_clear_generation` inequality limbs. Plan: route both
+through existing `surface_contract` mismatch helpers (`CZH-657`..`CZH-658`); no
+new predicate surface beyond doc binding where needed.
+
 ## Response Contract
 
 Every batch update must include:
