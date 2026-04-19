@@ -2086,7 +2086,7 @@ pub fn planUpdate(
     return plan;
 }
 
-test "CZH-S19: presentation delta pipeline field matches observability vocabulary" {
+test "presentation delta pipeline field matches observability vocabulary" {
     const TerminalWidgetSurfaceState = @import("terminal_widget_surface_state.zig").TerminalWidgetSurfaceState;
     comptime {
         const fields = @typeInfo(TerminalWidgetSurfaceState.PresentationUpdateDelta).@"struct".fields;
@@ -2098,7 +2098,7 @@ test "CZH-S19: presentation delta pipeline field matches observability vocabular
     }
 }
 
-test "CZH-S21: TerminalPresentResult exposes host-target and full-attachment carriers" {
+test "TerminalPresentResult exposes host-target and full-attachment carriers" {
     comptime {
         const fields = @typeInfo(TerminalPresentResult).@"struct".fields;
         var host: usize = 0;
@@ -2111,7 +2111,7 @@ test "CZH-S21: TerminalPresentResult exposes host-target and full-attachment car
     }
 }
 
-test "CZH-S21: reuse outcome aligns with present result attachment field names" {
+test "reuse outcome aligns with present result attachment field names" {
     comptime {
         const r_fields = @typeInfo(ReusePresentOutcomeState).@"struct".fields;
         var reuse_host: usize = 0;
@@ -2124,7 +2124,7 @@ test "CZH-S21: reuse outcome aligns with present result attachment field names" 
     }
 }
 
-test "CZH-768: PresentationPresentState exposes leg field and conjunction field distinctly" {
+test "PresentationPresentState exposes leg field and conjunction field distinctly" {
     comptime {
         const fields = @typeInfo(PresentationPresentState).@"struct".fields;
         var host: usize = 0;
@@ -2137,7 +2137,7 @@ test "CZH-768: PresentationPresentState exposes leg field and conjunction field 
     }
 }
 
-test "CZH-778: present-state and present-result share conjunction reporting field name" {
+test "present-state and present-result share conjunction reporting field name" {
     comptime {
         var present: usize = 0;
         var result: usize = 0;
@@ -2151,7 +2151,7 @@ test "CZH-778: present-state and present-result share conjunction reporting fiel
     }
 }
 
-test "CZH-788: reuse outcome and present result expose paired leg and conjunction fields" {
+test "reuse outcome and present result expose paired leg and conjunction fields" {
     comptime {
         {
             var host: usize = 0;
@@ -2174,7 +2174,7 @@ test "CZH-788: reuse outcome and present result expose paired leg and conjunctio
     }
 }
 
-test "CZH-798: RefreshedPresentablePresentationResult propagates conjunction for outcome fold" {
+test "RefreshedPresentablePresentationResult propagates conjunction for outcome fold" {
     const result = RefreshedPresentablePresentationResult{
         .bg_ms = 0.0,
         .glyph_ms = 0.0,
@@ -2184,14 +2184,14 @@ test "CZH-798: RefreshedPresentablePresentationResult propagates conjunction for
     try std.testing.expect(result.shared_surface_attachment_ready == true);
 }
 
-test "CZH-798: PresentationPresentState stores conjunction for reporting path" {
+test "PresentationPresentState stores conjunction for reporting path" {
     const state = PresentationPresentState{
         .shared_surface_attachment_ready = true,
     };
     try std.testing.expect(state.shared_surface_attachment_ready == true);
 }
 
-test "CZH-798: ReusePresentOutcomeState conjunction field role matches TerminalPresentResult" {
+test "ReusePresentOutcomeState conjunction field role matches TerminalPresentResult" {
     const outcome = ReusePresentOutcomeState{
         .shared_surface_attachment_ready = true,
         .host_surface_target_available = false,
@@ -2204,8 +2204,8 @@ test "CZH-798: ReusePresentOutcomeState conjunction field role matches TerminalP
     try std.testing.expect(result.host_surface_target_available == outcome.host_surface_target_available);
 }
 
-test "CZH-S27: helper consolidation — reuseSuccessOutcome constructs correct outcome state" {
-    // Verify the CZH-814 consolidation helper produces the expected outcome state for successful reuse.
+test "helper consolidation reuseSuccessOutcome constructs correct outcome state" {
+    // Verify the consolidation helper produces the expected outcome state for successful reuse.
     // This locks the pattern: successful reuse always has both legs and conjunction true.
     const outcome = reuseSuccessOutcome();
     try std.testing.expect(outcome.reused == true);
@@ -2215,7 +2215,7 @@ test "CZH-S27: helper consolidation — reuseSuccessOutcome constructs correct o
     try std.testing.expect(outcome.shared_surface_attachment_ready == true);
 }
 
-test "CZH-S28: helper hardening — reuse outcome assertion validates consistency" {
+test "helper hardening reuse outcome assertion validates consistency" {
     // Verify that the reuse outcome hardening assertion accepts valid reuse states and would
     // catch invalid states in debug builds. This locks the hardening invariant.
     const valid_outcome = reuseSuccessOutcome();
@@ -2230,7 +2230,7 @@ test "CZH-S28: helper hardening — reuse outcome assertion validates consistenc
     assertReuseOutcomeConsistency(non_reused);
 }
 
-test "CZH-S29: helper hardening — direct outcome assertion validates invariants" {
+test "helper hardening direct outcome assertion validates invariants" {
     // Verify that the direct outcome hardening assertion validates invariant fields.
     // Direct draws always advance cache, have renderer available, and do not pre-verify conjunction.
     const valid_direct = classifyDirectPresentOutcome(true);
@@ -2245,7 +2245,7 @@ test "CZH-S29: helper hardening — direct outcome assertion validates invariant
     try std.testing.expectEqual(direct_not_updated.outcome, .presented);
 }
 
-test "CZH-S26: integration lock — PresentationPresentState conjunction equals outcome conjunction" {
+test "integration lock PresentationPresentState conjunction equals outcome conjunction" {
     const present_state = PresentationPresentState{
         .shared_surface_attachment_ready = true,
         .host_surface_target_available = true,
@@ -2262,7 +2262,7 @@ test "CZH-S26: integration lock — PresentationPresentState conjunction equals 
     );
 }
 
-test "CZH-S26: integration lock — result fold preserves outcome conjunction" {
+test "integration lock result fold preserves outcome conjunction" {
     const outcome = ReusePresentOutcomeState{
         .reused = true,
         .outcome = .reused,
@@ -2276,7 +2276,7 @@ test "CZH-S26: integration lock — result fold preserves outcome conjunction" {
     try std.testing.expectEqual(result.outcome, outcome.outcome);
 }
 
-test "CZH-S26: integration lock — direct present outcome has correct leg/conjunction separation" {
+test "integration lock direct present outcome has correct leg/conjunction separation" {
     const outcome = DirectPresentOutcomeState{
         .outcome = .presented,
         .cache_state_advanced = true,
@@ -2285,7 +2285,7 @@ test "CZH-S26: integration lock — direct present outcome has correct leg/conju
     try std.testing.expect(outcome.host_surface_target_available);
 }
 
-test "CZH-S27: integration lock — consolidated outcome states fold correctly" {
+test "integration lock consolidated outcome states fold correctly" {
     // Verify that all three outcome state types produce consistent results when folded.
 
     // RefreshOutcomeState: conjunction passed separately
@@ -2310,7 +2310,7 @@ test "CZH-S27: integration lock — consolidated outcome states fold correctly" 
     try std.testing.expectEqual(reuse_result.outcome, TerminalPresentOutcome.reused);
     try std.testing.expect(reuse_result.shared_surface_attachment_ready == true);
 
-    // DirectPresentOutcomeState: both legs and conjunction as fields (CZH-816 consolidation)
+    // DirectPresentOutcomeState: both legs and conjunction as fields.
     const direct_outcome = DirectPresentOutcomeState{
         .outcome = .presented,
         .cache_state_advanced = true,
@@ -2328,7 +2328,7 @@ test "CZH-S27: integration lock — consolidated outcome states fold correctly" 
     try std.testing.expect(direct_result.shared_surface_attachment_ready == false);
 }
 
-test "CZH-S28: integration hardening — fold paths harden outcome consistency" {
+test "integration hardening fold paths harden outcome consistency" {
     // Verify that fold functions validate outcome state consistency and propagate to result.
 
     // Test: successful reuse outcome produces result with all fields true
@@ -2351,7 +2351,7 @@ test "CZH-S28: integration hardening — fold paths harden outcome consistency" 
     try std.testing.expectEqual(refresh_result.followup.reason, .target_unavailable);
 }
 
-test "CZH-S29: integration follow-through — refresh classification validates followup coupling" {
+test "integration follow-through refresh classification validates followup coupling" {
     // Verify that refresh outcome classification validates followup coupling invariants.
     // When followup_required is true, followup_reason must be non-.none.
 
@@ -2370,7 +2370,7 @@ test "CZH-S29: integration follow-through — refresh classification validates f
     try std.testing.expectEqual(refresh_presented.followup_reason, .none);
 }
 
-test "CZH-S29: integration follow-through — direct outcome folds correctly through generic path" {
+test "integration follow-through direct outcome folds correctly through generic path" {
     // Verify that direct present outcomes compose correctly through the generic fold.
     // Direct draws have both legs true and conjunction false (not pre-verified).
 
@@ -2390,7 +2390,7 @@ test "CZH-S29: integration follow-through — direct outcome folds correctly thr
     try std.testing.expect(result.shared_surface_attachment_ready == false);
 }
 
-test "CZH-S30: consolidation helper — unified fold composition pattern" {
+test "consolidation helper unified fold composition pattern" {
     // Verify that the consolidated fold composition helper correctly applies outcome-specific fields.
     // This locks the consolidation pattern used by outcome-specific fold functions.
 
@@ -2413,7 +2413,7 @@ test "CZH-S30: consolidation helper — unified fold composition pattern" {
     try std.testing.expectEqual(result2.followup.reason, .none);
 }
 
-test "CZH-S30: consolidation helper — refresh outcome assertion unified pattern" {
+test "consolidation helper refresh outcome assertion unified pattern" {
     // Verify that the consolidated refresh outcome assertion helper correctly validates
     // followup coupling invariants. This locks the consolidation pattern.
 
@@ -2434,7 +2434,7 @@ test "CZH-S30: consolidation helper — refresh outcome assertion unified patter
     assertRefreshOutcomeConsistency(valid_neutral);
 }
 
-test "CZH-S30: integration consolidation — all fold paths route through canonical generic fold" {
+test "integration consolidation all fold paths route through canonical generic fold" {
     // Verify that all outcome-specific fold paths correctly route through the canonical
     // generic fold function with outcome-type-specific wrapping. This locks the
     // consolidation pattern across all outcome types.
@@ -2474,4 +2474,3 @@ test "CZH-S30: integration consolidation — all fold paths route through canoni
     try std.testing.expect(direct_result.cache_state_advanced == true);
     try std.testing.expect(direct_result.shared_surface_attachment_ready == false);
 }
-
