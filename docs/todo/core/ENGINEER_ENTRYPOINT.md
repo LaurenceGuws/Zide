@@ -20,9 +20,8 @@ Read in this exact order:
 
 ## Current Active Batch
 
-- `CZH-B8` — **in_progress** via sprint `CZH-S3` at **`CZH-GATE-62`**:
-  make the optional BYO-PTY seam explicit in code packaging without changing
-  behavior or exported C symbols.
+- `CZH-B8` — **architect_review_pending** at **`CZH-GATE-62`** (sprint `CZH-S3`;
+  checkpoint `docs/todo/core/CZH_S3_CHECKPOINT.md`).
 
 ## Hard Rules
 

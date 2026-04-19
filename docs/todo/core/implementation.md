@@ -11,7 +11,8 @@ stable, reviewable, and ready for the next expansion phase.
 
 - Android lane is intentionally paused except blocker regressions.
 - Core lane is now primary.
-- Current active macro batch: `CZH-B8` (`in_progress`).
+- Current active macro batch: `CZH-B8` (`architect_review_pending` at
+  `CZH-GATE-62`).
 - Sprint authority: `docs/todo/core/JIRA_BOARD.md`
 - Active ticket source: `docs/todo/core/CZH_S3_TICKETS.md`
 
@@ -871,7 +872,7 @@ Execution source:
   bounded target set, and snapshot-diff naming no longer reads like compatibility
   residue.
 
-### `CZH-B8` Make BYO-PTY Packaging Explicit (`in_progress`)
+### `CZH-B8` Make BYO-PTY Packaging Explicit (`architect_review_pending` — `CZH-GATE-62`)
 
 Queue line (exact):
 
@@ -926,6 +927,21 @@ Execution source:
 - `src/terminal/ffi/byo_pty_host.zig` (renamed from `host_api.zig`).
 - **`bridge.zig`** imports `byo_pty_host.zig`; call sites use `byo_pty_host`.
 - Authority docs refreshed in **`CZH-619`**.
+
+#### `CZH-S3` engineer validation (`CZH-620`)
+
+- **Date:** 2026-04-19  
+- **Tickets:** `CZH-616`..`CZH-620` (one commit each).  
+- **SL-0** `zig build` — PASS  
+- **SL-1** `zig build test` — PASS  
+- **SL-2** `zig build -Dmode=terminal` — PASS  
+- **SL-3** `zig build -Dmode=editor` — PASS  
+- **`zig build test-config`** — PASS  
+- **`zig build test-editor`** — PASS  
+- **`zig build test-terminal-replay-all`** — PASS  
+- **Android guard** — SKIP (lane paused)
+
+Checkpoint packet: `docs/todo/core/CZH_S3_CHECKPOINT.md`.
 
 ## Response Contract
 
