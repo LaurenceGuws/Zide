@@ -166,7 +166,10 @@ pub const ReusePresentOutcomeState = struct {
     reused: bool = false,
     outcome: TerminalPresentOutcome = .skipped,
     cache_state_advanced: bool = false,
+    /// Host drawable-target **leg** only (renderer `terminalPresentableInfo`); not the pipeline ∧ target conjunction.
     host_surface_target_available: bool = false,
+    /// Full shared-surface attachment (`surface_attachment_contract.hostSharedSurfaceAttachmentReady` shape).
+    shared_surface_attachment_ready: bool = false,
 };
 
 fn presentResultFromOutcomeState(
@@ -1669,6 +1672,7 @@ pub fn tryFastPresentExisting(
             renderer_presentable_host.terminalSupportsReuseWithoutSyncUpdates(renderer)))) {
         return .{
             .host_surface_target_available = host_surface_target_available,
+            .shared_surface_attachment_ready = shared_surface_attachment_ready,
         };
     }
 
@@ -1700,6 +1704,7 @@ pub fn tryFastPresentExisting(
         .outcome = .reused,
         .cache_state_advanced = true,
         .host_surface_target_available = true,
+        .shared_surface_attachment_ready = true,
     };
 }
 
