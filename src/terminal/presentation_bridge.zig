@@ -89,3 +89,36 @@ test "CZH-864: notePresentableAvailability returns false when pipeline not ready
     const result = notePresentableAvailability(false, true, null);
     try std.testing.expect(!result);
 }
+
+test "CZH-867: ownership invariant - widget layer does not re-compute conjunction" {
+    // This test documents the ownership contract: widget layer must delegate
+    // to presentation_bridge for conjunction computation, not re-derive it.
+    // If widget tests directly call surface_attachment_contract functions,
+    // that violates the intended ownership split.
+
+    // Widget calls bridge (correct pattern):
+    const bridge_result = readSharedSurfaceAttachmentReady(true, false);
+    try std.testing.expect(!bridge_result); // true AND false = false
+
+    // This is the ONLY canonical read path widget should use.
+    // Any widget test that calls surface_attachment_contract directly
+    // is a violation of CZH-863/864 ownership move.
+}
+
+test "CZH-867: compute and read pairing - matching inputs yield same result" {
+    // CZH-863/864 pairing: compute route must yield same value as read route
+    // for matching inputs. This tests that the two functions are consistent.
+
+    const test_cases = [_]struct { pipe: bool, host: bool }{
+        .{ .pipe = true, .host = true },
+        .{ .pipe = true, .host = false },
+        .{ .pipe = false, .host = true },
+        .{ .pipe = false, .host = false },
+    };
+
+    for (test_cases) |case| {
+        const computed = notePresentableAvailability(case.pipe, case.host, null);
+        const read = readSharedSurfaceAttachmentReady(case.pipe, case.host);
+        try std.testing.expectEqual(computed, read);
+    }
+}
