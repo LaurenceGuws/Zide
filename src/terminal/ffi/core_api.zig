@@ -387,7 +387,7 @@ pub fn create(config: ?*const shared.CreateConfig, out_handle: *?*shared.ZideTer
 pub fn presentAck(handle: ?*shared.ZideTerminalHandle, generation: u64) shared.Status {
     const h = shared.fromOpaqueActive(handle) orelse return .invalid_argument;
     const published_generation = currentPublishedGeneration(h);
-    if (!surface_contract.presentAckGenerationAdmissible(generation, published_generation, h.last_acknowledged_generation)) {
+    if (!surface_contract.ffiPresentAckGenerationAdmissible(generation, published_generation, h.last_acknowledged_generation)) {
         return .invalid_argument;
     }
     _ = terminal_publication.acknowledgePresentedGeneration(h.shell, generation);
