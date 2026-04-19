@@ -131,23 +131,56 @@ getters for attachment visibility; **host export** uses `TerminalPresentResult` 
 outcomes — same field **names** where applicable, distinct **roles** (reporting snapshot vs aggregated
 result).
 
-## Presentation runtime ownership (`CZH-S33` authority)
+## Presentation runtime ownership (`CZH-S33` + `CZH-S34` authority)
 
-**Runtime orchestration layer:** Terminal layer owns the presentation runtime module
-(`src/terminal/presentation_runtime.zig`) that manages:
-- **Outcome classification:** Refresh cycle results → outcome state (pure semantic classification)
-- **Plan generation:** View model state + geometry → update plan (pure computation)
-- **Refresh orchestration:** Drive refresh cycle, fold results, manage generation tracking
-- **Attachment readiness computation:** Apply `TerminalPresentationBridge` to derive conjunction state
+**Terminal-owned runtime orchestration layer:**
+The terminal layer owns the presentation runtime module (`src/terminal/presentation_runtime.zig`)
+that manages all semantic presentation logic:
 
-Widget layer (`terminal_widget_presentation_runtime.zig`) becomes a thin facade that:
-- Gathers input/geometry/UI context
-- Calls terminal-owned runtime entrypoint
+- **Outcome classification** (pure semantic): `classifyRefreshOutcome()`, `classifyDirectPresentOutcome()`, `reuseSuccessOutcome()`
+  - Classify refresh cycle, direct present, and reuse results into outcome states with invariant fields
+  - All hardening assertions validate semantic consistency (no behavior changes)
+  
+- **Outcome folding** (pure computation): `presentResultFromRefreshOutcomeState()`, `presentResultFromReuseOutcomeState()`
+  - Fold outcome state + timing into host-facing result structs
+  - Propagate conjunction state (attachment readiness) through folding
+  
+- **Orchestration coordination** (`CZH-S34`, pure except for integration seams):
+  - **Refresh path:** `runPresentableRefreshCycle()`, `runRefreshedPresentablePresentation()`, `executeRefreshPresentFlow()`
+    - Drive refresh cycle outcome classification and result folding
+    - No renderer/shell calls; coordinates pure decision paths
+  - **Reuse path:** `tryFastPresentExisting()`, `runFastPresentIfAvailable()`
+    - Reuse eligibility decision based on generation pairing
+    - Outcome classification and result folding for cached frames
+  - **Direct path:** `directPresent()`
+    - Direct present path outcome classification and result folding
+  - **High-level coordination:** `runPresentation()`, `refreshPresentState()`, `planUpdate()`
+    - Top-level orchestration that calls phase-specific helpers
+    - Planning surface update modes based on presentation state
+    - No re-derivation of outcomes; delegates to outcome-phase helpers
+
+- **Geometry computation** (pure): `PresentationGeometry`, `computePresentationSurfaceGeometry()`, `ViewportShiftState`
+  - Surface geometry derivation from view dimensions and cell metrics
+  
+- **Attachment readiness** (pure computation): `computeHostSurfaceAttachmentState()`
+  - Apply `TerminalPresentationBridge` to derive full conjunction state
+
+**Widget-retained integration layer** (`terminal_widget_presentation_runtime.zig`):
+The widget layer remains a thin facade that:
+- Gathers input/geometry/UI context from renderer/shell/view state
+- Calls terminal-owned orchestration entry point with pure state
 - Interprets results in renderer/shell context (timing, callbacks, viewport clipping)
-- Keeps no semantic logic, only integration
+- Delegates all semantic classification, folding, and outcome coordination to terminal layer
+- Keeps no presentation logic, only integration and GPU operations
 
-**Canonical entrypoint:** Terminal runtime module provides single orchestration entry point
-called by widget facade. No re-derivation of outcomes, refresh decisions, or generation logic
+**No re-derivation rule:** Widget layer never recomputes outcomes, folding, or orchestration decisions.
+All semantic logic is owned by terminal layer and called through defined interfaces.
+
+**Canonical orchestration entry point:** `runPresentation()` in terminal runtime is the single
+orchestration function called by widget facade. All refresh/reuse/direct paths flow through this
+or its phase-specific helpers. Widget may call phase helpers directly only for testing/internal
+decision gating (e.g., checking reuse eligibility)—production codepaths always flow through
+the canonical entry point for consistent outcome handling
 in UI layer.
 
 **Outcome types:** Outcome structs and classification helpers are defined in terminal layer.
