@@ -103,6 +103,8 @@ pub const TerminalWidgetSurfaceState = struct {
         return self.presentation.target_available;
     }
 
+    /// Presentation invalidation delta vs last recorded surface draw; publication/clear
+    /// generation fields use `surface_contract.publicationClearPairMismatchesFromLastSurfaceRender`.
     pub fn presentationUpdateDelta(
         self: *const TerminalWidgetSurfaceState,
         terminal_view: view_state.TerminalViewModel,

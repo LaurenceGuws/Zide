@@ -37,12 +37,9 @@ pub fn presentAckGenerationAdmissible(
     return generation <= published_generation and generation >= last_acknowledged_generation;
 }
 
-/// Widget draw/presentation: publication generation differs from the last generation
-/// the shared presentable recorded for the terminal surface draw (`terminal_widget*`
-/// presentation runtime). Same predicate core as `needsRedrawFromPair` — explicit
-/// naming for the draw/presentation consumer (`TERMINAL_SURFACE_CONTRACT.md`).
-/// Also drives `PresentationUpdateDelta.generation_changed` in
-/// `terminal_widget_surface_state.zig` (`CZH-S11`).
+/// Widget draw: one leg of publication/clear vs last surface draw; same core as
+/// `needsRedrawFromPair`. Used by `publicationClearPairMismatchesFromLastSurfaceRender`
+/// (`TERMINAL_SURFACE_CONTRACT.md`, `CZH-S12`).
 pub fn publicationGenerationDiffersFromLastSurfaceRender(
     publication_generation: u64,
     last_surface_render_generation: u64,
@@ -50,13 +47,9 @@ pub fn publicationGenerationDiffersFromLastSurfaceRender(
     return needsRedrawFromPair(publication_generation, last_surface_render_generation);
 }
 
-/// Widget draw/presentation: publication **clear** generation differs from the
-/// last clear generation the shared presentable recorded for the terminal surface
-/// draw. Same predicate core as `needsRedrawFromPair`; pairs with
-/// `publicationGenerationDiffersFromLastSurfaceRender` for present-plan reuse
-/// eligibility (`TERMINAL_SURFACE_CONTRACT.md`).
-/// Also drives `PresentationUpdateDelta.clear_generation_changed` in
-/// `terminal_widget_surface_state.zig` (`CZH-S11`).
+/// Widget draw: clear-generation leg of publication/clear vs last surface draw;
+/// same core as `needsRedrawFromPair`. Used by `publicationClearPairMismatchesFromLastSurfaceRender`
+/// (`TERMINAL_SURFACE_CONTRACT.md`, `CZH-S12`).
 pub fn clearGenerationDiffersFromLastSurfaceRenderClear(
     publication_clear_generation: u64,
     last_surface_render_clear_generation: u64,

@@ -1044,6 +1044,8 @@ pub fn executeRefreshPresentFlow(
     });
 }
 
+/// Present/reuse plan; generation alignment for reuse uses
+/// `surface_contract.publicationClearPairMatchesLastSurfaceRender`.
 fn buildTerminalPresentPlan(
     self: anytype,
     renderer: anytype,
